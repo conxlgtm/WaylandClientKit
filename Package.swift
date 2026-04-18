@@ -16,7 +16,10 @@ let package = Package(
         .target(
             name: "CWaylandProtocols",
             dependencies: ["CWaylandClientSystem"],
-            publicHeadersPath: "include"
+            publicHeadersPath: "include",
+            cSettings: [
+                .define("_GNU_SOURCE", .when(platforms: [.linux]))
+            ]
         ),
         .target(
             name: "WaylandRaw",
@@ -42,5 +45,6 @@ let package = Package(
             name: "IntegrationTests",
             dependencies: ["WaylandClient"]
         ),
-    ]
+    ],
+    cLanguageStandard: .c17
 )

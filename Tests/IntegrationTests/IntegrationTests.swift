@@ -1,7 +1,10 @@
 import Testing
 import WaylandClient
 
-@Test
-func integrationPlaceholderBuilds() {
-    #expect(WaylandClientBootstrap.ready)
+@Suite
+struct IntegrationTests {
+    @Test
+    func integrationPlaceholderBuilds() {
+        #expect(WaylandClientBootstrap.ready)
+    }
 }
