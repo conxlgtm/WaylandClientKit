@@ -1,0 +1,4 @@
+module CWaylandClientSystem [system] {
+    header "include/wayland-client-umbrella.h"
+    export *
+}

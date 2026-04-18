@@ -1,0 +1,25 @@
+{
+  "protocols": [
+    {
+      "name": "wayland-core",
+      "localPath": "Protocols/core/wayland.xml",
+      "upstreamProject": "wayland",
+      "upstreamVersion": "1.24.0",
+      "vendoredFromPackage": "wayland-devel-1.24.0-3.fc44.x86_64",
+      "vendoredFromPath": "/usr/share/wayland/wayland.xml",
+      "sha256": "60abb5864546288a660f3d8af0c838fc87c85bb386582da23e52cb8476e9adbf",
+      "notes": "Canonical core Wayland protocol used for reproducible generation."
+    },
+    {
+      "name": "xdg-shell",
+      "localPath": "Protocols/stable/xdg-shell/xdg-shell.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "stable",
+      "vendoredFromPackage": "qt6-qtbase-gui-6.10.2-2.fc44.x86_64",
+      "vendoredFromPath": "/usr/share/qt6/wayland/protocols/xdg-shell/xdg-shell.xml",
+      "sha256": "b72112a7a1f9b2ad94ffa59468753ced568d6e7b2069df94a9d437e488b8506e",
+      "stability": "stable",
+      "notes": "Required for modern toplevel windows. Vendored from the Fedora Qt protocol path because wayland-protocols-devel was not installed when the snapshot was taken."
+    }
+  ]
+}
