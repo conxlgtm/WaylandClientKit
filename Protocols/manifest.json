@@ -14,12 +14,12 @@
       "name": "xdg-shell",
       "localPath": "Protocols/stable/xdg-shell/xdg-shell.xml",
       "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "stable",
-      "vendoredFromPackage": "qt6-qtbase-gui-6.10.2-2.fc44.x86_64",
-      "vendoredFromPath": "/usr/share/qt6/wayland/protocols/xdg-shell/xdg-shell.xml",
-      "sha256": "b72112a7a1f9b2ad94ffa59468753ced568d6e7b2069df94a9d437e488b8506e",
+      "upstreamVersion": "1.47",
+      "vendoredFromPackage": "wayland-protocols-devel-1.47-2.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml",
+      "sha256": "5084e76386f6c3959bee957a784c57de204be0de3f57533ce07b4be0617b171a",
       "stability": "stable",
-      "notes": "Required for modern toplevel windows. Vendored from the Fedora Qt protocol path because wayland-protocols-devel was not installed when the snapshot was taken."
+      "notes": "Required for modern toplevel windows. Vendored from the canonical Fedora wayland-protocols package path."
     }
   ]
 }
