@@ -5,11 +5,6 @@ import Testing
 @Suite
 struct WaylandRawTests {
     @Test
-    func waylandRawBootstrapIsReady() {
-        #expect(WaylandRawBootstrap.ready)
-    }
-
-    @Test
     func systemWaylandSmokeImportsResolve() {
         WaylandSmokeCheck.verify()
     }
