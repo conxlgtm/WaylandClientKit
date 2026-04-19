@@ -33,6 +33,27 @@ struct wl_callback *swl_surface_frame(
 {
     return wl_surface_frame(surface);
 }
+void swl_surface_attach(
+    struct wl_surface *surface,
+    struct wl_buffer *buffer,
+    int32_t x,
+    int32_t y)
+{
+    wl_surface_attach(surface, buffer, x, y);
+}
+void swl_surface_commit(struct wl_surface *surface)
+{
+    wl_surface_commit(surface);
+}
+void swl_surface_damage_buffer(
+    struct wl_surface *surface,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height)
+{
+    wl_surface_damage_buffer(surface, x, y, width, height);
+}
 struct wl_pointer *swl_seat_get_pointer(
     struct wl_seat *seat)
 {
@@ -42,6 +63,11 @@ struct wl_keyboard *swl_seat_get_keyboard(
     struct wl_seat *seat)
 {
     return wl_seat_get_keyboard(seat);
+}
+struct wl_touch *swl_seat_get_touch(
+    struct wl_seat *seat)
+{
+    return wl_seat_get_touch(seat);
 }
 void swl_callback_destroy(struct wl_callback *callback)
 {
@@ -66,6 +92,10 @@ void swl_pointer_release(struct wl_pointer *pointer)
 void swl_keyboard_release(struct wl_keyboard *keyboard)
 {
     wl_keyboard_release(keyboard);
+}
+void swl_touch_release(struct wl_touch *touch)
+{
+    wl_touch_release(touch);
 }
 void swl_seat_release(struct wl_seat *seat)
 {

@@ -49,6 +49,19 @@ struct wl_buffer *swl_shm_pool_create_buffer(
 struct wl_callback *swl_surface_frame(struct wl_surface *surface);
 struct wl_pointer *swl_seat_get_pointer(struct wl_seat *seat);
 struct wl_keyboard *swl_seat_get_keyboard(struct wl_seat *seat);
+struct wl_touch *swl_seat_get_touch(struct wl_seat *seat);
+void swl_surface_attach(
+    struct wl_surface *surface,
+    struct wl_buffer *buffer,
+    int32_t x,
+    int32_t y);
+void swl_surface_commit(struct wl_surface *surface);
+void swl_surface_damage_buffer(
+    struct wl_surface *surface,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height);
 
 /*
  * xdg request wrappers
@@ -80,6 +93,7 @@ void swl_surface_destroy(struct wl_surface *surface);
 void swl_shm_pool_destroy(struct wl_shm_pool *pool);
 void swl_pointer_release(struct wl_pointer *pointer);
 void swl_keyboard_release(struct wl_keyboard *keyboard);
+void swl_touch_release(struct wl_touch *touch);
 void swl_seat_release(struct wl_seat *seat);
 void swl_xdg_surface_destroy(struct xdg_surface *xdg_surface);
 void swl_xdg_toplevel_destroy(struct xdg_toplevel *xdg_toplevel);
@@ -139,6 +153,140 @@ typedef void (*swl_seat_name_fn)(
     void *data,
     struct wl_seat *seat,
     const char *name);
+typedef void (*swl_pointer_enter_fn)(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t serial,
+    struct wl_surface *surface,
+    wl_fixed_t surfaceX,
+    wl_fixed_t surfaceY);
+typedef void (*swl_pointer_leave_fn)(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t serial,
+    struct wl_surface *surface);
+typedef void (*swl_pointer_motion_fn)(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t time,
+    wl_fixed_t surfaceX,
+    wl_fixed_t surfaceY);
+typedef void (*swl_pointer_button_fn)(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t serial,
+    uint32_t time,
+    uint32_t button,
+    uint32_t state);
+typedef void (*swl_pointer_axis_fn)(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t time,
+    uint32_t axis,
+    wl_fixed_t value);
+typedef void (*swl_pointer_frame_fn)(
+    void *data,
+    struct wl_pointer *pointer);
+typedef void (*swl_pointer_axis_source_fn)(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t axisSource);
+typedef void (*swl_pointer_axis_stop_fn)(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t time,
+    uint32_t axis);
+typedef void (*swl_pointer_axis_discrete_fn)(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t axis,
+    int32_t discrete);
+typedef void (*swl_pointer_axis_value120_fn)(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t axis,
+    int32_t value120);
+typedef void (*swl_pointer_axis_relative_direction_fn)(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t axis,
+    uint32_t direction);
+typedef void (*swl_keyboard_keymap_fn)(
+    void *data,
+    struct wl_keyboard *keyboard,
+    uint32_t format,
+    int32_t fd,
+    uint32_t size);
+typedef void (*swl_keyboard_enter_fn)(
+    void *data,
+    struct wl_keyboard *keyboard,
+    uint32_t serial,
+    struct wl_surface *surface,
+    struct wl_array *keys);
+typedef void (*swl_keyboard_leave_fn)(
+    void *data,
+    struct wl_keyboard *keyboard,
+    uint32_t serial,
+    struct wl_surface *surface);
+typedef void (*swl_keyboard_key_fn)(
+    void *data,
+    struct wl_keyboard *keyboard,
+    uint32_t serial,
+    uint32_t time,
+    uint32_t key,
+    uint32_t state);
+typedef void (*swl_keyboard_modifiers_fn)(
+    void *data,
+    struct wl_keyboard *keyboard,
+    uint32_t serial,
+    uint32_t modsDepressed,
+    uint32_t modsLatched,
+    uint32_t modsLocked,
+    uint32_t group);
+typedef void (*swl_keyboard_repeat_info_fn)(
+    void *data,
+    struct wl_keyboard *keyboard,
+    int32_t rate,
+    int32_t delay);
+typedef void (*swl_touch_down_fn)(
+    void *data,
+    struct wl_touch *touch,
+    uint32_t serial,
+    uint32_t time,
+    struct wl_surface *surface,
+    int32_t id,
+    wl_fixed_t x,
+    wl_fixed_t y);
+typedef void (*swl_touch_up_fn)(
+    void *data,
+    struct wl_touch *touch,
+    uint32_t serial,
+    uint32_t time,
+    int32_t id);
+typedef void (*swl_touch_motion_fn)(
+    void *data,
+    struct wl_touch *touch,
+    uint32_t time,
+    int32_t id,
+    wl_fixed_t x,
+    wl_fixed_t y);
+typedef void (*swl_touch_frame_fn)(
+    void *data,
+    struct wl_touch *touch);
+typedef void (*swl_touch_cancel_fn)(
+    void *data,
+    struct wl_touch *touch);
+typedef void (*swl_touch_shape_fn)(
+    void *data,
+    struct wl_touch *touch,
+    int32_t id,
+    wl_fixed_t major,
+    wl_fixed_t minor);
+typedef void (*swl_touch_orientation_fn)(
+    void *data,
+    struct wl_touch *touch,
+    int32_t id,
+    wl_fixed_t orientation);
 
 /*
  * Callback bundle structs
@@ -186,6 +334,42 @@ struct swl_seat_listener_callbacks {
     void *data;
 };
 
+struct swl_pointer_listener_callbacks {
+    swl_pointer_enter_fn enter;
+    swl_pointer_leave_fn leave;
+    swl_pointer_motion_fn motion;
+    swl_pointer_button_fn button;
+    swl_pointer_axis_fn axis;
+    swl_pointer_frame_fn frame;
+    swl_pointer_axis_source_fn axis_source;
+    swl_pointer_axis_stop_fn axis_stop;
+    swl_pointer_axis_discrete_fn axis_discrete;
+    swl_pointer_axis_value120_fn axis_value120;
+    swl_pointer_axis_relative_direction_fn axis_relative_direction;
+    void *data;
+};
+
+struct swl_keyboard_listener_callbacks {
+    swl_keyboard_keymap_fn keymap;
+    swl_keyboard_enter_fn enter;
+    swl_keyboard_leave_fn leave;
+    swl_keyboard_key_fn key;
+    swl_keyboard_modifiers_fn modifiers;
+    swl_keyboard_repeat_info_fn repeat_info;
+    void *data;
+};
+
+struct swl_touch_listener_callbacks {
+    swl_touch_down_fn down;
+    swl_touch_up_fn up;
+    swl_touch_motion_fn motion;
+    swl_touch_frame_fn frame;
+    swl_touch_cancel_fn cancel;
+    swl_touch_shape_fn shape;
+    swl_touch_orientation_fn orientation;
+    void *data;
+};
+
 /*
  * Typed listener installers
  */
@@ -210,6 +394,15 @@ int swl_xdg_toplevel_add_listener(
 int swl_seat_add_listener(
     struct wl_seat *seat,
     const struct swl_seat_listener_callbacks *callbacks);
+int swl_pointer_add_listener(
+    struct wl_pointer *pointer,
+    const struct swl_pointer_listener_callbacks *callbacks);
+int swl_keyboard_add_listener(
+    struct wl_keyboard *keyboard,
+    const struct swl_keyboard_listener_callbacks *callbacks);
+int swl_touch_add_listener(
+    struct wl_touch *touch,
+    const struct swl_touch_listener_callbacks *callbacks);
 #ifdef __cplusplus
 }
 #endif

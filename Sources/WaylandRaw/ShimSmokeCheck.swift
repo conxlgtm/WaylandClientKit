@@ -13,6 +13,10 @@ enum ShimSmokeCheck {
         _ = swl_surface_frame
         _ = swl_seat_get_pointer
         _ = swl_seat_get_keyboard
+        _ = swl_seat_get_touch
+        _ = swl_surface_attach
+        _ = swl_surface_commit
+        _ = swl_surface_damage_buffer
 
         _ = swl_xdg_wm_base_get_xdg_surface
         _ = swl_xdg_surface_get_toplevel
@@ -27,6 +31,7 @@ enum ShimSmokeCheck {
         _ = swl_shm_pool_destroy
         _ = swl_pointer_release
         _ = swl_keyboard_release
+        _ = swl_touch_release
         _ = swl_seat_release
         _ = swl_xdg_surface_destroy
         _ = swl_xdg_toplevel_destroy
@@ -39,5 +44,8 @@ enum ShimSmokeCheck {
         _ = swl_xdg_surface_add_listener
         _ = swl_xdg_toplevel_add_listener
         _ = swl_seat_add_listener
+        _ = swl_pointer_add_listener
+        _ = swl_keyboard_add_listener
+        _ = swl_touch_add_listener
     }
 }
