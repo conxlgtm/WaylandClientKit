@@ -2,6 +2,10 @@ import CWaylandProtocols
 
 enum ShimSmokeCheck {
     static func verify() {
+        _ = swl_display_get_registry
+        _ = swl_display_sync
+        _ = swl_display_get_protocol_error_details
+
         _ = swl_registry_bind_wl_compositor
         _ = swl_registry_bind_wl_shm
         _ = swl_registry_bind_xdg_wm_base
@@ -25,13 +29,17 @@ enum ShimSmokeCheck {
         _ = swl_xdg_toplevel_set_title
         _ = swl_xdg_toplevel_set_app_id
 
+        _ = swl_registry_destroy
         _ = swl_callback_destroy
+        _ = swl_compositor_destroy
+        _ = swl_shm_destroy
         _ = swl_buffer_destroy
         _ = swl_surface_destroy
         _ = swl_shm_pool_destroy
         _ = swl_pointer_release
         _ = swl_keyboard_release
         _ = swl_touch_release
+        _ = swl_seat_destroy
         _ = swl_seat_release
         _ = swl_xdg_surface_destroy
         _ = swl_xdg_toplevel_destroy
