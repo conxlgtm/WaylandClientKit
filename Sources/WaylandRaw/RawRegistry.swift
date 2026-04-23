@@ -5,13 +5,13 @@ public final class RawRegistry: CustomStringConvertible {
     public let metadata: RawProxyMetadata
 
     public init(
-        opaquePointer: OpaquePointer,
+        opaquePointer registryPointer: OpaquePointer,
         version: RawVersion,
         ownership: RawOwnership,
         objectID: RawObjectID? = nil
     ) {
-        self.opaquePointer = opaquePointer
-        self.metadata = RawProxyMetadata(
+        opaquePointer = registryPointer
+        metadata = RawProxyMetadata(
             interfaceName: "wl_registry",
             version: version,
             ownership: ownership,
@@ -20,6 +20,6 @@ public final class RawRegistry: CustomStringConvertible {
     }
 
     public var description: String {
-        self.metadata.description
+        metadata.description
     }
 }

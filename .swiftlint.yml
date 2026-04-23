@@ -1,0 +1,232 @@
+# SwiftLint 0.61+.
+# Keep this strict: `make lint` runs SwiftLint with `--strict`, so warnings fail.
+
+included:
+  - Package.swift
+  - Sources
+  - Tests
+
+excluded:
+  - .build
+  - DerivedData
+  - Sources/CWaylandProtocols/generated
+  - Sources/CWaylandProtocols/include/generated
+  - Protocols
+  - notes
+
+disabled_rules:
+  # Apple swift-format owns brace placement. SwiftLint's opening_brace rule
+  # disagrees with swift-format on wrapped inheritance clauses.
+  - opening_brace
+
+# Analyzer-only rules are intentionally excluded until `swiftlint analyze` is
+# wired to compiler logs or a compile_commands.json file.
+opt_in_rules:
+  - anonymous_argument_in_multiline_closure
+  - array_init
+  - async_without_await
+  - attributes
+  - balanced_xctest_lifecycle
+  - closure_body_length
+  - closure_spacing
+  - collection_alignment
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - contains_over_first_not_nil
+  - contains_over_range_nil_comparison
+  - convenience_type
+  - direct_return
+  - discarded_notification_center_observer
+  - discouraged_assert
+  - discouraged_optional_boolean
+  - discouraged_optional_collection
+  - empty_collection_literal
+  - empty_count
+  - empty_string
+  - empty_xctest_method
+  - enum_case_associated_values_count
+  - explicit_init
+  - fatal_error_message
+  - fallthrough
+  - file_name_no_space
+  - final_test_case
+  - first_where
+  - flatmap_over_map_reduce
+  - force_unwrapping
+  - function_default_parameter_at_end
+  - identical_operands
+  - implicit_return
+  - implicitly_unwrapped_optional
+  - joined_default_parameter
+  - last_where
+  - legacy_multiple
+  - let_var_whitespace
+  - local_doc_comment
+  - lower_acl_than_parent
+  - modifier_order
+  - no_empty_block
+  - non_overridable_class_declaration
+  - number_separator
+  - object_literal
+  - operator_usage_whitespace
+  - optional_enum_case_matching
+  - prefer_condition_list
+  - prefer_key_path
+  - prefer_self_type_over_type_of_self
+  - prefer_zero_over_explicit_init
+  - reduce_into
+  - redundant_discardable_let
+  - redundant_nil_coalescing
+  - redundant_self_in_closure
+  - redundant_sendable
+  - redundant_type_annotation
+  - raw_value_for_camel_cased_codable_enum
+  - shorthand_argument
+  - shorthand_optional_binding
+  - return_value_from_void_function
+  - self_binding
+  - sorted_first_last
+  - sorted_imports
+  - static_operator
+  - strict_fileprivate
+  - superfluous_else
+  - test_case_accessibility
+  - toggle_bool
+  - trailing_closure
+  - unavailable_condition
+  - unavailable_function
+  - unhandled_throwing_task
+  - unneeded_parentheses_in_closure_argument
+  - unowned_variable_capture
+  - untyped_error_in_catch
+  - unused_parameter
+  - vertical_parameter_alignment_on_call
+  - weak_delegate
+  - xct_specific_matcher
+  - yoda_condition
+
+custom_rules:
+  no_explicit_self:
+    name: "No Explicit Self"
+    message: "Do not write explicit self. Rename shadowing parameters or unwrap weak captures before member access."
+    regex: "\\bself[?!]?\\."
+    severity: error
+
+  prefer_contextual_init_for_typed_declarations:
+    name: "Prefer Contextual .init"
+    message: "Use `.init(...)` when the declaration already states the concrete type."
+    regex: "\\b(?:let|var)\\s+\\w+\\s*:\\s*([A-Z][A-Za-z0-9_]*(?:<[^=\\n]+>)?)\\s*=\\s*\\1\\s*\\("
+    severity: error
+
+  prefer_file_id:
+    name: "Prefer #fileID"
+    message: "Use #fileID in production-facing APIs. Use #filePath only for explicit filesystem work."
+    regex: "#file\\b"
+    severity: error
+
+  no_silent_try_optional:
+    name: "No Silent try?"
+    message: "Do not discard thrown errors with try?. Use do/catch or propagate the error."
+    regex: "\\btry\\?"
+    severity: error
+
+  no_unchecked_sendable:
+    name: "No @unchecked Sendable"
+    message: "Do not bypass Swift 6 data-race checking with @unchecked Sendable without a reviewed exception."
+    regex: "@unchecked\\s+Sendable"
+    severity: error
+
+  no_unstructured_task:
+    name: "No Unstructured Task"
+    message: "Avoid unstructured Task launches. Prefer structured concurrency or store/cancel an owned Task handle."
+    regex: "\\bTask\\s*(?:\\([^)]*\\)\\s*)?\\{"
+    severity: error
+
+  no_detached_task:
+    name: "No Detached Task"
+    message: "Avoid Task.detached; it severs actor/task context and should require an explicit reviewed exception."
+    regex: "\\bTask\\.detached\\s*\\("
+    severity: error
+
+  no_fatal_error:
+    name: "No fatalError"
+    message: "Do not crash production code with fatalError. Model failure with errors or preconditions."
+    regex: "\\bfatalError\\s*\\("
+    severity: error
+
+  no_print:
+    name: "No print"
+    message: "Do not use print for runtime diagnostics. Use a logging abstraction or tests' Issue.record."
+    regex: "\\bprint\\s*\\("
+    severity: error
+
+  no_dispatch_queue:
+    name: "No DispatchQueue"
+    message: "Prefer Swift concurrency over ad hoc DispatchQueue usage in Swift 6 code."
+    regex: "\\bDispatchQueue\\b"
+    severity: error
+
+redundant_self_in_closure:
+  severity: error
+
+explicit_init:
+  severity: error
+  include_bare_init: false
+
+force_cast: error
+force_try: error
+force_unwrapping: error
+
+trailing_comma:
+  mandatory_comma: true
+
+line_length:
+  warning: 100
+  error: 120
+  ignores_comments: false
+  ignores_urls: true
+
+function_body_length:
+  warning: 60
+  error: 100
+
+closure_body_length:
+  warning: 30
+  error: 50
+
+function_parameter_count:
+  warning: 5
+  error: 7
+
+type_body_length:
+  warning: 250
+  error: 400
+
+file_length:
+  warning: 500
+  error: 800
+
+large_tuple:
+  warning: 3
+  error: 4
+
+cyclomatic_complexity:
+  warning: 10
+  error: 15
+
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  excluded:
+    - fd
+    - id
+    - x
+    - y
+
+type_name:
+  min_length:
+    warning: 3
+  max_length:
+    warning: 45
+    error: 60

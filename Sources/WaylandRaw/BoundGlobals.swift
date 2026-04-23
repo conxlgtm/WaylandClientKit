@@ -29,8 +29,8 @@ extension BoundGlobals {
             }
         }
 
-        swl_xdg_wm_base_destroy(self.xdgWmBase)
-        swl_shm_destroy(self.shm)
-        swl_compositor_destroy(self.compositor)
+        swl_xdg_wm_base_destroy(xdgWmBase)
+        swl_shm_destroy(shm)
+        swl_compositor_destroy(compositor)
     }
 }

@@ -4,22 +4,22 @@ public struct RawGlobalAdvertisement: Equatable, Sendable, CustomStringConvertib
     public let advertisedVersion: RawVersion
 
     public init(
-        name: UInt32,
-        interfaceName: String,
-        advertisedVersion: RawVersion
+        name globalName: UInt32,
+        interfaceName globalInterfaceName: String,
+        advertisedVersion globalAdvertisedVersion: RawVersion
     ) {
-        self.name = name
-        self.interfaceName = interfaceName
-        self.advertisedVersion = advertisedVersion
+        name = globalName
+        interfaceName = globalInterfaceName
+        advertisedVersion = globalAdvertisedVersion
     }
 
     public func negotiatedVersion(
         supportedByClient clientSupportedVersion: RawVersion
     ) -> RawVersion {
-        Swift.min(self.advertisedVersion, clientSupportedVersion)
+        Swift.min(advertisedVersion, clientSupportedVersion)
     }
 
     public var description: String {
-        "\(self.interfaceName) name=\(self.name) \(self.advertisedVersion)"
+        "\(interfaceName) name=\(name) \(advertisedVersion)"
     }
 }

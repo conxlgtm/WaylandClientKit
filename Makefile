@@ -1,15 +1,17 @@
 SWIFT_FORMAT := ./Scripts/swift-format.sh
+SWIFTLINT := ./Scripts/swiftlint.sh
 SWIFT := ./Scripts/swift.sh
 
 .PHONY: format lint verify-generated test check install-pre-commit
 
 format:
-	@$(SWIFT_FORMAT) format --in-place Package.swift
-	@$(SWIFT_FORMAT) format --in-place --parallel --recursive Sources Tests
+	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
+	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place --parallel --recursive Sources Tests
 
 lint:
-	@$(SWIFT_FORMAT) lint --strict Package.swift
-	@$(SWIFT_FORMAT) lint --strict --parallel --recursive Sources Tests
+	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict Package.swift
+	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict --parallel --recursive Sources Tests
+	@$(SWIFTLINT) lint --strict --no-cache --force-exclude --config .swiftlint.yml Package.swift Sources Tests
 
 verify-generated:
 	@./Scripts/verify-generated.sh

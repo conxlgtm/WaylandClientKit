@@ -38,7 +38,7 @@ public enum EventLoop {
         display: OpaquePointer,
         timeoutMilliseconds: Int32
     ) throws {
-        try self.pumpOnce(
+        try pumpOnce(
             display: display,
             timeoutMilliseconds: timeoutMilliseconds,
             operations: .live
@@ -63,7 +63,7 @@ public enum EventLoop {
 
         let needsWriteWakeup: Bool
         do {
-            needsWriteWakeup = try self.flushDisplay(display: display, operations: operations)
+            needsWriteWakeup = try flushDisplay(display: display, operations: operations)
         } catch {
             operations.cancelRead(display)
             throw error
@@ -80,31 +80,12 @@ public enum EventLoop {
             revents: 0
         )
 
-        let ready = operations.pollFileDescriptor(&descriptor, 1, timeoutMilliseconds)
-
-        if ready > 0 {
-            if descriptor.revents & self.pollFailureEvents != 0 {
-                operations.cancelRead(display)
-                throw RuntimeError.pollEventFailed(revents: descriptor.revents)
-            }
-
-            if descriptor.revents & Int16(POLLIN) != 0 {
-                if operations.readEvents(display) < 0 {
-                    throw operations.makeDisplayError(display, errno)
-                }
-            } else {
-                operations.cancelRead(display)
-            }
-
-            if descriptor.revents & Int16(POLLOUT) != 0 {
-                _ = try self.flushDisplay(display: display, operations: operations)
-            }
-        } else {
-            operations.cancelRead(display)
-            if ready < 0 && errno != EINTR {
-                throw RuntimeError.pollFailed(errno)
-            }
-        }
+        try handlePollResult(
+            ready: operations.pollFileDescriptor(&descriptor, 1, timeoutMilliseconds),
+            descriptor: descriptor,
+            display: display,
+            operations: operations
+        )
 
         if operations.dispatchPending(display) < 0 {
             throw operations.makeDisplayError(display, errno)
@@ -140,6 +121,38 @@ public enum EventLoop {
             }
 
             throw operations.makeDisplayError(display, savedErrno)
+        }
+    }
+
+    private static func handlePollResult(
+        ready: Int32,
+        descriptor: pollfd,
+        display: OpaquePointer,
+        operations: EventLoopOperations
+    ) throws {
+        guard ready > 0 else {
+            operations.cancelRead(display)
+            if ready < 0, errno != EINTR {
+                throw RuntimeError.pollFailed(errno)
+            }
+            return
+        }
+
+        if descriptor.revents & pollFailureEvents != 0 {
+            operations.cancelRead(display)
+            throw RuntimeError.pollEventFailed(revents: descriptor.revents)
+        }
+
+        if descriptor.revents & Int16(POLLIN) != 0 {
+            if operations.readEvents(display) < 0 {
+                throw operations.makeDisplayError(display, errno)
+            }
+        } else {
+            operations.cancelRead(display)
+        }
+
+        if descriptor.revents & Int16(POLLOUT) != 0 {
+            _ = try flushDisplay(display: display, operations: operations)
         }
     }
 }

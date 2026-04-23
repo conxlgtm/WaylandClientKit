@@ -7,10 +7,10 @@ final class SyncCallbackOwner {
     private let callbacks: UnsafeMutablePointer<swl_callback_listener_callbacks>
 
     init() {
-        self.callbacks = .allocate(capacity: 1)
-        self.callbacks.initialize(to: swl_callback_listener_callbacks())
+        callbacks = .allocate(capacity: 1)
+        callbacks.initialize(to: swl_callback_listener_callbacks())
 
-        self.callbacks.pointee.done = { data, _, _ in
+        callbacks.pointee.done = { data, _, _ in
             guard let data else { return }
             let owner = CallbackBox<SyncCallbackOwner>.fromOpaque(data).owner
             owner?.didFire = true
@@ -18,16 +18,16 @@ final class SyncCallbackOwner {
     }
 
     func install(on callback: OpaquePointer) throws {
-        self.callbacks.pointee.data = self.callbackStorage.opaquePointer
+        callbacks.pointee.data = callbackStorage.opaquePointer
 
-        let result = swl_callback_add_listener(callback, self.callbacks)
+        let result = swl_callback_add_listener(callback, callbacks)
         guard result == 0 else {
             throw RuntimeError.syncCallbackListenerInstallationFailed
         }
     }
 
     deinit {
-        self.callbacks.deinitialize(count: 1)
-        self.callbacks.deallocate()
+        callbacks.deinitialize(count: 1)
+        callbacks.deallocate()
     }
 }

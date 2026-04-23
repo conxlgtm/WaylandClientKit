@@ -2,26 +2,26 @@ public final class CallbackBox<Owner: AnyObject> {
     private weak var storedOwner: Owner?
 
     public init(_ owner: Owner) {
-        self.storedOwner = owner
+        storedOwner = owner
     }
 
     public var owner: Owner? {
-        self.storedOwner
+        storedOwner
     }
 
     public var isValid: Bool {
-        self.storedOwner != nil
+        storedOwner != nil
     }
 
     public func invalidate() {
-        self.storedOwner = nil
+        storedOwner = nil
     }
 
     @discardableResult
     public func withOwner<Result>(
         _ body: (Owner) throws -> Result
     ) rethrows -> Result? {
-        guard let owner = self.storedOwner else {
+        guard let owner = storedOwner else {
             return nil
         }
 
@@ -50,15 +50,15 @@ public final class CallbackBoxStorage<Owner: AnyObject> {
     public let box: CallbackBox<Owner>
 
     public init(owner: Owner) {
-        self.box = CallbackBox(owner)
+        box = CallbackBox(owner)
     }
 
     public var owner: Owner? {
-        self.box.owner
+        box.owner
     }
 
     public var isValid: Bool {
-        self.box.isValid
+        box.isValid
     }
 
     /// Returns an unretained opaque pointer while this storage keeps the box alive.
@@ -66,10 +66,10 @@ public final class CallbackBoxStorage<Owner: AnyObject> {
     /// Raw wrappers should strongly retain `CallbackBoxStorage` for exactly as long
     /// as the returned pointer is registered with C listener state.
     public var opaquePointer: UnsafeMutableRawPointer {
-        self.box.toOpaque()
+        box.toOpaque()
     }
 
     public func invalidate() {
-        self.box.invalidate()
+        box.invalidate()
     }
 }

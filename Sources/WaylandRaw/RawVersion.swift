@@ -1,12 +1,14 @@
-public struct RawVersion: Hashable, Sendable, Comparable, ExpressibleByIntegerLiteral, CustomStringConvertible {
+public struct RawVersion: Hashable, Sendable, Comparable, ExpressibleByIntegerLiteral,
+    CustomStringConvertible
+{
     public let value: UInt32
 
-    public init(_ value: UInt32) {
-        self.value = value
+    public init(_ rawValue: UInt32) {
+        value = rawValue
     }
 
-    public init(integerLiteral value: UInt32) {
-        self.init(value)
+    public init(integerLiteral rawValue: UInt32) {
+        value = rawValue
     }
 
     public static func < (lhs: RawVersion, rhs: RawVersion) -> Bool {
@@ -14,6 +16,6 @@ public struct RawVersion: Hashable, Sendable, Comparable, ExpressibleByIntegerLi
     }
 
     public var description: String {
-        "v\(self.value)"
+        "v\(value)"
     }
 }

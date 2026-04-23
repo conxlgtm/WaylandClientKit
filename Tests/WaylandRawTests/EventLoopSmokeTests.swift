@@ -19,7 +19,7 @@ struct EventLoopSmokeTests {
 
     @Test
     func eventLoopRetriesFlushInterruptedBySignal() throws {
-        let display = OpaquePointer(bitPattern: 1)!
+        let display = try makeDisplayPointer()
         var flushCallCount = 0
         var cancelReadCallCount = 0
         var polledEvents = Int16(0)
@@ -58,7 +58,7 @@ struct EventLoopSmokeTests {
 
     @Test
     func eventLoopPollsForWritableAfterFlushWouldBlock() throws {
-        let display = OpaquePointer(bitPattern: 1)!
+        let display = try makeDisplayPointer()
         var flushCallCount = 0
         var cancelReadCallCount = 0
         var polledEvents = Int16(0)
@@ -97,8 +97,8 @@ struct EventLoopSmokeTests {
     }
 
     @Test
-    func eventLoopThrowsWhenPollReportsFailureEvent() {
-        let display = OpaquePointer(bitPattern: 1)!
+    func eventLoopThrowsWhenPollReportsFailureEvent() throws {
+        let display = try makeDisplayPointer()
         var cancelReadCallCount = 0
 
         let operations = EventLoopOperations(
@@ -132,8 +132,8 @@ struct EventLoopSmokeTests {
     }
 
     @Test
-    func eventLoopThrowsWhenPrepareReadFailsUnexpectedly() {
-        let display = OpaquePointer(bitPattern: 1)!
+    func eventLoopThrowsWhenPrepareReadFailsUnexpectedly() throws {
+        let display = try makeDisplayPointer()
         var dispatchPendingCallCount = 0
         var cancelReadCallCount = 0
 
@@ -219,5 +219,9 @@ struct EventLoopSmokeTests {
     func missingGlobalErrorIncludesInterfaceName() {
         let error = RuntimeError.missingRequiredGlobal("xdg_wm_base")
         #expect(error.description.contains("xdg_wm_base"))
+    }
+
+    private func makeDisplayPointer() throws -> OpaquePointer {
+        try #require(OpaquePointer(bitPattern: 1))
     }
 }
