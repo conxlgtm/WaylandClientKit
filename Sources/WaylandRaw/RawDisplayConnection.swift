@@ -10,15 +10,15 @@ public final class RawDisplayConnection {
     private let registryListenerOwner: RegistryListenerOwner
 
     private init(
-        display: RawDisplay,
-        registry: RawRegistry,
-        registryState: RegistryState,
-        registryListenerOwner: RegistryListenerOwner
+        display rawDisplay: RawDisplay,
+        registry rawRegistry: RawRegistry,
+        registryState rawRegistryState: RegistryState,
+        registryListenerOwner rawRegistryListenerOwner: RegistryListenerOwner
     ) {
-        self.display = display
-        self.registry = registry
-        self.registryState = registryState
-        self.registryListenerOwner = registryListenerOwner
+        display = rawDisplay
+        registry = rawRegistry
+        registryState = rawRegistryState
+        registryListenerOwner = rawRegistryListenerOwner
     }
 
     public static func connect() throws -> RawDisplayConnection {
@@ -63,7 +63,7 @@ public final class RawDisplayConnection {
     }
 
     public func completeInitialDiscovery() throws {
-        guard let syncCallback = swl_display_sync(self.display.opaquePointer) else {
+        guard let syncCallback = swl_display_sync(display.opaquePointer) else {
             throw RuntimeError.syncRequestFailed
         }
         defer { swl_callback_destroy(syncCallback) }
@@ -73,18 +73,18 @@ public final class RawDisplayConnection {
 
         while !waiter.didFire {
             try EventLoop.pumpOnce(
-                display: self.display.opaquePointer,
-                timeoutMilliseconds: 1000
+                display: display.opaquePointer,
+                timeoutMilliseconds: 1_000
             )
         }
     }
 
     public var globals: [RawGlobalAdvertisement] {
-        self.registryState.snapshot
+        registryState.snapshot
     }
 
     public func global(named interfaceName: String) -> RawGlobalAdvertisement? {
-        self.registryState.firstGlobal(named: interfaceName)
+        registryState.firstGlobal(named: interfaceName)
     }
 
     @discardableResult
@@ -93,18 +93,10 @@ public final class RawDisplayConnection {
             return boundGlobals
         }
 
-        let reg = self.registry.opaquePointer
-
-        guard let compositorGlobal = self.registryState.firstGlobal(named: "wl_compositor") else {
-            throw RuntimeError.missingRequiredGlobal("wl_compositor")
-        }
-        guard let shmGlobal = self.registryState.firstGlobal(named: "wl_shm") else {
-            throw RuntimeError.missingRequiredGlobal("wl_shm")
-        }
-        guard let xdgGlobal = self.registryState.firstGlobal(named: "xdg_wm_base") else {
-            throw RuntimeError.missingRequiredGlobal("xdg_wm_base")
-        }
-
+        let reg = registry.opaquePointer
+        let compositorGlobal = try requiredGlobal(named: "wl_compositor")
+        let shmGlobal = try requiredGlobal(named: "wl_shm")
+        let xdgGlobal = try requiredGlobal(named: "xdg_wm_base")
         let compositorVersion = compositorGlobal.negotiatedVersion(
             supportedByClient: SupportedVersions.wlCompositor
         )
@@ -125,17 +117,65 @@ public final class RawDisplayConnection {
             throw RuntimeError.bindFailed("wl_compositor")
         }
 
-        guard
-            let shm = swl_registry_bind_wl_shm(
-                reg,
-                shmGlobal.name,
-                shmVersion.value
-            )
-        else {
+        let shm = try bindSharedMemory(
+            registry: reg,
+            global: shmGlobal,
+            version: shmVersion,
+            compositor: compositor
+        )
+        let xdgWmBase = try bindXDGWMBase(
+            registry: reg,
+            global: xdgGlobal,
+            version: xdgVersion,
+            compositor: compositor,
+            shm: shm
+        )
+        let seatBinding = bindSeatIfAvailable(registry: reg)
+
+        let bound = BoundGlobals(
+            compositor: compositor,
+            compositorVersion: compositorVersion,
+            shm: shm,
+            shmVersion: shmVersion,
+            xdgWmBase: xdgWmBase,
+            xdgWmBaseVersion: xdgVersion,
+            seat: seatBinding.pointer,
+            seatVersion: seatBinding.version
+        )
+
+        boundGlobals = bound
+        return bound
+    }
+
+    private func requiredGlobal(named interfaceName: String) throws -> RawGlobalAdvertisement {
+        guard let global = registryState.firstGlobal(named: interfaceName) else {
+            throw RuntimeError.missingRequiredGlobal(interfaceName)
+        }
+
+        return global
+    }
+
+    private func bindSharedMemory(
+        registry reg: OpaquePointer,
+        global shmGlobal: RawGlobalAdvertisement,
+        version shmVersion: RawVersion,
+        compositor: OpaquePointer
+    ) throws -> OpaquePointer {
+        guard let shm = swl_registry_bind_wl_shm(reg, shmGlobal.name, shmVersion.value) else {
             swl_compositor_destroy(compositor)
             throw RuntimeError.bindFailed("wl_shm")
         }
 
+        return shm
+    }
+
+    private func bindXDGWMBase(
+        registry reg: OpaquePointer,
+        global xdgGlobal: RawGlobalAdvertisement,
+        version xdgVersion: RawVersion,
+        compositor: OpaquePointer,
+        shm: OpaquePointer
+    ) throws -> OpaquePointer {
         guard
             let xdgWmBase = swl_registry_bind_xdg_wm_base(
                 reg,
@@ -148,55 +188,40 @@ public final class RawDisplayConnection {
             throw RuntimeError.bindFailed("xdg_wm_base")
         }
 
-        // wl_seat is optional
-        var seat: OpaquePointer? = nil
-        var seatVersion: RawVersion? = nil
-        if let seatGlobal = self.registryState.firstGlobal(named: "wl_seat") {
-            let negotiated = seatGlobal.negotiatedVersion(
-                supportedByClient: SupportedVersions.wlSeat
-            )
-            if let seatPointer = swl_registry_bind_wl_seat(
-                reg,
-                seatGlobal.name,
-                negotiated.value
-            ) {
-                seat = seatPointer
-                seatVersion = negotiated
-            }
+        return xdgWmBase
+    }
+
+    private func bindSeatIfAvailable(
+        registry reg: OpaquePointer
+    ) -> (pointer: OpaquePointer?, version: RawVersion?) {
+        guard let seatGlobal = registryState.firstGlobal(named: "wl_seat") else {
+            return (nil, nil)
         }
 
-        let bound = BoundGlobals(
-            compositor: compositor,
-            compositorVersion: compositorVersion,
-            shm: shm,
-            shmVersion: shmVersion,
-            xdgWmBase: xdgWmBase,
-            xdgWmBaseVersion: xdgVersion,
-            seat: seat,
-            seatVersion: seatVersion
+        let negotiated = seatGlobal.negotiatedVersion(
+            supportedByClient: SupportedVersions.wlSeat
         )
-
-        self.boundGlobals = bound
-        return bound
+        let seat = swl_registry_bind_wl_seat(reg, seatGlobal.name, negotiated.value)
+        return (seat, seat == nil ? nil : negotiated)
     }
 
     public func pumpEvents(timeoutMilliseconds: Int32 = -1) throws {
         try EventLoop.pumpOnce(
-            display: self.display.opaquePointer,
+            display: display.opaquePointer,
             timeoutMilliseconds: timeoutMilliseconds
         )
     }
 
     public func runEventLoop(while shouldContinue: () -> Bool) throws {
         try EventLoop.run(
-            display: self.display.opaquePointer,
+            display: display.opaquePointer,
             shouldContinue: shouldContinue
         )
     }
 
     deinit {
-        self.boundGlobals?.destroy()
-        swl_registry_destroy(self.registry.opaquePointer)
-        wl_display_disconnect(self.display.opaquePointer)
+        boundGlobals?.destroy()
+        swl_registry_destroy(registry.opaquePointer)
+        wl_display_disconnect(display.opaquePointer)
     }
 }

@@ -5,19 +5,20 @@ public struct RawProxyMetadata: Equatable, Sendable, CustomStringConvertible {
     public let objectID: RawObjectID?
 
     public init(
-        interfaceName: String,
-        version: RawVersion,
-        ownership: RawOwnership,
-        objectID: RawObjectID? = nil
+        interfaceName proxyInterfaceName: String,
+        version proxyVersion: RawVersion,
+        ownership proxyOwnership: RawOwnership,
+        objectID proxyObjectID: RawObjectID? = nil
     ) {
-        self.interfaceName = interfaceName
-        self.version = version
-        self.ownership = ownership
-        self.objectID = objectID
+        interfaceName = proxyInterfaceName
+        version = proxyVersion
+        ownership = proxyOwnership
+        objectID = proxyObjectID
     }
 
     public var description: String {
-        let objectIDDescription = self.objectID?.description ?? "id=?"
-        return "\(self.interfaceName) \(objectIDDescription) \(self.version) ownership=\(self.ownership)"
+        let objectIDDescription = objectID?.description ?? "id=?"
+        return
+            "\(interfaceName) \(objectIDDescription) \(version) ownership=\(ownership)"
     }
 }

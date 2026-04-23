@@ -5,13 +5,13 @@ public final class RawDisplay: CustomStringConvertible {
     public let metadata: RawProxyMetadata
 
     public init(
-        opaquePointer: OpaquePointer,
+        opaquePointer displayPointer: OpaquePointer,
         version: RawVersion,
         ownership: RawOwnership = .connectionLifetime,
         objectID: RawObjectID? = nil
     ) {
-        self.opaquePointer = opaquePointer
-        self.metadata = RawProxyMetadata(
+        opaquePointer = displayPointer
+        metadata = RawProxyMetadata(
             interfaceName: "wl_display",
             version: version,
             ownership: ownership,
@@ -20,6 +20,6 @@ public final class RawDisplay: CustomStringConvertible {
     }
 
     public var description: String {
-        self.metadata.description
+        metadata.description
     }
 }

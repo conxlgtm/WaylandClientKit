@@ -39,9 +39,10 @@ struct RawSupportTests {
     }
 
     @Test
-    func rawDisplayDefaultsToConnectionLifetimeOwnership() {
+    func rawDisplayDefaultsToConnectionLifetimeOwnership() throws {
+        let displayPointer = try #require(OpaquePointer(bitPattern: 0x10))
         let display = RawDisplay(
-            opaquePointer: OpaquePointer(bitPattern: 0x10)!,
+            opaquePointer: displayPointer,
             version: 1
         )
 
@@ -50,9 +51,10 @@ struct RawSupportTests {
     }
 
     @Test
-    func rawRegistryDescriptionShowsSuppliedMetadata() {
+    func rawRegistryDescriptionShowsSuppliedMetadata() throws {
+        let registryPointer = try #require(OpaquePointer(bitPattern: 0x20))
         let registry = RawRegistry(
-            opaquePointer: OpaquePointer(bitPattern: 0x20)!,
+            opaquePointer: registryPointer,
             version: 1,
             ownership: .borrowed,
             objectID: 2

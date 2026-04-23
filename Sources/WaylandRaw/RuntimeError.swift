@@ -15,7 +15,9 @@ public enum RuntimeError: Error, CustomStringConvertible {
     case systemError(errno: Int32)
     case protocolError(interfaceName: String?, objectID: UInt32, code: Int32)
 
-    public static func fromDisplay(_ display: OpaquePointer, fallbackErrno: Int32? = nil) -> RuntimeError {
+    public static func fromDisplay(_ display: OpaquePointer, fallbackErrno: Int32? = nil)
+        -> RuntimeError
+    {
         let error = wl_display_get_error(display)
 
         if error == EPROTO {

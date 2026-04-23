@@ -5,6 +5,6 @@ public enum RawOwnership: String, Sendable, CustomStringConvertible {
     case connectionLifetime
 
     public var description: String {
-        self.rawValue
+        rawValue
     }
 }
