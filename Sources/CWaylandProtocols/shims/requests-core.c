@@ -1,4 +1,11 @@
 #include "wayforge-shims.h"
+#include "generated/wayland-client-protocol.h"
+
+#include <sys/mman.h>
+
+#ifndef MFD_CLOEXEC
+#define MFD_CLOEXEC 0x0001U
+#endif
 
 struct wl_surface *swl_compositor_create_surface(struct wl_compositor *compositor)
 {
@@ -31,6 +38,28 @@ void swl_surface_attach(
 void swl_surface_commit(struct wl_surface *surface)
 {
     wl_surface_commit(surface);
+}
+
+void swl_surface_damage(
+    struct wl_surface *surface, int32_t x, int32_t y,
+    int32_t width, int32_t height)
+    {
+        wl_surface_damage(surface, x, y, width, height);
+    }
+
+uint32_t swl_shm_format_xrgb8888(void)
+{
+    return WL_SHM_FORMAT_XRGB8888;
+}
+
+int swl_memfd_create(const char *name, unsigned int flags)
+{
+    return memfd_create(name, flags);
+}
+
+unsigned int swl_mfd_cloexec(void)
+{
+    return MFD_CLOEXEC;
 }
 
 void swl_surface_damage_buffer(
