@@ -51,6 +51,16 @@ void swl_surface_commit(struct wl_surface *surface);
 void swl_surface_damage_buffer(
     struct wl_surface *surface, int32_t x, int32_t y,
     int32_t width, int32_t height);
+// for older wl_surface versions
+void swl_surface_damage(struct wl_surface *surface, int32_t xd, int32_t y, int32_t width, int32_t height);
+
+uint32_t swl_shm_format_xrgb8888(void);
+uint32_t swl_shm_format_argb8888(void);
+
+// create file backed memory for sharing with Wayland
+int swl_memfd_create(const char *name, unsigned int flags);
+// close on exec flags
+unsigned int swl_mfd_cloexec(void);
 
 /* ------------------------------------------------------------------ */
 /*  XDG request wrappers                                              */
