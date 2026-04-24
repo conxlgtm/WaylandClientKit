@@ -5,6 +5,7 @@ public final class RawDisplayConnection {
     public let display: RawDisplay
     public let registry: RawRegistry
     public private(set) var boundGlobals: BoundGlobals?
+    private var xdgWmBaseOwner: XDGWMBaseOwner?
 
     private let registryState: RegistryState
     private let registryListenerOwner: RegistryListenerOwner
@@ -130,6 +131,11 @@ public final class RawDisplayConnection {
             compositor: compositor,
             shm: shm
         )
+        let wmBaseOwner = try installXDGWMBaseListener(
+            on: xdgWmBase,
+            shm: shm,
+            compositor: compositor
+        )
         let seatBinding = bindSeatIfAvailable(registry: reg)
 
         let bound = BoundGlobals(
@@ -144,6 +150,7 @@ public final class RawDisplayConnection {
         )
 
         boundGlobals = bound
+        xdgWmBaseOwner = wmBaseOwner
         return bound
     }
 
@@ -189,6 +196,24 @@ public final class RawDisplayConnection {
         }
 
         return xdgWmBase
+    }
+
+    private func installXDGWMBaseListener(
+        on xdgWmBase: OpaquePointer,
+        shm: OpaquePointer,
+        compositor: OpaquePointer
+    ) throws -> XDGWMBaseOwner {
+        let owner = XDGWMBaseOwner(wmBase: xdgWmBase)
+        do {
+            try owner.install()
+        } catch {
+            swl_xdg_wm_base_destroy(xdgWmBase)
+            swl_shm_destroy(shm)
+            swl_compositor_destroy(compositor)
+            throw error
+        }
+
+        return owner
     }
 
     private func bindSeatIfAvailable(
