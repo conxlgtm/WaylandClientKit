@@ -49,6 +49,6 @@ struct VersionNegotiationTests {
         #expect(SupportedVersions.wlCompositor == RawVersion(6))
         #expect(SupportedVersions.wlShm == RawVersion(1))
         #expect(SupportedVersions.xdgWmBase == RawVersion(7))
-        #expect(SupportedVersions.wlSeat == RawVersion(9))
+        #expect(SupportedVersions.wlSeat == RawVersion(10))
     }
 }

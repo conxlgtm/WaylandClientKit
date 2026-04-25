@@ -5,7 +5,7 @@ public enum SupportedVersions {
     public static let wlCompositor: RawVersion = 6
     public static let wlShm: RawVersion = 1
     public static let xdgWmBase: RawVersion = 7
-    public static let wlSeat: RawVersion = 9
+    public static let wlSeat: RawVersion = 10
 }
 
 public final class BoundGlobals {
