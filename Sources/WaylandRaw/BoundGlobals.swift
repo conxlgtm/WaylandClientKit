@@ -8,29 +8,64 @@ public enum SupportedVersions {
     public static let wlSeat: RawVersion = 9
 }
 
-public struct BoundGlobals {
-    public let compositor: OpaquePointer
-    public let compositorVersion: RawVersion
-    public let shm: OpaquePointer
-    public let shmVersion: RawVersion
-    public let xdgWmBase: OpaquePointer
-    public let xdgWmBaseVersion: RawVersion
-    public let seat: OpaquePointer?
-    public let seatVersion: RawVersion?
+public final class BoundGlobals {
+    public let compositor: RawCompositor
+    public let sharedMemory: RawSharedMemory
+    public let xdgWMBase: RawXDGWMBase
+    public let seat: RawSeat?
+
+    private var isDestroyed = false
+
+    init(
+        compositor boundCompositor: RawCompositor,
+        sharedMemory boundSharedMemory: RawSharedMemory,
+        xdgWMBase boundXDGWMBase: RawXDGWMBase,
+        seat boundSeat: RawSeat?
+    ) {
+        compositor = boundCompositor
+        sharedMemory = boundSharedMemory
+        xdgWMBase = boundXDGWMBase
+        seat = boundSeat
+    }
+
+    func destroy() {
+        guard !isDestroyed else { return }
+
+        isDestroyed = true
+        seat?.destroy()
+        xdgWMBase.destroy()
+        sharedMemory.destroy()
+        compositor.destroy()
+    }
+
+    deinit {
+        destroy()
+    }
 }
 
-extension BoundGlobals {
-    func destroy() {
-        if let seat {
-            if let seatVersion, seatVersion >= 5 {
-                swl_seat_release(seat)
-            } else {
-                swl_seat_destroy(seat)
-            }
-        }
+public final class RawSeat {
+    let pointer: OpaquePointer
+    public let version: RawVersion
 
-        swl_xdg_wm_base_destroy(xdgWmBase)
-        swl_shm_destroy(shm)
-        swl_compositor_destroy(compositor)
+    private var isDestroyed = false
+
+    init(pointer seatPointer: OpaquePointer, version seatVersion: RawVersion) {
+        pointer = seatPointer
+        version = seatVersion
+    }
+
+    func destroy() {
+        guard !isDestroyed else { return }
+
+        isDestroyed = true
+        if version >= 5 {
+            swl_seat_release(pointer)
+        } else {
+            swl_seat_destroy(pointer)
+        }
+    }
+
+    deinit {
+        destroy()
     }
 }

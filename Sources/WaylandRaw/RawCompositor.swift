@@ -2,10 +2,12 @@ import CWaylandClientSystem
 import CWaylandProtocols
 
 public final class RawCompositor {
-    public let pointer: OpaquePointer
+    let pointer: OpaquePointer
     public let version: RawVersion
 
-    public init(pointer compositorPointer: OpaquePointer, version compositorVersion: RawVersion) {
+    private var isDestroyed = false
+
+    init(pointer compositorPointer: OpaquePointer, version compositorVersion: RawVersion) {
         pointer = compositorPointer
         version = compositorVersion
     }
@@ -16,5 +18,16 @@ public final class RawCompositor {
         }
 
         return RawSurface(pointer: surface, version: version)
+    }
+
+    func destroy() {
+        guard !isDestroyed else { return }
+
+        isDestroyed = true
+        swl_compositor_destroy(pointer)
+    }
+
+    deinit {
+        destroy()
     }
 }
