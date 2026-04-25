@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if ! command -v swift > /dev/null 2>&1; then
-    echo "Swift 6.3 must already be installed and on PATH."
+    echo "Swift 6.3.1 must already be installed and on PATH."
     exit 1
 fi
 

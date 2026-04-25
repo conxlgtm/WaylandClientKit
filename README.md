@@ -24,7 +24,7 @@ Not implemented yet:
 ## Reference Environment
 
 - Fedora
-- Swift 6.3
+- Swift 6.3.1
 - `wayland-devel`
 - `wayland-protocols-devel`
 - `pkgconf-pkg-config`
