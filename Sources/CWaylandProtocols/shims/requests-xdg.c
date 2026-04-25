@@ -1,4 +1,4 @@
-#include "wayforge-shims.h"
+#include "swift-wayland-shims.h"
 #include "generated/xdg-shell-client-protocol.h"
 
 struct xdg_surface *swl_xdg_wm_base_get_xdg_surface(

@@ -1,6 +1,6 @@
-# Wayforge
+# SwiftWayland
 
-Wayforge is a Swift package for Wayland clients on Linux.
+SwiftWayland is a Swift package for Wayland clients on Linux.
 
 ## Scope
 
@@ -74,7 +74,7 @@ make check
 Run the demo target:
 
 ```bash
-swift run wayforge-demo
+swift run swift-wayland-demo
 ```
 
 ## Documents

@@ -28,7 +28,7 @@ These files are committed.
 
 These files are not generated:
 
-- `Sources/CWaylandProtocols/include/wayforge-shims.h`
+- `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
 - `Sources/CWaylandProtocols/shims/*.c`
 
 ## Tools
@@ -88,7 +88,7 @@ Writes:
 
 Does not write:
 
-- `Sources/CWaylandProtocols/include/wayforge-shims.h`
+- `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
 - `Sources/CWaylandProtocols/shims/`
 
 ### `Scripts/verify-generated.sh`

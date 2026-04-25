@@ -2,7 +2,7 @@ import WaylandClient
 import WaylandRaw
 
 @main
-enum WayforgeDemo {
+enum SwiftWaylandDemo {
     static func main() throws {
         let connection = try RawDisplayConnection.connect()
         try connection.completeInitialDiscovery()

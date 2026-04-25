@@ -196,8 +196,14 @@ public final class TopLevelWindow {
 
     private func handleFrameDone() {
         pendingFrameRegistration = nil
-        needsRedrawStorage = true
         dropReleasedRetiredPools()
+
+        guard !isClosedStorage else {
+            needsRedrawStorage = false
+            return
+        }
+
+        needsRedrawStorage = true
     }
 
     private func handleCloseRequested() {

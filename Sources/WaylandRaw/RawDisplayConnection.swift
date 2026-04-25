@@ -79,7 +79,7 @@ public final class RawDisplayConnection {
             )
         }
 
-        registration.keepAliveForCallbackLifetime()
+        registration.keepAliveUntilHere()
     }
 
     public var globals: [RawGlobalAdvertisement] {

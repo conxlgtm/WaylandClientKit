@@ -41,7 +41,7 @@ final class WaylandCallbackRegistrationState {
 
         callbacks.pointee.done = { data, _, _ in
             guard let data else {
-                preconditionFailure("Wayland frame callback fired without Swift state")
+                preconditionFailure("Wayland callback fired without Swift state")
             }
 
             let state = Unmanaged<WaylandCallbackRegistrationState>
@@ -66,7 +66,7 @@ final class WaylandCallbackRegistrationState {
 
     func handleDone() {
         guard lifecycle == .pending else {
-            preconditionFailure("Wayland frame callback fired after completion")
+            preconditionFailure("Wayland callback fired after completion")
         }
 
         lifecycle = .firing
@@ -127,7 +127,7 @@ public struct FrameCallbackRegistration: ~Copyable {
         state.cancel()
     }
 
-    func keepAliveForCallbackLifetime() {
+    func keepAliveUntilHere() {
         // A deliberate no-op used when the callback may fire before scope exit.
     }
 

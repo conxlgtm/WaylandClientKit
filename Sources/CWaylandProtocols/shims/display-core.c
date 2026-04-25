@@ -1,4 +1,4 @@
-#include "wayforge-shims.h"
+#include "swift-wayland-shims.h"
 #include "generated/wayland-client-protocol.h"
 
 struct wl_registry *swl_display_get_registry(struct wl_display *display)

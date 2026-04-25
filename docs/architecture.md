@@ -92,14 +92,14 @@ Generated outputs:
 
 Shim files:
 
-- `Sources/CWaylandProtocols/include/wayforge-shims.h`
+- `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
 - `Sources/CWaylandProtocols/shims/`
 
 Swift code:
 
 - `Sources/WaylandRaw/`
 - `Sources/WaylandClient/`
-- `Sources/WayforgeDemo/`
+- `Sources/SwiftWaylandDemo/`
 
 ## Current Checks
 
