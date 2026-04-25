@@ -84,6 +84,11 @@ struct wl_touch *swl_seat_get_touch(struct wl_seat *seat)
     return wl_seat_get_touch(seat);
 }
 
+uint32_t swl_proxy_get_version(void *proxy)
+{
+    return wl_proxy_get_version((struct wl_proxy *)proxy);
+}
+
 void swl_registry_destroy(struct wl_registry *registry)
 {
     wl_registry_destroy(registry);
