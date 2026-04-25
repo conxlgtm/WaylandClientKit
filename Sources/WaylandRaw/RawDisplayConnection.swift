@@ -2,10 +2,9 @@ import CWaylandClientSystem
 import CWaylandProtocols
 
 public final class RawDisplayConnection {
-    public let display: RawDisplay
-    public let registry: RawRegistry
+    let display: RawDisplay
+    let registry: RawRegistry
     public private(set) var boundGlobals: BoundGlobals?
-    private var xdgWmBaseOwner: XDGWMBaseOwner?
 
     private let registryState: RegistryState
     private let registryListenerOwner: RegistryListenerOwner
@@ -65,19 +64,22 @@ public final class RawDisplayConnection {
 
     public func completeInitialDiscovery() throws {
         guard let syncCallback = swl_display_sync(display.opaquePointer) else {
-            throw RuntimeError.syncRequestFailed
+            throw RuntimeError.displaySyncRequestFailed
         }
-        defer { swl_callback_destroy(syncCallback) }
 
-        let waiter = SyncCallbackOwner()
-        try waiter.install(on: syncCallback)
+        var didFire = false
+        let registration = try FrameCallbackRegistration(pointer: syncCallback) {
+            didFire = true
+        }
 
-        while !waiter.didFire {
+        while !didFire {
             try EventLoop.pumpOnce(
                 display: display.opaquePointer,
                 timeoutMilliseconds: 1_000
             )
         }
+
+        registration.keepAliveForCallbackLifetime()
     }
 
     public var globals: [RawGlobalAdvertisement] {
@@ -117,40 +119,34 @@ public final class RawDisplayConnection {
         else {
             throw RuntimeError.bindFailed("wl_compositor")
         }
+        let compositorWrapper = RawCompositor(
+            pointer: compositor,
+            version: compositorVersion
+        )
 
         let shm = try bindSharedMemory(
             registry: reg,
             global: shmGlobal,
             version: shmVersion,
-            compositor: compositor
+            compositor: compositorWrapper
         )
         let xdgWmBase = try bindXDGWMBase(
             registry: reg,
             global: xdgGlobal,
             version: xdgVersion,
-            compositor: compositor,
+            compositor: compositorWrapper,
             shm: shm
-        )
-        let wmBaseOwner = try installXDGWMBaseListener(
-            on: xdgWmBase,
-            shm: shm,
-            compositor: compositor
         )
         let seatBinding = bindSeatIfAvailable(registry: reg)
 
         let bound = BoundGlobals(
-            compositor: compositor,
-            compositorVersion: compositorVersion,
-            shm: shm,
-            shmVersion: shmVersion,
-            xdgWmBase: xdgWmBase,
-            xdgWmBaseVersion: xdgVersion,
-            seat: seatBinding.pointer,
-            seatVersion: seatBinding.version
+            compositor: compositorWrapper,
+            sharedMemory: shm,
+            xdgWMBase: xdgWmBase,
+            seat: seatBinding
         )
 
         boundGlobals = bound
-        xdgWmBaseOwner = wmBaseOwner
         return bound
     }
 
@@ -166,23 +162,23 @@ public final class RawDisplayConnection {
         registry reg: OpaquePointer,
         global shmGlobal: RawGlobalAdvertisement,
         version shmVersion: RawVersion,
-        compositor: OpaquePointer
-    ) throws -> OpaquePointer {
+        compositor: RawCompositor
+    ) throws -> RawSharedMemory {
         guard let shm = swl_registry_bind_wl_shm(reg, shmGlobal.name, shmVersion.value) else {
-            swl_compositor_destroy(compositor)
+            compositor.destroy()
             throw RuntimeError.bindFailed("wl_shm")
         }
 
-        return shm
+        return .init(pointer: shm, version: shmVersion)
     }
 
     private func bindXDGWMBase(
         registry reg: OpaquePointer,
         global xdgGlobal: RawGlobalAdvertisement,
         version xdgVersion: RawVersion,
-        compositor: OpaquePointer,
-        shm: OpaquePointer
-    ) throws -> OpaquePointer {
+        compositor: RawCompositor,
+        shm: RawSharedMemory
+    ) throws -> RawXDGWMBase {
         guard
             let xdgWmBase = swl_registry_bind_xdg_wm_base(
                 reg,
@@ -190,44 +186,36 @@ public final class RawDisplayConnection {
                 xdgVersion.value
             )
         else {
-            swl_shm_destroy(shm)
-            swl_compositor_destroy(compositor)
+            shm.destroy()
+            compositor.destroy()
             throw RuntimeError.bindFailed("xdg_wm_base")
         }
 
-        return xdgWmBase
-    }
-
-    private func installXDGWMBaseListener(
-        on xdgWmBase: OpaquePointer,
-        shm: OpaquePointer,
-        compositor: OpaquePointer
-    ) throws -> XDGWMBaseOwner {
-        let owner = XDGWMBaseOwner(wmBase: xdgWmBase)
         do {
-            try owner.install()
+            return try .init(pointer: xdgWmBase, version: xdgVersion)
         } catch {
             swl_xdg_wm_base_destroy(xdgWmBase)
-            swl_shm_destroy(shm)
-            swl_compositor_destroy(compositor)
+            shm.destroy()
+            compositor.destroy()
             throw error
         }
-
-        return owner
     }
 
     private func bindSeatIfAvailable(
         registry reg: OpaquePointer
-    ) -> (pointer: OpaquePointer?, version: RawVersion?) {
+    ) -> RawSeat? {
         guard let seatGlobal = registryState.firstGlobal(named: "wl_seat") else {
-            return (nil, nil)
+            return nil
         }
 
         let negotiated = seatGlobal.negotiatedVersion(
             supportedByClient: SupportedVersions.wlSeat
         )
-        let seat = swl_registry_bind_wl_seat(reg, seatGlobal.name, negotiated.value)
-        return (seat, seat == nil ? nil : negotiated)
+        guard let seat = swl_registry_bind_wl_seat(reg, seatGlobal.name, negotiated.value) else {
+            return nil
+        }
+
+        return .init(pointer: seat, version: negotiated)
     }
 
     public func pumpEvents(timeoutMilliseconds: Int32 = -1) throws {

@@ -1,0 +1,119 @@
+import Testing
+
+@testable import WaylandRaw
+
+@Suite
+struct FrameCallbackRegistrationTests {
+    @Test
+    func consumingCancelAndDeinitDestroyOnce() throws {
+        let counters = CallbackCounters()
+        let pointer = try #require(OpaquePointer(bitPattern: 0x100))
+
+        do {
+            let registration = try FrameCallbackRegistration(
+                pointer: pointer,
+                onDone: {
+                    // The cancellation path should not invoke this closure.
+                },
+                operations: counters.operations(addResult: 0)
+            )
+
+            registration.cancel()
+        }
+
+        #expect(counters.addCount == 1)
+        #expect(counters.destroyCount == 1)
+    }
+
+    @Test
+    func installFailureDestroysProxyBeforeThrowing() throws {
+        let counters = CallbackCounters()
+        let pointer = try #require(OpaquePointer(bitPattern: 0x200))
+        var didThrow = false
+
+        do {
+            _ = try FrameCallbackRegistration(
+                pointer: pointer,
+                onDone: {
+                    // The failed install path should not invoke this closure.
+                },
+                operations: counters.operations(addResult: -1)
+            )
+        } catch {
+            didThrow = true
+        }
+
+        #expect(didThrow)
+        #expect(counters.addCount == 1)
+        #expect(counters.destroyCount == 1)
+    }
+
+    @Test
+    func doneFiresClosureAtMostOnceAndDoesNotDestroyCompositorOwnedProxy() throws {
+        let counters = CallbackCounters()
+        let pointer = try #require(OpaquePointer(bitPattern: 0x300))
+        var fireCount = 0
+        let state = WaylandCallbackRegistrationState(
+            pointer: pointer,
+            onDone: {
+                fireCount += 1
+            },
+            operations: counters.operations(addResult: 0)
+        )
+
+        try state.install()
+        state.handleDone()
+        state.cancel()
+
+        #expect(fireCount == 1)
+        #expect(state.lifecycle == .fired)
+        #expect(counters.destroyCount == 0)
+    }
+
+    @Test
+    func cancelIsIdempotentOnState() throws {
+        let counters = CallbackCounters()
+        let pointer = try #require(OpaquePointer(bitPattern: 0x400))
+        let state = WaylandCallbackRegistrationState(
+            pointer: pointer,
+            onDone: {
+                // Cancellation is being tested, not callback delivery.
+            },
+            operations: counters.operations(addResult: 0)
+        )
+
+        try state.install()
+        state.cancel()
+        state.cancel()
+
+        #expect(state.lifecycle == .cancelled)
+        #expect(counters.destroyCount == 1)
+    }
+}
+
+private final class CallbackCounters {
+    private(set) var addCount = 0
+    private(set) var destroyCount = 0
+
+    func operations(addResult: Int32) -> WaylandCallbackOperations {
+        let counters = self
+
+        return WaylandCallbackOperations(
+            addListener: { _, _ in
+                counters.recordAdd()
+                return addResult
+            },
+            destroy: { _ in
+                counters.recordDestroy()
+            }
+        )
+    }
+
+    private func recordAdd() {
+        addCount += 1
+    }
+
+    private func recordDestroy() {
+        destroyCount += 1
+    }
+}

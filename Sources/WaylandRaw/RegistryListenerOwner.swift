@@ -12,9 +12,13 @@ final class RegistryListenerOwner {
         callbacks.initialize(to: swl_registry_listener_callbacks())
 
         callbacks.pointee.global = { data, _, name, interface, version in
-            guard let data, let interface else { return }
-            let owner = CallbackBox<RegistryListenerOwner>.fromOpaque(data).owner
-            owner?.state.recordGlobal(
+            guard let data, let interface else {
+                preconditionFailure("wl_registry global fired without Swift state")
+            }
+            let owner = CallbackBox<RegistryListenerOwner>
+                .fromOpaque(data)
+                .requireOwner()
+            owner.state.recordGlobal(
                 name: name,
                 interfaceName: String(cString: interface),
                 version: version
@@ -22,9 +26,13 @@ final class RegistryListenerOwner {
         }
 
         callbacks.pointee.global_remove = { data, _, name in
-            guard let data else { return }
-            let owner = CallbackBox<RegistryListenerOwner>.fromOpaque(data).owner
-            owner?.state.removeGlobal(name: name)
+            guard let data else {
+                preconditionFailure("wl_registry global_remove fired without Swift state")
+            }
+            let owner = CallbackBox<RegistryListenerOwner>
+                .fromOpaque(data)
+                .requireOwner()
+            owner.state.removeGlobal(name: name)
         }
     }
 

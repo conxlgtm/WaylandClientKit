@@ -2,14 +2,28 @@ import CWaylandClientSystem
 import CWaylandProtocols
 
 public final class RawSurface {
-    public let pointer: OpaquePointer
+    let pointer: OpaquePointer
     public let version: RawVersion
 
     private var isDestroyed = false
 
-    public init(pointer surfacePointer: OpaquePointer, version surfaceVersion: RawVersion) {
+    init(pointer surfacePointer: OpaquePointer, version surfaceVersion: RawVersion) {
         pointer = surfacePointer
         version = surfaceVersion
+    }
+
+    public func requestFrame(onDone handler: @escaping () -> Void) throws
+        -> FrameCallbackRegistration
+    {
+        guard let callback = swl_surface_frame(pointer) else {
+            throw RuntimeError.frameRequestFailed
+        }
+
+        return try .init(pointer: callback, onDone: handler)
+    }
+
+    public func attach(buffer: RawBuffer?, x: Int32 = 0, y: Int32 = 0) {
+        swl_surface_attach(pointer, buffer?.pointer, x, y)
     }
 
     public func damageFullBuffer(width: Int32, height: Int32) {

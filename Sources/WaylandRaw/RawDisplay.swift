@@ -1,10 +1,10 @@
 import CWaylandClientSystem
 
 public final class RawDisplay: CustomStringConvertible {
-    public let opaquePointer: OpaquePointer
+    let opaquePointer: OpaquePointer
     public let metadata: RawProxyMetadata
 
-    public init(
+    init(
         opaquePointer displayPointer: OpaquePointer,
         version: RawVersion,
         ownership: RawOwnership = .connectionLifetime,

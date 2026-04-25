@@ -6,7 +6,8 @@ public enum RuntimeError: Error, CustomStringConvertible {
     case connectionFailed
     case registryCreationFailed
     case registryListenerInstallationFailed
-    case syncRequestFailed
+    case displaySyncRequestFailed
+    case frameRequestFailed
     case syncCallbackListenerInstallationFailed
     case missingRequiredGlobal(String)
     case bindFailed(String)
@@ -50,8 +51,10 @@ public enum RuntimeError: Error, CustomStringConvertible {
             "Wayland registry creation failed"
         case .registryListenerInstallationFailed:
             "Wayland registry listener installation failed"
-        case .syncRequestFailed:
+        case .displaySyncRequestFailed:
             "Wayland sync request failed"
+        case .frameRequestFailed:
+            "Wayland frame request failed"
         case .syncCallbackListenerInstallationFailed:
             "Wayland sync callback listener installation failed"
         case .missingRequiredGlobal(let name):
