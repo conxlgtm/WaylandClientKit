@@ -4,7 +4,7 @@ public struct SoftwareFrame {
     public let stride: Int32
     private let bytes: UnsafeMutableRawBufferPointer
 
-    public var wordsPerRow: Int {
+    private var wordsPerRow: Int {
         Int(stride) / MemoryLayout<UInt32>.stride
     }
 

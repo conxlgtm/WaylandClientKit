@@ -2,11 +2,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "Wayforge",
+    name: "SwiftWayland",
     products: [
         .library(name: "WaylandRaw", targets: ["WaylandRaw"]),
         .library(name: "WaylandClient", targets: ["WaylandClient"]),
-        .executable(name: "wayforge-demo", targets: ["WayforgeDemo"]),
+        .executable(name: "swift-wayland-demo", targets: ["SwiftWaylandDemo"]),
     ],
     targets: [
         .systemLibrary(
@@ -30,7 +30,7 @@ let package = Package(
             dependencies: ["WaylandRaw"]
         ),
         .executableTarget(
-            name: "WayforgeDemo",
+            name: "SwiftWaylandDemo",
             dependencies: ["WaylandClient"]
         ),
         .testTarget(

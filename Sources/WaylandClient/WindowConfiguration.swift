@@ -8,8 +8,8 @@ public struct WindowConfiguration: Sendable {
     public var bufferCount: Int
 
     public init(
-        title windowTitle: String = "Wayforge Demo",
-        appID applicationID: String = "wayforge-demo",
+        title windowTitle: String = "SwiftWayland Demo",
+        appID applicationID: String = "swift-wayland-demo",
         initialWidth width: Int32 = 640,
         initialHeight height: Int32 = 480,
         bufferCount count: Int = 3

@@ -290,7 +290,7 @@ public final class RawSharedMemoryPool {
             bufferCount: bufferCount
         )
         let memoryMapping = try SharedMemoryMapping(
-            name: "wayforge-buffer-pool",
+            name: "swift-wayland-buffer-pool",
             byteCount: totalBytes
         )
         let poolPointer = try Self.createPool(
@@ -316,7 +316,7 @@ public final class RawSharedMemoryPool {
         }
     }
 
-    public func nextFreeBuffer() -> RawBuffer? {
+    package func nextFreeBuffer() -> RawBuffer? {
         buffers.first { !$0.isBusy }
     }
 
