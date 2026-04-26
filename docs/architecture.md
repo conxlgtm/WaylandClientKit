@@ -68,6 +68,11 @@ Intended contents:
 - ownership rules
 - version handling
 - callback lifetime handling
+- event-loop pumping
+- registry and seat discovery
+- shared-memory buffer management
+- raw pointer, keyboard, and touch event capture
+- raw input `AsyncSequence` adapter
 
 ### `WaylandClient`
 
@@ -77,7 +82,10 @@ Purpose:
 
 Current state:
 
-- placeholder target only
+- software-buffer toplevel window helper
+- span-scoped XRGB8888 drawing API
+- frame callback based redraw pacing
+- lifecycle state for configure, map, redraw, and close handling
 
 ## Source Categories
 
@@ -105,5 +113,7 @@ Swift code:
 
 - `make lint`
 - `make verify-generated`
+- `make verify-shims`
+- `make strict-concurrency`
 - `make test`
 - `make check`

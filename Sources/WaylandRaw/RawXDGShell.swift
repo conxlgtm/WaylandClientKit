@@ -120,14 +120,18 @@ private enum ListenerInstallState {
 
 private final class XDGWMBaseOwner {
     private let wmBase: OpaquePointer
-    private lazy var callbackStorage = CallbackBoxStorage(owner: self)
-    private let callbacks: UnsafeMutablePointer<swl_xdg_wm_base_listener_callbacks>
     private var installState = ListenerInstallState.idle
+    private lazy var listenerStorage = CListenerStorage(
+        owner: self,
+        initialValue: swl_xdg_wm_base_listener_callbacks()
+    )
+
+    private var callbacks: UnsafeMutablePointer<swl_xdg_wm_base_listener_callbacks> {
+        listenerStorage.callbacks
+    }
 
     init(wmBase pointer: OpaquePointer) {
         wmBase = pointer
-        callbacks = .allocate(capacity: 1)
-        callbacks.initialize(to: swl_xdg_wm_base_listener_callbacks())
 
         callbacks.pointee.ping = { data, wmBase, serial in
             guard let data, let wmBase else {
@@ -148,7 +152,7 @@ private final class XDGWMBaseOwner {
             throw RuntimeError.systemError(errno: EINVAL)
         }
 
-        callbacks.pointee.data = callbackStorage.opaquePointer
+        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = swl_xdg_wm_base_add_listener(wmBase, callbacks)
         guard result == 0 else {
@@ -157,23 +161,22 @@ private final class XDGWMBaseOwner {
 
         installState = .installed
     }
-
-    deinit {
-        callbacks.deinitialize(count: 1)
-        callbacks.deallocate()
-    }
 }
 
 package final class XDGSurfaceOwner {
     private let configureState: XDGConfigureState
-    private lazy var callbackStorage = CallbackBoxStorage(owner: self)
-    private let callbacks: UnsafeMutablePointer<swl_xdg_surface_listener_callbacks>
     private var installState = ListenerInstallState.idle
+    private lazy var listenerStorage = CListenerStorage(
+        owner: self,
+        initialValue: swl_xdg_surface_listener_callbacks()
+    )
+
+    private var callbacks: UnsafeMutablePointer<swl_xdg_surface_listener_callbacks> {
+        listenerStorage.callbacks
+    }
 
     package init(configureState state: XDGConfigureState) {
         configureState = state
-        callbacks = .allocate(capacity: 1)
-        callbacks.initialize(to: swl_xdg_surface_listener_callbacks())
 
         callbacks.pointee.configure = { data, _, serial in
             guard let data else {
@@ -192,7 +195,7 @@ package final class XDGSurfaceOwner {
             throw RuntimeError.systemError(errno: EINVAL)
         }
 
-        callbacks.pointee.data = callbackStorage.opaquePointer
+        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = swl_xdg_surface_add_listener(xdgSurface.pointer, callbacks)
 
@@ -202,26 +205,25 @@ package final class XDGSurfaceOwner {
 
         installState = .installed
     }
-
-    deinit {
-        callbacks.deinitialize(count: 1)
-        callbacks.deallocate()
-    }
 }
 
 package final class XDGTopLevelOwner {
     private let configureState: XDGConfigureState
-    private lazy var callbackStorage = CallbackBoxStorage(owner: self)
-    private let callbacks: UnsafeMutablePointer<swl_xdg_toplevel_listener_callbacks>
     private var onClose: (() -> Void)?
     private var installState = ListenerInstallState.idle
+    private lazy var listenerStorage = CListenerStorage(
+        owner: self,
+        initialValue: swl_xdg_toplevel_listener_callbacks()
+    )
+
+    private var callbacks: UnsafeMutablePointer<swl_xdg_toplevel_listener_callbacks> {
+        listenerStorage.callbacks
+    }
 
     package init(configureState state: XDGConfigureState) {
         configureState = state
-        callbacks = .allocate(capacity: 1)
-        callbacks.initialize(to: swl_xdg_toplevel_listener_callbacks())
 
-        callbacks.pointee.configure = { data, _, width, height, _ in
+        callbacks.pointee.configure = { data, _, width, height, states in
             guard let data else {
                 preconditionFailure("xdg_toplevel configure fired without Swift state")
             }
@@ -231,7 +233,10 @@ package final class XDGTopLevelOwner {
                 .requireOwner()
             owner.configureState.handleTopLevelConfigure(
                 width: width,
-                height: height
+                height: height,
+                states: XDGTopLevelOwner.uint32ArrayOrTrap(from: states).map { rawState in
+                    XDGTopLevelState(rawValue: rawState)
+                }
             )
         }
 
@@ -245,6 +250,32 @@ package final class XDGTopLevelOwner {
                 .requireOwner()
             owner.onClose?()
         }
+
+        callbacks.pointee.configure_bounds = { data, _, width, height in
+            guard let data else {
+                preconditionFailure("xdg_toplevel configure_bounds fired without Swift state")
+            }
+
+            let owner = CallbackBox<XDGTopLevelOwner>
+                .fromOpaque(data)
+                .requireOwner()
+            owner.configureState.handleConfigureBounds(width: width, height: height)
+        }
+
+        callbacks.pointee.wm_capabilities = { data, _, capabilities in
+            guard let data else {
+                preconditionFailure("xdg_toplevel wm_capabilities fired without Swift state")
+            }
+
+            let owner = CallbackBox<XDGTopLevelOwner>
+                .fromOpaque(data)
+                .requireOwner()
+            owner.configureState.handleWMCapabilities(
+                XDGTopLevelOwner.uint32ArrayOrTrap(from: capabilities).map { rawCapability in
+                    XDGWMCapability(rawValue: rawCapability)
+                }
+            )
+        }
     }
 
     package func install(
@@ -255,7 +286,7 @@ package final class XDGTopLevelOwner {
             throw RuntimeError.systemError(errno: EINVAL)
         }
 
-        callbacks.pointee.data = callbackStorage.opaquePointer
+        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = swl_xdg_toplevel_add_listener(
             topLevel.pointer,
@@ -269,9 +300,11 @@ package final class XDGTopLevelOwner {
         onClose = closeHandler
         installState = .installed
     }
-
-    deinit {
-        callbacks.deinitialize(count: 1)
-        callbacks.deallocate()
+    private static func uint32ArrayOrTrap(from array: UnsafeMutablePointer<wl_array>?) -> [UInt32] {
+        do {
+            return try WaylandArray.uint32Values(from: array)
+        } catch {
+            preconditionFailure(String(describing: error))
+        }
     }
 }

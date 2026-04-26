@@ -1,4 +1,4 @@
-package enum RawTouchEvent: Equatable, Sendable {
+public enum RawTouchEvent: Equatable, Sendable {
     case down(RawTouchDown)
     case up(RawTouchUp)
     case motion(RawTouchMotion)
@@ -8,15 +8,15 @@ package enum RawTouchEvent: Equatable, Sendable {
     case orientation(RawTouchOrientation)
 }
 
-package struct RawTouchDown: Equatable, Sendable {
-    package let serial: UInt32
-    package let time: UInt32
-    package let surfaceID: RawObjectID?
-    package let id: Int32
-    package let x: WaylandFixed
-    package let y: WaylandFixed
+public struct RawTouchDown: Equatable, Sendable {
+    public let serial: UInt32
+    public let time: UInt32
+    public let surfaceID: RawObjectID?
+    public let id: Int32
+    public let x: WaylandFixed
+    public let y: WaylandFixed
 
-    package init(
+    public init(
         serial eventSerial: UInt32,
         time eventTime: UInt32,
         surfaceID eventSurfaceID: RawObjectID?,
@@ -33,25 +33,25 @@ package struct RawTouchDown: Equatable, Sendable {
     }
 }
 
-package struct RawTouchUp: Equatable, Sendable {
-    package let serial: UInt32
-    package let time: UInt32
-    package let id: Int32
+public struct RawTouchUp: Equatable, Sendable {
+    public let serial: UInt32
+    public let time: UInt32
+    public let id: Int32
 
-    package init(serial eventSerial: UInt32, time eventTime: UInt32, id eventID: Int32) {
+    public init(serial eventSerial: UInt32, time eventTime: UInt32, id eventID: Int32) {
         serial = eventSerial
         time = eventTime
         id = eventID
     }
 }
 
-package struct RawTouchMotion: Equatable, Sendable {
-    package let time: UInt32
-    package let id: Int32
-    package let x: WaylandFixed
-    package let y: WaylandFixed
+public struct RawTouchMotion: Equatable, Sendable {
+    public let time: UInt32
+    public let id: Int32
+    public let x: WaylandFixed
+    public let y: WaylandFixed
 
-    package init(
+    public init(
         time eventTime: UInt32, id eventID: Int32, x eventX: WaylandFixed, y eventY: WaylandFixed
     ) {
         time = eventTime
@@ -61,24 +61,23 @@ package struct RawTouchMotion: Equatable, Sendable {
     }
 }
 
-package struct RawTouchShape: Equatable, Sendable {
-    package let id: Int32
-    package let major: WaylandFixed
-    package let minor: WaylandFixed
+public struct RawTouchShape: Equatable, Sendable {
+    public let id: Int32
+    public let major: WaylandFixed
+    public let minor: WaylandFixed
 
-    package init(id touchID: Int32, major touchMajor: WaylandFixed, minor touchMinor: WaylandFixed)
-    {
+    public init(id touchID: Int32, major touchMajor: WaylandFixed, minor touchMinor: WaylandFixed) {
         id = touchID
         major = touchMajor
         minor = touchMinor
     }
 }
 
-package struct RawTouchOrientation: Equatable, Sendable {
-    package let id: Int32
-    package let orientation: WaylandFixed
+public struct RawTouchOrientation: Equatable, Sendable {
+    public let id: Int32
+    public let orientation: WaylandFixed
 
-    package init(id touchID: Int32, orientation touchOrientation: WaylandFixed) {
+    public init(id touchID: Int32, orientation touchOrientation: WaylandFixed) {
         id = touchID
         orientation = touchOrientation
     }

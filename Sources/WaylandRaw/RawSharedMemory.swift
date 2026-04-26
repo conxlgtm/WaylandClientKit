@@ -3,21 +3,24 @@ import CWaylandProtocols
 import Glibc
 
 public final class RawSharedMemory {
-    let pointer: OpaquePointer
     public let version: RawVersion
 
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    var pointer: OpaquePointer {
+        proxy.pointer
+    }
 
     init(pointer sharedMemoryPointer: OpaquePointer, version sharedMemoryVersion: RawVersion) {
-        pointer = sharedMemoryPointer
         version = sharedMemoryVersion
+        proxy = RawOwnedProxy(pointer: sharedMemoryPointer, destroy: swl_shm_destroy)
     }
 
     public func createPool(
         width: Int32,
         height: Int32,
         bufferCount: Int
-    ) throws -> RawSharedMemoryPool {
+    ) throws(RuntimeError) -> RawSharedMemoryPool {
         try .init(
             sharedMemory: self,
             width: width,
@@ -27,10 +30,7 @@ public final class RawSharedMemory {
     }
 
     func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        swl_shm_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
@@ -38,57 +38,17 @@ public final class RawSharedMemory {
     }
 }
 
-private final class SharedMemoryMapping {
-    let fileDescriptor: Int32
+private struct MappedRegion: ~Copyable {
     let byteCount: Int
     let baseAddress: UnsafeMutableRawPointer
 
-    init(name: String, byteCount requestedByteCount: Int) throws {
-        guard requestedByteCount > 0 else {
-            throw RuntimeError.systemError(errno: EINVAL)
-        }
-
-        let fd = try Self.createFileDescriptor(name: name)
-
-        do {
-            try Self.resizeFileDescriptor(fd, byteCount: requestedByteCount)
-            baseAddress = try Self.mapFileDescriptor(fd, byteCount: requestedByteCount)
-            fileDescriptor = fd
-            byteCount = requestedByteCount
-        } catch {
-            close(fd)
-            throw error
-        }
-    }
-
-    private static func createFileDescriptor(name: String) throws -> Int32 {
-        let fd = name.withCString { namePointer in
-            swl_memfd_create(namePointer, swl_mfd_cloexec())
-        }
-
-        guard fd >= 0 else {
-            throw RuntimeError.systemError(errno: errno)
-        }
-
-        return fd
-    }
-
-    private static func resizeFileDescriptor(_ fd: Int32, byteCount: Int) throws {
-        guard ftruncate(fd, off_t(byteCount)) == 0 else {
-            throw RuntimeError.systemError(errno: errno)
-        }
-    }
-
-    private static func mapFileDescriptor(
-        _ fd: Int32,
-        byteCount: Int
-    ) throws -> UnsafeMutableRawPointer {
+    init(fileDescriptor: Int32, byteCount requestedByteCount: Int) throws(RuntimeError) {
         let mapped = mmap(
             nil,
-            byteCount,
+            requestedByteCount,
             PROT_READ | PROT_WRITE,
             MAP_SHARED,
-            fd,
+            fileDescriptor,
             0
         )
 
@@ -96,12 +56,35 @@ private final class SharedMemoryMapping {
             throw RuntimeError.systemError(errno: errno)
         }
 
-        return mapped
+        baseAddress = mapped
+        byteCount = requestedByteCount
     }
 
     deinit {
         munmap(baseAddress, byteCount)
-        close(fileDescriptor)
+    }
+}
+
+private final class SharedMemoryMapping {
+    private let mappedRegion: MappedRegion
+
+    var byteCount: Int {
+        mappedRegion.byteCount
+    }
+
+    var baseAddress: UnsafeMutableRawPointer {
+        mappedRegion.baseAddress
+    }
+
+    init(fileDescriptor: Int32, byteCount requestedByteCount: Int) throws(RuntimeError) {
+        guard requestedByteCount > 0 else {
+            throw RuntimeError.systemError(errno: EINVAL)
+        }
+
+        mappedRegion = try MappedRegion(
+            fileDescriptor: fileDescriptor,
+            byteCount: requestedByteCount
+        )
     }
 }
 
@@ -111,7 +94,7 @@ public struct BufferLayout: Equatable, Sendable {
     public let stride: Int32
     public let byteCount: Int
 
-    public init(width bufferWidth: Int32, height bufferHeight: Int32) throws {
+    public init(width bufferWidth: Int32, height bufferHeight: Int32) throws(RuntimeError) {
         guard bufferWidth > 0, bufferHeight > 0 else {
             throw RuntimeError.systemError(errno: EINVAL)
         }
@@ -158,15 +141,18 @@ private enum BufferReleaseInstallState {
 }
 
 private final class BufferReleaseOwner {
-    private lazy var callbackStorage = CallbackBoxStorage(owner: self)
-    private let callbacks: UnsafeMutablePointer<swl_buffer_listener_callbacks>
     private var onRelease: (() -> Void)?
     private var installState = BufferReleaseInstallState.idle
+    private lazy var listenerStorage = CListenerStorage(
+        owner: self,
+        initialValue: swl_buffer_listener_callbacks()
+    )
+
+    private var callbacks: UnsafeMutablePointer<swl_buffer_listener_callbacks> {
+        listenerStorage.callbacks
+    }
 
     init() {
-        callbacks = .allocate(capacity: 1)
-        callbacks.initialize(to: swl_buffer_listener_callbacks())
-
         callbacks.pointee.release = { data, _ in
             guard let data else {
                 preconditionFailure("wl_buffer release fired without Swift state")
@@ -182,12 +168,12 @@ private final class BufferReleaseOwner {
     func install(
         on buffer: OpaquePointer,
         onRelease handler: @escaping () -> Void
-    ) throws {
+    ) throws(RuntimeError) {
         guard installState == .idle else {
             throw RuntimeError.systemError(errno: EINVAL)
         }
 
-        callbacks.pointee.data = callbackStorage.opaquePointer
+        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = swl_buffer_add_listener(buffer, callbacks)
         guard result == 0 else {
@@ -204,21 +190,22 @@ private final class BufferReleaseOwner {
 
     deinit {
         cancel()
-        callbacks.deinitialize(count: 1)
-        callbacks.deallocate()
     }
 }
 
 public final class RawBuffer {
-    let pointer: OpaquePointer
     package let width: Int32
     package let height: Int32
     package let stride: Int32
     package let bytes: UnsafeMutableRawBufferPointer
 
     private let releaseOwner = BufferReleaseOwner()
+    private var proxy: RawOwnedProxy
     private var busyState = BufferBusyState()
-    private var isDestroyed = false
+
+    var pointer: OpaquePointer {
+        proxy.pointer
+    }
 
     public var isBusy: Bool {
         busyState.isBusy
@@ -230,12 +217,12 @@ public final class RawBuffer {
         height bufferHeight: Int32,
         stride bufferStride: Int32,
         bytes bufferBytes: UnsafeMutableRawBufferPointer
-    ) throws {
-        pointer = bufferPointer
+    ) throws(RuntimeError) {
         width = bufferWidth
         height = bufferHeight
         stride = bufferStride
         bytes = bufferBytes
+        proxy = RawOwnedProxy(pointer: bufferPointer, destroy: swl_buffer_destroy)
 
         try releaseOwner.install(on: bufferPointer) { [weak buffer = self] in
             guard let buffer else { return }
@@ -253,11 +240,8 @@ public final class RawBuffer {
     }
 
     public func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
         releaseOwner.cancel()
-        swl_buffer_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
@@ -270,16 +254,19 @@ public final class RawSharedMemoryPool {
     public let layout: BufferLayout
 
     private let mapping: SharedMemoryMapping
-    private let pointer: OpaquePointer
     private let buffers: [RawBuffer]
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    private var pointer: OpaquePointer {
+        proxy.pointer
+    }
 
     init(
         sharedMemory: RawSharedMemory,
         width: Int32,
         height: Int32,
         bufferCount: Int
-    ) throws {
+    ) throws(RuntimeError) {
         guard bufferCount > 0 else {
             throw RuntimeError.systemError(errno: EINVAL)
         }
@@ -289,15 +276,19 @@ public final class RawSharedMemoryPool {
             layout: bufferLayout,
             bufferCount: bufferCount
         )
+        var fileDescriptor = try RawFileDescriptor.memfd(name: "swift-wayland-buffer-pool")
+        try fileDescriptor.resize(byteCount: totalBytes)
+
         let memoryMapping = try SharedMemoryMapping(
-            name: "swift-wayland-buffer-pool",
+            fileDescriptor: fileDescriptor.rawValue,
             byteCount: totalBytes
         )
         let poolPointer = try Self.createPool(
             sharedMemory: sharedMemory,
-            mapping: memoryMapping,
+            fileDescriptor: fileDescriptor.rawValue,
             totalBytes: totalBytes
         )
+        fileDescriptor.close()
 
         do {
             buffers = try Self.createBuffers(
@@ -309,7 +300,7 @@ public final class RawSharedMemoryPool {
             size = .init(width: width, height: height)
             layout = bufferLayout
             mapping = memoryMapping
-            pointer = poolPointer
+            proxy = RawOwnedProxy(pointer: poolPointer, destroy: swl_shm_pool_destroy)
         } catch {
             swl_shm_pool_destroy(poolPointer)
             throw error
@@ -325,13 +316,10 @@ public final class RawSharedMemoryPool {
     }
 
     public func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
         for buffer in buffers {
             buffer.destroy()
         }
-        swl_shm_pool_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
@@ -341,7 +329,7 @@ public final class RawSharedMemoryPool {
     private static func totalByteCount(
         layout: BufferLayout,
         bufferCount: Int
-    ) throws -> Int {
+    ) throws(RuntimeError) -> Int {
         let totalBytesResult = layout.byteCount.multipliedReportingOverflow(by: bufferCount)
         guard !totalBytesResult.overflow, totalBytesResult.partialValue <= Int(Int32.max) else {
             throw RuntimeError.systemError(errno: EOVERFLOW)
@@ -352,13 +340,13 @@ public final class RawSharedMemoryPool {
 
     private static func createPool(
         sharedMemory: RawSharedMemory,
-        mapping: SharedMemoryMapping,
+        fileDescriptor: Int32,
         totalBytes: Int
-    ) throws -> OpaquePointer {
+    ) throws(RuntimeError) -> OpaquePointer {
         guard
             let poolPointer = swl_shm_create_pool(
                 sharedMemory.pointer,
-                mapping.fileDescriptor,
+                fileDescriptor,
                 Int32(totalBytes)
             )
         else {
@@ -373,7 +361,7 @@ public final class RawSharedMemoryPool {
         mapping: SharedMemoryMapping,
         layout: BufferLayout,
         count: Int
-    ) throws -> [RawBuffer] {
+    ) throws(RuntimeError) -> [RawBuffer] {
         var created: [RawBuffer] = []
         created.reserveCapacity(count)
 
@@ -395,7 +383,7 @@ public final class RawSharedMemoryPool {
         mapping: SharedMemoryMapping,
         layout: BufferLayout,
         index: Int
-    ) throws -> RawBuffer {
+    ) throws(RuntimeError) -> RawBuffer {
         let offset = layout.byteCount * index
         guard
             let bufferPointer = swl_shm_pool_create_buffer(
@@ -410,20 +398,15 @@ public final class RawSharedMemoryPool {
             throw RuntimeError.bindFailed("wl_buffer")
         }
 
-        do {
-            return try RawBuffer(
-                pointer: bufferPointer,
-                width: layout.width,
-                height: layout.height,
-                stride: layout.stride,
-                bytes: .init(
-                    start: mapping.baseAddress.advanced(by: offset),
-                    count: layout.byteCount
-                )
+        return try RawBuffer(
+            pointer: bufferPointer,
+            width: layout.width,
+            height: layout.height,
+            stride: layout.stride,
+            bytes: .init(
+                start: mapping.baseAddress.advanced(by: offset),
+                count: layout.byteCount
             )
-        } catch {
-            swl_buffer_destroy(bufferPointer)
-            throw error
-        }
+        )
     }
 }

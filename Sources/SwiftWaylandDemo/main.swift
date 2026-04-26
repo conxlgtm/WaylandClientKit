@@ -24,7 +24,7 @@ enum SwiftWaylandDemo {
                 let red = UInt32((x * 255) / max(Int(frame.width), 1))
                 let green = UInt32((row * 255) / max(Int(frame.height), 1))
                 let blue = UInt32(0x80)
-                pixels[x] = (red << 16) | (green << 8) | blue
+                pixels[unchecked: x] = (red << 16) | (green << 8) | blue
             }
         }
     }

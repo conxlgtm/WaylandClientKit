@@ -21,20 +21,22 @@ public struct SoftwareFrame {
     }
 
     public func withXRGB8888Rows(
-        _ body: (_ row: Int, _ pixels: UnsafeMutableBufferPointer<UInt32>) throws -> Void
+        _ body: (_ row: Int, _ pixels: inout MutableSpan<UInt32>) throws -> Void
     ) rethrows {
-        let pixels = bytes.bindMemory(to: UInt32.self)
         let visibleWidth = Int(width)
         let visibleHeight = Int(height)
         precondition(wordsPerRow >= visibleWidth)
 
-        for row in 0..<visibleHeight {
-            let start = row * wordsPerRow
-            let rowPixels = UnsafeMutableBufferPointer(
-                start: pixels.baseAddress?.advanced(by: start),
-                count: visibleWidth
-            )
-            try body(row, rowPixels)
+        try bytes.withMemoryRebound(to: UInt32.self) { pixels in
+            for row in 0..<visibleHeight {
+                let start = row * wordsPerRow
+                let rowPixels = UnsafeMutableBufferPointer(
+                    start: pixels.baseAddress?.advanced(by: start),
+                    count: visibleWidth
+                )
+                var rowSpan = rowPixels.mutableSpan
+                try body(row, &rowSpan)
+            }
         }
     }
 }

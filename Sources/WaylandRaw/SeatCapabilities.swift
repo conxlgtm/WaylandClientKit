@@ -1,27 +1,27 @@
-package struct SeatCapabilities: OptionSet, Sendable, Equatable, CustomStringConvertible {
-    package let rawValue: UInt32
+public struct SeatCapabilities: OptionSet, Sendable, Equatable, CustomStringConvertible {
+    public let rawValue: UInt32
 
-    package init(rawValue capabilityRawValue: UInt32) {
+    public init(rawValue capabilityRawValue: UInt32) {
         rawValue = capabilityRawValue
     }
 
-    package static let pointer = Self(rawValue: 1)
-    package static let keyboard = Self(rawValue: 2)
-    package static let touch = Self(rawValue: 4)
+    public static let pointer = Self(rawValue: 1)
+    public static let keyboard = Self(rawValue: 2)
+    public static let touch = Self(rawValue: 4)
 
-    package var hasPointer: Bool {
+    public var hasPointer: Bool {
         contains(.pointer)
     }
 
-    package var hasKeyboard: Bool {
+    public var hasKeyboard: Bool {
         contains(.keyboard)
     }
 
-    package var hasTouch: Bool {
+    public var hasTouch: Bool {
         contains(.touch)
     }
 
-    package var description: String {
+    public var description: String {
         var names: [String] = []
 
         if contains(.pointer) {

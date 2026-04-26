@@ -24,9 +24,16 @@ enum WaylandCallbackLifecycle: Equatable {
 final class WaylandCallbackRegistrationState {
     private var pointer: OpaquePointer?
     private let operations: WaylandCallbackOperations
-    private let callbacks: UnsafeMutablePointer<swl_callback_listener_callbacks>
     private var onDone: (() -> Void)?
     private(set) var lifecycle: WaylandCallbackLifecycle = .pending
+    private lazy var listenerStorage = CListenerStorage(
+        owner: self,
+        initialValue: swl_callback_listener_callbacks()
+    )
+
+    private var callbacks: UnsafeMutablePointer<swl_callback_listener_callbacks> {
+        listenerStorage.callbacks
+    }
 
     init(
         pointer callbackPointer: OpaquePointer,
@@ -36,24 +43,21 @@ final class WaylandCallbackRegistrationState {
         pointer = callbackPointer
         onDone = handler
         operations = callbackOperations
-        callbacks = .allocate(capacity: 1)
-        callbacks.initialize(to: swl_callback_listener_callbacks())
 
         callbacks.pointee.done = { data, _, _ in
             guard let data else {
                 preconditionFailure("Wayland callback fired without Swift state")
             }
 
-            let state = Unmanaged<WaylandCallbackRegistrationState>
+            let state = CallbackBox<WaylandCallbackRegistrationState>
                 .fromOpaque(data)
-                .retain()
-                .takeRetainedValue()
+                .requireOwner("Wayland callback fired without Swift state")
             state.handleDone()
         }
     }
 
     func install() throws {
-        callbacks.pointee.data = Unmanaged.passUnretained(self).toOpaque()
+        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
         guard let pointer else {
             preconditionFailure("Wayland callback listener installed after ownership ended")
         }
@@ -94,8 +98,6 @@ final class WaylandCallbackRegistrationState {
 
     deinit {
         cancel()
-        callbacks.deinitialize(count: 1)
-        callbacks.deallocate()
     }
 }
 
@@ -125,10 +127,6 @@ public struct FrameCallbackRegistration: ~Copyable {
 
     public consuming func cancel() {
         state.cancel()
-    }
-
-    func keepAliveUntilHere() {
-        // A deliberate no-op used when the callback may fire before scope exit.
     }
 
     deinit {

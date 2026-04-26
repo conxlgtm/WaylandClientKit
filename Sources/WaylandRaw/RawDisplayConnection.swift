@@ -80,14 +80,14 @@ public final class RawDisplayConnection {
             didFire = true
         }
 
-        while !didFire {
-            try EventLoop.pumpOnce(
-                display: display.opaquePointer,
-                timeoutMilliseconds: 1_000
-            )
+        try withExtendedLifetime(registration) {
+            while !didFire {
+                try EventLoop.pumpOnce(
+                    display: display.opaquePointer,
+                    timeoutMilliseconds: 1_000
+                )
+            }
         }
-
-        registration.keepAliveUntilHere()
     }
 
     public var globals: [RawGlobalAdvertisement] {
@@ -224,8 +224,19 @@ public final class RawDisplayConnection {
         )
     }
 
-    package func drainInputEvents() -> [RawInputEvent] {
+    public func drainInputEvents() -> [RawInputEvent] {
         inputEventQueue.drain()
+    }
+
+    public func inputEvents(
+        timeoutMilliseconds: Int32 = RawInputEventStream.defaultPollTimeoutMilliseconds
+    ) -> RawInputEventStream {
+        RawInputEventStream(
+            timeoutMilliseconds: timeoutMilliseconds
+        ) { [connection = self] pollTimeout in
+            try connection.pumpEvents(timeoutMilliseconds: pollTimeout)
+            return connection.drainInputEvents()
+        }
     }
 
     public func runEventLoop(while shouldContinue: () -> Bool) throws {

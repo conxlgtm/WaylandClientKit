@@ -1,21 +1,21 @@
-package struct WaylandFixed: Equatable, Sendable, ExpressibleByIntegerLiteral,
+public struct WaylandFixed: Equatable, Sendable, ExpressibleByIntegerLiteral,
     CustomStringConvertible
 {
-    package let rawValue: Int32
+    public let rawValue: Int32
 
-    package init(rawValue fixedRawValue: Int32) {
+    public init(rawValue fixedRawValue: Int32) {
         rawValue = fixedRawValue
     }
 
-    package init(integerLiteral fixedRawValue: Int32) {
+    public init(integerLiteral fixedRawValue: Int32) {
         rawValue = fixedRawValue
     }
 
-    package var doubleValue: Double {
+    public var doubleValue: Double {
         Double(rawValue) / 256.0
     }
 
-    package var description: String {
+    public var description: String {
         "\(doubleValue)"
     }
 }

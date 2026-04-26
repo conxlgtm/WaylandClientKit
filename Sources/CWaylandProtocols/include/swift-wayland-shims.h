@@ -110,6 +110,7 @@ struct wl_registry *swl_display_get_registry(struct wl_display *display);
 struct wl_callback *swl_display_sync(struct wl_display *display);
 
 uint32_t swl_proxy_get_version(void *proxy);
+uint32_t swl_proxy_get_id(void *proxy);
 
 int swl_display_get_protocol_error_details(
     struct wl_display *display, struct swl_protocol_error_details *details);
