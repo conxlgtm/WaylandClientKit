@@ -383,6 +383,7 @@ struct SeatRegistryTests {
         ])
 
         #expect(registry.seats.map(\.id) == [RawSeatID(rawValue: 3)])
+        #expect(registry.unsupportedSeatVersions == [2: RawVersion(4)])
         #expect(
             recorder.entries == [
                 "bind seat 3 v10",

@@ -17,12 +17,17 @@ let package = Package(
     products: [
         .library(name: "WaylandRaw", targets: ["WaylandRaw"]),
         .library(name: "WaylandClient", targets: ["WaylandClient"]),
+        .library(name: "WaylandKeyboardInterpretation", targets: ["WaylandKeyboardInterpretation"]),
         .executable(name: "swift-wayland-demo", targets: ["SwiftWaylandDemo"]),
     ],
     targets: [
         .systemLibrary(
             name: "CWaylandClientSystem",
             pkgConfig: "wayland-client"
+        ),
+        .systemLibrary(
+            name: "CXKBCommonSystem",
+            pkgConfig: "xkbcommon"
         ),
         .target(
             name: "CWaylandProtocols",
@@ -42,6 +47,11 @@ let package = Package(
             dependencies: ["WaylandRaw"],
             swiftSettings: librarySwiftSettings
         ),
+        .target(
+            name: "WaylandKeyboardInterpretation",
+            dependencies: ["WaylandRaw", "CXKBCommonSystem"],
+            swiftSettings: librarySwiftSettings
+        ),
         .executableTarget(
             name: "SwiftWaylandDemo",
             dependencies: ["WaylandClient"],
@@ -55,6 +65,11 @@ let package = Package(
         .testTarget(
             name: "WaylandClientTests",
             dependencies: ["WaylandClient"],
+            swiftSettings: librarySwiftSettings
+        ),
+        .testTarget(
+            name: "WaylandKeyboardInterpretationTests",
+            dependencies: ["WaylandKeyboardInterpretation"],
             swiftSettings: librarySwiftSettings
         ),
         .testTarget(
