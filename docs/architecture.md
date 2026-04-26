@@ -16,7 +16,13 @@ CWaylandProtocols
     |
     v
 CWaylandClientSystem
+
+WaylandKeyboardInterpretation
+    optional consumer of WaylandRaw keyboard facts
+    also depends on CXKBCommonSystem
 ```
+
+`WaylandKeyboardInterpretation` is a sibling/consumer layer for raw keyboard facts, not a layer that `WaylandRaw` depends on.
 
 ## Target Roles
 
@@ -36,6 +42,22 @@ Does not contain:
 - generated protocol files
 - shim implementations
 - project-specific runtime logic
+
+### `CXKBCommonSystem`
+
+Purpose:
+
+- import installed xkbcommon headers into SwiftPM
+
+Contains:
+
+- `module.modulemap`
+- umbrella header for xkbcommon headers
+
+Does not contain:
+
+- keyboard policy
+- key symbol or text interpretation logic
 
 ### `CWaylandProtocols`
 
@@ -73,6 +95,24 @@ Intended contents:
 - shared-memory buffer management
 - raw pointer, keyboard, and touch event capture
 - raw input `AsyncSequence` adapter
+- copied keyboard keymap payloads
+
+Does not depend on:
+
+- `CXKBCommonSystem`
+- xkbcommon interpretation APIs
+
+### `WaylandKeyboardInterpretation`
+
+Purpose:
+
+- define the dependency boundary for future xkbcommon-backed keyboard interpretation
+
+Current state:
+
+- imports xkbcommon through `CXKBCommonSystem`
+- verifies that an xkb context can be created
+- does not expose public text, key symbols, shortcut names, compose behavior, or IME behavior
 
 ### `WaylandClient`
 
@@ -86,6 +126,31 @@ Current state:
 - span-scoped XRGB8888 drawing API
 - frame callback based redraw pacing
 - lifecycle state for configure, map, redraw, and close handling
+- `DisplaySession` as the owner of event pumping, window creation, and input draining
+- `InputRouter` that maps raw input events to public session input events
+
+## Input Model
+
+Input starts at `wl_seat`.
+
+`WaylandRaw` binds every usable advertised seat, tracks advertised and active capabilities separately, and owns child `wl_pointer`, `wl_keyboard`, and `wl_touch` lifetimes.
+
+Raw input events carry:
+
+- sequence number
+- seat identity
+- optional generation-aware child device identity
+- protocol serials and raw values
+
+`WaylandClient` exposes session-level input events through `DisplaySession.drainInputEvents()`.
+Public events carry sequence, seat identity, optional window identity, and raw pointer/keyboard facts.
+
+Keyboard events are raw protocol events. The raw keycode is the Wayland/evdev keycode, not text.
+
+Pointer coordinates are surface-local.
+
+Story 005 receives pointer events but does not manage cursor images yet.
+Some compositors may leave the cursor unchanged or undefined over the demo window until cursor support is added.
 
 ## Source Categories
 
@@ -107,6 +172,7 @@ Swift code:
 
 - `Sources/WaylandRaw/`
 - `Sources/WaylandClient/`
+- `Sources/WaylandKeyboardInterpretation/`
 - `Sources/SwiftWaylandDemo/`
 
 ## Current Checks

@@ -5,6 +5,7 @@ package final class SeatRegistry {
     private let eventSink: RawInputEventSink
     private let operations: RawSeatProxyOperations
     private var seatsByGlobalName: [UInt32: RawSeat] = [:]
+    private var unsupportedSeatVersionsByGlobalName: [UInt32: RawVersion] = [:]
     private var isDestroyed = false
 
     package init(
@@ -21,6 +22,10 @@ package final class SeatRegistry {
         seatsByGlobalName
             .sorted { $0.key < $1.key }
             .map(\.value)
+    }
+
+    package var unsupportedSeatVersions: [UInt32: RawVersion] {
+        unsupportedSeatVersionsByGlobalName
     }
 
     package func seat(for id: RawSeatID) -> RawSeat? {
@@ -40,9 +45,11 @@ package final class SeatRegistry {
         }
 
         guard advertisedVersion >= 5 else {
+            unsupportedSeatVersionsByGlobalName[globalName] = advertisedVersion
             return nil
         }
 
+        unsupportedSeatVersionsByGlobalName[globalName] = nil
         let negotiated = min(advertisedVersion, SupportedVersions.wlSeat)
         guard let seatPointer = operations.bindSeat(registry, globalName, negotiated.value) else {
             throw RuntimeError.bindFailed("wl_seat")

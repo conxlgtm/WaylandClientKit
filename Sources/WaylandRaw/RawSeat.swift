@@ -146,6 +146,7 @@ private final class PointerListenerOwner {
     private let deviceID: RawInputDeviceID
     private let eventSink: RawInputEventSink
     private let operations: RawSeatProxyOperations
+    private let isCurrentDevice: (RawInputDeviceID) -> Bool
     private var isCanceled = false
     private lazy var listenerStorage = CListenerStorage(
         owner: self,
@@ -160,11 +161,13 @@ private final class PointerListenerOwner {
     init(
         deviceID pointerDeviceID: RawInputDeviceID,
         eventSink pointerEventSink: RawInputEventSink,
-        operations pointerOperations: RawSeatProxyOperations
+        operations pointerOperations: RawSeatProxyOperations,
+        isCurrentDevice isPointerCurrent: @escaping (RawInputDeviceID) -> Bool
     ) {
         deviceID = pointerDeviceID
         eventSink = pointerEventSink
         operations = pointerOperations
+        isCurrentDevice = isPointerCurrent
 
         callbacks.pointee.enter = { data, _, serial, surface, surfaceX, surfaceY in
             let owner = PointerListenerOwner.requireOwner(
@@ -319,7 +322,7 @@ private final class PointerListenerOwner {
     }
 
     private func append(_ event: RawPointerEvent) {
-        guard !isCanceled else { return }
+        guard !isCanceled, isCurrentDevice(deviceID) else { return }
 
         eventSink.append(
             RawInputEventDraft(
@@ -339,6 +342,7 @@ private final class KeyboardListenerOwner {
     private let deviceID: RawInputDeviceID
     private let eventSink: RawInputEventSink
     private let operations: RawSeatProxyOperations
+    private let isCurrentDevice: (RawInputDeviceID) -> Bool
     private let onError: (Error) -> Void
     private var keymapGeneration: UInt64 = 1
     private var isCanceled = false
@@ -356,11 +360,13 @@ private final class KeyboardListenerOwner {
         deviceID keyboardDeviceID: RawInputDeviceID,
         eventSink keyboardEventSink: RawInputEventSink,
         operations keyboardOperations: RawSeatProxyOperations,
+        isCurrentDevice isKeyboardCurrent: @escaping (RawInputDeviceID) -> Bool,
         onError handleError: @escaping (Error) -> Void
     ) {
         deviceID = keyboardDeviceID
         eventSink = keyboardEventSink
         operations = keyboardOperations
+        isCurrentDevice = isKeyboardCurrent
         onError = handleError
 
         callbacks.pointee.keymap = { data, _, format, fd, size in
@@ -471,7 +477,7 @@ private final class KeyboardListenerOwner {
     }
 
     private func handleKeymap(format rawFormat: UInt32, fd: Int32, size: UInt32) {
-        guard !isCanceled else {
+        guard !isCanceled, isCurrentDevice(deviceID) else {
             if fd >= 0 {
                 close(fd)
             }
@@ -556,7 +562,7 @@ private final class KeyboardListenerOwner {
     }
 
     private func append(_ event: RawKeyboardEvent) {
-        guard !isCanceled else { return }
+        guard !isCanceled, isCurrentDevice(deviceID) else { return }
 
         eventSink.append(
             RawInputEventDraft(
@@ -576,6 +582,7 @@ private final class TouchListenerOwner {
     private let deviceID: RawInputDeviceID
     private let eventSink: RawInputEventSink
     private let operations: RawSeatProxyOperations
+    private let isCurrentDevice: (RawInputDeviceID) -> Bool
     private var isCanceled = false
     private lazy var listenerStorage = CListenerStorage(
         owner: self,
@@ -590,11 +597,13 @@ private final class TouchListenerOwner {
     init(
         deviceID touchDeviceID: RawInputDeviceID,
         eventSink touchEventSink: RawInputEventSink,
-        operations touchOperations: RawSeatProxyOperations
+        operations touchOperations: RawSeatProxyOperations,
+        isCurrentDevice isTouchCurrent: @escaping (RawInputDeviceID) -> Bool
     ) {
         deviceID = touchDeviceID
         eventSink = touchEventSink
         operations = touchOperations
+        isCurrentDevice = isTouchCurrent
 
         callbacks.pointee.down = { data, _, serial, time, surface, id, x, y in
             let owner = TouchListenerOwner.requireOwner(
@@ -714,7 +723,7 @@ private final class TouchListenerOwner {
     }
 
     private func append(_ event: RawTouchEvent) {
-        guard !isCanceled else { return }
+        guard !isCanceled, isCurrentDevice(deviceID) else { return }
 
         eventSink.append(
             RawInputEventDraft(
@@ -965,7 +974,9 @@ public final class RawSeat {
             deviceID: deviceID,
             eventSink: eventSink,
             operations: operations
-        )
+        ) { [weak seat = self] deviceID in
+            seat?.isCurrentDevice(deviceID) == true
+        }
         do {
             try listenerOwner.install(on: childPointer)
         } catch {
@@ -992,10 +1003,14 @@ public final class RawSeat {
         let listenerOwner = KeyboardListenerOwner(
             deviceID: deviceID,
             eventSink: eventSink,
-            operations: operations
-        ) { [weak seat = self] error in
-            seat?.lastCapabilityError = error
-        }
+            operations: operations,
+            isCurrentDevice: { [weak seat = self] deviceID in
+                seat?.isCurrentDevice(deviceID) == true
+            },
+            onError: { [weak seat = self] error in
+                seat?.lastCapabilityError = error
+            }
+        )
         do {
             try listenerOwner.install(on: childPointer)
         } catch {
@@ -1023,7 +1038,9 @@ public final class RawSeat {
             deviceID: deviceID,
             eventSink: eventSink,
             operations: operations
-        )
+        ) { [weak seat = self] deviceID in
+            seat?.isCurrentDevice(deviceID) == true
+        }
         do {
             try listenerOwner.install(on: childPointer)
         } catch {
@@ -1054,6 +1071,17 @@ public final class RawSeat {
     private func destroyTouch() {
         touchDevice?.destroy()
         touchDevice = nil
+    }
+
+    private func isCurrentDevice(_ deviceID: RawInputDeviceID) -> Bool {
+        switch deviceID.kind {
+        case .pointer:
+            pointerDevice?.id == deviceID
+        case .keyboard:
+            keyboardDevice?.id == deviceID
+        case .touch:
+            touchDevice?.id == deviceID
+        }
     }
 
     private func appendSnapshot() {
