@@ -1,17 +1,16 @@
 import WaylandClient
-import WaylandRaw
 
 @main
 enum SwiftWaylandDemo {
     static func main() throws {
-        let connection = try RawDisplayConnection.connect()
-        try connection.completeInitialDiscovery()
-
-        let window = try TopLevelWindow(connection: connection)
+        let session = try DisplaySession.connect()
+        let window = try session.createTopLevelWindow()
         try window.show(drawDemoFrame)
 
         while !window.isClosed {
-            try connection.pumpEvents(timeoutMilliseconds: 16)
+            try session.pumpEvents(timeoutMilliseconds: 16)
+            _ = session.drainInputEvents()
+
             if window.needsRedraw {
                 try window.redraw(drawDemoFrame)
             }

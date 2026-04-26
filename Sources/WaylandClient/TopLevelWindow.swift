@@ -31,6 +31,8 @@ private enum WindowLifecycleState: Equatable, CustomStringConvertible {
 }
 
 public final class TopLevelWindow {
+    public let id: WindowID
+
     private let connection: RawDisplayConnection
     private let configuration: WindowConfiguration
     private let configureState: XDGConfigureState
@@ -47,6 +49,7 @@ public final class TopLevelWindow {
     private var currentConfigure: SurfaceConfigure?
     private var needsRedrawStorage = false
     private var isClosedStorage = false
+    package var onClose: (() -> Void)?
 
     public var isClosed: Bool {
         isClosedStorage
@@ -60,6 +63,22 @@ public final class TopLevelWindow {
         connection rawConnection: RawDisplayConnection,
         configuration windowConfiguration: WindowConfiguration = .init()
     ) throws {
+        id = WindowID(rawValue: 0)
+        connection = rawConnection
+        configuration = windowConfiguration
+        configureState = .init(fallbackSize: windowConfiguration.fallbackSize)
+
+        let globals = try rawConnection.bindRequiredGlobals()
+        surface = try globals.compositor.createSurface()
+        try assignXDGRole(globals: globals)
+    }
+
+    package init(
+        id windowID: WindowID,
+        connection rawConnection: RawDisplayConnection,
+        configuration windowConfiguration: WindowConfiguration = .init()
+    ) throws {
+        id = windowID
         connection = rawConnection
         configuration = windowConfiguration
         configureState = .init(fallbackSize: windowConfiguration.fallbackSize)
@@ -92,6 +111,8 @@ public final class TopLevelWindow {
 
         isClosedStorage = true
         pendingFrameRegistration = nil
+        onClose?()
+        onClose = nil
 
         topLevel?.destroy()
         topLevel = nil
@@ -105,6 +126,10 @@ public final class TopLevelWindow {
         retiredBufferPools.removeAll()
         surface.destroy()
         lifecycleState = .destroyed
+    }
+
+    package var surfaceID: RawObjectID {
+        surface.objectID
     }
 
     deinit {

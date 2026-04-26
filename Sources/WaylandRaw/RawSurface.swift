@@ -38,6 +38,10 @@ public final class RawSurface {
         version >= 4
     }
 
+    package var objectID: RawObjectID {
+        RawObjectID(swl_proxy_get_id(UnsafeMutableRawPointer(pointer)))
+    }
+
     public func commit() {
         swl_surface_commit(pointer)
     }
