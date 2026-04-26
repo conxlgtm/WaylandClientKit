@@ -8,17 +8,23 @@ public final class RawDisplayConnection {
 
     private let registryState: RegistryState
     private let registryListenerOwner: RegistryListenerOwner
+    private let inputEventQueue: RawInputEventQueue
 
     private init(
         display rawDisplay: RawDisplay,
         registry rawRegistry: RawRegistry,
         registryState rawRegistryState: RegistryState,
-        registryListenerOwner rawRegistryListenerOwner: RegistryListenerOwner
+        registryListenerOwner rawRegistryListenerOwner: RegistryListenerOwner,
+        inputEventQueue rawInputEventQueue: RawInputEventQueue
     ) {
         display = rawDisplay
         registry = rawRegistry
         registryState = rawRegistryState
         registryListenerOwner = rawRegistryListenerOwner
+        inputEventQueue = rawInputEventQueue
+        registryListenerOwner.onGlobalRemoved = { [weak connection = self] name in
+            connection?.boundGlobals?.seatRegistry.removeSeat(globalName: name)
+        }
     }
 
     public static func connect() throws -> RawDisplayConnection {
@@ -39,6 +45,7 @@ public final class RawDisplayConnection {
 
         let state = RegistryState()
         let listenerOwner = RegistryListenerOwner(state: state)
+        let inputEventQueue = RawInputEventQueue()
 
         let rawRegistry = RawRegistry(
             opaquePointer: registryPointer,
@@ -58,7 +65,8 @@ public final class RawDisplayConnection {
             display: rawDisplay,
             registry: rawRegistry,
             registryState: state,
-            registryListenerOwner: listenerOwner
+            registryListenerOwner: listenerOwner,
+            inputEventQueue: inputEventQueue
         )
     }
 
@@ -137,13 +145,21 @@ public final class RawDisplayConnection {
             compositor: compositorWrapper,
             shm: shm
         )
-        let seatBinding = bindSeatIfAvailable(registry: reg)
+        let seatRegistry = SeatRegistry(registry: reg, eventSink: inputEventQueue)
+        do {
+            try seatRegistry.bindSeats(from: registryState.snapshot)
+        } catch {
+            xdgWmBase.destroy()
+            shm.destroy()
+            compositorWrapper.destroy()
+            throw error
+        }
 
         let bound = BoundGlobals(
             compositor: compositorWrapper,
             sharedMemory: shm,
             xdgWMBase: xdgWmBase,
-            seat: seatBinding
+            seatRegistry: seatRegistry
         )
 
         boundGlobals = bound
@@ -201,28 +217,15 @@ public final class RawDisplayConnection {
         }
     }
 
-    private func bindSeatIfAvailable(
-        registry reg: OpaquePointer
-    ) -> RawSeat? {
-        guard let seatGlobal = registryState.firstGlobal(named: "wl_seat") else {
-            return nil
-        }
-
-        let negotiated = seatGlobal.negotiatedVersion(
-            supportedByClient: SupportedVersions.wlSeat
-        )
-        guard let seat = swl_registry_bind_wl_seat(reg, seatGlobal.name, negotiated.value) else {
-            return nil
-        }
-
-        return .init(pointer: seat, version: negotiated)
-    }
-
     public func pumpEvents(timeoutMilliseconds: Int32 = -1) throws {
         try EventLoop.pumpOnce(
             display: display.opaquePointer,
             timeoutMilliseconds: timeoutMilliseconds
         )
+    }
+
+    package func drainInputEvents() -> [RawInputEvent] {
+        inputEventQueue.drain()
     }
 
     public func runEventLoop(while shouldContinue: () -> Bool) throws {

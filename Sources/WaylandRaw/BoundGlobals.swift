@@ -12,7 +12,7 @@ public final class BoundGlobals {
     public let compositor: RawCompositor
     public let sharedMemory: RawSharedMemory
     public let xdgWMBase: RawXDGWMBase
-    public let seat: RawSeat?
+    package let seatRegistry: SeatRegistry
 
     private var isDestroyed = false
 
@@ -20,49 +20,22 @@ public final class BoundGlobals {
         compositor boundCompositor: RawCompositor,
         sharedMemory boundSharedMemory: RawSharedMemory,
         xdgWMBase boundXDGWMBase: RawXDGWMBase,
-        seat boundSeat: RawSeat?
+        seatRegistry boundSeatRegistry: SeatRegistry
     ) {
         compositor = boundCompositor
         sharedMemory = boundSharedMemory
         xdgWMBase = boundXDGWMBase
-        seat = boundSeat
+        seatRegistry = boundSeatRegistry
     }
 
     func destroy() {
         guard !isDestroyed else { return }
 
         isDestroyed = true
-        seat?.destroy()
+        seatRegistry.destroy()
         xdgWMBase.destroy()
         sharedMemory.destroy()
         compositor.destroy()
-    }
-
-    deinit {
-        destroy()
-    }
-}
-
-public final class RawSeat {
-    let pointer: OpaquePointer
-    public let version: RawVersion
-
-    private var isDestroyed = false
-
-    init(pointer seatPointer: OpaquePointer, version seatVersion: RawVersion) {
-        pointer = seatPointer
-        version = seatVersion
-    }
-
-    func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        if version >= 5 {
-            swl_seat_release(pointer)
-        } else {
-            swl_seat_destroy(pointer)
-        }
     }
 
     deinit {

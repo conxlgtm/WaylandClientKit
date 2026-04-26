@@ -6,6 +6,7 @@ public enum RuntimeError: Error, CustomStringConvertible {
     case connectionFailed
     case registryCreationFailed
     case registryListenerInstallationFailed
+    case seatListenerInstallationFailed
     case displaySyncRequestFailed
     case frameRequestFailed
     case syncCallbackListenerInstallationFailed
@@ -51,6 +52,8 @@ public enum RuntimeError: Error, CustomStringConvertible {
             "Wayland registry creation failed"
         case .registryListenerInstallationFailed:
             "Wayland registry listener installation failed"
+        case .seatListenerInstallationFailed:
+            "Wayland seat listener installation failed"
         case .displaySyncRequestFailed:
             "Wayland sync request failed"
         case .frameRequestFailed:
