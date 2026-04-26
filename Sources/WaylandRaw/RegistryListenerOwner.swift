@@ -5,6 +5,7 @@ final class RegistryListenerOwner {
     private let state: RegistryState
     private lazy var callbackStorage = CallbackBoxStorage(owner: self)
     private let callbacks: UnsafeMutablePointer<swl_registry_listener_callbacks>
+    var onGlobalRemoved: ((UInt32) -> Void)?
 
     init(state registryState: RegistryState) {
         state = registryState
@@ -33,6 +34,7 @@ final class RegistryListenerOwner {
                 .fromOpaque(data)
                 .requireOwner()
             owner.state.removeGlobal(name: name)
+            owner.onGlobalRemoved?(name)
         }
     }
 

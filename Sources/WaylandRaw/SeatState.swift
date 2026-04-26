@@ -1,0 +1,216 @@
+package struct SeatState: Equatable, Sendable {
+    package var advertisedCapabilities: SeatCapabilities
+    package var activeCapabilities: SeatCapabilities
+    package var pointerGeneration: UInt64
+    package var keyboardGeneration: UInt64
+    package var touchGeneration: UInt64
+
+    package init(
+        advertisedCapabilities seatAdvertisedCapabilities: SeatCapabilities = [],
+        activeCapabilities seatActiveCapabilities: SeatCapabilities = [],
+        pointerGeneration seatPointerGeneration: UInt64 = 1,
+        keyboardGeneration seatKeyboardGeneration: UInt64 = 1,
+        touchGeneration seatTouchGeneration: UInt64 = 1
+    ) {
+        advertisedCapabilities = seatAdvertisedCapabilities
+        activeCapabilities = seatActiveCapabilities
+        pointerGeneration = seatPointerGeneration
+        keyboardGeneration = seatKeyboardGeneration
+        touchGeneration = seatTouchGeneration
+    }
+}
+
+package enum SeatAction: Equatable, Sendable {
+    case capabilitiesChanged(SeatCapabilities)
+    case pointerCreated
+    case pointerCreateFailed
+    case pointerDestroyed
+    case keyboardCreated
+    case keyboardCreateFailed
+    case keyboardDestroyed
+    case touchCreated
+    case touchCreateFailed
+    case touchDestroyed
+    case removed
+}
+
+package struct SeatTransitionPlan: Equatable, Sendable {
+    package var effects: [SeatEffect]
+    package var nextState: SeatState
+
+    package init(effects transitionEffects: [SeatEffect], nextState transitionState: SeatState) {
+        effects = transitionEffects
+        nextState = transitionState
+    }
+}
+
+package enum SeatEffect: Equatable, Sendable {
+    case createPointer(RawInputDeviceID)
+    case destroyPointer(RawInputDeviceID)
+    case createKeyboard(RawInputDeviceID)
+    case destroyKeyboard(RawInputDeviceID)
+    case createTouch(RawInputDeviceID)
+    case destroyTouch(RawInputDeviceID)
+    case emitSeatSnapshot
+    case emitSeatRemoved
+}
+
+package func reduceSeatState(
+    _ state: SeatState,
+    seatID: RawSeatID,
+    action: SeatAction
+) -> SeatTransitionPlan {
+    switch action {
+    case .capabilitiesChanged(let capabilities):
+        return planCapabilitiesChanged(state, seatID: seatID, capabilities: capabilities)
+    case .pointerCreated:
+        return planChildCreated(state, capability: .pointer)
+    case .pointerCreateFailed, .pointerDestroyed:
+        return planChildRemoved(state, capability: .pointer)
+    case .keyboardCreated:
+        return planChildCreated(state, capability: .keyboard)
+    case .keyboardCreateFailed, .keyboardDestroyed:
+        return planChildRemoved(state, capability: .keyboard)
+    case .touchCreated:
+        return planChildCreated(state, capability: .touch)
+    case .touchCreateFailed, .touchDestroyed:
+        return planChildRemoved(state, capability: .touch)
+    case .removed:
+        return planSeatRemoved(state, seatID: seatID)
+    }
+}
+
+private func planCapabilitiesChanged(
+    _ state: SeatState,
+    seatID: RawSeatID,
+    capabilities: SeatCapabilities
+) -> SeatTransitionPlan {
+    var next = state
+    var effects: [SeatEffect] = []
+    let oldActive = state.activeCapabilities
+
+    next.advertisedCapabilities = capabilities
+
+    if oldActive.hasTouch, !capabilities.hasTouch {
+        effects.append(.destroyTouch(currentDeviceID(state, seatID: seatID, kind: .touch)))
+        next.activeCapabilities.remove(.touch)
+    }
+    if oldActive.hasKeyboard, !capabilities.hasKeyboard {
+        effects.append(.destroyKeyboard(currentDeviceID(state, seatID: seatID, kind: .keyboard)))
+        next.activeCapabilities.remove(.keyboard)
+    }
+    if oldActive.hasPointer, !capabilities.hasPointer {
+        effects.append(.destroyPointer(currentDeviceID(state, seatID: seatID, kind: .pointer)))
+        next.activeCapabilities.remove(.pointer)
+    }
+
+    if capabilities.hasPointer, !oldActive.hasPointer {
+        let id = RawInputDeviceID(
+            seatID: seatID,
+            kind: .pointer,
+            generation: next.pointerGeneration
+        )
+        effects.append(.createPointer(id))
+        next.pointerGeneration += 1
+        next.activeCapabilities.insert(.pointer)
+    }
+    if capabilities.hasKeyboard, !oldActive.hasKeyboard {
+        let id = RawInputDeviceID(
+            seatID: seatID,
+            kind: .keyboard,
+            generation: next.keyboardGeneration
+        )
+        effects.append(.createKeyboard(id))
+        next.keyboardGeneration += 1
+        next.activeCapabilities.insert(.keyboard)
+    }
+    if capabilities.hasTouch, !oldActive.hasTouch {
+        let id = RawInputDeviceID(
+            seatID: seatID,
+            kind: .touch,
+            generation: next.touchGeneration
+        )
+        effects.append(.createTouch(id))
+        next.touchGeneration += 1
+        next.activeCapabilities.insert(.touch)
+    }
+
+    if next != state || !effects.isEmpty {
+        effects.append(.emitSeatSnapshot)
+    }
+
+    return SeatTransitionPlan(effects: effects, nextState: next)
+}
+
+private func planChildCreated(
+    _ state: SeatState,
+    capability: SeatCapabilities
+) -> SeatTransitionPlan {
+    guard !state.activeCapabilities.contains(capability) else {
+        return SeatTransitionPlan(effects: [], nextState: state)
+    }
+
+    var next = state
+    next.activeCapabilities.insert(capability)
+    return SeatTransitionPlan(effects: [.emitSeatSnapshot], nextState: next)
+}
+
+private func planChildRemoved(
+    _ state: SeatState,
+    capability: SeatCapabilities
+) -> SeatTransitionPlan {
+    guard state.activeCapabilities.contains(capability) else {
+        return SeatTransitionPlan(effects: [], nextState: state)
+    }
+
+    var next = state
+    next.activeCapabilities.remove(capability)
+    return SeatTransitionPlan(effects: [.emitSeatSnapshot], nextState: next)
+}
+
+private func planSeatRemoved(_ state: SeatState, seatID: RawSeatID) -> SeatTransitionPlan {
+    var effects: [SeatEffect] = []
+
+    if state.activeCapabilities.hasTouch {
+        effects.append(.destroyTouch(currentDeviceID(state, seatID: seatID, kind: .touch)))
+    }
+    if state.activeCapabilities.hasKeyboard {
+        effects.append(.destroyKeyboard(currentDeviceID(state, seatID: seatID, kind: .keyboard)))
+    }
+    if state.activeCapabilities.hasPointer {
+        effects.append(.destroyPointer(currentDeviceID(state, seatID: seatID, kind: .pointer)))
+    }
+
+    var next = state
+    next.advertisedCapabilities = []
+    next.activeCapabilities = []
+    effects.append(.emitSeatRemoved)
+
+    return SeatTransitionPlan(effects: effects, nextState: next)
+}
+
+private func currentDeviceID(
+    _ state: SeatState,
+    seatID: RawSeatID,
+    kind: RawInputDeviceID.Kind
+) -> RawInputDeviceID {
+    RawInputDeviceID(
+        seatID: seatID,
+        kind: kind,
+        generation: currentGeneration(state, kind: kind)
+    )
+}
+
+private func currentGeneration(_ state: SeatState, kind: RawInputDeviceID.Kind) -> UInt64 {
+    let nextGeneration =
+        switch kind {
+        case .pointer:
+            state.pointerGeneration
+        case .keyboard:
+            state.keyboardGeneration
+        case .touch:
+            state.touchGeneration
+        }
+
+    return nextGeneration > 1 ? nextGeneration - 1 : 1
+}
