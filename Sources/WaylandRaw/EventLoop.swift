@@ -37,7 +37,7 @@ public enum EventLoop {
     public static func pumpOnce(
         display: OpaquePointer,
         timeoutMilliseconds: Int32
-    ) throws {
+    ) throws(RuntimeError) {
         try pumpOnce(
             display: display,
             timeoutMilliseconds: timeoutMilliseconds,
@@ -49,7 +49,7 @@ public enum EventLoop {
         display: OpaquePointer,
         timeoutMilliseconds: Int32,
         operations: EventLoopOperations
-    ) throws {
+    ) throws(RuntimeError) {
         while operations.prepareRead(display) != 0 {
             let savedErrno = errno
             if savedErrno != EAGAIN {
@@ -96,7 +96,7 @@ public enum EventLoop {
     public static func run(
         display: OpaquePointer,
         shouldContinue: () -> Bool
-    ) throws {
+    ) throws(RuntimeError) {
         while shouldContinue() {
             try pumpOnce(display: display, timeoutMilliseconds: -1)
         }
@@ -105,7 +105,7 @@ public enum EventLoop {
     private static func flushDisplay(
         display: OpaquePointer,
         operations: EventLoopOperations
-    ) throws -> Bool {
+    ) throws(RuntimeError) -> Bool {
         while true {
             let result = operations.flush(display)
             if result >= 0 {
@@ -129,7 +129,7 @@ public enum EventLoop {
         descriptor: pollfd,
         display: OpaquePointer,
         operations: EventLoopOperations
-    ) throws {
+    ) throws(RuntimeError) {
         guard ready > 0 else {
             operations.cancelRead(display)
             if ready < 0, errno != EINTR {

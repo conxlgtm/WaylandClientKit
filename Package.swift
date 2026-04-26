@@ -1,6 +1,17 @@
 // swift-tools-version: 6.3.1
 import PackageDescription
 
+let librarySwiftSettings: [SwiftSetting] = [
+    .swiftLanguageMode(.v6),
+    .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+    .enableUpcomingFeature("InferIsolatedConformances"),
+]
+
+let executableSwiftSettings: [SwiftSetting] =
+    librarySwiftSettings + [
+        .defaultIsolation(MainActor.self)
+    ]
+
 let package = Package(
     name: "SwiftWayland",
     products: [
@@ -23,27 +34,33 @@ let package = Package(
         ),
         .target(
             name: "WaylandRaw",
-            dependencies: ["CWaylandProtocols", "CWaylandClientSystem"]
+            dependencies: ["CWaylandProtocols", "CWaylandClientSystem"],
+            swiftSettings: librarySwiftSettings
         ),
         .target(
             name: "WaylandClient",
-            dependencies: ["WaylandRaw"]
+            dependencies: ["WaylandRaw"],
+            swiftSettings: librarySwiftSettings
         ),
         .executableTarget(
             name: "SwiftWaylandDemo",
-            dependencies: ["WaylandClient"]
+            dependencies: ["WaylandClient"],
+            swiftSettings: executableSwiftSettings
         ),
         .testTarget(
             name: "WaylandRawTests",
-            dependencies: ["WaylandRaw"]
+            dependencies: ["WaylandRaw"],
+            swiftSettings: librarySwiftSettings
         ),
         .testTarget(
             name: "WaylandClientTests",
-            dependencies: ["WaylandClient"]
+            dependencies: ["WaylandClient"],
+            swiftSettings: librarySwiftSettings
         ),
         .testTarget(
             name: "IntegrationTests",
-            dependencies: ["WaylandClient"]
+            dependencies: ["WaylandClient"],
+            swiftSettings: librarySwiftSettings
         ),
     ],
     cLanguageStandard: .c17

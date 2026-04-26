@@ -89,6 +89,11 @@ uint32_t swl_proxy_get_version(void *proxy)
     return wl_proxy_get_version((struct wl_proxy *)proxy);
 }
 
+uint32_t swl_proxy_get_id(void *proxy)
+{
+    return wl_proxy_get_id((struct wl_proxy *)proxy);
+}
+
 void swl_registry_destroy(struct wl_registry *registry)
 {
     wl_registry_destroy(registry);

@@ -7,6 +7,9 @@ public enum RuntimeError: Error, CustomStringConvertible {
     case registryCreationFailed
     case registryListenerInstallationFailed
     case seatListenerInstallationFailed
+    case pointerListenerInstallationFailed
+    case keyboardListenerInstallationFailed
+    case touchListenerInstallationFailed
     case displaySyncRequestFailed
     case frameRequestFailed
     case syncCallbackListenerInstallationFailed
@@ -15,6 +18,7 @@ public enum RuntimeError: Error, CustomStringConvertible {
     case pollFailed(Int32)
     case pollEventFailed(revents: Int16)
     case systemError(errno: Int32)
+    case invalidWaylandArrayByteCount(byteCount: Int, elementSize: Int)
     case protocolError(interfaceName: String?, objectID: UInt32, code: Int32)
 
     public static func fromDisplay(_ display: OpaquePointer, fallbackErrno: Int32? = nil)
@@ -54,6 +58,12 @@ public enum RuntimeError: Error, CustomStringConvertible {
             "Wayland registry listener installation failed"
         case .seatListenerInstallationFailed:
             "Wayland seat listener installation failed"
+        case .pointerListenerInstallationFailed:
+            "Wayland pointer listener installation failed"
+        case .keyboardListenerInstallationFailed:
+            "Wayland keyboard listener installation failed"
+        case .touchListenerInstallationFailed:
+            "Wayland touch listener installation failed"
         case .displaySyncRequestFailed:
             "Wayland sync request failed"
         case .frameRequestFailed:
@@ -70,6 +80,8 @@ public enum RuntimeError: Error, CustomStringConvertible {
             "poll returned error events \(revents)"
         case .systemError(let errno):
             "Wayland runtime failed with errno \(errno)"
+        case .invalidWaylandArrayByteCount(let byteCount, let elementSize):
+            "Wayland array byte count \(byteCount) is not divisible by \(elementSize)"
         case .protocolError(let iface, let oid, let code):
             "Wayland protocol error interface=\(iface ?? "?") object=\(oid) code=\(code)"
         }

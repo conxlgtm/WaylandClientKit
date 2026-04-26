@@ -1,3 +1,4 @@
+import CWaylandProtocols
 import Testing
 
 @testable import WaylandRaw
@@ -71,6 +72,30 @@ struct FrameCallbackRegistrationTests {
     }
 
     @Test
+    func doneSurvivesRegistrationReleaseInsideHandler() throws {
+        let counters = CallbackCounters()
+        let pointer = try #require(OpaquePointer(bitPattern: 0x350))
+        let box = CallbackRegistrationBox()
+        var didFire = false
+
+        box.registration = try FrameCallbackRegistration(
+            pointer: pointer,
+            onDone: {
+                didFire = true
+                box.registration = nil
+            },
+            operations: counters.operations(addResult: 0)
+        )
+
+        let callbacks = try #require(counters.callbacks)
+        callbacks.pointee.done?(callbacks.pointee.data, pointer, 0)
+
+        #expect(didFire)
+        #expect(!box.hasRegistration)
+        #expect(counters.destroyCount == 0)
+    }
+
+    @Test
     func cancelIsIdempotentOnState() throws {
         let counters = CallbackCounters()
         let pointer = try #require(OpaquePointer(bitPattern: 0x400))
@@ -91,16 +116,26 @@ struct FrameCallbackRegistrationTests {
     }
 }
 
+private final class CallbackRegistrationBox {
+    var registration: FrameCallbackRegistration?
+
+    var hasRegistration: Bool {
+        registration != nil
+    }
+}
+
 private final class CallbackCounters {
     private(set) var addCount = 0
     private(set) var destroyCount = 0
+    private(set) var callbacks: UnsafePointer<swl_callback_listener_callbacks>?
 
     func operations(addResult: Int32) -> WaylandCallbackOperations {
         let counters = self
 
         return WaylandCallbackOperations(
-            addListener: { _, _ in
+            addListener: { _, callbacks in
                 counters.recordAdd()
+                counters.callbacks = callbacks
                 return addResult
             },
             destroy: { _ in

@@ -11,15 +11,22 @@ Current repository scope:
 - vendored protocol XML
 - generated protocol artifacts
 - C shim layer
-- smoke tests for system and shim imports
+- display connection management
+- registry discovery and version negotiation
+- event loop integration
+- SHM software rendering path
+- XDG toplevel window creation/configure handling
+- frame callback pacing
+- seat, pointer, keyboard, and touch event capture
+- raw input async event stream
+- tests for system imports, shim imports, raw lifecycle, and client drawing helpers
 
 Not implemented yet:
 
-- display connection management
-- Swift registry discovery
-- event loop
-- SHM rendering path
-- visible window
+- protocol coverage beyond core Wayland, XDG shell, shared memory, and input basics
+- xkbcommon-backed keyboard text/layout interpretation
+- higher-level `WaylandClient` async event adapters
+- DocC reference documentation
 
 ## Reference Environment
 
@@ -69,6 +76,12 @@ Run local checks:
 
 ```bash
 make check
+```
+
+Run the strict Swift concurrency build only:
+
+```bash
+make strict-concurrency
 ```
 
 Run the demo target:

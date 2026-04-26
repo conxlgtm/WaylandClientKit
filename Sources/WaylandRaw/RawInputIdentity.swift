@@ -1,22 +1,22 @@
-package struct RawSeatID: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt32
+public struct RawSeatID: Hashable, Sendable, CustomStringConvertible {
+    public let rawValue: UInt32
 
-    package init(rawValue seatRawValue: UInt32) {
+    public init(rawValue seatRawValue: UInt32) {
         rawValue = seatRawValue
     }
 
-    package var description: String {
+    public var description: String {
         "seat-\(rawValue)"
     }
 }
 
-package struct RawInputDeviceID: Hashable, Sendable, CustomStringConvertible {
-    package enum Kind: Hashable, Sendable, CustomStringConvertible {
+public struct RawInputDeviceID: Hashable, Sendable, CustomStringConvertible {
+    public enum Kind: Hashable, Sendable, CustomStringConvertible {
         case pointer
         case keyboard
         case touch
 
-        package var description: String {
+        public var description: String {
             switch self {
             case .pointer:
                 "pointer"
@@ -28,11 +28,11 @@ package struct RawInputDeviceID: Hashable, Sendable, CustomStringConvertible {
         }
     }
 
-    package let seatID: RawSeatID
-    package let kind: Kind
-    package let generation: UInt64
+    public let seatID: RawSeatID
+    public let kind: Kind
+    public let generation: UInt64
 
-    package init(
+    public init(
         seatID deviceSeatID: RawSeatID,
         kind deviceKind: Kind,
         generation deviceGeneration: UInt64
@@ -42,7 +42,7 @@ package struct RawInputDeviceID: Hashable, Sendable, CustomStringConvertible {
         generation = deviceGeneration
     }
 
-    package var description: String {
+    public var description: String {
         "\(seatID).\(kind)-\(generation)"
     }
 }

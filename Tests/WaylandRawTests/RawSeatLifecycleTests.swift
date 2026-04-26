@@ -1,9 +1,11 @@
+import CWaylandProtocols
+import Glibc
 import Testing
 
 @testable import WaylandRaw
 
 @Suite
-struct RawSeatLifecycleTests {
+struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
     @Test
     func capabilityChangesCreateAndReleaseChildProxies() throws {
         let recorder = SeatOperationRecorder()
@@ -26,8 +28,10 @@ struct RawSeatLifecycleTests {
         #expect(
             recorder.entries == [
                 "get pointer",
+                "add pointer listener",
                 "version",
                 "get keyboard",
+                "add keyboard listener",
                 "version",
             ])
 
@@ -85,6 +89,7 @@ struct RawSeatLifecycleTests {
             recorder.entries == [
                 "get pointer",
                 "get keyboard",
+                "add keyboard listener",
                 "version",
             ])
 
@@ -160,6 +165,204 @@ struct RawSeatLifecycleTests {
                     )
                 ))
     }
+
+    @Test
+    func pointerCallbacksEmitInputEvents() throws {
+        let recorder = SeatOperationRecorder()
+        recorder.pointerProxy = fakePointer(0x801)
+        let queue = RawInputEventQueue()
+        let seat = try RawSeat(
+            id: RawSeatID(rawValue: 8),
+            pointer: try #require(fakePointer(0x800)),
+            version: 10,
+            eventSink: queue,
+            operations: recorder.operations,
+            installListener: false
+        )
+
+        try seat.applyCapabilities([.pointer])
+        _ = queue.drain()
+
+        let callbacks = try #require(recorder.pointerCallbacks)
+        callbacks.pointee.motion?(
+            callbacks.pointee.data,
+            recorder.pointerProxy,
+            123,
+            256,
+            512
+        )
+
+        let event = try #require(queue.drain().last)
+        #expect(event.seatID == RawSeatID(rawValue: 8))
+        #expect(event.deviceID?.kind == .pointer)
+        #expect(
+            event.kind
+                == .pointer(
+                    .motion(
+                        RawPointerMotion(
+                            time: 123,
+                            x: WaylandFixed(rawValue: 256),
+                            y: WaylandFixed(rawValue: 512)
+                        )
+                    )
+                ))
+    }
+
+    @Test
+    func keyboardCallbacksCopyEnterKeys() throws {
+        let recorder = SeatOperationRecorder()
+        recorder.keyboardProxy = fakePointer(0x901)
+        let queue = RawInputEventQueue()
+        let seat = try RawSeat(
+            id: RawSeatID(rawValue: 9),
+            pointer: try #require(fakePointer(0x900)),
+            version: 10,
+            eventSink: queue,
+            operations: recorder.operations,
+            installListener: false
+        )
+
+        try seat.applyCapabilities([.keyboard])
+        _ = queue.drain()
+
+        let callbacks = try #require(recorder.keyboardCallbacks)
+        var pressedKeys = [UInt32(30), UInt32(31)]
+        let keyArrayByteCount = pressedKeys.count * MemoryLayout<UInt32>.stride
+        pressedKeys.withUnsafeMutableBufferPointer { keyBuffer in
+            var keyArray = wl_array(
+                size: keyArrayByteCount,
+                alloc: keyArrayByteCount,
+                data: UnsafeMutableRawPointer(keyBuffer.baseAddress)
+            )
+            callbacks.pointee.enter?(
+                callbacks.pointee.data,
+                recorder.keyboardProxy,
+                44,
+                fakePointer(0x777),
+                &keyArray
+            )
+        }
+
+        let enter = try #require(queue.drain().last)
+        #expect(
+            enter.kind
+                == .keyboard(
+                    .enter(
+                        RawKeyboardEnter(
+                            serial: 44,
+                            surfaceID: 0x777,
+                            pressedKeys: [30, 31]
+                        )
+                    )
+                ))
+    }
+
+    @Test
+    func keyboardKeymapCallbackCopiesBytesAndClosesFileDescriptor() throws {
+        let recorder = SeatOperationRecorder()
+        recorder.keyboardProxy = fakePointer(0x981)
+        let queue = RawInputEventQueue()
+        let seat = try RawSeat(
+            id: RawSeatID(rawValue: 11),
+            pointer: try #require(fakePointer(0x980)),
+            version: 10,
+            eventSink: queue,
+            operations: recorder.operations,
+            installListener: false
+        )
+
+        try seat.applyCapabilities([.keyboard])
+        _ = queue.drain()
+
+        let callbacks = try #require(recorder.keyboardCallbacks)
+        var descriptors = [Int32](repeating: 0, count: 2)
+        let pipeResult = descriptors.withUnsafeMutableBufferPointer { fds in
+            pipe(fds.baseAddress)
+        }
+        #expect(pipeResult == 0)
+
+        let bytes = [UInt8(1), UInt8(2), UInt8(3), UInt8(4)]
+        let writeResult = bytes.withUnsafeBytes { rawBytes in
+            write(descriptors[1], rawBytes.baseAddress, bytes.count)
+        }
+        #expect(writeResult == bytes.count)
+        close(descriptors[1])
+
+        callbacks.pointee.keymap?(
+            callbacks.pointee.data,
+            recorder.keyboardProxy,
+            RawKeyboardKeymapFormat.xkbV1.rawValue,
+            descriptors[0],
+            UInt32(bytes.count)
+        )
+
+        let event = try #require(queue.drain().last)
+        #expect(
+            event.kind
+                == .keyboard(
+                    .keymap(
+                        RawKeyboardKeymapPayload(
+                            id: RawKeyboardKeymapID(
+                                seatID: RawSeatID(rawValue: 11),
+                                keyboardGeneration: 1,
+                                keymapGeneration: 1
+                            ),
+                            format: .xkbV1,
+                            size: UInt32(bytes.count),
+                            bytes: bytes
+                        )
+                    )
+                ))
+        #expect(close(descriptors[0]) == -1)
+        #expect(errno == EBADF)
+    }
+
+    @Test
+    func touchCallbacksEmitInputEvents() throws {
+        let recorder = SeatOperationRecorder()
+        recorder.touchProxy = fakePointer(0xA01)
+        let queue = RawInputEventQueue()
+        let seat = try RawSeat(
+            id: RawSeatID(rawValue: 10),
+            pointer: try #require(fakePointer(0xA00)),
+            version: 10,
+            eventSink: queue,
+            operations: recorder.operations,
+            installListener: false
+        )
+
+        try seat.applyCapabilities([.touch])
+        _ = queue.drain()
+
+        let callbacks = try #require(recorder.touchCallbacks)
+        callbacks.pointee.down?(
+            callbacks.pointee.data,
+            recorder.touchProxy,
+            1,
+            2,
+            fakePointer(0x333),
+            3,
+            256,
+            512
+        )
+
+        let event = try #require(queue.drain().last)
+        #expect(event.deviceID?.kind == .touch)
+        #expect(
+            event.kind
+                == .touch(
+                    .down(
+                        RawTouchDown(
+                            serial: 1,
+                            time: 2,
+                            surfaceID: 0x333,
+                            id: 3,
+                            x: WaylandFixed(rawValue: 256),
+                            y: WaylandFixed(rawValue: 512)
+                        )
+                    )
+                ))
+    }
 }
 
 @Suite
@@ -214,6 +417,9 @@ private final class SeatOperationRecorder {
     var pointerProxy: OpaquePointer?
     var keyboardProxy: OpaquePointer?
     var touchProxy: OpaquePointer?
+    var pointerCallbacks: UnsafePointer<swl_pointer_listener_callbacks>?
+    var keyboardCallbacks: UnsafePointer<swl_keyboard_listener_callbacks>?
+    var touchCallbacks: UnsafePointer<swl_touch_listener_callbacks>?
 
     var operations: RawSeatProxyOperations {
         RawSeatProxyOperations(
@@ -223,6 +429,21 @@ private final class SeatOperationRecorder {
             },
             addSeatListener: { [self] _, _ in
                 entries.append("add seat listener")
+                return 0
+            },
+            addPointerListener: { [self] _, callbacks in
+                entries.append("add pointer listener")
+                pointerCallbacks = callbacks
+                return 0
+            },
+            addKeyboardListener: { [self] _, callbacks in
+                entries.append("add keyboard listener")
+                keyboardCallbacks = callbacks
+                return 0
+            },
+            addTouchListener: { [self] _, callbacks in
+                entries.append("add touch listener")
+                touchCallbacks = callbacks
                 return 0
             },
             getPointer: { [self] _ in
@@ -240,6 +461,9 @@ private final class SeatOperationRecorder {
             proxyVersion: { [self] _ in
                 entries.append("version")
                 return 10
+            },
+            proxyObjectID: { proxy in
+                proxy.map { RawObjectID(UInt32(UInt(bitPattern: UnsafeRawPointer($0)))) }
             },
             releasePointer: { [self] _ in
                 entries.append("release pointer")

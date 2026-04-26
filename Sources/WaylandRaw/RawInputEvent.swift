@@ -1,10 +1,10 @@
-package struct RawInputEvent: Equatable, Sendable {
-    package let sequence: UInt64
-    package let seatID: RawSeatID
-    package let deviceID: RawInputDeviceID?
-    package let kind: RawInputEventKind
+public struct RawInputEvent: Equatable, Sendable {
+    public let sequence: UInt64
+    public let seatID: RawSeatID
+    public let deviceID: RawInputDeviceID?
+    public let kind: RawInputEventKind
 
-    package init(
+    public init(
         sequence eventSequence: UInt64,
         seatID eventSeatID: RawSeatID,
         deviceID eventDeviceID: RawInputDeviceID?,
@@ -33,7 +33,7 @@ package struct RawInputEventDraft: Equatable, Sendable {
     }
 }
 
-package enum RawInputEventKind: Equatable, Sendable {
+public enum RawInputEventKind: Equatable, Sendable {
     case seat(RawSeatEventSnapshot)
     case seatRemoved
     case pointer(RawPointerEvent)
@@ -41,12 +41,12 @@ package enum RawInputEventKind: Equatable, Sendable {
     case touch(RawTouchEvent)
 }
 
-package struct RawSeatEventSnapshot: Equatable, Sendable {
-    package let advertisedCapabilities: SeatCapabilities
-    package let activeCapabilities: SeatCapabilities
-    package let name: String?
+public struct RawSeatEventSnapshot: Equatable, Sendable {
+    public let advertisedCapabilities: SeatCapabilities
+    public let activeCapabilities: SeatCapabilities
+    public let name: String?
 
-    package init(
+    public init(
         advertisedCapabilities seatAdvertisedCapabilities: SeatCapabilities,
         activeCapabilities seatActiveCapabilities: SeatCapabilities,
         name seatName: String?
