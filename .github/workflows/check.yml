@@ -1,0 +1,118 @@
+name: check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.3.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            clang \
+            curl \
+            git \
+            libwayland-dev \
+            libxkbcommon-dev \
+            make \
+            pkg-config \
+            unzip \
+            wayland-protocols
+      - name: Install SwiftLint
+        run: |
+          ./Scripts/install-swiftlint.sh "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Tool versions
+        run: |
+          swift --version
+          pkg-config --modversion wayland-client
+          pkg-config --modversion xkbcommon
+          command -v wayland-scanner
+          swiftlint version
+      - name: Check
+        run: make check
+
+  generated-freshness:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.3.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install generation dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            git \
+            libwayland-dev \
+            pkg-config \
+            wayland-protocols
+      - name: Verify generated artifacts
+        run: |
+          ./Scripts/verify-generated.sh
+          git diff --exit-code -- \
+            Protocols \
+            Sources/CWaylandProtocols/include/generated \
+            Sources/CWaylandProtocols/generated
+
+  release-build:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.3.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            clang \
+            git \
+            libwayland-dev \
+            libxkbcommon-dev \
+            pkg-config \
+            wayland-protocols
+      - name: Release build
+        run: |
+          swift build -c release
+          swift build -c release --product swift-wayland-demo
+          swift build -c release --product swift-wayland-smoke
+
+  wayland-smoke:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.3.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install smoke dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            clang \
+            coreutils \
+            git \
+            libwayland-dev \
+            libxkbcommon-dev \
+            pkg-config \
+            wayland-protocols \
+            weston
+      - name: Run headless Wayland smoke test
+        run: |
+          export XDG_RUNTIME_DIR="$(mktemp -d)"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          weston --backend=headless-backend.so \
+            --socket=swiftwayland-ci \
+            --idle-time=0 \
+            --log=weston.log &
+          WESTON_PID="$!"
+          trap 'kill "$WESTON_PID" 2>/dev/null || true' EXIT
+          export WAYLAND_DISPLAY=swiftwayland-ci
+          ./Scripts/smoke-wayland.sh

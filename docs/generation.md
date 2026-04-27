@@ -10,6 +10,8 @@ Vendored XML files:
 
 These files are committed.
 
+Do not edit generated files directly. Change the vendored XML or generation scripts, regenerate, and review the generated diff.
+
 ## Generated Outputs
 
 Generated headers:
@@ -119,3 +121,15 @@ because shim files are project-owned code rather than scanner output.
 Generated protocol files define the protocol surface.
 
 Shim files define the exported C surface imported by Swift.
+
+## Adding Another Protocol
+
+1. Add the protocol XML under `Protocols/`.
+2. Update `Protocols/manifest.json` if the protocol should be tracked there.
+3. Extend `Scripts/generate-protocols.sh` to write the generated header and C file.
+4. Run `./Scripts/generate-protocols.sh`.
+5. Add project-owned shim declarations and implementations for the Swift-facing surface.
+6. Update `Scripts/verify-shims.sh` for required new shim symbols.
+7. Add raw Swift wrappers and tests.
+8. Surface public overlay APIs only when the behavior is tested and documented.
+9. Run `make check`.
