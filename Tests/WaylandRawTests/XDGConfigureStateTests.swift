@@ -34,4 +34,26 @@ struct XDGConfigureStateTests {
         #expect(
             state.handleSurfaceConfigure(serial: 7).size == TopLevelSize(width: 320, height: 240))
     }
+
+    @Test
+    func pendingCallbackErrorsAreThrownAndCleared() {
+        let state = XDGConfigureState()
+        state.recordError(.invalidWaylandArrayByteCount(byteCount: 3, elementSize: 4))
+
+        do {
+            try state.throwPendingErrorIfAny()
+            Issue.record("Expected pending XDG configure error")
+        } catch RuntimeError.invalidWaylandArrayByteCount(let byteCount, let elementSize) {
+            #expect(byteCount == 3)
+            #expect(elementSize == 4)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        do {
+            try state.throwPendingErrorIfAny()
+        } catch {
+            Issue.record("Expected pending error to be cleared, got \(error)")
+        }
+    }
 }

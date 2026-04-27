@@ -76,6 +76,7 @@ public final class XDGConfigureState {
     private var pendingBounds: TopLevelSize?
     private var pendingWMCapabilities: [XDGWMCapability] = []
     private var latestConfigure: SurfaceConfigure?
+    private var pendingError: RuntimeError?
 
     public private(set) var hasReceivedInitialConfigure = false
 
@@ -101,6 +102,19 @@ public final class XDGConfigureState {
 
     public func handleWMCapabilities(_ capabilities: [XDGWMCapability]) {
         pendingWMCapabilities = capabilities
+    }
+
+    package func recordError(_ error: RuntimeError) {
+        if pendingError == nil {
+            pendingError = error
+        }
+    }
+
+    package func throwPendingErrorIfAny() throws {
+        guard let error = pendingError else { return }
+
+        pendingError = nil
+        throw error
     }
 
     @discardableResult

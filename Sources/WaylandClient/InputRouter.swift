@@ -1,8 +1,14 @@
 import WaylandRaw
 
 final class InputRouter {
+    private struct TouchFocusKey: Hashable {
+        var seatID: RawSeatID
+        var touchID: Int32
+    }
+
     private var pointerFocusBySeat: [RawSeatID: RawObjectID] = [:]
     private var keyboardFocusBySeat: [RawSeatID: RawObjectID] = [:]
+    private var touchFocusBySeatAndID: [TouchFocusKey: RawObjectID] = [:]
     private var windowsBySurface: [RawObjectID: WindowID] = [:]
 
     func register(windowID: WindowID, surfaceID: RawObjectID) {
@@ -13,6 +19,7 @@ final class InputRouter {
         windowsBySurface.removeValue(forKey: surfaceID)
         pointerFocusBySeat = pointerFocusBySeat.filter { $0.value != surfaceID }
         keyboardFocusBySeat = keyboardFocusBySeat.filter { $0.value != surfaceID }
+        touchFocusBySeatAndID = touchFocusBySeatAndID.filter { $0.value != surfaceID }
     }
 
     func route(_ event: RawInputEvent) -> [InputEvent] {
@@ -34,13 +41,14 @@ final class InputRouter {
         case .seatRemoved:
             pointerFocusBySeat[event.seatID] = nil
             keyboardFocusBySeat[event.seatID] = nil
+            touchFocusBySeatAndID = touchFocusBySeatAndID.filter { $0.key.seatID != event.seatID }
             return routedEvent(event, windowID: nil, kind: .seat(.removed))
         case .pointer(let pointerEvent):
             return routePointer(event, pointerEvent)
         case .keyboard(let keyboardEvent):
             return routeKeyboard(event, keyboardEvent)
-        case .touch:
-            return nil
+        case .touch(let touchEvent):
+            return routeTouch(event, touchEvent)
         }
     }
 
@@ -125,9 +133,133 @@ final class InputRouter {
             return routeKeyboardRepeatInfo(rawEvent, repeatInfo)
         }
     }
+
+    private func routeTouch(
+        _ rawEvent: RawInputEvent,
+        _ touchEvent: RawTouchEvent
+    ) -> InputEvent {
+        switch touchEvent {
+        case .down(let down):
+            return routeTouchDown(rawEvent, down)
+        case .up(let up):
+            return routeTouchUp(rawEvent, up)
+        case .motion(let motion):
+            return routeTouchMotion(rawEvent, motion)
+        case .frame:
+            return routedEvent(rawEvent, windowID: nil, kind: .touch(.frame))
+        case .cancel:
+            clearTouchFocuses(seatID: rawEvent.seatID)
+            return routedEvent(rawEvent, windowID: nil, kind: .touch(.cancel))
+        case .shape(let shape):
+            return routeTouchShape(rawEvent, shape)
+        case .orientation(let orientation):
+            return routeTouchOrientation(rawEvent, orientation)
+        }
+    }
 }
 
 extension InputRouter {
+    func routeTouchDown(
+        _ rawEvent: RawInputEvent,
+        _ down: RawTouchDown
+    ) -> InputEvent {
+        if let surfaceID = down.surfaceID {
+            touchFocusBySeatAndID[
+                TouchFocusKey(seatID: rawEvent.seatID, touchID: down.id)
+            ] = surfaceID
+        }
+        return routedEvent(
+            rawEvent,
+            windowID: windowID(for: down.surfaceID),
+            kind: .touch(
+                .down(
+                    TouchDownEvent(
+                        serial: down.serial,
+                        time: down.time,
+                        id: down.id,
+                        location: PointerLocation(
+                            x: down.x.doubleValue,
+                            y: down.y.doubleValue
+                        )
+                    )
+                )
+            )
+        )
+    }
+
+    func routeTouchUp(
+        _ rawEvent: RawInputEvent,
+        _ up: RawTouchUp
+    ) -> InputEvent {
+        let focusKey = TouchFocusKey(seatID: rawEvent.seatID, touchID: up.id)
+        let windowID = windowID(for: touchFocusBySeatAndID[focusKey])
+        touchFocusBySeatAndID[focusKey] = nil
+        return routedEvent(
+            rawEvent,
+            windowID: windowID,
+            kind: .touch(.up(TouchUpEvent(serial: up.serial, time: up.time, id: up.id)))
+        )
+    }
+
+    func routeTouchMotion(
+        _ rawEvent: RawInputEvent,
+        _ motion: RawTouchMotion
+    ) -> InputEvent {
+        routedEvent(
+            rawEvent,
+            windowID: focusedTouchWindow(for: rawEvent.seatID, touchID: motion.id),
+            kind: .touch(
+                .motion(
+                    TouchMotionEvent(
+                        time: motion.time,
+                        id: motion.id,
+                        location: PointerLocation(
+                            x: motion.x.doubleValue,
+                            y: motion.y.doubleValue
+                        )
+                    )
+                )
+            )
+        )
+    }
+
+    func routeTouchShape(
+        _ rawEvent: RawInputEvent,
+        _ shape: RawTouchShape
+    ) -> InputEvent {
+        routedEvent(
+            rawEvent,
+            windowID: focusedTouchWindow(for: rawEvent.seatID, touchID: shape.id),
+            kind: .touch(
+                .shape(
+                    TouchShapeEvent(
+                        id: shape.id,
+                        major: shape.major.doubleValue,
+                        minor: shape.minor.doubleValue
+                    )
+                )
+            )
+        )
+    }
+
+    func routeTouchOrientation(
+        _ rawEvent: RawInputEvent,
+        _ orientation: RawTouchOrientation
+    ) -> InputEvent {
+        routedEvent(
+            rawEvent,
+            windowID: focusedTouchWindow(for: rawEvent.seatID, touchID: orientation.id),
+            kind: .touch(
+                .orientation(
+                    TouchOrientationEvent(
+                        id: orientation.id,
+                        orientation: orientation.orientation.doubleValue
+                    )
+                )
+            )
+        )
+    }
+
     func routeKeyboardKeymap(
         _ rawEvent: RawInputEvent,
         _ keymap: RawKeyboardKeymapPayload
@@ -289,6 +421,16 @@ extension InputRouter {
 
     func focusedKeyboardWindow(for seatID: RawSeatID) -> WindowID? {
         windowID(for: keyboardFocusBySeat[seatID])
+    }
+
+    func focusedTouchWindow(for seatID: RawSeatID, touchID: Int32) -> WindowID? {
+        windowID(for: touchFocusBySeatAndID[TouchFocusKey(seatID: seatID, touchID: touchID)])
+    }
+
+    func clearTouchFocuses(seatID: RawSeatID) {
+        touchFocusBySeatAndID = touchFocusBySeatAndID.filter { entry in
+            entry.key.seatID != seatID
+        }
     }
 
     func clearPointerFocus(seatID: RawSeatID, surfaceID: RawObjectID?) {

@@ -23,6 +23,7 @@ public enum InputEventKind: Equatable, Sendable {
     case seat(SeatEvent)
     case pointer(PointerEvent)
     case keyboard(KeyboardEvent)
+    case touch(TouchEvent)
 }
 
 public enum SeatEvent: Equatable, Sendable {
@@ -229,5 +230,81 @@ public struct KeyboardRepeatInfo: Equatable, Sendable {
     public init(rate repeatRate: Int32, delay repeatDelay: Int32) {
         rate = repeatRate
         delay = repeatDelay
+    }
+}
+
+public enum TouchEvent: Equatable, Sendable {
+    case down(TouchDownEvent)
+    case up(TouchUpEvent)
+    case motion(TouchMotionEvent)
+    case frame
+    case cancel
+    case shape(TouchShapeEvent)
+    case orientation(TouchOrientationEvent)
+}
+
+public struct TouchDownEvent: Equatable, Sendable {
+    public let serial: UInt32
+    public let time: UInt32
+    public let id: Int32
+    public let location: PointerLocation
+
+    public init(
+        serial eventSerial: UInt32,
+        time eventTime: UInt32,
+        id eventID: Int32,
+        location eventLocation: PointerLocation
+    ) {
+        serial = eventSerial
+        time = eventTime
+        id = eventID
+        location = eventLocation
+    }
+}
+
+public struct TouchUpEvent: Equatable, Sendable {
+    public let serial: UInt32
+    public let time: UInt32
+    public let id: Int32
+
+    public init(serial eventSerial: UInt32, time eventTime: UInt32, id eventID: Int32) {
+        serial = eventSerial
+        time = eventTime
+        id = eventID
+    }
+}
+
+public struct TouchMotionEvent: Equatable, Sendable {
+    public let time: UInt32
+    public let id: Int32
+    public let location: PointerLocation
+
+    public init(time eventTime: UInt32, id eventID: Int32, location eventLocation: PointerLocation)
+    {
+        time = eventTime
+        id = eventID
+        location = eventLocation
+    }
+}
+
+public struct TouchShapeEvent: Equatable, Sendable {
+    public let id: Int32
+    public let major: Double
+    public let minor: Double
+
+    public init(id touchID: Int32, major touchMajor: Double, minor touchMinor: Double) {
+        id = touchID
+        major = touchMajor
+        minor = touchMinor
+    }
+}
+
+public struct TouchOrientationEvent: Equatable, Sendable {
+    public let id: Int32
+    public let orientation: Double
+
+    public init(id touchID: Int32, orientation touchOrientation: Double) {
+        id = touchID
+        orientation = touchOrientation
     }
 }
