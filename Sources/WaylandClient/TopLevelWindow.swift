@@ -96,6 +96,17 @@ public final class TopLevelWindow {
         try drawAndPresent(draw)
     }
 
+    public func show(
+        timeoutMilliseconds: Int32,
+        _ draw: (SoftwareFrame) throws -> Void
+    ) throws {
+        if currentConfigure == nil {
+            _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
+        }
+
+        try drawAndPresent(draw)
+    }
+
     public func redraw(_ draw: (SoftwareFrame) throws -> Void) throws {
         guard !isClosedStorage else { return }
 
@@ -166,6 +177,29 @@ public final class TopLevelWindow {
     private func waitForInitialConfigure() throws -> SurfaceConfigure {
         while !configureState.hasReceivedInitialConfigure, !isClosedStorage {
             try connection.pumpEvents(timeoutMilliseconds: 1_000)
+        }
+
+        guard let configure = try consumeLatestConfigureIfAvailable() else {
+            throw ClientError.windowCreationFailed("missing initial configure")
+        }
+
+        return configure
+    }
+
+    private func waitForInitialConfigure(timeoutMilliseconds: Int32) throws -> SurfaceConfigure {
+        var remainingMilliseconds = max(timeoutMilliseconds, 0)
+        let pollMilliseconds: Int32 = 50
+
+        while !configureState.hasReceivedInitialConfigure, !isClosedStorage {
+            guard remainingMilliseconds > 0 else {
+                throw ClientError.windowCreationFailed(
+                    "timed out waiting for initial configure"
+                )
+            }
+
+            let pumpTimeout = min(remainingMilliseconds, pollMilliseconds)
+            try connection.pumpEvents(timeoutMilliseconds: pumpTimeout)
+            remainingMilliseconds -= pumpTimeout
         }
 
         guard let configure = try consumeLatestConfigureIfAvailable() else {

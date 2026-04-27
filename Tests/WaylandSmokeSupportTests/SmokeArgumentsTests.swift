@@ -1,0 +1,65 @@
+import Testing
+import WaylandSmokeSupport
+
+@Suite
+struct SmokeArgumentsTests {
+    @Test
+    func emptyArgumentsRunDefaultConfiguration() throws {
+        let command = try SmokeArguments.parse([])
+
+        #expect(command == .run(SmokeConfiguration()))
+    }
+
+    @Test
+    func helpArgumentsReturnHelpCommand() throws {
+        #expect(try SmokeArguments.parse(["--help"]) == .help)
+        #expect(try SmokeArguments.parse(["-h"]) == .help)
+    }
+
+    @Test
+    func timeoutArgumentsOverrideConfiguration() throws {
+        let command = try SmokeArguments.parse([
+            "--",
+            "--timeout-milliseconds",
+            "2500",
+            "--post-commit-pump-milliseconds",
+            "25",
+        ])
+
+        #expect(
+            command
+                == .run(
+                    SmokeConfiguration(
+                        timeoutMilliseconds: 2_500,
+                        postCommitPumpMilliseconds: 25
+                    )
+                )
+        )
+    }
+
+    @Test
+    func missingArgumentValueThrows() {
+        #expect(throws: SmokeArgumentError.missingValue("--timeout-milliseconds")) {
+            try SmokeArguments.parse(["--timeout-milliseconds"])
+        }
+    }
+
+    @Test
+    func invalidArgumentValueThrows() {
+        #expect(
+            throws: SmokeArgumentError.invalidValue(
+                argument: "--timeout-milliseconds",
+                value: "nope"
+            )
+        ) {
+            try SmokeArguments.parse(["--timeout-milliseconds", "nope"])
+        }
+    }
+
+    @Test
+    func unknownArgumentThrows() {
+        #expect(throws: SmokeArgumentError.unknownArgument("--bad")) {
+            try SmokeArguments.parse(["--bad"])
+        }
+    }
+}

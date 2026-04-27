@@ -19,6 +19,7 @@ let package = Package(
         .library(name: "WaylandClient", targets: ["WaylandClient"]),
         .library(name: "WaylandKeyboardInterpretation", targets: ["WaylandKeyboardInterpretation"]),
         .executable(name: "swift-wayland-demo", targets: ["SwiftWaylandDemo"]),
+        .executable(name: "swift-wayland-smoke", targets: ["SwiftWaylandSmoke"]),
     ],
     targets: [
         .systemLibrary(
@@ -52,9 +53,19 @@ let package = Package(
             dependencies: ["WaylandRaw", "CXKBCommonSystem"],
             swiftSettings: librarySwiftSettings
         ),
+        .target(
+            name: "WaylandSmokeSupport",
+            dependencies: ["WaylandClient"],
+            swiftSettings: librarySwiftSettings
+        ),
         .executableTarget(
             name: "SwiftWaylandDemo",
             dependencies: ["WaylandClient"],
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "SwiftWaylandSmoke",
+            dependencies: ["WaylandSmokeSupport"],
             swiftSettings: executableSwiftSettings
         ),
         .testTarget(
@@ -70,6 +81,11 @@ let package = Package(
         .testTarget(
             name: "WaylandKeyboardInterpretationTests",
             dependencies: ["WaylandKeyboardInterpretation"],
+            swiftSettings: librarySwiftSettings
+        ),
+        .testTarget(
+            name: "WaylandSmokeSupportTests",
+            dependencies: ["WaylandSmokeSupport"],
             swiftSettings: librarySwiftSettings
         ),
         .testTarget(

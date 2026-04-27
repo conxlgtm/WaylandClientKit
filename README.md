@@ -4,7 +4,7 @@ SwiftWayland is a Swift package for Wayland clients on Linux.
 
 ## Scope
 
-Current repository scope:
+Current experimental baseline:
 
 - SwiftPM package layout
 - system-library import of `libwayland-client`
@@ -22,6 +22,7 @@ Current repository scope:
 - copied keyboard keymap payloads inside `WaylandRaw`
 - `xkbcommon` import boundary for future keyboard interpretation
 - raw input async event stream
+- noninteractive Wayland smoke executable
 - tests for system imports, shim imports, raw lifecycle, and client drawing helpers
 
 Not implemented yet:
@@ -33,6 +34,40 @@ Not implemented yet:
 - high-level gesture recognizers or widgets
 - DocC reference documentation
 
+## Support Matrix
+
+Supported in the `0.0.1` checkpoint:
+
+- `wl_display`
+- `wl_registry`
+- `wl_callback`
+- `wl_compositor`
+- `wl_surface`
+- `wl_shm`
+- `wl_shm_pool`
+- `wl_buffer`
+- `wl_seat`
+- `wl_pointer`
+- `wl_keyboard`
+- `wl_touch`
+- `xdg_wm_base`
+- `xdg_surface`
+- `xdg_toplevel`
+
+Boundary only:
+
+- xkbcommon import through `CXKBCommonSystem`
+
+Not supported in the `0.0.1` checkpoint:
+
+- `wl_data_device_manager`, clipboard, primary selection, or drag and drop
+- cursor themes or cursor surfaces
+- xdg-decoration
+- presentation-time, viewporter, or fractional-scale
+- linux-dmabuf, EGL, GBM, or GPU rendering
+- text-input or IME protocols
+- widgets or retained UI
+
 ## Reference Environment
 
 - Fedora
@@ -40,12 +75,23 @@ Not implemented yet:
 - `wayland-devel`
 - `wayland-protocols-devel`
 - `pkgconf-pkg-config`
+- `libxkbcommon-devel`
+- `git`
+- `clang`
+
+Swift 6.3.1 must already be installed and available on `PATH` before running the bootstrap script.
 
 ## Targets
 
 ```text
 WaylandClient
     public Swift layer with DisplaySession and window helpers
+
+WaylandSmokeSupport
+    command parsing and runtime helper for smoke checks
+
+SwiftWaylandSmoke
+    noninteractive Wayland smoke executable
 
 WaylandKeyboardInterpretation
     keyboard interpretation boundary for future xkbcommon work
@@ -104,10 +150,27 @@ swift run swift-wayland-demo
 The demo draws a small marker for pointer motion and prints basic pointer/keyboard/seat events.
 It does not manage cursor images yet; some compositors may leave the cursor unchanged or undefined over the demo window.
 
+Run the noninteractive Wayland smoke check under a real Wayland session:
+
+```bash
+./Scripts/smoke-wayland.sh
+```
+
+Or run the executable directly:
+
+```bash
+swift run swift-wayland-smoke
+```
+
 ## Documents
 
 - [Architecture](docs/architecture.md)
 - [Protocol Generation](docs/generation.md)
+- [Contributing](CONTRIBUTING.md)
+- [Release Checklist](docs/release.md)
+- [Roadmap](docs/roadmap.md)
+- [Advanced Graphics Boundary](docs/advanced-graphics.md)
+- [Public API Audit](docs/public-api-audit.md)
 
 ## Documentation Format
 
