@@ -6,11 +6,14 @@ if [[ -n "${SWIFT_BIN:-}" ]]; then
 fi
 
 SWIFTLY_HOME_DIR="${SWIFTLY_HOME:-$HOME/.local/share/swiftly}"
-SWIFTLY_TOOLCHAIN_SWIFT="$(
-    find "${SWIFTLY_HOME_DIR}/toolchains" -path '*/usr/bin/swift' 2>/dev/null \
-        | sort \
-        | tail -n 1
-)"
+SWIFTLY_TOOLCHAIN_SWIFT=""
+if [[ -d "${SWIFTLY_HOME_DIR}/toolchains" ]]; then
+    SWIFTLY_TOOLCHAIN_SWIFT="$(
+        find "${SWIFTLY_HOME_DIR}/toolchains" -path '*/usr/bin/swift' \
+            | sort \
+            | tail -n 1
+    )"
+fi
 
 if [[ -n "${SWIFTLY_TOOLCHAIN_SWIFT}" ]]; then
     exec "${SWIFTLY_TOOLCHAIN_SWIFT}" "$@"

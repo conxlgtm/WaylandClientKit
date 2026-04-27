@@ -37,6 +37,7 @@ These files are not generated:
 
 - `wayland-scanner`
 - `git`
+- `ripgrep`
 
 ## Commands
 

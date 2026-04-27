@@ -10,5 +10,5 @@ PROCESS_TIMEOUT_SECONDS="${SWIFT_WAYLAND_SMOKE_PROCESS_TIMEOUT_SECONDS:-60}"
 CONFIGURE_TIMEOUT_MILLISECONDS="${SWIFT_WAYLAND_SMOKE_CONFIGURE_TIMEOUT_MILLISECONDS:-5000}"
 
 timeout "${PROCESS_TIMEOUT_SECONDS}s" \
-    ./Scripts/swift.sh run swift-wayland-smoke -- \
+    ./Scripts/swift.sh run --disable-index-store swift-wayland-smoke -- \
     --timeout-milliseconds "${CONFIGURE_TIMEOUT_MILLISECONDS}"
