@@ -13,6 +13,7 @@ Reference environment:
 - `pkgconf-pkg-config`
 - `libxkbcommon-devel`
 - `git`
+- `ripgrep`
 - `clang`
 
 Swift itself must already be installed and on `PATH` before running the bootstrap script.

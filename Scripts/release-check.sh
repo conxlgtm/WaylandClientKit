@@ -2,9 +2,9 @@
 set -euo pipefail
 
 make check
-./Scripts/swift.sh build -c release
-./Scripts/swift.sh build -c release --product swift-wayland-demo
-./Scripts/swift.sh build -c release --product swift-wayland-smoke
+./Scripts/swift.sh build --disable-index-store -c release
+./Scripts/swift.sh build --disable-index-store -c release --product swift-wayland-demo
+./Scripts/swift.sh build --disable-index-store -c release --product swift-wayland-smoke
 
 if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
     ./Scripts/smoke-wayland.sh

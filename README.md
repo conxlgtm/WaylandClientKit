@@ -77,6 +77,7 @@ Not supported in the `0.0.1` checkpoint:
 - `pkgconf-pkg-config`
 - `libxkbcommon-devel`
 - `git`
+- `ripgrep`
 - `clang`
 
 Swift 6.3.1 must already be installed and available on `PATH` before running the bootstrap script.
@@ -167,10 +168,6 @@ swift run swift-wayland-smoke
 - [Architecture](docs/architecture.md)
 - [Protocol Generation](docs/generation.md)
 - [Contributing](CONTRIBUTING.md)
-- [Release Checklist](docs/release.md)
-- [Roadmap](docs/roadmap.md)
-- [Advanced Graphics Boundary](docs/advanced-graphics.md)
-- [Public API Audit](docs/public-api-audit.md)
 
 ## Documentation Format
 

@@ -12,6 +12,7 @@ sudo dnf install -y \
     pkgconf-pkg-config \
     libxkbcommon-devel \
     git \
+    ripgrep \
     clang --skip-unavailable
 
 swift --version

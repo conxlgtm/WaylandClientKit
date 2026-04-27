@@ -8,10 +8,6 @@ required_files=(
     CONTRIBUTING.md
     docs/architecture.md
     docs/generation.md
-    docs/release.md
-    docs/roadmap.md
-    docs/advanced-graphics.md
-    docs/public-api-audit.md
 )
 
 required_patterns=(
@@ -28,6 +24,7 @@ required_patterns=(
     "wayland-protocols-devel"
     "pkgconf-pkg-config"
     "libxkbcommon-devel"
+    "ripgrep"
     "make check"
     "./Scripts/generate-protocols.sh"
     "./Scripts/verify-generated.sh"

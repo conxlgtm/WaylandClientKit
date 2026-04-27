@@ -23,10 +23,10 @@ verify-docs:
 	@./Scripts/verify-docs.sh
 
 strict-concurrency:
-	@$(SWIFT) build -Xswiftc -strict-concurrency=complete -Xswiftc -warn-concurrency
+	@$(SWIFT) build --disable-index-store -Xswiftc -strict-concurrency=complete -Xswiftc -warn-concurrency
 
 test:
-	@$(SWIFT) test
+	@CC="$(CURDIR)/Scripts/clang-filter-index-store.sh" $(SWIFT) test
 
 check: lint verify-generated verify-shims verify-docs strict-concurrency test
 

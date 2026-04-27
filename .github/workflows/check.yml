@@ -25,6 +25,7 @@ jobs:
             libxkbcommon-dev \
             make \
             pkg-config \
+            ripgrep \
             unzip \
             wayland-protocols
       - name: Install SwiftLint
@@ -56,12 +57,7 @@ jobs:
             pkg-config \
             wayland-protocols
       - name: Verify generated artifacts
-        run: |
-          ./Scripts/verify-generated.sh
-          git diff --exit-code -- \
-            Protocols \
-            Sources/CWaylandProtocols/include/generated \
-            Sources/CWaylandProtocols/generated
+        run: ./Scripts/verify-generated.sh
 
   release-build:
     runs-on: ubuntu-latest
@@ -81,9 +77,9 @@ jobs:
             wayland-protocols
       - name: Release build
         run: |
-          swift build -c release
-          swift build -c release --product swift-wayland-demo
-          swift build -c release --product swift-wayland-smoke
+          swift build --disable-index-store -c release
+          swift build --disable-index-store -c release --product swift-wayland-demo
+          swift build --disable-index-store -c release --product swift-wayland-smoke
 
   wayland-smoke:
     if: github.event_name == 'workflow_dispatch'
