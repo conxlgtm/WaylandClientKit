@@ -1,4 +1,4 @@
-public enum ClientError: Error, CustomStringConvertible {
+public enum ClientError: Error, Sendable, CustomStringConvertible {
     case windowCreationFailed(String)
     case invalidWindowState(String)
 

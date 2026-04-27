@@ -9,6 +9,7 @@ public final class RawDisplayConnection {
     private let registryState: RegistryState
     private let registryListenerOwner: RegistryListenerOwner
     private let inputEventQueue: RawInputEventQueue
+    private let threadAffinity = ThreadAffinity()
 
     private init(
         display rawDisplay: RawDisplay,
@@ -25,6 +26,14 @@ public final class RawDisplayConnection {
         registryListenerOwner.onGlobalRemoved = { [weak connection = self] name in
             connection?.boundGlobals?.seatRegistry.removeSeat(globalName: name)
         }
+    }
+
+    package func preconditionIsOwnerThread(
+        _ operation: StaticString = #function,
+        file: StaticString = #fileID,
+        line: UInt = #line
+    ) {
+        threadAffinity.preconditionIsOwnerThread(operation, file: file, line: line)
     }
 
     public static func connect() throws -> RawDisplayConnection {
@@ -71,6 +80,8 @@ public final class RawDisplayConnection {
     }
 
     public func completeInitialDiscovery() throws {
+        preconditionIsOwnerThread()
+
         guard let syncCallback = swl_display_sync(display.opaquePointer) else {
             throw RuntimeError.displaySyncRequestFailed
         }
@@ -91,15 +102,19 @@ public final class RawDisplayConnection {
     }
 
     public var globals: [RawGlobalAdvertisement] {
-        registryState.snapshot
+        preconditionIsOwnerThread()
+        return registryState.snapshot
     }
 
     public func global(named interfaceName: String) -> RawGlobalAdvertisement? {
-        registryState.firstGlobal(named: interfaceName)
+        preconditionIsOwnerThread()
+        return registryState.firstGlobal(named: interfaceName)
     }
 
     @discardableResult
     public func bindRequiredGlobals() throws -> BoundGlobals {
+        preconditionIsOwnerThread()
+
         if let boundGlobals {
             return boundGlobals
         }
@@ -218,6 +233,8 @@ public final class RawDisplayConnection {
     }
 
     public func pumpEvents(timeoutMilliseconds: Int32 = -1) throws {
+        preconditionIsOwnerThread()
+
         try EventLoop.pumpOnce(
             display: display.opaquePointer,
             timeoutMilliseconds: timeoutMilliseconds
@@ -225,13 +242,20 @@ public final class RawDisplayConnection {
     }
 
     public func drainInputEvents() -> [RawInputEvent] {
-        inputEventQueue.drain()
+        preconditionIsOwnerThread()
+        return inputEventQueue.drain()
     }
 
-    public func inputEvents(
+    /// Returns an async sequence whose iterator performs blocking Wayland event pumps.
+    ///
+    /// This is useful as a small adapter around the single-threaded Wayland pump, but callers
+    /// should iterate it from a context where blocking the current thread is acceptable.
+    public func blockingInputEvents(
         timeoutMilliseconds: Int32 = RawInputEventStream.defaultPollTimeoutMilliseconds
     ) -> RawInputEventStream {
-        RawInputEventStream(
+        preconditionIsOwnerThread()
+
+        return RawInputEventStream(
             timeoutMilliseconds: timeoutMilliseconds
         ) { [connection = self] pollTimeout in
             try connection.pumpEvents(timeoutMilliseconds: pollTimeout)
@@ -239,7 +263,16 @@ public final class RawDisplayConnection {
         }
     }
 
+    @available(*, deprecated, renamed: "blockingInputEvents(timeoutMilliseconds:)")
+    public func inputEvents(
+        timeoutMilliseconds: Int32 = RawInputEventStream.defaultPollTimeoutMilliseconds
+    ) -> RawInputEventStream {
+        blockingInputEvents(timeoutMilliseconds: timeoutMilliseconds)
+    }
+
     public func runEventLoop(while shouldContinue: () -> Bool) throws {
+        preconditionIsOwnerThread()
+
         try EventLoop.run(
             display: display.opaquePointer,
             shouldContinue: shouldContinue
@@ -247,6 +280,7 @@ public final class RawDisplayConnection {
     }
 
     deinit {
+        preconditionIsOwnerThread()
         boundGlobals?.destroy()
         swl_registry_destroy(registry.opaquePointer)
         wl_display_disconnect(display.opaquePointer)

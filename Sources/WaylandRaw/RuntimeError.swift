@@ -2,7 +2,7 @@ import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
 
-public enum RuntimeError: Error, CustomStringConvertible {
+public enum RuntimeError: Error, Sendable, CustomStringConvertible {
     case connectionFailed
     case registryCreationFailed
     case registryListenerInstallationFailed

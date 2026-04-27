@@ -109,13 +109,16 @@ Does not depend on:
 
 Purpose:
 
-- define the dependency boundary for future xkbcommon-backed keyboard interpretation
+- provide xkbcommon-backed interpretation for copied raw keyboard facts
 
 Current state:
 
 - imports xkbcommon through `CXKBCommonSystem`
-- verifies that an xkb context can be created
-- does not expose public text, key symbols, shortcut names, compose behavior, or IME behavior
+- parses copied `xkb_v1` keymap payloads from `WaylandRaw`
+- owns xkb context, keymap, and state lifetimes inside thread-affine Swift objects
+- applies Wayland modifier masks
+- exposes interpreted key symbols and UTF-8 text for raw key events
+- does not expose shortcut policy, compose behavior, text-input protocols, or IME behavior
 
 ### `WaylandClient`
 
@@ -166,7 +169,10 @@ Raw input events carry:
 `WaylandClient` exposes session-level input events through `DisplaySession.drainInputEvents()`.
 Public events carry sequence, seat identity, optional window identity, and raw pointer/keyboard facts.
 
-Keyboard events are raw protocol events. The raw keycode is the Wayland/evdev keycode, not text.
+Keyboard events in `WaylandClient` are raw protocol events. The raw keycode is the
+Wayland/evdev keycode, not text. `WaylandKeyboardInterpretation` can consume the copied
+raw keymap payloads and raw key events when applications need xkb key symbols or simple
+UTF-8 text from key events.
 
 Pointer coordinates are surface-local.
 
@@ -185,10 +191,7 @@ Supported:
 
 - core Wayland display, registry, compositor, surface, callback, SHM, pool, buffer, seat, pointer, keyboard, and touch basics
 - stable xdg-shell wm_base, surface, and toplevel basics
-
-Boundary only:
-
-- xkbcommon import and context creation
+- basic `xkb_v1` keyboard interpretation through xkbcommon
 
 Not supported:
 

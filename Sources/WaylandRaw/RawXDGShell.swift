@@ -231,13 +231,19 @@ package final class XDGTopLevelOwner {
             let owner = CallbackBox<XDGTopLevelOwner>
                 .fromOpaque(data)
                 .requireOwner()
-            owner.configureState.handleTopLevelConfigure(
-                width: width,
-                height: height,
-                states: XDGTopLevelOwner.uint32ArrayOrTrap(from: states).map { rawState in
-                    XDGTopLevelState(rawValue: rawState)
-                }
-            )
+            do {
+                owner.configureState.handleTopLevelConfigure(
+                    width: width,
+                    height: height,
+                    states: try XDGTopLevelOwner.uint32Array(from: states).map { rawState in
+                        XDGTopLevelState(rawValue: rawState)
+                    }
+                )
+            } catch let error as RuntimeError {
+                owner.configureState.recordError(error)
+            } catch {
+                preconditionFailure("Unexpected XDG configure error: \(error)")
+            }
         }
 
         callbacks.pointee.close = { data, _ in
@@ -270,11 +276,17 @@ package final class XDGTopLevelOwner {
             let owner = CallbackBox<XDGTopLevelOwner>
                 .fromOpaque(data)
                 .requireOwner()
-            owner.configureState.handleWMCapabilities(
-                XDGTopLevelOwner.uint32ArrayOrTrap(from: capabilities).map { rawCapability in
-                    XDGWMCapability(rawValue: rawCapability)
-                }
-            )
+            do {
+                owner.configureState.handleWMCapabilities(
+                    try XDGTopLevelOwner.uint32Array(from: capabilities).map { rawCapability in
+                        XDGWMCapability(rawValue: rawCapability)
+                    }
+                )
+            } catch let error as RuntimeError {
+                owner.configureState.recordError(error)
+            } catch {
+                preconditionFailure("Unexpected XDG capabilities error: \(error)")
+            }
         }
     }
 
@@ -300,11 +312,10 @@ package final class XDGTopLevelOwner {
         onClose = closeHandler
         installState = .installed
     }
-    private static func uint32ArrayOrTrap(from array: UnsafeMutablePointer<wl_array>?) -> [UInt32] {
-        do {
-            return try WaylandArray.uint32Values(from: array)
-        } catch {
-            preconditionFailure(String(describing: error))
-        }
+
+    private static func uint32Array(from array: UnsafeMutablePointer<wl_array>?)
+        throws(RuntimeError) -> [UInt32]
+    {
+        try WaylandArray.uint32Values(from: array)
     }
 }

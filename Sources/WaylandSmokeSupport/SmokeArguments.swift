@@ -1,4 +1,4 @@
-public enum SmokeArgumentError: Error, Equatable, CustomStringConvertible {
+public enum SmokeArgumentError: Error, Equatable, Sendable, CustomStringConvertible {
     case unknownArgument(String)
     case missingValue(String)
     case invalidValue(argument: String, value: String)

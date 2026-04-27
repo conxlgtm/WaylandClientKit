@@ -36,6 +36,7 @@ public struct RawInputEventStream: AsyncSequence {
             pumpEvents = iteratorPumpEvents
         }
 
+        /// Returns the next event after performing blocking Wayland event pumps as needed.
         public mutating func next() async throws -> RawInputEvent? {
             guard !isTerminated else { return nil }
 

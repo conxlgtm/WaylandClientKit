@@ -30,6 +30,13 @@ private enum WindowLifecycleState: Equatable, CustomStringConvertible {
     }
 }
 
+private enum RedrawOutcome: Equatable {
+    case presented
+    case skippedClosed
+    case skippedPendingFrame
+    case waitingForBuffer
+}
+
 public final class TopLevelWindow {
     public let id: WindowID
 
@@ -89,35 +96,43 @@ public final class TopLevelWindow {
     }
 
     public func show(_ draw: (SoftwareFrame) throws -> Void) throws {
+        connection.preconditionIsOwnerThread()
+
         if currentConfigure == nil {
             _ = try waitForInitialConfigure()
         }
 
-        try drawAndPresent(draw)
+        _ = try drawAndPresent(draw)
     }
 
     public func show(
         timeoutMilliseconds: Int32,
         _ draw: (SoftwareFrame) throws -> Void
     ) throws {
+        connection.preconditionIsOwnerThread()
+
         if currentConfigure == nil {
             _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
         }
 
-        try drawAndPresent(draw)
+        _ = try drawAndPresent(draw)
     }
 
     public func redraw(_ draw: (SoftwareFrame) throws -> Void) throws {
+        connection.preconditionIsOwnerThread()
+
         guard !isClosedStorage else { return }
 
         if let configure = try consumeLatestConfigureIfAvailable() {
             lifecycleState = .configured(configure)
         }
 
-        try drawAndPresent(draw)
+        _ = try drawAndPresent(draw)
     }
 
     public func close() {
+        connection.preconditionIsOwnerThread()
+
         guard lifecycleState != .destroyed else { return }
 
         isClosedStorage = true
@@ -140,7 +155,8 @@ public final class TopLevelWindow {
     }
 
     package var surfaceID: RawObjectID {
-        surface.objectID
+        connection.preconditionIsOwnerThread()
+        return surface.objectID
     }
 
     deinit {
@@ -177,6 +193,7 @@ public final class TopLevelWindow {
     private func waitForInitialConfigure() throws -> SurfaceConfigure {
         while !configureState.hasReceivedInitialConfigure, !isClosedStorage {
             try connection.pumpEvents(timeoutMilliseconds: 1_000)
+            try configureState.throwPendingErrorIfAny()
         }
 
         guard let configure = try consumeLatestConfigureIfAvailable() else {
@@ -199,6 +216,7 @@ public final class TopLevelWindow {
 
             let pumpTimeout = min(remainingMilliseconds, pollMilliseconds)
             try connection.pumpEvents(timeoutMilliseconds: pumpTimeout)
+            try configureState.throwPendingErrorIfAny()
             remainingMilliseconds -= pumpTimeout
         }
 
@@ -210,6 +228,8 @@ public final class TopLevelWindow {
     }
 
     private func consumeLatestConfigureIfAvailable() throws -> SurfaceConfigure? {
+        try configureState.throwPendingErrorIfAny()
+
         guard let configure = configureState.consumeLatestConfigure() else {
             return nil
         }
@@ -272,9 +292,9 @@ public final class TopLevelWindow {
         lifecycleState = .closeRequested
     }
 
-    private func drawAndPresent(_ draw: (SoftwareFrame) throws -> Void) throws {
-        guard !isClosedStorage else { return }
-        guard pendingFrameRegistration == nil else { return }
+    private func drawAndPresent(_ draw: (SoftwareFrame) throws -> Void) throws -> RedrawOutcome {
+        guard !isClosedStorage else { return .skippedClosed }
+        guard pendingFrameRegistration == nil else { return .skippedPendingFrame }
         guard let configure = currentConfigure else {
             throw ClientError.invalidWindowState(lifecycleState.description)
         }
@@ -284,7 +304,7 @@ public final class TopLevelWindow {
 
         guard let buffer = pool.nextFreeBuffer() else {
             needsRedrawStorage = true
-            return
+            return .waitingForBuffer
         }
 
         let frame = SoftwareFrame(
@@ -309,5 +329,6 @@ public final class TopLevelWindow {
 
         lifecycleState = .mapped
         needsRedrawStorage = false
+        return .presented
     }
 }

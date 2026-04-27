@@ -86,6 +86,11 @@ private struct DemoState {
                 return
             }
             handleKeyboard(keyboard, seatID: event.seatID)
+        case .touch(let touch):
+            guard event.windowID == nil || event.windowID == focusedWindowID else {
+                return
+            }
+            handleTouch(touch, seatID: event.seatID)
         }
     }
 
@@ -157,6 +162,37 @@ private struct DemoState {
             )
         case .repeatInfo(let repeatInfo):
             DemoLog.write("keyboard repeat rate=\(repeatInfo.rate) delay=\(repeatInfo.delay)")
+        }
+    }
+
+    private func handleTouch(_ event: TouchEvent, seatID: SeatID) {
+        switch event {
+        case .down(let down):
+            DemoLog.write(
+                "touch down seat=\(seatID) serial=\(down.serial) id=\(down.id) "
+                    + "x=\(down.location.x) y=\(down.location.y)"
+            )
+        case .up(let up):
+            DemoLog.write("touch up seat=\(seatID) serial=\(up.serial) id=\(up.id)")
+        case .motion(let motion):
+            DemoLog.write(
+                "touch motion seat=\(seatID) id=\(motion.id) "
+                    + "x=\(motion.location.x) y=\(motion.location.y)"
+            )
+        case .frame:
+            DemoLog.write("touch frame seat=\(seatID)")
+        case .cancel:
+            DemoLog.write("touch cancel seat=\(seatID)")
+        case .shape(let shape):
+            DemoLog.write(
+                "touch shape seat=\(seatID) id=\(shape.id) "
+                    + "major=\(shape.major) minor=\(shape.minor)"
+            )
+        case .orientation(let orientation):
+            DemoLog.write(
+                "touch orientation seat=\(seatID) id=\(orientation.id) "
+                    + "orientation=\(orientation.orientation)"
+            )
         }
     }
 }

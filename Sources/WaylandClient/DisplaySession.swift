@@ -6,6 +6,7 @@ public final class DisplaySession {
     private var nextWindowID: UInt64 = 1
 
     public init(connection rawConnection: RawDisplayConnection) {
+        rawConnection.preconditionIsOwnerThread()
         connection = rawConnection
     }
 
@@ -16,11 +17,14 @@ public final class DisplaySession {
     }
 
     public func pumpEvents(timeoutMilliseconds: Int32 = -1) throws {
+        connection.preconditionIsOwnerThread()
         try connection.pumpEvents(timeoutMilliseconds: timeoutMilliseconds)
     }
 
     public func drainInputEvents() -> [InputEvent] {
-        connection
+        connection.preconditionIsOwnerThread()
+        return
+            connection
             .drainInputEvents()
             .flatMap { [inputRouter] event in
                 inputRouter.route(event)
@@ -30,6 +34,7 @@ public final class DisplaySession {
     public func createTopLevelWindow(
         configuration windowConfiguration: WindowConfiguration = .init()
     ) throws -> TopLevelWindow {
+        connection.preconditionIsOwnerThread()
         let windowID = allocateWindowID()
         let window = try TopLevelWindow(
             id: windowID,
@@ -47,6 +52,7 @@ public final class DisplaySession {
     }
 
     private func allocateWindowID() -> WindowID {
+        connection.preconditionIsOwnerThread()
         defer { nextWindowID += 1 }
         return WindowID(rawValue: nextWindowID)
     }
