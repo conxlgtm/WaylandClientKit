@@ -141,12 +141,35 @@ public struct PointerAxisRelativeDirection: Equatable, Sendable {
 }
 
 public enum KeyboardEvent: Equatable, Sendable {
+    case raw(RawKeyboardEvent)
+    case interpreted(InterpretedKeyboardEvent)
+}
+
+public enum RawKeyboardEvent: Equatable, Sendable {
     case keymapChanged(KeyboardKeymapInfo)
     case entered(serial: UInt32, pressedKeys: [UInt32])
     case left(serial: UInt32)
     case key(KeyboardKeyEvent)
     case modifiers(KeyboardModifiers)
     case repeatInfo(KeyboardRepeatInfo)
+}
+
+public enum InterpretedKeyboardEvent: Equatable, Sendable {
+    case keymap(InterpretedKeyboardKeymapInfo)
+    case key(InterpretedKeyboardKeyEvent)
+    case modifiers(InterpretedKeyboardModifiers)
+    case repeatInfo(InterpretedKeyboardRepeatInfo)
+    case unavailable(KeyboardInterpretationUnavailable)
+}
+
+public struct InterpretedKeyboardKeymapInfo: Equatable, Sendable {
+    public let format: KeyboardKeymapFormat
+    public let size: UInt32
+
+    public init(format keymapFormat: KeyboardKeymapFormat, size keymapSize: UInt32) {
+        format = keymapFormat
+        size = keymapSize
+    }
 }
 
 public struct KeyboardKeymapInfo: Equatable, Sendable {
@@ -189,6 +212,40 @@ public struct KeyboardKeyEvent: Equatable, Sendable {
     }
 }
 
+public struct InterpretedKeyboardKeyEvent: Equatable, Sendable {
+    public let serial: UInt32
+    public let time: UInt32
+    public let rawKeycode: UInt32
+    public let xkbKeycode: UInt32
+    public let state: InterpretedKeyboardKeyState
+    public let keysym: KeyboardKeysym
+    public let keysymName: String?
+    public let utf8: String?
+    public let repeats: Bool
+
+    public init(
+        serial eventSerial: UInt32,
+        time eventTime: UInt32,
+        rawKeycode eventRawKeycode: UInt32,
+        xkbKeycode eventXKBKeycode: UInt32,
+        state eventState: InterpretedKeyboardKeyState,
+        keysym eventKeysym: KeyboardKeysym,
+        keysymName eventKeysymName: String?,
+        utf8 eventUTF8: String?,
+        repeats eventRepeats: Bool
+    ) {
+        serial = eventSerial
+        time = eventTime
+        rawKeycode = eventRawKeycode
+        xkbKeycode = eventXKBKeycode
+        state = eventState
+        keysym = eventKeysym
+        keysymName = eventKeysymName
+        utf8 = eventUTF8
+        repeats = eventRepeats
+    }
+}
+
 public struct KeyState: Equatable, Sendable {
     public let rawValue: UInt32
 
@@ -199,6 +256,26 @@ public struct KeyState: Equatable, Sendable {
     public static let released = Self(rawValue: 0)
     public static let pressed = Self(rawValue: 1)
     public static let repeated = Self(rawValue: 2)
+}
+
+public struct InterpretedKeyboardKeyState: Equatable, Sendable {
+    public let rawValue: UInt32
+
+    public init(rawValue stateRawValue: UInt32) {
+        rawValue = stateRawValue
+    }
+
+    public static let released = Self(rawValue: 0)
+    public static let pressed = Self(rawValue: 1)
+    public static let repeated = Self(rawValue: 2)
+}
+
+public struct KeyboardKeysym: Equatable, Sendable {
+    public let rawValue: UInt32
+
+    public init(rawValue keysymRawValue: UInt32) {
+        rawValue = keysymRawValue
+    }
 }
 
 public struct KeyboardModifiers: Equatable, Sendable {
@@ -223,6 +300,49 @@ public struct KeyboardModifiers: Equatable, Sendable {
     }
 }
 
+public struct InterpretedKeyboardModifiers: Equatable, Sendable {
+    public let serial: UInt32
+    public let depressed: UInt32
+    public let latched: UInt32
+    public let locked: UInt32
+    public let group: UInt32
+    public let changedComponents: KeyboardModifierStateComponents
+
+    public init(
+        serial eventSerial: UInt32,
+        depressed eventDepressed: UInt32,
+        latched eventLatched: UInt32,
+        locked eventLocked: UInt32,
+        group eventGroup: UInt32,
+        changedComponents eventChangedComponents: KeyboardModifierStateComponents
+    ) {
+        serial = eventSerial
+        depressed = eventDepressed
+        latched = eventLatched
+        locked = eventLocked
+        group = eventGroup
+        changedComponents = eventChangedComponents
+    }
+}
+
+public struct KeyboardModifierStateComponents: OptionSet, Equatable, Sendable {
+    public let rawValue: UInt32
+
+    public init(rawValue componentsRawValue: UInt32) {
+        rawValue = componentsRawValue
+    }
+
+    public static let modsDepressed = Self(rawValue: 1 << 0)
+    public static let modsLatched = Self(rawValue: 1 << 1)
+    public static let modsLocked = Self(rawValue: 1 << 2)
+    public static let modsEffective = Self(rawValue: 1 << 3)
+    public static let layoutDepressed = Self(rawValue: 1 << 4)
+    public static let layoutLatched = Self(rawValue: 1 << 5)
+    public static let layoutLocked = Self(rawValue: 1 << 6)
+    public static let layoutEffective = Self(rawValue: 1 << 7)
+    public static let leds = Self(rawValue: 1 << 8)
+}
+
 public struct KeyboardRepeatInfo: Equatable, Sendable {
     public let rate: Int32
     public let delay: Int32
@@ -231,6 +351,37 @@ public struct KeyboardRepeatInfo: Equatable, Sendable {
         rate = repeatRate
         delay = repeatDelay
     }
+}
+
+public struct InterpretedKeyboardRepeatInfo: Equatable, Sendable {
+    public let rate: Int32
+    public let delay: Int32
+
+    public init(rate repeatRate: Int32, delay repeatDelay: Int32) {
+        rate = repeatRate
+        delay = repeatDelay
+    }
+}
+
+public struct KeyboardInterpretationUnavailable: Equatable, Sendable {
+    public let reason: KeyboardInterpretationUnavailableReason
+
+    public init(reason unavailableReason: KeyboardInterpretationUnavailableReason) {
+        reason = unavailableReason
+    }
+}
+
+public enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {
+    case missingDeviceID
+    case unsupportedKeymapFormat(UInt32)
+    case emptyKeymap
+    case invalidKeymap
+    case missingKeymap
+    case missingKeyboardState
+    case invalidKeycode(UInt32)
+    case nonKeyboardInputDevice
+    case mismatchedKeyboardSeat(expected: SeatID, actual: SeatID)
+    case mismatchedKeyboardDevice
 }
 
 public enum TouchEvent: Equatable, Sendable {

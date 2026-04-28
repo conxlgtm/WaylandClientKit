@@ -125,12 +125,14 @@ struct KeyboardFocusInputRouterTests {
             seatID: SeatID(rawValue: 3),
             windowID: windowID,
             kind: .keyboard(
-                .key(
-                    KeyboardKeyEvent(
-                        serial: 12,
-                        time: 13,
-                        rawKeycode: 32,
-                        state: .pressed
+                .raw(
+                    .key(
+                        KeyboardKeyEvent(
+                            serial: 12,
+                            time: 13,
+                            rawKeycode: 32,
+                            state: .pressed
+                        )
                     )
                 )
             )
@@ -151,7 +153,7 @@ struct KeyboardFocusInputRouterTests {
         let key = router.route(rawKeyboardKey(sequence: 3, seatID: seatID))
 
         #expect(leave.first?.windowID == windowID)
-        #expect(leave.first?.kind == .keyboard(.left(serial: 2)))
+        #expect(leave.first?.kind == .keyboard(.raw(.left(serial: 2))))
         #expect(key.first?.windowID == nil)
     }
 
@@ -183,7 +185,7 @@ struct KeyboardSeatLevelInputRouterTests {
         #expect(
             keymap.first?.kind
                 == .keyboard(
-                    .keymapChanged(KeyboardKeymapInfo(format: .xkbV1, size: 8))
+                    .raw(.keymapChanged(KeyboardKeymapInfo(format: .xkbV1, size: 8)))
                 ))
     }
 
@@ -201,8 +203,17 @@ struct KeyboardSeatLevelInputRouterTests {
         #expect(
             modifiers.first?.kind
                 == .keyboard(
-                    .modifiers(
-                        KeyboardModifiers(serial: 2, depressed: 3, latched: 4, locked: 5, group: 6))
+                    .raw(
+                        .modifiers(
+                            KeyboardModifiers(
+                                serial: 2,
+                                depressed: 3,
+                                latched: 4,
+                                locked: 5,
+                                group: 6
+                            )
+                        )
+                    )
                 ))
     }
 
@@ -219,7 +230,7 @@ struct KeyboardSeatLevelInputRouterTests {
         #expect(
             repeatInfo.first?.kind
                 == .keyboard(
-                    .repeatInfo(KeyboardRepeatInfo(rate: 30, delay: 400))
+                    .raw(.repeatInfo(KeyboardRepeatInfo(rate: 30, delay: 400)))
                 ))
     }
 }

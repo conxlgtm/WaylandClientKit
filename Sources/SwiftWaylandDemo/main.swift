@@ -140,6 +140,15 @@ private struct DemoState {
 
     private func handleKeyboard(_ event: KeyboardEvent, seatID: SeatID) {
         switch event {
+        case .raw(let rawEvent):
+            handleRawKeyboard(rawEvent, seatID: seatID)
+        case .interpreted(let interpretedEvent):
+            handleInterpretedKeyboard(interpretedEvent, seatID: seatID)
+        }
+    }
+
+    private func handleRawKeyboard(_ event: RawKeyboardEvent, seatID: SeatID) {
+        switch event {
         case .keymapChanged(let keymap):
             DemoLog.write(
                 "keyboard keymap seat=\(seatID) format=\(keymap.format.rawValue) "
@@ -162,6 +171,44 @@ private struct DemoState {
             )
         case .repeatInfo(let repeatInfo):
             DemoLog.write("keyboard repeat rate=\(repeatInfo.rate) delay=\(repeatInfo.delay)")
+        }
+    }
+
+    private func handleInterpretedKeyboard(
+        _ event: InterpretedKeyboardEvent,
+        seatID: SeatID
+    ) {
+        switch event {
+        case .keymap(let keymap):
+            DemoLog.write(
+                "keyboard interpreted keymap seat=\(seatID) "
+                    + "format=\(keymap.format.rawValue) size=\(keymap.size)"
+            )
+        case .key(let key):
+            let keysymName = key.keysymName ?? "?"
+            let utf8 = key.utf8 ?? ""
+            DemoLog.write(
+                "keyboard interpreted key seat=\(seatID) serial=\(key.serial) "
+                    + "rawKeycode=\(key.rawKeycode) xkbKeycode=\(key.xkbKeycode) "
+                    + "state=\(key.state.rawValue) keysym=\(keysymName) utf8=\(utf8)"
+            )
+        case .modifiers(let modifiers):
+            DemoLog.write(
+                "keyboard interpreted modifiers seat=\(seatID) serial=\(modifiers.serial) "
+                    + "depressed=\(modifiers.depressed) latched=\(modifiers.latched) "
+                    + "locked=\(modifiers.locked) group=\(modifiers.group) "
+                    + "changed=\(modifiers.changedComponents.rawValue)"
+            )
+        case .repeatInfo(let repeatInfo):
+            DemoLog.write(
+                "keyboard interpreted repeat seat=\(seatID) "
+                    + "rate=\(repeatInfo.rate) delay=\(repeatInfo.delay)"
+            )
+        case .unavailable(let unavailable):
+            DemoLog.write(
+                "keyboard interpretation unavailable seat=\(seatID) "
+                    + "reason=\(unavailable.reason)"
+            )
         }
     }
 
