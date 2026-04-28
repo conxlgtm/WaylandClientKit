@@ -81,6 +81,9 @@ let package = Package(
         .testTarget(
             name: "WaylandKeyboardInterpretationTests",
             dependencies: ["WaylandKeyboardInterpretation"],
+            resources: [
+                .copy("Fixtures")
+            ],
             swiftSettings: librarySwiftSettings
         ),
         .testTarget(

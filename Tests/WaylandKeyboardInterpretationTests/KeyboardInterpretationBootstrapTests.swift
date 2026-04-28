@@ -1,5 +1,6 @@
 import Testing
-import WaylandKeyboardInterpretation
+
+@testable import WaylandKeyboardInterpretation
 
 @Suite
 struct KeyboardInterpretationBootstrapTests {
