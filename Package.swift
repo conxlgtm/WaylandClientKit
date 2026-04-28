@@ -45,7 +45,7 @@ let package = Package(
         ),
         .target(
             name: "WaylandClient",
-            dependencies: ["WaylandRaw"],
+            dependencies: ["WaylandRaw", "WaylandKeyboardInterpretation"],
             swiftSettings: librarySwiftSettings
         ),
         .target(
@@ -75,7 +75,7 @@ let package = Package(
         ),
         .testTarget(
             name: "WaylandClientTests",
-            dependencies: ["WaylandClient"],
+            dependencies: ["WaylandClient", "WaylandKeyboardInterpretation"],
             swiftSettings: librarySwiftSettings
         ),
         .testTarget(

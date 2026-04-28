@@ -116,7 +116,7 @@ final class InputRouter {
 
     private func routeKeyboard(
         _ rawEvent: RawInputEvent,
-        _ keyboardEvent: RawKeyboardEvent
+        _ keyboardEvent: WaylandRaw.RawKeyboardEvent
     ) -> InputEvent {
         switch keyboardEvent {
         case .keymap(let keymap):
@@ -268,10 +268,12 @@ extension InputRouter {
             rawEvent,
             windowID: nil,
             kind: .keyboard(
-                .keymapChanged(
-                    KeyboardKeymapInfo(
-                        format: KeyboardKeymapFormat(rawValue: keymap.format.rawValue),
-                        size: keymap.size
+                .raw(
+                    .keymapChanged(
+                        KeyboardKeymapInfo(
+                            format: KeyboardKeymapFormat(rawValue: keymap.format.rawValue),
+                            size: keymap.size
+                        )
                     )
                 )
             )
@@ -289,7 +291,7 @@ extension InputRouter {
         return routedEvent(
             rawEvent,
             windowID: windowID(for: enter.surfaceID),
-            kind: .keyboard(.entered(serial: enter.serial, pressedKeys: enter.pressedKeys))
+            kind: .keyboard(.raw(.entered(serial: enter.serial, pressedKeys: enter.pressedKeys)))
         )
     }
 
@@ -302,7 +304,7 @@ extension InputRouter {
         return routedEvent(
             rawEvent,
             windowID: windowID,
-            kind: .keyboard(.left(serial: leave.serial))
+            kind: .keyboard(.raw(.left(serial: leave.serial)))
         )
     }
 
@@ -314,12 +316,14 @@ extension InputRouter {
             rawEvent,
             windowID: focusedKeyboardWindow(for: rawEvent.seatID),
             kind: .keyboard(
-                .key(
-                    KeyboardKeyEvent(
-                        serial: key.serial,
-                        time: key.time,
-                        rawKeycode: key.evdevKeycode,
-                        state: KeyState(rawValue: key.state.rawValue)
+                .raw(
+                    .key(
+                        KeyboardKeyEvent(
+                            serial: key.serial,
+                            time: key.time,
+                            rawKeycode: key.evdevKeycode,
+                            state: KeyState(rawValue: key.state.rawValue)
+                        )
                     )
                 )
             )
@@ -334,13 +338,15 @@ extension InputRouter {
             rawEvent,
             windowID: nil,
             kind: .keyboard(
-                .modifiers(
-                    KeyboardModifiers(
-                        serial: modifiers.serial,
-                        depressed: modifiers.depressed,
-                        latched: modifiers.latched,
-                        locked: modifiers.locked,
-                        group: modifiers.group
+                .raw(
+                    .modifiers(
+                        KeyboardModifiers(
+                            serial: modifiers.serial,
+                            depressed: modifiers.depressed,
+                            latched: modifiers.latched,
+                            locked: modifiers.locked,
+                            group: modifiers.group
+                        )
                     )
                 )
             )
@@ -355,7 +361,11 @@ extension InputRouter {
             rawEvent,
             windowID: nil,
             kind: .keyboard(
-                .repeatInfo(KeyboardRepeatInfo(rate: repeatInfo.rate, delay: repeatInfo.delay))
+                .raw(
+                    .repeatInfo(
+                        KeyboardRepeatInfo(rate: repeatInfo.rate, delay: repeatInfo.delay)
+                    )
+                )
             )
         )
     }

@@ -1,3 +1,4 @@
+import WaylandKeyboardInterpretation
 import WaylandRaw
 
 func rawPointerEnter(
@@ -137,7 +138,8 @@ func rawKeyboardKey(
     seatID: RawSeatID,
     serial: UInt32 = 2,
     time: UInt32 = 3,
-    rawKeycode: UInt32 = 4
+    rawKeycode: UInt32 = 4,
+    deviceID: RawInputDeviceID? = nil
 ) -> RawInputEvent {
     rawEvent(
         sequence: sequence,
@@ -151,11 +153,16 @@ func rawKeyboardKey(
                     state: .pressed
                 )
             )
-        )
+        ),
+        deviceID: deviceID
     )
 }
 
-func rawKeyboardKeymap(sequence: UInt64, seatID: RawSeatID) -> RawInputEvent {
+func rawKeyboardKeymap(
+    sequence: UInt64,
+    seatID: RawSeatID,
+    deviceID: RawInputDeviceID? = nil
+) -> RawInputEvent {
     rawEvent(
         sequence: sequence,
         seatID: seatID,
@@ -172,7 +179,8 @@ func rawKeyboardKeymap(sequence: UInt64, seatID: RawSeatID) -> RawInputEvent {
                     bytes: [1, 2, 3]
                 )
             )
-        )
+        ),
+        deviceID: deviceID
     )
 }
 
@@ -335,12 +343,26 @@ func rawSeatChanged(sequence: UInt64, seatID: RawSeatID, name: String) -> RawInp
 func rawEvent(
     sequence: UInt64,
     seatID: RawSeatID,
-    kind: RawInputEventKind
+    kind: RawInputEventKind,
+    deviceID: RawInputDeviceID? = nil
 ) -> RawInputEvent {
     RawInputEvent(
         sequence: sequence,
         seatID: seatID,
-        deviceID: nil,
+        deviceID: deviceID,
+        kind: kind
+    )
+}
+
+func interpretedKeyboardEvent(
+    sequence: UInt64,
+    seatID: RawSeatID,
+    kind: WaylandKeyboardInterpretation.InterpretedKeyboardEventKind
+) -> WaylandKeyboardInterpretation.InterpretedKeyboardEvent {
+    WaylandKeyboardInterpretation.InterpretedKeyboardEvent(
+        sequence: sequence,
+        seatID: seatID,
+        deviceID: RawInputDeviceID(seatID: seatID, kind: .keyboard, generation: 1),
         kind: kind
     )
 }

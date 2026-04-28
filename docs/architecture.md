@@ -7,8 +7,11 @@ Application code
     |
     v
 WaylandClient
-    |
-    v
+    |\
+    | v
+    | WaylandKeyboardInterpretation
+    |     |
+    v     v
 WaylandRaw
     |
     v
@@ -17,15 +20,14 @@ CWaylandProtocols
     v
 CWaylandClientSystem
 
-WaylandKeyboardInterpretation
-    optional consumer of WaylandRaw keyboard facts
-    also depends on CXKBCommonSystem
+WaylandKeyboardInterpretation also depends on CXKBCommonSystem.
 
 SwiftWaylandSmoke
     executable consumer of WaylandClient through WaylandSmokeSupport
 ```
 
-`WaylandKeyboardInterpretation` is a sibling/consumer layer for raw keyboard facts, not a layer that `WaylandRaw` depends on.
+`WaylandClient` uses `WaylandKeyboardInterpretation` to expose interpreted keyboard events in the session input stream.
+`WaylandRaw` does not depend on xkbcommon.
 
 ## Target Roles
 
@@ -134,6 +136,7 @@ Current state:
 - lifecycle state for configure, map, redraw, and close handling
 - `DisplaySession` as the owner of event pumping, window creation, and input draining
 - `InputRouter` that maps raw input events to public session input events
+- session-owned `KeyboardInterpreter` that maps raw keyboard facts to public interpreted keyboard events
 
 ### `WaylandSmokeSupport`
 
@@ -167,12 +170,13 @@ Raw input events carry:
 - protocol serials and raw values
 
 `WaylandClient` exposes session-level input events through `DisplaySession.drainInputEvents()`.
-Public events carry sequence, seat identity, optional window identity, and raw pointer/keyboard facts.
+Public events carry sequence, seat identity, optional window identity, raw pointer/keyboard/touch facts, and interpreted keyboard facts.
 
-Keyboard events in `WaylandClient` are raw protocol events. The raw keycode is the
-Wayland/evdev keycode, not text. `WaylandKeyboardInterpretation` can consume the copied
-raw keymap payloads and raw key events when applications need xkb key symbols or simple
-UTF-8 text from key events.
+`KeyboardEvent.raw` carries protocol facts. The raw keycode is the Wayland/evdev keycode, not text.
+`KeyboardEvent.interpreted` carries xkbcommon key symbols and simple UTF-8 values when a copied
+`xkb_v1` keymap is available.
+
+UTF-8 values from key events are key interpretation output. They are not committed text input.
 
 Pointer coordinates are surface-local.
 
@@ -192,6 +196,7 @@ Supported:
 - core Wayland display, registry, compositor, surface, callback, SHM, pool, buffer, seat, pointer, keyboard, and touch basics
 - stable xdg-shell wm_base, surface, and toplevel basics
 - basic `xkb_v1` keyboard interpretation through xkbcommon
+- session-level raw and interpreted keyboard events
 
 Not supported:
 

@@ -20,7 +20,7 @@ Current experimental baseline:
 - seat, pointer, keyboard, and touch event capture
 - session-level `DisplaySession` input draining with seat/window identity
 - copied keyboard keymap payloads inside `WaylandRaw`
-- `xkbcommon`-backed key interpretation for copied `xkb_v1` keymaps
+- `xkbcommon`-backed key interpretation for copied `xkb_v1` keymaps through `DisplaySession`
 - raw input async event stream
 - noninteractive Wayland smoke executable
 - tests for system imports, shim imports, raw lifecycle, and client drawing helpers
@@ -56,7 +56,7 @@ Supported in the `0.0.1` checkpoint:
 
 Keyboard interpretation:
 
-- `xkb_v1` keymaps through `WaylandKeyboardInterpretation`
+- `xkb_v1` keymaps through `WaylandKeyboardInterpretation` and `DisplaySession`
 - key symbols and UTF-8 text derived from `xkbcommon`
 
 Not supported in the `0.0.1` checkpoint:
@@ -149,7 +149,7 @@ Run the demo target:
 swift run swift-wayland-demo
 ```
 
-The demo draws a small marker for pointer motion and prints basic pointer/keyboard/touch/seat events.
+The demo draws a small marker for pointer motion and prints basic pointer/keyboard/touch/seat events, including interpreted keyboard events when keymap interpretation is available.
 It does not manage cursor images yet; some compositors may leave the cursor unchanged or undefined over the demo window.
 
 Run the noninteractive Wayland smoke check under a real Wayland session:
