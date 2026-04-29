@@ -18,6 +18,7 @@ let package = Package(
         .library(name: "WaylandRaw", targets: ["WaylandRaw"]),
         .library(name: "WaylandClient", targets: ["WaylandClient"]),
         .library(name: "WaylandKeyboardInterpretation", targets: ["WaylandKeyboardInterpretation"]),
+        .library(name: "WaylandCursor", targets: ["WaylandCursor"]),
         .executable(name: "swift-wayland-demo", targets: ["SwiftWaylandDemo"]),
         .executable(name: "swift-wayland-smoke", targets: ["SwiftWaylandSmoke"]),
     ],
@@ -29,6 +30,23 @@ let package = Package(
         .systemLibrary(
             name: "CXKBCommonSystem",
             pkgConfig: "xkbcommon"
+        ),
+        .systemLibrary(
+            name: "CWaylandCursorSystem",
+            pkgConfig: "wayland-cursor"
+        ),
+        .target(
+            name: "CWaylandCursorShims",
+            dependencies: ["CWaylandCursorSystem"],
+            publicHeadersPath: "include",
+            cSettings: [
+                .define("_GNU_SOURCE", .when(platforms: [.linux]))
+            ]
+        ),
+        .target(
+            name: "WaylandCursor",
+            dependencies: ["WaylandRaw", "CWaylandCursorShims"],
+            swiftSettings: librarySwiftSettings
         ),
         .target(
             name: "CWaylandProtocols",
@@ -45,7 +63,7 @@ let package = Package(
         ),
         .target(
             name: "WaylandClient",
-            dependencies: ["WaylandRaw", "WaylandKeyboardInterpretation"],
+            dependencies: ["WaylandRaw", "WaylandKeyboardInterpretation", "WaylandCursor"],
             swiftSettings: librarySwiftSettings
         ),
         .target(
@@ -86,6 +104,9 @@ let package = Package(
             ],
             swiftSettings: librarySwiftSettings
         ),
+        .testTarget(
+            name: "WaylandCursorTests", dependencies: ["WaylandCursor"],
+            swiftSettings: librarySwiftSettings),
         .testTarget(
             name: "WaylandSmokeSupportTests",
             dependencies: ["WaylandSmokeSupport"],

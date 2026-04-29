@@ -32,6 +32,23 @@ package final class SeatRegistry {
         seatsByGlobalName[id.rawValue]
     }
 
+    package func setPointerCursor(
+        seatID: RawSeatID,
+        serial: UInt32,
+        surfacePointer: OpaquePointer?,
+        hotspotX: Int32,
+        hotspotY: Int32,
+    ) -> RawPointerCursorResult {
+        guard let seat = seat(for: seatID) else { return .skippedUnknownSeat(seatID) }
+
+        return seat.setPointerCursor(
+            serial: serial,
+            surfacePointer: surfacePointer,
+            hotspotX: hotspotX,
+            hotspotY: hotspotY
+        )
+    }
+
     package func bindSeats(from globals: [RawGlobalAdvertisement]) throws {
         for global in globals where global.interfaceName == "wl_seat" {
             try bindSeat(globalName: global.name, advertisedVersion: global.advertisedVersion)

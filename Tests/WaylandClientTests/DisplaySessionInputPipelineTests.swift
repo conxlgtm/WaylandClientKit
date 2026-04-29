@@ -103,4 +103,57 @@ struct DisplaySessionInputPipelineTests {
                 )
         )
     }
+
+    @Test
+    func rawObserverRunsBeforeRoutingAndDoesNotDropInput() throws {
+        let router = InputRouter()
+        let keyboardInterpreter = try KeyboardInterpreter()
+        let observer = RegisteringRawObserver(
+            router: router,
+            surfaceID: 2_000,
+            windowID: WindowID(rawValue: 20)
+        )
+        let rawEnter = rawPointerEnter(
+            sequence: 1,
+            seatID: RawSeatID(rawValue: 20),
+            surfaceID: 2_000,
+            serial: 42
+        )
+
+        let routed = routeSessionInputEvents(
+            from: [rawEnter],
+            inputRouter: router,
+            keyboardInterpreter: keyboardInterpreter,
+            rawInputObserver: observer
+        )
+
+        #expect(observer.observedSequences == [1])
+        #expect(routed.count == 1)
+        #expect(routed.first?.windowID == WindowID(rawValue: 20))
+        #expect(
+            routed.first?.kind
+                == .pointer(.entered(PointerLocation(x: 0, y: 0), serial: 42))
+        )
+    }
+}
+
+private final class RegisteringRawObserver: RawInputEventObserving {
+    private let router: InputRouter
+    private let surfaceID: RawObjectID
+    private let windowID: WindowID
+
+    var observedSequences: [UInt64] = []
+
+    init(
+        router inputRouter: InputRouter, surfaceID rawSurfaceID: RawObjectID, windowID id: WindowID
+    ) {
+        router = inputRouter
+        surfaceID = rawSurfaceID
+        windowID = id
+    }
+
+    func observe(_ rawEvent: RawInputEvent) {
+        observedSequences.append(rawEvent.sequence)
+        router.register(windowID: windowID, surfaceID: surfaceID)
+    }
 }

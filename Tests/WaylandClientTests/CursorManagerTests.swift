@@ -1,0 +1,315 @@
+import Testing
+import WaylandCursor
+import WaylandRaw
+
+@testable import WaylandClient
+
+@Suite
+struct CursorManagerTests {
+    @Test
+    func pointerEnterSetsDefaultCursorForRegisteredSurface() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+
+        manager.register(surfaceID: 100)
+        manager.observe(
+            rawPointerEnter(
+                sequence: 1,
+                seatID: RawSeatID(rawValue: 1),
+                surfaceID: 100,
+                serial: 77
+            ))
+        let expectedSetRequest = SetCursorRequest(
+            seatID: RawSeatID(rawValue: 1),
+            serial: 77,
+            surfaceID: 0xC00,
+            hotspotX: 3,
+            hotspotY: 4
+        )
+
+        #expect(backend.resolvedCursorNames == ["left_ptr"])
+        #expect(backend.createdSurfaceSeatIDs == [RawSeatID(rawValue: 1)])
+        #expect(backend.setCursorRequests == [expectedSetRequest])
+        #expect(backend.createdSurfaces.first?.attachedCount == 1)
+        #expect(backend.createdSurfaces.first?.commitCount == 1)
+        #expect(
+            manager.requestResults == [
+                .set(seatID: SeatID(rawValue: 1), serial: 77, cursor: .defaultArrow)
+            ])
+    }
+
+    @Test
+    func pointerEnterForUnknownSurfaceDoesNotSetCursor() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+
+        manager.register(surfaceID: 100)
+        manager.observe(
+            rawPointerEnter(
+                sequence: 1,
+                seatID: RawSeatID(rawValue: 1),
+                surfaceID: 200,
+                serial: 77
+            ))
+
+        #expect(backend.resolvedCursorNames.isEmpty)
+        #expect(backend.createdSurfaces.isEmpty)
+        #expect(backend.setCursorRequests.isEmpty)
+        #expect(manager.requestResults.isEmpty)
+    }
+
+    @Test
+    func hiddenCursorUsesNilSurface() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+
+        manager.register(surfaceID: 100)
+        manager.setPointerCursor(.hidden)
+        manager.observe(
+            rawPointerEnter(
+                sequence: 1,
+                seatID: RawSeatID(rawValue: 2),
+                surfaceID: 100,
+                serial: 55
+            ))
+        let expectedSetRequest = SetCursorRequest(
+            seatID: RawSeatID(rawValue: 2),
+            serial: 55,
+            surfaceID: nil,
+            hotspotX: 0,
+            hotspotY: 0
+        )
+
+        #expect(backend.createdSurfaces.isEmpty)
+        #expect(backend.setCursorRequests == [expectedSetRequest])
+        #expect(
+            manager.requestResults == [
+                .hidden(seatID: SeatID(rawValue: 2), serial: 55)
+            ])
+    }
+
+    @Test
+    func seatRemovalDestroysOnlyThatSeatCursorSurface() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatA = RawSeatID(rawValue: 1)
+        let seatB = RawSeatID(rawValue: 2)
+
+        manager.register(surfaceID: 100)
+        manager.register(surfaceID: 200)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatA, surfaceID: 100))
+        manager.observe(rawPointerEnter(sequence: 2, seatID: seatB, surfaceID: 200))
+        let firstSurface = try #require(backend.surface(for: seatA))
+        let secondSurface = try #require(backend.surface(for: seatB))
+
+        manager.observe(rawSeatRemoved(sequence: 3, seatID: seatA))
+
+        #expect(firstSurface.destroyCount == 1)
+        #expect(secondSurface.destroyCount == 0)
+    }
+
+    @Test
+    func pointerCapabilityRemovalClearsOnlyThatSeatCursorState() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatA = RawSeatID(rawValue: 1)
+        let seatB = RawSeatID(rawValue: 2)
+
+        manager.register(surfaceID: 100)
+        manager.register(surfaceID: 200)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatA, surfaceID: 100))
+        manager.observe(rawPointerEnter(sequence: 2, seatID: seatB, surfaceID: 200))
+        let firstSurface = try #require(backend.surface(for: seatA))
+        let secondSurface = try #require(backend.surface(for: seatB))
+        backend.setCursorRequests.removeAll()
+
+        manager.observe(rawSeatCapabilities(sequence: 3, seatID: seatA, activeCapabilities: []))
+        manager.setPointerCursor(.text)
+
+        #expect(firstSurface.destroyCount == 1)
+        #expect(secondSurface.destroyCount == 0)
+        #expect(backend.setCursorRequests.map(\.seatID) == [seatB])
+    }
+
+    @Test
+    func cursorChangeUpdatesOnlyFocusedSeats() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatA = RawSeatID(rawValue: 1)
+        let seatB = RawSeatID(rawValue: 2)
+        let seatC = RawSeatID(rawValue: 3)
+
+        manager.register(surfaceID: 100)
+        manager.register(surfaceID: 300)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatA, surfaceID: 100))
+        manager.observe(rawPointerEnter(sequence: 2, seatID: seatB, surfaceID: 200))
+        manager.observe(rawPointerEnter(sequence: 3, seatID: seatC, surfaceID: 300))
+        backend.resolvedCursorNames.removeAll()
+        backend.setCursorRequests.removeAll()
+
+        manager.setPointerCursor(.text)
+
+        #expect(backend.resolvedCursorNames == ["text", "text"])
+        #expect(backend.setCursorRequests.map(\.seatID) == [seatA, seatC])
+    }
+
+    @Test
+    func missingDesiredCursorFallsBackToConfiguredCursor() throws {
+        let backend = try RecordingCursorBackend()
+        backend.missingCursorNames = ["text"]
+        let manager = try CursorManager(backend: backend, configuration: .init())
+
+        manager.register(surfaceID: 100)
+        manager.setPointerCursor(.text)
+        manager.observe(
+            rawPointerEnter(
+                sequence: 1,
+                seatID: RawSeatID(rawValue: 4),
+                surfaceID: 100,
+                serial: 88
+            ))
+
+        #expect(backend.resolvedCursorNames == ["text", "left_ptr"])
+        #expect(
+            manager.requestResults == [
+                .set(seatID: SeatID(rawValue: 4), serial: 88, cursor: .defaultArrow)
+            ])
+    }
+}
+
+private struct SetCursorRequest: Equatable {
+    let seatID: RawSeatID
+    let serial: UInt32
+    let surfaceID: RawObjectID?
+    let hotspotX: Int32
+    let hotspotY: Int32
+}
+
+private final class RecordingCursorBackend: CursorManagerBackend {
+    var resolvedCursorNames: [String] = []
+    var createdSurfaceSeatIDs: [RawSeatID] = []
+    var createdSurfaces: [RecordingCursorSurface] = []
+    var setCursorRequests: [SetCursorRequest] = []
+    var missingCursorNames: Set<String> = []
+
+    private let image: CursorImage
+    private var nextSurfaceID = UInt32(0xC00)
+
+    init() throws {
+        image = try CursorImage(
+            width: 16,
+            height: 24,
+            hotspotX: 3,
+            hotspotY: 4,
+            delay: 0,
+            buffer: RawBorrowedBuffer(pointer: try #require(OpaquePointer(bitPattern: 0xB00)))
+        )
+    }
+
+    func preconditionIsOwnerThread() {
+        // Test backend is always used on the test thread.
+    }
+
+    func cursorImage(named name: String) throws -> CursorImage {
+        resolvedCursorNames.append(name)
+
+        if missingCursorNames.contains(name) {
+            throw CursorError.missingCursor(name)
+        }
+
+        return image
+    }
+
+    func createCursorSurface(for seatID: RawSeatID) throws -> CursorManagerSurface {
+        createdSurfaceSeatIDs.append(seatID)
+        let surface = RecordingCursorSurface(objectID: RawObjectID(nextSurfaceID))
+        nextSurfaceID += 1
+        createdSurfaces.append(surface)
+        return surface
+    }
+
+    func setPointerCursor(
+        seatID: RawSeatID,
+        serial: UInt32,
+        surface: CursorManagerSurface?,
+        hotspotX: Int32,
+        hotspotY: Int32
+    ) -> RawPointerCursorResult {
+        setCursorRequests.append(
+            SetCursorRequest(
+                seatID: seatID,
+                serial: serial,
+                surfaceID: surface?.objectID,
+                hotspotX: hotspotX,
+                hotspotY: hotspotY
+            )
+        )
+
+        return .set(
+            RawPointerCursorSetResult(
+                seatID: seatID,
+                serial: serial,
+                surfaceID: surface?.objectID,
+                hotspotX: hotspotX,
+                hotspotY: hotspotY
+            )
+        )
+    }
+
+    func surface(for seatID: RawSeatID) -> RecordingCursorSurface? {
+        guard let index = createdSurfaceSeatIDs.firstIndex(of: seatID) else {
+            return nil
+        }
+
+        return createdSurfaces[index]
+    }
+}
+
+private final class RecordingCursorSurface: CursorManagerSurface {
+    let objectID: RawObjectID?
+    private(set) var attachedCount = 0
+    private(set) var commitCount = 0
+    private(set) var destroyCount = 0
+
+    init(objectID cursorSurfaceID: RawObjectID) {
+        objectID = cursorSurfaceID
+    }
+
+    func attach(_: CursorImage) {
+        attachedCount += 1
+    }
+
+    func commit() {
+        commitCount += 1
+    }
+
+    func destroy() {
+        destroyCount += 1
+    }
+}
+
+private func rawSeatRemoved(sequence: UInt64, seatID: RawSeatID) -> RawInputEvent {
+    rawEvent(
+        sequence: sequence,
+        seatID: seatID,
+        kind: .seatRemoved
+    )
+}
+
+private func rawSeatCapabilities(
+    sequence: UInt64,
+    seatID: RawSeatID,
+    activeCapabilities: SeatCapabilities
+) -> RawInputEvent {
+    rawEvent(
+        sequence: sequence,
+        seatID: seatID,
+        kind: .seat(
+            RawSeatEventSnapshot(
+                advertisedCapabilities: activeCapabilities,
+                activeCapabilities: activeCapabilities,
+                name: nil
+            )
+        )
+    )
+}

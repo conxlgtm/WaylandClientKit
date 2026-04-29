@@ -15,6 +15,7 @@ package struct RawSeatProxyOperations {
     package var getPointer: (OpaquePointer) -> OpaquePointer?
     package var getKeyboard: (OpaquePointer) -> OpaquePointer?
     package var getTouch: (OpaquePointer) -> OpaquePointer?
+    package var setPointerCursor: (OpaquePointer, UInt32, OpaquePointer?, Int32, Int32) -> Void
     package var proxyVersion: (OpaquePointer) -> RawVersion
     package var proxyObjectID: (OpaquePointer?) -> RawObjectID?
     package var releasePointer: (OpaquePointer) -> Void
@@ -47,6 +48,9 @@ package struct RawSeatProxyOperations {
             },
             getTouch: { seat in
                 swl_seat_get_touch(seat)
+            },
+            setPointerCursor: { pointer, serial, surface, hotspotX, hotspotY in
+                swl_pointer_set_cursor(pointer, serial, surface, hotspotX, hotspotY)
             },
             proxyVersion: { proxy in
                 RawVersion(swl_proxy_get_version(UnsafeMutableRawPointer(proxy)))
@@ -1055,6 +1059,33 @@ public final class RawSeat {
             listenerOwner: listenerOwner,
             cancelListener: { listenerOwner.cancel() },
             release: operations.releaseTouch
+        )
+    }
+
+    package func setPointerCursor(
+        serial: UInt32,
+        surfacePointer: OpaquePointer?,
+        hotspotX: Int32,
+        hotspotY: Int32
+    ) -> RawPointerCursorResult {
+        guard let pointerDevice else { return .skippedNoPointer(id) }
+
+        operations.setPointerCursor(
+            pointerDevice.pointer,
+            serial,
+            surfacePointer,
+            hotspotX,
+            hotspotY,
+        )
+
+        return .set(
+            RawPointerCursorSetResult(
+                seatID: id,
+                serial: serial,
+                surfaceID: operations.proxyObjectID(surfacePointer),
+                hotspotX: hotspotX,
+                hotspotY: hotspotY
+            )
         )
     }
 

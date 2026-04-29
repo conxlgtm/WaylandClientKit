@@ -44,6 +44,12 @@ struct wl_callback *swl_surface_frame(struct wl_surface *surface);
 struct wl_pointer *swl_seat_get_pointer(struct wl_seat *seat);
 struct wl_keyboard *swl_seat_get_keyboard(struct wl_seat *seat);
 struct wl_touch *swl_seat_get_touch(struct wl_seat *seat);
+void swl_pointer_set_cursor(
+    struct wl_pointer *pointer,
+    uint32_t serial,
+    struct wl_surface *surface,
+    int32_t hotspot_x,
+    int32_t hotspot_y);
 
 void swl_surface_attach(
     struct wl_surface *surface, struct wl_buffer *buffer, int32_t x, int32_t y);

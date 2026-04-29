@@ -2,12 +2,18 @@ import CWaylandProtocols
 import Testing
 
 @Suite
-struct ListenerCallbackBundleSmokeTests {
+struct ListenerCallbackBundleSmokeTests {  // swiftlint:disable:this type_body_length
     @Test
     func proxyVersionShimImportsIntoSwift() {
         let getVersion = swl_proxy_get_version
 
         #expect(MemoryLayout.size(ofValue: getVersion) > 0)
+    }
+
+    @Test
+    func pointerSetCursorShimImportsIntoSwift() {
+        let setCursor = swl_pointer_set_cursor
+        #expect(MemoryLayout.size(ofValue: setCursor) > 0)
     }
 
     @Test

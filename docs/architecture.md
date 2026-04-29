@@ -8,10 +8,11 @@ Application code
     v
 WaylandClient
     |\
-    | v
-    | WaylandKeyboardInterpretation
-    |     |
-    v     v
+    | \
+    |  v
+    |  WaylandKeyboardInterpretation
+    |      |
+    v      v
 WaylandRaw
     |
     v
@@ -20,6 +21,9 @@ CWaylandProtocols
     v
 CWaylandClientSystem
 
+WaylandClient also depends on WaylandCursor.
+WaylandCursor depends on WaylandRaw and CWaylandCursorShims.
+CWaylandCursorShims depends on CWaylandCursorSystem.
 WaylandKeyboardInterpretation also depends on CXKBCommonSystem.
 
 SwiftWaylandSmoke
@@ -27,7 +31,9 @@ SwiftWaylandSmoke
 ```
 
 `WaylandClient` uses `WaylandKeyboardInterpretation` to expose interpreted keyboard events in the session input stream.
+`WaylandClient` uses `WaylandCursor` to resolve cursor theme images and set cursor surfaces on pointer focus.
 `WaylandRaw` does not depend on xkbcommon.
+`WaylandRaw` does not depend on wayland-cursor.
 
 ## Target Roles
 
@@ -64,6 +70,40 @@ Does not contain:
 - keyboard policy
 - key symbol or text interpretation logic
 
+### `CWaylandCursorSystem`
+
+Purpose:
+
+- import installed wayland-cursor headers into SwiftPM
+
+Contains:
+
+- `module.modulemap`
+- umbrella header for wayland-cursor headers
+
+Does not contain:
+
+- cursor policy
+- Swift ownership logic
+
+### `CWaylandCursorShims`
+
+Purpose:
+
+- expose the small wayland-cursor ABI surface Swift needs
+
+Contains:
+
+- cursor theme load/destroy wrappers
+- cursor lookup wrappers
+- cursor image metadata accessors
+- cursor image buffer lookup
+
+Does not contain:
+
+- `wl_pointer.set_cursor`
+- window or session policy
+
 ### `CWaylandProtocols`
 
 Purpose:
@@ -99,6 +139,7 @@ Intended contents:
 - registry and seat discovery
 - shared-memory buffer management
 - raw pointer, keyboard, and touch event capture
+- raw pointer cursor request forwarding
 - raw input `AsyncSequence` adapter
 - copied keyboard keymap payloads
 
@@ -106,6 +147,22 @@ Does not depend on:
 
 - `CXKBCommonSystem`
 - xkbcommon interpretation APIs
+- `CWaylandCursorSystem`
+- wayland-cursor APIs
+
+### `WaylandCursor`
+
+Purpose:
+
+- wrap installed cursor themes and static cursor images
+
+Current state:
+
+- imports wayland-cursor through `CWaylandCursorShims`
+- loads a cursor theme for a `wl_shm`
+- resolves named cursors to image metadata and borrowed cursor buffers
+- keeps cursor image buffers owned by the cursor theme
+- does not know about windows, seats, or input routing
 
 ### `WaylandKeyboardInterpretation`
 
@@ -137,6 +194,7 @@ Current state:
 - `DisplaySession` as the owner of event pumping, window creation, and input draining
 - `InputRouter` that maps raw input events to public session input events
 - session-owned `KeyboardInterpreter` that maps raw keyboard facts to public interpreted keyboard events
+- session-owned `CursorManager` that sets cursor surfaces when pointer focus enters registered windows
 
 ### `WaylandSmokeSupport`
 
@@ -180,8 +238,9 @@ UTF-8 values from key events are key interpretation output. They are not committ
 
 Pointer coordinates are surface-local.
 
-Story 005 receives pointer events but does not manage cursor images yet.
-Some compositors may leave the cursor unchanged or undefined over the demo window until cursor support is added.
+Pointer cursor images are session policy. `WaylandClient` resolves the desired `PointerCursor`
+through `WaylandCursor`, creates per-seat cursor surfaces, attaches borrowed cursor theme buffers,
+and calls `wl_pointer.set_cursor` with the pointer enter serial for registered client surfaces.
 
 ## Runtime Model
 
@@ -197,10 +256,11 @@ Supported:
 - stable xdg-shell wm_base, surface, and toplevel basics
 - basic `xkb_v1` keyboard interpretation through xkbcommon
 - session-level raw and interpreted keyboard events
+- static pointer cursor surfaces through wayland-cursor
 
 Not supported:
 
-- cursor themes or cursor surfaces
+- cursor animation or per-output cursor scaling
 - xdg-decoration
 - clipboard, primary selection, drag and drop
 - text input or IME

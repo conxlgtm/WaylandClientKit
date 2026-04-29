@@ -84,6 +84,16 @@ struct wl_touch *swl_seat_get_touch(struct wl_seat *seat)
     return wl_seat_get_touch(seat);
 }
 
+void swl_pointer_set_cursor(
+    struct wl_pointer *pointer,
+    uint32_t serial,
+    struct wl_surface *surface,
+    int32_t hotspot_x,
+    int32_t hotspot_y)
+{
+    wl_pointer_set_cursor(pointer, serial, surface, hotspot_x, hotspot_y);
+}
+
 uint32_t swl_proxy_get_version(void *proxy)
 {
     return wl_proxy_get_version((struct wl_proxy *)proxy);
