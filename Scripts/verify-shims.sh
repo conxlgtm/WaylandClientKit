@@ -20,6 +20,7 @@ required_symbols=(
     swl_pointer_add_listener
     swl_keyboard_add_listener
     swl_touch_add_listener
+    swl_pointer_set_cursor
     swl_proxy_get_version
     swl_proxy_get_id
 )

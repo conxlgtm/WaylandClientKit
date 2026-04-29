@@ -26,6 +26,14 @@ public final class RawSurface {
         swl_surface_attach(pointer, buffer?.pointer, x, y)
     }
 
+    package func attachBorrowedBuffer(
+        _ buffer: RawBorrowedBuffer?,
+        x: Int32 = 0,
+        y: Int32 = 0
+    ) {
+        swl_surface_attach(pointer, buffer?.pointer, x, y)
+    }
+
     public func damageFullBuffer(width: Int32, height: Int32) {
         if usesBufferDamage {
             swl_surface_damage_buffer(pointer, 0, 0, width, height)

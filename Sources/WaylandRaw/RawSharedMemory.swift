@@ -7,7 +7,7 @@ public final class RawSharedMemory {
 
     private var proxy: RawOwnedProxy
 
-    var pointer: OpaquePointer {
+    package var pointer: OpaquePointer {
         proxy.pointer
     }
 

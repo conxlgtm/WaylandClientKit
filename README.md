@@ -21,6 +21,7 @@ Current experimental baseline:
 - session-level `DisplaySession` input draining with seat/window identity
 - copied keyboard keymap payloads inside `WaylandRaw`
 - `xkbcommon`-backed key interpretation for copied `xkb_v1` keymaps through `DisplaySession`
+- normal pointer cursor surfaces backed by `wayland-cursor`
 - raw input async event stream
 - noninteractive Wayland smoke executable
 - tests for system imports, shim imports, raw lifecycle, and client drawing helpers
@@ -29,8 +30,8 @@ Not implemented yet:
 
 - protocol coverage beyond core Wayland, XDG shell, shared memory, and input basics
 - compose, text-input, or IME behavior
-- cursor themes or cursor image management
 - text input, IME, clipboard, or drag and drop protocols
+- cursor animation, output-scale cursor selection, or custom cursor drawing APIs
 - high-level gesture recognizers or widgets
 - DocC reference documentation
 
@@ -59,10 +60,15 @@ Keyboard interpretation:
 - `xkb_v1` keymaps through `WaylandKeyboardInterpretation` and `DisplaySession`
 - key symbols and UTF-8 text derived from `xkbcommon`
 
+Pointer cursors:
+
+- session-level `PointerCursor` values
+- static cursor surfaces from installed cursor themes through `wayland-cursor`
+
 Not supported in the `0.0.1` checkpoint:
 
 - `wl_data_device_manager`, clipboard, primary selection, or drag and drop
-- cursor themes or cursor surfaces
+- cursor animation or per-output cursor scaling
 - xdg-decoration
 - presentation-time, viewporter, or fractional-scale
 - linux-dmabuf, EGL, GBM, or GPU rendering
@@ -73,7 +79,7 @@ Not supported in the `0.0.1` checkpoint:
 
 - Fedora
 - Swift 6.3.1
-- `wayland-devel`
+- `wayland-devel` for `libwayland-client` and `wayland-cursor.pc`
 - `wayland-protocols-devel`
 - `pkgconf-pkg-config`
 - `libxkbcommon-devel`
@@ -98,8 +104,17 @@ SwiftWaylandSmoke
 WaylandKeyboardInterpretation
     xkbcommon-backed keymap and key event interpretation
 
+WaylandCursor
+    wayland-cursor backed theme and cursor image wrapper
+
 WaylandRaw
     low-level Swift layer and raw input subsystem
+
+CWaylandCursorShims
+    C accessors for wayland-cursor structs
+
+CWaylandCursorSystem
+    system-library bridge to installed wayland-cursor headers
 
 CWaylandProtocols
     generated protocol C + C shims
@@ -150,7 +165,7 @@ swift run swift-wayland-demo
 ```
 
 The demo draws a small marker for pointer motion and prints basic pointer/keyboard/touch/seat events, including interpreted keyboard events when keymap interpretation is available.
-It does not manage cursor images yet; some compositors may leave the cursor unchanged or undefined over the demo window.
+It sets a normal pointer cursor when pointer focus enters the demo window.
 
 Run the noninteractive Wayland smoke check under a real Wayland session:
 

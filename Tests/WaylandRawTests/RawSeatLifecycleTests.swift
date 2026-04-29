@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 import CWaylandProtocols
 import Glibc
 import Testing
@@ -204,6 +205,48 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
                             x: WaylandFixed(rawValue: 256),
                             y: WaylandFixed(rawValue: 512)
                         )
+                    )
+                ))
+    }
+
+    @Test
+    func setPointerCursorUsesCurrentPointerChild() throws {
+        let recorder = SeatOperationRecorder()
+        recorder.pointerProxy = fakePointer(0x8A1)
+        let queue = RawInputEventQueue()
+        let seat = try RawSeat(
+            id: RawSeatID(rawValue: 14),
+            pointer: try #require(fakePointer(0x8A0)),
+            version: 10,
+            eventSink: queue,
+            operations: recorder.operations,
+            installListener: false
+        )
+
+        try seat.applyCapabilities([.pointer])
+        _ = queue.drain()
+        recorder.entries.removeAll()
+
+        let result = seat.setPointerCursor(
+            serial: 77,
+            surfacePointer: fakePointer(0x900),
+            hotspotX: 3,
+            hotspotY: 4
+        )
+
+        #expect(
+            recorder.entries.suffix(1) == [
+                "set cursor serial=77 surface=0x900 hotspot=3,4"
+            ])
+        #expect(
+            result
+                == .set(
+                    RawPointerCursorSetResult(
+                        seatID: RawSeatID(rawValue: 14),
+                        serial: 77,
+                        surfaceID: 0x900,
+                        hotspotX: 3,
+                        hotspotY: 4
                     )
                 ))
     }
@@ -459,6 +502,12 @@ private final class SeatOperationRecorder {
                 entries.append("get touch")
                 return touchProxy
             },
+            setPointerCursor: { [self] _, serial, surface, hotspotX, hotspotY in
+                entries.append(
+                    "set cursor serial=\(serial) surface=\(hex(surface)) "
+                        + "hotspot=\(hotspotX),\(hotspotY)"
+                )
+            },
             proxyVersion: { [self] _ in
                 entries.append("version")
                 return 10
@@ -484,4 +533,10 @@ private final class SeatOperationRecorder {
 
 private func fakePointer(_ bitPattern: Int) -> OpaquePointer? {
     OpaquePointer(bitPattern: bitPattern)
+}
+
+private func hex(_ pointer: OpaquePointer?) -> String {
+    guard let pointer else { return "nil" }
+
+    return "0x\(String(UInt(bitPattern: UnsafeRawPointer(pointer)), radix: 16))"
 }
