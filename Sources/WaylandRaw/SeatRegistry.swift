@@ -4,6 +4,7 @@ package final class SeatRegistry {
     private let registry: OpaquePointer
     private let eventSink: RawInputEventSink
     private let proxyAdoption: RawProxyAdoptionContext?
+    private let invariantFailureSink: RawInvariantFailureSink?
     private let operations: RawSeatProxyOperations
     private var seatsByGlobalName: [UInt32: RawSeat] = [:]
     private var unsupportedSeatVersionsByGlobalName: [UInt32: RawVersion] = [:]
@@ -13,11 +14,13 @@ package final class SeatRegistry {
         registry rawRegistry: OpaquePointer,
         eventSink inputEventSink: RawInputEventSink,
         proxyAdoption adoptionContext: RawProxyAdoptionContext? = nil,
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil,
         operations seatOperations: RawSeatProxyOperations = .live
     ) {
         registry = rawRegistry
         eventSink = inputEventSink
         proxyAdoption = adoptionContext
+        invariantFailureSink = failureSink
         operations = seatOperations
     }
 
@@ -82,6 +85,7 @@ package final class SeatRegistry {
                 version: negotiated,
                 eventSink: eventSink,
                 proxyAdoption: proxyAdoption,
+                invariantFailureSink: invariantFailureSink,
                 operations: operations
             )
             seatsByGlobalName[globalName] = seat
