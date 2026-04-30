@@ -2,16 +2,25 @@ import CWaylandProtocols
 
 package struct RawProxyAdoptionContext {
     private let eventQueue: RawEventQueue
+    package let invariantFailureSink: RawInvariantFailureSink
 
-    package init(eventQueue ownerQueue: RawEventQueue) {
+    package init(
+        eventQueue ownerQueue: RawEventQueue,
+        invariantFailureSink failureSink: RawInvariantFailureSink = .init()
+    ) {
         eventQueue = ownerQueue
+        invariantFailureSink = failureSink
     }
 
     package func adopt(
         _ proxy: OpaquePointer,
         interface interfaceName: StaticString
     ) -> OpaquePointer {
-        eventQueue.assertOwns(proxy: proxy, interface: interfaceName)
+        eventQueue.assertOwns(
+            proxy: proxy,
+            interface: interfaceName,
+            invariantFailureSink: invariantFailureSink
+        )
         return proxy
     }
 }
@@ -19,7 +28,8 @@ package struct RawProxyAdoptionContext {
 extension RawEventQueue {
     package func assertOwns(
         proxy: OpaquePointer,
-        interface interfaceName: StaticString
+        interface interfaceName: StaticString,
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil
     ) {
         #if DEBUG
             let rawProxy = unsafe UnsafeMutableRawPointer(proxy)
@@ -27,6 +37,11 @@ extension RawEventQueue {
                 let actualQueue = unsafe swl_proxy_get_queue_raw(rawProxy)
             else { return }
             let expectedQueue = unsafe opaquePointer
+            if actualQueue != expectedQueue {
+                failureSink?.reportFatalRawInvariantFailure(
+                    .proxyOnWrongQueue(interface: "\(interfaceName)")
+                )
+            }
             precondition(
                 actualQueue == expectedQueue,
                 "\(interfaceName) proxy is not assigned to the display owner event queue"

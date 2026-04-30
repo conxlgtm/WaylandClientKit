@@ -26,7 +26,11 @@ public final class RawSurface {
         }
 
         _ = proxyAdoption.adopt(callback, interface: "wl_callback")
-        return try .init(pointer: callback, onDone: handler)
+        return try .init(
+            pointer: callback,
+            onDone: handler,
+            invariantFailureSink: proxyAdoption.invariantFailureSink
+        )
     }
 
     public func attach(buffer: RawBuffer?, x: Int32 = 0, y: Int32 = 0) {

@@ -9,6 +9,7 @@ public final class RawSeat {
 
     private let eventSink: RawInputEventSink
     private let proxyAdoption: RawProxyAdoptionContext?
+    private let invariantFailureSink: RawInvariantFailureSink?
     private let listenerOwner: SeatListenerOwner
     private let operations: RawSeatProxyOperations
     private var state = SeatState()
@@ -38,6 +39,7 @@ public final class RawSeat {
         version seatVersion: RawVersion,
         eventSink inputEventSink: RawInputEventSink,
         proxyAdoption adoptionContext: RawProxyAdoptionContext? = nil,
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil,
         operations seatOperations: RawSeatProxyOperations = .live,
         installListener: Bool = true
     ) throws {
@@ -46,8 +48,12 @@ public final class RawSeat {
         version = seatVersion
         eventSink = inputEventSink
         proxyAdoption = adoptionContext
+        invariantFailureSink = failureSink ?? adoptionContext?.invariantFailureSink
         operations = seatOperations
-        listenerOwner = SeatListenerOwner(operations: seatOperations)
+        listenerOwner = SeatListenerOwner(
+            operations: seatOperations,
+            invariantFailureSink: failureSink ?? adoptionContext?.invariantFailureSink
+        )
 
         guard installListener else { return }
 
@@ -201,7 +207,8 @@ public final class RawSeat {
         let listenerOwner = PointerListenerOwner(
             deviceID: deviceID,
             eventSink: eventSink,
-            operations: operations
+            operations: operations,
+            invariantFailureSink: invariantFailureSink
         ) { [weak seat = self] deviceID in
             seat?.isCurrentDevice(deviceID) == true
         }
@@ -234,6 +241,7 @@ public final class RawSeat {
             deviceID: deviceID,
             eventSink: eventSink,
             operations: operations,
+            invariantFailureSink: invariantFailureSink,
             isCurrentDevice: { [weak seat = self] deviceID in
                 seat?.isCurrentDevice(deviceID) == true
             },
@@ -274,7 +282,8 @@ public final class RawSeat {
         let listenerOwner = TouchListenerOwner(
             deviceID: deviceID,
             eventSink: eventSink,
-            operations: operations
+            operations: operations,
+            invariantFailureSink: invariantFailureSink
         ) { [weak seat = self] deviceID in
             seat?.isCurrentDevice(deviceID) == true
         }

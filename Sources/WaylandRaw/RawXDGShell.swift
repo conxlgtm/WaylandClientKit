@@ -95,7 +95,10 @@ public final class RawXDGWMBase {
         version wmBaseVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws {
-        let newOwner = XDGWMBaseOwner(wmBase: wmBasePointer)
+        let newOwner = XDGWMBaseOwner(
+            wmBase: wmBasePointer,
+            invariantFailureSink: adoptionContext.invariantFailureSink
+        )
         try newOwner.install()
 
         pointer = adoptionContext.adopt(wmBasePointer, interface: "xdg_wm_base")
@@ -121,6 +124,7 @@ public final class RawXDGWMBase {
         guard !isDestroyed else { return }
 
         isDestroyed = true
+        owner.cancel()
         swl_xdg_wm_base_destroy(pointer)
     }
 
@@ -136,30 +140,37 @@ private enum ListenerInstallState {
 
 private final class XDGWMBaseOwner {
     private let wmBase: OpaquePointer
+    private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = ListenerInstallState.idle
     private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_xdg_wm_base_listener_callbacks()
+        initialValue: swl_xdg_wm_base_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
     )
 
     private var callbacks: UnsafeMutablePointer<swl_xdg_wm_base_listener_callbacks> {
         listenerStorage.callbacks
     }
 
-    init(wmBase pointer: OpaquePointer) {
+    init(
+        wmBase pointer: OpaquePointer,
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil
+    ) {
         wmBase = pointer
+        invariantFailureSink = failureSink
 
         callbacks.pointee.ping = { data, wmBase, serial in
-            guard let data, let wmBase else {
+            guard let wmBase else {
                 preconditionFailure("xdg_wm_base ping fired without Swift state")
             }
 
-            _ = CallbackBox<XDGWMBaseOwner>
-                .fromOpaque(data)
-                .requireOwner()
-
-            // We must pong, otherwise the compositor can treat the app as hung
-            swl_xdg_wm_base_pong(wmBase, serial)
+            XDGWMBaseOwner.withOwner(
+                data,
+                message: "xdg_wm_base ping fired without Swift state"
+            ) { _ in
+                // We must pong, otherwise the compositor can treat the app as hung
+                swl_xdg_wm_base_pong(wmBase, serial)
+            }
         }
     }
 
@@ -177,32 +188,49 @@ private final class XDGWMBaseOwner {
 
         installState = .installed
     }
+
+    func cancel() {
+        listenerStorage.invalidate()
+    }
+
+    private static func withOwner(
+        _ data: UnsafeMutableRawPointer?,
+        message: @autoclosure () -> String,
+        _ body: (XDGWMBaseOwner) -> Void
+    ) {
+        CListenerStorage<XDGWMBaseOwner, swl_xdg_wm_base_listener_callbacks>
+            .withOwner(from: data, message: message(), body)
+    }
 }
 
 package final class XDGSurfaceOwner {
     private let configureState: XDGConfigureState
+    private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = ListenerInstallState.idle
     private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_xdg_surface_listener_callbacks()
+        initialValue: swl_xdg_surface_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
     )
 
     private var callbacks: UnsafeMutablePointer<swl_xdg_surface_listener_callbacks> {
         listenerStorage.callbacks
     }
 
-    package init(configureState state: XDGConfigureState) {
+    package init(
+        configureState state: XDGConfigureState,
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil
+    ) {
         configureState = state
+        invariantFailureSink = failureSink
 
         callbacks.pointee.configure = { data, _, serial in
-            guard let data else {
-                preconditionFailure("xdg_surface configure fired without Swift state")
+            XDGSurfaceOwner.withOwner(
+                data,
+                message: "xdg_surface configure fired without Swift state"
+            ) { owner in
+                owner.configureState.handleSurfaceConfigure(serial: serial)
             }
-
-            let owner = CallbackBox<XDGSurfaceOwner>
-                .fromOpaque(data)
-                .requireOwner()
-            owner.configureState.handleSurfaceConfigure(serial: serial)
         }
     }
 
@@ -221,87 +249,98 @@ package final class XDGSurfaceOwner {
 
         installState = .installed
     }
+
+    package func cancel() {
+        listenerStorage.invalidate()
+    }
+
+    private static func withOwner(
+        _ data: UnsafeMutableRawPointer?,
+        message: @autoclosure () -> String,
+        _ body: (XDGSurfaceOwner) -> Void
+    ) {
+        CListenerStorage<XDGSurfaceOwner, swl_xdg_surface_listener_callbacks>
+            .withOwner(from: data, message: message(), body)
+    }
 }
 
 package final class XDGTopLevelOwner {
     private let configureState: XDGConfigureState
+    private let invariantFailureSink: RawInvariantFailureSink?
     private var onClose: (() -> Void)?
     private var installState = ListenerInstallState.idle
     private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_xdg_toplevel_listener_callbacks()
+        initialValue: swl_xdg_toplevel_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
     )
 
     private var callbacks: UnsafeMutablePointer<swl_xdg_toplevel_listener_callbacks> {
         listenerStorage.callbacks
     }
 
-    package init(configureState state: XDGConfigureState) {
+    package init(
+        configureState state: XDGConfigureState,
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil
+    ) {
         configureState = state
+        invariantFailureSink = failureSink
 
         callbacks.pointee.configure = { data, _, width, height, states in
-            guard let data else {
-                preconditionFailure("xdg_toplevel configure fired without Swift state")
-            }
-
-            let owner = CallbackBox<XDGTopLevelOwner>
-                .fromOpaque(data)
-                .requireOwner()
-            do {
-                owner.configureState.handleTopLevelConfigure(
-                    width: width,
-                    height: height,
-                    states: try XDGTopLevelOwner.uint32Array(from: states).map { rawState in
-                        XDGTopLevelState(rawValue: rawState)
-                    }
-                )
-            } catch let error as RuntimeError {
-                owner.configureState.recordError(error)
-            } catch {
-                preconditionFailure("Unexpected XDG configure error: \(error)")
+            XDGTopLevelOwner.withOwner(
+                data,
+                message: "xdg_toplevel configure fired without Swift state"
+            ) { owner in
+                do {
+                    owner.configureState.handleTopLevelConfigure(
+                        width: width,
+                        height: height,
+                        states: try XDGTopLevelOwner.uint32Array(from: states).map { rawState in
+                            XDGTopLevelState(rawValue: rawState)
+                        }
+                    )
+                } catch let error as RuntimeError {
+                    owner.configureState.recordError(error)
+                } catch {
+                    preconditionFailure("Unexpected XDG configure error: \(error)")
+                }
             }
         }
 
         callbacks.pointee.close = { data, _ in
-            guard let data else {
-                preconditionFailure("xdg_toplevel close fired without Swift state")
+            XDGTopLevelOwner.withOwner(
+                data,
+                message: "xdg_toplevel close fired without Swift state"
+            ) { owner in
+                owner.onClose?()
             }
-
-            let owner = CallbackBox<XDGTopLevelOwner>
-                .fromOpaque(data)
-                .requireOwner()
-            owner.onClose?()
         }
 
         callbacks.pointee.configure_bounds = { data, _, width, height in
-            guard let data else {
-                preconditionFailure("xdg_toplevel configure_bounds fired without Swift state")
+            XDGTopLevelOwner.withOwner(
+                data,
+                message: "xdg_toplevel configure_bounds fired without Swift state"
+            ) { owner in
+                owner.configureState.handleConfigureBounds(width: width, height: height)
             }
-
-            let owner = CallbackBox<XDGTopLevelOwner>
-                .fromOpaque(data)
-                .requireOwner()
-            owner.configureState.handleConfigureBounds(width: width, height: height)
         }
 
         callbacks.pointee.wm_capabilities = { data, _, capabilities in
-            guard let data else {
-                preconditionFailure("xdg_toplevel wm_capabilities fired without Swift state")
-            }
-
-            let owner = CallbackBox<XDGTopLevelOwner>
-                .fromOpaque(data)
-                .requireOwner()
-            do {
-                owner.configureState.handleWMCapabilities(
-                    try XDGTopLevelOwner.uint32Array(from: capabilities).map { rawCapability in
-                        XDGWMCapability(rawValue: rawCapability)
-                    }
-                )
-            } catch let error as RuntimeError {
-                owner.configureState.recordError(error)
-            } catch {
-                preconditionFailure("Unexpected XDG capabilities error: \(error)")
+            XDGTopLevelOwner.withOwner(
+                data,
+                message: "xdg_toplevel wm_capabilities fired without Swift state"
+            ) { owner in
+                do {
+                    owner.configureState.handleWMCapabilities(
+                        try XDGTopLevelOwner.uint32Array(from: capabilities).map { rawCapability in
+                            XDGWMCapability(rawValue: rawCapability)
+                        }
+                    )
+                } catch let error as RuntimeError {
+                    owner.configureState.recordError(error)
+                } catch {
+                    preconditionFailure("Unexpected XDG capabilities error: \(error)")
+                }
             }
         }
     }
@@ -329,9 +368,23 @@ package final class XDGTopLevelOwner {
         installState = .installed
     }
 
+    package func cancel() {
+        onClose = nil
+        listenerStorage.invalidate()
+    }
+
     private static func uint32Array(from array: UnsafeMutablePointer<wl_array>?)
         throws(RuntimeError) -> [UInt32]
     {
         try WaylandArray.uint32Values(from: array)
+    }
+
+    private static func withOwner(
+        _ data: UnsafeMutableRawPointer?,
+        message: @autoclosure () -> String,
+        _ body: (XDGTopLevelOwner) -> Void
+    ) {
+        CListenerStorage<XDGTopLevelOwner, swl_xdg_toplevel_listener_callbacks>
+            .withOwner(from: data, message: message(), body)
     }
 }

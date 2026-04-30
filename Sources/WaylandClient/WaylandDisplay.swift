@@ -157,6 +157,7 @@ public actor WaylandDisplay {
             maximumPendingInputEventCount: eventStreamConfiguration.inputEventCapacity
         )
         let displayCore = DisplayCore(session: session, eventHub: runtime.eventHub)
+        session.setRawInvariantFailureReporter(displayCore)
         let source = DisplayEventSource(core: displayCore)
         core = displayCore
         eventSource = source
@@ -226,7 +227,7 @@ private final class WaylandDisplayRuntime: Sendable {
 }
 
 @safe
-private final class DisplayCore {
+private final class DisplayCore: RawInvariantFailureReporter {
     private let eventHub: DisplayEventHub
     private var session: DisplaySession?
     private var windows: [WindowID: TopLevelWindow] = [:]
@@ -317,6 +318,10 @@ private final class DisplayCore {
         windows.removeAll(keepingCapacity: false)
         session = nil
         eventHub.finish(throwing: error)
+    }
+
+    func reportFatalRawInvariantFailure(_ failure: RawInvariantFailure) {
+        fail(.internalInvariantViolation(failure.description))
     }
 
     func pumpOnce(

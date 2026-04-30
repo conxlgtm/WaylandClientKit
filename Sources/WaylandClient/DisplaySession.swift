@@ -153,6 +153,13 @@ package final class DisplaySession {
         return cursorManager.pointerCursor
     }
 
+    package func setRawInvariantFailureReporter(
+        _ reporter: (any RawInvariantFailureReporter)?
+    ) {
+        connection.preconditionIsOwnerThread()
+        connection.setInvariantFailureReporter(reporter)
+    }
+
     @discardableResult
     package func setPointerCursorOnOwnerThread(
         _ cursor: PointerCursor

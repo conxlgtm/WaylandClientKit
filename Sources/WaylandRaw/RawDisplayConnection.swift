@@ -7,6 +7,7 @@ public final class RawDisplayConnection {
 
     let display: RawDisplay
     let eventQueue: RawEventQueue
+    package let invariantFailureSink: RawInvariantFailureSink
     let proxyAdoption: RawProxyAdoptionContext
     let registry: RawRegistry
     public private(set) var boundGlobals: BoundGlobals?
@@ -19,6 +20,7 @@ public final class RawDisplayConnection {
     private init(
         display rawDisplay: RawDisplay,
         eventQueue rawEventQueue: RawEventQueue,
+        invariantFailureSink rawInvariantFailureSink: RawInvariantFailureSink,
         registry rawRegistry: RawRegistry,
         registryState rawRegistryState: RegistryState,
         registryListenerOwner rawRegistryListenerOwner: RegistryListenerOwner,
@@ -26,7 +28,11 @@ public final class RawDisplayConnection {
     ) {
         display = rawDisplay
         eventQueue = rawEventQueue
-        proxyAdoption = RawProxyAdoptionContext(eventQueue: rawEventQueue)
+        invariantFailureSink = rawInvariantFailureSink
+        proxyAdoption = RawProxyAdoptionContext(
+            eventQueue: rawEventQueue,
+            invariantFailureSink: rawInvariantFailureSink
+        )
         registry = rawRegistry
         registryState = rawRegistryState
         registryListenerOwner = rawRegistryListenerOwner
@@ -82,7 +88,11 @@ public final class RawDisplayConnection {
         swl_display_wrapper_destroy(wrappedDisplay)
 
         let state = RegistryState()
-        let listenerOwner = RegistryListenerOwner(state: state)
+        let invariantFailureSink = RawInvariantFailureSink()
+        let listenerOwner = RegistryListenerOwner(
+            state: state,
+            invariantFailureSink: invariantFailureSink
+        )
         let inputEventQueue = RawInputEventQueue()
 
         let rawRegistry = RawRegistry(
@@ -106,6 +116,7 @@ public final class RawDisplayConnection {
         return RawDisplayConnection(
             display: rawDisplay,
             eventQueue: rawEventQueue,
+            invariantFailureSink: invariantFailureSink,
             registry: rawRegistry,
             registryState: state,
             registryListenerOwner: listenerOwner,
@@ -176,9 +187,15 @@ public final class RawDisplayConnection {
     deinit {
         preconditionIsOwnerThread()
         boundGlobals?.destroy()
+        registryListenerOwner.cancel()
         swl_registry_destroy(registry.opaquePointer)
         eventQueue.destroy()
         wl_display_disconnect(display.opaquePointer)
+    }
+
+    package func setInvariantFailureReporter(_ reporter: (any RawInvariantFailureReporter)?) {
+        preconditionIsOwnerThread()
+        invariantFailureSink.reporter = reporter
     }
 }
 
@@ -350,7 +367,8 @@ extension RawDisplayConnection {
         let seatRegistry = SeatRegistry(
             registry: reg,
             eventSink: inputEventQueue,
-            proxyAdoption: proxyAdoption
+            proxyAdoption: proxyAdoption,
+            invariantFailureSink: invariantFailureSink
         )
 
         do {
@@ -443,9 +461,11 @@ extension RawDisplayConnection {
 
         var didFire = false
         let deadline = try rawMonotonicMilliseconds() + Int64(timeoutMilliseconds)
-        let registration = try FrameCallbackRegistration(pointer: syncCallback) {
-            didFire = true
-        }
+        let registration = try FrameCallbackRegistration(
+            pointer: syncCallback,
+            onDone: { didFire = true },
+            invariantFailureSink: invariantFailureSink
+        )
 
         try withExtendedLifetime(registration) {
             while !didFire {
@@ -472,13 +492,4 @@ extension RawDisplayConnection {
         swl_display_wrapper_set_queue(wrappedDisplay, eventQueue.opaquePointer)
         return wrappedDisplay
     }
-}
-
-private func rawMonotonicMilliseconds() throws -> Int64 {
-    var timestamp = timespec()
-    guard clock_gettime(CLOCK_MONOTONIC, &timestamp) == 0 else {
-        throw RuntimeError.systemError(errno: errno)
-    }
-
-    return Int64(timestamp.tv_sec) * 1_000 + Int64(timestamp.tv_nsec) / 1_000_000
 }
