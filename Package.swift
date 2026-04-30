@@ -18,6 +18,11 @@ let executableSwiftSettings: [SwiftSetting] =
         .defaultIsolation(MainActor.self)
     ]
 
+let unsafeShimSwiftSettings: [SwiftSetting] =
+    librarySwiftSettings + [
+        .define("ENABLE_TESTING", .when(configuration: .debug))
+    ]
+
 let package = Package(
     name: "SwiftWayland",
     products: [
@@ -74,7 +79,7 @@ let package = Package(
         .target(
             name: "WaylandRawUnsafeShim",
             dependencies: ["CWaylandUnsafeShim", "CWaylandClientSystem", "WaylandRaw"],
-            swiftSettings: librarySwiftSettings
+            swiftSettings: unsafeShimSwiftSettings
         ),
         .target(
             name: "WaylandClient",

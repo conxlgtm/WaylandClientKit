@@ -1,3 +1,6 @@
+#include <wayland-client.h>
+#include <wayland-cursor.h>
+
 #include "swift-wayland-cursor-shims.h"
 
 struct wl_cursor_theme *swl_cursor_theme_load(

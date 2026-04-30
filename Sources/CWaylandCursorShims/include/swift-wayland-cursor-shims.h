@@ -1,8 +1,16 @@
 #pragma once
 
+#ifndef __linux__
+#error "SwiftWayland currently supports Linux only."
+#endif
+
 #include <stdint.h>
-#include <wayland-client.h>
-#include <wayland-cursor.h>
+
+struct wl_buffer;
+struct wl_cursor;
+struct wl_cursor_image;
+struct wl_cursor_theme;
+struct wl_shm;
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,7 +41,7 @@ uint32_t swl_cursor_image_height(struct wl_cursor_image *image);
 uint32_t swl_cursor_image_hotspot_x(struct wl_cursor_image *image);
 uint32_t swl_cursor_image_hotspot_y(struct wl_cursor_image *image);
 uint32_t swl_cursor_image_delay(struct wl_cursor_image *image);
-    
+
 struct wl_buffer *swl_cursor_image_get_buffer(struct wl_cursor_image *image);
 
 #ifdef __cplusplus
