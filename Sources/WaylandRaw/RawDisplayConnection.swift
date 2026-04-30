@@ -1,8 +1,13 @@
 import CWaylandClientSystem
 import CWaylandProtocols
+import Glibc
 
 public final class RawDisplayConnection {
+    public static let defaultDiscoveryTimeoutMS: Int32 = 1_000
+
     let display: RawDisplay
+    let eventQueue: RawEventQueue
+    let proxyAdoption: RawProxyAdoptionContext
     let registry: RawRegistry
     public private(set) var boundGlobals: BoundGlobals?
 
@@ -13,12 +18,15 @@ public final class RawDisplayConnection {
 
     private init(
         display rawDisplay: RawDisplay,
+        eventQueue rawEventQueue: RawEventQueue,
         registry rawRegistry: RawRegistry,
         registryState rawRegistryState: RegistryState,
         registryListenerOwner rawRegistryListenerOwner: RegistryListenerOwner,
         inputEventQueue rawInputEventQueue: RawInputEventQueue
     ) {
         display = rawDisplay
+        eventQueue = rawEventQueue
+        proxyAdoption = RawProxyAdoptionContext(eventQueue: rawEventQueue)
         registry = rawRegistry
         registryState = rawRegistryState
         registryListenerOwner = rawRegistryListenerOwner
@@ -36,6 +44,11 @@ public final class RawDisplayConnection {
         threadAffinity.preconditionIsOwnerThread(operation, file: file, line: line)
     }
 
+    @available(
+        *,
+        noasync,
+        message: "Use a synchronous owner-thread Wayland loop."
+    )
     public static func connect() throws -> RawDisplayConnection {
         guard let displayPointer = wl_display_connect(nil) else {
             throw RuntimeError.connectionFailed
@@ -47,17 +60,36 @@ public final class RawDisplayConnection {
             ownership: .connectionLifetime
         )
 
-        guard let registryPointer = swl_display_get_registry(displayPointer) else {
+        guard let eventQueuePointer = swl_display_create_event_queue(displayPointer) else {
+            wl_display_disconnect(displayPointer)
+            throw RuntimeError.eventQueueCreationFailed
+        }
+        let rawEventQueue = RawEventQueue(opaquePointer: eventQueuePointer)
+
+        guard let wrappedDisplay = swl_display_create_wrapper(displayPointer) else {
+            rawEventQueue.destroy()
+            wl_display_disconnect(displayPointer)
+            throw RuntimeError.displayWrapperCreationFailed
+        }
+        swl_display_wrapper_set_queue(wrappedDisplay, eventQueuePointer)
+
+        guard let registryPointer = swl_display_get_registry(wrappedDisplay) else {
+            swl_display_wrapper_destroy(wrappedDisplay)
+            rawEventQueue.destroy()
             wl_display_disconnect(displayPointer)
             throw RuntimeError.registryCreationFailed
         }
+        swl_display_wrapper_destroy(wrappedDisplay)
 
         let state = RegistryState()
         let listenerOwner = RegistryListenerOwner(state: state)
         let inputEventQueue = RawInputEventQueue()
 
         let rawRegistry = RawRegistry(
-            opaquePointer: registryPointer,
+            opaquePointer: rawEventQueue.assertedProxy(
+                registryPointer,
+                interface: "wl_registry"
+            ),
             version: 1,
             ownership: .connectionLifetime
         )
@@ -66,12 +98,14 @@ public final class RawDisplayConnection {
             try listenerOwner.install(on: registryPointer)
         } catch {
             swl_registry_destroy(registryPointer)
+            rawEventQueue.destroy()
             wl_display_disconnect(displayPointer)
             throw error
         }
 
         return RawDisplayConnection(
             display: rawDisplay,
+            eventQueue: rawEventQueue,
             registry: rawRegistry,
             registryState: state,
             registryListenerOwner: listenerOwner,
@@ -79,39 +113,91 @@ public final class RawDisplayConnection {
         )
     }
 
-    public func completeInitialDiscovery() throws {
-        preconditionIsOwnerThread()
-
-        guard let syncCallback = swl_display_sync(display.opaquePointer) else {
-            throw RuntimeError.displaySyncRequestFailed
-        }
-
-        var didFire = false
-        let registration = try FrameCallbackRegistration(pointer: syncCallback) {
-            didFire = true
-        }
-
-        try withExtendedLifetime(registration) {
-            while !didFire {
-                try EventLoop.pumpOnce(
-                    display: display.opaquePointer,
-                    timeoutMilliseconds: 1_000
-                )
-            }
-        }
-    }
-
+    @available(
+        *,
+        noasync,
+        message: "Read globals from the owner-thread Wayland loop."
+    )
     public var globals: [RawGlobalAdvertisement] {
         preconditionIsOwnerThread()
         return registryState.snapshot
     }
 
+    @available(
+        *,
+        noasync,
+        message: "Read globals from the owner-thread Wayland loop."
+    )
     public func global(named interfaceName: String) -> RawGlobalAdvertisement? {
         preconditionIsOwnerThread()
         return registryState.firstGlobal(named: interfaceName)
     }
 
+    @available(
+        *,
+        noasync,
+        message: "Pump events from the owner-thread Wayland loop."
+    )
+    public func pumpEvents(timeoutMilliseconds: Int32 = -1) throws {
+        preconditionIsOwnerThread()
+
+        try QueueEventLoop.pumpOnce(
+            display: display.opaquePointer,
+            eventQueue: eventQueue.opaquePointer,
+            timeoutMilliseconds: timeoutMilliseconds
+        )
+    }
+
+    @available(
+        *,
+        noasync,
+        message: "Drain input from the owner-thread Wayland loop."
+    )
+    public func drainInputEvents() -> [RawInputEvent] {
+        preconditionIsOwnerThread()
+        return inputEventQueue.drain()
+    }
+
+    @available(
+        *,
+        noasync,
+        message: "Run event loops from the owner-thread Wayland loop."
+    )
+    public func runEventLoop(while shouldContinue: () -> Bool) throws {
+        preconditionIsOwnerThread()
+
+        try QueueEventLoop.run(
+            display: display.opaquePointer,
+            eventQueue: eventQueue.opaquePointer,
+            shouldContinue: shouldContinue
+        )
+    }
+
+    deinit {
+        preconditionIsOwnerThread()
+        boundGlobals?.destroy()
+        swl_registry_destroy(registry.opaquePointer)
+        eventQueue.destroy()
+        wl_display_disconnect(display.opaquePointer)
+    }
+}
+
+extension RawDisplayConnection {
+    private struct RequiredGlobalBindingSet {
+        let compositor: RawGlobalAdvertisement
+        let compositorVersion: RawVersion
+        let sharedMemory: RawGlobalAdvertisement
+        let sharedMemoryVersion: RawVersion
+        let xdgWMBase: RawGlobalAdvertisement
+        let xdgWMBaseVersion: RawVersion
+    }
+
     @discardableResult
+    @available(
+        *,
+        noasync,
+        message: "Bind globals from the owner-thread Wayland loop."
+    )
     public func bindRequiredGlobals() throws -> BoundGlobals {
         preconditionIsOwnerThread()
 
@@ -120,55 +206,31 @@ public final class RawDisplayConnection {
         }
 
         let reg = registry.opaquePointer
-        let compositorGlobal = try requiredGlobal(named: "wl_compositor")
-        let shmGlobal = try requiredGlobal(named: "wl_shm")
-        let xdgGlobal = try requiredGlobal(named: "xdg_wm_base")
-        let compositorVersion = compositorGlobal.negotiatedVersion(
-            supportedByClient: SupportedVersions.wlCompositor
+        let bindingSet = try requiredGlobalBindingSet()
+        let compositorWrapper = try bindCompositor(
+            registry: reg,
+            global: bindingSet.compositor,
+            version: bindingSet.compositorVersion
         )
-        let shmVersion = shmGlobal.negotiatedVersion(
-            supportedByClient: SupportedVersions.wlShm
-        )
-        let xdgVersion = xdgGlobal.negotiatedVersion(
-            supportedByClient: SupportedVersions.xdgWmBase
-        )
-
-        guard
-            let compositor = swl_registry_bind_wl_compositor(
-                reg,
-                compositorGlobal.name,
-                compositorVersion.value
-            )
-        else {
-            throw RuntimeError.bindFailed("wl_compositor")
-        }
-        let compositorWrapper = RawCompositor(
-            pointer: compositor,
-            version: compositorVersion
-        )
-
         let shm = try bindSharedMemory(
             registry: reg,
-            global: shmGlobal,
-            version: shmVersion,
+            global: bindingSet.sharedMemory,
+            version: bindingSet.sharedMemoryVersion,
             compositor: compositorWrapper
         )
         let xdgWmBase = try bindXDGWMBase(
             registry: reg,
-            global: xdgGlobal,
-            version: xdgVersion,
+            global: bindingSet.xdgWMBase,
+            version: bindingSet.xdgWMBaseVersion,
             compositor: compositorWrapper,
             shm: shm
         )
-        let seatRegistry = SeatRegistry(registry: reg, eventSink: inputEventQueue)
-        do {
-            try seatRegistry.bindSeats(from: registryState.snapshot)
-        } catch {
-            xdgWmBase.destroy()
-            shm.destroy()
-            compositorWrapper.destroy()
-            throw error
-        }
+        let seatRegistry = try bindSeatRegistry(
+            registry: reg,
+            xdgWMBase: xdgWmBase,
+            sharedMemory: shm,
+            compositor: compositorWrapper
+        )
 
         let bound = BoundGlobals(
             compositor: compositorWrapper,
@@ -179,6 +241,27 @@ public final class RawDisplayConnection {
 
         boundGlobals = bound
         return bound
+    }
+
+    private func requiredGlobalBindingSet() throws -> RequiredGlobalBindingSet {
+        let compositor = try requiredGlobal(named: "wl_compositor")
+        let sharedMemory = try requiredGlobal(named: "wl_shm")
+        let xdgWMBase = try requiredGlobal(named: "xdg_wm_base")
+
+        return .init(
+            compositor: compositor,
+            compositorVersion: compositor.negotiatedVersion(
+                supportedByClient: SupportedVersions.wlCompositor
+            ),
+            sharedMemory: sharedMemory,
+            sharedMemoryVersion: sharedMemory.negotiatedVersion(
+                supportedByClient: SupportedVersions.wlShm
+            ),
+            xdgWMBase: xdgWMBase,
+            xdgWMBaseVersion: xdgWMBase.negotiatedVersion(
+                supportedByClient: SupportedVersions.xdgWmBase
+            )
+        )
     }
 
     private func requiredGlobal(named interfaceName: String) throws -> RawGlobalAdvertisement {
@@ -200,7 +283,29 @@ public final class RawDisplayConnection {
             throw RuntimeError.bindFailed("wl_shm")
         }
 
-        return .init(pointer: shm, version: shmVersion)
+        return .init(pointer: shm, version: shmVersion, proxyAdoption: proxyAdoption)
+    }
+
+    private func bindCompositor(
+        registry reg: OpaquePointer,
+        global compositorGlobal: RawGlobalAdvertisement,
+        version compositorVersion: RawVersion
+    ) throws -> RawCompositor {
+        guard
+            let compositor = swl_registry_bind_wl_compositor(
+                reg,
+                compositorGlobal.name,
+                compositorVersion.value
+            )
+        else {
+            throw RuntimeError.bindFailed("wl_compositor")
+        }
+
+        return .init(
+            pointer: compositor,
+            version: compositorVersion,
+            proxyAdoption: proxyAdoption
+        )
     }
 
     private func bindXDGWMBase(
@@ -223,7 +328,11 @@ public final class RawDisplayConnection {
         }
 
         do {
-            return try .init(pointer: xdgWmBase, version: xdgVersion)
+            return try .init(
+                pointer: xdgWmBase,
+                version: xdgVersion,
+                proxyAdoption: proxyAdoption
+            )
         } catch {
             swl_xdg_wm_base_destroy(xdgWmBase)
             shm.destroy()
@@ -232,57 +341,144 @@ public final class RawDisplayConnection {
         }
     }
 
-    public func pumpEvents(timeoutMilliseconds: Int32 = -1) throws {
-        preconditionIsOwnerThread()
+    private func bindSeatRegistry(
+        registry reg: OpaquePointer,
+        xdgWMBase: RawXDGWMBase,
+        sharedMemory shm: RawSharedMemory,
+        compositor: RawCompositor
+    ) throws -> SeatRegistry {
+        let seatRegistry = SeatRegistry(
+            registry: reg,
+            eventSink: inputEventQueue,
+            proxyAdoption: proxyAdoption
+        )
 
-        try EventLoop.pumpOnce(
+        do {
+            try seatRegistry.bindSeats(from: registryState.snapshot)
+            return seatRegistry
+        } catch {
+            xdgWMBase.destroy()
+            shm.destroy()
+            compositor.destroy()
+            throw error
+        }
+    }
+}
+
+extension RawDisplayConnection {
+    package var eventLoopFileDescriptor: CInt {
+        preconditionIsOwnerThread()
+        return EventLoop.fileDescriptor(display: display.opaquePointer)
+    }
+
+    package func dispatchPendingEvents() throws -> Int32 {
+        preconditionIsOwnerThread()
+        return try QueueEventLoop.dispatchPending(
             display: display.opaquePointer,
-            timeoutMilliseconds: timeoutMilliseconds
+            eventQueue: eventQueue.opaquePointer
         )
     }
 
-    public func drainInputEvents() -> [RawInputEvent] {
+    package func prepareReadEvents() throws -> Bool {
         preconditionIsOwnerThread()
-        return inputEventQueue.drain()
+        return try QueueEventLoop.prepareRead(
+            display: display.opaquePointer,
+            eventQueue: eventQueue.opaquePointer
+        )
     }
 
-    /// Returns an async sequence whose iterator performs blocking Wayland event pumps.
-    ///
-    /// This is useful as a small adapter around the single-threaded Wayland pump, but callers
-    /// should iterate it from a context where blocking the current thread is acceptable.
-    public func blockingInputEvents(
-        timeoutMilliseconds: Int32 = RawInputEventStream.defaultPollTimeoutMilliseconds
-    ) -> RawInputEventStream {
+    package func flushForExternalEventLoop() throws -> Bool {
+        preconditionIsOwnerThread()
+        return try EventLoop.flushForExternalPoll(display: display.opaquePointer)
+    }
+
+    package func readEvents() throws {
+        preconditionIsOwnerThread()
+        try EventLoop.readEvents(display: display.opaquePointer)
+    }
+
+    package func cancelReadEvents() {
+        preconditionIsOwnerThread()
+        EventLoop.cancelRead(display: display.opaquePointer)
+    }
+
+    package func pumpEvents(
+        timeoutMilliseconds: Int32,
+        wakeFileDescriptor: CInt,
+        drainWakeFileDescriptor: @escaping () -> Void
+    ) throws {
         preconditionIsOwnerThread()
 
-        return RawInputEventStream(
-            timeoutMilliseconds: timeoutMilliseconds
-        ) { [connection = self] pollTimeout in
-            try connection.pumpEvents(timeoutMilliseconds: pollTimeout)
-            return connection.drainInputEvents()
+        try QueueEventLoop.pumpOnce(
+            display: display.opaquePointer,
+            eventQueue: eventQueue.opaquePointer,
+            timeoutMilliseconds: timeoutMilliseconds,
+            wakeFileDescriptor: wakeFileDescriptor,
+            drainWakeFileDescriptor: drainWakeFileDescriptor
+        )
+    }
+
+    @available(
+        *,
+        noasync,
+        message: "Run discovery from the owner-thread Wayland loop."
+    )
+    public func completeInitialDiscovery(
+        timeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMS
+    ) throws {
+        preconditionIsOwnerThread()
+        guard timeoutMilliseconds >= 0 else {
+            throw RuntimeError.operationTimedOut(
+                "initial discovery timeout must be greater than or equal to zero"
+            )
+        }
+
+        let wrappedDisplay = try createDisplayWrapperOnEventQueue()
+        guard let syncCallback = swl_display_sync(wrappedDisplay) else {
+            swl_display_wrapper_destroy(wrappedDisplay)
+            throw RuntimeError.displaySyncRequestFailed
+        }
+        swl_display_wrapper_destroy(wrappedDisplay)
+        _ = proxyAdoption.adopt(syncCallback, interface: "wl_callback")
+
+        var didFire = false
+        let deadline = try rawMonotonicMilliseconds() + Int64(timeoutMilliseconds)
+        let registration = try FrameCallbackRegistration(pointer: syncCallback) {
+            didFire = true
+        }
+
+        try withExtendedLifetime(registration) {
+            while !didFire {
+                let remainingMilliseconds = deadline - (try rawMonotonicMilliseconds())
+                guard remainingMilliseconds > 0 else {
+                    throw RuntimeError.operationTimedOut("timed out waiting for initial globals")
+                }
+
+                let boundedRemaining = Int32(min(remainingMilliseconds, Int64(Int32.max)))
+                try QueueEventLoop.pumpOnce(
+                    display: display.opaquePointer,
+                    eventQueue: eventQueue.opaquePointer,
+                    timeoutMilliseconds: min(boundedRemaining, 50)
+                )
+            }
         }
     }
 
-    @available(*, deprecated, renamed: "blockingInputEvents(timeoutMilliseconds:)")
-    public func inputEvents(
-        timeoutMilliseconds: Int32 = RawInputEventStream.defaultPollTimeoutMilliseconds
-    ) -> RawInputEventStream {
-        blockingInputEvents(timeoutMilliseconds: timeoutMilliseconds)
+    private func createDisplayWrapperOnEventQueue() throws -> OpaquePointer {
+        guard let wrappedDisplay = swl_display_create_wrapper(display.opaquePointer) else {
+            throw RuntimeError.displayWrapperCreationFailed
+        }
+
+        swl_display_wrapper_set_queue(wrappedDisplay, eventQueue.opaquePointer)
+        return wrappedDisplay
+    }
+}
+
+private func rawMonotonicMilliseconds() throws -> Int64 {
+    var timestamp = timespec()
+    guard clock_gettime(CLOCK_MONOTONIC, &timestamp) == 0 else {
+        throw RuntimeError.systemError(errno: errno)
     }
 
-    public func runEventLoop(while shouldContinue: () -> Bool) throws {
-        preconditionIsOwnerThread()
-
-        try EventLoop.run(
-            display: display.opaquePointer,
-            shouldContinue: shouldContinue
-        )
-    }
-
-    deinit {
-        preconditionIsOwnerThread()
-        boundGlobals?.destroy()
-        swl_registry_destroy(registry.opaquePointer)
-        wl_display_disconnect(display.opaquePointer)
-    }
+    return Int64(timestamp.tv_sec) * 1_000 + Int64(timestamp.tv_nsec) / 1_000_000
 }

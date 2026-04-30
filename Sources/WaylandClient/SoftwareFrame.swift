@@ -1,4 +1,5 @@
-public struct SoftwareFrame {
+@safe
+public struct SoftwareFrame: ~Copyable {
     public let width: Int32
     public let height: Int32
     public let stride: Int32
@@ -17,24 +18,24 @@ public struct SoftwareFrame {
         width = frameWidth
         height = frameHeight
         stride = frameStride
-        bytes = frameBytes
+        unsafe bytes = frameBytes
     }
 
-    public func withXRGB8888Rows(
+    public borrowing func withXRGB8888Rows(
         _ body: (_ row: Int, _ pixels: inout MutableSpan<UInt32>) throws -> Void
     ) rethrows {
         let visibleWidth = Int(width)
         let visibleHeight = Int(height)
         precondition(wordsPerRow >= visibleWidth)
 
-        try bytes.withMemoryRebound(to: UInt32.self) { pixels in
+        try unsafe bytes.withMemoryRebound(to: UInt32.self) { pixels in
             for row in 0..<visibleHeight {
                 let start = row * wordsPerRow
-                let rowPixels = UnsafeMutableBufferPointer(
+                let rowPixels = unsafe UnsafeMutableBufferPointer(
                     start: pixels.baseAddress?.advanced(by: start),
                     count: visibleWidth
                 )
-                var rowSpan = rowPixels.mutableSpan
+                var rowSpan = unsafe rowPixels.mutableSpan
                 try body(row, &rowSpan)
             }
         }

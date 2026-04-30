@@ -3,6 +3,7 @@ import CWaylandProtocols
 package final class SeatRegistry {
     private let registry: OpaquePointer
     private let eventSink: RawInputEventSink
+    private let proxyAdoption: RawProxyAdoptionContext?
     private let operations: RawSeatProxyOperations
     private var seatsByGlobalName: [UInt32: RawSeat] = [:]
     private var unsupportedSeatVersionsByGlobalName: [UInt32: RawVersion] = [:]
@@ -11,10 +12,12 @@ package final class SeatRegistry {
     package init(
         registry rawRegistry: OpaquePointer,
         eventSink inputEventSink: RawInputEventSink,
+        proxyAdoption adoptionContext: RawProxyAdoptionContext? = nil,
         operations seatOperations: RawSeatProxyOperations = .live
     ) {
         registry = rawRegistry
         eventSink = inputEventSink
+        proxyAdoption = adoptionContext
         operations = seatOperations
     }
 
@@ -78,6 +81,7 @@ package final class SeatRegistry {
                 pointer: seatPointer,
                 version: negotiated,
                 eventSink: eventSink,
+                proxyAdoption: proxyAdoption,
                 operations: operations
             )
             seatsByGlobalName[globalName] = seat

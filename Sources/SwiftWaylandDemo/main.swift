@@ -3,31 +3,46 @@ import WaylandClient
 
 @main
 enum SwiftWaylandDemo {
-    static func main() throws {
-        let session = try DisplaySession.connect()
-        let window = try session.createTopLevelWindow()
-        var demoState = DemoState()
+    static func main() async throws {
+        try await WaylandDisplay.withConnection { display in
+            let window = try await display.createTopLevelWindow()
+            var demoState = DemoState()
 
-        try window.show { frame in
-            drawDemoFrame(frame, state: demoState)
-        }
-
-        while !window.isClosed {
-            try session.pumpEvents(timeoutMilliseconds: 16)
-
-            for event in session.drainInputEvents() {
-                demoState.handle(event, focusedWindowID: window.id)
+            let initialState = demoState
+            try await window.show { frame in
+                drawDemoFrame(frame, state: initialState)
             }
 
-            if demoState.consumeNeedsRedraw() || window.needsRedraw {
-                try window.redraw { frame in
-                    drawDemoFrame(frame, state: demoState)
+            eventLoop: for try await event in display.events {
+                switch event {
+                case .input(let inputEvent):
+                    demoState.handle(inputEvent, focusedWindowID: window.id)
+                    if demoState.consumeNeedsRedraw() {
+                        try await window.requestRedraw()
+                    }
+                case .diagnostic(let diagnostic):
+                    DemoLog.write("display diagnostic \(diagnostic)")
+                case .redrawRequested(let windowID):
+                    guard windowID == window.id else { continue }
+                    let redrawState = demoState
+                    try await window.redraw { frame in
+                        drawDemoFrame(frame, state: redrawState)
+                    }
+                case .windowCloseRequested(let windowID):
+                    guard windowID == window.id else { continue }
+                    await window.close()
+                case .windowClosed(let windowID):
+                    guard windowID == window.id else { continue }
+                    break eventLoop
                 }
             }
         }
     }
 
-    private static func drawDemoFrame(_ frame: SoftwareFrame, state: DemoState) {
+    nonisolated private static func drawDemoFrame(
+        _ frame: borrowing SoftwareFrame,
+        state: DemoState
+    ) {
         frame.withXRGB8888Rows { row, pixels in
             for x in 0..<Int(frame.width) {
                 let red = UInt32((x * 255) / max(Int(frame.width), 1))
@@ -40,7 +55,7 @@ enum SwiftWaylandDemo {
         }
     }
 
-    private static func drawPointerMarker(
+    nonisolated private static func drawPointerMarker(
         row: Int,
         pixels: inout MutableSpan<UInt32>,
         state: DemoState
@@ -74,10 +89,15 @@ private struct DemoState {
     var pointerPressed = false
     private var needsRedraw = false
 
-    mutating func handle(_ event: InputEvent, focusedWindowID: WindowID) {
+    nonisolated mutating func handle(_ event: InputEvent, focusedWindowID: WindowID) {
         switch event.kind {
         case .seat(let seat):
             handleSeat(seat, seatID: event.seatID)
+        case .diagnostic(let diagnostic):
+            DemoLog.write(
+                "input diagnostic seat=\(event.seatID) operation=\(diagnostic.operation) "
+                    + "message=\(diagnostic.message)"
+            )
         case .pointer(let pointer):
             guard event.windowID == focusedWindowID else { return }
             handlePointer(pointer)
@@ -94,12 +114,12 @@ private struct DemoState {
         }
     }
 
-    mutating func consumeNeedsRedraw() -> Bool {
+    nonisolated mutating func consumeNeedsRedraw() -> Bool {
         defer { needsRedraw = false }
         return needsRedraw
     }
 
-    private mutating func handleSeat(_ event: SeatEvent, seatID: SeatID) {
+    nonisolated private mutating func handleSeat(_ event: SeatEvent, seatID: SeatID) {
         switch event {
         case .changed(let snapshot):
             DemoLog.write(
@@ -111,7 +131,7 @@ private struct DemoState {
         }
     }
 
-    private mutating func handlePointer(_ event: PointerEvent) {
+    nonisolated private mutating func handlePointer(_ event: PointerEvent) {
         switch event {
         case .entered(let location, let serial):
             pointerInside = true
@@ -138,7 +158,7 @@ private struct DemoState {
         }
     }
 
-    private func handleKeyboard(_ event: KeyboardEvent, seatID: SeatID) {
+    nonisolated private func handleKeyboard(_ event: KeyboardEvent, seatID: SeatID) {
         switch event {
         case .raw(let rawEvent):
             handleRawKeyboard(rawEvent, seatID: seatID)
@@ -147,7 +167,7 @@ private struct DemoState {
         }
     }
 
-    private func handleRawKeyboard(_ event: RawKeyboardEvent, seatID: SeatID) {
+    nonisolated private func handleRawKeyboard(_ event: RawKeyboardEvent, seatID: SeatID) {
         switch event {
         case .keymapChanged(let keymap):
             DemoLog.write(
@@ -174,7 +194,7 @@ private struct DemoState {
         }
     }
 
-    private func handleInterpretedKeyboard(
+    nonisolated private func handleInterpretedKeyboard(
         _ event: InterpretedKeyboardEvent,
         seatID: SeatID
     ) {
@@ -186,12 +206,14 @@ private struct DemoState {
             )
         case .key(let key):
             let keysymName = key.keysymName ?? "?"
-            let utf8 = key.utf8 ?? ""
-            DemoLog.write(
+            var message =
                 "keyboard interpreted key seat=\(seatID) serial=\(key.serial) "
-                    + "rawKeycode=\(key.rawKeycode) xkbKeycode=\(key.xkbKeycode) "
-                    + "state=\(key.state.rawValue) keysym=\(keysymName) utf8=\(utf8)"
-            )
+                + "rawKeycode=\(key.rawKeycode) xkbKeycode=\(key.xkbKeycode) "
+                + "state=\(key.state.rawValue) keysym=\(keysymName)"
+            if DemoLog.logsTextInput, let utf8 = key.utf8 {
+                message += " utf8=\(utf8)"
+            }
+            DemoLog.write(message)
         case .modifiers(let modifiers):
             DemoLog.write(
                 "keyboard interpreted modifiers seat=\(seatID) serial=\(modifiers.serial) "
@@ -212,7 +234,7 @@ private struct DemoState {
         }
     }
 
-    private func handleTouch(_ event: TouchEvent, seatID: SeatID) {
+    nonisolated private func handleTouch(_ event: TouchEvent, seatID: SeatID) {
         switch event {
         case .down(let down):
             DemoLog.write(
@@ -245,7 +267,9 @@ private struct DemoState {
 }
 
 private enum DemoLog {
-    static func write(_ message: String) {
+    nonisolated static let logsTextInput = CommandLine.arguments.contains("--verbose-text")
+
+    nonisolated static func write(_ message: String) {
         FileHandle.standardOutput.write(Data((message + "\n").utf8))
     }
 }

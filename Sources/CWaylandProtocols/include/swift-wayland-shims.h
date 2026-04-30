@@ -115,8 +115,23 @@ struct swl_protocol_error_details {
 struct wl_registry *swl_display_get_registry(struct wl_display *display);
 struct wl_callback *swl_display_sync(struct wl_display *display);
 
+struct wl_event_queue *swl_display_create_event_queue(struct wl_display *display);
+void swl_event_queue_destroy(struct wl_event_queue *queue);
+struct wl_display *swl_display_create_wrapper(struct wl_display *display);
+void swl_display_wrapper_set_queue(
+    struct wl_display *display_wrapper,
+    struct wl_event_queue *queue);
+void swl_display_wrapper_destroy(struct wl_display *display_wrapper);
+int swl_display_dispatch_event_queue_pending(
+    struct wl_display *display,
+    struct wl_event_queue *queue);
+int swl_display_prepare_read_event_queue(
+    struct wl_display *display,
+    struct wl_event_queue *queue);
+
 uint32_t swl_proxy_get_version(void *proxy);
 uint32_t swl_proxy_get_id(void *proxy);
+struct wl_event_queue *swl_proxy_get_queue_raw(void *proxy);
 
 int swl_display_get_protocol_error_details(
     struct wl_display *display, struct swl_protocol_error_details *details);

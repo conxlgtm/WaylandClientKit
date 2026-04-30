@@ -1,9 +1,9 @@
-public enum SmokeArgumentError: Error, Equatable, Sendable, CustomStringConvertible {
+package enum SmokeArgumentError: Error, Equatable, Sendable, CustomStringConvertible {
     case unknownArgument(String)
     case missingValue(String)
     case invalidValue(argument: String, value: String)
 
-    public var description: String {
+    package var description: String {
         switch self {
         case .unknownArgument(let argument):
             "unknown argument: \(argument)"
@@ -15,8 +15,8 @@ public enum SmokeArgumentError: Error, Equatable, Sendable, CustomStringConverti
     }
 }
 
-public enum SmokeArguments {
-    public static let usage = """
+package enum SmokeArguments {
+    package static let usage = """
         Usage: swift-wayland-smoke [options]
 
         Options:
@@ -26,7 +26,7 @@ public enum SmokeArguments {
           -h, --help                         Show this help.
         """
 
-    public static func parse(_ arguments: [String]) throws -> SmokeCommand {
+    package static func parse(_ arguments: [String]) throws -> SmokeCommand {
         var configuration = SmokeConfiguration()
         var index = arguments.startIndex
 

@@ -32,6 +32,10 @@ public struct XDGTopLevelState: Equatable, Hashable, Sendable {
     public static let tiledTop = Self(rawValue: 7)
     public static let tiledBottom = Self(rawValue: 8)
     public static let suspended = Self(rawValue: 9)
+    public static let constrainedLeft = Self(rawValue: 10)
+    public static let constrainedRight = Self(rawValue: 11)
+    public static let constrainedTop = Self(rawValue: 12)
+    public static let constrainedBottom = Self(rawValue: 13)
 }
 
 public struct XDGWMCapability: Equatable, Hashable, Sendable {
@@ -77,12 +81,17 @@ public final class XDGConfigureState {
     private var pendingWMCapabilities: [XDGWMCapability] = []
     private var latestConfigure: SurfaceConfigure?
     private var pendingError: RuntimeError?
+    private var onSurfaceConfigure: (() -> Void)?
 
     public private(set) var hasReceivedInitialConfigure = false
 
     public init(fallbackSize initialFallbackSize: TopLevelSize = .fallback) {
         fallbackSize = initialFallbackSize
         pendingSize = initialFallbackSize
+    }
+
+    package func setSurfaceConfigureHandler(_ handler: @escaping () -> Void) {
+        onSurfaceConfigure = handler
     }
 
     public func handleTopLevelConfigure(
@@ -96,8 +105,12 @@ public final class XDGConfigureState {
     }
 
     public func handleConfigureBounds(width: Int32, height: Int32) {
+        guard width > 0, height > 0 else {
+            pendingBounds = nil
+            return
+        }
+
         pendingBounds = TopLevelSize(width: width, height: height)
-            .normalized(fallback: fallbackSize)
     }
 
     public func handleWMCapabilities(_ capabilities: [XDGWMCapability]) {
@@ -128,6 +141,7 @@ public final class XDGConfigureState {
         )
         latestConfigure = configure
         hasReceivedInitialConfigure = true
+        onSurfaceConfigure?()
         return configure
     }
 

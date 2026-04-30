@@ -69,16 +69,21 @@ final class WaylandCallbackRegistrationState {
     }
 
     func handleDone() {
-        guard lifecycle == .pending else {
+        guard lifecycle == .pending, let callback = unsafe pointer else {
             preconditionFailure("Wayland callback fired after completion")
         }
 
-        lifecycle = .firing
         let handler = onDone
+        let retainedListenerStorage = unsafe listenerStorage
         onDone = nil
-        pointer = nil
+        unsafe pointer = nil
         lifecycle = .fired
-        handler?()
+
+        unsafe operations.destroy(callback)
+
+        unsafe withExtendedLifetime(retainedListenerStorage) {
+            handler?()
+        }
     }
 
     func cancel() {

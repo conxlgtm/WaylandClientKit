@@ -7,6 +7,12 @@ let librarySwiftSettings: [SwiftSetting] = [
     .enableUpcomingFeature("InferIsolatedConformances"),
 ]
 
+let publicClientSwiftSettings: [SwiftSetting] =
+    librarySwiftSettings + [
+        .strictMemorySafety(),
+        .treatWarning("StrictMemorySafety", as: .error),
+    ]
+
 let executableSwiftSettings: [SwiftSetting] =
     librarySwiftSettings + [
         .defaultIsolation(MainActor.self)
@@ -15,10 +21,7 @@ let executableSwiftSettings: [SwiftSetting] =
 let package = Package(
     name: "SwiftWayland",
     products: [
-        .library(name: "WaylandRaw", targets: ["WaylandRaw"]),
         .library(name: "WaylandClient", targets: ["WaylandClient"]),
-        .library(name: "WaylandKeyboardInterpretation", targets: ["WaylandKeyboardInterpretation"]),
-        .library(name: "WaylandCursor", targets: ["WaylandCursor"]),
         .executable(name: "swift-wayland-demo", targets: ["SwiftWaylandDemo"]),
         .executable(name: "swift-wayland-smoke", targets: ["SwiftWaylandSmoke"]),
     ],
@@ -62,9 +65,26 @@ let package = Package(
             swiftSettings: librarySwiftSettings
         ),
         .target(
-            name: "WaylandClient",
-            dependencies: ["WaylandRaw", "WaylandKeyboardInterpretation", "WaylandCursor"],
+            name: "CWaylandUnsafeShim",
+            publicHeadersPath: "include",
+            cSettings: [
+                .define("_GNU_SOURCE", .when(platforms: [.linux]))
+            ]
+        ),
+        .target(
+            name: "WaylandRawUnsafeShim",
+            dependencies: ["CWaylandUnsafeShim", "CWaylandClientSystem", "WaylandRaw"],
             swiftSettings: librarySwiftSettings
+        ),
+        .target(
+            name: "WaylandClient",
+            dependencies: [
+                "WaylandRaw",
+                "WaylandRawUnsafeShim",
+                "WaylandKeyboardInterpretation",
+                "WaylandCursor",
+            ],
+            swiftSettings: publicClientSwiftSettings
         ),
         .target(
             name: "WaylandKeyboardInterpretation",
@@ -88,7 +108,7 @@ let package = Package(
         ),
         .testTarget(
             name: "WaylandRawTests",
-            dependencies: ["WaylandRaw"],
+            dependencies: ["WaylandRaw", "WaylandRawUnsafeShim"],
             swiftSettings: librarySwiftSettings
         ),
         .testTarget(
@@ -110,11 +130,6 @@ let package = Package(
         .testTarget(
             name: "WaylandSmokeSupportTests",
             dependencies: ["WaylandSmokeSupport"],
-            swiftSettings: librarySwiftSettings
-        ),
-        .testTarget(
-            name: "IntegrationTests",
-            dependencies: ["WaylandClient"],
             swiftSettings: librarySwiftSettings
         ),
     ],
