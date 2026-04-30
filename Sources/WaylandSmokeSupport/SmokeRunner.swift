@@ -1,7 +1,7 @@
 import WaylandClient
 
-public enum SmokeRunner {
-    public static func run(configuration: SmokeConfiguration = .init()) throws -> SmokeResult {
+package enum SmokeRunner {
+    package static func run(configuration: SmokeConfiguration = .init()) throws -> SmokeResult {
         let session = try DisplaySession.connect()
         let window = try session.createTopLevelWindow(
             configuration: WindowConfiguration(
@@ -30,7 +30,7 @@ public enum SmokeRunner {
         return .committedFrame
     }
 
-    private static func fill(_ frame: SoftwareFrame) {
+    private static func fill(_ frame: borrowing SoftwareFrame) {
         frame.withXRGB8888Rows { row, pixels in
             for column in 0..<pixels.count {
                 let red = UInt32((column * 255) / max(pixels.count, 1))

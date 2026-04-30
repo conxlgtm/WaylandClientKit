@@ -2,10 +2,10 @@ import CXKBCommonSystem
 import Foundation
 import WaylandRaw
 
-public enum KeyboardInterpreterError: Error, Equatable, Sendable, CustomStringConvertible {
+package enum KeyboardInterpreterError: Error, Equatable, Sendable, CustomStringConvertible {
     case contextCreationFailed
 
-    public var description: String {
+    package var description: String {
         switch self {
         case .contextCreationFailed:
             "xkbcommon failed to create a context"
@@ -39,13 +39,13 @@ enum KeyboardLayoutError: Error, Equatable, Sendable, CustomStringConvertible {
     }
 }
 
-public struct InterpretedKeyboardEvent: Equatable, Sendable {
-    public let sequence: UInt64
-    public let seatID: RawSeatID
-    public let deviceID: RawInputDeviceID?
-    public let kind: InterpretedKeyboardEventKind
+package struct InterpretedKeyboardEvent: Equatable, Sendable {
+    package let sequence: UInt64
+    package let seatID: RawSeatID
+    package let deviceID: RawInputDeviceID?
+    package let kind: InterpretedKeyboardEventKind
 
-    public init(
+    package init(
         sequence eventSequence: UInt64,
         seatID eventSeatID: RawSeatID,
         deviceID eventDeviceID: RawInputDeviceID?,
@@ -58,7 +58,7 @@ public struct InterpretedKeyboardEvent: Equatable, Sendable {
     }
 }
 
-public enum InterpretedKeyboardEventKind: Equatable, Sendable {
+package enum InterpretedKeyboardEventKind: Equatable, Sendable {
     case keymap(InterpretedKeyboardKeymap)
     case key(InterpretedKeyboardKey)
     case modifiers(InterpretedKeyboardModifiers)
@@ -66,12 +66,12 @@ public enum InterpretedKeyboardEventKind: Equatable, Sendable {
     case unavailable(KeyboardInterpretationUnavailable)
 }
 
-public struct InterpretedKeyboardKeymap: Equatable, Sendable {
-    public let id: RawKeyboardKeymapID
-    public let format: RawKeyboardKeymapFormat
-    public let size: UInt32
+package struct InterpretedKeyboardKeymap: Equatable, Sendable {
+    package let id: RawKeyboardKeymapID
+    package let format: RawKeyboardKeymapFormat
+    package let size: UInt32
 
-    public init(
+    package init(
         id keymapID: RawKeyboardKeymapID,
         format keymapFormat: RawKeyboardKeymapFormat,
         size keymapSize: UInt32
@@ -82,18 +82,18 @@ public struct InterpretedKeyboardKeymap: Equatable, Sendable {
     }
 }
 
-public struct InterpretedKeyboardKey: Equatable, Sendable {
-    public let serial: UInt32
-    public let time: UInt32
-    public let evdevKeycode: UInt32
-    public let xkbKeycode: UInt32
-    public let state: InterpretedKeyboardKeyState
-    public let keysym: KeyboardKeysym
-    public let keysymName: String?
-    public let utf8: String?
-    public let repeats: Bool
+package struct InterpretedKeyboardKey: Equatable, Sendable {
+    package let serial: UInt32
+    package let time: UInt32
+    package let evdevKeycode: UInt32
+    package let xkbKeycode: UInt32
+    package let state: InterpretedKeyboardKeyState
+    package let keysym: KeyboardKeysym
+    package let keysymName: String?
+    package let utf8: String?
+    package let repeats: Bool
 
-    public init(
+    package init(
         serial eventSerial: UInt32,
         time eventTime: UInt32,
         evdevKeycode eventEvdevKeycode: UInt32,
@@ -116,35 +116,35 @@ public struct InterpretedKeyboardKey: Equatable, Sendable {
     }
 }
 
-public struct InterpretedKeyboardKeyState: Equatable, Sendable {
-    public let rawValue: UInt32
+package struct InterpretedKeyboardKeyState: Equatable, Sendable {
+    package let rawValue: UInt32
 
-    public init(rawValue stateRawValue: UInt32) {
+    package init(rawValue stateRawValue: UInt32) {
         rawValue = stateRawValue
     }
 
-    public static let released = Self(rawValue: 0)
-    public static let pressed = Self(rawValue: 1)
-    public static let repeated = Self(rawValue: 2)
+    package static let released = Self(rawValue: 0)
+    package static let pressed = Self(rawValue: 1)
+    package static let repeated = Self(rawValue: 2)
 }
 
-public struct KeyboardKeysym: Equatable, Sendable {
-    public let rawValue: UInt32
+package struct KeyboardKeysym: Equatable, Sendable {
+    package let rawValue: UInt32
 
-    public init(rawValue keysymRawValue: UInt32) {
+    package init(rawValue keysymRawValue: UInt32) {
         rawValue = keysymRawValue
     }
 }
 
-public struct InterpretedKeyboardModifiers: Equatable, Sendable {
-    public let serial: UInt32
-    public let depressed: UInt32
-    public let latched: UInt32
-    public let locked: UInt32
-    public let group: UInt32
-    public let changedComponents: XKBStateComponents
+package struct InterpretedKeyboardModifiers: Equatable, Sendable {
+    package let serial: UInt32
+    package let depressed: UInt32
+    package let latched: UInt32
+    package let locked: UInt32
+    package let group: UInt32
+    package let changedComponents: XKBStateComponents
 
-    public init(
+    package init(
         serial eventSerial: UInt32,
         depressed eventDepressed: UInt32,
         latched eventLatched: UInt32,
@@ -161,43 +161,43 @@ public struct InterpretedKeyboardModifiers: Equatable, Sendable {
     }
 }
 
-public struct XKBStateComponents: OptionSet, Sendable {
-    public let rawValue: UInt32
+package struct XKBStateComponents: OptionSet, Sendable {
+    package let rawValue: UInt32
 
-    public init(rawValue componentsRawValue: UInt32) {
+    package init(rawValue componentsRawValue: UInt32) {
         rawValue = componentsRawValue
     }
 
-    public static let modsDepressed = Self(rawValue: 1 << 0)
-    public static let modsLatched = Self(rawValue: 1 << 1)
-    public static let modsLocked = Self(rawValue: 1 << 2)
-    public static let modsEffective = Self(rawValue: 1 << 3)
-    public static let layoutDepressed = Self(rawValue: 1 << 4)
-    public static let layoutLatched = Self(rawValue: 1 << 5)
-    public static let layoutLocked = Self(rawValue: 1 << 6)
-    public static let layoutEffective = Self(rawValue: 1 << 7)
-    public static let leds = Self(rawValue: 1 << 8)
+    package static let modsDepressed = Self(rawValue: 1 << 0)
+    package static let modsLatched = Self(rawValue: 1 << 1)
+    package static let modsLocked = Self(rawValue: 1 << 2)
+    package static let modsEffective = Self(rawValue: 1 << 3)
+    package static let layoutDepressed = Self(rawValue: 1 << 4)
+    package static let layoutLatched = Self(rawValue: 1 << 5)
+    package static let layoutLocked = Self(rawValue: 1 << 6)
+    package static let layoutEffective = Self(rawValue: 1 << 7)
+    package static let leds = Self(rawValue: 1 << 8)
 }
 
-public struct InterpretedKeyboardRepeatInfo: Equatable, Sendable {
-    public let rate: Int32
-    public let delay: Int32
+package struct InterpretedKeyboardRepeatInfo: Equatable, Sendable {
+    package let rate: Int32
+    package let delay: Int32
 
-    public init(rate repeatRate: Int32, delay repeatDelay: Int32) {
+    package init(rate repeatRate: Int32, delay repeatDelay: Int32) {
         rate = repeatRate
         delay = repeatDelay
     }
 }
 
-public struct KeyboardInterpretationUnavailable: Equatable, Sendable {
-    public let reason: KeyboardInterpretationUnavailableReason
+package struct KeyboardInterpretationUnavailable: Equatable, Sendable {
+    package let reason: KeyboardInterpretationUnavailableReason
 
-    public init(reason unavailableReason: KeyboardInterpretationUnavailableReason) {
+    package init(reason unavailableReason: KeyboardInterpretationUnavailableReason) {
         reason = unavailableReason
     }
 }
 
-public enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {
+package enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {
     case missingDeviceID
     case unsupportedKeymapFormat(UInt32)
     case emptyKeymap

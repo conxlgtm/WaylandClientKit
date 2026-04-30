@@ -1,6 +1,6 @@
 import WaylandRaw
 
-public final class KeyboardInterpreter {
+package final class KeyboardInterpreter {
     private enum DeviceResolution {
         case device(RawInputDeviceID)
         case diagnostic(InterpretedKeyboardEvent)
@@ -16,7 +16,7 @@ public final class KeyboardInterpreter {
     private var devicesByID: [RawInputDeviceID: DeviceState] = [:]
     private let threadAffinity = ThreadAffinity()
 
-    public init() throws(KeyboardInterpreterError) {
+    package init() throws(KeyboardInterpreterError) {
         do {
             context = try XKBContextOwner()
         } catch {
@@ -24,7 +24,7 @@ public final class KeyboardInterpreter {
         }
     }
 
-    public func consume(_ event: RawInputEvent) -> [InterpretedKeyboardEvent] {
+    package func consume(_ event: RawInputEvent) -> [InterpretedKeyboardEvent] {
         threadAffinity.preconditionIsOwnerThread()
 
         switch event.kind {
@@ -38,24 +38,24 @@ public final class KeyboardInterpreter {
         case .seatRemoved:
             reset(seatID: event.seatID)
             return []
-        case .pointer, .touch:
+        case .diagnostic, .pointer, .touch:
             return []
         }
     }
 
-    public func reset() {
+    package func reset() {
         threadAffinity.preconditionIsOwnerThread()
         devicesByID.removeAll()
     }
 
-    public func reset(seatID: RawSeatID) {
+    package func reset(seatID: RawSeatID) {
         threadAffinity.preconditionIsOwnerThread()
         devicesByID = devicesByID.filter { deviceID, _ in
             deviceID.seatID != seatID
         }
     }
 
-    public func reset(deviceID: RawInputDeviceID) {
+    package func reset(deviceID: RawInputDeviceID) {
         threadAffinity.preconditionIsOwnerThread()
         devicesByID.removeValue(forKey: deviceID)
     }

@@ -5,15 +5,24 @@ import Glibc
 public final class RawSharedMemory {
     public let version: RawVersion
 
+    package let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
     package var pointer: OpaquePointer {
         proxy.pointer
     }
 
-    init(pointer sharedMemoryPointer: OpaquePointer, version sharedMemoryVersion: RawVersion) {
+    init(
+        pointer sharedMemoryPointer: OpaquePointer,
+        version sharedMemoryVersion: RawVersion,
+        proxyAdoption adoptionContext: RawProxyAdoptionContext
+    ) {
         version = sharedMemoryVersion
-        proxy = RawOwnedProxy(pointer: sharedMemoryPointer, destroy: swl_shm_destroy)
+        proxyAdoption = adoptionContext
+        proxy = RawOwnedProxy(
+            pointer: adoptionContext.adopt(sharedMemoryPointer, interface: "wl_shm"),
+            destroy: swl_shm_destroy
+        )
     }
 
     public func createPool(
@@ -21,12 +30,31 @@ public final class RawSharedMemory {
         height: Int32,
         bufferCount: Int
     ) throws(RuntimeError) -> RawSharedMemoryPool {
+        try createPool(
+            width: width,
+            height: height,
+            bufferCount: bufferCount,
+            onBufferReleased: Self.ignoreBufferRelease
+        )
+    }
+
+    package func createPool(
+        width: Int32,
+        height: Int32,
+        bufferCount: Int,
+        onBufferReleased: @escaping () -> Void
+    ) throws(RuntimeError) -> RawSharedMemoryPool {
         try .init(
             sharedMemory: self,
             width: width,
             height: height,
-            bufferCount: bufferCount
+            bufferCount: bufferCount,
+            onBufferReleased: onBufferReleased
         )
+    }
+
+    private static func ignoreBufferRelease() {
+        // Raw clients without release notifications still reuse buffers by polling.
     }
 
     func destroy() {
@@ -202,6 +230,7 @@ public final class RawBuffer {
     private let releaseOwner = BufferReleaseOwner()
     private var proxy: RawOwnedProxy
     private var busyState = BufferBusyState()
+    private var releaseObserver: (() -> Void)?
 
     var pointer: OpaquePointer {
         proxy.pointer
@@ -213,6 +242,7 @@ public final class RawBuffer {
 
     init(
         pointer bufferPointer: OpaquePointer,
+        proxyAdoption adoptionContext: RawProxyAdoptionContext,
         width bufferWidth: Int32,
         height bufferHeight: Int32,
         stride bufferStride: Int32,
@@ -222,12 +252,15 @@ public final class RawBuffer {
         height = bufferHeight
         stride = bufferStride
         bytes = bufferBytes
-        proxy = RawOwnedProxy(pointer: bufferPointer, destroy: swl_buffer_destroy)
+        proxy = RawOwnedProxy(
+            pointer: adoptionContext.adopt(bufferPointer, interface: "wl_buffer"),
+            destroy: swl_buffer_destroy
+        )
 
         try releaseOwner.install(on: bufferPointer) { [weak buffer = self] in
             guard let buffer else { return }
 
-            buffer.markReleased()
+            buffer.handleRelease()
         }
     }
 
@@ -239,7 +272,17 @@ public final class RawBuffer {
         busyState.markReleased()
     }
 
+    func setReleaseObserver(_ observer: @escaping () -> Void) {
+        releaseObserver = observer
+    }
+
+    private func handleRelease() {
+        markReleased()
+        releaseObserver?()
+    }
+
     public func destroy() {
+        releaseObserver = nil
         releaseOwner.cancel()
         proxy.destroy()
     }
@@ -255,6 +298,7 @@ public final class RawSharedMemoryPool {
 
     private let mapping: SharedMemoryMapping
     private let buffers: [RawBuffer]
+    private let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
     private var pointer: OpaquePointer {
@@ -265,7 +309,8 @@ public final class RawSharedMemoryPool {
         sharedMemory: RawSharedMemory,
         width: Int32,
         height: Int32,
-        bufferCount: Int
+        bufferCount: Int,
+        onBufferReleased: @escaping () -> Void
     ) throws(RuntimeError) {
         guard bufferCount > 0 else {
             throw RuntimeError.systemError(errno: EINVAL)
@@ -288,19 +333,30 @@ public final class RawSharedMemoryPool {
             fileDescriptor: fileDescriptor.rawValue,
             totalBytes: totalBytes
         )
+        let adoptionContext = sharedMemory.proxyAdoption
         fileDescriptor.close()
 
         do {
-            buffers = try Self.createBuffers(
+            let createdBuffers = try Self.createBuffers(
                 pool: poolPointer,
+                proxyAdoption: adoptionContext,
                 mapping: memoryMapping,
                 layout: bufferLayout,
                 count: bufferCount
             )
+            for buffer in createdBuffers {
+                buffer.setReleaseObserver(onBufferReleased)
+            }
+
+            buffers = createdBuffers
             size = .init(width: width, height: height)
             layout = bufferLayout
             mapping = memoryMapping
-            proxy = RawOwnedProxy(pointer: poolPointer, destroy: swl_shm_pool_destroy)
+            proxyAdoption = adoptionContext
+            proxy = RawOwnedProxy(
+                pointer: adoptionContext.adopt(poolPointer, interface: "wl_shm_pool"),
+                destroy: swl_shm_pool_destroy
+            )
         } catch {
             swl_shm_pool_destroy(poolPointer)
             throw error
@@ -309,6 +365,10 @@ public final class RawSharedMemoryPool {
 
     package func nextFreeBuffer() -> RawBuffer? {
         buffers.first { !$0.isBusy }
+    }
+
+    public var hasFreeBuffers: Bool {
+        buffers.contains { !$0.isBusy }
     }
 
     public var hasBusyBuffers: Bool {
@@ -358,6 +418,7 @@ public final class RawSharedMemoryPool {
 
     private static func createBuffers(
         pool: OpaquePointer,
+        proxyAdoption adoptionContext: RawProxyAdoptionContext,
         mapping: SharedMemoryMapping,
         layout: BufferLayout,
         count: Int
@@ -368,6 +429,7 @@ public final class RawSharedMemoryPool {
         for index in 0..<count {
             let buffer = try createBuffer(
                 pool: pool,
+                proxyAdoption: adoptionContext,
                 mapping: mapping,
                 layout: layout,
                 index: index
@@ -380,6 +442,7 @@ public final class RawSharedMemoryPool {
 
     private static func createBuffer(
         pool: OpaquePointer,
+        proxyAdoption adoptionContext: RawProxyAdoptionContext,
         mapping: SharedMemoryMapping,
         layout: BufferLayout,
         index: Int
@@ -400,6 +463,7 @@ public final class RawSharedMemoryPool {
 
         return try RawBuffer(
             pointer: bufferPointer,
+            proxyAdoption: adoptionContext,
             width: layout.width,
             height: layout.height,
             stride: layout.stride,

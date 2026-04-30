@@ -5,11 +5,17 @@ public final class RawSurface {
     let pointer: OpaquePointer
     public let version: RawVersion
 
+    private let proxyAdoption: RawProxyAdoptionContext
     private var isDestroyed = false
 
-    init(pointer surfacePointer: OpaquePointer, version surfaceVersion: RawVersion) {
-        pointer = surfacePointer
+    init(
+        pointer surfacePointer: OpaquePointer,
+        version surfaceVersion: RawVersion,
+        proxyAdoption adoptionContext: RawProxyAdoptionContext
+    ) {
+        pointer = adoptionContext.adopt(surfacePointer, interface: "wl_surface")
         version = surfaceVersion
+        proxyAdoption = adoptionContext
     }
 
     public func requestFrame(onDone handler: @escaping () -> Void) throws
@@ -19,6 +25,7 @@ public final class RawSurface {
             throw RuntimeError.frameRequestFailed
         }
 
+        _ = proxyAdoption.adopt(callback, interface: "wl_callback")
         return try .init(pointer: callback, onDone: handler)
     }
 

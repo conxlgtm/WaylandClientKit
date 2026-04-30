@@ -1,4 +1,4 @@
-public enum CursorError: Error, Equatable, Sendable, CustomStringConvertible {
+package enum CursorError: Error, Equatable, Sendable, CustomStringConvertible {
     case invalidSize(Int32)
     case themeLoadFailed
     case missingCursor(String)
@@ -6,7 +6,7 @@ public enum CursorError: Error, Equatable, Sendable, CustomStringConvertible {
     case missingBuffer(String)
     case invalidImageDimension(UInt32)
 
-    public var description: String {
+    package var description: String {
         switch self {
         case .invalidSize(let size):
             "Cursor size must be greater than zero, got \(size)"

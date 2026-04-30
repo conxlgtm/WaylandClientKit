@@ -1,47 +1,14 @@
+import Glibc
 import WaylandRaw
 
-private enum WindowLifecycleState: Equatable, CustomStringConvertible {
-    case created
-    case roleAssigned
-    case waitingForInitialConfigure
-    case configured(SurfaceConfigure)
-    case mapped
-    case closeRequested
-    case destroyed
+package final class TopLevelWindow {
+    package static let defaultConfigureTimeoutMS: Int32 = 1_000
 
-    var description: String {
-        switch self {
-        case .created:
-            "created"
-        case .roleAssigned:
-            "roleAssigned"
-        case .waitingForInitialConfigure:
-            "waitingForInitialConfigure"
-        case .configured(let configure):
-            "configured(serial: \(configure.serial), "
-                + "\(configure.size.width)x\(configure.size.height))"
-        case .mapped:
-            "mapped"
-        case .closeRequested:
-            "closeRequested"
-        case .destroyed:
-            "destroyed"
-        }
-    }
-}
-
-private enum RedrawOutcome: Equatable {
-    case presented
-    case skippedClosed
-    case skippedPendingFrame
-    case waitingForBuffer
-}
-
-public final class TopLevelWindow {
-    public let id: WindowID
+    package let id: WindowID
 
     private let connection: RawDisplayConnection
     private let configuration: WindowConfiguration
+    private let initialConfigurePump: (Int32) throws -> Void
     private let configureState: XDGConfigureState
     private let surface: RawSurface
 
@@ -54,109 +21,51 @@ public final class TopLevelWindow {
     private var pendingFrameRegistration: FrameCallbackRegistration?
     private var lifecycleState = WindowLifecycleState.created
     private var currentConfigure: SurfaceConfigure?
-    private var needsRedrawStorage = false
+    private var redrawState = WindowRedrawState()
     private var isClosedStorage = false
+    private var isPresentingFrame = false
     package var onClose: (() -> Void)?
-
-    public var isClosed: Bool {
-        isClosedStorage
-    }
-
-    public var needsRedraw: Bool {
-        needsRedrawStorage
-    }
-
-    public init(
-        connection rawConnection: RawDisplayConnection,
-        configuration windowConfiguration: WindowConfiguration = .init()
-    ) throws {
-        id = WindowID(rawValue: 0)
-        connection = rawConnection
-        configuration = windowConfiguration
-        configureState = .init(fallbackSize: windowConfiguration.fallbackSize)
-
-        let globals = try rawConnection.bindRequiredGlobals()
-        surface = try globals.compositor.createSurface()
-        try assignXDGRole(globals: globals)
-    }
+    package var onCloseRequested: (() -> Void)?
+    package var onRedrawRequested: (() -> Void)?
 
     package init(
         id windowID: WindowID,
         connection rawConnection: RawDisplayConnection,
-        configuration windowConfiguration: WindowConfiguration = .init()
+        configuration windowConfiguration: WindowConfiguration = .init(),
+        initialConfigurePump pumpEvents: ((Int32) throws -> Void)? = nil
     ) throws {
+        try windowConfiguration.validate()
+
         id = windowID
         connection = rawConnection
         configuration = windowConfiguration
-        configureState = .init(fallbackSize: windowConfiguration.fallbackSize)
+        initialConfigurePump =
+            pumpEvents
+            ?? { timeoutMilliseconds in
+                try rawConnection.pumpEvents(timeoutMilliseconds: timeoutMilliseconds)
+            }
+        configureState = .init(
+            fallbackSize: TopLevelSize(
+                width: windowConfiguration.initialWidth,
+                height: windowConfiguration.initialHeight
+            )
+        )
 
         let globals = try rawConnection.bindRequiredGlobals()
         surface = try globals.compositor.createSurface()
+        configureState.setSurfaceConfigureHandler { [weak window = self] in
+            window?.markNeedsRedraw()
+        }
         try assignXDGRole(globals: globals)
-    }
-
-    public func show(_ draw: (SoftwareFrame) throws -> Void) throws {
-        connection.preconditionIsOwnerThread()
-
-        if currentConfigure == nil {
-            _ = try waitForInitialConfigure()
-        }
-
-        _ = try drawAndPresent(draw)
-    }
-
-    public func show(
-        timeoutMilliseconds: Int32,
-        _ draw: (SoftwareFrame) throws -> Void
-    ) throws {
-        connection.preconditionIsOwnerThread()
-
-        if currentConfigure == nil {
-            _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
-        }
-
-        _ = try drawAndPresent(draw)
-    }
-
-    public func redraw(_ draw: (SoftwareFrame) throws -> Void) throws {
-        connection.preconditionIsOwnerThread()
-
-        guard !isClosedStorage else { return }
-
-        if let configure = try consumeLatestConfigureIfAvailable() {
-            lifecycleState = .configured(configure)
-        }
-
-        _ = try drawAndPresent(draw)
-    }
-
-    public func close() {
-        connection.preconditionIsOwnerThread()
-
-        guard lifecycleState != .destroyed else { return }
-
-        isClosedStorage = true
-        pendingFrameRegistration = nil
-        onClose?()
-        onClose = nil
-
-        topLevel?.destroy()
-        topLevel = nil
-        topLevelOwner = nil
-
-        xdgSurface?.destroy()
-        xdgSurface = nil
-        xdgSurfaceOwner = nil
-
-        buffers = nil
-        retiredBufferPools.removeAll()
-        surface.destroy()
-        lifecycleState = .destroyed
     }
 
     package var surfaceID: RawObjectID {
         connection.preconditionIsOwnerThread()
         return surface.objectID
+    }
+
+    package var closeRequestPolicy: CloseRequestPolicy {
+        configuration.closeRequestPolicy
     }
 
     deinit {
@@ -190,34 +99,29 @@ public final class TopLevelWindow {
         lifecycleState = .waitingForInitialConfigure
     }
 
-    private func waitForInitialConfigure() throws -> SurfaceConfigure {
-        while !configureState.hasReceivedInitialConfigure, !isClosedStorage {
-            try connection.pumpEvents(timeoutMilliseconds: 1_000)
-            try configureState.throwPendingErrorIfAny()
-        }
-
-        guard let configure = try consumeLatestConfigureIfAvailable() else {
-            throw ClientError.windowCreationFailed("missing initial configure")
-        }
-
-        return configure
-    }
-
     private func waitForInitialConfigure(timeoutMilliseconds: Int32) throws -> SurfaceConfigure {
-        var remainingMilliseconds = max(timeoutMilliseconds, 0)
+        guard timeoutMilliseconds >= 0 else {
+            throw ClientError.invalidWindowConfiguration(
+                "timeoutMilliseconds must be greater than or equal to zero"
+            )
+        }
+
+        let timeout = Int64(max(timeoutMilliseconds, 0))
+        let deadline = try monotonicMilliseconds() + timeout
         let pollMilliseconds: Int32 = 50
 
         while !configureState.hasReceivedInitialConfigure, !isClosedStorage {
+            let remainingMilliseconds = deadline - (try monotonicMilliseconds())
             guard remainingMilliseconds > 0 else {
                 throw ClientError.windowCreationFailed(
                     "timed out waiting for initial configure"
                 )
             }
 
-            let pumpTimeout = min(remainingMilliseconds, pollMilliseconds)
-            try connection.pumpEvents(timeoutMilliseconds: pumpTimeout)
+            let boundedRemaining = Int32(min(remainingMilliseconds, Int64(Int32.max)))
+            let pumpTimeout = min(boundedRemaining, pollMilliseconds)
+            try initialConfigurePump(pumpTimeout)
             try configureState.throwPendingErrorIfAny()
-            remainingMilliseconds -= pumpTimeout
         }
 
         guard let configure = try consumeLatestConfigureIfAvailable() else {
@@ -261,7 +165,9 @@ public final class TopLevelWindow {
             width: size.width,
             height: size.height,
             bufferCount: configuration.bufferCount
-        )
+        ) { [weak window = self] in
+            window?.handleBufferReleased()
+        }
 
         buffers = newPool
         return newPool
@@ -275,39 +181,82 @@ public final class TopLevelWindow {
 
     private func handleFrameDone() {
         pendingFrameRegistration = nil
+        redrawState.markFrameReady()
         dropReleasedRetiredPools()
 
         guard !isClosedStorage else {
-            needsRedrawStorage = false
+            redrawState.resetTransientState()
             return
         }
 
-        needsRedrawStorage = true
+        maybePublishRedrawRequested()
+    }
+
+    private func handleBufferReleased() {
+        connection.preconditionIsOwnerThread()
+        dropReleasedRetiredPools()
+
+        guard !isClosedStorage, redrawState.isWaitingForBuffer else { return }
+        maybePublishRedrawRequested()
     }
 
     private func handleCloseRequested() {
-        isClosedStorage = true
-        pendingFrameRegistration = nil
-        needsRedrawStorage = false
+        guard !isClosedStorage, lifecycleState != .closeRequested else { return }
+
+        onCloseRequested?()
         lifecycleState = .closeRequested
     }
 
-    private func drawAndPresent(_ draw: (SoftwareFrame) throws -> Void) throws -> RedrawOutcome {
+    private func markNeedsRedraw() {
+        guard !isClosedStorage else {
+            redrawState.resetTransientState()
+            return
+        }
+
+        redrawState.markContentDirty()
+        maybePublishRedrawRequested()
+    }
+
+    private var isDirty: Bool {
+        redrawState.isDirty
+    }
+
+    private func maybePublishRedrawRequested() {
+        guard !isClosedStorage else { return }
+        let bufferUnavailable = buffers.map { !$0.hasFreeBuffers } ?? false
+        guard redrawState.shouldPublishRedrawRequest(bufferUnavailable: bufferUnavailable) else {
+            return
+        }
+
+        onRedrawRequested?()
+    }
+
+    private func drawAndPresent(
+        _ draw: (borrowing SoftwareFrame) throws -> Void
+    ) throws -> RedrawOutcome {
         guard !isClosedStorage else { return .skippedClosed }
+        redrawState.beginDrawAttempt()
         guard pendingFrameRegistration == nil else { return .skippedPendingFrame }
+        guard !isPresentingFrame else {
+            throw ClientError.invalidWindowState("cannot draw while another draw is active")
+        }
         guard let configure = currentConfigure else {
             throw ClientError.invalidWindowState(lifecycleState.description)
         }
+
+        isPresentingFrame = true
+        defer { isPresentingFrame = false }
 
         let pool = try bufferPool(for: configure.size)
         dropReleasedRetiredPools()
 
         guard let buffer = pool.nextFreeBuffer() else {
-            needsRedrawStorage = true
+            redrawState.markWaitingForBuffer()
             return .waitingForBuffer
         }
 
-        let frame = SoftwareFrame(
+        let generationDrawn = redrawState.generationForCurrentDraw()
+        let frame = unsafe SoftwareFrame(
             width: buffer.width,
             height: buffer.height,
             stride: buffer.stride,
@@ -316,11 +265,14 @@ public final class TopLevelWindow {
 
         try draw(frame)
 
+        guard !isClosedStorage else { return .skippedClosed }
+
         pendingFrameRegistration = try surface.requestFrame { [weak window = self] in
             guard let window else { return }
 
             window.handleFrameDone()
         }
+        redrawState.markFramePending()
 
         buffer.markBusy()
         surface.attach(buffer: buffer)
@@ -328,7 +280,134 @@ public final class TopLevelWindow {
         surface.commit()
 
         lifecycleState = .mapped
-        needsRedrawStorage = false
+        redrawState.markPresented(generation: generationDrawn)
         return .presented
+    }
+
+    private func monotonicMilliseconds() throws -> Int64 {
+        var timestamp = timespec()
+        guard unsafe clock_gettime(CLOCK_MONOTONIC, &timestamp) == 0 else {
+            throw ClientError.windowCreationFailed("clock_gettime failed with errno \(errno)")
+        }
+
+        return Int64(timestamp.tv_sec) * 1_000 + Int64(timestamp.tv_nsec) / 1_000_000
+    }
+}
+
+extension TopLevelWindow {
+    package var isClosedOnOwnerThread: Bool {
+        connection.preconditionIsOwnerThread()
+        return isClosedStorage
+    }
+
+    package var needsRedrawOnOwnerThread: Bool {
+        connection.preconditionIsOwnerThread()
+        return isDirty
+    }
+
+    package func requestRedrawOnOwnerThread() {
+        connection.preconditionIsOwnerThread()
+        markNeedsRedraw()
+    }
+
+    package func showOnOwnerThread(
+        timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
+        _ draw: (borrowing SoftwareFrame) throws -> Void
+    ) throws {
+        connection.preconditionIsOwnerThread()
+
+        if currentConfigure == nil {
+            _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
+        }
+
+        _ = try drawAndPresent(draw)
+    }
+
+    package func redrawOnOwnerThread(
+        _ draw: (borrowing SoftwareFrame) throws -> Void
+    ) throws {
+        connection.preconditionIsOwnerThread()
+
+        guard !isClosedStorage else { return }
+
+        if let configure = try consumeLatestConfigureIfAvailable() {
+            lifecycleState = .configured(configure)
+        }
+
+        _ = try drawAndPresent(draw)
+    }
+
+    package func closeOnOwnerThread() {
+        connection.preconditionIsOwnerThread()
+
+        guard lifecycleState != .destroyed else { return }
+
+        isClosedStorage = true
+        pendingFrameRegistration = nil
+        redrawState.resetTransientState()
+        onClose?()
+        onClose = nil
+        onCloseRequested = nil
+
+        topLevel?.destroy()
+        topLevel = nil
+        topLevelOwner = nil
+
+        xdgSurface?.destroy()
+        xdgSurface = nil
+        xdgSurfaceOwner = nil
+
+        buffers = nil
+        retiredBufferPools.removeAll()
+        surface.destroy()
+        lifecycleState = .destroyed
+    }
+
+    @available(
+        *,
+        noasync,
+        message: "Read window state from the owner-thread Wayland loop."
+    )
+    package var isClosed: Bool {
+        isClosedOnOwnerThread
+    }
+
+    @available(
+        *,
+        noasync,
+        message: "Read window state from the owner-thread Wayland loop."
+    )
+    package var needsRedraw: Bool {
+        needsRedrawOnOwnerThread
+    }
+
+    @available(
+        *,
+        noasync,
+        message: "Show windows from the owner-thread Wayland loop."
+    )
+    package func show(
+        timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
+        _ draw: (borrowing SoftwareFrame) throws -> Void
+    ) throws {
+        try showOnOwnerThread(timeoutMilliseconds: timeoutMilliseconds, draw)
+    }
+
+    @available(
+        *,
+        noasync,
+        message: "Redraw windows from the owner-thread Wayland loop."
+    )
+    package func redraw(_ draw: (borrowing SoftwareFrame) throws -> Void) throws {
+        try redrawOnOwnerThread(draw)
+    }
+
+    @available(
+        *,
+        noasync,
+        message: "Close windows from the owner-thread Wayland loop."
+    )
+    package func close() {
+        closeOnOwnerThread()
     }
 }

@@ -36,9 +36,29 @@ package struct RawInputEventDraft: Equatable, Sendable {
 public enum RawInputEventKind: Equatable, Sendable {
     case seat(RawSeatEventSnapshot)
     case seatRemoved
+    case diagnostic(RawInputDiagnostic)
     case pointer(RawPointerEvent)
     case keyboard(RawKeyboardEvent)
     case touch(RawTouchEvent)
+}
+
+public struct RawInputDiagnostic: Equatable, Sendable {
+    public let operation: RawInputDiagnosticOperation
+    public let message: String
+
+    public init(
+        operation diagnosticOperation: RawInputDiagnosticOperation,
+        message detail: String
+    ) {
+        operation = diagnosticOperation
+        message = detail
+    }
+}
+
+public enum RawInputDiagnosticOperation: Equatable, Sendable {
+    case keyboardKeymap
+    case listener(String)
+    case queueOverflow
 }
 
 public struct RawSeatEventSnapshot: Equatable, Sendable {

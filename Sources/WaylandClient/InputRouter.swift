@@ -43,6 +43,12 @@ final class InputRouter {
             keyboardFocusBySeat[event.seatID] = nil
             touchFocusBySeatAndID = touchFocusBySeatAndID.filter { $0.key.seatID != event.seatID }
             return routedEvent(event, windowID: nil, kind: .seat(.removed))
+        case .diagnostic(let diagnostic):
+            return routedEvent(
+                event,
+                windowID: nil,
+                kind: .diagnostic(convert(diagnostic))
+            )
         case .pointer(let pointerEvent):
             return routePointer(event, pointerEvent)
         case .keyboard(let keyboardEvent):
@@ -385,10 +391,30 @@ extension InputRouter {
 
     func convert(_ snapshot: RawSeatEventSnapshot) -> SeatStateSnapshot {
         SeatStateSnapshot(
-            advertisedCapabilities: snapshot.advertisedCapabilities,
-            activeCapabilities: snapshot.activeCapabilities,
+            advertisedCapabilities: SeatCapabilities(
+                rawValue: snapshot.advertisedCapabilities.rawValue
+            ),
+            activeCapabilities: SeatCapabilities(rawValue: snapshot.activeCapabilities.rawValue),
             name: snapshot.name
         )
+    }
+
+    func convert(_ diagnostic: RawInputDiagnostic) -> InputDiagnostic {
+        InputDiagnostic(
+            operation: convert(diagnostic.operation),
+            message: diagnostic.message
+        )
+    }
+
+    func convert(_ operation: RawInputDiagnosticOperation) -> InputDiagnosticOperation {
+        switch operation {
+        case .keyboardKeymap:
+            .keyboardKeymap
+        case .listener(let name):
+            .listener(name)
+        case .queueOverflow:
+            .queueOverflow
+        }
     }
 
     func convert(_ axis: RawPointerAxisEvent) -> PointerAxisEvent {

@@ -1,5 +1,3 @@
-import WaylandRaw
-
 public struct InputEvent: Equatable, Sendable {
     public let sequence: UInt64
     public let seatID: SeatID
@@ -21,9 +19,27 @@ public struct InputEvent: Equatable, Sendable {
 
 public enum InputEventKind: Equatable, Sendable {
     case seat(SeatEvent)
+    case diagnostic(InputDiagnostic)
     case pointer(PointerEvent)
     case keyboard(KeyboardEvent)
     case touch(TouchEvent)
+}
+
+public struct InputDiagnostic: Equatable, Sendable {
+    public let operation: InputDiagnosticOperation
+    public let message: String
+
+    public init(operation diagnosticOperation: InputDiagnosticOperation, message detail: String) {
+        operation = diagnosticOperation
+        message = detail
+    }
+}
+
+public enum InputDiagnosticOperation: Equatable, Sendable {
+    case keyboardKeymap
+    case listener(String)
+    case queueOverflow
+    case cursor(String)
 }
 
 public enum SeatEvent: Equatable, Sendable {

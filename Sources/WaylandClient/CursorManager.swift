@@ -1,16 +1,34 @@
 import WaylandCursor
 import WaylandRaw
 
-package enum CursorRequestResult: Equatable, Sendable {
+public enum CursorRequestResult: Equatable, Sendable {
+    case set(seatID: SeatID, serial: UInt32, cursor: PointerCursor)
+    case hidden(seatID: SeatID, serial: UInt32)
+    case skippedNoPointerFocus(seatID: SeatID)
+}
+
+package enum CursorRequestRecord: Equatable, Sendable {
     case set(seatID: SeatID, serial: UInt32, cursor: PointerCursor)
     case hidden(seatID: SeatID, serial: UInt32)
     case skippedNoPointerFocus(seatID: SeatID)
     case skippedMissingCursor(name: String)
     case failed(String)
+
+    init(_ result: CursorRequestResult) {
+        switch result {
+        case .set(let seatID, let serial, let cursor):
+            self = .set(seatID: seatID, serial: serial, cursor: cursor)
+        case .hidden(let seatID, let serial):
+            self = .hidden(seatID: seatID, serial: serial)
+        case .skippedNoPointerFocus(let seatID):
+            self = .skippedNoPointerFocus(seatID: seatID)
+        }
+    }
 }
 
 package protocol RawInputEventObserving: AnyObject {
-    func observe(_ rawEvent: RawInputEvent)
+    @discardableResult
+    func observe(_ rawEvent: RawInputEvent) -> [InputEvent]
 }
 
 package protocol CursorManagerSurface: AnyObject {
@@ -35,16 +53,19 @@ package protocol CursorManagerBackend: AnyObject {
 }
 
 package final class CursorManager: RawInputEventObserving {
+    private typealias ResolvedCursorImage = (cursor: PointerCursor, image: CursorImage)
+
     private let backend: CursorManagerBackend
     private let configuration: CursorConfiguration
     private var desiredCursor: PointerCursor
+    private var resolvedDesiredCursor: ResolvedCursorImage?
     private var registeredSurfaceIDs: Set<RawObjectID> = []
     private var focusedSurfaceBySeat: [RawSeatID: RawObjectID] = [:]
     private var focusedPointerSeatIDs: Set<RawSeatID> = []
     private var latestPointerEnterSerialBySeat: [RawSeatID: UInt32] = [:]
     private var cursorSurfaceBySeat: [RawSeatID: CursorManagerSurface] = [:]
 
-    package private(set) var requestResults: [CursorRequestResult] = []
+    package private(set) var requestResults: [CursorRequestRecord] = []
 
     init(
         connection rawConnection: RawDisplayConnection,
@@ -57,6 +78,7 @@ package final class CursorManager: RawInputEventObserving {
         )
         configuration = cursorConfiguration
         desiredCursor = cursorConfiguration.fallbackCursor
+        resolvedDesiredCursor = nil
     }
 
     package init(
@@ -69,6 +91,7 @@ package final class CursorManager: RawInputEventObserving {
         backend = cursorBackend
         configuration = cursorConfiguration
         desiredCursor = cursorConfiguration.fallbackCursor
+        resolvedDesiredCursor = nil
     }
 
     var pointerCursor: PointerCursor {
@@ -89,21 +112,29 @@ package final class CursorManager: RawInputEventObserving {
         }
     }
 
-    func setPointerCursor(_ cursor: PointerCursor) {
+    @discardableResult
+    func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {
         backend.preconditionIsOwnerThread()
+        let resolvedCursor = try resolvedCursorIfNeeded(cursor)
         desiredCursor = cursor
+        resolvedDesiredCursor = resolvedCursor
 
+        var results: [CursorRequestResult] = []
         for seatID in focusedPointerSeatIDs.sorted(by: { $0.rawValue < $1.rawValue }) {
-            applyCursor(to: seatID)
+            results.append(try applyCursor(to: seatID, resolvedCursor: resolvedCursor))
         }
+
+        requestResults.append(contentsOf: results.map(CursorRequestRecord.init))
+        return results
     }
 
-    package func observe(_ rawEvent: RawInputEvent) {
+    @discardableResult
+    package func observe(_ rawEvent: RawInputEvent) -> [InputEvent] {
         backend.preconditionIsOwnerThread()
 
         switch rawEvent.kind {
         case .pointer(.enter(let enter)):
-            handlePointerEnter(enter, seatID: rawEvent.seatID)
+            return handlePointerEnter(enter, rawEvent: rawEvent)
         case .pointer(.leave(let leave)):
             handlePointerLeave(leave, seatID: rawEvent.seatID)
         case .seat(let snapshot):
@@ -115,20 +146,26 @@ package final class CursorManager: RawInputEventObserving {
         default:
             break
         }
+
+        return []
     }
 
-    private func handlePointerEnter(_ enter: RawPointerEnter, seatID: RawSeatID) {
+    private func handlePointerEnter(
+        _ enter: RawPointerEnter,
+        rawEvent: RawInputEvent
+    ) -> [InputEvent] {
+        let seatID = rawEvent.seatID
         latestPointerEnterSerialBySeat[seatID] = enter.serial
 
         guard let surfaceID = enter.surfaceID,
             registeredSurfaceIDs.contains(surfaceID)
         else {
-            return
+            return []
         }
 
         focusedSurfaceBySeat[seatID] = surfaceID
         focusedPointerSeatIDs.insert(seatID)
-        applyCursor(to: seatID)
+        return recordCursorRequest(to: seatID, rawEvent: rawEvent)
     }
 
     private func handlePointerLeave(_ leave: RawPointerLeave, seatID: RawSeatID) {
@@ -138,63 +175,85 @@ package final class CursorManager: RawInputEventObserving {
         focusedPointerSeatIDs.remove(seatID)
     }
 
-    private func applyCursor(to seatID: RawSeatID) {
+    private func resolvedCursorIfNeeded(_ cursor: PointerCursor) throws -> ResolvedCursorImage? {
+        guard case .named = cursor.kind else { return nil }
+
+        return try resolveCursorImage(cursor)
+    }
+
+    private func applyCursor(
+        to seatID: RawSeatID,
+        resolvedCursor: ResolvedCursorImage? = nil
+    ) throws -> CursorRequestResult {
         guard focusedPointerSeatIDs.contains(seatID),
             let serial = latestPointerEnterSerialBySeat[seatID]
         else {
-            requestResults.append(.skippedNoPointerFocus(seatID: publicSeatID(seatID)))
-            return
+            return .skippedNoPointerFocus(seatID: publicSeatID(seatID))
         }
 
         switch desiredCursor.kind {
         case .hidden:
-            _ = backend.setPointerCursor(
+            let rawResult = backend.setPointerCursor(
                 seatID: seatID,
                 serial: serial,
                 surface: nil,
                 hotspotX: 0,
                 hotspotY: 0
             )
-            requestResults.append(.hidden(seatID: publicSeatID(seatID), serial: serial))
-        case .named:
-            applyNamedCursor(to: seatID, serial: serial)
-        }
-    }
-
-    private func applyNamedCursor(to seatID: RawSeatID, serial: UInt32) {
-        do {
-            let resolved = try resolveCursorImage(desiredCursor)
-            let surface = try cursorSurface(for: seatID)
-
-            surface.attach(resolved.image)
-            surface.commit()
-
-            let rawResult = backend.setPointerCursor(
-                seatID: seatID,
-                serial: serial,
-                surface: surface,
-                hotspotX: resolved.image.hotspotX,
-                hotspotY: resolved.image.hotspotY
-            )
-
-            switch rawResult {
-            case .set:
-                requestResults.append(
-                    .set(seatID: publicSeatID(seatID), serial: serial, cursor: resolved.cursor)
-                )
-            case .skippedNoPointer, .skippedUnknownSeat:
-                requestResults.append(.failed(String(describing: rawResult)))
+            guard case .set = rawResult else {
+                throw ClientError.pointerCursorRequestFailed(String(describing: rawResult))
             }
-        } catch CursorError.missingCursor(let name) {
-            requestResults.append(.skippedMissingCursor(name: name))
-        } catch {
-            requestResults.append(.failed(String(describing: error)))
+
+            return .hidden(seatID: publicSeatID(seatID), serial: serial)
+        case .named:
+            let resolved = try resolvedCursor ?? cachedResolvedDesiredCursor()
+            return try applyNamedCursor(
+                to: seatID,
+                serial: serial,
+                resolvedCursor: resolved
+            )
         }
     }
 
-    private func resolveCursorImage(_ cursor: PointerCursor) throws -> (
-        cursor: PointerCursor, image: CursorImage
-    ) {
+    private func applyNamedCursor(
+        to seatID: RawSeatID,
+        serial: UInt32,
+        resolvedCursor resolved: ResolvedCursorImage
+    ) throws
+        -> CursorRequestResult
+    {
+        let surface = try cursorSurface(for: seatID)
+
+        surface.attach(resolved.image)
+        surface.commit()
+
+        let rawResult = backend.setPointerCursor(
+            seatID: seatID,
+            serial: serial,
+            surface: surface,
+            hotspotX: resolved.image.hotspotX,
+            hotspotY: resolved.image.hotspotY
+        )
+
+        switch rawResult {
+        case .set:
+            return .set(seatID: publicSeatID(seatID), serial: serial, cursor: resolved.cursor)
+        case .skippedNoPointer, .skippedUnknownSeat:
+            throw ClientError.pointerCursorRequestFailed(String(describing: rawResult))
+        }
+    }
+
+    private func cachedResolvedDesiredCursor() throws -> ResolvedCursorImage {
+        if let resolvedDesiredCursor {
+            return resolvedDesiredCursor
+        }
+
+        let resolved = try resolveCursorImage(desiredCursor)
+        resolvedDesiredCursor = resolved
+        return resolved
+    }
+
+    private func resolveCursorImage(_ cursor: PointerCursor) throws -> ResolvedCursorImage {
         guard let name = cursor.name else {
             throw CursorError.missingCursor("hidden")
         }
@@ -245,12 +304,68 @@ package final class CursorManager: RawInputEventObserving {
                 "Cursor size must be greater than zero"
             )
         }
+
+        if let themeName = configuration.themeName {
+            try CStringValidation.requireNonEmptyNoInteriorNUL(
+                themeName,
+                fieldName: "Cursor theme names",
+                error: ClientError.invalidCursorConfiguration
+            )
+        }
+    }
+}
+
+extension CursorManager {
+    private func recordCursorRequest(
+        to seatID: RawSeatID,
+        rawEvent: RawInputEvent
+    ) -> [InputEvent] {
+        do {
+            requestResults.append(CursorRequestRecord(try applyCursor(to: seatID)))
+            return []
+        } catch CursorError.missingCursor(let name) {
+            requestResults.append(.skippedMissingCursor(name: name))
+            let diagnostic = cursorDiagnostic(
+                rawEvent,
+                operation: "missingCursor",
+                message: "cursor \(name) is unavailable"
+            )
+            return [diagnostic]
+        } catch {
+            let message = String(describing: error)
+            requestResults.append(.failed(message))
+            let diagnostic = cursorDiagnostic(
+                rawEvent,
+                operation: "automaticPointerEnter",
+                message: message
+            )
+            return [diagnostic]
+        }
+    }
+
+    private func cursorDiagnostic(
+        _ rawEvent: RawInputEvent,
+        operation: String,
+        message: String
+    ) -> InputEvent {
+        InputEvent(
+            sequence: rawEvent.sequence,
+            seatID: publicSeatID(rawEvent.seatID),
+            windowID: nil,
+            kind: .diagnostic(
+                InputDiagnostic(
+                    operation: .cursor(operation),
+                    message: message
+                )
+            )
+        )
     }
 }
 
 private final class LiveCursorManagerBackend: CursorManagerBackend {
     private let connection: RawDisplayConnection
-    private let theme: CursorTheme
+    private let configuration: CursorConfiguration
+    private var theme: CursorTheme?
 
     init(
         connection rawConnection: RawDisplayConnection,
@@ -259,11 +374,7 @@ private final class LiveCursorManagerBackend: CursorManagerBackend {
         rawConnection.preconditionIsOwnerThread()
 
         connection = rawConnection
-        theme = try CursorTheme(
-            shm: rawConnection.cursorSharedMemory(),
-            name: cursorConfiguration.themeName,
-            size: cursorConfiguration.size
-        )
+        configuration = cursorConfiguration
     }
 
     func preconditionIsOwnerThread() {
@@ -271,7 +382,21 @@ private final class LiveCursorManagerBackend: CursorManagerBackend {
     }
 
     func cursorImage(named name: String) throws -> CursorImage {
-        try theme.cursor(named: name).image
+        try cursorTheme().cursorImage(named: name)
+    }
+
+    private func cursorTheme() throws -> CursorTheme {
+        if let theme {
+            return theme
+        }
+
+        let loadedTheme = try CursorTheme(
+            shm: connection.cursorSharedMemory(),
+            name: configuration.themeName,
+            size: configuration.size
+        )
+        theme = loadedTheme
+        return loadedTheme
     }
 
     func createCursorSurface(for _: RawSeatID) throws -> CursorManagerSurface {

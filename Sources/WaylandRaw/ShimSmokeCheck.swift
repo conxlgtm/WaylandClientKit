@@ -4,6 +4,13 @@ enum ShimSmokeCheck {
     static func verify() {
         _ = swl_display_get_registry
         _ = swl_display_sync
+        _ = swl_display_create_event_queue
+        _ = swl_event_queue_destroy
+        _ = swl_display_create_wrapper
+        _ = swl_display_wrapper_set_queue
+        _ = swl_display_wrapper_destroy
+        _ = swl_display_dispatch_event_queue_pending
+        _ = swl_display_prepare_read_event_queue
         _ = swl_display_get_protocol_error_details
 
         _ = swl_registry_bind_wl_compositor
