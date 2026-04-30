@@ -18,11 +18,12 @@ Current experimental baseline:
 - XDG toplevel window creation/configure handling
 - frame callback pacing
 - seat, pointer, keyboard, and touch event capture
-- session-level `DisplaySession` input draining with seat/window identity
+- package-internal `DisplaySession` input draining with seat/window identity
+- high-level async `WaylandDisplay` actor backed by a dedicated Wayland owner thread
+  with an executor-owned integrated event loop
 - copied keyboard keymap payloads inside `WaylandRaw`
 - `xkbcommon`-backed key interpretation for copied `xkb_v1` keymaps through `DisplaySession`
 - normal pointer cursor surfaces backed by `wayland-cursor`
-- raw input async event stream
 - noninteractive Wayland smoke executable
 - tests for system imports, shim imports, raw lifecycle, and client drawing helpers
 
@@ -91,9 +92,12 @@ Swift 6.3.1 must already be installed and available on `PATH` before running the
 
 ## Targets
 
+The package currently vends one library product: `WaylandClient`. The other
+Swift targets are implementation modules used by that product and by tests.
+
 ```text
 WaylandClient
-    public Swift layer with DisplaySession and window helpers
+    public Swift layer with WaylandDisplay, Window, typed events, and drawing helpers
 
 WaylandSmokeSupport
     command parsing and runtime helper for smoke checks
@@ -108,7 +112,13 @@ WaylandCursor
     wayland-cursor backed theme and cursor image wrapper
 
 WaylandRaw
-    low-level Swift layer and raw input subsystem
+    low-level Swift layer, shared queue-specific event-loop engine, and raw input subsystem
+
+WaylandRawUnsafeShim
+    owner-thread executor and audited unsafe Swift runtime machinery
+
+CWaylandUnsafeShim
+    C accessors for Linux primitives used by unsafe Swift runtime machinery
 
 CWaylandCursorShims
     C accessors for wayland-cursor structs
@@ -158,6 +168,18 @@ Run the strict Swift concurrency build only:
 make strict-concurrency
 ```
 
+Run the raw-layer strict memory-safety file baseline:
+
+```bash
+make strict-memory-safety-raw
+```
+
+Run the unsafe-token allowlist check:
+
+```bash
+make verify-unsafe-allowlist
+```
+
 Run the demo target:
 
 ```bash
@@ -189,4 +211,4 @@ swift run swift-wayland-smoke
 
 Conceptual and maintenance documents are plain Markdown in the repository.
 
-DocC is not set up yet. It can be added later for public API reference when `WaylandRaw` and `WaylandClient` have stable APIs.
+DocC is not set up yet. It can be added later for public API reference when `WaylandClient` has a stable API.

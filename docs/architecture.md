@@ -7,19 +7,10 @@ Application code
     |
     v
 WaylandClient
-    |\
-    | \
-    |  v
-    |  WaylandKeyboardInterpretation
-    |      |
-    v      v
-WaylandRaw
-    |
-    v
-CWaylandProtocols
-    |
-    v
-CWaylandClientSystem
+    -> WaylandRaw -> CWaylandProtocols -> CWaylandClientSystem
+    -> WaylandRawUnsafeShim -> CWaylandUnsafeShim
+    -> WaylandKeyboardInterpretation -> WaylandRaw
+    -> WaylandCursor -> WaylandRaw
 
 WaylandClient also depends on WaylandCursor.
 WaylandCursor depends on WaylandRaw and CWaylandCursorShims.
@@ -34,6 +25,10 @@ SwiftWaylandSmoke
 `WaylandClient` uses `WaylandCursor` to resolve cursor theme images and set cursor surfaces on pointer focus.
 `WaylandRaw` does not depend on xkbcommon.
 `WaylandRaw` does not depend on wayland-cursor.
+`WaylandRawUnsafeShim` holds the owner-thread executor and its Linux wake primitive.
+The queue-specific Wayland prepare/read/cancel state machine lives in `WaylandRaw`
+as `QueueEventLoopEngine`; unsafe/default-queue and executor integrations adapt to
+that one engine instead of owning duplicate protocol loops.
 
 ## Target Roles
 
@@ -135,7 +130,7 @@ Intended contents:
 - ownership rules
 - version handling
 - callback lifetime handling
-- event-loop pumping
+- queue-specific event-loop pumping through `QueueEventLoopEngine`
 - registry and seat discovery
 - shared-memory buffer management
 - raw pointer, keyboard, and touch event capture
@@ -149,6 +144,35 @@ Does not depend on:
 - xkbcommon interpretation APIs
 - `CWaylandCursorSystem`
 - wayland-cursor APIs
+
+### `WaylandRawUnsafeShim`
+
+Purpose:
+
+- owner-thread executor machinery that cannot be expressed as ordinary safe Swift yet
+
+Intended contents:
+
+- pthread owner-thread lifecycle
+- eventfd wakeup integration
+- owned `ExecutorJob` storage and exactly-once execution checks
+- synchronous package bootstrap handoff for low-level tests only
+
+Does not contain:
+
+- Wayland proxy wrappers
+- listener trampoline state
+- public client APIs
+
+### `CWaylandUnsafeShim`
+
+Purpose:
+
+- tiny C boundary for Linux primitives used by `WaylandRawUnsafeShim`
+
+Contains:
+
+- eventfd creation and flag accessors
 
 ### `WaylandCursor`
 
@@ -187,11 +211,17 @@ Purpose:
 
 Current state:
 
+- `WaylandDisplay` actor for the high-level async API, backed by a dedicated
+  `WaylandThreadExecutor`
+- actor-owned windows addressed by `WindowID`, so public handles do not destroy Wayland
+  proxies from arbitrary threads
 - software-buffer toplevel window helper
+- package-visible window lifecycle and redraw scheduling helpers
 - span-scoped XRGB8888 drawing API
 - frame callback based redraw pacing
 - lifecycle state for configure, map, redraw, and close handling
-- `DisplaySession` as the owner of event pumping, window creation, and input draining
+- package-internal `DisplaySession` as the owner of manual pumping, window creation,
+  input side effects, and input draining
 - `InputRouter` that maps raw input events to public session input events
 - session-owned `KeyboardInterpreter` that maps raw keyboard facts to public interpreted keyboard events
 - session-owned `CursorManager` that sets cursor surfaces when pointer focus enters registered windows
@@ -227,7 +257,9 @@ Raw input events carry:
 - optional generation-aware child device identity
 - protocol serials and raw values
 
-`WaylandClient` exposes session-level input events through `DisplaySession.drainInputEvents()`.
+`DisplaySession.pumpEvents(timeoutMilliseconds:)` pumps Wayland callbacks and immediately
+processes raw input side effects such as cursor state and keyboard interpretation. Public
+session-level input events are buffered until `DisplaySession.drainInputEvents()` is called.
 Public events carry sequence, seat identity, optional window identity, raw pointer/keyboard/touch facts, and interpreted keyboard facts.
 
 `KeyboardEvent.raw` carries protocol facts. The raw keycode is the Wayland/evdev keycode, not text.
@@ -239,12 +271,44 @@ UTF-8 values from key events are key interpretation output. They are not committ
 Pointer coordinates are surface-local.
 
 Pointer cursor images are session policy. `WaylandClient` resolves the desired `PointerCursor`
-through `WaylandCursor`, creates per-seat cursor surfaces, attaches borrowed cursor theme buffers,
-and calls `wl_pointer.set_cursor` with the pointer enter serial for registered client surfaces.
+through `WaylandCursor`, creates per-seat cursor surfaces, attaches cursor theme buffers whose
+theme lifetime is retained by the image wrapper, and calls `wl_pointer.set_cursor` with the
+pointer enter serial for registered client surfaces.
 
 ## Runtime Model
 
-The experimental baseline is single-thread-affine. Create, pump, use, and destroy Wayland objects from one thread unless a later story explicitly introduces event-queue ownership for more threads.
+The low-level/manual-loop API is single-thread-affine. Create, pump, use, and destroy
+Wayland objects from one thread unless a later story explicitly introduces event-queue
+ownership for more threads. Public thread-affine calls are unavailable from async contexts
+so Swift tasks do not accidentally resume on a different executor/thread while holding
+Wayland ownership.
+
+The high-level async API is `WaylandDisplay`, an actor with a dedicated
+`WaylandThreadExecutor`. The actor strongly retains its executor and returns the same
+`UnownedSerialExecutor` for its lifetime. Actor-isolated methods run on the Wayland owner
+thread. The executor thread owns the high-level loop; `events` and `inputEvents` are passive
+subscribers and do not own pumping.
+
+The executor loop drains a bounded batch of Swift jobs, then runs one Wayland event-source
+turn when a display source is registered. That turn uses the canonical Wayland prepare-read
+sequence and polls both the Wayland display fd and the executor wake fd. Work enqueued while
+the loop is polling wakes the poll, causes the prepared read to be completed or canceled, and
+then runs in the next executor job phase. No arbitrary Swift jobs run between a successful
+prepare-read and read-events/cancel-read.
+
+Display streams are bounded throwing streams. Normal `WaylandDisplay.close()` finishes them
+without error; fatal Wayland/protocol/poll failures finish subscribers with
+`WaylandDisplayError`; subscriber overflow terminates only the slow subscriber rather than
+backpressuring the owner thread.
+
+Nonterminal runtime degradation is reported as diagnostics. Display subscribers receive
+`DisplayEvent.diagnostic`, while input subscribers still receive input-specific diagnostic
+events through `inputEvents`. This keeps fatal display failure, subscriber-local overflow,
+and recoverable input/cursor degradation separate.
+
+`WaylandDisplay` requires explicit `close()`. Window teardown is routed through the display
+actor. `Window` is a lightweight public handle, and `TopLevelWindow` remains an actor-owned
+implementation detail for the async API.
 
 Public input events preserve seat identity and optional window identity. Keyboard events are not text input.
 
@@ -283,10 +347,12 @@ Shim files:
 
 - `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
 - `Sources/CWaylandProtocols/shims/`
+- `Sources/CWaylandUnsafeShim/`
 
 Swift code:
 
 - `Sources/WaylandRaw/`
+- `Sources/WaylandRawUnsafeShim/`
 - `Sources/WaylandClient/`
 - `Sources/WaylandKeyboardInterpretation/`
 - `Sources/WaylandSmokeSupport/`
@@ -299,5 +365,13 @@ Swift code:
 - `make verify-generated`
 - `make verify-shims`
 - `make strict-concurrency`
+- `make strict-memory-safety-raw`
 - `make test`
 - `make check`
+
+`WaylandClient` builds with strict memory safety as errors. `WaylandRaw` and
+`WaylandRawUnsafeShim` are still being audited because they own intentional C, pointer, and
+executor boundaries. `make strict-memory-safety-raw` builds both targets with strict
+memory-safety diagnostics enabled and compares warnings against a per-file baseline. The
+baseline should only move down as raw wrappers are converted to small audited unsafe shims,
+noncopyable ownership tokens, and scoped borrowed views.

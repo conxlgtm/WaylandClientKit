@@ -82,7 +82,6 @@ jobs:
           swift build --disable-index-store -c release --product swift-wayland-smoke
 
   wayland-smoke:
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container:
       image: swift:6.3.1-noble
