@@ -7,6 +7,13 @@
 #define MFD_CLOEXEC 0x0001U
 #endif
 
+#if defined(WAYLAND_VERSION_MAJOR) && defined(WAYLAND_VERSION_MINOR) && \
+    (WAYLAND_VERSION_MAJOR > 1 || (WAYLAND_VERSION_MAJOR == 1 && WAYLAND_VERSION_MINOR >= 23))
+#define SWL_HAS_WL_PROXY_GET_QUEUE 1
+#else
+#define SWL_HAS_WL_PROXY_GET_QUEUE 0
+#endif
+
 struct wl_surface *swl_compositor_create_surface(struct wl_compositor *compositor)
 {
     return wl_compositor_create_surface(compositor);
@@ -106,7 +113,12 @@ uint32_t swl_proxy_get_id(void *proxy)
 
 struct wl_event_queue *swl_proxy_get_queue_raw(void *proxy)
 {
+#if SWL_HAS_WL_PROXY_GET_QUEUE
     return wl_proxy_get_queue((struct wl_proxy *)proxy);
+#else
+    (void)proxy;
+    return NULL;
+#endif
 }
 
 void swl_registry_destroy(struct wl_registry *registry)

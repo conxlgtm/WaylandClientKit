@@ -22,9 +22,13 @@ extension RawEventQueue {
         interface interfaceName: StaticString
     ) {
         #if DEBUG
-            let actualQueue = swl_proxy_get_queue_raw(UnsafeMutableRawPointer(proxy))
+            let rawProxy = unsafe UnsafeMutableRawPointer(proxy)
+            guard
+                let actualQueue = unsafe swl_proxy_get_queue_raw(rawProxy)
+            else { return }
+            let expectedQueue = unsafe opaquePointer
             precondition(
-                actualQueue == opaquePointer,
+                actualQueue == expectedQueue,
                 "\(interfaceName) proxy is not assigned to the display owner event queue"
             )
         #endif
