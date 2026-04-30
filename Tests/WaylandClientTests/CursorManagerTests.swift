@@ -7,6 +7,22 @@ import WaylandRaw
 @Suite
 struct CursorManagerTests {
     @Test
+    func cursorConfigurationRejectsThemeNamesThatWouldTruncateAtCBoundary() throws {
+        let backend = try RecordingCursorBackend()
+
+        #expect(
+            throws: ClientError.invalidCursorConfiguration(
+                "Cursor theme names must not contain embedded NUL bytes"
+            )
+        ) {
+            _ = try CursorManager(
+                backend: backend,
+                configuration: CursorConfiguration(themeName: "theme\0fallback")
+            )
+        }
+    }
+
+    @Test
     func pointerEnterSetsDefaultCursorForRegisteredSurface() throws {
         let backend = try RecordingCursorBackend()
         let manager = try CursorManager(backend: backend, configuration: .init())
@@ -64,7 +80,7 @@ struct CursorManagerTests {
         let manager = try CursorManager(backend: backend, configuration: .init())
 
         manager.register(surfaceID: 100)
-        manager.setPointerCursor(.hidden)
+        try manager.setPointerCursor(.hidden)
         manager.observe(
             rawPointerEnter(
                 sequence: 1,
@@ -124,7 +140,7 @@ struct CursorManagerTests {
         backend.setCursorRequests.removeAll()
 
         manager.observe(rawSeatCapabilities(sequence: 3, seatID: seatA, activeCapabilities: []))
-        manager.setPointerCursor(.text)
+        try manager.setPointerCursor(.text)
 
         #expect(firstSurface.destroyCount == 1)
         #expect(secondSurface.destroyCount == 0)
@@ -147,9 +163,9 @@ struct CursorManagerTests {
         backend.resolvedCursorNames.removeAll()
         backend.setCursorRequests.removeAll()
 
-        manager.setPointerCursor(.text)
+        try manager.setPointerCursor(.text)
 
-        #expect(backend.resolvedCursorNames == ["text", "text"])
+        #expect(backend.resolvedCursorNames == ["text"])
         #expect(backend.setCursorRequests.map(\.seatID) == [seatA, seatC])
     }
 
@@ -160,7 +176,7 @@ struct CursorManagerTests {
         let manager = try CursorManager(backend: backend, configuration: .init())
 
         manager.register(surfaceID: 100)
-        manager.setPointerCursor(.text)
+        try manager.setPointerCursor(.text)
         manager.observe(
             rawPointerEnter(
                 sequence: 1,
@@ -174,6 +190,51 @@ struct CursorManagerTests {
             manager.requestResults == [
                 .set(seatID: SeatID(rawValue: 4), serial: 88, cursor: .defaultArrow)
             ])
+    }
+
+    @Test
+    func cursorChangeValidatesBeforeChangingDesiredCursor() throws {
+        let backend = try RecordingCursorBackend()
+        backend.missingCursorNames = ["text", "left_ptr"]
+        let manager = try CursorManager(backend: backend, configuration: .init())
+
+        #expect(throws: CursorError.missingCursor("left_ptr")) {
+            try manager.setPointerCursor(.text)
+        }
+
+        #expect(manager.pointerCursor == .defaultArrow)
+        #expect(manager.requestResults.isEmpty)
+    }
+
+    @Test
+    func automaticCursorFailureReturnsPublicDiagnostic() throws {
+        let backend = try RecordingCursorBackend()
+        backend.missingCursorNames = ["left_ptr"]
+        let manager = try CursorManager(backend: backend, configuration: .init())
+
+        manager.register(surfaceID: 100)
+        let diagnostics = manager.observe(
+            rawPointerEnter(
+                sequence: 1,
+                seatID: RawSeatID(rawValue: 5),
+                surfaceID: 100,
+                serial: 55
+            ))
+
+        #expect(manager.requestResults == [.skippedMissingCursor(name: "left_ptr")])
+        let expectedDiagnostic = InputEvent(
+            sequence: 1,
+            seatID: SeatID(rawValue: 5),
+            windowID: nil,
+            kind: .diagnostic(
+                InputDiagnostic(
+                    operation: .cursor("missingCursor"),
+                    message: "cursor left_ptr is unavailable"
+                )
+            )
+        )
+
+        #expect(diagnostics == [expectedDiagnostic])
     }
 }
 
@@ -299,7 +360,7 @@ private func rawSeatRemoved(sequence: UInt64, seatID: RawSeatID) -> RawInputEven
 private func rawSeatCapabilities(
     sequence: UInt64,
     seatID: RawSeatID,
-    activeCapabilities: SeatCapabilities
+    activeCapabilities: WaylandRaw.SeatCapabilities
 ) -> RawInputEvent {
     rawEvent(
         sequence: sequence,

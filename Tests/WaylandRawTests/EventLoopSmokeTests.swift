@@ -2,19 +2,24 @@ import Glibc
 import Testing
 
 @testable import WaylandRaw
+@testable import WaylandRawUnsafeShim
 
 @Suite
-struct EventLoopSmokeTests {
+struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
     @Test
     func eventLoopPumpOnceIsCallable() {
         // Verify the EventLoop API compiles and is accessible.
         // Actual socket-level behavior requires a live compositor.
-        _ = EventLoop.pumpOnce as (OpaquePointer, Int32) throws -> Void
+        _ =
+            UnsafeDefaultQueueEventLoop.pumpOnceDefaultQueueUnsafe
+            as (OpaquePointer, Int32) throws -> Void
     }
 
     @Test
     func eventLoopRunIsCallable() {
-        _ = EventLoop.run as (OpaquePointer, () -> Bool) throws -> Void
+        _ =
+            UnsafeDefaultQueueEventLoop.runDefaultQueueUnsafe
+            as (OpaquePointer, () -> Bool) throws -> Void
     }
 
     @Test
@@ -42,10 +47,10 @@ struct EventLoopSmokeTests {
             },
             readEvents: { _ in 0 },
             cancelRead: { _ in cancelReadCallCount += 1 },
-            makeDisplayError: { _, fallbackErrno in .systemError(errno: fallbackErrno ?? 0) }
+            makeDisplayError: { _, fallbackErrno in .displayError(errno: fallbackErrno ?? 0) }
         )
 
-        try EventLoop.pumpOnce(
+        try UnsafeDefaultQueueEventLoop.pumpOnce(
             display: display,
             timeoutMilliseconds: 0,
             operations: operations
@@ -82,10 +87,10 @@ struct EventLoopSmokeTests {
             },
             readEvents: { _ in 0 },
             cancelRead: { _ in cancelReadCallCount += 1 },
-            makeDisplayError: { _, fallbackErrno in .systemError(errno: fallbackErrno ?? 0) }
+            makeDisplayError: { _, fallbackErrno in .displayError(errno: fallbackErrno ?? 0) }
         )
 
-        try EventLoop.pumpOnce(
+        try UnsafeDefaultQueueEventLoop.pumpOnce(
             display: display,
             timeoutMilliseconds: 0,
             operations: operations
@@ -94,6 +99,86 @@ struct EventLoopSmokeTests {
         #expect(flushCallCount == 2)
         #expect(polledEvents == Int16(POLLIN) | Int16(POLLOUT))
         #expect(cancelReadCallCount == 1)
+    }
+
+    @Test
+    func eventLoopAttemptsReadAfterFlushPipeClosed() throws {
+        let display = try makeDisplayPointer()
+        var flushCallCount = 0
+        var readEventsCallCount = 0
+        var cancelReadCallCount = 0
+
+        let operations = EventLoopOperations(
+            prepareRead: { _ in 0 },
+            dispatchPending: { _ in 0 },
+            flush: { _ in
+                flushCallCount += 1
+                errno = EPIPE
+                return -1
+            },
+            getFileDescriptor: { _ in 7 },
+            pollFileDescriptor: { descriptor, _, _ in
+                #expect(descriptor?.pointee.events == Int16(POLLIN))
+                descriptor?.pointee.revents = Int16(POLLIN)
+                return 1
+            },
+            readEvents: { _ in
+                readEventsCallCount += 1
+                return 0
+            },
+            cancelRead: { _ in cancelReadCallCount += 1 },
+            makeDisplayError: { _, fallbackErrno in .displayError(errno: fallbackErrno ?? 0) }
+        )
+
+        try UnsafeDefaultQueueEventLoop.pumpOnce(
+            display: display,
+            timeoutMilliseconds: 0,
+            operations: operations
+        )
+
+        #expect(flushCallCount == 1)
+        #expect(readEventsCallCount == 1)
+        #expect(cancelReadCallCount == 0)
+    }
+
+    @Test
+    func eventLoopCancelsPreparedReadWhenWakeDescriptorFires() throws {
+        let display = try makeDisplayPointer()
+        var cancelReadCallCount = 0
+        var readEventsCallCount = 0
+        var drainWakeCallCount = 0
+
+        let operations = EventLoopOperations(
+            prepareRead: { _ in 0 },
+            dispatchPending: { _ in 0 },
+            flush: { _ in 0 },
+            getFileDescriptor: { _ in 7 },
+            pollFileDescriptor: { descriptors, count, _ in
+                #expect(count == 2)
+                descriptors?[0].revents = 0
+                descriptors?[1].revents = Int16(POLLIN)
+                return 1
+            },
+            readEvents: { _ in
+                readEventsCallCount += 1
+                return 0
+            },
+            cancelRead: { _ in cancelReadCallCount += 1 },
+            makeDisplayError: { _, fallbackErrno in .displayError(errno: fallbackErrno ?? 0) }
+        )
+
+        try UnsafeDefaultQueueEventLoop.pumpOnce(
+            display: display,
+            timeoutMilliseconds: 0,
+            operations: operations,
+            wakeFileDescriptor: 8
+        ) {
+            drainWakeCallCount += 1
+        }
+
+        #expect(cancelReadCallCount == 1)
+        #expect(readEventsCallCount == 0)
+        #expect(drainWakeCallCount == 1)
     }
 
     @Test
@@ -112,17 +197,17 @@ struct EventLoopSmokeTests {
             },
             readEvents: { _ in 0 },
             cancelRead: { _ in cancelReadCallCount += 1 },
-            makeDisplayError: { _, fallbackErrno in .systemError(errno: fallbackErrno ?? 0) }
+            makeDisplayError: { _, fallbackErrno in .displayError(errno: fallbackErrno ?? 0) }
         )
 
         do {
-            try EventLoop.pumpOnce(
+            try UnsafeDefaultQueueEventLoop.pumpOnce(
                 display: display,
                 timeoutMilliseconds: 0,
                 operations: operations
             )
             Issue.record("Expected poll failure event to throw.")
-        } catch RuntimeError.pollEventFailed(let revents) {
+        } catch UnsafeDefaultQueueEventLoopError.pollEventFailed(let revents) {
             #expect(revents & Int16(POLLHUP) != 0)
         } catch {
             Issue.record("Unexpected error: \(error)")
@@ -151,17 +236,17 @@ struct EventLoopSmokeTests {
             pollFileDescriptor: { _, _, _ in 0 },
             readEvents: { _ in 0 },
             cancelRead: { _ in cancelReadCallCount += 1 },
-            makeDisplayError: { _, fallbackErrno in .systemError(errno: fallbackErrno ?? 0) }
+            makeDisplayError: { _, fallbackErrno in .displayError(errno: fallbackErrno ?? 0) }
         )
 
         do {
-            try EventLoop.pumpOnce(
+            try UnsafeDefaultQueueEventLoop.pumpOnce(
                 display: display,
                 timeoutMilliseconds: 0,
                 operations: operations
             )
             Issue.record("Expected unexpected prepare-read failure to throw.")
-        } catch RuntimeError.systemError(let errorCode) {
+        } catch UnsafeDefaultQueueEventLoopError.displayError(let errorCode) {
             #expect(errorCode == EBADF)
         } catch {
             Issue.record("Unexpected error: \(error)")

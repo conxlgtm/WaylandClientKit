@@ -67,4 +67,39 @@ struct InputEventQueueTests {
         )
         #expect(queue.drain().map(\.sequence) == [2])
     }
+
+    @Test
+    func overflowClearsBufferedEventsAndEmitsDiagnostic() {
+        let queue = RawInputEventQueue(capacity: 1)
+        let seatID = RawSeatID(rawValue: 9)
+
+        queue.append(
+            RawInputEventDraft(
+                seatID: seatID,
+                deviceID: nil,
+                kind: .seatRemoved
+            )
+        )
+        queue.append(
+            RawInputEventDraft(
+                seatID: seatID,
+                deviceID: nil,
+                kind: .seatRemoved
+            )
+        )
+
+        let events = queue.drain()
+
+        #expect(events.count == 1)
+        #expect(events.first?.sequence == 2)
+        #expect(
+            events.first?.kind
+                == .diagnostic(
+                    RawInputDiagnostic(
+                        operation: .queueOverflow,
+                        message: "raw input queue exceeded capacity 1"
+                    )
+                )
+        )
+    }
 }

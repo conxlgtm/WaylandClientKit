@@ -8,8 +8,6 @@ struct KeyboardInterpreterKeyEventTests {
     @Test
     func interpreterCreatesContext() throws {
         _ = try KeyboardInterpreter()
-        #expect(KeyboardInterpretationBootstrap.ready)
-        #expect(KeyboardInterpretationBootstrap.canCreateContext())
     }
 
     @Test

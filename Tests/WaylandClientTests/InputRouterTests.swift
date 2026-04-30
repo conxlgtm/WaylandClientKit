@@ -378,6 +378,64 @@ struct SeatInputRouterTests {
     }
 
     @Test
+    func diagnosticsRouteAtDisplayLevel() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 77)
+
+        let routed = router.route(
+            rawEvent(
+                sequence: 1,
+                seatID: seatID,
+                kind: .diagnostic(
+                    RawInputDiagnostic(
+                        operation: .keyboardKeymap,
+                        message: "keymap failed"
+                    )
+                )
+            )
+        )
+
+        #expect(routed.first?.windowID == nil)
+        #expect(
+            routed.first?.kind
+                == .diagnostic(
+                    InputDiagnostic(
+                        operation: .keyboardKeymap,
+                        message: "keymap failed"
+                    )
+                ))
+    }
+
+    @Test
+    func queueOverflowDiagnosticsRouteAtDisplayLevel() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 78)
+
+        let routed = router.route(
+            rawEvent(
+                sequence: 1,
+                seatID: seatID,
+                kind: .diagnostic(
+                    RawInputDiagnostic(
+                        operation: .queueOverflow,
+                        message: "overflow"
+                    )
+                )
+            )
+        )
+
+        #expect(routed.first?.windowID == nil)
+        #expect(
+            routed.first?.kind
+                == .diagnostic(
+                    InputDiagnostic(
+                        operation: .queueOverflow,
+                        message: "overflow"
+                    )
+                ))
+    }
+
+    @Test
     func seatRemovalClearsFocusedSurfacesForSeat() {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 10)
