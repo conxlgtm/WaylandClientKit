@@ -68,12 +68,12 @@ struct WaylandClientTests {
     }
 
     @Test
-    func softwareFrameWritesVisiblePixelsThroughMutableSpanRows() {
+    func softwareFrameWritesVisiblePixelsThroughMutableSpanRows() throws {
         var storage = [UInt32](repeating: 0, count: 6)
         let byteCount = storage.count * MemoryLayout<UInt32>.stride
 
-        storage.withUnsafeMutableBufferPointer { buffer in
-            let frame = SoftwareFrame(
+        try storage.withUnsafeMutableBufferPointer { buffer in
+            let frame = try SoftwareFrame(
                 width: 2,
                 height: 2,
                 stride: 3 * Int32(MemoryLayout<UInt32>.stride),
@@ -91,5 +91,29 @@ struct WaylandClientTests {
         }
 
         #expect(storage == [1, 2, 0, 11, 12, 0])
+    }
+
+    @Test
+    func softwareFrameRejectsStorageSmallerThanLayout() throws {
+        var storage = [UInt32](repeating: 0, count: 3)
+        let byteCount = storage.count * MemoryLayout<UInt32>.stride
+
+        _ = storage.withUnsafeMutableBufferPointer { buffer in
+            #expect(
+                throws: ClientError.invalidWindowState(
+                    "software frame storage is smaller than its layout"
+                )
+            ) {
+                _ = try SoftwareFrame(
+                    width: 2,
+                    height: 2,
+                    stride: 3 * Int32(MemoryLayout<UInt32>.stride),
+                    bytes: UnsafeMutableRawBufferPointer(
+                        start: UnsafeMutableRawPointer(buffer.baseAddress),
+                        count: byteCount
+                    )
+                )
+            }
+        }
     }
 }

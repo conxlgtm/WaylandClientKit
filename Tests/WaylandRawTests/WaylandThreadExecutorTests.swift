@@ -139,6 +139,39 @@ private final class FailingReadEventSourceProbe: WaylandThreadEventSource, Senda
     }
 }
 
+private final class OwnerThreadGate: Sendable {
+    private struct State: Sendable {
+        var didEnter = false
+        var isOpen = false
+    }
+
+    private let state = Mutex(State())
+
+    func enterAndWaitUntilOpened() {
+        state.withLock { $0.didEnter = true }
+
+        while !state.withLock({ $0.isOpen }) {
+            usleep(1_000)
+        }
+    }
+
+    func waitUntilEntered() -> Bool {
+        for _ in 0..<1_000 {
+            if state.withLock({ $0.didEnter }) {
+                return true
+            }
+
+            usleep(1_000)
+        }
+
+        return false
+    }
+
+    func open() {
+        state.withLock { $0.isOpen = true }
+    }
+}
+
 @Suite
 struct WaylandThreadExecutorTests {
     @Test
@@ -176,15 +209,59 @@ struct WaylandThreadExecutorTests {
     }
 
     @Test
-    func syncRunsOperationOnOwnerThread() throws {
+    func syncBootstrapOnlyRunsOperationOnOwnerThread() throws {
         let executor = try WaylandThreadExecutor()
         defer { executor.shutdown() }
 
-        let isOwnerThread = try executor.sync {
+        let isOwnerThread = try executor.syncBootstrapOnly {
             executor.isOwnerThread
         }
 
         #expect(isOwnerThread)
+    }
+
+    @Test
+    func shutdownDrainsQueuedOperationsAndJoinsOwnerThread() throws {
+        let executor = try WaylandThreadExecutor()
+        let gate = OwnerThreadGate()
+        defer {
+            gate.open()
+            executor.shutdown()
+        }
+
+        try executor.enqueueOperationForTesting {
+            gate.enterAndWaitUntilOpened()
+        }
+
+        #expect(gate.waitUntilEntered())
+
+        let operationRunCount = Mutex(0)
+        try executor.enqueueOperationForTesting {
+            operationRunCount.withLock { $0 += 1 }
+        }
+        try executor.enqueueOperationForTesting {
+            operationRunCount.withLock { $0 += 1 }
+        }
+
+        let queued = executor.lifecycleSnapshotForTesting
+        #expect(queued.state == .running)
+        #expect(queued.hasThreadStarted)
+        #expect(!queued.loopHasExited)
+        #expect(!queued.hasJoinedThread)
+        #expect(queued.queuedJobCount == 0)
+        #expect(queued.queuedOperationCount == 2)
+
+        gate.open()
+        executor.shutdown()
+
+        let stopped = executor.lifecycleSnapshotForTesting
+        #expect(stopped.state == .joined)
+        #expect(stopped.hasThreadStarted)
+        #expect(stopped.loopHasExited)
+        #expect(stopped.hasJoinedThread)
+        #expect(stopped.queuedJobCount == 0)
+        #expect(stopped.queuedOperationCount == 0)
+        #expect(operationRunCount.withLock { $0 } == 2)
     }
 
     @Test
@@ -204,7 +281,7 @@ struct WaylandThreadExecutorTests {
         defer { executor.shutdown() }
         let source = EventSourceProbe(executor: executor)
 
-        try executor.sync {
+        try executor.syncBootstrapOnly {
             try executor.installEventSource(source)
         }
 
@@ -227,7 +304,7 @@ struct WaylandThreadExecutorTests {
         defer { executor.shutdown() }
         let source = FailingReadEventSourceProbe(executor: executor)
 
-        try executor.sync {
+        try executor.syncBootstrapOnly {
             try executor.installEventSource(source)
         }
 

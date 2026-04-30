@@ -14,7 +14,36 @@ public struct SoftwareFrame: ~Copyable {
         height frameHeight: Int32,
         stride frameStride: Int32,
         bytes frameBytes: UnsafeMutableRawBufferPointer
-    ) {
+    ) throws {
+        guard frameWidth > 0, frameHeight > 0 else {
+            throw ClientError.invalidWindowState(
+                "software frame dimensions must be greater than zero"
+            )
+        }
+
+        let minimumStride = Int(frameWidth).multipliedReportingOverflow(
+            by: MemoryLayout<UInt32>.stride
+        )
+        guard !minimumStride.overflow,
+            minimumStride.partialValue <= Int(Int32.max),
+            frameStride >= Int32(minimumStride.partialValue)
+        else {
+            throw ClientError.invalidWindowState(
+                "software frame stride is too small for visible pixels"
+            )
+        }
+
+        let requiredByteCount = Int(frameStride).multipliedReportingOverflow(
+            by: Int(frameHeight)
+        )
+        guard !requiredByteCount.overflow,
+            frameBytes.count >= requiredByteCount.partialValue
+        else {
+            throw ClientError.invalidWindowState(
+                "software frame storage is smaller than its layout"
+            )
+        }
+
         width = frameWidth
         height = frameHeight
         stride = frameStride
