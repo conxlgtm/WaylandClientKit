@@ -113,9 +113,12 @@ Does not check shim files as generated output.
 
 ### `Scripts/verify-shims.sh`
 
-Checks the hand-written shim header and C files for the required exported
-symbols used by Swift. This is intentionally separate from protocol generation,
-because shim files are project-owned code rather than scanner output.
+Run with `./Scripts/verify-shims.sh`.
+
+Checks the hand-written protocol and cursor shim headers and C files for the
+required exported symbols used by Swift. This is intentionally separate from
+protocol generation, because shim files are project-owned code rather than
+scanner output.
 
 ## Boundary Rule
 

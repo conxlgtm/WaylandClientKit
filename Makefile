@@ -2,7 +2,7 @@ SWIFT_FORMAT := ./Scripts/swift-format.sh
 SWIFTLINT := ./Scripts/swiftlint.sh
 SWIFT := ./Scripts/swift.sh
 
-.PHONY: format lint verify-generated verify-shims verify-docs strict-concurrency test check smoke-wayland release-check install-pre-commit
+.PHONY: format lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency strict-memory-safety-raw test check smoke-wayland release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
@@ -22,13 +22,19 @@ verify-shims:
 verify-docs:
 	@./Scripts/verify-docs.sh
 
+verify-unsafe-allowlist:
+	@bash ./Scripts/verify-unsafe-allowlist.sh
+
 strict-concurrency:
 	@$(SWIFT) build --disable-index-store -Xswiftc -strict-concurrency=complete -Xswiftc -warn-concurrency
+
+strict-memory-safety-raw:
+	@bash ./Scripts/check-raw-strict-memory-safety.sh
 
 test:
 	@CC="$(CURDIR)/Scripts/clang-filter-index-store.sh" $(SWIFT) test
 
-check: lint verify-generated verify-shims verify-docs strict-concurrency test
+check: lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency strict-memory-safety-raw test
 
 smoke-wayland:
 	@./Scripts/smoke-wayland.sh
