@@ -113,10 +113,6 @@ record_warning() {
     local column="${rest%%:*}"
     local message="${rest#*: warning: }"
 
-    local key="$target"$'\t'"$path"
-    observed_counts["$key"]="$(( ${observed_counts["$key"]:-0} + 1 ))"
-    target_totals["$target"]="$(( ${target_totals["$target"]:-0} + 1 ))"
-
     local stem
     stem="$(printf '%s' "$message" | normalize_diagnostic | cut -c 1-160)"
     local hash
@@ -124,8 +120,14 @@ record_warning() {
     local context
     context="$(declaration_context "$path" "$line" | tr '\t' ' ')"
     local diagnostic_key="$toolchain"$'\t'"$target"$'\t'"$path"$'\t''StrictMemorySafety'$'\t'"$stem"$'\t'"$hash"
-    observed_diagnostics["$diagnostic_key"]=1
+    if [[ -n "${observed_diagnostics["$diagnostic_key"]:-}" ]]; then
+        return
+    fi
 
+    observed_diagnostics["$diagnostic_key"]=1
+    local key="$target"$'\t'"$path"
+    observed_counts["$key"]="$(( ${observed_counts["$key"]:-0} + 1 ))"
+    target_totals["$target"]="$(( ${target_totals["$target"]:-0} + 1 ))"
     printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
         "$toolchain" \
         "$target" \
