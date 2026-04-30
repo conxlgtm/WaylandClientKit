@@ -50,7 +50,7 @@ struct FrameCallbackRegistrationTests {
     }
 
     @Test
-    func doneFiresClosureAtMostOnceAndDoesNotDestroyCompositorOwnedProxy() throws {
+    func doneFiresClosureAtMostOnceAndDestroysLocalClientProxy() throws {
         let counters = CallbackCounters()
         let pointer = try #require(OpaquePointer(bitPattern: 0x300))
         var fireCount = 0
@@ -68,11 +68,12 @@ struct FrameCallbackRegistrationTests {
 
         #expect(fireCount == 1)
         #expect(state.lifecycle == .fired)
-        #expect(counters.destroyCount == 0)
+        #expect(counters.localProxyDestroyCount == 1)
+        #expect(counters.wireDestroyRequestCount == 0)
     }
 
     @Test
-    func doneSurvivesRegistrationReleaseInsideHandler() throws {
+    func doneKeepsListenerStateAliveThroughHandler() throws {
         let counters = CallbackCounters()
         let pointer = try #require(OpaquePointer(bitPattern: 0x350))
         let box = CallbackRegistrationBox()
@@ -92,7 +93,8 @@ struct FrameCallbackRegistrationTests {
 
         #expect(didFire)
         #expect(!box.hasRegistration)
-        #expect(counters.destroyCount == 0)
+        #expect(counters.localProxyDestroyCount == 1)
+        #expect(counters.wireDestroyRequestCount == 0)
     }
 
     @Test
@@ -112,7 +114,7 @@ struct FrameCallbackRegistrationTests {
         state.cancel()
 
         #expect(state.lifecycle == .cancelled)
-        #expect(counters.destroyCount == 1)
+        #expect(counters.localProxyDestroyCount == 1)
     }
 }
 
@@ -126,8 +128,13 @@ private final class CallbackRegistrationBox {
 
 private final class CallbackCounters {
     private(set) var addCount = 0
-    private(set) var destroyCount = 0
+    private(set) var localProxyDestroyCount = 0
+    private(set) var wireDestroyRequestCount = 0
     private(set) var callbacks: UnsafePointer<swl_callback_listener_callbacks>?
+
+    var destroyCount: Int {
+        localProxyDestroyCount
+    }
 
     func operations(addResult: Int32) -> WaylandCallbackOperations {
         let counters = self
@@ -149,6 +156,6 @@ private final class CallbackCounters {
     }
 
     private func recordDestroy() {
-        destroyCount += 1
+        localProxyDestroyCount += 1
     }
 }

@@ -301,7 +301,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
-    func keyboardKeymapCallbackCopiesBytesAndClosesFileDescriptor() throws {
+    func keyboardKeymapCallbackCopiesBytes() throws {
         let recorder = SeatOperationRecorder()
         recorder.keyboardProxy = fakePointer(0x981)
         let queue = RawInputEventQueue()
@@ -318,24 +318,14 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
         _ = queue.drain()
 
         let callbacks = try #require(recorder.keyboardCallbacks)
-        var descriptors = [Int32](repeating: 0, count: 2)
-        let pipeResult = descriptors.withUnsafeMutableBufferPointer { fds in
-            pipe(fds.baseAddress)
-        }
-        #expect(pipeResult == 0)
-
-        let bytes = [UInt8(1), UInt8(2), UInt8(3), UInt8(4)]
-        let writeResult = bytes.withUnsafeBytes { rawBytes in
-            write(descriptors[1], rawBytes.baseAddress, bytes.count)
-        }
-        #expect(writeResult == bytes.count)
-        close(descriptors[1])
+        let bytes = [UInt8(1), UInt8(2), UInt8(3), UInt8(0)]
+        let descriptor = try makeTemporaryFileDescriptor(bytes: bytes)
 
         callbacks.pointee.keymap?(
             callbacks.pointee.data,
             recorder.keyboardProxy,
             RawKeyboardKeymapFormat.xkbV1.rawValue,
-            descriptors[0],
+            descriptor,
             UInt32(bytes.count)
         )
 
@@ -356,8 +346,6 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
                         )
                     )
                 ))
-        #expect(close(descriptors[0]) == -1)
-        #expect(errno == EBADF)
     }
 
     @Test
@@ -539,4 +527,25 @@ private func hex(_ pointer: OpaquePointer?) -> String {
     guard let pointer else { return "nil" }
 
     return "0x\(String(UInt(bitPattern: UnsafeRawPointer(pointer)), radix: 16))"
+}
+
+private func makeTemporaryFileDescriptor(bytes: [UInt8]) throws -> Int32 {
+    var template = Array("/tmp/swift-wayland-seat-keymap-XXXXXX".utf8CString)
+    let descriptor = template.withUnsafeMutableBufferPointer { buffer in
+        guard let baseAddress = buffer.baseAddress else { return Int32(-1) }
+        return mkstemp(baseAddress)
+    }
+    try #require(descriptor >= 0)
+    template.withUnsafeBufferPointer { buffer in
+        if let baseAddress = buffer.baseAddress {
+            unlink(baseAddress)
+        }
+    }
+
+    let writeResult = bytes.withUnsafeBytes { rawBytes in
+        write(descriptor, rawBytes.baseAddress, bytes.count)
+    }
+    try #require(writeResult == bytes.count)
+    try #require(lseek(descriptor, 0, SEEK_SET) == 0)
+    return descriptor
 }

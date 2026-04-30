@@ -152,8 +152,9 @@ private final class RegisteringRawObserver: RawInputEventObserving {
         windowID = id
     }
 
-    func observe(_ rawEvent: RawInputEvent) {
+    func observe(_ rawEvent: RawInputEvent) -> [InputEvent] {
         observedSequences.append(rawEvent.sequence)
         router.register(windowID: windowID, surfaceID: surfaceID)
+        return []
     }
 }

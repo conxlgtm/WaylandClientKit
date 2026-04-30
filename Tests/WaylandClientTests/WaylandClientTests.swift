@@ -5,8 +5,66 @@ import Testing
 @Suite
 struct WaylandClientTests {
     @Test
-    func waylandClientBootstrapIsReady() {
-        #expect(WaylandClientBootstrap.ready)
+    func windowConfigurationRejectsInvalidInitialDimensionsAndBufferCount() {
+        #expect(
+            throws: ClientError.invalidWindowConfiguration(
+                "initialWidth must be greater than zero"
+            )
+        ) {
+            try WindowConfiguration(initialWidth: 0).validate()
+        }
+
+        #expect(
+            throws: ClientError.invalidWindowConfiguration(
+                "initialHeight must be greater than zero"
+            )
+        ) {
+            try WindowConfiguration(initialHeight: -1).validate()
+        }
+
+        #expect(
+            throws: ClientError.invalidWindowConfiguration(
+                "bufferCount must be greater than zero"
+            )
+        ) {
+            try WindowConfiguration(bufferCount: 0).validate()
+        }
+    }
+
+    @Test
+    func windowConfigurationRejectsCStringsThatWouldTruncateAtWaylandBoundary() {
+        #expect(
+            throws: ClientError.invalidWindowConfiguration(
+                "title must not contain embedded NUL bytes"
+            )
+        ) {
+            try WindowConfiguration(title: "visible\0hidden").validate()
+        }
+
+        #expect(
+            throws: ClientError.invalidWindowConfiguration("appID must not be empty")
+        ) {
+            try WindowConfiguration(appID: "").validate()
+        }
+
+        #expect(
+            throws: ClientError.invalidWindowConfiguration(
+                "appID must not contain embedded NUL bytes"
+            )
+        ) {
+            try WindowConfiguration(appID: "org.example\0Hidden").validate()
+        }
+    }
+
+    @Test
+    func pointerCursorRejectsCStringsThatWouldTruncateAtCursorBoundary() {
+        #expect(
+            throws: ClientError.invalidCursorConfiguration(
+                "Pointer cursor names must not contain embedded NUL bytes"
+            )
+        ) {
+            _ = try PointerCursor(name: "left_ptr\0fallback")
+        }
     }
 
     @Test

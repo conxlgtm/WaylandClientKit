@@ -36,6 +36,23 @@ struct XDGConfigureStateTests {
     }
 
     @Test
+    func zeroConfigureBoundsClearsBoundsInsteadOfUsingFallback() {
+        let state = XDGConfigureState(fallbackSize: TopLevelSize(width: 320, height: 240))
+        state.handleConfigureBounds(width: 1_024, height: 768)
+        state.handleConfigureBounds(width: 0, height: 0)
+
+        #expect(state.handleSurfaceConfigure(serial: 8).bounds == nil)
+    }
+
+    @Test
+    func partialZeroConfigureBoundsClearsBounds() {
+        let state = XDGConfigureState(fallbackSize: TopLevelSize(width: 320, height: 240))
+        state.handleConfigureBounds(width: 1_024, height: 0)
+
+        #expect(state.handleSurfaceConfigure(serial: 9).bounds == nil)
+    }
+
+    @Test
     func pendingCallbackErrorsAreThrownAndCleared() {
         let state = XDGConfigureState()
         state.recordError(.invalidWaylandArrayByteCount(byteCount: 3, elementSize: 4))
