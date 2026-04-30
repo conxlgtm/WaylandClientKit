@@ -1,54 +1,6 @@
 import CWaylandUnsafeShim
 import Glibc
 
-package protocol WaylandThreadEventSource: AnyObject {
-    var isClosed: Bool { get }
-
-    func fileDescriptor() throws -> CInt
-    func dispatchPending() throws -> Int32
-    func prepareRead() throws -> Bool
-    func flush() throws -> Bool
-    func readEvents() throws
-    func cancelRead()
-
-    func handleEventLoopError(_ error: any Error)
-}
-
-public enum WaylandThreadExecutorError: Error, Equatable, Sendable, CustomStringConvertible {
-    case eventFileDescriptorCreationFailed(Int32)
-    case threadCreationFailed(Int32)
-    case executorClosed
-    case wakeFileDescriptorReadFailed(Int32)
-    case wakeFileDescriptorShortRead(Int)
-    case wakeFileDescriptorWriteFailed(Int32)
-    case wakeFileDescriptorShortWrite(Int)
-    case pollFailed(Int32)
-    case pollEventFailed(revents: Int16)
-
-    public var description: String {
-        switch self {
-        case .eventFileDescriptorCreationFailed(let errorCode):
-            "failed to create Wayland owner thread wake fd: eventfd failed with errno \(errorCode)"
-        case .threadCreationFailed(let code):
-            "failed to create Wayland owner thread: pthread_create returned \(code)"
-        case .executorClosed:
-            "Wayland owner thread executor is closed"
-        case .wakeFileDescriptorReadFailed(let errorCode):
-            "Wayland owner thread wake fd read failed with errno \(errorCode)"
-        case .wakeFileDescriptorShortRead(let byteCount):
-            "Wayland owner thread wake fd read returned \(byteCount) bytes"
-        case .wakeFileDescriptorWriteFailed(let errorCode):
-            "Wayland owner thread wake fd write failed with errno \(errorCode)"
-        case .wakeFileDescriptorShortWrite(let byteCount):
-            "Wayland owner thread wake fd write returned \(byteCount) bytes"
-        case .pollFailed(let errorCode):
-            "Wayland owner thread poll failed with errno \(errorCode)"
-        case .pollEventFailed(let revents):
-            "Wayland owner thread poll returned error events \(revents)"
-        }
-    }
-}
-
 @safe
 public final class WaylandThreadExecutor: SerialExecutor {
     private static let jobBudget = 64
@@ -70,7 +22,8 @@ public final class WaylandThreadExecutor: SerialExecutor {
     private nonisolated(unsafe) var isStopping = false
     private nonisolated(unsafe) var didJoin = false
     private nonisolated(unsafe) var didDestroySynchronizationPrimitives = false
-    private nonisolated(unsafe) var workItems: [WorkItem] = []
+    private nonisolated(unsafe) var lifecycleState = ExecutorLifecycle.starting
+    private nonisolated(unsafe) var workItems = WaylandThreadWorkQueue<WorkItem>()
     private nonisolated(unsafe) var eventSource: (any WaylandThreadEventSource)?
 
     public init(name _: String = "swift-wayland") throws {
@@ -110,10 +63,11 @@ public final class WaylandThreadExecutor: SerialExecutor {
             )
         }
         guard wakeFileDescriptor >= 0 else {
+            markLoopExitedForFailedStart()
             destroySynchronizationPrimitives()
             throw WaylandThreadExecutorError.eventFileDescriptorCreationFailed(errno)
         }
-        wakeFileDescriptorStorage = wakeFileDescriptor
+        unsafe wakeFileDescriptorStorage = wakeFileDescriptor
 
         let retainedSelf = unsafe Unmanaged.passRetained(self).toOpaque()
         let createResult: Int32
@@ -137,8 +91,9 @@ public final class WaylandThreadExecutor: SerialExecutor {
         }
 
         guard createResult == 0 else {
-            isStopping = true
-            didJoin = true
+            unsafe isStopping = true
+            unsafe didJoin = true
+            markLoopExitedForFailedStart()
             closeWakeFileDescriptor(using: testingCloseWakeFileDescriptor)
             destroySynchronizationPrimitives()
             unsafe Unmanaged<WaylandThreadExecutor>.fromOpaque(retainedSelf).release()
@@ -149,16 +104,26 @@ public final class WaylandThreadExecutor: SerialExecutor {
     }
 
     deinit {
-        guard !didDestroySynchronizationPrimitives else { return }
+        let didDestroy = unsafe didDestroySynchronizationPrimitives
+        guard !didDestroy else { return }
 
-        shutdown()
+        if isOwnerThread {
+            precondition(
+                loopHasExited,
+                "WaylandThreadExecutor owner thread released before loop exit"
+            )
+        } else {
+            shutdown()
+        }
         closeWakeFileDescriptor()
         destroySynchronizationPrimitives()
     }
 
     public func enqueue(_ job: consuming ExecutorJob) {
         guard enqueue(.job(ExecutorJobCell(job))) else {
-            preconditionFailure("WaylandThreadExecutor dropped a job after shutdown")
+            preconditionFailure(
+                "WaylandThreadExecutor received a Swift executor job after executor teardown"
+            )
         }
     }
 
@@ -221,8 +186,8 @@ public final class WaylandThreadExecutor: SerialExecutor {
         }
     }
 
-    @available(*, noasync, message: "Use async actor methods on WaylandDisplay instead.")
-    package func sync<ResultValue: Sendable>(
+    @available(*, noasync, message: "Only for executor bootstrap and tests.")
+    package func syncBootstrapOnly<ResultValue: Sendable>(
         _ operation: @Sendable @escaping () throws -> ResultValue
     ) throws -> ResultValue {
         if isOwnerThread {
@@ -243,19 +208,57 @@ public final class WaylandThreadExecutor: SerialExecutor {
         return try synchronousOperation.wait()
     }
 
+    #if ENABLE_TESTING
+        package func enqueueOperationForTesting(
+            _ operation: @Sendable @escaping () -> Void
+        ) throws {
+            guard enqueue(.operation(operation)) else {
+                throw WaylandThreadExecutorError.executorClosed
+            }
+        }
+
+        package var lifecycleSnapshotForTesting: ExecutorLifecycleSnapshot {
+            unsafe pthread_mutex_lock(&mutex)
+            let state = unsafe lifecycleState
+            let hasThreadStarted = unsafe isReady
+            let hasJoinedThread = unsafe didJoin
+            let queuedJobCount = unsafe workItems.count { workItem in
+                if case .job = workItem { return true }
+                return false
+            }
+            let queuedOperationCount = unsafe workItems.count { workItem in
+                if case .operation = workItem { return true }
+                return false
+            }
+            let snapshot = ExecutorLifecycleSnapshot(
+                state: state,
+                isOwnerThread: unsafe pthread_equal(ownerThread, pthread_self()) != 0,
+                hasThreadStarted: hasThreadStarted,
+                loopHasExited: state == .loopExited || state == .joined || state == .destroyed,
+                hasJoinedThread: hasJoinedThread,
+                queuedJobCount: queuedJobCount,
+                queuedOperationCount: queuedOperationCount
+            )
+            unsafe pthread_mutex_unlock(&mutex)
+            return snapshot
+        }
+    #endif
+
     package func requestStopAfterCurrentJob(abandoningWaylandSources: Bool = false) {
         unsafe pthread_mutex_lock(&mutex)
         if abandoningWaylandSources {
-            eventSource = nil
+            unsafe eventSource = nil
         }
 
-        guard !isStopping else {
+        let alreadyStopping = unsafe isStopping
+        guard !alreadyStopping else {
             unsafe pthread_mutex_unlock(&mutex)
             return
         }
 
-        isStopping = true
-        workItems.append(.stop)
+        unsafe isStopping = true
+        unsafe lifecycleState = .stopRequested
+        unsafe workItems.append(.stop)
         unsafe pthread_cond_signal(&condition)
         signalWakeFileDescriptor()
         unsafe pthread_mutex_unlock(&mutex)
@@ -305,9 +308,14 @@ extension WaylandThreadExecutor {
     private func runThread() {
         unsafe pthread_mutex_lock(&mutex)
         unsafe ownerThread = pthread_self()
-        isReady = true
+        unsafe lifecycleState = .running
+        unsafe isReady = true
         unsafe pthread_cond_broadcast(&readyCondition)
         unsafe pthread_mutex_unlock(&mutex)
+
+        defer {
+            markLoopExited()
+        }
 
         while true {
             drainWakeFileDescriptor()
@@ -372,7 +380,7 @@ extension WaylandThreadExecutor {
 
     private func nextWorkItemIfPresent() -> WorkItem? {
         unsafe pthread_mutex_lock(&mutex)
-        let workItem = workItems.isEmpty ? nil : workItems.removeFirst()
+        let workItem = unsafe workItems.popFirst()
         unsafe pthread_mutex_unlock(&mutex)
         return workItem
     }
@@ -420,6 +428,7 @@ extension WaylandThreadExecutor {
         unsafe pthread_mutex_unlock(&mutex)
 
         pthread_join(threadToJoin, nil)
+        markJoined()
     }
 
     private func closeWakeFileDescriptor(
@@ -437,11 +446,55 @@ extension WaylandThreadExecutor {
     }
 
     private func destroySynchronizationPrimitives() {
-        guard !didDestroySynchronizationPrimitives else { return }
+        let didDestroy = unsafe didDestroySynchronizationPrimitives
+        guard !didDestroy else { return }
+
+        unsafe pthread_mutex_lock(&mutex)
+        let state = unsafe lifecycleState
+        precondition(
+            state == .loopExited || state == .joined,
+            "WaylandThreadExecutor destroyed synchronization primitives before loop exit"
+        )
+        unsafe lifecycleState = .destroyed
+        unsafe pthread_mutex_unlock(&mutex)
 
         unsafe pthread_mutex_destroy(&mutex)
         unsafe pthread_cond_destroy(&condition)
         unsafe pthread_cond_destroy(&readyCondition)
-        didDestroySynchronizationPrimitives = true
+        unsafe didDestroySynchronizationPrimitives = true
+    }
+
+    private var loopHasExited: Bool {
+        unsafe pthread_mutex_lock(&mutex)
+        let state = unsafe lifecycleState
+        let hasExited = state == .loopExited || state == .joined
+        unsafe pthread_mutex_unlock(&mutex)
+        return hasExited
+    }
+
+    private func markLoopExitedForFailedStart() {
+        unsafe pthread_mutex_lock(&mutex)
+        unsafe lifecycleState = .loopExited
+        unsafe pthread_cond_broadcast(&condition)
+        unsafe pthread_cond_broadcast(&readyCondition)
+        unsafe pthread_mutex_unlock(&mutex)
+    }
+
+    private func markLoopExited() {
+        unsafe pthread_mutex_lock(&mutex)
+        let state = unsafe lifecycleState
+        if state != .destroyed { unsafe lifecycleState = .loopExited }
+        unsafe pthread_cond_broadcast(&condition)
+        unsafe pthread_cond_broadcast(&readyCondition)
+        unsafe pthread_mutex_unlock(&mutex)
+    }
+
+    private func markJoined() {
+        unsafe pthread_mutex_lock(&mutex)
+        let state = unsafe lifecycleState
+        if state != .destroyed { unsafe lifecycleState = .joined }
+        unsafe pthread_cond_broadcast(&condition)
+        unsafe pthread_cond_broadcast(&readyCondition)
+        unsafe pthread_mutex_unlock(&mutex)
     }
 }

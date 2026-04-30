@@ -203,8 +203,8 @@ package final class TopLevelWindow {
     private func handleCloseRequested() {
         guard !isClosedStorage, lifecycleState != .closeRequested else { return }
 
-        onCloseRequested?()
         lifecycleState = .closeRequested
+        onCloseRequested?()
     }
 
     private func markNeedsRedraw() {
@@ -256,7 +256,7 @@ package final class TopLevelWindow {
         }
 
         let generationDrawn = redrawState.generationForCurrentDraw()
-        let frame = unsafe SoftwareFrame(
+        let frame = try unsafe SoftwareFrame(
             width: buffer.width,
             height: buffer.height,
             stride: buffer.stride,

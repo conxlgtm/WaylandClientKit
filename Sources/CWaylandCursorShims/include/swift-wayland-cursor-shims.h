@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef __linux__
+#error "SwiftWayland currently supports Linux only."
+#endif
+
 #include <stdint.h>
 #include <wayland-client.h>
 #include <wayland-cursor.h>
