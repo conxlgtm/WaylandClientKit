@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+source "$ROOT/Scripts/protocol-sources.sh"
+
 MODE="check"
 MODE_SELECTED=0
 MAINTAINER=0
@@ -454,33 +456,12 @@ check_pkg_config() {
     fi
 }
 
-pkg_config_variable() {
-    local value
-
-    value="$("$PKG_CONFIG" --variable="$2" "$1" 2>/dev/null || true)"
-    printf '%s\n' "${value/#\/\//\/}"
-}
-
-first_existing_file() {
-    local path
-
-    for path in "$@"; do
-        [[ -n "$path" ]] || continue
-        if [[ -f "$path" ]]; then
-            printf '%s\n' "$path"
-            return 0
-        fi
-    done
-
-    return 1
-}
-
 check_file_candidates() {
     local label="$1"
     shift
     local found
 
-    found="$(first_existing_file "$@" || true)"
+    found="$(protocol_sources_first_existing_file "$@" || true)"
     if [[ -n "$found" ]]; then
         ok "$label: $found"
         return 0
@@ -492,7 +473,8 @@ check_file_candidates() {
 }
 
 check_protocols_for_maintainers() {
-    local wayland_client_dir wayland_scanner_dir protocols_dir
+    local wayland_candidates=()
+    local xdg_candidates=()
 
     have wayland-scanner || die "missing wayland-scanner"
     ok "wayland-scanner: $(command -v wayland-scanner)"
@@ -501,21 +483,11 @@ check_protocols_for_maintainers() {
         die "missing pkg-config module: wayland-protocols"
     ok "wayland-protocols $("$PKG_CONFIG" --modversion wayland-protocols)"
 
-    wayland_client_dir="$(pkg_config_variable wayland-client pkgdatadir)"
-    wayland_scanner_dir="$(pkg_config_variable wayland-scanner pkgdatadir)"
-    protocols_dir="$(pkg_config_variable wayland-protocols pkgdatadir)"
+    mapfile -t wayland_candidates < <(protocol_sources_wayland_core_candidates)
+    mapfile -t xdg_candidates < <(protocol_sources_xdg_shell_candidates)
 
-    check_file_candidates "wayland.xml" \
-        "${wayland_client_dir:+$wayland_client_dir/wayland.xml}" \
-        "${wayland_scanner_dir:+$wayland_scanner_dir/wayland.xml}" \
-        /usr/share/wayland/wayland.xml \
-        /usr/local/share/wayland/wayland.xml
-
-    check_file_candidates "xdg-shell.xml" \
-        "${protocols_dir:+$protocols_dir/stable/xdg-shell/xdg-shell.xml}" \
-        /usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml \
-        /usr/local/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml \
-        /usr/share/qt6/wayland/protocols/xdg-shell/xdg-shell.xml
+    check_file_candidates "wayland.xml" "${wayland_candidates[@]}"
+    check_file_candidates "xdg-shell.xml" "${xdg_candidates[@]}"
 }
 
 if [[ "$MODE" == "install" || "$MODE" == "dry-run" ]]; then
