@@ -10,6 +10,13 @@ required_files=(
     docs/generation.md
 )
 
+required_executables=(
+    Scripts/bootstrap-linux.sh
+    Scripts/generate-protocols.sh
+    Scripts/verify-generated.sh
+    Scripts/verify-shims.sh
+)
+
 required_patterns=(
     "swift-wayland-demo"
     "swift-wayland-smoke"
@@ -43,6 +50,13 @@ missing=0
 for file in "${required_files[@]}"; do
     if [[ ! -f "$ROOT/$file" ]]; then
         echo "Missing documentation file: $file"
+        missing=1
+    fi
+done
+
+for file in "${required_executables[@]}"; do
+    if [[ ! -x "$ROOT/$file" ]]; then
+        echo "Missing executable script: $file"
         missing=1
     fi
 done

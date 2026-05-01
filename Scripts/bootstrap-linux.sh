@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-INSTALL=0
-DRY_RUN=0
+MODE="check"
+MODE_SELECTED=0
 MAINTAINER=0
 RUN_BUILD=0
 STRICT_SWIFT="${STRICT_SWIFT:-0}"
@@ -51,15 +51,25 @@ have() {
     command -v "$1" >/dev/null 2>&1
 }
 
+set_mode() {
+    if [[ "$MODE_SELECTED" -eq 1 ]]; then
+        die "choose only one mode: --check, --install, or --dry-run"
+    fi
+
+    MODE="$1"
+    MODE_SELECTED=1
+}
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --check)
+            set_mode check
             ;;
         --install)
-            INSTALL=1
+            set_mode install
             ;;
         --dry-run)
-            DRY_RUN=1
+            set_mode dry-run
             ;;
         --maintainer)
             MAINTAINER=1
@@ -80,6 +90,22 @@ while [[ $# -gt 0 ]]; do
     esac
     shift
 done
+
+case "$STRICT_SWIFT" in
+    0 | 1)
+        ;;
+    *)
+        die "STRICT_SWIFT must be 0 or 1"
+        ;;
+esac
+
+if [[ "$MODE" == "dry-run" && "$MAINTAINER" -eq 1 ]]; then
+    die "--dry-run cannot be combined with --maintainer"
+fi
+
+if [[ "$MODE" == "dry-run" && "$RUN_BUILD" -eq 1 ]]; then
+    die "--dry-run cannot be combined with --build"
+fi
 
 detect_pm() {
     local pm
@@ -228,12 +254,6 @@ package_commands() {
 install_packages() {
     local pm="$1"
     shift
-
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        printf 'Install commands for %s:\n' "$pm"
-        package_commands "$pm" "$@"
-        return 0
-    fi
 
     case "$pm" in
         apt-get)
@@ -426,15 +446,18 @@ check_protocols_for_maintainers() {
         /usr/share/qt6/wayland/protocols/xdg-shell/xdg-shell.xml
 }
 
-if [[ "$INSTALL" -eq 1 || "$DRY_RUN" -eq 1 ]]; then
+if [[ "$MODE" == "install" || "$MODE" == "dry-run" ]]; then
     PM="$(detect_pm || true)"
     [[ -n "$PM" ]] || die "could not detect a supported package manager"
     set_packages_for_pm "$PM" || die "unsupported package manager: $PM"
-    install_packages "$PM" "${PACKAGES[@]}"
 
-    if [[ "$DRY_RUN" -eq 1 ]]; then
+    if [[ "$MODE" == "dry-run" ]]; then
+        printf 'Install commands for %s:\n' "$PM"
+        package_commands "$PM" "${PACKAGES[@]}"
         exit 0
     fi
+
+    install_packages "$PM" "${PACKAGES[@]}"
 fi
 
 check_commands
