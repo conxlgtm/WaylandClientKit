@@ -59,6 +59,11 @@ uint32_t swl_shm_format_xrgb8888(void)
     return WL_SHM_FORMAT_XRGB8888;
 }
 
+uint32_t swl_shm_format_argb8888(void)
+{
+    return WL_SHM_FORMAT_ARGB8888;
+}
+
 int swl_memfd_create(const char *name, unsigned int flags)
 {
     return memfd_create(name, flags);

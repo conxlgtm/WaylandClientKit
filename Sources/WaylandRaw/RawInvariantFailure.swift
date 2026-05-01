@@ -24,6 +24,16 @@ package final class RawInvariantFailureSink {
     }
 
     package func reportFatalRawInvariantFailure(_ failure: RawInvariantFailure) {
-        reporter?.reportFatalRawInvariantFailure(failure)
+        guard let reporter else {
+            Self.trapForUnroutedFatalRawInvariantFailure(failure)
+        }
+
+        reporter.reportFatalRawInvariantFailure(failure)
+    }
+
+    package static func trapForUnroutedFatalRawInvariantFailure(
+        _ failure: RawInvariantFailure
+    ) -> Never {
+        preconditionFailure("SwiftWayland fatal raw invariant: \(failure.description)")
     }
 }

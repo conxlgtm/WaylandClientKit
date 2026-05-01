@@ -4,7 +4,6 @@ import Glibc
 
 public final class RawSharedMemory {
     public let version: RawVersion
-
     package let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
@@ -16,15 +15,21 @@ public final class RawSharedMemory {
         pointer sharedMemoryPointer: OpaquePointer,
         version sharedMemoryVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
-    ) {
+    ) throws(RuntimeError) {
         version = sharedMemoryVersion
         proxyAdoption = adoptionContext
+        let adoptedPointer: OpaquePointer
+        do {
+            adoptedPointer = try adoptionContext.adopt(sharedMemoryPointer, interface: "wl_shm")
+        } catch {
+            swl_shm_destroy(sharedMemoryPointer)
+            throw error
+        }
         proxy = RawOwnedProxy(
-            pointer: adoptionContext.adopt(sharedMemoryPointer, interface: "wl_shm"),
+            pointer: adoptedPointer,
             destroy: swl_shm_destroy
         )
     }
-
     public func createPool(
         width: Int32,
         height: Int32,
@@ -37,7 +42,6 @@ public final class RawSharedMemory {
             onBufferReleased: Self.ignoreBufferRelease
         )
     }
-
     package func createPool(
         width: Int32,
         height: Int32,
@@ -56,7 +60,6 @@ public final class RawSharedMemory {
     private static func ignoreBufferRelease() {
         // Raw clients without release notifications still reuse buffers by polling.
     }
-
     func destroy() {
         proxy.destroy()
     }
@@ -65,7 +68,6 @@ public final class RawSharedMemory {
         destroy()
     }
 }
-
 private struct MappedRegion: ~Copyable {
     let byteCount: Int
     let baseAddress: UnsafeMutableRawPointer
@@ -267,8 +269,15 @@ public final class RawBuffer {
         releaseOwner = BufferReleaseOwner(
             invariantFailureSink: adoptionContext.invariantFailureSink
         )
+        let adoptedPointer: OpaquePointer
+        do {
+            adoptedPointer = try adoptionContext.adopt(bufferPointer, interface: "wl_buffer")
+        } catch {
+            swl_buffer_destroy(bufferPointer)
+            throw error
+        }
         proxy = RawOwnedProxy(
-            pointer: adoptionContext.adopt(bufferPointer, interface: "wl_buffer"),
+            pointer: adoptedPointer,
             destroy: swl_buffer_destroy
         )
 
@@ -369,7 +378,7 @@ public final class RawSharedMemoryPool {
             mapping = memoryMapping
             proxyAdoption = adoptionContext
             proxy = RawOwnedProxy(
-                pointer: adoptionContext.adopt(poolPointer, interface: "wl_shm_pool"),
+                pointer: try adoptionContext.adopt(poolPointer, interface: "wl_shm_pool"),
                 destroy: swl_shm_pool_destroy
             )
         } catch {

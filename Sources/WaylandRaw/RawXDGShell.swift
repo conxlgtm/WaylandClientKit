@@ -12,8 +12,13 @@ public final class RawXDGTopLevel {
         pointer topLevelPointer: OpaquePointer,
         version topLevelVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
-    ) {
-        pointer = adoptionContext.adopt(topLevelPointer, interface: "xdg_toplevel")
+    ) throws(RuntimeError) {
+        do {
+            pointer = try adoptionContext.adopt(topLevelPointer, interface: "xdg_toplevel")
+        } catch {
+            swl_xdg_toplevel_destroy(topLevelPointer)
+            throw error
+        }
         version = topLevelVersion
     }
 
@@ -52,8 +57,13 @@ public final class RawXDGSurface {
         pointer surfacePointer: OpaquePointer,
         version surfaceVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
-    ) {
-        pointer = adoptionContext.adopt(surfacePointer, interface: "xdg_surface")
+    ) throws(RuntimeError) {
+        do {
+            pointer = try adoptionContext.adopt(surfacePointer, interface: "xdg_surface")
+        } catch {
+            swl_xdg_surface_destroy(surfacePointer)
+            throw error
+        }
         version = surfaceVersion
         proxyAdoption = adoptionContext
     }
@@ -63,7 +73,7 @@ public final class RawXDGSurface {
             throw RuntimeError.bindFailed("xdg_toplevel")
         }
 
-        return .init(pointer: pointer, version: version, proxyAdoption: proxyAdoption)
+        return try .init(pointer: pointer, version: version, proxyAdoption: proxyAdoption)
     }
 
     public func ackConfigure(serial: UInt32) {
@@ -99,9 +109,15 @@ public final class RawXDGWMBase {
             wmBase: wmBasePointer,
             invariantFailureSink: adoptionContext.invariantFailureSink
         )
-        try newOwner.install()
 
-        pointer = adoptionContext.adopt(wmBasePointer, interface: "xdg_wm_base")
+        do {
+            try newOwner.install()
+            pointer = try adoptionContext.adopt(wmBasePointer, interface: "xdg_wm_base")
+        } catch {
+            newOwner.cancel()
+            swl_xdg_wm_base_destroy(wmBasePointer)
+            throw error
+        }
         version = wmBaseVersion
         proxyAdoption = adoptionContext
         owner = newOwner
@@ -117,7 +133,7 @@ public final class RawXDGWMBase {
             throw RuntimeError.bindFailed("xdg_surface")
         }
 
-        return .init(pointer: surfacePointer, version: version, proxyAdoption: proxyAdoption)
+        return try .init(pointer: surfacePointer, version: version, proxyAdoption: proxyAdoption)
     }
 
     func destroy() {

@@ -423,6 +423,28 @@ struct SeatRegistryTests {
     }
 
     @Test
+    func bindSeatReleasesSeatOnceWhenConstructionFails() throws {
+        let recorder = SeatOperationRecorder()
+        recorder.seatListenerResult = -1
+        let queue = RawInputEventQueue()
+        let registry = SeatRegistry(
+            registry: try #require(fakePointer(0x650)),
+            eventSink: queue,
+            operations: recorder.operations
+        )
+
+        #expect(throws: RuntimeError.seatListenerInstallationFailed) {
+            try registry.bindSeat(globalName: 5, advertisedVersion: 10)
+        }
+        #expect(
+            recorder.entries == [
+                "bind seat 5 v10",
+                "add seat listener",
+                "release seat",
+            ])
+    }
+
+    @Test
     func removingBoundSeatIsIdempotent() throws {
         let recorder = SeatOperationRecorder()
         let queue = RawInputEventQueue()
@@ -452,6 +474,7 @@ private final class SeatOperationRecorder {
     var pointerCallbacks: UnsafePointer<swl_pointer_listener_callbacks>?
     var keyboardCallbacks: UnsafePointer<swl_keyboard_listener_callbacks>?
     var touchCallbacks: UnsafePointer<swl_touch_listener_callbacks>?
+    var seatListenerResult: Int32 = 0
 
     var operations: RawSeatProxyOperations {
         RawSeatProxyOperations(
@@ -461,7 +484,7 @@ private final class SeatOperationRecorder {
             },
             addSeatListener: { [self] _, _ in
                 entries.append("add seat listener")
-                return 0
+                return seatListenerResult
             },
             addPointerListener: { [self] _, callbacks in
                 entries.append("add pointer listener")
