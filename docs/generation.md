@@ -80,14 +80,26 @@ make verify-shims
 
 Copies protocol XML from the local system.
 
-Default sources:
+Default source resolution matches `Scripts/bootstrap-linux.sh --maintainer`.
+The scripts first check `pkg-config` package data directories, then standard
+system paths.
 
+Core Wayland XML candidates:
+
+- `$(pkg-config --variable=pkgdatadir wayland-client)/wayland.xml`
+- `$(pkg-config --variable=pkgdatadir wayland-scanner)/wayland.xml`
 - `/usr/share/wayland/wayland.xml`
+- `/usr/local/share/wayland/wayland.xml`
+
+Stable xdg-shell XML candidates:
+
+- `$(pkg-config --variable=pkgdatadir wayland-protocols)/stable/xdg-shell/xdg-shell.xml`
 - `/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml`
-
-Fallback for `xdg-shell.xml`:
-
+- `/usr/local/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml`
 - `/usr/share/qt6/wayland/protocols/xdg-shell/xdg-shell.xml`
+
+Set `WAYLAND_CORE_XML_SOURCE` or `XDG_SHELL_XML_SOURCE` to force a specific
+source path.
 
 Run `Scripts/bootstrap-linux.sh --maintainer` first to verify the scanner,
 `wayland-protocols` pkg-config module, and protocol XML inputs.
