@@ -59,6 +59,21 @@ public enum RawInputDiagnosticOperation: Equatable, Sendable {
     case keyboardKeymap
     case listener(String)
     case queueOverflow
+    case inputPipelineOverflow(RawInputPipelineOverflow)
+}
+
+public enum RawInputPipelineOverflowStage: Equatable, Sendable {
+    case rawInputQueue
+}
+
+public struct RawInputPipelineOverflow: Equatable, Sendable {
+    public let stage: RawInputPipelineOverflowStage
+    public let capacity: Int
+
+    public init(stage overflowStage: RawInputPipelineOverflowStage, capacity queueCapacity: Int) {
+        stage = overflowStage
+        capacity = queueCapacity
+    }
 }
 
 public struct RawSeatEventSnapshot: Equatable, Sendable {
