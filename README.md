@@ -76,19 +76,42 @@ Not supported in the `0.0.1` checkpoint:
 - text-input or IME protocols
 - widgets or retained UI
 
-## Reference Environment
+## Linux Dependencies
 
-- Fedora
-- Swift 6.3.1
-- `wayland-devel` for `libwayland-client` and `wayland-cursor.pc`
-- `wayland-protocols-devel`
-- `pkgconf-pkg-config`
-- `libxkbcommon-devel`
-- `git`
-- `ripgrep`
+Swift 6.3.1 or newer must already be installed.
+The bootstrap script verifies Swift through `Scripts/swift.sh` by default; it does not install or switch toolchains.
+Set `SWIFT_COMMAND=/path/to/swift` for custom toolchain resolution.
+
+The build dependency source of truth is the system capability surface:
+
+- Swift 6.3.1 or newer
 - `clang`
+- `pkg-config`
+- `pkg-config --exists wayland-client`
+- `pkg-config --exists wayland-cursor`
+- `pkg-config --exists xkbcommon`
 
-Swift 6.3.1 must already be installed and available on `PATH` before running the bootstrap script.
+Maintainers regenerating protocol artifacts also need:
+
+- `wayland-scanner`
+- `pkg-config --exists wayland-protocols`
+- `wayland.xml`
+- `stable/xdg-shell/xdg-shell.xml`
+
+Supported package-manager mappings:
+
+| Family | Packages |
+| --- | --- |
+| Debian/Ubuntu | `clang git libwayland-dev libxkbcommon-dev make pkg-config ripgrep wayland-protocols` |
+| Fedora/RHEL-like | `clang git wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
+| Arch/Manjaro | `clang git wayland wayland-protocols libxkbcommon make pkgconf ripgrep` |
+| openSUSE | `clang git wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
+| Alpine | `clang git wayland-dev wayland-protocols libxkbcommon-dev make pkgconf ripgrep` |
+| Gentoo | `sys-devel/clang dev-vcs/git dev-libs/wayland dev-libs/wayland-protocols dev-util/wayland-scanner x11-libs/libxkbcommon dev-build/make virtual/pkgconfig sys-apps/ripgrep` |
+| Nix/NixOS | `nixpkgs#clang nixpkgs#git nixpkgs#wayland nixpkgs#wayland-protocols nixpkgs#libxkbcommon nixpkgs#gnumake nixpkgs#pkg-config nixpkgs#ripgrep` |
+
+Alpine package installation is mapped for Wayland dependencies, but Swift toolchain availability may require separate setup.
+Nix/NixOS support is shell/declarative: `./Scripts/bootstrap-linux.sh --dry-run --package-manager nix` prints a `nix shell` command, and `--install` intentionally does not mutate a Nix profile or NixOS system configuration.
 
 ## Targets
 
@@ -138,10 +161,20 @@ CWaylandClientSystem
 
 ## Commands
 
-Bootstrap the Fedora environment:
+Verify or bootstrap a Linux environment:
 
 ```bash
-./Scripts/bootstrap-fedora.sh
+./Scripts/bootstrap-linux.sh --check
+./Scripts/bootstrap-linux.sh --dry-run
+./Scripts/bootstrap-linux.sh --dry-run --package-manager nix
+./Scripts/bootstrap-linux.sh --install
+./Scripts/bootstrap-linux.sh --build
+```
+
+Maintainers regenerating protocol artifacts should also run:
+
+```bash
+./Scripts/bootstrap-linux.sh --maintainer
 ```
 
 Sync protocol XML into the repository:
