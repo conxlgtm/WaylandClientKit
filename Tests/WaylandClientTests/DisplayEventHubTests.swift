@@ -66,10 +66,12 @@ struct DisplayEventHubTests {
 
         hub.publishInput(inputEvent)
 
-        await expectNext(
-            .diagnostic(.input(diagnostic, severity: .degraded)),
-            from: &displayIterator
+        let expectedDiagnostic = DisplayDiagnostic(
+            id: DiagnosticID(rawValue: 1),
+            severity: .degraded,
+            payload: .input(diagnostic)
         )
+        await expectNext(.diagnostic(expectedDiagnostic), from: &displayIterator)
         await expectInputNext(inputEvent, from: &inputIterator)
     }
 
@@ -87,10 +89,232 @@ struct DisplayEventHubTests {
 
         hub.publish(.input(inputEvent))
 
+        let expectedDiagnostic = DisplayDiagnostic(
+            id: DiagnosticID(rawValue: 1),
+            severity: .error,
+            payload: .input(diagnostic)
+        )
+        await expectNext(.diagnostic(expectedDiagnostic), from: &displayIterator)
+    }
+}
+
+@Suite
+struct DisplayDiagnosticsHubTests {
+    @Test
+    func diagnosticsStreamReceivesDisplayDiagnostics() async {
+        let hub = DisplayEventHub()
+        let diagnostic = InputDiagnostic(
+            operation: .cursor("automaticPointerEnter"),
+            message: "boom"
+        )
+        let inputEvent = InputEvent(
+            sequence: 1,
+            seatID: SeatID(rawValue: 2),
+            windowID: nil,
+            kind: .diagnostic(diagnostic)
+        )
+        var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
+
+        hub.publishInput(inputEvent)
+
+        await expectDiagnosticNext(
+            DisplayDiagnostic(
+                id: DiagnosticID(rawValue: 1),
+                severity: .degraded,
+                payload: .input(diagnostic)
+            ),
+            from: &diagnosticsIterator
+        )
+    }
+
+    @Test
+    func diagnosticsStreamDropsOldestWithoutInvertingDiagnosticIDs() async {
+        let hub = DisplayEventHub(
+            diagnosticsConfiguration: DiagnosticsConfiguration(capacity: 1)
+        )
+        var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
+
+        hub.publishInput(
+            diagnosticInputEvent(sequence: 1, message: "first")
+        )
+        hub.publishInput(
+            diagnosticInputEvent(sequence: 2, message: "second")
+        )
+
+        await expectDiagnosticNext(
+            DisplayDiagnostic(
+                id: DiagnosticID(rawValue: 2),
+                severity: .degraded,
+                payload: .input(
+                    InputDiagnostic(
+                        operation: .cursor("automaticPointerEnter"),
+                        message: "second"
+                    )
+                )
+            ),
+            from: &diagnosticsIterator
+        )
+        await expectDiagnosticNext(
+            DisplayDiagnostic(
+                id: DiagnosticID(rawValue: 3),
+                severity: .warning,
+                payload: .diagnosticsDropped(count: 1)
+            ),
+            from: &diagnosticsIterator
+        )
+    }
+
+    @Test
+    func diagnosticsStreamAggregatesDropNoticeWithoutUnusedNoticeIDs() async {
+        let hub = DisplayEventHub(
+            diagnosticsConfiguration: DiagnosticsConfiguration(capacity: 1)
+        )
+        var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
+
+        hub.publishInput(
+            diagnosticInputEvent(sequence: 1, message: "first")
+        )
+        hub.publishInput(
+            diagnosticInputEvent(sequence: 2, message: "second")
+        )
+        hub.publishInput(
+            diagnosticInputEvent(sequence: 3, message: "third")
+        )
+
+        await expectDiagnosticNext(
+            DisplayDiagnostic(
+                id: DiagnosticID(rawValue: 3),
+                severity: .degraded,
+                payload: .input(
+                    InputDiagnostic(
+                        operation: .cursor("automaticPointerEnter"),
+                        message: "third"
+                    )
+                )
+            ),
+            from: &diagnosticsIterator
+        )
+        await expectDiagnosticNext(
+            DisplayDiagnostic(
+                id: DiagnosticID(rawValue: 4),
+                severity: .warning,
+                payload: .diagnosticsDropped(count: 2)
+            ),
+            from: &diagnosticsIterator
+        )
+    }
+
+    @Test
+    func diagnosticsContinueAfterInputPipelineOverflow() async {
+        let hub = DisplayEventHub()
+        let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
+        let overflowDiagnostic = InputDiagnostic(
+            operation: .inputPipelineOverflow(overflow),
+            message: "raw input queue exceeded capacity 1"
+        )
+        let overflowEvent = InputEvent(
+            sequence: 1,
+            seatID: SeatID(rawValue: 3),
+            windowID: nil,
+            kind: .diagnostic(overflowDiagnostic)
+        )
+        var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
+
+        hub.publishInput(overflowEvent)
+        hub.publishInput(
+            diagnosticInputEvent(sequence: 2, message: "cursor still reports")
+        )
+
+        await expectDiagnosticNext(
+            DisplayDiagnostic(
+                id: DiagnosticID(rawValue: 1),
+                severity: .error,
+                payload: .input(overflowDiagnostic)
+            ),
+            from: &diagnosticsIterator
+        )
+        await expectDiagnosticNext(
+            DisplayDiagnostic(
+                id: DiagnosticID(rawValue: 2),
+                severity: .degraded,
+                payload: .input(
+                    InputDiagnostic(
+                        operation: .cursor("automaticPointerEnter"),
+                        message: "cursor still reports"
+                    )
+                )
+            ),
+            from: &diagnosticsIterator
+        )
+    }
+}
+
+@Suite
+struct DisplayEventHubFailureTests {
+    @Test
+    func inputPipelineOverflowTerminatesInputStreamButDisplayContinues() async {
+        let hub = DisplayEventHub()
+        let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
+        let diagnostic = InputDiagnostic(
+            operation: .inputPipelineOverflow(overflow),
+            message: "raw input queue exceeded capacity 1"
+        )
+        let inputEvent = InputEvent(
+            sequence: 2,
+            seatID: SeatID(rawValue: 3),
+            windowID: nil,
+            kind: .diagnostic(diagnostic)
+        )
+        var displayIterator = hub.displayEvents().makeAsyncIterator()
+        var inputIterator = hub.inputEvents().makeAsyncIterator()
+
+        hub.publishInput(inputEvent)
+        hub.publish(.redrawRequested(WindowID(rawValue: 9)))
+
         await expectNext(
-            .diagnostic(.input(diagnostic, severity: .error)),
+            .diagnostic(
+                DisplayDiagnostic(
+                    id: DiagnosticID(rawValue: 1),
+                    severity: .error,
+                    payload: .input(diagnostic)
+                )
+            ),
             from: &displayIterator
         )
+        await expectFailure(
+            .inputPipelineOverflow(overflow),
+            from: &inputIterator
+        )
+        await expectNext(.redrawRequested(WindowID(rawValue: 9)), from: &displayIterator)
+    }
+
+    @Test
+    func inputStreamDrainsPrefixThenFailsAfterPipelineOverflow() async {
+        let hub = DisplayEventHub()
+        let prefixEvent = InputEvent(
+            sequence: 1,
+            seatID: SeatID(rawValue: 3),
+            windowID: nil,
+            kind: .seat(.removed)
+        )
+        let overflow = InputPipelineOverflow(stage: .sessionPendingInput, capacity: 1)
+        let diagnostic = InputDiagnostic(
+            operation: .inputPipelineOverflow(overflow),
+            message: "session input queue exceeded capacity 1"
+        )
+        let overflowEvent = InputEvent(
+            sequence: 2,
+            seatID: SeatID(rawValue: 3),
+            windowID: nil,
+            kind: .diagnostic(diagnostic)
+        )
+        var inputIterator = hub.inputEvents().makeAsyncIterator()
+
+        hub.publishInput(prefixEvent)
+        hub.publishInput(overflowEvent)
+
+        await expectInputNext(prefixEvent, from: &inputIterator)
+        await expectFailure(.inputPipelineOverflow(overflow), from: &inputIterator)
     }
 
     @Test
@@ -109,6 +333,45 @@ struct DisplayEventHubTests {
     }
 
     @Test
+    func newSubscriberAfterNormalFinishImmediatelyReturnsNil() async {
+        let hub = DisplayEventHub()
+
+        hub.finish()
+
+        var iterator = hub.displayEvents().makeAsyncIterator()
+        do {
+            let event = try await iterator.next()
+            #expect(event == nil)
+        } catch {
+            Issue.record("Expected normal display stream finish, got \(error)")
+        }
+    }
+
+    @Test
+    func newSubscriberAfterFailedFinishImmediatelyThrows() async {
+        let hub = DisplayEventHub()
+        let error = WaylandDisplayError.internalInvariantViolation("listener state lost")
+
+        hub.finish(throwing: error)
+
+        var iterator = hub.displayEvents().makeAsyncIterator()
+        await expectFailure(error, from: &iterator)
+    }
+
+    @Test
+    func bufferedSubscriberDrainsThenReceivesTerminalFailure() async {
+        let hub = DisplayEventHub()
+        let error = WaylandDisplayError.internalInvariantViolation("listener state lost")
+        var iterator = hub.displayEvents().makeAsyncIterator()
+
+        hub.publish(.windowClosed(WindowID(rawValue: 1)))
+        hub.finish(throwing: error)
+
+        await expectNext(.windowClosed(WindowID(rawValue: 1)), from: &iterator)
+        await expectFailure(error, from: &iterator)
+    }
+
+    @Test
     func fatalInternalInvariantTerminatesDisplayAndInputStreams() async {
         let hub = DisplayEventHub()
         var displayIterator = hub.displayEvents().makeAsyncIterator()
@@ -121,69 +384,116 @@ struct DisplayEventHubTests {
         await expectFailure(error, from: &inputIterator)
     }
 
-    private func expectNext(
-        _ expectedEvent: DisplayEvent,
-        from iterator: inout DisplayEventsIterator
-    ) async {
-        do {
-            let event = try await iterator.next()
-            #expect(event == expectedEvent)
-        } catch {
-            Issue.record("Expected display event, got \(error)")
-        }
-    }
+    @Test
+    func newInputSubscriptionAfterPipelineOverflowFailsImmediately() async {
+        let hub = DisplayEventHub()
+        let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
+        let diagnostic = InputDiagnostic(
+            operation: .inputPipelineOverflow(overflow),
+            message: "raw input queue exceeded capacity 1"
+        )
+        let inputEvent = InputEvent(
+            sequence: 1,
+            seatID: SeatID(rawValue: 3),
+            windowID: nil,
+            kind: .diagnostic(diagnostic)
+        )
 
-    private func expectInputNext(
-        _ expectedEvent: InputEvent,
-        from iterator: inout InputEventsIterator
-    ) async {
-        do {
-            let event = try await iterator.next()
-            #expect(event == expectedEvent)
-        } catch {
-            Issue.record("Expected input event, got \(error)")
-        }
-    }
+        hub.publishInput(inputEvent)
 
-    private func expectOverflow(
-        from iterator: inout DisplayEventsIterator,
-        capacity: Int = 256
-    ) async {
-        do {
-            _ = try await iterator.next()
-            Issue.record("Expected display event overflow to terminate the subscriber")
-        } catch {
-            #expect(
-                error
-                    == .eventSubscriberOverflow(
-                        stream: "display event",
-                        capacity: capacity
-                    )
+        var inputIterator = hub.inputEvents().makeAsyncIterator()
+        await expectFailure(.inputPipelineOverflow(overflow), from: &inputIterator)
+    }
+}
+
+private func expectNext(
+    _ expectedEvent: DisplayEvent,
+    from iterator: inout DisplayEventsIterator
+) async {
+    do {
+        let event = try await iterator.next()
+        #expect(event == expectedEvent)
+    } catch {
+        Issue.record("Expected display event, got \(error)")
+    }
+}
+
+private func expectInputNext(
+    _ expectedEvent: InputEvent,
+    from iterator: inout InputEventsIterator
+) async {
+    do {
+        let event = try await iterator.next()
+        #expect(event == expectedEvent)
+    } catch {
+        Issue.record("Expected input event, got \(error)")
+    }
+}
+
+private func expectDiagnosticNext(
+    _ expectedDiagnostic: DisplayDiagnostic,
+    from iterator: inout DisplayDiagnosticsIterator
+) async {
+    do {
+        let diagnostic = try await iterator.next()
+        #expect(diagnostic == expectedDiagnostic)
+    } catch {
+        Issue.record("Expected diagnostic event, got \(error)")
+    }
+}
+
+private func expectOverflow(
+    from iterator: inout DisplayEventsIterator,
+    capacity: Int = 256
+) async {
+    do {
+        _ = try await iterator.next()
+        Issue.record("Expected display event overflow to terminate the subscriber")
+    } catch {
+        #expect(
+            error
+                == .eventSubscriberOverflow(
+                    stream: "display event",
+                    capacity: capacity
+                )
+        )
+    }
+}
+
+private func expectFailure(
+    _ expectedError: WaylandDisplayError,
+    from iterator: inout DisplayEventsIterator
+) async {
+    do {
+        _ = try await iterator.next()
+        Issue.record("Expected display stream failure")
+    } catch {
+        #expect(error == expectedError)
+    }
+}
+
+private func expectFailure(
+    _ expectedError: WaylandDisplayError,
+    from iterator: inout InputEventsIterator
+) async {
+    do {
+        _ = try await iterator.next()
+        Issue.record("Expected input stream failure")
+    } catch {
+        #expect(error == expectedError)
+    }
+}
+
+private func diagnosticInputEvent(sequence: UInt64, message: String) -> InputEvent {
+    InputEvent(
+        sequence: sequence,
+        seatID: SeatID(rawValue: 2),
+        windowID: nil,
+        kind: .diagnostic(
+            InputDiagnostic(
+                operation: .cursor("automaticPointerEnter"),
+                message: message
             )
-        }
-    }
-
-    private func expectFailure(
-        _ expectedError: WaylandDisplayError,
-        from iterator: inout DisplayEventsIterator
-    ) async {
-        do {
-            _ = try await iterator.next()
-            Issue.record("Expected display stream failure")
-        } catch {
-            #expect(error == expectedError)
-        }
-    }
-
-    private func expectFailure(
-        _ expectedError: WaylandDisplayError,
-        from iterator: inout InputEventsIterator
-    ) async {
-        do {
-            _ = try await iterator.next()
-            Issue.record("Expected input stream failure")
-        } catch {
-            #expect(error == expectedError)
-        }
-    }
+        )
+    )
 }

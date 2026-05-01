@@ -22,6 +22,10 @@ public actor WaylandDisplay {
         runtime.inputEvents
     }
 
+    public nonisolated var diagnostics: DisplayDiagnostics {
+        runtime.diagnostics
+    }
+
     private init(runtime displayRuntime: WaylandDisplayRuntime) {
         runtime = displayRuntime
     }
@@ -31,30 +35,42 @@ public actor WaylandDisplay {
     }
 
     public static func connect(
+        configuration displayConfiguration: DisplayConfiguration,
         cursorConfiguration: CursorConfiguration = .init(),
-        discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds,
-        eventStreamConfiguration: EventStreamConfiguration = .init()
+        discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds
     ) async throws -> WaylandDisplay {
-        let runtime = try WaylandDisplayRuntime(eventStreamConfiguration: eventStreamConfiguration)
+        let runtime = try WaylandDisplayRuntime(configuration: displayConfiguration)
         let display = WaylandDisplay(runtime: runtime)
         try await display.initialize(
             cursorConfiguration: cursorConfiguration,
             discoveryTimeoutMilliseconds: discoveryTimeoutMilliseconds,
-            eventStreamConfiguration: eventStreamConfiguration
+            configuration: displayConfiguration
         )
         return display
     }
 
-    public static func withConnection<ResultValue: Sendable>(
+    public static func connect(
         cursorConfiguration: CursorConfiguration = .init(),
         discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds,
-        eventStreamConfiguration: EventStreamConfiguration = .init(),
+        eventStreamConfiguration: EventStreamConfiguration = .init()
+    ) async throws -> WaylandDisplay {
+        try await connect(
+            configuration: DisplayConfiguration(eventStreams: eventStreamConfiguration),
+            cursorConfiguration: cursorConfiguration,
+            discoveryTimeoutMilliseconds: discoveryTimeoutMilliseconds
+        )
+    }
+
+    public static func withConnection<ResultValue: Sendable>(
+        configuration displayConfiguration: DisplayConfiguration,
+        cursorConfiguration: CursorConfiguration = .init(),
+        discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds,
         _ body: @Sendable (WaylandDisplay) async throws -> ResultValue
     ) async throws -> ResultValue {
         let display = try await connect(
+            configuration: displayConfiguration,
             cursorConfiguration: cursorConfiguration,
-            discoveryTimeoutMilliseconds: discoveryTimeoutMilliseconds,
-            eventStreamConfiguration: eventStreamConfiguration
+            discoveryTimeoutMilliseconds: discoveryTimeoutMilliseconds
         )
 
         do {
@@ -65,6 +81,20 @@ public actor WaylandDisplay {
             await display.close()
             throw error
         }
+    }
+
+    public static func withConnection<ResultValue: Sendable>(
+        cursorConfiguration: CursorConfiguration = .init(),
+        discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds,
+        eventStreamConfiguration: EventStreamConfiguration = .init(),
+        _ body: @Sendable (WaylandDisplay) async throws -> ResultValue
+    ) async throws -> ResultValue {
+        try await withConnection(
+            configuration: DisplayConfiguration(eventStreams: eventStreamConfiguration),
+            cursorConfiguration: cursorConfiguration,
+            discoveryTimeoutMilliseconds: discoveryTimeoutMilliseconds,
+            body
+        )
     }
 
     public var isClosed: Bool {
@@ -146,18 +176,24 @@ public actor WaylandDisplay {
     private func initialize(
         cursorConfiguration: CursorConfiguration,
         discoveryTimeoutMilliseconds: Int32,
-        eventStreamConfiguration: EventStreamConfiguration
+        configuration displayConfiguration: DisplayConfiguration
     ) throws {
         precondition(core == nil, "WaylandDisplay initialized more than once")
         let invariantFailureSink = RawInvariantFailureSink()
         let connection = try RawDisplayConnection.connect(
-            invariantFailureSink: invariantFailureSink
+            invariantFailureSink: invariantFailureSink,
+            inputQueueConfiguration: RawInputQueueConfiguration(
+                capacity: displayConfiguration.inputPipeline.rawInputQueueCapacity,
+                pointerMotionCoalescing: displayConfiguration
+                    .inputPipeline.pointerMotionCoalescing,
+                touchMotionCoalescing: displayConfiguration.inputPipeline.touchMotionCoalescing
+            )
         )
         try connection.completeInitialDiscovery(timeoutMilliseconds: discoveryTimeoutMilliseconds)
         let session = try DisplaySession(
             connection: connection,
             cursorConfiguration: cursorConfiguration,
-            maximumPendingInputEventCount: eventStreamConfiguration.inputEventCapacity
+            inputPipelineConfiguration: displayConfiguration.inputPipeline
         )
         let displayCore = DisplayCore(session: session, eventHub: runtime.eventHub)
         session.setRawInvariantFailureReporter(displayCore)
@@ -181,9 +217,12 @@ private final class WaylandDisplayRuntime: Sendable {
     let executor: WaylandThreadExecutor
     let eventHub: DisplayEventHub
 
-    init(eventStreamConfiguration: EventStreamConfiguration) throws {
-        try eventStreamConfiguration.validate()
-        eventHub = DisplayEventHub(configuration: eventStreamConfiguration)
+    init(configuration displayConfiguration: DisplayConfiguration) throws {
+        try displayConfiguration.validate()
+        eventHub = DisplayEventHub(
+            configuration: displayConfiguration.eventStreams,
+            diagnosticsConfiguration: displayConfiguration.diagnostics
+        )
         executor = try WaylandThreadExecutor()
     }
 
@@ -197,6 +236,10 @@ private final class WaylandDisplayRuntime: Sendable {
 
     var inputEvents: InputEvents {
         eventHub.inputEvents()
+    }
+
+    var diagnostics: DisplayDiagnostics {
+        eventHub.diagnostics()
     }
 
     func installEventSource(_ source: any WaylandThreadEventSource) throws {
