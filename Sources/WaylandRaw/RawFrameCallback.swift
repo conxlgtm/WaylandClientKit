@@ -24,11 +24,13 @@ enum WaylandCallbackLifecycle: Equatable {
 final class WaylandCallbackRegistrationState {
     private var pointer: OpaquePointer?
     private let operations: WaylandCallbackOperations
+    private let invariantFailureSink: RawInvariantFailureSink?
     private var onDone: (() -> Void)?
     private(set) var lifecycle: WaylandCallbackLifecycle = .pending
     private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_callback_listener_callbacks()
+        initialValue: swl_callback_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
     )
 
     private var callbacks: UnsafeMutablePointer<swl_callback_listener_callbacks> {
@@ -38,21 +40,24 @@ final class WaylandCallbackRegistrationState {
     init(
         pointer callbackPointer: OpaquePointer,
         onDone handler: @escaping () -> Void,
-        operations callbackOperations: WaylandCallbackOperations
+        operations callbackOperations: WaylandCallbackOperations,
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil
     ) {
         pointer = callbackPointer
         onDone = handler
+        invariantFailureSink = failureSink
         operations = callbackOperations
 
         callbacks.pointee.done = { data, _, _ in
-            guard let data else {
-                preconditionFailure("Wayland callback fired without Swift state")
+            CListenerStorage<
+                WaylandCallbackRegistrationState,
+                swl_callback_listener_callbacks
+            >.withOwner(
+                from: data,
+                message: "Wayland callback fired without Swift state"
+            ) { state in
+                state.handleDone()
             }
-
-            let state = CallbackBox<WaylandCallbackRegistrationState>
-                .fromOpaque(data)
-                .requireOwner("Wayland callback fired without Swift state")
-            state.handleDone()
         }
     }
 
@@ -78,6 +83,7 @@ final class WaylandCallbackRegistrationState {
         onDone = nil
         unsafe pointer = nil
         lifecycle = .fired
+        retainedListenerStorage.invalidate()
 
         unsafe operations.destroy(callback)
 
@@ -96,6 +102,7 @@ final class WaylandCallbackRegistrationState {
         let callback = pointer
         pointer = nil
         onDone = nil
+        listenerStorage.invalidate()
         if let callback {
             operations.destroy(callback)
         }
@@ -112,12 +119,14 @@ public struct FrameCallbackRegistration: ~Copyable {
     init(
         pointer callbackPointer: OpaquePointer,
         onDone handler: @escaping () -> Void,
-        operations callbackOperations: WaylandCallbackOperations = .live
+        operations callbackOperations: WaylandCallbackOperations = .live,
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil
     ) throws {
         let newState = WaylandCallbackRegistrationState(
             pointer: callbackPointer,
             onDone: handler,
-            operations: callbackOperations
+            operations: callbackOperations,
+            invariantFailureSink: failureSink
         )
 
         do {

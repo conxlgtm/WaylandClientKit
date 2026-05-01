@@ -19,14 +19,21 @@ package final class RawInputChildProxy {
         listenerOwner childListenerOwner: AnyObject?,
         cancelListener cancelChildListener: (() -> Void)? = nil,
         release releaseChildProxy: @escaping (OpaquePointer) -> Void
-    ) {
+    ) throws(RuntimeError) {
         id = childID
         version = childVersion
         listenerOwner = childListenerOwner
         cancelListener = cancelChildListener
-        let adoptedPointer =
-            adoptionContext?.adopt(childPointer, interface: interfaceName)
-            ?? childPointer
+        let adoptedPointer: OpaquePointer
+        do {
+            adoptedPointer =
+                try adoptionContext?.adopt(childPointer, interface: interfaceName)
+                ?? childPointer
+        } catch {
+            cancelChildListener?()
+            releaseChildProxy(childPointer)
+            throw error
+        }
         proxy = RawOwnedProxy(pointer: adoptedPointer, destroy: releaseChildProxy)
     }
 

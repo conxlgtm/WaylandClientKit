@@ -5,13 +5,15 @@ final class KeyboardListenerOwner {
     private let deviceID: RawInputDeviceID
     private let eventSink: RawInputEventSink
     private let operations: RawSeatProxyOperations
+    private let invariantFailureSink: RawInvariantFailureSink?
     private let isCurrentDevice: (RawInputDeviceID) -> Bool
     private let onError: (Error) -> Void
     private var keymapGeneration: UInt64 = 1
     private var isCanceled = false
     private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_keyboard_listener_callbacks()
+        initialValue: swl_keyboard_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
     )
 
     private var callbacks: UnsafeMutablePointer<swl_keyboard_listener_callbacks> {
@@ -23,87 +25,95 @@ final class KeyboardListenerOwner {
         deviceID keyboardDeviceID: RawInputDeviceID,
         eventSink keyboardEventSink: RawInputEventSink,
         operations keyboardOperations: RawSeatProxyOperations,
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil,
         isCurrentDevice isKeyboardCurrent: @escaping (RawInputDeviceID) -> Bool,
         onError handleError: @escaping (Error) -> Void
     ) {
         deviceID = keyboardDeviceID
         eventSink = keyboardEventSink
         operations = keyboardOperations
+        invariantFailureSink = failureSink
         isCurrentDevice = isKeyboardCurrent
         onError = handleError
 
         callbacks.pointee.keymap = { data, _, format, fd, size in
-            let owner = KeyboardListenerOwner.requireOwner(
+            KeyboardListenerOwner.withOwner(
                 data,
                 message: "wl_keyboard keymap fired without Swift state"
-            )
-            owner.handleKeymap(format: format, fd: fd, size: size)
+            ) { owner in
+                owner.handleKeymap(format: format, fd: fd, size: size)
+            }
         }
 
         callbacks.pointee.enter = { data, _, serial, surface, keys in
-            let owner = KeyboardListenerOwner.requireOwner(
+            KeyboardListenerOwner.withOwner(
                 data,
                 message: "wl_keyboard enter fired without Swift state"
-            )
-            owner.handleEnter(serial: serial, surface: surface, keys: keys)
+            ) { owner in
+                owner.handleEnter(serial: serial, surface: surface, keys: keys)
+            }
         }
 
         callbacks.pointee.leave = { data, _, serial, surface in
-            let owner = KeyboardListenerOwner.requireOwner(
+            KeyboardListenerOwner.withOwner(
                 data,
                 message: "wl_keyboard leave fired without Swift state"
-            )
-            owner.append(
-                .leave(
-                    RawKeyboardLeave(
-                        serial: serial,
-                        surfaceID: owner.operations.proxyObjectID(surface)
+            ) { owner in
+                owner.append(
+                    .leave(
+                        RawKeyboardLeave(
+                            serial: serial,
+                            surfaceID: owner.operations.proxyObjectID(surface)
+                        )
                     )
                 )
-            )
+            }
         }
 
         callbacks.pointee.key = { data, _, serial, time, key, state in
-            let owner = KeyboardListenerOwner.requireOwner(
+            KeyboardListenerOwner.withOwner(
                 data,
                 message: "wl_keyboard key fired without Swift state"
-            )
-            owner.append(
-                .key(
-                    RawKeyboardKey(
-                        serial: serial,
-                        time: time,
-                        evdevKeycode: key,
-                        state: RawKeyboardKeyState(rawValue: state)
+            ) { owner in
+                owner.append(
+                    .key(
+                        RawKeyboardKey(
+                            serial: serial,
+                            time: time,
+                            evdevKeycode: key,
+                            state: RawKeyboardKeyState(rawValue: state)
+                        )
                     )
                 )
-            )
+            }
         }
 
         callbacks.pointee.modifiers = { data, _, serial, depressed, latched, locked, group in
-            let owner = KeyboardListenerOwner.requireOwner(
+            KeyboardListenerOwner.withOwner(
                 data,
                 message: "wl_keyboard modifiers fired without Swift state"
-            )
-            owner.append(
-                .modifiers(
-                    RawKeyboardModifiers(
-                        serial: serial,
-                        depressed: depressed,
-                        latched: latched,
-                        locked: locked,
-                        group: group
+            ) { owner in
+                owner.append(
+                    .modifiers(
+                        RawKeyboardModifiers(
+                            serial: serial,
+                            depressed: depressed,
+                            latched: latched,
+                            locked: locked,
+                            group: group
+                        )
                     )
                 )
-            )
+            }
         }
 
         callbacks.pointee.repeat_info = { data, _, rate, delay in
-            let owner = KeyboardListenerOwner.requireOwner(
+            KeyboardListenerOwner.withOwner(
                 data,
                 message: "wl_keyboard repeat_info fired without Swift state"
-            )
-            owner.append(.repeatInfo(RawKeyboardRepeatInfo(rate: rate, delay: delay)))
+            ) { owner in
+                owner.append(.repeatInfo(RawKeyboardRepeatInfo(rate: rate, delay: delay)))
+            }
         }
     }
 
@@ -117,6 +127,7 @@ final class KeyboardListenerOwner {
 
     func cancel() {
         isCanceled = true
+        listenerStorage.invalidate()
     }
 
     private func handleEnter(
@@ -165,17 +176,13 @@ final class KeyboardListenerOwner {
         }
     }
 
-    private static func requireOwner(
+    private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
-        message: @autoclosure () -> String
-    ) -> KeyboardListenerOwner {
-        guard let data else {
-            preconditionFailure(message())
-        }
-
-        return CallbackBox<KeyboardListenerOwner>
-            .fromOpaque(data)
-            .requireOwner(message())
+        message: @autoclosure () -> String,
+        _ body: (KeyboardListenerOwner) -> Void
+    ) {
+        CListenerStorage<KeyboardListenerOwner, swl_keyboard_listener_callbacks>
+            .withOwner(from: data, message: message(), body)
     }
 
     private func append(_ event: RawKeyboardEvent) {

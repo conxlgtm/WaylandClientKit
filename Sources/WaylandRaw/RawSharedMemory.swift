@@ -4,7 +4,6 @@ import Glibc
 
 public final class RawSharedMemory {
     public let version: RawVersion
-
     package let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
@@ -16,15 +15,21 @@ public final class RawSharedMemory {
         pointer sharedMemoryPointer: OpaquePointer,
         version sharedMemoryVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
-    ) {
+    ) throws(RuntimeError) {
         version = sharedMemoryVersion
         proxyAdoption = adoptionContext
+        let adoptedPointer: OpaquePointer
+        do {
+            adoptedPointer = try adoptionContext.adopt(sharedMemoryPointer, interface: "wl_shm")
+        } catch {
+            swl_shm_destroy(sharedMemoryPointer)
+            throw error
+        }
         proxy = RawOwnedProxy(
-            pointer: adoptionContext.adopt(sharedMemoryPointer, interface: "wl_shm"),
+            pointer: adoptedPointer,
             destroy: swl_shm_destroy
         )
     }
-
     public func createPool(
         width: Int32,
         height: Int32,
@@ -37,7 +42,6 @@ public final class RawSharedMemory {
             onBufferReleased: Self.ignoreBufferRelease
         )
     }
-
     package func createPool(
         width: Int32,
         height: Int32,
@@ -56,7 +60,6 @@ public final class RawSharedMemory {
     private static func ignoreBufferRelease() {
         // Raw clients without release notifications still reuse buffers by polling.
     }
-
     func destroy() {
         proxy.destroy()
     }
@@ -65,7 +68,6 @@ public final class RawSharedMemory {
         destroy()
     }
 }
-
 private struct MappedRegion: ~Copyable {
     let byteCount: Int
     let baseAddress: UnsafeMutableRawPointer
@@ -169,27 +171,29 @@ private enum BufferReleaseInstallState {
 }
 
 private final class BufferReleaseOwner {
+    private let invariantFailureSink: RawInvariantFailureSink?
     private var onRelease: (() -> Void)?
     private var installState = BufferReleaseInstallState.idle
     private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_buffer_listener_callbacks()
+        initialValue: swl_buffer_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
     )
 
     private var callbacks: UnsafeMutablePointer<swl_buffer_listener_callbacks> {
         listenerStorage.callbacks
     }
 
-    init() {
-        callbacks.pointee.release = { data, _ in
-            guard let data else {
-                preconditionFailure("wl_buffer release fired without Swift state")
-            }
+    init(invariantFailureSink failureSink: RawInvariantFailureSink? = nil) {
+        invariantFailureSink = failureSink
 
-            let owner = CallbackBox<BufferReleaseOwner>
-                .fromOpaque(data)
-                .requireOwner()
-            owner.onRelease?()
+        callbacks.pointee.release = { data, _ in
+            BufferReleaseOwner.withOwner(
+                data,
+                message: "wl_buffer release fired without Swift state"
+            ) { owner in
+                owner.onRelease?()
+            }
         }
     }
 
@@ -214,10 +218,20 @@ private final class BufferReleaseOwner {
 
     func cancel() {
         onRelease = nil
+        listenerStorage.invalidate()
     }
 
     deinit {
         cancel()
+    }
+
+    private static func withOwner(
+        _ data: UnsafeMutableRawPointer?,
+        message: @autoclosure () -> String,
+        _ body: (BufferReleaseOwner) -> Void
+    ) {
+        CListenerStorage<BufferReleaseOwner, swl_buffer_listener_callbacks>
+            .withOwner(from: data, message: message(), body)
     }
 }
 
@@ -227,7 +241,7 @@ public final class RawBuffer {
     package let stride: Int32
     package let bytes: UnsafeMutableRawBufferPointer
 
-    private let releaseOwner = BufferReleaseOwner()
+    private let releaseOwner: BufferReleaseOwner
     private var proxy: RawOwnedProxy
     private var busyState = BufferBusyState()
     private var releaseObserver: (() -> Void)?
@@ -252,8 +266,18 @@ public final class RawBuffer {
         height = bufferHeight
         stride = bufferStride
         bytes = bufferBytes
+        releaseOwner = BufferReleaseOwner(
+            invariantFailureSink: adoptionContext.invariantFailureSink
+        )
+        let adoptedPointer: OpaquePointer
+        do {
+            adoptedPointer = try adoptionContext.adopt(bufferPointer, interface: "wl_buffer")
+        } catch {
+            swl_buffer_destroy(bufferPointer)
+            throw error
+        }
         proxy = RawOwnedProxy(
-            pointer: adoptionContext.adopt(bufferPointer, interface: "wl_buffer"),
+            pointer: adoptedPointer,
             destroy: swl_buffer_destroy
         )
 
@@ -354,7 +378,7 @@ public final class RawSharedMemoryPool {
             mapping = memoryMapping
             proxyAdoption = adoptionContext
             proxy = RawOwnedProxy(
-                pointer: adoptionContext.adopt(poolPointer, interface: "wl_shm_pool"),
+                pointer: try adoptionContext.adopt(poolPointer, interface: "wl_shm_pool"),
                 destroy: swl_shm_pool_destroy
             )
         } catch {

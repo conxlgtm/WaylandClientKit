@@ -3,42 +3,49 @@ import CWaylandProtocols
 
 final class RegistryListenerOwner {
     private let state: RegistryState
+    private let invariantFailureSink: RawInvariantFailureSink
     var onGlobalRemoved: ((UInt32) -> Void)?
     private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_registry_listener_callbacks()
+        initialValue: swl_registry_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
     )
 
     private var callbacks: UnsafeMutablePointer<swl_registry_listener_callbacks> {
         listenerStorage.callbacks
     }
 
-    init(state registryState: RegistryState) {
+    init(
+        state registryState: RegistryState,
+        invariantFailureSink failureSink: RawInvariantFailureSink = .init()
+    ) {
         state = registryState
+        invariantFailureSink = failureSink
 
         callbacks.pointee.global = { data, _, name, interface, version in
-            guard let data, let interface else {
+            guard let interface else {
                 preconditionFailure("wl_registry global fired without Swift state")
             }
-            let owner = CallbackBox<RegistryListenerOwner>
-                .fromOpaque(data)
-                .requireOwner()
-            owner.state.recordGlobal(
-                name: name,
-                interfaceName: String(cString: interface),
-                version: version
-            )
+            RegistryListenerOwner.withOwner(
+                data,
+                message: "wl_registry global fired without Swift state"
+            ) { owner in
+                owner.state.recordGlobal(
+                    name: name,
+                    interfaceName: String(cString: interface),
+                    version: version
+                )
+            }
         }
 
         callbacks.pointee.global_remove = { data, _, name in
-            guard let data else {
-                preconditionFailure("wl_registry global_remove fired without Swift state")
+            RegistryListenerOwner.withOwner(
+                data,
+                message: "wl_registry global_remove fired without Swift state"
+            ) { owner in
+                owner.state.removeGlobal(name: name)
+                owner.onGlobalRemoved?(name)
             }
-            let owner = CallbackBox<RegistryListenerOwner>
-                .fromOpaque(data)
-                .requireOwner()
-            owner.state.removeGlobal(name: name)
-            owner.onGlobalRemoved?(name)
         }
     }
 
@@ -49,5 +56,19 @@ final class RegistryListenerOwner {
         guard result == 0 else {
             throw RuntimeError.registryListenerInstallationFailed
         }
+    }
+
+    func cancel() {
+        listenerStorage.invalidate()
+        onGlobalRemoved = nil
+    }
+
+    private static func withOwner(
+        _ data: UnsafeMutableRawPointer?,
+        message: @autoclosure () -> String,
+        _ body: (RegistryListenerOwner) -> Void
+    ) {
+        CListenerStorage<RegistryListenerOwner, swl_registry_listener_callbacks>
+            .withOwner(from: data, message: message(), body)
     }
 }
