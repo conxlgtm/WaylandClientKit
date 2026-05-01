@@ -4,22 +4,25 @@ SwiftWayland is an experimental Linux Wayland client package. Keep changes small
 
 ## Environment
 
-Reference environment:
+Swift 6.3.1 or newer must already be installed.
+The bootstrap script verifies Swift and Linux system dependencies by default; it does not install or switch Swift toolchains.
+It uses `Scripts/swift.sh` by default; set `SWIFT_COMMAND=/path/to/swift` for custom toolchain resolution.
 
-- Fedora
-- Swift 6.3.1
-- `wayland-devel`
-- `wayland-protocols-devel`
-- `pkgconf-pkg-config`
-- `libxkbcommon-devel`
-- `git`
-- `ripgrep`
+Core build requirements:
+
+- Swift 6.3.1 or newer
 - `clang`
+- `pkg-config`
+- `wayland-client`
+- `wayland-cursor`
+- `xkbcommon`
 
-Swift itself must already be installed and on `PATH` before running the bootstrap script.
+Install distro packages explicitly, or run the bootstrap installer mode for Debian/Ubuntu, Fedora/RHEL-like, Arch/Manjaro, openSUSE, or Alpine systems.
 
 ```bash
-./Scripts/bootstrap-fedora.sh
+./Scripts/bootstrap-linux.sh --check
+./Scripts/bootstrap-linux.sh --dry-run
+./Scripts/bootstrap-linux.sh --install
 ```
 
 ## Local Checks
@@ -45,6 +48,7 @@ Protocol XML lives under `Protocols/`. Generated C and header artifacts live und
 Regenerate only through:
 
 ```bash
+./Scripts/bootstrap-linux.sh --maintainer
 ./Scripts/generate-protocols.sh
 ```
 
