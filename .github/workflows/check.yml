@@ -39,6 +39,54 @@ jobs:
           pkg-config --modversion xkbcommon
           command -v wayland-scanner
           swiftlint version
+      - name: Dogfood bootstrap script
+        run: |
+          expect_bootstrap_failure() {
+            expected_message="$1"
+            shift
+
+            output="$("$@" 2>&1)" && {
+              echo "expected command to fail: $*"
+              exit 1
+            }
+
+            if ! printf '%s\n' "$output" | grep -F --quiet -- "$expected_message"; then
+              echo "expected error message: $expected_message"
+              echo "$output"
+              exit 1
+            fi
+          }
+
+          ./Scripts/bootstrap-linux.sh --check
+          ./Scripts/bootstrap-linux.sh --maintainer
+          ./Scripts/bootstrap-linux.sh --dry-run
+          ./Scripts/bootstrap-linux.sh --dry-run --package-manager emerge
+          ./Scripts/bootstrap-linux.sh --dry-run --package-manager nix
+
+          expect_bootstrap_failure \
+            "choose only one mode: --check, --install, or --dry-run" \
+            ./Scripts/bootstrap-linux.sh --install --dry-run
+          expect_bootstrap_failure \
+            "choose only one mode: --check, --install, or --dry-run" \
+            ./Scripts/bootstrap-linux.sh --check --install
+          expect_bootstrap_failure \
+            "--dry-run cannot be combined with --build" \
+            ./Scripts/bootstrap-linux.sh --dry-run --build
+          expect_bootstrap_failure \
+            "--dry-run cannot be combined with --maintainer" \
+            ./Scripts/bootstrap-linux.sh --dry-run --maintainer
+          expect_bootstrap_failure \
+            "STRICT_SWIFT must be 0 or 1" \
+            env STRICT_SWIFT=false ./Scripts/bootstrap-linux.sh --check
+          expect_bootstrap_failure \
+            "STRICT_SWIFT must be 0 or 1" \
+            env STRICT_SWIFT=2 ./Scripts/bootstrap-linux.sh --check
+          expect_bootstrap_failure \
+            "unsupported package manager: brew" \
+            ./Scripts/bootstrap-linux.sh --dry-run --package-manager brew
+          expect_bootstrap_failure \
+            "Nix support is shell-based" \
+            ./Scripts/bootstrap-linux.sh --install --package-manager nix
       - name: Check
         run: make check
 
