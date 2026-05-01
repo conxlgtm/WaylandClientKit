@@ -107,8 +107,11 @@ Supported package-manager mappings:
 | Arch/Manjaro | `clang git wayland wayland-protocols libxkbcommon make pkgconf ripgrep` |
 | openSUSE | `clang git wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
 | Alpine | `clang git wayland-dev wayland-protocols libxkbcommon-dev make pkgconf ripgrep` |
+| Gentoo | `sys-devel/clang dev-vcs/git dev-libs/wayland dev-libs/wayland-protocols dev-util/wayland-scanner x11-libs/libxkbcommon dev-build/make virtual/pkgconfig sys-apps/ripgrep` |
+| Nix/NixOS | `nixpkgs#clang nixpkgs#git nixpkgs#wayland nixpkgs#wayland-protocols nixpkgs#libxkbcommon nixpkgs#gnumake nixpkgs#pkg-config nixpkgs#ripgrep` |
 
 Alpine package installation is mapped for Wayland dependencies, but Swift toolchain availability may require separate setup.
+Nix/NixOS support is shell/declarative: `./Scripts/bootstrap-linux.sh --dry-run --package-manager nix` prints a `nix shell` command, and `--install` intentionally does not mutate a Nix profile or NixOS system configuration.
 
 ## Targets
 
@@ -163,6 +166,7 @@ Verify or bootstrap a Linux environment:
 ```bash
 ./Scripts/bootstrap-linux.sh --check
 ./Scripts/bootstrap-linux.sh --dry-run
+./Scripts/bootstrap-linux.sh --dry-run --package-manager nix
 ./Scripts/bootstrap-linux.sh --install
 ./Scripts/bootstrap-linux.sh --build
 ```

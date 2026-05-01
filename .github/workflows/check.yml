@@ -60,6 +60,8 @@ jobs:
           ./Scripts/bootstrap-linux.sh --check
           ./Scripts/bootstrap-linux.sh --maintainer
           ./Scripts/bootstrap-linux.sh --dry-run
+          ./Scripts/bootstrap-linux.sh --dry-run --package-manager emerge
+          ./Scripts/bootstrap-linux.sh --dry-run --package-manager nix
 
           expect_bootstrap_failure \
             "choose only one mode: --check, --install, or --dry-run" \
@@ -79,6 +81,12 @@ jobs:
           expect_bootstrap_failure \
             "STRICT_SWIFT must be 0 or 1" \
             env STRICT_SWIFT=2 ./Scripts/bootstrap-linux.sh --check
+          expect_bootstrap_failure \
+            "unsupported package manager: brew" \
+            ./Scripts/bootstrap-linux.sh --dry-run --package-manager brew
+          expect_bootstrap_failure \
+            "Nix support is shell-based" \
+            ./Scripts/bootstrap-linux.sh --install --package-manager nix
       - name: Check
         run: make check
 

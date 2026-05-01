@@ -17,11 +17,13 @@ Core build requirements:
 - `wayland-cursor`
 - `xkbcommon`
 
-Install distro packages explicitly, or run the bootstrap installer mode for Debian/Ubuntu, Fedora/RHEL-like, Arch/Manjaro, openSUSE, or Alpine systems.
+Install distro packages explicitly, or run the bootstrap installer mode for Debian/Ubuntu, Fedora/RHEL-like, Arch/Manjaro, openSUSE, Alpine, or Gentoo systems.
+For Nix/NixOS, use dry-run mode to print shell inputs and add them to a `nix shell`, flake, or `shell.nix`; bootstrap install mode does not mutate Nix profiles or NixOS system configuration.
 
 ```bash
 ./Scripts/bootstrap-linux.sh --check
 ./Scripts/bootstrap-linux.sh --dry-run
+./Scripts/bootstrap-linux.sh --dry-run --package-manager nix
 ./Scripts/bootstrap-linux.sh --install
 ```
 
