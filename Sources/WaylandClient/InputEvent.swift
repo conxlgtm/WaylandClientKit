@@ -39,6 +39,7 @@ public enum InputDiagnosticOperation: Equatable, Sendable {
     case keyboardKeymap
     case listener(String)
     case queueOverflow
+    case inputPipelineOverflow(InputPipelineOverflow)
     case cursor(String)
 }
 

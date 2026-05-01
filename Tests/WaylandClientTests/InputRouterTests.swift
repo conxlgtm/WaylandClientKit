@@ -436,6 +436,37 @@ struct SeatInputRouterTests {
     }
 
     @Test
+    func inputPipelineOverflowDiagnosticsRouteAtDisplayLevel() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 79)
+        let rawOverflow = RawInputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
+        let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
+
+        let routed = router.route(
+            rawEvent(
+                sequence: 1,
+                seatID: seatID,
+                kind: .diagnostic(
+                    RawInputDiagnostic(
+                        operation: .inputPipelineOverflow(rawOverflow),
+                        message: "input overflow"
+                    )
+                )
+            )
+        )
+
+        #expect(routed.first?.windowID == nil)
+        #expect(
+            routed.first?.kind
+                == .diagnostic(
+                    InputDiagnostic(
+                        operation: .inputPipelineOverflow(overflow),
+                        message: "input overflow"
+                    )
+                ))
+    }
+
+    @Test
     func seatRemovalClearsFocusedSurfacesForSeat() {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 10)

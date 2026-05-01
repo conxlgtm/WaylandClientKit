@@ -414,7 +414,16 @@ extension InputRouter {
             .listener(name)
         case .queueOverflow:
             .queueOverflow
+        case .inputPipelineOverflow(let overflow):
+            .inputPipelineOverflow(convertRawOverflow(overflow))
         }
+    }
+
+    func convertRawOverflow(_ overflow: RawInputPipelineOverflow) -> InputPipelineOverflow {
+        InputPipelineOverflow(
+            stage: .rawInputQueue,
+            capacity: overflow.capacity
+        )
     }
 
     func convert(_ axis: RawPointerAxisEvent) -> PointerAxisEvent {

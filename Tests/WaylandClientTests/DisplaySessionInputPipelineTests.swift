@@ -135,6 +135,107 @@ struct DisplaySessionInputPipelineTests {
                 == .pointer(.entered(PointerLocation(x: 0, y: 0), serial: 42))
         )
     }
+
+    @Test
+    func pendingInputOverflowDrainsPrefixThenFailureAndIgnoresFutureInput() {
+        var state = PendingInputState.accepting(
+            [clientSeatRemoved(sequence: 1)]
+        )
+
+        state.append(
+            [
+                clientSeatRemoved(sequence: 2),
+                clientSeatRemoved(sequence: 3),
+            ],
+            capacity: 2,
+            makeOverflowEvent: sessionPendingOverflowEvent
+        )
+
+        let drainedEvents = state.drain()
+
+        #expect(drainedEvents.map(\.sequence) == [1, 2, 3])
+        #expect(drainedEvents.first?.kind == .seat(.removed))
+        #expect(drainedEvents.dropFirst().first?.kind == .seat(.removed))
+        #expect(
+            drainedEvents.last?.kind
+                == .diagnostic(
+                    InputDiagnostic(
+                        operation: .inputPipelineOverflow(
+                            InputPipelineOverflow(stage: .sessionPendingInput, capacity: 2)
+                        ),
+                        message: "session pending overflow"
+                    )
+                )
+        )
+
+        state.append(
+            [clientSeatRemoved(sequence: 4)],
+            capacity: 2,
+            makeOverflowEvent: sessionPendingOverflowEvent
+        )
+        #expect(state.drain().isEmpty)
+    }
+
+    @Test
+    func pendingInputOverflowKeepsAcceptedPrefixFromOverflowingBatch() {
+        var state = PendingInputState.accepting([])
+
+        state.append(
+            [
+                clientSeatRemoved(sequence: 1),
+                clientSeatRemoved(sequence: 2),
+                clientSeatRemoved(sequence: 3),
+            ],
+            capacity: 2,
+            makeOverflowEvent: sessionPendingOverflowEvent
+        )
+
+        let drainedEvents = state.drain()
+
+        #expect(drainedEvents.map(\.sequence) == [1, 2, 3])
+        #expect(drainedEvents.first?.kind == .seat(.removed))
+        #expect(drainedEvents.dropFirst().first?.kind == .seat(.removed))
+        #expect(
+            drainedEvents.dropFirst(2).first?.kind
+                == .diagnostic(
+                    InputDiagnostic(
+                        operation: .inputPipelineOverflow(
+                            InputPipelineOverflow(stage: .sessionPendingInput, capacity: 2)
+                        ),
+                        message: "session pending overflow"
+                    )
+                )
+        )
+    }
+
+    @Test
+    func rawAndPendingInputPipelineOverflowsExposeDistinctStages() {
+        let rawOverflow = InputDiagnostic(
+            operation: .inputPipelineOverflow(
+                InputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
+            ),
+            message: "raw input queue exceeded capacity 4"
+        )
+        let pendingOverflow = sessionPendingOverflowEvent(from: clientSeatRemoved(sequence: 1))
+
+        #expect(
+            rawOverflow.operation
+                == .inputPipelineOverflow(
+                    InputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
+                )
+        )
+        #expect(
+            pendingOverflow.kind
+                == .diagnostic(
+                    InputDiagnostic(
+                        operation: .inputPipelineOverflow(
+                            InputPipelineOverflow(stage: .sessionPendingInput, capacity: 2)
+                        ),
+                        message: "session pending overflow"
+                    )
+                )
+        )
+    }
 }
 
 private final class RegisteringRawObserver: RawInputEventObserving {
@@ -157,4 +258,29 @@ private final class RegisteringRawObserver: RawInputEventObserving {
         router.register(windowID: windowID, surfaceID: surfaceID)
         return []
     }
+}
+
+private func clientSeatRemoved(sequence: UInt64) -> InputEvent {
+    InputEvent(
+        sequence: sequence,
+        seatID: SeatID(rawValue: 42),
+        windowID: nil,
+        kind: .seat(.removed)
+    )
+}
+
+private func sessionPendingOverflowEvent(from event: InputEvent) -> InputEvent {
+    InputEvent(
+        sequence: event.sequence,
+        seatID: event.seatID,
+        windowID: nil,
+        kind: .diagnostic(
+            InputDiagnostic(
+                operation: .inputPipelineOverflow(
+                    InputPipelineOverflow(stage: .sessionPendingInput, capacity: 2)
+                ),
+                message: "session pending overflow"
+            )
+        )
+    )
 }

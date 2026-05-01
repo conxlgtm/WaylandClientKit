@@ -10,24 +10,23 @@ package final class DisplaySession {
     private let keyboardInterpreter: KeyboardInterpreter
     private let cursorManager: CursorManager
     private let maximumPendingInputEventCount: Int
-    private var pendingInputEvents: [InputEvent] = []
+    private var pendingInputState = PendingInputState.accepting([])
     private var nextWindowID: UInt64 = 1
 
     package init(
         connection rawConnection: RawDisplayConnection,
         cursorConfiguration: CursorConfiguration = .init(),
-        maximumPendingInputEventCount pendingInputCapacity: Int =
-            EventStreamConfiguration().inputEventCapacity
+        inputPipelineConfiguration: InputPipelineConfiguration = .init()
     ) throws {
         rawConnection.preconditionIsOwnerThread()
-        precondition(pendingInputCapacity > 0, "Pending input event capacity must be positive")
+        try inputPipelineConfiguration.validate()
         connection = rawConnection
         keyboardInterpreter = try KeyboardInterpreter()
         cursorManager = try CursorManager(
             connection: rawConnection,
             configuration: cursorConfiguration
         )
-        maximumPendingInputEventCount = pendingInputCapacity
+        maximumPendingInputEventCount = inputPipelineConfiguration.pendingInputEventCapacity
     }
 
     @available(
@@ -172,8 +171,7 @@ package final class DisplaySession {
         connection.preconditionIsOwnerThread()
         processPendingRawInputEvents()
 
-        defer { pendingInputEvents.removeAll(keepingCapacity: true) }
-        return pendingInputEvents
+        return pendingInputState.drain()
     }
 
     package func createTopLevelWindowOnOwnerThread(
@@ -211,6 +209,11 @@ package final class DisplaySession {
     }
 
     private func processPendingRawInputEvents() {
+        if pendingInputState.hasFailed {
+            _ = connection.drainInputEvents()
+            return
+        }
+
         let routedEvents = routeSessionInputEvents(
             from: connection.drainInputEvents(),
             inputRouter: inputRouter,
@@ -223,28 +226,119 @@ package final class DisplaySession {
 
     private func appendPendingInputEvents(_ inputEvents: [InputEvent]) {
         guard !inputEvents.isEmpty else { return }
+        pendingInputState.append(
+            inputEvents,
+            capacity: maximumPendingInputEventCount,
+            makeOverflowEvent: makePendingInputOverflowDiagnostic
+        )
+    }
 
-        guard pendingInputEvents.count + inputEvents.count <= maximumPendingInputEventCount else {
-            pendingInputEvents.removeAll(keepingCapacity: true)
-            let firstEvent = inputEvents[0]
-            let message = "session input queue exceeded capacity \(maximumPendingInputEventCount)"
-            pendingInputEvents.append(
-                InputEvent(
-                    sequence: firstEvent.sequence,
-                    seatID: firstEvent.seatID,
-                    windowID: nil,
-                    kind: .diagnostic(
-                        InputDiagnostic(
-                            operation: .queueOverflow,
-                            message: message
+    private func makePendingInputOverflowDiagnostic(from event: InputEvent) -> InputEvent {
+        let message = "session input queue exceeded capacity \(maximumPendingInputEventCount)"
+        return InputEvent(
+            sequence: event.sequence,
+            seatID: event.seatID,
+            windowID: nil,
+            kind: .diagnostic(
+                InputDiagnostic(
+                    operation: .inputPipelineOverflow(
+                        InputPipelineOverflow(
+                            stage: .sessionPendingInput,
+                            capacity: maximumPendingInputEventCount
                         )
-                    )
+                    ),
+                    message: message
                 )
             )
-            return
+        )
+    }
+}
+
+enum PendingInputState {
+    case accepting([InputEvent])
+    case failed(bufferedPrefix: [InputEvent], overflow: PendingInputOverflowEvent)
+    case drainedAfterFailure
+
+    var hasFailed: Bool {
+        switch self {
+        case .accepting:
+            false
+        case .failed, .drainedAfterFailure:
+            true
+        }
+    }
+
+    mutating func append(
+        _ inputEvents: [InputEvent],
+        capacity: Int,
+        makeOverflowEvent: (InputEvent) -> InputEvent
+    ) {
+        guard case .accepting(var pendingEvents) = self else { return }
+
+        for inputEvent in inputEvents {
+            if let overflow = PendingInputOverflowEvent(inputEvent) {
+                self = .failed(bufferedPrefix: pendingEvents, overflow: overflow)
+                return
+            }
+
+            guard pendingEvents.count < capacity else {
+                self = .failed(
+                    bufferedPrefix: pendingEvents,
+                    overflow: PendingInputOverflowEvent(
+                        from: inputEvent,
+                        makeOverflowEvent: makeOverflowEvent
+                    )
+                )
+                return
+            }
+
+            pendingEvents.append(inputEvent)
         }
 
-        pendingInputEvents.append(contentsOf: inputEvents)
+        self = .accepting(pendingEvents)
+    }
+
+    mutating func drain() -> [InputEvent] {
+        switch self {
+        case .accepting(let inputEvents):
+            self = .accepting([])
+            return inputEvents
+        case .failed(let bufferedPrefix, let overflow):
+            self = .drainedAfterFailure
+            return bufferedPrefix + [overflow.inputEvent]
+        case .drainedAfterFailure:
+            return []
+        }
+    }
+}
+
+struct PendingInputOverflowEvent {
+    let inputEvent: InputEvent
+
+    init?(_ event: InputEvent) {
+        guard Self.isInputPipelineOverflowDiagnostic(event) else { return nil }
+        inputEvent = event
+    }
+
+    init(
+        from rejectedEvent: InputEvent,
+        makeOverflowEvent: (InputEvent) -> InputEvent
+    ) {
+        let overflow = makeOverflowEvent(rejectedEvent)
+        precondition(
+            Self.isInputPipelineOverflowDiagnostic(overflow),
+            "Pending input overflow event must be an input-pipeline overflow diagnostic"
+        )
+        inputEvent = overflow
+    }
+
+    private static func isInputPipelineOverflowDiagnostic(_ event: InputEvent) -> Bool {
+        guard case .diagnostic(let diagnostic) = event.kind else { return false }
+        if case .inputPipelineOverflow = diagnostic.operation {
+            return true
+        }
+
+        return false
     }
 }
 
