@@ -2,6 +2,13 @@ import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
 
+private struct RegistryResources {
+    let registry: RawRegistry
+    let state: RegistryState
+    let listenerOwner: RegistryListenerOwner
+    let inputEventQueue: RawInputEventQueue
+}
+
 public final class RawDisplayConnection {
     public static let defaultDiscoveryTimeoutMS: Int32 = 1_000
 
@@ -50,12 +57,15 @@ public final class RawDisplayConnection {
         threadAffinity.preconditionIsOwnerThread(operation, file: file, line: line)
     }
 
-    @available(
-        *,
-        noasync,
-        message: "Use a synchronous owner-thread Wayland loop."
-    )
+    @available(*, noasync, message: "Use a synchronous owner-thread Wayland loop.")
     public static func connect() throws -> RawDisplayConnection {
+        try connect(invariantFailureSink: RawInvariantFailureSink())
+    }
+
+    @available(*, noasync, message: "Use a synchronous owner-thread Wayland loop.")
+    package static func connect(
+        invariantFailureSink: RawInvariantFailureSink
+    ) throws -> RawDisplayConnection {
         guard let displayPointer = wl_display_connect(nil) else {
             throw RuntimeError.connectionFailed
         }
@@ -87,41 +97,61 @@ public final class RawDisplayConnection {
         }
         swl_display_wrapper_destroy(wrappedDisplay)
 
+        let registryResources = try createRegistryResources(
+            displayPointer: displayPointer,
+            eventQueue: rawEventQueue,
+            registryPointer: registryPointer,
+            invariantFailureSink: invariantFailureSink
+        )
+
+        return RawDisplayConnection(
+            display: rawDisplay,
+            eventQueue: rawEventQueue,
+            invariantFailureSink: invariantFailureSink,
+            registry: registryResources.registry,
+            registryState: registryResources.state,
+            registryListenerOwner: registryResources.listenerOwner,
+            inputEventQueue: registryResources.inputEventQueue
+        )
+    }
+
+    private static func createRegistryResources(
+        displayPointer: OpaquePointer,
+        eventQueue: RawEventQueue,
+        registryPointer: OpaquePointer,
+        invariantFailureSink: RawInvariantFailureSink
+    ) throws -> RegistryResources {
         let state = RegistryState()
-        let invariantFailureSink = RawInvariantFailureSink()
         let listenerOwner = RegistryListenerOwner(
             state: state,
             invariantFailureSink: invariantFailureSink
         )
         let inputEventQueue = RawInputEventQueue()
 
-        let rawRegistry = RawRegistry(
-            opaquePointer: rawEventQueue.assertedProxy(
-                registryPointer,
-                interface: "wl_registry"
-            ),
-            version: 1,
-            ownership: .connectionLifetime
-        )
-
         do {
+            let adoptedRegistryPointer = try eventQueue.assertedProxy(
+                registryPointer,
+                interface: "wl_registry",
+                invariantFailureSink: invariantFailureSink
+            )
             try listenerOwner.install(on: registryPointer)
+            let registry = RawRegistry(
+                opaquePointer: adoptedRegistryPointer,
+                version: 1,
+                ownership: .connectionLifetime
+            )
+            return RegistryResources(
+                registry: registry,
+                state: state,
+                listenerOwner: listenerOwner,
+                inputEventQueue: inputEventQueue
+            )
         } catch {
             swl_registry_destroy(registryPointer)
-            rawEventQueue.destroy()
+            eventQueue.destroy()
             wl_display_disconnect(displayPointer)
             throw error
         }
-
-        return RawDisplayConnection(
-            display: rawDisplay,
-            eventQueue: rawEventQueue,
-            invariantFailureSink: invariantFailureSink,
-            registry: rawRegistry,
-            registryState: state,
-            registryListenerOwner: listenerOwner,
-            inputEventQueue: inputEventQueue
-        )
     }
 
     @available(
@@ -300,7 +330,12 @@ extension RawDisplayConnection {
             throw RuntimeError.bindFailed("wl_shm")
         }
 
-        return .init(pointer: shm, version: shmVersion, proxyAdoption: proxyAdoption)
+        do {
+            return try .init(pointer: shm, version: shmVersion, proxyAdoption: proxyAdoption)
+        } catch {
+            compositor.destroy()
+            throw error
+        }
     }
 
     private func bindCompositor(
@@ -318,7 +353,7 @@ extension RawDisplayConnection {
             throw RuntimeError.bindFailed("wl_compositor")
         }
 
-        return .init(
+        return try .init(
             pointer: compositor,
             version: compositorVersion,
             proxyAdoption: proxyAdoption
@@ -351,7 +386,6 @@ extension RawDisplayConnection {
                 proxyAdoption: proxyAdoption
             )
         } catch {
-            swl_xdg_wm_base_destroy(xdgWmBase)
             shm.destroy()
             compositor.destroy()
             throw error
@@ -380,116 +414,5 @@ extension RawDisplayConnection {
             compositor.destroy()
             throw error
         }
-    }
-}
-
-extension RawDisplayConnection {
-    package var eventLoopFileDescriptor: CInt {
-        preconditionIsOwnerThread()
-        return EventLoop.fileDescriptor(display: display.opaquePointer)
-    }
-
-    package func dispatchPendingEvents() throws -> Int32 {
-        preconditionIsOwnerThread()
-        return try QueueEventLoop.dispatchPending(
-            display: display.opaquePointer,
-            eventQueue: eventQueue.opaquePointer
-        )
-    }
-
-    package func prepareReadEvents() throws -> Bool {
-        preconditionIsOwnerThread()
-        return try QueueEventLoop.prepareRead(
-            display: display.opaquePointer,
-            eventQueue: eventQueue.opaquePointer
-        )
-    }
-
-    package func flushForExternalEventLoop() throws -> Bool {
-        preconditionIsOwnerThread()
-        return try EventLoop.flushForExternalPoll(display: display.opaquePointer)
-    }
-
-    package func readEvents() throws {
-        preconditionIsOwnerThread()
-        try EventLoop.readEvents(display: display.opaquePointer)
-    }
-
-    package func cancelReadEvents() {
-        preconditionIsOwnerThread()
-        EventLoop.cancelRead(display: display.opaquePointer)
-    }
-
-    package func pumpEvents(
-        timeoutMilliseconds: Int32,
-        wakeFileDescriptor: CInt,
-        drainWakeFileDescriptor: @escaping () -> Void
-    ) throws {
-        preconditionIsOwnerThread()
-
-        try QueueEventLoop.pumpOnce(
-            display: display.opaquePointer,
-            eventQueue: eventQueue.opaquePointer,
-            timeoutMilliseconds: timeoutMilliseconds,
-            wakeFileDescriptor: wakeFileDescriptor,
-            drainWakeFileDescriptor: drainWakeFileDescriptor
-        )
-    }
-
-    @available(
-        *,
-        noasync,
-        message: "Run discovery from the owner-thread Wayland loop."
-    )
-    public func completeInitialDiscovery(
-        timeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMS
-    ) throws {
-        preconditionIsOwnerThread()
-        guard timeoutMilliseconds >= 0 else {
-            throw RuntimeError.operationTimedOut(
-                "initial discovery timeout must be greater than or equal to zero"
-            )
-        }
-
-        let wrappedDisplay = try createDisplayWrapperOnEventQueue()
-        guard let syncCallback = swl_display_sync(wrappedDisplay) else {
-            swl_display_wrapper_destroy(wrappedDisplay)
-            throw RuntimeError.displaySyncRequestFailed
-        }
-        swl_display_wrapper_destroy(wrappedDisplay)
-        _ = proxyAdoption.adopt(syncCallback, interface: "wl_callback")
-
-        var didFire = false
-        let deadline = try rawMonotonicMilliseconds() + Int64(timeoutMilliseconds)
-        let registration = try FrameCallbackRegistration(
-            pointer: syncCallback,
-            onDone: { didFire = true },
-            invariantFailureSink: invariantFailureSink
-        )
-
-        try withExtendedLifetime(registration) {
-            while !didFire {
-                let remainingMilliseconds = deadline - (try rawMonotonicMilliseconds())
-                guard remainingMilliseconds > 0 else {
-                    throw RuntimeError.operationTimedOut("timed out waiting for initial globals")
-                }
-
-                let boundedRemaining = Int32(min(remainingMilliseconds, Int64(Int32.max)))
-                try QueueEventLoop.pumpOnce(
-                    display: display.opaquePointer,
-                    eventQueue: eventQueue.opaquePointer,
-                    timeoutMilliseconds: min(boundedRemaining, 50)
-                )
-            }
-        }
-    }
-
-    private func createDisplayWrapperOnEventQueue() throws -> OpaquePointer {
-        guard let wrappedDisplay = swl_display_create_wrapper(display.opaquePointer) else {
-            throw RuntimeError.displayWrapperCreationFailed
-        }
-
-        swl_display_wrapper_set_queue(wrappedDisplay, eventQueue.opaquePointer)
-        return wrappedDisplay
     }
 }

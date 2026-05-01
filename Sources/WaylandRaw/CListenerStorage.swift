@@ -37,11 +37,9 @@ final class CListenerStorage<Owner: AnyObject, Callbacks> {
         _ body: (Owner) throws -> Result
     ) rethrows -> Result? {
         guard let data else {
-            #if DEBUG
-                preconditionFailure(message())
-            #else
-                return nil
-            #endif
+            RawInvariantFailureSink.trapForUnroutedFatalRawInvariantFailure(
+                .callbackWithoutSwiftState(message())
+            )
         }
 
         let storage = Unmanaged<CListenerStorage<Owner, Callbacks>>
@@ -85,7 +83,11 @@ final class CListenerStorage<Owner: AnyObject, Callbacks> {
     }
 
     private func reportFatalInvariantFailure(_ failure: RawInvariantFailure) {
-        invariantFailureSink?.reportFatalRawInvariantFailure(failure)
+        guard let invariantFailureSink else {
+            RawInvariantFailureSink.trapForUnroutedFatalRawInvariantFailure(failure)
+        }
+
+        invariantFailureSink.reportFatalRawInvariantFailure(failure)
     }
 
     deinit {

@@ -108,6 +108,19 @@ struct DisplayEventHubTests {
         }
     }
 
+    @Test
+    func fatalInternalInvariantTerminatesDisplayAndInputStreams() async {
+        let hub = DisplayEventHub()
+        var displayIterator = hub.displayEvents().makeAsyncIterator()
+        var inputIterator = hub.inputEvents().makeAsyncIterator()
+        let error = WaylandDisplayError.internalInvariantViolation("listener state lost")
+
+        hub.finish(throwing: error)
+
+        await expectFailure(error, from: &displayIterator)
+        await expectFailure(error, from: &inputIterator)
+    }
+
     private func expectNext(
         _ expectedEvent: DisplayEvent,
         from iterator: inout DisplayEventsIterator
@@ -147,6 +160,30 @@ struct DisplayEventHubTests {
                         capacity: capacity
                     )
             )
+        }
+    }
+
+    private func expectFailure(
+        _ expectedError: WaylandDisplayError,
+        from iterator: inout DisplayEventsIterator
+    ) async {
+        do {
+            _ = try await iterator.next()
+            Issue.record("Expected display stream failure")
+        } catch {
+            #expect(error == expectedError)
+        }
+    }
+
+    private func expectFailure(
+        _ expectedError: WaylandDisplayError,
+        from iterator: inout InputEventsIterator
+    ) async {
+        do {
+            _ = try await iterator.next()
+            Issue.record("Expected input stream failure")
+        } catch {
+            #expect(error == expectedError)
         }
     }
 }

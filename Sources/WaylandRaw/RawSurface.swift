@@ -12,8 +12,13 @@ public final class RawSurface {
         pointer surfacePointer: OpaquePointer,
         version surfaceVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
-    ) {
-        pointer = adoptionContext.adopt(surfacePointer, interface: "wl_surface")
+    ) throws(RuntimeError) {
+        do {
+            pointer = try adoptionContext.adopt(surfacePointer, interface: "wl_surface")
+        } catch {
+            swl_surface_destroy(surfacePointer)
+            throw error
+        }
         version = surfaceVersion
         proxyAdoption = adoptionContext
     }
@@ -25,7 +30,12 @@ public final class RawSurface {
             throw RuntimeError.frameRequestFailed
         }
 
-        _ = proxyAdoption.adopt(callback, interface: "wl_callback")
+        do {
+            _ = try proxyAdoption.adopt(callback, interface: "wl_callback")
+        } catch {
+            swl_callback_destroy(callback)
+            throw error
+        }
         return try .init(
             pointer: callback,
             onDone: handler,

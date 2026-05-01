@@ -299,7 +299,9 @@ prepare-read and read-events/cancel-read.
 Display streams are bounded throwing streams. Normal `WaylandDisplay.close()` finishes them
 without error; fatal Wayland/protocol/poll failures finish subscribers with
 `WaylandDisplayError`; subscriber overflow terminates only the slow subscriber rather than
-backpressuring the owner thread.
+backpressuring the owner thread. Recovery from subscriber overflow is to create a new
+subscription; overflowed buffered events are not replayed. Fatal display failure is
+different: the display is no longer usable and callers must reconnect.
 
 Nonterminal runtime degradation is reported as diagnostics. Display subscribers receive
 `DisplayEvent.diagnostic`, while input subscribers still receive input-specific diagnostic

@@ -78,22 +78,17 @@ package final class SeatRegistry {
             throw RuntimeError.bindFailed("wl_seat")
         }
 
-        do {
-            let seat = try RawSeat(
-                id: RawSeatID(rawValue: globalName),
-                pointer: seatPointer,
-                version: negotiated,
-                eventSink: eventSink,
-                proxyAdoption: proxyAdoption,
-                invariantFailureSink: invariantFailureSink,
-                operations: operations
-            )
-            seatsByGlobalName[globalName] = seat
-            return seat
-        } catch {
-            operations.releaseSeat(seatPointer)
-            throw error
-        }
+        let seat = try RawSeat(
+            id: RawSeatID(rawValue: globalName),
+            pointer: seatPointer,
+            version: negotiated,
+            eventSink: eventSink,
+            proxyAdoption: proxyAdoption,
+            invariantFailureSink: invariantFailureSink,
+            operations: operations
+        )
+        seatsByGlobalName[globalName] = seat
+        return seat
     }
 
     package func removeSeat(globalName: UInt32) {

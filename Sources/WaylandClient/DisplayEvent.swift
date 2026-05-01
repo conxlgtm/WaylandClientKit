@@ -19,6 +19,9 @@ public enum DisplayDiagnostic: Equatable, Sendable {
     case input(InputDiagnostic, severity: DiagnosticSeverity)
 }
 
+/// Overflow is scoped to the individual subscription whose buffer filled.
+/// The display connection remains alive; create a new subscription to resume
+/// receiving future events. Events discarded by overflow are not replayed.
 public enum EventStreamOverflowPolicy: Equatable, Sendable {
     case failFast
 }

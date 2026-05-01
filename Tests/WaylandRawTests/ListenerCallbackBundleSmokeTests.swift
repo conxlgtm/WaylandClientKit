@@ -17,6 +17,16 @@ struct ListenerCallbackBundleSmokeTests {  // swiftlint:disable:this type_body_l
     }
 
     @Test
+    func shmFormatShimsResolveIntoSwift() {
+        let xrgb8888 = swl_shm_format_xrgb8888
+        let argb8888 = swl_shm_format_argb8888
+
+        #expect(MemoryLayout.size(ofValue: xrgb8888) > 0)
+        #expect(MemoryLayout.size(ofValue: argb8888) > 0)
+        #expect(swl_shm_format_xrgb8888() != swl_shm_format_argb8888())
+    }
+
+    @Test
     func pointerListenerCallbackBundleImportsIntoSwift() {
         var callbacks = swl_pointer_listener_callbacks()
 

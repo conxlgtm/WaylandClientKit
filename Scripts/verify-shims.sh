@@ -33,6 +33,8 @@ protocol_symbols=(
     swl_keyboard_add_listener
     swl_touch_add_listener
     swl_pointer_set_cursor
+    swl_shm_format_xrgb8888
+    swl_shm_format_argb8888
     swl_proxy_get_version
     swl_proxy_get_id
     swl_proxy_get_queue_raw

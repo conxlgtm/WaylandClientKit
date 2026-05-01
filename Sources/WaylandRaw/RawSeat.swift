@@ -44,7 +44,16 @@ public final class RawSeat {
         installListener: Bool = true
     ) throws {
         id = seatID
-        pointer = adoptionContext?.adopt(seatPointer, interface: "wl_seat") ?? seatPointer
+        let adoptedPointer: OpaquePointer
+        do {
+            adoptedPointer =
+                try adoptionContext?.adopt(seatPointer, interface: "wl_seat")
+                ?? seatPointer
+        } catch {
+            seatOperations.releaseSeat(seatPointer)
+            throw error
+        }
+        pointer = adoptedPointer
         version = seatVersion
         eventSink = inputEventSink
         proxyAdoption = adoptionContext
@@ -57,7 +66,7 @@ public final class RawSeat {
 
         guard installListener else { return }
 
-        try listenerOwner.install(on: seatPointer) { [weak seat = self] event in
+        try listenerOwner.install(on: adoptedPointer) { [weak seat = self] event in
             seat?.handleSeatEvent(event)
         }
     }
@@ -219,7 +228,7 @@ public final class RawSeat {
             throw error
         }
 
-        pointerDevice = RawInputChildProxy(
+        pointerDevice = try RawInputChildProxy(
             id: deviceID,
             pointer: childPointer,
             version: operations.proxyVersion(childPointer),
@@ -261,7 +270,7 @@ public final class RawSeat {
             throw error
         }
 
-        keyboardDevice = RawInputChildProxy(
+        keyboardDevice = try RawInputChildProxy(
             id: deviceID,
             pointer: childPointer,
             version: operations.proxyVersion(childPointer),
@@ -294,7 +303,7 @@ public final class RawSeat {
             throw error
         }
 
-        touchDevice = RawInputChildProxy(
+        touchDevice = try RawInputChildProxy(
             id: deviceID,
             pointer: childPointer,
             version: operations.proxyVersion(childPointer),
