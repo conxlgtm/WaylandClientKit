@@ -29,6 +29,7 @@ public enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
     case shortRead(expectedBytes: Int, actualBytes: Int)
     case invalidWaylandArrayByteCount(byteCount: Int, elementSize: Int)
     case protocolError(interfaceName: String?, objectID: UInt32, code: Int32)
+    case proxyQueueMismatch(String)
 
     public static func fromDisplay(_ display: OpaquePointer, fallbackErrno: Int32? = nil)
         -> RuntimeError
@@ -111,6 +112,8 @@ public enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
             "Wayland array byte count \(byteCount) is not divisible by \(elementSize)"
         case .protocolError(let iface, let oid, let code):
             "Wayland protocol error interface=\(iface ?? "?") object=\(oid) code=\(code)"
+        case .proxyQueueMismatch(let interfaceName):
+            "\(interfaceName) proxy is not assigned to the display owner event queue"
         }
     }
 }

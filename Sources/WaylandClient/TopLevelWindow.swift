@@ -79,10 +79,16 @@ package final class TopLevelWindow {
         newTopLevel.setTitle(configuration.title)
         newTopLevel.setAppID(configuration.appID)
 
-        let newXDGSurfaceOwner = XDGSurfaceOwner(configureState: configureState)
+        let newXDGSurfaceOwner = XDGSurfaceOwner(
+            configureState: configureState,
+            invariantFailureSink: connection.invariantFailureSink
+        )
         try newXDGSurfaceOwner.install(on: newXDGSurface)
 
-        let newTopLevelOwner = XDGTopLevelOwner(configureState: configureState)
+        let newTopLevelOwner = XDGTopLevelOwner(
+            configureState: configureState,
+            invariantFailureSink: connection.invariantFailureSink
+        )
         try newTopLevelOwner.install(on: newTopLevel) { [weak window = self] in
             guard let window else { return }
 
@@ -349,10 +355,12 @@ extension TopLevelWindow {
         onClose = nil
         onCloseRequested = nil
 
+        topLevelOwner?.cancel()
         topLevel?.destroy()
         topLevel = nil
         topLevelOwner = nil
 
+        xdgSurfaceOwner?.cancel()
         xdgSurface?.destroy()
         xdgSurface = nil
         xdgSurfaceOwner = nil

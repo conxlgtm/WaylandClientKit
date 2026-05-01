@@ -149,7 +149,10 @@ public actor WaylandDisplay {
         eventStreamConfiguration: EventStreamConfiguration
     ) throws {
         precondition(core == nil, "WaylandDisplay initialized more than once")
-        let connection = try RawDisplayConnection.connect()
+        let invariantFailureSink = RawInvariantFailureSink()
+        let connection = try RawDisplayConnection.connect(
+            invariantFailureSink: invariantFailureSink
+        )
         try connection.completeInitialDiscovery(timeoutMilliseconds: discoveryTimeoutMilliseconds)
         let session = try DisplaySession(
             connection: connection,
@@ -157,6 +160,7 @@ public actor WaylandDisplay {
             maximumPendingInputEventCount: eventStreamConfiguration.inputEventCapacity
         )
         let displayCore = DisplayCore(session: session, eventHub: runtime.eventHub)
+        session.setRawInvariantFailureReporter(displayCore)
         let source = DisplayEventSource(core: displayCore)
         core = displayCore
         eventSource = source
@@ -216,200 +220,15 @@ private final class WaylandDisplayRuntime: Sendable {
         eventHub.finish(throwing: .closed)
         executor.abandonWaylandEventSourceWithoutDestroyingRawResources()
 
+        // A missed close can deinitialize from an arbitrary thread. Normal
+        // Wayland teardown is ordered owner-thread work, so release builds
+        // abandon the raw graph instead of faking cleanup from deinit.
         if let leakedCore = core {
             unsafe intentionallyLeakObjectForWrongThreadResourceFallback(leakedCore)
             core = nil
         }
 
         executor.requestStopAfterCurrentJob(abandoningWaylandSources: true)
-    }
-}
-
-@safe
-private final class DisplayCore {
-    private let eventHub: DisplayEventHub
-    private var session: DisplaySession?
-    private var windows: [WindowID: TopLevelWindow] = [:]
-    private(set) var isClosed = false
-
-    init(session activeSession: DisplaySession, eventHub displayEventHub: DisplayEventHub) {
-        session = activeSession
-        eventHub = displayEventHub
-    }
-
-    func currentPointerCursor() throws -> PointerCursor {
-        try requireSession().pointerCursorOnOwnerThread
-    }
-
-    @discardableResult
-    func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {
-        try requireSession().setPointerCursorOnOwnerThread(cursor)
-    }
-
-    func createTopLevelWindowID(
-        configuration windowConfiguration: WindowConfiguration = .init()
-    ) throws -> WindowID {
-        let window = try requireSession().createTopLevelWindowOnOwnerThread(
-            configuration: windowConfiguration
-        )
-        installEventCallbacks(for: window)
-        windows[window.id] = window
-        return window.id
-    }
-
-    func showWindow(
-        _ windowID: WindowID,
-        timeoutMilliseconds: Int32,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        let window = try requireWindow(windowID)
-        try window.showOnOwnerThread(timeoutMilliseconds: timeoutMilliseconds, draw)
-        if let session {
-            publishInputEvents(session.drainInputEventsOnOwnerThread())
-        }
-    }
-
-    func redraw(
-        _ windowID: WindowID,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        let window = try requireWindow(windowID)
-        try window.redrawOnOwnerThread(draw)
-    }
-
-    func windowIsClosed(_ windowID: WindowID) throws -> Bool {
-        try requireWindow(windowID).isClosedOnOwnerThread
-    }
-
-    func windowNeedsRedraw(_ windowID: WindowID) throws -> Bool {
-        try requireWindow(windowID).needsRedrawOnOwnerThread
-    }
-
-    func requestRedraw(_ windowID: WindowID) throws {
-        try requireWindow(windowID).requestRedrawOnOwnerThread()
-    }
-
-    func closeWindow(_ windowID: WindowID) {
-        guard let window = windows.removeValue(forKey: windowID) else {
-            return
-        }
-
-        window.closeOnOwnerThread()
-        eventHub.publish(.windowClosed(windowID))
-    }
-
-    func close() {
-        guard !isClosed else { return }
-
-        isClosed = true
-        for windowID in Array(windows.keys) {
-            closeWindow(windowID)
-        }
-
-        session = nil
-        eventHub.finish()
-    }
-
-    func fail(_ error: WaylandDisplayError) {
-        guard !isClosed else { return }
-
-        isClosed = true
-        windows.removeAll(keepingCapacity: false)
-        session = nil
-        eventHub.finish(throwing: error)
-    }
-
-    func pumpOnce(
-        timeoutMilliseconds: Int32,
-        wakeFileDescriptor: CInt,
-        drainWakeFileDescriptor: @escaping () -> Void
-    ) throws {
-        guard !isClosed else { return }
-        let activeSession = try requireSession()
-        try activeSession.pumpEventsOnOwnerThread(
-            timeoutMilliseconds: timeoutMilliseconds,
-            wakeFileDescriptor: wakeFileDescriptor,
-            drainWakeFileDescriptor: drainWakeFileDescriptor
-        )
-        publishInputEvents(activeSession.drainInputEventsOnOwnerThread())
-    }
-
-    func fileDescriptor() throws -> CInt {
-        try requireSession().eventLoopFileDescriptorOnOwnerThread
-    }
-
-    @discardableResult
-    func dispatchPending() throws -> Int32 {
-        guard !isClosed else { return 0 }
-        let activeSession = try requireSession()
-        let dispatchedCount = try activeSession.dispatchPendingEventsOnOwnerThread()
-        publishInputEvents(activeSession.drainInputEventsOnOwnerThread())
-        return dispatchedCount
-    }
-
-    func prepareRead() throws -> Bool {
-        guard !isClosed else { return false }
-        return try requireSession().prepareReadEventsOnOwnerThread()
-    }
-
-    func flush() throws -> Bool {
-        guard !isClosed else { return false }
-        return try requireSession().flushForExternalEventLoopOnOwnerThread()
-    }
-
-    func readEvents() throws {
-        guard !isClosed else { return }
-        try requireSession().readEventsOnOwnerThread()
-    }
-
-    func cancelRead() {
-        guard !isClosed, let session else { return }
-        session.cancelReadEventsOnOwnerThread()
-    }
-
-    private func publishInputEvents(_ inputEvents: [InputEvent]) {
-        for inputEvent in inputEvents {
-            eventHub.publishInput(inputEvent)
-        }
-    }
-
-    private func installEventCallbacks(for window: TopLevelWindow) {
-        let windowID = window.id
-
-        window.onCloseRequested = { [weak core = self] in
-            core?.handleWindowCloseRequested(windowID)
-        }
-        window.onRedrawRequested = { [weak core = self] in
-            core?.eventHub.publish(.redrawRequested(windowID))
-        }
-    }
-
-    private func handleWindowCloseRequested(_ windowID: WindowID) {
-        eventHub.publish(.windowCloseRequested(windowID))
-
-        guard let window = windows[windowID],
-            window.closeRequestPolicy == .autoClose
-        else {
-            return
-        }
-
-        closeWindow(windowID)
-    }
-
-    private func requireSession() throws -> DisplaySession {
-        guard let session, !isClosed else {
-            throw ClientError.displayClosed
-        }
-
-        return session
-    }
-
-    private func requireWindow(_ windowID: WindowID) throws -> TopLevelWindow {
-        guard let window = windows[windowID] else {
-            throw ClientError.unknownWindow(windowID)
-        }
-
-        return window
     }
 }
 

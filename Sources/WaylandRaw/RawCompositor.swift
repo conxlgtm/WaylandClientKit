@@ -12,8 +12,13 @@ public final class RawCompositor {
         pointer compositorPointer: OpaquePointer,
         version compositorVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
-    ) {
-        pointer = adoptionContext.adopt(compositorPointer, interface: "wl_compositor")
+    ) throws(RuntimeError) {
+        do {
+            pointer = try adoptionContext.adopt(compositorPointer, interface: "wl_compositor")
+        } catch {
+            swl_compositor_destroy(compositorPointer)
+            throw error
+        }
         version = compositorVersion
         proxyAdoption = adoptionContext
     }
@@ -23,7 +28,7 @@ public final class RawCompositor {
             throw RuntimeError.bindFailed("wl_surface")
         }
 
-        return RawSurface(pointer: surface, version: version, proxyAdoption: proxyAdoption)
+        return try RawSurface(pointer: surface, version: version, proxyAdoption: proxyAdoption)
     }
 
     func destroy() {

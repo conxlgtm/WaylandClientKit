@@ -2,16 +2,25 @@ import CWaylandProtocols
 
 package struct RawProxyAdoptionContext {
     private let eventQueue: RawEventQueue
+    package let invariantFailureSink: RawInvariantFailureSink
 
-    package init(eventQueue ownerQueue: RawEventQueue) {
+    package init(
+        eventQueue ownerQueue: RawEventQueue,
+        invariantFailureSink failureSink: RawInvariantFailureSink = .init()
+    ) {
         eventQueue = ownerQueue
+        invariantFailureSink = failureSink
     }
 
     package func adopt(
         _ proxy: OpaquePointer,
         interface interfaceName: StaticString
-    ) -> OpaquePointer {
-        eventQueue.assertOwns(proxy: proxy, interface: interfaceName)
+    ) throws(RuntimeError) -> OpaquePointer {
+        try eventQueue.assertOwns(
+            proxy: proxy,
+            interface: interfaceName,
+            invariantFailureSink: invariantFailureSink
+        )
         return proxy
     }
 }
@@ -19,26 +28,52 @@ package struct RawProxyAdoptionContext {
 extension RawEventQueue {
     package func assertOwns(
         proxy: OpaquePointer,
-        interface interfaceName: StaticString
-    ) {
-        #if DEBUG
-            let rawProxy = unsafe UnsafeMutableRawPointer(proxy)
-            guard
-                let actualQueue = unsafe swl_proxy_get_queue_raw(rawProxy)
-            else { return }
-            let expectedQueue = unsafe opaquePointer
-            precondition(
-                actualQueue == expectedQueue,
-                "\(interfaceName) proxy is not assigned to the display owner event queue"
+        interface interfaceName: StaticString,
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil
+    ) throws(RuntimeError) {
+        let rawProxy = unsafe UnsafeMutableRawPointer(proxy)
+        guard
+            let actualQueue = unsafe swl_proxy_get_queue_raw(rawProxy)
+        else {
+            // Older libwayland headers do not expose runtime queue inspection;
+            // in that case queue ownership is enforced by the wrapper creation path.
+            return
+        }
+
+        let expectedQueue = unsafe opaquePointer
+        if actualQueue != expectedQueue {
+            try Self.reportQueueMismatch(
+                interface: interfaceName,
+                invariantFailureSink: failureSink
             )
-        #endif
+        }
     }
 
     package func assertedProxy(
         _ proxy: OpaquePointer,
-        interface interfaceName: StaticString
-    ) -> OpaquePointer {
-        assertOwns(proxy: proxy, interface: interfaceName)
+        interface interfaceName: StaticString,
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil
+    ) throws(RuntimeError) -> OpaquePointer {
+        try assertOwns(
+            proxy: proxy,
+            interface: interfaceName,
+            invariantFailureSink: failureSink
+        )
         return proxy
+    }
+
+    package static func reportQueueMismatch(
+        interface interfaceName: StaticString,
+        invariantFailureSink failureSink: RawInvariantFailureSink?
+    ) throws(RuntimeError) {
+        let interface = "\(interfaceName)"
+        let failure = RawInvariantFailure.proxyOnWrongQueue(interface: interface)
+        if let failureSink {
+            failureSink.reportFatalRawInvariantFailure(failure)
+        } else {
+            RawInvariantFailureSink.trapForUnroutedFatalRawInvariantFailure(failure)
+        }
+
+        throw RuntimeError.proxyQueueMismatch(interface)
     }
 }
