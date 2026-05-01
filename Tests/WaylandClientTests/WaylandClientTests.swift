@@ -68,6 +68,39 @@ struct WaylandClientTests {
     }
 
     @Test
+    func displayConfigurationRejectsInvalidInternalCapacities() {
+        #expect(
+            throws: ClientError.invalidDisplayState(
+                "rawInputQueueCapacity must be greater than zero"
+            )
+        ) {
+            try DisplayConfiguration(
+                inputPipeline: InputPipelineConfiguration(rawInputQueueCapacity: 0)
+            ).validate()
+        }
+
+        #expect(
+            throws: ClientError.invalidDisplayState(
+                "pendingInputEventCapacity must be greater than zero"
+            )
+        ) {
+            try DisplayConfiguration(
+                inputPipeline: InputPipelineConfiguration(pendingInputEventCapacity: 0)
+            ).validate()
+        }
+
+        #expect(
+            throws: ClientError.invalidDisplayState(
+                "diagnostics capacity must be greater than zero"
+            )
+        ) {
+            try DisplayConfiguration(
+                diagnostics: DiagnosticsConfiguration(capacity: 0)
+            ).validate()
+        }
+    }
+
+    @Test
     func softwareFrameWritesVisiblePixelsThroughMutableSpanRows() throws {
         var storage = [UInt32](repeating: 0, count: 6)
         let byteCount = storage.count * MemoryLayout<UInt32>.stride

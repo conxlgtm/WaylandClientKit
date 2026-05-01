@@ -15,45 +15,33 @@ public enum DiagnosticSeverity: Equatable, Sendable {
     case error
 }
 
-public enum DisplayDiagnostic: Equatable, Sendable {
-    case input(InputDiagnostic, severity: DiagnosticSeverity)
+public struct DiagnosticID: Equatable, Hashable, Sendable {
+    public let rawValue: UInt64
+
+    public init(rawValue diagnosticRawValue: UInt64) {
+        rawValue = diagnosticRawValue
+    }
 }
 
-/// Overflow is scoped to the individual subscription whose buffer filled.
-/// The display connection remains alive; create a new subscription to resume
-/// receiving future events. Events discarded by overflow are not replayed.
-public enum EventStreamOverflowPolicy: Equatable, Sendable {
-    case failFast
-}
-
-public struct EventStreamConfiguration: Equatable, Sendable {
-    public var displayEventCapacity: Int
-    public var inputEventCapacity: Int
-    public var overflowPolicy: EventStreamOverflowPolicy
+public struct DisplayDiagnostic: Equatable, Sendable {
+    public let id: DiagnosticID
+    public let severity: DiagnosticSeverity
+    public let payload: DisplayDiagnosticPayload
 
     public init(
-        displayEventCapacity displayCapacity: Int = 256,
-        inputEventCapacity inputCapacity: Int = 512,
-        overflowPolicy policy: EventStreamOverflowPolicy = .failFast
+        id diagnosticID: DiagnosticID,
+        severity diagnosticSeverity: DiagnosticSeverity,
+        payload diagnosticPayload: DisplayDiagnosticPayload
     ) {
-        displayEventCapacity = displayCapacity
-        inputEventCapacity = inputCapacity
-        overflowPolicy = policy
+        id = diagnosticID
+        severity = diagnosticSeverity
+        payload = diagnosticPayload
     }
+}
 
-    package func validate() throws {
-        guard displayEventCapacity > 0 else {
-            throw ClientError.invalidDisplayState(
-                "displayEventCapacity must be greater than zero"
-            )
-        }
-
-        guard inputEventCapacity > 0 else {
-            throw ClientError.invalidDisplayState(
-                "inputEventCapacity must be greater than zero"
-            )
-        }
-    }
+public enum DisplayDiagnosticPayload: Equatable, Sendable {
+    case input(InputDiagnostic)
+    case diagnosticsDropped(count: Int)
 }
 
 public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvertible {
@@ -62,6 +50,7 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
     case systemError(errno: Int32)
     case runtime(String)
     case eventSubscriberOverflow(stream: String, capacity: Int)
+    case inputPipelineOverflow(InputPipelineOverflow)
     case internalInvariantViolation(String)
 
     init(_ error: any Error) {
@@ -101,6 +90,9 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
             "Wayland display failed: \(detail)"
         case .eventSubscriberOverflow(let stream, let capacity):
             "Wayland \(stream) subscriber exceeded buffer capacity \(capacity)"
+        case .inputPipelineOverflow(let overflow):
+            "Wayland input pipeline overflowed in \(overflow.stage.description) "
+                + "at capacity \(overflow.capacity)"
         case .internalInvariantViolation(let detail):
             "Wayland display internal invariant failed: \(detail)"
         }
@@ -218,11 +210,68 @@ public struct InputEventsIterator: AsyncIteratorProtocol {
 }
 
 @safe
+public struct DisplayDiagnostics: AsyncSequence, Sendable {
+    public typealias Element = DisplayDiagnostic
+    public typealias Failure = WaylandDisplayError
+
+    private let subscription: InternalEventSubscription<DisplayDiagnostic>
+
+    package init(_ eventSubscription: InternalEventSubscription<DisplayDiagnostic>) {
+        subscription = eventSubscription
+    }
+
+    public func makeAsyncIterator() -> DisplayDiagnosticsIterator {
+        DisplayDiagnosticsIterator(base: subscription.makeAsyncIterator())
+    }
+}
+
+@safe
+public struct DisplayDiagnosticsIterator: AsyncIteratorProtocol {
+    public typealias Element = DisplayDiagnostic
+    public typealias Failure = WaylandDisplayError
+
+    private var base: InternalEventSubscriptionIterator<DisplayDiagnostic>
+
+    package init(base iterator: InternalEventSubscriptionIterator<DisplayDiagnostic>) {
+        base = iterator
+    }
+
+    public mutating func next() async throws(WaylandDisplayError) -> DisplayDiagnostic? {
+        try await next(isolation: nil)
+    }
+
+    public mutating func next(
+        isolation actor: isolated (any Actor)?
+    ) async throws(WaylandDisplayError) -> DisplayDiagnostic? {
+        try await base.next(isolation: actor)
+    }
+}
+
+@safe
+private final class DiagnosticIDGenerator: Sendable {
+    private let state = Mutex<UInt64>(1)
+
+    func next() -> DiagnosticID {
+        state.withLock { nextID in
+            defer { nextID += 1 }
+            return DiagnosticID(rawValue: nextID)
+        }
+    }
+}
+
+@safe
 final class DisplayEventHub: Sendable {
     private let displayBroker: TypedEventBroker<DisplayEvent>
     private let inputBroker: TypedEventBroker<InputEvent>
+    private let diagnosticsBroker: TypedEventBroker<DisplayDiagnostic>
+    private let diagnosticIDGenerator: DiagnosticIDGenerator
 
-    init(configuration: EventStreamConfiguration = .init()) {
+    init(
+        configuration: EventStreamConfiguration = .init(),
+        diagnosticsConfiguration: DiagnosticsConfiguration = .init()
+    ) {
+        let idGenerator = DiagnosticIDGenerator()
+        diagnosticIDGenerator = idGenerator
         displayBroker = TypedEventBroker<DisplayEvent>(
             streamName: "display event",
             capacity: configuration.displayEventCapacity
@@ -230,6 +279,17 @@ final class DisplayEventHub: Sendable {
         inputBroker = TypedEventBroker<InputEvent>(
             streamName: "input event",
             capacity: configuration.inputEventCapacity
+        )
+        diagnosticsBroker = TypedEventBroker<DisplayDiagnostic>(
+            streamName: "diagnostic",
+            capacity: diagnosticsConfiguration.capacity,
+            overflowStrategy: .dropOldest { count in
+                DisplayDiagnostic(
+                    id: idGenerator.next(),
+                    severity: .warning,
+                    payload: .diagnosticsDropped(count: count)
+                )
+            }
         )
     }
 
@@ -241,11 +301,17 @@ final class DisplayEventHub: Sendable {
         InputEvents(inputBroker.subscribe())
     }
 
+    func diagnostics() -> DisplayDiagnostics {
+        DisplayDiagnostics(diagnosticsBroker.subscribe())
+    }
+
     func publish(_ event: DisplayEvent) {
         switch event {
         case .input(let inputEvent):
             publishInput(inputEvent)
-        case .diagnostic, .windowCloseRequested, .windowClosed, .redrawRequested:
+        case .diagnostic(let diagnostic):
+            publishDiagnostic(diagnostic)
+        case .windowCloseRequested, .windowClosed, .redrawRequested:
             displayBroker.publish(event)
         }
     }
@@ -253,12 +319,19 @@ final class DisplayEventHub: Sendable {
     func publishInput(_ inputEvent: InputEvent) {
         switch inputEvent.kind {
         case .diagnostic(let diagnostic):
-            displayBroker.publish(
-                .diagnostic(
-                    .input(diagnostic, severity: displaySeverity(for: diagnostic))
-                )
+            let displayDiagnostic = makeDisplayDiagnostic(
+                payload: .input(diagnostic),
+                severity: displaySeverity(for: diagnostic)
             )
+            publishDiagnostic(displayDiagnostic)
+            if let overflow = inputPipelineOverflow(for: diagnostic) {
+                inputBroker.finish(
+                    throwing: .inputPipelineOverflow(overflow)
+                )
+                return
+            }
         case .seat, .pointer, .keyboard, .touch:
+            guard !inputBroker.isTerminal else { return }
             displayBroker.publish(.input(inputEvent))
         }
 
@@ -268,221 +341,40 @@ final class DisplayEventHub: Sendable {
     func finish(throwing error: WaylandDisplayError? = nil) {
         displayBroker.finish(throwing: error)
         inputBroker.finish(throwing: error)
+        diagnosticsBroker.finish(throwing: error)
     }
 
     private func displaySeverity(for diagnostic: InputDiagnostic) -> DiagnosticSeverity {
         switch diagnostic.operation {
-        case .queueOverflow:
+        case .queueOverflow, .inputPipelineOverflow:
             .error
         case .keyboardKeymap, .listener, .cursor:
             .degraded
         }
     }
-}
 
-typealias EventWaiter<Element: Sendable> =
-    CheckedContinuation<Result<Element?, WaylandDisplayError>, Never>
-
-@safe
-final class EventSubscription<Element: Sendable>: Sendable {
-    private let broker: TypedEventBroker<Element>
-    private let id: Int
-
-    init(broker eventBroker: TypedEventBroker<Element>, id subscriberID: Int) {
-        broker = eventBroker
-        id = subscriberID
-    }
-
-    deinit {
-        broker.cancelSubscriber(id)
-    }
-
-    func next(
-        isolation _: isolated (any Actor)?
-    ) async throws(WaylandDisplayError) -> Element? {
-        let result = await withTaskCancellationHandler {
-            await withCheckedContinuation { continuation in
-                broker.enqueueOrResumeNext(subscriberID: id, continuation: continuation)
-            }
-        } onCancel: {
-            broker.cancelSubscriber(id)
-        }
-
-        switch result {
-        case .success(let element):
-            return element
-        case .failure(let error):
-            throw error
-        }
-    }
-}
-
-@safe
-final class TypedEventBroker<Element: Sendable>: Sendable {
-    private struct Subscriber {
-        var buffer: [Element] = []
-        var waiter: EventWaiter<Element>?
-        var terminalError: WaylandDisplayError?
-        var isTerminal = false
-    }
-
-    private struct BrokerState {
-        var nextID = 1
-        var subscribers: [Int: Subscriber] = [:]
-        var terminalError: WaylandDisplayError?
-        var isTerminal = false
-    }
-
-    private let streamName: String
-    private let capacity: Int
-    private let state = Mutex(BrokerState())
-
-    init(streamName eventStreamName: String, capacity eventCapacity: Int) {
-        streamName = eventStreamName
-        capacity = eventCapacity
-    }
-
-    func subscribe() -> InternalEventSubscription<Element> {
-        let subscriberID = state.withLock { brokerState in
-            let id = brokerState.nextID
-            brokerState.nextID += 1
-            brokerState.subscribers[id] = Subscriber()
-            return id
-        }
-
-        return InternalEventSubscription(EventSubscription(broker: self, id: subscriberID))
-    }
-
-    func publish(_ element: Element) {
-        let waiters: [(EventWaiter<Element>, Result<Element?, WaylandDisplayError>)] =
-            state.withLock { brokerState in
-                guard !brokerState.isTerminal else { return [] }
-
-                var resumedWaiters:
-                    [(EventWaiter<Element>, Result<Element?, WaylandDisplayError>)] =
-                        []
-                let overflowError = WaylandDisplayError.eventSubscriberOverflow(
-                    stream: streamName,
-                    capacity: capacity
-                )
-
-                for subscriberID in brokerState.subscribers.keys.sorted() {
-                    guard var subscriber = brokerState.subscribers[subscriberID],
-                        !subscriber.isTerminal
-                    else { continue }
-
-                    if let waiter = subscriber.waiter {
-                        subscriber.waiter = nil
-                        brokerState.subscribers[subscriberID] = subscriber
-                        resumedWaiters.append((waiter, .success(element)))
-                        continue
-                    }
-
-                    if subscriber.buffer.count < capacity {
-                        subscriber.buffer.append(element)
-                    } else {
-                        subscriber.buffer.removeAll()
-                        subscriber.isTerminal = true
-                        subscriber.terminalError = overflowError
-                    }
-                    brokerState.subscribers[subscriberID] = subscriber
-                }
-
-                return resumedWaiters
-            }
-
-        resume(waiters)
-    }
-
-    func finish(throwing error: WaylandDisplayError? = nil) {
-        let waiters: [(EventWaiter<Element>, Result<Element?, WaylandDisplayError>)] =
-            state.withLock { brokerState in
-                guard !brokerState.isTerminal else { return [] }
-
-                brokerState.isTerminal = true
-                brokerState.terminalError = error
-
-                var resumedWaiters:
-                    [(EventWaiter<Element>, Result<Element?, WaylandDisplayError>)] =
-                        []
-                for subscriberID in brokerState.subscribers.keys {
-                    guard var subscriber = brokerState.subscribers[subscriberID],
-                        let waiter = subscriber.waiter
-                    else { continue }
-
-                    subscriber.waiter = nil
-                    brokerState.subscribers.removeValue(forKey: subscriberID)
-                    resumedWaiters.append((waiter, Self.terminalResult(error)))
-                }
-
-                return resumedWaiters
-            }
-
-        resume(waiters)
-    }
-
-    func enqueueOrResumeNext(
-        subscriberID: Int,
-        continuation: EventWaiter<Element>
-    ) {
-        let immediate = state.withLock { brokerState -> Result<Element?, WaylandDisplayError>? in
-            guard var subscriber = brokerState.subscribers[subscriberID] else {
-                return .success(nil)
-            }
-
-            if !subscriber.buffer.isEmpty {
-                let element = subscriber.buffer.removeFirst()
-                brokerState.subscribers[subscriberID] = subscriber
-                return .success(element)
-            }
-
-            if subscriber.isTerminal {
-                brokerState.subscribers.removeValue(forKey: subscriberID)
-                return Self.terminalResult(subscriber.terminalError)
-            }
-
-            if brokerState.isTerminal {
-                brokerState.subscribers.removeValue(forKey: subscriberID)
-                return Self.terminalResult(brokerState.terminalError)
-            }
-
-            guard subscriber.waiter == nil else {
-                return .failure(.internalInvariantViolation("event subscriber awaited twice"))
-            }
-
-            subscriber.waiter = continuation
-            brokerState.subscribers[subscriberID] = subscriber
-            return nil
-        }
-
-        if let immediate {
-            continuation.resume(returning: immediate)
+    private func inputPipelineOverflow(for diagnostic: InputDiagnostic) -> InputPipelineOverflow? {
+        switch diagnostic.operation {
+        case .inputPipelineOverflow(let overflow):
+            overflow
+        case .keyboardKeymap, .listener, .queueOverflow, .cursor:
+            nil
         }
     }
 
-    func cancelSubscriber(_ subscriberID: Int) {
-        let waiter = state.withLock { brokerState in
-            brokerState.subscribers.removeValue(forKey: subscriberID)?.waiter
-        }
-
-        waiter?.resume(returning: .success(nil))
+    private func makeDisplayDiagnostic(
+        payload diagnosticPayload: DisplayDiagnosticPayload,
+        severity diagnosticSeverity: DiagnosticSeverity
+    ) -> DisplayDiagnostic {
+        DisplayDiagnostic(
+            id: diagnosticIDGenerator.next(),
+            severity: diagnosticSeverity,
+            payload: diagnosticPayload
+        )
     }
 
-    private static func terminalResult(
-        _ error: WaylandDisplayError?
-    ) -> Result<Element?, WaylandDisplayError> {
-        if let error {
-            return .failure(error)
-        }
-
-        return .success(nil)
-    }
-
-    private func resume(
-        _ waiters: [(EventWaiter<Element>, Result<Element?, WaylandDisplayError>)]
-    ) {
-        for (waiter, result) in waiters {
-            waiter.resume(returning: result)
-        }
+    private func publishDiagnostic(_ diagnostic: DisplayDiagnostic) {
+        displayBroker.publish(.diagnostic(diagnostic))
+        diagnosticsBroker.publish(diagnostic)
     }
 }

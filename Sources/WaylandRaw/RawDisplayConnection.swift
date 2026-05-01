@@ -59,12 +59,16 @@ public final class RawDisplayConnection {
 
     @available(*, noasync, message: "Use a synchronous owner-thread Wayland loop.")
     public static func connect() throws -> RawDisplayConnection {
-        try connect(invariantFailureSink: RawInvariantFailureSink())
+        try connect(
+            invariantFailureSink: RawInvariantFailureSink(),
+            inputQueueConfiguration: RawInputQueueConfiguration()
+        )
     }
 
     @available(*, noasync, message: "Use a synchronous owner-thread Wayland loop.")
     package static func connect(
-        invariantFailureSink: RawInvariantFailureSink
+        invariantFailureSink: RawInvariantFailureSink,
+        inputQueueConfiguration: RawInputQueueConfiguration
     ) throws -> RawDisplayConnection {
         guard let displayPointer = wl_display_connect(nil) else {
             throw RuntimeError.connectionFailed
@@ -101,7 +105,8 @@ public final class RawDisplayConnection {
             displayPointer: displayPointer,
             eventQueue: rawEventQueue,
             registryPointer: registryPointer,
-            invariantFailureSink: invariantFailureSink
+            invariantFailureSink: invariantFailureSink,
+            inputQueueConfiguration: inputQueueConfiguration
         )
 
         return RawDisplayConnection(
@@ -119,14 +124,15 @@ public final class RawDisplayConnection {
         displayPointer: OpaquePointer,
         eventQueue: RawEventQueue,
         registryPointer: OpaquePointer,
-        invariantFailureSink: RawInvariantFailureSink
+        invariantFailureSink: RawInvariantFailureSink,
+        inputQueueConfiguration: RawInputQueueConfiguration
     ) throws -> RegistryResources {
         let state = RegistryState()
         let listenerOwner = RegistryListenerOwner(
             state: state,
             invariantFailureSink: invariantFailureSink
         )
-        let inputEventQueue = RawInputEventQueue()
+        let inputEventQueue = RawInputEventQueue(configuration: inputQueueConfiguration)
 
         do {
             let adoptedRegistryPointer = try eventQueue.assertedProxy(
