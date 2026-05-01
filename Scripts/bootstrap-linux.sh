@@ -10,31 +10,37 @@ MAINTAINER=0
 RUN_BUILD=0
 STRICT_SWIFT="${STRICT_SWIFT:-0}"
 SUDO="${SUDO-sudo}"
+PACKAGE_MANAGER="${PACKAGE_MANAGER:-}"
 PKG_CONFIG="${PKG_CONFIG:-pkg-config}"
 SWIFT_COMMAND="${SWIFT_COMMAND:-$ROOT/Scripts/swift.sh}"
 SUDO_WORDS=()
 
 usage() {
     cat <<'EOF'
-Usage: Scripts/bootstrap-linux.sh [--check] [--install] [--dry-run] [--maintainer] [--build] [--strict-swift]
+Usage: Scripts/bootstrap-linux.sh [--check] [--install] [--dry-run] [--maintainer] [--build] [--strict-swift] [--package-manager PM]
 
 Default behavior is --check: no sudo, no package installation.
 
 Options:
-  --check         verify dependencies only
-  --install      install distro packages before checks
-  --dry-run      print install commands and exit
-  --maintainer   also verify wayland-scanner and protocol XML inputs
-  --build        run swift build after dependency checks
-  --strict-swift require an exact Swift version match with Package.swift
-  -h, --help     show this help
+  --check              verify dependencies only
+  --install            install distro packages before checks
+  --dry-run            print package-manager commands and exit
+  --maintainer         also verify wayland-scanner and protocol XML inputs
+  --build              run swift build after dependency checks
+  --strict-swift       require an exact Swift version match with Package.swift
+  --package-manager PM use a specific package manager mapping
+  -h, --help           show this help
 
 Environment:
   STRICT_SWIFT=1       same as --strict-swift
   SUDO=doas            command used for privileged package installation
   SUDO=                run package manager directly, useful in containers
+  PACKAGE_MANAGER=nix  package manager mapping to use instead of detection
   PKG_CONFIG=pkgconf   pkg-config-compatible command to use for checks
   SWIFT_COMMAND=swift   Swift command used for version and build checks
+
+Supported package managers:
+  apt-get dnf pacman zypper apk emerge nix
 EOF
 }
 
@@ -80,6 +86,15 @@ while [[ $# -gt 0 ]]; do
         --strict-swift)
             STRICT_SWIFT=1
             ;;
+        --package-manager)
+            [[ $# -gt 1 ]] || die "--package-manager requires a value"
+            PACKAGE_MANAGER="$2"
+            shift
+            ;;
+        --package-manager=*)
+            PACKAGE_MANAGER="${1#--package-manager=}"
+            [[ -n "$PACKAGE_MANAGER" ]] || die "--package-manager requires a value"
+            ;;
         -h | --help)
             usage
             exit 0
@@ -99,6 +114,16 @@ case "$STRICT_SWIFT" in
         ;;
 esac
 
+if [[ -n "$PACKAGE_MANAGER" ]]; then
+    case "$PACKAGE_MANAGER" in
+        apt-get | dnf | pacman | zypper | apk | emerge | nix)
+            ;;
+        *)
+            die "unsupported package manager: $PACKAGE_MANAGER"
+            ;;
+    esac
+fi
+
 if [[ "$MODE" == "dry-run" && "$MAINTAINER" -eq 1 ]]; then
     die "--dry-run cannot be combined with --maintainer"
 fi
@@ -110,12 +135,22 @@ fi
 detect_pm() {
     local pm
 
-    for pm in apt-get dnf pacman zypper apk; do
+    if [[ -n "$PACKAGE_MANAGER" ]]; then
+        printf '%s\n' "$PACKAGE_MANAGER"
+        return 0
+    fi
+
+    for pm in apt-get dnf pacman zypper apk emerge; do
         if have "$pm"; then
             printf '%s\n' "$pm"
             return 0
         fi
     done
+
+    if have nix; then
+        printf 'nix\n'
+        return 0
+    fi
 
     return 1
 }
@@ -182,6 +217,31 @@ set_packages_for_pm() {
                 ripgrep
             )
             ;;
+        emerge)
+            PACKAGES=(
+                sys-devel/clang
+                dev-vcs/git
+                dev-libs/wayland
+                dev-libs/wayland-protocols
+                dev-util/wayland-scanner
+                x11-libs/libxkbcommon
+                dev-build/make
+                virtual/pkgconfig
+                sys-apps/ripgrep
+            )
+            ;;
+        nix)
+            PACKAGES=(
+                nixpkgs#clang
+                nixpkgs#git
+                nixpkgs#wayland
+                nixpkgs#wayland-protocols
+                nixpkgs#libxkbcommon
+                nixpkgs#gnumake
+                nixpkgs#pkg-config
+                nixpkgs#ripgrep
+            )
+            ;;
         *)
             return 1
             ;;
@@ -245,6 +305,12 @@ package_commands() {
         apk)
             print_with_sudo apk add "$@"
             ;;
+        emerge)
+            print_with_sudo emerge --ask=n --verbose "$@"
+            ;;
+        nix)
+            print_shell_command nix shell "$@"
+            ;;
         *)
             die "unsupported package manager: $pm"
             ;;
@@ -272,6 +338,12 @@ install_packages() {
         apk)
             run_with_sudo apk add "$@"
             ;;
+        emerge)
+            run_with_sudo emerge --ask=n --verbose "$@"
+            ;;
+        nix)
+            die "Nix support is shell-based; use --dry-run to print a nix shell command, or add the listed inputs to a flake/shell.nix"
+            ;;
         *)
             die "unsupported package manager: $pm"
             ;;
@@ -285,7 +357,7 @@ print_install_hint() {
     [[ -n "$pm" ]] || return 0
 
     set_packages_for_pm "$pm" || return 0
-    printf 'hint: install distro packages with:\n' >&2
+    printf 'hint: prepare dependencies with:\n' >&2
     package_commands "$pm" "${PACKAGES[@]}" >&2
 }
 
@@ -452,7 +524,11 @@ if [[ "$MODE" == "install" || "$MODE" == "dry-run" ]]; then
     set_packages_for_pm "$PM" || die "unsupported package manager: $PM"
 
     if [[ "$MODE" == "dry-run" ]]; then
-        printf 'Install commands for %s:\n' "$PM"
+        if [[ "$PM" == "nix" ]]; then
+            printf 'Dependency shell command for nix:\n'
+        else
+            printf 'Install commands for %s:\n' "$PM"
+        fi
         package_commands "$PM" "${PACKAGES[@]}"
         exit 0
     fi
