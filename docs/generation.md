@@ -38,12 +38,14 @@ These files are not generated:
 - `wayland-scanner`
 - `git`
 - `ripgrep`
+- `pkg-config`
 
 ## Commands
 
 Sync XML from the local system:
 
 ```bash
+./Scripts/bootstrap-linux.sh --maintainer
 ./Scripts/sync-protocols.sh
 ```
 
@@ -76,7 +78,9 @@ make verify-shims
 
 ### `Scripts/sync-protocols.sh`
 
-Copies:
+Copies protocol XML from the local system.
+
+Default sources:
 
 - `/usr/share/wayland/wayland.xml`
 - `/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml`
@@ -84,6 +88,9 @@ Copies:
 Fallback for `xdg-shell.xml`:
 
 - `/usr/share/qt6/wayland/protocols/xdg-shell/xdg-shell.xml`
+
+Run `Scripts/bootstrap-linux.sh --maintainer` first to verify the scanner,
+`wayland-protocols` pkg-config module, and protocol XML inputs.
 
 ### `Scripts/generate-protocols.sh`
 
