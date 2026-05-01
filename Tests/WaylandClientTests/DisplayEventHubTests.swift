@@ -203,6 +203,50 @@ struct DisplayDiagnosticsHubTests {
             from: &diagnosticsIterator
         )
     }
+
+    @Test
+    func diagnosticsContinueAfterInputPipelineOverflow() async {
+        let hub = DisplayEventHub()
+        let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
+        let overflowDiagnostic = InputDiagnostic(
+            operation: .inputPipelineOverflow(overflow),
+            message: "raw input queue exceeded capacity 1"
+        )
+        let overflowEvent = InputEvent(
+            sequence: 1,
+            seatID: SeatID(rawValue: 3),
+            windowID: nil,
+            kind: .diagnostic(overflowDiagnostic)
+        )
+        var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
+
+        hub.publishInput(overflowEvent)
+        hub.publishInput(
+            diagnosticInputEvent(sequence: 2, message: "cursor still reports")
+        )
+
+        await expectDiagnosticNext(
+            DisplayDiagnostic(
+                id: DiagnosticID(rawValue: 1),
+                severity: .error,
+                payload: .input(overflowDiagnostic)
+            ),
+            from: &diagnosticsIterator
+        )
+        await expectDiagnosticNext(
+            DisplayDiagnostic(
+                id: DiagnosticID(rawValue: 2),
+                severity: .degraded,
+                payload: .input(
+                    InputDiagnostic(
+                        operation: .cursor("automaticPointerEnter"),
+                        message: "cursor still reports"
+                    )
+                )
+            ),
+            from: &diagnosticsIterator
+        )
+    }
 }
 
 @Suite
@@ -289,6 +333,45 @@ struct DisplayEventHubFailureTests {
     }
 
     @Test
+    func newSubscriberAfterNormalFinishImmediatelyReturnsNil() async {
+        let hub = DisplayEventHub()
+
+        hub.finish()
+
+        var iterator = hub.displayEvents().makeAsyncIterator()
+        do {
+            let event = try await iterator.next()
+            #expect(event == nil)
+        } catch {
+            Issue.record("Expected normal display stream finish, got \(error)")
+        }
+    }
+
+    @Test
+    func newSubscriberAfterFailedFinishImmediatelyThrows() async {
+        let hub = DisplayEventHub()
+        let error = WaylandDisplayError.internalInvariantViolation("listener state lost")
+
+        hub.finish(throwing: error)
+
+        var iterator = hub.displayEvents().makeAsyncIterator()
+        await expectFailure(error, from: &iterator)
+    }
+
+    @Test
+    func bufferedSubscriberDrainsThenReceivesTerminalFailure() async {
+        let hub = DisplayEventHub()
+        let error = WaylandDisplayError.internalInvariantViolation("listener state lost")
+        var iterator = hub.displayEvents().makeAsyncIterator()
+
+        hub.publish(.windowClosed(WindowID(rawValue: 1)))
+        hub.finish(throwing: error)
+
+        await expectNext(.windowClosed(WindowID(rawValue: 1)), from: &iterator)
+        await expectFailure(error, from: &iterator)
+    }
+
+    @Test
     func fatalInternalInvariantTerminatesDisplayAndInputStreams() async {
         let hub = DisplayEventHub()
         var displayIterator = hub.displayEvents().makeAsyncIterator()
@@ -299,6 +382,27 @@ struct DisplayEventHubFailureTests {
 
         await expectFailure(error, from: &displayIterator)
         await expectFailure(error, from: &inputIterator)
+    }
+
+    @Test
+    func newInputSubscriptionAfterPipelineOverflowFailsImmediately() async {
+        let hub = DisplayEventHub()
+        let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
+        let diagnostic = InputDiagnostic(
+            operation: .inputPipelineOverflow(overflow),
+            message: "raw input queue exceeded capacity 1"
+        )
+        let inputEvent = InputEvent(
+            sequence: 1,
+            seatID: SeatID(rawValue: 3),
+            windowID: nil,
+            kind: .diagnostic(diagnostic)
+        )
+
+        hub.publishInput(inputEvent)
+
+        var inputIterator = hub.inputEvents().makeAsyncIterator()
+        await expectFailure(.inputPipelineOverflow(overflow), from: &inputIterator)
     }
 }
 

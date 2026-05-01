@@ -42,6 +42,41 @@ enum OverflowStrategy<Element: Sendable>: Sendable {
     case dropOldest(makeNotice: @Sendable (Int) -> Element)
 }
 
+private enum StreamTermination {
+    case finished
+    case failed(WaylandDisplayError)
+
+    init(error: WaylandDisplayError?) {
+        if let error {
+            self = .failed(error)
+        } else {
+            self = .finished
+        }
+    }
+
+    func result<Element: Sendable>() -> Result<Element?, WaylandDisplayError> {
+        switch self {
+        case .finished:
+            .success(nil)
+        case .failed(let error):
+            .failure(error)
+        }
+    }
+}
+
+private enum BrokerLifecycle {
+    case open
+    case terminal(StreamTermination)
+
+    var isTerminal: Bool {
+        if case .terminal = self {
+            return true
+        }
+
+        return false
+    }
+}
+
 private enum DropLedger<Element: Sendable> {
     case none
     case pending(count: Int)
@@ -77,7 +112,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
     private enum SubscriberState {
         case open(buffer: [Element], drops: DropLedger<Element>)
         case waiting(EventWaiter<Element>, drops: DropLedger<Element>)
-        case terminal(WaylandDisplayError?)
+        case terminal(StreamTermination)
     }
 
     private struct Subscriber {
@@ -93,8 +128,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
     private struct BrokerState {
         var nextID = 1
         var subscribers: [Int: Subscriber] = [:]
-        var terminalError: WaylandDisplayError?
-        var isTerminal = false
+        var lifecycle = BrokerLifecycle.open
 
         mutating func subscribe() -> Int {
             defer { nextID += 1 }
@@ -108,7 +142,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
             capacity: Int,
             overflowStrategy: OverflowStrategy<Element>
         ) -> [Delivery] {
-            guard !isTerminal else { return [] }
+            guard case .open = lifecycle else { return [] }
 
             let context = PublishContext(
                 capacity: capacity,
@@ -136,17 +170,16 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
         }
 
         mutating func finish(throwing error: WaylandDisplayError?) -> [Delivery] {
-            guard !isTerminal else { return [] }
+            guard case .open = lifecycle else { return [] }
 
-            isTerminal = true
-            terminalError = error
-
+            let termination = StreamTermination(error: error)
+            lifecycle = .terminal(termination)
             var deliveries: [Delivery] = []
             for subscriberID in subscribers.keys {
                 guard let subscriber = subscribers[subscriberID] else { continue }
                 if case .waiting(let waiter, _) = subscriber.state {
                     subscribers.removeValue(forKey: subscriberID)
-                    deliveries.append((waiter, Self.terminalResult(error)))
+                    deliveries.append((waiter, termination.result()))
                 }
             }
 
@@ -177,9 +210,9 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
                     return .success(notice)
                 }
 
-                if isTerminal {
+                if case .terminal(let termination) = lifecycle {
                     subscribers.removeValue(forKey: subscriberID)
-                    return Self.terminalResult(terminalError)
+                    return termination.result()
                 }
 
                 subscriber.state = .waiting(continuation, drops: drops)
@@ -187,9 +220,9 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
                 return nil
             case .waiting:
                 return .failure(.internalInvariantViolation("event subscriber awaited twice"))
-            case .terminal(let error):
+            case .terminal(let termination):
                 subscribers.removeValue(forKey: subscriberID)
-                return Self.terminalResult(error)
+                return termination.result()
             }
         }
 
@@ -221,7 +254,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
                 )
                 subscriber.state =
                     if didTerminate {
-                        .terminal(context.overflowError)
+                        .terminal(.failed(context.overflowError))
                     } else {
                         .open(buffer: buffer, drops: drops)
                     }
@@ -263,16 +296,6 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
                 return false
             }
         }
-
-        private static func terminalResult(
-            _ error: WaylandDisplayError?
-        ) -> Result<Element?, WaylandDisplayError> {
-            if let error {
-                return .failure(error)
-            }
-
-            return .success(nil)
-        }
     }
 
     private let streamName: String
@@ -308,7 +331,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
     }
 
     var isTerminal: Bool {
-        state.withLock { $0.isTerminal }
+        state.withLock { $0.lifecycle.isTerminal }
     }
 
     func finish(throwing error: WaylandDisplayError? = nil) {

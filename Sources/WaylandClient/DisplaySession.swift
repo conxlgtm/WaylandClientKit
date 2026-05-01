@@ -256,7 +256,7 @@ package final class DisplaySession {
 
 enum PendingInputState {
     case accepting([InputEvent])
-    case failed(bufferedPrefix: [InputEvent], overflow: InputEvent)
+    case failed(bufferedPrefix: [InputEvent], overflow: PendingInputOverflowEvent)
     case drainedAfterFailure
 
     var hasFailed: Bool {
@@ -276,15 +276,18 @@ enum PendingInputState {
         guard case .accepting(var pendingEvents) = self else { return }
 
         for inputEvent in inputEvents {
-            if isInputPipelineOverflowDiagnostic(inputEvent) {
-                self = .failed(bufferedPrefix: pendingEvents, overflow: inputEvent)
+            if let overflow = PendingInputOverflowEvent(inputEvent) {
+                self = .failed(bufferedPrefix: pendingEvents, overflow: overflow)
                 return
             }
 
             guard pendingEvents.count < capacity else {
                 self = .failed(
                     bufferedPrefix: pendingEvents,
-                    overflow: makeOverflowEvent(inputEvent)
+                    overflow: PendingInputOverflowEvent(
+                        from: inputEvent,
+                        makeOverflowEvent: makeOverflowEvent
+                    )
                 )
                 return
             }
@@ -302,20 +305,41 @@ enum PendingInputState {
             return inputEvents
         case .failed(let bufferedPrefix, let overflow):
             self = .drainedAfterFailure
-            return bufferedPrefix + [overflow]
+            return bufferedPrefix + [overflow.inputEvent]
         case .drainedAfterFailure:
             return []
         }
     }
 }
 
-private func isInputPipelineOverflowDiagnostic(_ event: InputEvent) -> Bool {
-    guard case .diagnostic(let diagnostic) = event.kind else { return false }
-    if case .inputPipelineOverflow = diagnostic.operation {
-        return true
+struct PendingInputOverflowEvent {
+    let inputEvent: InputEvent
+
+    init?(_ event: InputEvent) {
+        guard Self.isInputPipelineOverflowDiagnostic(event) else { return nil }
+        inputEvent = event
     }
 
-    return false
+    init(
+        from rejectedEvent: InputEvent,
+        makeOverflowEvent: (InputEvent) -> InputEvent
+    ) {
+        let overflow = makeOverflowEvent(rejectedEvent)
+        precondition(
+            Self.isInputPipelineOverflowDiagnostic(overflow),
+            "Pending input overflow event must be an input-pipeline overflow diagnostic"
+        )
+        inputEvent = overflow
+    }
+
+    private static func isInputPipelineOverflowDiagnostic(_ event: InputEvent) -> Bool {
+        guard case .diagnostic(let diagnostic) = event.kind else { return false }
+        if case .inputPipelineOverflow = diagnostic.operation {
+            return true
+        }
+
+        return false
+    }
 }
 
 func routeSessionInputEvents(
