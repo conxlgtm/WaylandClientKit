@@ -185,27 +185,6 @@ package final class TopLevelWindow {
         }
     }
 
-    private func handleFrameDone() {
-        pendingFrameRegistration = nil
-        redrawState.markFrameReady()
-        dropReleasedRetiredPools()
-
-        guard !isClosedStorage else {
-            redrawState.resetTransientState()
-            return
-        }
-
-        maybePublishRedrawRequested()
-    }
-
-    private func handleBufferReleased() {
-        connection.preconditionIsOwnerThread()
-        dropReleasedRetiredPools()
-
-        guard !isClosedStorage, redrawState.isWaitingForBuffer else { return }
-        maybePublishRedrawRequested()
-    }
-
     private func handleCloseRequested() {
         guard !isClosedStorage, lifecycleState != .closeRequested else { return }
 
@@ -213,35 +192,14 @@ package final class TopLevelWindow {
         onCloseRequested?()
     }
 
-    private func markNeedsRedraw() {
-        guard !isClosedStorage else {
-            redrawState.resetTransientState()
-            return
-        }
-
-        redrawState.markContentDirty()
-        maybePublishRedrawRequested()
-    }
-
-    private var isDirty: Bool {
-        redrawState.isDirty
-    }
-
-    private func maybePublishRedrawRequested() {
-        guard !isClosedStorage else { return }
-        let bufferUnavailable = buffers.map { !$0.hasFreeBuffers } ?? false
-        guard redrawState.shouldPublishRedrawRequest(bufferUnavailable: bufferUnavailable) else {
-            return
-        }
-
-        onRedrawRequested?()
-    }
-
     private func drawAndPresent(
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         guard !isClosedStorage else { return .skippedClosed }
-        redrawState.beginDrawAttempt()
+        _ = redrawState.reduce(
+            .redrawRequestConsumed,
+            bufferAvailable: redrawBufferAvailable
+        )
         guard pendingFrameRegistration == nil else { return .skippedPendingFrame }
         guard !isPresentingFrame else {
             throw ClientError.invalidWindowState("cannot draw while another draw is active")
@@ -257,11 +215,11 @@ package final class TopLevelWindow {
         dropReleasedRetiredPools()
 
         guard let buffer = pool.nextFreeBuffer() else {
-            redrawState.markWaitingForBuffer()
+            _ = redrawState.reduce(.drawBlockedByBuffer, bufferAvailable: false)
             return .waitingForBuffer
         }
 
-        let generationDrawn = redrawState.generationForCurrentDraw()
+        let generationDrawn = redrawState.generationForCurrentDraw
         let frame = try unsafe SoftwareFrame(
             width: buffer.width,
             height: buffer.height,
@@ -278,7 +236,6 @@ package final class TopLevelWindow {
 
             window.handleFrameDone()
         }
-        redrawState.markFramePending()
 
         buffer.markBusy()
         surface.attach(buffer: buffer)
@@ -286,7 +243,10 @@ package final class TopLevelWindow {
         surface.commit()
 
         lifecycleState = .mapped
-        redrawState.markPresented(generation: generationDrawn)
+        _ = redrawState.reduce(
+            .presented(generation: generationDrawn),
+            bufferAvailable: redrawBufferAvailable
+        )
         return .presented
     }
 
@@ -297,6 +257,77 @@ package final class TopLevelWindow {
         }
 
         return Int64(timestamp.tv_sec) * 1_000 + Int64(timestamp.tv_nsec) / 1_000_000
+    }
+}
+
+extension TopLevelWindow {
+    private func handleFrameDone() {
+        pendingFrameRegistration = nil
+        dropReleasedRetiredPools()
+
+        guard !isClosedStorage else {
+            _ = redrawState.reduce(
+                .transientStateReset,
+                bufferAvailable: redrawBufferAvailable
+            )
+            return
+        }
+
+        interpretRedrawEffects(
+            redrawState.reduce(
+                .frameBecameReady,
+                bufferAvailable: redrawBufferAvailable
+            )
+        )
+    }
+
+    private func handleBufferReleased() {
+        connection.preconditionIsOwnerThread()
+        dropReleasedRetiredPools()
+
+        guard !isClosedStorage, redrawState.isWaitingForBuffer else { return }
+        interpretRedrawEffects(
+            redrawState.reduce(
+                .bufferBecameAvailable,
+                bufferAvailable: redrawBufferAvailable
+            )
+        )
+    }
+
+    private func markNeedsRedraw() {
+        guard !isClosedStorage else {
+            _ = redrawState.reduce(
+                .transientStateReset,
+                bufferAvailable: redrawBufferAvailable
+            )
+            return
+        }
+
+        interpretRedrawEffects(
+            redrawState.reduce(
+                .contentInvalidated,
+                bufferAvailable: redrawBufferAvailable
+            )
+        )
+    }
+
+    private var isDirty: Bool {
+        redrawState.isDirty
+    }
+
+    private var redrawBufferAvailable: Bool {
+        buffers.map(\.hasFreeBuffers) ?? true
+    }
+
+    private func interpretRedrawEffects(_ effects: [WindowRedrawEffect]) {
+        guard !isClosedStorage else { return }
+
+        for effect in effects {
+            switch effect {
+            case .publishRedrawRequested:
+                onRedrawRequested?()
+            }
+        }
     }
 }
 
@@ -350,7 +381,10 @@ extension TopLevelWindow {
 
         isClosedStorage = true
         pendingFrameRegistration = nil
-        redrawState.resetTransientState()
+        _ = redrawState.reduce(
+            .transientStateReset,
+            bufferAvailable: redrawBufferAvailable
+        )
         onClose?()
         onClose = nil
         onCloseRequested = nil
