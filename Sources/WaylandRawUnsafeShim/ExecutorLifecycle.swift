@@ -12,9 +12,18 @@ public enum ShutdownMode: Equatable, Sendable {
     }
 }
 
-public enum ExecutorStartFailure: Equatable, Sendable {
+public enum ExecutorStartFailure: Equatable, Sendable, CustomStringConvertible {
     case eventFileDescriptorCreationFailed(Int32)
     case threadCreationFailed(Int32)
+
+    public var description: String {
+        switch self {
+        case .eventFileDescriptorCreationFailed(let errorCode):
+            "eventfd failed with errno \(errorCode)"
+        case .threadCreationFailed(let code):
+            "pthread_create returned \(code)"
+        }
+    }
 }
 
 package enum ExecutorLifecycle: Equatable, Sendable {
@@ -22,7 +31,7 @@ package enum ExecutorLifecycle: Equatable, Sendable {
     case running
     case stopRequested(ShutdownMode)
     case loopExited(ShutdownMode)
-    case joining(ShutdownMode, loopExited: Bool)
+    case joining(ShutdownMode)
     case joined(ShutdownMode)
     case failedToStart(ExecutorStartFailure)
     case destroying
@@ -44,8 +53,8 @@ package enum ExecutorLifecycle: Equatable, Sendable {
         switch self {
         case .loopExited, .joined, .destroying:
             true
-        case .joining(_, let loopExited):
-            loopExited
+        case .joining:
+            false
         case .starting, .running, .stopRequested, .failedToStart:
             false
         }
@@ -73,7 +82,7 @@ package enum ExecutorLifecycle: Equatable, Sendable {
         switch self {
         case .stopRequested(let mode),
             .loopExited(let mode),
-            .joining(let mode, _),
+            .joining(let mode),
             .joined(let mode):
             mode
         case .starting, .running, .failedToStart, .destroying:
