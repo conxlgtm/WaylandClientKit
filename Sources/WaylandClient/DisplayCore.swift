@@ -27,7 +27,7 @@ final class DisplayCore: RawInvariantFailureReporter {
     }
 
     func createTopLevelWindowID(
-        configuration windowConfiguration: WindowConfiguration = .init()
+        configuration windowConfiguration: WindowConfiguration = .default
     ) throws -> WindowID {
         try withFatalFailureFinalization {
             let window = try requireSession().createTopLevelWindowOnOwnerThread(
@@ -38,6 +38,7 @@ final class DisplayCore: RawInvariantFailureReporter {
                 throw ClientError.displayClosed
             }
             installEventCallbacks(for: window)
+            window.markPublishedOnOwnerThread()
             return window.id
         }
     }
@@ -91,9 +92,8 @@ final class DisplayCore: RawInvariantFailureReporter {
             // Fatal raw invariants already finished streams and deferred graph cleanup;
             // avoid publishing orderly window lifecycle events on that explicit path.
             guard !needsFatalFailureFinalization else { return }
-            guard let window = windows.removeValue(forKey: windowID) else { return }
+            guard let window = windows[windowID] else { return }
             window.closeOnOwnerThread()
-            eventHub.publish(.windowClosed(windowID))
         }
     }
 
@@ -210,6 +210,9 @@ final class DisplayCore: RawInvariantFailureReporter {
         window.onCloseRequested = { [weak core = self] in
             core?.handleWindowCloseRequested(windowID)
         }
+        window.onClosed = { [weak core = self] in
+            core?.handleWindowClosed(windowID)
+        }
         window.onRedrawRequested = { [weak core = self] in
             core?.eventHub.publish(.redrawRequested(windowID))
         }
@@ -217,12 +220,11 @@ final class DisplayCore: RawInvariantFailureReporter {
 
     private func handleWindowCloseRequested(_ windowID: WindowID) {
         eventHub.publish(.windowCloseRequested(windowID))
-        guard let window = windows[windowID],
-            window.closeRequestPolicy == .autoClose
-        else {
-            return
-        }
-        closeWindow(windowID)
+    }
+
+    private func handleWindowClosed(_ windowID: WindowID) {
+        windows.removeValue(forKey: windowID)
+        eventHub.publish(.windowClosed(windowID))
     }
 
     private func requireSession() throws -> DisplaySession {

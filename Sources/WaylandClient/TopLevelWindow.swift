@@ -1,6 +1,9 @@
+// swiftlint:disable file_length
+
 import Glibc
 import WaylandRaw
 
+// swiftlint:disable:next type_body_length
 package final class TopLevelWindow {
     package static let defaultConfigureTimeoutMS: Int32 = 1_000
 
@@ -19,23 +22,20 @@ package final class TopLevelWindow {
     private var buffers: RawSharedMemoryPool?
     private var retiredBufferPools: [RawSharedMemoryPool] = []
     private var pendingFrameRegistration: FrameCallbackRegistration?
-    private var lifecycleState = WindowLifecycleState.created
-    private var currentConfigure: SurfaceConfigure?
-    private var redrawState = WindowRedrawState()
-    private var isClosedStorage = false
-    private var isPresentingFrame = false
+    private var pendingWindowError: ClientError?
+    private var model: WindowModel
+
     package var onClose: (() -> Void)?
     package var onCloseRequested: (() -> Void)?
+    package var onClosed: (() -> Void)?
     package var onRedrawRequested: (() -> Void)?
 
     package init(
         id windowID: WindowID,
         connection rawConnection: RawDisplayConnection,
-        configuration windowConfiguration: WindowConfiguration = .init(),
+        configuration windowConfiguration: WindowConfiguration = .default,
         initialConfigurePump pumpEvents: ((Int32) throws -> Void)? = nil
     ) throws {
-        try windowConfiguration.validate()
-
         id = windowID
         connection = rawConnection
         configuration = windowConfiguration
@@ -44,18 +44,18 @@ package final class TopLevelWindow {
             ?? { timeoutMilliseconds in
                 try rawConnection.pumpEvents(timeoutMilliseconds: timeoutMilliseconds)
             }
-        configureState = .init(
-            fallbackSize: TopLevelSize(
-                width: windowConfiguration.initialWidth,
-                height: windowConfiguration.initialHeight
-            )
+        let globals = try rawConnection.bindRequiredGlobals()
+        configureState = .init()
+        surface = try globals.compositor.createSurface()
+        model = WindowModel(
+            id: windowID,
+            fallbackSize: windowConfiguration.initialSize
         )
 
-        let globals = try rawConnection.bindRequiredGlobals()
-        surface = try globals.compositor.createSurface()
         configureState.setSurfaceConfigureHandler { [weak window = self] in
             window?.markNeedsRedraw()
         }
+
         try assignXDGRole(globals: globals)
     }
 
@@ -76,8 +76,8 @@ package final class TopLevelWindow {
         let newXDGSurface = try globals.xdgWMBase.getSurface(for: surface)
         let newTopLevel = try newXDGSurface.getTopLevel()
 
-        newTopLevel.setTitle(configuration.title)
-        newTopLevel.setAppID(configuration.appID)
+        newTopLevel.setTitle(configuration.title.value)
+        newTopLevel.setAppID(configuration.appID.value)
 
         let newXDGSurfaceOwner = XDGSurfaceOwner(
             configureState: configureState,
@@ -100,62 +100,63 @@ package final class TopLevelWindow {
         xdgSurfaceOwner = newXDGSurfaceOwner
         topLevelOwner = newTopLevelOwner
 
-        lifecycleState = .roleAssigned
+        try interpretWindowEffects(model.reduce(.roleObjectsCreated))
         surface.commit()
-        lifecycleState = .waitingForInitialConfigure
+        try interpretWindowEffects(model.reduce(.initialCommitSent))
     }
 
-    private func waitForInitialConfigure(timeoutMilliseconds: Int32) throws -> SurfaceConfigure {
-        guard timeoutMilliseconds >= 0 else {
-            throw ClientError.invalidWindowConfiguration(
-                "timeoutMilliseconds must be greater than or equal to zero"
-            )
-        }
+    private func waitForInitialConfigure(
+        timeoutMilliseconds: Int32
+    ) throws -> ResolvedWindowConfiguration {
+        _ = try Milliseconds(timeoutMilliseconds)
 
         let timeout = Int64(max(timeoutMilliseconds, 0))
         let deadline = try monotonicMilliseconds() + timeout
         let pollMilliseconds: Int32 = 50
 
-        while !configureState.hasReceivedInitialConfigure, !isClosedStorage {
+        while !configureState.hasReceivedInitialConfigure, !model.isClosed {
             let remainingMilliseconds = deadline - (try monotonicMilliseconds())
             guard remainingMilliseconds > 0 else {
-                throw ClientError.windowCreationFailed(
-                    "timed out waiting for initial configure"
+                try interpretWindowEffects(
+                    model.reduce(.initialConfigureTimedOut(milliseconds: timeoutMilliseconds))
+                )
+                throw ClientError.window(
+                    id,
+                    .initialConfigureTimedOut(milliseconds: timeoutMilliseconds)
                 )
             }
 
             let boundedRemaining = Int32(min(remainingMilliseconds, Int64(Int32.max)))
             let pumpTimeout = min(boundedRemaining, pollMilliseconds)
             try initialConfigurePump(pumpTimeout)
+            try throwPendingWindowErrorIfAny()
             try configureState.throwPendingErrorIfAny()
         }
 
         guard let configure = try consumeLatestConfigureIfAvailable() else {
-            throw ClientError.windowCreationFailed("missing initial configure")
+            throw ClientError.window(
+                id,
+                .invalidLifecycleTransition(.mapBeforeInitialConfigure)
+            )
         }
 
         return configure
     }
 
-    private func consumeLatestConfigureIfAvailable() throws -> SurfaceConfigure? {
+    private func consumeLatestConfigureIfAvailable() throws -> ResolvedWindowConfiguration? {
+        try throwPendingWindowErrorIfAny()
         try configureState.throwPendingErrorIfAny()
 
-        guard let configure = configureState.consumeLatestConfigure() else {
+        guard let sequence = configureState.consumeLatestConfigure() else {
             return nil
         }
 
-        guard let activeXDGSurface = xdgSurface else {
-            throw ClientError.invalidWindowState("xdg_surface missing")
-        }
-
-        activeXDGSurface.ackConfigure(serial: configure.serial)
-        currentConfigure = configure
-        lifecycleState = .configured(configure)
-        return configure
+        try interpretWindowEffects(model.reduce(.configureReceived(sequence)))
+        return model.currentConfiguration
     }
 
-    private func bufferPool(for size: TopLevelSize) throws -> RawSharedMemoryPool {
-        if let buffers, buffers.size == size {
+    private func bufferPool(for size: PositiveTopLevelSize) throws -> RawSharedMemoryPool {
+        if let buffers, buffers.size == size.rawSize {
             return buffers
         }
 
@@ -168,9 +169,9 @@ package final class TopLevelWindow {
         }
 
         let newPool = try globals.sharedMemory.createPool(
-            width: size.width,
-            height: size.height,
-            bufferCount: configuration.bufferCount
+            width: size.width.rawValue,
+            height: size.height.rawValue,
+            bufferCount: configuration.bufferCount.rawValue
         ) { [weak window = self] in
             window?.handleBufferReleased()
         }
@@ -186,68 +187,145 @@ package final class TopLevelWindow {
     }
 
     private func handleCloseRequested() {
-        guard !isClosedStorage, lifecycleState != .closeRequested else { return }
-
-        lifecycleState = .closeRequested
-        onCloseRequested?()
+        do {
+            try interpretWindowEffects(
+                model.reduce(
+                    .compositorCloseRequested(policy: configuration.closeRequestPolicy)
+                )
+            )
+        } catch let error as ClientError {
+            pendingWindowError = error
+        } catch {
+            pendingWindowError = ClientError.window(
+                id,
+                .invalidLifecycleTransition(
+                    .invalidTransition(
+                        from: "closeRequested",
+                        event: String(describing: error)
+                    )
+                )
+            )
+        }
     }
 
     private func drawAndPresent(
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
-        guard !isClosedStorage else { return .skippedClosed }
-        _ = redrawState.reduce(
-            .redrawRequestConsumed,
-            bufferAvailable: redrawBufferAvailable
+        guard !model.isClosed else { return .skippedClosed }
+
+        let effects = try model.reduce(
+            .redrawRequestConsumed(bufferAvailable: redrawBufferAvailable)
         )
-        guard pendingFrameRegistration == nil else { return .skippedPendingFrame }
-        guard !isPresentingFrame else {
-            throw ClientError.invalidWindowState("cannot draw while another draw is active")
-        }
-        guard let configure = currentConfigure else {
-            throw ClientError.invalidWindowState(lifecycleState.description)
-        }
+        return try interpretPresentationEffects(effects, draw)
+    }
 
-        isPresentingFrame = true
-        defer { isPresentingFrame = false }
-
-        let pool = try bufferPool(for: configure.size)
-        dropReleasedRetiredPools()
-
-        guard let buffer = pool.nextFreeBuffer() else {
-            _ = redrawState.reduce(.drawBlockedByBuffer, bufferAvailable: false)
-            return .waitingForBuffer
-        }
-
-        let generationDrawn = redrawState.generationForCurrentDraw
-        let frame = try unsafe SoftwareFrame(
-            width: buffer.width,
-            height: buffer.height,
-            stride: buffer.stride,
-            bytes: buffer.bytes
+    // swiftlint:disable:next function_body_length
+    private func performSoftwarePresent(
+        _ request: PresentationRequest,
+        _ draw: (borrowing SoftwareFrame) throws -> Void
+    ) throws -> RedrawOutcome {
+        try interpretWindowEffects(
+            model.reduce(.presentationStarted(generation: request.generation))
         )
 
-        try draw(frame)
+        do {
+            guard pendingFrameRegistration == nil else {
+                failActivePresentation(
+                    generation: request.generation,
+                    detail: "frame callback is still pending"
+                )
+                return .skippedPendingFrame
+            }
 
-        guard !isClosedStorage else { return .skippedClosed }
+            let pool = try bufferPool(for: request.configuration.size)
+            dropReleasedRetiredPools()
 
-        pendingFrameRegistration = try surface.requestFrame { [weak window = self] in
-            guard let window else { return }
+            guard let buffer = pool.nextFreeBuffer() else {
+                try interpretWindowEffects(model.reduce(.presentationBlockedByBuffer))
+                return .waitingForBuffer
+            }
 
-            window.handleFrameDone()
+            let frame = try unsafe SoftwareFrame(
+                width: buffer.width,
+                height: buffer.height,
+                stride: buffer.stride,
+                bytes: buffer.bytes
+            )
+
+            do {
+                try draw(frame)
+            } catch {
+                failActivePresentation(
+                    generation: request.generation,
+                    detail: String(describing: error)
+                )
+                throw error
+            }
+
+            guard !model.isClosed else {
+                try interpretWindowEffects(model.reduce(.transientStateReset))
+                return .skippedClosed
+            }
+
+            do {
+                pendingFrameRegistration = try surface.requestFrame { [weak window = self] in
+                    guard let window else { return }
+
+                    window.handleFrameDone()
+                }
+            } catch {
+                failActivePresentation(
+                    generation: request.generation,
+                    detail: String(describing: error)
+                )
+                throw error
+            }
+
+            buffer.markBusy()
+            surface.attach(buffer: buffer)
+            surface.damageFullBuffer(width: buffer.width, height: buffer.height)
+            surface.commit()
+
+            try interpretWindowEffects(
+                model.reduce(
+                    .presentationSucceeded(
+                        generation: request.generation,
+                        bufferAvailable: redrawBufferAvailable
+                    )
+                )
+            )
+            return .presented
+        } catch {
+            failPresentationIfStillActive(generation: request.generation, error: error)
+            throw error
         }
+    }
 
-        buffer.markBusy()
-        surface.attach(buffer: buffer)
-        surface.damageFullBuffer(width: buffer.width, height: buffer.height)
-        surface.commit()
+    private func failPresentationIfStillActive(
+        generation: UInt64,
+        error: any Error
+    ) {
+        guard model.presentation == .drawing(generation: generation) else { return }
 
-        lifecycleState = .mapped
-        _ = redrawState.reduce(
-            .presented(generation: generationDrawn),
-            bufferAvailable: redrawBufferAvailable
+        failActivePresentation(
+            generation: generation,
+            detail: String(describing: error)
         )
-        return .presented
+    }
+
+    private func failActivePresentation(
+        generation: UInt64,
+        detail: String
+    ) {
+        do {
+            try interpretWindowEffects(
+                model.reduce(.presentationFailed(generation: generation, .drawFailed(detail)))
+            )
+        } catch ClientError.window(id, .presentationFailed(.drawFailed(detail))) {
+            // presentationFailed resets model state before reporting the presentation error.
+        } catch {
+            preconditionFailure("Unexpected presentation failure error: \(error)")
+        }
     }
 
     private func monotonicMilliseconds() throws -> Int64 {
@@ -258,6 +336,31 @@ package final class TopLevelWindow {
 
         return Int64(timestamp.tv_sec) * 1_000 + Int64(timestamp.tv_nsec) / 1_000_000
     }
+
+    private func throwPendingWindowErrorIfAny() throws {
+        guard let error = pendingWindowError else { return }
+
+        pendingWindowError = nil
+        throw error
+    }
+
+    private func resetTransientState() {
+        do {
+            _ = try model.reduce(.transientStateReset)
+        } catch let error as ClientError {
+            pendingWindowError = error
+        } catch {
+            pendingWindowError = ClientError.window(
+                id,
+                .invalidLifecycleTransition(
+                    .invalidTransition(
+                        from: "transientStateReset",
+                        event: String(describing: error)
+                    )
+                )
+            )
+        }
+    }
 }
 
 extension TopLevelWindow {
@@ -265,129 +368,149 @@ extension TopLevelWindow {
         pendingFrameRegistration = nil
         dropReleasedRetiredPools()
 
-        guard !isClosedStorage else {
-            _ = redrawState.reduce(
-                .transientStateReset,
-                bufferAvailable: redrawBufferAvailable
-            )
+        guard !model.isClosed else {
+            resetTransientState()
             return
         }
 
-        interpretRedrawEffects(
-            redrawState.reduce(
-                .frameBecameReady,
-                bufferAvailable: redrawBufferAvailable
+        do {
+            try interpretWindowEffects(
+                model.reduce(.frameBecameReady(bufferAvailable: redrawBufferAvailable))
             )
-        )
+        } catch let error as ClientError {
+            pendingWindowError = error
+        } catch {
+            pendingWindowError = ClientError.window(
+                id,
+                .invalidLifecycleTransition(
+                    .invalidTransition(from: "frameDone", event: String(describing: error))
+                )
+            )
+        }
     }
 
     private func handleBufferReleased() {
         connection.preconditionIsOwnerThread()
         dropReleasedRetiredPools()
 
-        guard !isClosedStorage, redrawState.isWaitingForBuffer else { return }
-        interpretRedrawEffects(
-            redrawState.reduce(
-                .bufferBecameAvailable,
-                bufferAvailable: redrawBufferAvailable
+        guard !model.isClosed, model.redraw.isWaitingForBuffer else { return }
+
+        do {
+            try interpretWindowEffects(
+                model.reduce(.bufferBecameAvailable(bufferAvailable: redrawBufferAvailable))
             )
-        )
+        } catch let error as ClientError {
+            pendingWindowError = error
+        } catch {
+            pendingWindowError = ClientError.window(
+                id,
+                .invalidLifecycleTransition(
+                    .invalidTransition(
+                        from: "bufferReleased",
+                        event: String(describing: error)
+                    )
+                )
+            )
+        }
     }
 
     private func markNeedsRedraw() {
-        guard !isClosedStorage else {
-            _ = redrawState.reduce(
-                .transientStateReset,
-                bufferAvailable: redrawBufferAvailable
-            )
+        guard !model.isClosed else {
+            resetTransientState()
             return
         }
 
-        interpretRedrawEffects(
-            redrawState.reduce(
-                .contentInvalidated,
-                bufferAvailable: redrawBufferAvailable
+        do {
+            try interpretWindowEffects(
+                model.reduce(.contentInvalidated(bufferAvailable: redrawBufferAvailable))
             )
-        )
+        } catch let error as ClientError {
+            pendingWindowError = error
+        } catch {
+            pendingWindowError = ClientError.window(
+                id,
+                .invalidLifecycleTransition(
+                    .invalidTransition(from: "markNeedsRedraw", event: String(describing: error))
+                )
+            )
+        }
     }
 
     private var isDirty: Bool {
-        redrawState.isDirty
+        model.redraw.isDirty
     }
 
     private var redrawBufferAvailable: Bool {
         buffers.map(\.hasFreeBuffers) ?? true
     }
 
-    private func interpretRedrawEffects(_ effects: [WindowRedrawEffect]) {
-        guard !isClosedStorage else { return }
-
+    // swiftlint:disable:next cyclomatic_complexity
+    private func interpretWindowEffects(_ effects: [WindowEffect]) throws {
         for effect in effects {
             switch effect {
+            case .ackConfigure(let serial):
+                guard let activeXDGSurface = xdgSurface else {
+                    throw ClientError.window(
+                        id,
+                        .invalidLifecycleTransition(
+                            .invalidTransition(from: "missing xdg_surface", event: "ackConfigure")
+                        )
+                    )
+                }
+                activeXDGSurface.ackConfigure(serial: serial)
+            case .publishCloseRequested:
+                onCloseRequested?()
+            case .publishClosed:
+                onClosed?()
+                onClosed = nil
             case .publishRedrawRequested:
                 onRedrawRequested?()
+            case .cancelFrameCallback:
+                pendingFrameRegistration = nil
+            case .performSoftwarePresent:
+                throw ClientError.window(
+                    id,
+                    .invalidLifecycleTransition(
+                        .invalidTransition(
+                            from: "effect interpreter without draw closure",
+                            event: "performSoftwarePresent"
+                        )
+                    )
+                )
+            case .retireSwapchain:
+                buffers = nil
+                retiredBufferPools.removeAll()
+            case .destroyRoleObjects:
+                destroyRoleObjects()
+            case .destroySurface:
+                surface.destroy()
             }
         }
     }
-}
 
-extension TopLevelWindow {
-    package var isClosedOnOwnerThread: Bool {
-        connection.preconditionIsOwnerThread()
-        return isClosedStorage
-    }
-
-    package var needsRedrawOnOwnerThread: Bool {
-        connection.preconditionIsOwnerThread()
-        return isDirty
-    }
-
-    package func requestRedrawOnOwnerThread() {
-        connection.preconditionIsOwnerThread()
-        markNeedsRedraw()
-    }
-
-    package func showOnOwnerThread(
-        timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
+    private func interpretPresentationEffects(
+        _ effects: [WindowEffect],
         _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        connection.preconditionIsOwnerThread()
+    ) throws -> RedrawOutcome {
+        var outcome = RedrawOutcome.skippedPendingFrame
 
-        if currentConfigure == nil {
-            _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
+        for effect in effects {
+            switch effect {
+            case .performSoftwarePresent(let request):
+                outcome = try performSoftwarePresent(request, draw)
+            default:
+                try interpretWindowEffects([effect])
+            }
         }
 
-        _ = try drawAndPresent(draw)
+        return effects.isEmpty ? .skippedPendingFrame : outcome
     }
 
-    package func redrawOnOwnerThread(
-        _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        connection.preconditionIsOwnerThread()
-
-        guard !isClosedStorage else { return }
-
-        if let configure = try consumeLatestConfigureIfAvailable() {
-            lifecycleState = .configured(configure)
-        }
-
-        _ = try drawAndPresent(draw)
-    }
-
-    package func closeOnOwnerThread() {
-        connection.preconditionIsOwnerThread()
-
-        guard lifecycleState != .destroyed else { return }
-
-        isClosedStorage = true
-        pendingFrameRegistration = nil
-        _ = redrawState.reduce(
-            .transientStateReset,
-            bufferAvailable: redrawBufferAvailable
-        )
+    private func destroyRoleObjects() {
         onClose?()
         onClose = nil
         onCloseRequested = nil
+        onRedrawRequested = nil
 
         topLevelOwner?.cancel()
         topLevel?.destroy()
@@ -398,11 +521,73 @@ extension TopLevelWindow {
         xdgSurface?.destroy()
         xdgSurface = nil
         xdgSurfaceOwner = nil
+    }
+}
 
-        buffers = nil
-        retiredBufferPools.removeAll()
-        surface.destroy()
-        lifecycleState = .destroyed
+extension TopLevelWindow {
+    package var isClosedOnOwnerThread: Bool {
+        connection.preconditionIsOwnerThread()
+        return model.isClosed
+    }
+
+    package var needsRedrawOnOwnerThread: Bool {
+        connection.preconditionIsOwnerThread()
+        return isDirty
+    }
+
+    package func markPublishedOnOwnerThread() {
+        connection.preconditionIsOwnerThread()
+        model.markPublished()
+    }
+
+    package func requestRedrawOnOwnerThread() throws {
+        connection.preconditionIsOwnerThread()
+        try throwPendingWindowErrorIfAny()
+        markNeedsRedraw()
+        try throwPendingWindowErrorIfAny()
+    }
+
+    package func showOnOwnerThread(
+        timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
+        _ draw: (borrowing SoftwareFrame) throws -> Void
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        try throwPendingWindowErrorIfAny()
+
+        if model.currentConfiguration == nil {
+            _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
+        }
+
+        _ = try drawAndPresent(draw)
+    }
+
+    package func redrawOnOwnerThread(
+        _ draw: (borrowing SoftwareFrame) throws -> Void
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        try throwPendingWindowErrorIfAny()
+
+        guard !model.isClosed else { return }
+
+        _ = try consumeLatestConfigureIfAvailable()
+        _ = try drawAndPresent(draw)
+    }
+
+    package func closeOnOwnerThread() {
+        connection.preconditionIsOwnerThread()
+
+        guard !model.isDestroyed else { return }
+
+        do {
+            try interpretWindowEffects(model.reduce(.explicitClose))
+        } catch {
+            pendingWindowError = ClientError.window(
+                id,
+                .invalidLifecycleTransition(
+                    .invalidTransition(from: "close", event: String(describing: error))
+                )
+            )
+        }
     }
 
     @available(
