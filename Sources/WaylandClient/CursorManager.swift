@@ -192,7 +192,6 @@ package final class CursorManager: RawInputEventObserving {
             )
             guard case .set = rawResult else {
                 throw cursorRequestFailure(
-                    operation: .setHidden,
                     seatID: seatID,
                     cursor: desiredCursor,
                     rawResult: rawResult
@@ -235,7 +234,6 @@ package final class CursorManager: RawInputEventObserving {
             return .set(seatID: publicSeatID(seatID), serial: serial, cursor: resolved.cursor)
         case .skippedNoPointer, .skippedUnknownSeat:
             throw cursorRequestFailure(
-                operation: .setNamed,
                 seatID: seatID,
                 cursor: desiredCursor,
                 rawResult: rawResult
@@ -296,7 +294,6 @@ package final class CursorManager: RawInputEventObserving {
     }
 
     private func cursorRequestFailure(
-        operation: PointerCursorOperation,
         seatID rawSeatID: RawSeatID,
         cursor: PointerCursor,
         rawResult: RawPointerCursorResult
@@ -323,7 +320,6 @@ package final class CursorManager: RawInputEventObserving {
         return .cursor(
             .requestFailed(
                 PointerCursorRequestFailure(
-                    operation: operation,
                     seatID: publicSeatID(rawSeatID),
                     requestedCursor: cursor,
                     backendResult: backendResult

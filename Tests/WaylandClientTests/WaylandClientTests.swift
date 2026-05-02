@@ -67,7 +67,7 @@ struct WaylandClientTests {
     @Test
     func cursorConfigurationRejectsInvalidSize() {
         #expect(throws: CursorConfigurationError.invalidSize(0)) {
-            _ = try CursorConfiguration(size: 0)
+            _ = try CursorConfiguration(themeName: nil, size: 0)
         }
     }
 
