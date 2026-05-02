@@ -194,9 +194,9 @@ package final class TopLevelWindow {
                 )
             )
         } catch let error as ClientError {
-            reportCallbackFailure(operation: "closeRequested", error: error)
+            reportCallbackFailure(operation: .closeRequested, error: error)
         } catch {
-            reportCallbackFailure(operation: "closeRequested", error: error)
+            reportCallbackFailure(operation: .closeRequested, error: error)
         }
     }
 
@@ -333,118 +333,20 @@ package final class TopLevelWindow {
         do {
             _ = try model.reduce(.transientStateReset)
         } catch let error as ClientError {
-            reportCallbackFailure(operation: "transientStateReset", error: error)
+            reportCallbackFailure(operation: .transientStateReset, error: error)
         } catch {
-            reportCallbackFailure(operation: "transientStateReset", error: error)
+            reportCallbackFailure(operation: .transientStateReset, error: error)
         }
     }
 
-    private func reportCallbackFailure(operation: String, error: any Error) {
+    private func reportCallbackFailure(operation: WindowCallbackOperation, error: any Error) {
         failureSink.reportWindowFailure(
-            windowFailure(operation: operation, error: error)
-        )
-    }
-
-    private func windowFailure(operation: String, error: any Error) -> WindowFailure {
-        if let clientError = error as? ClientError {
-            return windowFailure(operation: operation, clientError: clientError)
-        }
-
-        if let runtimeError = error as? RuntimeError {
-            return windowFailure(operation: operation, runtimeError: runtimeError)
-        }
-
-        return .internalInvariant(
-            .unexpectedWindowCallbackError(
-                id,
+            WindowFailureClassifier.classify(
+                windowID: id,
                 operation: operation,
-                detail: String(describing: error)
+                error: error
             )
         )
-    }
-
-    private func windowFailure(
-        operation: String,
-        clientError: ClientError
-    ) -> WindowFailure {
-        switch clientError {
-        case .window(let windowID, let windowError) where windowID == id:
-            return windowFailure(windowError, operation: operation)
-        case .displayClosed:
-            return .diagnostic(
-                WindowDiagnostic(
-                    windowID: id,
-                    operation: .callback(operation),
-                    message: clientError.description
-                )
-            )
-        default:
-            return .internalInvariant(
-                .unexpectedWindowCallbackError(
-                    id,
-                    operation: operation,
-                    detail: clientError.description
-                )
-            )
-        }
-    }
-
-    private func windowFailure(
-        _ windowError: WindowError,
-        operation: String
-    ) -> WindowFailure {
-        switch windowError {
-        case .invalidConfigure(let error):
-            return windowFailure(configureError: error)
-        case .invalidLifecycleTransition(let transition):
-            return .lifecycleViolation(id, transition)
-        case .initialConfigureTimedOut:
-            return .lifecycleViolation(
-                id,
-                .invalidTransition(from: "callback", event: operation)
-            )
-        case .presentationFailed(let error):
-            return .presentationFailure(id, error)
-        }
-    }
-
-    private func windowFailure(configureError: WindowConfigureError) -> WindowFailure {
-        switch configureError {
-        case .negativeSuggestedDimension(let width, let height):
-            .protocolViolation(
-                .invalidXDGConfigureDimensions(windowID: id, width: width, height: height)
-            )
-        case .invalidSerial(let serial):
-            .protocolViolation(.invalidConfigureSerial(windowID: id, serial: serial))
-        case .unresolvedSize:
-            .internalInvariant(
-                .effectInterpreterInvariant(id, "configure size could not be resolved")
-            )
-        }
-    }
-
-    private func windowFailure(
-        operation: String,
-        runtimeError: RuntimeError
-    ) -> WindowFailure {
-        switch runtimeError {
-        case .protocolError(let interface, let objectID, let code):
-            .protocolViolation(
-                .display(interface: interface, objectID: objectID, code: code)
-            )
-        case .proxyQueueMismatch(let interface):
-            .protocolViolation(
-                .proxyQueueMismatch(interface: interface, objectID: nil)
-            )
-        default:
-            .internalInvariant(
-                .unexpectedWindowCallbackError(
-                    id,
-                    operation: operation,
-                    detail: runtimeError.description
-                )
-            )
-        }
     }
 }
 
@@ -463,9 +365,9 @@ extension TopLevelWindow {
                 model.reduce(.frameBecameReady(bufferAvailable: redrawBufferAvailable))
             )
         } catch let error as ClientError {
-            reportCallbackFailure(operation: "frameDone", error: error)
+            reportCallbackFailure(operation: .frameDone, error: error)
         } catch {
-            reportCallbackFailure(operation: "frameDone", error: error)
+            reportCallbackFailure(operation: .frameDone, error: error)
         }
     }
 
@@ -480,9 +382,9 @@ extension TopLevelWindow {
                 model.reduce(.bufferBecameAvailable(bufferAvailable: redrawBufferAvailable))
             )
         } catch let error as ClientError {
-            reportCallbackFailure(operation: "bufferReleased", error: error)
+            reportCallbackFailure(operation: .bufferReleased, error: error)
         } catch {
-            reportCallbackFailure(operation: "bufferReleased", error: error)
+            reportCallbackFailure(operation: .bufferReleased, error: error)
         }
     }
 
@@ -497,9 +399,9 @@ extension TopLevelWindow {
                 model.reduce(.contentInvalidated(bufferAvailable: redrawBufferAvailable))
             )
         } catch let error as ClientError {
-            reportCallbackFailure(operation: "markNeedsRedraw", error: error)
+            reportCallbackFailure(operation: .markNeedsRedraw, error: error)
         } catch {
-            reportCallbackFailure(operation: "markNeedsRedraw", error: error)
+            reportCallbackFailure(operation: .markNeedsRedraw, error: error)
         }
     }
 
@@ -644,7 +546,7 @@ extension TopLevelWindow {
         do {
             try interpretWindowEffects(model.reduce(.explicitClose))
         } catch {
-            reportCallbackFailure(operation: "close", error: error)
+            reportCallbackFailure(operation: .close, error: error)
         }
     }
 

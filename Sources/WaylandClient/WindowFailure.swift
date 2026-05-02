@@ -1,3 +1,5 @@
+import WaylandRaw
+
 package protocol WindowFailureSink: AnyObject {
     func reportWindowFailure(_ failure: WindowFailure)
 }
@@ -8,7 +10,10 @@ package final class DefaultWindowFailureSink: WindowFailureSink {
     }
 
     package func reportWindowFailure(_ failure: WindowFailure) {
-        guard case .diagnostic = failure else {
+        switch failure {
+        case .diagnostic, .presentationFailure:
+            return
+        case .internalInvariant, .protocolViolation, .lifecycleViolation:
             preconditionFailure(failure.description)
         }
     }
@@ -29,6 +34,140 @@ package final class WeakWindowFailureSink: WindowFailureSink {
         }
 
         target.reportWindowFailure(failure)
+    }
+}
+
+package enum WindowFailureClassifier {
+    package static func classify(
+        windowID: WindowID,
+        operation: WindowCallbackOperation,
+        error: any Error
+    ) -> WindowFailure {
+        if let clientError = error as? ClientError {
+            return classify(
+                windowID: windowID,
+                operation: operation,
+                clientError: clientError
+            )
+        }
+
+        if let runtimeError = error as? RuntimeError {
+            return classify(
+                windowID: windowID,
+                operation: operation,
+                runtimeError: runtimeError
+            )
+        }
+
+        return .internalInvariant(
+            .unexpectedWindowCallbackError(
+                windowID,
+                operation: operation,
+                detail: String(describing: error)
+            )
+        )
+    }
+
+    private static func classify(
+        windowID: WindowID,
+        operation: WindowCallbackOperation,
+        clientError: ClientError
+    ) -> WindowFailure {
+        switch clientError {
+        case .window(let errorWindowID, let windowError) where errorWindowID == windowID:
+            return classify(windowID: windowID, operation: operation, windowError: windowError)
+        case .displayClosed:
+            return .diagnostic(
+                WindowDiagnostic(
+                    windowID: windowID,
+                    operation: .callback(operation),
+                    message: clientError.description
+                )
+            )
+        case .window:
+            return .internalInvariant(
+                .unexpectedWindowCallbackError(
+                    windowID,
+                    operation: operation,
+                    detail: clientError.description
+                )
+            )
+        default:
+            return .internalInvariant(
+                .unexpectedWindowCallbackError(
+                    windowID,
+                    operation: operation,
+                    detail: clientError.description
+                )
+            )
+        }
+    }
+
+    private static func classify(
+        windowID: WindowID,
+        operation: WindowCallbackOperation,
+        windowError: WindowError
+    ) -> WindowFailure {
+        switch windowError {
+        case .invalidConfigure(let error):
+            return classify(windowID: windowID, configureError: error)
+        case .invalidLifecycleTransition(let transition):
+            return .lifecycleViolation(windowID, transition)
+        case .initialConfigureTimedOut:
+            return .lifecycleViolation(
+                windowID,
+                .invalidTransition(from: "callback", event: operation.description)
+            )
+        case .presentationFailed(let error):
+            return .presentationFailure(windowID, error)
+        }
+    }
+
+    private static func classify(
+        windowID: WindowID,
+        configureError: WindowConfigureError
+    ) -> WindowFailure {
+        switch configureError {
+        case .negativeSuggestedDimension(let width, let height):
+            .protocolViolation(
+                .invalidXDGConfigureDimensions(
+                    windowID: windowID,
+                    width: width,
+                    height: height
+                )
+            )
+        case .invalidSerial(let serial):
+            .protocolViolation(.invalidConfigureSerial(windowID: windowID, serial: serial))
+        case .unresolvedSize:
+            .internalInvariant(
+                .effectInterpreterInvariant(windowID, "configure size could not be resolved")
+            )
+        }
+    }
+
+    private static func classify(
+        windowID: WindowID,
+        operation: WindowCallbackOperation,
+        runtimeError: RuntimeError
+    ) -> WindowFailure {
+        switch runtimeError {
+        case .protocolError(let interface, let objectID, let code):
+            .protocolViolation(
+                .display(interface: interface, objectID: objectID, code: code)
+            )
+        case .proxyQueueMismatch(let interface):
+            .protocolViolation(
+                .proxyQueueMismatch(interface: interface, objectID: nil)
+            )
+        default:
+            .internalInvariant(
+                .unexpectedWindowCallbackError(
+                    windowID,
+                    operation: operation,
+                    detail: runtimeError.description
+                )
+            )
+        }
     }
 }
 
