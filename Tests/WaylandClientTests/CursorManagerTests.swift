@@ -236,33 +236,6 @@ struct CursorManagerTests {
     }
 
     @Test
-    func explicitCursorRequestFailureIsTyped() throws {
-        let backend = try RecordingCursorBackend()
-        let manager = try CursorManager(backend: backend, configuration: .init())
-        let rawSeatID = RawSeatID(rawValue: 6)
-        let seatID = SeatID(rawValue: 6)
-
-        manager.register(surfaceID: 100)
-        manager.observe(rawPointerEnter(sequence: 1, seatID: rawSeatID, surfaceID: 100))
-        backend.setCursorResultOverride = .skippedNoPointer(rawSeatID)
-
-        #expect(
-            throws: ClientError.cursor(
-                .requestFailed(
-                    PointerCursorRequestFailure(
-                        operation: .setNamed,
-                        seatID: seatID,
-                        requestedCursor: .text,
-                        backendResult: .skippedNoPointer(seatID)
-                    )
-                )
-            )
-        ) {
-            try manager.setPointerCursor(.text)
-        }
-    }
-
-    @Test
     func automaticCursorFailureReturnsPublicDiagnostic() throws {
         let backend = try RecordingCursorBackend()
         backend.missingCursorNames = ["left_ptr"]
@@ -291,6 +264,63 @@ struct CursorManagerTests {
         )
 
         #expect(diagnostics == [expectedDiagnostic])
+    }
+}
+
+@Suite
+struct CursorManagerFailureTests {
+    @Test
+    func explicitCursorRequestFailureIsTyped() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let rawSeatID = RawSeatID(rawValue: 6)
+        let seatID = SeatID(rawValue: 6)
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: rawSeatID, surfaceID: 100))
+        backend.setCursorResultOverride = .skippedNoPointer(rawSeatID)
+
+        #expect(
+            throws: ClientError.cursor(
+                .requestFailed(
+                    PointerCursorRequestFailure(
+                        operation: .setNamed,
+                        seatID: seatID,
+                        requestedCursor: .text,
+                        backendResult: .skippedNoPointer
+                    )
+                )
+            )
+        ) {
+            try manager.setPointerCursor(.text)
+        }
+    }
+
+    @Test
+    func hiddenCursorRequestFailureIsTyped() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let rawSeatID = RawSeatID(rawValue: 7)
+        let seatID = SeatID(rawValue: 7)
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: rawSeatID, surfaceID: 100))
+        backend.setCursorResultOverride = .skippedUnknownSeat(rawSeatID)
+
+        #expect(
+            throws: ClientError.cursor(
+                .requestFailed(
+                    PointerCursorRequestFailure(
+                        operation: .setHidden,
+                        seatID: seatID,
+                        requestedCursor: .hidden,
+                        backendResult: .skippedUnknownSeat
+                    )
+                )
+            )
+        ) {
+            try manager.setPointerCursor(.hidden)
+        }
     }
 }
 

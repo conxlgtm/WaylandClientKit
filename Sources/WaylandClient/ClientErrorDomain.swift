@@ -1,7 +1,6 @@
 public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConvertible {
     case closed
     case unknownWindow(WindowID)
-    case invalidConfiguration(DisplayConfigurationError)
 
     public var description: String {
         switch self {
@@ -9,8 +8,6 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "display is closed"
         case .unknownWindow(let windowID):
             "unknown window: \(windowID)"
-        case .invalidConfiguration(let error):
-            "invalid display configuration: \(error.description)"
         }
     }
 }
@@ -30,15 +27,15 @@ public enum PointerCursorOperation: Equatable, Sendable, CustomStringConvertible
 }
 
 public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {
-    case skippedUnknownSeat(SeatID)
-    case skippedNoPointer(SeatID)
+    case skippedUnknownSeat
+    case skippedNoPointer
 
     public var description: String {
         switch self {
-        case .skippedUnknownSeat(let seatID):
-            "unknown seat \(seatID)"
-        case .skippedNoPointer(let seatID):
-            "seat \(seatID) has no pointer"
+        case .skippedUnknownSeat:
+            "unknown seat"
+        case .skippedNoPointer:
+            "seat has no pointer"
         }
     }
 }

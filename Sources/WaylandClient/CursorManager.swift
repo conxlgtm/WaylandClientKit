@@ -301,15 +301,24 @@ package final class CursorManager: RawInputEventObserving {
         cursor: PointerCursor,
         rawResult: RawPointerCursorResult
     ) -> ClientError {
-        let backendResult: PointerCursorBackendResult =
-            switch rawResult {
-            case .set:
-                preconditionFailure("successful cursor result cannot describe a failure")
-            case .skippedNoPointer(let seatID):
-                .skippedNoPointer(publicSeatID(seatID))
-            case .skippedUnknownSeat(let seatID):
-                .skippedUnknownSeat(publicSeatID(seatID))
-            }
+        let rawResultSeatID: RawSeatID
+        let backendResult: PointerCursorBackendResult
+
+        switch rawResult {
+        case .set:
+            preconditionFailure("successful cursor result cannot describe a failure")
+        case .skippedNoPointer(let seatID):
+            rawResultSeatID = seatID
+            backendResult = .skippedNoPointer
+        case .skippedUnknownSeat(let seatID):
+            rawResultSeatID = seatID
+            backendResult = .skippedUnknownSeat
+        }
+
+        precondition(
+            rawResultSeatID == rawSeatID,
+            "cursor backend failure seat must match requested seat"
+        )
 
         return .cursor(
             .requestFailed(
