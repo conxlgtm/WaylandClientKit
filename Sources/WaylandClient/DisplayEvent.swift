@@ -45,28 +45,6 @@ public enum DisplayDiagnosticPayload: Equatable, Sendable {
     case diagnosticsDropped(count: Int)
 }
 
-public enum WindowDiagnosticOperation: Equatable, Sendable {
-    case callback(String)
-    case lifecycle(String)
-    case presentation(String)
-}
-
-public struct WindowDiagnostic: Equatable, Sendable {
-    public let windowID: WindowID
-    public let operation: WindowDiagnosticOperation
-    public let message: String
-
-    public init(
-        windowID diagnosticWindowID: WindowID,
-        operation diagnosticOperation: WindowDiagnosticOperation,
-        message diagnosticMessage: String
-    ) {
-        windowID = diagnosticWindowID
-        operation = diagnosticOperation
-        message = diagnosticMessage
-    }
-}
-
 public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
     case display(interface: String?, objectID: UInt32, code: Int32)
     case invalidXDGConfigureDimensions(windowID: WindowID, width: Int32, height: Int32)
@@ -96,7 +74,11 @@ public enum InternalInvariantViolation: Equatable, Sendable, CustomStringConvert
     case bufferReleaseWithoutBufferState(WindowID)
     case invalidWindowTransition(WindowID, transition: WindowLifecycleTransitionError)
     case effectInterpreterInvariant(WindowID, String)
-    case unexpectedWindowCallbackError(WindowID, operation: String, detail: String)
+    case unexpectedWindowCallbackError(
+        WindowID,
+        operation: WindowCallbackOperation,
+        detail: String
+    )
     case eventSubscriberAwaitedTwice
 
     public var description: String {

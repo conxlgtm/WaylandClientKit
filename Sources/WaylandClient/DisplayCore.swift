@@ -142,7 +142,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             eventHub.publishWindowDiagnostic(
                 WindowDiagnostic(
                     windowID: windowID,
-                    operation: .presentation("presentationFailed"),
+                    operation: .presentation(.presentationFailed),
                     message: error.description
                 )
             )
