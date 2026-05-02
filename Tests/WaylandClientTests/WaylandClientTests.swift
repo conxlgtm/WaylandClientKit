@@ -49,8 +49,8 @@ struct WaylandClientTests {
     @Test
     func pointerCursorRejectsCStringsThatWouldTruncateAtCursorBoundary() {
         #expect(
-            throws: ClientError.invalidCursorConfiguration(
-                "Pointer cursor names must not contain embedded NUL bytes"
+            throws: ClientError.cursor(
+                .invalidConfiguration(.cursorNameContainsInteriorNUL)
             )
         ) {
             _ = try PointerCursor(name: "left_ptr\0fallback")
@@ -58,36 +58,111 @@ struct WaylandClientTests {
     }
 
     @Test
+    func pointerCursorRejectsEmptyName() {
+        #expect(throws: ClientError.cursor(.invalidConfiguration(.emptyCursorName))) {
+            _ = try PointerCursor(name: "")
+        }
+    }
+
+    @Test
+    func cursorConfigurationRejectsInvalidSize() {
+        #expect(throws: CursorConfigurationError.invalidSize(0)) {
+            _ = try CursorConfiguration(themeName: nil, size: 0)
+        }
+    }
+
+    @Test
+    func cursorConfigurationRejectsEmptyThemeName() {
+        #expect(throws: CursorConfigurationError.emptyThemeName) {
+            _ = try CursorConfiguration(themeName: "")
+        }
+    }
+
+    @Test
+    func cursorConfigurationAcceptsMinimumValidSizeAndThemeName() throws {
+        let configuration = try CursorConfiguration(themeName: "default", size: 1)
+
+        #expect(configuration.themeName == (try CursorThemeName("default")))
+        #expect(configuration.size == (try CursorSize(1)))
+    }
+
+    @Test
     func displayConfigurationRejectsInvalidInternalCapacities() {
         #expect(
-            throws: ClientError.invalidDisplayState(
-                "rawInputQueueCapacity must be greater than zero"
+            throws: DisplayConfigurationError.nonPositiveCapacity(
+                field: .displayEventCapacity,
+                value: 0
             )
         ) {
-            try DisplayConfiguration(
-                inputPipeline: InputPipelineConfiguration(rawInputQueueCapacity: 0)
-            ).validate()
+            _ = try EventStreamConfiguration(displayEventCapacity: 0)
         }
 
         #expect(
-            throws: ClientError.invalidDisplayState(
-                "pendingInputEventCapacity must be greater than zero"
+            throws: DisplayConfigurationError.nonPositiveCapacity(
+                field: .inputEventCapacity,
+                value: 0
             )
         ) {
-            try DisplayConfiguration(
-                inputPipeline: InputPipelineConfiguration(pendingInputEventCapacity: 0)
-            ).validate()
+            _ = try EventStreamConfiguration(inputEventCapacity: 0)
         }
 
         #expect(
-            throws: ClientError.invalidDisplayState(
-                "diagnostics capacity must be greater than zero"
+            throws: DisplayConfigurationError.nonPositiveCapacity(
+                field: .rawInputQueueCapacity,
+                value: 0
             )
         ) {
-            try DisplayConfiguration(
-                diagnostics: DiagnosticsConfiguration(capacity: 0)
-            ).validate()
+            _ = try InputPipelineConfiguration(rawInputQueueCapacity: 0)
         }
+
+        #expect(
+            throws: DisplayConfigurationError.nonPositiveCapacity(
+                field: .pendingInputEventCapacity,
+                value: 0
+            )
+        ) {
+            _ = try InputPipelineConfiguration(pendingInputEventCapacity: 0)
+        }
+
+        #expect(
+            throws: DisplayConfigurationError.nonPositiveCapacity(
+                field: .diagnosticsCapacity,
+                value: 0
+            )
+        ) {
+            _ = try DiagnosticsConfiguration(capacity: 0)
+        }
+    }
+
+    @Test
+    func displayConfigurationAcceptsMinimumValidCapacities() throws {
+        let eventStreams = try EventStreamConfiguration(
+            displayEventCapacity: 1,
+            inputEventCapacity: 1
+        )
+        let inputPipeline = try InputPipelineConfiguration(
+            rawInputQueueCapacity: 1,
+            pendingInputEventCapacity: 1
+        )
+        let diagnostics = try DiagnosticsConfiguration(capacity: 1)
+
+        #expect(
+            eventStreams.displayEventCapacity
+                == (try EventStreamCapacity(1, field: .displayEventCapacity))
+        )
+        #expect(
+            eventStreams.inputEventCapacity
+                == (try EventStreamCapacity(1, field: .inputEventCapacity))
+        )
+        #expect(
+            inputPipeline.rawInputQueueCapacity
+                == (try InputQueueCapacity(1, field: .rawInputQueueCapacity))
+        )
+        #expect(
+            inputPipeline.pendingInputEventCapacity
+                == (try InputQueueCapacity(1, field: .pendingInputEventCapacity))
+        )
+        #expect(diagnostics.capacity == (try DiagnosticsCapacity(1)))
     }
 
     @Test

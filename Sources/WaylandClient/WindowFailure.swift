@@ -76,7 +76,7 @@ package enum WindowFailureClassifier {
         switch clientError {
         case .window(let errorWindowID, let windowError) where errorWindowID == windowID:
             return classify(windowID: windowID, operation: operation, windowError: windowError)
-        case .displayClosed:
+        case .display(.closed):
             return .diagnostic(
                 WindowDiagnostic(
                     windowID: windowID,

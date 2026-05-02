@@ -12,7 +12,7 @@ struct WindowFailureClassifierTests {
         let failure = WindowFailureClassifier.classify(
             windowID: windowID,
             operation: .frameDone,
-            error: ClientError.displayClosed
+            error: ClientError.display(.closed)
         )
 
         #expect(
@@ -21,7 +21,7 @@ struct WindowFailureClassifierTests {
                     WindowDiagnostic(
                         windowID: windowID,
                         operation: .callback(.frameDone),
-                        message: ClientError.displayClosed.description
+                        message: ClientError.display(.closed).description
                     )
                 )
         )
@@ -67,7 +67,7 @@ struct WindowFailureClassifierTests {
 
     @Test
     func classifiesUnexpectedClientErrorAsInternalInvariant() {
-        let error = ClientError.unknownWindow(WindowID(rawValue: 99))
+        let error = ClientError.display(.unknownWindow(WindowID(rawValue: 99)))
         let failure = WindowFailureClassifier.classify(
             windowID: windowID,
             operation: .bufferReleased,
