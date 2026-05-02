@@ -148,6 +148,42 @@ struct CursorManagerTests {
     }
 
     @Test
+    func pointerLeaveClearsFocusWithoutDestroyingCursorSurface() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 1)
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100))
+        let cursorSurface = try #require(backend.surface(for: seatID))
+        backend.setCursorRequests.removeAll()
+
+        manager.observe(rawPointerLeave(sequence: 2, seatID: seatID, surfaceID: 100))
+        try manager.setPointerCursor(.text)
+
+        #expect(cursorSurface.destroyCount == 0)
+        #expect(backend.setCursorRequests.isEmpty)
+    }
+
+    @Test
+    func unregisteringFocusedSurfaceClearsFocusWithoutDestroyingCursorSurface() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 1)
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100))
+        let cursorSurface = try #require(backend.surface(for: seatID))
+        backend.setCursorRequests.removeAll()
+
+        manager.unregister(surfaceID: 100)
+        try manager.setPointerCursor(.text)
+
+        #expect(cursorSurface.destroyCount == 0)
+        #expect(backend.setCursorRequests.isEmpty)
+    }
+
+    @Test
     func cursorChangeUpdatesOnlyFocusedSeats() throws {
         let backend = try RecordingCursorBackend()
         let manager = try CursorManager(backend: backend, configuration: .init())

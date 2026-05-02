@@ -60,10 +60,7 @@ package final class CursorManager: RawInputEventObserving {
     private var desiredCursor: PointerCursor
     private var resolvedDesiredCursor: ResolvedCursorImage?
     private var registeredSurfaceIDs: Set<RawObjectID> = []
-    private var focusedSurfaceBySeat: [RawSeatID: RawObjectID] = [:]
-    private var focusedPointerSeatIDs: Set<RawSeatID> = []
-    private var latestPointerEnterSerialBySeat: [RawSeatID: UInt32] = [:]
-    private var cursorSurfaceBySeat: [RawSeatID: CursorManagerSurface] = [:]
+    private var cursorStateBySeat: [RawSeatID: PointerCursorSeatState] = [:]
 
     package private(set) var requestResults: [CursorRequestRecord] = []
 
@@ -94,21 +91,16 @@ package final class CursorManager: RawInputEventObserving {
         resolvedDesiredCursor = nil
     }
 
-    var pointerCursor: PointerCursor {
-        desiredCursor
-    }
+    var pointerCursor: PointerCursor { desiredCursor }
 
-    func register(surfaceID: RawObjectID) {
-        registeredSurfaceIDs.insert(surfaceID)
-    }
+    func register(surfaceID: RawObjectID) { registeredSurfaceIDs.insert(surfaceID) }
 
     func unregister(surfaceID: RawObjectID) {
         registeredSurfaceIDs.remove(surfaceID)
 
-        for (seatID, focusedSurfaceID) in focusedSurfaceBySeat
-        where focusedSurfaceID == surfaceID {
-            focusedSurfaceBySeat[seatID] = nil
-            focusedPointerSeatIDs.remove(seatID)
+        for seatID in Array(cursorStateBySeat.keys) {
+            let effects = reduceSeatState(.registeredSurfaceRemoved(surfaceID), for: seatID)
+            interpret(effects, seatID: seatID)
         }
     }
 
@@ -120,7 +112,7 @@ package final class CursorManager: RawInputEventObserving {
         resolvedDesiredCursor = resolvedCursor
 
         var results: [CursorRequestResult] = []
-        for seatID in focusedPointerSeatIDs.sorted(by: { $0.rawValue < $1.rawValue }) {
+        for seatID in focusedPointerSeatIDs() {
             results.append(try applyCursor(to: seatID, resolvedCursor: resolvedCursor))
         }
 
@@ -154,25 +146,26 @@ package final class CursorManager: RawInputEventObserving {
         _ enter: RawPointerEnter,
         rawEvent: RawInputEvent
     ) -> [InputEvent] {
-        let seatID = rawEvent.seatID
-        latestPointerEnterSerialBySeat[seatID] = enter.serial
-
-        guard let surfaceID = enter.surfaceID,
+        let event: PointerCursorSeatEvent
+        if let surfaceID = enter.surfaceID,
             registeredSurfaceIDs.contains(surfaceID)
-        else {
-            return []
+        {
+            event = .managedPointerEntered(
+                surfaceID: surfaceID,
+                serial: enter.serial,
+                sourceEvent: rawEvent
+            )
+        } else {
+            event = .unmanagedPointerEntered
         }
 
-        focusedSurfaceBySeat[seatID] = surfaceID
-        focusedPointerSeatIDs.insert(seatID)
-        return recordCursorRequest(to: seatID, rawEvent: rawEvent)
+        let effects = reduceSeatState(event, for: rawEvent.seatID)
+        return interpret(effects, seatID: rawEvent.seatID)
     }
 
     private func handlePointerLeave(_ leave: RawPointerLeave, seatID: RawSeatID) {
-        guard focusedSurfaceBySeat[seatID] == leave.surfaceID else { return }
-
-        focusedSurfaceBySeat[seatID] = nil
-        focusedPointerSeatIDs.remove(seatID)
+        let effects = reduceSeatState(.pointerLeft(surfaceID: leave.surfaceID), for: seatID)
+        interpret(effects, seatID: seatID)
     }
 
     private func resolvedCursorIfNeeded(_ cursor: PointerCursor) throws -> ResolvedCursorImage? {
@@ -183,11 +176,10 @@ package final class CursorManager: RawInputEventObserving {
 
     private func applyCursor(
         to seatID: RawSeatID,
+        serial explicitSerial: UInt32? = nil,
         resolvedCursor: ResolvedCursorImage? = nil
     ) throws -> CursorRequestResult {
-        guard focusedPointerSeatIDs.contains(seatID),
-            let serial = latestPointerEnterSerialBySeat[seatID]
-        else {
+        guard let serial = explicitSerial ?? cursorStateBySeat[seatID]?.focus.enterSerial else {
             return .skippedNoPointerFocus(seatID: publicSeatID(seatID))
         }
 
@@ -272,28 +264,25 @@ package final class CursorManager: RawInputEventObserving {
     }
 
     private func cursorSurface(for seatID: RawSeatID) throws -> CursorManagerSurface {
-        if let surface = cursorSurfaceBySeat[seatID] {
+        if let surface = cursorStateBySeat[seatID]?.cursorSurface {
             return surface
         }
 
         let surface = try backend.createCursorSurface(for: seatID)
-        cursorSurfaceBySeat[seatID] = surface
+        var state = cursorStateBySeat[seatID] ?? PointerCursorSeatState()
+        state.cursorSurface = surface
+        cursorStateBySeat[seatID] = state
         return surface
     }
 
     private func clearSeat(_ seatID: RawSeatID) {
-        latestPointerEnterSerialBySeat[seatID] = nil
-        focusedSurfaceBySeat[seatID] = nil
-        focusedPointerSeatIDs.remove(seatID)
-        cursorSurfaceBySeat.removeValue(forKey: seatID)?.destroy()
-    }
-
-    private func publicSeatID(_ seatID: RawSeatID) -> SeatID {
-        SeatID(rawValue: seatID.rawValue)
+        let effects = reduceSeatState(.pointerUnavailable, for: seatID)
+        interpret(effects, seatID: seatID)
     }
 
     deinit {
-        for surface in cursorSurfaceBySeat.values {
+        for state in cursorStateBySeat.values {
+            guard let surface = state.cursorSurface else { continue }
             surface.destroy()
         }
     }
@@ -316,12 +305,67 @@ package final class CursorManager: RawInputEventObserving {
 }
 
 extension CursorManager {
+    private func focusedPointerSeatIDs() -> [RawSeatID] {
+        cursorStateBySeat
+            .filter(\.value.focus.isFocused)
+            .map(\.key)
+            .sorted { $0.rawValue < $1.rawValue }
+    }
+
+    private func reduceSeatState(
+        _ event: PointerCursorSeatEvent,
+        for seatID: RawSeatID
+    ) -> [PointerCursorSeatEffect] {
+        var state = cursorStateBySeat[seatID] ?? PointerCursorSeatState()
+        let effects = state.reduce(event)
+
+        if state.isEmpty {
+            cursorStateBySeat[seatID] = nil
+        } else {
+            cursorStateBySeat[seatID] = state
+        }
+
+        return effects
+    }
+
+    @discardableResult
+    private func interpret(
+        _ effects: [PointerCursorSeatEffect],
+        seatID: RawSeatID
+    ) -> [InputEvent] {
+        var inputEvents: [InputEvent] = []
+
+        for effect in effects {
+            switch effect {
+            case .applyCursor(let serial, let sourceEvent):
+                inputEvents.append(
+                    contentsOf: recordCursorRequest(
+                        to: seatID,
+                        serial: serial,
+                        rawEvent: sourceEvent
+                    ))
+            case .destroyCursorSurface(let surface):
+                surface.destroy()
+            }
+        }
+
+        return inputEvents
+    }
+
+    private func publicSeatID(_ seatID: RawSeatID) -> SeatID {
+        SeatID(rawValue: seatID.rawValue)
+    }
+
     private func recordCursorRequest(
         to seatID: RawSeatID,
+        serial: UInt32,
         rawEvent: RawInputEvent
     ) -> [InputEvent] {
         do {
-            requestResults.append(CursorRequestRecord(try applyCursor(to: seatID)))
+            requestResults.append(
+                CursorRequestRecord(
+                    try applyCursor(to: seatID, serial: serial)
+                ))
             return []
         } catch CursorError.missingCursor(let name) {
             requestResults.append(.skippedMissingCursor(name: name))
