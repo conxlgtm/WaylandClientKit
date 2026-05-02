@@ -6,7 +6,7 @@ import Testing
 struct XDGConfigureStateTests {
     @Test
     func surfaceConfigureLatchesLatestTopLevelState() {
-        let state = XDGConfigureState(fallbackSize: TopLevelSize(width: 640, height: 480))
+        let state = XDGConfigureState()
 
         state.handleConfigureBounds(width: 1_920, height: 1_080)
         state.handleWMCapabilities([.maximize, .fullscreen])
@@ -19,37 +19,49 @@ struct XDGConfigureStateTests {
         let configure = state.handleSurfaceConfigure(serial: 42)
 
         #expect(configure.serial == 42)
-        #expect(configure.size == TopLevelSize(width: 800, height: 600))
-        #expect(configure.states == [.activated, .resizing])
-        #expect(configure.bounds == TopLevelSize(width: 1_920, height: 1_080))
-        #expect(configure.wmCapabilities == [.maximize, .fullscreen])
+        #expect(configure.topLevel.size == TopLevelSize(width: 800, height: 600))
+        #expect(configure.topLevel.states == [.activated, .resizing])
+        #expect(configure.topLevel.bounds == TopLevelSize(width: 1_920, height: 1_080))
+        #expect(configure.topLevel.wmCapabilities == [.maximize, .fullscreen])
     }
 
     @Test
-    func zeroConfigureSizeUsesFallback() {
-        let state = XDGConfigureState(fallbackSize: TopLevelSize(width: 320, height: 240))
+    func zeroConfigureSizeIsPreservedAsProtocolFact() {
+        let state = XDGConfigureState()
 
         state.handleTopLevelConfigure(width: 0, height: 0)
 
         #expect(
-            state.handleSurfaceConfigure(serial: 7).size == TopLevelSize(width: 320, height: 240))
+            state.handleSurfaceConfigure(serial: 7).topLevel.size
+                == TopLevelSize(width: 0, height: 0))
+    }
+
+    @Test
+    func partialZeroConfigureSizeIsPreservedPerDimension() {
+        let state = XDGConfigureState()
+
+        state.handleTopLevelConfigure(width: 0, height: 720)
+
+        #expect(
+            state.handleSurfaceConfigure(serial: 7).topLevel.size
+                == TopLevelSize(width: 0, height: 720))
     }
 
     @Test
     func zeroConfigureBoundsClearsBoundsInsteadOfUsingFallback() {
-        let state = XDGConfigureState(fallbackSize: TopLevelSize(width: 320, height: 240))
+        let state = XDGConfigureState()
         state.handleConfigureBounds(width: 1_024, height: 768)
         state.handleConfigureBounds(width: 0, height: 0)
 
-        #expect(state.handleSurfaceConfigure(serial: 8).bounds == nil)
+        #expect(state.handleSurfaceConfigure(serial: 8).topLevel.bounds == nil)
     }
 
     @Test
     func partialZeroConfigureBoundsClearsBounds() {
-        let state = XDGConfigureState(fallbackSize: TopLevelSize(width: 320, height: 240))
+        let state = XDGConfigureState()
         state.handleConfigureBounds(width: 1_024, height: 0)
 
-        #expect(state.handleSurfaceConfigure(serial: 9).bounds == nil)
+        #expect(state.handleSurfaceConfigure(serial: 9).topLevel.bounds == nil)
     }
 
     @Test
