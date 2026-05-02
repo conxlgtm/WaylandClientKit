@@ -241,7 +241,7 @@ final class XKBKeymapOwner {
             throw .emptyKeymap
         }
 
-        let newPointer = payload.bytes.withUnsafeBytes { rawBuffer -> OpaquePointer? in
+        let newPointer = payload.bytes.array.withUnsafeBytes { rawBuffer -> OpaquePointer? in
             guard let baseAddress = rawBuffer.baseAddress else {
                 return nil
             }

@@ -16,17 +16,32 @@ struct WaylandCallbackOperations {
 
 enum WaylandCallbackLifecycle: Equatable {
     case pending
-    case firing
+    case completed(WaylandCallbackCompletionReason)
+}
+
+enum WaylandCallbackCompletionReason: Equatable {
     case fired
     case cancelled
 }
 
+private enum WaylandCallbackState {
+    case pending(pointer: OpaquePointer, onDone: () -> Void)
+    case completed(WaylandCallbackCompletionReason)
+
+    var lifecycle: WaylandCallbackLifecycle {
+        switch self {
+        case .pending:
+            .pending
+        case .completed(let reason):
+            .completed(reason)
+        }
+    }
+}
+
 final class WaylandCallbackRegistrationState {
-    private var pointer: OpaquePointer?
+    private var state: WaylandCallbackState
     private let operations: WaylandCallbackOperations
     private let invariantFailureSink: RawInvariantFailureSink?
-    private var onDone: (() -> Void)?
-    private(set) var lifecycle: WaylandCallbackLifecycle = .pending
     private lazy var listenerStorage = CListenerStorage(
         owner: self,
         initialValue: swl_callback_listener_callbacks(),
@@ -43,8 +58,7 @@ final class WaylandCallbackRegistrationState {
         operations callbackOperations: WaylandCallbackOperations,
         invariantFailureSink failureSink: RawInvariantFailureSink? = nil
     ) {
-        pointer = callbackPointer
-        onDone = handler
+        state = .pending(pointer: callbackPointer, onDone: handler)
         invariantFailureSink = failureSink
         operations = callbackOperations
 
@@ -61,9 +75,13 @@ final class WaylandCallbackRegistrationState {
         }
     }
 
+    var lifecycle: WaylandCallbackLifecycle {
+        state.lifecycle
+    }
+
     func install() throws {
         callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
-        guard let pointer else {
+        guard case .pending(let pointer, _) = state else {
             preconditionFailure("Wayland callback listener installed after ownership ended")
         }
 
@@ -74,38 +92,29 @@ final class WaylandCallbackRegistrationState {
     }
 
     func handleDone() {
-        guard lifecycle == .pending, let callback = unsafe pointer else {
+        guard case .pending(let callback, let handler) = state else {
             preconditionFailure("Wayland callback fired after completion")
         }
 
-        let handler = onDone
-        let retainedListenerStorage = unsafe listenerStorage
-        onDone = nil
-        unsafe pointer = nil
-        lifecycle = .fired
+        let retainedListenerStorage = listenerStorage
+        state = .completed(.fired)
         retainedListenerStorage.invalidate()
 
         unsafe operations.destroy(callback)
 
         unsafe withExtendedLifetime(retainedListenerStorage) {
-            handler?()
+            handler()
         }
     }
 
     func cancel() {
-        guard lifecycle == .pending else {
-            onDone = nil
+        guard case .pending(let callback, _) = state else {
             return
         }
 
-        lifecycle = .cancelled
-        let callback = pointer
-        pointer = nil
-        onDone = nil
+        state = .completed(.cancelled)
         listenerStorage.invalidate()
-        if let callback {
-            operations.destroy(callback)
-        }
+        operations.destroy(callback)
     }
 
     deinit {

@@ -39,22 +39,62 @@ public struct RawKeyboardKeymapInfo: Equatable, Sendable {
     }
 }
 
+public struct KeymapBytes: Equatable, Sendable {
+    private let storage: [UInt8]
+
+    public init(_ keymapBytes: [UInt8]) {
+        precondition(
+            UInt64(keymapBytes.count) <= UInt64(UInt32.max),
+            "keymap byte count exceeds UInt32"
+        )
+
+        storage = keymapBytes
+    }
+
+    public var count: Int {
+        storage.count
+    }
+
+    public var countUInt32: UInt32 {
+        UInt32(storage.count)
+    }
+
+    public var isEmpty: Bool {
+        storage.isEmpty
+    }
+
+    public var array: [UInt8] {
+        storage
+    }
+}
+
 public struct RawKeyboardKeymapPayload: Equatable, Sendable {
     public let id: RawKeyboardKeymapID
     public let format: RawKeyboardKeymapFormat
-    public let size: UInt32
-    public let bytes: [UInt8]
+    public let bytes: KeymapBytes
+
+    public var size: UInt32 {
+        bytes.countUInt32
+    }
 
     public init(
         id keymapID: RawKeyboardKeymapID,
         format keymapFormat: RawKeyboardKeymapFormat,
-        size keymapSize: UInt32,
+        bytes keymapBytes: KeymapBytes
+    ) {
+        id = keymapID
+        format = keymapFormat
+        bytes = keymapBytes
+    }
+
+    public init(
+        id keymapID: RawKeyboardKeymapID,
+        format keymapFormat: RawKeyboardKeymapFormat,
         bytes keymapBytes: [UInt8]
     ) {
         id = keymapID
         format = keymapFormat
-        size = keymapSize
-        bytes = keymapBytes
+        bytes = KeymapBytes(keymapBytes)
     }
 }
 
