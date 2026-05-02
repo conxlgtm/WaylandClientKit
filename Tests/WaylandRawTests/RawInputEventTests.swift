@@ -77,7 +77,7 @@ struct RawInputEventTests {
     }
 
     @Test
-    func keyboardKeymapInfoCarriesInternalIDAndSafeMetadata() {
+    func keyboardKeymapInfoCarriesInternalIDAndSafeMetadata() throws {
         let seatID = RawSeatID(rawValue: 12)
         let id = RawKeyboardKeymapID(
             seatID: seatID,
@@ -89,10 +89,9 @@ struct RawInputEventTests {
             format: .xkbV1,
             size: 128
         )
-        let payload = RawKeyboardKeymapPayload(
+        let payload = try RawKeyboardKeymapPayload.xkbV1(
             id: id,
-            format: .xkbV1,
-            bytes: [1, 2, 3]
+            bytes: [1, 2, 0]
         )
 
         #expect(info.id == id)
@@ -100,7 +99,7 @@ struct RawInputEventTests {
         #expect(info.size == 128)
         #expect(RawKeyboardKeymapFormat.noKeymap.rawValue == 0)
         #expect(payload.size == 3)
-        #expect(payload.bytes.array == [1, 2, 3])
+        #expect(payload.xkbV1Bytes?.rawValue == [1, 2, 0])
     }
 
     @Test

@@ -194,16 +194,12 @@ extension KeyboardInterpreter {
             return [diagnostic]
         }
 
-        if payload.format != .xkbV1 {
+        guard case .xkbV1 = payload else {
             return resetAndReport(
                 .unsupportedKeymapFormat(payload.format.rawValue),
                 deviceID: payloadDeviceID,
                 event: event
             )
-        }
-
-        guard !payload.bytes.isEmpty else {
-            return resetAndReport(.emptyKeymap, deviceID: payloadDeviceID, event: event)
         }
 
         return installKeymap(payload, deviceID: payloadDeviceID, event: event)
