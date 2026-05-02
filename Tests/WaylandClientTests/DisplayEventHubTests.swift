@@ -5,9 +5,9 @@ import Testing
 @Suite
 struct DisplayEventHubTests {
     @Test
-    func displaySubscriberOverflowTerminatesOnlyThatSubscriber() async {
+    func displaySubscriberOverflowTerminatesOnlyThatSubscriber() async throws {
         let hub = DisplayEventHub(
-            configuration: EventStreamConfiguration(displayEventCapacity: 1)
+            configuration: try EventStreamConfiguration(displayEventCapacity: 1)
         )
         let firstStream = hub.displayEvents()
         let secondStream = hub.displayEvents()
@@ -24,9 +24,9 @@ struct DisplayEventHubTests {
     }
 
     @Test
-    func displaySubscriberOverflowUsesConfiguredCapacity() async {
+    func displaySubscriberOverflowUsesConfiguredCapacity() async throws {
         let hub = DisplayEventHub(
-            configuration: EventStreamConfiguration(displayEventCapacity: 1)
+            configuration: try EventStreamConfiguration(displayEventCapacity: 1)
         )
         let stream = hub.displayEvents()
 
@@ -41,7 +41,7 @@ struct DisplayEventHubTests {
             #expect(
                 error
                     == .eventSubscriberOverflow(
-                        stream: "display event",
+                        stream: .displayEvents,
                         capacity: 1
                     )
             )
@@ -128,9 +128,9 @@ struct DisplayDiagnosticsHubTests {
     }
 
     @Test
-    func diagnosticsStreamDropsOldestWithoutInvertingDiagnosticIDs() async {
+    func diagnosticsStreamDropsOldestWithoutInvertingDiagnosticIDs() async throws {
         let hub = DisplayEventHub(
-            diagnosticsConfiguration: DiagnosticsConfiguration(capacity: 1)
+            diagnosticsConfiguration: try DiagnosticsConfiguration(capacity: 1)
         )
         var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
 
@@ -165,9 +165,9 @@ struct DisplayDiagnosticsHubTests {
     }
 
     @Test
-    func diagnosticsStreamAggregatesDropNoticeWithoutUnusedNoticeIDs() async {
+    func diagnosticsStreamAggregatesDropNoticeWithoutUnusedNoticeIDs() async throws {
         let hub = DisplayEventHub(
-            diagnosticsConfiguration: DiagnosticsConfiguration(capacity: 1)
+            diagnosticsConfiguration: try DiagnosticsConfiguration(capacity: 1)
         )
         var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
 
@@ -459,7 +459,7 @@ private func expectOverflow(
         #expect(
             error
                 == .eventSubscriberOverflow(
-                    stream: "display event",
+                    stream: .displayEvents,
                     capacity: capacity
                 )
         )

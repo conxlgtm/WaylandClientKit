@@ -6,13 +6,13 @@ public enum EventStreamOverflowPolicy: Equatable, Sendable {
 }
 
 public struct EventStreamConfiguration: Equatable, Sendable {
-    public var displayEventCapacity: Int
-    public var inputEventCapacity: Int
+    public var displayEventCapacity: EventStreamCapacity
+    public var inputEventCapacity: EventStreamCapacity
     public var overflowPolicy: EventStreamOverflowPolicy
 
     public init(
-        displayEventCapacity displayCapacity: Int = 256,
-        inputEventCapacity inputCapacity: Int = 1_024,
+        displayEventCapacity displayCapacity: EventStreamCapacity = .defaultDisplayEvents,
+        inputEventCapacity inputCapacity: EventStreamCapacity = .defaultInputEvents,
         overflowPolicy policy: EventStreamOverflowPolicy = .failFast
     ) {
         displayEventCapacity = displayCapacity
@@ -20,18 +20,37 @@ public struct EventStreamConfiguration: Equatable, Sendable {
         overflowPolicy = policy
     }
 
-    package func validate() throws {
-        guard displayEventCapacity > 0 else {
-            throw ClientError.invalidDisplayState(
-                "displayEventCapacity must be greater than zero"
-            )
-        }
+    public init(
+        displayEventCapacity displayCapacity: Int,
+        inputEventCapacity inputCapacity: Int = EventStreamCapacity.defaultInputEvents.rawValue,
+        overflowPolicy policy: EventStreamOverflowPolicy = .failFast
+    ) throws {
+        displayEventCapacity = try EventStreamCapacity(
+            displayCapacity,
+            field: .displayEventCapacity
+        )
+        inputEventCapacity = try EventStreamCapacity(
+            inputCapacity,
+            field: .inputEventCapacity
+        )
+        overflowPolicy = policy
+    }
 
-        guard inputEventCapacity > 0 else {
-            throw ClientError.invalidDisplayState(
-                "inputEventCapacity must be greater than zero"
-            )
-        }
+    public init(
+        inputEventCapacity inputCapacity: Int,
+        displayEventCapacity displayCapacity: Int =
+            EventStreamCapacity.defaultDisplayEvents.rawValue,
+        overflowPolicy policy: EventStreamOverflowPolicy = .failFast
+    ) throws {
+        displayEventCapacity = try EventStreamCapacity(
+            displayCapacity,
+            field: .displayEventCapacity
+        )
+        inputEventCapacity = try EventStreamCapacity(
+            inputCapacity,
+            field: .inputEventCapacity
+        )
+        overflowPolicy = policy
     }
 }
 
@@ -48,8 +67,8 @@ public struct InputMotionCoalescing: OptionSet, Equatable, Sendable {
 }
 
 public struct InputPipelineConfiguration: Equatable, Sendable {
-    public var rawInputQueueCapacity: Int
-    public var pendingInputEventCapacity: Int
+    public var rawInputQueueCapacity: InputQueueCapacity
+    public var pendingInputEventCapacity: InputQueueCapacity
     public var motionCoalescing: InputMotionCoalescing
 
     public var pointerMotionCoalescing: Bool {
@@ -75,8 +94,8 @@ public struct InputPipelineConfiguration: Equatable, Sendable {
     }
 
     public init(
-        rawInputQueueCapacity rawCapacity: Int = 4_096,
-        pendingInputEventCapacity pendingCapacity: Int = 2_048,
+        rawInputQueueCapacity rawCapacity: InputQueueCapacity = .defaultRawInput,
+        pendingInputEventCapacity pendingCapacity: InputQueueCapacity = .defaultPendingInput,
         pointerMotionCoalescing shouldCoalescePointerMotion: Bool = true,
         touchMotionCoalescing shouldCoalesceTouchMotion: Bool = true
     ) {
@@ -89,42 +108,63 @@ public struct InputPipelineConfiguration: Equatable, Sendable {
 
     public init(
         motionCoalescing coalescingPolicy: InputMotionCoalescing,
-        rawInputQueueCapacity rawCapacity: Int = 4_096,
-        pendingInputEventCapacity pendingCapacity: Int = 2_048
+        rawInputQueueCapacity rawCapacity: InputQueueCapacity = .defaultRawInput,
+        pendingInputEventCapacity pendingCapacity: InputQueueCapacity = .defaultPendingInput
     ) {
         rawInputQueueCapacity = rawCapacity
         pendingInputEventCapacity = pendingCapacity
         motionCoalescing = coalescingPolicy
     }
 
-    package func validate() throws {
-        guard rawInputQueueCapacity > 0 else {
-            throw ClientError.invalidDisplayState(
-                "rawInputQueueCapacity must be greater than zero"
-            )
-        }
+    public init(
+        rawInputQueueCapacity rawCapacity: Int,
+        pendingInputEventCapacity pendingCapacity: Int =
+            InputQueueCapacity.defaultPendingInput.rawValue,
+        pointerMotionCoalescing shouldCoalescePointerMotion: Bool = true,
+        touchMotionCoalescing shouldCoalesceTouchMotion: Bool = true
+    ) throws {
+        rawInputQueueCapacity = try InputQueueCapacity(
+            rawCapacity,
+            field: .rawInputQueueCapacity
+        )
+        pendingInputEventCapacity = try InputQueueCapacity(
+            pendingCapacity,
+            field: .pendingInputEventCapacity
+        )
+        motionCoalescing = []
+        pointerMotionCoalescing = shouldCoalescePointerMotion
+        touchMotionCoalescing = shouldCoalesceTouchMotion
+    }
 
-        guard pendingInputEventCapacity > 0 else {
-            throw ClientError.invalidDisplayState(
-                "pendingInputEventCapacity must be greater than zero"
-            )
-        }
+    public init(
+        pendingInputEventCapacity pendingCapacity: Int,
+        rawInputQueueCapacity rawCapacity: Int = InputQueueCapacity.defaultRawInput.rawValue,
+        pointerMotionCoalescing shouldCoalescePointerMotion: Bool = true,
+        touchMotionCoalescing shouldCoalesceTouchMotion: Bool = true
+    ) throws {
+        rawInputQueueCapacity = try InputQueueCapacity(
+            rawCapacity,
+            field: .rawInputQueueCapacity
+        )
+        pendingInputEventCapacity = try InputQueueCapacity(
+            pendingCapacity,
+            field: .pendingInputEventCapacity
+        )
+        motionCoalescing = []
+        pointerMotionCoalescing = shouldCoalescePointerMotion
+        touchMotionCoalescing = shouldCoalesceTouchMotion
     }
 }
 
 public struct DiagnosticsConfiguration: Equatable, Sendable {
-    public var capacity: Int
+    public var capacity: DiagnosticsCapacity
 
-    public init(capacity diagnosticsCapacity: Int = 128) {
+    public init(capacity diagnosticsCapacity: DiagnosticsCapacity = .default) {
         capacity = diagnosticsCapacity
     }
 
-    package func validate() throws {
-        guard capacity > 0 else {
-            throw ClientError.invalidDisplayState(
-                "diagnostics capacity must be greater than zero"
-            )
-        }
+    public init(capacity diagnosticsCapacity: Int) throws {
+        capacity = try DiagnosticsCapacity(diagnosticsCapacity)
     }
 }
 
@@ -141,11 +181,5 @@ public struct DisplayConfiguration: Equatable, Sendable {
         eventStreams = streamConfiguration
         inputPipeline = inputConfiguration
         diagnostics = diagnosticsConfiguration
-    }
-
-    package func validate() throws {
-        try eventStreams.validate()
-        try inputPipeline.validate()
-        try diagnostics.validate()
     }
 }

@@ -12,11 +12,13 @@ public struct PointerCursor: Equatable, Sendable {
     }
 
     public init(name cursorName: String) throws {
-        try CStringValidation.requireNonEmptyNoInteriorNUL(
-            cursorName,
-            fieldName: "Pointer cursor names",
-            error: ClientError.invalidCursorConfiguration
-        )
+        guard !cursorName.isEmpty else {
+            throw ClientError.cursor(.invalidConfiguration(.emptyCursorName))
+        }
+
+        guard !cursorName.contains("\0") else {
+            throw ClientError.cursor(.invalidConfiguration(.cursorNameContainsInteriorNUL))
+        }
 
         kind = .named(cursorName)
     }

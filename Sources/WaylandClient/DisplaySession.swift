@@ -19,14 +19,14 @@ package final class DisplaySession {
         inputPipelineConfiguration: InputPipelineConfiguration = .init()
     ) throws {
         rawConnection.preconditionIsOwnerThread()
-        try inputPipelineConfiguration.validate()
         connection = rawConnection
         keyboardInterpreter = try KeyboardInterpreter()
         cursorManager = try CursorManager(
             connection: rawConnection,
             configuration: cursorConfiguration
         )
-        maximumPendingInputEventCount = inputPipelineConfiguration.pendingInputEventCapacity
+        let pendingInputEventCapacity = inputPipelineConfiguration.pendingInputEventCapacity
+        maximumPendingInputEventCount = pendingInputEventCapacity.rawValue
     }
 
     @available(
@@ -191,7 +191,7 @@ package final class DisplaySession {
             failureSink: failureSink
         ) { [weak self] timeoutMilliseconds in
             guard let self else {
-                throw ClientError.displayClosed
+                throw ClientError.display(.closed)
             }
 
             try pumpEventsOnOwnerThread(timeoutMilliseconds: timeoutMilliseconds)

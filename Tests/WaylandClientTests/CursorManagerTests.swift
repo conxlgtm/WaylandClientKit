@@ -8,17 +8,10 @@ import WaylandRaw
 struct CursorManagerTests {
     @Test
     func cursorConfigurationRejectsThemeNamesThatWouldTruncateAtCBoundary() throws {
-        let backend = try RecordingCursorBackend()
-
         #expect(
-            throws: ClientError.invalidCursorConfiguration(
-                "Cursor theme names must not contain embedded NUL bytes"
-            )
+            throws: CursorConfigurationError.themeNameContainsInteriorNUL
         ) {
-            _ = try CursorManager(
-                backend: backend,
-                configuration: CursorConfiguration(themeName: "theme\0fallback")
-            )
+            _ = try CursorConfiguration(themeName: "theme\0fallback")
         }
     }
 
@@ -274,6 +267,61 @@ struct CursorManagerTests {
     }
 }
 
+@Suite
+struct CursorManagerFailureTests {
+    @Test
+    func explicitCursorRequestFailureIsTyped() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let rawSeatID = RawSeatID(rawValue: 6)
+        let seatID = SeatID(rawValue: 6)
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: rawSeatID, surfaceID: 100))
+        backend.setCursorResultOverride = .skippedNoPointer(rawSeatID)
+
+        #expect(
+            throws: ClientError.cursor(
+                .requestFailed(
+                    PointerCursorRequestFailure(
+                        seatID: seatID,
+                        requestedCursor: .text,
+                        backendResult: .skippedNoPointer
+                    )
+                )
+            )
+        ) {
+            try manager.setPointerCursor(.text)
+        }
+    }
+
+    @Test
+    func hiddenCursorRequestFailureIsTyped() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let rawSeatID = RawSeatID(rawValue: 7)
+        let seatID = SeatID(rawValue: 7)
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: rawSeatID, surfaceID: 100))
+        backend.setCursorResultOverride = .skippedUnknownSeat(rawSeatID)
+
+        #expect(
+            throws: ClientError.cursor(
+                .requestFailed(
+                    PointerCursorRequestFailure(
+                        seatID: seatID,
+                        requestedCursor: .hidden,
+                        backendResult: .skippedUnknownSeat
+                    )
+                )
+            )
+        ) {
+            try manager.setPointerCursor(.hidden)
+        }
+    }
+}
+
 private struct SetCursorRequest: Equatable {
     let seatID: RawSeatID
     let serial: UInt32
@@ -288,6 +336,7 @@ private final class RecordingCursorBackend: CursorManagerBackend {
     var createdSurfaces: [RecordingCursorSurface] = []
     var setCursorRequests: [SetCursorRequest] = []
     var missingCursorNames: Set<String> = []
+    var setCursorResultOverride: RawPointerCursorResult?
 
     private let image: CursorImage
     private var nextSurfaceID = UInt32(0xC00)
@@ -341,6 +390,10 @@ private final class RecordingCursorBackend: CursorManagerBackend {
                 hotspotY: hotspotY
             )
         )
+
+        if let setCursorResultOverride {
+            return setCursorResultOverride
+        }
 
         return .set(
             RawPointerCursorSetResult(
