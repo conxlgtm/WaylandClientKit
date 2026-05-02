@@ -151,13 +151,17 @@ package enum WindowFailureClassifier {
         runtimeError: RuntimeError
     ) -> WindowFailure {
         switch runtimeError {
-        case .protocolError(let interface, let objectID, let code):
+        case .protocolError(let error):
             .protocolViolation(
-                .display(interface: interface, objectID: objectID, code: code)
+                .display(
+                    interface: error.interfaceName,
+                    objectID: error.objectID,
+                    code: error.code
+                )
             )
-        case .proxyQueueMismatch(let interface):
+        case .proxy(.queueMismatch(let interface, let objectID)):
             .protocolViolation(
-                .proxyQueueMismatch(interface: interface, objectID: nil)
+                .proxyQueueMismatch(interface: interface, objectID: objectID)
             )
         default:
             .internalInvariant(

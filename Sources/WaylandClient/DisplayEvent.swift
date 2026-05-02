@@ -66,7 +66,7 @@ public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
     case display(interface: String?, objectID: UInt32, code: Int32)
     case invalidXDGConfigureDimensions(windowID: WindowID, width: Int32, height: Int32)
     case invalidConfigureSerial(windowID: WindowID, serial: UInt32)
-    case proxyQueueMismatch(interface: String, objectID: UInt32?)
+    case proxyQueueMismatch(interface: String, objectID: RawObjectID?)
 
     public var description: String {
         switch self {
@@ -79,7 +79,7 @@ public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
             "Window \(windowID) received invalid configure serial \(serial)"
         case .proxyQueueMismatch(let interface, let objectID):
             "Wayland proxy queue mismatch interface=\(interface) object="
-                + "\(objectID.map(String.init) ?? "?")"
+                + "\(objectID?.description ?? "?")"
         }
     }
 }
@@ -124,7 +124,6 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
     case closed
     case protocolError(WaylandProtocolError)
     case systemError(errno: Int32)
-    case runtime(String)
     case eventSubscriberOverflow(stream: EventStreamIdentity, capacity: Int)
     case inputPipelineOverflow(InputPipelineOverflow)
     case internalInvariantViolation(InternalInvariantViolation)
@@ -140,21 +139,27 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
             return
         }
 
-        self = .runtime(String(describing: error))
+        self = .internalInvariantViolation(.message(String(describing: error)))
     }
 
     init(_ runtimeError: RuntimeError) {
         switch runtimeError {
-        case .protocolError(let interfaceName, let objectID, let code):
+        case .protocolError(let error):
             self = .protocolError(
-                .display(interface: interfaceName, objectID: objectID, code: code)
+                .display(
+                    interface: error.interfaceName,
+                    objectID: error.objectID,
+                    code: error.code
+                )
             )
-        case .proxyQueueMismatch(let interface):
-            self = .protocolError(.proxyQueueMismatch(interface: interface, objectID: nil))
-        case .pollFailed(let errno), .systemError(let errno):
+        case .proxy(.queueMismatch(let interface, let objectID)):
+            self = .protocolError(.proxyQueueMismatch(interface: interface, objectID: objectID))
+        case .pollFailed(let errno):
             self = .systemError(errno: errno)
+        case .system(let error):
+            self = .systemError(errno: error.errno)
         default:
-            self = .runtime(runtimeError.description)
+            self = .internalInvariantViolation(.message(runtimeError.description))
         }
     }
 
@@ -166,8 +171,6 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
             error.description
         case .systemError(let errno):
             "Wayland display failed with errno \(errno)"
-        case .runtime(let detail):
-            "Wayland display failed: \(detail)"
         case .eventSubscriberOverflow(let stream, let capacity):
             "Wayland \(stream.description) subscriber exceeded buffer capacity \(capacity)"
         case .inputPipelineOverflow(let overflow):
