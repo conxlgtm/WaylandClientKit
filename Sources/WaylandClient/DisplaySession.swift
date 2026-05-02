@@ -89,7 +89,7 @@ package final class DisplaySession {
         message: "Create windows from the owner-thread Wayland loop."
     )
     package func createTopLevelWindow(
-        configuration windowConfiguration: WindowConfiguration = .init()
+        configuration windowConfiguration: WindowConfiguration = .default
     ) throws -> TopLevelWindow {
         try createTopLevelWindowOnOwnerThread(configuration: windowConfiguration)
     }
@@ -175,7 +175,7 @@ package final class DisplaySession {
     }
 
     package func createTopLevelWindowOnOwnerThread(
-        configuration windowConfiguration: WindowConfiguration = .init()
+        configuration windowConfiguration: WindowConfiguration = .default
     ) throws -> TopLevelWindow {
         connection.preconditionIsOwnerThread()
         let windowID = allocateWindowID()

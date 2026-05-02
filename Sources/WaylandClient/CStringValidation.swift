@@ -4,9 +4,7 @@ enum CStringValidation {
         fieldName: String
     ) throws {
         guard !value.contains("\0") else {
-            throw ClientError.invalidWindowConfiguration(
-                "\(fieldName) must not contain embedded NUL bytes"
-            )
+            throw ClientError.invalidWindowConfiguration(.interiorNUL(field: fieldName))
         }
     }
 

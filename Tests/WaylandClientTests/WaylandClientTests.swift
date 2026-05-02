@@ -7,52 +7,42 @@ struct WaylandClientTests {
     @Test
     func windowConfigurationRejectsInvalidInitialDimensionsAndBufferCount() {
         #expect(
-            throws: ClientError.invalidWindowConfiguration(
-                "initialWidth must be greater than zero"
-            )
+            throws: ClientError.invalidWindowConfiguration(.nonPositiveInitialWidth(0))
         ) {
-            try WindowConfiguration(initialWidth: 0).validate()
+            _ = try WindowConfiguration(initialWidth: 0)
         }
 
         #expect(
-            throws: ClientError.invalidWindowConfiguration(
-                "initialHeight must be greater than zero"
-            )
+            throws: ClientError.invalidWindowConfiguration(.nonPositiveInitialHeight(-1))
         ) {
-            try WindowConfiguration(initialHeight: -1).validate()
+            _ = try WindowConfiguration(initialHeight: -1)
         }
 
         #expect(
-            throws: ClientError.invalidWindowConfiguration(
-                "bufferCount must be greater than zero"
-            )
+            throws: ClientError.invalidWindowConfiguration(.nonPositiveBufferCount(0))
         ) {
-            try WindowConfiguration(bufferCount: 0).validate()
+            _ = try WindowConfiguration(bufferCount: 0)
         }
     }
 
     @Test
     func windowConfigurationRejectsCStringsThatWouldTruncateAtWaylandBoundary() {
         #expect(
-            throws: ClientError.invalidWindowConfiguration(
-                "title must not contain embedded NUL bytes"
-            )
+            throws: ClientError.invalidWindowConfiguration(.interiorNUL(field: "title"))
         ) {
-            try WindowConfiguration(title: "visible\0hidden").validate()
+            _ = try WindowConfiguration(title: "visible\0hidden")
         }
 
         #expect(
-            throws: ClientError.invalidWindowConfiguration("appID must not be empty")
+            throws: ClientError.invalidWindowConfiguration(.emptyString(field: "appID"))
         ) {
-            try WindowConfiguration(appID: "").validate()
+            _ = try WindowConfiguration(appID: "")
         }
 
         #expect(
-            throws: ClientError.invalidWindowConfiguration(
-                "appID must not contain embedded NUL bytes"
-            )
+            throws: ClientError.invalidWindowConfiguration(.interiorNUL(field: "appID"))
         ) {
-            try WindowConfiguration(appID: "org.example\0Hidden").validate()
+            _ = try WindowConfiguration(appID: "org.example\0Hidden")
         }
     }
 
