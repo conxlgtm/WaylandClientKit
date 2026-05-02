@@ -3,13 +3,34 @@ public enum CloseRequestPolicy: Equatable, Sendable {
     case autoClose
 }
 
-public struct WindowConfiguration: Sendable {
-    public var title: String
-    public var appID: String
-    public var initialWidth: Int32
-    public var initialHeight: Int32
-    public var bufferCount: Int
+public struct WindowConfiguration: Equatable, Sendable {
+    public var title: WaylandString
+    public var appID: NonEmptyWaylandString
+    public var initialSize: PositiveTopLevelSize
+    public var bufferCount: PositiveInt
     public var closeRequestPolicy: CloseRequestPolicy
+
+    public static let `default` = WindowConfiguration(
+        title: WaylandString(unchecked: "SwiftWayland Demo"),
+        appID: NonEmptyWaylandString(unchecked: "swift-wayland-demo"),
+        initialSize: .default,
+        bufferCount: PositiveInt(unchecked: 3),
+        closeRequestPolicy: .requestOnly
+    )
+
+    public init(
+        title windowTitle: WaylandString,
+        appID applicationID: NonEmptyWaylandString,
+        initialSize size: PositiveTopLevelSize,
+        bufferCount count: PositiveInt,
+        closeRequestPolicy policy: CloseRequestPolicy = .requestOnly
+    ) {
+        title = windowTitle
+        appID = applicationID
+        initialSize = size
+        bufferCount = count
+        closeRequestPolicy = policy
+    }
 
     public init(
         title windowTitle: String = "SwiftWayland Demo",
@@ -18,33 +39,38 @@ public struct WindowConfiguration: Sendable {
         initialHeight height: Int32 = 480,
         bufferCount count: Int = 3,
         closeRequestPolicy policy: CloseRequestPolicy = .requestOnly
-    ) {
-        title = windowTitle
-        appID = applicationID
-        initialWidth = width
-        initialHeight = height
-        bufferCount = count
-        closeRequestPolicy = policy
-    }
-
-    package func validate() throws {
-        guard initialWidth > 0 else {
-            throw ClientError.invalidWindowConfiguration("initialWidth must be greater than zero")
+    ) throws {
+        guard width > 0 else {
+            throw ClientError.invalidWindowConfiguration(.nonPositiveInitialWidth(width))
         }
 
-        guard initialHeight > 0 else {
-            throw ClientError.invalidWindowConfiguration("initialHeight must be greater than zero")
+        guard height > 0 else {
+            throw ClientError.invalidWindowConfiguration(.nonPositiveInitialHeight(height))
         }
 
-        guard bufferCount > 0 else {
-            throw ClientError.invalidWindowConfiguration("bufferCount must be greater than zero")
+        guard count > 0 else {
+            throw ClientError.invalidWindowConfiguration(.nonPositiveBufferCount(count))
         }
 
-        try CStringValidation.requireNoInteriorNUL(title, fieldName: "title")
-        try CStringValidation.requireNonEmptyNoInteriorNUL(
-            appID,
-            fieldName: "appID",
-            error: ClientError.invalidWindowConfiguration
+        guard !windowTitle.contains("\0") else {
+            throw ClientError.invalidWindowConfiguration(.interiorNUL(field: "title"))
+        }
+
+        guard !applicationID.isEmpty else {
+            throw ClientError.invalidWindowConfiguration(.emptyString(field: "appID"))
+        }
+
+        guard !applicationID.contains("\0") else {
+            throw ClientError.invalidWindowConfiguration(.interiorNUL(field: "appID"))
+        }
+
+        title = WaylandString(unchecked: windowTitle)
+        appID = NonEmptyWaylandString(unchecked: applicationID)
+        initialSize = PositiveTopLevelSize(
+            width: PositiveInt32(unchecked: width),
+            height: PositiveInt32(unchecked: height)
         )
+        bufferCount = PositiveInt(unchecked: count)
+        closeRequestPolicy = policy
     }
 }
