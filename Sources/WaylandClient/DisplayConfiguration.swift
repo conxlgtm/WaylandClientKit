@@ -22,7 +22,7 @@ public struct EventStreamConfiguration: Equatable, Sendable {
 
     public init(
         displayEventCapacity displayCapacity: Int,
-        inputEventCapacity inputCapacity: Int = 1_024,
+        inputEventCapacity inputCapacity: Int = EventStreamCapacity.defaultInputEvents.rawValue,
         overflowPolicy policy: EventStreamOverflowPolicy = .failFast
     ) throws {
         displayEventCapacity = try EventStreamCapacity(
@@ -38,7 +38,8 @@ public struct EventStreamConfiguration: Equatable, Sendable {
 
     public init(
         inputEventCapacity inputCapacity: Int,
-        displayEventCapacity displayCapacity: Int = 256,
+        displayEventCapacity displayCapacity: Int =
+            EventStreamCapacity.defaultDisplayEvents.rawValue,
         overflowPolicy policy: EventStreamOverflowPolicy = .failFast
     ) throws {
         displayEventCapacity = try EventStreamCapacity(
@@ -117,7 +118,8 @@ public struct InputPipelineConfiguration: Equatable, Sendable {
 
     public init(
         rawInputQueueCapacity rawCapacity: Int,
-        pendingInputEventCapacity pendingCapacity: Int = 2_048,
+        pendingInputEventCapacity pendingCapacity: Int =
+            InputQueueCapacity.defaultPendingInput.rawValue,
         pointerMotionCoalescing shouldCoalescePointerMotion: Bool = true,
         touchMotionCoalescing shouldCoalesceTouchMotion: Bool = true
     ) throws {
@@ -136,7 +138,7 @@ public struct InputPipelineConfiguration: Equatable, Sendable {
 
     public init(
         pendingInputEventCapacity pendingCapacity: Int,
-        rawInputQueueCapacity rawCapacity: Int = 4_096,
+        rawInputQueueCapacity rawCapacity: Int = InputQueueCapacity.defaultRawInput.rawValue,
         pointerMotionCoalescing shouldCoalescePointerMotion: Bool = true,
         touchMotionCoalescing shouldCoalesceTouchMotion: Bool = true
     ) throws {

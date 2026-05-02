@@ -105,6 +105,20 @@ public enum DisplayConfigurationError: Error, Equatable, Sendable, CustomStringC
     }
 }
 
+public enum EventStreamCapacityField: Equatable, Sendable {
+    case displayEventCapacity
+    case inputEventCapacity
+
+    var displayConfigurationField: DisplayConfigurationField {
+        switch self {
+        case .displayEventCapacity:
+            .displayEventCapacity
+        case .inputEventCapacity:
+            .inputEventCapacity
+        }
+    }
+}
+
 public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {
     public let rawValue: Int
 
@@ -113,10 +127,13 @@ public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomString
 
     public init(
         _ value: Int,
-        field: DisplayConfigurationField
+        field: EventStreamCapacityField
     ) throws {
         guard value > 0 else {
-            throw DisplayConfigurationError.nonPositiveCapacity(field: field, value: value)
+            throw DisplayConfigurationError.nonPositiveCapacity(
+                field: field.displayConfigurationField,
+                value: value
+            )
         }
 
         rawValue = value
@@ -135,6 +152,20 @@ public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomString
     }
 }
 
+public enum InputQueueCapacityField: Equatable, Sendable {
+    case rawInputQueueCapacity
+    case pendingInputEventCapacity
+
+    var displayConfigurationField: DisplayConfigurationField {
+        switch self {
+        case .rawInputQueueCapacity:
+            .rawInputQueueCapacity
+        case .pendingInputEventCapacity:
+            .pendingInputEventCapacity
+        }
+    }
+}
+
 public struct InputQueueCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {
     public let rawValue: Int
 
@@ -143,10 +174,13 @@ public struct InputQueueCapacity: Equatable, Comparable, Sendable, CustomStringC
 
     public init(
         _ value: Int,
-        field: DisplayConfigurationField
+        field: InputQueueCapacityField
     ) throws {
         guard value > 0 else {
-            throw DisplayConfigurationError.nonPositiveCapacity(field: field, value: value)
+            throw DisplayConfigurationError.nonPositiveCapacity(
+                field: field.displayConfigurationField,
+                value: value
+            )
         }
 
         rawValue = value
