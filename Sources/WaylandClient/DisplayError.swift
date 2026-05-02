@@ -79,25 +79,6 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
     case inputPipelineOverflow(InputPipelineOverflow)
     case internalInvariantViolation(InternalInvariantViolation)
 
-    init(_ error: any Error) {
-        if let displayError = error as? WaylandDisplayError {
-            self = displayError
-            return
-        }
-
-        if let runtimeError = error as? RuntimeError {
-            self = Self(runtimeError)
-            return
-        }
-
-        if let executorError = error as? WaylandThreadExecutorError {
-            self = Self(executorError)
-            return
-        }
-
-        self = .internalInvariantViolation(.message(String(describing: error)))
-    }
-
     init(_ runtimeError: RuntimeError) {
         switch runtimeError {
         case .protocolError(let error):
