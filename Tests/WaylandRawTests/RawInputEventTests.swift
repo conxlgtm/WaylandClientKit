@@ -92,7 +92,6 @@ struct RawInputEventTests {
         let payload = RawKeyboardKeymapPayload(
             id: id,
             format: .xkbV1,
-            size: 3,
             bytes: [1, 2, 3]
         )
 
@@ -100,7 +99,8 @@ struct RawInputEventTests {
         #expect(info.format == .xkbV1)
         #expect(info.size == 128)
         #expect(RawKeyboardKeymapFormat.noKeymap.rawValue == 0)
-        #expect(payload.bytes == [1, 2, 3])
+        #expect(payload.size == 3)
+        #expect(payload.bytes.array == [1, 2, 3])
     }
 
     @Test

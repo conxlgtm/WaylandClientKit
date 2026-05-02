@@ -341,7 +341,6 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
                                 keymapGeneration: 1
                             ),
                             format: .xkbV1,
-                            size: UInt32(bytes.count),
                             bytes: bytes
                         )
                     )
