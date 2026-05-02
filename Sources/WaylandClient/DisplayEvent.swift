@@ -41,17 +41,76 @@ public struct DisplayDiagnostic: Equatable, Sendable {
 
 public enum DisplayDiagnosticPayload: Equatable, Sendable {
     case input(InputDiagnostic)
+    case window(WindowDiagnostic)
     case diagnosticsDropped(count: Int)
+}
+
+public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
+    case display(interface: String?, objectID: UInt32, code: Int32)
+    case invalidXDGConfigureDimensions(windowID: WindowID, width: Int32, height: Int32)
+    case invalidConfigureSerial(windowID: WindowID, serial: UInt32)
+    case proxyQueueMismatch(interface: String, objectID: UInt32?)
+
+    public var description: String {
+        switch self {
+        case .display(let interface, let objectID, let code):
+            "Wayland protocol error interface=\(interface ?? "?") object=\(objectID) code=\(code)"
+        case .invalidXDGConfigureDimensions(let windowID, let width, let height):
+            "Window \(windowID) received invalid XDG configure dimensions "
+                + "width=\(width) height=\(height)"
+        case .invalidConfigureSerial(let windowID, let serial):
+            "Window \(windowID) received invalid configure serial \(serial)"
+        case .proxyQueueMismatch(let interface, let objectID):
+            "Wayland proxy queue mismatch interface=\(interface) object="
+                + "\(objectID.map(String.init) ?? "?")"
+        }
+    }
+}
+
+public enum InternalInvariantViolation: Equatable, Sendable, CustomStringConvertible {
+    case message(String)
+    case rawListenerFiredAfterInvalidation(String)
+    case frameCallbackAfterLocalDestroy(WindowID)
+    case bufferReleaseWithoutBufferState(WindowID)
+    case invalidWindowTransition(WindowID, transition: WindowLifecycleTransitionError)
+    case effectInterpreterInvariant(WindowID, String)
+    case unexpectedWindowCallbackError(
+        WindowID,
+        operation: WindowCallbackOperation,
+        detail: String
+    )
+    case eventSubscriberAwaitedTwice
+
+    public var description: String {
+        switch self {
+        case .message(let detail):
+            detail
+        case .rawListenerFiredAfterInvalidation(let detail):
+            "Raw listener fired after invalidation: \(detail)"
+        case .frameCallbackAfterLocalDestroy(let windowID):
+            "Frame callback fired after local destroy for window \(windowID)"
+        case .bufferReleaseWithoutBufferState(let windowID):
+            "Buffer release arrived without buffer state for window \(windowID)"
+        case .invalidWindowTransition(let windowID, let transition):
+            "Window \(windowID) invalid transition: \(transition.description)"
+        case .effectInterpreterInvariant(let windowID, let detail):
+            "Window \(windowID) effect interpreter invariant failed: \(detail)"
+        case .unexpectedWindowCallbackError(let windowID, let operation, let detail):
+            "Window \(windowID) callback \(operation) failed unexpectedly: \(detail)"
+        case .eventSubscriberAwaitedTwice:
+            "event subscriber awaited twice"
+        }
+    }
 }
 
 public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvertible {
     case closed
-    case protocolError(interface: String?, objectID: UInt32, code: Int32)
+    case protocolError(WaylandProtocolError)
     case systemError(errno: Int32)
     case runtime(String)
     case eventSubscriberOverflow(stream: String, capacity: Int)
     case inputPipelineOverflow(InputPipelineOverflow)
-    case internalInvariantViolation(String)
+    case internalInvariantViolation(InternalInvariantViolation)
 
     init(_ error: any Error) {
         if let displayError = error as? WaylandDisplayError {
@@ -70,7 +129,11 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
     init(_ runtimeError: RuntimeError) {
         switch runtimeError {
         case .protocolError(let interfaceName, let objectID, let code):
-            self = .protocolError(interface: interfaceName, objectID: objectID, code: code)
+            self = .protocolError(
+                .display(interface: interfaceName, objectID: objectID, code: code)
+            )
+        case .proxyQueueMismatch(let interface):
+            self = .protocolError(.proxyQueueMismatch(interface: interface, objectID: nil))
         case .pollFailed(let errno), .systemError(let errno):
             self = .systemError(errno: errno)
         default:
@@ -82,8 +145,8 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
         switch self {
         case .closed:
             "Wayland display is closed"
-        case .protocolError(let interface, let objectID, let code):
-            "Wayland protocol error interface=\(interface ?? "?") object=\(objectID) code=\(code)"
+        case .protocolError(let error):
+            error.description
         case .systemError(let errno):
             "Wayland display failed with errno \(errno)"
         case .runtime(let detail):
@@ -93,8 +156,8 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
         case .inputPipelineOverflow(let overflow):
             "Wayland input pipeline overflowed in \(overflow.stage.description) "
                 + "at capacity \(overflow.capacity)"
-        case .internalInvariantViolation(let detail):
-            "Wayland display internal invariant failed: \(detail)"
+        case .internalInvariantViolation(let violation):
+            "Wayland display internal invariant failed: \(violation.description)"
         }
     }
 }
@@ -338,6 +401,15 @@ final class DisplayEventHub: Sendable {
         inputBroker.publish(inputEvent)
     }
 
+    func publishWindowDiagnostic(_ diagnostic: WindowDiagnostic) {
+        publishDiagnostic(
+            makeDisplayDiagnostic(
+                payload: .window(diagnostic),
+                severity: displaySeverity(for: diagnostic)
+            )
+        )
+    }
+
     func finish(throwing error: WaylandDisplayError? = nil) {
         displayBroker.finish(throwing: error)
         inputBroker.finish(throwing: error)
@@ -349,6 +421,13 @@ final class DisplayEventHub: Sendable {
         case .queueOverflow, .inputPipelineOverflow:
             .error
         case .keyboardKeymap, .listener, .cursor:
+            .degraded
+        }
+    }
+
+    private func displaySeverity(for diagnostic: WindowDiagnostic) -> DiagnosticSeverity {
+        switch diagnostic.operation {
+        case .callback, .lifecycle, .presentation:
             .degraded
         }
     }

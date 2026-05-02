@@ -219,7 +219,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
                 subscribers[subscriberID] = subscriber
                 return nil
             case .waiting:
-                return .failure(.internalInvariantViolation("event subscriber awaited twice"))
+                return .failure(.internalInvariantViolation(.eventSubscriberAwaitedTwice))
             case .terminal(let termination):
                 subscribers.removeValue(forKey: subscriberID)
                 return termination.result()
