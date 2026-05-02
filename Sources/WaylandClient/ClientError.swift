@@ -3,8 +3,7 @@ public enum ClientError: Error, Equatable, Sendable, CustomStringConvertible {
     case invalidWindowState(String)
     case display(DisplayOperationError)
     case invalidWindowConfiguration(WindowConfigurationError)
-    case invalidCursorConfiguration(String)
-    case pointerCursorRequestFailed(String)
+    case cursor(PointerCursorError)
     case window(WindowID, WindowError)
 
     public var description: String {
@@ -17,10 +16,8 @@ public enum ClientError: Error, Equatable, Sendable, CustomStringConvertible {
             "Display failed: \(error.description)"
         case .invalidWindowConfiguration(let error):
             "Invalid window configuration: \(error.description)"
-        case .invalidCursorConfiguration(let detail):
-            "Invalid cursor configuration: \(detail)"
-        case .pointerCursorRequestFailed(let detail):
-            "Pointer cursor request failed: \(detail)"
+        case .cursor(let error):
+            "Cursor failed: \(error.description)"
         case .window(let windowID, let error):
             "Window \(windowID) failed: \(error.description)"
         }

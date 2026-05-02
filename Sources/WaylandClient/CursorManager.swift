@@ -68,7 +68,6 @@ package final class CursorManager: RawInputEventObserving {
         connection rawConnection: RawDisplayConnection,
         configuration cursorConfiguration: CursorConfiguration
     ) throws {
-        try Self.validate(cursorConfiguration)
         backend = try LiveCursorManagerBackend(
             connection: rawConnection,
             configuration: cursorConfiguration
@@ -82,7 +81,6 @@ package final class CursorManager: RawInputEventObserving {
         backend cursorBackend: CursorManagerBackend,
         configuration cursorConfiguration: CursorConfiguration
     ) throws {
-        try Self.validate(cursorConfiguration)
         cursorBackend.preconditionIsOwnerThread()
 
         backend = cursorBackend
@@ -193,7 +191,12 @@ package final class CursorManager: RawInputEventObserving {
                 hotspotY: 0
             )
             guard case .set = rawResult else {
-                throw ClientError.pointerCursorRequestFailed(String(describing: rawResult))
+                throw cursorRequestFailure(
+                    operation: .setHidden,
+                    seatID: seatID,
+                    cursor: desiredCursor,
+                    rawResult: rawResult
+                )
             }
 
             return .hidden(seatID: publicSeatID(seatID), serial: serial)
@@ -231,7 +234,12 @@ package final class CursorManager: RawInputEventObserving {
         case .set:
             return .set(seatID: publicSeatID(seatID), serial: serial, cursor: resolved.cursor)
         case .skippedNoPointer, .skippedUnknownSeat:
-            throw ClientError.pointerCursorRequestFailed(String(describing: rawResult))
+            throw cursorRequestFailure(
+                operation: .setNamed,
+                seatID: seatID,
+                cursor: desiredCursor,
+                rawResult: rawResult
+            )
         }
     }
 
@@ -287,20 +295,32 @@ package final class CursorManager: RawInputEventObserving {
         }
     }
 
-    private static func validate(_ configuration: CursorConfiguration) throws {
-        guard configuration.size > 0 else {
-            throw ClientError.invalidCursorConfiguration(
-                "Cursor size must be greater than zero"
-            )
-        }
+    private func cursorRequestFailure(
+        operation: PointerCursorOperation,
+        seatID rawSeatID: RawSeatID,
+        cursor: PointerCursor,
+        rawResult: RawPointerCursorResult
+    ) -> ClientError {
+        let backendResult: PointerCursorBackendResult =
+            switch rawResult {
+            case .set:
+                preconditionFailure("successful cursor result cannot describe a failure")
+            case .skippedNoPointer(let seatID):
+                .skippedNoPointer(publicSeatID(seatID))
+            case .skippedUnknownSeat(let seatID):
+                .skippedUnknownSeat(publicSeatID(seatID))
+            }
 
-        if let themeName = configuration.themeName {
-            try CStringValidation.requireNonEmptyNoInteriorNUL(
-                themeName,
-                fieldName: "Cursor theme names",
-                error: ClientError.invalidCursorConfiguration
+        return .cursor(
+            .requestFailed(
+                PointerCursorRequestFailure(
+                    operation: operation,
+                    seatID: publicSeatID(rawSeatID),
+                    requestedCursor: cursor,
+                    backendResult: backendResult
+                )
             )
-        }
+        )
     }
 }
 
@@ -403,98 +423,5 @@ extension CursorManager {
                 )
             )
         )
-    }
-}
-
-private final class LiveCursorManagerBackend: CursorManagerBackend {
-    private let connection: RawDisplayConnection
-    private let configuration: CursorConfiguration
-    private var theme: CursorTheme?
-
-    init(
-        connection rawConnection: RawDisplayConnection,
-        configuration cursorConfiguration: CursorConfiguration
-    ) throws {
-        rawConnection.preconditionIsOwnerThread()
-
-        connection = rawConnection
-        configuration = cursorConfiguration
-    }
-
-    func preconditionIsOwnerThread() {
-        connection.preconditionIsOwnerThread()
-    }
-
-    func cursorImage(named name: String) throws -> CursorImage {
-        try cursorTheme().cursorImage(named: name)
-    }
-
-    private func cursorTheme() throws -> CursorTheme {
-        if let theme {
-            return theme
-        }
-
-        let loadedTheme = try CursorTheme(
-            shm: connection.cursorSharedMemory(),
-            name: configuration.themeName,
-            size: configuration.size
-        )
-        theme = loadedTheme
-        return loadedTheme
-    }
-
-    func createCursorSurface(for _: RawSeatID) throws -> CursorManagerSurface {
-        try LiveCursorManagerSurface(surface: connection.createRawSurface())
-    }
-
-    func setPointerCursor(
-        seatID: RawSeatID,
-        serial: UInt32,
-        surface: CursorManagerSurface?,
-        hotspotX: Int32,
-        hotspotY: Int32
-    ) -> RawPointerCursorResult {
-        let rawSurface: RawSurface?
-        if let surface {
-            guard let liveSurface = surface as? LiveCursorManagerSurface else {
-                preconditionFailure("Live cursor backend received a non-live cursor surface")
-            }
-            rawSurface = liveSurface.rawSurface
-        } else {
-            rawSurface = nil
-        }
-
-        return connection.setPointerCursor(
-            seatID: seatID,
-            serial: serial,
-            surface: rawSurface,
-            hotspotX: hotspotX,
-            hotspotY: hotspotY
-        )
-    }
-}
-
-private final class LiveCursorManagerSurface: CursorManagerSurface {
-    let rawSurface: RawSurface
-
-    init(surface: RawSurface) {
-        rawSurface = surface
-    }
-
-    var objectID: RawObjectID? {
-        rawSurface.objectID
-    }
-
-    func attach(_ image: CursorImage) {
-        rawSurface.attachBorrowedBuffer(image.buffer)
-        rawSurface.damageFullBuffer(width: image.width, height: image.height)
-    }
-
-    func commit() {
-        rawSurface.commit()
-    }
-
-    func destroy() {
-        rawSurface.destroy()
     }
 }

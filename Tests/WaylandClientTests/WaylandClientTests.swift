@@ -49,11 +49,18 @@ struct WaylandClientTests {
     @Test
     func pointerCursorRejectsCStringsThatWouldTruncateAtCursorBoundary() {
         #expect(
-            throws: ClientError.invalidCursorConfiguration(
-                "Pointer cursor names must not contain embedded NUL bytes"
+            throws: ClientError.cursor(
+                .invalidConfiguration(.cursorNameContainsInteriorNUL)
             )
         ) {
             _ = try PointerCursor(name: "left_ptr\0fallback")
+        }
+    }
+
+    @Test
+    func cursorConfigurationRejectsInvalidSize() {
+        #expect(throws: CursorConfigurationError.invalidSize(0)) {
+            _ = try CursorConfiguration(size: 0)
         }
     }
 
