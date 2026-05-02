@@ -1,17 +1,17 @@
 import CWaylandClientSystem
 import CWaylandProtocols
 
-public enum SupportedVersions {
-    public static let wlCompositor: RawVersion = 6
-    public static let wlShm: RawVersion = 1
-    public static let xdgWmBase: RawVersion = 7
-    public static let wlSeat: RawVersion = 10
+package enum SupportedVersions {
+    package static let wlCompositor: RawVersion = 6
+    package static let wlShm: RawVersion = 1
+    package static let xdgWmBase: RawVersion = 7
+    package static let wlSeat: RawVersion = 10
 }
 
-public final class BoundGlobals {
-    public let compositor: RawCompositor
-    public let sharedMemory: RawSharedMemory
-    public let xdgWMBase: RawXDGWMBase
+package final class BoundGlobals {
+    package let compositor: RawCompositor
+    package let sharedMemory: RawSharedMemory
+    package let xdgWMBase: RawXDGWMBase
     package let seatRegistry: SeatRegistry
 
     private var isDestroyed = false

@@ -2,9 +2,9 @@ import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
 
-public final class RawXDGTopLevel {
+package final class RawXDGTopLevel {
     let pointer: OpaquePointer
-    public let version: RawVersion
+    package let version: RawVersion
 
     private var isDestroyed = false
 
@@ -22,19 +22,19 @@ public final class RawXDGTopLevel {
         version = topLevelVersion
     }
 
-    public func setTitle(_ title: String) {
+    package func setTitle(_ title: String) {
         title.withCString { titlePointer in
             swl_xdg_toplevel_set_title(pointer, titlePointer)
         }
     }
 
-    public func setAppID(_ appID: String) {
+    package func setAppID(_ appID: String) {
         appID.withCString { appIDPointer in
             swl_xdg_toplevel_set_app_id(pointer, appIDPointer)
         }
     }
 
-    public func destroy() {
+    package func destroy() {
         guard !isDestroyed else { return }
 
         isDestroyed = true
@@ -46,9 +46,9 @@ public final class RawXDGTopLevel {
     }
 }
 
-public final class RawXDGSurface {
+package final class RawXDGSurface {
     let pointer: OpaquePointer
-    public let version: RawVersion
+    package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private var isDestroyed = false
@@ -68,7 +68,7 @@ public final class RawXDGSurface {
         proxyAdoption = adoptionContext
     }
 
-    public func getTopLevel() throws -> RawXDGTopLevel {
+    package func getTopLevel() throws -> RawXDGTopLevel {
         guard let pointer = swl_xdg_surface_get_toplevel(pointer) else {
             throw RuntimeError.bindFailed("xdg_toplevel")
         }
@@ -76,11 +76,11 @@ public final class RawXDGSurface {
         return try .init(pointer: pointer, version: version, proxyAdoption: proxyAdoption)
     }
 
-    public func ackConfigure(serial: UInt32) {
+    package func ackConfigure(serial: UInt32) {
         swl_xdg_surface_ack_configure(pointer, serial)
     }
 
-    public func destroy() {
+    package func destroy() {
         guard !isDestroyed else { return }
 
         isDestroyed = true
@@ -92,9 +92,9 @@ public final class RawXDGSurface {
     }
 }
 
-public final class RawXDGWMBase {
+package final class RawXDGWMBase {
     let pointer: OpaquePointer
-    public let version: RawVersion
+    package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private let owner: XDGWMBaseOwner
@@ -123,7 +123,7 @@ public final class RawXDGWMBase {
         owner = newOwner
     }
 
-    public func getSurface(for surface: RawSurface) throws -> RawXDGSurface {
+    package func getSurface(for surface: RawSurface) throws -> RawXDGSurface {
         guard
             let surfacePointer = swl_xdg_wm_base_get_xdg_surface(
                 pointer,
