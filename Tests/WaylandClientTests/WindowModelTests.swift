@@ -51,6 +51,26 @@ struct WindowModelTests {
     }
 
     @Test
+    func configureReceivedWhilePresentationActiveKeepsActiveSubstate() throws {
+        var (model, request) = try activeModelWithStartedPresentation()
+
+        let effects = try model.reduce(
+            .configureReceived(configure(width: 1_024, height: 768, serial: 7))
+        )
+
+        #expect(effects == [.ackConfigure(7), .publishRedrawRequested(windowID)])
+        #expect(model.presentation == .drawing(generation: request.generation))
+        #expect(model.redraw.hasOutstandingRedrawRequest)
+        #expect(
+            model.currentConfiguration?.size
+                == PositiveTopLevelSize(
+                    width: PositiveInt32(unchecked: 1_024),
+                    height: PositiveInt32(unchecked: 768)
+                )
+        )
+    }
+
+    @Test
     func negativeConfigureDimensionIsAWindowProtocolError() throws {
         var model = try configuredModelReadyForConfigure()
 
@@ -173,7 +193,9 @@ struct WindowModelTests {
         #expect(try model.reduce(.bufferBecameAvailable(bufferAvailable: true)).isEmpty)
         #expect(!model.redraw.isDirty)
     }
+}
 
+extension WindowModelTests {
     @Test
     func redrawRequestConsumedProducesPresentationEffect() throws {
         var model = try activePublishedModel()
