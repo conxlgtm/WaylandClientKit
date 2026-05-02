@@ -1,7 +1,7 @@
 import WaylandRaw
 
 @safe
-final class DisplayCore: RawInvariantFailureReporter {
+final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     private let eventHub: DisplayEventHub
     private var session: DisplaySession?
     private var windows: [WindowID: TopLevelWindow] = [:]
@@ -10,6 +10,11 @@ final class DisplayCore: RawInvariantFailureReporter {
 
     init(session activeSession: DisplaySession, eventHub displayEventHub: DisplayEventHub) {
         session = activeSession
+        eventHub = displayEventHub
+    }
+
+    init(eventHub displayEventHub: DisplayEventHub) {
+        session = nil
         eventHub = displayEventHub
     }
 
@@ -31,7 +36,8 @@ final class DisplayCore: RawInvariantFailureReporter {
     ) throws -> WindowID {
         try withFatalFailureFinalization {
             let window = try requireSession().createTopLevelWindowOnOwnerThread(
-                configuration: windowConfiguration
+                configuration: windowConfiguration,
+                failureSink: WeakWindowFailureSink(self)
             )
             windows[window.id] = window
             guard !isClosed else {
@@ -117,7 +123,32 @@ final class DisplayCore: RawInvariantFailureReporter {
     }
 
     func reportFatalRawInvariantFailure(_ failure: RawInvariantFailure) {
-        markDefunctForFatalRawInvariant(.internalInvariantViolation(failure.description))
+        markDefunctForFatalFailure(.internalInvariantViolation(.message(failure.description)))
+    }
+
+    func reportWindowFailure(_ failure: WindowFailure) {
+        switch failure {
+        case .internalInvariant(let invariant):
+            markDefunctForFatalFailure(.internalInvariantViolation(invariant))
+        case .protocolViolation(let error):
+            markDefunctForFatalFailure(.protocolError(error))
+        case .lifecycleViolation(let windowID, let transition):
+            markDefunctForFatalFailure(
+                .internalInvariantViolation(
+                    .invalidWindowTransition(windowID, transition: transition)
+                )
+            )
+        case .presentationFailure(let windowID, let error):
+            eventHub.publishWindowDiagnostic(
+                WindowDiagnostic(
+                    windowID: windowID,
+                    operation: .presentation(.presentationFailed),
+                    message: error.description
+                )
+            )
+        case .diagnostic(let diagnostic):
+            eventHub.publishWindowDiagnostic(diagnostic)
+        }
     }
 
     func pumpOnce(
@@ -182,7 +213,7 @@ final class DisplayCore: RawInvariantFailureReporter {
         }
     }
 
-    private func markDefunctForFatalRawInvariant(_ error: WaylandDisplayError) {
+    private func markDefunctForFatalFailure(_ error: WaylandDisplayError) {
         guard !isClosed else { return }
         // Raw invariant failures may be reported from inside a C callback, so
         // public streams fail immediately while destructive cleanup is deferred.

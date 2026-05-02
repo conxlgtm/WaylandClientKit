@@ -89,9 +89,13 @@ package final class DisplaySession {
         message: "Create windows from the owner-thread Wayland loop."
     )
     package func createTopLevelWindow(
-        configuration windowConfiguration: WindowConfiguration = .default
+        configuration windowConfiguration: WindowConfiguration = .default,
+        failureSink: any WindowFailureSink = DefaultWindowFailureSink()
     ) throws -> TopLevelWindow {
-        try createTopLevelWindowOnOwnerThread(configuration: windowConfiguration)
+        try createTopLevelWindowOnOwnerThread(
+            configuration: windowConfiguration,
+            failureSink: failureSink
+        )
     }
 
     package func pumpEventsOnOwnerThread(timeoutMilliseconds: Int32 = -1) throws {
@@ -175,14 +179,16 @@ package final class DisplaySession {
     }
 
     package func createTopLevelWindowOnOwnerThread(
-        configuration windowConfiguration: WindowConfiguration = .default
+        configuration windowConfiguration: WindowConfiguration = .default,
+        failureSink: any WindowFailureSink = DefaultWindowFailureSink()
     ) throws -> TopLevelWindow {
         connection.preconditionIsOwnerThread()
         let windowID = allocateWindowID()
         let window = try TopLevelWindow(
             id: windowID,
             connection: connection,
-            configuration: windowConfiguration
+            configuration: windowConfiguration,
+            failureSink: failureSink
         ) { [weak self] timeoutMilliseconds in
             guard let self else {
                 throw ClientError.displayClosed
