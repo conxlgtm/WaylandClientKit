@@ -377,13 +377,13 @@ struct WaylandThreadExecutorTests {
     }
 
     @Test
-    func requestStopDuringJoiningCanUpgradeShutdownMode() {
+    func requestStopDuringJoiningDoesNotRewriteShutdownMode() {
         var state = WaylandThreadExecutorState()
         state.phase = .joining(.orderly)
 
         _ = state.requestStop(.abandonWaylandSources)
 
-        #expect(state.phase == .joining(.abandonWaylandSources))
+        #expect(state.phase == .joining(.orderly))
     }
 
     @Test

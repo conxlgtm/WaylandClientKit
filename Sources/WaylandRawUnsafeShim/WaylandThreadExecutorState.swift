@@ -29,8 +29,7 @@ struct WaylandThreadExecutorState {
         case .stopRequested(let existingMode):
             phase = .stopRequested(existingMode.merged(with: mode))
             return false
-        case .joining(let existingMode):
-            phase = .joining(existingMode.merged(with: mode))
+        case .joining:
             return false
         case .loopExited, .joined:
             return false
