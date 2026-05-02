@@ -256,7 +256,7 @@ private final class WaylandDisplayRuntime: Sendable {
         #endif
 
         guard !didClose else {
-            executor.requestStopAfterCurrentJob(abandoningWaylandSources: false)
+            executor.requestStopAfterCurrentJob()
             return
         }
 
@@ -271,7 +271,7 @@ private final class WaylandDisplayRuntime: Sendable {
             core = nil
         }
 
-        executor.requestStopAfterCurrentJob(abandoningWaylandSources: true)
+        executor.requestStopAfterCurrentJob(.abandonWaylandSources)
     }
 }
 
