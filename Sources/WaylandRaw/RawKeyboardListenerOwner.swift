@@ -166,7 +166,6 @@ final class KeyboardListenerOwner {
                     keymapGeneration: keymapGeneration
                 ),
                 format: RawKeyboardKeymapFormat(rawValue: rawFormat),
-                size: size,
                 bytes: try RawKeyboardKeymapReader.readKeymap(fd: fd, size: size)
             )
             keymapGeneration += 1

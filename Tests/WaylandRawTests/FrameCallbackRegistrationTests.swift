@@ -67,7 +67,7 @@ struct FrameCallbackRegistrationTests {
         state.cancel()
 
         #expect(fireCount == 1)
-        #expect(state.lifecycle == .fired)
+        #expect(state.lifecycle == .completed(.fired))
         #expect(counters.localProxyDestroyCount == 1)
         #expect(counters.wireDestroyRequestCount == 0)
     }
@@ -113,7 +113,7 @@ struct FrameCallbackRegistrationTests {
         state.cancel()
         state.cancel()
 
-        #expect(state.lifecycle == .cancelled)
+        #expect(state.lifecycle == .completed(.cancelled))
         #expect(counters.localProxyDestroyCount == 1)
     }
 }
