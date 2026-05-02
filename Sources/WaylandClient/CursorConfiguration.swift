@@ -26,18 +26,4 @@ public struct CursorConfiguration: Equatable, Sendable {
         size = try CursorSize(cursorSize)
         fallbackCursor = cursorFallback
     }
-
-    public init(
-        size cursorSize: Int32,
-        themeName cursorThemeName: String? = nil,
-        fallbackCursor cursorFallback: PointerCursor = .defaultArrow
-    ) throws {
-        if let cursorThemeName {
-            themeName = try CursorThemeName(cursorThemeName)
-        } else {
-            themeName = nil
-        }
-        size = try CursorSize(cursorSize)
-        fallbackCursor = cursorFallback
-    }
 }

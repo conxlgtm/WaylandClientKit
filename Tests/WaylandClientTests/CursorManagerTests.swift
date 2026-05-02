@@ -284,7 +284,6 @@ struct CursorManagerFailureTests {
             throws: ClientError.cursor(
                 .requestFailed(
                     PointerCursorRequestFailure(
-                        operation: .setNamed,
                         seatID: seatID,
                         requestedCursor: .text,
                         backendResult: .skippedNoPointer
@@ -311,7 +310,6 @@ struct CursorManagerFailureTests {
             throws: ClientError.cursor(
                 .requestFailed(
                     PointerCursorRequestFailure(
-                        operation: .setHidden,
                         seatID: seatID,
                         requestedCursor: .hidden,
                         backendResult: .skippedUnknownSeat
