@@ -255,13 +255,131 @@ struct WaylandThreadExecutorTests {
         executor.shutdown()
 
         let stopped = executor.lifecycleSnapshotForTesting
-        #expect(stopped.state == .joined)
+        #expect(stopped.state == .joined(.orderly))
         #expect(stopped.hasThreadStarted)
         #expect(stopped.loopHasExited)
         #expect(stopped.hasJoinedThread)
         #expect(stopped.queuedJobCount == 0)
         #expect(stopped.queuedOperationCount == 0)
+        #expect(stopped.acceptedOperationCount == 3)
+        #expect(stopped.completedOperationCount == 3)
         #expect(operationRunCount.withLock { $0 } == 2)
+    }
+
+    @Test
+    func shutdownModeUpgradesToAbandonWaylandSources() throws {
+        let executor = try WaylandThreadExecutor()
+        let gate = OwnerThreadGate()
+        defer {
+            gate.open()
+            executor.shutdown(.abandonWaylandSources)
+        }
+
+        try executor.enqueueOperationForTesting {
+            gate.enterAndWaitUntilOpened()
+        }
+        #expect(gate.waitUntilEntered())
+
+        executor.requestStopAfterCurrentJob()
+        var stopping = executor.lifecycleSnapshotForTesting
+        #expect(stopping.state == .stopRequested(.orderly))
+
+        executor.requestStopAfterCurrentJob(.abandonWaylandSources)
+        stopping = executor.lifecycleSnapshotForTesting
+        #expect(stopping.state == .stopRequested(.abandonWaylandSources))
+
+        #expect(throws: WaylandThreadExecutorError.executorStopping(.abandonWaylandSources)) {
+            try executor.enqueueOperationForTesting {
+                Issue.record("operation should not be accepted while executor is stopping")
+            }
+        }
+
+        gate.open()
+        executor.shutdown(.abandonWaylandSources)
+
+        let stopped = executor.lifecycleSnapshotForTesting
+        #expect(stopped.state == .joined(.abandonWaylandSources))
+        #expect(stopped.hasJoinedThread)
+    }
+
+    @Test
+    func installEventSourceAfterStopReturnsStoppingError() throws {
+        let executor = try WaylandThreadExecutor()
+        let gate = OwnerThreadGate()
+        defer {
+            gate.open()
+            executor.shutdown()
+        }
+
+        try executor.enqueueOperationForTesting {
+            gate.enterAndWaitUntilOpened()
+        }
+        #expect(gate.waitUntilEntered())
+
+        executor.requestStopAfterCurrentJob()
+
+        #expect(throws: WaylandThreadExecutorError.executorStopping(.orderly)) {
+            try executor.installEventSource(EventSourceProbe(executor: executor))
+        }
+    }
+
+    @Test
+    func enqueueOperationAfterShutdownReturnsStoppedError() throws {
+        let executor = try WaylandThreadExecutor()
+        executor.shutdown()
+
+        #expect(throws: WaylandThreadExecutorError.executorStopped) {
+            try executor.enqueueOperationForTesting {
+                Issue.record("operation should not be accepted after executor shutdown")
+            }
+        }
+    }
+
+    @Test
+    func requestStopAfterJoinedDoesNotRewriteShutdownMode() throws {
+        let executor = try WaylandThreadExecutor()
+        executor.shutdown()
+
+        executor.requestStopAfterCurrentJob(.abandonWaylandSources)
+
+        #expect(executor.lifecycleSnapshotForTesting.state == .joined(.orderly))
+    }
+
+    @Test
+    func startingStateReturnsNotReadyRejection() {
+        let state = WaylandThreadExecutorState()
+
+        #expect(state.rejectionError() == .executorNotReady)
+    }
+
+    @Test
+    func requestStopAfterLoopExitDoesNotRewriteShutdownMode() {
+        var state = WaylandThreadExecutorState()
+        state.phase = .loopExited(.orderly)
+
+        _ = state.requestStop(.abandonWaylandSources)
+
+        #expect(state.phase == .loopExited(.orderly))
+    }
+
+    @Test
+    func markLoopExitedDuringJoiningPreservesJoiningState() {
+        var state = WaylandThreadExecutorState()
+        state.phase = .joining(.abandonWaylandSources, loopExited: false)
+
+        state.markLoopExited()
+
+        #expect(state.phase == .joining(.abandonWaylandSources, loopExited: true))
+    }
+
+    @Test
+    func requestStopAfterJoinLoopExitDoesNotRewriteShutdownMode() {
+        var state = WaylandThreadExecutorState()
+        state.phase = .joining(.orderly, loopExited: true)
+
+        _ = state.requestStop(.abandonWaylandSources)
+
+        #expect(state.phase == .joining(.orderly, loopExited: true))
     }
 
     @Test
