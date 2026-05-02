@@ -9,6 +9,7 @@ When creating or updating a pull request:
 - Describe what changed and why it changed.
 - Include validation only when checks were actually run.
 - Do not add embellishment, marketing language, or co-author trailers unless explicitly requested.
+- Open pull requests ready for review by default; use draft only when explicitly requested.
 
 Use this default structure:
 
