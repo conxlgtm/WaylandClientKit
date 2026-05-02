@@ -1,9 +1,9 @@
 import CWaylandClientSystem
 import CWaylandProtocols
 
-public final class RawCompositor {
+package final class RawCompositor {
     let pointer: OpaquePointer
-    public let version: RawVersion
+    package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private var isDestroyed = false
@@ -23,7 +23,7 @@ public final class RawCompositor {
         proxyAdoption = adoptionContext
     }
 
-    public func createSurface() throws -> RawSurface {
+    package func createSurface() throws -> RawSurface {
         guard let surface = swl_compositor_create_surface(pointer) else {
             throw RuntimeError.bindFailed("wl_surface")
         }

@@ -9,15 +9,15 @@ private struct RegistryResources {
     let inputEventQueue: RawInputEventQueue
 }
 
-public final class RawDisplayConnection {
-    public static let defaultDiscoveryTimeoutMS: Int32 = 1_000
+package final class RawDisplayConnection {
+    package static let defaultDiscoveryTimeoutMS: Int32 = 1_000
 
     let display: RawDisplay
     let eventQueue: RawEventQueue
     package let invariantFailureSink: RawInvariantFailureSink
     let proxyAdoption: RawProxyAdoptionContext
     let registry: RawRegistry
-    public private(set) var boundGlobals: BoundGlobals?
+    package private(set) var boundGlobals: BoundGlobals?
 
     private let registryState: RegistryState
     private let registryListenerOwner: RegistryListenerOwner
@@ -58,7 +58,7 @@ public final class RawDisplayConnection {
     }
 
     @available(*, noasync, message: "Use a synchronous owner-thread Wayland loop.")
-    public static func connect() throws -> RawDisplayConnection {
+    package static func connect() throws -> RawDisplayConnection {
         try connect(
             invariantFailureSink: RawInvariantFailureSink(),
             inputQueueConfiguration: RawInputQueueConfiguration()
@@ -165,7 +165,7 @@ public final class RawDisplayConnection {
         noasync,
         message: "Read globals from the owner-thread Wayland loop."
     )
-    public var globals: [RawGlobalAdvertisement] {
+    package var globals: [RawGlobalAdvertisement] {
         preconditionIsOwnerThread()
         return registryState.snapshot
     }
@@ -175,7 +175,7 @@ public final class RawDisplayConnection {
         noasync,
         message: "Read globals from the owner-thread Wayland loop."
     )
-    public func global(named interfaceName: String) -> RawGlobalAdvertisement? {
+    package func global(named interfaceName: String) -> RawGlobalAdvertisement? {
         preconditionIsOwnerThread()
         return registryState.firstGlobal(named: interfaceName)
     }
@@ -185,7 +185,7 @@ public final class RawDisplayConnection {
         noasync,
         message: "Pump events from the owner-thread Wayland loop."
     )
-    public func pumpEvents(timeoutMilliseconds: Int32 = -1) throws {
+    package func pumpEvents(timeoutMilliseconds: Int32 = -1) throws {
         preconditionIsOwnerThread()
 
         try QueueEventLoop.pumpOnce(
@@ -200,7 +200,7 @@ public final class RawDisplayConnection {
         noasync,
         message: "Drain input from the owner-thread Wayland loop."
     )
-    public func drainInputEvents() -> [RawInputEvent] {
+    package func drainInputEvents() -> [RawInputEvent] {
         preconditionIsOwnerThread()
         return inputEventQueue.drain()
     }
@@ -210,7 +210,7 @@ public final class RawDisplayConnection {
         noasync,
         message: "Run event loops from the owner-thread Wayland loop."
     )
-    public func runEventLoop(while shouldContinue: () -> Bool) throws {
+    package func runEventLoop(while shouldContinue: () -> Bool) throws {
         preconditionIsOwnerThread()
 
         try QueueEventLoop.run(
@@ -251,7 +251,7 @@ extension RawDisplayConnection {
         noasync,
         message: "Bind globals from the owner-thread Wayland loop."
     )
-    public func bindRequiredGlobals() throws -> BoundGlobals {
+    package func bindRequiredGlobals() throws -> BoundGlobals {
         preconditionIsOwnerThread()
 
         if let boundGlobals {

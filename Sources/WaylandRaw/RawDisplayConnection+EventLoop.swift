@@ -58,7 +58,7 @@ extension RawDisplayConnection {
         noasync,
         message: "Run discovery from the owner-thread Wayland loop."
     )
-    public func completeInitialDiscovery(
+    package func completeInitialDiscovery(
         timeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMS
     ) throws {
         preconditionIsOwnerThread()
