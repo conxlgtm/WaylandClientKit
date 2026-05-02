@@ -112,7 +112,7 @@ public actor WaylandDisplay {
 
     @discardableResult
     public func createTopLevelWindow(
-        configuration windowConfiguration: WindowConfiguration = .init()
+        configuration windowConfiguration: WindowConfiguration = .default
     ) throws -> Window {
         let windowID = try createTopLevelWindowID(configuration: windowConfiguration)
         return Window(id: windowID, display: self)
@@ -120,7 +120,7 @@ public actor WaylandDisplay {
 
     @discardableResult
     public func createTopLevelWindowID(
-        configuration windowConfiguration: WindowConfiguration = .init()
+        configuration windowConfiguration: WindowConfiguration = .default
     ) throws -> WindowID {
         try requireCore().createTopLevelWindowID(configuration: windowConfiguration)
     }
