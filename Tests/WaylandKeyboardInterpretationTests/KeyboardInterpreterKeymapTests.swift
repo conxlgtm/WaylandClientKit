@@ -9,7 +9,7 @@ struct KeyboardInterpreterKeymapTests {
     func parsesXKBV1KeymapAndEmitsKeymapEvent() throws {
         let interpreter = try KeyboardInterpreter()
         let deviceID = keyboardDevice()
-        let payload = keymapPayload(text: try fixtureKeymapText())
+        let payload = try keymapPayload(text: try fixtureKeymapText())
         let event = try #require(
             interpreter.consume(rawKeyboardInputEvent(deviceID: deviceID, kind: .keymap(payload)))
                 .first
@@ -34,7 +34,7 @@ struct KeyboardInterpreterKeymapTests {
     func invalidKeymapBytesProduceDiagnostic() throws {
         let interpreter = try KeyboardInterpreter()
         let deviceID = keyboardDevice()
-        let payload = keymapPayload(bytes: Array("not a keymap".utf8))
+        let payload = try keymapPayload(bytes: Array("not a keymap".utf8) + [0])
         let event = try #require(
             interpreter.consume(rawKeyboardInputEvent(deviceID: deviceID, kind: .keymap(payload)))
                 .first
@@ -48,8 +48,8 @@ struct KeyboardInterpreterKeymapTests {
     func noKeymapProducesUnsupportedFormatAndClearsPriorState() throws {
         let interpreter = try KeyboardInterpreter()
         let deviceID = keyboardDevice()
-        let validPayload = keymapPayload(text: try fixtureKeymapText())
-        let noKeymap = keymapPayload(bytes: [], format: .noKeymap)
+        let validPayload = try keymapPayload(text: try fixtureKeymapText())
+        let noKeymap = try keymapPayload(bytes: [], format: .noKeymap)
 
         _ = interpreter.consume(
             rawKeyboardInputEvent(deviceID: deviceID, kind: .keymap(validPayload)))
@@ -66,35 +66,6 @@ struct KeyboardInterpreterKeymapTests {
                     .unsupportedKeymapFormat(RawKeyboardKeymapFormat.noKeymap.rawValue)
                 ))
         #expect(interpreter.keymapID(for: deviceID) == nil)
-    }
-
-    @Test
-    func unknownKeymapFormatProducesUnsupportedFormatDiagnostic() throws {
-        let interpreter = try KeyboardInterpreter()
-        let deviceID = keyboardDevice()
-        let payload = keymapPayload(
-            bytes: [1, 2, 3],
-            format: RawKeyboardKeymapFormat(rawValue: 99)
-        )
-        let event = try #require(
-            interpreter.consume(rawKeyboardInputEvent(deviceID: deviceID, kind: .keymap(payload)))
-                .first
-        )
-
-        #expect(event.kind == unavailable(.unsupportedKeymapFormat(99)))
-    }
-
-    @Test
-    func emptyXKBV1KeymapProducesEmptyDiagnostic() throws {
-        let interpreter = try KeyboardInterpreter()
-        let deviceID = keyboardDevice()
-        let payload = keymapPayload(bytes: [])
-        let event = try #require(
-            interpreter.consume(rawKeyboardInputEvent(deviceID: deviceID, kind: .keymap(payload)))
-                .first
-        )
-
-        #expect(event.kind == unavailable(.emptyKeymap))
     }
 
     @Test
@@ -180,7 +151,7 @@ struct KeyboardInterpreterKeymapTests {
     @Test
     func keymapWithMismatchedDeviceProducesDiagnostic() throws {
         let interpreter = try KeyboardInterpreter()
-        let payload = keymapPayload(text: try fixtureKeymapText(), keyboardGeneration: 1)
+        let payload = try keymapPayload(text: try fixtureKeymapText(), keyboardGeneration: 1)
         let eventDeviceID = keyboardDevice(generation: 2)
         let event = try #require(
             interpreter.consume(
@@ -203,7 +174,7 @@ struct KeyboardInterpreterKeymapTests {
         let interpreter = try KeyboardInterpreter()
         let eventSeatID = RawSeatID(rawValue: 1)
         let payloadSeatID = RawSeatID(rawValue: 2)
-        let payload = keymapPayload(text: try fixtureKeymapText(), seatID: payloadSeatID)
+        let payload = try keymapPayload(text: try fixtureKeymapText(), seatID: payloadSeatID)
         let event = try #require(
             interpreter.consume(
                 RawInputEvent(
@@ -226,8 +197,8 @@ struct KeyboardInterpreterKeymapTests {
     func keymapReplacementUpdatesStoredGeneration() throws {
         let interpreter = try KeyboardInterpreter()
         let deviceID = keyboardDevice()
-        let first = keymapPayload(text: try fixtureKeymapText(), keymapGeneration: 1)
-        let second = keymapPayload(text: try fixtureKeymapText(), keymapGeneration: 2)
+        let first = try keymapPayload(text: try fixtureKeymapText(), keymapGeneration: 1)
+        let second = try keymapPayload(text: try fixtureKeymapText(), keymapGeneration: 2)
 
         _ = interpreter.consume(rawKeyboardInputEvent(deviceID: deviceID, kind: .keymap(first)))
         #expect(interpreter.keymapID(for: deviceID) == first.id)

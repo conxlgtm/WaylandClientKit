@@ -41,7 +41,7 @@ func interpreterWithFixtureKeymap() throws -> KeyboardInterpreter {
     _ = interpreter.consume(
         rawKeyboardInputEvent(
             deviceID: deviceID,
-            kind: .keymap(keymapPayload(text: try fixtureKeymapText()))
+            kind: .keymap(try keymapPayload(text: try fixtureKeymapText()))
         )
     )
     return interpreter
@@ -53,14 +53,19 @@ func keymapPayload(
     seatID: RawSeatID = RawSeatID(rawValue: 1),
     keyboardGeneration: UInt64 = 1,
     keymapGeneration: UInt64 = 1
-) -> RawKeyboardKeymapPayload {
-    RawKeyboardKeymapPayload(
-        id: RawKeyboardKeymapID(
-            seatID: seatID,
-            keyboardGeneration: keyboardGeneration,
-            keymapGeneration: keymapGeneration
-        ),
-        format: format,
+) throws -> RawKeyboardKeymapPayload {
+    let id = RawKeyboardKeymapID(
+        seatID: seatID,
+        keyboardGeneration: keyboardGeneration,
+        keymapGeneration: keymapGeneration
+    )
+
+    if format == .noKeymap {
+        return .noKeymap(id: id)
+    }
+
+    return try .xkbV1(
+        id: id,
         bytes: bytes
     )
 }
@@ -70,9 +75,9 @@ func keymapPayload(
     seatID: RawSeatID = RawSeatID(rawValue: 1),
     keyboardGeneration: UInt64 = 1,
     keymapGeneration: UInt64 = 1
-) -> RawKeyboardKeymapPayload {
-    keymapPayload(
-        bytes: Array(text.utf8),
+) throws -> RawKeyboardKeymapPayload {
+    try keymapPayload(
+        bytes: Array(text.utf8) + [0],
         seatID: seatID,
         keyboardGeneration: keyboardGeneration,
         keymapGeneration: keymapGeneration

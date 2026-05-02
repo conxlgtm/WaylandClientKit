@@ -16,7 +16,7 @@ struct KeyboardInterpreterLifecycleTests {
             rawKeyboardInputEvent(
                 deviceID: first,
                 kind: .keymap(
-                    keymapPayload(
+                    try keymapPayload(
                         text: try fixtureKeymapText(), keyboardGeneration: first.generation))
             )
         )
@@ -24,14 +24,14 @@ struct KeyboardInterpreterLifecycleTests {
             rawKeyboardInputEvent(
                 deviceID: second,
                 kind: .keymap(
-                    keymapPayload(
+                    try keymapPayload(
                         text: try fixtureKeymapText(), keyboardGeneration: second.generation))
             ))
         _ = interpreter.consume(
             rawKeyboardInputEvent(
                 deviceID: otherSeat,
                 kind: .keymap(
-                    keymapPayload(
+                    try keymapPayload(
                         text: try fixtureKeymapText(),
                         seatID: otherSeat.seatID,
                         keyboardGeneration: otherSeat.generation
@@ -60,14 +60,14 @@ struct KeyboardInterpreterLifecycleTests {
         _ = interpreter.consume(
             rawKeyboardInputEvent(
                 deviceID: firstSeat,
-                kind: .keymap(keymapPayload(text: try fixtureKeymapText()))
+                kind: .keymap(try keymapPayload(text: try fixtureKeymapText()))
             )
         )
         _ = interpreter.consume(
             rawKeyboardInputEvent(
                 deviceID: secondSeat,
                 kind: .keymap(
-                    keymapPayload(text: try fixtureKeymapText(), seatID: secondSeat.seatID))
+                    try keymapPayload(text: try fixtureKeymapText(), seatID: secondSeat.seatID))
             )
         )
 
@@ -100,7 +100,7 @@ struct KeyboardInterpreterLifecycleTests {
             rawKeyboardInputEvent(
                 deviceID: first,
                 kind: .keymap(
-                    keymapPayload(
+                    try keymapPayload(
                         text: try fixtureKeymapText(), keyboardGeneration: first.generation))
             )
         )
@@ -108,7 +108,7 @@ struct KeyboardInterpreterLifecycleTests {
             rawKeyboardInputEvent(
                 deviceID: second,
                 kind: .keymap(
-                    keymapPayload(
+                    try keymapPayload(
                         text: try fixtureKeymapText(), keyboardGeneration: second.generation))
             ))
 
