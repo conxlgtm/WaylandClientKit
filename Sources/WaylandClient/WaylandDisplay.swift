@@ -183,7 +183,7 @@ public actor WaylandDisplay {
         let connection = try RawDisplayConnection.connect(
             invariantFailureSink: invariantFailureSink,
             inputQueueConfiguration: RawInputQueueConfiguration(
-                capacity: displayConfiguration.inputPipeline.rawInputQueueCapacity,
+                capacity: displayConfiguration.inputPipeline.rawInputQueueCapacity.rawValue,
                 pointerMotionCoalescing: displayConfiguration
                     .inputPipeline.pointerMotionCoalescing,
                 touchMotionCoalescing: displayConfiguration.inputPipeline.touchMotionCoalescing
@@ -205,7 +205,7 @@ public actor WaylandDisplay {
 
     private func requireCore() throws -> DisplayCore {
         guard let core else {
-            throw ClientError.displayClosed
+            throw ClientError.display(.closed)
         }
 
         return core
@@ -218,7 +218,6 @@ private final class WaylandDisplayRuntime: Sendable {
     let eventHub: DisplayEventHub
 
     init(configuration displayConfiguration: DisplayConfiguration) throws {
-        try displayConfiguration.validate()
         eventHub = DisplayEventHub(
             configuration: displayConfiguration.eventStreams,
             diagnosticsConfiguration: displayConfiguration.diagnostics

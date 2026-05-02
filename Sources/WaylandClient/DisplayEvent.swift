@@ -45,6 +45,23 @@ public enum DisplayDiagnosticPayload: Equatable, Sendable {
     case diagnosticsDropped(count: Int)
 }
 
+public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {
+    case displayEvents
+    case inputEvents
+    case diagnostics
+
+    public var description: String {
+        switch self {
+        case .displayEvents:
+            "display events"
+        case .inputEvents:
+            "input events"
+        case .diagnostics:
+            "diagnostics"
+        }
+    }
+}
+
 public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
     case display(interface: String?, objectID: UInt32, code: Int32)
     case invalidXDGConfigureDimensions(windowID: WindowID, width: Int32, height: Int32)
@@ -108,7 +125,7 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
     case protocolError(WaylandProtocolError)
     case systemError(errno: Int32)
     case runtime(String)
-    case eventSubscriberOverflow(stream: String, capacity: Int)
+    case eventSubscriberOverflow(stream: EventStreamIdentity, capacity: Int)
     case inputPipelineOverflow(InputPipelineOverflow)
     case internalInvariantViolation(InternalInvariantViolation)
 
@@ -152,7 +169,7 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
         case .runtime(let detail):
             "Wayland display failed: \(detail)"
         case .eventSubscriberOverflow(let stream, let capacity):
-            "Wayland \(stream) subscriber exceeded buffer capacity \(capacity)"
+            "Wayland \(stream.description) subscriber exceeded buffer capacity \(capacity)"
         case .inputPipelineOverflow(let overflow):
             "Wayland input pipeline overflowed in \(overflow.stage.description) "
                 + "at capacity \(overflow.capacity)"
@@ -336,16 +353,16 @@ final class DisplayEventHub: Sendable {
         let idGenerator = DiagnosticIDGenerator()
         diagnosticIDGenerator = idGenerator
         displayBroker = TypedEventBroker<DisplayEvent>(
-            streamName: "display event",
-            capacity: configuration.displayEventCapacity
+            stream: .displayEvents,
+            capacity: configuration.displayEventCapacity.rawValue
         )
         inputBroker = TypedEventBroker<InputEvent>(
-            streamName: "input event",
-            capacity: configuration.inputEventCapacity
+            stream: .inputEvents,
+            capacity: configuration.inputEventCapacity.rawValue
         )
         diagnosticsBroker = TypedEventBroker<DisplayDiagnostic>(
-            streamName: "diagnostic",
-            capacity: diagnosticsConfiguration.capacity,
+            stream: .diagnostics,
+            capacity: diagnosticsConfiguration.capacity.rawValue,
             overflowStrategy: .dropOldest { count in
                 DisplayDiagnostic(
                     id: idGenerator.next(),
