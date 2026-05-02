@@ -4,9 +4,6 @@ package struct WindowModel: Equatable, Sendable {
     let id: WindowID
     let fallbackSize: PositiveTopLevelSize
     var lifecycle = XDGWindowLifecycle.created
-    var closeRequest = CloseRequestState.none
-    var redraw = WindowRedrawState()
-    var presentation = WindowPresentationState.idle
     var publication = WindowPublicationState.notPublished
 
     init(id windowID: WindowID, fallbackSize initialSize: PositiveTopLevelSize) {
@@ -28,11 +25,19 @@ package struct WindowModel: Equatable, Sendable {
     }
 
     var currentConfiguration: ResolvedWindowConfiguration? {
-        guard case .active(let state) = lifecycle else {
-            return nil
-        }
+        activeState?.configure
+    }
 
-        return state.configure
+    var closeRequest: CloseRequestState {
+        activeState?.closeRequest ?? .none
+    }
+
+    var redraw: WindowRedrawState {
+        activeState?.redraw ?? WindowRedrawState()
+    }
+
+    var presentation: WindowPresentationState {
+        activeState?.presentation ?? .idle
     }
 
     mutating func markPublished() {
@@ -62,11 +67,7 @@ package struct WindowModel: Equatable, Sendable {
         case .presentationStarted(let generation):
             return try reducePresentationStarted(generation: generation)
         case .presentationBlockedByBuffer:
-            try requireActivePresentation()
-            presentation = .idle
-            return mapRedrawEffects(
-                redraw.reduce(.drawBlockedByBuffer, bufferAvailable: false)
-            )
+            return try reducePresentationBlockedByBuffer()
         case .presentationSucceeded(let generation, let bufferAvailable):
             return try reducePresentationSucceeded(
                 generation: generation,
@@ -87,8 +88,10 @@ package struct WindowModel: Equatable, Sendable {
             )
         case .transientStateReset:
             guard !isClosed else { return [] }
-            _ = redraw.reduce(.transientStateReset, bufferAvailable: false)
-            presentation = .idle
+            guard var activeState else { return [] }
+            _ = activeState.redraw.reduce(.transientStateReset, bufferAvailable: false)
+            activeState.presentation = .idle
+            lifecycle = .active(activeState)
             return []
         }
     }
@@ -157,6 +160,9 @@ package enum XDGWindowLifecycle: Equatable, Sendable, CustomStringConvertible {
 
 package struct ActiveWindowState: Equatable, Sendable {
     var configure: ResolvedWindowConfiguration
+    var closeRequest = CloseRequestState.none
+    var redraw = WindowRedrawState()
+    var presentation = WindowPresentationState.idle
 }
 
 package enum CloseRequestState: Equatable, Sendable {
@@ -167,7 +173,6 @@ package enum CloseRequestState: Equatable, Sendable {
 package enum WindowPresentationState: Equatable, Sendable {
     case idle
     case drawing(generation: UInt64)
-    case closing
 }
 
 package enum WindowPublicationState: Equatable, Sendable {
@@ -185,10 +190,17 @@ package enum ClosingReason: Equatable, Sendable {
 
 package struct ClosingWindowState: Equatable, Sendable {
     var reason: ClosingReason
-    var didPublishClosed: Bool
 }
 
 extension WindowModel {
+    private var activeState: ActiveWindowState? {
+        guard case .active(let state) = lifecycle else {
+            return nil
+        }
+
+        return state
+    }
+
     private mutating func reduceRoleObjectsCreated() throws -> [WindowEffect] {
         guard lifecycle == .created else {
             throw invalidTransition(event: "roleObjectsCreated")
@@ -232,14 +244,16 @@ extension WindowModel {
         } catch let error as WindowError {
             throw ClientError.window(id, error)
         }
-        lifecycle = .active(ActiveWindowState(configure: resolved))
+        var nextActiveState = activeState ?? ActiveWindowState(configure: resolved)
+        nextActiveState.configure = resolved
 
         var effects: [WindowEffect] = [.ackConfigure(sequence.serial)]
         effects.append(
             contentsOf: mapRedrawEffects(
-                redraw.reduce(.contentInvalidated, bufferAvailable: true)
+                nextActiveState.redraw.reduce(.contentInvalidated, bufferAvailable: true)
             )
         )
+        lifecycle = .active(nextActiveState)
         return effects
     }
 
@@ -250,7 +264,7 @@ extension WindowModel {
             throw ClientError.window(id, .invalidLifecycleTransition(.redrawAfterDestroyed))
         }
 
-        guard case .active(let activeState) = lifecycle else {
+        guard var activeState else {
             if case .closing = lifecycle {
                 throw ClientError.window(id, .invalidLifecycleTransition(.presentWhileClosing))
             }
@@ -258,31 +272,31 @@ extension WindowModel {
             throw ClientError.window(id, .invalidLifecycleTransition(.mapBeforeInitialConfigure))
         }
 
-        guard presentation == .idle else {
+        guard activeState.presentation == .idle else {
             throw ClientError.window(id, .invalidLifecycleTransition(.nestedPresentation))
         }
 
-        guard redraw.hasOutstandingRedrawRequest else {
+        guard activeState.redraw.hasOutstandingRedrawRequest else {
             return []
         }
 
-        _ = redraw.reduce(.redrawRequestConsumed, bufferAvailable: bufferAvailable)
-        let generation = redraw.generationForCurrentDraw
+        _ = activeState.redraw.reduce(
+            .redrawRequestConsumed,
+            bufferAvailable: bufferAvailable
+        )
+        let generation = activeState.redraw.generationForCurrentDraw
         let request = PresentationRequest(
             generation: generation,
             configuration: activeState.configure
         )
+        lifecycle = .active(activeState)
         return [.performSoftwarePresent(request)]
     }
 
     private mutating func reducePresentationStarted(
         generation: UInt64
     ) throws -> [WindowEffect] {
-        guard presentation == .idle else {
-            throw ClientError.window(id, .invalidLifecycleTransition(.nestedPresentation))
-        }
-
-        guard case .active = lifecycle else {
+        guard var activeState else {
             if case .closing = lifecycle {
                 throw ClientError.window(id, .invalidLifecycleTransition(.presentWhileClosing))
             }
@@ -290,7 +304,12 @@ extension WindowModel {
             throw ClientError.window(id, .invalidLifecycleTransition(.mapBeforeInitialConfigure))
         }
 
-        presentation = .drawing(generation: generation)
+        guard activeState.presentation == .idle else {
+            throw ClientError.window(id, .invalidLifecycleTransition(.nestedPresentation))
+        }
+
+        activeState.presentation = .drawing(generation: generation)
+        lifecycle = .active(activeState)
         return []
     }
 
@@ -298,20 +317,39 @@ extension WindowModel {
         generation: UInt64,
         bufferAvailable: Bool
     ) throws -> [WindowEffect] {
-        try requireActivePresentation(generation: generation)
-        presentation = .idle
-        return mapRedrawEffects(
-            redraw.reduce(.presented(generation: generation), bufferAvailable: bufferAvailable)
+        var activeState = try requireActiveWindowState()
+        try requireActivePresentation(generation: generation, in: activeState)
+        activeState.presentation = .idle
+        let effects = mapRedrawEffects(
+            activeState.redraw.reduce(
+                .presented(generation: generation),
+                bufferAvailable: bufferAvailable
+            )
         )
+        lifecycle = .active(activeState)
+        return effects
     }
 
     private mutating func reducePresentationFailed(
         generation: UInt64,
         _ error: PresentationError
     ) throws -> [WindowEffect] {
-        try requireActivePresentation(generation: generation)
-        presentation = .idle
+        var activeState = try requireActiveWindowState()
+        try requireActivePresentation(generation: generation, in: activeState)
+        activeState.presentation = .idle
+        lifecycle = .active(activeState)
         throw ClientError.window(id, .presentationFailed(error))
+    }
+
+    private mutating func reducePresentationBlockedByBuffer() throws -> [WindowEffect] {
+        var activeState = try requireActiveWindowState()
+        try requireActivePresentation(in: activeState)
+        activeState.presentation = .idle
+        let effects = mapRedrawEffects(
+            activeState.redraw.reduce(.drawBlockedByBuffer, bufferAvailable: false)
+        )
+        lifecycle = .active(activeState)
+        return effects
     }
 
     private mutating func reduceCompositorCloseRequested(
@@ -321,11 +359,16 @@ extension WindowModel {
             throw ClientError.window(id, .invalidLifecycleTransition(.closeAfterDestroyed))
         }
 
-        guard closeRequest == .none else {
+        guard var activeState else {
+            return try beginClosing(reason: .compositorRequest, publishRequest: true)
+        }
+
+        guard activeState.closeRequest == .none else {
             return []
         }
 
-        closeRequest = .requested
+        activeState.closeRequest = .requested
+        lifecycle = .active(activeState)
 
         switch policy {
         case .requestOnly:
@@ -348,12 +391,9 @@ extension WindowModel {
             break
         }
 
-        presentation = .closing
-        redraw = WindowRedrawState()
         lifecycle = .closing(
             ClosingWindowState(
-                reason: reason,
-                didPublishClosed: false
+                reason: reason
             )
         )
 
@@ -374,7 +414,6 @@ extension WindowModel {
         }
 
         lifecycle = .destroyed
-        presentation = .idle
         return effects
     }
 
@@ -383,10 +422,13 @@ extension WindowModel {
         bufferAvailable: Bool
     ) -> [WindowEffect] {
         guard !isClosed else { return [] }
+        guard var activeState else { return [] }
 
-        return mapRedrawEffects(
-            redraw.reduce(event, bufferAvailable: bufferAvailable)
+        let effects = mapRedrawEffects(
+            activeState.redraw.reduce(event, bufferAvailable: bufferAvailable)
         )
+        lifecycle = .active(activeState)
+        return effects
     }
 
     private func mapRedrawEffects(_ effects: [WindowRedrawEffect]) -> [WindowEffect] {
@@ -399,8 +441,8 @@ extension WindowModel {
     }
 
     @discardableResult
-    private func requireActivePresentation() throws -> UInt64 {
-        switch presentation {
+    private func requireActivePresentation(in activeState: ActiveWindowState) throws -> UInt64 {
+        switch activeState.presentation {
         case .drawing(let generation):
             return generation
         case .idle:
@@ -408,13 +450,14 @@ extension WindowModel {
                 id,
                 .invalidLifecycleTransition(.inactivePresentationCompletion)
             )
-        case .closing:
-            throw ClientError.window(id, .invalidLifecycleTransition(.presentWhileClosing))
         }
     }
 
-    private func requireActivePresentation(generation actualGeneration: UInt64) throws {
-        let expectedGeneration = try requireActivePresentation()
+    private func requireActivePresentation(
+        generation actualGeneration: UInt64,
+        in activeState: ActiveWindowState
+    ) throws {
+        let expectedGeneration = try requireActivePresentation(in: activeState)
         guard expectedGeneration == actualGeneration else {
             throw ClientError.window(
                 id,
@@ -426,6 +469,18 @@ extension WindowModel {
                 )
             )
         }
+    }
+
+    private func requireActiveWindowState() throws -> ActiveWindowState {
+        guard let activeState else {
+            if case .closing = lifecycle {
+                throw ClientError.window(id, .invalidLifecycleTransition(.presentWhileClosing))
+            }
+
+            throw ClientError.window(id, .invalidLifecycleTransition(.mapBeforeInitialConfigure))
+        }
+
+        return activeState
     }
 
     private func invalidTransition(event: String) -> ClientError {
