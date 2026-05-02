@@ -2,17 +2,11 @@ public struct TopLevelSize: Equatable, Sendable {
     public let width: Int32
     public let height: Int32
 
-    public static let fallback = TopLevelSize(width: 640, height: 480)
+    public static let unspecified = TopLevelSize(width: 0, height: 0)
 
     public init(width sizeWidth: Int32, height sizeHeight: Int32) {
         width = sizeWidth
         height = sizeHeight
-    }
-
-    public func normalized(fallback: TopLevelSize = .fallback) -> Self {
-        Self(
-            width: width > 0 ? width : fallback.width,
-            height: height > 0 ? height : fallback.height)
     }
 }
 
@@ -51,21 +45,18 @@ public struct XDGWMCapability: Equatable, Hashable, Sendable {
     public static let minimize = Self(rawValue: 4)
 }
 
-public struct SurfaceConfigure: Equatable, Sendable {
-    public let serial: UInt32
+public struct XDGTopLevelConfigureSuggestion: Equatable, Sendable {
     public let size: TopLevelSize
     public let states: [XDGTopLevelState]
     public let bounds: TopLevelSize?
     public let wmCapabilities: [XDGWMCapability]
 
     public init(
-        serial configureSerial: UInt32,
         size configureSize: TopLevelSize,
         states configureStates: [XDGTopLevelState] = [],
         bounds configureBounds: TopLevelSize? = nil,
         wmCapabilities configureWMCapabilities: [XDGWMCapability] = []
     ) {
-        serial = configureSerial
         size = configureSize
         states = configureStates
         bounds = configureBounds
@@ -73,21 +64,32 @@ public struct SurfaceConfigure: Equatable, Sendable {
     }
 }
 
+public struct XDGConfigureSequence: Equatable, Sendable {
+    public let serial: UInt32
+    public let topLevel: XDGTopLevelConfigureSuggestion
+
+    public init(
+        serial configureSerial: UInt32,
+        topLevel topLevelSuggestion: XDGTopLevelConfigureSuggestion
+    ) {
+        serial = configureSerial
+        topLevel = topLevelSuggestion
+    }
+}
+
 public final class XDGConfigureState {
-    private let fallbackSize: TopLevelSize
     private var pendingSize: TopLevelSize
     private var pendingStates: [XDGTopLevelState] = []
     private var pendingBounds: TopLevelSize?
     private var pendingWMCapabilities: [XDGWMCapability] = []
-    private var latestConfigure: SurfaceConfigure?
+    private var latestConfigure: XDGConfigureSequence?
     private var pendingError: RuntimeError?
     private var onSurfaceConfigure: (() -> Void)?
 
     public private(set) var hasReceivedInitialConfigure = false
 
-    public init(fallbackSize initialFallbackSize: TopLevelSize = .fallback) {
-        fallbackSize = initialFallbackSize
-        pendingSize = initialFallbackSize
+    public init(initialSize: TopLevelSize = .unspecified) {
+        pendingSize = initialSize
     }
 
     package func setSurfaceConfigureHandler(_ handler: @escaping () -> Void) {
@@ -100,7 +102,6 @@ public final class XDGConfigureState {
         states: [XDGTopLevelState] = []
     ) {
         pendingSize = TopLevelSize(width: width, height: height)
-            .normalized(fallback: fallbackSize)
         pendingStates = states
     }
 
@@ -131,13 +132,15 @@ public final class XDGConfigureState {
     }
 
     @discardableResult
-    public func handleSurfaceConfigure(serial: UInt32) -> SurfaceConfigure {
-        let configure = SurfaceConfigure(
+    public func handleSurfaceConfigure(serial: UInt32) -> XDGConfigureSequence {
+        let configure = XDGConfigureSequence(
             serial: serial,
-            size: pendingSize,
-            states: pendingStates,
-            bounds: pendingBounds,
-            wmCapabilities: pendingWMCapabilities
+            topLevel: XDGTopLevelConfigureSuggestion(
+                size: pendingSize,
+                states: pendingStates,
+                bounds: pendingBounds,
+                wmCapabilities: pendingWMCapabilities
+            )
         )
         latestConfigure = configure
         hasReceivedInitialConfigure = true
@@ -145,7 +148,7 @@ public final class XDGConfigureState {
         return configure
     }
 
-    public func consumeLatestConfigure() -> SurfaceConfigure? {
+    public func consumeLatestConfigure() -> XDGConfigureSequence? {
         defer {
             latestConfigure = nil
         }
