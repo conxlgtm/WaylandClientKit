@@ -350,7 +350,9 @@ struct DisplayEventHubFailureTests {
     @Test
     func newSubscriberAfterFailedFinishImmediatelyThrows() async {
         let hub = DisplayEventHub()
-        let error = WaylandDisplayError.internalInvariantViolation("listener state lost")
+        let error = WaylandDisplayError.internalInvariantViolation(
+            .message("listener state lost")
+        )
 
         hub.finish(throwing: error)
 
@@ -361,7 +363,9 @@ struct DisplayEventHubFailureTests {
     @Test
     func bufferedSubscriberDrainsThenReceivesTerminalFailure() async {
         let hub = DisplayEventHub()
-        let error = WaylandDisplayError.internalInvariantViolation("listener state lost")
+        let error = WaylandDisplayError.internalInvariantViolation(
+            .message("listener state lost")
+        )
         var iterator = hub.displayEvents().makeAsyncIterator()
 
         hub.publish(.windowClosed(WindowID(rawValue: 1)))
@@ -376,7 +380,9 @@ struct DisplayEventHubFailureTests {
         let hub = DisplayEventHub()
         var displayIterator = hub.displayEvents().makeAsyncIterator()
         var inputIterator = hub.inputEvents().makeAsyncIterator()
-        let error = WaylandDisplayError.internalInvariantViolation("listener state lost")
+        let error = WaylandDisplayError.internalInvariantViolation(
+            .message("listener state lost")
+        )
 
         hub.finish(throwing: error)
 
@@ -467,9 +473,7 @@ private func expectFailure(
     do {
         _ = try await iterator.next()
         Issue.record("Expected display stream failure")
-    } catch {
-        #expect(error == expectedError)
-    }
+    } catch { #expect(error == expectedError) }
 }
 
 private func expectFailure(
@@ -479,21 +483,17 @@ private func expectFailure(
     do {
         _ = try await iterator.next()
         Issue.record("Expected input stream failure")
-    } catch {
-        #expect(error == expectedError)
-    }
+    } catch { #expect(error == expectedError) }
 }
-
 private func diagnosticInputEvent(sequence: UInt64, message: String) -> InputEvent {
-    InputEvent(
+    let diagnostic = InputDiagnostic(
+        operation: .cursor("automaticPointerEnter"),
+        message: message
+    )
+    return InputEvent(
         sequence: sequence,
         seatID: SeatID(rawValue: 2),
         windowID: nil,
-        kind: .diagnostic(
-            InputDiagnostic(
-                operation: .cursor("automaticPointerEnter"),
-                message: message
-            )
-        )
+        kind: .diagnostic(diagnostic)
     )
 }

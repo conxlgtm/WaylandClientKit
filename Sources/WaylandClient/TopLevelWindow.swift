@@ -22,7 +22,7 @@ package final class TopLevelWindow {
     private var buffers: RawSharedMemoryPool?
     private var retiredBufferPools: [RawSharedMemoryPool] = []
     private var pendingFrameRegistration: FrameCallbackRegistration?
-    private var pendingWindowError: ClientError?
+    private let failureSink: any WindowFailureSink
     private var model: WindowModel
 
     package var onClose: (() -> Void)?
@@ -34,11 +34,13 @@ package final class TopLevelWindow {
         id windowID: WindowID,
         connection rawConnection: RawDisplayConnection,
         configuration windowConfiguration: WindowConfiguration = .default,
+        failureSink windowFailureSink: any WindowFailureSink = DefaultWindowFailureSink(),
         initialConfigurePump pumpEvents: ((Int32) throws -> Void)? = nil
     ) throws {
         id = windowID
         connection = rawConnection
         configuration = windowConfiguration
+        failureSink = windowFailureSink
         initialConfigurePump =
             pumpEvents
             ?? { timeoutMilliseconds in
@@ -129,7 +131,6 @@ package final class TopLevelWindow {
             let boundedRemaining = Int32(min(remainingMilliseconds, Int64(Int32.max)))
             let pumpTimeout = min(boundedRemaining, pollMilliseconds)
             try initialConfigurePump(pumpTimeout)
-            try throwPendingWindowErrorIfAny()
             try configureState.throwPendingErrorIfAny()
         }
 
@@ -144,7 +145,6 @@ package final class TopLevelWindow {
     }
 
     private func consumeLatestConfigureIfAvailable() throws -> ResolvedWindowConfiguration? {
-        try throwPendingWindowErrorIfAny()
         try configureState.throwPendingErrorIfAny()
 
         guard let sequence = configureState.consumeLatestConfigure() else {
@@ -194,17 +194,9 @@ package final class TopLevelWindow {
                 )
             )
         } catch let error as ClientError {
-            pendingWindowError = error
+            reportCallbackFailure(operation: "closeRequested", error: error)
         } catch {
-            pendingWindowError = ClientError.window(
-                id,
-                .invalidLifecycleTransition(
-                    .invalidTransition(
-                        from: "closeRequested",
-                        event: String(describing: error)
-                    )
-                )
-            )
+            reportCallbackFailure(operation: "closeRequested", error: error)
         }
     }
 
@@ -337,26 +329,119 @@ package final class TopLevelWindow {
         return Int64(timestamp.tv_sec) * 1_000 + Int64(timestamp.tv_nsec) / 1_000_000
     }
 
-    private func throwPendingWindowErrorIfAny() throws {
-        guard let error = pendingWindowError else { return }
-
-        pendingWindowError = nil
-        throw error
-    }
-
     private func resetTransientState() {
         do {
             _ = try model.reduce(.transientStateReset)
         } catch let error as ClientError {
-            pendingWindowError = error
+            reportCallbackFailure(operation: "transientStateReset", error: error)
         } catch {
-            pendingWindowError = ClientError.window(
+            reportCallbackFailure(operation: "transientStateReset", error: error)
+        }
+    }
+
+    private func reportCallbackFailure(operation: String, error: any Error) {
+        failureSink.reportWindowFailure(
+            windowFailure(operation: operation, error: error)
+        )
+    }
+
+    private func windowFailure(operation: String, error: any Error) -> WindowFailure {
+        if let clientError = error as? ClientError {
+            return windowFailure(operation: operation, clientError: clientError)
+        }
+
+        if let runtimeError = error as? RuntimeError {
+            return windowFailure(operation: operation, runtimeError: runtimeError)
+        }
+
+        return .internalInvariant(
+            .unexpectedWindowCallbackError(
                 id,
-                .invalidLifecycleTransition(
-                    .invalidTransition(
-                        from: "transientStateReset",
-                        event: String(describing: error)
-                    )
+                operation: operation,
+                detail: String(describing: error)
+            )
+        )
+    }
+
+    private func windowFailure(
+        operation: String,
+        clientError: ClientError
+    ) -> WindowFailure {
+        switch clientError {
+        case .window(let windowID, let windowError) where windowID == id:
+            return windowFailure(windowError, operation: operation)
+        case .displayClosed:
+            return .diagnostic(
+                WindowDiagnostic(
+                    windowID: id,
+                    operation: .callback(operation),
+                    message: clientError.description
+                )
+            )
+        default:
+            return .internalInvariant(
+                .unexpectedWindowCallbackError(
+                    id,
+                    operation: operation,
+                    detail: clientError.description
+                )
+            )
+        }
+    }
+
+    private func windowFailure(
+        _ windowError: WindowError,
+        operation: String
+    ) -> WindowFailure {
+        switch windowError {
+        case .invalidConfigure(let error):
+            return windowFailure(configureError: error)
+        case .invalidLifecycleTransition(let transition):
+            return .lifecycleViolation(id, transition)
+        case .initialConfigureTimedOut:
+            return .lifecycleViolation(
+                id,
+                .invalidTransition(from: "callback", event: operation)
+            )
+        case .presentationFailed(let error):
+            return .presentationFailure(id, error)
+        }
+    }
+
+    private func windowFailure(configureError: WindowConfigureError) -> WindowFailure {
+        switch configureError {
+        case .negativeSuggestedDimension(let width, let height):
+            .protocolViolation(
+                .invalidXDGConfigureDimensions(windowID: id, width: width, height: height)
+            )
+        case .invalidSerial(let serial):
+            .protocolViolation(.invalidConfigureSerial(windowID: id, serial: serial))
+        case .unresolvedSize:
+            .internalInvariant(
+                .effectInterpreterInvariant(id, "configure size could not be resolved")
+            )
+        }
+    }
+
+    private func windowFailure(
+        operation: String,
+        runtimeError: RuntimeError
+    ) -> WindowFailure {
+        switch runtimeError {
+        case .protocolError(let interface, let objectID, let code):
+            .protocolViolation(
+                .display(interface: interface, objectID: objectID, code: code)
+            )
+        case .proxyQueueMismatch(let interface):
+            .protocolViolation(
+                .proxyQueueMismatch(interface: interface, objectID: nil)
+            )
+        default:
+            .internalInvariant(
+                .unexpectedWindowCallbackError(
+                    id,
+                    operation: operation,
+                    detail: runtimeError.description
                 )
             )
         }
@@ -378,14 +463,9 @@ extension TopLevelWindow {
                 model.reduce(.frameBecameReady(bufferAvailable: redrawBufferAvailable))
             )
         } catch let error as ClientError {
-            pendingWindowError = error
+            reportCallbackFailure(operation: "frameDone", error: error)
         } catch {
-            pendingWindowError = ClientError.window(
-                id,
-                .invalidLifecycleTransition(
-                    .invalidTransition(from: "frameDone", event: String(describing: error))
-                )
-            )
+            reportCallbackFailure(operation: "frameDone", error: error)
         }
     }
 
@@ -400,17 +480,9 @@ extension TopLevelWindow {
                 model.reduce(.bufferBecameAvailable(bufferAvailable: redrawBufferAvailable))
             )
         } catch let error as ClientError {
-            pendingWindowError = error
+            reportCallbackFailure(operation: "bufferReleased", error: error)
         } catch {
-            pendingWindowError = ClientError.window(
-                id,
-                .invalidLifecycleTransition(
-                    .invalidTransition(
-                        from: "bufferReleased",
-                        event: String(describing: error)
-                    )
-                )
-            )
+            reportCallbackFailure(operation: "bufferReleased", error: error)
         }
     }
 
@@ -425,14 +497,9 @@ extension TopLevelWindow {
                 model.reduce(.contentInvalidated(bufferAvailable: redrawBufferAvailable))
             )
         } catch let error as ClientError {
-            pendingWindowError = error
+            reportCallbackFailure(operation: "markNeedsRedraw", error: error)
         } catch {
-            pendingWindowError = ClientError.window(
-                id,
-                .invalidLifecycleTransition(
-                    .invalidTransition(from: "markNeedsRedraw", event: String(describing: error))
-                )
-            )
+            reportCallbackFailure(operation: "markNeedsRedraw", error: error)
         }
     }
 
@@ -542,9 +609,7 @@ extension TopLevelWindow {
 
     package func requestRedrawOnOwnerThread() throws {
         connection.preconditionIsOwnerThread()
-        try throwPendingWindowErrorIfAny()
         markNeedsRedraw()
-        try throwPendingWindowErrorIfAny()
     }
 
     package func showOnOwnerThread(
@@ -552,7 +617,6 @@ extension TopLevelWindow {
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         connection.preconditionIsOwnerThread()
-        try throwPendingWindowErrorIfAny()
 
         if model.currentConfiguration == nil {
             _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
@@ -565,7 +629,6 @@ extension TopLevelWindow {
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         connection.preconditionIsOwnerThread()
-        try throwPendingWindowErrorIfAny()
 
         guard !model.isClosed else { return }
 
@@ -581,12 +644,7 @@ extension TopLevelWindow {
         do {
             try interpretWindowEffects(model.reduce(.explicitClose))
         } catch {
-            pendingWindowError = ClientError.window(
-                id,
-                .invalidLifecycleTransition(
-                    .invalidTransition(from: "close", event: String(describing: error))
-                )
-            )
+            reportCallbackFailure(operation: "close", error: error)
         }
     }
 
