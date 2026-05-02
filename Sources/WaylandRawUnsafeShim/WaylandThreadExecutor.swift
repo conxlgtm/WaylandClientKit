@@ -369,6 +369,14 @@ extension WaylandThreadExecutor {
     private func drainSwiftJobs() -> JobDrainResult {
         let maximumJobCount = isStoppingSnapshot ? Int.max : Self.jobBudget
         var drainedJobCount = 0
+        var completedJobCount = 0
+        var completedOperationCount = 0
+        defer {
+            recordCompleted(
+                jobCount: completedJobCount,
+                operationCount: completedOperationCount
+            )
+        }
 
         while drainedJobCount < maximumJobCount {
             guard let workItem = nextWorkItemIfPresent() else {
@@ -379,11 +387,11 @@ extension WaylandThreadExecutor {
             case .job(let cell):
                 drainedJobCount += 1
                 unsafe cell.run(on: asUnownedSerialExecutor())
-                recordCompleted(workItem)
+                completedJobCount += 1
             case .operation(let operation):
                 drainedJobCount += 1
                 operation()
-                recordCompleted(workItem)
+                completedOperationCount += 1
             case .stop:
                 return .stop
             }
@@ -399,16 +407,12 @@ extension WaylandThreadExecutor {
         return workItem
     }
 
-    private func recordCompleted(_ workItem: WaylandThreadExecutorWorkItem) {
+    private func recordCompleted(jobCount: Int, operationCount: Int) {
+        guard jobCount > 0 || operationCount > 0 else { return }
+
         unsafe pthread_mutex_lock(&mutex)
-        switch workItem {
-        case .job:
-            unsafe state.completedJobCount += 1
-        case .operation:
-            unsafe state.completedOperationCount += 1
-        case .stop:
-            break
-        }
+        unsafe state.completedJobCount += UInt64(jobCount)
+        unsafe state.completedOperationCount += UInt64(operationCount)
         unsafe pthread_mutex_unlock(&mutex)
     }
 
