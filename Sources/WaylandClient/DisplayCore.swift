@@ -41,7 +41,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             )
             windows[window.id] = window
             guard !isClosed else {
-                throw ClientError.displayClosed
+                throw ClientError.display(.closed)
             }
             installEventCallbacks(for: window)
             window.markPublishedOnOwnerThread()
@@ -70,7 +70,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             let window = try requireOpenWindow(windowID)
             try window.redrawOnOwnerThread(draw)
             guard !isClosed else {
-                throw ClientError.displayClosed
+                throw ClientError.display(.closed)
             }
         }
     }
@@ -260,21 +260,21 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     private func requireSession() throws -> DisplaySession {
         guard let session, !isClosed else {
-            throw ClientError.displayClosed
+            throw ClientError.display(.closed)
         }
         return session
     }
 
     private func requireWindow(_ windowID: WindowID) throws -> TopLevelWindow {
         guard let window = windows[windowID] else {
-            throw ClientError.unknownWindow(windowID)
+            throw ClientError.display(.unknownWindow(windowID))
         }
         return window
     }
 
     private func requireOpenWindow(_ windowID: WindowID) throws -> TopLevelWindow {
         guard !isClosed else {
-            throw ClientError.displayClosed
+            throw ClientError.display(.closed)
         }
         return try requireWindow(windowID)
     }

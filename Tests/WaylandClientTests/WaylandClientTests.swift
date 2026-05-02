@@ -60,33 +60,30 @@ struct WaylandClientTests {
     @Test
     func displayConfigurationRejectsInvalidInternalCapacities() {
         #expect(
-            throws: ClientError.invalidDisplayState(
-                "rawInputQueueCapacity must be greater than zero"
+            throws: DisplayConfigurationError.nonPositiveCapacity(
+                field: .rawInputQueueCapacity,
+                value: 0
             )
         ) {
-            try DisplayConfiguration(
-                inputPipeline: InputPipelineConfiguration(rawInputQueueCapacity: 0)
-            ).validate()
+            _ = try InputPipelineConfiguration(rawInputQueueCapacity: 0)
         }
 
         #expect(
-            throws: ClientError.invalidDisplayState(
-                "pendingInputEventCapacity must be greater than zero"
+            throws: DisplayConfigurationError.nonPositiveCapacity(
+                field: .pendingInputEventCapacity,
+                value: 0
             )
         ) {
-            try DisplayConfiguration(
-                inputPipeline: InputPipelineConfiguration(pendingInputEventCapacity: 0)
-            ).validate()
+            _ = try InputPipelineConfiguration(pendingInputEventCapacity: 0)
         }
 
         #expect(
-            throws: ClientError.invalidDisplayState(
-                "diagnostics capacity must be greater than zero"
+            throws: DisplayConfigurationError.nonPositiveCapacity(
+                field: .diagnosticsCapacity,
+                value: 0
             )
         ) {
-            try DisplayConfiguration(
-                diagnostics: DiagnosticsConfiguration(capacity: 0)
-            ).validate()
+            _ = try DiagnosticsConfiguration(capacity: 0)
         }
     }
 

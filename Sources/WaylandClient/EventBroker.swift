@@ -138,7 +138,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
 
         mutating func publish(
             _ element: Element,
-            streamName: String,
+            stream: EventStreamIdentity,
             capacity: Int,
             overflowStrategy: OverflowStrategy<Element>
         ) -> [Delivery] {
@@ -147,7 +147,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
             let context = PublishContext(
                 capacity: capacity,
                 overflowError: WaylandDisplayError.eventSubscriberOverflow(
-                    stream: streamName,
+                    stream: stream,
                     capacity: capacity
                 ),
                 overflowStrategy: overflowStrategy
@@ -298,17 +298,17 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
         }
     }
 
-    private let streamName: String
+    private let stream: EventStreamIdentity
     private let capacity: Int
     private let overflowStrategy: OverflowStrategy<Element>
     private let state = Mutex(BrokerState())
 
     init(
-        streamName eventStreamName: String,
+        stream eventStream: EventStreamIdentity,
         capacity eventCapacity: Int,
         overflowStrategy eventOverflowStrategy: OverflowStrategy<Element> = .failFast
     ) {
-        streamName = eventStreamName
+        stream = eventStream
         capacity = eventCapacity
         overflowStrategy = eventOverflowStrategy
     }
@@ -322,7 +322,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
         let deliveries = state.withLock { brokerState in
             brokerState.publish(
                 element,
-                streamName: streamName,
+                stream: stream,
                 capacity: capacity,
                 overflowStrategy: overflowStrategy
             )
