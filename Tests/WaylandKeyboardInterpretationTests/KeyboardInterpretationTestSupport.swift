@@ -61,7 +61,6 @@ func keymapPayload(
             keymapGeneration: keymapGeneration
         ),
         format: format,
-        size: UInt32(bytes.count),
         bytes: bytes
     )
 }

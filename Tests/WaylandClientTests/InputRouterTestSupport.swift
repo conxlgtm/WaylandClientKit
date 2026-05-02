@@ -175,8 +175,7 @@ func rawKeyboardKeymap(
                         keymapGeneration: 1
                     ),
                     format: .xkbV1,
-                    size: 8,
-                    bytes: [1, 2, 3]
+                    bytes: [1, 2, 3, 4, 5, 6, 7, 8]
                 )
             )
         ),
