@@ -29,10 +29,10 @@ struct WaylandThreadExecutorState {
         case .stopRequested(let existingMode):
             phase = .stopRequested(existingMode.merged(with: mode))
             return false
-        case .joining(let existingMode, loopExited: false):
-            phase = .joining(existingMode.merged(with: mode), loopExited: false)
+        case .joining(let existingMode):
+            phase = .joining(existingMode.merged(with: mode))
             return false
-        case .loopExited, .joining(_, loopExited: true), .joined:
+        case .loopExited, .joined:
             return false
         case .failedToStart, .destroying:
             return false
@@ -47,8 +47,8 @@ struct WaylandThreadExecutorState {
             preconditionFailure("WaylandThreadExecutor loop exited without a stop request")
         case .stopRequested(let mode), .loopExited(let mode):
             phase = .loopExited(mode)
-        case .joining(let existingMode, _):
-            phase = .joining(existingMode, loopExited: true)
+        case .joining:
+            return
         case .joined, .failedToStart, .destroying:
             return
         }
@@ -60,7 +60,7 @@ struct WaylandThreadExecutorState {
         return switch phase {
         case .running:
             preconditionFailure("rejectionError called while executor is running")
-        case .stopRequested(let mode), .joining(let mode, _):
+        case .stopRequested(let mode), .joining(let mode):
             .executorStopping(mode)
         case .loopExited, .joined, .destroying:
             .executorStopped

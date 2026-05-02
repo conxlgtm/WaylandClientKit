@@ -179,7 +179,11 @@ struct WaylandThreadExecutorTests {
         let closedDescriptors = Mutex<[CInt]>([])
         let testingWakeFileDescriptor: CInt = 42
 
-        #expect(throws: WaylandThreadExecutorError.threadCreationFailed(EAGAIN)) {
+        #expect(
+            throws: WaylandThreadExecutorError.executorFailedToStart(
+                .threadCreationFailed(EAGAIN)
+            )
+        ) {
             _ = try WaylandThreadExecutor(
                 forcingThreadCreationFailureForTesting: EAGAIN,
                 wakeFileDescriptorForTesting: testingWakeFileDescriptor
@@ -365,21 +369,21 @@ struct WaylandThreadExecutorTests {
     @Test
     func markLoopExitedDuringJoiningPreservesJoiningState() {
         var state = WaylandThreadExecutorState()
-        state.phase = .joining(.abandonWaylandSources, loopExited: false)
+        state.phase = .joining(.abandonWaylandSources)
 
         state.markLoopExited()
 
-        #expect(state.phase == .joining(.abandonWaylandSources, loopExited: true))
+        #expect(state.phase == .joining(.abandonWaylandSources))
     }
 
     @Test
-    func requestStopAfterJoinLoopExitDoesNotRewriteShutdownMode() {
+    func requestStopDuringJoiningCanUpgradeShutdownMode() {
         var state = WaylandThreadExecutorState()
-        state.phase = .joining(.orderly, loopExited: true)
+        state.phase = .joining(.orderly)
 
         _ = state.requestStop(.abandonWaylandSources)
 
-        #expect(state.phase == .joining(.orderly, loopExited: true))
+        #expect(state.phase == .joining(.abandonWaylandSources))
     }
 
     @Test

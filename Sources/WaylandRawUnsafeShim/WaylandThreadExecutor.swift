@@ -52,9 +52,10 @@ public final class WaylandThreadExecutor: SerialExecutor {
             )
         }
         guard wakeFileDescriptor >= 0 else {
-            markFailedToStart(.eventFileDescriptorCreationFailed(errno))
+            let failure = ExecutorStartFailure.eventFileDescriptorCreationFailed(errno)
+            markFailedToStart(failure)
             destroySynchronizationPrimitives()
-            throw WaylandThreadExecutorError.eventFileDescriptorCreationFailed(errno)
+            throw WaylandThreadExecutorError.executorFailedToStart(failure)
         }
         unsafe wakeFileDescriptorStorage = wakeFileDescriptor
 
@@ -81,11 +82,12 @@ public final class WaylandThreadExecutor: SerialExecutor {
         }
 
         guard createResult == 0 else {
-            markFailedToStart(.threadCreationFailed(createResult))
+            let failure = ExecutorStartFailure.threadCreationFailed(createResult)
+            markFailedToStart(failure)
             closeWakeFileDescriptor(using: testingCloseWakeFileDescriptor)
             destroySynchronizationPrimitives()
             unsafe Unmanaged<WaylandThreadExecutor>.fromOpaque(retainedSelf).release()
-            throw WaylandThreadExecutorError.threadCreationFailed(createResult)
+            throw WaylandThreadExecutorError.executorFailedToStart(failure)
         }
 
         unsafe pthread_mutex_lock(&mutex)
@@ -470,7 +472,7 @@ extension WaylandThreadExecutor {
         }
 
         let mode = unsafe state.phase.shutdownMode ?? .orderly
-        unsafe state.phase = .joining(mode, loopExited: unsafe state.phase.loopHasExited)
+        unsafe state.phase = .joining(mode)
         unsafe pthread_mutex_unlock(&mutex)
 
         pthread_join(threadToJoin, nil)
