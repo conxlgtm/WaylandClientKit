@@ -19,7 +19,7 @@ enum WindowRedrawEffect: Equatable, Sendable {
     case publishRedrawRequested
 }
 
-struct WindowRedrawState {
+struct WindowRedrawState: Equatable, Sendable {
     private enum CleanPacing: Equatable, Sendable {
         case frameReady
         case waitingForFrame
@@ -57,6 +57,14 @@ struct WindowRedrawState {
 
     var isWaitingForBuffer: Bool {
         if case .dirty(_, _, .waitingForBuffer) = storage {
+            return true
+        }
+
+        return false
+    }
+
+    var hasOutstandingRedrawRequest: Bool {
+        if case .dirty(_, _, .frameReady(.outstanding)) = storage {
             return true
         }
 
