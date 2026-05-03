@@ -74,6 +74,7 @@ public enum WindowLifecycleTransitionError: Equatable, Sendable, CustomStringCon
     case closeAfterDestroyed
     case presentWithoutRedrawRequest
     case nestedPresentation
+    case presentAfterDestroyed
     case inactivePresentationCompletion
     case presentationGenerationMismatch(expected: UInt64, actual: UInt64)
     case invalidTransition(from: String, event: String)
@@ -92,6 +93,8 @@ public enum WindowLifecycleTransitionError: Equatable, Sendable, CustomStringCon
             "cannot present without a redraw request"
         case .nestedPresentation:
             "cannot present while another presentation is active"
+        case .presentAfterDestroyed:
+            "cannot present after the window is destroyed"
         case .inactivePresentationCompletion:
             "cannot complete presentation because no presentation is active"
         case .presentationGenerationMismatch(let expected, let actual):
