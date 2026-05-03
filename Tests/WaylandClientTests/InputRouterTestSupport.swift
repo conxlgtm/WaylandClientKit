@@ -163,22 +163,24 @@ func rawKeyboardKeymap(
     seatID: RawSeatID,
     deviceID: RawInputDeviceID? = nil
 ) -> RawInputEvent {
-    rawEvent(
+    let payload: RawKeyboardKeymapPayload
+    do {
+        payload = try .xkbV1(
+            id: RawKeyboardKeymapID(
+                seatID: seatID,
+                keyboardGeneration: 1,
+                keymapGeneration: 1
+            ),
+            bytes: [1, 2, 3, 4, 5, 6, 7, 0]
+        )
+    } catch {
+        preconditionFailure("test keymap payload should be valid: \(error)")
+    }
+
+    return rawEvent(
         sequence: sequence,
         seatID: seatID,
-        kind: .keyboard(
-            .keymap(
-                RawKeyboardKeymapPayload(
-                    id: RawKeyboardKeymapID(
-                        seatID: seatID,
-                        keyboardGeneration: 1,
-                        keymapGeneration: 1
-                    ),
-                    format: .xkbV1,
-                    bytes: [1, 2, 3, 4, 5, 6, 7, 8]
-                )
-            )
-        ),
+        kind: .keyboard(.keymap(payload)),
         deviceID: deviceID
     )
 }

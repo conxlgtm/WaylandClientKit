@@ -334,13 +334,12 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             event.kind
                 == .keyboard(
                     .keymap(
-                        RawKeyboardKeymapPayload(
+                        try RawKeyboardKeymapPayload.xkbV1(
                             id: RawKeyboardKeymapID(
                                 seatID: RawSeatID(rawValue: 11),
                                 keyboardGeneration: 1,
                                 keymapGeneration: 1
                             ),
-                            format: .xkbV1,
                             bytes: bytes
                         )
                     )

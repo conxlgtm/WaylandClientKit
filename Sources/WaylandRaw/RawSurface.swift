@@ -1,9 +1,9 @@
 import CWaylandClientSystem
 import CWaylandProtocols
 
-public final class RawSurface {
+package final class RawSurface {
     let pointer: OpaquePointer
-    public let version: RawVersion
+    package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private var isDestroyed = false
@@ -23,7 +23,7 @@ public final class RawSurface {
         proxyAdoption = adoptionContext
     }
 
-    public func requestFrame(onDone handler: @escaping () -> Void) throws
+    package func requestFrame(onDone handler: @escaping () -> Void) throws
         -> FrameCallbackRegistration
     {
         guard let callback = swl_surface_frame(pointer) else {
@@ -43,7 +43,7 @@ public final class RawSurface {
         )
     }
 
-    public func attach(buffer: RawBuffer?, x: Int32 = 0, y: Int32 = 0) {
+    package func attach(buffer: RawBuffer?, x: Int32 = 0, y: Int32 = 0) {
         swl_surface_attach(pointer, buffer?.pointer, x, y)
     }
 
@@ -55,7 +55,7 @@ public final class RawSurface {
         swl_surface_attach(pointer, buffer?.pointer, x, y)
     }
 
-    public func damageFullBuffer(width: Int32, height: Int32) {
+    package func damageFullBuffer(width: Int32, height: Int32) {
         if usesBufferDamage {
             swl_surface_damage_buffer(pointer, 0, 0, width, height)
         } else {
@@ -63,7 +63,7 @@ public final class RawSurface {
         }
     }
 
-    public var usesBufferDamage: Bool {
+    package var usesBufferDamage: Bool {
         version >= 4
     }
 
@@ -71,11 +71,11 @@ public final class RawSurface {
         RawObjectID(swl_proxy_get_id(UnsafeMutableRawPointer(pointer)))
     }
 
-    public func commit() {
+    package func commit() {
         swl_surface_commit(pointer)
     }
 
-    public func destroy() {
+    package func destroy() {
         guard !isDestroyed else { return }
 
         isDestroyed = true

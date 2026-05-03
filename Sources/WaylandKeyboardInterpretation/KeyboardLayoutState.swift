@@ -233,15 +233,11 @@ final class XKBKeymapOwner {
     init(context: XKBContextOwner, payload: RawKeyboardKeymapPayload)
         throws(KeyboardLayoutError)
     {
-        guard payload.format == .xkbV1 else {
+        guard case .xkbV1(_, let bytes) = payload else {
             throw .unsupportedKeymapFormat(payload.format.rawValue)
         }
 
-        guard !payload.bytes.isEmpty else {
-            throw .emptyKeymap
-        }
-
-        let newPointer = payload.bytes.array.withUnsafeBytes { rawBuffer -> OpaquePointer? in
+        let newPointer = bytes.rawValue.withUnsafeBytes { rawBuffer -> OpaquePointer? in
             guard let baseAddress = rawBuffer.baseAddress else {
                 return nil
             }
@@ -249,7 +245,7 @@ final class XKBKeymapOwner {
             return xkb_keymap_new_from_buffer(
                 context.pointer,
                 baseAddress.assumingMemoryBound(to: CChar.self),
-                payload.bytes.count,
+                bytes.count,
                 XKB_KEYMAP_FORMAT_TEXT_V1,
                 XKB_KEYMAP_COMPILE_NO_FLAGS
             )

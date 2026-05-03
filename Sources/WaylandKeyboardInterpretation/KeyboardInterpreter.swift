@@ -38,7 +38,10 @@ package final class KeyboardInterpreter {
         case .seatRemoved:
             reset(seatID: event.seatID)
             return []
-        case .diagnostic, .pointer, .touch:
+        case .diagnostic(let diagnostic):
+            consume(diagnostic, from: event)
+            return []
+        case .pointer, .touch:
             return []
         }
     }
@@ -100,6 +103,17 @@ extension KeyboardInterpreter {
         case .enter, .leave:
             return []
         }
+    }
+
+    private func consume(
+        _ diagnostic: RawInputDiagnostic,
+        from event: RawInputEvent
+    ) {
+        guard diagnostic.operation == .keyboardKeymap else { return }
+        guard let deviceID = event.deviceID else { return }
+        guard deviceID.kind == .keyboard else { return }
+
+        reset(deviceID: deviceID)
     }
 
     private func consumeKey(
@@ -194,16 +208,12 @@ extension KeyboardInterpreter {
             return [diagnostic]
         }
 
-        if payload.format != .xkbV1 {
+        guard case .xkbV1 = payload else {
             return resetAndReport(
                 .unsupportedKeymapFormat(payload.format.rawValue),
                 deviceID: payloadDeviceID,
                 event: event
             )
-        }
-
-        guard !payload.bytes.isEmpty else {
-            return resetAndReport(.emptyKeymap, deviceID: payloadDeviceID, event: event)
         }
 
         return installKeymap(payload, deviceID: payloadDeviceID, event: event)

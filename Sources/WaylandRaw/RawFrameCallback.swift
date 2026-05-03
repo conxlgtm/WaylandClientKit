@@ -122,7 +122,7 @@ final class WaylandCallbackRegistrationState {
     }
 }
 
-public struct FrameCallbackRegistration: ~Copyable {
+package struct FrameCallbackRegistration: ~Copyable {
     private let state: WaylandCallbackRegistrationState
 
     init(
@@ -148,7 +148,7 @@ public struct FrameCallbackRegistration: ~Copyable {
         state = newState
     }
 
-    public consuming func cancel() {
+    package consuming func cancel() {
         state.cancel()
     }
 

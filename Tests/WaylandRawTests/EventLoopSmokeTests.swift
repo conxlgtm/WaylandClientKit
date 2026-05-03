@@ -305,6 +305,29 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
+    func runtimeErrorSystemErrorCarriesStructuredPayload() {
+        let error = RuntimeError.systemError(errno: 5)
+        guard case .system(let systemError) = error else {
+            Issue.record("Expected structured system error")
+            return
+        }
+
+        #expect(systemError.errno == 5)
+    }
+
+    @Test
+    func runtimeErrorProxyMismatchCarriesStructuredPayload() {
+        let error = RuntimeError.proxyQueueMismatch("wl_surface")
+        guard case .proxy(.queueMismatch(let interface, let objectID)) = error else {
+            Issue.record("Expected structured proxy queue mismatch")
+            return
+        }
+
+        #expect(interface == "wl_surface")
+        #expect(objectID == nil)
+    }
+
+    @Test
     func missingGlobalErrorIncludesInterfaceName() {
         let error = RuntimeError.missingRequiredGlobal("xdg_wm_base")
         #expect(error.description.contains("xdg_wm_base"))

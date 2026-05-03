@@ -1,8 +1,8 @@
 import CWaylandClientSystem
 
-public final class RawRegistry: CustomStringConvertible {
+package final class RawRegistry: CustomStringConvertible {
     let opaquePointer: OpaquePointer
-    public let metadata: RawProxyMetadata
+    package let metadata: RawProxyMetadata
 
     init(
         opaquePointer registryPointer: OpaquePointer,
@@ -19,7 +19,7 @@ public final class RawRegistry: CustomStringConvertible {
         )
     }
 
-    public var description: String {
+    package var description: String {
         metadata.description
     }
 }
