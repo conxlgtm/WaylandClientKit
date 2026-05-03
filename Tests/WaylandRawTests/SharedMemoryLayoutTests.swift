@@ -45,11 +45,46 @@ struct SharedMemoryLayoutTests {
         var state = BufferBusyState()
 
         #expect(!state.isBusy)
+        #expect(state.isReusable)
+        #expect(state.lifecycle == .available)
 
-        state.markBusy()
+        let didAcquire = state.acquireForDrawing()
+        #expect(didAcquire)
+        #expect(!state.isReusable)
+
+        state.markPendingRelease(commitGeneration: 9)
         #expect(state.isBusy)
+        #expect(state.lifecycle == .pendingRelease(commitGeneration: 9))
 
         state.markReleased()
         #expect(!state.isBusy)
+        #expect(state.isReusable)
+        #expect(state.lifecycle == .available)
+    }
+
+    @Test
+    func retiredPendingReleaseBufferStaysBusyUntilRelease() {
+        var state = BufferBusyState()
+
+        let didAcquire = state.acquireForDrawing()
+        #expect(didAcquire)
+        state.markPendingRelease(commitGeneration: 4)
+        state.markRetired(reason: .resized)
+
+        #expect(state.isBusy)
+        #expect(!state.isReusable)
+        #expect(
+            state.lifecycle
+                == .retired(reason: .resized, pendingReleaseGeneration: 4)
+        )
+
+        state.markReleased()
+
+        #expect(!state.isBusy)
+        #expect(!state.isReusable)
+        #expect(
+            state.lifecycle
+                == .retired(reason: .resized, pendingReleaseGeneration: nil)
+        )
     }
 }
