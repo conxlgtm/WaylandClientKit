@@ -477,13 +477,15 @@ extension WindowModelTests {
     private func configure(
         width: Int32,
         height: Int32,
-        serial: UInt32 = 1
+        serial: UInt32 = 1,
+        decorationMode: RawDecorationMode? = nil
     ) -> XDGConfigureSequence {
         XDGConfigureSequence(
             serial: serial,
             topLevel: XDGTopLevelConfigureSuggestion(
                 size: TopLevelSize(width: width, height: height)
-            )
+            ),
+            decorationMode: decorationMode
         )
     }
 }

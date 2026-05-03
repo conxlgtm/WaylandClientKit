@@ -1,4 +1,5 @@
 import Testing
+import WaylandRaw
 
 @testable import WaylandClient
 
@@ -44,6 +45,21 @@ struct WaylandClientTests {
         ) {
             _ = try WindowConfiguration(appID: "org.example\0Hidden")
         }
+    }
+
+    @Test
+    func windowConfigurationDefaultsToServerSideDecorationPreference() throws {
+        #expect(WindowConfiguration.default.decorationPreference == .preferServerSide)
+        #expect(
+            try WindowConfiguration().decorationPreference == .preferServerSide
+        )
+    }
+
+    @Test
+    func decorationPreferenceMapsToRawModeRequest() {
+        #expect(WindowDecorationPreference.preferServerSide.requestedRawMode == .serverSide)
+        #expect(WindowDecorationPreference.preferClientSide.requestedRawMode == .clientSide)
+        #expect(WindowDecorationPreference.compositorDefault.requestedRawMode == nil)
     }
 
     @Test

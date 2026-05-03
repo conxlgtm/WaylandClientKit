@@ -3,6 +3,7 @@ import WaylandRaw
 package struct WindowModel: Equatable, Sendable {
     let id: WindowID
     let fallbackSize: PositiveTopLevelSize
+    var decoration = DecorationState.unavailable(reason: nil)
     var lifecycle = XDGWindowLifecycle.created(.none)
     var publication = WindowPublicationState.notPublished
 
@@ -18,10 +19,6 @@ package struct WindowModel: Equatable, Sendable {
         case .created, .roleAssigned, .waitingForInitialConfigure, .active:
             false
         }
-    }
-
-    var isDestroyed: Bool {
-        lifecycle == .destroyed
     }
 
     var currentConfiguration: ResolvedWindowConfiguration? {
@@ -49,11 +46,6 @@ package struct WindowModel: Equatable, Sendable {
         activeState?.presentation ?? .idle
     }
 
-    mutating func markPublished() {
-        guard publication == .notPublished else { return }
-        publication = .published(id)
-    }
-
     // swiftlint:disable:next cyclomatic_complexity
     mutating func reduce(
         _ event: WindowEvent
@@ -61,6 +53,12 @@ package struct WindowModel: Equatable, Sendable {
         switch event {
         case .roleObjectsCreated:
             return try reduceRoleObjectsCreated()
+        case .decorationUnavailable(let reason):
+            return reduceDecorationUnavailable(reason)
+        case .decorationObjectCreated(let preference):
+            return reduceDecorationObjectCreated(preference)
+        case .decorationPreferenceRequested(let preference):
+            return reduceDecorationPreferenceRequested(preference)
         case .initialCommitSent:
             return try reduceInitialCommitSent()
         case .configureReceived(let sequence):
@@ -188,6 +186,9 @@ extension WindowModel {
         var nextActiveState = activeState ?? ActiveWindowState(configure: resolved)
         nextActiveState.configure = resolved
         nextActiveState.closeRequest = closeRequest
+        if let mode = resolved.decorationMode {
+            decoration = .configured(mode)
+        }
 
         var effects: [WindowEffect] = [.ackConfigure(sequence.serial)]
         effects.append(
