@@ -156,29 +156,23 @@ package final class TopLevelWindow {
     }
 
     private func bufferPool(for size: PositiveTopLevelSize) throws -> RawSharedMemoryPool {
-        if let buffers, buffers.size == size.rawSize {
-            return buffers
-        }
+        try BufferPoolReplacement.pool(
+            for: size.rawSize,
+            active: &buffers,
+            retired: &retiredBufferPools
+        ) {
+            guard let globals = connection.boundGlobals else {
+                throw ClientError.windowCreationFailed("required globals are not bound")
+            }
 
-        if let buffers, buffers.hasBusyBuffers {
-            buffers.retire(reason: .resized)
-            retiredBufferPools.append(buffers)
+            return try globals.sharedMemory.createPool(
+                width: size.width.rawValue,
+                height: size.height.rawValue,
+                bufferCount: configuration.bufferCount.rawValue
+            ) { [weak window = self] in
+                window?.handleBufferReleased()
+            }
         }
-
-        guard let globals = connection.boundGlobals else {
-            throw ClientError.windowCreationFailed("required globals are not bound")
-        }
-
-        let newPool = try globals.sharedMemory.createPool(
-            width: size.width.rawValue,
-            height: size.height.rawValue,
-            bufferCount: configuration.bufferCount.rawValue
-        ) { [weak window = self] in
-            window?.handleBufferReleased()
-        }
-
-        buffers = newPool
-        return newPool
     }
 
     private func dropReleasedRetiredPools() {

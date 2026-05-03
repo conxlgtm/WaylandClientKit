@@ -71,6 +71,17 @@ for pattern in "${required_patterns[@]}"; do
     fi
 done
 
+api_report="$("$ROOT/Scripts/dump-public-api.sh")"
+if grep --fixed-strings --quiet "## Library Products" <<<"$api_report"; then
+    echo "Public API report labels all products as library products"
+    missing=1
+fi
+
+if ! grep --fixed-strings --quiet "## Products" <<<"$api_report"; then
+    echo "Public API report missing Products section"
+    missing=1
+fi
+
 for file in "${required_files[@]}"; do
     markdown_file="$ROOT/$file"
 

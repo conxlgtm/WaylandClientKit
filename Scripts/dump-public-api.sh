@@ -9,7 +9,7 @@ echo
 echo "Generated from tracked Swift sources."
 echo
 
-echo "## Library Products"
+echo "## Products"
 echo
 "$ROOT/Scripts/swift.sh" package describe --type text \
     | awk '

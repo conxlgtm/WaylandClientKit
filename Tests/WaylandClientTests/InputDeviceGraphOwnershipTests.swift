@@ -92,6 +92,30 @@ struct InputDeviceGraphOwnershipTests {
     }
 
     @Test
+    func replacementTouchGenerationDoesNotInheritPriorFocus() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 21)
+        let firstTouch = RawInputDeviceID(seatID: seatID, kind: .touch, generation: 1)
+        let secondTouch = RawInputDeviceID(seatID: seatID, kind: .touch, generation: 2)
+        router.register(windowID: WindowID(rawValue: 210), surfaceID: 2_100)
+
+        _ = router.route(
+            rawTouchDown(
+                sequence: 1,
+                seatID: seatID,
+                surfaceID: 2_100,
+                id: 7,
+                deviceID: firstTouch
+            )
+        )
+        let replacementMotion = router.route(
+            rawTouchMotion(sequence: 2, seatID: seatID, id: 7, deviceID: secondTouch)
+        )
+
+        #expect(replacementMotion.first?.windowID == nil)
+    }
+
+    @Test
     func keyboardCapabilityRemovalRetiresCurrentDeviceGeneration() {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 19)

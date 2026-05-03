@@ -26,10 +26,6 @@ package enum CursorRequestRecord: Equatable, Sendable {
     }
 }
 
-private struct CachedPointerCursorResolutionFailure: Error {
-    let diagnostic: CursorDiagnostic
-}
-
 package protocol RawInputEventObserving: AnyObject {
     @discardableResult
     func observe(_ rawEvent: RawInputEvent) -> [InputEvent]
@@ -252,10 +248,6 @@ package final class CursorManager: RawInputEventObserving {
             return resolvedDesiredCursor
         }
 
-        if let diagnostic = desiredCursor.unavailableDiagnostic {
-            throw CachedPointerCursorResolutionFailure(diagnostic: diagnostic)
-        }
-
         let resolved = try resolveCursorImage(desiredCursor.cursor)
         desiredCursor.cache(resolved)
         return resolved
@@ -414,14 +406,16 @@ extension CursorManager {
         serial: UInt32,
         rawEvent: RawInputEvent
     ) -> [InputEvent] {
+        if let diagnostic = desiredCursor.unavailableDiagnostic {
+            return recordAutomaticCursorFailure(diagnostic, rawEvent: rawEvent)
+        }
+
         do {
             requestResults.append(
                 CursorRequestRecord(
                     try applyCursor(to: seatID, serial: serial)
                 ))
             return []
-        } catch let failure as CachedPointerCursorResolutionFailure {
-            return recordAutomaticCursorFailure(failure.diagnostic, rawEvent: rawEvent)
         } catch CursorError.missingCursor(let name) {
             let diagnostic = CursorDiagnostic.missingCursor(name: name)
             desiredCursor.cacheUnavailable(diagnostic)

@@ -87,4 +87,32 @@ struct SharedMemoryLayoutTests {
                 == .retired(reason: .resized, pendingReleaseGeneration: nil)
         )
     }
+
+    @Test
+    func acquiredBufferCanBeRetiredBeforeCommit() {
+        var state = BufferBusyState()
+
+        let didAcquire = state.acquireForDrawing()
+        #expect(didAcquire)
+        state.markRetired(reason: .resized)
+
+        #expect(!state.isBusy)
+        #expect(!state.isReusable)
+        #expect(
+            state.lifecycle
+                == .retired(reason: .resized, pendingReleaseGeneration: nil)
+        )
+    }
+
+    @Test
+    func markReleasedIsIdempotentOnAvailableBuffer() {
+        var state = BufferBusyState()
+
+        state.markReleased()
+        state.markReleased()
+
+        #expect(!state.isBusy)
+        #expect(state.isReusable)
+        #expect(state.lifecycle == .available)
+    }
 }
