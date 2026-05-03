@@ -126,6 +126,14 @@ package final class XDGConfigureState {
         pendingDecorationMode = mode
     }
 
+    package func handleDecorationConfigure(rawMode: UInt32) {
+        do {
+            pendingDecorationMode = try RawDecorationMode(validating: rawMode)
+        } catch {
+            recordError(error)
+        }
+    }
+
     package func recordError(_ error: RuntimeError) {
         if pendingError == nil {
             pendingError = error

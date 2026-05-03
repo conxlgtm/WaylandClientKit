@@ -54,11 +54,11 @@ package struct WindowModel: Equatable, Sendable {
         case .roleObjectsCreated:
             return try reduceRoleObjectsCreated()
         case .decorationUnavailable(let reason):
-            return reduceDecorationUnavailable(reason)
+            return try reduceDecorationUnavailable(reason)
         case .decorationObjectCreated(let preference):
-            return reduceDecorationObjectCreated(preference)
+            return try reduceDecorationObjectCreated(preference)
         case .decorationPreferenceRequested(let preference):
-            return reduceDecorationPreferenceRequested(preference)
+            return try reduceDecorationPreferenceRequested(preference)
         case .initialCommitSent:
             return try reduceInitialCommitSent()
         case .configureReceived(let sequence):
@@ -187,7 +187,7 @@ extension WindowModel {
         nextActiveState.configure = resolved
         nextActiveState.closeRequest = closeRequest
         if let mode = resolved.decorationMode {
-            decoration = .configured(mode)
+            _ = try reduceDecorationConfigured(mode)
         }
 
         var effects: [WindowEffect] = [.ackConfigure(sequence.serial)]

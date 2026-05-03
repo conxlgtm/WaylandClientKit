@@ -251,12 +251,11 @@ package struct ResolvedWindowConfiguration: Equatable, Sendable {
 
 extension WindowDecorationMode {
     package init(_ rawMode: RawDecorationMode) {
-        if rawMode == .clientSide {
+        switch rawMode {
+        case .clientSide:
             self = .clientSide
-        } else if rawMode == .serverSide {
+        case .serverSide:
             self = .serverSide
-        } else {
-            self = .unavailable
         }
     }
 }
@@ -271,5 +270,9 @@ extension WindowDecorationPreference {
         case .compositorDefault:
             nil
         }
+    }
+
+    package var reportsUnavailableDecorationManager: Bool {
+        self == .preferServerSide
     }
 }

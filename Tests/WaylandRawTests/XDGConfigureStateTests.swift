@@ -37,6 +37,34 @@ struct XDGConfigureStateTests {
     }
 
     @Test
+    func multipleDecorationConfiguresBetweenSurfaceConfiguresUseLatestMode() {
+        let state = XDGConfigureState()
+        state.handleDecorationConfigure(mode: .clientSide)
+        state.handleDecorationConfigure(mode: .serverSide)
+
+        #expect(state.handleSurfaceConfigure(serial: 1).decorationMode == .serverSide)
+    }
+
+    @Test
+    func invalidDecorationConfigureModeRecordsPendingError() {
+        let state = XDGConfigureState()
+        state.handleDecorationConfigure(mode: .serverSide)
+        state.handleDecorationConfigure(rawMode: 999)
+
+        #expect(throws: RuntimeError.invalidDecorationMode(999)) {
+            try state.throwPendingErrorIfAny()
+        }
+        #expect(state.handleSurfaceConfigure(serial: 1).decorationMode == .serverSide)
+    }
+
+    @Test
+    func rawDecorationModeRejectsUnknownMode() {
+        #expect(throws: RuntimeError.invalidDecorationMode(999)) {
+            _ = try RawDecorationMode(validating: 999)
+        }
+    }
+
+    @Test
     func zeroConfigureSizeIsPreservedAsProtocolFact() {
         let state = XDGConfigureState()
 

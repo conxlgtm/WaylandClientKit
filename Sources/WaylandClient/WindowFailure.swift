@@ -138,6 +138,8 @@ package enum WindowFailureClassifier {
             )
         case .invalidSerial(let serial):
             .protocolViolation(.invalidConfigureSerial(windowID: windowID, serial: serial))
+        case .invalidDecorationMode(let rawValue):
+            .protocolViolation(.invalidDecorationMode(rawValue: rawValue))
         case .unresolvedSize:
             .internalInvariant(
                 .effectInterpreterInvariant(windowID, "configure size could not be resolved")
@@ -166,6 +168,8 @@ package enum WindowFailureClassifier {
                     objectID: objectID.map(WaylandProtocolObjectID.init)
                 )
             )
+        case .invalidDecorationMode(let rawValue):
+            .protocolViolation(.invalidDecorationMode(rawValue: rawValue))
         default:
             .internalInvariant(
                 .unexpectedWindowCallbackError(
