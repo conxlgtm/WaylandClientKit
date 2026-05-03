@@ -160,10 +160,9 @@ struct DisplaySessionInputPipelineTests {
             drainedEvents.last?.kind
                 == .diagnostic(
                     InputDiagnostic(
-                        operation: .inputPipelineOverflow(
+                        .inputPipelineOverflow(
                             InputPipelineOverflow(stage: .sessionPendingInput, capacity: 2)
-                        ),
-                        message: "session pending overflow"
+                        )
                     )
                 )
         )
@@ -199,10 +198,9 @@ struct DisplaySessionInputPipelineTests {
             drainedEvents.dropFirst(2).first?.kind
                 == .diagnostic(
                     InputDiagnostic(
-                        operation: .inputPipelineOverflow(
+                        .inputPipelineOverflow(
                             InputPipelineOverflow(stage: .sessionPendingInput, capacity: 2)
-                        ),
-                        message: "session pending overflow"
+                        )
                     )
                 )
         )
@@ -211,16 +209,15 @@ struct DisplaySessionInputPipelineTests {
     @Test
     func rawAndPendingInputPipelineOverflowsExposeDistinctStages() {
         let rawOverflow = InputDiagnostic(
-            operation: .inputPipelineOverflow(
+            .inputPipelineOverflow(
                 InputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
-            ),
-            message: "raw input queue exceeded capacity 4"
+            )
         )
         let pendingOverflow = sessionPendingOverflowEvent(from: clientSeatRemoved(sequence: 1))
 
         #expect(
             rawOverflow.operation
-                == .inputPipelineOverflow(
+                == InputDiagnosticOperation.inputPipelineOverflow(
                     InputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
                 )
         )
@@ -228,10 +225,9 @@ struct DisplaySessionInputPipelineTests {
             pendingOverflow.kind
                 == .diagnostic(
                     InputDiagnostic(
-                        operation: .inputPipelineOverflow(
+                        .inputPipelineOverflow(
                             InputPipelineOverflow(stage: .sessionPendingInput, capacity: 2)
-                        ),
-                        message: "session pending overflow"
+                        )
                     )
                 )
         )
@@ -276,10 +272,9 @@ private func sessionPendingOverflowEvent(from event: InputEvent) -> InputEvent {
         windowID: nil,
         kind: .diagnostic(
             InputDiagnostic(
-                operation: .inputPipelineOverflow(
+                .inputPipelineOverflow(
                     InputPipelineOverflow(stage: .sessionPendingInput, capacity: 2)
-                ),
-                message: "session pending overflow"
+                )
             )
         )
     )

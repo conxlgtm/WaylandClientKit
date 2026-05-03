@@ -381,6 +381,11 @@ struct SeatInputRouterTests {
     func diagnosticsRouteAtDisplayLevel() {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 77)
+        let keymapID = RawKeyboardKeymapID(
+            seatID: seatID,
+            keyboardGeneration: 1,
+            keymapGeneration: 1
+        )
 
         let routed = router.route(
             rawEvent(
@@ -388,8 +393,12 @@ struct SeatInputRouterTests {
                 seatID: seatID,
                 kind: .diagnostic(
                     RawInputDiagnostic(
-                        operation: .keyboardKeymap,
-                        message: "keymap failed"
+                        .keymap(
+                            .readFailed(
+                                id: keymapID,
+                                error: .missingNULTerminator(size: 12)
+                            )
+                        )
                     )
                 )
             )
@@ -400,37 +409,7 @@ struct SeatInputRouterTests {
             routed.first?.kind
                 == .diagnostic(
                     InputDiagnostic(
-                        operation: .keyboardKeymap,
-                        message: "keymap failed"
-                    )
-                ))
-    }
-
-    @Test
-    func queueOverflowDiagnosticsRouteAtDisplayLevel() {
-        let router = InputRouter()
-        let seatID = RawSeatID(rawValue: 78)
-
-        let routed = router.route(
-            rawEvent(
-                sequence: 1,
-                seatID: seatID,
-                kind: .diagnostic(
-                    RawInputDiagnostic(
-                        operation: .queueOverflow,
-                        message: "overflow"
-                    )
-                )
-            )
-        )
-
-        #expect(routed.first?.windowID == nil)
-        #expect(
-            routed.first?.kind
-                == .diagnostic(
-                    InputDiagnostic(
-                        operation: .queueOverflow,
-                        message: "overflow"
+                        .keymap(.readFailed(.missingNULTerminator(size: 12)))
                     )
                 ))
     }
@@ -448,8 +427,7 @@ struct SeatInputRouterTests {
                 seatID: seatID,
                 kind: .diagnostic(
                     RawInputDiagnostic(
-                        operation: .inputPipelineOverflow(rawOverflow),
-                        message: "input overflow"
+                        .inputPipelineOverflow(rawOverflow)
                     )
                 )
             )
@@ -460,8 +438,7 @@ struct SeatInputRouterTests {
             routed.first?.kind
                 == .diagnostic(
                     InputDiagnostic(
-                        operation: .inputPipelineOverflow(overflow),
-                        message: "input overflow"
+                        .inputPipelineOverflow(overflow)
                     )
                 ))
     }

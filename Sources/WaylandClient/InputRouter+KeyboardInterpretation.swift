@@ -1,4 +1,5 @@
 import WaylandKeyboardInterpretation
+import WaylandRaw
 
 extension InputRouter {
     func route(_ event: WaylandKeyboardInterpretation.InterpretedKeyboardEvent) -> [InputEvent] {
@@ -74,18 +75,23 @@ extension InputRouter {
         }
     }
 
+    // swiftlint:disable:next cyclomatic_complexity
     func convert(
         _ reason: WaylandKeyboardInterpretation.KeyboardInterpretationUnavailableReason
     ) -> KeyboardInterpretationUnavailableReason {
         switch reason {
         case .missingDeviceID:
             .missingDeviceID
+        case .noKeymap:
+            .noKeymap
         case .unsupportedKeymapFormat(let format):
             .unsupportedKeymapFormat(format)
         case .emptyKeymap:
             .emptyKeymap
         case .invalidKeymap:
             .invalidKeymap
+        case .keymapReadFailed(let error):
+            .keymapReadFailed(convert(error))
         case .missingKeymap:
             .missingKeymap
         case .missingKeyboardState:

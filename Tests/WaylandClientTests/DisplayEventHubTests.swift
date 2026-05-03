@@ -51,10 +51,7 @@ struct DisplayEventHubTests {
     @Test
     func inputDiagnosticsPublishAsDisplayDiagnosticsAndInputEvents() async {
         let hub = DisplayEventHub()
-        let diagnostic = InputDiagnostic(
-            operation: .cursor("automaticPointerEnter"),
-            message: "boom"
-        )
+        let diagnostic = cursorDiagnostic("boom")
         let inputEvent = InputEvent(
             sequence: 1,
             seatID: SeatID(rawValue: 2),
@@ -78,7 +75,9 @@ struct DisplayEventHubTests {
     @Test
     func publishingInputDiagnosticUsesDiagnosticDisplayEvent() async {
         let hub = DisplayEventHub()
-        let diagnostic = InputDiagnostic(operation: .queueOverflow, message: "overflow")
+        let diagnostic = pipelineOverflowDiagnostic(
+            InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
+        )
         let inputEvent = InputEvent(
             sequence: 2,
             seatID: SeatID(rawValue: 3),
@@ -103,10 +102,7 @@ struct DisplayDiagnosticsHubTests {
     @Test
     func diagnosticsStreamReceivesDisplayDiagnostics() async {
         let hub = DisplayEventHub()
-        let diagnostic = InputDiagnostic(
-            operation: .cursor("automaticPointerEnter"),
-            message: "boom"
-        )
+        let diagnostic = cursorDiagnostic("boom")
         let inputEvent = InputEvent(
             sequence: 1,
             seatID: SeatID(rawValue: 2),
@@ -146,10 +142,7 @@ struct DisplayDiagnosticsHubTests {
                 id: DiagnosticID(rawValue: 2),
                 severity: .degraded,
                 payload: .input(
-                    InputDiagnostic(
-                        operation: .cursor("automaticPointerEnter"),
-                        message: "second"
-                    )
+                    cursorDiagnostic("second")
                 )
             ),
             from: &diagnosticsIterator
@@ -186,10 +179,7 @@ struct DisplayDiagnosticsHubTests {
                 id: DiagnosticID(rawValue: 3),
                 severity: .degraded,
                 payload: .input(
-                    InputDiagnostic(
-                        operation: .cursor("automaticPointerEnter"),
-                        message: "third"
-                    )
+                    cursorDiagnostic("third")
                 )
             ),
             from: &diagnosticsIterator
@@ -208,10 +198,7 @@ struct DisplayDiagnosticsHubTests {
     func diagnosticsContinueAfterInputPipelineOverflow() async {
         let hub = DisplayEventHub()
         let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
-        let overflowDiagnostic = InputDiagnostic(
-            operation: .inputPipelineOverflow(overflow),
-            message: "raw input queue exceeded capacity 1"
-        )
+        let overflowDiagnostic = pipelineOverflowDiagnostic(overflow)
         let overflowEvent = InputEvent(
             sequence: 1,
             seatID: SeatID(rawValue: 3),
@@ -238,10 +225,7 @@ struct DisplayDiagnosticsHubTests {
                 id: DiagnosticID(rawValue: 2),
                 severity: .degraded,
                 payload: .input(
-                    InputDiagnostic(
-                        operation: .cursor("automaticPointerEnter"),
-                        message: "cursor still reports"
-                    )
+                    cursorDiagnostic("cursor still reports")
                 )
             ),
             from: &diagnosticsIterator
@@ -255,10 +239,7 @@ struct DisplayEventHubFailureTests {
     func inputPipelineOverflowTerminatesInputStreamButDisplayContinues() async {
         let hub = DisplayEventHub()
         let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
-        let diagnostic = InputDiagnostic(
-            operation: .inputPipelineOverflow(overflow),
-            message: "raw input queue exceeded capacity 1"
-        )
+        let diagnostic = pipelineOverflowDiagnostic(overflow)
         let inputEvent = InputEvent(
             sequence: 2,
             seatID: SeatID(rawValue: 3),
@@ -298,10 +279,7 @@ struct DisplayEventHubFailureTests {
             kind: .seat(.removed)
         )
         let overflow = InputPipelineOverflow(stage: .sessionPendingInput, capacity: 1)
-        let diagnostic = InputDiagnostic(
-            operation: .inputPipelineOverflow(overflow),
-            message: "session input queue exceeded capacity 1"
-        )
+        let diagnostic = pipelineOverflowDiagnostic(overflow)
         let overflowEvent = InputEvent(
             sequence: 2,
             seatID: SeatID(rawValue: 3),
@@ -394,10 +372,7 @@ struct DisplayEventHubFailureTests {
     func newInputSubscriptionAfterPipelineOverflowFailsImmediately() async {
         let hub = DisplayEventHub()
         let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
-        let diagnostic = InputDiagnostic(
-            operation: .inputPipelineOverflow(overflow),
-            message: "raw input queue exceeded capacity 1"
-        )
+        let diagnostic = pipelineOverflowDiagnostic(overflow)
         let inputEvent = InputEvent(
             sequence: 1,
             seatID: SeatID(rawValue: 3),
@@ -486,14 +461,19 @@ private func expectFailure(
     } catch { #expect(error == expectedError) }
 }
 private func diagnosticInputEvent(sequence: UInt64, message: String) -> InputEvent {
-    let diagnostic = InputDiagnostic(
-        operation: .cursor("automaticPointerEnter"),
-        message: message
-    )
+    let diagnostic = cursorDiagnostic(message)
     return InputEvent(
         sequence: sequence,
         seatID: SeatID(rawValue: 2),
         windowID: nil,
         kind: .diagnostic(diagnostic)
     )
+}
+
+private func cursorDiagnostic(_ message: String) -> InputDiagnostic {
+    InputDiagnostic(.cursor(.automaticPointerEnterFailed(message)))
+}
+
+private func pipelineOverflowDiagnostic(_ overflow: InputPipelineOverflow) -> InputDiagnostic {
+    InputDiagnostic(.inputPipelineOverflow(overflow))
 }

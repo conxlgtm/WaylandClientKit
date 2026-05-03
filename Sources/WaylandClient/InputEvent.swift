@@ -25,24 +25,6 @@ public enum InputEventKind: Equatable, Sendable {
     case touch(TouchEvent)
 }
 
-public struct InputDiagnostic: Equatable, Sendable {
-    public let operation: InputDiagnosticOperation
-    public let message: String
-
-    public init(operation diagnosticOperation: InputDiagnosticOperation, message detail: String) {
-        operation = diagnosticOperation
-        message = detail
-    }
-}
-
-public enum InputDiagnosticOperation: Equatable, Sendable {
-    case keyboardKeymap
-    case listener(String)
-    case queueOverflow
-    case inputPipelineOverflow(InputPipelineOverflow)
-    case cursor(String)
-}
-
 public enum SeatEvent: Equatable, Sendable {
     case changed(SeatStateSnapshot)
     case removed
@@ -390,9 +372,11 @@ public struct KeyboardInterpretationUnavailable: Equatable, Sendable {
 
 public enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {
     case missingDeviceID
+    case noKeymap
     case unsupportedKeymapFormat(UInt32)
     case emptyKeymap
     case invalidKeymap
+    case keymapReadFailed(KeymapReadFailure)
     case missingKeymap
     case missingKeyboardState
     case invalidKeycode(UInt32)

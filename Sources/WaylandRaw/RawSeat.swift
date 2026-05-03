@@ -254,13 +254,21 @@ public final class RawSeat {
             isCurrentDevice: { [weak seat = self] deviceID in
                 seat?.isCurrentDevice(deviceID) == true
             },
-            onError: { [weak seat = self] error in
+            onError: { [weak seat = self] error, keymapID in
                 seat?.lastCapabilityError = error
-                seat?.appendDiagnostic(
-                    deviceID: deviceID,
-                    operation: .keyboardKeymap,
-                    error: error
-                )
+                if let keymapID {
+                    seat?.appendKeymapDiagnostic(
+                        deviceID: deviceID,
+                        keymapID: keymapID,
+                        error: error
+                    )
+                } else {
+                    seat?.appendListenerDiagnostic(
+                        deviceID: deviceID,
+                        listener: "wl_keyboard",
+                        error: error
+                    )
+                }
             }
         )
         do {
@@ -388,9 +396,35 @@ public final class RawSeat {
         )
     }
 
-    private func appendDiagnostic(
+    private func appendKeymapDiagnostic(
         deviceID: RawInputDeviceID?,
-        operation: RawInputDiagnosticOperation,
+        keymapID: RawKeyboardKeymapID,
+        error: any Error
+    ) {
+        let payload: RawInputDiagnosticPayload
+        if let keymapError = error as? RawKeyboardKeymapReadError {
+            payload = .keymap(.readFailed(id: keymapID, error: keymapError))
+        } else {
+            payload = .listener(
+                RawListenerDiagnostic(
+                    listener: "wl_keyboard.keymap",
+                    message: String(describing: error)
+                )
+            )
+        }
+
+        eventSink.append(
+            RawInputEventDraft(
+                seatID: id,
+                deviceID: deviceID,
+                kind: .diagnostic(RawInputDiagnostic(payload))
+            )
+        )
+    }
+
+    private func appendListenerDiagnostic(
+        deviceID: RawInputDeviceID?,
+        listener: String,
         error: any Error
     ) {
         eventSink.append(
@@ -399,8 +433,12 @@ public final class RawSeat {
                 deviceID: deviceID,
                 kind: .diagnostic(
                     RawInputDiagnostic(
-                        operation: operation,
-                        message: String(describing: error)
+                        .listener(
+                            RawListenerDiagnostic(
+                                listener: listener,
+                                message: String(describing: error)
+                            )
+                        )
                     )
                 )
             )
