@@ -5,13 +5,27 @@ package enum SupportedVersions {
     package static let wlCompositor: RawVersion = 6
     package static let wlShm: RawVersion = 1
     package static let xdgWmBase: RawVersion = 7
+    package static let zxdgDecorationManagerV1: RawVersion = 2
     package static let wlSeat: RawVersion = 10
+}
+
+package struct OptionalGlobals {
+    package let xdgDecorationManager: RawXDGDecorationManager?
+
+    package init(xdgDecorationManager manager: RawXDGDecorationManager? = nil) {
+        xdgDecorationManager = manager
+    }
+
+    func destroy() {
+        xdgDecorationManager?.destroy()
+    }
 }
 
 package final class BoundGlobals {
     package let compositor: RawCompositor
     package let sharedMemory: RawSharedMemory
     package let xdgWMBase: RawXDGWMBase
+    package let extensions: OptionalGlobals
     package let seatRegistry: SeatRegistry
 
     private var isDestroyed = false
@@ -20,12 +34,14 @@ package final class BoundGlobals {
         compositor boundCompositor: RawCompositor,
         sharedMemory boundSharedMemory: RawSharedMemory,
         xdgWMBase boundXDGWMBase: RawXDGWMBase,
-        seatRegistry boundSeatRegistry: SeatRegistry
+        seatRegistry boundSeatRegistry: SeatRegistry,
+        extensions boundExtensions: OptionalGlobals = OptionalGlobals()
     ) {
         compositor = boundCompositor
         sharedMemory = boundSharedMemory
         xdgWMBase = boundXDGWMBase
         seatRegistry = boundSeatRegistry
+        extensions = boundExtensions
     }
 
     func destroy() {
@@ -33,6 +49,7 @@ package final class BoundGlobals {
 
         isDestroyed = true
         seatRegistry.destroy()
+        extensions.destroy()
         xdgWMBase.destroy()
         sharedMemory.destroy()
         compositor.destroy()

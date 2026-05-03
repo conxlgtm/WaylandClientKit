@@ -284,12 +284,23 @@ extension RawDisplayConnection {
             sharedMemory: shm,
             compositor: compositorWrapper
         )
+        let extensions: OptionalGlobals
+        do {
+            extensions = try bindOptionalGlobals(registry: reg)
+        } catch {
+            seatRegistry.destroy()
+            xdgWmBase.destroy()
+            shm.destroy()
+            compositorWrapper.destroy()
+            throw error
+        }
 
         let bound = BoundGlobals(
             compositor: compositorWrapper,
             sharedMemory: shm,
             xdgWMBase: xdgWmBase,
-            seatRegistry: seatRegistry
+            seatRegistry: seatRegistry,
+            extensions: extensions
         )
 
         boundGlobals = bound
@@ -323,6 +334,10 @@ extension RawDisplayConnection {
         }
 
         return global
+    }
+
+    private func optionalGlobal(named interfaceName: String) -> RawGlobalAdvertisement? {
+        registryState.firstGlobal(named: interfaceName)
     }
 
     private func bindSharedMemory(
@@ -396,6 +411,39 @@ extension RawDisplayConnection {
             compositor.destroy()
             throw error
         }
+    }
+
+    private func bindOptionalGlobals(registry reg: OpaquePointer) throws -> OptionalGlobals {
+        OptionalGlobals(
+            xdgDecorationManager: try bindXDGDecorationManagerIfPresent(registry: reg)
+        )
+    }
+
+    private func bindXDGDecorationManagerIfPresent(
+        registry reg: OpaquePointer
+    ) throws -> RawXDGDecorationManager? {
+        guard let global = optionalGlobal(named: "zxdg_decoration_manager_v1") else {
+            return nil
+        }
+
+        let version = global.negotiatedVersion(
+            supportedByClient: SupportedVersions.zxdgDecorationManagerV1
+        )
+        guard
+            let manager = unsafe swl_registry_bind_zxdg_decoration_manager_v1(
+                reg,
+                global.name,
+                version.value
+            )
+        else {
+            throw RuntimeError.bindFailed("zxdg_decoration_manager_v1")
+        }
+
+        return try .init(
+            pointer: manager,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
     }
 
     private func bindSeatRegistry(

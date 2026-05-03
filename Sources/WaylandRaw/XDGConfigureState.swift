@@ -67,13 +67,16 @@ package struct XDGTopLevelConfigureSuggestion: Equatable, Sendable {
 package struct XDGConfigureSequence: Equatable, Sendable {
     package let serial: UInt32
     package let topLevel: XDGTopLevelConfigureSuggestion
+    package let decorationMode: RawDecorationMode?
 
     package init(
         serial configureSerial: UInt32,
-        topLevel topLevelSuggestion: XDGTopLevelConfigureSuggestion
+        topLevel topLevelSuggestion: XDGTopLevelConfigureSuggestion,
+        decorationMode configureDecorationMode: RawDecorationMode? = nil
     ) {
         serial = configureSerial
         topLevel = topLevelSuggestion
+        decorationMode = configureDecorationMode
     }
 }
 
@@ -82,6 +85,7 @@ package final class XDGConfigureState {
     private var pendingStates: [XDGTopLevelState] = []
     private var pendingBounds: TopLevelSize?
     private var pendingWMCapabilities: [XDGWMCapability] = []
+    private var pendingDecorationMode: RawDecorationMode?
     private var latestConfigure: XDGConfigureSequence?
     private var pendingError: RuntimeError?
     private var onSurfaceConfigure: (() -> Void)?
@@ -118,6 +122,10 @@ package final class XDGConfigureState {
         pendingWMCapabilities = capabilities
     }
 
+    package func handleDecorationConfigure(mode: RawDecorationMode) {
+        pendingDecorationMode = mode
+    }
+
     package func recordError(_ error: RuntimeError) {
         if pendingError == nil {
             pendingError = error
@@ -140,8 +148,10 @@ package final class XDGConfigureState {
                 states: pendingStates,
                 bounds: pendingBounds,
                 wmCapabilities: pendingWMCapabilities
-            )
+            ),
+            decorationMode: pendingDecorationMode
         )
+        pendingDecorationMode = nil
         latestConfigure = configure
         hasReceivedInitialConfigure = true
         onSurfaceConfigure?()
