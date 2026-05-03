@@ -374,25 +374,15 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
 
     @Test
     func rawSystemErrnoRejectsZero() {
-        do {
-            _ = try NonZeroErrno(0)
-            Issue.record("Expected zero errno to be rejected.")
-        } catch RawSystemErrorConstructionError.nonPositiveErrno(let errorNumber) {
-            #expect(errorNumber == 0)
-        } catch {
-            Issue.record("Unexpected error: \(error)")
+        #expect(throws: RawSystemErrorConstructionError.nonPositiveErrno(0)) {
+            _ = try PositiveErrno(0)
         }
     }
 
     @Test
     func rawSystemErrnoRejectsNegativeValue() {
-        do {
-            _ = try NonZeroErrno(-1)
-            Issue.record("Expected negative errno to be rejected.")
-        } catch RawSystemErrorConstructionError.nonPositiveErrno(let errorNumber) {
-            #expect(errorNumber == -1)
-        } catch {
-            Issue.record("Unexpected error: \(error)")
+        #expect(throws: RawSystemErrorConstructionError.nonPositiveErrno(-1)) {
+            _ = try PositiveErrno(-1)
         }
     }
 

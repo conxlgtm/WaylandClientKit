@@ -6,7 +6,7 @@ package enum RawSystemErrorConstructionError: Error, Equatable, Sendable {
     case nonPositiveErrno(Int32)
 }
 
-package struct NonZeroErrno: Equatable, Sendable, CustomStringConvertible {
+package struct PositiveErrno: Equatable, Sendable, CustomStringConvertible {
     package let rawValue: Int32
 
     package init(_ rawErrorNumber: Int32) throws {
@@ -87,10 +87,10 @@ package enum RawSystemOperation: Equatable, Sendable, CustomStringConvertible {
 }
 
 package struct RawSystemError: Error, Equatable, Sendable, CustomStringConvertible {
-    package let errno: NonZeroErrno
+    package let errno: PositiveErrno
     package let operation: RawSystemOperation
 
-    package init(errno errorNumber: NonZeroErrno, operation systemOperation: RawSystemOperation) {
+    package init(errno errorNumber: PositiveErrno, operation systemOperation: RawSystemOperation) {
         errno = errorNumber
         operation = systemOperation
     }
@@ -99,12 +99,12 @@ package struct RawSystemError: Error, Equatable, Sendable, CustomStringConvertib
         validatingErrno errorNumber: Int32,
         operation systemOperation: RawSystemOperation
     ) throws {
-        errno = try NonZeroErrno(errorNumber)
+        errno = try PositiveErrno(errorNumber)
         operation = systemOperation
     }
 
     package init(uncheckedErrno errorNumber: Int32, operation systemOperation: RawSystemOperation) {
-        errno = NonZeroErrno(unchecked: errorNumber)
+        errno = PositiveErrno(unchecked: errorNumber)
         operation = systemOperation
     }
 

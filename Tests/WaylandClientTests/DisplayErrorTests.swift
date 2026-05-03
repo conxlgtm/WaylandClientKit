@@ -47,25 +47,15 @@ struct WaylandDisplayErrorMappingTests {
 
     @Test
     func waylandSystemErrnoRejectsZero() {
-        do {
+        #expect(throws: WaylandSystemErrorConstructionError.nonPositiveErrno(0)) {
             _ = try WaylandSystemErrno(0)
-            Issue.record("Expected zero errno to be rejected.")
-        } catch WaylandSystemErrorConstructionError.nonPositiveErrno(let errorNumber) {
-            #expect(errorNumber == 0)
-        } catch {
-            Issue.record("Unexpected error: \(error)")
         }
     }
 
     @Test
     func waylandSystemErrnoRejectsNegativeValue() {
-        do {
+        #expect(throws: WaylandSystemErrorConstructionError.nonPositiveErrno(-1)) {
             _ = try WaylandSystemErrno(-1)
-            Issue.record("Expected negative errno to be rejected.")
-        } catch WaylandSystemErrorConstructionError.nonPositiveErrno(let errorNumber) {
-            #expect(errorNumber == -1)
-        } catch {
-            Issue.record("Unexpected error: \(error)")
         }
     }
 
