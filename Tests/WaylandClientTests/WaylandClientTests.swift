@@ -63,10 +63,37 @@ struct WaylandClientTests {
     }
 
     @Test
+    func decorationPreferencePlansRawRequestSideEffects() {
+        #expect(
+            DecorationModeRequest(preference: .preferServerSide)
+                == .set(.serverSide)
+        )
+        #expect(
+            DecorationModeRequest(preference: .preferClientSide)
+                == .set(.clientSide)
+        )
+        #expect(DecorationModeRequest(preference: .compositorDefault) == .unset)
+    }
+
+    @Test
     func unavailableDecorationManagerDiagnosticsOnlyReportForServerSidePreference() {
         #expect(WindowDecorationPreference.preferServerSide.reportsUnavailableDecorationManager)
         #expect(!WindowDecorationPreference.preferClientSide.reportsUnavailableDecorationManager)
         #expect(!WindowDecorationPreference.compositorDefault.reportsUnavailableDecorationManager)
+    }
+
+    @Test
+    func unsupportedDecorationManagerVersionDiagnosticIncludesVersions() {
+        let reason = DecorationUnavailableReason.unsupportedManagerVersion(
+            advertised: RawVersion(1),
+            minimum: RawVersion(2)
+        )
+
+        #expect(
+            reason.diagnosticMessage
+                == "Server-side decoration protocol v1 is unsupported; "
+                + "requires v2 or newer."
+        )
     }
 
     @Test

@@ -76,6 +76,17 @@ struct VersionNegotiationTests {
         #expect(RawDisplayConnection.shouldBindXDGDecorationManager(v2Global))
         #expect(RawDisplayConnection.shouldBindXDGDecorationManager(v3Global))
         #expect(
+            RawDisplayConnection.xdgDecorationManagerBindingDecision(v1Global)
+                == .unsupportedVersion(
+                    advertised: RawVersion(1),
+                    minimum: RawVersion(2)
+                )
+        )
+        #expect(
+            RawDisplayConnection.xdgDecorationManagerBindingDecision(v2Global)
+                == .bind(version: RawVersion(2))
+        )
+        #expect(
             v3Global.negotiatedVersion(
                 supportedByClient: SupportedVersions.zxdgDecorationManagerV1
             )

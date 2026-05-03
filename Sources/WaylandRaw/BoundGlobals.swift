@@ -10,15 +10,34 @@ package enum SupportedVersions {
     package static let wlSeat: RawVersion = 10
 }
 
-package struct OptionalGlobals {
-    package let xdgDecorationManager: RawXDGDecorationManager?
+package enum XDGDecorationManagerBindingDecision: Equatable, Sendable {
+    case unsupportedVersion(advertised: RawVersion, minimum: RawVersion)
+    case bind(version: RawVersion)
+}
 
-    package init(xdgDecorationManager manager: RawXDGDecorationManager? = nil) {
+package enum OptionalXDGDecorationManager {
+    case missing
+    case unsupportedVersion(advertised: RawVersion, minimum: RawVersion)
+    case bound(RawXDGDecorationManager)
+
+    func destroy() {
+        guard case .bound(let manager) = self else { return }
+
+        manager.destroy()
+    }
+}
+
+package struct OptionalGlobals {
+    package let xdgDecorationManager: OptionalXDGDecorationManager
+
+    package init(
+        xdgDecorationManager manager: OptionalXDGDecorationManager = .missing
+    ) {
         xdgDecorationManager = manager
     }
 
     func destroy() {
-        xdgDecorationManager?.destroy()
+        xdgDecorationManager.destroy()
     }
 }
 

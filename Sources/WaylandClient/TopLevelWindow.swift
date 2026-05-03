@@ -125,10 +125,16 @@ package final class TopLevelWindow {
         globals: BoundGlobals,
         topLevel: RawXDGTopLevel
     ) throws -> DecorationObjects? {
-        guard let manager = globals.extensions.xdgDecorationManager else {
-            try interpretWindowEffects(model.reduce(.decorationUnavailable(.managerMissing)))
-            reportDecorationUnavailableIfNeeded(reason: .managerMissing)
-            return nil
+        let manager: RawXDGDecorationManager
+        switch globals.extensions.xdgDecorationManager {
+        case .bound(let boundManager):
+            manager = boundManager
+        case .missing:
+            return try recordDecorationUnavailable(.managerMissing)
+        case .unsupportedVersion(let advertised, let minimum):
+            return try recordDecorationUnavailable(
+                .unsupportedManagerVersion(advertised: advertised, minimum: minimum)
+            )
         }
 
         let newDecoration = try manager.getTopLevelDecoration(for: topLevel)
@@ -158,12 +164,15 @@ package final class TopLevelWindow {
         _ preference: WindowDecorationPreference,
         on decoration: RawXDGToplevelDecoration
     ) {
-        guard let requestedMode = preference.requestedRawMode else {
-            decoration.unsetMode()
-            return
-        }
+        DecorationModeRequest(preference: preference).apply(to: decoration)
+    }
 
-        decoration.setMode(requestedMode)
+    private func recordDecorationUnavailable(
+        _ reason: DecorationUnavailableReason
+    ) throws -> DecorationObjects? {
+        try interpretWindowEffects(model.reduce(.decorationUnavailable(reason)))
+        reportDecorationUnavailableIfNeeded(reason: reason)
+        return nil
     }
 
     private func reportDecorationUnavailableIfNeeded(reason: DecorationUnavailableReason) {
@@ -176,17 +185,10 @@ package final class TopLevelWindow {
                 WindowDiagnostic(
                     windowID: id,
                     operation: .decoration(.decorationUnavailable),
-                    message: decorationUnavailableMessage(reason)
+                    message: reason.diagnosticMessage
                 )
             )
         )
-    }
-
-    private func decorationUnavailableMessage(_ reason: DecorationUnavailableReason) -> String {
-        switch reason {
-        case .managerMissing:
-            "Server-side decoration protocol is unavailable."
-        }
     }
 
     private func waitForInitialConfigure(
