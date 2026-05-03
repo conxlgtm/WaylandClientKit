@@ -13,8 +13,7 @@ package protocol QueueEventLoopSource {
         _ descriptors: inout [pollfd],
         timeoutMilliseconds: Int32
     ) throws(Failure) -> Int32
-    func pollFailed(errno: Int32) -> Failure
-    func pollEventFailed(revents: Int16) -> Failure
+    func eventLoopFailed(_ error: RawEventLoopError) -> Failure
 }
 
 package struct PreparedReadToken: ~Copyable {
@@ -128,7 +127,14 @@ package struct QueueEventLoopEngine {
             source.cancelRead()
             preparedRead.resolve()
             if ready < 0, errno != EINTR {
-                throw source.pollFailed(errno: errno)
+                throw source.eventLoopFailed(
+                    .system(
+                        RawSystemError(
+                            uncheckedErrno: errno,
+                            operation: .pollEventLoop
+                        )
+                    )
+                )
             }
             return
         }
@@ -164,8 +170,15 @@ package struct QueueEventLoopEngine {
         guard waylandFailure == 0, wakeFailure == 0 else {
             source.cancelRead()
             preparedRead.resolve()
-            let failedEvents = waylandFailure != 0 ? wayland.revents : wake?.revents ?? 0
-            throw source.pollEventFailed(revents: failedEvents)
+            if waylandFailure != 0 {
+                throw source.eventLoopFailed(
+                    .unexpectedDisplayRevents(revents: wayland.revents)
+                )
+            }
+
+            throw source.eventLoopFailed(
+                .unexpectedWakeRevents(revents: wake?.revents ?? 0)
+            )
         }
     }
 

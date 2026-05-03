@@ -150,6 +150,52 @@ struct WindowModelTests {
     }
 
     @Test
+    func requestOnlyCloseTransitionTablePreservesLifecycle() throws {
+        for fixture in WindowLifecycleFixture.allCases {
+            var model = try model(in: fixture, published: true)
+
+            let effects = try model.reduce(.compositorCloseRequested(policy: .requestOnly))
+
+            #expect(effects == [.publishCloseRequested(windowID)])
+            #expect(model.closeRequest == .requested)
+            #expect(!model.isClosed)
+            #expect(
+                try model.reduce(.compositorCloseRequested(policy: .requestOnly)).isEmpty
+            )
+        }
+    }
+
+    @Test
+    func autoCloseTransitionTableDestroysFromOpenLifecyclePhases() throws {
+        for fixture in WindowLifecycleFixture.allCases {
+            var model = try model(in: fixture, published: true)
+
+            let effects = try model.reduce(.compositorCloseRequested(policy: .autoClose))
+
+            #expect(
+                effects == [
+                    .publishCloseRequested(windowID),
+                    .cancelFrameCallback,
+                    .retireSwapchain,
+                    .destroyRoleObjects,
+                    .destroySurface,
+                    .publishClosed(windowID),
+                ]
+            )
+            #expect(model.isDestroyed)
+            #expect(model.publication == .closedPublished(windowID))
+            #expect(
+                throws: ClientError.window(
+                    windowID,
+                    .invalidLifecycleTransition(.closeAfterDestroyed)
+                )
+            ) {
+                _ = try model.reduce(.compositorCloseRequested(policy: .autoClose))
+            }
+        }
+    }
+
+    @Test
     func autoClosePublishesOrderedTeardownEffectsOnce() throws {
         var model = try activePublishedModel()
 
@@ -357,11 +403,45 @@ extension WindowModelTests {
 }
 
 extension WindowModelTests {
+    private enum WindowLifecycleFixture: CaseIterable {
+        case created
+        case roleAssigned
+        case waitingForInitialConfigure
+        case active
+    }
+
     private func configuredModelReadyForConfigure() throws -> WindowModel {
         var model = WindowModel(id: windowID, fallbackSize: .default)
         _ = try model.reduce(.roleObjectsCreated)
         _ = try model.reduce(.initialCommitSent)
         return model
+    }
+
+    private func model(
+        in fixture: WindowLifecycleFixture,
+        published: Bool = false
+    ) throws -> WindowModel {
+        var model = WindowModel(id: windowID, fallbackSize: .default)
+        if published {
+            model.markPublished()
+        }
+
+        switch fixture {
+        case .created:
+            return model
+        case .roleAssigned:
+            _ = try model.reduce(.roleObjectsCreated)
+            return model
+        case .waitingForInitialConfigure:
+            _ = try model.reduce(.roleObjectsCreated)
+            _ = try model.reduce(.initialCommitSent)
+            return model
+        case .active:
+            _ = try model.reduce(.roleObjectsCreated)
+            _ = try model.reduce(.initialCommitSent)
+            _ = try model.reduce(.configureReceived(configure(width: 800, height: 600)))
+            return model
+        }
     }
 
     private func activePublishedModel() throws -> WindowModel {

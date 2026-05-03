@@ -1,7 +1,7 @@
-public final class RegistryState {
+package final class RegistryState {
     private var globalsByName: [UInt32: RawGlobalAdvertisement] = [:]
 
-    public func recordGlobal(name: UInt32, interfaceName: String, version: UInt32) {
+    package func recordGlobal(name: UInt32, interfaceName: String, version: UInt32) {
         globalsByName[name] = RawGlobalAdvertisement(
             name: name,
             interfaceName: interfaceName,
@@ -9,15 +9,15 @@ public final class RegistryState {
         )
     }
 
-    public func removeGlobal(name: UInt32) {
+    package func removeGlobal(name: UInt32) {
         globalsByName.removeValue(forKey: name)
     }
 
-    public var snapshot: [RawGlobalAdvertisement] {
+    package var snapshot: [RawGlobalAdvertisement] {
         globalsByName.values.sorted { $0.name < $1.name }
     }
 
-    public func firstGlobal(named interfaceName: String) -> RawGlobalAdvertisement? {
+    package func firstGlobal(named interfaceName: String) -> RawGlobalAdvertisement? {
         snapshot.first { $0.interfaceName == interfaceName }
     }
 }

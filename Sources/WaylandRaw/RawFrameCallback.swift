@@ -8,8 +8,8 @@ struct WaylandCallbackOperations {
 
     static var live: WaylandCallbackOperations {
         .init(
-            addListener: swl_callback_add_listener,
-            destroy: swl_callback_destroy
+            addListener: unsafe swl_callback_add_listener,
+            destroy: unsafe swl_callback_destroy
         )
     }
 }
@@ -85,9 +85,12 @@ final class WaylandCallbackRegistrationState {
             preconditionFailure("Wayland callback listener installed after ownership ended")
         }
 
-        let result = operations.addListener(pointer, callbacks)
+        let result = unsafe operations.addListener(pointer, callbacks)
         guard result == 0 else {
-            throw RuntimeError.systemError(errno: EINVAL)
+            throw RuntimeError.systemError(
+                errno: EINVAL,
+                operation: .installListener("wl_callback")
+            )
         }
     }
 

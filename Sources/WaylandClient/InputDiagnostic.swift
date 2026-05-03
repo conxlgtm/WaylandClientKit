@@ -60,20 +60,6 @@ public enum KeymapDiagnostic: Equatable, Sendable, CustomStringConvertible {
     }
 }
 
-public enum KeymapReadOperation: Equatable, Sendable, CustomStringConvertible {
-    case fstat
-    case mmap
-
-    public var description: String {
-        switch self {
-        case .fstat:
-            "fstat"
-        case .mmap:
-            "mmap"
-        }
-    }
-}
-
 public enum KeymapReadFailure: Equatable, Sendable, CustomStringConvertible {
     case unsupportedFormat(format: KeyboardKeymapFormat, advertisedSize: UInt32)
     case invalidFileDescriptor(Int32)
@@ -83,7 +69,7 @@ public enum KeymapReadFailure: Equatable, Sendable, CustomStringConvertible {
     case tooLargeForProtocolSize(Int)
     case fdTooSmall(size: UInt32, actualSize: Int64)
     case missingNULTerminator(size: UInt32)
-    case system(errno: Int32, operation: KeymapReadOperation)
+    case system(WaylandSystemError)
 
     public var description: String {
         switch self {
@@ -103,8 +89,8 @@ public enum KeymapReadFailure: Equatable, Sendable, CustomStringConvertible {
             "keymap fd contains \(actualSize) bytes, fewer than advertised size \(size)"
         case .missingNULTerminator(let size):
             "xkb_v1 keymap of size \(size) is not NUL-terminated"
-        case .system(let errno, let operation):
-            "system error during keymap \(operation): errno \(errno)"
+        case .system(let error):
+            "system error during keymap read: \(error.description)"
         }
     }
 }

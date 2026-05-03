@@ -39,34 +39,46 @@ package enum PointerCursorSeatEffect {
     case destroyCursorSurface(CursorManagerSurface)
 }
 
+package enum PointerCursorApplicationState: Equatable, Sendable {
+    case unapplied
+    case hidden(serial: UInt32)
+    case named(cursor: PointerCursor, serial: UInt32, surfaceID: RawObjectID?)
+}
+
 package struct PointerCursorSeatState {
     var focus: PointerFocusState = .unfocused
     var cursorSurface: CursorManagerSurface?
+    var application: PointerCursorApplicationState = .unapplied
 
     var isEmpty: Bool {
-        !focus.isFocused && cursorSurface == nil
+        !focus.isFocused && cursorSurface == nil && application == .unapplied
     }
 
     mutating func reduce(_ event: PointerCursorSeatEvent) -> [PointerCursorSeatEffect] {
         switch event {
         case .managedPointerEntered(let surfaceID, let serial, let sourceEvent):
             focus = .focused(surfaceID: surfaceID, enterSerial: serial)
+            application = .unapplied
             return [.applyCursor(serial: serial, sourceEvent: sourceEvent)]
         case .unmanagedPointerEntered:
             focus = .unfocused
+            application = .unapplied
             return []
         case .pointerLeft(let surfaceID):
             if focus.isFocused(on: surfaceID) {
                 focus = .unfocused
+                application = .unapplied
             }
             return []
         case .registeredSurfaceRemoved(let surfaceID):
             if focus.isFocused(on: surfaceID) {
                 focus = .unfocused
+                application = .unapplied
             }
             return []
         case .pointerUnavailable:
             focus = .unfocused
+            application = .unapplied
             guard let surface = cursorSurface else {
                 return []
             }
@@ -74,5 +86,9 @@ package struct PointerCursorSeatState {
             cursorSurface = nil
             return [.destroyCursorSurface(surface)]
         }
+    }
+
+    mutating func markApplied(_ appliedCursor: PointerCursorApplicationState) {
+        application = appliedCursor
     }
 }

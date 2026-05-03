@@ -1,57 +1,57 @@
-public struct TopLevelSize: Equatable, Sendable {
-    public let width: Int32
-    public let height: Int32
+package struct TopLevelSize: Equatable, Sendable {
+    package let width: Int32
+    package let height: Int32
 
-    public static let unspecified = TopLevelSize(width: 0, height: 0)
+    package static let unspecified = TopLevelSize(width: 0, height: 0)
 
-    public init(width sizeWidth: Int32, height sizeHeight: Int32) {
+    package init(width sizeWidth: Int32, height sizeHeight: Int32) {
         width = sizeWidth
         height = sizeHeight
     }
 }
 
-public struct XDGTopLevelState: Equatable, Hashable, Sendable {
-    public let rawValue: UInt32
+package struct XDGTopLevelState: Equatable, Hashable, Sendable {
+    package let rawValue: UInt32
 
-    public init(rawValue stateRawValue: UInt32) {
+    package init(rawValue stateRawValue: UInt32) {
         rawValue = stateRawValue
     }
 
-    public static let maximized = Self(rawValue: 1)
-    public static let fullscreen = Self(rawValue: 2)
-    public static let resizing = Self(rawValue: 3)
-    public static let activated = Self(rawValue: 4)
-    public static let tiledLeft = Self(rawValue: 5)
-    public static let tiledRight = Self(rawValue: 6)
-    public static let tiledTop = Self(rawValue: 7)
-    public static let tiledBottom = Self(rawValue: 8)
-    public static let suspended = Self(rawValue: 9)
-    public static let constrainedLeft = Self(rawValue: 10)
-    public static let constrainedRight = Self(rawValue: 11)
-    public static let constrainedTop = Self(rawValue: 12)
-    public static let constrainedBottom = Self(rawValue: 13)
+    package static let maximized = Self(rawValue: 1)
+    package static let fullscreen = Self(rawValue: 2)
+    package static let resizing = Self(rawValue: 3)
+    package static let activated = Self(rawValue: 4)
+    package static let tiledLeft = Self(rawValue: 5)
+    package static let tiledRight = Self(rawValue: 6)
+    package static let tiledTop = Self(rawValue: 7)
+    package static let tiledBottom = Self(rawValue: 8)
+    package static let suspended = Self(rawValue: 9)
+    package static let constrainedLeft = Self(rawValue: 10)
+    package static let constrainedRight = Self(rawValue: 11)
+    package static let constrainedTop = Self(rawValue: 12)
+    package static let constrainedBottom = Self(rawValue: 13)
 }
 
-public struct XDGWMCapability: Equatable, Hashable, Sendable {
-    public let rawValue: UInt32
+package struct XDGWMCapability: Equatable, Hashable, Sendable {
+    package let rawValue: UInt32
 
-    public init(rawValue capabilityRawValue: UInt32) {
+    package init(rawValue capabilityRawValue: UInt32) {
         rawValue = capabilityRawValue
     }
 
-    public static let windowMenu = Self(rawValue: 1)
-    public static let maximize = Self(rawValue: 2)
-    public static let fullscreen = Self(rawValue: 3)
-    public static let minimize = Self(rawValue: 4)
+    package static let windowMenu = Self(rawValue: 1)
+    package static let maximize = Self(rawValue: 2)
+    package static let fullscreen = Self(rawValue: 3)
+    package static let minimize = Self(rawValue: 4)
 }
 
-public struct XDGTopLevelConfigureSuggestion: Equatable, Sendable {
-    public let size: TopLevelSize
-    public let states: [XDGTopLevelState]
-    public let bounds: TopLevelSize?
-    public let wmCapabilities: [XDGWMCapability]
+package struct XDGTopLevelConfigureSuggestion: Equatable, Sendable {
+    package let size: TopLevelSize
+    package let states: [XDGTopLevelState]
+    package let bounds: TopLevelSize?
+    package let wmCapabilities: [XDGWMCapability]
 
-    public init(
+    package init(
         size configureSize: TopLevelSize,
         states configureStates: [XDGTopLevelState] = [],
         bounds configureBounds: TopLevelSize? = nil,
@@ -64,11 +64,11 @@ public struct XDGTopLevelConfigureSuggestion: Equatable, Sendable {
     }
 }
 
-public struct XDGConfigureSequence: Equatable, Sendable {
-    public let serial: UInt32
-    public let topLevel: XDGTopLevelConfigureSuggestion
+package struct XDGConfigureSequence: Equatable, Sendable {
+    package let serial: UInt32
+    package let topLevel: XDGTopLevelConfigureSuggestion
 
-    public init(
+    package init(
         serial configureSerial: UInt32,
         topLevel topLevelSuggestion: XDGTopLevelConfigureSuggestion
     ) {
@@ -77,7 +77,7 @@ public struct XDGConfigureSequence: Equatable, Sendable {
     }
 }
 
-public final class XDGConfigureState {
+package final class XDGConfigureState {
     private var pendingSize: TopLevelSize
     private var pendingStates: [XDGTopLevelState] = []
     private var pendingBounds: TopLevelSize?
@@ -86,9 +86,9 @@ public final class XDGConfigureState {
     private var pendingError: RuntimeError?
     private var onSurfaceConfigure: (() -> Void)?
 
-    public private(set) var hasReceivedInitialConfigure = false
+    package private(set) var hasReceivedInitialConfigure = false
 
-    public init(initialSize: TopLevelSize = .unspecified) {
+    package init(initialSize: TopLevelSize = .unspecified) {
         pendingSize = initialSize
     }
 
@@ -96,7 +96,7 @@ public final class XDGConfigureState {
         onSurfaceConfigure = handler
     }
 
-    public func handleTopLevelConfigure(
+    package func handleTopLevelConfigure(
         width: Int32,
         height: Int32,
         states: [XDGTopLevelState] = []
@@ -105,7 +105,7 @@ public final class XDGConfigureState {
         pendingStates = states
     }
 
-    public func handleConfigureBounds(width: Int32, height: Int32) {
+    package func handleConfigureBounds(width: Int32, height: Int32) {
         guard width > 0, height > 0 else {
             pendingBounds = nil
             return
@@ -114,7 +114,7 @@ public final class XDGConfigureState {
         pendingBounds = TopLevelSize(width: width, height: height)
     }
 
-    public func handleWMCapabilities(_ capabilities: [XDGWMCapability]) {
+    package func handleWMCapabilities(_ capabilities: [XDGWMCapability]) {
         pendingWMCapabilities = capabilities
     }
 
@@ -132,7 +132,7 @@ public final class XDGConfigureState {
     }
 
     @discardableResult
-    public func handleSurfaceConfigure(serial: UInt32) -> XDGConfigureSequence {
+    package func handleSurfaceConfigure(serial: UInt32) -> XDGConfigureSequence {
         let configure = XDGConfigureSequence(
             serial: serial,
             topLevel: XDGTopLevelConfigureSuggestion(
@@ -148,7 +148,7 @@ public final class XDGConfigureState {
         return configure
     }
 
-    public func consumeLatestConfigure() -> XDGConfigureSequence? {
+    package func consumeLatestConfigure() -> XDGConfigureSequence? {
         defer {
             latestConfigure = nil
         }

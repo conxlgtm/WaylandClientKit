@@ -97,11 +97,11 @@ package struct WindowModel: Equatable, Sendable {
             )
         case .transientStateReset:
             guard !isClosed else { return [] }
-            guard var activeState else { return [] }
-            _ = activeState.redraw.reduce(.transientStateReset, bufferAvailable: false)
-            activeState.presentation = .idle
-            lifecycle = .active(activeState)
-            return []
+            return updateActiveWindowStateIfPresent { activeState in
+                _ = activeState.redraw.reduce(.transientStateReset, bufferAvailable: false)
+                activeState.presentation = .idle
+                return []
+            }
         }
     }
 }
@@ -113,6 +113,33 @@ extension WindowModel {
         }
 
         return state
+    }
+
+    private mutating func transitionActiveWindowState(
+        _ update: (inout ActiveWindowState) throws -> [WindowEffect]
+    ) throws -> [WindowEffect] {
+        var activeState = try requireActiveWindowState()
+
+        do {
+            let effects = try update(&activeState)
+            lifecycle = .active(activeState)
+            return effects
+        } catch {
+            lifecycle = .active(activeState)
+            throw error
+        }
+    }
+
+    private mutating func updateActiveWindowStateIfPresent(
+        _ update: (inout ActiveWindowState) -> [WindowEffect]
+    ) -> [WindowEffect] {
+        guard var activeState else {
+            return []
+        }
+
+        let effects = update(&activeState)
+        lifecycle = .active(activeState)
+        return effects
     }
 
     private mutating func reduceRoleObjectsCreated() throws -> [WindowEffect] {
@@ -179,92 +206,91 @@ extension WindowModel {
             throw ClientError.window(id, .invalidLifecycleTransition(.redrawAfterDestroyed))
         }
 
-        guard var activeState else {
-            if case .closing = lifecycle {
-                throw ClientError.window(id, .invalidLifecycleTransition(.presentWhileClosing))
+        let windowID = id
+        return try transitionActiveWindowState { activeState in
+            guard activeState.presentation == .idle else {
+                throw ClientError.window(windowID, .invalidLifecycleTransition(.nestedPresentation))
             }
 
-            throw ClientError.window(id, .invalidLifecycleTransition(.mapBeforeInitialConfigure))
-        }
+            guard activeState.redraw.hasOutstandingRedrawRequest else {
+                return []
+            }
 
-        guard activeState.presentation == .idle else {
-            throw ClientError.window(id, .invalidLifecycleTransition(.nestedPresentation))
+            _ = activeState.redraw.reduce(
+                .redrawRequestConsumed,
+                bufferAvailable: bufferAvailable
+            )
+            let generation = activeState.redraw.generationForCurrentDraw
+            let request = PresentationRequest(
+                generation: generation,
+                configuration: activeState.configure
+            )
+            return [.performSoftwarePresent(request)]
         }
-
-        guard activeState.redraw.hasOutstandingRedrawRequest else {
-            return []
-        }
-
-        _ = activeState.redraw.reduce(
-            .redrawRequestConsumed,
-            bufferAvailable: bufferAvailable
-        )
-        let generation = activeState.redraw.generationForCurrentDraw
-        let request = PresentationRequest(
-            generation: generation,
-            configuration: activeState.configure
-        )
-        lifecycle = .active(activeState)
-        return [.performSoftwarePresent(request)]
     }
 
     private mutating func reducePresentationStarted(
         generation: UInt64
     ) throws -> [WindowEffect] {
-        guard var activeState else {
-            if case .closing = lifecycle {
-                throw ClientError.window(id, .invalidLifecycleTransition(.presentWhileClosing))
+        let windowID = id
+        return try transitionActiveWindowState { activeState in
+            guard activeState.presentation == .idle else {
+                throw ClientError.window(windowID, .invalidLifecycleTransition(.nestedPresentation))
             }
 
-            throw ClientError.window(id, .invalidLifecycleTransition(.mapBeforeInitialConfigure))
+            activeState.presentation = .drawing(generation: generation)
+            return []
         }
-
-        guard activeState.presentation == .idle else {
-            throw ClientError.window(id, .invalidLifecycleTransition(.nestedPresentation))
-        }
-
-        activeState.presentation = .drawing(generation: generation)
-        lifecycle = .active(activeState)
-        return []
     }
 
     private mutating func reducePresentationSucceeded(
         generation: UInt64,
         bufferAvailable: Bool
     ) throws -> [WindowEffect] {
-        var activeState = try requireActiveWindowState()
-        try requireActivePresentation(generation: generation, in: activeState)
-        activeState.presentation = .idle
-        let effects = mapRedrawEffects(
-            activeState.redraw.reduce(
-                .presented(generation: generation),
-                bufferAvailable: bufferAvailable
+        let windowID = id
+        return try transitionActiveWindowState { activeState in
+            try Self.requireActivePresentation(
+                generation: generation,
+                in: activeState,
+                windowID: windowID
             )
-        )
-        lifecycle = .active(activeState)
-        return effects
+            activeState.presentation = .idle
+            return Self.mapRedrawEffects(
+                activeState.redraw.reduce(
+                    .presented(generation: generation),
+                    bufferAvailable: bufferAvailable
+                ),
+                windowID: windowID
+            )
+        }
     }
 
     private mutating func reducePresentationFailed(
         generation: UInt64,
         _ error: PresentationError
     ) throws -> [WindowEffect] {
-        var activeState = try requireActiveWindowState()
-        try requireActivePresentation(generation: generation, in: activeState)
-        activeState.presentation = .idle
-        lifecycle = .active(activeState)
-        throw ClientError.window(id, .presentationFailed(error))
+        let windowID = id
+        return try transitionActiveWindowState { activeState in
+            try Self.requireActivePresentation(
+                generation: generation,
+                in: activeState,
+                windowID: windowID
+            )
+            activeState.presentation = .idle
+            throw ClientError.window(windowID, .presentationFailed(error))
+        }
     }
 
     private mutating func reducePresentationBlockedByBuffer() throws -> [WindowEffect] {
-        var activeState = try requireActiveWindowState()
-        try requireActivePresentation(in: activeState)
-        activeState.presentation = .idle
-        let effects = mapRedrawEffects(
-            activeState.redraw.reduce(.drawBlockedByBuffer, bufferAvailable: false)
-        )
-        lifecycle = .active(activeState)
-        return effects
+        let windowID = id
+        return try transitionActiveWindowState { activeState in
+            try Self.requireActivePresentation(in: activeState, windowID: windowID)
+            activeState.presentation = .idle
+            return Self.mapRedrawEffects(
+                activeState.redraw.reduce(.drawBlockedByBuffer, bufferAvailable: false),
+                windowID: windowID
+            )
+        }
     }
 
     private mutating func reduceCompositorCloseRequested(
@@ -359,32 +385,47 @@ extension WindowModel {
         bufferAvailable: Bool
     ) -> [WindowEffect] {
         guard !isClosed else { return [] }
-        guard var activeState else { return [] }
-
-        let effects = mapRedrawEffects(
-            activeState.redraw.reduce(event, bufferAvailable: bufferAvailable)
-        )
-        lifecycle = .active(activeState)
-        return effects
+        let windowID = id
+        return updateActiveWindowStateIfPresent { activeState in
+            Self.mapRedrawEffects(
+                activeState.redraw.reduce(event, bufferAvailable: bufferAvailable),
+                windowID: windowID
+            )
+        }
     }
 
     private func mapRedrawEffects(_ effects: [WindowRedrawEffect]) -> [WindowEffect] {
+        Self.mapRedrawEffects(effects, windowID: id)
+    }
+
+    private static func mapRedrawEffects(
+        _ effects: [WindowRedrawEffect],
+        windowID: WindowID
+    ) -> [WindowEffect] {
         effects.map { effect in
             switch effect {
             case .publishRedrawRequested:
-                .publishRedrawRequested(id)
+                .publishRedrawRequested(windowID)
             }
         }
     }
 
     @discardableResult
     private func requireActivePresentation(in activeState: ActiveWindowState) throws -> UInt64 {
+        try Self.requireActivePresentation(in: activeState, windowID: id)
+    }
+
+    @discardableResult
+    private static func requireActivePresentation(
+        in activeState: ActiveWindowState,
+        windowID: WindowID
+    ) throws -> UInt64 {
         switch activeState.presentation {
         case .drawing(let generation):
             return generation
         case .idle:
             throw ClientError.window(
-                id,
+                windowID,
                 .invalidLifecycleTransition(.inactivePresentationCompletion)
             )
         }
@@ -394,10 +435,25 @@ extension WindowModel {
         generation actualGeneration: UInt64,
         in activeState: ActiveWindowState
     ) throws {
-        let expectedGeneration = try requireActivePresentation(in: activeState)
+        try Self.requireActivePresentation(
+            generation: actualGeneration,
+            in: activeState,
+            windowID: id
+        )
+    }
+
+    private static func requireActivePresentation(
+        generation actualGeneration: UInt64,
+        in activeState: ActiveWindowState,
+        windowID: WindowID
+    ) throws {
+        let expectedGeneration = try requireActivePresentation(
+            in: activeState,
+            windowID: windowID
+        )
         guard expectedGeneration == actualGeneration else {
             throw ClientError.window(
-                id,
+                windowID,
                 .invalidLifecycleTransition(
                     .presentationGenerationMismatch(
                         expected: expectedGeneration,

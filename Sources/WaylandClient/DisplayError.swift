@@ -1,11 +1,249 @@
 import WaylandRaw
 import WaylandRawUnsafeShim
 
+public enum WaylandSystemErrorConstructionError: Error, Equatable, Sendable {
+    case nonPositiveErrno(Int32)
+}
+
+public struct WaylandSystemErrno: Equatable, Sendable, CustomStringConvertible {
+    public let rawValue: Int32
+
+    public init(_ rawErrorNumber: Int32) throws {
+        guard rawErrorNumber > 0 else {
+            throw WaylandSystemErrorConstructionError.nonPositiveErrno(rawErrorNumber)
+        }
+
+        rawValue = rawErrorNumber
+    }
+
+    package init(unchecked rawErrorNumber: Int32) {
+        precondition(rawErrorNumber > 0, "errno must be positive")
+        rawValue = rawErrorNumber
+    }
+
+    public var description: String {
+        "\(rawValue)"
+    }
+}
+
+public enum WaylandSystemOperation: Equatable, Sendable, CustomStringConvertible {
+    case validateArgument(String)
+    case createSharedMemoryFile
+    case resizeSharedMemoryFile
+    case mapSharedMemory
+    case createBuffer
+    case installListener(String)
+    case readMonotonicClock
+    case pollEventLoop
+    case displayFlush
+    case displayReadEvents
+    case displayDispatchPending
+    case displayPrepareRead
+    case displayError
+    case keymapFstat
+    case keymapMmap
+    case duplicateFileDescriptor
+    case closeFileDescriptor
+
+    public var description: String {
+        switch self {
+        case .validateArgument(let name):
+            "validate \(name)"
+        case .createSharedMemoryFile:
+            "create shared memory file"
+        case .resizeSharedMemoryFile:
+            "resize shared memory file"
+        case .mapSharedMemory:
+            "map shared memory"
+        case .createBuffer:
+            "create Wayland buffer"
+        case .installListener(let name):
+            "install \(name) listener"
+        case .readMonotonicClock:
+            "read monotonic clock"
+        case .pollEventLoop:
+            "poll Wayland event loop"
+        case .displayFlush:
+            "flush Wayland display"
+        case .displayReadEvents:
+            "read Wayland display events"
+        case .displayDispatchPending:
+            "dispatch pending Wayland events"
+        case .displayPrepareRead:
+            "prepare Wayland display read"
+        case .displayError:
+            "read Wayland display error"
+        case .keymapFstat:
+            "inspect keyboard keymap file"
+        case .keymapMmap:
+            "map keyboard keymap file"
+        case .duplicateFileDescriptor:
+            "duplicate file descriptor"
+        case .closeFileDescriptor:
+            "close file descriptor"
+        }
+    }
+}
+
+extension WaylandSystemOperation {
+    package init(_ rawOperation: RawSystemOperation) {
+        switch rawOperation {
+        case .validateArgument, .installListener:
+            self = Self.namedOperation(rawOperation)
+        case .createSharedMemoryFile, .resizeSharedMemoryFile, .mapSharedMemory, .createBuffer:
+            self = Self.sharedMemoryOperation(rawOperation)
+        case .readMonotonicClock, .pollEventLoop:
+            self = Self.runtimeOperation(rawOperation)
+        case .displayFlush, .displayReadEvents, .displayDispatchPending,
+            .displayPrepareRead, .displayError:
+            self = Self.displayOperation(rawOperation)
+        case .keymapFstat, .keymapMmap:
+            self = Self.keymapOperation(rawOperation)
+        case .duplicateFileDescriptor, .closeFileDescriptor:
+            self = Self.fileDescriptorOperation(rawOperation)
+        }
+    }
+
+    private static func namedOperation(
+        _ rawOperation: RawSystemOperation
+    ) -> WaylandSystemOperation {
+        switch rawOperation {
+        case .validateArgument(let name):
+            .validateArgument(name)
+        case .installListener(let name):
+            .installListener(name)
+        default:
+            preconditionFailure("operation is not name-bearing")
+        }
+    }
+
+    private static func sharedMemoryOperation(
+        _ rawOperation: RawSystemOperation
+    ) -> WaylandSystemOperation {
+        switch rawOperation {
+        case .createSharedMemoryFile:
+            .createSharedMemoryFile
+        case .resizeSharedMemoryFile:
+            .resizeSharedMemoryFile
+        case .mapSharedMemory:
+            .mapSharedMemory
+        case .createBuffer:
+            .createBuffer
+        default:
+            preconditionFailure("operation is not shared-memory related")
+        }
+    }
+
+    private static func runtimeOperation(
+        _ rawOperation: RawSystemOperation
+    ) -> WaylandSystemOperation {
+        switch rawOperation {
+        case .readMonotonicClock:
+            .readMonotonicClock
+        case .pollEventLoop:
+            .pollEventLoop
+        default:
+            preconditionFailure("operation is not runtime related")
+        }
+    }
+
+    private static func displayOperation(
+        _ rawOperation: RawSystemOperation
+    ) -> WaylandSystemOperation {
+        switch rawOperation {
+        case .displayFlush:
+            .displayFlush
+        case .displayReadEvents:
+            .displayReadEvents
+        case .displayDispatchPending:
+            .displayDispatchPending
+        case .displayPrepareRead:
+            .displayPrepareRead
+        case .displayError:
+            .displayError
+        default:
+            preconditionFailure("operation is not display related")
+        }
+    }
+
+    private static func keymapOperation(
+        _ rawOperation: RawSystemOperation
+    ) -> WaylandSystemOperation {
+        switch rawOperation {
+        case .keymapFstat:
+            .keymapFstat
+        case .keymapMmap:
+            .keymapMmap
+        default:
+            preconditionFailure("operation is not keymap related")
+        }
+    }
+
+    private static func fileDescriptorOperation(
+        _ rawOperation: RawSystemOperation
+    ) -> WaylandSystemOperation {
+        switch rawOperation {
+        case .duplicateFileDescriptor:
+            .duplicateFileDescriptor
+        case .closeFileDescriptor:
+            .closeFileDescriptor
+        default:
+            preconditionFailure("operation is not file-descriptor related")
+        }
+    }
+}
+
+public struct WaylandSystemError: Error, Equatable, Sendable, CustomStringConvertible {
+    public let errno: WaylandSystemErrno
+    public let operation: WaylandSystemOperation
+
+    public init(
+        errno errorNumber: WaylandSystemErrno,
+        operation systemOperation: WaylandSystemOperation
+    ) {
+        errno = errorNumber
+        operation = systemOperation
+    }
+
+    public init(
+        validatingErrno errorNumber: Int32,
+        operation systemOperation: WaylandSystemOperation
+    ) throws {
+        errno = try WaylandSystemErrno(errorNumber)
+        operation = systemOperation
+    }
+
+    package init(_ rawError: RawSystemError) {
+        errno = WaylandSystemErrno(unchecked: rawError.errno.rawValue)
+        operation = WaylandSystemOperation(rawError.operation)
+    }
+
+    public var description: String {
+        "\(operation.description) failed with errno \(errno.rawValue)"
+    }
+}
+
+public struct WaylandProtocolObjectID: Equatable, Hashable, Sendable, CustomStringConvertible {
+    public let rawValue: UInt32
+
+    public init(rawValue objectRawValue: UInt32) {
+        rawValue = objectRawValue
+    }
+
+    package init(_ objectID: RawObjectID) {
+        rawValue = objectID.value
+    }
+
+    public var description: String {
+        "\(rawValue)"
+    }
+}
+
 public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
     case display(interface: String?, objectID: UInt32, code: Int32)
     case invalidXDGConfigureDimensions(windowID: WindowID, width: Int32, height: Int32)
     case invalidConfigureSerial(windowID: WindowID, serial: UInt32)
-    case proxyQueueMismatch(interface: String, objectID: RawObjectID?)
+    case proxyQueueMismatch(interface: String, objectID: WaylandProtocolObjectID?)
 
     public var description: String {
         switch self {
@@ -24,12 +262,15 @@ public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
 }
 
 public enum WaylandEventLoopError: Equatable, Sendable, CustomStringConvertible {
-    case pollEventFailed(revents: Int16)
+    case unexpectedDisplayRevents(revents: Int16)
+    case unexpectedWakeRevents(revents: Int16)
 
     public var description: String {
         switch self {
-        case .pollEventFailed(let revents):
-            "Wayland event loop poll returned error events \(revents)"
+        case .unexpectedDisplayRevents(let revents):
+            "Wayland display poll returned error events \(revents)"
+        case .unexpectedWakeRevents(let revents):
+            "Wayland wake poll returned error events \(revents)"
         }
     }
 }
@@ -73,7 +314,7 @@ public enum InternalInvariantViolation: Equatable, Sendable, CustomStringConvert
 public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvertible {
     case closed
     case protocolError(WaylandProtocolError)
-    case systemError(errno: Int32)
+    case systemError(WaylandSystemError)
     case eventLoopError(WaylandEventLoopError)
     case eventSubscriberOverflow(stream: EventStreamIdentity, capacity: Int)
     case inputPipelineOverflow(InputPipelineOverflow)
@@ -90,13 +331,18 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
                 )
             )
         case .proxy(.queueMismatch(let interface, let objectID)):
-            self = .protocolError(.proxyQueueMismatch(interface: interface, objectID: objectID))
-        case .pollFailed(let errno):
-            self = .systemError(errno: errno)
-        case .pollEventFailed(let revents):
-            self = .eventLoopError(.pollEventFailed(revents: revents))
+            self = .protocolError(
+                .proxyQueueMismatch(
+                    interface: interface,
+                    objectID: objectID.map(WaylandProtocolObjectID.init)
+                )
+            )
+        case .eventLoop(let error):
+            self = Self(error)
         case .system(let error):
-            self = .systemError(errno: error.errno)
+            self = .systemError(WaylandSystemError(error))
+        case .systemErrnoUnavailable:
+            self = .internalInvariantViolation(.message(runtimeError.description))
         case .connectionFailed,
             .eventQueueCreationFailed,
             .displayWrapperCreationFailed,
@@ -115,10 +361,8 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
 
     init(_ executorError: WaylandThreadExecutorError) {
         switch executorError {
-        case .pollFailed(let errno):
-            self = .systemError(errno: errno)
-        case .pollEventFailed(let revents):
-            self = .eventLoopError(.pollEventFailed(revents: revents))
+        case .eventLoop(let error):
+            self = Self(error)
         case .executorNotReady,
             .executorClosed,
             .executorStopping,
@@ -132,14 +376,25 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
         }
     }
 
+    init(_ eventLoopError: RawEventLoopError) {
+        switch eventLoopError {
+        case .system(let error):
+            self = .systemError(WaylandSystemError(error))
+        case .unexpectedDisplayRevents(let revents):
+            self = .eventLoopError(.unexpectedDisplayRevents(revents: revents))
+        case .unexpectedWakeRevents(let revents):
+            self = .eventLoopError(.unexpectedWakeRevents(revents: revents))
+        }
+    }
+
     public var description: String {
         switch self {
         case .closed:
             "Wayland display is closed"
         case .protocolError(let error):
             error.description
-        case .systemError(let errno):
-            "Wayland display failed with errno \(errno)"
+        case .systemError(let error):
+            "Wayland display failed: \(error.description)"
         case .eventLoopError(let error):
             error.description
         case .eventSubscriberOverflow(let stream, let capacity):

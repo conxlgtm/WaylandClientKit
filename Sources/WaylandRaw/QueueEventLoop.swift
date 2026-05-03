@@ -6,9 +6,13 @@ enum QueueEventLoop {
         display: OpaquePointer,
         eventQueue: OpaquePointer
     ) throws(RuntimeError) -> Int32 {
-        let result = swl_display_dispatch_event_queue_pending(display, eventQueue)
+        let result = unsafe swl_display_dispatch_event_queue_pending(display, eventQueue)
         guard result >= 0 else {
-            throw RuntimeError.fromDisplay(display, fallbackErrno: errno)
+            throw RuntimeError.fromDisplay(
+                display,
+                fallbackErrno: errno,
+                operation: .displayDispatchPending
+            )
         }
 
         return result
@@ -18,7 +22,7 @@ enum QueueEventLoop {
         display: OpaquePointer,
         eventQueue: OpaquePointer
     ) throws(RuntimeError) -> Bool {
-        let result = swl_display_prepare_read_event_queue(display, eventQueue)
+        let result = unsafe swl_display_prepare_read_event_queue(display, eventQueue)
         if result == 0 {
             return true
         }
@@ -28,7 +32,11 @@ enum QueueEventLoop {
             return false
         }
 
-        throw RuntimeError.fromDisplay(display, fallbackErrno: savedErrno)
+        throw RuntimeError.fromDisplay(
+            display,
+            fallbackErrno: savedErrno,
+            operation: .displayPrepareRead
+        )
     }
 
     package static func pumpOnce(
@@ -105,15 +113,11 @@ private struct RawQueueEventLoopSource: QueueEventLoopSource {
         timeoutMilliseconds: Int32
     ) throws(RuntimeError) -> Int32 {
         descriptors.withUnsafeMutableBufferPointer { buffer in
-            Glibc.poll(buffer.baseAddress, nfds_t(buffer.count), timeoutMilliseconds)
+            unsafe Glibc.poll(buffer.baseAddress, nfds_t(buffer.count), timeoutMilliseconds)
         }
     }
 
-    func pollFailed(errno: Int32) -> RuntimeError {
-        .pollFailed(errno)
-    }
-
-    func pollEventFailed(revents: Int16) -> RuntimeError {
-        .pollEventFailed(revents: revents)
+    func eventLoopFailed(_ error: RawEventLoopError) -> RuntimeError {
+        .eventLoop(error)
     }
 }
