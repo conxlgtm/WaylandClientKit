@@ -26,6 +26,10 @@ package enum CursorRequestRecord: Equatable, Sendable {
     }
 }
 
+private struct CachedPointerCursorResolutionFailure: Error {
+    let diagnostic: CursorDiagnostic
+}
+
 package protocol RawInputEventObserving: AnyObject {
     @discardableResult
     func observe(_ rawEvent: RawInputEvent) -> [InputEvent]
@@ -248,6 +252,10 @@ package final class CursorManager: RawInputEventObserving {
             return resolvedDesiredCursor
         }
 
+        if let diagnostic = desiredCursor.unavailableDiagnostic {
+            throw CachedPointerCursorResolutionFailure(diagnostic: diagnostic)
+        }
+
         let resolved = try resolveCursorImage(desiredCursor.cursor)
         desiredCursor.cache(resolved)
         return resolved
@@ -412,22 +420,33 @@ extension CursorManager {
                     try applyCursor(to: seatID, serial: serial)
                 ))
             return []
+        } catch let failure as CachedPointerCursorResolutionFailure {
+            return recordAutomaticCursorFailure(failure.diagnostic, rawEvent: rawEvent)
         } catch CursorError.missingCursor(let name) {
-            requestResults.append(.skippedMissingCursor(name: name))
-            let diagnostic = cursorDiagnostic(
-                rawEvent,
-                payload: .missingCursor(name: name)
-            )
-            return [diagnostic]
+            let diagnostic = CursorDiagnostic.missingCursor(name: name)
+            desiredCursor.cacheUnavailable(diagnostic)
+            return recordAutomaticCursorFailure(diagnostic, rawEvent: rawEvent)
         } catch {
             let message = String(describing: error)
-            requestResults.append(.failed(message))
-            let diagnostic = cursorDiagnostic(
-                rawEvent,
-                payload: .automaticPointerEnterFailed(message)
-            )
-            return [diagnostic]
+            let diagnostic = CursorDiagnostic.automaticPointerEnterFailed(message)
+            desiredCursor.cacheUnavailable(diagnostic)
+            return recordAutomaticCursorFailure(diagnostic, rawEvent: rawEvent)
         }
+    }
+
+    private func recordAutomaticCursorFailure(
+        _ diagnostic: CursorDiagnostic,
+        rawEvent: RawInputEvent
+    ) -> [InputEvent] {
+        switch diagnostic {
+        case .missingCursor(let name):
+            requestResults.append(.skippedMissingCursor(name: name))
+        case .automaticPointerEnterFailed(let message):
+            requestResults.append(.failed(message))
+        }
+
+        let event = cursorDiagnostic(rawEvent, payload: diagnostic)
+        return [event]
     }
 
     private func cursorDiagnostic(

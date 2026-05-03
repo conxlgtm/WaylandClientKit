@@ -135,6 +135,17 @@ struct PointerCursorSeatStateTests {
         #expect(state.cursor == .hidden)
         #expect(state.resolvedImage == nil)
     }
+
+    @Test
+    func desiredPointerCursorStateCachesUnavailableResolution() {
+        var state = DesiredPointerCursorState(cursor: .defaultArrow)
+
+        state.cacheUnavailable(.missingCursor(name: "left_ptr"))
+
+        #expect(state.cursor == .defaultArrow)
+        #expect(state.resolvedImage == nil)
+        #expect(state.unavailableDiagnostic == .missingCursor(name: "left_ptr"))
+    }
 }
 
 private final class ReducerCursorSurface: CursorManagerSurface {
