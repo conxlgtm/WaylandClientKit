@@ -321,7 +321,7 @@ struct CursorManagerFailureTests {
     }
 }
 
-private struct SetCursorRequest: Equatable {
+struct SetCursorRequest: Equatable {
     let seatID: RawSeatID
     let serial: UInt32
     let surfaceID: RawObjectID?
@@ -329,7 +329,7 @@ private struct SetCursorRequest: Equatable {
     let hotspotY: Int32
 }
 
-private final class RecordingCursorBackend: CursorManagerBackend {
+final class RecordingCursorBackend: CursorManagerBackend {
     var resolvedCursorNames: [String] = []
     var createdSurfaceSeatIDs: [RawSeatID] = []
     var createdSurfaces: [RecordingCursorSurface] = []
@@ -414,7 +414,7 @@ private final class RecordingCursorBackend: CursorManagerBackend {
     }
 }
 
-private final class RecordingCursorSurface: CursorManagerSurface {
+final class RecordingCursorSurface: CursorManagerSurface {
     let objectID: RawObjectID?
     private(set) var attachedCount = 0
     private(set) var commitCount = 0
