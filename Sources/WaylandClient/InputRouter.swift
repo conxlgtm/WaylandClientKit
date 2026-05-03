@@ -1,14 +1,7 @@
 import WaylandRaw
 
 final class InputRouter {
-    private struct TouchFocusKey: Hashable {
-        var seatID: RawSeatID
-        var touchID: Int32
-    }
-
-    private var pointerFocusBySeat: [RawSeatID: RawObjectID] = [:]
-    private var keyboardFocusBySeat: [RawSeatID: RawObjectID] = [:]
-    private var touchFocusBySeatAndID: [TouchFocusKey: RawObjectID] = [:]
+    var deviceGraph = InputDeviceGraph()
     private var windowsBySurface: [RawObjectID: WindowID] = [:]
 
     func register(windowID: WindowID, surfaceID: RawObjectID) {
@@ -17,9 +10,7 @@ final class InputRouter {
 
     func unregister(surfaceID: RawObjectID) {
         windowsBySurface.removeValue(forKey: surfaceID)
-        pointerFocusBySeat = pointerFocusBySeat.filter { $0.value != surfaceID }
-        keyboardFocusBySeat = keyboardFocusBySeat.filter { $0.value != surfaceID }
-        touchFocusBySeatAndID = touchFocusBySeatAndID.filter { $0.value != surfaceID }
+        removeSurfaceFromDeviceGraph(surfaceID)
     }
 
     func route(_ event: RawInputEvent) -> [InputEvent] {
@@ -39,9 +30,7 @@ final class InputRouter {
                 kind: .seat(.changed(convert(snapshot)))
             )
         case .seatRemoved:
-            pointerFocusBySeat[event.seatID] = nil
-            keyboardFocusBySeat[event.seatID] = nil
-            touchFocusBySeatAndID = touchFocusBySeatAndID.filter { $0.key.seatID != event.seatID }
+            deviceGraph.removeSeat(event.seatID)
             return routedEvent(event, windowID: nil, kind: .seat(.removed))
         case .diagnostic(let diagnostic):
             return routedEvent(
@@ -65,7 +54,7 @@ final class InputRouter {
         switch pointerEvent {
         case .enter(let enter):
             if let surfaceID = enter.surfaceID {
-                pointerFocusBySeat[rawEvent.seatID] = surfaceID
+                setPointerFocus(seatID: rawEvent.seatID, surfaceID: surfaceID)
             }
             return routedEvent(
                 rawEvent,
@@ -170,9 +159,7 @@ extension InputRouter {
         _ down: RawTouchDown
     ) -> InputEvent {
         if let surfaceID = down.surfaceID {
-            touchFocusBySeatAndID[
-                TouchFocusKey(seatID: rawEvent.seatID, touchID: down.id)
-            ] = surfaceID
+            setTouchFocus(seatID: rawEvent.seatID, touchID: down.id, surfaceID: surfaceID)
         }
         return routedEvent(
             rawEvent,
@@ -197,9 +184,8 @@ extension InputRouter {
         _ rawEvent: RawInputEvent,
         _ up: RawTouchUp
     ) -> InputEvent {
-        let focusKey = TouchFocusKey(seatID: rawEvent.seatID, touchID: up.id)
-        let windowID = windowID(for: touchFocusBySeatAndID[focusKey])
-        touchFocusBySeatAndID[focusKey] = nil
+        let windowID = focusedTouchWindow(for: rawEvent.seatID, touchID: up.id)
+        clearTouchFocus(seatID: rawEvent.seatID, touchID: up.id)
         return routedEvent(
             rawEvent,
             windowID: windowID,
@@ -291,7 +277,7 @@ extension InputRouter {
         _ enter: RawKeyboardEnter
     ) -> InputEvent {
         if let surfaceID = enter.surfaceID {
-            keyboardFocusBySeat[rawEvent.seatID] = surfaceID
+            setKeyboardFocus(seatID: rawEvent.seatID, surfaceID: surfaceID)
         }
 
         return routedEvent(
@@ -431,39 +417,5 @@ extension InputRouter {
         }
 
         return windowsBySurface[surfaceID]
-    }
-
-    func focusedPointerWindow(for seatID: RawSeatID) -> WindowID? {
-        windowID(for: pointerFocusBySeat[seatID])
-    }
-
-    func focusedKeyboardWindow(for seatID: RawSeatID) -> WindowID? {
-        windowID(for: keyboardFocusBySeat[seatID])
-    }
-
-    func focusedTouchWindow(for seatID: RawSeatID, touchID: Int32) -> WindowID? {
-        windowID(for: touchFocusBySeatAndID[TouchFocusKey(seatID: seatID, touchID: touchID)])
-    }
-
-    func clearTouchFocuses(seatID: RawSeatID) {
-        touchFocusBySeatAndID = touchFocusBySeatAndID.filter { entry in
-            entry.key.seatID != seatID
-        }
-    }
-
-    func clearPointerFocus(seatID: RawSeatID, surfaceID: RawObjectID?) {
-        guard let surfaceID, pointerFocusBySeat[seatID] == surfaceID else {
-            return
-        }
-
-        pointerFocusBySeat[seatID] = nil
-    }
-
-    func clearKeyboardFocus(seatID: RawSeatID, surfaceID: RawObjectID?) {
-        guard let surfaceID, keyboardFocusBySeat[seatID] == surfaceID else {
-            return
-        }
-
-        keyboardFocusBySeat[seatID] = nil
     }
 }

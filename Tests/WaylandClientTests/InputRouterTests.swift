@@ -63,6 +63,19 @@ struct PointerInputRouterTests {
     }
 
     @Test
+    func unregisterClearsPointerFocusForSurface() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 15)
+        router.register(windowID: WindowID(rawValue: 150), surfaceID: 1_500)
+
+        _ = router.route(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 1_500))
+        router.unregister(surfaceID: 1_500)
+        let motion = router.route(rawPointerMotion(sequence: 2, seatID: seatID, time: 2))
+
+        #expect(motion.first?.windowID == nil)
+    }
+
+    @Test
     func pointerButtonAndAxisRouteToFocusedWindow() {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 8)
@@ -343,6 +356,19 @@ struct TouchInputRouterTests {
 
         #expect(cancel.first?.windowID == nil)
         #expect(cancel.first?.kind == .touch(.cancel))
+        #expect(motion.first?.windowID == nil)
+    }
+
+    @Test
+    func unregisterClearsTouchFocusForSurface() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 16)
+        router.register(windowID: WindowID(rawValue: 160), surfaceID: 1_600)
+
+        _ = router.route(rawTouchDown(sequence: 1, seatID: seatID, surfaceID: 1_600, id: 4))
+        router.unregister(surfaceID: 1_600)
+        let motion = router.route(rawTouchMotion(sequence: 2, seatID: seatID, id: 4))
+
         #expect(motion.first?.windowID == nil)
     }
 }
