@@ -112,6 +112,35 @@ struct WindowModelTests {
     }
 
     @Test
+    func requestOnlyCloseBeforeInitialConfigurePublishesRequestWithoutDestroying() throws {
+        var model = try configuredModelReadyForConfigure()
+
+        let effects = try model.reduce(.compositorCloseRequested(policy: .requestOnly))
+
+        #expect(effects == [.publishCloseRequested(windowID)])
+        #expect(model.closeRequest == .requested)
+        #expect(model.currentConfiguration == nil)
+        #expect(!model.isClosed)
+    }
+
+    @Test
+    func requestOnlyCloseBeforeInitialConfigureCarriesRequestIntoActiveState() throws {
+        var model = try configuredModelReadyForConfigure()
+
+        _ = try model.reduce(.compositorCloseRequested(policy: .requestOnly))
+        #expect(try model.reduce(.compositorCloseRequested(policy: .requestOnly)).isEmpty)
+
+        let effects = try model.reduce(
+            .configureReceived(configure(width: 800, height: 600, serial: 8))
+        )
+
+        #expect(effects == [.ackConfigure(8), .publishRedrawRequested(windowID)])
+        #expect(model.closeRequest == .requested)
+        #expect(model.currentConfiguration != nil)
+        #expect(!model.isClosed)
+    }
+
+    @Test
     func repeatedRequestOnlyCloseDoesNotRepublishRequest() throws {
         var model = try activePublishedModel()
 
