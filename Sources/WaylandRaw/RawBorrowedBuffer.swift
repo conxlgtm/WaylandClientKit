@@ -1,7 +1,12 @@
+@unsafe
 package struct RawBorrowedBuffer: Equatable {
-    package let pointer: OpaquePointer
+    private let borrowedPointer: OpaquePointer
+
+    package var pointer: OpaquePointer {
+        unsafe borrowedPointer
+    }
 
     package init(pointer bufferPointer: OpaquePointer) {
-        pointer = bufferPointer
+        unsafe borrowedPointer = bufferPointer
     }
 }

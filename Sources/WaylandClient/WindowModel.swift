@@ -466,11 +466,19 @@ extension WindowModel {
 
     private func requireActiveWindowState() throws -> ActiveWindowState {
         guard let activeState else {
-            if case .closing = lifecycle {
+            switch lifecycle {
+            case .closing:
                 throw ClientError.window(id, .invalidLifecycleTransition(.presentWhileClosing))
+            case .destroyed:
+                throw ClientError.window(id, .invalidLifecycleTransition(.presentAfterDestroyed))
+            case .created, .roleAssigned, .waitingForInitialConfigure:
+                throw ClientError.window(
+                    id,
+                    .invalidLifecycleTransition(.mapBeforeInitialConfigure)
+                )
+            case .active:
+                preconditionFailure("active lifecycle must carry active state")
             }
-
-            throw ClientError.window(id, .invalidLifecycleTransition(.mapBeforeInitialConfigure))
         }
 
         return activeState

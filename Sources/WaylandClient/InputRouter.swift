@@ -1,5 +1,9 @@
 import WaylandRaw
 
+struct AcceptedRawInputEvent {
+    let raw: RawInputEvent
+}
+
 final class InputRouter {
     var deviceGraph = InputDeviceGraph()
     private var windowsBySurface: [RawObjectID: WindowID] = [:]
@@ -14,7 +18,35 @@ final class InputRouter {
     }
 
     func route(_ event: RawInputEvent) -> [InputEvent] {
-        guard let routed = routeOne(event) else {
+        guard let acceptedEvent = acceptRawInputEvent(event) else {
+            return []
+        }
+
+        return route(acceptedEvent)
+    }
+
+    func acceptRawInputEvent(_ event: RawInputEvent) -> AcceptedRawInputEvent? {
+        let isAccepted: Bool
+        switch event.kind {
+        case .pointer:
+            isAccepted = acceptPointerDeviceEvent(event)
+        case .keyboard:
+            isAccepted = acceptKeyboardDeviceEvent(event)
+        case .touch:
+            isAccepted = acceptTouchDeviceEvent(event)
+        case .seat, .seatRemoved, .diagnostic:
+            isAccepted = true
+        }
+
+        guard isAccepted else {
+            return nil
+        }
+
+        return AcceptedRawInputEvent(raw: event)
+    }
+
+    func route(_ event: AcceptedRawInputEvent) -> [InputEvent] {
+        guard let routed = routeOne(event.raw) else {
             return []
         }
 
@@ -24,6 +56,7 @@ final class InputRouter {
     private func routeOne(_ event: RawInputEvent) -> InputEvent? {
         switch event.kind {
         case .seat(let snapshot):
+            applySeatSnapshot(event, snapshot)
             return routedEvent(
                 event,
                 windowID: nil,
