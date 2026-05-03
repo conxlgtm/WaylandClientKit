@@ -1,4 +1,5 @@
 #include "swift-wayland-shims.h"
+#include "generated/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/xdg-shell-client-protocol.h"
 
 /*
@@ -101,4 +102,29 @@ int swl_xdg_toplevel_add_listener(
 {
     return xdg_toplevel_add_listener(
         xdg_toplevel, &swl_xdg_toplevel_listener_impl, (void *)callbacks);
+}
+
+/*
+ * zxdg_toplevel_decoration_v1 listener bridge
+ */
+
+static void swl_zxdg_toplevel_decoration_v1_handle_configure(
+    void *data, struct zxdg_toplevel_decoration_v1 *decoration, uint32_t mode)
+{
+    const struct swl_zxdg_toplevel_decoration_v1_listener_callbacks *cb = data;
+    if (cb && cb->configure)
+        cb->configure(cb->data, decoration, mode);
+}
+
+static const struct zxdg_toplevel_decoration_v1_listener
+    swl_zxdg_toplevel_decoration_v1_listener_impl = {
+        .configure = swl_zxdg_toplevel_decoration_v1_handle_configure,
+};
+
+int swl_zxdg_toplevel_decoration_v1_add_listener(
+    struct zxdg_toplevel_decoration_v1 *decoration,
+    const struct swl_zxdg_toplevel_decoration_v1_listener_callbacks *callbacks)
+{
+    return zxdg_toplevel_decoration_v1_add_listener(
+        decoration, &swl_zxdg_toplevel_decoration_v1_listener_impl, (void *)callbacks);
 }

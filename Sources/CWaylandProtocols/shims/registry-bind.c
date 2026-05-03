@@ -1,5 +1,6 @@
 #include "swift-wayland-shims.h"
 #include "generated/wayland-client-protocol.h"
+#include "generated/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/xdg-shell-client-protocol.h"
 
 struct wl_compositor *swl_registry_bind_wl_compositor(
@@ -21,6 +22,13 @@ struct xdg_wm_base *swl_registry_bind_xdg_wm_base(
 {
     return (struct xdg_wm_base *)wl_registry_bind(
         registry, name, &xdg_wm_base_interface, version);
+}
+
+struct zxdg_decoration_manager_v1 *swl_registry_bind_zxdg_decoration_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct zxdg_decoration_manager_v1 *)wl_registry_bind(
+        registry, name, &zxdg_decoration_manager_v1_interface, version);
 }
 
 struct wl_seat *swl_registry_bind_wl_seat(

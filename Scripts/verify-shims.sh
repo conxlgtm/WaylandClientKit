@@ -21,6 +21,7 @@ protocol_symbols=(
     swl_registry_bind_wl_compositor
     swl_registry_bind_wl_shm
     swl_registry_bind_xdg_wm_base
+    swl_registry_bind_zxdg_decoration_manager_v1
     swl_registry_bind_wl_seat
     swl_registry_add_listener
     swl_callback_add_listener
@@ -28,6 +29,7 @@ protocol_symbols=(
     swl_xdg_wm_base_add_listener
     swl_xdg_surface_add_listener
     swl_xdg_toplevel_add_listener
+    swl_zxdg_toplevel_decoration_v1_add_listener
     swl_seat_add_listener
     swl_pointer_add_listener
     swl_keyboard_add_listener
@@ -38,6 +40,13 @@ protocol_symbols=(
     swl_proxy_get_version
     swl_proxy_get_id
     swl_proxy_get_queue_raw
+    swl_zxdg_decoration_manager_v1_get_toplevel_decoration
+    swl_zxdg_toplevel_decoration_v1_set_mode
+    swl_zxdg_toplevel_decoration_v1_unset_mode
+    swl_zxdg_toplevel_decoration_v1_mode_client_side
+    swl_zxdg_toplevel_decoration_v1_mode_server_side
+    swl_zxdg_toplevel_decoration_v1_destroy
+    swl_zxdg_decoration_manager_v1_destroy
 )
 
 cursor_symbols=(

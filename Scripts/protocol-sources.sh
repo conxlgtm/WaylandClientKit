@@ -46,6 +46,22 @@ protocol_sources_xdg_shell_candidates() {
         /usr/share/qt6/wayland/protocols/xdg-shell/xdg-shell.xml
 }
 
+protocol_sources_xdg_decoration_candidates() {
+    local protocols_dir
+
+    if [[ -n "${XDG_DECORATION_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$XDG_DECORATION_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml}" \
+        /usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml \
+        /usr/local/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml
+}
+
 protocol_sources_first_existing_file() {
     local path
 
