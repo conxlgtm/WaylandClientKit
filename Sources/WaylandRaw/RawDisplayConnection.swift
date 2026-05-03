@@ -425,6 +425,9 @@ extension RawDisplayConnection {
         guard let global = optionalGlobal(named: "zxdg_decoration_manager_v1") else {
             return nil
         }
+        guard Self.shouldBindXDGDecorationManager(global) else {
+            return nil
+        }
 
         let version = global.negotiatedVersion(
             supportedByClient: SupportedVersions.zxdgDecorationManagerV1
@@ -444,6 +447,12 @@ extension RawDisplayConnection {
             version: version,
             proxyAdoption: proxyAdoption
         )
+    }
+
+    package static func shouldBindXDGDecorationManager(
+        _ global: RawGlobalAdvertisement
+    ) -> Bool {
+        global.advertisedVersion >= SupportedVersions.zxdgDecorationManagerV1Minimum
     }
 
     private func bindSeatRegistry(

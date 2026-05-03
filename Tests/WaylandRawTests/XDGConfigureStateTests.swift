@@ -33,7 +33,19 @@ struct XDGConfigureStateTests {
         state.handleDecorationConfigure(mode: .clientSide)
 
         #expect(state.handleSurfaceConfigure(serial: 1).decorationMode == .clientSide)
+        _ = state.consumeLatestConfigure()
         #expect(state.handleSurfaceConfigure(serial: 2).decorationMode == nil)
+    }
+
+    @Test
+    func decorationModeSurvivesSkippedSurfaceConfigure() {
+        let state = XDGConfigureState()
+        state.handleDecorationConfigure(mode: .serverSide)
+        _ = state.handleSurfaceConfigure(serial: 1)
+
+        #expect(state.handleSurfaceConfigure(serial: 2).decorationMode == .serverSide)
+        #expect(state.consumeLatestConfigure()?.serial == 2)
+        #expect(state.handleSurfaceConfigure(serial: 3).decorationMode == nil)
     }
 
     @Test
