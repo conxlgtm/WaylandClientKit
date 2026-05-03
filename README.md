@@ -207,6 +207,12 @@ Run the raw-layer strict memory-safety file baseline:
 make strict-memory-safety-raw
 ```
 
+Generate a public API report before a checkpoint release:
+
+```bash
+./Scripts/dump-public-api.sh
+```
+
 Run the unsafe-token allowlist check:
 
 ```bash
@@ -238,6 +244,8 @@ swift run swift-wayland-smoke
 
 - [Architecture](docs/architecture.md)
 - [Protocol Generation](docs/generation.md)
+- [Public API Audit](docs/public-api-audit.md)
+- [Release Checklist](docs/release.md)
 - [Contributing](CONTRIBUTING.md)
 
 ## Documentation Format
