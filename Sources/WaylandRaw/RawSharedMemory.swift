@@ -239,7 +239,7 @@ package final class RawBuffer {
     package let width: Int32
     package let height: Int32
     package let stride: Int32
-    package let bytes: UnsafeMutableRawBufferPointer
+    private let bytes: UnsafeMutableRawBufferPointer
 
     private let releaseOwner: BufferReleaseOwner
     private var proxy: RawOwnedProxy
@@ -249,6 +249,12 @@ package final class RawBuffer {
     var pointer: OpaquePointer { proxy.pointer }
 
     package var isBusy: Bool { busyState.isBusy }
+
+    package func withUnsafeMutableBytes<R>(
+        _ body: (UnsafeMutableRawBufferPointer) throws -> R
+    ) rethrows -> R {
+        try unsafe body(bytes)
+    }
 
     init(
         pointer bufferPointer: OpaquePointer,

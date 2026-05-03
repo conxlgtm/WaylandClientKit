@@ -7,20 +7,20 @@ package struct RawOwnedProxy: ~Copyable {
         pointer proxyPointer: OpaquePointer,
         destroy destroyProxyFunction: @escaping (OpaquePointer) -> Void
     ) {
-        pointer = proxyPointer
-        destroyProxy = destroyProxyFunction
+        unsafe pointer = proxyPointer
+        unsafe destroyProxy = destroyProxyFunction
     }
 
     package mutating func destroy() {
         guard !isDestroyed else { return }
 
         isDestroyed = true
-        destroyProxy(pointer)
+        unsafe destroyProxy(pointer)
     }
 
     deinit {
         if !isDestroyed {
-            destroyProxy(pointer)
+            unsafe destroyProxy(pointer)
         }
     }
 }

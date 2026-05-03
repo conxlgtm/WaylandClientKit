@@ -237,15 +237,16 @@ package final class TopLevelWindow {
                 return .waitingForBuffer
             }
 
-            let frame = try unsafe SoftwareFrame(
-                width: buffer.width,
-                height: buffer.height,
-                stride: buffer.stride,
-                bytes: buffer.bytes
-            )
-
             do {
-                try draw(frame)
+                try unsafe buffer.withUnsafeMutableBytes { bytes in
+                    let frame = try unsafe SoftwareFrame(
+                        width: buffer.width,
+                        height: buffer.height,
+                        stride: buffer.stride,
+                        bytes: bytes
+                    )
+                    try draw(frame)
+                }
             } catch {
                 failActivePresentation(
                     generation: request.generation,
