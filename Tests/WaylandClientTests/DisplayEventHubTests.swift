@@ -75,7 +75,9 @@ struct DisplayEventHubTests {
     @Test
     func publishingInputDiagnosticUsesDiagnosticDisplayEvent() async {
         let hub = DisplayEventHub()
-        let diagnostic = queueOverflowDiagnostic(capacity: 1)
+        let diagnostic = pipelineOverflowDiagnostic(
+            InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
+        )
         let inputEvent = InputEvent(
             sequence: 2,
             seatID: SeatID(rawValue: 3),
@@ -470,14 +472,6 @@ private func diagnosticInputEvent(sequence: UInt64, message: String) -> InputEve
 
 private func cursorDiagnostic(_ message: String) -> InputDiagnostic {
     InputDiagnostic(.cursor(.automaticPointerEnterFailed(message)))
-}
-
-private func queueOverflowDiagnostic(capacity: Int) -> InputDiagnostic {
-    InputDiagnostic(
-        .queueOverflow(
-            InputPipelineOverflow(stage: .rawInputQueue, capacity: capacity)
-        )
-    )
 }
 
 private func pipelineOverflowDiagnostic(_ overflow: InputPipelineOverflow) -> InputDiagnostic {
