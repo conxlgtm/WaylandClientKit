@@ -12,6 +12,10 @@ struct xdg_surface;
 struct xdg_toplevel;
 struct zxdg_decoration_manager_v1;
 struct zxdg_toplevel_decoration_v1;
+struct wp_viewporter;
+struct wp_viewport;
+struct wp_fractional_scale_manager_v1;
+struct wp_fractional_scale_v1;
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,6 +35,12 @@ struct xdg_wm_base *swl_registry_bind_xdg_wm_base(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct zxdg_decoration_manager_v1 *swl_registry_bind_zxdg_decoration_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_viewporter *swl_registry_bind_wp_viewporter(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_fractional_scale_manager_v1 *swl_registry_bind_wp_fractional_scale_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wl_seat *swl_registry_bind_wl_seat(
@@ -68,6 +78,7 @@ void swl_surface_damage_buffer(
     int32_t width, int32_t height);
 // for older wl_surface versions
 void swl_surface_damage(struct wl_surface *surface, int32_t xd, int32_t y, int32_t width, int32_t height);
+void swl_surface_set_buffer_scale(struct wl_surface *surface, int32_t scale);
 
 uint32_t swl_shm_format_xrgb8888(void);
 uint32_t swl_shm_format_argb8888(void);
@@ -108,6 +119,22 @@ uint32_t swl_zxdg_toplevel_decoration_v1_mode_client_side(void);
 uint32_t swl_zxdg_toplevel_decoration_v1_mode_server_side(void);
 
 /* ------------------------------------------------------------------ */
+/*  Scale and viewport request wrappers                               */
+/* ------------------------------------------------------------------ */
+
+struct wp_viewport *swl_wp_viewporter_get_viewport(
+    struct wp_viewporter *viewporter,
+    struct wl_surface *surface);
+void swl_wp_viewport_set_destination(
+    struct wp_viewport *viewport,
+    int32_t width,
+    int32_t height);
+
+struct wp_fractional_scale_v1 *swl_wp_fractional_scale_manager_v1_get_fractional_scale(
+    struct wp_fractional_scale_manager_v1 *manager,
+    struct wl_surface *surface);
+
+/* ------------------------------------------------------------------ */
 /*  Destroy / release wrappers                                        */
 /* ------------------------------------------------------------------ */
 
@@ -130,6 +157,11 @@ void swl_zxdg_toplevel_decoration_v1_destroy(
     struct zxdg_toplevel_decoration_v1 *decoration);
 void swl_zxdg_decoration_manager_v1_destroy(
     struct zxdg_decoration_manager_v1 *manager);
+void swl_wp_viewport_destroy(struct wp_viewport *viewport);
+void swl_wp_viewporter_destroy(struct wp_viewporter *viewporter);
+void swl_wp_fractional_scale_v1_destroy(struct wp_fractional_scale_v1 *fractional_scale);
+void swl_wp_fractional_scale_manager_v1_destroy(
+    struct wp_fractional_scale_manager_v1 *manager);
 
 /* ------------------------------------------------------------------ */
 /*  Display wrappers                                                  */
@@ -180,6 +212,8 @@ typedef void (*swl_registry_global_remove_fn)(
 typedef void (*swl_callback_done_fn)(
     void *data, struct wl_callback *callback, uint32_t callback_data);
 typedef void (*swl_buffer_release_fn)(void *data, struct wl_buffer *buffer);
+typedef void (*swl_surface_preferred_buffer_scale_fn)(
+    void *data, struct wl_surface *surface, int32_t factor);
 
 /* XDG shell */
 typedef void (*swl_xdg_wm_base_ping_fn)(
@@ -201,6 +235,10 @@ typedef void (*swl_xdg_toplevel_wm_capabilities_fn)(
 /* XDG decoration */
 typedef void (*swl_zxdg_toplevel_decoration_v1_configure_fn)(
     void *data, struct zxdg_toplevel_decoration_v1 *decoration, uint32_t mode);
+
+/* Fractional scale */
+typedef void (*swl_wp_fractional_scale_v1_preferred_scale_fn)(
+    void *data, struct wp_fractional_scale_v1 *fractional_scale, uint32_t scale);
 
 /* Seat */
 typedef void (*swl_seat_capabilities_fn)(
@@ -295,6 +333,11 @@ struct swl_buffer_listener_callbacks {
     void                 *data;
 };
 
+struct swl_surface_listener_callbacks {
+    swl_surface_preferred_buffer_scale_fn preferred_buffer_scale;
+    void                                 *data;
+};
+
 struct swl_xdg_wm_base_listener_callbacks {
     swl_xdg_wm_base_ping_fn ping;
     void                    *data;
@@ -316,6 +359,11 @@ struct swl_xdg_toplevel_listener_callbacks {
 struct swl_zxdg_toplevel_decoration_v1_listener_callbacks {
     swl_zxdg_toplevel_decoration_v1_configure_fn configure;
     void                                        *data;
+};
+
+struct swl_wp_fractional_scale_v1_listener_callbacks {
+    swl_wp_fractional_scale_v1_preferred_scale_fn preferred_scale;
+    void                                         *data;
 };
 
 struct swl_seat_listener_callbacks {
@@ -376,6 +424,10 @@ int swl_buffer_add_listener(
     struct wl_buffer *buffer,
     const struct swl_buffer_listener_callbacks *callbacks);
 
+int swl_surface_add_listener(
+    struct wl_surface *surface,
+    const struct swl_surface_listener_callbacks *callbacks);
+
 int swl_xdg_wm_base_add_listener(
     struct xdg_wm_base *wm_base,
     const struct swl_xdg_wm_base_listener_callbacks *callbacks);
@@ -391,6 +443,10 @@ int swl_xdg_toplevel_add_listener(
 int swl_zxdg_toplevel_decoration_v1_add_listener(
     struct zxdg_toplevel_decoration_v1 *decoration,
     const struct swl_zxdg_toplevel_decoration_v1_listener_callbacks *callbacks);
+
+int swl_wp_fractional_scale_v1_add_listener(
+    struct wp_fractional_scale_v1 *fractional_scale,
+    const struct swl_wp_fractional_scale_v1_listener_callbacks *callbacks);
 
 int swl_seat_add_listener(
     struct wl_seat *seat,

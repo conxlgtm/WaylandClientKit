@@ -336,7 +336,7 @@ extension RawDisplayConnection {
         return global
     }
 
-    private func optionalGlobal(named interfaceName: String) -> RawGlobalAdvertisement? {
+    package func optionalGlobal(named interfaceName: String) -> RawGlobalAdvertisement? {
         registryState.firstGlobal(named: interfaceName)
     }
 
@@ -411,65 +411,6 @@ extension RawDisplayConnection {
             compositor.destroy()
             throw error
         }
-    }
-
-    private func bindOptionalGlobals(registry reg: OpaquePointer) throws -> OptionalGlobals {
-        OptionalGlobals(
-            xdgDecorationManager: try bindXDGDecorationManagerIfPresent(registry: reg)
-        )
-    }
-
-    private func bindXDGDecorationManagerIfPresent(
-        registry reg: OpaquePointer
-    ) throws -> OptionalXDGDecorationManager {
-        guard let global = optionalGlobal(named: "zxdg_decoration_manager_v1") else {
-            return .missing
-        }
-
-        switch Self.xdgDecorationManagerBindingDecision(global) {
-        case .unsupportedVersion(let advertised, let minimum):
-            return .unsupportedVersion(advertised: advertised, minimum: minimum)
-        case .bind(let version):
-            guard
-                let manager = unsafe swl_registry_bind_zxdg_decoration_manager_v1(
-                    reg,
-                    global.name,
-                    version.value
-                )
-            else {
-                throw RuntimeError.bindFailed("zxdg_decoration_manager_v1")
-            }
-
-            let wrappedManager = try unsafe RawXDGDecorationManager(
-                pointer: manager,
-                version: version,
-                proxyAdoption: proxyAdoption
-            )
-            return .bound(wrappedManager)
-        }
-    }
-
-    package static func shouldBindXDGDecorationManager(
-        _ global: RawGlobalAdvertisement
-    ) -> Bool {
-        global.advertisedVersion >= SupportedVersions.zxdgDecorationManagerV1Minimum
-    }
-
-    package static func xdgDecorationManagerBindingDecision(
-        _ global: RawGlobalAdvertisement
-    ) -> XDGDecorationManagerBindingDecision {
-        guard shouldBindXDGDecorationManager(global) else {
-            return .unsupportedVersion(
-                advertised: global.advertisedVersion,
-                minimum: SupportedVersions.zxdgDecorationManagerV1Minimum
-            )
-        }
-
-        return .bind(
-            version: global.negotiatedVersion(
-                supportedByClient: SupportedVersions.zxdgDecorationManagerV1
-            )
-        )
     }
 
     private func bindSeatRegistry(

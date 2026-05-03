@@ -7,6 +7,8 @@ package enum SupportedVersions {
     package static let xdgWmBase: RawVersion = 7
     package static let zxdgDecorationManagerV1Minimum: RawVersion = 2
     package static let zxdgDecorationManagerV1: RawVersion = 2
+    package static let wpViewporter: RawVersion = 1
+    package static let wpFractionalScaleManagerV1: RawVersion = 1
     package static let wlSeat: RawVersion = 10
 }
 
@@ -27,16 +29,47 @@ package enum OptionalXDGDecorationManager {
     }
 }
 
+package enum OptionalViewporter {
+    case missing
+    case bound(RawViewporter)
+
+    func destroy() {
+        guard case .bound(let viewporter) = self else { return }
+
+        viewporter.destroy()
+    }
+}
+
+package enum OptionalFractionalScaleManager {
+    case missing
+    case bound(RawFractionalScaleManager)
+
+    func destroy() {
+        guard case .bound(let manager) = self else { return }
+
+        manager.destroy()
+    }
+}
+
 package struct OptionalGlobals {
     package let xdgDecorationManager: OptionalXDGDecorationManager
+    package let viewporter: OptionalViewporter
+    package let fractionalScaleManager: OptionalFractionalScaleManager
 
     package init(
-        xdgDecorationManager manager: OptionalXDGDecorationManager = .missing
+        xdgDecorationManager manager: OptionalXDGDecorationManager = .missing,
+        viewporter boundViewporter: OptionalViewporter = .missing,
+        fractionalScaleManager boundFractionalScaleManager: OptionalFractionalScaleManager =
+            .missing
     ) {
         xdgDecorationManager = manager
+        viewporter = boundViewporter
+        fractionalScaleManager = boundFractionalScaleManager
     }
 
     func destroy() {
+        fractionalScaleManager.destroy()
+        viewporter.destroy()
         xdgDecorationManager.destroy()
     }
 }
