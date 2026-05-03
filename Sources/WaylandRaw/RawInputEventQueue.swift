@@ -146,13 +146,12 @@ package final class RawInputEventQueue: RawInputEventSink, Sendable {
                 deviceID: event.deviceID,
                 kind: .diagnostic(
                     RawInputDiagnostic(
-                        operation: .inputPipelineOverflow(
+                        .inputPipelineOverflow(
                             RawInputPipelineOverflow(
                                 stage: .rawInputQueue,
                                 capacity: configuration.capacity
                             )
-                        ),
-                        message: "raw input queue exceeded capacity \(configuration.capacity)"
+                        )
                     )
                 )
             )

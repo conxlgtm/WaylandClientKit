@@ -257,8 +257,7 @@ struct CursorManagerTests {
             windowID: nil,
             kind: .diagnostic(
                 InputDiagnostic(
-                    operation: .cursor("missingCursor"),
-                    message: "cursor left_ptr is unavailable"
+                    .cursor(.missingCursor(name: "left_ptr"))
                 )
             )
         )

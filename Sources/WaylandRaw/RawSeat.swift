@@ -256,11 +256,7 @@ public final class RawSeat {
             },
             onError: { [weak seat = self] error in
                 seat?.lastCapabilityError = error
-                seat?.appendDiagnostic(
-                    deviceID: deviceID,
-                    operation: .keyboardKeymap,
-                    error: error
-                )
+                seat?.appendKeymapDiagnostic(deviceID: deviceID, error: error)
             }
         )
         do {
@@ -388,21 +384,24 @@ public final class RawSeat {
         )
     }
 
-    private func appendDiagnostic(
-        deviceID: RawInputDeviceID?,
-        operation: RawInputDiagnosticOperation,
-        error: any Error
-    ) {
+    private func appendKeymapDiagnostic(deviceID: RawInputDeviceID?, error: any Error) {
+        let payload: RawInputDiagnosticPayload
+        if let keymapError = error as? RawKeyboardKeymapReadError {
+            payload = .keymap(.readFailed(keymapError))
+        } else {
+            payload = .listener(
+                RawListenerDiagnostic(
+                    listener: "wl_keyboard.keymap",
+                    message: String(describing: error)
+                )
+            )
+        }
+
         eventSink.append(
             RawInputEventDraft(
                 seatID: id,
                 deviceID: deviceID,
-                kind: .diagnostic(
-                    RawInputDiagnostic(
-                        operation: operation,
-                        message: String(describing: error)
-                    )
-                )
+                kind: .diagnostic(RawInputDiagnostic(payload))
             )
         )
     }

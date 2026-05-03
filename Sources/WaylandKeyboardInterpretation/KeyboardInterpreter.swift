@@ -109,7 +109,7 @@ extension KeyboardInterpreter {
         _ diagnostic: RawInputDiagnostic,
         from event: RawInputEvent
     ) {
-        guard diagnostic.operation == .keyboardKeymap else { return }
+        guard case .keymap = diagnostic.payload else { return }
         guard let deviceID = event.deviceID else { return }
         guard deviceID.kind == .keyboard else { return }
 
