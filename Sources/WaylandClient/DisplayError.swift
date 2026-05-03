@@ -2,22 +2,22 @@ import WaylandRaw
 import WaylandRawUnsafeShim
 
 public enum WaylandSystemErrorConstructionError: Error, Equatable, Sendable {
-    case zeroErrno
+    case nonPositiveErrno(Int32)
 }
 
 public struct WaylandSystemErrno: Equatable, Sendable, CustomStringConvertible {
     public let rawValue: Int32
 
     public init(_ rawErrorNumber: Int32) throws {
-        guard rawErrorNumber != 0 else {
-            throw WaylandSystemErrorConstructionError.zeroErrno
+        guard rawErrorNumber > 0 else {
+            throw WaylandSystemErrorConstructionError.nonPositiveErrno(rawErrorNumber)
         }
 
         rawValue = rawErrorNumber
     }
 
     package init(unchecked rawErrorNumber: Int32) {
-        precondition(rawErrorNumber != 0, "errno 0 is not a system failure")
+        precondition(rawErrorNumber > 0, "errno must be positive")
         rawValue = rawErrorNumber
     }
 
