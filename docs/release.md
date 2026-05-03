@@ -81,7 +81,7 @@ Supported:
 - Project-owned C shims for supported requests and listeners.
 - Display connection, registry discovery, and version-negotiated binds.
 - Single-thread-affine event loop.
-- wl_shm XRGB8888 software rendering.
+- Scale-aware wl_shm XRGB8888 software rendering.
 - xdg-shell toplevel lifecycle.
 - Frame callback paced redraw.
 - Basic seat, pointer, keyboard, and touch input capture.
@@ -96,7 +96,7 @@ Not supported:
 - Clipboard, primary selection, or drag and drop.
 - Cursor animation or per-output cursor scaling.
 - Client-side decorations.
-- Fractional scaling.
+- Full output-management API.
 - Presentation timing.
 - EGL, GBM, dmabuf, or GPU rendering.
 - Multi-threaded event queues.
