@@ -311,6 +311,22 @@ private final class DisplayEventSource: WaylandThreadEventSource {
     }
 
     func handleEventLoopError(_ error: any Error) {
-        core.fail(WaylandDisplayError(error))
+        core.fail(displayError(for: error))
+    }
+
+    private func displayError(for error: any Error) -> WaylandDisplayError {
+        if let displayError = error as? WaylandDisplayError {
+            return displayError
+        }
+
+        if let runtimeError = error as? RuntimeError {
+            return WaylandDisplayError(runtimeError)
+        }
+
+        if let executorError = error as? WaylandThreadExecutorError {
+            return WaylandDisplayError(executorError)
+        }
+
+        return .internalInvariantViolation(.message(String(describing: error)))
     }
 }

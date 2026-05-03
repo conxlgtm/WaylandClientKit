@@ -11,12 +11,60 @@ struct RawKeyboardKeymapReaderTests {
         let descriptor = try makeTemporaryFileDescriptor(bytes: bytes)
 
         let payload = try RawKeyboardKeymapReader.readKeymap(
+            id: keymapID(),
+            format: .xkbV1,
             fd: descriptor,
             size: UInt32(bytes.count),
             maximumSize: 1_024
         ) { close($0) }
 
-        #expect(payload == bytes)
+        #expect(payload.xkbV1Bytes?.rawValue == bytes)
+    }
+
+    @Test
+    func noKeymapProducesDistinctPayloadWithoutReadingBytes() throws {
+        let descriptor = Int32(-1)
+        let id = keymapID()
+
+        let payload = try RawKeyboardKeymapReader.readKeymap(
+            id: id,
+            format: .noKeymap,
+            fd: descriptor,
+            size: 0,
+            maximumSize: 1_024
+        ) { _ in
+            Issue.record("noKeymap should not close invalid file descriptors")
+        }
+
+        #expect(payload == .noKeymap(id: id))
+        #expect(payload.size == 0)
+    }
+
+    @Test
+    func throwsWhenFormatIsUnsupported() throws {
+        let bytes = [UInt8(1), UInt8(0)]
+        let descriptor = try makeTemporaryFileDescriptor(bytes: bytes)
+        let unsupported = RawKeyboardKeymapFormat(rawValue: 99)
+        var closedDescriptors: [Int32] = []
+
+        #expect(
+            throws: RawKeyboardKeymapReadError.unsupportedFormat(
+                format: unsupported,
+                advertisedSize: UInt32(bytes.count)
+            )
+        ) {
+            try RawKeyboardKeymapReader.readKeymap(
+                id: keymapID(),
+                format: unsupported,
+                fd: descriptor,
+                size: UInt32(bytes.count),
+                maximumSize: 1_024
+            ) { descriptor in
+                closedDescriptors.append(descriptor)
+                close(descriptor)
+            }
+        }
+        #expect(closedDescriptors == [descriptor])
     }
 
     @Test
@@ -27,6 +75,8 @@ struct RawKeyboardKeymapReaderTests {
         var closedDescriptors: [Int32] = []
         do {
             _ = try RawKeyboardKeymapReader.readKeymap(
+                id: keymapID(),
+                format: .xkbV1,
                 fd: descriptor,
                 size: 4,
                 maximumSize: 1_024
@@ -35,7 +85,7 @@ struct RawKeyboardKeymapReaderTests {
                 close(descriptor)
             }
             Issue.record("Expected keymap fd size error")
-        } catch RuntimeError.keymapFdTooSmall(let size, let actualSize) {
+        } catch RawKeyboardKeymapReadError.fdTooSmall(let size, let actualSize) {
             #expect(size == 4)
             #expect(actualSize == Int64(bytes.count))
         }
@@ -48,8 +98,10 @@ struct RawKeyboardKeymapReaderTests {
         let bytes = [UInt8](repeating: 0, count: 8)
         let descriptor = try makeTemporaryFileDescriptor(bytes: bytes)
 
-        #expect(throws: RuntimeError.keymapTooLarge(size: 8, maxSize: 4)) {
+        #expect(throws: RawKeyboardKeymapReadError.tooLarge(size: 8, maxSize: 4)) {
             try RawKeyboardKeymapReader.readKeymap(
+                id: keymapID(),
+                format: .xkbV1,
                 fd: descriptor,
                 size: 8,
                 maximumSize: 4
@@ -63,12 +115,14 @@ struct RawKeyboardKeymapReaderTests {
         let descriptor = try makeTemporaryFileDescriptor(bytes: bytes)
 
         #expect(
-            throws: RuntimeError.invalidKeymapSizeLimit(
+            throws: RawKeyboardKeymapReadError.invalidSizeLimit(
                 maxSize: RawKeyboardKeymapReader.hardMaximumKeymapSizeBytes + 1,
                 hardMaximumSize: RawKeyboardKeymapReader.hardMaximumKeymapSizeBytes
             )
         ) {
             try RawKeyboardKeymapReader.readKeymap(
+                id: keymapID(),
+                format: .xkbV1,
                 fd: descriptor,
                 size: 8,
                 maximumSize: RawKeyboardKeymapReader.hardMaximumKeymapSizeBytes + 1
@@ -81,8 +135,10 @@ struct RawKeyboardKeymapReaderTests {
         let bytes = [UInt8(1), UInt8(2)]
         let descriptor = try makeTemporaryFileDescriptor(bytes: bytes)
 
-        #expect(throws: RuntimeError.keymapNotNullTerminated(size: 2)) {
+        #expect(throws: RawKeyboardKeymapReadError.missingNULTerminator(size: 2)) {
             try RawKeyboardKeymapReader.readKeymap(
+                id: keymapID(),
+                format: .xkbV1,
                 fd: descriptor,
                 size: 2,
                 maximumSize: 1_024
@@ -95,13 +151,23 @@ struct RawKeyboardKeymapReaderTests {
         let bytes = [UInt8(0)]
         let descriptor = try makeTemporaryFileDescriptor(bytes: bytes)
 
-        #expect(throws: RuntimeError.invalidKeymapSize(1)) {
+        #expect(throws: RawKeyboardKeymapReadError.emptyXKBV1Payload(size: 1)) {
             try RawKeyboardKeymapReader.readKeymap(
+                id: keymapID(),
+                format: .xkbV1,
                 fd: descriptor,
                 size: 1,
                 maximumSize: 1_024
             ) { close($0) }
         }
+    }
+
+    private func keymapID() -> RawKeyboardKeymapID {
+        RawKeyboardKeymapID(
+            seatID: RawSeatID(rawValue: 1),
+            keyboardGeneration: 1,
+            keymapGeneration: 1
+        )
     }
 
     private func makeTemporaryFileDescriptor(bytes: [UInt8]) throws -> Int32 {

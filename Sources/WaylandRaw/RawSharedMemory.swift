@@ -2,8 +2,8 @@ import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
 
-public final class RawSharedMemory {
-    public let version: RawVersion
+package final class RawSharedMemory {
+    package let version: RawVersion
     package let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
@@ -30,7 +30,7 @@ public final class RawSharedMemory {
             destroy: swl_shm_destroy
         )
     }
-    public func createPool(
+    package func createPool(
         width: Int32,
         height: Int32,
         bufferCount: Int
@@ -118,13 +118,13 @@ private final class SharedMemoryMapping {
     }
 }
 
-public struct BufferLayout: Equatable, Sendable {
-    public let width: Int32
-    public let height: Int32
-    public let stride: Int32
-    public let byteCount: Int
+package struct BufferLayout: Equatable, Sendable {
+    package let width: Int32
+    package let height: Int32
+    package let stride: Int32
+    package let byteCount: Int
 
-    public init(width bufferWidth: Int32, height bufferHeight: Int32) throws(RuntimeError) {
+    package init(width bufferWidth: Int32, height bufferHeight: Int32) throws(RuntimeError) {
         guard bufferWidth > 0, bufferHeight > 0 else {
             throw RuntimeError.systemError(errno: EINVAL)
         }
@@ -149,18 +149,18 @@ public struct BufferLayout: Equatable, Sendable {
     }
 }
 
-public struct BufferBusyState: Equatable, Sendable {
-    public private(set) var isBusy = false
+package struct BufferBusyState: Equatable, Sendable {
+    package private(set) var isBusy = false
 
-    public init() {
+    package init() {
         // Start reusable until the buffer is attached for presentation.
     }
 
-    public mutating func markBusy() {
+    package mutating func markBusy() {
         isBusy = true
     }
 
-    public mutating func markReleased() {
+    package mutating func markReleased() {
         isBusy = false
     }
 }
@@ -235,7 +235,7 @@ private final class BufferReleaseOwner {
     }
 }
 
-public final class RawBuffer {
+package final class RawBuffer {
     package let width: Int32
     package let height: Int32
     package let stride: Int32
@@ -250,7 +250,7 @@ public final class RawBuffer {
         proxy.pointer
     }
 
-    public var isBusy: Bool {
+    package var isBusy: Bool {
         busyState.isBusy
     }
 
@@ -305,7 +305,7 @@ public final class RawBuffer {
         releaseObserver?()
     }
 
-    public func destroy() {
+    package func destroy() {
         releaseObserver = nil
         releaseOwner.cancel()
         proxy.destroy()
@@ -316,9 +316,9 @@ public final class RawBuffer {
     }
 }
 
-public final class RawSharedMemoryPool {
-    public let size: TopLevelSize
-    public let layout: BufferLayout
+package final class RawSharedMemoryPool {
+    package let size: TopLevelSize
+    package let layout: BufferLayout
 
     private let mapping: SharedMemoryMapping
     private let buffers: [RawBuffer]
@@ -391,15 +391,15 @@ public final class RawSharedMemoryPool {
         buffers.first { !$0.isBusy }
     }
 
-    public var hasFreeBuffers: Bool {
+    package var hasFreeBuffers: Bool {
         buffers.contains { !$0.isBusy }
     }
 
-    public var hasBusyBuffers: Bool {
+    package var hasBusyBuffers: Bool {
         buffers.contains(where: \.isBusy)
     }
 
-    public func destroy() {
+    package func destroy() {
         for buffer in buffers {
             buffer.destroy()
         }

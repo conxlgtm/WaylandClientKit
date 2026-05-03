@@ -14,8 +14,6 @@ package protocol WaylandThreadEventSource: AnyObject {
 }
 
 public enum WaylandThreadExecutorError: Error, Equatable, Sendable, CustomStringConvertible {
-    case eventFileDescriptorCreationFailed(Int32)
-    case threadCreationFailed(Int32)
     case executorNotReady
     case executorClosed
     case executorStopping(ShutdownMode)
@@ -30,10 +28,6 @@ public enum WaylandThreadExecutorError: Error, Equatable, Sendable, CustomString
 
     public var description: String {
         switch self {
-        case .eventFileDescriptorCreationFailed(let errorCode):
-            "failed to create Wayland owner thread wake fd: eventfd failed with errno \(errorCode)"
-        case .threadCreationFailed(let code):
-            "failed to create Wayland owner thread: pthread_create returned \(code)"
         case .executorNotReady:
             "Wayland owner thread executor is not ready"
         case .executorClosed:

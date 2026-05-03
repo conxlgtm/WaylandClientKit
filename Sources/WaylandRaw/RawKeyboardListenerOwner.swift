@@ -159,14 +159,15 @@ final class KeyboardListenerOwner {
         }
 
         do {
-            let payload = RawKeyboardKeymapPayload(
+            let payload = try RawKeyboardKeymapReader.readKeymap(
                 id: RawKeyboardKeymapID(
                     seatID: deviceID.seatID,
                     keyboardGeneration: deviceID.generation,
                     keymapGeneration: keymapGeneration
                 ),
                 format: RawKeyboardKeymapFormat(rawValue: rawFormat),
-                bytes: try RawKeyboardKeymapReader.readKeymap(fd: fd, size: size)
+                fd: fd,
+                size: size
             )
             keymapGeneration += 1
             append(.keymap(payload))

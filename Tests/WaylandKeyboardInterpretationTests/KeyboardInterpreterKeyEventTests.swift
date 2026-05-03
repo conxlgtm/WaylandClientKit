@@ -90,7 +90,7 @@ struct KeyboardInterpreterKeyEventTests {
         let interpreter = try interpreterWithFixtureKeymap()
         let deviceID = keyboardDevice()
         let shiftMask = try #require(
-            KeyboardLayoutState(keymap: keymapPayload(text: try fixtureKeymapText()))
+            KeyboardLayoutState(keymap: try keymapPayload(text: try fixtureKeymapText()))
                 .modifierMask(named: "Shift"))
         let modifiers = RawKeyboardModifiers(
             serial: 9,
