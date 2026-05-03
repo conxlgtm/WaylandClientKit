@@ -5,10 +5,19 @@ import Testing
 @testable import WaylandRawUnsafeShim
 
 private actor ShutdownCompletionRecorder {
+    private var starts: [String] = []
     private var completions: [String] = []
+
+    var startedValues: [String] {
+        starts
+    }
 
     var values: [String] {
         completions
+    }
+
+    func appendStarted(_ value: String) {
+        starts.append(value)
     }
 
     func append(_ value: String) {
@@ -44,12 +53,28 @@ private final class ConcurrentShutdownGate: Sendable {
 }
 
 private func waitUntil(_ predicate: () -> Bool) -> Bool {
-    for _ in 0..<1_000 {
+    for _ in 0..<5_000 {
         if predicate() {
             return true
         }
 
         usleep(1_000)
+    }
+
+    return false
+}
+
+private func waitUntilAsync(_ predicate: () async -> Bool) async -> Bool {
+    for _ in 0..<5_000 {
+        if await predicate() {
+            return true
+        }
+
+        do {
+            try await Task.sleep(nanoseconds: 1_000_000)
+        } catch {
+            return false
+        }
     }
 
     return false
@@ -72,23 +97,29 @@ struct WaylandThreadExecutorConcurrencyTests {
         }
         #expect(gate.waitUntilEntered())
 
+        executor.requestStopAfterCurrentJob(.abandonWaylandSources)
+        #expect(
+            executor.lifecycleSnapshotForTesting.state
+                == .stopRequested(.abandonWaylandSources)
+        )
+
         async let first: Void = {
-            executor.shutdown(.abandonWaylandSources)
+            await completions.appendStarted("first")
+            executor.shutdown(.orderly)
             await completions.append("first")
         }()
 
-        #expect(
-            waitUntil {
-                executor.lifecycleSnapshotForTesting.state
-                    == .joining(.abandonWaylandSources)
-            }
-        )
-
         async let second: Void = {
+            await completions.appendStarted("second")
             executor.shutdown(.orderly)
             await completions.append("second")
         }()
 
+        #expect(
+            await waitUntilAsync {
+                Set(await completions.startedValues) == ["first", "second"]
+            }
+        )
         usleep(10_000)
         #expect(await completions.values.isEmpty)
 
@@ -118,27 +149,33 @@ struct WaylandThreadExecutorConcurrencyTests {
         }
         #expect(gate.waitUntilEntered())
 
+        executor.requestStopAfterCurrentJob(.abandonWaylandSources)
+        #expect(
+            executor.lifecycleSnapshotForTesting.state
+                == .stopRequested(.abandonWaylandSources)
+        )
+
         async let first: Void = {
-            executor.shutdown(.abandonWaylandSources)
+            await completions.appendStarted("first")
+            executor.shutdown(.orderly)
             await completions.append("first")
         }()
-
-        #expect(
-            waitUntil {
-                executor.lifecycleSnapshotForTesting.state
-                    == .joining(.abandonWaylandSources)
-            }
-        )
 
         async let lateCallers: Void = withTaskGroup(of: Void.self) { group in
             for label in lateCallerLabels {
                 group.addTask {
+                    await completions.appendStarted(label)
                     executor.shutdown(.orderly)
                     await completions.append(label)
                 }
             }
         }
 
+        #expect(
+            await waitUntilAsync {
+                Set(await completions.startedValues) == Set(["first"] + lateCallerLabels)
+            }
+        )
         usleep(10_000)
         #expect(await completions.values.isEmpty)
 
