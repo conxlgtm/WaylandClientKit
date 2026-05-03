@@ -1,0 +1,139 @@
+import Testing
+import WaylandRaw
+
+@testable import WaylandClient
+
+@Suite
+struct CursorResolutionStateTests {
+    @Test
+    func automaticCursorFailureIsCachedAcrossPointerEnters() throws {
+        let backend = try RecordingCursorBackend()
+        backend.missingCursorNames = ["left_ptr"]
+        let manager = try CursorManager(backend: backend, configuration: .init())
+
+        manager.register(surfaceID: 100)
+        manager.register(surfaceID: 200)
+        let firstDiagnostics = manager.observe(
+            rawPointerEnter(
+                sequence: 1,
+                seatID: RawSeatID(rawValue: 5),
+                surfaceID: 100,
+                serial: 55
+            ))
+        let secondDiagnostics = manager.observe(
+            rawPointerEnter(
+                sequence: 2,
+                seatID: RawSeatID(rawValue: 5),
+                surfaceID: 200,
+                serial: 56
+            ))
+
+        #expect(backend.resolvedCursorNames == ["left_ptr"])
+        #expect(
+            manager.requestResults == [
+                .skippedMissingCursor(name: "left_ptr"),
+                .skippedMissingCursor(name: "left_ptr"),
+            ])
+        #expect(firstDiagnostics.first?.kind == cursorMissingDiagnostic())
+        #expect(secondDiagnostics.first?.kind == cursorMissingDiagnostic())
+    }
+
+    @Test
+    func explicitCursorChangeClearsCachedAutomaticFailure() throws {
+        let backend = try RecordingCursorBackend()
+        backend.missingCursorNames = ["left_ptr"]
+        let manager = try CursorManager(backend: backend, configuration: .init())
+
+        manager.register(surfaceID: 100)
+        _ = manager.observe(
+            rawPointerEnter(
+                sequence: 1,
+                seatID: RawSeatID(rawValue: 5),
+                surfaceID: 100,
+                serial: 55
+            ))
+        backend.missingCursorNames.removeAll()
+        _ = try manager.setPointerCursor(.text)
+
+        #expect(backend.resolvedCursorNames == ["left_ptr", "text"])
+        #expect(
+            manager.requestResults == [
+                .skippedMissingCursor(name: "left_ptr"),
+                .set(seatID: SeatID(rawValue: 5), serial: 55, cursor: .text),
+            ])
+    }
+
+    @Test
+    func automaticCursorBackendFailureDoesNotPoisonFuturePointerEnters() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 6)
+
+        manager.register(surfaceID: 100)
+        backend.setCursorResultOverride = .skippedUnknownSeat(seatID)
+        let firstDiagnostics = manager.observe(
+            rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 61)
+        )
+        backend.setCursorResultOverride = nil
+        let secondDiagnostics = manager.observe(
+            rawPointerEnter(sequence: 2, seatID: seatID, surfaceID: 100, serial: 62)
+        )
+
+        #expect(automaticCursorFailureMessage(firstDiagnostics) != nil)
+        #expect(secondDiagnostics.isEmpty)
+        #expect(backend.resolvedCursorNames == ["left_ptr"])
+        #expect(backend.setCursorRequests.map(\.serial) == [61, 62])
+        #expect(
+            manager.requestResults.last
+                == .set(seatID: SeatID(rawValue: 6), serial: 62, cursor: .defaultArrow)
+        )
+    }
+
+    @Test
+    func automaticCursorSurfaceCreationFailureIsRetried() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 7)
+
+        manager.register(surfaceID: 100)
+        backend.cursorSurfaceCreationError = CursorSurfaceCreationError.transient
+        let firstDiagnostics = manager.observe(
+            rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 71)
+        )
+        let secondDiagnostics = manager.observe(
+            rawPointerEnter(sequence: 2, seatID: seatID, surfaceID: 100, serial: 72)
+        )
+
+        #expect(automaticCursorFailureMessage(firstDiagnostics) != nil)
+        #expect(secondDiagnostics.isEmpty)
+        #expect(backend.cursorSurfaceRequestSeatIDs == [seatID, seatID])
+        #expect(backend.setCursorRequests.map(\.serial) == [72])
+        #expect(
+            manager.requestResults.last
+                == .set(seatID: SeatID(rawValue: 7), serial: 72, cursor: .defaultArrow)
+        )
+    }
+}
+
+private func cursorMissingDiagnostic() -> InputEventKind {
+    .diagnostic(
+        InputDiagnostic(
+            .cursor(.missingCursor(name: "left_ptr"))
+        )
+    )
+}
+
+private func automaticCursorFailureMessage(_ events: [InputEvent]) -> String? {
+    guard let firstEvent = events.first,
+        case .diagnostic(let diagnostic) = firstEvent.kind,
+        case .cursor(.automaticPointerEnterFailed(let message)) = diagnostic.payload
+    else {
+        return nil
+    }
+
+    return message
+}
+
+private enum CursorSurfaceCreationError: Error {
+    case transient
+}

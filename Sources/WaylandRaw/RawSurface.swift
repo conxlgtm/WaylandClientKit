@@ -2,38 +2,44 @@ import CWaylandClientSystem
 import CWaylandProtocols
 
 package final class RawSurface {
-    let pointer: OpaquePointer
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    var pointer: OpaquePointer { proxy.pointer }
 
     init(
         pointer surfacePointer: OpaquePointer,
         version surfaceVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
+        let adoptedPointer: OpaquePointer
         do {
-            pointer = try adoptionContext.adopt(surfacePointer, interface: "wl_surface")
+            adoptedPointer = try adoptionContext.adopt(surfacePointer, interface: "wl_surface")
         } catch {
-            swl_surface_destroy(surfacePointer)
+            unsafe swl_surface_destroy(surfacePointer)
             throw error
         }
         version = surfaceVersion
         proxyAdoption = adoptionContext
+        proxy = RawOwnedProxy(
+            pointer: adoptedPointer,
+            destroy: unsafe swl_surface_destroy
+        )
     }
 
     package func requestFrame(onDone handler: @escaping () -> Void) throws
         -> FrameCallbackRegistration
     {
-        guard let callback = swl_surface_frame(pointer) else {
+        guard let callback = unsafe swl_surface_frame(pointer) else {
             throw RuntimeError.frameRequestFailed
         }
 
         do {
             _ = try proxyAdoption.adopt(callback, interface: "wl_callback")
         } catch {
-            swl_callback_destroy(callback)
+            unsafe swl_callback_destroy(callback)
             throw error
         }
         return try .init(
@@ -44,7 +50,7 @@ package final class RawSurface {
     }
 
     package func attach(buffer: RawBuffer?, x: Int32 = 0, y: Int32 = 0) {
-        swl_surface_attach(pointer, buffer?.pointer, x, y)
+        unsafe swl_surface_attach(pointer, buffer?.pointer, x, y)
     }
 
     package func attachBorrowedBuffer(
@@ -52,14 +58,14 @@ package final class RawSurface {
         x: Int32 = 0,
         y: Int32 = 0
     ) {
-        swl_surface_attach(pointer, buffer?.pointer, x, y)
+        unsafe swl_surface_attach(pointer, buffer?.pointer, x, y)
     }
 
     package func damageFullBuffer(width: Int32, height: Int32) {
         if usesBufferDamage {
-            swl_surface_damage_buffer(pointer, 0, 0, width, height)
+            unsafe swl_surface_damage_buffer(pointer, 0, 0, width, height)
         } else {
-            swl_surface_damage(pointer, 0, 0, width, height)
+            unsafe swl_surface_damage(pointer, 0, 0, width, height)
         }
     }
 
@@ -68,18 +74,15 @@ package final class RawSurface {
     }
 
     package var objectID: RawObjectID {
-        RawObjectID(swl_proxy_get_id(UnsafeMutableRawPointer(pointer)))
+        unsafe RawObjectID(swl_proxy_get_id(UnsafeMutableRawPointer(pointer)))
     }
 
     package func commit() {
-        swl_surface_commit(pointer)
+        unsafe swl_surface_commit(pointer)
     }
 
     package func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        swl_surface_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {

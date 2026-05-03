@@ -182,6 +182,51 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
+    func eventLoopRepeatedWakeSignalsCancelPreparedReadsWithoutDisplayRead() throws {
+        let display = try makeDisplayPointer()
+        var pollCallCount = 0
+        var cancelReadCallCount = 0
+        var readEventsCallCount = 0
+        var drainWakeCallCount = 0
+
+        let operations = EventLoopOperations(
+            prepareRead: { _ in 0 },
+            dispatchPending: { _ in 0 },
+            flush: { _ in 0 },
+            getFileDescriptor: { _ in 7 },
+            pollFileDescriptor: { descriptors, count, _ in
+                pollCallCount += 1
+                #expect(count == 2)
+                descriptors?[0].revents = 0
+                descriptors?[1].revents = Int16(POLLIN)
+                return 1
+            },
+            readEvents: { _ in
+                readEventsCallCount += 1
+                return 0
+            },
+            cancelRead: { _ in cancelReadCallCount += 1 },
+            makeDisplayError: makeTestDisplayError
+        )
+
+        for _ in 0..<5 {
+            try UnsafeDefaultQueueEventLoop.pumpOnce(
+                display: display,
+                timeoutMilliseconds: 0,
+                operations: operations,
+                wakeFileDescriptor: 8
+            ) {
+                drainWakeCallCount += 1
+            }
+        }
+
+        #expect(pollCallCount == 5)
+        #expect(cancelReadCallCount == 5)
+        #expect(readEventsCallCount == 0)
+        #expect(drainWakeCallCount == 5)
+    }
+
+    @Test
     func eventLoopThrowsWhenPollReportsFailureEvent() throws {
         let display = try makeDisplayPointer()
         var cancelReadCallCount = 0

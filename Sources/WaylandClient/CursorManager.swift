@@ -406,6 +406,15 @@ extension CursorManager {
         serial: UInt32,
         rawEvent: RawInputEvent
     ) -> [InputEvent] {
+        if let diagnostic = desiredCursor.unavailableDiagnostic {
+            switch diagnostic {
+            case .missingCursor:
+                return recordAutomaticCursorFailure(diagnostic, rawEvent: rawEvent)
+            case .automaticPointerEnterFailed:
+                break
+            }
+        }
+
         do {
             requestResults.append(
                 CursorRequestRecord(
@@ -413,21 +422,29 @@ extension CursorManager {
                 ))
             return []
         } catch CursorError.missingCursor(let name) {
-            requestResults.append(.skippedMissingCursor(name: name))
-            let diagnostic = cursorDiagnostic(
-                rawEvent,
-                payload: .missingCursor(name: name)
-            )
-            return [diagnostic]
+            let diagnostic = CursorDiagnostic.missingCursor(name: name)
+            desiredCursor.cacheUnavailable(diagnostic)
+            return recordAutomaticCursorFailure(diagnostic, rawEvent: rawEvent)
         } catch {
             let message = String(describing: error)
-            requestResults.append(.failed(message))
-            let diagnostic = cursorDiagnostic(
-                rawEvent,
-                payload: .automaticPointerEnterFailed(message)
-            )
-            return [diagnostic]
+            let diagnostic = CursorDiagnostic.automaticPointerEnterFailed(message)
+            return recordAutomaticCursorFailure(diagnostic, rawEvent: rawEvent)
         }
+    }
+
+    private func recordAutomaticCursorFailure(
+        _ diagnostic: CursorDiagnostic,
+        rawEvent: RawInputEvent
+    ) -> [InputEvent] {
+        switch diagnostic {
+        case .missingCursor(let name):
+            requestResults.append(.skippedMissingCursor(name: name))
+        case .automaticPointerEnterFailed(let message):
+            requestResults.append(.failed(message))
+        }
+
+        let event = cursorDiagnostic(rawEvent, payload: diagnostic)
+        return [event]
     }
 
     private func cursorDiagnostic(

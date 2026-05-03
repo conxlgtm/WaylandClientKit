@@ -14,9 +14,15 @@ struct DisplaySessionInputPipelineTests {
         let deviceID = RawInputDeviceID(seatID: seatID, kind: .keyboard, generation: 1)
         let windowID = WindowID(rawValue: 180)
         router.register(windowID: windowID, surfaceID: 1_800)
+        let enter = rawKeyboardEnter(
+            sequence: 1,
+            seatID: seatID,
+            surfaceID: 1_800,
+            deviceID: deviceID
+        )
 
         _ = routeSessionInputEvents(
-            from: [rawKeyboardEnter(sequence: 1, seatID: seatID, surfaceID: 1_800)],
+            from: [enter],
             inputRouter: router,
             keyboardInterpreter: keyboardInterpreter
         )
@@ -39,21 +45,7 @@ struct DisplaySessionInputPipelineTests {
         #expect(routed.map(\.sequence) == [2, 2])
         #expect(routed[0].windowID == windowID)
         #expect(routed[1].windowID == nil)
-        #expect(
-            routed[0].kind
-                == .keyboard(
-                    .raw(
-                        .key(
-                            KeyboardKeyEvent(
-                                serial: 12,
-                                time: 13,
-                                rawKeycode: 16,
-                                state: .pressed
-                            )
-                        )
-                    )
-                )
-        )
+        #expect(routed[0].kind == expectedRawKeyEvent(serial: 12, time: 13, rawKeycode: 16))
         #expect(
             routed[1].kind
                 == .keyboard(
@@ -262,6 +254,25 @@ private func clientSeatRemoved(sequence: UInt64) -> InputEvent {
         seatID: SeatID(rawValue: 42),
         windowID: nil,
         kind: .seat(.removed)
+    )
+}
+
+private func expectedRawKeyEvent(
+    serial: UInt32,
+    time: UInt32,
+    rawKeycode: UInt32
+) -> InputEventKind {
+    .keyboard(
+        .raw(
+            .key(
+                KeyboardKeyEvent(
+                    serial: serial,
+                    time: time,
+                    rawKeycode: rawKeycode,
+                    state: .pressed
+                )
+            )
+        )
     )
 }
 
