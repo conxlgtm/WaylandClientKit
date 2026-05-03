@@ -206,4 +206,39 @@ struct KeyboardInterpreterKeymapTests {
         _ = interpreter.consume(rawKeyboardInputEvent(deviceID: deviceID, kind: .keymap(second)))
         #expect(interpreter.keymapID(for: deviceID) == second.id)
     }
+
+    @Test
+    func keymapReadFailureDiagnosticClearsPriorKeyboardState() throws {
+        let interpreter = try KeyboardInterpreter()
+        let deviceID = keyboardDevice()
+        let validPayload = try keymapPayload(text: try fixtureKeymapText())
+
+        _ = interpreter.consume(
+            rawKeyboardInputEvent(deviceID: deviceID, kind: .keymap(validPayload)))
+        #expect(interpreter.keymapID(for: deviceID) == validPayload.id)
+
+        let diagnostic = RawInputEvent(
+            sequence: 2,
+            seatID: deviceID.seatID,
+            deviceID: deviceID,
+            kind: .diagnostic(
+                RawInputDiagnostic(
+                    operation: .keyboardKeymap,
+                    message: RawKeyboardKeymapReadError.missingNULTerminator(size: 12)
+                        .description
+                )
+            )
+        )
+
+        #expect(interpreter.consume(diagnostic).isEmpty)
+        #expect(interpreter.keymapID(for: deviceID) == nil)
+
+        let event = try #require(
+            interpreter.consume(
+                rawKeyboardInputEvent(deviceID: deviceID, kind: .key(qKey()), sequence: 3)
+            ).first
+        )
+
+        #expect(event.kind == unavailable(.missingKeymap))
+    }
 }
