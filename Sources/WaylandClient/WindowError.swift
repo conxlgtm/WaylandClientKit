@@ -27,6 +27,8 @@ public enum WindowConfigurationError: Equatable, Sendable, CustomStringConvertib
     case interiorNUL(field: String)
     case nonPositiveInt32(value: Int32)
     case nonPositiveInt(value: Int)
+    case nonPositiveScaleNumerator(UInt32)
+    case zeroScaleDenominator
 
     public var description: String {
         switch self {
@@ -46,6 +48,10 @@ public enum WindowConfigurationError: Equatable, Sendable, CustomStringConvertib
             "expected positive Int32, got \(value)"
         case .nonPositiveInt(let value):
             "expected positive Int, got \(value)"
+        case .nonPositiveScaleNumerator(let value):
+            "scale numerator must be greater than zero, got \(value)"
+        case .zeroScaleDenominator:
+            "scale denominator must be greater than zero"
         }
     }
 }
