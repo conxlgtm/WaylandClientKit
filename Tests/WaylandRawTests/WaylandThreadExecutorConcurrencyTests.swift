@@ -1,27 +1,36 @@
+import Dispatch
 import Glibc
 import Synchronization
 import Testing
 
 @testable import WaylandRawUnsafeShim
 
-private actor ShutdownCompletionRecorder {
-    private var starts: [String] = []
-    private var completions: [String] = []
-
-    var startedValues: [String] {
-        starts
+private final class ShutdownCompletionRecorder: Sendable {
+    private struct State: Sendable {
+        var starts = Set<String>()
+        var completions = Set<String>()
     }
 
-    var values: [String] {
-        completions
+    private let state = Mutex(State())
+
+    var startedValues: Set<String> {
+        state.withLock { $0.starts }
+    }
+
+    var values: Set<String> {
+        state.withLock { $0.completions }
     }
 
     func appendStarted(_ value: String) {
-        starts.append(value)
+        state.withLock { state in
+            _ = state.starts.insert(value)
+        }
     }
 
     func append(_ value: String) {
-        completions.append(value)
+        state.withLock { state in
+            _ = state.completions.insert(value)
+        }
     }
 }
 
@@ -64,26 +73,29 @@ private func waitUntil(_ predicate: () -> Bool) -> Bool {
     return false
 }
 
-private func waitUntilAsync(_ predicate: () async -> Bool) async -> Bool {
-    for _ in 0..<5_000 {
-        if await predicate() {
-            return true
-        }
-
-        do {
-            try await Task.sleep(nanoseconds: 1_000_000)
-        } catch {
-            return false
-        }
+private func enqueueShutdownCaller(
+    executor: WaylandThreadExecutor,
+    mode: ShutdownMode,
+    label: String,
+    recorder: ShutdownCompletionRecorder,
+    group: DispatchGroup
+) {
+    group.enter()
+    // This test intentionally uses blocking threads: shutdown() waits for owner-thread exit.
+    // Running those calls as Swift tasks can starve the test body that opens the gate.
+    // swiftlint:disable:next no_dispatch_queue
+    DispatchQueue.global(qos: .userInitiated).async {
+        recorder.appendStarted(label)
+        executor.shutdown(mode)
+        recorder.append(label)
+        group.leave()
     }
-
-    return false
 }
 
 @Suite
 struct WaylandThreadExecutorConcurrencyTests {
     @Test
-    func concurrentShutdownCallerWaitsForFirstJoiner() async throws {
+    func concurrentShutdownCallerWaitsForFirstJoiner() throws {
         let executor = try WaylandThreadExecutor()
         let gate = ConcurrentShutdownGate()
         let completions = ShutdownCompletionRecorder()
@@ -103,38 +115,41 @@ struct WaylandThreadExecutorConcurrencyTests {
                 == .stopRequested(.abandonWaylandSources)
         )
 
-        async let first: Void = {
-            await completions.appendStarted("first")
-            executor.shutdown(.orderly)
-            await completions.append("first")
-        }()
-
-        async let second: Void = {
-            await completions.appendStarted("second")
-            executor.shutdown(.orderly)
-            await completions.append("second")
-        }()
+        let group = DispatchGroup()
+        enqueueShutdownCaller(
+            executor: executor,
+            mode: .orderly,
+            label: "first",
+            recorder: completions,
+            group: group
+        )
+        enqueueShutdownCaller(
+            executor: executor,
+            mode: .orderly,
+            label: "second",
+            recorder: completions,
+            group: group
+        )
 
         #expect(
-            await waitUntilAsync {
-                Set(await completions.startedValues) == ["first", "second"]
+            waitUntil {
+                completions.startedValues == ["first", "second"]
             }
         )
         usleep(10_000)
-        #expect(await completions.values.isEmpty)
+        #expect(completions.values.isEmpty)
 
         gate.open()
-        _ = await (first, second)
+        #expect(group.wait(timeout: .now() + .seconds(5)) == .success)
         let stopped = executor.lifecycleSnapshotForTesting
-        let completionSet = Set(await completions.values)
 
         #expect(stopped.state == .joined(.abandonWaylandSources))
         #expect(stopped.hasJoinedThread)
-        #expect(completionSet == ["first", "second"])
+        #expect(completions.values == ["first", "second"])
     }
 
     @Test
-    func manyConcurrentShutdownCallersWaitForSingleJoiner() async throws {
+    func manyConcurrentShutdownCallersWaitForSingleJoiner() throws {
         let executor = try WaylandThreadExecutor()
         let gate = ConcurrentShutdownGate()
         let completions = ShutdownCompletionRecorder()
@@ -155,37 +170,31 @@ struct WaylandThreadExecutorConcurrencyTests {
                 == .stopRequested(.abandonWaylandSources)
         )
 
-        async let first: Void = {
-            await completions.appendStarted("first")
-            executor.shutdown(.orderly)
-            await completions.append("first")
-        }()
-
-        async let lateCallers: Void = withTaskGroup(of: Void.self) { group in
-            for label in lateCallerLabels {
-                group.addTask {
-                    await completions.appendStarted(label)
-                    executor.shutdown(.orderly)
-                    await completions.append(label)
-                }
-            }
+        let group = DispatchGroup()
+        for label in ["first"] + lateCallerLabels {
+            enqueueShutdownCaller(
+                executor: executor,
+                mode: .orderly,
+                label: label,
+                recorder: completions,
+                group: group
+            )
         }
 
         #expect(
-            await waitUntilAsync {
-                Set(await completions.startedValues) == Set(["first"] + lateCallerLabels)
+            waitUntil {
+                completions.startedValues == Set(["first"] + lateCallerLabels)
             }
         )
         usleep(10_000)
-        #expect(await completions.values.isEmpty)
+        #expect(completions.values.isEmpty)
 
         gate.open()
-        _ = await (first, lateCallers)
+        #expect(group.wait(timeout: .now() + .seconds(5)) == .success)
         let stopped = executor.lifecycleSnapshotForTesting
-        let completionSet = Set(await completions.values)
 
         #expect(stopped.state == .joined(.abandonWaylandSources))
         #expect(stopped.hasJoinedThread)
-        #expect(completionSet == Set(["first"] + lateCallerLabels))
+        #expect(completions.values == Set(["first"] + lateCallerLabels))
     }
 }
