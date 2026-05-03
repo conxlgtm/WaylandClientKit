@@ -52,7 +52,8 @@ struct SharedMemoryLayoutTests {
         #expect(didAcquire)
         #expect(!state.isReusable)
 
-        state.markPendingRelease(commitGeneration: 9)
+        let didMarkPending = state.markPendingRelease(commitGeneration: 9)
+        #expect(didMarkPending)
         #expect(state.isBusy)
         #expect(state.lifecycle == .pendingRelease(commitGeneration: 9))
 
@@ -68,7 +69,8 @@ struct SharedMemoryLayoutTests {
 
         let didAcquire = state.acquireForDrawing()
         #expect(didAcquire)
-        state.markPendingRelease(commitGeneration: 4)
+        let didMarkPending = state.markPendingRelease(commitGeneration: 4)
+        #expect(didMarkPending)
         state.markRetired(reason: .resized)
 
         #expect(state.isBusy)
@@ -114,5 +116,47 @@ struct SharedMemoryLayoutTests {
         #expect(!state.isBusy)
         #expect(state.isReusable)
         #expect(state.lifecycle == .available)
+    }
+
+    @Test
+    func retiredBufferCannotBecomePendingRelease() {
+        var state = BufferBusyState()
+
+        state.markRetired(reason: .resized)
+        let didMarkPending = state.markPendingRelease(commitGeneration: 11)
+
+        #expect(!didMarkPending)
+        #expect(!state.isBusy)
+        #expect(!state.isReusable)
+        #expect(
+            state.lifecycle
+                == .retired(reason: .resized, pendingReleaseGeneration: nil)
+        )
+    }
+
+    @Test
+    func availableBufferCannotBecomePendingReleaseWithoutAcquire() {
+        var state = BufferBusyState()
+
+        let didMarkPending = state.markPendingRelease(commitGeneration: 12)
+
+        #expect(!didMarkPending)
+        #expect(!state.isBusy)
+        #expect(state.isReusable)
+        #expect(state.lifecycle == .available)
+    }
+
+    @Test
+    func pendingReleaseGenerationCannotBeOverwritten() {
+        var state = BufferBusyState()
+
+        let didAcquire = state.acquireForDrawing()
+        #expect(didAcquire)
+        let didMarkInitialPending = state.markPendingRelease(commitGeneration: 13)
+        let didOverwritePending = state.markPendingRelease(commitGeneration: 14)
+
+        #expect(didMarkInitialPending)
+        #expect(!didOverwritePending)
+        #expect(state.lifecycle == .pendingRelease(commitGeneration: 13))
     }
 }

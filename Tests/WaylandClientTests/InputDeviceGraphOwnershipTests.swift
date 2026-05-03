@@ -230,3 +230,90 @@ struct InputDeviceGraphOwnershipTests {
         )
     }
 }
+
+@Suite
+struct InputDeviceGraphMalformedIdentityTests {
+    @Test
+    func pointerEventWithKeyboardDeviceIDIsDropped() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 22)
+        let keyboardDevice = RawInputDeviceID(
+            seatID: seatID,
+            kind: .keyboard,
+            generation: 1
+        )
+        router.register(windowID: WindowID(rawValue: 220), surfaceID: 2_200)
+
+        let routed = router.route(
+            rawPointerEnter(
+                sequence: 1,
+                seatID: seatID,
+                surfaceID: 2_200,
+                deviceID: keyboardDevice
+            )
+        )
+
+        #expect(routed.isEmpty)
+    }
+
+    @Test
+    func keyboardEventWithDifferentSeatDeviceIDIsDropped() {
+        let router = InputRouter()
+        let eventSeatID = RawSeatID(rawValue: 23)
+        let deviceSeatID = RawSeatID(rawValue: 24)
+        let keyboardDevice = RawInputDeviceID(
+            seatID: deviceSeatID,
+            kind: .keyboard,
+            generation: 1
+        )
+        router.register(windowID: WindowID(rawValue: 230), surfaceID: 2_300)
+
+        let routed = router.route(
+            rawKeyboardEnter(
+                sequence: 1,
+                seatID: eventSeatID,
+                surfaceID: 2_300,
+                deviceID: keyboardDevice
+            )
+        )
+
+        #expect(routed.isEmpty)
+    }
+
+    @Test
+    func malformedDeviceIDDoesNotAdoptOrClearExistingFocus() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 25)
+        let pointerDevice = RawInputDeviceID(seatID: seatID, kind: .pointer, generation: 1)
+        let keyboardDevice = RawInputDeviceID(seatID: seatID, kind: .keyboard, generation: 1)
+        router.register(windowID: WindowID(rawValue: 250), surfaceID: 2_500)
+
+        _ = router.route(
+            rawPointerEnter(
+                sequence: 1,
+                seatID: seatID,
+                surfaceID: 2_500,
+                deviceID: pointerDevice
+            )
+        )
+        let malformedLeave = router.route(
+            rawPointerLeave(
+                sequence: 2,
+                seatID: seatID,
+                surfaceID: 2_500,
+                deviceID: keyboardDevice
+            )
+        )
+        let validMotion = router.route(
+            rawPointerMotion(
+                sequence: 3,
+                seatID: seatID,
+                time: 3,
+                deviceID: pointerDevice
+            )
+        )
+
+        #expect(malformedLeave.isEmpty)
+        #expect(validMotion.first?.windowID == WindowID(rawValue: 250))
+    }
+}

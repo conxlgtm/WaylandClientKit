@@ -43,8 +43,14 @@ package struct BufferBusyState: Equatable, Sendable {
         return true
     }
 
-    package mutating func markPendingRelease(commitGeneration: UInt64) {
+    @discardableResult
+    package mutating func markPendingRelease(commitGeneration: UInt64) -> Bool {
+        guard lifecycle == .acquiredForDrawing else {
+            return false
+        }
+
         lifecycle = .pendingRelease(commitGeneration: commitGeneration)
+        return true
     }
 
     package mutating func markReleased() {
