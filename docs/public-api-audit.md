@@ -18,6 +18,10 @@ Intentionally public:
 - `WindowConfiguration`
 - `WindowDecorationPreference`
 - `WindowDecorationMode`
+- `SurfaceScale`
+- `SurfaceGeometry`
+- `SoftwareFrameGeometry`
+- `PositivePixelSize`
 - `SoftwareFrame`
 - `DisplayEvent`
 - `DisplayDiagnostic`
@@ -40,8 +44,9 @@ Release contract:
 - `WaylandClient` is the only supported import for downstream users.
 - Display connection, window creation/close, request-redraw, software
   XRGB8888 drawing, basic pointer/keyboard/touch events, interpreted keyboard
-  payloads, server-side decoration negotiation, cursor requests, diagnostics,
-  and terminal display errors are the supported `0.0.1` product surface.
+  payloads, server-side decoration negotiation, scale-aware window geometry,
+  cursor requests, diagnostics, and terminal display errors are the supported
+  `0.0.1` product surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
   are derived display text, not control-flow payloads.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
@@ -51,6 +56,9 @@ Release contract:
   product API.
 - `SoftwareFrame` is a scoped borrowed drawing surface. User code may draw
   during the callback and may not retain frame storage beyond that callback.
+- Window sizes are logical surface sizes. `SurfaceGeometry` records the
+  logical size, buffer-pixel size, and exact `SurfaceScale` used by the
+  current SHM frame.
 
 Intentionally package-internal:
 
@@ -72,6 +80,9 @@ Notes:
 - `Window.decorationMode` reports the current effective xdg-decoration mode when
   the compositor supports `zxdg_decoration_manager_v1`; mode absence is explicit
   as `.unavailable`.
+- `Window.geometry` reports the current logical surface size, buffer-pixel size,
+  and scale. The value is derived from the current xdg configure size and the
+  active preferred integer or fractional surface scale.
 - The runtime is single-thread-affine. Thread-affine session/window entry points are
   package implementation details; downstream users should go through `WaylandDisplay`
   and `Window`.
@@ -79,6 +90,9 @@ Notes:
 - `SoftwareFrame` is noncopyable and borrowed by drawing callbacks. User code can draw
   through row spans during the callback, but cannot copy the frame out and mutate the
   SHM storage after presentation.
+- `SoftwareFrame.width` and `SoftwareFrame.height` are buffer-pixel dimensions.
+  `SoftwareFrame.geometry.logicalSize` remains the surface-local logical size
+  used for layout and input coordinate interpretation.
 - `KeyboardEvent.raw` carries raw protocol keyboard facts.
 - `KeyboardEvent.interpreted` carries xkbcommon-backed key symbols, simple UTF-8 values,
   modifier state updates, repeat info, and diagnostics.

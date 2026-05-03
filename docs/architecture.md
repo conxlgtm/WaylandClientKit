@@ -216,8 +216,10 @@ Current state:
 - actor-owned windows addressed by `WindowID`, so public handles do not destroy Wayland
   proxies from arbitrary threads
 - software-buffer toplevel window helper
+- scale-aware surface geometry for SHM software drawing
 - package-visible window lifecycle and redraw scheduling helpers
 - span-scoped XRGB8888 drawing API
+- optional viewporter and fractional-scale integration for buffer-size selection
 - frame callback based redraw pacing
 - lifecycle state for configure, map, redraw, and close handling
 - package-internal `DisplaySession` as the owner of manual pumping, window creation,
@@ -321,6 +323,9 @@ Supported:
 - core Wayland display, registry, compositor, surface, callback, SHM, pool, buffer, seat, pointer, keyboard, and touch basics
 - stable xdg-shell wm_base, surface, and toplevel basics
 - unstable xdg-decoration server-side decoration negotiation
+- stable viewporter surface destination basics
+- staging fractional-scale preferred-scale callbacks
+- scale-aware `SurfaceGeometry` and `SoftwareFrame` metadata
 - basic `xkb_v1` keyboard interpretation through xkbcommon
 - session-level raw and interpreted keyboard events
 - static pointer cursor surfaces through wayland-cursor
@@ -331,7 +336,7 @@ Not supported:
 - client-side decoration rendering
 - clipboard, primary selection, drag and drop
 - text input or IME
-- fractional-scale, viewporter, presentation-time
+- presentation-time
 - EGL, GBM, dmabuf, or GPU rendering
 - widgets or retained UI
 
