@@ -2,6 +2,9 @@ import WaylandRaw
 
 package enum WindowEvent: Equatable, Sendable {
     case roleObjectsCreated
+    case decorationUnavailable(DecorationUnavailableReason?)
+    case decorationObjectCreated(WindowDecorationPreference)
+    case decorationPreferenceRequested(WindowDecorationPreference)
     case initialCommitSent
     case configureReceived(XDGConfigureSequence)
     case contentInvalidated(bufferAvailable: Bool)
@@ -66,6 +69,26 @@ package struct ActiveWindowState: Equatable, Sendable {
     var closeRequest = CloseRequestState.none
     var redraw = WindowRedrawState()
     var presentation = WindowPresentationState.idle
+}
+
+package enum DecorationUnavailableReason: Equatable, Sendable {
+    case managerMissing
+}
+
+package enum DecorationState: Equatable, Sendable {
+    case unavailable(reason: DecorationUnavailableReason?)
+    case objectCreated(preference: WindowDecorationPreference)
+    case requested(WindowDecorationPreference)
+    case configured(WindowDecorationMode)
+
+    var currentMode: WindowDecorationMode {
+        switch self {
+        case .configured(let mode):
+            mode
+        case .unavailable, .objectCreated, .requested:
+            .unavailable
+        }
+    }
 }
 
 package enum CloseRequestState: Equatable, Sendable {

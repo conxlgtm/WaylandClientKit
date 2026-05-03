@@ -35,6 +35,17 @@ public enum WindowLifecycleOperation: Equatable, Sendable, CustomStringConvertib
     }
 }
 
+public enum WindowDecorationOperation: Equatable, Sendable, CustomStringConvertible {
+    case decorationUnavailable
+
+    public var description: String {
+        switch self {
+        case .decorationUnavailable:
+            "decorationUnavailable"
+        }
+    }
+}
+
 public enum WindowPresentationOperation: Equatable, Sendable, CustomStringConvertible {
     case presentationFailed
 
@@ -49,6 +60,7 @@ public enum WindowPresentationOperation: Equatable, Sendable, CustomStringConver
 public enum WindowDiagnosticOperation: Equatable, Sendable {
     case callback(WindowCallbackOperation)
     case lifecycle(WindowLifecycleOperation)
+    case decoration(WindowDecorationOperation)
     case presentation(WindowPresentationOperation)
 }
 

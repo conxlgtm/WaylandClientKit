@@ -17,8 +17,10 @@ package final class TopLevelWindow {
 
     private var xdgSurface: RawXDGSurface?
     private var topLevel: RawXDGTopLevel?
+    private var decoration: RawXDGToplevelDecoration?
     private var xdgSurfaceOwner: XDGSurfaceOwner?
     private var topLevelOwner: XDGTopLevelOwner?
+    private var decorationOwner: XDGDecorationOwner?
     private var buffers: RawSharedMemoryPool?
     private var retiredBufferPools: [RawSharedMemoryPool] = []
     private var pendingFrameRegistration: FrameCallbackRegistration?
@@ -97,14 +99,92 @@ package final class TopLevelWindow {
             window.handleCloseRequested()
         }
 
+        let decorationObjects = try createDecorationObjectsIfAvailable(
+            globals: globals,
+            topLevel: newTopLevel
+        )
+
         xdgSurface = newXDGSurface
         topLevel = newTopLevel
+        decoration = decorationObjects?.decoration
         xdgSurfaceOwner = newXDGSurfaceOwner
         topLevelOwner = newTopLevelOwner
+        decorationOwner = decorationObjects?.owner
 
         try interpretWindowEffects(model.reduce(.roleObjectsCreated))
         surface.commit()
         try interpretWindowEffects(model.reduce(.initialCommitSent))
+    }
+
+    private struct DecorationObjects {
+        let decoration: RawXDGToplevelDecoration
+        let owner: XDGDecorationOwner
+    }
+
+    private func createDecorationObjectsIfAvailable(
+        globals: BoundGlobals,
+        topLevel: RawXDGTopLevel
+    ) throws -> DecorationObjects? {
+        guard let manager = globals.extensions.xdgDecorationManager else {
+            try interpretWindowEffects(model.reduce(.decorationUnavailable(.managerMissing)))
+            reportDecorationUnavailableIfNeeded(reason: .managerMissing)
+            return nil
+        }
+
+        let newDecoration = try manager.getTopLevelDecoration(for: topLevel)
+        let newOwner = XDGDecorationOwner(
+            configureState: configureState,
+            invariantFailureSink: connection.invariantFailureSink
+        )
+
+        do {
+            try newOwner.install(on: newDecoration)
+            try interpretWindowEffects(
+                model.reduce(.decorationObjectCreated(configuration.decorationPreference))
+            )
+            requestDecorationPreference(configuration.decorationPreference, on: newDecoration)
+            try interpretWindowEffects(
+                model.reduce(.decorationPreferenceRequested(configuration.decorationPreference))
+            )
+            return DecorationObjects(decoration: newDecoration, owner: newOwner)
+        } catch {
+            newOwner.cancel()
+            newDecoration.destroy()
+            throw error
+        }
+    }
+
+    private func requestDecorationPreference(
+        _ preference: WindowDecorationPreference,
+        on decoration: RawXDGToplevelDecoration
+    ) {
+        guard let requestedMode = preference.requestedRawMode else {
+            decoration.unsetMode()
+            return
+        }
+
+        decoration.setMode(requestedMode)
+    }
+
+    private func reportDecorationUnavailableIfNeeded(reason: DecorationUnavailableReason) {
+        guard configuration.decorationPreference == .preferServerSide else { return }
+
+        failureSink.reportWindowFailure(
+            .diagnostic(
+                WindowDiagnostic(
+                    windowID: id,
+                    operation: .decoration(.decorationUnavailable),
+                    message: decorationUnavailableMessage(reason)
+                )
+            )
+        )
+    }
+
+    private func decorationUnavailableMessage(_ reason: DecorationUnavailableReason) -> String {
+        switch reason {
+        case .managerMissing:
+            "Server-side decoration protocol is unavailable."
+        }
     }
 
     private func waitForInitialConfigure(
@@ -502,6 +582,11 @@ extension TopLevelWindow {
         onRedrawRequested = nil
 
         topLevelOwner?.cancel()
+        decorationOwner?.cancel()
+        decoration?.destroy()
+        decoration = nil
+        decorationOwner = nil
+
         topLevel?.destroy()
         topLevel = nil
         topLevelOwner = nil
@@ -522,6 +607,11 @@ extension TopLevelWindow {
     package var needsRedrawOnOwnerThread: Bool {
         connection.preconditionIsOwnerThread()
         return isDirty
+    }
+
+    package var decorationModeOnOwnerThread: WindowDecorationMode {
+        connection.preconditionIsOwnerThread()
+        return model.decorationMode
     }
 
     package func markPublishedOnOwnerThread() {

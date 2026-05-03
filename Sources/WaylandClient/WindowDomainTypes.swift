@@ -214,6 +214,7 @@ package struct ResolvedWindowConfiguration: Equatable, Sendable {
     let states: [XDGTopLevelState]
     let bounds: PositiveTopLevelSize?
     let wmCapabilities: [XDGWMCapability]
+    let decorationMode: WindowDecorationMode?
 
     init(
         sequence: XDGConfigureSequence,
@@ -244,5 +245,31 @@ package struct ResolvedWindowConfiguration: Equatable, Sendable {
         states = sequence.topLevel.states
         bounds = resolvedBounds
         wmCapabilities = sequence.topLevel.wmCapabilities
+        decorationMode = sequence.decorationMode.map(WindowDecorationMode.init)
+    }
+}
+
+extension WindowDecorationMode {
+    package init(_ rawMode: RawDecorationMode) {
+        if rawMode == .clientSide {
+            self = .clientSide
+        } else if rawMode == .serverSide {
+            self = .serverSide
+        } else {
+            self = .unavailable
+        }
+    }
+}
+
+extension WindowDecorationPreference {
+    package var requestedRawMode: RawDecorationMode? {
+        switch self {
+        case .preferServerSide:
+            .serverSide
+        case .preferClientSide:
+            .clientSide
+        case .compositorDefault:
+            nil
+        }
     }
 }

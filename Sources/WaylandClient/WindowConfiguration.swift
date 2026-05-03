@@ -3,19 +3,33 @@ public enum CloseRequestPolicy: Equatable, Sendable {
     case autoClose
 }
 
+public enum WindowDecorationPreference: Equatable, Sendable {
+    case compositorDefault
+    case preferServerSide
+    case preferClientSide
+}
+
+public enum WindowDecorationMode: Equatable, Sendable {
+    case clientSide
+    case serverSide
+    case unavailable
+}
+
 public struct WindowConfiguration: Equatable, Sendable {
     public var title: WaylandString
     public var appID: NonEmptyWaylandString
     public var initialSize: PositiveTopLevelSize
     public var bufferCount: PositiveInt
     public var closeRequestPolicy: CloseRequestPolicy
+    public var decorationPreference: WindowDecorationPreference
 
     public static let `default` = WindowConfiguration(
         title: WaylandString(unchecked: "SwiftWayland Demo"),
         appID: NonEmptyWaylandString(unchecked: "swift-wayland-demo"),
         initialSize: .default,
         bufferCount: PositiveInt(unchecked: 3),
-        closeRequestPolicy: .requestOnly
+        closeRequestPolicy: .requestOnly,
+        decorationPreference: .preferServerSide
     )
 
     public init(
@@ -23,13 +37,15 @@ public struct WindowConfiguration: Equatable, Sendable {
         appID applicationID: NonEmptyWaylandString,
         initialSize size: PositiveTopLevelSize,
         bufferCount count: PositiveInt,
-        closeRequestPolicy policy: CloseRequestPolicy = .requestOnly
+        closeRequestPolicy policy: CloseRequestPolicy = .requestOnly,
+        decorationPreference preference: WindowDecorationPreference = .preferServerSide
     ) {
         title = windowTitle
         appID = applicationID
         initialSize = size
         bufferCount = count
         closeRequestPolicy = policy
+        decorationPreference = preference
     }
 
     public init(
@@ -38,7 +54,8 @@ public struct WindowConfiguration: Equatable, Sendable {
         initialWidth width: Int32 = 640,
         initialHeight height: Int32 = 480,
         bufferCount count: Int = 3,
-        closeRequestPolicy policy: CloseRequestPolicy = .requestOnly
+        closeRequestPolicy policy: CloseRequestPolicy = .requestOnly,
+        decorationPreference preference: WindowDecorationPreference = .preferServerSide
     ) throws {
         guard width > 0 else {
             throw ClientError.invalidWindowConfiguration(.nonPositiveInitialWidth(width))
@@ -72,5 +89,6 @@ public struct WindowConfiguration: Equatable, Sendable {
         )
         bufferCount = PositiveInt(unchecked: count)
         closeRequestPolicy = policy
+        decorationPreference = preference
     }
 }
