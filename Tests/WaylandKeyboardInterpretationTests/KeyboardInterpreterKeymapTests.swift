@@ -42,10 +42,14 @@ struct KeyboardInterpreterKeymapTests {
 
         #expect(event.kind == unavailable(.invalidKeymap))
         #expect(interpreter.keymapID(for: deviceID) == nil)
+        #expect(
+            interpreter.keymapState(for: deviceID)
+                == .unavailable(keymapID: payload.id, reason: .invalidKeymap)
+        )
     }
 
     @Test
-    func noKeymapProducesUnsupportedFormatAndClearsPriorState() throws {
+    func noKeymapRecordsRawOnlyStateAndClearsPriorLayout() throws {
         let interpreter = try KeyboardInterpreter()
         let deviceID = keyboardDevice()
         let validPayload = try keymapPayload(text: try fixtureKeymapText())
@@ -60,12 +64,17 @@ struct KeyboardInterpreterKeymapTests {
                 .first
         )
 
-        #expect(
-            event.kind
-                == unavailable(
-                    .unsupportedKeymapFormat(RawKeyboardKeymapFormat.noKeymap.rawValue)
-                ))
+        #expect(event.kind == unavailable(.noKeymap))
         #expect(interpreter.keymapID(for: deviceID) == nil)
+        #expect(interpreter.keymapState(for: deviceID) == .noKeymap(noKeymap.id))
+
+        let keyEvent = try #require(
+            interpreter.consume(
+                rawKeyboardInputEvent(deviceID: deviceID, kind: .key(qKey()), sequence: 3)
+            ).first
+        )
+
+        #expect(keyEvent.kind == unavailable(.noKeymap))
     }
 
     @Test
@@ -208,10 +217,16 @@ struct KeyboardInterpreterKeymapTests {
     }
 
     @Test
-    func keymapReadFailureDiagnosticClearsPriorKeyboardState() throws {
+    func keymapReadFailureDiagnosticRecordsUnavailableStateForNextKey() throws {
         let interpreter = try KeyboardInterpreter()
         let deviceID = keyboardDevice()
         let validPayload = try keymapPayload(text: try fixtureKeymapText())
+        let failure = RawKeyboardKeymapReadError.missingNULTerminator(size: 12)
+        let failedKeymapID = RawKeyboardKeymapID(
+            seatID: deviceID.seatID,
+            keyboardGeneration: deviceID.generation,
+            keymapGeneration: 2
+        )
 
         _ = interpreter.consume(
             rawKeyboardInputEvent(deviceID: deviceID, kind: .keymap(validPayload)))
@@ -225,7 +240,8 @@ struct KeyboardInterpreterKeymapTests {
                 RawInputDiagnostic(
                     .keymap(
                         .readFailed(
-                            RawKeyboardKeymapReadError.missingNULTerminator(size: 12)
+                            id: failedKeymapID,
+                            error: failure
                         )
                     )
                 )
@@ -234,6 +250,10 @@ struct KeyboardInterpreterKeymapTests {
 
         #expect(interpreter.consume(diagnostic).isEmpty)
         #expect(interpreter.keymapID(for: deviceID) == nil)
+        #expect(
+            interpreter.keymapState(for: deviceID)
+                == .unavailable(keymapID: failedKeymapID, reason: .keymapReadFailed(failure))
+        )
 
         let event = try #require(
             interpreter.consume(
@@ -241,6 +261,6 @@ struct KeyboardInterpreterKeymapTests {
             ).first
         )
 
-        #expect(event.kind == unavailable(.missingKeymap))
+        #expect(event.kind == unavailable(.keymapReadFailed(failure)))
     }
 }

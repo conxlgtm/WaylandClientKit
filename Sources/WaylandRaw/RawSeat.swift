@@ -254,9 +254,21 @@ public final class RawSeat {
             isCurrentDevice: { [weak seat = self] deviceID in
                 seat?.isCurrentDevice(deviceID) == true
             },
-            onError: { [weak seat = self] error in
+            onError: { [weak seat = self] error, keymapID in
                 seat?.lastCapabilityError = error
-                seat?.appendKeymapDiagnostic(deviceID: deviceID, error: error)
+                if let keymapID {
+                    seat?.appendKeymapDiagnostic(
+                        deviceID: deviceID,
+                        keymapID: keymapID,
+                        error: error
+                    )
+                } else {
+                    seat?.appendListenerDiagnostic(
+                        deviceID: deviceID,
+                        listener: "wl_keyboard",
+                        error: error
+                    )
+                }
             }
         )
         do {
@@ -384,10 +396,14 @@ public final class RawSeat {
         )
     }
 
-    private func appendKeymapDiagnostic(deviceID: RawInputDeviceID?, error: any Error) {
+    private func appendKeymapDiagnostic(
+        deviceID: RawInputDeviceID?,
+        keymapID: RawKeyboardKeymapID,
+        error: any Error
+    ) {
         let payload: RawInputDiagnosticPayload
         if let keymapError = error as? RawKeyboardKeymapReadError {
-            payload = .keymap(.readFailed(keymapError))
+            payload = .keymap(.readFailed(id: keymapID, error: keymapError))
         } else {
             payload = .listener(
                 RawListenerDiagnostic(
@@ -402,6 +418,29 @@ public final class RawSeat {
                 seatID: id,
                 deviceID: deviceID,
                 kind: .diagnostic(RawInputDiagnostic(payload))
+            )
+        )
+    }
+
+    private func appendListenerDiagnostic(
+        deviceID: RawInputDeviceID?,
+        listener: String,
+        error: any Error
+    ) {
+        eventSink.append(
+            RawInputEventDraft(
+                seatID: id,
+                deviceID: deviceID,
+                kind: .diagnostic(
+                    RawInputDiagnostic(
+                        .listener(
+                            RawListenerDiagnostic(
+                                listener: listener,
+                                message: String(describing: error)
+                            )
+                        )
+                    )
+                )
             )
         )
     }

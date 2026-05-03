@@ -199,15 +199,27 @@ package struct KeyboardInterpretationUnavailable: Equatable, Sendable {
 
 package enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {
     case missingDeviceID
+    case noKeymap
     case unsupportedKeymapFormat(UInt32)
     case emptyKeymap
     case invalidKeymap
+    case keymapReadFailed(RawKeyboardKeymapReadError)
     case missingKeymap
     case missingKeyboardState
     case invalidKeycode(UInt32)
     case nonKeyboardInputDevice(RawInputDeviceID)
     case mismatchedKeyboardSeat(expected: RawSeatID, actual: RawSeatID)
     case mismatchedKeyboardDevice(expected: RawInputDeviceID, actual: RawInputDeviceID)
+}
+
+package enum KeyboardInterpreterKeymapState: Equatable, Sendable {
+    case missing
+    case noKeymap(RawKeyboardKeymapID)
+    case valid(RawKeyboardKeymapID)
+    case unavailable(
+        keymapID: RawKeyboardKeymapID?,
+        reason: KeyboardInterpretationUnavailableReason
+    )
 }
 
 final class XKBContextOwner {

@@ -141,6 +141,35 @@ struct InterpretedKeyboardInputRouterTests {
                 )
         )
     }
+
+    @Test
+    func interpretedKeymapReadFailureReasonRemainsTyped() {
+        let routed = focusedKeyboardRouter().route(
+            interpretedKeyboardEvent(
+                sequence: 2,
+                seatID: RawSeatID(rawValue: 15),
+                kind: .unavailable(
+                    WaylandKeyboardInterpretation.KeyboardInterpretationUnavailable(
+                        reason: .keymapReadFailed(.missingNULTerminator(size: 12))
+                    )
+                )
+            )
+        )
+
+        #expect(routed.first?.windowID == nil)
+        #expect(
+            routed.first?.kind
+                == .keyboard(
+                    .interpreted(
+                        .unavailable(
+                            WaylandClient.KeyboardInterpretationUnavailable(
+                                reason: .keymapReadFailed(.missingNULTerminator(size: 12))
+                            )
+                        )
+                    )
+                )
+        )
+    }
 }
 
 private func focusedKeyboardRouter() -> InputRouter {
