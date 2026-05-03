@@ -179,6 +179,7 @@ struct InputDeviceGraph: Equatable {
         retireCurrentDevice(seatID: seatID, kind: .pointer)
         retireCurrentDevice(seatID: seatID, kind: .keyboard)
         retireCurrentDevice(seatID: seatID, kind: .touch)
+        clearGenerationHistory(for: seatID)
         seatsByID[seatID] = nil
     }
 
@@ -223,6 +224,12 @@ struct InputDeviceGraph: Equatable {
         case .touch:
             return state.touch.currentID
         }
+    }
+
+    private mutating func clearGenerationHistory(for seatID: RawSeatID) {
+        lastSeenGenerationByDevice[InputDeviceKey(seatID: seatID, kind: .pointer)] = nil
+        lastSeenGenerationByDevice[InputDeviceKey(seatID: seatID, kind: .keyboard)] = nil
+        lastSeenGenerationByDevice[InputDeviceKey(seatID: seatID, kind: .touch)] = nil
     }
 
     private mutating func retireCurrentDevice(
