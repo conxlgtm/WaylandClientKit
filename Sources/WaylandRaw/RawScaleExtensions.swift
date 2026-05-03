@@ -2,11 +2,12 @@ import CWaylandProtocols
 import Glibc
 
 package final class RawViewporter {
-    let pointer: OpaquePointer
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    private var pointer: OpaquePointer { proxy.pointer }
 
     init(
         pointer viewporterPointer: OpaquePointer,
@@ -14,9 +15,13 @@ package final class RawViewporter {
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
         do {
-            pointer = try adoptionContext.adopt(
+            let adoptedPointer = try adoptionContext.adopt(
                 viewporterPointer,
                 interface: "wp_viewporter"
+            )
+            proxy = RawOwnedProxy(
+                pointer: adoptedPointer,
+                destroy: unsafe swl_wp_viewporter_destroy
             )
         } catch {
             unsafe swl_wp_viewporter_destroy(viewporterPointer)
@@ -37,10 +42,7 @@ package final class RawViewporter {
     }
 
     package func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        unsafe swl_wp_viewporter_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
@@ -49,10 +51,11 @@ package final class RawViewporter {
 }
 
 package final class RawViewport {
-    let pointer: OpaquePointer
     package let version: RawVersion
 
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    var pointer: OpaquePointer { proxy.pointer }
 
     init(
         pointer viewportPointer: OpaquePointer,
@@ -60,7 +63,14 @@ package final class RawViewport {
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
         do {
-            pointer = try adoptionContext.adopt(viewportPointer, interface: "wp_viewport")
+            let adoptedPointer = try adoptionContext.adopt(
+                viewportPointer,
+                interface: "wp_viewport"
+            )
+            proxy = RawOwnedProxy(
+                pointer: adoptedPointer,
+                destroy: unsafe swl_wp_viewport_destroy
+            )
         } catch {
             unsafe swl_wp_viewport_destroy(viewportPointer)
             throw error
@@ -73,10 +83,7 @@ package final class RawViewport {
     }
 
     package func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        unsafe swl_wp_viewport_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
@@ -85,11 +92,12 @@ package final class RawViewport {
 }
 
 package final class RawFractionalScaleManager {
-    let pointer: OpaquePointer
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    private var pointer: OpaquePointer { proxy.pointer }
 
     init(
         pointer managerPointer: OpaquePointer,
@@ -97,9 +105,13 @@ package final class RawFractionalScaleManager {
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
         do {
-            pointer = try adoptionContext.adopt(
+            let adoptedPointer = try adoptionContext.adopt(
                 managerPointer,
                 interface: "wp_fractional_scale_manager_v1"
+            )
+            proxy = RawOwnedProxy(
+                pointer: adoptedPointer,
+                destroy: unsafe swl_wp_fractional_scale_manager_v1_destroy
             )
         } catch {
             unsafe swl_wp_fractional_scale_manager_v1_destroy(managerPointer)
@@ -127,10 +139,7 @@ package final class RawFractionalScaleManager {
     }
 
     package func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        unsafe swl_wp_fractional_scale_manager_v1_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
@@ -139,10 +148,11 @@ package final class RawFractionalScaleManager {
 }
 
 package final class RawFractionalScale {
-    let pointer: OpaquePointer
     package let version: RawVersion
 
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    var pointer: OpaquePointer { proxy.pointer }
 
     init(
         pointer fractionalScalePointer: OpaquePointer,
@@ -150,9 +160,13 @@ package final class RawFractionalScale {
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
         do {
-            pointer = try adoptionContext.adopt(
+            let adoptedPointer = try adoptionContext.adopt(
                 fractionalScalePointer,
                 interface: "wp_fractional_scale_v1"
+            )
+            proxy = RawOwnedProxy(
+                pointer: adoptedPointer,
+                destroy: unsafe swl_wp_fractional_scale_v1_destroy
             )
         } catch {
             unsafe swl_wp_fractional_scale_v1_destroy(fractionalScalePointer)
@@ -162,10 +176,7 @@ package final class RawFractionalScale {
     }
 
     package func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        unsafe swl_wp_fractional_scale_v1_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
