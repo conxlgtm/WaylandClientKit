@@ -6,9 +6,60 @@ package final class KeyboardInterpreter {
         case diagnostic(InterpretedKeyboardEvent)
     }
 
+    private enum KeyboardInterpretationState {
+        case missing
+        case noKeymap(RawKeyboardKeymapID)
+        case valid(KeyboardLayoutState)
+        case unavailable(
+            keymapID: RawKeyboardKeymapID?,
+            reason: KeyboardInterpretationUnavailableReason
+        )
+
+        var validLayout: KeyboardLayoutState? {
+            switch self {
+            case .valid(let layout):
+                layout
+            case .missing, .noKeymap, .unavailable:
+                nil
+            }
+        }
+
+        var validKeymapID: RawKeyboardKeymapID? {
+            switch self {
+            case .valid(let layout):
+                layout.id
+            case .missing, .noKeymap, .unavailable:
+                nil
+            }
+        }
+
+        var snapshot: KeyboardInterpreterKeymapState {
+            switch self {
+            case .missing:
+                .missing
+            case .noKeymap(let id):
+                .noKeymap(id)
+            case .valid(let layout):
+                .valid(layout.id)
+            case .unavailable(let keymapID, let reason):
+                .unavailable(keymapID: keymapID, reason: reason)
+            }
+        }
+
+        var failureReason: KeyboardInterpretationUnavailableReason? {
+            switch self {
+            case .noKeymap:
+                .noKeymap
+            case .unavailable(_, let reason):
+                reason
+            case .missing, .valid:
+                nil
+            }
+        }
+    }
+
     private struct DeviceState {
-        var keymapID: RawKeyboardKeymapID?
-        var layout: KeyboardLayoutState?
+        var keymap = KeyboardInterpretationState.missing
         var repeatInfo: RawKeyboardRepeatInfo?
     }
 
@@ -65,7 +116,12 @@ package final class KeyboardInterpreter {
 
     func keymapID(for deviceID: RawInputDeviceID) -> RawKeyboardKeymapID? {
         threadAffinity.preconditionIsOwnerThread()
-        return devicesByID[deviceID]?.keymapID
+        return devicesByID[deviceID]?.keymap.validKeymapID
+    }
+
+    func keymapState(for deviceID: RawInputDeviceID) -> KeyboardInterpreterKeymapState {
+        threadAffinity.preconditionIsOwnerThread()
+        return devicesByID[deviceID]?.keymap.snapshot ?? .missing
     }
 
     func repeatInfo(for deviceID: RawInputDeviceID) -> RawKeyboardRepeatInfo? {
@@ -109,11 +165,15 @@ extension KeyboardInterpreter {
         _ diagnostic: RawInputDiagnostic,
         from event: RawInputEvent
     ) {
-        guard diagnostic.operation == .keyboardKeymap else { return }
+        guard case .keymap(let keymapDiagnostic) = diagnostic.payload else { return }
+
         guard let deviceID = event.deviceID else { return }
         guard deviceID.kind == .keyboard else { return }
 
-        reset(deviceID: deviceID)
+        let (keymapID, reason) = unavailableReason(for: keymapDiagnostic)
+        var state = devicesByID[deviceID] ?? DeviceState()
+        state.keymap = .unavailable(keymapID: keymapID, reason: reason)
+        devicesByID[deviceID] = state
     }
 
     private func consumeKey(
@@ -124,8 +184,14 @@ extension KeyboardInterpreter {
         case .diagnostic(let diagnostic):
             return [diagnostic]
         case .device(let deviceID):
-            guard let layout = devicesByID[deviceID]?.layout else {
-                return [unavailable(.missingKeymap, from: event, deviceID: deviceID)]
+            let keymap = devicesByID[deviceID]?.keymap ?? .missing
+            guard let layout = keymap.validLayout else {
+                let diagnostic = unavailable(
+                    keymap.failureReason ?? .missingKeymap,
+                    from: event,
+                    deviceID: deviceID
+                )
+                return [diagnostic]
             }
 
             do {
@@ -151,8 +217,14 @@ extension KeyboardInterpreter {
         case .diagnostic(let diagnostic):
             return [diagnostic]
         case .device(let deviceID):
-            guard let layout = devicesByID[deviceID]?.layout else {
-                return [unavailable(.missingKeyboardState, from: event, deviceID: deviceID)]
+            let keymap = devicesByID[deviceID]?.keymap ?? .missing
+            guard let layout = keymap.validLayout else {
+                let diagnostic = unavailable(
+                    keymap.failureReason ?? .missingKeyboardState,
+                    from: event,
+                    deviceID: deviceID
+                )
+                return [diagnostic]
             }
 
             let interpretedEvent = interpreted(
@@ -209,11 +281,10 @@ extension KeyboardInterpreter {
         }
 
         guard case .xkbV1 = payload else {
-            return resetAndReport(
-                .unsupportedKeymapFormat(payload.format.rawValue),
-                deviceID: payloadDeviceID,
-                event: event
-            )
+            var state = devicesByID[payloadDeviceID] ?? DeviceState()
+            state.keymap = .noKeymap(payload.id)
+            devicesByID[payloadDeviceID] = state
+            return [unavailable(.noKeymap, from: event, deviceID: payloadDeviceID)]
         }
 
         return installKeymap(payload, deviceID: payloadDeviceID, event: event)
@@ -227,8 +298,7 @@ extension KeyboardInterpreter {
         do {
             let layout = try KeyboardLayoutState(context: context, keymap: payload)
             var state = devicesByID[deviceID] ?? DeviceState()
-            state.keymapID = payload.id
-            state.layout = layout
+            state.keymap = .valid(layout)
             devicesByID[deviceID] = state
 
             let interpretedEvent = interpreted(
@@ -244,12 +314,35 @@ extension KeyboardInterpreter {
             )
             return [interpretedEvent]
         } catch .unsupportedKeymapFormat(let format) {
-            return resetAndReport(
-                .unsupportedKeymapFormat(format), deviceID: deviceID, event: event)
+            return markUnavailableAndReport(
+                .unsupportedKeymapFormat(format),
+                keymapID: payload.id,
+                deviceID: deviceID,
+                event: event
+            )
         } catch .emptyKeymap {
-            return resetAndReport(.emptyKeymap, deviceID: deviceID, event: event)
+            return markUnavailableAndReport(
+                .emptyKeymap,
+                keymapID: payload.id,
+                deviceID: deviceID,
+                event: event
+            )
         } catch {
-            return resetAndReport(.invalidKeymap, deviceID: deviceID, event: event)
+            return markUnavailableAndReport(
+                .invalidKeymap,
+                keymapID: payload.id,
+                deviceID: deviceID,
+                event: event
+            )
+        }
+    }
+
+    private func unavailableReason(
+        for diagnostic: RawKeymapDiagnostic
+    ) -> (RawKeyboardKeymapID, KeyboardInterpretationUnavailableReason) {
+        switch diagnostic {
+        case .readFailed(let id, let error):
+            (id, .keymapReadFailed(error))
         }
     }
 
@@ -336,12 +429,15 @@ extension KeyboardInterpreter {
         )
     }
 
-    private func resetAndReport(
+    private func markUnavailableAndReport(
         _ reason: KeyboardInterpretationUnavailableReason,
+        keymapID: RawKeyboardKeymapID?,
         deviceID: RawInputDeviceID,
         event: RawInputEvent
     ) -> [InterpretedKeyboardEvent] {
-        devicesByID.removeValue(forKey: deviceID)
+        var state = devicesByID[deviceID] ?? DeviceState()
+        state.keymap = .unavailable(keymapID: keymapID, reason: reason)
+        devicesByID[deviceID] = state
         return [unavailable(reason, from: event, deviceID: deviceID)]
     }
 

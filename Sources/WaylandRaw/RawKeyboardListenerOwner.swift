@@ -7,7 +7,7 @@ final class KeyboardListenerOwner {
     private let operations: RawSeatProxyOperations
     private let invariantFailureSink: RawInvariantFailureSink?
     private let isCurrentDevice: (RawInputDeviceID) -> Bool
-    private let onError: (Error) -> Void
+    private let onError: (Error, RawKeyboardKeymapID?) -> Void
     private var keymapGeneration: UInt64 = 1
     private var isCanceled = false
     private lazy var listenerStorage = CListenerStorage(
@@ -27,7 +27,7 @@ final class KeyboardListenerOwner {
         operations keyboardOperations: RawSeatProxyOperations,
         invariantFailureSink failureSink: RawInvariantFailureSink? = nil,
         isCurrentDevice isKeyboardCurrent: @escaping (RawInputDeviceID) -> Bool,
-        onError handleError: @escaping (Error) -> Void
+        onError handleError: @escaping (Error, RawKeyboardKeymapID?) -> Void
     ) {
         deviceID = keyboardDeviceID
         eventSink = keyboardEventSink
@@ -146,7 +146,7 @@ final class KeyboardListenerOwner {
                 )
             )
         } catch {
-            onError(error)
+            onError(error, nil)
         }
     }
 
@@ -158,21 +158,25 @@ final class KeyboardListenerOwner {
             return
         }
 
+        let id = RawKeyboardKeymapID(
+            seatID: deviceID.seatID,
+            keyboardGeneration: deviceID.generation,
+            keymapGeneration: keymapGeneration
+        )
+        defer {
+            keymapGeneration += 1
+        }
+
         do {
             let payload = try RawKeyboardKeymapReader.readKeymap(
-                id: RawKeyboardKeymapID(
-                    seatID: deviceID.seatID,
-                    keyboardGeneration: deviceID.generation,
-                    keymapGeneration: keymapGeneration
-                ),
+                id: id,
                 format: RawKeyboardKeymapFormat(rawValue: rawFormat),
                 fd: fd,
                 size: size
             )
-            keymapGeneration += 1
             append(.keymap(payload))
         } catch {
-            onError(error)
+            onError(error, id)
         }
     }
 

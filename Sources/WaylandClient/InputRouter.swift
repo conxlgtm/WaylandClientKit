@@ -399,33 +399,6 @@ extension InputRouter {
         )
     }
 
-    func convert(_ diagnostic: RawInputDiagnostic) -> InputDiagnostic {
-        InputDiagnostic(
-            operation: convert(diagnostic.operation),
-            message: diagnostic.message
-        )
-    }
-
-    func convert(_ operation: RawInputDiagnosticOperation) -> InputDiagnosticOperation {
-        switch operation {
-        case .keyboardKeymap:
-            .keyboardKeymap
-        case .listener(let name):
-            .listener(name)
-        case .queueOverflow:
-            .queueOverflow
-        case .inputPipelineOverflow(let overflow):
-            .inputPipelineOverflow(convertRawOverflow(overflow))
-        }
-    }
-
-    func convertRawOverflow(_ overflow: RawInputPipelineOverflow) -> InputPipelineOverflow {
-        InputPipelineOverflow(
-            stage: .rawInputQueue,
-            capacity: overflow.capacity
-        )
-    }
-
     func convert(_ axis: RawPointerAxisEvent) -> PointerAxisEvent {
         switch axis {
         case .axis(let time, let rawAxis, let value):

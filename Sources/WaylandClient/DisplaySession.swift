@@ -240,20 +240,18 @@ package final class DisplaySession {
     }
 
     private func makePendingInputOverflowDiagnostic(from event: InputEvent) -> InputEvent {
-        let message = "session input queue exceeded capacity \(maximumPendingInputEventCount)"
-        return InputEvent(
+        InputEvent(
             sequence: event.sequence,
             seatID: event.seatID,
             windowID: nil,
             kind: .diagnostic(
                 InputDiagnostic(
-                    operation: .inputPipelineOverflow(
+                    .inputPipelineOverflow(
                         InputPipelineOverflow(
                             stage: .sessionPendingInput,
                             capacity: maximumPendingInputEventCount
                         )
-                    ),
-                    message: message
+                    )
                 )
             )
         )

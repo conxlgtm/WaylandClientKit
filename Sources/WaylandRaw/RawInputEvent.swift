@@ -43,27 +43,93 @@ public enum RawInputEventKind: Equatable, Sendable {
 }
 
 public struct RawInputDiagnostic: Equatable, Sendable {
-    public let operation: RawInputDiagnosticOperation
+    public let payload: RawInputDiagnosticPayload
+
+    public init(_ diagnosticPayload: RawInputDiagnosticPayload) {
+        payload = diagnosticPayload
+    }
+
+    public var operation: RawInputDiagnosticOperation {
+        payload.operation
+    }
+
+    public var message: String {
+        payload.description
+    }
+}
+
+public enum RawInputDiagnosticPayload: Equatable, Sendable {
+    case keymap(RawKeymapDiagnostic)
+    case listener(RawListenerDiagnostic)
+    case inputPipelineOverflow(RawInputPipelineOverflow)
+
+    public var operation: RawInputDiagnosticOperation {
+        switch self {
+        case .keymap:
+            .keyboardKeymap
+        case .listener(let diagnostic):
+            .listener(diagnostic.listener)
+        case .inputPipelineOverflow(let overflow):
+            .inputPipelineOverflow(overflow)
+        }
+    }
+}
+
+extension RawInputDiagnosticPayload: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .keymap(let diagnostic):
+            diagnostic.description
+        case .listener(let diagnostic):
+            diagnostic.description
+        case .inputPipelineOverflow(let overflow):
+            "\(overflow.stage.description) exceeded capacity \(overflow.capacity)"
+        }
+    }
+}
+
+public enum RawKeymapDiagnostic: Equatable, Sendable, CustomStringConvertible {
+    case readFailed(id: RawKeyboardKeymapID, error: RawKeyboardKeymapReadError)
+
+    public var description: String {
+        switch self {
+        case .readFailed(_, let error):
+            error.description
+        }
+    }
+}
+
+public struct RawListenerDiagnostic: Equatable, Sendable, CustomStringConvertible {
+    public let listener: String
     public let message: String
 
-    public init(
-        operation diagnosticOperation: RawInputDiagnosticOperation,
-        message detail: String
-    ) {
-        operation = diagnosticOperation
-        message = detail
+    public init(listener listenerName: String, message diagnosticMessage: String) {
+        listener = listenerName
+        message = diagnosticMessage
+    }
+
+    public var description: String {
+        message
     }
 }
 
 public enum RawInputDiagnosticOperation: Equatable, Sendable {
     case keyboardKeymap
     case listener(String)
-    case queueOverflow
     case inputPipelineOverflow(RawInputPipelineOverflow)
 }
 
 public enum RawInputPipelineOverflowStage: Equatable, Sendable {
     case rawInputQueue
+}
+
+extension RawInputPipelineOverflowStage: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .rawInputQueue:
+            "raw input queue"
+        }
+    }
 }
 
 public struct RawInputPipelineOverflow: Equatable, Sendable {

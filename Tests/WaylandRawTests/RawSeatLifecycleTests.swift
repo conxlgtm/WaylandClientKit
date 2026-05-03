@@ -347,6 +347,73 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
+    func failedKeyboardKeymapCallbackConsumesGeneration() throws {
+        let seatID = RawSeatID(rawValue: 12)
+        let fixture = try makeKeyboardSeatFixture(
+            seatID: seatID,
+            seatPointer: 0x990,
+            keyboardPointer: 0x991
+        )
+
+        let failedBytes = [UInt8(1), UInt8(2), UInt8(3)]
+        try sendKeyboardKeymap(fixture, bytes: failedBytes)
+        let failedEvent = try #require(fixture.queue.drain().last)
+        #expect(
+            failedEvent.kind
+                == expectedMissingTerminatorKeymapFailure(
+                    seatID: seatID,
+                    keymapGeneration: 1,
+                    byteCount: failedBytes.count
+                ))
+
+        let validBytes = [UInt8(4), UInt8(5), UInt8(0)]
+        try sendKeyboardKeymap(fixture, bytes: validBytes)
+        let successfulEvent = try #require(fixture.queue.drain().last)
+        #expect(
+            successfulEvent.kind
+                == .keyboard(
+                    .keymap(
+                        try RawKeyboardKeymapPayload.xkbV1(
+                            id: keyboardKeymapID(seatID: seatID, keymapGeneration: 2),
+                            bytes: validBytes
+                        )
+                    )
+                ))
+    }
+
+    @Test
+    func consecutiveFailedKeyboardKeymapCallbacksUseDistinctIDs() throws {
+        let seatID = RawSeatID(rawValue: 13)
+        let fixture = try makeKeyboardSeatFixture(
+            seatID: seatID,
+            seatPointer: 0x9A0,
+            keyboardPointer: 0x9A1
+        )
+
+        let firstBytes = [UInt8(1), UInt8(2)]
+        try sendKeyboardKeymap(fixture, bytes: firstBytes)
+        let firstEvent = try #require(fixture.queue.drain().last)
+        #expect(
+            firstEvent.kind
+                == expectedMissingTerminatorKeymapFailure(
+                    seatID: seatID,
+                    keymapGeneration: 1,
+                    byteCount: firstBytes.count
+                ))
+
+        let secondBytes = [UInt8(3), UInt8(4), UInt8(5)]
+        try sendKeyboardKeymap(fixture, bytes: secondBytes)
+        let secondEvent = try #require(fixture.queue.drain().last)
+        #expect(
+            secondEvent.kind
+                == expectedMissingTerminatorKeymapFailure(
+                    seatID: seatID,
+                    keymapGeneration: 2,
+                    byteCount: secondBytes.count
+                ))
+    }
+
+    @Test
     func touchCallbacksEmitInputEvents() throws {
         let recorder = SeatOperationRecorder()
         recorder.touchProxy = fakePointer(0xA01)
@@ -538,6 +605,87 @@ private final class SeatOperationRecorder {
             }
         )
     }
+}
+
+private struct KeyboardSeatFixture {
+    let seat: RawSeat
+    let queue: RawInputEventQueue
+    let callbacks: UnsafePointer<swl_keyboard_listener_callbacks>
+    let keyboardProxy: OpaquePointer?
+}
+
+private func makeKeyboardSeatFixture(
+    seatID: RawSeatID,
+    seatPointer: Int,
+    keyboardPointer: Int
+) throws -> KeyboardSeatFixture {
+    let recorder = SeatOperationRecorder()
+    recorder.keyboardProxy = fakePointer(keyboardPointer)
+    let queue = RawInputEventQueue()
+    let seat = try RawSeat(
+        id: seatID,
+        pointer: try #require(fakePointer(seatPointer)),
+        version: 10,
+        eventSink: queue,
+        operations: recorder.operations,
+        installListener: false
+    )
+
+    try seat.applyCapabilities([.keyboard])
+    _ = queue.drain()
+
+    return KeyboardSeatFixture(
+        seat: seat,
+        queue: queue,
+        callbacks: try #require(recorder.keyboardCallbacks),
+        keyboardProxy: recorder.keyboardProxy
+    )
+}
+
+private func sendKeyboardKeymap(
+    _ fixture: KeyboardSeatFixture,
+    bytes: [UInt8],
+    format: RawKeyboardKeymapFormat = .xkbV1
+) throws {
+    let descriptor = try makeTemporaryFileDescriptor(bytes: bytes)
+    fixture.callbacks.pointee.keymap?(
+        fixture.callbacks.pointee.data,
+        fixture.keyboardProxy,
+        format.rawValue,
+        descriptor,
+        UInt32(bytes.count)
+    )
+}
+
+private func keyboardKeymapID(
+    seatID: RawSeatID,
+    keymapGeneration: UInt64
+) -> RawKeyboardKeymapID {
+    RawKeyboardKeymapID(
+        seatID: seatID,
+        keyboardGeneration: 1,
+        keymapGeneration: keymapGeneration
+    )
+}
+
+private func expectedMissingTerminatorKeymapFailure(
+    seatID: RawSeatID,
+    keymapGeneration: UInt64,
+    byteCount: Int
+) -> RawInputEventKind {
+    .diagnostic(
+        RawInputDiagnostic(
+            .keymap(
+                .readFailed(
+                    id: keyboardKeymapID(
+                        seatID: seatID,
+                        keymapGeneration: keymapGeneration
+                    ),
+                    error: .missingNULTerminator(size: UInt32(byteCount))
+                )
+            )
+        )
+    )
 }
 
 private func fakePointer(_ bitPattern: Int) -> OpaquePointer? {
