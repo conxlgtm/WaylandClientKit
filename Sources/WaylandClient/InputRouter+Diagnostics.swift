@@ -49,17 +49,8 @@ extension InputRouter {
             .fdTooSmall(size: size, actualSize: actualSize)
         case .missingNULTerminator(let size):
             .missingNULTerminator(size: size)
-        case .system(let errno, let operation):
-            .system(errno: errno, operation: convert(operation))
-        }
-    }
-
-    func convert(_ operation: RawKeyboardKeymapReadOperation) -> KeymapReadOperation {
-        switch operation {
-        case .fstat:
-            .fstat
-        case .mmap:
-            .mmap
+        case .system(let error):
+            .system(WaylandSystemError(error))
         }
     }
 

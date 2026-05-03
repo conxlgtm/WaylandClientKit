@@ -3,7 +3,7 @@ import CWaylandUnsafeShim
 import Glibc
 
 @safe
-public final class WaylandThreadExecutor: SerialExecutor {
+package final class WaylandThreadExecutor: SerialExecutor {
     private static let jobBudget = 64
     package static let pollFailureEvents = Int16(POLLERR) | Int16(POLLHUP) | Int16(POLLNVAL)
 
@@ -14,7 +14,7 @@ public final class WaylandThreadExecutor: SerialExecutor {
     private nonisolated(unsafe) var synchronizationPrimitivesAreLive = false
     private nonisolated(unsafe) var state = WaylandThreadExecutorState()
 
-    public init(name _: String = "swift-wayland") throws {
+    package init(name _: String = "swift-wayland") throws {
         try initialize(forcedThreadCreationFailureForTesting: nil)
     }
 
@@ -112,7 +112,7 @@ public final class WaylandThreadExecutor: SerialExecutor {
         destroySynchronizationPrimitives()
     }
 
-    public func enqueue(_ job: consuming ExecutorJob) {
+    package func enqueue(_ job: consuming ExecutorJob) {
         guard case .accepted = enqueue(.job(ExecutorJobCell(job))) else {
             preconditionFailure(
                 "WaylandThreadExecutor received a Swift executor job after executor teardown"
@@ -120,7 +120,7 @@ public final class WaylandThreadExecutor: SerialExecutor {
         }
     }
 
-    public func checkIsolated() {
+    package func checkIsolated() {
         precondition(
             isOwnerThread,
             "WaylandThreadExecutor used from a different thread"
@@ -128,11 +128,11 @@ public final class WaylandThreadExecutor: SerialExecutor {
     }
 
     // swiftlint:disable:next discouraged_optional_boolean
-    public func isIsolatingCurrentContext() -> Bool? {
+    package func isIsolatingCurrentContext() -> Bool? {
         isOwnerThread
     }
 
-    public var isOwnerThread: Bool {
+    package var isOwnerThread: Bool {
         unsafe pthread_mutex_lock(&mutex)
         let ownerThread = unsafe state.ownerThread
         unsafe pthread_mutex_unlock(&mutex)
@@ -268,7 +268,7 @@ public final class WaylandThreadExecutor: SerialExecutor {
         unsafe pthread_mutex_unlock(&mutex)
     }
 
-    public func shutdown(_ mode: ShutdownMode = .orderly) {
+    package func shutdown(_ mode: ShutdownMode = .orderly) {
         requestStopAfterCurrentJob(mode)
 
         let shouldJoin = !isOwnerThread

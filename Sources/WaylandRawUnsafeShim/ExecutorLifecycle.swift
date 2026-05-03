@@ -1,4 +1,4 @@
-public enum ShutdownMode: Equatable, Sendable {
+package enum ShutdownMode: Equatable, Sendable {
     case orderly
     case abandonWaylandSources
 
@@ -12,11 +12,11 @@ public enum ShutdownMode: Equatable, Sendable {
     }
 }
 
-public enum ExecutorStartFailure: Equatable, Sendable, CustomStringConvertible {
+package enum ExecutorStartFailure: Equatable, Sendable, CustomStringConvertible {
     case eventFileDescriptorCreationFailed(Int32)
     case threadCreationFailed(Int32)
 
-    public var description: String {
+    package var description: String {
         switch self {
         case .eventFileDescriptorCreationFailed(let errorCode):
             "eventfd failed with errno \(errorCode)"
