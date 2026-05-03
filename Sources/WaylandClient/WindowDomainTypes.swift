@@ -124,6 +124,186 @@ public struct PositiveTopLevelSize: Equatable, Sendable, CustomStringConvertible
     }
 }
 
+public struct PositivePixelSize: Equatable, Sendable, CustomStringConvertible {
+    public let width: PositiveInt32
+    public let height: PositiveInt32
+
+    public init(width sizeWidth: PositiveInt32, height sizeHeight: PositiveInt32) {
+        width = sizeWidth
+        height = sizeHeight
+    }
+
+    public init(width sizeWidth: Int32, height sizeHeight: Int32) throws {
+        width = try PositiveInt32(sizeWidth)
+        height = try PositiveInt32(sizeHeight)
+    }
+
+    var rawSize: TopLevelSize {
+        TopLevelSize(width: width.rawValue, height: height.rawValue)
+    }
+
+    public var description: String {
+        "\(width.rawValue)x\(height.rawValue)"
+    }
+}
+
+public struct SurfaceScale: Equatable, Sendable, CustomStringConvertible {
+    public let numerator: UInt32
+    public let denominator: UInt32
+
+    public static let one = SurfaceScale(uncheckedNumerator: 1, denominator: 1)
+    package static let fractionalScaleDenominator: UInt32 = 120
+
+    public init(numerator scaleNumerator: UInt32, denominator scaleDenominator: UInt32)
+        throws
+    {
+        guard scaleNumerator > 0 else {
+            throw ClientError.invalidWindowConfiguration(
+                .nonPositiveScaleNumerator(scaleNumerator)
+            )
+        }
+
+        guard scaleDenominator > 0 else {
+            throw ClientError.invalidWindowConfiguration(.zeroScaleDenominator)
+        }
+
+        numerator = scaleNumerator
+        denominator = scaleDenominator
+    }
+
+    package init(uncheckedNumerator scaleNumerator: UInt32, denominator scaleDenominator: UInt32) {
+        precondition(scaleNumerator > 0, "scale numerator must be positive")
+        precondition(scaleDenominator > 0, "scale denominator must be positive")
+        numerator = scaleNumerator
+        denominator = scaleDenominator
+    }
+
+    package init(integerScale scale: Int32) throws {
+        guard scale > 0 else {
+            throw WindowError.invalidConfigure(
+                .negativeSuggestedDimension(width: scale, height: scale)
+            )
+        }
+
+        numerator = UInt32(scale)
+        denominator = 1
+    }
+
+    package init(fractionalScaleNumerator scaleNumerator: UInt32) throws {
+        guard scaleNumerator > 0 else {
+            throw ClientError.invalidWindowConfiguration(
+                .nonPositiveScaleNumerator(scaleNumerator)
+            )
+        }
+
+        numerator = scaleNumerator
+        denominator = SurfaceScale.fractionalScaleDenominator
+    }
+
+    public var description: String {
+        if denominator == 1 {
+            return "\(numerator)"
+        }
+
+        return "\(numerator)/\(denominator)"
+    }
+
+    package var isInteger: Bool {
+        denominator == 1
+    }
+
+    package var integerValue: Int32? {
+        guard denominator == 1, numerator <= UInt32(Int32.max) else {
+            return nil
+        }
+
+        return Int32(numerator)
+    }
+
+    package func bufferSize(for logicalSize: PositiveTopLevelSize) -> PositivePixelSize {
+        PositivePixelSize(
+            width: PositiveInt32(
+                unchecked: Self.roundHalfAwayFromZero(
+                    logicalSize.width.rawValue,
+                    numerator: numerator,
+                    denominator: denominator
+                )
+            ),
+            height: PositiveInt32(
+                unchecked: Self.roundHalfAwayFromZero(
+                    logicalSize.height.rawValue,
+                    numerator: numerator,
+                    denominator: denominator
+                )
+            )
+        )
+    }
+
+    private static func roundHalfAwayFromZero(
+        _ value: Int32,
+        numerator: UInt32,
+        denominator: UInt32
+    ) -> Int32 {
+        let scaled = Int64(value) * Int64(numerator)
+        let divisor = Int64(denominator)
+        let quotient = scaled / divisor
+        let remainder = scaled % divisor
+        let rounded = quotient + (remainder * 2 >= divisor ? 1 : 0)
+
+        precondition(rounded > 0 && rounded <= Int64(Int32.max))
+        return Int32(rounded)
+    }
+}
+
+public struct SurfaceGeometry: Equatable, Sendable, CustomStringConvertible {
+    public let logicalSize: PositiveTopLevelSize
+    public let bufferSize: PositivePixelSize
+    public let scale: SurfaceScale
+
+    public init(
+        logicalSize surfaceLogicalSize: PositiveTopLevelSize,
+        scale surfaceScale: SurfaceScale
+    ) {
+        logicalSize = surfaceLogicalSize
+        scale = surfaceScale
+        bufferSize = surfaceScale.bufferSize(for: surfaceLogicalSize)
+    }
+
+    package init(
+        logicalSize surfaceLogicalSize: PositiveTopLevelSize,
+        bufferSize surfaceBufferSize: PositivePixelSize,
+        scale surfaceScale: SurfaceScale
+    ) {
+        logicalSize = surfaceLogicalSize
+        bufferSize = surfaceBufferSize
+        scale = surfaceScale
+    }
+
+    public var description: String {
+        "logical \(logicalSize), buffer \(bufferSize), scale \(scale)"
+    }
+}
+
+public struct SoftwareFrameGeometry: Equatable, Sendable {
+    public let surface: SurfaceGeometry
+
+    public var logicalSize: PositiveTopLevelSize {
+        surface.logicalSize
+    }
+
+    public var bufferSize: PositivePixelSize {
+        surface.bufferSize
+    }
+
+    public var scale: SurfaceScale {
+        surface.scale
+    }
+
+    public init(surface surfaceGeometry: SurfaceGeometry) {
+        surface = surfaceGeometry
+    }
+}
+
 public struct Milliseconds: Equatable, Comparable, Sendable, CustomStringConvertible {
     public let rawValue: Int32
 
