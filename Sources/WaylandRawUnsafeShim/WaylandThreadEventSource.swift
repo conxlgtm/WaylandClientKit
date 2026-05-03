@@ -1,4 +1,5 @@
 import Glibc
+import WaylandRaw
 
 package protocol WaylandThreadEventSource: AnyObject {
     var isClosed: Bool { get }
@@ -13,7 +14,7 @@ package protocol WaylandThreadEventSource: AnyObject {
     func handleEventLoopError(_ error: any Error)
 }
 
-public enum WaylandThreadExecutorError: Error, Equatable, Sendable, CustomStringConvertible {
+package enum WaylandThreadExecutorError: Error, Equatable, Sendable, CustomStringConvertible {
     case executorNotReady
     case executorClosed
     case executorStopping(ShutdownMode)
@@ -23,10 +24,9 @@ public enum WaylandThreadExecutorError: Error, Equatable, Sendable, CustomString
     case wakeFileDescriptorShortRead(Int)
     case wakeFileDescriptorWriteFailed(Int32)
     case wakeFileDescriptorShortWrite(Int)
-    case pollFailed(Int32)
-    case pollEventFailed(revents: Int16)
+    case eventLoop(RawEventLoopError)
 
-    public var description: String {
+    package var description: String {
         switch self {
         case .executorNotReady:
             "Wayland owner thread executor is not ready"
@@ -46,10 +46,8 @@ public enum WaylandThreadExecutorError: Error, Equatable, Sendable, CustomString
             "Wayland owner thread wake fd write failed with errno \(errorCode)"
         case .wakeFileDescriptorShortWrite(let byteCount):
             "Wayland owner thread wake fd write returned \(byteCount) bytes"
-        case .pollFailed(let errorCode):
-            "Wayland owner thread poll failed with errno \(errorCode)"
-        case .pollEventFailed(let revents):
-            "Wayland owner thread poll returned error events \(revents)"
+        case .eventLoop(let error):
+            "Wayland owner thread event loop failed: \(error.description)"
         }
     }
 }

@@ -161,7 +161,10 @@ package enum WindowFailureClassifier {
             )
         case .proxy(.queueMismatch(let interface, let objectID)):
             .protocolViolation(
-                .proxyQueueMismatch(interface: interface, objectID: objectID)
+                .proxyQueueMismatch(
+                    interface: interface,
+                    objectID: objectID.map(WaylandProtocolObjectID.init)
+                )
             )
         default:
             .internalInvariant(

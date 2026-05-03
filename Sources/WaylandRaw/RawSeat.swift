@@ -2,10 +2,10 @@ import CWaylandProtocols
 import Glibc
 
 // swiftlint:disable:next type_body_length
-public final class RawSeat {
+package final class RawSeat {
     package let id: RawSeatID
     let pointer: OpaquePointer
-    public let version: RawVersion
+    package let version: RawVersion
 
     private let eventSink: RawInputEventSink
     private let proxyAdoption: RawProxyAdoptionContext?

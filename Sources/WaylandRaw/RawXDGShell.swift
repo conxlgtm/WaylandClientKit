@@ -185,21 +185,27 @@ private final class XDGWMBaseOwner {
                 message: "xdg_wm_base ping fired without Swift state"
             ) { _ in
                 // We must pong, otherwise the compositor can treat the app as hung
-                swl_xdg_wm_base_pong(wmBase, serial)
+                unsafe swl_xdg_wm_base_pong(wmBase, serial)
             }
         }
     }
 
     func install() throws {
         guard installState == .idle else {
-            throw RuntimeError.systemError(errno: EINVAL)
+            throw RuntimeError.systemError(
+                errno: EINVAL,
+                operation: .installListener("xdg_wm_base")
+            )
         }
 
         callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
-        let result = swl_xdg_wm_base_add_listener(wmBase, callbacks)
+        let result = unsafe swl_xdg_wm_base_add_listener(wmBase, callbacks)
         guard result == 0 else {
-            throw RuntimeError.systemError(errno: EINVAL)
+            throw RuntimeError.systemError(
+                errno: EINVAL,
+                operation: .installListener("xdg_wm_base")
+            )
         }
 
         installState = .installed
@@ -252,15 +258,21 @@ package final class XDGSurfaceOwner {
 
     package func install(on xdgSurface: RawXDGSurface) throws {
         guard installState == .idle else {
-            throw RuntimeError.systemError(errno: EINVAL)
+            throw RuntimeError.systemError(
+                errno: EINVAL,
+                operation: .installListener("xdg_surface")
+            )
         }
 
         callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
-        let result = swl_xdg_surface_add_listener(xdgSurface.pointer, callbacks)
+        let result = unsafe swl_xdg_surface_add_listener(xdgSurface.pointer, callbacks)
 
         guard result == 0 else {
-            throw RuntimeError.systemError(errno: EINVAL)
+            throw RuntimeError.systemError(
+                errno: EINVAL,
+                operation: .installListener("xdg_surface")
+            )
         }
 
         installState = .installed
@@ -366,18 +378,24 @@ package final class XDGTopLevelOwner {
         onClose closeHandler: @escaping () -> Void
     ) throws {
         guard installState == .idle else {
-            throw RuntimeError.systemError(errno: EINVAL)
+            throw RuntimeError.systemError(
+                errno: EINVAL,
+                operation: .installListener("xdg_toplevel")
+            )
         }
 
         callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
-        let result = swl_xdg_toplevel_add_listener(
+        let result = unsafe swl_xdg_toplevel_add_listener(
             topLevel.pointer,
             callbacks
         )
 
         guard result == 0 else {
-            throw RuntimeError.systemError(errno: EINVAL)
+            throw RuntimeError.systemError(
+                errno: EINVAL,
+                operation: .installListener("xdg_toplevel")
+            )
         }
 
         onClose = closeHandler
