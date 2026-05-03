@@ -163,6 +163,9 @@ final class KeyboardListenerOwner {
             keyboardGeneration: deviceID.generation,
             keymapGeneration: keymapGeneration
         )
+        defer {
+            keymapGeneration += 1
+        }
 
         do {
             let payload = try RawKeyboardKeymapReader.readKeymap(
@@ -171,7 +174,6 @@ final class KeyboardListenerOwner {
                 fd: fd,
                 size: size
             )
-            keymapGeneration += 1
             append(.keymap(payload))
         } catch {
             onError(error, id)
