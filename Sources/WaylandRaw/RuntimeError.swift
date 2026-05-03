@@ -3,22 +3,22 @@ import CWaylandProtocols
 import Glibc
 
 package enum RawSystemErrorConstructionError: Error, Equatable, Sendable {
-    case zeroErrno
+    case nonPositiveErrno(Int32)
 }
 
 package struct NonZeroErrno: Equatable, Sendable, CustomStringConvertible {
     package let rawValue: Int32
 
     package init(_ rawErrorNumber: Int32) throws {
-        guard rawErrorNumber != 0 else {
-            throw RawSystemErrorConstructionError.zeroErrno
+        guard rawErrorNumber > 0 else {
+            throw RawSystemErrorConstructionError.nonPositiveErrno(rawErrorNumber)
         }
 
         rawValue = rawErrorNumber
     }
 
     package init(unchecked rawErrorNumber: Int32) {
-        precondition(rawErrorNumber != 0, "errno 0 is not a system failure")
+        precondition(rawErrorNumber > 0, "errno must be positive")
         rawValue = rawErrorNumber
     }
 
@@ -219,7 +219,7 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
         errno errorNumber: Int32,
         operation systemOperation: RawSystemOperation
     ) -> RuntimeError {
-        guard errorNumber != 0 else {
+        guard errorNumber > 0 else {
             return .systemErrnoUnavailable(operation: systemOperation)
         }
 
@@ -274,7 +274,7 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
             return .systemError(errno: error, operation: systemOperation)
         }
 
-        guard let fallbackErrno, fallbackErrno != 0 else {
+        guard let fallbackErrno, fallbackErrno > 0 else {
             return .systemErrnoUnavailable(operation: systemOperation)
         }
 
