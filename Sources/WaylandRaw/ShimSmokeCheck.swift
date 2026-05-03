@@ -2,65 +2,93 @@ import CWaylandProtocols
 
 enum ShimSmokeCheck {
     static func verify() {
-        _ = swl_display_get_registry
-        _ = swl_display_sync
-        _ = swl_display_create_event_queue
-        _ = swl_event_queue_destroy
-        _ = swl_display_create_wrapper
-        _ = swl_display_wrapper_set_queue
-        _ = swl_display_wrapper_destroy
-        _ = swl_display_dispatch_event_queue_pending
-        _ = swl_display_prepare_read_event_queue
-        _ = swl_display_get_protocol_error_details
+        verifyDisplayShims()
+        verifyRegistryShims()
+        verifyCoreObjectShims()
+        verifyXDGShims()
+        verifyDestroyShims()
+        verifyListenerShims()
+    }
 
-        _ = swl_registry_bind_wl_compositor
-        _ = swl_registry_bind_wl_shm
-        _ = swl_registry_bind_xdg_wm_base
-        _ = swl_registry_bind_wl_seat
+    private static func verifyDisplayShims() {
+        _ = unsafe swl_display_get_registry
+        _ = unsafe swl_display_sync
+        _ = unsafe swl_display_create_event_queue
+        _ = unsafe swl_event_queue_destroy
+        _ = unsafe swl_display_create_wrapper
+        _ = unsafe swl_display_wrapper_set_queue
+        _ = unsafe swl_display_wrapper_destroy
+        _ = unsafe swl_display_dispatch_event_queue_pending
+        _ = unsafe swl_display_prepare_read_event_queue
+        _ = unsafe swl_display_get_protocol_error_details
+    }
 
-        _ = swl_compositor_create_surface
-        _ = swl_shm_create_pool
-        _ = swl_shm_pool_create_buffer
-        _ = swl_surface_frame
-        _ = swl_seat_get_pointer
-        _ = swl_seat_get_keyboard
-        _ = swl_seat_get_touch
-        _ = swl_surface_attach
-        _ = swl_surface_commit
-        _ = swl_surface_damage_buffer
+    private static func verifyRegistryShims() {
+        _ = unsafe swl_registry_bind_wl_compositor
+        _ = unsafe swl_registry_bind_wl_shm
+        _ = unsafe swl_registry_bind_xdg_wm_base
+        _ = unsafe swl_registry_bind_zxdg_decoration_manager_v1
+        _ = unsafe swl_registry_bind_wl_seat
+    }
 
-        _ = swl_xdg_wm_base_get_xdg_surface
-        _ = swl_xdg_surface_get_toplevel
-        _ = swl_xdg_wm_base_pong
-        _ = swl_xdg_surface_ack_configure
-        _ = swl_xdg_toplevel_set_title
-        _ = swl_xdg_toplevel_set_app_id
+    private static func verifyCoreObjectShims() {
+        _ = unsafe swl_compositor_create_surface
+        _ = unsafe swl_shm_create_pool
+        _ = unsafe swl_shm_pool_create_buffer
+        _ = unsafe swl_surface_frame
+        _ = unsafe swl_seat_get_pointer
+        _ = unsafe swl_seat_get_keyboard
+        _ = unsafe swl_seat_get_touch
+        _ = unsafe swl_surface_attach
+        _ = unsafe swl_surface_commit
+        _ = unsafe swl_surface_damage_buffer
+    }
 
-        _ = swl_registry_destroy
-        _ = swl_callback_destroy
-        _ = swl_compositor_destroy
-        _ = swl_shm_destroy
-        _ = swl_buffer_destroy
-        _ = swl_surface_destroy
-        _ = swl_shm_pool_destroy
-        _ = swl_pointer_release
-        _ = swl_keyboard_release
-        _ = swl_touch_release
-        _ = swl_seat_destroy
-        _ = swl_seat_release
-        _ = swl_xdg_surface_destroy
-        _ = swl_xdg_toplevel_destroy
-        _ = swl_xdg_wm_base_destroy
+    private static func verifyXDGShims() {
+        _ = unsafe swl_xdg_wm_base_get_xdg_surface
+        _ = unsafe swl_xdg_surface_get_toplevel
+        _ = unsafe swl_xdg_wm_base_pong
+        _ = unsafe swl_xdg_surface_ack_configure
+        _ = unsafe swl_xdg_toplevel_set_title
+        _ = unsafe swl_xdg_toplevel_set_app_id
+        _ = unsafe swl_zxdg_decoration_manager_v1_get_toplevel_decoration
+        _ = unsafe swl_zxdg_toplevel_decoration_v1_set_mode
+        _ = unsafe swl_zxdg_toplevel_decoration_v1_unset_mode
+        _ = swl_zxdg_toplevel_decoration_v1_mode_client_side
+        _ = swl_zxdg_toplevel_decoration_v1_mode_server_side
+    }
 
-        _ = swl_registry_add_listener
-        _ = swl_callback_add_listener
-        _ = swl_buffer_add_listener
-        _ = swl_xdg_wm_base_add_listener
-        _ = swl_xdg_surface_add_listener
-        _ = swl_xdg_toplevel_add_listener
-        _ = swl_seat_add_listener
-        _ = swl_pointer_add_listener
-        _ = swl_keyboard_add_listener
-        _ = swl_touch_add_listener
+    private static func verifyDestroyShims() {
+        _ = unsafe swl_registry_destroy
+        _ = unsafe swl_callback_destroy
+        _ = unsafe swl_compositor_destroy
+        _ = unsafe swl_shm_destroy
+        _ = unsafe swl_buffer_destroy
+        _ = unsafe swl_surface_destroy
+        _ = unsafe swl_shm_pool_destroy
+        _ = unsafe swl_pointer_release
+        _ = unsafe swl_keyboard_release
+        _ = unsafe swl_touch_release
+        _ = unsafe swl_seat_destroy
+        _ = unsafe swl_seat_release
+        _ = unsafe swl_xdg_surface_destroy
+        _ = unsafe swl_xdg_toplevel_destroy
+        _ = unsafe swl_xdg_wm_base_destroy
+        _ = unsafe swl_zxdg_toplevel_decoration_v1_destroy
+        _ = unsafe swl_zxdg_decoration_manager_v1_destroy
+    }
+
+    private static func verifyListenerShims() {
+        _ = unsafe swl_registry_add_listener
+        _ = unsafe swl_callback_add_listener
+        _ = unsafe swl_buffer_add_listener
+        _ = unsafe swl_xdg_wm_base_add_listener
+        _ = unsafe swl_xdg_surface_add_listener
+        _ = unsafe swl_xdg_toplevel_add_listener
+        _ = unsafe swl_zxdg_toplevel_decoration_v1_add_listener
+        _ = unsafe swl_seat_add_listener
+        _ = unsafe swl_pointer_add_listener
+        _ = unsafe swl_keyboard_add_listener
+        _ = unsafe swl_touch_add_listener
     }
 }

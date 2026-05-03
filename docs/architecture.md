@@ -320,6 +320,7 @@ Supported:
 
 - core Wayland display, registry, compositor, surface, callback, SHM, pool, buffer, seat, pointer, keyboard, and touch basics
 - stable xdg-shell wm_base, surface, and toplevel basics
+- unstable xdg-decoration server-side decoration negotiation
 - basic `xkb_v1` keyboard interpretation through xkbcommon
 - session-level raw and interpreted keyboard events
 - static pointer cursor surfaces through wayland-cursor
@@ -327,7 +328,7 @@ Supported:
 Not supported:
 
 - cursor animation or per-output cursor scaling
-- xdg-decoration
+- client-side decoration rendering
 - clipboard, primary selection, drag and drop
 - text input or IME
 - fractional-scale, viewporter, presentation-time

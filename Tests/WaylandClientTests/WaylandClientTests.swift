@@ -1,4 +1,5 @@
 import Testing
+import WaylandRaw
 
 @testable import WaylandClient
 
@@ -44,6 +45,55 @@ struct WaylandClientTests {
         ) {
             _ = try WindowConfiguration(appID: "org.example\0Hidden")
         }
+    }
+
+    @Test
+    func windowConfigurationDefaultsToServerSideDecorationPreference() throws {
+        #expect(WindowConfiguration.default.decorationPreference == .preferServerSide)
+        #expect(
+            try WindowConfiguration().decorationPreference == .preferServerSide
+        )
+    }
+
+    @Test
+    func decorationPreferenceMapsToRawModeRequest() {
+        #expect(WindowDecorationPreference.preferServerSide.requestedRawMode == .serverSide)
+        #expect(WindowDecorationPreference.preferClientSide.requestedRawMode == .clientSide)
+        #expect(WindowDecorationPreference.compositorDefault.requestedRawMode == nil)
+    }
+
+    @Test
+    func decorationPreferencePlansRawRequestSideEffects() {
+        #expect(
+            DecorationModeRequest(preference: .preferServerSide)
+                == .set(.serverSide)
+        )
+        #expect(
+            DecorationModeRequest(preference: .preferClientSide)
+                == .set(.clientSide)
+        )
+        #expect(DecorationModeRequest(preference: .compositorDefault) == .unset)
+    }
+
+    @Test
+    func unavailableDecorationManagerDiagnosticsOnlyReportForServerSidePreference() {
+        #expect(WindowDecorationPreference.preferServerSide.reportsUnavailableDecorationManager)
+        #expect(!WindowDecorationPreference.preferClientSide.reportsUnavailableDecorationManager)
+        #expect(!WindowDecorationPreference.compositorDefault.reportsUnavailableDecorationManager)
+    }
+
+    @Test
+    func unsupportedDecorationManagerVersionDiagnosticIncludesVersions() {
+        let reason = DecorationUnavailableReason.unsupportedManagerVersion(
+            advertised: RawVersion(1),
+            minimum: RawVersion(2)
+        )
+
+        #expect(
+            reason.diagnosticMessage
+                == "Server-side decoration protocol v1 is unsupported; "
+                + "requires v2 or newer."
+        )
     }
 
     @Test

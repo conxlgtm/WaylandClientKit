@@ -152,6 +152,10 @@ public actor WaylandDisplay {
         try requireCore().windowNeedsRedraw(windowID)
     }
 
+    public func windowDecorationMode(_ windowID: WindowID) throws -> WindowDecorationMode {
+        try requireCore().windowDecorationMode(windowID)
+    }
+
     public func requestRedraw(_ windowID: WindowID) throws {
         try requireCore().requestRedraw(windowID)
     }

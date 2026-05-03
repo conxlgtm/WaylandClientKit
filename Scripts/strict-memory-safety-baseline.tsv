@@ -8,7 +8,7 @@ WaylandRaw	Sources/WaylandRaw/RawCompositor.swift	6
 WaylandRaw	Sources/WaylandRaw/RawDisplay.swift	2
 WaylandRaw	Sources/WaylandRaw/RawDisplayConnection+EventLoop.swift	18
 WaylandRaw	Sources/WaylandRaw/RawDisplayConnection+PointerCursor.swift	1
-WaylandRaw	Sources/WaylandRaw/RawDisplayConnection.swift	34
+WaylandRaw	Sources/WaylandRaw/RawDisplayConnection.swift	37
 WaylandRaw	Sources/WaylandRaw/RawEventQueue.swift	4
 WaylandRaw	Sources/WaylandRaw/RawFileDescriptor.swift	1
 WaylandRaw	Sources/WaylandRaw/RawFrameCallback.swift	15
@@ -24,11 +24,12 @@ WaylandRaw	Sources/WaylandRaw/RawSeatProxyOperations.swift	17
 WaylandRaw	Sources/WaylandRaw/RawSharedMemory.swift	20
 WaylandRaw	Sources/WaylandRaw/RawSurface.swift	5
 WaylandRaw	Sources/WaylandRaw/RawTouchListenerOwner.swift	22
+WaylandRaw	Sources/WaylandRaw/RawXDGDecoration.swift	13
 WaylandRaw	Sources/WaylandRaw/RawXDGShell.swift	57
 WaylandRaw	Sources/WaylandRaw/RegistryListenerOwner.swift	13
 WaylandRaw	Sources/WaylandRaw/RuntimeError.swift	7
 WaylandRaw	Sources/WaylandRaw/SeatRegistry.swift	5
-WaylandRaw	Sources/WaylandRaw/ShimSmokeCheck.swift	55
+WaylandRaw	Sources/WaylandRaw/ShimSmokeCheck.swift	0
 WaylandRaw	Sources/WaylandRaw/WaylandArray.swift	6
 WaylandRaw	Sources/WaylandRaw/WaylandSmokeCheck.swift	8
 WaylandRawUnsafeShim	Sources/WaylandRawUnsafeShim/ExecutorJobCell.swift	4

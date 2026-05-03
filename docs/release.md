@@ -88,13 +88,14 @@ Supported:
 - Session-level public input draining.
 - Basic xkb_v1 keyboard interpretation through xkbcommon.
 - Static pointer cursor surfaces through wayland-cursor.
+- Server-side decoration negotiation through xdg-decoration.
 
 Not supported:
 - Widgets.
 - Text input, compose handling, or IME.
 - Clipboard, primary selection, or drag and drop.
 - Cursor animation or per-output cursor scaling.
-- Decorations.
+- Client-side decorations.
 - Fractional scaling.
 - Presentation timing.
 - EGL, GBM, dmabuf, or GPU rendering.

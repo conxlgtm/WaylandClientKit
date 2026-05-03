@@ -214,6 +214,7 @@ package struct ResolvedWindowConfiguration: Equatable, Sendable {
     let states: [XDGTopLevelState]
     let bounds: PositiveTopLevelSize?
     let wmCapabilities: [XDGWMCapability]
+    let decorationMode: WindowDecorationMode?
 
     init(
         sequence: XDGConfigureSequence,
@@ -244,5 +245,59 @@ package struct ResolvedWindowConfiguration: Equatable, Sendable {
         states = sequence.topLevel.states
         bounds = resolvedBounds
         wmCapabilities = sequence.topLevel.wmCapabilities
+        decorationMode = sequence.decorationMode.map(WindowDecorationMode.init)
+    }
+}
+
+extension WindowDecorationMode {
+    package init(_ rawMode: RawDecorationMode) {
+        switch rawMode {
+        case .clientSide:
+            self = .clientSide
+        case .serverSide:
+            self = .serverSide
+        }
+    }
+}
+
+package enum DecorationModeRequest: Equatable, Sendable {
+    case set(RawDecorationMode)
+    case unset
+
+    package init(preference: WindowDecorationPreference) {
+        switch preference {
+        case .preferServerSide:
+            self = .set(.serverSide)
+        case .preferClientSide:
+            self = .set(.clientSide)
+        case .compositorDefault:
+            self = .unset
+        }
+    }
+
+    package func apply(to decoration: RawXDGToplevelDecoration) {
+        switch self {
+        case .set(let mode):
+            decoration.setMode(mode)
+        case .unset:
+            decoration.unsetMode()
+        }
+    }
+}
+
+extension WindowDecorationPreference {
+    package var requestedRawMode: RawDecorationMode? {
+        switch self {
+        case .preferServerSide:
+            .serverSide
+        case .preferClientSide:
+            .clientSide
+        case .compositorDefault:
+            nil
+        }
+    }
+
+    package var reportsUnavailableDecorationManager: Bool {
+        self == .preferServerSide
     }
 }

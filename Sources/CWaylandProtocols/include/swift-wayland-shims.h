@@ -10,6 +10,8 @@
 struct xdg_wm_base;
 struct xdg_surface;
 struct xdg_toplevel;
+struct zxdg_decoration_manager_v1;
+struct zxdg_toplevel_decoration_v1;
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,6 +28,9 @@ struct wl_shm *swl_registry_bind_wl_shm(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct xdg_wm_base *swl_registry_bind_xdg_wm_base(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct zxdg_decoration_manager_v1 *swl_registry_bind_zxdg_decoration_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wl_seat *swl_registry_bind_wl_seat(
@@ -87,6 +92,22 @@ void swl_xdg_toplevel_set_title(struct xdg_toplevel *xdg_toplevel, const char *t
 void swl_xdg_toplevel_set_app_id(struct xdg_toplevel *xdg_toplevel, const char *app_id);
 
 /* ------------------------------------------------------------------ */
+/*  XDG decoration request wrappers                                   */
+/* ------------------------------------------------------------------ */
+
+struct zxdg_toplevel_decoration_v1 *swl_zxdg_decoration_manager_v1_get_toplevel_decoration(
+    struct zxdg_decoration_manager_v1 *manager,
+    struct xdg_toplevel *xdg_toplevel);
+
+void swl_zxdg_toplevel_decoration_v1_set_mode(
+    struct zxdg_toplevel_decoration_v1 *decoration, uint32_t mode);
+void swl_zxdg_toplevel_decoration_v1_unset_mode(
+    struct zxdg_toplevel_decoration_v1 *decoration);
+
+uint32_t swl_zxdg_toplevel_decoration_v1_mode_client_side(void);
+uint32_t swl_zxdg_toplevel_decoration_v1_mode_server_side(void);
+
+/* ------------------------------------------------------------------ */
 /*  Destroy / release wrappers                                        */
 /* ------------------------------------------------------------------ */
 
@@ -105,6 +126,10 @@ void swl_seat_release(struct wl_seat *seat);
 void swl_xdg_surface_destroy(struct xdg_surface *xdg_surface);
 void swl_xdg_toplevel_destroy(struct xdg_toplevel *xdg_toplevel);
 void swl_xdg_wm_base_destroy(struct xdg_wm_base *wm_base);
+void swl_zxdg_toplevel_decoration_v1_destroy(
+    struct zxdg_toplevel_decoration_v1 *decoration);
+void swl_zxdg_decoration_manager_v1_destroy(
+    struct zxdg_decoration_manager_v1 *manager);
 
 /* ------------------------------------------------------------------ */
 /*  Display wrappers                                                  */
@@ -172,6 +197,10 @@ typedef void (*swl_xdg_toplevel_configure_bounds_fn)(
 typedef void (*swl_xdg_toplevel_wm_capabilities_fn)(
     void *data, struct xdg_toplevel *xdg_toplevel,
     struct wl_array *capabilities);
+
+/* XDG decoration */
+typedef void (*swl_zxdg_toplevel_decoration_v1_configure_fn)(
+    void *data, struct zxdg_toplevel_decoration_v1 *decoration, uint32_t mode);
 
 /* Seat */
 typedef void (*swl_seat_capabilities_fn)(
@@ -284,6 +313,11 @@ struct swl_xdg_toplevel_listener_callbacks {
     void                                *data;
 };
 
+struct swl_zxdg_toplevel_decoration_v1_listener_callbacks {
+    swl_zxdg_toplevel_decoration_v1_configure_fn configure;
+    void                                        *data;
+};
+
 struct swl_seat_listener_callbacks {
     swl_seat_capabilities_fn capabilities;
     swl_seat_name_fn         name;
@@ -353,6 +387,10 @@ int swl_xdg_surface_add_listener(
 int swl_xdg_toplevel_add_listener(
     struct xdg_toplevel *xdg_toplevel,
     const struct swl_xdg_toplevel_listener_callbacks *callbacks);
+
+int swl_zxdg_toplevel_decoration_v1_add_listener(
+    struct zxdg_toplevel_decoration_v1 *decoration,
+    const struct swl_zxdg_toplevel_decoration_v1_listener_callbacks *callbacks);
 
 int swl_seat_add_listener(
     struct wl_seat *seat,

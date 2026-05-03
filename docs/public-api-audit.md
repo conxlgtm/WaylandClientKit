@@ -16,6 +16,8 @@ Intentionally public:
 - `WaylandDisplay`
 - `Window`
 - `WindowConfiguration`
+- `WindowDecorationPreference`
+- `WindowDecorationMode`
 - `SoftwareFrame`
 - `DisplayEvent`
 - `DisplayDiagnostic`
@@ -38,8 +40,8 @@ Release contract:
 - `WaylandClient` is the only supported import for downstream users.
 - Display connection, window creation/close, request-redraw, software
   XRGB8888 drawing, basic pointer/keyboard/touch events, interpreted keyboard
-  payloads, cursor requests, diagnostics, and terminal display errors are the
-  supported `0.0.1` product surface.
+  payloads, server-side decoration negotiation, cursor requests, diagnostics,
+  and terminal display errors are the supported `0.0.1` product surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
   are derived display text, not control-flow payloads.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
@@ -67,6 +69,9 @@ Notes:
 - `Window` is the ergonomic async handle. Windows are still addressable by `WindowID`,
   and teardown is routed through `WaylandDisplay.closeWindow(_:)` or
   `WaylandDisplay.close()`.
+- `Window.decorationMode` reports the current effective xdg-decoration mode when
+  the compositor supports `zxdg_decoration_manager_v1`; mode absence is explicit
+  as `.unavailable`.
 - The runtime is single-thread-affine. Thread-affine session/window entry points are
   package implementation details; downstream users should go through `WaylandDisplay`
   and `Window`.
@@ -81,6 +86,9 @@ Notes:
 - Cursor management is display-level. `PointerCursor` names theme cursors, and
   `WaylandDisplay.setPointerCursor(_:)` applies the desired cursor to focused seats.
   Explicit cursor changes throw when the cursor stack cannot fulfill the request.
+- `WindowDecorationPreference.preferServerSide` is the default because SwiftWayland
+  does not draw client-side titlebars. `preferClientSide` requests no server-side
+  decorations; applications remain responsible for any custom chrome they want.
 - `WaylandDisplay.connect` does not eagerly require a cursor theme to load. Cursor theme
   loading is deferred until a visible cursor image is first needed.
 - `WaylandDisplay.connect` and `Window.show` use finite default waits. Callers

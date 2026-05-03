@@ -376,6 +376,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             .systemError(errno: 5, operation: .displayReadEvents),
             .protocolError(interfaceName: "wl_surface", objectID: 3, code: 1),
             .protocolError(interfaceName: nil, objectID: 0, code: 0),
+            .invalidDecorationMode(999),
         ]
 
         for error in cases {

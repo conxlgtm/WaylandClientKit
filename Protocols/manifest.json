@@ -20,6 +20,17 @@
       "sha256": "5084e76386f6c3959bee957a784c57de204be0de3f57533ce07b4be0617b171a",
       "stability": "stable",
       "notes": "Required for modern toplevel windows. Vendored from the canonical Fedora wayland-protocols package path."
+    },
+    {
+      "name": "xdg-decoration-unstable-v1",
+      "localPath": "Protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml",
+      "sha256": "68753c4a85a28659e3aa1fe0f138329a8bf3dff0b4789f4663a2c7fedbfecf2f",
+      "stability": "unstable",
+      "notes": "Optional extension for compositor-managed toplevel decorations."
     }
   ]
 }

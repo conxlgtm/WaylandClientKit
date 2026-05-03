@@ -204,6 +204,7 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
     case operationTimedOut(String)
     case shortRead(expectedBytes: Int, actualBytes: Int)
     case invalidWaylandArrayByteCount(byteCount: Int, elementSize: Int)
+    case invalidDecorationMode(UInt32)
     case protocolError(RawProtocolError)
     case proxy(RawProxyError)
 
@@ -313,6 +314,8 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
             "Short read: expected \(expectedBytes) bytes, got \(actualBytes)"
         case .invalidWaylandArrayByteCount(let byteCount, let elementSize):
             "Wayland array byte count \(byteCount) is not divisible by \(elementSize)"
+        case .invalidDecorationMode(let rawValue):
+            "Invalid zxdg_toplevel_decoration_v1 mode \(rawValue)"
         case .protocolError(let error):
             "Wayland protocol error \(error.description)"
         case .proxy(let error):
