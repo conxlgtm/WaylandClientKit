@@ -149,6 +149,7 @@ package final class XDGConfigureState {
 
     @discardableResult
     package func handleSurfaceConfigure(serial: UInt32) -> XDGConfigureSequence {
+        let decorationMode = pendingDecorationMode ?? latestConfigure?.decorationMode
         let configure = XDGConfigureSequence(
             serial: serial,
             topLevel: XDGTopLevelConfigureSuggestion(
@@ -157,7 +158,7 @@ package final class XDGConfigureState {
                 bounds: pendingBounds,
                 wmCapabilities: pendingWMCapabilities
             ),
-            decorationMode: pendingDecorationMode
+            decorationMode: decorationMode
         )
         pendingDecorationMode = nil
         latestConfigure = configure
