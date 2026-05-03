@@ -13,11 +13,12 @@ struct WaylandDisplayErrorMappingTests {
             uncheckedErrno: EIO,
             operation: .pollEventLoop
         )
+        let clientSystemError = WaylandSystemError(systemError)
         let error = WaylandDisplayError(
             WaylandThreadExecutorError.eventLoop(.system(systemError))
         )
 
-        #expect(error == .systemError(systemError))
+        #expect(error == .systemError(clientSystemError))
     }
 
     @Test
@@ -38,9 +39,10 @@ struct WaylandDisplayErrorMappingTests {
             uncheckedErrno: EIO,
             operation: .displayReadEvents
         )
+        let clientSystemError = WaylandSystemError(systemError)
         let error = WaylandDisplayError(RuntimeError.eventLoop(.system(systemError)))
 
-        #expect(error == .systemError(systemError))
+        #expect(error == .systemError(clientSystemError))
     }
 
     @Test

@@ -2,14 +2,14 @@ import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
 
-public enum RawSystemErrorConstructionError: Error, Equatable, Sendable {
+package enum RawSystemErrorConstructionError: Error, Equatable, Sendable {
     case zeroErrno
 }
 
-public struct NonZeroErrno: Equatable, Sendable, CustomStringConvertible {
-    public let rawValue: Int32
+package struct NonZeroErrno: Equatable, Sendable, CustomStringConvertible {
+    package let rawValue: Int32
 
-    public init(_ rawErrorNumber: Int32) throws {
+    package init(_ rawErrorNumber: Int32) throws {
         guard rawErrorNumber != 0 else {
             throw RawSystemErrorConstructionError.zeroErrno
         }
@@ -22,12 +22,12 @@ public struct NonZeroErrno: Equatable, Sendable, CustomStringConvertible {
         rawValue = rawErrorNumber
     }
 
-    public var description: String {
+    package var description: String {
         "\(rawValue)"
     }
 }
 
-public enum RawSystemOperation: Equatable, Sendable, CustomStringConvertible {
+package enum RawSystemOperation: Equatable, Sendable, CustomStringConvertible {
     case validateArgument(String)
     case createSharedMemoryFile
     case resizeSharedMemoryFile
@@ -41,10 +41,12 @@ public enum RawSystemOperation: Equatable, Sendable, CustomStringConvertible {
     case displayDispatchPending
     case displayPrepareRead
     case displayError
+    case keymapFstat
+    case keymapMmap
     case duplicateFileDescriptor
     case closeFileDescriptor
 
-    public var description: String {
+    package var description: String {
         switch self {
         case .validateArgument(let name):
             "validate \(name)"
@@ -72,6 +74,10 @@ public enum RawSystemOperation: Equatable, Sendable, CustomStringConvertible {
             "prepare Wayland display read"
         case .displayError:
             "read Wayland display error"
+        case .keymapFstat:
+            "inspect keyboard keymap file"
+        case .keymapMmap:
+            "map keyboard keymap file"
         case .duplicateFileDescriptor:
             "duplicate file descriptor"
         case .closeFileDescriptor:
@@ -80,16 +86,16 @@ public enum RawSystemOperation: Equatable, Sendable, CustomStringConvertible {
     }
 }
 
-public struct RawSystemError: Error, Equatable, Sendable, CustomStringConvertible {
-    public let errno: NonZeroErrno
-    public let operation: RawSystemOperation
+package struct RawSystemError: Error, Equatable, Sendable, CustomStringConvertible {
+    package let errno: NonZeroErrno
+    package let operation: RawSystemOperation
 
-    public init(errno errorNumber: NonZeroErrno, operation systemOperation: RawSystemOperation) {
+    package init(errno errorNumber: NonZeroErrno, operation systemOperation: RawSystemOperation) {
         errno = errorNumber
         operation = systemOperation
     }
 
-    public init(
+    package init(
         validatingErrno errorNumber: Int32,
         operation systemOperation: RawSystemOperation
     ) throws {
@@ -102,17 +108,17 @@ public struct RawSystemError: Error, Equatable, Sendable, CustomStringConvertibl
         operation = systemOperation
     }
 
-    public var description: String {
+    package var description: String {
         "\(operation.description) failed with errno \(errno.rawValue)"
     }
 }
 
-public struct RawProtocolError: Error, Equatable, Sendable, CustomStringConvertible {
-    public let interfaceName: String?
-    public let objectID: UInt32
-    public let code: Int32
+package struct RawProtocolError: Error, Equatable, Sendable, CustomStringConvertible {
+    package let interfaceName: String?
+    package let objectID: UInt32
+    package let code: Int32
 
-    public init(
+    package init(
         interfaceName protocolInterfaceName: String?,
         objectID protocolObjectID: UInt32,
         code protocolCode: Int32
@@ -122,15 +128,15 @@ public struct RawProtocolError: Error, Equatable, Sendable, CustomStringConverti
         code = protocolCode
     }
 
-    public var description: String {
+    package var description: String {
         "interface=\(interfaceName ?? "?") object=\(objectID) code=\(code)"
     }
 }
 
-public enum RawProxyError: Error, Equatable, Sendable, CustomStringConvertible {
+package enum RawProxyError: Error, Equatable, Sendable, CustomStringConvertible {
     case queueMismatch(interface: String, objectID: RawObjectID?)
 
-    public var description: String {
+    package var description: String {
         switch self {
         case .queueMismatch(let interface, let objectID):
             "\(interface) proxy \(objectID.map(\.description) ?? "?") "
@@ -139,7 +145,7 @@ public enum RawProxyError: Error, Equatable, Sendable, CustomStringConvertible {
     }
 }
 
-public enum RawListenerInstallationError: Error, Equatable, Sendable, CustomStringConvertible {
+package enum RawListenerInstallationError: Error, Equatable, Sendable, CustomStringConvertible {
     case registry
     case seat
     case pointer
@@ -147,7 +153,7 @@ public enum RawListenerInstallationError: Error, Equatable, Sendable, CustomStri
     case touch
     case syncCallback
 
-    public var description: String {
+    package var description: String {
         switch self {
         case .registry:
             "Wayland registry listener installation failed"
@@ -165,12 +171,12 @@ public enum RawListenerInstallationError: Error, Equatable, Sendable, CustomStri
     }
 }
 
-public enum RawEventLoopError: Error, Equatable, Sendable, CustomStringConvertible {
+package enum RawEventLoopError: Error, Equatable, Sendable, CustomStringConvertible {
     case system(RawSystemError)
     case unexpectedDisplayRevents(revents: Int16)
     case unexpectedWakeRevents(revents: Int16)
 
-    public var description: String {
+    package var description: String {
         switch self {
         case .system(let error):
             error.description
@@ -182,7 +188,7 @@ public enum RawEventLoopError: Error, Equatable, Sendable, CustomStringConvertib
     }
 }
 
-public enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
+package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
     case connectionFailed
     case eventQueueCreationFailed
     case displayWrapperCreationFailed
@@ -201,15 +207,15 @@ public enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
     case protocolError(RawProtocolError)
     case proxy(RawProxyError)
 
-    public static let registryListenerInstallationFailed: RuntimeError = .listener(.registry)
-    public static let seatListenerInstallationFailed: RuntimeError = .listener(.seat)
-    public static let pointerListenerInstallationFailed: RuntimeError = .listener(.pointer)
-    public static let keyboardListenerInstallationFailed: RuntimeError = .listener(.keyboard)
-    public static let touchListenerInstallationFailed: RuntimeError = .listener(.touch)
-    public static let syncCallbackListenerInstallationFailed: RuntimeError =
+    package static let registryListenerInstallationFailed: RuntimeError = .listener(.registry)
+    package static let seatListenerInstallationFailed: RuntimeError = .listener(.seat)
+    package static let pointerListenerInstallationFailed: RuntimeError = .listener(.pointer)
+    package static let keyboardListenerInstallationFailed: RuntimeError = .listener(.keyboard)
+    package static let touchListenerInstallationFailed: RuntimeError = .listener(.touch)
+    package static let syncCallbackListenerInstallationFailed: RuntimeError =
         .listener(.syncCallback)
 
-    public static func systemError(
+    package static func systemError(
         errno errorNumber: Int32,
         operation systemOperation: RawSystemOperation
     ) -> RuntimeError {
@@ -222,7 +228,7 @@ public enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
         )
     }
 
-    public static func protocolError(
+    package static func protocolError(
         interfaceName: String?,
         objectID: UInt32,
         code: Int32
@@ -236,11 +242,11 @@ public enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
         )
     }
 
-    public static func proxyQueueMismatch(_ interface: String) -> RuntimeError {
+    package static func proxyQueueMismatch(_ interface: String) -> RuntimeError {
         .proxy(.queueMismatch(interface: interface, objectID: nil))
     }
 
-    public static func fromDisplay(
+    package static func fromDisplay(
         _ display: OpaquePointer,
         fallbackErrno: Int32? = nil,
         operation systemOperation: RawSystemOperation = .displayError
@@ -275,7 +281,7 @@ public enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
         return .systemError(errno: fallbackErrno, operation: systemOperation)
     }
 
-    public var description: String {
+    package var description: String {
         switch self {
         case .connectionFailed:
             "Wayland display connection failed"

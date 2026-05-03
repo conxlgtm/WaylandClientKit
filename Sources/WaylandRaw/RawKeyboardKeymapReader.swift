@@ -87,7 +87,9 @@ package enum RawKeyboardKeymapReader {
 
         var status = stat()
         guard unsafe fstat(fd, &status) == 0 else {
-            throw RawKeyboardKeymapReadError.system(errno: errno, operation: .fstat)
+            throw RawKeyboardKeymapReadError.system(
+                RawSystemError(uncheckedErrno: errno, operation: .keymapFstat)
+            )
         }
 
         guard status.st_size >= off_t(size) else {
@@ -103,7 +105,9 @@ package enum RawKeyboardKeymapReader {
             let mapping = unsafe mmap(nil, byteCount, PROT_READ, MAP_PRIVATE, fd, 0),
             unsafe mapping != failedMapping
         else {
-            throw RawKeyboardKeymapReadError.system(errno: errno, operation: .mmap)
+            throw RawKeyboardKeymapReadError.system(
+                RawSystemError(uncheckedErrno: errno, operation: .keymapMmap)
+            )
         }
 
         defer {

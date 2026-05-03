@@ -14,7 +14,7 @@ package protocol WaylandThreadEventSource: AnyObject {
     func handleEventLoopError(_ error: any Error)
 }
 
-public enum WaylandThreadExecutorError: Error, Equatable, Sendable, CustomStringConvertible {
+package enum WaylandThreadExecutorError: Error, Equatable, Sendable, CustomStringConvertible {
     case executorNotReady
     case executorClosed
     case executorStopping(ShutdownMode)
@@ -26,7 +26,7 @@ public enum WaylandThreadExecutorError: Error, Equatable, Sendable, CustomString
     case wakeFileDescriptorShortWrite(Int)
     case eventLoop(RawEventLoopError)
 
-    public var description: String {
+    package var description: String {
         switch self {
         case .executorNotReady:
             "Wayland owner thread executor is not ready"

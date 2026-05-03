@@ -1,4 +1,4 @@
-public enum RawKeyboardEvent: Equatable, Sendable {
+package enum RawKeyboardEvent: Equatable, Sendable {
     case keymap(RawKeyboardKeymapPayload)
     case enter(RawKeyboardEnter)
     case leave(RawKeyboardLeave)
@@ -7,12 +7,12 @@ public enum RawKeyboardEvent: Equatable, Sendable {
     case repeatInfo(RawKeyboardRepeatInfo)
 }
 
-public struct RawKeyboardKeymapID: Hashable, Sendable {
-    public let seatID: RawSeatID
-    public let keyboardGeneration: UInt64
-    public let keymapGeneration: UInt64
+package struct RawKeyboardKeymapID: Hashable, Sendable {
+    package let seatID: RawSeatID
+    package let keyboardGeneration: UInt64
+    package let keymapGeneration: UInt64
 
-    public init(
+    package init(
         seatID keymapSeatID: RawSeatID,
         keyboardGeneration keymapKeyboardGeneration: UInt64,
         keymapGeneration rawKeymapGeneration: UInt64
@@ -23,12 +23,12 @@ public struct RawKeyboardKeymapID: Hashable, Sendable {
     }
 }
 
-public struct RawKeyboardKeymapInfo: Equatable, Sendable {
-    public let id: RawKeyboardKeymapID
-    public let format: RawKeyboardKeymapFormat
-    public let size: UInt32
+package struct RawKeyboardKeymapInfo: Equatable, Sendable {
+    package let id: RawKeyboardKeymapID
+    package let format: RawKeyboardKeymapFormat
+    package let size: UInt32
 
-    public init(
+    package init(
         id keymapID: RawKeyboardKeymapID,
         format keymapFormat: RawKeyboardKeymapFormat,
         size keymapSize: UInt32
@@ -39,10 +39,10 @@ public struct RawKeyboardKeymapInfo: Equatable, Sendable {
     }
 }
 
-public struct XKBV1KeymapBytes: Equatable, Sendable {
+package struct XKBV1KeymapBytes: Equatable, Sendable {
     private let storage: [UInt8]
 
-    public init(_ keymapBytes: [UInt8]) throws(RawKeyboardKeymapReadError) {
+    package init(_ keymapBytes: [UInt8]) throws(RawKeyboardKeymapReadError) {
         guard UInt64(keymapBytes.count) <= UInt64(UInt32.max) else {
             throw .tooLargeForProtocolSize(keymapBytes.count)
         }
@@ -60,35 +60,35 @@ public struct XKBV1KeymapBytes: Equatable, Sendable {
         storage = keymapBytes
     }
 
-    public var count: Int {
+    package var count: Int {
         storage.count
     }
 
-    public var countUInt32: UInt32 {
+    package var countUInt32: UInt32 {
         UInt32(storage.count)
     }
 
-    public var isEmpty: Bool {
+    package var isEmpty: Bool {
         storage.isEmpty
     }
 
-    public var rawValue: [UInt8] {
+    package var rawValue: [UInt8] {
         storage
     }
 }
 
-public enum RawKeyboardKeymapPayload: Equatable, Sendable {
+package enum RawKeyboardKeymapPayload: Equatable, Sendable {
     case noKeymap(id: RawKeyboardKeymapID)
     case xkbV1(id: RawKeyboardKeymapID, bytes: XKBV1KeymapBytes)
 
-    public var id: RawKeyboardKeymapID {
+    package var id: RawKeyboardKeymapID {
         switch self {
         case .noKeymap(let id), .xkbV1(let id, _):
             id
         }
     }
 
-    public var format: RawKeyboardKeymapFormat {
+    package var format: RawKeyboardKeymapFormat {
         switch self {
         case .noKeymap:
             .noKeymap
@@ -97,7 +97,7 @@ public enum RawKeyboardKeymapPayload: Equatable, Sendable {
         }
     }
 
-    public var size: UInt32 {
+    package var size: UInt32 {
         switch self {
         case .noKeymap:
             0
@@ -106,7 +106,7 @@ public enum RawKeyboardKeymapPayload: Equatable, Sendable {
         }
     }
 
-    public var xkbV1Bytes: XKBV1KeymapBytes? {
+    package var xkbV1Bytes: XKBV1KeymapBytes? {
         switch self {
         case .noKeymap:
             nil
@@ -115,7 +115,7 @@ public enum RawKeyboardKeymapPayload: Equatable, Sendable {
         }
     }
 
-    public static func xkbV1(
+    package static func xkbV1(
         id keymapID: RawKeyboardKeymapID,
         bytes keymapBytes: [UInt8]
     ) throws(RawKeyboardKeymapReadError) -> Self {
@@ -123,12 +123,12 @@ public enum RawKeyboardKeymapPayload: Equatable, Sendable {
     }
 }
 
-public struct RawKeyboardEnter: Equatable, Sendable {
-    public let serial: UInt32
-    public let surfaceID: RawObjectID?
-    public let pressedKeys: [UInt32]
+package struct RawKeyboardEnter: Equatable, Sendable {
+    package let serial: UInt32
+    package let surfaceID: RawObjectID?
+    package let pressedKeys: [UInt32]
 
-    public init(
+    package init(
         serial eventSerial: UInt32,
         surfaceID eventSurfaceID: RawObjectID?,
         pressedKeys eventPressedKeys: [UInt32]
@@ -139,23 +139,23 @@ public struct RawKeyboardEnter: Equatable, Sendable {
     }
 }
 
-public struct RawKeyboardLeave: Equatable, Sendable {
-    public let serial: UInt32
-    public let surfaceID: RawObjectID?
+package struct RawKeyboardLeave: Equatable, Sendable {
+    package let serial: UInt32
+    package let surfaceID: RawObjectID?
 
-    public init(serial eventSerial: UInt32, surfaceID eventSurfaceID: RawObjectID?) {
+    package init(serial eventSerial: UInt32, surfaceID eventSurfaceID: RawObjectID?) {
         serial = eventSerial
         surfaceID = eventSurfaceID
     }
 }
 
-public struct RawKeyboardKey: Equatable, Sendable {
-    public let serial: UInt32
-    public let time: UInt32
-    public let evdevKeycode: UInt32
-    public let state: RawKeyboardKeyState
+package struct RawKeyboardKey: Equatable, Sendable {
+    package let serial: UInt32
+    package let time: UInt32
+    package let evdevKeycode: UInt32
+    package let state: RawKeyboardKeyState
 
-    public init(
+    package init(
         serial eventSerial: UInt32,
         time eventTime: UInt32,
         evdevKeycode eventEvdevKeycode: UInt32,
@@ -168,14 +168,14 @@ public struct RawKeyboardKey: Equatable, Sendable {
     }
 }
 
-public struct RawKeyboardModifiers: Equatable, Sendable {
-    public let serial: UInt32
-    public let depressed: UInt32
-    public let latched: UInt32
-    public let locked: UInt32
-    public let group: UInt32
+package struct RawKeyboardModifiers: Equatable, Sendable {
+    package let serial: UInt32
+    package let depressed: UInt32
+    package let latched: UInt32
+    package let locked: UInt32
+    package let group: UInt32
 
-    public init(
+    package init(
         serial eventSerial: UInt32,
         depressed eventDepressed: UInt32,
         latched eventLatched: UInt32,
@@ -190,54 +190,40 @@ public struct RawKeyboardModifiers: Equatable, Sendable {
     }
 }
 
-public struct RawKeyboardRepeatInfo: Equatable, Sendable {
-    public let rate: Int32
-    public let delay: Int32
+package struct RawKeyboardRepeatInfo: Equatable, Sendable {
+    package let rate: Int32
+    package let delay: Int32
 
-    public init(rate repeatRate: Int32, delay repeatDelay: Int32) {
+    package init(rate repeatRate: Int32, delay repeatDelay: Int32) {
         rate = repeatRate
         delay = repeatDelay
     }
 }
 
-public struct RawKeyboardKeyState: Equatable, Sendable {
-    public let rawValue: UInt32
+package struct RawKeyboardKeyState: Equatable, Sendable {
+    package let rawValue: UInt32
 
-    public init(rawValue stateRawValue: UInt32) {
+    package init(rawValue stateRawValue: UInt32) {
         rawValue = stateRawValue
     }
 
-    public static let released = Self(rawValue: 0)
-    public static let pressed = Self(rawValue: 1)
-    public static let repeated = Self(rawValue: 2)
+    package static let released = Self(rawValue: 0)
+    package static let pressed = Self(rawValue: 1)
+    package static let repeated = Self(rawValue: 2)
 }
 
-public struct RawKeyboardKeymapFormat: Equatable, Sendable {
-    public let rawValue: UInt32
+package struct RawKeyboardKeymapFormat: Equatable, Sendable {
+    package let rawValue: UInt32
 
-    public init(rawValue formatRawValue: UInt32) {
+    package init(rawValue formatRawValue: UInt32) {
         rawValue = formatRawValue
     }
 
-    public static let noKeymap = Self(rawValue: 0)
-    public static let xkbV1 = Self(rawValue: 1)
+    package static let noKeymap = Self(rawValue: 0)
+    package static let xkbV1 = Self(rawValue: 1)
 }
 
-public enum RawKeyboardKeymapReadOperation: Equatable, Sendable, CustomStringConvertible {
-    case fstat
-    case mmap
-
-    public var description: String {
-        switch self {
-        case .fstat:
-            "fstat"
-        case .mmap:
-            "mmap"
-        }
-    }
-}
-
-public enum RawKeyboardKeymapReadError: Error, Equatable, Sendable, CustomStringConvertible {
+package enum RawKeyboardKeymapReadError: Error, Equatable, Sendable, CustomStringConvertible {
     case unsupportedFormat(format: RawKeyboardKeymapFormat, advertisedSize: UInt32)
     case invalidFileDescriptor(Int32)
     case invalidSizeLimit(maxSize: UInt32, hardMaximumSize: UInt32)
@@ -246,9 +232,9 @@ public enum RawKeyboardKeymapReadError: Error, Equatable, Sendable, CustomString
     case tooLargeForProtocolSize(Int)
     case fdTooSmall(size: UInt32, actualSize: Int64)
     case missingNULTerminator(size: UInt32)
-    case system(errno: Int32, operation: RawKeyboardKeymapReadOperation)
+    case system(RawSystemError)
 
-    public var description: String {
+    package var description: String {
         switch self {
         case .unsupportedFormat(let format, let advertisedSize):
             "unsupported keymap format \(format.rawValue) with advertised size \(advertisedSize)"
@@ -266,8 +252,8 @@ public enum RawKeyboardKeymapReadError: Error, Equatable, Sendable, CustomString
             "keymap fd contains \(actualSize) bytes, fewer than advertised size \(size)"
         case .missingNULTerminator(let size):
             "xkb_v1 keymap of size \(size) is not NUL-terminated"
-        case .system(let errno, let operation):
-            "system error during keymap \(operation): errno \(errno)"
+        case .system(let error):
+            "system error during keymap read: \(error.description)"
         }
     }
 }

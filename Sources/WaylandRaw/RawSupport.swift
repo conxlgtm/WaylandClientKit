@@ -1,10 +1,10 @@
-public struct RawProxyMetadata: Equatable, Sendable, CustomStringConvertible {
-    public let interfaceName: String
-    public let version: RawVersion
-    public let ownership: RawOwnership
-    public let objectID: RawObjectID?
+package struct RawProxyMetadata: Equatable, Sendable, CustomStringConvertible {
+    package let interfaceName: String
+    package let version: RawVersion
+    package let ownership: RawOwnership
+    package let objectID: RawObjectID?
 
-    public init(
+    package init(
         interfaceName proxyInterfaceName: String,
         version proxyVersion: RawVersion,
         ownership proxyOwnership: RawOwnership,
@@ -16,7 +16,7 @@ public struct RawProxyMetadata: Equatable, Sendable, CustomStringConvertible {
         objectID = proxyObjectID
     }
 
-    public var description: String {
+    package var description: String {
         let objectIDDescription = objectID?.description ?? "id=?"
         return
             "\(interfaceName) \(objectIDDescription) \(version) ownership=\(ownership)"
