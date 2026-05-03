@@ -14,14 +14,35 @@ final class InputRouter {
     }
 
     func route(_ event: RawInputEvent) -> [InputEvent] {
-        guard let routed = routeOne(event) else {
+        guard acceptsRawInputEvent(event) else {
+            return []
+        }
+
+        return routeAccepted(event)
+    }
+
+    func acceptsRawInputEvent(_ event: RawInputEvent) -> Bool {
+        switch event.kind {
+        case .pointer:
+            acceptPointerDeviceEvent(event)
+        case .keyboard:
+            acceptKeyboardDeviceEvent(event)
+        case .touch:
+            acceptTouchDeviceEvent(event)
+        case .seat, .seatRemoved, .diagnostic:
+            true
+        }
+    }
+
+    func routeAccepted(_ event: RawInputEvent) -> [InputEvent] {
+        guard let routed = routeAcceptedOne(event) else {
             return []
         }
 
         return [routed]
     }
 
-    private func routeOne(_ event: RawInputEvent) -> InputEvent? {
+    private func routeAcceptedOne(_ event: RawInputEvent) -> InputEvent? {
         switch event.kind {
         case .seat(let snapshot):
             applySeatSnapshot(event, snapshot)
@@ -40,19 +61,10 @@ final class InputRouter {
                 kind: .diagnostic(convert(diagnostic))
             )
         case .pointer(let pointerEvent):
-            guard acceptPointerDeviceEvent(event) else {
-                return nil
-            }
             return routePointer(event, pointerEvent)
         case .keyboard(let keyboardEvent):
-            guard acceptKeyboardDeviceEvent(event) else {
-                return nil
-            }
             return routeKeyboard(event, keyboardEvent)
         case .touch(let touchEvent):
-            guard acceptTouchDeviceEvent(event) else {
-                return nil
-            }
             return routeTouch(event, touchEvent)
         }
     }

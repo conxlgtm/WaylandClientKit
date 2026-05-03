@@ -353,9 +353,9 @@ func routeSessionInputEvents(
     rawInputObserver: RawInputEventObserving? = nil
 ) -> [InputEvent] {
     var inputEvents: [InputEvent] = []
-    for rawEvent in rawEvents {
+    for rawEvent in rawEvents where inputRouter.acceptsRawInputEvent(rawEvent) {
         inputEvents.append(contentsOf: rawInputObserver?.observe(rawEvent) ?? [])
-        inputEvents.append(contentsOf: inputRouter.route(rawEvent))
+        inputEvents.append(contentsOf: inputRouter.routeAccepted(rawEvent))
 
         for interpretedEvent in keyboardInterpreter.consume(rawEvent) {
             inputEvents.append(contentsOf: inputRouter.route(interpretedEvent))
