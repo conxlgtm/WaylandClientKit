@@ -48,6 +48,20 @@ normalize_generated_file() {
         -e '/^#include <stdbool\.h>$/d' \
         -e '/^[[:space:]]+\* @deprecated Deprecated since version [0-9]+$/d' \
         "$generated_file"
+
+    awk '
+        { lines[NR] = $0 }
+        END {
+            last = NR
+            while (last > 0 && lines[last] == "") {
+                last--
+            }
+            for (line = 1; line <= last; line++) {
+                print lines[line]
+            }
+        }
+    ' "$generated_file" >"$generated_file.tmp"
+    mv "$generated_file.tmp" "$generated_file"
 }
 
 wayland-scanner client-header \

@@ -72,4 +72,3 @@ WL_PRIVATE const struct wl_interface zxdg_toplevel_decoration_v1_interface = {
 	3, zxdg_toplevel_decoration_v1_requests,
 	1, zxdg_toplevel_decoration_v1_events,
 };
-
