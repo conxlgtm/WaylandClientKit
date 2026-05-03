@@ -17,7 +17,6 @@ public struct InputDiagnostic: Equatable, Sendable {
 public enum InputDiagnosticPayload: Equatable, Sendable {
     case keymap(KeymapDiagnostic)
     case listener(InputListenerDiagnostic)
-    case queueOverflow(InputPipelineOverflow)
     case inputPipelineOverflow(InputPipelineOverflow)
     case cursor(CursorDiagnostic)
 
@@ -27,8 +26,6 @@ public enum InputDiagnosticPayload: Equatable, Sendable {
             .keyboardKeymap
         case .listener(let diagnostic):
             .listener(diagnostic.listener)
-        case .queueOverflow:
-            .queueOverflow
         case .inputPipelineOverflow(let overflow):
             .inputPipelineOverflow(overflow)
         case .cursor(let diagnostic):
@@ -44,8 +41,6 @@ extension InputDiagnosticPayload: CustomStringConvertible {
             diagnostic.description
         case .listener(let diagnostic):
             diagnostic.description
-        case .queueOverflow(let overflow):
-            "\(overflow.stage.description) exceeded capacity \(overflow.capacity)"
         case .inputPipelineOverflow(let overflow):
             "\(overflow.stage.description) exceeded capacity \(overflow.capacity)"
         case .cursor(let diagnostic):
@@ -159,7 +154,6 @@ public enum CursorDiagnostic: Equatable, Sendable, CustomStringConvertible {
 public enum InputDiagnosticOperation: Equatable, Sendable {
     case keyboardKeymap
     case listener(String)
-    case queueOverflow
     case inputPipelineOverflow(InputPipelineOverflow)
     case cursor(CursorDiagnosticOperation)
 }

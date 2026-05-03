@@ -415,37 +415,6 @@ struct SeatInputRouterTests {
     }
 
     @Test
-    func queueOverflowDiagnosticsRouteAtDisplayLevel() {
-        let router = InputRouter()
-        let seatID = RawSeatID(rawValue: 78)
-
-        let routed = router.route(
-            rawEvent(
-                sequence: 1,
-                seatID: seatID,
-                kind: .diagnostic(
-                    RawInputDiagnostic(
-                        .queueOverflow(
-                            RawInputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
-                        )
-                    )
-                )
-            )
-        )
-
-        #expect(routed.first?.windowID == nil)
-        #expect(
-            routed.first?.kind
-                == .diagnostic(
-                    InputDiagnostic(
-                        .queueOverflow(
-                            InputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
-                        )
-                    )
-                ))
-    }
-
-    @Test
     func inputPipelineOverflowDiagnosticsRouteAtDisplayLevel() {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 79)

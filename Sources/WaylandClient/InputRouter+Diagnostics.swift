@@ -16,8 +16,6 @@ extension InputRouter {
                     message: diagnostic.message
                 )
             )
-        case .queueOverflow(let overflow):
-            .queueOverflow(convertRawOverflow(overflow))
         case .inputPipelineOverflow(let overflow):
             .inputPipelineOverflow(convertRawOverflow(overflow))
         }
@@ -71,8 +69,6 @@ extension InputRouter {
             .keyboardKeymap
         case .listener(let name):
             .listener(name)
-        case .queueOverflow:
-            .queueOverflow
         case .inputPipelineOverflow(let overflow):
             .inputPipelineOverflow(convertRawOverflow(overflow))
         }

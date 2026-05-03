@@ -46,18 +46,14 @@ package final class KeyboardInterpreter {
             }
         }
 
-        func unavailableReason(default missingReason: KeyboardInterpretationUnavailableReason)
-            -> KeyboardInterpretationUnavailableReason
-        {
+        var failureReason: KeyboardInterpretationUnavailableReason? {
             switch self {
-            case .missing:
-                missingReason
             case .noKeymap:
                 .noKeymap
-            case .valid:
-                missingReason
             case .unavailable(_, let reason):
                 reason
+            case .missing, .valid:
+                nil
             }
         }
     }
@@ -191,7 +187,7 @@ extension KeyboardInterpreter {
             let keymap = devicesByID[deviceID]?.keymap ?? .missing
             guard let layout = keymap.validLayout else {
                 let diagnostic = unavailable(
-                    keymap.unavailableReason(default: .missingKeymap),
+                    keymap.failureReason ?? .missingKeymap,
                     from: event,
                     deviceID: deviceID
                 )
@@ -224,7 +220,7 @@ extension KeyboardInterpreter {
             let keymap = devicesByID[deviceID]?.keymap ?? .missing
             guard let layout = keymap.validLayout else {
                 let diagnostic = unavailable(
-                    keymap.unavailableReason(default: .missingKeyboardState),
+                    keymap.failureReason ?? .missingKeyboardState,
                     from: event,
                     deviceID: deviceID
                 )

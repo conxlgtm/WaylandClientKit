@@ -317,7 +317,7 @@ final class DisplayEventHub: Sendable {
 
     private func displaySeverity(for diagnostic: InputDiagnostic) -> DiagnosticSeverity {
         switch diagnostic.operation {
-        case .queueOverflow, .inputPipelineOverflow:
+        case .inputPipelineOverflow:
             .error
         case .keyboardKeymap, .listener, .cursor:
             .degraded
@@ -335,7 +335,7 @@ final class DisplayEventHub: Sendable {
         switch diagnostic.operation {
         case .inputPipelineOverflow(let overflow):
             overflow
-        case .keyboardKeymap, .listener, .queueOverflow, .cursor:
+        case .keyboardKeymap, .listener, .cursor:
             nil
         }
     }

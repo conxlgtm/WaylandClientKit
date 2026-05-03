@@ -61,7 +61,6 @@ public struct RawInputDiagnostic: Equatable, Sendable {
 public enum RawInputDiagnosticPayload: Equatable, Sendable {
     case keymap(RawKeymapDiagnostic)
     case listener(RawListenerDiagnostic)
-    case queueOverflow(RawInputPipelineOverflow)
     case inputPipelineOverflow(RawInputPipelineOverflow)
 
     public var operation: RawInputDiagnosticOperation {
@@ -70,8 +69,6 @@ public enum RawInputDiagnosticPayload: Equatable, Sendable {
             .keyboardKeymap
         case .listener(let diagnostic):
             .listener(diagnostic.listener)
-        case .queueOverflow:
-            .queueOverflow
         case .inputPipelineOverflow(let overflow):
             .inputPipelineOverflow(overflow)
         }
@@ -85,8 +82,6 @@ extension RawInputDiagnosticPayload: CustomStringConvertible {
             diagnostic.description
         case .listener(let diagnostic):
             diagnostic.description
-        case .queueOverflow(let overflow):
-            "\(overflow.stage.description) exceeded capacity \(overflow.capacity)"
         case .inputPipelineOverflow(let overflow):
             "\(overflow.stage.description) exceeded capacity \(overflow.capacity)"
         }
@@ -121,7 +116,6 @@ public struct RawListenerDiagnostic: Equatable, Sendable, CustomStringConvertibl
 public enum RawInputDiagnosticOperation: Equatable, Sendable {
     case keyboardKeymap
     case listener(String)
-    case queueOverflow
     case inputPipelineOverflow(RawInputPipelineOverflow)
 }
 
