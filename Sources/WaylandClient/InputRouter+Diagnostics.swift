@@ -25,7 +25,7 @@ extension InputRouter {
 
     func convert(_ diagnostic: RawKeymapDiagnostic) -> KeymapDiagnostic {
         switch diagnostic {
-        case .readFailed(let error):
+        case .readFailed(_, let error):
             .readFailed(convert(error))
         }
     }

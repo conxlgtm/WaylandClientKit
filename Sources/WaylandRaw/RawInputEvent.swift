@@ -94,11 +94,11 @@ extension RawInputDiagnosticPayload: CustomStringConvertible {
 }
 
 public enum RawKeymapDiagnostic: Equatable, Sendable, CustomStringConvertible {
-    case readFailed(RawKeyboardKeymapReadError)
+    case readFailed(id: RawKeyboardKeymapID, error: RawKeyboardKeymapReadError)
 
     public var description: String {
         switch self {
-        case .readFailed(let error):
+        case .readFailed(_, let error):
             error.description
         }
     }

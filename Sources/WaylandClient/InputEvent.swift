@@ -372,9 +372,11 @@ public struct KeyboardInterpretationUnavailable: Equatable, Sendable {
 
 public enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {
     case missingDeviceID
+    case noKeymap
     case unsupportedKeymapFormat(UInt32)
     case emptyKeymap
     case invalidKeymap
+    case keymapReadFailed(KeymapReadFailure)
     case missingKeymap
     case missingKeyboardState
     case invalidKeycode(UInt32)
