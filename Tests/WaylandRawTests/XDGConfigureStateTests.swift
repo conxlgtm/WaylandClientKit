@@ -10,6 +10,7 @@ struct XDGConfigureStateTests {
 
         state.handleConfigureBounds(width: 1_920, height: 1_080)
         state.handleWMCapabilities([.maximize, .fullscreen])
+        state.handleDecorationConfigure(mode: .serverSide)
         state.handleTopLevelConfigure(
             width: 800,
             height: 600,
@@ -23,6 +24,16 @@ struct XDGConfigureStateTests {
         #expect(configure.topLevel.states == [.activated, .resizing])
         #expect(configure.topLevel.bounds == TopLevelSize(width: 1_920, height: 1_080))
         #expect(configure.topLevel.wmCapabilities == [.maximize, .fullscreen])
+        #expect(configure.decorationMode == .serverSide)
+    }
+
+    @Test
+    func decorationConfigureIsConsumedBySurfaceConfigure() {
+        let state = XDGConfigureState()
+        state.handleDecorationConfigure(mode: .clientSide)
+
+        #expect(state.handleSurfaceConfigure(serial: 1).decorationMode == .clientSide)
+        #expect(state.handleSurfaceConfigure(serial: 2).decorationMode == nil)
     }
 
     @Test
