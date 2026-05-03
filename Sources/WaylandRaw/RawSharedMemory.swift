@@ -211,11 +211,13 @@ package final class RawBuffer {
         }
     }
 
-    package func markBusy() {
+    @discardableResult
+    package func markBusy() -> Bool {
         markBusy(commitGeneration: 0)
     }
 
-    package func markBusy(commitGeneration: UInt64) {
+    @discardableResult
+    package func markBusy(commitGeneration: UInt64) -> Bool {
         busyState.markPendingRelease(commitGeneration: commitGeneration)
     }
 

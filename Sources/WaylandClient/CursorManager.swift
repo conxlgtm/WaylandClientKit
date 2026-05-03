@@ -407,7 +407,12 @@ extension CursorManager {
         rawEvent: RawInputEvent
     ) -> [InputEvent] {
         if let diagnostic = desiredCursor.unavailableDiagnostic {
-            return recordAutomaticCursorFailure(diagnostic, rawEvent: rawEvent)
+            switch diagnostic {
+            case .missingCursor:
+                return recordAutomaticCursorFailure(diagnostic, rawEvent: rawEvent)
+            case .automaticPointerEnterFailed:
+                break
+            }
         }
 
         do {
@@ -423,7 +428,6 @@ extension CursorManager {
         } catch {
             let message = String(describing: error)
             let diagnostic = CursorDiagnostic.automaticPointerEnterFailed(message)
-            desiredCursor.cacheUnavailable(diagnostic)
             return recordAutomaticCursorFailure(diagnostic, rawEvent: rawEvent)
         }
     }

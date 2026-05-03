@@ -31,12 +31,14 @@ func rawPointerLeave(
     sequence: UInt64,
     seatID: RawSeatID,
     surfaceID: RawObjectID?,
-    serial: UInt32 = 1
+    serial: UInt32 = 1,
+    deviceID: RawInputDeviceID? = nil
 ) -> RawInputEvent {
     rawEvent(
         sequence: sequence,
         seatID: seatID,
-        kind: .pointer(.leave(RawPointerLeave(serial: serial, surfaceID: surfaceID)))
+        kind: .pointer(.leave(RawPointerLeave(serial: serial, surfaceID: surfaceID))),
+        deviceID: deviceID
     )
 }
 

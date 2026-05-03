@@ -291,7 +291,10 @@ package final class TopLevelWindow {
                 throw error
             }
 
-            buffer.markBusy(commitGeneration: request.generation)
+            precondition(
+                buffer.markBusy(commitGeneration: request.generation),
+                "acquired drawing buffer must move to pending release"
+            )
             surface.attach(buffer: buffer)
             surface.damageFullBuffer(width: buffer.width, height: buffer.height)
             surface.commit()

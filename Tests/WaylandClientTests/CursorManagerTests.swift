@@ -332,10 +332,12 @@ struct SetCursorRequest: Equatable {
 final class RecordingCursorBackend: CursorManagerBackend {
     var resolvedCursorNames: [String] = []
     var createdSurfaceSeatIDs: [RawSeatID] = []
+    var cursorSurfaceRequestSeatIDs: [RawSeatID] = []
     var createdSurfaces: [RecordingCursorSurface] = []
     var setCursorRequests: [SetCursorRequest] = []
     var missingCursorNames: Set<String> = []
     var setCursorResultOverride: RawPointerCursorResult?
+    var cursorSurfaceCreationError: (any Error)?
 
     private let image: CursorImage
     private var nextSurfaceID = UInt32(0xC00)
@@ -366,6 +368,12 @@ final class RecordingCursorBackend: CursorManagerBackend {
     }
 
     func createCursorSurface(for seatID: RawSeatID) throws -> CursorManagerSurface {
+        cursorSurfaceRequestSeatIDs.append(seatID)
+        if let error = cursorSurfaceCreationError {
+            cursorSurfaceCreationError = nil
+            throw error
+        }
+
         createdSurfaceSeatIDs.append(seatID)
         let surface = RecordingCursorSurface(objectID: RawObjectID(nextSurfaceID))
         nextSurfaceID += 1
