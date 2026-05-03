@@ -246,6 +246,12 @@ public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
     case invalidDecorationMode(rawValue: UInt32)
     case invalidPreferredBufferScale(windowID: WindowID, factor: Int32)
     case invalidFractionalScale(windowID: WindowID, numerator: UInt32)
+    case unrepresentableSurfaceBufferSize(
+        windowID: WindowID,
+        logicalDimension: Int32,
+        scaleNumerator: UInt32,
+        scaleDenominator: UInt32
+    )
     case proxyQueueMismatch(interface: String, objectID: WaylandProtocolObjectID?)
 
     public var description: String {
@@ -265,6 +271,15 @@ public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
         case .invalidFractionalScale(let windowID, let numerator):
             "Window \(windowID) received invalid wp_fractional_scale_v1 preferred scale "
                 + "\(numerator)"
+        case .unrepresentableSurfaceBufferSize(
+            let windowID,
+            let logicalDimension,
+            let scaleNumerator,
+            let scaleDenominator
+        ):
+            "Window \(windowID) surface scale \(scaleNumerator)/\(scaleDenominator) makes "
+                + "logical dimension \(logicalDimension) unrepresentable as an Int32 buffer "
+                + "dimension"
         case .proxyQueueMismatch(let interface, let objectID):
             "Wayland proxy queue mismatch interface=\(interface) object="
                 + "\(objectID?.description ?? "?")"

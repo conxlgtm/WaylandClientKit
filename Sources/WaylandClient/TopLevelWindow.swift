@@ -370,7 +370,7 @@ package final class TopLevelWindow {
         guard !model.isClosed else { return .skippedClosed }
 
         let effects = try model.reduce(
-            .redrawRequestConsumed(bufferAvailable: redrawBufferAvailable)
+            .redrawRequestConsumed(bufferAvailable: try redrawBufferAvailable())
         )
         return try interpretPresentationEffects(effects, draw)
     }
@@ -393,7 +393,7 @@ package final class TopLevelWindow {
                 return .skippedPendingFrame
             }
 
-            let geometry = surfaceGeometry(logicalSize: request.configuration.size)
+            let geometry = try surfaceGeometry(logicalSize: request.configuration.size)
             let pool = try bufferPool(for: geometry.bufferSize)
             dropReleasedRetiredPools()
 
@@ -465,7 +465,7 @@ package final class TopLevelWindow {
                 model.reduce(
                     .presentationSucceeded(
                         generation: request.generation,
-                        bufferAvailable: redrawBufferAvailable
+                        bufferAvailable: try redrawBufferAvailable()
                     )
                 )
             )
@@ -483,7 +483,13 @@ package final class TopLevelWindow {
             return
         }
 
-        viewport?.setDestination(
+        guard let viewport else {
+            preconditionFailure(
+                "viewport must exist when fractional scaling requires a destination"
+            )
+        }
+
+        viewport.setDestination(
             width: geometry.logicalSize.width.rawValue,
             height: geometry.logicalSize.height.rawValue
         )
@@ -558,7 +564,7 @@ extension TopLevelWindow {
 
         do {
             try interpretWindowEffects(
-                model.reduce(.frameBecameReady(bufferAvailable: redrawBufferAvailable))
+                model.reduce(.frameBecameReady(bufferAvailable: try redrawBufferAvailable()))
             )
         } catch let error as ClientError {
             reportCallbackFailure(operation: .frameDone, error: error)
@@ -575,7 +581,7 @@ extension TopLevelWindow {
 
         do {
             try interpretWindowEffects(
-                model.reduce(.bufferBecameAvailable(bufferAvailable: redrawBufferAvailable))
+                model.reduce(.bufferBecameAvailable(bufferAvailable: try redrawBufferAvailable()))
             )
         } catch let error as ClientError {
             reportCallbackFailure(operation: .bufferReleased, error: error)
@@ -586,7 +592,12 @@ extension TopLevelWindow {
 
     private func handlePreferredBufferScale(_ factor: Int32) {
         do {
-            guard try surfaceScaleState.updatePreferredBufferScale(factor) else { return }
+            guard
+                try surfaceScaleState.updatePreferredBufferScale(
+                    factor,
+                    logicalSize: currentLogicalSize
+                )
+            else { return }
             try markNeedsRedraw(bufferAvailable: true)
         } catch let error as WindowError {
             reportCallbackFailure(
@@ -600,7 +611,12 @@ extension TopLevelWindow {
 
     private func handlePreferredFractionalScale(_ scale: UInt32) {
         do {
-            guard try surfaceScaleState.updatePreferredFractionalScale(scale) else { return }
+            guard
+                try surfaceScaleState.updatePreferredFractionalScale(
+                    scale,
+                    logicalSize: currentLogicalSize
+                )
+            else { return }
             try markNeedsRedraw(bufferAvailable: true)
         } catch let error as WindowError {
             reportCallbackFailure(
@@ -614,7 +630,7 @@ extension TopLevelWindow {
 
     private func markNeedsRedraw() {
         do {
-            try markNeedsRedraw(bufferAvailable: redrawBufferAvailable)
+            try markNeedsRedraw(bufferAvailable: try redrawBufferAvailable())
         } catch let error as ClientError {
             reportCallbackFailure(operation: .markNeedsRedraw, error: error)
         } catch {
@@ -637,18 +653,26 @@ extension TopLevelWindow {
         model.redraw.isDirty
     }
 
-    private var currentSurfaceGeometry: SurfaceGeometry {
-        surfaceGeometry(logicalSize: model.currentConfiguration?.size ?? configuration.initialSize)
+    private var currentLogicalSize: PositiveTopLevelSize {
+        model.currentConfiguration?.size ?? configuration.initialSize
     }
 
-    private func surfaceGeometry(logicalSize: PositiveTopLevelSize) -> SurfaceGeometry {
-        surfaceScaleState.geometry(logicalSize: logicalSize)
+    private func currentSurfaceGeometry() throws -> SurfaceGeometry {
+        try surfaceGeometry(logicalSize: currentLogicalSize)
     }
 
-    private var redrawBufferAvailable: Bool {
+    private func surfaceGeometry(logicalSize: PositiveTopLevelSize) throws -> SurfaceGeometry {
+        do {
+            return try surfaceScaleState.geometry(logicalSize: logicalSize)
+        } catch let error as WindowError {
+            throw ClientError.window(id, error)
+        }
+    }
+
+    private func redrawBufferAvailable() throws -> Bool {
         guard let buffers else { return true }
 
-        if buffers.size != currentSurfaceGeometry.bufferSize.rawSize {
+        if buffers.size != (try currentSurfaceGeometry()).bufferSize.rawSize {
             return true
         }
 
@@ -771,8 +795,10 @@ extension TopLevelWindow {
     }
 
     package var geometryOnOwnerThread: SurfaceGeometry {
-        connection.preconditionIsOwnerThread()
-        return currentSurfaceGeometry
+        get throws {
+            connection.preconditionIsOwnerThread()
+            return try currentSurfaceGeometry()
+        }
     }
 
     package func markPublishedOnOwnerThread() {

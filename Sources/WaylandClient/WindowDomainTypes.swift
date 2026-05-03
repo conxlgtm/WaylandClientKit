@@ -230,38 +230,31 @@ public struct SurfaceScale: Equatable, Sendable, CustomStringConvertible {
         return Int32(numerator)
     }
 
-    package func bufferSize(for logicalSize: PositiveTopLevelSize) -> PositivePixelSize {
-        PositivePixelSize(
-            width: PositiveInt32(
-                unchecked: Self.roundHalfAwayFromZero(
-                    logicalSize.width.rawValue,
-                    numerator: numerator,
-                    denominator: denominator
-                )
-            ),
-            height: PositiveInt32(
-                unchecked: Self.roundHalfAwayFromZero(
-                    logicalSize.height.rawValue,
-                    numerator: numerator,
-                    denominator: denominator
-                )
-            )
+    package func bufferSize(for logicalSize: PositiveTopLevelSize) throws -> PositivePixelSize {
+        try PositivePixelSize(
+            width: scaledDimension(logicalSize.width.rawValue),
+            height: scaledDimension(logicalSize.height.rawValue)
         )
     }
 
-    private static func roundHalfAwayFromZero(
-        _ value: Int32,
-        numerator: UInt32,
-        denominator: UInt32
-    ) -> Int32 {
+    private func scaledDimension(_ value: Int32) throws -> PositiveInt32 {
         let scaled = Int64(value) * Int64(numerator)
         let divisor = Int64(denominator)
         let quotient = scaled / divisor
         let remainder = scaled % divisor
-        let rounded = quotient + (remainder * 2 >= divisor ? 1 : 0)
+        let rounded = max(1, quotient + (remainder * 2 >= divisor ? 1 : 0))
 
-        precondition(rounded > 0 && rounded <= Int64(Int32.max))
-        return Int32(rounded)
+        guard rounded <= Int64(Int32.max) else {
+            throw WindowError.invalidConfigure(
+                .unrepresentableSurfaceBufferSize(
+                    logicalDimension: value,
+                    scaleNumerator: numerator,
+                    scaleDenominator: denominator
+                )
+            )
+        }
+
+        return PositiveInt32(unchecked: Int32(rounded))
     }
 }
 
@@ -273,20 +266,10 @@ public struct SurfaceGeometry: Equatable, Sendable, CustomStringConvertible {
     public init(
         logicalSize surfaceLogicalSize: PositiveTopLevelSize,
         scale surfaceScale: SurfaceScale
-    ) {
+    ) throws {
         logicalSize = surfaceLogicalSize
         scale = surfaceScale
-        bufferSize = surfaceScale.bufferSize(for: surfaceLogicalSize)
-    }
-
-    package init(
-        logicalSize surfaceLogicalSize: PositiveTopLevelSize,
-        bufferSize surfaceBufferSize: PositivePixelSize,
-        scale surfaceScale: SurfaceScale
-    ) {
-        logicalSize = surfaceLogicalSize
-        bufferSize = surfaceBufferSize
-        scale = surfaceScale
+        bufferSize = try surfaceScale.bufferSize(for: surfaceLogicalSize)
     }
 
     public var description: String {

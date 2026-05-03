@@ -273,8 +273,8 @@ struct WaylandClientTests {
 private func softwareFrameTestGeometry(width: Int32, height: Int32) throws
     -> SoftwareFrameGeometry
 {
-    try SoftwareFrameGeometry(
-        surface: SurfaceGeometry(
+    SoftwareFrameGeometry(
+        surface: try SurfaceGeometry(
             logicalSize: PositiveTopLevelSize(width: width, height: height),
             scale: .one
         )

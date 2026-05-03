@@ -148,6 +148,19 @@ package enum WindowFailureClassifier {
             .protocolViolation(
                 .invalidFractionalScale(windowID: windowID, numerator: scale)
             )
+        case .unrepresentableSurfaceBufferSize(
+            let logicalDimension,
+            let scaleNumerator,
+            let scaleDenominator
+        ):
+            .protocolViolation(
+                .unrepresentableSurfaceBufferSize(
+                    windowID: windowID,
+                    logicalDimension: logicalDimension,
+                    scaleNumerator: scaleNumerator,
+                    scaleDenominator: scaleDenominator
+                )
+            )
         case .unresolvedSize:
             .internalInvariant(
                 .effectInterpreterInvariant(windowID, "configure size could not be resolved")

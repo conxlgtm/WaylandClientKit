@@ -66,6 +66,11 @@ public enum WindowConfigureError: Equatable, Sendable, CustomStringConvertible {
     case invalidDecorationMode(UInt32)
     case invalidPreferredBufferScale(Int32)
     case invalidFractionalScale(UInt32)
+    case unrepresentableSurfaceBufferSize(
+        logicalDimension: Int32,
+        scaleNumerator: UInt32,
+        scaleDenominator: UInt32
+    )
 
     public var description: String {
         switch self {
@@ -81,6 +86,13 @@ public enum WindowConfigureError: Equatable, Sendable, CustomStringConvertible {
             "invalid wl_surface preferred buffer scale \(factor)"
         case .invalidFractionalScale(let scale):
             "invalid wp_fractional_scale_v1 preferred scale \(scale)"
+        case .unrepresentableSurfaceBufferSize(
+            let logicalDimension,
+            let scaleNumerator,
+            let scaleDenominator
+        ):
+            "surface scale \(scaleNumerator)/\(scaleDenominator) makes logical dimension "
+                + "\(logicalDimension) unrepresentable as an Int32 buffer dimension"
         }
     }
 }
