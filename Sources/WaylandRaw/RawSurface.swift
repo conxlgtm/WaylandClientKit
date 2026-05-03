@@ -69,6 +69,10 @@ package final class RawSurface {
         }
     }
 
+    package func setBufferScale(_ scale: Int32) {
+        unsafe swl_surface_set_buffer_scale(pointer, scale)
+    }
+
     package var usesBufferDamage: Bool {
         version >= 4
     }

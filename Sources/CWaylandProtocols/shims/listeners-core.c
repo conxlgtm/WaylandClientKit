@@ -80,3 +80,54 @@ int swl_buffer_add_listener(
     return wl_buffer_add_listener(
         buffer, &swl_buffer_listener_impl, (void *)callbacks);
 }
+
+/*
+ * wl_surface listener bridge
+ */
+
+static void swl_surface_handle_enter(
+    void *data, struct wl_surface *surface, struct wl_output *output)
+{
+    (void)data;
+    (void)surface;
+    (void)output;
+}
+
+static void swl_surface_handle_leave(
+    void *data, struct wl_surface *surface, struct wl_output *output)
+{
+    (void)data;
+    (void)surface;
+    (void)output;
+}
+
+static void swl_surface_handle_preferred_buffer_scale(
+    void *data, struct wl_surface *surface, int32_t factor)
+{
+    const struct swl_surface_listener_callbacks *cb = data;
+    if (cb && cb->preferred_buffer_scale)
+        cb->preferred_buffer_scale(cb->data, surface, factor);
+}
+
+static void swl_surface_handle_preferred_buffer_transform(
+    void *data, struct wl_surface *surface, uint32_t transform)
+{
+    (void)data;
+    (void)surface;
+    (void)transform;
+}
+
+static const struct wl_surface_listener swl_surface_listener_impl = {
+    .enter                      = swl_surface_handle_enter,
+    .leave                      = swl_surface_handle_leave,
+    .preferred_buffer_scale     = swl_surface_handle_preferred_buffer_scale,
+    .preferred_buffer_transform = swl_surface_handle_preferred_buffer_transform,
+};
+
+int swl_surface_add_listener(
+    struct wl_surface *surface,
+    const struct swl_surface_listener_callbacks *callbacks)
+{
+    return wl_surface_add_listener(
+        surface, &swl_surface_listener_impl, (void *)callbacks);
+}

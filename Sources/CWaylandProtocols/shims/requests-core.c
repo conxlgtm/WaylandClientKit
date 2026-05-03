@@ -81,6 +81,11 @@ void swl_surface_damage_buffer(
     wl_surface_damage_buffer(surface, x, y, width, height);
 }
 
+void swl_surface_set_buffer_scale(struct wl_surface *surface, int32_t scale)
+{
+    wl_surface_set_buffer_scale(surface, scale);
+}
+
 struct wl_pointer *swl_seat_get_pointer(struct wl_seat *seat)
 {
     return wl_seat_get_pointer(seat);
