@@ -3,7 +3,7 @@ import WaylandRaw
 package struct WindowModel: Equatable, Sendable {
     let id: WindowID
     let fallbackSize: PositiveTopLevelSize
-    var lifecycle = XDGWindowLifecycle.created
+    var lifecycle = XDGWindowLifecycle.created(.none)
     var publication = WindowPublicationState.notPublished
 
     init(id windowID: WindowID, fallbackSize initialSize: PositiveTopLevelSize) {
@@ -29,7 +29,16 @@ package struct WindowModel: Equatable, Sendable {
     }
 
     var closeRequest: CloseRequestState {
-        activeState?.closeRequest ?? .none
+        switch lifecycle {
+        case .created(let closeRequest),
+            .roleAssigned(let closeRequest),
+            .waitingForInitialConfigure(let closeRequest):
+            closeRequest
+        case .active(let activeState):
+            activeState.closeRequest
+        case .closing, .destroyed:
+            .none
+        }
     }
 
     var redraw: WindowRedrawState {
@@ -97,101 +106,6 @@ package struct WindowModel: Equatable, Sendable {
     }
 }
 
-package enum WindowEvent: Equatable, Sendable {
-    case roleObjectsCreated
-    case initialCommitSent
-    case configureReceived(XDGConfigureSequence)
-    case contentInvalidated(bufferAvailable: Bool)
-    case frameBecameReady(bufferAvailable: Bool)
-    case bufferBecameAvailable(bufferAvailable: Bool)
-    case redrawRequestConsumed(bufferAvailable: Bool)
-    case presentationStarted(generation: UInt64)
-    case presentationBlockedByBuffer
-    case presentationSucceeded(generation: UInt64, bufferAvailable: Bool)
-    case presentationFailed(generation: UInt64, PresentationError)
-    case compositorCloseRequested(policy: CloseRequestPolicy)
-    case explicitClose
-    case initialConfigureTimedOut(milliseconds: Int32)
-    case transientStateReset
-}
-
-package enum WindowEffect: Equatable, Sendable {
-    case ackConfigure(UInt32)
-    case publishCloseRequested(WindowID)
-    case publishClosed(WindowID)
-    case publishRedrawRequested(WindowID)
-    case cancelFrameCallback
-    case performSoftwarePresent(PresentationRequest)
-    case retireSwapchain
-    case destroyRoleObjects
-    case destroySurface
-}
-
-package struct PresentationRequest: Equatable, Sendable {
-    let generation: UInt64
-    let configuration: ResolvedWindowConfiguration
-}
-
-package enum XDGWindowLifecycle: Equatable, Sendable, CustomStringConvertible {
-    case created
-    case roleAssigned
-    case waitingForInitialConfigure
-    case active(ActiveWindowState)
-    case closing(ClosingWindowState)
-    case destroyed
-
-    package var description: String {
-        switch self {
-        case .created:
-            "created"
-        case .roleAssigned:
-            "roleAssigned"
-        case .waitingForInitialConfigure:
-            "waitingForInitialConfigure"
-        case .active:
-            "active"
-        case .closing:
-            "closing"
-        case .destroyed:
-            "destroyed"
-        }
-    }
-}
-
-package struct ActiveWindowState: Equatable, Sendable {
-    var configure: ResolvedWindowConfiguration
-    var closeRequest = CloseRequestState.none
-    var redraw = WindowRedrawState()
-    var presentation = WindowPresentationState.idle
-}
-
-package enum CloseRequestState: Equatable, Sendable {
-    case none
-    case requested
-}
-
-package enum WindowPresentationState: Equatable, Sendable {
-    case idle
-    case drawing(generation: UInt64)
-}
-
-package enum WindowPublicationState: Equatable, Sendable {
-    case notPublished
-    case published(WindowID)
-    case closedPublished(WindowID)
-}
-
-package enum ClosingReason: Equatable, Sendable {
-    case explicitClose
-    case compositorRequest
-    case initializationFailed(WindowError)
-    case displayClosing
-}
-
-package struct ClosingWindowState: Equatable, Sendable {
-    var reason: ClosingReason
-}
-
 extension WindowModel {
     private var activeState: ActiveWindowState? {
         guard case .active(let state) = lifecycle else {
@@ -202,20 +116,20 @@ extension WindowModel {
     }
 
     private mutating func reduceRoleObjectsCreated() throws -> [WindowEffect] {
-        guard lifecycle == .created else {
+        guard case .created(let closeRequest) = lifecycle else {
             throw invalidTransition(event: "roleObjectsCreated")
         }
 
-        lifecycle = .roleAssigned
+        lifecycle = .roleAssigned(closeRequest)
         return []
     }
 
     private mutating func reduceInitialCommitSent() throws -> [WindowEffect] {
-        guard case .roleAssigned = lifecycle else {
+        guard case .roleAssigned(let closeRequest) = lifecycle else {
             throw invalidTransition(event: "initialCommitSent")
         }
 
-        lifecycle = .waitingForInitialConfigure
+        lifecycle = .waitingForInitialConfigure(closeRequest)
         return []
     }
 
@@ -246,6 +160,7 @@ extension WindowModel {
         }
         var nextActiveState = activeState ?? ActiveWindowState(configure: resolved)
         nextActiveState.configure = resolved
+        nextActiveState.closeRequest = closeRequest
 
         var effects: [WindowEffect] = [.ackConfigure(sequence.serial)]
         effects.append(
@@ -359,23 +274,45 @@ extension WindowModel {
             throw ClientError.window(id, .invalidLifecycleTransition(.closeAfterDestroyed))
         }
 
-        guard var activeState else {
+        switch policy {
+        case .requestOnly:
+            return reduceRequestOnlyCompositorCloseRequested()
+        case .autoClose:
+            guard var activeState else {
+                return try beginClosing(reason: .compositorRequest, publishRequest: true)
+            }
+
+            guard activeState.closeRequest == .none else {
+                return []
+            }
+
+            activeState.closeRequest = .requested
+            lifecycle = .active(activeState)
+
             return try beginClosing(reason: .compositorRequest, publishRequest: true)
         }
+    }
 
-        guard activeState.closeRequest == .none else {
+    private mutating func reduceRequestOnlyCompositorCloseRequested() -> [WindowEffect] {
+        switch lifecycle {
+        case .created(let closeRequest):
+            guard closeRequest == .none else { return [] }
+            lifecycle = .created(.requested)
+        case .roleAssigned(let closeRequest):
+            guard closeRequest == .none else { return [] }
+            lifecycle = .roleAssigned(.requested)
+        case .waitingForInitialConfigure(let closeRequest):
+            guard closeRequest == .none else { return [] }
+            lifecycle = .waitingForInitialConfigure(.requested)
+        case .active(var activeState):
+            guard activeState.closeRequest == .none else { return [] }
+            activeState.closeRequest = .requested
+            lifecycle = .active(activeState)
+        case .closing, .destroyed:
             return []
         }
 
-        activeState.closeRequest = .requested
-        lifecycle = .active(activeState)
-
-        switch policy {
-        case .requestOnly:
-            return [.publishCloseRequested(id)]
-        case .autoClose:
-            return try beginClosing(reason: .compositorRequest, publishRequest: true)
-        }
+        return [.publishCloseRequested(id)]
     }
 
     private mutating func beginClosing(
