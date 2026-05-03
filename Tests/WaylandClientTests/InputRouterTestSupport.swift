@@ -7,7 +7,8 @@ func rawPointerEnter(
     surfaceID: RawObjectID?,
     serial: UInt32 = 1,
     xRaw: Int32 = 0,
-    yRaw: Int32 = 0
+    yRaw: Int32 = 0,
+    deviceID: RawInputDeviceID? = nil
 ) -> RawInputEvent {
     rawEvent(
         sequence: sequence,
@@ -21,7 +22,8 @@ func rawPointerEnter(
                     y: WaylandFixed(rawValue: yRaw)
                 )
             )
-        )
+        ),
+        deviceID: deviceID
     )
 }
 
@@ -43,7 +45,8 @@ func rawPointerMotion(
     seatID: RawSeatID,
     time: UInt32,
     xRaw: Int32 = 0,
-    yRaw: Int32 = 0
+    yRaw: Int32 = 0,
+    deviceID: RawInputDeviceID? = nil
 ) -> RawInputEvent {
     rawEvent(
         sequence: sequence,
@@ -56,7 +59,8 @@ func rawPointerMotion(
                     y: WaylandFixed(rawValue: yRaw)
                 )
             )
-        )
+        ),
+        deviceID: deviceID
     )
 }
 
@@ -104,7 +108,8 @@ func rawKeyboardEnter(
     seatID: RawSeatID,
     surfaceID: RawObjectID?,
     serial: UInt32 = 1,
-    pressedKeys: [UInt32] = []
+    pressedKeys: [UInt32] = [],
+    deviceID: RawInputDeviceID? = nil
 ) -> RawInputEvent {
     rawEvent(
         sequence: sequence,
@@ -117,7 +122,8 @@ func rawKeyboardEnter(
                     pressedKeys: pressedKeys
                 )
             )
-        )
+        ),
+        deviceID: deviceID
     )
 }
 
@@ -227,7 +233,8 @@ func rawTouchDown(
     time: UInt32 = 2,
     id: Int32 = 3,
     xRaw: Int32 = 0,
-    yRaw: Int32 = 0
+    yRaw: Int32 = 0,
+    deviceID: RawInputDeviceID? = nil
 ) -> RawInputEvent {
     rawEvent(
         sequence: sequence,
@@ -243,7 +250,8 @@ func rawTouchDown(
                     y: WaylandFixed(rawValue: yRaw)
                 )
             )
-        )
+        ),
+        deviceID: deviceID
     )
 }
 
@@ -267,7 +275,8 @@ func rawTouchMotion(
     time: UInt32 = 6,
     id: Int32 = 3,
     xRaw: Int32 = 0,
-    yRaw: Int32 = 0
+    yRaw: Int32 = 0,
+    deviceID: RawInputDeviceID? = nil
 ) -> RawInputEvent {
     rawEvent(
         sequence: sequence,
@@ -281,7 +290,8 @@ func rawTouchMotion(
                     y: WaylandFixed(rawValue: yRaw)
                 )
             )
-        )
+        ),
+        deviceID: deviceID
     )
 }
 
@@ -327,14 +337,20 @@ func rawTouchOrientation(
     )
 }
 
-func rawSeatChanged(sequence: UInt64, seatID: RawSeatID, name: String) -> RawInputEvent {
+func rawSeatChanged(
+    sequence: UInt64,
+    seatID: RawSeatID,
+    name: String?,
+    advertisedCapabilities: WaylandRaw.SeatCapabilities = [.pointer],
+    activeCapabilities: WaylandRaw.SeatCapabilities = [.pointer]
+) -> RawInputEvent {
     rawEvent(
         sequence: sequence,
         seatID: seatID,
         kind: .seat(
             RawSeatEventSnapshot(
-                advertisedCapabilities: [.pointer],
-                activeCapabilities: [.pointer],
+                advertisedCapabilities: advertisedCapabilities,
+                activeCapabilities: activeCapabilities,
                 name: name
             )
         )

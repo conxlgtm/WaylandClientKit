@@ -1,6 +1,11 @@
 import WaylandRaw
 
 struct InputDeviceGraph: Equatable {
+    private struct InputDeviceKey: Hashable {
+        var seatID: RawSeatID
+        var kind: RawInputDeviceID.Kind
+    }
+
     private struct SeatInputState: Equatable {
         var pointer = PointerDeviceState()
         var keyboard = KeyboardDeviceState()
@@ -11,21 +16,56 @@ struct InputDeviceGraph: Equatable {
                 && keyboard == KeyboardDeviceState()
                 && touch == TouchDeviceState()
         }
+
+        mutating func adopt(_ deviceID: RawInputDeviceID) {
+            switch deviceID.kind {
+            case .pointer:
+                pointer = PointerDeviceState(
+                    currentID: deviceID,
+                    focusedSurfaceID: nil
+                )
+            case .keyboard:
+                keyboard = KeyboardDeviceState(
+                    currentID: deviceID,
+                    focusedSurfaceID: nil
+                )
+            case .touch:
+                touch = TouchDeviceState(
+                    currentID: deviceID,
+                    focusedSurfaceByTouchID: [:]
+                )
+            }
+        }
+
+        mutating func retire(_ kind: RawInputDeviceID.Kind) {
+            switch kind {
+            case .pointer:
+                pointer = PointerDeviceState()
+            case .keyboard:
+                keyboard = KeyboardDeviceState()
+            case .touch:
+                touch = TouchDeviceState()
+            }
+        }
     }
 
     private struct PointerDeviceState: Equatable {
+        var currentID: RawInputDeviceID?
         var focusedSurfaceID: RawObjectID?
     }
 
     private struct KeyboardDeviceState: Equatable {
+        var currentID: RawInputDeviceID?
         var focusedSurfaceID: RawObjectID?
     }
 
     private struct TouchDeviceState: Equatable {
+        var currentID: RawInputDeviceID?
         var focusedSurfaceByTouchID: [Int32: RawObjectID] = [:]
     }
 
     private var seatsByID: [RawSeatID: SeatInputState] = [:]
+    private var lastSeenGenerationByDevice: [InputDeviceKey: UInt64] = [:]
 
     func pointerFocus(for seatID: RawSeatID) -> RawObjectID? {
         seatsByID[seatID]?.pointer.focusedSurfaceID
@@ -55,6 +95,52 @@ struct InputDeviceGraph: Equatable {
         updateSeatState(seatID) { state in
             state.touch.focusedSurfaceByTouchID[touchID] = surfaceID
         }
+    }
+
+    mutating func applySeatSnapshot(
+        seatID: RawSeatID,
+        activeCapabilities: WaylandRaw.SeatCapabilities
+    ) {
+        if !activeCapabilities.hasPointer {
+            retireCurrentDevice(seatID: seatID, kind: .pointer)
+        }
+        if !activeCapabilities.hasKeyboard {
+            retireCurrentDevice(seatID: seatID, kind: .keyboard)
+        }
+        if !activeCapabilities.hasTouch {
+            retireCurrentDevice(seatID: seatID, kind: .touch)
+        }
+    }
+
+    mutating func acceptDeviceEvent(
+        _ deviceID: RawInputDeviceID?,
+        seatID: RawSeatID,
+        kind: RawInputDeviceID.Kind
+    ) -> Bool {
+        guard let deviceID else {
+            return true
+        }
+
+        guard deviceID.seatID == seatID, deviceID.kind == kind else {
+            return false
+        }
+
+        if currentDeviceID(seatID: seatID, kind: kind) == deviceID {
+            return true
+        }
+
+        let key = InputDeviceKey(seatID: seatID, kind: kind)
+        if let lastSeenGeneration = lastSeenGenerationByDevice[key],
+            deviceID.generation <= lastSeenGeneration
+        {
+            return false
+        }
+
+        lastSeenGenerationByDevice[key] = deviceID.generation
+        updateSeatState(seatID) { state in
+            state.adopt(deviceID)
+        }
+        return true
     }
 
     mutating func clearPointerFocus(seatID: RawSeatID, surfaceID: RawObjectID?) {
@@ -90,6 +176,9 @@ struct InputDeviceGraph: Equatable {
     }
 
     mutating func removeSeat(_ seatID: RawSeatID) {
+        retireCurrentDevice(seatID: seatID, kind: .pointer)
+        retireCurrentDevice(seatID: seatID, kind: .keyboard)
+        retireCurrentDevice(seatID: seatID, kind: .touch)
         seatsByID[seatID] = nil
     }
 
@@ -117,9 +206,64 @@ struct InputDeviceGraph: Equatable {
         update(&state)
         seatsByID[seatID] = state.isEmpty ? nil : state
     }
+
+    private func currentDeviceID(
+        seatID: RawSeatID,
+        kind: RawInputDeviceID.Kind
+    ) -> RawInputDeviceID? {
+        guard let state = seatsByID[seatID] else {
+            return nil
+        }
+
+        switch kind {
+        case .pointer:
+            return state.pointer.currentID
+        case .keyboard:
+            return state.keyboard.currentID
+        case .touch:
+            return state.touch.currentID
+        }
+    }
+
+    private mutating func retireCurrentDevice(
+        seatID: RawSeatID,
+        kind: RawInputDeviceID.Kind
+    ) {
+        guard let currentID = currentDeviceID(seatID: seatID, kind: kind) else {
+            return
+        }
+
+        let key = InputDeviceKey(seatID: seatID, kind: kind)
+        lastSeenGenerationByDevice[key] = max(
+            lastSeenGenerationByDevice[key] ?? 0,
+            currentID.generation
+        )
+        updateSeatState(seatID) { state in
+            state.retire(kind)
+        }
+    }
 }
 
 extension InputRouter {
+    func acceptPointerDeviceEvent(_ event: RawInputEvent) -> Bool {
+        deviceGraph.acceptDeviceEvent(event.deviceID, seatID: event.seatID, kind: .pointer)
+    }
+
+    func acceptKeyboardDeviceEvent(_ event: RawInputEvent) -> Bool {
+        deviceGraph.acceptDeviceEvent(event.deviceID, seatID: event.seatID, kind: .keyboard)
+    }
+
+    func acceptTouchDeviceEvent(_ event: RawInputEvent) -> Bool {
+        deviceGraph.acceptDeviceEvent(event.deviceID, seatID: event.seatID, kind: .touch)
+    }
+
+    func applySeatSnapshot(_ event: RawInputEvent, _ snapshot: RawSeatEventSnapshot) {
+        deviceGraph.applySeatSnapshot(
+            seatID: event.seatID,
+            activeCapabilities: snapshot.activeCapabilities
+        )
+    }
+
     func focusedPointerWindow(for seatID: RawSeatID) -> WindowID? {
         windowID(for: deviceGraph.pointerFocus(for: seatID))
     }
