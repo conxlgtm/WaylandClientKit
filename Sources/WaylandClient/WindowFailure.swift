@@ -140,6 +140,14 @@ package enum WindowFailureClassifier {
             .protocolViolation(.invalidConfigureSerial(windowID: windowID, serial: serial))
         case .invalidDecorationMode(let rawValue):
             .protocolViolation(.invalidDecorationMode(rawValue: rawValue))
+        case .invalidPreferredBufferScale(let factor):
+            .protocolViolation(
+                .invalidPreferredBufferScale(windowID: windowID, factor: factor)
+            )
+        case .invalidFractionalScale(let scale):
+            .protocolViolation(
+                .invalidFractionalScale(windowID: windowID, numerator: scale)
+            )
         case .unresolvedSize:
             .internalInvariant(
                 .effectInterpreterInvariant(windowID, "configure size could not be resolved")

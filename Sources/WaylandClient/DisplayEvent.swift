@@ -326,7 +326,7 @@ final class DisplayEventHub: Sendable {
 
     private func displaySeverity(for diagnostic: WindowDiagnostic) -> DiagnosticSeverity {
         switch diagnostic.operation {
-        case .callback, .lifecycle, .decoration, .presentation:
+        case .callback, .lifecycle, .decoration, .presentation, .scale:
             .degraded
         }
     }

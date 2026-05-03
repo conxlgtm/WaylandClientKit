@@ -156,6 +156,10 @@ public actor WaylandDisplay {
         try requireCore().windowDecorationMode(windowID)
     }
 
+    public func windowGeometry(_ windowID: WindowID) throws -> SurfaceGeometry {
+        try requireCore().windowGeometry(windowID)
+    }
+
     public func requestRedraw(_ windowID: WindowID) throws {
         try requireCore().requestRedraw(windowID)
     }

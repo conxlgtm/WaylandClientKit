@@ -28,6 +28,7 @@ public enum WindowConfigurationError: Equatable, Sendable, CustomStringConvertib
     case nonPositiveInt32(value: Int32)
     case nonPositiveInt(value: Int)
     case nonPositiveScaleNumerator(UInt32)
+    case scaleNumeratorTooLarge(UInt32)
     case zeroScaleDenominator
 
     public var description: String {
@@ -50,6 +51,8 @@ public enum WindowConfigurationError: Equatable, Sendable, CustomStringConvertib
             "expected positive Int, got \(value)"
         case .nonPositiveScaleNumerator(let value):
             "scale numerator must be greater than zero, got \(value)"
+        case .scaleNumeratorTooLarge(let value):
+            "scale numerator is too large, got \(value)"
         case .zeroScaleDenominator:
             "scale denominator must be greater than zero"
         }
@@ -61,6 +64,8 @@ public enum WindowConfigureError: Equatable, Sendable, CustomStringConvertible {
     case unresolvedSize
     case invalidSerial(UInt32)
     case invalidDecorationMode(UInt32)
+    case invalidPreferredBufferScale(Int32)
+    case invalidFractionalScale(UInt32)
 
     public var description: String {
         switch self {
@@ -72,6 +77,10 @@ public enum WindowConfigureError: Equatable, Sendable, CustomStringConvertible {
             "invalid configure serial \(serial)"
         case .invalidDecorationMode(let rawValue):
             "invalid zxdg_toplevel_decoration_v1 mode \(rawValue)"
+        case .invalidPreferredBufferScale(let factor):
+            "invalid wl_surface preferred buffer scale \(factor)"
+        case .invalidFractionalScale(let scale):
+            "invalid wp_fractional_scale_v1 preferred scale \(scale)"
         }
     }
 }

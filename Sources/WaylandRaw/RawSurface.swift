@@ -69,7 +69,22 @@ package final class RawSurface {
         }
     }
 
+    package func damageFullSurface(
+        bufferWidth: Int32,
+        bufferHeight: Int32,
+        logicalWidth: Int32,
+        logicalHeight: Int32
+    ) {
+        if usesBufferDamage {
+            unsafe swl_surface_damage_buffer(pointer, 0, 0, bufferWidth, bufferHeight)
+        } else {
+            unsafe swl_surface_damage(pointer, 0, 0, logicalWidth, logicalHeight)
+        }
+    }
+
     package func setBufferScale(_ scale: Int32) {
+        guard version >= 3 else { return }
+
         unsafe swl_surface_set_buffer_scale(pointer, scale)
     }
 
