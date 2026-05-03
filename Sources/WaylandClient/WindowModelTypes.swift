@@ -73,6 +73,17 @@ package struct ActiveWindowState: Equatable, Sendable {
 
 package enum DecorationUnavailableReason: Equatable, Sendable {
     case managerMissing
+    case unsupportedManagerVersion(advertised: RawVersion, minimum: RawVersion)
+
+    package var diagnosticMessage: String {
+        switch self {
+        case .managerMissing:
+            "Server-side decoration protocol is unavailable."
+        case .unsupportedManagerVersion(let advertised, let minimum):
+            "Server-side decoration protocol \(advertised) is unsupported; "
+                + "requires \(minimum) or newer."
+        }
+    }
 }
 
 package enum DecorationState: Equatable, Sendable {

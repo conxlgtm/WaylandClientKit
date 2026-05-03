@@ -260,6 +260,31 @@ extension WindowDecorationMode {
     }
 }
 
+package enum DecorationModeRequest: Equatable, Sendable {
+    case set(RawDecorationMode)
+    case unset
+
+    package init(preference: WindowDecorationPreference) {
+        switch preference {
+        case .preferServerSide:
+            self = .set(.serverSide)
+        case .preferClientSide:
+            self = .set(.clientSide)
+        case .compositorDefault:
+            self = .unset
+        }
+    }
+
+    package func apply(to decoration: RawXDGToplevelDecoration) {
+        switch self {
+        case .set(let mode):
+            decoration.setMode(mode)
+        case .unset:
+            decoration.unsetMode()
+        }
+    }
+}
+
 extension WindowDecorationPreference {
     package var requestedRawMode: RawDecorationMode? {
         switch self {

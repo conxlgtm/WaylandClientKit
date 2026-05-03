@@ -37,6 +37,25 @@ struct WindowDecorationModelTests {
     }
 
     @Test
+    func decorationCanBeReconfiguredToDifferentModeAfterAlreadyConfigured() throws {
+        var model = try modelWithDecorationWaitingForConfigure()
+        _ = try model.reduce(
+            .configureReceived(
+                configure(width: 800, height: 600, serial: 1, decorationMode: .serverSide)
+            )
+        )
+
+        _ = try model.reduce(
+            .configureReceived(
+                configure(width: 800, height: 600, serial: 2, decorationMode: .clientSide)
+            )
+        )
+
+        #expect(model.decorationMode == .clientSide)
+        #expect(model.decoration == .configured(.clientSide))
+    }
+
+    @Test
     func configureWithoutDecorationModePreservesPreviousEffectiveMode() throws {
         var model = try modelWithDecorationWaitingForConfigure()
         _ = try model.reduce(
