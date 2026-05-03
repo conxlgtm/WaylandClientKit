@@ -232,6 +232,98 @@ struct InputDeviceGraphOwnershipTests {
 }
 
 @Suite
+struct InputDeviceGraphSeatReuseTests {
+    @Test
+    func seatRemovalClearsGenerationHistoryForReusedSeatID() {
+        let fixture = ReusedSeatFixture()
+
+        fixture.installInitialDevices()
+        fixture.removeSeat()
+
+        #expect(fixture.reboundPointerEnter().first?.windowID == fixture.reboundWindowID)
+        #expect(fixture.reboundKeyboardEnter().first?.windowID == fixture.reboundWindowID)
+        #expect(fixture.reboundTouchDown().first?.windowID == fixture.reboundWindowID)
+    }
+}
+
+private final class ReusedSeatFixture {
+    let router = InputRouter()
+    let seatID = RawSeatID(rawValue: 26)
+    let initialSurfaceID: RawObjectID = 2_600
+    let reboundSurfaceID: RawObjectID = 2_601
+    let reboundWindowID = WindowID(rawValue: 261)
+
+    private lazy var pointer = device(kind: .pointer)
+    private lazy var keyboard = device(kind: .keyboard)
+    private lazy var touch = device(kind: .touch)
+
+    init() {
+        router.register(windowID: WindowID(rawValue: 260), surfaceID: initialSurfaceID)
+        router.register(windowID: reboundWindowID, surfaceID: reboundSurfaceID)
+    }
+
+    func installInitialDevices() {
+        _ = routePointerEnter(sequence: 1, surfaceID: initialSurfaceID)
+        _ = routeKeyboardEnter(sequence: 2, surfaceID: initialSurfaceID)
+        _ = routeTouchDown(sequence: 3, surfaceID: initialSurfaceID)
+    }
+
+    func removeSeat() {
+        _ = router.route(rawEvent(sequence: 4, seatID: seatID, kind: .seatRemoved))
+    }
+
+    func reboundPointerEnter() -> [InputEvent] {
+        routePointerEnter(sequence: 5, surfaceID: reboundSurfaceID)
+    }
+
+    func reboundKeyboardEnter() -> [InputEvent] {
+        routeKeyboardEnter(sequence: 6, surfaceID: reboundSurfaceID)
+    }
+
+    func reboundTouchDown() -> [InputEvent] {
+        routeTouchDown(sequence: 7, surfaceID: reboundSurfaceID)
+    }
+
+    private func routePointerEnter(sequence: UInt64, surfaceID: RawObjectID) -> [InputEvent] {
+        router.route(
+            rawPointerEnter(
+                sequence: sequence,
+                seatID: seatID,
+                surfaceID: surfaceID,
+                deviceID: pointer
+            )
+        )
+    }
+
+    private func routeKeyboardEnter(sequence: UInt64, surfaceID: RawObjectID) -> [InputEvent] {
+        router.route(
+            rawKeyboardEnter(
+                sequence: sequence,
+                seatID: seatID,
+                surfaceID: surfaceID,
+                deviceID: keyboard
+            )
+        )
+    }
+
+    private func routeTouchDown(sequence: UInt64, surfaceID: RawObjectID) -> [InputEvent] {
+        router.route(
+            rawTouchDown(
+                sequence: sequence,
+                seatID: seatID,
+                surfaceID: surfaceID,
+                id: 4,
+                deviceID: touch
+            )
+        )
+    }
+
+    private func device(kind: RawInputDeviceID.Kind) -> RawInputDeviceID {
+        RawInputDeviceID(seatID: seatID, kind: kind, generation: 1)
+    }
+}
+
+@Suite
 struct InputDeviceGraphMalformedIdentityTests {
     @Test
     func pointerEventWithKeyboardDeviceIDIsDropped() {
