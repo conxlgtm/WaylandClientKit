@@ -31,6 +31,28 @@
       "sha256": "68753c4a85a28659e3aa1fe0f138329a8bf3dff0b4789f4663a2c7fedbfecf2f",
       "stability": "unstable",
       "notes": "Optional extension for compositor-managed toplevel decorations."
+    },
+    {
+      "name": "viewporter",
+      "localPath": "Protocols/stable/viewporter/viewporter.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/stable/viewporter/viewporter.xml",
+      "sha256": "dcb12279a03746301fe490aaed4b38a403485a925abfce2ccfceb644e104fe71",
+      "stability": "stable",
+      "notes": "Optional extension for surface destination sizing used by fractional scaling."
+    },
+    {
+      "name": "fractional-scale-v1",
+      "localPath": "Protocols/staging/fractional-scale/fractional-scale-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml",
+      "sha256": "5941de5d28f427ecdadddc8623a6f6af0a30b0ab4726847236ba7a7652b81316",
+      "stability": "staging",
+      "notes": "Optional extension for compositor-preferred fractional surface scales."
     }
   ]
 }
