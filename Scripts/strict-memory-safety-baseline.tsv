@@ -2,7 +2,7 @@
 WaylandRaw	Sources/WaylandRaw/CallbackBox.swift	3
 WaylandRaw	Sources/WaylandRaw/EventLoop.swift	2
 WaylandRaw	Sources/WaylandRaw/QueueEventLoop.swift	13
-WaylandRaw	Sources/WaylandRaw/RawBorrowedBuffer.swift	2
+WaylandRaw	Sources/WaylandRaw/RawBorrowedBuffer.swift	0
 WaylandRaw	Sources/WaylandRaw/RawCompositor.swift	6
 WaylandRaw	Sources/WaylandRaw/RawDisplay.swift	2
 WaylandRaw	Sources/WaylandRaw/RawDisplayConnection+EventLoop.swift	18
@@ -13,7 +13,7 @@ WaylandRaw	Sources/WaylandRaw/RawFileDescriptor.swift	1
 WaylandRaw	Sources/WaylandRaw/RawFrameCallback.swift	15
 WaylandRaw	Sources/WaylandRaw/RawInputChildProxy.swift	5
 WaylandRaw	Sources/WaylandRaw/RawKeyboardListenerOwner.swift	22
-WaylandRaw	Sources/WaylandRaw/RawOwnedProxy.swift	5
+WaylandRaw	Sources/WaylandRaw/RawOwnedProxy.swift	1
 WaylandRaw	Sources/WaylandRaw/RawPointerListenerOwner.swift	31
 WaylandRaw	Sources/WaylandRaw/RawProxyAdoption.swift	5
 WaylandRaw	Sources/WaylandRaw/RawRegistry.swift	2
@@ -21,7 +21,7 @@ WaylandRaw	Sources/WaylandRaw/RawSeat.swift	24
 WaylandRaw	Sources/WaylandRaw/RawSeatListenerOwner.swift	13
 WaylandRaw	Sources/WaylandRaw/RawSeatProxyOperations.swift	17
 WaylandRaw	Sources/WaylandRaw/RawSharedMemory.swift	28
-WaylandRaw	Sources/WaylandRaw/RawSurface.swift	14
+WaylandRaw	Sources/WaylandRaw/RawSurface.swift	5
 WaylandRaw	Sources/WaylandRaw/RawTouchListenerOwner.swift	22
 WaylandRaw	Sources/WaylandRaw/RawXDGShell.swift	57
 WaylandRaw	Sources/WaylandRaw/RegistryListenerOwner.swift	13
