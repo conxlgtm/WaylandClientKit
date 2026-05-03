@@ -534,4 +534,3 @@ WL_PRIVATE const struct wl_interface wl_fixes_interface = {
 	2, wl_fixes_requests,
 	0, NULL,
 };
-
