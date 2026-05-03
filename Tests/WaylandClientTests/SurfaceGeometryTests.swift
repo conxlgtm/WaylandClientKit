@@ -30,11 +30,39 @@ struct SurfaceGeometryTests {
         ]
 
         for (logicalSize, scale, expectedBufferSize) in cases {
-            let geometry = SurfaceGeometry(logicalSize: logicalSize, scale: scale)
+            let geometry = try SurfaceGeometry(logicalSize: logicalSize, scale: scale)
 
             #expect(geometry.logicalSize == logicalSize)
             #expect(geometry.scale == scale)
             #expect(geometry.bufferSize == expectedBufferSize)
+        }
+    }
+
+    @Test
+    func tinyFractionalScaleProducesMinimumPositiveBufferSize() throws {
+        let geometry = try SurfaceGeometry(
+            logicalSize: PositiveTopLevelSize(width: 1, height: 1),
+            scale: SurfaceScale(numerator: 1, denominator: 120)
+        )
+
+        #expect(geometry.bufferSize == (try PositivePixelSize(width: 1, height: 1)))
+    }
+
+    @Test
+    func surfaceScaleBufferSizeOverflowThrowsTypedError() throws {
+        let logicalSize = try PositiveTopLevelSize(width: 640, height: 480)
+        let scale = try SurfaceScale(numerator: UInt32(Int32.max), denominator: 1)
+
+        #expect(
+            throws: WindowError.invalidConfigure(
+                .unrepresentableSurfaceBufferSize(
+                    logicalDimension: 640,
+                    scaleNumerator: UInt32(Int32.max),
+                    scaleDenominator: 1
+                )
+            )
+        ) {
+            _ = try SurfaceGeometry(logicalSize: logicalSize, scale: scale)
         }
     }
 
@@ -66,47 +94,95 @@ struct SurfaceGeometryTests {
     @Test
     func surfaceScaleStateUsesIntegerScaleUntilFractionalScaleArrives() throws {
         var scaleState = SurfaceScaleState(usesFractionalScale: true)
+        let logicalSize = try PositiveTopLevelSize(width: 80, height: 60)
 
         #expect(scaleState.effectiveScale == .one)
-        #expect(try scaleState.updatePreferredBufferScale(2))
+        #expect(try scaleState.updatePreferredBufferScale(2, logicalSize: logicalSize))
         #expect(
-            scaleState.geometry(logicalSize: try PositiveTopLevelSize(width: 80, height: 60))
+            try scaleState.geometry(logicalSize: logicalSize)
                 .bufferSize
                 == (try PositivePixelSize(width: 160, height: 120))
         )
         #expect(!scaleState.requiresViewportDestination)
         #expect(scaleState.bufferScaleForCommit == 2)
 
-        #expect(try scaleState.updatePreferredFractionalScale(180))
+        #expect(try scaleState.updatePreferredFractionalScale(180, logicalSize: logicalSize))
         #expect(
-            scaleState.geometry(logicalSize: try PositiveTopLevelSize(width: 80, height: 60))
+            try scaleState.geometry(logicalSize: logicalSize)
                 .bufferSize
                 == (try PositivePixelSize(width: 120, height: 90))
         )
         #expect(scaleState.requiresViewportDestination)
         #expect(scaleState.bufferScaleForCommit == 1)
 
-        let integerScaleChanged = try scaleState.updatePreferredBufferScale(3)
+        let integerScaleChanged = try scaleState.updatePreferredBufferScale(
+            3,
+            logicalSize: logicalSize
+        )
         #expect(!integerScaleChanged)
         #expect(
-            scaleState.geometry(logicalSize: try PositiveTopLevelSize(width: 80, height: 60))
+            try scaleState.geometry(logicalSize: logicalSize)
                 .bufferSize
                 == (try PositivePixelSize(width: 120, height: 90))
         )
     }
 
     @Test
-    func surfaceScaleStateRejectsInvalidPreferredScales() {
+    func surfaceScaleStateRejectsFractionalUpdateWhenFractionalScalingIsDisabled() throws {
+        var scaleState = SurfaceScaleState(usesFractionalScale: false)
+        let logicalSize = try PositiveTopLevelSize(width: 80, height: 60)
+
+        #expect(throws: WindowError.invalidConfigure(.invalidFractionalScale(180))) {
+            _ = try scaleState.updatePreferredFractionalScale(180, logicalSize: logicalSize)
+        }
+        #expect(scaleState.effectiveScale == .one)
+    }
+
+    @Test
+    func bufferScaleForCommitUsesIntegerScaleUntilFractionalScaleArrives() throws {
         var scaleState = SurfaceScaleState(usesFractionalScale: true)
+        let logicalSize = try PositiveTopLevelSize(width: 80, height: 60)
+
+        #expect(try scaleState.updatePreferredBufferScale(2, logicalSize: logicalSize))
+
+        #expect(scaleState.bufferScaleForCommit == 2)
+        #expect(!scaleState.requiresViewportDestination)
+    }
+
+    @Test
+    func surfaceScaleStateRejectsInvalidPreferredScales() throws {
+        var scaleState = SurfaceScaleState(usesFractionalScale: true)
+        let logicalSize = try PositiveTopLevelSize(width: 80, height: 60)
 
         #expect(
             throws: WindowError.invalidConfigure(.invalidPreferredBufferScale(0))
         ) {
-            _ = try scaleState.updatePreferredBufferScale(0)
+            _ = try scaleState.updatePreferredBufferScale(0, logicalSize: logicalSize)
         }
 
         #expect(throws: WindowError.invalidConfigure(.invalidFractionalScale(0))) {
-            _ = try scaleState.updatePreferredFractionalScale(0)
+            _ = try scaleState.updatePreferredFractionalScale(0, logicalSize: logicalSize)
+        }
+    }
+
+    @Test
+    func preferredBufferScaleTooLargeThrowsTypedError() throws {
+        var scaleState = SurfaceScaleState(usesFractionalScale: false)
+        let logicalSize = try PositiveTopLevelSize(width: 640, height: 480)
+
+        #expect(
+            throws: WindowError.invalidConfigure(
+                .unrepresentableSurfaceBufferSize(
+                    logicalDimension: 640,
+                    scaleNumerator: UInt32(Int32.max),
+                    scaleDenominator: 1
+                )
+            )
+        ) {
+            _ = try scaleState.updatePreferredBufferScale(
+                Int32.max,
+                logicalSize: logicalSize
+            )
         }
     }
 }
