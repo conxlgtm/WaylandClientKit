@@ -2,6 +2,9 @@ import WaylandRaw
 
 package enum WindowEvent: Equatable, Sendable {
     case roleObjectsCreated
+    case decorationUnavailable(DecorationUnavailableReason?)
+    case decorationObjectCreated(WindowDecorationPreference)
+    case decorationPreferenceRequested(WindowDecorationPreference)
     case initialCommitSent
     case configureReceived(XDGConfigureSequence)
     case contentInvalidated(bufferAvailable: Bool)
@@ -66,6 +69,37 @@ package struct ActiveWindowState: Equatable, Sendable {
     var closeRequest = CloseRequestState.none
     var redraw = WindowRedrawState()
     var presentation = WindowPresentationState.idle
+}
+
+package enum DecorationUnavailableReason: Equatable, Sendable {
+    case managerMissing
+    case unsupportedManagerVersion(advertised: RawVersion, minimum: RawVersion)
+
+    package var diagnosticMessage: String {
+        switch self {
+        case .managerMissing:
+            "Server-side decoration protocol is unavailable."
+        case .unsupportedManagerVersion(let advertised, let minimum):
+            "Server-side decoration protocol \(advertised) is unsupported; "
+                + "requires \(minimum) or newer."
+        }
+    }
+}
+
+package enum DecorationState: Equatable, Sendable {
+    case unavailable(reason: DecorationUnavailableReason?)
+    case objectCreated(preference: WindowDecorationPreference)
+    case requested(WindowDecorationPreference)
+    case configured(WindowDecorationMode)
+
+    var currentMode: WindowDecorationMode {
+        switch self {
+        case .configured(let mode):
+            mode
+        case .unavailable, .objectCreated, .requested:
+            .unavailable
+        }
+    }
 }
 
 package enum CloseRequestState: Equatable, Sendable {

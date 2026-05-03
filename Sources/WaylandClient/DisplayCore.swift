@@ -87,6 +87,12 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
     }
 
+    func windowDecorationMode(_ windowID: WindowID) throws -> WindowDecorationMode {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID).decorationModeOnOwnerThread
+        }
+    }
+
     func requestRedraw(_ windowID: WindowID) throws {
         try withFatalFailureFinalization {
             try requireOpenWindow(windowID).requestRedrawOnOwnerThread()

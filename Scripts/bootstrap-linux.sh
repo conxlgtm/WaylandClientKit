@@ -475,6 +475,7 @@ check_file_candidates() {
 check_protocols_for_maintainers() {
     local wayland_candidates=()
     local xdg_candidates=()
+    local decoration_candidates=()
 
     have wayland-scanner || die "missing wayland-scanner"
     ok "wayland-scanner: $(command -v wayland-scanner)"
@@ -485,9 +486,11 @@ check_protocols_for_maintainers() {
 
     mapfile -t wayland_candidates < <(protocol_sources_wayland_core_candidates)
     mapfile -t xdg_candidates < <(protocol_sources_xdg_shell_candidates)
+    mapfile -t decoration_candidates < <(protocol_sources_xdg_decoration_candidates)
 
     check_file_candidates "wayland.xml" "${wayland_candidates[@]}"
     check_file_candidates "xdg-shell.xml" "${xdg_candidates[@]}"
+    check_file_candidates "xdg-decoration-unstable-v1.xml" "${decoration_candidates[@]}"
 }
 
 if [[ "$MODE" == "install" || "$MODE" == "dry-run" ]]; then

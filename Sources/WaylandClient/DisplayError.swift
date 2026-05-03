@@ -243,6 +243,7 @@ public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
     case display(interface: String?, objectID: UInt32, code: Int32)
     case invalidXDGConfigureDimensions(windowID: WindowID, width: Int32, height: Int32)
     case invalidConfigureSerial(windowID: WindowID, serial: UInt32)
+    case invalidDecorationMode(rawValue: UInt32)
     case proxyQueueMismatch(interface: String, objectID: WaylandProtocolObjectID?)
 
     public var description: String {
@@ -254,6 +255,8 @@ public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
                 + "width=\(width) height=\(height)"
         case .invalidConfigureSerial(let windowID, let serial):
             "Window \(windowID) received invalid configure serial \(serial)"
+        case .invalidDecorationMode(let rawValue):
+            "Received invalid zxdg_toplevel_decoration_v1 mode \(rawValue)"
         case .proxyQueueMismatch(let interface, let objectID):
             "Wayland proxy queue mismatch interface=\(interface) object="
                 + "\(objectID?.description ?? "?")"
@@ -337,6 +340,8 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
                     objectID: objectID.map(WaylandProtocolObjectID.init)
                 )
             )
+        case .invalidDecorationMode(let rawValue):
+            self = .protocolError(.invalidDecorationMode(rawValue: rawValue))
         case .eventLoop(let error):
             self = Self(error)
         case .system(let error):

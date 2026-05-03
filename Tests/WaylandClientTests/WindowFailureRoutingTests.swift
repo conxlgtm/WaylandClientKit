@@ -105,6 +105,20 @@ struct WindowFailureClassifierTests {
                 )
         )
     }
+
+    @Test
+    func classifiesInvalidDecorationModeAsProtocolViolation() {
+        let failure = WindowFailureClassifier.classify(
+            windowID: windowID,
+            operation: .markNeedsRedraw,
+            error: RuntimeError.invalidDecorationMode(999)
+        )
+
+        #expect(
+            failure
+                == .protocolViolation(.invalidDecorationMode(rawValue: 999))
+        )
+    }
 }
 
 @Suite

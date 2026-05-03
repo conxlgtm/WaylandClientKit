@@ -42,6 +42,12 @@ public struct Window: Sendable, Hashable {
         }
     }
 
+    public var decorationMode: WindowDecorationMode {
+        get async throws {
+            try await display.windowDecorationMode(id)
+        }
+    }
+
     public static func == (lhs: Window, rhs: Window) -> Bool {
         lhs.id == rhs.id && lhs.displayIdentity == rhs.displayIdentity
     }

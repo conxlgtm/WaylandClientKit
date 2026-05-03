@@ -22,6 +22,11 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
+[[ -f "$PROTO_DIR/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
+    exit 1
+}
+
 rm -rf "$GEN_INC" "$GEN_SRC"
 mkdir -p "$GEN_INC" "$GEN_SRC" "$OUT_DIR/shims"
 
@@ -50,6 +55,14 @@ wayland-scanner client-header \
 wayland-scanner private-code \
     "$PROTO_DIR/stable/xdg-shell/xdg-shell.xml" \
     "$GEN_SRC/xdg-shell-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" \
+    "$GEN_INC/xdg-decoration-unstable-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" \
+    "$GEN_SRC/xdg-decoration-unstable-v1-protocol.c"
 
 for generated_file in "$GEN_INC"/*.h "$GEN_SRC"/*.c; do
     normalize_generated_file "$generated_file"
