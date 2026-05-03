@@ -45,6 +45,7 @@ struct RawKeyboardKeymapReaderTests {
         let bytes = [UInt8(1), UInt8(0)]
         let descriptor = try makeTemporaryFileDescriptor(bytes: bytes)
         let unsupported = RawKeyboardKeymapFormat(rawValue: 99)
+        var closedDescriptors: [Int32] = []
 
         #expect(
             throws: RawKeyboardKeymapReadError.unsupportedFormat(
@@ -58,8 +59,12 @@ struct RawKeyboardKeymapReaderTests {
                 fd: descriptor,
                 size: UInt32(bytes.count),
                 maximumSize: 1_024
-            ) { close($0) }
+            ) { descriptor in
+                closedDescriptors.append(descriptor)
+                close(descriptor)
+            }
         }
+        #expect(closedDescriptors == [descriptor])
     }
 
     @Test
