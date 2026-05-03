@@ -101,4 +101,54 @@ struct WaylandThreadExecutorConcurrencyTests {
         #expect(stopped.hasJoinedThread)
         #expect(completionSet == ["first", "second"])
     }
+
+    @Test
+    func manyConcurrentShutdownCallersWaitForSingleJoiner() async throws {
+        let executor = try WaylandThreadExecutor()
+        let gate = ConcurrentShutdownGate()
+        let completions = ShutdownCompletionRecorder()
+        let lateCallerLabels = (0..<6).map { "late-\($0)" }
+        defer {
+            gate.open()
+            executor.shutdown(.abandonWaylandSources)
+        }
+
+        try executor.enqueueOperationForTesting {
+            gate.enterAndWaitUntilOpened()
+        }
+        #expect(gate.waitUntilEntered())
+
+        async let first: Void = {
+            executor.shutdown(.abandonWaylandSources)
+            await completions.append("first")
+        }()
+
+        #expect(
+            waitUntil {
+                executor.lifecycleSnapshotForTesting.state
+                    == .joining(.abandonWaylandSources)
+            }
+        )
+
+        async let lateCallers: Void = withTaskGroup(of: Void.self) { group in
+            for label in lateCallerLabels {
+                group.addTask {
+                    executor.shutdown(.orderly)
+                    await completions.append(label)
+                }
+            }
+        }
+
+        usleep(10_000)
+        #expect(await completions.values.isEmpty)
+
+        gate.open()
+        _ = await (first, lateCallers)
+        let stopped = executor.lifecycleSnapshotForTesting
+        let completionSet = Set(await completions.values)
+
+        #expect(stopped.state == .joined(.abandonWaylandSources))
+        #expect(stopped.hasJoinedThread)
+        #expect(completionSet == Set(["first"] + lateCallerLabels))
+    }
 }
