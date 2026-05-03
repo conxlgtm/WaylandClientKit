@@ -6,6 +6,7 @@ Vendored XML files:
 
 - `Protocols/core/wayland.xml`
 - `Protocols/stable/xdg-shell/xdg-shell.xml`
+- `Protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
 - `Protocols/manifest.json`
 
 These files are committed.
@@ -18,11 +19,13 @@ Generated headers:
 
 - `Sources/CWaylandProtocols/include/generated/wayland-client-protocol.h`
 - `Sources/CWaylandProtocols/include/generated/xdg-shell-client-protocol.h`
+- `Sources/CWaylandProtocols/include/generated/xdg-decoration-unstable-v1-client-protocol.h`
 
 Generated C files:
 
 - `Sources/CWaylandProtocols/generated/wayland-protocol.c`
 - `Sources/CWaylandProtocols/generated/xdg-shell-protocol.c`
+- `Sources/CWaylandProtocols/generated/xdg-decoration-unstable-v1-protocol.c`
 
 These files are committed.
 
@@ -98,8 +101,14 @@ Stable xdg-shell XML candidates:
 - `/usr/local/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml`
 - `/usr/share/qt6/wayland/protocols/xdg-shell/xdg-shell.xml`
 
-Set `WAYLAND_CORE_XML_SOURCE` or `XDG_SHELL_XML_SOURCE` to force a specific
-source path.
+Unstable xdg-decoration XML candidates:
+
+- `$(pkg-config --variable=pkgdatadir wayland-protocols)/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
+- `/usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
+- `/usr/local/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
+
+Set `WAYLAND_CORE_XML_SOURCE`, `XDG_SHELL_XML_SOURCE`, or
+`XDG_DECORATION_XML_SOURCE` to force a specific source path.
 
 Run `Scripts/bootstrap-linux.sh --maintainer` first to verify the scanner,
 `wayland-protocols` pkg-config module, and protocol XML inputs.
