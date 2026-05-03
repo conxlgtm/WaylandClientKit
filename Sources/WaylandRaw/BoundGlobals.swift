@@ -72,6 +72,16 @@ package struct OptionalGlobals {
         viewporter.destroy()
         xdgDecorationManager.destroy()
     }
+
+    package var supportsFractionalScaling: Bool {
+        switch (viewporter, fractionalScaleManager) {
+        case (.bound, .bound):
+            true
+        case (.missing, _),
+            (_, .missing):
+            false
+        }
+    }
 }
 
 package final class BoundGlobals {

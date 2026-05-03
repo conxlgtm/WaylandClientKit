@@ -4,6 +4,7 @@ public enum WindowCallbackOperation: Equatable, Sendable, CustomStringConvertibl
     case frameDone
     case bufferReleased
     case markNeedsRedraw
+    case surfaceScaleChanged
     case close
 
     public var description: String {
@@ -18,6 +19,8 @@ public enum WindowCallbackOperation: Equatable, Sendable, CustomStringConvertibl
             "bufferReleased"
         case .markNeedsRedraw:
             "markNeedsRedraw"
+        case .surfaceScaleChanged:
+            "surfaceScaleChanged"
         case .close:
             "close"
         }
@@ -57,11 +60,23 @@ public enum WindowPresentationOperation: Equatable, Sendable, CustomStringConver
     }
 }
 
+public enum WindowScaleOperation: Equatable, Sendable, CustomStringConvertible {
+    case fractionalScaleUnavailable
+
+    public var description: String {
+        switch self {
+        case .fractionalScaleUnavailable:
+            "fractionalScaleUnavailable"
+        }
+    }
+}
+
 public enum WindowDiagnosticOperation: Equatable, Sendable {
     case callback(WindowCallbackOperation)
     case lifecycle(WindowLifecycleOperation)
     case decoration(WindowDecorationOperation)
     case presentation(WindowPresentationOperation)
+    case scale(WindowScaleOperation)
 }
 
 public struct WindowDiagnostic: Equatable, Sendable {

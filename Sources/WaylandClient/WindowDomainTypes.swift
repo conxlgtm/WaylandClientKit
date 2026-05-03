@@ -163,6 +163,12 @@ public struct SurfaceScale: Equatable, Sendable, CustomStringConvertible {
             )
         }
 
+        guard scaleNumerator <= UInt32(Int32.max) else {
+            throw ClientError.invalidWindowConfiguration(
+                .scaleNumeratorTooLarge(scaleNumerator)
+            )
+        }
+
         guard scaleDenominator > 0 else {
             throw ClientError.invalidWindowConfiguration(.zeroScaleDenominator)
         }
@@ -180,9 +186,7 @@ public struct SurfaceScale: Equatable, Sendable, CustomStringConvertible {
 
     package init(integerScale scale: Int32) throws {
         guard scale > 0 else {
-            throw WindowError.invalidConfigure(
-                .negativeSuggestedDimension(width: scale, height: scale)
-            )
+            throw WindowError.invalidConfigure(.invalidPreferredBufferScale(scale))
         }
 
         numerator = UInt32(scale)
@@ -193,6 +197,12 @@ public struct SurfaceScale: Equatable, Sendable, CustomStringConvertible {
         guard scaleNumerator > 0 else {
             throw ClientError.invalidWindowConfiguration(
                 .nonPositiveScaleNumerator(scaleNumerator)
+            )
+        }
+
+        guard scaleNumerator <= UInt32(Int32.max) else {
+            throw ClientError.invalidWindowConfiguration(
+                .scaleNumeratorTooLarge(scaleNumerator)
             )
         }
 
