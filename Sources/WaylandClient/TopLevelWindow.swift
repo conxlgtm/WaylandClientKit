@@ -161,6 +161,7 @@ package final class TopLevelWindow {
         }
 
         if let buffers, buffers.hasBusyBuffers {
+            buffers.retire(reason: .resized)
             retiredBufferPools.append(buffers)
         }
 
@@ -184,6 +185,21 @@ package final class TopLevelWindow {
         retiredBufferPools.removeAll { pool in
             !pool.hasBusyBuffers
         }
+    }
+
+    private func retireSwapchain() {
+        if let activeBuffers = buffers {
+            activeBuffers.retire(reason: .windowClosed)
+            if activeBuffers.hasBusyBuffers {
+                retiredBufferPools.append(activeBuffers)
+            }
+            buffers = nil
+        }
+
+        for pool in retiredBufferPools {
+            pool.retire(reason: .windowClosed)
+        }
+        dropReleasedRetiredPools()
     }
 
     private func handleCloseRequested() {
@@ -236,6 +252,10 @@ package final class TopLevelWindow {
                 try interpretWindowEffects(model.reduce(.presentationBlockedByBuffer))
                 return .waitingForBuffer
             }
+            guard buffer.acquireForDrawing() else {
+                try interpretWindowEffects(model.reduce(.presentationBlockedByBuffer))
+                return .waitingForBuffer
+            }
 
             do {
                 try unsafe buffer.withUnsafeMutableBytes { bytes in
@@ -252,11 +272,13 @@ package final class TopLevelWindow {
                     generation: request.generation,
                     detail: String(describing: error)
                 )
+                buffer.markReleased()
                 throw error
             }
 
             guard !model.isClosed else {
                 try interpretWindowEffects(model.reduce(.transientStateReset))
+                buffer.markReleased()
                 return .skippedClosed
             }
 
@@ -271,10 +293,11 @@ package final class TopLevelWindow {
                     generation: request.generation,
                     detail: String(describing: error)
                 )
+                buffer.markReleased()
                 throw error
             }
 
-            buffer.markBusy()
+            buffer.markBusy(commitGeneration: request.generation)
             surface.attach(buffer: buffer)
             surface.damageFullBuffer(width: buffer.width, height: buffer.height)
             surface.commit()
@@ -448,8 +471,7 @@ extension TopLevelWindow {
                     )
                 )
             case .retireSwapchain:
-                buffers = nil
-                retiredBufferPools.removeAll()
+                retireSwapchain()
             case .destroyRoleObjects:
                 destroyRoleObjects()
             case .destroySurface:

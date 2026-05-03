@@ -1,4 +1,5 @@
 # target	path	max_warnings
+WaylandRaw	Sources/WaylandRaw/BufferReleaseOwner.swift	8
 WaylandRaw	Sources/WaylandRaw/CallbackBox.swift	3
 WaylandRaw	Sources/WaylandRaw/EventLoop.swift	2
 WaylandRaw	Sources/WaylandRaw/QueueEventLoop.swift	13
@@ -20,7 +21,7 @@ WaylandRaw	Sources/WaylandRaw/RawRegistry.swift	2
 WaylandRaw	Sources/WaylandRaw/RawSeat.swift	24
 WaylandRaw	Sources/WaylandRaw/RawSeatListenerOwner.swift	13
 WaylandRaw	Sources/WaylandRaw/RawSeatProxyOperations.swift	17
-WaylandRaw	Sources/WaylandRaw/RawSharedMemory.swift	28
+WaylandRaw	Sources/WaylandRaw/RawSharedMemory.swift	20
 WaylandRaw	Sources/WaylandRaw/RawSurface.swift	5
 WaylandRaw	Sources/WaylandRaw/RawTouchListenerOwner.swift	22
 WaylandRaw	Sources/WaylandRaw/RawXDGShell.swift	57

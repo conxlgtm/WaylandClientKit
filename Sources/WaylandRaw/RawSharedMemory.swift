@@ -147,94 +147,6 @@ package struct BufferLayout: Equatable, Sendable {
     }
 }
 
-package struct BufferBusyState: Equatable, Sendable {
-    package private(set) var isBusy = false
-
-    package init() {
-        // Start reusable until the buffer is attached for presentation.
-    }
-
-    package mutating func markBusy() {
-        isBusy = true
-    }
-
-    package mutating func markReleased() {
-        isBusy = false
-    }
-}
-
-private enum BufferReleaseInstallState {
-    case idle
-    case installed
-}
-
-private final class BufferReleaseOwner {
-    private let invariantFailureSink: RawInvariantFailureSink?
-    private var onRelease: (() -> Void)?
-    private var installState = BufferReleaseInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
-        owner: self,
-        initialValue: swl_buffer_listener_callbacks(),
-        invariantFailureSink: invariantFailureSink
-    )
-
-    private var callbacks: UnsafeMutablePointer<swl_buffer_listener_callbacks> {
-        listenerStorage.callbacks
-    }
-
-    init(invariantFailureSink failureSink: RawInvariantFailureSink? = nil) {
-        invariantFailureSink = failureSink
-
-        callbacks.pointee.release = { data, _ in
-            BufferReleaseOwner.withOwner(
-                data,
-                message: "wl_buffer release fired without Swift state"
-            ) { owner in
-                owner.onRelease?()
-            }
-        }
-    }
-
-    func install(
-        on buffer: OpaquePointer,
-        onRelease handler: @escaping () -> Void
-    ) throws(RuntimeError) {
-        guard installState == .idle else {
-            throw RuntimeError.systemError(
-                errno: EINVAL, operation: .installListener("wl_buffer"))
-        }
-
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
-
-        let result = unsafe swl_buffer_add_listener(buffer, callbacks)
-        guard result == 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL, operation: .installListener("wl_buffer"))
-        }
-
-        onRelease = handler
-        installState = .installed
-    }
-
-    func cancel() {
-        onRelease = nil
-        listenerStorage.invalidate()
-    }
-
-    deinit {
-        cancel()
-    }
-
-    private static func withOwner(
-        _ data: UnsafeMutableRawPointer?,
-        message: @autoclosure () -> String,
-        _ body: (BufferReleaseOwner) -> Void
-    ) {
-        CListenerStorage<BufferReleaseOwner, swl_buffer_listener_callbacks>
-            .withOwner(from: data, message: message(), body)
-    }
-}
-
 package final class RawBuffer {
     package let width: Int32
     package let height: Int32
@@ -250,10 +162,19 @@ package final class RawBuffer {
 
     package var isBusy: Bool { busyState.isBusy }
 
+    package var isReusable: Bool { busyState.isReusable }
+
+    package var lifecycle: BufferLifecycle { busyState.lifecycle }
+
     package func withUnsafeMutableBytes<R>(
         _ body: (UnsafeMutableRawBufferPointer) throws -> R
     ) rethrows -> R {
         try unsafe body(bytes)
+    }
+
+    @discardableResult
+    package func acquireForDrawing() -> Bool {
+        busyState.acquireForDrawing()
     }
 
     init(
@@ -291,11 +212,19 @@ package final class RawBuffer {
     }
 
     package func markBusy() {
-        busyState.markBusy()
+        markBusy(commitGeneration: 0)
     }
 
-    func markReleased() {
+    package func markBusy(commitGeneration: UInt64) {
+        busyState.markPendingRelease(commitGeneration: commitGeneration)
+    }
+
+    package func markReleased() {
         busyState.markReleased()
+    }
+
+    package func retire(reason: BufferRetirementReason) {
+        busyState.markRetired(reason: reason)
     }
 
     func setReleaseObserver(_ observer: @escaping () -> Void) {
@@ -310,6 +239,7 @@ package final class RawBuffer {
     package func destroy() {
         releaseObserver = nil
         releaseOwner.cancel()
+        retire(reason: .destroyed)
         proxy.destroy()
     }
 
@@ -389,14 +319,21 @@ package final class RawSharedMemoryPool {
     }
 
     package func nextFreeBuffer() -> RawBuffer? {
-        buffers.first { !$0.isBusy }
+        buffers.first(where: \.isReusable)
     }
 
-    package var hasFreeBuffers: Bool { buffers.contains { !$0.isBusy } }
+    package var hasFreeBuffers: Bool { buffers.contains(where: \.isReusable) }
 
     package var hasBusyBuffers: Bool { buffers.contains(where: \.isBusy) }
 
+    package func retire(reason: BufferRetirementReason) {
+        for buffer in buffers {
+            buffer.retire(reason: reason)
+        }
+    }
+
     package func destroy() {
+        retire(reason: .destroyed)
         for buffer in buffers {
             buffer.destroy()
         }
