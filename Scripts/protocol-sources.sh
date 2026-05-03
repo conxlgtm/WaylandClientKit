@@ -62,6 +62,38 @@ protocol_sources_xdg_decoration_candidates() {
         /usr/local/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml
 }
 
+protocol_sources_viewporter_candidates() {
+    local protocols_dir
+
+    if [[ -n "${VIEWPORTER_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$VIEWPORTER_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/stable/viewporter/viewporter.xml}" \
+        /usr/share/wayland-protocols/stable/viewporter/viewporter.xml \
+        /usr/local/share/wayland-protocols/stable/viewporter/viewporter.xml
+}
+
+protocol_sources_fractional_scale_candidates() {
+    local protocols_dir
+
+    if [[ -n "${FRACTIONAL_SCALE_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$FRACTIONAL_SCALE_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/staging/fractional-scale/fractional-scale-v1.xml}" \
+        /usr/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml \
+        /usr/local/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml
+}
+
 protocol_sources_first_existing_file() {
     local path
 

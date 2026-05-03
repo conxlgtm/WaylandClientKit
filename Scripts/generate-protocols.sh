@@ -27,6 +27,16 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
+[[ -f "$PROTO_DIR/stable/viewporter/viewporter.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/stable/viewporter/viewporter.xml"
+    exit 1
+}
+
+[[ -f "$PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml"
+    exit 1
+}
+
 rm -rf "$GEN_INC" "$GEN_SRC"
 mkdir -p "$GEN_INC" "$GEN_SRC" "$OUT_DIR/shims"
 
@@ -63,6 +73,22 @@ wayland-scanner client-header \
 wayland-scanner private-code \
     "$PROTO_DIR/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" \
     "$GEN_SRC/xdg-decoration-unstable-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/stable/viewporter/viewporter.xml" \
+    "$GEN_INC/viewporter-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/stable/viewporter/viewporter.xml" \
+    "$GEN_SRC/viewporter-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml" \
+    "$GEN_INC/fractional-scale-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml" \
+    "$GEN_SRC/fractional-scale-v1-protocol.c"
 
 for generated_file in "$GEN_INC"/*.h "$GEN_SRC"/*.c; do
     normalize_generated_file "$generated_file"
