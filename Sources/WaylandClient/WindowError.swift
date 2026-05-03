@@ -54,6 +54,7 @@ public enum WindowConfigureError: Equatable, Sendable, CustomStringConvertible {
     case negativeSuggestedDimension(width: Int32, height: Int32)
     case unresolvedSize
     case invalidSerial(UInt32)
+    case invalidDecorationMode(UInt32)
 
     public var description: String {
         switch self {
@@ -63,6 +64,8 @@ public enum WindowConfigureError: Equatable, Sendable, CustomStringConvertible {
             "configure size could not be resolved"
         case .invalidSerial(let serial):
             "invalid configure serial \(serial)"
+        case .invalidDecorationMode(let rawValue):
+            "invalid zxdg_toplevel_decoration_v1 mode \(rawValue)"
         }
     }
 }

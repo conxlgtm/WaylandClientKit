@@ -167,7 +167,9 @@ package final class TopLevelWindow {
     }
 
     private func reportDecorationUnavailableIfNeeded(reason: DecorationUnavailableReason) {
-        guard configuration.decorationPreference == .preferServerSide else { return }
+        guard configuration.decorationPreference.reportsUnavailableDecorationManager else {
+            return
+        }
 
         failureSink.reportWindowFailure(
             .diagnostic(

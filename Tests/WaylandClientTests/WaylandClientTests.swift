@@ -63,6 +63,13 @@ struct WaylandClientTests {
     }
 
     @Test
+    func unavailableDecorationManagerDiagnosticsOnlyReportForServerSidePreference() {
+        #expect(WindowDecorationPreference.preferServerSide.reportsUnavailableDecorationManager)
+        #expect(!WindowDecorationPreference.preferClientSide.reportsUnavailableDecorationManager)
+        #expect(!WindowDecorationPreference.compositorDefault.reportsUnavailableDecorationManager)
+    }
+
+    @Test
     func pointerCursorRejectsCStringsThatWouldTruncateAtCursorBoundary() {
         #expect(
             throws: ClientError.cursor(

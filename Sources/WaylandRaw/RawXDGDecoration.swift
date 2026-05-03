@@ -1,19 +1,29 @@
 import CWaylandProtocols
 import Glibc
 
-package struct RawDecorationMode: Equatable, Sendable {
-    package let rawValue: UInt32
+package enum RawDecorationMode: Equatable, Sendable {
+    case clientSide
+    case serverSide
 
-    package init(rawValue decorationModeRawValue: UInt32) {
-        rawValue = decorationModeRawValue
+    package init(validating rawValue: UInt32) throws(RuntimeError) {
+        switch rawValue {
+        case swl_zxdg_toplevel_decoration_v1_mode_client_side():
+            self = .clientSide
+        case swl_zxdg_toplevel_decoration_v1_mode_server_side():
+            self = .serverSide
+        default:
+            throw .invalidDecorationMode(rawValue)
+        }
     }
 
-    package static let clientSide = Self(
-        rawValue: swl_zxdg_toplevel_decoration_v1_mode_client_side()
-    )
-    package static let serverSide = Self(
-        rawValue: swl_zxdg_toplevel_decoration_v1_mode_server_side()
-    )
+    package var rawValue: UInt32 {
+        switch self {
+        case .clientSide:
+            swl_zxdg_toplevel_decoration_v1_mode_client_side()
+        case .serverSide:
+            swl_zxdg_toplevel_decoration_v1_mode_server_side()
+        }
+    }
 }
 
 package final class RawXDGDecorationManager {
@@ -145,9 +155,7 @@ package final class XDGDecorationOwner {
                 data,
                 message: "zxdg_toplevel_decoration_v1 configure fired without Swift state"
             ) { owner in
-                owner.configureState.handleDecorationConfigure(
-                    mode: RawDecorationMode(rawValue: mode)
-                )
+                owner.configureState.handleDecorationConfigure(rawMode: mode)
             }
         }
     }
