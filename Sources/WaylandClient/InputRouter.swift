@@ -24,6 +24,7 @@ final class InputRouter {
     private func routeOne(_ event: RawInputEvent) -> InputEvent? {
         switch event.kind {
         case .seat(let snapshot):
+            applySeatSnapshot(event, snapshot)
             return routedEvent(
                 event,
                 windowID: nil,
@@ -39,10 +40,19 @@ final class InputRouter {
                 kind: .diagnostic(convert(diagnostic))
             )
         case .pointer(let pointerEvent):
+            guard acceptPointerDeviceEvent(event) else {
+                return nil
+            }
             return routePointer(event, pointerEvent)
         case .keyboard(let keyboardEvent):
+            guard acceptKeyboardDeviceEvent(event) else {
+                return nil
+            }
             return routeKeyboard(event, keyboardEvent)
         case .touch(let touchEvent):
+            guard acceptTouchDeviceEvent(event) else {
+                return nil
+            }
             return routeTouch(event, touchEvent)
         }
     }
