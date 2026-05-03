@@ -1,5 +1,4 @@
 # target	path	max_warnings
-WaylandRaw	Sources/WaylandRaw/CListenerStorage.swift	8
 WaylandRaw	Sources/WaylandRaw/CallbackBox.swift	3
 WaylandRaw	Sources/WaylandRaw/EventLoop.swift	2
 WaylandRaw	Sources/WaylandRaw/QueueEventLoop.swift	13

@@ -1,3 +1,4 @@
+@safe
 final class CListenerStorage<Owner: AnyObject, Callbacks> {
     private let callbackStorage: CallbackBoxStorage<Owner>
     private let invariantFailureSink: RawInvariantFailureSink?
@@ -13,12 +14,12 @@ final class CListenerStorage<Owner: AnyObject, Callbacks> {
     ) {
         callbackStorage = CallbackBoxStorage(owner: owner)
         invariantFailureSink = failureSink
-        callbacks = .allocate(capacity: 1)
-        callbacks.initialize(to: initialValue)
+        unsafe callbacks = UnsafeMutablePointer<Callbacks>.allocate(capacity: 1)
+        unsafe callbacks.initialize(to: initialValue)
     }
 
     var opaqueOwnerPointer: UnsafeMutableRawPointer {
-        UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
+        unsafe UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
     }
 
     var hasActiveCallbacksForTesting: Bool {
@@ -36,13 +37,13 @@ final class CListenerStorage<Owner: AnyObject, Callbacks> {
             "Wayland listener fired after Swift owner was released",
         _ body: (Owner) throws -> Result
     ) rethrows -> Result? {
-        guard let data else {
+        guard let data = unsafe data else {
             RawInvariantFailureSink.trapForUnroutedFatalRawInvariantFailure(
                 .callbackWithoutSwiftState(message())
             )
         }
 
-        let storage = Unmanaged<CListenerStorage<Owner, Callbacks>>
+        let storage = unsafe Unmanaged<CListenerStorage<Owner, Callbacks>>
             .fromOpaque(data)
             .takeUnretainedValue()
         return try storage.withOwner(message(), body)
@@ -92,7 +93,7 @@ final class CListenerStorage<Owner: AnyObject, Callbacks> {
 
     deinit {
         invalidate()
-        callbacks.deinitialize(count: 1)
-        callbacks.deallocate()
+        unsafe callbacks.deinitialize(count: 1)
+        unsafe callbacks.deallocate()
     }
 }
