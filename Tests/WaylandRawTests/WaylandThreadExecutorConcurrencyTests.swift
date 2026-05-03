@@ -7,29 +7,45 @@ import Testing
 
 private final class ShutdownCompletionRecorder: Sendable {
     private struct State: Sendable {
-        var starts = Set<String>()
-        var completions = Set<String>()
+        var starts: [String] = []
+        var completions: [String] = []
     }
 
     private let state = Mutex(State())
 
     var startedValues: Set<String> {
-        state.withLock { $0.starts }
+        state.withLock { Set($0.starts) }
     }
 
     var values: Set<String> {
-        state.withLock { $0.completions }
+        state.withLock { Set($0.completions) }
+    }
+
+    var completionCount: Int {
+        state.withLock { $0.completions.count }
+    }
+
+    func startCount(for value: String) -> Int {
+        state.withLock { state in
+            state.starts.count { $0 == value }
+        }
+    }
+
+    func completionCount(for value: String) -> Int {
+        state.withLock { state in
+            state.completions.count { $0 == value }
+        }
     }
 
     func appendStarted(_ value: String) {
         state.withLock { state in
-            _ = state.starts.insert(value)
+            state.starts.append(value)
         }
     }
 
     func append(_ value: String) {
         state.withLock { state in
-            _ = state.completions.insert(value)
+            state.completions.append(value)
         }
     }
 }
@@ -85,10 +101,10 @@ private func enqueueShutdownCaller(
     // Running those calls as Swift tasks can starve the test body that opens the gate.
     // swiftlint:disable:next no_dispatch_queue
     DispatchQueue.global(qos: .userInitiated).async {
+        defer { group.leave() }
         recorder.appendStarted(label)
         executor.shutdown(mode)
         recorder.append(label)
-        group.leave()
     }
 }
 
@@ -136,8 +152,14 @@ struct WaylandThreadExecutorConcurrencyTests {
                 completions.startedValues == ["first", "second"]
             }
         )
-        usleep(10_000)
+        #expect(
+            waitUntil {
+                executor.lifecycleSnapshotForTesting.state
+                    == .joining(.abandonWaylandSources)
+            }
+        )
         #expect(completions.values.isEmpty)
+        #expect(completions.completionCount == 0)
 
         gate.open()
         #expect(group.wait(timeout: .now() + .seconds(5)) == .success)
@@ -146,6 +168,10 @@ struct WaylandThreadExecutorConcurrencyTests {
         #expect(stopped.state == .joined(.abandonWaylandSources))
         #expect(stopped.hasJoinedThread)
         #expect(completions.values == ["first", "second"])
+        for label in ["first", "second"] {
+            #expect(completions.startCount(for: label) == 1)
+            #expect(completions.completionCount(for: label) == 1)
+        }
     }
 
     @Test
@@ -186,8 +212,14 @@ struct WaylandThreadExecutorConcurrencyTests {
                 completions.startedValues == Set(["first"] + lateCallerLabels)
             }
         )
-        usleep(10_000)
+        #expect(
+            waitUntil {
+                executor.lifecycleSnapshotForTesting.state
+                    == .joining(.abandonWaylandSources)
+            }
+        )
         #expect(completions.values.isEmpty)
+        #expect(completions.completionCount == 0)
 
         gate.open()
         #expect(group.wait(timeout: .now() + .seconds(5)) == .success)
@@ -196,5 +228,9 @@ struct WaylandThreadExecutorConcurrencyTests {
         #expect(stopped.state == .joined(.abandonWaylandSources))
         #expect(stopped.hasJoinedThread)
         #expect(completions.values == Set(["first"] + lateCallerLabels))
+        for label in ["first"] + lateCallerLabels {
+            #expect(completions.startCount(for: label) == 1)
+            #expect(completions.completionCount(for: label) == 1)
+        }
     }
 }
