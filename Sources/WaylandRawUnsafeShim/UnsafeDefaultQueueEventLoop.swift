@@ -3,18 +3,18 @@ import Glibc
 import WaylandRaw
 
 enum UnsafeDefaultQueueEventLoopError: Error, Equatable, Sendable, CustomStringConvertible {
-    case displayError(errno: Int32)
-    case pollFailed(Int32)
-    case pollEventFailed(revents: Int16)
+    case displayError(RawSystemError)
+    case displayErrnoUnavailable(operation: RawSystemOperation)
+    case eventLoop(RawEventLoopError)
 
     var description: String {
         switch self {
-        case .displayError(let errno):
-            "default-queue Wayland display failed with errno \(errno)"
-        case .pollFailed(let errno):
-            "default-queue Wayland poll failed with errno \(errno)"
-        case .pollEventFailed(let revents):
-            "default-queue Wayland poll returned failure events \(revents)"
+        case .displayError(let error):
+            "default-queue Wayland display failed: \(error.description)"
+        case .displayErrnoUnavailable(let operation):
+            "default-queue Wayland display failed during \(operation.description) without errno"
+        case .eventLoop(let error):
+            "default-queue Wayland event loop failed: \(error.description)"
         }
     }
 }
@@ -27,30 +27,38 @@ struct EventLoopOperations {
     var pollFileDescriptor: (UnsafeMutablePointer<pollfd>?, nfds_t, Int32) -> Int32
     var readEvents: (OpaquePointer) -> Int32
     var cancelRead: (OpaquePointer) -> Void
-    var makeDisplayError: (OpaquePointer, Int32?) -> UnsafeDefaultQueueEventLoopError
+    var makeDisplayError:
+        (OpaquePointer, Int32?, RawSystemOperation) -> UnsafeDefaultQueueEventLoopError
 
     static var live: EventLoopOperations {
         EventLoopOperations(
-            prepareRead: wl_display_prepare_read,
-            dispatchPending: wl_display_dispatch_pending,
-            flush: wl_display_flush,
-            getFileDescriptor: wl_display_get_fd,
+            prepareRead: unsafe wl_display_prepare_read,
+            dispatchPending: unsafe wl_display_dispatch_pending,
+            flush: unsafe wl_display_flush,
+            getFileDescriptor: unsafe wl_display_get_fd,
             pollFileDescriptor: { descriptor, count, timeout in
-                Glibc.poll(descriptor, count, timeout)
+                unsafe Glibc.poll(descriptor, count, timeout)
             },
-            readEvents: wl_display_read_events,
-            cancelRead: wl_display_cancel_read,
+            readEvents: unsafe wl_display_read_events,
+            cancelRead: unsafe wl_display_cancel_read,
             makeDisplayError: makeDisplayError
         )
     }
 
     private static func makeDisplayError(
         display: OpaquePointer,
-        fallbackErrno: Int32?
+        fallbackErrno: Int32?,
+        operation: RawSystemOperation
     ) -> UnsafeDefaultQueueEventLoopError {
-        let displayErrno = wl_display_get_error(display)
+        let displayErrno = unsafe wl_display_get_error(display)
+        let resolvedErrno = displayErrno != 0 ? displayErrno : fallbackErrno ?? errno
+        guard resolvedErrno != 0 else {
+            return .displayErrnoUnavailable(operation: operation)
+        }
+
         return .displayError(
-            errno: displayErrno != 0 ? displayErrno : fallbackErrno ?? errno)
+            RawSystemError(uncheckedErrno: resolvedErrno, operation: operation)
+        )
     }
 }
 
@@ -101,7 +109,7 @@ private struct DefaultQueueEventLoopSource: QueueEventLoopSource {
     func dispatchPending() throws(UnsafeDefaultQueueEventLoopError) -> Int32 {
         let result = operations.dispatchPending(display)
         guard result >= 0 else {
-            throw operations.makeDisplayError(display, errno)
+            throw operations.makeDisplayError(display, errno, .displayDispatchPending)
         }
 
         return result
@@ -118,7 +126,7 @@ private struct DefaultQueueEventLoopSource: QueueEventLoopSource {
             return false
         }
 
-        throw operations.makeDisplayError(display, savedErrno)
+        throw operations.makeDisplayError(display, savedErrno, .displayPrepareRead)
     }
 
     func flush() throws(UnsafeDefaultQueueEventLoopError) -> Bool {
@@ -139,7 +147,7 @@ private struct DefaultQueueEventLoopSource: QueueEventLoopSource {
                 return false
             }
 
-            throw operations.makeDisplayError(display, savedErrno)
+            throw operations.makeDisplayError(display, savedErrno, .displayFlush)
         }
     }
 
@@ -149,7 +157,7 @@ private struct DefaultQueueEventLoopSource: QueueEventLoopSource {
 
     func readEvents() throws(UnsafeDefaultQueueEventLoopError) {
         if operations.readEvents(display) < 0 {
-            throw operations.makeDisplayError(display, errno)
+            throw operations.makeDisplayError(display, errno, .displayReadEvents)
         }
     }
 
@@ -170,11 +178,7 @@ private struct DefaultQueueEventLoopSource: QueueEventLoopSource {
         }
     }
 
-    func pollFailed(errno: Int32) -> UnsafeDefaultQueueEventLoopError {
-        .pollFailed(errno)
-    }
-
-    func pollEventFailed(revents: Int16) -> UnsafeDefaultQueueEventLoopError {
-        .pollEventFailed(revents: revents)
+    func eventLoopFailed(_ error: RawEventLoopError) -> UnsafeDefaultQueueEventLoopError {
+        .eventLoop(error)
     }
 }

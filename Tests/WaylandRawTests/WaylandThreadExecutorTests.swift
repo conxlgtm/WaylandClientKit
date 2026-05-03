@@ -113,7 +113,7 @@ private final class FailingReadEventSourceProbe: WaylandThreadEventSource, Senda
 
     func readEvents() throws {
         state.withLock { $0.readEventsCallCount += 1 }
-        throw RuntimeError.systemError(errno: EPIPE)
+        throw RuntimeError.systemError(errno: EPIPE, operation: .displayReadEvents)
     }
 
     func cancelRead() {

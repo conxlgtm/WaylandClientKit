@@ -24,12 +24,15 @@ public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
 }
 
 public enum WaylandEventLoopError: Equatable, Sendable, CustomStringConvertible {
-    case pollEventFailed(revents: Int16)
+    case unexpectedDisplayRevents(revents: Int16)
+    case unexpectedWakeRevents(revents: Int16)
 
     public var description: String {
         switch self {
-        case .pollEventFailed(let revents):
-            "Wayland event loop poll returned error events \(revents)"
+        case .unexpectedDisplayRevents(let revents):
+            "Wayland display poll returned error events \(revents)"
+        case .unexpectedWakeRevents(let revents):
+            "Wayland wake poll returned error events \(revents)"
         }
     }
 }
@@ -73,7 +76,7 @@ public enum InternalInvariantViolation: Equatable, Sendable, CustomStringConvert
 public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvertible {
     case closed
     case protocolError(WaylandProtocolError)
-    case systemError(errno: Int32)
+    case systemError(RawSystemError)
     case eventLoopError(WaylandEventLoopError)
     case eventSubscriberOverflow(stream: EventStreamIdentity, capacity: Int)
     case inputPipelineOverflow(InputPipelineOverflow)
@@ -91,12 +94,12 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
             )
         case .proxy(.queueMismatch(let interface, let objectID)):
             self = .protocolError(.proxyQueueMismatch(interface: interface, objectID: objectID))
-        case .pollFailed(let errno):
-            self = .systemError(errno: errno)
-        case .pollEventFailed(let revents):
-            self = .eventLoopError(.pollEventFailed(revents: revents))
+        case .eventLoop(let error):
+            self = Self(error)
         case .system(let error):
-            self = .systemError(errno: error.errno)
+            self = .systemError(error)
+        case .systemErrnoUnavailable:
+            self = .internalInvariantViolation(.message(runtimeError.description))
         case .connectionFailed,
             .eventQueueCreationFailed,
             .displayWrapperCreationFailed,
@@ -115,10 +118,8 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
 
     init(_ executorError: WaylandThreadExecutorError) {
         switch executorError {
-        case .pollFailed(let errno):
-            self = .systemError(errno: errno)
-        case .pollEventFailed(let revents):
-            self = .eventLoopError(.pollEventFailed(revents: revents))
+        case .eventLoop(let error):
+            self = Self(error)
         case .executorNotReady,
             .executorClosed,
             .executorStopping,
@@ -132,14 +133,25 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
         }
     }
 
+    init(_ eventLoopError: RawEventLoopError) {
+        switch eventLoopError {
+        case .system(let error):
+            self = .systemError(error)
+        case .unexpectedDisplayRevents(let revents):
+            self = .eventLoopError(.unexpectedDisplayRevents(revents: revents))
+        case .unexpectedWakeRevents(let revents):
+            self = .eventLoopError(.unexpectedWakeRevents(revents: revents))
+        }
+    }
+
     public var description: String {
         switch self {
         case .closed:
             "Wayland display is closed"
         case .protocolError(let error):
             error.description
-        case .systemError(let errno):
-            "Wayland display failed with errno \(errno)"
+        case .systemError(let error):
+            "Wayland display failed: \(error.description)"
         case .eventLoopError(let error):
             error.description
         case .eventSubscriberOverflow(let stream, let capacity):

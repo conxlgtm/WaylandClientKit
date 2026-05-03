@@ -47,7 +47,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             },
             readEvents: { _ in 0 },
             cancelRead: { _ in cancelReadCallCount += 1 },
-            makeDisplayError: { _, fallbackErrno in .displayError(errno: fallbackErrno ?? 0) }
+            makeDisplayError: makeTestDisplayError
         )
 
         try UnsafeDefaultQueueEventLoop.pumpOnce(
@@ -87,7 +87,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             },
             readEvents: { _ in 0 },
             cancelRead: { _ in cancelReadCallCount += 1 },
-            makeDisplayError: { _, fallbackErrno in .displayError(errno: fallbackErrno ?? 0) }
+            makeDisplayError: makeTestDisplayError
         )
 
         try UnsafeDefaultQueueEventLoop.pumpOnce(
@@ -127,7 +127,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
                 return 0
             },
             cancelRead: { _ in cancelReadCallCount += 1 },
-            makeDisplayError: { _, fallbackErrno in .displayError(errno: fallbackErrno ?? 0) }
+            makeDisplayError: makeTestDisplayError
         )
 
         try UnsafeDefaultQueueEventLoop.pumpOnce(
@@ -164,7 +164,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
                 return 0
             },
             cancelRead: { _ in cancelReadCallCount += 1 },
-            makeDisplayError: { _, fallbackErrno in .displayError(errno: fallbackErrno ?? 0) }
+            makeDisplayError: makeTestDisplayError
         )
 
         try UnsafeDefaultQueueEventLoop.pumpOnce(
@@ -197,7 +197,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             },
             readEvents: { _ in 0 },
             cancelRead: { _ in cancelReadCallCount += 1 },
-            makeDisplayError: { _, fallbackErrno in .displayError(errno: fallbackErrno ?? 0) }
+            makeDisplayError: makeTestDisplayError
         )
 
         do {
@@ -207,7 +207,9 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
                 operations: operations
             )
             Issue.record("Expected poll failure event to throw.")
-        } catch UnsafeDefaultQueueEventLoopError.pollEventFailed(let revents) {
+        } catch UnsafeDefaultQueueEventLoopError.eventLoop(
+            .unexpectedDisplayRevents(let revents)
+        ) {
             #expect(revents & Int16(POLLHUP) != 0)
         } catch {
             Issue.record("Unexpected error: \(error)")
@@ -236,7 +238,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             pollFileDescriptor: { _, _, _ in 0 },
             readEvents: { _ in 0 },
             cancelRead: { _ in cancelReadCallCount += 1 },
-            makeDisplayError: { _, fallbackErrno in .displayError(errno: fallbackErrno ?? 0) }
+            makeDisplayError: makeTestDisplayError
         )
 
         do {
@@ -246,8 +248,9 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
                 operations: operations
             )
             Issue.record("Expected unexpected prepare-read failure to throw.")
-        } catch UnsafeDefaultQueueEventLoopError.displayError(let errorCode) {
-            #expect(errorCode == EBADF)
+        } catch UnsafeDefaultQueueEventLoopError.displayError(let error) {
+            #expect(error.errno.rawValue == EBADF)
+            #expect(error.operation == .displayPrepareRead)
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
@@ -270,9 +273,13 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             .syncCallbackListenerInstallationFailed,
             .missingRequiredGlobal("wl_shm"),
             .bindFailed("wl_compositor"),
-            .pollFailed(22),
-            .pollEventFailed(revents: Int16(POLLHUP)),
-            .systemError(errno: 5),
+            .eventLoop(
+                .system(
+                    RawSystemError(uncheckedErrno: 22, operation: .pollEventLoop)
+                )
+            ),
+            .eventLoop(.unexpectedDisplayRevents(revents: Int16(POLLHUP))),
+            .systemError(errno: 5, operation: .displayReadEvents),
             .protocolError(interfaceName: "wl_surface", objectID: 3, code: 1),
             .protocolError(interfaceName: nil, objectID: 0, code: 0),
         ]
@@ -306,13 +313,21 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
 
     @Test
     func runtimeErrorSystemErrorCarriesStructuredPayload() {
-        let error = RuntimeError.systemError(errno: 5)
+        let error = RuntimeError.systemError(errno: 5, operation: .displayReadEvents)
         guard case .system(let systemError) = error else {
             Issue.record("Expected structured system error")
             return
         }
 
-        #expect(systemError.errno == 5)
+        #expect(systemError.errno.rawValue == 5)
+        #expect(systemError.operation == .displayReadEvents)
+    }
+
+    @Test
+    func runtimeErrorZeroErrnoBecomesUnavailableFailure() {
+        let error = RuntimeError.systemError(errno: 0, operation: .displayReadEvents)
+
+        #expect(error == .systemErrnoUnavailable(operation: .displayReadEvents))
     }
 
     @Test
@@ -335,5 +350,19 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
 
     private func makeDisplayPointer() throws -> OpaquePointer {
         try #require(OpaquePointer(bitPattern: 1))
+    }
+
+    private func makeTestDisplayError(
+        _: OpaquePointer,
+        _ fallbackErrno: Int32?,
+        _ operation: RawSystemOperation
+    ) -> UnsafeDefaultQueueEventLoopError {
+        guard let fallbackErrno, fallbackErrno != 0 else {
+            return .displayErrnoUnavailable(operation: operation)
+        }
+
+        return .displayError(
+            RawSystemError(uncheckedErrno: fallbackErrno, operation: operation)
+        )
     }
 }

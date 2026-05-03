@@ -7,9 +7,7 @@ package final class RawSharedMemory {
     package let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
-    package var pointer: OpaquePointer {
-        proxy.pointer
-    }
+    package var pointer: OpaquePointer { proxy.pointer }
 
     init(
         pointer sharedMemoryPointer: OpaquePointer,
@@ -22,12 +20,12 @@ package final class RawSharedMemory {
         do {
             adoptedPointer = try adoptionContext.adopt(sharedMemoryPointer, interface: "wl_shm")
         } catch {
-            swl_shm_destroy(sharedMemoryPointer)
+            unsafe swl_shm_destroy(sharedMemoryPointer)
             throw error
         }
         proxy = RawOwnedProxy(
             pointer: adoptedPointer,
-            destroy: swl_shm_destroy
+            destroy: unsafe swl_shm_destroy
         )
     }
     package func createPool(
@@ -73,7 +71,7 @@ private struct MappedRegion: ~Copyable {
     let baseAddress: UnsafeMutableRawPointer
 
     init(fileDescriptor: Int32, byteCount requestedByteCount: Int) throws(RuntimeError) {
-        let mapped = mmap(
+        let mapped = unsafe mmap(
             nil,
             requestedByteCount,
             PROT_READ | PROT_WRITE,
@@ -83,7 +81,7 @@ private struct MappedRegion: ~Copyable {
         )
 
         guard let mapped, mapped != MAP_FAILED else {
-            throw RuntimeError.systemError(errno: errno)
+            throw RuntimeError.systemError(errno: errno, operation: .mapSharedMemory)
         }
 
         baseAddress = mapped
@@ -91,24 +89,21 @@ private struct MappedRegion: ~Copyable {
     }
 
     deinit {
-        munmap(baseAddress, byteCount)
+        unsafe munmap(baseAddress, byteCount)
     }
 }
 
 private final class SharedMemoryMapping {
     private let mappedRegion: MappedRegion
 
-    var byteCount: Int {
-        mappedRegion.byteCount
-    }
+    var byteCount: Int { mappedRegion.byteCount }
 
-    var baseAddress: UnsafeMutableRawPointer {
-        mappedRegion.baseAddress
-    }
+    var baseAddress: UnsafeMutableRawPointer { mappedRegion.baseAddress }
 
     init(fileDescriptor: Int32, byteCount requestedByteCount: Int) throws(RuntimeError) {
         guard requestedByteCount > 0 else {
-            throw RuntimeError.systemError(errno: EINVAL)
+            throw RuntimeError.systemError(
+                errno: EINVAL, operation: .validateArgument("shared memory mapping byte count"))
         }
 
         mappedRegion = try MappedRegion(
@@ -126,20 +121,23 @@ package struct BufferLayout: Equatable, Sendable {
 
     package init(width bufferWidth: Int32, height bufferHeight: Int32) throws(RuntimeError) {
         guard bufferWidth > 0, bufferHeight > 0 else {
-            throw RuntimeError.systemError(errno: EINVAL)
+            throw RuntimeError.systemError(
+                errno: EINVAL, operation: .validateArgument("buffer dimensions"))
         }
 
         let strideResult = Int(bufferWidth).multipliedReportingOverflow(
             by: MemoryLayout<UInt32>.stride
         )
         guard !strideResult.overflow, strideResult.partialValue <= Int(Int32.max) else {
-            throw RuntimeError.systemError(errno: EOVERFLOW)
+            throw RuntimeError.systemError(
+                errno: EOVERFLOW, operation: .validateArgument("buffer stride"))
         }
 
         let byteCountResult = strideResult.partialValue
             .multipliedReportingOverflow(by: Int(bufferHeight))
         guard !byteCountResult.overflow else {
-            throw RuntimeError.systemError(errno: EOVERFLOW)
+            throw RuntimeError.systemError(
+                errno: EOVERFLOW, operation: .validateArgument("buffer byte count"))
         }
 
         width = bufferWidth
@@ -202,14 +200,16 @@ private final class BufferReleaseOwner {
         onRelease handler: @escaping () -> Void
     ) throws(RuntimeError) {
         guard installState == .idle else {
-            throw RuntimeError.systemError(errno: EINVAL)
+            throw RuntimeError.systemError(
+                errno: EINVAL, operation: .installListener("wl_buffer"))
         }
 
         callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
-        let result = swl_buffer_add_listener(buffer, callbacks)
+        let result = unsafe swl_buffer_add_listener(buffer, callbacks)
         guard result == 0 else {
-            throw RuntimeError.systemError(errno: EINVAL)
+            throw RuntimeError.systemError(
+                errno: EINVAL, operation: .installListener("wl_buffer"))
         }
 
         onRelease = handler
@@ -246,13 +246,9 @@ package final class RawBuffer {
     private var busyState = BufferBusyState()
     private var releaseObserver: (() -> Void)?
 
-    var pointer: OpaquePointer {
-        proxy.pointer
-    }
+    var pointer: OpaquePointer { proxy.pointer }
 
-    package var isBusy: Bool {
-        busyState.isBusy
-    }
+    package var isBusy: Bool { busyState.isBusy }
 
     init(
         pointer bufferPointer: OpaquePointer,
@@ -273,12 +269,12 @@ package final class RawBuffer {
         do {
             adoptedPointer = try adoptionContext.adopt(bufferPointer, interface: "wl_buffer")
         } catch {
-            swl_buffer_destroy(bufferPointer)
+            unsafe swl_buffer_destroy(bufferPointer)
             throw error
         }
         proxy = RawOwnedProxy(
             pointer: adoptedPointer,
-            destroy: swl_buffer_destroy
+            destroy: unsafe swl_buffer_destroy
         )
 
         try releaseOwner.install(on: bufferPointer) { [weak buffer = self] in
@@ -325,9 +321,7 @@ package final class RawSharedMemoryPool {
     private let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
-    private var pointer: OpaquePointer {
-        proxy.pointer
-    }
+    private var pointer: OpaquePointer { proxy.pointer }
 
     init(
         sharedMemory: RawSharedMemory,
@@ -337,7 +331,8 @@ package final class RawSharedMemoryPool {
         onBufferReleased: @escaping () -> Void
     ) throws(RuntimeError) {
         guard bufferCount > 0 else {
-            throw RuntimeError.systemError(errno: EINVAL)
+            throw RuntimeError.systemError(
+                errno: EINVAL, operation: .validateArgument("shared memory buffer count"))
         }
 
         let bufferLayout = try BufferLayout(width: width, height: height)
@@ -379,10 +374,10 @@ package final class RawSharedMemoryPool {
             proxyAdoption = adoptionContext
             proxy = RawOwnedProxy(
                 pointer: try adoptionContext.adopt(poolPointer, interface: "wl_shm_pool"),
-                destroy: swl_shm_pool_destroy
+                destroy: unsafe swl_shm_pool_destroy
             )
         } catch {
-            swl_shm_pool_destroy(poolPointer)
+            unsafe swl_shm_pool_destroy(poolPointer)
             throw error
         }
     }
@@ -391,13 +386,9 @@ package final class RawSharedMemoryPool {
         buffers.first { !$0.isBusy }
     }
 
-    package var hasFreeBuffers: Bool {
-        buffers.contains { !$0.isBusy }
-    }
+    package var hasFreeBuffers: Bool { buffers.contains { !$0.isBusy } }
 
-    package var hasBusyBuffers: Bool {
-        buffers.contains(where: \.isBusy)
-    }
+    package var hasBusyBuffers: Bool { buffers.contains(where: \.isBusy) }
 
     package func destroy() {
         for buffer in buffers {
@@ -416,7 +407,8 @@ package final class RawSharedMemoryPool {
     ) throws(RuntimeError) -> Int {
         let totalBytesResult = layout.byteCount.multipliedReportingOverflow(by: bufferCount)
         guard !totalBytesResult.overflow, totalBytesResult.partialValue <= Int(Int32.max) else {
-            throw RuntimeError.systemError(errno: EOVERFLOW)
+            throw RuntimeError.systemError(
+                errno: EOVERFLOW, operation: .validateArgument("shared memory pool byte count"))
         }
 
         return totalBytesResult.partialValue
@@ -428,7 +420,7 @@ package final class RawSharedMemoryPool {
         totalBytes: Int
     ) throws(RuntimeError) -> OpaquePointer {
         guard
-            let poolPointer = swl_shm_create_pool(
+            let poolPointer = unsafe swl_shm_create_pool(
                 sharedMemory.pointer,
                 fileDescriptor,
                 Int32(totalBytes)
@@ -473,7 +465,7 @@ package final class RawSharedMemoryPool {
     ) throws(RuntimeError) -> RawBuffer {
         let offset = layout.byteCount * index
         guard
-            let bufferPointer = swl_shm_pool_create_buffer(
+            let bufferPointer = unsafe swl_shm_pool_create_buffer(
                 pool,
                 Int32(offset),
                 layout.width,
