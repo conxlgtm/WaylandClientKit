@@ -96,10 +96,9 @@ struct InputEventQueueTests {
             events.first?.kind
                 == .diagnostic(
                     RawInputDiagnostic(
-                        operation: .inputPipelineOverflow(
+                        .inputPipelineOverflow(
                             RawInputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
-                        ),
-                        message: "raw input queue exceeded capacity 1"
+                        )
                     )
                 )
         )

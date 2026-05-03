@@ -223,9 +223,11 @@ struct KeyboardInterpreterKeymapTests {
             deviceID: deviceID,
             kind: .diagnostic(
                 RawInputDiagnostic(
-                    operation: .keyboardKeymap,
-                    message: RawKeyboardKeymapReadError.missingNULTerminator(size: 12)
-                        .description
+                    .keymap(
+                        .readFailed(
+                            RawKeyboardKeymapReadError.missingNULTerminator(size: 12)
+                        )
+                    )
                 )
             )
         )

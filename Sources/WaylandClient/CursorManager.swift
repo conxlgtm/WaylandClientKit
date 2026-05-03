@@ -396,8 +396,7 @@ extension CursorManager {
             requestResults.append(.skippedMissingCursor(name: name))
             let diagnostic = cursorDiagnostic(
                 rawEvent,
-                operation: "missingCursor",
-                message: "cursor \(name) is unavailable"
+                payload: .missingCursor(name: name)
             )
             return [diagnostic]
         } catch {
@@ -405,8 +404,7 @@ extension CursorManager {
             requestResults.append(.failed(message))
             let diagnostic = cursorDiagnostic(
                 rawEvent,
-                operation: "automaticPointerEnter",
-                message: message
+                payload: .automaticPointerEnterFailed(message)
             )
             return [diagnostic]
         }
@@ -414,8 +412,7 @@ extension CursorManager {
 
     private func cursorDiagnostic(
         _ rawEvent: RawInputEvent,
-        operation: String,
-        message: String
+        payload: CursorDiagnostic
     ) -> InputEvent {
         InputEvent(
             sequence: rawEvent.sequence,
@@ -423,8 +420,7 @@ extension CursorManager {
             windowID: nil,
             kind: .diagnostic(
                 InputDiagnostic(
-                    operation: .cursor(operation),
-                    message: message
+                    .cursor(payload)
                 )
             )
         )
