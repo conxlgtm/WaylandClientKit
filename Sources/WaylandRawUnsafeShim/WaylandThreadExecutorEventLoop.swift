@@ -54,11 +54,7 @@ private struct ExecutorEventLoopSource: QueueEventLoopSource {
         }
     }
 
-    func pollFailed(errno: Int32) -> any Error {
-        WaylandThreadExecutorError.pollFailed(errno)
-    }
-
-    func pollEventFailed(revents: Int16) -> any Error {
-        WaylandThreadExecutorError.pollEventFailed(revents: revents)
+    func eventLoopFailed(_ error: RawEventLoopError) -> any Error {
+        WaylandThreadExecutorError.eventLoop(error)
     }
 }

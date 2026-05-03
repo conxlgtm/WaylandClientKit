@@ -2,15 +2,108 @@ import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
 
-public struct RawSystemError: Error, Equatable, Sendable, CustomStringConvertible {
-    public let errno: Int32
+public enum RawSystemErrorConstructionError: Error, Equatable, Sendable {
+    case zeroErrno
+}
 
-    public init(errno errorNumber: Int32) {
-        errno = errorNumber
+public struct NonZeroErrno: Equatable, Sendable, CustomStringConvertible {
+    public let rawValue: Int32
+
+    public init(_ rawErrorNumber: Int32) throws {
+        guard rawErrorNumber != 0 else {
+            throw RawSystemErrorConstructionError.zeroErrno
+        }
+
+        rawValue = rawErrorNumber
+    }
+
+    package init(unchecked rawErrorNumber: Int32) {
+        precondition(rawErrorNumber != 0, "errno 0 is not a system failure")
+        rawValue = rawErrorNumber
     }
 
     public var description: String {
-        "errno \(errno)"
+        "\(rawValue)"
+    }
+}
+
+public enum RawSystemOperation: Equatable, Sendable, CustomStringConvertible {
+    case validateArgument(String)
+    case createSharedMemoryFile
+    case resizeSharedMemoryFile
+    case mapSharedMemory
+    case createBuffer
+    case installListener(String)
+    case readMonotonicClock
+    case pollEventLoop
+    case displayFlush
+    case displayReadEvents
+    case displayDispatchPending
+    case displayPrepareRead
+    case displayError
+    case duplicateFileDescriptor
+    case closeFileDescriptor
+
+    public var description: String {
+        switch self {
+        case .validateArgument(let name):
+            "validate \(name)"
+        case .createSharedMemoryFile:
+            "create shared memory file"
+        case .resizeSharedMemoryFile:
+            "resize shared memory file"
+        case .mapSharedMemory:
+            "map shared memory"
+        case .createBuffer:
+            "create Wayland buffer"
+        case .installListener(let name):
+            "install \(name) listener"
+        case .readMonotonicClock:
+            "read monotonic clock"
+        case .pollEventLoop:
+            "poll Wayland event loop"
+        case .displayFlush:
+            "flush Wayland display"
+        case .displayReadEvents:
+            "read Wayland display events"
+        case .displayDispatchPending:
+            "dispatch pending Wayland events"
+        case .displayPrepareRead:
+            "prepare Wayland display read"
+        case .displayError:
+            "read Wayland display error"
+        case .duplicateFileDescriptor:
+            "duplicate file descriptor"
+        case .closeFileDescriptor:
+            "close file descriptor"
+        }
+    }
+}
+
+public struct RawSystemError: Error, Equatable, Sendable, CustomStringConvertible {
+    public let errno: NonZeroErrno
+    public let operation: RawSystemOperation
+
+    public init(errno errorNumber: NonZeroErrno, operation systemOperation: RawSystemOperation) {
+        errno = errorNumber
+        operation = systemOperation
+    }
+
+    public init(
+        validatingErrno errorNumber: Int32,
+        operation systemOperation: RawSystemOperation
+    ) throws {
+        errno = try NonZeroErrno(errorNumber)
+        operation = systemOperation
+    }
+
+    package init(uncheckedErrno errorNumber: Int32, operation systemOperation: RawSystemOperation) {
+        errno = NonZeroErrno(unchecked: errorNumber)
+        operation = systemOperation
+    }
+
+    public var description: String {
+        "\(operation.description) failed with errno \(errno.rawValue)"
     }
 }
 
@@ -72,6 +165,23 @@ public enum RawListenerInstallationError: Error, Equatable, Sendable, CustomStri
     }
 }
 
+public enum RawEventLoopError: Error, Equatable, Sendable, CustomStringConvertible {
+    case system(RawSystemError)
+    case unexpectedDisplayRevents(revents: Int16)
+    case unexpectedWakeRevents(revents: Int16)
+
+    public var description: String {
+        switch self {
+        case .system(let error):
+            error.description
+        case .unexpectedDisplayRevents(let revents):
+            "Wayland display poll returned failure events \(revents)"
+        case .unexpectedWakeRevents(let revents):
+            "Wayland wake poll returned failure events \(revents)"
+        }
+    }
+}
+
 public enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
     case connectionFailed
     case eventQueueCreationFailed
@@ -82,9 +192,9 @@ public enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
     case frameRequestFailed
     case missingRequiredGlobal(String)
     case bindFailed(String)
-    case pollFailed(Int32)
-    case pollEventFailed(revents: Int16)
+    case eventLoop(RawEventLoopError)
     case system(RawSystemError)
+    case systemErrnoUnavailable(operation: RawSystemOperation)
     case operationTimedOut(String)
     case shortRead(expectedBytes: Int, actualBytes: Int)
     case invalidWaylandArrayByteCount(byteCount: Int, elementSize: Int)
@@ -99,8 +209,17 @@ public enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
     public static let syncCallbackListenerInstallationFailed: RuntimeError =
         .listener(.syncCallback)
 
-    public static func systemError(errno: Int32) -> RuntimeError {
-        .system(RawSystemError(errno: errno))
+    public static func systemError(
+        errno errorNumber: Int32,
+        operation systemOperation: RawSystemOperation
+    ) -> RuntimeError {
+        guard errorNumber != 0 else {
+            return .systemErrnoUnavailable(operation: systemOperation)
+        }
+
+        return .system(
+            RawSystemError(uncheckedErrno: errorNumber, operation: systemOperation)
+        )
     }
 
     public static func protocolError(
@@ -121,7 +240,11 @@ public enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
         .proxy(.queueMismatch(interface: interface, objectID: nil))
     }
 
-    public static func fromDisplay(_ display: OpaquePointer, fallbackErrno: Int32? = nil)
+    public static func fromDisplay(
+        _ display: OpaquePointer,
+        fallbackErrno: Int32? = nil,
+        operation systemOperation: RawSystemOperation = .displayError
+    )
         -> RuntimeError
     {
         let error = wl_display_get_error(display)
@@ -142,10 +265,14 @@ public enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
         }
 
         if error != 0 {
-            return .systemError(errno: error)
+            return .systemError(errno: error, operation: systemOperation)
         }
 
-        return .systemError(errno: fallbackErrno ?? 0)
+        guard let fallbackErrno, fallbackErrno != 0 else {
+            return .systemErrnoUnavailable(operation: systemOperation)
+        }
+
+        return .systemError(errno: fallbackErrno, operation: systemOperation)
     }
 
     public var description: String {
@@ -168,12 +295,12 @@ public enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
             "Missing required global: \(name)"
         case .bindFailed(let name):
             "Failed to bind global: \(name)"
-        case .pollFailed(let errno):
-            "poll failed with errno \(errno)"
-        case .pollEventFailed(let revents):
-            "poll returned error events \(revents)"
+        case .eventLoop(let error):
+            error.description
         case .system(let error):
             "Wayland runtime failed with \(error.description)"
+        case .systemErrnoUnavailable(let operation):
+            "Wayland runtime failed during \(operation.description) without errno"
         case .operationTimedOut(let detail):
             "Wayland runtime operation timed out: \(detail)"
         case .shortRead(let expectedBytes, let actualBytes):

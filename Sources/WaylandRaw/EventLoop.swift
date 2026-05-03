@@ -3,12 +3,12 @@ import Glibc
 
 enum EventLoop {
     package static func fileDescriptor(display: OpaquePointer) -> CInt {
-        wl_display_get_fd(display)
+        unsafe wl_display_get_fd(display)
     }
 
     package static func flushForExternalPoll(display: OpaquePointer) throws(RuntimeError) -> Bool {
         while true {
-            let result = wl_display_flush(display)
+            let result = unsafe wl_display_flush(display)
             if result >= 0 {
                 return false
             }
@@ -24,17 +24,25 @@ enum EventLoop {
                 return false
             }
 
-            throw RuntimeError.fromDisplay(display, fallbackErrno: savedErrno)
+            throw RuntimeError.fromDisplay(
+                display,
+                fallbackErrno: savedErrno,
+                operation: .displayFlush
+            )
         }
     }
 
     package static func readEvents(display: OpaquePointer) throws(RuntimeError) {
-        if wl_display_read_events(display) < 0 {
-            throw RuntimeError.fromDisplay(display, fallbackErrno: errno)
+        if unsafe wl_display_read_events(display) < 0 {
+            throw RuntimeError.fromDisplay(
+                display,
+                fallbackErrno: errno,
+                operation: .displayReadEvents
+            )
         }
     }
 
     package static func cancelRead(display: OpaquePointer) {
-        wl_display_cancel_read(display)
+        unsafe wl_display_cancel_read(display)
     }
 }

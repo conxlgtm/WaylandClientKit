@@ -19,11 +19,11 @@ package struct RawFileDescriptor: ~Copyable {
 
     package static func memfd(name: String) throws(RuntimeError) -> RawFileDescriptor {
         let fd = name.withCString { namePointer in
-            swl_memfd_create(namePointer, swl_mfd_cloexec())
+            unsafe swl_memfd_create(namePointer, swl_mfd_cloexec())
         }
 
         guard fd >= 0 else {
-            throw RuntimeError.systemError(errno: errno)
+            throw RuntimeError.systemError(errno: errno, operation: .createSharedMemoryFile)
         }
 
         return RawFileDescriptor(fd)
@@ -31,7 +31,7 @@ package struct RawFileDescriptor: ~Copyable {
 
     package func resize(byteCount: Int) throws(RuntimeError) {
         guard ftruncate(rawValue, off_t(byteCount)) == 0 else {
-            throw RuntimeError.systemError(errno: errno)
+            throw RuntimeError.systemError(errno: errno, operation: .resizeSharedMemoryFile)
         }
     }
 
