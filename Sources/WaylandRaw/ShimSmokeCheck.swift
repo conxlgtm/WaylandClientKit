@@ -28,6 +28,8 @@ enum ShimSmokeCheck {
         _ = unsafe swl_registry_bind_wl_shm
         _ = unsafe swl_registry_bind_xdg_wm_base
         _ = unsafe swl_registry_bind_zxdg_decoration_manager_v1
+        _ = unsafe swl_registry_bind_wp_viewporter
+        _ = unsafe swl_registry_bind_wp_fractional_scale_manager_v1
         _ = unsafe swl_registry_bind_wl_seat
     }
 
@@ -42,6 +44,7 @@ enum ShimSmokeCheck {
         _ = unsafe swl_surface_attach
         _ = unsafe swl_surface_commit
         _ = unsafe swl_surface_damage_buffer
+        _ = unsafe swl_surface_set_buffer_scale
     }
 
     private static func verifyXDGShims() {
@@ -56,6 +59,9 @@ enum ShimSmokeCheck {
         _ = unsafe swl_zxdg_toplevel_decoration_v1_unset_mode
         _ = swl_zxdg_toplevel_decoration_v1_mode_client_side
         _ = swl_zxdg_toplevel_decoration_v1_mode_server_side
+        _ = unsafe swl_wp_viewporter_get_viewport
+        _ = unsafe swl_wp_viewport_set_destination
+        _ = unsafe swl_wp_fractional_scale_manager_v1_get_fractional_scale
     }
 
     private static func verifyDestroyShims() {
@@ -76,16 +82,22 @@ enum ShimSmokeCheck {
         _ = unsafe swl_xdg_wm_base_destroy
         _ = unsafe swl_zxdg_toplevel_decoration_v1_destroy
         _ = unsafe swl_zxdg_decoration_manager_v1_destroy
+        _ = unsafe swl_wp_viewport_destroy
+        _ = unsafe swl_wp_viewporter_destroy
+        _ = unsafe swl_wp_fractional_scale_v1_destroy
+        _ = unsafe swl_wp_fractional_scale_manager_v1_destroy
     }
 
     private static func verifyListenerShims() {
         _ = unsafe swl_registry_add_listener
         _ = unsafe swl_callback_add_listener
         _ = unsafe swl_buffer_add_listener
+        _ = unsafe swl_surface_add_listener
         _ = unsafe swl_xdg_wm_base_add_listener
         _ = unsafe swl_xdg_surface_add_listener
         _ = unsafe swl_xdg_toplevel_add_listener
         _ = unsafe swl_zxdg_toplevel_decoration_v1_add_listener
+        _ = unsafe swl_wp_fractional_scale_v1_add_listener
         _ = unsafe swl_seat_add_listener
         _ = unsafe swl_pointer_add_listener
         _ = unsafe swl_keyboard_add_listener

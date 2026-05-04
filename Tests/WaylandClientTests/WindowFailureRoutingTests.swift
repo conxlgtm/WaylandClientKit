@@ -119,6 +119,70 @@ struct WindowFailureClassifierTests {
                 == .protocolViolation(.invalidDecorationMode(rawValue: 999))
         )
     }
+
+    @Test
+    func classifiesInvalidPreferredBufferScaleAsProtocolViolation() {
+        let failure = WindowFailureClassifier.classify(
+            windowID: windowID,
+            operation: .surfaceScaleChanged,
+            error: ClientError.window(
+                windowID,
+                .invalidConfigure(.invalidPreferredBufferScale(0))
+            )
+        )
+
+        #expect(
+            failure
+                == .protocolViolation(
+                    .invalidPreferredBufferScale(windowID: windowID, factor: 0)
+                )
+        )
+    }
+
+    @Test
+    func classifiesInvalidFractionalScaleAsProtocolViolation() {
+        let failure = WindowFailureClassifier.classify(
+            windowID: windowID,
+            operation: .surfaceScaleChanged,
+            error: ClientError.window(
+                windowID,
+                .invalidConfigure(.invalidFractionalScale(0))
+            )
+        )
+
+        #expect(
+            failure
+                == .protocolViolation(
+                    .invalidFractionalScale(windowID: windowID, numerator: 0)
+                )
+        )
+    }
+
+    @Test
+    func classifiesUnrepresentableSurfaceBufferSizeAsProtocolViolation() {
+        let error = WindowConfigureError.unrepresentableSurfaceBufferSize(
+            logicalDimension: 640,
+            scaleNumerator: UInt32(Int32.max),
+            scaleDenominator: 1
+        )
+        let failure = WindowFailureClassifier.classify(
+            windowID: windowID,
+            operation: .surfaceScaleChanged,
+            error: ClientError.window(windowID, .invalidConfigure(error))
+        )
+
+        #expect(
+            failure
+                == .protocolViolation(
+                    .unrepresentableSurfaceBufferSize(
+                        windowID: windowID,
+                        logicalDimension: 640,
+                        scaleNumerator: UInt32(Int32.max),
+                        scaleDenominator: 1
+                    )
+                )
+        )
+    }
 }
 
 @Suite
