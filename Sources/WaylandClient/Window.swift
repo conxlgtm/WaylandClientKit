@@ -9,6 +9,10 @@ public struct Window: Sendable, Hashable {
         displayIdentity = ObjectIdentifier(owningDisplay)
     }
 
+    package func isOwned(by owningDisplay: WaylandDisplay) -> Bool {
+        displayIdentity == ObjectIdentifier(owningDisplay)
+    }
+
     public func show(
         timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
@@ -24,6 +28,12 @@ public struct Window: Sendable, Hashable {
 
     public func close() async {
         await display.closeWindow(id)
+    }
+
+    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws
+        -> PopupSurface
+    {
+        try await display.createPopup(parent: self, configuration: popupConfiguration)
     }
 
     public func requestRedraw() async throws {

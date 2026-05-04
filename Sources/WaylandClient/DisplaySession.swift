@@ -12,6 +12,7 @@ package final class DisplaySession {
     private let maximumPendingInputEventCount: Int
     private var pendingInputState = PendingInputState.accepting([])
     private var nextWindowID: UInt64 = 1
+    private var nextPopupID: UInt64 = 1
 
     package init(
         connection rawConnection: RawDisplayConnection,
@@ -214,6 +215,12 @@ package final class DisplaySession {
         return WindowID(rawValue: nextWindowID)
     }
 
+    private func allocatePopupID() -> PopupID {
+        connection.preconditionIsOwnerThread()
+        defer { nextPopupID += 1 }
+        return PopupID(rawValue: nextPopupID)
+    }
+
     private func processPendingRawInputEvents() {
         if pendingInputState.hasFailed {
             _ = connection.drainInputEvents()
@@ -343,6 +350,34 @@ struct PendingInputOverflowEvent {
         }
 
         return false
+    }
+}
+
+extension DisplaySession {
+    package func createPopupOnOwnerThread(
+        parent parentWindow: TopLevelWindow,
+        configuration popupConfiguration: PopupConfiguration,
+        failureSink: any WindowFailureSink = DefaultWindowFailureSink()
+    ) throws -> PopupRoleSurface {
+        connection.preconditionIsOwnerThread()
+        let popup = try parentWindow.createPopupOnOwnerThread(
+            id: allocatePopupID(),
+            configuration: popupConfiguration,
+            failureSink: failureSink
+        )
+        let popupSurfaceID = popup.surfaceID
+
+        try inputRouter.registerPopup(
+            parentSurfaceID: parentWindow.surfaceID,
+            surfaceID: popupSurfaceID
+        )
+        cursorManager.register(surfaceID: popupSurfaceID)
+        popup.onClose = { [cursorManager, inputRouter] in
+            inputRouter.unregister(surfaceID: popupSurfaceID)
+            cursorManager.unregister(surfaceID: popupSurfaceID)
+        }
+
+        return popup
     }
 }
 

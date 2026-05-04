@@ -105,4 +105,45 @@ struct PopupDomainTypesTests {
                 )
         )
     }
+
+    @Test
+    func popupConfigureStateLatchesPlacementAndAcksOnlyAfterSurfaceConfigure() throws {
+        let state = PopupConfigureState()
+
+        state.handlePopupConfigure(
+            RawXDGPopupConfigure(x: 4, y: 8, width: 120, height: 64)
+        )
+        #expect(!state.hasReceivedInitialConfigure)
+        #expect(state.consumeLatestConfigure() == nil)
+
+        let sequence = try #require(state.handleSurfaceConfigure(serial: 99))
+
+        #expect(state.hasReceivedInitialConfigure)
+        #expect(sequence.serial == 99)
+        #expect(sequence.placement.origin == LogicalOffset(x: 4, y: 8))
+        #expect(sequence.placement.size == (try PositiveLogicalSize(width: 120, height: 64)))
+        #expect(state.consumeLatestConfigure() == sequence)
+        #expect(state.consumeLatestConfigure() == nil)
+    }
+
+    @Test
+    func popupConfigureStateRejectsSurfaceConfigureWithoutPopupPayload() {
+        let state = PopupConfigureState()
+
+        #expect(state.handleSurfaceConfigure(serial: 42) == nil)
+        #expect(!state.hasReceivedInitialConfigure)
+    }
+
+    @Test
+    func popupConfigureStateRecordsInvalidPopupConfigureSize() throws {
+        let state = PopupConfigureState()
+
+        state.handlePopupConfigure(
+            RawXDGPopupConfigure(x: 0, y: 0, width: 0, height: 10)
+        )
+        #expect(state.handleSurfaceConfigure(serial: 1) == nil)
+        #expect(throws: (any Error).self) {
+            try state.throwPendingErrorIfAny()
+        }
+    }
 }

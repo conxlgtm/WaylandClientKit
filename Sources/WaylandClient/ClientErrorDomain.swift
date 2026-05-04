@@ -1,6 +1,9 @@
 public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConvertible {
     case closed
     case unknownWindow(WindowID)
+    case unknownPopup
+    case closedPopup
+    case foreignWindow(WindowID)
 
     public var description: String {
         switch self {
@@ -8,6 +11,12 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "display is closed"
         case .unknownWindow(let windowID):
             "unknown window: \(windowID)"
+        case .unknownPopup:
+            "unknown popup"
+        case .closedPopup:
+            "popup is closed"
+        case .foreignWindow(let windowID):
+            "window belongs to another display: \(windowID)"
         }
     }
 }
