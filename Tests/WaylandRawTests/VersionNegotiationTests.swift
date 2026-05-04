@@ -51,6 +51,8 @@ struct VersionNegotiationTests {
         #expect(SupportedVersions.xdgWmBase == RawVersion(7))
         #expect(SupportedVersions.zxdgDecorationManagerV1Minimum == RawVersion(2))
         #expect(SupportedVersions.zxdgDecorationManagerV1 == RawVersion(2))
+        #expect(SupportedVersions.wpViewporter == RawVersion(1))
+        #expect(SupportedVersions.wpFractionalScaleManagerV1 == RawVersion(1))
         #expect(SupportedVersions.wlSeat == RawVersion(10))
     }
 

@@ -235,6 +235,19 @@ extension WindowRedrawState {
     }
 
     private mutating func publishIfNeeded(bufferAvailable: Bool) -> [WindowRedrawEffect] {
+        if case .dirty(
+            let contentGeneration,
+            let presentedGeneration,
+            .waitingForBuffer
+        ) = storage, bufferAvailable {
+            storage = .dirty(
+                contentGeneration: contentGeneration,
+                presentedGeneration: presentedGeneration,
+                pacing: .frameReady(.outstanding)
+            )
+            return [.publishRedrawRequested]
+        }
+
         guard
             case .dirty(
                 let contentGeneration,
