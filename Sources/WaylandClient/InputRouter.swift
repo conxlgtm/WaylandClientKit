@@ -4,16 +4,32 @@ struct AcceptedRawInputEvent {
     let raw: RawInputEvent
 }
 
+enum InputRouterError: Error, Equatable, Sendable {
+    case unknownParentSurface(RawObjectID)
+}
+
+private struct InputSurfaceBinding: Equatable {
+    let windowID: WindowID
+}
+
 final class InputRouter {
     var deviceGraph = InputDeviceGraph()
-    private var windowsBySurface: [RawObjectID: WindowID] = [:]
+    private var surfaces: [RawObjectID: InputSurfaceBinding] = [:]
 
     func register(windowID: WindowID, surfaceID: RawObjectID) {
-        windowsBySurface[surfaceID] = windowID
+        surfaces[surfaceID] = InputSurfaceBinding(windowID: windowID)
+    }
+
+    func registerPopup(parentSurfaceID: RawObjectID, surfaceID: RawObjectID) throws {
+        guard let parent = surfaces[parentSurfaceID] else {
+            throw InputRouterError.unknownParentSurface(parentSurfaceID)
+        }
+
+        surfaces[surfaceID] = InputSurfaceBinding(windowID: parent.windowID)
     }
 
     func unregister(surfaceID: RawObjectID) {
-        windowsBySurface.removeValue(forKey: surfaceID)
+        surfaces.removeValue(forKey: surfaceID)
         removeSurfaceFromDeviceGraph(surfaceID)
     }
 
@@ -95,7 +111,7 @@ final class InputRouter {
                 kind: .pointer(
                     .entered(
                         PointerLocation(x: enter.x.doubleValue, y: enter.y.doubleValue),
-                        serial: enter.serial
+                        serial: InputSerial(rawValue: enter.serial)
                     )
                 )
             )
@@ -105,7 +121,7 @@ final class InputRouter {
             return routedEvent(
                 rawEvent,
                 windowID: windowID,
-                kind: .pointer(.left(serial: leave.serial))
+                kind: .pointer(.left(serial: InputSerial(rawValue: leave.serial)))
             )
         case .motion(let motion):
             return routedEvent(
@@ -125,7 +141,7 @@ final class InputRouter {
                 kind: .pointer(
                     .button(
                         PointerButtonEvent(
-                            serial: button.serial,
+                            serial: InputSerial(rawValue: button.serial),
                             time: button.time,
                             button: button.button,
                             state: ButtonState(rawValue: button.state.rawValue)
@@ -200,7 +216,7 @@ extension InputRouter {
             kind: .touch(
                 .down(
                     TouchDownEvent(
-                        serial: down.serial,
+                        serial: InputSerial(rawValue: down.serial),
                         time: down.time,
                         id: down.id,
                         location: PointerLocation(
@@ -222,7 +238,15 @@ extension InputRouter {
         return routedEvent(
             rawEvent,
             windowID: windowID,
-            kind: .touch(.up(TouchUpEvent(serial: up.serial, time: up.time, id: up.id)))
+            kind: .touch(
+                .up(
+                    TouchUpEvent(
+                        serial: InputSerial(rawValue: up.serial),
+                        time: up.time,
+                        id: up.id
+                    )
+                )
+            )
         )
     }
 
@@ -316,7 +340,14 @@ extension InputRouter {
         return routedEvent(
             rawEvent,
             windowID: windowID(for: enter.surfaceID),
-            kind: .keyboard(.raw(.entered(serial: enter.serial, pressedKeys: enter.pressedKeys)))
+            kind: .keyboard(
+                .raw(
+                    .entered(
+                        serial: InputSerial(rawValue: enter.serial),
+                        pressedKeys: enter.pressedKeys
+                    )
+                )
+            )
         )
     }
 
@@ -329,7 +360,7 @@ extension InputRouter {
         return routedEvent(
             rawEvent,
             windowID: windowID,
-            kind: .keyboard(.raw(.left(serial: leave.serial)))
+            kind: .keyboard(.raw(.left(serial: InputSerial(rawValue: leave.serial))))
         )
     }
 
@@ -344,7 +375,7 @@ extension InputRouter {
                 .raw(
                     .key(
                         KeyboardKeyEvent(
-                            serial: key.serial,
+                            serial: InputSerial(rawValue: key.serial),
                             time: key.time,
                             rawKeycode: key.evdevKeycode,
                             state: KeyState(rawValue: key.state.rawValue)
@@ -366,7 +397,7 @@ extension InputRouter {
                 .raw(
                     .modifiers(
                         KeyboardModifiers(
-                            serial: modifiers.serial,
+                            serial: InputSerial(rawValue: modifiers.serial),
                             depressed: modifiers.depressed,
                             latched: modifiers.latched,
                             locked: modifiers.locked,
@@ -449,6 +480,6 @@ extension InputRouter {
             return nil
         }
 
-        return windowsBySurface[surfaceID]
+        return surfaces[surfaceID]?.windowID
     }
 }
