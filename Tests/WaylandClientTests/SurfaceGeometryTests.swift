@@ -150,6 +150,59 @@ struct SurfaceGeometryTests {
     }
 
     @Test
+    func integerScaleCommitPlanUsesIntegerBufferScaleWithoutViewport() throws {
+        var scaleState = SurfaceScaleState(usesFractionalScale: true)
+        let logicalSize = try PositiveTopLevelSize(width: 80, height: 60)
+
+        #expect(try scaleState.updatePreferredBufferScale(2, logicalSize: logicalSize))
+        let geometry = try scaleState.geometry(logicalSize: logicalSize)
+        let plan = scaleState.commitPlan(
+            geometry: geometry,
+            surfaceUsesBufferDamage: true
+        )
+
+        #expect(geometry.bufferSize == (try PositivePixelSize(width: 160, height: 120)))
+        #expect(plan.bufferScale == 2)
+        #expect(plan.viewportDestination == nil)
+        #expect(plan.damage == .buffer(width: 160, height: 120))
+    }
+
+    @Test
+    func fractionalScaleCommitPlanUsesViewportDestinationAndBufferScaleOne() throws {
+        var scaleState = SurfaceScaleState(usesFractionalScale: true)
+        let logicalSize = try PositiveTopLevelSize(width: 101, height: 51)
+
+        #expect(try scaleState.updatePreferredFractionalScale(180, logicalSize: logicalSize))
+        let geometry = try scaleState.geometry(logicalSize: logicalSize)
+        let plan = scaleState.commitPlan(
+            geometry: geometry,
+            surfaceUsesBufferDamage: true
+        )
+
+        #expect(geometry.bufferSize == (try PositivePixelSize(width: 152, height: 77)))
+        #expect(plan.bufferScale == 1)
+        #expect(plan.viewportDestination == logicalSize)
+        #expect(plan.damage == .buffer(width: 152, height: 77))
+    }
+
+    @Test
+    func surfaceCommitPlanUsesLogicalDamageWhenBufferDamageIsUnavailable() throws {
+        let logicalSize = try PositiveTopLevelSize(width: 80, height: 60)
+        let geometry = try SurfaceGeometry(
+            logicalSize: logicalSize,
+            scale: SurfaceScale(numerator: 2, denominator: 1)
+        )
+        let plan = SurfaceCommitPlan(
+            geometry: geometry,
+            bufferScale: 2,
+            usesViewportDestination: false,
+            usesBufferDamage: false
+        )
+
+        #expect(plan.damage == .logical(width: 80, height: 60))
+    }
+
+    @Test
     func surfaceScaleStateRejectsInvalidPreferredScales() throws {
         var scaleState = SurfaceScaleState(usesFractionalScale: true)
         let logicalSize = try PositiveTopLevelSize(width: 80, height: 60)

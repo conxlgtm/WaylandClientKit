@@ -21,16 +21,12 @@ package final class TopLevelWindow {
     private var xdgSurfaceOwner: XDGSurfaceOwner?
     private var topLevelOwner: XDGTopLevelOwner?
     private var decorationOwner: XDGDecorationOwner?
-    private var surfaceScaleOwner: RawSurfaceScaleOwner?
-    private var viewport: RawViewport?
-    private var fractionalScale: RawFractionalScale?
-    private var fractionalScaleOwner: RawFractionalScaleOwner?
     private var buffers: RawSharedMemoryPool?
     private var retiredBufferPools: [RawSharedMemoryPool] = []
     private var pendingFrameRegistration: FrameCallbackRegistration?
     private let failureSink: any WindowFailureSink
     private var model: WindowModel
-    private var surfaceScaleState: SurfaceScaleState
+    private var scaleInstallation = ScaleInstallation.inactive(SurfaceScaleState())
 
     package var onClose: (() -> Void)?
     package var onCloseRequested: (() -> Void)?
@@ -56,9 +52,6 @@ package final class TopLevelWindow {
         let globals = try rawConnection.bindRequiredGlobals()
         configureState = .init()
         surface = try globals.compositor.createSurface()
-        surfaceScaleState = SurfaceScaleState(
-            usesFractionalScale: globals.extensions.supportsFractionalScaling
-        )
         model = WindowModel(
             id: windowID,
             fallbackSize: windowConfiguration.initialSize
@@ -130,6 +123,123 @@ package final class TopLevelWindow {
         let owner: XDGDecorationOwner
     }
 
+    private struct FractionalScaleResources {
+        let owner: RawSurfaceScaleOwner
+        let viewport: RawViewport
+        let fractionalScale: RawFractionalScale
+        let fractionalOwner: RawFractionalScaleOwner
+
+        func setViewportDestination(_ destination: PositiveTopLevelSize) {
+            viewport.setDestination(
+                width: destination.width.rawValue,
+                height: destination.height.rawValue
+            )
+        }
+
+        func destroy() {
+            owner.cancel()
+            fractionalOwner.cancel()
+            fractionalScale.destroy()
+            viewport.destroy()
+        }
+    }
+
+    private enum ScaleInstallation {
+        case inactive(SurfaceScaleState)
+        case integer(owner: RawSurfaceScaleOwner, state: SurfaceScaleState)
+        case fractional(resources: FractionalScaleResources, state: SurfaceScaleState)
+
+        private var state: SurfaceScaleState {
+            switch self {
+            case .inactive(let state),
+                .integer(_, let state),
+                .fractional(_, let state):
+                state
+            }
+        }
+
+        mutating func updatePreferredBufferScale(
+            _ factor: Int32,
+            logicalSize: PositiveTopLevelSize
+        ) throws -> Bool {
+            var nextState = state
+            let changed = try nextState.updatePreferredBufferScale(
+                factor,
+                logicalSize: logicalSize
+            )
+            replaceState(nextState)
+            return changed
+        }
+
+        mutating func updatePreferredFractionalScale(
+            _ scale: UInt32,
+            logicalSize: PositiveTopLevelSize
+        ) throws -> Bool {
+            var nextState = state
+            let changed = try nextState.updatePreferredFractionalScale(
+                scale,
+                logicalSize: logicalSize
+            )
+            replaceState(nextState)
+            return changed
+        }
+
+        func geometry(logicalSize: PositiveTopLevelSize) throws -> SurfaceGeometry {
+            try state.geometry(logicalSize: logicalSize)
+        }
+
+        func commitPlan(
+            geometry: SurfaceGeometry,
+            surfaceUsesBufferDamage: Bool
+        ) -> SurfaceCommitPlan {
+            state.commitPlan(
+                geometry: geometry,
+                surfaceUsesBufferDamage: surfaceUsesBufferDamage
+            )
+        }
+
+        func applyViewportDestinationIfNeeded(_ destination: PositiveTopLevelSize?) {
+            guard let destination else { return }
+
+            guard case .fractional(let resources, _) = self else {
+                preconditionFailure(
+                    "fractional scale commit plan requires a viewport installation"
+                )
+            }
+
+            resources.setViewportDestination(destination)
+        }
+
+        mutating func destroy() {
+            let preservedState = state
+
+            switch self {
+            case .inactive:
+                break
+            case .integer(let owner, _):
+                owner.cancel()
+            case .fractional(let resources, _):
+                resources.destroy()
+            }
+
+            self = .inactive(preservedState)
+        }
+
+        private mutating func replaceState(_ nextState: SurfaceScaleState) {
+            switch self {
+            case .inactive:
+                self = .inactive(nextState)
+            case .integer(let owner, _):
+                self = .integer(owner: owner, state: nextState)
+            case .fractional(let resources, _):
+                self = .fractional(
+                    resources: resources,
+                    state: nextState
+                )
+            }
+        }
+    }
+
     private func createDecorationObjectsIfAvailable(
         globals: BoundGlobals,
         topLevel: RawXDGTopLevel
@@ -184,17 +294,22 @@ package final class TopLevelWindow {
             invariantFailureSink: connection.invariantFailureSink
         )
         try newSurfaceScaleOwner.install(on: surface)
-        surfaceScaleOwner = newSurfaceScaleOwner
 
         do {
-            try installFractionalScaleObjectsIfAvailable(globals: globals)
+            scaleInstallation = try scaleInstallation(
+                globals: globals,
+                surfaceScaleOwner: newSurfaceScaleOwner
+            )
         } catch {
-            destroyScaleObjects()
+            newSurfaceScaleOwner.cancel()
             throw error
         }
     }
 
-    private func installFractionalScaleObjectsIfAvailable(globals: BoundGlobals) throws {
+    private func scaleInstallation(
+        globals: BoundGlobals,
+        surfaceScaleOwner newSurfaceScaleOwner: RawSurfaceScaleOwner
+    ) throws -> ScaleInstallation {
         switch (globals.extensions.viewporter, globals.extensions.fractionalScaleManager) {
         case (.bound(let boundViewporter), .bound(let boundManager)):
             let newViewport = try boundViewporter.getViewport(for: surface)
@@ -208,9 +323,15 @@ package final class TopLevelWindow {
 
             do {
                 try newOwner.install(on: newFractionalScale)
-                viewport = newViewport
-                fractionalScale = newFractionalScale
-                fractionalScaleOwner = newOwner
+                return .fractional(
+                    resources: FractionalScaleResources(
+                        owner: newSurfaceScaleOwner,
+                        viewport: newViewport,
+                        fractionalScale: newFractionalScale,
+                        fractionalOwner: newOwner
+                    ),
+                    state: SurfaceScaleState(usesFractionalScale: true)
+                )
             } catch {
                 newOwner.cancel()
                 newFractionalScale.destroy()
@@ -219,9 +340,16 @@ package final class TopLevelWindow {
             }
         case (.missing, .bound):
             reportFractionalScaleUnavailableBecauseViewporterIsMissing()
+            return .integer(
+                owner: newSurfaceScaleOwner,
+                state: SurfaceScaleState(usesFractionalScale: false)
+            )
         case (.bound, .missing),
             (.missing, .missing):
-            break
+            return .integer(
+                owner: newSurfaceScaleOwner,
+                state: SurfaceScaleState(usesFractionalScale: false)
+            )
         }
     }
 
@@ -451,14 +579,13 @@ package final class TopLevelWindow {
                 buffer.markBusy(commitGeneration: request.generation),
                 "acquired drawing buffer must move to pending release"
             )
-            applySurfaceGeometry(geometry)
-            surface.attach(buffer: buffer)
-            surface.damageFullSurface(
-                bufferWidth: buffer.width,
-                bufferHeight: buffer.height,
-                logicalWidth: geometry.logicalSize.width.rawValue,
-                logicalHeight: geometry.logicalSize.height.rawValue
+            let commitPlan = scaleInstallation.commitPlan(
+                geometry: geometry,
+                surfaceUsesBufferDamage: surface.usesBufferDamage
             )
+            applySurfaceCommitPlan(commitPlan)
+            surface.attach(buffer: buffer)
+            applySurfaceDamage(commitPlan.damage)
             surface.commit()
 
             try interpretWindowEffects(
@@ -476,23 +603,18 @@ package final class TopLevelWindow {
         }
     }
 
-    private func applySurfaceGeometry(_ geometry: SurfaceGeometry) {
-        surface.setBufferScale(surfaceScaleState.bufferScaleForCommit)
+    private func applySurfaceCommitPlan(_ plan: SurfaceCommitPlan) {
+        surface.setBufferScale(plan.bufferScale)
+        scaleInstallation.applyViewportDestinationIfNeeded(plan.viewportDestination)
+    }
 
-        guard surfaceScaleState.requiresViewportDestination else {
-            return
+    private func applySurfaceDamage(_ damage: SurfaceDamageExtent) {
+        switch damage {
+        case .buffer(let width, let height):
+            surface.damageFullBuffer(width: width, height: height)
+        case .logical(let width, let height):
+            surface.damageFullLogical(width: width, height: height)
         }
-
-        guard let viewport else {
-            preconditionFailure(
-                "viewport must exist when fractional scaling requires a destination"
-            )
-        }
-
-        viewport.setDestination(
-            width: geometry.logicalSize.width.rawValue,
-            height: geometry.logicalSize.height.rawValue
-        )
     }
 
     private func failPresentationIfStillActive(
@@ -593,7 +715,7 @@ extension TopLevelWindow {
     private func handlePreferredBufferScale(_ factor: Int32) {
         do {
             guard
-                try surfaceScaleState.updatePreferredBufferScale(
+                try scaleInstallation.updatePreferredBufferScale(
                     factor,
                     logicalSize: currentLogicalSize
                 )
@@ -612,7 +734,7 @@ extension TopLevelWindow {
     private func handlePreferredFractionalScale(_ scale: UInt32) {
         do {
             guard
-                try surfaceScaleState.updatePreferredFractionalScale(
+                try scaleInstallation.updatePreferredFractionalScale(
                     scale,
                     logicalSize: currentLogicalSize
                 )
@@ -663,7 +785,7 @@ extension TopLevelWindow {
 
     private func surfaceGeometry(logicalSize: PositiveTopLevelSize) throws -> SurfaceGeometry {
         do {
-            return try surfaceScaleState.geometry(logicalSize: logicalSize)
+            return try scaleInstallation.geometry(logicalSize: logicalSize)
         } catch let error as WindowError {
             throw ClientError.window(id, error)
         }
@@ -764,17 +886,7 @@ extension TopLevelWindow {
     }
 
     private func destroyScaleObjects() {
-        surfaceScaleOwner?.cancel()
-        surfaceScaleOwner = nil
-
-        fractionalScaleOwner?.cancel()
-        fractionalScaleOwner = nil
-
-        fractionalScale?.destroy()
-        fractionalScale = nil
-
-        viewport?.destroy()
-        viewport = nil
+        scaleInstallation.destroy()
     }
 }
 

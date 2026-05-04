@@ -84,6 +84,18 @@ package struct SurfaceScaleState: Equatable, Sendable {
         try SurfaceGeometry(logicalSize: logicalSize, scale: effectiveScale)
     }
 
+    package func commitPlan(
+        geometry: SurfaceGeometry,
+        surfaceUsesBufferDamage: Bool
+    ) -> SurfaceCommitPlan {
+        SurfaceCommitPlan(
+            geometry: geometry,
+            bufferScale: bufferScaleForCommit,
+            usesViewportDestination: requiresViewportDestination,
+            usesBufferDamage: surfaceUsesBufferDamage
+        )
+    }
+
     package var requiresViewportDestination: Bool {
         switch mode {
         case .integerOnly, .fractionalCapable(_, nil):
