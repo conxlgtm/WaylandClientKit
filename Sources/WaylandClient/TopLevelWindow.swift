@@ -144,6 +144,64 @@ package final class TopLevelWindow {
         }
     }
 
+    private struct RawFractionalScaleAcquisitionFactory: FractionalScaleAcquisitionFactory {
+        weak var window: TopLevelWindow?
+        let viewporter: RawViewporter
+        let manager: RawFractionalScaleManager
+        let surface: RawSurface
+        let invariantFailureSink: RawInvariantFailureSink?
+        let surfaceScaleOwner: RawSurfaceScaleOwner
+
+        func createViewport() throws -> RawViewport {
+            try viewporter.getViewport(for: surface)
+        }
+
+        func createFractionalScale() throws -> RawFractionalScale {
+            try manager.getFractionalScale(for: surface)
+        }
+
+        func createOwner() -> RawFractionalScaleOwner {
+            RawFractionalScaleOwner(
+                onPreferredScale: { [weak window] scale in
+                    window?.handlePreferredFractionalScale(scale)
+                },
+                invariantFailureSink: invariantFailureSink
+            )
+        }
+
+        func installOwner(
+            _ owner: RawFractionalScaleOwner,
+            on scale: RawFractionalScale
+        ) throws {
+            try owner.install(on: scale)
+        }
+
+        func destroyViewport(_ viewport: RawViewport) {
+            viewport.destroy()
+        }
+
+        func destroyFractionalScale(_ scale: RawFractionalScale) {
+            scale.destroy()
+        }
+
+        func cancelOwner(_ owner: RawFractionalScaleOwner) {
+            owner.cancel()
+        }
+
+        func makeResources(
+            viewport: RawViewport,
+            fractionalScale: RawFractionalScale,
+            owner: RawFractionalScaleOwner
+        ) -> FractionalScaleResources {
+            FractionalScaleResources(
+                owner: surfaceScaleOwner,
+                viewport: viewport,
+                fractionalScale: fractionalScale,
+                fractionalOwner: owner
+            )
+        }
+    }
+
     private enum ScaleInstallation {
         case inactive(SurfaceScaleState)
         case integer(owner: RawSurfaceScaleOwner, state: SurfaceScaleState)
@@ -295,15 +353,18 @@ package final class TopLevelWindow {
         )
         try newSurfaceScaleOwner.install(on: surface)
 
-        do {
-            scaleInstallation = try scaleInstallation(
-                globals: globals,
-                surfaceScaleOwner: newSurfaceScaleOwner
-            )
-        } catch {
-            newSurfaceScaleOwner.cancel()
-            throw error
-        }
+        scaleInstallation = try ScaleInstallationAcquisition.install(
+            surfaceScaleOwner: newSurfaceScaleOwner,
+            makeInstallation: { surfaceScaleOwner in
+                try scaleInstallation(
+                    globals: globals,
+                    surfaceScaleOwner: surfaceScaleOwner
+                )
+            },
+            cancelSurfaceScaleOwner: { owner in
+                owner.cancel()
+            }
+        )
     }
 
     private func scaleInstallation(
@@ -312,32 +373,20 @@ package final class TopLevelWindow {
     ) throws -> ScaleInstallation {
         switch (globals.extensions.viewporter, globals.extensions.fractionalScaleManager) {
         case (.bound(let boundViewporter), .bound(let boundManager)):
-            let newViewport = try boundViewporter.getViewport(for: surface)
-            let newFractionalScale = try boundManager.getFractionalScale(for: surface)
-            let newOwner = RawFractionalScaleOwner(
-                onPreferredScale: { [weak window = self] scale in
-                    window?.handlePreferredFractionalScale(scale)
-                },
-                invariantFailureSink: connection.invariantFailureSink
-            )
-
-            do {
-                try newOwner.install(on: newFractionalScale)
-                return .fractional(
-                    resources: FractionalScaleResources(
-                        owner: newSurfaceScaleOwner,
-                        viewport: newViewport,
-                        fractionalScale: newFractionalScale,
-                        fractionalOwner: newOwner
-                    ),
-                    state: SurfaceScaleState(usesFractionalScale: true)
+            let resources = try ScaleInstallationAcquisition.acquireFractionalResources(
+                using: RawFractionalScaleAcquisitionFactory(
+                    window: self,
+                    viewporter: boundViewporter,
+                    manager: boundManager,
+                    surface: surface,
+                    invariantFailureSink: connection.invariantFailureSink,
+                    surfaceScaleOwner: newSurfaceScaleOwner
                 )
-            } catch {
-                newOwner.cancel()
-                newFractionalScale.destroy()
-                newViewport.destroy()
-                throw error
-            }
+            )
+            return .fractional(
+                resources: resources,
+                state: SurfaceScaleState(usesFractionalScale: true)
+            )
         case (.missing, .bound):
             reportFractionalScaleUnavailableBecauseViewporterIsMissing()
             return .integer(
