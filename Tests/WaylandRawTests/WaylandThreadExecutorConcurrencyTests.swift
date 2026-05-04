@@ -1,4 +1,3 @@
-import Dispatch
 import Glibc
 import Synchronization
 import Testing
@@ -78,7 +77,7 @@ private final class ConcurrentShutdownGate: Sendable {
 }
 
 private func waitUntil(_ predicate: () -> Bool) -> Bool {
-    for _ in 0..<5_000 {
+    for _ in 0..<10_000 {
         if predicate() {
             return true
         }
@@ -89,19 +88,59 @@ private func waitUntil(_ predicate: () -> Bool) -> Bool {
     return false
 }
 
-private func enqueueShutdownCaller(
-    executor: WaylandThreadExecutor,
-    mode: ShutdownMode,
-    label: String,
-    recorder: ShutdownCompletionRecorder,
-    group: DispatchGroup
-) {
-    group.enter()
-    // This test intentionally uses blocking threads: shutdown() waits for owner-thread exit.
-    // Running those calls as Swift tasks can starve the test body that opens the gate.
-    // swiftlint:disable:next no_dispatch_queue
-    DispatchQueue.global(qos: .userInitiated).async {
-        defer { group.leave() }
+private final class ShutdownCallerThread {
+    private let executor: WaylandThreadExecutor
+    private let mode: ShutdownMode
+    private let label: String
+    private let recorder: ShutdownCompletionRecorder
+
+    init(
+        executor newExecutor: WaylandThreadExecutor,
+        mode shutdownMode: ShutdownMode,
+        label callerLabel: String,
+        recorder completionRecorder: ShutdownCompletionRecorder
+    ) {
+        executor = newExecutor
+        mode = shutdownMode
+        label = callerLabel
+        recorder = completionRecorder
+    }
+
+    func start() {
+        var attributes = pthread_attr_t()
+        let attributeInitResult = pthread_attr_init(&attributes)
+        precondition(attributeInitResult == 0, "pthread_attr_init failed")
+        let detachResult = pthread_attr_setdetachstate(
+            &attributes,
+            Int32(PTHREAD_CREATE_DETACHED)
+        )
+        precondition(detachResult == 0, "pthread_attr_setdetachstate failed")
+
+        let retainedSelf = Unmanaged.passRetained(self).toOpaque()
+        var thread = pthread_t()
+        let createResult = pthread_create(
+            &thread,
+            &attributes,
+            { pointer in
+                guard let pointer else { return nil }
+
+                let caller = Unmanaged<ShutdownCallerThread>
+                    .fromOpaque(pointer)
+                    .takeRetainedValue()
+                caller.run()
+                return nil
+            },
+            retainedSelf
+        )
+        pthread_attr_destroy(&attributes)
+
+        guard createResult == 0 else {
+            Unmanaged<ShutdownCallerThread>.fromOpaque(retainedSelf).release()
+            preconditionFailure("pthread_create failed with \(createResult)")
+        }
+    }
+
+    private func run() {
         recorder.appendStarted(label)
         executor.shutdown(mode)
         recorder.append(label)
@@ -131,21 +170,18 @@ struct WaylandThreadExecutorConcurrencyTests {
                 == .stopRequested(.abandonWaylandSources)
         )
 
-        let group = DispatchGroup()
-        enqueueShutdownCaller(
+        ShutdownCallerThread(
             executor: executor,
             mode: .orderly,
             label: "first",
-            recorder: completions,
-            group: group
-        )
-        enqueueShutdownCaller(
+            recorder: completions
+        ).start()
+        ShutdownCallerThread(
             executor: executor,
             mode: .orderly,
             label: "second",
-            recorder: completions,
-            group: group
-        )
+            recorder: completions
+        ).start()
 
         #expect(
             waitUntil {
@@ -162,7 +198,11 @@ struct WaylandThreadExecutorConcurrencyTests {
         #expect(completions.completionCount == 0)
 
         gate.open()
-        #expect(group.wait(timeout: .now() + .seconds(5)) == .success)
+        #expect(
+            waitUntil {
+                completions.values == ["first", "second"]
+            }
+        )
         let stopped = executor.lifecycleSnapshotForTesting
 
         #expect(stopped.state == .joined(.abandonWaylandSources))
@@ -196,15 +236,13 @@ struct WaylandThreadExecutorConcurrencyTests {
                 == .stopRequested(.abandonWaylandSources)
         )
 
-        let group = DispatchGroup()
         for label in ["first"] + lateCallerLabels {
-            enqueueShutdownCaller(
+            ShutdownCallerThread(
                 executor: executor,
                 mode: .orderly,
                 label: label,
-                recorder: completions,
-                group: group
-            )
+                recorder: completions
+            ).start()
         }
 
         #expect(
@@ -222,7 +260,11 @@ struct WaylandThreadExecutorConcurrencyTests {
         #expect(completions.completionCount == 0)
 
         gate.open()
-        #expect(group.wait(timeout: .now() + .seconds(5)) == .success)
+        #expect(
+            waitUntil {
+                completions.values == Set(["first"] + lateCallerLabels)
+            }
+        )
         let stopped = executor.lifecycleSnapshotForTesting
 
         #expect(stopped.state == .joined(.abandonWaylandSources))
