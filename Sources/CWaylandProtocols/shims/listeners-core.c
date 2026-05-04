@@ -101,6 +101,7 @@ static void swl_surface_handle_leave(
     (void)output;
 }
 
+#ifdef WL_SURFACE_PREFERRED_BUFFER_SCALE_SINCE_VERSION
 static void swl_surface_handle_preferred_buffer_scale(
     void *data, struct wl_surface *surface, int32_t factor)
 {
@@ -108,7 +109,9 @@ static void swl_surface_handle_preferred_buffer_scale(
     if (cb && cb->preferred_buffer_scale)
         cb->preferred_buffer_scale(cb->data, surface, factor);
 }
+#endif
 
+#ifdef WL_SURFACE_PREFERRED_BUFFER_TRANSFORM_SINCE_VERSION
 static void swl_surface_handle_preferred_buffer_transform(
     void *data, struct wl_surface *surface, uint32_t transform)
 {
@@ -116,12 +119,17 @@ static void swl_surface_handle_preferred_buffer_transform(
     (void)surface;
     (void)transform;
 }
+#endif
 
 static const struct wl_surface_listener swl_surface_listener_impl = {
-    .enter                      = swl_surface_handle_enter,
-    .leave                      = swl_surface_handle_leave,
-    .preferred_buffer_scale     = swl_surface_handle_preferred_buffer_scale,
+    .enter = swl_surface_handle_enter,
+    .leave = swl_surface_handle_leave,
+#ifdef WL_SURFACE_PREFERRED_BUFFER_SCALE_SINCE_VERSION
+    .preferred_buffer_scale = swl_surface_handle_preferred_buffer_scale,
+#endif
+#ifdef WL_SURFACE_PREFERRED_BUFFER_TRANSFORM_SINCE_VERSION
     .preferred_buffer_transform = swl_surface_handle_preferred_buffer_transform,
+#endif
 };
 
 int swl_surface_add_listener(
