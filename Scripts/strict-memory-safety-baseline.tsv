@@ -27,7 +27,8 @@ WaylandRaw	Sources/WaylandRaw/RawSharedMemory.swift	20
 WaylandRaw	Sources/WaylandRaw/RawSurface.swift	5
 WaylandRaw	Sources/WaylandRaw/RawTouchListenerOwner.swift	22
 WaylandRaw	Sources/WaylandRaw/RawXDGDecoration.swift	13
-WaylandRaw	Sources/WaylandRaw/RawXDGShell.swift	57
+WaylandRaw	Sources/WaylandRaw/RawXDGPopup.swift	16
+WaylandRaw	Sources/WaylandRaw/RawXDGShell.swift	59
 WaylandRaw	Sources/WaylandRaw/RegistryListenerOwner.swift	13
 WaylandRaw	Sources/WaylandRaw/RuntimeError.swift	7
 WaylandRaw	Sources/WaylandRaw/SeatRegistry.swift	5

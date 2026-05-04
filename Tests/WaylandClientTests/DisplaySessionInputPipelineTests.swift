@@ -266,7 +266,7 @@ private func expectedRawKeyEvent(
         .raw(
             .key(
                 KeyboardKeyEvent(
-                    serial: serial,
+                    serial: InputSerial(rawValue: serial),
                     time: time,
                     rawKeycode: rawKeycode,
                     state: .pressed

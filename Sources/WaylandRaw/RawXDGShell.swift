@@ -76,6 +76,27 @@ package final class RawXDGSurface {
         return try .init(pointer: pointer, version: version, proxyAdoption: proxyAdoption)
     }
 
+    package func getPopup(
+        parent: RawXDGSurface,
+        positioner: RawXDGPositioner
+    ) throws -> RawXDGPopup {
+        guard
+            let popupPointer = unsafe swl_xdg_surface_get_popup(
+                pointer,
+                parent.pointer,
+                positioner.pointer
+            )
+        else {
+            throw RuntimeError.bindFailed("xdg_popup")
+        }
+
+        return try .init(
+            pointer: popupPointer,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
+    }
+
     package func ackConfigure(serial: UInt32) {
         swl_xdg_surface_ack_configure(pointer, serial)
     }
@@ -134,6 +155,18 @@ package final class RawXDGWMBase {
         }
 
         return try .init(pointer: surfacePointer, version: version, proxyAdoption: proxyAdoption)
+    }
+
+    package func createPositioner() throws -> RawXDGPositioner {
+        guard let positionerPointer = unsafe swl_xdg_wm_base_create_positioner(pointer) else {
+            throw RuntimeError.bindFailed("xdg_positioner")
+        }
+
+        return try .init(
+            pointer: positionerPointer,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
     }
 
     func destroy() {

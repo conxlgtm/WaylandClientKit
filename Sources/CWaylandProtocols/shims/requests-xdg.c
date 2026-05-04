@@ -2,15 +2,248 @@
 #include "generated/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/xdg-shell-client-protocol.h"
 
+#ifdef SWL_ENABLE_TESTING
+static struct swl_test_xdg_positioner_request_record
+    swl_test_xdg_positioner_request_latest;
+static struct swl_test_xdg_popup_grab_record swl_test_xdg_popup_grab_latest;
+static struct swl_test_xdg_destroy_record swl_test_xdg_destroy_latest;
+
+static void swl_xdg_positioner_set_size_default(
+    struct xdg_positioner *positioner,
+    int32_t width,
+    int32_t height)
+{
+    xdg_positioner_set_size(positioner, width, height);
+}
+
+static void swl_xdg_positioner_set_anchor_rect_default(
+    struct xdg_positioner *positioner,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height)
+{
+    xdg_positioner_set_anchor_rect(positioner, x, y, width, height);
+}
+
+static void swl_xdg_positioner_set_anchor_default(
+    struct xdg_positioner *positioner,
+    uint32_t anchor)
+{
+    xdg_positioner_set_anchor(positioner, anchor);
+}
+
+static void swl_xdg_positioner_set_gravity_default(
+    struct xdg_positioner *positioner,
+    uint32_t gravity)
+{
+    xdg_positioner_set_gravity(positioner, gravity);
+}
+
+static void swl_xdg_positioner_set_constraint_adjustment_default(
+    struct xdg_positioner *positioner,
+    uint32_t constraint_adjustment)
+{
+    xdg_positioner_set_constraint_adjustment(positioner, constraint_adjustment);
+}
+
+static void swl_xdg_positioner_set_offset_default(
+    struct xdg_positioner *positioner,
+    int32_t x,
+    int32_t y)
+{
+    xdg_positioner_set_offset(positioner, x, y);
+}
+
+static void swl_xdg_popup_grab_default(
+    struct xdg_popup *popup,
+    struct wl_seat *seat,
+    uint32_t serial)
+{
+    xdg_popup_grab(popup, seat, serial);
+}
+
+static void swl_xdg_positioner_destroy_default(struct xdg_positioner *positioner)
+{
+    xdg_positioner_destroy(positioner);
+}
+
+static void swl_xdg_popup_destroy_default(struct xdg_popup *popup)
+{
+    xdg_popup_destroy(popup);
+}
+
+static void (*swl_xdg_positioner_set_size_impl)(
+    struct xdg_positioner *positioner,
+    int32_t width,
+    int32_t height) = swl_xdg_positioner_set_size_default;
+static void (*swl_xdg_positioner_set_anchor_rect_impl)(
+    struct xdg_positioner *positioner,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height) = swl_xdg_positioner_set_anchor_rect_default;
+static void (*swl_xdg_positioner_set_anchor_impl)(
+    struct xdg_positioner *positioner,
+    uint32_t anchor) = swl_xdg_positioner_set_anchor_default;
+static void (*swl_xdg_positioner_set_gravity_impl)(
+    struct xdg_positioner *positioner,
+    uint32_t gravity) = swl_xdg_positioner_set_gravity_default;
+static void (*swl_xdg_positioner_set_constraint_adjustment_impl)(
+    struct xdg_positioner *positioner,
+    uint32_t constraint_adjustment) =
+        swl_xdg_positioner_set_constraint_adjustment_default;
+static void (*swl_xdg_positioner_set_offset_impl)(
+    struct xdg_positioner *positioner,
+    int32_t x,
+    int32_t y) = swl_xdg_positioner_set_offset_default;
+static void (*swl_xdg_popup_grab_impl)(
+    struct xdg_popup *popup,
+    struct wl_seat *seat,
+    uint32_t serial) = swl_xdg_popup_grab_default;
+static void (*swl_xdg_positioner_destroy_impl)(struct xdg_positioner *positioner) =
+    swl_xdg_positioner_destroy_default;
+static void (*swl_xdg_popup_destroy_impl)(struct xdg_popup *popup) =
+    swl_xdg_popup_destroy_default;
+
+static void swl_test_record_positioner_request(
+    struct xdg_positioner *positioner,
+    enum swl_test_xdg_positioner_request_kind kind,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height,
+    uint32_t value)
+{
+    swl_test_xdg_positioner_request_latest.call_count += 1;
+    swl_test_xdg_positioner_request_latest.kind = kind;
+    swl_test_xdg_positioner_request_latest.positioner = positioner;
+    swl_test_xdg_positioner_request_latest.x = x;
+    swl_test_xdg_positioner_request_latest.y = y;
+    swl_test_xdg_positioner_request_latest.width = width;
+    swl_test_xdg_positioner_request_latest.height = height;
+    swl_test_xdg_positioner_request_latest.value = value;
+}
+
+static void swl_test_xdg_positioner_set_size_record(
+    struct xdg_positioner *positioner,
+    int32_t width,
+    int32_t height)
+{
+    swl_test_record_positioner_request(
+        positioner, SWL_TEST_XDG_POSITIONER_REQUEST_SIZE,
+        0, 0, width, height, 0);
+}
+
+static void swl_test_xdg_positioner_set_anchor_rect_record(
+    struct xdg_positioner *positioner,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height)
+{
+    swl_test_record_positioner_request(
+        positioner, SWL_TEST_XDG_POSITIONER_REQUEST_ANCHOR_RECT,
+        x, y, width, height, 0);
+}
+
+static void swl_test_xdg_positioner_set_anchor_record(
+    struct xdg_positioner *positioner,
+    uint32_t anchor)
+{
+    swl_test_record_positioner_request(
+        positioner, SWL_TEST_XDG_POSITIONER_REQUEST_ANCHOR,
+        0, 0, 0, 0, anchor);
+}
+
+static void swl_test_xdg_positioner_set_gravity_record(
+    struct xdg_positioner *positioner,
+    uint32_t gravity)
+{
+    swl_test_record_positioner_request(
+        positioner, SWL_TEST_XDG_POSITIONER_REQUEST_GRAVITY,
+        0, 0, 0, 0, gravity);
+}
+
+static void swl_test_xdg_positioner_set_constraint_adjustment_record(
+    struct xdg_positioner *positioner,
+    uint32_t constraint_adjustment)
+{
+    swl_test_record_positioner_request(
+        positioner, SWL_TEST_XDG_POSITIONER_REQUEST_CONSTRAINT_ADJUSTMENT,
+        0, 0, 0, 0, constraint_adjustment);
+}
+
+static void swl_test_xdg_positioner_set_offset_record(
+    struct xdg_positioner *positioner,
+    int32_t x,
+    int32_t y)
+{
+    swl_test_record_positioner_request(
+        positioner, SWL_TEST_XDG_POSITIONER_REQUEST_OFFSET,
+        x, y, 0, 0, 0);
+}
+
+static void swl_test_record_xdg_popup_grab(
+    struct xdg_popup *popup,
+    struct wl_seat *seat,
+    uint32_t serial)
+{
+    swl_test_xdg_popup_grab_latest.call_count += 1;
+    swl_test_xdg_popup_grab_latest.popup = popup;
+    swl_test_xdg_popup_grab_latest.seat = seat;
+    swl_test_xdg_popup_grab_latest.serial = serial;
+}
+
+static void swl_test_xdg_positioner_destroy_record(struct xdg_positioner *positioner)
+{
+    swl_test_xdg_destroy_latest.call_count += 1;
+    swl_test_xdg_destroy_latest.kind = SWL_TEST_XDG_DESTROY_POSITIONER;
+    swl_test_xdg_destroy_latest.object = positioner;
+}
+
+static void swl_test_xdg_popup_destroy_record(struct xdg_popup *popup)
+{
+    swl_test_xdg_destroy_latest.call_count += 1;
+    swl_test_xdg_destroy_latest.kind = SWL_TEST_XDG_DESTROY_POPUP;
+    swl_test_xdg_destroy_latest.object = popup;
+}
+#else
+#define swl_xdg_positioner_set_size_impl xdg_positioner_set_size
+#define swl_xdg_positioner_set_anchor_rect_impl xdg_positioner_set_anchor_rect
+#define swl_xdg_positioner_set_anchor_impl xdg_positioner_set_anchor
+#define swl_xdg_positioner_set_gravity_impl xdg_positioner_set_gravity
+#define swl_xdg_positioner_set_constraint_adjustment_impl \
+    xdg_positioner_set_constraint_adjustment
+#define swl_xdg_positioner_set_offset_impl xdg_positioner_set_offset
+#define swl_xdg_popup_grab_impl xdg_popup_grab
+#define swl_xdg_positioner_destroy_impl xdg_positioner_destroy
+#define swl_xdg_popup_destroy_impl xdg_popup_destroy
+#endif
+
 struct xdg_surface *swl_xdg_wm_base_get_xdg_surface(
     struct xdg_wm_base *wm_base, struct wl_surface *surface)
 {
     return xdg_wm_base_get_xdg_surface(wm_base, surface);
 }
 
+struct xdg_positioner *swl_xdg_wm_base_create_positioner(
+    struct xdg_wm_base *wm_base)
+{
+    return xdg_wm_base_create_positioner(wm_base);
+}
+
 struct xdg_toplevel *swl_xdg_surface_get_toplevel(struct xdg_surface *xdg_surface)
 {
     return xdg_surface_get_toplevel(xdg_surface);
+}
+
+struct xdg_popup *swl_xdg_surface_get_popup(
+    struct xdg_surface *xdg_surface,
+    struct xdg_surface *parent,
+    struct xdg_positioner *positioner)
+{
+    return xdg_surface_get_popup(xdg_surface, parent, positioner);
 }
 
 void swl_xdg_wm_base_pong(struct xdg_wm_base *wm_base, uint32_t serial)
@@ -33,6 +266,53 @@ void swl_xdg_toplevel_set_app_id(struct xdg_toplevel *xdg_toplevel, const char *
     xdg_toplevel_set_app_id(xdg_toplevel, app_id);
 }
 
+void swl_xdg_positioner_set_size(
+    struct xdg_positioner *positioner, int32_t width, int32_t height)
+{
+    swl_xdg_positioner_set_size_impl(positioner, width, height);
+}
+
+void swl_xdg_positioner_set_anchor_rect(
+    struct xdg_positioner *positioner,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height)
+{
+    swl_xdg_positioner_set_anchor_rect_impl(positioner, x, y, width, height);
+}
+
+void swl_xdg_positioner_set_anchor(
+    struct xdg_positioner *positioner, uint32_t anchor)
+{
+    swl_xdg_positioner_set_anchor_impl(positioner, anchor);
+}
+
+void swl_xdg_positioner_set_gravity(
+    struct xdg_positioner *positioner, uint32_t gravity)
+{
+    swl_xdg_positioner_set_gravity_impl(positioner, gravity);
+}
+
+void swl_xdg_positioner_set_constraint_adjustment(
+    struct xdg_positioner *positioner, uint32_t constraint_adjustment)
+{
+    swl_xdg_positioner_set_constraint_adjustment_impl(
+        positioner, constraint_adjustment);
+}
+
+void swl_xdg_positioner_set_offset(
+    struct xdg_positioner *positioner, int32_t x, int32_t y)
+{
+    swl_xdg_positioner_set_offset_impl(positioner, x, y);
+}
+
+void swl_xdg_popup_grab(
+    struct xdg_popup *popup, struct wl_seat *seat, uint32_t serial)
+{
+    swl_xdg_popup_grab_impl(popup, seat, serial);
+}
+
 void swl_xdg_surface_destroy(struct xdg_surface *xdg_surface)
 {
     xdg_surface_destroy(xdg_surface);
@@ -41,6 +321,16 @@ void swl_xdg_surface_destroy(struct xdg_surface *xdg_surface)
 void swl_xdg_toplevel_destroy(struct xdg_toplevel *xdg_toplevel)
 {
     xdg_toplevel_destroy(xdg_toplevel);
+}
+
+void swl_xdg_positioner_destroy(struct xdg_positioner *positioner)
+{
+    swl_xdg_positioner_destroy_impl(positioner);
+}
+
+void swl_xdg_popup_destroy(struct xdg_popup *popup)
+{
+    swl_xdg_popup_destroy_impl(popup);
 }
 
 void swl_xdg_wm_base_destroy(struct xdg_wm_base *wm_base)
@@ -88,3 +378,70 @@ void swl_zxdg_decoration_manager_v1_destroy(
 {
     zxdg_decoration_manager_v1_destroy(manager);
 }
+
+#ifdef SWL_ENABLE_TESTING
+void swl_test_xdg_request_recording_begin(void)
+{
+    swl_test_xdg_positioner_request_latest =
+        (struct swl_test_xdg_positioner_request_record){
+            .kind = SWL_TEST_XDG_POSITIONER_REQUEST_NONE,
+        };
+    swl_test_xdg_popup_grab_latest =
+        (struct swl_test_xdg_popup_grab_record){0};
+    swl_test_xdg_destroy_latest =
+        (struct swl_test_xdg_destroy_record){
+            .kind = SWL_TEST_XDG_DESTROY_NONE,
+        };
+
+    swl_xdg_positioner_set_size_impl =
+        swl_test_xdg_positioner_set_size_record;
+    swl_xdg_positioner_set_anchor_rect_impl =
+        swl_test_xdg_positioner_set_anchor_rect_record;
+    swl_xdg_positioner_set_anchor_impl =
+        swl_test_xdg_positioner_set_anchor_record;
+    swl_xdg_positioner_set_gravity_impl =
+        swl_test_xdg_positioner_set_gravity_record;
+    swl_xdg_positioner_set_constraint_adjustment_impl =
+        swl_test_xdg_positioner_set_constraint_adjustment_record;
+    swl_xdg_positioner_set_offset_impl =
+        swl_test_xdg_positioner_set_offset_record;
+    swl_xdg_popup_grab_impl = swl_test_record_xdg_popup_grab;
+    swl_xdg_positioner_destroy_impl = swl_test_xdg_positioner_destroy_record;
+    swl_xdg_popup_destroy_impl = swl_test_xdg_popup_destroy_record;
+}
+
+void swl_test_xdg_request_recording_end(void)
+{
+    swl_xdg_positioner_set_size_impl =
+        swl_xdg_positioner_set_size_default;
+    swl_xdg_positioner_set_anchor_rect_impl =
+        swl_xdg_positioner_set_anchor_rect_default;
+    swl_xdg_positioner_set_anchor_impl =
+        swl_xdg_positioner_set_anchor_default;
+    swl_xdg_positioner_set_gravity_impl =
+        swl_xdg_positioner_set_gravity_default;
+    swl_xdg_positioner_set_constraint_adjustment_impl =
+        swl_xdg_positioner_set_constraint_adjustment_default;
+    swl_xdg_positioner_set_offset_impl =
+        swl_xdg_positioner_set_offset_default;
+    swl_xdg_popup_grab_impl = swl_xdg_popup_grab_default;
+    swl_xdg_positioner_destroy_impl = swl_xdg_positioner_destroy_default;
+    swl_xdg_popup_destroy_impl = swl_xdg_popup_destroy_default;
+}
+
+struct swl_test_xdg_positioner_request_record
+swl_test_xdg_positioner_request_record(void)
+{
+    return swl_test_xdg_positioner_request_latest;
+}
+
+struct swl_test_xdg_popup_grab_record swl_test_xdg_popup_grab_record(void)
+{
+    return swl_test_xdg_popup_grab_latest;
+}
+
+struct swl_test_xdg_destroy_record swl_test_xdg_destroy_record(void)
+{
+    return swl_test_xdg_destroy_latest;
+}
+#endif

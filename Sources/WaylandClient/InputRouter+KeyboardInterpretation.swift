@@ -38,7 +38,7 @@ extension InputRouter {
         case .key(let key):
             .key(
                 InterpretedKeyboardKeyEvent(
-                    serial: key.serial,
+                    serial: InputSerial(rawValue: key.serial),
                     time: key.time,
                     rawKeycode: key.evdevKeycode,
                     xkbKeycode: key.xkbKeycode,
@@ -52,7 +52,7 @@ extension InputRouter {
         case .modifiers(let modifiers):
             .modifiers(
                 InterpretedKeyboardModifiers(
-                    serial: modifiers.serial,
+                    serial: InputSerial(rawValue: modifiers.serial),
                     depressed: modifiers.depressed,
                     latched: modifiers.latched,
                     locked: modifiers.locked,
