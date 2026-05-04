@@ -124,6 +124,8 @@ public struct PositiveTopLevelSize: Equatable, Sendable, CustomStringConvertible
     }
 }
 
+public typealias PositiveLogicalSize = PositiveTopLevelSize
+
 public struct PositivePixelSize: Equatable, Sendable, CustomStringConvertible {
     public let width: PositiveInt32
     public let height: PositiveInt32

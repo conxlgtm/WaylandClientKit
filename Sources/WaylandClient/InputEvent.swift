@@ -47,8 +47,8 @@ public struct SeatStateSnapshot: Equatable, Sendable {
 }
 
 public enum PointerEvent: Equatable, Sendable {
-    case entered(PointerLocation, serial: UInt32)
-    case left(serial: UInt32)
+    case entered(PointerLocation, serial: InputSerial)
+    case left(serial: InputSerial)
     case moved(PointerLocation, time: UInt32)
     case button(PointerButtonEvent)
     case axis(PointerAxisEvent)
@@ -65,13 +65,13 @@ public struct PointerLocation: Equatable, Sendable {
 }
 
 public struct PointerButtonEvent: Equatable, Sendable {
-    public let serial: UInt32
+    public let serial: InputSerial
     public let time: UInt32
     public let button: UInt32
     public let state: ButtonState
 
     public init(
-        serial eventSerial: UInt32,
+        serial eventSerial: InputSerial,
         time eventTime: UInt32,
         button eventButton: UInt32,
         state eventState: ButtonState
@@ -146,8 +146,8 @@ public enum KeyboardEvent: Equatable, Sendable {
 
 public enum RawKeyboardEvent: Equatable, Sendable {
     case keymapChanged(KeyboardKeymapInfo)
-    case entered(serial: UInt32, pressedKeys: [UInt32])
-    case left(serial: UInt32)
+    case entered(serial: InputSerial, pressedKeys: [UInt32])
+    case left(serial: InputSerial)
     case key(KeyboardKeyEvent)
     case modifiers(KeyboardModifiers)
     case repeatInfo(KeyboardRepeatInfo)
@@ -193,13 +193,13 @@ public struct KeyboardKeymapFormat: Equatable, Sendable {
 }
 
 public struct KeyboardKeyEvent: Equatable, Sendable {
-    public let serial: UInt32
+    public let serial: InputSerial
     public let time: UInt32
     public let rawKeycode: UInt32
     public let state: KeyState
 
     public init(
-        serial eventSerial: UInt32,
+        serial eventSerial: InputSerial,
         time eventTime: UInt32,
         rawKeycode eventRawKeycode: UInt32,
         state eventState: KeyState
@@ -212,7 +212,7 @@ public struct KeyboardKeyEvent: Equatable, Sendable {
 }
 
 public struct InterpretedKeyboardKeyEvent: Equatable, Sendable {
-    public let serial: UInt32
+    public let serial: InputSerial
     public let time: UInt32
     public let rawKeycode: UInt32
     public let xkbKeycode: UInt32
@@ -223,7 +223,7 @@ public struct InterpretedKeyboardKeyEvent: Equatable, Sendable {
     public let repeats: Bool
 
     public init(
-        serial eventSerial: UInt32,
+        serial eventSerial: InputSerial,
         time eventTime: UInt32,
         rawKeycode eventRawKeycode: UInt32,
         xkbKeycode eventXKBKeycode: UInt32,
@@ -278,14 +278,14 @@ public struct KeyboardKeysym: Equatable, Sendable {
 }
 
 public struct KeyboardModifiers: Equatable, Sendable {
-    public let serial: UInt32
+    public let serial: InputSerial
     public let depressed: UInt32
     public let latched: UInt32
     public let locked: UInt32
     public let group: UInt32
 
     public init(
-        serial eventSerial: UInt32,
+        serial eventSerial: InputSerial,
         depressed eventDepressed: UInt32,
         latched eventLatched: UInt32,
         locked eventLocked: UInt32,
@@ -300,7 +300,7 @@ public struct KeyboardModifiers: Equatable, Sendable {
 }
 
 public struct InterpretedKeyboardModifiers: Equatable, Sendable {
-    public let serial: UInt32
+    public let serial: InputSerial
     public let depressed: UInt32
     public let latched: UInt32
     public let locked: UInt32
@@ -308,7 +308,7 @@ public struct InterpretedKeyboardModifiers: Equatable, Sendable {
     public let changedComponents: KeyboardModifierStateComponents
 
     public init(
-        serial eventSerial: UInt32,
+        serial eventSerial: InputSerial,
         depressed eventDepressed: UInt32,
         latched eventLatched: UInt32,
         locked eventLocked: UInt32,
@@ -396,13 +396,13 @@ public enum TouchEvent: Equatable, Sendable {
 }
 
 public struct TouchDownEvent: Equatable, Sendable {
-    public let serial: UInt32
+    public let serial: InputSerial
     public let time: UInt32
     public let id: Int32
     public let location: PointerLocation
 
     public init(
-        serial eventSerial: UInt32,
+        serial eventSerial: InputSerial,
         time eventTime: UInt32,
         id eventID: Int32,
         location eventLocation: PointerLocation
@@ -415,11 +415,11 @@ public struct TouchDownEvent: Equatable, Sendable {
 }
 
 public struct TouchUpEvent: Equatable, Sendable {
-    public let serial: UInt32
+    public let serial: InputSerial
     public let time: UInt32
     public let id: Int32
 
-    public init(serial eventSerial: UInt32, time eventTime: UInt32, id eventID: Int32) {
+    public init(serial eventSerial: InputSerial, time eventTime: UInt32, id eventID: Int32) {
         serial = eventSerial
         time = eventTime
         id = eventID

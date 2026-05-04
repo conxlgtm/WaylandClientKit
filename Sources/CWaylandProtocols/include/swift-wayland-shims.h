@@ -14,6 +14,8 @@
 struct xdg_wm_base;
 struct xdg_surface;
 struct xdg_toplevel;
+struct xdg_positioner;
+struct xdg_popup;
 struct zxdg_decoration_manager_v1;
 struct zxdg_toplevel_decoration_v1;
 struct wp_viewporter;
@@ -98,13 +100,37 @@ unsigned int swl_mfd_cloexec(void);
 
 struct xdg_surface *swl_xdg_wm_base_get_xdg_surface(
     struct xdg_wm_base *wm_base, struct wl_surface *surface);
+struct xdg_positioner *swl_xdg_wm_base_create_positioner(
+    struct xdg_wm_base *wm_base);
 
 struct xdg_toplevel *swl_xdg_surface_get_toplevel(struct xdg_surface *xdg_surface);
+struct xdg_popup *swl_xdg_surface_get_popup(
+    struct xdg_surface *xdg_surface,
+    struct xdg_surface *parent,
+    struct xdg_positioner *positioner);
 
 void swl_xdg_wm_base_pong(struct xdg_wm_base *wm_base, uint32_t serial);
 void swl_xdg_surface_ack_configure(struct xdg_surface *xdg_surface, uint32_t serial);
 void swl_xdg_toplevel_set_title(struct xdg_toplevel *xdg_toplevel, const char *title);
 void swl_xdg_toplevel_set_app_id(struct xdg_toplevel *xdg_toplevel, const char *app_id);
+void swl_xdg_positioner_set_size(
+    struct xdg_positioner *positioner, int32_t width, int32_t height);
+void swl_xdg_positioner_set_anchor_rect(
+    struct xdg_positioner *positioner,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height);
+void swl_xdg_positioner_set_anchor(
+    struct xdg_positioner *positioner, uint32_t anchor);
+void swl_xdg_positioner_set_gravity(
+    struct xdg_positioner *positioner, uint32_t gravity);
+void swl_xdg_positioner_set_constraint_adjustment(
+    struct xdg_positioner *positioner, uint32_t constraint_adjustment);
+void swl_xdg_positioner_set_offset(
+    struct xdg_positioner *positioner, int32_t x, int32_t y);
+void swl_xdg_popup_grab(
+    struct xdg_popup *popup, struct wl_seat *seat, uint32_t serial);
 
 /* ------------------------------------------------------------------ */
 /*  XDG decoration request wrappers                                   */
@@ -156,6 +182,8 @@ void swl_seat_destroy(struct wl_seat *seat);
 void swl_seat_release(struct wl_seat *seat);
 void swl_xdg_surface_destroy(struct xdg_surface *xdg_surface);
 void swl_xdg_toplevel_destroy(struct xdg_toplevel *xdg_toplevel);
+void swl_xdg_positioner_destroy(struct xdg_positioner *positioner);
+void swl_xdg_popup_destroy(struct xdg_popup *popup);
 void swl_xdg_wm_base_destroy(struct xdg_wm_base *wm_base);
 void swl_zxdg_toplevel_decoration_v1_destroy(
     struct zxdg_toplevel_decoration_v1 *decoration);
@@ -235,6 +263,17 @@ typedef void (*swl_xdg_toplevel_configure_bounds_fn)(
 typedef void (*swl_xdg_toplevel_wm_capabilities_fn)(
     void *data, struct xdg_toplevel *xdg_toplevel,
     struct wl_array *capabilities);
+typedef void (*swl_xdg_popup_configure_fn)(
+    void *data,
+    struct xdg_popup *popup,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height);
+typedef void (*swl_xdg_popup_done_fn)(
+    void *data, struct xdg_popup *popup);
+typedef void (*swl_xdg_popup_repositioned_fn)(
+    void *data, struct xdg_popup *popup, uint32_t token);
 
 /* XDG decoration */
 typedef void (*swl_zxdg_toplevel_decoration_v1_configure_fn)(
@@ -360,6 +399,13 @@ struct swl_xdg_toplevel_listener_callbacks {
     void                                *data;
 };
 
+struct swl_xdg_popup_listener_callbacks {
+    swl_xdg_popup_configure_fn    configure;
+    swl_xdg_popup_done_fn         popup_done;
+    swl_xdg_popup_repositioned_fn repositioned;
+    void                         *data;
+};
+
 struct swl_zxdg_toplevel_decoration_v1_listener_callbacks {
     swl_zxdg_toplevel_decoration_v1_configure_fn configure;
     void                                        *data;
@@ -444,6 +490,10 @@ int swl_xdg_toplevel_add_listener(
     struct xdg_toplevel *xdg_toplevel,
     const struct swl_xdg_toplevel_listener_callbacks *callbacks);
 
+int swl_xdg_popup_add_listener(
+    struct xdg_popup *popup,
+    const struct swl_xdg_popup_listener_callbacks *callbacks);
+
 int swl_zxdg_toplevel_decoration_v1_add_listener(
     struct zxdg_toplevel_decoration_v1 *decoration,
     const struct swl_zxdg_toplevel_decoration_v1_listener_callbacks *callbacks);
@@ -508,6 +558,69 @@ struct swl_test_scale_destroy_record {
     void                            *object;
 };
 
+struct swl_test_xdg_popup_configure_record {
+    int32_t           call_count;
+    void             *data;
+    struct xdg_popup *popup;
+    int32_t           x;
+    int32_t           y;
+    int32_t           width;
+    int32_t           height;
+};
+
+struct swl_test_xdg_popup_done_record {
+    int32_t           call_count;
+    void             *data;
+    struct xdg_popup *popup;
+};
+
+struct swl_test_xdg_popup_repositioned_record {
+    int32_t           call_count;
+    void             *data;
+    struct xdg_popup *popup;
+    uint32_t          token;
+};
+
+enum swl_test_xdg_positioner_request_kind {
+    SWL_TEST_XDG_POSITIONER_REQUEST_NONE = 0,
+    SWL_TEST_XDG_POSITIONER_REQUEST_SIZE = 1,
+    SWL_TEST_XDG_POSITIONER_REQUEST_ANCHOR_RECT = 2,
+    SWL_TEST_XDG_POSITIONER_REQUEST_ANCHOR = 3,
+    SWL_TEST_XDG_POSITIONER_REQUEST_GRAVITY = 4,
+    SWL_TEST_XDG_POSITIONER_REQUEST_CONSTRAINT_ADJUSTMENT = 5,
+    SWL_TEST_XDG_POSITIONER_REQUEST_OFFSET = 6,
+};
+
+struct swl_test_xdg_positioner_request_record {
+    int32_t                                    call_count;
+    enum swl_test_xdg_positioner_request_kind kind;
+    struct xdg_positioner                    *positioner;
+    int32_t                                    x;
+    int32_t                                    y;
+    int32_t                                    width;
+    int32_t                                    height;
+    uint32_t                                   value;
+};
+
+struct swl_test_xdg_popup_grab_record {
+    int32_t           call_count;
+    struct xdg_popup *popup;
+    struct wl_seat   *seat;
+    uint32_t          serial;
+};
+
+enum swl_test_xdg_destroy_kind {
+    SWL_TEST_XDG_DESTROY_NONE = 0,
+    SWL_TEST_XDG_DESTROY_POSITIONER = 1,
+    SWL_TEST_XDG_DESTROY_POPUP = 2,
+};
+
+struct swl_test_xdg_destroy_record {
+    int32_t                        call_count;
+    enum swl_test_xdg_destroy_kind kind;
+    void                          *object;
+};
+
 int swl_test_surface_listener_emit_preferred_buffer_scale(
     void *data,
     struct wl_surface *surface,
@@ -525,6 +638,31 @@ void swl_test_scale_request_recording_end(void);
 struct swl_test_viewport_destination_record
 swl_test_scale_viewport_destination_record(void);
 struct swl_test_scale_destroy_record swl_test_scale_destroy_record(void);
+
+void swl_test_xdg_popup_listener_emit_configure(
+    void *data,
+    struct xdg_popup *popup,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height,
+    struct swl_test_xdg_popup_configure_record *record);
+void swl_test_xdg_popup_listener_emit_done(
+    void *data,
+    struct xdg_popup *popup,
+    struct swl_test_xdg_popup_done_record *record);
+void swl_test_xdg_popup_listener_emit_repositioned(
+    void *data,
+    struct xdg_popup *popup,
+    uint32_t token,
+    struct swl_test_xdg_popup_repositioned_record *record);
+
+void swl_test_xdg_request_recording_begin(void);
+void swl_test_xdg_request_recording_end(void);
+struct swl_test_xdg_positioner_request_record
+swl_test_xdg_positioner_request_record(void);
+struct swl_test_xdg_popup_grab_record swl_test_xdg_popup_grab_record(void);
+struct swl_test_xdg_destroy_record swl_test_xdg_destroy_record(void);
 #endif
 
 #ifdef __cplusplus
