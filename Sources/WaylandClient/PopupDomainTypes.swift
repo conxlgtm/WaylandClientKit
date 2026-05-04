@@ -1,43 +1,43 @@
 import WaylandRaw
 
-package struct LogicalOffset: Equatable, Sendable, CustomStringConvertible {
-    package let x: Int32
-    package let y: Int32
+public struct LogicalOffset: Equatable, Sendable, CustomStringConvertible {
+    public let x: Int32
+    public let y: Int32
 
-    package init(x offsetX: Int32, y offsetY: Int32) {
+    public init(x offsetX: Int32, y offsetY: Int32) {
         x = offsetX
         y = offsetY
     }
 
-    package static let zero = LogicalOffset(x: 0, y: 0)
+    public static let zero = LogicalOffset(x: 0, y: 0)
 
-    package var description: String {
+    public var description: String {
         "\(x),\(y)"
     }
 }
 
-package struct LogicalRect: Equatable, Sendable, CustomStringConvertible {
-    package let origin: LogicalOffset
-    package let size: PositiveLogicalSize
+public struct LogicalRect: Equatable, Sendable, CustomStringConvertible {
+    public let origin: LogicalOffset
+    public let size: PositiveLogicalSize
 
-    package init(origin rectOrigin: LogicalOffset, size rectSize: PositiveLogicalSize) {
+    public init(origin rectOrigin: LogicalOffset, size rectSize: PositiveLogicalSize) {
         origin = rectOrigin
         size = rectSize
     }
 
-    package init(x rectX: Int32, y rectY: Int32, width rectWidth: Int32, height rectHeight: Int32)
+    public init(x rectX: Int32, y rectY: Int32, width rectWidth: Int32, height rectHeight: Int32)
         throws
     {
         origin = LogicalOffset(x: rectX, y: rectY)
         size = try PositiveLogicalSize(width: rectWidth, height: rectHeight)
     }
 
-    package var description: String {
+    public var description: String {
         "\(origin) \(size)"
     }
 }
 
-package enum PopupAnchor: Equatable, Sendable {
+public enum PopupAnchor: Equatable, Sendable {
     case none
     case top
     case bottom
@@ -49,7 +49,7 @@ package enum PopupAnchor: Equatable, Sendable {
     case bottomRight
 }
 
-package enum PopupGravity: Equatable, Sendable {
+public enum PopupGravity: Equatable, Sendable {
     case none
     case top
     case bottom
@@ -61,7 +61,7 @@ package enum PopupGravity: Equatable, Sendable {
     case bottomRight
 }
 
-package struct PopupConstraintAdjustment:
+public struct PopupConstraintAdjustment:
     Equatable,
     Sendable,
     ExpressibleByArrayLiteral
@@ -72,42 +72,42 @@ package struct PopupConstraintAdjustment:
         rawValue = adjustmentRawValue
     }
 
-    package init(_ adjustments: [PopupConstraintAdjustment]) {
+    public init(_ adjustments: [PopupConstraintAdjustment]) {
         rawValue = adjustments.reduce(0) { bits, adjustment in
             bits | adjustment.rawValue
         }
     }
 
-    package init(arrayLiteral adjustments: PopupConstraintAdjustment...) {
+    public init(arrayLiteral adjustments: PopupConstraintAdjustment...) {
         self.init(adjustments)
     }
 
-    package func contains(_ adjustment: PopupConstraintAdjustment) -> Bool {
+    public func contains(_ adjustment: PopupConstraintAdjustment) -> Bool {
         rawValue & adjustment.rawValue == adjustment.rawValue
     }
 
-    package func union(_ adjustment: PopupConstraintAdjustment) -> PopupConstraintAdjustment {
+    public func union(_ adjustment: PopupConstraintAdjustment) -> PopupConstraintAdjustment {
         PopupConstraintAdjustment(rawValue: rawValue | adjustment.rawValue)
     }
 
-    package static let none = Self(rawValue: 0)
-    package static let slideX = Self(rawValue: 1)
-    package static let slideY = Self(rawValue: 2)
-    package static let flipX = Self(rawValue: 4)
-    package static let flipY = Self(rawValue: 8)
-    package static let resizeX = Self(rawValue: 16)
-    package static let resizeY = Self(rawValue: 32)
+    public static let none = Self(rawValue: 0)
+    public static let slideX = Self(rawValue: 1)
+    public static let slideY = Self(rawValue: 2)
+    public static let flipX = Self(rawValue: 4)
+    public static let flipY = Self(rawValue: 8)
+    public static let resizeX = Self(rawValue: 16)
+    public static let resizeY = Self(rawValue: 32)
 }
 
-package struct PopupPositioner: Equatable, Sendable {
-    package var anchorRect: LogicalRect
-    package var size: PositiveLogicalSize
-    package var anchor: PopupAnchor
-    package var gravity: PopupGravity
-    package var constraintAdjustment: PopupConstraintAdjustment
-    package var offset: LogicalOffset
+public struct PopupPositioner: Equatable, Sendable {
+    public var anchorRect: LogicalRect
+    public var size: PositiveLogicalSize
+    public var anchor: PopupAnchor
+    public var gravity: PopupGravity
+    public var constraintAdjustment: PopupConstraintAdjustment
+    public var offset: LogicalOffset
 
-    package init(
+    public init(
         anchorRect popupAnchorRect: LogicalRect,
         size popupSize: PositiveLogicalSize,
         anchor popupAnchor: PopupAnchor = .none,
@@ -124,16 +124,16 @@ package struct PopupPositioner: Equatable, Sendable {
     }
 }
 
-package enum PopupGrabPolicy: Equatable, Sendable {
+public enum PopupGrabPolicy: Equatable, Sendable {
     case none
     case explicit(seatID: SeatID, serial: InputSerial)
 }
 
-package struct PopupConfiguration: Equatable, Sendable {
-    package var positioner: PopupPositioner
-    package var grab: PopupGrabPolicy
+public struct PopupConfiguration: Equatable, Sendable {
+    public var positioner: PopupPositioner
+    public var grab: PopupGrabPolicy
 
-    package init(
+    public init(
         positioner popupPositioner: PopupPositioner,
         grab popupGrab: PopupGrabPolicy = .none
     ) {
@@ -142,11 +142,11 @@ package struct PopupConfiguration: Equatable, Sendable {
     }
 }
 
-package struct PopupPlacement: Equatable, Sendable {
-    package let origin: LogicalOffset
-    package let size: PositiveLogicalSize
+public struct PopupPlacement: Equatable, Sendable {
+    public let origin: LogicalOffset
+    public let size: PositiveLogicalSize
 
-    package init(origin placementOrigin: LogicalOffset, size placementSize: PositiveLogicalSize) {
+    public init(origin placementOrigin: LogicalOffset, size placementSize: PositiveLogicalSize) {
         origin = placementOrigin
         size = placementSize
     }

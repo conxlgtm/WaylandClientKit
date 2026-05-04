@@ -175,3 +175,9 @@ package final class XDGConfigureState {
         return latestConfigure
     }
 }
+
+extension XDGConfigureState: XDGSurfaceConfigureHandling {
+    package func handleXDGSurfaceConfigure(serial: UInt32) {
+        handleSurfaceConfigure(serial: serial)
+    }
+}
