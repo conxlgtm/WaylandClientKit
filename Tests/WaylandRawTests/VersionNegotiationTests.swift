@@ -53,6 +53,7 @@ struct VersionNegotiationTests {
         #expect(SupportedVersions.zxdgDecorationManagerV1 == RawVersion(2))
         #expect(SupportedVersions.wpViewporter == RawVersion(1))
         #expect(SupportedVersions.wpFractionalScaleManagerV1 == RawVersion(1))
+        #expect(SupportedVersions.wlDataDeviceManager == RawVersion(3))
         #expect(SupportedVersions.wlSeat == RawVersion(10))
     }
 

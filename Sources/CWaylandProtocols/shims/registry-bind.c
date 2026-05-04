@@ -53,3 +53,10 @@ struct wl_seat *swl_registry_bind_wl_seat(
     return (struct wl_seat *)wl_registry_bind(
         registry, name, &wl_seat_interface, version);
 }
+
+struct wl_data_device_manager *swl_registry_bind_wl_data_device_manager(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wl_data_device_manager *)wl_registry_bind(
+        registry, name, &wl_data_device_manager_interface, version);
+}
