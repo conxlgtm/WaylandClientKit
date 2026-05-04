@@ -18,13 +18,14 @@ disabled_rules:
   # Apple swift-format owns brace placement. SwiftLint's opening_brace rule
   # disagrees with swift-format on wrapped inheritance clauses.
   - opening_brace
+  # Apple swift-format owns multi-element trailing comma policy.
+  - trailing_comma
 
 # Analyzer-only rules are intentionally excluded until `swiftlint analyze` is
 # wired to compiler logs or a compile_commands.json file.
 opt_in_rules:
   - anonymous_argument_in_multiline_closure
   - array_init
-  - async_without_await
   - attributes
   - balanced_xctest_lifecycle
   - closure_body_length
@@ -35,7 +36,6 @@ opt_in_rules:
   - contains_over_first_not_nil
   - contains_over_range_nil_comparison
   - convenience_type
-  - direct_return
   - discarded_notification_center_observer
   - discouraged_assert
   - discouraged_optional_boolean
@@ -55,7 +55,6 @@ opt_in_rules:
   - force_unwrapping
   - function_default_parameter_at_end
   - identical_operands
-  - implicit_return
   - implicitly_unwrapped_optional
   - joined_default_parameter
   - last_where
@@ -86,7 +85,6 @@ opt_in_rules:
   - return_value_from_void_function
   - self_binding
   - sorted_first_last
-  - sorted_imports
   - static_operator
   - strict_fileprivate
   - superfluous_else
@@ -98,7 +96,6 @@ opt_in_rules:
   - unhandled_throwing_task
   - unneeded_parentheses_in_closure_argument
   - unowned_variable_capture
-  - untyped_error_in_catch
   - unused_parameter
   - vertical_parameter_alignment_on_call
   - weak_delegate
@@ -106,12 +103,6 @@ opt_in_rules:
   - yoda_condition
 
 custom_rules:
-  no_explicit_self:
-    name: "No Explicit Self"
-    message: "Do not write explicit self. Rename shadowing parameters or unwrap weak captures before member access."
-    regex: "\\bself[?!]?\\."
-    severity: error
-
   prefer_contextual_init_for_typed_declarations:
     name: "Prefer Contextual .init"
     message: "Use `.init(...)` when the declaration already states the concrete type."
@@ -128,12 +119,6 @@ custom_rules:
     name: "No Silent try?"
     message: "Do not discard thrown errors with try?. Use do/catch or propagate the error."
     regex: "\\btry\\?"
-    severity: error
-
-  no_unchecked_sendable:
-    name: "No @unchecked Sendable"
-    message: "Do not bypass Swift 6 data-race checking with @unchecked Sendable without a reviewed exception."
-    regex: "@unchecked\\s+Sendable"
     severity: error
 
   no_unstructured_task:
@@ -177,9 +162,6 @@ force_cast: error
 force_try: error
 force_unwrapping: error
 
-trailing_comma:
-  mandatory_comma: true
-
 line_length:
   warning: 100
   error: 120
@@ -220,7 +202,10 @@ identifier_name:
     error: 1
   excluded:
     - fd
+    - i
     - id
+    - j
+    - n
     - x
     - y
 

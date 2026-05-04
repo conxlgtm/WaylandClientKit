@@ -29,6 +29,21 @@ is_allowed() {
     return 1
 }
 
+has_nearby_safety_comment() {
+    local path="$1"
+    local line="$2"
+    local start end
+
+    if (( line > 5 )); then
+        start=$((line - 5))
+    else
+        start=1
+    fi
+    end=$((line + 2))
+
+    sed -n "${start},${end}p" "${path}" | rg -q 'SAFETY:'
+}
+
 failures=0
 while IFS=: read -r path line token; do
     if [[ -z "${path}" ]]; then
@@ -36,6 +51,11 @@ while IFS=: read -r path line token; do
     fi
 
     if is_allowed "${path}" "${token}"; then
+        if [[ "${token}" =~ ^@unchecked ]] && ! has_nearby_safety_comment "${path}" "${line}"; then
+            printf '%s:%s: @unchecked Sendable allowlist entry requires a nearby SAFETY comment\n' \
+                "${path}" "${line}" >&2
+            failures=1
+        fi
         continue
     fi
 
