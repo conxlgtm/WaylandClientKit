@@ -15,7 +15,10 @@ Current experimental baseline:
 - registry discovery and version negotiation
 - event loop integration
 - SHM software rendering path
+- scale-aware surface geometry for software rendering
 - XDG toplevel window creation/configure handling
+- xdg-decoration server-side decoration negotiation
+- viewporter and fractional-scale protocol integration for scaled SHM buffers
 - frame callback pacing
 - seat, pointer, keyboard, and touch event capture
 - package-internal `DisplaySession` input draining with seat/window identity
@@ -55,6 +58,20 @@ Supported in the `0.0.1` checkpoint:
 - `xdg_wm_base`
 - `xdg_surface`
 - `xdg_toplevel`
+- `zxdg_decoration_manager_v1`
+- `zxdg_toplevel_decoration_v1`
+- `wp_viewporter`
+- `wp_viewport`
+- `wp_fractional_scale_manager_v1`
+- `wp_fractional_scale_v1`
+
+Window geometry:
+
+- window configuration and xdg configure sizes are logical surface units
+- `SurfaceScale` stores exact rational scale values
+- `SurfaceGeometry` reports logical size, buffer-pixel size, and scale
+- `SoftwareFrame.width` and `SoftwareFrame.height` are buffer-pixel dimensions
+- `SoftwareFrame.geometry` reports how those pixels map back to logical surface size
 
 Keyboard interpretation:
 
@@ -70,8 +87,7 @@ Not supported in the `0.0.1` checkpoint:
 
 - `wl_data_device_manager`, clipboard, primary selection, or drag and drop
 - cursor animation or per-output cursor scaling
-- xdg-decoration
-- presentation-time, viewporter, or fractional-scale
+- presentation-time
 - linux-dmabuf, EGL, GBM, or GPU rendering
 - text-input or IME protocols
 - widgets or retained UI

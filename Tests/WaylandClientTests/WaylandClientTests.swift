@@ -225,6 +225,7 @@ struct WaylandClientTests {
                 width: 2,
                 height: 2,
                 stride: 3 * Int32(MemoryLayout<UInt32>.stride),
+                geometry: try softwareFrameTestGeometry(width: 2, height: 2),
                 bytes: UnsafeMutableRawBufferPointer(
                     start: UnsafeMutableRawPointer(buffer.baseAddress),
                     count: byteCount
@@ -236,6 +237,8 @@ struct WaylandClientTests {
                 pixels[unchecked: 0] = UInt32(row * 10 + 1)
                 pixels[unchecked: 1] = UInt32(row * 10 + 2)
             }
+
+            #expect(frame.geometry.bufferSize == (try PositivePixelSize(width: 2, height: 2)))
         }
 
         #expect(storage == [1, 2, 0, 11, 12, 0])
@@ -256,6 +259,7 @@ struct WaylandClientTests {
                     width: 2,
                     height: 2,
                     stride: 3 * Int32(MemoryLayout<UInt32>.stride),
+                    geometry: try softwareFrameTestGeometry(width: 2, height: 2),
                     bytes: UnsafeMutableRawBufferPointer(
                         start: UnsafeMutableRawPointer(buffer.baseAddress),
                         count: byteCount
@@ -264,4 +268,15 @@ struct WaylandClientTests {
             }
         }
     }
+}
+
+private func softwareFrameTestGeometry(width: Int32, height: Int32) throws
+    -> SoftwareFrameGeometry
+{
+    SoftwareFrameGeometry(
+        surface: try SurfaceGeometry(
+            logicalSize: PositiveTopLevelSize(width: width, height: height),
+            scale: .one
+        )
+    )
 }

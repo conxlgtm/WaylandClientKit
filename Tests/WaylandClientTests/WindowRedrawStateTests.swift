@@ -82,6 +82,36 @@ struct WindowRedrawStateTests {
     }
 
     @Test
+    func contentInvalidatedWaitingForBufferWithAvailableReplacementPublishes() {
+        var state = WindowRedrawState()
+
+        _ = state.reduce(.contentInvalidated, bufferAvailable: true)
+        _ = state.reduce(.redrawRequestConsumed, bufferAvailable: true)
+        _ = state.reduce(.drawBlockedByBuffer, bufferAvailable: false)
+
+        #expect(state.isWaitingForBuffer)
+        #expect(
+            state.reduce(.contentInvalidated, bufferAvailable: true)
+                == [.publishRedrawRequested]
+        )
+        #expect(!state.isWaitingForBuffer)
+        #expect(state.hasOutstandingRedrawRequest)
+    }
+
+    @Test
+    func contentInvalidatedWaitingForBufferWithoutReplacementKeepsWaiting() {
+        var state = WindowRedrawState()
+
+        _ = state.reduce(.contentInvalidated, bufferAvailable: true)
+        _ = state.reduce(.redrawRequestConsumed, bufferAvailable: true)
+        _ = state.reduce(.drawBlockedByBuffer, bufferAvailable: false)
+
+        #expect(state.isWaitingForBuffer)
+        #expect(state.reduce(.contentInvalidated, bufferAvailable: false).isEmpty)
+        #expect(state.isWaitingForBuffer)
+    }
+
+    @Test
     func cleanStateCannotWaitForBuffer() {
         var state = WindowRedrawState()
 

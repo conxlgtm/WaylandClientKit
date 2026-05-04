@@ -27,6 +27,16 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
+[[ -f "$PROTO_DIR/stable/viewporter/viewporter.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/stable/viewporter/viewporter.xml"
+    exit 1
+}
+
+[[ -f "$PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml"
+    exit 1
+}
+
 rm -rf "$GEN_INC" "$GEN_SRC"
 mkdir -p "$GEN_INC" "$GEN_SRC" "$OUT_DIR/shims"
 
@@ -38,6 +48,20 @@ normalize_generated_file() {
         -e '/^#include <stdbool\.h>$/d' \
         -e '/^[[:space:]]+\* @deprecated Deprecated since version [0-9]+$/d' \
         "$generated_file"
+
+    awk '
+        { lines[NR] = $0 }
+        END {
+            last = NR
+            while (last > 0 && lines[last] == "") {
+                last--
+            }
+            for (line = 1; line <= last; line++) {
+                print lines[line]
+            }
+        }
+    ' "$generated_file" >"$generated_file.tmp"
+    mv "$generated_file.tmp" "$generated_file"
 }
 
 wayland-scanner client-header \
@@ -63,6 +87,22 @@ wayland-scanner client-header \
 wayland-scanner private-code \
     "$PROTO_DIR/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" \
     "$GEN_SRC/xdg-decoration-unstable-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/stable/viewporter/viewporter.xml" \
+    "$GEN_INC/viewporter-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/stable/viewporter/viewporter.xml" \
+    "$GEN_SRC/viewporter-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml" \
+    "$GEN_INC/fractional-scale-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml" \
+    "$GEN_SRC/fractional-scale-v1-protocol.c"
 
 for generated_file in "$GEN_INC"/*.h "$GEN_SRC"/*.c; do
     normalize_generated_file "$generated_file"

@@ -93,6 +93,12 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
     }
 
+    func windowGeometry(_ windowID: WindowID) throws -> SurfaceGeometry {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID).geometryOnOwnerThread
+        }
+    }
+
     func requestRedraw(_ windowID: WindowID) throws {
         try withFatalFailureFinalization {
             try requireOpenWindow(windowID).requestRedrawOnOwnerThread()

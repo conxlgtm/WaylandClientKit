@@ -35,3 +35,35 @@ Audit invariant:
 - Every `RawOwnedProxy` calls its destroy function at most once.
 - Proxy adoption validates queue ownership before wrapping a proxy.
 - Raw surfaces destroy their Wayland proxy through the same ownership wrapper used by other raw proxy owners.
+
+## Scale Extension Raw Boundary
+
+Remaining unsafe constructs:
+
+- `RawDisplayConnection+OptionalGlobals` binds optional `wp_viewporter` and
+  `wp_fractional_scale_manager_v1` globals through registry C shims.
+- `RawViewporter`, `RawViewport`, `RawFractionalScaleManager`, and
+  `RawFractionalScale` wrap extension proxies returned by those shims.
+- `RawSurfaceScaleOwner` and `RawFractionalScaleOwner` store C listener
+  callback tables through `CListenerStorage`.
+- Listener callbacks recover Swift owners from C `data` pointers and forward
+  preferred integer or fractional scale values.
+
+Audit invariant:
+
+- Optional scale globals are bound only after registry discovery advertises
+  them.
+- Scale extension proxies are adopted through `RawProxyAdoptionContext`, then
+  destroyed through `RawOwnedProxy`.
+- A failed adoption destroys the just-created raw proxy before throwing.
+- Listener storage is invalidated before scale extension objects are destroyed
+  during window teardown.
+- Fractional scale is used by `WaylandClient` only when both
+  `wp_fractional_scale_manager_v1` and `wp_viewporter` are available.
+
+Tests:
+
+- `SurfaceGeometryTests` covers scale arithmetic, invalid preferred scale
+  values, and the integer-to-fractional scale state transition.
+- `VersionNegotiationTests` covers supported protocol versions for the scale
+  globals.

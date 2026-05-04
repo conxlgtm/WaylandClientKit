@@ -1,5 +1,7 @@
 #include "swift-wayland-shims.h"
+#include "generated/fractional-scale-v1-client-protocol.h"
 #include "generated/wayland-client-protocol.h"
+#include "generated/viewporter-client-protocol.h"
 #include "generated/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/xdg-shell-client-protocol.h"
 
@@ -29,6 +31,20 @@ struct zxdg_decoration_manager_v1 *swl_registry_bind_zxdg_decoration_manager_v1(
 {
     return (struct zxdg_decoration_manager_v1 *)wl_registry_bind(
         registry, name, &zxdg_decoration_manager_v1_interface, version);
+}
+
+struct wp_viewporter *swl_registry_bind_wp_viewporter(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wp_viewporter *)wl_registry_bind(
+        registry, name, &wp_viewporter_interface, version);
+}
+
+struct wp_fractional_scale_manager_v1 *swl_registry_bind_wp_fractional_scale_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wp_fractional_scale_manager_v1 *)wl_registry_bind(
+        registry, name, &wp_fractional_scale_manager_v1_interface, version);
 }
 
 struct wl_seat *swl_registry_bind_wl_seat(

@@ -3,6 +3,7 @@ public struct SoftwareFrame: ~Copyable {
     public let width: Int32
     public let height: Int32
     public let stride: Int32
+    public let geometry: SoftwareFrameGeometry
     private let bytes: UnsafeMutableRawBufferPointer
 
     private var wordsPerRow: Int {
@@ -13,6 +14,7 @@ public struct SoftwareFrame: ~Copyable {
         width frameWidth: Int32,
         height frameHeight: Int32,
         stride frameStride: Int32,
+        geometry frameGeometry: SoftwareFrameGeometry,
         bytes frameBytes: UnsafeMutableRawBufferPointer
     ) throws {
         guard frameWidth > 0, frameHeight > 0 else {
@@ -47,6 +49,7 @@ public struct SoftwareFrame: ~Copyable {
         width = frameWidth
         height = frameHeight
         stride = frameStride
+        geometry = frameGeometry
         unsafe bytes = frameBytes
     }
 

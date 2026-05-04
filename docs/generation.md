@@ -7,6 +7,8 @@ Vendored XML files:
 - `Protocols/core/wayland.xml`
 - `Protocols/stable/xdg-shell/xdg-shell.xml`
 - `Protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
+- `Protocols/stable/viewporter/viewporter.xml`
+- `Protocols/staging/fractional-scale/fractional-scale-v1.xml`
 - `Protocols/manifest.json`
 
 These files are committed.
@@ -20,12 +22,16 @@ Generated headers:
 - `Sources/CWaylandProtocols/include/generated/wayland-client-protocol.h`
 - `Sources/CWaylandProtocols/include/generated/xdg-shell-client-protocol.h`
 - `Sources/CWaylandProtocols/include/generated/xdg-decoration-unstable-v1-client-protocol.h`
+- `Sources/CWaylandProtocols/include/generated/viewporter-client-protocol.h`
+- `Sources/CWaylandProtocols/include/generated/fractional-scale-v1-client-protocol.h`
 
 Generated C files:
 
 - `Sources/CWaylandProtocols/generated/wayland-protocol.c`
 - `Sources/CWaylandProtocols/generated/xdg-shell-protocol.c`
 - `Sources/CWaylandProtocols/generated/xdg-decoration-unstable-v1-protocol.c`
+- `Sources/CWaylandProtocols/generated/viewporter-protocol.c`
+- `Sources/CWaylandProtocols/generated/fractional-scale-v1-protocol.c`
 
 These files are committed.
 
@@ -107,8 +113,21 @@ Unstable xdg-decoration XML candidates:
 - `/usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
 - `/usr/local/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
 
-Set `WAYLAND_CORE_XML_SOURCE`, `XDG_SHELL_XML_SOURCE`, or
-`XDG_DECORATION_XML_SOURCE` to force a specific source path.
+Stable viewporter XML candidates:
+
+- `$(pkg-config --variable=pkgdatadir wayland-protocols)/stable/viewporter/viewporter.xml`
+- `/usr/share/wayland-protocols/stable/viewporter/viewporter.xml`
+- `/usr/local/share/wayland-protocols/stable/viewporter/viewporter.xml`
+
+Staging fractional-scale XML candidates:
+
+- `$(pkg-config --variable=pkgdatadir wayland-protocols)/staging/fractional-scale/fractional-scale-v1.xml`
+- `/usr/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml`
+- `/usr/local/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml`
+
+Set `WAYLAND_CORE_XML_SOURCE`, `XDG_SHELL_XML_SOURCE`,
+`XDG_DECORATION_XML_SOURCE`, `VIEWPORTER_XML_SOURCE`, or
+`FRACTIONAL_SCALE_XML_SOURCE` to force a specific source path.
 
 Run `Scripts/bootstrap-linux.sh --maintainer` first to verify the scanner,
 `wayland-protocols` pkg-config module, and protocol XML inputs.
