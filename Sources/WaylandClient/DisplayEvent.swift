@@ -5,7 +5,20 @@ public enum DisplayEvent: Equatable, Sendable {
     case diagnostic(DisplayDiagnostic)
     case windowCloseRequested(WindowID)
     case windowClosed(WindowID)
+    case popupDismissed(PopupLifecycleEvent)
+    case popupClosed(PopupLifecycleEvent)
     case redrawRequested(WindowID)
+    case popupRedrawRequested(PopupLifecycleEvent)
+}
+
+public struct PopupLifecycleEvent: Equatable, Sendable {
+    public let popup: PopupSurfaceIdentity
+    public let parentWindowID: WindowID
+
+    package init(popup popupID: PopupID, parentWindowID popupParentWindowID: WindowID) {
+        popup = PopupSurfaceIdentity(popupID)
+        parentWindowID = popupParentWindowID
+    }
 }
 
 public enum DiagnosticSeverity: Equatable, Sendable {
@@ -273,7 +286,8 @@ final class DisplayEventHub: Sendable {
             publishInput(inputEvent)
         case .diagnostic(let diagnostic):
             publishDiagnostic(diagnostic)
-        case .windowCloseRequested, .windowClosed, .redrawRequested:
+        case .windowCloseRequested, .windowClosed, .popupDismissed, .popupClosed,
+            .redrawRequested, .popupRedrawRequested:
             displayBroker.publish(event)
         }
     }

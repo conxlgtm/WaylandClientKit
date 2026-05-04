@@ -187,6 +187,10 @@ private enum ListenerInstallState {
     case installed
 }
 
+package protocol XDGSurfaceConfigureHandling: AnyObject {
+    func handleXDGSurfaceConfigure(serial: UInt32)
+}
+
 private final class XDGWMBaseOwner {
     private let wmBase: OpaquePointer
     private let invariantFailureSink: RawInvariantFailureSink?
@@ -259,7 +263,7 @@ private final class XDGWMBaseOwner {
 }
 
 package final class XDGSurfaceOwner {
-    private let configureState: XDGConfigureState
+    private let configureHandler: any XDGSurfaceConfigureHandling
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = ListenerInstallState.idle
     private lazy var listenerStorage = CListenerStorage(
@@ -276,15 +280,27 @@ package final class XDGSurfaceOwner {
         configureState state: XDGConfigureState,
         invariantFailureSink failureSink: RawInvariantFailureSink? = nil
     ) {
-        configureState = state
+        configureHandler = state
         invariantFailureSink = failureSink
+        installCallback()
+    }
 
+    package init(
+        configureHandler handler: any XDGSurfaceConfigureHandling,
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil
+    ) {
+        configureHandler = handler
+        invariantFailureSink = failureSink
+        installCallback()
+    }
+
+    private func installCallback() {
         callbacks.pointee.configure = { data, _, serial in
             XDGSurfaceOwner.withOwner(
                 data,
                 message: "xdg_surface configure fired without Swift state"
             ) { owner in
-                owner.configureState.handleSurfaceConfigure(serial: serial)
+                owner.configureHandler.handleXDGSurfaceConfigure(serial: serial)
             }
         }
     }

@@ -13,30 +13,58 @@ enum SwiftWaylandDemo {
                 drawDemoFrame(frame, state: initialState)
             }
 
-            eventLoop: for try await event in display.events {
-                switch event {
-                case .input(let inputEvent):
-                    demoState.handle(inputEvent, focusedWindowID: window.id)
-                    if demoState.consumeNeedsRedraw() {
-                        try await window.requestRedraw()
-                    }
-                case .diagnostic(let diagnostic):
-                    DemoLog.write("display diagnostic \(diagnostic)")
-                case .redrawRequested(let windowID):
-                    guard windowID == window.id else { continue }
-                    let redrawState = demoState
-                    try await window.redraw { frame in
-                        drawDemoFrame(frame, state: redrawState)
-                    }
-                case .windowCloseRequested(let windowID):
-                    guard windowID == window.id else { continue }
-                    await window.close()
-                case .windowClosed(let windowID):
-                    guard windowID == window.id else { continue }
-                    break eventLoop
-                }
+            try await runEventLoop(
+                events: display.events,
+                window: window,
+                demoState: &demoState
+            )
+        }
+    }
+
+    nonisolated private static func runEventLoop(
+        events: DisplayEvents,
+        window: Window,
+        demoState: inout DemoState
+    ) async throws {
+        var iterator = events.makeAsyncIterator()
+        while let event = try await iterator.next() {
+            guard !(try await handle(event, window: window, demoState: &demoState)) else {
+                return
             }
         }
+    }
+
+    nonisolated private static func handle(
+        _ event: DisplayEvent,
+        window: Window,
+        demoState: inout DemoState
+    ) async throws -> Bool {
+        switch event {
+        case .input(let inputEvent):
+            demoState.handle(inputEvent, focusedWindowID: window.id)
+            if demoState.consumeNeedsRedraw() {
+                try await window.requestRedraw()
+            }
+        case .diagnostic(let diagnostic):
+            DemoLog.write("display diagnostic \(diagnostic)")
+        case .redrawRequested(let windowID):
+            guard windowID == window.id else { return false }
+            let redrawState = demoState
+            try await window.redraw { frame in
+                drawDemoFrame(frame, state: redrawState)
+            }
+        case .popupRedrawRequested:
+            break
+        case .windowCloseRequested(let windowID):
+            guard windowID == window.id else { return false }
+            await window.close()
+        case .windowClosed(let windowID):
+            return windowID == window.id
+        case .popupDismissed, .popupClosed:
+            break
+        }
+
+        return false
     }
 
     nonisolated private static func drawDemoFrame(
@@ -51,28 +79,34 @@ enum SwiftWaylandDemo {
                 pixels[unchecked: x] = (red << 16) | (green << 8) | blue
             }
 
-            drawPointerMarker(row: row, pixels: &pixels, state: state)
+            drawPointerMarker(
+                row: row,
+                pixels: &pixels,
+                frameHeight: Int(frame.height),
+                geometry: frame.geometry,
+                state: state
+            )
         }
     }
 
     nonisolated private static func drawPointerMarker(
         row: Int,
         pixels: inout MutableSpan<UInt32>,
+        frameHeight: Int,
+        geometry: SoftwareFrameGeometry,
         state: DemoState
     ) {
-        guard
-            state.pointerInside,
-            let location = state.pointerLocation
-        else {
+        guard case .inside(let location, let isPressed) = state.pointer else {
             return
         }
 
-        let markerX = Int(location.x.rounded())
-        let markerY = Int(location.y.rounded())
+        let point = geometry.bufferPixelPoint(logicalX: location.x, logicalY: location.y)
+        let markerX = min(max(point.x, 0), pixels.count - 1)
+        let markerY = min(max(point.y, 0), frameHeight - 1)
         let radius = 5
         guard abs(row - markerY) <= radius else { return }
 
-        let color: UInt32 = state.pointerPressed ? 0x00FF_2020 : 0x00FF_FFFF
+        let color: UInt32 = isPressed ? 0x00FF_2020 : 0x00FF_FFFF
         let startX = max(markerX - radius, 0)
         let endX = min(markerX + radius, pixels.count - 1)
         guard startX <= endX else { return }
@@ -84,9 +118,7 @@ enum SwiftWaylandDemo {
 }
 
 private struct DemoState {
-    var pointerLocation: PointerLocation?
-    var pointerInside = false
-    var pointerPressed = false
+    var pointer = PointerMarkerState.outside
     private var needsRedraw = false
 
     nonisolated mutating func handle(_ event: InputEvent, focusedWindowID: WindowID) {
@@ -134,20 +166,20 @@ private struct DemoState {
     nonisolated private mutating func handlePointer(_ event: PointerEvent) {
         switch event {
         case .entered(let location, let serial):
-            pointerInside = true
-            pointerLocation = location
+            pointer = .inside(location: location, pressed: false)
             needsRedraw = true
             DemoLog.write("pointer entered serial=\(serial) x=\(location.x) y=\(location.y)")
         case .left(let serial):
-            pointerInside = false
-            pointerLocation = nil
+            pointer = .outside
             needsRedraw = true
             DemoLog.write("pointer left serial=\(serial)")
         case .moved(let location, _):
-            pointerLocation = location
+            guard case .inside(_, let pressed) = pointer else { return }
+            pointer = .inside(location: location, pressed: pressed)
             needsRedraw = true
         case .button(let button):
-            pointerPressed = button.state == .pressed
+            guard case .inside(let location, _) = pointer else { return }
+            pointer = .inside(location: location, pressed: button.state == .pressed)
             needsRedraw = true
             DemoLog.write(
                 "pointer button serial=\(button.serial) button=\(button.button) "
@@ -264,6 +296,11 @@ private struct DemoState {
             )
         }
     }
+}
+
+private enum PointerMarkerState {
+    case outside
+    case inside(location: PointerLocation, pressed: Bool)
 }
 
 private enum DemoLog {

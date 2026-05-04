@@ -2,11 +2,17 @@ import WaylandRaw
 
 @safe
 final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
-    private let eventHub: DisplayEventHub
-    private var session: DisplaySession?
+    let eventHub: DisplayEventHub
+    var session: DisplaySession?
     private var windows: [WindowID: TopLevelWindow] = [:]
+    var popups: [PopupID: PopupRoleSurface] = [:]
+    var surfaceGraph = SurfaceGraph()
+    var windowSurfaceIDs: [WindowID: SurfaceID] = [:]
+    var popupSurfaceIDs: [PopupID: SurfaceID] = [:]
+    var popupParentWindowIDs: [PopupID: WindowID] = [:]
+    var closedPopupIDs: Set<PopupID> = []
     private(set) var isClosed = false
-    private var needsFatalFailureFinalization = false
+    var needsFatalFailureFinalization = false
 
     init(session activeSession: DisplaySession, eventHub displayEventHub: DisplayEventHub) {
         session = activeSession
@@ -18,19 +24,6 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         eventHub = displayEventHub
     }
 
-    func currentPointerCursor() throws -> PointerCursor {
-        try withFatalFailureFinalization {
-            try requireSession().pointerCursorOnOwnerThread
-        }
-    }
-
-    @discardableResult
-    func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {
-        try withFatalFailureFinalization {
-            try requireSession().setPointerCursorOnOwnerThread(cursor)
-        }
-    }
-
     func createTopLevelWindowID(
         configuration windowConfiguration: WindowConfiguration = .default
     ) throws -> WindowID {
@@ -39,10 +32,19 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
                 configuration: windowConfiguration,
                 failureSink: WeakWindowFailureSink(self)
             )
-            windows[window.id] = window
             guard !isClosed else {
+                window.closeOnOwnerThread()
                 throw ClientError.display(.closed)
             }
+            let surfaceID = SurfaceID(rawObjectID: window.surfaceID)
+            do {
+                try surfaceGraph.registerTopLevel(surfaceID: surfaceID, windowID: window.id)
+            } catch {
+                window.closeOnOwnerThread()
+                throw error
+            }
+            windows[window.id] = window
+            windowSurfaceIDs[window.id] = surfaceID
             installEventCallbacks(for: window)
             window.markPublishedOnOwnerThread()
             return window.id
@@ -110,6 +112,9 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             // Fatal raw invariants already finished streams and deferred graph cleanup;
             // avoid publishing orderly window lifecycle events on that explicit path.
             guard !needsFatalFailureFinalization else { return }
+            for popupID in popupIDsTopDown(parentedBy: windowID) {
+                closePopup(popupID)
+            }
             guard let window = windows[windowID] else { return }
             window.closeOnOwnerThread()
         }
@@ -129,7 +134,13 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         guard !isClosed else { return }
         // Non-callback failures can synchronously discard the owned graph.
         isClosed = true
+        popups.removeAll(keepingCapacity: false)
         windows.removeAll(keepingCapacity: false)
+        popupSurfaceIDs.removeAll(keepingCapacity: false)
+        popupParentWindowIDs.removeAll(keepingCapacity: false)
+        closedPopupIDs.removeAll(keepingCapacity: false)
+        windowSurfaceIDs.removeAll(keepingCapacity: false)
+        surfaceGraph = SurfaceGraph()
         session = nil
         eventHub.finish(throwing: error)
     }
@@ -160,6 +171,131 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             )
         case .diagnostic(let diagnostic):
             eventHub.publishWindowDiagnostic(diagnostic)
+        }
+    }
+
+    func publishInputEvents(_ inputEvents: [InputEvent]) {
+        for inputEvent in inputEvents {
+            eventHub.publishInput(inputEvent)
+        }
+    }
+
+    func markDefunctForFatalFailure(_ error: WaylandDisplayError) {
+        guard !isClosed else { return }
+        // Raw invariant failures may be reported from inside a C callback, so
+        // public streams fail immediately while destructive cleanup is deferred.
+        isClosed = true
+        needsFatalFailureFinalization = true
+        eventHub.finish(throwing: error)
+    }
+
+    func withFatalFailureFinalization<Result>(
+        _ body: () throws -> Result
+    ) rethrows -> Result {
+        defer { finalizeFatalFailureAfterDispatch() }
+        return try body()
+    }
+
+    private func finalizeFatalFailureAfterDispatch() {
+        guard needsFatalFailureFinalization else { return }
+        needsFatalFailureFinalization = false
+        popups.removeAll(keepingCapacity: false)
+        windows.removeAll(keepingCapacity: false)
+        popupSurfaceIDs.removeAll(keepingCapacity: false)
+        popupParentWindowIDs.removeAll(keepingCapacity: false)
+        closedPopupIDs.removeAll(keepingCapacity: false)
+        windowSurfaceIDs.removeAll(keepingCapacity: false)
+        surfaceGraph = SurfaceGraph()
+        session = nil
+    }
+
+    private func installEventCallbacks(for window: TopLevelWindow) {
+        let windowID = window.id
+        window.onCloseRequested = { [weak core = self] in
+            core?.handleWindowCloseRequested(windowID)
+        }
+        window.onClosed = { [weak core = self] in
+            core?.handleWindowClosed(windowID)
+        }
+        window.onRedrawRequested = { [weak core = self] in
+            core?.eventHub.publish(.redrawRequested(windowID))
+        }
+    }
+
+    private func handleWindowCloseRequested(_ windowID: WindowID) {
+        eventHub.publish(.windowCloseRequested(windowID))
+    }
+
+    private func handleWindowClosed(_ windowID: WindowID) {
+        for popupID in popupIDsTopDown(parentedBy: windowID) {
+            closePopup(popupID)
+        }
+        if let surfaceID = windowSurfaceIDs.removeValue(forKey: windowID) {
+            do {
+                try surfaceGraph.unregisterTopLevel(surfaceID)
+            } catch {
+                markSurfaceGraphInvariantFailed(error)
+                return
+            }
+        }
+        windows.removeValue(forKey: windowID)
+        eventHub.publish(.windowClosed(windowID))
+    }
+
+    func requireSession() throws -> DisplaySession {
+        guard let session, !isClosed else {
+            throw ClientError.display(.closed)
+        }
+        return session
+    }
+
+    private func requireWindow(_ windowID: WindowID) throws -> TopLevelWindow {
+        guard let window = windows[windowID] else {
+            throw ClientError.display(.unknownWindow(windowID))
+        }
+        return window
+    }
+
+    func requireOpenWindow(_ windowID: WindowID) throws -> TopLevelWindow {
+        guard !isClosed else {
+            throw ClientError.display(.closed)
+        }
+        return try requireWindow(windowID)
+    }
+
+    func requirePopup(_ popupID: PopupID) throws -> PopupRoleSurface {
+        guard !closedPopupIDs.contains(popupID) else {
+            throw ClientError.display(.closedPopup)
+        }
+        guard let popup = popups[popupID] else {
+            throw ClientError.display(.unknownPopup)
+        }
+        return popup
+    }
+
+    func requireOpenPopup(_ popupID: PopupID) throws -> PopupRoleSurface {
+        guard !isClosed else {
+            throw ClientError.display(.closed)
+        }
+        let popup = try requirePopup(popupID)
+        guard !popup.isClosedOnOwnerThread else {
+            throw ClientError.display(.closedPopup)
+        }
+        return popup
+    }
+}
+
+extension DisplayCore {
+    func currentPointerCursor() throws -> PointerCursor {
+        try withFatalFailureFinalization {
+            try requireSession().pointerCursorOnOwnerThread
+        }
+    }
+
+    @discardableResult
+    func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {
+        try withFatalFailureFinalization {
+            try requireSession().setPointerCursorOnOwnerThread(cursor)
         }
     }
 
@@ -217,77 +353,5 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     func cancelRead() {
         guard !isClosed, let session else { return }
         session.cancelReadEventsOnOwnerThread()
-    }
-
-    private func publishInputEvents(_ inputEvents: [InputEvent]) {
-        for inputEvent in inputEvents {
-            eventHub.publishInput(inputEvent)
-        }
-    }
-
-    private func markDefunctForFatalFailure(_ error: WaylandDisplayError) {
-        guard !isClosed else { return }
-        // Raw invariant failures may be reported from inside a C callback, so
-        // public streams fail immediately while destructive cleanup is deferred.
-        isClosed = true
-        needsFatalFailureFinalization = true
-        eventHub.finish(throwing: error)
-    }
-
-    private func withFatalFailureFinalization<Result>(
-        _ body: () throws -> Result
-    ) rethrows -> Result {
-        defer { finalizeFatalFailureAfterDispatch() }
-        return try body()
-    }
-
-    private func finalizeFatalFailureAfterDispatch() {
-        guard needsFatalFailureFinalization else { return }
-        needsFatalFailureFinalization = false
-        windows.removeAll(keepingCapacity: false)
-        session = nil
-    }
-
-    private func installEventCallbacks(for window: TopLevelWindow) {
-        let windowID = window.id
-        window.onCloseRequested = { [weak core = self] in
-            core?.handleWindowCloseRequested(windowID)
-        }
-        window.onClosed = { [weak core = self] in
-            core?.handleWindowClosed(windowID)
-        }
-        window.onRedrawRequested = { [weak core = self] in
-            core?.eventHub.publish(.redrawRequested(windowID))
-        }
-    }
-
-    private func handleWindowCloseRequested(_ windowID: WindowID) {
-        eventHub.publish(.windowCloseRequested(windowID))
-    }
-
-    private func handleWindowClosed(_ windowID: WindowID) {
-        windows.removeValue(forKey: windowID)
-        eventHub.publish(.windowClosed(windowID))
-    }
-
-    private func requireSession() throws -> DisplaySession {
-        guard let session, !isClosed else {
-            throw ClientError.display(.closed)
-        }
-        return session
-    }
-
-    private func requireWindow(_ windowID: WindowID) throws -> TopLevelWindow {
-        guard let window = windows[windowID] else {
-            throw ClientError.display(.unknownWindow(windowID))
-        }
-        return window
-    }
-
-    private func requireOpenWindow(_ windowID: WindowID) throws -> TopLevelWindow {
-        guard !isClosed else {
-            throw ClientError.display(.closed)
-        }
-        return try requireWindow(windowID)
     }
 }
