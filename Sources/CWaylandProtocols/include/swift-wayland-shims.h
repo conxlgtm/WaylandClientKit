@@ -7,6 +7,10 @@
 #include <stdint.h>
 #include <wayland-client.h>
 
+#if !defined(SWL_ENABLE_TESTING) && !defined(NDEBUG)
+#define SWL_ENABLE_TESTING 1
+#endif
+
 struct xdg_wm_base;
 struct xdg_surface;
 struct xdg_toplevel;
@@ -463,6 +467,65 @@ int swl_keyboard_add_listener(
 int swl_touch_add_listener(
     struct wl_touch *touch,
     const struct swl_touch_listener_callbacks *callbacks);
+
+#ifdef SWL_ENABLE_TESTING
+/* ------------------------------------------------------------------ */
+/*  Test-only scale shim contracts                                    */
+/* ------------------------------------------------------------------ */
+
+struct swl_test_surface_preferred_buffer_scale_record {
+    int32_t            call_count;
+    void              *data;
+    struct wl_surface *surface;
+    int32_t            factor;
+};
+
+struct swl_test_fractional_preferred_scale_record {
+    int32_t                        call_count;
+    void                          *data;
+    struct wp_fractional_scale_v1 *fractional_scale;
+    uint32_t                       scale;
+};
+
+struct swl_test_viewport_destination_record {
+    int32_t             call_count;
+    struct wp_viewport *viewport;
+    int32_t             width;
+    int32_t             height;
+};
+
+enum swl_test_scale_destroy_kind {
+    SWL_TEST_SCALE_DESTROY_NONE = 0,
+    SWL_TEST_SCALE_DESTROY_VIEWPORT = 1,
+    SWL_TEST_SCALE_DESTROY_VIEWPORTER = 2,
+    SWL_TEST_SCALE_DESTROY_FRACTIONAL_SCALE = 3,
+    SWL_TEST_SCALE_DESTROY_FRACTIONAL_SCALE_MANAGER = 4,
+};
+
+struct swl_test_scale_destroy_record {
+    int32_t                          call_count;
+    enum swl_test_scale_destroy_kind kind;
+    void                            *object;
+};
+
+int swl_test_surface_listener_emit_preferred_buffer_scale(
+    void *data,
+    struct wl_surface *surface,
+    int32_t factor,
+    struct swl_test_surface_preferred_buffer_scale_record *record);
+
+void swl_test_fractional_scale_listener_emit_preferred_scale(
+    void *data,
+    struct wp_fractional_scale_v1 *fractional_scale,
+    uint32_t scale,
+    struct swl_test_fractional_preferred_scale_record *record);
+
+void swl_test_scale_request_recording_begin(void);
+void swl_test_scale_request_recording_end(void);
+struct swl_test_viewport_destination_record
+swl_test_scale_viewport_destination_record(void);
+struct swl_test_scale_destroy_record swl_test_scale_destroy_record(void);
+#endif
 
 #ifdef __cplusplus
 }

@@ -5,6 +5,42 @@ import Testing
 @Suite
 struct ScaleInstallationAcquisitionTests {
     @Test
+    func scaleInstallationReturnsFractionalResourcesOnSuccess() throws {
+        let factory = FakeFractionalScaleFactory()
+
+        let resources = try ScaleInstallationAcquisition.acquireFractionalResources(
+            using: factory
+        )
+
+        #expect(resources.viewport === factory.viewport)
+        #expect(resources.fractionalScale === factory.fractionalScale)
+        #expect(resources.owner === factory.owner)
+        #expect(factory.viewport.destroyCount == 0)
+        #expect(factory.fractionalScale.destroyCount == 0)
+        #expect(factory.owner.cancelCount == 0)
+        #expect(factory.ownerCreateCount == 1)
+    }
+
+    @Test
+    func scaleInstallationDoesNotCancelSurfaceScaleOwnerOnSuccess() {
+        let surfaceScaleOwner = FakeSurfaceScaleOwner()
+
+        let installation: FakeScaleInstallation =
+            ScaleInstallationAcquisition.install(
+                surfaceScaleOwner: surfaceScaleOwner,
+                makeInstallation: { _ in
+                    FakeScaleInstallation()
+                },
+                cancelSurfaceScaleOwner: { owner in
+                    owner.cancel()
+                }
+            )
+
+        #expect(installation == FakeScaleInstallation())
+        #expect(surfaceScaleOwner.cancelCount == 0)
+    }
+
+    @Test
     func scaleInstallationDestroysViewportWhenFractionalScaleCreationFails() {
         let factory = FakeFractionalScaleFactory(
             failure: .fractionalScaleCreationFailed
@@ -65,10 +101,10 @@ private final class FakeFractionalScaleFactory: FractionalScaleAcquisitionFactor
     let viewport = FakeViewport()
     let fractionalScale = FakeFractionalScale()
     let owner = FakeFractionalScaleOwner()
-    private let selectedFailure: FakeScaleInstallationError
+    private let selectedFailure: FakeScaleInstallationError?
     private(set) var ownerCreateCount = 0
 
-    init(failure: FakeScaleInstallationError) {
+    init(failure: FakeScaleInstallationError? = nil) {
         selectedFailure = failure
     }
 
@@ -77,7 +113,7 @@ private final class FakeFractionalScaleFactory: FractionalScaleAcquisitionFactor
     }
 
     func createFractionalScale() throws -> FakeFractionalScale {
-        if selectedFailure == .fractionalScaleCreationFailed {
+        if let selectedFailure, selectedFailure == .fractionalScaleCreationFailed {
             throw selectedFailure
         }
 
@@ -93,7 +129,7 @@ private final class FakeFractionalScaleFactory: FractionalScaleAcquisitionFactor
         _: FakeFractionalScaleOwner,
         on _: FakeFractionalScale
     ) throws {
-        if selectedFailure == .listenerInstallFailed {
+        if let selectedFailure, selectedFailure == .listenerInstallFailed {
             throw selectedFailure
         }
     }
@@ -161,4 +197,4 @@ private struct FakeFractionalResources {
     let owner: FakeFractionalScaleOwner
 }
 
-private struct FakeScaleInstallation {}
+private struct FakeScaleInstallation: Equatable {}
