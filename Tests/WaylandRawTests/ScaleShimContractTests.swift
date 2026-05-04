@@ -16,10 +16,7 @@ struct ScaleShimContractTests {
             &record
         )
 
-        guard emitted != 0 else {
-            return
-        }
-
+        #expect(emitted == 1)
         #expect(record.call_count == 1)
         #expect(record.data == data)
         #expect(record.surface == surface)
