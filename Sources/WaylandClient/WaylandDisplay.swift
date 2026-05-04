@@ -125,6 +125,29 @@ public actor WaylandDisplay {
         try requireCore().createTopLevelWindowID(configuration: windowConfiguration)
     }
 
+    package func createPopup(
+        parent window: Window,
+        configuration popupConfiguration: PopupConfiguration
+    ) throws -> PopupSurface {
+        guard window.isOwned(by: self) else {
+            throw ClientError.display(.foreignWindow(window.id))
+        }
+
+        let popupID = try createPopupID(
+            parent: window.id,
+            configuration: popupConfiguration
+        )
+        return PopupSurface(id: popupID, parentWindowID: window.id, display: self)
+    }
+
+    @discardableResult
+    package func createPopupID(
+        parent windowID: WindowID,
+        configuration popupConfiguration: PopupConfiguration
+    ) throws -> PopupID {
+        try requireCore().createPopup(parent: windowID, configuration: popupConfiguration)
+    }
+
     public func showWindow(
         _ windowID: WindowID,
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMilliseconds,
@@ -142,6 +165,25 @@ public actor WaylandDisplay {
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try requireCore().redraw(windowID, draw)
+    }
+
+    package func showPopup(
+        _ popupID: PopupID,
+        timeoutMilliseconds: Int32 = defaultConfigureTimeoutMilliseconds,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) throws {
+        try requireCore().showPopup(
+            popupID,
+            timeoutMilliseconds: timeoutMilliseconds,
+            draw
+        )
+    }
+
+    package func redrawPopup(
+        _ popupID: PopupID,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) throws {
+        try requireCore().redrawPopup(popupID, draw)
     }
 
     public func windowIsClosed(_ windowID: WindowID) throws -> Bool {
@@ -164,8 +206,32 @@ public actor WaylandDisplay {
         try requireCore().requestRedraw(windowID)
     }
 
+    package func popupIsClosed(_ popupID: PopupID) throws -> Bool {
+        try requireCore().popupIsClosed(popupID)
+    }
+
+    package func popupNeedsRedraw(_ popupID: PopupID) throws -> Bool {
+        try requireCore().popupNeedsRedraw(popupID)
+    }
+
+    package func popupGeometry(_ popupID: PopupID) throws -> SurfaceGeometry {
+        try requireCore().popupGeometry(popupID)
+    }
+
+    package func popupPlacement(_ popupID: PopupID) throws -> PopupPlacement {
+        try requireCore().popupPlacement(popupID)
+    }
+
+    package func requestPopupRedraw(_ popupID: PopupID) throws {
+        try requireCore().requestPopupRedraw(popupID)
+    }
+
     public func closeWindow(_ windowID: WindowID) {
         core?.closeWindow(windowID)
+    }
+
+    package func closePopup(_ popupID: PopupID) {
+        core?.closePopup(popupID)
     }
 
     public func close() {

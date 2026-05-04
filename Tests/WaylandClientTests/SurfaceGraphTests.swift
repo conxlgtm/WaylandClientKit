@@ -84,6 +84,42 @@ struct SurfaceGraphTests {
     }
 
     @Test
+    func clientDestroyCascadeRemovesNestedPopupChainTopDown() throws {
+        var graph = SurfaceGraph()
+        let rootSurface = SurfaceID(rawValue: 35)
+        let firstPopup = SurfaceID(rawValue: 36)
+        let secondPopup = SurfaceID(rawValue: 37)
+        let thirdPopup = SurfaceID(rawValue: 38)
+
+        try graph.registerTopLevel(surfaceID: rootSurface, windowID: WindowID(rawValue: 35))
+        try graph.registerPopup(
+            surfaceID: firstPopup,
+            popupID: PopupID(rawValue: 351),
+            parent: rootSurface
+        )
+        try graph.registerPopup(
+            surfaceID: secondPopup,
+            popupID: PopupID(rawValue: 352),
+            parent: firstPopup
+        )
+        try graph.registerPopup(
+            surfaceID: thirdPopup,
+            popupID: PopupID(rawValue: 353),
+            parent: secondPopup
+        )
+
+        let destroyed = try graph.destroyClientRequestedPopupCascade(secondPopup)
+
+        #expect(destroyed.map(\.id) == [thirdPopup, secondPopup])
+        #expect(graph.popupStacksByRoot[rootSurface]?.topmost == firstPopup)
+        #expect(graph.nodes[thirdPopup] == nil)
+        #expect(graph.nodes[secondPopup] == nil)
+        #expect(graph.nodes[firstPopup]?.children.isEmpty == true)
+        #expect(graph.livePopupSurfacesByID[PopupID(rawValue: 352)] == nil)
+        #expect(graph.livePopupSurfacesByID[PopupID(rawValue: 353)] == nil)
+    }
+
+    @Test
     func compositorDismissalRemovesPopupChainTopDown() throws {
         var graph = SurfaceGraph()
         let rootSurface = SurfaceID(rawValue: 40)

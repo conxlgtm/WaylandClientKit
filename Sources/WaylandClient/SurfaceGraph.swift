@@ -1,8 +1,14 @@
+import WaylandRaw
+
 package struct SurfaceID: Hashable, Sendable, CustomStringConvertible {
     package let rawValue: UInt64
 
     package init(rawValue surfaceRawValue: UInt64) {
         rawValue = surfaceRawValue
+    }
+
+    package init(rawObjectID objectID: RawObjectID) {
+        rawValue = UInt64(objectID.value)
     }
 
     package var description: String {
@@ -81,6 +87,16 @@ package struct PopupStack: Equatable, Sendable {
         stack.removeSubrange(index...)
         return dismissed
     }
+
+    package mutating func destroyCascade(from popupSurfaceID: SurfaceID) throws -> [SurfaceID] {
+        guard let index = stack.firstIndex(of: popupSurfaceID) else {
+            throw SurfaceGraphError.unknownSurface(popupSurfaceID)
+        }
+
+        let destroyed = Array(stack[index...].reversed())
+        stack.removeSubrange(index...)
+        return destroyed
+    }
 }
 
 package struct SurfaceGraph: Equatable, Sendable {
@@ -149,6 +165,19 @@ package struct SurfaceGraph: Equatable, Sendable {
     }
 
     @discardableResult
+    package mutating func destroyClientRequestedPopupCascade(
+        _ surfaceID: SurfaceID
+    ) throws -> [SurfaceNode] {
+        let node = try requirePopupNode(surfaceID)
+        var stack = try requirePopupStack(for: node.root)
+        let destroyedIDs = try stack.destroyCascade(from: surfaceID)
+        popupStacksByRoot[node.root] = stack
+        return try destroyedIDs.map { destroyedID in
+            try removePopupNode(destroyedID)
+        }
+    }
+
+    @discardableResult
     package mutating func dismissPopupFromCompositor(
         _ surfaceID: SurfaceID
     ) throws -> [SurfaceNode] {
@@ -182,6 +211,13 @@ package struct SurfaceGraph: Equatable, Sendable {
         }
 
         return node.windowID
+    }
+
+    package func popupNodesTopDown(parentedBy windowID: WindowID) -> [SurfaceNode] {
+        popupStacksByRoot
+            .filter { root, _ in nodes[root]?.windowID == windowID }
+            .flatMap { _, stack in stack.stack.reversed() }
+            .compactMap { surfaceID in nodes[surfaceID] }
     }
 
     private func requirePopupNode(_ surfaceID: SurfaceID) throws -> SurfaceNode {

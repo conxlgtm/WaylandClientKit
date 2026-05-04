@@ -43,6 +43,18 @@ public struct WindowID: Hashable, Sendable, CustomStringConvertible {
     }
 }
 
+public struct PopupSurfaceIdentity: Hashable, Sendable, CustomStringConvertible {
+    package let rawValue: UInt64
+
+    package init(_ popupID: PopupID) {
+        rawValue = popupID.rawValue
+    }
+
+    public var description: String {
+        "popup-\(rawValue)"
+    }
+}
+
 package struct PopupID: Hashable, Sendable, CustomStringConvertible {
     package let rawValue: UInt64
 
