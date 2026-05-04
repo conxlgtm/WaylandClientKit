@@ -1,3 +1,4 @@
+import Foundation
 import Glibc
 import Synchronization
 import Testing
@@ -88,59 +89,13 @@ private func waitUntil(_ predicate: () -> Bool) -> Bool {
     return false
 }
 
-private final class ShutdownCallerThread {
-    private let executor: WaylandThreadExecutor
-    private let mode: ShutdownMode
-    private let label: String
-    private let recorder: ShutdownCompletionRecorder
-
-    init(
-        executor newExecutor: WaylandThreadExecutor,
-        mode shutdownMode: ShutdownMode,
-        label callerLabel: String,
-        recorder completionRecorder: ShutdownCompletionRecorder
-    ) {
-        executor = newExecutor
-        mode = shutdownMode
-        label = callerLabel
-        recorder = completionRecorder
-    }
-
-    func start() {
-        var attributes = pthread_attr_t()
-        let attributeInitResult = pthread_attr_init(&attributes)
-        precondition(attributeInitResult == 0, "pthread_attr_init failed")
-        let detachResult = pthread_attr_setdetachstate(
-            &attributes,
-            Int32(PTHREAD_CREATE_DETACHED)
-        )
-        precondition(detachResult == 0, "pthread_attr_setdetachstate failed")
-
-        let retainedSelf = Unmanaged.passRetained(self).toOpaque()
-        var thread = pthread_t()
-        let createResult = pthread_create(
-            &thread,
-            &attributes,
-            { pointer in
-                guard let pointer else { return nil }
-
-                let caller = Unmanaged<ShutdownCallerThread>
-                    .fromOpaque(pointer)
-                    .takeRetainedValue()
-                caller.run()
-                return nil
-            },
-            retainedSelf
-        )
-        pthread_attr_destroy(&attributes)
-
-        guard createResult == 0 else {
-            Unmanaged<ShutdownCallerThread>.fromOpaque(retainedSelf).release()
-            preconditionFailure("pthread_create failed with \(createResult)")
-        }
-    }
-
-    private func run() {
+private func startShutdownCallerThread(
+    executor: WaylandThreadExecutor,
+    mode: ShutdownMode,
+    label: String,
+    recorder: ShutdownCompletionRecorder
+) {
+    Thread.detachNewThread {
         recorder.appendStarted(label)
         executor.shutdown(mode)
         recorder.append(label)
@@ -170,18 +125,18 @@ struct WaylandThreadExecutorConcurrencyTests {
                 == .stopRequested(.abandonWaylandSources)
         )
 
-        ShutdownCallerThread(
+        startShutdownCallerThread(
             executor: executor,
             mode: .orderly,
             label: "first",
             recorder: completions
-        ).start()
-        ShutdownCallerThread(
+        )
+        startShutdownCallerThread(
             executor: executor,
             mode: .orderly,
             label: "second",
             recorder: completions
-        ).start()
+        )
 
         #expect(
             waitUntil {
@@ -237,12 +192,12 @@ struct WaylandThreadExecutorConcurrencyTests {
         )
 
         for label in ["first"] + lateCallerLabels {
-            ShutdownCallerThread(
+            startShutdownCallerThread(
                 executor: executor,
                 mode: .orderly,
                 label: label,
                 recorder: completions
-            ).start()
+            )
         }
 
         #expect(
