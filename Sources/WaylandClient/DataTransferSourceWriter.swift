@@ -1,10 +1,12 @@
 import Foundation
+import Synchronization
 
-package struct DataTransferSourceWriteJob: Equatable, Sendable {
+package final class DataTransferSourceWriteJob: Sendable {
     package let sourceID: DataSourceID
     package let mimeType: MIMEType
-    package let descriptor: Int32
     package let data: Data
+
+    private let descriptor: Mutex<Int32?>
 
     package init(
         sourceID jobSourceID: DataSourceID,
@@ -14,13 +16,13 @@ package struct DataTransferSourceWriteJob: Equatable, Sendable {
     ) {
         sourceID = jobSourceID
         mimeType = jobMIMEType
-        descriptor = jobDescriptor
         data = jobData
+        descriptor = Mutex(jobDescriptor)
     }
 
     package func write() -> DataTransferSourceWriteResult {
         do {
-            var ownedDescriptor = try OwnedFileDescriptor(adopting: descriptor)
+            var ownedDescriptor = try OwnedFileDescriptor(adopting: releaseRawDescriptor())
             try ownedDescriptor.writeData(data)
             return .succeeded(sourceID: sourceID, mimeType: mimeType)
         } catch let error as DataTransferError {
@@ -32,7 +34,7 @@ package struct DataTransferSourceWriteJob: Equatable, Sendable {
 
     package func closeAsCancelled() -> DataTransferSourceWriteResult {
         do {
-            var ownedDescriptor = try OwnedFileDescriptor(adopting: descriptor)
+            var ownedDescriptor = try OwnedFileDescriptor(adopting: releaseRawDescriptor())
             try ownedDescriptor.close()
             return .failed(sourceID: sourceID, mimeType: mimeType, error: .cancelled)
         } catch let error as DataTransferError {
@@ -40,6 +42,18 @@ package struct DataTransferSourceWriteJob: Equatable, Sendable {
         } catch {
             return .failed(sourceID: sourceID, mimeType: mimeType, error: .unavailable)
         }
+    }
+
+    private func releaseRawDescriptor() throws -> Int32 {
+        let releasedDescriptor = descriptor.withLock { storage -> Int32? in
+            defer { storage = nil }
+            return storage
+        }
+        guard let releasedDescriptor else {
+            throw DataTransferError.fileDescriptorAlreadyReleased
+        }
+
+        return releasedDescriptor
     }
 }
 

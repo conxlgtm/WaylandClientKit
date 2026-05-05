@@ -34,6 +34,68 @@ struct DataTransferSourceWriterTests {
     }
 
     @Test
+    func sourceWriteJobCannotWriteOrCloseSameDescriptorTwice() throws {
+        let descriptors = try makePipeDescriptors()
+        var readDescriptor = try OwnedFileDescriptor(adopting: descriptors.readEnd)
+        let job = DataTransferSourceWriteJob(
+            sourceID: DataSourceID(rawValue: 10),
+            mimeType: .plainText,
+            descriptor: descriptors.writeEnd,
+            data: Data("clipboard".utf8)
+        )
+
+        #expect(
+            job.closeAsCancelled()
+                == .failed(
+                    sourceID: DataSourceID(rawValue: 10),
+                    mimeType: .plainText,
+                    error: .cancelled
+                )
+        )
+        #expect(
+            job.write()
+                == .failed(
+                    sourceID: DataSourceID(rawValue: 10),
+                    mimeType: .plainText,
+                    error: .fileDescriptorAlreadyReleased
+                )
+        )
+        #expect(try readDescriptor.readData(limit: try ByteCount.bytes(32)).isEmpty)
+    }
+
+    @Test
+    func writerSubmittingSameJobTwiceDoesNotDoubleClose() throws {
+        let descriptors = try makePipeDescriptors()
+        var readDescriptor = try OwnedFileDescriptor(adopting: descriptors.readEnd)
+        let writer = ThreadedDataTransferSourceWriter()
+        defer { writer.shutdown() }
+        let job = DataTransferSourceWriteJob(
+            sourceID: DataSourceID(rawValue: 11),
+            mimeType: .plainText,
+            descriptor: descriptors.writeEnd,
+            data: Data("clipboard".utf8)
+        )
+
+        writer.submit([job, job])
+
+        #expect(
+            waitForResults(from: writer, count: 2)
+                == [
+                    .succeeded(sourceID: DataSourceID(rawValue: 11), mimeType: .plainText),
+                    .failed(
+                        sourceID: DataSourceID(rawValue: 11),
+                        mimeType: .plainText,
+                        error: .fileDescriptorAlreadyReleased
+                    ),
+                ]
+        )
+        #expect(
+            try readDescriptor.readData(limit: try ByteCount.bytes(32))
+                == Data("clipboard".utf8)
+        )
+    }
+
+    @Test
     func threadedWriterRecordsInvalidDescriptorFailure() {
         let writer = ThreadedDataTransferSourceWriter()
         defer { writer.shutdown() }
@@ -117,12 +179,46 @@ struct DataTransferSourceWriterTests {
         #expect(payload.isEmpty)
     }
 
+    @Test
+    func submittingSameJobAfterShutdownClosesDescriptorOnce() throws {
+        let descriptors = try makePipeDescriptors()
+        var readDescriptor = try OwnedFileDescriptor(adopting: descriptors.readEnd)
+        let writer = ThreadedDataTransferSourceWriter()
+        let job = DataTransferSourceWriteJob(
+            sourceID: DataSourceID(rawValue: 12),
+            mimeType: .plainText,
+            descriptor: descriptors.writeEnd,
+            data: Data("clipboard".utf8)
+        )
+
+        writer.shutdown()
+        writer.submit([job, job])
+
+        #expect(
+            writer.drainResults()
+                == [
+                    .failed(
+                        sourceID: DataSourceID(rawValue: 12),
+                        mimeType: .plainText,
+                        error: .cancelled
+                    ),
+                    .failed(
+                        sourceID: DataSourceID(rawValue: 12),
+                        mimeType: .plainText,
+                        error: .fileDescriptorAlreadyReleased
+                    ),
+                ]
+        )
+        #expect(try readDescriptor.readData(limit: try ByteCount.bytes(32)).isEmpty)
+    }
+
     private func waitForResults(
-        from writer: ThreadedDataTransferSourceWriter
+        from writer: ThreadedDataTransferSourceWriter,
+        count expectedCount: Int = 1
     ) -> [DataTransferSourceWriteResult] {
         for _ in 0..<1_000 {
             let results = writer.drainResults()
-            if !results.isEmpty {
+            if results.count >= expectedCount {
                 return results
             }
 
