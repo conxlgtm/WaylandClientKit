@@ -42,6 +42,7 @@ public enum WaylandSystemOperation: Equatable, Sendable, CustomStringConvertible
     case displayError
     case keymapFstat
     case keymapMmap
+    case createPipe
     case duplicateFileDescriptor
     case closeFileDescriptor
 
@@ -77,6 +78,8 @@ public enum WaylandSystemOperation: Equatable, Sendable, CustomStringConvertible
             "inspect keyboard keymap file"
         case .keymapMmap:
             "map keyboard keymap file"
+        case .createPipe:
+            "create pipe"
         case .duplicateFileDescriptor:
             "duplicate file descriptor"
         case .closeFileDescriptor:
@@ -99,7 +102,7 @@ extension WaylandSystemOperation {
             self = Self.displayOperation(rawOperation)
         case .keymapFstat, .keymapMmap:
             self = Self.keymapOperation(rawOperation)
-        case .duplicateFileDescriptor, .closeFileDescriptor:
+        case .createPipe, .duplicateFileDescriptor, .closeFileDescriptor:
             self = Self.fileDescriptorOperation(rawOperation)
         }
     }
@@ -183,6 +186,8 @@ extension WaylandSystemOperation {
         _ rawOperation: RawSystemOperation
     ) -> WaylandSystemOperation {
         switch rawOperation {
+        case .createPipe:
+            .createPipe
         case .duplicateFileDescriptor:
             .duplicateFileDescriptor
         case .closeFileDescriptor:

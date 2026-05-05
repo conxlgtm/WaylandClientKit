@@ -29,6 +29,22 @@ package struct RawFileDescriptor: ~Copyable {
         return RawFileDescriptor(fd)
     }
 
+    package static func pipeDescriptors() throws(RuntimeError) -> (
+        readEnd: Int32,
+        writeEnd: Int32
+    ) {
+        var descriptors = [Int32](repeating: -1, count: 2)
+        let result = unsafe descriptors.withUnsafeMutableBufferPointer { descriptorBuffer in
+            unsafe Glibc.pipe(descriptorBuffer.baseAddress)
+        }
+
+        guard result == 0 else {
+            throw RuntimeError.systemError(errno: errno, operation: .createPipe)
+        }
+
+        return (readEnd: descriptors[0], writeEnd: descriptors[1])
+    }
+
     package func resize(byteCount: Int) throws(RuntimeError) {
         guard ftruncate(rawValue, off_t(byteCount)) == 0 else {
             throw RuntimeError.systemError(errno: errno, operation: .resizeSharedMemoryFile)

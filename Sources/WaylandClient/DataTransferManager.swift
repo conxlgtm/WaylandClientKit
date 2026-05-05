@@ -14,7 +14,13 @@ package protocol DataTransferDeviceBinding: AnyObject {
 package protocol DataTransferOfferBinding: AnyObject {
     var id: DataOfferID { get }
 
+    func receive(mimeType: MIMEType, fd: Int32)
     func destroy()
+}
+
+package struct DataTransferPipeDescriptors: Equatable, Sendable {
+    package let readEnd: Int32
+    package let writeEnd: Int32
 }
 
 package protocol DataTransferManagerBackend: AnyObject {
@@ -28,13 +34,16 @@ package protocol DataTransferManagerBackend: AnyObject {
         id: DataOfferID,
         onEvent: @escaping (RawDataOfferEvent) -> Void
     ) throws -> any DataTransferOfferBinding
+    func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors
+    func adoptOwnedFileDescriptor(_ descriptor: Int32) throws -> OwnedFileDescriptor
+    func closeFileDescriptor(_ descriptor: Int32) -> Int32
 }
 
 package final class DataTransferManager {
-    private let backend: any DataTransferManagerBackend
-    private var state = DataTransferState()
+    package let backend: any DataTransferManagerBackend
+    package var state = DataTransferState()
     private var deviceBindings: [SeatID: any DataTransferDeviceBinding] = [:]
-    private var offerBindingsByID: [DataOfferID: any DataTransferOfferBinding] = [:]
+    package var offerBindingsByID: [DataOfferID: any DataTransferOfferBinding] = [:]
     private var offerIDsByHandle: [RawDataOfferHandle: DataOfferID] = [:]
     private var pendingOfferMimeTypesByID: [DataOfferID: [MIMEType]] = [:]
     private var pendingOfferSeatIDsByID: [DataOfferID: SeatID] = [:]
@@ -273,140 +282,5 @@ package final class DataTransferManager {
     private func allocateOfferID() -> DataOfferID {
         defer { nextOfferID += 1 }
         return DataOfferID(rawValue: nextOfferID)
-    }
-}
-
-private final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
-    private let connection: RawDisplayConnection
-
-    init(connection rawConnection: RawDisplayConnection) {
-        rawConnection.preconditionIsOwnerThread()
-        connection = rawConnection
-    }
-
-    func preconditionIsOwnerThread() {
-        connection.preconditionIsOwnerThread()
-    }
-
-    func bindDataDevice(
-        for seatID: SeatID,
-        onEvent: @escaping (RawDataDeviceEvent) -> Void
-    ) throws -> any DataTransferDeviceBinding {
-        let globals = try connection.bindRequiredGlobals()
-        guard case .bound(let manager) = globals.extensions.dataDeviceManager else {
-            throw DataTransferError.unavailable
-        }
-        guard let seat = globals.seatRegistry.seat(for: RawSeatID(rawValue: seatID.rawValue)) else {
-            throw DataTransferError.unknownSeat(seatID)
-        }
-
-        let device = try manager.getDataDevice(for: seat)
-        let owner = RawDataDeviceOwner(
-            onEvent: onEvent,
-            invariantFailureSink: connection.invariantFailureSink
-        )
-        do {
-            try owner.install(on: device)
-        } catch {
-            owner.cancel()
-            device.release()
-            throw error
-        }
-
-        return LiveDataTransferDeviceBinding(
-            seatID: seatID,
-            device: device,
-            owner: owner
-        )
-    }
-
-    func adoptDataOffer(
-        handle: RawDataOfferHandle,
-        id: DataOfferID,
-        onEvent: @escaping (RawDataOfferEvent) -> Void
-    ) throws -> any DataTransferOfferBinding {
-        let globals = try connection.bindRequiredGlobals()
-        guard case .bound(let manager) = globals.extensions.dataDeviceManager else {
-            throw DataTransferError.unavailable
-        }
-
-        let offer = try manager.adoptDataOffer(handle)
-        let owner = RawDataOfferOwner(
-            onEvent: onEvent,
-            invariantFailureSink: connection.invariantFailureSink
-        )
-        do {
-            try owner.install(on: offer)
-        } catch {
-            owner.cancel()
-            offer.destroy()
-            throw error
-        }
-
-        return LiveDataTransferOfferBinding(id: id, offer: offer, owner: owner)
-    }
-}
-
-private final class LiveDataTransferDeviceBinding: DataTransferDeviceBinding {
-    let seatID: SeatID
-
-    private let device: RawDataDevice
-    private let owner: RawDataDeviceOwner
-    private var isReleased = false
-
-    init(
-        seatID bindingSeatID: SeatID,
-        device rawDevice: RawDataDevice,
-        owner listenerOwner: RawDataDeviceOwner
-    ) {
-        seatID = bindingSeatID
-        device = rawDevice
-        owner = listenerOwner
-    }
-
-    func release() {
-        guard !isReleased else {
-            return
-        }
-
-        isReleased = true
-        owner.cancel()
-        device.release()
-    }
-
-    deinit {
-        release()
-    }
-}
-
-private final class LiveDataTransferOfferBinding: DataTransferOfferBinding {
-    let id: DataOfferID
-
-    private let offer: RawDataOffer
-    private let owner: RawDataOfferOwner
-    private var isDestroyed = false
-
-    init(
-        id offerID: DataOfferID,
-        offer rawOffer: RawDataOffer,
-        owner listenerOwner: RawDataOfferOwner
-    ) {
-        id = offerID
-        offer = rawOffer
-        owner = listenerOwner
-    }
-
-    func destroy() {
-        guard !isDestroyed else {
-            return
-        }
-
-        isDestroyed = true
-        owner.cancel()
-        offer.destroy()
-    }
-
-    deinit {
-        destroy()
     }
 }

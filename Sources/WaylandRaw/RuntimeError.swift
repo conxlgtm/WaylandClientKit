@@ -43,6 +43,7 @@ package enum RawSystemOperation: Equatable, Sendable, CustomStringConvertible {
     case displayError
     case keymapFstat
     case keymapMmap
+    case createPipe
     case duplicateFileDescriptor
     case closeFileDescriptor
 
@@ -78,6 +79,8 @@ package enum RawSystemOperation: Equatable, Sendable, CustomStringConvertible {
             "inspect keyboard keymap file"
         case .keymapMmap:
             "map keyboard keymap file"
+        case .createPipe:
+            "create pipe"
         case .duplicateFileDescriptor:
             "duplicate file descriptor"
         case .closeFileDescriptor:
