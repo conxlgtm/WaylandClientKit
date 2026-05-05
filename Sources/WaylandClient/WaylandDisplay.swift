@@ -297,7 +297,11 @@ extension WaylandDisplay {
         }
     }
 
-    public func setClipboard(
+    /// Requests ownership of the regular clipboard selection for a seat.
+    ///
+    /// The compositor validates `serial` at the protocol boundary; this call creates and installs
+    /// the local data source request but cannot prove compositor acceptance synchronously.
+    public func requestClipboardSelection(
         _ configuration: ClipboardSourceConfiguration,
         seatID: SeatID,
         serial: InputSerial
@@ -310,11 +314,14 @@ extension WaylandDisplay {
         return ClipboardSource(snapshot: source, display: self)
     }
 
-    public func clearClipboard(seatID: SeatID, serial: InputSerial) throws {
+    /// Requests clearing the regular clipboard selection for a seat.
+    ///
+    /// The compositor validates `serial` at the protocol boundary.
+    public func requestClearClipboard(seatID: SeatID, serial: InputSerial) throws {
         try requireCore().clearClipboard(seatID: seatID, serial: serial)
     }
 
-    package func clearClipboard(
+    package func requestClearClipboard(
         sourceID: DataSourceID,
         seatID: SeatID,
         serial: InputSerial

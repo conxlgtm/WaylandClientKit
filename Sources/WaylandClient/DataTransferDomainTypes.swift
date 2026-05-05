@@ -27,7 +27,6 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case sourceDataUnavailable(MIMEType)
     case mimeTypeUnavailable(MIMEType)
     case cancelled
-    case invalidSerial(seatID: SeatID, serial: InputSerial)
 
     public var description: String {
         switch self {
@@ -79,8 +78,6 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "MIME type unavailable: \(mimeType.description)"
         case .cancelled:
             "data transfer was cancelled"
-        case .invalidSerial(let seatID, let serial):
-            "invalid input serial \(serial) for seat \(seatID)"
         }
     }
 }
@@ -269,7 +266,7 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
         closeDescriptor = close
     }
 
-    public var rawValue: Int32 {
+    package var rawValue: Int32 {
         guard let storage else {
             preconditionFailure("file descriptor was already closed or released")
         }

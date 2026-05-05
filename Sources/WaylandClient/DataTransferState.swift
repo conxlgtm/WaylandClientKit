@@ -188,8 +188,8 @@ package struct DataTransferState: Equatable, Sendable {
         if seat.hasDataDevice {
             effects.append(.releaseDataDevice(seatID))
         }
-        appendSelectionOfferCleanup(seat.selectionOfferID, to: &effects)
-        appendSelectionSourceCleanup(seat.selectionSourceID, to: &effects)
+        appendSelectionOfferCleanup(seat.selectionOfferID, seatID: seatID, to: &effects)
+        appendSelectionSourceCleanup(seat.selectionSourceID, seatID: seatID, to: &effects)
 
         for offer in offers.values where offer.role.seatID == seatID {
             appendSelectionOfferCleanup(offer.id, to: &effects)
@@ -238,8 +238,13 @@ package struct DataTransferState: Equatable, Sendable {
         guard var seat = seats[seatID] else {
             throw DataTransferError.unknownSeat(seatID)
         }
-        if let offerID, offers[offerID] == nil {
-            throw DataTransferError.unknownOffer
+        if let offerID {
+            guard let offer = offers[offerID] else {
+                throw DataTransferError.unknownOffer
+            }
+            guard offer.role.seatID == seatID else {
+                throw DataTransferError.unknownOffer
+            }
         }
 
         guard seat.selectionOfferID != offerID else {
@@ -247,7 +252,7 @@ package struct DataTransferState: Equatable, Sendable {
         }
 
         var effects: [DataTransferEffect] = []
-        appendSelectionOfferCleanup(seat.selectionOfferID, to: &effects)
+        appendSelectionOfferCleanup(seat.selectionOfferID, seatID: seatID, to: &effects)
         seat.selectionOfferID = offerID
         seats[seatID] = seat
         effects.append(.publishSelectionChanged(seatID: seatID, offerID: offerID))
@@ -277,8 +282,13 @@ package struct DataTransferState: Equatable, Sendable {
         guard var seat = seats[seatID] else {
             throw DataTransferError.unknownSeat(seatID)
         }
-        if let sourceID, sources[sourceID] == nil {
-            throw DataTransferError.unknownSource
+        if let sourceID {
+            guard let source = sources[sourceID] else {
+                throw DataTransferError.unknownSource
+            }
+            guard source.seatID == seatID else {
+                throw DataTransferError.unknownSource
+            }
         }
 
         guard seat.selectionSourceID != sourceID else {
@@ -286,7 +296,7 @@ package struct DataTransferState: Equatable, Sendable {
         }
 
         var effects: [DataTransferEffect] = []
-        appendSelectionSourceCleanup(seat.selectionSourceID, to: &effects)
+        appendSelectionSourceCleanup(seat.selectionSourceID, seatID: seatID, to: &effects)
         seat.selectionSourceID = sourceID
         seats[seatID] = seat
         return effects
@@ -309,6 +319,18 @@ package struct DataTransferState: Equatable, Sendable {
 
     private mutating func appendSelectionOfferCleanup(
         _ offerID: DataOfferID?,
+        seatID: SeatID,
+        to effects: inout [DataTransferEffect]
+    ) {
+        guard let offerID, offers[offerID]?.role.seatID == seatID else {
+            return
+        }
+
+        appendSelectionOfferCleanup(offerID, to: &effects)
+    }
+
+    private mutating func appendSelectionOfferCleanup(
+        _ offerID: DataOfferID?,
         to effects: inout [DataTransferEffect]
     ) {
         guard let offerID, offers.removeValue(forKey: offerID) != nil else {
@@ -316,6 +338,18 @@ package struct DataTransferState: Equatable, Sendable {
         }
 
         effects.append(.destroyOffer(offerID))
+    }
+
+    private mutating func appendSelectionSourceCleanup(
+        _ sourceID: DataSourceID?,
+        seatID: SeatID,
+        to effects: inout [DataTransferEffect]
+    ) {
+        guard let sourceID, sources[sourceID]?.seatID == seatID else {
+            return
+        }
+
+        appendSelectionSourceCleanup(sourceID, to: &effects)
     }
 
     private mutating func appendSelectionSourceCleanup(

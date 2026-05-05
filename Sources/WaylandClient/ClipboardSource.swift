@@ -71,8 +71,11 @@ public struct ClipboardSource: Sendable, Hashable {
         ClipboardSourceIdentity(id)
     }
 
-    public func clear(serial: InputSerial) async throws {
-        try await display.clearClipboard(sourceID: id, seatID: seatID, serial: serial)
+    /// Requests clearing this source from the regular clipboard selection.
+    ///
+    /// The compositor validates `serial` at the protocol boundary.
+    public func requestClear(serial: InputSerial) async throws {
+        try await display.requestClearClipboard(sourceID: id, seatID: seatID, serial: serial)
     }
 
     public static func == (lhs: ClipboardSource, rhs: ClipboardSource) -> Bool {

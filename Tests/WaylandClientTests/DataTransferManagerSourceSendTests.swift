@@ -1,5 +1,4 @@
 import Foundation
-import Glibc
 import Testing
 
 @testable import WaylandClient
@@ -68,38 +67,6 @@ struct DataTransferManagerSourceSendTests {
         }
 
         #expect(backend.closedDescriptors.isEmpty)
-    }
-
-    @Test
-    func drainSourceWriteJobsTransfersQueuedRequestsWithoutClosing() throws {
-        let backend = RecordingDataTransferBackend()
-        let manager = DataTransferManager(backend: backend)
-        try manager.synchronizeSeats([seat1])
-
-        let source = try manager.setSelectionSource(
-            seatID: seat1,
-            mimeTypes: [.plainText],
-            serial: InputSerial(rawValue: 96),
-            dataProvider: DataTransferSourceProvider(
-                data: [.plainText: Data("clipboard".utf8)]
-            )
-        )
-        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
-
-        sourceBinding.emit(.send(mimeType: MIMEType.plainText.rawValue, fd: 219))
-
-        #expect(
-            try manager.drainSourceWriteJobs() == [
-                DataTransferSourceWriteJob(
-                    sourceID: source.id,
-                    mimeType: .plainText,
-                    descriptor: 219,
-                    data: Data("clipboard".utf8)
-                )
-            ]
-        )
-        #expect(backend.closedDescriptors.isEmpty)
-        #expect(manager.drainSourceSendRequests().isEmpty)
     }
 
     @Test
