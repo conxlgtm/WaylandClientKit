@@ -10,6 +10,8 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case unavailable
     case unknownSeat(SeatID)
     case missingDataDevice(SeatID)
+    case duplicateOffer
+    case duplicateSource
     case unknownOffer
     case offerExpired
     case unknownSource
@@ -38,6 +40,10 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "unknown seat: \(seatID)"
         case .missingDataDevice(let seatID):
             "seat has no data device: \(seatID)"
+        case .duplicateOffer:
+            "duplicate data offer"
+        case .duplicateSource:
+            "duplicate data source"
         case .unknownOffer:
             "unknown data offer"
         case .offerExpired:
