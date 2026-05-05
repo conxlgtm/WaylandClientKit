@@ -5,6 +5,7 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case negativeByteCount(Int)
     case byteCountOverflow(value: Int, multiplier: Int)
     case invalidFileDescriptor(Int32)
+    case createPipe(WaylandSystemErrno)
     case closeFileDescriptor(WaylandSystemErrno)
     case transferTooLarge(limit: ByteCount)
     case unavailable
@@ -30,6 +31,8 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "byte count overflow: \(value) * \(multiplier)"
         case .invalidFileDescriptor(let descriptor):
             "invalid file descriptor: \(descriptor)"
+        case .createPipe(let error):
+            "create pipe failed: \(error.description)"
         case .closeFileDescriptor(let error):
             "close file descriptor failed: \(error.description)"
         case .transferTooLarge(let limit):

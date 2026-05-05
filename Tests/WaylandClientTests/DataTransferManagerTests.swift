@@ -1,3 +1,4 @@
+import Synchronization
 import Testing
 import WaylandRaw
 
@@ -231,12 +232,19 @@ struct DataTransferManagerTests {
     }
 }
 
-private final class RecordingDataTransferBackend: DataTransferManagerBackend {
+final class RecordingDataTransferBackend: DataTransferManagerBackend {
     var boundSeatIDs: [SeatID] = []
     var failingSeatID: SeatID?
+    var pipeDescriptors = DataTransferPipeDescriptors(readEnd: 100, writeEnd: 101)
+    var pipeCreationCount = 0
+    var failingDescriptorAdoptions: Set<Int32> = []
+    var closedDescriptors: [Int32] {
+        descriptorCloseRecorder.descriptors
+    }
 
     private var bindings: [SeatID: RecordingDataTransferDeviceBinding] = [:]
     private var offerBindingsByHandle: [RawDataOfferHandle: RecordingDataTransferOfferBinding] = [:]
+    private let descriptorCloseRecorder = DescriptorCloseRecorder()
 
     func preconditionIsOwnerThread() {
         // Test backend has no thread-affinity boundary.
@@ -270,6 +278,28 @@ private final class RecordingDataTransferBackend: DataTransferManagerBackend {
         return binding
     }
 
+    func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors {
+        pipeCreationCount += 1
+        return pipeDescriptors
+    }
+
+    func adoptOwnedFileDescriptor(_ descriptor: Int32) throws -> OwnedFileDescriptor {
+        if failingDescriptorAdoptions.contains(descriptor) {
+            throw DataTransferError.invalidFileDescriptor(descriptor)
+        }
+
+        let recorder = descriptorCloseRecorder
+        return try OwnedFileDescriptor(adopting: descriptor) { descriptor in
+            recorder.record(descriptor)
+            return 0
+        }
+    }
+
+    func closeFileDescriptor(_ descriptor: Int32) -> Int32 {
+        descriptorCloseRecorder.record(descriptor)
+        return 0
+    }
+
     func binding(for seatID: SeatID) -> RecordingDataTransferDeviceBinding? {
         bindings[seatID]
     }
@@ -279,7 +309,19 @@ private final class RecordingDataTransferBackend: DataTransferManagerBackend {
     }
 }
 
-private final class RecordingDataTransferDeviceBinding: DataTransferDeviceBinding {
+private final class DescriptorCloseRecorder: Sendable {
+    private let storage = Mutex<[Int32]>([])
+
+    var descriptors: [Int32] {
+        storage.withLock { $0 }
+    }
+
+    func record(_ descriptor: Int32) {
+        storage.withLock { $0.append(descriptor) }
+    }
+}
+
+final class RecordingDataTransferDeviceBinding: DataTransferDeviceBinding {
     let seatID: SeatID
     var releaseCount = 0
 
@@ -302,9 +344,15 @@ private final class RecordingDataTransferDeviceBinding: DataTransferDeviceBindin
     }
 }
 
-private final class RecordingDataTransferOfferBinding: DataTransferOfferBinding {
+final class RecordingDataTransferOfferBinding: DataTransferOfferBinding {
+    struct Receive: Equatable {
+        let mimeType: MIMEType
+        let fd: Int32
+    }
+
     let id: DataOfferID
     var destroyCount = 0
+    var receives: [Receive] = []
 
     private let onEvent: (RawDataOfferEvent) -> Void
 
@@ -315,6 +363,10 @@ private final class RecordingDataTransferOfferBinding: DataTransferOfferBinding 
 
     func emit(_ event: RawDataOfferEvent) {
         onEvent(event)
+    }
+
+    func receive(mimeType: MIMEType, fd: Int32) {
+        receives.append(Receive(mimeType: mimeType, fd: fd))
     }
 
     func destroy() {
