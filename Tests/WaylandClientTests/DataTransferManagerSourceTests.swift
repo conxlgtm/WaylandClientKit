@@ -137,6 +137,95 @@ struct DataTransferManagerSourceTests {
     }
 
     @Test
+    func sourceSendWithoutProviderClosesDescriptorAndReportsTypedError() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+
+        let source = try manager.setSelectionSource(
+            seatID: seat1,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 75)
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+
+        sourceBinding.emit(.send(mimeType: MIMEType.plainText.rawValue, fd: 200))
+
+        #expect(backend.closedDescriptors == [200])
+        #expect(throws: DataTransferError.sourceDataUnavailable(.plainText)) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+    }
+
+    @Test
+    func sourceSendForUnavailableMimeClosesDescriptorAndReportsMimeError() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+
+        let source = try manager.setSelectionSource(
+            seatID: seat1,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 76)
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+
+        sourceBinding.emit(.send(mimeType: MIMEType.uriList.rawValue, fd: 201))
+
+        #expect(backend.closedDescriptors == [201])
+        #expect(throws: DataTransferError.mimeTypeUnavailable(.uriList)) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+    }
+
+    @Test
+    func sourceSendWithInvalidMimeClosesDescriptorAndReportsMimeValidationError() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+
+        let source = try manager.setSelectionSource(
+            seatID: seat1,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 77)
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+
+        sourceBinding.emit(.send(mimeType: nil, fd: 202))
+
+        #expect(backend.closedDescriptors == [202])
+        #expect(throws: DataTransferError.invalidMIMEType("")) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+    }
+
+    @Test
+    func sourceSendCloseFailureReportsCloseError() throws {
+        let backend = RecordingDataTransferBackend()
+        backend.failingCloseDescriptors[203] = 9
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+
+        let source = try manager.setSelectionSource(
+            seatID: seat1,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 78)
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+
+        sourceBinding.emit(.send(mimeType: MIMEType.plainText.rawValue, fd: 203))
+
+        #expect(backend.closedDescriptors == [203])
+        #expect(
+            throws: DataTransferError.closeFileDescriptor(
+                WaylandSystemErrno(unchecked: 9)
+            )
+        ) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+    }
+
+    @Test
     func settingSelectionSourceRejectsUnknownSeatAndSeatWithoutDataDevice() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
