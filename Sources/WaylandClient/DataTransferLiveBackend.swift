@@ -112,6 +112,14 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
         try OwnedFileDescriptor(adopting: descriptor)
     }
 
+    func writeFileDescriptor(_ descriptor: Int32, bytes: [UInt8]) throws -> Int {
+        do {
+            return try RawFileDescriptor.write(descriptor: descriptor, bytes: bytes)
+        } catch {
+            throw Self.dataTransferWriteError(error)
+        }
+    }
+
     func closeFileDescriptor(_ descriptor: Int32) -> Int32 {
         guard Glibc.close(descriptor) == 0 else {
             return errno > 0 ? errno : EIO
@@ -126,6 +134,17 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
             .createPipe(WaylandSystemErrno(unchecked: systemError.errno.rawValue))
         case .systemErrnoUnavailable:
             .createPipe(WaylandSystemErrno(unchecked: EIO))
+        default:
+            .unavailable
+        }
+    }
+
+    private static func dataTransferWriteError(_ error: RuntimeError) -> DataTransferError {
+        switch error {
+        case .system(let systemError):
+            .writeFileDescriptor(WaylandSystemErrno(unchecked: systemError.errno.rawValue))
+        case .systemErrnoUnavailable:
+            .writeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
         default:
             .unavailable
         }

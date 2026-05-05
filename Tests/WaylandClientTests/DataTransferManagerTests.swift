@@ -253,13 +253,21 @@ struct DataTransferManagerTests {
 }
 
 final class RecordingDataTransferBackend: DataTransferManagerBackend {
+    struct DescriptorWrite: Equatable {
+        let descriptor: Int32
+        let bytes: [UInt8]
+    }
+
     var boundSeatIDs: [SeatID] = []
     var failingSeatID: SeatID?
     var pipeDescriptors = DataTransferPipeDescriptors(readEnd: 100, writeEnd: 101)
     var pipeCreationCount = 0
     var failingDescriptorAdoptions: Set<Int32> = []
     var failingSourceCreationIDs: Set<DataSourceID> = []
+    var failingWriteDescriptors: [Int32: DataTransferError] = [:]
+    var maximumWriteByteCount: Int?
     var failingCloseDescriptors: [Int32: Int32] = [:]
+    var descriptorWrites: [DescriptorWrite] = []
     var closedDescriptors: [Int32] {
         descriptorCloseRecorder.descriptors
     }
@@ -329,6 +337,22 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
             recorder.record(descriptor)
             return 0
         }
+    }
+
+    func writeFileDescriptor(_ descriptor: Int32, bytes: [UInt8]) throws -> Int {
+        if let error = failingWriteDescriptors[descriptor] {
+            throw error
+        }
+
+        let bytesToWrite: [UInt8]
+        if let maximumWriteByteCount {
+            bytesToWrite = Array(bytes.prefix(maximumWriteByteCount))
+        } else {
+            bytesToWrite = bytes
+        }
+
+        descriptorWrites.append(DescriptorWrite(descriptor: descriptor, bytes: bytesToWrite))
+        return bytesToWrite.count
     }
 
     func closeFileDescriptor(_ descriptor: Int32) -> Int32 {

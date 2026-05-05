@@ -48,6 +48,7 @@ package protocol DataTransferManagerBackend: AnyObject {
     ) throws -> any DataTransferSourceBinding
     func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors
     func adoptOwnedFileDescriptor(_ descriptor: Int32) throws -> OwnedFileDescriptor
+    func writeFileDescriptor(_ descriptor: Int32, bytes: [UInt8]) throws -> Int
     func closeFileDescriptor(_ descriptor: Int32) -> Int32
 }
 
