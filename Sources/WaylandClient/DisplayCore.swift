@@ -189,7 +189,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         eventHub.finish(throwing: error)
     }
 
-    func withFatalFailureFinalization<Result>(
+    func withFatalFailureFinalization<Result: ~Copyable>(
         _ body: () throws -> Result
     ) rethrows -> Result {
         defer { finalizeFatalFailureAfterDispatch() }
@@ -282,6 +282,26 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             throw ClientError.display(.closedPopup)
         }
         return popup
+    }
+}
+
+extension DisplayCore {
+    func clipboardOffer(for seatID: SeatID) throws -> DataOfferSnapshot? {
+        try withFatalFailureFinalization {
+            try requireSession().clipboardOfferOnOwnerThread(for: seatID)
+        }
+    }
+
+    func receiveClipboardOffer(
+        id offerID: DataOfferID,
+        mimeType: MIMEType
+    ) throws -> OwnedFileDescriptor {
+        try withFatalFailureFinalization {
+            try requireSession().receiveClipboardOfferOnOwnerThread(
+                id: offerID,
+                mimeType: mimeType
+            )
+        }
     }
 }
 
