@@ -1,3 +1,5 @@
+import Foundation
+
 public struct ClipboardOffer: Sendable, Hashable {
     package let id: DataOfferID
     public let seatID: SeatID
@@ -20,6 +22,14 @@ public struct ClipboardOffer: Sendable, Hashable {
 
     public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {
         try await display.receiveClipboardOffer(id: id, mimeType: mimeType)
+    }
+
+    public func read(
+        _ mimeType: MIMEType,
+        limit: ByteCount = .defaultClipboardReadLimit
+    ) async throws -> Data {
+        var descriptor = try await receive(mimeType)
+        return try descriptor.readData(limit: limit)
     }
 
     public static func == (lhs: ClipboardOffer, rhs: ClipboardOffer) -> Bool {

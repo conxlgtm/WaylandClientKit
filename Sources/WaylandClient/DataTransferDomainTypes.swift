@@ -1,4 +1,6 @@
+import Foundation
 import Glibc
+import WaylandRaw
 
 public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertible {
     case invalidMIMEType(String)
@@ -6,6 +8,7 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case byteCountOverflow(value: Int, multiplier: Int)
     case invalidFileDescriptor(Int32)
     case createPipe(WaylandSystemErrno)
+    case readFileDescriptor(WaylandSystemErrno)
     case closeFileDescriptor(WaylandSystemErrno)
     case transferTooLarge(limit: ByteCount)
     case unavailable
@@ -33,6 +36,8 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "invalid file descriptor: \(descriptor)"
         case .createPipe(let error):
             "create pipe failed: \(error.description)"
+        case .readFileDescriptor(let error):
+            "read file descriptor failed: \(error.description)"
         case .closeFileDescriptor(let error):
             "close file descriptor failed: \(error.description)"
         case .transferTooLarge(let limit):
@@ -165,18 +170,24 @@ public struct ByteCount: Equatable, Comparable, Sendable, CustomStringConvertibl
 }
 
 public struct OwnedFileDescriptor: ~Copyable, Sendable {
+    private static let readChunkByteCount = 16 * 1_024
+
     private var storage: Int32?
+    private let readDescriptor: @Sendable (Int32, Int) throws -> [UInt8]
     private let closeDescriptor: @Sendable (Int32) -> Int32
 
     public init(adopting rawValue: Int32) throws {
         try self.init(
             adopting: rawValue,
+            readDescriptor: Self.defaultReadDescriptor,
             closeDescriptor: Self.defaultCloseDescriptor
         )
     }
 
     package init(
         adopting rawValue: Int32,
+        readDescriptor read: @escaping @Sendable (Int32, Int) throws -> [UInt8] =
+            Self.defaultReadDescriptor,
         closeDescriptor close: @escaping @Sendable (Int32) -> Int32
     ) throws {
         guard rawValue >= 0 else {
@@ -184,6 +195,7 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
         }
 
         storage = rawValue
+        readDescriptor = read
         closeDescriptor = close
     }
 
@@ -205,6 +217,25 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
         }
 
         return "file descriptor \(storage)"
+    }
+
+    public mutating func readData(
+        limit: ByteCount = .defaultClipboardReadLimit
+    ) throws -> Data {
+        let data: Data
+        do {
+            data = try readDataWithoutClosing(limit: limit)
+        } catch {
+            do {
+                try close()
+            } catch {
+                _ = error
+            }
+            throw error
+        }
+
+        try close()
+        return data
     }
 
     public mutating func close() throws {
@@ -229,6 +260,60 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
 
         storage = nil
         return descriptor
+    }
+
+    private mutating func readDataWithoutClosing(limit: ByteCount) throws -> Data {
+        var data = Data()
+
+        while true {
+            let remainingByteCount = limit.rawValue - data.count
+            let readByteCount = Self.nextReadByteCount(remainingByteCount)
+            let bytes = try readDescriptor(rawValue, readByteCount)
+            guard !bytes.isEmpty else {
+                return data
+            }
+            guard bytes.count <= remainingByteCount else {
+                throw DataTransferError.transferTooLarge(limit: limit)
+            }
+
+            data.append(contentsOf: bytes)
+        }
+    }
+
+    private static func nextReadByteCount(_ remainingByteCount: Int) -> Int {
+        let byteCountIncludingOverflowProbe =
+            if remainingByteCount == Int.max {
+                remainingByteCount
+            } else {
+                remainingByteCount + 1
+            }
+
+        return max(1, min(readChunkByteCount, byteCountIncludingOverflowProbe))
+    }
+
+    private static func defaultReadDescriptor(
+        _ descriptor: Int32,
+        maximumByteCount: Int
+    ) throws -> [UInt8] {
+        do {
+            return try RawFileDescriptor.read(
+                descriptor: descriptor,
+                maximumByteCount: maximumByteCount
+            )
+        } catch {
+            throw dataTransferReadError(error)
+        }
+    }
+
+    private static func dataTransferReadError(_ error: RuntimeError) -> DataTransferError {
+        switch error {
+        case .system(let systemError):
+            .readFileDescriptor(WaylandSystemErrno(unchecked: systemError.errno.rawValue))
+        case .systemErrnoUnavailable:
+            .readFileDescriptor(WaylandSystemErrno(unchecked: EIO))
+        default:
+            .unavailable
+        }
     }
 
     deinit {
