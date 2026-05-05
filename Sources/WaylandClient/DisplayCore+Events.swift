@@ -11,7 +11,14 @@ extension DisplayCore {
         }
     }
 
+    func publishDataTransferDiagnostics(_ diagnostics: [DataTransferDiagnostic]) {
+        for diagnostic in diagnostics {
+            eventHub.publishDataTransferDiagnostic(diagnostic)
+        }
+    }
+
     func publishSessionEvents(_ activeSession: DisplaySession) {
+        publishDataTransferDiagnostics(activeSession.drainDataTransferDiagnosticsOnOwnerThread())
         publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
         publishInputEvents(activeSession.drainInputEventsOnOwnerThread())
     }
