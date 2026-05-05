@@ -22,6 +22,10 @@ public actor WaylandDisplay {
         runtime.inputEvents
     }
 
+    public nonisolated var dataTransferEvents: DataTransferEvents {
+        runtime.dataTransferEvents
+    }
+
     public nonisolated var diagnostics: DisplayDiagnostics {
         runtime.diagnostics
     }
@@ -324,6 +328,10 @@ private final class WaylandDisplayRuntime: Sendable {
 
     var inputEvents: InputEvents {
         eventHub.inputEvents()
+    }
+
+    var dataTransferEvents: DataTransferEvents {
+        eventHub.dataTransferEvents()
     }
 
     var diagnostics: DisplayDiagnostics {
