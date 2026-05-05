@@ -68,13 +68,50 @@ extension DataTransferManager {
         sourceID: DataSourceID
     ) {
         do {
-            guard case .cancelled = event else {
-                return
+            switch event {
+            case .send(let rawMimeType, let descriptor):
+                try handleDataSourceSend(
+                    mimeType: rawMimeType,
+                    descriptor: descriptor,
+                    sourceID: sourceID
+                )
+            case .cancelled:
+                try apply(.sourceCancelled(sourceID))
+            case .target, .dndDropPerformed, .dndFinished, .action:
+                break
             }
-
-            try apply(.sourceCancelled(sourceID))
         } catch {
             pendingCallbackError = error
+        }
+    }
+
+    private func handleDataSourceSend(
+        mimeType rawMimeType: String?,
+        descriptor: Int32,
+        sourceID: DataSourceID
+    ) throws {
+        do {
+            guard let source = state.sourceSnapshot(sourceID) else {
+                throw DataTransferError.unknownSource
+            }
+            let mimeType = try MIMEType(rawMimeType ?? "")
+            guard source.mimeTypes.contains(mimeType) else {
+                throw DataTransferError.mimeTypeUnavailable(mimeType)
+            }
+
+            throw DataTransferError.sourceDataUnavailable(mimeType)
+        } catch {
+            try closeSourceSendDescriptor(descriptor)
+            throw error
+        }
+    }
+
+    private func closeSourceSendDescriptor(_ descriptor: Int32) throws {
+        let closeResult = backend.closeFileDescriptor(descriptor)
+        guard closeResult == 0 else {
+            throw DataTransferError.closeFileDescriptor(
+                WaylandSystemErrno(unchecked: closeResult)
+            )
         }
     }
 

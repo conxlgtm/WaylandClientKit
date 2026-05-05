@@ -20,6 +20,7 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case offerExpired
     case unknownSource
     case sourceCancelled
+    case sourceDataUnavailable(MIMEType)
     case mimeTypeUnavailable(MIMEType)
     case cancelled
     case invalidSerial(seatID: SeatID, serial: InputSerial)
@@ -60,6 +61,8 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "unknown data source"
         case .sourceCancelled:
             "data source was cancelled"
+        case .sourceDataUnavailable(let mimeType):
+            "data source has no provider for MIME type: \(mimeType.description)"
         case .mimeTypeUnavailable(let mimeType):
             "MIME type unavailable: \(mimeType.description)"
         case .cancelled:

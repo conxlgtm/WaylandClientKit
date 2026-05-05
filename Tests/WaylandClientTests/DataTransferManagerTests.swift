@@ -259,6 +259,7 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
     var pipeCreationCount = 0
     var failingDescriptorAdoptions: Set<Int32> = []
     var failingSourceCreationIDs: Set<DataSourceID> = []
+    var failingCloseDescriptors: [Int32: Int32] = [:]
     var closedDescriptors: [Int32] {
         descriptorCloseRecorder.descriptors
     }
@@ -332,7 +333,7 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
 
     func closeFileDescriptor(_ descriptor: Int32) -> Int32 {
         descriptorCloseRecorder.record(descriptor)
-        return 0
+        return failingCloseDescriptors[descriptor] ?? 0
     }
 
     func binding(for seatID: SeatID) -> RecordingDataTransferDeviceBinding? {
