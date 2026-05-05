@@ -7,6 +7,8 @@ import WaylandRaw
 struct DataTransferManagerTests {
     private let seat1 = SeatID(rawValue: 1)
     private let seat2 = SeatID(rawValue: 2)
+    private let offerHandle1 = RawDataOfferHandle(uncheckedRawValue: 0xDADA_0001)
+    private let offerHandle2 = RawDataOfferHandle(uncheckedRawValue: 0xDADA_0002)
 
     @Test
     func synchronizingSeatsBindsNewSeatsInStableOrder() throws {
@@ -99,6 +101,121 @@ struct DataTransferManagerTests {
     }
 
     @Test
+    func selectionOfferAdoptionTracksMimeTypesAndPublishesSelection() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let offer = try #require(backend.offerBinding(for: offerHandle1))
+        offer.emit(.offer(MIMEType.plainText.rawValue))
+        offer.emit(.offer(MIMEType.plainTextUTF8.rawValue))
+        device.emit(.selection(offerHandle1))
+
+        #expect(
+            manager.offerSnapshots
+                == [
+                    DataOfferSnapshot(
+                        id: offer.id,
+                        role: .selection(seatID: seat1),
+                        mimeTypes: [.plainText, .plainTextUTF8]
+                    )
+                ]
+        )
+        #expect(
+            manager.selectionChanges
+                == [DataTransferSelectionChange(seatID: seat1, offerID: offer.id)]
+        )
+    }
+
+    @Test
+    func mimeTypeAfterSelectionUpdatesExistingOffer() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let offer = try #require(backend.offerBinding(for: offerHandle1))
+        device.emit(.selection(offerHandle1))
+        offer.emit(.offer(MIMEType.uriList.rawValue))
+
+        #expect(manager.offerSnapshots.first?.mimeTypes == [.uriList])
+    }
+
+    @Test
+    func replacingSelectionDestroysPreviousOfferBinding() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let firstOffer = try #require(backend.offerBinding(for: offerHandle1))
+        device.emit(.selection(offerHandle1))
+        device.emit(.dataOffer(offerHandle2))
+        let secondOffer = try #require(backend.offerBinding(for: offerHandle2))
+        device.emit(.selection(offerHandle2))
+
+        #expect(firstOffer.destroyCount == 1)
+        #expect(secondOffer.destroyCount == 0)
+        #expect(manager.offerSnapshots.map(\.id) == [secondOffer.id])
+    }
+
+    @Test
+    func clearingSelectionDestroysCurrentOfferBinding() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let offer = try #require(backend.offerBinding(for: offerHandle1))
+        device.emit(.selection(offerHandle1))
+        device.emit(.selection(nil))
+
+        #expect(offer.destroyCount == 1)
+        #expect(manager.offerSnapshots.isEmpty)
+        #expect(
+            manager.selectionChanges
+                == [
+                    DataTransferSelectionChange(seatID: seat1, offerID: offer.id),
+                    DataTransferSelectionChange(seatID: seat1, offerID: nil),
+                ]
+        )
+    }
+
+    @Test
+    func removingSeatDestroysPendingOfferBinding() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let offer = try #require(backend.offerBinding(for: offerHandle1))
+        try manager.synchronizeSeats([])
+
+        #expect(offer.destroyCount == 1)
+        #expect(manager.offerSnapshots.isEmpty)
+    }
+
+    @Test
+    func selectingUnknownOfferReportsCallbackError() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.selection(offerHandle1))
+
+        #expect(throws: DataTransferError.unknownOffer) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+    }
+
+    @Test
     func callbackErrorsAreStoredAndThrownOnNextOwnerThreadOperation() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
@@ -119,6 +236,7 @@ private final class RecordingDataTransferBackend: DataTransferManagerBackend {
     var failingSeatID: SeatID?
 
     private var bindings: [SeatID: RecordingDataTransferDeviceBinding] = [:]
+    private var offerBindingsByHandle: [RawDataOfferHandle: RecordingDataTransferOfferBinding] = [:]
 
     func preconditionIsOwnerThread() {
         // Test backend has no thread-affinity boundary.
@@ -142,8 +260,22 @@ private final class RecordingDataTransferBackend: DataTransferManagerBackend {
         return binding
     }
 
+    func adoptDataOffer(
+        handle: RawDataOfferHandle,
+        id: DataOfferID,
+        onEvent: @escaping (RawDataOfferEvent) -> Void
+    ) throws -> any DataTransferOfferBinding {
+        let binding = RecordingDataTransferOfferBinding(id: id, onEvent: onEvent)
+        offerBindingsByHandle[handle] = binding
+        return binding
+    }
+
     func binding(for seatID: SeatID) -> RecordingDataTransferDeviceBinding? {
         bindings[seatID]
+    }
+
+    func offerBinding(for handle: RawDataOfferHandle) -> RecordingDataTransferOfferBinding? {
+        offerBindingsByHandle[handle]
     }
 }
 
@@ -167,5 +299,25 @@ private final class RecordingDataTransferDeviceBinding: DataTransferDeviceBindin
 
     func release() {
         releaseCount += 1
+    }
+}
+
+private final class RecordingDataTransferOfferBinding: DataTransferOfferBinding {
+    let id: DataOfferID
+    var destroyCount = 0
+
+    private let onEvent: (RawDataOfferEvent) -> Void
+
+    init(id offerID: DataOfferID, onEvent eventHandler: @escaping (RawDataOfferEvent) -> Void) {
+        id = offerID
+        onEvent = eventHandler
+    }
+
+    func emit(_ event: RawDataOfferEvent) {
+        onEvent(event)
+    }
+
+    func destroy() {
+        destroyCount += 1
     }
 }
