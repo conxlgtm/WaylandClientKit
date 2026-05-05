@@ -11,6 +11,7 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case readFileDescriptor(WaylandSystemErrno)
     case writeFileDescriptor(WaylandSystemErrno)
     case closeFileDescriptor(WaylandSystemErrno)
+    case fileDescriptorAlreadyReleased
     case transferTooLarge(limit: ByteCount)
     case unavailable
     case unknownSeat(SeatID)
@@ -44,6 +45,8 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "write file descriptor failed: \(error.description)"
         case .closeFileDescriptor(let error):
             "close file descriptor failed: \(error.description)"
+        case .fileDescriptorAlreadyReleased:
+            "file descriptor was already released"
         case .transferTooLarge(let limit):
             "transfer exceeded limit: \(limit.description)"
         case .unavailable:

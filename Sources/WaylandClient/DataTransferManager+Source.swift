@@ -1,10 +1,17 @@
 import WaylandRaw
 
 extension DataTransferManager {
+    package func drainSourceSendRequests() -> [DataTransferSourceSendRequest] {
+        backend.preconditionIsOwnerThread()
+        defer { pendingSourceSendRequests.removeAll(keepingCapacity: true) }
+        return pendingSourceSendRequests
+    }
+
     package func setSelectionSource(
         seatID: SeatID,
         mimeTypes: [MIMEType],
-        serial: InputSerial
+        serial: InputSerial,
+        dataProvider: DataTransferSourceProvider? = nil
     ) throws -> DataSourceSnapshot {
         backend.preconditionIsOwnerThread()
         try throwPendingCallbackErrorIfAny()
@@ -20,11 +27,13 @@ extension DataTransferManager {
             }
             try apply(.sourceCreated(id: sourceID, seatID: seatID, mimeTypes: mimeTypes))
             sourceBindingsByID[sourceID] = sourceBinding
+            sourceProvidersByID[sourceID] = dataProvider
             try apply(.selectionSourceChanged(seatID: seatID, sourceID: sourceID))
             deviceBinding.setSelection(source: sourceBinding, serial: serial)
         } catch {
             sourceBinding.destroy()
             sourceBindingsByID[sourceID] = nil
+            sourceProvidersByID[sourceID] = nil
             throw error
         }
 
@@ -98,8 +107,22 @@ extension DataTransferManager {
             guard source.mimeTypes.contains(mimeType) else {
                 throw DataTransferError.mimeTypeUnavailable(mimeType)
             }
+            guard
+                let dataProvider = sourceProvidersByID[sourceID],
+                let data = dataProvider.data(for: mimeType)
+            else {
+                throw DataTransferError.sourceDataUnavailable(mimeType)
+            }
 
-            throw DataTransferError.sourceDataUnavailable(mimeType)
+            pendingSourceSendRequests.append(
+                DataTransferSourceSendRequest(
+                    sourceID: sourceID,
+                    mimeType: mimeType,
+                    descriptor: descriptor,
+                    data: data,
+                    closeDescriptor: backend.closeFileDescriptor
+                )
+            )
         } catch {
             try closeSourceSendDescriptor(descriptor)
             throw error
@@ -113,6 +136,23 @@ extension DataTransferManager {
                 WaylandSystemErrno(unchecked: closeResult)
             )
         }
+    }
+
+    package func discardPendingSourceSendRequests(for sourceID: DataSourceID) {
+        var remainingRequests: [DataTransferSourceSendRequest] = []
+        for request in pendingSourceSendRequests {
+            if request.sourceID == sourceID {
+                do {
+                    try request.close()
+                } catch {
+                    pendingCallbackError = error
+                }
+            } else {
+                remainingRequests.append(request)
+            }
+        }
+
+        pendingSourceSendRequests = remainingRequests
     }
 
     private func allocateSourceID() -> DataSourceID {
