@@ -62,6 +62,18 @@ package final class RawDataDeviceManager {
         return try .init(pointer: device, version: version, proxyAdoption: proxyAdoption)
     }
 
+    package func adoptDataOffer(_ offerHandle: RawDataOfferHandle) throws -> RawDataOffer {
+        guard let offerPointer = unsafe offerHandle.pointer else {
+            throw RuntimeError.bindFailed("wl_data_offer")
+        }
+
+        return try unsafe .init(
+            pointer: offerPointer,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
+    }
+
     package func destroy() {
         proxy.destroy()
     }

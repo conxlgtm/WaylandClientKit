@@ -1,6 +1,27 @@
 import CWaylandProtocols
 import Glibc
 
+@safe
+package struct RawDataOfferHandle: Equatable, Hashable, Sendable {
+    package let rawValue: UInt
+
+    package init(uncheckedRawValue offerRawValue: UInt) {
+        rawValue = offerRawValue
+    }
+
+    package init?(_ offerPointer: OpaquePointer?) {
+        guard let offerPointer = unsafe offerPointer else {
+            return nil
+        }
+
+        rawValue = UInt(bitPattern: offerPointer)
+    }
+
+    package var pointer: OpaquePointer? {
+        unsafe OpaquePointer(bitPattern: rawValue)
+    }
+}
+
 package enum RawDataOfferEvent: Equatable, Sendable {
     case offer(String?)
     case sourceActions(RawDataDeviceDNDAction)
@@ -21,16 +42,16 @@ package struct RawDataDeviceEnter: Equatable {
     package let surface: OpaquePointer?
     package let x: WaylandFixed
     package let y: WaylandFixed
-    package let offer: OpaquePointer?
+    package let offer: RawDataOfferHandle?
 }
 
 package enum RawDataDeviceEvent: Equatable {
-    case dataOffer(OpaquePointer?)
+    case dataOffer(RawDataOfferHandle?)
     case enter(RawDataDeviceEnter)
     case leave
     case motion(time: UInt32, x: WaylandFixed, y: WaylandFixed)
     case drop
-    case selection(OpaquePointer?)
+    case selection(RawDataOfferHandle?)
 }
 
 private enum DataDeviceListenerInstallState {
@@ -275,7 +296,7 @@ package final class RawDataDeviceOwner {
                 data,
                 message: "wl_data_device data_offer fired without Swift state"
             ) { owner in
-                owner.onEvent(.dataOffer(offer))
+                owner.onEvent(.dataOffer(unsafe RawDataOfferHandle(offer)))
             }
         }
         callbacks.pointee.enter = { data, _, serial, surface, x, y, offer in
@@ -290,7 +311,7 @@ package final class RawDataDeviceOwner {
                             surface: surface,
                             x: WaylandFixed(rawValue: x),
                             y: WaylandFixed(rawValue: y),
-                            offer: offer
+                            offer: unsafe RawDataOfferHandle(offer)
                         )
                     )
                 )
@@ -335,7 +356,7 @@ package final class RawDataDeviceOwner {
                 data,
                 message: "wl_data_device selection fired without Swift state"
             ) { owner in
-                owner.onEvent(.selection(offer))
+                owner.onEvent(.selection(unsafe RawDataOfferHandle(offer)))
             }
         }
     }
