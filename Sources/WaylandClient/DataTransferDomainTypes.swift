@@ -9,6 +9,7 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case invalidFileDescriptor(Int32)
     case createPipe(WaylandSystemErrno)
     case readFileDescriptor(WaylandSystemErrno)
+    case writeFileDescriptor(WaylandSystemErrno)
     case closeFileDescriptor(WaylandSystemErrno)
     case transferTooLarge(limit: ByteCount)
     case unavailable
@@ -39,6 +40,8 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "create pipe failed: \(error.description)"
         case .readFileDescriptor(let error):
             "read file descriptor failed: \(error.description)"
+        case .writeFileDescriptor(let error):
+            "write file descriptor failed: \(error.description)"
         case .closeFileDescriptor(let error):
             "close file descriptor failed: \(error.description)"
         case .transferTooLarge(let limit):
@@ -204,12 +207,14 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
 
     private var storage: Int32?
     private let readDescriptor: @Sendable (Int32, Int) throws -> [UInt8]
+    private let writeDescriptor: @Sendable (Int32, [UInt8]) throws -> Int
     private let closeDescriptor: @Sendable (Int32) -> Int32
 
     public init(adopting rawValue: Int32) throws {
         try self.init(
             adopting: rawValue,
             readDescriptor: Self.defaultReadDescriptor,
+            writeDescriptor: Self.defaultWriteDescriptor,
             closeDescriptor: Self.defaultCloseDescriptor
         )
     }
@@ -218,6 +223,8 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
         adopting rawValue: Int32,
         readDescriptor read: @escaping @Sendable (Int32, Int) throws -> [UInt8] =
             Self.defaultReadDescriptor,
+        writeDescriptor write: @escaping @Sendable (Int32, [UInt8]) throws -> Int =
+            Self.defaultWriteDescriptor,
         closeDescriptor close: @escaping @Sendable (Int32) -> Int32
     ) throws {
         guard rawValue >= 0 else {
@@ -226,6 +233,7 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
 
         storage = rawValue
         readDescriptor = read
+        writeDescriptor = write
         closeDescriptor = close
     }
 
@@ -266,6 +274,21 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
 
         try close()
         return data
+    }
+
+    public mutating func writeData(_ data: Data) throws {
+        do {
+            try writeDataWithoutClosing(data)
+        } catch {
+            do {
+                try close()
+            } catch {
+                _ = error
+            }
+            throw error
+        }
+
+        try close()
     }
 
     public mutating func close() throws {
@@ -321,6 +344,23 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
         return max(1, min(readChunkByteCount, byteCountIncludingOverflowProbe))
     }
 
+    private func writeDataWithoutClosing(_ data: Data) throws {
+        let bytes = Array(data)
+        var writtenByteCount = 0
+
+        while writtenByteCount < bytes.count {
+            let remainingBytes = Array(bytes[writtenByteCount...])
+            let count = try writeDescriptor(rawValue, remainingBytes)
+            guard count > 0, count <= remainingBytes.count else {
+                throw DataTransferError.writeFileDescriptor(
+                    WaylandSystemErrno(unchecked: EIO)
+                )
+            }
+
+            writtenByteCount += count
+        }
+    }
+
     private static func defaultReadDescriptor(
         _ descriptor: Int32,
         maximumByteCount: Int
@@ -341,6 +381,28 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
             .readFileDescriptor(WaylandSystemErrno(unchecked: systemError.errno.rawValue))
         case .systemErrnoUnavailable:
             .readFileDescriptor(WaylandSystemErrno(unchecked: EIO))
+        default:
+            .unavailable
+        }
+    }
+
+    private static func defaultWriteDescriptor(
+        _ descriptor: Int32,
+        bytes: [UInt8]
+    ) throws -> Int {
+        do {
+            return try RawFileDescriptor.write(descriptor: descriptor, bytes: bytes)
+        } catch {
+            throw dataTransferWriteError(error)
+        }
+    }
+
+    private static func dataTransferWriteError(_ error: RuntimeError) -> DataTransferError {
+        switch error {
+        case .system(let systemError):
+            .writeFileDescriptor(WaylandSystemErrno(unchecked: systemError.errno.rawValue))
+        case .systemErrnoUnavailable:
+            .writeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
         default:
             .unavailable
         }

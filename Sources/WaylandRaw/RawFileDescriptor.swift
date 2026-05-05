@@ -61,6 +61,22 @@ package struct RawFileDescriptor: ~Copyable {
         return Array(buffer.prefix(Int(readCount)))
     }
 
+    package static func write(
+        descriptor fileDescriptor: Int32,
+        bytes: [UInt8]
+    ) throws(RuntimeError) -> Int {
+        var writableBytes = bytes
+        let writeCount = unsafe writableBytes.withUnsafeMutableBufferPointer { byteBuffer in
+            unsafe Glibc.write(fileDescriptor, byteBuffer.baseAddress, byteBuffer.count)
+        }
+
+        guard writeCount >= 0 else {
+            throw RuntimeError.systemError(errno: errno, operation: .writeFileDescriptor)
+        }
+
+        return Int(writeCount)
+    }
+
     package func resize(byteCount: Int) throws(RuntimeError) {
         guard ftruncate(rawValue, off_t(byteCount)) == 0 else {
             throw RuntimeError.systemError(errno: errno, operation: .resizeSharedMemoryFile)
