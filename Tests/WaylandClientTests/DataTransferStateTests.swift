@@ -182,7 +182,10 @@ struct DataTransferStateTests {
             .selectionSourceChanged(seatID: seat1, sourceID: source2)
         )
 
-        #expect(replacement.effects == [.cancelSource(source1)])
+        #expect(
+            replacement.effects
+                == [.cancelSource(source1), .publishSourceCancelled(source1)]
+        )
         #expect(replacement.state.sourceSnapshot(source1) == nil)
         #expect(replacement.state.seatSnapshot(seat1)?.selectionSourceID == source2)
     }
@@ -231,6 +234,7 @@ struct DataTransferStateTests {
                     .releaseDataDevice(seat1),
                     .destroyOffer(offer1),
                     .cancelSource(source1),
+                    .publishSourceCancelled(source1),
                 ]
         )
         #expect(removed.state.seatSnapshot(seat1) == nil)

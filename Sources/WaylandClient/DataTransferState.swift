@@ -327,6 +327,7 @@ package struct DataTransferState: Equatable, Sendable {
         }
 
         effects.append(.cancelSource(sourceID))
+        effects.append(.publishSourceCancelled(sourceID))
     }
 }
 

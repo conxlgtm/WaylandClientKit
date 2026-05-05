@@ -64,6 +64,10 @@ struct DataTransferManagerSourceTests {
         #expect(firstBinding.destroyCount == 1)
         #expect(manager.sourceSnapshots.map(\.id) == [second.id])
         #expect(
+            manager.drainDataTransferEvents()
+                == [.sourceCancelled(ClipboardSourceIdentity(first.id))]
+        )
+        #expect(
             device.selections
                 == [
                     RecordingDataTransferDeviceBinding.Selection(
@@ -97,6 +101,10 @@ struct DataTransferManagerSourceTests {
         #expect(sourceBinding.destroyCount == 1)
         #expect(manager.sourceSnapshots.isEmpty)
         #expect(manager.seatSnapshots.first?.selectionSourceID == nil)
+        #expect(
+            manager.drainDataTransferEvents()
+                == [.sourceCancelled(ClipboardSourceIdentity(source.id))]
+        )
         #expect(
             device.selections
                 == [
