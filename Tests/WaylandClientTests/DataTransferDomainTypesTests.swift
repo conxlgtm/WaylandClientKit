@@ -1,4 +1,5 @@
 import Foundation
+import Glibc
 import Synchronization
 import Testing
 
@@ -248,7 +249,123 @@ struct DataTransferDomainTypesTests {
     }
 }
 
+@Suite
+struct OwnedFileDescriptorWriteTests {
+    @Test
+    func ownedFileDescriptorWriteDataWritesAllBytesAndClosesDescriptor() throws {
+        let writeState = Mutex(WriteState(maximumWriteByteCount: 2))
+        let closedDescriptors = Mutex<[Int32]>([])
+        var descriptor = try OwnedFileDescriptor(
+            adopting: 31,
+            writeDescriptor: { _, bytes in
+                writeState.withLock { state in
+                    state.writeAttempts.append(bytes)
+                    return min(state.maximumWriteByteCount, bytes.count)
+                }
+            },
+            closeDescriptor: { descriptor in
+                closedDescriptors.withLock { $0.append(descriptor) }
+                return 0
+            }
+        )
+
+        try descriptor.writeData(Data("hello".utf8))
+        let descriptorIsClosed = descriptor.isClosed
+
+        #expect(descriptorIsClosed)
+        #expect(
+            writeState.withLock { $0.writeAttempts }
+                == [
+                    Array("hello".utf8),
+                    Array("llo".utf8),
+                    Array("o".utf8),
+                ]
+        )
+        #expect(closedDescriptors.withLock { $0 } == [31])
+    }
+
+    @Test
+    func ownedFileDescriptorWriteDataClosesDescriptorOnWriteFailure() throws {
+        let closedDescriptors = Mutex<[Int32]>([])
+        var descriptor = try OwnedFileDescriptor(
+            adopting: 32,
+            writeDescriptor: { _, _ in
+                throw DataTransferError.writeFileDescriptor(
+                    WaylandSystemErrno(unchecked: 5)
+                )
+            },
+            closeDescriptor: { descriptor in
+                closedDescriptors.withLock { $0.append(descriptor) }
+                return 0
+            }
+        )
+
+        #expect(
+            throws: DataTransferError.writeFileDescriptor(
+                WaylandSystemErrno(unchecked: 5)
+            )
+        ) {
+            try descriptor.writeData(Data("hello".utf8))
+        }
+        let descriptorIsClosed = descriptor.isClosed
+
+        #expect(descriptorIsClosed)
+        #expect(closedDescriptors.withLock { $0 } == [32])
+    }
+
+    @Test
+    func ownedFileDescriptorWriteDataTreatsZeroByteWriteAsFailure() throws {
+        let closedDescriptors = Mutex<[Int32]>([])
+        var descriptor = try OwnedFileDescriptor(
+            adopting: 33,
+            writeDescriptor: { _, _ in 0 },
+            closeDescriptor: { descriptor in
+                closedDescriptors.withLock { $0.append(descriptor) }
+                return 0
+            }
+        )
+
+        #expect(
+            throws: DataTransferError.writeFileDescriptor(
+                WaylandSystemErrno(unchecked: EIO)
+            )
+        ) {
+            try descriptor.writeData(Data("hello".utf8))
+        }
+        let descriptorIsClosed = descriptor.isClosed
+
+        #expect(descriptorIsClosed)
+        #expect(closedDescriptors.withLock { $0 } == [33])
+    }
+
+    @Test
+    func ownedFileDescriptorWriteDataReportsCloseFailureAfterSuccess() throws {
+        var descriptor = try OwnedFileDescriptor(
+            adopting: 34,
+            writeDescriptor: { _, bytes in bytes.count },
+            closeDescriptor: { _ in 9 }
+        )
+
+        #expect(
+            throws: DataTransferError.closeFileDescriptor(
+                WaylandSystemErrno(unchecked: 9)
+            )
+        ) {
+            try descriptor.writeData(Data("hello".utf8))
+        }
+
+        let descriptorIsClosed = descriptor.isClosed
+
+        #expect(!descriptorIsClosed)
+    }
+}
+
 private struct ReadState {
     var chunks: [[UInt8]]
     var maximumByteCounts: [Int] = []
+}
+
+private struct WriteState {
+    var maximumWriteByteCount: Int
+    var writeAttempts: [[UInt8]] = []
 }
