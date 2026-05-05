@@ -57,6 +57,8 @@ package final class DataTransferManager {
     package var deviceBindings: [SeatID: any DataTransferDeviceBinding] = [:]
     package var offerBindingsByID: [DataOfferID: any DataTransferOfferBinding] = [:]
     package var sourceBindingsByID: [DataSourceID: any DataTransferSourceBinding] = [:]
+    package var sourceProvidersByID: [DataSourceID: DataTransferSourceProvider] = [:]
+    package var pendingSourceSendRequests: [DataTransferSourceSendRequest] = []
     private var offerIDsByHandle: [RawDataOfferHandle: DataOfferID] = [:]
     private var pendingOfferMimeTypesByID: [DataOfferID: [MIMEType]] = [:]
     private var pendingOfferSeatIDsByID: [DataOfferID: SeatID] = [:]
@@ -286,6 +288,8 @@ package final class DataTransferManager {
 
     private func destroySourceBinding(_ sourceID: DataSourceID) {
         sourceBindingsByID.removeValue(forKey: sourceID)?.destroy()
+        sourceProvidersByID[sourceID] = nil
+        discardPendingSourceSendRequests(for: sourceID)
     }
 
     private func destroyPendingOfferBindings(for seatID: SeatID) {
