@@ -238,12 +238,14 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
     var pipeDescriptors = DataTransferPipeDescriptors(readEnd: 100, writeEnd: 101)
     var pipeCreationCount = 0
     var failingDescriptorAdoptions: Set<Int32> = []
+    var failingSourceCreationIDs: Set<DataSourceID> = []
     var closedDescriptors: [Int32] {
         descriptorCloseRecorder.descriptors
     }
 
     private var bindings: [SeatID: RecordingDataTransferDeviceBinding] = [:]
     private var offerBindingsByHandle: [RawDataOfferHandle: RecordingDataTransferOfferBinding] = [:]
+    private var sourceBindings: [DataSourceID: RecordingDataTransferSourceBinding] = [:]
     private let descriptorCloseRecorder = DescriptorCloseRecorder()
 
     func preconditionIsOwnerThread() {
@@ -278,6 +280,19 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
         return binding
     }
 
+    func createDataSource(
+        id: DataSourceID,
+        onEvent: @escaping (RawDataSourceEvent) -> Void
+    ) throws -> any DataTransferSourceBinding {
+        if failingSourceCreationIDs.contains(id) {
+            throw DataTransferError.unavailable
+        }
+
+        let binding = RecordingDataTransferSourceBinding(id: id, onEvent: onEvent)
+        sourceBindings[id] = binding
+        return binding
+    }
+
     func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors {
         pipeCreationCount += 1
         return pipeDescriptors
@@ -307,6 +322,10 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
     func offerBinding(for handle: RawDataOfferHandle) -> RecordingDataTransferOfferBinding? {
         offerBindingsByHandle[handle]
     }
+
+    func sourceBinding(for id: DataSourceID) -> RecordingDataTransferSourceBinding? {
+        sourceBindings[id]
+    }
 }
 
 private final class DescriptorCloseRecorder: Sendable {
@@ -322,8 +341,14 @@ private final class DescriptorCloseRecorder: Sendable {
 }
 
 final class RecordingDataTransferDeviceBinding: DataTransferDeviceBinding {
+    struct Selection: Equatable {
+        let sourceID: DataSourceID?
+        let serial: InputSerial
+    }
+
     let seatID: SeatID
     var releaseCount = 0
+    var selections: [Selection] = []
 
     private let onEvent: (RawDataDeviceEvent) -> Void
 
@@ -337,6 +362,10 @@ final class RecordingDataTransferDeviceBinding: DataTransferDeviceBinding {
 
     func emit(_ event: RawDataDeviceEvent) {
         onEvent(event)
+    }
+
+    func setSelection(source: (any DataTransferSourceBinding)?, serial: InputSerial) {
+        selections.append(Selection(sourceID: source?.id, serial: serial))
     }
 
     func release() {
@@ -367,6 +396,31 @@ final class RecordingDataTransferOfferBinding: DataTransferOfferBinding {
 
     func receive(mimeType: MIMEType, fd: Int32) {
         receives.append(Receive(mimeType: mimeType, fd: fd))
+    }
+
+    func destroy() {
+        destroyCount += 1
+    }
+}
+
+final class RecordingDataTransferSourceBinding: DataTransferSourceBinding {
+    let id: DataSourceID
+    var offeredMimeTypes: [MIMEType] = []
+    var destroyCount = 0
+
+    private let onEvent: (RawDataSourceEvent) -> Void
+
+    init(id sourceID: DataSourceID, onEvent eventHandler: @escaping (RawDataSourceEvent) -> Void) {
+        id = sourceID
+        onEvent = eventHandler
+    }
+
+    func emit(_ event: RawDataSourceEvent) {
+        onEvent(event)
+    }
+
+    func offer(mimeType: MIMEType) {
+        offeredMimeTypes.append(mimeType)
     }
 
     func destroy() {

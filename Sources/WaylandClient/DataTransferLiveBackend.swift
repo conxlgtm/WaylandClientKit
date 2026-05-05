@@ -71,6 +71,31 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
         return LiveDataTransferOfferBinding(id: id, offer: offer, owner: owner)
     }
 
+    func createDataSource(
+        id: DataSourceID,
+        onEvent: @escaping (RawDataSourceEvent) -> Void
+    ) throws -> any DataTransferSourceBinding {
+        let globals = try connection.bindRequiredGlobals()
+        guard case .bound(let manager) = globals.extensions.dataDeviceManager else {
+            throw DataTransferError.unavailable
+        }
+
+        let source = try manager.createDataSource()
+        let owner = RawDataSourceOwner(
+            onEvent: onEvent,
+            invariantFailureSink: connection.invariantFailureSink
+        )
+        do {
+            try owner.install(on: source)
+        } catch {
+            owner.cancel()
+            source.destroy()
+            throw error
+        }
+
+        return LiveDataTransferSourceBinding(id: id, source: source, owner: owner)
+    }
+
     func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors {
         do {
             let descriptors = try RawFileDescriptor.pipeDescriptors()
@@ -124,6 +149,11 @@ private final class LiveDataTransferDeviceBinding: DataTransferDeviceBinding {
         owner = listenerOwner
     }
 
+    func setSelection(source: (any DataTransferSourceBinding)?, serial: InputSerial) {
+        let liveSource = source as? LiveDataTransferSourceBinding
+        device.setSelection(source: liveSource?.source, serial: serial.rawValue)
+    }
+
     func release() {
         guard !isReleased else {
             return
@@ -168,6 +198,42 @@ private final class LiveDataTransferOfferBinding: DataTransferOfferBinding {
         isDestroyed = true
         owner.cancel()
         offer.destroy()
+    }
+
+    deinit {
+        destroy()
+    }
+}
+
+private final class LiveDataTransferSourceBinding: DataTransferSourceBinding {
+    let id: DataSourceID
+
+    let source: RawDataSource
+    private let owner: RawDataSourceOwner
+    private var isDestroyed = false
+
+    init(
+        id sourceID: DataSourceID,
+        source rawSource: RawDataSource,
+        owner listenerOwner: RawDataSourceOwner
+    ) {
+        id = sourceID
+        source = rawSource
+        owner = listenerOwner
+    }
+
+    func offer(mimeType: MIMEType) {
+        source.offer(mimeType: mimeType.rawValue)
+    }
+
+    func destroy() {
+        guard !isDestroyed else {
+            return
+        }
+
+        isDestroyed = true
+        owner.cancel()
+        source.destroy()
     }
 
     deinit {
