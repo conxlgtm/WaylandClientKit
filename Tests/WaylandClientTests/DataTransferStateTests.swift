@@ -53,9 +53,7 @@ struct DataTransferStateTests {
 
     @Test
     func selectionOfferAccumulatesMimeTypesWithoutDuplicates() throws {
-        var state = try DataTransferState()
-            .reduce(.seatAvailable(seat1))
-            .state
+        var state = try boundState(seat1)
         state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
             .state
 
@@ -84,7 +82,14 @@ struct DataTransferStateTests {
         }
 
         let withSeat = try initial.reduce(.seatAvailable(seat1)).state
-        let withOffer = try withSeat.reduce(
+        #expect(throws: DataTransferError.missingDataDevice(seat1)) {
+            _ = try withSeat.reduce(
+                .offerCreated(id: offer1, role: .selection(seatID: seat1))
+            )
+        }
+
+        let bound = try withSeat.reduce(.dataDeviceBound(seat1)).state
+        let withOffer = try bound.reduce(
             .offerCreated(id: offer1, role: .selection(seatID: seat1))
         ).state
 
@@ -97,9 +102,7 @@ struct DataTransferStateTests {
 
     @Test
     func selectionReplacementDestroysPreviousOfferAndPublishesChange() throws {
-        var state = try DataTransferState()
-            .reduce(.seatAvailable(seat1))
-            .state
+        var state = try boundState(seat1)
         state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
             .state
         state = try state.reduce(.offerCreated(id: offer2, role: .selection(seatID: seat1)))
@@ -129,9 +132,7 @@ struct DataTransferStateTests {
 
     @Test
     func clearingSelectionDestroysCurrentOfferAndPublishesNil() throws {
-        var state = try DataTransferState()
-            .reduce(.seatAvailable(seat1))
-            .state
+        var state = try boundState(seat1)
         state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
             .state
         state = try state.reduce(.selectionChanged(seatID: seat1, offerID: offer1)).state
@@ -158,17 +159,20 @@ struct DataTransferStateTests {
         }
 
         let withSeat = try initial.reduce(.seatAvailable(seat1)).state
+        #expect(throws: DataTransferError.missingDataDevice(seat1)) {
+            _ = try withSeat.reduce(.selectionChanged(seatID: seat1, offerID: nil))
+        }
+
+        let bound = try withSeat.reduce(.dataDeviceBound(seat1)).state
 
         #expect(throws: DataTransferError.unknownOffer) {
-            _ = try withSeat.reduce(.selectionChanged(seatID: seat1, offerID: offer1))
+            _ = try bound.reduce(.selectionChanged(seatID: seat1, offerID: offer1))
         }
     }
 
     @Test
     func sourceReplacementCancelsPreviousSource() throws {
-        var state = try DataTransferState()
-            .reduce(.seatAvailable(seat1))
-            .state
+        var state = try boundState(seat1)
         state = try state.reduce(
             .sourceCreated(id: source1, seatID: seat1, mimeTypes: [.plainText])
         ).state
@@ -192,9 +196,7 @@ struct DataTransferStateTests {
 
     @Test
     func sourceCancellationClearsSelectionSourceAndPublishesEvent() throws {
-        var state = try DataTransferState()
-            .reduce(.seatAvailable(seat1))
-            .state
+        var state = try boundState(seat1)
         state = try state.reduce(
             .sourceCreated(id: source1, seatID: seat1, mimeTypes: [.plainText])
         ).state
@@ -215,6 +217,7 @@ struct DataTransferStateTests {
             .state
         state = try state.reduce(.dataDeviceBound(seat1)).state
         state = try state.reduce(.seatAvailable(seat2)).state
+        state = try state.reduce(.dataDeviceBound(seat2)).state
         state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
             .state
         state = try state.reduce(.offerCreated(id: offer2, role: .selection(seatID: seat2)))
@@ -242,5 +245,10 @@ struct DataTransferStateTests {
         #expect(removed.state.sourceSnapshot(source1) == nil)
         #expect(removed.state.offerSnapshot(offer2) != nil)
         #expect(removed.state.seatSnapshot(seat2) != nil)
+    }
+
+    private func boundState(_ seatID: SeatID) throws -> DataTransferState {
+        let available = try DataTransferState().reduce(.seatAvailable(seatID)).state
+        return try available.reduce(.dataDeviceBound(seatID)).state
     }
 }

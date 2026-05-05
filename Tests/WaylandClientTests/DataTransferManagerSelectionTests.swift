@@ -53,7 +53,7 @@ struct DataTransferManagerSelectionTests {
     func selectionOfferRejectsSeatWithoutDataDevice() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
-        manager.state = DataTransferState(
+        manager.state = try DataTransferState(
             seats: [
                 seat1: DataTransferSeatSnapshot(
                     seatID: seat1,

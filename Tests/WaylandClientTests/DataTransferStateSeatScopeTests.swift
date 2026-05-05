@@ -11,10 +11,9 @@ struct DataTransferStateSeatScopeTests {
 
     @Test
     func selectionRejectsOfferFromDifferentSeat() throws {
-        var state = try DataTransferState()
-            .reduce(.seatAvailable(seat1))
-            .state
+        var state = try boundState(seat1)
         state = try state.reduce(.seatAvailable(seat2)).state
+        state = try state.reduce(.dataDeviceBound(seat2)).state
         state = try state.reduce(.offerCreated(id: offer2, role: .selection(seatID: seat2)))
             .state
 
@@ -27,10 +26,9 @@ struct DataTransferStateSeatScopeTests {
 
     @Test
     func selectionSourceRejectsSourceFromDifferentSeat() throws {
-        var state = try DataTransferState()
-            .reduce(.seatAvailable(seat1))
-            .state
+        var state = try boundState(seat1)
         state = try state.reduce(.seatAvailable(seat2)).state
+        state = try state.reduce(.dataDeviceBound(seat2)).state
         state = try state.reduce(
             .sourceCreated(id: source2, seatID: seat2, mimeTypes: [.plainText])
         ).state
@@ -43,44 +41,120 @@ struct DataTransferStateSeatScopeTests {
     }
 
     @Test
-    func seatRemovalDoesNotCleanOrPublishForeignSeatSelection() throws {
-        let state = DataTransferState(
-            seats: [
-                seat1: DataTransferSeatSnapshot(
-                    seatID: seat1,
-                    hasDataDevice: true,
-                    selectionOfferID: offer2,
-                    selectionSourceID: source2
-                ),
-                seat2: DataTransferSeatSnapshot(
-                    seatID: seat2,
-                    hasDataDevice: true,
-                    selectionOfferID: nil,
-                    selectionSourceID: nil
-                ),
-            ],
-            offers: [
-                offer2: DataOfferSnapshot(
-                    id: offer2,
-                    role: .selection(seatID: seat2),
-                    mimeTypes: [.plainText]
-                )
-            ],
-            sources: [
-                source2: DataSourceSnapshot(
-                    id: source2,
-                    seatID: seat2,
-                    mimeTypes: [.plainText]
-                )
-            ]
-        )
+    func selectionRejectedBeforeDataDeviceBound() throws {
+        let state = try DataTransferState()
+            .reduce(.seatAvailable(seat1))
+            .state
 
-        let removed = try state.reduce(.seatRemoved(seat1))
+        #expect(throws: DataTransferError.missingDataDevice(seat1)) {
+            _ = try state.reduce(.selectionChanged(seatID: seat1, offerID: nil))
+        }
+        #expect(throws: DataTransferError.missingDataDevice(seat1)) {
+            _ = try state.reduce(.offerCreated(id: offer2, role: .selection(seatID: seat1)))
+        }
+    }
 
-        #expect(removed.effects == [.releaseDataDevice(seat1)])
-        #expect(removed.state.seatSnapshot(seat1) == nil)
-        #expect(removed.state.seatSnapshot(seat2) != nil)
-        #expect(removed.state.offerSnapshot(offer2) != nil)
-        #expect(removed.state.sourceSnapshot(source2) != nil)
+    @Test
+    func sourceSelectionRejectedBeforeDataDeviceBound() throws {
+        let state = try DataTransferState()
+            .reduce(.seatAvailable(seat1))
+            .state
+
+        #expect(throws: DataTransferError.missingDataDevice(seat1)) {
+            _ = try state.reduce(
+                .sourceCreated(id: source2, seatID: seat1, mimeTypes: [.plainText])
+            )
+        }
+        #expect(throws: DataTransferError.missingDataDevice(seat1)) {
+            _ = try state.reduce(.selectionSourceChanged(seatID: seat1, sourceID: nil))
+        }
+    }
+
+    @Test
+    func stateSnapshotInitRejectsForeignSeatOffer() {
+        #expect(throws: DataTransferError.unknownOffer) {
+            _ = try DataTransferState(
+                seats: [
+                    seat1: DataTransferSeatSnapshot(
+                        seatID: seat1,
+                        hasDataDevice: true,
+                        selectionOfferID: offer2,
+                        selectionSourceID: nil
+                    )
+                ],
+                offers: [
+                    offer2: DataOfferSnapshot(
+                        id: offer2,
+                        role: .selection(seatID: seat2),
+                        mimeTypes: [.plainText]
+                    )
+                ],
+                sources: [:]
+            )
+        }
+    }
+
+    @Test
+    func stateSnapshotInitRejectsSelectionBeforeDataDeviceBound() {
+        #expect(throws: DataTransferError.missingDataDevice(seat1)) {
+            _ = try DataTransferState(
+                seats: [
+                    seat1: DataTransferSeatSnapshot(
+                        seatID: seat1,
+                        hasDataDevice: false,
+                        selectionOfferID: offer2,
+                        selectionSourceID: nil
+                    )
+                ],
+                offers: [
+                    offer2: DataOfferSnapshot(
+                        id: offer2,
+                        role: .selection(seatID: seat1),
+                        mimeTypes: [.plainText]
+                    )
+                ]
+            )
+        }
+    }
+
+    @Test
+    func stateSnapshotInitRejectsDanglingSelectionOffer() {
+        #expect(throws: DataTransferError.unknownOffer) {
+            _ = try DataTransferState(
+                seats: [
+                    seat1: DataTransferSeatSnapshot(
+                        seatID: seat1,
+                        hasDataDevice: true,
+                        selectionOfferID: offer2,
+                        selectionSourceID: nil
+                    )
+                ],
+                offers: [:],
+                sources: [:]
+            )
+        }
+    }
+
+    @Test
+    func stateSnapshotInitRejectsDanglingSelectionSource() {
+        #expect(throws: DataTransferError.unknownSource) {
+            _ = try DataTransferState(
+                seats: [
+                    seat1: DataTransferSeatSnapshot(
+                        seatID: seat1,
+                        hasDataDevice: true,
+                        selectionOfferID: nil,
+                        selectionSourceID: source2
+                    )
+                ],
+                offers: [:],
+                sources: [:]
+            )
+        }
+    }
+
+    private func boundState(_ seatID: SeatID) throws -> DataTransferState {
+        let available = try DataTransferState().reduce(.seatAvailable(seatID)).state
+        return try available.reduce(.dataDeviceBound(seatID)).state
     }
 }

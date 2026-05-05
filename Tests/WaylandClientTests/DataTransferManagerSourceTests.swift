@@ -246,7 +246,7 @@ struct DataTransferManagerSourceTests {
             )
         }
 
-        manager.state = DataTransferState(
+        manager.state = try DataTransferState(
             seats: [
                 seat2: DataTransferSeatSnapshot(
                     seatID: seat2,

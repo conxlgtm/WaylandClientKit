@@ -127,7 +127,7 @@ extension DataTransferManager {
                 break
             }
         } catch {
-            pendingCallbackError = error
+            recordCallbackError(error)
         }
     }
 
@@ -183,7 +183,7 @@ extension DataTransferManager {
                 do {
                     try request.close()
                 } catch {
-                    pendingCallbackError = error
+                    recordCallbackError(error)
                 }
             } else {
                 remainingRequests.append(request)
@@ -206,7 +206,7 @@ extension DataTransferManager {
             do {
                 try request.close()
             } catch {
-                pendingCallbackError = error
+                recordCallbackError(error)
             }
         }
     }

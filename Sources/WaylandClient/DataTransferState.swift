@@ -84,14 +84,21 @@ package struct DataTransferState: Equatable, Sendable {
     private var offers: [DataOfferID: OfferState]
     private var sources: [DataSourceID: SourceState]
 
+    package init() {
+        seats = [:]
+        offers = [:]
+        sources = [:]
+    }
+
     package init(
-        seats initialSeats: [SeatID: DataTransferSeatSnapshot] = [:],
+        seats initialSeats: [SeatID: DataTransferSeatSnapshot],
         offers initialOffers: [DataOfferID: DataOfferSnapshot] = [:],
         sources initialSources: [DataSourceID: DataSourceSnapshot] = [:]
-    ) {
+    ) throws {
         seats = initialSeats.mapValues(SeatState.init)
         offers = initialOffers.mapValues(OfferState.init)
         sources = initialSources.mapValues(SourceState.init)
+        try validateSelectionReferences()
     }
 
     package var seatSnapshots: [DataTransferSeatSnapshot] {
@@ -132,7 +139,9 @@ package struct DataTransferState: Equatable, Sendable {
         let effects = try next.apply(action)
         return DataTransferTransitionPlan(state: next, effects: effects)
     }
+}
 
+extension DataTransferState {
     private mutating func apply(_ action: DataTransferAction) throws -> [DataTransferEffect] {
         switch action {
         case .seatAvailable(let seatID):
@@ -208,9 +217,7 @@ package struct DataTransferState: Equatable, Sendable {
         guard offers[id] == nil else {
             throw DataTransferError.duplicateOffer
         }
-        guard seats[role.seatID] != nil else {
-            throw DataTransferError.unknownSeat(role.seatID)
-        }
+        _ = try boundSeat(role.seatID)
 
         offers[id] = OfferState(id: id, role: role)
         return []
@@ -237,6 +244,9 @@ package struct DataTransferState: Equatable, Sendable {
     ) throws -> [DataTransferEffect] {
         guard var seat = seats[seatID] else {
             throw DataTransferError.unknownSeat(seatID)
+        }
+        guard seat.hasDataDevice else {
+            throw DataTransferError.missingDataDevice(seatID)
         }
         if let offerID {
             guard let offer = offers[offerID] else {
@@ -267,9 +277,7 @@ package struct DataTransferState: Equatable, Sendable {
         guard sources[id] == nil else {
             throw DataTransferError.duplicateSource
         }
-        guard seats[seatID] != nil else {
-            throw DataTransferError.unknownSeat(seatID)
-        }
+        _ = try boundSeat(seatID)
 
         sources[id] = SourceState(id: id, seatID: seatID, mimeTypes: mimeTypes)
         return []
@@ -281,6 +289,9 @@ package struct DataTransferState: Equatable, Sendable {
     ) throws -> [DataTransferEffect] {
         guard var seat = seats[seatID] else {
             throw DataTransferError.unknownSeat(seatID)
+        }
+        guard seat.hasDataDevice else {
+            throw DataTransferError.missingDataDevice(seatID)
         }
         if let sourceID {
             guard let source = sources[sourceID] else {
@@ -315,6 +326,39 @@ package struct DataTransferState: Equatable, Sendable {
         }
 
         return [.cancelSource(sourceID), .publishSourceCancelled(sourceID)]
+    }
+
+    private func boundSeat(_ seatID: SeatID) throws -> SeatState {
+        guard let seat = seats[seatID] else {
+            throw DataTransferError.unknownSeat(seatID)
+        }
+        guard seat.hasDataDevice else {
+            throw DataTransferError.missingDataDevice(seatID)
+        }
+
+        return seat
+    }
+
+    private func validateSelectionReferences() throws {
+        for seat in seats.values {
+            if let offerID = seat.selectionOfferID {
+                guard seat.hasDataDevice else {
+                    throw DataTransferError.missingDataDevice(seat.seatID)
+                }
+                guard let offer = offers[offerID], offer.role.seatID == seat.seatID else {
+                    throw DataTransferError.unknownOffer
+                }
+            }
+
+            if let sourceID = seat.selectionSourceID {
+                guard seat.hasDataDevice else {
+                    throw DataTransferError.missingDataDevice(seat.seatID)
+                }
+                guard let source = sources[sourceID], source.seatID == seat.seatID else {
+                    throw DataTransferError.unknownSource
+                }
+            }
+        }
     }
 
     private mutating func appendSelectionOfferCleanup(

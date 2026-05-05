@@ -250,6 +250,22 @@ struct DataTransferManagerTests {
             try manager.throwPendingCallbackErrorIfAny()
         }
     }
+
+    @Test
+    func callbackErrorsPreserveFirstFailure() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        try manager.synchronizeSeats([])
+        let releasedBinding = try #require(backend.binding(for: seat1))
+
+        releasedBinding.emit(.selection(nil))
+        releasedBinding.emit(.dataOffer(nil))
+
+        #expect(throws: DataTransferError.unknownSeat(seat1)) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+    }
 }
 
 final class RecordingDataTransferBackend: DataTransferManagerBackend {
