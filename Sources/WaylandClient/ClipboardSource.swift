@@ -56,17 +56,23 @@ public struct ClipboardSource: Sendable, Hashable {
     public let seatID: SeatID
     public let mimeTypes: [MIMEType]
 
+    private let display: WaylandDisplay
     private let displayIdentity: ObjectIdentifier
 
     package init(snapshot: DataSourceSnapshot, display owningDisplay: WaylandDisplay) {
         id = snapshot.id
         seatID = snapshot.seatID
         mimeTypes = snapshot.mimeTypes
+        display = owningDisplay
         displayIdentity = ObjectIdentifier(owningDisplay)
     }
 
     public var identity: ClipboardSourceIdentity {
         ClipboardSourceIdentity(id)
+    }
+
+    public func clear(serial: InputSerial) async throws {
+        try await display.clearClipboard(sourceID: id, seatID: seatID, serial: serial)
     }
 
     public static func == (lhs: ClipboardSource, rhs: ClipboardSource) -> Bool {

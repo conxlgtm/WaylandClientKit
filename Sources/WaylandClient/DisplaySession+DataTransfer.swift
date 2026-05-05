@@ -47,6 +47,20 @@ extension DisplaySession {
         try dataTransferManager.clearSelectionSource(seatID: seatID, serial: serial)
     }
 
+    package func clearClipboardOnOwnerThread(
+        sourceID: DataSourceID,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        try processDataTransferState()
+        try dataTransferManager.clearSelectionSource(
+            id: sourceID,
+            seatID: seatID,
+            serial: serial
+        )
+    }
+
     package func processDataTransferState() throws {
         collectDataTransferSourceWriteResults()
         try dataTransferManager.throwPendingCallbackErrorIfAny()

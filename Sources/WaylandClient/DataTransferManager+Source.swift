@@ -73,6 +73,26 @@ extension DataTransferManager {
         try apply(.selectionSourceChanged(seatID: seatID, sourceID: nil))
     }
 
+    package func clearSelectionSource(
+        id sourceID: DataSourceID,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws {
+        backend.preconditionIsOwnerThread()
+        try throwPendingCallbackErrorIfAny()
+
+        guard let seat = state.seatSnapshot(seatID) else {
+            throw DataTransferError.unknownSeat(seatID)
+        }
+        guard seat.selectionSourceID == sourceID else {
+            throw DataTransferError.sourceCancelled
+        }
+
+        let deviceBinding = try selectionDeviceBinding(for: seatID)
+        deviceBinding.setSelection(source: nil, serial: serial)
+        try apply(.selectionSourceChanged(seatID: seatID, sourceID: nil))
+    }
+
     private func selectionDeviceBinding(
         for seatID: SeatID
     ) throws -> any DataTransferDeviceBinding {

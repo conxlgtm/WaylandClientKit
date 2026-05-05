@@ -314,6 +314,18 @@ extension WaylandDisplay {
         try requireCore().clearClipboard(seatID: seatID, serial: serial)
     }
 
+    package func clearClipboard(
+        sourceID: DataSourceID,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws {
+        try requireCore().clearClipboard(
+            sourceID: sourceID,
+            seatID: seatID,
+            serial: serial
+        )
+    }
+
     package func receiveClipboardOffer(
         id offerID: DataOfferID,
         mimeType: MIMEType
