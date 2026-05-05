@@ -286,6 +286,21 @@ public actor WaylandDisplay {
     }
 }
 
+extension WaylandDisplay {
+    public func clipboardOffer(for seatID: SeatID) throws -> ClipboardOffer? {
+        try requireCore().clipboardOffer(for: seatID).map { offer in
+            ClipboardOffer(snapshot: offer, display: self)
+        }
+    }
+
+    package func receiveClipboardOffer(
+        id offerID: DataOfferID,
+        mimeType: MIMEType
+    ) throws -> OwnedFileDescriptor {
+        try requireCore().receiveClipboardOffer(id: offerID, mimeType: mimeType)
+    }
+}
+
 @safe
 private final class WaylandDisplayRuntime: Sendable {
     let executor: WaylandThreadExecutor

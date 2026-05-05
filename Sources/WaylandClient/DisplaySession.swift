@@ -376,6 +376,23 @@ struct PendingInputOverflowEvent {
 }
 
 extension DisplaySession {
+    package func clipboardOfferOnOwnerThread(for seatID: SeatID) throws -> DataOfferSnapshot? {
+        connection.preconditionIsOwnerThread()
+        try processDataTransferState()
+        return try dataTransferManager.selectionOffer(for: seatID)
+    }
+
+    package func receiveClipboardOfferOnOwnerThread(
+        id offerID: DataOfferID,
+        mimeType: MIMEType
+    ) throws -> OwnedFileDescriptor {
+        connection.preconditionIsOwnerThread()
+        try processDataTransferState()
+        return try dataTransferManager.receiveOffer(id: offerID, mimeType: mimeType)
+    }
+}
+
+extension DisplaySession {
     package func createPopupOnOwnerThread(
         parent parentWindow: TopLevelWindow,
         configuration popupConfiguration: PopupConfiguration,

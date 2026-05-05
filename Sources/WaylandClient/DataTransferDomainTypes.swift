@@ -65,6 +65,18 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     }
 }
 
+public struct ClipboardOfferIdentity: Hashable, Sendable, CustomStringConvertible {
+    package let rawValue: UInt64
+
+    package init(_ offerID: DataOfferID) {
+        rawValue = offerID.rawValue
+    }
+
+    public var description: String {
+        "clipboard-offer-\(rawValue)"
+    }
+}
+
 public struct MIMEType: RawRepresentable, Equatable, Hashable, Sendable,
     CustomStringConvertible
 {
