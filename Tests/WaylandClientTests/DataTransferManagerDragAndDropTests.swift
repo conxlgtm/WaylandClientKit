@@ -114,6 +114,101 @@ struct DataTransferManagerDragAndDropTests {
     }
 
     @Test
+    func dndEnterWithCurrentSelectionHandleDoesNotDestroySelectionBinding() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let selectionOffer = try #require(backend.offerBinding(for: offerHandle1))
+        selectionOffer.emit(.offer(MIMEType.plainText.rawValue))
+        device.emit(.selection(offerHandle1))
+
+        device.emit(.enter(dndEnter(offer: offerHandle1)))
+
+        #expect(selectionOffer.destroyCount == 0)
+        #expect(
+            manager.offerSnapshots
+                == [
+                    DataOfferSnapshot(
+                        id: selectionOffer.id,
+                        role: .selection(seatID: seat1),
+                        mimeTypes: [.plainText]
+                    )
+                ]
+        )
+    }
+
+    @Test
+    func dndEnterWithCurrentSelectionHandleReportsTypedCallbackError() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let selectionOffer = try #require(backend.offerBinding(for: offerHandle1))
+        selectionOffer.emit(.offer(MIMEType.plainText.rawValue))
+        device.emit(.selection(offerHandle1))
+
+        device.emit(.enter(dndEnter(offer: offerHandle1)))
+
+        #expect(throws: DataTransferError.unknownOffer) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+    }
+
+    @Test
+    func selectionReceiveStillWorksAfterRejectedDndEnter() throws {
+        let backend = RecordingDataTransferBackend()
+        backend.pipeDescriptors = DataTransferPipeDescriptors(readEnd: 20, writeEnd: 21)
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let selectionOffer = try #require(backend.offerBinding(for: offerHandle1))
+        selectionOffer.emit(.offer(MIMEType.plainText.rawValue))
+        device.emit(.selection(offerHandle1))
+        device.emit(.enter(dndEnter(offer: offerHandle1)))
+
+        #expect(throws: DataTransferError.unknownOffer) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+        var descriptor = try manager.receiveOffer(id: selectionOffer.id, mimeType: .plainText)
+        let rawDescriptor = descriptor.releaseRawValue()
+
+        #expect(rawDescriptor == 20)
+        #expect(selectionOffer.destroyCount == 0)
+        #expect(
+            selectionOffer.receives
+                == [
+                    RecordingDataTransferOfferBinding.Receive(mimeType: .plainText, fd: 21)
+                ]
+        )
+    }
+
+    @Test
+    func dndLeaveAndDropDoNotDestroySelectionOffer() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let selectionOffer = try #require(backend.offerBinding(for: offerHandle1))
+        selectionOffer.emit(.offer(MIMEType.plainText.rawValue))
+        device.emit(.selection(offerHandle1))
+
+        device.emit(.leave)
+        device.emit(.drop)
+
+        #expect(selectionOffer.destroyCount == 0)
+        #expect(manager.offerSnapshots.map(\.id) == [selectionOffer.id])
+    }
+
+    @Test
     func seatRemovalStillDestroysPendingUnclassifiedOffer() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)

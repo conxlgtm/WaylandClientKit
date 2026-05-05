@@ -63,7 +63,6 @@ package final class DataTransferManager {
     private var offerIDsByHandle: [RawDataOfferHandle: DataOfferID] = [:]
     private var pendingOfferMimeTypesByID: [DataOfferID: [MIMEType]] = [:]
     private var pendingOfferSeatIDsByID: [DataOfferID: SeatID] = [:]
-    private var unsupportedDragOfferIDsBySeat: [SeatID: DataOfferID] = [:]
     package var pendingCallbackError: (any Error)?
     private var nextOfferID: UInt64 = 1
     package var nextSourceID: UInt64 = 1
@@ -209,12 +208,12 @@ package final class DataTransferManager {
             case .enter(let enter):
                 try handleUnsupportedDragEnter(enter, seatID: seatID)
             case .leave, .drop:
-                destroyCurrentUnsupportedDragOffer(for: seatID)
+                break
             case .motion:
                 break
             }
         } catch {
-            pendingCallbackError = error
+            recordCallbackError(error)
         }
     }
 
@@ -254,7 +253,7 @@ package final class DataTransferManager {
                 pendingOfferMimeTypesByID[offerID]?.append(mimeType)
             }
         } catch {
-            pendingCallbackError = error
+            recordCallbackError(error)
         }
     }
 
@@ -287,9 +286,6 @@ package final class DataTransferManager {
         offerBindingsByID.removeValue(forKey: offerID)?.destroy()
         pendingOfferMimeTypesByID[offerID] = nil
         pendingOfferSeatIDsByID[offerID] = nil
-        for (seatID, dragOfferID) in unsupportedDragOfferIDsBySeat where dragOfferID == offerID {
-            unsupportedDragOfferIDsBySeat[seatID] = nil
-        }
         for (handle, handleOfferID) in offerIDsByHandle where handleOfferID == offerID {
             offerIDsByHandle[handle] = nil
         }
@@ -327,6 +323,14 @@ package final class DataTransferManager {
         defer { nextOfferID += 1 }
         return DataOfferID(rawValue: nextOfferID)
     }
+
+    package func recordCallbackError(_ error: any Error) {
+        guard pendingCallbackError == nil else {
+            return
+        }
+
+        pendingCallbackError = error
+    }
 }
 
 extension DataTransferManager {
@@ -334,7 +338,6 @@ extension DataTransferManager {
         _ enter: RawDataDeviceEnter,
         seatID: SeatID
     ) throws {
-        destroyCurrentUnsupportedDragOffer(for: seatID)
         guard let handle = enter.offer else {
             return
         }
@@ -342,23 +345,11 @@ extension DataTransferManager {
             throw DataTransferError.unknownOffer
         }
 
-        if let offer = state.offerSnapshot(offerID) {
-            guard offer.role.seatID == seatID else {
-                throw DataTransferError.unknownOffer
-            }
-        } else {
-            guard pendingOfferSeatIDsByID[offerID] == seatID else {
-                throw DataTransferError.unknownOffer
-            }
+        guard state.offerSnapshot(offerID) == nil else {
+            throw DataTransferError.unknownOffer
         }
-
-        unsupportedDragOfferIDsBySeat[seatID] = offerID
-        destroyCurrentUnsupportedDragOffer(for: seatID)
-    }
-
-    private func destroyCurrentUnsupportedDragOffer(for seatID: SeatID) {
-        guard let offerID = unsupportedDragOfferIDsBySeat.removeValue(forKey: seatID) else {
-            return
+        guard pendingOfferSeatIDsByID[offerID] == seatID else {
+            throw DataTransferError.unknownOffer
         }
 
         destroyOfferBinding(offerID)
