@@ -56,6 +56,15 @@ package final class DataTransferSourceSendRequest {
         try closeRawDescriptor(releasedDescriptor)
     }
 
+    package func makeWriteJob() throws -> DataTransferSourceWriteJob {
+        DataTransferSourceWriteJob(
+            sourceID: sourceID,
+            mimeType: mimeType,
+            descriptor: try releaseRawDescriptor(),
+            data: data
+        )
+    }
+
     package func releaseRawDescriptor() throws -> Int32 {
         let releasedDescriptor = descriptor.withLock { storage -> Int32? in
             defer { storage = nil }

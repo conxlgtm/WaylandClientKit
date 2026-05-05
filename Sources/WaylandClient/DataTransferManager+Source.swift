@@ -7,6 +7,23 @@ extension DataTransferManager {
         return pendingSourceSendRequests
     }
 
+    package func drainSourceWriteJobs() throws -> [DataTransferSourceWriteJob] {
+        let requests = drainSourceSendRequests()
+        var jobs: [DataTransferSourceWriteJob] = []
+
+        for index in requests.indices {
+            do {
+                jobs.append(try requests[index].makeWriteJob())
+            } catch {
+                discardSourceWriteJobs(jobs)
+                discardRemainingSourceSendRequests(requests[(index + 1)...])
+                throw error
+            }
+        }
+
+        return jobs
+    }
+
     package func setSelectionSource(
         seatID: SeatID,
         mimeTypes: [MIMEType],
@@ -154,6 +171,24 @@ extension DataTransferManager {
         }
 
         pendingSourceSendRequests = remainingRequests
+    }
+
+    private func discardSourceWriteJobs(_ jobs: [DataTransferSourceWriteJob]) {
+        for job in jobs {
+            _ = job.closeAsCancelled()
+        }
+    }
+
+    private func discardRemainingSourceSendRequests(
+        _ requests: ArraySlice<DataTransferSourceSendRequest>
+    ) {
+        for request in requests {
+            do {
+                try request.close()
+            } catch {
+                pendingCallbackError = error
+            }
+        }
     }
 
     private func allocateSourceID() -> DataSourceID {

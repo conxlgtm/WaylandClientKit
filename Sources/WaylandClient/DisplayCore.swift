@@ -284,6 +284,9 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let activeSession = try requireSession()
             let offer = try activeSession.clipboardOfferOnOwnerThread(for: seatID)
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
             publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
             return offer
         }
@@ -298,6 +301,9 @@ extension DisplayCore {
             let descriptor = try activeSession.receiveClipboardOfferOnOwnerThread(
                 id: offerID,
                 mimeType: mimeType
+            )
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
             )
             publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
             return descriptor

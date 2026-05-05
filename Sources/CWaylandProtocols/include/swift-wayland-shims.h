@@ -5,6 +5,8 @@
 #endif
 
 #include <stdint.h>
+#include <stddef.h>
+#include <sys/types.h>
 #include <wayland-client.h>
 
 #if !defined(SWL_ENABLE_TESTING) && !defined(NDEBUG)
@@ -100,6 +102,7 @@ uint32_t swl_shm_format_argb8888(void);
 int swl_memfd_create(const char *name, unsigned int flags);
 // close on exec flags
 unsigned int swl_mfd_cloexec(void);
+ssize_t swl_write_no_sigpipe(int fd, const void *buffer, size_t count);
 
 /* ------------------------------------------------------------------ */
 /*  Data-device request wrappers                                      */

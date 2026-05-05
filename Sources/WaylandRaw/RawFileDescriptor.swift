@@ -67,7 +67,7 @@ package struct RawFileDescriptor: ~Copyable {
     ) throws(RuntimeError) -> Int {
         var writableBytes = bytes
         let writeCount = unsafe writableBytes.withUnsafeMutableBufferPointer { byteBuffer in
-            unsafe Glibc.write(fileDescriptor, byteBuffer.baseAddress, byteBuffer.count)
+            unsafe swl_write_no_sigpipe(fileDescriptor, byteBuffer.baseAddress, byteBuffer.count)
         }
 
         guard writeCount >= 0 else {

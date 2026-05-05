@@ -118,6 +118,29 @@ public enum DataTransferEvent: Equatable, Sendable {
     case sourceCancelled(ClipboardSourceIdentity)
 }
 
+public enum DataTransferDiagnosticOperation: Equatable, Sendable {
+    case sourceWriteFailed
+}
+
+public struct DataTransferDiagnostic: Equatable, Sendable {
+    public let source: ClipboardSourceIdentity
+    public let mimeType: MIMEType
+    public let operation: DataTransferDiagnosticOperation
+    public let message: String
+
+    public init(
+        source diagnosticSource: ClipboardSourceIdentity,
+        mimeType diagnosticMIMEType: MIMEType,
+        operation diagnosticOperation: DataTransferDiagnosticOperation,
+        message diagnosticMessage: String
+    ) {
+        source = diagnosticSource
+        mimeType = diagnosticMIMEType
+        operation = diagnosticOperation
+        message = diagnosticMessage
+    }
+}
+
 public struct MIMEType: RawRepresentable, Equatable, Hashable, Sendable,
     CustomStringConvertible
 {

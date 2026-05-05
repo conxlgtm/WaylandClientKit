@@ -54,6 +54,7 @@ public struct DisplayDiagnostic: Equatable, Sendable {
 public enum DisplayDiagnosticPayload: Equatable, Sendable {
     case input(InputDiagnostic)
     case window(WindowDiagnostic)
+    case dataTransfer(DataTransferDiagnostic)
     case diagnosticsDropped(count: Int)
 }
 
@@ -377,6 +378,15 @@ final class DisplayEventHub: Sendable {
         )
     }
 
+    func publishDataTransferDiagnostic(_ diagnostic: DataTransferDiagnostic) {
+        publishDiagnostic(
+            makeDisplayDiagnostic(
+                payload: .dataTransfer(diagnostic),
+                severity: displaySeverity(for: diagnostic)
+            )
+        )
+    }
+
     func finish(throwing error: WaylandDisplayError? = nil) {
         displayBroker.finish(throwing: error)
         inputBroker.finish(throwing: error)
@@ -396,6 +406,13 @@ final class DisplayEventHub: Sendable {
     private func displaySeverity(for diagnostic: WindowDiagnostic) -> DiagnosticSeverity {
         switch diagnostic.operation {
         case .callback, .lifecycle, .decoration, .presentation, .scale:
+            .degraded
+        }
+    }
+
+    private func displaySeverity(for diagnostic: DataTransferDiagnostic) -> DiagnosticSeverity {
+        switch diagnostic.operation {
+        case .sourceWriteFailed:
             .degraded
         }
     }

@@ -21,6 +21,35 @@ struct DisplayEventHubDataTransferTests {
     }
 
     @Test
+    func diagnosticsStreamsReceiveDataTransferDiagnostics() async {
+        let hub = DisplayEventHub()
+        let diagnostic = DataTransferDiagnostic(
+            source: ClipboardSourceIdentity(DataSourceID(rawValue: 1)),
+            mimeType: .plainText,
+            operation: .sourceWriteFailed,
+            message: "write failed"
+        )
+        var displayIterator = hub.displayEvents().makeAsyncIterator()
+        var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
+
+        hub.publishDataTransferDiagnostic(diagnostic)
+
+        let expectedDiagnostic = DisplayDiagnostic(
+            id: DiagnosticID(rawValue: 1),
+            severity: .degraded,
+            payload: .dataTransfer(diagnostic)
+        )
+        await expectDataTransferDisplayNext(
+            .diagnostic(expectedDiagnostic),
+            from: &displayIterator
+        )
+        await expectDataTransferDiagnosticNext(
+            expectedDiagnostic,
+            from: &diagnosticsIterator
+        )
+    }
+
+    @Test
     func dataTransferSubscriberOverflowUsesConfiguredCapacity() async throws {
         let hub = DisplayEventHub(
             configuration: try EventStreamConfiguration(dataTransferEventCapacity: 1)
@@ -83,4 +112,28 @@ private func expectFailure(
         _ = try await iterator.next()
         Issue.record("Expected data transfer stream failure")
     } catch { #expect(error == expectedError) }
+}
+
+private func expectDataTransferDisplayNext(
+    _ expectedEvent: DisplayEvent,
+    from iterator: inout DisplayEventsIterator
+) async {
+    do {
+        let event = try await iterator.next()
+        #expect(event == expectedEvent)
+    } catch {
+        Issue.record("Expected display event, got \(error)")
+    }
+}
+
+private func expectDataTransferDiagnosticNext(
+    _ expectedDiagnostic: DisplayDiagnostic,
+    from iterator: inout DisplayDiagnosticsIterator
+) async {
+    do {
+        let diagnostic = try await iterator.next()
+        #expect(diagnostic == expectedDiagnostic)
+    } catch {
+        Issue.record("Expected diagnostic event, got \(error)")
+    }
 }
