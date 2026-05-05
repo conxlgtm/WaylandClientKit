@@ -23,6 +23,30 @@ extension DisplaySession {
         return try dataTransferManager.receiveOffer(id: offerID, mimeType: mimeType)
     }
 
+    package func setClipboardOnOwnerThread(
+        _ configuration: ClipboardSourceConfiguration,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws -> DataSourceSnapshot {
+        connection.preconditionIsOwnerThread()
+        try processDataTransferState()
+        return try dataTransferManager.setSelectionSource(
+            seatID: seatID,
+            mimeTypes: configuration.mimeTypes,
+            serial: serial,
+            dataProvider: configuration.dataProvider
+        )
+    }
+
+    package func clearClipboardOnOwnerThread(
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        try processDataTransferState()
+        try dataTransferManager.clearSelectionSource(seatID: seatID, serial: serial)
+    }
+
     package func processDataTransferState() throws {
         collectDataTransferSourceWriteResults()
         try dataTransferManager.throwPendingCallbackErrorIfAny()
