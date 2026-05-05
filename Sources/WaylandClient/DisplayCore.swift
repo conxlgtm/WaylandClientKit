@@ -309,6 +309,37 @@ extension DisplayCore {
             return descriptor
         }
     }
+
+    func setClipboard(
+        _ configuration: ClipboardSourceConfiguration,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws -> DataSourceSnapshot {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            let source = try activeSession.setClipboardOnOwnerThread(
+                configuration,
+                seatID: seatID,
+                serial: serial
+            )
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            return source
+        }
+    }
+
+    func clearClipboard(seatID: SeatID, serial: InputSerial) throws {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            try activeSession.clearClipboardOnOwnerThread(seatID: seatID, serial: serial)
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+        }
+    }
 }
 
 extension DisplayCore {

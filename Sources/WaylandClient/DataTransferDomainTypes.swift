@@ -13,6 +13,8 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case closeFileDescriptor(WaylandSystemErrno)
     case fileDescriptorAlreadyReleased
     case transferTooLarge(limit: ByteCount)
+    case emptyDataSource
+    case duplicateMIMEType(MIMEType)
     case unavailable
     case unknownSeat(SeatID)
     case missingDataDevice(SeatID)
@@ -49,6 +51,10 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "file descriptor was already released"
         case .transferTooLarge(let limit):
             "transfer exceeded limit: \(limit.description)"
+        case .emptyDataSource:
+            "data source must offer at least one MIME type"
+        case .duplicateMIMEType(let mimeType):
+            "duplicate MIME type in data source: \(mimeType.description)"
         case .unavailable:
             "data transfer is unavailable"
         case .unknownSeat(let seatID):

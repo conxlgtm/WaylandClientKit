@@ -297,6 +297,23 @@ extension WaylandDisplay {
         }
     }
 
+    public func setClipboard(
+        _ configuration: ClipboardSourceConfiguration,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws -> ClipboardSource {
+        let source = try requireCore().setClipboard(
+            configuration,
+            seatID: seatID,
+            serial: serial
+        )
+        return ClipboardSource(snapshot: source, display: self)
+    }
+
+    public func clearClipboard(seatID: SeatID, serial: InputSerial) throws {
+        try requireCore().clearClipboard(seatID: seatID, serial: serial)
+    }
+
     package func receiveClipboardOffer(
         id offerID: DataOfferID,
         mimeType: MIMEType

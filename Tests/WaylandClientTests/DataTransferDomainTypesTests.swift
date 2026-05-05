@@ -33,6 +33,52 @@ struct DataTransferDomainTypesTests {
     }
 
     @Test
+    func clipboardSourceConfigurationRequiresPayloadsWithUniqueMimeTypes() throws {
+        #expect(throws: DataTransferError.emptyDataSource) {
+            _ = try ClipboardSourceConfiguration(payloads: [])
+        }
+
+        #expect(throws: DataTransferError.duplicateMIMEType(.plainText)) {
+            _ = try ClipboardSourceConfiguration(
+                payloads: [
+                    ClipboardSourcePayload(
+                        mimeType: .plainText,
+                        data: Data("one".utf8)
+                    ),
+                    ClipboardSourcePayload(
+                        mimeType: .plainText,
+                        data: Data("two".utf8)
+                    ),
+                ]
+            )
+        }
+    }
+
+    @Test
+    func clipboardSourceConfigurationPreservesPayloadOrderAndProvidesDataByMimeType() throws {
+        let configuration = try ClipboardSourceConfiguration(
+            payloads: [
+                ClipboardSourcePayload(
+                    mimeType: .plainTextUTF8,
+                    data: Data("hello".utf8)
+                ),
+                ClipboardSourcePayload(
+                    mimeType: .uriList,
+                    data: Data("file:///tmp/example\n".utf8)
+                ),
+            ]
+        )
+
+        #expect(configuration.mimeTypes == [.plainTextUTF8, .uriList])
+        #expect(configuration.dataProvider.data(for: .plainTextUTF8) == Data("hello".utf8))
+        #expect(
+            configuration.dataProvider.data(for: .uriList)
+                == Data("file:///tmp/example\n".utf8)
+        )
+        #expect(configuration.dataProvider.data(for: .plainText) == nil)
+    }
+
+    @Test
     func byteCountRejectsNegativeValuesAndScalesUnits() throws {
         #expect(throws: DataTransferError.negativeByteCount(-1)) {
             _ = try ByteCount(-1)
