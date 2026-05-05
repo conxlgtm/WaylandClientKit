@@ -9,6 +9,7 @@ package final class DisplaySession {
     private let inputRouter = InputRouter()
     private let keyboardInterpreter: KeyboardInterpreter
     private let cursorManager: CursorManager
+    private let dataTransferManager: DataTransferManager
     private let maximumPendingInputEventCount: Int
     private var pendingInputState = PendingInputState.accepting([])
     private var nextWindowID: UInt64 = 1
@@ -26,6 +27,7 @@ package final class DisplaySession {
             connection: rawConnection,
             configuration: cursorConfiguration
         )
+        dataTransferManager = DataTransferManager(connection: rawConnection)
         let pendingInputEventCapacity = inputPipelineConfiguration.pendingInputEventCapacity
         maximumPendingInputEventCount = pendingInputEventCapacity.rawValue
     }
@@ -102,7 +104,7 @@ package final class DisplaySession {
     package func pumpEventsOnOwnerThread(timeoutMilliseconds: Int32 = -1) throws {
         connection.preconditionIsOwnerThread()
         try connection.pumpEvents(timeoutMilliseconds: timeoutMilliseconds)
-        processPendingRawInputEvents()
+        try processPendingRawInputEvents()
     }
 
     package func pumpEventsOnOwnerThread(
@@ -116,7 +118,7 @@ package final class DisplaySession {
             wakeFileDescriptor: wakeFileDescriptor,
             drainWakeFileDescriptor: drainWakeFileDescriptor
         )
-        processPendingRawInputEvents()
+        try processPendingRawInputEvents()
     }
 
     package var eventLoopFileDescriptorOnOwnerThread: CInt {
@@ -128,7 +130,7 @@ package final class DisplaySession {
     package func dispatchPendingEventsOnOwnerThread() throws -> Int32 {
         connection.preconditionIsOwnerThread()
         let dispatchedCount = try connection.dispatchPendingEvents()
-        processPendingRawInputEvents()
+        try processPendingRawInputEvents()
         return dispatchedCount
     }
 
@@ -174,7 +176,7 @@ package final class DisplaySession {
 
     package func drainInputEventsOnOwnerThread() -> [InputEvent] {
         connection.preconditionIsOwnerThread()
-        processPendingRawInputEvents()
+        processPendingSessionInputEvents()
 
         return pendingInputState.drain()
     }
@@ -221,7 +223,12 @@ package final class DisplaySession {
         return PopupID(rawValue: nextPopupID)
     }
 
-    private func processPendingRawInputEvents() {
+    private func processPendingRawInputEvents() throws {
+        try processDataTransferState()
+        processPendingSessionInputEvents()
+    }
+
+    private func processPendingSessionInputEvents() {
         if pendingInputState.hasFailed {
             _ = connection.drainInputEvents()
             return
@@ -235,6 +242,21 @@ package final class DisplaySession {
         )
 
         appendPendingInputEvents(routedEvents)
+    }
+
+    private func processDataTransferState() throws {
+        try dataTransferManager.throwPendingCallbackErrorIfAny()
+
+        guard let globals = connection.boundGlobals else {
+            return
+        }
+        guard case .bound = globals.extensions.dataDeviceManager else {
+            return
+        }
+
+        try dataTransferManager.synchronizeSeats(
+            globals.seatRegistry.seats.map { SeatID(rawValue: $0.id.rawValue) }
+        )
     }
 
     private func appendPendingInputEvents(_ inputEvents: [InputEvent]) {
