@@ -340,6 +340,25 @@ extension DisplayCore {
             publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
         }
     }
+
+    func clearClipboard(
+        sourceID: DataSourceID,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            try activeSession.clearClipboardOnOwnerThread(
+                sourceID: sourceID,
+                seatID: seatID,
+                serial: serial
+            )
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+        }
+    }
 }
 
 extension DisplayCore {
