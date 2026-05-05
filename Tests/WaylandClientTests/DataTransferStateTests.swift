@@ -200,7 +200,7 @@ struct DataTransferStateTests {
 
         let cancelled = try state.reduce(.sourceCancelled(source1))
 
-        #expect(cancelled.effects == [.publishSourceCancelled(source1)])
+        #expect(cancelled.effects == [.cancelSource(source1), .publishSourceCancelled(source1)])
         #expect(cancelled.state.sourceSnapshot(source1) == nil)
         #expect(cancelled.state.seatSnapshot(seat1)?.selectionSourceID == nil)
     }

@@ -8,6 +8,7 @@ package struct DataTransferSelectionChange: Equatable, Sendable {
 package protocol DataTransferDeviceBinding: AnyObject {
     var seatID: SeatID { get }
 
+    func setSelection(source: (any DataTransferSourceBinding)?, serial: InputSerial)
     func release()
 }
 
@@ -15,6 +16,13 @@ package protocol DataTransferOfferBinding: AnyObject {
     var id: DataOfferID { get }
 
     func receive(mimeType: MIMEType, fd: Int32)
+    func destroy()
+}
+
+package protocol DataTransferSourceBinding: AnyObject {
+    var id: DataSourceID { get }
+
+    func offer(mimeType: MIMEType)
     func destroy()
 }
 
@@ -34,6 +42,10 @@ package protocol DataTransferManagerBackend: AnyObject {
         id: DataOfferID,
         onEvent: @escaping (RawDataOfferEvent) -> Void
     ) throws -> any DataTransferOfferBinding
+    func createDataSource(
+        id: DataSourceID,
+        onEvent: @escaping (RawDataSourceEvent) -> Void
+    ) throws -> any DataTransferSourceBinding
     func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors
     func adoptOwnedFileDescriptor(_ descriptor: Int32) throws -> OwnedFileDescriptor
     func closeFileDescriptor(_ descriptor: Int32) -> Int32
@@ -42,13 +54,15 @@ package protocol DataTransferManagerBackend: AnyObject {
 package final class DataTransferManager {
     package let backend: any DataTransferManagerBackend
     package var state = DataTransferState()
-    private var deviceBindings: [SeatID: any DataTransferDeviceBinding] = [:]
+    package var deviceBindings: [SeatID: any DataTransferDeviceBinding] = [:]
     package var offerBindingsByID: [DataOfferID: any DataTransferOfferBinding] = [:]
+    package var sourceBindingsByID: [DataSourceID: any DataTransferSourceBinding] = [:]
     private var offerIDsByHandle: [RawDataOfferHandle: DataOfferID] = [:]
     private var pendingOfferMimeTypesByID: [DataOfferID: [MIMEType]] = [:]
     private var pendingOfferSeatIDsByID: [DataOfferID: SeatID] = [:]
-    private var pendingCallbackError: (any Error)?
+    package var pendingCallbackError: (any Error)?
     private var nextOfferID: UInt64 = 1
+    package var nextSourceID: UInt64 = 1
 
     package private(set) var selectionChanges: [DataTransferSelectionChange] = []
     package private(set) var sourceCancellations: [DataSourceID] = []
@@ -98,7 +112,7 @@ package final class DataTransferManager {
         throw error
     }
 
-    private func apply(_ action: DataTransferAction) throws {
+    package func apply(_ action: DataTransferAction) throws {
         var nextState = state
         let plan = try nextState.reduce(action)
         nextState = plan.state
@@ -134,8 +148,8 @@ package final class DataTransferManager {
             destroyPendingOfferBindings(for: seatID)
         case .destroyOffer(let offerID):
             destroyOfferBinding(offerID)
-        case .cancelSource:
-            break
+        case .cancelSource(let sourceID):
+            destroySourceBinding(sourceID)
         case .publishSelectionChanged(let seatID, let offerID):
             selectionChanges.append(
                 DataTransferSelectionChange(seatID: seatID, offerID: offerID)
@@ -255,6 +269,10 @@ package final class DataTransferManager {
         for (handle, handleOfferID) in offerIDsByHandle where handleOfferID == offerID {
             offerIDsByHandle[handle] = nil
         }
+    }
+
+    private func destroySourceBinding(_ sourceID: DataSourceID) {
+        sourceBindingsByID.removeValue(forKey: sourceID)?.destroy()
     }
 
     private func destroyPendingOfferBindings(for seatID: SeatID) {

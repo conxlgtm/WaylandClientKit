@@ -304,7 +304,7 @@ package struct DataTransferState: Equatable, Sendable {
             seats[source.seatID] = seat
         }
 
-        return [.publishSourceCancelled(sourceID)]
+        return [.cancelSource(sourceID), .publishSourceCancelled(sourceID)]
     }
 
     private mutating func appendSelectionOfferCleanup(
