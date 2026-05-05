@@ -46,6 +46,38 @@ struct DataTransferManagerSourceWriteJobDrainTests {
         #expect(try readDescriptor.readData(limit: try ByteCount.bytes(32)).isEmpty)
     }
 
+    @Test
+    func drainedWriteJobDroppedWithoutSubmitClosesDescriptor() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let descriptors = try makePipeDescriptors()
+        var readDescriptor = try OwnedFileDescriptor(adopting: descriptors.readEnd)
+
+        let source = try manager.setSelectionSource(
+            seatID: seat1,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 97),
+            dataProvider: DataTransferSourceProvider(
+                data: [.plainText: Data("clipboard".utf8)]
+            )
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+
+        sourceBinding.emit(
+            .send(mimeType: MIMEType.plainText.rawValue, fd: descriptors.writeEnd)
+        )
+
+        do {
+            let jobs = try manager.drainSourceWriteJobs()
+            #expect(jobs.count == 1)
+            #expect(manager.drainSourceSendRequests().isEmpty)
+        }
+
+        #expect(isClosedDescriptor(descriptors.writeEnd))
+        try readDescriptor.close()
+    }
+
     private func makePipeDescriptors() throws -> (readEnd: Int32, writeEnd: Int32) {
         var descriptors = [Int32](repeating: -1, count: 2)
         let result = unsafe descriptors.withUnsafeMutableBufferPointer { descriptorBuffer in
@@ -58,5 +90,11 @@ struct DataTransferManagerSourceWriteJobDrainTests {
         }
 
         return (readEnd: descriptors[0], writeEnd: descriptors[1])
+    }
+
+    private func isClosedDescriptor(_ descriptor: Int32) -> Bool {
+        errno = 0
+        let result = Glibc.fcntl(descriptor, F_GETFD)
+        return result == -1 && errno == EBADF
     }
 }

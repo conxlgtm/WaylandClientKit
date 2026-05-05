@@ -1,4 +1,5 @@
 import Foundation
+import Glibc
 import Synchronization
 
 package final class DataTransferSourceWriteJob: Sendable {
@@ -7,22 +8,29 @@ package final class DataTransferSourceWriteJob: Sendable {
     package let data: Data
 
     private let descriptor: Mutex<Int32?>
+    private let closeDescriptor: @Sendable (Int32) -> Int32
 
     package init(
         sourceID jobSourceID: DataSourceID,
         mimeType jobMIMEType: MIMEType,
         descriptor jobDescriptor: Int32,
-        data jobData: Data
+        data jobData: Data,
+        closeDescriptor close: @escaping @Sendable (Int32) -> Int32 =
+            DataTransferSourceWriteJob.defaultCloseDescriptor
     ) {
         sourceID = jobSourceID
         mimeType = jobMIMEType
         data = jobData
         descriptor = Mutex(jobDescriptor)
+        closeDescriptor = close
     }
 
     package func write() -> DataTransferSourceWriteResult {
         do {
-            var ownedDescriptor = try OwnedFileDescriptor(adopting: releaseRawDescriptor())
+            var ownedDescriptor = try OwnedFileDescriptor(
+                adopting: releaseRawDescriptor(),
+                closeDescriptor: closeDescriptor
+            )
             try ownedDescriptor.writeData(data)
             return .succeeded(sourceID: sourceID, mimeType: mimeType)
         } catch let error as DataTransferError {
@@ -34,7 +42,10 @@ package final class DataTransferSourceWriteJob: Sendable {
 
     package func closeAsCancelled() -> DataTransferSourceWriteResult {
         do {
-            var ownedDescriptor = try OwnedFileDescriptor(adopting: releaseRawDescriptor())
+            var ownedDescriptor = try OwnedFileDescriptor(
+                adopting: releaseRawDescriptor(),
+                closeDescriptor: closeDescriptor
+            )
             try ownedDescriptor.close()
             return .failed(sourceID: sourceID, mimeType: mimeType, error: .cancelled)
         } catch let error as DataTransferError {
@@ -45,15 +56,35 @@ package final class DataTransferSourceWriteJob: Sendable {
     }
 
     private func releaseRawDescriptor() throws -> Int32 {
-        let releasedDescriptor = descriptor.withLock { storage -> Int32? in
-            defer { storage = nil }
-            return storage
-        }
+        let releasedDescriptor = takeRawDescriptor()
         guard let releasedDescriptor else {
             throw DataTransferError.fileDescriptorAlreadyReleased
         }
 
         return releasedDescriptor
+    }
+
+    private func takeRawDescriptor() -> Int32? {
+        descriptor.withLock { storage -> Int32? in
+            defer { storage = nil }
+            return storage
+        }
+    }
+
+    deinit {
+        guard let releasedDescriptor = takeRawDescriptor() else {
+            return
+        }
+
+        _ = closeDescriptor(releasedDescriptor)
+    }
+
+    private static func defaultCloseDescriptor(_ descriptor: Int32) -> Int32 {
+        guard Glibc.close(descriptor) == 0 else {
+            return errno > 0 ? errno : EIO
+        }
+
+        return 0
     }
 }
 

@@ -216,16 +216,17 @@ struct DataTransferSourceWriterTests {
         from writer: ThreadedDataTransferSourceWriter,
         count expectedCount: Int = 1
     ) -> [DataTransferSourceWriteResult] {
+        var collectedResults: [DataTransferSourceWriteResult] = []
         for _ in 0..<1_000 {
-            let results = writer.drainResults()
-            if results.count >= expectedCount {
-                return results
+            collectedResults.append(contentsOf: writer.drainResults())
+            if collectedResults.count >= expectedCount {
+                return collectedResults
             }
 
             usleep(1_000)
         }
 
-        return []
+        return collectedResults
     }
 
     private func makePipeDescriptors() throws -> (readEnd: Int32, writeEnd: Int32) {
