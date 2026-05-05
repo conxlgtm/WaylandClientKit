@@ -130,6 +130,10 @@ struct DataTransferManagerSourceTests {
         #expect(sourceBinding.destroyCount == 1)
         #expect(manager.sourceSnapshots.isEmpty)
         #expect(manager.sourceCancellations == [source.id])
+        #expect(
+            manager.drainDataTransferEvents()
+                == [.sourceCancelled(ClipboardSourceIdentity(source.id))]
+        )
     }
 
     @Test

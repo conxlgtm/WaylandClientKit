@@ -128,6 +128,15 @@ struct DataTransferManagerTests {
             manager.selectionChanges
                 == [DataTransferSelectionChange(seatID: seat1, offerID: offer.id)]
         )
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .selectionChanged(
+                        ClipboardSelectionEvent(seatID: seat1, offerID: offer.id)
+                    )
+                ]
+        )
+        #expect(manager.drainDataTransferEvents().isEmpty)
     }
 
     @Test
@@ -183,6 +192,17 @@ struct DataTransferManagerTests {
                 == [
                     DataTransferSelectionChange(seatID: seat1, offerID: offer.id),
                     DataTransferSelectionChange(seatID: seat1, offerID: nil),
+                ]
+        )
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .selectionChanged(
+                        ClipboardSelectionEvent(seatID: seat1, offerID: offer.id)
+                    ),
+                    .selectionChanged(
+                        ClipboardSelectionEvent(seatID: seat1, offerID: nil)
+                    ),
                 ]
         )
     }

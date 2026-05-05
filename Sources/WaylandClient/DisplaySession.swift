@@ -181,6 +181,11 @@ package final class DisplaySession {
         return pendingInputState.drain()
     }
 
+    package func drainDataTransferEventsOnOwnerThread() -> [DataTransferEvent] {
+        connection.preconditionIsOwnerThread()
+        return dataTransferManager.drainDataTransferEvents()
+    }
+
     package func createTopLevelWindowOnOwnerThread(
         configuration windowConfiguration: WindowConfiguration = .default,
         failureSink: any WindowFailureSink = DefaultWindowFailureSink()

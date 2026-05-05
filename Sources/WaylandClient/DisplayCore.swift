@@ -60,7 +60,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             let window = try requireOpenWindow(windowID)
             try window.showOnOwnerThread(timeoutMilliseconds: timeoutMilliseconds, draw)
             guard !isClosed, let session else { return }
-            publishInputEvents(session.drainInputEventsOnOwnerThread())
+            publishSessionEvents(session)
         }
     }
 
@@ -174,12 +174,6 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
     }
 
-    func publishInputEvents(_ inputEvents: [InputEvent]) {
-        for inputEvent in inputEvents {
-            eventHub.publishInput(inputEvent)
-        }
-    }
-
     func markDefunctForFatalFailure(_ error: WaylandDisplayError) {
         guard !isClosed else { return }
         // Raw invariant failures may be reported from inside a C callback, so
@@ -288,7 +282,10 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 extension DisplayCore {
     func clipboardOffer(for seatID: SeatID) throws -> DataOfferSnapshot? {
         try withFatalFailureFinalization {
-            try requireSession().clipboardOfferOnOwnerThread(for: seatID)
+            let activeSession = try requireSession()
+            let offer = try activeSession.clipboardOfferOnOwnerThread(for: seatID)
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            return offer
         }
     }
 
@@ -297,10 +294,13 @@ extension DisplayCore {
         mimeType: MIMEType
     ) throws -> OwnedFileDescriptor {
         try withFatalFailureFinalization {
-            try requireSession().receiveClipboardOfferOnOwnerThread(
+            let activeSession = try requireSession()
+            let descriptor = try activeSession.receiveClipboardOfferOnOwnerThread(
                 id: offerID,
                 mimeType: mimeType
             )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            return descriptor
         }
     }
 }
@@ -333,7 +333,7 @@ extension DisplayCore {
                 drainWakeFileDescriptor: drainWakeFileDescriptor
             )
             guard !isClosed else { return }
-            publishInputEvents(activeSession.drainInputEventsOnOwnerThread())
+            publishSessionEvents(activeSession)
         }
     }
 
@@ -348,7 +348,7 @@ extension DisplayCore {
             let activeSession = try requireSession()
             let dispatchedCount = try activeSession.dispatchPendingEventsOnOwnerThread()
             guard !isClosed else { return dispatchedCount }
-            publishInputEvents(activeSession.drainInputEventsOnOwnerThread())
+            publishSessionEvents(activeSession)
             return dispatchedCount
         }
     }

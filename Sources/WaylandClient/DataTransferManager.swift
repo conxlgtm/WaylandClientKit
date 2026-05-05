@@ -66,6 +66,7 @@ package final class DataTransferManager {
 
     package private(set) var selectionChanges: [DataTransferSelectionChange] = []
     package private(set) var sourceCancellations: [DataSourceID] = []
+    package private(set) var pendingEvents: [DataTransferEvent] = []
 
     package init(connection rawConnection: RawDisplayConnection) {
         backend = LiveDataTransferManagerBackend(connection: rawConnection)
@@ -112,6 +113,12 @@ package final class DataTransferManager {
         throw error
     }
 
+    package func drainDataTransferEvents() -> [DataTransferEvent] {
+        backend.preconditionIsOwnerThread()
+        defer { pendingEvents.removeAll(keepingCapacity: true) }
+        return pendingEvents
+    }
+
     package func apply(_ action: DataTransferAction) throws {
         var nextState = state
         let plan = try nextState.reduce(action)
@@ -154,8 +161,14 @@ package final class DataTransferManager {
             selectionChanges.append(
                 DataTransferSelectionChange(seatID: seatID, offerID: offerID)
             )
+            pendingEvents.append(
+                .selectionChanged(
+                    ClipboardSelectionEvent(seatID: seatID, offerID: offerID)
+                )
+            )
         case .publishSourceCancelled(let sourceID):
             sourceCancellations.append(sourceID)
+            pendingEvents.append(.sourceCancelled(ClipboardSourceIdentity(sourceID)))
         }
     }
 

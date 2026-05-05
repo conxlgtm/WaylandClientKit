@@ -54,7 +54,7 @@ extension DisplayCore {
             let popup = try requireOpenPopup(popupID)
             try popup.showOnOwnerThread(timeoutMilliseconds: timeoutMilliseconds, draw)
             guard !isClosed, let session else { return }
-            publishInputEvents(session.drainInputEventsOnOwnerThread())
+            publishSessionEvents(session)
         }
     }
 

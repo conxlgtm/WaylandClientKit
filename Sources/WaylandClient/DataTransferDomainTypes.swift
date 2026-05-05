@@ -82,6 +82,33 @@ public struct ClipboardOfferIdentity: Hashable, Sendable, CustomStringConvertibl
     }
 }
 
+public struct ClipboardSourceIdentity: Hashable, Sendable, CustomStringConvertible {
+    package let rawValue: UInt64
+
+    package init(_ sourceID: DataSourceID) {
+        rawValue = sourceID.rawValue
+    }
+
+    public var description: String {
+        "clipboard-source-\(rawValue)"
+    }
+}
+
+public struct ClipboardSelectionEvent: Equatable, Sendable {
+    public let seatID: SeatID
+    public let offer: ClipboardOfferIdentity?
+
+    package init(seatID eventSeatID: SeatID, offerID: DataOfferID?) {
+        seatID = eventSeatID
+        offer = offerID.map(ClipboardOfferIdentity.init)
+    }
+}
+
+public enum DataTransferEvent: Equatable, Sendable {
+    case selectionChanged(ClipboardSelectionEvent)
+    case sourceCancelled(ClipboardSourceIdentity)
+}
+
 public struct MIMEType: RawRepresentable, Equatable, Hashable, Sendable,
     CustomStringConvertible
 {
