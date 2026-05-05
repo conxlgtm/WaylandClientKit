@@ -1,3 +1,4 @@
+import Foundation
 import Synchronization
 import Testing
 
@@ -147,4 +148,107 @@ struct DataTransferDomainTypesTests {
 
         #expect(closeAttempts.withLock { $0 } == [12, 12])
     }
+
+    @Test
+    func ownedFileDescriptorReadDataClosesDescriptorOnSuccess() throws {
+        let readState = Mutex(
+            ReadState(chunks: [Array("hello".utf8), []])
+        )
+        let closedDescriptors = Mutex<[Int32]>([])
+        var descriptor = try OwnedFileDescriptor(
+            adopting: 21,
+            readDescriptor: { _, maximumByteCount in
+                readState.withLock { state in
+                    state.maximumByteCounts.append(maximumByteCount)
+                    return state.chunks.removeFirst()
+                }
+            },
+            closeDescriptor: { descriptor in
+                closedDescriptors.withLock { $0.append(descriptor) }
+                return 0
+            }
+        )
+
+        let data = try descriptor.readData(limit: try ByteCount.bytes(5))
+        let descriptorIsClosed = descriptor.isClosed
+
+        #expect(data == Data("hello".utf8))
+        #expect(descriptorIsClosed)
+        #expect(readState.withLock { $0.maximumByteCounts } == [6, 1])
+        #expect(closedDescriptors.withLock { $0 } == [21])
+    }
+
+    @Test
+    func ownedFileDescriptorReadDataClosesDescriptorOnReadFailure() throws {
+        let closedDescriptors = Mutex<[Int32]>([])
+        var descriptor = try OwnedFileDescriptor(
+            adopting: 22,
+            readDescriptor: { _, _ in
+                throw DataTransferError.readFileDescriptor(
+                    WaylandSystemErrno(unchecked: 5)
+                )
+            },
+            closeDescriptor: { descriptor in
+                closedDescriptors.withLock { $0.append(descriptor) }
+                return 0
+            }
+        )
+
+        #expect(
+            throws: DataTransferError.readFileDescriptor(
+                WaylandSystemErrno(unchecked: 5)
+            )
+        ) {
+            _ = try descriptor.readData(limit: try ByteCount.bytes(5))
+        }
+        let descriptorIsClosed = descriptor.isClosed
+
+        #expect(descriptorIsClosed)
+        #expect(closedDescriptors.withLock { $0 } == [22])
+    }
+
+    @Test
+    func ownedFileDescriptorReadDataClosesDescriptorWhenTransferExceedsLimit() throws {
+        let closedDescriptors = Mutex<[Int32]>([])
+        var descriptor = try OwnedFileDescriptor(
+            adopting: 23,
+            readDescriptor: { _, _ in
+                Array("toolarge".utf8)
+            },
+            closeDescriptor: { descriptor in
+                closedDescriptors.withLock { $0.append(descriptor) }
+                return 0
+            }
+        )
+
+        #expect(throws: DataTransferError.transferTooLarge(limit: try ByteCount.bytes(3))) {
+            _ = try descriptor.readData(limit: try ByteCount.bytes(3))
+        }
+        let descriptorIsClosed = descriptor.isClosed
+
+        #expect(descriptorIsClosed)
+        #expect(closedDescriptors.withLock { $0 } == [23])
+    }
+
+    @Test
+    func ownedFileDescriptorReadDataReportsCloseFailureAfterSuccess() throws {
+        var descriptor = try OwnedFileDescriptor(
+            adopting: 24,
+            readDescriptor: { _, _ in [] },
+            closeDescriptor: { _ in 9 }
+        )
+
+        #expect(
+            throws: DataTransferError.closeFileDescriptor(
+                WaylandSystemErrno(unchecked: 9)
+            )
+        ) {
+            _ = try descriptor.readData(limit: try ByteCount.bytes(3))
+        }
+    }
+}
+
+private struct ReadState {
+    var chunks: [[UInt8]]
+    var maximumByteCounts: [Int] = []
 }
