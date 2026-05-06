@@ -240,7 +240,7 @@ package final class DisplaySession {
     }
 
     private func processPendingRawInputEvents() throws {
-        try processDataTransferState(requirement: .optional)
+        try processInputDataTransferState()
         processPendingSessionInputEvents()
     }
 

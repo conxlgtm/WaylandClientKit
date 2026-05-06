@@ -65,7 +65,7 @@ extension DisplaySession {
 
     package func clipboardOfferOnOwnerThread(for seatID: SeatID) throws -> DataOfferSnapshot? {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState(requirement: .requiresDataDeviceManager)
+        try processClipboardDataTransferState()
         return try dataTransferManager.selectionOffer(for: seatID)
     }
 
@@ -74,7 +74,7 @@ extension DisplaySession {
         mimeType: MIMEType
     ) throws -> OwnedFileDescriptor {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState(requirement: .requiresDataDeviceManager)
+        try processClipboardDataTransferState()
         return try dataTransferManager.receiveOffer(id: offerID, mimeType: mimeType)
     }
 
@@ -84,7 +84,7 @@ extension DisplaySession {
         serial: InputSerial
     ) throws -> DataSourceSnapshot {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState(requirement: .requiresDataDeviceManager)
+        try processClipboardDataTransferState()
         return try dataTransferManager.setSelectionSource(
             seatID: seatID,
             mimeTypes: configuration.mimeTypes,
@@ -98,7 +98,7 @@ extension DisplaySession {
         serial: InputSerial
     ) throws {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState(requirement: .requiresDataDeviceManager)
+        try processClipboardDataTransferState()
         try dataTransferManager.clearSelectionSource(seatID: seatID, serial: serial)
     }
 
@@ -108,7 +108,7 @@ extension DisplaySession {
         serial: InputSerial
     ) throws {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState(requirement: .requiresDataDeviceManager)
+        try processClipboardDataTransferState()
         try dataTransferManager.clearSelectionSource(
             id: sourceID,
             seatID: seatID,
@@ -116,7 +116,15 @@ extension DisplaySession {
         )
     }
 
-    package func processDataTransferState(
+    package func processInputDataTransferState() throws {
+        try processDataTransferState(requirement: .optional)
+    }
+
+    private func processClipboardDataTransferState() throws {
+        try processDataTransferState(requirement: .requiresDataDeviceManager)
+    }
+
+    private func processDataTransferState(
         requirement: DataTransferProcessingRequirement
     ) throws {
         collectDataTransferSourceWriteResults()
