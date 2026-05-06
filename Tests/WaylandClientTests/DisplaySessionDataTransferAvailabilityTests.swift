@@ -71,13 +71,14 @@ struct DisplaySessionDataTransferAvailabilityTests {
         )
         var synchronizedSeatIDs: [SeatID] = []
 
-        try DisplaySession.processDataTransferGlobals(
+        let outcome = try DisplaySession.processDataTransferGlobals(
             requirement: .requiresDataDeviceManager,
             provider: provider
         ) { seatIDs in
             synchronizedSeatIDs = seatIDs
         }
 
+        #expect(outcome == .synchronized)
         #expect(provider.bindRequiredGlobalsCount == 1)
         #expect(synchronizedSeatIDs == seatIDs)
     }
@@ -134,15 +135,124 @@ struct DisplaySessionDataTransferAvailabilityTests {
         let provider = RecordingDataTransferGlobalProvider(currentSnapshot: nil)
         var synchronizedSeatIDs: [SeatID] = []
 
-        try DisplaySession.processDataTransferGlobals(
+        let outcome = try DisplaySession.processDataTransferGlobals(
             requirement: .optional,
             provider: provider
         ) { seatIDs in
             synchronizedSeatIDs = seatIDs
         }
 
+        #expect(outcome == .skipped)
         #expect(provider.bindRequiredGlobalsCount == 0)
         #expect(synchronizedSeatIDs.isEmpty)
+    }
+
+    @Test
+    func optionalProcessingDoesNotSubmitSourceWritesWhenGlobalsAreUnbound() throws {
+        let provider = RecordingDataTransferGlobalProvider(currentSnapshot: nil)
+        var synchronizedSeatIDs: [SeatID] = []
+        var sourceWriteSubmitCount = 0
+
+        try DisplaySession.processDataTransferGlobalEffects(
+            requirement: .optional,
+            provider: provider,
+            synchronizeSeats: { seatIDs in
+                synchronizedSeatIDs = seatIDs
+            },
+            submitSourceWrites: {
+                sourceWriteSubmitCount += 1
+            }
+        )
+
+        #expect(provider.bindRequiredGlobalsCount == 0)
+        #expect(synchronizedSeatIDs.isEmpty)
+        #expect(sourceWriteSubmitCount == 0)
+    }
+
+    @Test
+    func optionalProcessingDoesNotSubmitSourceWritesWhenDataDeviceManagerIsMissing() throws {
+        let provider = RecordingDataTransferGlobalProvider(
+            currentSnapshot: DataTransferGlobalSnapshot(
+                bindingState: .boundWithoutDataDeviceManager,
+                seatIDs: [SeatID(rawValue: 7)]
+            )
+        )
+        var synchronizedSeatIDs: [SeatID] = []
+        var sourceWriteSubmitCount = 0
+
+        try DisplaySession.processDataTransferGlobalEffects(
+            requirement: .optional,
+            provider: provider,
+            synchronizeSeats: { seatIDs in
+                synchronizedSeatIDs = seatIDs
+            },
+            submitSourceWrites: {
+                sourceWriteSubmitCount += 1
+            }
+        )
+
+        #expect(provider.bindRequiredGlobalsCount == 0)
+        #expect(synchronizedSeatIDs.isEmpty)
+        #expect(sourceWriteSubmitCount == 0)
+    }
+
+    @Test
+    func requiredProcessingSubmitsSourceWritesAfterBindingAndSynchronizingSeats() throws {
+        let seatIDs = [SeatID(rawValue: 3)]
+        let provider = RecordingDataTransferGlobalProvider(
+            currentSnapshot: nil,
+            boundSnapshot: DataTransferGlobalSnapshot(
+                bindingState: .boundWithDataDeviceManager,
+                seatIDs: seatIDs
+            )
+        )
+        var synchronizedSeatIDs: [SeatID] = []
+        var sourceWriteSubmitCount = 0
+
+        try DisplaySession.processDataTransferGlobalEffects(
+            requirement: .requiresDataDeviceManager,
+            provider: provider,
+            synchronizeSeats: { seatIDs in
+                synchronizedSeatIDs = seatIDs
+            },
+            submitSourceWrites: {
+                sourceWriteSubmitCount += 1
+            }
+        )
+
+        #expect(provider.bindRequiredGlobalsCount == 1)
+        #expect(synchronizedSeatIDs == seatIDs)
+        #expect(sourceWriteSubmitCount == 1)
+    }
+
+    @Test
+    func requiredProcessingDoesNotSubmitSourceWritesWhenDataDeviceManagerIsMissing() {
+        let provider = RecordingDataTransferGlobalProvider(
+            currentSnapshot: nil,
+            boundSnapshot: DataTransferGlobalSnapshot(
+                bindingState: .boundWithoutDataDeviceManager,
+                seatIDs: [SeatID(rawValue: 5)]
+            )
+        )
+        var synchronizedSeatIDs: [SeatID] = []
+        var sourceWriteSubmitCount = 0
+
+        #expect(throws: DataTransferError.unavailable) {
+            try DisplaySession.processDataTransferGlobalEffects(
+                requirement: .requiresDataDeviceManager,
+                provider: provider,
+                synchronizeSeats: { seatIDs in
+                    synchronizedSeatIDs = seatIDs
+                },
+                submitSourceWrites: {
+                    sourceWriteSubmitCount += 1
+                }
+            )
+        }
+
+        #expect(provider.bindRequiredGlobalsCount == 1)
+        #expect(synchronizedSeatIDs.isEmpty)
+        #expect(sourceWriteSubmitCount == 0)
     }
 }
 
