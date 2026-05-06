@@ -8,6 +8,75 @@ import Testing
 @Suite
 struct ClipboardOfferReadTests {
     @Test
+    func clipboardOfferReadReturnsDataAfterPeerWritesAndCloses() async throws {
+        let descriptors = try makePipeDescriptors()
+        let payload = Array("hello".utf8)
+        try writeAll(payload, to: descriptors.writeEnd)
+        Glibc.close(descriptors.writeEnd)
+
+        var descriptor = try OwnedFileDescriptor(adopting: descriptors.readEnd)
+        let data = try await descriptor.readData(
+            limit: try ByteCount.bytes(32),
+            timeout: .seconds(1)
+        )
+        let descriptorIsClosed = descriptor.isClosed
+
+        #expect(data == Data(payload))
+        #expect(descriptorIsClosed)
+    }
+
+    @Test
+    func clipboardOfferReadRetriesTemporaryUnavailabilityThenReturnsData() async throws {
+        let readSteps = Mutex<[ClipboardReadStep]>([
+            .temporaryUnavailable,
+            .bytes(Array("hello".utf8)),
+            .eof,
+        ])
+        let closedDescriptors = Mutex<[Int32]>([])
+        let requestedByteCounts = Mutex<[Int]>([])
+        var descriptor = try OwnedFileDescriptor(
+            adopting: 40,
+            readDescriptor: { descriptor, maximumByteCount in
+                #expect(descriptor == 40)
+                requestedByteCounts.withLock { $0.append(maximumByteCount) }
+
+                let nextStep = readSteps.withLock { steps in
+                    steps.isEmpty ? .eof : steps.removeFirst()
+                }
+
+                switch nextStep {
+                case .temporaryUnavailable:
+                    throw DataTransferError.readFileDescriptor(
+                        WaylandSystemErrno(unchecked: EAGAIN)
+                    )
+                case .bytes(let bytes):
+                    return bytes
+                case .eof:
+                    return []
+                }
+            },
+            prepareReadDescriptor: { descriptor in
+                #expect(descriptor == 40)
+            },
+            closeDescriptor: { descriptor in
+                closedDescriptors.withLock { $0.append(descriptor) }
+                return 0
+            }
+        )
+
+        let data = try await descriptor.readData(
+            limit: try ByteCount.bytes(32),
+            timeout: .seconds(1)
+        )
+        let descriptorIsClosed = descriptor.isClosed
+
+        #expect(data == Data("hello".utf8))
+        #expect(descriptorIsClosed)
+        #expect(closedDescriptors.withLock { $0 } == [40])
+        #expect(requestedByteCounts.withLock { $0.count } == 3)
+    }
+
+    @Test
     func clipboardOfferReadTimesOutWhenPeerDoesNotWrite() async throws {
         let descriptors = try makePipeDescriptors()
         defer { Glibc.close(descriptors.writeEnd) }
@@ -167,6 +236,30 @@ private func makePipeDescriptors() throws -> (readEnd: Int32, writeEnd: Int32) {
     }
 
     return (readEnd: descriptors[0], writeEnd: descriptors[1])
+}
+
+private func writeAll(_ bytes: [UInt8], to descriptor: Int32) throws {
+    var writtenByteCount = 0
+
+    while writtenByteCount < bytes.count {
+        let remainingBytes = Array(bytes[writtenByteCount...])
+        let result = remainingBytes.withUnsafeBufferPointer { buffer in
+            Glibc.write(descriptor, buffer.baseAddress, remainingBytes.count)
+        }
+        guard result > 0 else {
+            throw DataTransferError.writeFileDescriptor(
+                WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
+            )
+        }
+
+        writtenByteCount += result
+    }
+}
+
+private enum ClipboardReadStep: Sendable {
+    case temporaryUnavailable
+    case bytes([UInt8])
+    case eof
 }
 
 private final class ClipboardReadCancellationProbe: Sendable {
