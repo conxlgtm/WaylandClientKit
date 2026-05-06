@@ -97,10 +97,28 @@ package struct DataTransferState: Equatable, Sendable {
     ) throws {
         seats = [:]
         for (seatID, snapshot) in initialSeats {
+            guard seatID == snapshot.seatID else {
+                throw DataTransferError.unknownSeat(seatID)
+            }
             seats[seatID] = try SeatState(snapshot)
         }
-        offers = initialOffers.mapValues(OfferState.init)
-        sources = initialSources.mapValues(SourceState.init)
+
+        offers = [:]
+        for (offerID, snapshot) in initialOffers {
+            guard offerID == snapshot.id else {
+                throw DataTransferError.unknownOffer
+            }
+            offers[offerID] = OfferState(snapshot)
+        }
+
+        sources = [:]
+        for (sourceID, snapshot) in initialSources {
+            guard sourceID == snapshot.id else {
+                throw DataTransferError.unknownSource
+            }
+            sources[sourceID] = SourceState(snapshot)
+        }
+
         try validateSelectionReferences()
     }
 

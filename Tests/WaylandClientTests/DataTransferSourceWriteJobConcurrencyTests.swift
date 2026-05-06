@@ -8,6 +8,11 @@ import Testing
 @Suite
 struct DataTransferSourceWriteJobConcurrencyTests {
     @Test
+    func sourceWriteJobCrossesThreadBoundaryAsSendable() {
+        requireSendable(DataTransferSourceWriteJob.self)
+    }
+
+    @Test
     func concurrentWriteCallsOnSameJobOnlyOneWrites() throws {
         let sourceID = DataSourceID(rawValue: 30)
         let probe = ConcurrentSourceWriteProbe()
@@ -126,6 +131,10 @@ struct DataTransferSourceWriteJobConcurrencyTests {
 
         return collectedResults
     }
+}
+
+private func requireSendable<T: Sendable>(_ type: T.Type) {
+    _ = type
 }
 
 private final class ConcurrentSourceWriteProbe: Sendable {

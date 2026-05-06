@@ -1,5 +1,16 @@
 import WaylandRaw
 
+package enum DataTransferGlobalBindingState: Equatable, Sendable {
+    case unbound
+    case bound(hasDataDeviceManager: Bool)
+}
+
+package enum DataTransferGlobalProcessingDecision: Equatable, Sendable {
+    case skip
+    case bindRequiredGlobals
+    case synchronizeSeats
+}
+
 extension DisplaySession {
     package func drainDataTransferDiagnosticsOnOwnerThread() -> [DataTransferDiagnostic] {
         connection.preconditionIsOwnerThread()
@@ -10,7 +21,7 @@ extension DisplaySession {
 
     package func clipboardOfferOnOwnerThread(for seatID: SeatID) throws -> DataOfferSnapshot? {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState()
+        try processDataTransferState(requiresDataDeviceManager: true)
         return try dataTransferManager.selectionOffer(for: seatID)
     }
 
@@ -19,7 +30,7 @@ extension DisplaySession {
         mimeType: MIMEType
     ) throws -> OwnedFileDescriptor {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState()
+        try processDataTransferState(requiresDataDeviceManager: true)
         return try dataTransferManager.receiveOffer(id: offerID, mimeType: mimeType)
     }
 
@@ -29,7 +40,7 @@ extension DisplaySession {
         serial: InputSerial
     ) throws -> DataSourceSnapshot {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState()
+        try processDataTransferState(requiresDataDeviceManager: true)
         return try dataTransferManager.setSelectionSource(
             seatID: seatID,
             mimeTypes: configuration.mimeTypes,
@@ -43,7 +54,7 @@ extension DisplaySession {
         serial: InputSerial
     ) throws {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState()
+        try processDataTransferState(requiresDataDeviceManager: true)
         try dataTransferManager.clearSelectionSource(seatID: seatID, serial: serial)
     }
 
@@ -53,7 +64,7 @@ extension DisplaySession {
         serial: InputSerial
     ) throws {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState()
+        try processDataTransferState(requiresDataDeviceManager: true)
         try dataTransferManager.clearSelectionSource(
             id: sourceID,
             seatID: seatID,
@@ -61,21 +72,82 @@ extension DisplaySession {
         )
     }
 
-    package func processDataTransferState() throws {
+    package func processDataTransferState(
+        requiresDataDeviceManager: Bool = false
+    ) throws {
         collectDataTransferSourceWriteResults()
         try dataTransferManager.throwPendingCallbackErrorIfAny()
 
-        guard let globals = connection.boundGlobals else {
+        let decision = try Self.dataTransferGlobalProcessingDecision(
+            state: dataTransferGlobalBindingState,
+            requiresDataDeviceManager: requiresDataDeviceManager
+        )
+        let globals: BoundGlobals
+        switch decision {
+        case .skip:
             return
-        }
-        guard case .bound = globals.extensions.dataDeviceManager else {
-            return
+        case .bindRequiredGlobals:
+            globals = try connection.bindRequiredGlobals()
+            let postBindDecision = try Self.dataTransferGlobalProcessingDecision(
+                state: Self.dataTransferGlobalBindingState(for: globals),
+                requiresDataDeviceManager: requiresDataDeviceManager
+            )
+            guard postBindDecision == .synchronizeSeats else {
+                return
+            }
+        case .synchronizeSeats:
+            globals = try requireBoundGlobalsForDataTransferProcessing()
         }
 
         try dataTransferManager.synchronizeSeats(
             globals.seatRegistry.seats.map { SeatID(rawValue: $0.id.rawValue) }
         )
         try submitPendingDataTransferSourceWrites()
+    }
+
+    package static func dataTransferGlobalProcessingDecision(
+        state: DataTransferGlobalBindingState,
+        requiresDataDeviceManager: Bool
+    ) throws -> DataTransferGlobalProcessingDecision {
+        switch (state, requiresDataDeviceManager) {
+        case (.unbound, false):
+            .skip
+        case (.unbound, true):
+            .bindRequiredGlobals
+        case (.bound(hasDataDeviceManager: true), _):
+            .synchronizeSeats
+        case (.bound(hasDataDeviceManager: false), false):
+            .skip
+        case (.bound(hasDataDeviceManager: false), true):
+            throw DataTransferError.unavailable
+        }
+    }
+
+    private var dataTransferGlobalBindingState: DataTransferGlobalBindingState {
+        guard let globals = connection.boundGlobals else {
+            return .unbound
+        }
+
+        return Self.dataTransferGlobalBindingState(for: globals)
+    }
+
+    private static func dataTransferGlobalBindingState(
+        for globals: BoundGlobals
+    ) -> DataTransferGlobalBindingState {
+        switch globals.extensions.dataDeviceManager {
+        case .bound:
+            .bound(hasDataDeviceManager: true)
+        case .missing:
+            .bound(hasDataDeviceManager: false)
+        }
+    }
+
+    private func requireBoundGlobalsForDataTransferProcessing() throws -> BoundGlobals {
+        guard let globals = connection.boundGlobals else {
+            throw DataTransferError.unavailable
+        }
+
+        return globals
     }
 
     private func submitPendingDataTransferSourceWrites() throws {
@@ -85,18 +157,26 @@ extension DisplaySession {
 
     private func collectDataTransferSourceWriteResults() {
         for result in dataTransferSourceWriter.drainResults() {
-            guard case .failed(let sourceID, let mimeType, let error) = result else {
+            guard let diagnostic = Self.dataTransferDiagnostic(from: result) else {
                 continue
             }
 
-            pendingDataTransferDiagnostics.append(
-                DataTransferDiagnostic(
-                    source: ClipboardSourceIdentity(sourceID),
-                    mimeType: mimeType,
-                    operation: .sourceWriteFailed,
-                    message: error.description
-                )
-            )
+            pendingDataTransferDiagnostics.append(diagnostic)
         }
+    }
+
+    package static func dataTransferDiagnostic(
+        from result: DataTransferSourceWriteResult
+    ) -> DataTransferDiagnostic? {
+        guard case .failed(let sourceID, let mimeType, let error) = result else {
+            return nil
+        }
+
+        return DataTransferDiagnostic(
+            source: ClipboardSourceIdentity(sourceID),
+            mimeType: mimeType,
+            operation: .sourceWriteFailed,
+            message: error.description
+        )
     }
 }

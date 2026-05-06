@@ -3,26 +3,26 @@ import Glibc
 import Synchronization
 import WaylandRaw
 
-package final class DataTransferSourceWriteJob {
+package final class DataTransferSourceWriteJob: Sendable {
     package let sourceID: DataSourceID
     package let mimeType: MIMEType
     package let data: Data
 
     private let descriptor: Mutex<DescriptorState>
-    private let prepareDescriptorForWriting: (Int32) throws -> Void
-    private let writeDescriptor: (Int32, [UInt8]) throws -> Int
-    private let closeDescriptor: (Int32) -> Int32
+    private let prepareDescriptorForWriting: @Sendable (Int32) throws -> Void
+    private let writeDescriptor: @Sendable (Int32, [UInt8]) throws -> Int
+    private let closeDescriptor: @Sendable (Int32) -> Int32
 
     package init(
         sourceID jobSourceID: DataSourceID,
         mimeType jobMIMEType: MIMEType,
         descriptor jobDescriptor: Int32,
         data jobData: Data,
-        prepareDescriptorForWriting prepare: @escaping (Int32) throws -> Void =
+        prepareDescriptorForWriting prepare: @escaping @Sendable (Int32) throws -> Void =
             defaultPrepareDataTransferSourceDescriptorForWriting,
-        writeDescriptor write: @escaping (Int32, [UInt8]) throws -> Int =
+        writeDescriptor write: @escaping @Sendable (Int32, [UInt8]) throws -> Int =
             defaultWriteDataTransferSourceDescriptor,
-        closeDescriptor close: @escaping (Int32) -> Int32 =
+        closeDescriptor close: @escaping @Sendable (Int32) -> Int32 =
             defaultCloseDataTransferSourceDescriptor
     ) {
         sourceID = jobSourceID
