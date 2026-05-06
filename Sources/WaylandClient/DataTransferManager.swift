@@ -51,7 +51,6 @@ package protocol DataTransferManagerBackend: AnyObject {
 
     var sourceDescriptorIO: DataTransferSourceDescriptorIO { get }
 
-    func writeFileDescriptor(_ descriptor: Int32, bytes: [UInt8]) throws -> Int
     func closeFileDescriptor(_ descriptor: Int32) -> Int32
 }
 

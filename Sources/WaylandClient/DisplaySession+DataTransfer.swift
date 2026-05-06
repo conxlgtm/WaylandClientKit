@@ -17,6 +17,39 @@ package enum DataTransferGlobalProcessingDecision: Equatable, Sendable {
     case synchronizeSeats
 }
 
+package struct DataTransferGlobalSnapshot: Equatable, Sendable {
+    package let bindingState: DataTransferGlobalBindingState
+    package let seatIDs: [SeatID]
+
+    package init(
+        bindingState snapshotBindingState: DataTransferGlobalBindingState,
+        seatIDs snapshotSeatIDs: [SeatID]
+    ) {
+        bindingState = snapshotBindingState
+        seatIDs = snapshotSeatIDs
+    }
+}
+
+package protocol DataTransferGlobalProviding {
+    var currentDataTransferGlobalSnapshot: DataTransferGlobalSnapshot? { get }
+
+    func bindRequiredDataTransferGlobals() throws -> DataTransferGlobalSnapshot
+}
+
+extension RawDisplayConnection: DataTransferGlobalProviding {
+    package var currentDataTransferGlobalSnapshot: DataTransferGlobalSnapshot? {
+        guard let globals = boundGlobals else {
+            return nil
+        }
+
+        return DisplaySession.dataTransferGlobalSnapshot(for: globals)
+    }
+
+    package func bindRequiredDataTransferGlobals() throws -> DataTransferGlobalSnapshot {
+        try DisplaySession.dataTransferGlobalSnapshot(for: bindRequiredGlobals())
+    }
+}
+
 extension DisplaySession {
     package func drainDataTransferDiagnosticsOnOwnerThread() -> [DataTransferDiagnostic] {
         connection.preconditionIsOwnerThread()
@@ -83,32 +116,46 @@ extension DisplaySession {
     ) throws {
         collectDataTransferSourceWriteResults()
         try dataTransferManager.throwPendingCallbackErrorIfAny()
+        try Self.processDataTransferGlobals(
+            requirement: requirement,
+            provider: dataTransferGlobalProvider
+        ) { seatIDs in
+            try dataTransferManager.synchronizeSeats(seatIDs)
+        }
+        try submitPendingDataTransferSourceWrites()
+    }
 
+    package static func processDataTransferGlobals(
+        requirement: DataTransferProcessingRequirement,
+        provider: any DataTransferGlobalProviding,
+        synchronizeSeats: ([SeatID]) throws -> Void
+    ) throws {
         let decision = try Self.dataTransferGlobalProcessingDecision(
-            state: dataTransferGlobalBindingState,
+            state: provider.currentDataTransferGlobalSnapshot?.bindingState ?? .unbound,
             requirement: requirement
         )
-        let globals: BoundGlobals
+        let snapshot: DataTransferGlobalSnapshot
         switch decision {
         case .skip:
             return
         case .bindRequiredGlobals:
-            globals = try connection.bindRequiredGlobals()
+            snapshot = try provider.bindRequiredDataTransferGlobals()
             let postBindDecision = try Self.dataTransferGlobalProcessingDecision(
-                state: Self.dataTransferGlobalBindingState(for: globals),
+                state: snapshot.bindingState,
                 requirement: requirement
             )
             guard postBindDecision == .synchronizeSeats else {
                 return
             }
         case .synchronizeSeats:
-            globals = try requireBoundGlobalsForDataTransferProcessing()
+            guard let currentSnapshot = provider.currentDataTransferGlobalSnapshot else {
+                throw DataTransferError.unavailable
+            }
+
+            snapshot = currentSnapshot
         }
 
-        try dataTransferManager.synchronizeSeats(
-            globals.seatRegistry.seats.map { SeatID(rawValue: $0.id.rawValue) }
-        )
-        try submitPendingDataTransferSourceWrites()
+        try synchronizeSeats(snapshot.seatIDs)
     }
 
     package static func dataTransferGlobalProcessingDecision(
@@ -129,31 +176,23 @@ extension DisplaySession {
         }
     }
 
-    private var dataTransferGlobalBindingState: DataTransferGlobalBindingState {
-        guard let globals = connection.boundGlobals else {
-            return .unbound
-        }
-
-        return Self.dataTransferGlobalBindingState(for: globals)
-    }
-
-    private static func dataTransferGlobalBindingState(
+    package static func dataTransferGlobalSnapshot(
         for globals: BoundGlobals
-    ) -> DataTransferGlobalBindingState {
+    ) -> DataTransferGlobalSnapshot {
+        let seatIDs = globals.seatRegistry.seats.map { SeatID(rawValue: $0.id.rawValue) }
+
         switch globals.extensions.dataDeviceManager {
         case .bound:
-            .boundWithDataDeviceManager
+            return DataTransferGlobalSnapshot(
+                bindingState: .boundWithDataDeviceManager,
+                seatIDs: seatIDs
+            )
         case .missing:
-            .boundWithoutDataDeviceManager
+            return DataTransferGlobalSnapshot(
+                bindingState: .boundWithoutDataDeviceManager,
+                seatIDs: seatIDs
+            )
         }
-    }
-
-    private func requireBoundGlobalsForDataTransferProcessing() throws -> BoundGlobals {
-        guard let globals = connection.boundGlobals else {
-            throw DataTransferError.unavailable
-        }
-
-        return globals
     }
 
     private func submitPendingDataTransferSourceWrites() throws {

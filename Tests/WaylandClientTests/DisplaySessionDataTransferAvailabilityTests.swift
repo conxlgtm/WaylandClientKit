@@ -58,4 +58,114 @@ struct DisplaySessionDataTransferAvailabilityTests {
         #expect(optionalDecision == .synchronizeSeats)
         #expect(requiredDecision == .synchronizeSeats)
     }
+
+    @Test
+    func setClipboardBeforeWindowBindsGlobalsAndSynchronizesSeats() throws {
+        let seatIDs = [SeatID(rawValue: 7), SeatID(rawValue: 11)]
+        let provider = RecordingDataTransferGlobalProvider(
+            currentSnapshot: nil,
+            boundSnapshot: DataTransferGlobalSnapshot(
+                bindingState: .boundWithDataDeviceManager,
+                seatIDs: seatIDs
+            )
+        )
+        var synchronizedSeatIDs: [SeatID] = []
+
+        try DisplaySession.processDataTransferGlobals(
+            requirement: .requiresDataDeviceManager,
+            provider: provider
+        ) { seatIDs in
+            synchronizedSeatIDs = seatIDs
+        }
+
+        #expect(provider.bindRequiredGlobalsCount == 1)
+        #expect(synchronizedSeatIDs == seatIDs)
+    }
+
+    @Test
+    func clipboardOfferWithoutDataDeviceManagerThrowsUnavailable() {
+        let provider = RecordingDataTransferGlobalProvider(
+            currentSnapshot: DataTransferGlobalSnapshot(
+                bindingState: .boundWithoutDataDeviceManager,
+                seatIDs: [SeatID(rawValue: 7)]
+            )
+        )
+        var synchronizedSeatIDs: [SeatID] = []
+
+        #expect(throws: DataTransferError.unavailable) {
+            try DisplaySession.processDataTransferGlobals(
+                requirement: .requiresDataDeviceManager,
+                provider: provider
+            ) { seatIDs in
+                synchronizedSeatIDs = seatIDs
+            }
+        }
+
+        #expect(provider.bindRequiredGlobalsCount == 0)
+        #expect(synchronizedSeatIDs.isEmpty)
+    }
+
+    @Test
+    func receiveClipboardOfferWithoutDataDeviceManagerThrowsUnavailable() {
+        let provider = RecordingDataTransferGlobalProvider(
+            currentSnapshot: nil,
+            boundSnapshot: DataTransferGlobalSnapshot(
+                bindingState: .boundWithoutDataDeviceManager,
+                seatIDs: [SeatID(rawValue: 9)]
+            )
+        )
+        var synchronizedSeatIDs: [SeatID] = []
+
+        #expect(throws: DataTransferError.unavailable) {
+            try DisplaySession.processDataTransferGlobals(
+                requirement: .requiresDataDeviceManager,
+                provider: provider
+            ) { seatIDs in
+                synchronizedSeatIDs = seatIDs
+            }
+        }
+
+        #expect(provider.bindRequiredGlobalsCount == 1)
+        #expect(synchronizedSeatIDs.isEmpty)
+    }
+
+    @Test
+    func optionalInputProcessingSkipsUnboundGlobals() throws {
+        let provider = RecordingDataTransferGlobalProvider(currentSnapshot: nil)
+        var synchronizedSeatIDs: [SeatID] = []
+
+        try DisplaySession.processDataTransferGlobals(
+            requirement: .optional,
+            provider: provider
+        ) { seatIDs in
+            synchronizedSeatIDs = seatIDs
+        }
+
+        #expect(provider.bindRequiredGlobalsCount == 0)
+        #expect(synchronizedSeatIDs.isEmpty)
+    }
+}
+
+private final class RecordingDataTransferGlobalProvider: DataTransferGlobalProviding {
+    private(set) var currentDataTransferGlobalSnapshot: DataTransferGlobalSnapshot?
+    private let boundSnapshot: DataTransferGlobalSnapshot
+    private(set) var bindRequiredGlobalsCount = 0
+
+    init(
+        currentSnapshot: DataTransferGlobalSnapshot?,
+        boundSnapshot snapshotAfterBinding: DataTransferGlobalSnapshot =
+            DataTransferGlobalSnapshot(
+                bindingState: .boundWithDataDeviceManager,
+                seatIDs: []
+            )
+    ) {
+        currentDataTransferGlobalSnapshot = currentSnapshot
+        boundSnapshot = snapshotAfterBinding
+    }
+
+    func bindRequiredDataTransferGlobals() throws -> DataTransferGlobalSnapshot {
+        bindRequiredGlobalsCount += 1
+        currentDataTransferGlobalSnapshot = boundSnapshot
+        return boundSnapshot
+    }
 }

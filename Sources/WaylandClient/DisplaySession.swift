@@ -9,6 +9,7 @@ package final class DisplaySession {
     private let inputRouter = InputRouter()
     private let keyboardInterpreter: KeyboardInterpreter
     private let cursorManager: CursorManager
+    package let dataTransferGlobalProvider: any DataTransferGlobalProviding
     package let dataTransferManager: DataTransferManager
     package let dataTransferSourceWriter: any DataTransferSourceWriting
     private let maximumPendingInputEventCount: Int
@@ -31,6 +32,7 @@ package final class DisplaySession {
             connection: rawConnection,
             configuration: cursorConfiguration
         )
+        dataTransferGlobalProvider = rawConnection
         dataTransferManager = DataTransferManager(connection: rawConnection)
         dataTransferSourceWriter = sourceWriter
         let pendingInputEventCapacity = inputPipelineConfiguration.pendingInputEventCapacity
