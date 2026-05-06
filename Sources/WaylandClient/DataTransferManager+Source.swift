@@ -157,8 +157,7 @@ extension DataTransferManager {
                     mimeType: mimeType,
                     descriptor: descriptor,
                     data: data,
-                    writeDescriptor: backend.writeFileDescriptor,
-                    closeDescriptor: backend.closeFileDescriptor
+                    descriptorIO: backend.sourceDescriptorIO
                 )
             )
         } catch {

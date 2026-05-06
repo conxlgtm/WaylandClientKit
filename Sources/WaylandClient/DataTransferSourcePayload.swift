@@ -20,28 +20,26 @@ package final class DataTransferSourceSendRequest {
     package let data: Data
 
     private let descriptor: Mutex<Int32?>
-    private let writeDescriptor: (Int32, [UInt8]) throws -> Int
-    private let closeDescriptor: (Int32) -> Int32
+    private let descriptorIO: DataTransferSourceDescriptorIO
 
     package init(
         sourceID requestSourceID: DataSourceID,
         mimeType requestMIMEType: MIMEType,
         descriptor rawDescriptor: Int32,
         data requestData: Data,
-        writeDescriptor write: @escaping (Int32, [UInt8]) throws -> Int,
-        closeDescriptor close: @escaping (Int32) -> Int32
+        descriptorIO requestDescriptorIO: DataTransferSourceDescriptorIO
     ) {
         sourceID = requestSourceID
         mimeType = requestMIMEType
         data = requestData
         descriptor = Mutex(rawDescriptor)
-        writeDescriptor = write
-        closeDescriptor = close
+        descriptorIO = requestDescriptorIO
     }
 
     package func write() throws {
         let releasedDescriptor = try releaseRawDescriptor()
         do {
+            try descriptorIO.prepareForWriting(releasedDescriptor)
             try writeData(to: releasedDescriptor)
         } catch {
             let writeError = error
@@ -61,7 +59,8 @@ package final class DataTransferSourceSendRequest {
             sourceID: sourceID,
             mimeType: mimeType,
             descriptor: try releaseRawDescriptor(),
-            data: data
+            data: data,
+            descriptorIO: descriptorIO
         )
     }
 
@@ -88,7 +87,7 @@ package final class DataTransferSourceSendRequest {
 
         while writtenByteCount < bytes.count {
             let remainingBytes = Array(bytes[writtenByteCount...])
-            let count = try writeDescriptor(rawDescriptor, remainingBytes)
+            let count = try descriptorIO.write(rawDescriptor, bytes: remainingBytes)
             guard count > 0, count <= remainingBytes.count else {
                 throw DataTransferError.writeFileDescriptor(
                     WaylandSystemErrno(unchecked: EIO)
@@ -100,7 +99,7 @@ package final class DataTransferSourceSendRequest {
     }
 
     private func closeRawDescriptor(_ rawDescriptor: Int32) throws {
-        let closeResult = closeDescriptor(rawDescriptor)
+        let closeResult = descriptorIO.close(rawDescriptor)
         guard closeResult == 0 else {
             throw DataTransferError.closeFileDescriptor(
                 WaylandSystemErrno(unchecked: closeResult)
@@ -118,6 +117,6 @@ package final class DataTransferSourceSendRequest {
             return
         }
 
-        _ = closeDescriptor(releasedDescriptor)
+        _ = descriptorIO.close(releasedDescriptor)
     }
 }

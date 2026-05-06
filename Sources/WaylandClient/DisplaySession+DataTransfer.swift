@@ -2,7 +2,13 @@ import WaylandRaw
 
 package enum DataTransferGlobalBindingState: Equatable, Sendable {
     case unbound
-    case bound(hasDataDeviceManager: Bool)
+    case boundWithDataDeviceManager
+    case boundWithoutDataDeviceManager
+}
+
+package enum DataTransferProcessingRequirement: Equatable, Sendable {
+    case optional
+    case requiresDataDeviceManager
 }
 
 package enum DataTransferGlobalProcessingDecision: Equatable, Sendable {
@@ -21,7 +27,7 @@ extension DisplaySession {
 
     package func clipboardOfferOnOwnerThread(for seatID: SeatID) throws -> DataOfferSnapshot? {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState(requiresDataDeviceManager: true)
+        try processDataTransferState(requirement: .requiresDataDeviceManager)
         return try dataTransferManager.selectionOffer(for: seatID)
     }
 
@@ -30,7 +36,7 @@ extension DisplaySession {
         mimeType: MIMEType
     ) throws -> OwnedFileDescriptor {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState(requiresDataDeviceManager: true)
+        try processDataTransferState(requirement: .requiresDataDeviceManager)
         return try dataTransferManager.receiveOffer(id: offerID, mimeType: mimeType)
     }
 
@@ -40,7 +46,7 @@ extension DisplaySession {
         serial: InputSerial
     ) throws -> DataSourceSnapshot {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState(requiresDataDeviceManager: true)
+        try processDataTransferState(requirement: .requiresDataDeviceManager)
         return try dataTransferManager.setSelectionSource(
             seatID: seatID,
             mimeTypes: configuration.mimeTypes,
@@ -54,7 +60,7 @@ extension DisplaySession {
         serial: InputSerial
     ) throws {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState(requiresDataDeviceManager: true)
+        try processDataTransferState(requirement: .requiresDataDeviceManager)
         try dataTransferManager.clearSelectionSource(seatID: seatID, serial: serial)
     }
 
@@ -64,7 +70,7 @@ extension DisplaySession {
         serial: InputSerial
     ) throws {
         connection.preconditionIsOwnerThread()
-        try processDataTransferState(requiresDataDeviceManager: true)
+        try processDataTransferState(requirement: .requiresDataDeviceManager)
         try dataTransferManager.clearSelectionSource(
             id: sourceID,
             seatID: seatID,
@@ -73,14 +79,14 @@ extension DisplaySession {
     }
 
     package func processDataTransferState(
-        requiresDataDeviceManager: Bool = false
+        requirement: DataTransferProcessingRequirement
     ) throws {
         collectDataTransferSourceWriteResults()
         try dataTransferManager.throwPendingCallbackErrorIfAny()
 
         let decision = try Self.dataTransferGlobalProcessingDecision(
             state: dataTransferGlobalBindingState,
-            requiresDataDeviceManager: requiresDataDeviceManager
+            requirement: requirement
         )
         let globals: BoundGlobals
         switch decision {
@@ -90,7 +96,7 @@ extension DisplaySession {
             globals = try connection.bindRequiredGlobals()
             let postBindDecision = try Self.dataTransferGlobalProcessingDecision(
                 state: Self.dataTransferGlobalBindingState(for: globals),
-                requiresDataDeviceManager: requiresDataDeviceManager
+                requirement: requirement
             )
             guard postBindDecision == .synchronizeSeats else {
                 return
@@ -107,18 +113,18 @@ extension DisplaySession {
 
     package static func dataTransferGlobalProcessingDecision(
         state: DataTransferGlobalBindingState,
-        requiresDataDeviceManager: Bool
+        requirement: DataTransferProcessingRequirement
     ) throws -> DataTransferGlobalProcessingDecision {
-        switch (state, requiresDataDeviceManager) {
-        case (.unbound, false):
+        switch (state, requirement) {
+        case (.unbound, .optional):
             .skip
-        case (.unbound, true):
+        case (.unbound, .requiresDataDeviceManager):
             .bindRequiredGlobals
-        case (.bound(hasDataDeviceManager: true), _):
+        case (.boundWithDataDeviceManager, _):
             .synchronizeSeats
-        case (.bound(hasDataDeviceManager: false), false):
+        case (.boundWithoutDataDeviceManager, .optional):
             .skip
-        case (.bound(hasDataDeviceManager: false), true):
+        case (.boundWithoutDataDeviceManager, .requiresDataDeviceManager):
             throw DataTransferError.unavailable
         }
     }
@@ -136,9 +142,9 @@ extension DisplaySession {
     ) -> DataTransferGlobalBindingState {
         switch globals.extensions.dataDeviceManager {
         case .bound:
-            .bound(hasDataDeviceManager: true)
+            .boundWithDataDeviceManager
         case .missing:
-            .bound(hasDataDeviceManager: false)
+            .boundWithoutDataDeviceManager
         }
     }
 

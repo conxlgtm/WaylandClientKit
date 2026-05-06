@@ -8,7 +8,7 @@ struct DisplaySessionDataTransferAvailabilityTests {
     func optionalProcessingSkipsBeforeGlobalsAreBound() throws {
         let decision = try DisplaySession.dataTransferGlobalProcessingDecision(
             state: .unbound,
-            requiresDataDeviceManager: false
+            requirement: .optional
         )
 
         #expect(decision == .skip)
@@ -18,7 +18,7 @@ struct DisplaySessionDataTransferAvailabilityTests {
     func clipboardProcessingBindsGlobalsBeforeAnyWindow() throws {
         let decision = try DisplaySession.dataTransferGlobalProcessingDecision(
             state: .unbound,
-            requiresDataDeviceManager: true
+            requirement: .requiresDataDeviceManager
         )
 
         #expect(decision == .bindRequiredGlobals)
@@ -27,8 +27,8 @@ struct DisplaySessionDataTransferAvailabilityTests {
     @Test
     func optionalProcessingSkipsWhenDataDeviceManagerIsMissing() throws {
         let decision = try DisplaySession.dataTransferGlobalProcessingDecision(
-            state: .bound(hasDataDeviceManager: false),
-            requiresDataDeviceManager: false
+            state: .boundWithoutDataDeviceManager,
+            requirement: .optional
         )
 
         #expect(decision == .skip)
@@ -38,8 +38,8 @@ struct DisplaySessionDataTransferAvailabilityTests {
     func clipboardProcessingThrowsUnavailableWhenDataDeviceManagerIsMissing() {
         #expect(throws: DataTransferError.unavailable) {
             _ = try DisplaySession.dataTransferGlobalProcessingDecision(
-                state: .bound(hasDataDeviceManager: false),
-                requiresDataDeviceManager: true
+                state: .boundWithoutDataDeviceManager,
+                requirement: .requiresDataDeviceManager
             )
         }
     }
@@ -47,12 +47,12 @@ struct DisplaySessionDataTransferAvailabilityTests {
     @Test
     func processingSynchronizesSeatsWhenDataDeviceManagerIsAvailable() throws {
         let optionalDecision = try DisplaySession.dataTransferGlobalProcessingDecision(
-            state: .bound(hasDataDeviceManager: true),
-            requiresDataDeviceManager: false
+            state: .boundWithDataDeviceManager,
+            requirement: .optional
         )
         let requiredDecision = try DisplaySession.dataTransferGlobalProcessingDecision(
-            state: .bound(hasDataDeviceManager: true),
-            requiresDataDeviceManager: true
+            state: .boundWithDataDeviceManager,
+            requirement: .requiresDataDeviceManager
         )
 
         #expect(optionalDecision == .synchronizeSeats)
