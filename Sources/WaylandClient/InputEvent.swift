@@ -83,17 +83,6 @@ public struct PointerButtonEvent: Equatable, Sendable {
     }
 }
 
-public struct ButtonState: Equatable, Sendable {
-    public let rawValue: UInt32
-
-    public init(rawValue stateRawValue: UInt32) {
-        rawValue = stateRawValue
-    }
-
-    public static let released = Self(rawValue: 0)
-    public static let pressed = Self(rawValue: 1)
-}
-
 public enum PointerAxisEvent: Equatable, Sendable {
     case axis(time: UInt32, axis: PointerAxis, value: Double)
     case source(PointerAxisSource)
@@ -181,17 +170,6 @@ public struct KeyboardKeymapInfo: Equatable, Sendable {
     }
 }
 
-public struct KeyboardKeymapFormat: Equatable, Sendable {
-    public let rawValue: UInt32
-
-    public init(rawValue formatRawValue: UInt32) {
-        rawValue = formatRawValue
-    }
-
-    public static let noKeymap = Self(rawValue: 0)
-    public static let xkbV1 = Self(rawValue: 1)
-}
-
 public struct KeyboardKeyEvent: Equatable, Sendable {
     public let serial: InputSerial
     public let time: UInt32
@@ -243,30 +221,6 @@ public struct InterpretedKeyboardKeyEvent: Equatable, Sendable {
         utf8 = eventUTF8
         repeats = eventRepeats
     }
-}
-
-public struct KeyState: Equatable, Sendable {
-    public let rawValue: UInt32
-
-    public init(rawValue stateRawValue: UInt32) {
-        rawValue = stateRawValue
-    }
-
-    public static let released = Self(rawValue: 0)
-    public static let pressed = Self(rawValue: 1)
-    public static let repeated = Self(rawValue: 2)
-}
-
-public struct InterpretedKeyboardKeyState: Equatable, Sendable {
-    public let rawValue: UInt32
-
-    public init(rawValue stateRawValue: UInt32) {
-        rawValue = stateRawValue
-    }
-
-    public static let released = Self(rawValue: 0)
-    public static let pressed = Self(rawValue: 1)
-    public static let repeated = Self(rawValue: 2)
 }
 
 public struct KeyboardKeysym: Equatable, Sendable {

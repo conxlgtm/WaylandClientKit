@@ -64,6 +64,35 @@ struct SharedMemoryLayoutTests {
     }
 
     @Test
+    func acquiredBufferCannotBeAcquiredTwice() {
+        var state = BufferBusyState()
+
+        let firstAcquire = state.acquireForDrawing()
+        let secondAcquire = state.acquireForDrawing()
+
+        #expect(firstAcquire)
+        #expect(!secondAcquire)
+        #expect(state.lifecycle == .acquiredForDrawing)
+    }
+
+    @Test
+    func releaseAfterDestroyedDoesNotMakeBufferReusable() {
+        var state = BufferBusyState()
+
+        let didAcquire = state.acquireForDrawing()
+        #expect(didAcquire)
+        state.markRetired(reason: .destroyed)
+        state.markReleased()
+
+        #expect(!state.isBusy)
+        #expect(!state.isReusable)
+        #expect(
+            state.lifecycle
+                == .retired(reason: .destroyed, pendingReleaseGeneration: nil)
+        )
+    }
+
+    @Test
     func retiredPendingReleaseBufferStaysBusyUntilRelease() {
         var state = BufferBusyState()
 

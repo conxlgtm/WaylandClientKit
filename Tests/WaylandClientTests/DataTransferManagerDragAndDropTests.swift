@@ -19,8 +19,10 @@ struct DataTransferManagerDragAndDropTests {
         device.emit(.dataOffer(offerHandle1))
         let offer = try #require(backend.offerBinding(for: offerHandle1))
         offer.emit(.offer(MIMEType.plainText.rawValue))
+        try manager.checkInvariantsForTesting()
 
         device.emit(.enter(dndEnter(offer: offerHandle1)))
+        try manager.checkInvariantsForTesting()
 
         #expect(offer.destroyCount == 1)
         #expect(manager.offerBindingsByID.isEmpty)
@@ -36,9 +38,12 @@ struct DataTransferManagerDragAndDropTests {
         let device = try #require(backend.binding(for: seat1))
 
         device.emit(.dataOffer(offerHandle1))
+        try manager.checkInvariantsForTesting()
         let offer = try #require(backend.offerBinding(for: offerHandle1))
         device.emit(.enter(dndEnter(offer: offerHandle1)))
+        try manager.checkInvariantsForTesting()
         device.emit(.leave)
+        try manager.checkInvariantsForTesting()
 
         #expect(offer.destroyCount == 1)
         #expect(manager.offerBindingsByID.isEmpty)
@@ -53,9 +58,12 @@ struct DataTransferManagerDragAndDropTests {
         let device = try #require(backend.binding(for: seat1))
 
         device.emit(.dataOffer(offerHandle1))
+        try manager.checkInvariantsForTesting()
         let offer = try #require(backend.offerBinding(for: offerHandle1))
         device.emit(.enter(dndEnter(offer: offerHandle1)))
+        try manager.checkInvariantsForTesting()
         device.emit(.drop)
+        try manager.checkInvariantsForTesting()
 
         #expect(offer.destroyCount == 1)
         #expect(manager.offerBindingsByID.isEmpty)
@@ -72,8 +80,10 @@ struct DataTransferManagerDragAndDropTests {
         for rawValue in UInt(1)...UInt(5) {
             let handle = dataOfferHandle(rawValue)
             device.emit(.dataOffer(handle))
+            try manager.checkInvariantsForTesting()
             let offer = try #require(backend.offerBinding(for: handle))
             device.emit(.enter(dndEnter(offer: handle)))
+            try manager.checkInvariantsForTesting()
 
             #expect(offer.destroyCount == 1)
             #expect(manager.offerBindingsByID.isEmpty)
@@ -91,13 +101,18 @@ struct DataTransferManagerDragAndDropTests {
         device.emit(.dataOffer(offerHandle1))
         let selectionOffer = try #require(backend.offerBinding(for: offerHandle1))
         selectionOffer.emit(.offer(MIMEType.plainText.rawValue))
+        try manager.checkInvariantsForTesting()
 
         device.emit(.dataOffer(offerHandle2))
+        try manager.checkInvariantsForTesting()
         let dragOffer = try #require(backend.offerBinding(for: offerHandle2))
         device.emit(.enter(dndEnter(offer: offerHandle2)))
+        try manager.checkInvariantsForTesting()
         device.emit(.leave)
+        try manager.checkInvariantsForTesting()
 
         device.emit(.selection(offerHandle1))
+        try manager.checkInvariantsForTesting()
 
         #expect(selectionOffer.destroyCount == 0)
         #expect(dragOffer.destroyCount == 1)
@@ -124,6 +139,7 @@ struct DataTransferManagerDragAndDropTests {
         let selectionOffer = try #require(backend.offerBinding(for: offerHandle1))
         selectionOffer.emit(.offer(MIMEType.plainText.rawValue))
         device.emit(.selection(offerHandle1))
+        try manager.checkInvariantsForTesting()
 
         device.emit(.enter(dndEnter(offer: offerHandle1)))
 
@@ -151,6 +167,7 @@ struct DataTransferManagerDragAndDropTests {
         let selectionOffer = try #require(backend.offerBinding(for: offerHandle1))
         selectionOffer.emit(.offer(MIMEType.plainText.rawValue))
         device.emit(.selection(offerHandle1))
+        try manager.checkInvariantsForTesting()
 
         device.emit(.enter(dndEnter(offer: offerHandle1)))
 
@@ -171,6 +188,7 @@ struct DataTransferManagerDragAndDropTests {
         let selectionOffer = try #require(backend.offerBinding(for: offerHandle1))
         selectionOffer.emit(.offer(MIMEType.plainText.rawValue))
         device.emit(.selection(offerHandle1))
+        try manager.checkInvariantsForTesting()
         device.emit(.enter(dndEnter(offer: offerHandle1)))
 
         #expect(throws: DataTransferError.unknownOffer) {
@@ -200,9 +218,12 @@ struct DataTransferManagerDragAndDropTests {
         let selectionOffer = try #require(backend.offerBinding(for: offerHandle1))
         selectionOffer.emit(.offer(MIMEType.plainText.rawValue))
         device.emit(.selection(offerHandle1))
+        try manager.checkInvariantsForTesting()
 
         device.emit(.leave)
+        try manager.checkInvariantsForTesting()
         device.emit(.drop)
+        try manager.checkInvariantsForTesting()
 
         #expect(selectionOffer.destroyCount == 0)
         #expect(manager.offerSnapshots.map(\.id) == [selectionOffer.id])
@@ -216,9 +237,11 @@ struct DataTransferManagerDragAndDropTests {
         let device = try #require(backend.binding(for: seat1))
 
         device.emit(.dataOffer(offerHandle1))
+        try manager.checkInvariantsForTesting()
         let offer = try #require(backend.offerBinding(for: offerHandle1))
 
         try manager.synchronizeSeats([])
+        try manager.checkInvariantsForTesting()
 
         #expect(offer.destroyCount == 1)
         #expect(manager.offerBindingsByID.isEmpty)

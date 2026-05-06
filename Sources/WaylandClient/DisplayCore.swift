@@ -11,8 +11,11 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     var popupSurfaceIDs: [PopupID: SurfaceID] = [:]
     var popupParentWindowIDs: [PopupID: WindowID] = [:]
     var closedPopupIDs: Set<PopupID> = []
+    private var pendingPopupRegistryRemovalIDs: Set<PopupID> = []
     private(set) var isClosed = false
     var needsFatalFailureFinalization = false
+
+    var windowIDsForRegistryInvariants: Set<WindowID> { Set(windows.keys) }
 
     init(session activeSession: DisplaySession, eventHub displayEventHub: DisplayEventHub) {
         session = activeSession
@@ -47,6 +50,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             windowSurfaceIDs[window.id] = surfaceID
             installEventCallbacks(for: window)
             window.markPublishedOnOwnerThread()
+            assertRegistryInvariants()
             return window.id
         }
     }
@@ -139,48 +143,12 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         popupSurfaceIDs.removeAll(keepingCapacity: false)
         popupParentWindowIDs.removeAll(keepingCapacity: false)
         closedPopupIDs.removeAll(keepingCapacity: false)
+        pendingPopupRegistryRemovalIDs.removeAll(keepingCapacity: false)
         windowSurfaceIDs.removeAll(keepingCapacity: false)
         surfaceGraph = SurfaceGraph()
         session = nil
         eventHub.finish(throwing: error)
-    }
-
-    func reportFatalRawInvariantFailure(_ failure: RawInvariantFailure) {
-        markDefunctForFatalFailure(.internalInvariantViolation(.message(failure.description)))
-    }
-
-    func reportWindowFailure(_ failure: WindowFailure) {
-        switch failure {
-        case .internalInvariant(let invariant):
-            markDefunctForFatalFailure(.internalInvariantViolation(invariant))
-        case .protocolViolation(let error):
-            markDefunctForFatalFailure(.protocolError(error))
-        case .lifecycleViolation(let windowID, let transition):
-            markDefunctForFatalFailure(
-                .internalInvariantViolation(
-                    .invalidWindowTransition(windowID, transition: transition)
-                )
-            )
-        case .presentationFailure(let windowID, let error):
-            eventHub.publishWindowDiagnostic(
-                WindowDiagnostic(
-                    windowID: windowID,
-                    operation: .presentation(.presentationFailed),
-                    message: error.description
-                )
-            )
-        case .diagnostic(let diagnostic):
-            eventHub.publishWindowDiagnostic(diagnostic)
-        }
-    }
-
-    func markDefunctForFatalFailure(_ error: WaylandDisplayError) {
-        guard !isClosed else { return }
-        // Raw invariant failures may be reported from inside a C callback, so
-        // public streams fail immediately while destructive cleanup is deferred.
-        isClosed = true
-        needsFatalFailureFinalization = true
-        eventHub.finish(throwing: error)
+        assertRegistryInvariants()
     }
 
     func withFatalFailureFinalization<Result: ~Copyable>(
@@ -198,9 +166,11 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         popupSurfaceIDs.removeAll(keepingCapacity: false)
         popupParentWindowIDs.removeAll(keepingCapacity: false)
         closedPopupIDs.removeAll(keepingCapacity: false)
+        pendingPopupRegistryRemovalIDs.removeAll(keepingCapacity: false)
         windowSurfaceIDs.removeAll(keepingCapacity: false)
         surfaceGraph = SurfaceGraph()
         session = nil
+        assertRegistryInvariants()
     }
 
     private func installEventCallbacks(for window: TopLevelWindow) {
@@ -234,6 +204,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
         windows.removeValue(forKey: windowID)
         eventHub.publish(.windowClosed(windowID))
+        assertRegistryInvariants()
     }
 
     func requireSession() throws -> DisplaySession {
@@ -280,6 +251,68 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 }
 
 extension DisplayCore {
+    func beginPopupRegistryRemoval(for popupIDs: [PopupID]) {
+        pendingPopupRegistryRemovalIDs.formUnion(popupIDs)
+    }
+
+    func finishPopupRegistryRemoval(for popupID: PopupID) {
+        pendingPopupRegistryRemovalIDs.remove(popupID)
+        assertRegistryInvariantsAfterPopupRemovalIfReady()
+    }
+
+    func assertRegistryInvariantsAfterPopupRemovalIfReady() {
+        guard pendingPopupRegistryRemovalIDs.isEmpty else { return }
+        assertRegistryInvariants()
+    }
+
+    package func beginPopupRegistryRemovalForTesting(_ popupIDs: [PopupID]) {
+        beginPopupRegistryRemoval(for: popupIDs)
+    }
+
+    package var pendingPopupRegistryRemovalIDsForTesting: Set<PopupID> {
+        pendingPopupRegistryRemovalIDs
+    }
+}
+
+extension DisplayCore {
+    func reportFatalRawInvariantFailure(_ failure: RawInvariantFailure) {
+        markDefunctForFatalFailure(.internalInvariantViolation(.message(failure.description)))
+    }
+
+    func reportWindowFailure(_ failure: WindowFailure) {
+        switch failure {
+        case .internalInvariant(let invariant):
+            markDefunctForFatalFailure(.internalInvariantViolation(invariant))
+        case .protocolViolation(let error):
+            markDefunctForFatalFailure(.protocolError(error))
+        case .lifecycleViolation(let windowID, let transition):
+            markDefunctForFatalFailure(
+                .internalInvariantViolation(
+                    .invalidWindowTransition(windowID, transition: transition)
+                )
+            )
+        case .presentationFailure(let windowID, let error):
+            eventHub.publishWindowDiagnostic(
+                WindowDiagnostic(
+                    windowID: windowID,
+                    operation: .presentation(.presentationFailed),
+                    message: error.description
+                )
+            )
+        case .diagnostic(let diagnostic):
+            eventHub.publishWindowDiagnostic(diagnostic)
+        }
+    }
+
+    func markDefunctForFatalFailure(_ error: WaylandDisplayError) {
+        guard !isClosed else { return }
+        // Raw invariant failures may be reported from inside a C callback, so
+        // public streams fail immediately while destructive cleanup is deferred.
+        isClosed = true
+        needsFatalFailureFinalization = true
+        eventHub.finish(throwing: error)
+    }
+
     func clipboardOffer(for seatID: SeatID) throws -> DataOfferSnapshot? {
         try withFatalFailureFinalization {
             let activeSession = try requireSession()

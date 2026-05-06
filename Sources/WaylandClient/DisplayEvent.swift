@@ -89,6 +89,15 @@ package struct InternalEventSubscription<Element: Sendable>: Sendable {
     package func makeAsyncIterator() -> InternalEventSubscriptionIterator<Element> {
         InternalEventSubscriptionIterator(subscription: subscription)
     }
+
+    package func nextForTesting(
+        beforeImmediateResume: @escaping () -> Void
+    ) async throws(WaylandDisplayError) -> Element? {
+        try await subscription.next(
+            isolation: nil,
+            beforeImmediateResumeForTesting: beforeImmediateResume
+        )
+    }
 }
 
 @safe

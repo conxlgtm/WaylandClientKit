@@ -41,6 +41,7 @@ extension DisplayCore {
             popupParentWindowIDs[popup.id] = windowID
             closedPopupIDs.remove(popup.id)
             installPopupEventCallbacks(for: popup)
+            assertRegistryInvariants()
             return popup.id
         }
     }
@@ -116,9 +117,12 @@ extension DisplayCore {
             do {
                 let popupSurfaceID = try requirePopupSurfaceID(popupID)
                 let nodes = try surfaceGraph.destroyClientRequestedPopupCascade(popupSurfaceID)
-                for closingPopupID in popupIDs(from: nodes) {
+                let closingPopupIDs = popupIDs(from: nodes)
+                beginPopupRegistryRemoval(for: closingPopupIDs)
+                for closingPopupID in closingPopupIDs {
                     popups[closingPopupID]?.closeOnOwnerThread()
                 }
+                assertRegistryInvariantsAfterPopupRemovalIfReady()
             } catch {
                 markSurfaceGraphInvariantFailed(error)
             }
@@ -155,8 +159,10 @@ extension DisplayCore {
 
         do {
             let dismissedNodes = try surfaceGraph.dismissPopupFromCompositor(surfaceID)
+            let dismissedPopupIDs = popupIDs(from: dismissedNodes)
+            beginPopupRegistryRemoval(for: dismissedPopupIDs)
             publishPopupDismissedEvents(for: dismissedNodes)
-            for dismissedPopupID in popupIDs(from: dismissedNodes)
+            for dismissedPopupID in dismissedPopupIDs
             where dismissedPopupID != popupID {
                 popups[dismissedPopupID]?.closeOnOwnerThread()
             }
@@ -179,6 +185,7 @@ extension DisplayCore {
                 )
             )
         }
+        finishPopupRegistryRemoval(for: popupID)
     }
 
     func popupIDsTopDown(parentedBy windowID: WindowID) -> [PopupID] {
