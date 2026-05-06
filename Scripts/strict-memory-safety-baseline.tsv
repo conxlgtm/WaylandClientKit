@@ -13,7 +13,7 @@ WaylandRaw	Sources/WaylandRaw/RawDisplayConnection+OptionalGlobals.swift	4
 WaylandRaw	Sources/WaylandRaw/RawDisplayConnection+PointerCursor.swift	1
 WaylandRaw	Sources/WaylandRaw/RawDisplayConnection.swift	35
 WaylandRaw	Sources/WaylandRaw/RawEventQueue.swift	4
-WaylandRaw	Sources/WaylandRaw/RawFileDescriptor.swift	1
+WaylandRaw	Sources/WaylandRaw/RawFileDescriptor.swift	0
 WaylandRaw	Sources/WaylandRaw/RawFrameCallback.swift	15
 WaylandRaw	Sources/WaylandRaw/RawInputChildProxy.swift	5
 WaylandRaw	Sources/WaylandRaw/RawKeyboardListenerOwner.swift	22
