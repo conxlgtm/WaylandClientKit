@@ -62,9 +62,6 @@ package final class DataTransferSourceSendRequest {
             mimeType: mimeType,
             descriptor: try releaseRawDescriptor(),
             data: data,
-            prepareDescriptorForWriting: { _ in
-                // Drained requests have already crossed the backend descriptor boundary.
-            },
             writeDescriptor: writeDescriptor,
             closeDescriptor: closeDescriptor
         )

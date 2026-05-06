@@ -190,6 +190,36 @@ struct DataTransferStateSeatScopeTests {
         }
     }
 
+    @Test
+    func stateSnapshotInitRejectsOfferAndSourceAsOneSelection() {
+        #expect(throws: DataTransferError.unavailable) {
+            _ = try DataTransferState(
+                seats: [
+                    seat1: DataTransferSeatSnapshot(
+                        seatID: seat1,
+                        hasDataDevice: true,
+                        selectionOfferID: offer2,
+                        selectionSourceID: source2
+                    )
+                ],
+                offers: [
+                    offer2: DataOfferSnapshot(
+                        id: offer2,
+                        role: .selection(seatID: seat1),
+                        mimeTypes: [.plainText]
+                    )
+                ],
+                sources: [
+                    source2: DataSourceSnapshot(
+                        id: source2,
+                        seatID: seat1,
+                        mimeTypes: [.plainText]
+                    )
+                ]
+            )
+        }
+    }
+
     private func boundState(_ seatID: SeatID) throws -> DataTransferState {
         let available = try DataTransferState().reduce(.seatAvailable(seatID)).state
         return try available.reduce(.dataDeviceBound(seatID)).state

@@ -95,7 +95,10 @@ package struct DataTransferState: Equatable, Sendable {
         offers initialOffers: [DataOfferID: DataOfferSnapshot] = [:],
         sources initialSources: [DataSourceID: DataSourceSnapshot] = [:]
     ) throws {
-        seats = initialSeats.mapValues(SeatState.init)
+        seats = [:]
+        for (seatID, snapshot) in initialSeats {
+            seats[seatID] = try SeatState(snapshot)
+        }
         offers = initialOffers.mapValues(OfferState.init)
         sources = initialSources.mapValues(SourceState.init)
         try validateSelectionReferences()
@@ -140,6 +143,10 @@ package struct DataTransferState: Equatable, Sendable {
         return DataTransferTransitionPlan(state: next, effects: effects)
     }
 }
+
+private typealias SeatState = DataTransferSeatState
+private typealias OfferState = DataTransferOfferState
+private typealias SourceState = DataTransferSourceState
 
 extension DataTransferState {
     private mutating func apply(_ action: DataTransferAction) throws -> [DataTransferEffect] {
@@ -197,8 +204,7 @@ extension DataTransferState {
         if seat.hasDataDevice {
             effects.append(.releaseDataDevice(seatID))
         }
-        appendSelectionOfferCleanup(seat.selectionOfferID, seatID: seatID, to: &effects)
-        appendSelectionSourceCleanup(seat.selectionSourceID, seatID: seatID, to: &effects)
+        appendSelectionCleanup(seat.selection, seatID: seatID, to: &effects)
 
         for offer in offers.values where offer.role.seatID == seatID {
             appendSelectionOfferCleanup(offer.id, to: &effects)
@@ -257,13 +263,14 @@ extension DataTransferState {
             }
         }
 
-        guard seat.selectionOfferID != offerID else {
+        let nextSelection = ClipboardSelectionState.fromRemoteOffer(offerID)
+        guard seat.selection != nextSelection else {
             return []
         }
 
         var effects: [DataTransferEffect] = []
-        appendSelectionOfferCleanup(seat.selectionOfferID, seatID: seatID, to: &effects)
-        seat.selectionOfferID = offerID
+        appendSelectionCleanup(seat.selection, seatID: seatID, to: &effects)
+        seat.selection = nextSelection
         seats[seatID] = seat
         effects.append(.publishSelectionChanged(seatID: seatID, offerID: offerID))
         return effects
@@ -302,13 +309,14 @@ extension DataTransferState {
             }
         }
 
-        guard seat.selectionSourceID != sourceID else {
+        let nextSelection = ClipboardSelectionState.fromOwnedSource(sourceID)
+        guard seat.selection != nextSelection else {
             return []
         }
 
         var effects: [DataTransferEffect] = []
-        appendSelectionSourceCleanup(seat.selectionSourceID, seatID: seatID, to: &effects)
-        seat.selectionSourceID = sourceID
+        appendSelectionCleanup(seat.selection, seatID: seatID, to: &effects)
+        seat.selection = nextSelection
         seats[seatID] = seat
         return effects
     }
@@ -320,8 +328,8 @@ extension DataTransferState {
             return []
         }
 
-        if var seat = seats[source.seatID], seat.selectionSourceID == sourceID {
-            seat.selectionSourceID = nil
+        if var seat = seats[source.seatID], seat.selection == .ownedSource(sourceID) {
+            seat.selection = .none
             seats[source.seatID] = seat
         }
 
@@ -341,10 +349,13 @@ extension DataTransferState {
 
     private func validateSelectionReferences() throws {
         for seat in seats.values {
-            if let offerID = seat.selectionOfferID {
+            if seat.selection.hasAnySelection {
                 guard seat.hasDataDevice else {
                     throw DataTransferError.missingDataDevice(seat.seatID)
                 }
+            }
+
+            if let offerID = seat.selection.offerID {
                 guard let offer = offers[offerID],
                     case .selection(seat.seatID) = offer.role
                 else {
@@ -352,10 +363,7 @@ extension DataTransferState {
                 }
             }
 
-            if let sourceID = seat.selectionSourceID {
-                guard seat.hasDataDevice else {
-                    throw DataTransferError.missingDataDevice(seat.seatID)
-                }
+            if let sourceID = seat.selection.sourceID {
                 guard let source = sources[sourceID], source.seatID == seat.seatID else {
                     throw DataTransferError.unknownSource
                 }
@@ -409,91 +417,19 @@ extension DataTransferState {
         effects.append(.cancelSource(sourceID))
         effects.append(.publishSourceCancelled(sourceID))
     }
-}
 
-private struct SeatState: Equatable, Sendable {
-    var seatID: SeatID
-    var hasDataDevice: Bool
-    var selectionOfferID: DataOfferID?
-    var selectionSourceID: DataSourceID?
-
-    init(
-        seatID stateSeatID: SeatID,
-        hasDataDevice stateHasDataDevice: Bool = false,
-        selectionOfferID stateSelectionOfferID: DataOfferID? = nil,
-        selectionSourceID stateSelectionSourceID: DataSourceID? = nil
+    private mutating func appendSelectionCleanup(
+        _ selection: ClipboardSelectionState,
+        seatID: SeatID,
+        to effects: inout [DataTransferEffect]
     ) {
-        seatID = stateSeatID
-        hasDataDevice = stateHasDataDevice
-        selectionOfferID = stateSelectionOfferID
-        selectionSourceID = stateSelectionSourceID
-    }
-
-    init(_ snapshot: DataTransferSeatSnapshot) {
-        seatID = snapshot.seatID
-        hasDataDevice = snapshot.hasDataDevice
-        selectionOfferID = snapshot.selectionOfferID
-        selectionSourceID = snapshot.selectionSourceID
-    }
-
-    var snapshot: DataTransferSeatSnapshot {
-        DataTransferSeatSnapshot(
-            seatID: seatID,
-            hasDataDevice: hasDataDevice,
-            selectionOfferID: selectionOfferID,
-            selectionSourceID: selectionSourceID
-        )
-    }
-}
-
-private struct OfferState: Equatable, Sendable {
-    var id: DataOfferID
-    var role: DataOfferRole
-    var mimeTypes: [MIMEType]
-
-    init(
-        id offerID: DataOfferID,
-        role offerRole: DataOfferRole,
-        mimeTypes offerMimeTypes: [MIMEType] = []
-    ) {
-        id = offerID
-        role = offerRole
-        mimeTypes = offerMimeTypes
-    }
-
-    init(_ snapshot: DataOfferSnapshot) {
-        id = snapshot.id
-        role = snapshot.role
-        mimeTypes = snapshot.mimeTypes
-    }
-
-    var snapshot: DataOfferSnapshot {
-        DataOfferSnapshot(id: id, role: role, mimeTypes: mimeTypes)
-    }
-}
-
-private struct SourceState: Equatable, Sendable {
-    var id: DataSourceID
-    var seatID: SeatID
-    var mimeTypes: [MIMEType]
-
-    init(
-        id sourceID: DataSourceID,
-        seatID sourceSeatID: SeatID,
-        mimeTypes sourceTypes: [MIMEType]
-    ) {
-        id = sourceID
-        seatID = sourceSeatID
-        mimeTypes = sourceTypes
-    }
-
-    init(_ snapshot: DataSourceSnapshot) {
-        id = snapshot.id
-        seatID = snapshot.seatID
-        mimeTypes = snapshot.mimeTypes
-    }
-
-    var snapshot: DataSourceSnapshot {
-        DataSourceSnapshot(id: id, seatID: seatID, mimeTypes: mimeTypes)
+        switch selection {
+        case .none:
+            return
+        case .remoteOffer(let offerID):
+            appendSelectionOfferCleanup(offerID, seatID: seatID, to: &effects)
+        case .ownedSource(let sourceID):
+            appendSelectionSourceCleanup(sourceID, seatID: seatID, to: &effects)
+        }
     }
 }

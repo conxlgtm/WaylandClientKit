@@ -6,6 +6,8 @@ import WaylandRaw
 
 @Suite
 struct ClipboardSourceTests {
+    private let offerHandle1 = RawDataOfferHandle(uncheckedRawValue: 0xDA7A_5001)
+
     @Test
     func settingSelectionSourceFromClipboardConfigurationUsesOrderedPayloads() throws {
         let seatID = SeatID(rawValue: 1)
@@ -125,5 +127,79 @@ struct ClipboardSourceTests {
                     ),
                 ]
         )
+    }
+
+    @Test
+    func staleClipboardSourceHandleCannotClearRemoteReplacement() throws {
+        let seatID = SeatID(rawValue: 1)
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seatID])
+        let device = try #require(backend.binding(for: seatID))
+
+        let source = try manager.setSelectionSource(
+            seatID: seatID,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 71)
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+
+        device.emit(.dataOffer(offerHandle1))
+        let offerBinding = try #require(backend.offerBinding(for: offerHandle1))
+        offerBinding.emit(.offer(MIMEType.plainTextUTF8.rawValue))
+        device.emit(.selection(offerHandle1))
+
+        #expect(sourceBinding.destroyCount == 1)
+        #expect(manager.seatSnapshots.first?.selectionOfferID == offerBinding.id)
+        #expect(manager.seatSnapshots.first?.selectionSourceID == nil)
+
+        #expect(throws: DataTransferError.sourceCancelled) {
+            try manager.clearSelectionSource(
+                id: source.id,
+                seatID: seatID,
+                serial: InputSerial(rawValue: 72)
+            )
+        }
+
+        #expect(
+            device.selections
+                == [
+                    RecordingDataTransferDeviceBinding.Selection(
+                        sourceID: source.id,
+                        serial: InputSerial(rawValue: 71)
+                    )
+                ]
+        )
+        #expect(try manager.selectionOffer(for: seatID)?.id == offerBinding.id)
+    }
+
+    @Test
+    func sourceCancelledAfterRemoteReplacementDoesNotDisturbOffer() throws {
+        let seatID = SeatID(rawValue: 1)
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seatID])
+        let device = try #require(backend.binding(for: seatID))
+
+        let source = try manager.setSelectionSource(
+            seatID: seatID,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 81)
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+
+        device.emit(.dataOffer(offerHandle1))
+        let offerBinding = try #require(backend.offerBinding(for: offerHandle1))
+        offerBinding.emit(.offer(MIMEType.uriList.rawValue))
+        device.emit(.selection(offerHandle1))
+        _ = manager.drainDataTransferEvents()
+
+        sourceBinding.emit(.cancelled)
+
+        #expect(manager.pendingCallbackError == nil)
+        #expect(manager.seatSnapshots.first?.selectionOfferID == offerBinding.id)
+        #expect(manager.seatSnapshots.first?.selectionSourceID == nil)
+        #expect(manager.sourceSnapshots.isEmpty)
+        #expect(manager.drainDataTransferEvents().isEmpty)
     }
 }
