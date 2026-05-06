@@ -29,6 +29,54 @@ package struct RawFileDescriptor: ~Copyable {
         return RawFileDescriptor(fd)
     }
 
+    package static func pipeDescriptors() throws(RuntimeError) -> (
+        readEnd: Int32,
+        writeEnd: Int32
+    ) {
+        var descriptors = [Int32](repeating: -1, count: 2)
+        let result = unsafe descriptors.withUnsafeMutableBufferPointer { descriptorBuffer in
+            unsafe Glibc.pipe(descriptorBuffer.baseAddress)
+        }
+
+        guard result == 0 else {
+            throw RuntimeError.systemError(errno: errno, operation: .createPipe)
+        }
+
+        return (readEnd: descriptors[0], writeEnd: descriptors[1])
+    }
+
+    package static func read(
+        descriptor fileDescriptor: Int32,
+        maximumByteCount: Int
+    ) throws(RuntimeError) -> [UInt8] {
+        var buffer = [UInt8](repeating: 0, count: maximumByteCount)
+        let readCount = unsafe buffer.withUnsafeMutableBufferPointer { byteBuffer in
+            unsafe Glibc.read(fileDescriptor, byteBuffer.baseAddress, maximumByteCount)
+        }
+
+        guard readCount >= 0 else {
+            throw RuntimeError.systemError(errno: errno, operation: .readFileDescriptor)
+        }
+
+        return Array(buffer.prefix(Int(readCount)))
+    }
+
+    package static func write(
+        descriptor fileDescriptor: Int32,
+        bytes: [UInt8]
+    ) throws(RuntimeError) -> Int {
+        var writableBytes = bytes
+        let writeCount = unsafe writableBytes.withUnsafeMutableBufferPointer { byteBuffer in
+            unsafe swl_write_no_sigpipe(fileDescriptor, byteBuffer.baseAddress, byteBuffer.count)
+        }
+
+        guard writeCount >= 0 else {
+            throw RuntimeError.systemError(errno: errno, operation: .writeFileDescriptor)
+        }
+
+        return Int(writeCount)
+    }
+
     package func resize(byteCount: Int) throws(RuntimeError) {
         guard ftruncate(rawValue, off_t(byteCount)) == 0 else {
             throw RuntimeError.systemError(errno: errno, operation: .resizeSharedMemoryFile)

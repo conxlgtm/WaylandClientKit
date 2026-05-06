@@ -60,7 +60,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             let window = try requireOpenWindow(windowID)
             try window.showOnOwnerThread(timeoutMilliseconds: timeoutMilliseconds, draw)
             guard !isClosed, let session else { return }
-            publishInputEvents(session.drainInputEventsOnOwnerThread())
+            publishSessionEvents(session)
         }
     }
 
@@ -174,12 +174,6 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
     }
 
-    func publishInputEvents(_ inputEvents: [InputEvent]) {
-        for inputEvent in inputEvents {
-            eventHub.publishInput(inputEvent)
-        }
-    }
-
     func markDefunctForFatalFailure(_ error: WaylandDisplayError) {
         guard !isClosed else { return }
         // Raw invariant failures may be reported from inside a C callback, so
@@ -189,7 +183,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         eventHub.finish(throwing: error)
     }
 
-    func withFatalFailureFinalization<Result>(
+    func withFatalFailureFinalization<Result: ~Copyable>(
         _ body: () throws -> Result
     ) rethrows -> Result {
         defer { finalizeFatalFailureAfterDispatch() }
@@ -286,6 +280,88 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 }
 
 extension DisplayCore {
+    func clipboardOffer(for seatID: SeatID) throws -> DataOfferSnapshot? {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            let offer = try activeSession.clipboardOfferOnOwnerThread(for: seatID)
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            return offer
+        }
+    }
+
+    func receiveClipboardOffer(
+        id offerID: DataOfferID,
+        mimeType: MIMEType
+    ) throws -> OwnedFileDescriptor {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            let descriptor = try activeSession.receiveClipboardOfferOnOwnerThread(
+                id: offerID,
+                mimeType: mimeType
+            )
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            return descriptor
+        }
+    }
+
+    func setClipboard(
+        _ configuration: ClipboardSourceConfiguration,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws -> DataSourceSnapshot {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            let source = try activeSession.setClipboardOnOwnerThread(
+                configuration,
+                seatID: seatID,
+                serial: serial
+            )
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            return source
+        }
+    }
+
+    func clearClipboard(seatID: SeatID, serial: InputSerial) throws {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            try activeSession.clearClipboardOnOwnerThread(seatID: seatID, serial: serial)
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+        }
+    }
+
+    func clearClipboard(
+        sourceID: DataSourceID,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            try activeSession.clearClipboardOnOwnerThread(
+                sourceID: sourceID,
+                seatID: seatID,
+                serial: serial
+            )
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+        }
+    }
+}
+
+extension DisplayCore {
     func currentPointerCursor() throws -> PointerCursor {
         try withFatalFailureFinalization {
             try requireSession().pointerCursorOnOwnerThread
@@ -313,7 +389,7 @@ extension DisplayCore {
                 drainWakeFileDescriptor: drainWakeFileDescriptor
             )
             guard !isClosed else { return }
-            publishInputEvents(activeSession.drainInputEventsOnOwnerThread())
+            publishSessionEvents(activeSession)
         }
     }
 
@@ -328,7 +404,7 @@ extension DisplayCore {
             let activeSession = try requireSession()
             let dispatchedCount = try activeSession.dispatchPendingEventsOnOwnerThread()
             guard !isClosed else { return dispatchedCount }
-            publishInputEvents(activeSession.drainInputEventsOnOwnerThread())
+            publishSessionEvents(activeSession)
             return dispatchedCount
         }
     }

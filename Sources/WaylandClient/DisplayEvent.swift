@@ -54,12 +54,14 @@ public struct DisplayDiagnostic: Equatable, Sendable {
 public enum DisplayDiagnosticPayload: Equatable, Sendable {
     case input(InputDiagnostic)
     case window(WindowDiagnostic)
+    case dataTransfer(DataTransferDiagnostic)
     case diagnosticsDropped(count: Int)
 }
 
 public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {
     case displayEvents
     case inputEvents
+    case dataTransferEvents
     case diagnostics
 
     public var description: String {
@@ -68,6 +70,8 @@ public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {
             "display events"
         case .inputEvents:
             "input events"
+        case .dataTransferEvents:
+            "data transfer events"
         case .diagnostics:
             "diagnostics"
         }
@@ -185,6 +189,44 @@ public struct InputEventsIterator: AsyncIteratorProtocol {
 }
 
 @safe
+public struct DataTransferEvents: AsyncSequence, Sendable {
+    public typealias Element = DataTransferEvent
+    public typealias Failure = WaylandDisplayError
+
+    private let subscription: InternalEventSubscription<DataTransferEvent>
+
+    package init(_ eventSubscription: InternalEventSubscription<DataTransferEvent>) {
+        subscription = eventSubscription
+    }
+
+    public func makeAsyncIterator() -> DataTransferEventsIterator {
+        DataTransferEventsIterator(base: subscription.makeAsyncIterator())
+    }
+}
+
+@safe
+public struct DataTransferEventsIterator: AsyncIteratorProtocol {
+    public typealias Element = DataTransferEvent
+    public typealias Failure = WaylandDisplayError
+
+    private var base: InternalEventSubscriptionIterator<DataTransferEvent>
+
+    package init(base iterator: InternalEventSubscriptionIterator<DataTransferEvent>) {
+        base = iterator
+    }
+
+    public mutating func next() async throws(WaylandDisplayError) -> DataTransferEvent? {
+        try await next(isolation: nil)
+    }
+
+    public mutating func next(
+        isolation actor: isolated (any Actor)?
+    ) async throws(WaylandDisplayError) -> DataTransferEvent? {
+        try await base.next(isolation: actor)
+    }
+}
+
+@safe
 public struct DisplayDiagnostics: AsyncSequence, Sendable {
     public typealias Element = DisplayDiagnostic
     public typealias Failure = WaylandDisplayError
@@ -238,6 +280,7 @@ private final class DiagnosticIDGenerator: Sendable {
 final class DisplayEventHub: Sendable {
     private let displayBroker: TypedEventBroker<DisplayEvent>
     private let inputBroker: TypedEventBroker<InputEvent>
+    private let dataTransferBroker: TypedEventBroker<DataTransferEvent>
     private let diagnosticsBroker: TypedEventBroker<DisplayDiagnostic>
     private let diagnosticIDGenerator: DiagnosticIDGenerator
 
@@ -254,6 +297,10 @@ final class DisplayEventHub: Sendable {
         inputBroker = TypedEventBroker<InputEvent>(
             stream: .inputEvents,
             capacity: configuration.inputEventCapacity.rawValue
+        )
+        dataTransferBroker = TypedEventBroker<DataTransferEvent>(
+            stream: .dataTransferEvents,
+            capacity: configuration.dataTransferEventCapacity.rawValue
         )
         diagnosticsBroker = TypedEventBroker<DisplayDiagnostic>(
             stream: .diagnostics,
@@ -274,6 +321,10 @@ final class DisplayEventHub: Sendable {
 
     func inputEvents() -> InputEvents {
         InputEvents(inputBroker.subscribe())
+    }
+
+    func dataTransferEvents() -> DataTransferEvents {
+        DataTransferEvents(dataTransferBroker.subscribe())
     }
 
     func diagnostics() -> DisplayDiagnostics {
@@ -314,6 +365,10 @@ final class DisplayEventHub: Sendable {
         inputBroker.publish(inputEvent)
     }
 
+    func publishDataTransfer(_ event: DataTransferEvent) {
+        dataTransferBroker.publish(event)
+    }
+
     func publishWindowDiagnostic(_ diagnostic: WindowDiagnostic) {
         publishDiagnostic(
             makeDisplayDiagnostic(
@@ -323,9 +378,19 @@ final class DisplayEventHub: Sendable {
         )
     }
 
+    func publishDataTransferDiagnostic(_ diagnostic: DataTransferDiagnostic) {
+        publishDiagnostic(
+            makeDisplayDiagnostic(
+                payload: .dataTransfer(diagnostic),
+                severity: displaySeverity(for: diagnostic)
+            )
+        )
+    }
+
     func finish(throwing error: WaylandDisplayError? = nil) {
         displayBroker.finish(throwing: error)
         inputBroker.finish(throwing: error)
+        dataTransferBroker.finish(throwing: error)
         diagnosticsBroker.finish(throwing: error)
     }
 
@@ -341,6 +406,13 @@ final class DisplayEventHub: Sendable {
     private func displaySeverity(for diagnostic: WindowDiagnostic) -> DiagnosticSeverity {
         switch diagnostic.operation {
         case .callback, .lifecycle, .decoration, .presentation, .scale:
+            .degraded
+        }
+    }
+
+    private func displaySeverity(for diagnostic: DataTransferDiagnostic) -> DiagnosticSeverity {
+        switch diagnostic.operation {
+        case .sourceWriteFailed:
             .degraded
         }
     }

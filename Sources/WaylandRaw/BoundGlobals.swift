@@ -10,6 +10,7 @@ package enum SupportedVersions {
     package static let wpViewporter: RawVersion = 1
     package static let wpFractionalScaleManagerV1: RawVersion = 1
     package static let wlSeat: RawVersion = 10
+    package static let wlDataDeviceManager: RawVersion = 3
 }
 
 package enum XDGDecorationManagerBindingDecision: Equatable, Sendable {
@@ -51,23 +52,38 @@ package enum OptionalFractionalScaleManager {
     }
 }
 
+package enum OptionalDataDeviceManager {
+    case missing
+    case bound(RawDataDeviceManager)
+
+    func destroy() {
+        guard case .bound(let manager) = self else { return }
+
+        manager.destroy()
+    }
+}
+
 package struct OptionalGlobals {
     package let xdgDecorationManager: OptionalXDGDecorationManager
     package let viewporter: OptionalViewporter
     package let fractionalScaleManager: OptionalFractionalScaleManager
+    package let dataDeviceManager: OptionalDataDeviceManager
 
     package init(
         xdgDecorationManager manager: OptionalXDGDecorationManager = .missing,
         viewporter boundViewporter: OptionalViewporter = .missing,
         fractionalScaleManager boundFractionalScaleManager: OptionalFractionalScaleManager =
-            .missing
+            .missing,
+        dataDeviceManager boundDataDeviceManager: OptionalDataDeviceManager = .missing
     ) {
         xdgDecorationManager = manager
         viewporter = boundViewporter
         fractionalScaleManager = boundFractionalScaleManager
+        dataDeviceManager = boundDataDeviceManager
     }
 
     func destroy() {
+        dataDeviceManager.destroy()
         fractionalScaleManager.destroy()
         viewporter.destroy()
         xdgDecorationManager.destroy()

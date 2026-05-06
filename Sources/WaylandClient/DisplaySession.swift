@@ -5,19 +5,25 @@ import WaylandRaw
 package final class DisplaySession {
     package static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000
 
-    private let connection: RawDisplayConnection
+    package let connection: RawDisplayConnection
     private let inputRouter = InputRouter()
     private let keyboardInterpreter: KeyboardInterpreter
     private let cursorManager: CursorManager
+    package let dataTransferGlobalProvider: any DataTransferGlobalProviding
+    package let dataTransferManager: DataTransferManager
+    package let dataTransferSourceWriter: any DataTransferSourceWriting
     private let maximumPendingInputEventCount: Int
     private var pendingInputState = PendingInputState.accepting([])
+    package var pendingDataTransferDiagnostics: [DataTransferDiagnostic] = []
     private var nextWindowID: UInt64 = 1
     private var nextPopupID: UInt64 = 1
 
     package init(
         connection rawConnection: RawDisplayConnection,
         cursorConfiguration: CursorConfiguration = .init(),
-        inputPipelineConfiguration: InputPipelineConfiguration = .init()
+        inputPipelineConfiguration: InputPipelineConfiguration = .init(),
+        dataTransferSourceWriter sourceWriter: any DataTransferSourceWriting =
+            ThreadedDataTransferSourceWriter()
     ) throws {
         rawConnection.preconditionIsOwnerThread()
         connection = rawConnection
@@ -26,8 +32,15 @@ package final class DisplaySession {
             connection: rawConnection,
             configuration: cursorConfiguration
         )
+        dataTransferGlobalProvider = rawConnection
+        dataTransferManager = DataTransferManager(connection: rawConnection)
+        dataTransferSourceWriter = sourceWriter
         let pendingInputEventCapacity = inputPipelineConfiguration.pendingInputEventCapacity
         maximumPendingInputEventCount = pendingInputEventCapacity.rawValue
+    }
+
+    deinit {
+        dataTransferSourceWriter.shutdown()
     }
 
     @available(
@@ -102,7 +115,7 @@ package final class DisplaySession {
     package func pumpEventsOnOwnerThread(timeoutMilliseconds: Int32 = -1) throws {
         connection.preconditionIsOwnerThread()
         try connection.pumpEvents(timeoutMilliseconds: timeoutMilliseconds)
-        processPendingRawInputEvents()
+        try processPendingRawInputEvents()
     }
 
     package func pumpEventsOnOwnerThread(
@@ -116,7 +129,7 @@ package final class DisplaySession {
             wakeFileDescriptor: wakeFileDescriptor,
             drainWakeFileDescriptor: drainWakeFileDescriptor
         )
-        processPendingRawInputEvents()
+        try processPendingRawInputEvents()
     }
 
     package var eventLoopFileDescriptorOnOwnerThread: CInt {
@@ -128,7 +141,7 @@ package final class DisplaySession {
     package func dispatchPendingEventsOnOwnerThread() throws -> Int32 {
         connection.preconditionIsOwnerThread()
         let dispatchedCount = try connection.dispatchPendingEvents()
-        processPendingRawInputEvents()
+        try processPendingRawInputEvents()
         return dispatchedCount
     }
 
@@ -174,9 +187,14 @@ package final class DisplaySession {
 
     package func drainInputEventsOnOwnerThread() -> [InputEvent] {
         connection.preconditionIsOwnerThread()
-        processPendingRawInputEvents()
+        processPendingSessionInputEvents()
 
         return pendingInputState.drain()
+    }
+
+    package func drainDataTransferEventsOnOwnerThread() -> [DataTransferEvent] {
+        connection.preconditionIsOwnerThread()
+        return dataTransferManager.drainDataTransferEvents()
     }
 
     package func createTopLevelWindowOnOwnerThread(
@@ -221,7 +239,12 @@ package final class DisplaySession {
         return PopupID(rawValue: nextPopupID)
     }
 
-    private func processPendingRawInputEvents() {
+    private func processPendingRawInputEvents() throws {
+        try processInputDataTransferState()
+        processPendingSessionInputEvents()
+    }
+
+    private func processPendingSessionInputEvents() {
         if pendingInputState.hasFailed {
             _ = connection.drainInputEvents()
             return

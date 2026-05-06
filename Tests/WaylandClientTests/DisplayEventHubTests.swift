@@ -460,6 +460,7 @@ private func expectFailure(
         Issue.record("Expected input stream failure")
     } catch { #expect(error == expectedError) }
 }
+
 private func diagnosticInputEvent(sequence: UInt64, message: String) -> InputEvent {
     let diagnostic = cursorDiagnostic(message)
     return InputEvent(

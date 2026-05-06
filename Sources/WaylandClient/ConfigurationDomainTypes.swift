@@ -74,6 +74,7 @@ public struct CursorSize: Equatable, Comparable, Sendable, CustomStringConvertib
 public enum DisplayConfigurationField: Equatable, Sendable, CustomStringConvertible {
     case displayEventCapacity
     case inputEventCapacity
+    case dataTransferEventCapacity
     case rawInputQueueCapacity
     case pendingInputEventCapacity
     case diagnosticsCapacity
@@ -84,6 +85,8 @@ public enum DisplayConfigurationField: Equatable, Sendable, CustomStringConverti
             "displayEventCapacity"
         case .inputEventCapacity:
             "inputEventCapacity"
+        case .dataTransferEventCapacity:
+            "dataTransferEventCapacity"
         case .rawInputQueueCapacity:
             "rawInputQueueCapacity"
         case .pendingInputEventCapacity:
@@ -108,6 +111,7 @@ public enum DisplayConfigurationError: Error, Equatable, Sendable, CustomStringC
 public enum EventStreamCapacityField: Equatable, Sendable {
     case displayEventCapacity
     case inputEventCapacity
+    case dataTransferEventCapacity
 
     var displayConfigurationField: DisplayConfigurationField {
         switch self {
@@ -115,6 +119,8 @@ public enum EventStreamCapacityField: Equatable, Sendable {
             .displayEventCapacity
         case .inputEventCapacity:
             .inputEventCapacity
+        case .dataTransferEventCapacity:
+            .dataTransferEventCapacity
         }
     }
 }
@@ -124,6 +130,7 @@ public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomString
 
     public static let defaultDisplayEvents = EventStreamCapacity(unchecked: 256)
     public static let defaultInputEvents = EventStreamCapacity(unchecked: 1_024)
+    public static let defaultDataTransferEvents = EventStreamCapacity(unchecked: 256)
 
     public init(
         _ value: Int,
