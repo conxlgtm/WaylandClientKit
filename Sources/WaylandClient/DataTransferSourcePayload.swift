@@ -61,9 +61,7 @@ package final class DataTransferSourceSendRequest {
             sourceID: sourceID,
             mimeType: mimeType,
             descriptor: try releaseRawDescriptor(),
-            data: data,
-            writeDescriptor: writeDescriptor,
-            closeDescriptor: closeDescriptor
+            data: data
         )
     }
 

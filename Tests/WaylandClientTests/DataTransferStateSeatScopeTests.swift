@@ -220,6 +220,56 @@ struct DataTransferStateSeatScopeTests {
         }
     }
 
+    @Test
+    func stateSnapshotInitRejectsSeatKeyMismatch() {
+        #expect(throws: DataTransferError.unknownSeat(seat1)) {
+            _ = try DataTransferState(
+                seats: [
+                    seat1: DataTransferSeatSnapshot(
+                        seatID: seat2,
+                        hasDataDevice: true,
+                        selectionOfferID: nil,
+                        selectionSourceID: nil
+                    )
+                ]
+            )
+        }
+    }
+
+    @Test
+    func stateSnapshotInitRejectsOfferKeyMismatch() {
+        #expect(throws: DataTransferError.unknownOffer) {
+            _ = try DataTransferState(
+                seats: [:],
+                offers: [
+                    DataOfferID(rawValue: 1): DataOfferSnapshot(
+                        id: offer2,
+                        role: .selection(seatID: seat1),
+                        mimeTypes: [.plainText]
+                    )
+                ],
+                sources: [:]
+            )
+        }
+    }
+
+    @Test
+    func stateSnapshotInitRejectsSourceKeyMismatch() {
+        #expect(throws: DataTransferError.unknownSource) {
+            _ = try DataTransferState(
+                seats: [:],
+                offers: [:],
+                sources: [
+                    DataSourceID(rawValue: 1): DataSourceSnapshot(
+                        id: source2,
+                        seatID: seat1,
+                        mimeTypes: [.plainText]
+                    )
+                ]
+            )
+        }
+    }
+
     private func boundState(_ seatID: SeatID) throws -> DataTransferState {
         let available = try DataTransferState().reduce(.seatAvailable(seatID)).state
         return try available.reduce(.dataDeviceBound(seatID)).state
