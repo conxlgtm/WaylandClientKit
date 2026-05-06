@@ -1,6 +1,8 @@
 import Foundation
 
 public struct ClipboardOffer: Sendable, Hashable {
+    public static let defaultReadTimeout: Duration = .seconds(5)
+
     package let id: DataOfferID
     public let seatID: SeatID
     public let mimeTypes: [MIMEType]
@@ -26,10 +28,11 @@ public struct ClipboardOffer: Sendable, Hashable {
 
     public func read(
         _ mimeType: MIMEType,
-        limit: ByteCount = .defaultClipboardReadLimit
+        limit: ByteCount = .defaultClipboardReadLimit,
+        timeout: Duration = Self.defaultReadTimeout
     ) async throws -> Data {
         var descriptor = try await receive(mimeType)
-        return try descriptor.readData(limit: limit)
+        return try await descriptor.readData(limit: limit, timeout: timeout)
     }
 
     public static func == (lhs: ClipboardOffer, rhs: ClipboardOffer) -> Bool {
