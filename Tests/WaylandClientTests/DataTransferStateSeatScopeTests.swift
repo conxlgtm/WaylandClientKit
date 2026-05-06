@@ -25,6 +25,19 @@ struct DataTransferStateSeatScopeTests {
     }
 
     @Test
+    func selectionRejectsDragAndDropOffer() throws {
+        var state = try boundState(seat1)
+        state = try state.reduce(.offerCreated(id: offer2, role: .dragAndDrop(seatID: seat1)))
+            .state
+
+        #expect(throws: DataTransferError.unknownOffer) {
+            _ = try state.reduce(.selectionChanged(seatID: seat1, offerID: offer2))
+        }
+        #expect(state.seatSnapshot(seat1)?.selectionOfferID == nil)
+        #expect(state.offerSnapshot(offer2)?.role == .dragAndDrop(seatID: seat1))
+    }
+
+    @Test
     func selectionSourceRejectsSourceFromDifferentSeat() throws {
         var state = try boundState(seat1)
         state = try state.reduce(.seatAvailable(seat2)).state
@@ -86,6 +99,30 @@ struct DataTransferStateSeatScopeTests {
                     offer2: DataOfferSnapshot(
                         id: offer2,
                         role: .selection(seatID: seat2),
+                        mimeTypes: [.plainText]
+                    )
+                ],
+                sources: [:]
+            )
+        }
+    }
+
+    @Test
+    func stateSnapshotInitRejectsSelectionOfferWithDragAndDropRole() {
+        #expect(throws: DataTransferError.unknownOffer) {
+            _ = try DataTransferState(
+                seats: [
+                    seat1: DataTransferSeatSnapshot(
+                        seatID: seat1,
+                        hasDataDevice: true,
+                        selectionOfferID: offer2,
+                        selectionSourceID: nil
+                    )
+                ],
+                offers: [
+                    offer2: DataOfferSnapshot(
+                        id: offer2,
+                        role: .dragAndDrop(seatID: seat1),
                         mimeTypes: [.plainText]
                     )
                 ],
