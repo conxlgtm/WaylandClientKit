@@ -17,6 +17,11 @@ package enum DataTransferGlobalProcessingDecision: Equatable, Sendable {
     case synchronizeSeats
 }
 
+package enum DataTransferGlobalProcessingOutcome: Equatable, Sendable {
+    case skipped
+    case synchronized
+}
+
 package struct DataTransferGlobalSnapshot: Equatable, Sendable {
     package let bindingState: DataTransferGlobalBindingState
     package let seatIDs: [SeatID]
@@ -116,20 +121,41 @@ extension DisplaySession {
     ) throws {
         collectDataTransferSourceWriteResults()
         try dataTransferManager.throwPendingCallbackErrorIfAny()
-        try Self.processDataTransferGlobals(
+        try Self.processDataTransferGlobalEffects(
             requirement: requirement,
-            provider: dataTransferGlobalProvider
-        ) { seatIDs in
-            try dataTransferManager.synchronizeSeats(seatIDs)
+            provider: dataTransferGlobalProvider,
+            synchronizeSeats: { seatIDs in
+                try dataTransferManager.synchronizeSeats(seatIDs)
+            },
+            submitSourceWrites: {
+                try submitPendingDataTransferSourceWrites()
+            }
+        )
+    }
+
+    package static func processDataTransferGlobalEffects(
+        requirement: DataTransferProcessingRequirement,
+        provider: any DataTransferGlobalProviding,
+        synchronizeSeats: ([SeatID]) throws -> Void,
+        submitSourceWrites: () throws -> Void
+    ) throws {
+        let outcome = try processDataTransferGlobals(
+            requirement: requirement,
+            provider: provider,
+            synchronizeSeats: synchronizeSeats
+        )
+        guard outcome == .synchronized else {
+            return
         }
-        try submitPendingDataTransferSourceWrites()
+
+        try submitSourceWrites()
     }
 
     package static func processDataTransferGlobals(
         requirement: DataTransferProcessingRequirement,
         provider: any DataTransferGlobalProviding,
         synchronizeSeats: ([SeatID]) throws -> Void
-    ) throws {
+    ) throws -> DataTransferGlobalProcessingOutcome {
         let decision = try Self.dataTransferGlobalProcessingDecision(
             state: provider.currentDataTransferGlobalSnapshot?.bindingState ?? .unbound,
             requirement: requirement
@@ -137,7 +163,7 @@ extension DisplaySession {
         let snapshot: DataTransferGlobalSnapshot
         switch decision {
         case .skip:
-            return
+            return .skipped
         case .bindRequiredGlobals:
             snapshot = try provider.bindRequiredDataTransferGlobals()
             let postBindDecision = try Self.dataTransferGlobalProcessingDecision(
@@ -145,7 +171,7 @@ extension DisplaySession {
                 requirement: requirement
             )
             guard postBindDecision == .synchronizeSeats else {
-                return
+                return .skipped
             }
         case .synchronizeSeats:
             guard let currentSnapshot = provider.currentDataTransferGlobalSnapshot else {
@@ -156,6 +182,7 @@ extension DisplaySession {
         }
 
         try synchronizeSeats(snapshot.seatIDs)
+        return .synchronized
     }
 
     package static func dataTransferGlobalProcessingDecision(
