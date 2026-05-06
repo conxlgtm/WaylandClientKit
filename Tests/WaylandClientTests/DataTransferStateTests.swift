@@ -235,7 +235,6 @@ struct DataTransferStateTests {
             removed.effects
                 == [
                     .releaseDataDevice(seat1),
-                    .destroyOffer(offer1),
                     .cancelSource(source1),
                     .publishSourceCancelled(source1),
                 ]

@@ -1,4 +1,5 @@
 import Foundation
+import Glibc
 import Testing
 
 @testable import WaylandClient
@@ -79,7 +80,12 @@ struct DataTransferManagerSourceWriteJobDrainTests {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
         try manager.synchronizeSeats([seat1])
-        let descriptor: Int32 = 310
+        let descriptors = try makePipeDescriptors()
+        defer {
+            _ = Glibc.close(descriptors.readEnd)
+            _ = Glibc.close(descriptors.writeEnd)
+        }
+        let descriptor = descriptors.writeEnd
         backend.failingWriteDescriptors[descriptor] = .writeFileDescriptor(
             WaylandSystemErrno(unchecked: EIO)
         )
@@ -115,7 +121,12 @@ struct DataTransferManagerSourceWriteJobDrainTests {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
         try manager.synchronizeSeats([seat1])
-        let descriptor: Int32 = 311
+        let descriptors = try makePipeDescriptors()
+        defer {
+            _ = Glibc.close(descriptors.readEnd)
+            _ = Glibc.close(descriptors.writeEnd)
+        }
+        let descriptor = descriptors.writeEnd
         backend.failingCloseDescriptors[descriptor] = EIO
 
         let source = try manager.setSelectionSource(
@@ -150,5 +161,54 @@ struct DataTransferManagerSourceWriteJobDrainTests {
                 ]
         )
         #expect(backend.closedDescriptors == [descriptor])
+    }
+
+    @Test
+    func drainSourceWriteJobsPreparesDescriptorForNonblockingWrite() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let descriptors = try makePipeDescriptors()
+        defer {
+            _ = Glibc.close(descriptors.readEnd)
+            _ = Glibc.close(descriptors.writeEnd)
+        }
+        let descriptor = descriptors.writeEnd
+
+        let source = try manager.setSelectionSource(
+            seatID: seat1,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 100),
+            dataProvider: DataTransferSourceProvider(
+                data: [.plainText: Data("clipboard".utf8)]
+            )
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+        sourceBinding.emit(.send(mimeType: MIMEType.plainText.rawValue, fd: descriptor))
+
+        let jobs = try manager.drainSourceWriteJobs()
+        let job = try #require(jobs.first)
+
+        #expect(
+            job.write()
+                == .succeeded(sourceID: source.id, mimeType: .plainText)
+        )
+        let flags = Glibc.fcntl(descriptor, F_GETFL)
+        #expect(flags >= 0)
+        #expect((flags & O_NONBLOCK) == O_NONBLOCK)
+    }
+
+    private func makePipeDescriptors() throws -> (readEnd: Int32, writeEnd: Int32) {
+        var descriptors = [Int32](repeating: -1, count: 2)
+        let result = unsafe descriptors.withUnsafeMutableBufferPointer { descriptorBuffer in
+            unsafe Glibc.pipe(descriptorBuffer.baseAddress)
+        }
+        guard result == 0 else {
+            throw DataTransferError.createPipe(
+                WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
+            )
+        }
+
+        return (readEnd: descriptors[0], writeEnd: descriptors[1])
     }
 }
