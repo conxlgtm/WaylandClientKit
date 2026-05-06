@@ -9,7 +9,7 @@ import Testing
 struct DataTransferSourceWriterShutdownTests {
     @Test
     func shutdownCancelsInFlightJobAndWaitsForWorker() throws {
-        let probe = BlockingSourceWriteProbe()
+        let probe = BackpressureSourceWriteProbe()
         let writer = ThreadedDataTransferSourceWriter()
         defer { writer.shutdown() }
 
@@ -22,10 +22,12 @@ struct DataTransferSourceWriterShutdownTests {
         ])
 
         #expect(probe.waitUntilStarted())
+        let shutdownThreadMarker = currentThreadMarker()
         writer.shutdown()
 
         let results = writer.drainResults()
         #expect(probe.closedDescriptors == [500])
+        #expect(!probe.closeThreadMarkers.contains(shutdownThreadMarker))
         #expect(
             results == [
                 .failed(
@@ -40,7 +42,7 @@ struct DataTransferSourceWriterShutdownTests {
 
     @Test
     func shutdownCancelsQueuedAndInFlightJobs() throws {
-        let inFlightProbe = BlockingSourceWriteProbe()
+        let inFlightProbe = BackpressureSourceWriteProbe()
         let queuedCloseRecorder = WriterDescriptorCloseRecorder()
         let writer = ThreadedDataTransferSourceWriter()
         defer { writer.shutdown() }
@@ -96,7 +98,7 @@ struct DataTransferSourceWriterShutdownTests {
 
     @Test
     func shutdownReportsInFlightCloseFailure() throws {
-        let probe = BlockingSourceWriteProbe(closeResult: EIO)
+        let probe = BackpressureSourceWriteProbe(closeResult: EIO)
         let writer = ThreadedDataTransferSourceWriter()
         defer { writer.shutdown() }
 
@@ -124,10 +126,59 @@ struct DataTransferSourceWriterShutdownTests {
         )
     }
 
+    @Test
+    func shutdownCancelsBackpressuredNonblockingPipeWriteFromWorkerThread() throws {
+        let descriptors = try makePipeDescriptors()
+        var writeEndOwnedByTest = true
+        defer {
+            _ = Glibc.close(descriptors.readEnd)
+            if writeEndOwnedByTest {
+                _ = Glibc.close(descriptors.writeEnd)
+            }
+        }
+        try fillPipeUntilWouldBlock(descriptors.writeEnd)
+        let probe = PipeWriteProbe()
+        let writer = ThreadedDataTransferSourceWriter()
+        defer { writer.shutdown() }
+
+        writer.submit([
+            DataTransferSourceWriteJob(
+                sourceID: DataSourceID(rawValue: 24),
+                mimeType: .plainText,
+                descriptor: descriptors.writeEnd,
+                data: Data("blocked".utf8),
+                writeDescriptor: { descriptor, bytes in
+                    try probe.write(descriptor: descriptor, bytes: bytes)
+                },
+                closeDescriptor: { descriptor in
+                    probe.close(descriptor: descriptor)
+                }
+            )
+        ])
+        writeEndOwnedByTest = false
+
+        #expect(probe.waitUntilStarted())
+        let shutdownThreadMarker = currentThreadMarker()
+        writer.shutdown()
+
+        #expect(
+            writer.drainResults()
+                == [
+                    .failed(
+                        sourceID: DataSourceID(rawValue: 24),
+                        mimeType: .plainText,
+                        error: .cancelled
+                    )
+                ]
+        )
+        #expect(probe.closedDescriptors == [descriptors.writeEnd])
+        #expect(!probe.closeThreadMarkers.contains(shutdownThreadMarker))
+    }
+
     private func blockingWriteJob(
         sourceID: DataSourceID,
         descriptor: Int32,
-        probe: BlockingSourceWriteProbe
+        probe: BackpressureSourceWriteProbe
     ) -> DataTransferSourceWriteJob {
         DataTransferSourceWriteJob(
             sourceID: sourceID,
@@ -147,9 +198,9 @@ struct DataTransferSourceWriterShutdownTests {
     }
 }
 
-private final class BlockingSourceWriteProbe: Sendable {
+private final class BackpressureSourceWriteProbe: Sendable {
     private let condition = NSCondition()
-    private let state = Mutex(BlockingSourceWriteProbeState())
+    private let state = Mutex(BackpressureSourceWriteProbeState())
     private let closeResult: Int32
 
     init(closeResult: Int32 = 0) {
@@ -160,25 +211,27 @@ private final class BlockingSourceWriteProbe: Sendable {
         state.withLock(\.closedDescriptors)
     }
 
+    var closeThreadMarkers: [ObjectIdentifier] {
+        state.withLock(\.closeThreadMarkers)
+    }
+
     func write(descriptor _: Int32, bytes _: [UInt8]) throws -> Int {
         condition.lock()
         state.withLock { storage in
             storage.started = true
+            storage.writeCallCount += 1
         }
         condition.broadcast()
-        while !shouldUnblock {
-            condition.wait()
-        }
         condition.unlock()
 
-        throw DataTransferError.cancelled
+        throw DataTransferError.writeFileDescriptor(WaylandSystemErrno(unchecked: EAGAIN))
     }
 
     func close(descriptor: Int32) -> Int32 {
         condition.lock()
         state.withLock { storage in
             storage.closedDescriptors.append(descriptor)
-            storage.shouldUnblock = true
+            storage.closeThreadMarkers.append(currentThreadMarker())
         }
         condition.broadcast()
         condition.unlock()
@@ -203,16 +256,88 @@ private final class BlockingSourceWriteProbe: Sendable {
     private var started: Bool {
         state.withLock(\.started)
     }
+}
 
-    private var shouldUnblock: Bool {
-        state.withLock(\.shouldUnblock)
+private struct BackpressureSourceWriteProbeState {
+    var started = false
+    var writeCallCount = 0
+    var closedDescriptors: [Int32] = []
+    var closeThreadMarkers: [ObjectIdentifier] = []
+}
+
+private final class PipeWriteProbe: Sendable {
+    private let condition = NSCondition()
+    private let state = Mutex(PipeWriteProbeState())
+
+    var closedDescriptors: [Int32] {
+        state.withLock(\.closedDescriptors)
+    }
+
+    var closeThreadMarkers: [ObjectIdentifier] {
+        state.withLock(\.closeThreadMarkers)
+    }
+
+    func write(descriptor: Int32, bytes: [UInt8]) throws -> Int {
+        condition.lock()
+        state.withLock { storage in
+            storage.started = true
+            storage.writeCallCount += 1
+        }
+        condition.broadcast()
+        condition.unlock()
+
+        let result = unsafe bytes.withUnsafeBytes { buffer in
+            unsafe Glibc.write(descriptor, buffer.baseAddress, buffer.count)
+        }
+        guard result >= 0 else {
+            throw DataTransferError.writeFileDescriptor(
+                WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
+            )
+        }
+
+        return result
+    }
+
+    func close(descriptor: Int32) -> Int32 {
+        condition.lock()
+        state.withLock { storage in
+            storage.closedDescriptors.append(descriptor)
+            storage.closeThreadMarkers.append(currentThreadMarker())
+        }
+        condition.broadcast()
+        condition.unlock()
+
+        guard Glibc.close(descriptor) == 0 else {
+            return errno > 0 ? errno : EIO
+        }
+
+        return 0
+    }
+
+    func waitUntilStarted() -> Bool {
+        let deadline = Date(timeIntervalSinceNow: 2)
+        condition.lock()
+        defer { condition.unlock() }
+
+        while !started {
+            guard condition.wait(until: deadline) else {
+                return started
+            }
+        }
+
+        return true
+    }
+
+    private var started: Bool {
+        state.withLock(\.started)
     }
 }
 
-private struct BlockingSourceWriteProbeState {
+private struct PipeWriteProbeState {
     var started = false
-    var shouldUnblock = false
+    var writeCallCount = 0
     var closedDescriptors: [Int32] = []
+    var closeThreadMarkers: [ObjectIdentifier] = []
 }
 
 private final class WriterDescriptorCloseRecorder: Sendable {
@@ -225,4 +350,56 @@ private final class WriterDescriptorCloseRecorder: Sendable {
     func record(_ descriptor: Int32) {
         storage.withLock { $0.append(descriptor) }
     }
+}
+
+private func makePipeDescriptors() throws -> (readEnd: Int32, writeEnd: Int32) {
+    var descriptors = [Int32](repeating: -1, count: 2)
+    let result = unsafe descriptors.withUnsafeMutableBufferPointer { descriptorBuffer in
+        unsafe Glibc.pipe(descriptorBuffer.baseAddress)
+    }
+    guard result == 0 else {
+        throw DataTransferError.createPipe(
+            WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
+        )
+    }
+
+    return (readEnd: descriptors[0], writeEnd: descriptors[1])
+}
+
+private func fillPipeUntilWouldBlock(_ descriptor: Int32) throws {
+    try setNonblocking(descriptor)
+    let bytes = [UInt8](repeating: 0, count: 4_096)
+    while true {
+        let result = unsafe bytes.withUnsafeBytes { buffer in
+            unsafe Glibc.write(descriptor, buffer.baseAddress, buffer.count)
+        }
+        if result >= 0 {
+            continue
+        }
+        if errno == EAGAIN || errno == EWOULDBLOCK {
+            return
+        }
+
+        throw DataTransferError.writeFileDescriptor(
+            WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
+        )
+    }
+}
+
+private func setNonblocking(_ descriptor: Int32) throws {
+    let flags = Glibc.fcntl(descriptor, F_GETFL)
+    guard flags >= 0 else {
+        throw DataTransferError.writeFileDescriptor(
+            WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
+        )
+    }
+    guard Glibc.fcntl(descriptor, F_SETFL, flags | O_NONBLOCK) == 0 else {
+        throw DataTransferError.writeFileDescriptor(
+            WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
+        )
+    }
+}
+
+private func currentThreadMarker() -> ObjectIdentifier {
+    ObjectIdentifier(Thread.current)
 }

@@ -112,6 +112,10 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
         try OwnedFileDescriptor(adopting: descriptor)
     }
 
+    var sourceDescriptorIO: DataTransferSourceDescriptorIO {
+        .raw
+    }
+
     func writeFileDescriptor(_ descriptor: Int32, bytes: [UInt8]) throws -> Int {
         do {
             return try RawFileDescriptor.write(descriptor: descriptor, bytes: bytes)

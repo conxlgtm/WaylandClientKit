@@ -3,17 +3,44 @@ import Glibc
 import Synchronization
 import WaylandRaw
 
+package struct DataTransferSourceDescriptorIO: Sendable {
+    package static let raw = DataTransferSourceDescriptorIO()
+
+    private let prepareDescriptorForWriting: @Sendable (Int32) throws -> Void
+    private let writeDescriptor: @Sendable (Int32, [UInt8]) throws -> Int
+    private let closeDescriptor: @Sendable (Int32) -> Int32
+
+    package init(
+        prepareDescriptorForWriting prepare: @escaping @Sendable (Int32) throws -> Void =
+            defaultPrepareDataTransferSourceDescriptorForWriting,
+        writeDescriptor write: @escaping @Sendable (Int32, [UInt8]) throws -> Int =
+            defaultWriteDataTransferSourceDescriptor,
+        closeDescriptor close: @escaping @Sendable (Int32) -> Int32 =
+            defaultCloseDataTransferSourceDescriptor
+    ) {
+        prepareDescriptorForWriting = prepare
+        writeDescriptor = write
+        closeDescriptor = close
+    }
+
+    package func prepareForWriting(_ descriptor: Int32) throws {
+        try prepareDescriptorForWriting(descriptor)
+    }
+    package func write(_ descriptor: Int32, bytes: [UInt8]) throws -> Int {
+        try writeDescriptor(descriptor, bytes)
+    }
+    package func close(_ descriptor: Int32) -> Int32 { closeDescriptor(descriptor) }
+}
+
 package final class DataTransferSourceWriteJob: Sendable {
     package let sourceID: DataSourceID
     package let mimeType: MIMEType
     package let data: Data
 
     private let descriptor: Mutex<DescriptorState>
-    private let prepareDescriptorForWriting: @Sendable (Int32) throws -> Void
-    private let writeDescriptor: @Sendable (Int32, [UInt8]) throws -> Int
-    private let closeDescriptor: @Sendable (Int32) -> Int32
+    private let descriptorIO: DataTransferSourceDescriptorIO
 
-    package init(
+    package convenience init(
         sourceID jobSourceID: DataSourceID,
         mimeType jobMIMEType: MIMEType,
         descriptor jobDescriptor: Int32,
@@ -25,30 +52,52 @@ package final class DataTransferSourceWriteJob: Sendable {
         closeDescriptor close: @escaping @Sendable (Int32) -> Int32 =
             defaultCloseDataTransferSourceDescriptor
     ) {
+        self.init(
+            sourceID: jobSourceID,
+            mimeType: jobMIMEType,
+            descriptor: jobDescriptor,
+            data: jobData,
+            descriptorIO: DataTransferSourceDescriptorIO(
+                prepareDescriptorForWriting: prepare,
+                writeDescriptor: write,
+                closeDescriptor: close
+            )
+        )
+    }
+
+    package init(
+        sourceID jobSourceID: DataSourceID,
+        mimeType jobMIMEType: MIMEType,
+        descriptor jobDescriptor: Int32,
+        data jobData: Data,
+        descriptorIO jobDescriptorIO: DataTransferSourceDescriptorIO
+    ) {
         sourceID = jobSourceID
         mimeType = jobMIMEType
         data = jobData
         descriptor = Mutex(DescriptorState(rawValue: jobDescriptor))
-        prepareDescriptorForWriting = prepare
-        writeDescriptor = write
-        closeDescriptor = close
+        descriptorIO = jobDescriptorIO
     }
 
     package func write() -> DataTransferSourceWriteResult {
         do {
             let rawDescriptor = try startWriting()
             do {
-                try prepareDescriptorForWriting(rawDescriptor)
+                try descriptorIO.prepareForWriting(rawDescriptor)
                 try writeData(to: rawDescriptor)
-                try closeOwnedDescriptor(rawDescriptor)
             } catch {
+                let writeError = error
                 do {
                     try closeOwnedDescriptor(rawDescriptor)
                 } catch {
-                    _ = error
+                    if Self.isCancellation(writeError) {
+                        throw error
+                    }
                 }
-                throw error
+                throw writeError
             }
+
+            try closeOwnedDescriptor(rawDescriptor)
             return .succeeded(sourceID: sourceID, mimeType: mimeType)
         } catch let error as DataTransferError {
             return .failed(sourceID: sourceID, mimeType: mimeType, error: error)
@@ -74,10 +123,7 @@ package final class DataTransferSourceWriteJob: Sendable {
             case .idle(let rawDescriptor):
                 state = .cancelledBeforeWriting(closeCancellationDescriptor(rawDescriptor))
             case .writing(let rawDescriptor, nil):
-                state = .writing(
-                    rawDescriptor,
-                    cancellationError: closeCancellationDescriptor(rawDescriptor)
-                )
+                state = .writing(rawDescriptor, cancellationError: .cancelled)
             case .writing(_, .some), .cancelledBeforeWriting, .consumed:
                 break
             }
@@ -112,7 +158,7 @@ package final class DataTransferSourceWriteJob: Sendable {
             try throwIfCancelled()
             let remainingBytes = Array(bytes[writtenByteCount...])
             do {
-                let count = try writeDescriptor(rawDescriptor, remainingBytes)
+                let count = try descriptorIO.write(rawDescriptor, bytes: remainingBytes)
                 guard count > 0, count <= remainingBytes.count else {
                     throw DataTransferError.writeFileDescriptor(
                         WaylandSystemErrno(unchecked: EIO)
@@ -174,15 +220,14 @@ package final class DataTransferSourceWriteJob: Sendable {
                 throw DataTransferError.fileDescriptorAlreadyReleased
             }
         }
+        try closeRawDescriptor(rawDescriptor)
         if let cancellationError {
             throw cancellationError
         }
-
-        try closeRawDescriptor(rawDescriptor)
     }
 
     private func closeCancellationDescriptor(_ rawDescriptor: Int32) -> DataTransferError {
-        let closeResult = closeDescriptor(rawDescriptor)
+        let closeResult = descriptorIO.close(rawDescriptor)
         guard closeResult == 0 else {
             return .closeFileDescriptor(WaylandSystemErrno(unchecked: closeResult))
         }
@@ -191,7 +236,7 @@ package final class DataTransferSourceWriteJob: Sendable {
     }
 
     private func closeRawDescriptor(_ rawDescriptor: Int32) throws {
-        let closeResult = closeDescriptor(rawDescriptor)
+        let closeResult = descriptorIO.close(rawDescriptor)
         guard closeResult == 0 else {
             throw DataTransferError.closeFileDescriptor(
                 WaylandSystemErrno(unchecked: closeResult)
@@ -226,8 +271,16 @@ package final class DataTransferSourceWriteJob: Sendable {
             }
         }
         if let rawDescriptor {
-            _ = closeDescriptor(rawDescriptor)
+            _ = descriptorIO.close(rawDescriptor)
         }
+    }
+
+    private static func isCancellation(_ error: any Error) -> Bool {
+        guard let dataTransferError = error as? DataTransferError else {
+            return false
+        }
+
+        return dataTransferError == .cancelled
     }
 
     deinit {
