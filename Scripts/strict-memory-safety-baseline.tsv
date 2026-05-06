@@ -7,7 +7,9 @@ WaylandRaw	Sources/WaylandRaw/RawBorrowedBuffer.swift	0
 WaylandRaw	Sources/WaylandRaw/RawCompositor.swift	6
 WaylandRaw	Sources/WaylandRaw/RawDisplay.swift	2
 WaylandRaw	Sources/WaylandRaw/RawDisplayConnection+EventLoop.swift	18
-WaylandRaw	Sources/WaylandRaw/RawDisplayConnection+OptionalGlobals.swift	3
+WaylandRaw	Sources/WaylandRaw/RawDataDevice.swift	18
+WaylandRaw	Sources/WaylandRaw/RawDataDeviceOwners.swift	55
+WaylandRaw	Sources/WaylandRaw/RawDisplayConnection+OptionalGlobals.swift	4
 WaylandRaw	Sources/WaylandRaw/RawDisplayConnection+PointerCursor.swift	1
 WaylandRaw	Sources/WaylandRaw/RawDisplayConnection.swift	35
 WaylandRaw	Sources/WaylandRaw/RawEventQueue.swift	4

@@ -5,6 +5,8 @@
 #endif
 
 #include <stdint.h>
+#include <stddef.h>
+#include <sys/types.h>
 #include <wayland-client.h>
 
 #if !defined(SWL_ENABLE_TESTING) && !defined(NDEBUG)
@@ -22,6 +24,10 @@ struct wp_viewporter;
 struct wp_viewport;
 struct wp_fractional_scale_manager_v1;
 struct wp_fractional_scale_v1;
+struct wl_data_device_manager;
+struct wl_data_device;
+struct wl_data_offer;
+struct wl_data_source;
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,6 +56,9 @@ struct wp_fractional_scale_manager_v1 *swl_registry_bind_wp_fractional_scale_man
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wl_seat *swl_registry_bind_wl_seat(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wl_data_device_manager *swl_registry_bind_wl_data_device_manager(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 /* ------------------------------------------------------------------ */
@@ -93,6 +102,37 @@ uint32_t swl_shm_format_argb8888(void);
 int swl_memfd_create(const char *name, unsigned int flags);
 // close on exec flags
 unsigned int swl_mfd_cloexec(void);
+ssize_t swl_write_no_sigpipe(int fd, const void *buffer, size_t count);
+
+/* ------------------------------------------------------------------ */
+/*  Data-device request wrappers                                      */
+/* ------------------------------------------------------------------ */
+
+struct wl_data_source *swl_data_device_manager_create_data_source(
+    struct wl_data_device_manager *manager);
+struct wl_data_device *swl_data_device_manager_get_data_device(
+    struct wl_data_device_manager *manager, struct wl_seat *seat);
+void swl_data_source_offer(struct wl_data_source *source, const char *mime_type);
+void swl_data_source_set_actions(struct wl_data_source *source, uint32_t dnd_actions);
+void swl_data_offer_accept(
+    struct wl_data_offer *offer, uint32_t serial, const char *mime_type);
+void swl_data_offer_receive(
+    struct wl_data_offer *offer, const char *mime_type, int32_t fd);
+void swl_data_offer_finish(struct wl_data_offer *offer);
+void swl_data_offer_set_actions(
+    struct wl_data_offer *offer, uint32_t dnd_actions, uint32_t preferred_action);
+void swl_data_device_set_selection(
+    struct wl_data_device *device, struct wl_data_source *source, uint32_t serial);
+void swl_data_device_start_drag(
+    struct wl_data_device *device,
+    struct wl_data_source *source,
+    struct wl_surface *origin,
+    struct wl_surface *icon,
+    uint32_t serial);
+uint32_t swl_data_device_manager_dnd_action_none(void);
+uint32_t swl_data_device_manager_dnd_action_copy(void);
+uint32_t swl_data_device_manager_dnd_action_move(void);
+uint32_t swl_data_device_manager_dnd_action_ask(void);
 
 /* ------------------------------------------------------------------ */
 /*  XDG request wrappers                                              */
@@ -180,6 +220,11 @@ void swl_keyboard_release(struct wl_keyboard *keyboard);
 void swl_touch_release(struct wl_touch *touch);
 void swl_seat_destroy(struct wl_seat *seat);
 void swl_seat_release(struct wl_seat *seat);
+void swl_data_offer_destroy(struct wl_data_offer *offer);
+void swl_data_source_destroy(struct wl_data_source *source);
+void swl_data_device_destroy(struct wl_data_device *device);
+void swl_data_device_release(struct wl_data_device *device);
+void swl_data_device_manager_destroy(struct wl_data_device_manager *manager);
 void swl_xdg_surface_destroy(struct xdg_surface *xdg_surface);
 void swl_xdg_toplevel_destroy(struct xdg_toplevel *xdg_toplevel);
 void swl_xdg_positioner_destroy(struct xdg_positioner *positioner);
@@ -246,6 +291,42 @@ typedef void (*swl_callback_done_fn)(
 typedef void (*swl_buffer_release_fn)(void *data, struct wl_buffer *buffer);
 typedef void (*swl_surface_preferred_buffer_scale_fn)(
     void *data, struct wl_surface *surface, int32_t factor);
+
+/* Data device */
+typedef void (*swl_data_offer_offer_fn)(
+    void *data, struct wl_data_offer *offer, const char *mime_type);
+typedef void (*swl_data_offer_source_actions_fn)(
+    void *data, struct wl_data_offer *offer, uint32_t source_actions);
+typedef void (*swl_data_offer_action_fn)(
+    void *data, struct wl_data_offer *offer, uint32_t dnd_action);
+typedef void (*swl_data_source_target_fn)(
+    void *data, struct wl_data_source *source, const char *mime_type);
+typedef void (*swl_data_source_send_fn)(
+    void *data, struct wl_data_source *source, const char *mime_type, int32_t fd);
+typedef void (*swl_data_source_cancelled_fn)(
+    void *data, struct wl_data_source *source);
+typedef void (*swl_data_source_dnd_drop_performed_fn)(
+    void *data, struct wl_data_source *source);
+typedef void (*swl_data_source_dnd_finished_fn)(
+    void *data, struct wl_data_source *source);
+typedef void (*swl_data_source_action_fn)(
+    void *data, struct wl_data_source *source, uint32_t dnd_action);
+typedef void (*swl_data_device_data_offer_fn)(
+    void *data, struct wl_data_device *device, struct wl_data_offer *offer);
+typedef void (*swl_data_device_enter_fn)(
+    void *data,
+    struct wl_data_device *device,
+    uint32_t serial,
+    struct wl_surface *surface,
+    wl_fixed_t x,
+    wl_fixed_t y,
+    struct wl_data_offer *offer);
+typedef void (*swl_data_device_leave_fn)(void *data, struct wl_data_device *device);
+typedef void (*swl_data_device_motion_fn)(
+    void *data, struct wl_data_device *device, uint32_t time, wl_fixed_t x, wl_fixed_t y);
+typedef void (*swl_data_device_drop_fn)(void *data, struct wl_data_device *device);
+typedef void (*swl_data_device_selection_fn)(
+    void *data, struct wl_data_device *device, struct wl_data_offer *offer);
 
 /* XDG shell */
 typedef void (*swl_xdg_wm_base_ping_fn)(
@@ -381,6 +462,33 @@ struct swl_surface_listener_callbacks {
     void                                 *data;
 };
 
+struct swl_data_offer_listener_callbacks {
+    swl_data_offer_offer_fn          offer;
+    swl_data_offer_source_actions_fn source_actions;
+    swl_data_offer_action_fn         action;
+    void                            *data;
+};
+
+struct swl_data_source_listener_callbacks {
+    swl_data_source_target_fn             target;
+    swl_data_source_send_fn               send;
+    swl_data_source_cancelled_fn          cancelled;
+    swl_data_source_dnd_drop_performed_fn dnd_drop_performed;
+    swl_data_source_dnd_finished_fn       dnd_finished;
+    swl_data_source_action_fn             action;
+    void                                 *data;
+};
+
+struct swl_data_device_listener_callbacks {
+    swl_data_device_data_offer_fn data_offer;
+    swl_data_device_enter_fn      enter;
+    swl_data_device_leave_fn      leave;
+    swl_data_device_motion_fn     motion;
+    swl_data_device_drop_fn       drop;
+    swl_data_device_selection_fn  selection;
+    void                         *data;
+};
+
 struct swl_xdg_wm_base_listener_callbacks {
     swl_xdg_wm_base_ping_fn ping;
     void                    *data;
@@ -478,6 +586,18 @@ int swl_surface_add_listener(
     struct wl_surface *surface,
     const struct swl_surface_listener_callbacks *callbacks);
 
+int swl_data_offer_add_listener(
+    struct wl_data_offer *offer,
+    const struct swl_data_offer_listener_callbacks *callbacks);
+
+int swl_data_source_add_listener(
+    struct wl_data_source *source,
+    const struct swl_data_source_listener_callbacks *callbacks);
+
+int swl_data_device_add_listener(
+    struct wl_data_device *device,
+    const struct swl_data_device_listener_callbacks *callbacks);
+
 int swl_xdg_wm_base_add_listener(
     struct xdg_wm_base *wm_base,
     const struct swl_xdg_wm_base_listener_callbacks *callbacks);
@@ -556,6 +676,115 @@ struct swl_test_scale_destroy_record {
     int32_t                          call_count;
     enum swl_test_scale_destroy_kind kind;
     void                            *object;
+};
+
+struct swl_test_data_offer_offer_record {
+    int32_t               call_count;
+    void                 *data;
+    struct wl_data_offer *offer;
+    const char           *mime_type;
+};
+
+struct swl_test_data_offer_action_record {
+    int32_t               call_count;
+    void                 *data;
+    struct wl_data_offer *offer;
+    uint32_t              action;
+};
+
+struct swl_test_data_source_send_record {
+    int32_t                call_count;
+    void                  *data;
+    struct wl_data_source *source;
+    const char            *mime_type;
+    int32_t                fd;
+};
+
+struct swl_test_data_source_lifecycle_record {
+    int32_t                call_count;
+    void                  *data;
+    struct wl_data_source *source;
+};
+
+struct swl_test_data_source_action_record {
+    int32_t                call_count;
+    void                  *data;
+    struct wl_data_source *source;
+    uint32_t               action;
+};
+
+struct swl_test_data_device_offer_record {
+    int32_t                call_count;
+    void                  *data;
+    struct wl_data_device *device;
+    struct wl_data_offer  *offer;
+};
+
+struct swl_test_data_device_enter_record {
+    int32_t                call_count;
+    void                  *data;
+    struct wl_data_device *device;
+    uint32_t               serial;
+    struct wl_surface     *surface;
+    wl_fixed_t             x;
+    wl_fixed_t             y;
+    struct wl_data_offer  *offer;
+};
+
+struct swl_test_data_device_motion_record {
+    int32_t                call_count;
+    void                  *data;
+    struct wl_data_device *device;
+    uint32_t               time;
+    wl_fixed_t             x;
+    wl_fixed_t             y;
+};
+
+struct swl_test_data_device_lifecycle_record {
+    int32_t                call_count;
+    void                  *data;
+    struct wl_data_device *device;
+};
+
+enum swl_test_data_request_kind {
+    SWL_TEST_DATA_REQUEST_NONE = 0,
+    SWL_TEST_DATA_SOURCE_OFFER = 1,
+    SWL_TEST_DATA_SOURCE_SET_ACTIONS = 2,
+    SWL_TEST_DATA_OFFER_ACCEPT = 3,
+    SWL_TEST_DATA_OFFER_RECEIVE = 4,
+    SWL_TEST_DATA_OFFER_FINISH = 5,
+    SWL_TEST_DATA_OFFER_SET_ACTIONS = 6,
+    SWL_TEST_DATA_DEVICE_SET_SELECTION = 7,
+    SWL_TEST_DATA_DEVICE_START_DRAG = 8,
+};
+
+struct swl_test_data_request_record {
+    int32_t                         call_count;
+    enum swl_test_data_request_kind kind;
+    void                           *object;
+    void                           *source;
+    void                           *origin;
+    void                           *icon;
+    const char                     *mime_type;
+    uint32_t                        serial;
+    uint32_t                        actions;
+    uint32_t                        preferred_action;
+    int32_t                         fd;
+};
+
+enum swl_test_data_destroy_kind {
+    SWL_TEST_DATA_DESTROY_NONE = 0,
+    SWL_TEST_DATA_DESTROY_OFFER = 1,
+    SWL_TEST_DATA_DESTROY_SOURCE = 2,
+    SWL_TEST_DATA_DESTROY_DEVICE = 3,
+    SWL_TEST_DATA_DESTROY_MANAGER = 4,
+    SWL_TEST_DATA_DESTROY_DEVICE_LEGACY = 5,
+};
+
+struct swl_test_data_destroy_record {
+    int32_t                         call_count;
+    enum swl_test_data_destroy_kind kind;
+    void                           *object;
 };
 
 struct swl_test_xdg_popup_configure_record {
@@ -638,6 +867,88 @@ void swl_test_scale_request_recording_end(void);
 struct swl_test_viewport_destination_record
 swl_test_scale_viewport_destination_record(void);
 struct swl_test_scale_destroy_record swl_test_scale_destroy_record(void);
+
+void swl_test_data_offer_listener_emit_offer(
+    void *data,
+    struct wl_data_offer *offer,
+    const char *mime_type,
+    struct swl_test_data_offer_offer_record *record);
+void swl_test_data_offer_listener_emit_source_actions(
+    void *data,
+    struct wl_data_offer *offer,
+    uint32_t source_actions,
+    struct swl_test_data_offer_action_record *record);
+void swl_test_data_offer_listener_emit_action(
+    void *data,
+    struct wl_data_offer *offer,
+    uint32_t action,
+    struct swl_test_data_offer_action_record *record);
+void swl_test_data_source_listener_emit_target(
+    void *data,
+    struct wl_data_source *source,
+    const char *mime_type,
+    struct swl_test_data_source_send_record *record);
+void swl_test_data_source_listener_emit_send(
+    void *data,
+    struct wl_data_source *source,
+    const char *mime_type,
+    int32_t fd,
+    struct swl_test_data_source_send_record *record);
+void swl_test_data_source_listener_emit_cancelled(
+    void *data,
+    struct wl_data_source *source,
+    struct swl_test_data_source_lifecycle_record *record);
+void swl_test_data_source_listener_emit_dnd_drop_performed(
+    void *data,
+    struct wl_data_source *source,
+    struct swl_test_data_source_lifecycle_record *record);
+void swl_test_data_source_listener_emit_dnd_finished(
+    void *data,
+    struct wl_data_source *source,
+    struct swl_test_data_source_lifecycle_record *record);
+void swl_test_data_source_listener_emit_action(
+    void *data,
+    struct wl_data_source *source,
+    uint32_t action,
+    struct swl_test_data_source_action_record *record);
+void swl_test_data_device_listener_emit_data_offer(
+    void *data,
+    struct wl_data_device *device,
+    struct wl_data_offer *offer,
+    struct swl_test_data_device_offer_record *record);
+void swl_test_data_device_listener_emit_enter(
+    void *data,
+    struct wl_data_device *device,
+    uint32_t serial,
+    struct wl_surface *surface,
+    wl_fixed_t x,
+    wl_fixed_t y,
+    struct wl_data_offer *offer,
+    struct swl_test_data_device_enter_record *record);
+void swl_test_data_device_listener_emit_leave(
+    void *data,
+    struct wl_data_device *device,
+    struct swl_test_data_device_lifecycle_record *record);
+void swl_test_data_device_listener_emit_motion(
+    void *data,
+    struct wl_data_device *device,
+    uint32_t time,
+    wl_fixed_t x,
+    wl_fixed_t y,
+    struct swl_test_data_device_motion_record *record);
+void swl_test_data_device_listener_emit_drop(
+    void *data,
+    struct wl_data_device *device,
+    struct swl_test_data_device_lifecycle_record *record);
+void swl_test_data_device_listener_emit_selection(
+    void *data,
+    struct wl_data_device *device,
+    struct wl_data_offer *offer,
+    struct swl_test_data_device_offer_record *record);
+void swl_test_data_request_recording_begin(void);
+void swl_test_data_request_recording_end(void);
+struct swl_test_data_request_record swl_test_data_request_record(void);
+struct swl_test_data_destroy_record swl_test_data_destroy_record(void);
 
 void swl_test_xdg_popup_listener_emit_configure(
     void *data,

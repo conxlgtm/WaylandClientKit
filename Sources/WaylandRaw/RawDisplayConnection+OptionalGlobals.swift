@@ -10,11 +10,18 @@ extension RawDisplayConnection {
                 let fractionalScaleManager = try bindFractionalScaleManagerIfPresent(
                     registry: reg
                 )
-                return OptionalGlobals(
-                    xdgDecorationManager: decorationManager,
-                    viewporter: viewporter,
-                    fractionalScaleManager: fractionalScaleManager
-                )
+                do {
+                    let dataDeviceManager = try bindDataDeviceManagerIfPresent(registry: reg)
+                    return OptionalGlobals(
+                        xdgDecorationManager: decorationManager,
+                        viewporter: viewporter,
+                        fractionalScaleManager: fractionalScaleManager,
+                        dataDeviceManager: dataDeviceManager
+                    )
+                } catch {
+                    fractionalScaleManager.destroy()
+                    throw error
+                }
             } catch {
                 viewporter.destroy()
                 throw error
@@ -129,6 +136,35 @@ extension RawDisplayConnection {
         }
 
         let wrappedManager = try unsafe RawFractionalScaleManager(
+            pointer: manager,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
+        return .bound(wrappedManager)
+    }
+
+    private func bindDataDeviceManagerIfPresent(
+        registry reg: OpaquePointer
+    ) throws -> OptionalDataDeviceManager {
+        guard let global = optionalGlobal(named: "wl_data_device_manager") else {
+            return .missing
+        }
+
+        let version = global.negotiatedVersion(
+            supportedByClient: SupportedVersions.wlDataDeviceManager
+        )
+
+        guard
+            let manager = unsafe swl_registry_bind_wl_data_device_manager(
+                reg,
+                global.name,
+                version.value
+            )
+        else {
+            throw RuntimeError.bindFailed("wl_data_device_manager")
+        }
+
+        let wrappedManager = try unsafe RawDataDeviceManager(
             pointer: manager,
             version: version,
             proxyAdoption: proxyAdoption

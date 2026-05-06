@@ -22,6 +22,10 @@ public actor WaylandDisplay {
         runtime.inputEvents
     }
 
+    public nonisolated var dataTransferEvents: DataTransferEvents {
+        runtime.dataTransferEvents
+    }
+
     public nonisolated var diagnostics: DisplayDiagnostics {
         runtime.diagnostics
     }
@@ -286,6 +290,57 @@ public actor WaylandDisplay {
     }
 }
 
+extension WaylandDisplay {
+    public func clipboardOffer(for seatID: SeatID) throws -> ClipboardOffer? {
+        try requireCore().clipboardOffer(for: seatID).map { offer in
+            ClipboardOffer(snapshot: offer, display: self)
+        }
+    }
+
+    /// Requests ownership of the regular clipboard selection for a seat.
+    ///
+    /// The compositor validates `serial` at the protocol boundary; this call creates and installs
+    /// the local data source request but cannot prove compositor acceptance synchronously.
+    public func requestClipboardSelection(
+        _ configuration: ClipboardSourceConfiguration,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws -> ClipboardSource {
+        let source = try requireCore().setClipboard(
+            configuration,
+            seatID: seatID,
+            serial: serial
+        )
+        return ClipboardSource(snapshot: source, display: self)
+    }
+
+    /// Requests clearing the regular clipboard selection for a seat.
+    ///
+    /// The compositor validates `serial` at the protocol boundary.
+    public func requestClearClipboard(seatID: SeatID, serial: InputSerial) throws {
+        try requireCore().clearClipboard(seatID: seatID, serial: serial)
+    }
+
+    package func requestClearClipboard(
+        sourceID: DataSourceID,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws {
+        try requireCore().clearClipboard(
+            sourceID: sourceID,
+            seatID: seatID,
+            serial: serial
+        )
+    }
+
+    package func receiveClipboardOffer(
+        id offerID: DataOfferID,
+        mimeType: MIMEType
+    ) throws -> OwnedFileDescriptor {
+        try requireCore().receiveClipboardOffer(id: offerID, mimeType: mimeType)
+    }
+}
+
 @safe
 private final class WaylandDisplayRuntime: Sendable {
     let executor: WaylandThreadExecutor
@@ -309,6 +364,10 @@ private final class WaylandDisplayRuntime: Sendable {
 
     var inputEvents: InputEvents {
         eventHub.inputEvents()
+    }
+
+    var dataTransferEvents: DataTransferEvents {
+        eventHub.dataTransferEvents()
     }
 
     var diagnostics: DisplayDiagnostics {

@@ -158,6 +158,15 @@ struct WaylandClientTests {
 
         #expect(
             throws: DisplayConfigurationError.nonPositiveCapacity(
+                field: .dataTransferEventCapacity,
+                value: 0
+            )
+        ) {
+            _ = try EventStreamConfiguration(dataTransferEventCapacity: 0)
+        }
+
+        #expect(
+            throws: DisplayConfigurationError.nonPositiveCapacity(
                 field: .rawInputQueueCapacity,
                 value: 0
             )
@@ -188,7 +197,8 @@ struct WaylandClientTests {
     func displayConfigurationAcceptsMinimumValidCapacities() throws {
         let eventStreams = try EventStreamConfiguration(
             displayEventCapacity: 1,
-            inputEventCapacity: 1
+            inputEventCapacity: 1,
+            dataTransferEventCapacity: 1
         )
         let inputPipeline = try InputPipelineConfiguration(
             rawInputQueueCapacity: 1,
@@ -203,6 +213,10 @@ struct WaylandClientTests {
         #expect(
             eventStreams.inputEventCapacity
                 == (try EventStreamCapacity(1, field: .inputEventCapacity))
+        )
+        #expect(
+            eventStreams.dataTransferEventCapacity
+                == (try EventStreamCapacity(1, field: .dataTransferEventCapacity))
         )
         #expect(
             inputPipeline.rawInputQueueCapacity
