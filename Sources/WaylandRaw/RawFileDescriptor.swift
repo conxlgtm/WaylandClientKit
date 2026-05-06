@@ -18,7 +18,7 @@ package struct RawFileDescriptor: ~Copyable {
     }
 
     package static func memfd(name: String) throws(RuntimeError) -> RawFileDescriptor {
-        let fd = name.withCString { namePointer in
+        let fd = unsafe name.withCString { namePointer in
             unsafe swl_memfd_create(namePointer, swl_mfd_cloexec())
         }
 

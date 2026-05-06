@@ -360,21 +360,17 @@ package final class TopLevelWindow {
             let pool = try bufferPool(for: geometry.bufferSize)
             dropReleasedRetiredPools()
 
-            guard let buffer = pool.nextFreeBuffer() else {
-                try interpretWindowEffects(model.reduce(.presentationBlockedByBuffer))
-                return .waitingForBuffer
-            }
-            guard buffer.acquireForDrawing() else {
+            guard var drawingBuffer = pool.acquireDrawingBuffer() else {
                 try interpretWindowEffects(model.reduce(.presentationBlockedByBuffer))
                 return .waitingForBuffer
             }
 
             do {
-                try unsafe buffer.withUnsafeMutableBytes { bytes in
+                try unsafe drawingBuffer.withUnsafeMutableBytes { bytes in
                     let frame = try unsafe SoftwareFrame(
-                        width: buffer.width,
-                        height: buffer.height,
-                        stride: buffer.stride,
+                        width: drawingBuffer.width,
+                        height: drawingBuffer.height,
+                        stride: drawingBuffer.stride,
                         geometry: SoftwareFrameGeometry(surface: geometry),
                         bytes: bytes
                     )
@@ -385,13 +381,13 @@ package final class TopLevelWindow {
                     generation: request.generation,
                     detail: String(describing: error)
                 )
-                buffer.markReleased()
+                drawingBuffer.discard()
                 throw error
             }
 
             guard !model.isClosed else {
                 try interpretWindowEffects(model.reduce(.transientStateReset))
-                buffer.markReleased()
+                drawingBuffer.discard()
                 return .skippedClosed
             }
 
@@ -406,14 +402,11 @@ package final class TopLevelWindow {
                     generation: request.generation,
                     detail: String(describing: error)
                 )
-                buffer.markReleased()
+                drawingBuffer.discard()
                 throw error
             }
 
-            precondition(
-                buffer.markBusy(commitGeneration: request.generation),
-                "acquired drawing buffer must move to pending release"
-            )
+            let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
             let commitPlan = scaleInstallation.commitPlan(
                 geometry: geometry,
                 surfaceUsesBufferDamage: surface.usesBufferDamage

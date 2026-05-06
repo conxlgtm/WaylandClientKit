@@ -38,7 +38,7 @@ public actor WaylandDisplay {
         runtime.actorDidDeinitialize(core: &core, didClose: didCloseBeforeDeinit)
     }
 
-    public static func connect(
+    private static func openConnection(
         configuration displayConfiguration: DisplayConfiguration,
         cursorConfiguration: CursorConfiguration = .init(),
         discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds
@@ -53,25 +53,13 @@ public actor WaylandDisplay {
         return display
     }
 
-    public static func connect(
-        cursorConfiguration: CursorConfiguration = .init(),
-        discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds,
-        eventStreamConfiguration: EventStreamConfiguration = .init()
-    ) async throws -> WaylandDisplay {
-        try await connect(
-            configuration: DisplayConfiguration(eventStreams: eventStreamConfiguration),
-            cursorConfiguration: cursorConfiguration,
-            discoveryTimeoutMilliseconds: discoveryTimeoutMilliseconds
-        )
-    }
-
     public static func withConnection<ResultValue: Sendable>(
         configuration displayConfiguration: DisplayConfiguration,
         cursorConfiguration: CursorConfiguration = .init(),
         discoveryTimeoutMilliseconds: Int32 = defaultDiscoveryTimeoutMilliseconds,
         _ body: @Sendable (WaylandDisplay) async throws -> ResultValue
     ) async throws -> ResultValue {
-        let display = try await connect(
+        let display = try await openConnection(
             configuration: displayConfiguration,
             cursorConfiguration: cursorConfiguration,
             discoveryTimeoutMilliseconds: discoveryTimeoutMilliseconds

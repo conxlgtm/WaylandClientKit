@@ -1,8 +1,5 @@
 import Synchronization
 
-typealias EventWaiter<Element: Sendable> =
-    CheckedContinuation<Result<Element?, WaylandDisplayError>, Never>
-
 @safe
 final class EventSubscription<Element: Sendable>: Sendable {
     private let broker: TypedEventBroker<Element>
@@ -18,14 +15,24 @@ final class EventSubscription<Element: Sendable>: Sendable {
     }
 
     func next(
-        isolation _: isolated (any Actor)?
+        isolation _: isolated (any Actor)?,
+        beforeImmediateResumeForTesting: (() -> Void)? = nil
     ) async throws(WaylandDisplayError) -> Element? {
+        let waiter = broker.makeWaiter()
         let result = await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
-                broker.enqueueOrResumeNext(subscriberID: id, continuation: continuation)
+                broker.enqueueOrResumeNext(
+                    subscriberID: id,
+                    waiter: waiter,
+                    continuation: continuation,
+                    beforeImmediateResumeForTesting: beforeImmediateResumeForTesting
+                )
             }
         } onCancel: {
-            broker.cancelSubscriber(id)
+            broker.cancelWaiter(
+                subscriberID: id,
+                waiter: waiter
+            )
         }
 
         switch result {
@@ -105,13 +112,15 @@ private enum DropLedger<Element: Sendable> {
     }
 }
 
+// swiftlint:disable type_body_length
 @safe
 final class TypedEventBroker<Element: Sendable>: Sendable {
-    private typealias Delivery = (EventWaiter<Element>, Result<Element?, WaylandDisplayError>)
+    private typealias Waiter = EventWaiterBox<Element>
+    private typealias Delivery = EventBrokerDelivery<Element>
 
     private enum SubscriberState {
         case open(buffer: [Element], drops: DropLedger<Element>)
-        case waiting(EventWaiter<Element>, drops: DropLedger<Element>)
+        case waiting(Waiter, drops: DropLedger<Element>)
         case terminal(StreamTermination)
     }
 
@@ -127,6 +136,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
 
     private struct BrokerState {
         var nextID = 1
+        var nextWaiterID: UInt64 = 1
         var subscribers: [Int: Subscriber] = [:]
         var lifecycle = BrokerLifecycle.open
 
@@ -134,6 +144,11 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
             defer { nextID += 1 }
             subscribers[nextID] = Subscriber()
             return nextID
+        }
+
+        mutating func makeWaiter() -> Waiter {
+            defer { nextWaiterID += 1 }
+            return Waiter(id: EventWaiterID(rawValue: nextWaiterID))
         }
 
         mutating func publish(
@@ -179,7 +194,9 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
                 guard let subscriber = subscribers[subscriberID] else { continue }
                 if case .waiting(let waiter, _) = subscriber.state {
                     subscribers.removeValue(forKey: subscriberID)
-                    deliveries.append((waiter, termination.result()))
+                    deliveries.append(
+                        EventBrokerDelivery(waiter: waiter, result: termination.result())
+                    )
                 }
             }
 
@@ -188,6 +205,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
 
         mutating func enqueueOrResumeNext(
             subscriberID: Int,
+            waiter: Waiter,
             continuation: EventWaiter<Element>,
             overflowStrategy: OverflowStrategy<Element>
         ) -> Result<Element?, WaylandDisplayError>? {
@@ -197,6 +215,11 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
 
             switch subscriber.state {
             case .open(var buffer, var drops):
+                if let cancellation = waiter.install(continuation) {
+                    subscribers[subscriberID] = subscriber
+                    return cancellation
+                }
+
                 if !buffer.isEmpty {
                     let element = buffer.removeFirst()
                     subscriber.state = .open(buffer: buffer, drops: drops)
@@ -215,18 +238,42 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
                     return termination.result()
                 }
 
-                subscriber.state = .waiting(continuation, drops: drops)
+                subscriber.state = .waiting(waiter, drops: drops)
                 subscribers[subscriberID] = subscriber
                 return nil
             case .waiting:
+                if let cancellation = waiter.install(continuation) {
+                    return cancellation
+                }
                 return .failure(.internalInvariantViolation(.eventSubscriberAwaitedTwice))
             case .terminal(let termination):
+                if let cancellation = waiter.install(continuation) {
+                    subscribers[subscriberID] = subscriber
+                    return cancellation
+                }
                 subscribers.removeValue(forKey: subscriberID)
                 return termination.result()
             }
         }
 
-        mutating func cancelSubscriber(_ subscriberID: Int) -> EventWaiter<Element>? {
+        mutating func cancelWaiter(subscriberID: Int, waiterID: EventWaiterID) -> Waiter? {
+            guard var subscriber = subscribers[subscriberID] else {
+                return nil
+            }
+
+            guard case .waiting(let waiter, let drops) = subscriber.state else {
+                return nil
+            }
+            guard waiter.id == waiterID else {
+                return nil
+            }
+
+            subscriber.state = .open(buffer: [], drops: drops)
+            subscribers[subscriberID] = subscriber
+            return waiter
+        }
+
+        mutating func cancelSubscriber(_ subscriberID: Int) -> Waiter? {
             guard let subscriber = subscribers.removeValue(forKey: subscriberID) else {
                 return nil
             }
@@ -236,6 +283,16 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
             }
 
             return nil
+        }
+
+        var waitingSubscriberCount: Int {
+            subscribers.values.reduce(0) { count, subscriber in
+                if case .waiting = subscriber.state {
+                    return count + 1
+                }
+
+                return count
+            }
         }
 
         private func publish(
@@ -263,10 +320,14 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
                     overflowStrategy: context.overflowStrategy
                 ) {
                     subscriber.state = .open(buffer: [element], drops: drops)
-                    deliveries.append((waiter, .success(notice)))
+                    deliveries.append(
+                        EventBrokerDelivery(waiter: waiter, result: .success(notice))
+                    )
                 } else {
                     subscriber.state = .open(buffer: [], drops: drops)
-                    deliveries.append((waiter, .success(element)))
+                    deliveries.append(
+                        EventBrokerDelivery(waiter: waiter, result: .success(element))
+                    )
                 }
             case .terminal:
                 return
@@ -330,6 +391,10 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
         resume(deliveries)
     }
 
+    func makeWaiter() -> EventWaiterBox<Element> {
+        state.withLock { $0.makeWaiter() }
+    }
+
     var isTerminal: Bool {
         state.withLock { $0.lifecycle.isTerminal }
     }
@@ -339,31 +404,89 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
         resume(deliveries)
     }
 
+    package func claimPublishDeliveriesForTesting(
+        _ element: Element
+    ) -> EventBrokerPendingDeliveries<Element> {
+        let deliveries = state.withLock { brokerState in
+            brokerState.publish(
+                element,
+                stream: stream,
+                capacity: capacity,
+                overflowStrategy: overflowStrategy
+            )
+        }
+        return EventBrokerPendingDeliveries(deliveries: deliveries)
+    }
+
+    package func claimFinishDeliveriesForTesting(
+        throwing error: WaylandDisplayError? = nil
+    ) -> EventBrokerPendingDeliveries<Element> {
+        EventBrokerPendingDeliveries(
+            deliveries: state.withLock { $0.finish(throwing: error) }
+        )
+    }
+
+    package func resumeDeliveriesForTesting(
+        _ pendingDeliveries: EventBrokerPendingDeliveries<Element>
+    ) {
+        resume(pendingDeliveries.deliveries)
+    }
+
     func enqueueOrResumeNext(
         subscriberID: Int,
-        continuation: EventWaiter<Element>
+        waiter: EventWaiterBox<Element>,
+        continuation: EventWaiter<Element>,
+        beforeImmediateResumeForTesting: (() -> Void)? = nil
     ) {
         let immediate = state.withLock { brokerState in
             brokerState.enqueueOrResumeNext(
                 subscriberID: subscriberID,
+                waiter: waiter,
                 continuation: continuation,
                 overflowStrategy: overflowStrategy
             )
         }
 
         if let immediate {
-            continuation.resume(returning: immediate)
+            beforeImmediateResumeForTesting?()
+            waiter.resume()?.resume(returning: immediate)
         }
+    }
+
+    func cancelWaiter(subscriberID: Int, waiter: EventWaiterBox<Element>) {
+        let cancelledWaiter = state.withLock { brokerState in
+            brokerState.cancelWaiter(subscriberID: subscriberID, waiterID: waiter.id)
+        }
+        guard let cancelledWaiter else {
+            waiter.cancelIfPending()
+            return
+        }
+
+        cancelledWaiter.cancel()?.resume(returning: .success(nil))
     }
 
     func cancelSubscriber(_ subscriberID: Int) {
         let waiter = state.withLock { $0.cancelSubscriber(subscriberID) }
-        waiter?.resume(returning: .success(nil))
+        waiter?.cancel()?.resume(returning: .success(nil))
+    }
+
+    func waitingSubscriberCountForTesting() -> Int {
+        state.withLock { $0.waitingSubscriberCount }
     }
 
     private func resume(_ deliveries: [Delivery]) {
-        for (waiter, result) in deliveries {
-            waiter.resume(returning: result)
+        for delivery in deliveries {
+            delivery.waiter.resume()?.resume(returning: delivery.result)
         }
     }
+}
+// swiftlint:enable type_body_length
+
+struct EventBrokerDelivery<Element: Sendable>: Sendable {
+    let waiter: EventWaiterBox<Element>
+    let result: Result<Element?, WaylandDisplayError>
+}
+
+package struct EventBrokerPendingDeliveries<Element: Sendable>: Sendable {
+    let deliveries: [EventBrokerDelivery<Element>]
 }
