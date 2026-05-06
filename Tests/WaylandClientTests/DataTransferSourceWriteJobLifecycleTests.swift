@@ -62,11 +62,16 @@ struct DataTransferSourceWriteJobLifecycleTests {
             sourceID: DataSourceID(rawValue: 1),
             mimeType: .plainText,
             descriptor: descriptor,
-            data: Data()
-        ) { descriptor in
-            closedDescriptors.record(descriptor)
-            return 0
-        }
+            data: Data(),
+            prepareDescriptorForWriting: { _ in
+                // No descriptor setup needed for these lifecycle-only tests.
+            },
+            writeDescriptor: { _, bytes in bytes.count },
+            closeDescriptor: { descriptor in
+                closedDescriptors.record(descriptor)
+                return 0
+            }
+        )
     }
 }
 

@@ -252,7 +252,7 @@ extension DataTransferState {
             guard let offer = offers[offerID] else {
                 throw DataTransferError.unknownOffer
             }
-            guard offer.role.seatID == seatID else {
+            guard case .selection(seatID) = offer.role else {
                 throw DataTransferError.unknownOffer
             }
         }
@@ -345,7 +345,9 @@ extension DataTransferState {
                 guard seat.hasDataDevice else {
                     throw DataTransferError.missingDataDevice(seat.seatID)
                 }
-                guard let offer = offers[offerID], offer.role.seatID == seat.seatID else {
+                guard let offer = offers[offerID],
+                    case .selection(seat.seatID) = offer.role
+                else {
                     throw DataTransferError.unknownOffer
                 }
             }
