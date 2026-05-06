@@ -3,27 +3,27 @@ import Glibc
 import Synchronization
 import WaylandRaw
 
-package final class DataTransferSourceWriteJob: Sendable {
+package final class DataTransferSourceWriteJob {
     package let sourceID: DataSourceID
     package let mimeType: MIMEType
     package let data: Data
 
     private let descriptor: Mutex<DescriptorState>
-    private let prepareDescriptorForWriting: @Sendable (Int32) throws -> Void
-    private let writeDescriptor: @Sendable (Int32, [UInt8]) throws -> Int
-    private let closeDescriptor: @Sendable (Int32) -> Int32
+    private let prepareDescriptorForWriting: (Int32) throws -> Void
+    private let writeDescriptor: (Int32, [UInt8]) throws -> Int
+    private let closeDescriptor: (Int32) -> Int32
 
     package init(
         sourceID jobSourceID: DataSourceID,
         mimeType jobMIMEType: MIMEType,
         descriptor jobDescriptor: Int32,
         data jobData: Data,
-        prepareDescriptorForWriting prepare: @escaping @Sendable (Int32) throws -> Void =
-            DataTransferSourceWriteJob.defaultPrepareDescriptorForWriting,
-        writeDescriptor write: @escaping @Sendable (Int32, [UInt8]) throws -> Int =
-            DataTransferSourceWriteJob.defaultWriteDescriptor,
-        closeDescriptor close: @escaping @Sendable (Int32) -> Int32 =
-            DataTransferSourceWriteJob.defaultCloseDescriptor
+        prepareDescriptorForWriting prepare: @escaping (Int32) throws -> Void =
+            defaultPrepareDataTransferSourceDescriptorForWriting,
+        writeDescriptor write: @escaping (Int32, [UInt8]) throws -> Int =
+            defaultWriteDataTransferSourceDescriptor,
+        closeDescriptor close: @escaping (Int32) -> Int32 =
+            defaultCloseDataTransferSourceDescriptor
     ) {
         sourceID = jobSourceID
         mimeType = jobMIMEType
@@ -36,7 +36,7 @@ package final class DataTransferSourceWriteJob: Sendable {
 
     package func write() -> DataTransferSourceWriteResult {
         do {
-            let rawDescriptor = try rawDescriptorForWriting()
+            let rawDescriptor = try startWriting()
             do {
                 try prepareDescriptorForWriting(rawDescriptor)
                 try writeData(to: rawDescriptor)
@@ -69,30 +69,38 @@ package final class DataTransferSourceWriteJob: Sendable {
     }
 
     package func cancelInFlight() {
-        let releasedDescriptor = descriptor.withLock { storage -> Int32? in
-            storage.isCancellationRequested = true
-            defer { storage.rawValue = nil }
-            return storage.rawValue
-        }
-        if let releasedDescriptor {
-            _ = closeDescriptor(releasedDescriptor)
+        descriptor.withLock { state in
+            switch state {
+            case .idle(let rawDescriptor):
+                state = .cancelledBeforeWriting(closeCancellationDescriptor(rawDescriptor))
+            case .writing(let rawDescriptor, nil):
+                state = .writing(
+                    rawDescriptor,
+                    cancellationError: closeCancellationDescriptor(rawDescriptor)
+                )
+            case .writing(_, .some), .cancelledBeforeWriting, .consumed:
+                break
+            }
         }
     }
 
-    private func rawDescriptorForWriting() throws -> Int32 {
+    private func startWriting() throws -> Int32 {
         try descriptor.withLock { storage in
-            if storage.isCancellationRequested {
-                throw DataTransferError.cancelled
-            }
-            guard let rawDescriptor = storage.rawValue else {
+            switch storage {
+            case .idle(let rawDescriptor):
+                guard rawDescriptor >= 0 else {
+                    storage = .consumed
+                    throw DataTransferError.invalidFileDescriptor(rawDescriptor)
+                }
+
+                storage = .writing(rawDescriptor, cancellationError: nil)
+                return rawDescriptor
+            case .cancelledBeforeWriting(let error):
+                storage = .consumed
+                throw error
+            case .writing, .consumed:
                 throw DataTransferError.fileDescriptorAlreadyReleased
             }
-            guard rawDescriptor >= 0 else {
-                storage.rawValue = nil
-                throw DataTransferError.invalidFileDescriptor(rawDescriptor)
-            }
-
-            return rawDescriptor
         }
     }
 
@@ -113,10 +121,10 @@ package final class DataTransferSourceWriteJob: Sendable {
 
                 writtenByteCount += count
             } catch let error as DataTransferError {
-                if isCancellationRequested() {
-                    throw DataTransferError.cancelled
+                if let cancellationError = cancellationError() {
+                    throw cancellationError
                 }
-                if Self.isTemporaryWriteBackpressure(error) {
+                if isTemporaryDataTransferSourceWriteBackpressure(error) {
                     usleep(1_000)
                     continue
                 }
@@ -129,17 +137,26 @@ package final class DataTransferSourceWriteJob: Sendable {
     }
 
     private func throwIfCancelled() throws {
-        if isCancellationRequested() {
-            throw DataTransferError.cancelled
+        if let error = cancellationError() {
+            throw error
         }
     }
 
-    private func isCancellationRequested() -> Bool {
-        descriptor.withLock(\.isCancellationRequested)
+    private func cancellationError() -> DataTransferError? {
+        descriptor.withLock { storage in
+            switch storage {
+            case .writing(_, let cancellationError):
+                cancellationError
+            case .cancelledBeforeWriting(let error):
+                error
+            case .idle, .consumed:
+                nil
+            }
+        }
     }
 
     private func releaseRawDescriptor() throws -> Int32 {
-        let releasedDescriptor = takeRawDescriptor(markCancelled: false)
+        let releasedDescriptor = takeIdleRawDescriptor()
         guard let releasedDescriptor else {
             throw DataTransferError.fileDescriptorAlreadyReleased
         }
@@ -148,20 +165,29 @@ package final class DataTransferSourceWriteJob: Sendable {
     }
 
     private func closeOwnedDescriptor(_ rawDescriptor: Int32) throws {
-        guard takeMatchingRawDescriptor(rawDescriptor) != nil else {
-            if isCancellationRequested() {
-                throw DataTransferError.cancelled
+        let cancellationError = try descriptor.withLock { storage -> DataTransferError? in
+            switch storage {
+            case .writing(rawDescriptor, let cancellationError):
+                storage = .consumed
+                return cancellationError
+            case .idle, .writing, .cancelledBeforeWriting, .consumed:
+                throw DataTransferError.fileDescriptorAlreadyReleased
             }
-
-            throw DataTransferError.fileDescriptorAlreadyReleased
+        }
+        if let cancellationError {
+            throw cancellationError
         }
 
+        try closeRawDescriptor(rawDescriptor)
+    }
+
+    private func closeCancellationDescriptor(_ rawDescriptor: Int32) -> DataTransferError {
         let closeResult = closeDescriptor(rawDescriptor)
         guard closeResult == 0 else {
-            throw DataTransferError.closeFileDescriptor(
-                WaylandSystemErrno(unchecked: closeResult)
-            )
+            return .closeFileDescriptor(WaylandSystemErrno(unchecked: closeResult))
         }
+
+        return .cancelled
     }
 
     private func closeRawDescriptor(_ rawDescriptor: Int32) throws {
@@ -173,95 +199,109 @@ package final class DataTransferSourceWriteJob: Sendable {
         }
     }
 
-    private func takeRawDescriptor(markCancelled: Bool) -> Int32? {
+    private func takeIdleRawDescriptor() -> Int32? {
         descriptor.withLock { storage -> Int32? in
-            if markCancelled {
-                storage.isCancellationRequested = true
+            switch storage {
+            case .idle(let rawDescriptor):
+                storage = .consumed
+                return rawDescriptor
+            case .cancelledBeforeWriting:
+                storage = .consumed
+                return nil
+            case .writing, .consumed:
+                return nil
             }
-            defer { storage.rawValue = nil }
-            return storage.rawValue
         }
     }
 
-    private func takeMatchingRawDescriptor(_ rawDescriptor: Int32) -> Int32? {
-        descriptor.withLock { storage -> Int32? in
-            guard storage.rawValue == rawDescriptor else {
+    private func closeDescriptorOnDeinit() {
+        let rawDescriptor = descriptor.withLock { storage -> Int32? in
+            switch storage {
+            case .idle(let rawDescriptor), .writing(let rawDescriptor, nil):
+                storage = .consumed
+                return rawDescriptor
+            case .writing(_, .some), .cancelledBeforeWriting, .consumed:
+                storage = .consumed
                 return nil
             }
-
-            storage.rawValue = nil
-            return rawDescriptor
+        }
+        if let rawDescriptor {
+            _ = closeDescriptor(rawDescriptor)
         }
     }
 
     deinit {
-        guard let releasedDescriptor = takeRawDescriptor(markCancelled: false) else {
-            return
-        }
-
-        _ = closeDescriptor(releasedDescriptor)
+        closeDescriptorOnDeinit()
     }
 
-    private static func defaultPrepareDescriptorForWriting(_ descriptor: Int32) throws {
-        guard descriptor >= 0 else {
-            throw DataTransferError.invalidFileDescriptor(descriptor)
-        }
+    private enum DescriptorState: Sendable {
+        case idle(Int32)
+        case writing(Int32, cancellationError: DataTransferError?)
+        case cancelledBeforeWriting(DataTransferError)
+        case consumed
 
-        let flags = Glibc.fcntl(descriptor, F_GETFL)
-        guard flags >= 0 else {
-            throw DataTransferError.writeFileDescriptor(
-                WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
-            )
-        }
-        guard Glibc.fcntl(descriptor, F_SETFL, flags | O_NONBLOCK) == 0 else {
-            throw DataTransferError.writeFileDescriptor(
-                WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
-            )
+        init(rawValue: Int32) {
+            self = .idle(rawValue)
         }
     }
+}
 
-    private static func defaultWriteDescriptor(
-        descriptor: Int32,
-        bytes: [UInt8]
-    ) throws -> Int {
-        do {
-            return try RawFileDescriptor.write(descriptor: descriptor, bytes: bytes)
-        } catch let error {
-            throw Self.dataTransferWriteError(error)
-        }
+private func defaultPrepareDataTransferSourceDescriptorForWriting(_ descriptor: Int32) throws {
+    guard descriptor >= 0 else {
+        throw DataTransferError.invalidFileDescriptor(descriptor)
     }
 
-    private static func defaultCloseDescriptor(_ descriptor: Int32) -> Int32 {
-        guard Glibc.close(descriptor) == 0 else {
-            return errno > 0 ? errno : EIO
-        }
+    let flags = Glibc.fcntl(descriptor, F_GETFL)
+    guard flags >= 0 else {
+        throw DataTransferError.writeFileDescriptor(
+            WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
+        )
+    }
+    guard Glibc.fcntl(descriptor, F_SETFL, flags | O_NONBLOCK) == 0 else {
+        throw DataTransferError.writeFileDescriptor(
+            WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
+        )
+    }
+}
 
-        return 0
+private func defaultWriteDataTransferSourceDescriptor(
+    descriptor: Int32,
+    bytes: [UInt8]
+) throws -> Int {
+    do {
+        return try RawFileDescriptor.write(descriptor: descriptor, bytes: bytes)
+    } catch let error {
+        throw dataTransferSourceWriteError(error)
+    }
+}
+
+private func defaultCloseDataTransferSourceDescriptor(_ descriptor: Int32) -> Int32 {
+    guard Glibc.close(descriptor) == 0 else {
+        return errno > 0 ? errno : EIO
     }
 
-    private static func dataTransferWriteError(_ error: RuntimeError) -> DataTransferError {
-        switch error {
-        case .system(let systemError):
-            .writeFileDescriptor(WaylandSystemErrno(unchecked: systemError.errno.rawValue))
-        case .systemErrnoUnavailable:
-            .writeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
-        default:
-            .unavailable
-        }
+    return 0
+}
+
+private func dataTransferSourceWriteError(_ error: RuntimeError) -> DataTransferError {
+    switch error {
+    case .system(let systemError):
+        .writeFileDescriptor(WaylandSystemErrno(unchecked: systemError.errno.rawValue))
+    case .systemErrnoUnavailable:
+        .writeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
+    default:
+        .unavailable
+    }
+}
+
+private func isTemporaryDataTransferSourceWriteBackpressure(
+    _ error: DataTransferError
+) -> Bool {
+    guard case .writeFileDescriptor(let error) = error else {
+        return false
     }
 
-    private static func isTemporaryWriteBackpressure(_ error: DataTransferError) -> Bool {
-        guard case .writeFileDescriptor(let error) = error else {
-            return false
-        }
-
-        return error.rawValue == EAGAIN || error.rawValue == EWOULDBLOCK
-    }
-
-    private struct DescriptorState: Sendable {
-        var rawValue: Int32?
-        var isCancellationRequested = false
-    }
+    return error.rawValue == EAGAIN || error.rawValue == EWOULDBLOCK
 }
 
 package enum DataTransferSourceWriteResult: Equatable, Sendable {

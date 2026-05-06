@@ -1,4 +1,5 @@
 import Foundation
+import Glibc
 import Synchronization
 import Testing
 
@@ -93,6 +94,36 @@ struct DataTransferSourceWriterShutdownTests {
         )
     }
 
+    @Test
+    func shutdownReportsInFlightCloseFailure() throws {
+        let probe = BlockingSourceWriteProbe(closeResult: EIO)
+        let writer = ThreadedDataTransferSourceWriter()
+        defer { writer.shutdown() }
+
+        writer.submit([
+            blockingWriteJob(
+                sourceID: DataSourceID(rawValue: 23),
+                descriptor: 503,
+                probe: probe
+            )
+        ])
+
+        #expect(probe.waitUntilStarted())
+        writer.shutdown()
+
+        #expect(probe.closedDescriptors == [503])
+        #expect(
+            writer.drainResults()
+                == [
+                    .failed(
+                        sourceID: DataSourceID(rawValue: 23),
+                        mimeType: .plainText,
+                        error: .closeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
+                    )
+                ]
+        )
+    }
+
     private func blockingWriteJob(
         sourceID: DataSourceID,
         descriptor: Int32,
@@ -119,6 +150,11 @@ struct DataTransferSourceWriterShutdownTests {
 private final class BlockingSourceWriteProbe: Sendable {
     private let condition = NSCondition()
     private let state = Mutex(BlockingSourceWriteProbeState())
+    private let closeResult: Int32
+
+    init(closeResult: Int32 = 0) {
+        self.closeResult = closeResult
+    }
 
     var closedDescriptors: [Int32] {
         state.withLock(\.closedDescriptors)
@@ -147,7 +183,7 @@ private final class BlockingSourceWriteProbe: Sendable {
         condition.broadcast()
         condition.unlock()
 
-        return 0
+        return closeResult
     }
 
     func waitUntilStarted() -> Bool {
