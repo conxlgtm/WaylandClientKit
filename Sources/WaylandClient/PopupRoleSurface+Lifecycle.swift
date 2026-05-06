@@ -25,7 +25,7 @@ extension PopupRoleSurface {
         let deadline = try monotonicMilliseconds() + timeout
         let pollMilliseconds: Int32 = 50
 
-        while !configureState.hasReceivedInitialConfigure, !isClosedStorage {
+        while !configureState.hasReceivedInitialConfigure, !model.isClosed {
             let remainingMilliseconds = deadline - (try monotonicMilliseconds())
             guard remainingMilliseconds > 0 else {
                 throw ClientError.window(
@@ -57,9 +57,7 @@ extension PopupRoleSurface {
             return nil
         }
 
-        xdgSurface.ackConfigure(serial: sequence.serial)
-        currentPlacement = sequence.placement
-        _ = redrawState.reduce(.contentInvalidated, bufferAvailable: true)
+        try interpretPopupEffects(model.reduce(.configureReceived(sequence)))
         return sequence
     }
 
@@ -107,27 +105,12 @@ extension PopupRoleSurface {
     func drawAndPresent(
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
-        guard !isClosedStorage else { return .skippedClosed }
+        guard !model.isClosed else { return .skippedClosed }
 
-        guard redrawState.hasOutstandingRedrawRequest else {
-            return .skippedPendingFrame
-        }
-        _ = redrawState.reduce(
-            .redrawRequestConsumed,
-            bufferAvailable: try redrawBufferAvailable()
+        let effects = try model.reduce(
+            .redrawRequestConsumed(bufferAvailable: try redrawBufferAvailable())
         )
-        guard let placement = currentPlacement else {
-            throw ClientError.window(
-                parentWindowID,
-                .invalidLifecycleTransition(.mapBeforeInitialConfigure)
-            )
-        }
-        let generation = redrawState.generationForCurrentDraw
-        return try performSoftwarePresent(
-            generation: generation,
-            logicalSize: placement.size,
-            draw
-        )
+        return try interpretPresentationEffects(effects, draw)
     }
 
     package func applySurfaceCommitPlan(_ plan: SurfaceCommitPlan) {
@@ -145,13 +128,21 @@ extension PopupRoleSurface {
     }
 
     package func failPresentationIfStillActive(generation: UInt64) {
-        guard presentation == .drawing(generation: generation) else { return }
+        guard model.presentation == .drawing(generation: generation) else { return }
 
         failActivePresentation(generation: generation)
     }
 
-    package func failActivePresentation(generation _: UInt64) {
-        presentation = .idle
+    package func failActivePresentation(generation: UInt64) {
+        do {
+            try interpretPopupEffects(
+                model.reduce(.presentationFailed(generation: generation, .drawFailed("failed")))
+            )
+        } catch ClientError.window(parentWindowID, .presentationFailed(.drawFailed("failed"))) {
+            // presentationFailed resets model state before reporting the presentation error.
+        } catch {
+            preconditionFailure("Unexpected popup presentation failure error: \(error)")
+        }
     }
 
     package func monotonicMilliseconds() throws -> Int64 {
@@ -164,15 +155,18 @@ extension PopupRoleSurface {
     }
 
     package func resetTransientState() {
-        _ = redrawState.reduce(.transientStateReset, bufferAvailable: false)
-        presentation = .idle
+        do {
+            _ = try model.reduce(.transientStateReset)
+        } catch {
+            reportCallbackFailure(operation: .transientStateReset, error: error)
+        }
     }
 
     package func handleFrameDone() {
         pendingFrameRegistration = nil
         dropReleasedRetiredPools()
 
-        guard !isClosedStorage else {
+        guard !model.isClosed else {
             resetTransientState()
             return
         }
@@ -184,7 +178,7 @@ extension PopupRoleSurface {
         connection.preconditionIsOwnerThread()
         dropReleasedRetiredPools()
 
-        guard !isClosedStorage, redrawState.isWaitingForBuffer else { return }
+        guard !model.isClosed, model.redraw.isWaitingForBuffer else { return }
 
         publishRedrawAfterRedrawStateChange(.bufferBecameAvailable)
     }
@@ -226,19 +220,18 @@ extension PopupRoleSurface {
     }
 
     package func markNeedsRedraw(bufferAvailable: Bool) throws {
-        guard !isClosedStorage else {
+        guard !model.isClosed else {
             resetTransientState()
             return
         }
 
-        let effects = redrawState.reduce(.contentInvalidated, bufferAvailable: bufferAvailable)
-        if effects.contains(.publishRedrawRequested) {
-            onRedrawRequested?()
-        }
+        try interpretPopupEffects(
+            model.reduce(.contentInvalidated(bufferAvailable: bufferAvailable))
+        )
     }
 
     package var currentLogicalSize: PositiveLogicalSize {
-        currentPlacement?.size ?? configuration.positioner.size
+        model.currentLogicalSize
     }
 
     package func currentSurfaceGeometry() throws -> SurfaceGeometry {
@@ -268,29 +261,12 @@ extension PopupRoleSurface {
     }
 
     package func close(dismissedByCompositor: Bool = false) {
-        guard !isClosedStorage else { return }
-
-        isClosedStorage = true
-        onClose?()
-        onClose = nil
-        onRedrawRequested = nil
-        pendingFrameRegistration = nil
-        retireSwapchain()
-        scaleInstallation.destroy()
-        popupOwner?.cancel()
-        popupOwner = nil
-        xdgSurfaceOwner.cancel()
-        popup.destroy()
-        positioner.destroy()
-        xdgSurface.destroy()
-        surface.destroy()
-
-        if dismissedByCompositor {
-            onDismissed?()
-            onDismissed = nil
+        let event: PopupEvent = dismissedByCompositor ? .compositorDismissed : .explicitClose
+        do {
+            try interpretPopupEffects(model.reduce(event))
+        } catch {
+            reportCallbackFailure(operation: .close, error: error)
         }
-        onClosed?()
-        onClosed = nil
     }
 
     package func reportCallbackFailure(operation: WindowCallbackOperation, error: any Error) {
@@ -312,17 +288,39 @@ extension PopupRoleSurface {
 
     private func publishRedrawAfterRedrawStateChange(_ event: WindowRedrawEvent) {
         do {
-            _ = redrawState.reduce(
-                event,
-                bufferAvailable: try redrawBufferAvailable()
+            try interpretPopupEffects(
+                model.reduce(
+                    popupEvent(
+                        for: event,
+                        bufferAvailable: try redrawBufferAvailable()
+                    )
+                )
             )
         } catch {
             reportCallbackFailure(operation: .markNeedsRedraw, error: error)
             return
         }
+    }
 
-        if redrawState.hasOutstandingRedrawRequest {
-            onRedrawRequested?()
+    private func popupEvent(
+        for redrawEvent: WindowRedrawEvent,
+        bufferAvailable: Bool
+    ) -> PopupEvent {
+        switch redrawEvent {
+        case .contentInvalidated:
+            .contentInvalidated(bufferAvailable: bufferAvailable)
+        case .frameBecameReady:
+            .frameBecameReady(bufferAvailable: bufferAvailable)
+        case .bufferBecameAvailable:
+            .bufferBecameAvailable(bufferAvailable: bufferAvailable)
+        case .redrawRequestConsumed:
+            .redrawRequestConsumed(bufferAvailable: bufferAvailable)
+        case .drawBlockedByBuffer:
+            .presentationBlockedByBuffer
+        case .presented(let generation):
+            .presentationSucceeded(generation: generation, bufferAvailable: bufferAvailable)
+        case .transientStateReset:
+            .transientStateReset
         }
     }
 }

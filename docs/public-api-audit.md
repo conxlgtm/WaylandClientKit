@@ -103,10 +103,10 @@ Notes:
 - `WindowDecorationPreference.preferServerSide` is the default because SwiftWayland
   does not draw client-side titlebars. `preferClientSide` requests no server-side
   decorations; applications remain responsible for any custom chrome they want.
-- `WaylandDisplay.connect` does not eagerly require a cursor theme to load. Cursor theme
-  loading is deferred until a visible cursor image is first needed.
-- `WaylandDisplay.connect` and `Window.show` use finite default waits. Callers
-  must opt into longer waits by passing an explicit timeout.
+- `WaylandDisplay.withConnection` does not eagerly require a cursor theme to load.
+  Cursor theme loading is deferred until a visible cursor image is first needed.
+- `WaylandDisplay.withConnection`, `Window.show`, and `PopupSurface.show` use finite
+  default waits. Callers must opt into longer waits by passing an explicit timeout.
 - The `WaylandClient` target enables Swift strict memory-safety diagnostics as errors.
   Unsafe storage is confined to audited bridging points, currently `SoftwareFrame`.
 - `WaylandRaw` has a strict memory-safety warning budget checked by

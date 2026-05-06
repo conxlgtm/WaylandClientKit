@@ -19,7 +19,9 @@ struct DataTransferManagerReceiveTests {
         device.emit(.dataOffer(offerHandle1))
         let offer = try #require(backend.offerBinding(for: offerHandle1))
         offer.emit(.offer(MIMEType.plainTextUTF8.rawValue))
+        try manager.checkInvariantsForTesting()
         device.emit(.selection(offerHandle1))
+        try manager.checkInvariantsForTesting()
 
         var descriptor = try manager.receiveOffer(id: offer.id, mimeType: .plainTextUTF8)
         let rawDescriptor = descriptor.releaseRawValue()
@@ -54,7 +56,35 @@ struct DataTransferManagerReceiveTests {
     }
 
     @Test
-    func receivingUnavailableMimeTypeIsRejectedBeforePipeCreation() throws {
+    func runtimeOfferBindingIDMustMatchOfferID() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let offerID = DataOfferID(rawValue: 1)
+        let mismatchedID = DataOfferID(rawValue: 99)
+
+        manager.offerIDsByHandle[offerHandle1] = offerID
+        manager.runtimeOffersByID[offerID] = .pending(
+            handle: offerHandle1,
+            binding: RecordingDataTransferOfferBinding(id: mismatchedID) { _ in
+                return
+            },
+            seatID: seat1,
+            mimeTypes: []
+        )
+
+        #expect(
+            throws: DataTransferManagerInvariantViolation.runtimeOfferBindingIDMismatch(
+                expected: offerID,
+                actual: mismatchedID
+            )
+        ) {
+            try manager.checkInvariantsForTesting()
+        }
+    }
+
+    @Test
+    func activeRuntimeOfferBindingIDMustMatchStateOfferID() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
         try manager.synchronizeSeats([seat1])
@@ -64,6 +94,39 @@ struct DataTransferManagerReceiveTests {
         let offer = try #require(backend.offerBinding(for: offerHandle1))
         offer.emit(.offer(MIMEType.plainText.rawValue))
         device.emit(.selection(offerHandle1))
+        try manager.checkInvariantsForTesting()
+
+        let mismatchedID = DataOfferID(rawValue: offer.id.rawValue + 100)
+        manager.runtimeOffersByID[offer.id] = .active(
+            handle: offerHandle1,
+            binding: RecordingDataTransferOfferBinding(id: mismatchedID) { _ in
+                return
+            }
+        )
+
+        #expect(
+            throws: DataTransferManagerInvariantViolation.runtimeOfferBindingIDMismatch(
+                expected: offer.id,
+                actual: mismatchedID
+            )
+        ) {
+            try manager.checkInvariantsForTesting()
+        }
+    }
+
+    @Test
+    func receivingUnavailableMimeTypeIsRejectedBeforePipeCreation() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let offer = try #require(backend.offerBinding(for: offerHandle1))
+        offer.emit(.offer(MIMEType.plainText.rawValue))
+        try manager.checkInvariantsForTesting()
+        device.emit(.selection(offerHandle1))
+        try manager.checkInvariantsForTesting()
 
         #expect(throws: DataTransferError.mimeTypeUnavailable(.uriList)) {
             _ = try manager.receiveOffer(id: offer.id, mimeType: .uriList)
@@ -84,7 +147,9 @@ struct DataTransferManagerReceiveTests {
         device.emit(.dataOffer(offerHandle1))
         let offer = try #require(backend.offerBinding(for: offerHandle1))
         offer.emit(.offer(MIMEType.plainText.rawValue))
+        try manager.checkInvariantsForTesting()
         device.emit(.selection(offerHandle1))
+        try manager.checkInvariantsForTesting()
 
         #expect(throws: DataTransferError.invalidFileDescriptor(-1)) {
             _ = try manager.receiveOffer(id: offer.id, mimeType: .plainText)
@@ -106,7 +171,9 @@ struct DataTransferManagerReceiveTests {
         device.emit(.dataOffer(offerHandle1))
         let offer = try #require(backend.offerBinding(for: offerHandle1))
         offer.emit(.offer(MIMEType.plainText.rawValue))
+        try manager.checkInvariantsForTesting()
         device.emit(.selection(offerHandle1))
+        try manager.checkInvariantsForTesting()
 
         #expect(throws: DataTransferError.invalidFileDescriptor(14)) {
             _ = try manager.receiveOffer(id: offer.id, mimeType: .plainText)

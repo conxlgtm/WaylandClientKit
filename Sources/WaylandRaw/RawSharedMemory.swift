@@ -113,40 +113,6 @@ private final class SharedMemoryMapping {
     }
 }
 
-package struct BufferLayout: Equatable, Sendable {
-    package let width: Int32
-    package let height: Int32
-    package let stride: Int32
-    package let byteCount: Int
-
-    package init(width bufferWidth: Int32, height bufferHeight: Int32) throws(RuntimeError) {
-        guard bufferWidth > 0, bufferHeight > 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL, operation: .validateArgument("buffer dimensions"))
-        }
-
-        let strideResult = Int(bufferWidth).multipliedReportingOverflow(
-            by: MemoryLayout<UInt32>.stride
-        )
-        guard !strideResult.overflow, strideResult.partialValue <= Int(Int32.max) else {
-            throw RuntimeError.systemError(
-                errno: EOVERFLOW, operation: .validateArgument("buffer stride"))
-        }
-
-        let byteCountResult = strideResult.partialValue
-            .multipliedReportingOverflow(by: Int(bufferHeight))
-        guard !byteCountResult.overflow else {
-            throw RuntimeError.systemError(
-                errno: EOVERFLOW, operation: .validateArgument("buffer byte count"))
-        }
-
-        width = bufferWidth
-        height = bufferHeight
-        stride = Int32(strideResult.partialValue)
-        byteCount = byteCountResult.partialValue
-    }
-}
-
 package final class RawBuffer {
     package let width: Int32
     package let height: Int32
@@ -166,14 +132,14 @@ package final class RawBuffer {
 
     package var lifecycle: BufferLifecycle { busyState.lifecycle }
 
-    package func withUnsafeMutableBytes<R>(
+    private func withUnsafeMutableBytes<R>(
         _ body: (UnsafeMutableRawBufferPointer) throws -> R
     ) rethrows -> R {
         try unsafe body(bytes)
     }
 
     @discardableResult
-    package func acquireForDrawing() -> Bool {
+    private func acquireForDrawing() -> Bool {
         busyState.acquireForDrawing()
     }
 
@@ -212,16 +178,16 @@ package final class RawBuffer {
     }
 
     @discardableResult
-    package func markBusy() -> Bool {
+    private func markBusy() -> Bool {
         markBusy(commitGeneration: 0)
     }
 
     @discardableResult
-    package func markBusy(commitGeneration: UInt64) -> Bool {
+    private func markBusy(commitGeneration: UInt64) -> Bool {
         busyState.markPendingRelease(commitGeneration: commitGeneration)
     }
 
-    package func markReleased() {
+    private func markReleased() {
         busyState.markReleased()
     }
 
@@ -247,6 +213,59 @@ package final class RawBuffer {
 
     deinit {
         destroy()
+    }
+
+    package struct DrawingBuffer: ~Copyable {
+        private let buffer: RawBuffer
+        private var lease: DrawingBufferLease
+
+        private init(buffer drawingBuffer: RawBuffer) {
+            buffer = drawingBuffer
+            lease = DrawingBufferLease(
+                release: {
+                    drawingBuffer.markReleased()
+                },
+                markPendingRelease: { commitGeneration in
+                    drawingBuffer.markBusy(commitGeneration: commitGeneration)
+                }
+            )
+        }
+
+        package init?(acquiring drawingBuffer: RawBuffer) {
+            guard drawingBuffer.acquireForDrawing() else {
+                return nil
+            }
+
+            self.init(buffer: drawingBuffer)
+        }
+
+        package var width: Int32 {
+            buffer.width
+        }
+
+        package var height: Int32 {
+            buffer.height
+        }
+
+        package var stride: Int32 {
+            buffer.stride
+        }
+
+        package func withUnsafeMutableBytes<R>(
+            _ body: (UnsafeMutableRawBufferPointer) throws -> R
+        ) rethrows -> R {
+            lease.preconditionCanWrite()
+            return try unsafe buffer.withUnsafeMutableBytes(body)
+        }
+
+        package mutating func discard() {
+            lease.discard()
+        }
+
+        package mutating func markBusy(commitGeneration: UInt64) -> RawBuffer {
+            lease.markBusy(commitGeneration: commitGeneration)
+            return buffer
+        }
     }
 }
 
@@ -320,8 +339,16 @@ package final class RawSharedMemoryPool {
         }
     }
 
-    package func nextFreeBuffer() -> RawBuffer? {
+    private func nextFreeBuffer() -> RawBuffer? {
         buffers.first(where: \.isReusable)
+    }
+
+    package func acquireDrawingBuffer() -> RawBuffer.DrawingBuffer? {
+        guard let buffer = nextFreeBuffer() else {
+            return nil
+        }
+
+        return RawBuffer.DrawingBuffer(acquiring: buffer)
     }
 
     package var hasFreeBuffers: Bool { buffers.contains(where: \.isReusable) }

@@ -1,53 +1,48 @@
 extension PopupRoleSurface {
     // swiftlint:disable:next function_body_length
     func performSoftwarePresent(
-        generation: UInt64,
-        logicalSize: PositiveLogicalSize,
+        _ request: PopupPresentationRequest,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
-        presentation = .drawing(generation: generation)
+        try interpretPopupEffects(
+            model.reduce(.presentationStarted(generation: request.generation))
+        )
 
         do {
             guard pendingFrameRegistration == nil else {
-                failActivePresentation(generation: generation)
+                failActivePresentation(generation: request.generation)
                 return .skippedPendingFrame
             }
 
-            let geometry = try surfaceGeometry(logicalSize: logicalSize)
+            let geometry = try surfaceGeometry(logicalSize: request.placement.size)
             let pool = try bufferPool(for: geometry.bufferSize)
             dropReleasedRetiredPools()
 
-            guard let buffer = pool.nextFreeBuffer() else {
-                _ = redrawState.reduce(.drawBlockedByBuffer, bufferAvailable: false)
-                presentation = .idle
-                return .waitingForBuffer
-            }
-            guard buffer.acquireForDrawing() else {
-                _ = redrawState.reduce(.drawBlockedByBuffer, bufferAvailable: false)
-                presentation = .idle
+            guard var drawingBuffer = pool.acquireDrawingBuffer() else {
+                try interpretPopupEffects(model.reduce(.presentationBlockedByBuffer))
                 return .waitingForBuffer
             }
 
             do {
-                try unsafe buffer.withUnsafeMutableBytes { bytes in
+                try unsafe drawingBuffer.withUnsafeMutableBytes { bytes in
                     let frame = try unsafe SoftwareFrame(
-                        width: buffer.width,
-                        height: buffer.height,
-                        stride: buffer.stride,
+                        width: drawingBuffer.width,
+                        height: drawingBuffer.height,
+                        stride: drawingBuffer.stride,
                         geometry: SoftwareFrameGeometry(surface: geometry),
                         bytes: bytes
                     )
                     try draw(frame)
                 }
             } catch {
-                failActivePresentation(generation: generation)
-                buffer.markReleased()
+                failActivePresentation(generation: request.generation)
+                drawingBuffer.discard()
                 throw error
             }
 
-            guard !isClosedStorage else {
-                resetTransientState()
-                buffer.markReleased()
+            guard !model.isClosed else {
+                try interpretPopupEffects(model.reduce(.transientStateReset))
+                drawingBuffer.discard()
                 return .skippedClosed
             }
 
@@ -56,15 +51,12 @@ extension PopupRoleSurface {
                     self?.handleFrameDone()
                 }
             } catch {
-                failActivePresentation(generation: generation)
-                buffer.markReleased()
+                failActivePresentation(generation: request.generation)
+                drawingBuffer.discard()
                 throw error
             }
 
-            precondition(
-                buffer.markBusy(commitGeneration: generation),
-                "acquired drawing buffer must move to pending release"
-            )
+            let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
             let commitPlan = scaleInstallation.commitPlan(
                 geometry: geometry,
                 surfaceUsesBufferDamage: surface.usesBufferDamage
@@ -74,15 +66,83 @@ extension PopupRoleSurface {
             applySurfaceDamage(commitPlan.damage)
             surface.commit()
 
-            presentation = .idle
-            _ = redrawState.reduce(
-                .presented(generation: generation),
-                bufferAvailable: try redrawBufferAvailable()
+            try interpretPopupEffects(
+                model.reduce(
+                    .presentationSucceeded(
+                        generation: request.generation,
+                        bufferAvailable: try redrawBufferAvailable()
+                    )
+                )
             )
             return .presented
         } catch {
-            failPresentationIfStillActive(generation: generation)
+            failPresentationIfStillActive(generation: request.generation)
             throw error
         }
+    }
+
+    func interpretPresentationEffects(
+        _ effects: [PopupEffect],
+        _ draw: (borrowing SoftwareFrame) throws -> Void
+    ) throws -> RedrawOutcome {
+        var outcome = RedrawOutcome.skippedPendingFrame
+
+        for effect in effects {
+            switch effect {
+            case .performSoftwarePresent(let request):
+                outcome = try performSoftwarePresent(request, draw)
+            default:
+                try interpretPopupEffects([effect])
+            }
+        }
+
+        return effects.isEmpty ? .skippedPendingFrame : outcome
+    }
+
+    package func interpretPopupEffects(_ effects: [PopupEffect]) throws {
+        try WaylandClient.interpretPopupEffects(
+            effects,
+            parentWindowID: parentWindowID,
+            handlers: PopupEffectHandlers(
+                ackConfigure: { [xdgSurface] serial in
+                    xdgSurface.ackConfigure(serial: serial)
+                },
+                publishDismissed: { [self] _ in
+                    onDismissed?()
+                    onDismissed = nil
+                },
+                publishClosed: { [self] _ in
+                    onClosed?()
+                    onClosed = nil
+                },
+                publishRedrawRequested: { [self] _ in
+                    onRedrawRequested?()
+                },
+                cancelFrameCallback: { [self] in
+                    pendingFrameRegistration = nil
+                },
+                retireSwapchain: { [self] in
+                    retireSwapchain()
+                },
+                destroyRoleObjects: { [self] in
+                    destroyRoleObjects()
+                }
+            )
+        )
+    }
+
+    private func destroyRoleObjects() {
+        onClose?()
+        onClose = nil
+        onRedrawRequested = nil
+
+        scaleInstallation.destroy()
+        popupOwner?.cancel()
+        popupOwner = nil
+        xdgSurfaceOwner.cancel()
+        popup.destroy()
+        positioner.destroy()
+        xdgSurface.destroy()
+        surface.destroy()
     }
 }

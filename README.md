@@ -22,11 +22,12 @@ Current experimental baseline:
 - frame callback pacing
 - seat, pointer, keyboard, and touch event capture
 - package-internal `DisplaySession` input draining with seat/window identity
-- high-level async `WaylandDisplay` actor backed by a dedicated Wayland owner thread
-  with an executor-owned integrated event loop
+- high-level async `WaylandDisplay.withConnection` API backed by a dedicated Wayland owner
+  thread with an executor-owned integrated event loop
 - copied keyboard keymap payloads inside `WaylandRaw`
 - `xkbcommon`-backed key interpretation for copied `xkb_v1` keymaps through `DisplaySession`
 - normal pointer cursor surfaces backed by `wayland-cursor`
+- regular clipboard selection offers and sources through `wl_data_device_manager`
 - noninteractive Wayland smoke executable
 - tests for system imports, shim imports, raw lifecycle, and client drawing helpers
 
@@ -34,7 +35,7 @@ Not implemented yet:
 
 - protocol coverage beyond core Wayland, XDG shell, shared memory, and input basics
 - compose, text-input, or IME behavior
-- text input, IME, clipboard, or drag and drop protocols
+- primary selection and drag-and-drop transfer handling
 - cursor animation, output-scale cursor selection, or custom cursor drawing APIs
 - high-level gesture recognizers or widgets
 - DocC reference documentation
@@ -55,6 +56,10 @@ Supported in the `0.0.1` checkpoint:
 - `wl_pointer`
 - `wl_keyboard`
 - `wl_touch`
+- `wl_data_device_manager`
+- `wl_data_device`
+- `wl_data_offer`
+- `wl_data_source`
 - `xdg_wm_base`
 - `xdg_surface`
 - `xdg_toplevel`
@@ -83,9 +88,15 @@ Pointer cursors:
 - session-level `PointerCursor` values
 - static cursor surfaces from installed cursor themes through `wayland-cursor`
 
+Clipboard and data transfer:
+
+- regular clipboard selection offers can be inspected and received
+- regular clipboard sources can be offered and cleared
+- drag-and-drop enter events are rejected; primary selection is not implemented
+
 Not supported in the `0.0.1` checkpoint:
 
-- `wl_data_device_manager`, clipboard, primary selection, or drag and drop
+- primary selection or drag-and-drop transfer handling
 - cursor animation or per-output cursor scaling
 - presentation-time
 - linux-dmabuf, EGL, GBM, or GPU rendering

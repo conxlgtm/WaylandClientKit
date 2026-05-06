@@ -22,10 +22,7 @@ package final class PopupRoleSurface {
     package var buffers: RawSharedMemoryPool?
     package var retiredBufferPools: [RawSharedMemoryPool] = []
     package var pendingFrameRegistration: FrameCallbackRegistration?
-    var redrawState = WindowRedrawState()
-    package var presentation = WindowPresentationState.idle
-    package var currentPlacement: PopupPlacement?
-    package var isClosedStorage = false
+    package var model: PopupModel
 
     package var onClose: (() -> Void)?
     package var onDismissed: (() -> Void)?
@@ -50,6 +47,11 @@ package final class PopupRoleSurface {
         bufferCount = popupBufferCount
         failureSink = popupFailureSink
         initialConfigurePump = pumpEvents
+        model = PopupModel(
+            id: popupID,
+            parentWindowID: popupParentWindowID,
+            fallbackSize: popupConfiguration.positioner.size
+        )
 
         let globals = try rawConnection.bindRequiredGlobals()
         let newSurface = try globals.compositor.createSurface()
@@ -120,6 +122,7 @@ package final class PopupRoleSurface {
         do {
             try applyGrabIfNeeded(globals: globals)
             surface.commit()
+            try interpretPopupEffects(model.reduce(.initialCommitSent))
         } catch {
             close()
             throw error
@@ -137,12 +140,12 @@ package final class PopupRoleSurface {
 
     package var isClosedOnOwnerThread: Bool {
         connection.preconditionIsOwnerThread()
-        return isClosedStorage
+        return model.isClosed
     }
 
     package var needsRedrawOnOwnerThread: Bool {
         connection.preconditionIsOwnerThread()
-        return redrawState.isDirty
+        return model.redraw.isDirty
     }
 
     package var geometryOnOwnerThread: SurfaceGeometry {
@@ -155,7 +158,7 @@ package final class PopupRoleSurface {
     package var placementOnOwnerThread: PopupPlacement {
         get throws {
             connection.preconditionIsOwnerThread()
-            guard let currentPlacement else {
+            guard let currentPlacement = model.currentPlacement else {
                 throw ClientError.display(.unknownPopup)
             }
 
@@ -169,8 +172,8 @@ package final class PopupRoleSurface {
     ) throws {
         connection.preconditionIsOwnerThread()
 
-        if currentPlacement == nil {
-            currentPlacement = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
+        if model.currentPlacement == nil {
+            _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
         }
 
         try requestRedrawOnOwnerThread()
@@ -181,7 +184,7 @@ package final class PopupRoleSurface {
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         connection.preconditionIsOwnerThread()
-        guard !isClosedStorage else { return }
+        guard !model.isClosed else { return }
 
         _ = try consumeLatestConfigureIfAvailable()
         _ = try drawAndPresent(draw)
