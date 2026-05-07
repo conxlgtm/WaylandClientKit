@@ -7,61 +7,66 @@ struct InputDeviceGraph: Equatable {
     }
 
     private struct SeatInputState: Equatable {
-        var pointer = PointerDeviceState()
-        var keyboard = KeyboardDeviceState()
-        var touch = TouchDeviceState()
+        var pointer = PointerDeviceState.absent
+        var keyboard = KeyboardDeviceState.absent
+        var touch = TouchDeviceState.absent
 
         var isEmpty: Bool {
-            pointer == PointerDeviceState()
-                && keyboard == KeyboardDeviceState()
-                && touch == TouchDeviceState()
+            pointer == .absent
+                && keyboard == .absent
+                && touch == .absent
         }
 
         mutating func adopt(_ deviceID: RawInputDeviceID) {
             switch deviceID.kind {
             case .pointer:
-                pointer = PointerDeviceState(
-                    currentID: deviceID,
-                    focusedSurfaceID: nil
-                )
+                pointer = .present(identity: .identified(deviceID), focusedSurfaceID: nil)
             case .keyboard:
-                keyboard = KeyboardDeviceState(
-                    currentID: deviceID,
-                    focusedSurfaceID: nil
-                )
+                keyboard = .present(identity: .identified(deviceID), focusedSurfaceID: nil)
             case .touch:
-                touch = TouchDeviceState(
-                    currentID: deviceID,
+                touch = .present(
+                    identity: .identified(deviceID),
                     focusedSurfaceByTouchID: [:]
                 )
             }
         }
 
-        mutating func retire(_ kind: RawInputDeviceID.Kind) {
+        func containsDevice(_ kind: RawInputDeviceID.Kind) -> Bool {
             switch kind {
             case .pointer:
-                pointer = PointerDeviceState()
+                pointer.isPresent
             case .keyboard:
-                keyboard = KeyboardDeviceState()
+                keyboard.isPresent
             case .touch:
-                touch = TouchDeviceState()
+                touch.isPresent
             }
         }
-    }
 
-    private struct PointerDeviceState: Equatable {
-        var currentID: RawInputDeviceID?
-        var focusedSurfaceID: RawObjectID?
-    }
+        func currentDeviceID(_ kind: RawInputDeviceID.Kind) -> RawInputDeviceID? {
+            switch kind {
+            case .pointer:
+                pointer.currentID
+            case .keyboard:
+                keyboard.currentID
+            case .touch:
+                touch.currentID
+            }
+        }
 
-    private struct KeyboardDeviceState: Equatable {
-        var currentID: RawInputDeviceID?
-        var focusedSurfaceID: RawObjectID?
-    }
+        mutating func retire(_ kind: RawInputDeviceID.Kind) -> RawInputDeviceID? {
+            let currentID = currentDeviceID(kind)
 
-    private struct TouchDeviceState: Equatable {
-        var currentID: RawInputDeviceID?
-        var focusedSurfaceByTouchID: [Int32: RawObjectID] = [:]
+            switch kind {
+            case .pointer:
+                pointer = .absent
+            case .keyboard:
+                keyboard = .absent
+            case .touch:
+                touch = .absent
+            }
+
+            return currentID
+        }
     }
 
     private var seatsByID: [RawSeatID: SeatInputState] = [:]
@@ -76,24 +81,24 @@ struct InputDeviceGraph: Equatable {
     }
 
     func touchFocus(for seatID: RawSeatID, touchID: Int32) -> RawObjectID? {
-        seatsByID[seatID]?.touch.focusedSurfaceByTouchID[touchID]
+        seatsByID[seatID]?.touch.focus(touchID: touchID)
     }
 
     mutating func setPointerFocus(seatID: RawSeatID, surfaceID: RawObjectID) {
         updateSeatState(seatID) { state in
-            state.pointer.focusedSurfaceID = surfaceID
+            state.pointer.setFocus(surfaceID)
         }
     }
 
     mutating func setKeyboardFocus(seatID: RawSeatID, surfaceID: RawObjectID) {
         updateSeatState(seatID) { state in
-            state.keyboard.focusedSurfaceID = surfaceID
+            state.keyboard.setFocus(surfaceID)
         }
     }
 
     mutating func setTouchFocus(seatID: RawSeatID, touchID: Int32, surfaceID: RawObjectID) {
         updateSeatState(seatID) { state in
-            state.touch.focusedSurfaceByTouchID[touchID] = surfaceID
+            state.touch.setFocus(touchID: touchID, surfaceID: surfaceID)
         }
     }
 
@@ -149,7 +154,7 @@ struct InputDeviceGraph: Equatable {
         }
 
         updateSeatState(seatID) { state in
-            state.pointer.focusedSurfaceID = nil
+            state.pointer.clearFocus(matching: surfaceID)
         }
     }
 
@@ -159,19 +164,19 @@ struct InputDeviceGraph: Equatable {
         }
 
         updateSeatState(seatID) { state in
-            state.keyboard.focusedSurfaceID = nil
+            state.keyboard.clearFocus(matching: surfaceID)
         }
     }
 
     mutating func clearTouchFocus(seatID: RawSeatID, touchID: Int32) {
         updateSeatState(seatID) { state in
-            state.touch.focusedSurfaceByTouchID[touchID] = nil
+            state.touch.clearFocus(touchID: touchID)
         }
     }
 
     mutating func clearTouchFocuses(seatID: RawSeatID) {
         updateSeatState(seatID) { state in
-            state.touch.focusedSurfaceByTouchID.removeAll()
+            state.touch.clearFocuses()
         }
     }
 
@@ -187,14 +192,12 @@ struct InputDeviceGraph: Equatable {
         for seatID in seatsByID.keys {
             updateSeatState(seatID) { state in
                 if state.pointer.focusedSurfaceID == surfaceID {
-                    state.pointer.focusedSurfaceID = nil
+                    state.pointer.clearFocus(matching: surfaceID)
                 }
                 if state.keyboard.focusedSurfaceID == surfaceID {
-                    state.keyboard.focusedSurfaceID = nil
+                    state.keyboard.clearFocus(matching: surfaceID)
                 }
-                state.touch.focusedSurfaceByTouchID = state.touch
-                    .focusedSurfaceByTouchID
-                    .filter { $0.value != surfaceID }
+                state.touch.removeFocuses(matching: surfaceID)
             }
         }
     }
@@ -212,18 +215,7 @@ struct InputDeviceGraph: Equatable {
         seatID: RawSeatID,
         kind: RawInputDeviceID.Kind
     ) -> RawInputDeviceID? {
-        guard let state = seatsByID[seatID] else {
-            return nil
-        }
-
-        switch kind {
-        case .pointer:
-            return state.pointer.currentID
-        case .keyboard:
-            return state.keyboard.currentID
-        case .touch:
-            return state.touch.currentID
-        }
+        seatsByID[seatID]?.currentDeviceID(kind)
     }
 
     private mutating func clearGenerationHistory(for seatID: RawSeatID) {
@@ -236,17 +228,21 @@ struct InputDeviceGraph: Equatable {
         seatID: RawSeatID,
         kind: RawInputDeviceID.Kind
     ) {
-        guard let currentID = currentDeviceID(seatID: seatID, kind: kind) else {
+        guard let state = seatsByID[seatID], state.containsDevice(kind) else {
             return
         }
+        let retiredID = state.currentDeviceID(kind)
 
-        let key = InputDeviceKey(seatID: seatID, kind: kind)
-        lastSeenGenerationByDevice[key] = max(
-            lastSeenGenerationByDevice[key] ?? 0,
-            currentID.generation
-        )
+        if let retiredID {
+            let key = InputDeviceKey(seatID: seatID, kind: kind)
+            lastSeenGenerationByDevice[key] = max(
+                lastSeenGenerationByDevice[key] ?? 0,
+                retiredID.generation
+            )
+        }
+
         updateSeatState(seatID) { state in
-            state.retire(kind)
+            _ = state.retire(kind)
         }
     }
 }

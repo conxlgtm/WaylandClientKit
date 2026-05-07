@@ -28,6 +28,11 @@ package struct SurfaceNode: Equatable, Sendable {
     package var role: SurfaceRole
     package var children: [SurfaceID]
 
+    package var popupID: PopupID? {
+        guard case .popup(let popupID, _) = role else { return nil }
+        return popupID
+    }
+
     package init(
         id surfaceID: SurfaceID,
         windowID surfaceWindowID: WindowID,
@@ -41,15 +46,6 @@ package struct SurfaceNode: Equatable, Sendable {
         role = surfaceRole
         children = surfaceChildren
     }
-}
-
-package enum SurfaceGraphError: Error, Equatable, Sendable {
-    case duplicateSurface(SurfaceID)
-    case duplicatePopup(PopupID)
-    case unknownSurface(SurfaceID)
-    case unknownParent(SurfaceID)
-    case nonTopmostPopupDestroy(requested: SurfaceID, topmost: SurfaceID?)
-    case toplevelDestroyedWithLivePopups(WindowID)
 }
 
 package struct PopupStack: Equatable, Sendable {
@@ -69,7 +65,7 @@ package struct PopupStack: Equatable, Sendable {
 
     package mutating func destroyTopmost(_ popupSurfaceID: SurfaceID) throws -> SurfaceID {
         guard topmost == popupSurfaceID else {
-            throw SurfaceGraphError.nonTopmostPopupDestroy(
+            throw DisplaySurfaceStoreError.nonTopmostPopupDestroy(
                 requested: popupSurfaceID,
                 topmost: topmost
             )
@@ -78,9 +74,11 @@ package struct PopupStack: Equatable, Sendable {
         return stack.removeLast()
     }
 
-    package mutating func dismissFromCompositor(_ popupSurfaceID: SurfaceID) throws -> [SurfaceID] {
+    package mutating func dismissFromCompositor(
+        _ popupSurfaceID: SurfaceID
+    ) throws -> [SurfaceID] {
         guard let index = stack.firstIndex(of: popupSurfaceID) else {
-            throw SurfaceGraphError.unknownSurface(popupSurfaceID)
+            throw DisplaySurfaceStoreError.unknownSurface(popupSurfaceID)
         }
 
         let dismissed = Array(stack[index...].reversed())
@@ -90,7 +88,7 @@ package struct PopupStack: Equatable, Sendable {
 
     package mutating func destroyCascade(from popupSurfaceID: SurfaceID) throws -> [SurfaceID] {
         guard let index = stack.firstIndex(of: popupSurfaceID) else {
-            throw SurfaceGraphError.unknownSurface(popupSurfaceID)
+            throw DisplaySurfaceStoreError.unknownSurface(popupSurfaceID)
         }
 
         let destroyed = Array(stack[index...].reversed())
@@ -113,7 +111,7 @@ package struct SurfaceGraph: Equatable, Sendable {
         windowID: WindowID
     ) throws {
         guard nodes[surfaceID] == nil else {
-            throw SurfaceGraphError.duplicateSurface(surfaceID)
+            throw DisplaySurfaceStoreError.duplicateSurface(surfaceID)
         }
 
         nodes[surfaceID] = SurfaceNode(
@@ -125,19 +123,20 @@ package struct SurfaceGraph: Equatable, Sendable {
         popupStacksByRoot[surfaceID] = PopupStack()
     }
 
+    @discardableResult
     package mutating func registerPopup(
         surfaceID: SurfaceID,
         popupID: PopupID,
         parent parentID: SurfaceID
-    ) throws {
+    ) throws -> WindowID {
         guard nodes[surfaceID] == nil else {
-            throw SurfaceGraphError.duplicateSurface(surfaceID)
+            throw DisplaySurfaceStoreError.duplicateSurface(surfaceID)
         }
         guard livePopupSurfacesByID[popupID] == nil else {
-            throw SurfaceGraphError.duplicatePopup(popupID)
+            throw DisplaySurfaceStoreError.duplicatePopup(popupID)
         }
         guard let parent = nodes[parentID] else {
-            throw SurfaceGraphError.unknownParent(parentID)
+            throw DisplaySurfaceStoreError.unknownParent(parentID)
         }
         var stack = try requirePopupStack(for: parent.root)
 
@@ -151,6 +150,7 @@ package struct SurfaceGraph: Equatable, Sendable {
         livePopupSurfacesByID[popupID] = surfaceID
         stack.push(surfaceID)
         popupStacksByRoot[parent.root] = stack
+        return parent.windowID
     }
 
     @discardableResult
@@ -192,13 +192,13 @@ package struct SurfaceGraph: Equatable, Sendable {
 
     package mutating func unregisterTopLevel(_ surfaceID: SurfaceID) throws {
         guard let node = nodes[surfaceID] else {
-            throw SurfaceGraphError.unknownSurface(surfaceID)
+            throw DisplaySurfaceStoreError.unknownSurface(surfaceID)
         }
         guard case .toplevel(let windowID) = node.role else {
-            throw SurfaceGraphError.unknownSurface(surfaceID)
+            throw DisplaySurfaceStoreError.unknownSurface(surfaceID)
         }
         guard node.children.isEmpty else {
-            throw SurfaceGraphError.toplevelDestroyedWithLivePopups(windowID)
+            throw DisplaySurfaceStoreError.toplevelDestroyedWithLivePopups(windowID)
         }
 
         nodes.removeValue(forKey: surfaceID)
@@ -207,25 +207,61 @@ package struct SurfaceGraph: Equatable, Sendable {
 
     package func windowID(for surfaceID: SurfaceID) throws -> WindowID {
         guard let node = nodes[surfaceID] else {
-            throw SurfaceGraphError.unknownSurface(surfaceID)
+            throw DisplaySurfaceStoreError.unknownSurface(surfaceID)
         }
 
         return node.windowID
     }
 
-    package func popupNodesTopDown(parentedBy windowID: WindowID) -> [SurfaceNode] {
+    package func popupIDsTopDown(parentedBy windowID: WindowID) -> [PopupID] {
         popupStacksByRoot
             .filter { root, _ in nodes[root]?.windowID == windowID }
             .flatMap { _, stack in stack.stack.reversed() }
-            .compactMap { surfaceID in nodes[surfaceID] }
+            .compactMap { surfaceID in nodes[surfaceID]?.popupID }
+    }
+
+    package func children(of surfaceID: SurfaceID) -> [SurfaceID] {
+        nodes[surfaceID]?.children ?? []
+    }
+
+    package func topmostPopupSurfaceID(rootedAt surfaceID: SurfaceID) -> SurfaceID? {
+        popupStacksByRoot[surfaceID]?.topmost
+    }
+
+    package func contains(_ surfaceID: SurfaceID) -> Bool {
+        nodes[surfaceID] != nil
+    }
+
+    package func livePopupSurfaceID(for popupID: PopupID) -> SurfaceID? {
+        livePopupSurfacesByID[popupID]
+    }
+
+    package func windowNodeMatches(surfaceID: SurfaceID, windowID: WindowID) -> Bool {
+        nodes[surfaceID]?.role == .toplevel(windowID: windowID)
+    }
+
+    package func popupNodeMatches(
+        surfaceID: SurfaceID,
+        popupID: PopupID,
+        parentWindowID: WindowID
+    ) -> Bool {
+        guard
+            let node = nodes[surfaceID],
+            case .popup(let nodePopupID, _) = node.role,
+            nodePopupID == popupID
+        else {
+            return false
+        }
+
+        return node.windowID == parentWindowID
     }
 
     private func requirePopupNode(_ surfaceID: SurfaceID) throws -> SurfaceNode {
         guard let node = nodes[surfaceID] else {
-            throw SurfaceGraphError.unknownSurface(surfaceID)
+            throw DisplaySurfaceStoreError.unknownSurface(surfaceID)
         }
         guard case .popup = node.role else {
-            throw SurfaceGraphError.unknownSurface(surfaceID)
+            throw DisplaySurfaceStoreError.unknownSurface(surfaceID)
         }
 
         return node
@@ -233,7 +269,7 @@ package struct SurfaceGraph: Equatable, Sendable {
 
     private func requirePopupStack(for root: SurfaceID) throws -> PopupStack {
         guard let stack = popupStacksByRoot[root] else {
-            throw SurfaceGraphError.unknownSurface(root)
+            throw DisplaySurfaceStoreError.unknownSurface(root)
         }
 
         return stack
@@ -242,7 +278,7 @@ package struct SurfaceGraph: Equatable, Sendable {
     private mutating func removePopupNode(_ surfaceID: SurfaceID) throws -> SurfaceNode {
         let node = try requirePopupNode(surfaceID)
         guard case .popup(let popupID, let parentID) = node.role else {
-            throw SurfaceGraphError.unknownSurface(surfaceID)
+            throw DisplaySurfaceStoreError.unknownSurface(surfaceID)
         }
 
         nodes.removeValue(forKey: surfaceID)

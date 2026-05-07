@@ -86,14 +86,18 @@ package struct SurfaceScaleState: Equatable, Sendable {
 
     package func commitPlan(
         geometry: SurfaceGeometry,
-        surfaceUsesBufferDamage: Bool
+        damageMode: DamageCoordinateMode
     ) -> SurfaceCommitPlan {
         SurfaceCommitPlan(
             geometry: geometry,
             bufferScale: bufferScaleForCommit,
-            usesViewportDestination: requiresViewportDestination,
-            usesBufferDamage: surfaceUsesBufferDamage
+            viewportMode: viewportCommitMode,
+            damageMode: damageMode
         )
+    }
+
+    package var viewportCommitMode: ViewportCommitMode {
+        requiresViewportDestination ? .useLogicalSizeAsDestination : .omitDestination
     }
 
     package var requiresViewportDestination: Bool {

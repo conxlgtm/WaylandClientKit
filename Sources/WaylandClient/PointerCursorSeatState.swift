@@ -1,14 +1,24 @@
 import WaylandRaw
 
+package enum PointerCursorApplicationState: Equatable, Sendable {
+    case unapplied
+    case hidden(serial: UInt32)
+    case named(cursor: PointerCursor, serial: UInt32, surfaceID: RawObjectID?)
+}
+
 package enum PointerFocusState: Equatable, Sendable {
     case unfocused
-    case focused(surfaceID: RawObjectID, enterSerial: UInt32)
+    case focused(
+        surfaceID: RawObjectID,
+        enterSerial: UInt32,
+        application: PointerCursorApplicationState
+    )
 
     var enterSerial: UInt32? {
         switch self {
         case .unfocused:
             nil
-        case .focused(_, let serial):
+        case .focused(_, let serial, _):
             serial
         }
     }
@@ -17,12 +27,33 @@ package enum PointerFocusState: Equatable, Sendable {
         enterSerial != nil
     }
 
+    var application: PointerCursorApplicationState {
+        switch self {
+        case .unfocused:
+            .unapplied
+        case .focused(_, _, let application):
+            application
+        }
+    }
+
     func isFocused(on surfaceID: RawObjectID?) -> Bool {
-        guard case .focused(let focusedSurfaceID, _) = self else {
+        guard case .focused(let focusedSurfaceID, _, _) = self else {
             return false
         }
 
         return focusedSurfaceID == surfaceID
+    }
+
+    mutating func markApplied(_ application: PointerCursorApplicationState) {
+        guard case .focused(let surfaceID, let serial, _) = self else {
+            return
+        }
+
+        self = .focused(
+            surfaceID: surfaceID,
+            enterSerial: serial,
+            application: application
+        )
     }
 }
 
@@ -39,46 +70,42 @@ package enum PointerCursorSeatEffect {
     case destroyCursorSurface(CursorManagerSurface)
 }
 
-package enum PointerCursorApplicationState: Equatable, Sendable {
-    case unapplied
-    case hidden(serial: UInt32)
-    case named(cursor: PointerCursor, serial: UInt32, surfaceID: RawObjectID?)
-}
-
 package struct PointerCursorSeatState {
     var focus: PointerFocusState = .unfocused
     var cursorSurface: CursorManagerSurface?
-    var application: PointerCursorApplicationState = .unapplied
+
+    var application: PointerCursorApplicationState {
+        focus.application
+    }
 
     var isEmpty: Bool {
-        !focus.isFocused && cursorSurface == nil && application == .unapplied
+        !focus.isFocused && cursorSurface == nil
     }
 
     mutating func reduce(_ event: PointerCursorSeatEvent) -> [PointerCursorSeatEffect] {
         switch event {
         case .managedPointerEntered(let surfaceID, let serial, let sourceEvent):
-            focus = .focused(surfaceID: surfaceID, enterSerial: serial)
-            application = .unapplied
+            focus = .focused(
+                surfaceID: surfaceID,
+                enterSerial: serial,
+                application: .unapplied
+            )
             return [.applyCursor(serial: serial, sourceEvent: sourceEvent)]
         case .unmanagedPointerEntered:
             focus = .unfocused
-            application = .unapplied
             return []
         case .pointerLeft(let surfaceID):
             if focus.isFocused(on: surfaceID) {
                 focus = .unfocused
-                application = .unapplied
             }
             return []
         case .registeredSurfaceRemoved(let surfaceID):
             if focus.isFocused(on: surfaceID) {
                 focus = .unfocused
-                application = .unapplied
             }
             return []
         case .pointerUnavailable:
             focus = .unfocused
-            application = .unapplied
             guard let surface = cursorSurface else {
                 return []
             }
@@ -89,6 +116,6 @@ package struct PointerCursorSeatState {
     }
 
     mutating func markApplied(_ appliedCursor: PointerCursorApplicationState) {
-        application = appliedCursor
+        focus.markApplied(appliedCursor)
     }
 }

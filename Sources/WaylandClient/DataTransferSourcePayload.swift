@@ -2,11 +2,45 @@ import Foundation
 import Glibc
 import Synchronization
 
-package struct DataTransferSourceProvider: Sendable {
+package struct DataTransferSourcePayloadSet: Equatable, Sendable {
+    package let payloads: [ClipboardSourcePayload]
     private let payloadsByMIMEType: [MIMEType: Data]
 
-    package init(data payloads: [MIMEType: Data]) {
-        payloadsByMIMEType = payloads
+    package var mimeTypes: [MIMEType] {
+        payloads.map(\.mimeType)
+    }
+
+    package init(payloads sourcePayloads: [ClipboardSourcePayload]) throws {
+        guard !sourcePayloads.isEmpty else {
+            throw DataTransferError.emptyDataSource
+        }
+
+        var seenMIMETypes: Set<MIMEType> = []
+        for payload in sourcePayloads {
+            guard seenMIMETypes.insert(payload.mimeType).inserted else {
+                throw DataTransferError.duplicateMIMEType(payload.mimeType)
+            }
+        }
+
+        payloads = sourcePayloads
+        var payloadsByMIMEType: [MIMEType: Data] = [:]
+        for payload in sourcePayloads {
+            payloadsByMIMEType[payload.mimeType] = payload.data
+        }
+        self.payloadsByMIMEType = payloadsByMIMEType
+    }
+
+    package init(data payloads: [MIMEType: Data]) throws {
+        var sourcePayloads: [ClipboardSourcePayload] = []
+        for mimeType in payloads.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+            guard let data = payloads[mimeType] else {
+                preconditionFailure("Payload dictionary key disappeared during iteration")
+            }
+            sourcePayloads.append(
+                ClipboardSourcePayload(mimeType: mimeType, data: data)
+            )
+        }
+        try self.init(payloads: sourcePayloads)
     }
 
     package func data(for mimeType: MIMEType) -> Data? {

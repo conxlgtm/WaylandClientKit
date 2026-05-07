@@ -70,12 +70,12 @@ struct DataTransferDomainTypesTests {
         )
 
         #expect(configuration.mimeTypes == [.plainTextUTF8, .uriList])
-        #expect(configuration.dataProvider.data(for: .plainTextUTF8) == Data("hello".utf8))
+        #expect(configuration.payloadSet.data(for: .plainTextUTF8) == Data("hello".utf8))
         #expect(
-            configuration.dataProvider.data(for: .uriList)
+            configuration.payloadSet.data(for: .uriList)
                 == Data("file:///tmp/example\n".utf8)
         )
-        #expect(configuration.dataProvider.data(for: .plainText) == nil)
+        #expect(configuration.payloadSet.data(for: .plainText) == nil)
     }
 
     @Test

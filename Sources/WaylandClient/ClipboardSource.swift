@@ -12,20 +12,12 @@ public struct ClipboardSourcePayload: Equatable, Sendable {
 
 public struct ClipboardSourceConfiguration: Equatable, Sendable {
     public let payloads: [ClipboardSourcePayload]
+    package let payloadSet: DataTransferSourcePayloadSet
 
     public init(payloads sourcePayloads: [ClipboardSourcePayload]) throws {
-        guard !sourcePayloads.isEmpty else {
-            throw DataTransferError.emptyDataSource
-        }
-
-        var seenMIMETypes: Set<MIMEType> = []
-        for payload in sourcePayloads {
-            guard seenMIMETypes.insert(payload.mimeType).inserted else {
-                throw DataTransferError.duplicateMIMEType(payload.mimeType)
-            }
-        }
-
-        payloads = sourcePayloads
+        let validatedPayloads = try DataTransferSourcePayloadSet(payloads: sourcePayloads)
+        payloads = validatedPayloads.payloads
+        payloadSet = validatedPayloads
     }
 
     public static func data(
@@ -39,15 +31,6 @@ public struct ClipboardSourceConfiguration: Equatable, Sendable {
 
     package var mimeTypes: [MIMEType] {
         payloads.map(\.mimeType)
-    }
-
-    package var dataProvider: DataTransferSourceProvider {
-        var payloadsByMIMEType: [MIMEType: Data] = [:]
-        for payload in payloads {
-            payloadsByMIMEType[payload.mimeType] = payload.data
-        }
-
-        return DataTransferSourceProvider(data: payloadsByMIMEType)
     }
 }
 

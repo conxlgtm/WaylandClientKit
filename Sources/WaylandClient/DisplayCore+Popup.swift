@@ -32,29 +32,27 @@ extension DisplayCore {
             popup.closeOnOwnerThread()
             throw ClientError.display(.closed)
         }
-        try registerPopup(popup, surfaceParent: parentSurfaceID, windowID: windowID)
+        try registerPopup(popup, surfaceParent: parentSurfaceID)
         return popup.id
     }
 
     private func registerPopup(
         _ popup: PopupRoleSurface,
-        surfaceParent parentSurfaceID: SurfaceID,
-        windowID: WindowID
+        surfaceParent parentSurfaceID: SurfaceID
     ) throws {
         let popupSurfaceID = SurfaceID(rawObjectID: popup.surfaceID)
         do {
-            try surfaceGraph.registerPopup(
+            let parentWindowID = try surfaces.insertPopup(
+                popup,
                 surfaceID: popupSurfaceID,
-                popupID: popup.id,
                 parent: parentSurfaceID
             )
+            installPopupEventCallbacks(for: popup, parentWindowID: parentWindowID)
         } catch {
             popup.closeOnOwnerThread()
             throw error
         }
-        registry.insertPopup(popup, surfaceID: popupSurfaceID, parentWindowID: windowID)
-        installPopupEventCallbacks(for: popup, parentWindowID: windowID)
-        assertRegistryInvariants()
+        assertSurfaceStoreInvariants()
     }
 
     private func installPopupEventCallbacks(
@@ -75,8 +73,8 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let popup = try requireOpenPopup(popupID)
             try popup.showOnOwnerThread(timeoutMilliseconds: timeoutMilliseconds, draw)
-            guard !isClosed, let session else { return }
-            publishSessionEvents(session)
+            guard !isClosed, let activeSession else { return }
+            publishSessionEvents(activeSession)
         }
     }
 
@@ -97,7 +95,7 @@ extension DisplayCore {
             guard !isClosed else {
                 throw ClientError.display(.closed)
             }
-            if registry.closedPopupIDs.contains(popupID) {
+            if surfaces.popupIsClosedOrClosing(popupID) {
                 return true
             }
 
@@ -132,20 +130,17 @@ extension DisplayCore {
     func closePopup(_ popupID: PopupID) {
         withFatalFailureFinalization {
             // Fatal raw invariants already finished streams and deferred graph cleanup.
-            guard !needsFatalFailureFinalization else { return }
-            guard !registry.closedPopupIDs.contains(popupID) else { return }
-            guard registry.popup(popupID) != nil else { return }
+            guard !hasPendingFatalFailure else { return }
+            guard !surfaces.popupIsClosedOrClosing(popupID) else { return }
+            guard surfaces.popup(popupID) != nil else { return }
             do {
-                let popupSurfaceID = try requirePopupSurfaceID(popupID)
-                let nodes = try surfaceGraph.destroyClientRequestedPopupCascade(popupSurfaceID)
-                let closingPopupIDs = popupIDs(from: nodes)
-                beginPopupRegistryRemoval(for: closingPopupIDs)
+                let closingPopupIDs = try surfaces.beginClientRequestedPopupCascade(popupID)
                 for closingPopupID in closingPopupIDs {
-                    registry.popup(closingPopupID)?.closeOnOwnerThread()
+                    surfaces.popup(closingPopupID)?.closeOnOwnerThread()
                 }
-                assertRegistryInvariantsAfterPopupRemovalIfReady()
+                assertSurfaceStoreInvariants()
             } catch {
-                markSurfaceGraphInvariantFailed(error)
+                markSurfaceStoreInvariantFailed(error)
             }
         }
     }
@@ -172,32 +167,28 @@ extension DisplayCore {
     }
 
     private func handlePopupDismissed(_ popupID: PopupID, parentWindowID: WindowID) {
-        guard let surfaceID = registry.popupSurfaceID(popupID) else {
-            eventHub.publish(
-                .popupDismissed(
-                    PopupLifecycleEvent(popup: popupID, parentWindowID: parentWindowID)
-                )
-            )
-            return
-        }
-
         do {
-            let dismissedNodes = try surfaceGraph.dismissPopupFromCompositor(surfaceID)
-            let dismissedPopupIDs = popupIDs(from: dismissedNodes)
-            beginPopupRegistryRemoval(for: dismissedPopupIDs)
-            publishPopupDismissedEvents(for: dismissedNodes)
-            for dismissedPopupID in dismissedPopupIDs
-            where dismissedPopupID != popupID {
-                registry.popup(dismissedPopupID)?.closeOnOwnerThread()
+            guard let dismissal = try surfaces.beginCompositorPopupDismissal(popupID) else {
+                eventHub.publish(
+                    .popupDismissed(
+                        PopupLifecycleEvent(popup: popupID, parentWindowID: parentWindowID)
+                    )
+                )
+                return
             }
+
+            publishPopupDismissedEvents(dismissal.events)
+            for dismissedPopupID in dismissal.popupIDs where dismissedPopupID != popupID {
+                surfaces.popup(dismissedPopupID)?.closeOnOwnerThread()
+            }
+            assertSurfaceStoreInvariants()
         } catch {
-            markSurfaceGraphInvariantFailed(error)
-            return
+            markSurfaceStoreInvariantFailed(error)
         }
     }
 
     private func handlePopupClosed(_ popupID: PopupID) {
-        let parentWindowID = registry.markPopupClosed(popupID)
+        let parentWindowID = surfaces.markPopupClosed(popupID)
         if let parentWindowID {
             eventHub.publish(
                 .popupClosed(
@@ -205,61 +196,31 @@ extension DisplayCore {
                 )
             )
         }
-        finishPopupRegistryRemoval(for: popupID)
+        assertSurfaceStoreInvariants()
     }
 
     func popupIDsTopDown(parentedBy windowID: WindowID) -> [PopupID] {
-        popupIDs(from: surfaceGraph.popupNodesTopDown(parentedBy: windowID))
+        surfaces.popupIDsTopDown(parentedBy: windowID)
     }
 
-    private func popupIDs(from nodes: [SurfaceNode]) -> [PopupID] {
-        nodes.compactMap { node in
-            popupID(from: node)
-        }
-    }
-
-    private func popupID(from node: SurfaceNode) -> PopupID? {
-        guard case .popup(let popupID, _) = node.role else {
-            return nil
-        }
-
-        return popupID
-    }
-
-    private func publishPopupDismissedEvents(for nodes: [SurfaceNode]) {
-        for node in nodes {
-            guard case .popup(let popupID, _) = node.role else { continue }
-            eventHub.publish(
-                .popupDismissed(
-                    PopupLifecycleEvent(popup: popupID, parentWindowID: node.windowID)
-                )
-            )
+    private func publishPopupDismissedEvents(_ events: [PopupLifecycleEvent]) {
+        for event in events {
+            eventHub.publish(.popupDismissed(event))
         }
     }
 
     private func requireWindowSurfaceID(_ windowID: WindowID) throws -> SurfaceID {
-        guard let surfaceID = registry.windowSurfaceID(windowID) else {
+        guard let surfaceID = surfaces.windowSurfaceID(windowID) else {
             throw ClientError.display(.unknownWindow(windowID))
         }
 
         return surfaceID
     }
 
-    private func requirePopupSurfaceID(_ popupID: PopupID) throws -> SurfaceID {
-        guard !registry.closedPopupIDs.contains(popupID) else {
-            throw ClientError.display(.closedPopup)
-        }
-        guard let surfaceID = registry.popupSurfaceID(popupID) else {
-            throw ClientError.display(.unknownPopup)
-        }
-
-        return surfaceID
-    }
-
-    func markSurfaceGraphInvariantFailed(_ error: any Error) {
+    func markSurfaceStoreInvariantFailed(_ error: any Error) {
         markDefunctForFatalFailure(
             .internalInvariantViolation(
-                .message("surface graph invariant failed: \(String(describing: error))")
+                .message("surface store invariant failed: \(String(describing: error))")
             )
         )
     }
