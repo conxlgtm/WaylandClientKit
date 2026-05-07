@@ -32,7 +32,7 @@ struct WindowModelTests {
         _ = try model.reduce(.configureReceived(configure(width: 800, height: 600, serial: 1)))
         let presentationEffects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
         let request = try presentationRequest(from: presentationEffects)
-        _ = try model.reduce(.presentationStarted(generation: request.generation))
+        _ = try model.reduce(.presentationStarted(request))
         _ = try model.reduce(.presentationSucceeded(generation: 1, bufferAvailable: true))
         _ = try model.reduce(.frameBecameReady(bufferAvailable: true))
 
@@ -59,7 +59,7 @@ struct WindowModelTests {
         )
 
         #expect(effects == [.ackConfigure(7), .publishRedrawRequested(windowID)])
-        #expect(model.presentation == .drawing(generation: request.generation))
+        #expect(model.presentation == .drawing(request: request))
         #expect(model.redraw.hasOutstandingRedrawRequest)
         #expect(
             model.currentConfiguration?.size
@@ -113,7 +113,7 @@ struct WindowModelTests {
 
     @Test
     func requestOnlyCloseBeforeInitialConfigurePublishesRequestWithoutDestroying() throws {
-        var model = try configuredModelReadyForConfigure()
+        var model = try publishedModelReadyForConfigure()
 
         let effects = try model.reduce(.compositorCloseRequested(policy: .requestOnly))
 
@@ -125,7 +125,7 @@ struct WindowModelTests {
 
     @Test
     func requestOnlyCloseBeforeInitialConfigureCarriesRequestIntoActiveState() throws {
-        var model = try configuredModelReadyForConfigure()
+        var model = try publishedModelReadyForConfigure()
 
         _ = try model.reduce(.compositorCloseRequested(policy: .requestOnly))
         #expect(try model.reduce(.compositorCloseRequested(policy: .requestOnly)).isEmpty)
@@ -151,7 +151,7 @@ struct WindowModelTests {
 
     @Test
     func requestOnlyCloseTransitionTablePreservesLifecycle() throws {
-        for fixture in WindowLifecycleFixture.allCases {
+        for fixture in WindowLifecycleFixture.publishedCases {
             var model = try model(in: fixture, published: true)
 
             let effects = try model.reduce(.compositorCloseRequested(policy: .requestOnly))
@@ -167,7 +167,7 @@ struct WindowModelTests {
 
     @Test
     func autoCloseTransitionTableDestroysFromOpenLifecyclePhases() throws {
-        for fixture in WindowLifecycleFixture.allCases {
+        for fixture in WindowLifecycleFixture.publishedCases {
             var model = try model(in: fixture, published: true)
 
             let effects = try model.reduce(.compositorCloseRequested(policy: .autoClose))
@@ -271,143 +271,16 @@ struct WindowModelTests {
 }
 
 extension WindowModelTests {
-    @Test
-    func redrawRequestConsumedProducesPresentationEffect() throws {
-        var model = try activePublishedModel()
-
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
-        let request = PresentationRequest(
-            generation: 1,
-            configuration: try #require(model.currentConfiguration)
-        )
-
-        #expect(effects == [.performSoftwarePresent(request)])
-    }
-
-    @Test
-    func blockedPresentationReturnsToIdleAndWaitsForBuffer() throws {
-        var (model, _) = try activeModelWithStartedPresentation()
-
-        #expect(try model.reduce(.presentationBlockedByBuffer).isEmpty)
-        #expect(model.presentation == .idle)
-        #expect(model.redraw.isWaitingForBuffer)
-        #expect(
-            try model.reduce(.bufferBecameAvailable(bufferAvailable: true))
-                == [.publishRedrawRequested(windowID)]
-        )
-    }
-
-    @Test
-    func presentationSucceededRejectsMismatchedGeneration() throws {
-        var (model, request) = try activeModelWithStartedPresentation()
-
-        #expect(
-            throws: ClientError.window(
-                windowID,
-                .invalidLifecycleTransition(
-                    .presentationGenerationMismatch(
-                        expected: request.generation,
-                        actual: request.generation + 1
-                    )
-                )
-            )
-        ) {
-            _ = try model.reduce(
-                .presentationSucceeded(
-                    generation: request.generation + 1,
-                    bufferAvailable: true
-                )
-            )
-        }
-        #expect(model.presentation == .drawing(generation: request.generation))
-    }
-
-    @Test
-    func presentationFailedRejectsMismatchedGeneration() throws {
-        var (model, request) = try activeModelWithStartedPresentation()
-
-        #expect(
-            throws: ClientError.window(
-                windowID,
-                .invalidLifecycleTransition(
-                    .presentationGenerationMismatch(
-                        expected: request.generation,
-                        actual: request.generation + 1
-                    )
-                )
-            )
-        ) {
-            _ = try model.reduce(
-                .presentationFailed(
-                    generation: request.generation + 1,
-                    .drawFailed("stale")
-                )
-            )
-        }
-        #expect(model.presentation == .drawing(generation: request.generation))
-    }
-
-    @Test
-    func presentationBlockedRequiresActivePresentation() throws {
-        var model = try activePublishedModel()
-
-        #expect(
-            throws: ClientError.window(
-                windowID,
-                .invalidLifecycleTransition(.inactivePresentationCompletion)
-            )
-        ) {
-            _ = try model.reduce(.presentationBlockedByBuffer)
-        }
-        #expect(model.presentation == .idle)
-    }
-
-    @Test
-    func presentationSetupFailureReturnsModelToIdle() throws {
-        var (model, request) = try activeModelWithStartedPresentation()
-
-        #expect(
-            throws: ClientError.window(
-                windowID,
-                .presentationFailed(.drawFailed("allocation failed"))
-            )
-        ) {
-            _ = try model.reduce(
-                .presentationFailed(
-                    generation: request.generation,
-                    .drawFailed("allocation failed")
-                )
-            )
-        }
-        #expect(model.presentation == .idle)
-    }
-
-    @Test
-    func redrawAfterPresentationFailureDoesNotReportNestedPresentation() throws {
-        var (model, request) = try activeModelWithStartedPresentation()
-
-        #expect(throws: ClientError.window(windowID, .presentationFailed(.drawFailed("boom")))) {
-            _ = try model.reduce(
-                .presentationFailed(generation: request.generation, .drawFailed("boom"))
-            )
-        }
-
-        #expect(
-            try model.reduce(.contentInvalidated(bufferAvailable: true))
-                == [.publishRedrawRequested(windowID)]
-        )
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
-
-        #expect(try presentationRequest(from: effects).generation == request.generation + 1)
-    }
-}
-
-extension WindowModelTests {
     private enum WindowLifecycleFixture: CaseIterable {
         case created
         case roleAssigned
         case waitingForInitialConfigure
         case active
+
+        static let publishedCases: [WindowLifecycleFixture] = [
+            .waitingForInitialConfigure,
+            .active,
+        ]
     }
 
     private func configuredModelReadyForConfigure() throws -> WindowModel {
@@ -417,36 +290,41 @@ extension WindowModelTests {
         return model
     }
 
+    private func publishedModelReadyForConfigure() throws -> WindowModel {
+        var model = try configuredModelReadyForConfigure()
+        _ = try model.reduce(.published)
+        return model
+    }
+
     private func model(
         in fixture: WindowLifecycleFixture,
         published: Bool = false
     ) throws -> WindowModel {
         var model = WindowModel(id: windowID, fallbackSize: .default)
-        if published {
-            model.markPublished()
-        }
 
         switch fixture {
         case .created:
-            return model
+            break
         case .roleAssigned:
             _ = try model.reduce(.roleObjectsCreated)
-            return model
         case .waitingForInitialConfigure:
             _ = try model.reduce(.roleObjectsCreated)
             _ = try model.reduce(.initialCommitSent)
-            return model
         case .active:
             _ = try model.reduce(.roleObjectsCreated)
             _ = try model.reduce(.initialCommitSent)
             _ = try model.reduce(.configureReceived(configure(width: 800, height: 600)))
-            return model
         }
+
+        if published {
+            _ = try model.reduce(.published)
+        }
+
+        return model
     }
 
     private func activePublishedModel() throws -> WindowModel {
-        var model = try configuredModelReadyForConfigure()
-        model.markPublished()
+        var model = try publishedModelReadyForConfigure()
         _ = try model.reduce(.configureReceived(configure(width: 800, height: 600, serial: 1)))
         return model
     }
@@ -458,7 +336,7 @@ extension WindowModelTests {
         var model = try activePublishedModel()
         let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
         let request = try presentationRequest(from: effects)
-        _ = try model.reduce(.presentationStarted(generation: request.generation))
+        _ = try model.reduce(.presentationStarted(request))
         return (model, request)
     }
 

@@ -6,12 +6,13 @@ package enum WindowEvent: Equatable, Sendable {
     case decorationObjectCreated(WindowDecorationPreference)
     case decorationPreferenceRequested(WindowDecorationPreference)
     case initialCommitSent
+    case published
     case configureReceived(XDGConfigureSequence)
     case contentInvalidated(bufferAvailable: Bool)
     case frameBecameReady(bufferAvailable: Bool)
     case bufferBecameAvailable(bufferAvailable: Bool)
     case redrawRequestConsumed(bufferAvailable: Bool)
-    case presentationStarted(generation: UInt64)
+    case presentationStarted(PresentationRequest)
     case presentationBlockedByBuffer
     case presentationSucceeded(generation: UInt64, bufferAvailable: Bool)
     case presentationFailed(generation: UInt64, PresentationError)
@@ -36,6 +37,24 @@ package enum WindowEffect: Equatable, Sendable {
 package struct PresentationRequest: Equatable, Sendable {
     let generation: UInt64
     let configuration: ResolvedWindowConfiguration
+
+    var summary: WindowPresentationRequestSummary {
+        WindowPresentationRequestSummary(
+            generation: generation,
+            configureSerial: configuration.serial,
+            size: configuration.size,
+            bounds: configuration.bounds,
+            stateRawValues: configuration.states.map(\.rawValue),
+            wmCapabilityRawValues: configuration.wmCapabilities.map(\.rawValue),
+            decorationMode: configuration.decorationMode
+        )
+    }
+}
+
+package enum PresentationState<Request: Equatable & Sendable>: Equatable, Sendable {
+    case idle
+    case requested(request: Request)
+    case drawing(request: Request)
 }
 
 package enum XDGWindowLifecycle: Equatable, Sendable, CustomStringConvertible {
@@ -107,10 +126,7 @@ package enum CloseRequestState: Equatable, Sendable {
     case requested
 }
 
-package enum WindowPresentationState: Equatable, Sendable {
-    case idle
-    case drawing(generation: UInt64)
-}
+package typealias WindowPresentationState = PresentationState<PresentationRequest>
 
 package enum WindowPublicationState: Equatable, Sendable {
     case notPublished

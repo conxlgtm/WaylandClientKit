@@ -106,6 +106,7 @@ public enum WindowLifecycleTransitionError: Equatable, Sendable, CustomStringCon
     case nestedPresentation
     case presentAfterDestroyed
     case inactivePresentationCompletion
+    case presentationRequestMismatch(PresentationRequestMismatch)
     case presentationGenerationMismatch(expected: UInt64, actual: UInt64)
     case invalidTransition(from: String, event: String)
 
@@ -127,11 +128,67 @@ public enum WindowLifecycleTransitionError: Equatable, Sendable, CustomStringCon
             "cannot present after the window is destroyed"
         case .inactivePresentationCompletion:
             "cannot complete presentation because no presentation is active"
+        case .presentationRequestMismatch(let mismatch):
+            "cannot start presentation: \(mismatch.description)"
         case .presentationGenerationMismatch(let expected, let actual):
             "cannot complete presentation generation \(actual); active generation is \(expected)"
         case .invalidTransition(let state, let event):
             "cannot apply \(event) while \(state)"
         }
+    }
+}
+
+public enum PresentationRequestMismatch: Equatable, Sendable, CustomStringConvertible {
+    case window(
+        expected: WindowPresentationRequestSummary,
+        actual: WindowPresentationRequestSummary
+    )
+    case popup(
+        expected: PopupPresentationRequestSummary,
+        actual: PopupPresentationRequestSummary
+    )
+
+    public var description: String {
+        switch self {
+        case .window(let expected, let actual):
+            "expected window request \(expected.description), got \(actual.description)"
+        case .popup(let expected, let actual):
+            "expected popup request \(expected.description), got \(actual.description)"
+        }
+    }
+}
+
+public struct WindowPresentationRequestSummary:
+    Equatable,
+    Sendable,
+    CustomStringConvertible
+{
+    public let generation: UInt64
+    public let configureSerial: UInt32
+    public let size: PositiveTopLevelSize
+    public let bounds: PositiveTopLevelSize?
+    public let stateRawValues: [UInt32]
+    public let wmCapabilityRawValues: [UInt32]
+    public let decorationMode: WindowDecorationMode?
+
+    public var description: String {
+        "generation=\(generation) serial=\(configureSerial) size=\(size) "
+            + "bounds=\(String(describing: bounds)) "
+            + "states=\(stateRawValues) wmCapabilities=\(wmCapabilityRawValues) "
+            + "decoration=\(String(describing: decorationMode))"
+    }
+}
+
+public struct PopupPresentationRequestSummary:
+    Equatable,
+    Sendable,
+    CustomStringConvertible
+{
+    public let generation: UInt64
+    public let placement: PopupPlacement
+
+    public var description: String {
+        "generation=\(generation) placement=\(placement)"
     }
 }
 

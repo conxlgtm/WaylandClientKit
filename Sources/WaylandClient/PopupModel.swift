@@ -5,7 +5,7 @@ package enum PopupEvent: Equatable, Sendable {
     case frameBecameReady(bufferAvailable: Bool)
     case bufferBecameAvailable(bufferAvailable: Bool)
     case redrawRequestConsumed(bufferAvailable: Bool)
-    case presentationStarted(generation: UInt64)
+    case presentationStarted(PopupPresentationRequest)
     case presentationBlockedByBuffer
     case presentationSucceeded(generation: UInt64, bufferAvailable: Bool)
     case presentationFailed(generation: UInt64, PresentationError)
@@ -28,7 +28,13 @@ package enum PopupEffect: Equatable, Sendable {
 package struct PopupPresentationRequest: Equatable, Sendable {
     package let generation: UInt64
     package let placement: PopupPlacement
+
+    var summary: PopupPresentationRequestSummary {
+        PopupPresentationRequestSummary(generation: generation, placement: placement)
+    }
 }
+
+package typealias PopupPresentationState = PresentationState<PopupPresentationRequest>
 
 package enum PopupLifecycle: Equatable, Sendable, CustomStringConvertible {
     case created
@@ -56,7 +62,7 @@ package enum PopupLifecycle: Equatable, Sendable, CustomStringConvertible {
 package struct ActivePopupState: Equatable, Sendable {
     package var placement: PopupPlacement
     var redraw = WindowRedrawState()
-    package var presentation = WindowPresentationState.idle
+    package var presentation = PopupPresentationState.idle
 }
 
 package struct PopupModel: Equatable, Sendable {
@@ -100,7 +106,7 @@ package struct PopupModel: Equatable, Sendable {
         activeState?.redraw ?? WindowRedrawState()
     }
 
-    package var presentation: WindowPresentationState {
+    package var presentation: PopupPresentationState {
         activeState?.presentation ?? .idle
     }
 
@@ -119,8 +125,8 @@ package struct PopupModel: Equatable, Sendable {
             return reduceRedraw(.bufferBecameAvailable, bufferAvailable: bufferAvailable)
         case .redrawRequestConsumed(let bufferAvailable):
             return try reduceRedrawRequestConsumed(bufferAvailable: bufferAvailable)
-        case .presentationStarted(let generation):
-            return try reducePresentationStarted(generation: generation)
+        case .presentationStarted(let request):
+            return try reducePresentationStarted(request)
         case .presentationBlockedByBuffer:
             return try reducePresentationBlockedByBuffer()
         case .presentationSucceeded(let generation, let bufferAvailable):
@@ -249,30 +255,50 @@ extension PopupModel {
                 .redrawRequestConsumed,
                 bufferAvailable: bufferAvailable
             )
-            return [
-                .performSoftwarePresent(
-                    PopupPresentationRequest(
-                        generation: activeState.redraw.generationForCurrentDraw,
-                        placement: activeState.placement
-                    )
-                )
-            ]
+            let request = PopupPresentationRequest(
+                generation: activeState.redraw.generationForCurrentDraw,
+                placement: activeState.placement
+            )
+            activeState.presentation = .requested(request: request)
+            return [.performSoftwarePresent(request)]
         }
     }
 
     private mutating func reducePresentationStarted(
-        generation: UInt64
+        _ request: PopupPresentationRequest
     ) throws -> [PopupEffect] {
         let windowID = parentWindowID
         return try transitionActivePopupState { activeState in
-            guard activeState.presentation == .idle else {
+            let pendingRequest: PopupPresentationRequest
+            switch activeState.presentation {
+            case .idle:
+                throw ClientError.window(
+                    windowID,
+                    .invalidLifecycleTransition(.presentWithoutRedrawRequest)
+                )
+            case .requested(let request):
+                pendingRequest = request
+            case .drawing:
                 throw ClientError.window(
                     windowID,
                     .invalidLifecycleTransition(.nestedPresentation)
                 )
             }
+            guard pendingRequest == request else {
+                throw ClientError.window(
+                    windowID,
+                    .invalidLifecycleTransition(
+                        .presentationRequestMismatch(
+                            .popup(
+                                expected: pendingRequest.summary,
+                                actual: request.summary
+                            )
+                        )
+                    )
+                )
+            }
 
-            activeState.presentation = .drawing(generation: generation)
+            activeState.presentation = .drawing(request: request)
             return []
         }
     }
@@ -401,9 +427,9 @@ extension PopupModel {
         windowID: WindowID
     ) throws -> UInt64 {
         switch activeState.presentation {
-        case .drawing(let generation):
-            return generation
-        case .idle:
+        case .drawing(let request):
+            return request.generation
+        case .idle, .requested:
             throw ClientError.window(
                 windowID,
                 .invalidLifecycleTransition(.inactivePresentationCompletion)

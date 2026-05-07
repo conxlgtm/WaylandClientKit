@@ -10,6 +10,10 @@ struct WindowLifecycleTransitionTests {
     @Test
     func destroyedWindowRejectsPresentationStartWithDestroyedError() throws {
         var model = try activePublishedModel()
+        let request = PresentationRequest(
+            generation: 1,
+            configuration: try #require(model.currentConfiguration)
+        )
 
         _ = try model.reduce(.explicitClose)
 
@@ -19,7 +23,7 @@ struct WindowLifecycleTransitionTests {
                 .invalidLifecycleTransition(.presentAfterDestroyed)
             )
         ) {
-            _ = try model.reduce(.presentationStarted(generation: 1))
+            _ = try model.reduce(.presentationStarted(request))
         }
     }
 
@@ -62,9 +66,9 @@ struct WindowLifecycleTransitionTests {
 
     private func activePublishedModel() throws -> WindowModel {
         var model = WindowModel(id: windowID, fallbackSize: .default)
-        model.markPublished()
         _ = try model.reduce(.roleObjectsCreated)
         _ = try model.reduce(.initialCommitSent)
+        _ = try model.reduce(.published)
         _ = try model.reduce(.configureReceived(configure(width: 800, height: 600, serial: 1)))
         return model
     }
