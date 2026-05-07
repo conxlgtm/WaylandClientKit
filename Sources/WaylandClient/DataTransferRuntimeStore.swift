@@ -79,7 +79,7 @@ struct DataTransferStore {
     private var pendingSourceSendRequests: [DataTransferSourceSendRequest] = []
     private var offerIDsByHandle: [RawDataOfferHandle: DataOfferID] = [:]
     private var runtimeOffersByID: [DataOfferID: RuntimeDataOffer] = [:]
-    private var pendingCallbackFailure: DataTransferCallbackFailure?
+    private var pendingCallbackFailures: [DataTransferCallbackFailure] = []
 
     var boundSeatIDs: Set<SeatID> {
         Set(deviceBindings.keys)
@@ -98,7 +98,7 @@ struct DataTransferStore {
     }
 
     var callbackFailure: DataTransferCallbackFailure? {
-        pendingCallbackFailure
+        pendingCallbackFailures.first
     }
 
     var seatSnapshots: [DataTransferSeatSnapshot] {
@@ -278,15 +278,14 @@ struct DataTransferStore {
     }
 
     mutating func takeCallbackFailure() -> DataTransferCallbackFailure? {
-        defer { pendingCallbackFailure = nil }
-        return pendingCallbackFailure
+        guard !pendingCallbackFailures.isEmpty else {
+            return nil
+        }
+
+        return pendingCallbackFailures.removeFirst()
     }
 
     mutating func recordCallbackFailure(_ failure: DataTransferCallbackFailure) {
-        guard pendingCallbackFailure == nil else {
-            return
-        }
-
-        pendingCallbackFailure = failure
+        pendingCallbackFailures.append(failure)
     }
 }

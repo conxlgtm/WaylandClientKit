@@ -358,7 +358,7 @@ extension InputRouter {
                 rawValue: snapshot.advertisedCapabilities.rawValue
             ),
             activeCapabilities: SeatCapabilities(rawValue: snapshot.activeCapabilities.rawValue),
-            name: snapshot.name
+            name: snapshot.name.flatMap(SeatName.init(rawValue:))
         )
     }
 

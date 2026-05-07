@@ -1,5 +1,6 @@
 import Foundation
 import Glibc
+import Synchronization
 import Testing
 
 @testable import WaylandClient
@@ -146,6 +147,46 @@ struct DataTransferSourceWriterTests {
                 )
             ]
         )
+    }
+
+    @Test
+    func backpressuredSourceWriteTimesOutAndClosesDescriptor() {
+        let writeAttempts = Mutex(0)
+        let closeCount = Mutex(0)
+        let job = DataTransferSourceWriteJob(
+            sourceID: DataSourceID(rawValue: 20),
+            mimeType: .plainText,
+            descriptor: 200,
+            data: Data("clipboard".utf8),
+            writePolicy: DataTransferSourceWritePolicy(
+                maximumTemporaryWriteFailures: 2,
+                retryDelayMicroseconds: 0
+            ),
+            prepareDescriptorForWriting: { descriptor in
+                #expect(descriptor == 200)
+            },
+            writeDescriptor: { _, _ in
+                writeAttempts.withLock { $0 += 1 }
+                throw DataTransferError.writeFileDescriptor(
+                    WaylandSystemErrno(unchecked: EAGAIN)
+                )
+            },
+            closeDescriptor: { _ in
+                closeCount.withLock { $0 += 1 }
+                return 0
+            }
+        )
+
+        #expect(
+            job.write()
+                == .failed(
+                    sourceID: DataSourceID(rawValue: 20),
+                    mimeType: .plainText,
+                    error: .transferTimedOut
+                )
+        )
+        #expect(writeAttempts.withLock { $0 } == 3)
+        #expect(closeCount.withLock { $0 } == 1)
     }
 
     @Test

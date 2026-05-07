@@ -14,6 +14,7 @@ package enum DataTransferManagerInvariantViolation:
     case sourceBindingsDoNotMatchState
     case pendingSourceSendRequestMissingSource(DataSourceID)
     case seatSelectionReferencesMissingOffer(SeatID, DataOfferID)
+    case seatSelectionReferencesEmptyOffer(SeatID, DataOfferID)
     case seatSelectionReferencesMissingSource(SeatID, DataSourceID)
 
     package var description: String {
@@ -38,6 +39,8 @@ package enum DataTransferManagerInvariantViolation:
             "source send request references missing source \(sourceID)"
         case .seatSelectionReferencesMissingOffer(let seatID, let offerID):
             "seat \(seatID) selection references missing offer \(offerID)"
+        case .seatSelectionReferencesEmptyOffer(let seatID, let offerID):
+            "seat \(seatID) selection references offer \(offerID) with no MIME types"
         case .seatSelectionReferencesMissingSource(let seatID, let sourceID):
             "seat \(seatID) selection references missing source \(sourceID)"
         }
@@ -167,6 +170,13 @@ extension DataTransferManager {
                 throw
                     DataTransferManagerInvariantViolation
                     .seatSelectionReferencesMissingOffer(seat.seatID, offerID)
+            }
+            if let offerID = seat.selectionOfferID,
+                store.offerSnapshot(offerID)?.mimeTypes.isEmpty == true
+            {
+                throw
+                    DataTransferManagerInvariantViolation
+                    .seatSelectionReferencesEmptyOffer(seat.seatID, offerID)
             }
             if let sourceID = seat.selectionSourceID, !activeSourceIDs.contains(sourceID) {
                 throw

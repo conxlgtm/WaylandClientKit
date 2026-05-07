@@ -8,7 +8,7 @@ WaylandRaw	Sources/WaylandRaw/RawCompositor.swift	6
 WaylandRaw	Sources/WaylandRaw/RawDisplay.swift	2
 WaylandRaw	Sources/WaylandRaw/RawDisplayConnection+EventLoop.swift	18
 WaylandRaw	Sources/WaylandRaw/RawDataDevice.swift	18
-WaylandRaw	Sources/WaylandRaw/RawDataDeviceOwners.swift	55
+WaylandRaw	Sources/WaylandRaw/RawDataDeviceOwners.swift	52
 WaylandRaw	Sources/WaylandRaw/RawDisplayConnection+OptionalGlobals.swift	4
 WaylandRaw	Sources/WaylandRaw/RawDisplayConnection+PointerCursor.swift	1
 WaylandRaw	Sources/WaylandRaw/RawDisplayConnection.swift	35
@@ -23,7 +23,7 @@ WaylandRaw	Sources/WaylandRaw/RawProxyAdoption.swift	5
 WaylandRaw	Sources/WaylandRaw/RawRegistry.swift	2
 WaylandRaw	Sources/WaylandRaw/RawScaleExtensions.swift	27
 WaylandRaw	Sources/WaylandRaw/RawSeat.swift	24
-WaylandRaw	Sources/WaylandRaw/RawSeatListenerOwner.swift	13
+WaylandRaw	Sources/WaylandRaw/RawSeatListenerOwner.swift	11
 WaylandRaw	Sources/WaylandRaw/RawSeatProxyOperations.swift	17
 WaylandRaw	Sources/WaylandRaw/RawSharedMemory.swift	20
 WaylandRaw	Sources/WaylandRaw/RawSurface.swift	5

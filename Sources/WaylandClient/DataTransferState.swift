@@ -198,6 +198,9 @@ extension DataTransferState {
             guard case .selection(seatID) = offer.role else {
                 throw DataTransferError.unknownOffer
             }
+            guard !offer.mimeTypes.isEmpty else {
+                throw DataTransferError.emptyDataOffer
+            }
         }
 
         let nextSelection = ClipboardSelectionState.fromRemoteOffer(offerID)
@@ -223,8 +226,7 @@ extension DataTransferState {
         }
         _ = try boundSeat(seatID)
 
-        let snapshot = try DataSourceSnapshot(id: id, seatID: seatID, mimeTypes: mimeTypes)
-        sources[id] = SourceState(snapshot)
+        sources[id] = try SourceState(id: id, seatID: seatID, mimeTypes: mimeTypes)
         return []
     }
 
@@ -298,6 +300,9 @@ extension DataTransferState {
                     case .selection(seat.seatID) = offer.role
                 else {
                     throw DataTransferError.unknownOffer
+                }
+                guard !offer.mimeTypes.isEmpty else {
+                    throw DataTransferError.emptyDataOffer
                 }
             }
 

@@ -125,11 +125,23 @@ struct XDGConfigureStateTests {
     }
 
     @Test
-    func partialZeroConfigureBoundsClearsBounds() {
+    func partialZeroConfigureBoundsRecordsProtocolError() {
         let state = XDGConfigureState()
         state.handleConfigureBounds(width: 1_024, height: 0)
 
-        #expect(state.handleSurfaceConfigure(serial: 9).topLevel.bounds == nil)
+        #expect(throws: RuntimeError.invalidConfigureBounds(width: 1_024, height: 0)) {
+            try state.throwPendingErrorIfAny()
+        }
+    }
+
+    @Test
+    func negativeConfigureBoundsRecordsProtocolError() {
+        let state = XDGConfigureState()
+        state.handleConfigureBounds(width: -1, height: 768)
+
+        #expect(throws: RuntimeError.invalidConfigureBounds(width: -1, height: 768)) {
+            try state.throwPendingErrorIfAny()
+        }
     }
 
     @Test
