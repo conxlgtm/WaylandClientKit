@@ -425,7 +425,9 @@ package final class TopLevelWindow {
             let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
             let commitPlan = scaleInstallation.commitPlan(
                 geometry: geometry,
-                surfaceUsesBufferDamage: surface.usesBufferDamage
+                damageMode: DamageCoordinateMode(
+                    surfaceUsesBufferDamage: surface.usesBufferDamage
+                )
             )
             applySurfaceCommitPlan(commitPlan)
             surface.attach(buffer: buffer)

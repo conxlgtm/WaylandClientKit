@@ -3,30 +3,57 @@ package enum SurfaceDamageExtent: Equatable, Sendable {
     case logical(width: Int32, height: Int32)
 }
 
+package enum ViewportCommitMode: Equatable, Sendable {
+    case omitDestination
+    case useLogicalSizeAsDestination
+
+    package func destination(for geometry: SurfaceGeometry) -> PositiveLogicalSize? {
+        switch self {
+        case .omitDestination:
+            nil
+        case .useLogicalSizeAsDestination:
+            geometry.logicalSize
+        }
+    }
+}
+
+package enum DamageCoordinateMode: Equatable, Sendable {
+    case buffer
+    case logical
+
+    package init(surfaceUsesBufferDamage: Bool) {
+        self = surfaceUsesBufferDamage ? .buffer : .logical
+    }
+
+    package func extent(for geometry: SurfaceGeometry) -> SurfaceDamageExtent {
+        switch self {
+        case .buffer:
+            .buffer(
+                width: geometry.bufferSize.width.rawValue,
+                height: geometry.bufferSize.height.rawValue
+            )
+        case .logical:
+            .logical(
+                width: geometry.logicalSize.width.rawValue,
+                height: geometry.logicalSize.height.rawValue
+            )
+        }
+    }
+}
+
 package struct SurfaceCommitPlan: Equatable, Sendable {
     package let bufferScale: Int32
-    package let viewportDestination: PositiveTopLevelSize?
+    package let viewportDestination: PositiveLogicalSize?
     package let damage: SurfaceDamageExtent
 
     package init(
         geometry: SurfaceGeometry,
         bufferScale planBufferScale: Int32,
-        usesViewportDestination: Bool,
-        usesBufferDamage: Bool
+        viewportMode: ViewportCommitMode,
+        damageMode: DamageCoordinateMode
     ) {
         bufferScale = planBufferScale
-        viewportDestination = usesViewportDestination ? geometry.logicalSize : nil
-        damage =
-            if usesBufferDamage {
-                .buffer(
-                    width: geometry.bufferSize.width.rawValue,
-                    height: geometry.bufferSize.height.rawValue
-                )
-            } else {
-                .logical(
-                    width: geometry.logicalSize.width.rawValue,
-                    height: geometry.logicalSize.height.rawValue
-                )
-            }
+        viewportDestination = viewportMode.destination(for: geometry)
+        damage = damageMode.extent(for: geometry)
     }
 }

@@ -172,11 +172,11 @@ package enum SurfaceScaleInstallation {
 
     package func commitPlan(
         geometry: SurfaceGeometry,
-        surfaceUsesBufferDamage: Bool
+        damageMode: DamageCoordinateMode
     ) -> SurfaceCommitPlan {
         state.commitPlan(
             geometry: geometry,
-            surfaceUsesBufferDamage: surfaceUsesBufferDamage
+            damageMode: damageMode
         )
     }
 
