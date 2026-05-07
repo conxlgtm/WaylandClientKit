@@ -32,9 +32,9 @@ public struct InputSerial:
 }
 
 public struct WindowID: Hashable, Sendable, CustomStringConvertible {
-    public let rawValue: UInt64
+    package let rawValue: UInt64
 
-    public init(rawValue windowRawValue: UInt64) {
+    package init(rawValue windowRawValue: UInt64) {
         rawValue = windowRawValue
     }
 
