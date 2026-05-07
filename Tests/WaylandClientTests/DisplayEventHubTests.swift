@@ -55,7 +55,7 @@ struct DisplayEventHubTests {
         let inputEvent = InputEvent(
             sequence: 1,
             seatID: SeatID(rawValue: 2),
-            windowID: nil,
+            target: .display,
             kind: .diagnostic(diagnostic)
         )
         var displayIterator = hub.displayEvents().makeAsyncIterator()
@@ -81,7 +81,7 @@ struct DisplayEventHubTests {
         let inputEvent = InputEvent(
             sequence: 2,
             seatID: SeatID(rawValue: 3),
-            windowID: nil,
+            target: .display,
             kind: .diagnostic(diagnostic)
         )
         var displayIterator = hub.displayEvents().makeAsyncIterator()
@@ -106,7 +106,7 @@ struct DisplayDiagnosticsHubTests {
         let inputEvent = InputEvent(
             sequence: 1,
             seatID: SeatID(rawValue: 2),
-            windowID: nil,
+            target: .display,
             kind: .diagnostic(diagnostic)
         )
         var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
@@ -202,7 +202,7 @@ struct DisplayDiagnosticsHubTests {
         let overflowEvent = InputEvent(
             sequence: 1,
             seatID: SeatID(rawValue: 3),
-            windowID: nil,
+            target: .display,
             kind: .diagnostic(overflowDiagnostic)
         )
         var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
@@ -243,7 +243,7 @@ struct DisplayEventHubFailureTests {
         let inputEvent = InputEvent(
             sequence: 2,
             seatID: SeatID(rawValue: 3),
-            windowID: nil,
+            target: .display,
             kind: .diagnostic(diagnostic)
         )
         var displayIterator = hub.displayEvents().makeAsyncIterator()
@@ -275,7 +275,7 @@ struct DisplayEventHubFailureTests {
         let prefixEvent = InputEvent(
             sequence: 1,
             seatID: SeatID(rawValue: 3),
-            windowID: nil,
+            target: .display,
             kind: .seat(.removed)
         )
         let overflow = InputPipelineOverflow(stage: .sessionPendingInput, capacity: 1)
@@ -283,7 +283,7 @@ struct DisplayEventHubFailureTests {
         let overflowEvent = InputEvent(
             sequence: 2,
             seatID: SeatID(rawValue: 3),
-            windowID: nil,
+            target: .display,
             kind: .diagnostic(diagnostic)
         )
         var inputIterator = hub.inputEvents().makeAsyncIterator()
@@ -376,7 +376,7 @@ struct DisplayEventHubFailureTests {
         let inputEvent = InputEvent(
             sequence: 1,
             seatID: SeatID(rawValue: 3),
-            windowID: nil,
+            target: .display,
             kind: .diagnostic(diagnostic)
         )
 
@@ -466,7 +466,7 @@ private func diagnosticInputEvent(sequence: UInt64, message: String) -> InputEve
     return InputEvent(
         sequence: sequence,
         seatID: SeatID(rawValue: 2),
-        windowID: nil,
+        target: .display,
         kind: .diagnostic(diagnostic)
     )
 }

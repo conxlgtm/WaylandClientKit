@@ -134,7 +134,7 @@ struct PopupEffectInterpreterTests {
         var model = try activeModel()
         let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
         let request = try #require(presentationRequest(from: effects))
-        _ = try model.reduce(.presentationStarted(generation: request.generation))
+        _ = try model.reduce(.presentationStarted(request))
         return (model, request)
     }
 

@@ -252,7 +252,7 @@ private func clientSeatRemoved(sequence: UInt64) -> InputEvent {
     InputEvent(
         sequence: sequence,
         seatID: SeatID(rawValue: 42),
-        windowID: nil,
+        target: .display,
         kind: .seat(.removed)
     )
 }
@@ -280,7 +280,7 @@ private func sessionPendingOverflowEvent(from event: InputEvent) -> InputEvent {
     InputEvent(
         sequence: event.sequence,
         seatID: event.seatID,
-        windowID: nil,
+        target: .display,
         kind: .diagnostic(
             InputDiagnostic(
                 .inputPipelineOverflow(

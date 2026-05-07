@@ -454,7 +454,7 @@ extension CursorManager {
         InputEvent(
             sequence: rawEvent.sequence,
             seatID: publicSeatID(rawEvent.seatID),
-            windowID: nil,
+            target: .display,
             kind: .diagnostic(
                 InputDiagnostic(
                     .cursor(payload)

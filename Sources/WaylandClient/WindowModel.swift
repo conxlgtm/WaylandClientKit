@@ -61,6 +61,8 @@ package struct WindowModel: Equatable, Sendable {
             return try reduceDecorationPreferenceRequested(preference)
         case .initialCommitSent:
             return try reduceInitialCommitSent()
+        case .published:
+            return try reducePublished()
         case .configureReceived(let sequence):
             return try reduceConfigureReceived(sequence)
         case .contentInvalidated(let bufferAvailable):
@@ -71,8 +73,8 @@ package struct WindowModel: Equatable, Sendable {
             return reduceRedraw(.bufferBecameAvailable, bufferAvailable: bufferAvailable)
         case .redrawRequestConsumed(let bufferAvailable):
             return try reduceRedrawRequestConsumed(bufferAvailable: bufferAvailable)
-        case .presentationStarted(let generation):
-            return try reducePresentationStarted(generation: generation)
+        case .presentationStarted(let request):
+            return try reducePresentationStarted(request)
         case .presentationBlockedByBuffer:
             return try reducePresentationBlockedByBuffer()
         case .presentationSucceeded(let generation, let bufferAvailable):
@@ -158,6 +160,20 @@ extension WindowModel {
         return []
     }
 
+    private mutating func reducePublished() throws -> [WindowEffect] {
+        guard publication == .notPublished else {
+            return []
+        }
+
+        switch lifecycle {
+        case .waitingForInitialConfigure, .active:
+            publication = .published(id)
+            return []
+        case .created, .roleAssigned, .closing, .destroyed:
+            throw invalidTransition(event: "published")
+        }
+    }
+
     private mutating func reduceConfigureReceived(
         _ sequence: XDGConfigureSequence
     ) throws -> [WindowEffect] {
@@ -226,20 +242,43 @@ extension WindowModel {
                 generation: generation,
                 configuration: activeState.configure
             )
+            activeState.presentation = .requested(request: request)
             return [.performSoftwarePresent(request)]
         }
     }
 
     private mutating func reducePresentationStarted(
-        generation: UInt64
+        _ request: PresentationRequest
     ) throws -> [WindowEffect] {
         let windowID = id
         return try transitionActiveWindowState { activeState in
-            guard activeState.presentation == .idle else {
+            let pendingRequest: PresentationRequest
+            switch activeState.presentation {
+            case .idle:
+                throw ClientError.window(
+                    windowID,
+                    .invalidLifecycleTransition(.presentWithoutRedrawRequest)
+                )
+            case .requested(let request):
+                pendingRequest = request
+            case .drawing:
                 throw ClientError.window(windowID, .invalidLifecycleTransition(.nestedPresentation))
             }
+            guard pendingRequest == request else {
+                throw ClientError.window(
+                    windowID,
+                    .invalidLifecycleTransition(
+                        .presentationRequestMismatch(
+                            .window(
+                                expected: pendingRequest.summary,
+                                actual: request.summary
+                            )
+                        )
+                    )
+                )
+            }
 
-            activeState.presentation = .drawing(generation: generation)
+            activeState.presentation = .drawing(request: request)
             return []
         }
     }
@@ -294,93 +333,6 @@ extension WindowModel {
         }
     }
 
-    private mutating func reduceCompositorCloseRequested(
-        policy: CloseRequestPolicy
-    ) throws -> [WindowEffect] {
-        guard !isDestroyed else {
-            throw ClientError.window(id, .invalidLifecycleTransition(.closeAfterDestroyed))
-        }
-
-        switch policy {
-        case .requestOnly:
-            return reduceRequestOnlyCompositorCloseRequested()
-        case .autoClose:
-            guard var activeState else {
-                return try beginClosing(reason: .compositorRequest, publishRequest: true)
-            }
-
-            guard activeState.closeRequest == .none else {
-                return []
-            }
-
-            activeState.closeRequest = .requested
-            lifecycle = .active(activeState)
-
-            return try beginClosing(reason: .compositorRequest, publishRequest: true)
-        }
-    }
-
-    private mutating func reduceRequestOnlyCompositorCloseRequested() -> [WindowEffect] {
-        switch lifecycle {
-        case .created(let closeRequest):
-            guard closeRequest == .none else { return [] }
-            lifecycle = .created(.requested)
-        case .roleAssigned(let closeRequest):
-            guard closeRequest == .none else { return [] }
-            lifecycle = .roleAssigned(.requested)
-        case .waitingForInitialConfigure(let closeRequest):
-            guard closeRequest == .none else { return [] }
-            lifecycle = .waitingForInitialConfigure(.requested)
-        case .active(var activeState):
-            guard activeState.closeRequest == .none else { return [] }
-            activeState.closeRequest = .requested
-            lifecycle = .active(activeState)
-        case .closing, .destroyed:
-            return []
-        }
-
-        return [.publishCloseRequested(id)]
-    }
-
-    private mutating func beginClosing(
-        reason: ClosingReason,
-        publishRequest: Bool
-    ) throws -> [WindowEffect] {
-        switch lifecycle {
-        case .destroyed:
-            return []
-        case .closing:
-            return []
-        case .created, .roleAssigned, .waitingForInitialConfigure, .active:
-            break
-        }
-
-        lifecycle = .closing(
-            ClosingWindowState(
-                reason: reason
-            )
-        )
-
-        var effects: [WindowEffect] = []
-        if publishRequest {
-            effects.append(.publishCloseRequested(id))
-        }
-        effects.append(contentsOf: [
-            .cancelFrameCallback,
-            .retireSwapchain,
-            .destroyRoleObjects,
-            .destroySurface,
-        ])
-
-        if case .published(let windowID) = publication {
-            effects.append(.publishClosed(windowID))
-            publication = .closedPublished(windowID)
-        }
-
-        lifecycle = .destroyed
-        return effects
-    }
-
     private mutating func reduceRedraw(
         _ event: WindowRedrawEvent,
         bufferAvailable: Bool
@@ -422,9 +374,9 @@ extension WindowModel {
         windowID: WindowID
     ) throws -> UInt64 {
         switch activeState.presentation {
-        case .drawing(let generation):
-            return generation
-        case .idle:
+        case .drawing(let request):
+            return request.generation
+        case .idle, .requested:
             throw ClientError.window(
                 windowID,
                 .invalidLifecycleTransition(.inactivePresentationCompletion)
