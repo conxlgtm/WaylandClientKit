@@ -75,8 +75,8 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let popup = try requireOpenPopup(popupID)
             try popup.showOnOwnerThread(timeoutMilliseconds: timeoutMilliseconds, draw)
-            guard !isClosed, let session else { return }
-            publishSessionEvents(session)
+            guard !isClosed, let activeSession else { return }
+            publishSessionEvents(activeSession)
         }
     }
 
@@ -132,7 +132,7 @@ extension DisplayCore {
     func closePopup(_ popupID: PopupID) {
         withFatalFailureFinalization {
             // Fatal raw invariants already finished streams and deferred graph cleanup.
-            guard !needsFatalFailureFinalization else { return }
+            guard !hasPendingFatalFailure else { return }
             guard !registry.closedPopupIDs.contains(popupID) else { return }
             guard registry.popup(popupID) != nil else { return }
             do {
