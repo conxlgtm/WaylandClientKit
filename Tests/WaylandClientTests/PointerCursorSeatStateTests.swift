@@ -23,7 +23,7 @@ struct PointerCursorSeatStateTests {
                 sourceEvent: sourceEvent
             ))
 
-        #expect(state.focus == .focused(surfaceID: 100, enterSerial: 77))
+        #expect(state.focus == focused(surfaceID: 100, enterSerial: 77))
         #expect(effects.count == 1)
         guard case .applyCursor(let serial, let effectSourceEvent) = effects.first else {
             Issue.record("Expected applyCursor effect")
@@ -36,7 +36,7 @@ struct PointerCursorSeatStateTests {
     @Test
     func unmanagedPointerEnterClearsFocusWithoutEffects() {
         var state = PointerCursorSeatState()
-        state.focus = .focused(surfaceID: 100, enterSerial: 77)
+        state.focus = focused(surfaceID: 100, enterSerial: 77)
         state.markApplied(.hidden(serial: 77))
 
         let effects = state.reduce(.unmanagedPointerEntered)
@@ -49,12 +49,17 @@ struct PointerCursorSeatStateTests {
     @Test
     func pointerLeaveForDifferentSurfaceKeepsFocus() {
         var state = PointerCursorSeatState()
-        state.focus = .focused(surfaceID: 100, enterSerial: 77)
+        state.focus = focused(surfaceID: 100, enterSerial: 77)
         state.markApplied(.hidden(serial: 77))
 
         let effects = state.reduce(.pointerLeft(surfaceID: 200))
+        let expectedFocus = focused(
+            surfaceID: 100,
+            enterSerial: 77,
+            application: .hidden(serial: 77)
+        )
 
-        #expect(state.focus == .focused(surfaceID: 100, enterSerial: 77))
+        #expect(state.focus == expectedFocus)
         #expect(state.application == .hidden(serial: 77))
         #expect(effects.isEmpty)
     }
@@ -62,7 +67,7 @@ struct PointerCursorSeatStateTests {
     @Test
     func pointerLeaveForFocusedSurfaceClearsAppliedCursor() {
         var state = PointerCursorSeatState()
-        state.focus = .focused(surfaceID: 100, enterSerial: 77)
+        state.focus = focused(surfaceID: 100, enterSerial: 77)
         state.markApplied(.named(cursor: .text, serial: 77, surfaceID: 0xC00))
 
         let effects = state.reduce(.pointerLeft(surfaceID: 100))
@@ -81,7 +86,7 @@ struct PointerCursorSeatStateTests {
             serial: 88
         )
         var state = PointerCursorSeatState()
-        state.focus = .focused(surfaceID: 100, enterSerial: 77)
+        state.focus = focused(surfaceID: 100, enterSerial: 77)
         state.markApplied(.named(cursor: .text, serial: 77, surfaceID: 0xC00))
 
         let effects = state.reduce(
@@ -91,7 +96,7 @@ struct PointerCursorSeatStateTests {
                 sourceEvent: sourceEvent
             ))
 
-        #expect(state.focus == .focused(surfaceID: 200, enterSerial: 88))
+        #expect(state.focus == focused(surfaceID: 200, enterSerial: 88))
         #expect(state.application == .unapplied)
         #expect(effects.count == 1)
     }
@@ -100,7 +105,7 @@ struct PointerCursorSeatStateTests {
     func pointerUnavailableDestroysCursorSurfaceAndClearsState() {
         let surface = ReducerCursorSurface()
         var state = PointerCursorSeatState()
-        state.focus = .focused(surfaceID: 100, enterSerial: 77)
+        state.focus = focused(surfaceID: 100, enterSerial: 77)
         state.cursorSurface = surface
 
         let effects = state.reduce(.pointerUnavailable)
@@ -162,4 +167,16 @@ private final class ReducerCursorSurface: CursorManagerSurface {
     func destroy() {
         // Reducer tests only need object identity.
     }
+}
+
+private func focused(
+    surfaceID: RawObjectID,
+    enterSerial: UInt32,
+    application: PointerCursorApplicationState = .unapplied
+) -> PointerFocusState {
+    .focused(
+        surfaceID: surfaceID,
+        enterSerial: enterSerial,
+        application: application
+    )
 }
