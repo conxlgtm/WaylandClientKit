@@ -1,129 +1,3 @@
-package struct DataOfferID: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt64
-
-    package init(rawValue offerRawValue: UInt64) {
-        rawValue = offerRawValue
-    }
-
-    package var description: String {
-        "data-offer-\(rawValue)"
-    }
-}
-
-package struct DataSourceID: Hashable, Sendable, CustomStringConvertible {
-    package let rawValue: UInt64
-
-    package init(rawValue sourceRawValue: UInt64) {
-        rawValue = sourceRawValue
-    }
-
-    package var description: String {
-        "data-source-\(rawValue)"
-    }
-}
-
-package enum DataOfferRole: Equatable, Sendable {
-    case selection(seatID: SeatID)
-    case dragAndDrop(seatID: SeatID)
-
-    package var seatID: SeatID {
-        switch self {
-        case .selection(let seatID), .dragAndDrop(let seatID):
-            seatID
-        }
-    }
-}
-
-package struct DataOfferSnapshot: Equatable, Sendable {
-    package let id: DataOfferID
-    package let role: DataOfferRole
-    package let mimeTypes: [MIMEType]
-}
-
-package struct DataSourceSnapshot: Equatable, Sendable {
-    package let id: DataSourceID
-    package let seatID: SeatID
-    package let mimeTypes: [MIMEType]
-}
-
-package enum DataTransferSeatDeviceState: Equatable, Sendable {
-    case unbound
-    case bound(selection: ClipboardSelectionState)
-
-    package var hasDataDevice: Bool {
-        switch self {
-        case .unbound:
-            false
-        case .bound:
-            true
-        }
-    }
-
-    package var selection: ClipboardSelectionState {
-        switch self {
-        case .unbound:
-            .none
-        case .bound(let selection):
-            selection
-        }
-    }
-}
-
-package struct DataTransferSeatSnapshot: Equatable, Sendable {
-    package let seatID: SeatID
-    package let device: DataTransferSeatDeviceState
-
-    package var hasDataDevice: Bool {
-        device.hasDataDevice
-    }
-
-    package var selection: ClipboardSelectionState {
-        device.selection
-    }
-
-    package var selectionOfferID: DataOfferID? {
-        selection.offerID
-    }
-
-    package var selectionSourceID: DataSourceID? {
-        selection.sourceID
-    }
-
-    package init(
-        seatID snapshotSeatID: SeatID,
-        device snapshotDevice: DataTransferSeatDeviceState
-    ) {
-        seatID = snapshotSeatID
-        device = snapshotDevice
-    }
-}
-
-package enum DataTransferAction: Equatable, Sendable {
-    case seatAvailable(SeatID)
-    case dataDeviceBound(SeatID)
-    case seatRemoved(SeatID)
-    case offerCreated(id: DataOfferID, role: DataOfferRole)
-    case offerMimeType(id: DataOfferID, mimeType: MIMEType)
-    case selectionChanged(seatID: SeatID, offerID: DataOfferID?)
-    case sourceCreated(id: DataSourceID, seatID: SeatID, mimeTypes: [MIMEType])
-    case selectionSourceChanged(seatID: SeatID, sourceID: DataSourceID?)
-    case sourceCancelled(DataSourceID)
-}
-
-package enum DataTransferEffect: Equatable, Sendable {
-    case bindDataDevice(SeatID)
-    case releaseDataDevice(SeatID)
-    case destroyOffer(DataOfferID)
-    case cancelSource(DataSourceID)
-    case publishSelectionChanged(seatID: SeatID, offerID: DataOfferID?)
-    case publishSourceCancelled(DataSourceID)
-}
-
-package struct DataTransferTransitionPlan: Equatable, Sendable {
-    package let state: DataTransferState
-    package let effects: [DataTransferEffect]
-}
-
 package struct DataTransferState: Equatable, Sendable {
     private var seats: [SeatID: SeatState]
     private var offers: [DataOfferID: OfferState]
@@ -231,7 +105,7 @@ extension DataTransferState {
         case .selectionSourceChanged(let seatID, let sourceID):
             return try applySelectionSourceChanged(seatID: seatID, sourceID: sourceID)
         case .sourceCancelled(let sourceID):
-            return applySourceCancelled(sourceID)
+            return try applySourceCancelled(sourceID)
         }
     }
 
@@ -253,7 +127,7 @@ extension DataTransferState {
             return []
         }
 
-        seat.hasDataDevice = true
+        seat.bindDataDevice()
         seats[seatID] = seat
         return []
     }
@@ -333,7 +207,7 @@ extension DataTransferState {
 
         var effects: [DataTransferEffect] = []
         appendSelectionCleanup(seat.selection, seatID: seatID, to: &effects)
-        seat.selection = nextSelection
+        try seat.setSelection(nextSelection)
         seats[seatID] = seat
         effects.append(.publishSelectionChanged(seatID: seatID, offerID: offerID))
         return effects
@@ -349,7 +223,8 @@ extension DataTransferState {
         }
         _ = try boundSeat(seatID)
 
-        sources[id] = SourceState(id: id, seatID: seatID, mimeTypes: mimeTypes)
+        let snapshot = try DataSourceSnapshot(id: id, seatID: seatID, mimeTypes: mimeTypes)
+        sources[id] = SourceState(snapshot)
         return []
     }
 
@@ -379,20 +254,20 @@ extension DataTransferState {
 
         var effects: [DataTransferEffect] = []
         appendSelectionCleanup(seat.selection, seatID: seatID, to: &effects)
-        seat.selection = nextSelection
+        try seat.setSelection(nextSelection)
         seats[seatID] = seat
         return effects
     }
 
     private mutating func applySourceCancelled(
         _ sourceID: DataSourceID
-    ) -> [DataTransferEffect] {
+    ) throws -> [DataTransferEffect] {
         guard let source = sources.removeValue(forKey: sourceID) else {
             return []
         }
 
         if var seat = seats[source.seatID], seat.selection == .ownedSource(sourceID) {
-            seat.selection = .none
+            try seat.setSelection(.none)
             seats[source.seatID] = seat
         }
 

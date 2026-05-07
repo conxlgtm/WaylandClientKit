@@ -27,7 +27,7 @@ struct DataTransferManagerDragAndDropTests {
         #expect(offer.destroyCount == 1)
         #expect(manager.offerBindingsByID.isEmpty)
         #expect(manager.offerSnapshots.isEmpty)
-        #expect(manager.selectionChanges.isEmpty)
+        #expect(manager.drainDataTransferEvents().isEmpty)
     }
 
     @Test
@@ -178,7 +178,12 @@ struct DataTransferManagerDragAndDropTests {
                     error: .unknownOffer
                 )
         )
-        #expect(throws: DataTransferError.unknownOffer) {
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dataDevice(seat1),
+                error: .unknownOffer
+            )
+        ) {
             try manager.throwPendingCallbackErrorIfAny()
         }
     }
@@ -198,7 +203,12 @@ struct DataTransferManagerDragAndDropTests {
         try manager.checkInvariantsForTesting()
         device.emit(.enter(dndEnter(offer: offerHandle1)))
 
-        #expect(throws: DataTransferError.unknownOffer) {
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dataDevice(seat1),
+                error: .unknownOffer
+            )
+        ) {
             try manager.throwPendingCallbackErrorIfAny()
         }
         var descriptor = try manager.receiveOffer(id: selectionOffer.id, mimeType: .plainText)

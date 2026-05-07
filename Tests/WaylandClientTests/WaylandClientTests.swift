@@ -289,7 +289,7 @@ private func softwareFrameTestGeometry(width: Int32, height: Int32) throws
 {
     SoftwareFrameGeometry(
         surface: try SurfaceGeometry(
-            logicalSize: PositiveTopLevelSize(width: width, height: height),
+            logicalSize: PositiveLogicalSize(width: width, height: height),
             scale: .one
         )
     )

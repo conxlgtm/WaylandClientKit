@@ -204,40 +204,6 @@ public struct KeyboardKeyEvent: Equatable, Sendable {
     }
 }
 
-public struct InterpretedKeyboardKeyEvent: Equatable, Sendable {
-    public let serial: InputSerial
-    public let time: UInt32
-    public let rawKeycode: UInt32
-    public let xkbKeycode: UInt32
-    public let state: InterpretedKeyboardKeyState
-    public let keysym: KeyboardKeysym
-    public let keysymName: String?
-    public let utf8: String?
-    public let repeats: Bool
-
-    public init(
-        serial eventSerial: InputSerial,
-        time eventTime: UInt32,
-        rawKeycode eventRawKeycode: UInt32,
-        xkbKeycode eventXKBKeycode: UInt32,
-        state eventState: InterpretedKeyboardKeyState,
-        keysym eventKeysym: KeyboardKeysym,
-        keysymName eventKeysymName: String?,
-        utf8 eventUTF8: String?,
-        repeats eventRepeats: Bool
-    ) {
-        serial = eventSerial
-        time = eventTime
-        rawKeycode = eventRawKeycode
-        xkbKeycode = eventXKBKeycode
-        state = eventState
-        keysym = eventKeysym
-        keysymName = eventKeysymName
-        utf8 = eventUTF8
-        repeats = eventRepeats
-    }
-}
-
 public struct KeyboardKeysym: Equatable, Sendable {
     public let rawValue: UInt32
 

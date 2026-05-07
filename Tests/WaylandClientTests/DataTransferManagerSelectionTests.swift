@@ -53,13 +53,15 @@ struct DataTransferManagerSelectionTests {
     func selectionOfferRejectsSeatWithoutDataDevice() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
-        manager.state = try DataTransferState(
-            seats: [
-                seat1: DataTransferSeatSnapshot(
-                    seatID: seat1,
-                    device: .unbound
-                )
-            ]
+        manager.store.replaceState(
+            try DataTransferState(
+                seats: [
+                    seat1: DataTransferSeatSnapshot(
+                        seatID: seat1,
+                        device: .unbound
+                    )
+                ]
+            )
         )
 
         #expect(throws: DataTransferError.missingDataDevice(seat1)) {

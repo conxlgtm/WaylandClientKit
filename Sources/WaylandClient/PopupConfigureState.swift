@@ -25,12 +25,25 @@ package enum PopupSurfaceConfigureResult: Equatable, Sendable {
 }
 
 private enum PopupConfigureRecoverablePhase {
+    case waitingForInitialPopupConfigure
+    case pendingInitialRolePayload(RawXDGPopupConfigure)
     case waitingForPopupConfigure
     case pendingRolePayload(RawXDGPopupConfigure)
     case ready(PopupConfigureSequence)
+
+    var hasReceivedInitialConfigure: Bool {
+        switch self {
+        case .waitingForInitialPopupConfigure, .pendingInitialRolePayload:
+            false
+        case .waitingForPopupConfigure, .pendingRolePayload, .ready:
+            true
+        }
+    }
 }
 
 private enum PopupConfigurePhase {
+    case waitingForInitialPopupConfigure
+    case pendingInitialRolePayload(RawXDGPopupConfigure)
     case waitingForPopupConfigure
     case pendingRolePayload(RawXDGPopupConfigure)
     case ready(PopupConfigureSequence)
@@ -38,10 +51,12 @@ private enum PopupConfigurePhase {
 }
 
 package final class PopupConfigureState {
-    private var phase = PopupConfigurePhase.waitingForPopupConfigure
+    private var phase = PopupConfigurePhase.waitingForInitialPopupConfigure
     private var onSurfaceConfigure: (() -> Void)?
 
-    package private(set) var hasReceivedInitialConfigure = false
+    package var hasReceivedInitialConfigure: Bool {
+        recoverablePhase.hasReceivedInitialConfigure
+    }
 
     package init() {
         // Starts with no popup configure payload.
@@ -52,7 +67,11 @@ package final class PopupConfigureState {
     }
 
     package func handlePopupConfigure(_ configure: RawXDGPopupConfigure) {
-        replaceRecoverablePhase(.pendingRolePayload(configure))
+        if recoverablePhase.hasReceivedInitialConfigure {
+            replaceRecoverablePhase(.pendingRolePayload(configure))
+        } else {
+            replaceRecoverablePhase(.pendingInitialRolePayload(configure))
+        }
     }
 
     package func recordError(_ error: ClientError) {
@@ -71,7 +90,12 @@ package final class PopupConfigureState {
 
     @discardableResult
     package func handleSurfaceConfigure(serial: UInt32) -> PopupSurfaceConfigureResult {
-        guard case .pendingRolePayload(let pendingConfigure) = recoverablePhase else {
+        let pendingConfigure: RawXDGPopupConfigure
+        switch recoverablePhase {
+        case .pendingInitialRolePayload(let configure),
+            .pendingRolePayload(let configure):
+            pendingConfigure = configure
+        case .waitingForInitialPopupConfigure, .waitingForPopupConfigure, .ready:
             return .waitingForPopupConfigure
         }
 
@@ -91,7 +115,6 @@ package final class PopupConfigureState {
 
         let configure = PopupConfigureSequence(serial: serial, placement: placement)
         replaceRecoverablePhase(.ready(configure))
-        hasReceivedInitialConfigure = true
         onSurfaceConfigure?()
         return .configured(configure)
     }
@@ -107,6 +130,10 @@ package final class PopupConfigureState {
 
     private var recoverablePhase: PopupConfigureRecoverablePhase {
         switch phase {
+        case .waitingForInitialPopupConfigure:
+            .waitingForInitialPopupConfigure
+        case .pendingInitialRolePayload(let configure):
+            .pendingInitialRolePayload(configure)
         case .waitingForPopupConfigure:
             .waitingForPopupConfigure
         case .pendingRolePayload(let configure):
@@ -129,6 +156,10 @@ package final class PopupConfigureState {
 
     private func apply(_ recovery: PopupConfigureRecoverablePhase) {
         switch recovery {
+        case .waitingForInitialPopupConfigure:
+            phase = .waitingForInitialPopupConfigure
+        case .pendingInitialRolePayload(let configure):
+            phase = .pendingInitialRolePayload(configure)
         case .waitingForPopupConfigure:
             phase = .waitingForPopupConfigure
         case .pendingRolePayload(let configure):

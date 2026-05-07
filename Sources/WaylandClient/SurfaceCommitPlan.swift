@@ -21,10 +21,6 @@ package enum DamageCoordinateMode: Equatable, Sendable {
     case buffer
     case logical
 
-    package init(surfaceUsesBufferDamage: Bool) {
-        self = surfaceUsesBufferDamage ? .buffer : .logical
-    }
-
     package func extent(for geometry: SurfaceGeometry) -> SurfaceDamageExtent {
         switch self {
         case .buffer:

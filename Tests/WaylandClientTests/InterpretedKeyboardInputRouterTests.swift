@@ -20,11 +20,8 @@ struct InterpretedKeyboardInputRouterTests {
                         time: 11,
                         evdevKeycode: 16,
                         xkbKeycode: 24,
-                        state: .pressed,
                         keysym: WaylandKeyboardInterpretation.KeyboardKeysym(rawValue: 0x71),
-                        keysymName: "q",
-                        utf8: "q",
-                        repeats: true
+                        interpretation: .pressed(keysymName: "q", utf8: "q", repeats: true)
                     )
                 )
             )
@@ -48,11 +45,8 @@ struct InterpretedKeyboardInputRouterTests {
                         time: 11,
                         evdevKeycode: 16,
                         xkbKeycode: 24,
-                        state: .pressed,
                         keysym: WaylandKeyboardInterpretation.KeyboardKeysym(rawValue: 0x71),
-                        keysymName: "q",
-                        utf8: "q",
-                        repeats: true
+                        interpretation: .pressed(keysymName: "q", utf8: "q", repeats: true)
                     )
                 )
             )
@@ -222,11 +216,8 @@ private func expectedInterpretedQKey() -> InterpretedKeyboardKeyEvent {
         time: 11,
         rawKeycode: 16,
         xkbKeycode: 24,
-        state: .pressed,
         keysym: WaylandClient.KeyboardKeysym(rawValue: 0x71),
-        keysymName: "q",
-        utf8: "q",
-        repeats: true
+        interpretation: .pressed(keysymName: "q", utf8: "q", repeats: true)
     )
 }
 

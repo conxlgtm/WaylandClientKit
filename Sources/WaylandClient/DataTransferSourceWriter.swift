@@ -384,7 +384,7 @@ package final class ThreadedDataTransferSourceWriter: DataTransferSourceWriting 
 
         let cancelledJobs: [DataTransferSourceWriteJob]
         state.condition.lock()
-        if state.isShutdown {
+        if !state.lifecycle.acceptsJobs {
             cancelledJobs = jobs
         } else {
             state.jobs.append(contentsOf: jobs)
@@ -408,11 +408,11 @@ package final class ThreadedDataTransferSourceWriter: DataTransferSourceWriting 
         let cancelledJobs: [DataTransferSourceWriteJob]
         let currentJob: DataTransferSourceWriteJob?
         state.condition.lock()
-        if state.isShutdown {
+        if !state.lifecycle.acceptsJobs {
             cancelledJobs = []
             currentJob = state.currentJob
         } else {
-            state.isShutdown = true
+            state.lifecycle = .shutdownRequested
             cancelledJobs = state.jobs
             state.jobs.removeAll(keepingCapacity: false)
             currentJob = state.currentJob
@@ -433,7 +433,7 @@ package final class ThreadedDataTransferSourceWriter: DataTransferSourceWriting 
         defer {
             state.condition.lock()
             state.currentJob = nil
-            state.isStopped = true
+            state.lifecycle = .stopped
             state.condition.broadcast()
             state.condition.unlock()
         }
@@ -455,7 +455,7 @@ package final class ThreadedDataTransferSourceWriter: DataTransferSourceWriting 
         defer { state.condition.unlock() }
 
         while state.jobs.isEmpty,
-            !state.isShutdown
+            state.lifecycle.waitsForJobs
         {
             state.condition.wait()
         }
@@ -480,20 +480,9 @@ package final class ThreadedDataTransferSourceWriter: DataTransferSourceWriting 
 
     private func waitUntilStopped() {
         state.condition.lock()
-        while !state.isStopped {
+        while !state.lifecycle.isStopped {
             state.condition.wait()
         }
         state.condition.unlock()
     }
-}
-
-// SAFETY: ThreadedDataTransferSourceWriterState is shared with exactly one worker thread.
-// All mutable fields are accessed while holding `condition`, including shutdown and queues.
-private final class ThreadedDataTransferSourceWriterState: @unchecked Sendable {
-    let condition = NSCondition()
-    var isShutdown = false
-    var isStopped = false
-    var currentJob: DataTransferSourceWriteJob?
-    var jobs: [DataTransferSourceWriteJob] = []
-    var results: [DataTransferSourceWriteResult] = []
 }

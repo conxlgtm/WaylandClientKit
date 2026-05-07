@@ -1,3 +1,8 @@
+package enum SurfaceScaleCapability: Equatable, Sendable {
+    case integerOnly
+    case fractional
+}
+
 package struct SurfaceScaleState: Equatable, Sendable {
     private enum Mode: Equatable, Sendable {
         case integerOnly(preferred: SurfaceScale)
@@ -6,10 +11,11 @@ package struct SurfaceScaleState: Equatable, Sendable {
 
     private var mode: Mode
 
-    package init(usesFractionalScale shouldUseFractionalScale: Bool = false) {
-        if shouldUseFractionalScale {
+    package init(capability: SurfaceScaleCapability = .integerOnly) {
+        switch capability {
+        case .fractional:
             mode = .fractionalCapable(integerFallback: .one, fractional: nil)
-        } else {
+        case .integerOnly:
             mode = .integerOnly(preferred: .one)
         }
     }
@@ -25,7 +31,7 @@ package struct SurfaceScaleState: Equatable, Sendable {
 
     package mutating func updatePreferredBufferScale(
         _ factor: Int32,
-        logicalSize: PositiveTopLevelSize
+        logicalSize: PositiveLogicalSize
     ) throws -> Bool {
         guard factor > 0 else {
             throw WindowError.invalidConfigure(.invalidPreferredBufferScale(factor))
@@ -52,7 +58,7 @@ package struct SurfaceScaleState: Equatable, Sendable {
 
     package mutating func updatePreferredFractionalScale(
         _ scale: UInt32,
-        logicalSize: PositiveTopLevelSize
+        logicalSize: PositiveLogicalSize
     ) throws -> Bool {
         guard scale > 0 else {
             throw WindowError.invalidConfigure(.invalidFractionalScale(scale))
@@ -80,7 +86,7 @@ package struct SurfaceScaleState: Equatable, Sendable {
         return effectiveScale != previousScale
     }
 
-    package func geometry(logicalSize: PositiveTopLevelSize) throws -> SurfaceGeometry {
+    package func geometry(logicalSize: PositiveLogicalSize) throws -> SurfaceGeometry {
         try SurfaceGeometry(logicalSize: logicalSize, scale: effectiveScale)
     }
 
