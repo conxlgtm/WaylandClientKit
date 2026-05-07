@@ -74,77 +74,10 @@ package protocol DataTransferManagerBackend: AnyObject {
     func closeFileDescriptor(_ descriptor: Int32) -> Int32
 }
 
-enum RuntimeDataOffer {
-    case pending(
-        handle: RawDataOfferHandle,
-        binding: any DataTransferOfferBinding,
-        seatID: SeatID,
-        mimeTypes: [MIMEType]
-    )
-    case active(handle: RawDataOfferHandle, binding: any DataTransferOfferBinding)
-
-    var handle: RawDataOfferHandle {
-        switch self {
-        case .pending(let handle, _, _, _), .active(let handle, _):
-            handle
-        }
-    }
-
-    var binding: any DataTransferOfferBinding {
-        switch self {
-        case .pending(_, let binding, _, _), .active(_, let binding):
-            binding
-        }
-    }
-
-    var pendingSeatID: SeatID? {
-        guard case .pending(_, _, let seatID, _) = self else {
-            return nil
-        }
-
-        return seatID
-    }
-
-    var pendingMIMETypes: [MIMEType] {
-        guard case .pending(_, _, _, let mimeTypes) = self else {
-            return []
-        }
-
-        return mimeTypes
-    }
-
-    mutating func appendPendingMIMEType(_ mimeType: MIMEType) {
-        guard case .pending(let handle, let binding, let seatID, var mimeTypes) = self else {
-            return
-        }
-        guard !mimeTypes.contains(mimeType) else {
-            return
-        }
-
-        mimeTypes.append(mimeType)
-        self = .pending(
-            handle: handle,
-            binding: binding,
-            seatID: seatID,
-            mimeTypes: mimeTypes
-        )
-    }
-
-    mutating func markActive() {
-        self = .active(handle: handle, binding: binding)
-    }
-}
-
 package final class DataTransferManager {
     package let backend: any DataTransferManagerBackend
     package var state = DataTransferState()
-    package var deviceBindings: [SeatID: any DataTransferDeviceBinding] = [:]
-    package var sourceBindingsByID: [DataSourceID: any DataTransferSourceBinding] = [:]
-    package var sourcePayloadsByID: [DataSourceID: DataTransferSourcePayloadSet] = [:]
-    package var pendingSourceSendRequests: [DataTransferSourceSendRequest] = []
-    var offerIDsByHandle: [RawDataOfferHandle: DataOfferID] = [:]
-    var runtimeOffersByID: [DataOfferID: RuntimeDataOffer] = [:]
-    package var pendingCallbackError: DataTransferCallbackFailure?
+    var runtime = DataTransferRuntimeStore()
     private var nextOfferID: UInt64 = 1
     package var nextSourceID: UInt64 = 1
 
@@ -203,7 +136,7 @@ package final class DataTransferManager {
         case .bindDataDevice(let seatID):
             try bindDataDevice(for: seatID, nextState: &nextState)
         case .releaseDataDevice(let seatID):
-            deviceBindings.removeValue(forKey: seatID)?.release()
+            runtime.removeDeviceBinding(for: seatID)?.release()
             destroyPendingOfferBindings(for: seatID)
         case .destroyOffer(let offerID):
             destroyOfferBinding(offerID)
@@ -228,7 +161,7 @@ package final class DataTransferManager {
         for seatID: SeatID,
         nextState: inout DataTransferState
     ) throws {
-        guard deviceBindings[seatID] == nil else {
+        guard runtime.deviceBinding(for: seatID) == nil else {
             return
         }
 
@@ -242,7 +175,7 @@ package final class DataTransferManager {
             throw error
         }
 
-        deviceBindings[seatID] = binding
+        runtime.insertDeviceBinding(binding, for: seatID)
     }
 
     private func handleDataDeviceEvent(_ event: RawDataDeviceEvent, seatID: SeatID) {
@@ -271,7 +204,7 @@ package final class DataTransferManager {
         guard let handle else {
             throw DataTransferError.unknownOffer
         }
-        guard offerIDsByHandle[handle] == nil else {
+        guard !runtime.hasOffer(handle: handle) else {
             throw DataTransferError.duplicateOffer
         }
 
@@ -284,12 +217,11 @@ package final class DataTransferManager {
             id: offerID,
             onEvent: handleOfferEvent
         )
-        offerIDsByHandle[handle] = offerID
-        runtimeOffersByID[offerID] = .pending(
+        runtime.insertPendingOffer(
             handle: handle,
+            offerID: offerID,
             binding: binding,
-            seatID: seatID,
-            mimeTypes: []
+            seatID: seatID
         )
     }
 
@@ -303,11 +235,7 @@ package final class DataTransferManager {
             if state.offerSnapshot(offerID) != nil {
                 try apply(.offerMimeType(id: offerID, mimeType: mimeType))
             } else {
-                guard var runtimeOffer = runtimeOffersByID[offerID] else {
-                    throw DataTransferError.unknownOffer
-                }
-                runtimeOffer.appendPendingMIMEType(mimeType)
-                runtimeOffersByID[offerID] = runtimeOffer
+                try runtime.appendPendingMIMEType(mimeType, offerID: offerID)
             }
             preconditionInvariantsHold()
         } catch {
@@ -316,7 +244,7 @@ package final class DataTransferManager {
     }
 
     private func handleSelection(handle: RawDataOfferHandle, seatID: SeatID) throws {
-        guard let offerID = offerIDsByHandle[handle] else {
+        guard let offerID = runtime.offerID(for: handle) else {
             throw DataTransferError.unknownOffer
         }
 
@@ -325,7 +253,7 @@ package final class DataTransferManager {
                 throw DataTransferError.unknownOffer
             }
         } else {
-            guard var runtimeOffer = runtimeOffersByID[offerID] else {
+            guard let runtimeOffer = runtime.runtimeOffer(offerID) else {
                 throw DataTransferError.unknownOffer
             }
             guard runtimeOffer.pendingSeatID == seatID else {
@@ -336,33 +264,25 @@ package final class DataTransferManager {
             for mimeType in runtimeOffer.pendingMIMETypes {
                 try apply(.offerMimeType(id: offerID, mimeType: mimeType))
             }
-            runtimeOffer.markActive()
-            runtimeOffersByID[offerID] = runtimeOffer
+            _ = try runtime.markOfferActive(offerID)
         }
 
         try apply(.selectionChanged(seatID: seatID, offerID: offerID))
     }
 
     private func destroyOfferBinding(_ offerID: DataOfferID) {
-        if let runtimeOffer = runtimeOffersByID.removeValue(forKey: offerID) {
+        if let runtimeOffer = runtime.removeOffer(offerID) {
             runtimeOffer.binding.destroy()
-            offerIDsByHandle[runtimeOffer.handle] = nil
         }
     }
 
     private func destroySourceBinding(_ sourceID: DataSourceID) {
-        sourceBindingsByID.removeValue(forKey: sourceID)?.destroy()
-        sourcePayloadsByID[sourceID] = nil
+        runtime.removeSource(sourceID)?.binding.destroy()
         discardPendingSourceSendRequests(for: sourceID)
     }
 
     private func destroyPendingOfferBindings(for seatID: SeatID) {
-        let pendingOfferIDs =
-            runtimeOffersByID
-            .filter { _, runtimeOffer in runtimeOffer.pendingSeatID == seatID }
-            .map(\.key)
-
-        for offerID in pendingOfferIDs {
+        for offerID in runtime.pendingOfferIDs(for: seatID) {
             destroyOfferBinding(offerID)
         }
     }
@@ -388,7 +308,7 @@ extension DataTransferManager {
 
     package var offerBindingsByID: [DataOfferID: any DataTransferOfferBinding] {
         var bindings: [DataOfferID: any DataTransferOfferBinding] = [:]
-        for (offerID, runtimeOffer) in runtimeOffersByID {
+        for (offerID, runtimeOffer) in runtime.offersByIDForInvariantChecks {
             bindings[offerID] = runtimeOffer.binding
         }
         return bindings
@@ -398,13 +318,16 @@ extension DataTransferManager {
         state.sourceSnapshots
     }
 
+    package var pendingCallbackError: DataTransferCallbackFailure? {
+        runtime.callbackFailure
+    }
+
     package func throwPendingCallbackErrorIfAny() throws {
         backend.preconditionIsOwnerThread()
-        guard let error = pendingCallbackError else {
+        guard let error = runtime.takeCallbackFailure() else {
             return
         }
 
-        pendingCallbackError = nil
         throw error.error
     }
 
@@ -418,13 +341,11 @@ extension DataTransferManager {
         _ error: any Error,
         context: DataTransferCallbackContext
     ) {
-        guard pendingCallbackError == nil else {
-            return
-        }
-
-        pendingCallbackError = DataTransferCallbackFailure(
-            context: context,
-            error: Self.dataTransferCallbackError(error)
+        runtime.recordCallbackFailure(
+            DataTransferCallbackFailure(
+                context: context,
+                error: Self.dataTransferCallbackError(error)
+            )
         )
     }
 
@@ -439,14 +360,14 @@ extension DataTransferManager {
         guard let handle = enter.offer else {
             return
         }
-        guard let offerID = offerIDsByHandle[handle] else {
+        guard let offerID = runtime.offerID(for: handle) else {
             throw DataTransferError.unknownOffer
         }
 
         guard state.offerSnapshot(offerID) == nil else {
             throw DataTransferError.unknownOffer
         }
-        guard runtimeOffersByID[offerID]?.pendingSeatID == seatID else {
+        guard runtime.runtimeOffer(offerID)?.pendingSeatID == seatID else {
             throw DataTransferError.unknownOffer
         }
 
