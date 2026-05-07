@@ -39,7 +39,7 @@ Sources/CWaylandProtocols/shims/requests-core.c	wl_proxy_get_queue	Queue asserti
 Sources/CWaylandProtocols/shims/requests-core.c	swl_proxy_get_queue_raw	Queue assertion shim implementation.
 Sources/WaylandClient/SoftwareFrame.swift	UnsafeMutableBufferPointer	Scoped software-frame row spans.
 Sources/WaylandClient/SoftwareFrame.swift	UnsafeMutableRawBufferPointer	Scoped software-frame backing bytes.
-Sources/WaylandClient/DataTransferSourceWriter.swift	@unchecked Sendable	Condition-protected data-transfer writer state shared with one worker thread.
+Sources/WaylandClient/DataTransferSourceWriterState.swift	@unchecked Sendable	Condition-protected data-transfer writer state shared with one worker thread.
 Tests/**	OpaquePointer	Test doubles for raw C object wrappers.
 Tests/**	UnsafeMutablePointer	Test doubles for C listener and buffer APIs.
 Tests/**	UnsafeMutableBufferPointer	Test doubles for C buffer APIs.
