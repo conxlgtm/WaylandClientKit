@@ -116,21 +116,50 @@ package struct XDGConfigureSequence: Equatable, Sendable {
     }
 }
 
+private struct PendingTopLevelConfigureParts {
+    var size: TopLevelSize
+    var states: [XDGTopLevelState] = []
+    var bounds: TopLevelSize?
+    var wmCapabilities: [XDGWMCapability] = []
+    var decoration = XDGDecorationConfigure.unchanged
+}
+
+private struct XDGConfigureCollection {
+    var parts: PendingTopLevelConfigureParts
+    var carriedDecoration = XDGDecorationConfigure.unchanged
+}
+
+private enum XDGConfigureRecoverablePhase {
+    case collecting(XDGConfigureCollection)
+    case ready(XDGConfigureSequence, XDGConfigureCollection)
+
+    var collection: XDGConfigureCollection {
+        switch self {
+        case .collecting(let collection),
+            .ready(_, let collection):
+            collection
+        }
+    }
+}
+
+private enum XDGConfigurePhase {
+    case collecting(XDGConfigureCollection)
+    case ready(XDGConfigureSequence, XDGConfigureCollection)
+    case failed(RuntimeError, recovery: XDGConfigureRecoverablePhase)
+}
+
 package final class XDGConfigureState {
-    private var pendingSize: TopLevelSize
-    private var pendingStates: [XDGTopLevelState] = []
-    private var pendingBounds: TopLevelSize?
-    private var pendingWMCapabilities: [XDGWMCapability] = []
-    private var pendingDecoration = XDGDecorationConfigure.unchanged
-    private var unconsumedDecoration = XDGDecorationConfigure.unchanged
-    private var latestConfigure: XDGConfigureSequence?
-    private var pendingError: RuntimeError?
+    private var phase: XDGConfigurePhase
     private var onSurfaceConfigure: (() -> Void)?
 
     package private(set) var hasReceivedInitialConfigure = false
 
     package init(initialSize: TopLevelSize = .unspecified) {
-        pendingSize = initialSize
+        phase = .collecting(
+            XDGConfigureCollection(
+                parts: PendingTopLevelConfigureParts(size: initialSize)
+            )
+        )
     }
 
     package func setSurfaceConfigureHandler(_ handler: @escaping () -> Void) {
@@ -142,76 +171,131 @@ package final class XDGConfigureState {
         height: Int32,
         states: [XDGTopLevelState] = []
     ) {
-        pendingSize = TopLevelSize(width: width, height: height)
-        pendingStates = states
+        updateCollection { collection in
+            collection.parts.size = TopLevelSize(width: width, height: height)
+            collection.parts.states = states
+        }
     }
 
     package func handleConfigureBounds(width: Int32, height: Int32) {
         guard width > 0, height > 0 else {
-            pendingBounds = nil
+            updateCollection { collection in
+                collection.parts.bounds = nil
+            }
             return
         }
 
-        pendingBounds = TopLevelSize(width: width, height: height)
+        updateCollection { collection in
+            collection.parts.bounds = TopLevelSize(width: width, height: height)
+        }
     }
 
     package func handleWMCapabilities(_ capabilities: [XDGWMCapability]) {
-        pendingWMCapabilities = capabilities
+        updateCollection { collection in
+            collection.parts.wmCapabilities = capabilities
+        }
     }
 
     package func handleDecorationConfigure(mode: RawDecorationMode) {
-        pendingDecoration = .changed(mode)
+        updateCollection { collection in
+            collection.parts.decoration = .changed(mode)
+        }
     }
 
     package func handleDecorationConfigure(rawMode: UInt32) {
         do {
-            pendingDecoration = .changed(try RawDecorationMode(validating: rawMode))
+            handleDecorationConfigure(mode: try RawDecorationMode(validating: rawMode))
         } catch {
             recordError(error)
         }
     }
 
     package func recordError(_ error: RuntimeError) {
-        if pendingError == nil {
-            pendingError = error
+        guard case .failed = phase else {
+            phase = .failed(error, recovery: recoverablePhase)
+            return
         }
     }
 
     package func throwPendingErrorIfAny() throws {
-        guard let error = pendingError else { return }
+        guard case .failed(let error, let recovery) = phase else { return }
 
-        pendingError = nil
+        apply(recovery)
         throw error
     }
 
     @discardableResult
     package func handleSurfaceConfigure(serial: UInt32) -> XDGConfigureSequence {
-        let decoration = pendingDecoration.replacingUnchanged(with: unconsumedDecoration)
+        var collection = recoverablePhase.collection
+        let decoration = collection.parts.decoration.replacingUnchanged(
+            with: collection.carriedDecoration
+        )
         let configure = XDGConfigureSequence(
             serial: serial,
             topLevel: XDGTopLevelConfigureSuggestion(
-                size: pendingSize,
-                states: pendingStates,
-                bounds: pendingBounds,
-                wmCapabilities: pendingWMCapabilities
+                size: collection.parts.size,
+                states: collection.parts.states,
+                bounds: collection.parts.bounds,
+                wmCapabilities: collection.parts.wmCapabilities
             ),
             decorationMode: decoration.mode
         )
-        pendingDecoration = .unchanged
-        unconsumedDecoration = decoration
-        latestConfigure = configure
+        collection.parts.decoration = .unchanged
+        collection.carriedDecoration = decoration
+        replaceRecoverablePhase(.ready(configure, collection))
         hasReceivedInitialConfigure = true
         onSurfaceConfigure?()
         return configure
     }
 
     package func consumeLatestConfigure() -> XDGConfigureSequence? {
-        defer {
-            latestConfigure = nil
-            unconsumedDecoration = .unchanged
+        guard case .ready(let sequence, var collection) = recoverablePhase else {
+            return nil
         }
 
-        return latestConfigure
+        collection.carriedDecoration = .unchanged
+        replaceRecoverablePhase(.collecting(collection))
+        return sequence
+    }
+
+    private var recoverablePhase: XDGConfigureRecoverablePhase {
+        switch phase {
+        case .collecting(let collection):
+            .collecting(collection)
+        case .ready(let sequence, let collection):
+            .ready(sequence, collection)
+        case .failed(_, let recovery):
+            recovery
+        }
+    }
+
+    private func updateCollection(_ update: (inout XDGConfigureCollection) -> Void) {
+        switch recoverablePhase {
+        case .collecting(var collection):
+            update(&collection)
+            replaceRecoverablePhase(.collecting(collection))
+        case .ready(let sequence, var collection):
+            update(&collection)
+            replaceRecoverablePhase(.ready(sequence, collection))
+        }
+    }
+
+    private func replaceRecoverablePhase(_ nextRecovery: XDGConfigureRecoverablePhase) {
+        switch phase {
+        case .failed(let error, _):
+            phase = .failed(error, recovery: nextRecovery)
+        default:
+            apply(nextRecovery)
+        }
+    }
+
+    private func apply(_ recovery: XDGConfigureRecoverablePhase) {
+        switch recovery {
+        case .collecting(let collection):
+            phase = .collecting(collection)
+        case .ready(let sequence, let collection):
+            phase = .ready(sequence, collection)
+        }
     }
 }
 
