@@ -75,7 +75,7 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
         case .sourceCancelled:
             "data source was cancelled"
         case .sourceDataUnavailable(let mimeType):
-            "data source has no provider for MIME type: \(mimeType.description)"
+            "data source has no payload for MIME type: \(mimeType.description)"
         case .mimeTypeUnavailable(let mimeType):
             "MIME type unavailable: \(mimeType.description)"
         case .cancelled:

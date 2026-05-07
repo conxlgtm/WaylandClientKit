@@ -1,3 +1,4 @@
+import Foundation
 import Synchronization
 import WaylandRaw
 
@@ -129,6 +130,40 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
 
     func sourceBinding(for id: DataSourceID) -> RecordingDataTransferSourceBinding? {
         sourceBindings[id]
+    }
+}
+
+func sourcePayloads(
+    _ data: [MIMEType: Data] = [.plainText: Data("clipboard".utf8)]
+) throws -> DataTransferSourcePayloadSet {
+    try DataTransferSourcePayloadSet(data: data)
+}
+
+func sourcePayloads(for mimeTypes: [MIMEType]) throws -> DataTransferSourcePayloadSet {
+    try DataTransferSourcePayloadSet(
+        payloads: mimeTypes.map { mimeType in
+            ClipboardSourcePayload(mimeType: mimeType, data: Data())
+        }
+    )
+}
+
+extension DataTransferManager {
+    func setSelectionSource(
+        seatID: SeatID,
+        mimeTypes: [MIMEType],
+        serial: InputSerial,
+        payloads: DataTransferSourcePayloadSet? = nil
+    ) throws -> DataSourceSnapshot {
+        let sourcePayloads = try payloads ?? sourcePayloads(for: mimeTypes)
+        precondition(
+            sourcePayloads.mimeTypes == mimeTypes,
+            "Test source payloads must match advertised MIME types"
+        )
+        return try setSelectionSource(
+            seatID: seatID,
+            payloads: sourcePayloads,
+            serial: serial
+        )
     }
 }
 

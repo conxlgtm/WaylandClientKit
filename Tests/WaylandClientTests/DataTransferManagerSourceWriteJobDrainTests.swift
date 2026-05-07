@@ -19,7 +19,7 @@ struct DataTransferManagerSourceWriteJobDrainTests {
             seatID: seat1,
             mimeTypes: [.plainText],
             serial: InputSerial(rawValue: 96),
-            dataProvider: DataTransferSourceProvider(
+            payloads: DataTransferSourcePayloadSet(
                 data: [.plainText: Data("clipboard".utf8)]
             )
         )
@@ -56,7 +56,7 @@ struct DataTransferManagerSourceWriteJobDrainTests {
             seatID: seat1,
             mimeTypes: [.plainText],
             serial: InputSerial(rawValue: 97),
-            dataProvider: DataTransferSourceProvider(
+            payloads: DataTransferSourcePayloadSet(
                 data: [.plainText: Data("clipboard".utf8)]
             )
         )
@@ -97,7 +97,7 @@ struct DataTransferManagerSourceWriteJobDrainTests {
             seatID: seat1,
             mimeTypes: [.plainText],
             serial: InputSerial(rawValue: 100),
-            dataProvider: DataTransferSourceProvider(
+            payloads: DataTransferSourcePayloadSet(
                 data: [.plainText: Data("clipboard".utf8)]
             )
         )
@@ -144,7 +144,7 @@ struct DataTransferManagerSourceWriteJobDrainTests {
             seatID: seat1,
             mimeTypes: [.plainText],
             serial: InputSerial(rawValue: 101),
-            dataProvider: DataTransferSourceProvider(
+            payloads: DataTransferSourcePayloadSet(
                 data: [.plainText: Data("clipboard".utf8)]
             )
         )
@@ -183,7 +183,7 @@ struct DataTransferManagerSourceWriteJobDrainTests {
             seatID: seat1,
             mimeTypes: [.plainText],
             serial: InputSerial(rawValue: 102),
-            dataProvider: DataTransferSourceProvider(
+            payloads: DataTransferSourcePayloadSet(
                 data: [.plainText: Data("clipboard".utf8)]
             )
         )
@@ -230,7 +230,7 @@ struct DataTransferManagerSourceWriteJobDrainTests {
             seatID: seat1,
             mimeTypes: [.plainText],
             serial: InputSerial(rawValue: 103),
-            dataProvider: DataTransferSourceProvider(
+            payloads: DataTransferSourcePayloadSet(
                 data: [.plainText: Data("clipboard".utf8)]
             )
         )

@@ -26,9 +26,8 @@ extension DataTransferManager {
 
     package func setSelectionSource(
         seatID: SeatID,
-        mimeTypes: [MIMEType],
-        serial: InputSerial,
-        dataProvider: DataTransferSourceProvider? = nil
+        payloads: DataTransferSourcePayloadSet,
+        serial: InputSerial
     ) throws -> DataSourceSnapshot {
         backend.preconditionIsOwnerThread()
         try throwPendingCallbackErrorIfAny()
@@ -39,19 +38,19 @@ extension DataTransferManager {
             self?.handleDataSourceEvent(event, sourceID: sourceID)
         }
         do {
-            for mimeType in mimeTypes {
+            for mimeType in payloads.mimeTypes {
                 sourceBinding.offer(mimeType: mimeType)
             }
-            try apply(.sourceCreated(id: sourceID, seatID: seatID, mimeTypes: mimeTypes))
+            try apply(.sourceCreated(id: sourceID, seatID: seatID, mimeTypes: payloads.mimeTypes))
             sourceBindingsByID[sourceID] = sourceBinding
-            sourceProvidersByID[sourceID] = dataProvider
+            sourcePayloadsByID[sourceID] = payloads
             try apply(.selectionSourceChanged(seatID: seatID, sourceID: sourceID))
             deviceBinding.setSelection(source: sourceBinding, serial: serial)
             preconditionInvariantsHold()
         } catch {
             sourceBinding.destroy()
             sourceBindingsByID[sourceID] = nil
-            sourceProvidersByID[sourceID] = nil
+            sourcePayloadsByID[sourceID] = nil
             throw error
         }
 
@@ -150,8 +149,8 @@ extension DataTransferManager {
                 throw DataTransferError.mimeTypeUnavailable(mimeType)
             }
             guard
-                let dataProvider = sourceProvidersByID[sourceID],
-                let data = dataProvider.data(for: mimeType)
+                let payloads = sourcePayloadsByID[sourceID],
+                let data = payloads.data(for: mimeType)
             else {
                 throw DataTransferError.sourceDataUnavailable(mimeType)
             }

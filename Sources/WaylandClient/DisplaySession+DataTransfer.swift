@@ -87,9 +87,8 @@ extension DisplaySession {
         try processClipboardDataTransferState()
         return try dataTransferManager.setSelectionSource(
             seatID: seatID,
-            mimeTypes: configuration.mimeTypes,
-            serial: serial,
-            dataProvider: configuration.dataProvider
+            payloads: configuration.payloadSet,
+            serial: serial
         )
     }
 

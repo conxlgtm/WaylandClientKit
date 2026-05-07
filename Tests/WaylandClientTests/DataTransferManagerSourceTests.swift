@@ -145,30 +145,9 @@ struct DataTransferManagerSourceTests {
     }
 
     @Test
-    func sourceSendWithoutProviderClosesDescriptorAndReportsTypedError() throws {
-        let backend = RecordingDataTransferBackend()
-        let manager = DataTransferManager(backend: backend)
-        try manager.synchronizeSeats([seat1])
-
-        let source = try manager.setSelectionSource(
-            seatID: seat1,
-            mimeTypes: [.plainText],
-            serial: InputSerial(rawValue: 75)
-        )
-        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
-
-        sourceBinding.emit(.send(mimeType: MIMEType.plainText.rawValue, fd: 200))
-
-        #expect(backend.closedDescriptors == [200])
-        #expect(
-            manager.pendingCallbackError
-                == DataTransferCallbackFailure(
-                    context: .dataSource(source.id),
-                    error: .sourceDataUnavailable(.plainText)
-                )
-        )
-        #expect(throws: DataTransferError.sourceDataUnavailable(.plainText)) {
-            try manager.throwPendingCallbackErrorIfAny()
+    func sourcePayloadSetRejectsEmptyPayloadDictionary() {
+        #expect(throws: DataTransferError.emptyDataSource) {
+            _ = try DataTransferSourcePayloadSet(data: [:])
         }
     }
 
@@ -242,7 +221,7 @@ struct DataTransferManagerSourceTests {
         )
         let sourceBinding = try #require(backend.sourceBinding(for: source.id))
 
-        sourceBinding.emit(.send(mimeType: MIMEType.plainText.rawValue, fd: 203))
+        sourceBinding.emit(.send(mimeType: MIMEType.uriList.rawValue, fd: 203))
 
         #expect(backend.closedDescriptors == [203])
         #expect(
