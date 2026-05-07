@@ -2,12 +2,12 @@ import WaylandRaw
 
 package struct WindowModel: Equatable, Sendable {
     let id: WindowID
-    let fallbackSize: PositiveTopLevelSize
+    let fallbackSize: PositiveLogicalSize
     var decoration = DecorationState.unavailable(reason: nil)
     var lifecycle = XDGWindowLifecycle.created(.none)
     var publication = WindowPublicationState.notPublished
 
-    init(id windowID: WindowID, fallbackSize initialSize: PositiveTopLevelSize) {
+    init(id windowID: WindowID, fallbackSize initialSize: PositiveLogicalSize) {
         id = windowID
         fallbackSize = initialSize
     }

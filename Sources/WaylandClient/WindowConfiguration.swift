@@ -18,7 +18,7 @@ public enum WindowDecorationMode: Equatable, Sendable {
 public struct WindowConfiguration: Equatable, Sendable {
     public var title: WaylandString
     public var appID: NonEmptyWaylandString
-    public var initialSize: PositiveTopLevelSize
+    public var initialSize: PositiveLogicalSize
     public var bufferCount: PositiveInt
     public var closeRequestPolicy: CloseRequestPolicy
     public var decorationPreference: WindowDecorationPreference
@@ -35,7 +35,7 @@ public struct WindowConfiguration: Equatable, Sendable {
     public init(
         title windowTitle: WaylandString,
         appID applicationID: NonEmptyWaylandString,
-        initialSize size: PositiveTopLevelSize,
+        initialSize size: PositiveLogicalSize,
         bufferCount count: PositiveInt,
         closeRequestPolicy policy: CloseRequestPolicy = .requestOnly,
         decorationPreference preference: WindowDecorationPreference = .preferServerSide
@@ -83,7 +83,7 @@ public struct WindowConfiguration: Equatable, Sendable {
 
         title = WaylandString(unchecked: windowTitle)
         appID = NonEmptyWaylandString(unchecked: applicationID)
-        initialSize = PositiveTopLevelSize(
+        initialSize = PositiveLogicalSize(
             width: PositiveInt32(unchecked: width),
             height: PositiveInt32(unchecked: height)
         )
