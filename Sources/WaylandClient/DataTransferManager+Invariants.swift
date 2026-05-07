@@ -49,7 +49,7 @@ extension DataTransferManager {
         backend.preconditionIsOwnerThread()
 
         let seatsWithDataDevice = Set(
-            state.seatSnapshots
+            store.seatSnapshots
                 .filter(\.hasDataDevice)
                 .map(\.seatID)
         )
@@ -72,7 +72,7 @@ extension DataTransferManager {
     private func checkSeatBindingInvariants(
         seatsWithDataDevice: Set<SeatID>
     ) throws {
-        guard runtime.boundSeatIDs == seatsWithDataDevice else {
+        guard store.boundSeatIDs == seatsWithDataDevice else {
             throw DataTransferManagerInvariantViolation.dataDeviceBindingsDoNotMatchSeats
         }
     }
@@ -80,14 +80,14 @@ extension DataTransferManager {
     private func checkOfferRuntimeInvariants(
         seatsWithDataDevice: Set<SeatID>
     ) throws {
-        let runtimeOfferIDs = runtime.offerIDs
-        let indexedOfferIDs = runtime.indexedOfferIDs
+        let runtimeOfferIDs = store.offerIDs
+        let indexedOfferIDs = store.indexedOfferIDs
         guard runtimeOfferIDs == indexedOfferIDs else {
             throw DataTransferManagerInvariantViolation.offerHandleIndexDoesNotMatchRecords
         }
-        for (handle, offerID) in runtime.offerHandleIndexEntries {
+        for (handle, offerID) in store.offerHandleIndexEntries {
             guard
-                runtime.offerHandleMatchesIndex(
+                store.offerHandleMatchesIndex(
                     handle: handle,
                     offerID: offerID
                 )
@@ -97,13 +97,13 @@ extension DataTransferManager {
         }
 
         let activeOffersByID = Dictionary(
-            uniqueKeysWithValues: state.offerSnapshots.map { ($0.id, $0) }
+            uniqueKeysWithValues: store.offerSnapshots.map { ($0.id, $0) }
         )
         let activeOfferIDs = Set(activeOffersByID.keys)
-        for offerID in activeOfferIDs where runtime.runtimeOffer(offerID) == nil {
+        for offerID in activeOfferIDs where store.runtimeOffer(offerID) == nil {
             throw DataTransferManagerInvariantViolation.activeOfferMissingRuntimeBinding(offerID)
         }
-        for (offerID, runtimeOffer) in runtime.offersByIDForInvariantChecks {
+        for (offerID, runtimeOffer) in store.offersByIDForInvariantChecks {
             try checkRuntimeOffer(
                 offerID,
                 runtimeOffer,
@@ -146,11 +146,11 @@ extension DataTransferManager {
     }
 
     private func checkSourceRuntimeInvariants() throws {
-        let activeSourceIDs = Set(state.sourceSnapshots.map(\.id))
-        guard runtime.sourceIDs == activeSourceIDs else {
+        let activeSourceIDs = Set(store.sourceSnapshots.map(\.id))
+        guard store.sourceIDs == activeSourceIDs else {
             throw DataTransferManagerInvariantViolation.sourceBindingsDoNotMatchState
         }
-        for request in runtime.pendingSourceSendRequestsForInvariantChecks()
+        for request in store.pendingSourceSendRequestsForInvariantChecks()
         where !activeSourceIDs.contains(request.sourceID) {
             throw
                 DataTransferManagerInvariantViolation
@@ -159,10 +159,10 @@ extension DataTransferManager {
     }
 
     private func checkSelectionReferenceInvariants() throws {
-        let activeOfferIDs = Set(state.offerSnapshots.map(\.id))
-        let activeSourceIDs = Set(state.sourceSnapshots.map(\.id))
+        let activeOfferIDs = Set(store.offerSnapshots.map(\.id))
+        let activeSourceIDs = Set(store.sourceSnapshots.map(\.id))
 
-        for seat in state.seatSnapshots {
+        for seat in store.seatSnapshots {
             if let offerID = seat.selectionOfferID, !activeOfferIDs.contains(offerID) {
                 throw
                     DataTransferManagerInvariantViolation

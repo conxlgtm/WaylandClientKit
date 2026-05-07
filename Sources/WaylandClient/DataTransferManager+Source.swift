@@ -3,7 +3,7 @@ import WaylandRaw
 extension DataTransferManager {
     package func drainSourceSendRequests() -> [DataTransferSourceSendRequest] {
         backend.preconditionIsOwnerThread()
-        return runtime.drainSourceSendRequests()
+        return store.drainSourceSendRequests()
     }
 
     package func drainSourceWriteJobs() throws -> [DataTransferSourceWriteJob] {
@@ -41,7 +41,7 @@ extension DataTransferManager {
                 sourceBinding.offer(mimeType: mimeType)
             }
             try apply(.sourceCreated(id: sourceID, seatID: seatID, mimeTypes: payloads.mimeTypes))
-            runtime.insertSource(
+            store.insertSource(
                 binding: sourceBinding,
                 payloads: payloads,
                 sourceID: sourceID
@@ -51,11 +51,11 @@ extension DataTransferManager {
             preconditionInvariantsHold()
         } catch {
             sourceBinding.destroy()
-            runtime.removeSource(sourceID)
+            store.removeSource(sourceID)
             throw error
         }
 
-        guard let source = state.sourceSnapshot(sourceID) else {
+        guard let source = store.sourceSnapshot(sourceID) else {
             throw DataTransferError.unknownSource
         }
 
@@ -84,7 +84,7 @@ extension DataTransferManager {
         backend.preconditionIsOwnerThread()
         try throwPendingCallbackErrorIfAny()
 
-        guard let seat = state.seatSnapshot(seatID) else {
+        guard let seat = store.seatSnapshot(seatID) else {
             throw DataTransferError.unknownSeat(seatID)
         }
         guard seat.selectionSourceID == sourceID else {
@@ -100,13 +100,13 @@ extension DataTransferManager {
     private func selectionDeviceBinding(
         for seatID: SeatID
     ) throws -> any DataTransferDeviceBinding {
-        guard let seat = state.seatSnapshot(seatID) else {
+        guard let seat = store.seatSnapshot(seatID) else {
             throw DataTransferError.unknownSeat(seatID)
         }
         guard seat.hasDataDevice else {
             throw DataTransferError.missingDataDevice(seatID)
         }
-        guard let deviceBinding = runtime.deviceBinding(for: seatID) else {
+        guard let deviceBinding = store.deviceBinding(for: seatID) else {
             throw DataTransferError.missingDataDevice(seatID)
         }
 
@@ -132,7 +132,7 @@ extension DataTransferManager {
             }
             preconditionInvariantsHold()
         } catch {
-            recordCallbackError(error, context: .dataSource(sourceID))
+            recordCallbackError(error, context: .dataSource(ClipboardSourceIdentity(sourceID)))
         }
     }
 
@@ -142,7 +142,7 @@ extension DataTransferManager {
         sourceID: DataSourceID
     ) throws {
         do {
-            guard let source = state.sourceSnapshot(sourceID) else {
+            guard let source = store.sourceSnapshot(sourceID) else {
                 throw DataTransferError.unknownSource
             }
             let mimeType = try MIMEType(rawMimeType ?? "")
@@ -150,7 +150,7 @@ extension DataTransferManager {
                 throw DataTransferError.mimeTypeUnavailable(mimeType)
             }
             guard
-                let data = runtime.sourcePayloadData(
+                let data = store.sourcePayloadData(
                     sourceID: sourceID,
                     mimeType: mimeType
                 )
@@ -158,7 +158,7 @@ extension DataTransferManager {
                 throw DataTransferError.sourceDataUnavailable(mimeType)
             }
 
-            runtime.appendSourceSendRequest(
+            store.appendSourceSendRequest(
                 DataTransferSourceSendRequest(
                     sourceID: sourceID,
                     mimeType: mimeType,
@@ -184,19 +184,22 @@ extension DataTransferManager {
 
     package func discardPendingSourceSendRequests(for sourceID: DataSourceID) {
         var remainingRequests: [DataTransferSourceSendRequest] = []
-        for request in runtime.drainSourceSendRequests() {
+        for request in store.drainSourceSendRequests() {
             if request.sourceID == sourceID {
                 do {
                     try request.close()
                 } catch {
-                    recordCallbackError(error, context: .dataSource(sourceID))
+                    recordCallbackError(
+                        error,
+                        context: .dataSource(ClipboardSourceIdentity(sourceID))
+                    )
                 }
             } else {
                 remainingRequests.append(request)
             }
         }
 
-        runtime.replaceSourceSendRequests(remainingRequests)
+        store.replaceSourceSendRequests(remainingRequests)
     }
 
     private func discardSourceWriteJobs(_ jobs: [DataTransferSourceWriteJob]) {
@@ -212,7 +215,10 @@ extension DataTransferManager {
             do {
                 try request.close()
             } catch {
-                recordCallbackError(error, context: .dataSource(request.sourceID))
+                recordCallbackError(
+                    error,
+                    context: .dataSource(ClipboardSourceIdentity(request.sourceID))
+                )
             }
         }
     }

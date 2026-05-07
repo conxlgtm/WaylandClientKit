@@ -20,15 +20,13 @@ struct DataTransferManagerSourceTests {
             serial: InputSerial(rawValue: 44)
         )
         let sourceBinding = try #require(backend.sourceBinding(for: source.id))
-
-        #expect(
-            source
-                == DataSourceSnapshot(
-                    id: DataSourceID(rawValue: 1),
-                    seatID: seat1,
-                    mimeTypes: [.plainText, .plainTextUTF8]
-                )
+        let expectedSource = try DataSourceSnapshot(
+            id: DataSourceID(rawValue: 1),
+            seatID: seat1,
+            mimeTypes: [.plainText, .plainTextUTF8]
         )
+
+        #expect(source == expectedSource)
         #expect(sourceBinding.offeredMimeTypes == [.plainText, .plainTextUTF8])
         #expect(
             device.selections
@@ -137,7 +135,6 @@ struct DataTransferManagerSourceTests {
 
         #expect(sourceBinding.destroyCount == 1)
         #expect(manager.sourceSnapshots.isEmpty)
-        #expect(manager.sourceCancellations == [source.id])
         #expect(
             manager.drainDataTransferEvents()
                 == [.sourceCancelled(ClipboardSourceIdentity(source.id))]
@@ -170,11 +167,16 @@ struct DataTransferManagerSourceTests {
         #expect(
             manager.pendingCallbackError
                 == DataTransferCallbackFailure(
-                    context: .dataSource(source.id),
+                    context: .dataSource(ClipboardSourceIdentity(source.id)),
                     error: .mimeTypeUnavailable(.uriList)
                 )
         )
-        #expect(throws: DataTransferError.mimeTypeUnavailable(.uriList)) {
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dataSource(ClipboardSourceIdentity(source.id)),
+                error: .mimeTypeUnavailable(.uriList)
+            )
+        ) {
             try manager.throwPendingCallbackErrorIfAny()
         }
     }
@@ -198,11 +200,16 @@ struct DataTransferManagerSourceTests {
         #expect(
             manager.pendingCallbackError
                 == DataTransferCallbackFailure(
-                    context: .dataSource(source.id),
+                    context: .dataSource(ClipboardSourceIdentity(source.id)),
                     error: .invalidMIMEType("")
                 )
         )
-        #expect(throws: DataTransferError.invalidMIMEType("")) {
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dataSource(ClipboardSourceIdentity(source.id)),
+                error: .invalidMIMEType("")
+            )
+        ) {
             try manager.throwPendingCallbackErrorIfAny()
         }
     }
@@ -225,8 +232,11 @@ struct DataTransferManagerSourceTests {
 
         #expect(backend.closedDescriptors == [203])
         #expect(
-            throws: DataTransferError.closeFileDescriptor(
-                WaylandSystemErrno(unchecked: 9)
+            throws: DataTransferCallbackFailure(
+                context: .dataSource(ClipboardSourceIdentity(source.id)),
+                error: .closeFileDescriptor(
+                    WaylandSystemErrno(unchecked: 9)
+                )
             )
         ) {
             try manager.throwPendingCallbackErrorIfAny()
@@ -246,13 +256,15 @@ struct DataTransferManagerSourceTests {
             )
         }
 
-        manager.state = try DataTransferState(
-            seats: [
-                seat2: DataTransferSeatSnapshot(
-                    seatID: seat2,
-                    device: .unbound
-                )
-            ]
+        manager.store.replaceState(
+            try DataTransferState(
+                seats: [
+                    seat2: DataTransferSeatSnapshot(
+                        seatID: seat2,
+                        device: .unbound
+                    )
+                ]
+            )
         )
 
         #expect(throws: DataTransferError.missingDataDevice(seat2)) {

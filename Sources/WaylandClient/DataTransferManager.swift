@@ -1,27 +1,30 @@
 import WaylandRaw
 
-package struct DataTransferSelectionChange: Equatable, Sendable {
-    package let seatID: SeatID
-    package let offerID: DataOfferID?
-}
-
-package enum DataTransferCallbackContext: Equatable, Sendable {
+public enum DataTransferCallbackContext: Equatable, Sendable {
     case dataDevice(SeatID)
-    case dataOffer(DataOfferID)
-    case dataSource(DataSourceID)
+    case dataOffer(ClipboardOfferIdentity)
+    case dataSource(ClipboardSourceIdentity)
 }
 
-package struct DataTransferCallbackFailure:
+public struct DataTransferCallbackFailure:
     Error,
     Equatable,
     Sendable,
     CustomStringConvertible
 {
-    package let context: DataTransferCallbackContext
-    package let error: DataTransferError
+    public let context: DataTransferCallbackContext
+    public let error: DataTransferError
 
-    package var description: String {
+    public var description: String {
         "\(context): \(error.description)"
+    }
+
+    package init(
+        context failureContext: DataTransferCallbackContext,
+        error failureError: DataTransferError
+    ) {
+        context = failureContext
+        error = failureError
     }
 }
 
@@ -76,13 +79,10 @@ package protocol DataTransferManagerBackend: AnyObject {
 
 package final class DataTransferManager {
     package let backend: any DataTransferManagerBackend
-    package var state = DataTransferState()
-    var runtime = DataTransferRuntimeStore()
+    var store = DataTransferStore()
     private var nextOfferID: UInt64 = 1
     package var nextSourceID: UInt64 = 1
 
-    package private(set) var selectionChanges: [DataTransferSelectionChange] = []
-    package private(set) var sourceCancellations: [DataSourceID] = []
     package private(set) var pendingEvents: [DataTransferEvent] = []
 
     package init(connection rawConnection: RawDisplayConnection) {
@@ -99,7 +99,7 @@ package final class DataTransferManager {
         try throwPendingCallbackErrorIfAny()
 
         let desiredSeats = Set(seatIDs)
-        let currentSeats = Set(state.seatSnapshots.map(\.seatID))
+        let currentSeats = Set(store.seatSnapshots.map(\.seatID))
         for seatID in Self.sortedSeatIDs(currentSeats.subtracting(desiredSeats)) {
             try apply(.seatRemoved(seatID))
         }
@@ -111,12 +111,11 @@ package final class DataTransferManager {
     }
 
     package func apply(_ action: DataTransferAction) throws {
-        var nextState = state
-        let plan = try nextState.reduce(action)
-        nextState = plan.state
+        let plan = try store.transitionPlan(for: action)
+        var nextState = plan.state
 
         try interpret(plan.effects, nextState: &nextState)
-        state = nextState
+        store.replaceState(nextState)
     }
 
     private func interpret(
@@ -136,23 +135,19 @@ package final class DataTransferManager {
         case .bindDataDevice(let seatID):
             try bindDataDevice(for: seatID, nextState: &nextState)
         case .releaseDataDevice(let seatID):
-            runtime.removeDeviceBinding(for: seatID)?.release()
+            store.removeDeviceBinding(for: seatID)?.release()
             destroyPendingOfferBindings(for: seatID)
         case .destroyOffer(let offerID):
             destroyOfferBinding(offerID)
         case .cancelSource(let sourceID):
             destroySourceBinding(sourceID)
         case .publishSelectionChanged(let seatID, let offerID):
-            selectionChanges.append(
-                DataTransferSelectionChange(seatID: seatID, offerID: offerID)
-            )
             pendingEvents.append(
                 .selectionChanged(
                     ClipboardSelectionEvent(seatID: seatID, offerID: offerID)
                 )
             )
         case .publishSourceCancelled(let sourceID):
-            sourceCancellations.append(sourceID)
             pendingEvents.append(.sourceCancelled(ClipboardSourceIdentity(sourceID)))
         }
     }
@@ -161,7 +156,7 @@ package final class DataTransferManager {
         for seatID: SeatID,
         nextState: inout DataTransferState
     ) throws {
-        guard runtime.deviceBinding(for: seatID) == nil else {
+        guard store.deviceBinding(for: seatID) == nil else {
             return
         }
 
@@ -175,7 +170,7 @@ package final class DataTransferManager {
             throw error
         }
 
-        runtime.insertDeviceBinding(binding, for: seatID)
+        store.insertDeviceBinding(binding, for: seatID)
     }
 
     private func handleDataDeviceEvent(_ event: RawDataDeviceEvent, seatID: SeatID) {
@@ -204,7 +199,7 @@ package final class DataTransferManager {
         guard let handle else {
             throw DataTransferError.unknownOffer
         }
-        guard !runtime.hasOffer(handle: handle) else {
+        guard !store.hasOffer(handle: handle) else {
             throw DataTransferError.duplicateOffer
         }
 
@@ -217,7 +212,7 @@ package final class DataTransferManager {
             id: offerID,
             onEvent: handleOfferEvent
         )
-        runtime.insertPendingOffer(
+        store.insertPendingOffer(
             handle: handle,
             offerID: offerID,
             binding: binding,
@@ -232,28 +227,28 @@ package final class DataTransferManager {
             }
 
             let mimeType = try MIMEType(rawMimeType ?? "")
-            if state.offerSnapshot(offerID) != nil {
+            if store.offerSnapshot(offerID) != nil {
                 try apply(.offerMimeType(id: offerID, mimeType: mimeType))
             } else {
-                try runtime.appendPendingMIMEType(mimeType, offerID: offerID)
+                try store.appendPendingMIMEType(mimeType, offerID: offerID)
             }
             preconditionInvariantsHold()
         } catch {
-            recordCallbackError(error, context: .dataOffer(offerID))
+            recordCallbackError(error, context: .dataOffer(ClipboardOfferIdentity(offerID)))
         }
     }
 
     private func handleSelection(handle: RawDataOfferHandle, seatID: SeatID) throws {
-        guard let offerID = runtime.offerID(for: handle) else {
+        guard let offerID = store.offerID(for: handle) else {
             throw DataTransferError.unknownOffer
         }
 
-        if let existingOffer = state.offerSnapshot(offerID) {
+        if let existingOffer = store.offerSnapshot(offerID) {
             guard existingOffer.role.seatID == seatID else {
                 throw DataTransferError.unknownOffer
             }
         } else {
-            guard let runtimeOffer = runtime.runtimeOffer(offerID) else {
+            guard let runtimeOffer = store.runtimeOffer(offerID) else {
                 throw DataTransferError.unknownOffer
             }
             guard runtimeOffer.pendingSeatID == seatID else {
@@ -264,25 +259,25 @@ package final class DataTransferManager {
             for mimeType in runtimeOffer.pendingMIMETypes {
                 try apply(.offerMimeType(id: offerID, mimeType: mimeType))
             }
-            _ = try runtime.markOfferActive(offerID)
+            _ = try store.markOfferActive(offerID)
         }
 
         try apply(.selectionChanged(seatID: seatID, offerID: offerID))
     }
 
     private func destroyOfferBinding(_ offerID: DataOfferID) {
-        if let runtimeOffer = runtime.removeOffer(offerID) {
+        if let runtimeOffer = store.removeOffer(offerID) {
             runtimeOffer.binding.destroy()
         }
     }
 
     private func destroySourceBinding(_ sourceID: DataSourceID) {
-        runtime.removeSource(sourceID)?.binding.destroy()
+        store.removeSource(sourceID)?.binding.destroy()
         discardPendingSourceSendRequests(for: sourceID)
     }
 
     private func destroyPendingOfferBindings(for seatID: SeatID) {
-        for offerID in runtime.pendingOfferIDs(for: seatID) {
+        for offerID in store.pendingOfferIDs(for: seatID) {
             destroyOfferBinding(offerID)
         }
     }
@@ -299,36 +294,36 @@ package final class DataTransferManager {
 
 extension DataTransferManager {
     package var seatSnapshots: [DataTransferSeatSnapshot] {
-        state.seatSnapshots
+        store.seatSnapshots
     }
 
     package var offerSnapshots: [DataOfferSnapshot] {
-        state.offerSnapshots
+        store.offerSnapshots
     }
 
     package var offerBindingsByID: [DataOfferID: any DataTransferOfferBinding] {
         var bindings: [DataOfferID: any DataTransferOfferBinding] = [:]
-        for (offerID, runtimeOffer) in runtime.offersByIDForInvariantChecks {
+        for (offerID, runtimeOffer) in store.offersByIDForInvariantChecks {
             bindings[offerID] = runtimeOffer.binding
         }
         return bindings
     }
 
     package var sourceSnapshots: [DataSourceSnapshot] {
-        state.sourceSnapshots
+        store.sourceSnapshots
     }
 
     package var pendingCallbackError: DataTransferCallbackFailure? {
-        runtime.callbackFailure
+        store.callbackFailure
     }
 
     package func throwPendingCallbackErrorIfAny() throws {
         backend.preconditionIsOwnerThread()
-        guard let error = runtime.takeCallbackFailure() else {
+        guard let error = store.takeCallbackFailure() else {
             return
         }
 
-        throw error.error
+        throw error
     }
 
     package func drainDataTransferEvents() -> [DataTransferEvent] {
@@ -341,7 +336,7 @@ extension DataTransferManager {
         _ error: any Error,
         context: DataTransferCallbackContext
     ) {
-        runtime.recordCallbackFailure(
+        store.recordCallbackFailure(
             DataTransferCallbackFailure(
                 context: context,
                 error: Self.dataTransferCallbackError(error)
@@ -360,14 +355,14 @@ extension DataTransferManager {
         guard let handle = enter.offer else {
             return
         }
-        guard let offerID = runtime.offerID(for: handle) else {
+        guard let offerID = store.offerID(for: handle) else {
             throw DataTransferError.unknownOffer
         }
 
-        guard state.offerSnapshot(offerID) == nil else {
+        guard store.offerSnapshot(offerID) == nil else {
             throw DataTransferError.unknownOffer
         }
-        guard runtime.runtimeOffer(offerID)?.pendingSeatID == seatID else {
+        guard store.runtimeOffer(offerID)?.pendingSeatID == seatID else {
             throw DataTransferError.unknownOffer
         }
 
