@@ -76,15 +76,30 @@ extension InputRouter {
         switch interpretation {
         case .released(let keysymName):
             .released(keysymName: keysymName)
-        case .pressed(let keysymName, let utf8, let repeats):
-            .pressed(keysymName: keysymName, utf8: utf8, repeats: repeats)
-        case .repeated(let keysymName, let utf8, let repeats):
-            .repeated(keysymName: keysymName, utf8: utf8, repeats: repeats)
+        case .pressed(let keysymName, let utf8, let repeatCapability):
+            .pressed(
+                keysymName: keysymName,
+                utf8: utf8,
+                repeatCapability: convert(repeatCapability)
+            )
+        case .repeated(let keysymName, let utf8):
+            .repeated(keysymName: keysymName, utf8: utf8)
         case .unknown(let state, let keysymName):
             .unknown(
                 state: InterpretedKeyboardKeyState(rawValue: state.rawValue),
                 keysymName: keysymName
             )
+        }
+    }
+
+    func convert(
+        _ repeatCapability: WaylandKeyboardInterpretation.KeyboardKeyRepeatCapability
+    ) -> KeyboardKeyRepeatCapability {
+        switch repeatCapability {
+        case .nonRepeating:
+            .nonRepeating
+        case .repeating:
+            .repeating
         }
     }
 

@@ -80,7 +80,7 @@ struct InputDeviceGraph: Equatable {
         seatsByID[seatID]?.keyboard.focusedSurfaceID
     }
 
-    func touchFocus(for seatID: RawSeatID, touchID: Int32) -> RawObjectID? {
+    func touchFocus(for seatID: RawSeatID, touchID: RawTouchID) -> RawObjectID? {
         seatsByID[seatID]?.touch.focus(touchID: touchID)
     }
 
@@ -96,7 +96,7 @@ struct InputDeviceGraph: Equatable {
         }
     }
 
-    mutating func setTouchFocus(seatID: RawSeatID, touchID: Int32, surfaceID: RawObjectID) {
+    mutating func setTouchFocus(seatID: RawSeatID, touchID: RawTouchID, surfaceID: RawObjectID) {
         updateSeatState(seatID) { state in
             state.touch.setFocus(touchID: touchID, surfaceID: surfaceID)
         }
@@ -168,7 +168,7 @@ struct InputDeviceGraph: Equatable {
         }
     }
 
-    mutating func clearTouchFocus(seatID: RawSeatID, touchID: Int32) {
+    mutating func clearTouchFocus(seatID: RawSeatID, touchID: RawTouchID) {
         updateSeatState(seatID) { state in
             state.touch.clearFocus(touchID: touchID)
         }
@@ -275,7 +275,7 @@ extension InputRouter {
         deviceGraph.keyboardFocus(for: seatID)
     }
 
-    func focusedTouchSurface(for seatID: RawSeatID, touchID: Int32) -> RawObjectID? {
+    func focusedTouchSurface(for seatID: RawSeatID, touchID: RawTouchID) -> RawObjectID? {
         deviceGraph.touchFocus(for: seatID, touchID: touchID)
     }
 
@@ -299,11 +299,11 @@ extension InputRouter {
         deviceGraph.setKeyboardFocus(seatID: seatID, surfaceID: surfaceID)
     }
 
-    func setTouchFocus(seatID: RawSeatID, touchID: Int32, surfaceID: RawObjectID) {
+    func setTouchFocus(seatID: RawSeatID, touchID: RawTouchID, surfaceID: RawObjectID) {
         deviceGraph.setTouchFocus(seatID: seatID, touchID: touchID, surfaceID: surfaceID)
     }
 
-    func clearTouchFocus(seatID: RawSeatID, touchID: Int32) {
+    func clearTouchFocus(seatID: RawSeatID, touchID: RawTouchID) {
         deviceGraph.clearTouchFocus(seatID: seatID, touchID: touchID)
     }
 

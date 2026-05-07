@@ -46,9 +46,9 @@ struct WindowLifecycleTransitionTests {
     @Test
     func staleCallbacksAfterCloseAreNoOpTransitionTable() throws {
         let callbackEvents: [WindowEvent] = [
-            .contentInvalidated(bufferAvailable: true),
-            .frameBecameReady(bufferAvailable: true),
-            .bufferBecameAvailable(bufferAvailable: true),
+            .contentInvalidated(bufferAvailability: .available),
+            .frameBecameReady(bufferAvailability: .available),
+            .bufferBecameAvailable(bufferAvailability: .available),
             .transientStateReset,
         ]
 

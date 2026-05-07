@@ -113,7 +113,7 @@ enum TouchDeviceState: Equatable {
     case absent
     case present(
         identity: InputDeviceIdentity,
-        focusedSurfaceByTouchID: [Int32: RawObjectID]
+        focusedSurfaceByTouchID: [RawTouchID: RawObjectID]
     )
 
     var isPresent: Bool {
@@ -132,7 +132,7 @@ enum TouchDeviceState: Equatable {
         return identity.currentID
     }
 
-    func focus(touchID: Int32) -> RawObjectID? {
+    func focus(touchID: RawTouchID) -> RawObjectID? {
         guard case .present(_, let focusedSurfaceByTouchID) = self else {
             return nil
         }
@@ -140,7 +140,7 @@ enum TouchDeviceState: Equatable {
         return focusedSurfaceByTouchID[touchID]
     }
 
-    mutating func setFocus(touchID: Int32, surfaceID: RawObjectID) {
+    mutating func setFocus(touchID: RawTouchID, surfaceID: RawObjectID) {
         switch self {
         case .absent:
             self = .present(
@@ -156,7 +156,7 @@ enum TouchDeviceState: Equatable {
         }
     }
 
-    mutating func clearFocus(touchID: Int32) {
+    mutating func clearFocus(touchID: RawTouchID) {
         guard case .present(let identity, var focusedSurfaceByTouchID) = self else {
             return
         }

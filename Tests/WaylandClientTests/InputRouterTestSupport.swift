@@ -233,7 +233,7 @@ func rawTouchDown(
     surfaceID: RawObjectID?,
     serial: UInt32 = 1,
     time: UInt32 = 2,
-    id: Int32 = 3,
+    id: RawTouchID = 3,
     xRaw: Int32 = 0,
     yRaw: Int32 = 0,
     deviceID: RawInputDeviceID? = nil
@@ -262,7 +262,7 @@ func rawTouchUp(
     seatID: RawSeatID,
     serial: UInt32 = 4,
     time: UInt32 = 5,
-    id: Int32 = 3
+    id: RawTouchID = 3
 ) -> RawInputEvent {
     rawEvent(
         sequence: sequence,
@@ -275,7 +275,7 @@ func rawTouchMotion(
     sequence: UInt64,
     seatID: RawSeatID,
     time: UInt32 = 6,
-    id: Int32 = 3,
+    id: RawTouchID = 3,
     xRaw: Int32 = 0,
     yRaw: Int32 = 0,
     deviceID: RawInputDeviceID? = nil
@@ -300,7 +300,7 @@ func rawTouchMotion(
 func rawTouchShape(
     sequence: UInt64,
     seatID: RawSeatID,
-    id: Int32 = 3,
+    id: RawTouchID = 3,
     majorRaw: Int32 = 512,
     minorRaw: Int32 = 256
 ) -> RawInputEvent {
@@ -322,7 +322,7 @@ func rawTouchShape(
 func rawTouchOrientation(
     sequence: UInt64,
     seatID: RawSeatID,
-    id: Int32 = 3,
+    id: RawTouchID = 3,
     orientationRaw: Int32 = 128
 ) -> RawInputEvent {
     rawEvent(

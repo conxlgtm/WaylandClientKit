@@ -1,13 +1,13 @@
 package enum PopupEvent: Equatable, Sendable {
     case initialCommitSent
     case configureReceived(PopupConfigureSequence)
-    case contentInvalidated(bufferAvailable: Bool)
-    case frameBecameReady(bufferAvailable: Bool)
-    case bufferBecameAvailable(bufferAvailable: Bool)
-    case redrawRequestConsumed(bufferAvailable: Bool)
+    case contentInvalidated(bufferAvailability: RedrawBufferAvailability)
+    case frameBecameReady(bufferAvailability: RedrawBufferAvailability)
+    case bufferBecameAvailable(bufferAvailability: RedrawBufferAvailability)
+    case redrawRequestConsumed(bufferAvailability: RedrawBufferAvailability)
     case presentationStarted(PopupPresentationRequest)
     case presentationBlockedByBuffer
-    case presentationSucceeded(generation: UInt64, bufferAvailable: Bool)
+    case presentationSucceeded(generation: UInt64, bufferAvailability: RedrawBufferAvailability)
     case presentationFailed(generation: UInt64, PresentationError)
     case explicitClose
     case compositorDismissed
@@ -117,22 +117,22 @@ package struct PopupModel: Equatable, Sendable {
             return try reduceInitialCommitSent()
         case .configureReceived(let sequence):
             return try reduceConfigureReceived(sequence)
-        case .contentInvalidated(let bufferAvailable):
-            return reduceRedraw(.contentInvalidated, bufferAvailable: bufferAvailable)
-        case .frameBecameReady(let bufferAvailable):
-            return reduceRedraw(.frameBecameReady, bufferAvailable: bufferAvailable)
-        case .bufferBecameAvailable(let bufferAvailable):
-            return reduceRedraw(.bufferBecameAvailable, bufferAvailable: bufferAvailable)
-        case .redrawRequestConsumed(let bufferAvailable):
-            return try reduceRedrawRequestConsumed(bufferAvailable: bufferAvailable)
+        case .contentInvalidated(let bufferAvailability):
+            return reduceRedraw(.contentInvalidated, bufferAvailability: bufferAvailability)
+        case .frameBecameReady(let bufferAvailability):
+            return reduceRedraw(.frameBecameReady, bufferAvailability: bufferAvailability)
+        case .bufferBecameAvailable(let bufferAvailability):
+            return reduceRedraw(.bufferBecameAvailable, bufferAvailability: bufferAvailability)
+        case .redrawRequestConsumed(let bufferAvailability):
+            return try reduceRedrawRequestConsumed(bufferAvailability: bufferAvailability)
         case .presentationStarted(let request):
             return try reducePresentationStarted(request)
         case .presentationBlockedByBuffer:
             return try reducePresentationBlockedByBuffer()
-        case .presentationSucceeded(let generation, let bufferAvailable):
+        case .presentationSucceeded(let generation, let bufferAvailability):
             return try reducePresentationSucceeded(
                 generation: generation,
-                bufferAvailable: bufferAvailable
+                bufferAvailability: bufferAvailability
             )
         case .presentationFailed(let generation, let error):
             return try reducePresentationFailed(generation: generation, error)
@@ -221,7 +221,7 @@ extension PopupModel {
         var effects: [PopupEffect] = [.ackConfigure(sequence.serial)]
         effects.append(
             contentsOf: mapRedrawEffects(
-                nextActiveState.redraw.reduce(.contentInvalidated, bufferAvailable: true)
+                nextActiveState.redraw.reduce(.contentInvalidated, bufferAvailability: .available)
             )
         )
         lifecycle = .active(nextActiveState)
@@ -229,7 +229,7 @@ extension PopupModel {
     }
 
     private mutating func reduceRedrawRequestConsumed(
-        bufferAvailable: Bool
+        bufferAvailability: RedrawBufferAvailability
     ) throws -> [PopupEffect] {
         let windowID = parentWindowID
         guard !isDestroyed else {
@@ -253,7 +253,7 @@ extension PopupModel {
 
             _ = activeState.redraw.reduce(
                 .redrawRequestConsumed,
-                bufferAvailable: bufferAvailable
+                bufferAvailability: bufferAvailability
             )
             let request = PopupPresentationRequest(
                 generation: activeState.redraw.generationForCurrentDraw,
@@ -313,7 +313,7 @@ extension PopupModel {
             )
             activeState.presentation = .idle
             return Self.mapRedrawEffects(
-                activeState.redraw.reduce(.drawBlockedByBuffer, bufferAvailable: false),
+                activeState.redraw.reduce(.drawBlockedByBuffer, bufferAvailability: .unavailable),
                 event: event
             )
         }
@@ -321,7 +321,7 @@ extension PopupModel {
 
     private mutating func reducePresentationSucceeded(
         generation: UInt64,
-        bufferAvailable: Bool
+        bufferAvailability: RedrawBufferAvailability
     ) throws -> [PopupEffect] {
         let windowID = parentWindowID
         let event = lifecycleEvent
@@ -335,7 +335,7 @@ extension PopupModel {
             return Self.mapRedrawEffects(
                 activeState.redraw.reduce(
                     .presented(generation: generation),
-                    bufferAvailable: bufferAvailable
+                    bufferAvailability: bufferAvailability
                 ),
                 event: event
             )
@@ -360,13 +360,13 @@ extension PopupModel {
 
     private mutating func reduceRedraw(
         _ event: WindowRedrawEvent,
-        bufferAvailable: Bool
+        bufferAvailability: RedrawBufferAvailability
     ) -> [PopupEffect] {
         guard !isClosed else { return [] }
         let lifecycleEvent = lifecycleEvent
         return updateActivePopupStateIfPresent { activeState in
             Self.mapRedrawEffects(
-                activeState.redraw.reduce(event, bufferAvailable: bufferAvailable),
+                activeState.redraw.reduce(event, bufferAvailability: bufferAvailability),
                 event: lifecycleEvent
             )
         }
@@ -399,7 +399,7 @@ extension PopupModel {
     private mutating func resetTransientState() -> [PopupEffect] {
         guard !isClosed else { return [] }
         return updateActivePopupStateIfPresent { activeState in
-            _ = activeState.redraw.reduce(.transientStateReset, bufferAvailable: false)
+            _ = activeState.redraw.reduce(.transientStateReset, bufferAvailability: .unavailable)
             activeState.presentation = .idle
             return []
         }

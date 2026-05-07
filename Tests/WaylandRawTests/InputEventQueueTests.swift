@@ -303,7 +303,7 @@ struct InputEventQueueCoalescingTests {
     private func touchMotionDraft(
         seatID: RawSeatID,
         deviceID: RawInputDeviceID,
-        touch: Int32,
+        touch: RawTouchID,
         time: UInt32,
         x: Int32
     ) -> RawInputEventDraft {

@@ -8,13 +8,13 @@ package enum WindowEvent: Equatable, Sendable {
     case initialCommitSent
     case published
     case configureReceived(XDGConfigureSequence)
-    case contentInvalidated(bufferAvailable: Bool)
-    case frameBecameReady(bufferAvailable: Bool)
-    case bufferBecameAvailable(bufferAvailable: Bool)
-    case redrawRequestConsumed(bufferAvailable: Bool)
+    case contentInvalidated(bufferAvailability: RedrawBufferAvailability)
+    case frameBecameReady(bufferAvailability: RedrawBufferAvailability)
+    case bufferBecameAvailable(bufferAvailability: RedrawBufferAvailability)
+    case redrawRequestConsumed(bufferAvailability: RedrawBufferAvailability)
     case presentationStarted(PresentationRequest)
     case presentationBlockedByBuffer
-    case presentationSucceeded(generation: UInt64, bufferAvailable: Bool)
+    case presentationSucceeded(generation: UInt64, bufferAvailability: RedrawBufferAvailability)
     case presentationFailed(generation: UInt64, PresentationError)
     case compositorCloseRequested(policy: CloseRequestPolicy)
     case explicitClose
