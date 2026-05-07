@@ -127,18 +127,18 @@ extension PopupRoleSurface {
                     retireSwapchain()
                 },
                 destroyRoleObjects: { [self] in
-                    destroyRoleObjects()
+                    try destroyRoleObjects()
                 }
             )
         )
     }
 
-    private func destroyRoleObjects() {
+    private func destroyRoleObjects() throws {
         onClose?()
         onClose = nil
         onRedrawRequested = nil
 
-        scaleInstallation.destroy()
-        destroyRoleResources()
+        destroyScaleResources()
+        try destroyRoleResources()
     }
 }

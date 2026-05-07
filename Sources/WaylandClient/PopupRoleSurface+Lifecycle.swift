@@ -188,12 +188,20 @@ extension PopupRoleSurface {
     }
 
     package func handlePreferredBufferScale(_ factor: Int32) {
+        guard !model.isClosed else {
+            resetTransientState()
+            return
+        }
+
         do {
+            let logicalSize = currentLogicalSize
             guard
-                try scaleInstallation.updatePreferredBufferScale(
-                    factor,
-                    logicalSize: currentLogicalSize
-                )
+                try updateScaleResources({ scaleInstallation in
+                    try scaleInstallation.updatePreferredBufferScale(
+                        factor,
+                        logicalSize: logicalSize
+                    )
+                })
             else { return }
             try markNeedsRedraw(bufferAvailable: true)
         } catch {
@@ -202,12 +210,20 @@ extension PopupRoleSurface {
     }
 
     package func handlePreferredFractionalScale(_ scale: UInt32) {
+        guard !model.isClosed else {
+            resetTransientState()
+            return
+        }
+
         do {
+            let logicalSize = currentLogicalSize
             guard
-                try scaleInstallation.updatePreferredFractionalScale(
-                    scale,
-                    logicalSize: currentLogicalSize
-                )
+                try updateScaleResources({ scaleInstallation in
+                    try scaleInstallation.updatePreferredFractionalScale(
+                        scale,
+                        logicalSize: logicalSize
+                    )
+                })
             else { return }
             try markNeedsRedraw(bufferAvailable: true)
         } catch {

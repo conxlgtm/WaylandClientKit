@@ -264,9 +264,19 @@ extension PopupRoleSurface {
         set { roleResources?.popupOwner = newValue }
     }
 
-    package func destroyRoleResources() {
+    package func destroyRoleResources() throws {
         var removedRoleResources = surfaceRuntime.removeRoleResources()
         removedRoleResources?.destroy()
-        surfaceRuntime.markSurfaceDestroyed()
+        try surfaceRuntime.markSurfaceDestroyed()
+    }
+
+    package func destroyScaleResources() {
+        surfaceRuntime.destroyScaleInstallation()
+    }
+
+    package func updateScaleResources(
+        _ update: (inout SurfaceScaleInstallation) throws -> Bool
+    ) rethrows -> Bool {
+        try surfaceRuntime.updateScaleInstallation(update)
     }
 }
