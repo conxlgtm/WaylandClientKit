@@ -64,10 +64,42 @@ package struct XDGTopLevelConfigureSuggestion: Equatable, Sendable {
     }
 }
 
+package enum XDGDecorationConfigure: Equatable, Sendable {
+    case unchanged
+    case changed(RawDecorationMode)
+
+    package init(mode: RawDecorationMode?) {
+        if let mode {
+            self = .changed(mode)
+        } else {
+            self = .unchanged
+        }
+    }
+
+    package var mode: RawDecorationMode? {
+        guard case .changed(let mode) = self else {
+            return nil
+        }
+
+        return mode
+    }
+
+    package func replacingUnchanged(with fallback: XDGDecorationConfigure)
+        -> XDGDecorationConfigure
+    {
+        switch self {
+        case .changed:
+            self
+        case .unchanged:
+            fallback
+        }
+    }
+}
+
 package struct XDGConfigureSequence: Equatable, Sendable {
     package let serial: UInt32
     package let topLevel: XDGTopLevelConfigureSuggestion
-    package let decorationMode: RawDecorationMode?
+    package let decoration: XDGDecorationConfigure
 
     package init(
         serial configureSerial: UInt32,
@@ -76,7 +108,11 @@ package struct XDGConfigureSequence: Equatable, Sendable {
     ) {
         serial = configureSerial
         topLevel = topLevelSuggestion
-        decorationMode = configureDecorationMode
+        decoration = XDGDecorationConfigure(mode: configureDecorationMode)
+    }
+
+    package var decorationMode: RawDecorationMode? {
+        decoration.mode
     }
 }
 
@@ -85,7 +121,8 @@ package final class XDGConfigureState {
     private var pendingStates: [XDGTopLevelState] = []
     private var pendingBounds: TopLevelSize?
     private var pendingWMCapabilities: [XDGWMCapability] = []
-    private var pendingDecorationMode: RawDecorationMode?
+    private var pendingDecoration = XDGDecorationConfigure.unchanged
+    private var unconsumedDecoration = XDGDecorationConfigure.unchanged
     private var latestConfigure: XDGConfigureSequence?
     private var pendingError: RuntimeError?
     private var onSurfaceConfigure: (() -> Void)?
@@ -123,12 +160,12 @@ package final class XDGConfigureState {
     }
 
     package func handleDecorationConfigure(mode: RawDecorationMode) {
-        pendingDecorationMode = mode
+        pendingDecoration = .changed(mode)
     }
 
     package func handleDecorationConfigure(rawMode: UInt32) {
         do {
-            pendingDecorationMode = try RawDecorationMode(validating: rawMode)
+            pendingDecoration = .changed(try RawDecorationMode(validating: rawMode))
         } catch {
             recordError(error)
         }
@@ -149,7 +186,7 @@ package final class XDGConfigureState {
 
     @discardableResult
     package func handleSurfaceConfigure(serial: UInt32) -> XDGConfigureSequence {
-        let decorationMode = pendingDecorationMode ?? latestConfigure?.decorationMode
+        let decoration = pendingDecoration.replacingUnchanged(with: unconsumedDecoration)
         let configure = XDGConfigureSequence(
             serial: serial,
             topLevel: XDGTopLevelConfigureSuggestion(
@@ -158,9 +195,10 @@ package final class XDGConfigureState {
                 bounds: pendingBounds,
                 wmCapabilities: pendingWMCapabilities
             ),
-            decorationMode: decorationMode
+            decorationMode: decoration.mode
         )
-        pendingDecorationMode = nil
+        pendingDecoration = .unchanged
+        unconsumedDecoration = decoration
         latestConfigure = configure
         hasReceivedInitialConfigure = true
         onSurfaceConfigure?()
@@ -170,6 +208,7 @@ package final class XDGConfigureState {
     package func consumeLatestConfigure() -> XDGConfigureSequence? {
         defer {
             latestConfigure = nil
+            unconsumedDecoration = .unchanged
         }
 
         return latestConfigure

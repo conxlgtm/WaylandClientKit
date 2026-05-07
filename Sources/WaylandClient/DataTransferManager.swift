@@ -5,6 +5,26 @@ package struct DataTransferSelectionChange: Equatable, Sendable {
     package let offerID: DataOfferID?
 }
 
+package enum DataTransferCallbackContext: Equatable, Sendable {
+    case dataDevice(SeatID)
+    case dataOffer(DataOfferID)
+    case dataSource(DataSourceID)
+}
+
+package struct DataTransferCallbackFailure:
+    Error,
+    Equatable,
+    Sendable,
+    CustomStringConvertible
+{
+    package let context: DataTransferCallbackContext
+    package let error: DataTransferError
+
+    package var description: String {
+        "\(context): \(error.description)"
+    }
+}
+
 package protocol DataTransferDeviceBinding: AnyObject {
     var seatID: SeatID { get }
 
@@ -124,7 +144,7 @@ package final class DataTransferManager {
     package var pendingSourceSendRequests: [DataTransferSourceSendRequest] = []
     var offerIDsByHandle: [RawDataOfferHandle: DataOfferID] = [:]
     var runtimeOffersByID: [DataOfferID: RuntimeDataOffer] = [:]
-    package var pendingCallbackError: (any Error)?
+    package var pendingCallbackError: DataTransferCallbackFailure?
     private var nextOfferID: UInt64 = 1
     package var nextSourceID: UInt64 = 1
 
@@ -153,6 +173,8 @@ package final class DataTransferManager {
         for seatID in Self.sortedSeatIDs(desiredSeats.subtracting(currentSeats)) {
             try apply(.seatAvailable(seatID))
         }
+
+        preconditionInvariantsHold()
     }
 
     package func apply(_ action: DataTransferAction) throws {
@@ -239,8 +261,9 @@ package final class DataTransferManager {
             case .motion:
                 break
             }
+            preconditionInvariantsHold()
         } catch {
-            recordCallbackError(error)
+            recordCallbackError(error, context: .dataDevice(seatID))
         }
     }
 
@@ -286,8 +309,9 @@ package final class DataTransferManager {
                 runtimeOffer.appendPendingMIMEType(mimeType)
                 runtimeOffersByID[offerID] = runtimeOffer
             }
+            preconditionInvariantsHold()
         } catch {
-            recordCallbackError(error)
+            recordCallbackError(error, context: .dataOffer(offerID))
         }
     }
 
@@ -381,7 +405,7 @@ extension DataTransferManager {
         }
 
         pendingCallbackError = nil
-        throw error
+        throw error.error
     }
 
     package func drainDataTransferEvents() -> [DataTransferEvent] {
@@ -390,12 +414,22 @@ extension DataTransferManager {
         return pendingEvents
     }
 
-    package func recordCallbackError(_ error: any Error) {
+    package func recordCallbackError(
+        _ error: any Error,
+        context: DataTransferCallbackContext
+    ) {
         guard pendingCallbackError == nil else {
             return
         }
 
-        pendingCallbackError = error
+        pendingCallbackError = DataTransferCallbackFailure(
+            context: context,
+            error: Self.dataTransferCallbackError(error)
+        )
+    }
+
+    private static func dataTransferCallbackError(_ error: any Error) -> DataTransferError {
+        (error as? DataTransferError) ?? .unavailable
     }
 
     private func handleUnsupportedDragEnter(

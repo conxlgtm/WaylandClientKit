@@ -75,16 +75,16 @@ final class InputRouter {
             applySeatSnapshot(event, snapshot)
             return routedEvent(
                 event,
-                windowID: nil,
+                target: .display,
                 kind: .seat(.changed(convert(snapshot)))
             )
         case .seatRemoved:
             deviceGraph.removeSeat(event.seatID)
-            return routedEvent(event, windowID: nil, kind: .seat(.removed))
+            return routedEvent(event, target: .display, kind: .seat(.removed))
         case .diagnostic(let diagnostic):
             return routedEvent(
                 event,
-                windowID: nil,
+                target: .display,
                 kind: .diagnostic(convert(diagnostic))
             )
         case .pointer(let pointerEvent):
@@ -107,7 +107,7 @@ final class InputRouter {
             }
             return routedEvent(
                 rawEvent,
-                windowID: windowID(for: enter.surfaceID),
+                target: target(for: enter.surfaceID),
                 kind: .pointer(
                     .entered(
                         PointerLocation(x: enter.x.doubleValue, y: enter.y.doubleValue),
@@ -116,17 +116,17 @@ final class InputRouter {
                 )
             )
         case .leave(let leave):
-            let windowID = windowID(for: leave.surfaceID)
+            let target = target(for: leave.surfaceID)
             clearPointerFocus(seatID: rawEvent.seatID, surfaceID: leave.surfaceID)
             return routedEvent(
                 rawEvent,
-                windowID: windowID,
+                target: target,
                 kind: .pointer(.left(serial: InputSerial(rawValue: leave.serial)))
             )
         case .motion(let motion):
             return routedEvent(
                 rawEvent,
-                windowID: focusedPointerWindow(for: rawEvent.seatID),
+                target: target(forFocusedSurface: focusedPointerSurface(for: rawEvent.seatID)),
                 kind: .pointer(
                     .moved(
                         PointerLocation(x: motion.x.doubleValue, y: motion.y.doubleValue),
@@ -137,7 +137,7 @@ final class InputRouter {
         case .button(let button):
             return routedEvent(
                 rawEvent,
-                windowID: focusedPointerWindow(for: rawEvent.seatID),
+                target: target(forFocusedSurface: focusedPointerSurface(for: rawEvent.seatID)),
                 kind: .pointer(
                     .button(
                         PointerButtonEvent(
@@ -152,7 +152,7 @@ final class InputRouter {
         case .axis(let axis):
             return routedEvent(
                 rawEvent,
-                windowID: focusedPointerWindow(for: rawEvent.seatID),
+                target: target(forFocusedSurface: focusedPointerSurface(for: rawEvent.seatID)),
                 kind: .pointer(.axis(convert(axis)))
             )
         }
@@ -190,10 +190,10 @@ final class InputRouter {
         case .motion(let motion):
             return routeTouchMotion(rawEvent, motion)
         case .frame:
-            return routedEvent(rawEvent, windowID: nil, kind: .touch(.frame))
+            return routedEvent(rawEvent, target: .display, kind: .touch(.frame))
         case .cancel:
             clearTouchFocuses(seatID: rawEvent.seatID)
-            return routedEvent(rawEvent, windowID: nil, kind: .touch(.cancel))
+            return routedEvent(rawEvent, target: .display, kind: .touch(.cancel))
         case .shape(let shape):
             return routeTouchShape(rawEvent, shape)
         case .orientation(let orientation):
@@ -203,119 +203,13 @@ final class InputRouter {
 }
 
 extension InputRouter {
-    func routeTouchDown(
-        _ rawEvent: RawInputEvent,
-        _ down: RawTouchDown
-    ) -> InputEvent {
-        if let surfaceID = down.surfaceID {
-            setTouchFocus(seatID: rawEvent.seatID, touchID: down.id, surfaceID: surfaceID)
-        }
-        return routedEvent(
-            rawEvent,
-            windowID: windowID(for: down.surfaceID),
-            kind: .touch(
-                .down(
-                    TouchDownEvent(
-                        serial: InputSerial(rawValue: down.serial),
-                        time: down.time,
-                        id: down.id,
-                        location: PointerLocation(
-                            x: down.x.doubleValue,
-                            y: down.y.doubleValue
-                        )
-                    )
-                )
-            )
-        )
-    }
-
-    func routeTouchUp(
-        _ rawEvent: RawInputEvent,
-        _ up: RawTouchUp
-    ) -> InputEvent {
-        let windowID = focusedTouchWindow(for: rawEvent.seatID, touchID: up.id)
-        clearTouchFocus(seatID: rawEvent.seatID, touchID: up.id)
-        return routedEvent(
-            rawEvent,
-            windowID: windowID,
-            kind: .touch(
-                .up(
-                    TouchUpEvent(
-                        serial: InputSerial(rawValue: up.serial),
-                        time: up.time,
-                        id: up.id
-                    )
-                )
-            )
-        )
-    }
-
-    func routeTouchMotion(
-        _ rawEvent: RawInputEvent,
-        _ motion: RawTouchMotion
-    ) -> InputEvent {
-        routedEvent(
-            rawEvent,
-            windowID: focusedTouchWindow(for: rawEvent.seatID, touchID: motion.id),
-            kind: .touch(
-                .motion(
-                    TouchMotionEvent(
-                        time: motion.time,
-                        id: motion.id,
-                        location: PointerLocation(
-                            x: motion.x.doubleValue,
-                            y: motion.y.doubleValue
-                        )
-                    )
-                )
-            )
-        )
-    }
-
-    func routeTouchShape(
-        _ rawEvent: RawInputEvent,
-        _ shape: RawTouchShape
-    ) -> InputEvent {
-        routedEvent(
-            rawEvent,
-            windowID: focusedTouchWindow(for: rawEvent.seatID, touchID: shape.id),
-            kind: .touch(
-                .shape(
-                    TouchShapeEvent(
-                        id: shape.id,
-                        major: shape.major.doubleValue,
-                        minor: shape.minor.doubleValue
-                    )
-                )
-            )
-        )
-    }
-
-    func routeTouchOrientation(
-        _ rawEvent: RawInputEvent,
-        _ orientation: RawTouchOrientation
-    ) -> InputEvent {
-        routedEvent(
-            rawEvent,
-            windowID: focusedTouchWindow(for: rawEvent.seatID, touchID: orientation.id),
-            kind: .touch(
-                .orientation(
-                    TouchOrientationEvent(
-                        id: orientation.id,
-                        orientation: orientation.orientation.doubleValue
-                    )
-                )
-            )
-        )
-    }
-
     func routeKeyboardKeymap(
         _ rawEvent: RawInputEvent,
         _ keymap: RawKeyboardKeymapPayload
     ) -> InputEvent {
         routedEvent(
             rawEvent,
-            windowID: nil,
+            target: .display,
             kind: .keyboard(
                 .raw(
                     .keymapChanged(
@@ -339,7 +233,7 @@ extension InputRouter {
 
         return routedEvent(
             rawEvent,
-            windowID: windowID(for: enter.surfaceID),
+            target: target(for: enter.surfaceID),
             kind: .keyboard(
                 .raw(
                     .entered(
@@ -355,11 +249,11 @@ extension InputRouter {
         _ rawEvent: RawInputEvent,
         _ leave: RawKeyboardLeave
     ) -> InputEvent {
-        let windowID = windowID(for: leave.surfaceID)
+        let target = target(for: leave.surfaceID)
         clearKeyboardFocus(seatID: rawEvent.seatID, surfaceID: leave.surfaceID)
         return routedEvent(
             rawEvent,
-            windowID: windowID,
+            target: target,
             kind: .keyboard(.raw(.left(serial: InputSerial(rawValue: leave.serial))))
         )
     }
@@ -370,7 +264,7 @@ extension InputRouter {
     ) -> InputEvent {
         routedEvent(
             rawEvent,
-            windowID: focusedKeyboardWindow(for: rawEvent.seatID),
+            target: target(forFocusedSurface: focusedKeyboardSurface(for: rawEvent.seatID)),
             kind: .keyboard(
                 .raw(
                     .key(
@@ -392,7 +286,7 @@ extension InputRouter {
     ) -> InputEvent {
         routedEvent(
             rawEvent,
-            windowID: nil,
+            target: .display,
             kind: .keyboard(
                 .raw(
                     .modifiers(
@@ -415,7 +309,7 @@ extension InputRouter {
     ) -> InputEvent {
         routedEvent(
             rawEvent,
-            windowID: nil,
+            target: .display,
             kind: .keyboard(
                 .raw(
                     .repeatInfo(
@@ -428,15 +322,34 @@ extension InputRouter {
 
     func routedEvent(
         _ rawEvent: RawInputEvent,
-        windowID: WindowID?,
+        target: InputEventTarget,
         kind: InputEventKind
     ) -> InputEvent {
         InputEvent(
             sequence: rawEvent.sequence,
             seatID: SeatID(rawValue: rawEvent.seatID.rawValue),
-            windowID: windowID,
+            target: target,
             kind: kind
         )
+    }
+
+    func target(for surfaceID: RawObjectID?) -> InputEventTarget {
+        guard let surfaceID else {
+            return .unmanagedSurface
+        }
+        guard let windowID = windowID(for: surfaceID) else {
+            return .unmanagedSurface
+        }
+
+        return .window(windowID)
+    }
+
+    func target(forFocusedSurface surfaceID: RawObjectID?) -> InputEventTarget {
+        guard let surfaceID else {
+            return .focusless
+        }
+
+        return target(for: surfaceID)
     }
 
     func convert(_ snapshot: RawSeatEventSnapshot) -> SeatStateSnapshot {

@@ -171,6 +171,13 @@ struct DataTransferManagerDragAndDropTests {
 
         device.emit(.enter(dndEnter(offer: offerHandle1)))
 
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataDevice(seat1),
+                    error: .unknownOffer
+                )
+        )
         #expect(throws: DataTransferError.unknownOffer) {
             try manager.throwPendingCallbackErrorIfAny()
         }
