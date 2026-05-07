@@ -6,9 +6,7 @@ public actor WaylandDisplay {
     public static let defaultConfigureTimeoutMilliseconds: Int32 = 1_000
 
     private nonisolated let runtime: WaylandDisplayRuntime
-    private var core: DisplayCore?
-    private var eventSource: DisplayEventSource?
-    private var didCloseBeforeDeinit = false
+    private var lifecycle = WaylandDisplayLifecycle.initializing
 
     public nonisolated var unownedExecutor: UnownedSerialExecutor {
         unsafe runtime.executor.asUnownedSerialExecutor()
@@ -35,7 +33,7 @@ public actor WaylandDisplay {
     }
 
     isolated deinit {
-        runtime.actorDidDeinitialize(core: &core, didClose: didCloseBeforeDeinit)
+        runtime.actorDidDeinitialize(lifecycle: &lifecycle)
     }
 
     private static func openConnection(
@@ -90,7 +88,11 @@ public actor WaylandDisplay {
     }
 
     public var isClosed: Bool {
-        core?.isClosed ?? true
+        guard case .active(let core, _) = lifecycle else {
+            return true
+        }
+
+        return core.isClosed
     }
 
     public func currentPointerCursor() throws -> PointerCursor {
@@ -219,24 +221,30 @@ public actor WaylandDisplay {
     }
 
     package func closeWindow(_ windowID: WindowID) {
-        core?.closeWindow(windowID)
-    }
-
-    package func closePopup(_ popupID: PopupID) {
-        core?.closePopup(popupID)
-    }
-
-    public func close() {
-        guard let activeCore = core else {
-            didCloseBeforeDeinit = true
+        guard case .active(let core, _) = lifecycle else {
             return
         }
 
-        runtime.clearEventSource(eventSource)
+        core.closeWindow(windowID)
+    }
+
+    package func closePopup(_ popupID: PopupID) {
+        guard case .active(let core, _) = lifecycle else {
+            return
+        }
+
+        core.closePopup(popupID)
+    }
+
+    public func close() {
+        guard case .active(let activeCore, let activeEventSource) = lifecycle else {
+            lifecycle = .closed
+            return
+        }
+
+        runtime.clearEventSource(activeEventSource)
         activeCore.close()
-        eventSource = nil
-        core = nil
-        didCloseBeforeDeinit = true
+        lifecycle = .closed
     }
 
     private func initialize(
@@ -244,7 +252,10 @@ public actor WaylandDisplay {
         discoveryTimeoutMilliseconds: Int32,
         configuration displayConfiguration: DisplayConfiguration
     ) throws {
-        precondition(core == nil, "WaylandDisplay initialized more than once")
+        precondition(
+            lifecycle.isInitializing,
+            "WaylandDisplay initialized more than once"
+        )
         let invariantFailureSink = RawInvariantFailureSink()
         let connection = try RawDisplayConnection.connect(
             invariantFailureSink: invariantFailureSink,
@@ -266,17 +277,32 @@ public actor WaylandDisplay {
         let displayCore = DisplayCore(session: session, eventHub: runtime.eventHub)
         session.setRawInvariantFailureReporter(displayCore)
         let source = DisplayEventSource(core: displayCore)
-        core = displayCore
-        eventSource = source
+        lifecycle = .active(core: displayCore, eventSource: source)
         try runtime.installEventSource(source)
     }
 
     private func requireCore() throws -> DisplayCore {
-        guard let core else {
+        guard case .active(let core, _) = lifecycle else {
             throw ClientError.display(.closed)
         }
 
         return core
+    }
+}
+
+private enum WaylandDisplayLifecycle {
+    case initializing
+    case active(core: DisplayCore, eventSource: DisplayEventSource)
+    case closed
+    case abandoned
+
+    var isInitializing: Bool {
+        switch self {
+        case .initializing:
+            true
+        case .active, .closed, .abandoned:
+            false
+        }
     }
 }
 
@@ -372,28 +398,31 @@ private final class WaylandDisplayRuntime: Sendable {
         executor.clearEventSource(source)
     }
 
-    func actorDidDeinitialize(core: inout DisplayCore?, didClose: Bool) {
-        #if DEBUG
-            assert(didClose, "WaylandDisplay leaked; call close() or use withConnection(_:)")
-        #endif
-
-        guard !didClose else {
+    func actorDidDeinitialize(lifecycle: inout WaylandDisplayLifecycle) {
+        switch lifecycle {
+        case .closed, .abandoned:
             executor.requestStopAfterCurrentJob()
             return
-        }
+        case .initializing:
+            eventHub.finish(throwing: .closed)
+            lifecycle = .closed
+            executor.requestStopAfterCurrentJob()
+            return
+        case .active(let leakedCore, _):
+            #if DEBUG
+                assertionFailure("WaylandDisplay leaked; call close() or use withConnection(_:)")
+            #endif
 
-        eventHub.finish(throwing: .closed)
-        executor.abandonWaylandEventSourceWithoutDestroyingRawResources()
+            eventHub.finish(throwing: .closed)
+            executor.abandonWaylandEventSourceWithoutDestroyingRawResources()
 
-        // A missed close can deinitialize from an arbitrary thread. Normal
-        // Wayland teardown is ordered owner-thread work, so release builds
-        // abandon the raw graph instead of faking cleanup from deinit.
-        if let leakedCore = core {
+            // A missed close can deinitialize from an arbitrary thread. Normal
+            // Wayland teardown is ordered owner-thread work, so release builds
+            // abandon the raw graph instead of faking cleanup from deinit.
             unsafe intentionallyLeakObjectForWrongThreadResourceFallback(leakedCore)
-            core = nil
+            lifecycle = .abandoned
+            executor.requestStopAfterCurrentJob(.abandonWaylandSources)
         }
-
-        executor.requestStopAfterCurrentJob(.abandonWaylandSources)
     }
 }
 
