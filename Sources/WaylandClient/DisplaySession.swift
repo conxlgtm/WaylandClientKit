@@ -273,7 +273,7 @@ package final class DisplaySession {
         InputEvent(
             sequence: event.sequence,
             seatID: event.seatID,
-            windowID: nil,
+            target: .display,
             kind: .diagnostic(
                 InputDiagnostic(
                     .inputPipelineOverflow(

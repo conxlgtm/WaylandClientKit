@@ -128,7 +128,11 @@ extension PopupRoleSurface {
     }
 
     package func failPresentationIfStillActive(generation: UInt64) {
-        guard model.presentation == .drawing(generation: generation) else { return }
+        guard case .drawing(let request) = model.presentation,
+            request.generation == generation
+        else {
+            return
+        }
 
         failActivePresentation(generation: generation)
     }
