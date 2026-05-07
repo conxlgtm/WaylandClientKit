@@ -47,7 +47,7 @@ struct SurfaceGraphTests {
         )
 
         #expect(
-            throws: SurfaceGraphError.nonTopmostPopupDestroy(
+            throws: DisplaySurfaceStoreError.nonTopmostPopupDestroy(
                 requested: firstPopup,
                 topmost: secondPopup
             )
@@ -167,7 +167,11 @@ struct SurfaceGraphTests {
             parent: rootSurface
         )
 
-        #expect(throws: SurfaceGraphError.toplevelDestroyedWithLivePopups(WindowID(rawValue: 5))) {
+        #expect(
+            throws:
+                DisplaySurfaceStoreError
+                .toplevelDestroyedWithLivePopups(WindowID(rawValue: 5))
+        ) {
             try graph.unregisterTopLevel(rootSurface)
         }
     }
@@ -247,20 +251,20 @@ struct SurfaceGraphTests {
 
         try graph.registerTopLevel(surfaceID: rootSurface, windowID: WindowID(rawValue: 10))
 
-        #expect(throws: SurfaceGraphError.duplicateSurface(rootSurface)) {
+        #expect(throws: DisplaySurfaceStoreError.duplicateSurface(rootSurface)) {
             try graph.registerTopLevel(surfaceID: rootSurface, windowID: WindowID(rawValue: 11))
         }
-        #expect(throws: SurfaceGraphError.unknownParent(SurfaceID(rawValue: 999))) {
+        #expect(throws: DisplaySurfaceStoreError.unknownParent(SurfaceID(rawValue: 999))) {
             try graph.registerPopup(
                 surfaceID: popupSurface,
                 popupID: PopupID(rawValue: 1_001),
                 parent: SurfaceID(rawValue: 999)
             )
         }
-        #expect(throws: SurfaceGraphError.unknownSurface(popupSurface)) {
+        #expect(throws: DisplaySurfaceStoreError.unknownSurface(popupSurface)) {
             try graph.destroyClientRequestedPopup(popupSurface)
         }
-        #expect(throws: SurfaceGraphError.unknownSurface(popupSurface)) {
+        #expect(throws: DisplaySurfaceStoreError.unknownSurface(popupSurface)) {
             try graph.dismissPopupFromCompositor(popupSurface)
         }
     }
@@ -283,7 +287,7 @@ struct SurfaceGraphIdentityTests {
             parent: rootSurface
         )
 
-        #expect(throws: SurfaceGraphError.duplicatePopup(popupID)) {
+        #expect(throws: DisplaySurfaceStoreError.duplicatePopup(popupID)) {
             try graph.registerPopup(
                 surfaceID: secondPopupSurface,
                 popupID: popupID,
@@ -332,10 +336,10 @@ struct SurfaceGraphIdentityTests {
 
         _ = try graph.dismissPopupFromCompositor(popupSurface)
 
-        #expect(throws: SurfaceGraphError.unknownSurface(popupSurface)) {
+        #expect(throws: DisplaySurfaceStoreError.unknownSurface(popupSurface)) {
             try graph.dismissPopupFromCompositor(popupSurface)
         }
-        #expect(throws: SurfaceGraphError.unknownSurface(popupSurface)) {
+        #expect(throws: DisplaySurfaceStoreError.unknownSurface(popupSurface)) {
             try graph.destroyClientRequestedPopup(popupSurface)
         }
     }
