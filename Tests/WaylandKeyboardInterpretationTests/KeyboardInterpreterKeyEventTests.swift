@@ -67,6 +67,31 @@ struct KeyboardInterpreterKeyEventTests {
         #expect(key.state == .released)
         #expect(key.keysymName == "q")
         #expect(key.utf8 == nil)
+        #expect(!key.repeats)
+        #expect(key.interpretation == .released(keysymName: "q"))
+    }
+
+    @Test
+    func unknownKeyStatePreservesStateWithoutTextOrRepeatPayload() throws {
+        let interpreter = try interpreterWithFixtureKeymap()
+        let deviceID = keyboardDevice()
+        let unknownState = RawKeyboardKeyState(rawValue: 99)
+        let event = try #require(
+            interpreter.consume(
+                rawKeyboardInputEvent(
+                    deviceID: deviceID,
+                    kind: .key(qKey(state: unknownState))
+                )
+            ).first
+        )
+        let key = try #require(event.interpretedKey)
+        let interpretedState = InterpretedKeyboardKeyState(rawValue: 99)
+
+        #expect(key.state == interpretedState)
+        #expect(key.keysymName == "q")
+        #expect(key.utf8 == nil)
+        #expect(!key.repeats)
+        #expect(key.interpretation == .unknown(state: interpretedState, keysymName: "q"))
     }
 
     @Test
@@ -167,6 +192,7 @@ struct KeyboardInterpreterKeyEventTests {
         requireSendable(InterpretedKeyboardEvent.self)
         requireSendable(InterpretedKeyboardEventKind.self)
         requireSendable(InterpretedKeyboardKey.self)
+        requireSendable(InterpretedKeyboardKeyInterpretation.self)
         requireSendable(InterpretedKeyboardKeyState.self)
         requireSendable(InterpretedKeyboardModifiers.self)
         requireSendable(KeyboardInterpretationUnavailable.self)

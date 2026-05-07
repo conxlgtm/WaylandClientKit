@@ -42,11 +42,8 @@ extension InputRouter {
                     time: key.time,
                     rawKeycode: key.evdevKeycode,
                     xkbKeycode: key.xkbKeycode,
-                    state: InterpretedKeyboardKeyState(rawValue: key.state.rawValue),
                     keysym: KeyboardKeysym(rawValue: key.keysym.rawValue),
-                    keysymName: key.keysymName,
-                    utf8: key.utf8,
-                    repeats: key.repeats
+                    interpretation: convert(key.interpretation)
                 )
             )
         case .modifiers(let modifiers):
@@ -71,6 +68,24 @@ extension InputRouter {
                 KeyboardInterpretationUnavailable(
                     reason: convert(unavailable.reason)
                 )
+            )
+        }
+    }
+
+    func convert(
+        _ interpretation: WaylandKeyboardInterpretation.InterpretedKeyboardKeyInterpretation
+    ) -> InterpretedKeyboardKeyInterpretation {
+        switch interpretation {
+        case .released(let keysymName):
+            .released(keysymName: keysymName)
+        case .pressed(let keysymName, let utf8, let repeats):
+            .pressed(keysymName: keysymName, utf8: utf8, repeats: repeats)
+        case .repeated(let keysymName, let utf8, let repeats):
+            .repeated(keysymName: keysymName, utf8: utf8, repeats: repeats)
+        case .unknown(let state, let keysymName):
+            .unknown(
+                state: InterpretedKeyboardKeyState(rawValue: state.rawValue),
+                keysymName: keysymName
             )
         }
     }
