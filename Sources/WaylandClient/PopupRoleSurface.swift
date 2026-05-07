@@ -265,7 +265,8 @@ extension PopupRoleSurface {
     }
 
     package func destroyRoleResources() {
-        roleResources?.destroy()
-        roleResources = nil
+        var removedRoleResources = surfaceRuntime.removeRoleResources()
+        removedRoleResources?.destroy()
+        surfaceRuntime.markSurfaceDestroyed()
     }
 }

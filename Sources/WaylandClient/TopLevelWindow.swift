@@ -711,6 +711,7 @@ extension TopLevelWindow {
             case .destroySurface:
                 destroyScaleObjects()
                 surface.destroy()
+                surfaceRuntime.markSurfaceDestroyed()
             }
         }
     }
@@ -739,8 +740,8 @@ extension TopLevelWindow {
         onCloseRequested = nil
         onRedrawRequested = nil
 
-        roleResources?.destroy()
-        roleResources = nil
+        var removedRoleResources = surfaceRuntime.removeRoleResources()
+        removedRoleResources?.destroy()
     }
 
     private func destroyScaleObjects() {
