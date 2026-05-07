@@ -46,8 +46,8 @@ package enum DisplaySurfaceStoreInvariantViolation:
     }
 }
 
-package struct DisplayWindowRecord {
-    package let window: TopLevelWindow
+package struct DisplayWindowRecord<WindowReference> {
+    package let window: WindowReference
     package let surfaceID: SurfaceID
 }
 
@@ -56,8 +56,16 @@ package enum DisplayPopupLifecycle: Equatable, Sendable {
     case closing
 }
 
-package struct DisplayPopupRecord {
-    package let popup: PopupRoleSurface
+package protocol DisplayWindowReference {
+    var displayWindowID: WindowID { get }
+}
+
+package protocol DisplayPopupReference {
+    var displayPopupID: PopupID { get }
+}
+
+package struct DisplayPopupRecord<PopupReference> {
+    package let popup: PopupReference
     package let surfaceID: SurfaceID
     package let parentWindowID: WindowID
     package var lifecycle: DisplayPopupLifecycle
@@ -68,9 +76,12 @@ package struct DisplayPopupDismissal {
     package let events: [PopupLifecycleEvent]
 }
 
-package struct DisplaySurfaceStore {
-    private var windowRecords: [WindowID: DisplayWindowRecord] = [:]
-    private var popupRecords: [PopupID: DisplayPopupRecord] = [:]
+package struct DisplaySurfaceStore<
+    WindowReference: DisplayWindowReference,
+    PopupReference: DisplayPopupReference
+> {
+    private var windowRecords: [WindowID: DisplayWindowRecord<WindowReference>] = [:]
+    private var popupRecords: [PopupID: DisplayPopupRecord<PopupReference>] = [:]
     private var closedPopupIDsStorage: Set<PopupID> = []
     private var topology = SurfaceGraph()
 
@@ -82,11 +93,11 @@ package struct DisplaySurfaceStore {
         Array(windowRecords.keys)
     }
 
-    package func window(_ windowID: WindowID) -> TopLevelWindow? {
+    package func window(_ windowID: WindowID) -> WindowReference? {
         windowRecords[windowID]?.window
     }
 
-    package func popup(_ popupID: PopupID) -> PopupRoleSurface? {
+    package func popup(_ popupID: PopupID) -> PopupReference? {
         popupRecords[popupID]?.popup
     }
 
@@ -111,14 +122,15 @@ package struct DisplaySurfaceStore {
     }
 
     package mutating func insertWindow(
-        _ window: TopLevelWindow,
+        _ window: WindowReference,
         surfaceID: SurfaceID
     ) throws {
-        guard windowRecords[window.id] == nil else {
-            throw DisplaySurfaceStoreError.duplicateWindow(window.id)
+        let windowID = window.displayWindowID
+        guard windowRecords[windowID] == nil else {
+            throw DisplaySurfaceStoreError.duplicateWindow(windowID)
         }
-        try topology.registerTopLevel(surfaceID: surfaceID, windowID: window.id)
-        windowRecords[window.id] = DisplayWindowRecord(
+        try topology.registerTopLevel(surfaceID: surfaceID, windowID: windowID)
+        windowRecords[windowID] = DisplayWindowRecord(
             window: window,
             surfaceID: surfaceID
         )
@@ -133,25 +145,26 @@ package struct DisplaySurfaceStore {
 
     @discardableResult
     package mutating func insertPopup(
-        _ popup: PopupRoleSurface,
+        _ popup: PopupReference,
         surfaceID: SurfaceID,
         parent parentSurfaceID: SurfaceID
     ) throws -> WindowID {
-        guard popupRecords[popup.id] == nil else {
-            throw DisplaySurfaceStoreError.duplicatePopup(popup.id)
+        let popupID = popup.displayPopupID
+        guard popupRecords[popupID] == nil else {
+            throw DisplaySurfaceStoreError.duplicatePopup(popupID)
         }
         let parentWindowID = try topology.registerPopup(
             surfaceID: surfaceID,
-            popupID: popup.id,
+            popupID: popupID,
             parent: parentSurfaceID
         )
-        popupRecords[popup.id] = DisplayPopupRecord(
+        popupRecords[popupID] = DisplayPopupRecord(
             popup: popup,
             surfaceID: surfaceID,
             parentWindowID: parentWindowID,
             lifecycle: .live
         )
-        closedPopupIDsStorage.remove(popup.id)
+        closedPopupIDsStorage.remove(popupID)
         return parentWindowID
     }
 
@@ -238,6 +251,15 @@ package struct DisplaySurfaceStore {
         for (popupID, record) in popupRecords {
             switch record.lifecycle {
             case .live:
+                if let node = topology.nodes[record.surfaceID],
+                    case .popup(let nodePopupID, _) = node.role,
+                    nodePopupID == popupID,
+                    node.windowID != record.parentWindowID
+                {
+                    throw
+                        DisplaySurfaceStoreInvariantViolation
+                        .popupParentWindowMismatch(popupID)
+                }
                 guard
                     topology.popupNodeMatches(
                         surfaceID: record.surfaceID,
@@ -281,5 +303,17 @@ package struct DisplaySurfaceStore {
                 }
             }
         }
+    }
+}
+
+extension TopLevelWindow: DisplayWindowReference {
+    package var displayWindowID: WindowID {
+        id
+    }
+}
+
+extension PopupRoleSurface: DisplayPopupReference {
+    package var displayPopupID: PopupID {
+        id
     }
 }
