@@ -145,8 +145,10 @@ struct PopupDomainTypesTests {
             state.handleSurfaceConfigure(serial: 1)
                 == .failed(.invalidWindowConfiguration(.nonPositiveInt32(value: 0)))
         )
+        #expect(!state.hasReceivedInitialConfigure)
         #expect(throws: ClientError.invalidWindowConfiguration(.nonPositiveInt32(value: 0))) {
             try state.throwPendingErrorIfAny()
         }
+        #expect(!state.hasReceivedInitialConfigure)
     }
 }

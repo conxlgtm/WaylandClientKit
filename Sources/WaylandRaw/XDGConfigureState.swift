@@ -130,19 +130,31 @@ private struct XDGConfigureCollection {
 }
 
 private enum XDGConfigureRecoverablePhase {
+    case collectingInitial(XDGConfigureCollection)
     case collecting(XDGConfigureCollection)
     case ready(XDGConfigureSequence, XDGConfigureCollection)
 
     var collection: XDGConfigureCollection {
         switch self {
-        case .collecting(let collection),
+        case .collectingInitial(let collection),
+            .collecting(let collection),
             .ready(_, let collection):
             collection
+        }
+    }
+
+    var hasReceivedInitialConfigure: Bool {
+        switch self {
+        case .collectingInitial:
+            false
+        case .collecting, .ready:
+            true
         }
     }
 }
 
 private enum XDGConfigurePhase {
+    case collectingInitial(XDGConfigureCollection)
     case collecting(XDGConfigureCollection)
     case ready(XDGConfigureSequence, XDGConfigureCollection)
     case failed(RuntimeError, recovery: XDGConfigureRecoverablePhase)
@@ -152,10 +164,12 @@ package final class XDGConfigureState {
     private var phase: XDGConfigurePhase
     private var onSurfaceConfigure: (() -> Void)?
 
-    package private(set) var hasReceivedInitialConfigure = false
+    package var hasReceivedInitialConfigure: Bool {
+        recoverablePhase.hasReceivedInitialConfigure
+    }
 
     package init(initialSize: TopLevelSize = .unspecified) {
-        phase = .collecting(
+        phase = .collectingInitial(
             XDGConfigureCollection(
                 parts: PendingTopLevelConfigureParts(size: initialSize)
             )
@@ -243,7 +257,6 @@ package final class XDGConfigureState {
         collection.parts.decoration = .unchanged
         collection.carriedDecoration = decoration
         replaceRecoverablePhase(.ready(configure, collection))
-        hasReceivedInitialConfigure = true
         onSurfaceConfigure?()
         return configure
     }
@@ -260,6 +273,8 @@ package final class XDGConfigureState {
 
     private var recoverablePhase: XDGConfigureRecoverablePhase {
         switch phase {
+        case .collectingInitial(let collection):
+            .collectingInitial(collection)
         case .collecting(let collection):
             .collecting(collection)
         case .ready(let sequence, let collection):
@@ -271,6 +286,9 @@ package final class XDGConfigureState {
 
     private func updateCollection(_ update: (inout XDGConfigureCollection) -> Void) {
         switch recoverablePhase {
+        case .collectingInitial(var collection):
+            update(&collection)
+            replaceRecoverablePhase(.collectingInitial(collection))
         case .collecting(var collection):
             update(&collection)
             replaceRecoverablePhase(.collecting(collection))
@@ -291,6 +309,8 @@ package final class XDGConfigureState {
 
     private func apply(_ recovery: XDGConfigureRecoverablePhase) {
         switch recovery {
+        case .collectingInitial(let collection):
+            phase = .collectingInitial(collection)
         case .collecting(let collection):
             phase = .collecting(collection)
         case .ready(let sequence, let collection):
