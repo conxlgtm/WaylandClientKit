@@ -136,14 +136,13 @@ extension OwnedFileDescriptor {
             return
         }
 
+        storage = nil
         let closeErrno = closeDescriptor(descriptor)
         guard closeErrno == 0 else {
             throw DataTransferError.closeFileDescriptor(
                 WaylandSystemErrno(unchecked: Self.normalizeErrno(closeErrno))
             )
         }
-
-        storage = nil
     }
 
     public mutating func releaseRawValue() -> Int32 {

@@ -228,19 +228,19 @@ package enum SurfaceScaleInstallation {
             )
             return .fractional(
                 resources: resources,
-                state: SurfaceScaleState(usesFractionalScale: true)
+                state: SurfaceScaleState(capability: .fractional)
             )
         case (.missing, .bound):
             callbacks.onFractionalScaleUnavailable()
             return .integer(
                 owner: newSurfaceScaleOwner,
-                state: SurfaceScaleState(usesFractionalScale: false)
+                state: SurfaceScaleState(capability: .integerOnly)
             )
         case (.bound, .missing),
             (.missing, .missing):
             return .integer(
                 owner: newSurfaceScaleOwner,
-                state: SurfaceScaleState(usesFractionalScale: false)
+                state: SurfaceScaleState(capability: .integerOnly)
             )
         }
     }

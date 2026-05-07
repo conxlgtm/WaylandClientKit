@@ -6,7 +6,7 @@ extension DataTransferManager {
         backend.preconditionIsOwnerThread()
         try throwPendingCallbackErrorIfAny()
 
-        guard let offer = state.offerSnapshot(offerID) else {
+        guard let offer = store.offerSnapshot(offerID) else {
             throw DataTransferError.unknownOffer
         }
         guard offer.mimeTypes.contains(mimeType) else {

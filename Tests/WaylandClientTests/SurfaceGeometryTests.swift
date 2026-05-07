@@ -6,24 +6,24 @@ import Testing
 struct SurfaceGeometryTests {
     @Test
     func surfaceScaleComputesBufferSizeWithHalfAwayFromZeroRounding() throws {
-        let cases: [(PositiveTopLevelSize, SurfaceScale, PositivePixelSize)] = [
+        let cases: [(PositiveLogicalSize, SurfaceScale, PositivePixelSize)] = [
             (
-                try PositiveTopLevelSize(width: 100, height: 50),
+                try PositiveLogicalSize(width: 100, height: 50),
                 .one,
                 try PositivePixelSize(width: 100, height: 50)
             ),
             (
-                try PositiveTopLevelSize(width: 100, height: 50),
+                try PositiveLogicalSize(width: 100, height: 50),
                 try SurfaceScale(numerator: 180, denominator: 120),
                 try PositivePixelSize(width: 150, height: 75)
             ),
             (
-                try PositiveTopLevelSize(width: 101, height: 51),
+                try PositiveLogicalSize(width: 101, height: 51),
                 try SurfaceScale(numerator: 180, denominator: 120),
                 try PositivePixelSize(width: 152, height: 77)
             ),
             (
-                try PositiveTopLevelSize(width: 1, height: 1),
+                try PositiveLogicalSize(width: 1, height: 1),
                 try SurfaceScale(numerator: 150, denominator: 120),
                 try PositivePixelSize(width: 1, height: 1)
             ),
@@ -41,7 +41,7 @@ struct SurfaceGeometryTests {
     @Test
     func tinyFractionalScaleProducesMinimumPositiveBufferSize() throws {
         let geometry = try SurfaceGeometry(
-            logicalSize: PositiveTopLevelSize(width: 1, height: 1),
+            logicalSize: PositiveLogicalSize(width: 1, height: 1),
             scale: SurfaceScale(numerator: 1, denominator: 120)
         )
 
@@ -50,7 +50,7 @@ struct SurfaceGeometryTests {
 
     @Test
     func surfaceScaleBufferSizeOverflowThrowsTypedError() throws {
-        let logicalSize = try PositiveTopLevelSize(width: 640, height: 480)
+        let logicalSize = try PositiveLogicalSize(width: 640, height: 480)
         let scale = try SurfaceScale(numerator: UInt32(Int32.max), denominator: 1)
 
         #expect(
@@ -93,8 +93,8 @@ struct SurfaceGeometryTests {
 
     @Test
     func surfaceScaleStateUsesIntegerScaleUntilFractionalScaleArrives() throws {
-        var scaleState = SurfaceScaleState(usesFractionalScale: true)
-        let logicalSize = try PositiveTopLevelSize(width: 80, height: 60)
+        var scaleState = SurfaceScaleState(capability: .fractional)
+        let logicalSize = try PositiveLogicalSize(width: 80, height: 60)
 
         #expect(scaleState.effectiveScale == .one)
         #expect(try scaleState.updatePreferredBufferScale(2, logicalSize: logicalSize))
@@ -129,8 +129,8 @@ struct SurfaceGeometryTests {
 
     @Test
     func surfaceScaleStateRejectsFractionalUpdateWhenFractionalScalingIsDisabled() throws {
-        var scaleState = SurfaceScaleState(usesFractionalScale: false)
-        let logicalSize = try PositiveTopLevelSize(width: 80, height: 60)
+        var scaleState = SurfaceScaleState(capability: .integerOnly)
+        let logicalSize = try PositiveLogicalSize(width: 80, height: 60)
 
         #expect(throws: WindowError.invalidConfigure(.invalidFractionalScale(180))) {
             _ = try scaleState.updatePreferredFractionalScale(180, logicalSize: logicalSize)
@@ -140,8 +140,8 @@ struct SurfaceGeometryTests {
 
     @Test
     func bufferScaleForCommitUsesIntegerScaleUntilFractionalScaleArrives() throws {
-        var scaleState = SurfaceScaleState(usesFractionalScale: true)
-        let logicalSize = try PositiveTopLevelSize(width: 80, height: 60)
+        var scaleState = SurfaceScaleState(capability: .fractional)
+        let logicalSize = try PositiveLogicalSize(width: 80, height: 60)
 
         #expect(try scaleState.updatePreferredBufferScale(2, logicalSize: logicalSize))
 
@@ -151,8 +151,8 @@ struct SurfaceGeometryTests {
 
     @Test
     func integerScaleCommitPlanUsesIntegerBufferScaleWithoutViewport() throws {
-        var scaleState = SurfaceScaleState(usesFractionalScale: true)
-        let logicalSize = try PositiveTopLevelSize(width: 80, height: 60)
+        var scaleState = SurfaceScaleState(capability: .fractional)
+        let logicalSize = try PositiveLogicalSize(width: 80, height: 60)
 
         #expect(try scaleState.updatePreferredBufferScale(2, logicalSize: logicalSize))
         let geometry = try scaleState.geometry(logicalSize: logicalSize)
@@ -169,8 +169,8 @@ struct SurfaceGeometryTests {
 
     @Test
     func fractionalScaleCommitPlanUsesViewportDestinationAndBufferScaleOne() throws {
-        var scaleState = SurfaceScaleState(usesFractionalScale: true)
-        let logicalSize = try PositiveTopLevelSize(width: 101, height: 51)
+        var scaleState = SurfaceScaleState(capability: .fractional)
+        let logicalSize = try PositiveLogicalSize(width: 101, height: 51)
 
         #expect(try scaleState.updatePreferredFractionalScale(180, logicalSize: logicalSize))
         let geometry = try scaleState.geometry(logicalSize: logicalSize)
@@ -187,7 +187,7 @@ struct SurfaceGeometryTests {
 
     @Test
     func surfaceCommitPlanUsesLogicalDamageWhenBufferDamageIsUnavailable() throws {
-        let logicalSize = try PositiveTopLevelSize(width: 80, height: 60)
+        let logicalSize = try PositiveLogicalSize(width: 80, height: 60)
         let geometry = try SurfaceGeometry(
             logicalSize: logicalSize,
             scale: SurfaceScale(numerator: 2, denominator: 1)
@@ -204,8 +204,8 @@ struct SurfaceGeometryTests {
 
     @Test
     func surfaceScaleStateRejectsInvalidPreferredScales() throws {
-        var scaleState = SurfaceScaleState(usesFractionalScale: true)
-        let logicalSize = try PositiveTopLevelSize(width: 80, height: 60)
+        var scaleState = SurfaceScaleState(capability: .fractional)
+        let logicalSize = try PositiveLogicalSize(width: 80, height: 60)
 
         #expect(
             throws: WindowError.invalidConfigure(.invalidPreferredBufferScale(0))
@@ -220,8 +220,8 @@ struct SurfaceGeometryTests {
 
     @Test
     func preferredBufferScaleTooLargeThrowsTypedError() throws {
-        var scaleState = SurfaceScaleState(usesFractionalScale: false)
-        let logicalSize = try PositiveTopLevelSize(width: 640, height: 480)
+        var scaleState = SurfaceScaleState(capability: .integerOnly)
+        let logicalSize = try PositiveLogicalSize(width: 640, height: 480)
 
         #expect(
             throws: WindowError.invalidConfigure(

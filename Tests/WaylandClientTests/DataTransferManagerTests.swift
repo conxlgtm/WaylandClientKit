@@ -87,7 +87,7 @@ struct DataTransferManagerTests {
         try manager.synchronizeSeats([seat1])
 
         backend.binding(for: seat1)?.emit(.selection(nil))
-        #expect(manager.selectionChanges.isEmpty)
+        #expect(manager.drainDataTransferEvents().isEmpty)
     }
 
     @Test
@@ -112,10 +112,6 @@ struct DataTransferManagerTests {
                         mimeTypes: [.plainText, .plainTextUTF8]
                     )
                 ]
-        )
-        #expect(
-            manager.selectionChanges
-                == [DataTransferSelectionChange(seatID: seat1, offerID: offer.id)]
         )
         #expect(
             manager.drainDataTransferEvents()
@@ -177,13 +173,6 @@ struct DataTransferManagerTests {
         #expect(offer.destroyCount == 1)
         #expect(manager.offerSnapshots.isEmpty)
         #expect(
-            manager.selectionChanges
-                == [
-                    DataTransferSelectionChange(seatID: seat1, offerID: offer.id),
-                    DataTransferSelectionChange(seatID: seat1, offerID: nil),
-                ]
-        )
-        #expect(
             manager.drainDataTransferEvents()
                 == [
                     .selectionChanged(
@@ -227,7 +216,12 @@ struct DataTransferManagerTests {
                     error: .unknownOffer
                 )
         )
-        #expect(throws: DataTransferError.unknownOffer) {
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dataDevice(seat1),
+                error: .unknownOffer
+            )
+        ) {
             try manager.throwPendingCallbackErrorIfAny()
         }
     }
@@ -249,7 +243,12 @@ struct DataTransferManagerTests {
                     error: .unknownSeat(seat1)
                 )
         )
-        #expect(throws: DataTransferError.unknownSeat(seat1)) {
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dataDevice(seat1),
+                error: .unknownSeat(seat1)
+            )
+        ) {
             try manager.throwPendingCallbackErrorIfAny()
         }
     }
@@ -272,7 +271,12 @@ struct DataTransferManagerTests {
                     error: .unknownSeat(seat1)
                 )
         )
-        #expect(throws: DataTransferError.unknownSeat(seat1)) {
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dataDevice(seat1),
+                error: .unknownSeat(seat1)
+            )
+        ) {
             try manager.throwPendingCallbackErrorIfAny()
         }
     }

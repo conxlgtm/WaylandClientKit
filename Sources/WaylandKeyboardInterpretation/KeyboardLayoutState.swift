@@ -39,189 +39,6 @@ enum KeyboardLayoutError: Error, Equatable, Sendable, CustomStringConvertible {
     }
 }
 
-package struct InterpretedKeyboardEvent: Equatable, Sendable {
-    package let sequence: UInt64
-    package let seatID: RawSeatID
-    package let deviceID: RawInputDeviceID?
-    package let kind: InterpretedKeyboardEventKind
-
-    package init(
-        sequence eventSequence: UInt64,
-        seatID eventSeatID: RawSeatID,
-        deviceID eventDeviceID: RawInputDeviceID?,
-        kind eventKind: InterpretedKeyboardEventKind
-    ) {
-        sequence = eventSequence
-        seatID = eventSeatID
-        deviceID = eventDeviceID
-        kind = eventKind
-    }
-}
-
-package enum InterpretedKeyboardEventKind: Equatable, Sendable {
-    case keymap(InterpretedKeyboardKeymap)
-    case key(InterpretedKeyboardKey)
-    case modifiers(InterpretedKeyboardModifiers)
-    case repeatInfo(InterpretedKeyboardRepeatInfo)
-    case unavailable(KeyboardInterpretationUnavailable)
-}
-
-package struct InterpretedKeyboardKeymap: Equatable, Sendable {
-    package let id: RawKeyboardKeymapID
-    package let format: RawKeyboardKeymapFormat
-    package let size: UInt32
-
-    package init(
-        id keymapID: RawKeyboardKeymapID,
-        format keymapFormat: RawKeyboardKeymapFormat,
-        size keymapSize: UInt32
-    ) {
-        id = keymapID
-        format = keymapFormat
-        size = keymapSize
-    }
-}
-
-package struct InterpretedKeyboardKey: Equatable, Sendable {
-    package let serial: UInt32
-    package let time: UInt32
-    package let evdevKeycode: UInt32
-    package let xkbKeycode: UInt32
-    package let state: InterpretedKeyboardKeyState
-    package let keysym: KeyboardKeysym
-    package let keysymName: String?
-    package let utf8: String?
-    package let repeats: Bool
-
-    package init(
-        serial eventSerial: UInt32,
-        time eventTime: UInt32,
-        evdevKeycode eventEvdevKeycode: UInt32,
-        xkbKeycode eventXKBKeycode: UInt32,
-        state eventState: InterpretedKeyboardKeyState,
-        keysym eventKeysym: KeyboardKeysym,
-        keysymName eventKeysymName: String?,
-        utf8 eventUTF8: String?,
-        repeats eventRepeats: Bool
-    ) {
-        serial = eventSerial
-        time = eventTime
-        evdevKeycode = eventEvdevKeycode
-        xkbKeycode = eventXKBKeycode
-        state = eventState
-        keysym = eventKeysym
-        keysymName = eventKeysymName
-        utf8 = eventUTF8
-        repeats = eventRepeats
-    }
-}
-
-package struct InterpretedKeyboardKeyState: Equatable, Sendable {
-    package let rawValue: UInt32
-
-    package init(rawValue stateRawValue: UInt32) {
-        rawValue = stateRawValue
-    }
-
-    package static let released = Self(rawValue: 0)
-    package static let pressed = Self(rawValue: 1)
-    package static let repeated = Self(rawValue: 2)
-}
-
-package struct KeyboardKeysym: Equatable, Sendable {
-    package let rawValue: UInt32
-
-    package init(rawValue keysymRawValue: UInt32) {
-        rawValue = keysymRawValue
-    }
-}
-
-package struct InterpretedKeyboardModifiers: Equatable, Sendable {
-    package let serial: UInt32
-    package let depressed: UInt32
-    package let latched: UInt32
-    package let locked: UInt32
-    package let group: UInt32
-    package let changedComponents: XKBStateComponents
-
-    package init(
-        serial eventSerial: UInt32,
-        depressed eventDepressed: UInt32,
-        latched eventLatched: UInt32,
-        locked eventLocked: UInt32,
-        group eventGroup: UInt32,
-        changedComponents eventChangedComponents: XKBStateComponents
-    ) {
-        serial = eventSerial
-        depressed = eventDepressed
-        latched = eventLatched
-        locked = eventLocked
-        group = eventGroup
-        changedComponents = eventChangedComponents
-    }
-}
-
-package struct XKBStateComponents: OptionSet, Sendable {
-    package let rawValue: UInt32
-
-    package init(rawValue componentsRawValue: UInt32) {
-        rawValue = componentsRawValue
-    }
-
-    package static let modsDepressed = Self(rawValue: 1 << 0)
-    package static let modsLatched = Self(rawValue: 1 << 1)
-    package static let modsLocked = Self(rawValue: 1 << 2)
-    package static let modsEffective = Self(rawValue: 1 << 3)
-    package static let layoutDepressed = Self(rawValue: 1 << 4)
-    package static let layoutLatched = Self(rawValue: 1 << 5)
-    package static let layoutLocked = Self(rawValue: 1 << 6)
-    package static let layoutEffective = Self(rawValue: 1 << 7)
-    package static let leds = Self(rawValue: 1 << 8)
-}
-
-package struct InterpretedKeyboardRepeatInfo: Equatable, Sendable {
-    package let rate: Int32
-    package let delay: Int32
-
-    package init(rate repeatRate: Int32, delay repeatDelay: Int32) {
-        rate = repeatRate
-        delay = repeatDelay
-    }
-}
-
-package struct KeyboardInterpretationUnavailable: Equatable, Sendable {
-    package let reason: KeyboardInterpretationUnavailableReason
-
-    package init(reason unavailableReason: KeyboardInterpretationUnavailableReason) {
-        reason = unavailableReason
-    }
-}
-
-package enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {
-    case missingDeviceID
-    case noKeymap
-    case unsupportedKeymapFormat(UInt32)
-    case emptyKeymap
-    case invalidKeymap
-    case keymapReadFailed(RawKeyboardKeymapReadError)
-    case missingKeymap
-    case missingKeyboardState
-    case invalidKeycode(UInt32)
-    case nonKeyboardInputDevice(RawInputDeviceID)
-    case mismatchedKeyboardSeat(expected: RawSeatID, actual: RawSeatID)
-    case mismatchedKeyboardDevice(expected: RawInputDeviceID, actual: RawInputDeviceID)
-}
-
-package enum KeyboardInterpreterKeymapState: Equatable, Sendable {
-    case missing
-    case noKeymap(RawKeyboardKeymapID)
-    case valid(RawKeyboardKeymapID)
-    case unavailable(
-        keymapID: RawKeyboardKeymapID?,
-        reason: KeyboardInterpretationUnavailableReason
-    )
-}
-
 final class XKBContextOwner {
     let pointer: OpaquePointer
 
@@ -366,17 +183,20 @@ final class KeyboardLayoutState {
         let interpretedState = InterpretedKeyboardKeyState(rawValue: key.state.rawValue)
         let keysym = xkb_state_key_get_one_sym(state.pointer, xkbKeycode)
         let isPressLike = interpretedState == .pressed || interpretedState == .repeated
+        let interpretation = InterpretedKeyboardKeyInterpretation(
+            state: interpretedState,
+            keysymName: keysymName(for: keysym),
+            utf8: isPressLike ? utf8Text(for: xkbKeycode) : nil,
+            repeats: isPressLike && xkb_keymap_key_repeats(keymap.pointer, xkbKeycode) != 0
+        )
 
         return InterpretedKeyboardKey(
             serial: key.serial,
             time: key.time,
             evdevKeycode: key.evdevKeycode,
             xkbKeycode: xkbKeycode,
-            state: interpretedState,
             keysym: KeyboardKeysym(rawValue: keysym),
-            keysymName: keysymName(for: keysym),
-            utf8: isPressLike ? utf8Text(for: xkbKeycode) : nil,
-            repeats: xkb_keymap_key_repeats(keymap.pointer, xkbKeycode) != 0
+            interpretation: interpretation
         )
     }
 

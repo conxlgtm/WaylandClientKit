@@ -23,25 +23,31 @@ package struct DataTransferSeatState: Equatable, Sendable {
     }
 
     package var hasDataDevice: Bool {
-        get { device.hasDataDevice }
-        set {
-            switch (device, newValue) {
-            case (.unbound, true):
-                device = .bound(selection: .none)
-            case (.bound, false):
-                device = .unbound
-            case (.unbound, false), (.bound, true):
-                break
-            }
-        }
+        device.hasDataDevice
     }
 
     package var selection: ClipboardSelectionState {
-        get { device.selection }
-        set {
-            precondition(device.hasDataDevice, "selection requires a bound data device")
-            device = .bound(selection: newValue)
+        device.selection
+    }
+
+    package mutating func bindDataDevice() {
+        guard case .unbound = device else {
+            return
         }
+
+        device = .bound(selection: .none)
+    }
+
+    package mutating func unbindDataDevice() {
+        device = .unbound
+    }
+
+    package mutating func setSelection(_ selection: ClipboardSelectionState) throws {
+        guard device.hasDataDevice else {
+            throw DataTransferError.missingDataDevice(seatID)
+        }
+
+        device = .bound(selection: selection)
     }
 }
 
@@ -135,6 +141,14 @@ package struct DataTransferSourceState: Equatable, Sendable {
     }
 
     package var snapshot: DataSourceSnapshot {
-        DataSourceSnapshot(id: id, seatID: seatID, mimeTypes: mimeTypes)
+        do {
+            return try DataSourceSnapshot(
+                id: id,
+                seatID: seatID,
+                mimeTypes: mimeTypes
+            )
+        } catch {
+            preconditionFailure("data source state contains invalid MIME types")
+        }
     }
 }

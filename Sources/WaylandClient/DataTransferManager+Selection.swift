@@ -3,7 +3,7 @@ extension DataTransferManager {
         backend.preconditionIsOwnerThread()
         try throwPendingCallbackErrorIfAny()
 
-        guard let seat = state.seatSnapshot(seatID) else {
+        guard let seat = store.seatSnapshot(seatID) else {
             throw DataTransferError.unknownSeat(seatID)
         }
         guard seat.hasDataDevice else {
@@ -12,7 +12,7 @@ extension DataTransferManager {
         guard let offerID = seat.selectionOfferID else {
             return nil
         }
-        guard let offer = state.offerSnapshot(offerID) else {
+        guard let offer = store.offerSnapshot(offerID) else {
             throw DataTransferError.unknownOffer
         }
 

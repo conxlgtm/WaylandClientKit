@@ -165,8 +165,8 @@ public struct WindowPresentationRequestSummary:
 {
     public let generation: UInt64
     public let configureSerial: UInt32
-    public let size: PositiveTopLevelSize
-    public let bounds: PositiveTopLevelSize?
+    public let size: PositiveLogicalSize
+    public let bounds: PositiveLogicalSize?
     public let stateRawValues: [UInt32]
     public let wmCapabilityRawValues: [UInt32]
     public let decorationMode: WindowDecorationMode?

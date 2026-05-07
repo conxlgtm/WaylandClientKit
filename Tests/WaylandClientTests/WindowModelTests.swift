@@ -18,7 +18,7 @@ struct WindowModelTests {
         #expect(effects == [.ackConfigure(9), .publishRedrawRequested(windowID)])
         #expect(
             model.currentConfiguration?.size
-                == PositiveTopLevelSize(
+                == PositiveLogicalSize(
                     width: PositiveInt32(unchecked: 640),
                     height: PositiveInt32(unchecked: 720)
                 )
@@ -43,7 +43,7 @@ struct WindowModelTests {
         #expect(effects == [.ackConfigure(2), .publishRedrawRequested(windowID)])
         #expect(
             model.currentConfiguration?.size
-                == PositiveTopLevelSize(
+                == PositiveLogicalSize(
                     width: PositiveInt32(unchecked: 800),
                     height: PositiveInt32(unchecked: 720)
                 )
@@ -63,7 +63,7 @@ struct WindowModelTests {
         #expect(model.redraw.hasOutstandingRedrawRequest)
         #expect(
             model.currentConfiguration?.size
-                == PositiveTopLevelSize(
+                == PositiveLogicalSize(
                     width: PositiveInt32(unchecked: 1_024),
                     height: PositiveInt32(unchecked: 768)
                 )
