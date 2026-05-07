@@ -220,6 +220,13 @@ struct DataTransferManagerTests {
 
         device.emit(.selection(offerHandle1))
 
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataDevice(seat1),
+                    error: .unknownOffer
+                )
+        )
         #expect(throws: DataTransferError.unknownOffer) {
             try manager.throwPendingCallbackErrorIfAny()
         }
@@ -235,6 +242,13 @@ struct DataTransferManagerTests {
 
         releasedBinding.emit(.selection(nil))
 
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataDevice(seat1),
+                    error: .unknownSeat(seat1)
+                )
+        )
         #expect(throws: DataTransferError.unknownSeat(seat1)) {
             try manager.throwPendingCallbackErrorIfAny()
         }
@@ -251,6 +265,13 @@ struct DataTransferManagerTests {
         releasedBinding.emit(.selection(nil))
         releasedBinding.emit(.dataOffer(nil))
 
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataDevice(seat1),
+                    error: .unknownSeat(seat1)
+                )
+        )
         #expect(throws: DataTransferError.unknownSeat(seat1)) {
             try manager.throwPendingCallbackErrorIfAny()
         }

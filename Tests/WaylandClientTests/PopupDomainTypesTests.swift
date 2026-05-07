@@ -116,7 +116,7 @@ struct PopupDomainTypesTests {
         #expect(!state.hasReceivedInitialConfigure)
         #expect(state.consumeLatestConfigure() == nil)
 
-        let sequence = try #require(state.handleSurfaceConfigure(serial: 99))
+        let sequence = try #require(state.handleSurfaceConfigure(serial: 99).configure)
 
         #expect(state.hasReceivedInitialConfigure)
         #expect(sequence.serial == 99)
@@ -130,7 +130,7 @@ struct PopupDomainTypesTests {
     func popupConfigureStateRejectsSurfaceConfigureWithoutPopupPayload() {
         let state = PopupConfigureState()
 
-        #expect(state.handleSurfaceConfigure(serial: 42) == nil)
+        #expect(state.handleSurfaceConfigure(serial: 42) == .waitingForPopupConfigure)
         #expect(!state.hasReceivedInitialConfigure)
     }
 
@@ -141,8 +141,11 @@ struct PopupDomainTypesTests {
         state.handlePopupConfigure(
             RawXDGPopupConfigure(x: 0, y: 0, width: 0, height: 10)
         )
-        #expect(state.handleSurfaceConfigure(serial: 1) == nil)
-        #expect(throws: (any Error).self) {
+        #expect(
+            state.handleSurfaceConfigure(serial: 1)
+                == .failed(.invalidWindowConfiguration(.nonPositiveInt32(value: 0)))
+        )
+        #expect(throws: ClientError.invalidWindowConfiguration(.nonPositiveInt32(value: 0))) {
             try state.throwPendingErrorIfAny()
         }
     }

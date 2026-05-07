@@ -1,8 +1,20 @@
 public struct InputEvent: Equatable, Sendable {
     public let sequence: UInt64
     public let seatID: SeatID
-    public let windowID: WindowID?
+    public let target: InputEventTarget
     public let kind: InputEventKind
+
+    public init(
+        sequence eventSequence: UInt64,
+        seatID eventSeatID: SeatID,
+        target eventTarget: InputEventTarget,
+        kind eventKind: InputEventKind
+    ) {
+        sequence = eventSequence
+        seatID = eventSeatID
+        target = eventTarget
+        kind = eventKind
+    }
 
     public init(
         sequence eventSequence: UInt64,
@@ -10,11 +22,28 @@ public struct InputEvent: Equatable, Sendable {
         windowID eventWindowID: WindowID?,
         kind eventKind: InputEventKind
     ) {
-        sequence = eventSequence
-        seatID = eventSeatID
-        windowID = eventWindowID
-        kind = eventKind
+        self.init(
+            sequence: eventSequence,
+            seatID: eventSeatID,
+            target: eventWindowID.map(InputEventTarget.window) ?? .display,
+            kind: eventKind
+        )
     }
+
+    public var windowID: WindowID? {
+        guard case .window(let windowID) = target else {
+            return nil
+        }
+
+        return windowID
+    }
+}
+
+public enum InputEventTarget: Equatable, Sendable {
+    case display
+    case window(WindowID)
+    case unmanagedSurface
+    case focusless
 }
 
 public enum InputEventKind: Equatable, Sendable {

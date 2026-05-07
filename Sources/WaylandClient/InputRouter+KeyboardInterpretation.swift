@@ -6,21 +6,21 @@ extension InputRouter {
         let routed = InputEvent(
             sequence: event.sequence,
             seatID: SeatID(rawValue: event.seatID.rawValue),
-            windowID: interpretedWindowID(for: event),
+            target: interpretedTarget(for: event),
             kind: .keyboard(.interpreted(convert(event.kind)))
         )
 
         return [routed]
     }
 
-    func interpretedWindowID(
+    func interpretedTarget(
         for event: WaylandKeyboardInterpretation.InterpretedKeyboardEvent
-    ) -> WindowID? {
+    ) -> InputEventTarget {
         switch event.kind {
         case .key:
-            focusedKeyboardWindow(for: event.seatID)
+            target(forFocusedSurface: focusedKeyboardSurface(for: event.seatID))
         case .keymap, .modifiers, .repeatInfo, .unavailable:
-            nil
+            .display
         }
     }
 

@@ -24,6 +24,7 @@ struct XDGConfigureStateTests {
         #expect(configure.topLevel.states == [.activated, .resizing])
         #expect(configure.topLevel.bounds == TopLevelSize(width: 1_920, height: 1_080))
         #expect(configure.topLevel.wmCapabilities == [.maximize, .fullscreen])
+        #expect(configure.decoration == .changed(.serverSide))
         #expect(configure.decorationMode == .serverSide)
     }
 
@@ -34,7 +35,9 @@ struct XDGConfigureStateTests {
 
         #expect(state.handleSurfaceConfigure(serial: 1).decorationMode == .clientSide)
         _ = state.consumeLatestConfigure()
-        #expect(state.handleSurfaceConfigure(serial: 2).decorationMode == nil)
+        let configure = state.handleSurfaceConfigure(serial: 2)
+        #expect(configure.decoration == .unchanged)
+        #expect(configure.decorationMode == nil)
     }
 
     @Test

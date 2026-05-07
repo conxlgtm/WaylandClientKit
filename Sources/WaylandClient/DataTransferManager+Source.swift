@@ -47,6 +47,7 @@ extension DataTransferManager {
             sourceProvidersByID[sourceID] = dataProvider
             try apply(.selectionSourceChanged(seatID: seatID, sourceID: sourceID))
             deviceBinding.setSelection(source: sourceBinding, serial: serial)
+            preconditionInvariantsHold()
         } catch {
             sourceBinding.destroy()
             sourceBindingsByID[sourceID] = nil
@@ -58,6 +59,7 @@ extension DataTransferManager {
             throw DataTransferError.unknownSource
         }
 
+        preconditionInvariantsHold()
         return source
     }
 
@@ -71,6 +73,7 @@ extension DataTransferManager {
         let deviceBinding = try selectionDeviceBinding(for: seatID)
         deviceBinding.setSelection(source: nil, serial: serial)
         try apply(.selectionSourceChanged(seatID: seatID, sourceID: nil))
+        preconditionInvariantsHold()
     }
 
     package func clearSelectionSource(
@@ -91,6 +94,7 @@ extension DataTransferManager {
         let deviceBinding = try selectionDeviceBinding(for: seatID)
         deviceBinding.setSelection(source: nil, serial: serial)
         try apply(.selectionSourceChanged(seatID: seatID, sourceID: nil))
+        preconditionInvariantsHold()
     }
 
     private func selectionDeviceBinding(
@@ -126,8 +130,9 @@ extension DataTransferManager {
             case .target, .dndDropPerformed, .dndFinished, .action:
                 break
             }
+            preconditionInvariantsHold()
         } catch {
-            recordCallbackError(error)
+            recordCallbackError(error, context: .dataSource(sourceID))
         }
     }
 
@@ -182,7 +187,7 @@ extension DataTransferManager {
                 do {
                     try request.close()
                 } catch {
-                    recordCallbackError(error)
+                    recordCallbackError(error, context: .dataSource(sourceID))
                 }
             } else {
                 remainingRequests.append(request)
@@ -205,7 +210,7 @@ extension DataTransferManager {
             do {
                 try request.close()
             } catch {
-                recordCallbackError(error)
+                recordCallbackError(error, context: .dataSource(request.sourceID))
             }
         }
     }

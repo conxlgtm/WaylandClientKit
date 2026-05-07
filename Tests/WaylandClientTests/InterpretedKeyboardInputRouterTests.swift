@@ -30,7 +30,36 @@ struct InterpretedKeyboardInputRouterTests {
             )
         )
 
-        #expect(routed.first?.windowID == WindowID(rawValue: 150))
+        #expect(routed.first?.target == .window(WindowID(rawValue: 150)))
+        #expect(routed.first?.kind == .keyboard(.interpreted(.key(expectedInterpretedQKey()))))
+    }
+
+    @Test
+    func interpretedKeyAfterUnknownSurfaceEnterStaysUnmanagedSurface() {
+        let router = unmanagedSurfaceFocusedKeyboardRouter()
+
+        let routed = router.route(
+            interpretedKeyboardEvent(
+                sequence: 2,
+                seatID: RawSeatID(rawValue: 16),
+                kind: .key(
+                    InterpretedKeyboardKey(
+                        serial: 10,
+                        time: 11,
+                        evdevKeycode: 16,
+                        xkbKeycode: 24,
+                        state: .pressed,
+                        keysym: WaylandKeyboardInterpretation.KeyboardKeysym(rawValue: 0x71),
+                        keysymName: "q",
+                        utf8: "q",
+                        repeats: true
+                    )
+                )
+            )
+        )
+
+        #expect(routed.first?.windowID == nil)
+        #expect(routed.first?.target == .unmanagedSurface)
         #expect(routed.first?.kind == .keyboard(.interpreted(.key(expectedInterpretedQKey()))))
     }
 
@@ -54,7 +83,7 @@ struct InterpretedKeyboardInputRouterTests {
             )
         )
 
-        #expect(routed.first?.windowID == nil)
+        #expect(routed.first?.target == .display)
         #expect(
             routed.first?.kind
                 == .keyboard(
@@ -84,7 +113,7 @@ struct InterpretedKeyboardInputRouterTests {
             )
         )
 
-        #expect(routed.first?.windowID == nil)
+        #expect(routed.first?.target == .display)
         #expect(routed.first?.kind == .keyboard(.interpreted(.modifiers(expectedModifiers()))))
     }
 
@@ -100,7 +129,7 @@ struct InterpretedKeyboardInputRouterTests {
             )
         )
 
-        #expect(routed.first?.windowID == nil)
+        #expect(routed.first?.target == .display)
         #expect(
             routed.first?.kind
                 == .keyboard(
@@ -127,7 +156,7 @@ struct InterpretedKeyboardInputRouterTests {
             )
         )
 
-        #expect(routed.first?.windowID == nil)
+        #expect(routed.first?.target == .display)
         #expect(
             routed.first?.kind
                 == .keyboard(
@@ -156,7 +185,7 @@ struct InterpretedKeyboardInputRouterTests {
             )
         )
 
-        #expect(routed.first?.windowID == nil)
+        #expect(routed.first?.target == .display)
         #expect(
             routed.first?.kind
                 == .keyboard(
@@ -177,6 +206,13 @@ private func focusedKeyboardRouter() -> InputRouter {
     let seatID = RawSeatID(rawValue: 15)
     router.register(windowID: WindowID(rawValue: 150), surfaceID: 1_500)
     _ = router.route(rawKeyboardEnter(sequence: 1, seatID: seatID, surfaceID: 1_500))
+    return router
+}
+
+private func unmanagedSurfaceFocusedKeyboardRouter() -> InputRouter {
+    let router = InputRouter()
+    let seatID = RawSeatID(rawValue: 16)
+    _ = router.route(rawKeyboardEnter(sequence: 1, seatID: seatID, surfaceID: 1_600))
     return router
 }
 

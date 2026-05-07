@@ -131,18 +131,28 @@ private struct DemoState {
                     + "message=\(diagnostic.message)"
             )
         case .pointer(let pointer):
-            guard event.windowID == focusedWindowID else { return }
+            guard event.target == .window(focusedWindowID) else { return }
             handlePointer(pointer)
         case .keyboard(let keyboard):
-            guard event.windowID == nil || event.windowID == focusedWindowID else {
-                return
-            }
+            guard acceptsWindowOrDisplayTarget(event.target, focusedWindowID) else { return }
             handleKeyboard(keyboard, seatID: event.seatID)
         case .touch(let touch):
-            guard event.windowID == nil || event.windowID == focusedWindowID else {
-                return
-            }
+            guard acceptsWindowOrDisplayTarget(event.target, focusedWindowID) else { return }
             handleTouch(touch, seatID: event.seatID)
+        }
+    }
+
+    nonisolated private func acceptsWindowOrDisplayTarget(
+        _ target: InputEventTarget,
+        _ focusedWindowID: WindowID
+    ) -> Bool {
+        switch target {
+        case .window(let windowID):
+            windowID == focusedWindowID
+        case .display, .focusless:
+            true
+        case .unmanagedSurface:
+            false
         }
     }
 

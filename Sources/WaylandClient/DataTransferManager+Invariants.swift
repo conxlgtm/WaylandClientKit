@@ -62,6 +62,16 @@ extension DataTransferManager {
         try checkSelectionReferenceInvariants()
     }
 
+    package func preconditionInvariantsHold() {
+        #if DEBUG
+            do {
+                try checkInvariantsForTesting()
+            } catch {
+                preconditionFailure("DataTransferManager invariant violation: \(error)")
+            }
+        #endif
+    }
+
     private func checkSeatBindingInvariants(
         seatsWithDataDevice: Set<SeatID>
     ) throws {
