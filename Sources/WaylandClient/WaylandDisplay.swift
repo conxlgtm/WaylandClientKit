@@ -111,7 +111,7 @@ public actor WaylandDisplay {
     }
 
     @discardableResult
-    public func createTopLevelWindowID(
+    package func createTopLevelWindowID(
         configuration windowConfiguration: WindowConfiguration = .default
     ) throws -> WindowID {
         try requireCore().createTopLevelWindowID(configuration: windowConfiguration)
@@ -140,7 +140,7 @@ public actor WaylandDisplay {
         try requireCore().createPopup(parent: windowID, configuration: popupConfiguration)
     }
 
-    public func showWindow(
+    package func showWindow(
         _ windowID: WindowID,
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMilliseconds,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
@@ -152,7 +152,7 @@ public actor WaylandDisplay {
         )
     }
 
-    public func redraw(
+    package func redraw(
         _ windowID: WindowID,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
@@ -178,23 +178,23 @@ public actor WaylandDisplay {
         try requireCore().redrawPopup(popupID, draw)
     }
 
-    public func windowIsClosed(_ windowID: WindowID) throws -> Bool {
+    package func windowIsClosed(_ windowID: WindowID) throws -> Bool {
         try requireCore().windowIsClosed(windowID)
     }
 
-    public func windowNeedsRedraw(_ windowID: WindowID) throws -> Bool {
+    package func windowNeedsRedraw(_ windowID: WindowID) throws -> Bool {
         try requireCore().windowNeedsRedraw(windowID)
     }
 
-    public func windowDecorationMode(_ windowID: WindowID) throws -> WindowDecorationMode {
+    package func windowDecorationMode(_ windowID: WindowID) throws -> WindowDecorationMode {
         try requireCore().windowDecorationMode(windowID)
     }
 
-    public func windowGeometry(_ windowID: WindowID) throws -> SurfaceGeometry {
+    package func windowGeometry(_ windowID: WindowID) throws -> SurfaceGeometry {
         try requireCore().windowGeometry(windowID)
     }
 
-    public func requestRedraw(_ windowID: WindowID) throws {
+    package func requestRedraw(_ windowID: WindowID) throws {
         try requireCore().requestRedraw(windowID)
     }
 
@@ -218,7 +218,7 @@ public actor WaylandDisplay {
         try requireCore().requestPopupRedraw(popupID)
     }
 
-    public func closeWindow(_ windowID: WindowID) {
+    package func closeWindow(_ windowID: WindowID) {
         core?.closeWindow(windowID)
     }
 
