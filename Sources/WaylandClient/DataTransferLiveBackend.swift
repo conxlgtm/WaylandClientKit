@@ -154,6 +154,7 @@ private final class LiveDataTransferDeviceBinding: DataTransferDeviceBinding {
     }
 
     func setSelection(source: (any DataTransferSourceBinding)?, serial: InputSerial) {
+        precondition(!isReleased, "data transfer device binding was already released")
         let liveSource = source as? LiveDataTransferSourceBinding
         device.setSelection(source: liveSource?.source, serial: serial.rawValue)
     }
@@ -191,6 +192,7 @@ private final class LiveDataTransferOfferBinding: DataTransferOfferBinding {
     }
 
     func receive(mimeType: MIMEType, fd: Int32) {
+        precondition(!isDestroyed, "data transfer offer binding was already destroyed")
         offer.receive(mimeType: mimeType.rawValue, fd: fd)
     }
 
@@ -227,6 +229,7 @@ private final class LiveDataTransferSourceBinding: DataTransferSourceBinding {
     }
 
     func offer(mimeType: MIMEType) {
+        precondition(!isDestroyed, "data transfer source binding was already destroyed")
         source.offer(mimeType: mimeType.rawValue)
     }
 
