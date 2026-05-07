@@ -42,7 +42,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             }
             registry.insertWindow(window, surfaceID: surfaceID)
             installEventCallbacks(for: window)
-            window.markPublishedOnOwnerThread()
+            try window.markPublishedOnOwnerThread()
             assertRegistryInvariants()
             return window.id
         }

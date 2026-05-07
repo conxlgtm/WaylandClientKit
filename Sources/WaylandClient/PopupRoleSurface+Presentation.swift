@@ -5,7 +5,7 @@ extension PopupRoleSurface {
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         try interpretPopupEffects(
-            model.reduce(.presentationStarted(generation: request.generation))
+            model.reduce(.presentationStarted(request))
         )
 
         do {

@@ -16,20 +16,6 @@ public struct InputEvent: Equatable, Sendable {
         kind = eventKind
     }
 
-    public init(
-        sequence eventSequence: UInt64,
-        seatID eventSeatID: SeatID,
-        windowID eventWindowID: WindowID?,
-        kind eventKind: InputEventKind
-    ) {
-        self.init(
-            sequence: eventSequence,
-            seatID: eventSeatID,
-            target: eventWindowID.map(InputEventTarget.window) ?? .display,
-            kind: eventKind
-        )
-    }
-
     public var windowID: WindowID? {
         guard case .window(let windowID) = target else {
             return nil

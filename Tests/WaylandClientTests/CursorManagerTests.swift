@@ -254,7 +254,7 @@ struct CursorManagerTests {
         let expectedDiagnostic = InputEvent(
             sequence: 1,
             seatID: SeatID(rawValue: 5),
-            windowID: nil,
+            target: .display,
             kind: .diagnostic(
                 InputDiagnostic(
                     .cursor(.missingCursor(name: "left_ptr"))

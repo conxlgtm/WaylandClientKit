@@ -160,7 +160,7 @@ struct WindowDecorationModelTests {
 
     private func activePublishedModel() throws -> WindowModel {
         var model = try configuredModelReadyForConfigure()
-        model.markPublished()
+        _ = try model.reduce(.published)
         _ = try model.reduce(.configureReceived(configure(width: 800, height: 600)))
         return model
     }

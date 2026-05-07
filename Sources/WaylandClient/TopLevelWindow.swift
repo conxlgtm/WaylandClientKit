@@ -360,7 +360,7 @@ package final class TopLevelWindow {
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         try interpretWindowEffects(
-            model.reduce(.presentationStarted(generation: request.generation))
+            model.reduce(.presentationStarted(request))
         )
 
         do {
@@ -465,7 +465,11 @@ package final class TopLevelWindow {
         generation: UInt64,
         error: any Error
     ) {
-        guard model.presentation == .drawing(generation: generation) else { return }
+        guard case .drawing(let request) = model.presentation,
+            request.generation == generation
+        else {
+            return
+        }
 
         failActivePresentation(
             generation: generation,
@@ -767,9 +771,9 @@ extension TopLevelWindow {
         }
     }
 
-    package func markPublishedOnOwnerThread() {
+    package func markPublishedOnOwnerThread() throws {
         connection.preconditionIsOwnerThread()
-        model.markPublished()
+        try interpretWindowEffects(model.reduce(.published))
     }
 
     package func requestRedrawOnOwnerThread() throws {
