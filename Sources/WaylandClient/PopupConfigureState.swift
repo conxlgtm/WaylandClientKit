@@ -10,10 +10,24 @@ package struct PopupConfigureSequence: Equatable, Sendable {
     }
 }
 
+package enum PopupSurfaceConfigureResult: Equatable, Sendable {
+    case waitingForPopupConfigure
+    case configured(PopupConfigureSequence)
+    case failed(ClientError)
+
+    package var configure: PopupConfigureSequence? {
+        guard case .configured(let configure) = self else {
+            return nil
+        }
+
+        return configure
+    }
+}
+
 package final class PopupConfigureState {
     private var pendingConfigure: RawXDGPopupConfigure?
     private var latestConfigure: PopupConfigureSequence?
-    private var pendingError: (any Error)?
+    private var pendingError: ClientError?
     private var onSurfaceConfigure: (() -> Void)?
 
     package private(set) var hasReceivedInitialConfigure = false
@@ -30,7 +44,7 @@ package final class PopupConfigureState {
         pendingConfigure = configure
     }
 
-    package func recordError(_ error: any Error) {
+    package func recordError(_ error: ClientError) {
         if pendingError == nil {
             pendingError = error
         }
@@ -44,17 +58,23 @@ package final class PopupConfigureState {
     }
 
     @discardableResult
-    package func handleSurfaceConfigure(serial: UInt32) -> PopupConfigureSequence? {
+    package func handleSurfaceConfigure(serial: UInt32) -> PopupSurfaceConfigureResult {
         guard let pendingConfigure else {
-            return nil
+            return .waitingForPopupConfigure
         }
 
         let placement: PopupPlacement
         do {
             placement = try PopupPlacement(configure: pendingConfigure)
-        } catch {
+        } catch let error as ClientError {
             recordError(error)
-            return nil
+            return .failed(error)
+        } catch {
+            let clientError = ClientError.invalidWindowState(
+                "unexpected popup configure error: \(error)"
+            )
+            recordError(clientError)
+            return .failed(clientError)
         }
 
         let configure = PopupConfigureSequence(serial: serial, placement: placement)
@@ -62,7 +82,7 @@ package final class PopupConfigureState {
         latestConfigure = configure
         hasReceivedInitialConfigure = true
         onSurfaceConfigure?()
-        return configure
+        return .configured(configure)
     }
 
     package func consumeLatestConfigure() -> PopupConfigureSequence? {

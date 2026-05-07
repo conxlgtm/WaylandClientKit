@@ -160,6 +160,13 @@ struct DataTransferManagerSourceTests {
         sourceBinding.emit(.send(mimeType: MIMEType.plainText.rawValue, fd: 200))
 
         #expect(backend.closedDescriptors == [200])
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataSource(source.id),
+                    error: .sourceDataUnavailable(.plainText)
+                )
+        )
         #expect(throws: DataTransferError.sourceDataUnavailable(.plainText)) {
             try manager.throwPendingCallbackErrorIfAny()
         }
@@ -181,6 +188,13 @@ struct DataTransferManagerSourceTests {
         sourceBinding.emit(.send(mimeType: MIMEType.uriList.rawValue, fd: 201))
 
         #expect(backend.closedDescriptors == [201])
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataSource(source.id),
+                    error: .mimeTypeUnavailable(.uriList)
+                )
+        )
         #expect(throws: DataTransferError.mimeTypeUnavailable(.uriList)) {
             try manager.throwPendingCallbackErrorIfAny()
         }
@@ -202,6 +216,13 @@ struct DataTransferManagerSourceTests {
         sourceBinding.emit(.send(mimeType: nil, fd: 202))
 
         #expect(backend.closedDescriptors == [202])
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataSource(source.id),
+                    error: .invalidMIMEType("")
+                )
+        )
         #expect(throws: DataTransferError.invalidMIMEType("")) {
             try manager.throwPendingCallbackErrorIfAny()
         }

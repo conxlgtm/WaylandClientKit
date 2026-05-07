@@ -271,16 +271,16 @@ extension InputRouter {
         )
     }
 
-    func focusedPointerWindow(for seatID: RawSeatID) -> WindowID? {
-        windowID(for: deviceGraph.pointerFocus(for: seatID))
+    func focusedPointerSurface(for seatID: RawSeatID) -> RawObjectID? {
+        deviceGraph.pointerFocus(for: seatID)
     }
 
-    func focusedKeyboardWindow(for seatID: RawSeatID) -> WindowID? {
-        windowID(for: deviceGraph.keyboardFocus(for: seatID))
+    func focusedKeyboardSurface(for seatID: RawSeatID) -> RawObjectID? {
+        deviceGraph.keyboardFocus(for: seatID)
     }
 
-    func focusedTouchWindow(for seatID: RawSeatID, touchID: Int32) -> WindowID? {
-        windowID(for: deviceGraph.touchFocus(for: seatID, touchID: touchID))
+    func focusedTouchSurface(for seatID: RawSeatID, touchID: Int32) -> RawObjectID? {
+        deviceGraph.touchFocus(for: seatID, touchID: touchID)
     }
 
     func clearTouchFocuses(seatID: RawSeatID) {
