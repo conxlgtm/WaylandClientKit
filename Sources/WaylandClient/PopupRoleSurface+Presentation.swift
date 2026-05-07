@@ -71,7 +71,7 @@ extension PopupRoleSurface {
                 model.reduce(
                     .presentationSucceeded(
                         generation: request.generation,
-                        bufferAvailable: try redrawBufferAvailable()
+                        bufferAvailability: try redrawBufferAvailability()
                     )
                 )
             )

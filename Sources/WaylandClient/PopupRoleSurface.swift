@@ -205,7 +205,7 @@ package final class PopupRoleSurface {
 
     package func requestRedrawOnOwnerThread() throws {
         connection.preconditionIsOwnerThread()
-        try markNeedsRedraw(bufferAvailable: try redrawBufferAvailable())
+        try markNeedsRedraw(bufferAvailability: try redrawBufferAvailability())
     }
 
     package func closeOnOwnerThread() {

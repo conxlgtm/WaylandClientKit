@@ -37,4 +37,12 @@ struct InputEventStateTests {
         #expect(InterpretedKeyboardKeyState(rawValue: 99) == .unknown(99))
         #expect(InterpretedKeyboardKeyState.unknown(99).rawValue == 99)
     }
+
+    @Test
+    func touchIDPreservesRawValue() {
+        let id = TouchID(rawValue: 7)
+
+        #expect(id.rawValue == 7)
+        #expect(TouchID(rawValue: 7) == 7)
+    }
 }

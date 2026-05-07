@@ -183,11 +183,14 @@ final class KeyboardLayoutState {
         let interpretedState = InterpretedKeyboardKeyState(rawValue: key.state.rawValue)
         let keysym = xkb_state_key_get_one_sym(state.pointer, xkbKeycode)
         let isPressLike = interpretedState == .pressed || interpretedState == .repeated
+        let repeatCapability = KeyboardKeyRepeatCapability(
+            keymapAllowsRepeat: xkb_keymap_key_repeats(keymap.pointer, xkbKeycode) != 0
+        )
         let interpretation = InterpretedKeyboardKeyInterpretation(
             state: interpretedState,
             keysymName: keysymName(for: keysym),
             utf8: isPressLike ? utf8Text(for: xkbKeycode) : nil,
-            repeats: isPressLike && xkb_keymap_key_repeats(keymap.pointer, xkbKeycode) != 0
+            repeatCapability: repeatCapability
         )
 
         return InterpretedKeyboardKey(

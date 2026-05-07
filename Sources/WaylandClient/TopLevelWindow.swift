@@ -349,7 +349,7 @@ package final class TopLevelWindow {
         guard !model.isClosed else { return .skippedClosed }
 
         let effects = try model.reduce(
-            .redrawRequestConsumed(bufferAvailable: try redrawBufferAvailable())
+            .redrawRequestConsumed(bufferAvailability: try redrawBufferAvailability())
         )
         return try interpretPresentationEffects(effects, draw)
     }
@@ -437,7 +437,7 @@ package final class TopLevelWindow {
                 model.reduce(
                     .presentationSucceeded(
                         generation: request.generation,
-                        bufferAvailable: try redrawBufferAvailable()
+                        bufferAvailability: try redrawBufferAvailability()
                     )
                 )
             )
@@ -557,7 +557,7 @@ extension TopLevelWindow {
 
         do {
             try interpretWindowEffects(
-                model.reduce(.frameBecameReady(bufferAvailable: try redrawBufferAvailable()))
+                model.reduce(.frameBecameReady(bufferAvailability: try redrawBufferAvailability()))
             )
         } catch let error as ClientError {
             reportCallbackFailure(operation: .frameDone, error: error)
@@ -574,7 +574,9 @@ extension TopLevelWindow {
 
         do {
             try interpretWindowEffects(
-                model.reduce(.bufferBecameAvailable(bufferAvailable: try redrawBufferAvailable()))
+                model.reduce(
+                    .bufferBecameAvailable(bufferAvailability: try redrawBufferAvailability())
+                )
             )
         } catch let error as ClientError {
             reportCallbackFailure(operation: .bufferReleased, error: error)
@@ -599,7 +601,7 @@ extension TopLevelWindow {
                     )
                 })
             else { return }
-            try markNeedsRedraw(bufferAvailable: true)
+            try markNeedsRedraw(bufferAvailability: .available)
         } catch let error as WindowError {
             reportCallbackFailure(
                 operation: .surfaceScaleChanged,
@@ -626,7 +628,7 @@ extension TopLevelWindow {
                     )
                 })
             else { return }
-            try markNeedsRedraw(bufferAvailable: true)
+            try markNeedsRedraw(bufferAvailability: .available)
         } catch let error as WindowError {
             reportCallbackFailure(
                 operation: .surfaceScaleChanged,
@@ -639,7 +641,7 @@ extension TopLevelWindow {
 
     private func markNeedsRedraw() {
         do {
-            try markNeedsRedraw(bufferAvailable: try redrawBufferAvailable())
+            try markNeedsRedraw(bufferAvailability: try redrawBufferAvailability())
         } catch let error as ClientError {
             reportCallbackFailure(operation: .markNeedsRedraw, error: error)
         } catch {
@@ -647,14 +649,14 @@ extension TopLevelWindow {
         }
     }
 
-    private func markNeedsRedraw(bufferAvailable: Bool) throws {
+    private func markNeedsRedraw(bufferAvailability: RedrawBufferAvailability) throws {
         guard !model.isClosed else {
             resetTransientState()
             return
         }
 
         try interpretWindowEffects(
-            model.reduce(.contentInvalidated(bufferAvailable: bufferAvailable))
+            model.reduce(.contentInvalidated(bufferAvailability: bufferAvailability))
         )
     }
 
@@ -678,14 +680,14 @@ extension TopLevelWindow {
         }
     }
 
-    private func redrawBufferAvailable() throws -> Bool {
-        guard let buffers else { return true }
+    private func redrawBufferAvailability() throws -> RedrawBufferAvailability {
+        guard let buffers else { return .available }
 
         if buffers.size != (try currentSurfaceGeometry()).bufferSize.rawSize {
-            return true
+            return .available
         }
 
-        return buffers.hasFreeBuffers
+        return RedrawBufferAvailability(isAvailable: buffers.hasFreeBuffers)
     }
 
     // swiftlint:disable:next cyclomatic_complexity

@@ -114,6 +114,7 @@ struct RawInputEventTests {
         )
         let event = RawTouchEvent.down(down)
 
+        #expect(down.id.rawValue == 3)
         #expect(event == .down(down))
     }
 }

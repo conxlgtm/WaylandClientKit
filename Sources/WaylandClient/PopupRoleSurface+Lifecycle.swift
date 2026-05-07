@@ -108,7 +108,7 @@ extension PopupRoleSurface {
         guard !model.isClosed else { return .skippedClosed }
 
         let effects = try model.reduce(
-            .redrawRequestConsumed(bufferAvailable: try redrawBufferAvailable())
+            .redrawRequestConsumed(bufferAvailability: try redrawBufferAvailability())
         )
         return try interpretPresentationEffects(effects, draw)
     }
@@ -203,7 +203,7 @@ extension PopupRoleSurface {
                     )
                 })
             else { return }
-            try markNeedsRedraw(bufferAvailable: true)
+            try markNeedsRedraw(bufferAvailability: .available)
         } catch {
             reportCallbackFailure(operation: .surfaceScaleChanged, error: error)
         }
@@ -225,7 +225,7 @@ extension PopupRoleSurface {
                     )
                 })
             else { return }
-            try markNeedsRedraw(bufferAvailable: true)
+            try markNeedsRedraw(bufferAvailability: .available)
         } catch {
             reportCallbackFailure(operation: .surfaceScaleChanged, error: error)
         }
@@ -233,20 +233,20 @@ extension PopupRoleSurface {
 
     package func markNeedsRedraw() {
         do {
-            try markNeedsRedraw(bufferAvailable: try redrawBufferAvailable())
+            try markNeedsRedraw(bufferAvailability: try redrawBufferAvailability())
         } catch {
             reportCallbackFailure(operation: .markNeedsRedraw, error: error)
         }
     }
 
-    package func markNeedsRedraw(bufferAvailable: Bool) throws {
+    package func markNeedsRedraw(bufferAvailability: RedrawBufferAvailability) throws {
         guard !model.isClosed else {
             resetTransientState()
             return
         }
 
         try interpretPopupEffects(
-            model.reduce(.contentInvalidated(bufferAvailable: bufferAvailable))
+            model.reduce(.contentInvalidated(bufferAvailability: bufferAvailability))
         )
     }
 
@@ -266,14 +266,14 @@ extension PopupRoleSurface {
         }
     }
 
-    package func redrawBufferAvailable() throws -> Bool {
-        guard let buffers else { return true }
+    package func redrawBufferAvailability() throws -> RedrawBufferAvailability {
+        guard let buffers else { return .available }
 
         if buffers.size != (try currentSurfaceGeometry()).bufferSize.rawSize {
-            return true
+            return .available
         }
 
-        return buffers.hasFreeBuffers
+        return RedrawBufferAvailability(isAvailable: buffers.hasFreeBuffers)
     }
 
     package func handlePopupDone() {
@@ -312,7 +312,7 @@ extension PopupRoleSurface {
                 model.reduce(
                     popupEvent(
                         for: event,
-                        bufferAvailable: try redrawBufferAvailable()
+                        bufferAvailability: try redrawBufferAvailability()
                     )
                 )
             )
@@ -324,21 +324,21 @@ extension PopupRoleSurface {
 
     private func popupEvent(
         for redrawEvent: WindowRedrawEvent,
-        bufferAvailable: Bool
+        bufferAvailability: RedrawBufferAvailability
     ) -> PopupEvent {
         switch redrawEvent {
         case .contentInvalidated:
-            .contentInvalidated(bufferAvailable: bufferAvailable)
+            .contentInvalidated(bufferAvailability: bufferAvailability)
         case .frameBecameReady:
-            .frameBecameReady(bufferAvailable: bufferAvailable)
+            .frameBecameReady(bufferAvailability: bufferAvailability)
         case .bufferBecameAvailable:
-            .bufferBecameAvailable(bufferAvailable: bufferAvailable)
+            .bufferBecameAvailable(bufferAvailability: bufferAvailability)
         case .redrawRequestConsumed:
-            .redrawRequestConsumed(bufferAvailable: bufferAvailable)
+            .redrawRequestConsumed(bufferAvailability: bufferAvailability)
         case .drawBlockedByBuffer:
             .presentationBlockedByBuffer
         case .presented(let generation):
-            .presentationSucceeded(generation: generation, bufferAvailable: bufferAvailable)
+            .presentationSucceeded(generation: generation, bufferAvailability: bufferAvailability)
         case .transientStateReset:
             .transientStateReset
         }

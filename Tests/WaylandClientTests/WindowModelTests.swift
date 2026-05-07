@@ -30,11 +30,15 @@ struct WindowModelTests {
         var model = try configuredModelReadyForConfigure()
 
         _ = try model.reduce(.configureReceived(configure(width: 800, height: 600, serial: 1)))
-        let presentationEffects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let presentationEffects = try model.reduce(
+            .redrawRequestConsumed(bufferAvailability: .available)
+        )
         let request = try presentationRequest(from: presentationEffects)
         _ = try model.reduce(.presentationStarted(request))
-        _ = try model.reduce(.presentationSucceeded(generation: 1, bufferAvailable: true))
-        _ = try model.reduce(.frameBecameReady(bufferAvailable: true))
+        _ = try model.reduce(
+            .presentationSucceeded(generation: 1, bufferAvailability: .available)
+        )
+        _ = try model.reduce(.frameBecameReady(bufferAvailability: .available))
 
         let effects = try model.reduce(
             .configureReceived(configure(width: 0, height: 720, serial: 2))
@@ -244,7 +248,7 @@ struct WindowModelTests {
 
         _ = try model.reduce(.explicitClose)
 
-        #expect(try model.reduce(.contentInvalidated(bufferAvailable: true)).isEmpty)
+        #expect(try model.reduce(.contentInvalidated(bufferAvailability: .available)).isEmpty)
         #expect(!model.redraw.isDirty)
     }
 
@@ -254,18 +258,18 @@ struct WindowModelTests {
 
         _ = try model.reduce(.explicitClose)
 
-        #expect(try model.reduce(.frameBecameReady(bufferAvailable: true)).isEmpty)
+        #expect(try model.reduce(.frameBecameReady(bufferAvailability: .available)).isEmpty)
         #expect(!model.redraw.isDirty)
     }
 
     @Test
-    func bufferAvailableAfterExplicitCloseDoesNotPublishRedraw() throws {
+    func bufferBecameAvailableAfterExplicitCloseDoesNotPublishRedraw() throws {
         var (model, _) = try activeModelWithStartedPresentation()
         _ = try model.reduce(.presentationBlockedByBuffer)
 
         _ = try model.reduce(.explicitClose)
 
-        #expect(try model.reduce(.bufferBecameAvailable(bufferAvailable: true)).isEmpty)
+        #expect(try model.reduce(.bufferBecameAvailable(bufferAvailability: .available)).isEmpty)
         #expect(!model.redraw.isDirty)
     }
 }
@@ -334,7 +338,7 @@ extension WindowModelTests {
         request: PresentationRequest
     ) {
         var model = try activePublishedModel()
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let request = try presentationRequest(from: effects)
         _ = try model.reduce(.presentationStarted(request))
         return (model, request)
