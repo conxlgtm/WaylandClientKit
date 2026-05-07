@@ -72,7 +72,8 @@ struct RuntimeDataSource {
     let payloads: DataTransferSourcePayloadSet
 }
 
-struct DataTransferRuntimeStore {
+struct DataTransferStore {
+    private var state = DataTransferState()
     private var deviceBindings: [SeatID: any DataTransferDeviceBinding] = [:]
     private var sourceRecords: [DataSourceID: RuntimeDataSource] = [:]
     private var pendingSourceSendRequests: [DataTransferSourceSendRequest] = []
@@ -98,6 +99,38 @@ struct DataTransferRuntimeStore {
 
     var callbackFailure: DataTransferCallbackFailure? {
         pendingCallbackFailure
+    }
+
+    var seatSnapshots: [DataTransferSeatSnapshot] {
+        state.seatSnapshots
+    }
+
+    var offerSnapshots: [DataOfferSnapshot] {
+        state.offerSnapshots
+    }
+
+    var sourceSnapshots: [DataSourceSnapshot] {
+        state.sourceSnapshots
+    }
+
+    func seatSnapshot(_ seatID: SeatID) -> DataTransferSeatSnapshot? {
+        state.seatSnapshot(seatID)
+    }
+
+    func offerSnapshot(_ offerID: DataOfferID) -> DataOfferSnapshot? {
+        state.offerSnapshot(offerID)
+    }
+
+    func sourceSnapshot(_ sourceID: DataSourceID) -> DataSourceSnapshot? {
+        state.sourceSnapshot(sourceID)
+    }
+
+    func transitionPlan(for action: DataTransferAction) throws -> DataTransferTransitionPlan {
+        try state.reduce(action)
+    }
+
+    mutating func replaceState(_ nextState: DataTransferState) {
+        state = nextState
     }
 
     var offerBindingsByID: [DataOfferID: any DataTransferOfferBinding] {

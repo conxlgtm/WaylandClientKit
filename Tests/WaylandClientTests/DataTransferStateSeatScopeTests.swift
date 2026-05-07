@@ -191,17 +191,19 @@ struct DataTransferStateSeatScopeTests {
     }
 
     @Test
-    func stateSnapshotInitRejectsSourceKeyMismatch() {
+    func stateSnapshotInitRejectsSourceKeyMismatch() throws {
+        let sourceSnapshot = try DataSourceSnapshot(
+            id: source2,
+            seatID: seat1,
+            mimeTypes: [.plainText]
+        )
+
         #expect(throws: DataTransferError.unknownSource) {
             _ = try DataTransferState(
                 seats: [:],
                 offers: [:],
                 sources: [
-                    DataSourceID(rawValue: 1): DataSourceSnapshot(
-                        id: source2,
-                        seatID: seat1,
-                        mimeTypes: [.plainText]
-                    )
+                    DataSourceID(rawValue: 1): sourceSnapshot
                 ]
             )
         }
