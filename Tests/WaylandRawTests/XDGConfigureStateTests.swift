@@ -29,6 +29,20 @@ struct XDGConfigureStateTests {
     }
 
     @Test
+    func initialConfigureReceiptFollowsConfigurePhase() {
+        let state = XDGConfigureState()
+
+        state.handleTopLevelConfigure(width: 800, height: 600)
+        #expect(!state.hasReceivedInitialConfigure)
+
+        _ = state.handleSurfaceConfigure(serial: 1)
+        #expect(state.hasReceivedInitialConfigure)
+
+        _ = state.consumeLatestConfigure()
+        #expect(state.hasReceivedInitialConfigure)
+    }
+
+    @Test
     func decorationConfigureIsConsumedBySurfaceConfigure() {
         let state = XDGConfigureState()
         state.handleDecorationConfigure(mode: .clientSide)
