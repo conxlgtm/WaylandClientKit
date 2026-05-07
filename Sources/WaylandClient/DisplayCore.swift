@@ -3,21 +3,22 @@ import WaylandRaw
 @safe
 final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     let eventHub: DisplayEventHub
-    var session: DisplaySession?
+    private var lifecycle: DisplayCoreLifecycle
     var registry = DisplaySurfaceRegistry()
     var surfaceGraph = SurfaceGraph()
-    private(set) var isClosed = false
-    var needsFatalFailureFinalization = false
+    var isClosed: Bool { lifecycle.isClosed }
+    var activeSession: DisplaySession? { lifecycle.activeSession }
+    var hasPendingFatalFailure: Bool { lifecycle.hasPendingFatalFailure }
 
     var windowIDsForRegistryInvariants: Set<WindowID> { registry.windowIDs }
 
     init(session activeSession: DisplaySession, eventHub displayEventHub: DisplayEventHub) {
-        session = activeSession
+        lifecycle = .active(activeSession)
         eventHub = displayEventHub
     }
 
     init(eventHub displayEventHub: DisplayEventHub) {
-        session = nil
+        lifecycle = .testHarness
         eventHub = displayEventHub
     }
 
@@ -56,8 +57,8 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         try withFatalFailureFinalization {
             let window = try requireOpenWindow(windowID)
             try window.showOnOwnerThread(timeoutMilliseconds: timeoutMilliseconds, draw)
-            guard !isClosed, let session else { return }
-            publishSessionEvents(session)
+            guard !isClosed, let activeSession else { return }
+            publishSessionEvents(activeSession)
         }
     }
 
@@ -108,7 +109,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         withFatalFailureFinalization {
             // Fatal raw invariants already finished streams and deferred graph cleanup;
             // avoid publishing orderly window lifecycle events on that explicit path.
-            guard !needsFatalFailureFinalization else { return }
+            guard !hasPendingFatalFailure else { return }
             for popupID in popupIDsTopDown(parentedBy: windowID) {
                 closePopup(popupID)
             }
@@ -119,21 +120,19 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     func close() {
         guard !isClosed else { return }
-        isClosed = true
+        lifecycle = .closed
         for windowID in registry.allWindowIDs {
             closeWindow(windowID)
         }
-        session = nil
         eventHub.finish()
     }
 
     func fail(_ error: WaylandDisplayError) {
         guard !isClosed else { return }
         // Non-callback failures can synchronously discard the owned graph.
-        isClosed = true
+        lifecycle = .closed
         registry.removeAll()
         surfaceGraph = SurfaceGraph()
-        session = nil
         eventHub.finish(throwing: error)
         assertRegistryInvariants()
     }
@@ -146,11 +145,10 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     }
 
     private func finalizeFatalFailureAfterDispatch() {
-        guard needsFatalFailureFinalization else { return }
-        needsFatalFailureFinalization = false
+        guard hasPendingFatalFailure else { return }
         registry.removeAll()
         surfaceGraph = SurfaceGraph()
-        session = nil
+        lifecycle = .closed
         assertRegistryInvariants()
     }
 
@@ -189,7 +187,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     }
 
     func requireSession() throws -> DisplaySession {
-        guard let session, !isClosed else {
+        guard let session = activeSession else {
             throw ClientError.display(.closed)
         }
         return session
@@ -228,6 +226,40 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             throw ClientError.display(.closedPopup)
         }
         return popup
+    }
+}
+
+private enum DisplayCoreLifecycle {
+    case testHarness
+    case active(DisplaySession)
+    case failedPendingFinalization(DisplaySession?)
+    case closed
+
+    var isClosed: Bool {
+        switch self {
+        case .testHarness, .active:
+            false
+        case .failedPendingFinalization, .closed:
+            true
+        }
+    }
+
+    var hasPendingFatalFailure: Bool {
+        switch self {
+        case .failedPendingFinalization:
+            true
+        case .testHarness, .active, .closed:
+            false
+        }
+    }
+
+    var activeSession: DisplaySession? {
+        switch self {
+        case .active(let session):
+            session
+        case .testHarness, .failedPendingFinalization, .closed:
+            nil
+        }
     }
 }
 
@@ -281,8 +313,7 @@ extension DisplayCore {
         guard !isClosed else { return }
         // Raw invariant failures may be reported from inside a C callback, so
         // public streams fail immediately while destructive cleanup is deferred.
-        isClosed = true
-        needsFatalFailureFinalization = true
+        lifecycle = .failedPendingFinalization(activeSession)
         eventHub.finish(throwing: error)
     }
 
@@ -433,7 +464,7 @@ extension DisplayCore {
     }
 
     func cancelRead() {
-        guard !isClosed, let session else { return }
-        session.cancelReadEventsOnOwnerThread()
+        guard let activeSession else { return }
+        activeSession.cancelReadEventsOnOwnerThread()
     }
 }
