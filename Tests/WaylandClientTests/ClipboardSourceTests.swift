@@ -31,7 +31,7 @@ struct ClipboardSourceTests {
             seatID: seatID,
             mimeTypes: configuration.mimeTypes,
             serial: InputSerial(rawValue: 45),
-            dataProvider: configuration.dataProvider
+            payloads: configuration.payloadSet
         )
         let sourceBinding = try #require(backend.sourceBinding(for: source.id))
 

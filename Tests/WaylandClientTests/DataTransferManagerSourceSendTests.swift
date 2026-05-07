@@ -8,7 +8,7 @@ struct DataTransferManagerSourceSendTests {
     private let seat1 = SeatID(rawValue: 1)
 
     @Test
-    func sourceSendWithProviderQueuesOwnedSendRequestWithoutClosingDescriptor() throws {
+    func sourceSendWithPayloadsQueuesOwnedSendRequestWithoutClosingDescriptor() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
         try manager.synchronizeSeats([seat1])
@@ -17,7 +17,7 @@ struct DataTransferManagerSourceSendTests {
             seatID: seat1,
             mimeTypes: [.plainText],
             serial: InputSerial(rawValue: 90),
-            dataProvider: DataTransferSourceProvider(
+            payloads: DataTransferSourcePayloadSet(
                 data: [.plainText: Data("clipboard".utf8)]
             )
         )
@@ -50,7 +50,7 @@ struct DataTransferManagerSourceSendTests {
             seatID: seat1,
             mimeTypes: [.plainText],
             serial: InputSerial(rawValue: 91),
-            dataProvider: DataTransferSourceProvider(
+            payloads: DataTransferSourcePayloadSet(
                 data: [.plainText: Data("clipboard".utf8)]
             )
         )
@@ -184,7 +184,7 @@ struct DataTransferManagerSourceSendTests {
             seatID: seat1,
             mimeTypes: [.plainText],
             serial: InputSerial(rawValue: 92),
-            dataProvider: DataTransferSourceProvider(
+            payloads: DataTransferSourcePayloadSet(
                 data: [.plainText: Data("clipboard".utf8)]
             )
         )
@@ -211,7 +211,7 @@ struct DataTransferManagerSourceSendTests {
             seatID: seat1,
             mimeTypes: [.plainText],
             serial: InputSerial(rawValue: 93),
-            dataProvider: DataTransferSourceProvider(
+            payloads: DataTransferSourcePayloadSet(
                 data: [.plainText: Data("clipboard".utf8)]
             )
         )
@@ -222,7 +222,7 @@ struct DataTransferManagerSourceSendTests {
             seatID: seat1,
             mimeTypes: [.uriList],
             serial: InputSerial(rawValue: 94),
-            dataProvider: DataTransferSourceProvider(data: [.uriList: Data("file://a".utf8)])
+            payloads: DataTransferSourcePayloadSet(data: [.uriList: Data("file://a".utf8)])
         )
 
         #expect(backend.closedDescriptors == [213])
@@ -241,7 +241,7 @@ struct DataTransferManagerSourceSendTests {
             seatID: seat1,
             mimeTypes: [.plainText],
             serial: InputSerial(rawValue: 95),
-            dataProvider: DataTransferSourceProvider(data: [.plainText: data])
+            payloads: DataTransferSourcePayloadSet(data: [.plainText: data])
         )
         let sourceBinding = try #require(backend.sourceBinding(for: source.id))
 

@@ -3,8 +3,7 @@ import WaylandRaw
 extension DataTransferManager {
     package func drainSourceSendRequests() -> [DataTransferSourceSendRequest] {
         backend.preconditionIsOwnerThread()
-        defer { pendingSourceSendRequests.removeAll(keepingCapacity: true) }
-        return pendingSourceSendRequests
+        return runtime.drainSourceSendRequests()
     }
 
     package func drainSourceWriteJobs() throws -> [DataTransferSourceWriteJob] {
@@ -26,9 +25,8 @@ extension DataTransferManager {
 
     package func setSelectionSource(
         seatID: SeatID,
-        mimeTypes: [MIMEType],
-        serial: InputSerial,
-        dataProvider: DataTransferSourceProvider? = nil
+        payloads: DataTransferSourcePayloadSet,
+        serial: InputSerial
     ) throws -> DataSourceSnapshot {
         backend.preconditionIsOwnerThread()
         try throwPendingCallbackErrorIfAny()
@@ -39,19 +37,21 @@ extension DataTransferManager {
             self?.handleDataSourceEvent(event, sourceID: sourceID)
         }
         do {
-            for mimeType in mimeTypes {
+            for mimeType in payloads.mimeTypes {
                 sourceBinding.offer(mimeType: mimeType)
             }
-            try apply(.sourceCreated(id: sourceID, seatID: seatID, mimeTypes: mimeTypes))
-            sourceBindingsByID[sourceID] = sourceBinding
-            sourceProvidersByID[sourceID] = dataProvider
+            try apply(.sourceCreated(id: sourceID, seatID: seatID, mimeTypes: payloads.mimeTypes))
+            runtime.insertSource(
+                binding: sourceBinding,
+                payloads: payloads,
+                sourceID: sourceID
+            )
             try apply(.selectionSourceChanged(seatID: seatID, sourceID: sourceID))
             deviceBinding.setSelection(source: sourceBinding, serial: serial)
             preconditionInvariantsHold()
         } catch {
             sourceBinding.destroy()
-            sourceBindingsByID[sourceID] = nil
-            sourceProvidersByID[sourceID] = nil
+            runtime.removeSource(sourceID)
             throw error
         }
 
@@ -106,7 +106,7 @@ extension DataTransferManager {
         guard seat.hasDataDevice else {
             throw DataTransferError.missingDataDevice(seatID)
         }
-        guard let deviceBinding = deviceBindings[seatID] else {
+        guard let deviceBinding = runtime.deviceBinding(for: seatID) else {
             throw DataTransferError.missingDataDevice(seatID)
         }
 
@@ -150,13 +150,15 @@ extension DataTransferManager {
                 throw DataTransferError.mimeTypeUnavailable(mimeType)
             }
             guard
-                let dataProvider = sourceProvidersByID[sourceID],
-                let data = dataProvider.data(for: mimeType)
+                let data = runtime.sourcePayloadData(
+                    sourceID: sourceID,
+                    mimeType: mimeType
+                )
             else {
                 throw DataTransferError.sourceDataUnavailable(mimeType)
             }
 
-            pendingSourceSendRequests.append(
+            runtime.appendSourceSendRequest(
                 DataTransferSourceSendRequest(
                     sourceID: sourceID,
                     mimeType: mimeType,
@@ -182,7 +184,7 @@ extension DataTransferManager {
 
     package func discardPendingSourceSendRequests(for sourceID: DataSourceID) {
         var remainingRequests: [DataTransferSourceSendRequest] = []
-        for request in pendingSourceSendRequests {
+        for request in runtime.drainSourceSendRequests() {
             if request.sourceID == sourceID {
                 do {
                     try request.close()
@@ -194,7 +196,7 @@ extension DataTransferManager {
             }
         }
 
-        pendingSourceSendRequests = remainingRequests
+        runtime.replaceSourceSendRequests(remainingRequests)
     }
 
     private func discardSourceWriteJobs(_ jobs: [DataTransferSourceWriteJob]) {

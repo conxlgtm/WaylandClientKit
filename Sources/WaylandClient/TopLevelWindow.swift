@@ -425,7 +425,9 @@ package final class TopLevelWindow {
             let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
             let commitPlan = scaleInstallation.commitPlan(
                 geometry: geometry,
-                surfaceUsesBufferDamage: surface.usesBufferDamage
+                damageMode: DamageCoordinateMode(
+                    surfaceUsesBufferDamage: surface.usesBufferDamage
+                )
             )
             applySurfaceCommitPlan(commitPlan)
             surface.attach(buffer: buffer)
@@ -583,12 +585,20 @@ extension TopLevelWindow {
     }
 
     private func handlePreferredBufferScale(_ factor: Int32) {
+        guard !model.isClosed else {
+            resetTransientState()
+            return
+        }
+
         do {
+            let logicalSize = currentLogicalSize
             guard
-                try scaleInstallation.updatePreferredBufferScale(
-                    factor,
-                    logicalSize: currentLogicalSize
-                )
+                try surfaceRuntime.updateScaleInstallation({ scaleInstallation in
+                    try scaleInstallation.updatePreferredBufferScale(
+                        factor,
+                        logicalSize: logicalSize
+                    )
+                })
             else { return }
             try markNeedsRedraw(bufferAvailable: true)
         } catch let error as WindowError {
@@ -602,12 +612,20 @@ extension TopLevelWindow {
     }
 
     private func handlePreferredFractionalScale(_ scale: UInt32) {
+        guard !model.isClosed else {
+            resetTransientState()
+            return
+        }
+
         do {
+            let logicalSize = currentLogicalSize
             guard
-                try scaleInstallation.updatePreferredFractionalScale(
-                    scale,
-                    logicalSize: currentLogicalSize
-                )
+                try surfaceRuntime.updateScaleInstallation({ scaleInstallation in
+                    try scaleInstallation.updatePreferredFractionalScale(
+                        scale,
+                        logicalSize: logicalSize
+                    )
+                })
             else { return }
             try markNeedsRedraw(bufferAvailable: true)
         } catch let error as WindowError {
@@ -711,6 +729,7 @@ extension TopLevelWindow {
             case .destroySurface:
                 destroyScaleObjects()
                 surface.destroy()
+                try surfaceRuntime.markSurfaceDestroyed()
             }
         }
     }
@@ -739,12 +758,12 @@ extension TopLevelWindow {
         onCloseRequested = nil
         onRedrawRequested = nil
 
-        roleResources?.destroy()
-        roleResources = nil
+        var removedRoleResources = surfaceRuntime.removeRoleResources()
+        removedRoleResources?.destroy()
     }
 
     private func destroyScaleObjects() {
-        scaleInstallation.destroy()
+        surfaceRuntime.destroyScaleInstallation()
     }
 }
 

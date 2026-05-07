@@ -59,7 +59,9 @@ extension PopupRoleSurface {
             let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
             let commitPlan = scaleInstallation.commitPlan(
                 geometry: geometry,
-                surfaceUsesBufferDamage: surface.usesBufferDamage
+                damageMode: DamageCoordinateMode(
+                    surfaceUsesBufferDamage: surface.usesBufferDamage
+                )
             )
             applySurfaceCommitPlan(commitPlan)
             surface.attach(buffer: buffer)
@@ -125,18 +127,18 @@ extension PopupRoleSurface {
                     retireSwapchain()
                 },
                 destroyRoleObjects: { [self] in
-                    destroyRoleObjects()
+                    try destroyRoleObjects()
                 }
             )
         )
     }
 
-    private func destroyRoleObjects() {
+    private func destroyRoleObjects() throws {
         onClose?()
         onClose = nil
         onRedrawRequested = nil
 
-        scaleInstallation.destroy()
-        destroyRoleResources()
+        destroyScaleResources()
+        try destroyRoleResources()
     }
 }

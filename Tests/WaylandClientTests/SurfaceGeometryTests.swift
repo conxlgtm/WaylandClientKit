@@ -158,7 +158,7 @@ struct SurfaceGeometryTests {
         let geometry = try scaleState.geometry(logicalSize: logicalSize)
         let plan = scaleState.commitPlan(
             geometry: geometry,
-            surfaceUsesBufferDamage: true
+            damageMode: .buffer
         )
 
         #expect(geometry.bufferSize == (try PositivePixelSize(width: 160, height: 120)))
@@ -176,7 +176,7 @@ struct SurfaceGeometryTests {
         let geometry = try scaleState.geometry(logicalSize: logicalSize)
         let plan = scaleState.commitPlan(
             geometry: geometry,
-            surfaceUsesBufferDamage: true
+            damageMode: .buffer
         )
 
         #expect(geometry.bufferSize == (try PositivePixelSize(width: 152, height: 77)))
@@ -195,8 +195,8 @@ struct SurfaceGeometryTests {
         let plan = SurfaceCommitPlan(
             geometry: geometry,
             bufferScale: 2,
-            usesViewportDestination: false,
-            usesBufferDamage: false
+            viewportMode: .omitDestination,
+            damageMode: .logical
         )
 
         #expect(plan.damage == .logical(width: 80, height: 60))

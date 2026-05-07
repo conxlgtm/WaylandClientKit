@@ -12,7 +12,6 @@ package enum DataTransferManagerInvariantViolation:
     case pendingRuntimeOfferHasState(DataOfferID)
     case pendingRuntimeOfferMissingSeat(DataOfferID, SeatID)
     case sourceBindingsDoNotMatchState
-    case sourceProviderWithoutSource(DataSourceID)
     case pendingSourceSendRequestMissingSource(DataSourceID)
     case seatSelectionReferencesMissingOffer(SeatID, DataOfferID)
     case seatSelectionReferencesMissingSource(SeatID, DataSourceID)
@@ -35,8 +34,6 @@ package enum DataTransferManagerInvariantViolation:
             "pending offer \(offerID) references missing seat \(seatID)"
         case .sourceBindingsDoNotMatchState:
             "source bindings do not match active sources"
-        case .sourceProviderWithoutSource(let sourceID):
-            "source provider \(sourceID) has no active source"
         case .pendingSourceSendRequestMissingSource(let sourceID):
             "source send request references missing source \(sourceID)"
         case .seatSelectionReferencesMissingOffer(let seatID, let offerID):
@@ -75,7 +72,7 @@ extension DataTransferManager {
     private func checkSeatBindingInvariants(
         seatsWithDataDevice: Set<SeatID>
     ) throws {
-        guard Set(deviceBindings.keys) == seatsWithDataDevice else {
+        guard runtime.boundSeatIDs == seatsWithDataDevice else {
             throw DataTransferManagerInvariantViolation.dataDeviceBindingsDoNotMatchSeats
         }
     }
@@ -83,13 +80,18 @@ extension DataTransferManager {
     private func checkOfferRuntimeInvariants(
         seatsWithDataDevice: Set<SeatID>
     ) throws {
-        let runtimeOfferIDs = Set(runtimeOffersByID.keys)
-        let indexedOfferIDs = Set(offerIDsByHandle.values)
+        let runtimeOfferIDs = runtime.offerIDs
+        let indexedOfferIDs = runtime.indexedOfferIDs
         guard runtimeOfferIDs == indexedOfferIDs else {
             throw DataTransferManagerInvariantViolation.offerHandleIndexDoesNotMatchRecords
         }
-        for (handle, offerID) in offerIDsByHandle {
-            guard runtimeOffersByID[offerID]?.handle == handle else {
+        for (handle, offerID) in runtime.offerHandleIndexEntries {
+            guard
+                runtime.offerHandleMatchesIndex(
+                    handle: handle,
+                    offerID: offerID
+                )
+            else {
                 throw DataTransferManagerInvariantViolation.offerHandleIndexDoesNotMatchRecords
             }
         }
@@ -98,10 +100,10 @@ extension DataTransferManager {
             uniqueKeysWithValues: state.offerSnapshots.map { ($0.id, $0) }
         )
         let activeOfferIDs = Set(activeOffersByID.keys)
-        for offerID in activeOfferIDs where runtimeOffersByID[offerID] == nil {
+        for offerID in activeOfferIDs where runtime.runtimeOffer(offerID) == nil {
             throw DataTransferManagerInvariantViolation.activeOfferMissingRuntimeBinding(offerID)
         }
-        for (offerID, runtimeOffer) in runtimeOffersByID {
+        for (offerID, runtimeOffer) in runtime.offersByIDForInvariantChecks {
             try checkRuntimeOffer(
                 offerID,
                 runtimeOffer,
@@ -145,13 +147,11 @@ extension DataTransferManager {
 
     private func checkSourceRuntimeInvariants() throws {
         let activeSourceIDs = Set(state.sourceSnapshots.map(\.id))
-        guard Set(sourceBindingsByID.keys) == activeSourceIDs else {
+        guard runtime.sourceIDs == activeSourceIDs else {
             throw DataTransferManagerInvariantViolation.sourceBindingsDoNotMatchState
         }
-        for sourceID in sourceProvidersByID.keys where !activeSourceIDs.contains(sourceID) {
-            throw DataTransferManagerInvariantViolation.sourceProviderWithoutSource(sourceID)
-        }
-        for request in pendingSourceSendRequests where !activeSourceIDs.contains(request.sourceID) {
+        for request in runtime.pendingSourceSendRequestsForInvariantChecks()
+        where !activeSourceIDs.contains(request.sourceID) {
             throw
                 DataTransferManagerInvariantViolation
                 .pendingSourceSendRequestMissingSource(request.sourceID)
