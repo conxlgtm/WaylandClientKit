@@ -22,6 +22,49 @@ struct DataTransferManagerCallbackFailureTests {
                 )
         )
     }
+
+    @Test
+    func callbackErrorsAreQueuedInCallbackOrder() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        try manager.synchronizeSeats([])
+        let releasedBinding = try #require(backend.binding(for: seat1))
+
+        releasedBinding.emit(.selection(nil))
+        releasedBinding.emit(.dataOffer(nil))
+
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataDevice(seat1),
+                    error: .unknownSeat(seat1)
+                )
+        )
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dataDevice(seat1),
+                error: .unknownSeat(seat1)
+            )
+        ) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataDevice(seat1),
+                    error: .unknownOffer
+                )
+        )
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dataDevice(seat1),
+                error: .unknownOffer
+            )
+        ) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+    }
 }
 
 private struct UnexpectedCallbackError: Error, CustomStringConvertible {

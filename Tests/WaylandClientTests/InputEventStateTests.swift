@@ -39,6 +39,48 @@ struct InputEventStateTests {
     }
 
     @Test
+    func pointerAxisDecodesKnownAndUnknownRawValues() {
+        #expect(PointerAxis(rawValue: 0) == .verticalScroll)
+        #expect(PointerAxis(rawValue: 1) == .horizontalScroll)
+        #expect(PointerAxis(rawValue: 99) == .unknown(99))
+        #expect(PointerAxis.unknown(99).rawValue == 99)
+    }
+
+    @Test
+    func pointerAxisSourceDecodesKnownAndUnknownRawValues() {
+        #expect(PointerAxisSource(rawValue: 0) == .wheel)
+        #expect(PointerAxisSource(rawValue: 1) == .finger)
+        #expect(PointerAxisSource(rawValue: 2) == .continuous)
+        #expect(PointerAxisSource(rawValue: 3) == .wheelTilt)
+        #expect(PointerAxisSource(rawValue: 99) == .unknown(99))
+        #expect(PointerAxisSource.unknown(99).rawValue == 99)
+    }
+
+    @Test
+    func pointerAxisRelativeDirectionDecodesKnownAndUnknownRawValues() {
+        #expect(PointerAxisRelativeDirection(rawValue: 0) == .identical)
+        #expect(PointerAxisRelativeDirection(rawValue: 1) == .inverted)
+        #expect(PointerAxisRelativeDirection(rawValue: 99) == .unknown(99))
+        #expect(PointerAxisRelativeDirection.unknown(99).rawValue == 99)
+    }
+
+    @Test
+    func keyboardModifierDomainValuesPreserveRawValues() {
+        #expect(KeyboardModifierMask(rawValue: 7).rawValue == 7)
+        #expect(KeyboardLayoutGroup(rawValue: 3).rawValue == 3)
+        #expect(
+            KeyboardModifiers(
+                serial: InputSerial(rawValue: 1),
+                depressed: 2,
+                latched: 3,
+                locked: 4,
+                group: 5
+            )
+            .depressed == KeyboardModifierMask(rawValue: 2)
+        )
+    }
+
+    @Test
     func touchIDPreservesRawValue() {
         let id = TouchID(rawValue: 7)
 

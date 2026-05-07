@@ -192,10 +192,14 @@ package final class XDGConfigureState {
     }
 
     package func handleConfigureBounds(width: Int32, height: Int32) {
-        guard width > 0, height > 0 else {
+        if width == 0, height == 0 {
             updateCollection { collection in
                 collection.parts.bounds = nil
             }
+            return
+        }
+        guard width > 0, height > 0 else {
+            recordError(.invalidConfigureBounds(width: width, height: height))
             return
         }
 

@@ -39,17 +39,17 @@ final class SeatListenerOwner {
         }
 
         callbacks.pointee.name = { data, _, name in
-            guard let name else {
-                preconditionFailure("wl_seat name fired without Swift state")
-            }
-
             SeatListenerOwner.withOwner(
                 data,
                 message: "wl_seat name fired without Swift state"
             ) { owner in
                 guard !owner.isCanceled else { return }
+                guard let name = unsafe name else {
+                    owner.reportMissingSeatName()
+                    return
+                }
 
-                owner.onEvent?(.name(String(cString: name)))
+                owner.onEvent?(.name(unsafe String(cString: name)))
             }
         }
     }
@@ -70,6 +70,10 @@ final class SeatListenerOwner {
         isCanceled = true
         onEvent = nil
         listenerStorage.invalidate()
+    }
+
+    private func reportMissingSeatName() {
+        invariantFailureSink?.reportFatalRawInvariantFailure(.missingSeatName)
     }
 
     deinit {

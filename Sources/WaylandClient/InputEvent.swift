@@ -48,12 +48,12 @@ public enum SeatEvent: Equatable, Sendable {
 public struct SeatStateSnapshot: Equatable, Sendable {
     public let advertisedCapabilities: SeatCapabilities
     public let activeCapabilities: SeatCapabilities
-    public let name: String?
+    public let name: SeatName?
 
     public init(
         advertisedCapabilities seatAdvertisedCapabilities: SeatCapabilities,
         activeCapabilities seatActiveCapabilities: SeatCapabilities,
-        name seatName: String?
+        name seatName: SeatName?
     ) {
         advertisedCapabilities = seatAdvertisedCapabilities
         activeCapabilities = seatActiveCapabilities
@@ -106,41 +106,6 @@ public enum PointerAxisEvent: Equatable, Sendable {
     case value120(axis: PointerAxis, value120: Int32)
     case relativeDirection(axis: PointerAxis, direction: PointerAxisRelativeDirection)
     case frame
-}
-
-public struct PointerAxis: Equatable, Sendable {
-    public let rawValue: UInt32
-
-    public init(rawValue axisRawValue: UInt32) {
-        rawValue = axisRawValue
-    }
-
-    public static let verticalScroll = Self(rawValue: 0)
-    public static let horizontalScroll = Self(rawValue: 1)
-}
-
-public struct PointerAxisSource: Equatable, Sendable {
-    public let rawValue: UInt32
-
-    public init(rawValue sourceRawValue: UInt32) {
-        rawValue = sourceRawValue
-    }
-
-    public static let wheel = Self(rawValue: 0)
-    public static let finger = Self(rawValue: 1)
-    public static let continuous = Self(rawValue: 2)
-    public static let wheelTilt = Self(rawValue: 3)
-}
-
-public struct PointerAxisRelativeDirection: Equatable, Sendable {
-    public let rawValue: UInt32
-
-    public init(rawValue directionRawValue: UInt32) {
-        rawValue = directionRawValue
-    }
-
-    public static let identical = Self(rawValue: 0)
-    public static let inverted = Self(rawValue: 1)
 }
 
 public enum KeyboardEvent: Equatable, Sendable {
@@ -214,10 +179,10 @@ public struct KeyboardKeysym: Equatable, Sendable {
 
 public struct KeyboardModifiers: Equatable, Sendable {
     public let serial: InputSerial
-    public let depressed: UInt32
-    public let latched: UInt32
-    public let locked: UInt32
-    public let group: UInt32
+    public let depressed: KeyboardModifierMask
+    public let latched: KeyboardModifierMask
+    public let locked: KeyboardModifierMask
+    public let group: KeyboardLayoutGroup
 
     public init(
         serial eventSerial: InputSerial,
@@ -225,6 +190,20 @@ public struct KeyboardModifiers: Equatable, Sendable {
         latched eventLatched: UInt32,
         locked eventLocked: UInt32,
         group eventGroup: UInt32
+    ) {
+        serial = eventSerial
+        depressed = KeyboardModifierMask(rawValue: eventDepressed)
+        latched = KeyboardModifierMask(rawValue: eventLatched)
+        locked = KeyboardModifierMask(rawValue: eventLocked)
+        group = KeyboardLayoutGroup(rawValue: eventGroup)
+    }
+
+    public init(
+        serial eventSerial: InputSerial,
+        depressed eventDepressed: KeyboardModifierMask,
+        latched eventLatched: KeyboardModifierMask,
+        locked eventLocked: KeyboardModifierMask,
+        group eventGroup: KeyboardLayoutGroup
     ) {
         serial = eventSerial
         depressed = eventDepressed
@@ -236,10 +215,10 @@ public struct KeyboardModifiers: Equatable, Sendable {
 
 public struct InterpretedKeyboardModifiers: Equatable, Sendable {
     public let serial: InputSerial
-    public let depressed: UInt32
-    public let latched: UInt32
-    public let locked: UInt32
-    public let group: UInt32
+    public let depressed: KeyboardModifierMask
+    public let latched: KeyboardModifierMask
+    public let locked: KeyboardModifierMask
+    public let group: KeyboardLayoutGroup
     public let changedComponents: KeyboardModifierStateComponents
 
     public init(
@@ -248,6 +227,22 @@ public struct InterpretedKeyboardModifiers: Equatable, Sendable {
         latched eventLatched: UInt32,
         locked eventLocked: UInt32,
         group eventGroup: UInt32,
+        changedComponents eventChangedComponents: KeyboardModifierStateComponents
+    ) {
+        serial = eventSerial
+        depressed = KeyboardModifierMask(rawValue: eventDepressed)
+        latched = KeyboardModifierMask(rawValue: eventLatched)
+        locked = KeyboardModifierMask(rawValue: eventLocked)
+        group = KeyboardLayoutGroup(rawValue: eventGroup)
+        changedComponents = eventChangedComponents
+    }
+
+    public init(
+        serial eventSerial: InputSerial,
+        depressed eventDepressed: KeyboardModifierMask,
+        latched eventLatched: KeyboardModifierMask,
+        locked eventLocked: KeyboardModifierMask,
+        group eventGroup: KeyboardLayoutGroup,
         changedComponents eventChangedComponents: KeyboardModifierStateComponents
     ) {
         serial = eventSerial

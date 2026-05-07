@@ -144,6 +144,28 @@ struct DataTransferStateSeatScopeTests {
     }
 
     @Test
+    func stateSnapshotInitRejectsSelectionOfferWithoutMimeTypes() {
+        #expect(throws: DataTransferError.emptyDataOffer) {
+            _ = try DataTransferState(
+                seats: [
+                    seat1: DataTransferSeatSnapshot(
+                        seatID: seat1,
+                        device: .bound(selection: .remoteOffer(offer2))
+                    )
+                ],
+                offers: [
+                    offer2: DataOfferSnapshot(
+                        id: offer2,
+                        role: .selection(seatID: seat1),
+                        mimeTypes: []
+                    )
+                ],
+                sources: [:]
+            )
+        }
+    }
+
+    @Test
     func stateSnapshotInitRejectsDanglingSelectionSource() {
         #expect(throws: DataTransferError.unknownSource) {
             _ = try DataTransferState(

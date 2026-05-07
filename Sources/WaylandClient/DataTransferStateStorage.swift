@@ -120,35 +120,37 @@ package struct DataTransferOfferState: Equatable, Sendable {
 }
 
 package struct DataTransferSourceState: Equatable, Sendable {
-    package var id: DataSourceID
-    package var seatID: SeatID
-    package var mimeTypes: [MIMEType]
+    private var storage: DataSourceSnapshot
 
     package init(
         id sourceID: DataSourceID,
         seatID sourceSeatID: SeatID,
         mimeTypes sourceTypes: [MIMEType]
-    ) {
-        id = sourceID
-        seatID = sourceSeatID
-        mimeTypes = sourceTypes
+    ) throws {
+        storage = try DataSourceSnapshot(
+            id: sourceID,
+            seatID: sourceSeatID,
+            mimeTypes: sourceTypes
+        )
     }
 
     package init(_ snapshot: DataSourceSnapshot) {
-        id = snapshot.id
-        seatID = snapshot.seatID
-        mimeTypes = snapshot.mimeTypes
+        storage = snapshot
+    }
+
+    package var id: DataSourceID {
+        storage.id
+    }
+
+    package var seatID: SeatID {
+        storage.seatID
+    }
+
+    package var mimeTypes: [MIMEType] {
+        storage.mimeTypes
     }
 
     package var snapshot: DataSourceSnapshot {
-        do {
-            return try DataSourceSnapshot(
-                id: id,
-                seatID: seatID,
-                mimeTypes: mimeTypes
-            )
-        } catch {
-            preconditionFailure("data source state contains invalid MIME types")
-        }
+        storage
     }
 }

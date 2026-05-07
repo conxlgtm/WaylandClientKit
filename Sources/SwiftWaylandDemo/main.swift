@@ -166,7 +166,8 @@ private struct DemoState {
         case .changed(let snapshot):
             DemoLog.write(
                 "seat \(seatID) capabilities advertised=\(snapshot.advertisedCapabilities) "
-                    + "active=\(snapshot.activeCapabilities) name=\(snapshot.name ?? "?")"
+                    + "active=\(snapshot.activeCapabilities) "
+                    + "name=\(snapshot.name?.description ?? "?")"
             )
         case .removed:
             DemoLog.write("seat \(seatID) removed")

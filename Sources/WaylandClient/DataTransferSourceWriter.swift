@@ -37,14 +37,16 @@ package final class DataTransferSourceWriteJob: Sendable {
     package let mimeType: MIMEType
     package let data: Data
 
-    private let descriptor: Mutex<DescriptorState>
+    private let descriptor: Mutex<DataTransferSourceDescriptorState>
     private let descriptorIO: DataTransferSourceDescriptorIO
+    private let writePolicy: DataTransferSourceWritePolicy
 
     package convenience init(
         sourceID jobSourceID: DataSourceID,
         mimeType jobMIMEType: MIMEType,
         descriptor jobDescriptor: Int32,
         data jobData: Data,
+        writePolicy jobWritePolicy: DataTransferSourceWritePolicy = .default,
         prepareDescriptorForWriting prepare: @escaping @Sendable (Int32) throws -> Void =
             defaultPrepareDataTransferSourceDescriptorForWriting,
         writeDescriptor write: @escaping @Sendable (Int32, [UInt8]) throws -> Int =
@@ -61,7 +63,8 @@ package final class DataTransferSourceWriteJob: Sendable {
                 prepareDescriptorForWriting: prepare,
                 writeDescriptor: write,
                 closeDescriptor: close
-            )
+            ),
+            writePolicy: jobWritePolicy
         )
     }
 
@@ -70,13 +73,15 @@ package final class DataTransferSourceWriteJob: Sendable {
         mimeType jobMIMEType: MIMEType,
         descriptor jobDescriptor: Int32,
         data jobData: Data,
-        descriptorIO jobDescriptorIO: DataTransferSourceDescriptorIO
+        descriptorIO jobDescriptorIO: DataTransferSourceDescriptorIO,
+        writePolicy jobWritePolicy: DataTransferSourceWritePolicy = .default
     ) {
         sourceID = jobSourceID
         mimeType = jobMIMEType
         data = jobData
-        descriptor = Mutex(DescriptorState(rawValue: jobDescriptor))
+        descriptor = Mutex(DataTransferSourceDescriptorState(rawValue: jobDescriptor))
         descriptorIO = jobDescriptorIO
+        writePolicy = jobWritePolicy
     }
 
     package func write() -> DataTransferSourceWriteResult {
@@ -153,6 +158,7 @@ package final class DataTransferSourceWriteJob: Sendable {
     private func writeData(to rawDescriptor: Int32) throws {
         let bytes = Array(data)
         var writtenByteCount = 0
+        var temporaryWriteFailureCount = 0
 
         while writtenByteCount < bytes.count {
             try throwIfCancelled()
@@ -166,12 +172,22 @@ package final class DataTransferSourceWriteJob: Sendable {
                 }
 
                 writtenByteCount += count
+                temporaryWriteFailureCount = 0
             } catch let error as DataTransferError {
                 if let cancellationError = cancellationError() {
                     throw cancellationError
                 }
                 if isTemporaryDataTransferSourceWriteBackpressure(error) {
-                    usleep(1_000)
+                    temporaryWriteFailureCount += 1
+                    guard
+                        temporaryWriteFailureCount
+                            <= writePolicy.maximumTemporaryWriteFailures
+                    else {
+                        throw DataTransferError.transferTimedOut
+                    }
+                    if writePolicy.retryDelayMicroseconds > 0 {
+                        usleep(writePolicy.retryDelayMicroseconds)
+                    }
                     continue
                 }
 
@@ -285,17 +301,6 @@ package final class DataTransferSourceWriteJob: Sendable {
 
     deinit {
         closeDescriptorOnDeinit()
-    }
-
-    private enum DescriptorState: Sendable {
-        case idle(Int32)
-        case writing(Int32, cancellationError: DataTransferError?)
-        case cancelledBeforeWriting(DataTransferError)
-        case consumed
-
-        init(rawValue: Int32) {
-            self = .idle(rawValue)
-        }
     }
 }
 

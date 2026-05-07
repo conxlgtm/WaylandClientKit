@@ -168,6 +168,49 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
+    func emptyNameEventClearsSeatName() throws {
+        let recorder = SeatOperationRecorder()
+        let queue = RawInputEventQueue()
+        let seat = try RawSeat(
+            id: RawSeatID(rawValue: 17),
+            pointer: try #require(fakePointer(0x501)),
+            version: 10,
+            eventSink: queue,
+            operations: recorder.operations,
+            installListener: false
+        )
+
+        seat.applyName("default")
+        seat.applyName("")
+
+        #expect(seat.name == nil)
+        #expect(queue.drain().last?.kind == .seat(seat.snapshot))
+    }
+
+    @Test
+    func nullNameCallbackRecordsRawInvariantFailure() throws {
+        let operationRecorder = SeatOperationRecorder()
+        let failureRecorder = RawInvariantFailureRecorder()
+        let sink = RawInvariantFailureSink()
+        sink.reporter = failureRecorder
+        let queue = RawInputEventQueue()
+        let seat = try RawSeat(
+            id: RawSeatID(rawValue: 18),
+            pointer: try #require(fakePointer(0x502)),
+            version: 10,
+            eventSink: queue,
+            invariantFailureSink: sink,
+            operations: operationRecorder.operations
+        )
+        let callbacks = try #require(operationRecorder.seatCallbacks)
+
+        callbacks.pointee.name?(callbacks.pointee.data, seat.pointer, nil)
+
+        #expect(failureRecorder.failures == [.missingSeatName])
+        #expect(queue.drain().isEmpty)
+    }
+
+    @Test
     func pointerCallbacksEmitInputEvents() throws {
         let recorder = SeatOperationRecorder()
         recorder.pointerProxy = fakePointer(0x801)
@@ -540,6 +583,7 @@ private final class SeatOperationRecorder {
     var pointerProxy: OpaquePointer?
     var keyboardProxy: OpaquePointer?
     var touchProxy: OpaquePointer?
+    var seatCallbacks: UnsafePointer<swl_seat_listener_callbacks>?
     var pointerCallbacks: UnsafePointer<swl_pointer_listener_callbacks>?
     var keyboardCallbacks: UnsafePointer<swl_keyboard_listener_callbacks>?
     var touchCallbacks: UnsafePointer<swl_touch_listener_callbacks>?
@@ -551,8 +595,9 @@ private final class SeatOperationRecorder {
                 entries.append("bind seat \(name) v\(version)")
                 return OpaquePointer(bitPattern: Int(0x1_000 + name))
             },
-            addSeatListener: { [self] _, _ in
+            addSeatListener: { [self] _, callbacks in
                 entries.append("add seat listener")
+                seatCallbacks = callbacks
                 return seatListenerResult
             },
             addPointerListener: { [self] _, callbacks in
@@ -608,6 +653,14 @@ private final class SeatOperationRecorder {
                 entries.append("release seat")
             }
         )
+    }
+}
+
+private final class RawInvariantFailureRecorder: RawInvariantFailureReporter {
+    var failures: [RawInvariantFailure] = []
+
+    func reportFatalRawInvariantFailure(_ failure: RawInvariantFailure) {
+        failures.append(failure)
     }
 }
 

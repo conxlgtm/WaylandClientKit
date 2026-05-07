@@ -15,6 +15,7 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case transferTimedOut
     case callbackFailure(String)
     case emptyDataSource
+    case emptyDataOffer
     case duplicateMIMEType(MIMEType)
     case unavailable
     case unknownSeat(SeatID)
@@ -57,6 +58,8 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "data transfer callback failed: \(message)"
         case .emptyDataSource:
             "data source must offer at least one MIME type"
+        case .emptyDataOffer:
+            "data offer must provide at least one MIME type before selection"
         case .duplicateMIMEType(let mimeType):
             "duplicate MIME type in data source: \(mimeType.description)"
         case .unavailable:

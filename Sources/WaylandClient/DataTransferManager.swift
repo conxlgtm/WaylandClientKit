@@ -254,6 +254,9 @@ package final class DataTransferManager {
             guard runtimeOffer.pendingSeatID == seatID else {
                 throw DataTransferError.unknownOffer
             }
+            guard !runtimeOffer.pendingMIMETypes.isEmpty else {
+                throw DataTransferError.emptyDataOffer
+            }
 
             try apply(.offerCreated(id: offerID, role: .selection(seatID: seatID)))
             for mimeType in runtimeOffer.pendingMIMETypes {

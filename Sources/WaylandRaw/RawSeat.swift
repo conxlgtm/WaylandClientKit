@@ -89,7 +89,7 @@ package final class RawSeat {
     }
 
     package func applyName(_ name: String) {
-        nameStorage = name
+        nameStorage = name.isEmpty ? nil : name
         appendSnapshot()
     }
 

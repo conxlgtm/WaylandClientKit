@@ -105,6 +105,8 @@ struct DataTransferStateTests {
             .state
         state = try state.reduce(.offerCreated(id: offer2, role: .selection(seatID: seat1)))
             .state
+        state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
+        state = try state.reduce(.offerMimeType(id: offer2, mimeType: .plainTextUTF8)).state
 
         let firstSelection = try state.reduce(
             .selectionChanged(seatID: seat1, offerID: offer1)
@@ -133,6 +135,7 @@ struct DataTransferStateTests {
         var state = try boundState(seat1)
         state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
             .state
+        state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
         state = try state.reduce(.selectionChanged(seatID: seat1, offerID: offer1)).state
 
         let cleared = try state.reduce(.selectionChanged(seatID: seat1, offerID: nil))
@@ -166,6 +169,19 @@ struct DataTransferStateTests {
         #expect(throws: DataTransferError.unknownOffer) {
             _ = try bound.reduce(.selectionChanged(seatID: seat1, offerID: offer1))
         }
+    }
+
+    @Test
+    func selectionRejectsOfferWithoutMimeTypes() throws {
+        var state = try boundState(seat1)
+        state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
+            .state
+
+        #expect(throws: DataTransferError.emptyDataOffer) {
+            _ = try state.reduce(.selectionChanged(seatID: seat1, offerID: offer1))
+        }
+        #expect(state.seatSnapshot(seat1)?.selectionOfferID == nil)
+        #expect(state.offerSnapshot(offer1)?.mimeTypes.isEmpty == true)
     }
 
     @Test
@@ -220,6 +236,7 @@ struct DataTransferStateTests {
             .state
         state = try state.reduce(.offerCreated(id: offer2, role: .selection(seatID: seat2)))
             .state
+        state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
         state = try state.reduce(.selectionChanged(seatID: seat1, offerID: offer1)).state
         state = try state.reduce(
             .sourceCreated(id: source1, seatID: seat1, mimeTypes: [.plainText])

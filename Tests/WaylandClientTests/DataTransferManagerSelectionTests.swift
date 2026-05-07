@@ -31,6 +31,26 @@ struct DataTransferManagerSelectionTests {
     }
 
     @Test
+    func selectionWithNoMimeTypesRecordsCallbackError() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        device.emit(.selection(offerHandle1))
+
+        #expect(manager.offerSnapshots.isEmpty)
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataDevice(seat1),
+                    error: .emptyDataOffer
+                )
+        )
+    }
+
+    @Test
     func selectionOfferReturnsNilWhenSeatHasNoSelection() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
