@@ -154,14 +154,14 @@ public enum RawKeyboardEvent: Equatable, Sendable {
     case left(serial: InputSerial)
     case key(KeyboardKeyEvent)
     case modifiers(KeyboardModifiers)
-    case repeatInfo(KeyboardRepeatInfo)
+    case repeatInfo(KeyboardRepeatPolicy)
 }
 
 public enum InterpretedKeyboardEvent: Equatable, Sendable {
     case keymap(InterpretedKeyboardKeymapInfo)
     case key(InterpretedKeyboardKeyEvent)
     case modifiers(InterpretedKeyboardModifiers)
-    case repeatInfo(InterpretedKeyboardRepeatInfo)
+    case repeatInfo(KeyboardRepeatPolicy)
     case unavailable(KeyboardInterpretationUnavailable)
 }
 
@@ -277,23 +277,111 @@ public struct KeyboardModifierStateComponents: OptionSet, Equatable, Sendable {
     public static let leds = Self(rawValue: 1 << 8)
 }
 
-public struct KeyboardRepeatInfo: Equatable, Sendable {
-    public let rate: Int32
-    public let delay: Int32
+public enum KeyboardRepeatPolicy: Equatable, Sendable {
+    case disabled
+    case enabled(rate: KeyboardRepeatRate, delay: KeyboardRepeatDelay)
 
-    public init(rate repeatRate: Int32, delay repeatDelay: Int32) {
-        rate = repeatRate
-        delay = repeatDelay
+    public init(rate repeatRate: Int32, delay repeatDelay: Int32) throws {
+        guard repeatDelay >= 0 else {
+            throw KeyboardRepeatPolicyError.negativeDelay(rate: repeatRate, delay: repeatDelay)
+        }
+        guard repeatRate >= 0 else {
+            throw KeyboardRepeatPolicyError.negativeRate(rate: repeatRate, delay: repeatDelay)
+        }
+        guard repeatRate > 0 else {
+            self = .disabled
+            return
+        }
+
+        self = .enabled(
+            rate: KeyboardRepeatRate(unchecked: repeatRate),
+            delay: KeyboardRepeatDelay(unchecked: repeatDelay)
+        )
+    }
+
+    public var rate: Int32 {
+        switch self {
+        case .disabled:
+            0
+        case .enabled(let rate, _):
+            rate.rawValue
+        }
+    }
+
+    public var delayMilliseconds: Int32? {
+        switch self {
+        case .disabled:
+            nil
+        case .enabled(_, let delay):
+            delay.rawValue
+        }
     }
 }
 
-public struct InterpretedKeyboardRepeatInfo: Equatable, Sendable {
-    public let rate: Int32
-    public let delay: Int32
+public struct KeyboardRepeatRate: Equatable, Comparable, Sendable, CustomStringConvertible {
+    public let rawValue: Int32
 
-    public init(rate repeatRate: Int32, delay repeatDelay: Int32) {
-        rate = repeatRate
-        delay = repeatDelay
+    public init(_ value: Int32) throws {
+        guard value > 0 else {
+            throw KeyboardRepeatPolicyError.nonPositiveRate(value)
+        }
+
+        rawValue = value
+    }
+
+    package init(unchecked value: Int32) {
+        precondition(value > 0, "keyboard repeat rate must be positive")
+        rawValue = value
+    }
+
+    public var description: String {
+        String(rawValue)
+    }
+
+    public static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
+}
+
+public struct KeyboardRepeatDelay: Equatable, Comparable, Sendable, CustomStringConvertible {
+    public let rawValue: Int32
+
+    public init(_ value: Int32) throws {
+        guard value >= 0 else {
+            throw KeyboardRepeatPolicyError.negativeDelay(rate: 0, delay: value)
+        }
+
+        rawValue = value
+    }
+
+    package init(unchecked value: Int32) {
+        precondition(value >= 0, "keyboard repeat delay must be non-negative")
+        rawValue = value
+    }
+
+    public var description: String {
+        String(rawValue)
+    }
+
+    public static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
+}
+
+public enum KeyboardRepeatPolicyError: Error, Equatable, Sendable, CustomStringConvertible {
+    case nonPositiveRate(Int32)
+    case negativeRate(rate: Int32, delay: Int32)
+    case negativeDelay(rate: Int32, delay: Int32)
+
+    public var description: String {
+        switch self {
+        case .nonPositiveRate(let value):
+            "keyboard repeat rate must be positive, got \(value)"
+        case .negativeRate(let rate, let delay):
+            "invalid keyboard repeat info: negative rate \(rate), delay \(delay)"
+        case .negativeDelay(let rate, let delay):
+            "invalid keyboard repeat info: rate \(rate), negative delay \(delay)"
+        }
     }
 }
 

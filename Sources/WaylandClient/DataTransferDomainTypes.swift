@@ -13,6 +13,7 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case fileDescriptorAlreadyReleased
     case transferTooLarge(limit: ByteCount)
     case transferTimedOut
+    case callbackFailure(String)
     case emptyDataSource
     case duplicateMIMEType(MIMEType)
     case unavailable
@@ -52,6 +53,8 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "transfer exceeded limit: \(limit.description)"
         case .transferTimedOut:
             "data transfer timed out"
+        case .callbackFailure(let message):
+            "data transfer callback failed: \(message)"
         case .emptyDataSource:
             "data source must offer at least one MIME type"
         case .duplicateMIMEType(let mimeType):

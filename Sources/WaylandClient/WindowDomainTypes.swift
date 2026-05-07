@@ -384,9 +384,9 @@ package struct TopLevelSizeSuggestion: Equatable, Sendable {
 package struct ResolvedWindowConfiguration: Equatable, Sendable {
     let serial: UInt32
     let size: PositiveLogicalSize
-    let states: [XDGTopLevelState]
+    let states: [WindowStateToken]
     let bounds: PositiveLogicalSize?
-    let wmCapabilities: [XDGWMCapability]
+    let wmCapabilities: [WindowManagerCapability]
     let decorationMode: WindowDecorationMode?
 
     init(
@@ -415,9 +415,9 @@ package struct ResolvedWindowConfiguration: Equatable, Sendable {
 
         serial = sequence.serial
         size = try suggestion.resolve(previous: previousSize, fallback: fallbackSize)
-        states = sequence.topLevel.states
+        states = sequence.topLevel.states.map(WindowStateToken.init)
         bounds = resolvedBounds
-        wmCapabilities = sequence.topLevel.wmCapabilities
+        wmCapabilities = sequence.topLevel.wmCapabilities.map(WindowManagerCapability.init)
         decorationMode = sequence.decorationMode.map(WindowDecorationMode.init)
     }
 }

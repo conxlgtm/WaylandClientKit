@@ -356,12 +356,16 @@ extension WindowModelTests {
         width: Int32,
         height: Int32,
         serial: UInt32 = 1,
+        states: [XDGTopLevelState] = [],
+        wmCapabilities: [XDGWMCapability] = [],
         decorationMode: RawDecorationMode? = nil
     ) -> XDGConfigureSequence {
         XDGConfigureSequence(
             serial: serial,
             topLevel: XDGTopLevelConfigureSuggestion(
-                size: TopLevelSize(width: width, height: height)
+                size: TopLevelSize(width: width, height: height),
+                states: states,
+                wmCapabilities: wmCapabilities
             ),
             decorationMode: decorationMode
         )

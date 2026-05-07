@@ -407,7 +407,7 @@ final class DisplayEventHub: Sendable {
         switch diagnostic.operation {
         case .inputPipelineOverflow:
             .error
-        case .keyboardKeymap, .listener, .cursor:
+        case .keyboardKeymap, .keyboardRepeat, .listener, .cursor:
             .degraded
         }
     }
@@ -430,7 +430,7 @@ final class DisplayEventHub: Sendable {
         switch diagnostic.operation {
         case .inputPipelineOverflow(let overflow):
             overflow
-        case .keyboardKeymap, .listener, .cursor:
+        case .keyboardKeymap, .keyboardRepeat, .listener, .cursor:
             nil
         }
     }

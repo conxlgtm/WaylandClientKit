@@ -44,8 +44,8 @@ package struct PresentationRequest: Equatable, Sendable {
             configureSerial: configuration.serial,
             size: configuration.size,
             bounds: configuration.bounds,
-            stateRawValues: configuration.states.map(\.rawValue),
-            wmCapabilityRawValues: configuration.wmCapabilities.map(\.rawValue),
+            states: configuration.states,
+            wmCapabilities: configuration.wmCapabilities,
             decorationMode: configuration.decorationMode
         )
     }

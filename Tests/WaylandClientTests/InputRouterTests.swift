@@ -279,12 +279,12 @@ struct KeyboardSeatLevelInputRouterTests {
     }
 
     @Test
-    func repeatInfoRemainsSeatLevel() {
+    func repeatInfoRemainsSeatLevel() throws {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 4)
         router.register(windowID: WindowID(rawValue: 50), surfaceID: 500)
 
-        let repeatInfo = router.route(
+        let repeatInfo = try router.route(
             rawKeyboardRepeatInfo(sequence: 3, seatID: seatID, rate: 30, delay: 400))
 
         #expect(repeatInfo.first?.windowID == nil)
@@ -292,7 +292,7 @@ struct KeyboardSeatLevelInputRouterTests {
         #expect(
             repeatInfo.first?.kind
                 == .keyboard(
-                    .raw(.repeatInfo(KeyboardRepeatInfo(rate: 30, delay: 400)))
+                    .raw(.repeatInfo(try KeyboardRepeatPolicy(rate: 30, delay: 400)))
                 ))
     }
 }
@@ -360,6 +360,41 @@ struct SeatInputRouterTests {
                 == .diagnostic(
                     InputDiagnostic(
                         .keymap(.readFailed(.missingNULTerminator(size: 12)))
+                    )
+                ))
+    }
+
+    @Test
+    func keyboardRepeatDiagnosticsRouteAtDisplayLevel() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 78)
+
+        let routed = router.route(
+            rawEvent(
+                sequence: 1,
+                seatID: seatID,
+                kind: .diagnostic(
+                    RawInputDiagnostic(
+                        .keyboardRepeat(
+                            RawKeyboardRepeatDiagnostic(
+                                error: .negativeRate(rate: -1, delay: 400)
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        #expect(routed.first?.windowID == nil)
+        #expect(
+            routed.first?.kind
+                == .diagnostic(
+                    InputDiagnostic(
+                        .keyboardRepeat(
+                            KeyboardRepeatDiagnostic(
+                                .negativeRate(rate: -1, delay: 400)
+                            )
+                        )
                     )
                 ))
     }

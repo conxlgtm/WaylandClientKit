@@ -473,10 +473,14 @@ struct SeatRegistryTests {
             operations: recorder.operations
         )
 
-        try registry.bindSeats(from: [
-            RawGlobalAdvertisement(name: 2, interfaceName: "wl_seat", advertisedVersion: 4),
-            RawGlobalAdvertisement(name: 3, interfaceName: "wl_seat", advertisedVersion: 10),
-        ])
+        let oldSeat = try #require(
+            RawGlobalAdvertisement(name: 2, interfaceName: "wl_seat", advertisedVersion: 4)
+        )
+        let currentSeat = try #require(
+            RawGlobalAdvertisement(name: 3, interfaceName: "wl_seat", advertisedVersion: 10)
+        )
+
+        try registry.bindSeats(from: [oldSeat, currentSeat])
 
         #expect(registry.seats.map(\.id) == [RawSeatID(rawValue: 3)])
         #expect(registry.unsupportedSeatVersions == [2: RawVersion(4)])

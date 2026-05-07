@@ -16,6 +16,7 @@ public struct InputDiagnostic: Equatable, Sendable {
 
 public enum InputDiagnosticPayload: Equatable, Sendable {
     case keymap(KeymapDiagnostic)
+    case keyboardRepeat(KeyboardRepeatDiagnostic)
     case listener(InputListenerDiagnostic)
     case inputPipelineOverflow(InputPipelineOverflow)
     case cursor(CursorDiagnostic)
@@ -24,6 +25,8 @@ public enum InputDiagnosticPayload: Equatable, Sendable {
         switch self {
         case .keymap:
             .keyboardKeymap
+        case .keyboardRepeat:
+            .keyboardRepeat
         case .listener(let diagnostic):
             .listener(diagnostic.listener)
         case .inputPipelineOverflow(let overflow):
@@ -38,6 +41,8 @@ extension InputDiagnosticPayload: CustomStringConvertible {
     public var description: String {
         switch self {
         case .keymap(let diagnostic):
+            diagnostic.description
+        case .keyboardRepeat(let diagnostic):
             diagnostic.description
         case .listener(let diagnostic):
             diagnostic.description
@@ -56,6 +61,32 @@ public enum KeymapDiagnostic: Equatable, Sendable, CustomStringConvertible {
         switch self {
         case .readFailed(let failure):
             failure.description
+        }
+    }
+}
+
+public struct KeyboardRepeatDiagnostic: Equatable, Sendable, CustomStringConvertible {
+    public let failure: KeyboardRepeatFailure
+
+    public init(_ diagnosticFailure: KeyboardRepeatFailure) {
+        failure = diagnosticFailure
+    }
+
+    public var description: String {
+        failure.description
+    }
+}
+
+public enum KeyboardRepeatFailure: Equatable, Sendable, CustomStringConvertible {
+    case negativeRate(rate: Int32, delay: Int32)
+    case negativeDelay(rate: Int32, delay: Int32)
+
+    public var description: String {
+        switch self {
+        case .negativeRate(let rate, let delay):
+            "invalid keyboard repeat info: negative rate \(rate), delay \(delay)"
+        case .negativeDelay(let rate, let delay):
+            "invalid keyboard repeat info: rate \(rate), negative delay \(delay)"
         }
     }
 }
@@ -139,6 +170,7 @@ public enum CursorDiagnostic: Equatable, Sendable, CustomStringConvertible {
 
 public enum InputDiagnosticOperation: Equatable, Sendable {
     case keyboardKeymap
+    case keyboardRepeat
     case listener(String)
     case inputPipelineOverflow(InputPipelineOverflow)
     case cursor(CursorDiagnosticOperation)

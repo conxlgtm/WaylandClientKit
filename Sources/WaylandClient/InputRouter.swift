@@ -313,7 +313,7 @@ extension InputRouter {
             kind: .keyboard(
                 .raw(
                     .repeatInfo(
-                        KeyboardRepeatInfo(rate: repeatInfo.rate, delay: repeatInfo.delay)
+                        KeyboardRepeatPolicy(repeatInfo)
                     )
                 )
             )
