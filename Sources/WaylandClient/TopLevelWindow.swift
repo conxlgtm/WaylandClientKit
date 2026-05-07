@@ -423,11 +423,10 @@ package final class TopLevelWindow {
             }
 
             let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
+            let damageMode: DamageCoordinateMode = surface.usesBufferDamage ? .buffer : .logical
             let commitPlan = scaleInstallation.commitPlan(
                 geometry: geometry,
-                damageMode: DamageCoordinateMode(
-                    surfaceUsesBufferDamage: surface.usesBufferDamage
-                )
+                damageMode: damageMode
             )
             applySurfaceCommitPlan(commitPlan)
             surface.attach(buffer: buffer)
@@ -663,7 +662,7 @@ extension TopLevelWindow {
         model.redraw.isDirty
     }
 
-    private var currentLogicalSize: PositiveTopLevelSize {
+    private var currentLogicalSize: PositiveLogicalSize {
         model.currentConfiguration?.size ?? configuration.initialSize
     }
 
@@ -671,7 +670,7 @@ extension TopLevelWindow {
         try surfaceGeometry(logicalSize: currentLogicalSize)
     }
 
-    private func surfaceGeometry(logicalSize: PositiveTopLevelSize) throws -> SurfaceGeometry {
+    private func surfaceGeometry(logicalSize: PositiveLogicalSize) throws -> SurfaceGeometry {
         do {
             return try scaleInstallation.geometry(logicalSize: logicalSize)
         } catch let error as WindowError {

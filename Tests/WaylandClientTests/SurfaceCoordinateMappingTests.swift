@@ -8,7 +8,7 @@ struct SurfaceCoordinateMappingTests {
     func softwareFrameGeometryMapsLogicalPointToScaleOneBufferPixels() throws {
         let frameGeometry = SoftwareFrameGeometry(
             surface: try SurfaceGeometry(
-                logicalSize: PositiveTopLevelSize(width: 100, height: 50),
+                logicalSize: PositiveLogicalSize(width: 100, height: 50),
                 scale: .one
             )
         )
@@ -23,7 +23,7 @@ struct SurfaceCoordinateMappingTests {
     func softwareFrameGeometryMapsLogicalPointToIntegerScaleBufferPixels() throws {
         let frameGeometry = SoftwareFrameGeometry(
             surface: try SurfaceGeometry(
-                logicalSize: PositiveTopLevelSize(width: 100, height: 50),
+                logicalSize: PositiveLogicalSize(width: 100, height: 50),
                 scale: SurfaceScale(numerator: 2, denominator: 1)
             )
         )
@@ -38,7 +38,7 @@ struct SurfaceCoordinateMappingTests {
     func softwareFrameGeometryMapsLogicalPointToFractionalScaleBufferPixels() throws {
         let frameGeometry = SoftwareFrameGeometry(
             surface: try SurfaceGeometry(
-                logicalSize: PositiveTopLevelSize(width: 101, height: 51),
+                logicalSize: PositiveLogicalSize(width: 101, height: 51),
                 scale: SurfaceScale(numerator: 180, denominator: 120)
             )
         )
@@ -53,7 +53,7 @@ struct SurfaceCoordinateMappingTests {
     func softwareFrameGeometryMapsLogicalBoundsToBufferBounds() throws {
         let frameGeometry = SoftwareFrameGeometry(
             surface: try SurfaceGeometry(
-                logicalSize: PositiveTopLevelSize(width: 100, height: 50),
+                logicalSize: PositiveLogicalSize(width: 100, height: 50),
                 scale: SurfaceScale(numerator: 2, denominator: 1)
             )
         )

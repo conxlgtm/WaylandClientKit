@@ -57,11 +57,10 @@ extension PopupRoleSurface {
             }
 
             let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
+            let damageMode: DamageCoordinateMode = surface.usesBufferDamage ? .buffer : .logical
             let commitPlan = scaleInstallation.commitPlan(
                 geometry: geometry,
-                damageMode: DamageCoordinateMode(
-                    surfaceUsesBufferDamage: surface.usesBufferDamage
-                )
+                damageMode: damageMode
             )
             applySurfaceCommitPlan(commitPlan)
             surface.attach(buffer: buffer)

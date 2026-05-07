@@ -124,8 +124,6 @@ public struct PositiveLogicalSize: Equatable, Sendable, CustomStringConvertible 
     }
 }
 
-public typealias PositiveTopLevelSize = PositiveLogicalSize
-
 public struct PositivePixelSize: Equatable, Sendable, CustomStringConvertible {
     public let width: PositiveInt32
     public let height: PositiveInt32
@@ -232,7 +230,7 @@ public struct SurfaceScale: Equatable, Sendable, CustomStringConvertible {
         return Int32(numerator)
     }
 
-    package func bufferSize(for logicalSize: PositiveTopLevelSize) throws -> PositivePixelSize {
+    package func bufferSize(for logicalSize: PositiveLogicalSize) throws -> PositivePixelSize {
         try PositivePixelSize(
             width: scaledDimension(logicalSize.width.rawValue),
             height: scaledDimension(logicalSize.height.rawValue)
@@ -261,12 +259,12 @@ public struct SurfaceScale: Equatable, Sendable, CustomStringConvertible {
 }
 
 public struct SurfaceGeometry: Equatable, Sendable, CustomStringConvertible {
-    public let logicalSize: PositiveTopLevelSize
+    public let logicalSize: PositiveLogicalSize
     public let bufferSize: PositivePixelSize
     public let scale: SurfaceScale
 
     public init(
-        logicalSize surfaceLogicalSize: PositiveTopLevelSize,
+        logicalSize surfaceLogicalSize: PositiveLogicalSize,
         scale surfaceScale: SurfaceScale
     ) throws {
         logicalSize = surfaceLogicalSize
@@ -282,7 +280,7 @@ public struct SurfaceGeometry: Equatable, Sendable, CustomStringConvertible {
 public struct SoftwareFrameGeometry: Equatable, Sendable {
     public let surface: SurfaceGeometry
 
-    public var logicalSize: PositiveTopLevelSize {
+    public var logicalSize: PositiveLogicalSize {
         surface.logicalSize
     }
 
@@ -363,10 +361,10 @@ package struct TopLevelSizeSuggestion: Equatable, Sendable {
     }
 
     func resolve(
-        previous: PositiveTopLevelSize?,
-        fallback: PositiveTopLevelSize
-    ) throws -> PositiveTopLevelSize {
-        PositiveTopLevelSize(
+        previous: PositiveLogicalSize?,
+        fallback: PositiveLogicalSize
+    ) throws -> PositiveLogicalSize {
+        PositiveLogicalSize(
             width: width.suggestedValue ?? previous?.width ?? fallback.width,
             height: height.suggestedValue ?? previous?.height ?? fallback.height
         )
@@ -385,29 +383,29 @@ package struct TopLevelSizeSuggestion: Equatable, Sendable {
 
 package struct ResolvedWindowConfiguration: Equatable, Sendable {
     let serial: UInt32
-    let size: PositiveTopLevelSize
+    let size: PositiveLogicalSize
     let states: [XDGTopLevelState]
-    let bounds: PositiveTopLevelSize?
+    let bounds: PositiveLogicalSize?
     let wmCapabilities: [XDGWMCapability]
     let decorationMode: WindowDecorationMode?
 
     init(
         sequence: XDGConfigureSequence,
-        previousSize: PositiveTopLevelSize?,
-        fallbackSize: PositiveTopLevelSize
+        previousSize: PositiveLogicalSize?,
+        fallbackSize: PositiveLogicalSize
     ) throws {
         let suggestion = try TopLevelSizeSuggestion.normalize(
             width: sequence.topLevel.size.width,
             height: sequence.topLevel.size.height
         )
-        let resolvedBounds: PositiveTopLevelSize?
+        let resolvedBounds: PositiveLogicalSize?
         if let bounds = sequence.topLevel.bounds {
             guard bounds.width > 0, bounds.height > 0 else {
                 throw WindowError.invalidConfigure(
                     .negativeSuggestedDimension(width: bounds.width, height: bounds.height)
                 )
             }
-            resolvedBounds = PositiveTopLevelSize(
+            resolvedBounds = PositiveLogicalSize(
                 width: PositiveInt32(unchecked: bounds.width),
                 height: PositiveInt32(unchecked: bounds.height)
             )
