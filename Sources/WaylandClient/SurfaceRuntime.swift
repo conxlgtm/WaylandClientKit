@@ -1,5 +1,10 @@
 import WaylandRaw
 
+enum SurfaceRuntimeError: Error, Equatable {
+    case surfaceDestroyedWithActiveBufferPool
+    case surfaceDestroyedWithLiveRoleResources
+}
+
 struct SurfaceRuntime<RoleResources> {
     private struct SurfaceObjects {
         var buffers: RawSharedMemoryPool?
@@ -107,18 +112,38 @@ struct SurfaceRuntime<RoleResources> {
         }
     }
 
-    mutating func markSurfaceDestroyed() {
+    mutating func updateScaleInstallation(
+        _ update: (inout SurfaceScaleInstallation) throws -> Bool
+    ) rethrows -> Bool {
+        switch phase {
+        case .unassigned(var objects):
+            let result = try update(&objects.scaleInstallation)
+            phase = .unassigned(objects)
+            return result
+        case .live(let roleResources, var objects):
+            let result = try update(&objects.scaleInstallation)
+            phase = .live(roleResources: roleResources, objects)
+            return result
+        case .roleDestroyed(var objects):
+            let result = try update(&objects.scaleInstallation)
+            phase = .roleDestroyed(objects)
+            return result
+        case .surfaceDestroyed:
+            return false
+        }
+    }
+
+    mutating func markSurfaceDestroyed() throws {
         switch phase {
         case .unassigned(var objects),
             .roleDestroyed(var objects):
-            precondition(
-                objects.buffers == nil,
-                "Surface destroyed with an active buffer pool"
-            )
+            guard objects.buffers == nil else {
+                throw SurfaceRuntimeError.surfaceDestroyedWithActiveBufferPool
+            }
             objects.scaleInstallation.destroy()
             phase = .surfaceDestroyed(retiredBufferPools: objects.retiredBufferPools)
         case .live:
-            preconditionFailure("Surface destroyed with live role resources")
+            throw SurfaceRuntimeError.surfaceDestroyedWithLiveRoleResources
         case .surfaceDestroyed:
             return
         }

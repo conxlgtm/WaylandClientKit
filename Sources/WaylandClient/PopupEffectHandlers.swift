@@ -5,7 +5,7 @@ package struct PopupEffectHandlers {
     package var publishRedrawRequested: (PopupLifecycleEvent) -> Void
     package var cancelFrameCallback: () -> Void
     package var retireSwapchain: () -> Void
-    package var destroyRoleObjects: () -> Void
+    package var destroyRoleObjects: () throws -> Void
 
     package init(
         ackConfigure configureAcknowledgement: @escaping (UInt32) -> Void,
@@ -14,7 +14,7 @@ package struct PopupEffectHandlers {
         publishRedrawRequested redrawPublication: @escaping (PopupLifecycleEvent) -> Void,
         cancelFrameCallback frameCancellation: @escaping () -> Void,
         retireSwapchain swapchainRetirement: @escaping () -> Void,
-        destroyRoleObjects roleObjectDestruction: @escaping () -> Void
+        destroyRoleObjects roleObjectDestruction: @escaping () throws -> Void
     ) {
         ackConfigure = configureAcknowledgement
         publishDismissed = dismissedPublication
@@ -56,7 +56,7 @@ package func interpretPopupEffects(
         case .retireSwapchain:
             handlers.retireSwapchain()
         case .destroyRoleObjects:
-            handlers.destroyRoleObjects()
+            try handlers.destroyRoleObjects()
         }
     }
 }

@@ -585,12 +585,20 @@ extension TopLevelWindow {
     }
 
     private func handlePreferredBufferScale(_ factor: Int32) {
+        guard !model.isClosed else {
+            resetTransientState()
+            return
+        }
+
         do {
+            let logicalSize = currentLogicalSize
             guard
-                try scaleInstallation.updatePreferredBufferScale(
-                    factor,
-                    logicalSize: currentLogicalSize
-                )
+                try surfaceRuntime.updateScaleInstallation({ scaleInstallation in
+                    try scaleInstallation.updatePreferredBufferScale(
+                        factor,
+                        logicalSize: logicalSize
+                    )
+                })
             else { return }
             try markNeedsRedraw(bufferAvailable: true)
         } catch let error as WindowError {
@@ -604,12 +612,20 @@ extension TopLevelWindow {
     }
 
     private func handlePreferredFractionalScale(_ scale: UInt32) {
+        guard !model.isClosed else {
+            resetTransientState()
+            return
+        }
+
         do {
+            let logicalSize = currentLogicalSize
             guard
-                try scaleInstallation.updatePreferredFractionalScale(
-                    scale,
-                    logicalSize: currentLogicalSize
-                )
+                try surfaceRuntime.updateScaleInstallation({ scaleInstallation in
+                    try scaleInstallation.updatePreferredFractionalScale(
+                        scale,
+                        logicalSize: logicalSize
+                    )
+                })
             else { return }
             try markNeedsRedraw(bufferAvailable: true)
         } catch let error as WindowError {
@@ -713,7 +729,7 @@ extension TopLevelWindow {
             case .destroySurface:
                 destroyScaleObjects()
                 surface.destroy()
-                surfaceRuntime.markSurfaceDestroyed()
+                try surfaceRuntime.markSurfaceDestroyed()
             }
         }
     }
@@ -747,7 +763,7 @@ extension TopLevelWindow {
     }
 
     private func destroyScaleObjects() {
-        scaleInstallation.destroy()
+        surfaceRuntime.destroyScaleInstallation()
     }
 }
 
