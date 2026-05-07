@@ -12,7 +12,7 @@ package enum DataTransferManagerInvariantViolation:
     case pendingRuntimeOfferHasState(DataOfferID)
     case pendingRuntimeOfferMissingSeat(DataOfferID, SeatID)
     case sourceBindingsDoNotMatchState
-    case sourceProviderWithoutSource(DataSourceID)
+    case sourcePayloadsWithoutSource(DataSourceID)
     case pendingSourceSendRequestMissingSource(DataSourceID)
     case seatSelectionReferencesMissingOffer(SeatID, DataOfferID)
     case seatSelectionReferencesMissingSource(SeatID, DataSourceID)
@@ -35,8 +35,8 @@ package enum DataTransferManagerInvariantViolation:
             "pending offer \(offerID) references missing seat \(seatID)"
         case .sourceBindingsDoNotMatchState:
             "source bindings do not match active sources"
-        case .sourceProviderWithoutSource(let sourceID):
-            "source provider \(sourceID) has no active source"
+        case .sourcePayloadsWithoutSource(let sourceID):
+            "source payloads \(sourceID) have no active source"
         case .pendingSourceSendRequestMissingSource(let sourceID):
             "source send request references missing source \(sourceID)"
         case .seatSelectionReferencesMissingOffer(let seatID, let offerID):
@@ -148,8 +148,8 @@ extension DataTransferManager {
         guard Set(sourceBindingsByID.keys) == activeSourceIDs else {
             throw DataTransferManagerInvariantViolation.sourceBindingsDoNotMatchState
         }
-        for sourceID in sourceProvidersByID.keys where !activeSourceIDs.contains(sourceID) {
-            throw DataTransferManagerInvariantViolation.sourceProviderWithoutSource(sourceID)
+        for sourceID in sourcePayloadsByID.keys where !activeSourceIDs.contains(sourceID) {
+            throw DataTransferManagerInvariantViolation.sourcePayloadsWithoutSource(sourceID)
         }
         for request in pendingSourceSendRequests where !activeSourceIDs.contains(request.sourceID) {
             throw
