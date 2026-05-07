@@ -173,7 +173,7 @@ struct KeyboardInterpreterKeyEventTests {
     func repeatInfoIsStoredAndEmittedWithoutSynthesizingEvents() throws {
         let interpreter = try KeyboardInterpreter()
         let deviceID = keyboardDevice()
-        let repeatInfo = RawKeyboardRepeatInfo(rate: 30, delay: 400)
+        let repeatInfo = try RawKeyboardRepeatInfo(rate: 30, delay: 400)
         let event = try #require(
             interpreter.consume(
                 rawKeyboardInputEvent(
@@ -183,8 +183,29 @@ struct KeyboardInterpreterKeyEventTests {
             ).first
         )
 
-        #expect(event.kind == .repeatInfo(InterpretedKeyboardRepeatInfo(rate: 30, delay: 400)))
+        #expect(event.kind == .repeatInfo(InterpretedKeyboardRepeatInfo(repeatInfo)))
         #expect(interpreter.repeatInfo(for: deviceID) == repeatInfo)
+    }
+
+    @Test
+    func zeroRepeatRateBecomesDisabled() throws {
+        let repeatInfo = try RawKeyboardRepeatInfo(rate: 0, delay: 400)
+
+        #expect(repeatInfo == .disabled)
+    }
+
+    @Test
+    func negativeRepeatRateIsRejected() {
+        #expect(throws: RawKeyboardRepeatInfoError.negativeRate(rate: -1, delay: 400)) {
+            try RawKeyboardRepeatInfo(rate: -1, delay: 400)
+        }
+    }
+
+    @Test
+    func negativeRepeatDelayIsRejected() {
+        #expect(throws: RawKeyboardRepeatInfoError.negativeDelay(rate: 30, delay: -1)) {
+            try RawKeyboardRepeatInfo(rate: 30, delay: -1)
+        }
     }
 
     @Test

@@ -345,7 +345,7 @@ extension DataTransferManager {
     }
 
     private static func dataTransferCallbackError(_ error: any Error) -> DataTransferError {
-        (error as? DataTransferError) ?? .unavailable
+        (error as? DataTransferError) ?? .callbackFailure(String(describing: error))
     }
 
     private func handleUnsupportedDragEnter(

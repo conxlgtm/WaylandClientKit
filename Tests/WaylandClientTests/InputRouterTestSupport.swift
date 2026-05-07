@@ -219,11 +219,11 @@ func rawKeyboardRepeatInfo(
     seatID: RawSeatID,
     rate: Int32,
     delay: Int32
-) -> RawInputEvent {
+) throws -> RawInputEvent {
     rawEvent(
         sequence: sequence,
         seatID: seatID,
-        kind: .keyboard(.repeatInfo(RawKeyboardRepeatInfo(rate: rate, delay: delay)))
+        kind: .keyboard(.repeatInfo(try RawKeyboardRepeatInfo(rate: rate, delay: delay)))
     )
 }
 

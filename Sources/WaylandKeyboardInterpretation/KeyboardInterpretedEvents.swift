@@ -213,13 +213,17 @@ package struct XKBStateComponents: OptionSet, Sendable {
     package static let leds = Self(rawValue: 1 << 8)
 }
 
-package struct InterpretedKeyboardRepeatInfo: Equatable, Sendable {
-    package let rate: Int32
-    package let delay: Int32
+package enum InterpretedKeyboardRepeatInfo: Equatable, Sendable {
+    case disabled
+    case enabled(rate: RawKeyboardRepeatRate, delay: RawKeyboardRepeatDelay)
 
-    package init(rate repeatRate: Int32, delay repeatDelay: Int32) {
-        rate = repeatRate
-        delay = repeatDelay
+    package init(_ repeatInfo: RawKeyboardRepeatInfo) {
+        switch repeatInfo {
+        case .disabled:
+            self = .disabled
+        case .enabled(let rate, let delay):
+            self = .enabled(rate: rate, delay: delay)
+        }
     }
 }
 

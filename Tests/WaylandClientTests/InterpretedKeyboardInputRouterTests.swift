@@ -112,13 +112,14 @@ struct InterpretedKeyboardInputRouterTests {
     }
 
     @Test
-    func interpretedRepeatInfoRemainsSeatLevel() {
+    func interpretedRepeatInfoRemainsSeatLevel() throws {
+        let rawRepeatInfo = try RawKeyboardRepeatInfo(rate: 30, delay: 400)
         let routed = focusedKeyboardRouter().route(
             interpretedKeyboardEvent(
                 sequence: 4,
                 seatID: RawSeatID(rawValue: 15),
                 kind: .repeatInfo(
-                    InterpretedKeyboardRepeatInfo(rate: 30, delay: 400)
+                    InterpretedKeyboardRepeatInfo(rawRepeatInfo)
                 )
             )
         )
@@ -129,7 +130,7 @@ struct InterpretedKeyboardInputRouterTests {
                 == .keyboard(
                     .interpreted(
                         .repeatInfo(
-                            WaylandClient.InterpretedKeyboardRepeatInfo(rate: 30, delay: 400)
+                            try KeyboardRepeatPolicy(rate: 30, delay: 400)
                         )
                     )
                 )

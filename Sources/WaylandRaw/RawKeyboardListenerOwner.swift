@@ -112,7 +112,22 @@ final class KeyboardListenerOwner {
                 data,
                 message: "wl_keyboard repeat_info fired without Swift state"
             ) { owner in
-                owner.append(.repeatInfo(RawKeyboardRepeatInfo(rate: rate, delay: delay)))
+                do {
+                    owner.append(.repeatInfo(try RawKeyboardRepeatInfo(rate: rate, delay: delay)))
+                } catch let error as RawKeyboardRepeatInfoError {
+                    owner.appendDiagnostic(
+                        .keyboardRepeat(RawKeyboardRepeatDiagnostic(error: error))
+                    )
+                } catch {
+                    owner.appendDiagnostic(
+                        .listener(
+                            RawListenerDiagnostic(
+                                listener: "wl_keyboard",
+                                message: "unexpected repeat_info error: \(error)"
+                            )
+                        )
+                    )
+                }
             }
         }
     }
@@ -197,6 +212,18 @@ final class KeyboardListenerOwner {
                 seatID: deviceID.seatID,
                 deviceID: deviceID,
                 kind: .keyboard(event)
+            )
+        )
+    }
+
+    private func appendDiagnostic(_ payload: RawInputDiagnosticPayload) {
+        guard !isCanceled, isCurrentDevice(deviceID) else { return }
+
+        eventSink.append(
+            RawInputEventDraft(
+                seatID: deviceID.seatID,
+                deviceID: deviceID,
+                kind: .diagnostic(RawInputDiagnostic(payload))
             )
         )
     }

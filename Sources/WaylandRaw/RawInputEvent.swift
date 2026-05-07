@@ -60,6 +60,7 @@ package struct RawInputDiagnostic: Equatable, Sendable {
 
 package enum RawInputDiagnosticPayload: Equatable, Sendable {
     case keymap(RawKeymapDiagnostic)
+    case keyboardRepeat(RawKeyboardRepeatDiagnostic)
     case listener(RawListenerDiagnostic)
     case inputPipelineOverflow(RawInputPipelineOverflow)
 
@@ -67,6 +68,8 @@ package enum RawInputDiagnosticPayload: Equatable, Sendable {
         switch self {
         case .keymap:
             .keyboardKeymap
+        case .keyboardRepeat:
+            .keyboardRepeat
         case .listener(let diagnostic):
             .listener(diagnostic.listener)
         case .inputPipelineOverflow(let overflow):
@@ -79,6 +82,8 @@ extension RawInputDiagnosticPayload: CustomStringConvertible {
     package var description: String {
         switch self {
         case .keymap(let diagnostic):
+            diagnostic.description
+        case .keyboardRepeat(let diagnostic):
             diagnostic.description
         case .listener(let diagnostic):
             diagnostic.description
@@ -99,6 +104,18 @@ package enum RawKeymapDiagnostic: Equatable, Sendable, CustomStringConvertible {
     }
 }
 
+package struct RawKeyboardRepeatDiagnostic: Equatable, Sendable, CustomStringConvertible {
+    package let error: RawKeyboardRepeatInfoError
+
+    package init(error repeatError: RawKeyboardRepeatInfoError) {
+        error = repeatError
+    }
+
+    package var description: String {
+        error.description
+    }
+}
+
 package struct RawListenerDiagnostic: Equatable, Sendable, CustomStringConvertible {
     package let listener: String
     package let message: String
@@ -115,6 +132,7 @@ package struct RawListenerDiagnostic: Equatable, Sendable, CustomStringConvertib
 
 package enum RawInputDiagnosticOperation: Equatable, Sendable {
     case keyboardKeymap
+    case keyboardRepeat
     case listener(String)
     case inputPipelineOverflow(RawInputPipelineOverflow)
 }

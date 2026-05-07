@@ -249,12 +249,7 @@ extension KeyboardInterpreter {
             devicesByID[deviceID] = state
 
             let interpretedEvent = interpreted(
-                .repeatInfo(
-                    InterpretedKeyboardRepeatInfo(
-                        rate: repeatInfo.rate,
-                        delay: repeatInfo.delay
-                    )
-                ),
+                .repeatInfo(InterpretedKeyboardRepeatInfo(repeatInfo)),
                 from: event,
                 deviceID: deviceID
             )

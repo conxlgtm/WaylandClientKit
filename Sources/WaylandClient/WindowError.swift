@@ -167,14 +167,15 @@ public struct WindowPresentationRequestSummary:
     public let configureSerial: UInt32
     public let size: PositiveLogicalSize
     public let bounds: PositiveLogicalSize?
-    public let stateRawValues: [UInt32]
-    public let wmCapabilityRawValues: [UInt32]
+    public let states: [WindowStateToken]
+    public let wmCapabilities: [WindowManagerCapability]
     public let decorationMode: WindowDecorationMode?
 
     public var description: String {
         "generation=\(generation) serial=\(configureSerial) size=\(size) "
             + "bounds=\(String(describing: bounds)) "
-            + "states=\(stateRawValues) wmCapabilities=\(wmCapabilityRawValues) "
+            + "states=\(states.map(\.rawValue)) "
+            + "wmCapabilities=\(wmCapabilities.map(\.rawValue)) "
             + "decoration=\(String(describing: decorationMode))"
     }
 }

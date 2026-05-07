@@ -60,9 +60,7 @@ extension InputRouter {
                 )
             )
         case .repeatInfo(let repeatInfo):
-            .repeatInfo(
-                InterpretedKeyboardRepeatInfo(rate: repeatInfo.rate, delay: repeatInfo.delay)
-            )
+            .repeatInfo(convert(repeatInfo))
         case .unavailable(let unavailable):
             .unavailable(
                 KeyboardInterpretationUnavailable(
@@ -86,6 +84,20 @@ extension InputRouter {
             .unknown(
                 state: InterpretedKeyboardKeyState(rawValue: state.rawValue),
                 keysymName: keysymName
+            )
+        }
+    }
+
+    func convert(
+        _ repeatInfo: WaylandKeyboardInterpretation.InterpretedKeyboardRepeatInfo
+    ) -> KeyboardRepeatPolicy {
+        switch repeatInfo {
+        case .disabled:
+            .disabled
+        case .enabled(let rate, let delay):
+            .enabled(
+                rate: KeyboardRepeatRate(unchecked: rate.rawValue),
+                delay: KeyboardRepeatDelay(unchecked: delay.rawValue)
             )
         }
     }
