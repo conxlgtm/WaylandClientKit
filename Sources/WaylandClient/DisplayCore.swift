@@ -4,18 +4,12 @@ import WaylandRaw
 final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     let eventHub: DisplayEventHub
     var session: DisplaySession?
-    private var windows: [WindowID: TopLevelWindow] = [:]
-    var popups: [PopupID: PopupRoleSurface] = [:]
+    var registry = DisplaySurfaceRegistry()
     var surfaceGraph = SurfaceGraph()
-    var windowSurfaceIDs: [WindowID: SurfaceID] = [:]
-    var popupSurfaceIDs: [PopupID: SurfaceID] = [:]
-    var popupParentWindowIDs: [PopupID: WindowID] = [:]
-    var closedPopupIDs: Set<PopupID> = []
-    private var pendingPopupRegistryRemovalIDs: Set<PopupID> = []
     private(set) var isClosed = false
     var needsFatalFailureFinalization = false
 
-    var windowIDsForRegistryInvariants: Set<WindowID> { Set(windows.keys) }
+    var windowIDsForRegistryInvariants: Set<WindowID> { registry.windowIDs }
 
     init(session activeSession: DisplaySession, eventHub displayEventHub: DisplayEventHub) {
         session = activeSession
@@ -46,8 +40,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
                 window.closeOnOwnerThread()
                 throw error
             }
-            windows[window.id] = window
-            windowSurfaceIDs[window.id] = surfaceID
+            registry.insertWindow(window, surfaceID: surfaceID)
             installEventCallbacks(for: window)
             window.markPublishedOnOwnerThread()
             assertRegistryInvariants()
@@ -119,7 +112,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             for popupID in popupIDsTopDown(parentedBy: windowID) {
                 closePopup(popupID)
             }
-            guard let window = windows[windowID] else { return }
+            guard let window = registry.window(windowID) else { return }
             window.closeOnOwnerThread()
         }
     }
@@ -127,7 +120,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     func close() {
         guard !isClosed else { return }
         isClosed = true
-        for windowID in Array(windows.keys) {
+        for windowID in registry.allWindowIDs {
             closeWindow(windowID)
         }
         session = nil
@@ -138,13 +131,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         guard !isClosed else { return }
         // Non-callback failures can synchronously discard the owned graph.
         isClosed = true
-        popups.removeAll(keepingCapacity: false)
-        windows.removeAll(keepingCapacity: false)
-        popupSurfaceIDs.removeAll(keepingCapacity: false)
-        popupParentWindowIDs.removeAll(keepingCapacity: false)
-        closedPopupIDs.removeAll(keepingCapacity: false)
-        pendingPopupRegistryRemovalIDs.removeAll(keepingCapacity: false)
-        windowSurfaceIDs.removeAll(keepingCapacity: false)
+        registry.removeAll()
         surfaceGraph = SurfaceGraph()
         session = nil
         eventHub.finish(throwing: error)
@@ -161,13 +148,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     private func finalizeFatalFailureAfterDispatch() {
         guard needsFatalFailureFinalization else { return }
         needsFatalFailureFinalization = false
-        popups.removeAll(keepingCapacity: false)
-        windows.removeAll(keepingCapacity: false)
-        popupSurfaceIDs.removeAll(keepingCapacity: false)
-        popupParentWindowIDs.removeAll(keepingCapacity: false)
-        closedPopupIDs.removeAll(keepingCapacity: false)
-        pendingPopupRegistryRemovalIDs.removeAll(keepingCapacity: false)
-        windowSurfaceIDs.removeAll(keepingCapacity: false)
+        registry.removeAll()
         surfaceGraph = SurfaceGraph()
         session = nil
         assertRegistryInvariants()
@@ -194,7 +175,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         for popupID in popupIDsTopDown(parentedBy: windowID) {
             closePopup(popupID)
         }
-        if let surfaceID = windowSurfaceIDs.removeValue(forKey: windowID) {
+        if let surfaceID = registry.windowSurfaceID(windowID) {
             do {
                 try surfaceGraph.unregisterTopLevel(surfaceID)
             } catch {
@@ -202,7 +183,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
                 return
             }
         }
-        windows.removeValue(forKey: windowID)
+        registry.removeWindow(windowID)
         eventHub.publish(.windowClosed(windowID))
         assertRegistryInvariants()
     }
@@ -215,7 +196,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     }
 
     private func requireWindow(_ windowID: WindowID) throws -> TopLevelWindow {
-        guard let window = windows[windowID] else {
+        guard let window = registry.window(windowID) else {
             throw ClientError.display(.unknownWindow(windowID))
         }
         return window
@@ -229,10 +210,10 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     }
 
     func requirePopup(_ popupID: PopupID) throws -> PopupRoleSurface {
-        guard !closedPopupIDs.contains(popupID) else {
+        guard !registry.closedPopupIDs.contains(popupID) else {
             throw ClientError.display(.closedPopup)
         }
-        guard let popup = popups[popupID] else {
+        guard let popup = registry.popup(popupID) else {
             throw ClientError.display(.unknownPopup)
         }
         return popup
@@ -252,25 +233,17 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
 extension DisplayCore {
     func beginPopupRegistryRemoval(for popupIDs: [PopupID]) {
-        pendingPopupRegistryRemovalIDs.formUnion(popupIDs)
+        registry.beginPopupRegistryRemoval(for: popupIDs)
     }
 
     func finishPopupRegistryRemoval(for popupID: PopupID) {
-        pendingPopupRegistryRemovalIDs.remove(popupID)
+        registry.finishPopupRegistryRemoval(for: popupID)
         assertRegistryInvariantsAfterPopupRemovalIfReady()
     }
 
     func assertRegistryInvariantsAfterPopupRemovalIfReady() {
-        guard pendingPopupRegistryRemovalIDs.isEmpty else { return }
+        guard registry.pendingPopupRegistryRemovalIDs.isEmpty else { return }
         assertRegistryInvariants()
-    }
-
-    package func beginPopupRegistryRemovalForTesting(_ popupIDs: [PopupID]) {
-        beginPopupRegistryRemoval(for: popupIDs)
-    }
-
-    package var pendingPopupRegistryRemovalIDsForTesting: Set<PopupID> {
-        pendingPopupRegistryRemovalIDs
     }
 }
 

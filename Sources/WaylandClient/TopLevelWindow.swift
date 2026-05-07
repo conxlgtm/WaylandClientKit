@@ -3,6 +3,28 @@
 import Glibc
 import WaylandRaw
 
+private struct TopLevelWindowRoleResources {
+    let xdgSurface: RawXDGSurface
+    let topLevel: RawXDGTopLevel
+    var decoration: RawXDGToplevelDecoration?
+    let xdgSurfaceOwner: XDGSurfaceOwner
+    let topLevelOwner: XDGTopLevelOwner
+    var decorationOwner: XDGDecorationOwner?
+
+    mutating func destroy() {
+        topLevelOwner.cancel()
+        decorationOwner?.cancel()
+        decoration?.destroy()
+        decoration = nil
+        decorationOwner = nil
+
+        topLevel.destroy()
+
+        xdgSurfaceOwner.cancel()
+        xdgSurface.destroy()
+    }
+}
+
 // swiftlint:disable:next type_body_length
 package final class TopLevelWindow {
     package static let defaultConfigureTimeoutMS: Int32 = 1_000
@@ -15,18 +37,10 @@ package final class TopLevelWindow {
     private let configureState: XDGConfigureState
     private let surface: RawSurface
 
-    private var xdgSurface: RawXDGSurface?
-    private var topLevel: RawXDGTopLevel?
-    private var decoration: RawXDGToplevelDecoration?
-    private var xdgSurfaceOwner: XDGSurfaceOwner?
-    private var topLevelOwner: XDGTopLevelOwner?
-    private var decorationOwner: XDGDecorationOwner?
-    private var buffers: RawSharedMemoryPool?
-    private var retiredBufferPools: [RawSharedMemoryPool] = []
-    private var pendingFrameRegistration: FrameCallbackRegistration?
     private let failureSink: any WindowFailureSink
     private var model: WindowModel
-    private var scaleInstallation = SurfaceScaleInstallation()
+    private var surfaceRuntime = SurfaceRuntime<TopLevelWindowRoleResources>()
+    private var pendingFrameRegistration: FrameCallbackRegistration?
 
     package var onClose: (() -> Void)?
     package var onCloseRequested: (() -> Void)?
@@ -106,12 +120,14 @@ package final class TopLevelWindow {
             topLevel: newTopLevel
         )
 
-        xdgSurface = newXDGSurface
-        topLevel = newTopLevel
-        decoration = decorationObjects?.decoration
-        xdgSurfaceOwner = newXDGSurfaceOwner
-        topLevelOwner = newTopLevelOwner
-        decorationOwner = decorationObjects?.owner
+        roleResources = TopLevelWindowRoleResources(
+            xdgSurface: newXDGSurface,
+            topLevel: newTopLevel,
+            decoration: decorationObjects?.decoration,
+            xdgSurfaceOwner: newXDGSurfaceOwner,
+            topLevelOwner: newTopLevelOwner,
+            decorationOwner: decorationObjects?.owner
+        )
 
         try interpretWindowEffects(model.reduce(.roleObjectsCreated))
         surface.commit()
@@ -503,6 +519,28 @@ package final class TopLevelWindow {
 }
 
 extension TopLevelWindow {
+    private var roleResources: TopLevelWindowRoleResources? {
+        get { surfaceRuntime.roleResources }
+        set { surfaceRuntime.roleResources = newValue }
+    }
+
+    private var buffers: RawSharedMemoryPool? {
+        get { surfaceRuntime.buffers }
+        set { surfaceRuntime.buffers = newValue }
+    }
+
+    private var retiredBufferPools: [RawSharedMemoryPool] {
+        get { surfaceRuntime.retiredBufferPools }
+        set { surfaceRuntime.retiredBufferPools = newValue }
+    }
+
+    private var scaleInstallation: SurfaceScaleInstallation {
+        get { surfaceRuntime.scaleInstallation }
+        set { surfaceRuntime.scaleInstallation = newValue }
+    }
+}
+
+extension TopLevelWindow {
     private func handleFrameDone() {
         pendingFrameRegistration = nil
         dropReleasedRetiredPools()
@@ -634,7 +672,7 @@ extension TopLevelWindow {
         for effect in effects {
             switch effect {
             case .ackConfigure(let serial):
-                guard let activeXDGSurface = xdgSurface else {
+                guard let activeXDGSurface = roleResources?.xdgSurface else {
                     throw ClientError.window(
                         id,
                         .invalidLifecycleTransition(
@@ -697,20 +735,8 @@ extension TopLevelWindow {
         onCloseRequested = nil
         onRedrawRequested = nil
 
-        topLevelOwner?.cancel()
-        decorationOwner?.cancel()
-        decoration?.destroy()
-        decoration = nil
-        decorationOwner = nil
-
-        topLevel?.destroy()
-        topLevel = nil
-        topLevelOwner = nil
-
-        xdgSurfaceOwner?.cancel()
-        xdgSurface?.destroy()
-        xdgSurface = nil
-        xdgSurfaceOwner = nil
+        roleResources?.destroy()
+        roleResources = nil
     }
 
     private func destroyScaleObjects() {
@@ -764,7 +790,7 @@ extension TopLevelWindow {
         guard model.currentConfiguration != nil else {
             throw ClientError.window(id, .invalidLifecycleTransition(.mapBeforeInitialConfigure))
         }
-        guard let activeXDGSurface = xdgSurface else {
+        guard let activeXDGSurface = roleResources?.xdgSurface else {
             throw ClientError.window(
                 id,
                 .invalidLifecycleTransition(

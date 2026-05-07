@@ -104,7 +104,7 @@ extension PopupRoleSurface {
             effects,
             parentWindowID: parentWindowID,
             handlers: PopupEffectHandlers(
-                ackConfigure: { [xdgSurface] serial in
+                ackConfigure: { [self] serial in
                     xdgSurface.ackConfigure(serial: serial)
                 },
                 publishDismissed: { [self] _ in
@@ -137,12 +137,6 @@ extension PopupRoleSurface {
         onRedrawRequested = nil
 
         scaleInstallation.destroy()
-        popupOwner?.cancel()
-        popupOwner = nil
-        xdgSurfaceOwner.cancel()
-        popup.destroy()
-        positioner.destroy()
-        xdgSurface.destroy()
-        surface.destroy()
+        destroyRoleResources()
     }
 }

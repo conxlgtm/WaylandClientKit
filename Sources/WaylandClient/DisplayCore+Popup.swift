@@ -1,12 +1,8 @@
-package protocol PopupRoleSurfaceEventCallbacks: AnyObject {
-    var id: PopupID { get }
-    var parentWindowID: WindowID { get }
-    var onDismissed: (() -> Void)? { get set }
-    var onClosed: (() -> Void)? { get set }
-    var onRedrawRequested: (() -> Void)? { get set }
+package struct PopupEventCallbacks {
+    package let onDismissed: () -> Void
+    package let onClosed: () -> Void
+    package let onRedrawRequested: () -> Void
 }
-
-extension PopupRoleSurface: PopupRoleSurfaceEventCallbacks {}
 
 extension DisplayCore {
     func createPopup(
@@ -14,36 +10,61 @@ extension DisplayCore {
         configuration popupConfiguration: PopupConfiguration
     ) throws -> PopupID {
         try withFatalFailureFinalization {
-            let parentWindow = try requireOpenWindow(windowID)
-            let parentSurfaceID = try requireWindowSurfaceID(windowID)
-            let popup = try requireSession().createPopupOnOwnerThread(
-                parent: parentWindow,
-                configuration: popupConfiguration,
-                failureSink: WeakWindowFailureSink(self)
+            try createPopupAfterFatalFailureGuard(
+                parent: windowID,
+                configuration: popupConfiguration
             )
-            guard !isClosed else {
-                popup.closeOnOwnerThread()
-                throw ClientError.display(.closed)
-            }
-            let popupSurfaceID = SurfaceID(rawObjectID: popup.surfaceID)
-            do {
-                try surfaceGraph.registerPopup(
-                    surfaceID: popupSurfaceID,
-                    popupID: popup.id,
-                    parent: parentSurfaceID
-                )
-            } catch {
-                popup.closeOnOwnerThread()
-                throw error
-            }
-            popups[popup.id] = popup
-            popupSurfaceIDs[popup.id] = popupSurfaceID
-            popupParentWindowIDs[popup.id] = windowID
-            closedPopupIDs.remove(popup.id)
-            installPopupEventCallbacks(for: popup)
-            assertRegistryInvariants()
-            return popup.id
         }
+    }
+
+    private func createPopupAfterFatalFailureGuard(
+        parent windowID: WindowID,
+        configuration popupConfiguration: PopupConfiguration
+    ) throws -> PopupID {
+        let parentWindow = try requireOpenWindow(windowID)
+        let parentSurfaceID = try requireWindowSurfaceID(windowID)
+        let popup = try requireSession().createPopupOnOwnerThread(
+            parent: parentWindow,
+            configuration: popupConfiguration,
+            failureSink: WeakWindowFailureSink(self)
+        )
+        guard !isClosed else {
+            popup.closeOnOwnerThread()
+            throw ClientError.display(.closed)
+        }
+        try registerPopup(popup, surfaceParent: parentSurfaceID, windowID: windowID)
+        return popup.id
+    }
+
+    private func registerPopup(
+        _ popup: PopupRoleSurface,
+        surfaceParent parentSurfaceID: SurfaceID,
+        windowID: WindowID
+    ) throws {
+        let popupSurfaceID = SurfaceID(rawObjectID: popup.surfaceID)
+        do {
+            try surfaceGraph.registerPopup(
+                surfaceID: popupSurfaceID,
+                popupID: popup.id,
+                parent: parentSurfaceID
+            )
+        } catch {
+            popup.closeOnOwnerThread()
+            throw error
+        }
+        registry.insertPopup(popup, surfaceID: popupSurfaceID, parentWindowID: windowID)
+        installPopupEventCallbacks(for: popup, parentWindowID: windowID)
+        assertRegistryInvariants()
+    }
+
+    private func installPopupEventCallbacks(
+        for popup: PopupRoleSurface,
+        parentWindowID: WindowID
+    ) {
+        let callbacks = popupEventCallbacks(popupID: popup.id, parentWindowID: parentWindowID)
+        popup.onDismissed = callbacks.onDismissed
+        popup.onClosed = callbacks.onClosed
+        popup.onRedrawRequested = callbacks.onRedrawRequested
     }
 
     func showPopup(
@@ -76,7 +97,7 @@ extension DisplayCore {
             guard !isClosed else {
                 throw ClientError.display(.closed)
             }
-            if closedPopupIDs.contains(popupID) {
+            if registry.closedPopupIDs.contains(popupID) {
                 return true
             }
 
@@ -112,15 +133,15 @@ extension DisplayCore {
         withFatalFailureFinalization {
             // Fatal raw invariants already finished streams and deferred graph cleanup.
             guard !needsFatalFailureFinalization else { return }
-            guard !closedPopupIDs.contains(popupID) else { return }
-            guard popups[popupID] != nil else { return }
+            guard !registry.closedPopupIDs.contains(popupID) else { return }
+            guard registry.popup(popupID) != nil else { return }
             do {
                 let popupSurfaceID = try requirePopupSurfaceID(popupID)
                 let nodes = try surfaceGraph.destroyClientRequestedPopupCascade(popupSurfaceID)
                 let closingPopupIDs = popupIDs(from: nodes)
                 beginPopupRegistryRemoval(for: closingPopupIDs)
                 for closingPopupID in closingPopupIDs {
-                    popups[closingPopupID]?.closeOnOwnerThread()
+                    registry.popup(closingPopupID)?.closeOnOwnerThread()
                 }
                 assertRegistryInvariantsAfterPopupRemovalIfReady()
             } catch {
@@ -129,26 +150,29 @@ extension DisplayCore {
         }
     }
 
-    package func installPopupEventCallbacks(for popup: any PopupRoleSurfaceEventCallbacks) {
-        let popupID = popup.id
-        let parentWindowID = popup.parentWindowID
-        popup.onDismissed = { [weak core = self] in
-            core?.handlePopupDismissed(popupID, parentWindowID: parentWindowID)
-        }
-        popup.onClosed = { [weak core = self] in
-            core?.handlePopupClosed(popupID)
-        }
-        popup.onRedrawRequested = { [weak core = self] in
-            core?.eventHub.publish(
-                .popupRedrawRequested(
-                    PopupLifecycleEvent(popup: popupID, parentWindowID: parentWindowID)
+    package func popupEventCallbacks(
+        popupID: PopupID,
+        parentWindowID: WindowID
+    ) -> PopupEventCallbacks {
+        PopupEventCallbacks(
+            onDismissed: { [weak core = self] in
+                core?.handlePopupDismissed(popupID, parentWindowID: parentWindowID)
+            },
+            onClosed: { [weak core = self] in
+                core?.handlePopupClosed(popupID)
+            },
+            onRedrawRequested: { [weak core = self] in
+                core?.eventHub.publish(
+                    .popupRedrawRequested(
+                        PopupLifecycleEvent(popup: popupID, parentWindowID: parentWindowID)
+                    )
                 )
-            )
-        }
+            }
+        )
     }
 
     private func handlePopupDismissed(_ popupID: PopupID, parentWindowID: WindowID) {
-        guard let surfaceID = popupSurfaceIDs[popupID] else {
+        guard let surfaceID = registry.popupSurfaceID(popupID) else {
             eventHub.publish(
                 .popupDismissed(
                     PopupLifecycleEvent(popup: popupID, parentWindowID: parentWindowID)
@@ -164,7 +188,7 @@ extension DisplayCore {
             publishPopupDismissedEvents(for: dismissedNodes)
             for dismissedPopupID in dismissedPopupIDs
             where dismissedPopupID != popupID {
-                popups[dismissedPopupID]?.closeOnOwnerThread()
+                registry.popup(dismissedPopupID)?.closeOnOwnerThread()
             }
         } catch {
             markSurfaceGraphInvariantFailed(error)
@@ -173,11 +197,7 @@ extension DisplayCore {
     }
 
     private func handlePopupClosed(_ popupID: PopupID) {
-        let parentWindowID = popupParentWindowIDs[popupID] ?? popups[popupID]?.parentWindowID
-        closedPopupIDs.insert(popupID)
-        popups.removeValue(forKey: popupID)
-        popupSurfaceIDs.removeValue(forKey: popupID)
-        popupParentWindowIDs.removeValue(forKey: popupID)
+        let parentWindowID = registry.markPopupClosed(popupID)
         if let parentWindowID {
             eventHub.publish(
                 .popupClosed(
@@ -218,7 +238,7 @@ extension DisplayCore {
     }
 
     private func requireWindowSurfaceID(_ windowID: WindowID) throws -> SurfaceID {
-        guard let surfaceID = windowSurfaceIDs[windowID] else {
+        guard let surfaceID = registry.windowSurfaceID(windowID) else {
             throw ClientError.display(.unknownWindow(windowID))
         }
 
@@ -226,10 +246,10 @@ extension DisplayCore {
     }
 
     private func requirePopupSurfaceID(_ popupID: PopupID) throws -> SurfaceID {
-        guard !closedPopupIDs.contains(popupID) else {
+        guard !registry.closedPopupIDs.contains(popupID) else {
             throw ClientError.display(.closedPopup)
         }
-        guard let surfaceID = popupSurfaceIDs[popupID] else {
+        guard let surfaceID = registry.popupSurfaceID(popupID) else {
             throw ClientError.display(.unknownPopup)
         }
 
