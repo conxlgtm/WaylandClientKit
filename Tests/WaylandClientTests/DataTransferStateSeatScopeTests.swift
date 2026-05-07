@@ -90,9 +90,7 @@ struct DataTransferStateSeatScopeTests {
                 seats: [
                     seat1: DataTransferSeatSnapshot(
                         seatID: seat1,
-                        hasDataDevice: true,
-                        selectionOfferID: offer2,
-                        selectionSourceID: nil
+                        device: .bound(selection: .remoteOffer(offer2))
                     )
                 ],
                 offers: [
@@ -114,9 +112,7 @@ struct DataTransferStateSeatScopeTests {
                 seats: [
                     seat1: DataTransferSeatSnapshot(
                         seatID: seat1,
-                        hasDataDevice: true,
-                        selectionOfferID: offer2,
-                        selectionSourceID: nil
+                        device: .bound(selection: .remoteOffer(offer2))
                     )
                 ],
                 offers: [
@@ -132,38 +128,13 @@ struct DataTransferStateSeatScopeTests {
     }
 
     @Test
-    func stateSnapshotInitRejectsSelectionBeforeDataDeviceBound() {
-        #expect(throws: DataTransferError.missingDataDevice(seat1)) {
-            _ = try DataTransferState(
-                seats: [
-                    seat1: DataTransferSeatSnapshot(
-                        seatID: seat1,
-                        hasDataDevice: false,
-                        selectionOfferID: offer2,
-                        selectionSourceID: nil
-                    )
-                ],
-                offers: [
-                    offer2: DataOfferSnapshot(
-                        id: offer2,
-                        role: .selection(seatID: seat1),
-                        mimeTypes: [.plainText]
-                    )
-                ]
-            )
-        }
-    }
-
-    @Test
     func stateSnapshotInitRejectsDanglingSelectionOffer() {
         #expect(throws: DataTransferError.unknownOffer) {
             _ = try DataTransferState(
                 seats: [
                     seat1: DataTransferSeatSnapshot(
                         seatID: seat1,
-                        hasDataDevice: true,
-                        selectionOfferID: offer2,
-                        selectionSourceID: nil
+                        device: .bound(selection: .remoteOffer(offer2))
                     )
                 ],
                 offers: [:],
@@ -179,43 +150,11 @@ struct DataTransferStateSeatScopeTests {
                 seats: [
                     seat1: DataTransferSeatSnapshot(
                         seatID: seat1,
-                        hasDataDevice: true,
-                        selectionOfferID: nil,
-                        selectionSourceID: source2
+                        device: .bound(selection: .ownedSource(source2))
                     )
                 ],
                 offers: [:],
                 sources: [:]
-            )
-        }
-    }
-
-    @Test
-    func stateSnapshotInitRejectsOfferAndSourceAsOneSelection() {
-        #expect(throws: DataTransferError.unavailable) {
-            _ = try DataTransferState(
-                seats: [
-                    seat1: DataTransferSeatSnapshot(
-                        seatID: seat1,
-                        hasDataDevice: true,
-                        selectionOfferID: offer2,
-                        selectionSourceID: source2
-                    )
-                ],
-                offers: [
-                    offer2: DataOfferSnapshot(
-                        id: offer2,
-                        role: .selection(seatID: seat1),
-                        mimeTypes: [.plainText]
-                    )
-                ],
-                sources: [
-                    source2: DataSourceSnapshot(
-                        id: source2,
-                        seatID: seat1,
-                        mimeTypes: [.plainText]
-                    )
-                ]
             )
         }
     }
@@ -227,9 +166,7 @@ struct DataTransferStateSeatScopeTests {
                 seats: [
                     seat1: DataTransferSeatSnapshot(
                         seatID: seat2,
-                        hasDataDevice: true,
-                        selectionOfferID: nil,
-                        selectionSourceID: nil
+                        device: .bound(selection: .none)
                     )
                 ]
             )
