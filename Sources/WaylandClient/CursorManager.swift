@@ -7,25 +7,6 @@ public enum CursorRequestResult: Equatable, Sendable {
     case skippedNoPointerFocus(seatID: SeatID)
 }
 
-package enum CursorRequestRecord: Equatable, Sendable {
-    case set(seatID: SeatID, serial: UInt32, cursor: PointerCursor)
-    case hidden(seatID: SeatID, serial: UInt32)
-    case skippedNoPointerFocus(seatID: SeatID)
-    case skippedMissingCursor(name: String)
-    case failed(String)
-
-    init(_ result: CursorRequestResult) {
-        switch result {
-        case .set(let seatID, let serial, let cursor):
-            self = .set(seatID: seatID, serial: serial, cursor: cursor)
-        case .hidden(let seatID, let serial):
-            self = .hidden(seatID: seatID, serial: serial)
-        case .skippedNoPointerFocus(let seatID):
-            self = .skippedNoPointerFocus(seatID: seatID)
-        }
-    }
-}
-
 package protocol RawInputEventObserving: AnyObject {
     @discardableResult
     func observe(_ rawEvent: RawInputEvent) -> [InputEvent]
@@ -58,8 +39,6 @@ package final class CursorManager: RawInputEventObserving {
     private var desiredCursor: DesiredPointerCursorState
     private var registeredSurfaceIDs: Set<RawObjectID> = []
     private var cursorStateBySeat: [RawSeatID: PointerCursorSeatState] = [:]
-
-    package private(set) var requestResults: [CursorRequestRecord] = []
 
     init(
         connection rawConnection: RawDisplayConnection,
@@ -108,7 +87,6 @@ package final class CursorManager: RawInputEventObserving {
             results.append(try applyCursor(to: seatID, resolvedCursor: resolvedCursor))
         }
 
-        requestResults.append(contentsOf: results.map(CursorRequestRecord.init))
         return results
     }
 
@@ -409,40 +387,30 @@ extension CursorManager {
         if let diagnostic = desiredCursor.unavailableDiagnostic {
             switch diagnostic {
             case .missingCursor:
-                return recordAutomaticCursorFailure(diagnostic, rawEvent: rawEvent)
+                return automaticCursorDiagnosticEvents(diagnostic, rawEvent: rawEvent)
             case .automaticPointerEnterFailed:
                 break
             }
         }
 
         do {
-            requestResults.append(
-                CursorRequestRecord(
-                    try applyCursor(to: seatID, serial: serial)
-                ))
+            _ = try applyCursor(to: seatID, serial: serial)
             return []
         } catch CursorError.missingCursor(let name) {
             let diagnostic = CursorDiagnostic.missingCursor(name: name)
             desiredCursor.cacheUnavailable(diagnostic)
-            return recordAutomaticCursorFailure(diagnostic, rawEvent: rawEvent)
+            return automaticCursorDiagnosticEvents(diagnostic, rawEvent: rawEvent)
         } catch {
             let message = String(describing: error)
             let diagnostic = CursorDiagnostic.automaticPointerEnterFailed(message)
-            return recordAutomaticCursorFailure(diagnostic, rawEvent: rawEvent)
+            return automaticCursorDiagnosticEvents(diagnostic, rawEvent: rawEvent)
         }
     }
 
-    private func recordAutomaticCursorFailure(
+    private func automaticCursorDiagnosticEvents(
         _ diagnostic: CursorDiagnostic,
         rawEvent: RawInputEvent
     ) -> [InputEvent] {
-        switch diagnostic {
-        case .missingCursor(let name):
-            requestResults.append(.skippedMissingCursor(name: name))
-        case .automaticPointerEnterFailed(let message):
-            requestResults.append(.failed(message))
-        }
-
         let event = cursorDiagnostic(rawEvent, payload: diagnostic)
         return [event]
     }

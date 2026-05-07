@@ -41,10 +41,6 @@ struct CursorManagerTests {
         #expect(backend.setCursorRequests == [expectedSetRequest])
         #expect(backend.createdSurfaces.first?.attachedCount == 1)
         #expect(backend.createdSurfaces.first?.commitCount == 1)
-        #expect(
-            manager.requestResults == [
-                .set(seatID: SeatID(rawValue: 1), serial: 77, cursor: .defaultArrow)
-            ])
     }
 
     @Test
@@ -64,7 +60,6 @@ struct CursorManagerTests {
         #expect(backend.resolvedCursorNames.isEmpty)
         #expect(backend.createdSurfaces.isEmpty)
         #expect(backend.setCursorRequests.isEmpty)
-        #expect(manager.requestResults.isEmpty)
     }
 
     @Test
@@ -91,10 +86,6 @@ struct CursorManagerTests {
 
         #expect(backend.createdSurfaces.isEmpty)
         #expect(backend.setCursorRequests == [expectedSetRequest])
-        #expect(
-            manager.requestResults == [
-                .hidden(seatID: SeatID(rawValue: 2), serial: 55)
-            ])
     }
 
     @Test
@@ -215,10 +206,7 @@ struct CursorManagerTests {
             ))
 
         #expect(backend.resolvedCursorNames == ["text", "left_ptr"])
-        #expect(
-            manager.requestResults == [
-                .set(seatID: SeatID(rawValue: 4), serial: 88, cursor: .defaultArrow)
-            ])
+        #expect(backend.setCursorRequests.map(\.serial) == [88])
     }
 
     @Test
@@ -232,7 +220,7 @@ struct CursorManagerTests {
         }
 
         #expect(manager.pointerCursor == .defaultArrow)
-        #expect(manager.requestResults.isEmpty)
+        #expect(backend.setCursorRequests.isEmpty)
     }
 
     @Test
@@ -250,7 +238,7 @@ struct CursorManagerTests {
                 serial: 55
             ))
 
-        #expect(manager.requestResults == [.skippedMissingCursor(name: "left_ptr")])
+        #expect(backend.setCursorRequests.isEmpty)
         let expectedDiagnostic = InputEvent(
             sequence: 1,
             seatID: SeatID(rawValue: 5),
