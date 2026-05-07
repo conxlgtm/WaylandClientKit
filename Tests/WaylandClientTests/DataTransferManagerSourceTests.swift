@@ -250,9 +250,7 @@ struct DataTransferManagerSourceTests {
             seats: [
                 seat2: DataTransferSeatSnapshot(
                     seatID: seat2,
-                    hasDataDevice: false,
-                    selectionOfferID: nil,
-                    selectionSourceID: nil
+                    device: .unbound
                 )
             ]
         )

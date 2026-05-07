@@ -1,6 +1,25 @@
 import Glibc
 import WaylandRaw
 
+private struct PopupRoleResources {
+    let surface: RawSurface
+    let xdgSurface: RawXDGSurface
+    let popup: RawXDGPopup
+    let xdgSurfaceOwner: XDGSurfaceOwner
+    let positioner: RawXDGPositioner
+    var popupOwner: XDGPopupOwner?
+
+    mutating func destroy() {
+        popupOwner?.cancel()
+        popupOwner = nil
+        xdgSurfaceOwner.cancel()
+        popup.destroy()
+        positioner.destroy()
+        xdgSurface.destroy()
+        surface.destroy()
+    }
+}
+
 package final class PopupRoleSurface {
     package let id: PopupID
     package let parentWindowID: WindowID
@@ -10,17 +29,9 @@ package final class PopupRoleSurface {
     package let bufferCount: PositiveInt
     package let initialConfigurePump: (Int32) throws -> Void
     package let failureSink: any WindowFailureSink
-    package let surface: RawSurface
-    package let xdgSurface: RawXDGSurface
-    package let popup: RawXDGPopup
-    package let xdgSurfaceOwner: XDGSurfaceOwner
-    package let positioner: RawXDGPositioner
     package let configureState = PopupConfigureState()
 
-    package var popupOwner: XDGPopupOwner?
-    package var scaleInstallation = SurfaceScaleInstallation()
-    package var buffers: RawSharedMemoryPool?
-    package var retiredBufferPools: [RawSharedMemoryPool] = []
+    private var surfaceRuntime = SurfaceRuntime<PopupRoleResources>()
     package var pendingFrameRegistration: FrameCallbackRegistration?
     package var model: PopupModel
 
@@ -69,11 +80,13 @@ package final class PopupRoleSurface {
 
         do {
             try newXDGSurfaceOwner.install(on: newXDGSurface)
-            surface = newSurface
-            xdgSurface = newXDGSurface
-            popup = newPopup
-            xdgSurfaceOwner = newXDGSurfaceOwner
-            positioner = newPositioner
+            roleResources = PopupRoleResources(
+                surface: newSurface,
+                xdgSurface: newXDGSurface,
+                popup: newPopup,
+                xdgSurfaceOwner: newXDGSurfaceOwner,
+                positioner: newPositioner
+            )
             try scaleInstallation = SurfaceScaleInstallation.install(
                 globals: globals,
                 surface: newSurface,
@@ -198,5 +211,61 @@ package final class PopupRoleSurface {
     package func closeOnOwnerThread() {
         connection.preconditionIsOwnerThread()
         close()
+    }
+}
+
+extension PopupRoleSurface {
+    private var roleResources: PopupRoleResources? {
+        get { surfaceRuntime.roleResources }
+        set { surfaceRuntime.roleResources = newValue }
+    }
+
+    package var scaleInstallation: SurfaceScaleInstallation {
+        get { surfaceRuntime.scaleInstallation }
+        set { surfaceRuntime.scaleInstallation = newValue }
+    }
+
+    package var buffers: RawSharedMemoryPool? {
+        get { surfaceRuntime.buffers }
+        set { surfaceRuntime.buffers = newValue }
+    }
+
+    package var retiredBufferPools: [RawSharedMemoryPool] {
+        get { surfaceRuntime.retiredBufferPools }
+        set { surfaceRuntime.retiredBufferPools = newValue }
+    }
+
+    private var liveRoleResources: PopupRoleResources {
+        guard let roleResources else {
+            preconditionFailure("Popup role resources used after destruction")
+        }
+
+        return roleResources
+    }
+
+    package var surface: RawSurface {
+        liveRoleResources.surface
+    }
+
+    package var xdgSurface: RawXDGSurface {
+        liveRoleResources.xdgSurface
+    }
+
+    package var popup: RawXDGPopup {
+        liveRoleResources.popup
+    }
+
+    package var positioner: RawXDGPositioner {
+        liveRoleResources.positioner
+    }
+
+    package var popupOwner: XDGPopupOwner? {
+        get { roleResources?.popupOwner }
+        set { roleResources?.popupOwner = newValue }
+    }
+
+    package func destroyRoleResources() {
+        roleResources?.destroy()
+        roleResources = nil
     }
 }

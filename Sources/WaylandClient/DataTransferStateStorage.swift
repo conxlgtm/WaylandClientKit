@@ -1,33 +1,47 @@
 package struct DataTransferSeatState: Equatable, Sendable {
     package var seatID: SeatID
-    package var hasDataDevice: Bool
-    package var selection: ClipboardSelectionState
+    package var device: DataTransferSeatDeviceState
 
     package init(
         seatID stateSeatID: SeatID,
         hasDataDevice stateHasDataDevice: Bool = false
     ) {
         seatID = stateSeatID
-        hasDataDevice = stateHasDataDevice
-        selection = .none
+        device = stateHasDataDevice ? .bound(selection: .none) : .unbound
     }
 
     package init(_ snapshot: DataTransferSeatSnapshot) throws {
         seatID = snapshot.seatID
-        hasDataDevice = snapshot.hasDataDevice
-        selection = try ClipboardSelectionState(
-            offerID: snapshot.selectionOfferID,
-            sourceID: snapshot.selectionSourceID
-        )
+        device = snapshot.device
     }
 
     package var snapshot: DataTransferSeatSnapshot {
         DataTransferSeatSnapshot(
             seatID: seatID,
-            hasDataDevice: hasDataDevice,
-            selectionOfferID: selection.offerID,
-            selectionSourceID: selection.sourceID
+            device: device
         )
+    }
+
+    package var hasDataDevice: Bool {
+        get { device.hasDataDevice }
+        set {
+            switch (device, newValue) {
+            case (.unbound, true):
+                device = .bound(selection: .none)
+            case (.bound, false):
+                device = .unbound
+            case (.unbound, false), (.bound, true):
+                break
+            }
+        }
+    }
+
+    package var selection: ClipboardSelectionState {
+        get { device.selection }
+        set {
+            precondition(device.hasDataDevice, "selection requires a bound data device")
+            device = .bound(selection: newValue)
+        }
     }
 }
 
@@ -35,22 +49,6 @@ package enum ClipboardSelectionState: Equatable, Sendable {
     case none
     case remoteOffer(DataOfferID)
     case ownedSource(DataSourceID)
-
-    package init(
-        offerID: DataOfferID?,
-        sourceID: DataSourceID?
-    ) throws {
-        switch (offerID, sourceID) {
-        case (nil, nil):
-            self = .none
-        case (.some(let offerID), nil):
-            self = .remoteOffer(offerID)
-        case (nil, .some(let sourceID)):
-            self = .ownedSource(sourceID)
-        case (.some, .some):
-            throw DataTransferError.unavailable
-        }
-    }
 
     package static func fromRemoteOffer(_ offerID: DataOfferID?) -> ClipboardSelectionState {
         if let offerID {

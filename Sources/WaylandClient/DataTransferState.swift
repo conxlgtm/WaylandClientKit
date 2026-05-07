@@ -46,11 +46,56 @@ package struct DataSourceSnapshot: Equatable, Sendable {
     package let mimeTypes: [MIMEType]
 }
 
+package enum DataTransferSeatDeviceState: Equatable, Sendable {
+    case unbound
+    case bound(selection: ClipboardSelectionState)
+
+    package var hasDataDevice: Bool {
+        switch self {
+        case .unbound:
+            false
+        case .bound:
+            true
+        }
+    }
+
+    package var selection: ClipboardSelectionState {
+        switch self {
+        case .unbound:
+            .none
+        case .bound(let selection):
+            selection
+        }
+    }
+}
+
 package struct DataTransferSeatSnapshot: Equatable, Sendable {
     package let seatID: SeatID
-    package let hasDataDevice: Bool
-    package let selectionOfferID: DataOfferID?
-    package let selectionSourceID: DataSourceID?
+    package let device: DataTransferSeatDeviceState
+
+    package var hasDataDevice: Bool {
+        device.hasDataDevice
+    }
+
+    package var selection: ClipboardSelectionState {
+        device.selection
+    }
+
+    package var selectionOfferID: DataOfferID? {
+        selection.offerID
+    }
+
+    package var selectionSourceID: DataSourceID? {
+        selection.sourceID
+    }
+
+    package init(
+        seatID snapshotSeatID: SeatID,
+        device snapshotDevice: DataTransferSeatDeviceState
+    ) {
+        seatID = snapshotSeatID
+        device = snapshotDevice
+    }
 }
 
 package enum DataTransferAction: Equatable, Sendable {

@@ -160,13 +160,7 @@ package final class DataTransferManager {
         let plan = try nextState.reduce(action)
         nextState = plan.state
 
-        do {
-            try interpret(plan.effects, nextState: &nextState)
-        } catch {
-            rollbackBindings(for: state)
-            throw error
-        }
-
+        try interpret(plan.effects, nextState: &nextState)
         state = nextState
     }
 
@@ -346,13 +340,6 @@ package final class DataTransferManager {
 
         for offerID in pendingOfferIDs {
             destroyOfferBinding(offerID)
-        }
-    }
-
-    private func rollbackBindings(for committedState: DataTransferState) {
-        let liveSeats = Set(committedState.seatSnapshots.map(\.seatID))
-        for seatID in deviceBindings.keys where !liveSeats.contains(seatID) {
-            deviceBindings.removeValue(forKey: seatID)?.release()
         }
     }
 
