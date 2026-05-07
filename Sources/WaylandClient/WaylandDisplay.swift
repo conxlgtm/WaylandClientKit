@@ -249,7 +249,9 @@ public actor WaylandDisplay {
         let connection = try RawDisplayConnection.connect(
             invariantFailureSink: invariantFailureSink,
             inputQueueConfiguration: RawInputQueueConfiguration(
-                capacity: displayConfiguration.inputPipeline.rawInputQueueCapacity.rawValue,
+                capacity: RawInputQueueCapacity(
+                    unchecked: displayConfiguration.inputPipeline.rawInputQueueCapacity.rawValue
+                ),
                 pointerMotionCoalescing: displayConfiguration
                     .inputPipeline.pointerMotionCoalescing,
                 touchMotionCoalescing: displayConfiguration.inputPipeline.touchMotionCoalescing

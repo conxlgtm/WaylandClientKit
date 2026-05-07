@@ -23,15 +23,11 @@ struct DataTransferManagerTests {
                 == [
                     DataTransferSeatSnapshot(
                         seatID: seat1,
-                        hasDataDevice: true,
-                        selectionOfferID: nil,
-                        selectionSourceID: nil
+                        device: .bound(selection: .none)
                     ),
                     DataTransferSeatSnapshot(
                         seatID: seat2,
-                        hasDataDevice: true,
-                        selectionOfferID: nil,
-                        selectionSourceID: nil
+                        device: .bound(selection: .none)
                     ),
                 ]
         )
@@ -78,9 +74,7 @@ struct DataTransferManagerTests {
                 == [
                     DataTransferSeatSnapshot(
                         seatID: seat1,
-                        hasDataDevice: true,
-                        selectionOfferID: nil,
-                        selectionSourceID: nil
+                        device: .bound(selection: .none)
                     )
                 ]
         )

@@ -4,9 +4,6 @@ package enum DisplayCoreRegistryInvariantViolation:
     Sendable,
     CustomStringConvertible
 {
-    case windowSurfaceKeysDoNotMatchWindows
-    case popupSurfaceKeysDoNotMatchPopups
-    case popupParentKeysDoNotMatchPopups
     case closedPopupStillHasLiveRecord(PopupID)
     case missingWindowGraphNode(WindowID)
     case missingPopupGraphNode(PopupID)
@@ -17,12 +14,6 @@ package enum DisplayCoreRegistryInvariantViolation:
 
     package var description: String {
         switch self {
-        case .windowSurfaceKeysDoNotMatchWindows:
-            "window surface keys do not match windows"
-        case .popupSurfaceKeysDoNotMatchPopups:
-            "popup surface keys do not match popups"
-        case .popupParentKeysDoNotMatchPopups:
-            "popup parent keys do not match popups"
         case .closedPopupStillHasLiveRecord(let popupID):
             "closed popup \(popupID) still has a live record"
         case .missingWindowGraphNode(let windowID):
@@ -46,6 +37,16 @@ extension DisplayCore {
         try checkRegistryInvariants()
     }
 
+    static func checkRegistryInvariantsForTesting(
+        surfaceIndex: DisplaySurfaceIndex,
+        surfaceGraph: SurfaceGraph
+    ) throws {
+        try checkRegistryInvariants(
+            surfaceIndex: surfaceIndex,
+            surfaceGraph: surfaceGraph
+        )
+    }
+
     func assertRegistryInvariants() {
         #if DEBUG
             do {
@@ -57,39 +58,47 @@ extension DisplayCore {
     }
 
     func checkRegistryInvariants() throws {
-        try checkRegistryKeySets()
-        try checkClosedPopupsHaveNoLiveRecords()
-        try checkWindowGraphRecords()
-        try checkPopupGraphRecords()
-        try checkGraphNodesHaveObjectRecords()
+        try Self.checkRegistryInvariants(
+            surfaceIndex: registry.surfaceIndex,
+            surfaceGraph: surfaceGraph
+        )
     }
 
-    private func checkRegistryKeySets() throws {
-        guard Set(windowSurfaceIDs.keys) == windowIDsForRegistryInvariants else {
-            throw DisplayCoreRegistryInvariantViolation.windowSurfaceKeysDoNotMatchWindows
-        }
-        guard Set(popupSurfaceIDs.keys) == Set(popups.keys) else {
-            throw DisplayCoreRegistryInvariantViolation.popupSurfaceKeysDoNotMatchPopups
-        }
-        guard Set(popupParentWindowIDs.keys) == Set(popups.keys) else {
-            throw DisplayCoreRegistryInvariantViolation.popupParentKeysDoNotMatchPopups
-        }
+    private static func checkRegistryInvariants(
+        surfaceIndex: DisplaySurfaceIndex,
+        surfaceGraph: SurfaceGraph
+    ) throws {
+        try checkClosedPopupsHaveNoLiveRecords(surfaceIndex: surfaceIndex)
+        try checkWindowGraphRecords(
+            surfaceIndex: surfaceIndex,
+            surfaceGraph: surfaceGraph
+        )
+        try checkPopupGraphRecords(
+            surfaceIndex: surfaceIndex,
+            surfaceGraph: surfaceGraph
+        )
+        try checkGraphNodesHaveIndexRecords(
+            surfaceIndex: surfaceIndex,
+            surfaceGraph: surfaceGraph
+        )
     }
 
-    private func checkClosedPopupsHaveNoLiveRecords() throws {
-        for closedPopupID in closedPopupIDs
-        where popups[closedPopupID] != nil
-            || popupSurfaceIDs[closedPopupID] != nil
-            || popupParentWindowIDs[closedPopupID] != nil
-        {
+    private static func checkClosedPopupsHaveNoLiveRecords(
+        surfaceIndex: DisplaySurfaceIndex
+    ) throws {
+        for closedPopupID in surfaceIndex.closedPopupIDs
+        where surfaceIndex.popupIDs.contains(closedPopupID) {
             throw DisplayCoreRegistryInvariantViolation.closedPopupStillHasLiveRecord(
                 closedPopupID
             )
         }
     }
 
-    private func checkWindowGraphRecords() throws {
-        for (windowID, surfaceID) in windowSurfaceIDs {
+    private static func checkWindowGraphRecords(
+        surfaceIndex: DisplaySurfaceIndex,
+        surfaceGraph: SurfaceGraph
+    ) throws {
+        for (windowID, surfaceID) in surfaceIndex.windowSurfaceIDs {
             guard
                 let node = surfaceGraph.nodes[surfaceID],
                 node.role == .toplevel(windowID: windowID)
@@ -99,8 +108,11 @@ extension DisplayCore {
         }
     }
 
-    private func checkPopupGraphRecords() throws {
-        for (popupID, surfaceID) in popupSurfaceIDs {
+    private static func checkPopupGraphRecords(
+        surfaceIndex: DisplaySurfaceIndex,
+        surfaceGraph: SurfaceGraph
+    ) throws {
+        for (popupID, surfaceID) in surfaceIndex.popupSurfaceIDs {
             guard
                 let node = surfaceGraph.nodes[surfaceID],
                 case .popup(let graphPopupID, _) = node.role,
@@ -108,7 +120,7 @@ extension DisplayCore {
             else {
                 throw DisplayCoreRegistryInvariantViolation.missingPopupGraphNode(popupID)
             }
-            guard node.windowID == popupParentWindowIDs[popupID] else {
+            guard node.windowID == surfaceIndex.popupParentWindowIDs[popupID] else {
                 throw DisplayCoreRegistryInvariantViolation.popupParentWindowMismatch(popupID)
             }
             guard surfaceGraph.livePopupSurfacesByID[popupID] == surfaceID else {
@@ -117,9 +129,12 @@ extension DisplayCore {
         }
     }
 
-    private func checkGraphNodesHaveObjectRecords() throws {
-        let knownWindowSurfaces = Set(windowSurfaceIDs.values)
-        let knownPopupSurfaces = Set(popupSurfaceIDs.values)
+    private static func checkGraphNodesHaveIndexRecords(
+        surfaceIndex: DisplaySurfaceIndex,
+        surfaceGraph: SurfaceGraph
+    ) throws {
+        let knownWindowSurfaces = Set(surfaceIndex.windowSurfaceIDs.values)
+        let knownPopupSurfaces = Set(surfaceIndex.popupSurfaceIDs.values)
         for (surfaceID, node) in surfaceGraph.nodes {
             switch node.role {
             case .toplevel:

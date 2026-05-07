@@ -70,7 +70,7 @@ struct InputEventQueueTests {
 
     @Test
     func overflowClearsBufferedEventsAndEmitsDiagnostic() {
-        let queue = RawInputEventQueue(capacity: 1)
+        let queue = RawInputEventQueue(capacity: RawInputQueueCapacity(unchecked: 1))
         let seatID = RawSeatID(rawValue: 9)
 
         queue.append(

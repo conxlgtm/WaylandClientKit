@@ -42,34 +42,21 @@ struct DisplayEventHubPopupTests {
     func installedPopupRedrawCallbackPublishesPopupRedrawTarget() async throws {
         let hub = DisplayEventHub()
         let core = DisplayCore(eventHub: hub)
-        let popup = PopupCallbackProbe(
-            id: PopupID(rawValue: 7),
-            parentWindowID: WindowID(rawValue: 3)
-        )
+        let popupID = PopupID(rawValue: 7)
+        let parentWindowID = WindowID(rawValue: 3)
         let expected = PopupLifecycleEvent(
-            popup: popup.id,
-            parentWindowID: popup.parentWindowID
+            popup: popupID,
+            parentWindowID: parentWindowID
         )
         var iterator = hub.displayEvents().makeAsyncIterator()
 
-        core.installPopupEventCallbacks(for: popup)
-        let redraw = try #require(popup.onRedrawRequested)
-        redraw()
+        let callbacks = core.popupEventCallbacks(
+            popupID: popupID,
+            parentWindowID: parentWindowID
+        )
+        callbacks.onRedrawRequested()
 
         await expectPopupEvent(.popupRedrawRequested(expected), from: &iterator)
-    }
-}
-
-private final class PopupCallbackProbe: PopupRoleSurfaceEventCallbacks {
-    let id: PopupID
-    let parentWindowID: WindowID
-    var onDismissed: (() -> Void)?
-    var onClosed: (() -> Void)?
-    var onRedrawRequested: (() -> Void)?
-
-    init(id popupID: PopupID, parentWindowID popupParentWindowID: WindowID) {
-        id = popupID
-        parentWindowID = popupParentWindowID
     }
 }
 

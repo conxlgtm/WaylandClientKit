@@ -16,16 +16,42 @@ package struct RawInputCoalescing: OptionSet, Equatable, Sendable {
     package static let all: RawInputCoalescing = [.pointerMotion, .touchMotion]
 }
 
+package struct RawInputQueueCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {
+    package let rawValue: Int
+
+    package static let `default` = RawInputQueueCapacity(unchecked: 4_096)
+
+    package init?(_ value: Int) {
+        guard value > 0 else {
+            return nil
+        }
+
+        rawValue = value
+    }
+
+    package init(unchecked value: Int) {
+        precondition(value > 0, "Raw input event queue capacity must be positive")
+        rawValue = value
+    }
+
+    package var description: String {
+        String(rawValue)
+    }
+
+    package static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
+}
+
 package struct RawInputQueueConfiguration: Equatable, Sendable {
-    package var capacity: Int
+    package var capacity: RawInputQueueCapacity
     package var coalescing: RawInputCoalescing
 
     package init(
-        capacity eventCapacity: Int = RawInputEventQueue.defaultCapacity,
+        capacity eventCapacity: RawInputQueueCapacity = .default,
         pointerMotionCoalescing shouldCoalescePointerMotion: Bool = true,
         touchMotionCoalescing shouldCoalesceTouchMotion: Bool = true
     ) {
-        precondition(eventCapacity > 0, "Raw input event queue capacity must be positive")
         capacity = eventCapacity
         coalescing = []
         if shouldCoalescePointerMotion {
@@ -38,16 +64,15 @@ package struct RawInputQueueConfiguration: Equatable, Sendable {
 
     package init(
         coalescing coalescingPolicy: RawInputCoalescing,
-        capacity eventCapacity: Int = RawInputEventQueue.defaultCapacity
+        capacity eventCapacity: RawInputQueueCapacity = .default
     ) {
-        precondition(eventCapacity > 0, "Raw input event queue capacity must be positive")
         capacity = eventCapacity
         coalescing = coalescingPolicy
     }
 }
 
 package final class RawInputEventQueue: RawInputEventSink, Sendable {
-    package static let defaultCapacity = 4_096
+    package static let defaultCapacity = RawInputQueueCapacity.default
 
     private struct State: Sendable {
         var nextSequence: UInt64 = 1
@@ -57,7 +82,7 @@ package final class RawInputEventQueue: RawInputEventSink, Sendable {
     private let configuration: RawInputQueueConfiguration
     private let state = Mutex(State())
 
-    package init(capacity eventCapacity: Int = defaultCapacity) {
+    package init(capacity eventCapacity: RawInputQueueCapacity = defaultCapacity) {
         configuration = RawInputQueueConfiguration(capacity: eventCapacity)
     }
 
@@ -74,7 +99,7 @@ package final class RawInputEventQueue: RawInputEventSink, Sendable {
                 return
             }
 
-            if state.events.count >= configuration.capacity {
+            if state.events.count >= configuration.capacity.rawValue {
                 appendOverflowDiagnostic(
                     for: event,
                     sequence: materializedEvent.sequence,
@@ -149,7 +174,7 @@ package final class RawInputEventQueue: RawInputEventSink, Sendable {
                         .inputPipelineOverflow(
                             RawInputPipelineOverflow(
                                 stage: .rawInputQueue,
-                                capacity: configuration.capacity
+                                capacity: configuration.capacity.rawValue
                             )
                         )
                     )
