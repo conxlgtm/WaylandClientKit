@@ -4,7 +4,7 @@ import WaylandRaw
 final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     let eventHub: DisplayEventHub
     private var lifecycle: DisplayCoreLifecycle
-    var surfaces = DisplaySurfaceStore()
+    var surfaces = DisplaySurfaceStore<TopLevelWindow, PopupRoleSurface>()
     var isClosed: Bool { lifecycle.isClosed }
     var activeSession: DisplaySession? { lifecycle.activeSession }
     var hasPendingFatalFailure: Bool { lifecycle.hasPendingFatalFailure }
