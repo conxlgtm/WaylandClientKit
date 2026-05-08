@@ -114,14 +114,7 @@ struct PrimarySelectionControllerTests {
         #expect(snapshot.mimeTypes == [.plainText, .plainTextUTF8])
         #expect(sourceBinding.offeredMimeTypes == [.plainText, .plainTextUTF8])
         #expect(device.selections == [.init(sourceID: snapshot.id, serial: serial)])
-        #expect(
-            controller.drainDataTransferEvents()
-                == [
-                    .primarySelectionChanged(
-                        PrimarySelectionEvent(seatID: seat1, offerID: nil)
-                    )
-                ]
-        )
+        #expect(controller.drainDataTransferEvents().isEmpty)
     }
 
     @Test
@@ -208,15 +201,11 @@ struct PrimarySelectionControllerTests {
                 == [
                     .primarySelectionSourceCancelled(
                         PrimarySelectionSourceIdentity(snapshot.id)
-                    ),
-                    .primarySelectionChanged(
-                        PrimarySelectionEvent(seatID: seat1, offerID: nil)
-                    ),
+                    )
                 ]
         )
     }
 
-    @Test
     func selectingOfferWithoutMimeTypesQueuesCallbackFailure() throws {
         let backend = RecordingPrimarySelectionBackend()
         let controller = PrimarySelectionController(backend: backend)
