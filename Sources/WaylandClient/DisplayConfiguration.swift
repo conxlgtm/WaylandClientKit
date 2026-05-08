@@ -178,6 +178,55 @@ public struct InputPipelineConfiguration: Equatable, Sendable {
     }
 }
 
+public struct KeyboardInterpretationConfiguration: Equatable, Sendable {
+    public var compose: KeyboardComposeConfiguration
+
+    public init(compose composeConfiguration: KeyboardComposeConfiguration = .enabled()) {
+        compose = composeConfiguration
+    }
+}
+
+public enum KeyboardComposeConfiguration: Equatable, Sendable {
+    case disabled
+    case enabled(
+        locale: KeyboardComposeLocale = .processEnvironment,
+        cancellationPolicy: KeyboardComposeCancellationPolicy = .passThroughCancellingKey
+    )
+}
+
+public enum KeyboardComposeLocale: Equatable, Sendable {
+    case processEnvironment
+    case identifier(KeyboardComposeLocaleIdentifier)
+}
+
+public enum KeyboardComposeLocaleError: Error, Equatable, Sendable {
+    case emptyIdentifier
+}
+
+public struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {
+    public let rawValue: String
+
+    public init(_ value: String) throws(KeyboardComposeLocaleError) {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw .emptyIdentifier
+        }
+
+        rawValue = trimmed
+    }
+
+    public static let posixC = Self(unchecked: "C")
+
+    private init(unchecked value: String) {
+        rawValue = value
+    }
+}
+
+public enum KeyboardComposeCancellationPolicy: Equatable, Sendable {
+    case passThroughCancellingKey
+    case swallowCancellingKey
+}
+
 public struct DiagnosticsConfiguration: Equatable, Sendable {
     public var capacity: DiagnosticsCapacity
 
@@ -193,15 +242,19 @@ public struct DiagnosticsConfiguration: Equatable, Sendable {
 public struct DisplayConfiguration: Equatable, Sendable {
     public var eventStreams: EventStreamConfiguration
     public var inputPipeline: InputPipelineConfiguration
+    public var keyboardInterpretation: KeyboardInterpretationConfiguration
     public var diagnostics: DiagnosticsConfiguration
 
     public init(
         eventStreams streamConfiguration: EventStreamConfiguration = .init(),
         inputPipeline inputConfiguration: InputPipelineConfiguration = .init(),
+        keyboardInterpretation keyboardInterpretationConfiguration:
+            KeyboardInterpretationConfiguration = .init(),
         diagnostics diagnosticsConfiguration: DiagnosticsConfiguration = .init()
     ) {
         eventStreams = streamConfiguration
         inputPipeline = inputConfiguration
+        keyboardInterpretation = keyboardInterpretationConfiguration
         diagnostics = diagnosticsConfiguration
     }
 }

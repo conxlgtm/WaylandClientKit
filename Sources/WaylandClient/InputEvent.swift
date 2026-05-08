@@ -160,6 +160,8 @@ public struct KeyboardKeysym: Equatable, Sendable {
     public init(rawValue keysymRawValue: UInt32) {
         rawValue = keysymRawValue
     }
+
+    public static let noSymbol = Self(rawValue: 0)
 }
 
 public struct KeyboardModifiers: Equatable, Sendable {
@@ -380,6 +382,8 @@ public enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {
     case emptyKeymap
     case invalidKeymap
     case keymapReadFailed(KeymapReadFailure)
+    case composeTableUnavailable(locale: String)
+    case composeStateCreationFailed
     case missingKeymap
     case missingKeyboardState
     case invalidKeycode(UInt32)

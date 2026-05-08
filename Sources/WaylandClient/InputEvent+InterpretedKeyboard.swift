@@ -3,8 +3,9 @@ public struct InterpretedKeyboardKeyEvent: Equatable, Sendable {
     public let time: WaylandTimestampMilliseconds
     public let rawKeycode: EvdevKeycode
     public let xkbKeycode: XKBKeycode
-    public let keysym: KeyboardKeysym
+    public let symbolResolution: KeyboardSymbolResolution
     public let interpretation: InterpretedKeyboardKeyInterpretation
+    public let text: KeyboardTextResult
 
     public init(
         serial eventSerial: InputSerial,
@@ -12,14 +13,48 @@ public struct InterpretedKeyboardKeyEvent: Equatable, Sendable {
         rawKeycode eventRawKeycode: EvdevKeycode,
         xkbKeycode eventXKBKeycode: XKBKeycode,
         keysym eventKeysym: KeyboardKeysym,
-        interpretation eventInterpretation: InterpretedKeyboardKeyInterpretation
+        interpretation eventInterpretation: InterpretedKeyboardKeyInterpretation,
+        text eventText: KeyboardTextResult = .none
+    ) {
+        self.init(
+            serial: eventSerial,
+            time: eventTime,
+            rawKeycode: eventRawKeycode,
+            xkbKeycode: eventXKBKeycode,
+            symbolResolution: .single(eventKeysym),
+            interpretation: eventInterpretation,
+            text: eventText
+        )
+    }
+
+    public init(
+        serial eventSerial: InputSerial,
+        time eventTime: WaylandTimestampMilliseconds,
+        rawKeycode eventRawKeycode: EvdevKeycode,
+        xkbKeycode eventXKBKeycode: XKBKeycode,
+        symbolResolution eventSymbolResolution: KeyboardSymbolResolution,
+        interpretation eventInterpretation: InterpretedKeyboardKeyInterpretation,
+        text eventText: KeyboardTextResult = .none
     ) {
         serial = eventSerial
         time = eventTime
         rawKeycode = eventRawKeycode
         xkbKeycode = eventXKBKeycode
-        keysym = eventKeysym
+        symbolResolution = eventSymbolResolution
         interpretation = eventInterpretation
+        text = eventText
+    }
+
+    public var keysym: KeyboardKeysym {
+        symbolResolution.primary
+    }
+
+    public var keySymbols: [KeyboardKeysym] {
+        symbolResolution.all
+    }
+
+    public var primaryKeySymbol: KeyboardKeysym {
+        symbolResolution.primary
     }
 
     public var state: InterpretedKeyboardKeyState {
@@ -34,8 +69,53 @@ public struct InterpretedKeyboardKeyEvent: Equatable, Sendable {
         interpretation.utf8
     }
 
+    public var keyText: String? {
+        interpretation.utf8
+    }
+
     public var repeatCapability: KeyboardKeyRepeatCapability? {
         interpretation.repeatCapability
+    }
+}
+
+public enum KeyboardSymbolResolutionError: Error, Equatable, Sendable {
+    case emptySymbols
+    case primaryNotFirst(primary: KeyboardKeysym, first: KeyboardKeysym)
+}
+
+public struct KeyboardSymbolResolution: Equatable, Sendable {
+    public let primary: KeyboardKeysym
+    public let all: [KeyboardKeysym]
+
+    public init(
+        primary primaryKeysym: KeyboardKeysym,
+        all keysyms: [KeyboardKeysym]
+    ) throws(KeyboardSymbolResolutionError) {
+        guard let first = keysyms.first else {
+            throw .emptySymbols
+        }
+        guard first == primaryKeysym else {
+            throw .primaryNotFirst(primary: primaryKeysym, first: first)
+        }
+
+        primary = primaryKeysym
+        all = keysyms
+    }
+
+    public static func single(_ keysym: KeyboardKeysym) -> Self {
+        Self(uncheckedPrimary: keysym, all: [keysym])
+    }
+
+    public static func resolved(_ keysyms: [KeyboardKeysym]) -> Self {
+        guard let first = keysyms.first else {
+            return .single(.noSymbol)
+        }
+        return Self(uncheckedPrimary: first, all: keysyms)
+    }
+
+    private init(uncheckedPrimary primaryKeysym: KeyboardKeysym, all keysyms: [KeyboardKeysym]) {
+        primary = primaryKeysym
+        all = keysyms
     }
 }
 
@@ -118,4 +198,73 @@ public enum InterpretedKeyboardKeyInterpretation: Equatable, Sendable {
 public enum KeyboardKeyRepeatCapability: Equatable, Sendable {
     case nonRepeating
     case repeating
+}
+
+public enum KeyboardTextResult: Equatable, Sendable {
+    case none
+    case composing(KeyboardComposeProgress)
+    case committed(KeyboardTextCommit)
+    case cancelled(KeyboardComposeCancellation)
+
+    public var committedString: String? {
+        switch self {
+        case .committed(let commit):
+            commit.string
+        case .cancelled(let cancellation):
+            cancellation.fallbackCommit?.string
+        case .none, .composing:
+            nil
+        }
+    }
+}
+
+public struct KeyboardTextCommit: Equatable, Sendable {
+    public let string: String
+    public let source: KeyboardTextSource
+    public let resultKeysym: KeyboardKeysym?
+    public let resultKeysymName: String?
+
+    public init(
+        string commitString: String,
+        source commitSource: KeyboardTextSource,
+        resultKeysym commitResultKeysym: KeyboardKeysym?,
+        resultKeysymName commitResultKeysymName: String?
+    ) {
+        string = commitString
+        source = commitSource
+        resultKeysym = commitResultKeysym
+        resultKeysymName = commitResultKeysymName
+    }
+}
+
+public enum KeyboardTextSource: Equatable, Sendable {
+    case xkbKey
+    case compose
+    case composeCancellationFallback
+}
+
+public struct KeyboardComposeProgress: Equatable, Sendable {
+    public let startedBy: KeyboardKeysym?
+    public let startedByName: String?
+
+    public init(startedBy keysym: KeyboardKeysym?, startedByName keysymName: String?) {
+        startedBy = keysym
+        startedByName = keysymName
+    }
+}
+
+public struct KeyboardComposeCancellation: Equatable, Sendable {
+    public let cancellingKeysym: KeyboardKeysym?
+    public let cancellingKeysymName: String?
+    public let fallbackCommit: KeyboardTextCommit?
+
+    public init(
+        cancellingKeysym keysym: KeyboardKeysym?,
+        cancellingKeysymName keysymName: String?,
+        fallbackCommit cancellationFallbackCommit: KeyboardTextCommit?
+    ) {
+        cancellingKeysym = keysym
+        cancellingKeysymName = keysymName
+        fallbackCommit = cancellationFallbackCommit
+    }
 }

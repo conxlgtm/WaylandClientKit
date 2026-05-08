@@ -199,9 +199,12 @@ Current state:
 - imports xkbcommon through `CXKBCommonSystem`
 - parses copied `xkb_v1` keymap payloads from `WaylandRaw`
 - owns xkb context, keymap, and state lifetimes inside thread-affine Swift objects
+- owns xkb compose table and compose state lifetimes for local dead-key text
 - applies Wayland modifier masks
-- exposes interpreted key symbols and UTF-8 text for raw key events
-- does not expose shortcut policy, compose behavior, text-input protocols, or IME behavior
+- exposes interpreted key symbol lists, primary key symbols, and UTF-8 key text
+  for raw key events
+- exposes compose/dead-key text as a separate text result on interpreted key events
+- does not expose shortcut policy, text-input protocols, or IME behavior
 
 ### `WaylandClient`
 
@@ -330,6 +333,7 @@ Supported:
 - staging fractional-scale preferred-scale callbacks
 - scale-aware `SurfaceGeometry` and `SoftwareFrame` metadata
 - basic `xkb_v1` keyboard interpretation through xkbcommon
+- compose and dead-key text results for interpreted keyboard events
 - session-level raw and interpreted keyboard events
 - static pointer cursor surfaces through wayland-cursor
 - regular clipboard selection offers and sources through data-device

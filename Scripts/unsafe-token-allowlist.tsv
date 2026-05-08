@@ -4,6 +4,7 @@ Sources/CWaylandProtocols/include/generated/**	wl_proxy_add_listener	Generated W
 Sources/WaylandCursor/**	OpaquePointer	wayland-cursor C object wrappers.
 Sources/WaylandKeyboardInterpretation/**	OpaquePointer	xkbcommon C object wrappers.
 Sources/WaylandKeyboardInterpretation/**	UnsafeMutablePointer	xkbcommon keymap/state pointer storage.
+Sources/WaylandKeyboardInterpretation/KeyboardLayoutState.swift	UnsafePointer	xkbcommon borrowed keysym array from xkb_state_key_get_syms.
 Sources/WaylandRaw/**	OpaquePointer	Raw Wayland ownership wrappers and typed proxy shims.
 Sources/WaylandRaw/**	UnsafeMutablePointer	Raw listener/proxy/storage boundary.
 Sources/WaylandRaw/**	UnsafeMutableBufferPointer	Raw event-loop and memory-layout bridge.

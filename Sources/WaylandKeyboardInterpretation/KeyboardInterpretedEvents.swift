@@ -48,8 +48,9 @@ package struct InterpretedKeyboardKey: Equatable, Sendable {
     package let time: UInt32
     package let evdevKeycode: UInt32
     package let xkbKeycode: UInt32
-    package let keysym: KeyboardKeysym
+    package let symbolResolution: KeyboardSymbolResolution
     package let interpretation: InterpretedKeyboardKeyInterpretation
+    package let text: KeyboardTextResult
 
     package init(
         serial eventSerial: UInt32,
@@ -57,14 +58,44 @@ package struct InterpretedKeyboardKey: Equatable, Sendable {
         evdevKeycode eventEvdevKeycode: UInt32,
         xkbKeycode eventXKBKeycode: UInt32,
         keysym eventKeysym: KeyboardKeysym,
-        interpretation eventInterpretation: InterpretedKeyboardKeyInterpretation
+        interpretation eventInterpretation: InterpretedKeyboardKeyInterpretation,
+        text eventText: KeyboardTextResult = .none
+    ) {
+        self.init(
+            serial: eventSerial,
+            time: eventTime,
+            evdevKeycode: eventEvdevKeycode,
+            xkbKeycode: eventXKBKeycode,
+            symbolResolution: .single(eventKeysym),
+            interpretation: eventInterpretation,
+            text: eventText
+        )
+    }
+
+    package init(
+        serial eventSerial: UInt32,
+        time eventTime: UInt32,
+        evdevKeycode eventEvdevKeycode: UInt32,
+        xkbKeycode eventXKBKeycode: UInt32,
+        symbolResolution eventSymbolResolution: KeyboardSymbolResolution,
+        interpretation eventInterpretation: InterpretedKeyboardKeyInterpretation,
+        text eventText: KeyboardTextResult = .none
     ) {
         serial = eventSerial
         time = eventTime
         evdevKeycode = eventEvdevKeycode
         xkbKeycode = eventXKBKeycode
-        keysym = eventKeysym
+        symbolResolution = eventSymbolResolution
         interpretation = eventInterpretation
+        text = eventText
+    }
+
+    package var keysym: KeyboardKeysym {
+        symbolResolution.primary
+    }
+
+    package var keysyms: [KeyboardKeysym] {
+        symbolResolution.all
     }
 
     package var state: InterpretedKeyboardKeyState {
@@ -187,6 +218,118 @@ package struct KeyboardKeysym: Equatable, Sendable {
     package init(rawValue keysymRawValue: UInt32) {
         rawValue = keysymRawValue
     }
+
+    package static let noSymbol = Self(rawValue: 0)
+}
+
+package enum KeyboardSymbolResolutionError: Error, Equatable, Sendable {
+    case emptySymbols
+    case primaryNotFirst(primary: KeyboardKeysym, first: KeyboardKeysym)
+}
+
+package struct KeyboardSymbolResolution: Equatable, Sendable {
+    package let primary: KeyboardKeysym
+    package let all: [KeyboardKeysym]
+
+    package init(
+        primary primaryKeysym: KeyboardKeysym,
+        all keysyms: [KeyboardKeysym]
+    ) throws(KeyboardSymbolResolutionError) {
+        guard let first = keysyms.first else {
+            throw .emptySymbols
+        }
+        guard first == primaryKeysym else {
+            throw .primaryNotFirst(primary: primaryKeysym, first: first)
+        }
+
+        primary = primaryKeysym
+        all = keysyms
+    }
+
+    package static func single(_ keysym: KeyboardKeysym) -> Self {
+        Self(uncheckedPrimary: keysym, all: [keysym])
+    }
+
+    package static func resolved(_ keysyms: [KeyboardKeysym]) -> Self {
+        guard let first = keysyms.first else {
+            return .single(.noSymbol)
+        }
+        return Self(uncheckedPrimary: first, all: keysyms)
+    }
+
+    private init(uncheckedPrimary primaryKeysym: KeyboardKeysym, all keysyms: [KeyboardKeysym]) {
+        primary = primaryKeysym
+        all = keysyms
+    }
+}
+
+package enum KeyboardTextResult: Equatable, Sendable {
+    case none
+    case composing(KeyboardComposeProgress)
+    case committed(KeyboardTextCommit)
+    case cancelled(KeyboardComposeCancellation)
+
+    package var committedString: String? {
+        switch self {
+        case .committed(let commit):
+            commit.string
+        case .cancelled(let cancellation):
+            cancellation.fallbackCommit?.string
+        case .none, .composing:
+            nil
+        }
+    }
+}
+
+package struct KeyboardTextCommit: Equatable, Sendable {
+    package let string: String
+    package let source: KeyboardTextSource
+    package let resultKeysym: KeyboardKeysym?
+    package let resultKeysymName: String?
+
+    package init(
+        string commitString: String,
+        source commitSource: KeyboardTextSource,
+        resultKeysym commitResultKeysym: KeyboardKeysym?,
+        resultKeysymName commitResultKeysymName: String?
+    ) {
+        string = commitString
+        source = commitSource
+        resultKeysym = commitResultKeysym
+        resultKeysymName = commitResultKeysymName
+    }
+}
+
+package enum KeyboardTextSource: Equatable, Sendable {
+    case xkbKey
+    case compose
+    case composeCancellationFallback
+}
+
+package struct KeyboardComposeProgress: Equatable, Sendable {
+    package let startedBy: KeyboardKeysym?
+    package let startedByName: String?
+
+    package init(startedBy keysym: KeyboardKeysym?, startedByName keysymName: String?) {
+        startedBy = keysym
+        startedByName = keysymName
+    }
+}
+
+package struct KeyboardComposeCancellation: Equatable, Sendable {
+    package let cancellingKeysym: KeyboardKeysym?
+    package let cancellingKeysymName: String?
+    package let fallbackCommit: KeyboardTextCommit?
+
+    package init(
+        cancellingKeysym keysym: KeyboardKeysym?,
+        cancellingKeysymName keysymName: String?,
+        fallbackCommit cancellationFallbackCommit: KeyboardTextCommit?
+    ) {
+        cancellingKeysym = keysym
+        cancellingKeysymName = keysymName
+        fallbackCommit = cancellationFallbackCommit
+    }
 }
 
 package struct InterpretedKeyboardModifiers: Equatable, Sendable {
@@ -261,6 +404,8 @@ package enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {
     case emptyKeymap
     case invalidKeymap
     case keymapReadFailed(RawKeyboardKeymapReadError)
+    case composeTableUnavailable(locale: String)
+    case composeStateCreationFailed
     case missingKeymap
     case missingKeyboardState
     case invalidKeycode(UInt32)

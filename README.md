@@ -29,6 +29,7 @@ Current experimental baseline:
 - `xkbcommon`-backed key interpretation for copied `xkb_v1` keymaps through `DisplaySession`
 - normal pointer cursor surfaces backed by `wayland-cursor`
 - regular clipboard selection offers and sources through `wl_data_device_manager`
+- compose and dead-key text results for interpreted keyboard events
 - display, input, data-transfer, and diagnostic event streams
 - noninteractive Wayland smoke executable
 - tests for system imports, shim imports, raw lifecycle, and client drawing helpers
@@ -36,7 +37,7 @@ Current experimental baseline:
 Not implemented yet:
 
 - protocol coverage beyond the listed current support matrix
-- compose, text-input, or IME behavior
+- text-input or IME behavior
 - primary selection and drag-and-drop transfer handling
 - cursor animation, output-scale cursor selection, or custom cursor drawing APIs
 - public output model or presentation-time API
@@ -86,7 +87,10 @@ Window geometry:
 Keyboard interpretation:
 
 - `xkb_v1` keymaps through `WaylandKeyboardInterpretation` and `DisplaySession`
-- key symbols and UTF-8 text derived from `xkbcommon`
+- key symbol lists, primary key symbols, and UTF-8 key text derived from `xkbcommon`
+- compose and dead-key sequences through `xkbcommon` compose state
+- shortcut logic should use key symbols and modifiers, not composed text
+- composed text is local keyboard text and is not Wayland text-input or IME output
 
 Pointer cursors:
 
@@ -268,6 +272,7 @@ swift run swift-wayland-demo
 ```
 
 The demo draws a small marker for pointer motion and prints basic pointer/keyboard/touch/seat events, including interpreted keyboard events when keymap interpretation is available.
+Interpreted keyboard events include local compose/dead-key text results when compose support is enabled.
 It sets a normal pointer cursor when pointer focus enters the demo window.
 
 Run the noninteractive Wayland smoke check under a real Wayland session:

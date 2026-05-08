@@ -73,6 +73,9 @@ Current user-facing contract:
   are derived display text, not control-flow payloads.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
   protocol values are intentionally preserved when useful to clients.
+- Interpreted keyboard events expose local keyboard text through
+  `KeyboardTextResult`. Shortcut matching should still use `keySymbols`,
+  `primaryKeySymbol`, and modifiers. This is not text-input or IME support.
 - Raw keymap bytes, raw file descriptors, raw proxies, listener owners, event
   queues, SHM pool internals, and owner-thread executor machinery are not
   product API.

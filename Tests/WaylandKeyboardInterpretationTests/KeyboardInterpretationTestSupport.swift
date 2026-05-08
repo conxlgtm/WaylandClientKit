@@ -35,8 +35,10 @@ func requireSendable<T: Sendable>(_ type: T.Type) {
     _ = type
 }
 
-func interpreterWithFixtureKeymap() throws -> KeyboardInterpreter {
-    let interpreter = try KeyboardInterpreter()
+func interpreterWithFixtureKeymap(
+    configuration: KeyboardInterpreterConfiguration = .init()
+) throws -> KeyboardInterpreter {
+    let interpreter = try KeyboardInterpreter(configuration: configuration)
     let deviceID = keyboardDevice()
     _ = interpreter.consume(
         rawKeyboardInputEvent(
@@ -118,6 +120,35 @@ func qKey(
         evdevKeycode: evdevKeycode,
         state: state
     )
+}
+
+func deadAcuteKey(state: RawKeyboardKeyState = .pressed) -> RawKeyboardKey {
+    qKey(evdevKeycode: 2, state: state)
+}
+
+func aKey(state: RawKeyboardKeyState = .pressed) -> RawKeyboardKey {
+    qKey(evdevKeycode: 30, state: state)
+}
+
+func bKey(state: RawKeyboardKeyState = .pressed) -> RawKeyboardKey {
+    qKey(evdevKeycode: 48, state: state)
+}
+
+func shiftKey(state: RawKeyboardKeyState = .pressed) -> RawKeyboardKey {
+    qKey(evdevKeycode: 42, state: state)
+}
+
+func composeTableText() -> String {
+    """
+    <dead_acute> <a> : "á" aacute
+    <dead_acute> <A> : "Á" Aacute
+    """
+}
+
+func multiStepComposeTableText() -> String {
+    """
+    <dead_acute> <b> <a> : "x" X
+    """
 }
 
 func fixtureKeymapText() throws -> String {

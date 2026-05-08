@@ -258,6 +258,9 @@ private struct DemoState {
             if DemoLog.logsTextInput, let utf8 = key.utf8 {
                 message += " utf8=\(utf8)"
             }
+            if DemoLog.logsTextInput {
+                message += " text=\(keyboardTextDescription(key.text))"
+            }
             DemoLog.write(message)
         case .modifiers(let modifiers):
             DemoLog.write(
@@ -285,6 +288,24 @@ private struct DemoState {
             "disabled"
         case .enabled(let rate, let delay):
             "enabled rate=\(rate.rawValue) delay=\(delay.rawValue)"
+        }
+    }
+
+    nonisolated private func keyboardTextDescription(_ result: KeyboardTextResult) -> String {
+        switch result {
+        case .none:
+            "none"
+        case .composing(let progress):
+            "composing startedBy=\(progress.startedByName ?? "?")"
+        case .committed(let commit):
+            "committed source=\(commit.source) string=\(commit.string)"
+        case .cancelled(let cancellation):
+            if let fallback = cancellation.fallbackCommit {
+                "cancelled key=\(cancellation.cancellingKeysymName ?? "?") "
+                    + "fallback=\(fallback.string)"
+            } else {
+                "cancelled key=\(cancellation.cancellingKeysymName ?? "?")"
+            }
         }
     }
 

@@ -6,72 +6,53 @@ package final class KeyboardInterpreter {
         case diagnostic(InterpretedKeyboardEvent)
     }
 
-    private enum KeyboardInterpretationState {
-        case missing
-        case noKeymap(RawKeyboardKeymapID)
-        case valid(KeyboardLayoutState)
-        case unavailable(
-            keymapID: RawKeyboardKeymapID?,
-            reason: KeyboardInterpretationUnavailableReason
-        )
-
-        var validLayout: KeyboardLayoutState? {
-            switch self {
-            case .valid(let layout):
-                layout
-            case .missing, .noKeymap, .unavailable:
-                nil
-            }
-        }
-
-        var validKeymapID: RawKeyboardKeymapID? {
-            switch self {
-            case .valid(let layout):
-                layout.id
-            case .missing, .noKeymap, .unavailable:
-                nil
-            }
-        }
-
-        var snapshot: KeyboardInterpreterKeymapState {
-            switch self {
-            case .missing:
-                .missing
-            case .noKeymap(let id):
-                .noKeymap(id)
-            case .valid(let layout):
-                .valid(layout.id)
-            case .unavailable(let keymapID, let reason):
-                .unavailable(keymapID: keymapID, reason: reason)
-            }
-        }
-
-        var failureReason: KeyboardInterpretationUnavailableReason? {
-            switch self {
-            case .noKeymap:
-                .noKeymap
-            case .unavailable(_, let reason):
-                reason
-            case .missing, .valid:
-                nil
-            }
-        }
-    }
-
-    private struct DeviceState {
-        var keymap = KeyboardInterpretationState.missing
-        var repeatInfo: RawKeyboardRepeatInfo?
-    }
-
     private let context: XKBContextOwner
-    private var devicesByID: [RawInputDeviceID: DeviceState] = [:]
+    private let configuration: KeyboardInterpreterConfiguration
+    private let composeTable: XKBComposeTableOwner?
+    private let composeFailureReason: KeyboardInterpretationUnavailableReason?
+    private var reportedComposeFailure = false
+    private var devicesByID: [RawInputDeviceID: KeyboardInterpreterDeviceState] = [:]
     private let threadAffinity = ThreadAffinity()
 
-    package init() throws(KeyboardInterpreterError) {
+    package init(
+        configuration interpreterConfiguration: KeyboardInterpreterConfiguration = .init()
+    ) throws(KeyboardInterpreterError) {
         do {
             context = try XKBContextOwner()
         } catch {
             throw .contextCreationFailed
+        }
+        configuration = interpreterConfiguration
+
+        switch interpreterConfiguration.compose {
+        case .disabled:
+            composeTable = nil
+            composeFailureReason = nil
+        case .enabled(let locale, _):
+            let resolvedLocale = locale.resolved()
+            do {
+                composeTable = try XKBComposeTableOwner(
+                    context: context,
+                    locale: resolvedLocale
+                )
+                composeFailureReason = nil
+            } catch let failure {
+                composeTable = nil
+                composeFailureReason = Self.unavailableReason(for: failure, locale: resolvedLocale)
+            }
+        case .tableBuffer(let buffer, let locale, _):
+            let resolvedLocale = locale.resolved()
+            do {
+                composeTable = try XKBComposeTableOwner(
+                    context: context,
+                    buffer: buffer,
+                    locale: resolvedLocale
+                )
+                composeFailureReason = nil
+            } catch let failure {
+                composeTable = nil
+                composeFailureReason = Self.unavailableReason(for: failure, locale: resolvedLocale)
+            }
         }
     }
 
@@ -171,7 +152,7 @@ extension KeyboardInterpreter {
         guard deviceID.kind == .keyboard else { return }
 
         let (keymapID, reason) = unavailableReason(for: keymapDiagnostic)
-        var state = devicesByID[deviceID] ?? DeviceState()
+        var state = devicesByID[deviceID] ?? KeyboardInterpreterDeviceState()
         state.keymap = .unavailable(keymapID: keymapID, reason: reason)
         devicesByID[deviceID] = state
     }
@@ -244,7 +225,7 @@ extension KeyboardInterpreter {
         case .diagnostic(let diagnostic):
             return [diagnostic]
         case .device(let deviceID):
-            var state = devicesByID[deviceID] ?? DeviceState()
+            var state = devicesByID[deviceID] ?? KeyboardInterpreterDeviceState()
             state.repeatInfo = repeatInfo
             devicesByID[deviceID] = state
 
@@ -276,7 +257,7 @@ extension KeyboardInterpreter {
         }
 
         guard case .xkbV1 = payload else {
-            var state = devicesByID[payloadDeviceID] ?? DeviceState()
+            var state = devicesByID[payloadDeviceID] ?? KeyboardInterpreterDeviceState()
             state.keymap = .noKeymap(payload.id)
             devicesByID[payloadDeviceID] = state
             return [unavailable(.noKeymap, from: event, deviceID: payloadDeviceID)]
@@ -291,8 +272,13 @@ extension KeyboardInterpreter {
         event: RawInputEvent
     ) -> [InterpretedKeyboardEvent] {
         do {
-            let layout = try KeyboardLayoutState(context: context, keymap: payload)
-            var state = devicesByID[deviceID] ?? DeviceState()
+            let layout = try KeyboardLayoutState(
+                context: context,
+                keymap: payload,
+                composeTable: composeTable,
+                composeCancellationPolicy: composeCancellationPolicy
+            )
+            var state = devicesByID[deviceID] ?? KeyboardInterpreterDeviceState()
             state.keymap = .valid(layout)
             devicesByID[deviceID] = state
 
@@ -307,7 +293,13 @@ extension KeyboardInterpreter {
                 from: event,
                 deviceID: deviceID
             )
-            return [interpretedEvent]
+            return composeFailureEvent(
+                from: event,
+                deviceID: deviceID,
+                reason: layout.composeFailureReason
+            ).map { composeFailure in
+                [interpretedEvent, composeFailure]
+            } ?? [interpretedEvent]
         } catch .unsupportedKeymapFormat(let format) {
             return markUnavailableAndReport(
                 .unsupportedKeymapFormat(format),
@@ -330,6 +322,40 @@ extension KeyboardInterpreter {
                 event: event
             )
         }
+    }
+
+    private var composeCancellationPolicy: KeyboardComposeCancellationPolicy {
+        switch configuration.compose {
+        case .disabled:
+            .passThroughCancellingKey
+        case .enabled(_, let policy), .tableBuffer(_, _, let policy):
+            policy
+        }
+    }
+
+    private static func unavailableReason(
+        for failure: KeyboardComposeFailure,
+        locale: String
+    ) -> KeyboardInterpretationUnavailableReason {
+        switch failure {
+        case .tableUnavailable:
+            .composeTableUnavailable(locale: locale)
+        case .stateCreationFailed:
+            .composeStateCreationFailed
+        }
+    }
+
+    private func composeFailureEvent(
+        from event: RawInputEvent,
+        deviceID: RawInputDeviceID,
+        reason layoutFailureReason: KeyboardInterpretationUnavailableReason? = nil
+    ) -> InterpretedKeyboardEvent? {
+        guard
+            !reportedComposeFailure,
+            let composeFailureReason = layoutFailureReason ?? composeFailureReason
+        else { return nil }
+        reportedComposeFailure = true
+        return unavailable(composeFailureReason, from: event, deviceID: deviceID)
     }
 
     private func unavailableReason(
@@ -430,7 +456,7 @@ extension KeyboardInterpreter {
         deviceID: RawInputDeviceID,
         event: RawInputEvent
     ) -> [InterpretedKeyboardEvent] {
-        var state = devicesByID[deviceID] ?? DeviceState()
+        var state = devicesByID[deviceID] ?? KeyboardInterpreterDeviceState()
         state.keymap = .unavailable(keymapID: keymapID, reason: reason)
         devicesByID[deviceID] = state
         return [unavailable(reason, from: event, deviceID: deviceID)]
