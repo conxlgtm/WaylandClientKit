@@ -5,22 +5,26 @@ import Testing
 @Suite
 struct RawSupportTests {
     @Test
-    func rawGlobalAdvertisementNegotiatesMinimumVersion() {
-        let global = RawGlobalAdvertisement(
-            name: 7,
-            interfaceName: "xdg_wm_base",
-            advertisedVersion: 7
+    func rawGlobalAdvertisementNegotiatesMinimumVersion() throws {
+        let global = try #require(
+            RawGlobalAdvertisement(
+                name: 7,
+                interfaceName: "xdg_wm_base",
+                advertisedVersion: 7
+            )
         )
 
         #expect(global.negotiatedVersion(supportedByClient: 6) == 6)
     }
 
     @Test
-    func rawGlobalAdvertisementKeepsAdvertisedVersionWhenClientSupportsMore() {
-        let global = RawGlobalAdvertisement(
-            name: 7,
-            interfaceName: "xdg_wm_base",
-            advertisedVersion: 4
+    func rawGlobalAdvertisementKeepsAdvertisedVersionWhenClientSupportsMore() throws {
+        let global = try #require(
+            RawGlobalAdvertisement(
+                name: 7,
+                interfaceName: "xdg_wm_base",
+                advertisedVersion: 4
+            )
         )
 
         #expect(global.negotiatedVersion(supportedByClient: 6) == 4)

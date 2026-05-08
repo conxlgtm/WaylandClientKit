@@ -79,6 +79,14 @@ final class WaylandCallbackRegistrationState {
         state.lifecycle
     }
 
+    var listenerStorageIsValidForTesting: Bool {
+        unsafe listenerStorage.isValidForTesting
+    }
+
+    var listenerStorageCallbackActive: Bool {
+        unsafe listenerStorage.hasActiveCallbacksForTesting
+    }
+
     func install() throws {
         callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
         guard case .pending(let pointer, _) = state else {

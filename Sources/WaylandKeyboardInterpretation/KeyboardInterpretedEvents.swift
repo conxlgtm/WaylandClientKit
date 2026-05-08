@@ -79,8 +79,8 @@ package struct InterpretedKeyboardKey: Equatable, Sendable {
         interpretation.utf8
     }
 
-    package var repeats: Bool {
-        interpretation.repeats
+    package var repeatCapability: KeyboardKeyRepeatCapability? {
+        interpretation.repeatCapability
     }
 }
 
@@ -98,23 +98,31 @@ package struct InterpretedKeyboardKeyState: Equatable, Sendable {
 
 package enum InterpretedKeyboardKeyInterpretation: Equatable, Sendable {
     case released(keysymName: String?)
-    case pressed(keysymName: String?, utf8: String?, repeats: Bool)
-    case repeated(keysymName: String?, utf8: String?, repeats: Bool)
+    case pressed(
+        keysymName: String?,
+        utf8: String?,
+        repeatCapability: KeyboardKeyRepeatCapability
+    )
+    case repeated(keysymName: String?, utf8: String?)
     case unknown(state: InterpretedKeyboardKeyState, keysymName: String?)
 
     package init(
         state keyState: InterpretedKeyboardKeyState,
         keysymName keyKeysymName: String?,
         utf8 keyUTF8: String?,
-        repeats keyRepeats: Bool
+        repeatCapability keyRepeatCapability: KeyboardKeyRepeatCapability
     ) {
         switch keyState {
         case .released:
             self = .released(keysymName: keyKeysymName)
         case .pressed:
-            self = .pressed(keysymName: keyKeysymName, utf8: keyUTF8, repeats: keyRepeats)
+            self = .pressed(
+                keysymName: keyKeysymName,
+                utf8: keyUTF8,
+                repeatCapability: keyRepeatCapability
+            )
         case .repeated:
-            self = .repeated(keysymName: keyKeysymName, utf8: keyUTF8, repeats: keyRepeats)
+            self = .repeated(keysymName: keyKeysymName, utf8: keyUTF8)
         default:
             self = .unknown(state: keyState, keysymName: keyKeysymName)
         }
@@ -137,7 +145,7 @@ package enum InterpretedKeyboardKeyInterpretation: Equatable, Sendable {
         switch self {
         case .released(let keysymName),
             .pressed(let keysymName, _, _),
-            .repeated(let keysymName, _, _),
+            .repeated(let keysymName, _),
             .unknown(_, let keysymName):
             keysymName
         }
@@ -145,20 +153,31 @@ package enum InterpretedKeyboardKeyInterpretation: Equatable, Sendable {
 
     package var utf8: String? {
         switch self {
-        case .pressed(_, let utf8, _), .repeated(_, let utf8, _):
+        case .pressed(_, let utf8, _), .repeated(_, let utf8):
             utf8
         case .released, .unknown:
             nil
         }
     }
 
-    package var repeats: Bool {
+    package var repeatCapability: KeyboardKeyRepeatCapability? {
         switch self {
-        case .pressed(_, _, let repeats), .repeated(_, _, let repeats):
-            repeats
+        case .pressed(_, _, let repeatCapability):
+            repeatCapability
+        case .repeated:
+            .repeating
         case .released, .unknown:
-            false
+            nil
         }
+    }
+}
+
+package enum KeyboardKeyRepeatCapability: Equatable, Sendable {
+    case nonRepeating
+    case repeating
+
+    package init(keymapAllowsRepeat allowsRepeat: Bool) {
+        self = allowsRepeat ? .repeating : .nonRepeating
     }
 }
 
@@ -213,13 +232,17 @@ package struct XKBStateComponents: OptionSet, Sendable {
     package static let leds = Self(rawValue: 1 << 8)
 }
 
-package struct InterpretedKeyboardRepeatInfo: Equatable, Sendable {
-    package let rate: Int32
-    package let delay: Int32
+package enum InterpretedKeyboardRepeatInfo: Equatable, Sendable {
+    case disabled
+    case enabled(rate: RawKeyboardRepeatRate, delay: RawKeyboardRepeatDelay)
 
-    package init(rate repeatRate: Int32, delay repeatDelay: Int32) {
-        rate = repeatRate
-        delay = repeatDelay
+    package init(_ repeatInfo: RawKeyboardRepeatInfo) {
+        switch repeatInfo {
+        case .disabled:
+            self = .disabled
+        case .enabled(let rate, let delay):
+            self = .enabled(rate: rate, delay: delay)
+        }
     }
 }
 

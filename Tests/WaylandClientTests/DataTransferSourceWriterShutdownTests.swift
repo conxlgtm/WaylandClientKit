@@ -64,7 +64,7 @@ struct DataTransferSourceWriterShutdownTests {
                 writeDescriptor: { _, bytes in bytes.count },
                 closeDescriptor: { descriptor in
                     queuedCloseRecorder.record(descriptor)
-                    return 0
+                    return .closed
                 }
             ),
         ])
@@ -227,7 +227,7 @@ private final class BackpressureSourceWriteProbe: Sendable {
         throw DataTransferError.writeFileDescriptor(WaylandSystemErrno(unchecked: EAGAIN))
     }
 
-    func close(descriptor: Int32) -> Int32 {
+    func close(descriptor: Int32) -> FileDescriptorCloseResult {
         condition.lock()
         state.withLock { storage in
             storage.closedDescriptors.append(descriptor)
@@ -236,7 +236,9 @@ private final class BackpressureSourceWriteProbe: Sendable {
         condition.broadcast()
         condition.unlock()
 
-        return closeResult
+        return closeResult == 0
+            ? .closed
+            : .failed(WaylandSystemErrno(unchecked: closeResult > 0 ? closeResult : EIO))
     }
 
     func waitUntilStarted() -> Bool {
@@ -298,7 +300,7 @@ private final class PipeWriteProbe: Sendable {
         return result
     }
 
-    func close(descriptor: Int32) -> Int32 {
+    func close(descriptor: Int32) -> FileDescriptorCloseResult {
         condition.lock()
         state.withLock { storage in
             storage.closedDescriptors.append(descriptor)
@@ -307,11 +309,7 @@ private final class PipeWriteProbe: Sendable {
         condition.broadcast()
         condition.unlock()
 
-        guard Glibc.close(descriptor) == 0 else {
-            return errno > 0 ? errno : EIO
-        }
-
-        return 0
+        return .posixReturn(Glibc.close(descriptor))
     }
 
     func waitUntilStarted() -> Bool {

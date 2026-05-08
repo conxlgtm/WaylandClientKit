@@ -36,6 +36,43 @@ Audit invariant:
 - Proxy adoption validates queue ownership before wrapping a proxy.
 - Raw surfaces destroy their Wayland proxy through the same ownership wrapper used by other raw proxy owners.
 
+## Listener Callback Ownership
+
+Remaining unsafe constructs:
+
+- `CListenerStorage` allocates C callback tables and stores an unretained pointer
+  to itself in each listener `data` field.
+- `CallbackBoxStorage` keeps the Swift owner reachable while the listener is
+  valid.
+- Seat, pointer, keyboard, touch, data-device, XDG, buffer-release, frame
+  callback, and scale-extension listeners recover Swift owners from C callback
+  payloads.
+- `RawInputChildProxy` keeps pointer, keyboard, and touch listener owners alive
+  until the child proxy is destroyed.
+
+Audit invariant:
+
+- A listener owner remains strongly reachable for as long as Wayland can invoke
+  the registered callback.
+- Listener storage is invalidated before the owned proxy is destroyed or before
+  the callback lifecycle reaches a terminal state.
+- Callback storage remains allocated until any active callback returns, even
+  when the callback destroys or cancels its own registration.
+- A callback after listener invalidation is a fatal raw invariant failure, not a
+  silently ignored event.
+
+Tests:
+
+- `CallbackBoxTests` covers opaque pointer round trips, invalidation, weak-owner
+  loss, fatal invariant routing, and reentrant release during an active callback.
+- `FrameCallbackRegistrationTests` covers install failure cleanup, cancel
+  idempotence, one-shot frame completion, callback-owner lifetime during
+  reentrant release, and listener invalidation while the callback payload is
+  still alive.
+- `RawSeatLifecycleTests` covers pointer, keyboard, and touch callback delivery
+  after child listener installation, child creation failure cleanup, and child
+  proxy release on capability removal.
+
 ## Scale Extension Raw Boundary
 
 Remaining unsafe constructs:

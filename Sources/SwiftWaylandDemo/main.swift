@@ -131,7 +131,7 @@ private struct DemoState {
                     + "message=\(diagnostic.message)"
             )
         case .pointer(let pointer):
-            guard event.target == .window(focusedWindowID) else { return }
+            guard event.windowID == focusedWindowID else { return }
             handlePointer(pointer)
         case .keyboard(let keyboard):
             guard acceptsWindowOrDisplayTarget(event.target, focusedWindowID) else { return }
@@ -147,8 +147,8 @@ private struct DemoState {
         _ focusedWindowID: WindowID
     ) -> Bool {
         switch target {
-        case .window(let windowID):
-            windowID == focusedWindowID
+        case .surface(let surface):
+            surface.windowID == focusedWindowID
         case .display, .focusless:
             true
         case .unmanagedSurface:
@@ -166,7 +166,8 @@ private struct DemoState {
         case .changed(let snapshot):
             DemoLog.write(
                 "seat \(seatID) capabilities advertised=\(snapshot.advertisedCapabilities) "
-                    + "active=\(snapshot.activeCapabilities) name=\(snapshot.name ?? "?")"
+                    + "active=\(snapshot.activeCapabilities) "
+                    + "name=\(snapshot.name?.description ?? "?")"
             )
         case .removed:
             DemoLog.write("seat \(seatID) removed")
@@ -232,7 +233,9 @@ private struct DemoState {
                     + "locked=\(modifiers.locked) group=\(modifiers.group)"
             )
         case .repeatInfo(let repeatInfo):
-            DemoLog.write("keyboard repeat rate=\(repeatInfo.rate) delay=\(repeatInfo.delay)")
+            DemoLog.write(
+                "keyboard repeat policy=\(repeatPolicyDescription(repeatInfo))"
+            )
         }
     }
 
@@ -266,13 +269,22 @@ private struct DemoState {
         case .repeatInfo(let repeatInfo):
             DemoLog.write(
                 "keyboard interpreted repeat seat=\(seatID) "
-                    + "rate=\(repeatInfo.rate) delay=\(repeatInfo.delay)"
+                    + "policy=\(repeatPolicyDescription(repeatInfo))"
             )
         case .unavailable(let unavailable):
             DemoLog.write(
                 "keyboard interpretation unavailable seat=\(seatID) "
                     + "reason=\(unavailable.reason)"
             )
+        }
+    }
+
+    nonisolated private func repeatPolicyDescription(_ policy: KeyboardRepeatPolicy) -> String {
+        switch policy {
+        case .disabled:
+            "disabled"
+        case .enabled(let rate, let delay):
+            "enabled rate=\(rate.rawValue) delay=\(delay.rawValue)"
         }
     }
 

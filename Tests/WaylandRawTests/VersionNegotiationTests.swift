@@ -5,41 +5,49 @@ import Testing
 @Suite
 struct VersionNegotiationTests {
     @Test
-    func choosesClientVersionWhenServerOffersMore() {
-        let global = RawGlobalAdvertisement(
-            name: 8,
-            interfaceName: "xdg_wm_base",
-            advertisedVersion: 7
+    func choosesClientVersionWhenServerOffersMore() throws {
+        let global = try #require(
+            RawGlobalAdvertisement(
+                name: 8,
+                interfaceName: "xdg_wm_base",
+                advertisedVersion: 7
+            )
         )
         #expect(global.negotiatedVersion(supportedByClient: 6) == RawVersion(6))
     }
 
     @Test
-    func choosesServerVersionWhenClientSupportsMore() {
-        let global = RawGlobalAdvertisement(
-            name: 8,
-            interfaceName: "xdg_wm_base",
-            advertisedVersion: 4
+    func choosesServerVersionWhenClientSupportsMore() throws {
+        let global = try #require(
+            RawGlobalAdvertisement(
+                name: 8,
+                interfaceName: "xdg_wm_base",
+                advertisedVersion: 4
+            )
         )
         #expect(global.negotiatedVersion(supportedByClient: 6) == RawVersion(4))
     }
 
     @Test
-    func choosesEqualVersionWhenBothMatch() {
-        let global = RawGlobalAdvertisement(
-            name: 5,
-            interfaceName: "wl_compositor",
-            advertisedVersion: 6
+    func choosesEqualVersionWhenBothMatch() throws {
+        let global = try #require(
+            RawGlobalAdvertisement(
+                name: 5,
+                interfaceName: "wl_compositor",
+                advertisedVersion: 6
+            )
         )
         #expect(global.negotiatedVersion(supportedByClient: 6) == RawVersion(6))
     }
 
     @Test
-    func version1AlwaysNegotiatesToOne() {
-        let global = RawGlobalAdvertisement(
-            name: 2,
-            interfaceName: "wl_shm",
-            advertisedVersion: 1
+    func version1AlwaysNegotiatesToOne() throws {
+        let global = try #require(
+            RawGlobalAdvertisement(
+                name: 2,
+                interfaceName: "wl_shm",
+                advertisedVersion: 1
+            )
         )
         #expect(global.negotiatedVersion(supportedByClient: 1) == RawVersion(1))
     }
@@ -58,21 +66,27 @@ struct VersionNegotiationTests {
     }
 
     @Test
-    func xdgDecorationManagerV1IsNotBoundUntilFirstConfigureGatingExists() {
-        let v1Global = RawGlobalAdvertisement(
-            name: 1,
-            interfaceName: "zxdg_decoration_manager_v1",
-            advertisedVersion: 1
+    func xdgDecorationManagerV1IsNotBoundUntilFirstConfigureGatingExists() throws {
+        let v1Global = try #require(
+            RawGlobalAdvertisement(
+                name: 1,
+                interfaceName: "zxdg_decoration_manager_v1",
+                advertisedVersion: 1
+            )
         )
-        let v2Global = RawGlobalAdvertisement(
-            name: 2,
-            interfaceName: "zxdg_decoration_manager_v1",
-            advertisedVersion: 2
+        let v2Global = try #require(
+            RawGlobalAdvertisement(
+                name: 2,
+                interfaceName: "zxdg_decoration_manager_v1",
+                advertisedVersion: 2
+            )
         )
-        let v3Global = RawGlobalAdvertisement(
-            name: 3,
-            interfaceName: "zxdg_decoration_manager_v1",
-            advertisedVersion: 3
+        let v3Global = try #require(
+            RawGlobalAdvertisement(
+                name: 3,
+                interfaceName: "zxdg_decoration_manager_v1",
+                advertisedVersion: 3
+            )
         )
 
         #expect(!RawDisplayConnection.shouldBindXDGDecorationManager(v1Global))

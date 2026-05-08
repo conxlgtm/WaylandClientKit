@@ -21,6 +21,10 @@ xkb_keymap {
         };
     };
     xkb_compatibility "swiftwayland" {
+        interpret Shift_L+Any {
+            repeat= False;
+            action= SetMods(modifiers=Shift);
+        };
     };
     xkb_symbols "swiftwayland" {
         key <LFSH> { [ Shift_L ] };

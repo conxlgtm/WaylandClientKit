@@ -7,14 +7,14 @@ package enum WindowEvent: Equatable, Sendable {
     case decorationPreferenceRequested(WindowDecorationPreference)
     case initialCommitSent
     case published
-    case configureReceived(XDGConfigureSequence)
-    case contentInvalidated(bufferAvailable: Bool)
-    case frameBecameReady(bufferAvailable: Bool)
-    case bufferBecameAvailable(bufferAvailable: Bool)
-    case redrawRequestConsumed(bufferAvailable: Bool)
+    case configureReceived(WindowConfigureEvent)
+    case contentInvalidated(bufferAvailability: RedrawBufferAvailability)
+    case frameBecameReady(bufferAvailability: RedrawBufferAvailability)
+    case bufferBecameAvailable(bufferAvailability: RedrawBufferAvailability)
+    case redrawRequestConsumed(bufferAvailability: RedrawBufferAvailability)
     case presentationStarted(PresentationRequest)
     case presentationBlockedByBuffer
-    case presentationSucceeded(generation: UInt64, bufferAvailable: Bool)
+    case presentationSucceeded(generation: UInt64, bufferAvailability: RedrawBufferAvailability)
     case presentationFailed(generation: UInt64, PresentationError)
     case compositorCloseRequested(policy: CloseRequestPolicy)
     case explicitClose
@@ -27,6 +27,7 @@ package enum WindowEffect: Equatable, Sendable {
     case publishCloseRequested(WindowID)
     case publishClosed(WindowID)
     case publishRedrawRequested(WindowID)
+    case publishDiagnostic(WindowDiagnostic)
     case cancelFrameCallback
     case performSoftwarePresent(PresentationRequest)
     case retireSwapchain
@@ -44,8 +45,8 @@ package struct PresentationRequest: Equatable, Sendable {
             configureSerial: configuration.serial,
             size: configuration.size,
             bounds: configuration.bounds,
-            stateRawValues: configuration.states.map(\.rawValue),
-            wmCapabilityRawValues: configuration.wmCapabilities.map(\.rawValue),
+            states: configuration.states,
+            wmCapabilities: configuration.wmCapabilities,
             decorationMode: configuration.decorationMode
         )
     }

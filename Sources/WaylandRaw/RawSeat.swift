@@ -73,7 +73,7 @@ package final class RawSeat {
 
     package var snapshot: RawSeatEventSnapshot {
         RawSeatEventSnapshot(
-            advertisedCapabilities: state.advertisedCapabilities,
+            uncheckedAdvertisedCapabilities: state.advertisedCapabilities,
             activeCapabilities: state.activeCapabilities,
             name: nameStorage
         )
@@ -89,7 +89,7 @@ package final class RawSeat {
     }
 
     package func applyName(_ name: String) {
-        nameStorage = name
+        nameStorage = name.isEmpty ? nil : name
         appendSnapshot()
     }
 
@@ -152,15 +152,27 @@ package final class RawSeat {
     private func applyCreateEffect(_ effect: SeatEffect) -> Error? {
         switch effect {
         case .createPointer(let deviceID):
-            attemptCreate(action: .pointerCreateFailed) {
+            attemptCreate(
+                action: .pointerCreateFailed,
+                deviceID: deviceID,
+                interface: "wl_pointer"
+            ) {
                 try createPointer(id: deviceID)
             }
         case .createKeyboard(let deviceID):
-            attemptCreate(action: .keyboardCreateFailed) {
+            attemptCreate(
+                action: .keyboardCreateFailed,
+                deviceID: deviceID,
+                interface: "wl_keyboard"
+            ) {
                 try createKeyboard(id: deviceID)
             }
         case .createTouch(let deviceID):
-            attemptCreate(action: .touchCreateFailed) {
+            attemptCreate(
+                action: .touchCreateFailed,
+                deviceID: deviceID,
+                interface: "wl_touch"
+            ) {
                 try createTouch(id: deviceID)
             }
         default:
@@ -168,14 +180,18 @@ package final class RawSeat {
         }
     }
 
-    private func attemptCreate(action failureAction: SeatAction, _ create: () throws -> Void)
-        -> Error?
-    {
+    private func attemptCreate(
+        action failureAction: SeatAction,
+        deviceID: RawInputDeviceID,
+        interface: String,
+        _ create: () throws -> Void
+    ) -> Error? {
         do {
             try create()
             return nil
         } catch {
             state = reduceSeatState(state, seatID: id, action: failureAction).nextState
+            appendSeatBindingDiagnostic(deviceID: deviceID, interface: interface, error: error)
             return error
         }
     }
@@ -437,6 +453,34 @@ package final class RawSeat {
                             RawListenerDiagnostic(
                                 listener: listener,
                                 message: String(describing: error)
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    }
+
+    private func appendSeatBindingDiagnostic(
+        deviceID: RawInputDeviceID,
+        interface: String,
+        error: any Error
+    ) {
+        guard let runtimeError = error as? RuntimeError else {
+            appendListenerDiagnostic(deviceID: deviceID, listener: interface, error: error)
+            return
+        }
+
+        eventSink.append(
+            RawInputEventDraft(
+                seatID: id,
+                deviceID: deviceID,
+                kind: .diagnostic(
+                    RawInputDiagnostic(
+                        .seatBinding(
+                            RawSeatBindingDiagnostic(
+                                interface: interface,
+                                error: runtimeError
                             )
                         )
                     )

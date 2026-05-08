@@ -22,7 +22,7 @@ struct PointerInputRouterTests {
         let expectedEnter = InputEvent(
             sequence: 1,
             seatID: SeatID(rawValue: 1),
-            target: .window(windowID),
+            target: .surface(.window(windowID)),
             kind: .pointer(.entered(PointerLocation(x: 1.0, y: 2.0), serial: 7))
         )
 
@@ -153,7 +153,7 @@ struct KeyboardFocusInputRouterTests {
         let expectedKey = InputEvent(
             sequence: 2,
             seatID: SeatID(rawValue: 3),
-            target: .window(windowID),
+            target: .surface(.window(windowID)),
             kind: .keyboard(
                 .raw(
                     .key(
@@ -279,12 +279,12 @@ struct KeyboardSeatLevelInputRouterTests {
     }
 
     @Test
-    func repeatInfoRemainsSeatLevel() {
+    func repeatInfoRemainsSeatLevel() throws {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 4)
         router.register(windowID: WindowID(rawValue: 50), surfaceID: 500)
 
-        let repeatInfo = router.route(
+        let repeatInfo = try router.route(
             rawKeyboardRepeatInfo(sequence: 3, seatID: seatID, rate: 30, delay: 400))
 
         #expect(repeatInfo.first?.windowID == nil)
@@ -292,7 +292,7 @@ struct KeyboardSeatLevelInputRouterTests {
         #expect(
             repeatInfo.first?.kind
                 == .keyboard(
-                    .raw(.repeatInfo(KeyboardRepeatInfo(rate: 30, delay: 400)))
+                    .raw(.repeatInfo(try KeyboardRepeatPolicy(rate: 30, delay: 400)))
                 ))
     }
 }
@@ -317,9 +317,9 @@ struct SeatInputRouterTests {
                 == .seat(
                     .changed(
                         SeatStateSnapshot(
-                            advertisedCapabilities: [.pointer],
+                            uncheckedAdvertisedCapabilities: [.pointer],
                             activeCapabilities: [.pointer],
-                            name: "seat0"
+                            name: SeatName(rawValue: "seat0")
                         )
                     )
                 ))
@@ -365,11 +365,89 @@ struct SeatInputRouterTests {
     }
 
     @Test
+    func keyboardRepeatDiagnosticsRouteAtDisplayLevel() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 78)
+
+        let routed = router.route(
+            rawEvent(
+                sequence: 1,
+                seatID: seatID,
+                kind: .diagnostic(
+                    RawInputDiagnostic(
+                        .keyboardRepeat(
+                            RawKeyboardRepeatDiagnostic(
+                                error: .negativeRate(rate: -1, delay: 400)
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        #expect(routed.first?.windowID == nil)
+        #expect(
+            routed.first?.kind
+                == .diagnostic(
+                    InputDiagnostic(
+                        .keyboardRepeat(
+                            KeyboardRepeatDiagnostic(
+                                .negativeRate(rate: -1, delay: 400)
+                            )
+                        )
+                    )
+                ))
+    }
+
+    @Test
+    func seatBindingDiagnosticsRouteWithTypedFailure() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 80)
+
+        let routed = router.route(
+            rawEvent(
+                sequence: 1,
+                seatID: seatID,
+                kind: .diagnostic(
+                    RawInputDiagnostic(
+                        .seatBinding(
+                            RawSeatBindingDiagnostic(
+                                interface: "wl_keyboard",
+                                failure: .listener(.keyboard)
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        #expect(routed.first?.windowID == nil)
+        #expect(
+            routed.first?.kind
+                == .diagnostic(
+                    InputDiagnostic(
+                        .seatBinding(
+                            InputSeatBindingDiagnostic(
+                                interface: "wl_keyboard",
+                                failure: .listener(.keyboard)
+                            )
+                        )
+                    )
+                ))
+    }
+
+    @Test
     func inputPipelineOverflowDiagnosticsRouteAtDisplayLevel() {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 79)
-        let rawOverflow = RawInputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
-        let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
+        let rawOverflow = RawInputPipelineOverflow(
+            stage: .rawInputQueue,
+            capacity: RawInputQueueCapacity(unchecked: 4)
+        )
+        let overflow = InputPipelineOverflow(
+            stage: .rawInputQueue,
+            capacity: InputPipelineCapacity(unchecked: 4)
+        )
 
         let routed = router.route(
             rawEvent(

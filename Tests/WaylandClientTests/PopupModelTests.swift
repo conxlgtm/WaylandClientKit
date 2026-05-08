@@ -46,7 +46,7 @@ struct PopupModelTests {
                 .invalidLifecycleTransition(.mapBeforeInitialConfigure)
             )
         ) {
-            _ = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+            _ = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         }
     }
 
@@ -54,7 +54,7 @@ struct PopupModelTests {
     func contentInvalidatedBeforeConfigureDoesNotPublishRedraw() throws {
         var model = try waitingModel()
 
-        #expect(try model.reduce(.contentInvalidated(bufferAvailable: true)).isEmpty)
+        #expect(try model.reduce(.contentInvalidated(bufferAvailability: .available)).isEmpty)
         #expect(!model.redraw.isDirty)
     }
 
@@ -114,7 +114,7 @@ struct PopupModelTests {
             _ = try model.reduce(
                 .presentationSucceeded(
                     generation: request.generation + 1,
-                    bufferAvailable: true
+                    bufferAvailability: .available
                 )
             )
         }
@@ -128,23 +128,23 @@ struct PopupModelTests {
         #expect(model.presentation == .idle)
         #expect(model.redraw.isWaitingForBuffer)
         #expect(
-            try model.reduce(.bufferBecameAvailable(bufferAvailable: true))
+            try model.reduce(.bufferBecameAvailable(bufferAvailability: .available))
                 == [.publishRedrawRequested(lifecycleEvent)]
         )
     }
 
     @Test
-    func drawFailureLeavesPresentationIdle() throws {
+    func drawFailurePreservesThrownErrorDescriptionAndLeavesPresentationIdle() throws {
         var (model, request) = try activeModelWithStartedPresentation()
 
         #expect(
             throws: ClientError.window(
                 parentWindowID,
-                .presentationFailed(.drawFailed("failed"))
+                .presentationFailed(.userDraw("draw exploded"))
             )
         ) {
             _ = try model.reduce(
-                .presentationFailed(generation: request.generation, .drawFailed("failed"))
+                .presentationFailed(generation: request.generation, .userDraw("draw exploded"))
             )
         }
         #expect(model.presentation == .idle)
@@ -177,7 +177,7 @@ struct PopupModelTests {
         -> (PopupModel, PopupPresentationRequest)
     {
         var model = try activeModel()
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let request = try #require(presentationRequest(from: effects))
         _ = try model.reduce(.presentationStarted(request))
         return (model, request)

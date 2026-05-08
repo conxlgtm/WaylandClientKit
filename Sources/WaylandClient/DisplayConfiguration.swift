@@ -1,35 +1,24 @@
-/// Overflow is scoped to the individual subscription whose buffer filled.
-/// The display connection remains alive; create a new subscription to resume
-/// receiving future events. Events discarded by overflow are not replayed.
-public enum EventStreamOverflowPolicy: Equatable, Sendable {
-    case failFast
-}
-
 public struct EventStreamConfiguration: Equatable, Sendable {
     public var displayEventCapacity: EventStreamCapacity
     public var inputEventCapacity: EventStreamCapacity
     public var dataTransferEventCapacity: EventStreamCapacity
-    public var overflowPolicy: EventStreamOverflowPolicy
 
     public init(
         displayEventCapacity displayCapacity: EventStreamCapacity = .defaultDisplayEvents,
         inputEventCapacity inputCapacity: EventStreamCapacity = .defaultInputEvents,
         dataTransferEventCapacity dataTransferCapacity: EventStreamCapacity =
-            .defaultDataTransferEvents,
-        overflowPolicy policy: EventStreamOverflowPolicy = .failFast
+            .defaultDataTransferEvents
     ) {
         displayEventCapacity = displayCapacity
         inputEventCapacity = inputCapacity
         dataTransferEventCapacity = dataTransferCapacity
-        overflowPolicy = policy
     }
 
     public init(
         displayEventCapacity displayCapacity: Int,
         inputEventCapacity inputCapacity: Int = EventStreamCapacity.defaultInputEvents.rawValue,
         dataTransferEventCapacity dataTransferCapacity: Int =
-            EventStreamCapacity.defaultDataTransferEvents.rawValue,
-        overflowPolicy policy: EventStreamOverflowPolicy = .failFast
+            EventStreamCapacity.defaultDataTransferEvents.rawValue
     ) throws {
         displayEventCapacity = try EventStreamCapacity(
             displayCapacity,
@@ -43,7 +32,6 @@ public struct EventStreamConfiguration: Equatable, Sendable {
             dataTransferCapacity,
             field: .dataTransferEventCapacity
         )
-        overflowPolicy = policy
     }
 
     public init(
@@ -51,8 +39,7 @@ public struct EventStreamConfiguration: Equatable, Sendable {
         displayEventCapacity displayCapacity: Int =
             EventStreamCapacity.defaultDisplayEvents.rawValue,
         dataTransferEventCapacity dataTransferCapacity: Int =
-            EventStreamCapacity.defaultDataTransferEvents.rawValue,
-        overflowPolicy policy: EventStreamOverflowPolicy = .failFast
+            EventStreamCapacity.defaultDataTransferEvents.rawValue
     ) throws {
         displayEventCapacity = try EventStreamCapacity(
             displayCapacity,
@@ -66,15 +53,13 @@ public struct EventStreamConfiguration: Equatable, Sendable {
             dataTransferCapacity,
             field: .dataTransferEventCapacity
         )
-        overflowPolicy = policy
     }
 
     public init(
         dataTransferEventCapacity dataTransferCapacity: Int,
         displayEventCapacity displayCapacity: Int =
             EventStreamCapacity.defaultDisplayEvents.rawValue,
-        inputEventCapacity inputCapacity: Int = EventStreamCapacity.defaultInputEvents.rawValue,
-        overflowPolicy policy: EventStreamOverflowPolicy = .failFast
+        inputEventCapacity inputCapacity: Int = EventStreamCapacity.defaultInputEvents.rawValue
     ) throws {
         displayEventCapacity = try EventStreamCapacity(
             displayCapacity,
@@ -88,7 +73,6 @@ public struct EventStreamConfiguration: Equatable, Sendable {
             dataTransferCapacity,
             field: .dataTransferEventCapacity
         )
-        overflowPolicy = policy
     }
 }
 

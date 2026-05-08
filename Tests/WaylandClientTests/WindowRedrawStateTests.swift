@@ -9,15 +9,15 @@ struct WindowRedrawStateTests {
         var state = WindowRedrawState()
 
         #expect(
-            state.reduce(.contentInvalidated, bufferAvailable: true)
+            state.reduce(.contentInvalidated, bufferAvailability: .available)
                 == [.publishRedrawRequested]
         )
         #expect(state.isDirty)
 
-        #expect(state.reduce(.contentInvalidated, bufferAvailable: true).isEmpty)
-        #expect(state.reduce(.redrawRequestConsumed, bufferAvailable: true).isEmpty)
+        #expect(state.reduce(.contentInvalidated, bufferAvailability: .available).isEmpty)
+        #expect(state.reduce(.redrawRequestConsumed, bufferAvailability: .available).isEmpty)
         #expect(
-            state.reduce(.contentInvalidated, bufferAvailable: true)
+            state.reduce(.contentInvalidated, bufferAvailability: .available)
                 == [.publishRedrawRequested]
         )
     }
@@ -26,9 +26,9 @@ struct WindowRedrawStateTests {
     func redrawRequestConsumedDoesNotRepublishImmediately() {
         var state = WindowRedrawState()
 
-        _ = state.reduce(.contentInvalidated, bufferAvailable: true)
+        _ = state.reduce(.contentInvalidated, bufferAvailability: .available)
 
-        #expect(state.reduce(.redrawRequestConsumed, bufferAvailable: true).isEmpty)
+        #expect(state.reduce(.redrawRequestConsumed, bufferAvailability: .available).isEmpty)
         #expect(state.isDirty)
     }
 
@@ -36,31 +36,31 @@ struct WindowRedrawStateTests {
     func staticContentDoesNotPublishAgainWhenFrameBecomesReady() {
         var state = WindowRedrawState()
 
-        _ = state.reduce(.contentInvalidated, bufferAvailable: true)
-        _ = state.reduce(.redrawRequestConsumed, bufferAvailable: true)
+        _ = state.reduce(.contentInvalidated, bufferAvailability: .available)
+        _ = state.reduce(.redrawRequestConsumed, bufferAvailability: .available)
         let drawnGeneration = state.generationForCurrentDraw
 
         #expect(
-            state.reduce(.presented(generation: drawnGeneration), bufferAvailable: true)
+            state.reduce(.presented(generation: drawnGeneration), bufferAvailability: .available)
                 .isEmpty
         )
         #expect(!state.isDirty)
-        #expect(state.reduce(.frameBecameReady, bufferAvailable: true).isEmpty)
+        #expect(state.reduce(.frameBecameReady, bufferAvailability: .available).isEmpty)
     }
 
     @Test
     func dirtyContentWaitsForFrameBeforePublishingAgain() {
         var state = WindowRedrawState()
 
-        _ = state.reduce(.contentInvalidated, bufferAvailable: true)
-        _ = state.reduce(.redrawRequestConsumed, bufferAvailable: true)
+        _ = state.reduce(.contentInvalidated, bufferAvailability: .available)
+        _ = state.reduce(.redrawRequestConsumed, bufferAvailability: .available)
         let drawnGeneration = state.generationForCurrentDraw
-        _ = state.reduce(.presented(generation: drawnGeneration), bufferAvailable: true)
+        _ = state.reduce(.presented(generation: drawnGeneration), bufferAvailability: .available)
 
-        #expect(state.reduce(.contentInvalidated, bufferAvailable: true).isEmpty)
+        #expect(state.reduce(.contentInvalidated, bufferAvailability: .available).isEmpty)
         #expect(state.isDirty)
         #expect(
-            state.reduce(.frameBecameReady, bufferAvailable: true)
+            state.reduce(.frameBecameReady, bufferAvailability: .available)
                 == [.publishRedrawRequested]
         )
     }
@@ -69,13 +69,13 @@ struct WindowRedrawStateTests {
     func dirtyContentWaitsForBufferBeforePublishingAgain() {
         var state = WindowRedrawState()
 
-        _ = state.reduce(.contentInvalidated, bufferAvailable: true)
-        _ = state.reduce(.redrawRequestConsumed, bufferAvailable: true)
+        _ = state.reduce(.contentInvalidated, bufferAvailability: .available)
+        _ = state.reduce(.redrawRequestConsumed, bufferAvailability: .available)
 
-        #expect(state.reduce(.drawBlockedByBuffer, bufferAvailable: false).isEmpty)
+        #expect(state.reduce(.drawBlockedByBuffer, bufferAvailability: .unavailable).isEmpty)
         #expect(state.isWaitingForBuffer)
         #expect(
-            state.reduce(.bufferBecameAvailable, bufferAvailable: true)
+            state.reduce(.bufferBecameAvailable, bufferAvailability: .available)
                 == [.publishRedrawRequested]
         )
         #expect(!state.isWaitingForBuffer)
@@ -85,13 +85,13 @@ struct WindowRedrawStateTests {
     func contentInvalidatedWaitingForBufferWithAvailableReplacementPublishes() {
         var state = WindowRedrawState()
 
-        _ = state.reduce(.contentInvalidated, bufferAvailable: true)
-        _ = state.reduce(.redrawRequestConsumed, bufferAvailable: true)
-        _ = state.reduce(.drawBlockedByBuffer, bufferAvailable: false)
+        _ = state.reduce(.contentInvalidated, bufferAvailability: .available)
+        _ = state.reduce(.redrawRequestConsumed, bufferAvailability: .available)
+        _ = state.reduce(.drawBlockedByBuffer, bufferAvailability: .unavailable)
 
         #expect(state.isWaitingForBuffer)
         #expect(
-            state.reduce(.contentInvalidated, bufferAvailable: true)
+            state.reduce(.contentInvalidated, bufferAvailability: .available)
                 == [.publishRedrawRequested]
         )
         #expect(!state.isWaitingForBuffer)
@@ -102,12 +102,12 @@ struct WindowRedrawStateTests {
     func contentInvalidatedWaitingForBufferWithoutReplacementKeepsWaiting() {
         var state = WindowRedrawState()
 
-        _ = state.reduce(.contentInvalidated, bufferAvailable: true)
-        _ = state.reduce(.redrawRequestConsumed, bufferAvailable: true)
-        _ = state.reduce(.drawBlockedByBuffer, bufferAvailable: false)
+        _ = state.reduce(.contentInvalidated, bufferAvailability: .available)
+        _ = state.reduce(.redrawRequestConsumed, bufferAvailability: .available)
+        _ = state.reduce(.drawBlockedByBuffer, bufferAvailability: .unavailable)
 
         #expect(state.isWaitingForBuffer)
-        #expect(state.reduce(.contentInvalidated, bufferAvailable: false).isEmpty)
+        #expect(state.reduce(.contentInvalidated, bufferAvailability: .unavailable).isEmpty)
         #expect(state.isWaitingForBuffer)
     }
 
@@ -115,7 +115,7 @@ struct WindowRedrawStateTests {
     func cleanStateCannotWaitForBuffer() {
         var state = WindowRedrawState()
 
-        #expect(state.reduce(.drawBlockedByBuffer, bufferAvailable: false).isEmpty)
+        #expect(state.reduce(.drawBlockedByBuffer, bufferAvailability: .unavailable).isEmpty)
         #expect(!state.isDirty)
         #expect(!state.isWaitingForBuffer)
     }
@@ -124,18 +124,18 @@ struct WindowRedrawStateTests {
     func presentingOlderGenerationKeepsNewerContentDirtyUntilFrameReady() {
         var state = WindowRedrawState()
 
-        _ = state.reduce(.contentInvalidated, bufferAvailable: true)
-        _ = state.reduce(.redrawRequestConsumed, bufferAvailable: true)
+        _ = state.reduce(.contentInvalidated, bufferAvailability: .available)
+        _ = state.reduce(.redrawRequestConsumed, bufferAvailability: .available)
         let drawnGeneration = state.generationForCurrentDraw
-        _ = state.reduce(.contentInvalidated, bufferAvailable: true)
+        _ = state.reduce(.contentInvalidated, bufferAvailability: .available)
 
         #expect(
-            state.reduce(.presented(generation: drawnGeneration), bufferAvailable: true)
+            state.reduce(.presented(generation: drawnGeneration), bufferAvailability: .available)
                 .isEmpty
         )
         #expect(state.isDirty)
         #expect(
-            state.reduce(.frameBecameReady, bufferAvailable: true)
+            state.reduce(.frameBecameReady, bufferAvailability: .available)
                 == [.publishRedrawRequested]
         )
     }

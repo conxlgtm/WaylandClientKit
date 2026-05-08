@@ -258,6 +258,8 @@ public struct WaylandProtocolObjectID: Equatable, Hashable, Sendable, CustomStri
 public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
     case display(interface: String?, objectID: UInt32, code: Int32)
     case invalidXDGConfigureDimensions(windowID: WindowID, width: Int32, height: Int32)
+    case invalidXDGTopLevelConfigureSize(width: Int32, height: Int32)
+    case invalidXDGConfigureBounds(width: Int32, height: Int32)
     case invalidConfigureSerial(windowID: WindowID, serial: UInt32)
     case invalidDecorationMode(rawValue: UInt32)
     case invalidPreferredBufferScale(windowID: WindowID, factor: Int32)
@@ -277,6 +279,10 @@ public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {
         case .invalidXDGConfigureDimensions(let windowID, let width, let height):
             "Window \(windowID) received invalid XDG configure dimensions "
                 + "width=\(width) height=\(height)"
+        case .invalidXDGTopLevelConfigureSize(let width, let height):
+            "Received invalid XDG top-level configure size width=\(width) height=\(height)"
+        case .invalidXDGConfigureBounds(let width, let height):
+            "Received invalid XDG configure bounds width=\(width) height=\(height)"
         case .invalidConfigureSerial(let windowID, let serial):
             "Window \(windowID) received invalid configure serial \(serial)"
         case .invalidDecorationMode(let rawValue):
@@ -381,6 +387,10 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
             )
         case .invalidDecorationMode(let rawValue):
             self = .protocolError(.invalidDecorationMode(rawValue: rawValue))
+        case .invalidTopLevelConfigureSize(let width, let height):
+            self = .protocolError(.invalidXDGTopLevelConfigureSize(width: width, height: height))
+        case .invalidConfigureBounds(let width, let height):
+            self = .protocolError(.invalidXDGConfigureBounds(width: width, height: height))
         case .eventLoop(let error):
             self = Self(error)
         case .system(let error):

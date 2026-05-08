@@ -451,7 +451,7 @@ private func rawSeatCapabilities(
         seatID: seatID,
         kind: .seat(
             RawSeatEventSnapshot(
-                advertisedCapabilities: activeCapabilities,
+                uncheckedAdvertisedCapabilities: activeCapabilities,
                 activeCapabilities: activeCapabilities,
                 name: nil
             )

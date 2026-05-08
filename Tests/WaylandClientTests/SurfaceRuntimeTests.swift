@@ -60,11 +60,27 @@ struct SurfaceRuntimeTests {
     }
 
     @Test
+    func installingRoleResourcesAfterSurfaceDestroyedReturnsError() throws {
+        var runtime = SurfaceRuntime<RoleToken>()
+
+        try runtime.markSurfaceDestroyed()
+
+        #expect(throws: SurfaceRuntimeError.installAfterSurfaceDestroyed) {
+            try runtime.installRoleResources(RoleToken(rawValue: 1))
+        }
+        runtime.roleResources = RoleToken(rawValue: 2)
+
+        #expect(runtime.roleResources == nil)
+    }
+
+    @Test
     func scaleInstallationUpdateAfterSurfaceDestructionIsIgnored() throws {
         var runtime = SurfaceRuntime<RoleToken>()
         var didRunUpdate = false
 
         try runtime.markSurfaceDestroyed()
+        runtime.scaleInstallation = SurfaceScaleInstallation()
+        _ = runtime.scaleInstallation
         let result = runtime.updateScaleInstallation { _ in
             didRunUpdate = true
             return true

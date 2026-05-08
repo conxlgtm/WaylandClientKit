@@ -19,30 +19,50 @@ public struct SoftwareFrame: ~Copyable {
     ) throws {
         guard frameWidth > 0, frameHeight > 0 else {
             throw ClientError.invalidWindowState(
-                "software frame dimensions must be greater than zero"
+                .softwareFrameLayout(
+                    .nonPositiveDimensions(width: frameWidth, height: frameHeight)
+                )
             )
         }
 
         let minimumStride = Int(frameWidth).multipliedReportingOverflow(
             by: MemoryLayout<UInt32>.stride
         )
-        guard !minimumStride.overflow,
-            minimumStride.partialValue <= Int(Int32.max),
-            frameStride >= Int32(minimumStride.partialValue)
-        else {
+        guard !minimumStride.overflow, minimumStride.partialValue <= Int(Int32.max) else {
             throw ClientError.invalidWindowState(
-                "software frame stride is too small for visible pixels"
+                .softwareFrameLayout(.minimumStrideOverflow(width: frameWidth))
+            )
+        }
+        guard frameStride >= Int32(minimumStride.partialValue) else {
+            throw ClientError.invalidWindowState(
+                .softwareFrameLayout(
+                    .strideTooSmall(
+                        width: frameWidth,
+                        stride: frameStride,
+                        minimumStride: minimumStride.partialValue
+                    )
+                )
             )
         }
 
         let requiredByteCount = Int(frameStride).multipliedReportingOverflow(
             by: Int(frameHeight)
         )
-        guard !requiredByteCount.overflow,
-            frameBytes.count >= requiredByteCount.partialValue
-        else {
+        guard !requiredByteCount.overflow else {
             throw ClientError.invalidWindowState(
-                "software frame storage is smaller than its layout"
+                .softwareFrameLayout(
+                    .requiredByteCountOverflow(stride: frameStride, height: frameHeight)
+                )
+            )
+        }
+        guard frameBytes.count >= requiredByteCount.partialValue else {
+            throw ClientError.invalidWindowState(
+                .softwareFrameLayout(
+                    .storageTooSmall(
+                        requiredByteCount: requiredByteCount.partialValue,
+                        actualByteCount: frameBytes.count
+                    )
+                )
             )
         }
 

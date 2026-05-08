@@ -18,6 +18,7 @@ struct DataTransferStateSelectionTests {
             .state
         state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
             .state
+        state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
 
         let replacement = try state.reduce(
             .selectionChanged(seatID: seat1, offerID: offer1)
@@ -41,6 +42,7 @@ struct DataTransferStateSelectionTests {
         var state = try boundState(seat1)
         state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
             .state
+        state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
         state = try state.reduce(.selectionChanged(seatID: seat1, offerID: offer1)).state
         state = try state.reduce(
             .sourceCreated(id: source1, seatID: seat1, mimeTypes: [.plainText])
@@ -66,6 +68,7 @@ struct DataTransferStateSelectionTests {
             .state
         state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
             .state
+        state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
         state = try state.reduce(.selectionChanged(seatID: seat1, offerID: offer1)).state
 
         let cancelled = try state.reduce(.sourceCancelled(source1))

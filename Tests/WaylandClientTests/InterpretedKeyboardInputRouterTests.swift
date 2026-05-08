@@ -21,13 +21,17 @@ struct InterpretedKeyboardInputRouterTests {
                         evdevKeycode: 16,
                         xkbKeycode: 24,
                         keysym: WaylandKeyboardInterpretation.KeyboardKeysym(rawValue: 0x71),
-                        interpretation: .pressed(keysymName: "q", utf8: "q", repeats: true)
+                        interpretation: .pressed(
+                            keysymName: "q",
+                            utf8: "q",
+                            repeatCapability: .repeating
+                        )
                     )
                 )
             )
         )
 
-        #expect(routed.first?.target == .window(WindowID(rawValue: 150)))
+        #expect(routed.first?.target == .surface(.window(WindowID(rawValue: 150))))
         #expect(routed.first?.kind == .keyboard(.interpreted(.key(expectedInterpretedQKey()))))
     }
 
@@ -46,7 +50,11 @@ struct InterpretedKeyboardInputRouterTests {
                         evdevKeycode: 16,
                         xkbKeycode: 24,
                         keysym: WaylandKeyboardInterpretation.KeyboardKeysym(rawValue: 0x71),
-                        interpretation: .pressed(keysymName: "q", utf8: "q", repeats: true)
+                        interpretation: .pressed(
+                            keysymName: "q",
+                            utf8: "q",
+                            repeatCapability: .repeating
+                        )
                     )
                 )
             )
@@ -55,6 +63,39 @@ struct InterpretedKeyboardInputRouterTests {
         #expect(routed.first?.windowID == nil)
         #expect(routed.first?.target == .unmanagedSurface)
         #expect(routed.first?.kind == .keyboard(.interpreted(.key(expectedInterpretedQKey()))))
+    }
+
+    @Test
+    func interpretedKeyRepeatCapabilityMapsToClientDomain() {
+        let routed = focusedKeyboardRouter().route(
+            interpretedKeyboardEvent(
+                sequence: 2,
+                seatID: RawSeatID(rawValue: 15),
+                kind: .key(
+                    InterpretedKeyboardKey(
+                        serial: 10,
+                        time: 11,
+                        evdevKeycode: 16,
+                        xkbKeycode: 24,
+                        keysym: WaylandKeyboardInterpretation.KeyboardKeysym(rawValue: 0x71),
+                        interpretation: .pressed(
+                            keysymName: "q",
+                            utf8: "q",
+                            repeatCapability: .nonRepeating
+                        )
+                    )
+                )
+            )
+        )
+
+        #expect(
+            routed.first?.kind
+                == .keyboard(
+                    .interpreted(
+                        .key(expectedInterpretedQKey(repeatCapability: .nonRepeating))
+                    )
+                )
+        )
     }
 
     @Test
@@ -112,13 +153,14 @@ struct InterpretedKeyboardInputRouterTests {
     }
 
     @Test
-    func interpretedRepeatInfoRemainsSeatLevel() {
+    func interpretedRepeatInfoRemainsSeatLevel() throws {
+        let rawRepeatInfo = try RawKeyboardRepeatInfo(rate: 30, delay: 400)
         let routed = focusedKeyboardRouter().route(
             interpretedKeyboardEvent(
                 sequence: 4,
                 seatID: RawSeatID(rawValue: 15),
                 kind: .repeatInfo(
-                    InterpretedKeyboardRepeatInfo(rate: 30, delay: 400)
+                    InterpretedKeyboardRepeatInfo(rawRepeatInfo)
                 )
             )
         )
@@ -129,7 +171,7 @@ struct InterpretedKeyboardInputRouterTests {
                 == .keyboard(
                     .interpreted(
                         .repeatInfo(
-                            WaylandClient.InterpretedKeyboardRepeatInfo(rate: 30, delay: 400)
+                            try KeyboardRepeatPolicy(rate: 30, delay: 400)
                         )
                     )
                 )
@@ -210,14 +252,20 @@ private func unmanagedSurfaceFocusedKeyboardRouter() -> InputRouter {
     return router
 }
 
-private func expectedInterpretedQKey() -> InterpretedKeyboardKeyEvent {
+private func expectedInterpretedQKey(
+    repeatCapability: WaylandClient.KeyboardKeyRepeatCapability = .repeating
+) -> InterpretedKeyboardKeyEvent {
     InterpretedKeyboardKeyEvent(
         serial: 10,
         time: 11,
         rawKeycode: 16,
         xkbKeycode: 24,
         keysym: WaylandClient.KeyboardKeysym(rawValue: 0x71),
-        interpretation: .pressed(keysymName: "q", utf8: "q", repeats: true)
+        interpretation: .pressed(
+            keysymName: "q",
+            utf8: "q",
+            repeatCapability: repeatCapability
+        )
     )
 }
 

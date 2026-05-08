@@ -38,6 +38,20 @@ package struct DataOfferSnapshot: Equatable, Sendable {
     package let id: DataOfferID
     package let role: DataOfferRole
     package let mimeTypes: [MIMEType]
+
+    package init(
+        id offerID: DataOfferID,
+        role offerRole: DataOfferRole,
+        mimeTypes offerMIMETypes: [MIMEType]
+    ) throws {
+        try NonEmptyMIMETypeList.validate(
+            offerMIMETypes,
+            emptyError: .emptyDataOffer
+        )
+        id = offerID
+        role = offerRole
+        mimeTypes = offerMIMETypes
+    }
 }
 
 package struct DataSourceSnapshot: Equatable, Sendable {
@@ -50,15 +64,33 @@ package struct DataSourceSnapshot: Equatable, Sendable {
         seatID sourceSeatID: SeatID,
         mimeTypes sourceMIMETypes: [MIMEType]
     ) throws {
-        try Self.validate(sourceMIMETypes)
+        try NonEmptyMIMETypeList.validate(
+            sourceMIMETypes,
+            emptyError: .emptyDataSource
+        )
         id = sourceID
         seatID = sourceSeatID
         mimeTypes = sourceMIMETypes
     }
+}
 
-    private static func validate(_ mimeTypes: [MIMEType]) throws {
+package struct NonEmptyMIMETypeList: Equatable, Sendable {
+    package let values: [MIMEType]
+
+    package init(
+        _ mimeTypes: [MIMEType],
+        emptyError: DataTransferError
+    ) throws {
+        try Self.validate(mimeTypes, emptyError: emptyError)
+        values = mimeTypes
+    }
+
+    package static func validate(
+        _ mimeTypes: [MIMEType],
+        emptyError: DataTransferError
+    ) throws {
         guard !mimeTypes.isEmpty else {
-            throw DataTransferError.emptyDataSource
+            throw emptyError
         }
 
         var seenMIMETypes: Set<MIMEType> = []

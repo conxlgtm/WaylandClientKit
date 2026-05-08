@@ -32,8 +32,8 @@ struct RawInputEventTests {
     }
 
     @Test
-    func seatSnapshotPreservesAdvertisedAndActiveCapabilities() {
-        let snapshot = RawSeatEventSnapshot(
+    func seatSnapshotPreservesAdvertisedAndActiveCapabilities() throws {
+        let snapshot = try RawSeatEventSnapshot(
             advertisedCapabilities: [.pointer, .keyboard],
             activeCapabilities: [.keyboard],
             name: "main"
@@ -42,6 +42,31 @@ struct RawInputEventTests {
         #expect(snapshot.advertisedCapabilities == [.pointer, .keyboard])
         #expect(snapshot.activeCapabilities == [.keyboard])
         #expect(snapshot.name == "main")
+    }
+
+    @Test
+    func seatSnapshotRejectsActiveCapabilityNotAdvertised() {
+        #expect(
+            throws: RawSeatEventSnapshotError.activeCapabilityNotAdvertised(
+                activeCapabilities: [.keyboard],
+                advertisedCapabilities: []
+            )
+        ) {
+            _ = try RawSeatEventSnapshot(
+                advertisedCapabilities: [],
+                activeCapabilities: [.keyboard],
+                name: nil
+            )
+        }
+    }
+
+    @Test
+    func seatCapabilitiesDescriptionIncludesUnknownBits() {
+        let capabilities = SeatCapabilities(rawValue: 0x80)
+
+        #expect(capabilities.unknownBits == 0x80)
+        #expect(capabilities.description == "unknown(0x80)")
+        #expect(SeatCapabilities(rawValue: 0x81).description == "pointer+unknown(0x80)")
     }
 
     @Test
@@ -114,6 +139,7 @@ struct RawInputEventTests {
         )
         let event = RawTouchEvent.down(down)
 
+        #expect(down.id.rawValue == 3)
         #expect(event == .down(down))
     }
 }

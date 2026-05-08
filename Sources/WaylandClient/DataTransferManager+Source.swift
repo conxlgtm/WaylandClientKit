@@ -40,12 +40,12 @@ extension DataTransferManager {
             for mimeType in payloads.mimeTypes {
                 sourceBinding.offer(mimeType: mimeType)
             }
-            try apply(.sourceCreated(id: sourceID, seatID: seatID, mimeTypes: payloads.mimeTypes))
-            store.insertSource(
+            try store.insertSource(
                 binding: sourceBinding,
                 payloads: payloads,
                 sourceID: sourceID
             )
+            try apply(.sourceCreated(id: sourceID, seatID: seatID, mimeTypes: payloads.mimeTypes))
             try apply(.selectionSourceChanged(seatID: seatID, sourceID: sourceID))
             deviceBinding.setSelection(source: sourceBinding, serial: serial)
             preconditionInvariantsHold()
@@ -56,7 +56,7 @@ extension DataTransferManager {
         }
 
         guard let source = store.sourceSnapshot(sourceID) else {
-            throw DataTransferError.unknownSource
+            throw DataTransferError.unknownSourceIdentity(ClipboardSourceIdentity(sourceID))
         }
 
         preconditionInvariantsHold()
@@ -143,7 +143,9 @@ extension DataTransferManager {
     ) throws {
         do {
             guard let source = store.sourceSnapshot(sourceID) else {
-                throw DataTransferError.unknownSource
+                throw DataTransferError.unknownSourceIdentity(
+                    ClipboardSourceIdentity(sourceID)
+                )
             }
             let mimeType = try MIMEType(rawMimeType ?? "")
             guard source.mimeTypes.contains(mimeType) else {
@@ -174,11 +176,11 @@ extension DataTransferManager {
     }
 
     private func closeSourceSendDescriptor(_ descriptor: Int32) throws {
-        let closeResult = backend.closeFileDescriptor(descriptor)
-        guard closeResult == 0 else {
-            throw DataTransferError.closeFileDescriptor(
-                WaylandSystemErrno(unchecked: closeResult)
-            )
+        switch backend.closeFileDescriptor(descriptor) {
+        case .closed:
+            return
+        case .failed(let error):
+            throw DataTransferError.closeFileDescriptor(error)
         }
     }
 

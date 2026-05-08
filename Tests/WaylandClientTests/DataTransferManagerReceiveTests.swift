@@ -45,7 +45,11 @@ struct DataTransferManagerReceiveTests {
         let manager = DataTransferManager(backend: backend)
         try manager.synchronizeSeats([seat1])
 
-        #expect(throws: DataTransferError.unknownOffer) {
+        #expect(
+            throws: DataTransferError.unknownOfferIdentity(
+                ClipboardOfferIdentity(DataOfferID(rawValue: 99))
+            )
+        ) {
             _ = try manager.receiveOffer(
                 id: DataOfferID(rawValue: 99),
                 mimeType: .plainText

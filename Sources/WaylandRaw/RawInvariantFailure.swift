@@ -1,6 +1,7 @@
 package enum RawInvariantFailure: Equatable, Sendable, CustomStringConvertible {
     case callbackWithoutSwiftState(String)
     case proxyOnWrongQueue(interface: String)
+    case missingSeatName
 
     package var description: String {
         switch self {
@@ -8,6 +9,8 @@ package enum RawInvariantFailure: Equatable, Sendable, CustomStringConvertible {
             detail
         case .proxyOnWrongQueue(let interfaceName):
             "\(interfaceName) proxy is not assigned to the display owner event queue"
+        case .missingSeatName:
+            "wl_seat name callback did not include a name"
         }
     }
 }

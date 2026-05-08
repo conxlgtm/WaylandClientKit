@@ -167,14 +167,15 @@ public struct WindowPresentationRequestSummary:
     public let configureSerial: UInt32
     public let size: PositiveLogicalSize
     public let bounds: PositiveLogicalSize?
-    public let stateRawValues: [UInt32]
-    public let wmCapabilityRawValues: [UInt32]
+    public let states: [WindowStateToken]
+    public let wmCapabilities: [WindowManagerCapability]
     public let decorationMode: WindowDecorationMode?
 
     public var description: String {
         "generation=\(generation) serial=\(configureSerial) size=\(size) "
             + "bounds=\(String(describing: bounds)) "
-            + "states=\(stateRawValues) wmCapabilities=\(wmCapabilityRawValues) "
+            + "states=\(states.map(\.rawValue)) "
+            + "wmCapabilities=\(wmCapabilities.map(\.rawValue)) "
             + "decoration=\(String(describing: decorationMode))"
     }
 }
@@ -194,13 +195,17 @@ public struct PopupPresentationRequestSummary:
 
 public enum PresentationError: Error, Equatable, Sendable, CustomStringConvertible {
     case noFreeBuffer
-    case drawFailed(String)
+    case userDraw(String)
+    case frameCallbackRequest(String)
+    case surfaceCommit(String)
 
     public var description: String {
         switch self {
         case .noFreeBuffer:
             "no free buffer is available"
-        case .drawFailed(let detail):
+        case .userDraw(let detail),
+            .frameCallbackRequest(let detail),
+            .surfaceCommit(let detail):
             detail
         }
     }

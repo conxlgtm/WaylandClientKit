@@ -52,7 +52,7 @@ package struct DataTransferState: Equatable, Sendable {
         offers
             .values
             .sorted { $0.id.rawValue < $1.id.rawValue }
-            .map(\.snapshot)
+            .compactMap(\.snapshot)
     }
 
     package var sourceSnapshots: [DataSourceSnapshot] {
@@ -174,9 +174,7 @@ extension DataTransferState {
             throw DataTransferError.unknownOffer
         }
 
-        if !offer.mimeTypes.contains(mimeType) {
-            offer.mimeTypes.append(mimeType)
-        }
+        try offer.appendMIMETypeIfNew(mimeType)
         offers[id] = offer
         return []
     }
@@ -197,6 +195,9 @@ extension DataTransferState {
             }
             guard case .selection(seatID) = offer.role else {
                 throw DataTransferError.unknownOffer
+            }
+            guard offer.snapshot != nil else {
+                throw DataTransferError.emptyDataOffer
             }
         }
 
@@ -223,8 +224,7 @@ extension DataTransferState {
         }
         _ = try boundSeat(seatID)
 
-        let snapshot = try DataSourceSnapshot(id: id, seatID: seatID, mimeTypes: mimeTypes)
-        sources[id] = SourceState(snapshot)
+        sources[id] = try SourceState(id: id, seatID: seatID, mimeTypes: mimeTypes)
         return []
     }
 
@@ -298,6 +298,9 @@ extension DataTransferState {
                     case .selection(seat.seatID) = offer.role
                 else {
                     throw DataTransferError.unknownOffer
+                }
+                guard offer.snapshot != nil else {
+                    throw DataTransferError.emptyDataOffer
                 }
             }
 

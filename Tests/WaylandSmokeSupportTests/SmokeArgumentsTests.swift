@@ -19,7 +19,6 @@ struct SmokeArgumentsTests {
     @Test
     func timeoutArgumentsOverrideConfiguration() throws {
         let command = try SmokeArguments.parse([
-            "--",
             "--timeout-milliseconds",
             "2500",
             "--post-commit-pump-milliseconds",
@@ -29,12 +28,19 @@ struct SmokeArgumentsTests {
         #expect(
             command
                 == .run(
-                    SmokeConfiguration(
+                    try SmokeConfiguration(
                         timeoutMilliseconds: 2_500,
                         postCommitPumpMilliseconds: 25
                     )
                 )
         )
+    }
+
+    @Test
+    func doubleDashIsRejectedBecauseSmokeHasNoPositionals() {
+        #expect(throws: SmokeArgumentError.unsupportedEndOfOptionsMarker) {
+            try SmokeArguments.parse(["--"])
+        }
     }
 
     @Test
@@ -60,6 +66,30 @@ struct SmokeArgumentsTests {
     func unknownArgumentThrows() {
         #expect(throws: SmokeArgumentError.unknownArgument("--bad")) {
             try SmokeArguments.parse(["--bad"])
+        }
+    }
+
+    @Test
+    func smokeConfigurationRejectsNonPositiveTimeout() {
+        #expect(
+            throws: SmokeConfigurationError.nonPositiveMilliseconds(
+                field: .timeoutMilliseconds,
+                value: 0
+            )
+        ) {
+            try SmokeConfiguration(timeoutMilliseconds: 0, postCommitPumpMilliseconds: 16)
+        }
+    }
+
+    @Test
+    func smokeConfigurationRejectsNonPositivePostCommitPump() {
+        #expect(
+            throws: SmokeConfigurationError.nonPositiveMilliseconds(
+                field: .postCommitPumpMilliseconds,
+                value: -1
+            )
+        ) {
+            try SmokeConfiguration(timeoutMilliseconds: 1, postCommitPumpMilliseconds: -1)
         }
     }
 }

@@ -12,7 +12,7 @@ extension PopupRoleSurface {
                 for: RawSeatID(rawValue: seatID.rawValue)
             )
         else {
-            throw ClientError.invalidWindowState("unknown popup grab seat \(seatID)")
+            throw ClientError.invalidWindowState(.unknownPopupGrabSeat(seatID))
         }
 
         popup.grab(seat: seat, serial: serial.rawValue)
@@ -68,7 +68,7 @@ extension PopupRoleSurface {
             retired: &retiredBufferPools
         ) {
             guard let globals = connection.boundGlobals else {
-                throw ClientError.windowCreationFailed("required globals are not bound")
+                throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
             }
 
             return try globals.sharedMemory.createPool(
@@ -108,7 +108,7 @@ extension PopupRoleSurface {
         guard !model.isClosed else { return .skippedClosed }
 
         let effects = try model.reduce(
-            .redrawRequestConsumed(bufferAvailable: try redrawBufferAvailable())
+            .redrawRequestConsumed(bufferAvailability: try redrawBufferAvailability())
         )
         return try interpretPresentationEffects(effects, draw)
     }
@@ -127,22 +127,30 @@ extension PopupRoleSurface {
         }
     }
 
-    package func failPresentationIfStillActive(generation: UInt64) {
+    package func failPresentationIfStillActive(
+        generation: UInt64,
+        error: PresentationError
+    ) {
         guard case .drawing(let request) = model.presentation,
             request.generation == generation
         else {
             return
         }
 
-        failActivePresentation(generation: generation)
+        failActivePresentation(generation: generation, error: error)
     }
 
-    package func failActivePresentation(generation: UInt64) {
+    package func failActivePresentation(
+        generation: UInt64,
+        error: PresentationError = .surfaceCommit("presentation failed")
+    ) {
         do {
             try interpretPopupEffects(
-                model.reduce(.presentationFailed(generation: generation, .drawFailed("failed")))
+                model.reduce(.presentationFailed(generation: generation, error))
             )
-        } catch ClientError.window(parentWindowID, .presentationFailed(.drawFailed("failed"))) {
+        } catch ClientError.window(let windowID, .presentationFailed(let reportedError))
+            where windowID == parentWindowID && reportedError == error
+        {
             // presentationFailed resets model state before reporting the presentation error.
         } catch {
             preconditionFailure("Unexpected popup presentation failure error: \(error)")
@@ -152,7 +160,7 @@ extension PopupRoleSurface {
     package func monotonicMilliseconds() throws -> Int64 {
         var timestamp = timespec()
         guard unsafe clock_gettime(CLOCK_MONOTONIC, &timestamp) == 0 else {
-            throw ClientError.windowCreationFailed("clock_gettime failed with errno \(errno)")
+            throw ClientError.windowCreationFailed(.clockGetTimeFailed(errno: errno))
         }
 
         return Int64(timestamp.tv_sec) * 1_000 + Int64(timestamp.tv_nsec) / 1_000_000
@@ -203,7 +211,7 @@ extension PopupRoleSurface {
                     )
                 })
             else { return }
-            try markNeedsRedraw(bufferAvailable: true)
+            try markNeedsRedraw(bufferAvailability: .available)
         } catch {
             reportCallbackFailure(operation: .surfaceScaleChanged, error: error)
         }
@@ -225,7 +233,7 @@ extension PopupRoleSurface {
                     )
                 })
             else { return }
-            try markNeedsRedraw(bufferAvailable: true)
+            try markNeedsRedraw(bufferAvailability: .available)
         } catch {
             reportCallbackFailure(operation: .surfaceScaleChanged, error: error)
         }
@@ -233,20 +241,20 @@ extension PopupRoleSurface {
 
     package func markNeedsRedraw() {
         do {
-            try markNeedsRedraw(bufferAvailable: try redrawBufferAvailable())
+            try markNeedsRedraw(bufferAvailability: try redrawBufferAvailability())
         } catch {
             reportCallbackFailure(operation: .markNeedsRedraw, error: error)
         }
     }
 
-    package func markNeedsRedraw(bufferAvailable: Bool) throws {
+    package func markNeedsRedraw(bufferAvailability: RedrawBufferAvailability) throws {
         guard !model.isClosed else {
             resetTransientState()
             return
         }
 
         try interpretPopupEffects(
-            model.reduce(.contentInvalidated(bufferAvailable: bufferAvailable))
+            model.reduce(.contentInvalidated(bufferAvailability: bufferAvailability))
         )
     }
 
@@ -266,14 +274,14 @@ extension PopupRoleSurface {
         }
     }
 
-    package func redrawBufferAvailable() throws -> Bool {
-        guard let buffers else { return true }
+    package func redrawBufferAvailability() throws -> RedrawBufferAvailability {
+        guard let buffers else { return .available }
 
         if buffers.size != (try currentSurfaceGeometry()).bufferSize.rawSize {
-            return true
+            return .available
         }
 
-        return buffers.hasFreeBuffers
+        return RedrawBufferAvailability(isAvailable: buffers.hasFreeBuffers)
     }
 
     package func handlePopupDone() {
@@ -312,7 +320,7 @@ extension PopupRoleSurface {
                 model.reduce(
                     popupEvent(
                         for: event,
-                        bufferAvailable: try redrawBufferAvailable()
+                        bufferAvailability: try redrawBufferAvailability()
                     )
                 )
             )
@@ -324,21 +332,21 @@ extension PopupRoleSurface {
 
     private func popupEvent(
         for redrawEvent: WindowRedrawEvent,
-        bufferAvailable: Bool
+        bufferAvailability: RedrawBufferAvailability
     ) -> PopupEvent {
         switch redrawEvent {
         case .contentInvalidated:
-            .contentInvalidated(bufferAvailable: bufferAvailable)
+            .contentInvalidated(bufferAvailability: bufferAvailability)
         case .frameBecameReady:
-            .frameBecameReady(bufferAvailable: bufferAvailable)
+            .frameBecameReady(bufferAvailability: bufferAvailability)
         case .bufferBecameAvailable:
-            .bufferBecameAvailable(bufferAvailable: bufferAvailable)
+            .bufferBecameAvailable(bufferAvailability: bufferAvailability)
         case .redrawRequestConsumed:
-            .redrawRequestConsumed(bufferAvailable: bufferAvailable)
+            .redrawRequestConsumed(bufferAvailability: bufferAvailability)
         case .drawBlockedByBuffer:
             .presentationBlockedByBuffer
         case .presented(let generation):
-            .presentationSucceeded(generation: generation, bufferAvailable: bufferAvailable)
+            .presentationSucceeded(generation: generation, bufferAvailability: bufferAvailability)
         case .transientStateReset:
             .transientStateReset
         }
