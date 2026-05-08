@@ -12,9 +12,16 @@ private struct InputSurfaceBinding: Equatable {
     let windowID: WindowID
 }
 
+struct ReportedUnknownInputProtocolValue: Hashable {
+    let seatID: SeatID
+    let field: UnknownInputProtocolValueField
+    let rawValue: UInt32
+}
+
 final class InputRouter {
     var deviceGraph = InputDeviceGraph()
     private var surfaces: [RawObjectID: InputSurfaceBinding] = [:]
+    var reportedUnknownProtocolValues: Set<ReportedUnknownInputProtocolValue> = []
 
     func register(windowID: WindowID, surfaceID: RawObjectID) {
         surfaces[surfaceID] = InputSurfaceBinding(windowID: windowID)
@@ -66,7 +73,7 @@ final class InputRouter {
             return []
         }
 
-        return [routed]
+        return [routed] + unknownProtocolValueDiagnostics(for: event.raw)
     }
 
     private func routeOne(_ event: RawInputEvent) -> InputEvent? {
@@ -130,7 +137,7 @@ final class InputRouter {
                 kind: .pointer(
                     .moved(
                         PointerLocation(x: motion.x.doubleValue, y: motion.y.doubleValue),
-                        time: motion.time
+                        time: WaylandTimestampMilliseconds(rawValue: motion.time)
                     )
                 )
             )
@@ -142,8 +149,8 @@ final class InputRouter {
                     .button(
                         PointerButtonEvent(
                             serial: InputSerial(rawValue: button.serial),
-                            time: button.time,
-                            button: button.button,
+                            time: WaylandTimestampMilliseconds(rawValue: button.time),
+                            button: PointerButtonCode(rawValue: button.button),
                             state: ButtonState(rawValue: button.state.rawValue)
                         )
                     )
@@ -238,7 +245,7 @@ extension InputRouter {
                 .raw(
                     .entered(
                         serial: InputSerial(rawValue: enter.serial),
-                        pressedKeys: enter.pressedKeys
+                        pressedKeys: enter.pressedKeys.map(EvdevKeycode.init(rawValue:))
                     )
                 )
             )
@@ -270,8 +277,8 @@ extension InputRouter {
                     .key(
                         KeyboardKeyEvent(
                             serial: InputSerial(rawValue: key.serial),
-                            time: key.time,
-                            rawKeycode: key.evdevKeycode,
+                            time: WaylandTimestampMilliseconds(rawValue: key.time),
+                            rawKeycode: EvdevKeycode(rawValue: key.evdevKeycode),
                             state: KeyState(rawValue: key.state.rawValue)
                         )
                     )
@@ -366,18 +373,27 @@ extension InputRouter {
         switch axis {
         case .axis(let time, let rawAxis, let value):
             .axis(
-                time: time,
+                time: WaylandTimestampMilliseconds(rawValue: time),
                 axis: PointerAxis(rawValue: rawAxis.rawValue),
                 value: value.doubleValue
             )
         case .source(let source):
             .source(PointerAxisSource(rawValue: source.rawValue))
         case .stop(let time, let axis):
-            .stop(time: time, axis: PointerAxis(rawValue: axis.rawValue))
+            .stop(
+                time: WaylandTimestampMilliseconds(rawValue: time),
+                axis: PointerAxis(rawValue: axis.rawValue)
+            )
         case .discrete(let axis, let value):
-            .discrete(axis: PointerAxis(rawValue: axis.rawValue), value: value)
+            .discrete(
+                axis: PointerAxis(rawValue: axis.rawValue),
+                value: PointerAxisDiscreteStep(rawValue: value)
+            )
         case .value120(let axis, let value120):
-            .value120(axis: PointerAxis(rawValue: axis.rawValue), value120: value120)
+            .value120(
+                axis: PointerAxis(rawValue: axis.rawValue),
+                value120: PointerAxisValue120(rawValue: value120)
+            )
         case .relativeDirection(let axis, let direction):
             .relativeDirection(
                 axis: PointerAxis(rawValue: axis.rawValue),

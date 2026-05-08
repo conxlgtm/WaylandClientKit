@@ -27,6 +27,7 @@ package enum WindowEffect: Equatable, Sendable {
     case publishCloseRequested(WindowID)
     case publishClosed(WindowID)
     case publishRedrawRequested(WindowID)
+    case publishDiagnostic(WindowDiagnostic)
     case cancelFrameCallback
     case performSoftwarePresent(PresentationRequest)
     case retireSwapchain

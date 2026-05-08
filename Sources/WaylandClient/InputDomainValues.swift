@@ -16,6 +16,114 @@ public struct SeatName: RawRepresentable, Equatable, Hashable, Sendable,
     }
 }
 
+public struct WaylandTimestampMilliseconds: RawRepresentable, Equatable, Hashable,
+    Sendable, CustomStringConvertible, ExpressibleByIntegerLiteral
+{
+    public let rawValue: UInt32
+
+    public init(rawValue timestampRawValue: UInt32) {
+        rawValue = timestampRawValue
+    }
+
+    public init(integerLiteral value: UInt32) {
+        rawValue = value
+    }
+
+    public var description: String {
+        String(rawValue)
+    }
+}
+
+public struct PointerButtonCode: RawRepresentable, Equatable, Hashable, Sendable,
+    CustomStringConvertible, ExpressibleByIntegerLiteral
+{
+    public let rawValue: UInt32
+
+    public init(rawValue buttonRawValue: UInt32) {
+        rawValue = buttonRawValue
+    }
+
+    public init(integerLiteral value: UInt32) {
+        rawValue = value
+    }
+
+    public var description: String {
+        String(rawValue)
+    }
+}
+
+public struct EvdevKeycode: RawRepresentable, Equatable, Hashable, Sendable,
+    CustomStringConvertible, ExpressibleByIntegerLiteral
+{
+    public let rawValue: UInt32
+
+    public init(rawValue keycodeRawValue: UInt32) {
+        rawValue = keycodeRawValue
+    }
+
+    public init(integerLiteral value: UInt32) {
+        rawValue = value
+    }
+
+    public var description: String {
+        String(rawValue)
+    }
+}
+
+public struct XKBKeycode: RawRepresentable, Equatable, Hashable, Sendable,
+    CustomStringConvertible, ExpressibleByIntegerLiteral
+{
+    public let rawValue: UInt32
+
+    public init(rawValue keycodeRawValue: UInt32) {
+        rawValue = keycodeRawValue
+    }
+
+    public init(integerLiteral value: UInt32) {
+        rawValue = value
+    }
+
+    public var description: String {
+        String(rawValue)
+    }
+}
+
+public struct PointerAxisDiscreteStep: RawRepresentable, Equatable, Hashable,
+    Sendable, CustomStringConvertible, ExpressibleByIntegerLiteral
+{
+    public let rawValue: Int32
+
+    public init(rawValue stepRawValue: Int32) {
+        rawValue = stepRawValue
+    }
+
+    public init(integerLiteral value: Int32) {
+        rawValue = value
+    }
+
+    public var description: String {
+        String(rawValue)
+    }
+}
+
+public struct PointerAxisValue120: RawRepresentable, Equatable, Hashable,
+    Sendable, CustomStringConvertible, ExpressibleByIntegerLiteral
+{
+    public let rawValue: Int32
+
+    public init(rawValue valueRawValue: Int32) {
+        rawValue = valueRawValue
+    }
+
+    public init(integerLiteral value: Int32) {
+        rawValue = value
+    }
+
+    public var description: String {
+        String(rawValue)
+    }
+}
+
 public enum PointerAxis: Equatable, Sendable {
     case verticalScroll
     case horizontalScroll

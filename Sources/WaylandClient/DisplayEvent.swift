@@ -407,14 +407,23 @@ final class DisplayEventHub: Sendable {
         switch diagnostic.operation {
         case .inputPipelineOverflow:
             .error
-        case .keyboardKeymap, .keyboardRepeat, .listener, .cursor:
+        case .keyboardKeymap,
+            .keyboardRepeat,
+            .listener,
+            .cursor,
+            .unknownProtocolValue:
             .degraded
         }
     }
 
     private func displaySeverity(for diagnostic: WindowDiagnostic) -> DiagnosticSeverity {
         switch diagnostic.operation {
-        case .callback, .lifecycle, .decoration, .presentation, .scale:
+        case .callback,
+            .lifecycle,
+            .decoration,
+            .presentation,
+            .scale,
+            .unknownProtocolValue:
             .degraded
         }
     }
@@ -430,7 +439,11 @@ final class DisplayEventHub: Sendable {
         switch diagnostic.operation {
         case .inputPipelineOverflow(let overflow):
             overflow
-        case .keyboardKeymap, .keyboardRepeat, .listener, .cursor:
+        case .keyboardKeymap,
+            .keyboardRepeat,
+            .listener,
+            .cursor,
+            .unknownProtocolValue:
             nil
         }
     }

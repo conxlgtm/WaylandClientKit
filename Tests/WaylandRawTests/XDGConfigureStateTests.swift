@@ -75,22 +75,18 @@ struct XDGConfigureStateTests {
     }
 
     @Test
-    func invalidDecorationConfigureModeRecordsPendingError() {
+    func unknownDecorationConfigureModeIsPreserved() throws {
         let state = XDGConfigureState()
         state.handleDecorationConfigure(mode: .serverSide)
         state.handleDecorationConfigure(rawMode: 999)
 
-        #expect(throws: RuntimeError.invalidDecorationMode(999)) {
-            try state.throwPendingErrorIfAny()
-        }
-        #expect(state.handleSurfaceConfigure(serial: 1).decorationMode == .serverSide)
+        try state.throwPendingErrorIfAny()
+        #expect(state.handleSurfaceConfigure(serial: 1).decorationMode == .unknown(999))
     }
 
     @Test
-    func rawDecorationModeRejectsUnknownMode() {
-        #expect(throws: RuntimeError.invalidDecorationMode(999)) {
-            _ = try RawDecorationMode(validating: 999)
-        }
+    func rawDecorationModePreservesUnknownMode() throws {
+        #expect(try RawDecorationMode(validating: 999) == .unknown(999))
     }
 
     @Test

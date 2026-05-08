@@ -295,7 +295,7 @@ package final class TopLevelWindow {
             retired: &retiredBufferPools
         ) {
             guard let globals = connection.boundGlobals else {
-                throw ClientError.windowCreationFailed("required globals are not bound")
+                throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
             }
 
             return try globals.sharedMemory.createPool(
@@ -496,7 +496,7 @@ package final class TopLevelWindow {
     private func monotonicMilliseconds() throws -> Int64 {
         var timestamp = timespec()
         guard unsafe clock_gettime(CLOCK_MONOTONIC, &timestamp) == 0 else {
-            throw ClientError.windowCreationFailed("clock_gettime failed with errno \(errno)")
+            throw ClientError.windowCreationFailed(.clockGetTimeFailed(errno: errno))
         }
 
         return Int64(timestamp.tv_sec) * 1_000 + Int64(timestamp.tv_nsec) / 1_000_000
@@ -711,6 +711,8 @@ extension TopLevelWindow {
                 onClosed = nil
             case .publishRedrawRequested:
                 onRedrawRequested?()
+            case .publishDiagnostic(let diagnostic):
+                failureSink.reportWindowFailure(.diagnostic(diagnostic))
             case .cancelFrameCallback:
                 pendingFrameRegistration = nil
             case .performSoftwarePresent:

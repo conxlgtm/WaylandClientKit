@@ -4,6 +4,7 @@ import Glibc
 package enum RawDecorationMode: Equatable, Sendable {
     case clientSide
     case serverSide
+    case unknown(UInt32)
 
     package init(validating rawValue: UInt32) throws(RuntimeError) {
         switch rawValue {
@@ -12,7 +13,7 @@ package enum RawDecorationMode: Equatable, Sendable {
         case swl_zxdg_toplevel_decoration_v1_mode_server_side():
             self = .serverSide
         default:
-            throw .invalidDecorationMode(rawValue)
+            self = .unknown(rawValue)
         }
     }
 
@@ -22,6 +23,8 @@ package enum RawDecorationMode: Equatable, Sendable {
             swl_zxdg_toplevel_decoration_v1_mode_client_side()
         case .serverSide:
             swl_zxdg_toplevel_decoration_v1_mode_server_side()
+        case .unknown(let rawValue):
+            rawValue
         }
     }
 }

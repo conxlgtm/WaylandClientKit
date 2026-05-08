@@ -71,12 +71,54 @@ public enum WindowScaleOperation: Equatable, Sendable, CustomStringConvertible {
     }
 }
 
+public enum UnknownWindowProtocolValueField: Equatable, Hashable, Sendable,
+    CustomStringConvertible
+{
+    case xdgTopLevelState
+    case xdgWMCapability
+    case xdgDecorationMode
+
+    public var description: String {
+        switch self {
+        case .xdgTopLevelState:
+            "xdg_toplevel state"
+        case .xdgWMCapability:
+            "xdg_toplevel wm capability"
+        case .xdgDecorationMode:
+            "zxdg_toplevel_decoration_v1 mode"
+        }
+    }
+}
+
+public struct UnknownWindowProtocolValueDiagnostic: Equatable, Sendable,
+    CustomStringConvertible
+{
+    public let field: UnknownWindowProtocolValueField
+    public let rawValue: UInt32
+    public let configureSerial: UInt32
+
+    public init(
+        field diagnosticField: UnknownWindowProtocolValueField,
+        rawValue diagnosticRawValue: UInt32,
+        configureSerial diagnosticConfigureSerial: UInt32
+    ) {
+        field = diagnosticField
+        rawValue = diagnosticRawValue
+        configureSerial = diagnosticConfigureSerial
+    }
+
+    public var description: String {
+        "unknown \(field.description) \(rawValue) in configure serial \(configureSerial)"
+    }
+}
+
 public enum WindowDiagnosticOperation: Equatable, Sendable {
     case callback(WindowCallbackOperation)
     case lifecycle(WindowLifecycleOperation)
     case decoration(WindowDecorationOperation)
     case presentation(WindowPresentationOperation)
     case scale(WindowScaleOperation)
+    case unknownProtocolValue(UnknownWindowProtocolValueField)
 }
 
 public struct WindowDiagnostic: Equatable, Sendable {

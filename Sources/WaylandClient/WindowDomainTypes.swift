@@ -429,6 +429,8 @@ extension WindowDecorationMode {
             self = .clientSide
         case .serverSide:
             self = .serverSide
+        case .unknown(let rawValue):
+            self = .unknown(rawValue)
         }
     }
 }

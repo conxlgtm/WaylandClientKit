@@ -12,7 +12,7 @@ extension PopupRoleSurface {
                 for: RawSeatID(rawValue: seatID.rawValue)
             )
         else {
-            throw ClientError.invalidWindowState("unknown popup grab seat \(seatID)")
+            throw ClientError.invalidWindowState(.unknownPopupGrabSeat(seatID))
         }
 
         popup.grab(seat: seat, serial: serial.rawValue)
@@ -68,7 +68,7 @@ extension PopupRoleSurface {
             retired: &retiredBufferPools
         ) {
             guard let globals = connection.boundGlobals else {
-                throw ClientError.windowCreationFailed("required globals are not bound")
+                throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
             }
 
             return try globals.sharedMemory.createPool(
@@ -152,7 +152,7 @@ extension PopupRoleSurface {
     package func monotonicMilliseconds() throws -> Int64 {
         var timestamp = timespec()
         guard unsafe clock_gettime(CLOCK_MONOTONIC, &timestamp) == 0 else {
-            throw ClientError.windowCreationFailed("clock_gettime failed with errno \(errno)")
+            throw ClientError.windowCreationFailed(.clockGetTimeFailed(errno: errno))
         }
 
         return Int64(timestamp.tv_sec) * 1_000 + Int64(timestamp.tv_nsec) / 1_000_000

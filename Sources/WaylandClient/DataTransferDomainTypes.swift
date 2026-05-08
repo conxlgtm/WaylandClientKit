@@ -21,10 +21,20 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case unknownSeat(SeatID)
     case missingDataDevice(SeatID)
     case duplicateOffer
+    case duplicateOfferHandle(rawValue: UInt, existingOffer: ClipboardOfferIdentity?)
     case duplicateSource
     case unknownOffer
+    case missingOfferHandle(seatID: SeatID)
+    case unknownOfferHandle(rawValue: UInt, seatID: SeatID?)
+    case unknownOfferIdentity(ClipboardOfferIdentity)
+    case mismatchedOfferSeat(
+        offer: ClipboardOfferIdentity,
+        expected: SeatID,
+        actual: SeatID?
+    )
     case offerExpired
     case unknownSource
+    case unknownSourceIdentity(ClipboardSourceIdentity)
     case sourceCancelled
     case sourceDataUnavailable(MIMEType)
     case mimeTypeUnavailable(MIMEType)
@@ -70,14 +80,30 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "seat has no data device: \(seatID)"
         case .duplicateOffer:
             "duplicate data offer"
+        case .duplicateOfferHandle(let rawValue, let existingOffer):
+            "duplicate data offer handle \(rawValue)"
+                + (existingOffer.map { " for \($0.description)" } ?? "")
         case .duplicateSource:
             "duplicate data source"
         case .unknownOffer:
             "unknown data offer"
+        case .missingOfferHandle(let seatID):
+            "data offer callback for \(seatID) did not include an offer handle"
+        case .unknownOfferHandle(let rawValue, let seatID):
+            "unknown data offer handle \(rawValue)"
+                + (seatID.map { " for \($0.description)" } ?? "")
+        case .unknownOfferIdentity(let offer):
+            "unknown data offer \(offer.description)"
+        case .mismatchedOfferSeat(let offer, let expected, let actual):
+            "data offer \(offer.description) belonged to "
+                + (actual?.description ?? "no seat")
+                + ", expected \(expected.description)"
         case .offerExpired:
             "data offer expired"
         case .unknownSource:
             "unknown data source"
+        case .unknownSourceIdentity(let source):
+            "unknown data source \(source.description)"
         case .sourceCancelled:
             "data source was cancelled"
         case .sourceDataUnavailable(let mimeType):

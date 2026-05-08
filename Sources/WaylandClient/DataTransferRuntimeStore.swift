@@ -203,7 +203,7 @@ struct DataTransferStore {
         offerID: DataOfferID
     ) throws {
         guard var runtimeOffer = runtimeOffersByID[offerID] else {
-            throw DataTransferError.unknownOffer
+            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
         }
 
         runtimeOffer.appendPendingMIMEType(mimeType)
@@ -212,7 +212,7 @@ struct DataTransferStore {
 
     mutating func markOfferActive(_ offerID: DataOfferID) throws -> RuntimeDataOffer {
         guard var runtimeOffer = runtimeOffersByID[offerID] else {
-            throw DataTransferError.unknownOffer
+            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
         }
 
         runtimeOffer.markActive()

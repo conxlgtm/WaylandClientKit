@@ -13,6 +13,7 @@ public enum WindowDecorationMode: Equatable, Sendable {
     case clientSide
     case serverSide
     case unavailable
+    case unknown(UInt32)
 }
 
 public struct WindowConfiguration: Equatable, Sendable {

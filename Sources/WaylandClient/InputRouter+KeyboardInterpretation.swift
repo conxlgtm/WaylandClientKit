@@ -39,9 +39,9 @@ extension InputRouter {
             .key(
                 InterpretedKeyboardKeyEvent(
                     serial: InputSerial(rawValue: key.serial),
-                    time: key.time,
-                    rawKeycode: key.evdevKeycode,
-                    xkbKeycode: key.xkbKeycode,
+                    time: WaylandTimestampMilliseconds(rawValue: key.time),
+                    rawKeycode: EvdevKeycode(rawValue: key.evdevKeycode),
+                    xkbKeycode: XKBKeycode(rawValue: key.xkbKeycode),
                     keysym: KeyboardKeysym(rawValue: key.keysym.rawValue),
                     interpretation: convert(key.interpretation)
                 )
