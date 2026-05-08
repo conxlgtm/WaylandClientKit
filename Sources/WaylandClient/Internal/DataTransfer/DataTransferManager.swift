@@ -224,7 +224,7 @@ package final class DataTransferManager {
         if let existingOffer = store.offerSnapshot(offerID) {
             guard existingOffer.role.seatID == seatID else {
                 throw DataTransferError.mismatchedOfferSeat(
-                    offer: ClipboardOfferIdentity(offerID),
+                    offer: .clipboard(ClipboardOfferIdentity(offerID)),
                     expected: seatID,
                     actual: existingOffer.role.seatID
                 )
@@ -235,7 +235,7 @@ package final class DataTransferManager {
             }
             guard runtimeOffer.pendingSeatID == seatID else {
                 throw DataTransferError.mismatchedOfferSeat(
-                    offer: ClipboardOfferIdentity(offerID),
+                    offer: .clipboard(ClipboardOfferIdentity(offerID)),
                     expected: seatID,
                     actual: runtimeOffer.pendingSeatID
                 )
@@ -359,7 +359,7 @@ extension DataTransferManager {
         }
         guard store.runtimeOffer(offerID)?.pendingSeatID == seatID else {
             throw DataTransferError.mismatchedOfferSeat(
-                offer: ClipboardOfferIdentity(offerID),
+                offer: .clipboard(ClipboardOfferIdentity(offerID)),
                 expected: seatID,
                 actual: store.runtimeOffer(offerID)?.pendingSeatID
             )

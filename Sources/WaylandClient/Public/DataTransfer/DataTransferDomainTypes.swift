@@ -34,7 +34,7 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case unknownOfferIdentity(ClipboardOfferIdentity)
     case unknownPrimarySelectionOfferIdentity(PrimarySelectionOfferIdentity)
     case mismatchedOfferSeat(
-        offer: ClipboardOfferIdentity,
+        offer: DataTransferOfferIdentity,
         expected: SeatID,
         actual: SeatID?
     )
@@ -141,6 +141,20 @@ public enum DataTransferCallbackFailureCause: Equatable, Sendable,
         switch self {
         case .backend(let type, let description):
             "\(type): \(description)"
+        }
+    }
+}
+
+public enum DataTransferOfferIdentity: Equatable, Sendable, CustomStringConvertible {
+    case clipboard(ClipboardOfferIdentity)
+    case primarySelection(PrimarySelectionOfferIdentity)
+
+    public var description: String {
+        switch self {
+        case .clipboard(let offer):
+            offer.description
+        case .primarySelection(let offer):
+            offer.description
         }
     }
 }
