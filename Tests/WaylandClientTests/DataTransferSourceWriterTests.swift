@@ -173,7 +173,7 @@ struct DataTransferSourceWriterTests {
             },
             closeDescriptor: { _ in
                 closeCount.withLock { $0 += 1 }
-                return 0
+                return .closed
             }
         )
 

@@ -133,11 +133,11 @@ package final class DataTransferSourceSendRequest {
     }
 
     private func closeRawDescriptor(_ rawDescriptor: Int32) throws {
-        let closeResult = descriptorIO.close(rawDescriptor)
-        guard closeResult == 0 else {
-            throw DataTransferError.closeFileDescriptor(
-                WaylandSystemErrno(unchecked: closeResult)
-            )
+        switch descriptorIO.close(rawDescriptor) {
+        case .closed:
+            return
+        case .failed(let error):
+            throw DataTransferError.closeFileDescriptor(error)
         }
     }
 

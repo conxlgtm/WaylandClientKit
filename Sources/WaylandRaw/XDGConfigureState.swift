@@ -185,6 +185,11 @@ package final class XDGConfigureState {
         height: Int32,
         states: [XDGTopLevelState] = []
     ) {
+        guard width >= 0, height >= 0 else {
+            recordError(.invalidTopLevelConfigureSize(width: width, height: height))
+            return
+        }
+
         updateCollection { collection in
             collection.parts.size = TopLevelSize(width: width, height: height)
             collection.parts.states = states

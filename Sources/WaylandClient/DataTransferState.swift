@@ -174,7 +174,7 @@ extension DataTransferState {
             throw DataTransferError.unknownOffer
         }
 
-        try offer.appendMIMEType(mimeType)
+        try offer.appendMIMETypeIfNew(mimeType)
         offers[id] = offer
         return []
     }

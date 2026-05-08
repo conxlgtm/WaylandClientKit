@@ -168,7 +168,7 @@ private final class ConcurrentSourceWriteProbe: Sendable {
         return bytes.count
     }
 
-    func close(descriptor: Int32) -> Int32 {
+    func close(descriptor: Int32) -> FileDescriptorCloseResult {
         condition.lock()
         state.withLock { storage in
             storage.closedDescriptors.append(descriptor)
@@ -176,7 +176,7 @@ private final class ConcurrentSourceWriteProbe: Sendable {
         condition.broadcast()
         condition.unlock()
 
-        return 0
+        return .closed
     }
 
     func finish() {

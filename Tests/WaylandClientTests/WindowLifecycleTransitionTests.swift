@@ -64,6 +64,30 @@ struct WindowLifecycleTransitionTests {
         }
     }
 
+    @Test
+    func closePublishesClosedExactlyOnceForEveryPublishedClosableLifecycle() throws {
+        for model in try publishedClosableModels() {
+            var model = model
+
+            let firstEffects = try model.reduce(.explicitClose)
+            let secondEffects = try model.reduce(.explicitClose)
+
+            #expect(firstEffects.filter { $0 == .publishClosed(windowID) }.count == 1)
+            #expect(!secondEffects.contains(.publishClosed(windowID)))
+            #expect(model.publication == .closedPublished(windowID))
+        }
+    }
+
+    @Test
+    func destroyedWindowCannotRemainPublished() throws {
+        var model = try activePublishedModel()
+
+        _ = try model.reduce(.explicitClose)
+
+        #expect(model.isDestroyed)
+        #expect(model.publication != .published(windowID))
+    }
+
     private func activePublishedModel() throws -> WindowModel {
         var model = WindowModel(id: windowID, fallbackSize: .default)
         _ = try model.reduce(.roleObjectsCreated)
@@ -71,6 +95,15 @@ struct WindowLifecycleTransitionTests {
         _ = try model.reduce(.published)
         _ = try model.reduce(.configureReceived(configure(width: 800, height: 600, serial: 1)))
         return model
+    }
+
+    private func publishedClosableModels() throws -> [WindowModel] {
+        var waiting = WindowModel(id: windowID, fallbackSize: .default)
+        _ = try waiting.reduce(.roleObjectsCreated)
+        _ = try waiting.reduce(.initialCommitSent)
+        _ = try waiting.reduce(.published)
+
+        return [waiting, try activePublishedModel()]
     }
 
     private func configure(
