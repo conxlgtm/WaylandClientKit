@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ClipboardOffer: Sendable, Hashable {
+public struct PrimarySelectionOffer: Sendable, Hashable {
     public static let defaultReadTimeout: Duration = .seconds(5)
 
     package let id: DataOfferID
@@ -18,12 +18,12 @@ public struct ClipboardOffer: Sendable, Hashable {
         displayIdentity = ObjectIdentifier(owningDisplay)
     }
 
-    public var identity: ClipboardOfferIdentity {
-        ClipboardOfferIdentity(id)
+    public var identity: PrimarySelectionOfferIdentity {
+        PrimarySelectionOfferIdentity(id)
     }
 
     public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {
-        try await display.receiveClipboardOffer(id: id, mimeType: mimeType)
+        try await display.receivePrimarySelectionOffer(id: id, mimeType: mimeType)
     }
 
     public func read(
@@ -35,7 +35,7 @@ public struct ClipboardOffer: Sendable, Hashable {
         return try await descriptor.readData(limit: limit, timeout: timeout)
     }
 
-    public static func == (lhs: ClipboardOffer, rhs: ClipboardOffer) -> Bool {
+    public static func == (lhs: PrimarySelectionOffer, rhs: PrimarySelectionOffer) -> Bool {
         lhs.id == rhs.id && lhs.displayIdentity == rhs.displayIdentity
     }
 

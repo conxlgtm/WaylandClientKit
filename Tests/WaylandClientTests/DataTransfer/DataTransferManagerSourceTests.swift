@@ -63,7 +63,7 @@ struct DataTransferManagerSourceTests {
         #expect(manager.sourceSnapshots.map(\.id) == [second.id])
         #expect(
             manager.drainDataTransferEvents()
-                == [.sourceCancelled(ClipboardSourceIdentity(first.id))]
+                == [.clipboardSourceCancelled(ClipboardSourceIdentity(first.id))]
         )
         #expect(
             device.selections
@@ -101,7 +101,7 @@ struct DataTransferManagerSourceTests {
         #expect(manager.seatSnapshots.first?.selectionSourceID == nil)
         #expect(
             manager.drainDataTransferEvents()
-                == [.sourceCancelled(ClipboardSourceIdentity(source.id))]
+                == [.clipboardSourceCancelled(ClipboardSourceIdentity(source.id))]
         )
         #expect(
             device.selections
@@ -137,7 +137,7 @@ struct DataTransferManagerSourceTests {
         #expect(manager.sourceSnapshots.isEmpty)
         #expect(
             manager.drainDataTransferEvents()
-                == [.sourceCancelled(ClipboardSourceIdentity(source.id))]
+                == [.clipboardSourceCancelled(ClipboardSourceIdentity(source.id))]
         )
     }
 

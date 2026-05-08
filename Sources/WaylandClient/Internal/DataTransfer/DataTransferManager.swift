@@ -115,12 +115,12 @@ package final class DataTransferManager {
             destroySourceBinding(sourceID)
         case .publishSelectionChanged(let seatID, let offerID):
             pendingEvents.append(
-                .selectionChanged(
+                .clipboardSelectionChanged(
                     ClipboardSelectionEvent(seatID: seatID, offerID: offerID)
                 )
             )
         case .publishSourceCancelled(let sourceID):
-            pendingEvents.append(.sourceCancelled(ClipboardSourceIdentity(sourceID)))
+            pendingEvents.append(.clipboardSourceCancelled(ClipboardSourceIdentity(sourceID)))
         }
     }
 

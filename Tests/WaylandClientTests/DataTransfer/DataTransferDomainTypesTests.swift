@@ -102,7 +102,7 @@ struct DataTransferDomainTypesTests {
         #expect(try ByteCount.bytes(0).rawValue == 0)
         #expect(try ByteCount.kilobytes(2).rawValue == 2_048)
         #expect(try ByteCount.megabytes(3).rawValue == 3 * 1_024 * 1_024)
-        #expect(ByteCount.defaultClipboardReadLimit.rawValue == 16 * 1_024 * 1_024)
+        #expect(ByteCount.defaultTransferReadLimit.rawValue == 16 * 1_024 * 1_024)
     }
 
     @Test

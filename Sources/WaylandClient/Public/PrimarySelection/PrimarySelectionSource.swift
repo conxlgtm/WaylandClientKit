@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ClipboardSourceConfiguration: Equatable, Sendable {
+public struct PrimarySelectionSourceConfiguration: Equatable, Sendable {
     public let payloads: [DataTransferSourcePayload]
     package let payloadSet: DataTransferSourcePayloadSet
 
@@ -13,8 +13,8 @@ public struct ClipboardSourceConfiguration: Equatable, Sendable {
     public static func data(
         mimeType: MIMEType,
         _ data: Data
-    ) throws -> ClipboardSourceConfiguration {
-        try ClipboardSourceConfiguration(
+    ) throws -> PrimarySelectionSourceConfiguration {
+        try PrimarySelectionSourceConfiguration(
             payloads: [DataTransferSourcePayload(mimeType: mimeType, data: data)]
         )
     }
@@ -24,7 +24,7 @@ public struct ClipboardSourceConfiguration: Equatable, Sendable {
     }
 }
 
-public struct ClipboardSource: Sendable, Hashable {
+public struct PrimarySelectionSource: Sendable, Hashable {
     package let id: DataSourceID
     public let seatID: SeatID
     public let mimeTypes: [MIMEType]
@@ -40,18 +40,18 @@ public struct ClipboardSource: Sendable, Hashable {
         displayIdentity = ObjectIdentifier(owningDisplay)
     }
 
-    public var identity: ClipboardSourceIdentity {
-        ClipboardSourceIdentity(id)
+    public var identity: PrimarySelectionSourceIdentity {
+        PrimarySelectionSourceIdentity(id)
     }
 
-    /// Requests clearing this source from the regular clipboard selection.
+    /// Requests clearing this source from the primary selection.
     ///
     /// The compositor validates `serial` at the protocol boundary.
     public func requestClear(serial: InputSerial) async throws {
-        try await display.requestClearClipboard(sourceID: id, seatID: seatID, serial: serial)
+        try await display.requestClearPrimarySelection(sourceID: id, seatID: seatID, serial: serial)
     }
 
-    public static func == (lhs: ClipboardSource, rhs: ClipboardSource) -> Bool {
+    public static func == (lhs: PrimarySelectionSource, rhs: PrimarySelectionSource) -> Bool {
         lhs.id == rhs.id && lhs.displayIdentity == rhs.displayIdentity
     }
 
