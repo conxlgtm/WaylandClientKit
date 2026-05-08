@@ -104,6 +104,7 @@ let package = Package(
         .executableTarget(
             name: "SwiftWaylandDemo",
             dependencies: ["WaylandClient"],
+            path: "Examples/SwiftWaylandDemo",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
@@ -113,6 +114,11 @@ let package = Package(
         ),
         .testTarget(
             name: "WaylandRawTests",
+            dependencies: ["WaylandRaw"],
+            swiftSettings: librarySwiftSettings
+        ),
+        .testTarget(
+            name: "WaylandRuntimeTests",
             dependencies: ["WaylandRaw", "WaylandRuntime"],
             swiftSettings: librarySwiftSettings
         ),

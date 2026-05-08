@@ -373,7 +373,7 @@ Swift code:
 - `Sources/WaylandClient/`
 - `Sources/WaylandKeyboard/`
 - `Sources/WaylandSmokeSupport/`
-- `Sources/SwiftWaylandDemo/`
+- `Examples/SwiftWaylandDemo/`
 - `Sources/SwiftWaylandSmoke/`
 
 ## Current Checks
