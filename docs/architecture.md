@@ -27,7 +27,7 @@ SwiftWaylandSmoke
 `WaylandRaw` does not depend on wayland-cursor.
 `WaylandRawUnsafeShim` holds the owner-thread executor and its Linux wake primitive.
 The queue-specific Wayland prepare/read/cancel state machine lives in `WaylandRaw`
-as `QueueEventLoopEngine`; unsafe/default-queue and executor integrations adapt to
+as `QueueEventLoopEngine`. Unsafe/default-queue and executor integrations adapt to
 that one engine instead of owning duplicate protocol loops.
 
 ## Target Roles
@@ -218,6 +218,7 @@ Current state:
 - software-buffer toplevel window helper
 - scale-aware surface geometry for SHM software drawing
 - package-visible window lifecycle and redraw scheduling helpers
+- popup lifecycle, placement, redraw scheduling, dismissal, and input target helpers
 - span-scoped XRGB8888 drawing API
 - optional viewporter and fractional-scale integration for buffer-size selection
 - frame callback based redraw pacing
@@ -227,6 +228,7 @@ Current state:
 - `InputRouter` that maps raw input events to public session input events
 - session-owned `KeyboardInterpreter` that maps raw keyboard facts to public interpreted keyboard events
 - session-owned `CursorManager` that sets cursor surfaces when pointer focus enters registered windows
+- seat-scoped regular clipboard selection state and data-transfer event publishing
 
 ### `WaylandSmokeSupport`
 
@@ -288,7 +290,7 @@ Wayland ownership.
 The high-level async API is `WaylandDisplay`, an actor with a dedicated
 `WaylandThreadExecutor`. The actor strongly retains its executor and returns the same
 `UnownedSerialExecutor` for its lifetime. Actor-isolated methods run on the Wayland owner
-thread. The executor thread owns the high-level loop; `events` and `inputEvents` are passive
+thread. The executor thread owns the high-level loop. `events` and `inputEvents` are passive
 subscribers and do not own pumping.
 
 The executor loop drains a bounded batch of Swift jobs, then runs one Wayland event-source
@@ -299,10 +301,10 @@ then runs in the next executor job phase. No arbitrary Swift jobs run between a 
 prepare-read and read-events/cancel-read.
 
 Display streams are bounded throwing streams. Normal `WaylandDisplay.close()` finishes them
-without error; fatal Wayland/protocol/poll failures finish subscribers with
-`WaylandDisplayError`; subscriber overflow terminates only the slow subscriber rather than
+without error. Fatal Wayland/protocol/poll failures finish subscribers with
+`WaylandDisplayError`. Subscriber overflow terminates only the slow subscriber rather than
 backpressuring the owner thread. Recovery from subscriber overflow is to create a new
-subscription; overflowed buffered events are not replayed. Fatal display failure is
+subscription. Overflowed buffered events are not replayed. Fatal display failure is
 different: the display is no longer usable and callers must reconnect.
 
 Nonterminal runtime degradation is reported as diagnostics. Display subscribers receive
@@ -322,6 +324,7 @@ Supported:
 
 - core Wayland display, registry, compositor, surface, callback, SHM, pool, buffer, seat, pointer, keyboard, and touch basics
 - stable xdg-shell wm_base, surface, and toplevel basics
+- xdg popup surfaces, positioner data, dismissal, redraw, and input target identity
 - unstable xdg-decoration server-side decoration negotiation
 - stable viewporter surface destination basics
 - staging fractional-scale preferred-scale callbacks
@@ -329,12 +332,14 @@ Supported:
 - basic `xkb_v1` keyboard interpretation through xkbcommon
 - session-level raw and interpreted keyboard events
 - static pointer cursor surfaces through wayland-cursor
+- regular clipboard selection offers and sources through data-device
 
 Not supported:
 
 - cursor animation or per-output cursor scaling
 - client-side decoration rendering
-- clipboard, primary selection, drag and drop
+- primary selection or drag and drop
+- public output model
 - text input or IME
 - presentation-time
 - EGL, GBM, dmabuf, or GPU rendering
@@ -375,6 +380,8 @@ Swift code:
 - `make strict-concurrency`
 - `make strict-memory-safety-raw`
 - `make test`
+- `make test-public-api-client`
+- `make integration-wayland`
 - `make check`
 
 `WaylandClient` builds with strict memory safety as errors. `WaylandRaw` and

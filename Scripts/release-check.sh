@@ -8,9 +8,10 @@ make check
 
 if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
     ./Scripts/smoke-wayland.sh
+    ./Scripts/integration-wayland.sh
 elif [[ "${CI:-}" == "true" || "${REQUIRE_WAYLAND_SMOKE:-}" == "1" ]]; then
-    echo "Live Wayland smoke check is required, but WAYLAND_DISPLAY is not set." >&2
+    echo "Live Wayland smoke and public integration checks are required, but WAYLAND_DISPLAY is not set." >&2
     exit 1
 else
-    echo "Skipping live Wayland smoke check because WAYLAND_DISPLAY is not set."
+    echo "Skipping live Wayland smoke and public integration checks because WAYLAND_DISPLAY is not set."
 fi

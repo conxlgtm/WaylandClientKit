@@ -21,6 +21,7 @@ Current experimental baseline:
 - viewporter and fractional-scale protocol integration for scaled SHM buffers
 - frame callback pacing
 - seat, pointer, keyboard, and touch event capture
+- popup surfaces with placement, redraw, dismissal, and input target identity
 - package-internal `DisplaySession` input draining with seat/window identity
 - high-level async `WaylandDisplay.withConnection` API backed by a dedicated Wayland owner
   thread with an executor-owned integrated event loop
@@ -28,21 +29,23 @@ Current experimental baseline:
 - `xkbcommon`-backed key interpretation for copied `xkb_v1` keymaps through `DisplaySession`
 - normal pointer cursor surfaces backed by `wayland-cursor`
 - regular clipboard selection offers and sources through `wl_data_device_manager`
+- display, input, data-transfer, and diagnostic event streams
 - noninteractive Wayland smoke executable
 - tests for system imports, shim imports, raw lifecycle, and client drawing helpers
 
 Not implemented yet:
 
-- protocol coverage beyond core Wayland, XDG shell, shared memory, and input basics
+- protocol coverage beyond the listed current support matrix
 - compose, text-input, or IME behavior
 - primary selection and drag-and-drop transfer handling
 - cursor animation, output-scale cursor selection, or custom cursor drawing APIs
+- public output model or presentation-time API
 - high-level gesture recognizers or widgets
 - DocC reference documentation
 
 ## Support Matrix
 
-Supported in the `0.0.1` checkpoint:
+Supported in the current experimental baseline:
 
 - `wl_display`
 - `wl_registry`
@@ -63,6 +66,8 @@ Supported in the `0.0.1` checkpoint:
 - `xdg_wm_base`
 - `xdg_surface`
 - `xdg_toplevel`
+- `xdg_popup`
+- `xdg_positioner`
 - `zxdg_decoration_manager_v1`
 - `zxdg_toplevel_decoration_v1`
 - `wp_viewporter`
@@ -92,13 +97,22 @@ Clipboard and data transfer:
 
 - regular clipboard selection offers can be inspected and received
 - regular clipboard sources can be offered and cleared
-- drag-and-drop enter events are rejected; primary selection is not implemented
+- drag-and-drop enter events are rejected
+- primary selection is not implemented
 
-Not supported in the `0.0.1` checkpoint:
+Popups:
+
+- popup surfaces can be created from windows
+- popup placement is reported through `PopupSurface.placement`
+- popup lifecycle events identify the popup and parent window
+- input events preserve popup target identity
+
+Not supported in the current experimental baseline:
 
 - primary selection or drag-and-drop transfer handling
 - cursor animation or per-output cursor scaling
 - presentation-time
+- public `wl_output` model
 - linux-dmabuf, EGL, GBM, or GPU rendering
 - text-input or IME protocols
 - widgets or retained UI
@@ -106,7 +120,8 @@ Not supported in the `0.0.1` checkpoint:
 ## Linux Dependencies
 
 Swift 6.3.1 or newer must already be installed.
-The bootstrap script verifies Swift through `Scripts/swift.sh` by default; it does not install or switch toolchains.
+The bootstrap script verifies Swift through `Scripts/swift.sh` by default.
+It does not install or switch toolchains.
 Set `SWIFT_COMMAND=/path/to/swift` for custom toolchain resolution.
 
 The build dependency source of truth is the system capability surface:
@@ -234,7 +249,7 @@ Run the raw-layer strict memory-safety file baseline:
 make strict-memory-safety-raw
 ```
 
-Generate a public API report before a checkpoint release:
+Generate a public API report before publishing checkpoint notes:
 
 ```bash
 ./Scripts/dump-public-api.sh
@@ -261,6 +276,12 @@ Run the noninteractive Wayland smoke check under a real Wayland session:
 ./Scripts/smoke-wayland.sh
 ```
 
+Run public API integration tests under a real Wayland session:
+
+```bash
+./Scripts/integration-wayland.sh
+```
+
 Or run the executable directly:
 
 ```bash
@@ -272,7 +293,7 @@ swift run swift-wayland-smoke
 - [Architecture](docs/architecture.md)
 - [Protocol Generation](docs/generation.md)
 - [Public API Audit](docs/public-api-audit.md)
-- [Release Checklist](docs/release.md)
+- [Development Checkpoint Checklist](docs/release.md)
 - [Contributing](CONTRIBUTING.md)
 
 ## Documentation Format

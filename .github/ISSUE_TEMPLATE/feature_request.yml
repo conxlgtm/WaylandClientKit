@@ -1,0 +1,19 @@
+name: Feature request
+description: Propose protocol or API work
+body:
+  - type: input
+    id: protocol
+    attributes:
+      label: Protocol or subsystem
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem or use case
+  - type: textarea
+    id: sketch
+    attributes:
+      label: Proposed API or design sketch
+  - type: textarea
+    id: risks
+    attributes:
+      label: Compatibility, safety, and compositor risks

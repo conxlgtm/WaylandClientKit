@@ -5,9 +5,12 @@ included:
   - Package.swift
   - Sources
   - Tests
+  - IntegrationTests/PublicAPIClient/Package.swift
+  - IntegrationTests/PublicAPIClient/Tests
 
 excluded:
   - .build
+  - IntegrationTests/PublicAPIClient/.build
   - DerivedData
   - Sources/CWaylandProtocols/generated
   - Sources/CWaylandProtocols/include/generated
