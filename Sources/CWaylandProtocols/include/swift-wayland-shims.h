@@ -28,6 +28,10 @@ struct wl_data_device_manager;
 struct wl_data_device;
 struct wl_data_offer;
 struct wl_data_source;
+struct zwp_primary_selection_device_manager_v1;
+struct zwp_primary_selection_device_v1;
+struct zwp_primary_selection_offer_v1;
+struct zwp_primary_selection_source_v1;
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,6 +63,10 @@ struct wl_seat *swl_registry_bind_wl_seat(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wl_data_device_manager *swl_registry_bind_wl_data_device_manager(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct zwp_primary_selection_device_manager_v1 *
+swl_registry_bind_zwp_primary_selection_device_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 /* ------------------------------------------------------------------ */
@@ -127,6 +135,29 @@ uint32_t swl_data_device_manager_dnd_action_none(void);
 uint32_t swl_data_device_manager_dnd_action_copy(void);
 uint32_t swl_data_device_manager_dnd_action_move(void);
 uint32_t swl_data_device_manager_dnd_action_ask(void);
+
+/* ------------------------------------------------------------------ */
+/*  Primary-selection request wrappers                                */
+/* ------------------------------------------------------------------ */
+
+struct zwp_primary_selection_source_v1 *
+swl_primary_selection_device_manager_create_source(
+    struct zwp_primary_selection_device_manager_v1 *manager);
+struct zwp_primary_selection_device_v1 *
+swl_primary_selection_device_manager_get_device(
+    struct zwp_primary_selection_device_manager_v1 *manager,
+    struct wl_seat *seat);
+void swl_primary_selection_source_offer(
+    struct zwp_primary_selection_source_v1 *source,
+    const char *mime_type);
+void swl_primary_selection_offer_receive(
+    struct zwp_primary_selection_offer_v1 *offer,
+    const char *mime_type,
+    int32_t fd);
+void swl_primary_selection_device_set_selection(
+    struct zwp_primary_selection_device_v1 *device,
+    struct zwp_primary_selection_source_v1 *source,
+    uint32_t serial);
 
 /* ------------------------------------------------------------------ */
 /*  XDG request wrappers                                              */
@@ -219,6 +250,14 @@ void swl_data_source_destroy(struct wl_data_source *source);
 void swl_data_device_destroy(struct wl_data_device *device);
 void swl_data_device_release(struct wl_data_device *device);
 void swl_data_device_manager_destroy(struct wl_data_device_manager *manager);
+void swl_primary_selection_offer_destroy(
+    struct zwp_primary_selection_offer_v1 *offer);
+void swl_primary_selection_source_destroy(
+    struct zwp_primary_selection_source_v1 *source);
+void swl_primary_selection_device_destroy(
+    struct zwp_primary_selection_device_v1 *device);
+void swl_primary_selection_device_manager_destroy(
+    struct zwp_primary_selection_device_manager_v1 *manager);
 void swl_xdg_surface_destroy(struct xdg_surface *xdg_surface);
 void swl_xdg_toplevel_destroy(struct xdg_toplevel *xdg_toplevel);
 void swl_xdg_positioner_destroy(struct xdg_positioner *positioner);
@@ -321,6 +360,28 @@ typedef void (*swl_data_device_motion_fn)(
 typedef void (*swl_data_device_drop_fn)(void *data, struct wl_data_device *device);
 typedef void (*swl_data_device_selection_fn)(
     void *data, struct wl_data_device *device, struct wl_data_offer *offer);
+
+/* Primary selection */
+typedef void (*swl_primary_selection_offer_offer_fn)(
+    void *data,
+    struct zwp_primary_selection_offer_v1 *offer,
+    const char *mime_type);
+typedef void (*swl_primary_selection_source_send_fn)(
+    void *data,
+    struct zwp_primary_selection_source_v1 *source,
+    const char *mime_type,
+    int32_t fd);
+typedef void (*swl_primary_selection_source_cancelled_fn)(
+    void *data,
+    struct zwp_primary_selection_source_v1 *source);
+typedef void (*swl_primary_selection_device_data_offer_fn)(
+    void *data,
+    struct zwp_primary_selection_device_v1 *device,
+    struct zwp_primary_selection_offer_v1 *offer);
+typedef void (*swl_primary_selection_device_selection_fn)(
+    void *data,
+    struct zwp_primary_selection_device_v1 *device,
+    struct zwp_primary_selection_offer_v1 *offer);
 
 /* XDG shell */
 typedef void (*swl_xdg_wm_base_ping_fn)(
@@ -483,6 +544,23 @@ struct swl_data_device_listener_callbacks {
     void                         *data;
 };
 
+struct swl_primary_selection_offer_listener_callbacks {
+    swl_primary_selection_offer_offer_fn offer;
+    void                               *data;
+};
+
+struct swl_primary_selection_source_listener_callbacks {
+    swl_primary_selection_source_send_fn      send;
+    swl_primary_selection_source_cancelled_fn cancelled;
+    void                                     *data;
+};
+
+struct swl_primary_selection_device_listener_callbacks {
+    swl_primary_selection_device_data_offer_fn data_offer;
+    swl_primary_selection_device_selection_fn  selection;
+    void                                      *data;
+};
+
 struct swl_xdg_wm_base_listener_callbacks {
     swl_xdg_wm_base_ping_fn ping;
     void                    *data;
@@ -591,6 +669,18 @@ int swl_data_source_add_listener(
 int swl_data_device_add_listener(
     struct wl_data_device *device,
     const struct swl_data_device_listener_callbacks *callbacks);
+
+int swl_primary_selection_offer_add_listener(
+    struct zwp_primary_selection_offer_v1 *offer,
+    const struct swl_primary_selection_offer_listener_callbacks *callbacks);
+
+int swl_primary_selection_source_add_listener(
+    struct zwp_primary_selection_source_v1 *source,
+    const struct swl_primary_selection_source_listener_callbacks *callbacks);
+
+int swl_primary_selection_device_add_listener(
+    struct zwp_primary_selection_device_v1 *device,
+    const struct swl_primary_selection_device_listener_callbacks *callbacks);
 
 int swl_xdg_wm_base_add_listener(
     struct xdg_wm_base *wm_base,
@@ -738,6 +828,65 @@ struct swl_test_data_device_lifecycle_record {
     int32_t                call_count;
     void                  *data;
     struct wl_data_device *device;
+};
+
+struct swl_test_primary_selection_offer_offer_record {
+    int32_t                                call_count;
+    void                                  *data;
+    struct zwp_primary_selection_offer_v1 *offer;
+    const char                            *mime_type;
+};
+
+struct swl_test_primary_selection_source_send_record {
+    int32_t                                 call_count;
+    void                                   *data;
+    struct zwp_primary_selection_source_v1 *source;
+    const char                             *mime_type;
+    int32_t                                 fd;
+};
+
+struct swl_test_primary_selection_source_lifecycle_record {
+    int32_t                                 call_count;
+    void                                   *data;
+    struct zwp_primary_selection_source_v1 *source;
+};
+
+struct swl_test_primary_selection_device_offer_record {
+    int32_t                                call_count;
+    void                                  *data;
+    struct zwp_primary_selection_device_v1 *device;
+    struct zwp_primary_selection_offer_v1 *offer;
+};
+
+enum swl_test_primary_selection_request_kind {
+    SWL_TEST_PRIMARY_SELECTION_REQUEST_NONE = 0,
+    SWL_TEST_PRIMARY_SELECTION_SOURCE_OFFER = 1,
+    SWL_TEST_PRIMARY_SELECTION_OFFER_RECEIVE = 2,
+    SWL_TEST_PRIMARY_SELECTION_DEVICE_SET_SELECTION = 3,
+};
+
+struct swl_test_primary_selection_request_record {
+    int32_t                                      call_count;
+    enum swl_test_primary_selection_request_kind kind;
+    void                                        *object;
+    void                                        *source;
+    const char                                  *mime_type;
+    uint32_t                                     serial;
+    int32_t                                      fd;
+};
+
+enum swl_test_primary_selection_destroy_kind {
+    SWL_TEST_PRIMARY_SELECTION_DESTROY_NONE = 0,
+    SWL_TEST_PRIMARY_SELECTION_DESTROY_OFFER = 1,
+    SWL_TEST_PRIMARY_SELECTION_DESTROY_SOURCE = 2,
+    SWL_TEST_PRIMARY_SELECTION_DESTROY_DEVICE = 3,
+    SWL_TEST_PRIMARY_SELECTION_DESTROY_MANAGER = 4,
+};
+
+struct swl_test_primary_selection_destroy_record {
+    int32_t                                     call_count;
+    enum swl_test_primary_selection_destroy_kind kind;
+    void                                       *object;
 };
 
 enum swl_test_data_request_kind {
@@ -943,6 +1092,38 @@ void swl_test_data_request_recording_begin(void);
 void swl_test_data_request_recording_end(void);
 struct swl_test_data_request_record swl_test_data_request_record(void);
 struct swl_test_data_destroy_record swl_test_data_destroy_record(void);
+
+void swl_test_primary_selection_offer_listener_emit_offer(
+    void *data,
+    struct zwp_primary_selection_offer_v1 *offer,
+    const char *mime_type,
+    struct swl_test_primary_selection_offer_offer_record *record);
+void swl_test_primary_selection_source_listener_emit_send(
+    void *data,
+    struct zwp_primary_selection_source_v1 *source,
+    const char *mime_type,
+    int32_t fd,
+    struct swl_test_primary_selection_source_send_record *record);
+void swl_test_primary_selection_source_listener_emit_cancelled(
+    void *data,
+    struct zwp_primary_selection_source_v1 *source,
+    struct swl_test_primary_selection_source_lifecycle_record *record);
+void swl_test_primary_selection_device_listener_emit_data_offer(
+    void *data,
+    struct zwp_primary_selection_device_v1 *device,
+    struct zwp_primary_selection_offer_v1 *offer,
+    struct swl_test_primary_selection_device_offer_record *record);
+void swl_test_primary_selection_device_listener_emit_selection(
+    void *data,
+    struct zwp_primary_selection_device_v1 *device,
+    struct zwp_primary_selection_offer_v1 *offer,
+    struct swl_test_primary_selection_device_offer_record *record);
+void swl_test_primary_selection_request_recording_begin(void);
+void swl_test_primary_selection_request_recording_end(void);
+struct swl_test_primary_selection_request_record
+swl_test_primary_selection_request_record(void);
+struct swl_test_primary_selection_destroy_record
+swl_test_primary_selection_destroy_record(void);
 
 void swl_test_xdg_popup_listener_emit_configure(
     void *data,
