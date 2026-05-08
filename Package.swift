@@ -138,11 +138,6 @@ let package = Package(
             dependencies: ["WaylandSmokeSupport"],
             swiftSettings: librarySwiftSettings
         ),
-        .testTarget(
-            name: "WaylandPublicIntegrationTests",
-            dependencies: ["WaylandClient"],
-            swiftSettings: librarySwiftSettings
-        ),
     ],
     cLanguageStandard: .c17
 )

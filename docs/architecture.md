@@ -380,6 +380,7 @@ Swift code:
 - `make strict-concurrency`
 - `make strict-memory-safety-raw`
 - `make test`
+- `make test-public-api-client`
 - `make integration-wayland`
 - `make check`
 

@@ -12,4 +12,6 @@ PROCESS_TIMEOUT_SECONDS="${SWIFT_WAYLAND_INTEGRATION_PROCESS_TIMEOUT_SECONDS:-90
 export SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=1
 
 timeout "${PROCESS_TIMEOUT_SECONDS}s" \
-    ./Scripts/swift.sh test --filter WaylandDisplayPublicIntegrationTests
+    ./Scripts/swift.sh test \
+        --package-path IntegrationTests/PublicAPIClient \
+        --filter WaylandDisplayPublicIntegrationTests
