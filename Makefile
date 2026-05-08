@@ -1,55 +1,55 @@
-SWIFT_FORMAT := ./Scripts/swift-format.sh
-SWIFTLINT := ./Scripts/swiftlint.sh
-SWIFT := ./Scripts/swift.sh
+SWIFT_FORMAT := ./scripts/dev/swift-format.sh
+SWIFTLINT := ./scripts/dev/swiftlint.sh
+SWIFT := ./scripts/dev/swift.sh
 
 .PHONY: format lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency strict-memory-safety-raw test test-public-api-client check smoke-wayland integration-wayland release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place IntegrationTests/PublicAPIClient/Package.swift
-	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place --parallel --recursive Sources Tests IntegrationTests/PublicAPIClient/Tests
+	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place --parallel --recursive Sources Tests Examples IntegrationTests/PublicAPIClient/Tests
 
 lint:
 	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict Package.swift
 	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict IntegrationTests/PublicAPIClient/Package.swift
-	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict --parallel --recursive Sources Tests IntegrationTests/PublicAPIClient/Tests
+	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict --parallel --recursive Sources Tests Examples IntegrationTests/PublicAPIClient/Tests
 	@$(SWIFTLINT) lint --strict --no-cache --force-exclude --config .swiftlint.yml
 
 verify-generated:
-	@./Scripts/verify-generated.sh
+	@./scripts/protocols/verify-generated.sh
 
 verify-shims:
-	@./Scripts/verify-shims.sh
+	@./scripts/shims/verify-shims.sh
 
 verify-docs:
-	@./Scripts/verify-docs.sh
+	@./scripts/ci/verify-docs.sh
 
 verify-unsafe-allowlist:
-	@bash ./Scripts/verify-unsafe-allowlist.sh
+	@bash ./scripts/safety/verify-unsafe-allowlist.sh
 
 strict-concurrency:
 	@$(SWIFT) build --disable-index-store -Xswiftc -strict-concurrency=complete -Xswiftc -warn-concurrency
 
 strict-memory-safety-raw:
-	@bash ./Scripts/check-raw-strict-memory-safety.sh
+	@bash ./scripts/safety/check-strict-memory-safety.sh
 
 test:
-	@CC="$(CURDIR)/Scripts/clang-filter-index-store.sh" $(SWIFT) test
+	@CC="$(CURDIR)/scripts/dev/clang-filter-index-store.sh" $(SWIFT) test
 
 test-public-api-client:
-	@CC="$(CURDIR)/Scripts/clang-filter-index-store.sh" $(SWIFT) test --package-path IntegrationTests/PublicAPIClient --filter WaylandDisplayPublicIntegrationTests
+	@./scripts/ci/test-public-api-client.sh
 
 check: lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency strict-memory-safety-raw test test-public-api-client
 
 smoke-wayland:
-	@./Scripts/smoke-wayland.sh
+	@./scripts/smoke/smoke-wayland.sh
 
 integration-wayland:
-	@./Scripts/integration-wayland.sh
+	@./scripts/smoke/integration-wayland.sh
 
 release-check:
-	@./Scripts/release-check.sh
+	@./scripts/ci/release-check.sh
 
 install-pre-commit:
-	@cp Scripts/pre-commit.sh .git/hooks/pre-commit
+	@cp scripts/dev/pre-commit.sh .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit

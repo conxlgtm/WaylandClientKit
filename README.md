@@ -29,6 +29,7 @@ Current experimental baseline:
 - `xkbcommon`-backed key interpretation for copied `xkb_v1` keymaps through `DisplaySession`
 - normal pointer cursor surfaces backed by `wayland-cursor`
 - regular clipboard selection offers and sources through `wl_data_device_manager`
+- compose and dead-key text results for interpreted keyboard events
 - display, input, data-transfer, and diagnostic event streams
 - noninteractive Wayland smoke executable
 - tests for system imports, shim imports, raw lifecycle, and client drawing helpers
@@ -36,7 +37,7 @@ Current experimental baseline:
 Not implemented yet:
 
 - protocol coverage beyond the listed current support matrix
-- compose, text-input, or IME behavior
+- text-input or IME behavior
 - primary selection and drag-and-drop transfer handling
 - cursor animation, output-scale cursor selection, or custom cursor drawing APIs
 - public output model or presentation-time API
@@ -85,8 +86,11 @@ Window geometry:
 
 Keyboard interpretation:
 
-- `xkb_v1` keymaps through `WaylandKeyboardInterpretation` and `DisplaySession`
-- key symbols and UTF-8 text derived from `xkbcommon`
+- `xkb_v1` keymaps through `WaylandKeyboard` and `DisplaySession`
+- key symbol lists, primary key symbols, and UTF-8 key text derived from `xkbcommon`
+- compose and dead-key sequences through `xkbcommon` compose state
+- shortcut logic should use key symbols and modifiers, not composed text
+- composed text is local keyboard text and is not Wayland text-input or IME output
 
 Pointer cursors:
 
@@ -120,7 +124,7 @@ Not supported in the current experimental baseline:
 ## Linux Dependencies
 
 Swift 6.3.1 or newer must already be installed.
-The bootstrap script verifies Swift through `Scripts/swift.sh` by default.
+The bootstrap script verifies Swift through `scripts/dev/swift.sh` by default.
 It does not install or switch toolchains.
 Set `SWIFT_COMMAND=/path/to/swift` for custom toolchain resolution.
 
@@ -153,7 +157,7 @@ Supported package-manager mappings:
 | Nix/NixOS | `nixpkgs#clang nixpkgs#git nixpkgs#wayland nixpkgs#wayland-protocols nixpkgs#libxkbcommon nixpkgs#gnumake nixpkgs#pkg-config nixpkgs#ripgrep` |
 
 Alpine package installation is mapped for Wayland dependencies, but Swift toolchain availability may require separate setup.
-Nix/NixOS support is shell/declarative: `./Scripts/bootstrap-linux.sh --dry-run --package-manager nix` prints a `nix shell` command, and `--install` intentionally does not mutate a Nix profile or NixOS system configuration.
+Nix/NixOS support is shell/declarative: `./scripts/dev/bootstrap-linux.sh --dry-run --package-manager nix` prints a `nix shell` command, and `--install` intentionally does not mutate a Nix profile or NixOS system configuration.
 
 ## Targets
 
@@ -170,7 +174,7 @@ WaylandSmokeSupport
 SwiftWaylandSmoke
     noninteractive Wayland smoke executable
 
-WaylandKeyboardInterpretation
+WaylandKeyboard
     xkbcommon-backed keymap and key event interpretation
 
 WaylandCursor
@@ -179,10 +183,10 @@ WaylandCursor
 WaylandRaw
     low-level Swift layer, shared queue-specific event-loop engine, and raw input subsystem
 
-WaylandRawUnsafeShim
+WaylandRuntime
     owner-thread executor and audited unsafe Swift runtime machinery
 
-CWaylandUnsafeShim
+CWaylandRuntimeShims
     C accessors for Linux primitives used by unsafe Swift runtime machinery
 
 CWaylandCursorShims
@@ -206,29 +210,29 @@ CWaylandClientSystem
 Verify or bootstrap a Linux environment:
 
 ```bash
-./Scripts/bootstrap-linux.sh --check
-./Scripts/bootstrap-linux.sh --dry-run
-./Scripts/bootstrap-linux.sh --dry-run --package-manager nix
-./Scripts/bootstrap-linux.sh --install
-./Scripts/bootstrap-linux.sh --build
+./scripts/dev/bootstrap-linux.sh --check
+./scripts/dev/bootstrap-linux.sh --dry-run
+./scripts/dev/bootstrap-linux.sh --dry-run --package-manager nix
+./scripts/dev/bootstrap-linux.sh --install
+./scripts/dev/bootstrap-linux.sh --build
 ```
 
 Maintainers regenerating protocol artifacts should also run:
 
 ```bash
-./Scripts/bootstrap-linux.sh --maintainer
+./scripts/dev/bootstrap-linux.sh --maintainer
 ```
 
 Sync protocol XML into the repository:
 
 ```bash
-./Scripts/sync-protocols.sh
+./scripts/protocols/sync.sh
 ```
 
 Regenerate protocol artifacts:
 
 ```bash
-./Scripts/generate-protocols.sh
+./scripts/protocols/generate.sh
 ```
 
 Run local checks:
@@ -252,7 +256,7 @@ make strict-memory-safety-raw
 Generate a public API report before publishing checkpoint notes:
 
 ```bash
-./Scripts/dump-public-api.sh
+./scripts/ci/dump-public-api.sh
 ```
 
 Run the unsafe-token allowlist check:
@@ -264,22 +268,23 @@ make verify-unsafe-allowlist
 Run the demo target:
 
 ```bash
-swift run swift-wayland-demo
+swift run SwiftWaylandDemo
 ```
 
 The demo draws a small marker for pointer motion and prints basic pointer/keyboard/touch/seat events, including interpreted keyboard events when keymap interpretation is available.
+Interpreted keyboard events include local compose/dead-key text results when compose support is enabled.
 It sets a normal pointer cursor when pointer focus enters the demo window.
 
 Run the noninteractive Wayland smoke check under a real Wayland session:
 
 ```bash
-./Scripts/smoke-wayland.sh
+./scripts/smoke/smoke-wayland.sh
 ```
 
 Run public API integration tests under a real Wayland session:
 
 ```bash
-./Scripts/integration-wayland.sh
+./scripts/smoke/integration-wayland.sh
 ```
 
 Or run the executable directly:
