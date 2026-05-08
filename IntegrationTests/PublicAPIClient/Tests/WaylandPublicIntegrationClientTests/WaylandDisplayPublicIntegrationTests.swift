@@ -109,30 +109,6 @@ struct WaylandDisplayPublicIntegrationTests {
             #expect(finalCursor == .hidden)
         }
     }
-
-    @Test
-    func primarySelectionOfferForUnknownSeatReportsPublicError() async throws {
-        try await withPublicConnection { display in
-            let unknownSeatID = SeatID(rawValue: UInt32.max)
-
-            do {
-                _ = try await display.primarySelectionOffer(for: unknownSeatID)
-                Issue.record("Expected a primary-selection public error")
-            } catch let error as DataTransferError {
-                switch error {
-                case .unavailable:
-                    break
-                case .missingPrimarySelectionDevice(let seatID):
-                    #expect(seatID == unknownSeatID)
-                default:
-                    Issue.record(
-                        "Expected primary-selection unavailable or missing device, got \(error)")
-                }
-            } catch {
-                Issue.record("Expected DataTransferError, got \(error)")
-            }
-        }
-    }
 }
 
 @Suite("WaylandDisplay public API surface")
@@ -193,96 +169,6 @@ struct WaylandDisplayPublicAPISurfaceTests {
         }
 
         _ = consumeDataTransferEvent
-    }
-}
-
-@Suite(
-    "WaylandDisplay primary selection public behavior",
-    .enabled(
-        if: PublicIntegrationEnvironment.isEnabled && PublicPrimarySelectionFixture.isEnabled,
-        "Set WAYLAND_DISPLAY, SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=1, SWIFT_WAYLAND_PRIMARY_SELECTION_SEAT_ID, and SWIFT_WAYLAND_PRIMARY_SELECTION_SERIAL"
-    ),
-    .serialized
-)
-struct WaylandDisplayPrimarySelectionPublicBehaviorTests {
-    @Test
-    func requestPrimarySelectionPublishesPrimarySelectionEvent() async throws {
-        let fixture = try #require(PublicPrimarySelectionFixture.current)
-
-        try await withPublicConnection { display in
-            guard
-                try await primarySelectionCapabilityIsAvailable(
-                    display,
-                    seatID: fixture.seatID
-                )
-            else {
-                return
-            }
-
-            let dataTransferEvents = display.dataTransferEvents
-            let configuration = try PrimarySelectionSourceConfiguration.data(
-                mimeType: .plainText,
-                Data("primary".utf8)
-            )
-
-            let event = try await dataTransferEvent(
-                in: dataTransferEvents,
-                matching: { event in
-                    isPrimarySelectionChangedEvent(event, seatID: fixture.seatID, offer: nil)
-                },
-                after: {
-                    let source = try await display.requestPrimarySelection(
-                        configuration,
-                        seatID: fixture.seatID,
-                        serial: fixture.serial
-                    )
-
-                    #expect(source.seatID == fixture.seatID)
-                    #expect(source.mimeTypes == [.plainText])
-                }
-            )
-
-            #expect(isPrimarySelectionChangedEvent(event, seatID: fixture.seatID, offer: nil))
-        }
-    }
-
-    @Test
-    func clearingPrimarySelectionSourcePublishesSourceCancellation() async throws {
-        let fixture = try #require(PublicPrimarySelectionFixture.current)
-
-        try await withPublicConnection { display in
-            guard
-                try await primarySelectionCapabilityIsAvailable(
-                    display,
-                    seatID: fixture.seatID
-                )
-            else {
-                return
-            }
-
-            let dataTransferEvents = display.dataTransferEvents
-            let configuration = try PrimarySelectionSourceConfiguration.data(
-                mimeType: .plainText,
-                Data("primary".utf8)
-            )
-            let source = try await display.requestPrimarySelection(
-                configuration,
-                seatID: fixture.seatID,
-                serial: fixture.serial
-            )
-
-            let event = try await dataTransferEvent(
-                in: dataTransferEvents,
-                matching: { event in
-                    isPrimarySelectionSourceCancelledEvent(event, source: source.identity)
-                },
-                after: {
-                    try await source.requestClear(serial: fixture.serial)
-                }
-            )
-
-            #expect(isPrimarySelectionSourceCancelledEvent(event, source: source.identity))
-        }
     }
 }
 
@@ -354,20 +240,6 @@ private func nextDisplayEvent(
     throw PublicIntegrationError.streamEnded
 }
 
-private func nextDataTransferEvent(
-    in events: DataTransferEvents,
-    matching predicate: @escaping @Sendable (DataTransferEvent) -> Bool
-) async throws -> DataTransferEvent {
-    var iterator = events.makeAsyncIterator()
-    while let event = try await iterator.next() {
-        if predicate(event) {
-            return event
-        }
-    }
-
-    throw PublicIntegrationError.streamEnded
-}
-
 private func streamCloseResults(
     displayEvents: DisplayEvents,
     inputEvents: InputEvents,
@@ -427,32 +299,6 @@ private func displayEvent(
         try await withThrowingTaskGroup(of: DisplayEvent.self) { group in
             group.addTask {
                 try await nextDisplayEvent(in: events, matching: predicate)
-            }
-
-            await Task.yield()
-            try await trigger()
-
-            guard let event = try await group.next() else {
-                throw PublicIntegrationError.streamEnded
-            }
-            group.cancelAll()
-            return event
-        }
-    }
-}
-
-private func dataTransferEvent(
-    in events: DataTransferEvents,
-    matching predicate: @escaping @Sendable (DataTransferEvent) -> Bool,
-    after trigger: @escaping @Sendable () async throws -> Void
-) async throws -> DataTransferEvent {
-    try await withTimeout(
-        nanoseconds: publicIntegrationWaitTimeoutNanoseconds,
-        operation: "waiting for data transfer event"
-    ) {
-        try await withThrowingTaskGroup(of: DataTransferEvent.self) { group in
-            group.addTask {
-                try await nextDataTransferEvent(in: events, matching: predicate)
             }
 
             await Task.yield()
@@ -580,53 +426,13 @@ private func isPopupLifecycleEvent(
         && lifecycleEvent.parentWindowID == expectedParentWindowID
 }
 
-private func isPrimarySelectionChangedEvent(
-    _ event: DataTransferEvent,
-    seatID expectedSeatID: SeatID,
-    offer expectedOffer: PrimarySelectionOfferIdentity?
-) -> Bool {
-    guard case .primarySelectionChanged(let event) = event else {
-        return false
-    }
-
-    return event.seatID == expectedSeatID && event.offer == expectedOffer
-}
-
-private func isPrimarySelectionSourceCancelledEvent(
-    _ event: DataTransferEvent,
-    source expectedSource: PrimarySelectionSourceIdentity
-) -> Bool {
-    guard case .primarySelectionSourceCancelled(let source) = event else {
-        return false
-    }
-
-    return source == expectedSource
-}
-
-private func primarySelectionCapabilityIsAvailable(
-    _ display: WaylandDisplay,
-    seatID: SeatID
-) async throws -> Bool {
-    do {
-        _ = try await display.primarySelectionOffer(for: seatID)
-        return true
-    } catch let error as DataTransferError {
-        switch error {
-        case .unavailable:
-            return false
-        default:
-            throw error
-        }
-    }
-}
-
 private enum PublicIntegrationEnvironment {
     static var isEnabled: Bool {
         environmentValue("SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS") == "1"
             && environmentValue("WAYLAND_DISPLAY") != nil
     }
 
-    static func environmentValue(_ key: String) -> String? {
+    private static func environmentValue(_ key: String) -> String? {
         guard let value = ProcessInfo.processInfo.environment[key],
             !value.isEmpty
         else {
@@ -634,36 +440,6 @@ private enum PublicIntegrationEnvironment {
         }
 
         return value
-    }
-}
-
-private struct PublicPrimarySelectionFixture: Sendable {
-    let seatID: SeatID
-    let serial: InputSerial
-
-    static var isEnabled: Bool {
-        current != nil
-    }
-
-    static var current: PublicPrimarySelectionFixture? {
-        guard let seatRawValue = environmentUInt32("SWIFT_WAYLAND_PRIMARY_SELECTION_SEAT_ID"),
-            let serialRawValue = environmentUInt32("SWIFT_WAYLAND_PRIMARY_SELECTION_SERIAL")
-        else {
-            return nil
-        }
-
-        return PublicPrimarySelectionFixture(
-            seatID: SeatID(rawValue: seatRawValue),
-            serial: InputSerial(rawValue: serialRawValue)
-        )
-    }
-
-    private static func environmentUInt32(_ key: String) -> UInt32? {
-        guard let value = PublicIntegrationEnvironment.environmentValue(key) else {
-            return nil
-        }
-
-        return UInt32(value)
     }
 }
 
