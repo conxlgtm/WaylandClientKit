@@ -1,11 +1,5 @@
 #include "swift-wayland-shims.h"
-#include "generated/wayland-client-protocol.h"
-
-#include <sys/mman.h>
-
-#ifndef MFD_CLOEXEC
-#define MFD_CLOEXEC 0x0001U
-#endif
+#include "generated/core/wayland-client-protocol.h"
 
 #if defined(WAYLAND_VERSION_MAJOR) && defined(WAYLAND_VERSION_MINOR) && \
     (WAYLAND_VERSION_MAJOR > 1 || (WAYLAND_VERSION_MAJOR == 1 && WAYLAND_VERSION_MINOR >= 23))
@@ -62,16 +56,6 @@ uint32_t swl_shm_format_xrgb8888(void)
 uint32_t swl_shm_format_argb8888(void)
 {
     return WL_SHM_FORMAT_ARGB8888;
-}
-
-int swl_memfd_create(const char *name, unsigned int flags)
-{
-    return memfd_create(name, flags);
-}
-
-unsigned int swl_mfd_cloexec(void)
-{
-    return MFD_CLOEXEC;
 }
 
 void swl_surface_damage_buffer(

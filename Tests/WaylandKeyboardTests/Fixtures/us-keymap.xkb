@@ -1,0 +1,40 @@
+// Minimal deterministic fixture derived from a US-style q/Q layout.
+// It is checked in so tests do not depend on the host keyboard layout.
+xkb_keymap {
+    xkb_keycodes "swiftwayland" {
+        minimum = 8;
+        maximum = 255;
+        <AE01> = 10;
+        <LFSH> = 50;
+        <AD01> = 24;
+        <AC01> = 38;
+        <AB05> = 56;
+    };
+    xkb_types "swiftwayland" {
+        type "ONE_LEVEL" {
+            modifiers = none;
+            map[None] = Level1;
+            level_name[Level1] = "Any";
+        };
+        type "TWO_LEVEL" {
+            modifiers = Shift;
+            map[Shift] = Level2;
+            level_name[Level1] = "Base";
+            level_name[Level2] = "Shift";
+        };
+    };
+    xkb_compatibility "swiftwayland" {
+        interpret Shift_L+Any {
+            repeat= False;
+            action= SetMods(modifiers=Shift);
+        };
+    };
+    xkb_symbols "swiftwayland" {
+        key <AE01> { [ dead_acute ] };
+        key <LFSH> { [ Shift_L ] };
+        modifier_map Shift { <LFSH> };
+        key <AD01> { type="TWO_LEVEL", [ q, Q ] };
+        key <AC01> { type="TWO_LEVEL", [ a, A ] };
+        key <AB05> { type="TWO_LEVEL", [ b, B ] };
+    };
+};

@@ -7,7 +7,7 @@ SwiftWayland is an experimental Linux Wayland client package. Keep changes small
 Swift 6.3.1 or newer must already be installed.
 The bootstrap script verifies Swift and Linux system dependencies by default.
 It does not install or switch Swift toolchains.
-It uses `Scripts/swift.sh` by default.
+It uses `scripts/dev/swift.sh` by default.
 Set `SWIFT_COMMAND=/path/to/swift` for custom toolchain resolution.
 
 Core build requirements:
@@ -24,10 +24,10 @@ For Nix/NixOS, use dry-run mode to print shell inputs and add them to a `nix she
 Bootstrap install mode does not mutate Nix profiles or NixOS system configuration.
 
 ```bash
-./Scripts/bootstrap-linux.sh --check
-./Scripts/bootstrap-linux.sh --dry-run
-./Scripts/bootstrap-linux.sh --dry-run --package-manager nix
-./Scripts/bootstrap-linux.sh --install
+./scripts/dev/bootstrap-linux.sh --check
+./scripts/dev/bootstrap-linux.sh --dry-run
+./scripts/dev/bootstrap-linux.sh --dry-run --package-manager nix
+./scripts/dev/bootstrap-linux.sh --install
 ```
 
 ## Local Checks
@@ -42,26 +42,26 @@ swift build -c release
 Under a real Wayland session, also run:
 
 ```bash
-./Scripts/smoke-wayland.sh
-./Scripts/integration-wayland.sh
-swift run swift-wayland-demo
+./scripts/smoke/smoke-wayland.sh
+./scripts/smoke/integration-wayland.sh
+swift run SwiftWaylandDemo
 ```
 
 ## Protocol Generation
 
-Protocol XML lives under `Protocols/`. Generated C and header artifacts live under `Sources/CWaylandProtocols/`.
+Protocol XML lives under `protocols/`. Generated C and header artifacts live under `Sources/CWaylandProtocols/`.
 
 Regenerate only through:
 
 ```bash
-./Scripts/bootstrap-linux.sh --maintainer
-./Scripts/generate-protocols.sh
+./scripts/dev/bootstrap-linux.sh --maintainer
+./scripts/protocols/generate.sh
 ```
 
 Verify generated outputs with:
 
 ```bash
-./Scripts/verify-generated.sh
+./scripts/protocols/verify-generated.sh
 ```
 
 Do not edit generated files directly.
@@ -86,7 +86,7 @@ Swift should call project-owned C shims, not generated inline protocol helpers d
 
 - `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
 - `Sources/CWaylandProtocols/shims/`
-- `Scripts/verify-shims.sh`
+- `scripts/shims/verify-shims.sh`
 - listener smoke tests where applicable.
 
 ## Public API

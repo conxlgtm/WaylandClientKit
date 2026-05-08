@@ -1,5 +1,5 @@
 #include "swift-wayland-shims.h"
-#include "generated/wayland-client-protocol.h"
+#include "generated/core/wayland-client-protocol.h"
 
 #ifdef SWL_ENABLE_TESTING
 static struct swl_test_data_request_record swl_test_data_request_latest;

@@ -1,21 +1,23 @@
 * @conxlgtm
 
 /Package.swift @conxlgtm
+/Examples/ @conxlgtm
 /docs/ @conxlgtm
-/Scripts/ @conxlgtm
+/scripts/ @conxlgtm
 
 /Sources/CWaylandProtocols/ @conxlgtm
-/Sources/CWaylandUnsafeShim/ @conxlgtm
+/Sources/CWaylandRuntimeShims/ @conxlgtm
 /Sources/WaylandRaw/ @conxlgtm
-/Sources/WaylandRawUnsafeShim/ @conxlgtm
+/Sources/WaylandRuntime/ @conxlgtm
 
 /Sources/WaylandClient/ @conxlgtm
 /Sources/WaylandCursor/ @conxlgtm
-/Sources/WaylandKeyboardInterpretation/ @conxlgtm
+/Sources/WaylandKeyboard/ @conxlgtm
 
 /Tests/WaylandRawTests/ @conxlgtm
+/Tests/WaylandRuntimeTests/ @conxlgtm
 /Tests/WaylandClientTests/ @conxlgtm
 /Tests/WaylandCursorTests/ @conxlgtm
-/Tests/WaylandKeyboardInterpretationTests/ @conxlgtm
+/Tests/WaylandKeyboardTests/ @conxlgtm
 
 /.github/workflows/ @conxlgtm

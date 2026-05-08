@@ -73,6 +73,9 @@ Current user-facing contract:
   are derived display text, not control-flow payloads.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
   protocol values are intentionally preserved when useful to clients.
+- Interpreted keyboard events expose local keyboard text through
+  `KeyboardTextResult`. Shortcut matching should still use `keySymbols`,
+  `primaryKeySymbol`, and modifiers. This is not text-input or IME support.
 - Raw keymap bytes, raw file descriptors, raw proxies, listener owners, event
   queues, SHM pool internals, and owner-thread executor machinery are not
   product API.
@@ -148,13 +151,13 @@ Notes:
 These targets are package-internal architecture units:
 
 - `WaylandRaw`: low-level protocol-shaped wrappers, raw input capture, and copied keymap payloads.
-- `WaylandKeyboardInterpretation`: xkbcommon-backed interpretation of copied `xkb_v1` keymaps.
+- `WaylandKeyboard`: xkbcommon-backed interpretation of copied `xkb_v1` keymaps.
 - `WaylandCursor`: wayland-cursor theme loading and cursor image lifetime handling.
 
 They may contain `public` declarations for cross-target compilation mechanics, but they are
 not vended as package library products.
 
-Run `./Scripts/dump-public-api.sh` during public API review and compare the
+Run `./scripts/ci/dump-public-api.sh` during public API review and compare the
 output against this audit. Any new public declaration in `WaylandClient` should
 be classified as product API, raw-preserving API, diagnostic/error API, or
 temporary API to remove before a public compatibility policy exists.
@@ -208,7 +211,7 @@ The public API may break while SwiftWayland is experimental.
 
 Before treating a public declaration as intentional:
 
-1. Run `./Scripts/dump-public-api.sh`.
+1. Run `./scripts/ci/dump-public-api.sh`.
 2. Review all new `WaylandClient` public declarations.
 3. Confirm non-product public declarations are still outside the manifest's
    library products.

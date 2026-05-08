@@ -30,7 +30,7 @@ jobs:
             wayland-protocols
       - name: Install SwiftLint
         run: |
-          ./Scripts/install-swiftlint.sh "$HOME/.local/bin"
+          ./scripts/dev/install-swiftlint.sh "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Tool versions
         run: |
@@ -57,36 +57,36 @@ jobs:
             fi
           }
 
-          ./Scripts/bootstrap-linux.sh --check
-          ./Scripts/bootstrap-linux.sh --maintainer
-          ./Scripts/bootstrap-linux.sh --dry-run
-          ./Scripts/bootstrap-linux.sh --dry-run --package-manager emerge
-          ./Scripts/bootstrap-linux.sh --dry-run --package-manager nix
+          ./scripts/dev/bootstrap-linux.sh --check
+          ./scripts/dev/bootstrap-linux.sh --maintainer
+          ./scripts/dev/bootstrap-linux.sh --dry-run
+          ./scripts/dev/bootstrap-linux.sh --dry-run --package-manager emerge
+          ./scripts/dev/bootstrap-linux.sh --dry-run --package-manager nix
 
           expect_bootstrap_failure \
             "choose only one mode: --check, --install, or --dry-run" \
-            ./Scripts/bootstrap-linux.sh --install --dry-run
+            ./scripts/dev/bootstrap-linux.sh --install --dry-run
           expect_bootstrap_failure \
             "choose only one mode: --check, --install, or --dry-run" \
-            ./Scripts/bootstrap-linux.sh --check --install
+            ./scripts/dev/bootstrap-linux.sh --check --install
           expect_bootstrap_failure \
             "--dry-run cannot be combined with --build" \
-            ./Scripts/bootstrap-linux.sh --dry-run --build
+            ./scripts/dev/bootstrap-linux.sh --dry-run --build
           expect_bootstrap_failure \
             "--dry-run cannot be combined with --maintainer" \
-            ./Scripts/bootstrap-linux.sh --dry-run --maintainer
+            ./scripts/dev/bootstrap-linux.sh --dry-run --maintainer
           expect_bootstrap_failure \
             "STRICT_SWIFT must be 0 or 1" \
-            env STRICT_SWIFT=false ./Scripts/bootstrap-linux.sh --check
+            env STRICT_SWIFT=false ./scripts/dev/bootstrap-linux.sh --check
           expect_bootstrap_failure \
             "STRICT_SWIFT must be 0 or 1" \
-            env STRICT_SWIFT=2 ./Scripts/bootstrap-linux.sh --check
+            env STRICT_SWIFT=2 ./scripts/dev/bootstrap-linux.sh --check
           expect_bootstrap_failure \
             "unsupported package manager: brew" \
-            ./Scripts/bootstrap-linux.sh --dry-run --package-manager brew
+            ./scripts/dev/bootstrap-linux.sh --dry-run --package-manager brew
           expect_bootstrap_failure \
             "Nix support is shell-based" \
-            ./Scripts/bootstrap-linux.sh --install --package-manager nix
+            ./scripts/dev/bootstrap-linux.sh --install --package-manager nix
       - name: Check
         run: make check
 
@@ -105,7 +105,7 @@ jobs:
             pkg-config \
             wayland-protocols
       - name: Verify generated artifacts
-        run: ./Scripts/verify-generated.sh
+        run: ./scripts/protocols/verify-generated.sh
 
   release-build:
     runs-on: ubuntu-latest
@@ -126,7 +126,7 @@ jobs:
       - name: Release build
         run: |
           swift build --disable-index-store -c release
-          swift build --disable-index-store -c release --product swift-wayland-demo
+          swift build --disable-index-store -c release --target SwiftWaylandDemo
           swift build --disable-index-store -c release --product swift-wayland-smoke
 
   wayland-smoke:
@@ -158,5 +158,5 @@ jobs:
           WESTON_PID="$!"
           trap 'kill "$WESTON_PID" 2>/dev/null || true' EXIT
           export WAYLAND_DISPLAY=swiftwayland-ci
-          ./Scripts/smoke-wayland.sh
-          ./Scripts/integration-wayland.sh
+          ./scripts/smoke/smoke-wayland.sh
+          ./scripts/smoke/integration-wayland.sh

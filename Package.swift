@@ -18,7 +18,7 @@ let executableSwiftSettings: [SwiftSetting] =
         .defaultIsolation(MainActor.self)
     ]
 
-let unsafeShimSwiftSettings: [SwiftSetting] =
+let runtimeSwiftSettings: [SwiftSetting] =
     librarySwiftSettings + [
         .define("ENABLE_TESTING", .when(configuration: .debug))
     ]
@@ -27,7 +27,6 @@ let package = Package(
     name: "SwiftWayland",
     products: [
         .library(name: "WaylandClient", targets: ["WaylandClient"]),
-        .executable(name: "swift-wayland-demo", targets: ["SwiftWaylandDemo"]),
         .executable(name: "swift-wayland-smoke", targets: ["SwiftWaylandSmoke"]),
     ],
     targets: [
@@ -67,33 +66,33 @@ let package = Package(
         ),
         .target(
             name: "WaylandRaw",
-            dependencies: ["CWaylandProtocols", "CWaylandClientSystem"],
+            dependencies: ["CWaylandProtocols", "CWaylandClientSystem", "CWaylandRuntimeShims"],
             swiftSettings: librarySwiftSettings
         ),
         .target(
-            name: "CWaylandUnsafeShim",
+            name: "CWaylandRuntimeShims",
             publicHeadersPath: "include",
             cSettings: [
                 .define("_GNU_SOURCE", .when(platforms: [.linux]))
             ]
         ),
         .target(
-            name: "WaylandRawUnsafeShim",
-            dependencies: ["CWaylandUnsafeShim", "CWaylandClientSystem", "WaylandRaw"],
-            swiftSettings: unsafeShimSwiftSettings
+            name: "WaylandRuntime",
+            dependencies: ["CWaylandRuntimeShims", "CWaylandClientSystem", "WaylandRaw"],
+            swiftSettings: runtimeSwiftSettings
         ),
         .target(
             name: "WaylandClient",
             dependencies: [
                 "WaylandRaw",
-                "WaylandRawUnsafeShim",
-                "WaylandKeyboardInterpretation",
+                "WaylandRuntime",
+                "WaylandKeyboard",
                 "WaylandCursor",
             ],
             swiftSettings: publicClientSwiftSettings
         ),
         .target(
-            name: "WaylandKeyboardInterpretation",
+            name: "WaylandKeyboard",
             dependencies: ["WaylandRaw", "CXKBCommonSystem"],
             swiftSettings: librarySwiftSettings
         ),
@@ -105,6 +104,7 @@ let package = Package(
         .executableTarget(
             name: "SwiftWaylandDemo",
             dependencies: ["WaylandClient"],
+            path: "Examples/SwiftWaylandDemo",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
@@ -114,17 +114,22 @@ let package = Package(
         ),
         .testTarget(
             name: "WaylandRawTests",
-            dependencies: ["WaylandRaw", "WaylandRawUnsafeShim"],
+            dependencies: ["WaylandRaw"],
+            swiftSettings: librarySwiftSettings
+        ),
+        .testTarget(
+            name: "WaylandRuntimeTests",
+            dependencies: ["WaylandRaw", "WaylandRuntime"],
             swiftSettings: librarySwiftSettings
         ),
         .testTarget(
             name: "WaylandClientTests",
-            dependencies: ["WaylandClient", "WaylandKeyboardInterpretation"],
+            dependencies: ["WaylandClient", "WaylandKeyboard"],
             swiftSettings: librarySwiftSettings
         ),
         .testTarget(
-            name: "WaylandKeyboardInterpretationTests",
-            dependencies: ["WaylandKeyboardInterpretation"],
+            name: "WaylandKeyboardTests",
+            dependencies: ["WaylandKeyboard"],
             resources: [
                 .copy("Fixtures")
             ],

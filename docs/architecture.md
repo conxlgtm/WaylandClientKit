@@ -8,24 +8,24 @@ Application code
     v
 WaylandClient
     -> WaylandRaw -> CWaylandProtocols -> CWaylandClientSystem
-    -> WaylandRawUnsafeShim -> CWaylandUnsafeShim
-    -> WaylandKeyboardInterpretation -> WaylandRaw
+    -> WaylandRuntime -> CWaylandRuntimeShims
+    -> WaylandKeyboard -> WaylandRaw
     -> WaylandCursor -> WaylandRaw
 
 WaylandClient also depends on WaylandCursor.
 WaylandCursor depends on WaylandRaw and CWaylandCursorShims.
 CWaylandCursorShims depends on CWaylandCursorSystem.
-WaylandKeyboardInterpretation also depends on CXKBCommonSystem.
+WaylandKeyboard also depends on CXKBCommonSystem.
 
 SwiftWaylandSmoke
     executable consumer of WaylandClient through WaylandSmokeSupport
 ```
 
-`WaylandClient` uses `WaylandKeyboardInterpretation` to expose interpreted keyboard events in the session input stream.
+`WaylandClient` uses `WaylandKeyboard` to expose interpreted keyboard events in the session input stream.
 `WaylandClient` uses `WaylandCursor` to resolve cursor theme images and set cursor surfaces on pointer focus.
 `WaylandRaw` does not depend on xkbcommon.
 `WaylandRaw` does not depend on wayland-cursor.
-`WaylandRawUnsafeShim` holds the owner-thread executor and its Linux wake primitive.
+`WaylandRuntime` holds the owner-thread executor and its Linux wake primitive.
 The queue-specific Wayland prepare/read/cancel state machine lives in `WaylandRaw`
 as `QueueEventLoopEngine`. Unsafe/default-queue and executor integrations adapt to
 that one engine instead of owning duplicate protocol loops.
@@ -114,8 +114,14 @@ Contains:
 
 Subdirectories:
 
-- `include/generated/`
-- `generated/`
+- `include/generated/core/`
+- `include/generated/stable/`
+- `include/generated/staging/`
+- `include/generated/legacy-unstable/`
+- `generated/core/`
+- `generated/stable/`
+- `generated/staging/`
+- `generated/legacy-unstable/`
 - `shims/`
 
 ### `WaylandRaw`
@@ -145,7 +151,7 @@ Does not depend on:
 - `CWaylandCursorSystem`
 - wayland-cursor APIs
 
-### `WaylandRawUnsafeShim`
+### `WaylandRuntime`
 
 Purpose:
 
@@ -164,11 +170,11 @@ Does not contain:
 - listener trampoline state
 - public client APIs
 
-### `CWaylandUnsafeShim`
+### `CWaylandRuntimeShims`
 
 Purpose:
 
-- tiny C boundary for Linux primitives used by `WaylandRawUnsafeShim`
+- tiny C boundary for Linux primitives used by `WaylandRuntime`
 
 Contains:
 
@@ -188,7 +194,7 @@ Current state:
 - keeps cursor image buffers owned by the cursor theme
 - does not know about windows, seats, or input routing
 
-### `WaylandKeyboardInterpretation`
+### `WaylandKeyboard`
 
 Purpose:
 
@@ -199,9 +205,12 @@ Current state:
 - imports xkbcommon through `CXKBCommonSystem`
 - parses copied `xkb_v1` keymap payloads from `WaylandRaw`
 - owns xkb context, keymap, and state lifetimes inside thread-affine Swift objects
+- owns xkb compose table and compose state lifetimes for local dead-key text
 - applies Wayland modifier masks
-- exposes interpreted key symbols and UTF-8 text for raw key events
-- does not expose shortcut policy, compose behavior, text-input protocols, or IME behavior
+- exposes interpreted key symbol lists, primary key symbols, and UTF-8 key text
+  for raw key events
+- exposes compose/dead-key text as a separate text result on interpreted key events
+- does not expose shortcut policy, text-input protocols, or IME behavior
 
 ### `WaylandClient`
 
@@ -330,6 +339,7 @@ Supported:
 - staging fractional-scale preferred-scale callbacks
 - scale-aware `SurfaceGeometry` and `SoftwareFrame` metadata
 - basic `xkb_v1` keyboard interpretation through xkbcommon
+- compose and dead-key text results for interpreted keyboard events
 - session-level raw and interpreted keyboard events
 - static pointer cursor surfaces through wayland-cursor
 - regular clipboard selection offers and sources through data-device
@@ -349,7 +359,7 @@ Not supported:
 
 Repository-owned protocol inputs:
 
-- `Protocols/`
+- `protocols/`
 
 Generated outputs:
 
@@ -360,16 +370,16 @@ Shim files:
 
 - `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
 - `Sources/CWaylandProtocols/shims/`
-- `Sources/CWaylandUnsafeShim/`
+- `Sources/CWaylandRuntimeShims/`
 
 Swift code:
 
 - `Sources/WaylandRaw/`
-- `Sources/WaylandRawUnsafeShim/`
+- `Sources/WaylandRuntime/`
 - `Sources/WaylandClient/`
-- `Sources/WaylandKeyboardInterpretation/`
+- `Sources/WaylandKeyboard/`
 - `Sources/WaylandSmokeSupport/`
-- `Sources/SwiftWaylandDemo/`
+- `Examples/SwiftWaylandDemo/`
 - `Sources/SwiftWaylandSmoke/`
 
 ## Current Checks
@@ -385,7 +395,7 @@ Swift code:
 - `make check`
 
 `WaylandClient` builds with strict memory safety as errors. `WaylandRaw` and
-`WaylandRawUnsafeShim` are still being audited because they own intentional C, pointer, and
+`WaylandRuntime` are still being audited because they own intentional C, pointer, and
 executor boundaries. `make strict-memory-safety-raw` builds both targets with strict
 memory-safety diagnostics enabled and compares warnings against a per-file baseline. The
 baseline should only move down as raw wrappers are converted to small audited unsafe shims,
