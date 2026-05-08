@@ -17,19 +17,20 @@ public struct InputEvent: Equatable, Sendable {
     }
 
     public var windowID: WindowID? {
-        guard case .window(let windowID) = target else {
+        guard case .surface(let surface) = target else {
             return nil
         }
 
-        return windowID
+        return surface.windowID
     }
-}
 
-public enum InputEventTarget: Equatable, Sendable {
-    case display
-    case window(WindowID)
-    case unmanagedSurface
-    case focusless
+    public var popup: PopupSurfaceIdentity? {
+        guard case .surface(.popup(let popup, _)) = target else {
+            return nil
+        }
+
+        return popup
+    }
 }
 
 public enum InputEventKind: Equatable, Sendable {

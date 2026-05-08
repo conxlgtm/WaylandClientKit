@@ -391,6 +391,7 @@ extension DisplaySession {
         let popupSurfaceID = popup.surfaceID
 
         try inputRouter.registerPopup(
+            popupID: popup.id,
             parentSurfaceID: parentWindow.surfaceID,
             surfaceID: popupSurfaceID
         )

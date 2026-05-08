@@ -9,7 +9,11 @@ enum InputRouterError: Error, Equatable, Sendable {
 }
 
 private struct InputSurfaceBinding: Equatable {
-    let windowID: WindowID
+    let target: SurfaceTarget
+
+    var windowID: WindowID {
+        target.windowID
+    }
 }
 
 struct ReportedUnknownInputProtocolValue: Hashable {
@@ -24,15 +28,24 @@ final class InputRouter {
     var reportedUnknownProtocolValues: Set<ReportedUnknownInputProtocolValue> = []
 
     func register(windowID: WindowID, surfaceID: RawObjectID) {
-        surfaces[surfaceID] = InputSurfaceBinding(windowID: windowID)
+        surfaces[surfaceID] = InputSurfaceBinding(target: .window(windowID))
     }
 
-    func registerPopup(parentSurfaceID: RawObjectID, surfaceID: RawObjectID) throws {
+    func registerPopup(
+        popupID: PopupID,
+        parentSurfaceID: RawObjectID,
+        surfaceID: RawObjectID
+    ) throws {
         guard let parent = surfaces[parentSurfaceID] else {
             throw InputRouterError.unknownParentSurface(parentSurfaceID)
         }
 
-        surfaces[surfaceID] = InputSurfaceBinding(windowID: parent.windowID)
+        surfaces[surfaceID] = InputSurfaceBinding(
+            target: .popup(
+                PopupSurfaceIdentity(popupID),
+                parentWindowID: parent.windowID
+            )
+        )
     }
 
     func unregister(surfaceID: RawObjectID) {
@@ -344,11 +357,11 @@ extension InputRouter {
         guard let surfaceID else {
             return .unmanagedSurface
         }
-        guard let windowID = windowID(for: surfaceID) else {
+        guard let surfaceTarget = surfaceTarget(for: surfaceID) else {
             return .unmanagedSurface
         }
 
-        return .window(windowID)
+        return .surface(surfaceTarget)
     }
 
     func target(forFocusedSurface surfaceID: RawObjectID?) -> InputEventTarget {
@@ -410,5 +423,13 @@ extension InputRouter {
         }
 
         return surfaces[surfaceID]?.windowID
+    }
+
+    func surfaceTarget(for surfaceID: RawObjectID?) -> SurfaceTarget? {
+        guard let surfaceID else {
+            return nil
+        }
+
+        return surfaces[surfaceID]?.target
     }
 }

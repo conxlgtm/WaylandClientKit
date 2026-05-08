@@ -22,7 +22,7 @@ struct PointerInputRouterTests {
         let expectedEnter = InputEvent(
             sequence: 1,
             seatID: SeatID(rawValue: 1),
-            target: .window(windowID),
+            target: .surface(.window(windowID)),
             kind: .pointer(.entered(PointerLocation(x: 1.0, y: 2.0), serial: 7))
         )
 
@@ -153,7 +153,7 @@ struct KeyboardFocusInputRouterTests {
         let expectedKey = InputEvent(
             sequence: 2,
             seatID: SeatID(rawValue: 3),
-            target: .window(windowID),
+            target: .surface(.window(windowID)),
             kind: .keyboard(
                 .raw(
                     .key(

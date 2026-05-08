@@ -134,17 +134,17 @@ struct PopupModelTests {
     }
 
     @Test
-    func drawFailureLeavesPresentationIdle() throws {
+    func drawFailurePreservesThrownErrorDescriptionAndLeavesPresentationIdle() throws {
         var (model, request) = try activeModelWithStartedPresentation()
 
         #expect(
             throws: ClientError.window(
                 parentWindowID,
-                .presentationFailed(.drawFailed("failed"))
+                .presentationFailed(.drawFailed("draw exploded"))
             )
         ) {
             _ = try model.reduce(
-                .presentationFailed(generation: request.generation, .drawFailed("failed"))
+                .presentationFailed(generation: request.generation, .drawFailed("draw exploded"))
             )
         }
         #expect(model.presentation == .idle)

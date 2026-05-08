@@ -16,6 +16,7 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
     var pipeCreationCount = 0
     var failingDescriptorAdoptions: Set<Int32> = []
     var failingSourceCreationIDs: Set<DataSourceID> = []
+    var sourceBindingIDOverride: DataSourceID?
     var failingWriteDescriptors: [Int32: DataTransferError] {
         get { sourceDescriptorRecorder.failingWriteDescriptors }
         set { sourceDescriptorRecorder.failingWriteDescriptors = newValue }
@@ -86,7 +87,10 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
             throw DataTransferError.unavailable
         }
 
-        let binding = RecordingDataTransferSourceBinding(id: id, onEvent: onEvent)
+        let binding = RecordingDataTransferSourceBinding(
+            id: sourceBindingIDOverride ?? id,
+            onEvent: onEvent
+        )
         sourceBindings[id] = binding
         return binding
     }

@@ -68,8 +68,26 @@ enum RuntimeDataOffer {
 }
 
 struct RuntimeDataSource {
+    let id: DataSourceID
     let binding: any DataTransferSourceBinding
     let payloads: DataTransferSourcePayloadSet
+
+    init(
+        id sourceID: DataSourceID,
+        binding sourceBinding: any DataTransferSourceBinding,
+        payloads sourcePayloads: DataTransferSourcePayloadSet
+    ) throws {
+        guard sourceBinding.id == sourceID else {
+            throw DataTransferManagerInvariantViolation.sourceBindingIDMismatch(
+                expected: sourceID,
+                actual: sourceBinding.id
+            )
+        }
+
+        id = sourceID
+        binding = sourceBinding
+        payloads = sourcePayloads
+    }
 }
 
 struct DataTransferStore {
@@ -87,6 +105,10 @@ struct DataTransferStore {
 
     var sourceIDs: Set<DataSourceID> {
         Set(sourceRecords.keys)
+    }
+
+    var sourcesByIDForInvariantChecks: [DataSourceID: RuntimeDataSource] {
+        sourceRecords
     }
 
     var offerIDs: Set<DataOfferID> {
@@ -240,8 +262,9 @@ struct DataTransferStore {
         binding: any DataTransferSourceBinding,
         payloads: DataTransferSourcePayloadSet,
         sourceID: DataSourceID
-    ) {
-        sourceRecords[sourceID] = RuntimeDataSource(
+    ) throws {
+        sourceRecords[sourceID] = try RuntimeDataSource(
+            id: sourceID,
             binding: binding,
             payloads: payloads
         )

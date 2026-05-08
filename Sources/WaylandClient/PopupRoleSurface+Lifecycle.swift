@@ -127,22 +127,30 @@ extension PopupRoleSurface {
         }
     }
 
-    package func failPresentationIfStillActive(generation: UInt64) {
+    package func failPresentationIfStillActive(
+        generation: UInt64,
+        error: PresentationError
+    ) {
         guard case .drawing(let request) = model.presentation,
             request.generation == generation
         else {
             return
         }
 
-        failActivePresentation(generation: generation)
+        failActivePresentation(generation: generation, error: error)
     }
 
-    package func failActivePresentation(generation: UInt64) {
+    package func failActivePresentation(
+        generation: UInt64,
+        error: PresentationError = .drawFailed("presentation failed")
+    ) {
         do {
             try interpretPopupEffects(
-                model.reduce(.presentationFailed(generation: generation, .drawFailed("failed")))
+                model.reduce(.presentationFailed(generation: generation, error))
             )
-        } catch ClientError.window(parentWindowID, .presentationFailed(.drawFailed("failed"))) {
+        } catch ClientError.window(let windowID, .presentationFailed(let reportedError))
+            where windowID == parentWindowID && reportedError == error
+        {
             // presentationFailed resets model state before reporting the presentation error.
         } catch {
             preconditionFailure("Unexpected popup presentation failure error: \(error)")
