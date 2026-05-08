@@ -3,14 +3,14 @@ import Glibc
 import Synchronization
 
 package struct DataTransferSourcePayloadSet: Equatable, Sendable {
-    package let payloads: [ClipboardSourcePayload]
+    package let payloads: [DataTransferSourcePayload]
     private let payloadsByMIMEType: [MIMEType: Data]
 
     package var mimeTypes: [MIMEType] {
         payloads.map(\.mimeType)
     }
 
-    package init(payloads sourcePayloads: [ClipboardSourcePayload]) throws {
+    package init(payloads sourcePayloads: [DataTransferSourcePayload]) throws {
         guard !sourcePayloads.isEmpty else {
             throw DataTransferError.emptyDataSource
         }
@@ -31,13 +31,13 @@ package struct DataTransferSourcePayloadSet: Equatable, Sendable {
     }
 
     package init(data payloads: [MIMEType: Data]) throws {
-        var sourcePayloads: [ClipboardSourcePayload] = []
+        var sourcePayloads: [DataTransferSourcePayload] = []
         for mimeType in payloads.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
             guard let data = payloads[mimeType] else {
                 preconditionFailure("Payload dictionary key disappeared during iteration")
             }
             sourcePayloads.append(
-                ClipboardSourcePayload(mimeType: mimeType, data: data)
+                DataTransferSourcePayload(mimeType: mimeType, data: data)
             )
         }
         try self.init(payloads: sourcePayloads)

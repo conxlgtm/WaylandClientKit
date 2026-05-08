@@ -116,7 +116,7 @@ struct DataTransferManagerTests {
         #expect(
             manager.drainDataTransferEvents()
                 == [
-                    .selectionChanged(
+                    .clipboardSelectionChanged(
                         ClipboardSelectionEvent(seatID: seat1, offerID: offer.id)
                     )
                 ]
@@ -200,10 +200,10 @@ struct DataTransferManagerTests {
         #expect(
             manager.drainDataTransferEvents()
                 == [
-                    .selectionChanged(
+                    .clipboardSelectionChanged(
                         ClipboardSelectionEvent(seatID: seat1, offerID: offer.id)
                     ),
-                    .selectionChanged(
+                    .clipboardSelectionChanged(
                         ClipboardSelectionEvent(seatID: seat1, offerID: nil)
                     ),
                 ]

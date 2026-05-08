@@ -9,7 +9,7 @@ struct DisplayEventHubDataTransferTests {
     func dataTransferStreamReceivesPublishedEvents() async {
         let hub = DisplayEventHub()
         var iterator = hub.dataTransferEvents().makeAsyncIterator()
-        let event = DataTransferEvent.selectionChanged(
+        let event = DataTransferEvent.clipboardSelectionChanged(
             ClipboardSelectionEvent(
                 seatID: SeatID(rawValue: 1),
                 offerID: DataOfferID(rawValue: 2)
@@ -120,10 +120,10 @@ struct DisplayEventHubDataTransferTests {
         let stream = hub.dataTransferEvents()
 
         hub.publishDataTransfer(
-            .sourceCancelled(ClipboardSourceIdentity(DataSourceID(rawValue: 1)))
+            .clipboardSourceCancelled(ClipboardSourceIdentity(DataSourceID(rawValue: 1)))
         )
         hub.publishDataTransfer(
-            .sourceCancelled(ClipboardSourceIdentity(DataSourceID(rawValue: 2)))
+            .clipboardSourceCancelled(ClipboardSourceIdentity(DataSourceID(rawValue: 2)))
         )
 
         var iterator = stream.makeAsyncIterator()

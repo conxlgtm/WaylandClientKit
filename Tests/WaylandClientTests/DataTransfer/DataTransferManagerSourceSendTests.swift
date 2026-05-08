@@ -216,7 +216,7 @@ struct DataTransferManagerSourceSendTests {
         #expect(manager.drainSourceSendRequests().isEmpty)
         #expect(
             manager.drainDataTransferEvents()
-                == [.sourceCancelled(ClipboardSourceIdentity(source.id))]
+                == [.clipboardSourceCancelled(ClipboardSourceIdentity(source.id))]
         )
     }
 

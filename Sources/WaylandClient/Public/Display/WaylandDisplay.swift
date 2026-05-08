@@ -358,6 +358,46 @@ extension WaylandDisplay {
     }
 }
 
+extension WaylandDisplay {
+    public func primarySelectionOffer(for seatID: SeatID) throws -> PrimarySelectionOffer? {
+        throw DataTransferError.unavailable
+    }
+
+    /// Requests ownership of the primary selection for a seat.
+    ///
+    /// The compositor validates `serial` at the protocol boundary. Primary selection is usually
+    /// tied to selected text and focus, so compositor acceptance is asynchronous.
+    public func requestPrimarySelection(
+        _ configuration: PrimarySelectionSourceConfiguration,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws -> PrimarySelectionSource {
+        throw DataTransferError.unavailable
+    }
+
+    /// Requests clearing the primary selection for a seat.
+    ///
+    /// The compositor validates `serial` at the protocol boundary.
+    public func requestClearPrimarySelection(seatID: SeatID, serial: InputSerial) throws {
+        throw DataTransferError.unavailable
+    }
+
+    package func requestClearPrimarySelection(
+        sourceID: DataSourceID,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws {
+        throw DataTransferError.unavailable
+    }
+
+    package func receivePrimarySelectionOffer(
+        id offerID: DataOfferID,
+        mimeType: MIMEType
+    ) throws -> OwnedFileDescriptor {
+        throw DataTransferError.unavailable
+    }
+}
+
 @safe
 private final class WaylandDisplayRuntime: Sendable {
     let executor: WaylandThreadExecutor
