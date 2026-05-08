@@ -215,7 +215,7 @@ extension PrimarySelectionController {
                 try handleSelection(handle: handle, seatID: seatID)
             }
         } catch {
-            recordCallbackError(error, context: .dataDevice(seatID))
+            recordCallbackError(error, context: .primarySelectionDevice(seatID))
         }
     }
 
@@ -292,7 +292,7 @@ extension PrimarySelectionController {
         if let snapshot = offer.snapshot {
             guard snapshot.role.seatID == seatID else {
                 throw DataTransferError.mismatchedOfferSeat(
-                    offer: ClipboardOfferIdentity(offerID),
+                    offer: .primarySelection(PrimarySelectionOfferIdentity(offerID)),
                     expected: seatID,
                     actual: snapshot.role.seatID
                 )
@@ -300,7 +300,7 @@ extension PrimarySelectionController {
         } else {
             guard offer.pendingSeatID == seatID else {
                 throw DataTransferError.mismatchedOfferSeat(
-                    offer: ClipboardOfferIdentity(offerID),
+                    offer: .primarySelection(PrimarySelectionOfferIdentity(offerID)),
                     expected: seatID,
                     actual: offer.pendingSeatID
                 )
