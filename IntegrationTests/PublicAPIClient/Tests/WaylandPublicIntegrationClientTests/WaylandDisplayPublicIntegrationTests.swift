@@ -122,10 +122,11 @@ struct WaylandDisplayPublicAPISurfaceTests {
         let configuration = try PrimarySelectionSourceConfiguration(payloads: [payload])
 
         #expect(configuration.payloads == [payload])
-        #expect(try PrimarySelectionSourceConfiguration.data(
-            mimeType: .plainTextUTF8,
-            Data("primary utf8".utf8)
-        ).payloads.first?.mimeType == .plainTextUTF8)
+        #expect(
+            try PrimarySelectionSourceConfiguration.data(
+                mimeType: .plainTextUTF8,
+                Data("primary utf8".utf8)
+            ).payloads.first?.mimeType == .plainTextUTF8)
     }
 
     @Test
