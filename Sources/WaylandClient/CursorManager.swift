@@ -33,10 +33,11 @@ package protocol CursorManagerBackend: AnyObject {
     ) -> RawPointerCursorResult
 }
 
+// swiftlint:disable:next type_body_length
 package final class CursorManager: RawInputEventObserving {
-    private let backend: CursorManagerBackend
+    package let backend: CursorManagerBackend
     private let configuration: CursorConfiguration
-    private var desiredCursor: DesiredPointerCursorState
+    package var desiredCursor: DesiredPointerCursorState
     private var registeredSurfaceIDs: Set<RawObjectID> = []
     private var cursorStateBySeat: [RawSeatID: PointerCursorSeatState] = [:]
 
@@ -221,7 +222,7 @@ package final class CursorManager: RawInputEventObserving {
         }
     }
 
-    private func cachedResolvedDesiredCursor() throws -> ResolvedPointerCursorImage {
+    package func cachedResolvedDesiredCursor() throws -> ResolvedPointerCursorImage {
         if let resolvedDesiredCursor = desiredCursor.resolvedImage {
             return resolvedDesiredCursor
         }
@@ -255,7 +256,7 @@ package final class CursorManager: RawInputEventObserving {
         }
     }
 
-    private func cursorSurface(for seatID: RawSeatID) throws -> CursorManagerSurface {
+    package func cursorSurface(for seatID: RawSeatID) throws -> CursorManagerSurface {
         if let surface = cursorStateBySeat[seatID]?.cursorSurface {
             return surface
         }
@@ -284,6 +285,22 @@ package final class CursorManager: RawInputEventObserving {
         cursor: PointerCursor,
         rawResult: RawPointerCursorResult
     ) -> ClientError {
+        .cursor(
+            .requestFailed(
+                pointerCursorRequestFailure(
+                    seatID: rawSeatID,
+                    cursor: cursor,
+                    rawResult: rawResult
+                )
+            )
+        )
+    }
+
+    package func pointerCursorRequestFailure(
+        seatID rawSeatID: RawSeatID,
+        cursor: PointerCursor,
+        rawResult: RawPointerCursorResult
+    ) -> PointerCursorRequestFailure {
         let rawResultSeatID: RawSeatID
         let backendResult: PointerCursorBackendResult
 
@@ -303,14 +320,10 @@ package final class CursorManager: RawInputEventObserving {
             "cursor backend failure seat must match requested seat"
         )
 
-        return .cursor(
-            .requestFailed(
-                PointerCursorRequestFailure(
-                    seatID: publicSeatID(rawSeatID),
-                    requestedCursor: cursor,
-                    backendResult: backendResult
-                )
-            )
+        return PointerCursorRequestFailure(
+            seatID: publicSeatID(rawSeatID),
+            requestedCursor: cursor,
+            backendResult: backendResult
         )
     }
 }
@@ -339,7 +352,7 @@ extension CursorManager {
         return effects
     }
 
-    private func markCursorApplied(
+    package func markCursorApplied(
         _ application: PointerCursorApplicationState,
         for seatID: RawSeatID
     ) {
@@ -375,7 +388,7 @@ extension CursorManager {
         return inputEvents
     }
 
-    private func publicSeatID(_ seatID: RawSeatID) -> SeatID {
+    package func publicSeatID(_ seatID: RawSeatID) -> SeatID {
         SeatID(rawValue: seatID.rawValue)
     }
 
@@ -394,15 +407,24 @@ extension CursorManager {
         }
 
         do {
-            _ = try applyCursor(to: seatID, serial: serial)
+            _ = try applyAutomaticPointerEnterCursor(to: seatID, serial: serial)
             return []
         } catch CursorError.missingCursor(let name) {
             let diagnostic = CursorDiagnostic.missingCursor(name: name)
             desiredCursor.cacheUnavailable(diagnostic)
             return automaticCursorDiagnosticEvents(diagnostic, rawEvent: rawEvent)
+        } catch let failure as AutomaticPointerEnterFailure {
+            let diagnostic = CursorDiagnostic.automaticPointerEnterFailed(failure)
+            return automaticCursorDiagnosticEvents(diagnostic, rawEvent: rawEvent)
+        } catch ClientError.cursor(.requestFailed(let failure)) {
+            let diagnostic = CursorDiagnostic.automaticPointerEnterFailed(
+                .cursorRequest(failure)
+            )
+            return automaticCursorDiagnosticEvents(diagnostic, rawEvent: rawEvent)
         } catch {
-            let message = String(describing: error)
-            let diagnostic = CursorDiagnostic.automaticPointerEnterFailed(message)
+            let diagnostic = CursorDiagnostic.automaticPointerEnterFailed(
+                .cursorApplication(String(describing: error))
+            )
             return automaticCursorDiagnosticEvents(diagnostic, rawEvent: rawEvent)
         }
     }

@@ -222,9 +222,29 @@ public enum CursorDiagnosticOperation: Equatable, Sendable {
     case automaticPointerEnter
 }
 
+public enum AutomaticPointerEnterFailure: Error, Equatable, Sendable, CustomStringConvertible {
+    case cursorImageResolution(String)
+    case cursorSurfaceCreation(String)
+    case cursorRequest(PointerCursorRequestFailure)
+    case cursorApplication(String)
+
+    public var description: String {
+        switch self {
+        case .cursorImageResolution(let detail):
+            "cursor image resolution failed: \(detail)"
+        case .cursorSurfaceCreation(let detail):
+            "cursor surface creation failed: \(detail)"
+        case .cursorRequest(let failure):
+            failure.description
+        case .cursorApplication(let detail):
+            "cursor application failed: \(detail)"
+        }
+    }
+}
+
 public enum CursorDiagnostic: Equatable, Sendable, CustomStringConvertible {
     case missingCursor(name: String)
-    case automaticPointerEnterFailed(String)
+    case automaticPointerEnterFailed(AutomaticPointerEnterFailure)
 
     public var operation: CursorDiagnosticOperation {
         switch self {
@@ -239,8 +259,8 @@ public enum CursorDiagnostic: Equatable, Sendable, CustomStringConvertible {
         switch self {
         case .missingCursor(let name):
             "cursor \(name) is unavailable"
-        case .automaticPointerEnterFailed(let message):
-            message
+        case .automaticPointerEnterFailed(let failure):
+            failure.description
         }
     }
 }
@@ -253,6 +273,7 @@ public enum UnknownInputProtocolValueField: Equatable, Hashable, Sendable,
     case pointerAxisRelativeDirection
     case pointerButtonState
     case keyboardKeyState
+    case seatCapability
 
     public var description: String {
         switch self {
@@ -266,6 +287,8 @@ public enum UnknownInputProtocolValueField: Equatable, Hashable, Sendable,
             "pointer button state"
         case .keyboardKeyState:
             "keyboard key state"
+        case .seatCapability:
+            "seat capability"
         }
     }
 }

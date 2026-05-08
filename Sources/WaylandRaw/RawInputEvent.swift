@@ -219,12 +219,22 @@ extension RawInputPipelineOverflowStage: CustomStringConvertible {
 
 package struct RawInputPipelineOverflow: Equatable, Sendable {
     package let stage: RawInputPipelineOverflowStage
-    package let capacity: Int
+    package let capacity: RawInputQueueCapacity
 
-    package init(stage overflowStage: RawInputPipelineOverflowStage, capacity queueCapacity: Int) {
+    package init(
+        stage overflowStage: RawInputPipelineOverflowStage,
+        capacity queueCapacity: RawInputQueueCapacity
+    ) {
         stage = overflowStage
         capacity = queueCapacity
     }
+}
+
+package enum RawSeatEventSnapshotError: Error, Equatable, Sendable {
+    case activeCapabilityNotAdvertised(
+        activeCapabilities: SeatCapabilities,
+        advertisedCapabilities: SeatCapabilities
+    )
 }
 
 package struct RawSeatEventSnapshot: Equatable, Sendable {
@@ -234,6 +244,25 @@ package struct RawSeatEventSnapshot: Equatable, Sendable {
 
     package init(
         advertisedCapabilities seatAdvertisedCapabilities: SeatCapabilities,
+        activeCapabilities seatActiveCapabilities: SeatCapabilities,
+        name seatName: String?
+    ) throws {
+        guard seatActiveCapabilities.isSubset(of: seatAdvertisedCapabilities) else {
+            throw RawSeatEventSnapshotError.activeCapabilityNotAdvertised(
+                activeCapabilities: seatActiveCapabilities,
+                advertisedCapabilities: seatAdvertisedCapabilities
+            )
+        }
+
+        self.init(
+            uncheckedAdvertisedCapabilities: seatAdvertisedCapabilities,
+            activeCapabilities: seatActiveCapabilities,
+            name: seatName
+        )
+    }
+
+    package init(
+        uncheckedAdvertisedCapabilities seatAdvertisedCapabilities: SeatCapabilities,
         activeCapabilities seatActiveCapabilities: SeatCapabilities,
         name seatName: String?
     ) {

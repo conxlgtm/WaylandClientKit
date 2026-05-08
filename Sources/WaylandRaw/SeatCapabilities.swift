@@ -8,6 +8,15 @@ package struct SeatCapabilities: OptionSet, Sendable, Equatable, CustomStringCon
     package static let pointer = Self(rawValue: 1)
     package static let keyboard = Self(rawValue: 2)
     package static let touch = Self(rawValue: 4)
+    package static let known: Self = [.pointer, .keyboard, .touch]
+
+    package var unknownBits: UInt32 {
+        rawValue & ~Self.known.rawValue
+    }
+
+    package var hasUnknownBits: Bool {
+        unknownBits != 0
+    }
 
     package var hasPointer: Bool {
         contains(.pointer)
@@ -32,6 +41,9 @@ package struct SeatCapabilities: OptionSet, Sendable, Equatable, CustomStringCon
         }
         if contains(.touch) {
             names.append("touch")
+        }
+        if hasUnknownBits {
+            names.append("unknown(0x\(String(unknownBits, radix: 16)))")
         }
 
         return names.isEmpty ? "none" : names.joined(separator: "+")

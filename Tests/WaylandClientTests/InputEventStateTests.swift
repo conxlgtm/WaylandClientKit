@@ -65,6 +65,42 @@ struct InputEventStateTests {
     }
 
     @Test
+    func seatSnapshotRejectsActiveCapabilityNotAdvertised() {
+        #expect(
+            throws: SeatStateSnapshotError.activeCapabilityNotAdvertised(
+                activeCapabilities: [.keyboard],
+                advertisedCapabilities: []
+            )
+        ) {
+            _ = try SeatStateSnapshot(
+                advertisedCapabilities: [],
+                activeCapabilities: [.keyboard],
+                name: nil
+            )
+        }
+    }
+
+    @Test
+    func seatCapabilitiesDescriptionIncludesUnknownBits() {
+        let capabilities = SeatCapabilities(rawValue: 0x80)
+
+        #expect(capabilities.unknownBits == 0x80)
+        #expect(capabilities.description == "unknown(0x80)")
+        #expect(SeatCapabilities(rawValue: 0x82).description == "keyboard+unknown(0x80)")
+    }
+
+    @Test
+    func inputPipelineOverflowRejectsNonPositiveCapacity() {
+        #expect(throws: InputPipelineOverflowError.nonPositiveCapacity(0)) {
+            _ = try InputPipelineOverflow(stage: .sessionPendingInput, capacity: 0)
+        }
+
+        #expect(throws: InputPipelineOverflowError.nonPositiveCapacity(-1)) {
+            _ = try InputPipelineCapacity(-1)
+        }
+    }
+
+    @Test
     func keyboardModifierDomainValuesPreserveRawValues() {
         #expect(KeyboardModifierMask(rawValue: 7).rawValue == 7)
         #expect(KeyboardLayoutGroup(rawValue: 3).rawValue == 3)

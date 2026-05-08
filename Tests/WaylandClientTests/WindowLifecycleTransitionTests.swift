@@ -110,12 +110,16 @@ struct WindowLifecycleTransitionTests {
         width: Int32,
         height: Int32,
         serial: UInt32 = 1
-    ) -> XDGConfigureSequence {
-        XDGConfigureSequence(
-            serial: serial,
-            topLevel: XDGTopLevelConfigureSuggestion(
-                size: TopLevelSize(width: width, height: height)
-            )
+    ) throws -> WindowConfigureEvent {
+        try WindowConfigureEvent(
+            sequence: XDGConfigureSequence(
+                serial: serial,
+                topLevel: XDGTopLevelConfigureSuggestion(
+                    size: TopLevelSize(width: width, height: height)
+                )
+            ),
+            previousSize: nil,
+            fallbackSize: .default
         )
     }
 }

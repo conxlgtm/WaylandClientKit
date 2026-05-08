@@ -135,7 +135,7 @@ extension InputRouter {
     func convertRawOverflow(_ overflow: RawInputPipelineOverflow) -> InputPipelineOverflow {
         InputPipelineOverflow(
             stage: .rawInputQueue,
-            capacity: overflow.capacity
+            capacity: InputPipelineCapacity(unchecked: overflow.capacity.rawValue)
         )
     }
 }

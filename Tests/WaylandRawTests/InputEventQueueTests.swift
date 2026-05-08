@@ -20,7 +20,7 @@ struct InputEventQueueTests {
                 deviceID: nil,
                 kind: .seat(
                     RawSeatEventSnapshot(
-                        advertisedCapabilities: [.pointer],
+                        uncheckedAdvertisedCapabilities: [.pointer],
                         activeCapabilities: [],
                         name: nil
                     )
@@ -97,7 +97,10 @@ struct InputEventQueueTests {
                 == .diagnostic(
                     RawInputDiagnostic(
                         .inputPipelineOverflow(
-                            RawInputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
+                            RawInputPipelineOverflow(
+                                stage: .rawInputQueue,
+                                capacity: RawInputQueueCapacity(unchecked: 1)
+                            )
                         )
                     )
                 )

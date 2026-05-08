@@ -243,7 +243,7 @@ struct WindowFailureRoutingTests {
         let hub = DisplayEventHub()
         let core = DisplayCore(eventHub: hub)
         let windowID = WindowID(rawValue: 8)
-        let error = PresentationError.drawFailed("paint failed")
+        let error = PresentationError.userDraw("paint failed")
         var displayIterator = hub.displayEvents().makeAsyncIterator()
         var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
 

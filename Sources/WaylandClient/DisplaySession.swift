@@ -279,7 +279,9 @@ package final class DisplaySession {
                     .inputPipelineOverflow(
                         InputPipelineOverflow(
                             stage: .sessionPendingInput,
-                            capacity: maximumPendingInputEventCount
+                            capacity: InputPipelineCapacity(
+                                unchecked: maximumPendingInputEventCount
+                            )
                         )
                     )
                 )

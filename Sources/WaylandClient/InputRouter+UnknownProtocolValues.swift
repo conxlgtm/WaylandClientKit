@@ -10,7 +10,9 @@ extension InputRouter {
                 unknownPointerButtonStateValues(button.state)
             case .keyboard(.key(let key)):
                 unknownKeyboardKeyStateValues(key.state)
-            case .pointer, .keyboard, .touch, .seat, .seatRemoved, .diagnostic:
+            case .seat(let snapshot):
+                unknownSeatCapabilityValues(snapshot.advertisedCapabilities)
+            case .pointer, .keyboard, .touch, .seatRemoved, .diagnostic:
                 []
             }
 
@@ -98,6 +100,16 @@ extension InputRouter {
         }
 
         return [(.keyboardKeyState, rawValue)]
+    }
+
+    private func unknownSeatCapabilityValues(
+        _ capabilities: WaylandRaw.SeatCapabilities
+    ) -> [(UnknownInputProtocolValueField, UInt32)] {
+        guard capabilities.hasUnknownBits else {
+            return []
+        }
+
+        return [(.seatCapability, capabilities.unknownBits)]
     }
 
     private func unknownProtocolValueDiagnostic(

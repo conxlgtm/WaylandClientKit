@@ -195,13 +195,17 @@ public struct PopupPresentationRequestSummary:
 
 public enum PresentationError: Error, Equatable, Sendable, CustomStringConvertible {
     case noFreeBuffer
-    case drawFailed(String)
+    case userDraw(String)
+    case frameCallbackRequest(String)
+    case surfaceCommit(String)
 
     public var description: String {
         switch self {
         case .noFreeBuffer:
             "no free buffer is available"
-        case .drawFailed(let detail):
+        case .userDraw(let detail),
+            .frameCallbackRequest(let detail),
+            .surfaceCommit(let detail):
             detail
         }
     }

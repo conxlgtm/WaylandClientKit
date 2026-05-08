@@ -76,7 +76,10 @@ struct DisplayEventHubTests {
     func publishingInputDiagnosticUsesDiagnosticDisplayEvent() async {
         let hub = DisplayEventHub()
         let diagnostic = pipelineOverflowDiagnostic(
-            InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
+            InputPipelineOverflow(
+                stage: .rawInputQueue,
+                capacity: InputPipelineCapacity(unchecked: 1)
+            )
         )
         let inputEvent = InputEvent(
             sequence: 2,
@@ -197,7 +200,10 @@ struct DisplayDiagnosticsHubTests {
     @Test
     func diagnosticsContinueAfterInputPipelineOverflow() async {
         let hub = DisplayEventHub()
-        let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
+        let overflow = InputPipelineOverflow(
+            stage: .rawInputQueue,
+            capacity: InputPipelineCapacity(unchecked: 1)
+        )
         let overflowDiagnostic = pipelineOverflowDiagnostic(overflow)
         let overflowEvent = InputEvent(
             sequence: 1,
@@ -238,7 +244,10 @@ struct DisplayEventHubFailureTests {
     @Test
     func inputPipelineOverflowTerminatesInputStreamButDisplayContinues() async {
         let hub = DisplayEventHub()
-        let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
+        let overflow = InputPipelineOverflow(
+            stage: .rawInputQueue,
+            capacity: InputPipelineCapacity(unchecked: 1)
+        )
         let diagnostic = pipelineOverflowDiagnostic(overflow)
         let inputEvent = InputEvent(
             sequence: 2,
@@ -278,7 +287,10 @@ struct DisplayEventHubFailureTests {
             target: .display,
             kind: .seat(.removed)
         )
-        let overflow = InputPipelineOverflow(stage: .sessionPendingInput, capacity: 1)
+        let overflow = InputPipelineOverflow(
+            stage: .sessionPendingInput,
+            capacity: InputPipelineCapacity(unchecked: 1)
+        )
         let diagnostic = pipelineOverflowDiagnostic(overflow)
         let overflowEvent = InputEvent(
             sequence: 2,
@@ -371,7 +383,10 @@ struct DisplayEventHubFailureTests {
     @Test
     func newInputSubscriptionAfterPipelineOverflowFailsImmediately() async {
         let hub = DisplayEventHub()
-        let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
+        let overflow = InputPipelineOverflow(
+            stage: .rawInputQueue,
+            capacity: InputPipelineCapacity(unchecked: 1)
+        )
         let diagnostic = pipelineOverflowDiagnostic(overflow)
         let inputEvent = InputEvent(
             sequence: 1,
@@ -472,7 +487,9 @@ private func diagnosticInputEvent(sequence: UInt64, message: String) -> InputEve
 }
 
 private func cursorDiagnostic(_ message: String) -> InputDiagnostic {
-    InputDiagnostic(.cursor(.automaticPointerEnterFailed(message)))
+    InputDiagnostic(
+        .cursor(.automaticPointerEnterFailed(.cursorApplication(message)))
+    )
 }
 
 private func pipelineOverflowDiagnostic(_ overflow: InputPipelineOverflow) -> InputDiagnostic {

@@ -41,7 +41,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             createdSnapshot.kind
                 == .seat(
                     RawSeatEventSnapshot(
-                        advertisedCapabilities: [.pointer, .keyboard],
+                        uncheckedAdvertisedCapabilities: [.pointer, .keyboard],
                         activeCapabilities: [.pointer, .keyboard],
                         name: nil
                     )
@@ -99,7 +99,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             snapshot.kind
                 == .seat(
                     RawSeatEventSnapshot(
-                        advertisedCapabilities: [.pointer, .keyboard],
+                        uncheckedAdvertisedCapabilities: [.pointer, .keyboard],
                         activeCapabilities: [.keyboard],
                         name: nil
                     )
@@ -178,7 +178,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
                     ),
                     .seat(
                         RawSeatEventSnapshot(
-                            advertisedCapabilities: [.pointer],
+                            uncheckedAdvertisedCapabilities: [.pointer],
                             activeCapabilities: [],
                             name: nil
                         )
@@ -231,7 +231,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
                     ),
                     .seat(
                         RawSeatEventSnapshot(
-                            advertisedCapabilities: [.pointer],
+                            uncheckedAdvertisedCapabilities: [.pointer],
                             activeCapabilities: [],
                             name: nil
                         )
@@ -283,7 +283,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
                     ),
                     .seat(
                         RawSeatEventSnapshot(
-                            advertisedCapabilities: [.keyboard],
+                            uncheckedAdvertisedCapabilities: [.keyboard],
                             activeCapabilities: [],
                             name: nil
                         )
@@ -347,7 +347,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             queue.drain().last?.kind
                 == .seat(
                     RawSeatEventSnapshot(
-                        advertisedCapabilities: [],
+                        uncheckedAdvertisedCapabilities: [],
                         activeCapabilities: [],
                         name: "default"
                     )

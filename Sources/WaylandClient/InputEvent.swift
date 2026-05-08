@@ -46,22 +46,6 @@ public enum SeatEvent: Equatable, Sendable {
     case removed
 }
 
-public struct SeatStateSnapshot: Equatable, Sendable {
-    public let advertisedCapabilities: SeatCapabilities
-    public let activeCapabilities: SeatCapabilities
-    public let name: SeatName?
-
-    public init(
-        advertisedCapabilities seatAdvertisedCapabilities: SeatCapabilities,
-        activeCapabilities seatActiveCapabilities: SeatCapabilities,
-        name seatName: SeatName?
-    ) {
-        advertisedCapabilities = seatAdvertisedCapabilities
-        activeCapabilities = seatActiveCapabilities
-        name = seatName
-    }
-}
-
 public enum PointerEvent: Equatable, Sendable {
     case entered(PointerLocation, serial: InputSerial)
     case left(serial: InputSerial)
