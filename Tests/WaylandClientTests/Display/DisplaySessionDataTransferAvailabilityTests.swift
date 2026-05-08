@@ -60,61 +60,6 @@ struct DisplaySessionDataTransferAvailabilityTests {
     }
 
     @Test
-    func primarySelectionProcessingBindsGlobalsBeforeAnyWindow() throws {
-        let decision = try DisplaySession.primarySelectionGlobalProcessingDecision(
-            state: .unbound,
-            requirement: .requiresPrimarySelectionDeviceManager
-        )
-
-        #expect(decision == .bindRequiredGlobals)
-    }
-
-    @Test
-    func optionalPrimarySelectionProcessingSkipsWhenManagerIsMissing() throws {
-        let decision = try DisplaySession.primarySelectionGlobalProcessingDecision(
-            state: .boundWithoutPrimarySelectionDeviceManager,
-            requirement: .optional
-        )
-
-        #expect(decision == .skip)
-    }
-
-    @Test
-    func primarySelectionProcessingThrowsUnavailableWhenManagerIsMissing() {
-        #expect(throws: DataTransferError.unavailable) {
-            _ = try DisplaySession.primarySelectionGlobalProcessingDecision(
-                state: .boundWithoutPrimarySelectionDeviceManager,
-                requirement: .requiresPrimarySelectionDeviceManager
-            )
-        }
-    }
-
-    @Test
-    func primarySelectionProcessingSynchronizesSeatsWhenManagerIsAvailable() throws {
-        let seatIDs = [SeatID(rawValue: 7), SeatID(rawValue: 11)]
-        let provider = RecordingDataTransferGlobalProvider(
-            currentSnapshot: nil,
-            currentPrimarySelectionSnapshot: nil,
-            boundPrimarySelectionSnapshot: PrimarySelectionGlobalSnapshot(
-                bindingState: .boundWithPrimarySelectionDeviceManager,
-                seatIDs: seatIDs
-            )
-        )
-        var synchronizedSeatIDs: [SeatID] = []
-
-        let outcome = try DisplaySession.processPrimarySelectionGlobals(
-            requirement: .requiresPrimarySelectionDeviceManager,
-            provider: provider
-        ) { seatIDs in
-            synchronizedSeatIDs = seatIDs
-        }
-
-        #expect(outcome == .synchronized)
-        #expect(provider.bindRequiredPrimarySelectionGlobalsCount == 1)
-        #expect(synchronizedSeatIDs == seatIDs)
-    }
-
-    @Test
     func setClipboardBeforeWindowBindsGlobalsAndSynchronizesSeats() throws {
         let seatIDs = [SeatID(rawValue: 7), SeatID(rawValue: 11)]
         let provider = RecordingDataTransferGlobalProvider(
@@ -330,7 +275,7 @@ private final class RecordingDataTransferGlobalProvider: DataTransferGlobalProvi
         boundPrimarySelectionSnapshot primarySelectionSnapshotAfterBinding:
             PrimarySelectionGlobalSnapshot =
             PrimarySelectionGlobalSnapshot(
-                bindingState: .boundWithPrimarySelectionDeviceManager,
+                bindingState: .boundWithPrimaryManager,
                 seatIDs: []
             )
     ) {

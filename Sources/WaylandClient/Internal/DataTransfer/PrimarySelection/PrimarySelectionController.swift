@@ -1,164 +1,5 @@
 import WaylandRaw
 
-package protocol PrimarySelectionDeviceBinding: AnyObject {
-    var seatID: SeatID { get }
-
-    func setSelection(source: (any PrimarySelectionSourceBinding)?, serial: InputSerial)
-    func release()
-}
-
-package protocol PrimarySelectionOfferBinding: AnyObject {
-    var id: DataOfferID { get }
-
-    func receive(mimeType: MIMEType, fd: Int32)
-    func destroy()
-}
-
-package protocol PrimarySelectionSourceBinding: AnyObject {
-    var id: DataSourceID { get }
-
-    func offer(mimeType: MIMEType)
-    func destroy()
-}
-
-package protocol PrimarySelectionControllerBackend: AnyObject {
-    func preconditionIsOwnerThread()
-    func bindPrimarySelectionDevice(
-        for seatID: SeatID,
-        onEvent: @escaping (RawPrimarySelectionDeviceEvent) -> Void
-    ) throws -> any PrimarySelectionDeviceBinding
-    func adoptPrimarySelectionOffer(
-        handle: RawPrimarySelectionOfferHandle,
-        id: DataOfferID,
-        onEvent: @escaping (RawPrimarySelectionOfferEvent) -> Void
-    ) throws -> any PrimarySelectionOfferBinding
-    func createPrimarySelectionSource(
-        id: DataSourceID,
-        onEvent: @escaping (RawPrimarySelectionSourceEvent) -> Void
-    ) throws -> any PrimarySelectionSourceBinding
-    func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors
-    func adoptOwnedFileDescriptor(_ descriptor: Int32) throws -> OwnedFileDescriptor
-
-    var sourceDescriptorIO: DataTransferSourceDescriptorIO { get }
-
-    func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult
-}
-
-private enum RuntimePrimarySelectionOffer {
-    case pending(
-        handle: RawPrimarySelectionOfferHandle,
-        binding: any PrimarySelectionOfferBinding,
-        seatID: SeatID,
-        mimeTypes: [MIMEType]
-    )
-    case active(
-        handle: RawPrimarySelectionOfferHandle,
-        binding: any PrimarySelectionOfferBinding,
-        snapshot: DataOfferSnapshot
-    )
-
-    var handle: RawPrimarySelectionOfferHandle {
-        switch self {
-        case .pending(let handle, _, _, _), .active(let handle, _, _):
-            handle
-        }
-    }
-
-    var binding: any PrimarySelectionOfferBinding {
-        switch self {
-        case .pending(_, let binding, _, _), .active(_, let binding, _):
-            binding
-        }
-    }
-
-    var pendingSeatID: SeatID? {
-        guard case .pending(_, _, let seatID, _) = self else {
-            return nil
-        }
-
-        return seatID
-    }
-
-    var pendingMIMETypes: [MIMEType] {
-        guard case .pending(_, _, _, let mimeTypes) = self else {
-            return []
-        }
-
-        return mimeTypes
-    }
-
-    var snapshot: DataOfferSnapshot? {
-        guard case .active(_, _, let snapshot) = self else {
-            return nil
-        }
-
-        return snapshot
-    }
-
-    mutating func appendPendingMIMEType(_ mimeType: MIMEType) {
-        guard case .pending(let handle, let binding, let seatID, var mimeTypes) = self else {
-            return
-        }
-        guard !mimeTypes.contains(mimeType) else {
-            return
-        }
-
-        mimeTypes.append(mimeType)
-        self = .pending(
-            handle: handle,
-            binding: binding,
-            seatID: seatID,
-            mimeTypes: mimeTypes
-        )
-    }
-
-    mutating func markActive(id offerID: DataOfferID) throws {
-        guard case .pending(let handle, let binding, let seatID, let mimeTypes) = self else {
-            return
-        }
-
-        self = .active(
-            handle: handle,
-            binding: binding,
-            snapshot: try DataOfferSnapshot(
-                id: offerID,
-                role: .selection(seatID: seatID),
-                mimeTypes: mimeTypes
-            )
-        )
-    }
-}
-
-private struct RuntimePrimarySelectionSource {
-    let id: DataSourceID
-    let binding: any PrimarySelectionSourceBinding
-    let payloads: DataTransferSourcePayloadSet
-    let snapshot: DataSourceSnapshot
-
-    init(
-        id sourceID: DataSourceID,
-        seatID sourceSeatID: SeatID,
-        binding sourceBinding: any PrimarySelectionSourceBinding,
-        payloads sourcePayloads: DataTransferSourcePayloadSet
-    ) throws {
-        guard sourceBinding.id == sourceID else {
-            throw DataTransferManagerInvariantViolation.sourceBindingIDMismatch(
-                expected: sourceID,
-                actual: sourceBinding.id
-            )
-        }
-
-        id = sourceID
-        binding = sourceBinding
-        payloads = sourcePayloads
-        snapshot = try DataSourceSnapshot(
-            id: sourceID,
-            seatID: sourceSeatID,
-            mimeTypes: sourcePayloads.mimeTypes
-        )
-    }
-}
-
 package final class PrimarySelectionController {
     package let backend: any PrimarySelectionControllerBackend
     private var deviceBindings: [SeatID: any PrimarySelectionDeviceBinding] = [:]
@@ -166,7 +7,7 @@ package final class PrimarySelectionController {
     private var offersByID: [DataOfferID: RuntimePrimarySelectionOffer] = [:]
     private var selectionBySeat: [SeatID: PrimarySelectionSelectionState] = [:]
     private var sourcesByID: [DataSourceID: RuntimePrimarySelectionSource] = [:]
-    private var pendingSourceSendRequests: [DataTransferSourceSendRequest] = []
+    var pendingSourceSendRequests: [DataTransferSourceSendRequest] = []
     private var pendingCallbackFailures: [DataTransferCallbackFailure] = []
     private var pendingEvents: [DataTransferEvent] = []
     private var nextOfferID: UInt64 = 1
@@ -249,10 +90,10 @@ package final class PrimarySelectionController {
 
         let deviceBinding = try primarySelectionDeviceBinding(for: seatID)
         let sourceID = allocateSourceID()
-        let sourceBinding = try backend.createPrimarySelectionSource(id: sourceID) {
-            [weak self] event in
-            self?.handleSourceEvent(event, sourceID: sourceID)
-        }
+        let sourceBinding = try backend.createPrimarySelectionSource(
+            id: sourceID,
+            onEvent: sourceEventHandler(for: sourceID)
+        )
         do {
             for mimeType in payloads.mimeTypes {
                 sourceBinding.offer(mimeType: mimeType)
@@ -332,36 +173,7 @@ package final class PrimarySelectionController {
     }
 }
 
-private enum PrimarySelectionSelectionState: Equatable {
-    case none
-    case remoteOffer(DataOfferID)
-    case ownedSource(DataSourceID)
-}
-
 extension PrimarySelectionController {
-    package func drainSourceSendRequests() -> [DataTransferSourceSendRequest] {
-        backend.preconditionIsOwnerThread()
-        defer { pendingSourceSendRequests.removeAll(keepingCapacity: true) }
-        return pendingSourceSendRequests
-    }
-
-    package func drainSourceWriteJobs() throws -> [DataTransferSourceWriteJob] {
-        let requests = drainSourceSendRequests()
-        var jobs: [DataTransferSourceWriteJob] = []
-
-        for index in requests.indices {
-            do {
-                jobs.append(try requests[index].makeWriteJob())
-            } catch {
-                discardSourceWriteJobs(jobs)
-                discardRemainingSourceSendRequests(requests[(index + 1)...])
-                throw error
-            }
-        }
-
-        return jobs
-    }
-
     private func bindDevice(for seatID: SeatID) throws {
         guard deviceBindings[seatID] == nil else {
             return
@@ -533,6 +345,14 @@ extension PrimarySelectionController {
         }
     }
 
+    private func sourceEventHandler(
+        for sourceID: DataSourceID
+    ) -> (RawPrimarySelectionSourceEvent) -> Void {
+        { [weak self] event in
+            self?.handleSourceEvent(event, sourceID: sourceID)
+        }
+    }
+
     private func handleSourceSend(
         mimeType rawMimeType: String?,
         descriptor: Int32,
@@ -611,93 +431,7 @@ extension PrimarySelectionController {
         }
     }
 
-    private func adoptReadEnd(
-        _ descriptors: DataTransferPipeDescriptors
-    ) throws -> OwnedFileDescriptor {
-        do {
-            return try backend.adoptOwnedFileDescriptor(descriptors.readEnd)
-        } catch {
-            _ = backend.closeFileDescriptor(descriptors.readEnd)
-            _ = backend.closeFileDescriptor(descriptors.writeEnd)
-            throw error
-        }
-    }
-
-    private func receiveIntoPipe(
-        _ binding: any PrimarySelectionOfferBinding,
-        mimeType: MIMEType,
-        descriptors: DataTransferPipeDescriptors,
-        readEnd: inout OwnedFileDescriptor
-    ) throws {
-        var rawWriteEnd: Int32? = descriptors.writeEnd
-        do {
-            var writeEnd = try backend.adoptOwnedFileDescriptor(descriptors.writeEnd)
-            rawWriteEnd = nil
-            binding.receive(mimeType: mimeType, fd: writeEnd.rawValue)
-            try writeEnd.close()
-        } catch {
-            if let rawWriteEnd {
-                _ = backend.closeFileDescriptor(rawWriteEnd)
-            }
-            do {
-                try readEnd.close()
-            } catch {
-                _ = error
-            }
-            throw error
-        }
-    }
-
-    private func closeSourceSendDescriptor(_ descriptor: Int32) throws {
-        switch backend.closeFileDescriptor(descriptor) {
-        case .closed:
-            return
-        case .failed(let error):
-            throw DataTransferError.closeFileDescriptor(error)
-        }
-    }
-
-    package func discardPendingSourceSendRequests(for sourceID: DataSourceID) {
-        var remainingRequests: [DataTransferSourceSendRequest] = []
-        for request in drainSourceSendRequests() {
-            if request.source == .primarySelection(sourceID) {
-                do {
-                    try request.close()
-                } catch {
-                    recordCallbackError(
-                        error,
-                        context: .primarySelectionSource(
-                            PrimarySelectionSourceIdentity(sourceID)
-                        )
-                    )
-                }
-            } else {
-                remainingRequests.append(request)
-            }
-        }
-
-        pendingSourceSendRequests = remainingRequests
-    }
-
-    private func discardSourceWriteJobs(_ jobs: [DataTransferSourceWriteJob]) {
-        for job in jobs {
-            _ = job.closeAsCancelled()
-        }
-    }
-
-    private func discardRemainingSourceSendRequests(
-        _ requests: ArraySlice<DataTransferSourceSendRequest>
-    ) {
-        for request in requests {
-            do {
-                try request.close()
-            } catch {
-                recordCallbackError(error, context: .sourceWrite(request.source.diagnosticSource))
-            }
-        }
-    }
-
-    private func recordCallbackError(
+    func recordCallbackError(
         _ error: any Error,
         context: DataTransferCallbackContext
     ) {
