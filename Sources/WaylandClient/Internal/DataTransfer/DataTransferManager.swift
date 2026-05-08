@@ -51,19 +51,26 @@ package protocol DataTransferManagerBackend: AnyObject {
 
 package final class DataTransferManager {
     package let backend: any DataTransferManagerBackend
+    private let eventQueue: DataTransferEventQueue
     var store = DataTransferStore()
     private var nextOfferID: UInt64 = 1
     package var nextSourceID: UInt64 = 1
 
-    package private(set) var pendingEvents: [DataTransferEvent] = []
-
-    package init(connection rawConnection: RawDisplayConnection) {
+    package init(
+        connection rawConnection: RawDisplayConnection,
+        eventQueue dataTransferEventQueue: DataTransferEventQueue = DataTransferEventQueue()
+    ) {
         backend = LiveDataTransferManagerBackend(connection: rawConnection)
+        eventQueue = dataTransferEventQueue
     }
 
-    package init(backend dataTransferBackend: any DataTransferManagerBackend) {
+    package init(
+        backend dataTransferBackend: any DataTransferManagerBackend,
+        eventQueue dataTransferEventQueue: DataTransferEventQueue = DataTransferEventQueue()
+    ) {
         dataTransferBackend.preconditionIsOwnerThread()
         backend = dataTransferBackend
+        eventQueue = dataTransferEventQueue
     }
 
     package func synchronizeSeats(_ seatIDs: [SeatID]) throws {
@@ -114,13 +121,13 @@ package final class DataTransferManager {
         case .cancelSource(let sourceID):
             destroySourceBinding(sourceID)
         case .publishSelectionChanged(let seatID, let offerID):
-            pendingEvents.append(
+            eventQueue.append(
                 .clipboardSelectionChanged(
                     ClipboardSelectionEvent(seatID: seatID, offerID: offerID)
                 )
             )
         case .publishSourceCancelled(let sourceID):
-            pendingEvents.append(.clipboardSourceCancelled(ClipboardSourceIdentity(sourceID)))
+            eventQueue.append(.clipboardSourceCancelled(ClipboardSourceIdentity(sourceID)))
         }
     }
 
@@ -317,8 +324,7 @@ extension DataTransferManager {
 
     package func drainDataTransferEvents() -> [DataTransferEvent] {
         backend.preconditionIsOwnerThread()
-        defer { pendingEvents.removeAll(keepingCapacity: true) }
-        return pendingEvents
+        return eventQueue.drain()
     }
 
     package func recordCallbackError(
