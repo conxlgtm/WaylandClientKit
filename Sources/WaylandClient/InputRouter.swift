@@ -374,7 +374,7 @@ extension InputRouter {
 
     func convert(_ snapshot: RawSeatEventSnapshot) -> SeatStateSnapshot {
         SeatStateSnapshot(
-            advertisedCapabilities: SeatCapabilities(
+            uncheckedAdvertisedCapabilities: SeatCapabilities(
                 rawValue: snapshot.advertisedCapabilities.rawValue
             ),
             activeCapabilities: SeatCapabilities(rawValue: snapshot.activeCapabilities.rawValue),

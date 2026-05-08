@@ -351,7 +351,7 @@ func rawSeatChanged(
         seatID: seatID,
         kind: .seat(
             RawSeatEventSnapshot(
-                advertisedCapabilities: advertisedCapabilities,
+                uncheckedAdvertisedCapabilities: advertisedCapabilities,
                 activeCapabilities: activeCapabilities,
                 name: name
             )

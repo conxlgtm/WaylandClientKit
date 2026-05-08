@@ -184,7 +184,7 @@ extension WindowModel {
     }
 
     private mutating func reduceConfigureReceived(
-        _ sequence: XDGConfigureSequence
+        _ event: WindowConfigureEvent
     ) throws -> [WindowEffect] {
         switch lifecycle {
         case .destroyed:
@@ -197,17 +197,7 @@ extension WindowModel {
             break
         }
 
-        let previousSize = currentConfiguration?.size
-        let resolved: ResolvedWindowConfiguration
-        do {
-            resolved = try ResolvedWindowConfiguration(
-                sequence: sequence,
-                previousSize: previousSize,
-                fallbackSize: fallbackSize
-            )
-        } catch let error as WindowError {
-            throw ClientError.window(id, error)
-        }
+        let resolved = event.configuration
         var nextActiveState = activeState ?? ActiveWindowState(configure: resolved)
         nextActiveState.configure = resolved
         nextActiveState.closeRequest = closeRequest
@@ -215,8 +205,8 @@ extension WindowModel {
             _ = try reduceDecorationConfigured(mode)
         }
 
-        var effects = unknownProtocolValueEffects(for: sequence)
-        effects.append(.ackConfigure(sequence.serial))
+        var effects = unknownProtocolValueEffects(for: event.unknownValues)
+        effects.append(.ackConfigure(event.serial))
         effects.append(
             contentsOf: mapRedrawEffects(
                 nextActiveState.redraw.reduce(.contentInvalidated, bufferAvailability: .available)

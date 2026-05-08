@@ -73,7 +73,7 @@ package final class RawSeat {
 
     package var snapshot: RawSeatEventSnapshot {
         RawSeatEventSnapshot(
-            advertisedCapabilities: state.advertisedCapabilities,
+            uncheckedAdvertisedCapabilities: state.advertisedCapabilities,
             activeCapabilities: state.activeCapabilities,
             name: nameStorage
         )

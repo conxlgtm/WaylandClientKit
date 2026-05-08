@@ -98,7 +98,7 @@ struct WindowModelPresentationTests {
             _ = try model.reduce(
                 .presentationFailed(
                     generation: request.generation + 1,
-                    .drawFailed("stale")
+                    .userDraw("stale")
                 )
             )
         }
@@ -127,13 +127,13 @@ struct WindowModelPresentationTests {
         #expect(
             throws: ClientError.window(
                 windowID,
-                .presentationFailed(.drawFailed("allocation failed"))
+                .presentationFailed(.userDraw("allocation failed"))
             )
         ) {
             _ = try model.reduce(
                 .presentationFailed(
                     generation: request.generation,
-                    .drawFailed("allocation failed")
+                    .userDraw("allocation failed")
                 )
             )
         }
@@ -144,9 +144,9 @@ struct WindowModelPresentationTests {
     func redrawAfterPresentationFailureDoesNotReportNestedPresentation() throws {
         var (model, request) = try activeModelWithStartedPresentation()
 
-        #expect(throws: ClientError.window(windowID, .presentationFailed(.drawFailed("boom")))) {
+        #expect(throws: ClientError.window(windowID, .presentationFailed(.userDraw("boom")))) {
             _ = try model.reduce(
-                .presentationFailed(generation: request.generation, .drawFailed("boom"))
+                .presentationFailed(generation: request.generation, .userDraw("boom"))
             )
         }
 
@@ -184,11 +184,7 @@ struct WindowModelPresentationTests {
         let issuedRequest = try presentationRequest(from: effects)
         let staleRequest = PresentationRequest(
             generation: issuedRequest.generation,
-            configuration: try ResolvedWindowConfiguration(
-                sequence: configure(width: 1_024, height: 768),
-                previousSize: nil,
-                fallbackSize: .default
-            )
+            configuration: try configure(width: 1_024, height: 768).configuration
         )
 
         #expect(issuedRequest.summary != staleRequest.summary)
@@ -326,12 +322,16 @@ extension WindowModelPresentationTests {
         width: Int32,
         height: Int32,
         serial: UInt32 = 1
-    ) -> XDGConfigureSequence {
-        XDGConfigureSequence(
-            serial: serial,
-            topLevel: XDGTopLevelConfigureSuggestion(
-                size: TopLevelSize(width: width, height: height)
-            )
+    ) throws -> WindowConfigureEvent {
+        try WindowConfigureEvent(
+            sequence: XDGConfigureSequence(
+                serial: serial,
+                topLevel: XDGTopLevelConfigureSuggestion(
+                    size: TopLevelSize(width: width, height: height)
+                )
+            ),
+            previousSize: nil,
+            fallbackSize: .default
         )
     }
 }

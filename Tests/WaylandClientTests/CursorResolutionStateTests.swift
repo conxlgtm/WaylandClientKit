@@ -74,7 +74,16 @@ struct CursorResolutionStateTests {
             rawPointerEnter(sequence: 2, seatID: seatID, surfaceID: 100, serial: 62)
         )
 
-        #expect(automaticCursorFailureMessage(firstDiagnostics) != nil)
+        #expect(
+            automaticCursorFailure(firstDiagnostics)
+                == .cursorRequest(
+                    PointerCursorRequestFailure(
+                        seatID: SeatID(rawValue: seatID.rawValue),
+                        requestedCursor: .defaultArrow,
+                        backendResult: .skippedUnknownSeat
+                    )
+                )
+        )
         #expect(secondDiagnostics.isEmpty)
         #expect(backend.resolvedCursorNames == ["left_ptr"])
         #expect(backend.setCursorRequests.map(\.serial) == [61, 62])
@@ -95,7 +104,7 @@ struct CursorResolutionStateTests {
             rawPointerEnter(sequence: 2, seatID: seatID, surfaceID: 100, serial: 72)
         )
 
-        #expect(automaticCursorFailureMessage(firstDiagnostics) != nil)
+        #expect(automaticCursorFailure(firstDiagnostics) == .cursorSurfaceCreation("transient"))
         #expect(secondDiagnostics.isEmpty)
         #expect(backend.cursorSurfaceRequestSeatIDs == [seatID, seatID])
         #expect(backend.setCursorRequests.map(\.serial) == [72])
@@ -110,15 +119,15 @@ private func cursorMissingDiagnostic() -> InputEventKind {
     )
 }
 
-private func automaticCursorFailureMessage(_ events: [InputEvent]) -> String? {
+private func automaticCursorFailure(_ events: [InputEvent]) -> AutomaticPointerEnterFailure? {
     guard let firstEvent = events.first,
         case .diagnostic(let diagnostic) = firstEvent.kind,
-        case .cursor(.automaticPointerEnterFailed(let message)) = diagnostic.payload
+        case .cursor(.automaticPointerEnterFailed(let failure)) = diagnostic.payload
     else {
         return nil
     }
 
-    return message
+    return failure
 }
 
 private enum CursorSurfaceCreationError: Error {

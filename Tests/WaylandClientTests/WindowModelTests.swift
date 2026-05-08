@@ -41,7 +41,14 @@ struct WindowModelTests {
         _ = try model.reduce(.frameBecameReady(bufferAvailability: .available))
 
         let effects = try model.reduce(
-            .configureReceived(configure(width: 0, height: 720, serial: 2))
+            .configureReceived(
+                configure(
+                    width: 0,
+                    height: 720,
+                    serial: 2,
+                    previousSize: model.currentConfiguration?.size
+                )
+            )
         )
 
         #expect(effects == [.ackConfigure(2), .publishRedrawRequested(windowID)])
@@ -75,16 +82,13 @@ struct WindowModelTests {
     }
 
     @Test
-    func negativeConfigureDimensionIsAWindowProtocolError() throws {
-        var model = try configuredModelReadyForConfigure()
-
+    func negativeConfigureDimensionIsRejectedBeforeWindowModel() throws {
         #expect(
-            throws: ClientError.window(
-                windowID,
-                .invalidConfigure(.negativeSuggestedDimension(width: -1, height: 480))
+            throws: WindowError.invalidConfigure(
+                .negativeSuggestedDimension(width: -1, height: 480)
             )
         ) {
-            _ = try model.reduce(.configureReceived(configure(width: -1, height: 480)))
+            _ = try configure(width: -1, height: 480)
         }
     }
 
@@ -362,16 +366,21 @@ extension WindowModelTests {
         serial: UInt32 = 1,
         states: [XDGTopLevelState] = [],
         wmCapabilities: [XDGWMCapability] = [],
-        decorationMode: RawDecorationMode? = nil
-    ) -> XDGConfigureSequence {
-        XDGConfigureSequence(
-            serial: serial,
-            topLevel: XDGTopLevelConfigureSuggestion(
-                size: TopLevelSize(width: width, height: height),
-                states: states,
-                wmCapabilities: wmCapabilities
+        decorationMode: RawDecorationMode? = nil,
+        previousSize: PositiveLogicalSize? = nil
+    ) throws -> WindowConfigureEvent {
+        try WindowConfigureEvent(
+            sequence: XDGConfigureSequence(
+                serial: serial,
+                topLevel: XDGTopLevelConfigureSuggestion(
+                    size: TopLevelSize(width: width, height: height),
+                    states: states,
+                    wmCapabilities: wmCapabilities
+                ),
+                decorationMode: decorationMode
             ),
-            decorationMode: decorationMode
+            previousSize: previousSize,
+            fallbackSize: .default
         )
     }
 }

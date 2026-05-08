@@ -12,7 +12,7 @@ extension PopupRoleSurface {
             guard pendingFrameRegistration == nil else {
                 failActivePresentation(
                     generation: request.generation,
-                    error: .drawFailed("frame callback already pending")
+                    error: .frameCallbackRequest("frame callback already pending")
                 )
                 return .skippedPendingFrame
             }
@@ -40,7 +40,7 @@ extension PopupRoleSurface {
             } catch {
                 failActivePresentation(
                     generation: request.generation,
-                    error: .drawFailed(String(describing: error))
+                    error: .userDraw(String(describing: error))
                 )
                 drawingBuffer.discard()
                 throw error
@@ -59,7 +59,7 @@ extension PopupRoleSurface {
             } catch {
                 failActivePresentation(
                     generation: request.generation,
-                    error: .drawFailed(String(describing: error))
+                    error: .frameCallbackRequest(String(describing: error))
                 )
                 drawingBuffer.discard()
                 throw error
@@ -88,7 +88,7 @@ extension PopupRoleSurface {
         } catch {
             failPresentationIfStillActive(
                 generation: request.generation,
-                error: .drawFailed(String(describing: error))
+                error: .surfaceCommit(String(describing: error))
             )
             throw error
         }

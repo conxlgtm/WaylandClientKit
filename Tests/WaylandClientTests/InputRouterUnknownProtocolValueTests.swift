@@ -212,4 +212,52 @@ struct InputRouterUnknownProtocolValueTests {
                 )
         )
     }
+
+    @Test
+    func unknownSeatCapabilityDoesNotCreateChildAndPublishesDiagnosticOnce() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 12)
+        let rawSeatEvent = rawSeatChanged(
+            sequence: 3,
+            seatID: seatID,
+            name: "seat0",
+            advertisedCapabilities: WaylandRaw.SeatCapabilities(rawValue: 0x80),
+            activeCapabilities: []
+        )
+
+        let first = router.route(rawSeatEvent)
+        let second = router.route(rawSeatEvent)
+
+        #expect(first.count == 2)
+        #expect(second.count == 1)
+        #expect(
+            first.first?.kind
+                == .seat(
+                    .changed(
+                        SeatStateSnapshot(
+                            uncheckedAdvertisedCapabilities: WaylandClient.SeatCapabilities(
+                                rawValue: 0x80
+                            ),
+                            activeCapabilities: [],
+                            name: SeatName(rawValue: "seat0")
+                        )
+                    )
+                )
+        )
+        #expect(
+            first.last?.kind
+                == .diagnostic(
+                    InputDiagnostic(
+                        .unknownProtocolValue(
+                            UnknownInputProtocolValueDiagnostic(
+                                field: .seatCapability,
+                                rawValue: 0x80,
+                                seatID: SeatID(rawValue: seatID.rawValue),
+                                sequence: 3
+                            )
+                        )
+                    )
+                )
+        )
+    }
 }

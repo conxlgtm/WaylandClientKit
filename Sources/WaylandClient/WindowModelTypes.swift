@@ -7,7 +7,7 @@ package enum WindowEvent: Equatable, Sendable {
     case decorationPreferenceRequested(WindowDecorationPreference)
     case initialCommitSent
     case published
-    case configureReceived(XDGConfigureSequence)
+    case configureReceived(WindowConfigureEvent)
     case contentInvalidated(bufferAvailability: RedrawBufferAvailability)
     case frameBecameReady(bufferAvailability: RedrawBufferAvailability)
     case bufferBecameAvailable(bufferAvailability: RedrawBufferAvailability)

@@ -317,7 +317,7 @@ struct SeatInputRouterTests {
                 == .seat(
                     .changed(
                         SeatStateSnapshot(
-                            advertisedCapabilities: [.pointer],
+                            uncheckedAdvertisedCapabilities: [.pointer],
                             activeCapabilities: [.pointer],
                             name: SeatName(rawValue: "seat0")
                         )
@@ -440,8 +440,14 @@ struct SeatInputRouterTests {
     func inputPipelineOverflowDiagnosticsRouteAtDisplayLevel() {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 79)
-        let rawOverflow = RawInputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
-        let overflow = InputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
+        let rawOverflow = RawInputPipelineOverflow(
+            stage: .rawInputQueue,
+            capacity: RawInputQueueCapacity(unchecked: 4)
+        )
+        let overflow = InputPipelineOverflow(
+            stage: .rawInputQueue,
+            capacity: InputPipelineCapacity(unchecked: 4)
+        )
 
         let routed = router.route(
             rawEvent(

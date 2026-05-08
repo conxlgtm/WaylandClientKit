@@ -142,7 +142,7 @@ extension PopupRoleSurface {
 
     package func failActivePresentation(
         generation: UInt64,
-        error: PresentationError = .drawFailed("presentation failed")
+        error: PresentationError = .surfaceCommit("presentation failed")
     ) {
         do {
             try interpretPopupEffects(

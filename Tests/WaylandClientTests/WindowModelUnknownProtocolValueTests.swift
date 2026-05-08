@@ -100,15 +100,19 @@ struct WindowModelUnknownProtocolValueTests {
         states: [XDGTopLevelState] = [],
         wmCapabilities: [XDGWMCapability] = [],
         decorationMode: RawDecorationMode? = nil
-    ) -> XDGConfigureSequence {
-        XDGConfigureSequence(
-            serial: serial,
-            topLevel: XDGTopLevelConfigureSuggestion(
-                size: TopLevelSize(width: width, height: height),
-                states: states,
-                wmCapabilities: wmCapabilities
+    ) throws -> WindowConfigureEvent {
+        try WindowConfigureEvent(
+            sequence: XDGConfigureSequence(
+                serial: serial,
+                topLevel: XDGTopLevelConfigureSuggestion(
+                    size: TopLevelSize(width: width, height: height),
+                    states: states,
+                    wmCapabilities: wmCapabilities
+                ),
+                decorationMode: decorationMode
             ),
-            decorationMode: decorationMode
+            previousSize: nil,
+            fallbackSize: .default
         )
     }
 }

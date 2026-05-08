@@ -120,13 +120,15 @@ package final class TopLevelWindow {
             topLevel: newTopLevel
         )
 
-        roleResources = TopLevelWindowRoleResources(
-            xdgSurface: newXDGSurface,
-            topLevel: newTopLevel,
-            decoration: decorationObjects?.decoration,
-            xdgSurfaceOwner: newXDGSurfaceOwner,
-            topLevelOwner: newTopLevelOwner,
-            decorationOwner: decorationObjects?.owner
+        try surfaceRuntime.installRoleResources(
+            TopLevelWindowRoleResources(
+                xdgSurface: newXDGSurface,
+                topLevel: newTopLevel,
+                decoration: decorationObjects?.decoration,
+                xdgSurfaceOwner: newXDGSurfaceOwner,
+                topLevelOwner: newTopLevelOwner,
+                decorationOwner: decorationObjects?.owner
+            )
         )
 
         try interpretWindowEffects(model.reduce(.roleObjectsCreated))
@@ -292,7 +294,17 @@ package final class TopLevelWindow {
             return nil
         }
 
-        try interpretWindowEffects(model.reduce(.configureReceived(sequence)))
+        let configureEvent: WindowConfigureEvent
+        do {
+            configureEvent = try WindowConfigureEvent(
+                sequence: sequence,
+                previousSize: model.currentConfiguration?.size,
+                fallbackSize: model.fallbackSize
+            )
+        } catch let error as WindowError {
+            throw ClientError.window(id, error)
+        }
+        try interpretWindowEffects(model.reduce(.configureReceived(configureEvent)))
         return model.currentConfiguration
     }
 
@@ -375,7 +387,7 @@ package final class TopLevelWindow {
             guard pendingFrameRegistration == nil else {
                 failActivePresentation(
                     generation: request.generation,
-                    detail: "frame callback is still pending"
+                    error: .frameCallbackRequest("frame callback is still pending")
                 )
                 return .skippedPendingFrame
             }
@@ -403,7 +415,7 @@ package final class TopLevelWindow {
             } catch {
                 failActivePresentation(
                     generation: request.generation,
-                    detail: String(describing: error)
+                    error: .userDraw(String(describing: error))
                 )
                 drawingBuffer.discard()
                 throw error
@@ -424,7 +436,7 @@ package final class TopLevelWindow {
             } catch {
                 failActivePresentation(
                     generation: request.generation,
-                    detail: String(describing: error)
+                    error: .frameCallbackRequest(String(describing: error))
                 )
                 drawingBuffer.discard()
                 throw error
@@ -451,7 +463,10 @@ package final class TopLevelWindow {
             )
             return .presented
         } catch {
-            failPresentationIfStillActive(generation: request.generation, error: error)
+            failPresentationIfStillActive(
+                generation: request.generation,
+                error: .surfaceCommit(String(describing: error))
+            )
             throw error
         }
     }
@@ -472,7 +487,7 @@ package final class TopLevelWindow {
 
     private func failPresentationIfStillActive(
         generation: UInt64,
-        error: any Error
+        error: PresentationError
     ) {
         guard case .drawing(let request) = model.presentation,
             request.generation == generation
@@ -482,19 +497,21 @@ package final class TopLevelWindow {
 
         failActivePresentation(
             generation: generation,
-            detail: String(describing: error)
+            error: error
         )
     }
 
     private func failActivePresentation(
         generation: UInt64,
-        detail: String
+        error: PresentationError
     ) {
         do {
             try interpretWindowEffects(
-                model.reduce(.presentationFailed(generation: generation, .drawFailed(detail)))
+                model.reduce(.presentationFailed(generation: generation, error))
             )
-        } catch ClientError.window(id, .presentationFailed(.drawFailed(detail))) {
+        } catch ClientError.window(id, .presentationFailed(let reportedError))
+            where reportedError == error
+        {
             // presentationFailed resets model state before reporting the presentation error.
         } catch {
             preconditionFailure("Unexpected presentation failure error: \(error)")
