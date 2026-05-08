@@ -1,16 +1,7 @@
-# Release Checklist
+# Development Checkpoint Checklist
 
 Tags are reproducible development checkpoints. They do not imply API stability.
-
-## Checkpoint Version
-
-Use:
-
-```text
-0.0.1
-```
-
-Do not imply API stability in tag text or GitHub release text.
+Do not tag while docs, public API audit, support lists, and checks disagree.
 
 ## Required Checks
 
@@ -32,10 +23,11 @@ Under a real Wayland session:
 
 ```bash
 ./Scripts/smoke-wayland.sh
+./Scripts/integration-wayland.sh
 swift run swift-wayland-demo
 ```
 
-Release targets are Weston, GNOME/Mutter, KDE/KWin, and Sway/wlroots. A checkpoint
+Compositor targets are Weston, GNOME/Mutter, KDE/KWin, and Sway/wlroots. A checkpoint
 should not treat Weston-only behavior as sufficient for compositor compatibility.
 
 ## Tag Checklist
@@ -44,16 +36,17 @@ should not treat Weston-only behavior as sufficient for compositor compatibility
 2. Confirm Swift 6.3.1 is active.
 3. Confirm Linux bootstrap dependencies are installed or CI uses equivalent packages.
 4. Run `make check`.
-5. Run release builds for the package, demo, and smoke executable.
+5. Run optimized builds for the package, demo, and smoke executable.
 6. Run `./Scripts/smoke-wayland.sh` under a Wayland session.
-7. Manually run `swift run swift-wayland-demo` on at least one non-Weston desktop
-   before treating compositor compatibility as release-ready.
-8. Regenerate protocols and confirm no diff.
-9. Generate and review the public API report.
-10. Review `docs/public-api-audit.md`.
-11. Update README support and unsupported lists if behavior changed.
-12. Tag the checkpoint.
-13. If publishing a GitHub release, copy the supported and unsupported scope from README.
+7. Run `./Scripts/integration-wayland.sh` under a Wayland session.
+8. Manually run `swift run swift-wayland-demo` on at least one non-Weston desktop
+   before treating compositor compatibility as proven.
+9. Regenerate protocols and confirm no diff.
+10. Generate and review the public API report.
+11. Review `docs/public-api-audit.md`.
+12. Update README support and unsupported lists if behavior changed.
+13. Tag the checkpoint.
+14. If publishing GitHub checkpoint notes, copy the supported and unsupported scope from README.
 
 ## Stop Conditions
 
@@ -63,16 +56,17 @@ Do not tag if any of these fail:
 - shim verification,
 - strict concurrency build,
 - tests,
-- release build,
+- optimized build,
 - public API report review,
-- or live Wayland smoke test.
+- live Wayland smoke test,
+- or live Wayland public API integration test.
 
-## Tag Text
+## Tag Text Template
 
 Use factual scope text:
 
 ```markdown
-SwiftWayland 0.0.1 is a development checkpoint for Linux Wayland client work.
+SwiftWayland is a development checkpoint for Linux Wayland client work.
 
 Supported:
 - Swift 6.3.1 package build.
@@ -89,11 +83,13 @@ Supported:
 - Basic xkb_v1 keyboard interpretation through xkbcommon.
 - Static pointer cursor surfaces through wayland-cursor.
 - Server-side decoration negotiation through xdg-decoration.
+- Popup surfaces with placement, redraw, dismissal, and target identity.
+- Regular clipboard selection offers and sources through data-device.
 
 Not supported:
 - Widgets.
 - Text input, compose handling, or IME.
-- Clipboard, primary selection, or drag and drop.
+- Primary selection or drag and drop.
 - Cursor animation or per-output cursor scaling.
 - Client-side decorations.
 - Full output-management API.
@@ -106,5 +102,6 @@ Verification:
 - make check
 - swift build -c release
 - swift run swift-wayland-smoke
+- ./Scripts/integration-wayland.sh
 - manual demo smoke test
 ```
