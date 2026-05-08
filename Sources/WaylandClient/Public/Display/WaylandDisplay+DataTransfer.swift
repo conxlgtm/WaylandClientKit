@@ -51,7 +51,7 @@ extension WaylandDisplay {
 
 extension WaylandDisplay {
     public func primarySelectionOffer(for seatID: SeatID) throws -> PrimarySelectionOffer? {
-        try requireCore().primarySelectionOffer(for: seatID).map { offer in
+        try requirePrimarySelectionHandler().primarySelectionOffer(for: seatID).map { offer in
             PrimarySelectionOffer(snapshot: offer, display: self)
         }
     }
@@ -65,7 +65,7 @@ extension WaylandDisplay {
         seatID: SeatID,
         serial: InputSerial
     ) throws -> PrimarySelectionSource {
-        let source = try requireCore().setPrimarySelection(
+        let source = try requirePrimarySelectionHandler().setPrimarySelection(
             configuration,
             seatID: seatID,
             serial: serial
@@ -77,7 +77,10 @@ extension WaylandDisplay {
     ///
     /// The compositor validates `serial` at the protocol boundary.
     public func requestClearPrimarySelection(seatID: SeatID, serial: InputSerial) throws {
-        try requireCore().clearPrimarySelection(seatID: seatID, serial: serial)
+        try requirePrimarySelectionHandler().clearPrimarySelection(
+            seatID: seatID,
+            serial: serial
+        )
     }
 
     package func requestClearPrimarySelection(
@@ -85,7 +88,7 @@ extension WaylandDisplay {
         seatID: SeatID,
         serial: InputSerial
     ) throws {
-        try requireCore().clearPrimarySelection(
+        try requirePrimarySelectionHandler().clearPrimarySelection(
             sourceID: sourceID,
             seatID: seatID,
             serial: serial
@@ -96,6 +99,9 @@ extension WaylandDisplay {
         id offerID: DataOfferID,
         mimeType: MIMEType
     ) throws -> OwnedFileDescriptor {
-        try requireCore().receivePrimarySelectionOffer(id: offerID, mimeType: mimeType)
+        try requirePrimarySelectionHandler().receivePrimarySelectionOffer(
+            id: offerID,
+            mimeType: mimeType
+        )
     }
 }

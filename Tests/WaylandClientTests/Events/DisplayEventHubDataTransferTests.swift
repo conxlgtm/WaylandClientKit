@@ -74,6 +74,31 @@ struct DisplayEventHubDataTransferTests {
     }
 
     @Test
+    func primarySelectionSourceWriteFailureResultMapsToDiagnostic() {
+        let diagnostic = DisplaySession.dataTransferDiagnostic(
+            from: .failed(
+                source: .primarySelection(DataSourceID(rawValue: 5)),
+                mimeType: .plainTextUTF8,
+                error: .writeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
+            )
+        )
+
+        #expect(
+            diagnostic
+                == DataTransferDiagnostic(
+                    source: .primarySelection(
+                        PrimarySelectionSourceIdentity(DataSourceID(rawValue: 5))
+                    ),
+                    mimeType: .plainTextUTF8,
+                    operation: .sourceWriteFailed,
+                    error: .writeFileDescriptor(
+                        WaylandSystemErrno(unchecked: EIO)
+                    )
+                )
+        )
+    }
+
+    @Test
     func sourceWriteSuccessResultDoesNotMapToDiagnostic() {
         #expect(
             DisplaySession.dataTransferDiagnostic(
