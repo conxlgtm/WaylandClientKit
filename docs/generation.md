@@ -19,19 +19,19 @@ Do not edit generated files directly. Change the vendored XML or generation scri
 
 Generated headers:
 
-- `Sources/CWaylandProtocols/include/generated/wayland-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/xdg-shell-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/xdg-decoration-unstable-v1-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/viewporter-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/fractional-scale-v1-client-protocol.h`
+- `Sources/CWaylandProtocols/include/generated/core/wayland-client-protocol.h`
+- `Sources/CWaylandProtocols/include/generated/stable/xdg-shell/xdg-shell-client-protocol.h`
+- `Sources/CWaylandProtocols/include/generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h`
+- `Sources/CWaylandProtocols/include/generated/stable/viewporter/viewporter-client-protocol.h`
+- `Sources/CWaylandProtocols/include/generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h`
 
 Generated C files:
 
-- `Sources/CWaylandProtocols/generated/wayland-protocol.c`
-- `Sources/CWaylandProtocols/generated/xdg-shell-protocol.c`
-- `Sources/CWaylandProtocols/generated/xdg-decoration-unstable-v1-protocol.c`
-- `Sources/CWaylandProtocols/generated/viewporter-protocol.c`
-- `Sources/CWaylandProtocols/generated/fractional-scale-v1-protocol.c`
+- `Sources/CWaylandProtocols/generated/core/wayland-protocol.c`
+- `Sources/CWaylandProtocols/generated/stable/xdg-shell/xdg-shell-protocol.c`
+- `Sources/CWaylandProtocols/generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-protocol.c`
+- `Sources/CWaylandProtocols/generated/stable/viewporter/viewporter-protocol.c`
+- `Sources/CWaylandProtocols/generated/staging/fractional-scale/fractional-scale-v1-protocol.c`
 
 These files are committed.
 

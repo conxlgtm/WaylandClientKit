@@ -1,9 +1,9 @@
 #include "swift-wayland-shims.h"
-#include "generated/fractional-scale-v1-client-protocol.h"
-#include "generated/wayland-client-protocol.h"
-#include "generated/viewporter-client-protocol.h"
-#include "generated/xdg-decoration-unstable-v1-client-protocol.h"
-#include "generated/xdg-shell-client-protocol.h"
+#include "generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h"
+#include "generated/core/wayland-client-protocol.h"
+#include "generated/stable/viewporter/viewporter-client-protocol.h"
+#include "generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h"
+#include "generated/stable/xdg-shell/xdg-shell-client-protocol.h"
 
 struct wl_compositor *swl_registry_bind_wl_compositor(
     struct wl_registry *registry, uint32_t name, uint32_t version)

@@ -1,5 +1,5 @@
 #include "swift-wayland-shims.h"
-#include "generated/wayland-client-protocol.h"
+#include "generated/core/wayland-client-protocol.h"
 
 /*
  * wl_data_offer listener bridge

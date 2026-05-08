@@ -114,8 +114,14 @@ Contains:
 
 Subdirectories:
 
-- `include/generated/`
-- `generated/`
+- `include/generated/core/`
+- `include/generated/stable/`
+- `include/generated/staging/`
+- `include/generated/legacy-unstable/`
+- `generated/core/`
+- `generated/stable/`
+- `generated/staging/`
+- `generated/legacy-unstable/`
 - `shims/`
 
 ### `WaylandRaw`

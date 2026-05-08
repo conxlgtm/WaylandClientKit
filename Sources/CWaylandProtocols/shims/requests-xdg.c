@@ -1,6 +1,6 @@
 #include "swift-wayland-shims.h"
-#include "generated/xdg-decoration-unstable-v1-client-protocol.h"
-#include "generated/xdg-shell-client-protocol.h"
+#include "generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h"
+#include "generated/stable/xdg-shell/xdg-shell-client-protocol.h"
 
 #ifdef SWL_ENABLE_TESTING
 static struct swl_test_xdg_positioner_request_record

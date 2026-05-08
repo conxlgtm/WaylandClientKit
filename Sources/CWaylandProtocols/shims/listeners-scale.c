@@ -1,5 +1,5 @@
 #include "swift-wayland-shims.h"
-#include "generated/fractional-scale-v1-client-protocol.h"
+#include "generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h"
 
 static void swl_wp_fractional_scale_v1_handle_preferred_scale(
     void *data, struct wp_fractional_scale_v1 *fractional_scale, uint32_t scale)
