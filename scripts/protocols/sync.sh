@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-source "$ROOT/Scripts/protocol-sources.sh"
+source "$ROOT/scripts/protocols/sources.sh"
 
 wayland_candidates=()
 xdg_candidates=()
@@ -58,18 +58,18 @@ FRACTIONAL_SCALE_XML_SOURCE="$(
 }
 
 mkdir -p \
-    "$ROOT/Protocols/core" \
-    "$ROOT/Protocols/stable/xdg-shell" \
-    "$ROOT/Protocols/unstable/xdg-decoration" \
-    "$ROOT/Protocols/stable/viewporter" \
-    "$ROOT/Protocols/staging/fractional-scale"
+    "$ROOT/protocols/upstream/core" \
+    "$ROOT/protocols/upstream/stable/xdg-shell" \
+    "$ROOT/protocols/upstream/legacy-unstable/xdg-decoration" \
+    "$ROOT/protocols/upstream/stable/viewporter" \
+    "$ROOT/protocols/upstream/staging/fractional-scale"
 
-cp "$WAYLAND_CORE_XML_SOURCE" "$ROOT/Protocols/core/wayland.xml"
-cp "$XDG_SHELL_XML_SOURCE" "$ROOT/Protocols/stable/xdg-shell/xdg-shell.xml"
+cp "$WAYLAND_CORE_XML_SOURCE" "$ROOT/protocols/upstream/core/wayland.xml"
+cp "$XDG_SHELL_XML_SOURCE" "$ROOT/protocols/upstream/stable/xdg-shell/xdg-shell.xml"
 cp "$XDG_DECORATION_XML_SOURCE" \
-    "$ROOT/Protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
-cp "$VIEWPORTER_XML_SOURCE" "$ROOT/Protocols/stable/viewporter/viewporter.xml"
+    "$ROOT/protocols/upstream/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
+cp "$VIEWPORTER_XML_SOURCE" "$ROOT/protocols/upstream/stable/viewporter/viewporter.xml"
 cp "$FRACTIONAL_SCALE_XML_SOURCE" \
-    "$ROOT/Protocols/staging/fractional-scale/fractional-scale-v1.xml"
+    "$ROOT/protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml"
 
-echo "Vendored protocol XML into $ROOT/Protocols"
+echo "Vendored protocol XML into $ROOT/protocols"

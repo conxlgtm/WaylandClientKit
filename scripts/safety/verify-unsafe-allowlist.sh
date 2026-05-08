@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ALLOWLIST_PATH="${ROOT_DIR}/Scripts/unsafe-token-allowlist.tsv"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ALLOWLIST_PATH="${ROOT_DIR}/scripts/safety/unsafe-token-allowlist.tsv"
 TOKEN_PATTERN='@unchecked[[:space:]]+Sendable|UnsafeMutableRawBufferPointer|UnsafeMutableBufferPointer|UnsafeRawBufferPointer|UnsafeBufferPointer|UnsafeMutableRawPointer|UnsafeMutablePointer|UnsafeRawPointer|UnsafePointer|OpaquePointer|Unmanaged|unsafeBitCast|withUnsafeCurrentTask|nonisolated\(unsafe\)|unowned\(unsafe\)|pthread_[A-Za-z0-9_]+|eventfd|ppoll\(|poll\(|\bwl_display_dispatch\b|\bwl_display_dispatch_pending\b|\bwl_display_prepare_read\b|wl_proxy_add_listener|\bwl_proxy_get_queue\b|\bwl_proxy_set_queue\b|\bwl_proxy_create_wrapper\b|\bwl_proxy_wrapper_destroy\b|swl_proxy_get_queue_raw|UnsafeDefaultQueueEventLoop|EventLoop\.pumpOnce\(display:'
 
 cd "${ROOT_DIR}"
@@ -68,7 +68,7 @@ if [[ "${failures}" -ne 0 ]]; then
 Unsafe-token allowlist check failed.
 
 Move the unsafe construct into an approved raw/shim boundary, or add a narrow entry
-to Scripts/unsafe-token-allowlist.tsv with a concrete reason.
+to scripts/safety/unsafe-token-allowlist.tsv with a concrete reason.
 MESSAGE
 fi
 

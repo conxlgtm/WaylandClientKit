@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 required_files=(
     README.md
@@ -11,14 +11,14 @@ required_files=(
 )
 
 required_executables=(
-    Scripts/bootstrap-linux.sh
-    Scripts/generate-protocols.sh
-    Scripts/verify-generated.sh
-    Scripts/verify-shims.sh
+    scripts/dev/bootstrap-linux.sh
+    scripts/protocols/generate.sh
+    scripts/protocols/verify-generated.sh
+    scripts/shims/verify-shims.sh
 )
 
 required_patterns=(
-    "swift-wayland-demo"
+    "SwiftWaylandDemo"
     "swift-wayland-smoke"
     "WaylandClient"
     "WaylandDisplay"
@@ -40,9 +40,9 @@ required_patterns=(
     "ripgrep"
     "make check"
     "make strict-memory-safety-raw"
-    "./Scripts/generate-protocols.sh"
-    "./Scripts/verify-generated.sh"
-    "./Scripts/verify-shims.sh"
+    "./scripts/protocols/generate.sh"
+    "./scripts/protocols/verify-generated.sh"
+    "./scripts/shims/verify-shims.sh"
 )
 
 missing=0
@@ -71,7 +71,7 @@ for pattern in "${required_patterns[@]}"; do
     fi
 done
 
-api_report="$("$ROOT/Scripts/dump-public-api.sh")"
+api_report="$("$ROOT/scripts/ci/dump-public-api.sh")"
 if grep --fixed-strings --quiet "## Library Products" <<<"$api_report"; then
     echo "Public API report labels all products as library products"
     missing=1

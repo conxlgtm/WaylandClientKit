@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROTO_DIR="$ROOT/Protocols"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PROTO_DIR="$ROOT/protocols/upstream"
 OUT_DIR="$ROOT/Sources/CWaylandProtocols"
 GEN_INC="$OUT_DIR/include/generated"
 GEN_SRC="$OUT_DIR/generated"
@@ -22,8 +22,8 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
-[[ -f "$PROTO_DIR/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" ]] || {
-    echo "Missing vendored protocol: $PROTO_DIR/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
+[[ -f "$PROTO_DIR/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
     exit 1
 }
 
@@ -81,11 +81,11 @@ wayland-scanner private-code \
     "$GEN_SRC/xdg-shell-protocol.c"
 
 wayland-scanner client-header \
-    "$PROTO_DIR/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" \
+    "$PROTO_DIR/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" \
     "$GEN_INC/xdg-decoration-unstable-v1-client-protocol.h"
 
 wayland-scanner private-code \
-    "$PROTO_DIR/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" \
+    "$PROTO_DIR/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" \
     "$GEN_SRC/xdg-decoration-unstable-v1-protocol.c"
 
 wayland-scanner client-header \

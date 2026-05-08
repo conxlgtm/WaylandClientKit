@@ -2,7 +2,7 @@
   "protocols": [
     {
       "name": "wayland-core",
-      "localPath": "Protocols/core/wayland.xml",
+      "localPath": "protocols/upstream/core/wayland.xml",
       "upstreamProject": "wayland",
       "upstreamVersion": "1.24.0",
       "vendoredFromPackage": "wayland-devel-1.24.0-3.fc44.x86_64",
@@ -12,7 +12,7 @@
     },
     {
       "name": "xdg-shell",
-      "localPath": "Protocols/stable/xdg-shell/xdg-shell.xml",
+      "localPath": "protocols/upstream/stable/xdg-shell/xdg-shell.xml",
       "upstreamProject": "wayland-protocols",
       "upstreamVersion": "1.47",
       "vendoredFromPackage": "wayland-protocols-devel-1.47-2.fc44.noarch",
@@ -23,7 +23,7 @@
     },
     {
       "name": "xdg-decoration-unstable-v1",
-      "localPath": "Protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml",
+      "localPath": "protocols/upstream/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml",
       "upstreamProject": "wayland-protocols",
       "upstreamVersion": "1.48",
       "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
@@ -34,7 +34,7 @@
     },
     {
       "name": "viewporter",
-      "localPath": "Protocols/stable/viewporter/viewporter.xml",
+      "localPath": "protocols/upstream/stable/viewporter/viewporter.xml",
       "upstreamProject": "wayland-protocols",
       "upstreamVersion": "1.48",
       "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
@@ -45,7 +45,7 @@
     },
     {
       "name": "fractional-scale-v1",
-      "localPath": "Protocols/staging/fractional-scale/fractional-scale-v1.xml",
+      "localPath": "protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml",
       "upstreamProject": "wayland-protocols",
       "upstreamVersion": "1.48",
       "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",

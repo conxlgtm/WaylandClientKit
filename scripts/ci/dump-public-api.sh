@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
 git_in_repo() {
@@ -15,7 +15,7 @@ echo
 
 echo "## Products"
 echo
-"$ROOT/Scripts/swift.sh" package describe --type text \
+"$ROOT/scripts/dev/swift.sh" package describe --type text \
     | awk '
         /^Products:/ { in_products = 1; next }
         /^Targets:/ { in_products = 0 }
@@ -25,7 +25,8 @@ echo
 
 echo "## WaylandClient Public Declarations"
 echo
-git_in_repo ls-files 'Sources/WaylandClient/*.swift' \
+git_in_repo ls-files \
+    | rg '^Sources/WaylandClient/.*\.swift$' \
     | sort \
     | while IFS= read -r file; do
         declarations="$(rg -n '^[[:space:]]*public[[:space:]]+' "$file" || true)"
@@ -41,7 +42,8 @@ echo "## Non-Product Target Public Declarations"
 echo
 echo "These declarations are not part of a vended library product unless the package manifest changes."
 echo
-git_in_repo ls-files 'Sources/*.swift' 'Sources/*/*.swift' \
+git_in_repo ls-files \
+    | rg '^Sources/.*\.swift$' \
     | rg -v '^Sources/WaylandClient/' \
     | sort \
     | while IFS= read -r file; do

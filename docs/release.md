@@ -14,17 +14,17 @@ pkg-config --modversion xkbcommon
 command -v wayland-scanner
 make check
 swift build -c release
-swift build -c release --product swift-wayland-demo
+swift build -c release --target SwiftWaylandDemo
 swift build -c release --product swift-wayland-smoke
-./Scripts/dump-public-api.sh > /tmp/swiftwayland-public-api.md
+./scripts/ci/dump-public-api.sh > /tmp/swiftwayland-public-api.md
 ```
 
 Under a real Wayland session:
 
 ```bash
-./Scripts/smoke-wayland.sh
-./Scripts/integration-wayland.sh
-swift run swift-wayland-demo
+./scripts/smoke/smoke-wayland.sh
+./scripts/smoke/integration-wayland.sh
+swift run SwiftWaylandDemo
 ```
 
 Compositor targets are Weston, GNOME/Mutter, KDE/KWin, and Sway/wlroots. A checkpoint
@@ -37,9 +37,9 @@ should not treat Weston-only behavior as sufficient for compositor compatibility
 3. Confirm Linux bootstrap dependencies are installed or CI uses equivalent packages.
 4. Run `make check`.
 5. Run optimized builds for the package, demo, and smoke executable.
-6. Run `./Scripts/smoke-wayland.sh` under a Wayland session.
-7. Run `./Scripts/integration-wayland.sh` under a Wayland session.
-8. Manually run `swift run swift-wayland-demo` on at least one non-Weston desktop
+6. Run `./scripts/smoke/smoke-wayland.sh` under a Wayland session.
+7. Run `./scripts/smoke/integration-wayland.sh` under a Wayland session.
+8. Manually run `swift run SwiftWaylandDemo` on at least one non-Weston desktop
    before treating compositor compatibility as proven.
 9. Regenerate protocols and confirm no diff.
 10. Generate and review the public API report.
@@ -103,6 +103,6 @@ Verification:
 - make check
 - swift build -c release
 - swift run swift-wayland-smoke
-- ./Scripts/integration-wayland.sh
+- ./scripts/smoke/integration-wayland.sh
 - manual demo smoke test
 ```
