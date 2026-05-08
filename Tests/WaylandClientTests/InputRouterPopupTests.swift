@@ -167,6 +167,32 @@ struct PopupInputRouterTests {
     }
 
     @Test
+    func popupCloseRemovesPopupTargetButKeepsParentTarget() throws {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 22)
+        let windowID = WindowID(rawValue: 220)
+        let popupID = PopupID(rawValue: 2_201)
+        router.register(windowID: windowID, surfaceID: 2_200)
+        try router.registerPopup(
+            popupID: popupID,
+            parentSurfaceID: 2_200,
+            surfaceID: 2_201
+        )
+
+        _ = router.route(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 2_201))
+        router.unregister(surfaceID: 2_201)
+
+        let staleMotion = router.route(rawPointerMotion(sequence: 2, seatID: seatID, time: 20))
+        let parentEnter = router.route(
+            rawPointerEnter(sequence: 3, seatID: seatID, surfaceID: 2_200, serial: 21)
+        )
+
+        #expect(staleMotion.first?.target == .focusless)
+        #expect(parentEnter.first?.target == .surface(.window(windowID)))
+        #expect(parentEnter.first?.popup == nil)
+    }
+
+    @Test
     func unregisterPopupSurfaceClearsPointerKeyboardAndTouchFocus() throws {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 20)
