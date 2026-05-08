@@ -38,9 +38,9 @@ Sources/CWaylandProtocols/shims/display-core.c	wl_proxy_wrapper_destroy	Queue-at
 Sources/CWaylandProtocols/shims/file-descriptor.c	pthread_*	C shim blocks SIGPIPE around fd writes without changing process-global signal disposition.
 Sources/CWaylandProtocols/shims/requests-core.c	wl_proxy_get_queue	Queue assertion shim implementation.
 Sources/CWaylandProtocols/shims/requests-core.c	swl_proxy_get_queue_raw	Queue assertion shim implementation.
-Sources/WaylandClient/SoftwareFrame.swift	UnsafeMutableBufferPointer	Scoped software-frame row spans.
-Sources/WaylandClient/SoftwareFrame.swift	UnsafeMutableRawBufferPointer	Scoped software-frame backing bytes.
-Sources/WaylandClient/DataTransferSourceWriterState.swift	@unchecked Sendable	Condition-protected data-transfer writer state shared with one worker thread.
+Sources/WaylandClient/Public/Rendering/SoftwareFrame.swift	UnsafeMutableBufferPointer	Scoped software-frame row spans.
+Sources/WaylandClient/Public/Rendering/SoftwareFrame.swift	UnsafeMutableRawBufferPointer	Scoped software-frame backing bytes.
+Sources/WaylandClient/Internal/DataTransfer/DataTransferSourceWriterState.swift	@unchecked Sendable	Condition-protected data-transfer writer state shared with one worker thread.
 Tests/**	OpaquePointer	Test doubles for raw C object wrappers.
 Tests/**	UnsafeMutablePointer	Test doubles for C listener and buffer APIs.
 Tests/**	UnsafeMutableBufferPointer	Test doubles for C buffer APIs.
