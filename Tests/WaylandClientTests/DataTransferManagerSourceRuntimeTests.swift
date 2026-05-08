@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import WaylandRaw
 
 @testable import WaylandClient
 
@@ -84,5 +85,48 @@ struct DataTransferManagerSourceRuntimeTests {
         ) {
             try manager.throwPendingCallbackErrorIfAny()
         }
+    }
+
+    @Test
+    func dataTransferTransitionSequenceMaintainsRuntimeInvariants() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        let offerHandle = RawDataOfferHandle(uncheckedRawValue: 0xDA7A_7001)
+
+        try manager.synchronizeSeats([seatID])
+        try manager.checkInvariantsForTesting()
+        let device = try #require(backend.binding(for: seatID))
+
+        let source = try manager.setSelectionSource(
+            seatID: seatID,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 4),
+            payloads: try DataTransferSourcePayloadSet(
+                data: [.plainText: Data("clipboard".utf8)]
+            )
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+        sourceBinding.emit(.send(mimeType: MIMEType.plainText.rawValue, fd: 401))
+        try manager.checkInvariantsForTesting()
+
+        device.emit(.dataOffer(offerHandle))
+        let offerBinding = try #require(backend.offerBinding(for: offerHandle))
+        offerBinding.emit(.offer(MIMEType.uriList.rawValue))
+        device.emit(.selection(offerHandle))
+        try manager.checkInvariantsForTesting()
+
+        #expect(sourceBinding.destroyCount == 1)
+        #expect(backend.closedDescriptors == [401])
+        #expect(manager.drainSourceSendRequests().isEmpty)
+        #expect(manager.seatSnapshots.first?.selectionOfferID == offerBinding.id)
+
+        device.emit(.selection(nil))
+        try manager.checkInvariantsForTesting()
+        #expect(offerBinding.destroyCount == 1)
+
+        try manager.synchronizeSeats([])
+        try manager.checkInvariantsForTesting()
+        #expect(device.releaseCount == 1)
+        #expect(manager.seatSnapshots.isEmpty)
     }
 }
