@@ -237,7 +237,7 @@ struct InterpretedKeyboardInputRouterTests {
     }
 }
 
-private func focusedKeyboardRouter() -> InputRouter {
+func focusedKeyboardRouter() -> InputRouter {
     let router = InputRouter()
     let seatID = RawSeatID(rawValue: 15)
     router.register(windowID: WindowID(rawValue: 150), surfaceID: 1_500)
@@ -245,14 +245,14 @@ private func focusedKeyboardRouter() -> InputRouter {
     return router
 }
 
-private func unmanagedSurfaceFocusedKeyboardRouter() -> InputRouter {
+func unmanagedSurfaceFocusedKeyboardRouter() -> InputRouter {
     let router = InputRouter()
     let seatID = RawSeatID(rawValue: 16)
     _ = router.route(rawKeyboardEnter(sequence: 1, seatID: seatID, surfaceID: 1_600))
     return router
 }
 
-private func expectedInterpretedQKey(
+func expectedInterpretedQKey(
     repeatCapability: WaylandClient.KeyboardKeyRepeatCapability = .repeating
 ) -> InterpretedKeyboardKeyEvent {
     InterpretedKeyboardKeyEvent(
@@ -269,7 +269,7 @@ private func expectedInterpretedQKey(
     )
 }
 
-private func expectedModifiers() -> WaylandClient.InterpretedKeyboardModifiers {
+func expectedModifiers() -> WaylandClient.InterpretedKeyboardModifiers {
     WaylandClient.InterpretedKeyboardModifiers(
         serial: 20,
         depressed: 1,

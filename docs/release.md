@@ -81,6 +81,7 @@ Supported:
 - Basic seat, pointer, keyboard, and touch input capture.
 - Session-level public input draining.
 - Basic xkb_v1 keyboard interpretation through xkbcommon.
+- Compose and dead-key text results for interpreted keyboard events.
 - Static pointer cursor surfaces through wayland-cursor.
 - Server-side decoration negotiation through xdg-decoration.
 - Popup surfaces with placement, redraw, dismissal, and target identity.
@@ -88,7 +89,7 @@ Supported:
 
 Not supported:
 - Widgets.
-- Text input, compose handling, or IME.
+- Text input or IME.
 - Primary selection or drag and drop.
 - Cursor animation or per-output cursor scaling.
 - Client-side decorations.

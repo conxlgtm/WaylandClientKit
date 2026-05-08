@@ -272,7 +272,8 @@ public actor WaylandDisplay {
         let session = try DisplaySession(
             connection: connection,
             cursorConfiguration: cursorConfiguration,
-            inputPipelineConfiguration: displayConfiguration.inputPipeline
+            inputPipelineConfiguration: displayConfiguration.inputPipeline,
+            keyboardInterpretationConfiguration: displayConfiguration.keyboardInterpretation
         )
         let displayCore = DisplayCore(session: session, eventHub: runtime.eventHub)
         session.setRawInvariantFailureReporter(displayCore)

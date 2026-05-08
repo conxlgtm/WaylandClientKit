@@ -2,7 +2,7 @@ import WaylandCursor
 import WaylandKeyboardInterpretation
 import WaylandRaw
 
-package final class DisplaySession {
+package final class DisplaySession {  // swiftlint:disable:this type_body_length
     package static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000
 
     package let connection: RawDisplayConnection
@@ -22,21 +22,30 @@ package final class DisplaySession {
         connection rawConnection: RawDisplayConnection,
         cursorConfiguration: CursorConfiguration = .init(),
         inputPipelineConfiguration: InputPipelineConfiguration = .init(),
+        keyboardInterpretationConfiguration: KeyboardInterpretationConfiguration = .init(),
         dataTransferSourceWriter sourceWriter: any DataTransferSourceWriting =
             ThreadedDataTransferSourceWriter()
     ) throws {
         rawConnection.preconditionIsOwnerThread()
         connection = rawConnection
-        keyboardInterpreter = try KeyboardInterpreter()
-        cursorManager = try CursorManager(
-            connection: rawConnection,
-            configuration: cursorConfiguration
+        keyboardInterpreter = try KeyboardInterpreter(
+            configuration: Self.keyboardInterpreterConfiguration(
+                for: keyboardInterpretationConfiguration
+            )
         )
+        cursorManager = try CursorManager(
+            connection: rawConnection, configuration: cursorConfiguration)
         dataTransferGlobalProvider = rawConnection
         dataTransferManager = DataTransferManager(connection: rawConnection)
         dataTransferSourceWriter = sourceWriter
-        let pendingInputEventCapacity = inputPipelineConfiguration.pendingInputEventCapacity
-        maximumPendingInputEventCount = pendingInputEventCapacity.rawValue
+        maximumPendingInputEventCount =
+            inputPipelineConfiguration.pendingInputEventCapacity.rawValue
+    }
+
+    package static func keyboardInterpreterConfiguration(
+        for configuration: KeyboardInterpretationConfiguration
+    ) -> WaylandKeyboardInterpretation.KeyboardInterpreterConfiguration {
+        .init(configuration)
     }
 
     deinit {

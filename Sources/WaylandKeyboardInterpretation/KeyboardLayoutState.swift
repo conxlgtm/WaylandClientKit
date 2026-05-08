@@ -115,16 +115,35 @@ final class KeyboardLayoutState {
     private let context: XKBContextOwner
     private let keymap: XKBKeymapOwner
     private let state: XKBStateOwner
+    private let composeState: XKBComposeStateOwner?
+    private let composeCancellationPolicy: KeyboardComposeCancellationPolicy
+    let composeFailureReason: KeyboardInterpretationUnavailableReason?
     private let threadAffinity = ThreadAffinity()
 
     init(
         context sharedContext: XKBContextOwner,
-        keymap payload: RawKeyboardKeymapPayload
+        keymap payload: RawKeyboardKeymapPayload,
+        composeTable: XKBComposeTableOwner? = nil,
+        composeCancellationPolicy policy: KeyboardComposeCancellationPolicy =
+            .passThroughCancellingKey
     ) throws(KeyboardLayoutError) {
         keymapID = payload.id
         context = sharedContext
         keymap = try XKBKeymapOwner(context: sharedContext, payload: payload)
         state = try XKBStateOwner(keymap: keymap)
+        if let composeTable {
+            do {
+                composeState = try XKBComposeStateOwner(table: composeTable)
+                composeFailureReason = nil
+            } catch {
+                composeState = nil
+                composeFailureReason = .composeStateCreationFailed
+            }
+        } else {
+            composeState = nil
+            composeFailureReason = nil
+        }
+        composeCancellationPolicy = policy
     }
 
     init(keymap payload: RawKeyboardKeymapPayload)
@@ -135,6 +154,9 @@ final class KeyboardLayoutState {
         context = newContext
         keymap = try XKBKeymapOwner(context: newContext, payload: payload)
         state = try XKBStateOwner(keymap: keymap)
+        composeState = nil
+        composeCancellationPolicy = .passThroughCancellingKey
+        composeFailureReason = nil
     }
 
     var id: RawKeyboardKeymapID {
@@ -181,16 +203,33 @@ final class KeyboardLayoutState {
 
         let xkbKeycode = key.evdevKeycode + Self.evdevToXKBOffset
         let interpretedState = InterpretedKeyboardKeyState(rawValue: key.state.rawValue)
-        let keysym = xkb_state_key_get_one_sym(state.pointer, xkbKeycode)
+        let keyboardKeysyms = keysyms(for: xkbKeycode)
+        let symbolResolution = symbolResolution(for: xkbKeycode, keysyms: keyboardKeysyms)
+        let primaryKeysym = symbolResolution.primary
+        let keyKeysymName = keysymName(for: primaryKeysym.rawValue)
         let isPressLike = interpretedState == .pressed || interpretedState == .repeated
+        let keyText = isPressLike ? utf8Text(for: xkbKeycode) : nil
+        let singleKeysym = keyboardKeysyms.count == 1 ? primaryKeysym : nil
+        let singleKeysymName = singleKeysym == nil ? nil : keyKeysymName
+        let textInput = KeyboardTextResolutionInput(
+            feedKeysym: singleKeysym ?? KeyboardKeysym(rawValue: UInt32(XKB_KEY_NoSymbol)),
+            feedKeysymName: singleKeysymName,
+            keyText: keyText,
+            resultKeysym: singleKeysym,
+            resultKeysymName: singleKeysymName
+        )
         let repeatCapability = KeyboardKeyRepeatCapability(
             keymapAllowsRepeat: xkb_keymap_key_repeats(keymap.pointer, xkbKeycode) != 0
         )
         let interpretation = InterpretedKeyboardKeyInterpretation(
             state: interpretedState,
-            keysymName: keysymName(for: keysym),
-            utf8: isPressLike ? utf8Text(for: xkbKeycode) : nil,
+            keysymName: keyKeysymName,
+            utf8: keyText,
             repeatCapability: repeatCapability
+        )
+        let text = keyboardTextResult(
+            isPressLike: isPressLike,
+            input: textInput
         )
 
         return InterpretedKeyboardKey(
@@ -198,8 +237,9 @@ final class KeyboardLayoutState {
             time: key.time,
             evdevKeycode: key.evdevKeycode,
             xkbKeycode: xkbKeycode,
-            keysym: KeyboardKeysym(rawValue: keysym),
-            interpretation: interpretation
+            symbolResolution: symbolResolution,
+            interpretation: interpretation,
+            text: text
         )
     }
 
@@ -223,10 +263,78 @@ final class KeyboardLayoutState {
         return stringFromNullTerminatedBuffer(buffer)
     }
 
+    private func keysyms(for xkbKeycode: UInt32) -> [KeyboardKeysym] {
+        var keysymsPointer: UnsafePointer<xkb_keysym_t>?
+        let count = xkb_state_key_get_syms(
+            state.pointer,
+            xkbKeycode,
+            &keysymsPointer
+        )
+        guard count > 0, let keysymsPointer else { return [] }
+
+        return (0..<Int(count)).map { index in
+            KeyboardKeysym(rawValue: keysymsPointer[index])
+        }
+    }
+
+    private func symbolResolution(
+        for xkbKeycode: UInt32,
+        keysyms: [KeyboardKeysym]
+    ) -> KeyboardSymbolResolution {
+        let oneKeysym = xkb_state_key_get_one_sym(state.pointer, xkbKeycode)
+        guard oneKeysym != XKB_KEY_NoSymbol else {
+            return .resolved(keysyms)
+        }
+
+        let primaryKeysym = KeyboardKeysym(rawValue: oneKeysym)
+        guard keysyms.first != primaryKeysym else {
+            return .resolved(keysyms)
+        }
+
+        let normalizedKeysyms = [primaryKeysym] + keysyms.filter { $0 != primaryKeysym }
+        return .resolved(normalizedKeysyms)
+    }
+
     private func utf8Text(for xkbKeycode: UInt32) -> String? {
         stringFromXKB { buffer, count in
             xkb_state_key_get_utf8(state.pointer, xkbKeycode, buffer, count)
         }
+    }
+
+    private func keyboardTextResult(
+        isPressLike: Bool,
+        input: KeyboardTextResolutionInput
+    ) -> KeyboardTextResult {
+        guard isPressLike else { return .none }
+
+        guard let composeState else {
+            return xkbKeyTextResult(
+                input.keyText,
+                resultKeysym: input.resultKeysym,
+                resultKeysymName: input.resultKeysymName
+            )
+        }
+
+        return composeState.resolve(
+            input: input,
+            policy: composeCancellationPolicy
+        )
+    }
+
+    private func xkbKeyTextResult(
+        _ keyText: String?,
+        resultKeysym: KeyboardKeysym?,
+        resultKeysymName: String?
+    ) -> KeyboardTextResult {
+        guard let keyText else { return .none }
+        return .committed(
+            KeyboardTextCommit(
+                string: keyText,
+                source: .xkbKey,
+                resultKeysym: resultKeysym,
+                resultKeysymName: resultKeysymName
+            )
+        )
     }
 
     private func stringFromXKB(
