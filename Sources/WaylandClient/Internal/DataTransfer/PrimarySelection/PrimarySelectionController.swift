@@ -2,6 +2,7 @@ import WaylandRaw
 
 package final class PrimarySelectionController {
     package let backend: any PrimarySelectionControllerBackend
+    private let eventQueue: DataTransferEventQueue
     private var deviceBindings: [SeatID: any PrimarySelectionDeviceBinding] = [:]
     private var offerIDsByHandle: [RawPrimarySelectionOfferHandle: DataOfferID] = [:]
     private var offersByID: [DataOfferID: RuntimePrimarySelectionOffer] = [:]
@@ -9,17 +10,24 @@ package final class PrimarySelectionController {
     private var sourcesByID: [DataSourceID: RuntimePrimarySelectionSource] = [:]
     var pendingSourceSendRequests: [DataTransferSourceSendRequest] = []
     private var pendingCallbackFailures: [DataTransferCallbackFailure] = []
-    private var pendingEvents: [DataTransferEvent] = []
     private var nextOfferID: UInt64 = 1
     private var nextSourceID: UInt64 = 1
 
-    package init(connection rawConnection: RawDisplayConnection) {
+    package init(
+        connection rawConnection: RawDisplayConnection,
+        eventQueue dataTransferEventQueue: DataTransferEventQueue = DataTransferEventQueue()
+    ) {
         backend = LivePrimarySelectionControllerBackend(connection: rawConnection)
+        eventQueue = dataTransferEventQueue
     }
 
-    package init(backend controllerBackend: any PrimarySelectionControllerBackend) {
+    package init(
+        backend controllerBackend: any PrimarySelectionControllerBackend,
+        eventQueue dataTransferEventQueue: DataTransferEventQueue = DataTransferEventQueue()
+    ) {
         controllerBackend.preconditionIsOwnerThread()
         backend = controllerBackend
+        eventQueue = dataTransferEventQueue
     }
 
     package func synchronizeSeats(_ seatIDs: [SeatID]) throws {
@@ -154,8 +162,7 @@ package final class PrimarySelectionController {
 
     package func drainDataTransferEvents() -> [DataTransferEvent] {
         backend.preconditionIsOwnerThread()
-        defer { pendingEvents.removeAll(keepingCapacity: true) }
-        return pendingEvents
+        return eventQueue.drain()
     }
 
     package func throwPendingCallbackErrorIfAny() throws {
@@ -206,7 +213,7 @@ extension PrimarySelectionController {
 
                 cleanupSelection(currentSelection)
                 selectionBySeat[seatID] = PrimarySelectionSelectionState.none
-                pendingEvents.append(
+                eventQueue.append(
                     .primarySelectionChanged(
                         PrimarySelectionEvent(seatID: seatID, offerID: nil)
                     )
@@ -318,7 +325,7 @@ extension PrimarySelectionController {
 
         cleanupSelection(selectionBySeat[seatID] ?? .none)
         selectionBySeat[seatID] = .remoteOffer(offerID)
-        pendingEvents.append(
+        eventQueue.append(
             .primarySelectionChanged(PrimarySelectionEvent(seatID: seatID, offerID: offerID))
         )
     }
@@ -337,7 +344,7 @@ extension PrimarySelectionController {
                 )
             case .cancelled:
                 if cancelSource(sourceID) {
-                    pendingEvents.append(
+                    eventQueue.append(
                         .primarySelectionSourceCancelled(PrimarySelectionSourceIdentity(sourceID))
                     )
                 }
@@ -413,7 +420,7 @@ extension PrimarySelectionController {
             destroyOffer(offerID)
         case .ownedSource(let sourceID):
             if cancelSource(sourceID) {
-                pendingEvents.append(
+                eventQueue.append(
                     .primarySelectionSourceCancelled(PrimarySelectionSourceIdentity(sourceID))
                 )
             }
