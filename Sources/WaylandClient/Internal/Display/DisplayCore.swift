@@ -326,6 +326,36 @@ extension DisplayCore {
         }
     }
 
+    func primarySelectionOffer(for seatID: SeatID) throws -> DataOfferSnapshot? {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            let offer = try activeSession.primarySelectionOfferOnOwnerThread(for: seatID)
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            return offer
+        }
+    }
+
+    func receivePrimarySelectionOffer(
+        id offerID: DataOfferID,
+        mimeType: MIMEType
+    ) throws -> OwnedFileDescriptor {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            let descriptor = try activeSession.receivePrimarySelectionOfferOnOwnerThread(
+                id: offerID,
+                mimeType: mimeType
+            )
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            return descriptor
+        }
+    }
+
     func setClipboard(
         _ configuration: ClipboardSourceConfiguration,
         seatID: SeatID,
@@ -357,6 +387,37 @@ extension DisplayCore {
         }
     }
 
+    func setPrimarySelection(
+        _ configuration: PrimarySelectionSourceConfiguration,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws -> DataSourceSnapshot {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            let source = try activeSession.setPrimarySelectionOnOwnerThread(
+                configuration,
+                seatID: seatID,
+                serial: serial
+            )
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            return source
+        }
+    }
+
+    func clearPrimarySelection(seatID: SeatID, serial: InputSerial) throws {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            try activeSession.clearPrimarySelectionOnOwnerThread(seatID: seatID, serial: serial)
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+        }
+    }
+
     func clearClipboard(
         sourceID: DataSourceID,
         seatID: SeatID,
@@ -365,6 +426,25 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let activeSession = try requireSession()
             try activeSession.clearClipboardOnOwnerThread(
+                sourceID: sourceID,
+                seatID: seatID,
+                serial: serial
+            )
+            publishDataTransferDiagnostics(
+                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
+            )
+            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+        }
+    }
+
+    func clearPrimarySelection(
+        sourceID: DataSourceID,
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            try activeSession.clearPrimarySelectionOnOwnerThread(
                 sourceID: sourceID,
                 seatID: seatID,
                 serial: serial

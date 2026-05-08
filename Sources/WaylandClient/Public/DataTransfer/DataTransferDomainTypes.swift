@@ -224,8 +224,22 @@ public enum DataTransferDiagnosticOperation: Equatable, Sendable {
     case sourceWriteFailed
 }
 
+public enum DataTransferDiagnosticSource: Equatable, Sendable, CustomStringConvertible {
+    case clipboard(ClipboardSourceIdentity)
+    case primarySelection(PrimarySelectionSourceIdentity)
+
+    public var description: String {
+        switch self {
+        case .clipboard(let source):
+            source.description
+        case .primarySelection(let source):
+            source.description
+        }
+    }
+}
+
 public struct DataTransferDiagnostic: Equatable, Sendable {
-    public let source: ClipboardSourceIdentity
+    public let source: DataTransferDiagnosticSource
     public let mimeType: MIMEType
     public let operation: DataTransferDiagnosticOperation
     public let error: DataTransferError
@@ -235,7 +249,7 @@ public struct DataTransferDiagnostic: Equatable, Sendable {
     }
 
     public init(
-        source diagnosticSource: ClipboardSourceIdentity,
+        source diagnosticSource: DataTransferDiagnosticSource,
         mimeType diagnosticMIMEType: MIMEType,
         operation diagnosticOperation: DataTransferDiagnosticOperation,
         error diagnosticError: DataTransferError
@@ -244,6 +258,34 @@ public struct DataTransferDiagnostic: Equatable, Sendable {
         mimeType = diagnosticMIMEType
         operation = diagnosticOperation
         error = diagnosticError
+    }
+
+    public init(
+        source diagnosticSource: ClipboardSourceIdentity,
+        mimeType diagnosticMIMEType: MIMEType,
+        operation diagnosticOperation: DataTransferDiagnosticOperation,
+        error diagnosticError: DataTransferError
+    ) {
+        self.init(
+            source: .clipboard(diagnosticSource),
+            mimeType: diagnosticMIMEType,
+            operation: diagnosticOperation,
+            error: diagnosticError
+        )
+    }
+
+    public init(
+        source diagnosticSource: PrimarySelectionSourceIdentity,
+        mimeType diagnosticMIMEType: MIMEType,
+        operation diagnosticOperation: DataTransferDiagnosticOperation,
+        error diagnosticError: DataTransferError
+    ) {
+        self.init(
+            source: .primarySelection(diagnosticSource),
+            mimeType: diagnosticMIMEType,
+            operation: diagnosticOperation,
+            error: diagnosticError
+        )
     }
 }
 

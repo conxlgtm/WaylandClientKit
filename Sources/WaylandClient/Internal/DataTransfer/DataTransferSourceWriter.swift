@@ -34,8 +34,29 @@ package struct DataTransferSourceDescriptorIO: Sendable {
     }
 }
 
+package enum DataTransferSourceWriteSource: Equatable, Sendable {
+    case clipboard(DataSourceID)
+    case primarySelection(DataSourceID)
+
+    package var diagnosticSource: DataTransferDiagnosticSource {
+        switch self {
+        case .clipboard(let sourceID):
+            .clipboard(ClipboardSourceIdentity(sourceID))
+        case .primarySelection(let sourceID):
+            .primarySelection(PrimarySelectionSourceIdentity(sourceID))
+        }
+    }
+
+    package var sourceID: DataSourceID {
+        switch self {
+        case .clipboard(let sourceID), .primarySelection(let sourceID):
+            sourceID
+        }
+    }
+}
+
 package final class DataTransferSourceWriteJob: Sendable {
-    package let sourceID: DataSourceID
+    package let source: DataTransferSourceWriteSource
     package let mimeType: MIMEType
     package let data: Data
 
@@ -57,7 +78,7 @@ package final class DataTransferSourceWriteJob: Sendable {
             defaultCloseDataTransferSourceDescriptor
     ) {
         self.init(
-            sourceID: jobSourceID,
+            source: .clipboard(jobSourceID),
             mimeType: jobMIMEType,
             descriptor: jobDescriptor,
             data: jobData,
@@ -71,14 +92,14 @@ package final class DataTransferSourceWriteJob: Sendable {
     }
 
     package init(
-        sourceID jobSourceID: DataSourceID,
+        source jobSource: DataTransferSourceWriteSource,
         mimeType jobMIMEType: MIMEType,
         descriptor jobDescriptor: Int32,
         data jobData: Data,
         descriptorIO jobDescriptorIO: DataTransferSourceDescriptorIO,
         writePolicy jobWritePolicy: DataTransferSourceWritePolicy = .default
     ) {
-        sourceID = jobSourceID
+        source = jobSource
         mimeType = jobMIMEType
         data = jobData
         descriptor = Mutex(DataTransferSourceDescriptorState(rawValue: jobDescriptor))
@@ -105,22 +126,22 @@ package final class DataTransferSourceWriteJob: Sendable {
             }
 
             try closeOwnedDescriptor(rawDescriptor)
-            return .succeeded(sourceID: sourceID, mimeType: mimeType)
+            return .succeeded(source: source, mimeType: mimeType)
         } catch let error as DataTransferError {
-            return .failed(sourceID: sourceID, mimeType: mimeType, error: error)
+            return .failed(source: source, mimeType: mimeType, error: error)
         } catch {
-            return .failed(sourceID: sourceID, mimeType: mimeType, error: .unavailable)
+            return .failed(source: source, mimeType: mimeType, error: .unavailable)
         }
     }
 
     package func closeAsCancelled() -> DataTransferSourceWriteResult {
         do {
             try closeRawDescriptor(try releaseRawDescriptor())
-            return .failed(sourceID: sourceID, mimeType: mimeType, error: .cancelled)
+            return .failed(source: source, mimeType: mimeType, error: .cancelled)
         } catch let error as DataTransferError {
-            return .failed(sourceID: sourceID, mimeType: mimeType, error: error)
+            return .failed(source: source, mimeType: mimeType, error: error)
         } catch {
-            return .failed(sourceID: sourceID, mimeType: mimeType, error: .unavailable)
+            return .failed(source: source, mimeType: mimeType, error: .unavailable)
         }
     }
 
@@ -363,8 +384,12 @@ private func isTemporaryDataTransferSourceWriteBackpressure(
 }
 
 package enum DataTransferSourceWriteResult: Equatable, Sendable {
-    case succeeded(sourceID: DataSourceID, mimeType: MIMEType)
-    case failed(sourceID: DataSourceID, mimeType: MIMEType, error: DataTransferError)
+    case succeeded(source: DataTransferSourceWriteSource, mimeType: MIMEType)
+    case failed(
+        source: DataTransferSourceWriteSource,
+        mimeType: MIMEType,
+        error: DataTransferError
+    )
 }
 
 package protocol DataTransferSourceWriting: AnyObject {
