@@ -108,9 +108,6 @@ package final class PrimarySelectionController {
             cleanupSelection(selectionBySeat[seatID] ?? .none)
             selectionBySeat[seatID] = .ownedSource(sourceID)
             deviceBinding.setSelection(source: sourceBinding, serial: serial)
-            pendingEvents.append(
-                .primarySelectionChanged(PrimarySelectionEvent(seatID: seatID, offerID: nil))
-            )
         } catch {
             sourceBinding.destroy()
             sourcesByID[sourceID] = nil
@@ -135,11 +132,9 @@ package final class PrimarySelectionController {
 
         let deviceBinding = try primarySelectionDeviceBinding(for: seatID)
         deviceBinding.setSelection(source: nil, serial: serial)
-        cleanupSelection(selectionBySeat[seatID] ?? .none)
+        let currentSelection = selectionBySeat[seatID] ?? .none
+        cleanupSelection(currentSelection)
         selectionBySeat[seatID] = PrimarySelectionSelectionState.none
-        pendingEvents.append(
-            .primarySelectionChanged(PrimarySelectionEvent(seatID: seatID, offerID: nil))
-        )
     }
 
     package func clearSelectionSource(
@@ -204,7 +199,12 @@ extension PrimarySelectionController {
             case .dataOffer(let handle):
                 try handleDataOffer(handle, seatID: seatID)
             case .selection(nil):
-                cleanupSelection(selectionBySeat[seatID] ?? .none)
+                let currentSelection = selectionBySeat[seatID] ?? .none
+                guard currentSelection != .none else {
+                    return
+                }
+
+                cleanupSelection(currentSelection)
                 selectionBySeat[seatID] = PrimarySelectionSelectionState.none
                 pendingEvents.append(
                     .primarySelectionChanged(

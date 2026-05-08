@@ -7,11 +7,10 @@ import Testing
 @Suite("WaylandDisplay primary selection public methods")
 struct WaylandDisplayPrimarySelectionTests {
     @Test
-    func publicRequestPrimarySelectionPublishesPrimarySelectionEvent() async throws {
+    func publicRequestPrimarySelectionSubmitsRequest() async throws {
         let harness = try await primarySelectionDisplayHarness()
         let display = harness.display
         let handler = harness.handler
-        var iterator = display.dataTransferEvents.makeAsyncIterator()
         let seatID = SeatID(rawValue: 11)
         let serial = InputSerial(rawValue: 17)
         let configuration = try PrimarySelectionSourceConfiguration.data(
@@ -37,12 +36,6 @@ struct WaylandDisplayPrimarySelectionTests {
                     )
                 ]
         )
-        await expectPrimarySelectionEvent(
-            .primarySelectionChanged(
-                PrimarySelectionEvent(seatID: seatID, offerID: nil)
-            ),
-            from: &iterator
-        )
         await display.close()
     }
 
@@ -62,23 +55,21 @@ struct WaylandDisplayPrimarySelectionTests {
             seatID: seatID,
             serial: serial
         )
-        await expectPrimarySelectionEvent(
-            .primarySelectionChanged(
-                PrimarySelectionEvent(seatID: seatID, offerID: nil)
-            ),
-            from: &iterator
-        )
 
         try await source.requestClear(serial: serial)
 
-        await expectPrimarySelectionEvent(
-            .primarySelectionSourceCancelled(source.identity),
-            from: &iterator
+        #expect(
+            harness.handler.clearRequests
+                == [
+                    PrimarySelectionClearRequest(
+                        sourceID: source.id,
+                        seatID: seatID,
+                        serial: serial
+                    )
+                ]
         )
         await expectPrimarySelectionEvent(
-            .primarySelectionChanged(
-                PrimarySelectionEvent(seatID: seatID, offerID: nil)
-            ),
+            .primarySelectionSourceCancelled(source.identity),
             from: &iterator
         )
         await display.close()
@@ -157,6 +148,10 @@ private final class RecordingDisplayPrimarySelectionHandler:
         state.withLock(\.setRequests)
     }
 
+    var clearRequests: [PrimarySelectionClearRequest] {
+        state.withLock(\.clearRequests)
+    }
+
     var receiveRequests: [PrimarySelectionReceiveRequest] {
         state.withLock(\.receiveRequests)
     }
@@ -216,11 +211,6 @@ private final class RecordingDisplayPrimarySelectionHandler:
             state.activeSource = source
             return source
         }
-        eventHub.publishDataTransfer(
-            .primarySelectionChanged(
-                PrimarySelectionEvent(seatID: seatID, offerID: nil)
-            )
-        )
         return source
     }
 
@@ -235,11 +225,6 @@ private final class RecordingDisplayPrimarySelectionHandler:
             )
             state.activeSource = nil
         }
-        eventHub.publishDataTransfer(
-            .primarySelectionChanged(
-                PrimarySelectionEvent(seatID: seatID, offerID: nil)
-            )
-        )
     }
 
     func clearPrimarySelection(
@@ -263,11 +248,6 @@ private final class RecordingDisplayPrimarySelectionHandler:
         }
         eventHub.publishDataTransfer(
             .primarySelectionSourceCancelled(PrimarySelectionSourceIdentity(sourceID))
-        )
-        eventHub.publishDataTransfer(
-            .primarySelectionChanged(
-                PrimarySelectionEvent(seatID: seatID, offerID: nil)
-            )
         )
     }
 }
