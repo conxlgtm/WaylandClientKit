@@ -35,7 +35,7 @@ Sources/CWaylandProtocols/include/swift-wayland-shims.h	swl_proxy_get_queue_raw	
 Sources/CWaylandProtocols/shims/display-core.c	wl_proxy_create_wrapper	Queue-at-creation wrapper shim.
 Sources/CWaylandProtocols/shims/display-core.c	wl_proxy_set_queue	Queue-at-creation wrapper shim.
 Sources/CWaylandProtocols/shims/display-core.c	wl_proxy_wrapper_destroy	Queue-at-creation wrapper shim.
-Sources/CWaylandProtocols/shims/file-descriptor.c	pthread_*	C shim blocks SIGPIPE around fd writes without changing process-global signal disposition.
+Sources/CWaylandRuntimeShims/fd-shim.c	pthread_*	C shim blocks SIGPIPE around fd writes without changing process-global signal disposition.
 Sources/CWaylandProtocols/shims/requests-core.c	wl_proxy_get_queue	Queue assertion shim implementation.
 Sources/CWaylandProtocols/shims/requests-core.c	swl_proxy_get_queue_raw	Queue assertion shim implementation.
 Sources/WaylandClient/Public/Rendering/SoftwareFrame.swift	UnsafeMutableBufferPointer	Scoped software-frame row spans.

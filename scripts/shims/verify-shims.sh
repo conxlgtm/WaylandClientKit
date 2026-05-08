@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PROTOCOL_HEADER="$ROOT/Sources/CWaylandProtocols/include/swift-wayland-shims.h"
 PROTOCOL_SHIMS_DIR="$ROOT/Sources/CWaylandProtocols/shims"
+RUNTIME_HEADER="$ROOT/Sources/CWaylandRuntimeShims/include/swift-wayland-runtime-shims.h"
+RUNTIME_SHIMS_DIR="$ROOT/Sources/CWaylandRuntimeShims"
 CURSOR_HEADER="$ROOT/Sources/CWaylandCursorShims/include/swift-wayland-cursor-shims.h"
 CURSOR_SHIMS_DIR="$ROOT/Sources/CWaylandCursorShims"
 
@@ -75,6 +77,15 @@ cursor_symbols=(
     swl_cursor_image_get_buffer
 )
 
+runtime_symbols=(
+    swl_eventfd
+    swl_efd_cloexec
+    swl_efd_nonblock
+    swl_memfd_create
+    swl_mfd_cloexec
+    swl_write_no_sigpipe
+)
+
 missing=0
 check_symbol_group() {
     local header="$1"
@@ -110,14 +121,25 @@ if [[ ! -f "$CURSOR_HEADER" ]]; then
     missing=1
 fi
 
+if [[ ! -f "$RUNTIME_HEADER" ]]; then
+    echo "Missing runtime shim header: $RUNTIME_HEADER"
+    missing=1
+fi
+
 if [[ ! -d "$CURSOR_SHIMS_DIR" ]]; then
     echo "Missing cursor shim implementation directory: $CURSOR_SHIMS_DIR"
+    missing=1
+fi
+
+if [[ ! -d "$RUNTIME_SHIMS_DIR" ]]; then
+    echo "Missing runtime shim implementation directory: $RUNTIME_SHIMS_DIR"
     missing=1
 fi
 
 if [[ "$missing" -eq 0 ]]; then
     check_symbol_group "$PROTOCOL_HEADER" "$PROTOCOL_SHIMS_DIR" "${protocol_symbols[@]}"
     check_symbol_group "$CURSOR_HEADER" "$CURSOR_SHIMS_DIR" "${cursor_symbols[@]}"
+    check_symbol_group "$RUNTIME_HEADER" "$RUNTIME_SHIMS_DIR" "${runtime_symbols[@]}"
 fi
 
 exit "$missing"
