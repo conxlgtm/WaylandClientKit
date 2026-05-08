@@ -312,6 +312,10 @@ extension PrimarySelectionController {
             offersByID[offerID] = offer
         }
 
+        guard selectionBySeat[seatID] != .remoteOffer(offerID) else {
+            return
+        }
+
         cleanupSelection(selectionBySeat[seatID] ?? .none)
         selectionBySeat[seatID] = .remoteOffer(offerID)
         pendingEvents.append(

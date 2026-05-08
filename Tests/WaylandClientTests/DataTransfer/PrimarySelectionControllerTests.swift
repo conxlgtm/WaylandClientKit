@@ -74,6 +74,25 @@ struct PrimarySelectionControllerTests {
     }
 
     @Test
+    func repeatedRemoteSelectionPreservesActiveOffer() throws {
+        let backend = RecordingPrimarySelectionBackend()
+        let controller = PrimarySelectionController(backend: backend)
+        let handle = RawPrimarySelectionOfferHandle(uncheckedRawValue: 0x1004)
+
+        try activateRemoteOffer(handle: handle, controller: controller, backend: backend)
+        let device = try #require(backend.binding(for: seat1))
+        let offerBinding = try #require(backend.offerBinding(for: handle))
+
+        device.emit(.selection(handle))
+
+        let snapshot = try #require(try controller.offer(for: seat1))
+        #expect(snapshot.id == DataOfferID(rawValue: 1))
+        #expect(snapshot.mimeTypes == [.plainText])
+        #expect(offerBinding.destroyCount == 0)
+        #expect(controller.drainDataTransferEvents().isEmpty)
+    }
+
+    @Test
     func settingPrimarySelectionSourceOffersMimeTypesAndSetsDeviceSelection() throws {
         let backend = RecordingPrimarySelectionBackend()
         let controller = PrimarySelectionController(backend: backend)
