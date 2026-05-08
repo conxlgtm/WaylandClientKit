@@ -54,6 +54,34 @@ struct PrimarySelectionControllerSelectionEventTests {
         )
     }
 
+    @Test
+    func sourceCancelledAfterLocalClearDoesNotPublishSecondCancellation() throws {
+        let backend = RecordingPrimarySelectionBackend()
+        let controller = PrimarySelectionController(backend: backend)
+        let payloads = try primarySelectionPayloads([.plainText: Data("primary".utf8)])
+
+        try controller.synchronizeSeats([seat1])
+        let snapshot = try controller.setSelectionSource(
+            seatID: seat1,
+            payloads: payloads,
+            serial: serial
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: snapshot.id))
+        _ = controller.drainDataTransferEvents()
+
+        try controller.clearSelectionSource(seatID: seat1, serial: InputSerial(rawValue: 56))
+        sourceBinding.emit(.cancelled)
+
+        #expect(
+            controller.drainDataTransferEvents()
+                == [
+                    .primarySelectionSourceCancelled(
+                        PrimarySelectionSourceIdentity(snapshot.id)
+                    )
+                ]
+        )
+    }
+
     private func activateRemoteOffer(
         handle: RawPrimarySelectionOfferHandle,
         controller: PrimarySelectionController,
