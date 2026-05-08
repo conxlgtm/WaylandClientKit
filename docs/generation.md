@@ -4,12 +4,12 @@
 
 Vendored XML files:
 
-- `Protocols/core/wayland.xml`
-- `Protocols/stable/xdg-shell/xdg-shell.xml`
-- `Protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
-- `Protocols/stable/viewporter/viewporter.xml`
-- `Protocols/staging/fractional-scale/fractional-scale-v1.xml`
-- `Protocols/manifest.json`
+- `protocols/upstream/core/wayland.xml`
+- `protocols/upstream/stable/xdg-shell/xdg-shell.xml`
+- `protocols/upstream/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
+- `protocols/upstream/stable/viewporter/viewporter.xml`
+- `protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml`
+- `protocols/manifest.json`
 
 These files are committed.
 
@@ -54,20 +54,20 @@ These files are not generated:
 Sync XML from the local system:
 
 ```bash
-./Scripts/bootstrap-linux.sh --maintainer
-./Scripts/sync-protocols.sh
+./scripts/dev/bootstrap-linux.sh --maintainer
+./scripts/protocols/sync.sh
 ```
 
 Generate protocol artifacts from vendored XML:
 
 ```bash
-./Scripts/generate-protocols.sh
+./scripts/protocols/generate.sh
 ```
 
 Verify that vendored XML and generated outputs are in sync:
 
 ```bash
-./Scripts/verify-generated.sh
+./scripts/protocols/verify-generated.sh
 ```
 
 Run the full local gate:
@@ -85,11 +85,11 @@ make verify-shims
 
 ## Script Responsibilities
 
-### `Scripts/sync-protocols.sh`
+### `scripts/protocols/sync.sh`
 
 Copies protocol XML from the local system.
 
-Default source resolution matches `Scripts/bootstrap-linux.sh --maintainer`.
+Default source resolution matches `scripts/dev/bootstrap-linux.sh --maintainer`.
 The scripts first check `pkg-config` package data directories, then standard
 system paths.
 
@@ -129,14 +129,14 @@ Set `WAYLAND_CORE_XML_SOURCE`, `XDG_SHELL_XML_SOURCE`,
 `XDG_DECORATION_XML_SOURCE`, `VIEWPORTER_XML_SOURCE`, or
 `FRACTIONAL_SCALE_XML_SOURCE` to force a specific source path.
 
-Run `Scripts/bootstrap-linux.sh --maintainer` first to verify the scanner,
+Run `scripts/dev/bootstrap-linux.sh --maintainer` first to verify the scanner,
 `wayland-protocols` pkg-config module, and protocol XML inputs.
 
-### `Scripts/generate-protocols.sh`
+### `scripts/protocols/generate.sh`
 
 Reads:
 
-- `Protocols/`
+- `protocols/`
 
 Writes:
 
@@ -148,19 +148,19 @@ Does not write:
 - `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
 - `Sources/CWaylandProtocols/shims/`
 
-### `Scripts/verify-generated.sh`
+### `scripts/protocols/verify-generated.sh`
 
 Checks diffs for:
 
-- `Protocols/`
+- `protocols/`
 - `Sources/CWaylandProtocols/include/generated/`
 - `Sources/CWaylandProtocols/generated/`
 
 Does not check shim files as generated output.
 
-### `Scripts/verify-shims.sh`
+### `scripts/shims/verify-shims.sh`
 
-Run with `./Scripts/verify-shims.sh`.
+Run with `./scripts/shims/verify-shims.sh`.
 
 Checks the hand-written protocol and cursor shim headers and C files for the
 required exported symbols used by Swift. This is intentionally separate from
@@ -175,12 +175,12 @@ Shim files define the exported C surface imported by Swift.
 
 ## Adding Another Protocol
 
-1. Add the protocol XML under `Protocols/`.
-2. Update `Protocols/manifest.json` if the protocol should be tracked there.
-3. Extend `Scripts/generate-protocols.sh` to write the generated header and C file.
-4. Run `./Scripts/generate-protocols.sh`.
+1. Add the protocol XML under `protocols/upstream/`.
+2. Update `protocols/manifest.json` if the protocol should be tracked there.
+3. Extend `scripts/protocols/generate.sh` to write the generated header and C file.
+4. Run `./scripts/protocols/generate.sh`.
 5. Add project-owned shim declarations and implementations for the Swift-facing surface.
-6. Update `Scripts/verify-shims.sh` for required new shim symbols.
+6. Update `scripts/shims/verify-shims.sh` for required new shim symbols.
 7. Add raw Swift wrappers and tests.
 8. Surface public overlay APIs only when the behavior is tested and documented.
 9. Run `make check`.

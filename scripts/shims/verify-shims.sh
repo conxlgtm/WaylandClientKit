@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PROTOCOL_HEADER="$ROOT/Sources/CWaylandProtocols/include/swift-wayland-shims.h"
 PROTOCOL_SHIMS_DIR="$ROOT/Sources/CWaylandProtocols/shims"
 CURSOR_HEADER="$ROOT/Sources/CWaylandCursorShims/include/swift-wayland-cursor-shims.h"

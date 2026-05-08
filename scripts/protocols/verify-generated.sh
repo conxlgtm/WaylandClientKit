@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 GENERATED_PATHS=(
-    Protocols
+    protocols
     Sources/CWaylandProtocols/include/generated
     Sources/CWaylandProtocols/generated
 )
@@ -25,7 +25,7 @@ for path in "${GENERATED_PATHS[@]}"; do
     cp -a "$source_path" "$snapshot_path"
 done
 
-"$ROOT/Scripts/generate-protocols.sh"
+"$ROOT/scripts/protocols/generate.sh"
 
 diff_status=0
 for path in "${GENERATED_PATHS[@]}"; do

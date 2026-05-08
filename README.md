@@ -124,7 +124,7 @@ Not supported in the current experimental baseline:
 ## Linux Dependencies
 
 Swift 6.3.1 or newer must already be installed.
-The bootstrap script verifies Swift through `Scripts/swift.sh` by default.
+The bootstrap script verifies Swift through `scripts/dev/swift.sh` by default.
 It does not install or switch toolchains.
 Set `SWIFT_COMMAND=/path/to/swift` for custom toolchain resolution.
 
@@ -157,7 +157,7 @@ Supported package-manager mappings:
 | Nix/NixOS | `nixpkgs#clang nixpkgs#git nixpkgs#wayland nixpkgs#wayland-protocols nixpkgs#libxkbcommon nixpkgs#gnumake nixpkgs#pkg-config nixpkgs#ripgrep` |
 
 Alpine package installation is mapped for Wayland dependencies, but Swift toolchain availability may require separate setup.
-Nix/NixOS support is shell/declarative: `./Scripts/bootstrap-linux.sh --dry-run --package-manager nix` prints a `nix shell` command, and `--install` intentionally does not mutate a Nix profile or NixOS system configuration.
+Nix/NixOS support is shell/declarative: `./scripts/dev/bootstrap-linux.sh --dry-run --package-manager nix` prints a `nix shell` command, and `--install` intentionally does not mutate a Nix profile or NixOS system configuration.
 
 ## Targets
 
@@ -210,29 +210,29 @@ CWaylandClientSystem
 Verify or bootstrap a Linux environment:
 
 ```bash
-./Scripts/bootstrap-linux.sh --check
-./Scripts/bootstrap-linux.sh --dry-run
-./Scripts/bootstrap-linux.sh --dry-run --package-manager nix
-./Scripts/bootstrap-linux.sh --install
-./Scripts/bootstrap-linux.sh --build
+./scripts/dev/bootstrap-linux.sh --check
+./scripts/dev/bootstrap-linux.sh --dry-run
+./scripts/dev/bootstrap-linux.sh --dry-run --package-manager nix
+./scripts/dev/bootstrap-linux.sh --install
+./scripts/dev/bootstrap-linux.sh --build
 ```
 
 Maintainers regenerating protocol artifacts should also run:
 
 ```bash
-./Scripts/bootstrap-linux.sh --maintainer
+./scripts/dev/bootstrap-linux.sh --maintainer
 ```
 
 Sync protocol XML into the repository:
 
 ```bash
-./Scripts/sync-protocols.sh
+./scripts/protocols/sync.sh
 ```
 
 Regenerate protocol artifacts:
 
 ```bash
-./Scripts/generate-protocols.sh
+./scripts/protocols/generate.sh
 ```
 
 Run local checks:
@@ -256,7 +256,7 @@ make strict-memory-safety-raw
 Generate a public API report before publishing checkpoint notes:
 
 ```bash
-./Scripts/dump-public-api.sh
+./scripts/ci/dump-public-api.sh
 ```
 
 Run the unsafe-token allowlist check:
@@ -268,7 +268,7 @@ make verify-unsafe-allowlist
 Run the demo target:
 
 ```bash
-swift run swift-wayland-demo
+swift run SwiftWaylandDemo
 ```
 
 The demo draws a small marker for pointer motion and prints basic pointer/keyboard/touch/seat events, including interpreted keyboard events when keymap interpretation is available.
@@ -278,13 +278,13 @@ It sets a normal pointer cursor when pointer focus enters the demo window.
 Run the noninteractive Wayland smoke check under a real Wayland session:
 
 ```bash
-./Scripts/smoke-wayland.sh
+./scripts/smoke/smoke-wayland.sh
 ```
 
 Run public API integration tests under a real Wayland session:
 
 ```bash
-./Scripts/integration-wayland.sh
+./scripts/smoke/integration-wayland.sh
 ```
 
 Or run the executable directly:

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
-source "$ROOT/Scripts/protocol-sources.sh"
+source "$ROOT/scripts/protocols/sources.sh"
 
 MODE="check"
 MODE_SELECTED=0
@@ -14,12 +14,12 @@ STRICT_SWIFT="${STRICT_SWIFT:-0}"
 SUDO="${SUDO-sudo}"
 PACKAGE_MANAGER="${PACKAGE_MANAGER:-}"
 PKG_CONFIG="${PKG_CONFIG:-pkg-config}"
-SWIFT_COMMAND="${SWIFT_COMMAND:-$ROOT/Scripts/swift.sh}"
+SWIFT_COMMAND="${SWIFT_COMMAND:-$ROOT/scripts/dev/swift.sh}"
 SUDO_WORDS=()
 
 usage() {
     cat <<'EOF'
-Usage: Scripts/bootstrap-linux.sh [--check] [--install] [--dry-run] [--maintainer] [--build] [--strict-swift] [--package-manager PM]
+Usage: scripts/dev/bootstrap-linux.sh [--check] [--install] [--dry-run] [--maintainer] [--build] [--strict-swift] [--package-manager PM]
 
 Default behavior is --check: no sudo, no package installation.
 

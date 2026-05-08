@@ -353,7 +353,7 @@ Not supported:
 
 Repository-owned protocol inputs:
 
-- `Protocols/`
+- `protocols/`
 
 Generated outputs:
 

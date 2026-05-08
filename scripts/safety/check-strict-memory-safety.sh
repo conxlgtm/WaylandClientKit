@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BASELINE_FILE="${SWIFTWAYLAND_STRICT_MEMORY_SAFETY_BASELINE:-$ROOT/Scripts/strict-memory-safety-baseline.tsv}"
-DIAGNOSTIC_BASELINE_FILE="${SWIFTWAYLAND_STRICT_MEMORY_SAFETY_DIAGNOSTIC_BASELINE:-$ROOT/Scripts/strict-memory-safety-diagnostics.tsv}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+BASELINE_FILE="${SWIFTWAYLAND_STRICT_MEMORY_SAFETY_BASELINE:-$ROOT/scripts/safety/strict-memory-safety-baseline.tsv}"
+DIAGNOSTIC_BASELINE_FILE="${SWIFTWAYLAND_STRICT_MEMORY_SAFETY_DIAGNOSTIC_BASELINE:-$ROOT/scripts/safety/strict-memory-safety-diagnostics.tsv}"
 UPDATE_DIAGNOSTIC_BASELINE="${SWIFTWAYLAND_UPDATE_STRICT_MEMORY_SAFETY_DIAGNOSTICS:-0}"
 LOG_DIR="$(mktemp -d)"
 BUILD_ROOT="$(mktemp -d)"
@@ -29,7 +29,7 @@ targets=(WaylandRaw WaylandRuntime)
 
 toolchain_identity() {
     local version_line
-    version_line="$("$ROOT/Scripts/swift.sh" --version | head -n 1 | sed -E 's/[[:space:]]+/ /g')"
+    version_line="$("$ROOT/scripts/dev/swift.sh" --version | head -n 1 | sed -E 's/[[:space:]]+/ /g')"
 
     local normalized
     normalized="$(printf '%s\n' "$version_line" \
@@ -147,7 +147,7 @@ build_target() {
 
     set +e
     CLANG_MODULE_CACHE_PATH="${CLANG_MODULE_CACHE_PATH:-/tmp/swiftwayland-module-cache}" \
-        "$ROOT/Scripts/swift.sh" build \
+        "$ROOT/scripts/dev/swift.sh" build \
         --target "$target" \
         --scratch-path "$build_dir" \
         --disable-index-store \

@@ -2,7 +2,7 @@
 
 /Package.swift @conxlgtm
 /docs/ @conxlgtm
-/Scripts/ @conxlgtm
+/scripts/ @conxlgtm
 
 /Sources/CWaylandProtocols/ @conxlgtm
 /Sources/CWaylandRuntimeShims/ @conxlgtm
