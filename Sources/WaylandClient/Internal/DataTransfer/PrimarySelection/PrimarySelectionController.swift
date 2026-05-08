@@ -189,7 +189,7 @@ extension PrimarySelectionController {
             destroyOffer(offerID)
         }
         for (sourceID, source) in sourcesByID where source.snapshot.seatID == seatID {
-            cancelSource(sourceID)
+            _ = cancelSource(sourceID)
         }
     }
 
@@ -336,10 +336,11 @@ extension PrimarySelectionController {
                     sourceID: sourceID
                 )
             case .cancelled:
-                cancelSource(sourceID)
-                pendingEvents.append(
-                    .primarySelectionSourceCancelled(PrimarySelectionSourceIdentity(sourceID))
-                )
+                if cancelSource(sourceID) {
+                    pendingEvents.append(
+                        .primarySelectionSourceCancelled(PrimarySelectionSourceIdentity(sourceID))
+                    )
+                }
             }
         } catch {
             recordCallbackError(
@@ -411,10 +412,11 @@ extension PrimarySelectionController {
         case .remoteOffer(let offerID):
             destroyOffer(offerID)
         case .ownedSource(let sourceID):
-            cancelSource(sourceID)
-            pendingEvents.append(
-                .primarySelectionSourceCancelled(PrimarySelectionSourceIdentity(sourceID))
-            )
+            if cancelSource(sourceID) {
+                pendingEvents.append(
+                    .primarySelectionSourceCancelled(PrimarySelectionSourceIdentity(sourceID))
+                )
+            }
         }
     }
 
@@ -427,12 +429,18 @@ extension PrimarySelectionController {
         offer.binding.destroy()
     }
 
-    private func cancelSource(_ sourceID: DataSourceID) {
-        sourcesByID.removeValue(forKey: sourceID)?.binding.destroy()
+    private func cancelSource(_ sourceID: DataSourceID) -> Bool {
+        guard let source = sourcesByID.removeValue(forKey: sourceID) else {
+            discardPendingSourceSendRequests(for: sourceID)
+            return false
+        }
+
+        source.binding.destroy()
         discardPendingSourceSendRequests(for: sourceID)
         for (seatID, selection) in selectionBySeat where selection == .ownedSource(sourceID) {
             selectionBySeat[seatID] = PrimarySelectionSelectionState.none
         }
+        return true
     }
 
     func recordCallbackError(
