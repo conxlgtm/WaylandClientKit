@@ -38,7 +38,18 @@ command -v wayland-scanner >/dev/null 2>&1 || {
 }
 
 rm -rf "$GEN_INC" "$GEN_SRC"
-mkdir -p "$GEN_INC" "$GEN_SRC" "$OUT_DIR/shims"
+mkdir -p \
+    "$GEN_INC/core" \
+    "$GEN_INC/stable/xdg-shell" \
+    "$GEN_INC/stable/viewporter" \
+    "$GEN_INC/staging/fractional-scale" \
+    "$GEN_INC/legacy-unstable/xdg-decoration" \
+    "$GEN_SRC/core" \
+    "$GEN_SRC/stable/xdg-shell" \
+    "$GEN_SRC/stable/viewporter" \
+    "$GEN_SRC/staging/fractional-scale" \
+    "$GEN_SRC/legacy-unstable/xdg-decoration" \
+    "$OUT_DIR/shims"
 
 normalize_generated_file() {
     local generated_file="$1"
@@ -66,46 +77,46 @@ normalize_generated_file() {
 
 wayland-scanner client-header \
     "$PROTO_DIR/core/wayland.xml" \
-    "$GEN_INC/wayland-client-protocol.h"
+    "$GEN_INC/core/wayland-client-protocol.h"
 
 wayland-scanner private-code \
     "$PROTO_DIR/core/wayland.xml" \
-    "$GEN_SRC/wayland-protocol.c"
+    "$GEN_SRC/core/wayland-protocol.c"
 
 wayland-scanner client-header \
     "$PROTO_DIR/stable/xdg-shell/xdg-shell.xml" \
-    "$GEN_INC/xdg-shell-client-protocol.h"
+    "$GEN_INC/stable/xdg-shell/xdg-shell-client-protocol.h"
 
 wayland-scanner private-code \
     "$PROTO_DIR/stable/xdg-shell/xdg-shell.xml" \
-    "$GEN_SRC/xdg-shell-protocol.c"
+    "$GEN_SRC/stable/xdg-shell/xdg-shell-protocol.c"
 
 wayland-scanner client-header \
     "$PROTO_DIR/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" \
-    "$GEN_INC/xdg-decoration-unstable-v1-client-protocol.h"
+    "$GEN_INC/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h"
 
 wayland-scanner private-code \
     "$PROTO_DIR/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" \
-    "$GEN_SRC/xdg-decoration-unstable-v1-protocol.c"
+    "$GEN_SRC/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-protocol.c"
 
 wayland-scanner client-header \
     "$PROTO_DIR/stable/viewporter/viewporter.xml" \
-    "$GEN_INC/viewporter-client-protocol.h"
+    "$GEN_INC/stable/viewporter/viewporter-client-protocol.h"
 
 wayland-scanner private-code \
     "$PROTO_DIR/stable/viewporter/viewporter.xml" \
-    "$GEN_SRC/viewporter-protocol.c"
+    "$GEN_SRC/stable/viewporter/viewporter-protocol.c"
 
 wayland-scanner client-header \
     "$PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml" \
-    "$GEN_INC/fractional-scale-v1-client-protocol.h"
+    "$GEN_INC/staging/fractional-scale/fractional-scale-v1-client-protocol.h"
 
 wayland-scanner private-code \
     "$PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml" \
-    "$GEN_SRC/fractional-scale-v1-protocol.c"
+    "$GEN_SRC/staging/fractional-scale/fractional-scale-v1-protocol.c"
 
-for generated_file in "$GEN_INC"/*.h "$GEN_SRC"/*.c; do
+while IFS= read -r generated_file; do
     normalize_generated_file "$generated_file"
-done
+done < <(find "$GEN_INC" "$GEN_SRC" -type f \( -name '*.h' -o -name '*.c' \) | sort)
 
 echo "Generated Wayland protocol artifacts in $OUT_DIR"

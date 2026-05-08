@@ -1,6 +1,6 @@
 #include "swift-wayland-shims.h"
-#include "generated/xdg-decoration-unstable-v1-client-protocol.h"
-#include "generated/xdg-shell-client-protocol.h"
+#include "generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h"
+#include "generated/stable/xdg-shell/xdg-shell-client-protocol.h"
 
 /*
  * xdg_wm_base listener bridge

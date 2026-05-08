@@ -1,6 +1,6 @@
 #include "swift-wayland-shims.h"
-#include "generated/fractional-scale-v1-client-protocol.h"
-#include "generated/viewporter-client-protocol.h"
+#include "generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h"
+#include "generated/stable/viewporter/viewporter-client-protocol.h"
 
 #ifdef SWL_ENABLE_TESTING
 static struct swl_test_viewport_destination_record
