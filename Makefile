@@ -7,12 +7,12 @@ SWIFT := ./scripts/dev/swift.sh
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place IntegrationTests/PublicAPIClient/Package.swift
-	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place --parallel --recursive Sources Tests IntegrationTests/PublicAPIClient/Tests
+	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place --parallel --recursive Sources Tests Examples IntegrationTests/PublicAPIClient/Tests
 
 lint:
 	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict Package.swift
 	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict IntegrationTests/PublicAPIClient/Package.swift
-	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict --parallel --recursive Sources Tests IntegrationTests/PublicAPIClient/Tests
+	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict --parallel --recursive Sources Tests Examples IntegrationTests/PublicAPIClient/Tests
 	@$(SWIFTLINT) lint --strict --no-cache --force-exclude --config .swiftlint.yml
 
 verify-generated:
@@ -37,7 +37,7 @@ test:
 	@CC="$(CURDIR)/scripts/dev/clang-filter-index-store.sh" $(SWIFT) test
 
 test-public-api-client:
-	@CC="$(CURDIR)/scripts/dev/clang-filter-index-store.sh" $(SWIFT) test --package-path IntegrationTests/PublicAPIClient --scratch-path "$(CURDIR)/.build/public-api-client" --filter WaylandDisplayPublicIntegrationTests
+	@./scripts/ci/test-public-api-client.sh
 
 check: lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency strict-memory-safety-raw test test-public-api-client
 

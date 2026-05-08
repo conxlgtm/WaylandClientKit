@@ -4,7 +4,7 @@ Sources/CWaylandProtocols/include/generated/**	wl_proxy_add_listener	Generated W
 Sources/WaylandCursor/**	OpaquePointer	wayland-cursor C object wrappers.
 Sources/WaylandKeyboard/**	OpaquePointer	xkbcommon C object wrappers.
 Sources/WaylandKeyboard/**	UnsafeMutablePointer	xkbcommon keymap/state pointer storage.
-Sources/WaylandKeyboard/KeyboardLayoutState.swift	UnsafePointer	xkbcommon borrowed keysym array from xkb_state_key_get_syms.
+Sources/WaylandKeyboard/Internal/XKB/KeyboardLayoutState.swift	UnsafePointer	xkbcommon borrowed keysym array from xkb_state_key_get_syms.
 Sources/WaylandRaw/**	OpaquePointer	Raw Wayland ownership wrappers and typed proxy shims.
 Sources/WaylandRaw/**	UnsafeMutablePointer	Raw listener/proxy/storage boundary.
 Sources/WaylandRaw/**	UnsafeMutableBufferPointer	Raw event-loop and memory-layout bridge.
@@ -26,10 +26,10 @@ Sources/WaylandRuntime/**	UnsafeMutableBufferPointer	Executor-owned poll descrip
 Sources/WaylandRuntime/**	UnsafeMutablePointer	Owned ExecutorJob storage and wake-fd reads.
 Sources/WaylandRuntime/**	UnsafePointer	Wake-fd writes.
 Sources/WaylandRuntime/**	Unmanaged	pthread_create self-retain bridge.
-Sources/WaylandRuntime/UnsafeDefaultQueueEventLoop.swift	OpaquePointer	Quarantined unsafe default-queue event-loop escape hatch.
-Sources/WaylandRuntime/UnsafeDefaultQueueEventLoop.swift	UnsafeDefaultQueueEventLoop	Quarantined unsafe default-queue event-loop escape hatch.
-Sources/WaylandRuntime/UnsafeDefaultQueueEventLoop.swift	wl_display_dispatch_pending	Quarantined unsafe default-queue event-loop escape hatch.
-Sources/WaylandRuntime/UnsafeDefaultQueueEventLoop.swift	wl_display_prepare_read	Quarantined unsafe default-queue event-loop escape hatch.
+Sources/WaylandRuntime/EventLoop/UnsafeDefaultQueueEventLoop.swift	OpaquePointer	Quarantined unsafe default-queue event-loop escape hatch.
+Sources/WaylandRuntime/EventLoop/UnsafeDefaultQueueEventLoop.swift	UnsafeDefaultQueueEventLoop	Quarantined unsafe default-queue event-loop escape hatch.
+Sources/WaylandRuntime/EventLoop/UnsafeDefaultQueueEventLoop.swift	wl_display_dispatch_pending	Quarantined unsafe default-queue event-loop escape hatch.
+Sources/WaylandRuntime/EventLoop/UnsafeDefaultQueueEventLoop.swift	wl_display_prepare_read	Quarantined unsafe default-queue event-loop escape hatch.
 Sources/CWaylandProtocols/include/swift-wayland-shims.h	wl_proxy_get_queue	Queue assertion shim declaration.
 Sources/CWaylandProtocols/include/swift-wayland-shims.h	swl_proxy_get_queue_raw	Queue assertion shim declaration.
 Sources/CWaylandProtocols/shims/display-core.c	wl_proxy_create_wrapper	Queue-at-creation wrapper shim.
@@ -53,4 +53,4 @@ Tests/**	UnsafeRawBufferPointer	Test doubles for C buffer APIs.
 Tests/WaylandClientTests/InputRouterTests.swift	Unmanaged	Input target regression names use UnmanagedSurface as a domain state, not Swift Unmanaged.
 Tests/WaylandClientTests/InterpretedKeyboardInputRouterTests.swift	Unmanaged	Input target regression names use UnmanagedSurface as a domain state, not Swift Unmanaged.
 Tests/WaylandClientTests/InputRouterTouchTests.swift	Unmanaged	Input target regression names use UnmanagedSurface as a domain state, not Swift Unmanaged.
-Tests/WaylandRawTests/EventLoopSmokeTests.swift	UnsafeDefaultQueueEventLoop	Test coverage for quarantined default-queue escape hatch.
+Tests/WaylandRuntimeTests/EventLoop/EventLoopSmokeTests.swift	UnsafeDefaultQueueEventLoop	Test coverage for quarantined default-queue escape hatch.

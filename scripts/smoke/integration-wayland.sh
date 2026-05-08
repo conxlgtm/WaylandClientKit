@@ -14,9 +14,4 @@ PROCESS_TIMEOUT_SECONDS="${SWIFT_WAYLAND_INTEGRATION_PROCESS_TIMEOUT_SECONDS:-90
 
 export SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=1
 
-timeout "${PROCESS_TIMEOUT_SECONDS}s" \
-    env CC="${REPO_ROOT}/scripts/dev/clang-filter-index-store.sh" \
-        "${REPO_ROOT}/scripts/dev/swift.sh" test \
-        --package-path "${REPO_ROOT}/IntegrationTests/PublicAPIClient" \
-        --scratch-path "${REPO_ROOT}/.build/public-api-client" \
-        --filter WaylandDisplayPublicIntegrationTests
+timeout "${PROCESS_TIMEOUT_SECONDS}s" "${REPO_ROOT}/scripts/ci/test-public-api-client.sh"

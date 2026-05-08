@@ -1,6 +1,7 @@
 * @conxlgtm
 
 /Package.swift @conxlgtm
+/Examples/ @conxlgtm
 /docs/ @conxlgtm
 /scripts/ @conxlgtm
 
@@ -14,6 +15,7 @@
 /Sources/WaylandKeyboard/ @conxlgtm
 
 /Tests/WaylandRawTests/ @conxlgtm
+/Tests/WaylandRuntimeTests/ @conxlgtm
 /Tests/WaylandClientTests/ @conxlgtm
 /Tests/WaylandCursorTests/ @conxlgtm
 /Tests/WaylandKeyboardTests/ @conxlgtm
