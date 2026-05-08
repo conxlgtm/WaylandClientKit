@@ -53,6 +53,17 @@
       "sha256": "5941de5d28f427ecdadddc8623a6f6af0a30b0ab4726847236ba7a7652b81316",
       "stability": "staging",
       "notes": "Optional extension for compositor-preferred fractional surface scales."
+    },
+    {
+      "name": "primary-selection-unstable-v1",
+      "localPath": "protocols/upstream/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml",
+      "sha256": "d568482ba84df6e531698b1f531810860995ca24d69495427fe43aee6017f52c",
+      "stability": "unstable",
+      "notes": "Optional extension for X-style primary selection transfer."
     }
   ]
 }

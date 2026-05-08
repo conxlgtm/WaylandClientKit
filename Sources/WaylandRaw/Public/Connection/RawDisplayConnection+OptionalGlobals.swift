@@ -12,12 +12,20 @@ extension RawDisplayConnection {
                 )
                 do {
                     let dataDeviceManager = try bindDataDeviceManagerIfPresent(registry: reg)
-                    return OptionalGlobals(
-                        xdgDecorationManager: decorationManager,
-                        viewporter: viewporter,
-                        fractionalScaleManager: fractionalScaleManager,
-                        dataDeviceManager: dataDeviceManager
-                    )
+                    do {
+                        let primarySelectionDeviceManager =
+                            try bindPrimarySelectionDeviceManagerIfPresent(registry: reg)
+                        return OptionalGlobals(
+                            xdgDecorationManager: decorationManager,
+                            viewporter: viewporter,
+                            fractionalScaleManager: fractionalScaleManager,
+                            dataDeviceManager: dataDeviceManager,
+                            primarySelectionDeviceManager: primarySelectionDeviceManager
+                        )
+                    } catch {
+                        dataDeviceManager.destroy()
+                        throw error
+                    }
                 } catch {
                     fractionalScaleManager.destroy()
                     throw error
@@ -165,6 +173,35 @@ extension RawDisplayConnection {
         }
 
         let wrappedManager = try unsafe RawDataDeviceManager(
+            pointer: manager,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
+        return .bound(wrappedManager)
+    }
+
+    private func bindPrimarySelectionDeviceManagerIfPresent(
+        registry reg: OpaquePointer
+    ) throws -> OptionalPrimarySelectionDeviceManager {
+        guard let global = optionalGlobal(named: "zwp_primary_selection_device_manager_v1") else {
+            return .missing
+        }
+
+        let version = global.negotiatedVersion(
+            supportedByClient: SupportedVersions.zwpPrimarySelectionDeviceManagerV1
+        )
+
+        guard
+            let manager = unsafe swl_registry_bind_zwp_primary_selection_device_manager_v1(
+                reg,
+                global.name,
+                version.value
+            )
+        else {
+            throw RuntimeError.bindFailed("zwp_primary_selection_device_manager_v1")
+        }
+
+        let wrappedManager = try unsafe RawPrimarySelectionDeviceManager(
             pointer: manager,
             version: version,
             proxyAdoption: proxyAdoption

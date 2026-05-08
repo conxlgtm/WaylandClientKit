@@ -86,11 +86,12 @@ Supported:
 - Server-side decoration negotiation through xdg-decoration.
 - Popup surfaces with placement, redraw, dismissal, and target identity.
 - Regular clipboard selection offers and sources through data-device.
+- Primary selection offers and sources through primary-selection.
 
 Not supported:
 - Widgets.
 - Text input or IME.
-- Primary selection or drag and drop.
+- Drag and drop.
 - Cursor animation or per-output cursor scaling.
 - Client-side decorations.
 - Full output-management API.

@@ -258,24 +258,42 @@ struct DisplaySessionDataTransferAvailabilityTests {
 
 private final class RecordingDataTransferGlobalProvider: DataTransferGlobalProviding {
     private(set) var currentDataTransferGlobalSnapshot: DataTransferGlobalSnapshot?
+    private(set) var currentPrimarySelectionGlobalSnapshot: PrimarySelectionGlobalSnapshot?
     private let boundSnapshot: DataTransferGlobalSnapshot
+    private let boundPrimarySelectionSnapshot: PrimarySelectionGlobalSnapshot
     private(set) var bindRequiredGlobalsCount = 0
+    private(set) var bindRequiredPrimarySelectionGlobalsCount = 0
 
     init(
         currentSnapshot: DataTransferGlobalSnapshot?,
+        currentPrimarySelectionSnapshot: PrimarySelectionGlobalSnapshot? = nil,
         boundSnapshot snapshotAfterBinding: DataTransferGlobalSnapshot =
             DataTransferGlobalSnapshot(
                 bindingState: .boundWithDataDeviceManager,
                 seatIDs: []
+            ),
+        boundPrimarySelectionSnapshot primarySelectionSnapshotAfterBinding:
+            PrimarySelectionGlobalSnapshot =
+            PrimarySelectionGlobalSnapshot(
+                bindingState: .boundWithPrimaryManager,
+                seatIDs: []
             )
     ) {
         currentDataTransferGlobalSnapshot = currentSnapshot
+        currentPrimarySelectionGlobalSnapshot = currentPrimarySelectionSnapshot
         boundSnapshot = snapshotAfterBinding
+        boundPrimarySelectionSnapshot = primarySelectionSnapshotAfterBinding
     }
 
     func bindRequiredDataTransferGlobals() throws -> DataTransferGlobalSnapshot {
         bindRequiredGlobalsCount += 1
         currentDataTransferGlobalSnapshot = boundSnapshot
         return boundSnapshot
+    }
+
+    func bindRequiredPrimarySelectionGlobals() throws -> PrimarySelectionGlobalSnapshot {
+        bindRequiredPrimarySelectionGlobalsCount += 1
+        currentPrimarySelectionGlobalSnapshot = boundPrimarySelectionSnapshot
+        return boundPrimarySelectionSnapshot
     }
 }

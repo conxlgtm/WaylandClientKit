@@ -3,14 +3,14 @@ import Glibc
 import Synchronization
 
 package struct DataTransferSourcePayloadSet: Equatable, Sendable {
-    package let payloads: [ClipboardSourcePayload]
+    package let payloads: [DataTransferSourcePayload]
     private let payloadsByMIMEType: [MIMEType: Data]
 
     package var mimeTypes: [MIMEType] {
         payloads.map(\.mimeType)
     }
 
-    package init(payloads sourcePayloads: [ClipboardSourcePayload]) throws {
+    package init(payloads sourcePayloads: [DataTransferSourcePayload]) throws {
         guard !sourcePayloads.isEmpty else {
             throw DataTransferError.emptyDataSource
         }
@@ -31,13 +31,13 @@ package struct DataTransferSourcePayloadSet: Equatable, Sendable {
     }
 
     package init(data payloads: [MIMEType: Data]) throws {
-        var sourcePayloads: [ClipboardSourcePayload] = []
+        var sourcePayloads: [DataTransferSourcePayload] = []
         for mimeType in payloads.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
             guard let data = payloads[mimeType] else {
                 preconditionFailure("Payload dictionary key disappeared during iteration")
             }
             sourcePayloads.append(
-                ClipboardSourcePayload(mimeType: mimeType, data: data)
+                DataTransferSourcePayload(mimeType: mimeType, data: data)
             )
         }
         try self.init(payloads: sourcePayloads)
@@ -49,21 +49,25 @@ package struct DataTransferSourcePayloadSet: Equatable, Sendable {
 }
 
 package final class DataTransferSourceSendRequest {
-    package let sourceID: DataSourceID
+    package let source: DataTransferSourceWriteSource
     package let mimeType: MIMEType
     package let data: Data
+
+    package var sourceID: DataSourceID {
+        source.sourceID
+    }
 
     private let descriptor: Mutex<Int32?>
     private let descriptorIO: DataTransferSourceDescriptorIO
 
     package init(
-        sourceID requestSourceID: DataSourceID,
+        source requestSource: DataTransferSourceWriteSource,
         mimeType requestMIMEType: MIMEType,
         descriptor rawDescriptor: Int32,
         data requestData: Data,
         descriptorIO requestDescriptorIO: DataTransferSourceDescriptorIO
     ) {
-        sourceID = requestSourceID
+        source = requestSource
         mimeType = requestMIMEType
         data = requestData
         descriptor = Mutex(rawDescriptor)
@@ -90,7 +94,7 @@ package final class DataTransferSourceSendRequest {
 
     package func makeWriteJob() throws -> DataTransferSourceWriteJob {
         DataTransferSourceWriteJob(
-            sourceID: sourceID,
+            source: source,
             mimeType: mimeType,
             descriptor: try releaseRawDescriptor(),
             data: data,

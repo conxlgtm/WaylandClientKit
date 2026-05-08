@@ -28,7 +28,7 @@ public struct ClipboardOffer: Sendable, Hashable {
 
     public func read(
         _ mimeType: MIMEType,
-        limit: ByteCount = .defaultClipboardReadLimit,
+        limit: ByteCount = .defaultTransferReadLimit,
         timeout: Duration = Self.defaultReadTimeout
     ) async throws -> Data {
         var descriptor = try await receive(mimeType)

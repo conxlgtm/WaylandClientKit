@@ -87,14 +87,6 @@ public actor WaylandDisplay {
         )
     }
 
-    public var isClosed: Bool {
-        guard case .active(let core, _) = lifecycle else {
-            return true
-        }
-
-        return core.isClosed
-    }
-
     public func currentPointerCursor() throws -> PointerCursor {
         try requireCore().currentPointerCursor()
     }
@@ -237,14 +229,17 @@ public actor WaylandDisplay {
     }
 
     public func close() {
-        guard case .active(let activeCore, let activeEventSource) = lifecycle else {
+        switch lifecycle {
+        case .active(let activeCore, let activeEventSource):
+            runtime.clearEventSource(activeEventSource)
+            activeCore.close()
             lifecycle = .closed
-            return
+        case .primarySelectionTestHarness:
+            runtime.eventHub.finish()
+            lifecycle = .closed
+        case .initializing, .closed, .abandoned:
+            lifecycle = .closed
         }
-
-        runtime.clearEventSource(activeEventSource)
-        activeCore.close()
-        lifecycle = .closed
     }
 
     private func initialize(
@@ -282,7 +277,7 @@ public actor WaylandDisplay {
         try runtime.installEventSource(source)
     }
 
-    private func requireCore() throws -> DisplayCore {
+    func requireCore() throws -> DisplayCore {
         guard case .active(let core, _) = lifecycle else {
             throw ClientError.display(.closed)
         }
@@ -291,9 +286,59 @@ public actor WaylandDisplay {
     }
 }
 
+extension WaylandDisplay {
+    public var isClosed: Bool {
+        switch lifecycle {
+        case .active(let core, _):
+            return core.isClosed
+        case .primarySelectionTestHarness:
+            return false
+        case .initializing, .closed, .abandoned:
+            return true
+        }
+    }
+
+    static func primarySelectionTestHarness<
+        Handler: Sendable & WaylandDisplayPrimarySelectionHandling
+    >(
+        primarySelectionHandler makeHandler:
+            @Sendable (DisplayEventHub) throws -> Handler
+    ) async throws -> (display: WaylandDisplay, handler: Handler) {
+        let runtime = try WaylandDisplayRuntime(configuration: DisplayConfiguration())
+        let handler = try makeHandler(runtime.eventHub)
+        let display = WaylandDisplay(runtime: runtime)
+        await display.installPrimarySelectionTestHarness(handler)
+        return (display, handler)
+    }
+
+    private func installPrimarySelectionTestHarness<
+        Handler: Sendable & WaylandDisplayPrimarySelectionHandling
+    >(
+        _ handler: Handler
+    ) {
+        precondition(
+            lifecycle.isInitializing,
+            "WaylandDisplay primary-selection test harness installed more than once"
+        )
+        lifecycle = .primarySelectionTestHarness(handler)
+    }
+
+    func requirePrimarySelectionHandler() throws -> any WaylandDisplayPrimarySelectionHandling {
+        switch lifecycle {
+        case .active(let core, _):
+            return core
+        case .primarySelectionTestHarness(let handler):
+            return handler
+        case .initializing, .closed, .abandoned:
+            throw ClientError.display(.closed)
+        }
+    }
+}
+
 private enum WaylandDisplayLifecycle {
     case initializing
     case active(core: DisplayCore, eventSource: DisplayEventSource)
+    case primarySelectionTestHarness(any WaylandDisplayPrimarySelectionHandling)
     case closed
     case abandoned
 
@@ -301,60 +346,9 @@ private enum WaylandDisplayLifecycle {
         switch self {
         case .initializing:
             true
-        case .active, .closed, .abandoned:
+        case .active, .primarySelectionTestHarness, .closed, .abandoned:
             false
         }
-    }
-}
-
-extension WaylandDisplay {
-    public func clipboardOffer(for seatID: SeatID) throws -> ClipboardOffer? {
-        try requireCore().clipboardOffer(for: seatID).map { offer in
-            ClipboardOffer(snapshot: offer, display: self)
-        }
-    }
-
-    /// Requests ownership of the regular clipboard selection for a seat.
-    ///
-    /// The compositor validates `serial` at the protocol boundary; this call creates and installs
-    /// the local data source request but cannot prove compositor acceptance synchronously.
-    public func requestClipboardSelection(
-        _ configuration: ClipboardSourceConfiguration,
-        seatID: SeatID,
-        serial: InputSerial
-    ) throws -> ClipboardSource {
-        let source = try requireCore().setClipboard(
-            configuration,
-            seatID: seatID,
-            serial: serial
-        )
-        return ClipboardSource(snapshot: source, display: self)
-    }
-
-    /// Requests clearing the regular clipboard selection for a seat.
-    ///
-    /// The compositor validates `serial` at the protocol boundary.
-    public func requestClearClipboard(seatID: SeatID, serial: InputSerial) throws {
-        try requireCore().clearClipboard(seatID: seatID, serial: serial)
-    }
-
-    package func requestClearClipboard(
-        sourceID: DataSourceID,
-        seatID: SeatID,
-        serial: InputSerial
-    ) throws {
-        try requireCore().clearClipboard(
-            sourceID: sourceID,
-            seatID: seatID,
-            serial: serial
-        )
-    }
-
-    package func receiveClipboardOffer(
-        id offerID: DataOfferID,
-        mimeType: MIMEType
-    ) throws -> OwnedFileDescriptor {
-        try requireCore().receiveClipboardOffer(id: offerID, mimeType: mimeType)
     }
 }
 
@@ -404,7 +398,7 @@ private final class WaylandDisplayRuntime: Sendable {
         case .closed, .abandoned:
             executor.requestStopAfterCurrentJob()
             return
-        case .initializing:
+        case .initializing, .primarySelectionTestHarness:
             eventHub.finish(throwing: .closed)
             lifecycle = .closed
             executor.requestStopAfterCurrentJob()

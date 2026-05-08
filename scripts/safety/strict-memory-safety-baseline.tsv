@@ -9,10 +9,12 @@ WaylandRaw	Sources/WaylandRaw/Public/Connection/RawDisplay.swift	2
 WaylandRaw	Sources/WaylandRaw/Public/Connection/RawDisplayConnection+EventLoop.swift	18
 WaylandRaw	Sources/WaylandRaw/Public/Objects/DataDevice/RawDataDevice.swift	18
 WaylandRaw	Sources/WaylandRaw/Internal/Listeners/DataDevice/RawDataDeviceOwners.swift	52
-WaylandRaw	Sources/WaylandRaw/Public/Connection/RawDisplayConnection+OptionalGlobals.swift	4
+WaylandRaw	Sources/WaylandRaw/Public/Connection/RawDisplayConnection+OptionalGlobals.swift	5
 WaylandRaw	Sources/WaylandRaw/Public/Connection/RawDisplayConnection+PointerCursor.swift	1
 WaylandRaw	Sources/WaylandRaw/Public/Connection/RawDisplayConnection.swift	35
 WaylandRaw	Sources/WaylandRaw/Public/Connection/RawEventQueue.swift	4
+WaylandRaw	Sources/WaylandRaw/Public/Objects/PrimarySelection/RawPrimarySelection.swift	14
+WaylandRaw	Sources/WaylandRaw/Internal/Listeners/PrimarySelection/RawPrimarySelectionOwners.swift	27
 WaylandRaw	Sources/WaylandRaw/Public/Types/RawFileDescriptor.swift	0
 WaylandRaw	Sources/WaylandRaw/Public/Objects/Core/RawFrameCallback.swift	15
 WaylandRaw	Sources/WaylandRaw/Internal/Input/RawInputChildProxy.swift	5

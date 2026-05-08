@@ -20,21 +20,28 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case unavailable
     case unknownSeat(SeatID)
     case missingDataDevice(SeatID)
+    case missingPrimarySelectionDevice(SeatID)
     case duplicateOffer
     case duplicateOfferHandle(rawValue: UInt, existingOffer: ClipboardOfferIdentity?)
+    case duplicatePrimarySelectionOfferHandle(
+        rawValue: UInt,
+        existingOffer: PrimarySelectionOfferIdentity?
+    )
     case duplicateSource
     case unknownOffer
     case missingOfferHandle(seatID: SeatID)
     case unknownOfferHandle(rawValue: UInt, seatID: SeatID?)
     case unknownOfferIdentity(ClipboardOfferIdentity)
+    case unknownPrimarySelectionOfferIdentity(PrimarySelectionOfferIdentity)
     case mismatchedOfferSeat(
-        offer: ClipboardOfferIdentity,
+        offer: DataTransferOfferIdentity,
         expected: SeatID,
         actual: SeatID?
     )
     case offerExpired
     case unknownSource
     case unknownSourceIdentity(ClipboardSourceIdentity)
+    case unknownPrimarySelectionSourceIdentity(PrimarySelectionSourceIdentity)
     case sourceCancelled
     case sourceDataUnavailable(MIMEType)
     case mimeTypeUnavailable(MIMEType)
@@ -78,10 +85,15 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "unknown seat: \(seatID)"
         case .missingDataDevice(let seatID):
             "seat has no data device: \(seatID)"
+        case .missingPrimarySelectionDevice(let seatID):
+            "seat has no primary selection device: \(seatID)"
         case .duplicateOffer:
             "duplicate data offer"
         case .duplicateOfferHandle(let rawValue, let existingOffer):
             "duplicate data offer handle \(rawValue)"
+                + (existingOffer.map { " for \($0.description)" } ?? "")
+        case .duplicatePrimarySelectionOfferHandle(let rawValue, let existingOffer):
+            "duplicate primary selection offer handle \(rawValue)"
                 + (existingOffer.map { " for \($0.description)" } ?? "")
         case .duplicateSource:
             "duplicate data source"
@@ -94,6 +106,8 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
                 + (seatID.map { " for \($0.description)" } ?? "")
         case .unknownOfferIdentity(let offer):
             "unknown data offer \(offer.description)"
+        case .unknownPrimarySelectionOfferIdentity(let offer):
+            "unknown primary selection offer \(offer.description)"
         case .mismatchedOfferSeat(let offer, let expected, let actual):
             "data offer \(offer.description) belonged to "
                 + (actual?.description ?? "no seat")
@@ -104,6 +118,8 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "unknown data source"
         case .unknownSourceIdentity(let source):
             "unknown data source \(source.description)"
+        case .unknownPrimarySelectionSourceIdentity(let source):
+            "unknown primary selection source \(source.description)"
         case .sourceCancelled:
             "data source was cancelled"
         case .sourceDataUnavailable(let mimeType):
@@ -125,6 +141,20 @@ public enum DataTransferCallbackFailureCause: Equatable, Sendable,
         switch self {
         case .backend(let type, let description):
             "\(type): \(description)"
+        }
+    }
+}
+
+public enum DataTransferOfferIdentity: Equatable, Sendable, CustomStringConvertible {
+    case clipboard(ClipboardOfferIdentity)
+    case primarySelection(PrimarySelectionOfferIdentity)
+
+    public var description: String {
+        switch self {
+        case .clipboard(let offer):
+            offer.description
+        case .primarySelection(let offer):
+            offer.description
         }
     }
 }
@@ -153,6 +183,30 @@ public struct ClipboardSourceIdentity: Hashable, Sendable, CustomStringConvertib
     }
 }
 
+public struct PrimarySelectionOfferIdentity: Hashable, Sendable, CustomStringConvertible {
+    package let rawValue: UInt64
+
+    package init(_ offerID: DataOfferID) {
+        rawValue = offerID.rawValue
+    }
+
+    public var description: String {
+        "primary-selection-offer-\(rawValue)"
+    }
+}
+
+public struct PrimarySelectionSourceIdentity: Hashable, Sendable, CustomStringConvertible {
+    package let rawValue: UInt64
+
+    package init(_ sourceID: DataSourceID) {
+        rawValue = sourceID.rawValue
+    }
+
+    public var description: String {
+        "primary-selection-source-\(rawValue)"
+    }
+}
+
 public struct ClipboardSelectionEvent: Equatable, Sendable {
     public let seatID: SeatID
     public let offer: ClipboardOfferIdentity?
@@ -163,17 +217,43 @@ public struct ClipboardSelectionEvent: Equatable, Sendable {
     }
 }
 
+public struct PrimarySelectionEvent: Equatable, Sendable {
+    public let seatID: SeatID
+    public let offer: PrimarySelectionOfferIdentity?
+
+    package init(seatID eventSeatID: SeatID, offerID: DataOfferID?) {
+        seatID = eventSeatID
+        offer = offerID.map(PrimarySelectionOfferIdentity.init)
+    }
+}
+
 public enum DataTransferEvent: Equatable, Sendable {
-    case selectionChanged(ClipboardSelectionEvent)
-    case sourceCancelled(ClipboardSourceIdentity)
+    case clipboardSelectionChanged(ClipboardSelectionEvent)
+    case primarySelectionChanged(PrimarySelectionEvent)
+    case clipboardSourceCancelled(ClipboardSourceIdentity)
+    case primarySelectionSourceCancelled(PrimarySelectionSourceIdentity)
 }
 
 public enum DataTransferDiagnosticOperation: Equatable, Sendable {
     case sourceWriteFailed
 }
 
+public enum DataTransferDiagnosticSource: Equatable, Sendable, CustomStringConvertible {
+    case clipboard(ClipboardSourceIdentity)
+    case primarySelection(PrimarySelectionSourceIdentity)
+
+    public var description: String {
+        switch self {
+        case .clipboard(let source):
+            source.description
+        case .primarySelection(let source):
+            source.description
+        }
+    }
+}
+
 public struct DataTransferDiagnostic: Equatable, Sendable {
-    public let source: ClipboardSourceIdentity
+    public let source: DataTransferDiagnosticSource
     public let mimeType: MIMEType
     public let operation: DataTransferDiagnosticOperation
     public let error: DataTransferError
@@ -183,7 +263,7 @@ public struct DataTransferDiagnostic: Equatable, Sendable {
     }
 
     public init(
-        source diagnosticSource: ClipboardSourceIdentity,
+        source diagnosticSource: DataTransferDiagnosticSource,
         mimeType diagnosticMIMEType: MIMEType,
         operation diagnosticOperation: DataTransferDiagnosticOperation,
         error diagnosticError: DataTransferError
@@ -192,6 +272,34 @@ public struct DataTransferDiagnostic: Equatable, Sendable {
         mimeType = diagnosticMIMEType
         operation = diagnosticOperation
         error = diagnosticError
+    }
+
+    public init(
+        source diagnosticSource: ClipboardSourceIdentity,
+        mimeType diagnosticMIMEType: MIMEType,
+        operation diagnosticOperation: DataTransferDiagnosticOperation,
+        error diagnosticError: DataTransferError
+    ) {
+        self.init(
+            source: .clipboard(diagnosticSource),
+            mimeType: diagnosticMIMEType,
+            operation: diagnosticOperation,
+            error: diagnosticError
+        )
+    }
+
+    public init(
+        source diagnosticSource: PrimarySelectionSourceIdentity,
+        mimeType diagnosticMIMEType: MIMEType,
+        operation diagnosticOperation: DataTransferDiagnosticOperation,
+        error diagnosticError: DataTransferError
+    ) {
+        self.init(
+            source: .primarySelection(diagnosticSource),
+            mimeType: diagnosticMIMEType,
+            operation: diagnosticOperation,
+            error: diagnosticError
+        )
     }
 }
 
@@ -283,7 +391,7 @@ public struct MIMEType: RawRepresentable, Equatable, Hashable, Sendable,
 public struct ByteCount: Equatable, Comparable, Sendable, CustomStringConvertible {
     public let rawValue: Int
 
-    public static let defaultClipboardReadLimit = ByteCount(unchecked: 16 * 1_024 * 1_024)
+    public static let defaultTransferReadLimit = ByteCount(unchecked: 16 * 1_024 * 1_024)
 
     public init(_ value: Int) throws {
         guard value >= 0 else {

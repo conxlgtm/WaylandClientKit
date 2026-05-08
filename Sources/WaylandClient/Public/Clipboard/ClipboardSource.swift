@@ -1,20 +1,10 @@
 import Foundation
 
-public struct ClipboardSourcePayload: Equatable, Sendable {
-    public let mimeType: MIMEType
-    public let data: Data
-
-    public init(mimeType payloadMIMEType: MIMEType, data payloadData: Data) {
-        mimeType = payloadMIMEType
-        data = payloadData
-    }
-}
-
 public struct ClipboardSourceConfiguration: Equatable, Sendable {
-    public let payloads: [ClipboardSourcePayload]
+    public let payloads: [DataTransferSourcePayload]
     package let payloadSet: DataTransferSourcePayloadSet
 
-    public init(payloads sourcePayloads: [ClipboardSourcePayload]) throws {
+    public init(payloads sourcePayloads: [DataTransferSourcePayload]) throws {
         let validatedPayloads = try DataTransferSourcePayloadSet(payloads: sourcePayloads)
         payloads = validatedPayloads.payloads
         payloadSet = validatedPayloads
@@ -25,7 +15,7 @@ public struct ClipboardSourceConfiguration: Equatable, Sendable {
         _ data: Data
     ) throws -> ClipboardSourceConfiguration {
         try ClipboardSourceConfiguration(
-            payloads: [ClipboardSourcePayload(mimeType: mimeType, data: data)]
+            payloads: [DataTransferSourcePayload(mimeType: mimeType, data: data)]
         )
     }
 
