@@ -131,7 +131,7 @@ private struct DemoState {
                     + "message=\(diagnostic.message)"
             )
         case .pointer(let pointer):
-            guard event.target == .window(focusedWindowID) else { return }
+            guard event.windowID == focusedWindowID else { return }
             handlePointer(pointer)
         case .keyboard(let keyboard):
             guard acceptsWindowOrDisplayTarget(event.target, focusedWindowID) else { return }
@@ -147,8 +147,8 @@ private struct DemoState {
         _ focusedWindowID: WindowID
     ) -> Bool {
         switch target {
-        case .window(let windowID):
-            windowID == focusedWindowID
+        case .surface(let surface):
+            surface.windowID == focusedWindowID
         case .display, .focusless:
             true
         case .unmanagedSurface:

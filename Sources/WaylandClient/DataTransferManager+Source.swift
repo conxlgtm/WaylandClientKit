@@ -40,12 +40,12 @@ extension DataTransferManager {
             for mimeType in payloads.mimeTypes {
                 sourceBinding.offer(mimeType: mimeType)
             }
-            try apply(.sourceCreated(id: sourceID, seatID: seatID, mimeTypes: payloads.mimeTypes))
-            store.insertSource(
+            try store.insertSource(
                 binding: sourceBinding,
                 payloads: payloads,
                 sourceID: sourceID
             )
+            try apply(.sourceCreated(id: sourceID, seatID: seatID, mimeTypes: payloads.mimeTypes))
             try apply(.selectionSourceChanged(seatID: seatID, sourceID: sourceID))
             deviceBinding.setSelection(source: sourceBinding, serial: serial)
             preconditionInvariantsHold()

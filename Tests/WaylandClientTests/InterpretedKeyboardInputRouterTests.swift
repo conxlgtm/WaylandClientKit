@@ -31,7 +31,7 @@ struct InterpretedKeyboardInputRouterTests {
             )
         )
 
-        #expect(routed.first?.target == .window(WindowID(rawValue: 150)))
+        #expect(routed.first?.target == .surface(.window(WindowID(rawValue: 150))))
         #expect(routed.first?.kind == .keyboard(.interpreted(.key(expectedInterpretedQKey()))))
     }
 
