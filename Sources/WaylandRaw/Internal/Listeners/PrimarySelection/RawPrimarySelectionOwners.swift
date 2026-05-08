@@ -51,9 +51,11 @@ package final class RawPrimarySelectionOfferOwner {
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<
-        swl_primary_selection_offer_listener_callbacks
-    > {
+    private var callbacks:
+        UnsafeMutablePointer<
+            swl_primary_selection_offer_listener_callbacks
+        >
+    {
         listenerStorage.callbacks
     }
 
@@ -123,9 +125,11 @@ package final class RawPrimarySelectionSourceOwner {
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<
-        swl_primary_selection_source_listener_callbacks
-    > {
+    private var callbacks:
+        UnsafeMutablePointer<
+            swl_primary_selection_source_listener_callbacks
+        >
+    {
         listenerStorage.callbacks
     }
 
@@ -203,9 +207,11 @@ package final class RawPrimarySelectionDeviceOwner {
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<
-        swl_primary_selection_device_listener_callbacks
-    > {
+    private var callbacks:
+        UnsafeMutablePointer<
+            swl_primary_selection_device_listener_callbacks
+        >
+    {
         listenerStorage.callbacks
     }
 

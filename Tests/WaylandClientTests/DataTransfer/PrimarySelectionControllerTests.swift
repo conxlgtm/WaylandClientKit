@@ -66,7 +66,8 @@ struct PrimarySelectionControllerTests {
 
         try activateRemoteOffer(handle: handle, controller: controller, backend: backend)
 
-        var descriptor = try controller.receiveOffer(id: DataOfferID(rawValue: 1), mimeType: .plainText)
+        var descriptor = try controller.receiveOffer(
+            id: DataOfferID(rawValue: 1), mimeType: .plainText)
         try descriptor.close()
         let offerBinding = try #require(backend.offerBinding(for: handle))
 
@@ -406,7 +407,10 @@ private final class RecordingPrimarySelectionOfferBinding: PrimarySelectionOffer
 
     private let onEvent: (RawPrimarySelectionOfferEvent) -> Void
 
-    init(id offerID: DataOfferID, onEvent eventHandler: @escaping (RawPrimarySelectionOfferEvent) -> Void) {
+    init(
+        id offerID: DataOfferID,
+        onEvent eventHandler: @escaping (RawPrimarySelectionOfferEvent) -> Void
+    ) {
         id = offerID
         onEvent = eventHandler
     }
@@ -431,7 +435,10 @@ private final class RecordingPrimarySelectionSourceBinding: PrimarySelectionSour
 
     private let onEvent: (RawPrimarySelectionSourceEvent) -> Void
 
-    init(id sourceID: DataSourceID, onEvent eventHandler: @escaping (RawPrimarySelectionSourceEvent) -> Void) {
+    init(
+        id sourceID: DataSourceID,
+        onEvent eventHandler: @escaping (RawPrimarySelectionSourceEvent) -> Void
+    ) {
         id = sourceID
         onEvent = eventHandler
     }
