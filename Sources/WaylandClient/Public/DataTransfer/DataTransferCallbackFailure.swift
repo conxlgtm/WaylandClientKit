@@ -2,6 +2,9 @@ public enum DataTransferCallbackContext: Equatable, Sendable {
     case dataDevice(SeatID)
     case dataOffer(ClipboardOfferIdentity)
     case dataSource(ClipboardSourceIdentity)
+    case primarySelectionOffer(PrimarySelectionOfferIdentity)
+    case primarySelectionSource(PrimarySelectionSourceIdentity)
+    case sourceWrite(DataTransferDiagnosticSource)
 }
 
 public struct DataTransferCallbackFailure:

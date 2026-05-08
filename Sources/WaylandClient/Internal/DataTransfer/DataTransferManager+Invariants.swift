@@ -165,10 +165,10 @@ extension DataTransferManager {
             }
         }
         for request in store.pendingSourceSendRequestsForInvariantChecks()
-        where !activeSourceIDs.contains(request.sourceID) {
+        where !activeSourceIDs.contains(request.source.sourceID) {
             throw
                 DataTransferManagerInvariantViolation
-                .pendingSourceSendRequestMissingSource(request.sourceID)
+                .pendingSourceSendRequestMissingSource(request.source.sourceID)
         }
     }
 

@@ -360,7 +360,9 @@ extension WaylandDisplay {
 
 extension WaylandDisplay {
     public func primarySelectionOffer(for seatID: SeatID) throws -> PrimarySelectionOffer? {
-        throw DataTransferError.unavailable
+        try requireCore().primarySelectionOffer(for: seatID).map { offer in
+            PrimarySelectionOffer(snapshot: offer, display: self)
+        }
     }
 
     /// Requests ownership of the primary selection for a seat.
@@ -372,14 +374,19 @@ extension WaylandDisplay {
         seatID: SeatID,
         serial: InputSerial
     ) throws -> PrimarySelectionSource {
-        throw DataTransferError.unavailable
+        let source = try requireCore().setPrimarySelection(
+            configuration,
+            seatID: seatID,
+            serial: serial
+        )
+        return PrimarySelectionSource(snapshot: source, display: self)
     }
 
     /// Requests clearing the primary selection for a seat.
     ///
     /// The compositor validates `serial` at the protocol boundary.
     public func requestClearPrimarySelection(seatID: SeatID, serial: InputSerial) throws {
-        throw DataTransferError.unavailable
+        try requireCore().clearPrimarySelection(seatID: seatID, serial: serial)
     }
 
     package func requestClearPrimarySelection(
@@ -387,14 +394,18 @@ extension WaylandDisplay {
         seatID: SeatID,
         serial: InputSerial
     ) throws {
-        throw DataTransferError.unavailable
+        try requireCore().clearPrimarySelection(
+            sourceID: sourceID,
+            seatID: seatID,
+            serial: serial
+        )
     }
 
     package func receivePrimarySelectionOffer(
         id offerID: DataOfferID,
         mimeType: MIMEType
     ) throws -> OwnedFileDescriptor {
-        throw DataTransferError.unavailable
+        try requireCore().receivePrimarySelectionOffer(id: offerID, mimeType: mimeType)
     }
 }
 

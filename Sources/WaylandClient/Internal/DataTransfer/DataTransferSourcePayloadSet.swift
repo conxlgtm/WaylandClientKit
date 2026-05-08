@@ -49,7 +49,7 @@ package struct DataTransferSourcePayloadSet: Equatable, Sendable {
 }
 
 package final class DataTransferSourceSendRequest {
-    package let sourceID: DataSourceID
+    package let source: DataTransferSourceWriteSource
     package let mimeType: MIMEType
     package let data: Data
 
@@ -57,13 +57,13 @@ package final class DataTransferSourceSendRequest {
     private let descriptorIO: DataTransferSourceDescriptorIO
 
     package init(
-        sourceID requestSourceID: DataSourceID,
+        source requestSource: DataTransferSourceWriteSource,
         mimeType requestMIMEType: MIMEType,
         descriptor rawDescriptor: Int32,
         data requestData: Data,
         descriptorIO requestDescriptorIO: DataTransferSourceDescriptorIO
     ) {
-        sourceID = requestSourceID
+        source = requestSource
         mimeType = requestMIMEType
         data = requestData
         descriptor = Mutex(rawDescriptor)
@@ -90,7 +90,7 @@ package final class DataTransferSourceSendRequest {
 
     package func makeWriteJob() throws -> DataTransferSourceWriteJob {
         DataTransferSourceWriteJob(
-            sourceID: sourceID,
+            source: source,
             mimeType: mimeType,
             descriptor: try releaseRawDescriptor(),
             data: data,
