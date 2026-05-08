@@ -78,7 +78,7 @@ struct KeyboardInterpreterLifecycleTests {
                 deviceID: nil,
                 kind: .seat(
                     RawSeatEventSnapshot(
-                        advertisedCapabilities: [.pointer],
+                        uncheckedAdvertisedCapabilities: [.pointer],
                         activeCapabilities: [.pointer],
                         name: "seat0"
                     )

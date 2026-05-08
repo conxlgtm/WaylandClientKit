@@ -46,9 +46,9 @@ struct WindowLifecycleTransitionTests {
     @Test
     func staleCallbacksAfterCloseAreNoOpTransitionTable() throws {
         let callbackEvents: [WindowEvent] = [
-            .contentInvalidated(bufferAvailable: true),
-            .frameBecameReady(bufferAvailable: true),
-            .bufferBecameAvailable(bufferAvailable: true),
+            .contentInvalidated(bufferAvailability: .available),
+            .frameBecameReady(bufferAvailability: .available),
+            .bufferBecameAvailable(bufferAvailability: .available),
             .transientStateReset,
         ]
 
@@ -64,6 +64,30 @@ struct WindowLifecycleTransitionTests {
         }
     }
 
+    @Test
+    func closePublishesClosedExactlyOnceForEveryPublishedClosableLifecycle() throws {
+        for model in try publishedClosableModels() {
+            var model = model
+
+            let firstEffects = try model.reduce(.explicitClose)
+            let secondEffects = try model.reduce(.explicitClose)
+
+            #expect(firstEffects.filter { $0 == .publishClosed(windowID) }.count == 1)
+            #expect(!secondEffects.contains(.publishClosed(windowID)))
+            #expect(model.publication == .closedPublished(windowID))
+        }
+    }
+
+    @Test
+    func destroyedWindowCannotRemainPublished() throws {
+        var model = try activePublishedModel()
+
+        _ = try model.reduce(.explicitClose)
+
+        #expect(model.isDestroyed)
+        #expect(model.publication != .published(windowID))
+    }
+
     private func activePublishedModel() throws -> WindowModel {
         var model = WindowModel(id: windowID, fallbackSize: .default)
         _ = try model.reduce(.roleObjectsCreated)
@@ -73,16 +97,29 @@ struct WindowLifecycleTransitionTests {
         return model
     }
 
+    private func publishedClosableModels() throws -> [WindowModel] {
+        var waiting = WindowModel(id: windowID, fallbackSize: .default)
+        _ = try waiting.reduce(.roleObjectsCreated)
+        _ = try waiting.reduce(.initialCommitSent)
+        _ = try waiting.reduce(.published)
+
+        return [waiting, try activePublishedModel()]
+    }
+
     private func configure(
         width: Int32,
         height: Int32,
         serial: UInt32 = 1
-    ) -> XDGConfigureSequence {
-        XDGConfigureSequence(
-            serial: serial,
-            topLevel: XDGTopLevelConfigureSuggestion(
-                size: TopLevelSize(width: width, height: height)
-            )
+    ) throws -> WindowConfigureEvent {
+        try WindowConfigureEvent(
+            sequence: XDGConfigureSequence(
+                serial: serial,
+                topLevel: XDGTopLevelConfigureSuggestion(
+                    size: TopLevelSize(width: width, height: height)
+                )
+            ),
+            previousSize: nil,
+            fallbackSize: .default
         )
     }
 }

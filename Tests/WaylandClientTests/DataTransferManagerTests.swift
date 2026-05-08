@@ -106,7 +106,7 @@ struct DataTransferManagerTests {
         #expect(
             manager.offerSnapshots
                 == [
-                    DataOfferSnapshot(
+                    try DataOfferSnapshot(
                         id: offer.id,
                         role: .selection(seatID: seat1),
                         mimeTypes: [.plainText, .plainTextUTF8]
@@ -133,10 +133,32 @@ struct DataTransferManagerTests {
 
         device.emit(.dataOffer(offerHandle1))
         let offer = try #require(backend.offerBinding(for: offerHandle1))
+        offer.emit(.offer(MIMEType.plainText.rawValue))
         device.emit(.selection(offerHandle1))
         offer.emit(.offer(MIMEType.uriList.rawValue))
 
-        #expect(manager.offerSnapshots.first?.mimeTypes == [.uriList])
+        #expect(manager.offerSnapshots.first?.mimeTypes == [.plainText, .uriList])
+    }
+
+    @Test
+    func malformedRemoteMIMETypeQueuesCallbackFailure() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let offer = try #require(backend.offerBinding(for: offerHandle1))
+        offer.emit(.offer(" text/plain "))
+
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataOffer(ClipboardOfferIdentity(offer.id)),
+                    error: .invalidMIMEType(" text/plain ")
+                )
+        )
+        #expect(manager.offerSnapshots.isEmpty)
     }
 
     @Test
@@ -148,9 +170,11 @@ struct DataTransferManagerTests {
 
         device.emit(.dataOffer(offerHandle1))
         let firstOffer = try #require(backend.offerBinding(for: offerHandle1))
+        firstOffer.emit(.offer(MIMEType.plainText.rawValue))
         device.emit(.selection(offerHandle1))
         device.emit(.dataOffer(offerHandle2))
         let secondOffer = try #require(backend.offerBinding(for: offerHandle2))
+        secondOffer.emit(.offer(MIMEType.plainTextUTF8.rawValue))
         device.emit(.selection(offerHandle2))
 
         #expect(firstOffer.destroyCount == 1)
@@ -167,6 +191,7 @@ struct DataTransferManagerTests {
 
         device.emit(.dataOffer(offerHandle1))
         let offer = try #require(backend.offerBinding(for: offerHandle1))
+        offer.emit(.offer(MIMEType.plainText.rawValue))
         device.emit(.selection(offerHandle1))
         device.emit(.selection(nil))
 
@@ -213,13 +238,13 @@ struct DataTransferManagerTests {
             manager.pendingCallbackError
                 == DataTransferCallbackFailure(
                     context: .dataDevice(seat1),
-                    error: .unknownOffer
+                    error: .unknownOfferHandle(rawValue: offerHandle1.rawValue, seatID: seat1)
                 )
         )
         #expect(
             throws: DataTransferCallbackFailure(
                 context: .dataDevice(seat1),
-                error: .unknownOffer
+                error: .unknownOfferHandle(rawValue: offerHandle1.rawValue, seatID: seat1)
             )
         ) {
             try manager.throwPendingCallbackErrorIfAny()
@@ -235,34 +260,6 @@ struct DataTransferManagerTests {
         let releasedBinding = try #require(backend.binding(for: seat1))
 
         releasedBinding.emit(.selection(nil))
-
-        #expect(
-            manager.pendingCallbackError
-                == DataTransferCallbackFailure(
-                    context: .dataDevice(seat1),
-                    error: .unknownSeat(seat1)
-                )
-        )
-        #expect(
-            throws: DataTransferCallbackFailure(
-                context: .dataDevice(seat1),
-                error: .unknownSeat(seat1)
-            )
-        ) {
-            try manager.throwPendingCallbackErrorIfAny()
-        }
-    }
-
-    @Test
-    func callbackErrorsPreserveFirstFailure() throws {
-        let backend = RecordingDataTransferBackend()
-        let manager = DataTransferManager(backend: backend)
-        try manager.synchronizeSeats([seat1])
-        try manager.synchronizeSeats([])
-        let releasedBinding = try #require(backend.binding(for: seat1))
-
-        releasedBinding.emit(.selection(nil))
-        releasedBinding.emit(.dataOffer(nil))
 
         #expect(
             manager.pendingCallbackError

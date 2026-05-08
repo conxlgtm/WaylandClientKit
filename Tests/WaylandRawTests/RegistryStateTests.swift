@@ -7,12 +7,13 @@ struct RegistryStateTests {
     @Test
     func recordsGlobal() {
         let state = RegistryState()
-        state.recordGlobal(name: 4, interfaceName: "wl_compositor", version: 6)
+        #expect(state.recordGlobal(name: 4, interfaceName: "wl_compositor", version: 6))
 
         let global = state.firstGlobal(named: "wl_compositor")
         #expect(global != nil)
         #expect(global?.name == 4)
         #expect(global?.advertisedVersion == RawVersion(6))
+        #expect(state.rejectedGlobals.isEmpty)
     }
 
     @Test
@@ -59,5 +60,62 @@ struct RegistryStateTests {
         let global = state.firstGlobal(named: "wl_compositor")
         #expect(global?.advertisedVersion == RawVersion(6))
         #expect(state.snapshot.count == 1)
+    }
+
+    @Test
+    func recordGlobalRejectsZeroVersion() {
+        let state = RegistryState()
+
+        #expect(!state.recordGlobal(name: 4, interfaceName: "wl_compositor", version: 0))
+        #expect(state.snapshot.isEmpty)
+        #expect(
+            state.rejectedGlobals
+                == [
+                    RawGlobalAdvertisementRejection(
+                        name: 4,
+                        interfaceName: "wl_compositor",
+                        advertisedVersion: RawVersion(0),
+                        failure: .zeroAdvertisedVersion
+                    )
+                ]
+        )
+    }
+
+    @Test
+    func recordGlobalRejectsEmptyInterfaceName() {
+        let state = RegistryState()
+
+        #expect(!state.recordGlobal(name: 4, interfaceName: "", version: 1))
+        #expect(state.snapshot.isEmpty)
+        #expect(
+            state.rejectedGlobals
+                == [
+                    RawGlobalAdvertisementRejection(
+                        name: 4,
+                        interfaceName: "",
+                        advertisedVersion: RawVersion(1),
+                        failure: .emptyInterfaceName
+                    )
+                ]
+        )
+    }
+
+    @Test
+    func recordGlobalRejectsInterfaceNameWithNUL() {
+        let state = RegistryState()
+
+        #expect(!state.recordGlobal(name: 4, interfaceName: "wl\0seat", version: 1))
+        #expect(state.snapshot.isEmpty)
+        #expect(
+            state.rejectedGlobals
+                == [
+                    RawGlobalAdvertisementRejection(
+                        name: 4,
+                        interfaceName: "wl\0seat",
+                        advertisedVersion: RawVersion(1),
+                        failure: .interfaceNameContainsNUL
+                    )
+                ]
+        )
     }
 }

@@ -153,7 +153,10 @@ struct DisplaySessionInputPipelineTests {
                 == .diagnostic(
                     InputDiagnostic(
                         .inputPipelineOverflow(
-                            InputPipelineOverflow(stage: .sessionPendingInput, capacity: 2)
+                            InputPipelineOverflow(
+                                stage: .sessionPendingInput,
+                                capacity: InputPipelineCapacity(unchecked: 2)
+                            )
                         )
                     )
                 )
@@ -191,7 +194,10 @@ struct DisplaySessionInputPipelineTests {
                 == .diagnostic(
                     InputDiagnostic(
                         .inputPipelineOverflow(
-                            InputPipelineOverflow(stage: .sessionPendingInput, capacity: 2)
+                            InputPipelineOverflow(
+                                stage: .sessionPendingInput,
+                                capacity: InputPipelineCapacity(unchecked: 2)
+                            )
                         )
                     )
                 )
@@ -202,7 +208,10 @@ struct DisplaySessionInputPipelineTests {
     func rawAndPendingInputPipelineOverflowsExposeDistinctStages() {
         let rawOverflow = InputDiagnostic(
             .inputPipelineOverflow(
-                InputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
+                InputPipelineOverflow(
+                    stage: .rawInputQueue,
+                    capacity: InputPipelineCapacity(unchecked: 4)
+                )
             )
         )
         let pendingOverflow = sessionPendingOverflowEvent(from: clientSeatRemoved(sequence: 1))
@@ -210,7 +219,10 @@ struct DisplaySessionInputPipelineTests {
         #expect(
             rawOverflow.operation
                 == InputDiagnosticOperation.inputPipelineOverflow(
-                    InputPipelineOverflow(stage: .rawInputQueue, capacity: 4)
+                    InputPipelineOverflow(
+                        stage: .rawInputQueue,
+                        capacity: InputPipelineCapacity(unchecked: 4)
+                    )
                 )
         )
         #expect(
@@ -218,7 +230,10 @@ struct DisplaySessionInputPipelineTests {
                 == .diagnostic(
                     InputDiagnostic(
                         .inputPipelineOverflow(
-                            InputPipelineOverflow(stage: .sessionPendingInput, capacity: 2)
+                            InputPipelineOverflow(
+                                stage: .sessionPendingInput,
+                                capacity: InputPipelineCapacity(unchecked: 2)
+                            )
                         )
                     )
                 )
@@ -267,8 +282,8 @@ private func expectedRawKeyEvent(
             .key(
                 KeyboardKeyEvent(
                     serial: InputSerial(rawValue: serial),
-                    time: time,
-                    rawKeycode: rawKeycode,
+                    time: WaylandTimestampMilliseconds(rawValue: time),
+                    rawKeycode: EvdevKeycode(rawValue: rawKeycode),
                     state: .pressed
                 )
             )
@@ -284,7 +299,10 @@ private func sessionPendingOverflowEvent(from event: InputEvent) -> InputEvent {
         kind: .diagnostic(
             InputDiagnostic(
                 .inputPipelineOverflow(
-                    InputPipelineOverflow(stage: .sessionPendingInput, capacity: 2)
+                    InputPipelineOverflow(
+                        stage: .sessionPendingInput,
+                        capacity: InputPipelineCapacity(unchecked: 2)
+                    )
                 )
             )
         )

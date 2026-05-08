@@ -20,7 +20,7 @@ struct InputEventQueueTests {
                 deviceID: nil,
                 kind: .seat(
                     RawSeatEventSnapshot(
-                        advertisedCapabilities: [.pointer],
+                        uncheckedAdvertisedCapabilities: [.pointer],
                         activeCapabilities: [],
                         name: nil
                     )
@@ -97,7 +97,10 @@ struct InputEventQueueTests {
                 == .diagnostic(
                     RawInputDiagnostic(
                         .inputPipelineOverflow(
-                            RawInputPipelineOverflow(stage: .rawInputQueue, capacity: 1)
+                            RawInputPipelineOverflow(
+                                stage: .rawInputQueue,
+                                capacity: RawInputQueueCapacity(unchecked: 1)
+                            )
                         )
                     )
                 )
@@ -303,7 +306,7 @@ struct InputEventQueueCoalescingTests {
     private func touchMotionDraft(
         seatID: RawSeatID,
         deviceID: RawInputDeviceID,
-        touch: Int32,
+        touch: RawTouchID,
         time: UInt32,
         x: Int32
     ) -> RawInputEventDraft {

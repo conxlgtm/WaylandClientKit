@@ -174,7 +174,7 @@ package final class RawInputEventQueue: RawInputEventSink, Sendable {
                         .inputPipelineOverflow(
                             RawInputPipelineOverflow(
                                 stage: .rawInputQueue,
-                                capacity: configuration.capacity.rawValue
+                                capacity: configuration.capacity
                             )
                         )
                     )

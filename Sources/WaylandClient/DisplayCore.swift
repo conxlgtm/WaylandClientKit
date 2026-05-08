@@ -275,8 +275,12 @@ extension DisplayCore {
             eventHub.publishWindowDiagnostic(
                 WindowDiagnostic(
                     windowID: windowID,
-                    operation: .presentation(.presentationFailed),
-                    message: error.description
+                    payload: .presentation(
+                        WindowPresentationDiagnostic(
+                            operation: .presentationFailed,
+                            error: error
+                        )
+                    )
                 )
             )
         case .diagnostic(let diagnostic):

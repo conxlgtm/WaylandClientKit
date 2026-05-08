@@ -8,14 +8,14 @@ package struct DataTransferSourceDescriptorIO: Sendable {
 
     private let prepareDescriptorForWriting: @Sendable (Int32) throws -> Void
     private let writeDescriptor: @Sendable (Int32, [UInt8]) throws -> Int
-    private let closeDescriptor: @Sendable (Int32) -> Int32
+    private let closeDescriptor: @Sendable (Int32) -> FileDescriptorCloseResult
 
     package init(
         prepareDescriptorForWriting prepare: @escaping @Sendable (Int32) throws -> Void =
             defaultPrepareDataTransferSourceDescriptorForWriting,
         writeDescriptor write: @escaping @Sendable (Int32, [UInt8]) throws -> Int =
             defaultWriteDataTransferSourceDescriptor,
-        closeDescriptor close: @escaping @Sendable (Int32) -> Int32 =
+        closeDescriptor close: @escaping @Sendable (Int32) -> FileDescriptorCloseResult =
             defaultCloseDataTransferSourceDescriptor
     ) {
         prepareDescriptorForWriting = prepare
@@ -29,7 +29,9 @@ package struct DataTransferSourceDescriptorIO: Sendable {
     package func write(_ descriptor: Int32, bytes: [UInt8]) throws -> Int {
         try writeDescriptor(descriptor, bytes)
     }
-    package func close(_ descriptor: Int32) -> Int32 { closeDescriptor(descriptor) }
+    package func close(_ descriptor: Int32) -> FileDescriptorCloseResult {
+        closeDescriptor(descriptor)
+    }
 }
 
 package final class DataTransferSourceWriteJob: Sendable {
@@ -37,19 +39,21 @@ package final class DataTransferSourceWriteJob: Sendable {
     package let mimeType: MIMEType
     package let data: Data
 
-    private let descriptor: Mutex<DescriptorState>
+    private let descriptor: Mutex<DataTransferSourceDescriptorState>
     private let descriptorIO: DataTransferSourceDescriptorIO
+    private let writePolicy: DataTransferSourceWritePolicy
 
     package convenience init(
         sourceID jobSourceID: DataSourceID,
         mimeType jobMIMEType: MIMEType,
         descriptor jobDescriptor: Int32,
         data jobData: Data,
+        writePolicy jobWritePolicy: DataTransferSourceWritePolicy = .default,
         prepareDescriptorForWriting prepare: @escaping @Sendable (Int32) throws -> Void =
             defaultPrepareDataTransferSourceDescriptorForWriting,
         writeDescriptor write: @escaping @Sendable (Int32, [UInt8]) throws -> Int =
             defaultWriteDataTransferSourceDescriptor,
-        closeDescriptor close: @escaping @Sendable (Int32) -> Int32 =
+        closeDescriptor close: @escaping @Sendable (Int32) -> FileDescriptorCloseResult =
             defaultCloseDataTransferSourceDescriptor
     ) {
         self.init(
@@ -61,7 +65,8 @@ package final class DataTransferSourceWriteJob: Sendable {
                 prepareDescriptorForWriting: prepare,
                 writeDescriptor: write,
                 closeDescriptor: close
-            )
+            ),
+            writePolicy: jobWritePolicy
         )
     }
 
@@ -70,13 +75,15 @@ package final class DataTransferSourceWriteJob: Sendable {
         mimeType jobMIMEType: MIMEType,
         descriptor jobDescriptor: Int32,
         data jobData: Data,
-        descriptorIO jobDescriptorIO: DataTransferSourceDescriptorIO
+        descriptorIO jobDescriptorIO: DataTransferSourceDescriptorIO,
+        writePolicy jobWritePolicy: DataTransferSourceWritePolicy = .default
     ) {
         sourceID = jobSourceID
         mimeType = jobMIMEType
         data = jobData
-        descriptor = Mutex(DescriptorState(rawValue: jobDescriptor))
+        descriptor = Mutex(DataTransferSourceDescriptorState(rawValue: jobDescriptor))
         descriptorIO = jobDescriptorIO
+        writePolicy = jobWritePolicy
     }
 
     package func write() -> DataTransferSourceWriteResult {
@@ -153,6 +160,7 @@ package final class DataTransferSourceWriteJob: Sendable {
     private func writeData(to rawDescriptor: Int32) throws {
         let bytes = Array(data)
         var writtenByteCount = 0
+        var temporaryWriteFailureCount = 0
 
         while writtenByteCount < bytes.count {
             try throwIfCancelled()
@@ -166,12 +174,22 @@ package final class DataTransferSourceWriteJob: Sendable {
                 }
 
                 writtenByteCount += count
+                temporaryWriteFailureCount = 0
             } catch let error as DataTransferError {
                 if let cancellationError = cancellationError() {
                     throw cancellationError
                 }
                 if isTemporaryDataTransferSourceWriteBackpressure(error) {
-                    usleep(1_000)
+                    temporaryWriteFailureCount += 1
+                    guard
+                        temporaryWriteFailureCount
+                            <= writePolicy.maximumTemporaryWriteFailures
+                    else {
+                        throw DataTransferError.transferTimedOut
+                    }
+                    if writePolicy.retryDelayMicroseconds > 0 {
+                        usleep(writePolicy.retryDelayMicroseconds)
+                    }
                     continue
                 }
 
@@ -227,20 +245,20 @@ package final class DataTransferSourceWriteJob: Sendable {
     }
 
     private func closeCancellationDescriptor(_ rawDescriptor: Int32) -> DataTransferError {
-        let closeResult = descriptorIO.close(rawDescriptor)
-        guard closeResult == 0 else {
-            return .closeFileDescriptor(WaylandSystemErrno(unchecked: closeResult))
+        switch descriptorIO.close(rawDescriptor) {
+        case .closed:
+            return .cancelled
+        case .failed(let error):
+            return .closeFileDescriptor(error)
         }
-
-        return .cancelled
     }
 
     private func closeRawDescriptor(_ rawDescriptor: Int32) throws {
-        let closeResult = descriptorIO.close(rawDescriptor)
-        guard closeResult == 0 else {
-            throw DataTransferError.closeFileDescriptor(
-                WaylandSystemErrno(unchecked: closeResult)
-            )
+        switch descriptorIO.close(rawDescriptor) {
+        case .closed:
+            return
+        case .failed(let error):
+            throw DataTransferError.closeFileDescriptor(error)
         }
     }
 
@@ -286,17 +304,6 @@ package final class DataTransferSourceWriteJob: Sendable {
     deinit {
         closeDescriptorOnDeinit()
     }
-
-    private enum DescriptorState: Sendable {
-        case idle(Int32)
-        case writing(Int32, cancellationError: DataTransferError?)
-        case cancelledBeforeWriting(DataTransferError)
-        case consumed
-
-        init(rawValue: Int32) {
-            self = .idle(rawValue)
-        }
-    }
 }
 
 private func defaultPrepareDataTransferSourceDescriptorForWriting(_ descriptor: Int32) throws {
@@ -328,12 +335,10 @@ private func defaultWriteDataTransferSourceDescriptor(
     }
 }
 
-private func defaultCloseDataTransferSourceDescriptor(_ descriptor: Int32) -> Int32 {
-    guard Glibc.close(descriptor) == 0 else {
-        return errno > 0 ? errno : EIO
-    }
-
-    return 0
+private func defaultCloseDataTransferSourceDescriptor(
+    _ descriptor: Int32
+) -> FileDescriptorCloseResult {
+    FileDescriptorCloseResult.posixReturn(Glibc.close(descriptor))
 }
 
 private func dataTransferSourceWriteError(_ error: RuntimeError) -> DataTransferError {

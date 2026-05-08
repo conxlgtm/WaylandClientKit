@@ -64,6 +64,26 @@ struct DisplaySurfaceStoreTests {
     }
 
     @Test
+    func compositorDismissFromMiddleMaintainsSurfaceTree() throws {
+        var store = try nestedPopupStore()
+
+        _ = try #require(
+            try store.beginCompositorPopupDismissal(PopupID(rawValue: 102))
+        )
+        _ = store.markPopupClosed(PopupID(rawValue: 103))
+        _ = store.markPopupClosed(PopupID(rawValue: 102))
+
+        #expect(
+            store.popupIDsTopDown(parentedBy: WindowID(rawValue: 1))
+                == [PopupID(rawValue: 101)]
+        )
+        #expect(try store.windowID(for: SurfaceID(rawValue: 11)) == WindowID(rawValue: 1))
+        #expect(store.popup(PopupID(rawValue: 102)) == nil)
+        #expect(store.popup(PopupID(rawValue: 103)) == nil)
+        try store.checkInvariantsForTesting()
+    }
+
+    @Test
     func markPopupClosedRemovesRecordAndPreservesParent() throws {
         var store = try nestedPopupStore()
 

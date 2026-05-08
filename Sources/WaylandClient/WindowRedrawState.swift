@@ -19,6 +19,19 @@ enum WindowRedrawEffect: Equatable, Sendable {
     case publishRedrawRequested
 }
 
+package enum RedrawBufferAvailability: Equatable, Sendable {
+    case available
+    case unavailable
+
+    init(isAvailable: Bool) {
+        self = isAvailable ? .available : .unavailable
+    }
+
+    var isAvailable: Bool {
+        self == .available
+    }
+}
+
 struct WindowRedrawState: Equatable, Sendable {
     private enum CleanPacing: Equatable, Sendable {
         case frameReady
@@ -82,18 +95,18 @@ struct WindowRedrawState: Equatable, Sendable {
 
     mutating func reduce(
         _ event: WindowRedrawEvent,
-        bufferAvailable: Bool
+        bufferAvailability: RedrawBufferAvailability
     ) -> [WindowRedrawEffect] {
         switch event {
         case .contentInvalidated:
             invalidateContent()
-            return publishIfNeeded(bufferAvailable: bufferAvailable)
+            return publishIfNeeded(bufferAvailability: bufferAvailability)
         case .frameBecameReady:
             markFrameReady()
-            return publishIfNeeded(bufferAvailable: bufferAvailable)
+            return publishIfNeeded(bufferAvailability: bufferAvailability)
         case .bufferBecameAvailable:
             markBufferAvailable()
-            return publishIfNeeded(bufferAvailable: bufferAvailable)
+            return publishIfNeeded(bufferAvailability: bufferAvailability)
         case .redrawRequestConsumed:
             markRedrawRequestConsumed()
             return []
@@ -234,12 +247,14 @@ extension WindowRedrawState {
         }
     }
 
-    private mutating func publishIfNeeded(bufferAvailable: Bool) -> [WindowRedrawEffect] {
+    private mutating func publishIfNeeded(
+        bufferAvailability: RedrawBufferAvailability
+    ) -> [WindowRedrawEffect] {
         if case .dirty(
             let contentGeneration,
             let presentedGeneration,
             .waitingForBuffer
-        ) = storage, bufferAvailable {
+        ) = storage, bufferAvailability.isAvailable {
             storage = .dirty(
                 contentGeneration: contentGeneration,
                 presentedGeneration: presentedGeneration,
@@ -258,7 +273,7 @@ extension WindowRedrawState {
             return []
         }
 
-        guard bufferAvailable else {
+        guard bufferAvailability.isAvailable else {
             storage = .dirty(
                 contentGeneration: contentGeneration,
                 presentedGeneration: presentedGeneration,

@@ -1,11 +1,17 @@
 import WaylandRaw
 
+struct ReportedUnknownWindowProtocolValue: Hashable, Sendable {
+    let field: UnknownWindowProtocolValueField
+    let rawValue: UInt32
+}
+
 package struct WindowModel: Equatable, Sendable {
     let id: WindowID
     let fallbackSize: PositiveLogicalSize
     var decoration = DecorationState.unavailable(reason: nil)
     var lifecycle = XDGWindowLifecycle.created(.none)
     var publication = WindowPublicationState.notPublished
+    var reportedUnknownProtocolValues: Set<ReportedUnknownWindowProtocolValue> = []
 
     init(id windowID: WindowID, fallbackSize initialSize: PositiveLogicalSize) {
         id = windowID
@@ -65,22 +71,22 @@ package struct WindowModel: Equatable, Sendable {
             return try reducePublished()
         case .configureReceived(let sequence):
             return try reduceConfigureReceived(sequence)
-        case .contentInvalidated(let bufferAvailable):
-            return reduceRedraw(.contentInvalidated, bufferAvailable: bufferAvailable)
-        case .frameBecameReady(let bufferAvailable):
-            return reduceRedraw(.frameBecameReady, bufferAvailable: bufferAvailable)
-        case .bufferBecameAvailable(let bufferAvailable):
-            return reduceRedraw(.bufferBecameAvailable, bufferAvailable: bufferAvailable)
-        case .redrawRequestConsumed(let bufferAvailable):
-            return try reduceRedrawRequestConsumed(bufferAvailable: bufferAvailable)
+        case .contentInvalidated(let bufferAvailability):
+            return reduceRedraw(.contentInvalidated, bufferAvailability: bufferAvailability)
+        case .frameBecameReady(let bufferAvailability):
+            return reduceRedraw(.frameBecameReady, bufferAvailability: bufferAvailability)
+        case .bufferBecameAvailable(let bufferAvailability):
+            return reduceRedraw(.bufferBecameAvailable, bufferAvailability: bufferAvailability)
+        case .redrawRequestConsumed(let bufferAvailability):
+            return try reduceRedrawRequestConsumed(bufferAvailability: bufferAvailability)
         case .presentationStarted(let request):
             return try reducePresentationStarted(request)
         case .presentationBlockedByBuffer:
             return try reducePresentationBlockedByBuffer()
-        case .presentationSucceeded(let generation, let bufferAvailable):
+        case .presentationSucceeded(let generation, let bufferAvailability):
             return try reducePresentationSucceeded(
                 generation: generation,
-                bufferAvailable: bufferAvailable
+                bufferAvailability: bufferAvailability
             )
         case .presentationFailed(let generation, let error):
             return try reducePresentationFailed(generation: generation, error)
@@ -98,7 +104,10 @@ package struct WindowModel: Equatable, Sendable {
         case .transientStateReset:
             guard !isClosed else { return [] }
             return updateActiveWindowStateIfPresent { activeState in
-                _ = activeState.redraw.reduce(.transientStateReset, bufferAvailable: false)
+                _ = activeState.redraw.reduce(
+                    .transientStateReset,
+                    bufferAvailability: .unavailable
+                )
                 activeState.presentation = .idle
                 return []
             }
@@ -175,7 +184,7 @@ extension WindowModel {
     }
 
     private mutating func reduceConfigureReceived(
-        _ sequence: XDGConfigureSequence
+        _ event: WindowConfigureEvent
     ) throws -> [WindowEffect] {
         switch lifecycle {
         case .destroyed:
@@ -188,17 +197,7 @@ extension WindowModel {
             break
         }
 
-        let previousSize = currentConfiguration?.size
-        let resolved: ResolvedWindowConfiguration
-        do {
-            resolved = try ResolvedWindowConfiguration(
-                sequence: sequence,
-                previousSize: previousSize,
-                fallbackSize: fallbackSize
-            )
-        } catch let error as WindowError {
-            throw ClientError.window(id, error)
-        }
+        let resolved = event.configuration
         var nextActiveState = activeState ?? ActiveWindowState(configure: resolved)
         nextActiveState.configure = resolved
         nextActiveState.closeRequest = closeRequest
@@ -206,10 +205,11 @@ extension WindowModel {
             _ = try reduceDecorationConfigured(mode)
         }
 
-        var effects: [WindowEffect] = [.ackConfigure(sequence.serial)]
+        var effects = unknownProtocolValueEffects(for: event.unknownValues)
+        effects.append(.ackConfigure(event.serial))
         effects.append(
             contentsOf: mapRedrawEffects(
-                nextActiveState.redraw.reduce(.contentInvalidated, bufferAvailable: true)
+                nextActiveState.redraw.reduce(.contentInvalidated, bufferAvailability: .available)
             )
         )
         lifecycle = .active(nextActiveState)
@@ -217,7 +217,7 @@ extension WindowModel {
     }
 
     private mutating func reduceRedrawRequestConsumed(
-        bufferAvailable: Bool
+        bufferAvailability: RedrawBufferAvailability
     ) throws -> [WindowEffect] {
         guard !isDestroyed else {
             throw ClientError.window(id, .invalidLifecycleTransition(.redrawAfterDestroyed))
@@ -235,7 +235,7 @@ extension WindowModel {
 
             _ = activeState.redraw.reduce(
                 .redrawRequestConsumed,
-                bufferAvailable: bufferAvailable
+                bufferAvailability: bufferAvailability
             )
             let generation = activeState.redraw.generationForCurrentDraw
             let request = PresentationRequest(
@@ -285,7 +285,7 @@ extension WindowModel {
 
     private mutating func reducePresentationSucceeded(
         generation: UInt64,
-        bufferAvailable: Bool
+        bufferAvailability: RedrawBufferAvailability
     ) throws -> [WindowEffect] {
         let windowID = id
         return try transitionActiveWindowState { activeState in
@@ -298,7 +298,7 @@ extension WindowModel {
             return Self.mapRedrawEffects(
                 activeState.redraw.reduce(
                     .presented(generation: generation),
-                    bufferAvailable: bufferAvailable
+                    bufferAvailability: bufferAvailability
                 ),
                 windowID: windowID
             )
@@ -327,7 +327,7 @@ extension WindowModel {
             try Self.requireActivePresentation(in: activeState, windowID: windowID)
             activeState.presentation = .idle
             return Self.mapRedrawEffects(
-                activeState.redraw.reduce(.drawBlockedByBuffer, bufferAvailable: false),
+                activeState.redraw.reduce(.drawBlockedByBuffer, bufferAvailability: .unavailable),
                 windowID: windowID
             )
         }
@@ -335,13 +335,13 @@ extension WindowModel {
 
     private mutating func reduceRedraw(
         _ event: WindowRedrawEvent,
-        bufferAvailable: Bool
+        bufferAvailability: RedrawBufferAvailability
     ) -> [WindowEffect] {
         guard !isClosed else { return [] }
         let windowID = id
         return updateActiveWindowStateIfPresent { activeState in
             Self.mapRedrawEffects(
-                activeState.redraw.reduce(event, bufferAvailable: bufferAvailable),
+                activeState.redraw.reduce(event, bufferAvailability: bufferAvailability),
                 windowID: windowID
             )
         }

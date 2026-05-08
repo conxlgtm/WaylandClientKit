@@ -10,7 +10,10 @@ extension PopupRoleSurface {
 
         do {
             guard pendingFrameRegistration == nil else {
-                failActivePresentation(generation: request.generation)
+                failActivePresentation(
+                    generation: request.generation,
+                    error: .frameCallbackRequest("frame callback already pending")
+                )
                 return .skippedPendingFrame
             }
 
@@ -35,7 +38,10 @@ extension PopupRoleSurface {
                     try draw(frame)
                 }
             } catch {
-                failActivePresentation(generation: request.generation)
+                failActivePresentation(
+                    generation: request.generation,
+                    error: .userDraw(String(describing: error))
+                )
                 drawingBuffer.discard()
                 throw error
             }
@@ -51,7 +57,10 @@ extension PopupRoleSurface {
                     self?.handleFrameDone()
                 }
             } catch {
-                failActivePresentation(generation: request.generation)
+                failActivePresentation(
+                    generation: request.generation,
+                    error: .frameCallbackRequest(String(describing: error))
+                )
                 drawingBuffer.discard()
                 throw error
             }
@@ -71,13 +80,16 @@ extension PopupRoleSurface {
                 model.reduce(
                     .presentationSucceeded(
                         generation: request.generation,
-                        bufferAvailable: try redrawBufferAvailable()
+                        bufferAvailability: try redrawBufferAvailability()
                     )
                 )
             )
             return .presented
         } catch {
-            failPresentationIfStillActive(generation: request.generation)
+            failPresentationIfStillActive(
+                generation: request.generation,
+                error: .surfaceCommit(String(describing: error))
+            )
             throw error
         }
     }

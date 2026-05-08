@@ -12,8 +12,10 @@ package enum DataTransferManagerInvariantViolation:
     case pendingRuntimeOfferHasState(DataOfferID)
     case pendingRuntimeOfferMissingSeat(DataOfferID, SeatID)
     case sourceBindingsDoNotMatchState
+    case sourceBindingIDMismatch(expected: DataSourceID, actual: DataSourceID)
     case pendingSourceSendRequestMissingSource(DataSourceID)
     case seatSelectionReferencesMissingOffer(SeatID, DataOfferID)
+    case seatSelectionReferencesEmptyOffer(SeatID, DataOfferID)
     case seatSelectionReferencesMissingSource(SeatID, DataSourceID)
 
     package var description: String {
@@ -34,10 +36,14 @@ package enum DataTransferManagerInvariantViolation:
             "pending offer \(offerID) references missing seat \(seatID)"
         case .sourceBindingsDoNotMatchState:
             "source bindings do not match active sources"
+        case .sourceBindingIDMismatch(let expected, let actual):
+            "runtime source \(expected) has binding \(actual)"
         case .pendingSourceSendRequestMissingSource(let sourceID):
             "source send request references missing source \(sourceID)"
         case .seatSelectionReferencesMissingOffer(let seatID, let offerID):
             "seat \(seatID) selection references missing offer \(offerID)"
+        case .seatSelectionReferencesEmptyOffer(let seatID, let offerID):
+            "seat \(seatID) selection references offer \(offerID) with no MIME types"
         case .seatSelectionReferencesMissingSource(let seatID, let sourceID):
             "seat \(seatID) selection references missing source \(sourceID)"
         }
@@ -150,6 +156,14 @@ extension DataTransferManager {
         guard store.sourceIDs == activeSourceIDs else {
             throw DataTransferManagerInvariantViolation.sourceBindingsDoNotMatchState
         }
+        for (sourceID, runtimeSource) in store.sourcesByIDForInvariantChecks {
+            guard runtimeSource.id == sourceID, runtimeSource.binding.id == sourceID else {
+                throw DataTransferManagerInvariantViolation.sourceBindingIDMismatch(
+                    expected: sourceID,
+                    actual: runtimeSource.binding.id
+                )
+            }
+        }
         for request in store.pendingSourceSendRequestsForInvariantChecks()
         where !activeSourceIDs.contains(request.sourceID) {
             throw
@@ -167,6 +181,13 @@ extension DataTransferManager {
                 throw
                     DataTransferManagerInvariantViolation
                     .seatSelectionReferencesMissingOffer(seat.seatID, offerID)
+            }
+            if let offerID = seat.selectionOfferID,
+                store.offerSnapshot(offerID)?.mimeTypes.isEmpty == true
+            {
+                throw
+                    DataTransferManagerInvariantViolation
+                    .seatSelectionReferencesEmptyOffer(seat.seatID, offerID)
             }
             if let sourceID = seat.selectionSourceID, !activeSourceIDs.contains(sourceID) {
                 throw

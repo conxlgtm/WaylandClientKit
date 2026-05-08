@@ -279,7 +279,9 @@ package final class DisplaySession {
                     .inputPipelineOverflow(
                         InputPipelineOverflow(
                             stage: .sessionPendingInput,
-                            capacity: maximumPendingInputEventCount
+                            capacity: InputPipelineCapacity(
+                                unchecked: maximumPendingInputEventCount
+                            )
                         )
                     )
                 )
@@ -391,6 +393,7 @@ extension DisplaySession {
         let popupSurfaceID = popup.surfaceID
 
         try inputRouter.registerPopup(
+            popupID: popup.id,
             parentSurfaceID: parentWindow.surfaceID,
             surfaceID: popupSurfaceID
         )

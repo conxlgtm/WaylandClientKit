@@ -190,13 +190,68 @@ package struct RawKeyboardModifiers: Equatable, Sendable {
     }
 }
 
-package struct RawKeyboardRepeatInfo: Equatable, Sendable {
-    package let rate: Int32
-    package let delay: Int32
+package enum RawKeyboardRepeatInfo: Equatable, Sendable {
+    case disabled
+    case enabled(rate: RawKeyboardRepeatRate, delay: RawKeyboardRepeatDelay)
 
-    package init(rate repeatRate: Int32, delay repeatDelay: Int32) {
-        rate = repeatRate
-        delay = repeatDelay
+    package init(rate repeatRate: Int32, delay repeatDelay: Int32)
+        throws(RawKeyboardRepeatInfoError)
+    {
+        guard repeatDelay >= 0 else {
+            throw .negativeDelay(rate: repeatRate, delay: repeatDelay)
+        }
+        guard repeatRate >= 0 else {
+            throw .negativeRate(rate: repeatRate, delay: repeatDelay)
+        }
+        guard repeatRate > 0 else {
+            self = .disabled
+            return
+        }
+
+        self = .enabled(
+            rate: RawKeyboardRepeatRate(unchecked: repeatRate),
+            delay: RawKeyboardRepeatDelay(unchecked: repeatDelay)
+        )
+    }
+}
+
+package struct RawKeyboardRepeatRate: Equatable, Comparable, Sendable {
+    package let rawValue: Int32
+
+    package init(unchecked value: Int32) {
+        precondition(value > 0, "keyboard repeat rate must be positive")
+        rawValue = value
+    }
+
+    package static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
+}
+
+package struct RawKeyboardRepeatDelay: Equatable, Comparable, Sendable {
+    package let rawValue: Int32
+
+    package init(unchecked value: Int32) {
+        precondition(value >= 0, "keyboard repeat delay must be non-negative")
+        rawValue = value
+    }
+
+    package static func < (lhs: Self, rhs: Self) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
+}
+
+package enum RawKeyboardRepeatInfoError: Error, Equatable, Sendable, CustomStringConvertible {
+    case negativeRate(rate: Int32, delay: Int32)
+    case negativeDelay(rate: Int32, delay: Int32)
+
+    package var description: String {
+        switch self {
+        case .negativeRate(let rate, let delay):
+            "invalid keyboard repeat info: negative rate \(rate), delay \(delay)"
+        case .negativeDelay(let rate, let delay):
+            "invalid keyboard repeat info: rate \(rate), negative delay \(delay)"
+        }
     }
 }
 

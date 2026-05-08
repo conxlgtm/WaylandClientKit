@@ -69,7 +69,7 @@ struct DataTransferSourceWriteJobLifecycleTests {
             writeDescriptor: { _, bytes in bytes.count },
             closeDescriptor: { descriptor in
                 closedDescriptors.record(descriptor)
-                return 0
+                return .closed
             }
         )
     }

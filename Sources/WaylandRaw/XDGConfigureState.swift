@@ -185,6 +185,11 @@ package final class XDGConfigureState {
         height: Int32,
         states: [XDGTopLevelState] = []
     ) {
+        guard width >= 0, height >= 0 else {
+            recordError(.invalidTopLevelConfigureSize(width: width, height: height))
+            return
+        }
+
         updateCollection { collection in
             collection.parts.size = TopLevelSize(width: width, height: height)
             collection.parts.states = states
@@ -192,10 +197,14 @@ package final class XDGConfigureState {
     }
 
     package func handleConfigureBounds(width: Int32, height: Int32) {
-        guard width > 0, height > 0 else {
+        if width == 0, height == 0 {
             updateCollection { collection in
                 collection.parts.bounds = nil
             }
+            return
+        }
+        guard width > 0, height > 0 else {
+            recordError(.invalidConfigureBounds(width: width, height: height))
             return
         }
 

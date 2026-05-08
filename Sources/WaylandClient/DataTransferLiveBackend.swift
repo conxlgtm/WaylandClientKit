@@ -116,12 +116,8 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
         .raw
     }
 
-    func closeFileDescriptor(_ descriptor: Int32) -> Int32 {
-        guard Glibc.close(descriptor) == 0 else {
-            return errno > 0 ? errno : EIO
-        }
-
-        return 0
+    func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult {
+        FileDescriptorCloseResult.posixReturn(Glibc.close(descriptor))
     }
 
     private static func dataTransferPipeError(_ error: RuntimeError) -> DataTransferError {

@@ -7,10 +7,14 @@ import WaylandRaw
 struct PopupDomainTypesTests {
     @Test
     func logicalRectRejectsNonPositiveSize() {
-        #expect(throws: (any Error).self) {
+        #expect(
+            throws: ClientError.invalidWindowConfiguration(.nonPositiveInt32(value: 0))
+        ) {
             _ = try LogicalRect(x: 0, y: 0, width: 0, height: 10)
         }
-        #expect(throws: (any Error).self) {
+        #expect(
+            throws: ClientError.invalidWindowConfiguration(.nonPositiveInt32(value: -1))
+        ) {
             _ = try LogicalRect(x: 0, y: 0, width: 10, height: -1)
         }
     }

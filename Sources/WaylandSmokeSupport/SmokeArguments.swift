@@ -2,6 +2,7 @@ package enum SmokeArgumentError: Error, Equatable, Sendable, CustomStringConvert
     case unknownArgument(String)
     case missingValue(String)
     case invalidValue(argument: String, value: String)
+    case unsupportedEndOfOptionsMarker
 
     package var description: String {
         switch self {
@@ -11,6 +12,8 @@ package enum SmokeArgumentError: Error, Equatable, Sendable, CustomStringConvert
             "missing value for \(argument)"
         case .invalidValue(let argument, let value):
             "invalid value for \(argument): \(value)"
+        case .unsupportedEndOfOptionsMarker:
+            "-- is not supported because swift-wayland-smoke has no positional arguments"
         }
     }
 }
@@ -27,7 +30,8 @@ package enum SmokeArguments {
         """
 
     package static func parse(_ arguments: [String]) throws -> SmokeCommand {
-        var configuration = SmokeConfiguration()
+        var timeout = SmokeMilliseconds.defaultTimeout
+        var postCommitPump = SmokeMilliseconds.defaultPostCommitPump
         var index = arguments.startIndex
 
         while index < arguments.endIndex {
@@ -37,18 +41,20 @@ package enum SmokeArguments {
             case "-h", "--help":
                 return .help
             case "--":
-                break
+                throw SmokeArgumentError.unsupportedEndOfOptionsMarker
             case "--timeout-milliseconds":
-                configuration.timeoutMilliseconds = try readPositiveInt32(
+                timeout = try readMilliseconds(
                     after: argument,
                     in: arguments,
-                    index: &index
+                    index: &index,
+                    field: .timeoutMilliseconds
                 )
             case "--post-commit-pump-milliseconds":
-                configuration.postCommitPumpMilliseconds = try readPositiveInt32(
+                postCommitPump = try readMilliseconds(
                     after: argument,
                     in: arguments,
-                    index: &index
+                    index: &index,
+                    field: .postCommitPumpMilliseconds
                 )
             default:
                 throw SmokeArgumentError.unknownArgument(argument)
@@ -57,14 +63,20 @@ package enum SmokeArguments {
             arguments.formIndex(after: &index)
         }
 
-        return .run(configuration)
+        return .run(
+            SmokeConfiguration(
+                timeout: timeout,
+                postCommitPump: postCommitPump
+            )
+        )
     }
 
-    private static func readPositiveInt32(
+    private static func readMilliseconds(
         after argument: String,
         in arguments: [String],
-        index: inout Int
-    ) throws -> Int32 {
+        index: inout Int,
+        field: SmokeConfigurationField
+    ) throws -> SmokeMilliseconds {
         let valueIndex = arguments.index(after: index)
         guard valueIndex < arguments.endIndex else {
             throw SmokeArgumentError.missingValue(argument)
@@ -79,6 +91,10 @@ package enum SmokeArguments {
         }
 
         index = valueIndex
-        return parsed
+        do {
+            return try SmokeMilliseconds(parsed, field: field)
+        } catch {
+            throw SmokeArgumentError.invalidValue(argument: argument, value: rawValue)
+        }
     }
 }

@@ -170,13 +170,17 @@ struct WindowDecorationModelTests {
         height: Int32,
         serial: UInt32 = 1,
         decorationMode: RawDecorationMode? = nil
-    ) -> XDGConfigureSequence {
-        XDGConfigureSequence(
-            serial: serial,
-            topLevel: XDGTopLevelConfigureSuggestion(
-                size: TopLevelSize(width: width, height: height)
+    ) throws -> WindowConfigureEvent {
+        try WindowConfigureEvent(
+            sequence: XDGConfigureSequence(
+                serial: serial,
+                topLevel: XDGTopLevelConfigureSuggestion(
+                    size: TopLevelSize(width: width, height: height)
+                ),
+                decorationMode: decorationMode
             ),
-            decorationMode: decorationMode
+            previousSize: nil,
+            fallbackSize: .default
         )
     }
 

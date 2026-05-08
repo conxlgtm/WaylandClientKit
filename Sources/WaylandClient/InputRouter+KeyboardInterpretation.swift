@@ -39,9 +39,9 @@ extension InputRouter {
             .key(
                 InterpretedKeyboardKeyEvent(
                     serial: InputSerial(rawValue: key.serial),
-                    time: key.time,
-                    rawKeycode: key.evdevKeycode,
-                    xkbKeycode: key.xkbKeycode,
+                    time: WaylandTimestampMilliseconds(rawValue: key.time),
+                    rawKeycode: EvdevKeycode(rawValue: key.evdevKeycode),
+                    xkbKeycode: XKBKeycode(rawValue: key.xkbKeycode),
                     keysym: KeyboardKeysym(rawValue: key.keysym.rawValue),
                     interpretation: convert(key.interpretation)
                 )
@@ -60,9 +60,7 @@ extension InputRouter {
                 )
             )
         case .repeatInfo(let repeatInfo):
-            .repeatInfo(
-                InterpretedKeyboardRepeatInfo(rate: repeatInfo.rate, delay: repeatInfo.delay)
-            )
+            .repeatInfo(convert(repeatInfo))
         case .unavailable(let unavailable):
             .unavailable(
                 KeyboardInterpretationUnavailable(
@@ -78,14 +76,43 @@ extension InputRouter {
         switch interpretation {
         case .released(let keysymName):
             .released(keysymName: keysymName)
-        case .pressed(let keysymName, let utf8, let repeats):
-            .pressed(keysymName: keysymName, utf8: utf8, repeats: repeats)
-        case .repeated(let keysymName, let utf8, let repeats):
-            .repeated(keysymName: keysymName, utf8: utf8, repeats: repeats)
+        case .pressed(let keysymName, let utf8, let repeatCapability):
+            .pressed(
+                keysymName: keysymName,
+                utf8: utf8,
+                repeatCapability: convert(repeatCapability)
+            )
+        case .repeated(let keysymName, let utf8):
+            .repeated(keysymName: keysymName, utf8: utf8)
         case .unknown(let state, let keysymName):
             .unknown(
                 state: InterpretedKeyboardKeyState(rawValue: state.rawValue),
                 keysymName: keysymName
+            )
+        }
+    }
+
+    func convert(
+        _ repeatCapability: WaylandKeyboardInterpretation.KeyboardKeyRepeatCapability
+    ) -> KeyboardKeyRepeatCapability {
+        switch repeatCapability {
+        case .nonRepeating:
+            .nonRepeating
+        case .repeating:
+            .repeating
+        }
+    }
+
+    func convert(
+        _ repeatInfo: WaylandKeyboardInterpretation.InterpretedKeyboardRepeatInfo
+    ) -> KeyboardRepeatPolicy {
+        switch repeatInfo {
+        case .disabled:
+            .disabled
+        case .enabled(let rate, let delay):
+            .enabled(
+                rate: KeyboardRepeatRate(unchecked: rate.rawValue),
+                delay: KeyboardRepeatDelay(unchecked: delay.rawValue)
             )
         }
     }

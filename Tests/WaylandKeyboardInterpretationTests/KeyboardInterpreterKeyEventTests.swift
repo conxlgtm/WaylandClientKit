@@ -28,7 +28,7 @@ struct KeyboardInterpreterKeyEventTests {
         #expect(key.state == .pressed)
         #expect(key.keysymName == "q")
         #expect(key.utf8 == "q")
-        #expect(key.repeats)
+        #expect(key.repeatCapability == .repeating)
     }
 
     @Test
@@ -47,7 +47,27 @@ struct KeyboardInterpreterKeyEventTests {
 
         #expect(key.state == .repeated)
         #expect(key.utf8 == "q")
-        #expect(key.repeats)
+        #expect(key.repeatCapability == .repeating)
+    }
+
+    @Test
+    func pressedModifierKeyReportsNonRepeatingCapability() throws {
+        let interpreter = try interpreterWithFixtureKeymap()
+        let deviceID = keyboardDevice()
+        let event = try #require(
+            interpreter.consume(
+                rawKeyboardInputEvent(
+                    deviceID: deviceID,
+                    kind: .key(qKey(evdevKeycode: 42))
+                )
+            ).first
+        )
+        let key = try #require(event.interpretedKey)
+
+        #expect(key.state == .pressed)
+        #expect(key.keysymName == "Shift_L")
+        #expect(key.utf8 == nil)
+        #expect(key.repeatCapability == .nonRepeating)
     }
 
     @Test
@@ -67,7 +87,7 @@ struct KeyboardInterpreterKeyEventTests {
         #expect(key.state == .released)
         #expect(key.keysymName == "q")
         #expect(key.utf8 == nil)
-        #expect(!key.repeats)
+        #expect(key.repeatCapability == nil)
         #expect(key.interpretation == .released(keysymName: "q"))
     }
 
@@ -90,7 +110,7 @@ struct KeyboardInterpreterKeyEventTests {
         #expect(key.state == interpretedState)
         #expect(key.keysymName == "q")
         #expect(key.utf8 == nil)
-        #expect(!key.repeats)
+        #expect(key.repeatCapability == nil)
         #expect(key.interpretation == .unknown(state: interpretedState, keysymName: "q"))
     }
 
@@ -173,7 +193,7 @@ struct KeyboardInterpreterKeyEventTests {
     func repeatInfoIsStoredAndEmittedWithoutSynthesizingEvents() throws {
         let interpreter = try KeyboardInterpreter()
         let deviceID = keyboardDevice()
-        let repeatInfo = RawKeyboardRepeatInfo(rate: 30, delay: 400)
+        let repeatInfo = try RawKeyboardRepeatInfo(rate: 30, delay: 400)
         let event = try #require(
             interpreter.consume(
                 rawKeyboardInputEvent(
@@ -183,8 +203,29 @@ struct KeyboardInterpreterKeyEventTests {
             ).first
         )
 
-        #expect(event.kind == .repeatInfo(InterpretedKeyboardRepeatInfo(rate: 30, delay: 400)))
+        #expect(event.kind == .repeatInfo(InterpretedKeyboardRepeatInfo(repeatInfo)))
         #expect(interpreter.repeatInfo(for: deviceID) == repeatInfo)
+    }
+
+    @Test
+    func zeroRepeatRateBecomesDisabled() throws {
+        let repeatInfo = try RawKeyboardRepeatInfo(rate: 0, delay: 400)
+
+        #expect(repeatInfo == .disabled)
+    }
+
+    @Test
+    func negativeRepeatRateIsRejected() {
+        #expect(throws: RawKeyboardRepeatInfoError.negativeRate(rate: -1, delay: 400)) {
+            try RawKeyboardRepeatInfo(rate: -1, delay: 400)
+        }
+    }
+
+    @Test
+    func negativeRepeatDelayIsRejected() {
+        #expect(throws: RawKeyboardRepeatInfoError.negativeDelay(rate: 30, delay: -1)) {
+            try RawKeyboardRepeatInfo(rate: 30, delay: -1)
+        }
     }
 
     @Test
@@ -194,6 +235,7 @@ struct KeyboardInterpreterKeyEventTests {
         requireSendable(InterpretedKeyboardKey.self)
         requireSendable(InterpretedKeyboardKeyInterpretation.self)
         requireSendable(InterpretedKeyboardKeyState.self)
+        requireSendable(KeyboardKeyRepeatCapability.self)
         requireSendable(InterpretedKeyboardModifiers.self)
         requireSendable(KeyboardInterpretationUnavailable.self)
     }

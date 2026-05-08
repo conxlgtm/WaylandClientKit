@@ -11,7 +11,7 @@ struct WindowModelPresentationTests {
     func redrawRequestConsumedProducesPresentationEffect() throws {
         var model = try activePublishedModel()
 
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let request = PresentationRequest(
             generation: 1,
             configuration: try #require(model.currentConfiguration)
@@ -25,7 +25,7 @@ struct WindowModelPresentationTests {
     func presentationStateTransitionsFromRequestedToDrawingToIdle() throws {
         var model = try activePublishedModel()
 
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let request = try presentationRequest(from: effects)
 
         #expect(model.presentation == .requested(request: request))
@@ -33,7 +33,10 @@ struct WindowModelPresentationTests {
         #expect(model.presentation == .drawing(request: request))
         #expect(
             try model.reduce(
-                .presentationSucceeded(generation: request.generation, bufferAvailable: true)
+                .presentationSucceeded(
+                    generation: request.generation,
+                    bufferAvailability: .available
+                )
             ).isEmpty
         )
         #expect(model.presentation == .idle)
@@ -47,7 +50,7 @@ struct WindowModelPresentationTests {
         #expect(model.presentation == .idle)
         #expect(model.redraw.isWaitingForBuffer)
         #expect(
-            try model.reduce(.bufferBecameAvailable(bufferAvailable: true))
+            try model.reduce(.bufferBecameAvailable(bufferAvailability: .available))
                 == [.publishRedrawRequested(windowID)]
         )
     }
@@ -70,7 +73,7 @@ struct WindowModelPresentationTests {
             _ = try model.reduce(
                 .presentationSucceeded(
                     generation: request.generation + 1,
-                    bufferAvailable: true
+                    bufferAvailability: .available
                 )
             )
         }
@@ -95,7 +98,7 @@ struct WindowModelPresentationTests {
             _ = try model.reduce(
                 .presentationFailed(
                     generation: request.generation + 1,
-                    .drawFailed("stale")
+                    .userDraw("stale")
                 )
             )
         }
@@ -124,13 +127,13 @@ struct WindowModelPresentationTests {
         #expect(
             throws: ClientError.window(
                 windowID,
-                .presentationFailed(.drawFailed("allocation failed"))
+                .presentationFailed(.userDraw("allocation failed"))
             )
         ) {
             _ = try model.reduce(
                 .presentationFailed(
                     generation: request.generation,
-                    .drawFailed("allocation failed")
+                    .userDraw("allocation failed")
                 )
             )
         }
@@ -141,17 +144,17 @@ struct WindowModelPresentationTests {
     func redrawAfterPresentationFailureDoesNotReportNestedPresentation() throws {
         var (model, request) = try activeModelWithStartedPresentation()
 
-        #expect(throws: ClientError.window(windowID, .presentationFailed(.drawFailed("boom")))) {
+        #expect(throws: ClientError.window(windowID, .presentationFailed(.userDraw("boom")))) {
             _ = try model.reduce(
-                .presentationFailed(generation: request.generation, .drawFailed("boom"))
+                .presentationFailed(generation: request.generation, .userDraw("boom"))
             )
         }
 
         #expect(
-            try model.reduce(.contentInvalidated(bufferAvailable: true))
+            try model.reduce(.contentInvalidated(bufferAvailability: .available))
                 == [.publishRedrawRequested(windowID)]
         )
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
 
         #expect(try presentationRequest(from: effects).generation == request.generation + 1)
     }
@@ -177,15 +180,11 @@ struct WindowModelPresentationTests {
     @Test
     func presentationStartRejectsRequestForDifferentConfiguration() throws {
         var model = try activePublishedModel()
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let issuedRequest = try presentationRequest(from: effects)
         let staleRequest = PresentationRequest(
             generation: issuedRequest.generation,
-            configuration: try ResolvedWindowConfiguration(
-                sequence: configure(width: 1_024, height: 768),
-                previousSize: nil,
-                fallbackSize: .default
-            )
+            configuration: try configure(width: 1_024, height: 768).configuration
         )
 
         #expect(issuedRequest.summary != staleRequest.summary)
@@ -210,7 +209,7 @@ struct WindowModelPresentationTests {
     @Test
     func transientStateResetClearsRequestedPresentation() throws {
         var model = try activePublishedModel()
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let request = try presentationRequest(from: effects)
 
         #expect(model.presentation == .requested(request: request))
@@ -221,7 +220,7 @@ struct WindowModelPresentationTests {
     @Test
     func explicitCloseClearsRequestedPresentation() throws {
         var model = try activePublishedModel()
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let request = try presentationRequest(from: effects)
 
         #expect(model.presentation == .requested(request: request))
@@ -301,7 +300,7 @@ extension WindowModelPresentationTests {
         request: PresentationRequest
     ) {
         var model = try activePublishedModel()
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let request = try presentationRequest(from: effects)
         _ = try model.reduce(.presentationStarted(request))
         return (model, request)
@@ -323,12 +322,16 @@ extension WindowModelPresentationTests {
         width: Int32,
         height: Int32,
         serial: UInt32 = 1
-    ) -> XDGConfigureSequence {
-        XDGConfigureSequence(
-            serial: serial,
-            topLevel: XDGTopLevelConfigureSuggestion(
-                size: TopLevelSize(width: width, height: height)
-            )
+    ) throws -> WindowConfigureEvent {
+        try WindowConfigureEvent(
+            sequence: XDGConfigureSequence(
+                serial: serial,
+                topLevel: XDGTopLevelConfigureSuggestion(
+                    size: TopLevelSize(width: width, height: height)
+                )
+            ),
+            previousSize: nil,
+            fallbackSize: .default
         )
     }
 }

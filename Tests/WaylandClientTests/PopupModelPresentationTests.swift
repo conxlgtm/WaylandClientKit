@@ -11,7 +11,7 @@ struct PopupModelPresentationTests {
     func presentationStateTransitionsFromRequestedToDrawingToIdle() throws {
         var model = try activeModel()
 
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let request = try #require(presentationRequest(from: effects))
 
         #expect(model.presentation == .requested(request: request))
@@ -19,7 +19,10 @@ struct PopupModelPresentationTests {
         #expect(model.presentation == .drawing(request: request))
         #expect(
             try model.reduce(
-                .presentationSucceeded(generation: request.generation, bufferAvailable: true)
+                .presentationSucceeded(
+                    generation: request.generation,
+                    bufferAvailability: .available
+                )
             ).isEmpty
         )
         #expect(model.presentation == .idle)
@@ -46,7 +49,7 @@ struct PopupModelPresentationTests {
     @Test
     func presentationStartRejectsRequestForDifferentPlacement() throws {
         var model = try activeModel()
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let issuedRequest = try #require(presentationRequest(from: effects))
         let staleRequest = PopupPresentationRequest(
             generation: issuedRequest.generation,
@@ -78,7 +81,7 @@ struct PopupModelPresentationTests {
     @Test
     func transientStateResetClearsRequestedPresentation() throws {
         var model = try activeModel()
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let request = try #require(presentationRequest(from: effects))
 
         #expect(model.presentation == .requested(request: request))
@@ -89,7 +92,7 @@ struct PopupModelPresentationTests {
     @Test
     func explicitCloseClearsRequestedPresentation() throws {
         var model = try activeModel()
-        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailable: true))
+        let effects = try model.reduce(.redrawRequestConsumed(bufferAvailability: .available))
         let request = try #require(presentationRequest(from: effects))
 
         #expect(model.presentation == .requested(request: request))

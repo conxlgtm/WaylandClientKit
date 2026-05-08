@@ -255,7 +255,7 @@ extension DisplaySession {
             source: ClipboardSourceIdentity(sourceID),
             mimeType: mimeType,
             operation: .sourceWriteFailed,
-            message: error.description
+            error: error
         )
     }
 }

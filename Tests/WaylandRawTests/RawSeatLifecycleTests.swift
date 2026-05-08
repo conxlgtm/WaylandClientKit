@@ -41,7 +41,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             createdSnapshot.kind
                 == .seat(
                     RawSeatEventSnapshot(
-                        advertisedCapabilities: [.pointer, .keyboard],
+                        uncheckedAdvertisedCapabilities: [.pointer, .keyboard],
                         activeCapabilities: [.pointer, .keyboard],
                         name: nil
                     )
@@ -99,11 +99,198 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             snapshot.kind
                 == .seat(
                     RawSeatEventSnapshot(
-                        advertisedCapabilities: [.pointer, .keyboard],
+                        uncheckedAdvertisedCapabilities: [.pointer, .keyboard],
                         activeCapabilities: [.keyboard],
                         name: nil
                     )
                 ))
+    }
+
+    @Test
+    func destroyAfterChildCreationFailureReleasesOnlyCreatedChildren() throws {
+        let recorder = SeatOperationRecorder()
+        recorder.pointerProxy = nil
+        recorder.keyboardProxy = fakePointer(0x312)
+        let queue = RawInputEventQueue()
+        let seat = try RawSeat(
+            id: RawSeatID(rawValue: 15),
+            pointer: try #require(fakePointer(0x310)),
+            version: 10,
+            eventSink: queue,
+            operations: recorder.operations,
+            installListener: false
+        )
+
+        do {
+            try seat.applyCapabilities([.pointer, .keyboard])
+            Issue.record("Expected pointer creation to fail")
+        } catch RuntimeError.bindFailed(let interfaceName) {
+            #expect(interfaceName == "wl_pointer")
+        }
+        seat.destroy()
+
+        #expect(
+            recorder.entries == [
+                "get pointer",
+                "get keyboard",
+                "add keyboard listener",
+                "version",
+                "release keyboard",
+                "release seat",
+            ]
+        )
+    }
+
+    @Test
+    func pointerCreateFailureEmitsSeatBindingDiagnostic() throws {
+        let recorder = SeatOperationRecorder()
+        recorder.pointerProxy = nil
+        let queue = RawInputEventQueue()
+        let seatID = RawSeatID(rawValue: 19)
+        let deviceID = RawInputDeviceID(seatID: seatID, kind: .pointer, generation: 1)
+        let seat = try RawSeat(
+            id: seatID,
+            pointer: try #require(fakePointer(0x320)),
+            version: 10,
+            eventSink: queue,
+            operations: recorder.operations,
+            installListener: false
+        )
+
+        #expect(throws: RuntimeError.bindFailed("wl_pointer")) {
+            try seat.applyCapabilities([.pointer])
+        }
+
+        let events = queue.drain()
+        #expect(events.first?.deviceID == deviceID)
+        #expect(
+            events.map(\.kind)
+                == [
+                    .diagnostic(
+                        RawInputDiagnostic(
+                            .seatBinding(
+                                RawSeatBindingDiagnostic(
+                                    interface: "wl_pointer",
+                                    error: .bindFailed("wl_pointer")
+                                )
+                            )
+                        )
+                    ),
+                    .seat(
+                        RawSeatEventSnapshot(
+                            uncheckedAdvertisedCapabilities: [.pointer],
+                            activeCapabilities: [],
+                            name: nil
+                        )
+                    ),
+                ]
+        )
+        #expect(queue.drain().isEmpty)
+        #expect(seat.activeCapabilities.isEmpty)
+    }
+
+    @Test
+    func pointerListenerInstallFailureEmitsSeatBindingDiagnostic() throws {
+        let recorder = SeatOperationRecorder()
+        recorder.pointerProxy = fakePointer(0x331)
+        recorder.pointerListenerResult = -1
+        let queue = RawInputEventQueue()
+        let seatID = RawSeatID(rawValue: 20)
+        let seat = try RawSeat(
+            id: seatID,
+            pointer: try #require(fakePointer(0x330)),
+            version: 10,
+            eventSink: queue,
+            operations: recorder.operations,
+            installListener: false
+        )
+
+        #expect(throws: RuntimeError.pointerListenerInstallationFailed) {
+            try seat.applyCapabilities([.pointer])
+        }
+
+        #expect(
+            recorder.entries == [
+                "get pointer",
+                "add pointer listener",
+                "release pointer",
+            ]
+        )
+        #expect(
+            queue.drain().map(\.kind)
+                == [
+                    .diagnostic(
+                        RawInputDiagnostic(
+                            .seatBinding(
+                                RawSeatBindingDiagnostic(
+                                    interface: "wl_pointer",
+                                    error: .pointerListenerInstallationFailed
+                                )
+                            )
+                        )
+                    ),
+                    .seat(
+                        RawSeatEventSnapshot(
+                            uncheckedAdvertisedCapabilities: [.pointer],
+                            activeCapabilities: [],
+                            name: nil
+                        )
+                    ),
+                ]
+        )
+        #expect(seat.activeCapabilities.isEmpty)
+    }
+
+    @Test
+    func keyboardListenerInstallFailureEmitsSeatBindingDiagnostic() throws {
+        let recorder = SeatOperationRecorder()
+        recorder.keyboardProxy = fakePointer(0x341)
+        recorder.keyboardListenerResult = -1
+        let queue = RawInputEventQueue()
+        let seatID = RawSeatID(rawValue: 21)
+        let seat = try RawSeat(
+            id: seatID,
+            pointer: try #require(fakePointer(0x340)),
+            version: 10,
+            eventSink: queue,
+            operations: recorder.operations,
+            installListener: false
+        )
+
+        #expect(throws: RuntimeError.keyboardListenerInstallationFailed) {
+            try seat.applyCapabilities([.keyboard])
+        }
+
+        #expect(
+            recorder.entries == [
+                "get keyboard",
+                "add keyboard listener",
+                "release keyboard",
+            ]
+        )
+        #expect(
+            queue.drain().map(\.kind)
+                == [
+                    .diagnostic(
+                        RawInputDiagnostic(
+                            .seatBinding(
+                                RawSeatBindingDiagnostic(
+                                    interface: "wl_keyboard",
+                                    error: .keyboardListenerInstallationFailed
+                                )
+                            )
+                        )
+                    ),
+                    .seat(
+                        RawSeatEventSnapshot(
+                            uncheckedAdvertisedCapabilities: [.keyboard],
+                            activeCapabilities: [],
+                            name: nil
+                        )
+                    ),
+                ]
+        )
+        #expect(seat.activeCapabilities.isEmpty)
     }
 
     @Test
@@ -160,11 +347,54 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             queue.drain().last?.kind
                 == .seat(
                     RawSeatEventSnapshot(
-                        advertisedCapabilities: [],
+                        uncheckedAdvertisedCapabilities: [],
                         activeCapabilities: [],
                         name: "default"
                     )
                 ))
+    }
+
+    @Test
+    func emptyNameEventClearsSeatName() throws {
+        let recorder = SeatOperationRecorder()
+        let queue = RawInputEventQueue()
+        let seat = try RawSeat(
+            id: RawSeatID(rawValue: 17),
+            pointer: try #require(fakePointer(0x501)),
+            version: 10,
+            eventSink: queue,
+            operations: recorder.operations,
+            installListener: false
+        )
+
+        seat.applyName("default")
+        seat.applyName("")
+
+        #expect(seat.name == nil)
+        #expect(queue.drain().last?.kind == .seat(seat.snapshot))
+    }
+
+    @Test
+    func nullNameCallbackRecordsRawInvariantFailure() throws {
+        let operationRecorder = SeatOperationRecorder()
+        let failureRecorder = RawInvariantFailureRecorder()
+        let sink = RawInvariantFailureSink()
+        sink.reporter = failureRecorder
+        let queue = RawInputEventQueue()
+        let seat = try RawSeat(
+            id: RawSeatID(rawValue: 18),
+            pointer: try #require(fakePointer(0x502)),
+            version: 10,
+            eventSink: queue,
+            invariantFailureSink: sink,
+            operations: operationRecorder.operations
+        )
+        let callbacks = try #require(operationRecorder.seatCallbacks)
+
+        callbacks.pointee.name?(callbacks.pointee.data, seat.pointer, nil)
+
+        #expect(failureRecorder.failures == [.missingSeatName])
+        #expect(queue.drain().isEmpty)
     }
 
     @Test
@@ -473,10 +703,14 @@ struct SeatRegistryTests {
             operations: recorder.operations
         )
 
-        try registry.bindSeats(from: [
-            RawGlobalAdvertisement(name: 2, interfaceName: "wl_seat", advertisedVersion: 4),
-            RawGlobalAdvertisement(name: 3, interfaceName: "wl_seat", advertisedVersion: 10),
-        ])
+        let oldSeat = try #require(
+            RawGlobalAdvertisement(name: 2, interfaceName: "wl_seat", advertisedVersion: 4)
+        )
+        let currentSeat = try #require(
+            RawGlobalAdvertisement(name: 3, interfaceName: "wl_seat", advertisedVersion: 10)
+        )
+
+        try registry.bindSeats(from: [oldSeat, currentSeat])
 
         #expect(registry.seats.map(\.id) == [RawSeatID(rawValue: 3)])
         #expect(registry.unsupportedSeatVersions == [2: RawVersion(4)])
@@ -536,10 +770,14 @@ private final class SeatOperationRecorder {
     var pointerProxy: OpaquePointer?
     var keyboardProxy: OpaquePointer?
     var touchProxy: OpaquePointer?
+    var seatCallbacks: UnsafePointer<swl_seat_listener_callbacks>?
     var pointerCallbacks: UnsafePointer<swl_pointer_listener_callbacks>?
     var keyboardCallbacks: UnsafePointer<swl_keyboard_listener_callbacks>?
     var touchCallbacks: UnsafePointer<swl_touch_listener_callbacks>?
     var seatListenerResult: Int32 = 0
+    var pointerListenerResult: Int32 = 0
+    var keyboardListenerResult: Int32 = 0
+    var touchListenerResult: Int32 = 0
 
     var operations: RawSeatProxyOperations {
         RawSeatProxyOperations(
@@ -547,24 +785,25 @@ private final class SeatOperationRecorder {
                 entries.append("bind seat \(name) v\(version)")
                 return OpaquePointer(bitPattern: Int(0x1_000 + name))
             },
-            addSeatListener: { [self] _, _ in
+            addSeatListener: { [self] _, callbacks in
                 entries.append("add seat listener")
+                seatCallbacks = callbacks
                 return seatListenerResult
             },
             addPointerListener: { [self] _, callbacks in
                 entries.append("add pointer listener")
                 pointerCallbacks = callbacks
-                return 0
+                return pointerListenerResult
             },
             addKeyboardListener: { [self] _, callbacks in
                 entries.append("add keyboard listener")
                 keyboardCallbacks = callbacks
-                return 0
+                return keyboardListenerResult
             },
             addTouchListener: { [self] _, callbacks in
                 entries.append("add touch listener")
                 touchCallbacks = callbacks
-                return 0
+                return touchListenerResult
             },
             getPointer: { [self] _ in
                 entries.append("get pointer")
@@ -604,6 +843,14 @@ private final class SeatOperationRecorder {
                 entries.append("release seat")
             }
         )
+    }
+}
+
+private final class RawInvariantFailureRecorder: RawInvariantFailureReporter {
+    var failures: [RawInvariantFailure] = []
+
+    func reportFatalRawInvariantFailure(_ failure: RawInvariantFailure) {
+        failures.append(failure)
     }
 }
 

@@ -75,22 +75,18 @@ struct XDGConfigureStateTests {
     }
 
     @Test
-    func invalidDecorationConfigureModeRecordsPendingError() {
+    func unknownDecorationConfigureModeIsPreserved() throws {
         let state = XDGConfigureState()
         state.handleDecorationConfigure(mode: .serverSide)
         state.handleDecorationConfigure(rawMode: 999)
 
-        #expect(throws: RuntimeError.invalidDecorationMode(999)) {
-            try state.throwPendingErrorIfAny()
-        }
-        #expect(state.handleSurfaceConfigure(serial: 1).decorationMode == .serverSide)
+        try state.throwPendingErrorIfAny()
+        #expect(state.handleSurfaceConfigure(serial: 1).decorationMode == .unknown(999))
     }
 
     @Test
-    func rawDecorationModeRejectsUnknownMode() {
-        #expect(throws: RuntimeError.invalidDecorationMode(999)) {
-            _ = try RawDecorationMode(validating: 999)
-        }
+    func rawDecorationModePreservesUnknownMode() throws {
+        #expect(try RawDecorationMode(validating: 999) == .unknown(999))
     }
 
     @Test
@@ -116,6 +112,17 @@ struct XDGConfigureStateTests {
     }
 
     @Test
+    func negativeTopLevelConfigureRecordsProtocolErrorAtRawBoundary() {
+        let state = XDGConfigureState()
+
+        state.handleTopLevelConfigure(width: -1, height: 480)
+
+        #expect(throws: RuntimeError.invalidTopLevelConfigureSize(width: -1, height: 480)) {
+            try state.throwPendingErrorIfAny()
+        }
+    }
+
+    @Test
     func zeroConfigureBoundsClearsBoundsInsteadOfUsingFallback() {
         let state = XDGConfigureState()
         state.handleConfigureBounds(width: 1_024, height: 768)
@@ -125,11 +132,23 @@ struct XDGConfigureStateTests {
     }
 
     @Test
-    func partialZeroConfigureBoundsClearsBounds() {
+    func partialZeroConfigureBoundsRecordsProtocolError() {
         let state = XDGConfigureState()
         state.handleConfigureBounds(width: 1_024, height: 0)
 
-        #expect(state.handleSurfaceConfigure(serial: 9).topLevel.bounds == nil)
+        #expect(throws: RuntimeError.invalidConfigureBounds(width: 1_024, height: 0)) {
+            try state.throwPendingErrorIfAny()
+        }
+    }
+
+    @Test
+    func negativeConfigureBoundsRecordsProtocolError() {
+        let state = XDGConfigureState()
+        state.handleConfigureBounds(width: -1, height: 768)
+
+        #expect(throws: RuntimeError.invalidConfigureBounds(width: -1, height: 768)) {
+            try state.throwPendingErrorIfAny()
+        }
     }
 
     @Test

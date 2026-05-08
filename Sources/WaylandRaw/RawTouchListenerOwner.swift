@@ -42,7 +42,7 @@ final class TouchListenerOwner {
                             serial: serial,
                             time: time,
                             surfaceID: owner.operations.proxyObjectID(surface),
-                            id: id,
+                            id: RawTouchID(rawValue: id),
                             x: WaylandFixed(rawValue: x),
                             y: WaylandFixed(rawValue: y)
                         )
@@ -56,7 +56,9 @@ final class TouchListenerOwner {
                 data,
                 message: "wl_touch up fired without Swift state"
             ) { owner in
-                owner.append(.up(RawTouchUp(serial: serial, time: time, id: id)))
+                owner.append(
+                    .up(RawTouchUp(serial: serial, time: time, id: RawTouchID(rawValue: id)))
+                )
             }
         }
 
@@ -69,7 +71,7 @@ final class TouchListenerOwner {
                     .motion(
                         RawTouchMotion(
                             time: time,
-                            id: id,
+                            id: RawTouchID(rawValue: id),
                             x: WaylandFixed(rawValue: x),
                             y: WaylandFixed(rawValue: y)
                         )
@@ -104,7 +106,7 @@ final class TouchListenerOwner {
                 owner.append(
                     .shape(
                         RawTouchShape(
-                            id: id,
+                            id: RawTouchID(rawValue: id),
                             major: WaylandFixed(rawValue: major),
                             minor: WaylandFixed(rawValue: minor)
                         )
@@ -121,7 +123,7 @@ final class TouchListenerOwner {
                 owner.append(
                     .orientation(
                         RawTouchOrientation(
-                            id: id,
+                            id: RawTouchID(rawValue: id),
                             orientation: WaylandFixed(rawValue: orientation)
                         )
                     )

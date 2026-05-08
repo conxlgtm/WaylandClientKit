@@ -98,6 +98,35 @@ struct FrameCallbackRegistrationTests {
     }
 
     @Test
+    func doneInvalidatesListenerStorageWhileKeepingCallbackPayloadAlive() throws {
+        let counters = CallbackCounters()
+        let pointer = try #require(OpaquePointer(bitPattern: 0x375))
+        var state: WaylandCallbackRegistrationState?
+        var storageWasInvalidatedDuringHandler = false
+        var storageWasAliveDuringHandler = false
+
+        let callbackState = WaylandCallbackRegistrationState(
+            pointer: pointer,
+            onDone: {
+                guard let state else { return }
+                storageWasInvalidatedDuringHandler = !state.listenerStorageIsValidForTesting
+                storageWasAliveDuringHandler = state.listenerStorageCallbackActive
+            },
+            operations: counters.operations(addResult: 0)
+        )
+        state = callbackState
+
+        try callbackState.install()
+        let callbacks = try #require(counters.callbacks)
+        callbacks.pointee.done?(callbacks.pointee.data, pointer, 0)
+
+        #expect(storageWasInvalidatedDuringHandler)
+        #expect(storageWasAliveDuringHandler)
+        #expect(callbackState.lifecycle == .completed(.fired))
+        #expect(counters.localProxyDestroyCount == 1)
+    }
+
+    @Test
     func cancelIsIdempotentOnState() throws {
         let counters = CallbackCounters()
         let pointer = try #require(OpaquePointer(bitPattern: 0x400))

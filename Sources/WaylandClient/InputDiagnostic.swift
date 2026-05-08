@@ -16,20 +16,29 @@ public struct InputDiagnostic: Equatable, Sendable {
 
 public enum InputDiagnosticPayload: Equatable, Sendable {
     case keymap(KeymapDiagnostic)
+    case keyboardRepeat(KeyboardRepeatDiagnostic)
     case listener(InputListenerDiagnostic)
+    case seatBinding(InputSeatBindingDiagnostic)
     case inputPipelineOverflow(InputPipelineOverflow)
     case cursor(CursorDiagnostic)
+    case unknownProtocolValue(UnknownInputProtocolValueDiagnostic)
 
     public var operation: InputDiagnosticOperation {
         switch self {
         case .keymap:
             .keyboardKeymap
+        case .keyboardRepeat:
+            .keyboardRepeat
         case .listener(let diagnostic):
             .listener(diagnostic.listener)
+        case .seatBinding(let diagnostic):
+            .seatBinding(diagnostic.interface)
         case .inputPipelineOverflow(let overflow):
             .inputPipelineOverflow(overflow)
         case .cursor(let diagnostic):
             .cursor(diagnostic.operation)
+        case .unknownProtocolValue(let diagnostic):
+            .unknownProtocolValue(diagnostic.field)
         }
     }
 }
@@ -39,11 +48,17 @@ extension InputDiagnosticPayload: CustomStringConvertible {
         switch self {
         case .keymap(let diagnostic):
             diagnostic.description
+        case .keyboardRepeat(let diagnostic):
+            diagnostic.description
         case .listener(let diagnostic):
+            diagnostic.description
+        case .seatBinding(let diagnostic):
             diagnostic.description
         case .inputPipelineOverflow(let overflow):
             "\(overflow.stage.description) exceeded capacity \(overflow.capacity)"
         case .cursor(let diagnostic):
+            diagnostic.description
+        case .unknownProtocolValue(let diagnostic):
             diagnostic.description
         }
     }
@@ -56,6 +71,32 @@ public enum KeymapDiagnostic: Equatable, Sendable, CustomStringConvertible {
         switch self {
         case .readFailed(let failure):
             failure.description
+        }
+    }
+}
+
+public struct KeyboardRepeatDiagnostic: Equatable, Sendable, CustomStringConvertible {
+    public let failure: KeyboardRepeatFailure
+
+    public init(_ diagnosticFailure: KeyboardRepeatFailure) {
+        failure = diagnosticFailure
+    }
+
+    public var description: String {
+        failure.description
+    }
+}
+
+public enum KeyboardRepeatFailure: Equatable, Sendable, CustomStringConvertible {
+    case negativeRate(rate: Int32, delay: Int32)
+    case negativeDelay(rate: Int32, delay: Int32)
+
+    public var description: String {
+        switch self {
+        case .negativeRate(let rate, let delay):
+            "invalid keyboard repeat info: negative rate \(rate), delay \(delay)"
+        case .negativeDelay(let rate, let delay):
+            "invalid keyboard repeat info: rate \(rate), negative delay \(delay)"
         }
     }
 }
@@ -109,14 +150,101 @@ public struct InputListenerDiagnostic: Equatable, Sendable, CustomStringConverti
     }
 }
 
+public struct InputSeatBindingDiagnostic: Equatable, Sendable, CustomStringConvertible {
+    public let interface: String
+    public let failure: InputSeatBindingFailure
+
+    public init(interface interfaceName: String, failure bindingFailure: InputSeatBindingFailure) {
+        interface = interfaceName
+        failure = bindingFailure
+    }
+
+    public var description: String {
+        "\(interface) binding failed: \(failure.description)"
+    }
+}
+
+public enum InputSeatBindingFailure: Equatable, Sendable, CustomStringConvertible {
+    case bindFailed(interface: String)
+    case listener(InputSeatBindingListener)
+    case proxyQueueMismatch(interface: String, objectID: UInt32?)
+    case system(WaylandSystemError)
+    case systemErrnoUnavailable(WaylandSystemOperation)
+    case other(String)
+
+    public var description: String {
+        switch self {
+        case .bindFailed(let interface):
+            "Failed to bind global: \(interface)"
+        case .listener(let listener):
+            listener.description
+        case .proxyQueueMismatch(let interface, let objectID):
+            "\(interface) proxy \(objectID.map { "id=\($0)" } ?? "?") "
+                + "is not assigned to the display owner event queue"
+        case .system(let error):
+            "Wayland runtime failed with \(error.description)"
+        case .systemErrnoUnavailable(let operation):
+            "Wayland runtime failed during \(operation.description) without errno"
+        case .other(let message):
+            message
+        }
+    }
+}
+
+public enum InputSeatBindingListener: Equatable, Sendable, CustomStringConvertible {
+    case registry
+    case seat
+    case pointer
+    case keyboard
+    case touch
+    case syncCallback
+
+    public var description: String {
+        switch self {
+        case .registry:
+            "Wayland registry listener installation failed"
+        case .seat:
+            "Wayland seat listener installation failed"
+        case .pointer:
+            "Wayland pointer listener installation failed"
+        case .keyboard:
+            "Wayland keyboard listener installation failed"
+        case .touch:
+            "Wayland touch listener installation failed"
+        case .syncCallback:
+            "Wayland sync callback listener installation failed"
+        }
+    }
+}
+
 public enum CursorDiagnosticOperation: Equatable, Sendable {
     case missingCursor
     case automaticPointerEnter
 }
 
+public enum AutomaticPointerEnterFailure: Error, Equatable, Sendable, CustomStringConvertible {
+    case cursorImageResolution(String)
+    case cursorSurfaceCreation(String)
+    case cursorRequest(PointerCursorRequestFailure)
+    case cursorApplication(String)
+
+    public var description: String {
+        switch self {
+        case .cursorImageResolution(let detail):
+            "cursor image resolution failed: \(detail)"
+        case .cursorSurfaceCreation(let detail):
+            "cursor surface creation failed: \(detail)"
+        case .cursorRequest(let failure):
+            failure.description
+        case .cursorApplication(let detail):
+            "cursor application failed: \(detail)"
+        }
+    }
+}
+
 public enum CursorDiagnostic: Equatable, Sendable, CustomStringConvertible {
     case missingCursor(name: String)
-    case automaticPointerEnterFailed(String)
+    case automaticPointerEnterFailed(AutomaticPointerEnterFailure)
 
     public var operation: CursorDiagnosticOperation {
         switch self {
@@ -131,15 +259,71 @@ public enum CursorDiagnostic: Equatable, Sendable, CustomStringConvertible {
         switch self {
         case .missingCursor(let name):
             "cursor \(name) is unavailable"
-        case .automaticPointerEnterFailed(let message):
-            message
+        case .automaticPointerEnterFailed(let failure):
+            failure.description
         }
+    }
+}
+
+public enum UnknownInputProtocolValueField: Equatable, Hashable, Sendable,
+    CustomStringConvertible
+{
+    case pointerAxis
+    case pointerAxisSource
+    case pointerAxisRelativeDirection
+    case pointerButtonState
+    case keyboardKeyState
+    case seatCapability
+
+    public var description: String {
+        switch self {
+        case .pointerAxis:
+            "pointer axis"
+        case .pointerAxisSource:
+            "pointer axis source"
+        case .pointerAxisRelativeDirection:
+            "pointer axis relative direction"
+        case .pointerButtonState:
+            "pointer button state"
+        case .keyboardKeyState:
+            "keyboard key state"
+        case .seatCapability:
+            "seat capability"
+        }
+    }
+}
+
+public struct UnknownInputProtocolValueDiagnostic: Equatable, Sendable,
+    CustomStringConvertible
+{
+    public let field: UnknownInputProtocolValueField
+    public let rawValue: UInt32
+    public let seatID: SeatID
+    public let sequence: UInt64
+
+    public init(
+        field diagnosticField: UnknownInputProtocolValueField,
+        rawValue diagnosticRawValue: UInt32,
+        seatID diagnosticSeatID: SeatID,
+        sequence diagnosticSequence: UInt64
+    ) {
+        field = diagnosticField
+        rawValue = diagnosticRawValue
+        seatID = diagnosticSeatID
+        sequence = diagnosticSequence
+    }
+
+    public var description: String {
+        "unknown \(field.description) \(rawValue) from \(seatID) at input sequence \(sequence)"
     }
 }
 
 public enum InputDiagnosticOperation: Equatable, Sendable {
     case keyboardKeymap
+    case keyboardRepeat
     case listener(String)
+    case seatBinding(String)
     case inputPipelineOverflow(InputPipelineOverflow)
     case cursor(CursorDiagnosticOperation)
+    case unknownProtocolValue(UnknownInputProtocolValueField)
 }

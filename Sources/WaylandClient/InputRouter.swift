@@ -9,23 +9,43 @@ enum InputRouterError: Error, Equatable, Sendable {
 }
 
 private struct InputSurfaceBinding: Equatable {
-    let windowID: WindowID
+    let target: SurfaceTarget
+
+    var windowID: WindowID {
+        target.windowID
+    }
+}
+
+struct ReportedUnknownInputProtocolValue: Hashable {
+    let seatID: SeatID
+    let field: UnknownInputProtocolValueField
+    let rawValue: UInt32
 }
 
 final class InputRouter {
     var deviceGraph = InputDeviceGraph()
     private var surfaces: [RawObjectID: InputSurfaceBinding] = [:]
+    var reportedUnknownProtocolValues: Set<ReportedUnknownInputProtocolValue> = []
 
     func register(windowID: WindowID, surfaceID: RawObjectID) {
-        surfaces[surfaceID] = InputSurfaceBinding(windowID: windowID)
+        surfaces[surfaceID] = InputSurfaceBinding(target: .window(windowID))
     }
 
-    func registerPopup(parentSurfaceID: RawObjectID, surfaceID: RawObjectID) throws {
+    func registerPopup(
+        popupID: PopupID,
+        parentSurfaceID: RawObjectID,
+        surfaceID: RawObjectID
+    ) throws {
         guard let parent = surfaces[parentSurfaceID] else {
             throw InputRouterError.unknownParentSurface(parentSurfaceID)
         }
 
-        surfaces[surfaceID] = InputSurfaceBinding(windowID: parent.windowID)
+        surfaces[surfaceID] = InputSurfaceBinding(
+            target: .popup(
+                PopupSurfaceIdentity(popupID),
+                parentWindowID: parent.windowID
+            )
+        )
     }
 
     func unregister(surfaceID: RawObjectID) {
@@ -66,7 +86,7 @@ final class InputRouter {
             return []
         }
 
-        return [routed]
+        return [routed] + unknownProtocolValueDiagnostics(for: event.raw)
     }
 
     private func routeOne(_ event: RawInputEvent) -> InputEvent? {
@@ -130,7 +150,7 @@ final class InputRouter {
                 kind: .pointer(
                     .moved(
                         PointerLocation(x: motion.x.doubleValue, y: motion.y.doubleValue),
-                        time: motion.time
+                        time: WaylandTimestampMilliseconds(rawValue: motion.time)
                     )
                 )
             )
@@ -142,8 +162,8 @@ final class InputRouter {
                     .button(
                         PointerButtonEvent(
                             serial: InputSerial(rawValue: button.serial),
-                            time: button.time,
-                            button: button.button,
+                            time: WaylandTimestampMilliseconds(rawValue: button.time),
+                            button: PointerButtonCode(rawValue: button.button),
                             state: ButtonState(rawValue: button.state.rawValue)
                         )
                     )
@@ -238,7 +258,7 @@ extension InputRouter {
                 .raw(
                     .entered(
                         serial: InputSerial(rawValue: enter.serial),
-                        pressedKeys: enter.pressedKeys
+                        pressedKeys: enter.pressedKeys.map(EvdevKeycode.init(rawValue:))
                     )
                 )
             )
@@ -270,8 +290,8 @@ extension InputRouter {
                     .key(
                         KeyboardKeyEvent(
                             serial: InputSerial(rawValue: key.serial),
-                            time: key.time,
-                            rawKeycode: key.evdevKeycode,
+                            time: WaylandTimestampMilliseconds(rawValue: key.time),
+                            rawKeycode: EvdevKeycode(rawValue: key.evdevKeycode),
                             state: KeyState(rawValue: key.state.rawValue)
                         )
                     )
@@ -313,7 +333,7 @@ extension InputRouter {
             kind: .keyboard(
                 .raw(
                     .repeatInfo(
-                        KeyboardRepeatInfo(rate: repeatInfo.rate, delay: repeatInfo.delay)
+                        KeyboardRepeatPolicy(repeatInfo)
                     )
                 )
             )
@@ -337,11 +357,11 @@ extension InputRouter {
         guard let surfaceID else {
             return .unmanagedSurface
         }
-        guard let windowID = windowID(for: surfaceID) else {
+        guard let surfaceTarget = surfaceTarget(for: surfaceID) else {
             return .unmanagedSurface
         }
 
-        return .window(windowID)
+        return .surface(surfaceTarget)
     }
 
     func target(forFocusedSurface surfaceID: RawObjectID?) -> InputEventTarget {
@@ -354,11 +374,11 @@ extension InputRouter {
 
     func convert(_ snapshot: RawSeatEventSnapshot) -> SeatStateSnapshot {
         SeatStateSnapshot(
-            advertisedCapabilities: SeatCapabilities(
+            uncheckedAdvertisedCapabilities: SeatCapabilities(
                 rawValue: snapshot.advertisedCapabilities.rawValue
             ),
             activeCapabilities: SeatCapabilities(rawValue: snapshot.activeCapabilities.rawValue),
-            name: snapshot.name
+            name: snapshot.name.flatMap(SeatName.init(rawValue:))
         )
     }
 
@@ -366,18 +386,27 @@ extension InputRouter {
         switch axis {
         case .axis(let time, let rawAxis, let value):
             .axis(
-                time: time,
+                time: WaylandTimestampMilliseconds(rawValue: time),
                 axis: PointerAxis(rawValue: rawAxis.rawValue),
                 value: value.doubleValue
             )
         case .source(let source):
             .source(PointerAxisSource(rawValue: source.rawValue))
         case .stop(let time, let axis):
-            .stop(time: time, axis: PointerAxis(rawValue: axis.rawValue))
+            .stop(
+                time: WaylandTimestampMilliseconds(rawValue: time),
+                axis: PointerAxis(rawValue: axis.rawValue)
+            )
         case .discrete(let axis, let value):
-            .discrete(axis: PointerAxis(rawValue: axis.rawValue), value: value)
+            .discrete(
+                axis: PointerAxis(rawValue: axis.rawValue),
+                value: PointerAxisDiscreteStep(rawValue: value)
+            )
         case .value120(let axis, let value120):
-            .value120(axis: PointerAxis(rawValue: axis.rawValue), value120: value120)
+            .value120(
+                axis: PointerAxis(rawValue: axis.rawValue),
+                value120: PointerAxisValue120(rawValue: value120)
+            )
         case .relativeDirection(let axis, let direction):
             .relativeDirection(
                 axis: PointerAxis(rawValue: axis.rawValue),
@@ -394,5 +423,13 @@ extension InputRouter {
         }
 
         return surfaces[surfaceID]?.windowID
+    }
+
+    func surfaceTarget(for surfaceID: RawObjectID?) -> SurfaceTarget? {
+        guard let surfaceID else {
+            return nil
+        }
+
+        return surfaces[surfaceID]?.target
     }
 }

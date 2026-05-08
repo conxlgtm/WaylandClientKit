@@ -3,6 +3,7 @@ import WaylandRaw
 enum SurfaceRuntimeError: Error, Equatable {
     case surfaceDestroyedWithActiveBufferPool
     case surfaceDestroyedWithLiveRoleResources
+    case installAfterSurfaceDestroyed
 }
 
 struct SurfaceRuntime<RoleResources> {
@@ -46,7 +47,7 @@ struct SurfaceRuntime<RoleResources> {
             }
         }
         set {
-            guard newValue != nil || !isSurfaceDestroyed else {
+            guard !isSurfaceDestroyed else {
                 return
             }
 
@@ -87,7 +88,7 @@ struct SurfaceRuntime<RoleResources> {
                 .roleDestroyed(let objects):
                 objects.scaleInstallation
             case .surfaceDestroyed:
-                preconditionFailure("Surface scale resources used after surface destruction")
+                SurfaceScaleInstallation()
             }
         }
         set {
@@ -95,6 +96,14 @@ struct SurfaceRuntime<RoleResources> {
                 objects.scaleInstallation = newValue
             }
         }
+    }
+
+    mutating func installRoleResources(_ roleResources: RoleResources) throws {
+        guard !isSurfaceDestroyed else {
+            throw SurfaceRuntimeError.installAfterSurfaceDestroyed
+        }
+
+        replaceRoleResources(with: roleResources)
     }
 
     mutating func removeRoleResources() -> RoleResources? {
@@ -171,7 +180,7 @@ struct SurfaceRuntime<RoleResources> {
             (.surfaceDestroyed, nil):
             return
         case (.surfaceDestroyed, .some):
-            preconditionFailure("Role resources installed after surface destruction")
+            return
         }
     }
 
@@ -189,7 +198,7 @@ struct SurfaceRuntime<RoleResources> {
             update(&objects)
             phase = .roleDestroyed(objects)
         case .surfaceDestroyed:
-            preconditionFailure("Surface resources used after surface destruction")
+            return
         }
     }
 }

@@ -80,12 +80,14 @@ package final class PopupRoleSurface {
 
         do {
             try newXDGSurfaceOwner.install(on: newXDGSurface)
-            roleResources = PopupRoleResources(
-                surface: newSurface,
-                xdgSurface: newXDGSurface,
-                popup: newPopup,
-                xdgSurfaceOwner: newXDGSurfaceOwner,
-                positioner: newPositioner
+            try surfaceRuntime.installRoleResources(
+                PopupRoleResources(
+                    surface: newSurface,
+                    xdgSurface: newXDGSurface,
+                    popup: newPopup,
+                    xdgSurfaceOwner: newXDGSurfaceOwner,
+                    positioner: newPositioner
+                )
             )
             try scaleInstallation = SurfaceScaleInstallation.install(
                 globals: globals,
@@ -205,7 +207,7 @@ package final class PopupRoleSurface {
 
     package func requestRedrawOnOwnerThread() throws {
         connection.preconditionIsOwnerThread()
-        try markNeedsRedraw(bufferAvailable: try redrawBufferAvailable())
+        try markNeedsRedraw(bufferAvailability: try redrawBufferAvailability())
     }
 
     package func closeOnOwnerThread() {

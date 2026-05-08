@@ -60,15 +60,21 @@ package struct RawInputDiagnostic: Equatable, Sendable {
 
 package enum RawInputDiagnosticPayload: Equatable, Sendable {
     case keymap(RawKeymapDiagnostic)
+    case keyboardRepeat(RawKeyboardRepeatDiagnostic)
     case listener(RawListenerDiagnostic)
+    case seatBinding(RawSeatBindingDiagnostic)
     case inputPipelineOverflow(RawInputPipelineOverflow)
 
     package var operation: RawInputDiagnosticOperation {
         switch self {
         case .keymap:
             .keyboardKeymap
+        case .keyboardRepeat:
+            .keyboardRepeat
         case .listener(let diagnostic):
             .listener(diagnostic.listener)
+        case .seatBinding(let diagnostic):
+            .seatBinding(diagnostic.interface)
         case .inputPipelineOverflow(let overflow):
             .inputPipelineOverflow(overflow)
         }
@@ -80,7 +86,11 @@ extension RawInputDiagnosticPayload: CustomStringConvertible {
         switch self {
         case .keymap(let diagnostic):
             diagnostic.description
+        case .keyboardRepeat(let diagnostic):
+            diagnostic.description
         case .listener(let diagnostic):
+            diagnostic.description
+        case .seatBinding(let diagnostic):
             diagnostic.description
         case .inputPipelineOverflow(let overflow):
             "\(overflow.stage.description) exceeded capacity \(overflow.capacity)"
@@ -99,6 +109,18 @@ package enum RawKeymapDiagnostic: Equatable, Sendable, CustomStringConvertible {
     }
 }
 
+package struct RawKeyboardRepeatDiagnostic: Equatable, Sendable, CustomStringConvertible {
+    package let error: RawKeyboardRepeatInfoError
+
+    package init(error repeatError: RawKeyboardRepeatInfoError) {
+        error = repeatError
+    }
+
+    package var description: String {
+        error.description
+    }
+}
+
 package struct RawListenerDiagnostic: Equatable, Sendable, CustomStringConvertible {
     package let listener: String
     package let message: String
@@ -113,9 +135,72 @@ package struct RawListenerDiagnostic: Equatable, Sendable, CustomStringConvertib
     }
 }
 
+package struct RawSeatBindingDiagnostic: Equatable, Sendable, CustomStringConvertible {
+    package let interface: String
+    package let failure: RawSeatBindingFailure
+
+    package init(interface interfaceName: String, failure bindingFailure: RawSeatBindingFailure) {
+        interface = interfaceName
+        failure = bindingFailure
+    }
+
+    package init(interface interfaceName: String, error bindingError: RuntimeError) {
+        self.init(interface: interfaceName, failure: RawSeatBindingFailure(bindingError))
+    }
+
+    package var description: String {
+        "\(interface) binding failed: \(failure.description)"
+    }
+}
+
+package enum RawSeatBindingFailure: Equatable, Sendable, CustomStringConvertible {
+    case bindFailed(String)
+    case listener(RawListenerInstallationError)
+    case proxy(RawProxyError)
+    case system(RawSystemError)
+    case systemErrnoUnavailable(RawSystemOperation)
+    case other(String)
+
+    package init(_ runtimeError: RuntimeError) {
+        switch runtimeError {
+        case .bindFailed(let interfaceName):
+            self = .bindFailed(interfaceName)
+        case .listener(let error):
+            self = .listener(error)
+        case .proxy(let error):
+            self = .proxy(error)
+        case .system(let error):
+            self = .system(error)
+        case .systemErrnoUnavailable(let operation):
+            self = .systemErrnoUnavailable(operation)
+        default:
+            self = .other(runtimeError.description)
+        }
+    }
+
+    package var description: String {
+        switch self {
+        case .bindFailed(let interfaceName):
+            "Failed to bind global: \(interfaceName)"
+        case .listener(let error):
+            error.description
+        case .proxy(let error):
+            error.description
+        case .system(let error):
+            "Wayland runtime failed with \(error.description)"
+        case .systemErrnoUnavailable(let operation):
+            "Wayland runtime failed during \(operation.description) without errno"
+        case .other(let message):
+            message
+        }
+    }
+}
+
 package enum RawInputDiagnosticOperation: Equatable, Sendable {
     case keyboardKeymap
+    case keyboardRepeat
     case listener(String)
+    case seatBinding(String)
     case inputPipelineOverflow(RawInputPipelineOverflow)
 }
 
@@ -134,12 +219,22 @@ extension RawInputPipelineOverflowStage: CustomStringConvertible {
 
 package struct RawInputPipelineOverflow: Equatable, Sendable {
     package let stage: RawInputPipelineOverflowStage
-    package let capacity: Int
+    package let capacity: RawInputQueueCapacity
 
-    package init(stage overflowStage: RawInputPipelineOverflowStage, capacity queueCapacity: Int) {
+    package init(
+        stage overflowStage: RawInputPipelineOverflowStage,
+        capacity queueCapacity: RawInputQueueCapacity
+    ) {
         stage = overflowStage
         capacity = queueCapacity
     }
+}
+
+package enum RawSeatEventSnapshotError: Error, Equatable, Sendable {
+    case activeCapabilityNotAdvertised(
+        activeCapabilities: SeatCapabilities,
+        advertisedCapabilities: SeatCapabilities
+    )
 }
 
 package struct RawSeatEventSnapshot: Equatable, Sendable {
@@ -149,6 +244,25 @@ package struct RawSeatEventSnapshot: Equatable, Sendable {
 
     package init(
         advertisedCapabilities seatAdvertisedCapabilities: SeatCapabilities,
+        activeCapabilities seatActiveCapabilities: SeatCapabilities,
+        name seatName: String?
+    ) throws {
+        guard seatActiveCapabilities.isSubset(of: seatAdvertisedCapabilities) else {
+            throw RawSeatEventSnapshotError.activeCapabilityNotAdvertised(
+                activeCapabilities: seatActiveCapabilities,
+                advertisedCapabilities: seatAdvertisedCapabilities
+            )
+        }
+
+        self.init(
+            uncheckedAdvertisedCapabilities: seatAdvertisedCapabilities,
+            activeCapabilities: seatActiveCapabilities,
+            name: seatName
+        )
+    }
+
+    package init(
+        uncheckedAdvertisedCapabilities seatAdvertisedCapabilities: SeatCapabilities,
         activeCapabilities seatActiveCapabilities: SeatCapabilities,
         name seatName: String?
     ) {

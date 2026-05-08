@@ -266,7 +266,12 @@ struct WaylandClientTests {
         _ = storage.withUnsafeMutableBufferPointer { buffer in
             #expect(
                 throws: ClientError.invalidWindowState(
-                    "software frame storage is smaller than its layout"
+                    .softwareFrameLayout(
+                        .storageTooSmall(
+                            requiredByteCount: 2 * 3 * MemoryLayout<UInt32>.stride,
+                            actualByteCount: byteCount
+                        )
+                    )
                 )
             ) {
                 _ = try SoftwareFrame(

@@ -120,13 +120,15 @@ package final class TopLevelWindow {
             topLevel: newTopLevel
         )
 
-        roleResources = TopLevelWindowRoleResources(
-            xdgSurface: newXDGSurface,
-            topLevel: newTopLevel,
-            decoration: decorationObjects?.decoration,
-            xdgSurfaceOwner: newXDGSurfaceOwner,
-            topLevelOwner: newTopLevelOwner,
-            decorationOwner: decorationObjects?.owner
+        try surfaceRuntime.installRoleResources(
+            TopLevelWindowRoleResources(
+                xdgSurface: newXDGSurface,
+                topLevel: newTopLevel,
+                decoration: decorationObjects?.decoration,
+                xdgSurfaceOwner: newXDGSurfaceOwner,
+                topLevelOwner: newTopLevelOwner,
+                decorationOwner: decorationObjects?.owner
+            )
         )
 
         try interpretWindowEffects(model.reduce(.roleObjectsCreated))
@@ -209,8 +211,12 @@ package final class TopLevelWindow {
             .diagnostic(
                 WindowDiagnostic(
                     windowID: id,
-                    operation: .scale(.fractionalScaleUnavailable),
-                    message: "Fractional scale protocol is available, but viewporter is missing."
+                    payload: .scale(
+                        WindowScaleDiagnostic(
+                            operation: .fractionalScaleUnavailable,
+                            reason: .viewporterMissing
+                        )
+                    )
                 )
             )
         )
@@ -233,8 +239,12 @@ package final class TopLevelWindow {
             .diagnostic(
                 WindowDiagnostic(
                     windowID: id,
-                    operation: .decoration(.decorationUnavailable),
-                    message: reason.diagnosticMessage
+                    payload: .decoration(
+                        WindowDecorationDiagnostic(
+                            operation: .decorationUnavailable,
+                            reason: WindowDecorationUnavailableReason(reason)
+                        )
+                    )
                 )
             )
         )
@@ -284,7 +294,17 @@ package final class TopLevelWindow {
             return nil
         }
 
-        try interpretWindowEffects(model.reduce(.configureReceived(sequence)))
+        let configureEvent: WindowConfigureEvent
+        do {
+            configureEvent = try WindowConfigureEvent(
+                sequence: sequence,
+                previousSize: model.currentConfiguration?.size,
+                fallbackSize: model.fallbackSize
+            )
+        } catch let error as WindowError {
+            throw ClientError.window(id, error)
+        }
+        try interpretWindowEffects(model.reduce(.configureReceived(configureEvent)))
         return model.currentConfiguration
     }
 
@@ -295,7 +315,7 @@ package final class TopLevelWindow {
             retired: &retiredBufferPools
         ) {
             guard let globals = connection.boundGlobals else {
-                throw ClientError.windowCreationFailed("required globals are not bound")
+                throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
             }
 
             return try globals.sharedMemory.createPool(
@@ -349,7 +369,7 @@ package final class TopLevelWindow {
         guard !model.isClosed else { return .skippedClosed }
 
         let effects = try model.reduce(
-            .redrawRequestConsumed(bufferAvailable: try redrawBufferAvailable())
+            .redrawRequestConsumed(bufferAvailability: try redrawBufferAvailability())
         )
         return try interpretPresentationEffects(effects, draw)
     }
@@ -367,7 +387,7 @@ package final class TopLevelWindow {
             guard pendingFrameRegistration == nil else {
                 failActivePresentation(
                     generation: request.generation,
-                    detail: "frame callback is still pending"
+                    error: .frameCallbackRequest("frame callback is still pending")
                 )
                 return .skippedPendingFrame
             }
@@ -395,7 +415,7 @@ package final class TopLevelWindow {
             } catch {
                 failActivePresentation(
                     generation: request.generation,
-                    detail: String(describing: error)
+                    error: .userDraw(String(describing: error))
                 )
                 drawingBuffer.discard()
                 throw error
@@ -416,7 +436,7 @@ package final class TopLevelWindow {
             } catch {
                 failActivePresentation(
                     generation: request.generation,
-                    detail: String(describing: error)
+                    error: .frameCallbackRequest(String(describing: error))
                 )
                 drawingBuffer.discard()
                 throw error
@@ -437,13 +457,16 @@ package final class TopLevelWindow {
                 model.reduce(
                     .presentationSucceeded(
                         generation: request.generation,
-                        bufferAvailable: try redrawBufferAvailable()
+                        bufferAvailability: try redrawBufferAvailability()
                     )
                 )
             )
             return .presented
         } catch {
-            failPresentationIfStillActive(generation: request.generation, error: error)
+            failPresentationIfStillActive(
+                generation: request.generation,
+                error: .surfaceCommit(String(describing: error))
+            )
             throw error
         }
     }
@@ -464,7 +487,7 @@ package final class TopLevelWindow {
 
     private func failPresentationIfStillActive(
         generation: UInt64,
-        error: any Error
+        error: PresentationError
     ) {
         guard case .drawing(let request) = model.presentation,
             request.generation == generation
@@ -474,19 +497,21 @@ package final class TopLevelWindow {
 
         failActivePresentation(
             generation: generation,
-            detail: String(describing: error)
+            error: error
         )
     }
 
     private func failActivePresentation(
         generation: UInt64,
-        detail: String
+        error: PresentationError
     ) {
         do {
             try interpretWindowEffects(
-                model.reduce(.presentationFailed(generation: generation, .drawFailed(detail)))
+                model.reduce(.presentationFailed(generation: generation, error))
             )
-        } catch ClientError.window(id, .presentationFailed(.drawFailed(detail))) {
+        } catch ClientError.window(id, .presentationFailed(let reportedError))
+            where reportedError == error
+        {
             // presentationFailed resets model state before reporting the presentation error.
         } catch {
             preconditionFailure("Unexpected presentation failure error: \(error)")
@@ -496,7 +521,7 @@ package final class TopLevelWindow {
     private func monotonicMilliseconds() throws -> Int64 {
         var timestamp = timespec()
         guard unsafe clock_gettime(CLOCK_MONOTONIC, &timestamp) == 0 else {
-            throw ClientError.windowCreationFailed("clock_gettime failed with errno \(errno)")
+            throw ClientError.windowCreationFailed(.clockGetTimeFailed(errno: errno))
         }
 
         return Int64(timestamp.tv_sec) * 1_000 + Int64(timestamp.tv_nsec) / 1_000_000
@@ -557,7 +582,7 @@ extension TopLevelWindow {
 
         do {
             try interpretWindowEffects(
-                model.reduce(.frameBecameReady(bufferAvailable: try redrawBufferAvailable()))
+                model.reduce(.frameBecameReady(bufferAvailability: try redrawBufferAvailability()))
             )
         } catch let error as ClientError {
             reportCallbackFailure(operation: .frameDone, error: error)
@@ -574,7 +599,9 @@ extension TopLevelWindow {
 
         do {
             try interpretWindowEffects(
-                model.reduce(.bufferBecameAvailable(bufferAvailable: try redrawBufferAvailable()))
+                model.reduce(
+                    .bufferBecameAvailable(bufferAvailability: try redrawBufferAvailability())
+                )
             )
         } catch let error as ClientError {
             reportCallbackFailure(operation: .bufferReleased, error: error)
@@ -599,7 +626,7 @@ extension TopLevelWindow {
                     )
                 })
             else { return }
-            try markNeedsRedraw(bufferAvailable: true)
+            try markNeedsRedraw(bufferAvailability: .available)
         } catch let error as WindowError {
             reportCallbackFailure(
                 operation: .surfaceScaleChanged,
@@ -626,7 +653,7 @@ extension TopLevelWindow {
                     )
                 })
             else { return }
-            try markNeedsRedraw(bufferAvailable: true)
+            try markNeedsRedraw(bufferAvailability: .available)
         } catch let error as WindowError {
             reportCallbackFailure(
                 operation: .surfaceScaleChanged,
@@ -639,7 +666,7 @@ extension TopLevelWindow {
 
     private func markNeedsRedraw() {
         do {
-            try markNeedsRedraw(bufferAvailable: try redrawBufferAvailable())
+            try markNeedsRedraw(bufferAvailability: try redrawBufferAvailability())
         } catch let error as ClientError {
             reportCallbackFailure(operation: .markNeedsRedraw, error: error)
         } catch {
@@ -647,14 +674,14 @@ extension TopLevelWindow {
         }
     }
 
-    private func markNeedsRedraw(bufferAvailable: Bool) throws {
+    private func markNeedsRedraw(bufferAvailability: RedrawBufferAvailability) throws {
         guard !model.isClosed else {
             resetTransientState()
             return
         }
 
         try interpretWindowEffects(
-            model.reduce(.contentInvalidated(bufferAvailable: bufferAvailable))
+            model.reduce(.contentInvalidated(bufferAvailability: bufferAvailability))
         )
     }
 
@@ -678,14 +705,14 @@ extension TopLevelWindow {
         }
     }
 
-    private func redrawBufferAvailable() throws -> Bool {
-        guard let buffers else { return true }
+    private func redrawBufferAvailability() throws -> RedrawBufferAvailability {
+        guard let buffers else { return .available }
 
         if buffers.size != (try currentSurfaceGeometry()).bufferSize.rawSize {
-            return true
+            return .available
         }
 
-        return buffers.hasFreeBuffers
+        return RedrawBufferAvailability(isAvailable: buffers.hasFreeBuffers)
     }
 
     // swiftlint:disable:next cyclomatic_complexity
@@ -709,6 +736,8 @@ extension TopLevelWindow {
                 onClosed = nil
             case .publishRedrawRequested:
                 onRedrawRequested?()
+            case .publishDiagnostic(let diagnostic):
+                failureSink.reportWindowFailure(.diagnostic(diagnostic))
             case .cancelFrameCallback:
                 pendingFrameRegistration = nil
             case .performSoftwarePresent:
