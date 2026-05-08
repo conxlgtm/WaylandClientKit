@@ -11,7 +11,9 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     private let cursorManager: CursorManager
     package let dataTransferGlobalProvider: any DataTransferGlobalProviding
     package let dataTransferManager: DataTransferManager
+    package let primarySelectionController: PrimarySelectionController
     package let dataTransferSourceWriter: any DataTransferSourceWriting
+    private let dataTransferEventQueue = DataTransferEventQueue()
     private let maximumPendingInputEventCount: Int
     private var pendingInputState = PendingInputState.accepting([])
     package var pendingDataTransferDiagnostics: [DataTransferDiagnostic] = []
@@ -36,7 +38,14 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         cursorManager = try CursorManager(
             connection: rawConnection, configuration: cursorConfiguration)
         dataTransferGlobalProvider = rawConnection
-        dataTransferManager = DataTransferManager(connection: rawConnection)
+        dataTransferManager = DataTransferManager(
+            connection: rawConnection,
+            eventQueue: dataTransferEventQueue
+        )
+        primarySelectionController = PrimarySelectionController(
+            connection: rawConnection,
+            eventQueue: dataTransferEventQueue
+        )
         dataTransferSourceWriter = sourceWriter
         maximumPendingInputEventCount =
             inputPipelineConfiguration.pendingInputEventCapacity.rawValue
@@ -203,7 +212,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
 
     package func drainDataTransferEventsOnOwnerThread() -> [DataTransferEvent] {
         connection.preconditionIsOwnerThread()
-        return dataTransferManager.drainDataTransferEvents()
+        return dataTransferEventQueue.drain()
     }
 
     package func createTopLevelWindowOnOwnerThread(

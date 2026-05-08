@@ -71,7 +71,7 @@ extension OwnedFileDescriptor {
     }
 
     public mutating func readData(
-        limit: ByteCount = .defaultClipboardReadLimit
+        limit: ByteCount = .defaultTransferReadLimit
     ) throws -> Data {
         let data: Data
         do {

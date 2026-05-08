@@ -1,43 +1,15 @@
 import Foundation
 import Glibc
 import Synchronization
-import WaylandRaw
-
-package struct DataTransferSourceDescriptorIO: Sendable {
-    package static let raw = DataTransferSourceDescriptorIO()
-
-    private let prepareDescriptorForWriting: @Sendable (Int32) throws -> Void
-    private let writeDescriptor: @Sendable (Int32, [UInt8]) throws -> Int
-    private let closeDescriptor: @Sendable (Int32) -> FileDescriptorCloseResult
-
-    package init(
-        prepareDescriptorForWriting prepare: @escaping @Sendable (Int32) throws -> Void =
-            defaultPrepareDataTransferSourceDescriptorForWriting,
-        writeDescriptor write: @escaping @Sendable (Int32, [UInt8]) throws -> Int =
-            defaultWriteDataTransferSourceDescriptor,
-        closeDescriptor close: @escaping @Sendable (Int32) -> FileDescriptorCloseResult =
-            defaultCloseDataTransferSourceDescriptor
-    ) {
-        prepareDescriptorForWriting = prepare
-        writeDescriptor = write
-        closeDescriptor = close
-    }
-
-    package func prepareForWriting(_ descriptor: Int32) throws {
-        try prepareDescriptorForWriting(descriptor)
-    }
-    package func write(_ descriptor: Int32, bytes: [UInt8]) throws -> Int {
-        try writeDescriptor(descriptor, bytes)
-    }
-    package func close(_ descriptor: Int32) -> FileDescriptorCloseResult {
-        closeDescriptor(descriptor)
-    }
-}
 
 package final class DataTransferSourceWriteJob: Sendable {
-    package let sourceID: DataSourceID
+    package let source: DataTransferSourceWriteSource
     package let mimeType: MIMEType
     package let data: Data
+
+    package var sourceID: DataSourceID {
+        source.sourceID
+    }
 
     private let descriptor: Mutex<DataTransferSourceDescriptorState>
     private let descriptorIO: DataTransferSourceDescriptorIO
@@ -57,7 +29,7 @@ package final class DataTransferSourceWriteJob: Sendable {
             defaultCloseDataTransferSourceDescriptor
     ) {
         self.init(
-            sourceID: jobSourceID,
+            source: .clipboard(jobSourceID),
             mimeType: jobMIMEType,
             descriptor: jobDescriptor,
             data: jobData,
@@ -71,14 +43,14 @@ package final class DataTransferSourceWriteJob: Sendable {
     }
 
     package init(
-        sourceID jobSourceID: DataSourceID,
+        source jobSource: DataTransferSourceWriteSource,
         mimeType jobMIMEType: MIMEType,
         descriptor jobDescriptor: Int32,
         data jobData: Data,
         descriptorIO jobDescriptorIO: DataTransferSourceDescriptorIO,
         writePolicy jobWritePolicy: DataTransferSourceWritePolicy = .default
     ) {
-        sourceID = jobSourceID
+        source = jobSource
         mimeType = jobMIMEType
         data = jobData
         descriptor = Mutex(DataTransferSourceDescriptorState(rawValue: jobDescriptor))
@@ -105,22 +77,22 @@ package final class DataTransferSourceWriteJob: Sendable {
             }
 
             try closeOwnedDescriptor(rawDescriptor)
-            return .succeeded(sourceID: sourceID, mimeType: mimeType)
+            return .succeeded(source: source, mimeType: mimeType)
         } catch let error as DataTransferError {
-            return .failed(sourceID: sourceID, mimeType: mimeType, error: error)
+            return .failed(source: source, mimeType: mimeType, error: error)
         } catch {
-            return .failed(sourceID: sourceID, mimeType: mimeType, error: .unavailable)
+            return .failed(source: source, mimeType: mimeType, error: .unavailable)
         }
     }
 
     package func closeAsCancelled() -> DataTransferSourceWriteResult {
         do {
             try closeRawDescriptor(try releaseRawDescriptor())
-            return .failed(sourceID: sourceID, mimeType: mimeType, error: .cancelled)
+            return .failed(source: source, mimeType: mimeType, error: .cancelled)
         } catch let error as DataTransferError {
-            return .failed(sourceID: sourceID, mimeType: mimeType, error: error)
+            return .failed(source: source, mimeType: mimeType, error: error)
         } catch {
-            return .failed(sourceID: sourceID, mimeType: mimeType, error: .unavailable)
+            return .failed(source: source, mimeType: mimeType, error: .unavailable)
         }
     }
 
@@ -306,52 +278,6 @@ package final class DataTransferSourceWriteJob: Sendable {
     }
 }
 
-private func defaultPrepareDataTransferSourceDescriptorForWriting(_ descriptor: Int32) throws {
-    guard descriptor >= 0 else {
-        throw DataTransferError.invalidFileDescriptor(descriptor)
-    }
-
-    let flags = Glibc.fcntl(descriptor, F_GETFL)
-    guard flags >= 0 else {
-        throw DataTransferError.writeFileDescriptor(
-            WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
-        )
-    }
-    guard Glibc.fcntl(descriptor, F_SETFL, flags | O_NONBLOCK) == 0 else {
-        throw DataTransferError.writeFileDescriptor(
-            WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
-        )
-    }
-}
-
-private func defaultWriteDataTransferSourceDescriptor(
-    descriptor: Int32,
-    bytes: [UInt8]
-) throws -> Int {
-    do {
-        return try RawFileDescriptor.write(descriptor: descriptor, bytes: bytes)
-    } catch let error {
-        throw dataTransferSourceWriteError(error)
-    }
-}
-
-private func defaultCloseDataTransferSourceDescriptor(
-    _ descriptor: Int32
-) -> FileDescriptorCloseResult {
-    FileDescriptorCloseResult.posixReturn(Glibc.close(descriptor))
-}
-
-private func dataTransferSourceWriteError(_ error: RuntimeError) -> DataTransferError {
-    switch error {
-    case .system(let systemError):
-        .writeFileDescriptor(WaylandSystemErrno(unchecked: systemError.errno.rawValue))
-    case .systemErrnoUnavailable:
-        .writeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
-    default:
-        .unavailable
-    }
-}
-
 private func isTemporaryDataTransferSourceWriteBackpressure(
     _ error: DataTransferError
 ) -> Bool {
@@ -360,11 +286,6 @@ private func isTemporaryDataTransferSourceWriteBackpressure(
     }
 
     return error.rawValue == EAGAIN || error.rawValue == EWOULDBLOCK
-}
-
-package enum DataTransferSourceWriteResult: Equatable, Sendable {
-    case succeeded(sourceID: DataSourceID, mimeType: MIMEType)
-    case failed(sourceID: DataSourceID, mimeType: MIMEType, error: DataTransferError)
 }
 
 package protocol DataTransferSourceWriting: AnyObject {

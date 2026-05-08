@@ -162,7 +162,7 @@ extension DataTransferManager {
 
             store.appendSourceSendRequest(
                 DataTransferSourceSendRequest(
-                    sourceID: sourceID,
+                    source: .clipboard(sourceID),
                     mimeType: mimeType,
                     descriptor: descriptor,
                     data: data,
@@ -187,7 +187,7 @@ extension DataTransferManager {
     package func discardPendingSourceSendRequests(for sourceID: DataSourceID) {
         var remainingRequests: [DataTransferSourceSendRequest] = []
         for request in store.drainSourceSendRequests() {
-            if request.sourceID == sourceID {
+            if request.source == .clipboard(sourceID) {
                 do {
                     try request.close()
                 } catch {
@@ -219,7 +219,7 @@ extension DataTransferManager {
             } catch {
                 recordCallbackError(
                     error,
-                    context: .dataSource(ClipboardSourceIdentity(request.sourceID))
+                    context: .sourceWrite(request.source.diagnosticSource)
                 )
             }
         }

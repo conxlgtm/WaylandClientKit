@@ -15,5 +15,4 @@ trap cleanup EXIT
 env CC="${REPO_ROOT}/scripts/dev/clang-filter-index-store.sh" \
     "${REPO_ROOT}/scripts/dev/swift.sh" test \
         --package-path "${REPO_ROOT}/IntegrationTests/PublicAPIClient" \
-        --scratch-path "${BUILD_DIR}" \
-        --filter WaylandDisplayPublicIntegrationTests
+        --scratch-path "${BUILD_DIR}"

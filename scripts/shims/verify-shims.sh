@@ -27,6 +27,7 @@ protocol_symbols=(
     swl_registry_bind_wp_viewporter
     swl_registry_bind_wp_fractional_scale_manager_v1
     swl_registry_bind_wl_seat
+    swl_registry_bind_zwp_primary_selection_device_manager_v1
     swl_registry_add_listener
     swl_callback_add_listener
     swl_buffer_add_listener
@@ -40,7 +41,19 @@ protocol_symbols=(
     swl_pointer_add_listener
     swl_keyboard_add_listener
     swl_touch_add_listener
+    swl_primary_selection_offer_add_listener
+    swl_primary_selection_source_add_listener
+    swl_primary_selection_device_add_listener
     swl_pointer_set_cursor
+    swl_primary_selection_device_manager_create_source
+    swl_primary_selection_device_manager_get_device
+    swl_primary_selection_source_offer
+    swl_primary_selection_offer_receive
+    swl_primary_selection_device_set_selection
+    swl_primary_selection_offer_destroy
+    swl_primary_selection_source_destroy
+    swl_primary_selection_device_destroy
+    swl_primary_selection_device_manager_destroy
     swl_shm_format_xrgb8888
     swl_shm_format_argb8888
     swl_proxy_get_version

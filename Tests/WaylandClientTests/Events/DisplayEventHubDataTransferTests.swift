@@ -9,7 +9,7 @@ struct DisplayEventHubDataTransferTests {
     func dataTransferStreamReceivesPublishedEvents() async {
         let hub = DisplayEventHub()
         var iterator = hub.dataTransferEvents().makeAsyncIterator()
-        let event = DataTransferEvent.selectionChanged(
+        let event = DataTransferEvent.clipboardSelectionChanged(
             ClipboardSelectionEvent(
                 seatID: SeatID(rawValue: 1),
                 offerID: DataOfferID(rawValue: 2)
@@ -74,6 +74,31 @@ struct DisplayEventHubDataTransferTests {
     }
 
     @Test
+    func primarySelectionSourceWriteFailureResultMapsToDiagnostic() {
+        let diagnostic = DisplaySession.dataTransferDiagnostic(
+            from: .failed(
+                source: .primarySelection(DataSourceID(rawValue: 5)),
+                mimeType: .plainTextUTF8,
+                error: .writeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
+            )
+        )
+
+        #expect(
+            diagnostic
+                == DataTransferDiagnostic(
+                    source: .primarySelection(
+                        PrimarySelectionSourceIdentity(DataSourceID(rawValue: 5))
+                    ),
+                    mimeType: .plainTextUTF8,
+                    operation: .sourceWriteFailed,
+                    error: .writeFileDescriptor(
+                        WaylandSystemErrno(unchecked: EIO)
+                    )
+                )
+        )
+    }
+
+    @Test
     func sourceWriteSuccessResultDoesNotMapToDiagnostic() {
         #expect(
             DisplaySession.dataTransferDiagnostic(
@@ -120,10 +145,10 @@ struct DisplayEventHubDataTransferTests {
         let stream = hub.dataTransferEvents()
 
         hub.publishDataTransfer(
-            .sourceCancelled(ClipboardSourceIdentity(DataSourceID(rawValue: 1)))
+            .clipboardSourceCancelled(ClipboardSourceIdentity(DataSourceID(rawValue: 1)))
         )
         hub.publishDataTransfer(
-            .sourceCancelled(ClipboardSourceIdentity(DataSourceID(rawValue: 2)))
+            .clipboardSourceCancelled(ClipboardSourceIdentity(DataSourceID(rawValue: 2)))
         )
 
         var iterator = stream.makeAsyncIterator()
