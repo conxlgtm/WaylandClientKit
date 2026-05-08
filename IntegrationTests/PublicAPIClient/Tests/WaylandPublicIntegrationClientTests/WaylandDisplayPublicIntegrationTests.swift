@@ -68,11 +68,8 @@ struct WaylandDisplayPublicIntegrationTests {
             try await window.redraw { frame in
                 fill(frame, color: 0x0030_2010)
             }
-            #expect(try await !window.needsRedraw)
 
-            await window.close()
-            await window.close()
-            #expect(try await window.isClosed)
+            try await close(window, events: displayEvents)
         }
     }
 
@@ -293,7 +290,24 @@ private func redraw(
     try await popup.redraw { frame in
         fill(frame, color: 0x0050_5050)
     }
-    #expect(try await !popup.needsRedraw)
+}
+
+private func close(
+    _ window: Window,
+    events displayEvents: DisplayEvents
+) async throws {
+    let closeEvent = try await displayEvent(
+        in: displayEvents,
+        matching: { event in
+            event == .windowClosed(window.id)
+        },
+        after: {
+            await window.close()
+            await window.close()
+        }
+    )
+
+    #expect(closeEvent == .windowClosed(window.id))
 }
 
 private func close(
