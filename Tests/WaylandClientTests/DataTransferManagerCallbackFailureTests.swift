@@ -53,13 +53,13 @@ struct DataTransferManagerCallbackFailureTests {
             manager.pendingCallbackError
                 == DataTransferCallbackFailure(
                     context: .dataDevice(seat1),
-                    error: .unknownOffer
+                    error: .missingOfferHandle(seatID: seat1)
                 )
         )
         #expect(
             throws: DataTransferCallbackFailure(
                 context: .dataDevice(seat1),
-                error: .unknownOffer
+                error: .missingOfferHandle(seatID: seat1)
             )
         ) {
             try manager.throwPendingCallbackErrorIfAny()

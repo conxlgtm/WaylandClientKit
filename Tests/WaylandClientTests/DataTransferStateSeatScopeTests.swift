@@ -16,6 +16,7 @@ struct DataTransferStateSeatScopeTests {
         state = try state.reduce(.dataDeviceBound(seat2)).state
         state = try state.reduce(.offerCreated(id: offer2, role: .selection(seatID: seat2)))
             .state
+        state = try state.reduce(.offerMimeType(id: offer2, mimeType: .plainText)).state
 
         #expect(throws: DataTransferError.unknownOffer) {
             _ = try state.reduce(.selectionChanged(seatID: seat1, offerID: offer2))
@@ -29,6 +30,7 @@ struct DataTransferStateSeatScopeTests {
         var state = try boundState(seat1)
         state = try state.reduce(.offerCreated(id: offer2, role: .dragAndDrop(seatID: seat1)))
             .state
+        state = try state.reduce(.offerMimeType(id: offer2, mimeType: .plainText)).state
 
         #expect(throws: DataTransferError.unknownOffer) {
             _ = try state.reduce(.selectionChanged(seatID: seat1, offerID: offer2))
@@ -94,7 +96,7 @@ struct DataTransferStateSeatScopeTests {
                     )
                 ],
                 offers: [
-                    offer2: DataOfferSnapshot(
+                    offer2: try DataOfferSnapshot(
                         id: offer2,
                         role: .selection(seatID: seat2),
                         mimeTypes: [.plainText]
@@ -116,7 +118,7 @@ struct DataTransferStateSeatScopeTests {
                     )
                 ],
                 offers: [
-                    offer2: DataOfferSnapshot(
+                    offer2: try DataOfferSnapshot(
                         id: offer2,
                         role: .dragAndDrop(seatID: seat1),
                         mimeTypes: [.plainText]
@@ -154,7 +156,7 @@ struct DataTransferStateSeatScopeTests {
                     )
                 ],
                 offers: [
-                    offer2: DataOfferSnapshot(
+                    offer2: try DataOfferSnapshot(
                         id: offer2,
                         role: .selection(seatID: seat1),
                         mimeTypes: []
@@ -201,7 +203,7 @@ struct DataTransferStateSeatScopeTests {
             _ = try DataTransferState(
                 seats: [:],
                 offers: [
-                    DataOfferID(rawValue: 1): DataOfferSnapshot(
+                    DataOfferID(rawValue: 1): try DataOfferSnapshot(
                         id: offer2,
                         role: .selection(seatID: seat1),
                         mimeTypes: [.plainText]

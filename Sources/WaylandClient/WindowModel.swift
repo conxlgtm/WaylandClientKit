@@ -1,11 +1,17 @@
 import WaylandRaw
 
+struct ReportedUnknownWindowProtocolValue: Hashable, Sendable {
+    let field: UnknownWindowProtocolValueField
+    let rawValue: UInt32
+}
+
 package struct WindowModel: Equatable, Sendable {
     let id: WindowID
     let fallbackSize: PositiveLogicalSize
     var decoration = DecorationState.unavailable(reason: nil)
     var lifecycle = XDGWindowLifecycle.created(.none)
     var publication = WindowPublicationState.notPublished
+    var reportedUnknownProtocolValues: Set<ReportedUnknownWindowProtocolValue> = []
 
     init(id windowID: WindowID, fallbackSize initialSize: PositiveLogicalSize) {
         id = windowID
@@ -209,7 +215,8 @@ extension WindowModel {
             _ = try reduceDecorationConfigured(mode)
         }
 
-        var effects: [WindowEffect] = [.ackConfigure(sequence.serial)]
+        var effects = unknownProtocolValueEffects(for: sequence)
+        effects.append(.ackConfigure(sequence.serial))
         effects.append(
             contentsOf: mapRedrawEffects(
                 nextActiveState.redraw.reduce(.contentInvalidated, bufferAvailability: .available)

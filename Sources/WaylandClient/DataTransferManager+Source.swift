@@ -56,7 +56,7 @@ extension DataTransferManager {
         }
 
         guard let source = store.sourceSnapshot(sourceID) else {
-            throw DataTransferError.unknownSource
+            throw DataTransferError.unknownSourceIdentity(ClipboardSourceIdentity(sourceID))
         }
 
         preconditionInvariantsHold()
@@ -143,7 +143,9 @@ extension DataTransferManager {
     ) throws {
         do {
             guard let source = store.sourceSnapshot(sourceID) else {
-                throw DataTransferError.unknownSource
+                throw DataTransferError.unknownSourceIdentity(
+                    ClipboardSourceIdentity(sourceID)
+                )
             }
             let mimeType = try MIMEType(rawMimeType ?? "")
             guard source.mimeTypes.contains(mimeType) else {

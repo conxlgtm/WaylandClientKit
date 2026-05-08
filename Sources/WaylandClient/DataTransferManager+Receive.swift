@@ -7,7 +7,7 @@ extension DataTransferManager {
         try throwPendingCallbackErrorIfAny()
 
         guard let offer = store.offerSnapshot(offerID) else {
-            throw DataTransferError.unknownOffer
+            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
         }
         guard offer.mimeTypes.contains(mimeType) else {
             throw DataTransferError.mimeTypeUnavailable(mimeType)

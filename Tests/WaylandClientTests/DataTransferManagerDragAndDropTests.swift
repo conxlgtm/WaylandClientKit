@@ -119,7 +119,7 @@ struct DataTransferManagerDragAndDropTests {
         #expect(
             manager.offerSnapshots
                 == [
-                    DataOfferSnapshot(
+                    try DataOfferSnapshot(
                         id: selectionOffer.id,
                         role: .selection(seatID: seat1),
                         mimeTypes: [.plainText]
@@ -147,7 +147,7 @@ struct DataTransferManagerDragAndDropTests {
         #expect(
             manager.offerSnapshots
                 == [
-                    DataOfferSnapshot(
+                    try DataOfferSnapshot(
                         id: selectionOffer.id,
                         role: .selection(seatID: seat1),
                         mimeTypes: [.plainText]
@@ -175,13 +175,13 @@ struct DataTransferManagerDragAndDropTests {
             manager.pendingCallbackError
                 == DataTransferCallbackFailure(
                     context: .dataDevice(seat1),
-                    error: .unknownOffer
+                    error: .unknownOfferIdentity(ClipboardOfferIdentity(selectionOffer.id))
                 )
         )
         #expect(
             throws: DataTransferCallbackFailure(
                 context: .dataDevice(seat1),
-                error: .unknownOffer
+                error: .unknownOfferIdentity(ClipboardOfferIdentity(selectionOffer.id))
             )
         ) {
             try manager.throwPendingCallbackErrorIfAny()
@@ -206,7 +206,7 @@ struct DataTransferManagerDragAndDropTests {
         #expect(
             throws: DataTransferCallbackFailure(
                 context: .dataDevice(seat1),
-                error: .unknownOffer
+                error: .unknownOfferIdentity(ClipboardOfferIdentity(selectionOffer.id))
             )
         ) {
             try manager.throwPendingCallbackErrorIfAny()

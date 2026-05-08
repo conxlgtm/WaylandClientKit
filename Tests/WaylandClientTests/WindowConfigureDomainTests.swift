@@ -37,7 +37,8 @@ struct WindowConfigureDomainTests {
                 width: 640,
                 height: 480,
                 states: [XDGTopLevelState(rawValue: 99)],
-                wmCapabilities: [XDGWMCapability(rawValue: 77)]
+                wmCapabilities: [XDGWMCapability(rawValue: 77)],
+                decorationMode: .unknown(55)
             ),
             previousSize: nil,
             fallbackSize: .default
@@ -45,6 +46,7 @@ struct WindowConfigureDomainTests {
 
         #expect(configuration.states == [.unknown(99)])
         #expect(configuration.wmCapabilities == [.unknown(77)])
+        #expect(configuration.decorationMode == .unknown(55))
         #expect(configuration.states.map(\.rawValue) == [99])
         #expect(configuration.wmCapabilities.map(\.rawValue) == [77])
     }
@@ -67,6 +69,27 @@ struct WindowConfigureDomainTests {
         #expect(request.summary.wmCapabilities == [.fullscreen, .unknown(77)])
         #expect(request.summary.states.map(\.rawValue) == [4, 99])
         #expect(request.summary.wmCapabilities.map(\.rawValue) == [3, 77])
+    }
+
+    @Test
+    func normalizeConfigureSizeIsIdempotentForProtocolSamples() throws {
+        let samples: [(Int32, Int32)] = [
+            (0, 0),
+            (0, 480),
+            (640, 0),
+            (1, 1),
+            (1_920, 1_080),
+        ]
+
+        for (width, height) in samples {
+            let first = try TopLevelSizeSuggestion.normalize(width: width, height: height)
+            let second = try TopLevelSizeSuggestion.normalize(
+                width: first.width.suggestedValue?.rawValue ?? 0,
+                height: first.height.suggestedValue?.rawValue ?? 0
+            )
+
+            #expect(second == first)
+        }
     }
 
     private func configure(

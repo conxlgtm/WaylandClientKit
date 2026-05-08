@@ -93,29 +93,62 @@ package enum ClipboardSelectionState: Equatable, Sendable {
     }
 }
 
-package struct DataTransferOfferState: Equatable, Sendable {
-    package var id: DataOfferID
-    package var role: DataOfferRole
-    package var mimeTypes: [MIMEType]
+package enum DataTransferOfferState: Equatable, Sendable {
+    case pending(id: DataOfferID, role: DataOfferRole, mimeTypes: [MIMEType])
+    case selectable(DataOfferSnapshot)
 
-    package init(
-        id offerID: DataOfferID,
-        role offerRole: DataOfferRole,
-        mimeTypes offerMimeTypes: [MIMEType] = []
-    ) {
-        id = offerID
-        role = offerRole
-        mimeTypes = offerMimeTypes
+    package init(id offerID: DataOfferID, role offerRole: DataOfferRole) {
+        self = .pending(id: offerID, role: offerRole, mimeTypes: [])
     }
 
     package init(_ snapshot: DataOfferSnapshot) {
-        id = snapshot.id
-        role = snapshot.role
-        mimeTypes = snapshot.mimeTypes
+        self = .selectable(snapshot)
     }
 
-    package var snapshot: DataOfferSnapshot {
-        DataOfferSnapshot(id: id, role: role, mimeTypes: mimeTypes)
+    package var id: DataOfferID {
+        switch self {
+        case .pending(let id, _, _):
+            id
+        case .selectable(let snapshot):
+            snapshot.id
+        }
+    }
+
+    package var role: DataOfferRole {
+        switch self {
+        case .pending(_, let role, _):
+            role
+        case .selectable(let snapshot):
+            snapshot.role
+        }
+    }
+
+    package var mimeTypes: [MIMEType] {
+        switch self {
+        case .pending(_, _, let mimeTypes):
+            mimeTypes
+        case .selectable(let snapshot):
+            snapshot.mimeTypes
+        }
+    }
+
+    package var snapshot: DataOfferSnapshot? {
+        guard case .selectable(let snapshot) = self else {
+            return nil
+        }
+
+        return snapshot
+    }
+
+    package mutating func appendMIMEType(_ mimeType: MIMEType) throws {
+        guard !mimeTypes.contains(mimeType) else {
+            return
+        }
+
+        let nextMIMETypes = mimeTypes + [mimeType]
+        self = .selectable(
+            try DataOfferSnapshot(id: id, role: role, mimeTypes: nextMIMETypes)
+        )
     }
 }
 

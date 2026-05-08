@@ -106,7 +106,7 @@ struct DataTransferManagerTests {
         #expect(
             manager.offerSnapshots
                 == [
-                    DataOfferSnapshot(
+                    try DataOfferSnapshot(
                         id: offer.id,
                         role: .selection(seatID: seat1),
                         mimeTypes: [.plainText, .plainTextUTF8]
@@ -217,13 +217,13 @@ struct DataTransferManagerTests {
             manager.pendingCallbackError
                 == DataTransferCallbackFailure(
                     context: .dataDevice(seat1),
-                    error: .unknownOffer
+                    error: .unknownOfferHandle(rawValue: offerHandle1.rawValue, seatID: seat1)
                 )
         )
         #expect(
             throws: DataTransferCallbackFailure(
                 context: .dataDevice(seat1),
-                error: .unknownOffer
+                error: .unknownOfferHandle(rawValue: offerHandle1.rawValue, seatID: seat1)
             )
         ) {
             try manager.throwPendingCallbackErrorIfAny()

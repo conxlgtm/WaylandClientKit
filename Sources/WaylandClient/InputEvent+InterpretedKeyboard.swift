@@ -1,16 +1,16 @@
 public struct InterpretedKeyboardKeyEvent: Equatable, Sendable {
     public let serial: InputSerial
-    public let time: UInt32
-    public let rawKeycode: UInt32
-    public let xkbKeycode: UInt32
+    public let time: WaylandTimestampMilliseconds
+    public let rawKeycode: EvdevKeycode
+    public let xkbKeycode: XKBKeycode
     public let keysym: KeyboardKeysym
     public let interpretation: InterpretedKeyboardKeyInterpretation
 
     public init(
         serial eventSerial: InputSerial,
-        time eventTime: UInt32,
-        rawKeycode eventRawKeycode: UInt32,
-        xkbKeycode eventXKBKeycode: UInt32,
+        time eventTime: WaylandTimestampMilliseconds,
+        rawKeycode eventRawKeycode: EvdevKeycode,
+        xkbKeycode eventXKBKeycode: XKBKeycode,
         keysym eventKeysym: KeyboardKeysym,
         interpretation eventInterpretation: InterpretedKeyboardKeyInterpretation
     ) {

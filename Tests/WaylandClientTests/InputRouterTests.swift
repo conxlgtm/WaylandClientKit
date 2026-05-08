@@ -103,41 +103,6 @@ struct PointerInputRouterTests {
     }
 
     @Test
-    func unknownPointerAxisValuesRouteAsUnknownDomainValues() {
-        let router = InputRouter()
-        let seatID = RawSeatID(rawValue: 9)
-        router.register(windowID: WindowID(rawValue: 90), surfaceID: 900)
-        _ = router.route(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 900))
-
-        let axis = router.route(
-            rawEvent(
-                sequence: 2,
-                seatID: seatID,
-                kind: .pointer(
-                    .axis(
-                        .relativeDirection(
-                            axis: RawPointerAxis(rawValue: 77),
-                            direction: RawPointerAxisRelativeDirection(rawValue: 88)
-                        )
-                    )
-                )
-            )
-        )
-
-        #expect(
-            axis.first?.kind
-                == .pointer(
-                    .axis(
-                        .relativeDirection(
-                            axis: .unknown(77),
-                            direction: .unknown(88)
-                        )
-                    )
-                )
-        )
-    }
-
-    @Test
     func unknownSurfaceIsPreservedAsDisplayLevelEvent() {
         let router = InputRouter()
 

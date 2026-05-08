@@ -267,8 +267,8 @@ private func expectedRawKeyEvent(
             .key(
                 KeyboardKeyEvent(
                     serial: InputSerial(rawValue: serial),
-                    time: time,
-                    rawKeycode: rawKeycode,
+                    time: WaylandTimestampMilliseconds(rawValue: time),
+                    rawKeycode: EvdevKeycode(rawValue: rawKeycode),
                     state: .pressed
                 )
             )

@@ -13,7 +13,7 @@ extension DataTransferManager {
             return nil
         }
         guard let offer = store.offerSnapshot(offerID) else {
-            throw DataTransferError.unknownOffer
+            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
         }
 
         return offer

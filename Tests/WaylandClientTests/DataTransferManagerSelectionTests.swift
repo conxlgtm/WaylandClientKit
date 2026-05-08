@@ -22,11 +22,11 @@ struct DataTransferManagerSelectionTests {
 
         #expect(
             try manager.selectionOffer(for: seat1)
-                == DataOfferSnapshot(
+                == (try DataOfferSnapshot(
                     id: offer.id,
                     role: .selection(seatID: seat1),
                     mimeTypes: [.plainText]
-                )
+                ))
         )
     }
 

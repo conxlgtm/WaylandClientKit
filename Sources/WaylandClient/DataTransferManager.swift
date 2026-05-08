@@ -197,10 +197,13 @@ package final class DataTransferManager {
 
     private func handleDataOffer(_ handle: RawDataOfferHandle?, seatID: SeatID) throws {
         guard let handle else {
-            throw DataTransferError.unknownOffer
+            throw DataTransferError.missingOfferHandle(seatID: seatID)
         }
         guard !store.hasOffer(handle: handle) else {
-            throw DataTransferError.duplicateOffer
+            throw DataTransferError.duplicateOfferHandle(
+                rawValue: handle.rawValue,
+                existingOffer: store.offerID(for: handle).map(ClipboardOfferIdentity.init)
+            )
         }
 
         let offerID = allocateOfferID()
@@ -240,19 +243,30 @@ package final class DataTransferManager {
 
     private func handleSelection(handle: RawDataOfferHandle, seatID: SeatID) throws {
         guard let offerID = store.offerID(for: handle) else {
-            throw DataTransferError.unknownOffer
+            throw DataTransferError.unknownOfferHandle(
+                rawValue: handle.rawValue,
+                seatID: seatID
+            )
         }
 
         if let existingOffer = store.offerSnapshot(offerID) {
             guard existingOffer.role.seatID == seatID else {
-                throw DataTransferError.unknownOffer
+                throw DataTransferError.mismatchedOfferSeat(
+                    offer: ClipboardOfferIdentity(offerID),
+                    expected: seatID,
+                    actual: existingOffer.role.seatID
+                )
             }
         } else {
             guard let runtimeOffer = store.runtimeOffer(offerID) else {
-                throw DataTransferError.unknownOffer
+                throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
             }
             guard runtimeOffer.pendingSeatID == seatID else {
-                throw DataTransferError.unknownOffer
+                throw DataTransferError.mismatchedOfferSeat(
+                    offer: ClipboardOfferIdentity(offerID),
+                    expected: seatID,
+                    actual: runtimeOffer.pendingSeatID
+                )
             }
             guard !runtimeOffer.pendingMIMETypes.isEmpty else {
                 throw DataTransferError.emptyDataOffer
@@ -359,14 +373,18 @@ extension DataTransferManager {
             return
         }
         guard let offerID = store.offerID(for: handle) else {
-            throw DataTransferError.unknownOffer
+            throw DataTransferError.unknownOfferHandle(rawValue: handle.rawValue, seatID: seatID)
         }
 
         guard store.offerSnapshot(offerID) == nil else {
-            throw DataTransferError.unknownOffer
+            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
         }
         guard store.runtimeOffer(offerID)?.pendingSeatID == seatID else {
-            throw DataTransferError.unknownOffer
+            throw DataTransferError.mismatchedOfferSeat(
+                offer: ClipboardOfferIdentity(offerID),
+                expected: seatID,
+                actual: store.runtimeOffer(offerID)?.pendingSeatID
+            )
         }
 
         destroyOfferBinding(offerID)

@@ -64,7 +64,7 @@ public struct SeatStateSnapshot: Equatable, Sendable {
 public enum PointerEvent: Equatable, Sendable {
     case entered(PointerLocation, serial: InputSerial)
     case left(serial: InputSerial)
-    case moved(PointerLocation, time: UInt32)
+    case moved(PointerLocation, time: WaylandTimestampMilliseconds)
     case button(PointerButtonEvent)
     case axis(PointerAxisEvent)
 }
@@ -81,14 +81,14 @@ public struct PointerLocation: Equatable, Sendable {
 
 public struct PointerButtonEvent: Equatable, Sendable {
     public let serial: InputSerial
-    public let time: UInt32
-    public let button: UInt32
+    public let time: WaylandTimestampMilliseconds
+    public let button: PointerButtonCode
     public let state: ButtonState
 
     public init(
         serial eventSerial: InputSerial,
-        time eventTime: UInt32,
-        button eventButton: UInt32,
+        time eventTime: WaylandTimestampMilliseconds,
+        button eventButton: PointerButtonCode,
         state eventState: ButtonState
     ) {
         serial = eventSerial
@@ -99,11 +99,11 @@ public struct PointerButtonEvent: Equatable, Sendable {
 }
 
 public enum PointerAxisEvent: Equatable, Sendable {
-    case axis(time: UInt32, axis: PointerAxis, value: Double)
+    case axis(time: WaylandTimestampMilliseconds, axis: PointerAxis, value: Double)
     case source(PointerAxisSource)
-    case stop(time: UInt32, axis: PointerAxis)
-    case discrete(axis: PointerAxis, value: Int32)
-    case value120(axis: PointerAxis, value120: Int32)
+    case stop(time: WaylandTimestampMilliseconds, axis: PointerAxis)
+    case discrete(axis: PointerAxis, value: PointerAxisDiscreteStep)
+    case value120(axis: PointerAxis, value120: PointerAxisValue120)
     case relativeDirection(axis: PointerAxis, direction: PointerAxisRelativeDirection)
     case frame
 }
@@ -115,7 +115,7 @@ public enum KeyboardEvent: Equatable, Sendable {
 
 public enum RawKeyboardEvent: Equatable, Sendable {
     case keymapChanged(KeyboardKeymapInfo)
-    case entered(serial: InputSerial, pressedKeys: [UInt32])
+    case entered(serial: InputSerial, pressedKeys: [EvdevKeycode])
     case left(serial: InputSerial)
     case key(KeyboardKeyEvent)
     case modifiers(KeyboardModifiers)
@@ -152,14 +152,14 @@ public struct KeyboardKeymapInfo: Equatable, Sendable {
 
 public struct KeyboardKeyEvent: Equatable, Sendable {
     public let serial: InputSerial
-    public let time: UInt32
-    public let rawKeycode: UInt32
+    public let time: WaylandTimestampMilliseconds
+    public let rawKeycode: EvdevKeycode
     public let state: KeyState
 
     public init(
         serial eventSerial: InputSerial,
-        time eventTime: UInt32,
-        rawKeycode eventRawKeycode: UInt32,
+        time eventTime: WaylandTimestampMilliseconds,
+        rawKeycode eventRawKeycode: EvdevKeycode,
         state eventState: KeyState
     ) {
         serial = eventSerial
@@ -415,13 +415,13 @@ public enum TouchEvent: Equatable, Sendable {
 
 public struct TouchDownEvent: Equatable, Sendable {
     public let serial: InputSerial
-    public let time: UInt32
+    public let time: WaylandTimestampMilliseconds
     public let id: TouchID
     public let location: PointerLocation
 
     public init(
         serial eventSerial: InputSerial,
-        time eventTime: UInt32,
+        time eventTime: WaylandTimestampMilliseconds,
         id eventID: TouchID,
         location eventLocation: PointerLocation
     ) {
@@ -434,10 +434,14 @@ public struct TouchDownEvent: Equatable, Sendable {
 
 public struct TouchUpEvent: Equatable, Sendable {
     public let serial: InputSerial
-    public let time: UInt32
+    public let time: WaylandTimestampMilliseconds
     public let id: TouchID
 
-    public init(serial eventSerial: InputSerial, time eventTime: UInt32, id eventID: TouchID) {
+    public init(
+        serial eventSerial: InputSerial,
+        time eventTime: WaylandTimestampMilliseconds,
+        id eventID: TouchID
+    ) {
         serial = eventSerial
         time = eventTime
         id = eventID
@@ -445,12 +449,12 @@ public struct TouchUpEvent: Equatable, Sendable {
 }
 
 public struct TouchMotionEvent: Equatable, Sendable {
-    public let time: UInt32
+    public let time: WaylandTimestampMilliseconds
     public let id: TouchID
     public let location: PointerLocation
 
     public init(
-        time eventTime: UInt32,
+        time eventTime: WaylandTimestampMilliseconds,
         id eventID: TouchID,
         location eventLocation: PointerLocation
     ) {

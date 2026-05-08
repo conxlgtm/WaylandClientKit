@@ -20,6 +20,7 @@ public enum InputDiagnosticPayload: Equatable, Sendable {
     case listener(InputListenerDiagnostic)
     case inputPipelineOverflow(InputPipelineOverflow)
     case cursor(CursorDiagnostic)
+    case unknownProtocolValue(UnknownInputProtocolValueDiagnostic)
 
     public var operation: InputDiagnosticOperation {
         switch self {
@@ -33,6 +34,8 @@ public enum InputDiagnosticPayload: Equatable, Sendable {
             .inputPipelineOverflow(overflow)
         case .cursor(let diagnostic):
             .cursor(diagnostic.operation)
+        case .unknownProtocolValue(let diagnostic):
+            .unknownProtocolValue(diagnostic.field)
         }
     }
 }
@@ -49,6 +52,8 @@ extension InputDiagnosticPayload: CustomStringConvertible {
         case .inputPipelineOverflow(let overflow):
             "\(overflow.stage.description) exceeded capacity \(overflow.capacity)"
         case .cursor(let diagnostic):
+            diagnostic.description
+        case .unknownProtocolValue(let diagnostic):
             diagnostic.description
         }
     }
@@ -168,10 +173,55 @@ public enum CursorDiagnostic: Equatable, Sendable, CustomStringConvertible {
     }
 }
 
+public enum UnknownInputProtocolValueField: Equatable, Hashable, Sendable,
+    CustomStringConvertible
+{
+    case pointerAxis
+    case pointerAxisSource
+    case pointerAxisRelativeDirection
+
+    public var description: String {
+        switch self {
+        case .pointerAxis:
+            "pointer axis"
+        case .pointerAxisSource:
+            "pointer axis source"
+        case .pointerAxisRelativeDirection:
+            "pointer axis relative direction"
+        }
+    }
+}
+
+public struct UnknownInputProtocolValueDiagnostic: Equatable, Sendable,
+    CustomStringConvertible
+{
+    public let field: UnknownInputProtocolValueField
+    public let rawValue: UInt32
+    public let seatID: SeatID
+    public let sequence: UInt64
+
+    public init(
+        field diagnosticField: UnknownInputProtocolValueField,
+        rawValue diagnosticRawValue: UInt32,
+        seatID diagnosticSeatID: SeatID,
+        sequence diagnosticSequence: UInt64
+    ) {
+        field = diagnosticField
+        rawValue = diagnosticRawValue
+        seatID = diagnosticSeatID
+        sequence = diagnosticSequence
+    }
+
+    public var description: String {
+        "unknown \(field.description) \(rawValue) from \(seatID) at input sequence \(sequence)"
+    }
+}
+
 public enum InputDiagnosticOperation: Equatable, Sendable {
     case keyboardKeymap
     case keyboardRepeat
     case listener(String)
     case inputPipelineOverflow(InputPipelineOverflow)
     case cursor(CursorDiagnosticOperation)
+    case unknownProtocolValue(UnknownInputProtocolValueField)
 }

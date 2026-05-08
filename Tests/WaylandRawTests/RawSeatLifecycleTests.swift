@@ -107,6 +107,41 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
+    func destroyAfterChildCreationFailureReleasesOnlyCreatedChildren() throws {
+        let recorder = SeatOperationRecorder()
+        recorder.pointerProxy = nil
+        recorder.keyboardProxy = fakePointer(0x312)
+        let queue = RawInputEventQueue()
+        let seat = try RawSeat(
+            id: RawSeatID(rawValue: 15),
+            pointer: try #require(fakePointer(0x310)),
+            version: 10,
+            eventSink: queue,
+            operations: recorder.operations,
+            installListener: false
+        )
+
+        do {
+            try seat.applyCapabilities([.pointer, .keyboard])
+            Issue.record("Expected pointer creation to fail")
+        } catch RuntimeError.bindFailed(let interfaceName) {
+            #expect(interfaceName == "wl_pointer")
+        }
+        seat.destroy()
+
+        #expect(
+            recorder.entries == [
+                "get pointer",
+                "get keyboard",
+                "add keyboard listener",
+                "version",
+                "release keyboard",
+                "release seat",
+            ]
+        )
+    }
+
+    @Test
     func globalRemovalDestroysChildrenBeforeSeatAndEmitsRemoval() throws {
         let recorder = SeatOperationRecorder()
         recorder.pointerProxy = fakePointer(0x401)
