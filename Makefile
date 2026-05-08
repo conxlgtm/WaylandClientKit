@@ -37,7 +37,7 @@ test:
 	@CC="$(CURDIR)/Scripts/clang-filter-index-store.sh" $(SWIFT) test
 
 test-public-api-client:
-	@$(SWIFT) test --package-path IntegrationTests/PublicAPIClient --filter WaylandDisplayPublicIntegrationTests
+	@CC="$(CURDIR)/Scripts/clang-filter-index-store.sh" $(SWIFT) test --package-path IntegrationTests/PublicAPIClient --filter WaylandDisplayPublicIntegrationTests
 
 check: lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency strict-memory-safety-raw test test-public-api-client
 
