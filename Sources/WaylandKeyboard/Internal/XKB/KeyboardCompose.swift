@@ -81,12 +81,17 @@ package enum KeyboardComposeFailure: Error, Equatable, Sendable {
 }
 
 final class XKBComposeTableOwner {
+    private static let creationLock = NSLock()
+
     let pointer: OpaquePointer
 
     init(
         context: XKBContextOwner,
         locale: String
     ) throws(KeyboardComposeFailure) {
+        Self.creationLock.lock()
+        defer { Self.creationLock.unlock() }
+
         let newPointer = locale.withCString { localePointer in
             xkb_compose_table_new_from_locale(
                 context.pointer,
@@ -98,10 +103,6 @@ final class XKBComposeTableOwner {
         guard let newPointer else {
             throw .tableUnavailable(locale: locale)
         }
-        guard Self.hasEntries(newPointer) else {
-            xkb_compose_table_unref(newPointer)
-            throw .tableUnavailable(locale: locale)
-        }
 
         pointer = newPointer
     }
@@ -111,6 +112,13 @@ final class XKBComposeTableOwner {
         buffer: String,
         locale: String = "C"
     ) throws(KeyboardComposeFailure) {
+        guard !buffer.isEmpty else {
+            throw .tableUnavailable(locale: locale)
+        }
+
+        Self.creationLock.lock()
+        defer { Self.creationLock.unlock() }
+
         let newPointer = buffer.withCString { bufferPointer -> OpaquePointer? in
             locale.withCString { localePointer in
                 xkb_compose_table_new_from_buffer(
@@ -127,24 +135,12 @@ final class XKBComposeTableOwner {
         guard let newPointer else {
             throw .tableUnavailable(locale: locale)
         }
-        guard Self.hasEntries(newPointer) else {
-            xkb_compose_table_unref(newPointer)
-            throw .tableUnavailable(locale: locale)
-        }
 
         pointer = newPointer
     }
 
     deinit {
         xkb_compose_table_unref(pointer)
-    }
-
-    private static func hasEntries(_ table: OpaquePointer) -> Bool {
-        guard let iterator = xkb_compose_table_iterator_new(table) else {
-            return false
-        }
-        defer { xkb_compose_table_iterator_free(iterator) }
-        return xkb_compose_table_iterator_next(iterator) != nil
     }
 }
 
