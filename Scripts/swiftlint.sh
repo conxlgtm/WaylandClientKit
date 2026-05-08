@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 if [[ -z "${LINUX_SOURCEKIT_LIB_PATH:-}" ]]; then
     RUNTIME_RESOURCE_PATH="$(
-        swift -print-target-info 2>/dev/null \
+        "${SCRIPT_DIR}/swift.sh" -print-target-info 2>/dev/null \
             | sed -n 's/.*"runtimeResourcePath"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
             | head -n 1
     )"

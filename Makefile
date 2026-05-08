@@ -2,7 +2,7 @@ SWIFT_FORMAT := ./Scripts/swift-format.sh
 SWIFTLINT := ./Scripts/swiftlint.sh
 SWIFT := ./Scripts/swift.sh
 
-.PHONY: format lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency strict-memory-safety-raw test check smoke-wayland release-check install-pre-commit
+.PHONY: format lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency strict-memory-safety-raw test check smoke-wayland integration-wayland release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
@@ -38,6 +38,9 @@ check: lint verify-generated verify-shims verify-docs verify-unsafe-allowlist st
 
 smoke-wayland:
 	@./Scripts/smoke-wayland.sh
+
+integration-wayland:
+	@./Scripts/integration-wayland.sh
 
 release-check:
 	@./Scripts/release-check.sh
