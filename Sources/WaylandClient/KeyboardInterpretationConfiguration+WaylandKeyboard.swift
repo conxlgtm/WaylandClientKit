@@ -1,20 +1,20 @@
-import WaylandKeyboardInterpretation
+import WaylandKeyboard
 
-extension WaylandKeyboardInterpretation.KeyboardInterpreterConfiguration {
+extension WaylandKeyboard.KeyboardInterpreterConfiguration {
     init(_ configuration: KeyboardInterpretationConfiguration) {
-        self.init(compose: WaylandKeyboardInterpretation.KeyboardComposeMode(configuration.compose))
+        self.init(compose: WaylandKeyboard.KeyboardComposeMode(configuration.compose))
     }
 }
 
-extension WaylandKeyboardInterpretation.KeyboardComposeMode {
+extension WaylandKeyboard.KeyboardComposeMode {
     init(_ configuration: KeyboardComposeConfiguration) {
         switch configuration {
         case .disabled:
             self = .disabled
         case .enabled(let locale, let policy):
             self = .enabled(
-                locale: WaylandKeyboardInterpretation.KeyboardComposeLocale(locale),
-                cancellationPolicy: WaylandKeyboardInterpretation.KeyboardComposeCancellationPolicy(
+                locale: WaylandKeyboard.KeyboardComposeLocale(locale),
+                cancellationPolicy: WaylandKeyboard.KeyboardComposeCancellationPolicy(
                     policy
                 )
             )
@@ -22,14 +22,14 @@ extension WaylandKeyboardInterpretation.KeyboardComposeMode {
     }
 }
 
-extension WaylandKeyboardInterpretation.KeyboardComposeLocale {
+extension WaylandKeyboard.KeyboardComposeLocale {
     init(_ locale: KeyboardComposeLocale) {
         switch locale {
         case .processEnvironment:
             self = .processEnvironment
         case .identifier(let identifier):
             self = .identifier(
-                WaylandKeyboardInterpretation.KeyboardComposeLocaleIdentifier(
+                WaylandKeyboard.KeyboardComposeLocaleIdentifier(
                     unchecked: identifier.rawValue
                 )
             )
@@ -37,7 +37,7 @@ extension WaylandKeyboardInterpretation.KeyboardComposeLocale {
     }
 }
 
-extension WaylandKeyboardInterpretation.KeyboardComposeCancellationPolicy {
+extension WaylandKeyboard.KeyboardComposeCancellationPolicy {
     init(_ policy: KeyboardComposeCancellationPolicy) {
         switch policy {
         case .passThroughCancellingKey:

@@ -1,5 +1,5 @@
 import WaylandRaw
-import WaylandRawUnsafeShim
+import WaylandRuntime
 
 public enum WaylandSystemErrorConstructionError: Error, Equatable, Sendable {
     case nonPositiveErrno(Int32)

@@ -1,4 +1,4 @@
-import WaylandKeyboardInterpretation
+import WaylandKeyboard
 import WaylandRaw
 
 func rawPointerEnter(
@@ -376,9 +376,9 @@ func rawEvent(
 func interpretedKeyboardEvent(
     sequence: UInt64,
     seatID: RawSeatID,
-    kind: WaylandKeyboardInterpretation.InterpretedKeyboardEventKind
-) -> WaylandKeyboardInterpretation.InterpretedKeyboardEvent {
-    WaylandKeyboardInterpretation.InterpretedKeyboardEvent(
+    kind: WaylandKeyboard.InterpretedKeyboardEventKind
+) -> WaylandKeyboard.InterpretedKeyboardEvent {
+    WaylandKeyboard.InterpretedKeyboardEvent(
         sequence: sequence,
         seatID: seatID,
         deviceID: RawInputDeviceID(seatID: seatID, kind: .keyboard, generation: 1),

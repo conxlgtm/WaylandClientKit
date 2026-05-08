@@ -23,7 +23,7 @@ required_patterns=(
     "WaylandClient"
     "WaylandDisplay"
     "WaylandRaw"
-    "WaylandKeyboardInterpretation"
+    "WaylandKeyboard"
     "WaylandCursor"
     "WaylandSmokeSupport"
     "CWaylandProtocols"

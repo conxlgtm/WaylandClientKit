@@ -3,7 +3,7 @@ import Synchronization
 import Testing
 
 @testable import WaylandRaw
-@testable import WaylandRawUnsafeShim
+@testable import WaylandRuntime
 
 private actor ExecutorProbe {
     private let executor: WaylandThreadExecutor

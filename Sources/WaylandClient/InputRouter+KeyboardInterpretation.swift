@@ -1,8 +1,8 @@
-import WaylandKeyboardInterpretation
+import WaylandKeyboard
 import WaylandRaw
 
 extension InputRouter {
-    func route(_ event: WaylandKeyboardInterpretation.InterpretedKeyboardEvent) -> [InputEvent] {
+    func route(_ event: WaylandKeyboard.InterpretedKeyboardEvent) -> [InputEvent] {
         let routed = InputEvent(
             sequence: event.sequence,
             seatID: SeatID(rawValue: event.seatID.rawValue),
@@ -14,7 +14,7 @@ extension InputRouter {
     }
 
     func interpretedTarget(
-        for event: WaylandKeyboardInterpretation.InterpretedKeyboardEvent
+        for event: WaylandKeyboard.InterpretedKeyboardEvent
     ) -> InputEventTarget {
         switch event.kind {
         case .key:
@@ -25,7 +25,7 @@ extension InputRouter {
     }
 
     func convert(
-        _ event: WaylandKeyboardInterpretation.InterpretedKeyboardEventKind
+        _ event: WaylandKeyboard.InterpretedKeyboardEventKind
     ) -> InterpretedKeyboardEvent {
         switch event {
         case .keymap(let keymap):
@@ -72,7 +72,7 @@ extension InputRouter {
     }
 
     func convert(
-        _ resolution: WaylandKeyboardInterpretation.KeyboardSymbolResolution
+        _ resolution: WaylandKeyboard.KeyboardSymbolResolution
     ) -> KeyboardSymbolResolution {
         .resolved(
             resolution.all.map { keysym in
@@ -82,7 +82,7 @@ extension InputRouter {
     }
 
     func convert(
-        _ interpretation: WaylandKeyboardInterpretation.InterpretedKeyboardKeyInterpretation
+        _ interpretation: WaylandKeyboard.InterpretedKeyboardKeyInterpretation
     ) -> InterpretedKeyboardKeyInterpretation {
         switch interpretation {
         case .released(let keysymName):
@@ -104,7 +104,7 @@ extension InputRouter {
     }
 
     func convert(
-        _ repeatCapability: WaylandKeyboardInterpretation.KeyboardKeyRepeatCapability
+        _ repeatCapability: WaylandKeyboard.KeyboardKeyRepeatCapability
     ) -> KeyboardKeyRepeatCapability {
         switch repeatCapability {
         case .nonRepeating:
@@ -115,7 +115,7 @@ extension InputRouter {
     }
 
     func convert(
-        _ repeatInfo: WaylandKeyboardInterpretation.InterpretedKeyboardRepeatInfo
+        _ repeatInfo: WaylandKeyboard.InterpretedKeyboardRepeatInfo
     ) -> KeyboardRepeatPolicy {
         switch repeatInfo {
         case .disabled:
@@ -130,7 +130,7 @@ extension InputRouter {
 
     // swiftlint:disable:next cyclomatic_complexity
     func convert(
-        _ reason: WaylandKeyboardInterpretation.KeyboardInterpretationUnavailableReason
+        _ reason: WaylandKeyboard.KeyboardInterpretationUnavailableReason
     ) -> KeyboardInterpretationUnavailableReason {
         switch reason {
         case .missingDeviceID:
@@ -168,7 +168,7 @@ extension InputRouter {
     }
 
     func convert(
-        _ text: WaylandKeyboardInterpretation.KeyboardTextResult
+        _ text: WaylandKeyboard.KeyboardTextResult
     ) -> KeyboardTextResult {
         switch text {
         case .none:
@@ -198,7 +198,7 @@ extension InputRouter {
     }
 
     func convert(
-        _ commit: WaylandKeyboardInterpretation.KeyboardTextCommit
+        _ commit: WaylandKeyboard.KeyboardTextCommit
     ) -> KeyboardTextCommit {
         KeyboardTextCommit(
             string: commit.string,
@@ -209,7 +209,7 @@ extension InputRouter {
     }
 
     func convert(
-        _ source: WaylandKeyboardInterpretation.KeyboardTextSource
+        _ source: WaylandKeyboard.KeyboardTextSource
     ) -> KeyboardTextSource {
         switch source {
         case .xkbKey:

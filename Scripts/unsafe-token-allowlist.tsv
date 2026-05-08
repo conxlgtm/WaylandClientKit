@@ -1,10 +1,10 @@
 # path-pattern	token	reason
-Sources/CWaylandUnsafeShim/**	eventfd	C shim for the executor wake fd.
+Sources/CWaylandRuntimeShims/**	eventfd	C shim for the executor wake fd.
 Sources/CWaylandProtocols/include/generated/**	wl_proxy_add_listener	Generated Wayland protocol headers.
 Sources/WaylandCursor/**	OpaquePointer	wayland-cursor C object wrappers.
-Sources/WaylandKeyboardInterpretation/**	OpaquePointer	xkbcommon C object wrappers.
-Sources/WaylandKeyboardInterpretation/**	UnsafeMutablePointer	xkbcommon keymap/state pointer storage.
-Sources/WaylandKeyboardInterpretation/KeyboardLayoutState.swift	UnsafePointer	xkbcommon borrowed keysym array from xkb_state_key_get_syms.
+Sources/WaylandKeyboard/**	OpaquePointer	xkbcommon C object wrappers.
+Sources/WaylandKeyboard/**	UnsafeMutablePointer	xkbcommon keymap/state pointer storage.
+Sources/WaylandKeyboard/KeyboardLayoutState.swift	UnsafePointer	xkbcommon borrowed keysym array from xkb_state_key_get_syms.
 Sources/WaylandRaw/**	OpaquePointer	Raw Wayland ownership wrappers and typed proxy shims.
 Sources/WaylandRaw/**	UnsafeMutablePointer	Raw listener/proxy/storage boundary.
 Sources/WaylandRaw/**	UnsafeMutableBufferPointer	Raw event-loop and memory-layout bridge.
@@ -18,18 +18,18 @@ Sources/WaylandRaw/EventLoop.swift	poll(	Wayland external event-loop integration
 Sources/WaylandRaw/QueueEventLoop.swift	poll(	Queue-specific Wayland external event-loop integration.
 Sources/WaylandRaw/RawProxyAdoption.swift	swl_proxy_get_queue_raw	Centralized runtime queue assertion for proxy adoption.
 Sources/WaylandRaw/ThreadAffinity.swift	pthread_*	Raw owner-thread affinity token.
-Sources/WaylandRawUnsafeShim/**	eventfd	Executor wake fd primitive.
-Sources/WaylandRawUnsafeShim/**	nonisolated(unsafe)	Synchronized pthread-backed executor internals.
-Sources/WaylandRawUnsafeShim/**	pthread_*	Executor owner thread, mutex, condition, and join primitives.
-Sources/WaylandRawUnsafeShim/**	poll(	Executor-owned Wayland fd and wake fd multiplexing.
-Sources/WaylandRawUnsafeShim/**	UnsafeMutableBufferPointer	Executor-owned poll descriptor storage.
-Sources/WaylandRawUnsafeShim/**	UnsafeMutablePointer	Owned ExecutorJob storage and wake-fd reads.
-Sources/WaylandRawUnsafeShim/**	UnsafePointer	Wake-fd writes.
-Sources/WaylandRawUnsafeShim/**	Unmanaged	pthread_create self-retain bridge.
-Sources/WaylandRawUnsafeShim/UnsafeDefaultQueueEventLoop.swift	OpaquePointer	Quarantined unsafe default-queue event-loop escape hatch.
-Sources/WaylandRawUnsafeShim/UnsafeDefaultQueueEventLoop.swift	UnsafeDefaultQueueEventLoop	Quarantined unsafe default-queue event-loop escape hatch.
-Sources/WaylandRawUnsafeShim/UnsafeDefaultQueueEventLoop.swift	wl_display_dispatch_pending	Quarantined unsafe default-queue event-loop escape hatch.
-Sources/WaylandRawUnsafeShim/UnsafeDefaultQueueEventLoop.swift	wl_display_prepare_read	Quarantined unsafe default-queue event-loop escape hatch.
+Sources/WaylandRuntime/**	eventfd	Executor wake fd primitive.
+Sources/WaylandRuntime/**	nonisolated(unsafe)	Synchronized pthread-backed executor internals.
+Sources/WaylandRuntime/**	pthread_*	Executor owner thread, mutex, condition, and join primitives.
+Sources/WaylandRuntime/**	poll(	Executor-owned Wayland fd and wake fd multiplexing.
+Sources/WaylandRuntime/**	UnsafeMutableBufferPointer	Executor-owned poll descriptor storage.
+Sources/WaylandRuntime/**	UnsafeMutablePointer	Owned ExecutorJob storage and wake-fd reads.
+Sources/WaylandRuntime/**	UnsafePointer	Wake-fd writes.
+Sources/WaylandRuntime/**	Unmanaged	pthread_create self-retain bridge.
+Sources/WaylandRuntime/UnsafeDefaultQueueEventLoop.swift	OpaquePointer	Quarantined unsafe default-queue event-loop escape hatch.
+Sources/WaylandRuntime/UnsafeDefaultQueueEventLoop.swift	UnsafeDefaultQueueEventLoop	Quarantined unsafe default-queue event-loop escape hatch.
+Sources/WaylandRuntime/UnsafeDefaultQueueEventLoop.swift	wl_display_dispatch_pending	Quarantined unsafe default-queue event-loop escape hatch.
+Sources/WaylandRuntime/UnsafeDefaultQueueEventLoop.swift	wl_display_prepare_read	Quarantined unsafe default-queue event-loop escape hatch.
 Sources/CWaylandProtocols/include/swift-wayland-shims.h	wl_proxy_get_queue	Queue assertion shim declaration.
 Sources/CWaylandProtocols/include/swift-wayland-shims.h	swl_proxy_get_queue_raw	Queue assertion shim declaration.
 Sources/CWaylandProtocols/shims/display-core.c	wl_proxy_create_wrapper	Queue-at-creation wrapper shim.

@@ -1,5 +1,5 @@
-#ifndef SWIFT_WAYLAND_UNSAFE_SHIM_H
-#define SWIFT_WAYLAND_UNSAFE_SHIM_H
+#ifndef SWIFT_WAYLAND_RUNTIME_SHIMS_H
+#define SWIFT_WAYLAND_RUNTIME_SHIMS_H
 
 #ifndef __linux__
 #error "SwiftWayland currently supports Linux only."

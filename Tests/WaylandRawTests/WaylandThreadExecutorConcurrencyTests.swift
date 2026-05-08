@@ -3,7 +3,7 @@ import Glibc
 import Synchronization
 import Testing
 
-@testable import WaylandRawUnsafeShim
+@testable import WaylandRuntime
 
 private final class ShutdownCompletionRecorder: Sendable {
     private struct State: Sendable {

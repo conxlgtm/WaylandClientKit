@@ -1,5 +1,5 @@
 import WaylandRaw
-import WaylandRawUnsafeShim
+import WaylandRuntime
 
 public actor WaylandDisplay {
     public static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000

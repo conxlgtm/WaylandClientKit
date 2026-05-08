@@ -1,5 +1,5 @@
 import Testing
-import WaylandKeyboardInterpretation
+import WaylandKeyboard
 
 @testable import WaylandClient
 
@@ -7,7 +7,7 @@ import WaylandKeyboardInterpretation
 struct KeyboardInterpretationConfigurationTests {
     @Test
     func publicComposeDisabledMapsToInternalDisabled() {
-        let mapped = WaylandKeyboardInterpretation.KeyboardInterpreterConfiguration(
+        let mapped = WaylandKeyboard.KeyboardInterpreterConfiguration(
             KeyboardInterpretationConfiguration(compose: .disabled)
         )
 
@@ -17,7 +17,7 @@ struct KeyboardInterpretationConfigurationTests {
     @Test
     func publicComposeCancellationPolicyMapsToInternalPolicy() throws {
         let locale = try WaylandClient.KeyboardComposeLocaleIdentifier("sv_SE.UTF-8")
-        let mapped = WaylandKeyboardInterpretation.KeyboardInterpreterConfiguration(
+        let mapped = WaylandKeyboard.KeyboardInterpreterConfiguration(
             KeyboardInterpretationConfiguration(
                 compose: .enabled(
                     locale: .identifier(locale),
@@ -30,7 +30,7 @@ struct KeyboardInterpretationConfigurationTests {
             mapped.compose
                 == .enabled(
                     locale: .identifier(
-                        WaylandKeyboardInterpretation.KeyboardComposeLocaleIdentifier(
+                        WaylandKeyboard.KeyboardComposeLocaleIdentifier(
                             unchecked: "sv_SE.UTF-8"
                         )
                     ),

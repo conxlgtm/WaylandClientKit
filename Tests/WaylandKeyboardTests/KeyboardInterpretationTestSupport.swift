@@ -1,7 +1,7 @@
 import Foundation
 import WaylandRaw
 
-@testable import WaylandKeyboardInterpretation
+@testable import WaylandKeyboard
 
 enum KeyboardInterpretationTestFixtureError: Error {
     case missingKeymapFixture
