@@ -7,6 +7,7 @@ Vendored XML files:
 - `protocols/upstream/core/wayland.xml`
 - `protocols/upstream/stable/xdg-shell/xdg-shell.xml`
 - `protocols/upstream/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
+- `protocols/upstream/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml`
 - `protocols/upstream/stable/viewporter/viewporter.xml`
 - `protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml`
 - `protocols/manifest.json`
@@ -22,6 +23,7 @@ Generated headers:
 - `Sources/CWaylandProtocols/include/generated/core/wayland-client-protocol.h`
 - `Sources/CWaylandProtocols/include/generated/stable/xdg-shell/xdg-shell-client-protocol.h`
 - `Sources/CWaylandProtocols/include/generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h`
+- `Sources/CWaylandProtocols/include/generated/legacy-unstable/primary-selection/primary-selection-unstable-v1-client-protocol.h`
 - `Sources/CWaylandProtocols/include/generated/stable/viewporter/viewporter-client-protocol.h`
 - `Sources/CWaylandProtocols/include/generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h`
 
@@ -30,6 +32,7 @@ Generated C files:
 - `Sources/CWaylandProtocols/generated/core/wayland-protocol.c`
 - `Sources/CWaylandProtocols/generated/stable/xdg-shell/xdg-shell-protocol.c`
 - `Sources/CWaylandProtocols/generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-protocol.c`
+- `Sources/CWaylandProtocols/generated/legacy-unstable/primary-selection/primary-selection-unstable-v1-protocol.c`
 - `Sources/CWaylandProtocols/generated/stable/viewporter/viewporter-protocol.c`
 - `Sources/CWaylandProtocols/generated/staging/fractional-scale/fractional-scale-v1-protocol.c`
 
@@ -113,6 +116,12 @@ Unstable xdg-decoration XML candidates:
 - `/usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
 - `/usr/local/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
 
+Unstable primary-selection XML candidates:
+
+- `$(pkg-config --variable=pkgdatadir wayland-protocols)/unstable/primary-selection/primary-selection-unstable-v1.xml`
+- `/usr/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml`
+- `/usr/local/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml`
+
 Stable viewporter XML candidates:
 
 - `$(pkg-config --variable=pkgdatadir wayland-protocols)/stable/viewporter/viewporter.xml`
@@ -126,8 +135,9 @@ Staging fractional-scale XML candidates:
 - `/usr/local/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml`
 
 Set `WAYLAND_CORE_XML_SOURCE`, `XDG_SHELL_XML_SOURCE`,
-`XDG_DECORATION_XML_SOURCE`, `VIEWPORTER_XML_SOURCE`, or
-`FRACTIONAL_SCALE_XML_SOURCE` to force a specific source path.
+`XDG_DECORATION_XML_SOURCE`, `PRIMARY_SELECTION_XML_SOURCE`,
+`VIEWPORTER_XML_SOURCE`, or `FRACTIONAL_SCALE_XML_SOURCE` to force a specific
+source path.
 
 Run `scripts/dev/bootstrap-linux.sh --maintainer` first to verify the scanner,
 `wayland-protocols` pkg-config module, and protocol XML inputs.

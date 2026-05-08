@@ -238,6 +238,7 @@ Current state:
 - session-owned `KeyboardInterpreter` that maps raw keyboard facts to public interpreted keyboard events
 - session-owned `CursorManager` that sets cursor surfaces when pointer focus enters registered windows
 - seat-scoped regular clipboard selection state and data-transfer event publishing
+- seat-scoped primary selection state through the primary-selection protocol
 
 ### `WaylandSmokeSupport`
 
@@ -343,12 +344,13 @@ Supported:
 - session-level raw and interpreted keyboard events
 - static pointer cursor surfaces through wayland-cursor
 - regular clipboard selection offers and sources through data-device
+- primary selection offers and sources through primary-selection
 
 Not supported:
 
 - cursor animation or per-output cursor scaling
 - client-side decoration rendering
-- primary selection or drag and drop
+- drag and drop
 - public output model
 - text input or IME
 - presentation-time
