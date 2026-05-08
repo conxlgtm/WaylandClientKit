@@ -8,7 +8,7 @@ import Testing
 @Suite
 struct DataTransferDomainTypesTests {
     @Test
-    func mimeTypeRejectsEmptyAndInteriorNULValues() {
+    func mimeTypeRejectsMalformedValues() {
         #expect(throws: DataTransferError.invalidMIMEType("")) {
             _ = try MIMEType("")
         }
@@ -17,16 +17,31 @@ struct DataTransferDomainTypesTests {
             _ = try MIMEType("text/plain\0hidden")
         }
 
+        #expect(throws: DataTransferError.invalidMIMEType(" text/plain ")) {
+            _ = try MIMEType(" text/plain ")
+        }
+
+        #expect(throws: DataTransferError.invalidMIMEType("text/")) {
+            _ = try MIMEType("text/")
+        }
+
+        #expect(throws: DataTransferError.invalidMIMEType("text/plain\nbad")) {
+            _ = try MIMEType("text/plain\nbad")
+        }
+
         #expect(MIMEType(rawValue: "") == nil)
         #expect(MIMEType(rawValue: "text/plain\0hidden") == nil)
+        #expect(MIMEType(rawValue: "text/") == nil)
     }
 
     @Test
-    func mimeTypePreservesExactOfferedStringAndConstants() throws {
+    func mimeTypePreservesExactValidOfferedStringAndConstants() throws {
         let mimeType = try MIMEType("application/x-swiftwayland-test")
+        let parameterized = try MIMEType("text/plain;charset=utf-8")
 
         #expect(mimeType.rawValue == "application/x-swiftwayland-test")
         #expect(mimeType.description == "application/x-swiftwayland-test")
+        #expect(parameterized.rawValue == "text/plain;charset=utf-8")
         #expect(MIMEType.plainText.rawValue == "text/plain")
         #expect(MIMEType.plainTextUTF8.rawValue == "text/plain;charset=utf-8")
         #expect(MIMEType.uriList.rawValue == "text/uri-list")

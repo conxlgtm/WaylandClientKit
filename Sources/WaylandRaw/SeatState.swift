@@ -1,22 +1,68 @@
+package enum SeatStateError: Error, Equatable, Sendable {
+    case activeCapabilityNotAdvertised(
+        activeCapabilities: SeatCapabilities,
+        advertisedCapabilities: SeatCapabilities
+    )
+}
+
 package struct SeatState: Equatable, Sendable {
-    package var advertisedCapabilities: SeatCapabilities
-    package var activeCapabilities: SeatCapabilities
+    package private(set) var advertisedCapabilities: SeatCapabilities
+    package private(set) var activeCapabilities: SeatCapabilities
     package var pointerGeneration: UInt64
     package var keyboardGeneration: UInt64
     package var touchGeneration: UInt64
 
+    package init() {
+        advertisedCapabilities = []
+        activeCapabilities = []
+        pointerGeneration = 1
+        keyboardGeneration = 1
+        touchGeneration = 1
+    }
+
     package init(
-        advertisedCapabilities seatAdvertisedCapabilities: SeatCapabilities = [],
-        activeCapabilities seatActiveCapabilities: SeatCapabilities = [],
+        advertisedCapabilities seatAdvertisedCapabilities: SeatCapabilities,
+        activeCapabilities seatActiveCapabilities: SeatCapabilities,
         pointerGeneration seatPointerGeneration: UInt64 = 1,
         keyboardGeneration seatKeyboardGeneration: UInt64 = 1,
         touchGeneration seatTouchGeneration: UInt64 = 1
-    ) {
+    ) throws {
+        guard seatActiveCapabilities.isSubset(of: seatAdvertisedCapabilities) else {
+            throw SeatStateError.activeCapabilityNotAdvertised(
+                activeCapabilities: seatActiveCapabilities,
+                advertisedCapabilities: seatAdvertisedCapabilities
+            )
+        }
+
         advertisedCapabilities = seatAdvertisedCapabilities
         activeCapabilities = seatActiveCapabilities
         pointerGeneration = seatPointerGeneration
         keyboardGeneration = seatKeyboardGeneration
         touchGeneration = seatTouchGeneration
+    }
+
+    package mutating func replaceAdvertisedCapabilities(
+        _ seatAdvertisedCapabilities: SeatCapabilities
+    ) {
+        advertisedCapabilities = seatAdvertisedCapabilities
+        activeCapabilities.formIntersection(seatAdvertisedCapabilities)
+    }
+
+    package mutating func activate(_ capability: SeatCapabilities) {
+        precondition(
+            advertisedCapabilities.contains(capability),
+            "Seat active capability must be advertised before activation"
+        )
+        activeCapabilities.insert(capability)
+    }
+
+    package mutating func deactivate(_ capability: SeatCapabilities) {
+        activeCapabilities.remove(capability)
+    }
+
+    package mutating func removeAllCapabilities() {
+        advertisedCapabilities = []
+        activeCapabilities = []
     }
 }
 
@@ -89,19 +135,19 @@ private func planCapabilitiesChanged(
     var effects: [SeatEffect] = []
     let oldActive = state.activeCapabilities
 
-    next.advertisedCapabilities = capabilities
+    next.replaceAdvertisedCapabilities(capabilities)
 
     if oldActive.hasTouch, !capabilities.hasTouch {
         effects.append(.destroyTouch(currentDeviceID(state, seatID: seatID, kind: .touch)))
-        next.activeCapabilities.remove(.touch)
+        next.deactivate(.touch)
     }
     if oldActive.hasKeyboard, !capabilities.hasKeyboard {
         effects.append(.destroyKeyboard(currentDeviceID(state, seatID: seatID, kind: .keyboard)))
-        next.activeCapabilities.remove(.keyboard)
+        next.deactivate(.keyboard)
     }
     if oldActive.hasPointer, !capabilities.hasPointer {
         effects.append(.destroyPointer(currentDeviceID(state, seatID: seatID, kind: .pointer)))
-        next.activeCapabilities.remove(.pointer)
+        next.deactivate(.pointer)
     }
 
     if capabilities.hasPointer, !oldActive.hasPointer {
@@ -112,7 +158,7 @@ private func planCapabilitiesChanged(
         )
         effects.append(.createPointer(id))
         next.pointerGeneration += 1
-        next.activeCapabilities.insert(.pointer)
+        next.activate(.pointer)
     }
     if capabilities.hasKeyboard, !oldActive.hasKeyboard {
         let id = RawInputDeviceID(
@@ -122,7 +168,7 @@ private func planCapabilitiesChanged(
         )
         effects.append(.createKeyboard(id))
         next.keyboardGeneration += 1
-        next.activeCapabilities.insert(.keyboard)
+        next.activate(.keyboard)
     }
     if capabilities.hasTouch, !oldActive.hasTouch {
         let id = RawInputDeviceID(
@@ -132,7 +178,7 @@ private func planCapabilitiesChanged(
         )
         effects.append(.createTouch(id))
         next.touchGeneration += 1
-        next.activeCapabilities.insert(.touch)
+        next.activate(.touch)
     }
 
     if next != state || !effects.isEmpty {
@@ -149,9 +195,12 @@ private func planChildCreated(
     guard !state.activeCapabilities.contains(capability) else {
         return SeatTransitionPlan(effects: [], nextState: state)
     }
+    guard state.advertisedCapabilities.contains(capability) else {
+        return SeatTransitionPlan(effects: [], nextState: state)
+    }
 
     var next = state
-    next.activeCapabilities.insert(capability)
+    next.activate(capability)
     return SeatTransitionPlan(effects: [.emitSeatSnapshot], nextState: next)
 }
 
@@ -164,7 +213,7 @@ private func planChildRemoved(
     }
 
     var next = state
-    next.activeCapabilities.remove(capability)
+    next.deactivate(capability)
     return SeatTransitionPlan(effects: [.emitSeatSnapshot], nextState: next)
 }
 
@@ -182,8 +231,7 @@ private func planSeatRemoved(_ state: SeatState, seatID: RawSeatID) -> SeatTrans
     }
 
     var next = state
-    next.advertisedCapabilities = []
-    next.activeCapabilities = []
+    next.removeAllCapabilities()
     effects.append(.emitSeatRemoved)
 
     return SeatTransitionPlan(effects: effects, nextState: next)

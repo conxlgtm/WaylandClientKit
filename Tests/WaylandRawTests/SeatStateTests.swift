@@ -31,9 +31,9 @@ struct SeatStateTests {
     }
 
     @Test
-    func repeatedCapabilityMaskIsIdempotentWhenChildIsActive() {
+    func repeatedCapabilityMaskIsIdempotentWhenChildIsActive() throws {
         let seatID = RawSeatID(rawValue: 7)
-        let old = SeatState(
+        let old = try SeatState(
             advertisedCapabilities: [.pointer],
             activeCapabilities: [.pointer],
             pointerGeneration: 2
@@ -50,9 +50,9 @@ struct SeatStateTests {
     }
 
     @Test
-    func removingPointerCapabilityPlansPointerDestruction() {
+    func removingPointerCapabilityPlansPointerDestruction() throws {
         let seatID = RawSeatID(rawValue: 8)
-        let old = SeatState(
+        let old = try SeatState(
             advertisedCapabilities: [.pointer],
             activeCapabilities: [.pointer],
             pointerGeneration: 2
@@ -79,9 +79,9 @@ struct SeatStateTests {
     }
 
     @Test
-    func changingFromPointerKeyboardToKeyboardDestroysPointerOnly() {
+    func changingFromPointerKeyboardToKeyboardDestroysPointerOnly() throws {
         let seatID = RawSeatID(rawValue: 9)
-        let old = SeatState(
+        let old = try SeatState(
             advertisedCapabilities: [.pointer, .keyboard],
             activeCapabilities: [.pointer, .keyboard],
             pointerGeneration: 2,
@@ -102,6 +102,54 @@ struct SeatStateTests {
                 .emitSeatSnapshot,
             ])
         #expect(plan.nextState.activeCapabilities == [.keyboard])
+    }
+
+    @Test
+    func seatStateRejectsActiveCapabilityNotAdvertised() {
+        #expect(
+            throws: SeatStateError.activeCapabilityNotAdvertised(
+                activeCapabilities: [.pointer],
+                advertisedCapabilities: []
+            )
+        ) {
+            _ = try SeatState(
+                advertisedCapabilities: [],
+                activeCapabilities: [.pointer]
+            )
+        }
+    }
+
+    @Test
+    func propertySeatActiveCapabilitiesAreAlwaysSubsetOfAdvertisedCapabilities() {
+        let seatID = RawSeatID(rawValue: 20)
+
+        for advertisedRawValue in UInt32(0)...UInt32(7) {
+            let advertised = SeatCapabilities(rawValue: advertisedRawValue)
+            let plan = reduceSeatState(
+                SeatState(),
+                seatID: seatID,
+                action: .capabilitiesChanged(advertised)
+            )
+
+            #expect(
+                plan.nextState.activeCapabilities.isSubset(
+                    of: plan.nextState.advertisedCapabilities
+                )
+            )
+        }
+    }
+
+    @Test
+    func pointerCreatedWithoutAdvertisedPointerIsRejected() {
+        let seatID = RawSeatID(rawValue: 21)
+        let plan = reduceSeatState(
+            SeatState(),
+            seatID: seatID,
+            action: .pointerCreated
+        )
+
+        #expect(plan.effects.isEmpty)
+        #expect(plan.nextState.activeCapabilities.isEmpty)
     }
 
     @Test
@@ -142,9 +190,9 @@ struct SeatStateTests {
     }
 
     @Test
-    func seatRemovalDestroysChildrenBeforeEmittingRemoval() {
+    func seatRemovalDestroysChildrenBeforeEmittingRemoval() throws {
         let seatID = RawSeatID(rawValue: 12)
-        let old = SeatState(
+        let old = try SeatState(
             advertisedCapabilities: [.pointer, .keyboard, .touch],
             activeCapabilities: [.pointer, .keyboard, .touch],
             pointerGeneration: 2,

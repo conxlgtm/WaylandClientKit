@@ -209,8 +209,12 @@ package final class TopLevelWindow {
             .diagnostic(
                 WindowDiagnostic(
                     windowID: id,
-                    operation: .scale(.fractionalScaleUnavailable),
-                    message: "Fractional scale protocol is available, but viewporter is missing."
+                    payload: .scale(
+                        WindowScaleDiagnostic(
+                            operation: .fractionalScaleUnavailable,
+                            reason: .viewporterMissing
+                        )
+                    )
                 )
             )
         )
@@ -233,8 +237,12 @@ package final class TopLevelWindow {
             .diagnostic(
                 WindowDiagnostic(
                     windowID: id,
-                    operation: .decoration(.decorationUnavailable),
-                    message: reason.diagnosticMessage
+                    payload: .decoration(
+                        WindowDecorationDiagnostic(
+                            operation: .decorationUnavailable,
+                            reason: WindowDecorationUnavailableReason(reason)
+                        )
+                    )
                 )
             )
         )

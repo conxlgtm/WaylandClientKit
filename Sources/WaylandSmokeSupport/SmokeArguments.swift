@@ -2,6 +2,7 @@ package enum SmokeArgumentError: Error, Equatable, Sendable, CustomStringConvert
     case unknownArgument(String)
     case missingValue(String)
     case invalidValue(argument: String, value: String)
+    case unsupportedEndOfOptionsMarker
 
     package var description: String {
         switch self {
@@ -11,6 +12,8 @@ package enum SmokeArgumentError: Error, Equatable, Sendable, CustomStringConvert
             "missing value for \(argument)"
         case .invalidValue(let argument, let value):
             "invalid value for \(argument): \(value)"
+        case .unsupportedEndOfOptionsMarker:
+            "-- is not supported because swift-wayland-smoke has no positional arguments"
         }
     }
 }
@@ -38,7 +41,7 @@ package enum SmokeArguments {
             case "-h", "--help":
                 return .help
             case "--":
-                break
+                throw SmokeArgumentError.unsupportedEndOfOptionsMarker
             case "--timeout-milliseconds":
                 timeout = try readMilliseconds(
                     after: argument,

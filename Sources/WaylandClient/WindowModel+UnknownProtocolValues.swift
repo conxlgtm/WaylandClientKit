@@ -57,8 +57,7 @@ extension WindowModel {
             .publishDiagnostic(
                 WindowDiagnostic(
                     windowID: id,
-                    operation: .unknownProtocolValue(field),
-                    message: diagnostic.description
+                    payload: .unknownProtocolValue(diagnostic)
                 )
             )
         )

@@ -18,6 +18,13 @@ extension InputRouter {
                     message: diagnostic.message
                 )
             )
+        case .seatBinding(let diagnostic):
+            .seatBinding(
+                InputSeatBindingDiagnostic(
+                    interface: diagnostic.interface,
+                    failure: convert(diagnostic.failure)
+                )
+            )
         case .inputPipelineOverflow(let overflow):
             .inputPipelineOverflow(convertRawOverflow(overflow))
         }
@@ -32,6 +39,47 @@ extension InputRouter {
 
     func convert(_ diagnostic: RawKeyboardRepeatDiagnostic) -> KeyboardRepeatDiagnostic {
         KeyboardRepeatDiagnostic(convert(diagnostic.error))
+    }
+
+    func convert(_ failure: RawSeatBindingFailure) -> InputSeatBindingFailure {
+        switch failure {
+        case .bindFailed(let interface):
+            .bindFailed(interface: interface)
+        case .listener(let listener):
+            .listener(convert(listener))
+        case .proxy(let error):
+            convert(error)
+        case .system(let error):
+            .system(WaylandSystemError(error))
+        case .systemErrnoUnavailable(let operation):
+            .systemErrnoUnavailable(WaylandSystemOperation(operation))
+        case .other(let message):
+            .other(message)
+        }
+    }
+
+    func convert(_ listener: RawListenerInstallationError) -> InputSeatBindingListener {
+        switch listener {
+        case .registry:
+            .registry
+        case .seat:
+            .seat
+        case .pointer:
+            .pointer
+        case .keyboard:
+            .keyboard
+        case .touch:
+            .touch
+        case .syncCallback:
+            .syncCallback
+        }
+    }
+
+    func convert(_ error: RawProxyError) -> InputSeatBindingFailure {
+        switch error {
+        case .queueMismatch(let interface, let objectID):
+            .proxyQueueMismatch(interface: interface, objectID: objectID?.value)
+        }
     }
 
     func convert(_ error: RawKeyboardRepeatInfoError) -> KeyboardRepeatFailure {
@@ -77,6 +125,8 @@ extension InputRouter {
             .keyboardRepeat
         case .listener(let name):
             .listener(name)
+        case .seatBinding(let interface):
+            .seatBinding(interface)
         case .inputPipelineOverflow(let overflow):
             .inputPipelineOverflow(convertRawOverflow(overflow))
         }
