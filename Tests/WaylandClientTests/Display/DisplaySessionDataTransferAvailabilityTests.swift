@@ -60,6 +60,61 @@ struct DisplaySessionDataTransferAvailabilityTests {
     }
 
     @Test
+    func primarySelectionProcessingBindsGlobalsBeforeAnyWindow() throws {
+        let decision = try DisplaySession.primarySelectionGlobalProcessingDecision(
+            state: .unbound,
+            requirement: .requiresPrimarySelectionDeviceManager
+        )
+
+        #expect(decision == .bindRequiredGlobals)
+    }
+
+    @Test
+    func optionalPrimarySelectionProcessingSkipsWhenManagerIsMissing() throws {
+        let decision = try DisplaySession.primarySelectionGlobalProcessingDecision(
+            state: .boundWithoutPrimarySelectionDeviceManager,
+            requirement: .optional
+        )
+
+        #expect(decision == .skip)
+    }
+
+    @Test
+    func primarySelectionProcessingThrowsUnavailableWhenManagerIsMissing() {
+        #expect(throws: DataTransferError.unavailable) {
+            _ = try DisplaySession.primarySelectionGlobalProcessingDecision(
+                state: .boundWithoutPrimarySelectionDeviceManager,
+                requirement: .requiresPrimarySelectionDeviceManager
+            )
+        }
+    }
+
+    @Test
+    func primarySelectionProcessingSynchronizesSeatsWhenManagerIsAvailable() throws {
+        let seatIDs = [SeatID(rawValue: 7), SeatID(rawValue: 11)]
+        let provider = RecordingDataTransferGlobalProvider(
+            currentSnapshot: nil,
+            currentPrimarySelectionSnapshot: nil,
+            boundPrimarySelectionSnapshot: PrimarySelectionGlobalSnapshot(
+                bindingState: .boundWithPrimarySelectionDeviceManager,
+                seatIDs: seatIDs
+            )
+        )
+        var synchronizedSeatIDs: [SeatID] = []
+
+        let outcome = try DisplaySession.processPrimarySelectionGlobals(
+            requirement: .requiresPrimarySelectionDeviceManager,
+            provider: provider
+        ) { seatIDs in
+            synchronizedSeatIDs = seatIDs
+        }
+
+        #expect(outcome == .synchronized)
+        #expect(provider.bindRequiredPrimarySelectionGlobalsCount == 1)
+        #expect(synchronizedSeatIDs == seatIDs)
+    }
+
+    @Test
     func setClipboardBeforeWindowBindsGlobalsAndSynchronizesSeats() throws {
         let seatIDs = [SeatID(rawValue: 7), SeatID(rawValue: 11)]
         let provider = RecordingDataTransferGlobalProvider(
@@ -258,24 +313,42 @@ struct DisplaySessionDataTransferAvailabilityTests {
 
 private final class RecordingDataTransferGlobalProvider: DataTransferGlobalProviding {
     private(set) var currentDataTransferGlobalSnapshot: DataTransferGlobalSnapshot?
+    private(set) var currentPrimarySelectionGlobalSnapshot: PrimarySelectionGlobalSnapshot?
     private let boundSnapshot: DataTransferGlobalSnapshot
+    private let boundPrimarySelectionSnapshot: PrimarySelectionGlobalSnapshot
     private(set) var bindRequiredGlobalsCount = 0
+    private(set) var bindRequiredPrimarySelectionGlobalsCount = 0
 
     init(
         currentSnapshot: DataTransferGlobalSnapshot?,
+        currentPrimarySelectionSnapshot: PrimarySelectionGlobalSnapshot? = nil,
         boundSnapshot snapshotAfterBinding: DataTransferGlobalSnapshot =
             DataTransferGlobalSnapshot(
                 bindingState: .boundWithDataDeviceManager,
                 seatIDs: []
+            ),
+        boundPrimarySelectionSnapshot primarySelectionSnapshotAfterBinding:
+            PrimarySelectionGlobalSnapshot =
+            PrimarySelectionGlobalSnapshot(
+                bindingState: .boundWithPrimarySelectionDeviceManager,
+                seatIDs: []
             )
     ) {
         currentDataTransferGlobalSnapshot = currentSnapshot
+        currentPrimarySelectionGlobalSnapshot = currentPrimarySelectionSnapshot
         boundSnapshot = snapshotAfterBinding
+        boundPrimarySelectionSnapshot = primarySelectionSnapshotAfterBinding
     }
 
     func bindRequiredDataTransferGlobals() throws -> DataTransferGlobalSnapshot {
         bindRequiredGlobalsCount += 1
         currentDataTransferGlobalSnapshot = boundSnapshot
         return boundSnapshot
+    }
+
+    func bindRequiredPrimarySelectionGlobals() throws -> PrimarySelectionGlobalSnapshot {
+        bindRequiredPrimarySelectionGlobalsCount += 1
+        currentPrimarySelectionGlobalSnapshot = boundPrimarySelectionSnapshot
+        return boundPrimarySelectionSnapshot
     }
 }

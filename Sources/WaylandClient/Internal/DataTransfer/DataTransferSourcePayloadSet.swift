@@ -53,6 +53,10 @@ package final class DataTransferSourceSendRequest {
     package let mimeType: MIMEType
     package let data: Data
 
+    package var sourceID: DataSourceID {
+        source.sourceID
+    }
+
     private let descriptor: Mutex<Int32?>
     private let descriptorIO: DataTransferSourceDescriptorIO
 
