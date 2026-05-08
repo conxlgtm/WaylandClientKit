@@ -1,8 +1,8 @@
 # Public API Audit
 
-This audit records the current API boundary and the intended `0.0.1` release
-contract. `0.0.1` is still a development checkpoint, but public declarations in
-the `WaylandClient` product should be treated as intentional user-facing API.
+This audit records the current API boundary for the experimental `WaylandClient`
+product. There is no compatibility promise yet, but public declarations in this
+product should still be treated as intentional user-facing API.
 
 ## Products
 
@@ -15,9 +15,14 @@ Intentionally public:
 
 - `WaylandDisplay`
 - `Window`
+- `PopupSurface`
 - `WindowConfiguration`
 - `WindowDecorationPreference`
 - `WindowDecorationMode`
+- `PopupConfiguration`
+- `PopupPositioner`
+- `PopupPlacement`
+- `PopupLifecycleEvent`
 - `SurfaceScale`
 - `SurfaceGeometry`
 - `SoftwareFrameGeometry`
@@ -26,27 +31,44 @@ Intentionally public:
 - `DisplayEvent`
 - `DisplayDiagnostic`
 - `DiagnosticSeverity`
+- `DisplayEvents`
+- `InputEvents`
+- `DataTransferEvents`
+- `DisplayDiagnostics`
 - `WaylandDisplayError`
 - `InputEvent`
 - `InputEventKind`
 - `SeatCapabilities`
 - `SeatID`
 - `WindowID`
+- `PopupSurfaceIdentity`
 - public pointer, keyboard, and touch event payloads
 - public raw and interpreted keyboard event payloads
 - `PointerCursor`
 - `CursorRequestResult`
 - `CursorConfiguration`
+- `ClipboardOffer`
+- `ClipboardSource`
+- `ClipboardSourceConfiguration`
+- `ClipboardSourcePayload`
+- `ClipboardOfferIdentity`
+- `ClipboardSourceIdentity`
+- `ClipboardSelectionEvent`
+- `DataTransferEvent`
+- `DataTransferDiagnostic`
+- `MIMEType`
+- `OwnedFileDescriptor`
+- `ByteCount`
 - `ClientError`
 
-Release contract:
+Current user-facing contract:
 
 - `WaylandClient` is the only supported import for downstream users.
-- Display connection, window creation/close, request-redraw, software
+- Display connection, window creation and close, request-redraw, software
   XRGB8888 drawing, basic pointer/keyboard/touch events, interpreted keyboard
   payloads, server-side decoration negotiation, scale-aware window geometry,
-  cursor requests, diagnostics, and terminal display errors are the supported
-  `0.0.1` product surface.
+  popup surfaces, regular clipboard selection, cursor requests, diagnostics,
+  and terminal display errors are the current product surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
   are derived display text, not control-flow payloads.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
@@ -59,6 +81,9 @@ Release contract:
 - Window sizes are logical surface sizes. `SurfaceGeometry` records the
   logical size, buffer-pixel size, and exact `SurfaceScale` used by the
   current SHM frame.
+- Regular clipboard means `wl_data_device_manager` selection offers and sources.
+  Primary selection and drag-and-drop transfer handling are not part of this
+  contract.
 
 Intentionally package-internal:
 
@@ -68,7 +93,7 @@ Intentionally package-internal:
 Notes:
 
 - `WaylandDisplay` is the high-level async surface. It is an actor backed by a
-  dedicated Wayland owner-thread executor. The executor owns the integrated pump loop;
+  dedicated Wayland owner-thread executor. The executor owns the integrated pump loop.
   display/input event streams are passive subscribers and do not drive Wayland dispatch.
 - Display streams terminate normally on explicit close and terminate with
   `WaylandDisplayError` on fatal display failure or per-subscriber overflow.
@@ -77,14 +102,16 @@ Notes:
 - `Window` is the ergonomic async handle. Windows are still addressable by `WindowID`,
   and teardown is routed through `WaylandDisplay.closeWindow(_:)` or
   `WaylandDisplay.close()`.
+- `PopupSurface` is the public popup handle. Popup lifecycle display events carry
+  the popup identity and parent window identity.
 - `Window.decorationMode` reports the current effective xdg-decoration mode when
-  the compositor supports `zxdg_decoration_manager_v1`; mode absence is explicit
+  the compositor supports `zxdg_decoration_manager_v1`. Mode absence is explicit
   as `.unavailable`.
 - `Window.geometry` reports the current logical surface size, buffer-pixel size,
   and scale. The value is derived from the current xdg configure size and the
   active preferred integer or fractional surface scale.
 - The runtime is single-thread-affine. Thread-affine session/window entry points are
-  package implementation details; downstream users should go through `WaylandDisplay`
+  package implementation details. Downstream users should go through `WaylandDisplay`
   and `Window`.
 - `TopLevelWindow` is currently tied to SHM software drawing and is not public API.
 - `SoftwareFrame` is noncopyable and borrowed by drawing callbacks. User code can draw
@@ -100,9 +127,12 @@ Notes:
 - Cursor management is display-level. `PointerCursor` names theme cursors, and
   `WaylandDisplay.setPointerCursor(_:)` applies the desired cursor to focused seats.
   Explicit cursor changes throw when the cursor stack cannot fulfill the request.
+- Clipboard offers are seat-scoped. `ClipboardOffer.read` performs a bounded read
+  with a timeout, and `ClipboardSourceConfiguration` represents local regular
+  clipboard payloads.
 - `WindowDecorationPreference.preferServerSide` is the default because SwiftWayland
   does not draw client-side titlebars. `preferClientSide` requests no server-side
-  decorations; applications remain responsible for any custom chrome they want.
+  decorations. Applications remain responsible for any custom chrome they want.
 - `WaylandDisplay.withConnection` does not eagerly require a cursor theme to load.
   Cursor theme loading is deferred until a visible cursor image is first needed.
 - `WaylandDisplay.withConnection`, `Window.show`, and `PopupSurface.show` use finite
@@ -124,10 +154,10 @@ These targets are package-internal architecture units:
 They may contain `public` declarations for cross-target compilation mechanics, but they are
 not vended as package library products.
 
-Run `./Scripts/dump-public-api.sh` before a checkpoint tag and compare the
+Run `./Scripts/dump-public-api.sh` during public API review and compare the
 output against this audit. Any new public declaration in `WaylandClient` should
 be classified as product API, raw-preserving API, diagnostic/error API, or
-temporary API to remove before the checkpoint.
+temporary API to remove before a public compatibility policy exists.
 
 ## Stable Raw-Preserving Values
 
@@ -172,14 +202,14 @@ Public event payloads are value-shaped and can be `Sendable`.
 
 Do not add `@unchecked Sendable` without a documented exception and review. Current lint rules reject it.
 
-## Compatibility
+## Development Contract
 
-The `0.0.1` checkpoint may break API in later changes.
+The public API may break while SwiftWayland is experimental.
 
-Before tagging a checkpoint:
+Before treating a public declaration as intentional:
 
 1. Run `./Scripts/dump-public-api.sh`.
 2. Review all new `WaylandClient` public declarations.
 3. Confirm non-product public declarations are still outside the manifest's
    library products.
-4. Update this audit if the release contract changes.
+4. Update this audit if the current public contract changes.

@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a correctness, crash, or compatibility problem
+body:
+  - type: input
+    id: swift
+    attributes:
+      label: Swift version
+  - type: input
+    id: distro
+    attributes:
+      label: Linux distribution
+  - type: input
+    id: compositor
+    attributes:
+      label: Compositor and version
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+  - type: checkboxes
+    id: layers
+    attributes:
+      label: Affected layers
+      options:
+        - label: raw
+        - label: client
+        - label: cursor
+        - label: keyboard
+        - label: clipboard
+        - label: popup
+        - label: docs
+        - label: ci

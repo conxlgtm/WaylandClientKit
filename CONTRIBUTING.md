@@ -5,8 +5,10 @@ SwiftWayland is an experimental Linux Wayland client package. Keep changes small
 ## Environment
 
 Swift 6.3.1 or newer must already be installed.
-The bootstrap script verifies Swift and Linux system dependencies by default; it does not install or switch Swift toolchains.
-It uses `Scripts/swift.sh` by default; set `SWIFT_COMMAND=/path/to/swift` for custom toolchain resolution.
+The bootstrap script verifies Swift and Linux system dependencies by default.
+It does not install or switch Swift toolchains.
+It uses `Scripts/swift.sh` by default.
+Set `SWIFT_COMMAND=/path/to/swift` for custom toolchain resolution.
 
 Core build requirements:
 
@@ -18,7 +20,8 @@ Core build requirements:
 - `xkbcommon`
 
 Install distro packages explicitly, or run the bootstrap installer mode for Debian/Ubuntu, Fedora/RHEL-like, Arch/Manjaro, openSUSE, Alpine, or Gentoo systems.
-For Nix/NixOS, use dry-run mode to print shell inputs and add them to a `nix shell`, flake, or `shell.nix`; bootstrap install mode does not mutate Nix profiles or NixOS system configuration.
+For Nix/NixOS, use dry-run mode to print shell inputs and add them to a `nix shell`, flake, or `shell.nix`.
+Bootstrap install mode does not mutate Nix profiles or NixOS system configuration.
 
 ```bash
 ./Scripts/bootstrap-linux.sh --check
@@ -100,8 +103,18 @@ public
 
 `WaylandClient` is the primary public overlay. `WaylandRaw` is intentionally protocol-shaped and less stable. Keep raw details out of `WaylandClient` unless they are part of the documented experimental API.
 
+When a pull request adds, removes, or changes public `WaylandClient` declarations, update `docs/public-api-audit.md`.
+If behavior appears in README support lists, update architecture and roadmap docs in the same change.
+
+## Safety Review
+
+Any new unsafe surface must explain the ownership invariant that makes it valid.
+If the strict memory safety baseline or unsafe-token allowlist changes, describe why in the pull request.
+Prefer scoped borrowed values, validated domain values, and package-internal C shims over raw pointer exposure.
+
 ## Scope Rule
 
 Cut breadth before correctness.
 
-Do not add GPU rendering, cursor themes, decorations, clipboard, drag and drop, text input, IME, widgets, or multi-threaded queues as incidental side work. Those belong in dedicated roadmap stories.
+Do not add GPU rendering, cursor animation, output management, primary selection, drag and drop, text input, IME, widgets, or multi-threaded queues as incidental side work.
+Those belong in dedicated roadmap stories.
