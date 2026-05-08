@@ -50,7 +50,7 @@ Tests/**	UnsafePointer	Test doubles for C listener and keymap APIs.
 Tests/**	UnsafeBufferPointer	Test doubles for C strings and temporary file paths.
 Tests/**	UnsafeRawPointer	Test doubles for C buffer APIs.
 Tests/**	UnsafeRawBufferPointer	Test doubles for C buffer APIs.
-Tests/WaylandClientTests/InputRouterTests.swift	Unmanaged	Input target regression names use UnmanagedSurface as a domain state, not Swift Unmanaged.
-Tests/WaylandClientTests/InterpretedKeyboardInputRouterTests.swift	Unmanaged	Input target regression names use UnmanagedSurface as a domain state, not Swift Unmanaged.
-Tests/WaylandClientTests/InputRouterTouchTests.swift	Unmanaged	Input target regression names use UnmanagedSurface as a domain state, not Swift Unmanaged.
+Tests/WaylandClientTests/Input/InputRouterTests.swift	Unmanaged	Input target regression names use UnmanagedSurface as a domain state, not Swift Unmanaged.
+Tests/WaylandClientTests/Input/InterpretedKeyboardInputRouterTests.swift	Unmanaged	Input target regression names use UnmanagedSurface as a domain state, not Swift Unmanaged.
+Tests/WaylandClientTests/Input/InputRouterTouchTests.swift	Unmanaged	Input target regression names use UnmanagedSurface as a domain state, not Swift Unmanaged.
 Tests/WaylandRuntimeTests/EventLoop/EventLoopSmokeTests.swift	UnsafeDefaultQueueEventLoop	Test coverage for quarantined default-queue escape hatch.
