@@ -19,7 +19,6 @@ struct SmokeArgumentsTests {
     @Test
     func timeoutArgumentsOverrideConfiguration() throws {
         let command = try SmokeArguments.parse([
-            "--",
             "--timeout-milliseconds",
             "2500",
             "--post-commit-pump-milliseconds",
@@ -35,6 +34,13 @@ struct SmokeArgumentsTests {
                     )
                 )
         )
+    }
+
+    @Test
+    func doubleDashIsRejectedBecauseSmokeHasNoPositionals() {
+        #expect(throws: SmokeArgumentError.unsupportedEndOfOptionsMarker) {
+            try SmokeArguments.parse(["--"])
+        }
     }
 
     @Test

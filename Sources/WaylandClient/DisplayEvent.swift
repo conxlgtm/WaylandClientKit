@@ -410,6 +410,7 @@ final class DisplayEventHub: Sendable {
         case .keyboardKeymap,
             .keyboardRepeat,
             .listener,
+            .seatBinding,
             .cursor,
             .unknownProtocolValue:
             .degraded
@@ -442,6 +443,7 @@ final class DisplayEventHub: Sendable {
         case .keyboardKeymap,
             .keyboardRepeat,
             .listener,
+            .seatBinding,
             .cursor,
             .unknownProtocolValue:
             nil

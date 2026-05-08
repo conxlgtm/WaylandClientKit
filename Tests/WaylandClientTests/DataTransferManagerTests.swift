@@ -141,6 +141,27 @@ struct DataTransferManagerTests {
     }
 
     @Test
+    func malformedRemoteMIMETypeQueuesCallbackFailure() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let offer = try #require(backend.offerBinding(for: offerHandle1))
+        offer.emit(.offer(" text/plain "))
+
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataOffer(ClipboardOfferIdentity(offer.id)),
+                    error: .invalidMIMEType(" text/plain ")
+                )
+        )
+        #expect(manager.offerSnapshots.isEmpty)
+    }
+
+    @Test
     func replacingSelectionDestroysPreviousOfferBinding() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)

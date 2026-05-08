@@ -80,8 +80,12 @@ package enum WindowFailureClassifier {
             return .diagnostic(
                 WindowDiagnostic(
                     windowID: windowID,
-                    operation: .callback(operation),
-                    message: clientError.description
+                    payload: .callback(
+                        WindowCallbackDiagnostic(
+                            operation: operation,
+                            failure: .displayClosed
+                        )
+                    )
                 )
             )
         case .window:

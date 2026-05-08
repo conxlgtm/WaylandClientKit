@@ -176,18 +176,22 @@ public struct DataTransferDiagnostic: Equatable, Sendable {
     public let source: ClipboardSourceIdentity
     public let mimeType: MIMEType
     public let operation: DataTransferDiagnosticOperation
-    public let message: String
+    public let error: DataTransferError
+
+    public var message: String {
+        error.description
+    }
 
     public init(
         source diagnosticSource: ClipboardSourceIdentity,
         mimeType diagnosticMIMEType: MIMEType,
         operation diagnosticOperation: DataTransferDiagnosticOperation,
-        message diagnosticMessage: String
+        error diagnosticError: DataTransferError
     ) {
         source = diagnosticSource
         mimeType = diagnosticMIMEType
         operation = diagnosticOperation
-        message = diagnosticMessage
+        error = diagnosticError
     }
 }
 
@@ -217,7 +221,7 @@ public struct MIMEType: RawRepresentable, Equatable, Hashable, Sendable,
     }
 
     package init(unchecked value: String) {
-        precondition(Self.isValid(value), "MIME type must be non-empty and NUL-free")
+        precondition(Self.isValid(value), "MIME type must be a valid MIME token")
         rawValue = value
     }
 
@@ -226,7 +230,53 @@ public struct MIMEType: RawRepresentable, Equatable, Hashable, Sendable,
     }
 
     private static func isValid(_ value: String) -> Bool {
-        !value.isEmpty && !value.contains("\0")
+        guard !value.isEmpty, value == value.trimmingCharacters(in: .whitespacesAndNewlines) else {
+            return false
+        }
+        guard !value.unicodeScalars.contains(where: { $0.value < 0x21 || $0.value > 0x7E }) else {
+            return false
+        }
+
+        let parts = value.split(separator: ";", omittingEmptySubsequences: false)
+        guard let mediaType = parts.first else { return false }
+        let mediaTypeParts = mediaType.split(separator: "/", omittingEmptySubsequences: false)
+        guard mediaTypeParts.count == 2,
+            isToken(mediaTypeParts[0]),
+            isToken(mediaTypeParts[1])
+        else {
+            return false
+        }
+
+        for parameter in parts.dropFirst() {
+            let parameterParts = parameter.split(
+                separator: "=",
+                maxSplits: 1,
+                omittingEmptySubsequences: false
+            )
+            guard parameterParts.count == 2,
+                isToken(parameterParts[0]),
+                isToken(parameterParts[1])
+            else {
+                return false
+            }
+        }
+
+        return true
+    }
+
+    private static func isToken(_ value: Substring) -> Bool {
+        guard !value.isEmpty else { return false }
+
+        return value.unicodeScalars.allSatisfy { scalar in
+            switch scalar.value {
+            case 0x30...0x39, 0x41...0x5A, 0x61...0x7A:
+                true
+            case 0x21, 0x23...0x27, 0x2A, 0x2B, 0x2D, 0x2E, 0x5E, 0x5F, 0x60, 0x7C, 0x7E:
+                true
+            default:
+                false
+            }
+        }
     }
 }
 

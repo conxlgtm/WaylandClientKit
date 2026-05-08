@@ -20,8 +20,12 @@ struct WindowFailureClassifierTests {
                 == .diagnostic(
                     WindowDiagnostic(
                         windowID: windowID,
-                        operation: .callback(.frameDone),
-                        message: ClientError.display(.closed).description
+                        payload: .callback(
+                            WindowCallbackDiagnostic(
+                                operation: .frameDone,
+                                failure: .displayClosed
+                            )
+                        )
                     )
                 )
         )
@@ -194,8 +198,12 @@ struct WindowFailureRoutingTests {
         let windowID = WindowID(rawValue: 9)
         let diagnostic = WindowDiagnostic(
             windowID: windowID,
-            operation: .callback(.frameDone),
-            message: "frame callback arrived after close"
+            payload: .callback(
+                WindowCallbackDiagnostic(
+                    operation: .frameDone,
+                    failure: .displayClosed
+                )
+            )
         )
         var displayIterator = hub.displayEvents().makeAsyncIterator()
         var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
@@ -247,8 +255,12 @@ struct WindowFailureRoutingTests {
             payload: .window(
                 WindowDiagnostic(
                     windowID: windowID,
-                    operation: .presentation(.presentationFailed),
-                    message: error.description
+                    payload: .presentation(
+                        WindowPresentationDiagnostic(
+                            operation: .presentationFailed,
+                            error: error
+                        )
+                    )
                 )
             )
         )

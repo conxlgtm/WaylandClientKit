@@ -400,6 +400,43 @@ struct SeatInputRouterTests {
     }
 
     @Test
+    func seatBindingDiagnosticsRouteWithTypedFailure() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 80)
+
+        let routed = router.route(
+            rawEvent(
+                sequence: 1,
+                seatID: seatID,
+                kind: .diagnostic(
+                    RawInputDiagnostic(
+                        .seatBinding(
+                            RawSeatBindingDiagnostic(
+                                interface: "wl_keyboard",
+                                failure: .listener(.keyboard)
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        #expect(routed.first?.windowID == nil)
+        #expect(
+            routed.first?.kind
+                == .diagnostic(
+                    InputDiagnostic(
+                        .seatBinding(
+                            InputSeatBindingDiagnostic(
+                                interface: "wl_keyboard",
+                                failure: .listener(.keyboard)
+                            )
+                        )
+                    )
+                ))
+    }
+
+    @Test
     func inputPipelineOverflowDiagnosticsRouteAtDisplayLevel() {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 79)

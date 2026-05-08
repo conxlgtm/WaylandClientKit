@@ -18,6 +18,7 @@ public enum InputDiagnosticPayload: Equatable, Sendable {
     case keymap(KeymapDiagnostic)
     case keyboardRepeat(KeyboardRepeatDiagnostic)
     case listener(InputListenerDiagnostic)
+    case seatBinding(InputSeatBindingDiagnostic)
     case inputPipelineOverflow(InputPipelineOverflow)
     case cursor(CursorDiagnostic)
     case unknownProtocolValue(UnknownInputProtocolValueDiagnostic)
@@ -30,6 +31,8 @@ public enum InputDiagnosticPayload: Equatable, Sendable {
             .keyboardRepeat
         case .listener(let diagnostic):
             .listener(diagnostic.listener)
+        case .seatBinding(let diagnostic):
+            .seatBinding(diagnostic.interface)
         case .inputPipelineOverflow(let overflow):
             .inputPipelineOverflow(overflow)
         case .cursor(let diagnostic):
@@ -48,6 +51,8 @@ extension InputDiagnosticPayload: CustomStringConvertible {
         case .keyboardRepeat(let diagnostic):
             diagnostic.description
         case .listener(let diagnostic):
+            diagnostic.description
+        case .seatBinding(let diagnostic):
             diagnostic.description
         case .inputPipelineOverflow(let overflow):
             "\(overflow.stage.description) exceeded capacity \(overflow.capacity)"
@@ -145,6 +150,73 @@ public struct InputListenerDiagnostic: Equatable, Sendable, CustomStringConverti
     }
 }
 
+public struct InputSeatBindingDiagnostic: Equatable, Sendable, CustomStringConvertible {
+    public let interface: String
+    public let failure: InputSeatBindingFailure
+
+    public init(interface interfaceName: String, failure bindingFailure: InputSeatBindingFailure) {
+        interface = interfaceName
+        failure = bindingFailure
+    }
+
+    public var description: String {
+        "\(interface) binding failed: \(failure.description)"
+    }
+}
+
+public enum InputSeatBindingFailure: Equatable, Sendable, CustomStringConvertible {
+    case bindFailed(interface: String)
+    case listener(InputSeatBindingListener)
+    case proxyQueueMismatch(interface: String, objectID: UInt32?)
+    case system(WaylandSystemError)
+    case systemErrnoUnavailable(WaylandSystemOperation)
+    case other(String)
+
+    public var description: String {
+        switch self {
+        case .bindFailed(let interface):
+            "Failed to bind global: \(interface)"
+        case .listener(let listener):
+            listener.description
+        case .proxyQueueMismatch(let interface, let objectID):
+            "\(interface) proxy \(objectID.map { "id=\($0)" } ?? "?") "
+                + "is not assigned to the display owner event queue"
+        case .system(let error):
+            "Wayland runtime failed with \(error.description)"
+        case .systemErrnoUnavailable(let operation):
+            "Wayland runtime failed during \(operation.description) without errno"
+        case .other(let message):
+            message
+        }
+    }
+}
+
+public enum InputSeatBindingListener: Equatable, Sendable, CustomStringConvertible {
+    case registry
+    case seat
+    case pointer
+    case keyboard
+    case touch
+    case syncCallback
+
+    public var description: String {
+        switch self {
+        case .registry:
+            "Wayland registry listener installation failed"
+        case .seat:
+            "Wayland seat listener installation failed"
+        case .pointer:
+            "Wayland pointer listener installation failed"
+        case .keyboard:
+            "Wayland keyboard listener installation failed"
+        case .touch:
+            "Wayland touch listener installation failed"
+        case .syncCallback:
+            "Wayland sync callback listener installation failed"
+        }
+    }
+}
+
 public enum CursorDiagnosticOperation: Equatable, Sendable {
     case missingCursor
     case automaticPointerEnter
@@ -227,6 +299,7 @@ public enum InputDiagnosticOperation: Equatable, Sendable {
     case keyboardKeymap
     case keyboardRepeat
     case listener(String)
+    case seatBinding(String)
     case inputPipelineOverflow(InputPipelineOverflow)
     case cursor(CursorDiagnosticOperation)
     case unknownProtocolValue(UnknownInputProtocolValueField)

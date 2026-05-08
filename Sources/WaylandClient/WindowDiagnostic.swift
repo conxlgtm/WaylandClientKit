@@ -1,3 +1,5 @@
+import WaylandRaw
+
 public enum WindowCallbackOperation: Equatable, Sendable, CustomStringConvertible {
     case closeRequested
     case transientStateReset
@@ -123,16 +125,176 @@ public enum WindowDiagnosticOperation: Equatable, Sendable {
 
 public struct WindowDiagnostic: Equatable, Sendable {
     public let windowID: WindowID
-    public let operation: WindowDiagnosticOperation
-    public let message: String
+    public let payload: WindowDiagnosticPayload
+
+    public var operation: WindowDiagnosticOperation {
+        payload.operation
+    }
+
+    public var message: String {
+        payload.description
+    }
 
     public init(
         windowID diagnosticWindowID: WindowID,
-        operation diagnosticOperation: WindowDiagnosticOperation,
-        message diagnosticMessage: String
+        payload diagnosticPayload: WindowDiagnosticPayload
     ) {
         windowID = diagnosticWindowID
+        payload = diagnosticPayload
+    }
+}
+
+public enum WindowDiagnosticPayload: Equatable, Sendable, CustomStringConvertible {
+    case callback(WindowCallbackDiagnostic)
+    case decoration(WindowDecorationDiagnostic)
+    case presentation(WindowPresentationDiagnostic)
+    case scale(WindowScaleDiagnostic)
+    case unknownProtocolValue(UnknownWindowProtocolValueDiagnostic)
+
+    public var operation: WindowDiagnosticOperation {
+        switch self {
+        case .callback(let diagnostic):
+            .callback(diagnostic.operation)
+        case .decoration(let diagnostic):
+            .decoration(diagnostic.operation)
+        case .presentation(let diagnostic):
+            .presentation(diagnostic.operation)
+        case .scale(let diagnostic):
+            .scale(diagnostic.operation)
+        case .unknownProtocolValue(let diagnostic):
+            .unknownProtocolValue(diagnostic.field)
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .callback(let diagnostic):
+            diagnostic.description
+        case .decoration(let diagnostic):
+            diagnostic.description
+        case .presentation(let diagnostic):
+            diagnostic.description
+        case .scale(let diagnostic):
+            diagnostic.description
+        case .unknownProtocolValue(let diagnostic):
+            diagnostic.description
+        }
+    }
+}
+
+public struct WindowCallbackDiagnostic: Equatable, Sendable, CustomStringConvertible {
+    public let operation: WindowCallbackOperation
+    public let failure: WindowCallbackFailure
+
+    public init(
+        operation diagnosticOperation: WindowCallbackOperation,
+        failure diagnosticFailure: WindowCallbackFailure
+    ) {
         operation = diagnosticOperation
-        message = diagnosticMessage
+        failure = diagnosticFailure
+    }
+
+    public var description: String {
+        "\(operation.description) callback failed: \(failure.description)"
+    }
+}
+
+public enum WindowCallbackFailure: Equatable, Sendable, CustomStringConvertible {
+    case displayClosed
+
+    public var description: String {
+        switch self {
+        case .displayClosed:
+            ClientError.display(.closed).description
+        }
+    }
+}
+
+public struct WindowDecorationDiagnostic: Equatable, Sendable, CustomStringConvertible {
+    public let operation: WindowDecorationOperation
+    public let reason: WindowDecorationUnavailableReason
+
+    public init(
+        operation diagnosticOperation: WindowDecorationOperation,
+        reason diagnosticReason: WindowDecorationUnavailableReason
+    ) {
+        operation = diagnosticOperation
+        reason = diagnosticReason
+    }
+
+    public var description: String {
+        reason.description
+    }
+}
+
+public enum WindowDecorationUnavailableReason: Equatable, Sendable, CustomStringConvertible {
+    case managerMissing
+    case unsupportedManagerVersion(advertised: UInt32, minimum: UInt32)
+
+    package init(_ reason: DecorationUnavailableReason) {
+        switch reason {
+        case .managerMissing:
+            self = .managerMissing
+        case .unsupportedManagerVersion(let advertised, let minimum):
+            self = .unsupportedManagerVersion(
+                advertised: advertised.value,
+                minimum: minimum.value
+            )
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .managerMissing:
+            "Server-side decoration protocol is unavailable."
+        case .unsupportedManagerVersion(let advertised, let minimum):
+            "Server-side decoration protocol v\(advertised) is unsupported; "
+                + "requires v\(minimum) or newer."
+        }
+    }
+}
+
+public struct WindowPresentationDiagnostic: Equatable, Sendable, CustomStringConvertible {
+    public let operation: WindowPresentationOperation
+    public let error: PresentationError
+
+    public init(
+        operation diagnosticOperation: WindowPresentationOperation,
+        error presentationError: PresentationError
+    ) {
+        operation = diagnosticOperation
+        error = presentationError
+    }
+
+    public var description: String {
+        error.description
+    }
+}
+
+public struct WindowScaleDiagnostic: Equatable, Sendable, CustomStringConvertible {
+    public let operation: WindowScaleOperation
+    public let reason: WindowScaleFailure
+
+    public init(
+        operation diagnosticOperation: WindowScaleOperation,
+        reason diagnosticReason: WindowScaleFailure
+    ) {
+        operation = diagnosticOperation
+        reason = diagnosticReason
+    }
+
+    public var description: String {
+        reason.description
+    }
+}
+
+public enum WindowScaleFailure: Equatable, Sendable, CustomStringConvertible {
+    case viewporterMissing
+
+    public var description: String {
+        switch self {
+        case .viewporterMissing:
+            "Fractional scale protocol is available, but viewporter is missing."
+        }
     }
 }

@@ -28,7 +28,7 @@ struct DisplayEventHubDataTransferTests {
             source: ClipboardSourceIdentity(DataSourceID(rawValue: 1)),
             mimeType: .plainText,
             operation: .sourceWriteFailed,
-            message: "write failed"
+            error: .writeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
         )
         var displayIterator = hub.displayEvents().makeAsyncIterator()
         var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()
@@ -66,9 +66,9 @@ struct DisplayEventHubDataTransferTests {
                     source: ClipboardSourceIdentity(DataSourceID(rawValue: 2)),
                     mimeType: .plainTextUTF8,
                     operation: .sourceWriteFailed,
-                    message: DataTransferError.writeFileDescriptor(
+                    error: .writeFileDescriptor(
                         WaylandSystemErrno(unchecked: EIO)
-                    ).description
+                    )
                 )
         )
     }
@@ -90,7 +90,7 @@ struct DisplayEventHubDataTransferTests {
             source: ClipboardSourceIdentity(DataSourceID(rawValue: 4)),
             mimeType: .plainText,
             operation: .sourceWriteFailed,
-            message: "write failed"
+            error: .writeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
         )
         var displayIterator = hub.displayEvents().makeAsyncIterator()
         var diagnosticsIterator = hub.diagnostics().makeAsyncIterator()

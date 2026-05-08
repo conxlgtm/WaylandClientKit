@@ -88,8 +88,7 @@ struct WindowModelUnknownProtocolValueTests {
         return .publishDiagnostic(
             WindowDiagnostic(
                 windowID: windowID,
-                operation: .unknownProtocolValue(field),
-                message: diagnostic.description
+                payload: .unknownProtocolValue(diagnostic)
             )
         )
     }
