@@ -195,20 +195,16 @@ private func streamCloseResults(
     ) {
         try await withThrowingTaskGroup(of: Bool.self) { group in
             group.addTask {
-                var iterator = displayEvents.makeAsyncIterator()
-                return try await iterator.next() == nil
+                try await waitForTermination(of: displayEvents)
             }
             group.addTask {
-                var iterator = inputEvents.makeAsyncIterator()
-                return try await iterator.next() == nil
+                try await waitForTermination(of: inputEvents)
             }
             group.addTask {
-                var iterator = dataTransferEvents.makeAsyncIterator()
-                return try await iterator.next() == nil
+                try await waitForTermination(of: dataTransferEvents)
             }
             group.addTask {
-                var iterator = diagnostics.makeAsyncIterator()
-                return try await iterator.next() == nil
+                try await waitForTermination(of: diagnostics)
             }
 
             await Task.yield()
@@ -221,6 +217,16 @@ private func streamCloseResults(
             return results
         }
     }
+}
+
+private func waitForTermination<Stream: AsyncSequence & Sendable>(
+    of stream: Stream
+) async throws -> Bool {
+    var iterator = stream.makeAsyncIterator()
+    while try await iterator.next() != nil {
+        // Consume queued events before observing stream termination.
+    }
+    return true
 }
 
 private func displayEvent(
