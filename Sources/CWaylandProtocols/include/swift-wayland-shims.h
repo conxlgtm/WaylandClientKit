@@ -98,12 +98,6 @@ void swl_surface_set_buffer_scale(struct wl_surface *surface, int32_t scale);
 uint32_t swl_shm_format_xrgb8888(void);
 uint32_t swl_shm_format_argb8888(void);
 
-// create file backed memory for sharing with Wayland
-int swl_memfd_create(const char *name, unsigned int flags);
-// close on exec flags
-unsigned int swl_mfd_cloexec(void);
-ssize_t swl_write_no_sigpipe(int fd, const void *buffer, size_t count);
-
 /* ------------------------------------------------------------------ */
 /*  Data-device request wrappers                                      */
 /* ------------------------------------------------------------------ */

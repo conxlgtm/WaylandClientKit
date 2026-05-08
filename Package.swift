@@ -66,7 +66,7 @@ let package = Package(
         ),
         .target(
             name: "WaylandRaw",
-            dependencies: ["CWaylandProtocols", "CWaylandClientSystem"],
+            dependencies: ["CWaylandProtocols", "CWaylandClientSystem", "CWaylandRuntimeShims"],
             swiftSettings: librarySwiftSettings
         ),
         .target(

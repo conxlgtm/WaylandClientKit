@@ -1,4 +1,4 @@
-import CWaylandProtocols
+import CWaylandRuntimeShims
 import Glibc
 
 package struct RawFileDescriptor: ~Copyable {

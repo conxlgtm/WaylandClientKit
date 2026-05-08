@@ -1,10 +1,25 @@
-#include "swift-wayland-shims.h"
+#include "swift-wayland-runtime-shims.h"
 
 #include <errno.h>
 #include <pthread.h>
 #include <signal.h>
+#include <sys/mman.h>
 #include <time.h>
 #include <unistd.h>
+
+#ifndef MFD_CLOEXEC
+#define MFD_CLOEXEC 0x0001U
+#endif
+
+int swl_memfd_create(const char *name, unsigned int flags)
+{
+    return memfd_create(name, flags);
+}
+
+unsigned int swl_mfd_cloexec(void)
+{
+    return MFD_CLOEXEC;
+}
 
 ssize_t swl_write_no_sigpipe(int fd, const void *buffer, size_t count)
 {
