@@ -176,11 +176,11 @@ extension DataTransferManager {
     }
 
     private func closeSourceSendDescriptor(_ descriptor: Int32) throws {
-        let closeResult = backend.closeFileDescriptor(descriptor)
-        guard closeResult == 0 else {
-            throw DataTransferError.closeFileDescriptor(
-                WaylandSystemErrno(unchecked: closeResult)
-            )
+        switch backend.closeFileDescriptor(descriptor) {
+        case .closed:
+            return
+        case .failed(let error):
+            throw DataTransferError.closeFileDescriptor(error)
         }
     }
 

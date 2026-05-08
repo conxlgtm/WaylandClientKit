@@ -214,6 +214,7 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
     case shortRead(expectedBytes: Int, actualBytes: Int)
     case invalidWaylandArrayByteCount(byteCount: Int, elementSize: Int)
     case invalidDecorationMode(UInt32)
+    case invalidTopLevelConfigureSize(width: Int32, height: Int32)
     case invalidConfigureBounds(width: Int32, height: Int32)
     case protocolError(RawProtocolError)
     case proxy(RawProxyError)
@@ -326,6 +327,8 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
             "Wayland array byte count \(byteCount) is not divisible by \(elementSize)"
         case .invalidDecorationMode(let rawValue):
             "Invalid zxdg_toplevel_decoration_v1 mode \(rawValue)"
+        case .invalidTopLevelConfigureSize(let width, let height):
+            "Invalid xdg_toplevel.configure size \(width)x\(height)"
         case .invalidConfigureBounds(let width, let height):
             "Invalid xdg_toplevel.configure_bounds \(width)x\(height)"
         case .protocolError(let error):

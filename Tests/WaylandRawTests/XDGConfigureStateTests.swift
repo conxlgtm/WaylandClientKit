@@ -112,6 +112,17 @@ struct XDGConfigureStateTests {
     }
 
     @Test
+    func negativeTopLevelConfigureRecordsProtocolErrorAtRawBoundary() {
+        let state = XDGConfigureState()
+
+        state.handleTopLevelConfigure(width: -1, height: 480)
+
+        #expect(throws: RuntimeError.invalidTopLevelConfigureSize(width: -1, height: 480)) {
+            try state.throwPendingErrorIfAny()
+        }
+    }
+
+    @Test
     func zeroConfigureBoundsClearsBoundsInsteadOfUsingFallback() {
         let state = XDGConfigureState()
         state.handleConfigureBounds(width: 1_024, height: 768)

@@ -140,7 +140,7 @@ package enum DataTransferOfferState: Equatable, Sendable {
         return snapshot
     }
 
-    package mutating func appendMIMEType(_ mimeType: MIMEType) throws {
+    package mutating func appendMIMETypeIfNew(_ mimeType: MIMEType) throws {
         guard !mimeTypes.contains(mimeType) else {
             return
         }

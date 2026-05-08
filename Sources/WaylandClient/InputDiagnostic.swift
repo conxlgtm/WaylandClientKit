@@ -179,6 +179,8 @@ public enum UnknownInputProtocolValueField: Equatable, Hashable, Sendable,
     case pointerAxis
     case pointerAxisSource
     case pointerAxisRelativeDirection
+    case pointerButtonState
+    case keyboardKeyState
 
     public var description: String {
         switch self {
@@ -188,6 +190,10 @@ public enum UnknownInputProtocolValueField: Equatable, Hashable, Sendable,
             "pointer axis source"
         case .pointerAxisRelativeDirection:
             "pointer axis relative direction"
+        case .pointerButtonState:
+            "pointer button state"
+        case .keyboardKeyState:
+            "keyboard key state"
         }
     }
 }

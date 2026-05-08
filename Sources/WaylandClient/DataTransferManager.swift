@@ -74,7 +74,7 @@ package protocol DataTransferManagerBackend: AnyObject {
 
     var sourceDescriptorIO: DataTransferSourceDescriptorIO { get }
 
-    func closeFileDescriptor(_ descriptor: Int32) -> Int32
+    func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult
 }
 
 package final class DataTransferManager {
@@ -362,7 +362,13 @@ extension DataTransferManager {
     }
 
     private static func dataTransferCallbackError(_ error: any Error) -> DataTransferError {
-        (error as? DataTransferError) ?? .callbackFailure(String(describing: error))
+        (error as? DataTransferError)
+            ?? .callbackFailure(
+                .backend(
+                    type: String(describing: type(of: error)),
+                    description: String(describing: error)
+                )
+            )
     }
 
     private func handleUnsupportedDragEnter(

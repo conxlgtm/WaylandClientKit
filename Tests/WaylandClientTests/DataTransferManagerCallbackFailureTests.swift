@@ -7,7 +7,7 @@ struct DataTransferManagerCallbackFailureTests {
     private let seat1 = SeatID(rawValue: 1)
 
     @Test
-    func unexpectedCallbackErrorPreservesMessageAndContext() {
+    func callbackFailurePreservesBackendErrorTypeAndContext() {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
         let error = UnexpectedCallbackError(message: "adopt offer failed with EIO")
@@ -18,7 +18,31 @@ struct DataTransferManagerCallbackFailureTests {
             manager.pendingCallbackError
                 == DataTransferCallbackFailure(
                     context: .dataDevice(seat1),
-                    error: .callbackFailure("adopt offer failed with EIO")
+                    error: .callbackFailure(
+                        .backend(
+                            type: "UnexpectedCallbackError",
+                            description: "adopt offer failed with EIO"
+                        )
+                    )
+                )
+        )
+    }
+
+    @Test
+    func callbackFailurePreservesDataTransferError() {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+
+        manager.recordCallbackError(
+            DataTransferError.unknownSeat(seat1),
+            context: .dataDevice(seat1)
+        )
+
+        #expect(
+            manager.pendingCallbackError
+                == DataTransferCallbackFailure(
+                    context: .dataDevice(seat1),
+                    error: .unknownSeat(seat1)
                 )
         )
     }

@@ -160,6 +160,25 @@ struct DataTransferManagerSourceSendTests {
     }
 
     @Test
+    func sourceSendRequestCloseNegativeReturnReportsCloseError() throws {
+        let backend = RecordingDataTransferBackend()
+        backend.failingCloseDescriptors[218] = -1
+        let request = try queuedSourceSendRequest(
+            descriptor: 218,
+            data: Data("clipboard".utf8),
+            backend: backend
+        )
+
+        #expect(
+            throws: DataTransferError.closeFileDescriptor(
+                WaylandSystemErrno(unchecked: EIO)
+            )
+        ) {
+            try request.write()
+        }
+    }
+
+    @Test
     func sourceSendRequestWriteClosesEmptyPayloadWithoutWriting() throws {
         let backend = RecordingDataTransferBackend()
         let request = try queuedSourceSendRequest(

@@ -116,7 +116,7 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
         try sourceDescriptorRecorder.writeFileDescriptor(descriptor, bytes: bytes)
     }
 
-    func closeFileDescriptor(_ descriptor: Int32) -> Int32 {
+    func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult {
         sourceDescriptorRecorder.closeFileDescriptor(descriptor)
     }
 
@@ -253,9 +253,13 @@ private final class RecordingSourceDescriptorIO: Sendable {
         }
     }
 
-    func closeFileDescriptor(_ descriptor: Int32) -> Int32 {
+    func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult {
         closeRecorder.record(descriptor)
-        return storage.withLock(\.failingCloseDescriptors)[descriptor] ?? 0
+        guard let closeErrno = storage.withLock(\.failingCloseDescriptors)[descriptor] else {
+            return .closed
+        }
+
+        return .failed(WaylandSystemErrno(unchecked: closeErrno > 0 ? closeErrno : EIO))
     }
 }
 
