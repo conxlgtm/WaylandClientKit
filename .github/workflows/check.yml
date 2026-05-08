@@ -159,3 +159,4 @@ jobs:
           trap 'kill "$WESTON_PID" 2>/dev/null || true' EXIT
           export WAYLAND_DISPLAY=swiftwayland-ci
           ./Scripts/smoke-wayland.sh
+          ./Scripts/integration-wayland.sh

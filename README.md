@@ -276,6 +276,12 @@ Run the noninteractive Wayland smoke check under a real Wayland session:
 ./Scripts/smoke-wayland.sh
 ```
 
+Run public API integration tests under a real Wayland session:
+
+```bash
+./Scripts/integration-wayland.sh
+```
+
 Or run the executable directly:
 
 ```bash

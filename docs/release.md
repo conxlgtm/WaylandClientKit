@@ -23,6 +23,7 @@ Under a real Wayland session:
 
 ```bash
 ./Scripts/smoke-wayland.sh
+./Scripts/integration-wayland.sh
 swift run swift-wayland-demo
 ```
 
@@ -37,14 +38,15 @@ should not treat Weston-only behavior as sufficient for compositor compatibility
 4. Run `make check`.
 5. Run optimized builds for the package, demo, and smoke executable.
 6. Run `./Scripts/smoke-wayland.sh` under a Wayland session.
-7. Manually run `swift run swift-wayland-demo` on at least one non-Weston desktop
+7. Run `./Scripts/integration-wayland.sh` under a Wayland session.
+8. Manually run `swift run swift-wayland-demo` on at least one non-Weston desktop
    before treating compositor compatibility as proven.
-8. Regenerate protocols and confirm no diff.
-9. Generate and review the public API report.
-10. Review `docs/public-api-audit.md`.
-11. Update README support and unsupported lists if behavior changed.
-12. Tag the checkpoint.
-13. If publishing GitHub checkpoint notes, copy the supported and unsupported scope from README.
+9. Regenerate protocols and confirm no diff.
+10. Generate and review the public API report.
+11. Review `docs/public-api-audit.md`.
+12. Update README support and unsupported lists if behavior changed.
+13. Tag the checkpoint.
+14. If publishing GitHub checkpoint notes, copy the supported and unsupported scope from README.
 
 ## Stop Conditions
 
@@ -56,7 +58,8 @@ Do not tag if any of these fail:
 - tests,
 - optimized build,
 - public API report review,
-- or live Wayland smoke test.
+- live Wayland smoke test,
+- or live Wayland public API integration test.
 
 ## Tag Text Template
 
@@ -99,5 +102,6 @@ Verification:
 - make check
 - swift build -c release
 - swift run swift-wayland-smoke
+- ./Scripts/integration-wayland.sh
 - manual demo smoke test
 ```

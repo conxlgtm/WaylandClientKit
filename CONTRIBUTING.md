@@ -43,6 +43,7 @@ Under a real Wayland session, also run:
 
 ```bash
 ./Scripts/smoke-wayland.sh
+./Scripts/integration-wayland.sh
 swift run swift-wayland-demo
 ```
 
