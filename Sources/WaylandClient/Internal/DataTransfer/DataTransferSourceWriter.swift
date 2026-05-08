@@ -60,6 +60,10 @@ package final class DataTransferSourceWriteJob: Sendable {
     package let mimeType: MIMEType
     package let data: Data
 
+    package var sourceID: DataSourceID {
+        source.sourceID
+    }
+
     private let descriptor: Mutex<DataTransferSourceDescriptorState>
     private let descriptorIO: DataTransferSourceDescriptorIO
     private let writePolicy: DataTransferSourceWritePolicy
@@ -390,6 +394,21 @@ package enum DataTransferSourceWriteResult: Equatable, Sendable {
         mimeType: MIMEType,
         error: DataTransferError
     )
+
+    package static func succeeded(
+        sourceID: DataSourceID,
+        mimeType: MIMEType
+    ) -> DataTransferSourceWriteResult {
+        .succeeded(source: .clipboard(sourceID), mimeType: mimeType)
+    }
+
+    package static func failed(
+        sourceID: DataSourceID,
+        mimeType: MIMEType,
+        error: DataTransferError
+    ) -> DataTransferSourceWriteResult {
+        .failed(source: .clipboard(sourceID), mimeType: mimeType, error: error)
+    }
 }
 
 package protocol DataTransferSourceWriting: AnyObject {
