@@ -189,7 +189,10 @@ private func streamCloseResults(
     diagnostics: DisplayDiagnostics,
     close: @escaping @Sendable () async -> Void
 ) async throws -> [Bool] {
-    try await withTimeout(nanoseconds: publicIntegrationWaitTimeoutNanoseconds) {
+    try await withTimeout(
+        nanoseconds: publicIntegrationWaitTimeoutNanoseconds,
+        operation: "closing public event streams"
+    ) {
         try await withThrowingTaskGroup(of: Bool.self) { group in
             group.addTask {
                 var iterator = displayEvents.makeAsyncIterator()
@@ -225,7 +228,10 @@ private func displayEvent(
     matching predicate: @escaping @Sendable (DisplayEvent) -> Bool,
     after trigger: @escaping @Sendable () async throws -> Void
 ) async throws -> DisplayEvent {
-    try await withTimeout(nanoseconds: publicIntegrationWaitTimeoutNanoseconds) {
+    try await withTimeout(
+        nanoseconds: publicIntegrationWaitTimeoutNanoseconds,
+        operation: "waiting for display event"
+    ) {
         try await withThrowingTaskGroup(of: DisplayEvent.self) { group in
             group.addTask {
                 try await nextDisplayEvent(in: events, matching: predicate)
@@ -357,13 +363,13 @@ private enum PublicIntegrationEnvironment {
 }
 
 private enum PublicIntegrationError: Error, CustomStringConvertible {
-    case timeout
+    case timeout(operation: String)
     case streamEnded
 
     var description: String {
         switch self {
-        case .timeout:
-            "Timed out waiting for public Wayland integration event"
+        case .timeout(let operation):
+            "Timed out waiting for public Wayland integration event: \(operation)"
         case .streamEnded:
             "Public Wayland integration stream ended before the expected event"
         }
@@ -372,19 +378,20 @@ private enum PublicIntegrationError: Error, CustomStringConvertible {
 
 private func withTimeout<Value: Sendable>(
     nanoseconds: UInt64,
-    _ operation: @escaping @Sendable () async throws -> Value
+    operation operationName: String,
+    _ body: @escaping @Sendable () async throws -> Value
 ) async throws -> Value {
     try await withThrowingTaskGroup(of: Value.self) { group in
         group.addTask {
-            try await operation()
+            try await body()
         }
         group.addTask {
             try await Task.sleep(nanoseconds: nanoseconds)
-            throw PublicIntegrationError.timeout
+            throw PublicIntegrationError.timeout(operation: operationName)
         }
 
         guard let value = try await group.next() else {
-            throw PublicIntegrationError.timeout
+            throw PublicIntegrationError.timeout(operation: operationName)
         }
 
         group.cancelAll()
