@@ -8,8 +8,8 @@ package enum DataTransferGlobalBindingState: Equatable, Sendable {
 
 package enum PrimarySelectionGlobalBindingState: Equatable, Sendable {
     case unbound
-    case boundWithPrimarySelectionDeviceManager
-    case boundWithoutPrimarySelectionDeviceManager
+    case boundWithPrimaryManager
+    case boundWithoutPrimaryManager
 }
 
 package enum DataTransferProcessingRequirement: Equatable, Sendable {
@@ -364,11 +364,11 @@ extension DisplaySession {
             .skip
         case (.unbound, .requiresPrimarySelectionDeviceManager):
             .bindRequiredGlobals
-        case (.boundWithPrimarySelectionDeviceManager, _):
+        case (.boundWithPrimaryManager, _):
             .synchronizeSeats
-        case (.boundWithoutPrimarySelectionDeviceManager, .optional):
+        case (.boundWithoutPrimaryManager, .optional):
             .skip
-        case (.boundWithoutPrimarySelectionDeviceManager, .requiresPrimarySelectionDeviceManager):
+        case (.boundWithoutPrimaryManager, .requiresPrimarySelectionDeviceManager):
             throw DataTransferError.unavailable
         }
     }
@@ -400,12 +400,12 @@ extension DisplaySession {
         switch globals.extensions.primarySelectionDeviceManager {
         case .bound:
             return PrimarySelectionGlobalSnapshot(
-                bindingState: .boundWithPrimarySelectionDeviceManager,
+                bindingState: .boundWithPrimaryManager,
                 seatIDs: seatIDs
             )
         case .missing:
             return PrimarySelectionGlobalSnapshot(
-                bindingState: .boundWithoutPrimarySelectionDeviceManager,
+                bindingState: .boundWithoutPrimaryManager,
                 seatIDs: seatIDs
             )
         }
