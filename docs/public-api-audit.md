@@ -54,6 +54,13 @@ Intentionally public:
 - `ClipboardOfferIdentity`
 - `ClipboardSourceIdentity`
 - `ClipboardSelectionEvent`
+- `DataTransferSourcePayload`
+- `PrimarySelectionOffer`
+- `PrimarySelectionSource`
+- `PrimarySelectionSourceConfiguration`
+- `PrimarySelectionOfferIdentity`
+- `PrimarySelectionSourceIdentity`
+- `PrimarySelectionEvent`
 - `DataTransferEvent`
 - `DataTransferDiagnostic`
 - `MIMEType`
@@ -67,8 +74,9 @@ Current user-facing contract:
 - Display connection, window creation and close, request-redraw, software
   XRGB8888 drawing, basic pointer/keyboard/touch events, interpreted keyboard
   payloads, server-side decoration negotiation, scale-aware window geometry,
-  popup surfaces, regular clipboard selection, cursor requests, diagnostics,
-  and terminal display errors are the current product surface.
+  popup surfaces, regular clipboard selection, primary selection, cursor
+  requests, diagnostics, and terminal display errors are the current product
+  surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
   are derived display text, not control-flow payloads.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
@@ -85,8 +93,9 @@ Current user-facing contract:
   logical size, buffer-pixel size, and exact `SurfaceScale` used by the
   current SHM frame.
 - Regular clipboard means `wl_data_device_manager` selection offers and sources.
-  Primary selection and drag-and-drop transfer handling are not part of this
-  contract.
+- Primary selection means `zwp_primary_selection_device_manager_v1` offers and
+  sources. It is selection-driven, focus-sensitive, and serial-scoped.
+- Drag-and-drop transfer handling is not part of this contract.
 
 Intentionally package-internal:
 
@@ -133,6 +142,10 @@ Notes:
 - Clipboard offers are seat-scoped. `ClipboardOffer.read` performs a bounded read
   with a timeout, and `ClipboardSourceConfiguration` represents local regular
   clipboard payloads.
+- Primary selection offers are seat-scoped and expire when the compositor sends
+  a null selection or focus changes. `PrimarySelectionOffer.read` uses the same
+  bounded transfer rules as clipboard reads, and `PrimarySelectionSourceConfiguration`
+  represents local primary-selection payloads.
 - `WindowDecorationPreference.preferServerSide` is the default because SwiftWayland
   does not draw client-side titlebars. `preferClientSide` requests no server-side
   decorations. Applications remain responsible for any custom chrome they want.

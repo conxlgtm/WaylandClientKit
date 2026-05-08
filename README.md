@@ -29,6 +29,7 @@ Current experimental baseline:
 - `xkbcommon`-backed key interpretation for copied `xkb_v1` keymaps through `DisplaySession`
 - normal pointer cursor surfaces backed by `wayland-cursor`
 - regular clipboard selection offers and sources through `wl_data_device_manager`
+- primary selection offers and sources through `zwp_primary_selection_device_manager_v1`
 - compose and dead-key text results for interpreted keyboard events
 - display, input, data-transfer, and diagnostic event streams
 - noninteractive Wayland smoke executable
@@ -38,7 +39,7 @@ Not implemented yet:
 
 - protocol coverage beyond the listed current support matrix
 - text-input or IME behavior
-- primary selection and drag-and-drop transfer handling
+- drag-and-drop transfer handling
 - cursor animation, output-scale cursor selection, or custom cursor drawing APIs
 - public output model or presentation-time API
 - high-level gesture recognizers or widgets
@@ -64,6 +65,10 @@ Supported in the current experimental baseline:
 - `wl_data_device`
 - `wl_data_offer`
 - `wl_data_source`
+- `zwp_primary_selection_device_manager_v1`
+- `zwp_primary_selection_device_v1`
+- `zwp_primary_selection_offer_v1`
+- `zwp_primary_selection_source_v1`
 - `xdg_wm_base`
 - `xdg_surface`
 - `xdg_toplevel`
@@ -101,8 +106,10 @@ Clipboard and data transfer:
 
 - regular clipboard selection offers can be inspected and received
 - regular clipboard sources can be offered and cleared
+- primary selection offers can be inspected and received when the compositor advertises the protocol
+- primary selection sources can be offered and cleared with an input serial
+- primary selection is selection-driven and focus-sensitive, not a second regular clipboard
 - drag-and-drop enter events are rejected
-- primary selection is not implemented
 
 Popups:
 
@@ -113,7 +120,7 @@ Popups:
 
 Not supported in the current experimental baseline:
 
-- primary selection or drag-and-drop transfer handling
+- drag-and-drop transfer handling
 - cursor animation or per-output cursor scaling
 - presentation-time
 - public `wl_output` model
