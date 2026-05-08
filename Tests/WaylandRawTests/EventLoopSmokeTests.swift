@@ -2,7 +2,7 @@ import Glibc
 import Testing
 
 @testable import WaylandRaw
-@testable import WaylandRawUnsafeShim
+@testable import WaylandRuntime
 
 @Suite
 struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length

@@ -1,5 +1,5 @@
 import Testing
-import WaylandKeyboardInterpretation
+import WaylandKeyboard
 import WaylandRaw
 
 @testable import WaylandClient

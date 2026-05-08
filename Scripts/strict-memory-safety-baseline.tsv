@@ -37,7 +37,7 @@ WaylandRaw	Sources/WaylandRaw/SeatRegistry.swift	5
 WaylandRaw	Sources/WaylandRaw/ShimSmokeCheck.swift	0
 WaylandRaw	Sources/WaylandRaw/WaylandArray.swift	6
 WaylandRaw	Sources/WaylandRaw/WaylandSmokeCheck.swift	8
-WaylandRawUnsafeShim	Sources/WaylandRawUnsafeShim/ExecutorJobCell.swift	4
-WaylandRawUnsafeShim	Sources/WaylandRawUnsafeShim/SynchronousOperation.swift	3
-WaylandRawUnsafeShim	Sources/WaylandRawUnsafeShim/UnsafeDefaultQueueEventLoop.swift	19
-WaylandRawUnsafeShim	Sources/WaylandRawUnsafeShim/WaylandThreadExecutor.swift	3
+WaylandRuntime	Sources/WaylandRuntime/ExecutorJobCell.swift	4
+WaylandRuntime	Sources/WaylandRuntime/SynchronousOperation.swift	3
+WaylandRuntime	Sources/WaylandRuntime/UnsafeDefaultQueueEventLoop.swift	19
+WaylandRuntime	Sources/WaylandRuntime/WaylandThreadExecutor.swift	3

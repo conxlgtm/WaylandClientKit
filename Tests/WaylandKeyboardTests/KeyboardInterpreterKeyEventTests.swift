@@ -3,7 +3,7 @@
 import Testing
 import WaylandRaw
 
-@testable import WaylandKeyboardInterpretation
+@testable import WaylandKeyboard
 
 @Suite
 struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_length

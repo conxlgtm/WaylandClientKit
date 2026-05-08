@@ -1,5 +1,5 @@
 import WaylandCursor
-import WaylandKeyboardInterpretation
+import WaylandKeyboard
 import WaylandRaw
 
 package final class DisplaySession {  // swiftlint:disable:this type_body_length
@@ -44,7 +44,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
 
     package static func keyboardInterpreterConfiguration(
         for configuration: KeyboardInterpretationConfiguration
-    ) -> WaylandKeyboardInterpretation.KeyboardInterpreterConfiguration {
+    ) -> WaylandKeyboard.KeyboardInterpreterConfiguration {
         .init(configuration)
     }
 

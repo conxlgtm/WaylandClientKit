@@ -1,5 +1,5 @@
 import Testing
-import WaylandKeyboardInterpretation
+import WaylandKeyboard
 import WaylandRaw
 
 @testable import WaylandClient
@@ -41,8 +41,8 @@ struct InterpretedKeyboardInputRouterComposeTests {
                 kind: .key(
                     interpretedComposeAKey(
                         text: .composing(
-                            WaylandKeyboardInterpretation.KeyboardComposeProgress(
-                                startedBy: WaylandKeyboardInterpretation.KeyboardKeysym(
+                            WaylandKeyboard.KeyboardComposeProgress(
+                                startedBy: WaylandKeyboard.KeyboardKeysym(
                                     rawValue: 0xFE51
                                 ),
                                 startedByName: "dead_acute"
@@ -73,16 +73,16 @@ struct InterpretedKeyboardInputRouterComposeTests {
                 kind: .key(
                     interpretedComposeAKey(
                         text: .cancelled(
-                            WaylandKeyboardInterpretation.KeyboardComposeCancellation(
+                            WaylandKeyboard.KeyboardComposeCancellation(
                                 cancellingKeysym:
-                                    WaylandKeyboardInterpretation.KeyboardKeysym(rawValue: 0x62),
+                                    WaylandKeyboard.KeyboardKeysym(rawValue: 0x62),
                                 cancellingKeysymName: "b",
                                 fallbackCommit:
-                                    WaylandKeyboardInterpretation.KeyboardTextCommit(
+                                    WaylandKeyboard.KeyboardTextCommit(
                                         string: "b",
                                         source: .composeCancellationFallback,
                                         resultKeysym:
-                                            WaylandKeyboardInterpretation.KeyboardKeysym(
+                                            WaylandKeyboard.KeyboardKeysym(
                                                 rawValue: 0x62
                                             ),
                                         resultKeysymName: "b"
@@ -120,14 +120,14 @@ struct InterpretedKeyboardInputRouterComposeTests {
                 kind: .key(
                     interpretedComposeAKey(
                         text: .composing(
-                            WaylandKeyboardInterpretation.KeyboardComposeProgress(
-                                startedBy: WaylandKeyboardInterpretation.KeyboardKeysym(
+                            WaylandKeyboard.KeyboardComposeProgress(
+                                startedBy: WaylandKeyboard.KeyboardKeysym(
                                     rawValue: 0xFE51
                                 ),
                                 startedByName: "dead_acute"
                             )
                         ),
-                        keysym: WaylandKeyboardInterpretation.KeyboardKeysym(rawValue: 0x62)
+                        keysym: WaylandKeyboard.KeyboardKeysym(rawValue: 0x62)
                     )
                 )
             )
@@ -152,7 +152,7 @@ struct InterpretedKeyboardInputRouterComposeTests {
                 sequence: 2,
                 seatID: RawSeatID(rawValue: 15),
                 kind: .unavailable(
-                    WaylandKeyboardInterpretation.KeyboardInterpretationUnavailable(
+                    WaylandKeyboard.KeyboardInterpretationUnavailable(
                         reason: .composeTableUnavailable(locale: "zz_ZZ.UTF-8")
                     )
                 )
@@ -178,10 +178,10 @@ struct InterpretedKeyboardInputRouterComposeTests {
 private func interpretedComposeAKey() -> InterpretedKeyboardKey {
     interpretedComposeAKey(
         text: .committed(
-            WaylandKeyboardInterpretation.KeyboardTextCommit(
+            WaylandKeyboard.KeyboardTextCommit(
                 string: "á",
                 source: .compose,
-                resultKeysym: WaylandKeyboardInterpretation.KeyboardKeysym(rawValue: 0xE1),
+                resultKeysym: WaylandKeyboard.KeyboardKeysym(rawValue: 0xE1),
                 resultKeysymName: "aacute"
             )
         )
@@ -189,9 +189,9 @@ private func interpretedComposeAKey() -> InterpretedKeyboardKey {
 }
 
 private func interpretedComposeAKey(
-    text: WaylandKeyboardInterpretation.KeyboardTextResult,
-    keysym: WaylandKeyboardInterpretation.KeyboardKeysym =
-        WaylandKeyboardInterpretation.KeyboardKeysym(rawValue: 0x61)
+    text: WaylandKeyboard.KeyboardTextResult,
+    keysym: WaylandKeyboard.KeyboardKeysym =
+        WaylandKeyboard.KeyboardKeysym(rawValue: 0x61)
 ) -> InterpretedKeyboardKey {
     InterpretedKeyboardKey(
         serial: 10,

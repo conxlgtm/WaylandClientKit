@@ -5,17 +5,17 @@
 /Scripts/ @conxlgtm
 
 /Sources/CWaylandProtocols/ @conxlgtm
-/Sources/CWaylandUnsafeShim/ @conxlgtm
+/Sources/CWaylandRuntimeShims/ @conxlgtm
 /Sources/WaylandRaw/ @conxlgtm
-/Sources/WaylandRawUnsafeShim/ @conxlgtm
+/Sources/WaylandRuntime/ @conxlgtm
 
 /Sources/WaylandClient/ @conxlgtm
 /Sources/WaylandCursor/ @conxlgtm
-/Sources/WaylandKeyboardInterpretation/ @conxlgtm
+/Sources/WaylandKeyboard/ @conxlgtm
 
 /Tests/WaylandRawTests/ @conxlgtm
 /Tests/WaylandClientTests/ @conxlgtm
 /Tests/WaylandCursorTests/ @conxlgtm
-/Tests/WaylandKeyboardInterpretationTests/ @conxlgtm
+/Tests/WaylandKeyboardTests/ @conxlgtm
 
 /.github/workflows/ @conxlgtm

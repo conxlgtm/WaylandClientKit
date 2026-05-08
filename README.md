@@ -86,7 +86,7 @@ Window geometry:
 
 Keyboard interpretation:
 
-- `xkb_v1` keymaps through `WaylandKeyboardInterpretation` and `DisplaySession`
+- `xkb_v1` keymaps through `WaylandKeyboard` and `DisplaySession`
 - key symbol lists, primary key symbols, and UTF-8 key text derived from `xkbcommon`
 - compose and dead-key sequences through `xkbcommon` compose state
 - shortcut logic should use key symbols and modifiers, not composed text
@@ -174,7 +174,7 @@ WaylandSmokeSupport
 SwiftWaylandSmoke
     noninteractive Wayland smoke executable
 
-WaylandKeyboardInterpretation
+WaylandKeyboard
     xkbcommon-backed keymap and key event interpretation
 
 WaylandCursor
@@ -183,10 +183,10 @@ WaylandCursor
 WaylandRaw
     low-level Swift layer, shared queue-specific event-loop engine, and raw input subsystem
 
-WaylandRawUnsafeShim
+WaylandRuntime
     owner-thread executor and audited unsafe Swift runtime machinery
 
-CWaylandUnsafeShim
+CWaylandRuntimeShims
     C accessors for Linux primitives used by unsafe Swift runtime machinery
 
 CWaylandCursorShims

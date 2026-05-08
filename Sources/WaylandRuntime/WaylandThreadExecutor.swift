@@ -1,5 +1,5 @@
 // swiftlint:disable file_length
-import CWaylandUnsafeShim
+import CWaylandRuntimeShims
 import Glibc
 
 @safe

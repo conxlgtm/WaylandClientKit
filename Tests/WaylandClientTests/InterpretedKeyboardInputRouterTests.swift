@@ -1,5 +1,5 @@
 import Testing
-import WaylandKeyboardInterpretation
+import WaylandKeyboard
 import WaylandRaw
 
 @testable import WaylandClient
@@ -20,7 +20,7 @@ struct InterpretedKeyboardInputRouterTests {
                         time: 11,
                         evdevKeycode: 16,
                         xkbKeycode: 24,
-                        keysym: WaylandKeyboardInterpretation.KeyboardKeysym(rawValue: 0x71),
+                        keysym: WaylandKeyboard.KeyboardKeysym(rawValue: 0x71),
                         interpretation: .pressed(
                             keysymName: "q",
                             utf8: "q",
@@ -49,7 +49,7 @@ struct InterpretedKeyboardInputRouterTests {
                         time: 11,
                         evdevKeycode: 16,
                         xkbKeycode: 24,
-                        keysym: WaylandKeyboardInterpretation.KeyboardKeysym(rawValue: 0x71),
+                        keysym: WaylandKeyboard.KeyboardKeysym(rawValue: 0x71),
                         interpretation: .pressed(
                             keysymName: "q",
                             utf8: "q",
@@ -77,7 +77,7 @@ struct InterpretedKeyboardInputRouterTests {
                         time: 11,
                         evdevKeycode: 16,
                         xkbKeycode: 24,
-                        keysym: WaylandKeyboardInterpretation.KeyboardKeysym(rawValue: 0x71),
+                        keysym: WaylandKeyboard.KeyboardKeysym(rawValue: 0x71),
                         interpretation: .pressed(
                             keysymName: "q",
                             utf8: "q",
@@ -185,7 +185,7 @@ struct InterpretedKeyboardInputRouterTests {
                 sequence: 2,
                 seatID: RawSeatID(rawValue: 15),
                 kind: .unavailable(
-                    WaylandKeyboardInterpretation.KeyboardInterpretationUnavailable(
+                    WaylandKeyboard.KeyboardInterpretationUnavailable(
                         reason: .missingKeymap
                     )
                 )
@@ -214,7 +214,7 @@ struct InterpretedKeyboardInputRouterTests {
                 sequence: 2,
                 seatID: RawSeatID(rawValue: 15),
                 kind: .unavailable(
-                    WaylandKeyboardInterpretation.KeyboardInterpretationUnavailable(
+                    WaylandKeyboard.KeyboardInterpretationUnavailable(
                         reason: .keymapReadFailed(.missingNULTerminator(size: 12))
                     )
                 )

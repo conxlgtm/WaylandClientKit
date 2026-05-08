@@ -1,7 +1,7 @@
 import Glibc
 import Testing
 import WaylandRaw
-import WaylandRawUnsafeShim
+import WaylandRuntime
 
 @testable import WaylandClient
 

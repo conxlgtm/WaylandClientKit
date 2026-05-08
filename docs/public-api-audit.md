@@ -151,7 +151,7 @@ Notes:
 These targets are package-internal architecture units:
 
 - `WaylandRaw`: low-level protocol-shaped wrappers, raw input capture, and copied keymap payloads.
-- `WaylandKeyboardInterpretation`: xkbcommon-backed interpretation of copied `xkb_v1` keymaps.
+- `WaylandKeyboard`: xkbcommon-backed interpretation of copied `xkb_v1` keymaps.
 - `WaylandCursor`: wayland-cursor theme loading and cursor image lifetime handling.
 
 They may contain `public` declarations for cross-target compilation mechanics, but they are

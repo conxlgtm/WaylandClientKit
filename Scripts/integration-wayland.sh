@@ -18,4 +18,5 @@ timeout "${PROCESS_TIMEOUT_SECONDS}s" \
     env CC="${REPO_ROOT}/Scripts/clang-filter-index-store.sh" \
         "${REPO_ROOT}/Scripts/swift.sh" test \
         --package-path "${REPO_ROOT}/IntegrationTests/PublicAPIClient" \
+        --scratch-path "${REPO_ROOT}/.build/public-api-client" \
         --filter WaylandDisplayPublicIntegrationTests

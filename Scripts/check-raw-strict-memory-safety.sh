@@ -25,7 +25,7 @@ declare -A observed_counts=()
 declare -A target_totals=()
 declare -A allowed_diagnostics=()
 declare -A observed_diagnostics=()
-targets=(WaylandRaw WaylandRawUnsafeShim)
+targets=(WaylandRaw WaylandRuntime)
 
 toolchain_identity() {
     local version_line

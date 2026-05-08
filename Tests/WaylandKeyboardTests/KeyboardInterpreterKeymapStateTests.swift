@@ -1,7 +1,7 @@
 import Testing
 import WaylandRaw
 
-@testable import WaylandKeyboardInterpretation
+@testable import WaylandKeyboard
 
 @Suite
 struct KeyboardInterpreterKeymapStateTests {
