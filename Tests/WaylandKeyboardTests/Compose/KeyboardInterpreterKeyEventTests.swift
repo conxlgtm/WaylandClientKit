@@ -9,7 +9,7 @@ import WaylandRaw
 struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_length
     @Test
     func interpreterCreatesContext() throws {
-        _ = try KeyboardInterpreter()
+        _ = try testKeyboardInterpreter()
     }
 
     @Test
@@ -413,7 +413,8 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
                 compose: .enabled(
                     locale: .identifier(try KeyboardComposeLocaleIdentifier("zz_ZZ.invalid"))
                 )
-            )
+            ),
+            composeEnvironment: KeyboardComposeEnvironment()
         )
         let deviceID = keyboardDevice()
         let firstKeymapEvents = interpreter.consume(
@@ -465,7 +466,10 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
 
     @Test
     func processComposeLocaleFallsBackToCWhenEnvironmentIsMissing() {
-        #expect(KeyboardComposeLocale.processEnvironment.resolved(environment: [:]) == "C")
+        #expect(
+            KeyboardComposeLocale.processEnvironment.resolved(
+                environment: KeyboardComposeEnvironment()
+            ) == "C")
     }
 
     @Test
@@ -525,7 +529,8 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
         let interpreter = try KeyboardInterpreter(
             configuration: KeyboardInterpreterConfiguration(
                 compose: .tableBuffer("")
-            )
+            ),
+            composeEnvironment: KeyboardComposeEnvironment()
         )
         let deviceID = keyboardDevice()
         let keymapEvents = interpreter.consume(
@@ -549,7 +554,8 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
         let interpreter = try KeyboardInterpreter(
             configuration: KeyboardInterpreterConfiguration(
                 compose: .tableBuffer("include \"en_US.UTF-8\"\0")
-            )
+            ),
+            composeEnvironment: KeyboardComposeEnvironment()
         )
         let deviceID = keyboardDevice()
         let keymapEvents = interpreter.consume(
@@ -573,24 +579,31 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
         let locale = KeyboardComposeLocale.processEnvironment
 
         #expect(
-            locale.resolved(environment: [
-                "LANG": "en_US.UTF-8",
-                "LC_CTYPE": "fr_FR.UTF-8",
-                "LC_ALL": "de_DE.UTF-8",
-            ]) == "de_DE.UTF-8")
+            locale.resolved(
+                environment: keyboardComposeEnvironment([
+                    "LANG": "en_US.UTF-8",
+                    "LC_CTYPE": "fr_FR.UTF-8",
+                    "LC_ALL": "de_DE.UTF-8",
+                ])
+            )
+                == "de_DE.UTF-8")
         #expect(
-            locale.resolved(environment: [
-                "LANG": "en_US.UTF-8",
-                "LC_CTYPE": "fr_FR.UTF-8",
-            ]) == "fr_FR.UTF-8")
+            locale.resolved(
+                environment: keyboardComposeEnvironment([
+                    "LANG": "en_US.UTF-8",
+                    "LC_CTYPE": "fr_FR.UTF-8",
+                ])
+            ) == "fr_FR.UTF-8")
         #expect(
-            locale.resolved(environment: [
-                "LANG": "en_US.UTF-8"
-            ]) == "en_US.UTF-8")
+            locale.resolved(
+                environment: keyboardComposeEnvironment([
+                    "LANG": "en_US.UTF-8"
+                ])
+            ) == "en_US.UTF-8")
         #expect(
             KeyboardComposeLocale.identifier(
                 try KeyboardComposeLocaleIdentifier(" sv_SE.UTF-8 ")
-            ).resolved() == "sv_SE.UTF-8")
+            ).resolved(environment: KeyboardComposeEnvironment()) == "sv_SE.UTF-8")
     }
 
     @Test
@@ -598,17 +611,45 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
         let locale = KeyboardComposeLocale.processEnvironment
 
         #expect(
-            locale.resolved(environment: [
-                "LANG": "en_US.UTF-8",
-                "LC_CTYPE": "",
-                "LC_ALL": "   ",
-            ]) == "en_US.UTF-8")
+            locale.resolved(
+                environment: keyboardComposeEnvironment([
+                    "LANG": "en_US.UTF-8",
+                    "LC_CTYPE": "",
+                    "LC_ALL": "   ",
+                ])
+            )
+                == "en_US.UTF-8")
         #expect(
-            locale.resolved(environment: [
-                "LANG": "\n",
-                "LC_CTYPE": "\t",
-                "LC_ALL": "   ",
-            ]) == "C")
+            locale.resolved(
+                environment: keyboardComposeEnvironment([
+                    "LANG": "\n",
+                    "LC_CTYPE": "\t",
+                    "LC_ALL": "   ",
+                ])
+            )
+                == "C")
+    }
+
+    @Test
+    func interpreterUsesProvidedComposeEnvironmentSnapshot() throws {
+        let interpreter = try KeyboardInterpreter(
+            configuration: KeyboardInterpreterConfiguration(
+                compose: .enabled(locale: .processEnvironment)
+            ),
+            composeEnvironment: KeyboardComposeEnvironment(["LC_ALL": "zz_ZZ.invalid"])
+        )
+        let deviceID = keyboardDevice()
+        let keymapEvents = interpreter.consume(
+            rawKeyboardInputEvent(
+                deviceID: deviceID,
+                kind: .keymap(try keymapPayload(text: try fixtureKeymapText()))
+            )
+        )
+
+        #expect(
+            keymapEvents.last?.kind
+                == unavailable(.composeTableUnavailable(locale: "zz_ZZ.invalid"))
+        )
     }
 
     @Test
@@ -664,7 +705,7 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
 
     @Test
     func modifiersBeforeKeymapProduceMissingStateDiagnostic() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let deviceID = keyboardDevice()
         let event = try #require(
             interpreter.consume(
@@ -688,7 +729,7 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
 
     @Test
     func repeatInfoIsStoredAndEmittedWithoutSynthesizingEvents() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let deviceID = keyboardDevice()
         let repeatInfo = try RawKeyboardRepeatInfo(rate: 30, delay: 400)
         let event = try #require(
@@ -743,4 +784,10 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
         requireSendable(InterpretedKeyboardModifiers.self)
         requireSendable(KeyboardInterpretationUnavailable.self)
     }
+}
+
+private func keyboardComposeEnvironment(
+    _ variables: [String: String]
+) -> KeyboardComposeEnvironment {
+    KeyboardComposeEnvironment(variables)
 }

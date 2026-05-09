@@ -9,7 +9,8 @@ struct DisplaySessionCursorDeviceGateTests {
     @Test
     func stalePointerEnterDoesNotApplyCursorBeforeRouting() throws {
         let router = InputRouter()
-        let keyboardInterpreter = try KeyboardInterpreter()
+        let keyboardInterpreter = try KeyboardInterpreter(
+            configuration: .init(compose: .disabled), composeEnvironment: .init())
         let backend = try RecordingCursorBackend()
         let cursorManager = try CursorManager(backend: backend, configuration: .init())
         let seatID = RawSeatID(rawValue: 30)
@@ -62,7 +63,8 @@ struct DisplaySessionCursorDeviceGateTests {
     @Test
     func malformedPointerLeaveDoesNotClearCursorFocusBeforeRouting() throws {
         let router = InputRouter()
-        let keyboardInterpreter = try KeyboardInterpreter()
+        let keyboardInterpreter = try KeyboardInterpreter(
+            configuration: .init(compose: .disabled), composeEnvironment: .init())
         let backend = try RecordingCursorBackend()
         let cursorManager = try CursorManager(backend: backend, configuration: .init())
         let seatID = RawSeatID(rawValue: 31)
@@ -110,7 +112,8 @@ struct DisplaySessionCursorDeviceGateTests {
     @Test
     func pointerCapabilityRemovalRejectsStaleCursorApplication() throws {
         let router = InputRouter()
-        let keyboardInterpreter = try KeyboardInterpreter()
+        let keyboardInterpreter = try KeyboardInterpreter(
+            configuration: .init(compose: .disabled), composeEnvironment: .init())
         let backend = try RecordingCursorBackend()
         let cursorManager = try CursorManager(backend: backend, configuration: .init())
         let seatID = RawSeatID(rawValue: 32)

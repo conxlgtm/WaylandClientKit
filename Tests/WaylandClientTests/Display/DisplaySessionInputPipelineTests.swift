@@ -9,7 +9,8 @@ struct DisplaySessionInputPipelineTests {
     @Test
     func rawKeyboardEventPrecedesInterpretedDiagnosticFromSameRawEvent() throws {
         let router = InputRouter()
-        let keyboardInterpreter = try KeyboardInterpreter()
+        let keyboardInterpreter = try KeyboardInterpreter(
+            configuration: .init(compose: .disabled), composeEnvironment: .init())
         let seatID = RawSeatID(rawValue: 18)
         let deviceID = RawInputDeviceID(seatID: seatID, kind: .keyboard, generation: 1)
         let windowID = WindowID(rawValue: 180)
@@ -63,7 +64,8 @@ struct DisplaySessionInputPipelineTests {
     @Test
     func rawKeymapEventPrecedesInterpreterKeymapDiagnostic() throws {
         let router = InputRouter()
-        let keyboardInterpreter = try KeyboardInterpreter()
+        let keyboardInterpreter = try KeyboardInterpreter(
+            configuration: .init(compose: .disabled), composeEnvironment: .init())
         let seatID = RawSeatID(rawValue: 19)
         let deviceID = RawInputDeviceID(seatID: seatID, kind: .keyboard, generation: 1)
 
@@ -99,7 +101,8 @@ struct DisplaySessionInputPipelineTests {
     @Test
     func rawObserverRunsBeforeRoutingAndDoesNotDropInput() throws {
         let router = InputRouter()
-        let keyboardInterpreter = try KeyboardInterpreter()
+        let keyboardInterpreter = try KeyboardInterpreter(
+            configuration: .init(compose: .disabled), composeEnvironment: .init())
         let observer = RegisteringRawObserver(
             router: router,
             surfaceID: 2_000,

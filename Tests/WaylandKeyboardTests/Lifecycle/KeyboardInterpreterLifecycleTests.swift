@@ -7,7 +7,7 @@ import WaylandRaw
 struct KeyboardInterpreterLifecycleTests {
     @Test
     func seatRemovalClearsAllStatesForSeat() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let first = keyboardDevice(seatRawValue: 1, generation: 1)
         let second = keyboardDevice(seatRawValue: 1, generation: 2)
         let otherSeat = keyboardDevice(seatRawValue: 2, generation: 1)
@@ -53,7 +53,7 @@ struct KeyboardInterpreterLifecycleTests {
 
     @Test
     func keyboardCapabilityLossClearsStatesForSeat() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let firstSeat = keyboardDevice(seatRawValue: 1)
         let secondSeat = keyboardDevice(seatRawValue: 2)
 
@@ -92,7 +92,7 @@ struct KeyboardInterpreterLifecycleTests {
 
     @Test
     func deviceGenerationsKeepIndependentState() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let first = keyboardDevice(generation: 1)
         let second = keyboardDevice(generation: 2)
 
@@ -128,7 +128,7 @@ struct KeyboardInterpreterLifecycleTests {
 
     @Test
     func nonKeyboardRawEventsReturnEmptyArray() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let event = RawInputEvent(
             sequence: 1,
             seatID: RawSeatID(rawValue: 1),

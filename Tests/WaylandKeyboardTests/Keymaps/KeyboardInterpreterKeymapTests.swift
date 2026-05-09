@@ -7,7 +7,7 @@ import WaylandRaw
 struct KeyboardInterpreterKeymapTests {
     @Test
     func parsesXKBV1KeymapAndEmitsKeymapEvent() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let deviceID = keyboardDevice()
         let payload = try keymapPayload(text: try fixtureKeymapText())
         let event = try #require(
@@ -32,7 +32,7 @@ struct KeyboardInterpreterKeymapTests {
 
     @Test
     func invalidKeymapBytesProduceDiagnostic() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let deviceID = keyboardDevice()
         let payload = try keymapPayload(bytes: Array("not a keymap".utf8) + [0])
         let event = try #require(
@@ -50,7 +50,7 @@ struct KeyboardInterpreterKeymapTests {
 
     @Test
     func noKeymapRecordsRawOnlyStateAndClearsPriorLayout() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let deviceID = keyboardDevice()
         let validPayload = try keymapPayload(text: try fixtureKeymapText())
         let noKeymap = try keymapPayload(bytes: [], format: .noKeymap)
@@ -79,7 +79,7 @@ struct KeyboardInterpreterKeymapTests {
 
     @Test
     func keyBeforeKeymapProducesMissingKeymapDiagnostic() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let deviceID = keyboardDevice()
         let event = try #require(
             interpreter.consume(
@@ -93,7 +93,7 @@ struct KeyboardInterpreterKeymapTests {
 
     @Test
     func keyWithoutDeviceIDProducesMissingDeviceDiagnostic() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let event = try #require(
             interpreter.consume(
                 RawInputEvent(
@@ -110,7 +110,7 @@ struct KeyboardInterpreterKeymapTests {
 
     @Test
     func keyFromNonKeyboardDeviceProducesDiagnostic() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let deviceID = RawInputDeviceID(
             seatID: RawSeatID(rawValue: 1),
             kind: .pointer,
@@ -132,7 +132,7 @@ struct KeyboardInterpreterKeymapTests {
 
     @Test
     func keyFromDifferentSeatProducesDiagnostic() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let eventSeatID = RawSeatID(rawValue: 1)
         let deviceSeatID = RawSeatID(rawValue: 2)
         let deviceID = RawInputDeviceID(
@@ -159,7 +159,7 @@ struct KeyboardInterpreterKeymapTests {
 
     @Test
     func keymapWithMismatchedDeviceProducesDiagnostic() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let payload = try keymapPayload(text: try fixtureKeymapText(), keyboardGeneration: 1)
         let eventDeviceID = keyboardDevice(generation: 2)
         let event = try #require(
@@ -180,7 +180,7 @@ struct KeyboardInterpreterKeymapTests {
 
     @Test
     func keymapFromDifferentSeatProducesDiagnostic() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let eventSeatID = RawSeatID(rawValue: 1)
         let payloadSeatID = RawSeatID(rawValue: 2)
         let payload = try keymapPayload(text: try fixtureKeymapText(), seatID: payloadSeatID)
@@ -204,7 +204,7 @@ struct KeyboardInterpreterKeymapTests {
 
     @Test
     func keymapReplacementUpdatesStoredGeneration() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let deviceID = keyboardDevice()
         let first = try keymapPayload(text: try fixtureKeymapText(), keymapGeneration: 1)
         let second = try keymapPayload(text: try fixtureKeymapText(), keymapGeneration: 2)
@@ -218,7 +218,7 @@ struct KeyboardInterpreterKeymapTests {
 
     @Test
     func keymapReadFailureDiagnosticRecordsUnavailableStateForNextKey() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let deviceID = keyboardDevice()
         let validPayload = try keymapPayload(text: try fixtureKeymapText())
         let failure = RawKeyboardKeymapReadError.missingNULTerminator(size: 12)

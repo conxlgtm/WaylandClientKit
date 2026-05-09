@@ -1,3 +1,4 @@
+import Foundation
 import WaylandCursor
 import WaylandKeyboard
 import WaylandRaw
@@ -33,7 +34,8 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         keyboardInterpreter = try KeyboardInterpreter(
             configuration: Self.keyboardInterpreterConfiguration(
                 for: keyboardInterpretationConfiguration
-            )
+            ),
+            composeEnvironment: Self.keyboardComposeEnvironment()
         )
         cursorManager = try CursorManager(
             connection: rawConnection, configuration: cursorConfiguration)
@@ -55,6 +57,10 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         for configuration: KeyboardInterpretationConfiguration
     ) -> WaylandKeyboard.KeyboardInterpreterConfiguration {
         .init(configuration)
+    }
+
+    package static func keyboardComposeEnvironment() -> WaylandKeyboard.KeyboardComposeEnvironment {
+        .init(ProcessInfo.processInfo.environment)
     }
 
     deinit {

@@ -225,6 +225,19 @@ struct WaylandThreadExecutorTests {
     }
 
     @Test
+    func syncBootstrapOnlyPropagatesSendableOperationFailure() throws {
+        let executor = try WaylandThreadExecutor()
+        defer { executor.shutdown() }
+
+        do {
+            try executor.syncBootstrapOnly(throwExecutorNotReady)
+            Issue.record("operation unexpectedly succeeded")
+        } catch {
+            #expect(error == .executorNotReady)
+        }
+    }
+
+    @Test
     func shutdownDrainsQueuedOperationsAndJoinsOwnerThread() throws {
         let executor = try WaylandThreadExecutor()
         let gate = OwnerThreadGate()
@@ -402,10 +415,11 @@ struct WaylandThreadExecutorTests {
         let executor = try WaylandThreadExecutor()
         defer { executor.shutdown() }
         let source = EventSourceProbe(executor: executor)
-
-        try executor.syncBootstrapOnly {
+        let installSource: @Sendable () throws(WaylandThreadExecutorError) -> Void = {
             try executor.installEventSource(source)
         }
+
+        try executor.syncBootstrapOnly(installSource)
 
         for _ in 0..<100 {
             let snapshot = source.snapshot()
@@ -425,10 +439,11 @@ struct WaylandThreadExecutorTests {
         let executor = try WaylandThreadExecutor()
         defer { executor.shutdown() }
         let source = FailingReadEventSourceProbe(executor: executor)
-
-        try executor.syncBootstrapOnly {
+        let installSource: @Sendable () throws(WaylandThreadExecutorError) -> Void = {
             try executor.installEventSource(source)
         }
+
+        try executor.syncBootstrapOnly(installSource)
 
         for _ in 0..<100 {
             let snapshot = source.snapshot()
@@ -443,4 +458,8 @@ struct WaylandThreadExecutorTests {
 
         #expect(Bool(false), "failing event source was not polled")
     }
+}
+
+private func throwExecutorNotReady() throws(WaylandThreadExecutorError) {
+    throw WaylandThreadExecutorError.executorNotReady
 }

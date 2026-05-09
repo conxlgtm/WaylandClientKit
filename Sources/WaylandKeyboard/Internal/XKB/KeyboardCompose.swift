@@ -1,5 +1,4 @@
 import CXKBCommonSystem
-import Foundation
 
 package struct KeyboardInterpreterConfiguration: Equatable, Sendable {
     package var compose: KeyboardComposeMode
@@ -26,24 +25,30 @@ package enum KeyboardComposeLocale: Equatable, Sendable {
     case processEnvironment
     case identifier(KeyboardComposeLocaleIdentifier)
 
-    package func resolved(
-        environment: [String: String] = ProcessInfo.processInfo.environment
-    ) -> String {
+    package func resolved(environment: KeyboardComposeEnvironment) -> String {
         switch self {
         case .identifier(let identifier):
             identifier.rawValue
         case .processEnvironment:
-            normalized(environment["LC_ALL"])
-                ?? normalized(environment["LC_CTYPE"])
-                ?? normalized(environment["LANG"])
+            normalized(environment.variables["LC_ALL"])
+                ?? normalized(environment.variables["LC_CTYPE"])
+                ?? normalized(environment.variables["LANG"])
                 ?? KeyboardComposeLocaleIdentifier.posixC.rawValue
         }
     }
 
     private func normalized(_ value: String?) -> String? {
         guard let value else { return nil }
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = trimmingXKBASCIIWhitespace(value)
         return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+package struct KeyboardComposeEnvironment: Equatable, Sendable {
+    package var variables: [String: String]
+
+    package init(_ environmentVariables: [String: String] = [:]) {
+        variables = environmentVariables
     }
 }
 
@@ -55,7 +60,7 @@ package struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {
     package let rawValue: String
 
     package init(_ value: String) throws(KeyboardComposeLocaleError) {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = trimmingXKBASCIIWhitespace(value)
         guard !trimmed.isEmpty else {
             throw .emptyIdentifier
         }
@@ -228,7 +233,7 @@ final class XKBComposeStateOwner {
     }
 
     private func composedText() -> String? {
-        unsafe stringFromXKB { buffer, count in
+        stringFromXKBSizedCall { buffer, count in
             unsafe xkb_compose_state_get_utf8(pointer, buffer, count)
         }
     }
@@ -240,19 +245,9 @@ final class XKBComposeStateOwner {
     }
 
     private func composedKeysymName(for keysym: KeyboardKeysym) -> String? {
-        var buffer = [CChar](repeating: 0, count: 64)
-        let required = unsafe xkb_keysym_get_name(keysym.rawValue, &buffer, buffer.count)
-        guard required > 0 else { return nil }
-
-        if Int(required) < buffer.count {
-            return stringFromNullTerminatedBuffer(buffer)
+        stringFromXKBNameCall { buffer, count in
+            unsafe xkb_keysym_get_name(keysym.rawValue, buffer, count)
         }
-
-        buffer = [CChar](repeating: 0, count: Int(required) + 1)
-        let written = unsafe xkb_keysym_get_name(keysym.rawValue, &buffer, buffer.count)
-        guard written > 0 else { return nil }
-
-        return stringFromNullTerminatedBuffer(buffer)
     }
 
     private func xkbKeyTextResult(
@@ -288,25 +283,23 @@ final class XKBComposeStateOwner {
             resultKeysymName: resultKeysymName
         )
     }
+}
 
-    private func stringFromXKB(
-        _ body: (UnsafeMutablePointer<CChar>?, Int) -> Int32
-    ) -> String? {
-        let required = body(nil, 0)
-        guard required > 0 else { return nil }
-
-        var buffer = [CChar](repeating: 0, count: Int(required) + 1)
-        let written = unsafe body(&buffer, buffer.count)
-        guard written > 0 else { return nil }
-
-        return stringFromNullTerminatedBuffer(buffer)
+private func trimmingXKBASCIIWhitespace(_ value: String) -> String {
+    let trimmedScalars = value.unicodeScalars.drop { scalar in
+        isXKBASCIIWhitespace(scalar)
     }
+    .reversed()
+    .drop { isXKBASCIIWhitespace($0) }
+    .reversed()
+    return String(String.UnicodeScalarView(trimmedScalars))
+}
 
-    private func stringFromNullTerminatedBuffer(_ buffer: [CChar]) -> String? {
-        let endIndex = buffer.firstIndex(of: 0) ?? buffer.endIndex
-        return String(
-            bytes: buffer[..<endIndex].map { UInt8(bitPattern: $0) },
-            encoding: .utf8
-        )
+private func isXKBASCIIWhitespace(_ scalar: UnicodeScalar) -> Bool {
+    switch scalar.value {
+    case 0x09...0x0D, 0x20:
+        true
+    default:
+        false
     }
 }

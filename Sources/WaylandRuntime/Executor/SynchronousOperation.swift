@@ -2,12 +2,14 @@ import Glibc
 
 @safe
 final class SynchronousOperation<ResultValue: Sendable>: Sendable {
-    private let operation: @Sendable () throws -> ResultValue
+    private let operation: @Sendable () throws(WaylandThreadExecutorError) -> ResultValue
     private nonisolated(unsafe) var mutex = unsafe pthread_mutex_t()
     private nonisolated(unsafe) var condition = pthread_cond_t()
-    private nonisolated(unsafe) var result: Result<ResultValue, Error>?
+    private nonisolated(unsafe) var result: Result<ResultValue, WaylandThreadExecutorError>?
 
-    init(_ body: @Sendable @escaping () throws -> ResultValue) {
+    init(
+        _ body: @Sendable @escaping () throws(WaylandThreadExecutorError) -> ResultValue
+    ) {
         operation = body
         unsafe pthread_mutex_init(&mutex, nil)
         unsafe pthread_cond_init(&condition, nil)
@@ -19,8 +21,11 @@ final class SynchronousOperation<ResultValue: Sendable>: Sendable {
     }
 
     func run() {
-        let operationResult = Result {
-            try operation()
+        let operationResult: Result<ResultValue, WaylandThreadExecutorError>
+        do {
+            operationResult = .success(try operation())
+        } catch {
+            operationResult = .failure(error)
         }
 
         unsafe pthread_mutex_lock(&mutex)
@@ -29,16 +34,23 @@ final class SynchronousOperation<ResultValue: Sendable>: Sendable {
         unsafe pthread_mutex_unlock(&mutex)
     }
 
-    func wait() throws -> ResultValue {
+    func wait() throws(WaylandThreadExecutorError) -> ResultValue {
         unsafe pthread_mutex_lock(&mutex)
         while unsafe result == nil {
             unsafe pthread_cond_wait(&condition, &mutex)
         }
 
-        let operationResult = unsafe result
+        guard let operationResult = unsafe result else {
+            unsafe pthread_mutex_unlock(&mutex)
+            throw WaylandThreadExecutorError.executorClosed
+        }
         unsafe pthread_mutex_unlock(&mutex)
 
-        return try operationResult?.get()
-            ?? { throw WaylandThreadExecutorError.executorClosed }()
+        switch operationResult {
+        case .success(let value):
+            return value
+        case .failure(let error):
+            throw error
+        }
     }
 }
