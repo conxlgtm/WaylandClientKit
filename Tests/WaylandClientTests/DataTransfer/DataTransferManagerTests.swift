@@ -141,7 +141,7 @@ struct DataTransferManagerTests {
     }
 
     @Test
-    func malformedRemoteMIMETypeQueuesCallbackFailure() throws {
+    func malformedRemoteMIMETypeIsIgnored() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
         try manager.synchronizeSeats([seat1])
@@ -149,16 +149,13 @@ struct DataTransferManagerTests {
 
         device.emit(.dataOffer(offerHandle1))
         let offer = try #require(backend.offerBinding(for: offerHandle1))
+        offer.emit(.offer("UTF8_STRING"))
         offer.emit(.offer(" text/plain "))
+        offer.emit(.offer(MIMEType.plainText.rawValue))
+        device.emit(.selection(offerHandle1))
 
-        #expect(
-            manager.pendingCallbackError
-                == DataTransferCallbackFailure(
-                    context: .dataOffer(ClipboardOfferIdentity(offer.id)),
-                    error: .invalidMIMEType(" text/plain ")
-                )
-        )
-        #expect(manager.offerSnapshots.isEmpty)
+        #expect(manager.pendingCallbackError == nil)
+        #expect(manager.offerSnapshots.first?.mimeTypes == [.plainText])
     }
 
     @Test
