@@ -95,21 +95,37 @@ enum RuntimePrimarySelectionOffer {
         return snapshot
     }
 
-    mutating func appendPendingMIMEType(_ mimeType: MIMEType) {
-        guard case .pending(let handle, let binding, let seatID, var mimeTypes) = self else {
-            return
-        }
-        guard !mimeTypes.contains(mimeType) else {
-            return
-        }
+    mutating func appendMIMETypeIfNew(_ mimeType: MIMEType) throws -> Bool {
+        switch self {
+        case .pending(let handle, let binding, let seatID, var mimeTypes):
+            guard !mimeTypes.contains(mimeType) else {
+                return false
+            }
 
-        mimeTypes.append(mimeType)
-        self = .pending(
-            handle: handle,
-            binding: binding,
-            seatID: seatID,
-            mimeTypes: mimeTypes
-        )
+            mimeTypes.append(mimeType)
+            self = .pending(
+                handle: handle,
+                binding: binding,
+                seatID: seatID,
+                mimeTypes: mimeTypes
+            )
+            return true
+        case .active(let handle, let binding, let snapshot):
+            guard !snapshot.mimeTypes.contains(mimeType) else {
+                return false
+            }
+
+            self = .active(
+                handle: handle,
+                binding: binding,
+                snapshot: try DataOfferSnapshot(
+                    id: snapshot.id,
+                    role: snapshot.role,
+                    mimeTypes: snapshot.mimeTypes + [mimeType]
+                )
+            )
+            return true
+        }
     }
 
     mutating func markActive(id offerID: DataOfferID) throws {

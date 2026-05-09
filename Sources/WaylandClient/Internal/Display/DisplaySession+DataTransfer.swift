@@ -101,6 +101,30 @@ extension DisplaySession {
         return pendingDataTransferDiagnostics
     }
 
+    package func cancelSourceWrites(for events: [DataTransferEvent]) {
+        Self.cancelSourceWrites(for: events, using: dataTransferSourceWriter)
+    }
+
+    package static func cancelSourceWrites(
+        for events: [DataTransferEvent],
+        using writer: ThreadedDataTransferSourceWriter
+    ) {
+        for event in events {
+            switch event {
+            case .clipboardSourceCancelled(let source):
+                writer.cancelJobs(
+                    for: .clipboard(DataSourceID(rawValue: source.rawValue))
+                )
+            case .primarySelectionSourceCancelled(let source):
+                writer.cancelJobs(
+                    for: .primarySelection(DataSourceID(rawValue: source.rawValue))
+                )
+            case .clipboardSelectionChanged, .primarySelectionChanged:
+                break
+            }
+        }
+    }
+
     package func clipboardOfferOnOwnerThread(for seatID: SeatID) throws -> DataOfferSnapshot? {
         connection.preconditionIsOwnerThread()
         try processClipboardDataTransferState()
@@ -434,7 +458,9 @@ extension DisplaySession {
     package static func dataTransferDiagnostic(
         from result: DataTransferSourceWriteResult
     ) -> DataTransferDiagnostic? {
-        guard case .failed(let source, let mimeType, let error) = result else {
+        guard case .failed(let source, let mimeType, let error) = result,
+            error != .cancelled
+        else {
             return nil
         }
 
