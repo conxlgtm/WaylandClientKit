@@ -153,7 +153,7 @@ package final class PrimarySelectionController {
         backend.preconditionIsOwnerThread()
         try throwPendingCallbackErrorIfAny()
 
-        guard case .ownedSource(sourceID) = selectionBySeat[seatID] ?? .none else {
+        guard (selectionBySeat[seatID] ?? .none) == .ownedSource(sourceID) else {
             throw DataTransferError.sourceCancelled
         }
 
@@ -228,11 +228,7 @@ extension PrimarySelectionController {
 
                 cleanupSelection(currentSelection)
                 selectionBySeat[seatID] = PrimarySelectionSelectionState.none
-                eventQueue.append(
-                    .primarySelectionChanged(
-                        PrimarySelectionEvent(seatID: seatID, offerID: nil)
-                    )
-                )
+                publishSelectionChanged(seatID: seatID, offerID: nil)
             case .selection(.some(let handle)):
                 try handleSelection(handle: handle, seatID: seatID)
             }
@@ -286,8 +282,11 @@ extension PrimarySelectionController {
                     PrimarySelectionOfferIdentity(offerID)
                 )
             }
-            offer.appendPendingMIMEType(mimeType)
+            let changed = try offer.appendMIMETypeIfNew(mimeType)
             offersByID[offerID] = offer
+            if changed, let snapshot = offer.snapshot {
+                publishSelectionChanged(seatID: snapshot.role.seatID, offerID: offerID)
+            }
         } catch {
             recordCallbackError(
                 error,
@@ -340,9 +339,7 @@ extension PrimarySelectionController {
 
         cleanupSelection(selectionBySeat[seatID] ?? .none)
         selectionBySeat[seatID] = .remoteOffer(offerID)
-        eventQueue.append(
-            .primarySelectionChanged(PrimarySelectionEvent(seatID: seatID, offerID: offerID))
-        )
+        publishSelectionChanged(seatID: seatID, offerID: offerID)
     }
 
     private func handleSourceEvent(
@@ -474,6 +471,9 @@ extension PrimarySelectionController {
         )
     }
 
+    private func publishSelectionChanged(seatID: SeatID, offerID: DataOfferID?) {
+        eventQueue.append(.primarySelectionChanged(.init(seatID: seatID, offerID: offerID)))
+    }
     private static func dataTransferCallbackError(_ error: any Error) -> DataTransferError {
         (error as? DataTransferError)
             ?? .callbackFailure(

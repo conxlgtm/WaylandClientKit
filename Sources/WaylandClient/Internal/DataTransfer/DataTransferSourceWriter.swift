@@ -358,6 +358,33 @@ package final class ThreadedDataTransferSourceWriter {
             return (cancelledJobs: cancelledJobs, currentJob: currentJob)
         }
 
+        func cancelJobs(for source: DataTransferSourceWriteSource) -> (
+            cancelledJobs: [DataTransferSourceWriteJob],
+            currentJob: DataTransferSourceWriteJob?
+        ) {
+            condition.lock()
+            defer { condition.unlock() }
+
+            guard !lifecycle.isStopped else {
+                return (cancelledJobs: [], currentJob: nil)
+            }
+
+            var remainingJobs: [DataTransferSourceWriteJob] = []
+            var cancelledJobs: [DataTransferSourceWriteJob] = []
+            for job in jobs {
+                if job.source == source {
+                    cancelledJobs.append(job)
+                } else {
+                    remainingJobs.append(job)
+                }
+            }
+            jobs = remainingJobs
+
+            let currentJob = currentJob?.source == source ? currentJob : nil
+            condition.broadcast()
+            return (cancelledJobs: cancelledJobs, currentJob: currentJob)
+        }
+
         func markStopped() {
             condition.lock()
             currentJob = nil
@@ -430,6 +457,12 @@ package final class ThreadedDataTransferSourceWriter {
 
     package func drainResults() -> [DataTransferSourceWriteResult] {
         state.drainResults()
+    }
+
+    package func cancelJobs(for source: DataTransferSourceWriteSource) {
+        let cancellation = state.cancelJobs(for: source)
+        append(cancellation.cancelledJobs.map { $0.closeAsCancelled() })
+        cancellation.currentJob?.cancelInFlight()
     }
 
     package func shutdown() {

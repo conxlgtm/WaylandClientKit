@@ -184,6 +184,7 @@ extension OwnedFileDescriptor {
 
         while true {
             try Task.checkCancellation()
+            try Self.throwIfReadDeadlinePassed(clock: clock, deadline: deadline)
 
             let remainingByteCount = limit.rawValue - data.count
             let readByteCount = Self.nextReadByteCount(remainingByteCount)
@@ -205,6 +206,15 @@ extension OwnedFileDescriptor {
             }
 
             data.append(contentsOf: bytes)
+        }
+    }
+
+    private static func throwIfReadDeadlinePassed(
+        clock: ContinuousClock,
+        deadline: ContinuousClock.Instant
+    ) throws {
+        guard clock.now < deadline else {
+            throw DataTransferError.transferTimedOut
         }
     }
 

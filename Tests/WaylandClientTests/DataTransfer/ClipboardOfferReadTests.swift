@@ -94,6 +94,36 @@ struct ClipboardOfferReadTests {
     }
 
     @Test
+    func clipboardOfferReadTimesOutWhenPeerKeepsDescriptorOpenAfterData() async throws {
+        let closedDescriptors = Mutex<[Int32]>([])
+        var descriptor = try OwnedFileDescriptor(
+            adopting: 44,
+            readDescriptor: { _, _ in
+                Thread.sleep(forTimeInterval: 0.02)
+                return Array("x".utf8)
+            },
+            prepareReadDescriptor: { descriptor in
+                #expect(descriptor == 44)
+            },
+            closeDescriptor: { descriptor in
+                closedDescriptors.withLock { $0.append(descriptor) }
+                return 0
+            }
+        )
+
+        await expectDataTransferError(.transferTimedOut) {
+            _ = try await descriptor.readData(
+                limit: try ByteCount.bytes(32),
+                timeout: .milliseconds(5)
+            )
+        }
+        let descriptorIsClosed = descriptor.isClosed
+
+        #expect(descriptorIsClosed)
+        #expect(closedDescriptors.withLock { $0 } == [44])
+    }
+
+    @Test
     func clipboardOfferReadCancellationClosesDescriptor() async throws {
         let probe = ClipboardReadCancellationProbe()
 

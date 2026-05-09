@@ -248,7 +248,9 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
 
     package func drainDataTransferEventsOnOwnerThread() -> [DataTransferEvent] {
         connection.preconditionIsOwnerThread()
-        return dataTransferEventQueue.drain()
+        let events = dataTransferEventQueue.drain()
+        cancelSourceWrites(for: events)
+        return events
     }
 
     package func createTopLevelWindowOnOwnerThread(

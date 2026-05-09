@@ -108,6 +108,19 @@ struct DisplayEventHubDataTransferTests {
     }
 
     @Test
+    func cancelledSourceWriteResultDoesNotMapToDiagnostic() {
+        #expect(
+            DisplaySession.dataTransferDiagnostic(
+                from: .failed(
+                    sourceID: DataSourceID(rawValue: 3),
+                    mimeType: .plainText,
+                    error: .cancelled
+                )
+            ) == nil
+        )
+    }
+
+    @Test
     func sourceWriteFailureDiagnosticPublishesThroughDisplayCore() async {
         let hub = DisplayEventHub()
         let core = DisplayCore(eventHub: hub)
