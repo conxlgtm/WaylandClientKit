@@ -52,6 +52,15 @@ Under a real Wayland session, also run:
 swift run SwiftWaylandDemo
 ```
 
+For a private headless Weston compositor, run:
+
+```bash
+make wayland-headless
+```
+
+See [Linux live Wayland testing](docs/live-wayland-testing.md) for the live
+test contract, package commands, and optional protocol skip policy.
+
 ## Protocol Generation
 
 Protocol XML lives under `protocols/`. Generated C and header artifacts live under `Sources/CWaylandProtocols/`.

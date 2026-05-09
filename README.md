@@ -235,6 +235,15 @@ Maintainers regenerating protocol artifacts should also run:
 ./scripts/dev/bootstrap-linux.sh --maintainer
 ```
 
+Live Wayland smoke and public API integration checks are documented in
+[Linux live Wayland testing](docs/live-wayland-testing.md).
+
+Run the headless Weston path with:
+
+```bash
+make wayland-headless
+```
+
 Sync protocol XML into the repository:
 
 ```bash

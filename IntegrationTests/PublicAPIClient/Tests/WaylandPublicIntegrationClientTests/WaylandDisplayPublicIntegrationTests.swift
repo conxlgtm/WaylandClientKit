@@ -48,7 +48,10 @@ struct WaylandDisplayPublicIntegrationTests {
             } catch let error as DataTransferError {
                 switch error {
                 case .unavailable:
-                    break
+                    noteOptionalProtocolSkip(
+                        test: "primary selection",
+                        interfaceName: "zwp_primary_selection_device_manager_v1"
+                    )
                 case .missingPrimarySelectionDevice(let seatID):
                     #expect(seatID == unknownSeatID)
                 default:
@@ -132,6 +135,13 @@ struct WaylandDisplayPublicIntegrationTests {
             #expect(finalCursor == .hidden)
         }
     }
+}
+
+private func noteOptionalProtocolSkip(test: String, interfaceName: String) {
+    Issue.record(
+        "Skipping \(test) live test: compositor did not advertise \(interfaceName).",
+        severity: .warning
+    )
 }
 
 private func withPublicConnection(
