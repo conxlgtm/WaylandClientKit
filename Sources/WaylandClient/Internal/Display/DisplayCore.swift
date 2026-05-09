@@ -101,6 +101,12 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
     }
 
+    func capabilities() throws -> WaylandCapabilities {
+        try withFatalFailureFinalization {
+            try requireSession().capabilitiesOnOwnerThread()
+        }
+    }
+
     func closeWindow(_ windowID: WindowID) {
         withFatalFailureFinalization {
             // Fatal raw invariants already finished streams and deferred graph cleanup;

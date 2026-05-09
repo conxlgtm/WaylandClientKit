@@ -106,6 +106,8 @@ Clipboard and data transfer:
 
 - regular clipboard selection offers can be inspected and received
 - regular clipboard sources can be offered and cleared
+- compositor support for clipboard, primary selection, decorations, viewporter,
+  and fractional scaling can be inspected through `WaylandDisplay.capabilities()`
 - primary selection offers can be inspected and received when the compositor advertises the protocol
 - primary selection sources can be offered and cleared with an input serial
 - primary selection is selection-driven and focus-sensitive, not a second regular clipboard

@@ -201,6 +201,29 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         return cursorManager.pointerCursor
     }
 
+    package func capabilitiesOnOwnerThread() -> WaylandCapabilities {
+        connection.preconditionIsOwnerThread()
+        return WaylandCapabilities.fromAdvertisedProtocols(
+            [
+                advertisedProtocol(named: "wl_data_device_manager"),
+                advertisedProtocol(named: "zwp_primary_selection_device_manager_v1"),
+                advertisedProtocol(named: "zxdg_decoration_manager_v1"),
+                advertisedProtocol(named: "wp_viewporter"),
+                advertisedProtocol(named: "wp_fractional_scale_manager_v1"),
+            ].compactMap(\.self))
+    }
+
+    private func advertisedProtocol(named interfaceName: String) -> AdvertisedWaylandProtocol? {
+        guard let global = connection.optionalGlobal(named: interfaceName) else {
+            return nil
+        }
+
+        return AdvertisedWaylandProtocol(
+            interfaceName: global.interfaceName,
+            advertisedVersion: global.advertisedVersion.value
+        )
+    }
+
     package func setRawInvariantFailureReporter(
         _ reporter: (any RawInvariantFailureReporter)?
     ) {

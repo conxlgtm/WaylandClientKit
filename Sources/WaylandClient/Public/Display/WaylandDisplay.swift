@@ -91,6 +91,14 @@ public actor WaylandDisplay {
         try requireCore().currentPointerCursor()
     }
 
+    /// Returns compositor protocol features discovered during connection setup.
+    ///
+    /// This is a side-effect-free registry query. Request APIs still validate availability at
+    /// use time because Wayland globals may disappear after initial discovery.
+    public func capabilities() throws -> WaylandCapabilities {
+        try requireCore().capabilities()
+    }
+
     @discardableResult
     public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {
         try requireCore().setPointerCursor(cursor)

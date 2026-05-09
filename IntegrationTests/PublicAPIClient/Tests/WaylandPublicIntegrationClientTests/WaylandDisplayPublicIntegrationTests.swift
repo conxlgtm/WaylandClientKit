@@ -40,6 +40,7 @@ struct WaylandDisplayPublicIntegrationTests {
     @Test
     func primarySelectionOfferForUnknownSeatReportsPublicError() async throws {
         try await withPublicConnection { display in
+            let capabilities = try await display.capabilities()
             let unknownSeatID = SeatID(rawValue: UInt32.max)
 
             do {
@@ -48,11 +49,13 @@ struct WaylandDisplayPublicIntegrationTests {
             } catch let error as DataTransferError {
                 switch error {
                 case .unavailable:
+                    #expect(capabilities.primarySelection == .unavailable)
                     noteOptionalProtocolSkip(
                         test: "primary selection",
                         interfaceName: "zwp_primary_selection_device_manager_v1"
                     )
                 case .missingPrimarySelectionDevice(let seatID):
+                    #expect(capabilities.primarySelection.isAvailable)
                     #expect(seatID == unknownSeatID)
                 default:
                     Issue.record("Expected primary-selection error, got \(error)")
