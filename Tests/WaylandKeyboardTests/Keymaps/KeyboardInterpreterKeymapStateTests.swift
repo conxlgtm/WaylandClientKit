@@ -7,7 +7,7 @@ import WaylandRaw
 struct KeyboardInterpreterKeymapStateTests {
     @Test
     func validKeymapAfterUnavailableStateReinstallsLayout() throws {
-        let interpreter = try KeyboardInterpreter()
+        let interpreter = try testKeyboardInterpreter()
         let deviceID = keyboardDevice()
         let invalidPayload = try keymapPayload(bytes: Array("not a keymap".utf8) + [0])
         let validPayload = try keymapPayload(text: try fixtureKeymapText(), keymapGeneration: 2)

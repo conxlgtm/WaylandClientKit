@@ -15,7 +15,8 @@ package final class KeyboardInterpreter {
     private let threadAffinity = ThreadAffinity()
 
     package init(
-        configuration interpreterConfiguration: KeyboardInterpreterConfiguration = .init()
+        configuration interpreterConfiguration: KeyboardInterpreterConfiguration,
+        composeEnvironment: KeyboardComposeEnvironment
     ) throws(KeyboardInterpreterError) {
         do {
             context = try XKBContextOwner()
@@ -29,7 +30,7 @@ package final class KeyboardInterpreter {
             composeTable = nil
             composeFailureReason = nil
         case .enabled(let locale, _):
-            let resolvedLocale = locale.resolved()
+            let resolvedLocale = locale.resolved(environment: composeEnvironment)
             do {
                 composeTable = try XKBComposeTableOwner(
                     context: context,
@@ -41,7 +42,7 @@ package final class KeyboardInterpreter {
                 composeFailureReason = Self.unavailableReason(for: failure, locale: resolvedLocale)
             }
         case .tableBuffer(let buffer, let locale, _):
-            let resolvedLocale = locale.resolved()
+            let resolvedLocale = locale.resolved(environment: composeEnvironment)
             do {
                 composeTable = try XKBComposeTableOwner(
                     context: context,

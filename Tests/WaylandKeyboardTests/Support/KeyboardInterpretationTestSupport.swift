@@ -38,7 +38,7 @@ func requireSendable<T: Sendable>(_ type: T.Type) {
 func interpreterWithFixtureKeymap(
     configuration: KeyboardInterpreterConfiguration = .init()
 ) throws -> KeyboardInterpreter {
-    let interpreter = try KeyboardInterpreter(configuration: configuration)
+    let interpreter = try testKeyboardInterpreter(configuration: configuration)
     let deviceID = keyboardDevice()
     _ = interpreter.consume(
         rawKeyboardInputEvent(
@@ -47,6 +47,16 @@ func interpreterWithFixtureKeymap(
         )
     )
     return interpreter
+}
+
+func testKeyboardInterpreter(
+    configuration: KeyboardInterpreterConfiguration = .init(compose: .disabled),
+    composeEnvironment: KeyboardComposeEnvironment = .init()
+) throws -> KeyboardInterpreter {
+    try KeyboardInterpreter(
+        configuration: configuration,
+        composeEnvironment: composeEnvironment
+    )
 }
 
 func keymapPayload(

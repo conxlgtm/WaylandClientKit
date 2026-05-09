@@ -150,7 +150,9 @@ package final class WaylandThreadExecutor: SerialExecutor {
         unsafe wakeFileDescriptorStorage
     }
 
-    package func installEventSource(_ source: any WaylandThreadEventSource) throws {
+    package func installEventSource(_ source: any WaylandThreadEventSource)
+        throws(WaylandThreadExecutorError)
+    {
         unsafe pthread_mutex_lock(&mutex)
         guard unsafe state.phase.canAcceptWork else {
             let error = unsafe state.rejectionError()
@@ -193,8 +195,8 @@ package final class WaylandThreadExecutor: SerialExecutor {
 
     @available(*, noasync, message: "Only for executor bootstrap and tests.")
     package func syncBootstrapOnly<ResultValue: Sendable>(
-        _ operation: @Sendable @escaping () throws -> ResultValue
-    ) throws -> ResultValue {
+        _ operation: @Sendable @escaping () throws(WaylandThreadExecutorError) -> ResultValue
+    ) throws(WaylandThreadExecutorError) -> ResultValue {
         if isOwnerThread {
             return try operation()
         }

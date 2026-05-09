@@ -41,10 +41,11 @@ enum KeyboardLayoutError: Error, Equatable, Sendable, CustomStringConvertible {
 
 @safe
 private enum XKBComposeTableCreation {
-    // libxkbcommon compose table construction may parse locale compose files and
-    // process compose data while Swift Testing creates interpreters concurrently.
-    // Serialize constructor calls process-wide; the resulting table is still
-    // owned by one non-Sendable Swift wrapper.
+    // libxkbcommon compose table constructors have crashed under concurrent
+    // Swift Testing runs on glibc Linux while parsing locale and buffer-backed
+    // compose tables. Serialize this C boundary process-wide until the package
+    // has an upstream thread-safety guarantee for concurrent table creation.
+    // The resulting table remains owned by one non-Sendable Swift wrapper.
     static let lock = Mutex(())
 }
 
@@ -305,19 +306,9 @@ final class KeyboardLayoutState {
     }
 
     private func keysymName(for keysym: UInt32) -> String? {
-        var buffer = [CChar](repeating: 0, count: 64)
-        let required = unsafe xkb_keysym_get_name(keysym, &buffer, buffer.count)
-        guard required > 0 else { return nil }
-
-        if Int(required) < buffer.count {
-            return stringFromNullTerminatedBuffer(buffer)
+        stringFromXKBNameCall { buffer, count in
+            unsafe xkb_keysym_get_name(keysym, buffer, count)
         }
-
-        buffer = [CChar](repeating: 0, count: Int(required) + 1)
-        let written = unsafe xkb_keysym_get_name(keysym, &buffer, buffer.count)
-        guard written > 0 else { return nil }
-
-        return stringFromNullTerminatedBuffer(buffer)
     }
 
     private func keysyms(for xkbKeycode: UInt32) -> [KeyboardKeysym] {
@@ -353,7 +344,7 @@ final class KeyboardLayoutState {
     }
 
     private func utf8Text(for xkbKeycode: UInt32) -> String? {
-        unsafe stringFromXKB { buffer, count in
+        stringFromXKBSizedCall { buffer, count in
             unsafe xkb_state_key_get_utf8(state.pointer, xkbKeycode, buffer, count)
         }
     }
@@ -391,31 +382,6 @@ final class KeyboardLayoutState {
                 resultKeysym: resultKeysym,
                 resultKeysymName: resultKeysymName
             )
-        )
-    }
-
-    private func stringFromXKB(
-        _ body: (UnsafeMutablePointer<CChar>?, Int) -> Int32
-    ) -> String? {
-        let required = body(nil, 0)
-        guard required > 0 else { return nil }
-
-        var buffer = [CChar](repeating: 0, count: Int(required) + 1)
-        let written = unsafe body(&buffer, buffer.count)
-        guard written > 0 else { return nil }
-
-        let endIndex = buffer.firstIndex(of: 0) ?? buffer.endIndex
-        return String(
-            bytes: buffer[..<endIndex].map { UInt8(bitPattern: $0) },
-            encoding: .utf8
-        )
-    }
-
-    private func stringFromNullTerminatedBuffer(_ buffer: [CChar]) -> String? {
-        let endIndex = buffer.firstIndex(of: 0) ?? buffer.endIndex
-        return String(
-            bytes: buffer[..<endIndex].map { UInt8(bitPattern: $0) },
-            encoding: .utf8
         )
     }
 }
