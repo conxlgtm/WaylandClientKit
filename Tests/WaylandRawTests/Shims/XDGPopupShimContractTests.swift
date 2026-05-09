@@ -95,8 +95,8 @@ struct XDGPopupShimContractTests {
     func popupGrabPreservesSeatAndSerial() {
         let popup = unsafe OpaquePointer(bitPattern: 0x6060)
         let seat = unsafe OpaquePointer(bitPattern: 0x7070)
-        unsafe swl_test_xdg_request_recording_begin()
-        defer { unsafe swl_test_xdg_request_recording_end() }
+        swl_test_xdg_request_recording_begin()
+        defer { swl_test_xdg_request_recording_end() }
         unsafe swl_xdg_popup_grab(popup, seat, 123)
         let record = unsafe swl_test_xdg_popup_grab_record()
         #expect(unsafe record.call_count == 1)
@@ -130,9 +130,9 @@ struct XDGPopupShimContractTests {
         request: () -> Void,
         sourceLocation: SourceLocation = #_sourceLocation
     ) {
-        unsafe swl_test_xdg_request_recording_begin()
-        defer { unsafe swl_test_xdg_request_recording_end() }
-        unsafe request()
+        swl_test_xdg_request_recording_begin()
+        defer { swl_test_xdg_request_recording_end() }
+        request()
         let record = unsafe swl_test_xdg_positioner_request_record()
         #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
         #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
@@ -149,8 +149,8 @@ struct XDGPopupShimContractTests {
         destroy: (OpaquePointer?) -> Void,
         sourceLocation: SourceLocation = #_sourceLocation
     ) {
-        unsafe swl_test_xdg_request_recording_begin()
-        defer { unsafe swl_test_xdg_request_recording_end() }
+        swl_test_xdg_request_recording_begin()
+        defer { swl_test_xdg_request_recording_end() }
         unsafe destroy(object)
         let record = unsafe swl_test_xdg_destroy_record()
         let expectedObject = unsafe UnsafeMutableRawPointer(object)

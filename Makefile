@@ -31,7 +31,7 @@ strict-concurrency:
 	@$(SWIFT) build --disable-index-store -Xswiftc -strict-concurrency=complete -Xswiftc -warn-concurrency
 
 test:
-	@CC="$(CURDIR)/scripts/dev/clang-filter-index-store.sh" $(SWIFT) test
+	@./scripts/ci/test-with-warnings-as-errors.sh
 
 test-public-api-client:
 	@./scripts/ci/test-public-api-client.sh
