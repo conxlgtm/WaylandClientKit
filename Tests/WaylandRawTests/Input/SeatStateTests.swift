@@ -13,13 +13,11 @@ struct SeatStateTests {
             kind: .pointer,
             generation: 1
         )
-
         let plan = reduceSeatState(
             old,
             seatID: seatID,
             action: .capabilitiesChanged([.pointer])
         )
-
         #expect(
             plan.effects == [
                 .createPointer(pointerID),
@@ -29,7 +27,6 @@ struct SeatStateTests {
         #expect(plan.nextState.activeCapabilities == [.pointer])
         #expect(plan.nextState.pointerGeneration == 2)
     }
-
     @Test
     func repeatedCapabilityMaskIsIdempotentWhenChildIsActive() throws {
         let seatID = RawSeatID(rawValue: 7)
@@ -38,17 +35,14 @@ struct SeatStateTests {
             activeCapabilities: [.pointer],
             pointerGeneration: 2
         )
-
         let plan = reduceSeatState(
             old,
             seatID: seatID,
             action: .capabilitiesChanged([.pointer])
         )
-
         #expect(plan.effects.isEmpty)
         #expect(plan.nextState == old)
     }
-
     @Test
     func removingPointerCapabilityPlansPointerDestruction() throws {
         let seatID = RawSeatID(rawValue: 8)
@@ -62,13 +56,11 @@ struct SeatStateTests {
             kind: .pointer,
             generation: 1
         )
-
         let plan = reduceSeatState(
             old,
             seatID: seatID,
             action: .capabilitiesChanged([])
         )
-
         #expect(
             plan.effects == [
                 .destroyPointer(pointerID),
@@ -77,7 +69,6 @@ struct SeatStateTests {
         #expect(plan.nextState.advertisedCapabilities.isEmpty)
         #expect(plan.nextState.activeCapabilities.isEmpty)
     }
-
     @Test
     func changingFromPointerKeyboardToKeyboardDestroysPointerOnly() throws {
         let seatID = RawSeatID(rawValue: 9)
@@ -87,13 +78,11 @@ struct SeatStateTests {
             pointerGeneration: 2,
             keyboardGeneration: 2
         )
-
         let plan = reduceSeatState(
             old,
             seatID: seatID,
             action: .capabilitiesChanged([.keyboard])
         )
-
         #expect(
             plan.effects == [
                 .destroyPointer(
@@ -103,7 +92,6 @@ struct SeatStateTests {
             ])
         #expect(plan.nextState.activeCapabilities == [.keyboard])
     }
-
     @Test
     func seatStateRejectsActiveCapabilityNotAdvertised() {
         #expect(
@@ -118,11 +106,9 @@ struct SeatStateTests {
             )
         }
     }
-
     @Test
     func propertySeatActiveCapabilitiesAreAlwaysSubsetOfAdvertisedCapabilities() {
         let seatID = RawSeatID(rawValue: 20)
-
         for advertisedRawValue in UInt32(0)...UInt32(7) {
             let advertised = SeatCapabilities(rawValue: advertisedRawValue)
             let plan = reduceSeatState(
@@ -130,7 +116,6 @@ struct SeatStateTests {
                 seatID: seatID,
                 action: .capabilitiesChanged(advertised)
             )
-
             #expect(
                 plan.nextState.activeCapabilities.isSubset(
                     of: plan.nextState.advertisedCapabilities
@@ -138,7 +123,6 @@ struct SeatStateTests {
             )
         }
     }
-
     @Test
     func pointerCreatedWithoutAdvertisedPointerIsRejected() {
         let seatID = RawSeatID(rawValue: 21)
@@ -147,27 +131,22 @@ struct SeatStateTests {
             seatID: seatID,
             action: .pointerCreated
         )
-
         #expect(plan.effects.isEmpty)
         #expect(plan.nextState.activeCapabilities.isEmpty)
     }
-
     @Test
     func unknownCapabilityBitsAreAdvertisedButDoNotCreateChildren() {
         let seatID = RawSeatID(rawValue: 10)
         let future = SeatCapabilities(rawValue: 0x80)
-
         let plan = reduceSeatState(
             SeatState(),
             seatID: seatID,
             action: .capabilitiesChanged(future)
         )
-
         #expect(plan.effects == [.emitSeatSnapshot])
         #expect(plan.nextState.advertisedCapabilities == future)
         #expect(plan.nextState.activeCapabilities.isEmpty)
     }
-
     @Test
     func createFailurePreservesAdvertisedCapabilitiesAndRemovesActiveChild() {
         let seatID = RawSeatID(rawValue: 11)
@@ -176,19 +155,16 @@ struct SeatStateTests {
             seatID: seatID,
             action: .capabilitiesChanged([.pointer, .keyboard])
         ).nextState
-
         let failed = reduceSeatState(
             planned,
             seatID: seatID,
             action: .pointerCreateFailed
         )
-
         #expect(failed.effects == [.emitSeatSnapshot])
         #expect(failed.nextState.advertisedCapabilities == [.pointer, .keyboard])
         #expect(failed.nextState.activeCapabilities == [.keyboard])
         #expect(failed.nextState.pointerGeneration == 2)
     }
-
     @Test
     func seatRemovalDestroysChildrenBeforeEmittingRemoval() throws {
         let seatID = RawSeatID(rawValue: 12)
@@ -199,9 +175,7 @@ struct SeatStateTests {
             keyboardGeneration: 2,
             touchGeneration: 2
         )
-
         let plan = reduceSeatState(old, seatID: seatID, action: .removed)
-
         #expect(
             plan.effects == [
                 .destroyTouch(RawInputDeviceID(seatID: seatID, kind: .touch, generation: 1)),

@@ -76,7 +76,7 @@ enum SwiftWaylandDemo {
                 let red = UInt32((x * 255) / max(Int(frame.width), 1))
                 let green = UInt32((row * 255) / max(Int(frame.height), 1))
                 let blue = UInt32(0x80)
-                pixels[unchecked: x] = (red << 16) | (green << 8) | blue
+                unsafe pixels[unchecked: x] = (red << 16) | (green << 8) | blue
             }
 
             drawPointerMarker(
@@ -112,7 +112,7 @@ enum SwiftWaylandDemo {
         guard startX <= endX else { return }
 
         for x in startX...endX {
-            pixels[unchecked: x] = color
+            unsafe pixels[unchecked: x] = color
         }
     }
 }

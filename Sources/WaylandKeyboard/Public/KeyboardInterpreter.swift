@@ -340,6 +340,8 @@ extension KeyboardInterpreter {
         switch failure {
         case .tableUnavailable:
             .composeTableUnavailable(locale: locale)
+        case .tableBufferContainsNUL:
+            .composeTableBufferContainsNUL
         case .stateCreationFailed:
             .composeStateCreationFailed
         }

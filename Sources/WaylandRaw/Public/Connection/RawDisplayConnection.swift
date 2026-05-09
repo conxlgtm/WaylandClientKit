@@ -2,6 +2,7 @@ import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
 
+@safe
 private struct RegistryResources {
     let registry: RawRegistry
     let state: RegistryState
@@ -9,6 +10,7 @@ private struct RegistryResources {
     let inputEventQueue: RawInputEventQueue
 }
 
+@safe
 package final class RawDisplayConnection {
     package static let defaultDiscoveryTimeoutMS: Int32 = 1_000
 
@@ -70,7 +72,7 @@ package final class RawDisplayConnection {
         invariantFailureSink: RawInvariantFailureSink,
         inputQueueConfiguration: RawInputQueueConfiguration
     ) throws -> RawDisplayConnection {
-        guard let displayPointer = wl_display_connect(nil) else {
+        guard let displayPointer = unsafe wl_display_connect(nil) else {
             throw RuntimeError.connectionFailed
         }
 
@@ -80,26 +82,26 @@ package final class RawDisplayConnection {
             ownership: .connectionLifetime
         )
 
-        guard let eventQueuePointer = swl_display_create_event_queue(displayPointer) else {
-            wl_display_disconnect(displayPointer)
+        guard let eventQueuePointer = unsafe swl_display_create_event_queue(displayPointer) else {
+            unsafe wl_display_disconnect(displayPointer)
             throw RuntimeError.eventQueueCreationFailed
         }
         let rawEventQueue = RawEventQueue(opaquePointer: eventQueuePointer)
 
-        guard let wrappedDisplay = swl_display_create_wrapper(displayPointer) else {
+        guard let wrappedDisplay = unsafe swl_display_create_wrapper(displayPointer) else {
             rawEventQueue.destroy()
-            wl_display_disconnect(displayPointer)
+            unsafe wl_display_disconnect(displayPointer)
             throw RuntimeError.displayWrapperCreationFailed
         }
-        swl_display_wrapper_set_queue(wrappedDisplay, eventQueuePointer)
+        unsafe swl_display_wrapper_set_queue(wrappedDisplay, eventQueuePointer)
 
-        guard let registryPointer = swl_display_get_registry(wrappedDisplay) else {
-            swl_display_wrapper_destroy(wrappedDisplay)
+        guard let registryPointer = unsafe swl_display_get_registry(wrappedDisplay) else {
+            unsafe swl_display_wrapper_destroy(wrappedDisplay)
             rawEventQueue.destroy()
-            wl_display_disconnect(displayPointer)
+            unsafe wl_display_disconnect(displayPointer)
             throw RuntimeError.registryCreationFailed
         }
-        swl_display_wrapper_destroy(wrappedDisplay)
+        unsafe swl_display_wrapper_destroy(wrappedDisplay)
 
         let registryResources = try createRegistryResources(
             displayPointer: displayPointer,
@@ -120,6 +122,7 @@ package final class RawDisplayConnection {
         )
     }
 
+    @safe
     private static func createRegistryResources(
         displayPointer: OpaquePointer,
         eventQueue: RawEventQueue,
@@ -140,8 +143,8 @@ package final class RawDisplayConnection {
                 interface: "wl_registry",
                 invariantFailureSink: invariantFailureSink
             )
-            try listenerOwner.install(on: registryPointer)
-            let registry = RawRegistry(
+            try unsafe listenerOwner.install(on: registryPointer)
+            let registry = unsafe RawRegistry(
                 opaquePointer: adoptedRegistryPointer,
                 version: 1,
                 ownership: .connectionLifetime
@@ -153,9 +156,9 @@ package final class RawDisplayConnection {
                 inputEventQueue: inputEventQueue
             )
         } catch {
-            swl_registry_destroy(registryPointer)
+            unsafe swl_registry_destroy(registryPointer)
             eventQueue.destroy()
-            wl_display_disconnect(displayPointer)
+            unsafe wl_display_disconnect(displayPointer)
             throw error
         }
     }
@@ -188,7 +191,7 @@ package final class RawDisplayConnection {
     package func pumpEvents(timeoutMilliseconds: Int32 = -1) throws {
         preconditionIsOwnerThread()
 
-        try QueueEventLoop.pumpOnce(
+        try unsafe QueueEventLoop.pumpOnce(
             display: display.opaquePointer,
             eventQueue: eventQueue.opaquePointer,
             timeoutMilliseconds: timeoutMilliseconds
@@ -213,7 +216,7 @@ package final class RawDisplayConnection {
     package func runEventLoop(while shouldContinue: () -> Bool) throws {
         preconditionIsOwnerThread()
 
-        try QueueEventLoop.run(
+        try unsafe QueueEventLoop.run(
             display: display.opaquePointer,
             eventQueue: eventQueue.opaquePointer,
             shouldContinue: shouldContinue
@@ -224,9 +227,9 @@ package final class RawDisplayConnection {
         preconditionIsOwnerThread()
         boundGlobals?.destroy()
         registryListenerOwner.cancel()
-        swl_registry_destroy(registry.opaquePointer)
+        unsafe swl_registry_destroy(registry.opaquePointer)
         eventQueue.destroy()
-        wl_display_disconnect(display.opaquePointer)
+        unsafe wl_display_disconnect(display.opaquePointer)
     }
 
     package func setInvariantFailureReporter(_ reporter: (any RawInvariantFailureReporter)?) {
@@ -340,13 +343,15 @@ extension RawDisplayConnection {
         registryState.firstGlobal(named: interfaceName)
     }
 
+    @safe
     private func bindSharedMemory(
         registry reg: OpaquePointer,
         global shmGlobal: RawGlobalAdvertisement,
         version shmVersion: RawVersion,
         compositor: RawCompositor
     ) throws -> RawSharedMemory {
-        guard let shm = swl_registry_bind_wl_shm(reg, shmGlobal.name, shmVersion.value) else {
+        guard let shm = unsafe swl_registry_bind_wl_shm(reg, shmGlobal.name, shmVersion.value)
+        else {
             compositor.destroy()
             throw RuntimeError.bindFailed("wl_shm")
         }
@@ -359,13 +364,14 @@ extension RawDisplayConnection {
         }
     }
 
+    @safe
     private func bindCompositor(
         registry reg: OpaquePointer,
         global compositorGlobal: RawGlobalAdvertisement,
         version compositorVersion: RawVersion
     ) throws -> RawCompositor {
         guard
-            let compositor = swl_registry_bind_wl_compositor(
+            let compositor = unsafe swl_registry_bind_wl_compositor(
                 reg,
                 compositorGlobal.name,
                 compositorVersion.value
@@ -381,6 +387,7 @@ extension RawDisplayConnection {
         )
     }
 
+    @safe
     private func bindXDGWMBase(
         registry reg: OpaquePointer,
         global xdgGlobal: RawGlobalAdvertisement,
@@ -389,7 +396,7 @@ extension RawDisplayConnection {
         shm: RawSharedMemory
     ) throws -> RawXDGWMBase {
         guard
-            let xdgWmBase = swl_registry_bind_xdg_wm_base(
+            let xdgWmBase = unsafe swl_registry_bind_xdg_wm_base(
                 reg,
                 xdgGlobal.name,
                 xdgVersion.value
@@ -413,13 +420,14 @@ extension RawDisplayConnection {
         }
     }
 
+    @safe
     private func bindSeatRegistry(
         registry reg: OpaquePointer,
         xdgWMBase: RawXDGWMBase,
         sharedMemory shm: RawSharedMemory,
         compositor: RawCompositor
     ) throws -> SeatRegistry {
-        let seatRegistry = SeatRegistry(
+        let seatRegistry = unsafe SeatRegistry(
             registry: reg,
             eventSink: inputEventQueue,
             proxyAdoption: proxyAdoption,

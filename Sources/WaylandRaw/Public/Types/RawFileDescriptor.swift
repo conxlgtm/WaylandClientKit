@@ -35,7 +35,7 @@ package struct RawFileDescriptor: ~Copyable {
     ) {
         var descriptors = [Int32](repeating: -1, count: 2)
         let result = unsafe descriptors.withUnsafeMutableBufferPointer { descriptorBuffer in
-            unsafe Glibc.pipe(descriptorBuffer.baseAddress)
+            unsafe swl_pipe_cloexec(descriptorBuffer.baseAddress)
         }
 
         guard result == 0 else {
@@ -50,15 +50,19 @@ package struct RawFileDescriptor: ~Copyable {
         maximumByteCount: Int
     ) throws(RuntimeError) -> [UInt8] {
         var buffer = [UInt8](repeating: 0, count: maximumByteCount)
-        let readCount = unsafe buffer.withUnsafeMutableBufferPointer { byteBuffer in
-            unsafe Glibc.read(fileDescriptor, byteBuffer.baseAddress, maximumByteCount)
-        }
+        while true {
+            let readCount = unsafe buffer.withUnsafeMutableBufferPointer { byteBuffer in
+                unsafe Glibc.read(fileDescriptor, byteBuffer.baseAddress, maximumByteCount)
+            }
 
-        guard readCount >= 0 else {
-            throw RuntimeError.systemError(errno: errno, operation: .readFileDescriptor)
-        }
+            if readCount >= 0 {
+                return Array(buffer.prefix(Int(readCount)))
+            }
 
-        return Array(buffer.prefix(Int(readCount)))
+            if errno != EINTR {
+                throw RuntimeError.systemError(errno: errno, operation: .readFileDescriptor)
+            }
+        }
     }
 
     package static func write(

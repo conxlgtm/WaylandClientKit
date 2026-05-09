@@ -1,7 +1,8 @@
 import CWaylandProtocols
 
+@safe
 package final class SeatRegistry {
-    private let registry: OpaquePointer
+    @safe private let registry: OpaquePointer
     private let eventSink: RawInputEventSink
     private let proxyAdoption: RawProxyAdoptionContext?
     private let invariantFailureSink: RawInvariantFailureSink?
@@ -17,7 +18,7 @@ package final class SeatRegistry {
         invariantFailureSink failureSink: RawInvariantFailureSink? = nil,
         operations seatOperations: RawSeatProxyOperations = .live
     ) {
-        registry = rawRegistry
+        unsafe registry = rawRegistry
         eventSink = inputEventSink
         proxyAdoption = adoptionContext
         invariantFailureSink = failureSink
@@ -47,7 +48,7 @@ package final class SeatRegistry {
     ) -> RawPointerCursorResult {
         guard let seat = seat(for: seatID) else { return .skippedUnknownSeat(seatID) }
 
-        return seat.setPointerCursor(
+        return unsafe seat.setPointerCursor(
             serial: serial,
             surfacePointer: surfacePointer,
             hotspotX: hotspotX,
@@ -74,11 +75,14 @@ package final class SeatRegistry {
 
         unsupportedSeatVersionsByGlobalName[globalName] = nil
         let negotiated = min(advertisedVersion, SupportedVersions.wlSeat)
-        guard let seatPointer = operations.bindSeat(registry, globalName, negotiated.value) else {
+        guard
+            let seatPointer = unsafe operations.bindSeat(
+                registry, globalName, negotiated.value)
+        else {
             throw RuntimeError.bindFailed("wl_seat")
         }
 
-        let seat = try RawSeat(
+        let seat = try unsafe RawSeat(
             id: RawSeatID(rawValue: globalName),
             pointer: seatPointer,
             version: negotiated,

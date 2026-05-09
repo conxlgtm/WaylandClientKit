@@ -7,19 +7,19 @@ let librarySwiftSettings: [SwiftSetting] = [
     .enableUpcomingFeature("InferIsolatedConformances"),
 ]
 
-let publicClientSwiftSettings: [SwiftSetting] =
+let strictMemorySafetySwiftSettings: [SwiftSetting] =
     librarySwiftSettings + [
         .strictMemorySafety(),
         .treatWarning("StrictMemorySafety", as: .error),
     ]
 
 let executableSwiftSettings: [SwiftSetting] =
-    librarySwiftSettings + [
+    strictMemorySafetySwiftSettings + [
         .defaultIsolation(MainActor.self)
     ]
 
 let runtimeSwiftSettings: [SwiftSetting] =
-    librarySwiftSettings + [
+    strictMemorySafetySwiftSettings + [
         .define("ENABLE_TESTING", .when(configuration: .debug))
     ]
 
@@ -53,7 +53,7 @@ let package = Package(
         .target(
             name: "WaylandCursor",
             dependencies: ["WaylandRaw", "CWaylandCursorShims"],
-            swiftSettings: librarySwiftSettings
+            swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
             name: "CWaylandProtocols",
@@ -67,7 +67,7 @@ let package = Package(
         .target(
             name: "WaylandRaw",
             dependencies: ["CWaylandProtocols", "CWaylandClientSystem", "CWaylandRuntimeShims"],
-            swiftSettings: librarySwiftSettings
+            swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
             name: "CWaylandRuntimeShims",
@@ -89,17 +89,17 @@ let package = Package(
                 "WaylandKeyboard",
                 "WaylandCursor",
             ],
-            swiftSettings: publicClientSwiftSettings
+            swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
             name: "WaylandKeyboard",
             dependencies: ["WaylandRaw", "CXKBCommonSystem"],
-            swiftSettings: librarySwiftSettings
+            swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
             name: "WaylandSmokeSupport",
             dependencies: ["WaylandClient"],
-            swiftSettings: librarySwiftSettings
+            swiftSettings: strictMemorySafetySwiftSettings
         ),
         .executableTarget(
             name: "SwiftWaylandDemo",
@@ -115,17 +115,17 @@ let package = Package(
         .testTarget(
             name: "WaylandRawTests",
             dependencies: ["WaylandRaw"],
-            swiftSettings: librarySwiftSettings
+            swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(
             name: "WaylandRuntimeTests",
             dependencies: ["WaylandRaw", "WaylandRuntime"],
-            swiftSettings: librarySwiftSettings
+            swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(
             name: "WaylandClientTests",
             dependencies: ["WaylandClient", "WaylandKeyboard"],
-            swiftSettings: librarySwiftSettings
+            swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(
             name: "WaylandKeyboardTests",
@@ -133,15 +133,15 @@ let package = Package(
             resources: [
                 .copy("Fixtures")
             ],
-            swiftSettings: librarySwiftSettings
+            swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(
             name: "WaylandCursorTests", dependencies: ["WaylandCursor"],
-            swiftSettings: librarySwiftSettings),
+            swiftSettings: strictMemorySafetySwiftSettings),
         .testTarget(
             name: "WaylandSmokeSupportTests",
             dependencies: ["WaylandSmokeSupport"],
-            swiftSettings: librarySwiftSettings
+            swiftSettings: strictMemorySafetySwiftSettings
         ),
     ],
     cLanguageStandard: .c17

@@ -1,5 +1,6 @@
 import CXKBCommonSystem
 import Foundation
+import Synchronization
 
 package struct KeyboardInterpreterConfiguration: Equatable, Sendable {
     package var compose: KeyboardComposeMode
@@ -77,34 +78,47 @@ package enum KeyboardComposeCancellationPolicy: Equatable, Sendable {
 
 package enum KeyboardComposeFailure: Error, Equatable, Sendable {
     case tableUnavailable(locale: String)
+    case tableBufferContainsNUL
     case stateCreationFailed
 }
 
+@safe
 final class XKBComposeTableOwner {
-    private static let creationLock = NSLock()
+    // libxkbcommon documents compose tables as immutable after creation, but
+    // not concurrent table compilation through shared contexts and locale
+    // file parsing. Swift Testing can create interpreters concurrently, so
+    // table compilation is serialized before table objects are handed out.
+    private static let creationLock = Mutex(())
 
-    let pointer: OpaquePointer
+    @safe let pointer: OpaquePointer
+
+    // SAFETY: This value crosses `Mutex.withLock` only to transfer a newly
+    // created compose table pointer to its Swift owner. The pointer is not
+    // shared through the carrier after `XKBComposeTableOwner` stores it.
+    @safe
+    private struct CreatedTablePointer: @unchecked Sendable {
+        @safe let pointer: OpaquePointer
+    }
 
     init(
         context: XKBContextOwner,
         locale: String
     ) throws(KeyboardComposeFailure) {
-        Self.creationLock.lock()
-        defer { Self.creationLock.unlock() }
-
-        let newPointer = locale.withCString { localePointer in
-            xkb_compose_table_new_from_locale(
-                context.pointer,
-                localePointer,
-                XKB_COMPOSE_COMPILE_NO_FLAGS
-            )
+        let createdTable = Self.creationLock.withLock { _ -> CreatedTablePointer? in
+            unsafe locale.withCString { localePointer in
+                unsafe xkb_compose_table_new_from_locale(
+                    context.pointer,
+                    localePointer,
+                    XKB_COMPOSE_COMPILE_NO_FLAGS
+                ).map(CreatedTablePointer.init(pointer:))
+            }
         }
 
-        guard let newPointer else {
+        guard let createdTable else {
             throw .tableUnavailable(locale: locale)
         }
 
-        pointer = newPointer
+        pointer = createdTable.pointer
     }
 
     init(
@@ -116,31 +130,35 @@ final class XKBComposeTableOwner {
             throw .tableUnavailable(locale: locale)
         }
 
-        Self.creationLock.lock()
-        defer { Self.creationLock.unlock() }
-
-        let newPointer = buffer.withCString { bufferPointer -> OpaquePointer? in
-            locale.withCString { localePointer in
-                xkb_compose_table_new_from_buffer(
-                    context.pointer,
-                    bufferPointer,
-                    strlen(bufferPointer),
-                    localePointer,
-                    XKB_COMPOSE_FORMAT_TEXT_V1,
-                    XKB_COMPOSE_COMPILE_NO_FLAGS
-                )
-            }
+        guard !buffer.utf8.contains(0) else {
+            throw .tableBufferContainsNUL
         }
 
-        guard let newPointer else {
+        let byteCount = buffer.utf8.count
+        let createdTable = Self.creationLock.withLock { _ -> CreatedTablePointer? in
+            unsafe buffer.withCString { bufferPointer -> OpaquePointer? in
+                unsafe locale.withCString { localePointer in
+                    unsafe xkb_compose_table_new_from_buffer(
+                        context.pointer,
+                        bufferPointer,
+                        byteCount,
+                        localePointer,
+                        XKB_COMPOSE_FORMAT_TEXT_V1,
+                        XKB_COMPOSE_COMPILE_NO_FLAGS
+                    )
+                }
+            }.map(CreatedTablePointer.init(pointer:))
+        }
+
+        guard let createdTable else {
             throw .tableUnavailable(locale: locale)
         }
 
-        pointer = newPointer
+        pointer = createdTable.pointer
     }
 
     deinit {
-        xkb_compose_table_unref(pointer)
+        unsafe xkb_compose_table_unref(pointer)
     }
 }
 
@@ -152,14 +170,15 @@ struct KeyboardTextResolutionInput {
     let resultKeysymName: String?
 }
 
+@safe
 final class XKBComposeStateOwner {
     private let table: XKBComposeTableOwner
-    private let pointer: OpaquePointer
+    @safe private let pointer: OpaquePointer
     private var activeProgress: KeyboardComposeProgress?
 
     init(table composeTable: XKBComposeTableOwner) throws(KeyboardComposeFailure) {
         guard
-            let newPointer = xkb_compose_state_new(
+            let newPointer = unsafe xkb_compose_state_new(
                 composeTable.pointer,
                 XKB_COMPOSE_STATE_NO_FLAGS
             )
@@ -168,14 +187,14 @@ final class XKBComposeStateOwner {
         }
 
         table = composeTable
-        pointer = newPointer
+        unsafe pointer = newPointer
     }
 
     func resolve(
         input: KeyboardTextResolutionInput,
         policy: KeyboardComposeCancellationPolicy
     ) -> KeyboardTextResult {
-        let feedResult = xkb_compose_state_feed(pointer, input.feedKeysym.rawValue)
+        let feedResult = unsafe xkb_compose_state_feed(pointer, input.feedKeysym.rawValue)
         guard feedResult != XKB_COMPOSE_FEED_IGNORED else {
             return xkbKeyTextResult(
                 input.keyText,
@@ -184,7 +203,7 @@ final class XKBComposeStateOwner {
             )
         }
 
-        switch xkb_compose_state_get_status(pointer) {
+        switch unsafe xkb_compose_state_get_status(pointer) {
         case XKB_COMPOSE_NOTHING:
             activeProgress = nil
             return xkbKeyTextResult(
@@ -235,29 +254,29 @@ final class XKBComposeStateOwner {
     }
 
     func reset() {
-        xkb_compose_state_reset(pointer)
+        unsafe xkb_compose_state_reset(pointer)
         activeProgress = nil
     }
 
     deinit {
-        xkb_compose_state_unref(pointer)
+        unsafe xkb_compose_state_unref(pointer)
     }
 
     private func composedText() -> String? {
-        stringFromXKB { buffer, count in
-            xkb_compose_state_get_utf8(pointer, buffer, count)
+        unsafe stringFromXKB { buffer, count in
+            unsafe xkb_compose_state_get_utf8(pointer, buffer, count)
         }
     }
 
     private func composedKeysym() -> KeyboardKeysym? {
-        let rawKeysym = xkb_compose_state_get_one_sym(pointer)
+        let rawKeysym = unsafe xkb_compose_state_get_one_sym(pointer)
         guard rawKeysym != XKB_KEY_NoSymbol else { return nil }
         return KeyboardKeysym(rawValue: rawKeysym)
     }
 
     private func composedKeysymName(for keysym: KeyboardKeysym) -> String? {
         var buffer = [CChar](repeating: 0, count: 64)
-        let required = xkb_keysym_get_name(keysym.rawValue, &buffer, buffer.count)
+        let required = unsafe xkb_keysym_get_name(keysym.rawValue, &buffer, buffer.count)
         guard required > 0 else { return nil }
 
         if Int(required) < buffer.count {
@@ -265,7 +284,7 @@ final class XKBComposeStateOwner {
         }
 
         buffer = [CChar](repeating: 0, count: Int(required) + 1)
-        let written = xkb_keysym_get_name(keysym.rawValue, &buffer, buffer.count)
+        let written = unsafe xkb_keysym_get_name(keysym.rawValue, &buffer, buffer.count)
         guard written > 0 else { return nil }
 
         return stringFromNullTerminatedBuffer(buffer)
@@ -312,7 +331,7 @@ final class XKBComposeStateOwner {
         guard required > 0 else { return nil }
 
         var buffer = [CChar](repeating: 0, count: Int(required) + 1)
-        let written = body(&buffer, buffer.count)
+        let written = unsafe body(&buffer, buffer.count)
         guard written > 0 else { return nil }
 
         return stringFromNullTerminatedBuffer(buffer)

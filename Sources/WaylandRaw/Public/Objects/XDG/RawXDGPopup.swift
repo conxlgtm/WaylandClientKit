@@ -53,12 +53,14 @@ package struct RawXDGPositionerConstraintAdjustment: OptionSet, Sendable {
     package static let resizeY = Self(rawValue: 32)
 }
 
+@safe
 package final class RawXDGPositioner {
-    let pointer: OpaquePointer
+    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
     private var isDestroyed = false
 
+    @safe
     init(
         pointer positionerPointer: OpaquePointer,
         version positionerVersion: RawVersion,
@@ -130,12 +132,14 @@ package struct RawXDGPopupConfigure: Equatable, Sendable {
     }
 }
 
+@safe
 package final class RawXDGPopup {
-    let pointer: OpaquePointer
+    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
     private var isDestroyed = false
 
+    @safe
     init(
         pointer popupPointer: OpaquePointer,
         version popupVersion: RawVersion,
@@ -171,19 +175,20 @@ private enum XDGPopupListenerInstallState {
     case installed
 }
 
+@safe
 package final class XDGPopupOwner {
     private let onConfigure: (RawXDGPopupConfigure) -> Void
     private let onPopupDone: () -> Void
     private let onRepositioned: (UInt32) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = XDGPopupListenerInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_xdg_popup_listener_callbacks(),
+        initialValue: unsafe swl_xdg_popup_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<swl_xdg_popup_listener_callbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<swl_xdg_popup_listener_callbacks> {
         listenerStorage.callbacks
     }
 
@@ -200,7 +205,7 @@ package final class XDGPopupOwner {
         onRepositioned = repositionedHandler
         invariantFailureSink = failureSink
 
-        callbacks.pointee.configure = { data, _, x, y, width, height in
+        unsafe callbacks.pointee.configure = { data, _, x, y, width, height in
             XDGPopupOwner.withOwner(
                 data,
                 message: "xdg_popup configure fired without Swift state"
@@ -216,7 +221,7 @@ package final class XDGPopupOwner {
             }
         }
 
-        callbacks.pointee.popup_done = { data, _ in
+        unsafe callbacks.pointee.popup_done = { data, _ in
             XDGPopupOwner.withOwner(
                 data,
                 message: "xdg_popup popup_done fired without Swift state"
@@ -225,7 +230,7 @@ package final class XDGPopupOwner {
             }
         }
 
-        callbacks.pointee.repositioned = { data, _, token in
+        unsafe callbacks.pointee.repositioned = { data, _, token in
             XDGPopupOwner.withOwner(
                 data,
                 message: "xdg_popup repositioned fired without Swift state"
@@ -243,7 +248,7 @@ package final class XDGPopupOwner {
             )
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_xdg_popup_add_listener(
             popup.pointer,
@@ -264,6 +269,7 @@ package final class XDGPopupOwner {
         listenerStorage.invalidate()
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,

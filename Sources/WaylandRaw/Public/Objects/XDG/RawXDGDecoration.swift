@@ -1,6 +1,7 @@
 import CWaylandProtocols
 import Glibc
 
+@safe
 package enum RawDecorationMode: Equatable, Sendable {
     case clientSide
     case serverSide
@@ -29,13 +30,15 @@ package enum RawDecorationMode: Equatable, Sendable {
     }
 }
 
+@safe
 package final class RawXDGDecorationManager {
-    let pointer: OpaquePointer
+    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private var isDestroyed = false
 
+    @safe
     init(
         pointer managerPointer: OpaquePointer,
         version managerVersion: RawVersion,
@@ -81,12 +84,14 @@ package final class RawXDGDecorationManager {
     }
 }
 
+@safe
 package final class RawXDGToplevelDecoration {
-    let pointer: OpaquePointer
+    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
     private var isDestroyed = false
 
+    @safe
     init(
         pointer decorationPointer: OpaquePointer,
         version decorationVersion: RawVersion,
@@ -132,17 +137,18 @@ private enum DecorationListenerInstallState {
 private typealias DecorationListenerCallbacks =
     swl_zxdg_toplevel_decoration_v1_listener_callbacks
 
+@safe
 package final class XDGDecorationOwner {
     private let configureState: XDGConfigureState
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = DecorationListenerInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
         initialValue: unsafe swl_zxdg_toplevel_decoration_v1_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<DecorationListenerCallbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<DecorationListenerCallbacks> {
         listenerStorage.callbacks
     }
 
@@ -153,7 +159,7 @@ package final class XDGDecorationOwner {
         configureState = state
         invariantFailureSink = failureSink
 
-        callbacks.pointee.configure = { data, _, mode in
+        unsafe callbacks.pointee.configure = { data, _, mode in
             XDGDecorationOwner.withOwner(
                 data,
                 message: "zxdg_toplevel_decoration_v1 configure fired without Swift state"
@@ -171,7 +177,7 @@ package final class XDGDecorationOwner {
             )
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_zxdg_toplevel_decoration_v1_add_listener(
             decoration.pointer,
@@ -192,6 +198,7 @@ package final class XDGDecorationOwner {
         listenerStorage.invalidate()
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,

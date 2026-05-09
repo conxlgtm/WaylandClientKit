@@ -39,25 +39,27 @@ enum KeyboardLayoutError: Error, Equatable, Sendable, CustomStringConvertible {
     }
 }
 
+@safe
 final class XKBContextOwner {
-    let pointer: OpaquePointer
+    @safe let pointer: OpaquePointer
 
     init() throws(KeyboardLayoutError) {
-        guard let newPointer = xkb_context_new(XKB_CONTEXT_NO_FLAGS) else {
+        guard let newPointer = unsafe xkb_context_new(XKB_CONTEXT_NO_FLAGS) else {
             throw .contextCreationFailed
         }
 
-        xkb_context_set_log_level(newPointer, XKB_LOG_LEVEL_CRITICAL)
-        pointer = newPointer
+        unsafe xkb_context_set_log_level(newPointer, XKB_LOG_LEVEL_CRITICAL)
+        unsafe pointer = newPointer
     }
 
     deinit {
-        xkb_context_unref(pointer)
+        unsafe xkb_context_unref(pointer)
     }
 }
 
+@safe
 final class XKBKeymapOwner {
-    let pointer: OpaquePointer
+    @safe let pointer: OpaquePointer
 
     init(context: XKBContextOwner, payload: RawKeyboardKeymapPayload)
         throws(KeyboardLayoutError)
@@ -66,12 +68,12 @@ final class XKBKeymapOwner {
             throw .unsupportedKeymapFormat(payload.format.rawValue)
         }
 
-        let newPointer = bytes.rawValue.withUnsafeBytes { rawBuffer -> OpaquePointer? in
+        let newPointer = unsafe bytes.rawValue.withUnsafeBytes { rawBuffer -> OpaquePointer? in
             guard let baseAddress = rawBuffer.baseAddress else {
                 return nil
             }
 
-            return xkb_keymap_new_from_buffer(
+            return unsafe xkb_keymap_new_from_buffer(
                 context.pointer,
                 baseAddress.assumingMemoryBound(to: CChar.self),
                 bytes.count,
@@ -80,31 +82,32 @@ final class XKBKeymapOwner {
             )
         }
 
-        guard let newPointer else {
+        guard let newPointer = unsafe newPointer else {
             throw .invalidKeymap
         }
 
-        pointer = newPointer
+        unsafe pointer = newPointer
     }
 
     deinit {
-        xkb_keymap_unref(pointer)
+        unsafe xkb_keymap_unref(pointer)
     }
 }
 
+@safe
 final class XKBStateOwner {
-    let pointer: OpaquePointer
+    @safe let pointer: OpaquePointer
 
     init(keymap: XKBKeymapOwner) throws(KeyboardLayoutError) {
-        guard let newPointer = xkb_state_new(keymap.pointer) else {
+        guard let newPointer = unsafe xkb_state_new(keymap.pointer) else {
             throw .stateCreationFailed
         }
 
-        pointer = newPointer
+        unsafe pointer = newPointer
     }
 
     deinit {
-        xkb_state_unref(pointer)
+        unsafe xkb_state_unref(pointer)
     }
 }
 
@@ -167,7 +170,7 @@ final class KeyboardLayoutState {
     func applyModifiers(_ modifiers: RawKeyboardModifiers) -> XKBStateComponents {
         threadAffinity.preconditionIsOwnerThread()
 
-        let changed = xkb_state_update_mask(
+        let changed = unsafe xkb_state_update_mask(
             state.pointer,
             modifiers.depressed,
             modifiers.latched,
@@ -182,8 +185,8 @@ final class KeyboardLayoutState {
     func modifierMask(named name: String) -> UInt32? {
         threadAffinity.preconditionIsOwnerThread()
 
-        return name.withCString { namePointer -> UInt32? in
-            let index = xkb_keymap_mod_get_index(keymap.pointer, namePointer)
+        return unsafe name.withCString { namePointer -> UInt32? in
+            let index = unsafe xkb_keymap_mod_get_index(keymap.pointer, namePointer)
             guard index != XKB_MOD_INVALID, index < UInt32.bitWidth else {
                 return nil
             }
@@ -219,7 +222,7 @@ final class KeyboardLayoutState {
             resultKeysymName: singleKeysymName
         )
         let repeatCapability = KeyboardKeyRepeatCapability(
-            keymapAllowsRepeat: xkb_keymap_key_repeats(keymap.pointer, xkbKeycode) != 0
+            keymapAllowsRepeat: unsafe xkb_keymap_key_repeats(keymap.pointer, xkbKeycode) != 0
         )
         let interpretation = InterpretedKeyboardKeyInterpretation(
             state: interpretedState,
@@ -249,7 +252,7 @@ final class KeyboardLayoutState {
 
     private func keysymName(for keysym: UInt32) -> String? {
         var buffer = [CChar](repeating: 0, count: 64)
-        let required = xkb_keysym_get_name(keysym, &buffer, buffer.count)
+        let required = unsafe xkb_keysym_get_name(keysym, &buffer, buffer.count)
         guard required > 0 else { return nil }
 
         if Int(required) < buffer.count {
@@ -257,7 +260,7 @@ final class KeyboardLayoutState {
         }
 
         buffer = [CChar](repeating: 0, count: Int(required) + 1)
-        let written = xkb_keysym_get_name(keysym, &buffer, buffer.count)
+        let written = unsafe xkb_keysym_get_name(keysym, &buffer, buffer.count)
         guard written > 0 else { return nil }
 
         return stringFromNullTerminatedBuffer(buffer)
@@ -265,15 +268,15 @@ final class KeyboardLayoutState {
 
     private func keysyms(for xkbKeycode: UInt32) -> [KeyboardKeysym] {
         var keysymsPointer: UnsafePointer<xkb_keysym_t>?
-        let count = xkb_state_key_get_syms(
+        let count = unsafe xkb_state_key_get_syms(
             state.pointer,
             xkbKeycode,
             &keysymsPointer
         )
-        guard count > 0, let keysymsPointer else { return [] }
+        guard count > 0, let keysymsPointer = unsafe keysymsPointer else { return [] }
 
         return (0..<Int(count)).map { index in
-            KeyboardKeysym(rawValue: keysymsPointer[index])
+            KeyboardKeysym(rawValue: unsafe keysymsPointer[index])
         }
     }
 
@@ -281,7 +284,7 @@ final class KeyboardLayoutState {
         for xkbKeycode: UInt32,
         keysyms: [KeyboardKeysym]
     ) -> KeyboardSymbolResolution {
-        let oneKeysym = xkb_state_key_get_one_sym(state.pointer, xkbKeycode)
+        let oneKeysym = unsafe xkb_state_key_get_one_sym(state.pointer, xkbKeycode)
         guard oneKeysym != XKB_KEY_NoSymbol else {
             return .resolved(keysyms)
         }
@@ -296,8 +299,8 @@ final class KeyboardLayoutState {
     }
 
     private func utf8Text(for xkbKeycode: UInt32) -> String? {
-        stringFromXKB { buffer, count in
-            xkb_state_key_get_utf8(state.pointer, xkbKeycode, buffer, count)
+        unsafe stringFromXKB { buffer, count in
+            unsafe xkb_state_key_get_utf8(state.pointer, xkbKeycode, buffer, count)
         }
     }
 
@@ -344,7 +347,7 @@ final class KeyboardLayoutState {
         guard required > 0 else { return nil }
 
         var buffer = [CChar](repeating: 0, count: Int(required) + 1)
-        let written = body(&buffer, buffer.count)
+        let written = unsafe body(&buffer, buffer.count)
         guard written > 0 else { return nil }
 
         let endIndex = buffer.firstIndex(of: 0) ?? buffer.endIndex

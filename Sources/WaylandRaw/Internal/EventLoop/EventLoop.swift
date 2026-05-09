@@ -1,6 +1,7 @@
 import CWaylandClientSystem
 import Glibc
 
+@safe
 enum EventLoop {
     package static func fileDescriptor(display: OpaquePointer) -> CInt {
         unsafe wl_display_get_fd(display)

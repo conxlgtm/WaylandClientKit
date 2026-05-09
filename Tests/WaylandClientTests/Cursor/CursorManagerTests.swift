@@ -337,7 +337,8 @@ final class RecordingCursorBackend: CursorManagerBackend {
             hotspotX: 3,
             hotspotY: 4,
             delay: 0,
-            buffer: RawBorrowedBuffer(pointer: try #require(OpaquePointer(bitPattern: 0xB00)))
+            buffer: RawBorrowedBuffer(
+                pointer: try unsafe #require(OpaquePointer(bitPattern: 0xB00)))
         )
     }
 

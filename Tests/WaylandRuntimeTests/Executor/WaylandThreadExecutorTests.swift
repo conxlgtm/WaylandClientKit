@@ -9,7 +9,7 @@ private actor ExecutorProbe {
     private let executor: WaylandThreadExecutor
 
     nonisolated var unownedExecutor: UnownedSerialExecutor {
-        executor.asUnownedSerialExecutor()
+        unsafe executor.asUnownedSerialExecutor()
     }
 
     init(executor probeExecutor: WaylandThreadExecutor) {

@@ -19,19 +19,20 @@ enum UnsafeDefaultQueueEventLoopError: Error, Equatable, Sendable, CustomStringC
     }
 }
 
+@safe
 struct EventLoopOperations {
-    var prepareRead: (OpaquePointer) -> Int32
-    var dispatchPending: (OpaquePointer) -> Int32
-    var flush: (OpaquePointer) -> Int32
-    var getFileDescriptor: (OpaquePointer) -> Int32
-    var pollFileDescriptor: (UnsafeMutablePointer<pollfd>?, nfds_t, Int32) -> Int32
-    var readEvents: (OpaquePointer) -> Int32
-    var cancelRead: (OpaquePointer) -> Void
-    var makeDisplayError:
+    @safe var prepareRead: (OpaquePointer) -> Int32
+    @safe var dispatchPending: (OpaquePointer) -> Int32
+    @safe var flush: (OpaquePointer) -> Int32
+    @safe var getFileDescriptor: (OpaquePointer) -> Int32
+    @safe var pollFileDescriptor: (UnsafeMutablePointer<pollfd>?, nfds_t, Int32) -> Int32
+    @safe var readEvents: (OpaquePointer) -> Int32
+    @safe var cancelRead: (OpaquePointer) -> Void
+    @safe var makeDisplayError:
         (OpaquePointer, Int32?, RawSystemOperation) -> UnsafeDefaultQueueEventLoopError
 
     static var live: EventLoopOperations {
-        EventLoopOperations(
+        unsafe EventLoopOperations(
             prepareRead: unsafe wl_display_prepare_read,
             dispatchPending: unsafe wl_display_dispatch_pending,
             flush: unsafe wl_display_flush,
@@ -41,7 +42,7 @@ struct EventLoopOperations {
             },
             readEvents: unsafe wl_display_read_events,
             cancelRead: unsafe wl_display_cancel_read,
-            makeDisplayError: makeDisplayError
+            makeDisplayError: unsafe makeDisplayError
         )
     }
 
@@ -69,7 +70,7 @@ enum UnsafeDefaultQueueEventLoop {
         display: OpaquePointer,
         timeoutMilliseconds: Int32
     ) throws(UnsafeDefaultQueueEventLoopError) {
-        try pumpOnce(
+        try unsafe pumpOnce(
             display: display,
             timeoutMilliseconds: timeoutMilliseconds,
             operations: .live
@@ -82,7 +83,7 @@ enum UnsafeDefaultQueueEventLoop {
         shouldContinue: () -> Bool
     ) throws(UnsafeDefaultQueueEventLoopError) {
         while shouldContinue() {
-            try pumpOnceDefaultQueueUnsafe(display: display, timeoutMilliseconds: -1)
+            try unsafe pumpOnceDefaultQueueUnsafe(display: display, timeoutMilliseconds: -1)
         }
     }
 
@@ -93,7 +94,7 @@ enum UnsafeDefaultQueueEventLoop {
         wakeFileDescriptor: CInt? = nil,
         drainWakeFileDescriptor: (() -> Void)? = nil
     ) throws(UnsafeDefaultQueueEventLoopError) {
-        try QueueEventLoopEngine().step(
+        try unsafe QueueEventLoopEngine().step(
             source: DefaultQueueEventLoopSource(display: display, operations: operations),
             timeoutMilliseconds: timeoutMilliseconds,
             wakeFileDescriptor: wakeFileDescriptor,
@@ -102,21 +103,22 @@ enum UnsafeDefaultQueueEventLoop {
     }
 }
 
+@safe
 private struct DefaultQueueEventLoopSource: QueueEventLoopSource {
-    let display: OpaquePointer
+    @safe let display: OpaquePointer
     let operations: EventLoopOperations
 
     func dispatchPending() throws(UnsafeDefaultQueueEventLoopError) -> Int32 {
-        let result = operations.dispatchPending(display)
+        let result = unsafe operations.dispatchPending(display)
         guard result >= 0 else {
-            throw operations.makeDisplayError(display, errno, .displayDispatchPending)
+            throw unsafe operations.makeDisplayError(display, errno, .displayDispatchPending)
         }
 
         return result
     }
 
     func prepareRead() throws(UnsafeDefaultQueueEventLoopError) -> Bool {
-        let result = operations.prepareRead(display)
+        let result = unsafe operations.prepareRead(display)
         if result == 0 {
             return true
         }
@@ -126,12 +128,12 @@ private struct DefaultQueueEventLoopSource: QueueEventLoopSource {
             return false
         }
 
-        throw operations.makeDisplayError(display, savedErrno, .displayPrepareRead)
+        throw unsafe operations.makeDisplayError(display, savedErrno, .displayPrepareRead)
     }
 
     func flush() throws(UnsafeDefaultQueueEventLoopError) -> Bool {
         while true {
-            let result = operations.flush(display)
+            let result = unsafe operations.flush(display)
             if result >= 0 {
                 return false
             }
@@ -147,30 +149,30 @@ private struct DefaultQueueEventLoopSource: QueueEventLoopSource {
                 return false
             }
 
-            throw operations.makeDisplayError(display, savedErrno, .displayFlush)
+            throw unsafe operations.makeDisplayError(display, savedErrno, .displayFlush)
         }
     }
 
     func fileDescriptor() throws(UnsafeDefaultQueueEventLoopError) -> CInt {
-        operations.getFileDescriptor(display)
+        unsafe operations.getFileDescriptor(display)
     }
 
     func readEvents() throws(UnsafeDefaultQueueEventLoopError) {
-        if operations.readEvents(display) < 0 {
-            throw operations.makeDisplayError(display, errno, .displayReadEvents)
+        if unsafe operations.readEvents(display) < 0 {
+            throw unsafe operations.makeDisplayError(display, errno, .displayReadEvents)
         }
     }
 
     func cancelRead() {
-        operations.cancelRead(display)
+        unsafe operations.cancelRead(display)
     }
 
     func pollFileDescriptors(
         _ descriptors: inout [pollfd],
         timeoutMilliseconds: Int32
     ) throws(UnsafeDefaultQueueEventLoopError) -> Int32 {
-        descriptors.withUnsafeMutableBufferPointer { buffer in
-            operations.pollFileDescriptor(
+        unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
+            unsafe operations.pollFileDescriptor(
                 buffer.baseAddress,
                 nfds_t(buffer.count),
                 timeoutMilliseconds

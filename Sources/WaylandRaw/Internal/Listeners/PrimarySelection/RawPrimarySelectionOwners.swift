@@ -41,17 +41,18 @@ private enum PrimarySelectionListenerInstallState {
     case installed
 }
 
+@safe
 package final class RawPrimarySelectionOfferOwner {
     private let onEvent: (RawPrimarySelectionOfferEvent) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = PrimarySelectionListenerInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_primary_selection_offer_listener_callbacks(),
+        initialValue: unsafe swl_primary_selection_offer_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks:
+    @safe private var callbacks:
         UnsafeMutablePointer<
             swl_primary_selection_offer_listener_callbacks
         >
@@ -73,7 +74,7 @@ package final class RawPrimarySelectionOfferOwner {
             throw listenerInstallError("zwp_primary_selection_offer_v1")
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_primary_selection_offer_add_listener(
             offer.pointer,
@@ -92,7 +93,7 @@ package final class RawPrimarySelectionOfferOwner {
     }
 
     private func configureCallbacks() {
-        callbacks.pointee.offer = { data, _, mimeType in
+        unsafe callbacks.pointee.offer = { data, _, mimeType in
             RawPrimarySelectionOfferOwner.withOwner(
                 data,
                 message: "zwp_primary_selection_offer_v1 offer fired without Swift state"
@@ -102,6 +103,7 @@ package final class RawPrimarySelectionOfferOwner {
         }
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,
@@ -115,17 +117,18 @@ package final class RawPrimarySelectionOfferOwner {
     }
 }
 
+@safe
 package final class RawPrimarySelectionSourceOwner {
     private let onEvent: (RawPrimarySelectionSourceEvent) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = PrimarySelectionListenerInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_primary_selection_source_listener_callbacks(),
+        initialValue: unsafe swl_primary_selection_source_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks:
+    @safe private var callbacks:
         UnsafeMutablePointer<
             swl_primary_selection_source_listener_callbacks
         >
@@ -147,7 +150,7 @@ package final class RawPrimarySelectionSourceOwner {
             throw listenerInstallError("zwp_primary_selection_source_v1")
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_primary_selection_source_add_listener(
             source.pointer,
@@ -166,7 +169,7 @@ package final class RawPrimarySelectionSourceOwner {
     }
 
     private func configureCallbacks() {
-        callbacks.pointee.send = { data, _, mimeType, fd in
+        unsafe callbacks.pointee.send = { data, _, mimeType, fd in
             RawPrimarySelectionSourceOwner.withOwner(
                 data,
                 message: "zwp_primary_selection_source_v1 send fired without Swift state"
@@ -174,7 +177,7 @@ package final class RawPrimarySelectionSourceOwner {
                 owner.onEvent(.send(mimeType: optionalString(from: mimeType), fd: fd))
             }
         }
-        callbacks.pointee.cancelled = { data, _ in
+        unsafe callbacks.pointee.cancelled = { data, _ in
             RawPrimarySelectionSourceOwner.withOwner(
                 data,
                 message: "zwp_primary_selection_source_v1 cancelled fired without Swift state"
@@ -184,6 +187,7 @@ package final class RawPrimarySelectionSourceOwner {
         }
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,
@@ -197,17 +201,18 @@ package final class RawPrimarySelectionSourceOwner {
     }
 }
 
+@safe
 package final class RawPrimarySelectionDeviceOwner {
     private let onEvent: (RawPrimarySelectionDeviceEvent) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = PrimarySelectionListenerInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_primary_selection_device_listener_callbacks(),
+        initialValue: unsafe swl_primary_selection_device_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks:
+    @safe private var callbacks:
         UnsafeMutablePointer<
             swl_primary_selection_device_listener_callbacks
         >
@@ -229,7 +234,7 @@ package final class RawPrimarySelectionDeviceOwner {
             throw listenerInstallError("zwp_primary_selection_device_v1")
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_primary_selection_device_add_listener(
             device.pointer,
@@ -248,7 +253,7 @@ package final class RawPrimarySelectionDeviceOwner {
     }
 
     private func configureCallbacks() {
-        callbacks.pointee.data_offer = { data, _, offer in
+        unsafe callbacks.pointee.data_offer = { data, _, offer in
             RawPrimarySelectionDeviceOwner.withOwner(
                 data,
                 message: "zwp_primary_selection_device_v1 data_offer fired without Swift state"
@@ -256,7 +261,7 @@ package final class RawPrimarySelectionDeviceOwner {
                 owner.onEvent(.dataOffer(unsafe RawPrimarySelectionOfferHandle(offer)))
             }
         }
-        callbacks.pointee.selection = { data, _, offer in
+        unsafe callbacks.pointee.selection = { data, _, offer in
             RawPrimarySelectionDeviceOwner.withOwner(
                 data,
                 message: "zwp_primary_selection_device_v1 selection fired without Swift state"
@@ -266,6 +271,7 @@ package final class RawPrimarySelectionDeviceOwner {
         }
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,
@@ -283,6 +289,7 @@ private func listenerInstallError(_ interface: String) -> RuntimeError {
     RuntimeError.systemError(errno: EINVAL, operation: .installListener(interface))
 }
 
+@safe
 private func optionalString(from cString: UnsafePointer<CChar>?) -> String? {
-    cString.map { String(cString: $0) }
+    unsafe cString.map { unsafe String(cString: $0) }
 }

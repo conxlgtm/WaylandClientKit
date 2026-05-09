@@ -1,5 +1,6 @@
 import CWaylandProtocols
 
+@safe
 final class TouchListenerOwner {
     private let deviceID: RawInputDeviceID
     private let eventSink: RawInputEventSink
@@ -7,13 +8,13 @@ final class TouchListenerOwner {
     private let invariantFailureSink: RawInvariantFailureSink?
     private let isCurrentDevice: (RawInputDeviceID) -> Bool
     private var isCanceled = false
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_touch_listener_callbacks(),
+        initialValue: unsafe swl_touch_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<swl_touch_listener_callbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<swl_touch_listener_callbacks> {
         listenerStorage.callbacks
     }
 
@@ -31,7 +32,7 @@ final class TouchListenerOwner {
         invariantFailureSink = failureSink
         isCurrentDevice = isTouchCurrent
 
-        callbacks.pointee.down = { data, _, serial, time, surface, id, x, y in
+        unsafe callbacks.pointee.down = { data, _, serial, time, surface, id, x, y in
             TouchListenerOwner.withOwner(
                 data,
                 message: "wl_touch down fired without Swift state"
@@ -41,7 +42,7 @@ final class TouchListenerOwner {
                         RawTouchDown(
                             serial: serial,
                             time: time,
-                            surfaceID: owner.operations.proxyObjectID(surface),
+                            surfaceID: unsafe owner.operations.proxyObjectID(surface),
                             id: RawTouchID(rawValue: id),
                             x: WaylandFixed(rawValue: x),
                             y: WaylandFixed(rawValue: y)
@@ -51,7 +52,7 @@ final class TouchListenerOwner {
             }
         }
 
-        callbacks.pointee.up = { data, _, serial, time, id in
+        unsafe callbacks.pointee.up = { data, _, serial, time, id in
             TouchListenerOwner.withOwner(
                 data,
                 message: "wl_touch up fired without Swift state"
@@ -62,7 +63,7 @@ final class TouchListenerOwner {
             }
         }
 
-        callbacks.pointee.motion = { data, _, time, id, x, y in
+        unsafe callbacks.pointee.motion = { data, _, time, id, x, y in
             TouchListenerOwner.withOwner(
                 data,
                 message: "wl_touch motion fired without Swift state"
@@ -80,7 +81,7 @@ final class TouchListenerOwner {
             }
         }
 
-        callbacks.pointee.frame = { data, _ in
+        unsafe callbacks.pointee.frame = { data, _ in
             TouchListenerOwner.withOwner(
                 data,
                 message: "wl_touch frame fired without Swift state"
@@ -89,7 +90,7 @@ final class TouchListenerOwner {
             }
         }
 
-        callbacks.pointee.cancel = { data, _ in
+        unsafe callbacks.pointee.cancel = { data, _ in
             TouchListenerOwner.withOwner(
                 data,
                 message: "wl_touch cancel fired without Swift state"
@@ -98,7 +99,7 @@ final class TouchListenerOwner {
             }
         }
 
-        callbacks.pointee.shape = { data, _, id, major, minor in
+        unsafe callbacks.pointee.shape = { data, _, id, major, minor in
             TouchListenerOwner.withOwner(
                 data,
                 message: "wl_touch shape fired without Swift state"
@@ -115,7 +116,7 @@ final class TouchListenerOwner {
             }
         }
 
-        callbacks.pointee.orientation = { data, _, id, orientation in
+        unsafe callbacks.pointee.orientation = { data, _, id, orientation in
             TouchListenerOwner.withOwner(
                 data,
                 message: "wl_touch orientation fired without Swift state"
@@ -133,8 +134,8 @@ final class TouchListenerOwner {
     }
 
     func install(on touch: OpaquePointer) throws {
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
-        let result = operations.addTouchListener(touch, callbacks)
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        let result = unsafe operations.addTouchListener(touch, callbacks)
         guard result == 0 else {
             throw RuntimeError.touchListenerInstallationFailed
         }
@@ -145,6 +146,7 @@ final class TouchListenerOwner {
         listenerStorage.invalidate()
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,

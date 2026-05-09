@@ -110,7 +110,7 @@ If behavior appears in README support lists, update architecture and roadmap doc
 ## Safety Review
 
 Any new unsafe surface must explain the ownership invariant that makes it valid.
-If the strict memory safety baseline or unsafe-token allowlist changes, describe why in the pull request.
+If the unsafe-token allowlist changes, describe why in the pull request.
 Prefer scoped borrowed values, validated domain values, and package-internal C shims over raw pointer exposure.
 
 ## Scope Rule

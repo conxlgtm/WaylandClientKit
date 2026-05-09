@@ -1,6 +1,6 @@
 @safe
 final class ExecutorJobCell {
-    private let storage: UnsafeMutablePointer<ExecutorJob>
+    @safe private let storage: UnsafeMutablePointer<ExecutorJob>
     private nonisolated(unsafe) var containsJob = true
 
     init(_ job: consuming ExecutorJob) {
@@ -9,7 +9,7 @@ final class ExecutorJobCell {
     }
 
     deinit {
-        if containsJob {
+        if unsafe containsJob {
             preconditionFailure("Executor job was dropped without running")
         }
 
@@ -17,8 +17,8 @@ final class ExecutorJobCell {
     }
 
     func run(on executor: UnownedSerialExecutor) {
-        precondition(containsJob, "Executor job already consumed")
-        containsJob = false
+        precondition(unsafe containsJob, "Executor job already consumed")
+        unsafe containsJob = false
 
         let job = unsafe storage.move()
         unsafe job.runSynchronously(on: executor)
