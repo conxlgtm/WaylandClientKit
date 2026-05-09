@@ -226,8 +226,8 @@ private func waitUntil(
 
 private func makePipeDescriptors() throws -> (readEnd: Int32, writeEnd: Int32) {
     var descriptors = [Int32](repeating: -1, count: 2)
-    let result = descriptors.withUnsafeMutableBufferPointer { buffer in
-        Glibc.pipe(buffer.baseAddress)
+    let result = unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
+        unsafe Glibc.pipe(buffer.baseAddress)
     }
     guard result == 0 else {
         throw DataTransferError.createPipe(
@@ -243,8 +243,8 @@ private func writeAll(_ bytes: [UInt8], to descriptor: Int32) throws {
 
     while writtenByteCount < bytes.count {
         let remainingBytes = Array(bytes[writtenByteCount...])
-        let result = remainingBytes.withUnsafeBufferPointer { buffer in
-            Glibc.write(descriptor, buffer.baseAddress, remainingBytes.count)
+        let result = unsafe remainingBytes.withUnsafeBufferPointer { buffer in
+            unsafe Glibc.write(descriptor, buffer.baseAddress, remainingBytes.count)
         }
         guard result > 0 else {
             throw DataTransferError.writeFileDescriptor(

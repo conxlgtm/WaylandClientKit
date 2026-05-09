@@ -1,6 +1,7 @@
 import CWaylandProtocols
 import Glibc
 
+@safe
 final class KeyboardListenerOwner {
     private let deviceID: RawInputDeviceID
     private let eventSink: RawInputEventSink
@@ -10,13 +11,13 @@ final class KeyboardListenerOwner {
     private let onError: (Error, RawKeyboardKeymapID?) -> Void
     private var keymapGeneration: UInt64 = 1
     private var isCanceled = false
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_keyboard_listener_callbacks(),
+        initialValue: unsafe swl_keyboard_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<swl_keyboard_listener_callbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<swl_keyboard_listener_callbacks> {
         listenerStorage.callbacks
     }
 
@@ -36,7 +37,7 @@ final class KeyboardListenerOwner {
         isCurrentDevice = isKeyboardCurrent
         onError = handleError
 
-        callbacks.pointee.keymap = { data, _, format, fd, size in
+        unsafe callbacks.pointee.keymap = { data, _, format, fd, size in
             KeyboardListenerOwner.withOwner(
                 data,
                 message: "wl_keyboard keymap fired without Swift state"
@@ -45,7 +46,7 @@ final class KeyboardListenerOwner {
             }
         }
 
-        callbacks.pointee.enter = { data, _, serial, surface, keys in
+        unsafe callbacks.pointee.enter = { data, _, serial, surface, keys in
             KeyboardListenerOwner.withOwner(
                 data,
                 message: "wl_keyboard enter fired without Swift state"
@@ -54,7 +55,7 @@ final class KeyboardListenerOwner {
             }
         }
 
-        callbacks.pointee.leave = { data, _, serial, surface in
+        unsafe callbacks.pointee.leave = { data, _, serial, surface in
             KeyboardListenerOwner.withOwner(
                 data,
                 message: "wl_keyboard leave fired without Swift state"
@@ -63,14 +64,14 @@ final class KeyboardListenerOwner {
                     .leave(
                         RawKeyboardLeave(
                             serial: serial,
-                            surfaceID: owner.operations.proxyObjectID(surface)
+                            surfaceID: unsafe owner.operations.proxyObjectID(surface)
                         )
                     )
                 )
             }
         }
 
-        callbacks.pointee.key = { data, _, serial, time, key, state in
+        unsafe callbacks.pointee.key = { data, _, serial, time, key, state in
             KeyboardListenerOwner.withOwner(
                 data,
                 message: "wl_keyboard key fired without Swift state"
@@ -88,7 +89,7 @@ final class KeyboardListenerOwner {
             }
         }
 
-        callbacks.pointee.modifiers = { data, _, serial, depressed, latched, locked, group in
+        unsafe callbacks.pointee.modifiers = { data, _, serial, depressed, latched, locked, group in
             KeyboardListenerOwner.withOwner(
                 data,
                 message: "wl_keyboard modifiers fired without Swift state"
@@ -107,7 +108,7 @@ final class KeyboardListenerOwner {
             }
         }
 
-        callbacks.pointee.repeat_info = { data, _, rate, delay in
+        unsafe callbacks.pointee.repeat_info = { data, _, rate, delay in
             KeyboardListenerOwner.withOwner(
                 data,
                 message: "wl_keyboard repeat_info fired without Swift state"
@@ -133,8 +134,8 @@ final class KeyboardListenerOwner {
     }
 
     func install(on keyboard: OpaquePointer) throws {
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
-        let result = operations.addKeyboardListener(keyboard, callbacks)
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        let result = unsafe operations.addKeyboardListener(keyboard, callbacks)
         guard result == 0 else {
             throw RuntimeError.keyboardListenerInstallationFailed
         }
@@ -145,6 +146,7 @@ final class KeyboardListenerOwner {
         listenerStorage.invalidate()
     }
 
+    @safe
     private func handleEnter(
         serial: UInt32,
         surface: OpaquePointer?,
@@ -155,7 +157,7 @@ final class KeyboardListenerOwner {
                 .enter(
                     RawKeyboardEnter(
                         serial: serial,
-                        surfaceID: operations.proxyObjectID(surface),
+                        surfaceID: unsafe operations.proxyObjectID(surface),
                         pressedKeys: try WaylandArray.uint32Values(from: keys)
                     )
                 )
@@ -195,6 +197,7 @@ final class KeyboardListenerOwner {
         }
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,

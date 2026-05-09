@@ -39,7 +39,6 @@ required_patterns=(
     "bootstrap-linux.sh"
     "ripgrep"
     "make check"
-    "make strict-memory-safety-raw"
     "./scripts/protocols/generate.sh"
     "./scripts/protocols/verify-generated.sh"
     "./scripts/shims/verify-shims.sh"

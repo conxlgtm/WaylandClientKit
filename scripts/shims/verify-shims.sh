@@ -96,6 +96,7 @@ runtime_symbols=(
     swl_efd_nonblock
     swl_memfd_create
     swl_mfd_cloexec
+    swl_pipe_cloexec
     swl_write_no_sigpipe
 )
 

@@ -2,13 +2,15 @@ import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
 
+@safe
 package final class RawSharedMemory {
     package let version: RawVersion
     package let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
-    package var pointer: OpaquePointer { proxy.pointer }
+    @safe package var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer sharedMemoryPointer: OpaquePointer,
         version sharedMemoryVersion: RawVersion,
@@ -18,7 +20,8 @@ package final class RawSharedMemory {
         proxyAdoption = adoptionContext
         let adoptedPointer: OpaquePointer
         do {
-            adoptedPointer = try adoptionContext.adopt(sharedMemoryPointer, interface: "wl_shm")
+            unsafe adoptedPointer = try adoptionContext.adopt(
+                sharedMemoryPointer, interface: "wl_shm")
         } catch {
             unsafe swl_shm_destroy(sharedMemoryPointer)
             throw error
@@ -66,9 +69,11 @@ package final class RawSharedMemory {
         destroy()
     }
 }
+
+@safe
 private struct MappedRegion: ~Copyable {
     let byteCount: Int
-    let baseAddress: UnsafeMutableRawPointer
+    @safe let baseAddress: UnsafeMutableRawPointer
 
     init(fileDescriptor: Int32, byteCount requestedByteCount: Int) throws(RuntimeError) {
         let mapped = unsafe mmap(
@@ -80,11 +85,11 @@ private struct MappedRegion: ~Copyable {
             0
         )
 
-        guard let mapped, mapped != MAP_FAILED else {
+        guard let mapped = unsafe mapped, unsafe mapped != MAP_FAILED else {
             throw RuntimeError.systemError(errno: errno, operation: .mapSharedMemory)
         }
 
-        baseAddress = mapped
+        unsafe baseAddress = mapped
         byteCount = requestedByteCount
     }
 
@@ -93,12 +98,13 @@ private struct MappedRegion: ~Copyable {
     }
 }
 
+@safe
 private final class SharedMemoryMapping {
     private let mappedRegion: MappedRegion
 
     var byteCount: Int { mappedRegion.byteCount }
 
-    var baseAddress: UnsafeMutableRawPointer { mappedRegion.baseAddress }
+    @safe var baseAddress: UnsafeMutableRawPointer { mappedRegion.baseAddress }
 
     init(fileDescriptor: Int32, byteCount requestedByteCount: Int) throws(RuntimeError) {
         guard requestedByteCount > 0 else {
@@ -113,18 +119,19 @@ private final class SharedMemoryMapping {
     }
 }
 
+@safe
 package final class RawBuffer {
     package let width: Int32
     package let height: Int32
     package let stride: Int32
-    private let bytes: UnsafeMutableRawBufferPointer
+    @safe private let bytes: UnsafeMutableRawBufferPointer
 
     private let releaseOwner: BufferReleaseOwner
     private var proxy: RawOwnedProxy
     private var busyState = BufferBusyState()
     private var releaseObserver: (() -> Void)?
 
-    var pointer: OpaquePointer { proxy.pointer }
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
     package var isBusy: Bool { busyState.isBusy }
 
@@ -154,13 +161,14 @@ package final class RawBuffer {
         width = bufferWidth
         height = bufferHeight
         stride = bufferStride
-        bytes = bufferBytes
+        unsafe bytes = bufferBytes
         releaseOwner = BufferReleaseOwner(
             invariantFailureSink: adoptionContext.invariantFailureSink
         )
         let adoptedPointer: OpaquePointer
         do {
-            adoptedPointer = try adoptionContext.adopt(bufferPointer, interface: "wl_buffer")
+            unsafe adoptedPointer = try adoptionContext.adopt(
+                bufferPointer, interface: "wl_buffer")
         } catch {
             unsafe swl_buffer_destroy(bufferPointer)
             throw error
@@ -170,7 +178,7 @@ package final class RawBuffer {
             destroy: unsafe swl_buffer_destroy
         )
 
-        try releaseOwner.install(on: bufferPointer) { [weak buffer = self] in
+        try unsafe releaseOwner.install(on: bufferPointer) { [weak buffer = self] in
             guard let buffer else { return }
 
             buffer.handleRelease()
@@ -269,6 +277,7 @@ package final class RawBuffer {
     }
 }
 
+@safe
 package final class RawSharedMemoryPool {
     package let size: TopLevelSize
     package let layout: BufferLayout
@@ -278,7 +287,7 @@ package final class RawSharedMemoryPool {
     private let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
-    private var pointer: OpaquePointer { proxy.pointer }
+    @safe private var pointer: OpaquePointer { proxy.pointer }
 
     init(
         sharedMemory: RawSharedMemory,
@@ -304,7 +313,7 @@ package final class RawSharedMemoryPool {
             fileDescriptor: fileDescriptor.rawValue,
             byteCount: totalBytes
         )
-        let poolPointer = try Self.createPool(
+        let poolPointer = try unsafe Self.createPool(
             sharedMemory: sharedMemory,
             fileDescriptor: fileDescriptor.rawValue,
             totalBytes: totalBytes
@@ -313,7 +322,7 @@ package final class RawSharedMemoryPool {
         fileDescriptor.close()
 
         do {
-            let createdBuffers = try Self.createBuffers(
+            let createdBuffers = try unsafe Self.createBuffers(
                 pool: poolPointer,
                 proxyAdoption: adoptionContext,
                 mapping: memoryMapping,
@@ -330,7 +339,8 @@ package final class RawSharedMemoryPool {
             mapping = memoryMapping
             proxyAdoption = adoptionContext
             proxy = RawOwnedProxy(
-                pointer: try adoptionContext.adopt(poolPointer, interface: "wl_shm_pool"),
+                pointer: try adoptionContext.adopt(
+                    poolPointer, interface: "wl_shm_pool"),
                 destroy: unsafe swl_shm_pool_destroy
             )
         } catch {
@@ -401,7 +411,7 @@ package final class RawSharedMemoryPool {
             throw RuntimeError.bindFailed("wl_shm_pool")
         }
 
-        return poolPointer
+        return unsafe poolPointer
     }
 
     private static func createBuffers(
@@ -415,7 +425,7 @@ package final class RawSharedMemoryPool {
         created.reserveCapacity(count)
 
         for index in 0..<count {
-            let buffer = try createBuffer(
+            let buffer = try unsafe createBuffer(
                 pool: pool,
                 proxyAdoption: adoptionContext,
                 mapping: mapping,
@@ -449,13 +459,13 @@ package final class RawSharedMemoryPool {
             throw RuntimeError.bindFailed("wl_buffer")
         }
 
-        return try RawBuffer(
+        return try unsafe RawBuffer(
             pointer: bufferPointer,
             proxyAdoption: adoptionContext,
             width: layout.width,
             height: layout.height,
             stride: layout.stride,
-            bytes: .init(
+            bytes: unsafe .init(
                 start: mapping.baseAddress.advanced(by: offset),
                 count: layout.byteCount
             )

@@ -1,13 +1,15 @@
 import CWaylandClientSystem
 import CWaylandProtocols
 
+@safe
 package final class RawCompositor {
-    let pointer: OpaquePointer
+    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private var isDestroyed = false
 
+    @safe
     init(
         pointer compositorPointer: OpaquePointer,
         version compositorVersion: RawVersion,
@@ -16,7 +18,7 @@ package final class RawCompositor {
         do {
             pointer = try adoptionContext.adopt(compositorPointer, interface: "wl_compositor")
         } catch {
-            swl_compositor_destroy(compositorPointer)
+            unsafe swl_compositor_destroy(compositorPointer)
             throw error
         }
         version = compositorVersion
@@ -24,7 +26,7 @@ package final class RawCompositor {
     }
 
     package func createSurface() throws -> RawSurface {
-        guard let surface = swl_compositor_create_surface(pointer) else {
+        guard let surface = unsafe swl_compositor_create_surface(pointer) else {
             throw RuntimeError.bindFailed("wl_surface")
         }
 
@@ -35,7 +37,7 @@ package final class RawCompositor {
         guard !isDestroyed else { return }
 
         isDestroyed = true
-        swl_compositor_destroy(pointer)
+        unsafe swl_compositor_destroy(pointer)
     }
 
     deinit {

@@ -270,7 +270,7 @@ struct DataTransferManagerDragAndDropTests {
     }
 
     private func dndEnter(offer: RawDataOfferHandle?) -> RawDataDeviceEnter {
-        RawDataDeviceEnter(
+        unsafe RawDataDeviceEnter(
             serial: 1,
             surface: nil,
             x: WaylandFixed(rawValue: 0),

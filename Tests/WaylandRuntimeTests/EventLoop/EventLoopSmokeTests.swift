@@ -11,25 +11,25 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
         // Verify the EventLoop API compiles and is accessible.
         // Actual socket-level behavior requires a live compositor.
         _ =
-            UnsafeDefaultQueueEventLoop.pumpOnceDefaultQueueUnsafe
+            unsafe UnsafeDefaultQueueEventLoop.pumpOnceDefaultQueueUnsafe
             as (OpaquePointer, Int32) throws -> Void
     }
 
     @Test
     func eventLoopRunIsCallable() {
         _ =
-            UnsafeDefaultQueueEventLoop.runDefaultQueueUnsafe
+            unsafe UnsafeDefaultQueueEventLoop.runDefaultQueueUnsafe
             as (OpaquePointer, () -> Bool) throws -> Void
     }
 
     @Test
     func eventLoopRetriesFlushInterruptedBySignal() throws {
-        let display = try makeDisplayPointer()
+        let display = try unsafe makeDisplayPointer()
         var flushCallCount = 0
         var cancelReadCallCount = 0
         var polledEvents = Int16(0)
 
-        let operations = EventLoopOperations(
+        let operations = unsafe EventLoopOperations(
             prepareRead: { _ in 0 },
             dispatchPending: { _ in 0 },
             flush: { _ in
@@ -42,7 +42,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             },
             getFileDescriptor: { _ in 7 },
             pollFileDescriptor: { descriptor, _, _ in
-                polledEvents = descriptor?.pointee.events ?? 0
+                polledEvents = unsafe descriptor?.pointee.events ?? 0
                 return 0
             },
             readEvents: { _ in 0 },
@@ -50,7 +50,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             makeDisplayError: makeTestDisplayError
         )
 
-        try UnsafeDefaultQueueEventLoop.pumpOnce(
+        try unsafe UnsafeDefaultQueueEventLoop.pumpOnce(
             display: display,
             timeoutMilliseconds: 0,
             operations: operations
@@ -63,12 +63,12 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
 
     @Test
     func eventLoopPollsForWritableAfterFlushWouldBlock() throws {
-        let display = try makeDisplayPointer()
+        let display = try unsafe makeDisplayPointer()
         var flushCallCount = 0
         var cancelReadCallCount = 0
         var polledEvents = Int16(0)
 
-        let operations = EventLoopOperations(
+        let operations = unsafe EventLoopOperations(
             prepareRead: { _ in 0 },
             dispatchPending: { _ in 0 },
             flush: { _ in
@@ -81,8 +81,8 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             },
             getFileDescriptor: { _ in 7 },
             pollFileDescriptor: { descriptor, _, _ in
-                polledEvents = descriptor?.pointee.events ?? 0
-                descriptor?.pointee.revents = Int16(POLLOUT)
+                polledEvents = unsafe descriptor?.pointee.events ?? 0
+                unsafe descriptor?.pointee.revents = Int16(POLLOUT)
                 return 1
             },
             readEvents: { _ in 0 },
@@ -90,7 +90,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             makeDisplayError: makeTestDisplayError
         )
 
-        try UnsafeDefaultQueueEventLoop.pumpOnce(
+        try unsafe UnsafeDefaultQueueEventLoop.pumpOnce(
             display: display,
             timeoutMilliseconds: 0,
             operations: operations
@@ -103,12 +103,12 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
 
     @Test
     func eventLoopAttemptsReadAfterFlushPipeClosed() throws {
-        let display = try makeDisplayPointer()
+        let display = try unsafe makeDisplayPointer()
         var flushCallCount = 0
         var readEventsCallCount = 0
         var cancelReadCallCount = 0
 
-        let operations = EventLoopOperations(
+        let operations = unsafe EventLoopOperations(
             prepareRead: { _ in 0 },
             dispatchPending: { _ in 0 },
             flush: { _ in
@@ -118,8 +118,8 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             },
             getFileDescriptor: { _ in 7 },
             pollFileDescriptor: { descriptor, _, _ in
-                #expect(descriptor?.pointee.events == Int16(POLLIN))
-                descriptor?.pointee.revents = Int16(POLLIN)
+                #expect(unsafe descriptor?.pointee.events == Int16(POLLIN))
+                unsafe descriptor?.pointee.revents = Int16(POLLIN)
                 return 1
             },
             readEvents: { _ in
@@ -130,7 +130,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             makeDisplayError: makeTestDisplayError
         )
 
-        try UnsafeDefaultQueueEventLoop.pumpOnce(
+        try unsafe UnsafeDefaultQueueEventLoop.pumpOnce(
             display: display,
             timeoutMilliseconds: 0,
             operations: operations
@@ -143,20 +143,20 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
 
     @Test
     func eventLoopCancelsPreparedReadWhenWakeDescriptorFires() throws {
-        let display = try makeDisplayPointer()
+        let display = try unsafe makeDisplayPointer()
         var cancelReadCallCount = 0
         var readEventsCallCount = 0
         var drainWakeCallCount = 0
 
-        let operations = EventLoopOperations(
+        let operations = unsafe EventLoopOperations(
             prepareRead: { _ in 0 },
             dispatchPending: { _ in 0 },
             flush: { _ in 0 },
             getFileDescriptor: { _ in 7 },
             pollFileDescriptor: { descriptors, count, _ in
                 #expect(count == 2)
-                descriptors?[0].revents = 0
-                descriptors?[1].revents = Int16(POLLIN)
+                unsafe descriptors?[0].revents = 0
+                unsafe descriptors?[1].revents = Int16(POLLIN)
                 return 1
             },
             readEvents: { _ in
@@ -167,7 +167,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             makeDisplayError: makeTestDisplayError
         )
 
-        try UnsafeDefaultQueueEventLoop.pumpOnce(
+        try unsafe UnsafeDefaultQueueEventLoop.pumpOnce(
             display: display,
             timeoutMilliseconds: 0,
             operations: operations,
@@ -183,13 +183,13 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
 
     @Test
     func eventLoopRepeatedWakeSignalsCancelPreparedReadsWithoutDisplayRead() throws {
-        let display = try makeDisplayPointer()
+        let display = try unsafe makeDisplayPointer()
         var pollCallCount = 0
         var cancelReadCallCount = 0
         var readEventsCallCount = 0
         var drainWakeCallCount = 0
 
-        let operations = EventLoopOperations(
+        let operations = unsafe EventLoopOperations(
             prepareRead: { _ in 0 },
             dispatchPending: { _ in 0 },
             flush: { _ in 0 },
@@ -197,8 +197,8 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
             pollFileDescriptor: { descriptors, count, _ in
                 pollCallCount += 1
                 #expect(count == 2)
-                descriptors?[0].revents = 0
-                descriptors?[1].revents = Int16(POLLIN)
+                unsafe descriptors?[0].revents = 0
+                unsafe descriptors?[1].revents = Int16(POLLIN)
                 return 1
             },
             readEvents: { _ in
@@ -210,7 +210,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
         )
 
         for _ in 0..<5 {
-            try UnsafeDefaultQueueEventLoop.pumpOnce(
+            try unsafe UnsafeDefaultQueueEventLoop.pumpOnce(
                 display: display,
                 timeoutMilliseconds: 0,
                 operations: operations,
@@ -228,16 +228,16 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
 
     @Test
     func eventLoopThrowsWhenPollReportsFailureEvent() throws {
-        let display = try makeDisplayPointer()
+        let display = try unsafe makeDisplayPointer()
         var cancelReadCallCount = 0
 
-        let operations = EventLoopOperations(
+        let operations = unsafe EventLoopOperations(
             prepareRead: { _ in 0 },
             dispatchPending: { _ in 0 },
             flush: { _ in 0 },
             getFileDescriptor: { _ in 7 },
             pollFileDescriptor: { descriptor, _, _ in
-                descriptor?.pointee.revents = Int16(POLLHUP)
+                unsafe descriptor?.pointee.revents = Int16(POLLHUP)
                 return 1
             },
             readEvents: { _ in 0 },
@@ -246,7 +246,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
         )
 
         do {
-            try UnsafeDefaultQueueEventLoop.pumpOnce(
+            try unsafe UnsafeDefaultQueueEventLoop.pumpOnce(
                 display: display,
                 timeoutMilliseconds: 0,
                 operations: operations
@@ -265,20 +265,20 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
 
     @Test
     func eventLoopThrowsWhenWakeDescriptorReportsFailureEvent() throws {
-        let display = try makeDisplayPointer()
+        let display = try unsafe makeDisplayPointer()
         var cancelReadCallCount = 0
         var readEventsCallCount = 0
         var drainWakeCallCount = 0
 
-        let operations = EventLoopOperations(
+        let operations = unsafe EventLoopOperations(
             prepareRead: { _ in 0 },
             dispatchPending: { _ in 0 },
             flush: { _ in 0 },
             getFileDescriptor: { _ in 7 },
             pollFileDescriptor: { descriptors, count, _ in
                 #expect(count == 2)
-                descriptors?[0].revents = 0
-                descriptors?[1].revents = Int16(POLLHUP)
+                unsafe descriptors?[0].revents = 0
+                unsafe descriptors?[1].revents = Int16(POLLHUP)
                 return 1
             },
             readEvents: { _ in
@@ -290,7 +290,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
         )
 
         do {
-            try UnsafeDefaultQueueEventLoop.pumpOnce(
+            try unsafe UnsafeDefaultQueueEventLoop.pumpOnce(
                 display: display,
                 timeoutMilliseconds: 0,
                 operations: operations,
@@ -314,11 +314,11 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
 
     @Test
     func eventLoopThrowsWhenPrepareReadFailsUnexpectedly() throws {
-        let display = try makeDisplayPointer()
+        let display = try unsafe makeDisplayPointer()
         var dispatchPendingCallCount = 0
         var cancelReadCallCount = 0
 
-        let operations = EventLoopOperations(
+        let operations = unsafe EventLoopOperations(
             prepareRead: { _ in
                 errno = EBADF
                 return -1
@@ -336,7 +336,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
         )
 
         do {
-            try UnsafeDefaultQueueEventLoop.pumpOnce(
+            try unsafe UnsafeDefaultQueueEventLoop.pumpOnce(
                 display: display,
                 timeoutMilliseconds: 0,
                 operations: operations
@@ -465,7 +465,7 @@ struct EventLoopSmokeTests {  // swiftlint:disable:this type_body_length
     }
 
     private func makeDisplayPointer() throws -> OpaquePointer {
-        try #require(OpaquePointer(bitPattern: 1))
+        try unsafe #require(OpaquePointer(bitPattern: 1))
     }
 
     private func makeTestDisplayError(

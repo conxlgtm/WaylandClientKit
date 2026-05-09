@@ -6,24 +6,25 @@ private enum BufferReleaseInstallState {
     case installed
 }
 
+@safe
 final class BufferReleaseOwner {
     private let invariantFailureSink: RawInvariantFailureSink?
     private var onRelease: (() -> Void)?
     private var installState = BufferReleaseInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_buffer_listener_callbacks(),
+        initialValue: unsafe swl_buffer_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<swl_buffer_listener_callbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<swl_buffer_listener_callbacks> {
         listenerStorage.callbacks
     }
 
     init(invariantFailureSink failureSink: RawInvariantFailureSink? = nil) {
         invariantFailureSink = failureSink
 
-        callbacks.pointee.release = { data, _ in
+        unsafe callbacks.pointee.release = { data, _ in
             BufferReleaseOwner.withOwner(
                 data,
                 message: "wl_buffer release fired without Swift state"
@@ -42,7 +43,7 @@ final class BufferReleaseOwner {
                 errno: EINVAL, operation: .installListener("wl_buffer"))
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_buffer_add_listener(buffer, callbacks)
         guard result == 0 else {
@@ -63,6 +64,7 @@ final class BufferReleaseOwner {
         cancel()
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,

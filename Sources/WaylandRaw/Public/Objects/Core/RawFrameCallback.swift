@@ -2,14 +2,16 @@ import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
 
+@safe
 struct WaylandCallbackOperations {
-    let addListener: (OpaquePointer?, UnsafePointer<swl_callback_listener_callbacks>?) -> Int32
-    let destroy: (OpaquePointer?) -> Void
+    @safe let addListener:
+        (OpaquePointer?, UnsafePointer<swl_callback_listener_callbacks>?) -> Int32
+    @safe let destroy: (OpaquePointer?) -> Void
 
     static var live: WaylandCallbackOperations {
-        .init(
-            addListener: unsafe swl_callback_add_listener,
-            destroy: unsafe swl_callback_destroy
+        unsafe .init(
+            addListener: { unsafe swl_callback_add_listener($0, $1) },
+            destroy: { unsafe swl_callback_destroy($0) }
         )
     }
 }
@@ -24,6 +26,7 @@ enum WaylandCallbackCompletionReason: Equatable {
     case cancelled
 }
 
+@safe
 private enum WaylandCallbackState {
     case pending(pointer: OpaquePointer, onDone: () -> Void)
     case completed(WaylandCallbackCompletionReason)
@@ -38,31 +41,33 @@ private enum WaylandCallbackState {
     }
 }
 
+@safe
 final class WaylandCallbackRegistrationState {
     private var state: WaylandCallbackState
     private let operations: WaylandCallbackOperations
     private let invariantFailureSink: RawInvariantFailureSink?
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_callback_listener_callbacks(),
+        initialValue: unsafe swl_callback_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<swl_callback_listener_callbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<swl_callback_listener_callbacks> {
         listenerStorage.callbacks
     }
 
+    @safe
     init(
         pointer callbackPointer: OpaquePointer,
         onDone handler: @escaping () -> Void,
         operations callbackOperations: WaylandCallbackOperations,
         invariantFailureSink failureSink: RawInvariantFailureSink? = nil
     ) {
-        state = .pending(pointer: callbackPointer, onDone: handler)
+        unsafe state = .pending(pointer: callbackPointer, onDone: handler)
         invariantFailureSink = failureSink
         operations = callbackOperations
 
-        callbacks.pointee.done = { data, _, _ in
+        unsafe callbacks.pointee.done = { data, _, _ in
             CListenerStorage<
                 WaylandCallbackRegistrationState,
                 swl_callback_listener_callbacks
@@ -80,15 +85,15 @@ final class WaylandCallbackRegistrationState {
     }
 
     var listenerStorageIsValidForTesting: Bool {
-        unsafe listenerStorage.isValidForTesting
+        listenerStorage.isValidForTesting
     }
 
     var listenerStorageCallbackActive: Bool {
-        unsafe listenerStorage.hasActiveCallbacksForTesting
+        listenerStorage.hasActiveCallbacksForTesting
     }
 
     func install() throws {
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
         guard case .pending(let pointer, _) = state else {
             preconditionFailure("Wayland callback listener installed after ownership ended")
         }
@@ -125,7 +130,7 @@ final class WaylandCallbackRegistrationState {
 
         state = .completed(.cancelled)
         listenerStorage.invalidate()
-        operations.destroy(callback)
+        unsafe operations.destroy(callback)
     }
 
     deinit {
@@ -133,9 +138,11 @@ final class WaylandCallbackRegistrationState {
     }
 }
 
+@safe
 package struct FrameCallbackRegistration: ~Copyable {
     private let state: WaylandCallbackRegistrationState
 
+    @safe
     init(
         pointer callbackPointer: OpaquePointer,
         onDone handler: @escaping () -> Void,

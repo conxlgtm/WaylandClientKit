@@ -24,18 +24,18 @@ final class SynchronousOperation<ResultValue: Sendable>: Sendable {
         }
 
         unsafe pthread_mutex_lock(&mutex)
-        result = operationResult
+        unsafe result = operationResult
         unsafe pthread_cond_signal(&condition)
         unsafe pthread_mutex_unlock(&mutex)
     }
 
     func wait() throws -> ResultValue {
         unsafe pthread_mutex_lock(&mutex)
-        while result == nil {
+        while unsafe result == nil {
             unsafe pthread_cond_wait(&condition, &mutex)
         }
 
-        let operationResult = result
+        let operationResult = unsafe result
         unsafe pthread_mutex_unlock(&mutex)
 
         return try operationResult?.get()

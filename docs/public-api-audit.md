@@ -153,11 +153,8 @@ Notes:
   Cursor theme loading is deferred until a visible cursor image is first needed.
 - `WaylandDisplay.withConnection`, `Window.show`, and `PopupSurface.show` use finite
   default waits. Callers must opt into longer waits by passing an explicit timeout.
-- The `WaylandClient` target enables Swift strict memory-safety diagnostics as errors.
-  Unsafe storage is confined to audited bridging points, currently `SoftwareFrame`.
-- `WaylandRaw` has a strict memory-safety warning budget checked by
-  `make strict-memory-safety-raw`. That target is not yet warning-free because it owns
-  the intentional C boundary, but new raw unsafe surface area should not increase.
+- All Swift targets enable Swift strict memory-safety diagnostics as errors.
+  Unsafe storage is confined to explicit C, pointer, and executor boundary wrappers.
 
 ## Implementation Targets
 

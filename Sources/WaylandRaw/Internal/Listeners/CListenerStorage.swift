@@ -5,8 +5,9 @@ final class CListenerStorage<Owner: AnyObject, Callbacks> {
     private var isInvalidated = false
     private var activeCallbackDepth = 0
 
-    let callbacks: UnsafeMutablePointer<Callbacks>
+    @safe let callbacks: UnsafeMutablePointer<Callbacks>
 
+    @safe
     init(
         owner: Owner,
         initialValue: Callbacks,
@@ -14,23 +15,24 @@ final class CListenerStorage<Owner: AnyObject, Callbacks> {
     ) {
         callbackStorage = CallbackBoxStorage(owner: owner)
         invariantFailureSink = failureSink
-        unsafe callbacks = UnsafeMutablePointer<Callbacks>.allocate(capacity: 1)
+        callbacks = UnsafeMutablePointer<Callbacks>.allocate(capacity: 1)
         unsafe callbacks.initialize(to: initialValue)
     }
 
-    var opaqueOwnerPointer: UnsafeMutableRawPointer {
+    @safe var opaqueOwnerPointer: UnsafeMutableRawPointer {
         unsafe UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
     }
 
-    var hasActiveCallbacksForTesting: Bool {
+    @safe var hasActiveCallbacksForTesting: Bool {
         activeCallbackDepth > 0
     }
 
-    var isValidForTesting: Bool {
+    @safe var isValidForTesting: Bool {
         !isInvalidated && callbackStorage.isValid
     }
 
     @discardableResult
+    @safe
     static func withOwner<Result>(
         from data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String =
@@ -49,6 +51,7 @@ final class CListenerStorage<Owner: AnyObject, Callbacks> {
         return try storage.withOwner(message(), body)
     }
 
+    @safe
     func invalidate() {
         guard !isInvalidated else { return }
 

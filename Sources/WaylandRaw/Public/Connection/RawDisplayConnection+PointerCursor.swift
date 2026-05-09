@@ -20,7 +20,7 @@ extension RawDisplayConnection {
 
         guard let boundGlobals else { return .skippedUnknownSeat(seatID) }
 
-        return boundGlobals.seatRegistry.setPointerCursor(
+        return unsafe boundGlobals.seatRegistry.setPointerCursor(
             seatID: seatID,
             serial: serial,
             surfacePointer: surface?.pointer,

@@ -405,6 +405,7 @@ package enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {
     case invalidKeymap
     case keymapReadFailed(RawKeyboardKeymapReadError)
     case composeTableUnavailable(locale: String)
+    case composeTableBufferContainsNUL
     case composeStateCreationFailed
     case missingKeymap
     case missingKeyboardState
