@@ -1,4 +1,3 @@
-import Foundation
 import WaylandRaw
 
 public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertible {
@@ -338,7 +337,7 @@ public struct MIMEType: RawRepresentable, Equatable, Hashable, Sendable,
     }
 
     private static func isValid(_ value: String) -> Bool {
-        guard !value.isEmpty, value == value.trimmingCharacters(in: .whitespacesAndNewlines) else {
+        guard !value.isEmpty else {
             return false
         }
         guard !value.unicodeScalars.contains(where: { $0.value < 0x21 || $0.value > 0x7E }) else {

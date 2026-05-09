@@ -42,10 +42,9 @@ package final class WaylandThreadExecutor: SerialExecutor {
         closeWakeFileDescriptorForTesting testingCloseWakeFileDescriptor:
             (@Sendable (CInt) -> CInt)? = nil
     ) throws {
-        unsafe pthread_mutex_init(&mutex, nil)
-        unsafe pthread_cond_init(&condition, nil)
-        unsafe pthread_cond_init(&readyCondition, nil)
-        unsafe synchronizationPrimitivesAreLive = true
+        if let failure = initializeSynchronizationPrimitives() {
+            throw WaylandThreadExecutorError.executorFailedToStart(failure)
+        }
 
         let wakeFileDescriptor: CInt
         if let testingWakeFileDescriptor {
@@ -201,7 +200,7 @@ package final class WaylandThreadExecutor: SerialExecutor {
             return try operation()
         }
 
-        let synchronousOperation = SynchronousOperation(operation)
+        let synchronousOperation = try SynchronousOperation(operation)
         switch enqueue(
             .operation {
                 synchronousOperation.run()
@@ -286,6 +285,38 @@ package final class WaylandThreadExecutor: SerialExecutor {
 }
 
 extension WaylandThreadExecutor {
+    private func initializeSynchronizationPrimitives() -> ExecutorStartFailure? {
+        let mutexResult = unsafe pthread_mutex_init(&mutex, nil)
+        guard mutexResult == 0 else {
+            return .syncPrimitiveInitFailed(
+                function: "pthread_mutex_init",
+                code: mutexResult
+            )
+        }
+
+        let conditionResult = unsafe pthread_cond_init(&condition, nil)
+        guard conditionResult == 0 else {
+            unsafe pthread_mutex_destroy(&mutex)
+            return .syncPrimitiveInitFailed(
+                function: "pthread_cond_init(condition)",
+                code: conditionResult
+            )
+        }
+
+        let readyConditionResult = unsafe pthread_cond_init(&readyCondition, nil)
+        guard readyConditionResult == 0 else {
+            unsafe pthread_cond_destroy(&condition)
+            unsafe pthread_mutex_destroy(&mutex)
+            return .syncPrimitiveInitFailed(
+                function: "pthread_cond_init(readyCondition)",
+                code: readyConditionResult
+            )
+        }
+
+        unsafe synchronizationPrimitivesAreLive = true
+        return nil
+    }
+
     private func enqueue(
         _ workItem: WaylandThreadExecutorWorkItem
     ) -> WaylandThreadExecutorEnqueueResult {

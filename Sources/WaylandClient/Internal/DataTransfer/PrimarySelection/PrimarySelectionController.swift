@@ -165,11 +165,26 @@ package final class PrimarySelectionController {
         return eventQueue.drain()
     }
 
+    func shutdown() {
+        backend.preconditionIsOwnerThread()
+        for sourceID in sourcesByID.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+            sourcesByID.removeValue(forKey: sourceID)?.binding.destroy()
+        }
+        for offerID in offersByID.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+            destroyOffer(offerID)
+        }
+        for seatID in deviceBindings.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+            deviceBindings.removeValue(forKey: seatID)?.release()
+        }
+        discardAllPendingSourceSendRequests()
+        selectionBySeat.removeAll(keepingCapacity: false)
+        offerIDsByHandle.removeAll(keepingCapacity: false)
+        pendingCallbackFailures.removeAll(keepingCapacity: false)
+    }
+
     package func throwPendingCallbackErrorIfAny() throws {
         backend.preconditionIsOwnerThread()
-        guard !pendingCallbackFailures.isEmpty else {
-            return
-        }
+        guard !pendingCallbackFailures.isEmpty else { return }
 
         throw pendingCallbackFailures.removeFirst()
     }
@@ -402,9 +417,6 @@ extension PrimarySelectionController {
     private func primarySelectionDeviceBinding(
         for seatID: SeatID
     ) throws -> any PrimarySelectionDeviceBinding {
-        guard deviceBindings[seatID] != nil else {
-            throw DataTransferError.missingPrimarySelectionDevice(seatID)
-        }
         guard let deviceBinding = deviceBindings[seatID] else {
             throw DataTransferError.missingPrimarySelectionDevice(seatID)
         }

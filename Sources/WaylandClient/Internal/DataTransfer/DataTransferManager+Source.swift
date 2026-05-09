@@ -204,6 +204,16 @@ extension DataTransferManager {
         store.replaceSourceSendRequests(remainingRequests)
     }
 
+    func discardAllPendingSourceSendRequests() {
+        for request in store.drainSourceSendRequests() {
+            do {
+                try request.close()
+            } catch {
+                _ = error
+            }
+        }
+    }
+
     private func discardSourceWriteJobs(_ jobs: [DataTransferSourceWriteJob]) {
         for job in jobs {
             _ = job.closeAsCancelled()

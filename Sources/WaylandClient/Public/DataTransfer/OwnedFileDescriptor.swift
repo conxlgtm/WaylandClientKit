@@ -9,7 +9,7 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
     private var storage: Int32?
     private let readDescriptor: @Sendable (Int32, Int) throws -> [UInt8]
     private let prepareReadDescriptor: @Sendable (Int32) throws -> Void
-    private let writeDescriptor: @Sendable (Int32, [UInt8]) throws -> Int
+    private let writeDescriptor: @Sendable (Int32, ArraySlice<UInt8>) throws -> Int
     private let closeDescriptor: @Sendable (Int32) -> Int32
 
     public init(adopting rawValue: Int32) throws {
@@ -27,7 +27,7 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
             Self.defaultReadDescriptor,
         prepareReadDescriptor prepareRead: @escaping @Sendable (Int32) throws -> Void =
             Self.defaultPrepareReadDescriptor,
-        writeDescriptor write: @escaping @Sendable (Int32, [UInt8]) throws -> Int =
+        writeDescriptor write: @escaping @Sendable (Int32, ArraySlice<UInt8>) throws -> Int =
             Self.defaultWriteDescriptor,
         closeDescriptor close: @escaping @Sendable (Int32) -> Int32
     ) throws {
@@ -251,7 +251,7 @@ extension OwnedFileDescriptor {
         var writtenByteCount = 0
 
         while writtenByteCount < bytes.count {
-            let remainingBytes = Array(bytes[writtenByteCount...])
+            let remainingBytes = bytes[writtenByteCount...]
             let count = try writeDescriptor(rawValue, remainingBytes)
             guard count > 0, count <= remainingBytes.count else {
                 throw DataTransferError.writeFileDescriptor(
@@ -308,7 +308,7 @@ extension OwnedFileDescriptor {
 
     private static func defaultWriteDescriptor(
         _ descriptor: Int32,
-        bytes: [UInt8]
+        bytes: ArraySlice<UInt8>
     ) throws -> Int {
         do {
             return try RawFileDescriptor.write(descriptor: descriptor, bytes: bytes)

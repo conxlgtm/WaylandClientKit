@@ -72,6 +72,21 @@ struct RawSupportTests {
         #expect(objectID.value == 9)
         #expect(objectID.description == "id=9")
     }
+
+    @Test
+    func rawFileDescriptorMemfdRejectsNameContainingNUL() {
+        #expect(
+            throws: RuntimeError.system(
+                RawSystemError(
+                    uncheckedErrno: EINVAL,
+                    operation: .validateArgument("shared memory file name")
+                )
+            )
+        ) {
+            _ = try RawFileDescriptor.memfd(name: "swift-wayland\0buffer")
+        }
+    }
+
     @Test
     func rawPipeDescriptorsAreCloseOnExec() throws {
         let descriptors = try RawFileDescriptor.pipeDescriptors()
@@ -83,5 +98,50 @@ struct RawSupportTests {
         let writeFlags = Glibc.fcntl(descriptors.writeEnd, F_GETFD)
         #expect(readFlags & FD_CLOEXEC == FD_CLOEXEC)
         #expect(writeFlags & FD_CLOEXEC == FD_CLOEXEC)
+    }
+
+    @Test
+    func rawFileDescriptorReadRejectsNegativeByteCount() throws {
+        let descriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(descriptors.readEnd)
+            Glibc.close(descriptors.writeEnd)
+        }
+
+        #expect(
+            throws: RuntimeError.system(
+                RawSystemError(
+                    uncheckedErrno: EINVAL,
+                    operation: .validateArgument("file descriptor read byte count")
+                )
+            )
+        ) {
+            try RawFileDescriptor.read(
+                descriptor: descriptors.readEnd,
+                maximumByteCount: -1
+            )
+        }
+    }
+
+    @Test
+    func rawFileDescriptorWriteWritesOnlyArraySliceContents() throws {
+        let descriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(descriptors.readEnd)
+            Glibc.close(descriptors.writeEnd)
+        }
+        let bytes = Array("xxhelloyy".utf8)
+
+        let writeCount = try RawFileDescriptor.write(
+            descriptor: descriptors.writeEnd,
+            bytes: bytes[2..<7]
+        )
+        let readBytes = try RawFileDescriptor.read(
+            descriptor: descriptors.readEnd,
+            maximumByteCount: 16
+        )
+
+        #expect(writeCount == 5)
+        #expect(readBytes == Array("hello".utf8))
     }
 }

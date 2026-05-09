@@ -5,17 +5,37 @@ final class SynchronousOperation<ResultValue: Sendable>: Sendable {
     private let operation: @Sendable () throws(WaylandThreadExecutorError) -> ResultValue
     private nonisolated(unsafe) var mutex = unsafe pthread_mutex_t()
     private nonisolated(unsafe) var condition = pthread_cond_t()
+    private nonisolated(unsafe) var synchronizationPrimitivesAreLive = false
     private nonisolated(unsafe) var result: Result<ResultValue, WaylandThreadExecutorError>?
 
     init(
         _ body: @Sendable @escaping () throws(WaylandThreadExecutorError) -> ResultValue
-    ) {
+    ) throws(WaylandThreadExecutorError) {
         operation = body
-        unsafe pthread_mutex_init(&mutex, nil)
-        unsafe pthread_cond_init(&condition, nil)
+
+        let mutexResult = unsafe pthread_mutex_init(&mutex, nil)
+        guard mutexResult == 0 else {
+            throw WaylandThreadExecutorError.operationSyncInitFailed(
+                function: "pthread_mutex_init",
+                code: mutexResult
+            )
+        }
+
+        let conditionResult = unsafe pthread_cond_init(&condition, nil)
+        guard conditionResult == 0 else {
+            unsafe pthread_mutex_destroy(&mutex)
+            throw WaylandThreadExecutorError.operationSyncInitFailed(
+                function: "pthread_cond_init",
+                code: conditionResult
+            )
+        }
+
+        unsafe synchronizationPrimitivesAreLive = true
     }
 
     deinit {
+        guard unsafe synchronizationPrimitivesAreLive else { return }
+
         unsafe pthread_mutex_destroy(&mutex)
         unsafe pthread_cond_destroy(&condition)
     }

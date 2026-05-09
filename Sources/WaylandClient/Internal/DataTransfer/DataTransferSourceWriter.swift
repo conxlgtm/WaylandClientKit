@@ -23,7 +23,7 @@ package final class DataTransferSourceWriteJob: Sendable {
         writePolicy jobWritePolicy: DataTransferSourceWritePolicy = .default,
         prepareDescriptorForWriting prepare: @escaping @Sendable (Int32) throws -> Void =
             defaultPrepareDataTransferSourceDescriptorForWriting,
-        writeDescriptor write: @escaping @Sendable (Int32, [UInt8]) throws -> Int =
+        writeDescriptor write: @escaping @Sendable (Int32, ArraySlice<UInt8>) throws -> Int =
             defaultWriteDataTransferSourceDescriptor,
         closeDescriptor close: @escaping @Sendable (Int32) -> FileDescriptorCloseResult =
             defaultCloseDataTransferSourceDescriptor
@@ -136,7 +136,7 @@ package final class DataTransferSourceWriteJob: Sendable {
 
         while writtenByteCount < bytes.count {
             try throwIfCancelled()
-            let remainingBytes = Array(bytes[writtenByteCount...])
+            let remainingBytes = bytes[writtenByteCount...]
             do {
                 let count = try descriptorIO.write(rawDescriptor, bytes: remainingBytes)
                 guard count > 0, count <= remainingBytes.count else {
@@ -288,13 +288,7 @@ private func isTemporaryDataTransferSourceWriteBackpressure(
     return error.rawValue == EAGAIN || error.rawValue == EWOULDBLOCK
 }
 
-package protocol DataTransferSourceWriting: AnyObject {
-    func submit(_ jobs: [DataTransferSourceWriteJob])
-    func drainResults() -> [DataTransferSourceWriteResult]
-    func shutdown()
-}
-
-package final class ThreadedDataTransferSourceWriter: DataTransferSourceWriting {
+package final class ThreadedDataTransferSourceWriter {
     private enum Lifecycle {
         case running
         case shutdownRequested

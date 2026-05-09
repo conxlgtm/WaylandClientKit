@@ -12,6 +12,7 @@ public struct WaylandString: Equatable, Sendable, CustomStringConvertible {
     }
 
     package init(unchecked string: String) {
+        precondition(!string.contains("\0"), "Wayland string must not contain NUL bytes")
         value = string
     }
 
@@ -40,6 +41,8 @@ public struct NonEmptyWaylandString: Equatable, Sendable, CustomStringConvertibl
     }
 
     package init(unchecked string: String) {
+        precondition(!string.isEmpty, "Wayland string must not be empty")
+        precondition(!string.contains("\0"), "Wayland string must not contain NUL bytes")
         value = string
     }
 
@@ -60,6 +63,7 @@ public struct PositiveInt32: Equatable, Comparable, Sendable, CustomStringConver
     }
 
     package init(unchecked value: Int32) {
+        precondition(value > 0, "positive Int32 value must be positive")
         rawValue = value
     }
 
@@ -84,6 +88,7 @@ public struct PositiveInt: Equatable, Comparable, Sendable, CustomStringConverti
     }
 
     package init(unchecked value: Int) {
+        precondition(value > 0, "positive Int value must be positive")
         rawValue = value
     }
 
@@ -179,6 +184,7 @@ public struct SurfaceScale: Equatable, Sendable, CustomStringConvertible {
 
     package init(uncheckedNumerator scaleNumerator: UInt32, denominator scaleDenominator: UInt32) {
         precondition(scaleNumerator > 0, "scale numerator must be positive")
+        precondition(scaleNumerator <= UInt32(Int32.max), "scale numerator must fit in Int32")
         precondition(scaleDenominator > 0, "scale denominator must be positive")
         numerator = scaleNumerator
         denominator = scaleDenominator
@@ -309,6 +315,7 @@ public struct Milliseconds: Equatable, Comparable, Sendable, CustomStringConvert
     }
 
     package init(unchecked value: Int32) {
+        precondition(value >= 0, "milliseconds value must be non-negative")
         rawValue = value
     }
 

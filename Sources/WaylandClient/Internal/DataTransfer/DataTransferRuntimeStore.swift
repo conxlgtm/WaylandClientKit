@@ -308,6 +308,10 @@ struct DataTransferStore {
         return pendingCallbackFailures.removeFirst()
     }
 
+    mutating func discardCallbackFailures() {
+        pendingCallbackFailures.removeAll(keepingCapacity: false)
+    }
+
     mutating func recordCallbackFailure(_ failure: DataTransferCallbackFailure) {
         pendingCallbackFailures.append(failure)
     }

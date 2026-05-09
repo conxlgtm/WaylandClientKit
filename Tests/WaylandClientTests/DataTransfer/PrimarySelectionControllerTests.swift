@@ -172,6 +172,44 @@ struct PrimarySelectionControllerTests {
     }
 
     @Test
+    func shutdownReleasesPrimarySelectionResourcesOnOwnerThread() throws {
+        let backend = RecordingPrimarySelectionBackend()
+        let controller = PrimarySelectionController(backend: backend)
+        let payloads = try primarySelectionPayloads([.plainText: Data("primary".utf8)])
+        let handle = RawPrimarySelectionOfferHandle(uncheckedRawValue: 0x1005)
+
+        try controller.synchronizeSeats([seat1, seat2])
+        let source = try controller.setSelectionSource(
+            seatID: seat1,
+            payloads: payloads,
+            serial: serial
+        )
+        try #require(backend.sourceBinding(for: source.id)).emit(
+            .send(mimeType: MIMEType.plainText.rawValue, fd: 77)
+        )
+        let remoteDevice = try #require(backend.binding(for: seat2))
+        remoteDevice.emit(.dataOffer(handle))
+        let offerBinding = try #require(backend.offerBinding(for: handle))
+        offerBinding.emit(.offer(MIMEType.plainText.rawValue))
+        remoteDevice.emit(.selection(handle))
+        _ = controller.drainDataTransferEvents()
+
+        controller.shutdown()
+
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+        let firstDevice = try #require(backend.binding(for: seat1))
+        let secondDevice = try #require(backend.binding(for: seat2))
+
+        #expect(firstDevice.releaseCount == 1)
+        #expect(secondDevice.releaseCount == 1)
+        #expect(sourceBinding.destroyCount == 1)
+        #expect(offerBinding.destroyCount == 1)
+        #expect(backend.closedDescriptors == [77])
+        #expect(controller.drainSourceSendRequests().isEmpty)
+        #expect(controller.drainDataTransferEvents().isEmpty)
+    }
+
+    @Test
     func clearingPrimarySelectionSourceSetsNilSelectionAndDestroysCurrentSource() throws {
         let backend = RecordingPrimarySelectionBackend()
         let controller = PrimarySelectionController(backend: backend)

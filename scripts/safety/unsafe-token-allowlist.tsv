@@ -9,6 +9,7 @@ Sources/WaylandKeyboard/Internal/XKB/KeyboardLayoutState.swift	UnsafePointer	xkb
 Sources/WaylandRaw/**	OpaquePointer	Raw Wayland ownership wrappers and typed proxy shims.
 Sources/WaylandRaw/**	UnsafeMutablePointer	Raw listener/proxy/storage boundary.
 Sources/WaylandRaw/**	UnsafeMutableBufferPointer	Raw event-loop and memory-layout bridge.
+Sources/WaylandRaw/Public/Types/RawFileDescriptor.swift	UnsafeBufferPointer	Raw fd write bridge passes borrowed immutable bytes to the no-SIGPIPE C shim.
 Sources/WaylandRaw/**	UnsafeMutableRawPointer	Raw listener userData and SHM mmap boundary.
 Sources/WaylandRaw/**	UnsafeMutableRawBufferPointer	Raw SHM mmap buffer boundary.
 Sources/WaylandRaw/**	UnsafePointer	Raw generated listener signatures and borrowed C strings.

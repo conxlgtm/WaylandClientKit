@@ -18,6 +18,13 @@ package struct RawFileDescriptor: ~Copyable {
     }
 
     package static func memfd(name: String) throws(RuntimeError) -> RawFileDescriptor {
+        guard !name.utf8.contains(0) else {
+            throw RuntimeError.systemError(
+                errno: EINVAL,
+                operation: .validateArgument("shared memory file name")
+            )
+        }
+
         let fd = unsafe name.withCString { namePointer in
             unsafe swl_memfd_create(namePointer, swl_mfd_cloexec())
         }
@@ -49,6 +56,13 @@ package struct RawFileDescriptor: ~Copyable {
         descriptor fileDescriptor: Int32,
         maximumByteCount: Int
     ) throws(RuntimeError) -> [UInt8] {
+        guard maximumByteCount >= 0 else {
+            throw RuntimeError.systemError(
+                errno: EINVAL,
+                operation: .validateArgument("file descriptor read byte count")
+            )
+        }
+
         var buffer = [UInt8](repeating: 0, count: maximumByteCount)
         while true {
             let readCount = unsafe buffer.withUnsafeMutableBufferPointer { byteBuffer in
@@ -69,8 +83,14 @@ package struct RawFileDescriptor: ~Copyable {
         descriptor fileDescriptor: Int32,
         bytes: [UInt8]
     ) throws(RuntimeError) -> Int {
-        var writableBytes = bytes
-        let writeCount = unsafe writableBytes.withUnsafeMutableBufferPointer { byteBuffer in
+        try write(descriptor: fileDescriptor, bytes: bytes[...])
+    }
+
+    package static func write(
+        descriptor fileDescriptor: Int32,
+        bytes: ArraySlice<UInt8>
+    ) throws(RuntimeError) -> Int {
+        let writeCount = unsafe bytes.withUnsafeBufferPointer { byteBuffer in
             unsafe swl_write_no_sigpipe(fileDescriptor, byteBuffer.baseAddress, byteBuffer.count)
         }
 

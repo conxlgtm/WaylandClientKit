@@ -124,7 +124,7 @@ package final class DataTransferSourceSendRequest {
         var writtenByteCount = 0
 
         while writtenByteCount < bytes.count {
-            let remainingBytes = Array(bytes[writtenByteCount...])
+            let remainingBytes = bytes[writtenByteCount...]
             let count = try descriptorIO.write(rawDescriptor, bytes: remainingBytes)
             guard count > 0, count <= remainingBytes.count else {
                 throw DataTransferError.writeFileDescriptor(

@@ -46,6 +46,19 @@ struct WaylandDisplayErrorMappingTests {
     }
 
     @Test
+    func runtimeConnectSystemErrorMapsToDisplaySystemError() {
+        let systemError = RawSystemError(
+            uncheckedErrno: ENOENT,
+            operation: .connectDisplay
+        )
+        let clientSystemError = WaylandSystemError(systemError)
+        let error = WaylandDisplayError(RuntimeError.system(systemError))
+
+        #expect(error == .systemError(clientSystemError))
+        #expect(clientSystemError.operation == .connectDisplay)
+    }
+
+    @Test
     func waylandSystemErrnoRejectsZero() {
         #expect(throws: WaylandSystemErrorConstructionError.nonPositiveErrno(0)) {
             _ = try WaylandSystemErrno(0)

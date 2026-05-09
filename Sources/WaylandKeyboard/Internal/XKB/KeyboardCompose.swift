@@ -40,7 +40,11 @@ package enum KeyboardComposeLocale: Equatable, Sendable {
     private func normalized(_ value: String?) -> String? {
         guard let value else { return nil }
         let trimmed = trimmingXKBASCIIWhitespace(value)
-        return trimmed.isEmpty ? nil : trimmed
+        guard !trimmed.isEmpty, !trimmed.utf8.contains(0) else {
+            return nil
+        }
+
+        return trimmed
     }
 }
 
@@ -54,6 +58,7 @@ package struct KeyboardComposeEnvironment: Equatable, Sendable {
 
 package enum KeyboardComposeLocaleError: Error, Equatable, Sendable {
     case emptyIdentifier
+    case containsNUL
 }
 
 package struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {
@@ -64,6 +69,9 @@ package struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {
         guard !trimmed.isEmpty else {
             throw .emptyIdentifier
         }
+        guard !trimmed.utf8.contains(0) else {
+            throw .containsNUL
+        }
 
         rawValue = trimmed
     }
@@ -71,6 +79,11 @@ package struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {
     package static let posixC = Self(unchecked: "C")
 
     package init(unchecked value: String) {
+        precondition(!value.isEmpty, "compose locale identifier must not be empty")
+        precondition(
+            !value.utf8.contains(0),
+            "compose locale identifier must not contain NUL bytes"
+        )
         rawValue = value
     }
 }

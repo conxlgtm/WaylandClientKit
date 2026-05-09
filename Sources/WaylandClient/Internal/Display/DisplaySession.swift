@@ -13,7 +13,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     package let dataTransferGlobalProvider: any DataTransferGlobalProviding
     package let dataTransferManager: DataTransferManager
     package let primarySelectionController: PrimarySelectionController
-    package let dataTransferSourceWriter: any DataTransferSourceWriting
+    package let dataTransferSourceWriter: ThreadedDataTransferSourceWriter
     private let dataTransferEventQueue = DataTransferEventQueue()
     private let maximumPendingInputEventCount: Int
     private var pendingInputState = PendingInputState.accepting([])
@@ -26,7 +26,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         cursorConfiguration: CursorConfiguration = .init(),
         inputPipelineConfiguration: InputPipelineConfiguration = .init(),
         keyboardInterpretationConfiguration: KeyboardInterpretationConfiguration = .init(),
-        dataTransferSourceWriter sourceWriter: any DataTransferSourceWriting =
+        dataTransferSourceWriter sourceWriter: ThreadedDataTransferSourceWriter =
             ThreadedDataTransferSourceWriter()
     ) throws {
         rawConnection.preconditionIsOwnerThread()
@@ -63,8 +63,15 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         .init(ProcessInfo.processInfo.environment)
     }
 
-    deinit {
+    func releaseWaylandResourcesOnOwnerThread() {
+        connection.preconditionIsOwnerThread()
+        primarySelectionController.shutdown()
+        dataTransferManager.shutdown()
         dataTransferSourceWriter.shutdown()
+    }
+
+    deinit {
+        releaseWaylandResourcesOnOwnerThread()
     }
 
     @available(

@@ -154,10 +154,12 @@ private final class ConcurrentSourceWriteProbe: Sendable {
         state.withLock(\.closedDescriptors)
     }
 
-    func write(descriptor: Int32, bytes: [UInt8]) throws -> Int {
+    func write(descriptor: Int32, bytes: ArraySlice<UInt8>) throws -> Int {
         condition.lock()
         state.withLock { storage in
-            storage.writeCalls.append(WriteCall(descriptor: descriptor, bytes: bytes))
+            storage.writeCalls.append(
+                WriteCall(descriptor: descriptor, bytes: Array(bytes))
+            )
         }
         condition.broadcast()
         while !shouldFinish {

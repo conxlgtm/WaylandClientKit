@@ -487,6 +487,13 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
     }
 
     @Test
+    func composeLocaleIdentifierContainingNULIsRejected() {
+        #expect(throws: KeyboardComposeLocaleError.containsNUL) {
+            try KeyboardComposeLocaleIdentifier("en_US\0.UTF-8")
+        }
+    }
+
+    @Test
     func cannotCreateSymbolResolutionWithDisagreeingPrimarySymbol() {
         #expect(
             throws: KeyboardSymbolResolutionError.primaryNotFirst(
@@ -625,6 +632,30 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
                     "LANG": "\n",
                     "LC_CTYPE": "\t",
                     "LC_ALL": "   ",
+                ])
+            )
+                == "C")
+    }
+
+    @Test
+    func processComposeLocaleSkipsEnvironmentValuesContainingNUL() {
+        let locale = KeyboardComposeLocale.processEnvironment
+
+        #expect(
+            locale.resolved(
+                environment: keyboardComposeEnvironment([
+                    "LANG": "en_US.UTF-8",
+                    "LC_CTYPE": "fr_FR.UTF-8",
+                    "LC_ALL": "de_DE\0.UTF-8",
+                ])
+            )
+                == "fr_FR.UTF-8")
+        #expect(
+            locale.resolved(
+                environment: keyboardComposeEnvironment([
+                    "LANG": "en_US\0.UTF-8",
+                    "LC_CTYPE": "fr_FR\0.UTF-8",
+                    "LC_ALL": "de_DE\0.UTF-8",
                 ])
             )
                 == "C")

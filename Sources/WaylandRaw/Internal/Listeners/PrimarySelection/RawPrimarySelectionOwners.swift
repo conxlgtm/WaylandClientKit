@@ -6,6 +6,10 @@ package struct RawPrimarySelectionOfferHandle: Equatable, Hashable, Sendable {
     package let rawValue: UInt
 
     package init(uncheckedRawValue offerRawValue: UInt) {
+        precondition(
+            offerRawValue != 0,
+            "primary selection offer handle raw value must not be zero"
+        )
         rawValue = offerRawValue
     }
 
