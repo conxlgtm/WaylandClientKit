@@ -7,6 +7,11 @@ package final class WaylandThreadExecutor: SerialExecutor {
     private static let jobBudget = 64
     package static let pollFailureEvents = Int16(POLLERR) | Int16(POLLHUP) | Int16(POLLNVAL)
 
+    // SAFETY: The executor owns these pthread-backed fields for its lifetime.
+    // `state` is read or mutated while `mutex` is held, except for owner-thread
+    // checks that compare against the already-started thread identity. The wake
+    // fd and primitive liveness flag are initialized before the owner thread is
+    // visible and are torn down only after shutdown joins the owner thread.
     private nonisolated(unsafe) var mutex = unsafe pthread_mutex_t()
     private nonisolated(unsafe) var condition = pthread_cond_t()
     private nonisolated(unsafe) var readyCondition = pthread_cond_t()

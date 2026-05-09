@@ -135,6 +135,10 @@ The bootstrap script verifies Swift through `scripts/dev/swift.sh` by default.
 It does not install or switch toolchains.
 Set `SWIFT_COMMAND=/path/to/swift` for custom toolchain resolution.
 
+Current CI validates dynamic glibc Linux on Ubuntu Noble with shared libraries
+resolved through `pkg-config`. Musl, static Linux SDK builds, and static linking
+are not part of the current support contract.
+
 The build dependency source of truth is the system capability surface:
 
 - Swift 6.3.1 or newer
@@ -164,6 +168,7 @@ Supported package-manager mappings:
 | Nix/NixOS | `nixpkgs#clang nixpkgs#git nixpkgs#wayland nixpkgs#wayland-protocols nixpkgs#libxkbcommon nixpkgs#gnumake nixpkgs#pkg-config nixpkgs#ripgrep` |
 
 Alpine package installation is mapped for Wayland dependencies, but Swift toolchain availability may require separate setup.
+The Alpine row is a dependency lookup aid, not a Musl support claim.
 Nix/NixOS support is shell/declarative: `./scripts/dev/bootstrap-linux.sh --dry-run --package-manager nix` prints a `nix shell` command, and `--install` intentionally does not mutate a Nix profile or NixOS system configuration.
 
 ## Targets

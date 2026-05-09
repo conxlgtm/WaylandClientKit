@@ -147,16 +147,12 @@ struct InterpretedKeyboardInputRouterComposeTests {
 
     @Test
     func interpretedComposeFailureReasonRemainsTyped() {
-        let routed = focusedKeyboardRouter().route(
-            interpretedKeyboardEvent(
-                sequence: 2,
-                seatID: RawSeatID(rawValue: 15),
-                kind: .unavailable(
-                    WaylandKeyboard.KeyboardInterpretationUnavailable(
-                        reason: .composeTableUnavailable(locale: "zz_ZZ.UTF-8")
-                    )
-                )
-            )
+        let router = focusedKeyboardRouter()
+        let routed = router.route(
+            unavailableKeyboardEvent(.composeTableUnavailable(locale: "zz_ZZ.UTF-8"))
+        )
+        let emptyBufferRouted = router.route(
+            unavailableKeyboardEvent(.emptyComposeTableBuffer)
         )
 
         #expect(routed.first?.target == .display)
@@ -164,7 +160,7 @@ struct InterpretedKeyboardInputRouterComposeTests {
             routed.first?.kind
                 == .keyboard(
                     .interpreted(
-                        .unavailable(
+                        WaylandClient.InterpretedKeyboardEvent.unavailable(
                             WaylandClient.KeyboardInterpretationUnavailable(
                                 reason: .composeTableUnavailable(locale: "zz_ZZ.UTF-8")
                             )
@@ -172,7 +168,31 @@ struct InterpretedKeyboardInputRouterComposeTests {
                     )
                 )
         )
+        #expect(
+            emptyBufferRouted.first?.kind
+                == .keyboard(
+                    .interpreted(
+                        WaylandClient.InterpretedKeyboardEvent.unavailable(
+                            WaylandClient.KeyboardInterpretationUnavailable(
+                                reason: .invalidComposeConfiguration
+                            )
+                        )
+                    )
+                )
+        )
     }
+}
+
+private func unavailableKeyboardEvent(
+    _ reason: WaylandKeyboard.KeyboardInterpretationUnavailableReason
+) -> WaylandKeyboard.InterpretedKeyboardEvent {
+    interpretedKeyboardEvent(
+        sequence: 2,
+        seatID: RawSeatID(rawValue: 15),
+        kind: .unavailable(
+            WaylandKeyboard.KeyboardInterpretationUnavailable(reason: reason)
+        )
+    )
 }
 
 private func interpretedComposeAKey() -> InterpretedKeyboardKey {

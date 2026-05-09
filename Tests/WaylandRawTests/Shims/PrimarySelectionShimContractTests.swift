@@ -96,7 +96,7 @@ struct PrimarySelectionRequestShimContractTests {
         let device = try unsafe #require(OpaquePointer(bitPattern: 0x5A0A))
         try assertPrimarySelectionRequest(
             expectedKind: SWL_TEST_PRIMARY_SELECTION_SOURCE_OFFER,
-            object: unsafe source
+            object: source
         ) {
             try unsafe "text/plain".withCString { mimeType in
                 unsafe swl_primary_selection_source_offer(source, mimeType)
@@ -107,7 +107,7 @@ struct PrimarySelectionRequestShimContractTests {
         }
         try assertPrimarySelectionRequest(
             expectedKind: SWL_TEST_PRIMARY_SELECTION_OFFER_RECEIVE,
-            object: unsafe offer
+            object: offer
         ) {
             try unsafe "text/uri-list".withCString { mimeType in
                 unsafe swl_primary_selection_offer_receive(offer, mimeType, 23)
@@ -119,7 +119,7 @@ struct PrimarySelectionRequestShimContractTests {
         }
         assertPrimarySelectionRequest(
             expectedKind: SWL_TEST_PRIMARY_SELECTION_DEVICE_SET_SELECTION,
-            object: unsafe device
+            object: device
         ) {
             unsafe swl_primary_selection_device_set_selection(device, source, 101)
             let record = unsafe swl_test_primary_selection_request_record()
@@ -160,8 +160,8 @@ private func assertPrimarySelectionRequest(
     exercise: () throws -> Void,
     sourceLocation: SourceLocation = #_sourceLocation
 ) rethrows {
-    unsafe swl_test_primary_selection_request_recording_begin()
-    defer { unsafe swl_test_primary_selection_request_recording_end() }
+    swl_test_primary_selection_request_recording_begin()
+    defer { swl_test_primary_selection_request_recording_end() }
     try exercise()
     let record = unsafe swl_test_primary_selection_request_record()
     let expectedObject = unsafe UnsafeMutableRawPointer(object)
@@ -177,8 +177,8 @@ private func assertPrimarySelectionDestroy(
     destroy: (OpaquePointer?) -> Void,
     sourceLocation: SourceLocation = #_sourceLocation
 ) {
-    unsafe swl_test_primary_selection_request_recording_begin()
-    defer { unsafe swl_test_primary_selection_request_recording_end() }
+    swl_test_primary_selection_request_recording_begin()
+    defer { swl_test_primary_selection_request_recording_end() }
     unsafe destroy(object)
     let record = unsafe swl_test_primary_selection_destroy_record()
     let expectedObject = unsafe UnsafeMutableRawPointer(object)

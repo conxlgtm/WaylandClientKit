@@ -15,12 +15,12 @@ struct ListenerCallbackBundleSmokeTests {  // swiftlint:disable:this type_body_l
     }
     @Test
     func shmFormatShimsResolveIntoSwift() {
-        let xrgb8888 = unsafe swl_shm_format_xrgb8888
-        let argb8888 = unsafe swl_shm_format_argb8888
-        let xrgb8888Value = unsafe swl_shm_format_xrgb8888()
-        let argb8888Value = unsafe swl_shm_format_argb8888()
-        #expect(unsafe MemoryLayout.size(ofValue: xrgb8888) > 0)
-        #expect(unsafe MemoryLayout.size(ofValue: argb8888) > 0)
+        let xrgb8888 = swl_shm_format_xrgb8888
+        let argb8888 = swl_shm_format_argb8888
+        let xrgb8888Value = swl_shm_format_xrgb8888()
+        let argb8888Value = swl_shm_format_argb8888()
+        #expect(MemoryLayout.size(ofValue: xrgb8888) > 0)
+        #expect(MemoryLayout.size(ofValue: argb8888) > 0)
         #expect(xrgb8888Value != argb8888Value)
     }
     @Test

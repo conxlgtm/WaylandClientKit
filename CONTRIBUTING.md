@@ -10,6 +10,11 @@ It does not install or switch Swift toolchains.
 It uses `scripts/dev/swift.sh` by default.
 Set `SWIFT_COMMAND=/path/to/swift` for custom toolchain resolution.
 
+CI currently validates dynamic glibc Linux on Ubuntu Noble with shared
+Wayland, XKB, and cursor libraries resolved through `pkg-config`. Package-manager
+rows are dependency hints for contributors. Musl, static Linux SDK builds, and
+static linking need dedicated CI before they are treated as supported.
+
 Core build requirements:
 
 - Swift 6.3.1 or newer

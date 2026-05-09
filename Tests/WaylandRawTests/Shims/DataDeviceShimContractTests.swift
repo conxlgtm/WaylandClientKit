@@ -343,8 +343,8 @@ private func assertDataRequest(
     exercise: () throws -> Void,
     sourceLocation: SourceLocation = #_sourceLocation
 ) rethrows {
-    unsafe swl_test_data_request_recording_begin()
-    defer { unsafe swl_test_data_request_recording_end() }
+    swl_test_data_request_recording_begin()
+    defer { swl_test_data_request_recording_end() }
     try exercise()
     let record = unsafe swl_test_data_request_record()
     let expectedObject = unsafe UnsafeMutableRawPointer(object)
@@ -360,8 +360,8 @@ private func assertDataDestroy(
     destroy: (OpaquePointer?) -> Void,
     sourceLocation: SourceLocation = #_sourceLocation
 ) {
-    unsafe swl_test_data_request_recording_begin()
-    defer { unsafe swl_test_data_request_recording_end() }
+    swl_test_data_request_recording_begin()
+    defer { swl_test_data_request_recording_end() }
     unsafe destroy(object)
     let record = unsafe swl_test_data_destroy_record()
     let expectedObject = unsafe UnsafeMutableRawPointer(object)
