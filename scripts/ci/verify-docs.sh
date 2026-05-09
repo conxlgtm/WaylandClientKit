@@ -8,6 +8,7 @@ required_files=(
     CONTRIBUTING.md
     docs/architecture.md
     docs/generation.md
+    docs/live-wayland-testing.md
 )
 
 required_executables=(
@@ -39,6 +40,7 @@ required_patterns=(
     "bootstrap-linux.sh"
     "ripgrep"
     "make check"
+    "make wayland-headless"
     "./scripts/protocols/generate.sh"
     "./scripts/protocols/verify-generated.sh"
     "./scripts/shims/verify-shims.sh"
