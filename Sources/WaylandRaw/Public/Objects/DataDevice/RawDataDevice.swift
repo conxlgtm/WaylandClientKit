@@ -1,6 +1,7 @@
 import CWaylandProtocols
 import Glibc
 
+@safe
 package struct RawDataDeviceDNDAction: OptionSet, Sendable {
     package let rawValue: UInt32
 
@@ -14,14 +15,16 @@ package struct RawDataDeviceDNDAction: OptionSet, Sendable {
     package static let ask = Self(rawValue: swl_data_device_manager_dnd_action_ask())
 }
 
+@safe
 package final class RawDataDeviceManager {
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
-    private var pointer: OpaquePointer { proxy.pointer }
+    @safe private var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer managerPointer: OpaquePointer,
         version managerVersion: RawVersion,
@@ -67,7 +70,7 @@ package final class RawDataDeviceManager {
             throw RuntimeError.bindFailed("wl_data_offer")
         }
 
-        return try unsafe .init(
+        return try .init(
             pointer: offerPointer,
             version: version,
             proxyAdoption: proxyAdoption
@@ -83,13 +86,15 @@ package final class RawDataDeviceManager {
     }
 }
 
+@safe
 package final class RawDataOffer {
     package let version: RawVersion
 
     private var proxy: RawOwnedProxy
 
-    var pointer: OpaquePointer { proxy.pointer }
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer offerPointer: OpaquePointer,
         version offerVersion: RawVersion,
@@ -118,7 +123,7 @@ package final class RawDataOffer {
     }
 
     package func receive(mimeType: String, fd: Int32) {
-        mimeType.withCString { mimeTypePointer in
+        unsafe mimeType.withCString { mimeTypePointer in
             unsafe swl_data_offer_receive(pointer, mimeTypePointer, fd)
         }
     }
@@ -147,13 +152,15 @@ package final class RawDataOffer {
     }
 }
 
+@safe
 package final class RawDataSource {
     package let version: RawVersion
 
     private var proxy: RawOwnedProxy
 
-    var pointer: OpaquePointer { proxy.pointer }
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer sourcePointer: OpaquePointer,
         version sourceVersion: RawVersion,
@@ -176,7 +183,7 @@ package final class RawDataSource {
     }
 
     package func offer(mimeType: String) {
-        mimeType.withCString { mimeTypePointer in
+        unsafe mimeType.withCString { mimeTypePointer in
             unsafe swl_data_source_offer(pointer, mimeTypePointer)
         }
     }
@@ -194,13 +201,15 @@ package final class RawDataSource {
     }
 }
 
+@safe
 package final class RawDataDevice {
     package let version: RawVersion
 
     private var proxy: RawOwnedProxy
 
-    var pointer: OpaquePointer { proxy.pointer }
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer devicePointer: OpaquePointer,
         version deviceVersion: RawVersion,
@@ -213,9 +222,9 @@ package final class RawDataDevice {
             )
             let destroyDevice: (OpaquePointer?) -> Void
             if deviceVersion >= RawVersion(2) {
-                destroyDevice = unsafe swl_data_device_release
+                unsafe destroyDevice = Self.releaseDataDevice
             } else {
-                destroyDevice = unsafe swl_data_device_destroy
+                unsafe destroyDevice = Self.destroyDataDevice
             }
             proxy = RawOwnedProxy(
                 pointer: adoptedPointer,
@@ -255,11 +264,22 @@ package final class RawDataDevice {
         proxy.destroy()
     }
 
+    @safe
+    private static func releaseDataDevice(_ pointer: OpaquePointer?) {
+        unsafe swl_data_device_release(pointer)
+    }
+
+    @safe
+    private static func destroyDataDevice(_ pointer: OpaquePointer?) {
+        unsafe swl_data_device_destroy(pointer)
+    }
+
     deinit {
         release()
     }
 }
 
+@safe
 private func withOptionalCString<Result>(
     _ string: String?,
     _ body: (UnsafePointer<CChar>?) -> Result
@@ -268,5 +288,5 @@ private func withOptionalCString<Result>(
         return body(nil)
     }
 
-    return string.withCString(body)
+    return unsafe string.withCString(body)
 }

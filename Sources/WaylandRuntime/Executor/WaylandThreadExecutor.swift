@@ -142,7 +142,7 @@ package final class WaylandThreadExecutor: SerialExecutor {
     }
 
     package var wakeFileDescriptor: CInt {
-        wakeFileDescriptorStorage
+        unsafe wakeFileDescriptorStorage
     }
 
     package func installEventSource(_ source: any WaylandThreadEventSource) throws {
@@ -180,7 +180,7 @@ package final class WaylandThreadExecutor: SerialExecutor {
 
     package func drainWakeFileDescriptor() {
         do {
-            try Self.drainWakeFileDescriptor(wakeFileDescriptorStorage)
+            try Self.drainWakeFileDescriptor(unsafe wakeFileDescriptorStorage)
         } catch {
             preconditionFailure(String(describing: error))
         }
@@ -306,7 +306,7 @@ extension WaylandThreadExecutor {
 
     private func signalWakeFileDescriptor() {
         do {
-            _ = try Self.signalWakeFileDescriptor(wakeFileDescriptorStorage)
+            _ = try Self.signalWakeFileDescriptor(unsafe wakeFileDescriptorStorage)
         } catch {
             preconditionFailure(String(describing: error))
         }

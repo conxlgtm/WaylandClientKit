@@ -24,13 +24,11 @@ struct RawInputEventTests {
             deviceID: deviceID,
             kind: .keyboard(.key(key))
         )
-
         #expect(event.sequence == 44)
         #expect(event.seatID == seatID)
         #expect(event.deviceID == deviceID)
         #expect(event.kind == .keyboard(.key(key)))
     }
-
     @Test
     func seatSnapshotPreservesAdvertisedAndActiveCapabilities() throws {
         let snapshot = try RawSeatEventSnapshot(
@@ -38,12 +36,10 @@ struct RawInputEventTests {
             activeCapabilities: [.keyboard],
             name: "main"
         )
-
         #expect(snapshot.advertisedCapabilities == [.pointer, .keyboard])
         #expect(snapshot.activeCapabilities == [.keyboard])
         #expect(snapshot.name == "main")
     }
-
     @Test
     func seatSnapshotRejectsActiveCapabilityNotAdvertised() {
         #expect(
@@ -59,48 +55,39 @@ struct RawInputEventTests {
             )
         }
     }
-
     @Test
     func seatCapabilitiesDescriptionIncludesUnknownBits() {
         let capabilities = SeatCapabilities(rawValue: 0x80)
-
         #expect(capabilities.unknownBits == 0x80)
         #expect(capabilities.description == "unknown(0x80)")
         #expect(SeatCapabilities(rawValue: 0x81).description == "pointer+unknown(0x80)")
     }
-
     @Test
     func pointerAxisComponentsPreserveRawValues() {
         let event = RawPointerAxisEvent.value120(
             axis: .verticalScroll,
             value120: -120
         )
-
         #expect(event == .value120(axis: .verticalScroll, value120: -120))
         #expect(RawPointerAxis(rawValue: 99).rawValue == 99)
         #expect(RawPointerAxisSource.wheelTilt.rawValue == 3)
         #expect(RawPointerAxisRelativeDirection.inverted.rawValue == 1)
     }
-
     @Test
     func pointerButtonStatePreservesUnknownFutureValues() {
         let future = RawPointerButtonState(rawValue: 99)
-
         #expect(RawPointerButtonState.released.rawValue == 0)
         #expect(RawPointerButtonState.pressed.rawValue == 1)
         #expect(future.rawValue == 99)
     }
-
     @Test
     func keyboardKeyStatePreservesRepeatedAndUnknownFutureValues() {
         let future = RawKeyboardKeyState(rawValue: 99)
-
         #expect(RawKeyboardKeyState.released.rawValue == 0)
         #expect(RawKeyboardKeyState.pressed.rawValue == 1)
         #expect(RawKeyboardKeyState.repeated.rawValue == 2)
         #expect(future.rawValue == 99)
     }
-
     @Test
     func keyboardKeymapInfoCarriesInternalIDAndSafeMetadata() throws {
         let seatID = RawSeatID(rawValue: 12)
@@ -118,7 +105,6 @@ struct RawInputEventTests {
             id: id,
             bytes: [1, 2, 0]
         )
-
         #expect(info.id == id)
         #expect(info.format == .xkbV1)
         #expect(info.size == 128)
@@ -126,7 +112,6 @@ struct RawInputEventTests {
         #expect(payload.size == 3)
         #expect(payload.xkbV1Bytes?.rawValue == [1, 2, 0])
     }
-
     @Test
     func touchEventsPreserveRawFields() {
         let down = RawTouchDown(
@@ -138,7 +123,6 @@ struct RawInputEventTests {
             y: WaylandFixed(rawValue: 512)
         )
         let event = RawTouchEvent.down(down)
-
         #expect(down.id.rawValue == 3)
         #expect(event == .down(down))
     }

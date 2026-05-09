@@ -37,12 +37,35 @@ package enum RawDataSourceEvent: Equatable, Sendable {
     case action(RawDataDeviceDNDAction)
 }
 
+@safe
 package struct RawDataDeviceEnter: Equatable {
     package let serial: UInt32
-    package let surface: OpaquePointer?
+    @safe package let surface: OpaquePointer?
     package let x: WaylandFixed
     package let y: WaylandFixed
     package let offer: RawDataOfferHandle?
+
+    package init(
+        serial eventSerial: UInt32,
+        surface surfacePointer: OpaquePointer?,
+        x positionX: WaylandFixed,
+        y positionY: WaylandFixed,
+        offer offerHandle: RawDataOfferHandle?
+    ) {
+        serial = eventSerial
+        unsafe surface = surfacePointer
+        x = positionX
+        y = positionY
+        offer = offerHandle
+    }
+
+    package static func == (lhs: RawDataDeviceEnter, rhs: RawDataDeviceEnter) -> Bool {
+        lhs.serial == rhs.serial
+            && (unsafe lhs.surface == rhs.surface)
+            && lhs.x == rhs.x
+            && lhs.y == rhs.y
+            && lhs.offer == rhs.offer
+    }
 }
 
 package enum RawDataDeviceEvent: Equatable {
@@ -59,17 +82,18 @@ private enum DataDeviceListenerInstallState {
     case installed
 }
 
+@safe
 package final class RawDataOfferOwner {
     private let onEvent: (RawDataOfferEvent) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = DataDeviceListenerInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_data_offer_listener_callbacks(),
+        initialValue: unsafe swl_data_offer_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<swl_data_offer_listener_callbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<swl_data_offer_listener_callbacks> {
         listenerStorage.callbacks
     }
 
@@ -87,7 +111,7 @@ package final class RawDataOfferOwner {
             throw listenerInstallError("wl_data_offer")
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_data_offer_add_listener(offer.pointer, callbacks)
 
@@ -103,7 +127,7 @@ package final class RawDataOfferOwner {
     }
 
     private func configureCallbacks() {
-        callbacks.pointee.offer = { data, _, mimeType in
+        unsafe callbacks.pointee.offer = { data, _, mimeType in
             RawDataOfferOwner.withOwner(
                 data,
                 message: "wl_data_offer offer fired without Swift state"
@@ -111,7 +135,7 @@ package final class RawDataOfferOwner {
                 owner.onEvent(.offer(optionalString(from: mimeType)))
             }
         }
-        callbacks.pointee.source_actions = { data, _, actions in
+        unsafe callbacks.pointee.source_actions = { data, _, actions in
             RawDataOfferOwner.withOwner(
                 data,
                 message: "wl_data_offer source_actions fired without Swift state"
@@ -119,7 +143,7 @@ package final class RawDataOfferOwner {
                 owner.onEvent(.sourceActions(.init(rawValue: actions)))
             }
         }
-        callbacks.pointee.action = { data, _, action in
+        unsafe callbacks.pointee.action = { data, _, action in
             RawDataOfferOwner.withOwner(
                 data,
                 message: "wl_data_offer action fired without Swift state"
@@ -129,6 +153,7 @@ package final class RawDataOfferOwner {
         }
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,
@@ -139,17 +164,18 @@ package final class RawDataOfferOwner {
     }
 }
 
+@safe
 package final class RawDataSourceOwner {
     private let onEvent: (RawDataSourceEvent) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = DataDeviceListenerInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_data_source_listener_callbacks(),
+        initialValue: unsafe swl_data_source_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<swl_data_source_listener_callbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<swl_data_source_listener_callbacks> {
         listenerStorage.callbacks
     }
 
@@ -167,7 +193,7 @@ package final class RawDataSourceOwner {
             throw listenerInstallError("wl_data_source")
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_data_source_add_listener(source.pointer, callbacks)
 
@@ -183,7 +209,7 @@ package final class RawDataSourceOwner {
     }
 
     private func configureCallbacks() {
-        callbacks.pointee.target = { data, _, mimeType in
+        unsafe callbacks.pointee.target = { data, _, mimeType in
             RawDataSourceOwner.withOwner(
                 data,
                 message: "wl_data_source target fired without Swift state"
@@ -191,7 +217,7 @@ package final class RawDataSourceOwner {
                 owner.onEvent(.target(optionalString(from: mimeType)))
             }
         }
-        callbacks.pointee.send = { data, _, mimeType, fd in
+        unsafe callbacks.pointee.send = { data, _, mimeType, fd in
             RawDataSourceOwner.withOwner(
                 data,
                 message: "wl_data_source send fired without Swift state"
@@ -203,7 +229,7 @@ package final class RawDataSourceOwner {
     }
 
     private func configureLifecycleCallbacks() {
-        callbacks.pointee.cancelled = { data, _ in
+        unsafe callbacks.pointee.cancelled = { data, _ in
             RawDataSourceOwner.withOwner(
                 data,
                 message: "wl_data_source cancelled fired without Swift state"
@@ -211,7 +237,7 @@ package final class RawDataSourceOwner {
                 owner.onEvent(.cancelled)
             }
         }
-        callbacks.pointee.dnd_drop_performed = { data, _ in
+        unsafe callbacks.pointee.dnd_drop_performed = { data, _ in
             RawDataSourceOwner.withOwner(
                 data,
                 message: "wl_data_source dnd_drop_performed fired without Swift state"
@@ -219,7 +245,7 @@ package final class RawDataSourceOwner {
                 owner.onEvent(.dndDropPerformed)
             }
         }
-        callbacks.pointee.dnd_finished = { data, _ in
+        unsafe callbacks.pointee.dnd_finished = { data, _ in
             RawDataSourceOwner.withOwner(
                 data,
                 message: "wl_data_source dnd_finished fired without Swift state"
@@ -227,7 +253,7 @@ package final class RawDataSourceOwner {
                 owner.onEvent(.dndFinished)
             }
         }
-        callbacks.pointee.action = { data, _, action in
+        unsafe callbacks.pointee.action = { data, _, action in
             RawDataSourceOwner.withOwner(
                 data,
                 message: "wl_data_source action fired without Swift state"
@@ -237,6 +263,7 @@ package final class RawDataSourceOwner {
         }
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,
@@ -247,17 +274,18 @@ package final class RawDataSourceOwner {
     }
 }
 
+@safe
 package final class RawDataDeviceOwner {
     private let onEvent: (RawDataDeviceEvent) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = DataDeviceListenerInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_data_device_listener_callbacks(),
+        initialValue: unsafe swl_data_device_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<swl_data_device_listener_callbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<swl_data_device_listener_callbacks> {
         listenerStorage.callbacks
     }
 
@@ -275,7 +303,7 @@ package final class RawDataDeviceOwner {
             throw listenerInstallError("wl_data_device")
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_data_device_add_listener(device.pointer, callbacks)
 
@@ -291,7 +319,7 @@ package final class RawDataDeviceOwner {
     }
 
     private func configureCallbacks() {
-        callbacks.pointee.data_offer = { data, _, offer in
+        unsafe callbacks.pointee.data_offer = { data, _, offer in
             RawDataDeviceOwner.withOwner(
                 data,
                 message: "wl_data_device data_offer fired without Swift state"
@@ -299,16 +327,16 @@ package final class RawDataDeviceOwner {
                 owner.onEvent(.dataOffer(unsafe RawDataOfferHandle(offer)))
             }
         }
-        callbacks.pointee.enter = { data, _, serial, surface, x, y, offer in
+        unsafe callbacks.pointee.enter = { data, _, serial, surface, x, y, offer in
             RawDataDeviceOwner.withOwner(
                 data,
                 message: "wl_data_device enter fired without Swift state"
             ) { owner in
                 owner.onEvent(
                     .enter(
-                        RawDataDeviceEnter(
+                        unsafe RawDataDeviceEnter(
                             serial: serial,
-                            surface: surface,
+                            surface: unsafe surface,
                             x: WaylandFixed(rawValue: x),
                             y: WaylandFixed(rawValue: y),
                             offer: unsafe RawDataOfferHandle(offer)
@@ -321,7 +349,7 @@ package final class RawDataDeviceOwner {
     }
 
     private func configureLifecycleCallbacks() {
-        callbacks.pointee.leave = { data, _ in
+        unsafe callbacks.pointee.leave = { data, _ in
             RawDataDeviceOwner.withOwner(
                 data,
                 message: "wl_data_device leave fired without Swift state"
@@ -329,7 +357,7 @@ package final class RawDataDeviceOwner {
                 owner.onEvent(.leave)
             }
         }
-        callbacks.pointee.motion = { data, _, time, x, y in
+        unsafe callbacks.pointee.motion = { data, _, time, x, y in
             RawDataDeviceOwner.withOwner(
                 data,
                 message: "wl_data_device motion fired without Swift state"
@@ -343,7 +371,7 @@ package final class RawDataDeviceOwner {
                 )
             }
         }
-        callbacks.pointee.drop = { data, _ in
+        unsafe callbacks.pointee.drop = { data, _ in
             RawDataDeviceOwner.withOwner(
                 data,
                 message: "wl_data_device drop fired without Swift state"
@@ -351,7 +379,7 @@ package final class RawDataDeviceOwner {
                 owner.onEvent(.drop)
             }
         }
-        callbacks.pointee.selection = { data, _, offer in
+        unsafe callbacks.pointee.selection = { data, _, offer in
             RawDataDeviceOwner.withOwner(
                 data,
                 message: "wl_data_device selection fired without Swift state"
@@ -361,6 +389,7 @@ package final class RawDataDeviceOwner {
         }
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,
@@ -375,6 +404,7 @@ private func listenerInstallError(_ interface: String) -> RuntimeError {
     RuntimeError.systemError(errno: EINVAL, operation: .installListener(interface))
 }
 
+@safe
 private func optionalString(from cString: UnsafePointer<CChar>?) -> String? {
-    cString.map { String(cString: $0) }
+    unsafe cString.map { unsafe String(cString: $0) }
 }

@@ -35,7 +35,7 @@ package enum SmokeRunner {
             for column in 0..<pixels.count {
                 let red = UInt32((column * 255) / max(pixels.count, 1))
                 let green = UInt32((row * 255) / max(Int(frame.height), 1))
-                pixels[unchecked: column] = (red << 16) | (green << 8) | 0x40
+                unsafe pixels[unchecked: column] = (red << 16) | (green << 8) | 0x40
             }
         }
     }

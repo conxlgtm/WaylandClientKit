@@ -2,7 +2,7 @@ SWIFT_FORMAT := ./scripts/dev/swift-format.sh
 SWIFTLINT := ./scripts/dev/swiftlint.sh
 SWIFT := ./scripts/dev/swift.sh
 
-.PHONY: format lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency strict-memory-safety-raw test test-public-api-client check smoke-wayland integration-wayland release-check install-pre-commit
+.PHONY: format lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency test test-public-api-client check smoke-wayland integration-wayland release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
@@ -30,16 +30,13 @@ verify-unsafe-allowlist:
 strict-concurrency:
 	@$(SWIFT) build --disable-index-store -Xswiftc -strict-concurrency=complete -Xswiftc -warn-concurrency
 
-strict-memory-safety-raw:
-	@bash ./scripts/safety/check-strict-memory-safety.sh
-
 test:
 	@CC="$(CURDIR)/scripts/dev/clang-filter-index-store.sh" $(SWIFT) test
 
 test-public-api-client:
 	@./scripts/ci/test-public-api-client.sh
 
-check: lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency strict-memory-safety-raw test test-public-api-client
+check: lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency test test-public-api-client
 
 smoke-wayland:
 	@./scripts/smoke/smoke-wayland.sh

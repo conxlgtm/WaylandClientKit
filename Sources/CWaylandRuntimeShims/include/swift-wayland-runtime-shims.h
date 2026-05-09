@@ -16,6 +16,7 @@ int swl_efd_nonblock(void) SWL_SWIFT_UNSAFE;
 
 int swl_memfd_create(const char *name, unsigned int flags) SWL_SWIFT_UNSAFE;
 unsigned int swl_mfd_cloexec(void) SWL_SWIFT_UNSAFE;
+int swl_pipe_cloexec(int descriptors[2]) SWL_SWIFT_UNSAFE;
 ssize_t swl_write_no_sigpipe(int fd, const void *buffer, size_t count) SWL_SWIFT_UNSAFE;
 
 #endif

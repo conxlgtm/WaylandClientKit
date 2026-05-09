@@ -1,8 +1,10 @@
+@safe
 package struct RawOwnedProxy: ~Copyable {
-    package let pointer: OpaquePointer
+    @safe package let pointer: OpaquePointer
     private let destroyProxy: (OpaquePointer) -> Void
     private var isDestroyed = false
 
+    @safe
     package init(
         pointer proxyPointer: OpaquePointer,
         destroy destroyProxyFunction: @escaping (OpaquePointer) -> Void
@@ -11,6 +13,7 @@ package struct RawOwnedProxy: ~Copyable {
         unsafe destroyProxy = destroyProxyFunction
     }
 
+    @safe
     package mutating func destroy() {
         guard !isDestroyed else { return }
 

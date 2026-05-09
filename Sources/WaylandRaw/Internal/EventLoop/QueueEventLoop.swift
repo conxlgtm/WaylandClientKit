@@ -1,6 +1,7 @@
 import CWaylandProtocols
 import Glibc
 
+@safe
 enum QueueEventLoop {
     package static func dispatchPending(
         display: OpaquePointer,
@@ -71,7 +72,7 @@ enum QueueEventLoop {
         shouldContinue: () -> Bool
     ) throws(RuntimeError) {
         while shouldContinue() {
-            try pumpOnce(
+            try unsafe pumpOnce(
                 display: display,
                 eventQueue: eventQueue,
                 timeoutMilliseconds: -1
@@ -80,39 +81,46 @@ enum QueueEventLoop {
     }
 }
 
+@safe
 private struct RawQueueEventLoopSource: QueueEventLoopSource {
-    let display: OpaquePointer
-    let eventQueue: OpaquePointer
+    @safe let display: OpaquePointer
+    @safe let eventQueue: OpaquePointer
+
+    @safe
+    init(display: OpaquePointer, eventQueue: OpaquePointer) {
+        unsafe self.display = display
+        unsafe self.eventQueue = eventQueue
+    }
 
     func dispatchPending() throws(RuntimeError) -> Int32 {
-        try QueueEventLoop.dispatchPending(display: display, eventQueue: eventQueue)
+        try unsafe QueueEventLoop.dispatchPending(display: display, eventQueue: eventQueue)
     }
 
     func prepareRead() throws(RuntimeError) -> Bool {
-        try QueueEventLoop.prepareRead(display: display, eventQueue: eventQueue)
+        try unsafe QueueEventLoop.prepareRead(display: display, eventQueue: eventQueue)
     }
 
     func flush() throws(RuntimeError) -> Bool {
-        try EventLoop.flushForExternalPoll(display: display)
+        try unsafe EventLoop.flushForExternalPoll(display: display)
     }
 
     func fileDescriptor() throws(RuntimeError) -> CInt {
-        EventLoop.fileDescriptor(display: display)
+        unsafe EventLoop.fileDescriptor(display: display)
     }
 
     func readEvents() throws(RuntimeError) {
-        try EventLoop.readEvents(display: display)
+        try unsafe EventLoop.readEvents(display: display)
     }
 
     func cancelRead() {
-        EventLoop.cancelRead(display: display)
+        unsafe EventLoop.cancelRead(display: display)
     }
 
     func pollFileDescriptors(
         _ descriptors: inout [pollfd],
         timeoutMilliseconds: Int32
     ) throws(RuntimeError) -> Int32 {
-        descriptors.withUnsafeMutableBufferPointer { buffer in
+        unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
             unsafe Glibc.poll(buffer.baseAddress, nfds_t(buffer.count), timeoutMilliseconds)
         }
     }

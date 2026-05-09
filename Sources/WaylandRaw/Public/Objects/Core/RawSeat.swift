@@ -1,10 +1,11 @@
 import CWaylandProtocols
 import Glibc
 
-// swiftlint:disable:next type_body_length
+// swiftlint:disable type_body_length
+@safe
 package final class RawSeat {
     package let id: RawSeatID
-    let pointer: OpaquePointer
+    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
     private let eventSink: RawInputEventSink
@@ -46,14 +47,16 @@ package final class RawSeat {
         id = seatID
         let adoptedPointer: OpaquePointer
         do {
-            adoptedPointer =
-                try adoptionContext?.adopt(seatPointer, interface: "wl_seat")
-                ?? seatPointer
+            if let adoptionContext {
+                unsafe adoptedPointer = try adoptionContext.adopt(seatPointer, interface: "wl_seat")
+            } else {
+                unsafe adoptedPointer = seatPointer
+            }
         } catch {
-            seatOperations.releaseSeat(seatPointer)
+            unsafe seatOperations.releaseSeat(seatPointer)
             throw error
         }
-        pointer = adoptedPointer
+        unsafe pointer = adoptedPointer
         version = seatVersion
         eventSink = inputEventSink
         proxyAdoption = adoptionContext
@@ -66,7 +69,7 @@ package final class RawSeat {
 
         guard installListener else { return }
 
-        try listenerOwner.install(on: adoptedPointer) { [weak seat = self] event in
+        try unsafe listenerOwner.install(on: adoptedPointer) { [weak seat = self] event in
             seat?.handleSeatEvent(event)
         }
     }
@@ -111,7 +114,7 @@ package final class RawSeat {
         destroyKeyboard()
         destroyPointer()
         listenerOwner.cancel()
-        operations.releaseSeat(pointer)
+        unsafe operations.releaseSeat(pointer)
     }
 
     private func handleSeatEvent(_ event: SeatListenerEvent) {
@@ -225,7 +228,7 @@ package final class RawSeat {
 
     private func createPointer(id deviceID: RawInputDeviceID) throws {
         guard pointerDevice == nil else { return }
-        guard let childPointer = operations.getPointer(pointer) else {
+        guard let childPointer = unsafe operations.getPointer(pointer) else {
             throw RuntimeError.bindFailed("wl_pointer")
         }
 
@@ -238,16 +241,16 @@ package final class RawSeat {
             seat?.isCurrentDevice(deviceID) == true
         }
         do {
-            try listenerOwner.install(on: childPointer)
+            try unsafe listenerOwner.install(on: childPointer)
         } catch {
-            operations.releasePointer(childPointer)
+            unsafe operations.releasePointer(childPointer)
             throw error
         }
 
-        pointerDevice = try RawInputChildProxy(
+        pointerDevice = try unsafe RawInputChildProxy(
             id: deviceID,
             pointer: childPointer,
-            version: operations.proxyVersion(childPointer),
+            version: unsafe operations.proxyVersion(childPointer),
             proxyAdoption: proxyAdoption,
             interface: "wl_pointer",
             listenerOwner: listenerOwner,
@@ -258,7 +261,7 @@ package final class RawSeat {
 
     private func createKeyboard(id deviceID: RawInputDeviceID) throws {
         guard keyboardDevice == nil else { return }
-        guard let childPointer = operations.getKeyboard(pointer) else {
+        guard let childPointer = unsafe operations.getKeyboard(pointer) else {
             throw RuntimeError.bindFailed("wl_keyboard")
         }
 
@@ -288,16 +291,16 @@ package final class RawSeat {
             }
         )
         do {
-            try listenerOwner.install(on: childPointer)
+            try unsafe listenerOwner.install(on: childPointer)
         } catch {
-            operations.releaseKeyboard(childPointer)
+            unsafe operations.releaseKeyboard(childPointer)
             throw error
         }
 
-        keyboardDevice = try RawInputChildProxy(
+        keyboardDevice = try unsafe RawInputChildProxy(
             id: deviceID,
             pointer: childPointer,
-            version: operations.proxyVersion(childPointer),
+            version: unsafe operations.proxyVersion(childPointer),
             proxyAdoption: proxyAdoption,
             interface: "wl_keyboard",
             listenerOwner: listenerOwner,
@@ -308,7 +311,7 @@ package final class RawSeat {
 
     private func createTouch(id deviceID: RawInputDeviceID) throws {
         guard touchDevice == nil else { return }
-        guard let childPointer = operations.getTouch(pointer) else {
+        guard let childPointer = unsafe operations.getTouch(pointer) else {
             throw RuntimeError.bindFailed("wl_touch")
         }
 
@@ -321,16 +324,16 @@ package final class RawSeat {
             seat?.isCurrentDevice(deviceID) == true
         }
         do {
-            try listenerOwner.install(on: childPointer)
+            try unsafe listenerOwner.install(on: childPointer)
         } catch {
-            operations.releaseTouch(childPointer)
+            unsafe operations.releaseTouch(childPointer)
             throw error
         }
 
-        touchDevice = try RawInputChildProxy(
+        touchDevice = try unsafe RawInputChildProxy(
             id: deviceID,
             pointer: childPointer,
-            version: operations.proxyVersion(childPointer),
+            version: unsafe operations.proxyVersion(childPointer),
             proxyAdoption: proxyAdoption,
             interface: "wl_touch",
             listenerOwner: listenerOwner,
@@ -347,7 +350,7 @@ package final class RawSeat {
     ) -> RawPointerCursorResult {
         guard let pointerDevice else { return .skippedNoPointer(id) }
 
-        operations.setPointerCursor(
+        unsafe operations.setPointerCursor(
             pointerDevice.pointer,
             serial,
             surfacePointer,
@@ -359,7 +362,7 @@ package final class RawSeat {
             RawPointerCursorSetResult(
                 seatID: id,
                 serial: serial,
-                surfaceID: operations.proxyObjectID(surfacePointer),
+                surfaceID: unsafe operations.proxyObjectID(surfacePointer),
                 hotspotX: hotspotX,
                 hotspotY: hotspotY
             )
@@ -493,3 +496,4 @@ package final class RawSeat {
         destroy()
     }
 }
+// swiftlint:enable type_body_length

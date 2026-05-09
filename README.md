@@ -254,12 +254,6 @@ Run the strict Swift concurrency build only:
 make strict-concurrency
 ```
 
-Run the raw-layer strict memory-safety file baseline:
-
-```bash
-make strict-memory-safety-raw
-```
-
 Generate a public API report before publishing checkpoint notes:
 
 ```bash

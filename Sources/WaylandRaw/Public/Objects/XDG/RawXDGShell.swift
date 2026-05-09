@@ -2,12 +2,14 @@ import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
 
+@safe
 package final class RawXDGTopLevel {
-    let pointer: OpaquePointer
+    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
     private var isDestroyed = false
 
+    @safe
     init(
         pointer topLevelPointer: OpaquePointer,
         version topLevelVersion: RawVersion,
@@ -16,21 +18,21 @@ package final class RawXDGTopLevel {
         do {
             pointer = try adoptionContext.adopt(topLevelPointer, interface: "xdg_toplevel")
         } catch {
-            swl_xdg_toplevel_destroy(topLevelPointer)
+            unsafe swl_xdg_toplevel_destroy(topLevelPointer)
             throw error
         }
         version = topLevelVersion
     }
 
     package func setTitle(_ title: String) {
-        title.withCString { titlePointer in
-            swl_xdg_toplevel_set_title(pointer, titlePointer)
+        unsafe title.withCString { titlePointer in
+            unsafe swl_xdg_toplevel_set_title(pointer, titlePointer)
         }
     }
 
     package func setAppID(_ appID: String) {
-        appID.withCString { appIDPointer in
-            swl_xdg_toplevel_set_app_id(pointer, appIDPointer)
+        unsafe appID.withCString { appIDPointer in
+            unsafe swl_xdg_toplevel_set_app_id(pointer, appIDPointer)
         }
     }
 
@@ -38,7 +40,7 @@ package final class RawXDGTopLevel {
         guard !isDestroyed else { return }
 
         isDestroyed = true
-        swl_xdg_toplevel_destroy(pointer)
+        unsafe swl_xdg_toplevel_destroy(pointer)
     }
 
     deinit {
@@ -46,13 +48,15 @@ package final class RawXDGTopLevel {
     }
 }
 
+@safe
 package final class RawXDGSurface {
-    let pointer: OpaquePointer
+    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private var isDestroyed = false
 
+    @safe
     init(
         pointer surfacePointer: OpaquePointer,
         version surfaceVersion: RawVersion,
@@ -61,7 +65,7 @@ package final class RawXDGSurface {
         do {
             pointer = try adoptionContext.adopt(surfacePointer, interface: "xdg_surface")
         } catch {
-            swl_xdg_surface_destroy(surfacePointer)
+            unsafe swl_xdg_surface_destroy(surfacePointer)
             throw error
         }
         version = surfaceVersion
@@ -69,7 +73,7 @@ package final class RawXDGSurface {
     }
 
     package func getTopLevel() throws -> RawXDGTopLevel {
-        guard let pointer = swl_xdg_surface_get_toplevel(pointer) else {
+        guard let pointer = unsafe swl_xdg_surface_get_toplevel(pointer) else {
             throw RuntimeError.bindFailed("xdg_toplevel")
         }
 
@@ -98,14 +102,14 @@ package final class RawXDGSurface {
     }
 
     package func ackConfigure(serial: UInt32) {
-        swl_xdg_surface_ack_configure(pointer, serial)
+        unsafe swl_xdg_surface_ack_configure(pointer, serial)
     }
 
     package func destroy() {
         guard !isDestroyed else { return }
 
         isDestroyed = true
-        swl_xdg_surface_destroy(pointer)
+        unsafe swl_xdg_surface_destroy(pointer)
     }
 
     deinit {
@@ -113,14 +117,16 @@ package final class RawXDGSurface {
     }
 }
 
+@safe
 package final class RawXDGWMBase {
-    let pointer: OpaquePointer
+    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private let owner: XDGWMBaseOwner
     private var isDestroyed = false
 
+    @safe
     init(
         pointer wmBasePointer: OpaquePointer,
         version wmBaseVersion: RawVersion,
@@ -136,7 +142,7 @@ package final class RawXDGWMBase {
             pointer = try adoptionContext.adopt(wmBasePointer, interface: "xdg_wm_base")
         } catch {
             newOwner.cancel()
-            swl_xdg_wm_base_destroy(wmBasePointer)
+            unsafe swl_xdg_wm_base_destroy(wmBasePointer)
             throw error
         }
         version = wmBaseVersion
@@ -146,7 +152,7 @@ package final class RawXDGWMBase {
 
     package func getSurface(for surface: RawSurface) throws -> RawXDGSurface {
         guard
-            let surfacePointer = swl_xdg_wm_base_get_xdg_surface(
+            let surfacePointer = unsafe swl_xdg_wm_base_get_xdg_surface(
                 pointer,
                 surface.pointer
             )
@@ -174,7 +180,7 @@ package final class RawXDGWMBase {
 
         isDestroyed = true
         owner.cancel()
-        swl_xdg_wm_base_destroy(pointer)
+        unsafe swl_xdg_wm_base_destroy(pointer)
     }
 
     deinit {
@@ -191,29 +197,31 @@ package protocol XDGSurfaceConfigureHandling: AnyObject {
     func handleXDGSurfaceConfigure(serial: UInt32)
 }
 
+@safe
 private final class XDGWMBaseOwner {
-    private let wmBase: OpaquePointer
+    @safe private let wmBase: OpaquePointer
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = ListenerInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_xdg_wm_base_listener_callbacks(),
+        initialValue: unsafe swl_xdg_wm_base_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<swl_xdg_wm_base_listener_callbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<swl_xdg_wm_base_listener_callbacks> {
         listenerStorage.callbacks
     }
 
+    @safe
     init(
         wmBase pointer: OpaquePointer,
         invariantFailureSink failureSink: RawInvariantFailureSink? = nil
     ) {
-        wmBase = pointer
+        unsafe wmBase = pointer
         invariantFailureSink = failureSink
 
-        callbacks.pointee.ping = { data, wmBase, serial in
-            guard let wmBase else {
+        unsafe callbacks.pointee.ping = { data, wmBase, serial in
+            guard let wmBase = unsafe wmBase else {
                 preconditionFailure("xdg_wm_base ping fired without Swift state")
             }
 
@@ -235,7 +243,7 @@ private final class XDGWMBaseOwner {
             )
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_xdg_wm_base_add_listener(wmBase, callbacks)
         guard result == 0 else {
@@ -252,6 +260,7 @@ private final class XDGWMBaseOwner {
         listenerStorage.invalidate()
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,
@@ -262,17 +271,18 @@ private final class XDGWMBaseOwner {
     }
 }
 
+@safe
 package final class XDGSurfaceOwner {
     private let configureHandler: any XDGSurfaceConfigureHandling
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = ListenerInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_xdg_surface_listener_callbacks(),
+        initialValue: unsafe swl_xdg_surface_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<swl_xdg_surface_listener_callbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<swl_xdg_surface_listener_callbacks> {
         listenerStorage.callbacks
     }
 
@@ -295,7 +305,7 @@ package final class XDGSurfaceOwner {
     }
 
     private func installCallback() {
-        callbacks.pointee.configure = { data, _, serial in
+        unsafe callbacks.pointee.configure = { data, _, serial in
             XDGSurfaceOwner.withOwner(
                 data,
                 message: "xdg_surface configure fired without Swift state"
@@ -313,7 +323,7 @@ package final class XDGSurfaceOwner {
             )
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_xdg_surface_add_listener(xdgSurface.pointer, callbacks)
 
@@ -331,6 +341,7 @@ package final class XDGSurfaceOwner {
         listenerStorage.invalidate()
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,
@@ -341,18 +352,19 @@ package final class XDGSurfaceOwner {
     }
 }
 
+@safe
 package final class XDGTopLevelOwner {
     private let configureState: XDGConfigureState
     private let invariantFailureSink: RawInvariantFailureSink?
     private var onClose: (() -> Void)?
     private var installState = ListenerInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_xdg_toplevel_listener_callbacks(),
+        initialValue: unsafe swl_xdg_toplevel_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<swl_xdg_toplevel_listener_callbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<swl_xdg_toplevel_listener_callbacks> {
         listenerStorage.callbacks
     }
 
@@ -363,7 +375,7 @@ package final class XDGTopLevelOwner {
         configureState = state
         invariantFailureSink = failureSink
 
-        callbacks.pointee.configure = { data, _, width, height, states in
+        unsafe callbacks.pointee.configure = { data, _, width, height, states in
             XDGTopLevelOwner.withOwner(
                 data,
                 message: "xdg_toplevel configure fired without Swift state"
@@ -384,7 +396,7 @@ package final class XDGTopLevelOwner {
             }
         }
 
-        callbacks.pointee.close = { data, _ in
+        unsafe callbacks.pointee.close = { data, _ in
             XDGTopLevelOwner.withOwner(
                 data,
                 message: "xdg_toplevel close fired without Swift state"
@@ -393,7 +405,7 @@ package final class XDGTopLevelOwner {
             }
         }
 
-        callbacks.pointee.configure_bounds = { data, _, width, height in
+        unsafe callbacks.pointee.configure_bounds = { data, _, width, height in
             XDGTopLevelOwner.withOwner(
                 data,
                 message: "xdg_toplevel configure_bounds fired without Swift state"
@@ -402,7 +414,7 @@ package final class XDGTopLevelOwner {
             }
         }
 
-        callbacks.pointee.wm_capabilities = { data, _, capabilities in
+        unsafe callbacks.pointee.wm_capabilities = { data, _, capabilities in
             XDGTopLevelOwner.withOwner(
                 data,
                 message: "xdg_toplevel wm_capabilities fired without Swift state"
@@ -433,7 +445,7 @@ package final class XDGTopLevelOwner {
             )
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_xdg_toplevel_add_listener(
             topLevel.pointer,
@@ -456,12 +468,14 @@ package final class XDGTopLevelOwner {
         listenerStorage.invalidate()
     }
 
+    @safe
     private static func uint32Array(from array: UnsafeMutablePointer<wl_array>?)
         throws(RuntimeError) -> [UInt32]
     {
         try WaylandArray.uint32Values(from: array)
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,

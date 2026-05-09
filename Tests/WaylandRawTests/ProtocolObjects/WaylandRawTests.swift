@@ -8,7 +8,6 @@ struct WaylandRawTests {
     func systemWaylandSmokeImportsResolve() {
         WaylandSmokeCheck.verify()
     }
-
     @Test
     func shimWaylandSmokeImportsResolve() {
         ShimSmokeCheck.verify()

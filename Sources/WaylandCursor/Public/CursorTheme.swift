@@ -1,8 +1,9 @@
 import CWaylandCursorShims
 import WaylandRaw
 
+@safe
 package final class CursorTheme {
-    private let pointer: OpaquePointer
+    @safe private let pointer: OpaquePointer
 
     package init(shm: RawSharedMemory, name: String?, size: Int32) throws {
         guard size > 0 else {
@@ -11,52 +12,56 @@ package final class CursorTheme {
 
         let loadedTheme: OpaquePointer?
         if let name {
-            loadedTheme = name.withCString { namePointer in
-                swl_cursor_theme_load(namePointer, size, shm.pointer)
+            unsafe loadedTheme = name.withCString { namePointer in
+                unsafe swl_cursor_theme_load(
+                    namePointer,
+                    size,
+                    shm.pointer
+                )
             }
         } else {
-            loadedTheme = swl_cursor_theme_load(nil, size, shm.pointer)
+            unsafe loadedTheme = swl_cursor_theme_load(nil, size, shm.pointer)
         }
 
-        guard let loadedTheme else {
+        guard let loadedTheme = unsafe loadedTheme else {
             throw CursorError.themeLoadFailed
         }
 
-        pointer = loadedTheme
+        unsafe pointer = loadedTheme
     }
 
     package func cursorImage(named name: String) throws -> CursorImage {
-        let cursorPointer = name.withCString { namePointer in
-            swl_cursor_theme_get_cursor(pointer, namePointer)
+        let cursorPointer = unsafe name.withCString { namePointer in
+            unsafe swl_cursor_theme_get_cursor(pointer, namePointer)
         }
 
-        guard let cursorPointer else {
+        guard let cursorPointer = unsafe cursorPointer else {
             throw CursorError.missingCursor(name)
         }
 
-        guard swl_cursor_image_count(cursorPointer) > 0,
-            let imagePointer = swl_cursor_image_at(cursorPointer, 0)
+        guard unsafe swl_cursor_image_count(cursorPointer) > 0,
+            let imagePointer = unsafe swl_cursor_image_at(cursorPointer, 0)
         else {
             throw CursorError.missingImage(name)
         }
 
-        guard let bufferPointer = swl_cursor_image_get_buffer(imagePointer) else {
+        guard let bufferPointer = unsafe swl_cursor_image_get_buffer(imagePointer) else {
             throw CursorError.missingBuffer(name)
         }
 
         return try CursorImage(
-            width: swl_cursor_image_width(imagePointer),
-            height: swl_cursor_image_height(imagePointer),
-            hotspotX: swl_cursor_image_hotspot_x(imagePointer),
-            hotspotY: swl_cursor_image_hotspot_y(imagePointer),
-            delay: swl_cursor_image_delay(imagePointer),
+            width: unsafe swl_cursor_image_width(imagePointer),
+            height: unsafe swl_cursor_image_height(imagePointer),
+            hotspotX: unsafe swl_cursor_image_hotspot_x(imagePointer),
+            hotspotY: unsafe swl_cursor_image_hotspot_y(imagePointer),
+            delay: unsafe swl_cursor_image_delay(imagePointer),
             buffer: RawBorrowedBuffer(pointer: bufferPointer),
             owner: self
         )
     }
 
     deinit {
-        swl_cursor_theme_destroy(pointer)
+        unsafe swl_cursor_theme_destroy(pointer)
     }
 }
 

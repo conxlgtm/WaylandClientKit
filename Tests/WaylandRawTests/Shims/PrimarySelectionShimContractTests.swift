@@ -5,37 +5,32 @@ import Testing
 struct PrimarySelectionOfferShimContractTests {
     @Test
     func primarySelectionOfferListenerForwardsMimeType() throws {
-        let data = UnsafeMutableRawPointer(bitPattern: 0x5101)
-        let offer = try #require(OpaquePointer(bitPattern: 0x5202))
-        var record = swl_test_primary_selection_offer_offer_record()
-
-        try "text/plain;charset=utf-8".withCString { mimeType in
+        let data = unsafe UnsafeMutableRawPointer(bitPattern: 0x5101)
+        let offer = try unsafe #require(OpaquePointer(bitPattern: 0x5202))
+        var record = unsafe swl_test_primary_selection_offer_offer_record()
+        try unsafe "text/plain;charset=utf-8".withCString { mimeType in
             unsafe swl_test_primary_selection_offer_listener_emit_offer(
                 data,
                 offer,
                 mimeType,
                 &record
             )
-
-            let recordedMimeType = try #require(record.mime_type)
-            #expect(String(cString: recordedMimeType) == "text/plain;charset=utf-8")
+            let recordedMimeType = try unsafe #require(record.mime_type)
+            #expect(unsafe String(cString: recordedMimeType) == "text/plain;charset=utf-8")
         }
-
-        #expect(record.call_count == 1)
-        #expect(record.data == data)
-        #expect(record.offer == offer)
+        #expect(unsafe record.call_count == 1)
+        #expect(unsafe record.data == data)
+        #expect(unsafe record.offer == offer)
     }
 }
-
 @Suite(.serialized)
 struct PrimarySelectionSourceShimContractTests {
     @Test
     func primarySelectionSourceListenerForwardsSendAndCancelled() throws {
-        let data = UnsafeMutableRawPointer(bitPattern: 0x5303)
-        let source = try #require(OpaquePointer(bitPattern: 0x5404))
-
-        var sendRecord = swl_test_primary_selection_source_send_record()
-        try "text/plain".withCString { mimeType in
+        let data = unsafe UnsafeMutableRawPointer(bitPattern: 0x5303)
+        let source = try unsafe #require(OpaquePointer(bitPattern: 0x5404))
+        var sendRecord = unsafe swl_test_primary_selection_source_send_record()
+        try unsafe "text/plain".withCString { mimeType in
             unsafe swl_test_primary_selection_source_listener_emit_send(
                 data,
                 source,
@@ -43,160 +38,151 @@ struct PrimarySelectionSourceShimContractTests {
                 17,
                 &sendRecord
             )
-
-            let recordedMimeType = try #require(sendRecord.mime_type)
-            #expect(String(cString: recordedMimeType) == "text/plain")
+            let recordedMimeType = try unsafe #require(sendRecord.mime_type)
+            #expect(unsafe String(cString: recordedMimeType) == "text/plain")
         }
-        #expect(sendRecord.call_count == 1)
-        #expect(sendRecord.data == data)
-        #expect(sendRecord.source == source)
-        #expect(sendRecord.fd == 17)
-
-        var lifecycleRecord = swl_test_primary_selection_source_lifecycle_record()
+        #expect(unsafe sendRecord.call_count == 1)
+        #expect(unsafe sendRecord.data == data)
+        #expect(unsafe sendRecord.source == source)
+        #expect(unsafe sendRecord.fd == 17)
+        var lifecycleRecord = unsafe swl_test_primary_selection_source_lifecycle_record()
         unsafe swl_test_primary_selection_source_listener_emit_cancelled(
             data,
             source,
             &lifecycleRecord
         )
-        #expect(lifecycleRecord.call_count == 1)
-        #expect(lifecycleRecord.data == data)
-        #expect(lifecycleRecord.source == source)
+        #expect(unsafe lifecycleRecord.call_count == 1)
+        #expect(unsafe lifecycleRecord.data == data)
+        #expect(unsafe lifecycleRecord.source == source)
     }
 }
-
 @Suite(.serialized)
 struct PrimarySelectionDeviceShimContractTests {
     @Test
     func primarySelectionDeviceListenerForwardsOfferAndSelection() throws {
-        let data = UnsafeMutableRawPointer(bitPattern: 0x5505)
-        let device = try #require(OpaquePointer(bitPattern: 0x5606))
-        let offer = try #require(OpaquePointer(bitPattern: 0x5707))
-
-        var dataOfferRecord = swl_test_primary_selection_device_offer_record()
+        let data = unsafe UnsafeMutableRawPointer(bitPattern: 0x5505)
+        let device = try unsafe #require(OpaquePointer(bitPattern: 0x5606))
+        let offer = try unsafe #require(OpaquePointer(bitPattern: 0x5707))
+        var dataOfferRecord = unsafe swl_test_primary_selection_device_offer_record()
         unsafe swl_test_primary_selection_device_listener_emit_data_offer(
             data,
             device,
             offer,
             &dataOfferRecord
         )
-        #expect(dataOfferRecord.call_count == 1)
-        #expect(dataOfferRecord.data == data)
-        #expect(dataOfferRecord.device == device)
-        #expect(dataOfferRecord.offer == offer)
-
-        var selectionRecord = swl_test_primary_selection_device_offer_record()
+        #expect(unsafe dataOfferRecord.call_count == 1)
+        #expect(unsafe dataOfferRecord.data == data)
+        #expect(unsafe dataOfferRecord.device == device)
+        #expect(unsafe dataOfferRecord.offer == offer)
+        var selectionRecord = unsafe swl_test_primary_selection_device_offer_record()
         unsafe swl_test_primary_selection_device_listener_emit_selection(
             data,
             device,
             offer,
             &selectionRecord
         )
-        #expect(selectionRecord.call_count == 1)
-        #expect(selectionRecord.data == data)
-        #expect(selectionRecord.device == device)
-        #expect(selectionRecord.offer == offer)
+        #expect(unsafe selectionRecord.call_count == 1)
+        #expect(unsafe selectionRecord.data == data)
+        #expect(unsafe selectionRecord.device == device)
+        #expect(unsafe selectionRecord.offer == offer)
     }
 }
-
 @Suite(.serialized)
 struct PrimarySelectionRequestShimContractTests {
     @Test
     func primarySelectionRequestWrappersPreserveArguments() throws {
-        let source = try #require(OpaquePointer(bitPattern: 0x5808))
-        let offer = try #require(OpaquePointer(bitPattern: 0x5909))
-        let device = try #require(OpaquePointer(bitPattern: 0x5A0A))
-
+        let source = try unsafe #require(OpaquePointer(bitPattern: 0x5808))
+        let offer = try unsafe #require(OpaquePointer(bitPattern: 0x5909))
+        let device = try unsafe #require(OpaquePointer(bitPattern: 0x5A0A))
         try assertPrimarySelectionRequest(
             expectedKind: SWL_TEST_PRIMARY_SELECTION_SOURCE_OFFER,
-            object: source
+            object: unsafe source
         ) {
-            try "text/plain".withCString { mimeType in
+            try unsafe "text/plain".withCString { mimeType in
                 unsafe swl_primary_selection_source_offer(source, mimeType)
                 let record = unsafe swl_test_primary_selection_request_record()
-                let recordedMimeType = try #require(record.mime_type)
-                #expect(String(cString: recordedMimeType) == "text/plain")
+                let recordedMimeType = try unsafe #require(record.mime_type)
+                #expect(unsafe String(cString: recordedMimeType) == "text/plain")
             }
         }
-
         try assertPrimarySelectionRequest(
             expectedKind: SWL_TEST_PRIMARY_SELECTION_OFFER_RECEIVE,
-            object: offer
+            object: unsafe offer
         ) {
-            try "text/uri-list".withCString { mimeType in
+            try unsafe "text/uri-list".withCString { mimeType in
                 unsafe swl_primary_selection_offer_receive(offer, mimeType, 23)
                 let record = unsafe swl_test_primary_selection_request_record()
-                let recordedMimeType = try #require(record.mime_type)
-                #expect(String(cString: recordedMimeType) == "text/uri-list")
-                #expect(record.fd == 23)
+                let recordedMimeType = try unsafe #require(record.mime_type)
+                #expect(unsafe String(cString: recordedMimeType) == "text/uri-list")
+                #expect(unsafe record.fd == 23)
             }
         }
-
         assertPrimarySelectionRequest(
             expectedKind: SWL_TEST_PRIMARY_SELECTION_DEVICE_SET_SELECTION,
-            object: device
+            object: unsafe device
         ) {
             unsafe swl_primary_selection_device_set_selection(device, source, 101)
             let record = unsafe swl_test_primary_selection_request_record()
-            #expect(record.source == UnsafeMutableRawPointer(source))
-            #expect(record.serial == 101)
+            let expectedSource = unsafe UnsafeMutableRawPointer(source)
+            #expect(unsafe record.source == expectedSource)
+            #expect(unsafe record.serial == 101)
         }
     }
-
     @Test
     func primarySelectionDestroyWrappersCallMatchingProtocolDestroy() throws {
         assertPrimarySelectionDestroy(
-            object: try #require(OpaquePointer(bitPattern: 0x5B0B)),
+            object: try unsafe #require(OpaquePointer(bitPattern: 0x5B0B)),
             expectedKind: SWL_TEST_PRIMARY_SELECTION_DESTROY_OFFER,
             destroy: unsafe swl_primary_selection_offer_destroy
         )
         assertPrimarySelectionDestroy(
-            object: try #require(OpaquePointer(bitPattern: 0x5C0C)),
+            object: try unsafe #require(OpaquePointer(bitPattern: 0x5C0C)),
             expectedKind: SWL_TEST_PRIMARY_SELECTION_DESTROY_SOURCE,
             destroy: unsafe swl_primary_selection_source_destroy
         )
         assertPrimarySelectionDestroy(
-            object: try #require(OpaquePointer(bitPattern: 0x5D0D)),
+            object: try unsafe #require(OpaquePointer(bitPattern: 0x5D0D)),
             expectedKind: SWL_TEST_PRIMARY_SELECTION_DESTROY_DEVICE,
             destroy: unsafe swl_primary_selection_device_destroy
         )
         assertPrimarySelectionDestroy(
-            object: try #require(OpaquePointer(bitPattern: 0x5E0E)),
+            object: try unsafe #require(OpaquePointer(bitPattern: 0x5E0E)),
             expectedKind: SWL_TEST_PRIMARY_SELECTION_DESTROY_MANAGER,
             destroy: unsafe swl_primary_selection_device_manager_destroy
         )
     }
 }
 
+@safe
 private func assertPrimarySelectionRequest(
     expectedKind: swl_test_primary_selection_request_kind,
     object: OpaquePointer,
     exercise: () throws -> Void,
     sourceLocation: SourceLocation = #_sourceLocation
 ) rethrows {
-    swl_test_primary_selection_request_recording_begin()
-    defer { swl_test_primary_selection_request_recording_end() }
-
+    unsafe swl_test_primary_selection_request_recording_begin()
+    defer { unsafe swl_test_primary_selection_request_recording_end() }
     try exercise()
     let record = unsafe swl_test_primary_selection_request_record()
-
-    #expect(record.call_count == 1, sourceLocation: sourceLocation)
-    #expect(record.kind == expectedKind, sourceLocation: sourceLocation)
-    #expect(record.object == UnsafeMutableRawPointer(object), sourceLocation: sourceLocation)
+    let expectedObject = unsafe UnsafeMutableRawPointer(object)
+    #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
+    #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+    #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
 }
 
+@safe
 private func assertPrimarySelectionDestroy(
     object: OpaquePointer,
     expectedKind: swl_test_primary_selection_destroy_kind,
     destroy: (OpaquePointer?) -> Void,
     sourceLocation: SourceLocation = #_sourceLocation
 ) {
-    swl_test_primary_selection_request_recording_begin()
-    defer { swl_test_primary_selection_request_recording_end() }
-
-    destroy(object)
+    unsafe swl_test_primary_selection_request_recording_begin()
+    defer { unsafe swl_test_primary_selection_request_recording_end() }
+    unsafe destroy(object)
     let record = unsafe swl_test_primary_selection_destroy_record()
-
-    #expect(record.call_count == 1, sourceLocation: sourceLocation)
-    #expect(record.kind == expectedKind, sourceLocation: sourceLocation)
-    #expect(record.object == UnsafeMutableRawPointer(object), sourceLocation: sourceLocation)
+    let expectedObject = unsafe UnsafeMutableRawPointer(object)
+    #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
+    #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+    #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
 }
