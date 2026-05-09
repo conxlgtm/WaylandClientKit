@@ -1,0 +1,63 @@
+import Testing
+
+@testable import WaylandClient
+
+@Suite
+struct WaylandCapabilitiesTests {
+    @Test
+    func missingProtocolsAreUnavailable() {
+        let capabilities = WaylandCapabilities.fromAdvertisedProtocols([])
+
+        #expect(capabilities.clipboard == .unavailable)
+        #expect(capabilities.primarySelection == .unavailable)
+        #expect(capabilities.xdgDecoration == .unavailable)
+        #expect(capabilities.viewporter == .unavailable)
+        #expect(capabilities.fractionalScale == .unavailable)
+    }
+
+    @Test
+    func advertisedProtocolsExposeNegotiatedVersions() {
+        let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
+            .init(interfaceName: "wl_data_device_manager", advertisedVersion: 7),
+            .init(
+                interfaceName: "zwp_primary_selection_device_manager_v1",
+                advertisedVersion: 1
+            ),
+            .init(interfaceName: "zxdg_decoration_manager_v1", advertisedVersion: 7),
+            .init(interfaceName: "wp_viewporter", advertisedVersion: 4),
+            .init(interfaceName: "wp_fractional_scale_manager_v1", advertisedVersion: 3),
+        ])
+
+        #expect(capabilities.clipboard == .available(version: 3))
+        #expect(capabilities.primarySelection == .available(version: 1))
+        #expect(capabilities.xdgDecoration == .available(version: 2))
+        #expect(capabilities.viewporter == .available(version: 1))
+        #expect(capabilities.fractionalScale == .available(version: 1))
+    }
+
+    @Test
+    func lowerAdvertisedVersionIsPreserved() {
+        let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
+            .init(interfaceName: "wl_data_device_manager", advertisedVersion: 1)
+        ])
+
+        #expect(capabilities.clipboard == .available(version: 1))
+    }
+
+    @Test
+    func xdgDecorationBelowMinimumIsUnavailable() {
+        let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
+            .init(interfaceName: "zxdg_decoration_manager_v1", advertisedVersion: 1)
+        ])
+
+        #expect(capabilities.xdgDecoration == .unavailable)
+    }
+
+    @Test
+    func availabilityReportsBooleanAndVersion() {
+        #expect(ProtocolAvailability.unavailable.isAvailable == false)
+        #expect(ProtocolAvailability.unavailable.version == nil)
+        #expect(ProtocolAvailability.available(version: 2).isAvailable)
+        #expect(ProtocolAvailability.available(version: 2).version == 2)
+    }
+}

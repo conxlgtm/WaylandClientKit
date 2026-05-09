@@ -35,6 +35,8 @@ Intentionally public:
 - `InputEvents`
 - `DataTransferEvents`
 - `DisplayDiagnostics`
+- `WaylandCapabilities`
+- `ProtocolAvailability`
 - `WaylandDisplayError`
 - `InputEvent`
 - `InputEventKind`
@@ -93,6 +95,9 @@ Current user-facing contract:
   logical size, buffer-pixel size, and exact `SurfaceScale` used by the
   current SHM frame.
 - Regular clipboard means `wl_data_device_manager` selection offers and sources.
+- `WaylandDisplay.capabilities()` reports currently advertised compositor support
+  for regular clipboard, primary selection, server-side decorations, viewporter,
+  and fractional scaling without binding new protocol objects.
 - Primary selection means `zwp_primary_selection_device_manager_v1` offers and
   sources. It is selection-driven, focus-sensitive, and serial-scoped.
 - Drag-and-drop transfer handling is not part of this contract.
@@ -142,6 +147,9 @@ Notes:
 - Clipboard offers are seat-scoped. `ClipboardOffer.read` performs a bounded read
   with a timeout, and `ClipboardSourceConfiguration` represents local regular
   clipboard payloads.
+- `WaylandCapabilities` is a registry-discovery snapshot. It lets applications
+  branch before requesting optional features, but request APIs still throw typed
+  availability errors because Wayland globals can be removed after discovery.
 - Primary selection offers are seat-scoped and expire when the compositor sends
   a null selection or focus changes. `PrimarySelectionOffer.read` uses the same
   bounded transfer rules as clipboard reads, and `PrimarySelectionSourceConfiguration`

@@ -45,6 +45,29 @@ struct WaylandDisplayPublicAPISurfaceTests {
     }
 
     @Test
+    func capabilityTypesAndDisplayMethodCompileForExternalClients() {
+        let availability = ProtocolAvailability.available(version: 1)
+        let capabilities = WaylandCapabilities(
+            clipboard: availability,
+            primarySelection: .unavailable,
+            xdgDecoration: .available(version: 2),
+            viewporter: .available(version: 1),
+            fractionalScale: .unavailable
+        )
+
+        #expect(availability.isAvailable)
+        #expect(availability.version == 1)
+        #expect(capabilities.clipboard == .available(version: 1))
+        #expect(capabilities.primarySelection == .unavailable)
+
+        func useCapabilitiesAPI(display: WaylandDisplay) async throws -> WaylandCapabilities {
+            try await display.capabilities()
+        }
+
+        _ = useCapabilitiesAPI
+    }
+
+    @Test
     func primarySelectionDataTransferEventsCompileForExternalClients() {
         func consumeDataTransferEvent(_ event: DataTransferEvent) -> String {
             switch event {
