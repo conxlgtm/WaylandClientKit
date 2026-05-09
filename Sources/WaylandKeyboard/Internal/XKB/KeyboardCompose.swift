@@ -1,6 +1,5 @@
 import CXKBCommonSystem
 import Foundation
-import Synchronization
 
 package struct KeyboardInterpreterConfiguration: Equatable, Sendable {
     package var compose: KeyboardComposeMode
@@ -78,47 +77,24 @@ package enum KeyboardComposeCancellationPolicy: Equatable, Sendable {
 
 package enum KeyboardComposeFailure: Error, Equatable, Sendable {
     case tableUnavailable(locale: String)
+    case emptyTableBuffer
     case tableBufferContainsNUL
     case stateCreationFailed
 }
 
 @safe
 final class XKBComposeTableOwner {
-    // libxkbcommon documents compose tables as immutable after creation, but
-    // not concurrent table compilation through shared contexts and locale
-    // file parsing. Swift Testing can create interpreters concurrently, so
-    // table compilation is serialized before table objects are handed out.
-    private static let creationLock = Mutex(())
-
     @safe let pointer: OpaquePointer
-
-    // SAFETY: This value crosses `Mutex.withLock` only to transfer a newly
-    // created compose table pointer to its Swift owner. The pointer is not
-    // shared through the carrier after `XKBComposeTableOwner` stores it.
-    @safe
-    private struct CreatedTablePointer: @unchecked Sendable {
-        @safe let pointer: OpaquePointer
-    }
 
     init(
         context: XKBContextOwner,
         locale: String
     ) throws(KeyboardComposeFailure) {
-        let createdTable = Self.creationLock.withLock { _ -> CreatedTablePointer? in
-            unsafe locale.withCString { localePointer in
-                unsafe xkb_compose_table_new_from_locale(
-                    context.pointer,
-                    localePointer,
-                    XKB_COMPOSE_COMPILE_NO_FLAGS
-                ).map(CreatedTablePointer.init(pointer:))
-            }
-        }
-
-        guard let createdTable else {
+        guard let createdTable = unsafe context.createComposeTable(locale: locale) else {
             throw .tableUnavailable(locale: locale)
         }
 
-        pointer = createdTable.pointer
+        unsafe pointer = createdTable
     }
 
     init(
@@ -127,34 +103,23 @@ final class XKBComposeTableOwner {
         locale: String = "C"
     ) throws(KeyboardComposeFailure) {
         guard !buffer.isEmpty else {
-            throw .tableUnavailable(locale: locale)
+            throw .emptyTableBuffer
         }
 
         guard !buffer.utf8.contains(0) else {
             throw .tableBufferContainsNUL
         }
 
-        let byteCount = buffer.utf8.count
-        let createdTable = Self.creationLock.withLock { _ -> CreatedTablePointer? in
-            unsafe buffer.withCString { bufferPointer -> OpaquePointer? in
-                unsafe locale.withCString { localePointer in
-                    unsafe xkb_compose_table_new_from_buffer(
-                        context.pointer,
-                        bufferPointer,
-                        byteCount,
-                        localePointer,
-                        XKB_COMPOSE_FORMAT_TEXT_V1,
-                        XKB_COMPOSE_COMPILE_NO_FLAGS
-                    )
-                }
-            }.map(CreatedTablePointer.init(pointer:))
-        }
-
-        guard let createdTable else {
+        guard
+            let createdTable = unsafe context.createComposeTable(
+                buffer: buffer,
+                locale: locale
+            )
+        else {
             throw .tableUnavailable(locale: locale)
         }
 
-        pointer = createdTable.pointer
+        unsafe pointer = createdTable
     }
 
     deinit {

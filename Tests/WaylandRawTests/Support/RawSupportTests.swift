@@ -7,7 +7,7 @@ import Testing
 struct RawSupportTests {
     @Test
     func rawGlobalAdvertisementNegotiatesMinimumVersion() throws {
-        let global = try unsafe #require(
+        let global = try #require(
             RawGlobalAdvertisement(
                 name: 7,
                 interfaceName: "xdg_wm_base",
@@ -18,7 +18,7 @@ struct RawSupportTests {
     }
     @Test
     func rawGlobalAdvertisementKeepsAdvertisedVersionWhenClientSupportsMore() throws {
-        let global = try unsafe #require(
+        let global = try #require(
             RawGlobalAdvertisement(
                 name: 7,
                 interfaceName: "xdg_wm_base",
@@ -40,7 +40,7 @@ struct RawSupportTests {
     @Test
     func rawDisplayDefaultsToConnectionLifetimeOwnership() throws {
         let displayPointer = try unsafe #require(OpaquePointer(bitPattern: 0x10))
-        let display = unsafe RawDisplay(
+        let display = RawDisplay(
             opaquePointer: displayPointer,
             version: 1
         )

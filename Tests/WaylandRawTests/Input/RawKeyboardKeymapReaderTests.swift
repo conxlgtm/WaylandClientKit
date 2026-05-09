@@ -156,7 +156,7 @@ struct RawKeyboardKeymapReaderTests {
             guard let baseAddress = buffer.baseAddress else { return Int32(-1) }
             return unsafe mkstemp(baseAddress)
         }
-        try unsafe #require(descriptor >= 0)
+        try #require(descriptor >= 0)
         unsafe template.withUnsafeBufferPointer { buffer in
             if let baseAddress = buffer.baseAddress {
                 unsafe unlink(baseAddress)
@@ -165,8 +165,8 @@ struct RawKeyboardKeymapReaderTests {
         let writeResult = unsafe bytes.withUnsafeBytes { rawBytes in
             unsafe write(descriptor, rawBytes.baseAddress, bytes.count)
         }
-        try unsafe #require(writeResult == bytes.count)
-        try unsafe #require(lseek(descriptor, 0, SEEK_SET) == 0)
+        try #require(writeResult == bytes.count)
+        try #require(lseek(descriptor, 0, SEEK_SET) == 0)
         return descriptor
     }
 }

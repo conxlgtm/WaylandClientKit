@@ -34,7 +34,7 @@ should not treat Weston-only behavior as sufficient for compositor compatibility
 
 1. Confirm the working tree is clean.
 2. Confirm Swift 6.3.1 is active.
-3. Confirm Linux bootstrap dependencies are installed or CI uses equivalent packages.
+3. Confirm dynamic glibc Linux bootstrap dependencies are installed or CI uses equivalent packages.
 4. Run `make check`.
 5. Run optimized builds for the package, demo, and smoke executable.
 6. Run `./scripts/smoke/smoke-wayland.sh` under a Wayland session.
@@ -70,7 +70,7 @@ SwiftWayland is a development checkpoint for Linux Wayland client work.
 
 Supported:
 - Swift 6.3.1 package build.
-- Linux bootstrap dependency checks.
+- Dynamic glibc Linux bootstrap dependency checks through `pkg-config`.
 - Core Wayland and stable xdg-shell generated artifacts.
 - Project-owned C shims for supported requests and listeners.
 - Display connection, registry discovery, and version-negotiated binds.

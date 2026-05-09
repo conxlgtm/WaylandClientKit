@@ -6,7 +6,7 @@ import Testing
 struct VersionNegotiationTests {
     @Test
     func choosesClientVersionWhenServerOffersMore() throws {
-        let global = try unsafe #require(
+        let global = try #require(
             RawGlobalAdvertisement(
                 name: 8,
                 interfaceName: "xdg_wm_base",
@@ -17,7 +17,7 @@ struct VersionNegotiationTests {
     }
     @Test
     func choosesServerVersionWhenClientSupportsMore() throws {
-        let global = try unsafe #require(
+        let global = try #require(
             RawGlobalAdvertisement(
                 name: 8,
                 interfaceName: "xdg_wm_base",
@@ -28,7 +28,7 @@ struct VersionNegotiationTests {
     }
     @Test
     func choosesEqualVersionWhenBothMatch() throws {
-        let global = try unsafe #require(
+        let global = try #require(
             RawGlobalAdvertisement(
                 name: 5,
                 interfaceName: "wl_compositor",
@@ -39,7 +39,7 @@ struct VersionNegotiationTests {
     }
     @Test
     func version1AlwaysNegotiatesToOne() throws {
-        let global = try unsafe #require(
+        let global = try #require(
             RawGlobalAdvertisement(
                 name: 2,
                 interfaceName: "wl_shm",
@@ -62,21 +62,21 @@ struct VersionNegotiationTests {
     }
     @Test
     func xdgDecorationManagerV1IsNotBoundUntilFirstConfigureGatingExists() throws {
-        let v1Global = try unsafe #require(
+        let v1Global = try #require(
             RawGlobalAdvertisement(
                 name: 1,
                 interfaceName: "zxdg_decoration_manager_v1",
                 advertisedVersion: 1
             )
         )
-        let v2Global = try unsafe #require(
+        let v2Global = try #require(
             RawGlobalAdvertisement(
                 name: 2,
                 interfaceName: "zxdg_decoration_manager_v1",
                 advertisedVersion: 2
             )
         )
-        let v3Global = try unsafe #require(
+        let v3Global = try #require(
             RawGlobalAdvertisement(
                 name: 3,
                 interfaceName: "zxdg_decoration_manager_v1",

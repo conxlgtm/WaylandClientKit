@@ -18,7 +18,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0x200)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         try seat.applyCapabilities([.pointer, .keyboard])
@@ -33,7 +33,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
                 "add keyboard listener",
                 "version",
             ])
-        let createdSnapshot = try unsafe #require(queue.drain().last)
+        let createdSnapshot = try #require(queue.drain().last)
         #expect(
             createdSnapshot.kind
                 == .seat(
@@ -65,7 +65,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0x300)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         do {
@@ -83,7 +83,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
                 "add keyboard listener",
                 "version",
             ])
-        let snapshot = try unsafe #require(queue.drain().last)
+        let snapshot = try #require(queue.drain().last)
         #expect(
             snapshot.kind
                 == .seat(
@@ -105,7 +105,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0x310)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         do {
@@ -138,7 +138,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0x320)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         #expect(throws: RuntimeError.bindFailed("wl_pointer")) {
@@ -183,7 +183,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0x330)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         #expect(throws: RuntimeError.pointerListenerInstallationFailed) {
@@ -232,7 +232,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0x340)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         #expect(throws: RuntimeError.keyboardListenerInstallationFailed) {
@@ -281,7 +281,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0x400)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         try seat.applyCapabilities([.pointer, .keyboard, .touch])
@@ -308,7 +308,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0x500)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         seat.applyName("default")
@@ -332,7 +332,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0x501)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         seat.applyName("default")
@@ -353,7 +353,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             version: 10,
             eventSink: queue,
             invariantFailureSink: sink,
-            operations: unsafe operationRecorder.operations
+            operations: operationRecorder.operations
         )
         let callbacks = try unsafe #require(operationRecorder.seatCallbacks)
         unsafe callbacks.pointee.name?(callbacks.pointee.data, seat.pointer, nil)
@@ -370,7 +370,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0x800)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         try seat.applyCapabilities([.pointer])
@@ -383,7 +383,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             256,
             512
         )
-        let event = try unsafe #require(queue.drain().last)
+        let event = try #require(queue.drain().last)
         #expect(event.seatID == RawSeatID(rawValue: 8))
         #expect(event.deviceID?.kind == .pointer)
         #expect(
@@ -408,7 +408,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0x8A0)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         try seat.applyCapabilities([.pointer])
@@ -446,7 +446,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0x900)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         try seat.applyCapabilities([.keyboard])
@@ -458,7 +458,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             var keyArray = unsafe wl_array(
                 size: keyArrayByteCount,
                 alloc: keyArrayByteCount,
-                data: unsafe UnsafeMutableRawPointer(keyBuffer.baseAddress)
+                data: UnsafeMutableRawPointer(keyBuffer.baseAddress)
             )
             unsafe callbacks.pointee.enter?(
                 callbacks.pointee.data,
@@ -468,7 +468,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
                 &keyArray
             )
         }
-        let enter = try unsafe #require(queue.drain().last)
+        let enter = try #require(queue.drain().last)
         #expect(
             enter.kind
                 == .keyboard(
@@ -491,7 +491,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0x980)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         try seat.applyCapabilities([.keyboard])
@@ -506,7 +506,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             descriptor,
             UInt32(bytes.count)
         )
-        let event = try unsafe #require(queue.drain().last)
+        let event = try #require(queue.drain().last)
         #expect(
             event.kind
                 == .keyboard(
@@ -532,7 +532,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
         )
         let failedBytes = [UInt8(1), UInt8(2), UInt8(3)]
         try sendKeyboardKeymap(fixture, bytes: failedBytes)
-        let failedEvent = try unsafe #require(fixture.queue.drain().last)
+        let failedEvent = try #require(fixture.queue.drain().last)
         #expect(
             failedEvent.kind
                 == expectedMissingTerminatorKeymapFailure(
@@ -542,7 +542,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
                 ))
         let validBytes = [UInt8(4), UInt8(5), UInt8(0)]
         try sendKeyboardKeymap(fixture, bytes: validBytes)
-        let successfulEvent = try unsafe #require(fixture.queue.drain().last)
+        let successfulEvent = try #require(fixture.queue.drain().last)
         #expect(
             successfulEvent.kind
                 == .keyboard(
@@ -564,7 +564,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
         )
         let firstBytes = [UInt8(1), UInt8(2)]
         try sendKeyboardKeymap(fixture, bytes: firstBytes)
-        let firstEvent = try unsafe #require(fixture.queue.drain().last)
+        let firstEvent = try #require(fixture.queue.drain().last)
         #expect(
             firstEvent.kind
                 == expectedMissingTerminatorKeymapFailure(
@@ -574,7 +574,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
                 ))
         let secondBytes = [UInt8(3), UInt8(4), UInt8(5)]
         try sendKeyboardKeymap(fixture, bytes: secondBytes)
-        let secondEvent = try unsafe #require(fixture.queue.drain().last)
+        let secondEvent = try #require(fixture.queue.drain().last)
         #expect(
             secondEvent.kind
                 == expectedMissingTerminatorKeymapFailure(
@@ -593,7 +593,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             pointer: try unsafe #require(fakePointer(0xA00)),
             version: 10,
             eventSink: queue,
-            operations: unsafe recorder.operations,
+            operations: recorder.operations,
             installListener: false
         )
         try seat.applyCapabilities([.touch])
@@ -609,7 +609,7 @@ struct RawSeatLifecycleTests {  // swiftlint:disable:this type_body_length
             256,
             512
         )
-        let event = try unsafe #require(queue.drain().last)
+        let event = try #require(queue.drain().last)
         #expect(event.deviceID?.kind == .touch)
         #expect(
             event.kind
@@ -636,12 +636,12 @@ struct SeatRegistryTests {
         let registry = unsafe SeatRegistry(
             registry: try unsafe #require(fakePointer(0x600)),
             eventSink: queue,
-            operations: unsafe recorder.operations
+            operations: recorder.operations
         )
-        let oldSeat = try unsafe #require(
+        let oldSeat = try #require(
             RawGlobalAdvertisement(name: 2, interfaceName: "wl_seat", advertisedVersion: 4)
         )
-        let currentSeat = try unsafe #require(
+        let currentSeat = try #require(
             RawGlobalAdvertisement(name: 3, interfaceName: "wl_seat", advertisedVersion: 10)
         )
         try registry.bindSeats(from: [oldSeat, currentSeat])
@@ -661,7 +661,7 @@ struct SeatRegistryTests {
         let registry = unsafe SeatRegistry(
             registry: try unsafe #require(fakePointer(0x650)),
             eventSink: queue,
-            operations: unsafe recorder.operations
+            operations: recorder.operations
         )
         #expect(throws: RuntimeError.seatListenerInstallationFailed) {
             try registry.bindSeat(globalName: 5, advertisedVersion: 10)
@@ -680,7 +680,7 @@ struct SeatRegistryTests {
         let registry = unsafe SeatRegistry(
             registry: try unsafe #require(fakePointer(0x700)),
             eventSink: queue,
-            operations: unsafe recorder.operations
+            operations: recorder.operations
         )
         try registry.bindSeat(globalName: 9, advertisedVersion: 10)
         recorder.entries.removeAll()
@@ -802,7 +802,7 @@ private func makeKeyboardSeatFixture(
         pointer: try unsafe #require(fakePointer(seatPointer)),
         version: 10,
         eventSink: queue,
-        operations: unsafe recorder.operations,
+        operations: recorder.operations,
         installListener: false
     )
     try seat.applyCapabilities([.keyboard])
@@ -870,7 +870,7 @@ private func makeTemporaryFileDescriptor(bytes: [UInt8]) throws -> Int32 {
         guard let baseAddress = buffer.baseAddress else { return Int32(-1) }
         return unsafe mkstemp(baseAddress)
     }
-    try unsafe #require(descriptor >= 0)
+    try #require(descriptor >= 0)
     unsafe template.withUnsafeBufferPointer { buffer in
         if let baseAddress = buffer.baseAddress {
             unsafe unlink(baseAddress)
@@ -879,7 +879,7 @@ private func makeTemporaryFileDescriptor(bytes: [UInt8]) throws -> Int32 {
     let writeResult = unsafe bytes.withUnsafeBytes { rawBytes in
         unsafe write(descriptor, rawBytes.baseAddress, bytes.count)
     }
-    try unsafe #require(writeResult == bytes.count)
-    try unsafe #require(lseek(descriptor, 0, SEEK_SET) == 0)
+    try #require(writeResult == bytes.count)
+    try #require(lseek(descriptor, 0, SEEK_SET) == 0)
     return descriptor
 }
