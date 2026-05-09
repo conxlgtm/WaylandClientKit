@@ -521,7 +521,7 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
     }
 
     @Test
-    func invalidComposeTableBufferIsReportedAndFallsBackToXKBText() throws {
+    func emptyComposeTableBufferIsReportedAndFallsBackToXKBText() throws {
         let interpreter = try KeyboardInterpreter(
             configuration: KeyboardInterpreterConfiguration(
                 compose: .tableBuffer("")
@@ -540,7 +540,7 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
             ).first?.interpretedKey
         )
 
-        #expect(keymapEvents.last?.kind == unavailable(.composeTableUnavailable(locale: "C")))
+        #expect(keymapEvents.last?.kind == unavailable(.emptyComposeTableBuffer))
         #expect(key.text.committedString == "q")
     }
 
@@ -591,6 +591,24 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
             KeyboardComposeLocale.identifier(
                 try KeyboardComposeLocaleIdentifier(" sv_SE.UTF-8 ")
             ).resolved() == "sv_SE.UTF-8")
+    }
+
+    @Test
+    func processComposeLocaleSkipsEmptyAndWhitespaceEnvironmentValues() {
+        let locale = KeyboardComposeLocale.processEnvironment
+
+        #expect(
+            locale.resolved(environment: [
+                "LANG": "en_US.UTF-8",
+                "LC_CTYPE": "",
+                "LC_ALL": "   ",
+            ]) == "en_US.UTF-8")
+        #expect(
+            locale.resolved(environment: [
+                "LANG": "\n",
+                "LC_CTYPE": "\t",
+                "LC_ALL": "   ",
+            ]) == "C")
     }
 
     @Test

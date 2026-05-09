@@ -1,5 +1,5 @@
 import CXKBCommonSystem
-import Foundation
+import Synchronization
 import WaylandRaw
 
 package enum KeyboardInterpreterError: Error, Equatable, Sendable, CustomStringConvertible {
@@ -40,8 +40,25 @@ enum KeyboardLayoutError: Error, Equatable, Sendable, CustomStringConvertible {
 }
 
 @safe
+private enum XKBComposeTableCreation {
+    // libxkbcommon compose table construction may parse locale compose files and
+    // process compose data while Swift Testing creates interpreters concurrently.
+    // Serialize constructor calls process-wide; the resulting table is still
+    // owned by one non-Sendable Swift wrapper.
+    static let lock = Mutex(())
+}
+
+@safe
 final class XKBContextOwner {
     @safe let pointer: OpaquePointer
+
+    // SAFETY: This value crosses `Mutex.withLock` only to transfer a newly
+    // created compose table pointer to its Swift owner. The pointer is not
+    // shared through the carrier after the caller stores it.
+    @safe
+    private struct CreatedTable: @unchecked Sendable {
+        @safe let pointer: OpaquePointer
+    }
 
     init() throws(KeyboardLayoutError) {
         guard let newPointer = unsafe xkb_context_new(XKB_CONTEXT_NO_FLAGS) else {
@@ -54,6 +71,43 @@ final class XKBContextOwner {
 
     deinit {
         unsafe xkb_context_unref(pointer)
+    }
+
+    func createComposeTable(locale: String) -> OpaquePointer? {
+        let createdTable = XKBComposeTableCreation.lock.withLock { _ -> CreatedTable? in
+            unsafe locale.withCString { localePointer in
+                unsafe xkb_compose_table_new_from_locale(
+                    pointer,
+                    localePointer,
+                    XKB_COMPOSE_COMPILE_NO_FLAGS
+                ).map(CreatedTable.init(pointer:))
+            }
+        }
+
+        return createdTable?.pointer
+    }
+
+    func createComposeTable(
+        buffer: String,
+        locale: String
+    ) -> OpaquePointer? {
+        let byteCount = buffer.utf8.count
+        let createdTable = XKBComposeTableCreation.lock.withLock { _ -> CreatedTable? in
+            unsafe buffer.withCString { bufferPointer -> OpaquePointer? in
+                unsafe locale.withCString { localePointer in
+                    unsafe xkb_compose_table_new_from_buffer(
+                        pointer,
+                        bufferPointer,
+                        byteCount,
+                        localePointer,
+                        XKB_COMPOSE_FORMAT_TEXT_V1,
+                        XKB_COMPOSE_COMPILE_NO_FLAGS
+                    )
+                }
+            }.map(CreatedTable.init(pointer:))
+        }
+
+        return createdTable?.pointer
     }
 }
 

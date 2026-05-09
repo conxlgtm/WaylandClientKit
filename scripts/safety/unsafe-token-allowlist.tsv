@@ -3,7 +3,7 @@ Sources/CWaylandRuntimeShims/**	eventfd	C shim for the executor wake fd.
 Sources/CWaylandProtocols/include/generated/**	wl_proxy_add_listener	Generated Wayland protocol headers.
 Sources/WaylandCursor/**	OpaquePointer	wayland-cursor C object wrappers.
 Sources/WaylandKeyboard/**	OpaquePointer	xkbcommon C object wrappers.
-Sources/WaylandKeyboard/Internal/XKB/KeyboardCompose.swift	@unchecked Sendable	Owned compose table pointer carrier returned across a Mutex lock boundary.
+Sources/WaylandKeyboard/Internal/XKB/KeyboardLayoutState.swift	@unchecked Sendable	Owned compose table pointer carrier returned across a Mutex lock boundary.
 Sources/WaylandKeyboard/**	UnsafeMutablePointer	xkbcommon keymap/state pointer storage.
 Sources/WaylandKeyboard/Internal/XKB/KeyboardLayoutState.swift	UnsafePointer	xkbcommon borrowed keysym array from xkb_state_key_get_syms.
 Sources/WaylandRaw/**	OpaquePointer	Raw Wayland ownership wrappers and typed proxy shims.
