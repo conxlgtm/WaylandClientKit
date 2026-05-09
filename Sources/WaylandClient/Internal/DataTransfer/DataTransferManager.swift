@@ -208,7 +208,7 @@ package final class DataTransferManager {
                 return
             }
 
-            let mimeType = try MIMEType(rawMimeType ?? "")
+            guard let rawMimeType, let mimeType = MIMEType(rawValue: rawMimeType) else { return }
             if store.offerSnapshot(offerID) != nil {
                 try apply(.offerMimeType(id: offerID, mimeType: mimeType))
             } else {

@@ -2,7 +2,7 @@ SWIFT_FORMAT := ./scripts/dev/swift-format.sh
 SWIFTLINT := ./scripts/dev/swiftlint.sh
 SWIFT := ./scripts/dev/swift.sh
 
-.PHONY: format lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency test test-public-api-client check-base check check-wayland-smoke-if-available smoke-wayland integration-wayland release-check install-pre-commit
+.PHONY: format lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency test test-public-api-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless wayland-headless release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
@@ -50,8 +50,17 @@ check-wayland-smoke-if-available:
 smoke-wayland:
 	@./scripts/smoke/smoke-wayland.sh
 
+smoke-wayland-headless:
+	@./scripts/smoke/with-headless-weston.sh -- ./scripts/smoke/smoke-wayland.sh
+
 integration-wayland:
 	@./scripts/smoke/integration-wayland.sh
+
+integration-wayland-headless:
+	@./scripts/smoke/with-headless-weston.sh -- ./scripts/smoke/integration-wayland.sh
+
+wayland-headless:
+	@./scripts/smoke/with-headless-weston.sh -- bash -c './scripts/smoke/smoke-wayland.sh && ./scripts/smoke/integration-wayland.sh'
 
 release-check:
 	@./scripts/ci/release-check.sh

@@ -148,15 +148,4 @@ jobs:
             wayland-protocols \
             weston
       - name: Run headless Wayland checks
-        run: |
-          export XDG_RUNTIME_DIR="$(mktemp -d)"
-          chmod 700 "$XDG_RUNTIME_DIR"
-          weston --backend=headless-backend.so \
-            --socket=swiftwayland-ci \
-            --idle-time=0 \
-            --log=weston.log &
-          WESTON_PID="$!"
-          trap 'kill "$WESTON_PID" 2>/dev/null || true' EXIT
-          export WAYLAND_DISPLAY=swiftwayland-ci
-          ./scripts/smoke/smoke-wayland.sh
-          ./scripts/smoke/integration-wayland.sh
+        run: make wayland-headless

@@ -12,6 +12,8 @@ SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=0 make check-base
 if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
     ./scripts/smoke/smoke-wayland.sh
     ./scripts/smoke/integration-wayland.sh
+elif command -v weston >/dev/null 2>&1; then
+    make wayland-headless
 elif [[ "${CI:-}" == "true" || "${REQUIRE_WAYLAND_SMOKE:-}" == "1" ]]; then
     echo "Live Wayland smoke and public integration checks are required, but WAYLAND_DISPLAY is not set." >&2
     exit 1

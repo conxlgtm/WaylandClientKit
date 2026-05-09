@@ -280,7 +280,7 @@ extension PrimarySelectionController {
                 return
             }
 
-            let mimeType = try MIMEType(rawMimeType ?? "")
+            guard let rawMimeType, let mimeType = MIMEType(rawValue: rawMimeType) else { return }
             guard var offer = offersByID[offerID] else {
                 throw DataTransferError.unknownPrimarySelectionOfferIdentity(
                     PrimarySelectionOfferIdentity(offerID)
