@@ -6,7 +6,7 @@ import Testing
 struct VersionNegotiationTests {
     @Test
     func choosesClientVersionWhenServerOffersMore() throws {
-        let global = try #require(
+        let global = try unsafe #require(
             RawGlobalAdvertisement(
                 name: 8,
                 interfaceName: "xdg_wm_base",
@@ -15,10 +15,9 @@ struct VersionNegotiationTests {
         )
         #expect(global.negotiatedVersion(supportedByClient: 6) == RawVersion(6))
     }
-
     @Test
     func choosesServerVersionWhenClientSupportsMore() throws {
-        let global = try #require(
+        let global = try unsafe #require(
             RawGlobalAdvertisement(
                 name: 8,
                 interfaceName: "xdg_wm_base",
@@ -27,10 +26,9 @@ struct VersionNegotiationTests {
         )
         #expect(global.negotiatedVersion(supportedByClient: 6) == RawVersion(4))
     }
-
     @Test
     func choosesEqualVersionWhenBothMatch() throws {
-        let global = try #require(
+        let global = try unsafe #require(
             RawGlobalAdvertisement(
                 name: 5,
                 interfaceName: "wl_compositor",
@@ -39,10 +37,9 @@ struct VersionNegotiationTests {
         )
         #expect(global.negotiatedVersion(supportedByClient: 6) == RawVersion(6))
     }
-
     @Test
     func version1AlwaysNegotiatesToOne() throws {
-        let global = try #require(
+        let global = try unsafe #require(
             RawGlobalAdvertisement(
                 name: 2,
                 interfaceName: "wl_shm",
@@ -51,7 +48,6 @@ struct VersionNegotiationTests {
         )
         #expect(global.negotiatedVersion(supportedByClient: 1) == RawVersion(1))
     }
-
     @Test
     func supportedVersionsTableHasExpectedValues() {
         #expect(SupportedVersions.wlCompositor == RawVersion(6))
@@ -64,31 +60,29 @@ struct VersionNegotiationTests {
         #expect(SupportedVersions.wlDataDeviceManager == RawVersion(3))
         #expect(SupportedVersions.wlSeat == RawVersion(10))
     }
-
     @Test
     func xdgDecorationManagerV1IsNotBoundUntilFirstConfigureGatingExists() throws {
-        let v1Global = try #require(
+        let v1Global = try unsafe #require(
             RawGlobalAdvertisement(
                 name: 1,
                 interfaceName: "zxdg_decoration_manager_v1",
                 advertisedVersion: 1
             )
         )
-        let v2Global = try #require(
+        let v2Global = try unsafe #require(
             RawGlobalAdvertisement(
                 name: 2,
                 interfaceName: "zxdg_decoration_manager_v1",
                 advertisedVersion: 2
             )
         )
-        let v3Global = try #require(
+        let v3Global = try unsafe #require(
             RawGlobalAdvertisement(
                 name: 3,
                 interfaceName: "zxdg_decoration_manager_v1",
                 advertisedVersion: 3
             )
         )
-
         #expect(!RawDisplayConnection.shouldBindXDGDecorationManager(v1Global))
         #expect(RawDisplayConnection.shouldBindXDGDecorationManager(v2Global))
         #expect(RawDisplayConnection.shouldBindXDGDecorationManager(v3Global))

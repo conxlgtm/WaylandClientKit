@@ -5,28 +5,43 @@ import Testing
 struct CursorShimSmokeTests {
     @Test
     func cursorThemeShimsImportIntoSwift() {
-        let load = swl_cursor_theme_load
-        let destroy = swl_cursor_theme_destroy
-        let getCursor = swl_cursor_theme_get_cursor
-        let imageAt = swl_cursor_image_at
-        let getBuffer = swl_cursor_image_get_buffer
+        let load = unsafe swl_cursor_theme_load
+        let destroy = unsafe swl_cursor_theme_destroy
+        let getCursor = unsafe swl_cursor_theme_get_cursor
+        let imageAt = unsafe swl_cursor_image_at
+        let getBuffer = unsafe swl_cursor_image_get_buffer
 
-        #expect(MemoryLayout.size(ofValue: load) > 0)
-        #expect(MemoryLayout.size(ofValue: destroy) > 0)
-        #expect(MemoryLayout.size(ofValue: getCursor) > 0)
-        #expect(MemoryLayout.size(ofValue: imageAt) > 0)
-        #expect(MemoryLayout.size(ofValue: getBuffer) > 0)
+        let loadSize = unsafe MemoryLayout.size(ofValue: load)
+        let destroySize = unsafe MemoryLayout.size(ofValue: destroy)
+        let getCursorSize = unsafe MemoryLayout.size(ofValue: getCursor)
+        let imageAtSize = unsafe MemoryLayout.size(ofValue: imageAt)
+        let getBufferSize = unsafe MemoryLayout.size(ofValue: getBuffer)
+
+        #expect(loadSize > 0)
+        #expect(destroySize > 0)
+        #expect(getCursorSize > 0)
+        #expect(imageAtSize > 0)
+        #expect(getBufferSize > 0)
     }
 
     @Test
     func cursorImageShimsTreatNullInputsAsMissingValues() {
-        #expect(swl_cursor_image_count(nil) == 0)
-        #expect(swl_cursor_image_at(nil, 0) == nil)
-        #expect(swl_cursor_image_width(nil) == 0)
-        #expect(swl_cursor_image_height(nil) == 0)
-        #expect(swl_cursor_image_hotspot_x(nil) == 0)
-        #expect(swl_cursor_image_hotspot_y(nil) == 0)
-        #expect(swl_cursor_image_delay(nil) == 0)
-        #expect(swl_cursor_image_get_buffer(nil) == nil)
+        let imageCount = swl_cursor_image_count(nil)
+        let imageAtIsNil = unsafe swl_cursor_image_at(nil, 0) == nil
+        let imageWidth = swl_cursor_image_width(nil)
+        let imageHeight = swl_cursor_image_height(nil)
+        let hotspotX = swl_cursor_image_hotspot_x(nil)
+        let hotspotY = swl_cursor_image_hotspot_y(nil)
+        let delay = swl_cursor_image_delay(nil)
+        let bufferIsNil = unsafe swl_cursor_image_get_buffer(nil) == nil
+
+        #expect(imageCount == 0)
+        #expect(imageAtIsNil)
+        #expect(imageWidth == 0)
+        #expect(imageHeight == 0)
+        #expect(hotspotX == 0)
+        #expect(hotspotY == 0)
+        #expect(delay == 0)
+        #expect(bufferIsNil)
     }
 }

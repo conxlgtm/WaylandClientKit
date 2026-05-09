@@ -1,6 +1,7 @@
 #include "swift-wayland-runtime-shims.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <signal.h>
 #include <sys/mman.h>
@@ -19,6 +20,15 @@ int swl_memfd_create(const char *name, unsigned int flags)
 unsigned int swl_mfd_cloexec(void)
 {
     return MFD_CLOEXEC;
+}
+
+int swl_pipe_cloexec(int descriptors[2])
+{
+    int result;
+    do {
+        result = pipe2(descriptors, O_CLOEXEC);
+    } while (result < 0 && errno == EINTR);
+    return result;
 }
 
 ssize_t swl_write_no_sigpipe(int fd, const void *buffer, size_t count)

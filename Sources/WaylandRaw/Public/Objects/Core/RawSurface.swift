@@ -1,14 +1,16 @@
 import CWaylandClientSystem
 import CWaylandProtocols
 
+@safe
 package final class RawSurface {
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
-    var pointer: OpaquePointer { proxy.pointer }
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer surfacePointer: OpaquePointer,
         version surfaceVersion: RawVersion,
@@ -16,7 +18,10 @@ package final class RawSurface {
     ) throws(RuntimeError) {
         let adoptedPointer: OpaquePointer
         do {
-            adoptedPointer = try adoptionContext.adopt(surfacePointer, interface: "wl_surface")
+            unsafe adoptedPointer = try adoptionContext.adopt(
+                surfacePointer,
+                interface: "wl_surface"
+            )
         } catch {
             unsafe swl_surface_destroy(surfacePointer)
             throw error

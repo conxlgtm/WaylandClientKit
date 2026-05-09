@@ -1,14 +1,16 @@
 import CWaylandProtocols
 import Glibc
 
+@safe
 package final class RawPrimarySelectionDeviceManager {
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
-    private var pointer: OpaquePointer { proxy.pointer }
+    @safe private var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer managerPointer: OpaquePointer,
         version managerVersion: RawVersion,
@@ -59,7 +61,7 @@ package final class RawPrimarySelectionDeviceManager {
             throw RuntimeError.bindFailed("zwp_primary_selection_offer_v1")
         }
 
-        return try unsafe .init(
+        return try .init(
             pointer: offerPointer,
             version: version,
             proxyAdoption: proxyAdoption
@@ -75,13 +77,15 @@ package final class RawPrimarySelectionDeviceManager {
     }
 }
 
+@safe
 package final class RawPrimarySelectionOffer {
     package let version: RawVersion
 
     private var proxy: RawOwnedProxy
 
-    var pointer: OpaquePointer { proxy.pointer }
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer offerPointer: OpaquePointer,
         version offerVersion: RawVersion,
@@ -104,7 +108,7 @@ package final class RawPrimarySelectionOffer {
     }
 
     package func receive(mimeType: String, fd: Int32) {
-        mimeType.withCString { mimeTypePointer in
+        unsafe mimeType.withCString { mimeTypePointer in
             unsafe swl_primary_selection_offer_receive(pointer, mimeTypePointer, fd)
         }
     }
@@ -118,13 +122,15 @@ package final class RawPrimarySelectionOffer {
     }
 }
 
+@safe
 package final class RawPrimarySelectionSource {
     package let version: RawVersion
 
     private var proxy: RawOwnedProxy
 
-    var pointer: OpaquePointer { proxy.pointer }
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer sourcePointer: OpaquePointer,
         version sourceVersion: RawVersion,
@@ -147,7 +153,7 @@ package final class RawPrimarySelectionSource {
     }
 
     package func offer(mimeType: String) {
-        mimeType.withCString { mimeTypePointer in
+        unsafe mimeType.withCString { mimeTypePointer in
             unsafe swl_primary_selection_source_offer(pointer, mimeTypePointer)
         }
     }
@@ -161,13 +167,15 @@ package final class RawPrimarySelectionSource {
     }
 }
 
+@safe
 package final class RawPrimarySelectionDevice {
     package let version: RawVersion
 
     private var proxy: RawOwnedProxy
 
-    var pointer: OpaquePointer { proxy.pointer }
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer devicePointer: OpaquePointer,
         version deviceVersion: RawVersion,

@@ -4,12 +4,12 @@ import CWaylandProtocols
 extension RawDisplayConnection {
     package var eventLoopFileDescriptor: CInt {
         preconditionIsOwnerThread()
-        return EventLoop.fileDescriptor(display: display.opaquePointer)
+        return unsafe EventLoop.fileDescriptor(display: display.opaquePointer)
     }
 
     package func dispatchPendingEvents() throws -> Int32 {
         preconditionIsOwnerThread()
-        return try QueueEventLoop.dispatchPending(
+        return try unsafe QueueEventLoop.dispatchPending(
             display: display.opaquePointer,
             eventQueue: eventQueue.opaquePointer
         )
@@ -17,7 +17,7 @@ extension RawDisplayConnection {
 
     package func prepareReadEvents() throws -> Bool {
         preconditionIsOwnerThread()
-        return try QueueEventLoop.prepareRead(
+        return try unsafe QueueEventLoop.prepareRead(
             display: display.opaquePointer,
             eventQueue: eventQueue.opaquePointer
         )
@@ -25,17 +25,17 @@ extension RawDisplayConnection {
 
     package func flushForExternalEventLoop() throws -> Bool {
         preconditionIsOwnerThread()
-        return try EventLoop.flushForExternalPoll(display: display.opaquePointer)
+        return try unsafe EventLoop.flushForExternalPoll(display: display.opaquePointer)
     }
 
     package func readEvents() throws {
         preconditionIsOwnerThread()
-        try EventLoop.readEvents(display: display.opaquePointer)
+        try unsafe EventLoop.readEvents(display: display.opaquePointer)
     }
 
     package func cancelReadEvents() {
         preconditionIsOwnerThread()
-        EventLoop.cancelRead(display: display.opaquePointer)
+        unsafe EventLoop.cancelRead(display: display.opaquePointer)
     }
 
     package func pumpEvents(
@@ -44,7 +44,7 @@ extension RawDisplayConnection {
         drainWakeFileDescriptor: @escaping () -> Void
     ) throws {
         preconditionIsOwnerThread()
-        try QueueEventLoop.pumpOnce(
+        try unsafe QueueEventLoop.pumpOnce(
             display: display.opaquePointer,
             eventQueue: eventQueue.opaquePointer,
             timeoutMilliseconds: timeoutMilliseconds,
@@ -69,15 +69,15 @@ extension RawDisplayConnection {
         }
 
         let wrappedDisplay = try createDisplayWrapperOnEventQueue()
-        guard let syncCallback = swl_display_sync(wrappedDisplay) else {
-            swl_display_wrapper_destroy(wrappedDisplay)
+        guard let syncCallback = unsafe swl_display_sync(wrappedDisplay) else {
+            unsafe swl_display_wrapper_destroy(wrappedDisplay)
             throw RuntimeError.displaySyncRequestFailed
         }
-        swl_display_wrapper_destroy(wrappedDisplay)
+        unsafe swl_display_wrapper_destroy(wrappedDisplay)
         do {
             _ = try proxyAdoption.adopt(syncCallback, interface: "wl_callback")
         } catch {
-            swl_callback_destroy(syncCallback)
+            unsafe swl_callback_destroy(syncCallback)
             throw error
         }
 
@@ -97,7 +97,7 @@ extension RawDisplayConnection {
                 }
 
                 let boundedRemaining = Int32(min(remainingMilliseconds, Int64(Int32.max)))
-                try QueueEventLoop.pumpOnce(
+                try unsafe QueueEventLoop.pumpOnce(
                     display: display.opaquePointer,
                     eventQueue: eventQueue.opaquePointer,
                     timeoutMilliseconds: min(boundedRemaining, 50)
@@ -106,11 +106,12 @@ extension RawDisplayConnection {
         }
     }
 
+    @safe
     private func createDisplayWrapperOnEventQueue() throws -> OpaquePointer {
-        guard let wrappedDisplay = swl_display_create_wrapper(display.opaquePointer) else {
+        guard let wrappedDisplay = unsafe swl_display_create_wrapper(display.opaquePointer) else {
             throw RuntimeError.displayWrapperCreationFailed
         }
-        swl_display_wrapper_set_queue(wrappedDisplay, eventQueue.opaquePointer)
-        return wrappedDisplay
+        unsafe swl_display_wrapper_set_queue(wrappedDisplay, eventQueue.opaquePointer)
+        return unsafe wrappedDisplay
     }
 }

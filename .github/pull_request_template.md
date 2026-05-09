@@ -23,7 +23,7 @@
 
 - [ ] No new unsafe surface
 - [ ] New unsafe surface is documented
-- [ ] Strict memory safety baseline changed
+- [ ] Strict memory-safety boundary changed
 - [ ] Unsafe-token allowlist changed
 
 <!-- Explain any safety or ownership impact. -->

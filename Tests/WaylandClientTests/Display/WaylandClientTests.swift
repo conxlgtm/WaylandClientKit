@@ -234,13 +234,13 @@ struct WaylandClientTests {
         var storage = [UInt32](repeating: 0, count: 6)
         let byteCount = storage.count * MemoryLayout<UInt32>.stride
 
-        try storage.withUnsafeMutableBufferPointer { buffer in
-            let frame = try SoftwareFrame(
+        try unsafe storage.withUnsafeMutableBufferPointer { buffer in
+            let frame = try unsafe SoftwareFrame(
                 width: 2,
                 height: 2,
                 stride: 3 * Int32(MemoryLayout<UInt32>.stride),
                 geometry: try softwareFrameTestGeometry(width: 2, height: 2),
-                bytes: UnsafeMutableRawBufferPointer(
+                bytes: unsafe UnsafeMutableRawBufferPointer(
                     start: UnsafeMutableRawPointer(buffer.baseAddress),
                     count: byteCount
                 )
@@ -248,8 +248,8 @@ struct WaylandClientTests {
 
             frame.withXRGB8888Rows { row, pixels in
                 #expect(pixels.count == 2)
-                pixels[unchecked: 0] = UInt32(row * 10 + 1)
-                pixels[unchecked: 1] = UInt32(row * 10 + 2)
+                unsafe pixels[unchecked: 0] = UInt32(row * 10 + 1)
+                unsafe pixels[unchecked: 1] = UInt32(row * 10 + 2)
             }
 
             #expect(frame.geometry.bufferSize == (try PositivePixelSize(width: 2, height: 2)))
@@ -263,7 +263,7 @@ struct WaylandClientTests {
         var storage = [UInt32](repeating: 0, count: 3)
         let byteCount = storage.count * MemoryLayout<UInt32>.stride
 
-        _ = storage.withUnsafeMutableBufferPointer { buffer in
+        _ = unsafe storage.withUnsafeMutableBufferPointer { buffer in
             #expect(
                 throws: ClientError.invalidWindowState(
                     .softwareFrameLayout(
@@ -274,12 +274,12 @@ struct WaylandClientTests {
                     )
                 )
             ) {
-                _ = try SoftwareFrame(
+                _ = try unsafe SoftwareFrame(
                     width: 2,
                     height: 2,
                     stride: 3 * Int32(MemoryLayout<UInt32>.stride),
                     geometry: try softwareFrameTestGeometry(width: 2, height: 2),
-                    bytes: UnsafeMutableRawBufferPointer(
+                    bytes: unsafe UnsafeMutableRawBufferPointer(
                         start: UnsafeMutableRawPointer(buffer.baseAddress),
                         count: byteCount
                     )

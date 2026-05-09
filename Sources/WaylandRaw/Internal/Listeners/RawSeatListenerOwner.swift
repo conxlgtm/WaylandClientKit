@@ -5,18 +5,19 @@ enum SeatListenerEvent {
     case name(String)
 }
 
+@safe
 final class SeatListenerOwner {
     private let operations: RawSeatProxyOperations
     private let invariantFailureSink: RawInvariantFailureSink?
     private var onEvent: ((SeatListenerEvent) -> Void)?
     private var isCanceled = false
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
-        initialValue: swl_seat_listener_callbacks(),
+        initialValue: unsafe swl_seat_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<swl_seat_listener_callbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<swl_seat_listener_callbacks> {
         listenerStorage.callbacks
     }
 
@@ -27,7 +28,7 @@ final class SeatListenerOwner {
         operations = seatOperations
         invariantFailureSink = failureSink
 
-        callbacks.pointee.capabilities = { data, _, capabilities in
+        unsafe callbacks.pointee.capabilities = { data, _, capabilities in
             SeatListenerOwner.withOwner(
                 data,
                 message: "wl_seat capabilities fired without Swift state"
@@ -38,7 +39,7 @@ final class SeatListenerOwner {
             }
         }
 
-        callbacks.pointee.name = { data, _, name in
+        unsafe callbacks.pointee.name = { data, _, name in
             SeatListenerOwner.withOwner(
                 data,
                 message: "wl_seat name fired without Swift state"
@@ -58,9 +59,9 @@ final class SeatListenerOwner {
         throws
     {
         onEvent = handleEvent
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
-        let result = operations.addSeatListener(seat, callbacks)
+        let result = unsafe operations.addSeatListener(seat, callbacks)
         guard result == 0 else {
             throw RuntimeError.seatListenerInstallationFailed
         }
@@ -80,6 +81,7 @@ final class SeatListenerOwner {
         cancel()
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,

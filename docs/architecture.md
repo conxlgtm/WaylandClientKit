@@ -390,15 +390,11 @@ Swift code:
 - `make verify-generated`
 - `make verify-shims`
 - `make strict-concurrency`
-- `make strict-memory-safety-raw`
 - `make test`
 - `make test-public-api-client`
 - `make integration-wayland`
 - `make check`
 
-`WaylandClient` builds with strict memory safety as errors. `WaylandRaw` and
-`WaylandRuntime` are still being audited because they own intentional C, pointer, and
-executor boundaries. `make strict-memory-safety-raw` builds both targets with strict
-memory-safety diagnostics enabled and compares warnings against a per-file baseline. The
-baseline should only move down as raw wrappers are converted to small audited unsafe shims,
-noncopyable ownership tokens, and scoped borrowed views.
+Every Swift target builds with strict memory safety as errors through the package
+manifest. Raw wrappers, runtime executor code, keyboard interpretation, cursor loading,
+smoke support, examples, and tests all compile under the same compiler gate.

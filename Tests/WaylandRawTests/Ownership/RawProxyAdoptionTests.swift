@@ -17,7 +17,6 @@ struct RawProxyAdoptionTests {
         let recorder = FailureRecorder()
         let sink = RawInvariantFailureSink()
         sink.reporter = recorder
-
         #expect(throws: RuntimeError.proxyQueueMismatch("wl_surface")) {
             try RawEventQueue.reportQueueMismatch(
                 interface: "wl_surface",

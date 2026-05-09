@@ -1,5 +1,6 @@
 import CWaylandProtocols
 
+@safe
 package struct RawProxyAdoptionContext {
     private let eventQueue: RawEventQueue
     package let invariantFailureSink: RawInvariantFailureSink
@@ -12,6 +13,7 @@ package struct RawProxyAdoptionContext {
         invariantFailureSink = failureSink
     }
 
+    @safe
     package func adopt(
         _ proxy: OpaquePointer,
         interface interfaceName: StaticString
@@ -21,11 +23,12 @@ package struct RawProxyAdoptionContext {
             interface: interfaceName,
             invariantFailureSink: invariantFailureSink
         )
-        return proxy
+        return unsafe proxy
     }
 }
 
 extension RawEventQueue {
+    @safe
     package func assertOwns(
         proxy: OpaquePointer,
         interface interfaceName: StaticString,
@@ -40,8 +43,8 @@ extension RawEventQueue {
             return
         }
 
-        let expectedQueue = unsafe opaquePointer
-        if actualQueue != expectedQueue {
+        let expectedQueue = opaquePointer
+        if unsafe actualQueue != expectedQueue {
             try Self.reportQueueMismatch(
                 interface: interfaceName,
                 invariantFailureSink: failureSink
@@ -49,6 +52,7 @@ extension RawEventQueue {
         }
     }
 
+    @safe
     package func assertedProxy(
         _ proxy: OpaquePointer,
         interface interfaceName: StaticString,
@@ -59,7 +63,7 @@ extension RawEventQueue {
             interface: interfaceName,
             invariantFailureSink: failureSink
         )
-        return proxy
+        return unsafe proxy
     }
 
     package static func reportQueueMismatch(

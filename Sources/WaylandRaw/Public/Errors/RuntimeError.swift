@@ -258,6 +258,7 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
         .proxy(.queueMismatch(interface: interface, objectID: nil))
     }
 
+    @safe
     package static func fromDisplay(
         _ display: OpaquePointer,
         fallbackErrno: Int32? = nil,
@@ -265,18 +266,18 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
     )
         -> RuntimeError
     {
-        let error = wl_display_get_error(display)
+        let error = unsafe wl_display_get_error(display)
 
         if error == EPROTO {
-            var details = swl_protocol_error_details(
+            var details = unsafe swl_protocol_error_details(
                 code: 0,
                 object_id: 0,
                 interface_name: nil
             )
-            _ = swl_display_get_protocol_error_details(display, &details)
+            _ = unsafe swl_display_get_protocol_error_details(display, &details)
 
-            return .protocolError(
-                interfaceName: details.interface_name.map { String(cString: $0) },
+            return unsafe .protocolError(
+                interfaceName: details.interface_name.map { unsafe String(cString: $0) },
                 objectID: details.object_id,
                 code: details.code
             )

@@ -1,6 +1,7 @@
 import CWaylandProtocols
 
 extension RawDisplayConnection {
+    @safe
     package func bindOptionalGlobals(registry reg: OpaquePointer) throws -> OptionalGlobals {
         let decorationManager = try bindXDGDecorationManagerIfPresent(registry: reg)
 
@@ -40,6 +41,7 @@ extension RawDisplayConnection {
         }
     }
 
+    @safe
     private func bindXDGDecorationManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalXDGDecorationManager {
@@ -61,7 +63,7 @@ extension RawDisplayConnection {
                 throw RuntimeError.bindFailed("zxdg_decoration_manager_v1")
             }
 
-            let wrappedManager = try unsafe RawXDGDecorationManager(
+            let wrappedManager = try RawXDGDecorationManager(
                 pointer: manager,
                 version: version,
                 proxyAdoption: proxyAdoption
@@ -93,6 +95,7 @@ extension RawDisplayConnection {
         )
     }
 
+    @safe
     private func bindViewporterIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalViewporter {
@@ -114,7 +117,7 @@ extension RawDisplayConnection {
             throw RuntimeError.bindFailed("wp_viewporter")
         }
 
-        let wrappedViewporter = try unsafe RawViewporter(
+        let wrappedViewporter = try RawViewporter(
             pointer: viewporter,
             version: version,
             proxyAdoption: proxyAdoption
@@ -122,6 +125,7 @@ extension RawDisplayConnection {
         return .bound(wrappedViewporter)
     }
 
+    @safe
     private func bindFractionalScaleManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalFractionalScaleManager {
@@ -143,7 +147,7 @@ extension RawDisplayConnection {
             throw RuntimeError.bindFailed("wp_fractional_scale_manager_v1")
         }
 
-        let wrappedManager = try unsafe RawFractionalScaleManager(
+        let wrappedManager = try RawFractionalScaleManager(
             pointer: manager,
             version: version,
             proxyAdoption: proxyAdoption
@@ -151,6 +155,7 @@ extension RawDisplayConnection {
         return .bound(wrappedManager)
     }
 
+    @safe
     private func bindDataDeviceManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalDataDeviceManager {
@@ -172,7 +177,7 @@ extension RawDisplayConnection {
             throw RuntimeError.bindFailed("wl_data_device_manager")
         }
 
-        let wrappedManager = try unsafe RawDataDeviceManager(
+        let wrappedManager = try RawDataDeviceManager(
             pointer: manager,
             version: version,
             proxyAdoption: proxyAdoption
@@ -180,6 +185,7 @@ extension RawDisplayConnection {
         return .bound(wrappedManager)
     }
 
+    @safe
     private func bindPrimarySelectionDeviceManagerIfPresent(
         registry reg: OpaquePointer
     ) throws -> OptionalPrimarySelectionDeviceManager {
@@ -201,7 +207,7 @@ extension RawDisplayConnection {
             throw RuntimeError.bindFailed("zwp_primary_selection_device_manager_v1")
         }
 
-        let wrappedManager = try unsafe RawPrimarySelectionDeviceManager(
+        let wrappedManager = try RawPrimarySelectionDeviceManager(
             pointer: manager,
             version: version,
             proxyAdoption: proxyAdoption

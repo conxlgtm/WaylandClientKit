@@ -147,6 +147,8 @@ extension InputRouter {
             .keymapReadFailed(convert(error))
         case .composeTableUnavailable(let locale):
             .composeTableUnavailable(locale: locale)
+        case .composeTableBufferContainsNUL:
+            .composeTableBufferContainsNUL
         case .composeStateCreationFailed:
             .composeStateCreationFailed
         case .missingKeymap:

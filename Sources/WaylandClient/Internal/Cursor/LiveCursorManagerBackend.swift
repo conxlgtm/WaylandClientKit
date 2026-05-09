@@ -81,7 +81,7 @@ private final class LiveCursorManagerSurface: CursorManagerSurface {
     }
 
     func attach(_ image: CursorImage) {
-        unsafe rawSurface.attachBorrowedBuffer(image.buffer)
+        rawSurface.attachBorrowedBuffer(image.buffer)
         rawSurface.damageFullBuffer(width: image.width, height: image.height)
     }
 

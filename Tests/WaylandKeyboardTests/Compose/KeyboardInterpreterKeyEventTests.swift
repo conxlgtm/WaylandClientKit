@@ -545,6 +545,30 @@ struct KeyboardInterpreterKeyEventTests {  // swiftlint:disable:this type_body_l
     }
 
     @Test
+    func composeTableBufferContainingNULIsRejectedBeforeXKB() throws {
+        let interpreter = try KeyboardInterpreter(
+            configuration: KeyboardInterpreterConfiguration(
+                compose: .tableBuffer("include \"en_US.UTF-8\"\0")
+            )
+        )
+        let deviceID = keyboardDevice()
+        let keymapEvents = interpreter.consume(
+            rawKeyboardInputEvent(
+                deviceID: deviceID,
+                kind: .keymap(try keymapPayload(text: try fixtureKeymapText()))
+            )
+        )
+        let key = try #require(
+            interpreter.consume(
+                rawKeyboardInputEvent(deviceID: deviceID, kind: .key(qKey()))
+            ).first?.interpretedKey
+        )
+
+        #expect(keymapEvents.last?.kind == unavailable(.composeTableBufferContainsNUL))
+        #expect(key.text.committedString == "q")
+    }
+
+    @Test
     func composeLocaleResolutionUsesProcessLocalePriority() throws {
         let locale = KeyboardComposeLocale.processEnvironment
 

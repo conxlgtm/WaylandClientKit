@@ -295,10 +295,132 @@ package protocol DataTransferSourceWriting: AnyObject {
 }
 
 package final class ThreadedDataTransferSourceWriter: DataTransferSourceWriting {
-    private let state: ThreadedDataTransferSourceWriterState
+    private enum Lifecycle {
+        case running
+        case shutdownRequested
+        case stopped
+
+        var acceptsJobs: Bool {
+            self == .running
+        }
+
+        var waitsForJobs: Bool {
+            self == .running
+        }
+
+        var isStopped: Bool {
+            self == .stopped
+        }
+    }
+
+    // SAFETY: State is shared with exactly one worker thread. Its mutable
+    // storage is private, and every state transition happens while holding
+    // `condition`.
+    private final class State: @unchecked Sendable {
+        private let condition = NSCondition()
+        private var lifecycle = Lifecycle.running
+        private var currentJob: DataTransferSourceWriteJob?
+        private var jobs: [DataTransferSourceWriteJob] = []
+        private var results: [DataTransferSourceWriteResult] = []
+
+        func submit(_ submittedJobs: [DataTransferSourceWriteJob])
+            -> [DataTransferSourceWriteJob]
+        {
+            condition.lock()
+            defer { condition.unlock() }
+
+            guard lifecycle.acceptsJobs else {
+                return submittedJobs
+            }
+
+            jobs.append(contentsOf: submittedJobs)
+            condition.signal()
+            return []
+        }
+
+        func drainResults() -> [DataTransferSourceWriteResult] {
+            condition.lock()
+            defer { condition.unlock() }
+
+            defer { results.removeAll(keepingCapacity: true) }
+            return results
+        }
+
+        func requestShutdown() -> (
+            cancelledJobs: [DataTransferSourceWriteJob],
+            currentJob: DataTransferSourceWriteJob?
+        ) {
+            condition.lock()
+            defer { condition.unlock() }
+
+            guard lifecycle.acceptsJobs else {
+                return (cancelledJobs: [], currentJob: currentJob)
+            }
+
+            lifecycle = .shutdownRequested
+            let cancelledJobs = jobs
+            jobs.removeAll(keepingCapacity: false)
+            condition.broadcast()
+            return (cancelledJobs: cancelledJobs, currentJob: currentJob)
+        }
+
+        func markStopped() {
+            condition.lock()
+            currentJob = nil
+            lifecycle = .stopped
+            condition.broadcast()
+            condition.unlock()
+        }
+
+        func completeCurrentJob(with result: DataTransferSourceWriteResult) {
+            condition.lock()
+            currentJob = nil
+            results.append(result)
+            condition.broadcast()
+            condition.unlock()
+        }
+
+        func nextJob() -> DataTransferSourceWriteJob? {
+            condition.lock()
+            defer { condition.unlock() }
+
+            while jobs.isEmpty,
+                lifecycle.waitsForJobs
+            {
+                condition.wait()
+            }
+
+            guard !jobs.isEmpty else {
+                return nil
+            }
+
+            let job = jobs.removeFirst()
+            currentJob = job
+            return job
+        }
+
+        func append(_ newResults: [DataTransferSourceWriteResult]) {
+            guard !newResults.isEmpty else { return }
+
+            condition.lock()
+            results.append(contentsOf: newResults)
+            condition.broadcast()
+            condition.unlock()
+        }
+
+        func waitUntilStopped() {
+            condition.lock()
+            while !lifecycle.isStopped {
+                condition.wait()
+            }
+            condition.unlock()
+        }
+    }
+
+    private let state: State
 
     package init() {
-        let writerState = ThreadedDataTransferSourceWriterState()
+        let writerState = State()
         state = writerState
         Thread.detachNewThread {
             Self.run(state: writerState)
@@ -308,46 +430,18 @@ package final class ThreadedDataTransferSourceWriter: DataTransferSourceWriting 
     package func submit(_ jobs: [DataTransferSourceWriteJob]) {
         guard !jobs.isEmpty else { return }
 
-        let cancelledJobs: [DataTransferSourceWriteJob]
-        state.condition.lock()
-        if !state.lifecycle.acceptsJobs {
-            cancelledJobs = jobs
-        } else {
-            state.jobs.append(contentsOf: jobs)
-            cancelledJobs = []
-            state.condition.signal()
-        }
-        state.condition.unlock()
-
+        let cancelledJobs = state.submit(jobs)
         append(cancelledJobs.map { $0.closeAsCancelled() })
     }
 
     package func drainResults() -> [DataTransferSourceWriteResult] {
-        state.condition.lock()
-        defer { state.condition.unlock() }
-
-        defer { state.results.removeAll(keepingCapacity: true) }
-        return state.results
+        state.drainResults()
     }
 
     package func shutdown() {
-        let cancelledJobs: [DataTransferSourceWriteJob]
-        let currentJob: DataTransferSourceWriteJob?
-        state.condition.lock()
-        if !state.lifecycle.acceptsJobs {
-            cancelledJobs = []
-            currentJob = state.currentJob
-        } else {
-            state.lifecycle = .shutdownRequested
-            cancelledJobs = state.jobs
-            state.jobs.removeAll(keepingCapacity: false)
-            currentJob = state.currentJob
-            state.condition.broadcast()
-        }
-        state.condition.unlock()
-
-        append(cancelledJobs.map { $0.closeAsCancelled() })
-        currentJob?.cancelInFlight()
+        let shutdown = state.requestShutdown()
+        append(shutdown.cancelledJobs.map { $0.closeAsCancelled() })
+        shutdown.currentJob?.cancelInFlight()
         waitUntilStopped()
     }
 
@@ -355,60 +449,22 @@ package final class ThreadedDataTransferSourceWriter: DataTransferSourceWriting 
         shutdown()
     }
 
-    private static func run(state: ThreadedDataTransferSourceWriterState) {
+    private static func run(state: State) {
         defer {
-            state.condition.lock()
-            state.currentJob = nil
-            state.lifecycle = .stopped
-            state.condition.broadcast()
-            state.condition.unlock()
+            state.markStopped()
         }
 
-        while let job = nextJob(from: state) {
+        while let job = state.nextJob() {
             let result = job.write()
-            state.condition.lock()
-            state.currentJob = nil
-            state.results.append(result)
-            state.condition.broadcast()
-            state.condition.unlock()
+            state.completeCurrentJob(with: result)
         }
-    }
-
-    private static func nextJob(
-        from state: ThreadedDataTransferSourceWriterState
-    ) -> DataTransferSourceWriteJob? {
-        state.condition.lock()
-        defer { state.condition.unlock() }
-
-        while state.jobs.isEmpty,
-            state.lifecycle.waitsForJobs
-        {
-            state.condition.wait()
-        }
-
-        guard !state.jobs.isEmpty else {
-            return nil
-        }
-
-        let job = state.jobs.removeFirst()
-        state.currentJob = job
-        return job
     }
 
     private func append(_ results: [DataTransferSourceWriteResult]) {
-        guard !results.isEmpty else { return }
-
-        state.condition.lock()
-        state.results.append(contentsOf: results)
-        state.condition.broadcast()
-        state.condition.unlock()
+        state.append(results)
     }
 
     private func waitUntilStopped() {
-        state.condition.lock()
-        while !state.lifecycle.isStopped {
-            state.condition.wait()
-        }
-        state.condition.unlock()
+        state.waitUntilStopped()
     }
 }

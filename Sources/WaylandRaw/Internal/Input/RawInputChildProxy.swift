@@ -1,3 +1,4 @@
+@safe
 package final class RawInputChildProxy {
     package let id: RawInputDeviceID
     package let version: RawVersion
@@ -6,7 +7,7 @@ package final class RawInputChildProxy {
     private let cancelListener: (() -> Void)?
     private var proxy: RawOwnedProxy
 
-    package var pointer: OpaquePointer {
+    @safe package var pointer: OpaquePointer {
         proxy.pointer
     }
 
@@ -26,12 +27,15 @@ package final class RawInputChildProxy {
         cancelListener = cancelChildListener
         let adoptedPointer: OpaquePointer
         do {
-            adoptedPointer =
-                try adoptionContext?.adopt(childPointer, interface: interfaceName)
-                ?? childPointer
+            if let adoptionContext {
+                unsafe adoptedPointer = try adoptionContext.adopt(
+                    childPointer, interface: interfaceName)
+            } else {
+                unsafe adoptedPointer = childPointer
+            }
         } catch {
             cancelChildListener?()
-            releaseChildProxy(childPointer)
+            unsafe releaseChildProxy(childPointer)
             throw error
         }
         proxy = RawOwnedProxy(pointer: adoptedPointer, destroy: releaseChildProxy)

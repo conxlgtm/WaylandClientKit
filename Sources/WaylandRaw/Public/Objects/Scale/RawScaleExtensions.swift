@@ -1,14 +1,16 @@
 import CWaylandProtocols
 import Glibc
 
+@safe
 package final class RawViewporter {
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
-    private var pointer: OpaquePointer { proxy.pointer }
+    @safe private var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer viewporterPointer: OpaquePointer,
         version viewporterVersion: RawVersion,
@@ -50,13 +52,15 @@ package final class RawViewporter {
     }
 }
 
+@safe
 package final class RawViewport {
     package let version: RawVersion
 
     private var proxy: RawOwnedProxy
 
-    var pointer: OpaquePointer { proxy.pointer }
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer viewportPointer: OpaquePointer,
         version viewportVersion: RawVersion,
@@ -91,14 +95,16 @@ package final class RawViewport {
     }
 }
 
+@safe
 package final class RawFractionalScaleManager {
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
 
-    private var pointer: OpaquePointer { proxy.pointer }
+    @safe private var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer managerPointer: OpaquePointer,
         version managerVersion: RawVersion,
@@ -147,13 +153,15 @@ package final class RawFractionalScaleManager {
     }
 }
 
+@safe
 package final class RawFractionalScale {
     package let version: RawVersion
 
     private var proxy: RawOwnedProxy
 
-    var pointer: OpaquePointer { proxy.pointer }
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
+    @safe
     init(
         pointer fractionalScalePointer: OpaquePointer,
         version fractionalScaleVersion: RawVersion,
@@ -191,17 +199,18 @@ private enum ScaleListenerInstallState {
 
 private typealias SurfaceScaleListenerCallbacks = swl_surface_listener_callbacks
 
+@safe
 package final class RawSurfaceScaleOwner {
     private let onPreferredBufferScale: (Int32) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = ScaleListenerInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
         initialValue: unsafe swl_surface_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<SurfaceScaleListenerCallbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<SurfaceScaleListenerCallbacks> {
         listenerStorage.callbacks
     }
 
@@ -212,7 +221,7 @@ package final class RawSurfaceScaleOwner {
         onPreferredBufferScale = handler
         invariantFailureSink = failureSink
 
-        callbacks.pointee.preferred_buffer_scale = { data, _, factor in
+        unsafe callbacks.pointee.preferred_buffer_scale = { data, _, factor in
             RawSurfaceScaleOwner.withOwner(
                 data,
                 message: "wl_surface preferred_buffer_scale fired without Swift state"
@@ -230,7 +239,7 @@ package final class RawSurfaceScaleOwner {
             )
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_surface_add_listener(surface.pointer, callbacks)
 
@@ -248,6 +257,7 @@ package final class RawSurfaceScaleOwner {
         listenerStorage.invalidate()
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,
@@ -264,17 +274,18 @@ package final class RawSurfaceScaleOwner {
 private typealias FractionalScaleListenerCallbacks =
     swl_wp_fractional_scale_v1_listener_callbacks
 
+@safe
 package final class RawFractionalScaleOwner {
     private let onPreferredScale: (UInt32) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = ScaleListenerInstallState.idle
-    private lazy var listenerStorage = CListenerStorage(
+    @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
         initialValue: unsafe swl_wp_fractional_scale_v1_listener_callbacks(),
         invariantFailureSink: invariantFailureSink
     )
 
-    private var callbacks: UnsafeMutablePointer<FractionalScaleListenerCallbacks> {
+    @safe private var callbacks: UnsafeMutablePointer<FractionalScaleListenerCallbacks> {
         listenerStorage.callbacks
     }
 
@@ -285,7 +296,7 @@ package final class RawFractionalScaleOwner {
         onPreferredScale = handler
         invariantFailureSink = failureSink
 
-        callbacks.pointee.preferred_scale = { data, _, scale in
+        unsafe callbacks.pointee.preferred_scale = { data, _, scale in
             RawFractionalScaleOwner.withOwner(
                 data,
                 message: "wp_fractional_scale_v1 preferred_scale fired without Swift state"
@@ -303,7 +314,7 @@ package final class RawFractionalScaleOwner {
             )
         }
 
-        callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
         let result = unsafe swl_wp_fractional_scale_v1_add_listener(
             fractionalScale.pointer,
@@ -324,6 +335,7 @@ package final class RawFractionalScaleOwner {
         listenerStorage.invalidate()
     }
 
+    @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
         message: @autoclosure () -> String,

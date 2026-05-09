@@ -1,7 +1,8 @@
 import CWaylandClientSystem
 
+@safe
 package final class RawRegistry: CustomStringConvertible {
-    let opaquePointer: OpaquePointer
+    @safe let opaquePointer: OpaquePointer
     package let metadata: RawProxyMetadata
 
     init(
@@ -10,7 +11,7 @@ package final class RawRegistry: CustomStringConvertible {
         ownership: RawOwnership,
         objectID: RawObjectID? = nil
     ) {
-        opaquePointer = registryPointer
+        unsafe opaquePointer = registryPointer
         metadata = RawProxyMetadata(
             interfaceName: "wl_registry",
             version: version,
