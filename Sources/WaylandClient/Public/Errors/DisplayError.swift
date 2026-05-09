@@ -33,6 +33,7 @@ public enum WaylandSystemOperation: Equatable, Sendable, CustomStringConvertible
     case mapSharedMemory
     case createBuffer
     case installListener(String)
+    case connectDisplay
     case readMonotonicClock
     case pollEventLoop
     case displayFlush
@@ -62,6 +63,8 @@ public enum WaylandSystemOperation: Equatable, Sendable, CustomStringConvertible
             "create Wayland buffer"
         case .installListener(let name):
             "install \(name) listener"
+        case .connectDisplay:
+            "connect Wayland display"
         case .readMonotonicClock:
             "read monotonic clock"
         case .pollEventLoop:
@@ -101,7 +104,7 @@ extension WaylandSystemOperation {
             self = Self.namedOperation(rawOperation)
         case .createSharedMemoryFile, .resizeSharedMemoryFile, .mapSharedMemory, .createBuffer:
             self = Self.sharedMemoryOperation(rawOperation)
-        case .readMonotonicClock, .pollEventLoop:
+        case .connectDisplay, .readMonotonicClock, .pollEventLoop:
             self = Self.runtimeOperation(rawOperation)
         case .displayFlush, .displayReadEvents, .displayDispatchPending,
             .displayPrepareRead, .displayError:
@@ -148,6 +151,8 @@ extension WaylandSystemOperation {
         _ rawOperation: RawSystemOperation
     ) -> WaylandSystemOperation {
         switch rawOperation {
+        case .connectDisplay:
+            .connectDisplay
         case .readMonotonicClock:
             .readMonotonicClock
         case .pollEventLoop:
@@ -422,6 +427,7 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
             .executorStopping,
             .executorStopped,
             .executorFailedToStart,
+            .operationSyncInitFailed,
             .wakeFileDescriptorReadFailed,
             .wakeFileDescriptorShortRead,
             .wakeFileDescriptorWriteFailed,

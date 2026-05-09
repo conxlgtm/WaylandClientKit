@@ -37,6 +37,8 @@ public struct CursorThemeName: Equatable, Sendable, CustomStringConvertible {
     }
 
     package init(unchecked name: String) {
+        precondition(!name.isEmpty, "cursor theme name must not be empty")
+        precondition(!name.contains("\0"), "cursor theme name must not contain NUL bytes")
         value = name
     }
 
@@ -59,6 +61,7 @@ public struct CursorSize: Equatable, Comparable, Sendable, CustomStringConvertib
     }
 
     package init(unchecked value: Int32) {
+        precondition(value > 0, "cursor size must be positive")
         rawValue = value
     }
 
@@ -147,6 +150,7 @@ public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomString
     }
 
     package init(unchecked value: Int) {
+        precondition(value > 0, "event stream capacity must be positive")
         rawValue = value
     }
 
@@ -194,6 +198,7 @@ public struct InputQueueCapacity: Equatable, Comparable, Sendable, CustomStringC
     }
 
     package init(unchecked value: Int) {
+        precondition(value > 0, "input queue capacity must be positive")
         rawValue = value
     }
 
@@ -223,6 +228,7 @@ public struct DiagnosticsCapacity: Equatable, Comparable, Sendable, CustomString
     }
 
     package init(unchecked value: Int) {
+        precondition(value > 0, "diagnostics capacity must be positive")
         rawValue = value
     }
 

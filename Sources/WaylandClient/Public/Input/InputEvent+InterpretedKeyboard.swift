@@ -114,6 +114,7 @@ public struct KeyboardSymbolResolution: Equatable, Sendable {
     }
 
     private init(uncheckedPrimary primaryKeysym: KeyboardKeysym, all keysyms: [KeyboardKeysym]) {
+        precondition(keysyms.first == primaryKeysym, "primary keysym must match the first keysym")
         primary = primaryKeysym
         all = keysyms
     }

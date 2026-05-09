@@ -60,4 +60,34 @@ struct KeyboardInterpretationConfigurationTests {
             try WaylandClient.KeyboardComposeLocaleIdentifier("  \n\t")
         }
     }
+
+    @Test
+    func composeLocaleIdentifierContainingNULIsRejected() {
+        #expect(throws: WaylandClient.KeyboardComposeLocaleError.containsNUL) {
+            try WaylandClient.KeyboardComposeLocaleIdentifier("en_US\0.UTF-8")
+        }
+    }
+
+    @Test
+    func composeLocaleIdentifierTrimsASCIIWhitespaceBeforeMapping() throws {
+        let locale = try WaylandClient.KeyboardComposeLocaleIdentifier(
+            "\r\n sv_SE.UTF-8 \t"
+        )
+        let mapped = WaylandKeyboard.KeyboardInterpreterConfiguration(
+            KeyboardInterpretationConfiguration(
+                compose: .enabled(locale: .identifier(locale))
+            )
+        )
+
+        #expect(
+            mapped.compose
+                == .enabled(
+                    locale: .identifier(
+                        WaylandKeyboard.KeyboardComposeLocaleIdentifier(
+                            unchecked: "sv_SE.UTF-8"
+                        )
+                    ),
+                    cancellationPolicy: .passThroughCancellingKey
+                ))
+    }
 }

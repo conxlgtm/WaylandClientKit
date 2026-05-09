@@ -215,7 +215,7 @@ private final class BackpressureSourceWriteProbe: Sendable {
         state.withLock(\.closeThreadMarkers)
     }
 
-    func write(descriptor _: Int32, bytes _: [UInt8]) throws -> Int {
+    func write(descriptor _: Int32, bytes _: ArraySlice<UInt8>) throws -> Int {
         condition.lock()
         state.withLock { storage in
             storage.started = true
@@ -279,7 +279,7 @@ private final class PipeWriteProbe: Sendable {
         state.withLock(\.closeThreadMarkers)
     }
 
-    func write(descriptor: Int32, bytes: [UInt8]) throws -> Int {
+    func write(descriptor: Int32, bytes: ArraySlice<UInt8>) throws -> Int {
         condition.lock()
         state.withLock { storage in
             storage.started = true
@@ -288,7 +288,7 @@ private final class PipeWriteProbe: Sendable {
         condition.broadcast()
         condition.unlock()
 
-        let result = unsafe bytes.withUnsafeBytes { buffer in
+        let result = unsafe bytes.withUnsafeBufferPointer { buffer in
             unsafe Glibc.write(descriptor, buffer.baseAddress, buffer.count)
         }
         guard result >= 0 else {

@@ -201,15 +201,19 @@ public enum KeyboardComposeLocale: Equatable, Sendable {
 
 public enum KeyboardComposeLocaleError: Error, Equatable, Sendable {
     case emptyIdentifier
+    case containsNUL
 }
 
 public struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {
     public let rawValue: String
 
     public init(_ value: String) throws(KeyboardComposeLocaleError) {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = trimmingKeyboardComposeASCIIWhitespace(value)
         guard !trimmed.isEmpty else {
             throw .emptyIdentifier
+        }
+        guard !trimmed.utf8.contains(0) else {
+            throw .containsNUL
         }
 
         rawValue = trimmed
@@ -218,7 +222,31 @@ public struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {
     public static let posixC = Self(unchecked: "C")
 
     private init(unchecked value: String) {
+        precondition(!value.isEmpty, "compose locale identifier must not be empty")
+        precondition(
+            !value.utf8.contains(0),
+            "compose locale identifier must not contain NUL bytes"
+        )
         rawValue = value
+    }
+}
+
+private func trimmingKeyboardComposeASCIIWhitespace(_ value: String) -> String {
+    let trimmedScalars = value.unicodeScalars.drop { scalar in
+        isKeyboardComposeASCIIWhitespace(scalar)
+    }
+    .reversed()
+    .drop { isKeyboardComposeASCIIWhitespace($0) }
+    .reversed()
+    return String(String.UnicodeScalarView(trimmedScalars))
+}
+
+private func isKeyboardComposeASCIIWhitespace(_ scalar: UnicodeScalar) -> Bool {
+    switch scalar.value {
+    case 0x09...0x0D, 0x20:
+        true
+    default:
+        false
     }
 }
 

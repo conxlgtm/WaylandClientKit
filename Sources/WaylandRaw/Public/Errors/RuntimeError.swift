@@ -34,6 +34,7 @@ package enum RawSystemOperation: Equatable, Sendable, CustomStringConvertible {
     case mapSharedMemory
     case createBuffer
     case installListener(String)
+    case connectDisplay
     case readMonotonicClock
     case pollEventLoop
     case displayFlush
@@ -63,6 +64,8 @@ package enum RawSystemOperation: Equatable, Sendable, CustomStringConvertible {
             "create Wayland buffer"
         case .installListener(let name):
             "install \(name) listener"
+        case .connectDisplay:
+            "connect Wayland display"
         case .readMonotonicClock:
             "read monotonic clock"
         case .pollEventLoop:

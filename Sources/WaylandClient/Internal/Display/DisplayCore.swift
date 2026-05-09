@@ -116,20 +116,30 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     func close() {
         guard !isClosed else { return }
-        lifecycle = .closed
+        let session = activeSession
         for windowID in surfaces.allWindowIDs {
             closeWindow(windowID)
         }
+        session?.releaseWaylandResourcesOnOwnerThread()
+        lifecycle = .closed
         eventHub.finish()
+        withExtendedLifetime(session) {
+            _ = ()
+        }
     }
 
     func fail(_ error: WaylandDisplayError) {
         guard !isClosed else { return }
+        let session = activeSession
         // Non-callback failures can synchronously discard the owned graph.
-        lifecycle = .closed
         surfaces.removeAll()
+        session?.releaseWaylandResourcesOnOwnerThread()
+        lifecycle = .closed
         eventHub.finish(throwing: error)
         assertSurfaceStoreInvariants()
+        withExtendedLifetime(session) {
+            _ = ()
+        }
     }
 
     func withFatalFailureFinalization<Result: ~Copyable>(

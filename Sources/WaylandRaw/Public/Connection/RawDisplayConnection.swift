@@ -72,7 +72,13 @@ package final class RawDisplayConnection {
         invariantFailureSink: RawInvariantFailureSink,
         inputQueueConfiguration: RawInputQueueConfiguration
     ) throws -> RawDisplayConnection {
+        errno = 0
         guard let displayPointer = unsafe wl_display_connect(nil) else {
+            let savedErrno = errno
+            guard savedErrno <= 0 else {
+                throw RuntimeError.systemError(errno: savedErrno, operation: .connectDisplay)
+            }
+
             throw RuntimeError.connectionFailed
         }
 

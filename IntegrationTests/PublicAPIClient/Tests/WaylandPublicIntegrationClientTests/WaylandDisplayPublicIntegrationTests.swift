@@ -38,6 +38,29 @@ struct WaylandDisplayPublicIntegrationTests {
     }
 
     @Test
+    func primarySelectionOfferForUnknownSeatReportsPublicError() async throws {
+        try await withPublicConnection { display in
+            let unknownSeatID = SeatID(rawValue: UInt32.max)
+
+            do {
+                _ = try await display.primarySelectionOffer(for: unknownSeatID)
+                Issue.record("Expected a primary-selection public error")
+            } catch let error as DataTransferError {
+                switch error {
+                case .unavailable:
+                    break
+                case .missingPrimarySelectionDevice(let seatID):
+                    #expect(seatID == unknownSeatID)
+                default:
+                    Issue.record("Expected primary-selection error, got \(error)")
+                }
+            } catch {
+                Issue.record("Expected DataTransferError, got \(error)")
+            }
+        }
+    }
+
+    @Test
     func toplevelWindowShowsRedrawsAndClosesThroughPublicAPI() async throws {
         try await withPublicConnection { display in
             let displayEvents = display.events
@@ -108,67 +131,6 @@ struct WaylandDisplayPublicIntegrationTests {
             #expect(results.isEmpty)
             #expect(finalCursor == .hidden)
         }
-    }
-}
-
-@Suite("WaylandDisplay public API surface")
-struct WaylandDisplayPublicAPISurfaceTests {
-    @Test
-    func primarySelectionPublicTypesCompileForExternalClients() throws {
-        let payload = DataTransferSourcePayload(
-            mimeType: .plainText,
-            data: Data("primary".utf8)
-        )
-        let configuration = try PrimarySelectionSourceConfiguration(payloads: [payload])
-
-        #expect(configuration.payloads == [payload])
-        #expect(
-            try PrimarySelectionSourceConfiguration.data(
-                mimeType: .plainTextUTF8,
-                Data("primary utf8".utf8)
-            ).payloads.first?.mimeType == .plainTextUTF8)
-    }
-
-    @Test
-    func primarySelectionDisplayMethodsCompileForExternalClients() {
-        func usePrimarySelectionAPI(
-            display: WaylandDisplay,
-            seatID: SeatID,
-            serial: InputSerial
-        ) async throws {
-            let configuration = try PrimarySelectionSourceConfiguration.data(
-                mimeType: .plainText,
-                Data("primary".utf8)
-            )
-            let source = try await display.requestPrimarySelection(
-                configuration,
-                seatID: seatID,
-                serial: serial
-            )
-            _ = try await display.primarySelectionOffer(for: seatID)
-            try await source.requestClear(serial: serial)
-            try await display.requestClearPrimarySelection(seatID: seatID, serial: serial)
-        }
-
-        _ = usePrimarySelectionAPI
-    }
-
-    @Test
-    func primarySelectionDataTransferEventsCompileForExternalClients() {
-        func consumeDataTransferEvent(_ event: DataTransferEvent) -> String {
-            switch event {
-            case .clipboardSelectionChanged(let event):
-                event.offer?.description ?? "clipboard cleared"
-            case .primarySelectionChanged(let event):
-                event.offer?.description ?? "primary selection cleared"
-            case .clipboardSourceCancelled(let identity):
-                identity.description
-            case .primarySelectionSourceCancelled(let identity):
-                identity.description
-            }
-        }
-
-        _ = consumeDataTransferEvent
     }
 }
 

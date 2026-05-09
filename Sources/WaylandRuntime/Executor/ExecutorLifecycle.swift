@@ -13,11 +13,14 @@ package enum ShutdownMode: Equatable, Sendable {
 }
 
 package enum ExecutorStartFailure: Equatable, Sendable, CustomStringConvertible {
+    case syncPrimitiveInitFailed(function: String, code: Int32)
     case eventFileDescriptorCreationFailed(Int32)
     case threadCreationFailed(Int32)
 
     package var description: String {
         switch self {
+        case .syncPrimitiveInitFailed(let function, let code):
+            "\(function) returned \(code)"
         case .eventFileDescriptorCreationFailed(let errorCode):
             "eventfd failed with errno \(errorCode)"
         case .threadCreationFailed(let code):

@@ -242,9 +242,9 @@ private func writeAll(_ bytes: [UInt8], to descriptor: Int32) throws {
     var writtenByteCount = 0
 
     while writtenByteCount < bytes.count {
-        let remainingBytes = Array(bytes[writtenByteCount...])
+        let remainingBytes = bytes[writtenByteCount...]
         let result = unsafe remainingBytes.withUnsafeBufferPointer { buffer in
-            unsafe Glibc.write(descriptor, buffer.baseAddress, remainingBytes.count)
+            unsafe Glibc.write(descriptor, buffer.baseAddress, buffer.count)
         }
         guard result > 0 else {
             throw DataTransferError.writeFileDescriptor(

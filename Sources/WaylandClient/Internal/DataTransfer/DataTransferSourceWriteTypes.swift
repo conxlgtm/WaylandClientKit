@@ -5,13 +5,13 @@ package struct DataTransferSourceDescriptorIO: Sendable {
     package static let raw = DataTransferSourceDescriptorIO()
 
     private let prepareDescriptorForWriting: @Sendable (Int32) throws -> Void
-    private let writeDescriptor: @Sendable (Int32, [UInt8]) throws -> Int
+    private let writeDescriptor: @Sendable (Int32, ArraySlice<UInt8>) throws -> Int
     private let closeDescriptor: @Sendable (Int32) -> FileDescriptorCloseResult
 
     package init(
         prepareDescriptorForWriting prepare: @escaping @Sendable (Int32) throws -> Void =
             defaultPrepareDataTransferSourceDescriptorForWriting,
-        writeDescriptor write: @escaping @Sendable (Int32, [UInt8]) throws -> Int =
+        writeDescriptor write: @escaping @Sendable (Int32, ArraySlice<UInt8>) throws -> Int =
             defaultWriteDataTransferSourceDescriptor,
         closeDescriptor close: @escaping @Sendable (Int32) -> FileDescriptorCloseResult =
             defaultCloseDataTransferSourceDescriptor
@@ -25,7 +25,7 @@ package struct DataTransferSourceDescriptorIO: Sendable {
         try prepareDescriptorForWriting(descriptor)
     }
 
-    package func write(_ descriptor: Int32, bytes: [UInt8]) throws -> Int {
+    package func write(_ descriptor: Int32, bytes: ArraySlice<UInt8>) throws -> Int {
         try writeDescriptor(descriptor, bytes)
     }
 
@@ -101,7 +101,7 @@ package func defaultPrepareDataTransferSourceDescriptorForWriting(
 
 package func defaultWriteDataTransferSourceDescriptor(
     descriptor: Int32,
-    bytes: [UInt8]
+    bytes: ArraySlice<UInt8>
 ) throws -> Int {
     do {
         return try RawFileDescriptor.write(descriptor: descriptor, bytes: bytes)

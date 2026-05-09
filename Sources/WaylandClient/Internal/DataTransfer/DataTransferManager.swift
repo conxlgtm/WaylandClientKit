@@ -282,6 +282,14 @@ package final class DataTransferManager {
         seatIDs.sorted { $0.rawValue < $1.rawValue }
     }
 
+    private static func sortedOfferIDs(_ offerIDs: Set<DataOfferID>) -> [DataOfferID] {
+        offerIDs.sorted { $0.rawValue < $1.rawValue }
+    }
+
+    private static func sortedSourceIDs(_ sourceIDs: Set<DataSourceID>) -> [DataSourceID] {
+        sourceIDs.sorted { $0.rawValue < $1.rawValue }
+    }
+
     private func allocateOfferID() -> DataOfferID {
         defer { nextOfferID += 1 }
         return DataOfferID(rawValue: nextOfferID)
@@ -325,6 +333,24 @@ extension DataTransferManager {
     package func drainDataTransferEvents() -> [DataTransferEvent] {
         backend.preconditionIsOwnerThread()
         return eventQueue.drain()
+    }
+
+    func shutdown() {
+        backend.preconditionIsOwnerThread()
+
+        for sourceID in Self.sortedSourceIDs(store.sourceIDs) {
+            store.removeSource(sourceID)?.binding.destroy()
+        }
+        for offerID in Self.sortedOfferIDs(store.offerIDs) {
+            store.removeOffer(offerID)?.binding.destroy()
+        }
+        for seatID in Self.sortedSeatIDs(store.boundSeatIDs) {
+            store.removeDeviceBinding(for: seatID)?.release()
+        }
+        discardAllPendingSourceSendRequests()
+
+        store.replaceState(DataTransferState())
+        store.discardCallbackFailures()
     }
 
     package func recordCallbackError(

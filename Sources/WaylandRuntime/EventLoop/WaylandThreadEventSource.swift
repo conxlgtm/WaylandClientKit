@@ -20,6 +20,7 @@ package enum WaylandThreadExecutorError: Error, Equatable, Sendable, CustomStrin
     case executorStopping(ShutdownMode)
     case executorStopped
     case executorFailedToStart(ExecutorStartFailure)
+    case operationSyncInitFailed(function: String, code: Int32)
     case wakeFileDescriptorReadFailed(Int32)
     case wakeFileDescriptorShortRead(Int)
     case wakeFileDescriptorWriteFailed(Int32)
@@ -38,6 +39,8 @@ package enum WaylandThreadExecutorError: Error, Equatable, Sendable, CustomStrin
             "Wayland owner thread executor has stopped"
         case .executorFailedToStart(let failure):
             "Wayland owner thread executor failed to start: \(failure)"
+        case .operationSyncInitFailed(let function, let code):
+            "\(function) for a synchronous executor operation returned \(code)"
         case .wakeFileDescriptorReadFailed(let errorCode):
             "Wayland owner thread wake fd read failed with errno \(errorCode)"
         case .wakeFileDescriptorShortRead(let byteCount):

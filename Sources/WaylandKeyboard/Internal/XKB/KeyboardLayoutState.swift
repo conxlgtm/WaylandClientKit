@@ -75,6 +75,8 @@ final class XKBContextOwner {
     }
 
     func createComposeTable(locale: String) -> OpaquePointer? {
+        precondition(!locale.isEmpty, "compose table locale must not be empty")
+        precondition(!locale.utf8.contains(0), "compose table locale must not contain NUL bytes")
         let createdTable = XKBComposeTableCreation.lock.withLock { _ -> CreatedTable? in
             unsafe locale.withCString { localePointer in
                 unsafe xkb_compose_table_new_from_locale(
@@ -92,6 +94,10 @@ final class XKBContextOwner {
         buffer: String,
         locale: String
     ) -> OpaquePointer? {
+        precondition(!buffer.isEmpty, "compose table buffer must not be empty")
+        precondition(!buffer.utf8.contains(0), "compose table buffer must not contain NUL bytes")
+        precondition(!locale.isEmpty, "compose table locale must not be empty")
+        precondition(!locale.utf8.contains(0), "compose table locale must not contain NUL bytes")
         let byteCount = buffer.utf8.count
         let createdTable = XKBComposeTableCreation.lock.withLock { _ -> CreatedTable? in
             unsafe buffer.withCString { bufferPointer -> OpaquePointer? in
