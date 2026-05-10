@@ -48,6 +48,7 @@ package final class RawDisplayConnection {
         inputEventQueue = rawInputEventQueue
         registryListenerOwner.onGlobalRemoved = { [weak connection = self] name in
             connection?.boundGlobals?.seatRegistry.removeSeat(globalName: name)
+            connection?.boundGlobals?.outputRegistry.removeOutput(globalName: name)
         }
     }
 
@@ -217,6 +218,16 @@ package final class RawDisplayConnection {
     @available(
         *,
         noasync,
+        message: "Read outputs from the owner-thread Wayland loop."
+    )
+    package func outputSnapshots() throws -> [RawOutputSnapshot] {
+        preconditionIsOwnerThread()
+        return try bindRequiredGlobals().outputRegistry.snapshots
+    }
+
+    @available(
+        *,
+        noasync,
         message: "Run event loops from the owner-thread Wayland loop."
     )
     package func runEventLoop(while shouldContinue: () -> Bool) throws {
@@ -293,10 +304,18 @@ extension RawDisplayConnection {
             sharedMemory: shm,
             compositor: compositorWrapper
         )
+        let outputRegistry = try bindOutputRegistry(
+            registry: reg,
+            xdgWMBase: xdgWmBase,
+            sharedMemory: shm,
+            compositor: compositorWrapper,
+            seatRegistry: seatRegistry
+        )
         let extensions: OptionalGlobals
         do {
             extensions = try bindOptionalGlobals(registry: reg)
         } catch {
+            outputRegistry.destroy()
             seatRegistry.destroy()
             xdgWmBase.destroy()
             shm.destroy()
@@ -309,6 +328,7 @@ extension RawDisplayConnection {
             sharedMemory: shm,
             xdgWMBase: xdgWmBase,
             seatRegistry: seatRegistry,
+            outputRegistry: outputRegistry,
             extensions: extensions
         )
 
@@ -444,6 +464,33 @@ extension RawDisplayConnection {
             try seatRegistry.bindSeats(from: registryState.snapshot)
             return seatRegistry
         } catch {
+            xdgWMBase.destroy()
+            shm.destroy()
+            compositor.destroy()
+            throw error
+        }
+    }
+
+    @safe
+    private func bindOutputRegistry(
+        registry reg: OpaquePointer,
+        xdgWMBase: RawXDGWMBase,
+        sharedMemory shm: RawSharedMemory,
+        compositor: RawCompositor,
+        seatRegistry: SeatRegistry
+    ) throws -> OutputRegistry {
+        let outputRegistry = OutputRegistry(
+            registry: reg,
+            proxyAdoption: proxyAdoption,
+            invariantFailureSink: invariantFailureSink
+        )
+
+        do {
+            try outputRegistry.bindOutputs(from: registryState.snapshot)
+            return outputRegistry
+        } catch {
+            outputRegistry.destroy()
+            seatRegistry.destroy()
             xdgWMBase.destroy()
             shm.destroy()
             compositor.destroy()

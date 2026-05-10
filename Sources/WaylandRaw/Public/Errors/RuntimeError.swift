@@ -159,6 +159,7 @@ package enum RawProxyError: Error, Equatable, Sendable, CustomStringConvertible 
 
 package enum RawListenerInstallationError: Error, Equatable, Sendable, CustomStringConvertible {
     case registry
+    case output
     case seat
     case pointer
     case keyboard
@@ -169,6 +170,8 @@ package enum RawListenerInstallationError: Error, Equatable, Sendable, CustomStr
         switch self {
         case .registry:
             "Wayland registry listener installation failed"
+        case .output:
+            "Wayland output listener installation failed"
         case .seat:
             "Wayland seat listener installation failed"
         case .pointer:
@@ -223,6 +226,7 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
     case proxy(RawProxyError)
 
     package static let registryListenerInstallationFailed: RuntimeError = .listener(.registry)
+    package static let outputListenerInstallationFailed: RuntimeError = .listener(.output)
     package static let seatListenerInstallationFailed: RuntimeError = .listener(.seat)
     package static let pointerListenerInstallationFailed: RuntimeError = .listener(.pointer)
     package static let keyboardListenerInstallationFailed: RuntimeError = .listener(.keyboard)

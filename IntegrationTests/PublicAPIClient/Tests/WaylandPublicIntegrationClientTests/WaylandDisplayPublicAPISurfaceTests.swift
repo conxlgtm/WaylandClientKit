@@ -68,6 +68,87 @@ struct WaylandDisplayPublicAPISurfaceTests {
     }
 
     @Test
+    func outputSnapshotTypesAndDisplayMethodCompileForExternalClients() throws {
+        let scale = try PositiveInt32(2)
+        let snapshot = OutputSnapshot(
+            id: OutputID(rawValue: 1),
+            version: 4,
+            geometry: OutputGeometry(
+                x: 0,
+                y: 0,
+                physicalWidthMillimeters: 600,
+                physicalHeightMillimeters: 340,
+                subpixel: 1,
+                make: "Acme",
+                model: "Panel",
+                transform: 0
+            ),
+            currentMode: OutputMode(
+                flags: 1,
+                width: 1_920,
+                height: 1_080,
+                refreshMilliHertz: 60_000
+            ),
+            scale: scale,
+            name: "HDMI-A-1",
+            description: "Acme Panel"
+        )
+
+        #expect(snapshot.id == OutputID(rawValue: 1))
+        #expect(snapshot.scale == scale)
+
+        func useOutputsAPI(display: WaylandDisplay) async throws -> [OutputSnapshot] {
+            try await display.outputs()
+        }
+
+        _ = useOutputsAPI
+    }
+
+    @Test
+    func windowManagerControlMethodsCompileForExternalClients() throws {
+        let minimumSize = try PositiveLogicalSize(width: 320, height: 240)
+        let maximumSize = try PositiveLogicalSize(width: 1_920, height: 1_080)
+        let snapshot = WindowStateSnapshot(
+            configureSerial: 10,
+            size: minimumSize,
+            states: [.activated, .tiled(.left)],
+            bounds: maximumSize,
+            managerCapabilities: [.maximize, .fullscreen],
+            decorationMode: .serverSide
+        )
+
+        #expect(snapshot.configureSerial == 10)
+        #expect(WindowResizeEdge.bottomRight == .bottomRight)
+
+        func useWindowControls(window: Window, seatID: SeatID, serial: InputSerial) async throws {
+            try await window.setTitle("Settings")
+            try await window.setAppID("com.example.settings")
+            try await window.setMinimumSize(minimumSize)
+            try await window.setMaximumSize(maximumSize)
+            try await window.setMinimumSize(nil)
+            try await window.requestMaximize()
+            try await window.requestUnmaximize()
+            try await window.requestFullscreen()
+            try await window.requestExitFullscreen()
+            try await window.requestMinimize()
+            try await window.requestInteractiveMove(seatID: seatID, serial: serial)
+            try await window.requestInteractiveResize(
+                seatID: seatID,
+                serial: serial,
+                edge: .bottomRight
+            )
+            try await window.requestWindowMenu(
+                seatID: seatID,
+                serial: serial,
+                position: LogicalOffset(x: 8, y: 12)
+            )
+            _ = try await window.stateSnapshot
+        }
+
+        _ = useWindowControls
+    }
+
+    @Test
     func primarySelectionDataTransferEventsCompileForExternalClients() {
         func consumeDataTransferEvent(_ event: DataTransferEvent) -> String {
             switch event {

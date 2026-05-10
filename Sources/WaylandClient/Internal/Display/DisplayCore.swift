@@ -107,6 +107,12 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
     }
 
+    func outputs() throws -> [OutputSnapshot] {
+        try withFatalFailureFinalization {
+            try requireSession().outputSnapshotsOnOwnerThread()
+        }
+    }
+
     func closeWindow(_ windowID: WindowID) {
         withFatalFailureFinalization {
             // Fatal raw invariants already finished streams and deferred graph cleanup;
