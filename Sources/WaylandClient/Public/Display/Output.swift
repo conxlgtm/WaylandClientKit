@@ -212,11 +212,11 @@ public struct OutputSnapshot: Equatable, Sendable {
         id outputID: OutputID,
         version outputVersion: UInt32,
         geometry outputGeometry: OutputGeometry?,
+        logicalGeometry outputLogicalGeometry: OutputLogicalGeometry?,
         currentMode outputCurrentMode: OutputMode?,
         scale outputScale: PositiveInt32,
         name outputName: String?,
-        description outputDescription: String?,
-        logicalGeometry outputLogicalGeometry: OutputLogicalGeometry? = nil
+        description outputDescription: String?
     ) {
         id = outputID
         version = outputVersion
@@ -233,11 +233,11 @@ public struct OutputSnapshot: Equatable, Sendable {
             id: OutputID(rawValue: raw.id.rawValue),
             version: raw.version.value,
             geometry: raw.geometry.map(OutputGeometry.init),
+            logicalGeometry: raw.logicalGeometry.map(OutputLogicalGeometry.init),
             currentMode: raw.currentMode.map(OutputMode.init),
             scale: PositiveInt32(unchecked: raw.scale),
             name: raw.name,
-            description: raw.description,
-            logicalGeometry: raw.logicalGeometry.map(OutputLogicalGeometry.init)
+            description: raw.description
         )
     }
 }

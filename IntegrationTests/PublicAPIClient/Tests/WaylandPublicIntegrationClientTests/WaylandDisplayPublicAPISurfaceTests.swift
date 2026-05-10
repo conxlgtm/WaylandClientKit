@@ -87,6 +87,12 @@ struct WaylandDisplayPublicAPISurfaceTests {
                 model: "Panel",
                 transform: .normal
             ),
+            logicalGeometry: OutputLogicalGeometry(
+                x: 1_920,
+                y: 0,
+                width: logicalWidth,
+                height: logicalHeight
+            ),
             currentMode: OutputMode(
                 flags: [.current],
                 width: 1_920,
@@ -95,13 +101,7 @@ struct WaylandDisplayPublicAPISurfaceTests {
             ),
             scale: scale,
             name: "HDMI-A-1",
-            description: "Acme Panel",
-            logicalGeometry: OutputLogicalGeometry(
-                x: 1_920,
-                y: 0,
-                width: logicalWidth,
-                height: logicalHeight
-            )
+            description: "Acme Panel"
         )
 
         #expect(snapshot.id == OutputID(rawValue: 1))
