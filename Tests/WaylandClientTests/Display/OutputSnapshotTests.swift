@@ -20,6 +20,12 @@ struct OutputSnapshotTests {
                 model: "Panel",
                 transform: 0
             ),
+            logicalGeometry: RawOutputLogicalGeometry(
+                x: 1_920,
+                y: 0,
+                width: 1_280,
+                height: 720
+            ),
             currentMode: RawOutputMode(
                 flags: 1,
                 width: 1_920,
@@ -39,6 +45,9 @@ struct OutputSnapshotTests {
         #expect(snapshot.geometry?.model == "Panel")
         #expect(snapshot.geometry?.subpixel == OutputSubpixelLayout.none)
         #expect(snapshot.geometry?.transform == .normal)
+        #expect(snapshot.logicalGeometry?.x == 1_920)
+        #expect(snapshot.logicalGeometry?.width == PositiveInt32(unchecked: 1_280))
+        #expect(snapshot.logicalGeometry?.height == PositiveInt32(unchecked: 720))
         #expect(snapshot.currentMode?.width == 1_920)
         #expect(snapshot.currentMode?.flags == [.current])
         #expect(snapshot.currentMode?.refreshMilliHertz == 60_000)
@@ -61,6 +70,7 @@ struct OutputSnapshotTests {
             id: RawOutputID(rawValue: 9),
             version: RawVersion(3),
             geometry: nil,
+            logicalGeometry: nil,
             currentMode: nil,
             scale: 1,
             name: nil,

@@ -218,6 +218,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
                 advertisedProtocol(named: "wl_data_device_manager"),
                 advertisedProtocol(named: "zwp_primary_selection_device_manager_v1"),
                 advertisedProtocol(named: "zxdg_decoration_manager_v1"),
+                advertisedProtocol(named: "zxdg_output_manager_v1"),
                 advertisedProtocol(named: "wp_viewporter"),
                 advertisedProtocol(named: "wp_fractional_scale_manager_v1"),
             ].compactMap(\.self))

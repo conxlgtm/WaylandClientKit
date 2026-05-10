@@ -179,10 +179,30 @@ public struct OutputMode: Equatable, Sendable {
     }
 }
 
+public struct OutputLogicalGeometry: Equatable, Sendable {
+    public let x: Int32
+    public let y: Int32
+    public let width: PositiveInt32
+    public let height: PositiveInt32
+
+    public init(
+        x geometryX: Int32,
+        y geometryY: Int32,
+        width geometryWidth: PositiveInt32,
+        height geometryHeight: PositiveInt32
+    ) {
+        x = geometryX
+        y = geometryY
+        width = geometryWidth
+        height = geometryHeight
+    }
+}
+
 public struct OutputSnapshot: Equatable, Sendable {
     public let id: OutputID
     public let version: UInt32
     public let geometry: OutputGeometry?
+    public let logicalGeometry: OutputLogicalGeometry?
     public let currentMode: OutputMode?
     public let scale: PositiveInt32
     public let name: String?
@@ -195,11 +215,13 @@ public struct OutputSnapshot: Equatable, Sendable {
         currentMode outputCurrentMode: OutputMode?,
         scale outputScale: PositiveInt32,
         name outputName: String?,
-        description outputDescription: String?
+        description outputDescription: String?,
+        logicalGeometry outputLogicalGeometry: OutputLogicalGeometry? = nil
     ) {
         id = outputID
         version = outputVersion
         geometry = outputGeometry
+        logicalGeometry = outputLogicalGeometry
         currentMode = outputCurrentMode
         scale = outputScale
         name = outputName
@@ -214,7 +236,8 @@ public struct OutputSnapshot: Equatable, Sendable {
             currentMode: raw.currentMode.map(OutputMode.init),
             scale: PositiveInt32(unchecked: raw.scale),
             name: raw.name,
-            description: raw.description
+            description: raw.description,
+            logicalGeometry: raw.logicalGeometry.map(OutputLogicalGeometry.init)
         )
     }
 }
@@ -230,6 +253,17 @@ extension OutputGeometry {
             make: raw.make,
             model: raw.model,
             transform: OutputTransform(rawValue: raw.transform)
+        )
+    }
+}
+
+extension OutputLogicalGeometry {
+    package init(_ raw: RawOutputLogicalGeometry) {
+        self.init(
+            x: raw.x,
+            y: raw.y,
+            width: PositiveInt32(unchecked: raw.width),
+            height: PositiveInt32(unchecked: raw.height)
         )
     }
 }

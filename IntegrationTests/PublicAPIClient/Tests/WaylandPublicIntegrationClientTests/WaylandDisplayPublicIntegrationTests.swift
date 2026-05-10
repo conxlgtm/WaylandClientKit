@@ -2,8 +2,8 @@ import Foundation
 import Testing
 import WaylandClient
 
-private let publicIntegrationTimeoutMilliseconds: Int32 = 5_000
-private let publicIntegrationWaitTimeoutNanoseconds: UInt64 = 5_000_000_000
+let publicIntegrationTimeoutMilliseconds: Int32 = 5_000
+let publicIntegrationWaitTimeoutNanoseconds: UInt64 = 5_000_000_000
 
 @Suite(
     "WaylandDisplay public integration",
@@ -140,7 +140,7 @@ struct WaylandDisplayPublicIntegrationTests {
     }
 }
 
-private func noteOptionalProtocolSkip(test: String, interfaceName: String) {
+func noteOptionalProtocolSkip(test: String, interfaceName: String) {
     Issue.record(
         "Skipping \(test) live test: compositor did not advertise \(interfaceName).",
         severity: .warning
@@ -432,7 +432,7 @@ private enum PublicIntegrationError: Error, CustomStringConvertible {
     }
 }
 
-private func withTimeout<Value: Sendable>(
+func withTimeout<Value: Sendable>(
     nanoseconds: UInt64,
     operation operationName: String,
     _ body: @escaping @Sendable () async throws -> Value
