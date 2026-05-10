@@ -70,6 +70,10 @@ package struct RawOutputMode: Equatable, Sendable {
         height = outputHeight
         refreshMilliHertz = outputRefreshMilliHertz
     }
+
+    package var isValidCurrentMode: Bool {
+        flags & 0x1 != 0 && width > 0 && height > 0 && refreshMilliHertz >= 0
+    }
 }
 
 package struct RawOutputLogicalGeometry: Equatable, Sendable {
@@ -249,6 +253,12 @@ package final class RawOutput {
         proxy.pointer
     }
 
+    #if DEBUG
+        package var pointerAddressForTesting: UInt {
+            unsafe UInt(bitPattern: UnsafeMutableRawPointer(pointer))
+        }
+    #endif
+
     @safe package var pointerIdentity: RawOutputPointerIdentity {
         RawOutputPointerIdentity(pointer)
     }
@@ -267,6 +277,10 @@ package final class RawOutput {
             state.geometry = geometry
         case .mode(let mode):
             guard mode.flags & 0x1 != 0 else { return }
+            guard mode.isValidCurrentMode else {
+                state.currentMode = nil
+                return
+            }
             state.currentMode = mode
         case .done:
             onChanged(snapshot)

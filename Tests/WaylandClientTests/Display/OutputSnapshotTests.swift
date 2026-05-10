@@ -48,12 +48,57 @@ struct OutputSnapshotTests {
         #expect(snapshot.logicalGeometry?.x == 1_920)
         #expect(snapshot.logicalGeometry?.width == PositiveInt32(unchecked: 1_280))
         #expect(snapshot.logicalGeometry?.height == PositiveInt32(unchecked: 720))
-        #expect(snapshot.currentMode?.width == 1_920)
+        #expect(snapshot.currentMode?.width == PositiveInt32(unchecked: 1_920))
+        #expect(snapshot.currentMode?.height == PositiveInt32(unchecked: 1_080))
         #expect(snapshot.currentMode?.flags == [.current])
-        #expect(snapshot.currentMode?.refreshMilliHertz == 60_000)
+        #expect(snapshot.currentMode?.refresh == .milliHertz(PositiveInt32(unchecked: 60_000)))
         #expect(snapshot.scale == PositiveInt32(unchecked: 2))
         #expect(snapshot.name == "HDMI-A-1")
         #expect(snapshot.description == "Acme Panel")
+    }
+
+    @Test
+    func publicSnapshotDropsCurrentModeWithNonPositiveWidth() {
+        let snapshot = OutputSnapshot(rawSnapshot(mode: rawMode(width: 0)))
+
+        #expect(snapshot.currentMode == nil)
+    }
+
+    @Test
+    func publicSnapshotDropsCurrentModeWithNonPositiveHeight() {
+        let snapshot = OutputSnapshot(rawSnapshot(mode: rawMode(height: -1)))
+
+        #expect(snapshot.currentMode == nil)
+    }
+
+    @Test
+    func publicSnapshotAllowsZeroRefreshAsUnspecified() {
+        let snapshot = OutputSnapshot(rawSnapshot(mode: rawMode(refreshMilliHertz: 0)))
+
+        #expect(snapshot.currentMode?.refresh == .unspecified)
+    }
+
+    @Test
+    func publicSnapshotDropsCurrentModeWithNegativeRefresh() {
+        let snapshot = OutputSnapshot(rawSnapshot(mode: rawMode(refreshMilliHertz: -1)))
+
+        #expect(snapshot.currentMode == nil)
+    }
+
+    @Test
+    func publicSnapshotDropsNonCurrentOutputMode() {
+        let snapshot = OutputSnapshot(rawSnapshot(mode: rawMode(flags: 0)))
+
+        #expect(snapshot.currentMode == nil)
+    }
+
+    @Test
+    func rawCurrentModeValidationRejectsMalformedTransportData() {
+        #expect(rawMode(width: -1).isValidCurrentMode == false)
+        #expect(rawMode(height: 0).isValidCurrentMode == false)
+        #expect(rawMode(refreshMilliHertz: -1).isValidCurrentMode == false)
+        #expect(rawMode(flags: 0).isValidCurrentMode == false)
+        #expect(rawMode().isValidCurrentMode)
     }
 
     @Test
@@ -84,6 +129,33 @@ struct OutputSnapshotTests {
         #expect(
             DisplayEvent(.removed(RawOutputID(rawValue: 10)))
                 == .outputRemoved(OutputID(rawValue: 10))
+        )
+    }
+
+    private func rawSnapshot(mode: RawOutputMode?) -> RawOutputSnapshot {
+        RawOutputSnapshot(
+            id: RawOutputID(rawValue: 7),
+            version: RawVersion(4),
+            geometry: nil,
+            logicalGeometry: nil,
+            currentMode: mode,
+            scale: 1,
+            name: nil,
+            description: nil
+        )
+    }
+
+    private func rawMode(
+        flags: UInt32 = 1,
+        width: Int32 = 1_920,
+        height: Int32 = 1_080,
+        refreshMilliHertz: Int32 = 60_000
+    ) -> RawOutputMode {
+        RawOutputMode(
+            flags: flags,
+            width: width,
+            height: height,
+            refreshMilliHertz: refreshMilliHertz
         )
     }
 }

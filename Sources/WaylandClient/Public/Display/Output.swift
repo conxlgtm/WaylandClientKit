@@ -162,20 +162,35 @@ public struct OutputModeFlags: OptionSet, Sendable {
 
 public struct OutputMode: Equatable, Sendable {
     public let flags: OutputModeFlags
-    public let width: Int32
-    public let height: Int32
-    public let refreshMilliHertz: Int32
+    public let width: PositiveInt32
+    public let height: PositiveInt32
+    public let refresh: OutputRefreshRate
 
     public init(
         flags modeFlags: OutputModeFlags,
-        width modeWidth: Int32,
-        height modeHeight: Int32,
-        refreshMilliHertz modeRefreshMilliHertz: Int32
+        width modeWidth: PositiveInt32,
+        height modeHeight: PositiveInt32,
+        refresh modeRefresh: OutputRefreshRate
     ) {
         flags = modeFlags
         width = modeWidth
         height = modeHeight
-        refreshMilliHertz = modeRefreshMilliHertz
+        refresh = modeRefresh
+    }
+}
+
+public enum OutputRefreshRate: Equatable, Sendable {
+    case unspecified
+    case milliHertz(PositiveInt32)
+
+    package init?(_ rawMilliHertz: Int32) {
+        guard rawMilliHertz >= 0 else { return nil }
+
+        if rawMilliHertz == 0 {
+            self = .unspecified
+        } else {
+            self = .milliHertz(PositiveInt32(unchecked: rawMilliHertz))
+        }
     }
 }
 
@@ -234,7 +249,7 @@ public struct OutputSnapshot: Equatable, Sendable {
             version: raw.version.value,
             geometry: raw.geometry.map(OutputGeometry.init),
             logicalGeometry: raw.logicalGeometry.map(OutputLogicalGeometry.init),
-            currentMode: raw.currentMode.map(OutputMode.init),
+            currentMode: raw.currentMode.flatMap(OutputMode.init),
             scale: PositiveInt32(unchecked: raw.scale),
             name: raw.name,
             description: raw.description
@@ -269,12 +284,30 @@ extension OutputLogicalGeometry {
 }
 
 extension OutputMode {
-    package init(_ raw: RawOutputMode) {
+    package init?(_ raw: RawOutputMode) {
+        let flags = OutputModeFlags(rawValue: raw.flags)
+        guard
+            flags.contains(.current),
+            let width = PositiveInt32(rawOutputModeDimension: raw.width),
+            let height = PositiveInt32(rawOutputModeDimension: raw.height),
+            let refresh = OutputRefreshRate(raw.refreshMilliHertz)
+        else {
+            return nil
+        }
+
         self.init(
-            flags: OutputModeFlags(rawValue: raw.flags),
-            width: raw.width,
-            height: raw.height,
-            refreshMilliHertz: raw.refreshMilliHertz
+            flags: flags,
+            width: width,
+            height: height,
+            refresh: refresh
         )
+    }
+}
+
+extension PositiveInt32 {
+    package init?(rawOutputModeDimension value: Int32) {
+        guard value > 0 else { return nil }
+
+        self.init(unchecked: value)
     }
 }
