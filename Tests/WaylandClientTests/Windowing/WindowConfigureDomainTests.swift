@@ -72,6 +72,43 @@ struct WindowConfigureDomainTests {
     }
 
     @Test
+    func stateSnapshotCopiesResolvedConfigureState() throws {
+        let configuration = try ResolvedWindowConfiguration(
+            sequence: configure(
+                width: 640,
+                height: 480,
+                serial: 42,
+                states: [.activated],
+                wmCapabilities: [.maximize],
+                decorationMode: .serverSide
+            ),
+            previousSize: nil,
+            fallbackSize: .default
+        )
+
+        let snapshot = WindowStateSnapshot(configuration)
+        let expectedSize = try PositiveLogicalSize(width: 640, height: 480)
+
+        #expect(snapshot.configureSerial == 42)
+        #expect(snapshot.size == expectedSize)
+        #expect(snapshot.states == [.activated])
+        #expect(snapshot.managerCapabilities == [.maximize])
+        #expect(snapshot.decorationMode == .serverSide)
+    }
+
+    @Test
+    func resizeEdgesMapToXDGProtocolValues() {
+        #expect(WindowResizeEdge.top.rawXDGResizeEdge.rawValue == 1)
+        #expect(WindowResizeEdge.bottom.rawXDGResizeEdge.rawValue == 2)
+        #expect(WindowResizeEdge.left.rawXDGResizeEdge.rawValue == 4)
+        #expect(WindowResizeEdge.topLeft.rawXDGResizeEdge.rawValue == 5)
+        #expect(WindowResizeEdge.bottomLeft.rawXDGResizeEdge.rawValue == 6)
+        #expect(WindowResizeEdge.right.rawXDGResizeEdge.rawValue == 8)
+        #expect(WindowResizeEdge.topRight.rawXDGResizeEdge.rawValue == 9)
+        #expect(WindowResizeEdge.bottomRight.rawXDGResizeEdge.rawValue == 10)
+    }
+
+    @Test
     func normalizeConfigureSizeIsIdempotentForProtocolSamples() throws {
         let samples: [(Int32, Int32)] = [
             (0, 0),

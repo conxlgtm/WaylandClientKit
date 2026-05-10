@@ -20,6 +20,13 @@ struct wl_shm *swl_registry_bind_wl_shm(
         registry, name, &wl_shm_interface, version);
 }
 
+struct wl_output *swl_registry_bind_wl_output(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wl_output *)wl_registry_bind(
+        registry, name, &wl_output_interface, version);
+}
+
 struct xdg_wm_base *swl_registry_bind_xdg_wm_base(
     struct wl_registry *registry, uint32_t name, uint32_t version)
 {

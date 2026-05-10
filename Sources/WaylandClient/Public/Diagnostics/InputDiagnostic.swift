@@ -193,6 +193,7 @@ public enum InputSeatBindingFailure: Equatable, Sendable, CustomStringConvertibl
 
 public enum InputSeatBindingListener: Equatable, Sendable, CustomStringConvertible {
     case registry
+    case output
     case seat
     case pointer
     case keyboard
@@ -203,6 +204,8 @@ public enum InputSeatBindingListener: Equatable, Sendable, CustomStringConvertib
         switch self {
         case .registry:
             "Wayland registry listener installation failed"
+        case .output:
+            "Wayland output listener installation failed"
         case .seat:
             "Wayland seat listener installation failed"
         case .pointer:

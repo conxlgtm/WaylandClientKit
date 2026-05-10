@@ -99,6 +99,10 @@ public actor WaylandDisplay {
         try requireCore().capabilities()
     }
 
+    public func outputs() throws -> [OutputSnapshot] {
+        try requireCore().outputs()
+    }
+
     @discardableResult
     public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {
         try requireCore().setPointerCursor(cursor)
