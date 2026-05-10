@@ -78,13 +78,13 @@ struct WaylandDisplayPublicAPISurfaceTests {
                 y: 0,
                 physicalWidthMillimeters: 600,
                 physicalHeightMillimeters: 340,
-                subpixel: 1,
+                subpixel: .none,
                 make: "Acme",
                 model: "Panel",
-                transform: 0
+                transform: .normal
             ),
             currentMode: OutputMode(
-                flags: 1,
+                flags: [.current],
                 width: 1_920,
                 height: 1_080,
                 refreshMilliHertz: 60_000
@@ -96,6 +96,9 @@ struct WaylandDisplayPublicAPISurfaceTests {
 
         #expect(snapshot.id == OutputID(rawValue: 1))
         #expect(snapshot.scale == scale)
+        #expect(OutputSubpixelLayout(rawValue: 999) == .unrecognized(999))
+        #expect(OutputTransform(rawValue: 999) == .unrecognized(999))
+        #expect(OutputModeFlags.preferred.rawValue == 0x2)
 
         func useOutputsAPI(display: WaylandDisplay) async throws -> [OutputSnapshot] {
             try await display.outputs()
