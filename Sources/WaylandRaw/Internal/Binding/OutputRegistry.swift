@@ -6,6 +6,7 @@ package final class OutputRegistry {
     private let proxyAdoption: RawProxyAdoptionContext
     private let invariantFailureSink: RawInvariantFailureSink?
     private var outputsByID: [RawOutputID: RawOutput] = [:]
+    private var pendingEvents: [RawOutputEvent] = []
 
     @safe
     init(
@@ -44,9 +45,17 @@ package final class OutputRegistry {
         }?.key
     }
 
+    package func drainEvents() -> [RawOutputEvent] {
+        defer { pendingEvents.removeAll(keepingCapacity: true) }
+        return pendingEvents
+    }
+
     package func removeOutput(globalName: UInt32) {
         let id = RawOutputID(rawValue: globalName)
-        outputsByID.removeValue(forKey: id)?.destroy()
+        guard let output = outputsByID.removeValue(forKey: id) else { return }
+
+        output.destroy()
+        pendingEvents.append(.removed(id))
     }
 
     package func destroy() {
@@ -77,7 +86,9 @@ package final class OutputRegistry {
             version: version,
             proxyAdoption: proxyAdoption,
             invariantFailureSink: invariantFailureSink
-        )
+        ) { [weak self] snapshot in
+            self?.pendingEvents.append(.changed(snapshot))
+        }
     }
 
     deinit {

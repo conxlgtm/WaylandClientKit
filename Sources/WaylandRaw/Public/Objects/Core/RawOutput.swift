@@ -100,6 +100,11 @@ package struct RawOutputSnapshot: Equatable, Sendable {
     }
 }
 
+package enum RawOutputEvent: Equatable, Sendable {
+    case changed(RawOutputSnapshot)
+    case removed(RawOutputID)
+}
+
 private struct RawOutputState {
     var geometry: RawOutputGeometry?
     var currentMode: RawOutputMode?
@@ -136,6 +141,7 @@ package final class RawOutput {
 
     private var proxy: RawOwnedProxy
     private let listenerOwner: OutputListenerOwner
+    private let onChanged: (RawOutputSnapshot) -> Void
     private var state = RawOutputState()
     private var isDestroyed = false
 
@@ -145,10 +151,12 @@ package final class RawOutput {
         pointer outputPointer: OpaquePointer,
         version outputVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext,
-        invariantFailureSink failureSink: RawInvariantFailureSink? = nil
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil,
+        onChanged handleChanged: @escaping (RawOutputSnapshot) -> Void = { _ in () }
     ) throws {
         id = outputID
         version = outputVersion
+        onChanged = handleChanged
         let adoptedPointer: OpaquePointer
         do {
             unsafe adoptedPointer = try adoptionContext.adopt(
@@ -200,7 +208,7 @@ package final class RawOutput {
             guard mode.flags & 0x1 != 0 else { return }
             state.currentMode = mode
         case .done:
-            break
+            onChanged(snapshot)
         case .scale(let scale):
             guard scale > 0 else { return }
             state.scale = scale
