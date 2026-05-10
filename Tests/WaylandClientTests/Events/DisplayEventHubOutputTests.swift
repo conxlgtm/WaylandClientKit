@@ -24,6 +24,20 @@ struct DisplayEventHubOutputTests {
         await expectOutputEvent(.outputChanged(snapshot), from: &iterator)
         await expectOutputEvent(.outputRemoved(OutputID(rawValue: 8)), from: &iterator)
     }
+
+    @Test
+    func windowOutputMembershipEventsPublishOnDisplayStream() async {
+        let hub = DisplayEventHub()
+        let event = WindowOutputMembershipEvent(
+            windowID: WindowID(rawValue: 3),
+            outputs: [OutputID(rawValue: 1), OutputID(rawValue: 2)]
+        )
+        var iterator = hub.displayEvents().makeAsyncIterator()
+
+        hub.publish(.windowOutputsChanged(event))
+
+        await expectOutputEvent(.windowOutputsChanged(event), from: &iterator)
+    }
 }
 
 private func expectOutputEvent(

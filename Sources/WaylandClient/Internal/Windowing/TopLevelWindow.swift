@@ -47,6 +47,7 @@ package final class TopLevelWindow {
     package var onCloseRequested: (() -> Void)?
     package var onClosed: (() -> Void)?
     package var onRedrawRequested: (() -> Void)?
+    package var onOutputMembershipChanged: (([OutputID]) -> Void)?
 
     package init(
         id windowID: WindowID,
@@ -731,7 +732,9 @@ extension TopLevelWindow {
             return
         }
 
-        enteredOutputIDs.insert(outputID)
+        guard enteredOutputIDs.insert(outputID).inserted else { return }
+
+        onOutputMembershipChanged?(outputIDsOnOwnerThread)
     }
 
     private func handleSurfaceLeftOutput(_ output: RawOutputPointerIdentity) {
@@ -743,7 +746,9 @@ extension TopLevelWindow {
             return
         }
 
-        enteredOutputIDs.remove(outputID)
+        guard enteredOutputIDs.remove(outputID) != nil else { return }
+
+        onOutputMembershipChanged?(outputIDsOnOwnerThread)
     }
 
     private func markNeedsRedraw() {
@@ -867,6 +872,7 @@ extension TopLevelWindow {
         onClose = nil
         onCloseRequested = nil
         onRedrawRequested = nil
+        onOutputMembershipChanged = nil
 
         var removedRoleResources = surfaceRuntime.removeRoleResources()
         removedRoleResources?.destroy()

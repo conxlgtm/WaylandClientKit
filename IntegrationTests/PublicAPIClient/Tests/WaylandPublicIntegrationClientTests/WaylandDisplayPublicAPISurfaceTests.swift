@@ -110,6 +110,8 @@ struct WaylandDisplayPublicAPISurfaceTests {
                 snapshot.name ?? snapshot.id.description
             case .outputRemoved(let id):
                 id.description
+            case .windowOutputsChanged(let event):
+                "\(event.windowID):\(event.outputs.count)"
             default:
                 nil
             }
