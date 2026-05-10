@@ -37,11 +37,22 @@ struct OutputSnapshotTests {
         #expect(snapshot.version == 4)
         #expect(snapshot.geometry?.make == "Acme")
         #expect(snapshot.geometry?.model == "Panel")
+        #expect(snapshot.geometry?.subpixel == OutputSubpixelLayout.none)
+        #expect(snapshot.geometry?.transform == .normal)
         #expect(snapshot.currentMode?.width == 1_920)
+        #expect(snapshot.currentMode?.flags == [.current])
         #expect(snapshot.currentMode?.refreshMilliHertz == 60_000)
         #expect(snapshot.scale == PositiveInt32(unchecked: 2))
         #expect(snapshot.name == "HDMI-A-1")
         #expect(snapshot.description == "Acme Panel")
+    }
+
+    @Test
+    func outputMetadataPreservesUnknownRawValues() {
+        #expect(OutputSubpixelLayout(rawValue: 99) == .unrecognized(99))
+        #expect(OutputSubpixelLayout.unrecognized(99).rawValue == 99)
+        #expect(OutputTransform(rawValue: 99) == .unrecognized(99))
+        #expect(OutputTransform.unrecognized(99).rawValue == 99)
     }
 
     @Test

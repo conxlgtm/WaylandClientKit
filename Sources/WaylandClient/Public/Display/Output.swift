@@ -12,25 +12,131 @@ public struct OutputID: Hashable, Sendable, CustomStringConvertible {
     }
 }
 
+public enum OutputSubpixelLayout: Equatable, Sendable {
+    case unknown
+    case none
+    case horizontalRGB
+    case horizontalBGR
+    case verticalRGB
+    case verticalBGR
+    case unrecognized(Int32)
+
+    public init(rawValue outputRawValue: Int32) {
+        switch outputRawValue {
+        case 0:
+            self = .unknown
+        case 1:
+            self = .none
+        case 2:
+            self = .horizontalRGB
+        case 3:
+            self = .horizontalBGR
+        case 4:
+            self = .verticalRGB
+        case 5:
+            self = .verticalBGR
+        default:
+            self = .unrecognized(outputRawValue)
+        }
+    }
+
+    public var rawValue: Int32 {
+        switch self {
+        case .unknown:
+            0
+        case .none:
+            1
+        case .horizontalRGB:
+            2
+        case .horizontalBGR:
+            3
+        case .verticalRGB:
+            4
+        case .verticalBGR:
+            5
+        case .unrecognized(let rawValue):
+            rawValue
+        }
+    }
+}
+
+public enum OutputTransform: Equatable, Sendable {
+    case normal
+    case rotated90
+    case rotated180
+    case rotated270
+    case flipped
+    case flipped90
+    case flipped180
+    case flipped270
+    case unrecognized(Int32)
+
+    public init(rawValue outputRawValue: Int32) {
+        switch outputRawValue {
+        case 0:
+            self = .normal
+        case 1:
+            self = .rotated90
+        case 2:
+            self = .rotated180
+        case 3:
+            self = .rotated270
+        case 4:
+            self = .flipped
+        case 5:
+            self = .flipped90
+        case 6:
+            self = .flipped180
+        case 7:
+            self = .flipped270
+        default:
+            self = .unrecognized(outputRawValue)
+        }
+    }
+
+    public var rawValue: Int32 {
+        switch self {
+        case .normal:
+            0
+        case .rotated90:
+            1
+        case .rotated180:
+            2
+        case .rotated270:
+            3
+        case .flipped:
+            4
+        case .flipped90:
+            5
+        case .flipped180:
+            6
+        case .flipped270:
+            7
+        case .unrecognized(let rawValue):
+            rawValue
+        }
+    }
+}
+
 public struct OutputGeometry: Equatable, Sendable {
     public let x: Int32
     public let y: Int32
     public let physicalWidthMillimeters: Int32
     public let physicalHeightMillimeters: Int32
-    public let subpixel: Int32
+    public let subpixel: OutputSubpixelLayout
     public let make: String?
     public let model: String?
-    public let transform: Int32
+    public let transform: OutputTransform
 
     public init(
         x geometryX: Int32,
         y geometryY: Int32,
         physicalWidthMillimeters geometryPhysicalWidthMillimeters: Int32,
         physicalHeightMillimeters geometryPhysicalHeightMillimeters: Int32,
-        subpixel geometrySubpixel: Int32,
+        subpixel geometrySubpixel: OutputSubpixelLayout,
         make geometryMake: String?,
         model geometryModel: String?,
-        transform geometryTransform: Int32
+        transform geometryTransform: OutputTransform
     ) {
         x = geometryX
         y = geometryY
@@ -43,14 +149,25 @@ public struct OutputGeometry: Equatable, Sendable {
     }
 }
 
+public struct OutputModeFlags: OptionSet, Sendable {
+    public let rawValue: UInt32
+
+    public init(rawValue modeRawValue: UInt32) {
+        rawValue = modeRawValue
+    }
+
+    public static let current = OutputModeFlags(rawValue: 0x1)
+    public static let preferred = OutputModeFlags(rawValue: 0x2)
+}
+
 public struct OutputMode: Equatable, Sendable {
-    public let flags: UInt32
+    public let flags: OutputModeFlags
     public let width: Int32
     public let height: Int32
     public let refreshMilliHertz: Int32
 
     public init(
-        flags modeFlags: UInt32,
+        flags modeFlags: OutputModeFlags,
         width modeWidth: Int32,
         height modeHeight: Int32,
         refreshMilliHertz modeRefreshMilliHertz: Int32
@@ -109,10 +226,10 @@ extension OutputGeometry {
             y: raw.y,
             physicalWidthMillimeters: raw.physicalWidthMillimeters,
             physicalHeightMillimeters: raw.physicalHeightMillimeters,
-            subpixel: raw.subpixel,
+            subpixel: OutputSubpixelLayout(rawValue: raw.subpixel),
             make: raw.make,
             model: raw.model,
-            transform: raw.transform
+            transform: OutputTransform(rawValue: raw.transform)
         )
     }
 }
@@ -120,7 +237,7 @@ extension OutputGeometry {
 extension OutputMode {
     package init(_ raw: RawOutputMode) {
         self.init(
-            flags: raw.flags,
+            flags: OutputModeFlags(rawValue: raw.flags),
             width: raw.width,
             height: raw.height,
             refreshMilliHertz: raw.refreshMilliHertz
