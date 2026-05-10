@@ -11,6 +11,7 @@ struct DisplayEventHubOutputTests {
             id: OutputID(rawValue: 7),
             version: 4,
             geometry: nil,
+            logicalGeometry: nil,
             currentMode: nil,
             scale: try PositiveInt32(1),
             name: "HDMI-A-1",
