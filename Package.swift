@@ -124,7 +124,7 @@ let package = Package(
         ),
         .testTarget(
             name: "WaylandClientTests",
-            dependencies: ["WaylandClient", "WaylandKeyboard"],
+            dependencies: ["WaylandClient", "WaylandKeyboard", "CWaylandProtocols"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(

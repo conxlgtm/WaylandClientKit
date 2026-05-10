@@ -43,6 +43,10 @@ package final class TopLevelWindow {
     private var pendingFrameRegistration: FrameCallbackRegistration?
     private var outputMembership = WindowOutputMembershipState()
 
+    #if DEBUG
+        private var testingInteractionSeatsByID: [SeatID: RawSeat] = [:]
+    #endif
+
     package var onClose: (() -> Void)?
     package var onCloseRequested: (() -> Void)?
     package var onClosed: (() -> Void)?
@@ -591,6 +595,12 @@ extension TopLevelWindow {
     }
 
     private func interactionSeat(for seatID: SeatID) throws -> RawSeat {
+        #if DEBUG
+            if let seat = testingInteractionSeatsByID[seatID] {
+                return seat
+            }
+        #endif
+
         let globals = try connection.bindRequiredGlobals()
         guard
             let seat = globals.seatRegistry.seat(
@@ -617,6 +627,28 @@ extension TopLevelWindow {
 
         return output
     }
+
+    #if DEBUG
+        package func installInteractionSeatForTesting(
+            id seatID: SeatID,
+            pointerAddress: Int
+        ) throws -> UInt {
+            if let existing = testingInteractionSeatsByID[seatID] {
+                return existing.pointerAddressForTesting
+            }
+
+            let seat = try RawSeat.testingNoopSeatForRequestRecording(
+                id: RawSeatID(rawValue: seatID.rawValue),
+                pointerAddress: pointerAddress
+            )
+            testingInteractionSeatsByID[seatID] = seat
+            return seat.pointerAddressForTesting
+        }
+
+        package func removeInteractionSeatForTesting(_ seatID: SeatID) {
+            testingInteractionSeatsByID.removeValue(forKey: seatID)?.destroy()
+        }
+    #endif
 
     private var outputIDsOnOwnerThread: [OutputID] {
         guard let outputRegistry = connection.boundGlobals?.outputRegistry else { return [] }
@@ -881,6 +913,12 @@ extension TopLevelWindow {
 }
 
 extension TopLevelWindow {
+    #if DEBUG
+        package var topLevelPointerAddressForTesting: UInt? {
+            roleResources?.topLevel.pointerAddressForTesting
+        }
+    #endif
+
     package var isClosedOnOwnerThread: Bool {
         connection.preconditionIsOwnerThread()
         return model.isClosed
