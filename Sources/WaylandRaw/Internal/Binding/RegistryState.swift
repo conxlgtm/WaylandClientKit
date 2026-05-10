@@ -46,6 +46,10 @@ package final class RegistryState {
         rejectedGlobalsStorage
     }
 
+    package func global(name: UInt32) -> RawGlobalAdvertisement? {
+        globalsByName[name]
+    }
+
     package func firstGlobal(named interfaceName: String) -> RawGlobalAdvertisement? {
         snapshot.first { $0.interfaceName == interfaceName }
     }

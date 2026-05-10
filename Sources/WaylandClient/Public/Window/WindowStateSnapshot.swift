@@ -5,6 +5,7 @@ public struct WindowStateSnapshot: Equatable, Sendable {
     public let bounds: PositiveLogicalSize?
     public let managerCapabilities: [WindowManagerCapability]
     public let decorationMode: WindowDecorationMode?
+    public let outputs: [OutputID]
 
     public init(
         configureSerial snapshotConfigureSerial: UInt32,
@@ -12,7 +13,8 @@ public struct WindowStateSnapshot: Equatable, Sendable {
         states snapshotStates: [WindowStateToken],
         bounds snapshotBounds: PositiveLogicalSize?,
         managerCapabilities snapshotManagerCapabilities: [WindowManagerCapability],
-        decorationMode snapshotDecorationMode: WindowDecorationMode?
+        decorationMode snapshotDecorationMode: WindowDecorationMode?,
+        outputs snapshotOutputs: [OutputID] = []
     ) {
         configureSerial = snapshotConfigureSerial
         size = snapshotSize
@@ -20,16 +22,21 @@ public struct WindowStateSnapshot: Equatable, Sendable {
         bounds = snapshotBounds
         managerCapabilities = snapshotManagerCapabilities
         decorationMode = snapshotDecorationMode
+        outputs = snapshotOutputs
     }
 
-    package init(_ configuration: ResolvedWindowConfiguration) {
+    package init(
+        _ configuration: ResolvedWindowConfiguration,
+        outputIDs snapshotOutputs: [OutputID] = []
+    ) {
         self.init(
             configureSerial: configuration.serial,
             size: configuration.size,
             states: configuration.states,
             bounds: configuration.bounds,
             managerCapabilities: configuration.wmCapabilities,
-            decorationMode: configuration.decorationMode
+            decorationMode: configuration.decorationMode,
+            outputs: snapshotOutputs
         )
     }
 }

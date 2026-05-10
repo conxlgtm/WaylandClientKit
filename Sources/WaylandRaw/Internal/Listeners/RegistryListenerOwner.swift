@@ -5,6 +5,7 @@ import CWaylandProtocols
 final class RegistryListenerOwner {
     private let state: RegistryState
     private let invariantFailureSink: RawInvariantFailureSink
+    var onGlobalAdvertised: ((RawGlobalAdvertisement) -> Void)?
     var onGlobalRemoved: ((UInt32) -> Void)?
     @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
@@ -31,11 +32,14 @@ final class RegistryListenerOwner {
                 data,
                 message: "wl_registry global fired without Swift state"
             ) { owner in
-                owner.state.recordGlobal(
+                let recorded = owner.state.recordGlobal(
                     name: name,
                     interfaceName: unsafe String(cString: interface),
                     version: version
                 )
+                guard recorded, let global = owner.state.global(name: name) else { return }
+
+                owner.onGlobalAdvertised?(global)
             }
         }
 
@@ -61,6 +65,7 @@ final class RegistryListenerOwner {
 
     func cancel() {
         listenerStorage.invalidate()
+        onGlobalAdvertised = nil
         onGlobalRemoved = nil
     }
 

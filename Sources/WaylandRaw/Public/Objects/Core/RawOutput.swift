@@ -13,6 +13,15 @@ package struct RawOutputID: Hashable, Sendable, CustomStringConvertible {
     }
 }
 
+package struct RawOutputPointerIdentity: Hashable, Sendable {
+    package let rawValue: UInt
+
+    @safe
+    package init(_ pointer: OpaquePointer) {
+        unsafe rawValue = UInt(bitPattern: UnsafeMutableRawPointer(pointer))
+    }
+}
+
 package struct RawOutputGeometry: Equatable, Sendable {
     package let x: Int32
     package let y: Int32
@@ -165,6 +174,14 @@ package final class RawOutput {
 
     package var snapshot: RawOutputSnapshot {
         state.snapshot(id: id, version: version)
+    }
+
+    @safe package var pointer: OpaquePointer {
+        proxy.pointer
+    }
+
+    @safe package var pointerIdentity: RawOutputPointerIdentity {
+        RawOutputPointerIdentity(pointer)
     }
 
     package func destroy() {

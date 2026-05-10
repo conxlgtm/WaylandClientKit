@@ -20,6 +20,38 @@ struct ScaleShimContractTests {
         #expect(unsafe record.surface == surface)
         #expect(unsafe record.factor == 3)
     }
+
+    @Test
+    func surfaceListenerForwardsOutputEnterAndLeave() {
+        let data = unsafe UnsafeMutableRawPointer(bitPattern: 0x1101)
+        let surface = unsafe OpaquePointer(bitPattern: 0x2202)
+        let output = unsafe OpaquePointer(bitPattern: 0x3303)
+        var enterRecord = unsafe swl_test_surface_output_record()
+        var leaveRecord = unsafe swl_test_surface_output_record()
+
+        unsafe swl_test_surface_listener_emit_enter(
+            data,
+            surface,
+            output,
+            &enterRecord
+        )
+        unsafe swl_test_surface_listener_emit_leave(
+            data,
+            surface,
+            output,
+            &leaveRecord
+        )
+
+        #expect(unsafe enterRecord.call_count == 1)
+        #expect(unsafe enterRecord.data == data)
+        #expect(unsafe enterRecord.surface == surface)
+        #expect(unsafe enterRecord.output == output)
+        #expect(unsafe leaveRecord.call_count == 1)
+        #expect(unsafe leaveRecord.data == data)
+        #expect(unsafe leaveRecord.surface == surface)
+        #expect(unsafe leaveRecord.output == output)
+    }
+
     @Test
     func fractionalScaleListenerForwardsPreferredScalePreservingNumerator() {
         let data = unsafe UnsafeMutableRawPointer(bitPattern: 0x3003)

@@ -72,8 +72,8 @@ public struct Window: Sendable, Hashable {
         try await display.requestWindowUnmaximize(id)
     }
 
-    public func requestFullscreen() async throws {
-        try await display.requestWindowFullscreen(id)
+    public func requestFullscreen(output: OutputID? = nil) async throws {
+        try await display.requestWindowFullscreen(id, output: output)
     }
 
     public func requestExitFullscreen() async throws {

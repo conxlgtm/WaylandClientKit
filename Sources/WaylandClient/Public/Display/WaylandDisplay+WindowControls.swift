@@ -33,8 +33,11 @@ extension WaylandDisplay {
         try requireCore().requestWindowUnmaximize(windowID)
     }
 
-    package func requestWindowFullscreen(_ windowID: WindowID) throws {
-        try requireCore().requestWindowFullscreen(windowID)
+    package func requestWindowFullscreen(
+        _ windowID: WindowID,
+        output: OutputID? = nil
+    ) throws {
+        try requireCore().requestWindowFullscreen(windowID, output: output)
     }
 
     package func requestWindowExitFullscreen(_ windowID: WindowID) throws {

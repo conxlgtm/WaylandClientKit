@@ -28,6 +28,22 @@ package final class OutputRegistry {
         }
     }
 
+    package func bindAdvertisedOutput(_ global: RawGlobalAdvertisement) throws {
+        guard global.interfaceName == "wl_output" else { return }
+
+        try bindOutput(global)
+    }
+
+    package func output(for id: RawOutputID) -> RawOutput? {
+        outputsByID[id]
+    }
+
+    package func outputID(for pointerIdentity: RawOutputPointerIdentity) -> RawOutputID? {
+        outputsByID.first { _, output in
+            output.pointerIdentity == pointerIdentity
+        }?.key
+    }
+
     package func removeOutput(globalName: UInt32) {
         let id = RawOutputID(rawValue: globalName)
         outputsByID.removeValue(forKey: id)?.destroy()

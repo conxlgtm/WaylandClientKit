@@ -350,6 +350,10 @@ typedef void (*swl_registry_global_remove_fn)(
 typedef void (*swl_callback_done_fn)(
     void *data, struct wl_callback *callback, uint32_t callback_data);
 typedef void (*swl_buffer_release_fn)(void *data, struct wl_buffer *buffer);
+typedef void (*swl_surface_enter_fn)(
+    void *data, struct wl_surface *surface, struct wl_output *output);
+typedef void (*swl_surface_leave_fn)(
+    void *data, struct wl_surface *surface, struct wl_output *output);
 typedef void (*swl_surface_preferred_buffer_scale_fn)(
     void *data, struct wl_surface *surface, int32_t factor);
 
@@ -568,6 +572,8 @@ struct swl_buffer_listener_callbacks {
 };
 
 struct swl_surface_listener_callbacks {
+    swl_surface_enter_fn                  enter;
+    swl_surface_leave_fn                  leave;
     swl_surface_preferred_buffer_scale_fn preferred_buffer_scale;
     void                                 *data;
 };
@@ -801,6 +807,13 @@ struct swl_test_surface_preferred_buffer_scale_record {
     void              *data;
     struct wl_surface *surface;
     int32_t            factor;
+};
+
+struct swl_test_surface_output_record {
+    int32_t            call_count;
+    void              *data;
+    struct wl_surface *surface;
+    struct wl_output  *output;
 };
 
 struct swl_test_fractional_preferred_scale_record {
@@ -1095,6 +1108,18 @@ int swl_test_surface_listener_emit_preferred_buffer_scale(
     struct wl_surface *surface,
     int32_t factor,
     struct swl_test_surface_preferred_buffer_scale_record *record);
+
+void swl_test_surface_listener_emit_enter(
+    void *data,
+    struct wl_surface *surface,
+    struct wl_output *output,
+    struct swl_test_surface_output_record *record);
+
+void swl_test_surface_listener_emit_leave(
+    void *data,
+    struct wl_surface *surface,
+    struct wl_output *output,
+    struct swl_test_surface_output_record *record);
 
 void swl_test_fractional_scale_listener_emit_preferred_scale(
     void *data,
