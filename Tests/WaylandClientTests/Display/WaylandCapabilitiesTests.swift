@@ -57,9 +57,18 @@ struct WaylandCapabilitiesTests {
     }
 
     @Test
-    func xdgOutputBelowMinimumIsUnavailable() {
+    func xdgOutputVersionTwoIsAvailableForLogicalGeometryAndMetadata() {
         let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
             .init(interfaceName: "zxdg_output_manager_v1", advertisedVersion: 2)
+        ])
+
+        #expect(capabilities.xdgOutput == .available(version: 2))
+    }
+
+    @Test
+    func xdgOutputBelowMinimumIsUnavailable() {
+        let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
+            .init(interfaceName: "zxdg_output_manager_v1", advertisedVersion: 1)
         ])
 
         #expect(capabilities.xdgOutput == .unavailable)
