@@ -9,6 +9,12 @@ package final class RawXDGTopLevel {
 
     private var isDestroyed = false
 
+    #if DEBUG
+        package var pointerAddressForTesting: UInt {
+            unsafe UInt(bitPattern: UnsafeMutableRawPointer(pointer))
+        }
+    #endif
+
     @safe
     init(
         pointer topLevelPointer: OpaquePointer,

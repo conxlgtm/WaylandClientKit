@@ -76,4 +76,32 @@ package struct RawSeatProxyOperations {
             }
         )
     }
+
+    #if DEBUG
+        package static var testingNoop: RawSeatProxyOperations {
+            unsafe RawSeatProxyOperations(
+                bindSeat: { _, _, _ in nil },
+                addSeatListener: { _, _ in 0 },
+                addPointerListener: { _, _ in 0 },
+                addKeyboardListener: { _, _ in 0 },
+                addTouchListener: { _, _ in 0 },
+                getPointer: { _ in nil },
+                getKeyboard: { _ in nil },
+                getTouch: { _ in nil },
+                setPointerCursor: { _, _, _, _, _ in return },
+                proxyVersion: { _ in RawVersion(10) },
+                proxyObjectID: { proxy in
+                    guard let proxy = unsafe proxy else { return nil }
+
+                    return unsafe RawObjectID(
+                        UInt32(truncatingIfNeeded: UInt(bitPattern: UnsafeRawPointer(proxy)))
+                    )
+                },
+                releasePointer: { _ in return },
+                releaseKeyboard: { _ in return },
+                releaseTouch: { _ in return },
+                releaseSeat: { _ in return }
+            )
+        }
+    #endif
 }
