@@ -41,7 +41,7 @@ package final class TopLevelWindow {
     private var model: WindowModel
     private var surfaceRuntime = SurfaceRuntime<TopLevelWindowRoleResources>()
     private var pendingFrameRegistration: FrameCallbackRegistration?
-    private var enteredOutputIDs: Set<RawOutputID> = []
+    private var outputMembership = WindowOutputMembershipState()
 
     package var onClose: (() -> Void)?
     package var onCloseRequested: (() -> Void)?
@@ -622,10 +622,7 @@ extension TopLevelWindow {
         guard let outputRegistry = connection.boundGlobals?.outputRegistry else { return [] }
 
         return
-            enteredOutputIDs
-            .filter { outputRegistry.output(for: $0) != nil }
-            .map { OutputID(rawValue: $0.rawValue) }
-            .sorted { $0.rawValue < $1.rawValue }
+            outputMembership.currentOutputIDs { outputRegistry.output(for: $0) != nil }
     }
 }
 
@@ -732,7 +729,7 @@ extension TopLevelWindow {
             return
         }
 
-        guard enteredOutputIDs.insert(outputID).inserted else { return }
+        guard outputMembership.enter(outputID) else { return }
 
         onOutputMembershipChanged?(outputIDsOnOwnerThread)
     }
@@ -746,7 +743,7 @@ extension TopLevelWindow {
             return
         }
 
-        guard enteredOutputIDs.remove(outputID) != nil else { return }
+        guard outputMembership.leave(outputID) else { return }
 
         onOutputMembershipChanged?(outputIDsOnOwnerThread)
     }
@@ -923,6 +920,14 @@ extension TopLevelWindow {
     package func markPublishedOnOwnerThread() throws {
         connection.preconditionIsOwnerThread()
         try interpretWindowEffects(model.reduce(.published))
+    }
+
+    package func removeOutputMembershipOnOwnerThread(_ outputID: OutputID) {
+        connection.preconditionIsOwnerThread()
+        guard !model.isClosed else { return }
+        guard outputMembership.remove(outputID) else { return }
+
+        onOutputMembershipChanged?(outputIDsOnOwnerThread)
     }
 
     package func requestRedrawOnOwnerThread() throws {

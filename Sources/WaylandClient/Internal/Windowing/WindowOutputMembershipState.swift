@@ -1,0 +1,30 @@
+import WaylandRaw
+
+package struct WindowOutputMembershipState: Equatable {
+    private var outputIDs: Set<RawOutputID> = []
+
+    package init() {
+        // Starts with no compositor output membership.
+    }
+
+    package mutating func enter(_ outputID: RawOutputID) -> Bool {
+        outputIDs.insert(outputID).inserted
+    }
+
+    package mutating func leave(_ outputID: RawOutputID) -> Bool {
+        outputIDs.remove(outputID) != nil
+    }
+
+    package mutating func remove(_ outputID: OutputID) -> Bool {
+        outputIDs.remove(RawOutputID(rawValue: outputID.rawValue)) != nil
+    }
+
+    package func currentOutputIDs(
+        where isStillBound: (RawOutputID) -> Bool = { _ in true }
+    ) -> [OutputID] {
+        outputIDs
+            .filter(isStillBound)
+            .map { OutputID(rawValue: $0.rawValue) }
+            .sorted { $0.rawValue < $1.rawValue }
+    }
+}
