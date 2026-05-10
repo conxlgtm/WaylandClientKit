@@ -47,8 +47,8 @@ package final class RawXDGOutputManager {
             pointer: xdgOutput,
             version: version,
             proxyAdoption: proxyAdoption
-        ) { [weak output] event in
-            output?.handleXDGOutputEvent(event)
+        ) { [weak output, version] event in
+            output?.handleXDGOutputEvent(event, xdgOutputVersion: version)
         }
     }
 

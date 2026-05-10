@@ -131,74 +131,6 @@ package enum RawOutputEvent: Equatable, Sendable {
     case removed(RawOutputID)
 }
 
-package enum RawXDGOutputEvent: Equatable, Sendable {
-    case logicalPosition(x: Int32, y: Int32)
-    case logicalSize(width: Int32, height: Int32)
-    case done
-    case name(String)
-    case description(String)
-}
-
-private struct RawOutputLogicalPosition {
-    let x: Int32
-    let y: Int32
-}
-
-private struct RawOutputLogicalSize {
-    let width: Int32
-    let height: Int32
-}
-
-private struct RawOutputState {
-    var geometry: RawOutputGeometry?
-    var logicalPosition: RawOutputLogicalPosition?
-    var logicalSize: RawOutputLogicalSize?
-    var currentMode: RawOutputMode?
-    var scale: Int32 = 1
-    var name: String?
-    var description: String?
-
-    var logicalGeometry: RawOutputLogicalGeometry? {
-        guard
-            let logicalPosition,
-            let logicalSize,
-            logicalSize.width > 0,
-            logicalSize.height > 0
-        else {
-            return nil
-        }
-
-        return RawOutputLogicalGeometry(
-            x: logicalPosition.x,
-            y: logicalPosition.y,
-            width: logicalSize.width,
-            height: logicalSize.height
-        )
-    }
-
-    func snapshot(id: RawOutputID, version: RawVersion) -> RawOutputSnapshot {
-        RawOutputSnapshot(
-            id: id,
-            version: version,
-            geometry: geometry,
-            logicalGeometry: logicalGeometry,
-            currentMode: currentMode,
-            scale: scale,
-            name: name,
-            description: description
-        )
-    }
-}
-
-private enum RawOutputListenerEvent {
-    case geometry(RawOutputGeometry)
-    case mode(RawOutputMode)
-    case done
-    case scale(Int32)
-    case name(String)
-    case description(String)
-}
-
 @safe
 package final class RawOutput {
     package let id: RawOutputID
@@ -271,49 +203,22 @@ package final class RawOutput {
         proxy.destroy()
     }
 
-    private func handle(_ event: RawOutputListenerEvent) {
-        switch event {
-        case .geometry(let geometry):
-            state.geometry = geometry
-        case .mode(let mode):
-            guard mode.flags & 0x1 != 0 else { return }
-            guard mode.isValidCurrentMode else {
-                state.currentMode = nil
-                return
-            }
-            state.currentMode = mode
-        case .done:
+    private func handle(_ event: RawOutputCoreEvent) {
+        if state.applyCoreEvent(event, version: version) {
             onChanged(snapshot)
-        case .scale(let scale):
-            guard scale > 0 else { return }
-            state.scale = scale
-        case .name(let name):
-            state.name = name.isEmpty ? nil : name
-        case .description(let description):
-            state.description = description.isEmpty ? nil : description
         }
     }
 
-    package func handleXDGOutputEvent(_ event: RawXDGOutputEvent) {
-        switch event {
-        case .logicalPosition(let x, let y):
-            state.logicalPosition = RawOutputLogicalPosition(x: x, y: y)
-        case .logicalSize(let width, let height):
-            guard width > 0, height > 0 else {
-                state.logicalSize = nil
-                return
-            }
-            state.logicalSize = RawOutputLogicalSize(width: width, height: height)
-        case .done:
+    package func handleXDGOutputEvent(
+        _ event: RawXDGOutputEvent,
+        xdgOutputVersion: RawVersion
+    ) {
+        if state.applyXDGOutputEvent(
+            event,
+            outputVersion: version,
+            xdgOutputVersion: xdgOutputVersion
+        ) {
             onChanged(snapshot)
-        case .name(let name):
-            if state.name == nil {
-                state.name = name.isEmpty ? nil : name
-            }
-        case .description(let description):
-            if state.description == nil {
-                state.description = description.isEmpty ? nil : description
-            }
         }
     }
 
@@ -325,7 +230,7 @@ package final class RawOutput {
 @safe
 private final class OutputListenerOwner {
     private let invariantFailureSink: RawInvariantFailureSink?
-    private var onEvent: ((RawOutputListenerEvent) -> Void)?
+    private var onEvent: ((RawOutputCoreEvent) -> Void)?
     private var isCanceled = false
     @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
@@ -452,7 +357,7 @@ private final class OutputListenerOwner {
 
     func install(
         on output: OpaquePointer,
-        onEvent handleEvent: @escaping (RawOutputListenerEvent) -> Void
+        onEvent handleEvent: @escaping (RawOutputCoreEvent) -> Void
     ) throws {
         onEvent = handleEvent
         unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
