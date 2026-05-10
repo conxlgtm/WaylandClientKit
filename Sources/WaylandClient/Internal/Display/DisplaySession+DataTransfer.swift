@@ -125,6 +125,17 @@ extension DisplaySession {
         }
     }
 
+    package static func drainDataTransferEventsAndDiagnostics(
+        _ events: [DataTransferEvent],
+        using writer: ThreadedDataTransferSourceWriter,
+        pendingDiagnostics: inout [DataTransferDiagnostic]
+    ) -> (diagnostics: [DataTransferDiagnostic], events: [DataTransferEvent]) {
+        cancelSourceWrites(for: events, using: writer)
+        collectDataTransferSourceWriteResults(from: writer, into: &pendingDiagnostics)
+        defer { pendingDiagnostics.removeAll(keepingCapacity: true) }
+        return (diagnostics: pendingDiagnostics, events: events)
+    }
+
     package func clipboardOfferOnOwnerThread(for seatID: SeatID) throws -> DataOfferSnapshot? {
         connection.preconditionIsOwnerThread()
         try processClipboardDataTransferState()
@@ -446,12 +457,22 @@ extension DisplaySession {
     }
 
     private func collectDataTransferSourceWriteResults() {
-        for result in dataTransferSourceWriter.drainResults() {
+        Self.collectDataTransferSourceWriteResults(
+            from: dataTransferSourceWriter,
+            into: &pendingDataTransferDiagnostics
+        )
+    }
+
+    private static func collectDataTransferSourceWriteResults(
+        from writer: ThreadedDataTransferSourceWriter,
+        into pendingDiagnostics: inout [DataTransferDiagnostic]
+    ) {
+        for result in writer.drainResults() {
             guard let diagnostic = Self.dataTransferDiagnostic(from: result) else {
                 continue
             }
 
-            pendingDataTransferDiagnostics.append(diagnostic)
+            pendingDiagnostics.append(diagnostic)
         }
     }
 

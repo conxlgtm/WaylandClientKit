@@ -5,7 +5,7 @@ import WaylandRaw
 @testable import WaylandClient
 
 @Suite
-struct PrimarySelectionControllerTests {
+struct PrimarySelectionControllerTests {  // swiftlint:disable:this type_body_length
     private let seat1 = SeatID(rawValue: 1)
     private let seat2 = SeatID(rawValue: 2)
     private let serial = InputSerial(rawValue: 55)
@@ -71,6 +71,61 @@ struct PrimarySelectionControllerTests {
 
         #expect(offerBinding.receives == [.init(mimeType: .plainText, fd: 101)])
         #expect(backend.closedDescriptors == [101, 100])
+    }
+
+    @Test
+    func receivePipeAdoptionFailureClosesOnlyValidPrimarySelectionDescriptor() throws {
+        let backend = RecordingPrimarySelectionBackend()
+        backend.pipeDescriptors = DataTransferPipeDescriptors(readEnd: -1, writeEnd: 102)
+        let controller = PrimarySelectionController(backend: backend)
+        let handle = RawPrimarySelectionOfferHandle(uncheckedRawValue: 0x1006)
+
+        try activateRemoteOffer(handle: handle, controller: controller, backend: backend)
+        let offerBinding = try #require(backend.offerBinding(for: handle))
+
+        #expect(throws: DataTransferError.invalidFileDescriptor(-1)) {
+            _ = try controller.receiveOffer(id: DataOfferID(rawValue: 1), mimeType: .plainText)
+        }
+
+        #expect(backend.closedDescriptors == [102])
+        #expect(offerBinding.receives.isEmpty)
+    }
+
+    @Test
+    func receiveWriteDescriptorAdoptionFailureClosesPrimarySelectionReadEnd() throws {
+        let backend = RecordingPrimarySelectionBackend()
+        backend.pipeDescriptors = DataTransferPipeDescriptors(readEnd: 103, writeEnd: 104)
+        backend.failingDescriptorAdoptions.insert(104)
+        let controller = PrimarySelectionController(backend: backend)
+        let handle = RawPrimarySelectionOfferHandle(uncheckedRawValue: 0x1007)
+
+        try activateRemoteOffer(handle: handle, controller: controller, backend: backend)
+        let offerBinding = try #require(backend.offerBinding(for: handle))
+
+        #expect(throws: DataTransferError.invalidFileDescriptor(104)) {
+            _ = try controller.receiveOffer(id: DataOfferID(rawValue: 1), mimeType: .plainText)
+        }
+
+        #expect(backend.closedDescriptors == [104, 103])
+        #expect(offerBinding.receives.isEmpty)
+    }
+
+    @Test
+    func invalidWriteDescriptorAdoptionFailureClosesOnlyPrimarySelectionReadEnd() throws {
+        let backend = RecordingPrimarySelectionBackend()
+        backend.pipeDescriptors = DataTransferPipeDescriptors(readEnd: 105, writeEnd: -1)
+        let controller = PrimarySelectionController(backend: backend)
+        let handle = RawPrimarySelectionOfferHandle(uncheckedRawValue: 0x1008)
+
+        try activateRemoteOffer(handle: handle, controller: controller, backend: backend)
+        let offerBinding = try #require(backend.offerBinding(for: handle))
+
+        #expect(throws: DataTransferError.invalidFileDescriptor(-1)) {
+            _ = try controller.receiveOffer(id: DataOfferID(rawValue: 1), mimeType: .plainText)
+        }
+
+        #expect(backend.closedDescriptors == [105])
+        #expect(offerBinding.receives.isEmpty)
     }
 
     @Test
@@ -143,6 +198,36 @@ struct PrimarySelectionControllerTests {
     }
 
     @Test
+    func sourceSendWithValidMIMEAndInvalidDescriptorRecordsCallbackFailure() throws {
+        let backend = RecordingPrimarySelectionBackend()
+        let controller = PrimarySelectionController(backend: backend)
+        let payloads = try primarySelectionPayloads([.plainText: Data("primary".utf8)])
+
+        try controller.synchronizeSeats([seat1])
+        let snapshot = try controller.setSelectionSource(
+            seatID: seat1,
+            payloads: payloads,
+            serial: serial
+        )
+        try #require(backend.sourceBinding(for: snapshot.id)).emit(
+            .send(mimeType: MIMEType.plainText.rawValue, fd: -1)
+        )
+
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .primarySelectionSource(
+                    PrimarySelectionSourceIdentity(snapshot.id)
+                ),
+                error: .invalidFileDescriptor(-1)
+            )
+        ) {
+            try controller.throwPendingCallbackErrorIfAny()
+        }
+        #expect(backend.closedDescriptors.isEmpty)
+        #expect(controller.drainSourceSendRequests().isEmpty)
+    }
+
+    @Test
     func sourceCancellationDestroysBindingAndPublishesSourceCancellation() throws {
         let backend = RecordingPrimarySelectionBackend()
         let controller = PrimarySelectionController(backend: backend)
@@ -210,6 +295,60 @@ struct PrimarySelectionControllerTests {
     }
 
     @Test
+    func removingSeatDestroysSeatScopedOffersAndSourcesWithoutCrossSeatEffects() throws {
+        let backend = RecordingPrimarySelectionBackend()
+        let controller = PrimarySelectionController(backend: backend)
+        let firstHandle = RawPrimarySelectionOfferHandle(uncheckedRawValue: 0x1010)
+        let secondHandle = RawPrimarySelectionOfferHandle(uncheckedRawValue: 0x2020)
+        let otherSeatHandle = RawPrimarySelectionOfferHandle(uncheckedRawValue: 0x3030)
+        let payloads = try primarySelectionPayloads([.plainText: Data("primary".utf8)])
+
+        try controller.synchronizeSeats([seat1, seat2])
+        let firstDevice = try #require(backend.binding(for: seat1))
+        let secondDevice = try #require(backend.binding(for: seat2))
+        firstDevice.emit(.dataOffer(firstHandle))
+        firstDevice.emit(.dataOffer(secondHandle))
+        secondDevice.emit(.dataOffer(otherSeatHandle))
+        let firstOffer = try #require(backend.offerBinding(for: firstHandle))
+        let secondOffer = try #require(backend.offerBinding(for: secondHandle))
+        let otherSeatOffer = try #require(backend.offerBinding(for: otherSeatHandle))
+        let firstSeatSource = try controller.setSelectionSource(
+            seatID: seat1,
+            payloads: payloads,
+            serial: serial
+        )
+        let otherSeatSource = try controller.setSelectionSource(
+            seatID: seat2,
+            payloads: payloads,
+            serial: InputSerial(rawValue: 56)
+        )
+        let firstSeatSourceBinding = try #require(
+            backend.sourceBinding(for: firstSeatSource.id)
+        )
+        let otherSeatSourceBinding = try #require(
+            backend.sourceBinding(for: otherSeatSource.id)
+        )
+
+        try controller.synchronizeSeats([seat2])
+
+        #expect(firstDevice.releaseCount == 1)
+        #expect(secondDevice.releaseCount == 0)
+        #expect(firstOffer.destroyCount == 1)
+        #expect(secondOffer.destroyCount == 1)
+        #expect(otherSeatOffer.destroyCount == 0)
+        #expect(firstSeatSourceBinding.destroyCount == 1)
+        #expect(otherSeatSourceBinding.destroyCount == 0)
+        #expect(
+            controller.drainDataTransferEvents()
+                == [
+                    .primarySelectionSourceCancelled(
+                        PrimarySelectionSourceIdentity(firstSeatSource.id)
+                    )
+                ]
+        )
+    }
+
+    @Test
     func clearingPrimarySelectionSourceSetsNilSelectionAndDestroysCurrentSource() throws {
         let backend = RecordingPrimarySelectionBackend()
         let controller = PrimarySelectionController(backend: backend)
@@ -244,6 +383,7 @@ struct PrimarySelectionControllerTests {
         )
     }
 
+    @Test
     func selectingOfferWithoutMimeTypesQueuesCallbackFailure() throws {
         let backend = RecordingPrimarySelectionBackend()
         let controller = PrimarySelectionController(backend: backend)

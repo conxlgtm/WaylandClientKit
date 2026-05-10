@@ -1,6 +1,4 @@
-import Foundation
 import Glibc
-import Synchronization
 import Testing
 
 @testable import WaylandClient
@@ -71,7 +69,7 @@ struct SourceWriterCancellationTests {
         ])
 
         #expect(probe.waitUntilStarted())
-        let cancellationThreadMarker = currentThreadMarker()
+        let cancellationThreadMarker = sourceCancellationThreadMarker()
         writer.cancelJobs(for: .clipboard(sourceID))
 
         #expect(
@@ -249,190 +247,79 @@ struct SourceWriterDisplayCancellationTests {
                 == .closeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
         )
     }
-}
 
-private func blockingWriteJob(
-    sourceID: DataSourceID,
-    descriptor: Int32,
-    probe: SourceCancellationBackpressureProbe
-) -> DataTransferSourceWriteJob {
-    blockingWriteJob(source: .clipboard(sourceID), descriptor: descriptor, probe: probe)
-}
-
-private func blockingWriteJob(
-    source: DataTransferSourceWriteSource,
-    descriptor: Int32,
-    probe: SourceCancellationBackpressureProbe
-) -> DataTransferSourceWriteJob {
-    DataTransferSourceWriteJob(
-        source: source,
-        mimeType: .plainText,
-        descriptor: descriptor,
-        data: Data("blocked".utf8),
-        descriptorIO: DataTransferSourceDescriptorIO(
-            prepareDescriptorForWriting: { _ in
-                // No descriptor setup needed for this deterministic blocking test job.
-            },
-            writeDescriptor: { descriptor, bytes in
-                try probe.write(descriptor: descriptor, bytes: bytes)
-            },
-            closeDescriptor: { descriptor in
-                probe.close(descriptor: descriptor)
-            }
+    @Test
+    func drainedCancelledEventCollectsCloseFailureDiagnosticInSamePass() throws {
+        try verifyDrainedCancelledEventCollectsCloseFailureDiagnosticInSamePass(
+            source: .clipboard(DataSourceID(rawValue: 38)),
+            event: .clipboardSourceCancelled(
+                ClipboardSourceIdentity(DataSourceID(rawValue: 38))
+            ),
+            diagnosticSource: .clipboard(ClipboardSourceIdentity(DataSourceID(rawValue: 38)))
         )
-    )
-}
+    }
 
-private func queuedWriteJob(
-    source: DataTransferSourceWriteSource,
-    descriptor: Int32,
-    closeRecorder: SourceCancellationCloseRecorder
-) -> DataTransferSourceWriteJob {
-    DataTransferSourceWriteJob(
-        source: source,
-        mimeType: .plainText,
-        descriptor: descriptor,
-        data: Data("queued".utf8),
-        descriptorIO: DataTransferSourceDescriptorIO(
-            prepareDescriptorForWriting: { _ in
-                // No descriptor setup needed for this queued test job.
-            },
-            writeDescriptor: { _, bytes in bytes.count },
-            closeDescriptor: { descriptor in
-                closeRecorder.record(descriptor)
-            }
+    @Test
+    func drainedPrimarySelectionCancelledEventCollectsCloseFailureDiagnosticInSamePass() throws {
+        try verifyDrainedCancelledEventCollectsCloseFailureDiagnosticInSamePass(
+            source: .primarySelection(DataSourceID(rawValue: 39)),
+            event: .primarySelectionSourceCancelled(
+                PrimarySelectionSourceIdentity(DataSourceID(rawValue: 39))
+            ),
+            diagnosticSource: .primarySelection(
+                PrimarySelectionSourceIdentity(DataSourceID(rawValue: 39))
+            )
         )
-    )
+    }
 }
 
-private func verifyDrainedSourceCancelledEventCancelsInFlightWrite(
+private func verifyDrainedCancelledEventCollectsCloseFailureDiagnosticInSamePass(
     source: DataTransferSourceWriteSource,
     event: DataTransferEvent,
-    descriptor: Int32
+    diagnosticSource: DataTransferDiagnosticSource
 ) throws {
-    let probe = SourceCancellationBackpressureProbe()
-    let eventQueue = DataTransferEventQueue()
+    let inFlightSource = DataTransferSourceWriteSource.clipboard(DataSourceID(rawValue: 37))
+    let queuedDescriptor: Int32 = 518
+    let inFlightProbe = SourceCancellationBackpressureProbe()
+    let closeRecorder = SourceCancellationCloseRecorder(closeResult: EIO)
     let writer = ThreadedDataTransferSourceWriter()
+    var pendingDiagnostics: [DataTransferDiagnostic] = []
     defer { writer.shutdown() }
 
     writer.submit([
-        blockingWriteJob(source: source, descriptor: descriptor, probe: probe)
+        blockingWriteJob(
+            source: inFlightSource,
+            descriptor: 517,
+            probe: inFlightProbe
+        )
     ])
-    #expect(probe.waitUntilStarted())
-    eventQueue.append(event)
+    #expect(inFlightProbe.waitUntilStarted())
+    writer.submit([
+        queuedWriteJob(
+            source: source,
+            descriptor: queuedDescriptor,
+            closeRecorder: closeRecorder
+        )
+    ])
 
-    DisplaySession.cancelSourceWrites(for: eventQueue.drain(), using: writer)
+    let drained = DisplaySession.drainDataTransferEventsAndDiagnostics(
+        [event],
+        using: writer,
+        pendingDiagnostics: &pendingDiagnostics
+    )
 
+    #expect(drained.events == [event])
+    #expect(closeRecorder.descriptors == [queuedDescriptor])
+    #expect(pendingDiagnostics.isEmpty)
     #expect(
-        waitForResults(from: writer)
+        drained.diagnostics
             == [
-                .failed(
-                    source: source,
+                DataTransferDiagnostic(
+                    source: diagnosticSource,
                     mimeType: .plainText,
-                    error: .cancelled
+                    operation: .sourceWriteFailed,
+                    error: .closeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
                 )
             ]
     )
-    #expect(probe.closedDescriptors == [descriptor])
-}
-
-private func waitForResults(
-    from writer: ThreadedDataTransferSourceWriter,
-    count expectedCount: Int = 1
-) -> [DataTransferSourceWriteResult] {
-    var collectedResults: [DataTransferSourceWriteResult] = []
-    for _ in 0..<1_000 {
-        collectedResults.append(contentsOf: writer.drainResults())
-        if collectedResults.count >= expectedCount {
-            return collectedResults
-        }
-
-        usleep(1_000)
-    }
-
-    return collectedResults
-}
-
-private final class SourceCancellationBackpressureProbe: Sendable {
-    private let condition = NSCondition()
-    private let state = Mutex(SourceCancellationBackpressureProbeState())
-
-    var closedDescriptors: [Int32] {
-        state.withLock(\.closedDescriptors)
-    }
-
-    var closeThreadMarkers: [ObjectIdentifier] {
-        state.withLock(\.closeThreadMarkers)
-    }
-
-    func write(descriptor _: Int32, bytes _: ArraySlice<UInt8>) throws -> Int {
-        condition.lock()
-        state.withLock { storage in
-            storage.started = true
-        }
-        condition.broadcast()
-        condition.unlock()
-
-        throw DataTransferError.writeFileDescriptor(WaylandSystemErrno(unchecked: EAGAIN))
-    }
-
-    func close(descriptor: Int32) -> FileDescriptorCloseResult {
-        condition.lock()
-        state.withLock { storage in
-            storage.closedDescriptors.append(descriptor)
-            storage.closeThreadMarkers.append(currentThreadMarker())
-        }
-        condition.broadcast()
-        condition.unlock()
-
-        return .closed
-    }
-
-    func waitUntilStarted() -> Bool {
-        let deadline = Date(timeIntervalSinceNow: 2)
-        condition.lock()
-        defer { condition.unlock() }
-
-        while !started {
-            guard condition.wait(until: deadline) else {
-                return started
-            }
-        }
-
-        return true
-    }
-
-    private var started: Bool {
-        state.withLock(\.started)
-    }
-}
-
-private struct SourceCancellationBackpressureProbeState {
-    var started = false
-    var closedDescriptors: [Int32] = []
-    var closeThreadMarkers: [ObjectIdentifier] = []
-}
-
-private final class SourceCancellationCloseRecorder: Sendable {
-    private let storage = Mutex<[Int32]>([])
-    private let closeResult: Int32
-
-    init(closeResult: Int32 = 0) {
-        self.closeResult = closeResult
-    }
-
-    var descriptors: [Int32] {
-        storage.withLock { $0 }
-    }
-
-    func record(_ descriptor: Int32) -> FileDescriptorCloseResult {
-        storage.withLock { $0.append(descriptor) }
-        return closeResult == 0
-            ? .closed
-            : .failed(WaylandSystemErrno(unchecked: closeResult > 0 ? closeResult : EIO))
-    }
-}
-
-private func currentThreadMarker() -> ObjectIdentifier {
-    ObjectIdentifier(Thread.current)
 }

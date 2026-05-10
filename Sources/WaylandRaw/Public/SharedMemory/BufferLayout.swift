@@ -22,7 +22,9 @@ package struct BufferLayout: Equatable, Sendable {
 
         let byteCountResult = strideResult.partialValue
             .multipliedReportingOverflow(by: Int(bufferHeight))
-        guard !byteCountResult.overflow else {
+        guard !byteCountResult.overflow,
+            byteCountResult.partialValue <= Int(Int32.max)
+        else {
             throw RuntimeError.systemError(
                 errno: EOVERFLOW, operation: .validateArgument("buffer byte count"))
         }

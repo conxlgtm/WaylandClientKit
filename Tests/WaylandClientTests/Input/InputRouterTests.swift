@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import Testing
 import WaylandRaw
 
@@ -75,6 +77,55 @@ struct PointerInputRouterTests {
 
         #expect(motion.first?.windowID == nil)
         #expect(motion.first?.target == .focusless)
+    }
+
+    @Test
+    func unregisterClearsSurfaceFocusAcrossMultipleSeatsAndDevices() {
+        let router = InputRouter()
+        let removedSurfaceID: RawObjectID = 1_520
+        let retainedSurfaceID: RawObjectID = 1_521
+        let removedWindowID = WindowID(rawValue: 152)
+        let retainedWindowID = WindowID(rawValue: 153)
+        let pointerSeatID = RawSeatID(rawValue: 152)
+        let keyboardSeatID = RawSeatID(rawValue: 153)
+        let touchSeatID = RawSeatID(rawValue: 154)
+        let retainedSeatID = RawSeatID(rawValue: 155)
+
+        router.register(windowID: removedWindowID, surfaceID: removedSurfaceID)
+        router.register(windowID: retainedWindowID, surfaceID: retainedSurfaceID)
+        _ = router.route(
+            rawPointerEnter(sequence: 1, seatID: pointerSeatID, surfaceID: removedSurfaceID)
+        )
+        _ = router.route(
+            rawKeyboardEnter(sequence: 2, seatID: keyboardSeatID, surfaceID: removedSurfaceID)
+        )
+        _ = router.route(
+            rawTouchDown(
+                sequence: 3,
+                seatID: touchSeatID,
+                surfaceID: removedSurfaceID,
+                id: 7
+            )
+        )
+        _ = router.route(
+            rawPointerEnter(sequence: 4, seatID: retainedSeatID, surfaceID: retainedSurfaceID)
+        )
+
+        router.unregister(surfaceID: removedSurfaceID)
+
+        let pointerMotion = router.route(
+            rawPointerMotion(sequence: 5, seatID: pointerSeatID, time: 5)
+        )
+        let key = router.route(rawKeyboardKey(sequence: 6, seatID: keyboardSeatID))
+        let touchMotion = router.route(rawTouchMotion(sequence: 7, seatID: touchSeatID, id: 7))
+        let retainedMotion = router.route(
+            rawPointerMotion(sequence: 8, seatID: retainedSeatID, time: 8)
+        )
+
+        #expect(pointerMotion.first?.target == .focusless)
+        #expect(key.first?.target == .focusless)
+        #expect(touchMotion.first?.target == .focusless)
+        #expect(retainedMotion.first?.windowID == retainedWindowID)
     }
 
     @Test

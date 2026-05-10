@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import WaylandRaw
 
 package final class PrimarySelectionController {
@@ -204,13 +206,25 @@ extension PrimarySelectionController {
     }
 
     private func removeSeat(_ seatID: SeatID) {
+        var pendingOfferIDsForSeat: [DataOfferID] = []
+        for (offerID, offer) in offersByID where offer.pendingSeatID == seatID {
+            pendingOfferIDsForSeat.append(offerID)
+        }
+        pendingOfferIDsForSeat.sort { $0.rawValue < $1.rawValue }
+
+        var sourceIDsForSeat: [DataSourceID] = []
+        for (sourceID, source) in sourcesByID where source.snapshot.seatID == seatID {
+            sourceIDsForSeat.append(sourceID)
+        }
+        sourceIDsForSeat.sort { $0.rawValue < $1.rawValue }
+
         deviceBindings.removeValue(forKey: seatID)?.release()
         cleanupSelection(selectionBySeat.removeValue(forKey: seatID) ?? .none)
 
-        for (offerID, offer) in offersByID where offer.pendingSeatID == seatID {
+        for offerID in pendingOfferIDsForSeat {
             destroyOffer(offerID)
         }
-        for (sourceID, source) in sourcesByID where source.snapshot.seatID == seatID {
+        for sourceID in sourceIDsForSeat {
             _ = cancelSource(sourceID)
         }
     }
@@ -397,7 +411,7 @@ extension PrimarySelectionController {
             }
 
             pendingSourceSendRequests.append(
-                DataTransferSourceSendRequest(
+                try DataTransferSourceSendRequest(
                     source: .primarySelection(sourceID),
                     mimeType: mimeType,
                     descriptor: descriptor,
@@ -453,7 +467,12 @@ extension PrimarySelectionController {
 
         source.binding.destroy()
         discardPendingSourceSendRequests(for: sourceID)
+        var selectedSeatIDs: [SeatID] = []
         for (seatID, selection) in selectionBySeat where selection == .ownedSource(sourceID) {
+            selectedSeatIDs.append(seatID)
+        }
+
+        for seatID in selectedSeatIDs {
             selectionBySeat[seatID] = PrimarySelectionSelectionState.none
         }
         return true

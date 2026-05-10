@@ -54,6 +54,24 @@ struct DataTransferSourceWriteJobLifecycleTests {
         #expect(closedDescriptors.descriptors == [43])
     }
 
+    @Test
+    func cancelInFlightOnInvalidIdleDescriptorDoesNotCloseDescriptor() {
+        let closedDescriptors = DescriptorCloseRecorder()
+        let job = makeJob(descriptor: -1, closedDescriptors: closedDescriptors)
+
+        job.cancelInFlight()
+
+        #expect(
+            job.write()
+                == DataTransferSourceWriteResult.failed(
+                    sourceID: DataSourceID(rawValue: 1),
+                    mimeType: MIMEType.plainText,
+                    error: DataTransferError.invalidFileDescriptor(-1)
+                )
+        )
+        #expect(closedDescriptors.descriptors.isEmpty)
+    }
+
     private func makeJob(
         descriptor: Int32,
         closedDescriptors: DescriptorCloseRecorder

@@ -161,7 +161,7 @@ extension DataTransferManager {
             }
 
             store.appendSourceSendRequest(
-                DataTransferSourceSendRequest(
+                try DataTransferSourceSendRequest(
                     source: .clipboard(sourceID),
                     mimeType: mimeType,
                     descriptor: descriptor,
@@ -176,6 +176,10 @@ extension DataTransferManager {
     }
 
     private func closeSourceSendDescriptor(_ descriptor: Int32) throws {
+        guard descriptor >= 0 else {
+            throw DataTransferError.invalidFileDescriptor(descriptor)
+        }
+
         switch backend.closeFileDescriptor(descriptor) {
         case .closed:
             return

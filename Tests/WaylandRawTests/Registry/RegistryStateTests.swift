@@ -36,6 +36,32 @@ struct RegistryStateTests {
         state.recordGlobal(name: 1, interfaceName: "wl_compositor", version: 6)
         #expect(state.firstGlobal(named: "wl_shm") == nil)
     }
+
+    @Test
+    func firstGlobalChoosesHighestAdvertisedVersionForDuplicateInterfaces() {
+        let state = RegistryState()
+        state.recordGlobal(name: 1, interfaceName: "zxdg_output_manager_v1", version: 1)
+        state.recordGlobal(name: 2, interfaceName: "zxdg_output_manager_v1", version: 3)
+        state.recordGlobal(name: 3, interfaceName: "zxdg_output_manager_v1", version: 2)
+
+        let global = state.firstGlobal(named: "zxdg_output_manager_v1")
+
+        #expect(global?.name == 2)
+        #expect(global?.advertisedVersion == RawVersion(3))
+    }
+
+    @Test
+    func firstGlobalUsesLowestNameWhenDuplicateInterfacesHaveSameVersion() {
+        let state = RegistryState()
+        state.recordGlobal(name: 4, interfaceName: "wl_data_device_manager", version: 3)
+        state.recordGlobal(name: 2, interfaceName: "wl_data_device_manager", version: 3)
+
+        let global = state.firstGlobal(named: "wl_data_device_manager")
+
+        #expect(global?.name == 2)
+        #expect(global?.advertisedVersion == RawVersion(3))
+    }
+
     @Test
     func removeNonExistentNameIsHarmless() {
         let state = RegistryState()

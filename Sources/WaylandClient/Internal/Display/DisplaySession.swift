@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import Foundation
 import WaylandCursor
 import WaylandKeyboard
@@ -262,6 +264,18 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         let events = dataTransferEventQueue.drain()
         cancelSourceWrites(for: events)
         return events
+    }
+
+    package func drainDataTransferEventsAndDiagnosticsOnOwnerThread() -> (
+        diagnostics: [DataTransferDiagnostic],
+        events: [DataTransferEvent]
+    ) {
+        connection.preconditionIsOwnerThread()
+        return Self.drainDataTransferEventsAndDiagnostics(
+            dataTransferEventQueue.drain(),
+            using: dataTransferSourceWriter,
+            pendingDiagnostics: &pendingDataTransferDiagnostics
+        )
     }
 
     package func createTopLevelWindowOnOwnerThread(

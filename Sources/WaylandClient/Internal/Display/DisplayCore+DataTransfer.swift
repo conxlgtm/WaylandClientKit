@@ -3,10 +3,7 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let activeSession = try requireSession()
             let offer = try activeSession.clipboardOfferOnOwnerThread(for: seatID)
-            publishDataTransferDiagnostics(
-                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
-            )
-            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            publishDrainedDataTransfer(from: activeSession)
             return offer
         }
     }
@@ -21,10 +18,7 @@ extension DisplayCore {
                 id: offerID,
                 mimeType: mimeType
             )
-            publishDataTransferDiagnostics(
-                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
-            )
-            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            publishDrainedDataTransfer(from: activeSession)
             return descriptor
         }
     }
@@ -33,10 +27,7 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let activeSession = try requireSession()
             let offer = try activeSession.primarySelectionOfferOnOwnerThread(for: seatID)
-            publishDataTransferDiagnostics(
-                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
-            )
-            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            publishDrainedDataTransfer(from: activeSession)
             return offer
         }
     }
@@ -51,10 +42,7 @@ extension DisplayCore {
                 id: offerID,
                 mimeType: mimeType
             )
-            publishDataTransferDiagnostics(
-                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
-            )
-            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            publishDrainedDataTransfer(from: activeSession)
             return descriptor
         }
     }
@@ -71,10 +59,7 @@ extension DisplayCore {
                 seatID: seatID,
                 serial: serial
             )
-            publishDataTransferDiagnostics(
-                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
-            )
-            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            publishDrainedDataTransfer(from: activeSession)
             return source
         }
     }
@@ -83,10 +68,7 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let activeSession = try requireSession()
             try activeSession.clearClipboardOnOwnerThread(seatID: seatID, serial: serial)
-            publishDataTransferDiagnostics(
-                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
-            )
-            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            publishDrainedDataTransfer(from: activeSession)
         }
     }
 
@@ -102,10 +84,7 @@ extension DisplayCore {
                 seatID: seatID,
                 serial: serial
             )
-            publishDataTransferDiagnostics(
-                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
-            )
-            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            publishDrainedDataTransfer(from: activeSession)
             return source
         }
     }
@@ -114,10 +93,7 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let activeSession = try requireSession()
             try activeSession.clearPrimarySelectionOnOwnerThread(seatID: seatID, serial: serial)
-            publishDataTransferDiagnostics(
-                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
-            )
-            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            publishDrainedDataTransfer(from: activeSession)
         }
     }
 
@@ -133,10 +109,7 @@ extension DisplayCore {
                 seatID: seatID,
                 serial: serial
             )
-            publishDataTransferDiagnostics(
-                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
-            )
-            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            publishDrainedDataTransfer(from: activeSession)
         }
     }
 
@@ -152,10 +125,18 @@ extension DisplayCore {
                 seatID: seatID,
                 serial: serial
             )
-            publishDataTransferDiagnostics(
-                activeSession.drainDataTransferDiagnosticsOnOwnerThread()
-            )
-            publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+            publishDrainedDataTransfer(from: activeSession)
         }
+    }
+
+    private func publishDrainedDataTransfer(from session: DisplaySession) {
+        publishDataTransferDrain(session.drainDataTransferEventsAndDiagnosticsOnOwnerThread())
+    }
+
+    package func publishDataTransferDrain(
+        _ drained: (diagnostics: [DataTransferDiagnostic], events: [DataTransferEvent])
+    ) {
+        publishDataTransferDiagnostics(drained.diagnostics)
+        publishDataTransferEvents(drained.events)
     }
 }

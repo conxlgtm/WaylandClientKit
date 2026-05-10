@@ -25,20 +25,16 @@ private struct RawOutputLogicalSize {
     let height: Int32
 }
 
-private enum RawOutputDescriptionSource {
-    case wlOutput
-    case xdgOutput
-}
-
 package struct RawOutputState {
     private var geometry: RawOutputGeometry?
     private var logicalPosition: RawOutputLogicalPosition?
     private var logicalSize: RawOutputLogicalSize?
     private var currentMode: RawOutputMode?
     private var scale: Int32 = 1
-    private var name: String?
-    private var description: String?
-    private var descriptionSource: RawOutputDescriptionSource?
+    private var wlName: String?
+    private var xdgName: String?
+    private var wlDescription: String?
+    private var xdgDescription: String?
 
     package init() {
         // wl_output scale defaults to 1 until a valid scale event arrives.
@@ -70,8 +66,8 @@ package struct RawOutputState {
             logicalGeometry: logicalGeometry,
             currentMode: currentMode,
             scale: scale,
-            name: name,
-            description: description
+            name: wlName ?? xdgName,
+            description: wlDescription ?? xdgDescription
         )
     }
 
@@ -98,11 +94,10 @@ package struct RawOutputState {
             self.scale = scale
             return publishesWithoutDoneEvent(version: version)
         case .name(let name):
-            self.name = name.isEmpty ? nil : name
+            wlName = name.isEmpty ? nil : name
             return publishesWithoutDoneEvent(version: version)
         case .description(let description):
-            self.description = description.isEmpty ? nil : description
-            descriptionSource = .wlOutput
+            wlDescription = description.isEmpty ? nil : description
             return publishesWithoutDoneEvent(version: version)
         }
     }
@@ -135,23 +130,13 @@ package struct RawOutputState {
         case .done:
             return true
         case .name(let name):
-            if self.name == nil {
-                self.name = name.isEmpty ? nil : name
-            }
+            xdgName = name.isEmpty ? nil : name
             return publishesXDGOutputEventWithoutDoneEvent(
                 outputVersion: outputVersion,
                 xdgOutputVersion: xdgOutputVersion
             )
         case .description(let description):
-            guard descriptionSource != .wlOutput else {
-                return publishesXDGOutputEventWithoutDoneEvent(
-                    outputVersion: outputVersion,
-                    xdgOutputVersion: xdgOutputVersion
-                )
-            }
-
-            self.description = description.isEmpty ? nil : description
-            descriptionSource = .xdgOutput
+            xdgDescription = description.isEmpty ? nil : description
             return publishesXDGOutputEventWithoutDoneEvent(
                 outputVersion: outputVersion,
                 xdgOutputVersion: xdgOutputVersion

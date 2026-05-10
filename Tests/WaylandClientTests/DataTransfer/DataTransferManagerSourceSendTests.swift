@@ -4,7 +4,7 @@ import Testing
 @testable import WaylandClient
 
 @Suite
-struct DataTransferManagerSourceSendTests {
+struct DataTransferManagerSourceSendTests {  // swiftlint:disable:this type_body_length
     private let seat1 = SeatID(rawValue: 1)
 
     @Test
@@ -176,6 +176,52 @@ struct DataTransferManagerSourceSendTests {
         ) {
             try request.write()
         }
+    }
+
+    @Test
+    func sourceSendRequestRejectsInvalidDescriptorBeforeOwnership() throws {
+        let backend = RecordingDataTransferBackend()
+
+        #expect(throws: DataTransferError.invalidFileDescriptor(-1)) {
+            _ = try DataTransferSourceSendRequest(
+                source: .clipboard(DataSourceID(rawValue: 26)),
+                mimeType: .plainText,
+                descriptor: -1,
+                data: Data("clipboard".utf8),
+                descriptorIO: backend.sourceDescriptorIO
+            )
+        }
+        #expect(backend.closedDescriptors.isEmpty)
+    }
+
+    @Test
+    func sourceSendWithValidMIMEAndInvalidDescriptorRecordsCallbackFailure() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+
+        let source = try manager.setSelectionSource(
+            seatID: seat1,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 96),
+            payloads: DataTransferSourcePayloadSet(
+                data: [.plainText: Data("clipboard".utf8)]
+            )
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+
+        sourceBinding.emit(.send(mimeType: MIMEType.plainText.rawValue, fd: -1))
+
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dataSource(ClipboardSourceIdentity(source.id)),
+                error: .invalidFileDescriptor(-1)
+            )
+        ) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+        #expect(backend.closedDescriptors.isEmpty)
+        #expect(manager.drainSourceSendRequests().isEmpty)
     }
 
     @Test

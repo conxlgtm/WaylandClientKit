@@ -169,6 +169,37 @@ struct EventBrokerCancellationTests {
         }
     }
 
+    @Test
+    func finishResumesAllWaitingSubscribers() async throws {
+        let broker = TypedEventBroker<DisplayEvent>(
+            stream: .displayEvents,
+            capacity: 4
+        )
+        let firstSubscription = broker.subscribe()
+        let secondSubscription = broker.subscribe()
+        let expected = WaylandDisplayError.internalInvariantViolation(
+            .message("finish all")
+        )
+
+        try await withThrowingTaskGroup(
+            of: Result<DisplayEvent?, WaylandDisplayError>.self
+        ) { group in
+            group.addTask {
+                try await nextResult(from: firstSubscription)
+            }
+            group.addTask {
+                try await nextResult(from: secondSubscription)
+            }
+
+            try await waitUntil { broker.waitingSubscriberCountForTesting() == 2 }
+            broker.finish(throwing: expected)
+
+            let first = try await #require(group.next())
+            let second = try await #require(group.next())
+            #expect([first, second] == [.failure(expected), .failure(expected)])
+        }
+    }
+
     private func waitUntil(_ condition: () -> Bool) async throws {
         for _ in 0..<1_000 {
             if condition() {
@@ -179,6 +210,17 @@ struct EventBrokerCancellationTests {
         }
 
         Issue.record("Timed out waiting for condition.")
+    }
+}
+
+private func nextResult(
+    from subscription: InternalEventSubscription<DisplayEvent>
+) async throws -> Result<DisplayEvent?, WaylandDisplayError> {
+    var iterator = subscription.makeAsyncIterator()
+    do {
+        return .success(try await iterator.next())
+    } catch {
+        return .failure(error)
     }
 }
 
