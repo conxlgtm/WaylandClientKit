@@ -190,18 +190,29 @@ struct WindowControlPublicRequestStateTests {
     }
 
     @Test
-    func setMinimumSizeNilClearsProtocolSizeWithZeroes() async throws {
+    func setMinimumSizeSendsProtocolSizeAndNilClearsWithZeroes() async throws {
         try await withWindowControlConnection { display, window in
             let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
 
-            let record = try await recordTopLevelRequest {
+            let sizeRecord = try await recordTopLevelRequest {
+                try await window.setMinimumSize(
+                    try PositiveLogicalSize(width: 320, height: 240)
+                )
+            }
+
+            #expect(sizeRecord.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MIN_SIZE)
+            #expect(sizeRecord.topLevelAddress == topLevelPointer)
+            #expect(sizeRecord.width == 320)
+            #expect(sizeRecord.height == 240)
+
+            let clearRecord = try await recordTopLevelRequest {
                 try await window.setMinimumSize(nil)
             }
 
-            #expect(record.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MIN_SIZE)
-            #expect(record.topLevelAddress == topLevelPointer)
-            #expect(record.width == 0)
-            #expect(record.height == 0)
+            #expect(clearRecord.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MIN_SIZE)
+            #expect(clearRecord.topLevelAddress == topLevelPointer)
+            #expect(clearRecord.width == 0)
+            #expect(clearRecord.height == 0)
         }
     }
 
@@ -375,20 +386,6 @@ private func requireTopLevelPointer(
     return pointer
 }
 
-private func recordTopLevelRequest(
-    _ request: @Sendable () async throws -> Void
-) async throws -> RecordedTopLevelRequest {
-    swl_test_xdg_request_recording_begin()
-    defer {
-        swl_test_xdg_request_recording_end()
-    }
-
-    try await request()
-    let record = unsafe RecordedTopLevelRequest(swl_test_xdg_toplevel_request_record())
-    #expect(record.callCount == 1)
-    return record
-}
-
 private func expectUnknownInteractionSeat(
     _ seatID: SeatID,
     _ action: @Sendable () async throws -> Void
@@ -436,42 +433,6 @@ private func withSeatForRecordedRequest(
             Issue.record("Failed to remove testing interaction seat: \(error).")
         }
         throw bodyError
-    }
-}
-
-private struct RecordedTopLevelRequest: Sendable {
-    let callCount: Int32
-    let kind: swl_test_xdg_toplevel_request_kind
-    let topLevelAddress: UInt?
-    let seatAddress: UInt?
-    let outputAddress: UInt?
-    let serial: UInt32
-    let x: Int32
-    let y: Int32
-    let width: Int32
-    let height: Int32
-    let value: UInt32
-    let text: String?
-
-    init(_ record: swl_test_xdg_toplevel_request_record) {
-        unsafe callCount = record.call_count
-        unsafe kind = record.kind
-        unsafe topLevelAddress = Self.pointerAddress(record.toplevel)
-        unsafe seatAddress = Self.pointerAddress(record.seat)
-        unsafe outputAddress = Self.pointerAddress(record.output)
-        unsafe serial = record.serial
-        unsafe x = record.x
-        unsafe y = record.y
-        unsafe width = record.width
-        unsafe height = record.height
-        unsafe value = record.value
-        unsafe text = record.text.map { unsafe String(cString: $0) }
-    }
-
-    private static func pointerAddress(_ pointer: OpaquePointer?) -> UInt? {
-        guard let pointer = unsafe pointer else { return nil }
-
-        return unsafe UInt(bitPattern: UnsafeMutableRawPointer(pointer))
     }
 }
 

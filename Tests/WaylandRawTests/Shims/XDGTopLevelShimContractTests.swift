@@ -1,20 +1,21 @@
 import CWaylandProtocols
 import Testing
+import WaylandTestSupport
 
 @Suite(.serialized)
 struct XDGTopLevelShimContractTests {
     @Test
-    func identityRequestsPreserveText() {
+    func identityRequestsPreserveText() async throws {
         let topLevel = unsafe OpaquePointer(bitPattern: 0x1010)
 
-        assertTopLevelRequest(
+        try await assertTopLevelRequest(
             expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_TITLE,
             topLevel: topLevel,
             text: "SwiftWayland"
         ) {
             unsafe swl_xdg_toplevel_set_title(topLevel, "SwiftWayland")
         }
-        assertTopLevelRequest(
+        try await assertTopLevelRequest(
             expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_APP_ID,
             topLevel: topLevel,
             text: "dev.swiftwayland.tests"
@@ -24,11 +25,11 @@ struct XDGTopLevelShimContractTests {
     }
 
     @Test
-    func interactiveRequestsPreserveSeatSerialAndGeometry() {
+    func interactiveRequestsPreserveSeatSerialAndGeometry() async throws {
         let topLevel = unsafe OpaquePointer(bitPattern: 0x1111)
         let seat = unsafe OpaquePointer(bitPattern: 0x2222)
 
-        assertTopLevelRequest(
+        try await assertTopLevelRequest(
             expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_SHOW_WINDOW_MENU,
             topLevel: topLevel,
             seat: seat,
@@ -38,7 +39,7 @@ struct XDGTopLevelShimContractTests {
         ) {
             unsafe swl_xdg_toplevel_show_window_menu(topLevel, seat, 123, 10, -20)
         }
-        assertTopLevelRequest(
+        try await assertTopLevelRequest(
             expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_MOVE,
             topLevel: topLevel,
             seat: seat,
@@ -46,7 +47,7 @@ struct XDGTopLevelShimContractTests {
         ) {
             unsafe swl_xdg_toplevel_move(topLevel, seat, 456)
         }
-        assertTopLevelRequest(
+        try await assertTopLevelRequest(
             expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_RESIZE,
             topLevel: topLevel,
             seat: seat,
@@ -58,10 +59,10 @@ struct XDGTopLevelShimContractTests {
     }
 
     @Test
-    func sizeLimitRequestsPreserveDimensions() {
+    func sizeLimitRequestsPreserveDimensions() async throws {
         let topLevel = unsafe OpaquePointer(bitPattern: 0x3333)
 
-        assertTopLevelRequest(
+        try await assertTopLevelRequest(
             expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MAX_SIZE,
             topLevel: topLevel,
             width: 1_920,
@@ -69,7 +70,7 @@ struct XDGTopLevelShimContractTests {
         ) {
             unsafe swl_xdg_toplevel_set_max_size(topLevel, 1_920, 1_080)
         }
-        assertTopLevelRequest(
+        try await assertTopLevelRequest(
             expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MIN_SIZE,
             topLevel: topLevel,
             width: 320,
@@ -80,36 +81,36 @@ struct XDGTopLevelShimContractTests {
     }
 
     @Test
-    func windowStateRequestsPreserveProtocolRequest() {
+    func windowStateRequestsPreserveProtocolRequest() async throws {
         let topLevel = unsafe OpaquePointer(bitPattern: 0x4444)
         let output = unsafe OpaquePointer(bitPattern: 0x5555)
 
-        assertTopLevelRequest(
+        try await assertTopLevelRequest(
             expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MAXIMIZED,
             topLevel: topLevel
         ) {
             unsafe swl_xdg_toplevel_set_maximized(topLevel)
         }
-        assertTopLevelRequest(
+        try await assertTopLevelRequest(
             expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_UNSET_MAXIMIZED,
             topLevel: topLevel
         ) {
             unsafe swl_xdg_toplevel_unset_maximized(topLevel)
         }
-        assertTopLevelRequest(
+        try await assertTopLevelRequest(
             expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_FULLSCREEN,
             topLevel: topLevel,
             output: output
         ) {
             unsafe swl_xdg_toplevel_set_fullscreen(topLevel, output)
         }
-        assertTopLevelRequest(
+        try await assertTopLevelRequest(
             expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_UNSET_FULLSCREEN,
             topLevel: topLevel
         ) {
             unsafe swl_xdg_toplevel_unset_fullscreen(topLevel)
         }
-        assertTopLevelRequest(
+        try await assertTopLevelRequest(
             expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MINIMIZED,
             topLevel: topLevel
         ) {
@@ -132,8 +133,8 @@ struct XDGTopLevelShimContractTests {
         text: String? = nil,
         request: () -> Void,
         sourceLocation: SourceLocation = #_sourceLocation
-    ) {
-        ShimRequestRecordingLock.xdg.withLock { _ in
+    ) async throws {
+        try await XDGRequestRecordingGate.withExclusiveRecording {
             swl_test_xdg_request_recording_begin()
             defer { swl_test_xdg_request_recording_end() }
 
