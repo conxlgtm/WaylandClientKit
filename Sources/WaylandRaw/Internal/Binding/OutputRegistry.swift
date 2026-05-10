@@ -5,18 +5,22 @@ package final class OutputRegistry {
     @safe private let registry: OpaquePointer
     private let proxyAdoption: RawProxyAdoptionContext
     private let invariantFailureSink: RawInvariantFailureSink?
+    private let xdgOutputManager: OptionalXDGOutputManager
     private var outputsByID: [RawOutputID: RawOutput] = [:]
+    private var xdgOutputsByID: [RawOutputID: RawXDGOutput] = [:]
     private var pendingEvents: [RawOutputEvent] = []
 
     @safe
     init(
         registry rawRegistry: OpaquePointer,
         proxyAdoption adoptionContext: RawProxyAdoptionContext,
-        invariantFailureSink failureSink: RawInvariantFailureSink? = nil
+        invariantFailureSink failureSink: RawInvariantFailureSink? = nil,
+        xdgOutputManager optionalXDGOutputManager: OptionalXDGOutputManager = .missing
     ) {
         unsafe registry = rawRegistry
         proxyAdoption = adoptionContext
         invariantFailureSink = failureSink
+        xdgOutputManager = optionalXDGOutputManager
     }
 
     package var snapshots: [RawOutputSnapshot] {
@@ -54,14 +58,19 @@ package final class OutputRegistry {
         let id = RawOutputID(rawValue: globalName)
         guard let output = outputsByID.removeValue(forKey: id) else { return }
 
+        xdgOutputsByID.removeValue(forKey: id)?.destroy()
         output.destroy()
         pendingEvents.append(.removed(id))
     }
 
     package func destroy() {
+        for xdgOutput in xdgOutputsByID.values {
+            xdgOutput.destroy()
+        }
         for output in outputsByID.values {
             output.destroy()
         }
+        xdgOutputsByID.removeAll()
         outputsByID.removeAll()
     }
 
@@ -80,7 +89,7 @@ package final class OutputRegistry {
             throw RuntimeError.bindFailed("wl_output")
         }
 
-        outputsByID[id] = try RawOutput(
+        let output = try RawOutput(
             id: id,
             pointer: pointer,
             version: version,
@@ -88,6 +97,16 @@ package final class OutputRegistry {
             invariantFailureSink: invariantFailureSink
         ) { [weak self] snapshot in
             self?.pendingEvents.append(.changed(snapshot))
+        }
+
+        do {
+            if let manager = xdgOutputManager.manager {
+                xdgOutputsByID[id] = try manager.getXDGOutput(for: output)
+            }
+            outputsByID[id] = output
+        } catch {
+            output.destroy()
+            throw error
         }
     }
 

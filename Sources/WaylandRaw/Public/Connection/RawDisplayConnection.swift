@@ -292,6 +292,11 @@ extension RawDisplayConnection {
         let xdgWMBaseVersion: RawVersion
     }
 
+    private struct OptionalGlobalBindingSet {
+        let extensions: OptionalGlobals
+        let outputRegistry: OutputRegistry
+    }
+
     @discardableResult
     @available(
         *,
@@ -331,36 +336,62 @@ extension RawDisplayConnection {
             sharedMemory: shm,
             compositor: compositorWrapper
         )
-        let outputRegistry = try bindOutputRegistry(
+        let optionalBindingSet = try unsafe bindOptionalGlobalsAndOutputs(
             registry: reg,
             xdgWMBase: xdgWmBase,
             sharedMemory: shm,
             compositor: compositorWrapper,
             seatRegistry: seatRegistry
         )
-        let extensions: OptionalGlobals
-        do {
-            extensions = try bindOptionalGlobals(registry: reg)
-        } catch {
-            outputRegistry.destroy()
-            seatRegistry.destroy()
-            xdgWmBase.destroy()
-            shm.destroy()
-            compositorWrapper.destroy()
-            throw error
-        }
 
         let bound = BoundGlobals(
             compositor: compositorWrapper,
             sharedMemory: shm,
             xdgWMBase: xdgWmBase,
             seatRegistry: seatRegistry,
-            outputRegistry: outputRegistry,
-            extensions: extensions
+            outputRegistry: optionalBindingSet.outputRegistry,
+            extensions: optionalBindingSet.extensions
         )
 
         boundGlobals = bound
         return bound
+    }
+
+    private func bindOptionalGlobalsAndOutputs(
+        registry reg: OpaquePointer,
+        xdgWMBase: RawXDGWMBase,
+        sharedMemory shm: RawSharedMemory,
+        compositor: RawCompositor,
+        seatRegistry: SeatRegistry
+    ) throws -> OptionalGlobalBindingSet {
+        let extensions: OptionalGlobals
+        do {
+            extensions = try bindOptionalGlobals(registry: reg)
+        } catch {
+            seatRegistry.destroy()
+            xdgWMBase.destroy()
+            shm.destroy()
+            compositor.destroy()
+            throw error
+        }
+
+        do {
+            let outputRegistry = try bindOutputRegistry(
+                registry: reg,
+                extensions: extensions
+            )
+            return OptionalGlobalBindingSet(
+                extensions: extensions,
+                outputRegistry: outputRegistry
+            )
+        } catch {
+            extensions.destroy()
+            seatRegistry.destroy()
+            xdgWMBase.destroy()
+            shm.destroy()
+            compositor.destroy()
+            throw error
+        }
     }
 
     private func requiredGlobalBindingSet() throws -> RequiredGlobalBindingSet {
@@ -501,15 +532,13 @@ extension RawDisplayConnection {
     @safe
     private func bindOutputRegistry(
         registry reg: OpaquePointer,
-        xdgWMBase: RawXDGWMBase,
-        sharedMemory shm: RawSharedMemory,
-        compositor: RawCompositor,
-        seatRegistry: SeatRegistry
+        extensions: OptionalGlobals
     ) throws -> OutputRegistry {
         let outputRegistry = OutputRegistry(
             registry: reg,
             proxyAdoption: proxyAdoption,
-            invariantFailureSink: invariantFailureSink
+            invariantFailureSink: invariantFailureSink,
+            xdgOutputManager: extensions.xdgOutputManager
         )
 
         do {
@@ -517,10 +546,6 @@ extension RawDisplayConnection {
             return outputRegistry
         } catch {
             outputRegistry.destroy()
-            seatRegistry.destroy()
-            xdgWMBase.destroy()
-            shm.destroy()
-            compositor.destroy()
             throw error
         }
     }

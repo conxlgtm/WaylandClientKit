@@ -72,10 +72,30 @@ package struct RawOutputMode: Equatable, Sendable {
     }
 }
 
+package struct RawOutputLogicalGeometry: Equatable, Sendable {
+    package let x: Int32
+    package let y: Int32
+    package let width: Int32
+    package let height: Int32
+
+    package init(
+        x outputX: Int32,
+        y outputY: Int32,
+        width outputWidth: Int32,
+        height outputHeight: Int32
+    ) {
+        x = outputX
+        y = outputY
+        width = outputWidth
+        height = outputHeight
+    }
+}
+
 package struct RawOutputSnapshot: Equatable, Sendable {
     package let id: RawOutputID
     package let version: RawVersion
     package let geometry: RawOutputGeometry?
+    package let logicalGeometry: RawOutputLogicalGeometry?
     package let currentMode: RawOutputMode?
     package let scale: Int32
     package let name: String?
@@ -85,6 +105,7 @@ package struct RawOutputSnapshot: Equatable, Sendable {
         id outputID: RawOutputID,
         version outputVersion: RawVersion,
         geometry outputGeometry: RawOutputGeometry?,
+        logicalGeometry outputLogicalGeometry: RawOutputLogicalGeometry?,
         currentMode outputCurrentMode: RawOutputMode?,
         scale outputScale: Int32,
         name outputName: String?,
@@ -93,6 +114,7 @@ package struct RawOutputSnapshot: Equatable, Sendable {
         id = outputID
         version = outputVersion
         geometry = outputGeometry
+        logicalGeometry = outputLogicalGeometry
         currentMode = outputCurrentMode
         scale = outputScale
         name = outputName
@@ -105,18 +127,57 @@ package enum RawOutputEvent: Equatable, Sendable {
     case removed(RawOutputID)
 }
 
+package enum RawXDGOutputEvent: Equatable, Sendable {
+    case logicalPosition(x: Int32, y: Int32)
+    case logicalSize(width: Int32, height: Int32)
+    case done
+    case name(String)
+    case description(String)
+}
+
+private struct RawOutputLogicalPosition {
+    let x: Int32
+    let y: Int32
+}
+
+private struct RawOutputLogicalSize {
+    let width: Int32
+    let height: Int32
+}
+
 private struct RawOutputState {
     var geometry: RawOutputGeometry?
+    var logicalPosition: RawOutputLogicalPosition?
+    var logicalSize: RawOutputLogicalSize?
     var currentMode: RawOutputMode?
     var scale: Int32 = 1
     var name: String?
     var description: String?
+
+    var logicalGeometry: RawOutputLogicalGeometry? {
+        guard
+            let logicalPosition,
+            let logicalSize,
+            logicalSize.width > 0,
+            logicalSize.height > 0
+        else {
+            return nil
+        }
+
+        return RawOutputLogicalGeometry(
+            x: logicalPosition.x,
+            y: logicalPosition.y,
+            width: logicalSize.width,
+            height: logicalSize.height
+        )
+    }
 
     func snapshot(id: RawOutputID, version: RawVersion) -> RawOutputSnapshot {
         RawOutputSnapshot(
             id: id,
             version: version,
             geometry: geometry,
+            logicalGeometry: logicalGeometry,
             currentMode: currentMode,
             scale: scale,
             name: name,
@@ -216,6 +277,29 @@ package final class RawOutput {
             state.name = name.isEmpty ? nil : name
         case .description(let description):
             state.description = description.isEmpty ? nil : description
+        }
+    }
+
+    package func handleXDGOutputEvent(_ event: RawXDGOutputEvent) {
+        switch event {
+        case .logicalPosition(let x, let y):
+            state.logicalPosition = RawOutputLogicalPosition(x: x, y: y)
+        case .logicalSize(let width, let height):
+            guard width > 0, height > 0 else {
+                state.logicalSize = nil
+                return
+            }
+            state.logicalSize = RawOutputLogicalSize(width: width, height: height)
+        case .done:
+            onChanged(snapshot)
+        case .name(let name):
+            if state.name == nil {
+                state.name = name.isEmpty ? nil : name
+            }
+        case .description(let description):
+            if state.description == nil {
+                state.description = description.isEmpty ? nil : description
+            }
         }
     }
 

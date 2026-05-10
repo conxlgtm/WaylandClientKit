@@ -51,6 +51,7 @@ struct WaylandDisplayPublicAPISurfaceTests {
             clipboard: availability,
             primarySelection: .unavailable,
             xdgDecoration: .available(version: 2),
+            xdgOutput: .available(version: 3),
             viewporter: .available(version: 1),
             fractionalScale: .unavailable
         )
@@ -59,6 +60,7 @@ struct WaylandDisplayPublicAPISurfaceTests {
         #expect(availability.version == 1)
         #expect(capabilities.clipboard == .available(version: 1))
         #expect(capabilities.primarySelection == .unavailable)
+        #expect(capabilities.xdgOutput == .available(version: 3))
 
         func useCapabilitiesAPI(display: WaylandDisplay) async throws -> WaylandCapabilities {
             try await display.capabilities()
@@ -70,6 +72,8 @@ struct WaylandDisplayPublicAPISurfaceTests {
     @Test
     func outputSnapshotTypesAndDisplayMethodCompileForExternalClients() throws {
         let scale = try PositiveInt32(2)
+        let logicalWidth = try PositiveInt32(1_280)
+        let logicalHeight = try PositiveInt32(720)
         let snapshot = OutputSnapshot(
             id: OutputID(rawValue: 1),
             version: 4,
@@ -91,11 +95,18 @@ struct WaylandDisplayPublicAPISurfaceTests {
             ),
             scale: scale,
             name: "HDMI-A-1",
-            description: "Acme Panel"
+            description: "Acme Panel",
+            logicalGeometry: OutputLogicalGeometry(
+                x: 1_920,
+                y: 0,
+                width: logicalWidth,
+                height: logicalHeight
+            )
         )
 
         #expect(snapshot.id == OutputID(rawValue: 1))
         #expect(snapshot.scale == scale)
+        #expect(snapshot.logicalGeometry?.width == logicalWidth)
         #expect(OutputSubpixelLayout(rawValue: 999) == .unrecognized(999))
         #expect(OutputTransform(rawValue: 999) == .unrecognized(999))
         #expect(OutputModeFlags.preferred.rawValue == 0x2)

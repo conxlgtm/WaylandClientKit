@@ -3,6 +3,36 @@ import WaylandClient
 
 extension WaylandDisplayPublicIntegrationTests {
     @Test
+    func xdgOutputLogicalGeometryIsPublishedWhenAdvertised() async throws {
+        try await withPublicConnection { display in
+            let capabilities = try await display.capabilities()
+            guard capabilities.xdgOutput.isAvailable else {
+                noteOptionalProtocolSkip(
+                    test: "xdg-output logical geometry",
+                    interfaceName: "zxdg_output_manager_v1"
+                )
+                return
+            }
+
+            let outputs = try await withTimeout(
+                nanoseconds: publicIntegrationWaitTimeoutNanoseconds,
+                operation: "waiting for xdg-output logical geometry"
+            ) {
+                while true {
+                    let outputs = try await display.outputs()
+                    if outputs.contains(where: { $0.logicalGeometry != nil }) {
+                        return outputs
+                    }
+
+                    try await Task.sleep(nanoseconds: 10_000_000)
+                }
+            }
+
+            #expect(outputs.contains { $0.logicalGeometry != nil })
+        }
+    }
+
+    @Test
     func toplevelWindowPublishesOutputMembershipThroughPublicAPI() async throws {
         try await withPublicConnection { display in
             let displayEvents = display.events

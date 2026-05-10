@@ -20,6 +20,8 @@ struct xdg_positioner;
 struct xdg_popup;
 struct zxdg_decoration_manager_v1;
 struct zxdg_toplevel_decoration_v1;
+struct zxdg_output_manager_v1;
+struct zxdg_output_v1;
 struct wp_viewporter;
 struct wp_viewport;
 struct wp_fractional_scale_manager_v1;
@@ -54,6 +56,9 @@ struct xdg_wm_base *swl_registry_bind_xdg_wm_base(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct zxdg_decoration_manager_v1 *swl_registry_bind_zxdg_decoration_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct zxdg_output_manager_v1 *swl_registry_bind_zxdg_output_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wp_viewporter *swl_registry_bind_wp_viewporter(
@@ -240,6 +245,14 @@ uint32_t swl_zxdg_toplevel_decoration_v1_mode_client_side(void);
 uint32_t swl_zxdg_toplevel_decoration_v1_mode_server_side(void);
 
 /* ------------------------------------------------------------------ */
+/*  XDG output request wrappers                                       */
+/* ------------------------------------------------------------------ */
+
+struct zxdg_output_v1 *swl_zxdg_output_manager_v1_get_xdg_output(
+    struct zxdg_output_manager_v1 *manager,
+    struct wl_output *output);
+
+/* ------------------------------------------------------------------ */
 /*  Scale and viewport request wrappers                               */
 /* ------------------------------------------------------------------ */
 
@@ -295,6 +308,9 @@ void swl_zxdg_toplevel_decoration_v1_destroy(
     struct zxdg_toplevel_decoration_v1 *decoration);
 void swl_zxdg_decoration_manager_v1_destroy(
     struct zxdg_decoration_manager_v1 *manager);
+void swl_zxdg_output_v1_destroy(struct zxdg_output_v1 *output);
+void swl_zxdg_output_manager_v1_destroy(
+    struct zxdg_output_manager_v1 *manager);
 void swl_wp_viewport_destroy(struct wp_viewport *viewport);
 void swl_wp_viewporter_destroy(struct wp_viewporter *viewporter);
 void swl_wp_fractional_scale_v1_destroy(struct wp_fractional_scale_v1 *fractional_scale);
@@ -383,6 +399,18 @@ typedef void (*swl_output_name_fn)(
     void *data, struct wl_output *output, const char *name);
 typedef void (*swl_output_description_fn)(
     void *data, struct wl_output *output, const char *description);
+
+/* XDG output */
+typedef void (*swl_zxdg_output_v1_logical_position_fn)(
+    void *data, struct zxdg_output_v1 *output, int32_t x, int32_t y);
+typedef void (*swl_zxdg_output_v1_logical_size_fn)(
+    void *data, struct zxdg_output_v1 *output, int32_t width, int32_t height);
+typedef void (*swl_zxdg_output_v1_done_fn)(
+    void *data, struct zxdg_output_v1 *output);
+typedef void (*swl_zxdg_output_v1_name_fn)(
+    void *data, struct zxdg_output_v1 *output, const char *name);
+typedef void (*swl_zxdg_output_v1_description_fn)(
+    void *data, struct zxdg_output_v1 *output, const char *description);
 
 /* Data device */
 typedef void (*swl_data_offer_offer_fn)(
@@ -662,6 +690,15 @@ struct swl_zxdg_toplevel_decoration_v1_listener_callbacks {
     void                                        *data;
 };
 
+struct swl_zxdg_output_v1_listener_callbacks {
+    swl_zxdg_output_v1_logical_position_fn logical_position;
+    swl_zxdg_output_v1_logical_size_fn     logical_size;
+    swl_zxdg_output_v1_done_fn             done;
+    swl_zxdg_output_v1_name_fn             name;
+    swl_zxdg_output_v1_description_fn      description;
+    void                                  *data;
+};
+
 struct swl_wp_fractional_scale_v1_listener_callbacks {
     swl_wp_fractional_scale_v1_preferred_scale_fn preferred_scale;
     void                                         *data;
@@ -776,6 +813,10 @@ int swl_xdg_popup_add_listener(
 int swl_zxdg_toplevel_decoration_v1_add_listener(
     struct zxdg_toplevel_decoration_v1 *decoration,
     const struct swl_zxdg_toplevel_decoration_v1_listener_callbacks *callbacks);
+
+int swl_zxdg_output_v1_add_listener(
+    struct zxdg_output_v1 *output,
+    const struct swl_zxdg_output_v1_listener_callbacks *callbacks);
 
 int swl_wp_fractional_scale_v1_add_listener(
     struct wp_fractional_scale_v1 *fractional_scale,

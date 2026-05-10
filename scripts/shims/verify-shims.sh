@@ -24,6 +24,7 @@ protocol_symbols=(
     swl_registry_bind_wl_shm
     swl_registry_bind_xdg_wm_base
     swl_registry_bind_zxdg_decoration_manager_v1
+    swl_registry_bind_zxdg_output_manager_v1
     swl_registry_bind_wp_viewporter
     swl_registry_bind_wp_fractional_scale_manager_v1
     swl_registry_bind_wl_seat
@@ -60,12 +61,16 @@ protocol_symbols=(
     swl_proxy_get_id
     swl_proxy_get_queue_raw
     swl_zxdg_decoration_manager_v1_get_toplevel_decoration
+    swl_zxdg_output_manager_v1_get_xdg_output
     swl_zxdg_toplevel_decoration_v1_set_mode
     swl_zxdg_toplevel_decoration_v1_unset_mode
     swl_zxdg_toplevel_decoration_v1_mode_client_side
     swl_zxdg_toplevel_decoration_v1_mode_server_side
     swl_zxdg_toplevel_decoration_v1_destroy
     swl_zxdg_decoration_manager_v1_destroy
+    swl_zxdg_output_v1_destroy
+    swl_zxdg_output_manager_v1_destroy
+    swl_zxdg_output_v1_add_listener
     swl_wp_viewporter_get_viewport
     swl_wp_viewport_set_destination
     swl_wp_viewport_destroy

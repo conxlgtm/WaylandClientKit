@@ -11,6 +11,7 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.clipboard == .unavailable)
         #expect(capabilities.primarySelection == .unavailable)
         #expect(capabilities.xdgDecoration == .unavailable)
+        #expect(capabilities.xdgOutput == .unavailable)
         #expect(capabilities.viewporter == .unavailable)
         #expect(capabilities.fractionalScale == .unavailable)
     }
@@ -24,6 +25,7 @@ struct WaylandCapabilitiesTests {
                 advertisedVersion: 1
             ),
             .init(interfaceName: "zxdg_decoration_manager_v1", advertisedVersion: 7),
+            .init(interfaceName: "zxdg_output_manager_v1", advertisedVersion: 7),
             .init(interfaceName: "wp_viewporter", advertisedVersion: 4),
             .init(interfaceName: "wp_fractional_scale_manager_v1", advertisedVersion: 3),
         ])
@@ -31,6 +33,7 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.clipboard == .available(version: 3))
         #expect(capabilities.primarySelection == .available(version: 1))
         #expect(capabilities.xdgDecoration == .available(version: 2))
+        #expect(capabilities.xdgOutput == .available(version: 3))
         #expect(capabilities.viewporter == .available(version: 1))
         #expect(capabilities.fractionalScale == .available(version: 1))
     }
@@ -51,6 +54,15 @@ struct WaylandCapabilitiesTests {
         ])
 
         #expect(capabilities.xdgDecoration == .unavailable)
+    }
+
+    @Test
+    func xdgOutputBelowMinimumIsUnavailable() {
+        let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
+            .init(interfaceName: "zxdg_output_manager_v1", advertisedVersion: 2)
+        ])
+
+        #expect(capabilities.xdgOutput == .unavailable)
     }
 
     @Test
