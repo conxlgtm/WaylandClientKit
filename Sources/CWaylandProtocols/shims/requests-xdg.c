@@ -1,14 +1,30 @@
 #include "swift-wayland-shims.h"
 #include "generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/stable/xdg-shell/xdg-shell-client-protocol.h"
+#include <stddef.h>
 
 #ifdef SWL_ENABLE_TESTING
+static char swl_test_xdg_toplevel_request_text[256];
 static struct swl_test_xdg_positioner_request_record
     swl_test_xdg_positioner_request_latest;
 static struct swl_test_xdg_toplevel_request_record
     swl_test_xdg_toplevel_request_latest;
 static struct swl_test_xdg_popup_grab_record swl_test_xdg_popup_grab_latest;
 static struct swl_test_xdg_destroy_record swl_test_xdg_destroy_latest;
+
+static void swl_xdg_toplevel_set_title_default(
+    struct xdg_toplevel *xdg_toplevel,
+    const char *title)
+{
+    xdg_toplevel_set_title(xdg_toplevel, title);
+}
+
+static void swl_xdg_toplevel_set_app_id_default(
+    struct xdg_toplevel *xdg_toplevel,
+    const char *app_id)
+{
+    xdg_toplevel_set_app_id(xdg_toplevel, app_id);
+}
 
 static void swl_xdg_toplevel_show_window_menu_default(
     struct xdg_toplevel *xdg_toplevel,
@@ -181,6 +197,12 @@ static void (*swl_xdg_positioner_destroy_impl)(struct xdg_positioner *positioner
     swl_xdg_positioner_destroy_default;
 static void (*swl_xdg_popup_destroy_impl)(struct xdg_popup *popup) =
     swl_xdg_popup_destroy_default;
+static void (*swl_xdg_toplevel_set_title_impl)(
+    struct xdg_toplevel *xdg_toplevel,
+    const char *title) = swl_xdg_toplevel_set_title_default;
+static void (*swl_xdg_toplevel_set_app_id_impl)(
+    struct xdg_toplevel *xdg_toplevel,
+    const char *app_id) = swl_xdg_toplevel_set_app_id_default;
 static void (*swl_xdg_toplevel_show_window_menu_impl)(
     struct xdg_toplevel *xdg_toplevel,
     struct wl_seat *seat,
@@ -232,6 +254,7 @@ static void swl_test_record_toplevel_request(
     int32_t height,
     uint32_t value)
 {
+    swl_test_xdg_toplevel_request_text[0] = '\0';
     swl_test_xdg_toplevel_request_latest.call_count += 1;
     swl_test_xdg_toplevel_request_latest.kind = kind;
     swl_test_xdg_toplevel_request_latest.toplevel = xdg_toplevel;
@@ -243,6 +266,47 @@ static void swl_test_record_toplevel_request(
     swl_test_xdg_toplevel_request_latest.width = width;
     swl_test_xdg_toplevel_request_latest.height = height;
     swl_test_xdg_toplevel_request_latest.value = value;
+    swl_test_xdg_toplevel_request_latest.text = NULL;
+}
+
+static void swl_test_copy_toplevel_request_text(const char *text)
+{
+    if (text == NULL) {
+        swl_test_xdg_toplevel_request_text[0] = '\0';
+        swl_test_xdg_toplevel_request_latest.text =
+            swl_test_xdg_toplevel_request_text;
+        return;
+    }
+
+    size_t index = 0;
+    while (index < sizeof(swl_test_xdg_toplevel_request_text) - 1
+        && text[index] != '\0') {
+        swl_test_xdg_toplevel_request_text[index] = text[index];
+        index += 1;
+    }
+    swl_test_xdg_toplevel_request_text[index] = '\0';
+    swl_test_xdg_toplevel_request_latest.text =
+        swl_test_xdg_toplevel_request_text;
+}
+
+static void swl_test_xdg_toplevel_set_title_record(
+    struct xdg_toplevel *xdg_toplevel,
+    const char *title)
+{
+    swl_test_record_toplevel_request(
+        xdg_toplevel, SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_TITLE,
+        NULL, NULL, 0, 0, 0, 0, 0, 0);
+    swl_test_copy_toplevel_request_text(title);
+}
+
+static void swl_test_xdg_toplevel_set_app_id_record(
+    struct xdg_toplevel *xdg_toplevel,
+    const char *app_id)
+{
+    swl_test_record_toplevel_request(
+        xdg_toplevel, SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_APP_ID,
+        NULL, NULL, 0, 0, 0, 0, 0, 0);
+    swl_test_copy_toplevel_request_text(app_id);
 }
 
 static void swl_test_xdg_toplevel_show_window_menu_record(
@@ -452,6 +516,8 @@ static void swl_test_xdg_popup_destroy_record(struct xdg_popup *popup)
 #define swl_xdg_popup_grab_impl xdg_popup_grab
 #define swl_xdg_positioner_destroy_impl xdg_positioner_destroy
 #define swl_xdg_popup_destroy_impl xdg_popup_destroy
+#define swl_xdg_toplevel_set_title_impl xdg_toplevel_set_title
+#define swl_xdg_toplevel_set_app_id_impl xdg_toplevel_set_app_id
 #define swl_xdg_toplevel_show_window_menu_impl xdg_toplevel_show_window_menu
 #define swl_xdg_toplevel_move_impl xdg_toplevel_move
 #define swl_xdg_toplevel_resize_impl xdg_toplevel_resize
@@ -501,12 +567,12 @@ void swl_xdg_surface_ack_configure(struct xdg_surface *xdg_surface, uint32_t ser
 
 void swl_xdg_toplevel_set_title(struct xdg_toplevel *xdg_toplevel, const char *title)
 {
-    xdg_toplevel_set_title(xdg_toplevel, title);
+    swl_xdg_toplevel_set_title_impl(xdg_toplevel, title);
 }
 
 void swl_xdg_toplevel_set_app_id(struct xdg_toplevel *xdg_toplevel, const char *app_id)
 {
-    xdg_toplevel_set_app_id(xdg_toplevel, app_id);
+    swl_xdg_toplevel_set_app_id_impl(xdg_toplevel, app_id);
 }
 
 void swl_xdg_toplevel_show_window_menu(
@@ -688,6 +754,7 @@ void swl_zxdg_decoration_manager_v1_destroy(
 #ifdef SWL_ENABLE_TESTING
 void swl_test_xdg_request_recording_begin(void)
 {
+    swl_test_xdg_toplevel_request_text[0] = '\0';
     swl_test_xdg_positioner_request_latest =
         (struct swl_test_xdg_positioner_request_record){
             .kind = SWL_TEST_XDG_POSITIONER_REQUEST_NONE,
@@ -718,6 +785,10 @@ void swl_test_xdg_request_recording_begin(void)
     swl_xdg_popup_grab_impl = swl_test_record_xdg_popup_grab;
     swl_xdg_positioner_destroy_impl = swl_test_xdg_positioner_destroy_record;
     swl_xdg_popup_destroy_impl = swl_test_xdg_popup_destroy_record;
+    swl_xdg_toplevel_set_title_impl =
+        swl_test_xdg_toplevel_set_title_record;
+    swl_xdg_toplevel_set_app_id_impl =
+        swl_test_xdg_toplevel_set_app_id_record;
     swl_xdg_toplevel_show_window_menu_impl =
         swl_test_xdg_toplevel_show_window_menu_record;
     swl_xdg_toplevel_move_impl =
@@ -757,6 +828,10 @@ void swl_test_xdg_request_recording_end(void)
     swl_xdg_popup_grab_impl = swl_xdg_popup_grab_default;
     swl_xdg_positioner_destroy_impl = swl_xdg_positioner_destroy_default;
     swl_xdg_popup_destroy_impl = swl_xdg_popup_destroy_default;
+    swl_xdg_toplevel_set_title_impl =
+        swl_xdg_toplevel_set_title_default;
+    swl_xdg_toplevel_set_app_id_impl =
+        swl_xdg_toplevel_set_app_id_default;
     swl_xdg_toplevel_show_window_menu_impl =
         swl_xdg_toplevel_show_window_menu_default;
     swl_xdg_toplevel_move_impl =
