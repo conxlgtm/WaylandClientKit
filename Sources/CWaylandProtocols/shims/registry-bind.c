@@ -3,6 +3,7 @@
 #include "generated/core/wayland-client-protocol.h"
 #include "generated/stable/viewporter/viewporter-client-protocol.h"
 #include "generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h"
+#include "generated/legacy-unstable/xdg-output/xdg-output-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/primary-selection/primary-selection-unstable-v1-client-protocol.h"
 #include "generated/stable/xdg-shell/xdg-shell-client-protocol.h"
 
@@ -20,6 +21,13 @@ struct wl_shm *swl_registry_bind_wl_shm(
         registry, name, &wl_shm_interface, version);
 }
 
+struct wl_output *swl_registry_bind_wl_output(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wl_output *)wl_registry_bind(
+        registry, name, &wl_output_interface, version);
+}
+
 struct xdg_wm_base *swl_registry_bind_xdg_wm_base(
     struct wl_registry *registry, uint32_t name, uint32_t version)
 {
@@ -32,6 +40,13 @@ struct zxdg_decoration_manager_v1 *swl_registry_bind_zxdg_decoration_manager_v1(
 {
     return (struct zxdg_decoration_manager_v1 *)wl_registry_bind(
         registry, name, &zxdg_decoration_manager_v1_interface, version);
+}
+
+struct zxdg_output_manager_v1 *swl_registry_bind_zxdg_output_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct zxdg_output_manager_v1 *)wl_registry_bind(
+        registry, name, &zxdg_output_manager_v1_interface, version);
 }
 
 struct wp_viewporter *swl_registry_bind_wp_viewporter(

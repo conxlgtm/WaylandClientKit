@@ -135,6 +135,16 @@ void swl_shm_destroy(struct wl_shm *shm)
     wl_shm_destroy(shm);
 }
 
+void swl_output_destroy(struct wl_output *output)
+{
+    wl_output_destroy(output);
+}
+
+void swl_output_release(struct wl_output *output)
+{
+    wl_output_release(output);
+}
+
 void swl_buffer_destroy(struct wl_buffer *buffer)
 {
     wl_buffer_destroy(buffer);

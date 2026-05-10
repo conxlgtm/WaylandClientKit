@@ -17,9 +17,28 @@ extension DisplayCore {
         }
     }
 
+    func publishOutputEvents(_ events: [DisplayEvent]) {
+        for event in events {
+            eventHub.publish(event)
+        }
+    }
+
     func publishSessionEvents(_ activeSession: DisplaySession) {
+        let outputEvents = activeSession.drainOutputEventsOnOwnerThread()
+        publishOutputEvents(outputEvents)
+        publishWindowOutputMembershipEvents(after: outputEvents)
         publishDataTransferDiagnostics(activeSession.drainDataTransferDiagnosticsOnOwnerThread())
         publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
         publishInputEvents(activeSession.drainInputEventsOnOwnerThread())
+    }
+
+    private func publishWindowOutputMembershipEvents(after outputEvents: [DisplayEvent]) {
+        for event in outputEvents {
+            guard case .outputRemoved(let outputID) = event else { continue }
+
+            for windowID in surfaces.allWindowIDs {
+                surfaces.window(windowID)?.removeOutputMembershipOnOwnerThread(outputID)
+            }
+        }
     }
 }

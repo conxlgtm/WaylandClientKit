@@ -8,6 +8,7 @@ source "$ROOT/scripts/protocols/sources.sh"
 wayland_candidates=()
 xdg_candidates=()
 decoration_candidates=()
+xdg_output_candidates=()
 viewporter_candidates=()
 fractional_scale_candidates=()
 primary_selection_candidates=()
@@ -15,6 +16,7 @@ primary_selection_candidates=()
 mapfile -t wayland_candidates < <(protocol_sources_wayland_core_candidates)
 mapfile -t xdg_candidates < <(protocol_sources_xdg_shell_candidates)
 mapfile -t decoration_candidates < <(protocol_sources_xdg_decoration_candidates)
+mapfile -t xdg_output_candidates < <(protocol_sources_xdg_output_candidates)
 mapfile -t viewporter_candidates < <(protocol_sources_viewporter_candidates)
 mapfile -t fractional_scale_candidates < <(protocol_sources_fractional_scale_candidates)
 mapfile -t primary_selection_candidates < <(protocol_sources_primary_selection_candidates)
@@ -24,6 +26,7 @@ XDG_SHELL_XML_SOURCE="$(protocol_sources_first_existing_file "${xdg_candidates[@
 XDG_DECORATION_XML_SOURCE="$(
     protocol_sources_first_existing_file "${decoration_candidates[@]}" || true
 )"
+XDG_OUTPUT_XML_SOURCE="$(protocol_sources_first_existing_file "${xdg_output_candidates[@]}" || true)"
 VIEWPORTER_XML_SOURCE="$(protocol_sources_first_existing_file "${viewporter_candidates[@]}" || true)"
 FRACTIONAL_SCALE_XML_SOURCE="$(
     protocol_sources_first_existing_file "${fractional_scale_candidates[@]}" || true
@@ -50,6 +53,12 @@ PRIMARY_SELECTION_XML_SOURCE="$(
     exit 1
 }
 
+[[ -f "$XDG_OUTPUT_XML_SOURCE" ]] || {
+    echo "Missing xdg-output XML. Checked:"
+    printf '  %s\n' "${xdg_output_candidates[@]}"
+    exit 1
+}
+
 [[ -f "$VIEWPORTER_XML_SOURCE" ]] || {
     echo "Missing viewporter XML. Checked:"
     printf '  %s\n' "${viewporter_candidates[@]}"
@@ -72,6 +81,7 @@ mkdir -p \
     "$ROOT/protocols/upstream/core" \
     "$ROOT/protocols/upstream/stable/xdg-shell" \
     "$ROOT/protocols/upstream/legacy-unstable/xdg-decoration" \
+    "$ROOT/protocols/upstream/legacy-unstable/xdg-output" \
     "$ROOT/protocols/upstream/stable/viewporter" \
     "$ROOT/protocols/upstream/staging/fractional-scale" \
     "$ROOT/protocols/upstream/legacy-unstable/primary-selection"
@@ -80,6 +90,8 @@ cp "$WAYLAND_CORE_XML_SOURCE" "$ROOT/protocols/upstream/core/wayland.xml"
 cp "$XDG_SHELL_XML_SOURCE" "$ROOT/protocols/upstream/stable/xdg-shell/xdg-shell.xml"
 cp "$XDG_DECORATION_XML_SOURCE" \
     "$ROOT/protocols/upstream/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
+cp "$XDG_OUTPUT_XML_SOURCE" \
+    "$ROOT/protocols/upstream/legacy-unstable/xdg-output/xdg-output-unstable-v1.xml"
 cp "$VIEWPORTER_XML_SOURCE" "$ROOT/protocols/upstream/stable/viewporter/viewporter.xml"
 cp "$FRACTIONAL_SCALE_XML_SOURCE" \
     "$ROOT/protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml"

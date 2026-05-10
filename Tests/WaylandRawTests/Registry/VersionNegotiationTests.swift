@@ -55,6 +55,8 @@ struct VersionNegotiationTests {
         #expect(SupportedVersions.xdgWmBase == RawVersion(7))
         #expect(SupportedVersions.zxdgDecorationManagerV1Minimum == RawVersion(2))
         #expect(SupportedVersions.zxdgDecorationManagerV1 == RawVersion(2))
+        #expect(SupportedVersions.zxdgOutputManagerV1Minimum == RawVersion(2))
+        #expect(SupportedVersions.zxdgOutputManagerV1 == RawVersion(3))
         #expect(SupportedVersions.wpViewporter == RawVersion(1))
         #expect(SupportedVersions.wpFractionalScaleManagerV1 == RawVersion(1))
         #expect(SupportedVersions.wlDataDeviceManager == RawVersion(3))
@@ -102,6 +104,49 @@ struct VersionNegotiationTests {
                 supportedByClient: SupportedVersions.zxdgDecorationManagerV1
             )
                 == RawVersion(2)
+        )
+    }
+
+    @Test
+    func xdgOutputManagerV2IsBoundForLogicalGeometryAndMetadata() throws {
+        let v1Global = try #require(
+            RawGlobalAdvertisement(
+                name: 1,
+                interfaceName: "zxdg_output_manager_v1",
+                advertisedVersion: 1
+            )
+        )
+        let v2Global = try #require(
+            RawGlobalAdvertisement(
+                name: 2,
+                interfaceName: "zxdg_output_manager_v1",
+                advertisedVersion: 2
+            )
+        )
+        let v3Global = try #require(
+            RawGlobalAdvertisement(
+                name: 3,
+                interfaceName: "zxdg_output_manager_v1",
+                advertisedVersion: 3
+            )
+        )
+        #expect(!RawDisplayConnection.shouldBindXDGOutputManager(v1Global))
+        #expect(RawDisplayConnection.shouldBindXDGOutputManager(v2Global))
+        #expect(RawDisplayConnection.shouldBindXDGOutputManager(v3Global))
+        #expect(
+            RawDisplayConnection.xdgOutputManagerBindingDecision(v1Global)
+                == .unsupportedVersion(
+                    advertised: RawVersion(1),
+                    minimum: RawVersion(2)
+                )
+        )
+        #expect(
+            RawDisplayConnection.xdgOutputManagerBindingDecision(v2Global)
+                == .bind(version: RawVersion(2))
+        )
+        #expect(
+            RawDisplayConnection.xdgOutputManagerBindingDecision(v3Global)
+                == .bind(version: RawVersion(3))
         )
     }
 }

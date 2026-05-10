@@ -4,15 +4,21 @@ package struct SurfaceScaleInstallationCallbacks {
     package let onPreferredBufferScale: (Int32) -> Void
     package let onPreferredFractionalScale: (UInt32) -> Void
     package let onFractionalScaleUnavailable: () -> Void
+    package let onOutputEnter: (RawOutputPointerIdentity) -> Void
+    package let onOutputLeave: (RawOutputPointerIdentity) -> Void
 
     package init(
         onPreferredBufferScale handlePreferredBufferScale: @escaping (Int32) -> Void,
         onPreferredFractionalScale handlePreferredFractionalScale: @escaping (UInt32) -> Void,
-        onFractionalScaleUnavailable handleFractionalScaleUnavailable: @escaping () -> Void
+        onFractionalScaleUnavailable handleFractionalScaleUnavailable: @escaping () -> Void,
+        onOutputEnter handleOutputEnter: @escaping (RawOutputPointerIdentity) -> Void = { _ in () },
+        onOutputLeave handleOutputLeave: @escaping (RawOutputPointerIdentity) -> Void = { _ in () }
     ) {
         onPreferredBufferScale = handlePreferredBufferScale
         onPreferredFractionalScale = handlePreferredFractionalScale
         onFractionalScaleUnavailable = handleFractionalScaleUnavailable
+        onOutputEnter = handleOutputEnter
+        onOutputLeave = handleOutputLeave
     }
 }
 
@@ -119,6 +125,8 @@ package enum SurfaceScaleInstallation {
     ) throws -> SurfaceScaleInstallation {
         let newSurfaceScaleOwner = RawSurfaceScaleOwner(
             onPreferredBufferScale: callbacks.onPreferredBufferScale,
+            onOutputEnter: callbacks.onOutputEnter,
+            onOutputLeave: callbacks.onOutputLeave,
             invariantFailureSink: invariantFailureSink
         )
         try newSurfaceScaleOwner.install(on: surface)

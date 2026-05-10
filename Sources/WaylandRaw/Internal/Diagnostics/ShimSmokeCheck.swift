@@ -26,8 +26,10 @@ enum ShimSmokeCheck {
     private static func verifyRegistryShims() {
         _ = unsafe swl_registry_bind_wl_compositor
         _ = unsafe swl_registry_bind_wl_shm
+        _ = unsafe swl_registry_bind_wl_output
         _ = unsafe swl_registry_bind_xdg_wm_base
         _ = unsafe swl_registry_bind_zxdg_decoration_manager_v1
+        _ = unsafe swl_registry_bind_zxdg_output_manager_v1
         _ = unsafe swl_registry_bind_wp_viewporter
         _ = unsafe swl_registry_bind_wp_fractional_scale_manager_v1
         _ = unsafe swl_registry_bind_wl_seat
@@ -54,11 +56,22 @@ enum ShimSmokeCheck {
         _ = unsafe swl_xdg_surface_ack_configure
         _ = unsafe swl_xdg_toplevel_set_title
         _ = unsafe swl_xdg_toplevel_set_app_id
+        _ = unsafe swl_xdg_toplevel_show_window_menu
+        _ = unsafe swl_xdg_toplevel_move
+        _ = unsafe swl_xdg_toplevel_resize
+        _ = unsafe swl_xdg_toplevel_set_max_size
+        _ = unsafe swl_xdg_toplevel_set_min_size
+        _ = unsafe swl_xdg_toplevel_set_maximized
+        _ = unsafe swl_xdg_toplevel_unset_maximized
+        _ = unsafe swl_xdg_toplevel_set_fullscreen
+        _ = unsafe swl_xdg_toplevel_unset_fullscreen
+        _ = unsafe swl_xdg_toplevel_set_minimized
         _ = unsafe swl_zxdg_decoration_manager_v1_get_toplevel_decoration
         _ = unsafe swl_zxdg_toplevel_decoration_v1_set_mode
         _ = unsafe swl_zxdg_toplevel_decoration_v1_unset_mode
         _ = swl_zxdg_toplevel_decoration_v1_mode_client_side
         _ = swl_zxdg_toplevel_decoration_v1_mode_server_side
+        _ = unsafe swl_zxdg_output_manager_v1_get_xdg_output
         _ = unsafe swl_wp_viewporter_get_viewport
         _ = unsafe swl_wp_viewport_set_destination
         _ = unsafe swl_wp_fractional_scale_manager_v1_get_fractional_scale
@@ -69,6 +82,8 @@ enum ShimSmokeCheck {
         _ = unsafe swl_callback_destroy
         _ = unsafe swl_compositor_destroy
         _ = unsafe swl_shm_destroy
+        _ = unsafe swl_output_destroy
+        _ = unsafe swl_output_release
         _ = unsafe swl_buffer_destroy
         _ = unsafe swl_surface_destroy
         _ = unsafe swl_shm_pool_destroy
@@ -82,6 +97,8 @@ enum ShimSmokeCheck {
         _ = unsafe swl_xdg_wm_base_destroy
         _ = unsafe swl_zxdg_toplevel_decoration_v1_destroy
         _ = unsafe swl_zxdg_decoration_manager_v1_destroy
+        _ = unsafe swl_zxdg_output_v1_destroy
+        _ = unsafe swl_zxdg_output_manager_v1_destroy
         _ = unsafe swl_wp_viewport_destroy
         _ = unsafe swl_wp_viewporter_destroy
         _ = unsafe swl_wp_fractional_scale_v1_destroy
@@ -93,10 +110,12 @@ enum ShimSmokeCheck {
         _ = unsafe swl_callback_add_listener
         _ = unsafe swl_buffer_add_listener
         _ = unsafe swl_surface_add_listener
+        _ = unsafe swl_output_add_listener
         _ = unsafe swl_xdg_wm_base_add_listener
         _ = unsafe swl_xdg_surface_add_listener
         _ = unsafe swl_xdg_toplevel_add_listener
         _ = unsafe swl_zxdg_toplevel_decoration_v1_add_listener
+        _ = unsafe swl_zxdg_output_v1_add_listener
         _ = unsafe swl_wp_fractional_scale_v1_add_listener
         _ = unsafe swl_seat_add_listener
         _ = unsafe swl_pointer_add_listener

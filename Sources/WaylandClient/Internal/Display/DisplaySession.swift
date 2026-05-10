@@ -201,6 +201,16 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         return cursorManager.pointerCursor
     }
 
+    package func outputSnapshotsOnOwnerThread() throws -> [OutputSnapshot] {
+        connection.preconditionIsOwnerThread()
+        return try connection.outputSnapshots().map(OutputSnapshot.init)
+    }
+
+    package func drainOutputEventsOnOwnerThread() -> [DisplayEvent] {
+        connection.preconditionIsOwnerThread()
+        return connection.drainOutputEvents().map(DisplayEvent.init)
+    }
+
     package func capabilitiesOnOwnerThread() -> WaylandCapabilities {
         connection.preconditionIsOwnerThread()
         return WaylandCapabilities.fromAdvertisedProtocols(
@@ -208,6 +218,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
                 advertisedProtocol(named: "wl_data_device_manager"),
                 advertisedProtocol(named: "zwp_primary_selection_device_manager_v1"),
                 advertisedProtocol(named: "zxdg_decoration_manager_v1"),
+                advertisedProtocol(named: "zxdg_output_manager_v1"),
                 advertisedProtocol(named: "wp_viewporter"),
                 advertisedProtocol(named: "wp_fractional_scale_manager_v1"),
             ].compactMap(\.self))

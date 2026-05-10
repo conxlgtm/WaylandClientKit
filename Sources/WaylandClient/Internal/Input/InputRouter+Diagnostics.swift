@@ -62,6 +62,8 @@ extension InputRouter {
         switch listener {
         case .registry:
             .registry
+        case .output:
+            .output
         case .seat:
             .seat
         case .pointer:

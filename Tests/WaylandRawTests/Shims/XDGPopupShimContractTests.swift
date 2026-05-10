@@ -1,5 +1,6 @@
 import CWaylandProtocols
 import Testing
+import WaylandTestSupport
 
 @Suite(.serialized)
 struct XDGPopupShimContractTests {
@@ -47,16 +48,16 @@ struct XDGPopupShimContractTests {
         #expect(unsafe repositionedRecord.token == 77)
     }
     @Test
-    func positionerRequestsPreserveArgumentOrder() {
+    func positionerRequestsPreserveArgumentOrder() async throws {
         let positioner = unsafe OpaquePointer(bitPattern: 0x5050)
-        assertPositionerRequest(
+        try await assertPositionerRequest(
             expectedKind: SWL_TEST_XDG_POSITIONER_REQUEST_SIZE,
             width: 320,
             height: 240
         ) {
             unsafe swl_xdg_positioner_set_size(positioner, 320, 240)
         }
-        assertPositionerRequest(
+        try await assertPositionerRequest(
             expectedKind: SWL_TEST_XDG_POSITIONER_REQUEST_ANCHOR_RECT,
             x: 10,
             y: 20,
@@ -65,25 +66,25 @@ struct XDGPopupShimContractTests {
         ) {
             unsafe swl_xdg_positioner_set_anchor_rect(positioner, 10, 20, 30, 40)
         }
-        assertPositionerRequest(
+        try await assertPositionerRequest(
             expectedKind: SWL_TEST_XDG_POSITIONER_REQUEST_ANCHOR,
             value: 8
         ) {
             unsafe swl_xdg_positioner_set_anchor(positioner, 8)
         }
-        assertPositionerRequest(
+        try await assertPositionerRequest(
             expectedKind: SWL_TEST_XDG_POSITIONER_REQUEST_GRAVITY,
             value: 5
         ) {
             unsafe swl_xdg_positioner_set_gravity(positioner, 5)
         }
-        assertPositionerRequest(
+        try await assertPositionerRequest(
             expectedKind: SWL_TEST_XDG_POSITIONER_REQUEST_CONSTRAINT_ADJUSTMENT,
             value: 13
         ) {
             unsafe swl_xdg_positioner_set_constraint_adjustment(positioner, 13)
         }
-        assertPositionerRequest(
+        try await assertPositionerRequest(
             expectedKind: SWL_TEST_XDG_POSITIONER_REQUEST_OFFSET,
             x: -5,
             y: 6
@@ -92,27 +93,29 @@ struct XDGPopupShimContractTests {
         }
     }
     @Test
-    func popupGrabPreservesSeatAndSerial() {
+    func popupGrabPreservesSeatAndSerial() async throws {
         let popup = unsafe OpaquePointer(bitPattern: 0x6060)
         let seat = unsafe OpaquePointer(bitPattern: 0x7070)
-        swl_test_xdg_request_recording_begin()
-        defer { swl_test_xdg_request_recording_end() }
-        unsafe swl_xdg_popup_grab(popup, seat, 123)
-        let record = unsafe swl_test_xdg_popup_grab_record()
-        #expect(unsafe record.call_count == 1)
-        #expect(unsafe record.popup == popup)
-        #expect(unsafe record.seat == seat)
-        #expect(unsafe record.serial == 123)
+        try await XDGRequestRecordingGate.withExclusiveRecording {
+            swl_test_xdg_request_recording_begin()
+            defer { swl_test_xdg_request_recording_end() }
+            unsafe swl_xdg_popup_grab(popup, seat, 123)
+            let record = unsafe swl_test_xdg_popup_grab_record()
+            #expect(unsafe record.call_count == 1)
+            #expect(unsafe record.popup == popup)
+            #expect(unsafe record.seat == seat)
+            #expect(unsafe record.serial == 123)
+        }
     }
     @Test
-    func popupDestroyWrappersCallMatchingProtocolDestroy() {
-        assertDestroyWrapper(
+    func popupDestroyWrappersCallMatchingProtocolDestroy() async throws {
+        try await assertDestroyWrapper(
             object: unsafe OpaquePointer(bitPattern: 0x8080),
             expectedKind: SWL_TEST_XDG_DESTROY_POSITIONER
         ) { pointer in
             unsafe swl_xdg_positioner_destroy(pointer)
         }
-        assertDestroyWrapper(
+        try await assertDestroyWrapper(
             object: unsafe OpaquePointer(bitPattern: 0x9090),
             expectedKind: SWL_TEST_XDG_DESTROY_POPUP
         ) { pointer in
@@ -129,18 +132,20 @@ struct XDGPopupShimContractTests {
         value: UInt32 = 0,
         request: () -> Void,
         sourceLocation: SourceLocation = #_sourceLocation
-    ) {
-        swl_test_xdg_request_recording_begin()
-        defer { swl_test_xdg_request_recording_end() }
-        request()
-        let record = unsafe swl_test_xdg_positioner_request_record()
-        #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
-        #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
-        #expect(unsafe record.x == x, sourceLocation: sourceLocation)
-        #expect(unsafe record.y == y, sourceLocation: sourceLocation)
-        #expect(unsafe record.width == width, sourceLocation: sourceLocation)
-        #expect(unsafe record.height == height, sourceLocation: sourceLocation)
-        #expect(unsafe record.value == value, sourceLocation: sourceLocation)
+    ) async throws {
+        try await XDGRequestRecordingGate.withExclusiveRecording {
+            swl_test_xdg_request_recording_begin()
+            defer { swl_test_xdg_request_recording_end() }
+            request()
+            let record = unsafe swl_test_xdg_positioner_request_record()
+            #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
+            #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+            #expect(unsafe record.x == x, sourceLocation: sourceLocation)
+            #expect(unsafe record.y == y, sourceLocation: sourceLocation)
+            #expect(unsafe record.width == width, sourceLocation: sourceLocation)
+            #expect(unsafe record.height == height, sourceLocation: sourceLocation)
+            #expect(unsafe record.value == value, sourceLocation: sourceLocation)
+        }
     }
     @safe
     private func assertDestroyWrapper(
@@ -148,14 +153,16 @@ struct XDGPopupShimContractTests {
         expectedKind: swl_test_xdg_destroy_kind,
         destroy: (OpaquePointer?) -> Void,
         sourceLocation: SourceLocation = #_sourceLocation
-    ) {
-        swl_test_xdg_request_recording_begin()
-        defer { swl_test_xdg_request_recording_end() }
-        unsafe destroy(object)
-        let record = unsafe swl_test_xdg_destroy_record()
-        let expectedObject = unsafe UnsafeMutableRawPointer(object)
-        #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
-        #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
-        #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+    ) async throws {
+        try await XDGRequestRecordingGate.withExclusiveRecording {
+            swl_test_xdg_request_recording_begin()
+            defer { swl_test_xdg_request_recording_end() }
+            unsafe destroy(object)
+            let record = unsafe swl_test_xdg_destroy_record()
+            let expectedObject = unsafe UnsafeMutableRawPointer(object)
+            #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
+            #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+            #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+        }
     }
 }

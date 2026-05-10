@@ -202,6 +202,8 @@ private typealias SurfaceScaleListenerCallbacks = swl_surface_listener_callbacks
 @safe
 package final class RawSurfaceScaleOwner {
     private let onPreferredBufferScale: (Int32) -> Void
+    private let onOutputEnter: (RawOutputPointerIdentity) -> Void
+    private let onOutputLeave: (RawOutputPointerIdentity) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = ScaleListenerInstallState.idle
     @safe private lazy var listenerStorage = CListenerStorage(
@@ -216,11 +218,33 @@ package final class RawSurfaceScaleOwner {
 
     package init(
         onPreferredBufferScale handler: @escaping (Int32) -> Void,
+        onOutputEnter handleOutputEnter: @escaping (RawOutputPointerIdentity) -> Void = { _ in () },
+        onOutputLeave handleOutputLeave: @escaping (RawOutputPointerIdentity) -> Void = { _ in () },
         invariantFailureSink failureSink: RawInvariantFailureSink? = nil
     ) {
         onPreferredBufferScale = handler
+        onOutputEnter = handleOutputEnter
+        onOutputLeave = handleOutputLeave
         invariantFailureSink = failureSink
 
+        unsafe callbacks.pointee.enter = { data, _, output in
+            guard let output = unsafe output else { return }
+            RawSurfaceScaleOwner.withOwner(
+                data,
+                message: "wl_surface enter fired without Swift state"
+            ) { owner in
+                owner.onOutputEnter(RawOutputPointerIdentity(output))
+            }
+        }
+        unsafe callbacks.pointee.leave = { data, _, output in
+            guard let output = unsafe output else { return }
+            RawSurfaceScaleOwner.withOwner(
+                data,
+                message: "wl_surface leave fired without Swift state"
+            ) { owner in
+                owner.onOutputLeave(RawOutputPointerIdentity(output))
+            }
+        }
         unsafe callbacks.pointee.preferred_buffer_scale = { data, _, factor in
             RawSurfaceScaleOwner.withOwner(
                 data,

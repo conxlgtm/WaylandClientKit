@@ -4,9 +4,12 @@ import CWaylandProtocols
 package enum SupportedVersions {
     package static let wlCompositor: RawVersion = 6
     package static let wlShm: RawVersion = 1
+    package static let wlOutput: RawVersion = 4
     package static let xdgWmBase: RawVersion = 7
     package static let zxdgDecorationManagerV1Minimum: RawVersion = 2
     package static let zxdgDecorationManagerV1: RawVersion = 2
+    package static let zxdgOutputManagerV1Minimum: RawVersion = 2
+    package static let zxdgOutputManagerV1: RawVersion = 3
     package static let wpViewporter: RawVersion = 1
     package static let wpFractionalScaleManagerV1: RawVersion = 1
     package static let wlSeat: RawVersion = 10
@@ -15,6 +18,11 @@ package enum SupportedVersions {
 }
 
 package enum XDGDecorationManagerBindingDecision: Equatable, Sendable {
+    case unsupportedVersion(advertised: RawVersion, minimum: RawVersion)
+    case bind(version: RawVersion)
+}
+
+package enum XDGOutputManagerBindingDecision: Equatable, Sendable {
     case unsupportedVersion(advertised: RawVersion, minimum: RawVersion)
     case bind(version: RawVersion)
 }
@@ -28,6 +36,24 @@ package enum OptionalXDGDecorationManager {
         guard case .bound(let manager) = self else { return }
 
         manager.destroy()
+    }
+}
+
+package enum OptionalXDGOutputManager {
+    case missing
+    case unsupportedVersion(advertised: RawVersion, minimum: RawVersion)
+    case bound(RawXDGOutputManager)
+
+    func destroy() {
+        guard case .bound(let manager) = self else { return }
+
+        manager.destroy()
+    }
+
+    package var manager: RawXDGOutputManager? {
+        guard case .bound(let manager) = self else { return nil }
+
+        return manager
     }
 }
 
@@ -77,6 +103,7 @@ package enum OptionalPrimarySelectionDeviceManager {
 
 package struct OptionalGlobals {
     package let xdgDecorationManager: OptionalXDGDecorationManager
+    package let xdgOutputManager: OptionalXDGOutputManager
     package let viewporter: OptionalViewporter
     package let fractionalScaleManager: OptionalFractionalScaleManager
     package let dataDeviceManager: OptionalDataDeviceManager
@@ -84,6 +111,7 @@ package struct OptionalGlobals {
 
     package init(
         xdgDecorationManager manager: OptionalXDGDecorationManager = .missing,
+        xdgOutputManager boundXDGOutputManager: OptionalXDGOutputManager = .missing,
         viewporter boundViewporter: OptionalViewporter = .missing,
         fractionalScaleManager boundFractionalScaleManager: OptionalFractionalScaleManager =
             .missing,
@@ -92,6 +120,7 @@ package struct OptionalGlobals {
             OptionalPrimarySelectionDeviceManager = .missing
     ) {
         xdgDecorationManager = manager
+        xdgOutputManager = boundXDGOutputManager
         viewporter = boundViewporter
         fractionalScaleManager = boundFractionalScaleManager
         dataDeviceManager = boundDataDeviceManager
@@ -103,6 +132,7 @@ package struct OptionalGlobals {
         dataDeviceManager.destroy()
         fractionalScaleManager.destroy()
         viewporter.destroy()
+        xdgOutputManager.destroy()
         xdgDecorationManager.destroy()
     }
 
@@ -123,6 +153,7 @@ package final class BoundGlobals {
     package let xdgWMBase: RawXDGWMBase
     package let extensions: OptionalGlobals
     package let seatRegistry: SeatRegistry
+    package let outputRegistry: OutputRegistry
 
     private var isDestroyed = false
 
@@ -131,12 +162,14 @@ package final class BoundGlobals {
         sharedMemory boundSharedMemory: RawSharedMemory,
         xdgWMBase boundXDGWMBase: RawXDGWMBase,
         seatRegistry boundSeatRegistry: SeatRegistry,
+        outputRegistry boundOutputRegistry: OutputRegistry,
         extensions boundExtensions: OptionalGlobals = OptionalGlobals()
     ) {
         compositor = boundCompositor
         sharedMemory = boundSharedMemory
         xdgWMBase = boundXDGWMBase
         seatRegistry = boundSeatRegistry
+        outputRegistry = boundOutputRegistry
         extensions = boundExtensions
     }
 
@@ -144,6 +177,7 @@ package final class BoundGlobals {
         guard !isDestroyed else { return }
 
         isDestroyed = true
+        outputRegistry.destroy()
         seatRegistry.destroy()
         extensions.destroy()
         xdgWMBase.destroy()
