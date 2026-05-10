@@ -1,7 +1,10 @@
+// swiftlint:disable file_length
+
 import Foundation
 import Glibc
 import Synchronization
 
+// swiftlint:disable:next type_body_length
 package final class DataTransferSourceWriteJob: Sendable {
     package let source: DataTransferSourceWriteSource
     package let mimeType: MIMEType
@@ -217,6 +220,10 @@ package final class DataTransferSourceWriteJob: Sendable {
     }
 
     private func closeCancellationDescriptor(_ rawDescriptor: Int32) -> DataTransferError {
+        guard rawDescriptor >= 0 else {
+            return .invalidFileDescriptor(rawDescriptor)
+        }
+
         switch descriptorIO.close(rawDescriptor) {
         case .closed:
             return .cancelled
@@ -226,6 +233,10 @@ package final class DataTransferSourceWriteJob: Sendable {
     }
 
     private func closeRawDescriptor(_ rawDescriptor: Int32) throws {
+        guard rawDescriptor >= 0 else {
+            throw DataTransferError.invalidFileDescriptor(rawDescriptor)
+        }
+
         switch descriptorIO.close(rawDescriptor) {
         case .closed:
             return
@@ -261,6 +272,10 @@ package final class DataTransferSourceWriteJob: Sendable {
             }
         }
         if let rawDescriptor {
+            guard rawDescriptor >= 0 else {
+                return
+            }
+
             _ = descriptorIO.close(rawDescriptor)
         }
     }

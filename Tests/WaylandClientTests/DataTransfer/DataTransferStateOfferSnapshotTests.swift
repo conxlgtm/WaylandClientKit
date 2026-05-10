@@ -58,6 +58,38 @@ struct DataTransferStateOfferSnapshotTests {
         #expect(state.offerSnapshot(offer1)?.mimeTypes == [.plainText])
     }
 
+    @Test
+    func lateMIMETypeForCurrentSelectionPublishesSelectionChange() throws {
+        var state = try boundState(seat1)
+        state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
+            .state
+        state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
+        state = try state.reduce(.selectionChanged(seatID: seat1, offerID: offer1)).state
+
+        let update = try state.reduce(.offerMimeType(id: offer1, mimeType: .uriList))
+
+        #expect(
+            update.effects == [
+                .publishSelectionChanged(seatID: seat1, offerID: offer1)
+            ]
+        )
+        #expect(update.state.offerSnapshot(offer1)?.mimeTypes == [.plainText, .uriList])
+    }
+
+    @Test
+    func duplicateLateMIMETypeForCurrentSelectionDoesNotPublishAgain() throws {
+        var state = try boundState(seat1)
+        state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
+            .state
+        state = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText)).state
+        state = try state.reduce(.selectionChanged(seatID: seat1, offerID: offer1)).state
+
+        let update = try state.reduce(.offerMimeType(id: offer1, mimeType: .plainText))
+
+        #expect(update.effects.isEmpty)
+        #expect(update.state.offerSnapshot(offer1)?.mimeTypes == [.plainText])
+    }
+
     private func boundState(_ seatID: SeatID) throws -> DataTransferState {
         let available = try DataTransferState().reduce(.seatAvailable(seatID)).state
         return try available.reduce(.dataDeviceBound(seatID)).state

@@ -3,7 +3,7 @@ import Testing
 @testable import WaylandClient
 
 @Suite
-struct DataTransferStateSeatScopeTests {
+struct DataTransferStateSeatScopeTests {  // swiftlint:disable:this type_body_length
     private let seat1 = SeatID(rawValue: 1)
     private let seat2 = SeatID(rawValue: 2)
     private let offer2 = DataOfferID(rawValue: 2)
@@ -93,7 +93,11 @@ struct DataTransferStateSeatScopeTests {
                     seat1: DataTransferSeatSnapshot(
                         seatID: seat1,
                         device: .bound(selection: .remoteOffer(offer2))
-                    )
+                    ),
+                    seat2: DataTransferSeatSnapshot(
+                        seatID: seat2,
+                        device: .bound(selection: .none)
+                    ),
                 ],
                 offers: [
                     offer2: try DataOfferSnapshot(
@@ -215,6 +219,45 @@ struct DataTransferStateSeatScopeTests {
     }
 
     @Test
+    func stateSnapshotInitRejectsOfferForUnknownSeat() {
+        #expect(throws: DataTransferError.unknownSeat(seat1)) {
+            _ = try DataTransferState(
+                seats: [:],
+                offers: [
+                    offer2: try DataOfferSnapshot(
+                        id: offer2,
+                        role: .selection(seatID: seat1),
+                        mimeTypes: [.plainText]
+                    )
+                ],
+                sources: [:]
+            )
+        }
+    }
+
+    @Test
+    func stateSnapshotInitRejectsOfferForSeatWithoutDataDevice() {
+        #expect(throws: DataTransferError.missingDataDevice(seat1)) {
+            _ = try DataTransferState(
+                seats: [
+                    seat1: DataTransferSeatSnapshot(
+                        seatID: seat1,
+                        device: .unbound
+                    )
+                ],
+                offers: [
+                    offer2: try DataOfferSnapshot(
+                        id: offer2,
+                        role: .selection(seatID: seat1),
+                        mimeTypes: [.plainText]
+                    )
+                ],
+                sources: [:]
+            )
+        }
+    }
+
+    @Test
     func stateSnapshotInitRejectsSourceKeyMismatch() throws {
         let sourceSnapshot = try DataSourceSnapshot(
             id: source2,
@@ -228,6 +271,49 @@ struct DataTransferStateSeatScopeTests {
                 offers: [:],
                 sources: [
                     DataSourceID(rawValue: 1): sourceSnapshot
+                ]
+            )
+        }
+    }
+
+    @Test
+    func stateSnapshotInitRejectsSourceForUnknownSeat() throws {
+        let sourceSnapshot = try DataSourceSnapshot(
+            id: source2,
+            seatID: seat1,
+            mimeTypes: [.plainText]
+        )
+
+        #expect(throws: DataTransferError.unknownSeat(seat1)) {
+            _ = try DataTransferState(
+                seats: [:],
+                offers: [:],
+                sources: [
+                    source2: sourceSnapshot
+                ]
+            )
+        }
+    }
+
+    @Test
+    func stateSnapshotInitRejectsSourceForSeatWithoutDataDevice() throws {
+        let sourceSnapshot = try DataSourceSnapshot(
+            id: source2,
+            seatID: seat1,
+            mimeTypes: [.plainText]
+        )
+
+        #expect(throws: DataTransferError.missingDataDevice(seat1)) {
+            _ = try DataTransferState(
+                seats: [
+                    seat1: DataTransferSeatSnapshot(
+                        seatID: seat1,
+                        device: .unbound
+                    )
+                ],
+                offers: [:],
+                sources: [
+                    source2: sourceSnapshot
                 ]
             )
         }

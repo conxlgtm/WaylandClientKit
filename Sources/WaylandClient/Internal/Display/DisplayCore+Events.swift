@@ -27,8 +27,9 @@ extension DisplayCore {
         let outputEvents = activeSession.drainOutputEventsOnOwnerThread()
         publishOutputEvents(outputEvents)
         publishWindowOutputMembershipEvents(after: outputEvents)
-        publishDataTransferDiagnostics(activeSession.drainDataTransferDiagnosticsOnOwnerThread())
-        publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
+        let dataTransfer = activeSession.drainDataTransferEventsAndDiagnosticsOnOwnerThread()
+        publishDataTransferDiagnostics(dataTransfer.diagnostics)
+        publishDataTransferEvents(dataTransfer.events)
         publishInputEvents(activeSession.drainInputEventsOnOwnerThread())
     }
 

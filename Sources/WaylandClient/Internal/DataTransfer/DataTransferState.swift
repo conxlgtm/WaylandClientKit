@@ -38,6 +38,7 @@ package struct DataTransferState: Equatable, Sendable {
             sources[sourceID] = SourceState(snapshot)
         }
 
+        try validateOfferAndSourceSeats()
         try validateSelectionReferences()
     }
 
@@ -137,17 +138,26 @@ extension DataTransferState {
             return []
         }
 
+        let offerIDsForSeat = offers.values
+            .filter { $0.role.seatID == seatID }
+            .map(\.id)
+            .sorted { $0.rawValue < $1.rawValue }
+        let sourceIDsForSeat = sources.values
+            .filter { $0.seatID == seatID }
+            .map(\.id)
+            .sorted { $0.rawValue < $1.rawValue }
+
         var effects: [DataTransferEffect] = []
         if seat.hasDataDevice {
             effects.append(.releaseDataDevice(seatID))
         }
         appendSelectionCleanup(seat.selection, seatID: seatID, to: &effects)
 
-        for offer in offers.values where offer.role.seatID == seatID {
-            appendSelectionOfferCleanup(offer.id, to: &effects)
+        for offerID in offerIDsForSeat {
+            appendSelectionOfferCleanup(offerID, to: &effects)
         }
-        for source in sources.values where source.seatID == seatID {
-            appendSelectionSourceCleanup(source.id, to: &effects)
+        for sourceID in sourceIDsForSeat {
+            appendSelectionSourceCleanup(sourceID, to: &effects)
         }
 
         return effects
@@ -174,9 +184,17 @@ extension DataTransferState {
             throw DataTransferError.unknownOffer
         }
 
-        try offer.appendMIMETypeIfNew(mimeType)
+        let wasSelectable = offer.snapshot != nil
+        let didChange = try offer.appendMIMETypeIfNew(mimeType)
         offers[id] = offer
-        return []
+
+        guard didChange, wasSelectable, case .selection(let seatID) = offer.role,
+            seats[seatID]?.selection == .remoteOffer(id)
+        else {
+            return []
+        }
+
+        return [.publishSelectionChanged(seatID: seatID, offerID: id)]
     }
 
     private mutating func applySelectionChanged(
@@ -309,6 +327,16 @@ extension DataTransferState {
                     throw DataTransferError.unknownSource
                 }
             }
+        }
+    }
+
+    private func validateOfferAndSourceSeats() throws {
+        for offer in offers.values {
+            _ = try boundSeat(offer.role.seatID)
+        }
+
+        for source in sources.values {
+            _ = try boundSeat(source.seatID)
         }
     }
 

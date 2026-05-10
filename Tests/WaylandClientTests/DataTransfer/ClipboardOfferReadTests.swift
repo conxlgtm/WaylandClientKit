@@ -124,6 +124,68 @@ struct ClipboardOfferReadTests {
     }
 
     @Test
+    func clipboardOfferReadClosesDescriptorWhenPrepareReadFails() async throws {
+        let closedDescriptors = Mutex<[Int32]>([])
+        var descriptor = try OwnedFileDescriptor(
+            adopting: 45,
+            readDescriptor: { _, _ in
+                Issue.record("Read should not run after prepare failure.")
+                return []
+            },
+            prepareReadDescriptor: { descriptor in
+                #expect(descriptor == 45)
+                throw DataTransferError.readFileDescriptor(
+                    WaylandSystemErrno(unchecked: EIO)
+                )
+            },
+            closeDescriptor: { descriptor in
+                closedDescriptors.withLock { $0.append(descriptor) }
+                return 0
+            }
+        )
+
+        await expectDataTransferError(
+            .readFileDescriptor(WaylandSystemErrno(unchecked: EIO))
+        ) {
+            _ = try await descriptor.readData(
+                limit: try ByteCount.bytes(32),
+                timeout: .seconds(1)
+            )
+        }
+        let descriptorIsClosed = descriptor.isClosed
+
+        #expect(descriptorIsClosed)
+        #expect(closedDescriptors.withLock { $0 } == [45])
+    }
+
+    @Test
+    func clipboardOfferReadReportsCloseFailureAfterSuccess() async throws {
+        var descriptor = try OwnedFileDescriptor(
+            adopting: 46,
+            readDescriptor: { _, _ in [] },
+            prepareReadDescriptor: { descriptor in
+                #expect(descriptor == 46)
+            },
+            closeDescriptor: { descriptor in
+                #expect(descriptor == 46)
+                return EIO
+            }
+        )
+
+        await expectDataTransferError(
+            .closeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
+        ) {
+            _ = try await descriptor.readData(
+                limit: try ByteCount.bytes(32),
+                timeout: .seconds(1)
+            )
+        }
+        let descriptorIsClosed = descriptor.isClosed
+
+        #expect(descriptorIsClosed)
+    }
+
+    @Test
     func clipboardOfferReadCancellationClosesDescriptor() async throws {
         let probe = ClipboardReadCancellationProbe()
 

@@ -96,6 +96,46 @@ struct InputEventQueueTests {
                 )
         )
     }
+
+    @Test
+    func overflowIgnoresFurtherEventsUntilDrain() {
+        let queue = RawInputEventQueue(capacity: RawInputQueueCapacity(unchecked: 1))
+        let seatID = RawSeatID(rawValue: 10)
+        queue.append(
+            RawInputEventDraft(
+                seatID: seatID,
+                deviceID: nil,
+                kind: .seatRemoved
+            )
+        )
+        queue.append(
+            RawInputEventDraft(
+                seatID: seatID,
+                deviceID: nil,
+                kind: .seatRemoved
+            )
+        )
+        queue.append(
+            RawInputEventDraft(
+                seatID: seatID,
+                deviceID: nil,
+                kind: .seatRemoved
+            )
+        )
+
+        let overflow = queue.drain()
+        queue.append(
+            RawInputEventDraft(
+                seatID: seatID,
+                deviceID: nil,
+                kind: .seatRemoved
+            )
+        )
+
+        #expect(overflow.count == 1)
+        #expect(overflow.first?.sequence == 2)
+        #expect(queue.drain().map(\.sequence) == [4])
+    }
 }
 @Suite
 struct InputEventQueueCoalescingTests {

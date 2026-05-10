@@ -90,7 +90,7 @@ package struct DisplaySurfaceStore<
     }
 
     package var allWindowIDs: [WindowID] {
-        Array(windowRecords.keys)
+        windowRecords.keys.sorted { $0.rawValue < $1.rawValue }
     }
 
     package func window(_ windowID: WindowID) -> WindowReference? {
