@@ -11,7 +11,101 @@ import Testing
     ),
     .serialized
 )
-struct WindowControlPublicRequestTests {
+struct WindowControlPublicRequestIdentityTests {
+    @Test
+    func setTitleSendsTitleRequest() async throws {
+        try await withWindowControlConnection { display, window in
+            let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
+
+            let record = try await recordTopLevelRequest {
+                try await window.setTitle("Updated SwiftWayland Title")
+            }
+
+            #expect(record.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_TITLE)
+            #expect(record.topLevelAddress == topLevelPointer)
+            #expect(record.text == "Updated SwiftWayland Title")
+        }
+    }
+
+    @Test
+    func setAppIDSendsAppIDRequest() async throws {
+        try await withWindowControlConnection { display, window in
+            let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
+
+            let record = try await recordTopLevelRequest {
+                try await window.setAppID("dev.swiftwayland.updated")
+            }
+
+            #expect(record.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_APP_ID)
+            #expect(record.topLevelAddress == topLevelPointer)
+            #expect(record.text == "dev.swiftwayland.updated")
+        }
+    }
+}
+
+@Suite(
+    .enabled(
+        if: WindowControlRequestTestEnvironment.isEnabled,
+        "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1"
+    ),
+    .serialized
+)
+struct WindowControlPublicRequestStateTests {
+    @Test
+    func setMaximumSizeSendsProtocolSizeAndNilClearsWithZeroes() async throws {
+        try await withWindowControlConnection { display, window in
+            let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
+
+            let sizeRecord = try await recordTopLevelRequest {
+                try await window.setMaximumSize(
+                    try PositiveLogicalSize(width: 1_024, height: 768)
+                )
+            }
+
+            #expect(sizeRecord.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MAX_SIZE)
+            #expect(sizeRecord.topLevelAddress == topLevelPointer)
+            #expect(sizeRecord.width == 1_024)
+            #expect(sizeRecord.height == 768)
+
+            let clearRecord = try await recordTopLevelRequest {
+                try await window.setMaximumSize(nil)
+            }
+
+            #expect(clearRecord.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MAX_SIZE)
+            #expect(clearRecord.topLevelAddress == topLevelPointer)
+            #expect(clearRecord.width == 0)
+            #expect(clearRecord.height == 0)
+        }
+    }
+
+    @Test
+    func requestMaximizeSendsSetMaximized() async throws {
+        try await withWindowControlConnection { display, window in
+            let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
+
+            let record = try await recordTopLevelRequest {
+                try await window.requestMaximize()
+            }
+
+            #expect(record.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MAXIMIZED)
+            #expect(record.topLevelAddress == topLevelPointer)
+        }
+    }
+
+    @Test
+    func requestUnmaximizeSendsUnsetMaximized() async throws {
+        try await withWindowControlConnection { display, window in
+            let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
+
+            let record = try await recordTopLevelRequest {
+                try await window.requestUnmaximize()
+            }
+
+            #expect(record.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_UNSET_MAXIMIZED)
+            #expect(record.topLevelAddress == topLevelPointer)
+        }
+    }
+
     @Test
     func requestFullscreenUsesResolvedOutputPointer() async throws {
         try await withWindowControlConnection { display, window in
@@ -22,14 +116,7 @@ struct WindowControlPublicRequestTests {
                 )
                 return
             }
-            guard
-                let topLevelPointer = try await display.rawTopLevelPointerAddressForTesting(
-                    window.id
-                )
-            else {
-                Issue.record("Expected a live xdg_toplevel for \(window.id).")
-                return
-            }
+            let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
 
             let record = try await recordTopLevelRequest {
                 try await window.requestFullscreen(output: output.id)
@@ -60,46 +147,52 @@ struct WindowControlPublicRequestTests {
     }
 
     @Test
-    func requestInteractiveResizeUsesSeatSerialAndEdge() async throws {
+    func requestFullscreenWithoutOutputSendsNilOutput() async throws {
         try await withWindowControlConnection { display, window in
-            try await withSeatForRecordedRequest(in: display, windowID: window.id) { seat in
-                guard
-                    let topLevelPointer = try await display.rawTopLevelPointerAddressForTesting(
-                        window.id
-                    )
-                else {
-                    Issue.record("Expected a live xdg_toplevel for \(window.id).")
-                    return
-                }
+            let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
 
-                let record = try await recordTopLevelRequest {
-                    try await window.requestInteractiveResize(
-                        seatID: seat.id,
-                        serial: InputSerial(rawValue: 44),
-                        edge: .bottomRight
-                    )
-                }
-
-                #expect(record.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_RESIZE)
-                #expect(record.topLevelAddress == topLevelPointer)
-                #expect(record.seatAddress == seat.pointerAddress)
-                #expect(record.serial == 44)
-                #expect(record.value == WindowResizeEdge.bottomRight.rawXDGResizeEdge.rawValue)
+            let record = try await recordTopLevelRequest {
+                try await window.requestFullscreen()
             }
+
+            #expect(record.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_FULLSCREEN)
+            #expect(record.topLevelAddress == topLevelPointer)
+            #expect(record.outputAddress == nil)
+        }
+    }
+
+    @Test
+    func requestExitFullscreenSendsUnsetFullscreen() async throws {
+        try await withWindowControlConnection { display, window in
+            let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
+
+            let record = try await recordTopLevelRequest {
+                try await window.requestExitFullscreen()
+            }
+
+            #expect(record.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_UNSET_FULLSCREEN)
+            #expect(record.topLevelAddress == topLevelPointer)
+        }
+    }
+
+    @Test
+    func requestMinimizeSendsSetMinimized() async throws {
+        try await withWindowControlConnection { display, window in
+            let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
+
+            let record = try await recordTopLevelRequest {
+                try await window.requestMinimize()
+            }
+
+            #expect(record.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MINIMIZED)
+            #expect(record.topLevelAddress == topLevelPointer)
         }
     }
 
     @Test
     func setMinimumSizeNilClearsProtocolSizeWithZeroes() async throws {
         try await withWindowControlConnection { display, window in
-            guard
-                let topLevelPointer = try await display.rawTopLevelPointerAddressForTesting(
-                    window.id
-                )
-            else {
-                Issue.record("Expected a live xdg_toplevel for \(window.id).")
-                return
-            }
+            let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
 
             let record = try await recordTopLevelRequest {
                 try await window.setMinimumSize(nil)
@@ -128,19 +221,102 @@ struct WindowControlPublicRequestTests {
             }
         }
     }
+}
+
+@Suite(
+    .enabled(
+        if: WindowControlRequestTestEnvironment.isEnabled,
+        "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1"
+    ),
+    .serialized
+)
+struct WindowControlPublicRequestInteractionTests {
+    @Test
+    func requestInteractiveMoveUsesSeatAndSerial() async throws {
+        try await withWindowControlConnection { display, window in
+            try await withSeatForRecordedRequest(in: display, windowID: window.id) { seat in
+                let topLevelPointer = try await requireTopLevelPointer(
+                    in: display,
+                    for: window
+                )
+
+                let record = try await recordTopLevelRequest {
+                    try await window.requestInteractiveMove(
+                        seatID: seat.id,
+                        serial: InputSerial(rawValue: 33)
+                    )
+                }
+
+                #expect(record.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_MOVE)
+                #expect(record.topLevelAddress == topLevelPointer)
+                #expect(record.seatAddress == seat.pointerAddress)
+                #expect(record.serial == 33)
+            }
+        }
+    }
+
+    @Test
+    func requestInteractiveResizeUsesSeatSerialAndEdge() async throws {
+        try await withWindowControlConnection { display, window in
+            try await withSeatForRecordedRequest(in: display, windowID: window.id) { seat in
+                let topLevelPointer = try await requireTopLevelPointer(
+                    in: display,
+                    for: window
+                )
+
+                let record = try await recordTopLevelRequest {
+                    try await window.requestInteractiveResize(
+                        seatID: seat.id,
+                        serial: InputSerial(rawValue: 44),
+                        edge: .bottomRight
+                    )
+                }
+
+                #expect(record.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_RESIZE)
+                #expect(record.topLevelAddress == topLevelPointer)
+                #expect(record.seatAddress == seat.pointerAddress)
+                #expect(record.serial == 44)
+                #expect(record.value == WindowResizeEdge.bottomRight.rawXDGResizeEdge.rawValue)
+            }
+        }
+    }
+
+    @Test
+    func interactiveRequestsRejectUnknownSeat() async throws {
+        try await withWindowControlConnection { _, window in
+            let unknownSeat = SeatID(rawValue: UInt32.max)
+
+            try await expectUnknownInteractionSeat(unknownSeat) {
+                try await window.requestInteractiveMove(
+                    seatID: unknownSeat,
+                    serial: InputSerial(rawValue: 1)
+                )
+            }
+            try await expectUnknownInteractionSeat(unknownSeat) {
+                try await window.requestInteractiveResize(
+                    seatID: unknownSeat,
+                    serial: InputSerial(rawValue: 2),
+                    edge: .left
+                )
+            }
+            try await expectUnknownInteractionSeat(unknownSeat) {
+                try await window.requestWindowMenu(
+                    seatID: unknownSeat,
+                    serial: InputSerial(rawValue: 3),
+                    position: LogicalOffset(x: 0, y: 0)
+                )
+            }
+        }
+    }
 
     @Test
     func windowMenuUsesSeatSerialAndPosition() async throws {
         try await withWindowControlConnection { display, window in
             try await withSeatForRecordedRequest(in: display, windowID: window.id) { seat in
-                guard
-                    let topLevelPointer = try await display.rawTopLevelPointerAddressForTesting(
-                        window.id
-                    )
-                else {
-                    Issue.record("Expected a live xdg_toplevel for \(window.id).")
-                    return
-                }
+                let topLevelPointer = try await requireTopLevelPointer(
+                    in: display,
+                    for: window
+                )
 
                 let record = try await recordTopLevelRequest {
                     try await window.requestWindowMenu(
@@ -159,77 +335,112 @@ struct WindowControlPublicRequestTests {
             }
         }
     }
+}
 
-    private func withWindowControlConnection(
-        _ body: @Sendable (WaylandDisplay, Window) async throws -> Void
-    ) async throws {
-        try await WaylandDisplay.withConnection(
-            cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
-            discoveryTimeoutMilliseconds: 5_000
-        ) { display in
-            let window = try await display.createTopLevelWindow(
-                configuration: try WindowConfiguration(
-                    title: "SwiftWayland Window Control Test",
-                    appID: "swift-wayland-window-control-test",
-                    initialWidth: 160,
-                    initialHeight: 120,
-                    closeRequestPolicy: .requestOnly,
-                    decorationPreference: .preferServerSide
-                )
+private func withWindowControlConnection(
+    _ body: @Sendable (WaylandDisplay, Window) async throws -> Void
+) async throws {
+    try await WaylandDisplay.withConnection(
+        cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
+        discoveryTimeoutMilliseconds: 5_000
+    ) { display in
+        let window = try await display.createTopLevelWindow(
+            configuration: try WindowConfiguration(
+                title: "SwiftWayland Window Control Test",
+                appID: "swift-wayland-window-control-test",
+                initialWidth: 160,
+                initialHeight: 120,
+                closeRequestPolicy: .requestOnly,
+                decorationPreference: .preferServerSide
             )
-
-            try await body(display, window)
-        }
-    }
-
-    private func recordTopLevelRequest(
-        _ request: @Sendable () async throws -> Void
-    ) async throws -> RecordedTopLevelRequest {
-        swl_test_xdg_request_recording_begin()
-        defer {
-            swl_test_xdg_request_recording_end()
-        }
-
-        try await request()
-        return unsafe RecordedTopLevelRequest(swl_test_xdg_toplevel_request_record())
-    }
-
-    private func withSeatForRecordedRequest(
-        in display: WaylandDisplay,
-        windowID: WindowID,
-        _ body: @Sendable ((id: SeatID, pointerAddress: UInt)) async throws -> Void
-    ) async throws {
-        if let seat = try await display.firstRawSeatForTesting() {
-            try await body(seat)
-            return
-        }
-
-        let insertedSeat = try await display.insertWindowInteractionSeatForTesting(
-            windowID: windowID,
-            seatID: SeatID(rawValue: UInt32.max - 1),
-            pointerAddress: 0x5EA7_0001
         )
+
+        try await body(display, window)
+    }
+}
+
+private func requireTopLevelPointer(
+    in display: WaylandDisplay,
+    for window: Window
+) async throws -> UInt {
+    guard
+        let pointer = try await display.rawTopLevelPointerAddressForTesting(
+            window.id
+        )
+    else {
+        Issue.record("Expected a live xdg_toplevel for \(window.id).")
+        throw WindowControlRequestTestError.missingTopLevel
+    }
+
+    return pointer
+}
+
+private func recordTopLevelRequest(
+    _ request: @Sendable () async throws -> Void
+) async throws -> RecordedTopLevelRequest {
+    swl_test_xdg_request_recording_begin()
+    defer {
+        swl_test_xdg_request_recording_end()
+    }
+
+    try await request()
+    let record = unsafe RecordedTopLevelRequest(swl_test_xdg_toplevel_request_record())
+    #expect(record.callCount == 1)
+    return record
+}
+
+private func expectUnknownInteractionSeat(
+    _ seatID: SeatID,
+    _ action: @Sendable () async throws -> Void
+) async throws {
+    do {
+        try await action()
+        Issue.record("Expected unknown interaction seat \(seatID) to throw.")
+    } catch ClientError.invalidWindowState(
+        .unknownWindowInteractionSeat(let thrownSeatID)
+    ) {
+        #expect(thrownSeatID == seatID)
+    } catch {
+        Issue.record("Expected unknown interaction seat error, got \(error).")
+    }
+}
+
+private func withSeatForRecordedRequest(
+    in display: WaylandDisplay,
+    windowID: WindowID,
+    _ body: @Sendable ((id: SeatID, pointerAddress: UInt)) async throws -> Void
+) async throws {
+    if let seat = try await display.firstRawSeatForTesting() {
+        try await body(seat)
+        return
+    }
+
+    let insertedSeat = try await display.insertWindowInteractionSeatForTesting(
+        windowID: windowID,
+        seatID: SeatID(rawValue: UInt32.max - 1),
+        pointerAddress: 0x5EA7_0001
+    )
+    do {
+        try await body(insertedSeat)
+        try await display.removeWindowInteractionSeatForTesting(
+            windowID: windowID,
+            seatID: insertedSeat.id
+        )
+    } catch let bodyError {
         do {
-            try await body(insertedSeat)
             try await display.removeWindowInteractionSeatForTesting(
                 windowID: windowID,
                 seatID: insertedSeat.id
             )
-        } catch let bodyError {
-            do {
-                try await display.removeWindowInteractionSeatForTesting(
-                    windowID: windowID,
-                    seatID: insertedSeat.id
-                )
-            } catch {
-                Issue.record("Failed to remove testing interaction seat: \(error).")
-            }
-            throw bodyError
+        } catch {
+            Issue.record("Failed to remove testing interaction seat: \(error).")
         }
+        throw bodyError
     }
 }
 
 private struct RecordedTopLevelRequest: Sendable {
+    let callCount: Int32
     let kind: swl_test_xdg_toplevel_request_kind
     let topLevelAddress: UInt?
     let seatAddress: UInt?
@@ -240,8 +451,10 @@ private struct RecordedTopLevelRequest: Sendable {
     let width: Int32
     let height: Int32
     let value: UInt32
+    let text: String?
 
     init(_ record: swl_test_xdg_toplevel_request_record) {
+        unsafe callCount = record.call_count
         unsafe kind = record.kind
         unsafe topLevelAddress = Self.pointerAddress(record.toplevel)
         unsafe seatAddress = Self.pointerAddress(record.seat)
@@ -252,6 +465,7 @@ private struct RecordedTopLevelRequest: Sendable {
         unsafe width = record.width
         unsafe height = record.height
         unsafe value = record.value
+        unsafe text = record.text.map { unsafe String(cString: $0) }
     }
 
     private static func pointerAddress(_ pointer: OpaquePointer?) -> UInt? {
@@ -259,6 +473,10 @@ private struct RecordedTopLevelRequest: Sendable {
 
         return unsafe UInt(bitPattern: UnsafeMutableRawPointer(pointer))
     }
+}
+
+private enum WindowControlRequestTestError: Error {
+    case missingTopLevel
 }
 
 private enum WindowControlRequestTestEnvironment {

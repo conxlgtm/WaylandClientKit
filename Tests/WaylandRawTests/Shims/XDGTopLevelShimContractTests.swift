@@ -4,6 +4,26 @@ import Testing
 @Suite(.serialized)
 struct XDGTopLevelShimContractTests {
     @Test
+    func identityRequestsPreserveText() {
+        let topLevel = unsafe OpaquePointer(bitPattern: 0x1010)
+
+        assertTopLevelRequest(
+            expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_TITLE,
+            topLevel: topLevel,
+            text: "SwiftWayland"
+        ) {
+            unsafe swl_xdg_toplevel_set_title(topLevel, "SwiftWayland")
+        }
+        assertTopLevelRequest(
+            expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_APP_ID,
+            topLevel: topLevel,
+            text: "dev.swiftwayland.tests"
+        ) {
+            unsafe swl_xdg_toplevel_set_app_id(topLevel, "dev.swiftwayland.tests")
+        }
+    }
+
+    @Test
     func interactiveRequestsPreserveSeatSerialAndGeometry() {
         let topLevel = unsafe OpaquePointer(bitPattern: 0x1111)
         let seat = unsafe OpaquePointer(bitPattern: 0x2222)
@@ -109,6 +129,7 @@ struct XDGTopLevelShimContractTests {
         width: Int32 = 0,
         height: Int32 = 0,
         value: UInt32 = 0,
+        text: String? = nil,
         request: () -> Void,
         sourceLocation: SourceLocation = #_sourceLocation
     ) {
@@ -130,6 +151,8 @@ struct XDGTopLevelShimContractTests {
             #expect(unsafe record.width == width, sourceLocation: sourceLocation)
             #expect(unsafe record.height == height, sourceLocation: sourceLocation)
             #expect(unsafe record.value == value, sourceLocation: sourceLocation)
+            let recordedText = unsafe record.text.map { unsafe String(cString: $0) }
+            #expect(recordedText == text, sourceLocation: sourceLocation)
         }
     }
 }

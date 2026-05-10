@@ -1088,6 +1088,8 @@ enum swl_test_xdg_toplevel_request_kind {
     SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_FULLSCREEN = 8,
     SWL_TEST_XDG_TOPLEVEL_REQUEST_UNSET_FULLSCREEN = 9,
     SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MINIMIZED = 10,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_TITLE = 11,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_APP_ID = 12,
 };
 
 struct swl_test_xdg_toplevel_request_record {
@@ -1102,6 +1104,7 @@ struct swl_test_xdg_toplevel_request_record {
     int32_t                                 width;
     int32_t                                 height;
     uint32_t                                value;
+    const char                             *text;
 };
 
 enum swl_test_xdg_positioner_request_kind {

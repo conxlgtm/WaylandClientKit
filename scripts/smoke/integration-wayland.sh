@@ -21,4 +21,4 @@ env \
     SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1 \
     timeout "${PROCESS_TIMEOUT_SECONDS}s" \
     "${REPO_ROOT}/scripts/dev/swift.sh" test \
-    --filter WindowControlPublicRequestTests
+    --filter WindowControlPublicRequest
