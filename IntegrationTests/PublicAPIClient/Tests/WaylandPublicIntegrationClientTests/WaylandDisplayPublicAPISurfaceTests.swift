@@ -95,9 +95,9 @@ struct WaylandDisplayPublicAPISurfaceTests {
             ),
             currentMode: OutputMode(
                 flags: [.current],
-                width: 1_920,
-                height: 1_080,
-                refreshMilliHertz: 60_000
+                width: try PositiveInt32(1_920),
+                height: try PositiveInt32(1_080),
+                refresh: .milliHertz(try PositiveInt32(60_000))
             ),
             scale: scale,
             name: "HDMI-A-1",
