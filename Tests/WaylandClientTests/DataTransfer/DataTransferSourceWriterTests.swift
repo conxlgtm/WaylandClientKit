@@ -6,7 +6,7 @@ import Testing
 @testable import WaylandClient
 
 @Suite
-struct DataTransferSourceWriterTests {
+struct DataTransferSourceWriterTests {  // swiftlint:disable:this type_body_length
     @Test
     func threadedWriterWritesDataAndRecordsSuccess() throws {
         let descriptors = try makePipeDescriptors()
@@ -118,6 +118,25 @@ struct DataTransferSourceWriterTests {
                     error: .invalidFileDescriptor(-1)
                 )
             ]
+        )
+    }
+
+    @Test
+    func sourceWriteJobCancellationReportsInvalidDescriptorDirectly() {
+        let job = DataTransferSourceWriteJob(
+            sourceID: DataSourceID(rawValue: 12),
+            mimeType: .plainText,
+            descriptor: -1,
+            data: Data("clipboard".utf8)
+        )
+
+        #expect(
+            job.closeAsCancelled()
+                == .failed(
+                    sourceID: DataSourceID(rawValue: 12),
+                    mimeType: .plainText,
+                    error: .invalidFileDescriptor(-1)
+                )
         )
     }
 

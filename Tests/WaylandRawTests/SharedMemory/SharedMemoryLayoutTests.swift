@@ -32,6 +32,14 @@ struct SharedMemoryLayoutTests {
         }
         #expect(didThrow)
     }
+
+    @Test
+    func bufferLayoutRejectsByteCountAboveWaylandInt32Limit() {
+        #expect(throws: RuntimeError.self) {
+            _ = try BufferLayout(width: Int32.max / 4, height: 2)
+        }
+    }
+
     @Test
     func bufferBusyStateTracksReusableBuffers() {
         var state = BufferBusyState()

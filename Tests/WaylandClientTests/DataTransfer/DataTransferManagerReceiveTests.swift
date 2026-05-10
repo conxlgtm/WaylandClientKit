@@ -82,7 +82,7 @@ struct DataTransferManagerReceiveTests {
     }
 
     @Test
-    func receivePipeAdoptionFailureClosesBothDescriptors() throws {
+    func receivePipeAdoptionFailureClosesOnlyValidDescriptor() throws {
         let backend = RecordingDataTransferBackend()
         backend.pipeDescriptors = DataTransferPipeDescriptors(readEnd: -1, writeEnd: 12)
         let manager = DataTransferManager(backend: backend)
@@ -100,7 +100,7 @@ struct DataTransferManagerReceiveTests {
             _ = try manager.receiveOffer(id: offer.id, mimeType: .plainText)
         }
 
-        #expect(backend.closedDescriptors == [-1, 12])
+        #expect(backend.closedDescriptors == [12])
         #expect(offer.receives.isEmpty)
     }
 
@@ -125,6 +125,29 @@ struct DataTransferManagerReceiveTests {
         }
 
         #expect(backend.closedDescriptors == [14, 13])
+        #expect(offer.receives.isEmpty)
+    }
+
+    @Test
+    func invalidWriteDescriptorAdoptionFailureClosesOnlyReadDescriptor() throws {
+        let backend = RecordingDataTransferBackend()
+        backend.pipeDescriptors = DataTransferPipeDescriptors(readEnd: 15, writeEnd: -1)
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let offer = try #require(backend.offerBinding(for: offerHandle1))
+        offer.emit(.offer(MIMEType.plainText.rawValue))
+        try manager.checkInvariantsForTesting()
+        device.emit(.selection(offerHandle1))
+        try manager.checkInvariantsForTesting()
+
+        #expect(throws: DataTransferError.invalidFileDescriptor(-1)) {
+            _ = try manager.receiveOffer(id: offer.id, mimeType: .plainText)
+        }
+
+        #expect(backend.closedDescriptors == [15])
         #expect(offer.receives.isEmpty)
     }
 }

@@ -66,7 +66,11 @@ package final class DataTransferSourceSendRequest {
         descriptor rawDescriptor: Int32,
         data requestData: Data,
         descriptorIO requestDescriptorIO: DataTransferSourceDescriptorIO
-    ) {
+    ) throws {
+        guard rawDescriptor >= 0 else {
+            throw DataTransferError.invalidFileDescriptor(rawDescriptor)
+        }
+
         source = requestSource
         mimeType = requestMIMEType
         data = requestData
@@ -137,6 +141,10 @@ package final class DataTransferSourceSendRequest {
     }
 
     private func closeRawDescriptor(_ rawDescriptor: Int32) throws {
+        guard rawDescriptor >= 0 else {
+            throw DataTransferError.invalidFileDescriptor(rawDescriptor)
+        }
+
         switch descriptorIO.close(rawDescriptor) {
         case .closed:
             return
@@ -152,6 +160,10 @@ package final class DataTransferSourceSendRequest {
                 return storage
             })
         else {
+            return
+        }
+
+        guard releasedDescriptor >= 0 else {
             return
         }
 

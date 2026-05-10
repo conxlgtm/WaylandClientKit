@@ -15,6 +15,32 @@ struct DisplaySurfaceStoreTests {
     }
 
     @Test
+    func allWindowIDsAreReturnedInStableRawValueOrder() throws {
+        var store = Store()
+
+        try store.insertWindow(
+            WindowRef(displayWindowID: WindowID(rawValue: 30)),
+            surfaceID: SurfaceID(rawValue: 300)
+        )
+        try store.insertWindow(
+            WindowRef(displayWindowID: WindowID(rawValue: 10)),
+            surfaceID: SurfaceID(rawValue: 100)
+        )
+        try store.insertWindow(
+            WindowRef(displayWindowID: WindowID(rawValue: 20)),
+            surfaceID: SurfaceID(rawValue: 200)
+        )
+
+        #expect(
+            store.allWindowIDs == [
+                WindowID(rawValue: 10),
+                WindowID(rawValue: 20),
+                WindowID(rawValue: 30),
+            ]
+        )
+    }
+
+    @Test
     func clientRequestedCascadeMarksRemovedPopupsClosing() throws {
         var store = try nestedPopupStore()
 

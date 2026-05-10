@@ -3,13 +3,15 @@ import Testing
 @testable import WaylandClient
 
 @Suite
-struct DataTransferStateTests {
+struct DataTransferStateTests {  // swiftlint:disable:this type_body_length
     private let seat1 = SeatID(rawValue: 1)
     private let seat2 = SeatID(rawValue: 2)
     private let offer1 = DataOfferID(rawValue: 1)
     private let offer2 = DataOfferID(rawValue: 2)
+    private let offer3 = DataOfferID(rawValue: 3)
     private let source1 = DataSourceID(rawValue: 1)
     private let source2 = DataSourceID(rawValue: 2)
+    private let source3 = DataSourceID(rawValue: 3)
 
     @Test
     func seatAvailabilityRequestsDataDeviceBindingOnce() throws {
@@ -260,6 +262,55 @@ struct DataTransferStateTests {
         #expect(removed.state.sourceSnapshot(source1) == nil)
         #expect(removed.state.offerSnapshot(offer2) != nil)
         #expect(removed.state.seatSnapshot(seat2) != nil)
+    }
+
+    @Test
+    func seatRemovalCleansMultipleOffersAndSourcesWithoutCrossSeatEffects() throws {
+        var state = try DataTransferState()
+            .reduce(.seatAvailable(seat1))
+            .state
+        state = try state.reduce(.dataDeviceBound(seat1)).state
+        state = try state.reduce(.seatAvailable(seat2)).state
+        state = try state.reduce(.dataDeviceBound(seat2)).state
+        state = try state.reduce(.offerCreated(id: offer1, role: .selection(seatID: seat1)))
+            .state
+        state = try state.reduce(.offerCreated(id: offer2, role: .selection(seatID: seat1)))
+            .state
+        state = try state.reduce(.offerCreated(id: offer3, role: .selection(seatID: seat2)))
+            .state
+        state = try state.reduce(.offerMimeType(id: offer3, mimeType: .uriList)).state
+        state = try state.reduce(
+            .sourceCreated(id: source1, seatID: seat1, mimeTypes: [.plainText])
+        ).state
+        state = try state.reduce(
+            .sourceCreated(id: source2, seatID: seat1, mimeTypes: [.plainTextUTF8])
+        ).state
+        state = try state.reduce(
+            .sourceCreated(id: source3, seatID: seat2, mimeTypes: [.uriList])
+        ).state
+
+        let removed = try state.reduce(.seatRemoved(seat1))
+
+        #expect(
+            removed.effects
+                == [
+                    .releaseDataDevice(seat1),
+                    .destroyOffer(offer1),
+                    .destroyOffer(offer2),
+                    .cancelSource(source1),
+                    .publishSourceCancelled(source1),
+                    .cancelSource(source2),
+                    .publishSourceCancelled(source2),
+                ]
+        )
+        #expect(removed.state.seatSnapshot(seat1) == nil)
+        #expect(removed.state.offerSnapshot(offer1) == nil)
+        #expect(removed.state.offerSnapshot(offer2) == nil)
+        #expect(removed.state.sourceSnapshot(source1) == nil)
+        #expect(removed.state.sourceSnapshot(source2) == nil)
+        #expect(removed.state.seatSnapshot(seat2) != nil)
+        #expect(removed.state.offerSnapshot(offer3) != nil)
+        #expect(removed.state.sourceSnapshot(source3) != nil)
     }
 
     private func boundState(_ seatID: SeatID) throws -> DataTransferState {

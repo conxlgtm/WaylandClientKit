@@ -426,6 +426,10 @@ public struct ByteCount: Equatable, Comparable, Sendable, CustomStringConvertibl
     }
 
     private static func scaled(_ value: Int, by multiplier: Int) throws -> ByteCount {
+        guard value >= 0 else {
+            throw DataTransferError.negativeByteCount(value)
+        }
+
         let product = value.multipliedReportingOverflow(by: multiplier)
         guard !product.overflow else {
             throw DataTransferError.byteCountOverflow(value: value, multiplier: multiplier)

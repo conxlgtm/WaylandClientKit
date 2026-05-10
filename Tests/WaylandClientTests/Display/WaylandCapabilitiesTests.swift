@@ -48,6 +48,17 @@ struct WaylandCapabilitiesTests {
     }
 
     @Test
+    func duplicateProtocolAdvertisementsUseHighestVersion() {
+        let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
+            .init(interfaceName: "zxdg_output_manager_v1", advertisedVersion: 1),
+            .init(interfaceName: "zxdg_output_manager_v1", advertisedVersion: 2),
+            .init(interfaceName: "zxdg_output_manager_v1", advertisedVersion: 3),
+        ])
+
+        #expect(capabilities.xdgOutput == .available(version: 3))
+    }
+
+    @Test
     func xdgDecorationBelowMinimumIsUnavailable() {
         let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
             .init(interfaceName: "zxdg_decoration_manager_v1", advertisedVersion: 1)

@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import Foundation
 import Glibc
 import Synchronization
@@ -97,6 +99,12 @@ struct DataTransferDomainTypesTests {
     func byteCountRejectsNegativeValuesAndScalesUnits() throws {
         #expect(throws: DataTransferError.negativeByteCount(-1)) {
             _ = try ByteCount(-1)
+        }
+        #expect(throws: DataTransferError.negativeByteCount(-1)) {
+            _ = try ByteCount.kilobytes(-1)
+        }
+        #expect(throws: DataTransferError.negativeByteCount(-1)) {
+            _ = try ByteCount.megabytes(-1)
         }
 
         #expect(try ByteCount.bytes(0).rawValue == 0)
