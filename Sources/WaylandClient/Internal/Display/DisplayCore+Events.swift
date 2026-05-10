@@ -17,7 +17,14 @@ extension DisplayCore {
         }
     }
 
+    func publishOutputEvents(_ events: [DisplayEvent]) {
+        for event in events {
+            eventHub.publish(event)
+        }
+    }
+
     func publishSessionEvents(_ activeSession: DisplaySession) {
+        publishOutputEvents(activeSession.drainOutputEventsOnOwnerThread())
         publishDataTransferDiagnostics(activeSession.drainDataTransferDiagnosticsOnOwnerThread())
         publishDataTransferEvents(activeSession.drainDataTransferEventsOnOwnerThread())
         publishInputEvents(activeSession.drainInputEventsOnOwnerThread())

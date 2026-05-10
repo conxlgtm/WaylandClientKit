@@ -60,7 +60,7 @@ enum SwiftWaylandDemo {
             await window.close()
         case .windowClosed(let windowID):
             return windowID == window.id
-        case .popupDismissed, .popupClosed:
+        case .popupDismissed, .popupClosed, .outputChanged, .outputRemoved:
             break
         }
 

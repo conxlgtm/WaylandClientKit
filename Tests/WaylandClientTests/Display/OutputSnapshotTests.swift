@@ -43,4 +43,26 @@ struct OutputSnapshotTests {
         #expect(snapshot.name == "HDMI-A-1")
         #expect(snapshot.description == "Acme Panel")
     }
+
+    @Test
+    func rawOutputEventsMapToDisplayEvents() {
+        let raw = RawOutputSnapshot(
+            id: RawOutputID(rawValue: 9),
+            version: RawVersion(3),
+            geometry: nil,
+            currentMode: nil,
+            scale: 1,
+            name: nil,
+            description: nil
+        )
+
+        #expect(
+            DisplayEvent(.changed(raw))
+                == .outputChanged(OutputSnapshot(raw))
+        )
+        #expect(
+            DisplayEvent(.removed(RawOutputID(rawValue: 10)))
+                == .outputRemoved(OutputID(rawValue: 10))
+        )
+    }
 }

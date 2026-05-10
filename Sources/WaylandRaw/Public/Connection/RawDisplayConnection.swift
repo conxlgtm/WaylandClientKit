@@ -245,6 +245,16 @@ package final class RawDisplayConnection {
     @available(
         *,
         noasync,
+        message: "Drain outputs from the owner-thread Wayland loop."
+    )
+    package func drainOutputEvents() -> [RawOutputEvent] {
+        preconditionIsOwnerThread()
+        return boundGlobals?.outputRegistry.drainEvents() ?? []
+    }
+
+    @available(
+        *,
+        noasync,
         message: "Run event loops from the owner-thread Wayland loop."
     )
     package func runEventLoop(while shouldContinue: () -> Bool) throws {

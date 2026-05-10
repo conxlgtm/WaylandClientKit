@@ -206,6 +206,11 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         return try connection.outputSnapshots().map(OutputSnapshot.init)
     }
 
+    package func drainOutputEventsOnOwnerThread() -> [DisplayEvent] {
+        connection.preconditionIsOwnerThread()
+        return connection.drainOutputEvents().map(DisplayEvent.init)
+    }
+
     package func capabilitiesOnOwnerThread() -> WaylandCapabilities {
         connection.preconditionIsOwnerThread()
         return WaylandCapabilities.fromAdvertisedProtocols(

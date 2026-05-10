@@ -101,7 +101,19 @@ struct WaylandDisplayPublicAPISurfaceTests {
             try await display.outputs()
         }
 
+        func consumeOutputDisplayEvent(_ event: DisplayEvent) -> String? {
+            switch event {
+            case .outputChanged(let snapshot):
+                snapshot.name ?? snapshot.id.description
+            case .outputRemoved(let id):
+                id.description
+            default:
+                nil
+            }
+        }
+
         _ = useOutputsAPI
+        _ = consumeOutputDisplayEvent
     }
 
     @Test
