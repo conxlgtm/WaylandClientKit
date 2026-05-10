@@ -114,10 +114,12 @@ struct WaylandDisplayPublicAPISurfaceTests {
             states: [.activated, .tiled(.left)],
             bounds: maximumSize,
             managerCapabilities: [.maximize, .fullscreen],
-            decorationMode: .serverSide
+            decorationMode: .serverSide,
+            outputs: [OutputID(rawValue: 1)]
         )
 
         #expect(snapshot.configureSerial == 10)
+        #expect(snapshot.outputs == [OutputID(rawValue: 1)])
         #expect(WindowResizeEdge.bottomRight == .bottomRight)
 
         func useWindowControls(window: Window, seatID: SeatID, serial: InputSerial) async throws {
@@ -129,6 +131,7 @@ struct WaylandDisplayPublicAPISurfaceTests {
             try await window.requestMaximize()
             try await window.requestUnmaximize()
             try await window.requestFullscreen()
+            try await window.requestFullscreen(output: OutputID(rawValue: 1))
             try await window.requestExitFullscreen()
             try await window.requestMinimize()
             try await window.requestInteractiveMove(seatID: seatID, serial: serial)

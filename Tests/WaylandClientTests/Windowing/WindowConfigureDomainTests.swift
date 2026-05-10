@@ -86,7 +86,10 @@ struct WindowConfigureDomainTests {
             fallbackSize: .default
         )
 
-        let snapshot = WindowStateSnapshot(configuration)
+        let snapshot = WindowStateSnapshot(
+            configuration,
+            outputIDs: [OutputID(rawValue: 2), OutputID(rawValue: 1)]
+        )
         let expectedSize = try PositiveLogicalSize(width: 640, height: 480)
 
         #expect(snapshot.configureSerial == 42)
@@ -94,6 +97,7 @@ struct WindowConfigureDomainTests {
         #expect(snapshot.states == [.activated])
         #expect(snapshot.managerCapabilities == [.maximize])
         #expect(snapshot.decorationMode == .serverSide)
+        #expect(snapshot.outputs == [OutputID(rawValue: 2), OutputID(rawValue: 1)])
     }
 
     @Test

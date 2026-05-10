@@ -2,6 +2,8 @@ import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
 
+// swiftlint:disable file_length
+
 @safe
 private struct RegistryResources {
     let registry: RawRegistry
@@ -46,6 +48,21 @@ package final class RawDisplayConnection {
         registryState = rawRegistryState
         registryListenerOwner = rawRegistryListenerOwner
         inputEventQueue = rawInputEventQueue
+        registryListenerOwner.onGlobalAdvertised = { [weak connection = self] global in
+            guard let connection, let boundGlobals = connection.boundGlobals else { return }
+
+            do {
+                try boundGlobals.outputRegistry.bindAdvertisedOutput(global)
+            } catch {
+                connection.invariantFailureSink.reportFatalRawInvariantFailure(
+                    .globalBindingFailed(
+                        interface: global.interfaceName,
+                        name: global.name,
+                        reason: String(describing: error)
+                    )
+                )
+            }
+        }
         registryListenerOwner.onGlobalRemoved = { [weak connection = self] name in
             connection?.boundGlobals?.seatRegistry.removeSeat(globalName: name)
             connection?.boundGlobals?.outputRegistry.removeOutput(globalName: name)

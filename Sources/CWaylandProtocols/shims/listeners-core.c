@@ -88,17 +88,17 @@ int swl_buffer_add_listener(
 static void swl_surface_handle_enter(
     void *data, struct wl_surface *surface, struct wl_output *output)
 {
-    (void)data;
-    (void)surface;
-    (void)output;
+    const struct swl_surface_listener_callbacks *cb = data;
+    if (cb && cb->enter)
+        cb->enter(cb->data, surface, output);
 }
 
 static void swl_surface_handle_leave(
     void *data, struct wl_surface *surface, struct wl_output *output)
 {
-    (void)data;
-    (void)surface;
-    (void)output;
+    const struct swl_surface_listener_callbacks *cb = data;
+    if (cb && cb->leave)
+        cb->leave(cb->data, surface, output);
 }
 
 #ifdef WL_SURFACE_PREFERRED_BUFFER_SCALE_SINCE_VERSION
@@ -243,6 +243,25 @@ int swl_output_add_listener(
 #ifdef SWL_ENABLE_TESTING
 static struct swl_test_surface_preferred_buffer_scale_record
     swl_test_surface_preferred_buffer_scale_latest;
+static struct swl_test_surface_output_record swl_test_surface_output_latest;
+
+static void swl_test_record_surface_enter(
+    void *data, struct wl_surface *surface, struct wl_output *output)
+{
+    swl_test_surface_output_latest.call_count += 1;
+    swl_test_surface_output_latest.data = data;
+    swl_test_surface_output_latest.surface = surface;
+    swl_test_surface_output_latest.output = output;
+}
+
+static void swl_test_record_surface_leave(
+    void *data, struct wl_surface *surface, struct wl_output *output)
+{
+    swl_test_surface_output_latest.call_count += 1;
+    swl_test_surface_output_latest.data = data;
+    swl_test_surface_output_latest.surface = surface;
+    swl_test_surface_output_latest.output = output;
+}
 
 static void swl_test_record_surface_preferred_buffer_scale(
     void *data, struct wl_surface *surface, int32_t factor)
@@ -285,5 +304,43 @@ int swl_test_surface_listener_emit_preferred_buffer_scale(
 
     return 0;
 #endif
+}
+
+void swl_test_surface_listener_emit_enter(
+    void *data,
+    struct wl_surface *surface,
+    struct wl_output *output,
+    struct swl_test_surface_output_record *record)
+{
+    swl_test_surface_output_latest =
+        (struct swl_test_surface_output_record){0};
+    const struct swl_surface_listener_callbacks callbacks = {
+        .enter = swl_test_record_surface_enter,
+        .data = data,
+    };
+
+    swl_surface_handle_enter((void *)&callbacks, surface, output);
+
+    if (record)
+        *record = swl_test_surface_output_latest;
+}
+
+void swl_test_surface_listener_emit_leave(
+    void *data,
+    struct wl_surface *surface,
+    struct wl_output *output,
+    struct swl_test_surface_output_record *record)
+{
+    swl_test_surface_output_latest =
+        (struct swl_test_surface_output_record){0};
+    const struct swl_surface_listener_callbacks callbacks = {
+        .leave = swl_test_record_surface_leave,
+        .data = data,
+    };
+
+    swl_surface_handle_leave((void *)&callbacks, surface, output);
+
+    if (record)
+        *record = swl_test_surface_output_latest;
 }
 #endif

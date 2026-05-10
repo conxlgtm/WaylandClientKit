@@ -44,6 +44,7 @@ public enum WindowCreationFailure: Equatable, Sendable, CustomStringConvertible 
 public enum InvalidWindowState: Equatable, Sendable, CustomStringConvertible {
     case unknownPopupGrabSeat(SeatID)
     case unknownWindowInteractionSeat(SeatID)
+    case unknownWindowFullscreenOutput(OutputID)
     case unexpectedPopupConfigureError(String)
     case softwareFrameLayout(SoftwareFrameLayoutError)
     case message(String)
@@ -54,6 +55,8 @@ public enum InvalidWindowState: Equatable, Sendable, CustomStringConvertible {
             "unknown popup grab seat \(seatID)"
         case .unknownWindowInteractionSeat(let seatID):
             "unknown window interaction seat \(seatID)"
+        case .unknownWindowFullscreenOutput(let outputID):
+            "unknown window fullscreen output \(outputID)"
         case .unexpectedPopupConfigureError(let message):
             "unexpected popup configure error: \(message)"
         case .softwareFrameLayout(let error):

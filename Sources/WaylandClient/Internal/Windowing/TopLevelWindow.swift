@@ -41,6 +41,7 @@ package final class TopLevelWindow {
     private var model: WindowModel
     private var surfaceRuntime = SurfaceRuntime<TopLevelWindowRoleResources>()
     private var pendingFrameRegistration: FrameCallbackRegistration?
+    private var enteredOutputIDs: Set<RawOutputID> = []
 
     package var onClose: (() -> Void)?
     package var onCloseRequested: (() -> Void)?
@@ -201,6 +202,12 @@ package final class TopLevelWindow {
                 },
                 onFractionalScaleUnavailable: { [weak self] in
                     self?.reportFractionalScaleUnavailableBecauseViewporterIsMissing()
+                },
+                onOutputEnter: { [weak self] output in
+                    self?.handleSurfaceEnteredOutput(output)
+                },
+                onOutputLeave: { [weak self] output in
+                    self?.handleSurfaceLeftOutput(output)
                 }
             )
         )
@@ -594,6 +601,31 @@ extension TopLevelWindow {
 
         return seat
     }
+
+    private func fullscreenOutput(for outputID: OutputID?) throws -> RawOutput? {
+        guard let outputID else { return nil }
+
+        let globals = try connection.bindRequiredGlobals()
+        guard
+            let output = globals.outputRegistry.output(
+                for: RawOutputID(rawValue: outputID.rawValue)
+            )
+        else {
+            throw ClientError.invalidWindowState(.unknownWindowFullscreenOutput(outputID))
+        }
+
+        return output
+    }
+
+    private var outputIDsOnOwnerThread: [OutputID] {
+        guard let outputRegistry = connection.boundGlobals?.outputRegistry else { return [] }
+
+        return
+            enteredOutputIDs
+            .filter { outputRegistry.output(for: $0) != nil }
+            .map { OutputID(rawValue: $0.rawValue) }
+            .sorted { $0.rawValue < $1.rawValue }
+    }
 }
 
 extension TopLevelWindow {
@@ -688,6 +720,30 @@ extension TopLevelWindow {
         } catch {
             reportCallbackFailure(operation: .surfaceScaleChanged, error: error)
         }
+    }
+
+    private func handleSurfaceEnteredOutput(_ output: RawOutputPointerIdentity) {
+        guard !model.isClosed else { return }
+
+        guard
+            let outputID = connection.boundGlobals?.outputRegistry.outputID(for: output)
+        else {
+            return
+        }
+
+        enteredOutputIDs.insert(outputID)
+    }
+
+    private func handleSurfaceLeftOutput(_ output: RawOutputPointerIdentity) {
+        guard !model.isClosed else { return }
+
+        guard
+            let outputID = connection.boundGlobals?.outputRegistry.outputID(for: output)
+        else {
+            return
+        }
+
+        enteredOutputIDs.remove(outputID)
     }
 
     private func markNeedsRedraw() {
@@ -854,7 +910,7 @@ extension TopLevelWindow {
                 )
             }
 
-            return WindowStateSnapshot(configuration)
+            return WindowStateSnapshot(configuration, outputIDs: outputIDsOnOwnerThread)
         }
     }
 
@@ -906,9 +962,10 @@ extension TopLevelWindow {
         try activeTopLevel(for: "requestUnmaximize").unsetMaximized()
     }
 
-    package func requestFullscreenOnOwnerThread() throws {
+    package func requestFullscreenOnOwnerThread(outputID: OutputID? = nil) throws {
         connection.preconditionIsOwnerThread()
-        try activeTopLevel(for: "requestFullscreen").setFullscreen()
+        let output = try fullscreenOutput(for: outputID)
+        try activeTopLevel(for: "requestFullscreen").setFullscreen(output: output)
     }
 
     package func requestExitFullscreenOnOwnerThread() throws {

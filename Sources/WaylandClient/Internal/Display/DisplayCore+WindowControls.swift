@@ -41,9 +41,9 @@ extension DisplayCore {
         }
     }
 
-    func requestWindowFullscreen(_ windowID: WindowID) throws {
+    func requestWindowFullscreen(_ windowID: WindowID, output: OutputID? = nil) throws {
         try withFatalFailureFinalization {
-            try requireOpenWindow(windowID).requestFullscreenOnOwnerThread()
+            try requireOpenWindow(windowID).requestFullscreenOnOwnerThread(outputID: output)
         }
     }
 

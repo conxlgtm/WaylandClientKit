@@ -46,8 +46,8 @@ extension RawXDGTopLevel {
         unsafe swl_xdg_toplevel_unset_maximized(pointer)
     }
 
-    package func setFullscreen() {
-        unsafe swl_xdg_toplevel_set_fullscreen(pointer, nil)
+    package func setFullscreen(output: RawOutput? = nil) {
+        unsafe swl_xdg_toplevel_set_fullscreen(pointer, output?.pointer)
     }
 
     package func unsetFullscreen() {
