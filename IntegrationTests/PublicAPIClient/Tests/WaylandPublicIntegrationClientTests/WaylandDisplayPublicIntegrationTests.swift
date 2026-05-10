@@ -147,7 +147,7 @@ private func noteOptionalProtocolSkip(test: String, interfaceName: String) {
     )
 }
 
-private func withPublicConnection(
+func withPublicConnection(
     _ body: @Sendable (WaylandDisplay) async throws -> Void
 ) async throws {
     try await WaylandDisplay.withConnection(
@@ -162,7 +162,7 @@ private func withPublicConnection(
     )
 }
 
-private func testWindowConfiguration() throws -> WindowConfiguration {
+func testWindowConfiguration() throws -> WindowConfiguration {
     try WindowConfiguration(
         title: "SwiftWayland Public Integration",
         appID: "swift-wayland-public-integration",
@@ -191,7 +191,7 @@ private func testPopupConfiguration() throws -> PopupConfiguration {
     )
 }
 
-private func show(_ window: Window, color: UInt32) async throws {
+func show(_ window: Window, color: UInt32) async throws {
     let timeout = publicIntegrationTimeoutMilliseconds
     try await window.show(timeoutMilliseconds: timeout, drawColor(color))
 }
@@ -262,7 +262,7 @@ private func waitForTermination<Stream: AsyncSequence & Sendable>(
     return true
 }
 
-private func displayEvent(
+func displayEvent(
     in events: DisplayEvents,
     matching predicate: @escaping @Sendable (DisplayEvent) -> Bool,
     after trigger: @escaping @Sendable () async throws -> Void
