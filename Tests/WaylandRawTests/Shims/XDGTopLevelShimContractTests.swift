@@ -112,22 +112,24 @@ struct XDGTopLevelShimContractTests {
         request: () -> Void,
         sourceLocation: SourceLocation = #_sourceLocation
     ) {
-        swl_test_xdg_request_recording_begin()
-        defer { swl_test_xdg_request_recording_end() }
+        ShimRequestRecordingLock.xdg.withLock { _ in
+            swl_test_xdg_request_recording_begin()
+            defer { swl_test_xdg_request_recording_end() }
 
-        request()
+            request()
 
-        let record = unsafe swl_test_xdg_toplevel_request_record()
-        #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
-        #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
-        #expect(unsafe record.toplevel == topLevel, sourceLocation: sourceLocation)
-        #expect(unsafe record.seat == seat, sourceLocation: sourceLocation)
-        #expect(unsafe record.output == output, sourceLocation: sourceLocation)
-        #expect(unsafe record.serial == serial, sourceLocation: sourceLocation)
-        #expect(unsafe record.x == x, sourceLocation: sourceLocation)
-        #expect(unsafe record.y == y, sourceLocation: sourceLocation)
-        #expect(unsafe record.width == width, sourceLocation: sourceLocation)
-        #expect(unsafe record.height == height, sourceLocation: sourceLocation)
-        #expect(unsafe record.value == value, sourceLocation: sourceLocation)
+            let record = unsafe swl_test_xdg_toplevel_request_record()
+            #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
+            #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+            #expect(unsafe record.toplevel == topLevel, sourceLocation: sourceLocation)
+            #expect(unsafe record.seat == seat, sourceLocation: sourceLocation)
+            #expect(unsafe record.output == output, sourceLocation: sourceLocation)
+            #expect(unsafe record.serial == serial, sourceLocation: sourceLocation)
+            #expect(unsafe record.x == x, sourceLocation: sourceLocation)
+            #expect(unsafe record.y == y, sourceLocation: sourceLocation)
+            #expect(unsafe record.width == width, sourceLocation: sourceLocation)
+            #expect(unsafe record.height == height, sourceLocation: sourceLocation)
+            #expect(unsafe record.value == value, sourceLocation: sourceLocation)
+        }
     }
 }

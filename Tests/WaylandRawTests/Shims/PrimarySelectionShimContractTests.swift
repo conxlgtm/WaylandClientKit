@@ -160,14 +160,16 @@ private func assertPrimarySelectionRequest(
     exercise: () throws -> Void,
     sourceLocation: SourceLocation = #_sourceLocation
 ) rethrows {
-    swl_test_primary_selection_request_recording_begin()
-    defer { swl_test_primary_selection_request_recording_end() }
-    try exercise()
-    let record = unsafe swl_test_primary_selection_request_record()
-    let expectedObject = unsafe UnsafeMutableRawPointer(object)
-    #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
-    #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
-    #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+    try ShimRequestRecordingLock.primarySelection.withLock { _ in
+        swl_test_primary_selection_request_recording_begin()
+        defer { swl_test_primary_selection_request_recording_end() }
+        try exercise()
+        let record = unsafe swl_test_primary_selection_request_record()
+        let expectedObject = unsafe UnsafeMutableRawPointer(object)
+        #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
+        #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+        #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+    }
 }
 
 @safe
@@ -177,12 +179,14 @@ private func assertPrimarySelectionDestroy(
     destroy: (OpaquePointer?) -> Void,
     sourceLocation: SourceLocation = #_sourceLocation
 ) {
-    swl_test_primary_selection_request_recording_begin()
-    defer { swl_test_primary_selection_request_recording_end() }
-    unsafe destroy(object)
-    let record = unsafe swl_test_primary_selection_destroy_record()
-    let expectedObject = unsafe UnsafeMutableRawPointer(object)
-    #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
-    #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
-    #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+    ShimRequestRecordingLock.primarySelection.withLock { _ in
+        swl_test_primary_selection_request_recording_begin()
+        defer { swl_test_primary_selection_request_recording_end() }
+        unsafe destroy(object)
+        let record = unsafe swl_test_primary_selection_destroy_record()
+        let expectedObject = unsafe UnsafeMutableRawPointer(object)
+        #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
+        #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+        #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+    }
 }
