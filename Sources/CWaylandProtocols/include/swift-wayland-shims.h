@@ -20,6 +20,8 @@ struct xdg_positioner;
 struct xdg_popup;
 struct zxdg_decoration_manager_v1;
 struct zxdg_toplevel_decoration_v1;
+struct zxdg_output_manager_v1;
+struct zxdg_output_v1;
 struct wp_viewporter;
 struct wp_viewport;
 struct wp_fractional_scale_manager_v1;
@@ -47,10 +49,16 @@ struct wl_compositor *swl_registry_bind_wl_compositor(
 struct wl_shm *swl_registry_bind_wl_shm(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
+struct wl_output *swl_registry_bind_wl_output(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
 struct xdg_wm_base *swl_registry_bind_xdg_wm_base(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct zxdg_decoration_manager_v1 *swl_registry_bind_zxdg_decoration_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct zxdg_output_manager_v1 *swl_registry_bind_zxdg_output_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wp_viewporter *swl_registry_bind_wp_viewporter(
@@ -178,6 +186,29 @@ void swl_xdg_wm_base_pong(struct xdg_wm_base *wm_base, uint32_t serial);
 void swl_xdg_surface_ack_configure(struct xdg_surface *xdg_surface, uint32_t serial);
 void swl_xdg_toplevel_set_title(struct xdg_toplevel *xdg_toplevel, const char *title);
 void swl_xdg_toplevel_set_app_id(struct xdg_toplevel *xdg_toplevel, const char *app_id);
+void swl_xdg_toplevel_show_window_menu(
+    struct xdg_toplevel *xdg_toplevel,
+    struct wl_seat *seat,
+    uint32_t serial,
+    int32_t x,
+    int32_t y);
+void swl_xdg_toplevel_move(
+    struct xdg_toplevel *xdg_toplevel, struct wl_seat *seat, uint32_t serial);
+void swl_xdg_toplevel_resize(
+    struct xdg_toplevel *xdg_toplevel,
+    struct wl_seat *seat,
+    uint32_t serial,
+    uint32_t edges);
+void swl_xdg_toplevel_set_max_size(
+    struct xdg_toplevel *xdg_toplevel, int32_t width, int32_t height);
+void swl_xdg_toplevel_set_min_size(
+    struct xdg_toplevel *xdg_toplevel, int32_t width, int32_t height);
+void swl_xdg_toplevel_set_maximized(struct xdg_toplevel *xdg_toplevel);
+void swl_xdg_toplevel_unset_maximized(struct xdg_toplevel *xdg_toplevel);
+void swl_xdg_toplevel_set_fullscreen(
+    struct xdg_toplevel *xdg_toplevel, struct wl_output *output);
+void swl_xdg_toplevel_unset_fullscreen(struct xdg_toplevel *xdg_toplevel);
+void swl_xdg_toplevel_set_minimized(struct xdg_toplevel *xdg_toplevel);
 void swl_xdg_positioner_set_size(
     struct xdg_positioner *positioner, int32_t width, int32_t height);
 void swl_xdg_positioner_set_anchor_rect(
@@ -214,6 +245,14 @@ uint32_t swl_zxdg_toplevel_decoration_v1_mode_client_side(void);
 uint32_t swl_zxdg_toplevel_decoration_v1_mode_server_side(void);
 
 /* ------------------------------------------------------------------ */
+/*  XDG output request wrappers                                       */
+/* ------------------------------------------------------------------ */
+
+struct zxdg_output_v1 *swl_zxdg_output_manager_v1_get_xdg_output(
+    struct zxdg_output_manager_v1 *manager,
+    struct wl_output *output);
+
+/* ------------------------------------------------------------------ */
 /*  Scale and viewport request wrappers                               */
 /* ------------------------------------------------------------------ */
 
@@ -237,6 +276,8 @@ void swl_registry_destroy(struct wl_registry *registry);
 void swl_callback_destroy(struct wl_callback *callback);
 void swl_compositor_destroy(struct wl_compositor *compositor);
 void swl_shm_destroy(struct wl_shm *shm);
+void swl_output_destroy(struct wl_output *output);
+void swl_output_release(struct wl_output *output);
 void swl_buffer_destroy(struct wl_buffer *buffer);
 void swl_surface_destroy(struct wl_surface *surface);
 void swl_shm_pool_destroy(struct wl_shm_pool *pool);
@@ -267,6 +308,9 @@ void swl_zxdg_toplevel_decoration_v1_destroy(
     struct zxdg_toplevel_decoration_v1 *decoration);
 void swl_zxdg_decoration_manager_v1_destroy(
     struct zxdg_decoration_manager_v1 *manager);
+void swl_zxdg_output_v1_destroy(struct zxdg_output_v1 *output);
+void swl_zxdg_output_manager_v1_destroy(
+    struct zxdg_output_manager_v1 *manager);
 void swl_wp_viewport_destroy(struct wp_viewport *viewport);
 void swl_wp_viewporter_destroy(struct wp_viewporter *viewporter);
 void swl_wp_fractional_scale_v1_destroy(struct wp_fractional_scale_v1 *fractional_scale);
@@ -322,8 +366,51 @@ typedef void (*swl_registry_global_remove_fn)(
 typedef void (*swl_callback_done_fn)(
     void *data, struct wl_callback *callback, uint32_t callback_data);
 typedef void (*swl_buffer_release_fn)(void *data, struct wl_buffer *buffer);
+typedef void (*swl_surface_enter_fn)(
+    void *data, struct wl_surface *surface, struct wl_output *output);
+typedef void (*swl_surface_leave_fn)(
+    void *data, struct wl_surface *surface, struct wl_output *output);
 typedef void (*swl_surface_preferred_buffer_scale_fn)(
     void *data, struct wl_surface *surface, int32_t factor);
+
+/* Output */
+typedef void (*swl_output_geometry_fn)(
+    void *data,
+    struct wl_output *output,
+    int32_t x,
+    int32_t y,
+    int32_t physical_width,
+    int32_t physical_height,
+    int32_t subpixel,
+    const char *make,
+    const char *model,
+    int32_t transform);
+typedef void (*swl_output_mode_fn)(
+    void *data,
+    struct wl_output *output,
+    uint32_t flags,
+    int32_t width,
+    int32_t height,
+    int32_t refresh);
+typedef void (*swl_output_done_fn)(void *data, struct wl_output *output);
+typedef void (*swl_output_scale_fn)(
+    void *data, struct wl_output *output, int32_t factor);
+typedef void (*swl_output_name_fn)(
+    void *data, struct wl_output *output, const char *name);
+typedef void (*swl_output_description_fn)(
+    void *data, struct wl_output *output, const char *description);
+
+/* XDG output */
+typedef void (*swl_zxdg_output_v1_logical_position_fn)(
+    void *data, struct zxdg_output_v1 *output, int32_t x, int32_t y);
+typedef void (*swl_zxdg_output_v1_logical_size_fn)(
+    void *data, struct zxdg_output_v1 *output, int32_t width, int32_t height);
+typedef void (*swl_zxdg_output_v1_done_fn)(
+    void *data, struct zxdg_output_v1 *output);
+typedef void (*swl_zxdg_output_v1_name_fn)(
+    void *data, struct zxdg_output_v1 *output, const char *name);
+typedef void (*swl_zxdg_output_v1_description_fn)(
+    void *data, struct zxdg_output_v1 *output, const char *description);
 
 /* Data device */
 typedef void (*swl_data_offer_offer_fn)(
@@ -513,8 +600,20 @@ struct swl_buffer_listener_callbacks {
 };
 
 struct swl_surface_listener_callbacks {
+    swl_surface_enter_fn                  enter;
+    swl_surface_leave_fn                  leave;
     swl_surface_preferred_buffer_scale_fn preferred_buffer_scale;
     void                                 *data;
+};
+
+struct swl_output_listener_callbacks {
+    swl_output_geometry_fn    geometry;
+    swl_output_mode_fn        mode;
+    swl_output_done_fn        done;
+    swl_output_scale_fn       scale;
+    swl_output_name_fn        name;
+    swl_output_description_fn description;
+    void                     *data;
 };
 
 struct swl_data_offer_listener_callbacks {
@@ -591,6 +690,15 @@ struct swl_zxdg_toplevel_decoration_v1_listener_callbacks {
     void                                        *data;
 };
 
+struct swl_zxdg_output_v1_listener_callbacks {
+    swl_zxdg_output_v1_logical_position_fn logical_position;
+    swl_zxdg_output_v1_logical_size_fn     logical_size;
+    swl_zxdg_output_v1_done_fn             done;
+    swl_zxdg_output_v1_name_fn             name;
+    swl_zxdg_output_v1_description_fn      description;
+    void                                  *data;
+};
+
 struct swl_wp_fractional_scale_v1_listener_callbacks {
     swl_wp_fractional_scale_v1_preferred_scale_fn preferred_scale;
     void                                         *data;
@@ -658,6 +766,10 @@ int swl_surface_add_listener(
     struct wl_surface *surface,
     const struct swl_surface_listener_callbacks *callbacks);
 
+int swl_output_add_listener(
+    struct wl_output *output,
+    const struct swl_output_listener_callbacks *callbacks);
+
 int swl_data_offer_add_listener(
     struct wl_data_offer *offer,
     const struct swl_data_offer_listener_callbacks *callbacks);
@@ -702,6 +814,10 @@ int swl_zxdg_toplevel_decoration_v1_add_listener(
     struct zxdg_toplevel_decoration_v1 *decoration,
     const struct swl_zxdg_toplevel_decoration_v1_listener_callbacks *callbacks);
 
+int swl_zxdg_output_v1_add_listener(
+    struct zxdg_output_v1 *output,
+    const struct swl_zxdg_output_v1_listener_callbacks *callbacks);
+
 int swl_wp_fractional_scale_v1_add_listener(
     struct wp_fractional_scale_v1 *fractional_scale,
     const struct swl_wp_fractional_scale_v1_listener_callbacks *callbacks);
@@ -732,6 +848,13 @@ struct swl_test_surface_preferred_buffer_scale_record {
     void              *data;
     struct wl_surface *surface;
     int32_t            factor;
+};
+
+struct swl_test_surface_output_record {
+    int32_t            call_count;
+    void              *data;
+    struct wl_surface *surface;
+    struct wl_output  *output;
 };
 
 struct swl_test_fractional_preferred_scale_record {
@@ -953,6 +1076,37 @@ struct swl_test_xdg_popup_repositioned_record {
     uint32_t          token;
 };
 
+enum swl_test_xdg_toplevel_request_kind {
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_NONE = 0,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_SHOW_WINDOW_MENU = 1,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_MOVE = 2,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_RESIZE = 3,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MAX_SIZE = 4,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MIN_SIZE = 5,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MAXIMIZED = 6,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_UNSET_MAXIMIZED = 7,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_FULLSCREEN = 8,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_UNSET_FULLSCREEN = 9,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_MINIMIZED = 10,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_TITLE = 11,
+    SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_APP_ID = 12,
+};
+
+struct swl_test_xdg_toplevel_request_record {
+    int32_t                                  call_count;
+    enum swl_test_xdg_toplevel_request_kind kind;
+    struct xdg_toplevel                    *toplevel;
+    struct wl_seat                         *seat;
+    struct wl_output                       *output;
+    uint32_t                                serial;
+    int32_t                                 x;
+    int32_t                                 y;
+    int32_t                                 width;
+    int32_t                                 height;
+    uint32_t                                value;
+    const char                             *text;
+};
+
 enum swl_test_xdg_positioner_request_kind {
     SWL_TEST_XDG_POSITIONER_REQUEST_NONE = 0,
     SWL_TEST_XDG_POSITIONER_REQUEST_SIZE = 1,
@@ -998,6 +1152,18 @@ int swl_test_surface_listener_emit_preferred_buffer_scale(
     struct wl_surface *surface,
     int32_t factor,
     struct swl_test_surface_preferred_buffer_scale_record *record);
+
+void swl_test_surface_listener_emit_enter(
+    void *data,
+    struct wl_surface *surface,
+    struct wl_output *output,
+    struct swl_test_surface_output_record *record);
+
+void swl_test_surface_listener_emit_leave(
+    void *data,
+    struct wl_surface *surface,
+    struct wl_output *output,
+    struct swl_test_surface_output_record *record);
 
 void swl_test_fractional_scale_listener_emit_preferred_scale(
     void *data,
@@ -1147,6 +1313,8 @@ void swl_test_xdg_request_recording_begin(void);
 void swl_test_xdg_request_recording_end(void);
 struct swl_test_xdg_positioner_request_record
 swl_test_xdg_positioner_request_record(void);
+struct swl_test_xdg_toplevel_request_record
+swl_test_xdg_toplevel_request_record(void);
 struct swl_test_xdg_popup_grab_record swl_test_xdg_popup_grab_record(void);
 struct swl_test_xdg_destroy_record swl_test_xdg_destroy_record(void);
 #endif

@@ -20,6 +20,38 @@ struct ScaleShimContractTests {
         #expect(unsafe record.surface == surface)
         #expect(unsafe record.factor == 3)
     }
+
+    @Test
+    func surfaceListenerForwardsOutputEnterAndLeave() {
+        let data = unsafe UnsafeMutableRawPointer(bitPattern: 0x1101)
+        let surface = unsafe OpaquePointer(bitPattern: 0x2202)
+        let output = unsafe OpaquePointer(bitPattern: 0x3303)
+        var enterRecord = unsafe swl_test_surface_output_record()
+        var leaveRecord = unsafe swl_test_surface_output_record()
+
+        unsafe swl_test_surface_listener_emit_enter(
+            data,
+            surface,
+            output,
+            &enterRecord
+        )
+        unsafe swl_test_surface_listener_emit_leave(
+            data,
+            surface,
+            output,
+            &leaveRecord
+        )
+
+        #expect(unsafe enterRecord.call_count == 1)
+        #expect(unsafe enterRecord.data == data)
+        #expect(unsafe enterRecord.surface == surface)
+        #expect(unsafe enterRecord.output == output)
+        #expect(unsafe leaveRecord.call_count == 1)
+        #expect(unsafe leaveRecord.data == data)
+        #expect(unsafe leaveRecord.surface == surface)
+        #expect(unsafe leaveRecord.output == output)
+    }
+
     @Test
     func fractionalScaleListenerForwardsPreferredScalePreservingNumerator() {
         let data = unsafe UnsafeMutableRawPointer(bitPattern: 0x3003)
@@ -39,14 +71,16 @@ struct ScaleShimContractTests {
     @Test
     func viewportSetDestinationPassesWidthThenHeight() {
         let viewport = unsafe OpaquePointer(bitPattern: 0x5005)
-        swl_test_scale_request_recording_begin()
-        defer { swl_test_scale_request_recording_end() }
-        unsafe swl_wp_viewport_set_destination(viewport, 640, 480)
-        let record = unsafe swl_test_scale_viewport_destination_record()
-        #expect(unsafe record.call_count == 1)
-        #expect(unsafe record.viewport == viewport)
-        #expect(unsafe record.width == 640)
-        #expect(unsafe record.height == 480)
+        ShimRequestRecordingLock.scale.withLock { _ in
+            swl_test_scale_request_recording_begin()
+            defer { swl_test_scale_request_recording_end() }
+            unsafe swl_wp_viewport_set_destination(viewport, 640, 480)
+            let record = unsafe swl_test_scale_viewport_destination_record()
+            #expect(unsafe record.call_count == 1)
+            #expect(unsafe record.viewport == viewport)
+            #expect(unsafe record.width == 640)
+            #expect(unsafe record.height == 480)
+        }
     }
     @Test
     func scaleDestroyWrappersCallTheMatchingProtocolDestroy() {
@@ -82,13 +116,15 @@ struct ScaleShimContractTests {
         destroy: (OpaquePointer?) -> Void,
         sourceLocation: SourceLocation = #_sourceLocation
     ) {
-        swl_test_scale_request_recording_begin()
-        defer { swl_test_scale_request_recording_end() }
-        unsafe destroy(object)
-        let record = unsafe swl_test_scale_destroy_record()
-        let expectedObject = unsafe UnsafeMutableRawPointer(object)
-        #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
-        #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
-        #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+        ShimRequestRecordingLock.scale.withLock { _ in
+            swl_test_scale_request_recording_begin()
+            defer { swl_test_scale_request_recording_end() }
+            unsafe destroy(object)
+            let record = unsafe swl_test_scale_destroy_record()
+            let expectedObject = unsafe UnsafeMutableRawPointer(object)
+            #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
+            #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+            #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+        }
     }
 }

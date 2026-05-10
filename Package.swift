@@ -112,9 +112,14 @@ let package = Package(
             dependencies: ["WaylandSmokeSupport"],
             swiftSettings: executableSwiftSettings
         ),
+        .target(
+            name: "WaylandTestSupport",
+            path: "Tests/WaylandTestSupport",
+            swiftSettings: strictMemorySafetySwiftSettings
+        ),
         .testTarget(
             name: "WaylandRawTests",
-            dependencies: ["WaylandRaw"],
+            dependencies: ["WaylandRaw", "WaylandTestSupport"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(
@@ -124,7 +129,12 @@ let package = Package(
         ),
         .testTarget(
             name: "WaylandClientTests",
-            dependencies: ["WaylandClient", "WaylandKeyboard"],
+            dependencies: [
+                "WaylandClient",
+                "WaylandKeyboard",
+                "CWaylandProtocols",
+                "WaylandTestSupport",
+            ],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(

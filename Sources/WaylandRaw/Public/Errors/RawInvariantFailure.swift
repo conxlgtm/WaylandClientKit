@@ -1,6 +1,7 @@
 package enum RawInvariantFailure: Equatable, Sendable, CustomStringConvertible {
     case callbackWithoutSwiftState(String)
     case proxyOnWrongQueue(interface: String)
+    case globalBindingFailed(interface: String, name: UInt32, reason: String)
     case missingSeatName
 
     package var description: String {
@@ -9,6 +10,8 @@ package enum RawInvariantFailure: Equatable, Sendable, CustomStringConvertible {
             detail
         case .proxyOnWrongQueue(let interfaceName):
             "\(interfaceName) proxy is not assigned to the display owner event queue"
+        case .globalBindingFailed(let interfaceName, let name, let reason):
+            "failed to bind advertised \(interfaceName) global \(name): \(reason)"
         case .missingSeatName:
             "wl_seat name callback did not include a name"
         }

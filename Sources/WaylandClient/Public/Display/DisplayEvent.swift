@@ -9,6 +9,9 @@ public enum DisplayEvent: Equatable, Sendable {
     case popupClosed(PopupLifecycleEvent)
     case redrawRequested(WindowID)
     case popupRedrawRequested(PopupLifecycleEvent)
+    case outputChanged(OutputSnapshot)
+    case outputRemoved(OutputID)
+    case windowOutputsChanged(WindowOutputMembershipEvent)
 }
 
 public struct PopupLifecycleEvent: Equatable, Sendable {
@@ -18,6 +21,16 @@ public struct PopupLifecycleEvent: Equatable, Sendable {
     package init(popup popupID: PopupID, parentWindowID popupParentWindowID: WindowID) {
         popup = PopupSurfaceIdentity(popupID)
         parentWindowID = popupParentWindowID
+    }
+}
+
+public struct WindowOutputMembershipEvent: Equatable, Sendable {
+    public let windowID: WindowID
+    public let outputs: [OutputID]
+
+    public init(windowID eventWindowID: WindowID, outputs eventOutputs: [OutputID]) {
+        windowID = eventWindowID
+        outputs = eventOutputs
     }
 }
 
@@ -347,7 +360,8 @@ final class DisplayEventHub: Sendable {
         case .diagnostic(let diagnostic):
             publishDiagnostic(diagnostic)
         case .windowCloseRequested, .windowClosed, .popupDismissed, .popupClosed,
-            .redrawRequested, .popupRedrawRequested:
+            .redrawRequested, .popupRedrawRequested, .outputChanged, .outputRemoved,
+            .windowOutputsChanged:
             displayBroker.publish(event)
         }
     }

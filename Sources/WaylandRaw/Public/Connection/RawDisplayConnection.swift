@@ -2,6 +2,8 @@ import CWaylandClientSystem
 import CWaylandProtocols
 import Glibc
 
+// swiftlint:disable file_length
+
 @safe
 private struct RegistryResources {
     let registry: RawRegistry
@@ -46,8 +48,24 @@ package final class RawDisplayConnection {
         registryState = rawRegistryState
         registryListenerOwner = rawRegistryListenerOwner
         inputEventQueue = rawInputEventQueue
+        registryListenerOwner.onGlobalAdvertised = { [weak connection = self] global in
+            guard let connection, let boundGlobals = connection.boundGlobals else { return }
+
+            do {
+                try boundGlobals.outputRegistry.bindAdvertisedOutput(global)
+            } catch {
+                connection.invariantFailureSink.reportFatalRawInvariantFailure(
+                    .globalBindingFailed(
+                        interface: global.interfaceName,
+                        name: global.name,
+                        reason: String(describing: error)
+                    )
+                )
+            }
+        }
         registryListenerOwner.onGlobalRemoved = { [weak connection = self] name in
             connection?.boundGlobals?.seatRegistry.removeSeat(globalName: name)
+            connection?.boundGlobals?.outputRegistry.removeOutput(globalName: name)
         }
     }
 
@@ -217,6 +235,26 @@ package final class RawDisplayConnection {
     @available(
         *,
         noasync,
+        message: "Read outputs from the owner-thread Wayland loop."
+    )
+    package func outputSnapshots() throws -> [RawOutputSnapshot] {
+        preconditionIsOwnerThread()
+        return try bindRequiredGlobals().outputRegistry.snapshots
+    }
+
+    @available(
+        *,
+        noasync,
+        message: "Drain outputs from the owner-thread Wayland loop."
+    )
+    package func drainOutputEvents() -> [RawOutputEvent] {
+        preconditionIsOwnerThread()
+        return boundGlobals?.outputRegistry.drainEvents() ?? []
+    }
+
+    @available(
+        *,
+        noasync,
         message: "Run event loops from the owner-thread Wayland loop."
     )
     package func runEventLoop(while shouldContinue: () -> Bool) throws {
@@ -252,6 +290,11 @@ extension RawDisplayConnection {
         let sharedMemoryVersion: RawVersion
         let xdgWMBase: RawGlobalAdvertisement
         let xdgWMBaseVersion: RawVersion
+    }
+
+    private struct OptionalGlobalBindingSet {
+        let extensions: OptionalGlobals
+        let outputRegistry: OutputRegistry
     }
 
     @discardableResult
@@ -293,27 +336,62 @@ extension RawDisplayConnection {
             sharedMemory: shm,
             compositor: compositorWrapper
         )
-        let extensions: OptionalGlobals
-        do {
-            extensions = try bindOptionalGlobals(registry: reg)
-        } catch {
-            seatRegistry.destroy()
-            xdgWmBase.destroy()
-            shm.destroy()
-            compositorWrapper.destroy()
-            throw error
-        }
+        let optionalBindingSet = try unsafe bindOptionalGlobalsAndOutputs(
+            registry: reg,
+            xdgWMBase: xdgWmBase,
+            sharedMemory: shm,
+            compositor: compositorWrapper,
+            seatRegistry: seatRegistry
+        )
 
         let bound = BoundGlobals(
             compositor: compositorWrapper,
             sharedMemory: shm,
             xdgWMBase: xdgWmBase,
             seatRegistry: seatRegistry,
-            extensions: extensions
+            outputRegistry: optionalBindingSet.outputRegistry,
+            extensions: optionalBindingSet.extensions
         )
 
         boundGlobals = bound
         return bound
+    }
+
+    private func bindOptionalGlobalsAndOutputs(
+        registry reg: OpaquePointer,
+        xdgWMBase: RawXDGWMBase,
+        sharedMemory shm: RawSharedMemory,
+        compositor: RawCompositor,
+        seatRegistry: SeatRegistry
+    ) throws -> OptionalGlobalBindingSet {
+        let extensions: OptionalGlobals
+        do {
+            extensions = try bindOptionalGlobals(registry: reg)
+        } catch {
+            seatRegistry.destroy()
+            xdgWMBase.destroy()
+            shm.destroy()
+            compositor.destroy()
+            throw error
+        }
+
+        do {
+            let outputRegistry = try bindOutputRegistry(
+                registry: reg,
+                extensions: extensions
+            )
+            return OptionalGlobalBindingSet(
+                extensions: extensions,
+                outputRegistry: outputRegistry
+            )
+        } catch {
+            extensions.destroy()
+            seatRegistry.destroy()
+            xdgWMBase.destroy()
+            shm.destroy()
+            compositor.destroy()
+            throw error
+        }
     }
 
     private func requiredGlobalBindingSet() throws -> RequiredGlobalBindingSet {
@@ -447,6 +525,27 @@ extension RawDisplayConnection {
             xdgWMBase.destroy()
             shm.destroy()
             compositor.destroy()
+            throw error
+        }
+    }
+
+    @safe
+    private func bindOutputRegistry(
+        registry reg: OpaquePointer,
+        extensions: OptionalGlobals
+    ) throws -> OutputRegistry {
+        let outputRegistry = OutputRegistry(
+            registry: reg,
+            proxyAdoption: proxyAdoption,
+            invariantFailureSink: invariantFailureSink,
+            xdgOutputManager: extensions.xdgOutputManager
+        )
+
+        do {
+            try outputRegistry.bindOutputs(from: registryState.snapshot)
+            return outputRegistry
+        } catch {
+            outputRegistry.destroy()
             throw error
         }
     }

@@ -41,7 +41,7 @@ Not implemented yet:
 - text-input or IME behavior
 - drag-and-drop transfer handling
 - cursor animation, output-scale cursor selection, or custom cursor drawing APIs
-- public output model or presentation-time API
+- output-management or presentation-time APIs
 - high-level gesture recognizers or widgets
 - DocC reference documentation
 
@@ -54,6 +54,7 @@ Supported in the current experimental baseline:
 - `wl_callback`
 - `wl_compositor`
 - `wl_surface`
+- `wl_output`
 - `wl_shm`
 - `wl_shm_pool`
 - `wl_buffer`
@@ -76,6 +77,8 @@ Supported in the current experimental baseline:
 - `xdg_positioner`
 - `zxdg_decoration_manager_v1`
 - `zxdg_toplevel_decoration_v1`
+- `zxdg_output_manager_v1`
+- `zxdg_output_v1`
 - `wp_viewporter`
 - `wp_viewport`
 - `wp_fractional_scale_manager_v1`
@@ -113,6 +116,13 @@ Clipboard and data transfer:
 - primary selection is selection-driven and focus-sensitive, not a second regular clipboard
 - drag-and-drop enter events are rejected
 
+Outputs:
+
+- public output snapshots report scale, transform, physical size, make, model, name, and description when advertised
+- output add, update, and remove events are exposed through the display event stream
+- window output membership tracks `wl_surface.enter` and `wl_surface.leave`
+- `zxdg_output_manager_v1` logical output geometry is reported when the compositor advertises version 3 or newer
+
 Popups:
 
 - popup surfaces can be created from windows
@@ -125,7 +135,7 @@ Not supported in the current experimental baseline:
 - drag-and-drop transfer handling
 - cursor animation or per-output cursor scaling
 - presentation-time
-- public `wl_output` model
+- output management or control APIs
 - linux-dmabuf, EGL, GBM, or GPU rendering
 - text-input or IME protocols
 - widgets or retained UI

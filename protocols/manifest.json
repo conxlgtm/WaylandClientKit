@@ -33,6 +33,17 @@
       "notes": "Optional extension for compositor-managed toplevel decorations."
     },
     {
+      "name": "xdg-output-unstable-v1",
+      "localPath": "protocols/upstream/legacy-unstable/xdg-output/xdg-output-unstable-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/xdg-output/xdg-output-unstable-v1.xml",
+      "sha256": "363d547c3eefe8959160cac903ff90b311d4b183005557d73640d9df2cfd7f79",
+      "stability": "unstable",
+      "notes": "Optional extension for desktop logical output geometry."
+    },
+    {
       "name": "viewporter",
       "localPath": "protocols/upstream/stable/viewporter/viewporter.xml",
       "upstreamProject": "wayland-protocols",

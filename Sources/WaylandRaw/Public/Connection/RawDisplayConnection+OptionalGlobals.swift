@@ -6,33 +6,40 @@ extension RawDisplayConnection {
         let decorationManager = try bindXDGDecorationManagerIfPresent(registry: reg)
 
         do {
-            let viewporter = try bindViewporterIfPresent(registry: reg)
+            let xdgOutputManager = try bindXDGOutputManagerIfPresent(registry: reg)
             do {
-                let fractionalScaleManager = try bindFractionalScaleManagerIfPresent(
-                    registry: reg
-                )
+                let viewporter = try bindViewporterIfPresent(registry: reg)
                 do {
-                    let dataDeviceManager = try bindDataDeviceManagerIfPresent(registry: reg)
+                    let fractionalScaleManager = try bindFractionalScaleManagerIfPresent(
+                        registry: reg
+                    )
                     do {
-                        let primarySelectionDeviceManager =
-                            try bindPrimarySelectionDeviceManagerIfPresent(registry: reg)
-                        return OptionalGlobals(
-                            xdgDecorationManager: decorationManager,
-                            viewporter: viewporter,
-                            fractionalScaleManager: fractionalScaleManager,
-                            dataDeviceManager: dataDeviceManager,
-                            primarySelectionDeviceManager: primarySelectionDeviceManager
-                        )
+                        let dataDeviceManager = try bindDataDeviceManagerIfPresent(registry: reg)
+                        do {
+                            let primarySelectionDeviceManager =
+                                try bindPrimarySelectionDeviceManagerIfPresent(registry: reg)
+                            return OptionalGlobals(
+                                xdgDecorationManager: decorationManager,
+                                xdgOutputManager: xdgOutputManager,
+                                viewporter: viewporter,
+                                fractionalScaleManager: fractionalScaleManager,
+                                dataDeviceManager: dataDeviceManager,
+                                primarySelectionDeviceManager: primarySelectionDeviceManager
+                            )
+                        } catch {
+                            dataDeviceManager.destroy()
+                            throw error
+                        }
                     } catch {
-                        dataDeviceManager.destroy()
+                        fractionalScaleManager.destroy()
                         throw error
                     }
                 } catch {
-                    fractionalScaleManager.destroy()
+                    viewporter.destroy()
                     throw error
                 }
             } catch {
-                viewporter.destroy()
+                xdgOutputManager.destroy()
                 throw error
             }
         } catch {
@@ -91,6 +98,63 @@ extension RawDisplayConnection {
         return .bind(
             version: global.negotiatedVersion(
                 supportedByClient: SupportedVersions.zxdgDecorationManagerV1
+            )
+        )
+    }
+
+    @safe
+    private func bindXDGOutputManagerIfPresent(
+        registry reg: OpaquePointer
+    ) throws -> OptionalXDGOutputManager {
+        guard let global = optionalGlobal(named: "zxdg_output_manager_v1") else {
+            return .missing
+        }
+
+        switch Self.xdgOutputManagerBindingDecision(global) {
+        case .unsupportedVersion(let advertised, let minimum):
+            return .unsupportedVersion(
+                advertised: advertised,
+                minimum: minimum
+            )
+        case .bind(let version):
+            guard
+                let manager = unsafe swl_registry_bind_zxdg_output_manager_v1(
+                    reg,
+                    global.name,
+                    version.value
+                )
+            else {
+                throw RuntimeError.bindFailed("zxdg_output_manager_v1")
+            }
+
+            let wrappedManager = try RawXDGOutputManager(
+                pointer: manager,
+                version: version,
+                proxyAdoption: proxyAdoption
+            )
+            return .bound(wrappedManager)
+        }
+    }
+
+    package static func shouldBindXDGOutputManager(
+        _ global: RawGlobalAdvertisement
+    ) -> Bool {
+        global.advertisedVersion >= SupportedVersions.zxdgOutputManagerV1Minimum
+    }
+
+    package static func xdgOutputManagerBindingDecision(
+        _ global: RawGlobalAdvertisement
+    ) -> XDGOutputManagerBindingDecision {
+        guard shouldBindXDGOutputManager(global) else {
+            return .unsupportedVersion(
+                advertised: global.advertisedVersion,
+                minimum: SupportedVersions.zxdgOutputManagerV1Minimum
+            )
+        }
+
+        return .bind(
+            version: global.negotiatedVersion(
+                supportedByClient: SupportedVersions.zxdgOutputManagerV1
             )
         )
     }

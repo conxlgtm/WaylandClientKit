@@ -2,8 +2,8 @@ import Foundation
 import Testing
 import WaylandClient
 
-private let publicIntegrationTimeoutMilliseconds: Int32 = 5_000
-private let publicIntegrationWaitTimeoutNanoseconds: UInt64 = 5_000_000_000
+let publicIntegrationTimeoutMilliseconds: Int32 = 5_000
+let publicIntegrationWaitTimeoutNanoseconds: UInt64 = 5_000_000_000
 
 @Suite(
     "WaylandDisplay public integration",
@@ -140,14 +140,14 @@ struct WaylandDisplayPublicIntegrationTests {
     }
 }
 
-private func noteOptionalProtocolSkip(test: String, interfaceName: String) {
+func noteOptionalProtocolSkip(test: String, interfaceName: String) {
     Issue.record(
         "Skipping \(test) live test: compositor did not advertise \(interfaceName).",
         severity: .warning
     )
 }
 
-private func withPublicConnection(
+func withPublicConnection(
     _ body: @Sendable (WaylandDisplay) async throws -> Void
 ) async throws {
     try await WaylandDisplay.withConnection(
@@ -162,7 +162,7 @@ private func withPublicConnection(
     )
 }
 
-private func testWindowConfiguration() throws -> WindowConfiguration {
+func testWindowConfiguration() throws -> WindowConfiguration {
     try WindowConfiguration(
         title: "SwiftWayland Public Integration",
         appID: "swift-wayland-public-integration",
@@ -191,7 +191,7 @@ private func testPopupConfiguration() throws -> PopupConfiguration {
     )
 }
 
-private func show(_ window: Window, color: UInt32) async throws {
+func show(_ window: Window, color: UInt32) async throws {
     let timeout = publicIntegrationTimeoutMilliseconds
     try await window.show(timeoutMilliseconds: timeout, drawColor(color))
 }
@@ -262,7 +262,7 @@ private func waitForTermination<Stream: AsyncSequence & Sendable>(
     return true
 }
 
-private func displayEvent(
+func displayEvent(
     in events: DisplayEvents,
     matching predicate: @escaping @Sendable (DisplayEvent) -> Bool,
     after trigger: @escaping @Sendable () async throws -> Void
@@ -432,7 +432,7 @@ private enum PublicIntegrationError: Error, CustomStringConvertible {
     }
 }
 
-private func withTimeout<Value: Sendable>(
+func withTimeout<Value: Sendable>(
     nanoseconds: UInt64,
     operation operationName: String,
     _ body: @escaping @Sendable () async throws -> Value

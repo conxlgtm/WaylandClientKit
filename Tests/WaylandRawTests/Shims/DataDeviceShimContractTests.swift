@@ -343,14 +343,16 @@ private func assertDataRequest(
     exercise: () throws -> Void,
     sourceLocation: SourceLocation = #_sourceLocation
 ) rethrows {
-    swl_test_data_request_recording_begin()
-    defer { swl_test_data_request_recording_end() }
-    try exercise()
-    let record = unsafe swl_test_data_request_record()
-    let expectedObject = unsafe UnsafeMutableRawPointer(object)
-    #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
-    #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
-    #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+    try ShimRequestRecordingLock.data.withLock { _ in
+        swl_test_data_request_recording_begin()
+        defer { swl_test_data_request_recording_end() }
+        try exercise()
+        let record = unsafe swl_test_data_request_record()
+        let expectedObject = unsafe UnsafeMutableRawPointer(object)
+        #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
+        #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+        #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+    }
 }
 
 @safe
@@ -360,12 +362,14 @@ private func assertDataDestroy(
     destroy: (OpaquePointer?) -> Void,
     sourceLocation: SourceLocation = #_sourceLocation
 ) {
-    swl_test_data_request_recording_begin()
-    defer { swl_test_data_request_recording_end() }
-    unsafe destroy(object)
-    let record = unsafe swl_test_data_destroy_record()
-    let expectedObject = unsafe UnsafeMutableRawPointer(object)
-    #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
-    #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
-    #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+    ShimRequestRecordingLock.data.withLock { _ in
+        swl_test_data_request_recording_begin()
+        defer { swl_test_data_request_recording_end() }
+        unsafe destroy(object)
+        let record = unsafe swl_test_data_destroy_record()
+        let expectedObject = unsafe UnsafeMutableRawPointer(object)
+        #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
+        #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+        #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+    }
 }

@@ -7,6 +7,17 @@ public enum WindowEdge: Equatable, Hashable, Sendable {
     case bottom
 }
 
+public enum WindowResizeEdge: Equatable, Hashable, Sendable {
+    case top
+    case bottom
+    case left
+    case topLeft
+    case bottomLeft
+    case right
+    case topRight
+    case bottomRight
+}
+
 public enum WindowStateToken: Equatable, Hashable, Sendable {
     case maximized
     case fullscreen
@@ -81,6 +92,29 @@ public enum WindowStateToken: Equatable, Hashable, Sendable {
             XDGTopLevelState.constrainedTop.rawValue
         case .bottom:
             XDGTopLevelState.constrainedBottom.rawValue
+        }
+    }
+}
+
+extension WindowResizeEdge {
+    package var rawXDGResizeEdge: RawXDGTopLevelResizeEdge {
+        switch self {
+        case .top:
+            .top
+        case .bottom:
+            .bottom
+        case .left:
+            .left
+        case .topLeft:
+            .topLeft
+        case .bottomLeft:
+            .bottomLeft
+        case .right:
+            .right
+        case .topRight:
+            .topRight
+        case .bottomRight:
+            .bottomRight
         }
     }
 }

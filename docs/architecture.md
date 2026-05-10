@@ -345,13 +345,15 @@ Supported:
 - static pointer cursor surfaces through wayland-cursor
 - regular clipboard selection offers and sources through data-device
 - primary selection offers and sources through primary-selection
+- public output snapshots and display events through `wl_output`
+- optional logical output geometry through `zxdg_output_manager_v1`
 
 Not supported:
 
 - cursor animation or per-output cursor scaling
 - client-side decoration rendering
 - drag and drop
-- public output model
+- output management or control APIs
 - text input or IME
 - presentation-time
 - EGL, GBM, dmabuf, or GPU rendering

@@ -27,6 +27,11 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
+[[ -f "$PROTO_DIR/legacy-unstable/xdg-output/xdg-output-unstable-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/legacy-unstable/xdg-output/xdg-output-unstable-v1.xml"
+    exit 1
+}
+
 [[ -f "$PROTO_DIR/stable/viewporter/viewporter.xml" ]] || {
     echo "Missing vendored protocol: $PROTO_DIR/stable/viewporter/viewporter.xml"
     exit 1
@@ -49,12 +54,14 @@ mkdir -p \
     "$GEN_INC/stable/viewporter" \
     "$GEN_INC/staging/fractional-scale" \
     "$GEN_INC/legacy-unstable/xdg-decoration" \
+    "$GEN_INC/legacy-unstable/xdg-output" \
     "$GEN_INC/legacy-unstable/primary-selection" \
     "$GEN_SRC/core" \
     "$GEN_SRC/stable/xdg-shell" \
     "$GEN_SRC/stable/viewporter" \
     "$GEN_SRC/staging/fractional-scale" \
     "$GEN_SRC/legacy-unstable/xdg-decoration" \
+    "$GEN_SRC/legacy-unstable/xdg-output" \
     "$GEN_SRC/legacy-unstable/primary-selection" \
     "$OUT_DIR/shims"
 
@@ -106,6 +113,14 @@ wayland-scanner client-header \
 wayland-scanner private-code \
     "$PROTO_DIR/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml" \
     "$GEN_SRC/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/legacy-unstable/xdg-output/xdg-output-unstable-v1.xml" \
+    "$GEN_INC/legacy-unstable/xdg-output/xdg-output-unstable-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/legacy-unstable/xdg-output/xdg-output-unstable-v1.xml" \
+    "$GEN_SRC/legacy-unstable/xdg-output/xdg-output-unstable-v1-protocol.c"
 
 wayland-scanner client-header \
     "$PROTO_DIR/stable/viewporter/viewporter.xml" \

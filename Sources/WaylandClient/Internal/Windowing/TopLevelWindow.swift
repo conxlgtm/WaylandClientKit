@@ -41,11 +41,17 @@ package final class TopLevelWindow {
     private var model: WindowModel
     private var surfaceRuntime = SurfaceRuntime<TopLevelWindowRoleResources>()
     private var pendingFrameRegistration: FrameCallbackRegistration?
+    private var outputMembership = WindowOutputMembershipState()
+
+    #if DEBUG
+        private var testingInteractionSeatsByID: [SeatID: RawSeat] = [:]
+    #endif
 
     package var onClose: (() -> Void)?
     package var onCloseRequested: (() -> Void)?
     package var onClosed: (() -> Void)?
     package var onRedrawRequested: (() -> Void)?
+    package var onOutputMembershipChanged: (([OutputID]) -> Void)?
 
     package init(
         id windowID: WindowID,
@@ -201,6 +207,12 @@ package final class TopLevelWindow {
                 },
                 onFractionalScaleUnavailable: { [weak self] in
                     self?.reportFractionalScaleUnavailableBecauseViewporterIsMissing()
+                },
+                onOutputEnter: { [weak self] output in
+                    self?.handleSurfaceEnteredOutput(output)
+                },
+                onOutputLeave: { [weak self] output in
+                    self?.handleSurfaceLeftOutput(output)
                 }
             )
         )
@@ -568,6 +580,82 @@ extension TopLevelWindow {
         get { surfaceRuntime.scaleInstallation }
         set { surfaceRuntime.scaleInstallation = newValue }
     }
+
+    private func activeTopLevel(for event: String) throws -> RawXDGTopLevel {
+        guard let topLevel = roleResources?.topLevel else {
+            throw ClientError.window(
+                id,
+                .invalidLifecycleTransition(
+                    .invalidTransition(from: "missing xdg_toplevel", event: event)
+                )
+            )
+        }
+
+        return topLevel
+    }
+
+    private func interactionSeat(for seatID: SeatID) throws -> RawSeat {
+        #if DEBUG
+            if let seat = testingInteractionSeatsByID[seatID] {
+                return seat
+            }
+        #endif
+
+        let globals = try connection.bindRequiredGlobals()
+        guard
+            let seat = globals.seatRegistry.seat(
+                for: RawSeatID(rawValue: seatID.rawValue)
+            )
+        else {
+            throw ClientError.invalidWindowState(.unknownWindowInteractionSeat(seatID))
+        }
+
+        return seat
+    }
+
+    private func fullscreenOutput(for outputID: OutputID?) throws -> RawOutput? {
+        guard let outputID else { return nil }
+
+        let globals = try connection.bindRequiredGlobals()
+        guard
+            let output = globals.outputRegistry.output(
+                for: RawOutputID(rawValue: outputID.rawValue)
+            )
+        else {
+            throw ClientError.invalidWindowState(.unknownWindowFullscreenOutput(outputID))
+        }
+
+        return output
+    }
+
+    #if DEBUG
+        package func installInteractionSeatForTesting(
+            id seatID: SeatID,
+            pointerAddress: Int
+        ) throws -> UInt {
+            if let existing = testingInteractionSeatsByID[seatID] {
+                return existing.pointerAddressForTesting
+            }
+
+            let seat = try RawSeat.testingNoopSeatForRequestRecording(
+                id: RawSeatID(rawValue: seatID.rawValue),
+                pointerAddress: pointerAddress
+            )
+            testingInteractionSeatsByID[seatID] = seat
+            return seat.pointerAddressForTesting
+        }
+
+        package func removeInteractionSeatForTesting(_ seatID: SeatID) {
+            testingInteractionSeatsByID.removeValue(forKey: seatID)?.destroy()
+        }
+    #endif
+
+    private var outputIDsOnOwnerThread: [OutputID] {
+        guard let outputRegistry = connection.boundGlobals?.outputRegistry else { return [] }
+
+        return
+            outputMembership.currentOutputIDs { outputRegistry.output(for: $0) != nil }
+    }
 }
 
 extension TopLevelWindow {
@@ -662,6 +750,34 @@ extension TopLevelWindow {
         } catch {
             reportCallbackFailure(operation: .surfaceScaleChanged, error: error)
         }
+    }
+
+    private func handleSurfaceEnteredOutput(_ output: RawOutputPointerIdentity) {
+        guard !model.isClosed else { return }
+
+        guard
+            let outputID = connection.boundGlobals?.outputRegistry.outputID(for: output)
+        else {
+            return
+        }
+
+        guard outputMembership.enter(outputID) else { return }
+
+        onOutputMembershipChanged?(outputIDsOnOwnerThread)
+    }
+
+    private func handleSurfaceLeftOutput(_ output: RawOutputPointerIdentity) {
+        guard !model.isClosed else { return }
+
+        guard
+            let outputID = connection.boundGlobals?.outputRegistry.outputID(for: output)
+        else {
+            return
+        }
+
+        guard outputMembership.leave(outputID) else { return }
+
+        onOutputMembershipChanged?(outputIDsOnOwnerThread)
     }
 
     private func markNeedsRedraw() {
@@ -785,6 +901,7 @@ extension TopLevelWindow {
         onClose = nil
         onCloseRequested = nil
         onRedrawRequested = nil
+        onOutputMembershipChanged = nil
 
         var removedRoleResources = surfaceRuntime.removeRoleResources()
         removedRoleResources?.destroy()
@@ -796,6 +913,12 @@ extension TopLevelWindow {
 }
 
 extension TopLevelWindow {
+    #if DEBUG
+        package var topLevelPointerAddressForTesting: UInt? {
+            roleResources?.topLevel.pointerAddressForTesting
+        }
+    #endif
+
     package var isClosedOnOwnerThread: Bool {
         connection.preconditionIsOwnerThread()
         return model.isClosed
@@ -818,14 +941,127 @@ extension TopLevelWindow {
         }
     }
 
+    package var stateSnapshotOnOwnerThread: WindowStateSnapshot {
+        get throws {
+            connection.preconditionIsOwnerThread()
+            guard let configuration = model.currentConfiguration else {
+                throw ClientError.window(
+                    id,
+                    .invalidLifecycleTransition(.mapBeforeInitialConfigure)
+                )
+            }
+
+            return WindowStateSnapshot(configuration, outputIDs: outputIDsOnOwnerThread)
+        }
+    }
+
     package func markPublishedOnOwnerThread() throws {
         connection.preconditionIsOwnerThread()
         try interpretWindowEffects(model.reduce(.published))
     }
 
+    package func removeOutputMembershipOnOwnerThread(_ outputID: OutputID) {
+        connection.preconditionIsOwnerThread()
+        guard !model.isClosed else { return }
+        guard outputMembership.remove(outputID) else { return }
+
+        onOutputMembershipChanged?(outputIDsOnOwnerThread)
+    }
+
     package func requestRedrawOnOwnerThread() throws {
         connection.preconditionIsOwnerThread()
         markNeedsRedraw()
+    }
+
+    package func setTitleOnOwnerThread(_ title: WaylandString) throws {
+        connection.preconditionIsOwnerThread()
+        try activeTopLevel(for: "setTitle").setTitle(title.value)
+    }
+
+    package func setAppIDOnOwnerThread(_ appID: NonEmptyWaylandString) throws {
+        connection.preconditionIsOwnerThread()
+        try activeTopLevel(for: "setAppID").setAppID(appID.value)
+    }
+
+    package func setMinimumSizeOnOwnerThread(_ size: PositiveLogicalSize?) throws {
+        connection.preconditionIsOwnerThread()
+        let topLevel = try activeTopLevel(for: "setMinimumSize")
+        topLevel.setMinimumSize(
+            width: size?.width.rawValue ?? 0,
+            height: size?.height.rawValue ?? 0
+        )
+    }
+
+    package func setMaximumSizeOnOwnerThread(_ size: PositiveLogicalSize?) throws {
+        connection.preconditionIsOwnerThread()
+        let topLevel = try activeTopLevel(for: "setMaximumSize")
+        topLevel.setMaximumSize(
+            width: size?.width.rawValue ?? 0,
+            height: size?.height.rawValue ?? 0
+        )
+    }
+
+    package func requestMaximizeOnOwnerThread() throws {
+        connection.preconditionIsOwnerThread()
+        try activeTopLevel(for: "requestMaximize").setMaximized()
+    }
+
+    package func requestUnmaximizeOnOwnerThread() throws {
+        connection.preconditionIsOwnerThread()
+        try activeTopLevel(for: "requestUnmaximize").unsetMaximized()
+    }
+
+    package func requestFullscreenOnOwnerThread(outputID: OutputID? = nil) throws {
+        connection.preconditionIsOwnerThread()
+        let output = try fullscreenOutput(for: outputID)
+        try activeTopLevel(for: "requestFullscreen").setFullscreen(output: output)
+    }
+
+    package func requestExitFullscreenOnOwnerThread() throws {
+        connection.preconditionIsOwnerThread()
+        try activeTopLevel(for: "requestExitFullscreen").unsetFullscreen()
+    }
+
+    package func requestMinimizeOnOwnerThread() throws {
+        connection.preconditionIsOwnerThread()
+        try activeTopLevel(for: "requestMinimize").setMinimized()
+    }
+
+    package func requestInteractiveMoveOnOwnerThread(
+        seatID: SeatID,
+        serial: InputSerial
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        let topLevel = try activeTopLevel(for: "requestInteractiveMove")
+        let seat = try interactionSeat(for: seatID)
+        topLevel.move(seat: seat, serial: serial.rawValue)
+    }
+
+    package func requestInteractiveResizeOnOwnerThread(
+        seatID: SeatID,
+        serial: InputSerial,
+        edge: WindowResizeEdge
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        let topLevel = try activeTopLevel(for: "requestInteractiveResize")
+        let seat = try interactionSeat(for: seatID)
+        topLevel.resize(seat: seat, serial: serial.rawValue, edge: edge.rawXDGResizeEdge)
+    }
+
+    package func requestWindowMenuOnOwnerThread(
+        seatID: SeatID,
+        serial: InputSerial,
+        position: LogicalOffset
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        let topLevel = try activeTopLevel(for: "requestWindowMenu")
+        let seat = try interactionSeat(for: seatID)
+        topLevel.showWindowMenu(
+            seat: seat,
+            serial: serial.rawValue,
+            x: position.x,
+            y: position.y
+        )
     }
 
     package func createPopupOnOwnerThread(

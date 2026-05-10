@@ -37,6 +37,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Server-side decoration support through `zxdg_decoration_manager_v1`.
     public let xdgDecoration: ProtocolAvailability
 
+    /// Desktop logical output geometry support through `zxdg_output_manager_v1`.
+    public let xdgOutput: ProtocolAvailability
+
     /// Surface cropping and scaling support through `wp_viewporter`.
     public let viewporter: ProtocolAvailability
 
@@ -47,12 +50,14 @@ public struct WaylandCapabilities: Equatable, Sendable {
         clipboard: ProtocolAvailability,
         primarySelection: ProtocolAvailability,
         xdgDecoration: ProtocolAvailability,
+        xdgOutput: ProtocolAvailability,
         viewporter: ProtocolAvailability,
         fractionalScale: ProtocolAvailability
     ) {
         self.clipboard = clipboard
         self.primarySelection = primarySelection
         self.xdgDecoration = xdgDecoration
+        self.xdgOutput = xdgOutput
         self.viewporter = viewporter
         self.fractionalScale = fractionalScale
     }
@@ -84,6 +89,11 @@ extension WaylandCapabilities {
                 first("zxdg_decoration_manager_v1"),
                 supportedByClient: SupportedVersions.zxdgDecorationManagerV1,
                 minimumVersion: SupportedVersions.zxdgDecorationManagerV1Minimum
+            ),
+            xdgOutput: ProtocolAvailability(
+                first("zxdg_output_manager_v1"),
+                supportedByClient: SupportedVersions.zxdgOutputManagerV1,
+                minimumVersion: SupportedVersions.zxdgOutputManagerV1Minimum
             ),
             viewporter: ProtocolAvailability(
                 first("wp_viewporter"),

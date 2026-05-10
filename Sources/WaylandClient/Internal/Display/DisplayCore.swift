@@ -107,6 +107,12 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
     }
 
+    func outputs() throws -> [OutputSnapshot] {
+        try withFatalFailureFinalization {
+            try requireSession().outputSnapshotsOnOwnerThread()
+        }
+    }
+
     func closeWindow(_ windowID: WindowID) {
         withFatalFailureFinalization {
             // Fatal raw invariants already finished streams and deferred graph cleanup;
@@ -172,6 +178,13 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
         window.onRedrawRequested = { [weak core = self] in
             core?.eventHub.publish(.redrawRequested(windowID))
+        }
+        window.onOutputMembershipChanged = { [weak core = self] outputs in
+            core?.eventHub.publish(
+                .windowOutputsChanged(
+                    WindowOutputMembershipEvent(windowID: windowID, outputs: outputs)
+                )
+            )
         }
     }
 
