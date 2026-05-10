@@ -179,6 +179,13 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         window.onRedrawRequested = { [weak core = self] in
             core?.eventHub.publish(.redrawRequested(windowID))
         }
+        window.onOutputMembershipChanged = { [weak core = self] outputs in
+            core?.eventHub.publish(
+                .windowOutputsChanged(
+                    WindowOutputMembershipEvent(windowID: windowID, outputs: outputs)
+                )
+            )
+        }
     }
 
     private func handleWindowCloseRequested(_ windowID: WindowID) {
