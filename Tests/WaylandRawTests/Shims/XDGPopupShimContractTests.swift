@@ -95,14 +95,16 @@ struct XDGPopupShimContractTests {
     func popupGrabPreservesSeatAndSerial() {
         let popup = unsafe OpaquePointer(bitPattern: 0x6060)
         let seat = unsafe OpaquePointer(bitPattern: 0x7070)
-        swl_test_xdg_request_recording_begin()
-        defer { swl_test_xdg_request_recording_end() }
-        unsafe swl_xdg_popup_grab(popup, seat, 123)
-        let record = unsafe swl_test_xdg_popup_grab_record()
-        #expect(unsafe record.call_count == 1)
-        #expect(unsafe record.popup == popup)
-        #expect(unsafe record.seat == seat)
-        #expect(unsafe record.serial == 123)
+        ShimRequestRecordingLock.xdg.withLock { _ in
+            swl_test_xdg_request_recording_begin()
+            defer { swl_test_xdg_request_recording_end() }
+            unsafe swl_xdg_popup_grab(popup, seat, 123)
+            let record = unsafe swl_test_xdg_popup_grab_record()
+            #expect(unsafe record.call_count == 1)
+            #expect(unsafe record.popup == popup)
+            #expect(unsafe record.seat == seat)
+            #expect(unsafe record.serial == 123)
+        }
     }
     @Test
     func popupDestroyWrappersCallMatchingProtocolDestroy() {
@@ -130,17 +132,19 @@ struct XDGPopupShimContractTests {
         request: () -> Void,
         sourceLocation: SourceLocation = #_sourceLocation
     ) {
-        swl_test_xdg_request_recording_begin()
-        defer { swl_test_xdg_request_recording_end() }
-        request()
-        let record = unsafe swl_test_xdg_positioner_request_record()
-        #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
-        #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
-        #expect(unsafe record.x == x, sourceLocation: sourceLocation)
-        #expect(unsafe record.y == y, sourceLocation: sourceLocation)
-        #expect(unsafe record.width == width, sourceLocation: sourceLocation)
-        #expect(unsafe record.height == height, sourceLocation: sourceLocation)
-        #expect(unsafe record.value == value, sourceLocation: sourceLocation)
+        ShimRequestRecordingLock.xdg.withLock { _ in
+            swl_test_xdg_request_recording_begin()
+            defer { swl_test_xdg_request_recording_end() }
+            request()
+            let record = unsafe swl_test_xdg_positioner_request_record()
+            #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
+            #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+            #expect(unsafe record.x == x, sourceLocation: sourceLocation)
+            #expect(unsafe record.y == y, sourceLocation: sourceLocation)
+            #expect(unsafe record.width == width, sourceLocation: sourceLocation)
+            #expect(unsafe record.height == height, sourceLocation: sourceLocation)
+            #expect(unsafe record.value == value, sourceLocation: sourceLocation)
+        }
     }
     @safe
     private func assertDestroyWrapper(
@@ -149,13 +153,15 @@ struct XDGPopupShimContractTests {
         destroy: (OpaquePointer?) -> Void,
         sourceLocation: SourceLocation = #_sourceLocation
     ) {
-        swl_test_xdg_request_recording_begin()
-        defer { swl_test_xdg_request_recording_end() }
-        unsafe destroy(object)
-        let record = unsafe swl_test_xdg_destroy_record()
-        let expectedObject = unsafe UnsafeMutableRawPointer(object)
-        #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
-        #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
-        #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+        ShimRequestRecordingLock.xdg.withLock { _ in
+            swl_test_xdg_request_recording_begin()
+            defer { swl_test_xdg_request_recording_end() }
+            unsafe destroy(object)
+            let record = unsafe swl_test_xdg_destroy_record()
+            let expectedObject = unsafe UnsafeMutableRawPointer(object)
+            #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
+            #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+            #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+        }
     }
 }

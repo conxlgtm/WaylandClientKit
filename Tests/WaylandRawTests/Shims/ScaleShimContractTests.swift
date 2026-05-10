@@ -71,14 +71,16 @@ struct ScaleShimContractTests {
     @Test
     func viewportSetDestinationPassesWidthThenHeight() {
         let viewport = unsafe OpaquePointer(bitPattern: 0x5005)
-        swl_test_scale_request_recording_begin()
-        defer { swl_test_scale_request_recording_end() }
-        unsafe swl_wp_viewport_set_destination(viewport, 640, 480)
-        let record = unsafe swl_test_scale_viewport_destination_record()
-        #expect(unsafe record.call_count == 1)
-        #expect(unsafe record.viewport == viewport)
-        #expect(unsafe record.width == 640)
-        #expect(unsafe record.height == 480)
+        ShimRequestRecordingLock.scale.withLock { _ in
+            swl_test_scale_request_recording_begin()
+            defer { swl_test_scale_request_recording_end() }
+            unsafe swl_wp_viewport_set_destination(viewport, 640, 480)
+            let record = unsafe swl_test_scale_viewport_destination_record()
+            #expect(unsafe record.call_count == 1)
+            #expect(unsafe record.viewport == viewport)
+            #expect(unsafe record.width == 640)
+            #expect(unsafe record.height == 480)
+        }
     }
     @Test
     func scaleDestroyWrappersCallTheMatchingProtocolDestroy() {
@@ -114,13 +116,15 @@ struct ScaleShimContractTests {
         destroy: (OpaquePointer?) -> Void,
         sourceLocation: SourceLocation = #_sourceLocation
     ) {
-        swl_test_scale_request_recording_begin()
-        defer { swl_test_scale_request_recording_end() }
-        unsafe destroy(object)
-        let record = unsafe swl_test_scale_destroy_record()
-        let expectedObject = unsafe UnsafeMutableRawPointer(object)
-        #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
-        #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
-        #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+        ShimRequestRecordingLock.scale.withLock { _ in
+            swl_test_scale_request_recording_begin()
+            defer { swl_test_scale_request_recording_end() }
+            unsafe destroy(object)
+            let record = unsafe swl_test_scale_destroy_record()
+            let expectedObject = unsafe UnsafeMutableRawPointer(object)
+            #expect(unsafe record.call_count == 1, sourceLocation: sourceLocation)
+            #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+            #expect(unsafe record.object == expectedObject, sourceLocation: sourceLocation)
+        }
     }
 }
