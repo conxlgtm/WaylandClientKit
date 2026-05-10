@@ -8,7 +8,7 @@ package enum SupportedVersions {
     package static let xdgWmBase: RawVersion = 7
     package static let zxdgDecorationManagerV1Minimum: RawVersion = 2
     package static let zxdgDecorationManagerV1: RawVersion = 2
-    package static let zxdgOutputManagerV1Minimum: RawVersion = 3
+    package static let zxdgOutputManagerV1Minimum: RawVersion = 2
     package static let zxdgOutputManagerV1: RawVersion = 3
     package static let wpViewporter: RawVersion = 1
     package static let wpFractionalScaleManagerV1: RawVersion = 1
@@ -18,6 +18,11 @@ package enum SupportedVersions {
 }
 
 package enum XDGDecorationManagerBindingDecision: Equatable, Sendable {
+    case unsupportedVersion(advertised: RawVersion, minimum: RawVersion)
+    case bind(version: RawVersion)
+}
+
+package enum XDGOutputManagerBindingDecision: Equatable, Sendable {
     case unsupportedVersion(advertised: RawVersion, minimum: RawVersion)
     case bind(version: RawVersion)
 }

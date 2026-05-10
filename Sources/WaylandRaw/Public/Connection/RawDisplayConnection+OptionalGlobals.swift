@@ -110,33 +110,53 @@ extension RawDisplayConnection {
             return .missing
         }
 
-        guard global.advertisedVersion >= SupportedVersions.zxdgOutputManagerV1Minimum else {
+        switch Self.xdgOutputManagerBindingDecision(global) {
+        case .unsupportedVersion(let advertised, let minimum):
+            return .unsupportedVersion(
+                advertised: advertised,
+                minimum: minimum
+            )
+        case .bind(let version):
+            guard
+                let manager = unsafe swl_registry_bind_zxdg_output_manager_v1(
+                    reg,
+                    global.name,
+                    version.value
+                )
+            else {
+                throw RuntimeError.bindFailed("zxdg_output_manager_v1")
+            }
+
+            let wrappedManager = try RawXDGOutputManager(
+                pointer: manager,
+                version: version,
+                proxyAdoption: proxyAdoption
+            )
+            return .bound(wrappedManager)
+        }
+    }
+
+    package static func shouldBindXDGOutputManager(
+        _ global: RawGlobalAdvertisement
+    ) -> Bool {
+        global.advertisedVersion >= SupportedVersions.zxdgOutputManagerV1Minimum
+    }
+
+    package static func xdgOutputManagerBindingDecision(
+        _ global: RawGlobalAdvertisement
+    ) -> XDGOutputManagerBindingDecision {
+        guard shouldBindXDGOutputManager(global) else {
             return .unsupportedVersion(
                 advertised: global.advertisedVersion,
                 minimum: SupportedVersions.zxdgOutputManagerV1Minimum
             )
         }
 
-        let version = global.negotiatedVersion(
-            supportedByClient: SupportedVersions.zxdgOutputManagerV1
-        )
-
-        guard
-            let manager = unsafe swl_registry_bind_zxdg_output_manager_v1(
-                reg,
-                global.name,
-                version.value
+        return .bind(
+            version: global.negotiatedVersion(
+                supportedByClient: SupportedVersions.zxdgOutputManagerV1
             )
-        else {
-            throw RuntimeError.bindFailed("zxdg_output_manager_v1")
-        }
-
-        let wrappedManager = try RawXDGOutputManager(
-            pointer: manager,
-            version: version,
-            proxyAdoption: proxyAdoption
         )
-        return .bound(wrappedManager)
     }
 
     @safe
