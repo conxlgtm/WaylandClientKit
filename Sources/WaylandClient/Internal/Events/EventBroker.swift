@@ -190,7 +190,7 @@ final class TypedEventBroker<Element: Sendable>: Sendable {
             let termination = StreamTermination(error: error)
             lifecycle = .terminal(termination)
             var deliveries: [Delivery] = []
-            for subscriberID in subscribers.keys {
+            for subscriberID in subscribers.keys.sorted() {
                 guard let subscriber = subscribers[subscriberID] else { continue }
                 if case .waiting(let waiter, _) = subscriber.state {
                     subscribers.removeValue(forKey: subscriberID)

@@ -140,15 +140,16 @@ package enum DataTransferOfferState: Equatable, Sendable {
         return snapshot
     }
 
-    package mutating func appendMIMETypeIfNew(_ mimeType: MIMEType) throws {
+    package mutating func appendMIMETypeIfNew(_ mimeType: MIMEType) throws -> Bool {
         guard !mimeTypes.contains(mimeType) else {
-            return
+            return false
         }
 
         let nextMIMETypes = mimeTypes + [mimeType]
         self = .selectable(
             try DataOfferSnapshot(id: id, role: role, mimeTypes: nextMIMETypes)
         )
+        return true
     }
 }
 

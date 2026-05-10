@@ -77,6 +77,7 @@ package final class RawInputEventQueue: RawInputEventSink, Sendable {
     private struct State: Sendable {
         var nextSequence: UInt64 = 1
         var events: [RawInputEvent] = []
+        var hasPendingOverflow = false
     }
 
     private let configuration: RawInputQueueConfiguration
@@ -94,6 +95,8 @@ package final class RawInputEventQueue: RawInputEventSink, Sendable {
         state.withLock { state in
             let materializedEvent = Self.materialize(event, sequence: state.nextSequence)
             state.nextSequence += 1
+
+            guard !state.hasPendingOverflow else { return }
 
             if coalesce(materializedEvent, into: &state.events) {
                 return
@@ -114,7 +117,10 @@ package final class RawInputEventQueue: RawInputEventSink, Sendable {
 
     package func drain() -> [RawInputEvent] {
         state.withLock { state in
-            defer { state.events.removeAll(keepingCapacity: true) }
+            defer {
+                state.events.removeAll(keepingCapacity: true)
+                state.hasPendingOverflow = false
+            }
             return state.events
         }
     }
@@ -164,6 +170,7 @@ package final class RawInputEventQueue: RawInputEventSink, Sendable {
         to state: inout State
     ) {
         state.events.removeAll(keepingCapacity: true)
+        state.hasPendingOverflow = true
         state.events.append(
             RawInputEvent(
                 sequence: eventSequence,

@@ -33,8 +33,8 @@ extension DataTransferManager {
         do {
             return try backend.adoptOwnedFileDescriptor(descriptors.readEnd)
         } catch {
-            _ = backend.closeFileDescriptor(descriptors.readEnd)
-            _ = backend.closeFileDescriptor(descriptors.writeEnd)
+            closePipeDescriptorIfValid(descriptors.readEnd)
+            closePipeDescriptorIfValid(descriptors.writeEnd)
             throw error
         }
     }
@@ -53,7 +53,7 @@ extension DataTransferManager {
             try writeEnd.close()
         } catch {
             if let rawWriteEnd {
-                _ = backend.closeFileDescriptor(rawWriteEnd)
+                closePipeDescriptorIfValid(rawWriteEnd)
             }
             do {
                 try readEnd.close()
@@ -62,5 +62,10 @@ extension DataTransferManager {
             }
             throw error
         }
+    }
+
+    private func closePipeDescriptorIfValid(_ descriptor: Int32) {
+        guard descriptor >= 0 else { return }
+        _ = backend.closeFileDescriptor(descriptor)
     }
 }

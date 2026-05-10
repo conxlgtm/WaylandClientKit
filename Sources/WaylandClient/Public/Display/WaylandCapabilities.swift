@@ -72,35 +72,48 @@ extension WaylandCapabilities {
     static func fromAdvertisedProtocols(
         _ protocols: [AdvertisedWaylandProtocol]
     ) -> WaylandCapabilities {
-        func first(_ interfaceName: String) -> AdvertisedWaylandProtocol? {
-            protocols.first { $0.interfaceName == interfaceName }
+        func best(_ interfaceName: String) -> AdvertisedWaylandProtocol? {
+            var selected: AdvertisedWaylandProtocol?
+            for advertisedProtocol in protocols
+            where advertisedProtocol.interfaceName == interfaceName {
+                guard let current = selected else {
+                    selected = advertisedProtocol
+                    continue
+                }
+
+                if advertisedProtocol.advertisedVersion > current.advertisedVersion {
+                    selected = advertisedProtocol
+                }
+            }
+
+            return selected
         }
 
         return WaylandCapabilities(
             clipboard: ProtocolAvailability(
-                first("wl_data_device_manager"),
+                best("wl_data_device_manager"),
                 supportedByClient: SupportedVersions.wlDataDeviceManager
             ),
             primarySelection: ProtocolAvailability(
-                first("zwp_primary_selection_device_manager_v1"),
+                best("zwp_primary_selection_device_manager_v1"),
                 supportedByClient: SupportedVersions.zwpPrimarySelectionDeviceManagerV1
             ),
             xdgDecoration: ProtocolAvailability(
-                first("zxdg_decoration_manager_v1"),
+                best("zxdg_decoration_manager_v1"),
                 supportedByClient: SupportedVersions.zxdgDecorationManagerV1,
                 minimumVersion: SupportedVersions.zxdgDecorationManagerV1Minimum
             ),
             xdgOutput: ProtocolAvailability(
-                first("zxdg_output_manager_v1"),
+                best("zxdg_output_manager_v1"),
                 supportedByClient: SupportedVersions.zxdgOutputManagerV1,
                 minimumVersion: SupportedVersions.zxdgOutputManagerV1Minimum
             ),
             viewporter: ProtocolAvailability(
-                first("wp_viewporter"),
+                best("wp_viewporter"),
                 supportedByClient: SupportedVersions.wpViewporter
             ),
             fractionalScale: ProtocolAvailability(
-                first("wp_fractional_scale_manager_v1"),
+                best("wp_fractional_scale_manager_v1"),
                 supportedByClient: SupportedVersions.wpFractionalScaleManagerV1
             )
         )

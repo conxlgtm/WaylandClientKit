@@ -28,8 +28,8 @@ extension PrimarySelectionController {
         do {
             return try backend.adoptOwnedFileDescriptor(descriptors.readEnd)
         } catch {
-            _ = backend.closeFileDescriptor(descriptors.readEnd)
-            _ = backend.closeFileDescriptor(descriptors.writeEnd)
+            closePipeDescriptorIfValid(descriptors.readEnd)
+            closePipeDescriptorIfValid(descriptors.writeEnd)
             throw error
         }
     }
@@ -48,7 +48,7 @@ extension PrimarySelectionController {
             try writeEnd.close()
         } catch {
             if let rawWriteEnd {
-                _ = backend.closeFileDescriptor(rawWriteEnd)
+                closePipeDescriptorIfValid(rawWriteEnd)
             }
             do {
                 try readEnd.close()
@@ -59,7 +59,16 @@ extension PrimarySelectionController {
         }
     }
 
+    private func closePipeDescriptorIfValid(_ descriptor: Int32) {
+        guard descriptor >= 0 else { return }
+        _ = backend.closeFileDescriptor(descriptor)
+    }
+
     func closeSourceSendDescriptor(_ descriptor: Int32) throws {
+        guard descriptor >= 0 else {
+            throw DataTransferError.invalidFileDescriptor(descriptor)
+        }
+
         switch backend.closeFileDescriptor(descriptor) {
         case .closed:
             return

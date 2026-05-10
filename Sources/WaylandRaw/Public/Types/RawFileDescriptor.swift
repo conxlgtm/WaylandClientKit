@@ -90,15 +90,23 @@ package struct RawFileDescriptor: ~Copyable {
         descriptor fileDescriptor: Int32,
         bytes: ArraySlice<UInt8>
     ) throws(RuntimeError) -> Int {
-        let writeCount = unsafe bytes.withUnsafeBufferPointer { byteBuffer in
-            unsafe swl_write_no_sigpipe(fileDescriptor, byteBuffer.baseAddress, byteBuffer.count)
-        }
+        while true {
+            let writeCount = unsafe bytes.withUnsafeBufferPointer { byteBuffer in
+                unsafe swl_write_no_sigpipe(
+                    fileDescriptor,
+                    byteBuffer.baseAddress,
+                    byteBuffer.count
+                )
+            }
 
-        guard writeCount >= 0 else {
-            throw RuntimeError.systemError(errno: errno, operation: .writeFileDescriptor)
-        }
+            if writeCount >= 0 {
+                return Int(writeCount)
+            }
 
-        return Int(writeCount)
+            if errno != EINTR {
+                throw RuntimeError.systemError(errno: errno, operation: .writeFileDescriptor)
+            }
+        }
     }
 
     package func resize(byteCount: Int) throws(RuntimeError) {

@@ -5,7 +5,7 @@ import WaylandRaw
 @testable import WaylandClient
 
 @Suite
-struct DataTransferManagerTests {
+struct DataTransferManagerTests {  // swiftlint:disable:this type_body_length
     private let seat1 = SeatID(rawValue: 1)
     private let seat2 = SeatID(rawValue: 2)
     private let offerHandle1 = RawDataOfferHandle(uncheckedRawValue: 0xDADA_0001)
@@ -138,6 +138,17 @@ struct DataTransferManagerTests {
         offer.emit(.offer(MIMEType.uriList.rawValue))
 
         #expect(manager.offerSnapshots.first?.mimeTypes == [.plainText, .uriList])
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .clipboardSelectionChanged(
+                        ClipboardSelectionEvent(seatID: seat1, offerID: offer.id)
+                    ),
+                    .clipboardSelectionChanged(
+                        ClipboardSelectionEvent(seatID: seat1, offerID: offer.id)
+                    ),
+                ]
+        )
     }
 
     @Test
@@ -220,6 +231,32 @@ struct DataTransferManagerTests {
 
         #expect(offer.destroyCount == 1)
         #expect(manager.offerSnapshots.isEmpty)
+    }
+
+    @Test
+    func pendingOfferIDsForSeatAreStable() {
+        var store = DataTransferStore()
+        let firstOfferID = DataOfferID(rawValue: 1)
+        let secondOfferID = DataOfferID(rawValue: 2)
+
+        store.insertPendingOffer(
+            handle: offerHandle2,
+            offerID: secondOfferID,
+            binding: RecordingDataTransferOfferBinding(id: secondOfferID) { _ in
+                // Test does not need offer callbacks.
+            },
+            seatID: seat1
+        )
+        store.insertPendingOffer(
+            handle: offerHandle1,
+            offerID: firstOfferID,
+            binding: RecordingDataTransferOfferBinding(id: firstOfferID) { _ in
+                // Test does not need offer callbacks.
+            },
+            seatID: seat1
+        )
+
+        #expect(store.pendingOfferIDs(for: seat1) == [firstOfferID, secondOfferID])
     }
 
     @Test

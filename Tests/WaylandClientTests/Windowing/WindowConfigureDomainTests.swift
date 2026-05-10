@@ -101,6 +101,33 @@ struct WindowConfigureDomainTests {
     }
 
     @Test
+    func waylandStringRejectsInteriorNUL() {
+        #expect(
+            throws: ClientError.invalidWindowConfiguration(.interiorNUL(field: "WaylandString"))
+        ) {
+            _ = try WaylandString("visible\0hidden")
+        }
+    }
+
+    @Test
+    func nonEmptyWaylandStringRejectsEmptyAndInteriorNUL() {
+        #expect(
+            throws: ClientError.invalidWindowConfiguration(
+                .emptyString(field: "NonEmptyWaylandString")
+            )
+        ) {
+            _ = try NonEmptyWaylandString("")
+        }
+        #expect(
+            throws: ClientError.invalidWindowConfiguration(
+                .interiorNUL(field: "NonEmptyWaylandString")
+            )
+        ) {
+            _ = try NonEmptyWaylandString("visible\0hidden")
+        }
+    }
+
+    @Test
     func resizeEdgesMapToXDGProtocolValues() {
         #expect(WindowResizeEdge.top.rawXDGResizeEdge.rawValue == 1)
         #expect(WindowResizeEdge.bottom.rawXDGResizeEdge.rawValue == 2)
