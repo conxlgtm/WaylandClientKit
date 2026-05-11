@@ -34,7 +34,10 @@ extension DataTransferManager {
         offerID: DataOfferID
     ) throws {
         let actions = DragActionSet(rawDataDeviceDNDAction: rawActions)
-        if store.offerSnapshot(offerID) != nil {
+        if let offer = store.offerSnapshot(offerID) {
+            guard case .dragAndDrop = offer.role else {
+                return
+            }
             try apply(.offerSourceActions(id: offerID, actions: actions))
         } else {
             try store.setPendingSourceActions(actions, offerID: offerID)
@@ -46,7 +49,10 @@ extension DataTransferManager {
         offerID: DataOfferID
     ) throws {
         let action = DragAction(rawDataDeviceDNDAction: rawAction)
-        if store.offerSnapshot(offerID) != nil {
+        if let offer = store.offerSnapshot(offerID) {
+            guard case .dragAndDrop = offer.role else {
+                return
+            }
             try apply(.offerSelectedAction(id: offerID, action: action))
         } else {
             try store.setPendingSelectedAction(action, offerID: offerID)
