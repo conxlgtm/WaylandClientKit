@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 package struct DataTransferState: Equatable, Sendable {
     private var seats: [SeatID: SeatState]
     var offers: [DataOfferID: OfferState]
@@ -130,11 +132,16 @@ extension DataTransferState {
             .dragFinished, .dragCancelled:
             return try applyDragAndDrop(action)
         case .sourceCreated(let id, let seatID, let mimeTypes):
-            return try applySourceCreated(id: id, seatID: seatID, mimeTypes: mimeTypes)
-        case .selectionSourceChanged(let seatID, let sourceID):
-            return try applySelectionSourceChanged(seatID: seatID, sourceID: sourceID)
-        case .sourceCancelled(let sourceID):
-            return try applySourceCancelled(sourceID)
+            return try applySourceCreated(
+                id: id,
+                role: .selection(seatID: seatID),
+                mimeTypes: mimeTypes
+            )
+        case .dragSourceCreated, .dragSourceTargetChanged, .dragSourceActionChanged,
+            .dragSourceDropPerformed, .dragSourceFinished, .dragSourceInvalidFinished:
+            return try applyDragSource(action)
+        case .selectionSourceChanged, .sourceCancelled:
+            return try applySelectionSource(action)
         }
     }
 
@@ -186,7 +193,7 @@ extension DataTransferState {
             appendSelectionOfferCleanup(offerID, to: &effects)
         }
         for sourceID in sourceIDsForSeat {
-            appendSelectionSourceCleanup(sourceID, to: &effects)
+            appendSourceCleanup(sourceID, to: &effects)
         }
 
         return effects
@@ -268,15 +275,15 @@ extension DataTransferState {
 
     private mutating func applySourceCreated(
         id: DataSourceID,
-        seatID: SeatID,
+        role: DataSourceRole,
         mimeTypes: [MIMEType]
     ) throws -> [DataTransferEffect] {
         guard sources[id] == nil else {
             throw DataTransferError.duplicateSource
         }
-        _ = try boundSeat(seatID)
+        _ = try boundSeat(role.seatID)
 
-        sources[id] = try SourceState(id: id, seatID: seatID, mimeTypes: mimeTypes)
+        sources[id] = try SourceState(id: id, role: role, mimeTypes: mimeTypes)
         return []
     }
 
@@ -297,6 +304,9 @@ extension DataTransferState {
             guard source.seatID == seatID else {
                 throw DataTransferError.unknownSource
             }
+            guard case .selection = source.role else {
+                throw DataTransferError.unknownSource
+            }
         }
 
         let nextSelection = ClipboardSelectionState.fromOwnedSource(sourceID)
@@ -311,6 +321,19 @@ extension DataTransferState {
         return effects
     }
 
+    private mutating func applySelectionSource(
+        _ action: DataTransferAction
+    ) throws -> [DataTransferEffect] {
+        switch action {
+        case .selectionSourceChanged(let seatID, let sourceID):
+            return try applySelectionSourceChanged(seatID: seatID, sourceID: sourceID)
+        case .sourceCancelled(let sourceID):
+            return try applySourceCancelled(sourceID)
+        default:
+            return []
+        }
+    }
+
     private mutating func applySourceCancelled(
         _ sourceID: DataSourceID
     ) throws -> [DataTransferEffect] {
@@ -318,12 +341,103 @@ extension DataTransferState {
             return []
         }
 
-        if var seat = seats[source.seatID], seat.selection == .ownedSource(sourceID) {
+        if case .selection = source.role,
+            var seat = seats[source.seatID],
+            seat.selection == .ownedSource(sourceID)
+        {
             try seat.setSelection(.none)
             seats[source.seatID] = seat
+            return [.cancelSource(sourceID), .publishSourceCancelled(sourceID)]
         }
 
-        return [.cancelSource(sourceID), .publishSourceCancelled(sourceID)]
+        if case .dragAndDrop = source.role {
+            return [.cancelSource(sourceID), .publishDragSourceCancelled(sourceID)]
+        }
+
+        return [.cancelSource(sourceID)]
+    }
+
+    private mutating func applyDragSource(
+        _ action: DataTransferAction
+    ) throws -> [DataTransferEffect] {
+        switch action {
+        case .dragSourceCreated(let id, let seatID, let mimeTypes, let actions):
+            return try applySourceCreated(
+                id: id,
+                role: .dragAndDrop(seatID: seatID, actions: try DragSourceActions(actions)),
+                mimeTypes: mimeTypes
+            )
+        case .dragSourceTargetChanged(let id, let mimeType):
+            return try applyDragSourceTargetChanged(id: id, mimeType: mimeType)
+        case .dragSourceActionChanged(let id, let action):
+            return try applyDragSourceActionChanged(id: id, action: action)
+        case .dragSourceDropPerformed(let id):
+            return try applyDragSourceDropPerformed(id)
+        case .dragSourceFinished(let id):
+            return try applyDragSourceFinished(id)
+        case .dragSourceInvalidFinished(let id):
+            return try applyDragSourceInvalidFinished(id)
+        default:
+            return []
+        }
+    }
+
+    private func requireDragSource(_ sourceID: DataSourceID) throws -> SourceState {
+        guard let source = sources[sourceID], case .dragAndDrop = source.role else {
+            throw DataTransferError.unknownDragSourceIdentity(DragSourceIdentity(sourceID))
+        }
+
+        return source
+    }
+
+    private func applyDragSourceTargetChanged(
+        id sourceID: DataSourceID,
+        mimeType: MIMEType?
+    ) throws -> [DataTransferEffect] {
+        _ = try requireDragSource(sourceID)
+        return [.publishDragSourceTargetChanged(id: sourceID, mimeType: mimeType)]
+    }
+
+    private mutating func applyDragSourceActionChanged(
+        id sourceID: DataSourceID,
+        action: DragAction
+    ) throws -> [DataTransferEffect] {
+        var source = try requireDragSource(sourceID)
+        try source.setSelectedDragAction(action)
+        sources[sourceID] = source
+        return [.publishDragSourceActionChanged(id: sourceID, action: action)]
+    }
+
+    private mutating func applyDragSourceDropPerformed(
+        _ sourceID: DataSourceID
+    ) throws -> [DataTransferEffect] {
+        var source = try requireDragSource(sourceID)
+        guard try source.markDragDropped() else {
+            return []
+        }
+
+        sources[sourceID] = source
+        return [.publishDragSourceDropPerformed(sourceID)]
+    }
+
+    private mutating func applyDragSourceFinished(
+        _ sourceID: DataSourceID
+    ) throws -> [DataTransferEffect] {
+        let source = try requireDragSource(sourceID)
+        let finalAction = try source.finishedDragAction()
+        _ = sources.removeValue(forKey: sourceID)
+        return [
+            .destroySource(sourceID),
+            .publishDragSourceFinished(id: sourceID, finalAction: finalAction),
+        ]
+    }
+
+    private mutating func applyDragSourceInvalidFinished(
+        _ sourceID: DataSourceID
+    ) throws -> [DataTransferEffect] {
+        _ = try requireDragSource(sourceID)
+        _ = sources.removeValue(forKey: sourceID)
+        return [.cancelSource(sourceID)]
     }
 
     func boundSeat(_ seatID: SeatID) throws -> SeatState {
@@ -357,7 +471,10 @@ extension DataTransferState {
             }
 
             if let sourceID = seat.selection.sourceID {
-                guard let source = sources[sourceID], source.seatID == seat.seatID else {
+                guard let source = sources[sourceID],
+                    source.seatID == seat.seatID,
+                    case .selection = source.role
+                else {
                     throw DataTransferError.unknownSource
                 }
             }
@@ -454,12 +571,45 @@ extension DataTransferState {
         _ sourceID: DataSourceID?,
         to effects: inout [DataTransferEffect]
     ) {
-        guard let sourceID, sources.removeValue(forKey: sourceID) != nil else {
+        guard let sourceID,
+            let source = sources[sourceID],
+            case .selection = source.role
+        else {
+            return
+        }
+
+        _ = sources.removeValue(forKey: sourceID)
+        effects.append(.cancelSource(sourceID))
+        effects.append(.publishSourceCancelled(sourceID))
+    }
+
+    private mutating func appendSourceCleanup(
+        _ sourceID: DataSourceID?,
+        seatID: SeatID,
+        to effects: inout [DataTransferEffect]
+    ) {
+        guard let sourceID, sources[sourceID]?.seatID == seatID else {
+            return
+        }
+
+        appendSourceCleanup(sourceID, to: &effects)
+    }
+
+    private mutating func appendSourceCleanup(
+        _ sourceID: DataSourceID?,
+        to effects: inout [DataTransferEffect]
+    ) {
+        guard let sourceID, let source = sources.removeValue(forKey: sourceID) else {
             return
         }
 
         effects.append(.cancelSource(sourceID))
-        effects.append(.publishSourceCancelled(sourceID))
+        switch source.role {
+        case .selection:
+            effects.append(.publishSourceCancelled(sourceID))
+        case .dragAndDrop:
+            effects.append(.publishDragSourceCancelled(sourceID))
+        }
     }
 
     private mutating func appendSelectionCleanup(

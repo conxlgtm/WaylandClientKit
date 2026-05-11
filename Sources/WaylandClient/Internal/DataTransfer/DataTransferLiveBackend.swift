@@ -134,6 +134,7 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
 
 private final class LiveDataTransferDeviceBinding: DataTransferDeviceBinding {
     let seatID: SeatID
+    var protocolVersion: RawVersion { device.version }
 
     private let device: RawDataDevice
     private let owner: RawDataDeviceOwner
@@ -155,6 +156,30 @@ private final class LiveDataTransferDeviceBinding: DataTransferDeviceBinding {
         device.setSelection(source: liveSource?.source, serial: serial.rawValue)
     }
 
+    func startDrag(
+        source: any DataTransferSourceBinding,
+        origin: any DataTransferDragOriginBinding,
+        icon: DragIcon,
+        serial: InputSerial
+    ) {
+        precondition(!isReleased, "data transfer device binding was already released")
+        guard let liveSource = source as? LiveDataTransferSourceBinding else {
+            preconditionFailure("drag source binding is not backed by Wayland raw state")
+        }
+        guard let liveOrigin = origin as? LiveDataTransferDragOriginBinding else {
+            preconditionFailure("drag origin binding is not backed by Wayland raw state")
+        }
+        switch icon {
+        case .none:
+            device.startDrag(
+                source: liveSource.source,
+                origin: liveOrigin.surface,
+                icon: nil,
+                serial: serial.rawValue
+            )
+        }
+    }
+
     func release() {
         guard !isReleased else {
             return
@@ -167,6 +192,14 @@ private final class LiveDataTransferDeviceBinding: DataTransferDeviceBinding {
 
     deinit {
         release()
+    }
+}
+
+package final class LiveDataTransferDragOriginBinding: DataTransferDragOriginBinding {
+    let surface: RawSurface
+
+    package init(surface originSurface: RawSurface) {
+        surface = originSurface
     }
 }
 
@@ -228,6 +261,7 @@ private final class LiveDataTransferOfferBinding: DataTransferOfferBinding {
 
 private final class LiveDataTransferSourceBinding: DataTransferSourceBinding {
     let id: DataSourceID
+    var protocolVersion: RawVersion { source.version }
 
     let source: RawDataSource
     private let owner: RawDataSourceOwner
@@ -246,6 +280,11 @@ private final class LiveDataTransferSourceBinding: DataTransferSourceBinding {
     func offer(mimeType: MIMEType) {
         precondition(!isDestroyed, "data transfer source binding was already destroyed")
         source.offer(mimeType: mimeType.rawValue)
+    }
+
+    func setDragActions(_ actions: DragActionSet) {
+        precondition(!isDestroyed, "data transfer source binding was already destroyed")
+        source.setActions(actions.rawDataDeviceDNDAction)
     }
 
     func destroy() {

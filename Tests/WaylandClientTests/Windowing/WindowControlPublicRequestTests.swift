@@ -4,6 +4,7 @@ import Testing
 
 @testable import WaylandClient
 
+// swiftlint:disable type_body_length
 @Suite(
     .enabled(
         if: WindowControlRequestTestEnvironment.isEnabled,
@@ -11,7 +12,7 @@ import Testing
     ),
     .serialized
 )
-struct WindowControlPublicRequestIdentityTests {
+struct WindowControlPublicRequestTests {
     @Test
     func setTitleSendsTitleRequest() async throws {
         try await withWindowControlConnection { display, window in
@@ -41,16 +42,7 @@ struct WindowControlPublicRequestIdentityTests {
             #expect(record.text == "dev.swiftwayland.updated")
         }
     }
-}
 
-@Suite(
-    .enabled(
-        if: WindowControlRequestTestEnvironment.isEnabled,
-        "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1"
-    ),
-    .serialized
-)
-struct WindowControlPublicRequestStateTests {
     @Test
     func setMaximumSizeSendsProtocolSizeAndNilClearsWithZeroes() async throws {
         try await withWindowControlConnection { display, window in
@@ -232,16 +224,7 @@ struct WindowControlPublicRequestStateTests {
             }
         }
     }
-}
 
-@Suite(
-    .enabled(
-        if: WindowControlRequestTestEnvironment.isEnabled,
-        "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1"
-    ),
-    .serialized
-)
-struct WindowControlPublicRequestInteractionTests {
     @Test
     func requestInteractiveMoveUsesSeatAndSerial() async throws {
         try await withWindowControlConnection { display, window in
@@ -347,6 +330,7 @@ struct WindowControlPublicRequestInteractionTests {
         }
     }
 }
+// swiftlint:enable type_body_length
 
 private func withWindowControlConnection(
     _ body: @Sendable (WaylandDisplay, Window) async throws -> Void

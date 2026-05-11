@@ -268,21 +268,39 @@ package enum DataTransferOfferState: Equatable, Sendable {
 
 package struct DataTransferSourceState: Equatable, Sendable {
     private var storage: DataSourceSnapshot
+    private var selectedDragAction: DragAction?
+    private var hasDragDropped: Bool
 
     package init(
         id sourceID: DataSourceID,
         seatID sourceSeatID: SeatID,
         mimeTypes sourceTypes: [MIMEType]
     ) throws {
-        storage = try DataSourceSnapshot(
+        try self.init(
             id: sourceID,
-            seatID: sourceSeatID,
+            role: .selection(seatID: sourceSeatID),
             mimeTypes: sourceTypes
         )
     }
 
+    package init(
+        id sourceID: DataSourceID,
+        role sourceRole: DataSourceRole,
+        mimeTypes sourceTypes: [MIMEType]
+    ) throws {
+        storage = try DataSourceSnapshot(
+            id: sourceID,
+            role: sourceRole,
+            mimeTypes: sourceTypes
+        )
+        selectedDragAction = nil
+        hasDragDropped = false
+    }
+
     package init(_ snapshot: DataSourceSnapshot) {
         storage = snapshot
+        selectedDragAction = nil
+        hasDragDropped = false
     }
 
     package var id: DataSourceID {
@@ -293,11 +311,78 @@ package struct DataTransferSourceState: Equatable, Sendable {
         storage.seatID
     }
 
+    package var role: DataSourceRole {
+        storage.role
+    }
+
     package var mimeTypes: [MIMEType] {
         storage.mimeTypes
     }
 
     package var snapshot: DataSourceSnapshot {
         storage
+    }
+
+    package mutating func setSelectedDragAction(_ action: DragAction) throws {
+        let availableActions = try requireDragSourceActions()
+        try validateSelectedDragAction(action, availableActions: availableActions)
+        guard canApplySelectedDragActionAfterDrop(action) else {
+            throw DataTransferError.invalidSourceEvent(.action)
+        }
+
+        selectedDragAction = action
+    }
+
+    package mutating func markDragDropped() throws -> Bool {
+        _ = try requireDragSourceActions()
+        guard !hasDragDropped else {
+            return false
+        }
+
+        hasDragDropped = true
+        return true
+    }
+
+    package func finishedDragAction() throws -> DragSourceFinalAction {
+        _ = try requireDragSourceActions()
+        guard hasDragDropped, let selectedDragAction else {
+            throw DataTransferError.invalidSourceEvent(.dndFinished)
+        }
+
+        return try DragSourceFinalAction(selectedDragAction)
+    }
+
+    private func requireDragSourceActions() throws -> DragActionSet {
+        guard let actions = storage.role.dragActions else {
+            throw DataTransferError.unknownDragSourceIdentity(DragSourceIdentity(id))
+        }
+
+        return actions
+    }
+
+    private func validateSelectedDragAction(
+        _ action: DragAction,
+        availableActions: DragActionSet
+    ) throws {
+        guard action != .none, action.isKnownProtocolAction else {
+            return
+        }
+        guard availableActions.contains(action.actionSetMember) else {
+            throw DataTransferError.unsupportedDragAction(
+                action: action,
+                available: availableActions
+            )
+        }
+    }
+
+    private func canApplySelectedDragActionAfterDrop(_ action: DragAction) -> Bool {
+        guard hasDragDropped, let selectedDragAction else {
+            return true
+        }
+        guard selectedDragAction != .ask else {
+            return true
+        }
+
+        return action == selectedDragAction
     }
 }

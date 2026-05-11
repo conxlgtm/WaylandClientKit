@@ -917,6 +917,10 @@ extension TopLevelWindow {
         package var topLevelPointerAddressForTesting: UInt? {
             roleResources?.topLevel.pointerAddressForTesting
         }
+
+        package var surfacePointerAddressForTesting: UInt {
+            surface.pointerAddressForTesting
+        }
     #endif
 
     package var isClosedOnOwnerThread: Bool {
@@ -1062,6 +1066,12 @@ extension TopLevelWindow {
             x: position.x,
             y: position.y
         )
+    }
+
+    package func dataTransferDragOriginOnOwnerThread() throws -> any DataTransferDragOriginBinding {
+        connection.preconditionIsOwnerThread()
+        _ = try activeTopLevel(for: "startDrag")
+        return LiveDataTransferDragOriginBinding(surface: surface)
     }
 
     package func createPopupOnOwnerThread(

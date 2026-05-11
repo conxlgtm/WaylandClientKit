@@ -22,6 +22,38 @@ package struct DataSourceID: Hashable, Sendable, CustomStringConvertible {
     }
 }
 
+package enum DataSourceRole: Equatable, Sendable {
+    case selection(seatID: SeatID)
+    case dragAndDrop(seatID: SeatID, actions: DragSourceActions)
+
+    package var seatID: SeatID {
+        switch self {
+        case .selection(let seatID), .dragAndDrop(let seatID, _):
+            seatID
+        }
+    }
+
+    package var dragActions: DragActionSet? {
+        guard case .dragAndDrop(_, let actions) = self else {
+            return nil
+        }
+
+        return actions.value
+    }
+}
+
+package struct DragSourceActions: Equatable, Sendable {
+    package let value: DragActionSet
+
+    package init(_ actions: DragActionSet) throws {
+        guard !actions.isEmpty, actions.containsOnlyKnownProtocolActions else {
+            throw DataTransferError.invalidDragActionSet(rawValue: actions.rawValue)
+        }
+
+        value = actions
+    }
+}
+
 package enum DataOfferRole: Equatable, Sendable {
     case selection(seatID: SeatID)
     case dragAndDrop(seatID: SeatID)
@@ -127,12 +159,28 @@ package struct DataOfferSnapshot: Equatable, Sendable {
 
 package struct DataSourceSnapshot: Equatable, Sendable {
     package let id: DataSourceID
-    package let seatID: SeatID
+    package let role: DataSourceRole
     package let mimeTypes: [MIMEType]
+
+    package var seatID: SeatID {
+        role.seatID
+    }
 
     package init(
         id sourceID: DataSourceID,
         seatID sourceSeatID: SeatID,
+        mimeTypes sourceMIMETypes: [MIMEType]
+    ) throws {
+        try self.init(
+            id: sourceID,
+            role: .selection(seatID: sourceSeatID),
+            mimeTypes: sourceMIMETypes
+        )
+    }
+
+    package init(
+        id sourceID: DataSourceID,
+        role sourceRole: DataSourceRole,
         mimeTypes sourceMIMETypes: [MIMEType]
     ) throws {
         try NonEmptyMIMETypeList.validate(
@@ -140,7 +188,7 @@ package struct DataSourceSnapshot: Equatable, Sendable {
             emptyError: .emptyDataSource
         )
         id = sourceID
-        seatID = sourceSeatID
+        role = sourceRole
         mimeTypes = sourceMIMETypes
     }
 }
@@ -272,6 +320,17 @@ package enum DataTransferAction: Equatable, Sendable {
     case dragFinished(DataOfferID)
     case dragCancelled(DataOfferID)
     case sourceCreated(id: DataSourceID, seatID: SeatID, mimeTypes: [MIMEType])
+    case dragSourceCreated(
+        id: DataSourceID,
+        seatID: SeatID,
+        mimeTypes: [MIMEType],
+        actions: DragActionSet
+    )
+    case dragSourceTargetChanged(id: DataSourceID, mimeType: MIMEType?)
+    case dragSourceActionChanged(id: DataSourceID, action: DragAction)
+    case dragSourceDropPerformed(DataSourceID)
+    case dragSourceFinished(DataSourceID)
+    case dragSourceInvalidFinished(DataSourceID)
     case selectionSourceChanged(seatID: SeatID, sourceID: DataSourceID?)
     case sourceCancelled(DataSourceID)
 }
@@ -280,6 +339,7 @@ package enum DataTransferEffect: Equatable, Sendable {
     case bindDataDevice(SeatID)
     case releaseDataDevice(SeatID)
     case destroyOffer(DataOfferID)
+    case destroySource(DataSourceID)
     case cancelSource(DataSourceID)
     case publishSelectionChanged(seatID: SeatID, offerID: DataOfferID?)
     case publishDragEntered(DataTransferDragEnterTransition)
@@ -290,6 +350,11 @@ package enum DataTransferEffect: Equatable, Sendable {
     case publishDragDropped(seatID: SeatID, offerID: DataOfferID)
     case publishDragOfferChanged(seatID: SeatID, offerID: DataOfferID)
     case publishSourceCancelled(DataSourceID)
+    case publishDragSourceCancelled(DataSourceID)
+    case publishDragSourceTargetChanged(id: DataSourceID, mimeType: MIMEType?)
+    case publishDragSourceActionChanged(id: DataSourceID, action: DragAction)
+    case publishDragSourceDropPerformed(DataSourceID)
+    case publishDragSourceFinished(id: DataSourceID, finalAction: DragSourceFinalAction)
 }
 
 package struct DataTransferTransitionPlan: Equatable, Sendable {

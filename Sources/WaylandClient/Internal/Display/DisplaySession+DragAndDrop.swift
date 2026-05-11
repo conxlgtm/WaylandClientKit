@@ -54,4 +54,31 @@ extension DisplaySession {
         try processClipboardDataTransferState()
         try dataTransferManager.cancelDragOffer(id: offerID)
     }
+
+    package func startDragOnOwnerThread(
+        _ configuration: DragSourceConfiguration,
+        seatID: SeatID,
+        serial: InputSerial,
+        origin: any DataTransferDragOriginBinding,
+        icon: DragIcon
+    ) throws -> DataSourceSnapshot {
+        connection.preconditionIsOwnerThread()
+        try processClipboardDataTransferState()
+        return try dataTransferManager.startDrag(
+            DataTransferStartDragRequest(
+                seatID: seatID,
+                payloads: configuration.payloadSet,
+                actions: configuration.actions,
+                serial: serial,
+                origin: origin,
+                icon: icon
+            )
+        )
+    }
+
+    package func cancelDragSourceOnOwnerThread(id sourceID: DataSourceID) throws {
+        connection.preconditionIsOwnerThread()
+        try processClipboardDataTransferState()
+        try dataTransferManager.cancelDragSource(id: sourceID)
+    }
 }
