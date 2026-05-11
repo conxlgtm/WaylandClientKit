@@ -39,7 +39,7 @@ Not implemented yet:
 
 - protocol coverage beyond the listed current support matrix
 - text-input or IME behavior
-- drag-and-drop transfer handling
+- drag icon surfaces
 - cursor animation, output-scale cursor selection, or custom cursor drawing APIs
 - output-management or presentation-time APIs
 - high-level gesture recognizers or widgets
@@ -114,7 +114,10 @@ Clipboard and data transfer:
 - primary selection offers can be inspected and received when the compositor advertises the protocol
 - primary selection sources can be offered and cleared with an input serial
 - primary selection is selection-driven and focus-sensitive, not a second regular clipboard
-- drag-and-drop enter events are rejected
+- receive-side drag-and-drop offers can be inspected, negotiated, received, finished, and cancelled
+- source-side drag-and-drop sources can be started and cancelled from managed windows with explicit input serials
+- drag source target, action, drop, finished, and cancelled lifecycle events are exposed
+- drag icon surfaces are not yet supported
 
 Outputs:
 
@@ -132,7 +135,7 @@ Popups:
 
 Not supported in the current experimental baseline:
 
-- drag-and-drop transfer handling
+- drag icon surfaces
 - cursor animation or per-output cursor scaling
 - presentation-time
 - output management or control APIs

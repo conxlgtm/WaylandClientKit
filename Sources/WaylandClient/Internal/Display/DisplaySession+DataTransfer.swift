@@ -119,8 +119,14 @@ extension DisplaySession {
                 writer.cancelJobs(
                     for: .primarySelection(DataSourceID(rawValue: source.rawValue))
                 )
+            case .dragSourceCancelled(let source):
+                writer.cancelJobs(
+                    for: .dragAndDrop(DataSourceID(rawValue: source.rawValue))
+                )
             case .clipboardSelectionChanged, .primarySelectionChanged,
-                .dragEntered, .dragMotion, .dragLeft, .dragDropped, .dragOfferChanged:
+                .dragEntered, .dragMotion, .dragLeft, .dragDropped, .dragOfferChanged,
+                .dragSourceTargetChanged, .dragSourceActionChanged, .dragSourceDropPerformed,
+                .dragSourceFinished:
                 break
             }
         }
@@ -475,22 +481,5 @@ extension DisplaySession {
 
             pendingDiagnostics.append(diagnostic)
         }
-    }
-
-    package static func dataTransferDiagnostic(
-        from result: DataTransferSourceWriteResult
-    ) -> DataTransferDiagnostic? {
-        guard case .failed(let source, let mimeType, let error) = result,
-            error != .cancelled
-        else {
-            return nil
-        }
-
-        return DataTransferDiagnostic(
-            source: source.diagnosticSource,
-            mimeType: mimeType,
-            operation: .sourceWriteFailed,
-            error: error
-        )
     }
 }

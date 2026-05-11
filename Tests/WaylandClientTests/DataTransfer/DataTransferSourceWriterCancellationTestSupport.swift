@@ -119,10 +119,15 @@ final class SourceCancellationBackpressureProbe: Sendable {
         state.withLock(\.closeThreadMarkers)
     }
 
+    var writeAttemptCount: Int {
+        state.withLock(\.writeAttemptCount)
+    }
+
     func write(descriptor _: Int32, bytes _: ArraySlice<UInt8>) throws -> Int {
         condition.lock()
         state.withLock { storage in
             storage.started = true
+            storage.writeAttemptCount += 1
         }
         condition.broadcast()
         condition.unlock()
@@ -156,6 +161,20 @@ final class SourceCancellationBackpressureProbe: Sendable {
         return true
     }
 
+    func waitUntilWriteAttemptCount(atLeast minimumCount: Int) -> Bool {
+        let deadline = Date(timeIntervalSinceNow: 2)
+        condition.lock()
+        defer { condition.unlock() }
+
+        while writeAttemptCount < minimumCount {
+            guard condition.wait(until: deadline) else {
+                return writeAttemptCount >= minimumCount
+            }
+        }
+
+        return true
+    }
+
     private var started: Bool {
         state.withLock(\.started)
     }
@@ -163,6 +182,7 @@ final class SourceCancellationBackpressureProbe: Sendable {
 
 private struct SourceCancellationBackpressureProbeState {
     var started = false
+    var writeAttemptCount = 0
     var closedDescriptors: [Int32] = []
     var closeThreadMarkers: [ObjectIdentifier] = []
 }

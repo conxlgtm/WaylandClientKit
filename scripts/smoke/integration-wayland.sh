@@ -19,6 +19,7 @@ timeout "${PROCESS_TIMEOUT_SECONDS}s" "${REPO_ROOT}/scripts/ci/test-public-api-c
 env \
     CC="${REPO_ROOT}/scripts/dev/clang-filter-index-store.sh" \
     SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1 \
+    SWIFT_WAYLAND_ENABLE_DND_SOURCE_REQUEST_TESTS=1 \
     timeout "${PROCESS_TIMEOUT_SECONDS}s" \
     "${REPO_ROOT}/scripts/dev/swift.sh" test \
-    --filter WindowControlPublicRequest
+    --filter 'WindowControlPublicRequest|WindowDragSourcePublicRequest'
