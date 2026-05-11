@@ -267,7 +267,7 @@ public enum DataTransferEvent: Equatable, Sendable {
     case dragSourceTargetChanged(DragSourceTargetEvent)
     case dragSourceActionChanged(DragSourceActionEvent)
     case dragSourceDropPerformed(DragSourceIdentity)
-    case dragSourceFinished(DragSourceIdentity)
+    case dragSourceFinished(DragSourceFinishedEvent)
     case dragEntered(DragEnterEvent)
     case dragMotion(DragMotionEvent)
     case dragLeft(DragLeaveEvent)

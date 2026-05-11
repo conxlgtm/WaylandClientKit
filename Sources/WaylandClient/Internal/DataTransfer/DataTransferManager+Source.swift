@@ -431,23 +431,16 @@ extension DataTransferManager {
     }
 
     package func discardPendingSourceSendRequests(for sourceID: DataSourceID) {
-        var remainingRequests: [DataTransferSourceSendRequest] = []
-        for request in store.drainSourceSendRequests() {
-            if request.source.sourceID == sourceID {
-                do {
-                    try request.close()
-                } catch {
-                    recordCallbackError(
-                        error,
-                        context: .sourceWrite(request.source.diagnosticSource)
-                    )
-                }
-            } else {
-                remainingRequests.append(request)
+        for request in store.removeSourceSendRequests(for: sourceID) {
+            do {
+                try request.close()
+            } catch {
+                recordCallbackError(
+                    error,
+                    context: .sourceWrite(request.source.diagnosticSource)
+                )
             }
         }
-
-        store.replaceSourceSendRequests(remainingRequests)
     }
 
     func discardAllPendingSourceSendRequests() {

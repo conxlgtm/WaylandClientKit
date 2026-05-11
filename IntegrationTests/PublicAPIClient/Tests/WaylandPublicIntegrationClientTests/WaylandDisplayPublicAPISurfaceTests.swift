@@ -204,8 +204,8 @@ struct WaylandDisplayPublicAPISurfaceTests {
                 "\(event.source.description):\(event.action.description)"
             case .dragSourceDropPerformed(let identity):
                 identity.description
-            case .dragSourceFinished(let identity):
-                identity.description
+            case .dragSourceFinished(let event):
+                "\(event.source.description):\(event.finalAction.description)"
             case .dragEntered(let event):
                 "\(event.offer.description):\(event.serial.description):\(event.target)"
             case .dragMotion(let event):

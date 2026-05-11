@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import Foundation
 import Testing
 
@@ -107,7 +109,9 @@ struct DataTransferManagerDragSourceTests {
                         DragSourceActionEvent(sourceID: source.id, action: .move)
                     ),
                     .dragSourceDropPerformed(DragSourceIdentity(source.id)),
-                    .dragSourceFinished(DragSourceIdentity(source.id)),
+                    .dragSourceFinished(
+                        DragSourceFinishedEvent(sourceID: source.id, finalAction: .move)
+                    ),
                 ]
         )
         #expect(binding.destroyCount == 1)
@@ -120,6 +124,8 @@ struct DataTransferManagerDragSourceTests {
         let binding = try #require(backend.sourceBinding(for: source.id))
 
         binding.emit(.send(mimeType: MIMEType.plainText.rawValue, fd: 223))
+        binding.emit(.action(.copy))
+        binding.emit(.dndDropPerformed)
         binding.emit(.dndFinished)
 
         let request = try #require(manager.drainSourceSendRequests().first)
@@ -129,6 +135,56 @@ struct DataTransferManagerDragSourceTests {
         #expect(backend.closedDescriptors.isEmpty)
         #expect(binding.destroyCount == 1)
         #expect(manager.sourceSnapshots.isEmpty)
+    }
+
+    @Test
+    func finishedDragSourcePendingSendSurvivesCancellingClipboardSource() throws {
+        let (manager, backend, dragSource) = try managerWithStartedDragSource()
+        let dragBinding = try #require(backend.sourceBinding(for: dragSource.id))
+
+        dragBinding.emit(.send(mimeType: MIMEType.plainText.rawValue, fd: 223))
+        dragBinding.emit(.action(.copy))
+        dragBinding.emit(.dndDropPerformed)
+        dragBinding.emit(.dndFinished)
+        _ = manager.drainDataTransferEvents()
+
+        let clipboardSource = try manager.setSelectionSource(
+            seatID: seatID,
+            mimeTypes: [.plainText],
+            serial: serial
+        )
+        let clipboardBinding = try #require(backend.sourceBinding(for: clipboardSource.id))
+
+        clipboardBinding.emit(.cancelled)
+
+        let request = try #require(manager.drainSourceSendRequests().first)
+        #expect(request.source == .dragAndDrop(dragSource.id))
+        #expect(request.mimeType == .plainText)
+        #expect(backend.closedDescriptors.isEmpty)
+        #expect(clipboardBinding.destroyCount == 1)
+    }
+
+    @Test
+    func finishedDragSourcePendingSendSurvivesCancellingAnotherDragSource() throws {
+        let (manager, backend, firstSource) = try managerWithStartedDragSource()
+        let firstBinding = try #require(backend.sourceBinding(for: firstSource.id))
+
+        firstBinding.emit(.send(mimeType: MIMEType.plainText.rawValue, fd: 224))
+        firstBinding.emit(.action(.copy))
+        firstBinding.emit(.dndDropPerformed)
+        firstBinding.emit(.dndFinished)
+        _ = manager.drainDataTransferEvents()
+
+        let secondSource = try manager.startDrag(try startDragRequest(actions: [.copy]))
+        let secondBinding = try #require(backend.sourceBinding(for: secondSource.id))
+
+        try manager.cancelDragSource(id: secondSource.id)
+
+        let request = try #require(manager.drainSourceSendRequests().first)
+        #expect(request.source == .dragAndDrop(firstSource.id))
+        #expect(request.mimeType == .plainText)
+        #expect(backend.closedDescriptors.isEmpty)
+        #expect(secondBinding.destroyCount == 1)
     }
 
     @Test
@@ -236,7 +292,7 @@ struct DataTransferManagerDragSourceTests {
 }
 
 @Suite
-struct DataTransferManagerDragSourceCallbackTests {
+struct DataTransferManagerDragSourceCallbackTests {  // swiftlint:disable:this type_body_length
     private let seatID = SeatID(rawValue: 1)
     private let origin = RecordingDataTransferDragOriginBinding(id: 0x57)
     private let serial = InputSerial(rawValue: 44)
@@ -318,10 +374,204 @@ struct DataTransferManagerDragSourceCallbackTests {
     }
 
     @Test
+    func dragSourceActionRejectsKnownActionOutsideOfferedSet() throws {
+        let (manager, backend, source) = try managerWithStartedDragSource(actions: [.move])
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        binding.emit(.action(.copy))
+
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dragSource(DragSourceIdentity(source.id)),
+                error: .unsupportedDragAction(action: .copy, available: [.move])
+            )
+        ) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+        #expect(manager.drainDataTransferEvents().isEmpty)
+    }
+
+    @Test
+    func dragSourceActionNoneIsAccepted() throws {
+        let (manager, backend, source) = try managerWithStartedDragSource(actions: [.move])
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        binding.emit(.action(.none))
+
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .dragSourceActionChanged(
+                        DragSourceActionEvent(sourceID: source.id, action: .none)
+                    )
+                ]
+        )
+        try manager.throwPendingCallbackErrorIfAny()
+    }
+
+    @Test
+    func dragSourceActionAskRequiresAskOffered() throws {
+        let (manager, backend, source) = try managerWithStartedDragSource(actions: [.copy])
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        binding.emit(.action(.ask))
+
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dragSource(DragSourceIdentity(source.id)),
+                error: .unsupportedDragAction(action: .ask, available: [.copy])
+            )
+        ) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+        #expect(manager.drainDataTransferEvents().isEmpty)
+    }
+
+    @Test
+    func dragSourceFinishedIncludesLatestSelectedAction() throws {
+        let (manager, backend, source) = try managerWithStartedDragSource()
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        binding.emit(.action(.copy))
+        binding.emit(.action(.move))
+        binding.emit(.dndDropPerformed)
+        binding.emit(.dndFinished)
+
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .dragSourceActionChanged(
+                        DragSourceActionEvent(sourceID: source.id, action: .copy)
+                    ),
+                    .dragSourceActionChanged(
+                        DragSourceActionEvent(sourceID: source.id, action: .move)
+                    ),
+                    .dragSourceDropPerformed(DragSourceIdentity(source.id)),
+                    .dragSourceFinished(
+                        DragSourceFinishedEvent(sourceID: source.id, finalAction: .move)
+                    ),
+                ]
+        )
+        try manager.throwPendingCallbackErrorIfAny()
+    }
+
+    @Test
+    func dragSourceAskFinalActionBeforeFinishedWins() throws {
+        let (manager, backend, source) = try managerWithStartedDragSource(
+            actions: [.copy, .move, .ask]
+        )
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        binding.emit(.action(.ask))
+        binding.emit(.dndDropPerformed)
+        binding.emit(.action(.copy))
+        binding.emit(.dndFinished)
+
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .dragSourceActionChanged(
+                        DragSourceActionEvent(sourceID: source.id, action: .ask)
+                    ),
+                    .dragSourceDropPerformed(DragSourceIdentity(source.id)),
+                    .dragSourceActionChanged(
+                        DragSourceActionEvent(sourceID: source.id, action: .copy)
+                    ),
+                    .dragSourceFinished(
+                        DragSourceFinishedEvent(sourceID: source.id, finalAction: .copy)
+                    ),
+                ]
+        )
+        try manager.throwPendingCallbackErrorIfAny()
+    }
+
+    @Test
+    func dragSourceFinishedWithoutSelectedActionRecordsCallbackFailure() throws {
+        let (manager, backend, source) = try managerWithStartedDragSource()
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        binding.emit(.dndDropPerformed)
+        binding.emit(.dndFinished)
+
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dragSource(DragSourceIdentity(source.id)),
+                error: .invalidSourceEvent(.dndFinished)
+            )
+        ) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+        #expect(
+            manager.drainDataTransferEvents()
+                == [.dragSourceDropPerformed(DragSourceIdentity(source.id))]
+        )
+        #expect(backend.sourceBinding(for: source.id)?.destroyCount == 0)
+    }
+
+    @Test
+    func dragSourceFinishedBeforeDropRecordsCallbackFailure() throws {
+        let (manager, backend, source) = try managerWithStartedDragSource()
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        binding.emit(.action(.copy))
+        binding.emit(.dndFinished)
+
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dragSource(DragSourceIdentity(source.id)),
+                error: .invalidSourceEvent(.dndFinished)
+            )
+        ) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .dragSourceActionChanged(
+                        DragSourceActionEvent(sourceID: source.id, action: .copy)
+                    )
+                ]
+        )
+        #expect(backend.sourceBinding(for: source.id)?.destroyCount == 0)
+    }
+
+    @Test
+    func unknownFinalDragSourceActionPreservesRawValue() throws {
+        let (manager, backend, source) = try managerWithStartedDragSource()
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        binding.emit(.action(RawDataDeviceDNDAction(rawValue: 8)))
+        binding.emit(.dndDropPerformed)
+        binding.emit(.dndFinished)
+
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .dragSourceActionChanged(
+                        DragSourceActionEvent(
+                            sourceID: source.id,
+                            action: .unknown(rawValue: 8)
+                        )
+                    ),
+                    .dragSourceDropPerformed(DragSourceIdentity(source.id)),
+                    .dragSourceFinished(
+                        DragSourceFinishedEvent(
+                            sourceID: source.id,
+                            finalAction: .unknown(rawValue: 8)
+                        )
+                    ),
+                ]
+        )
+        try manager.throwPendingCallbackErrorIfAny()
+    }
+
+    @Test
     func lateDragSourceCallbackAfterFinishKeepsDragSourceContext() throws {
         let (manager, backend, source) = try managerWithStartedDragSource()
         let binding = try #require(backend.sourceBinding(for: source.id))
 
+        binding.emit(.action(.copy))
+        binding.emit(.dndDropPerformed)
         binding.emit(.dndFinished)
         _ = manager.drainDataTransferEvents()
 
@@ -395,11 +645,21 @@ struct DataTransferManagerDragSourceCallbackTests {
         backend: RecordingDataTransferBackend,
         source: DataSourceSnapshot
     ) {
+        try managerWithStartedDragSource(actions: [.copy, .move])
+    }
+
+    private func managerWithStartedDragSource(
+        actions: DragActionSet
+    ) throws -> (
+        manager: DataTransferManager,
+        backend: RecordingDataTransferBackend,
+        source: DataSourceSnapshot
+    ) {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
         try manager.synchronizeSeats([seatID])
         let source = try manager.startDrag(
-            try startDragRequest(actions: [.copy, .move])
+            try startDragRequest(actions: actions)
         )
         return (manager, backend, source)
     }

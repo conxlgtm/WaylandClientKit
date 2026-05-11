@@ -396,27 +396,38 @@ extension DataTransferState {
         return [.publishDragSourceTargetChanged(id: sourceID, mimeType: mimeType)]
     }
 
-    private func applyDragSourceActionChanged(
+    private mutating func applyDragSourceActionChanged(
         id sourceID: DataSourceID,
         action: DragAction
     ) throws -> [DataTransferEffect] {
-        _ = try requireDragSource(sourceID)
+        var source = try requireDragSource(sourceID)
+        try source.setSelectedDragAction(action)
+        sources[sourceID] = source
         return [.publishDragSourceActionChanged(id: sourceID, action: action)]
     }
 
-    private func applyDragSourceDropPerformed(
+    private mutating func applyDragSourceDropPerformed(
         _ sourceID: DataSourceID
     ) throws -> [DataTransferEffect] {
-        _ = try requireDragSource(sourceID)
+        var source = try requireDragSource(sourceID)
+        guard try source.markDragDropped() else {
+            return []
+        }
+
+        sources[sourceID] = source
         return [.publishDragSourceDropPerformed(sourceID)]
     }
 
     private mutating func applyDragSourceFinished(
         _ sourceID: DataSourceID
     ) throws -> [DataTransferEffect] {
-        _ = try requireDragSource(sourceID)
+        let source = try requireDragSource(sourceID)
+        let finalAction = try source.finishedDragAction()
         _ = sources.removeValue(forKey: sourceID)
-        return [.destroySource(sourceID), .publishDragSourceFinished(sourceID)]
+        return [
+            .destroySource(sourceID),
+            .publishDragSourceFinished(id: sourceID, finalAction: finalAction),
+        ]
     }
 
     func boundSeat(_ seatID: SeatID) throws -> SeatState {

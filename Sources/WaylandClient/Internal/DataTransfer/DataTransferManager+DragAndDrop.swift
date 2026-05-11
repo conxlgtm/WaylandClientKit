@@ -71,8 +71,15 @@ extension DataTransferManager {
             )
         case .publishDragSourceDropPerformed(let sourceID):
             eventQueue.append(.dragSourceDropPerformed(DragSourceIdentity(sourceID)))
-        case .publishDragSourceFinished(let sourceID):
-            eventQueue.append(.dragSourceFinished(DragSourceIdentity(sourceID)))
+        case .publishDragSourceFinished(let sourceID, let finalAction):
+            eventQueue.append(
+                .dragSourceFinished(
+                    DragSourceFinishedEvent(
+                        sourceID: sourceID,
+                        finalAction: finalAction
+                    )
+                )
+            )
         default:
             return
         }
