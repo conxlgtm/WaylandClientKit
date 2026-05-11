@@ -10,6 +10,7 @@ xdg_candidates=()
 decoration_candidates=()
 xdg_output_candidates=()
 viewporter_candidates=()
+presentation_time_candidates=()
 fractional_scale_candidates=()
 primary_selection_candidates=()
 
@@ -18,6 +19,7 @@ mapfile -t xdg_candidates < <(protocol_sources_xdg_shell_candidates)
 mapfile -t decoration_candidates < <(protocol_sources_xdg_decoration_candidates)
 mapfile -t xdg_output_candidates < <(protocol_sources_xdg_output_candidates)
 mapfile -t viewporter_candidates < <(protocol_sources_viewporter_candidates)
+mapfile -t presentation_time_candidates < <(protocol_sources_presentation_time_candidates)
 mapfile -t fractional_scale_candidates < <(protocol_sources_fractional_scale_candidates)
 mapfile -t primary_selection_candidates < <(protocol_sources_primary_selection_candidates)
 
@@ -28,6 +30,9 @@ XDG_DECORATION_XML_SOURCE="$(
 )"
 XDG_OUTPUT_XML_SOURCE="$(protocol_sources_first_existing_file "${xdg_output_candidates[@]}" || true)"
 VIEWPORTER_XML_SOURCE="$(protocol_sources_first_existing_file "${viewporter_candidates[@]}" || true)"
+PRESENTATION_TIME_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${presentation_time_candidates[@]}" || true
+)"
 FRACTIONAL_SCALE_XML_SOURCE="$(
     protocol_sources_first_existing_file "${fractional_scale_candidates[@]}" || true
 )"
@@ -65,6 +70,12 @@ PRIMARY_SELECTION_XML_SOURCE="$(
     exit 1
 }
 
+[[ -f "$PRESENTATION_TIME_XML_SOURCE" ]] || {
+    echo "Missing presentation-time XML. Checked:"
+    printf '  %s\n' "${presentation_time_candidates[@]}"
+    exit 1
+}
+
 [[ -f "$FRACTIONAL_SCALE_XML_SOURCE" ]] || {
     echo "Missing fractional-scale XML. Checked:"
     printf '  %s\n' "${fractional_scale_candidates[@]}"
@@ -83,6 +94,7 @@ mkdir -p \
     "$ROOT/protocols/upstream/legacy-unstable/xdg-decoration" \
     "$ROOT/protocols/upstream/legacy-unstable/xdg-output" \
     "$ROOT/protocols/upstream/stable/viewporter" \
+    "$ROOT/protocols/upstream/stable/presentation-time" \
     "$ROOT/protocols/upstream/staging/fractional-scale" \
     "$ROOT/protocols/upstream/legacy-unstable/primary-selection"
 
@@ -93,6 +105,8 @@ cp "$XDG_DECORATION_XML_SOURCE" \
 cp "$XDG_OUTPUT_XML_SOURCE" \
     "$ROOT/protocols/upstream/legacy-unstable/xdg-output/xdg-output-unstable-v1.xml"
 cp "$VIEWPORTER_XML_SOURCE" "$ROOT/protocols/upstream/stable/viewporter/viewporter.xml"
+cp "$PRESENTATION_TIME_XML_SOURCE" \
+    "$ROOT/protocols/upstream/stable/presentation-time/presentation-time.xml"
 cp "$FRACTIONAL_SCALE_XML_SOURCE" \
     "$ROOT/protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml"
 cp "$PRIMARY_SELECTION_XML_SOURCE" \

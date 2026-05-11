@@ -24,6 +24,8 @@ struct zxdg_output_manager_v1;
 struct zxdg_output_v1;
 struct wp_viewporter;
 struct wp_viewport;
+struct wp_presentation;
+struct wp_presentation_feedback;
 struct wp_fractional_scale_manager_v1;
 struct wp_fractional_scale_v1;
 struct wl_data_device_manager;
@@ -62,6 +64,9 @@ struct zxdg_output_manager_v1 *swl_registry_bind_zxdg_output_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wp_viewporter *swl_registry_bind_wp_viewporter(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_presentation *swl_registry_bind_wp_presentation(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wp_fractional_scale_manager_v1 *swl_registry_bind_wp_fractional_scale_manager_v1(
@@ -269,6 +274,14 @@ struct wp_fractional_scale_v1 *swl_wp_fractional_scale_manager_v1_get_fractional
     struct wl_surface *surface);
 
 /* ------------------------------------------------------------------ */
+/*  Presentation-time request wrappers                                */
+/* ------------------------------------------------------------------ */
+
+struct wp_presentation_feedback *swl_wp_presentation_feedback(
+    struct wp_presentation *presentation,
+    struct wl_surface *surface);
+
+/* ------------------------------------------------------------------ */
 /*  Destroy / release wrappers                                        */
 /* ------------------------------------------------------------------ */
 
@@ -316,6 +329,9 @@ void swl_wp_viewporter_destroy(struct wp_viewporter *viewporter);
 void swl_wp_fractional_scale_v1_destroy(struct wp_fractional_scale_v1 *fractional_scale);
 void swl_wp_fractional_scale_manager_v1_destroy(
     struct wp_fractional_scale_manager_v1 *manager);
+void swl_wp_presentation_destroy(struct wp_presentation *presentation);
+void swl_wp_presentation_feedback_destroy(
+    struct wp_presentation_feedback *feedback);
 
 /* ------------------------------------------------------------------ */
 /*  Display wrappers                                                  */
@@ -505,6 +521,26 @@ typedef void (*swl_zxdg_toplevel_decoration_v1_configure_fn)(
 /* Fractional scale */
 typedef void (*swl_wp_fractional_scale_v1_preferred_scale_fn)(
     void *data, struct wp_fractional_scale_v1 *fractional_scale, uint32_t scale);
+
+/* Presentation time */
+typedef void (*swl_wp_presentation_clock_id_fn)(
+    void *data, struct wp_presentation *presentation, uint32_t clock_id);
+typedef void (*swl_wp_presentation_feedback_sync_output_fn)(
+    void *data,
+    struct wp_presentation_feedback *feedback,
+    struct wl_output *output);
+typedef void (*swl_wp_presentation_feedback_presented_fn)(
+    void *data,
+    struct wp_presentation_feedback *feedback,
+    uint32_t tv_sec_hi,
+    uint32_t tv_sec_lo,
+    uint32_t tv_nsec,
+    uint32_t refresh,
+    uint32_t seq_hi,
+    uint32_t seq_lo,
+    uint32_t flags);
+typedef void (*swl_wp_presentation_feedback_discarded_fn)(
+    void *data, struct wp_presentation_feedback *feedback);
 
 /* Seat */
 typedef void (*swl_seat_capabilities_fn)(
@@ -704,6 +740,18 @@ struct swl_wp_fractional_scale_v1_listener_callbacks {
     void                                         *data;
 };
 
+struct swl_wp_presentation_listener_callbacks {
+    swl_wp_presentation_clock_id_fn clock_id;
+    void                           *data;
+};
+
+struct swl_wp_presentation_feedback_listener_callbacks {
+    swl_wp_presentation_feedback_sync_output_fn sync_output;
+    swl_wp_presentation_feedback_presented_fn   presented;
+    swl_wp_presentation_feedback_discarded_fn   discarded;
+    void                                       *data;
+};
+
 struct swl_seat_listener_callbacks {
     swl_seat_capabilities_fn capabilities;
     swl_seat_name_fn         name;
@@ -821,6 +869,14 @@ int swl_zxdg_output_v1_add_listener(
 int swl_wp_fractional_scale_v1_add_listener(
     struct wp_fractional_scale_v1 *fractional_scale,
     const struct swl_wp_fractional_scale_v1_listener_callbacks *callbacks);
+
+int swl_wp_presentation_add_listener(
+    struct wp_presentation *presentation,
+    const struct swl_wp_presentation_listener_callbacks *callbacks);
+
+int swl_wp_presentation_feedback_add_listener(
+    struct wp_presentation_feedback *feedback,
+    const struct swl_wp_presentation_feedback_listener_callbacks *callbacks);
 
 int swl_seat_add_listener(
     struct wl_seat *seat,

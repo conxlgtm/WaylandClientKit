@@ -94,6 +94,22 @@ protocol_sources_viewporter_candidates() {
         /usr/local/share/wayland-protocols/stable/viewporter/viewporter.xml
 }
 
+protocol_sources_presentation_time_candidates() {
+    local protocols_dir
+
+    if [[ -n "${PRESENTATION_TIME_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$PRESENTATION_TIME_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/stable/presentation-time/presentation-time.xml}" \
+        /usr/share/wayland-protocols/stable/presentation-time/presentation-time.xml \
+        /usr/local/share/wayland-protocols/stable/presentation-time/presentation-time.xml
+}
+
 protocol_sources_fractional_scale_candidates() {
     local protocols_dir
 

@@ -1,6 +1,7 @@
 #include "swift-wayland-shims.h"
 #include "generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h"
 #include "generated/core/wayland-client-protocol.h"
+#include "generated/stable/presentation-time/presentation-time-client-protocol.h"
 #include "generated/stable/viewporter/viewporter-client-protocol.h"
 #include "generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/xdg-output/xdg-output-unstable-v1-client-protocol.h"
@@ -54,6 +55,13 @@ struct wp_viewporter *swl_registry_bind_wp_viewporter(
 {
     return (struct wp_viewporter *)wl_registry_bind(
         registry, name, &wp_viewporter_interface, version);
+}
+
+struct wp_presentation *swl_registry_bind_wp_presentation(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wp_presentation *)wl_registry_bind(
+        registry, name, &wp_presentation_interface, version);
 }
 
 struct wp_fractional_scale_manager_v1 *swl_registry_bind_wp_fractional_scale_manager_v1(

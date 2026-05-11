@@ -26,6 +26,7 @@ protocol_symbols=(
     swl_registry_bind_zxdg_decoration_manager_v1
     swl_registry_bind_zxdg_output_manager_v1
     swl_registry_bind_wp_viewporter
+    swl_registry_bind_wp_presentation
     swl_registry_bind_wp_fractional_scale_manager_v1
     swl_registry_bind_wl_seat
     swl_registry_bind_zwp_primary_selection_device_manager_v1
@@ -75,6 +76,11 @@ protocol_symbols=(
     swl_wp_viewport_set_destination
     swl_wp_viewport_destroy
     swl_wp_viewporter_destroy
+    swl_wp_presentation_feedback
+    swl_wp_presentation_destroy
+    swl_wp_presentation_feedback_destroy
+    swl_wp_presentation_add_listener
+    swl_wp_presentation_feedback_add_listener
     swl_wp_fractional_scale_manager_v1_get_fractional_scale
     swl_wp_fractional_scale_v1_destroy
     swl_wp_fractional_scale_manager_v1_destroy
