@@ -330,6 +330,7 @@ package enum DataTransferAction: Equatable, Sendable {
     case dragSourceActionChanged(id: DataSourceID, action: DragAction)
     case dragSourceDropPerformed(DataSourceID)
     case dragSourceFinished(DataSourceID)
+    case dragSourceInvalidFinished(DataSourceID)
     case selectionSourceChanged(seatID: SeatID, sourceID: DataSourceID?)
     case sourceCancelled(DataSourceID)
 }
@@ -353,7 +354,7 @@ package enum DataTransferEffect: Equatable, Sendable {
     case publishDragSourceTargetChanged(id: DataSourceID, mimeType: MIMEType?)
     case publishDragSourceActionChanged(id: DataSourceID, action: DragAction)
     case publishDragSourceDropPerformed(DataSourceID)
-    case publishDragSourceFinished(id: DataSourceID, finalAction: DragAction)
+    case publishDragSourceFinished(id: DataSourceID, finalAction: DragSourceFinalAction)
 }
 
 package struct DataTransferTransitionPlan: Equatable, Sendable {

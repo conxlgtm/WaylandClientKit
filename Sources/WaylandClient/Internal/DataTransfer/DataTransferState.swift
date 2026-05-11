@@ -138,7 +138,7 @@ extension DataTransferState {
                 mimeTypes: mimeTypes
             )
         case .dragSourceCreated, .dragSourceTargetChanged, .dragSourceActionChanged,
-            .dragSourceDropPerformed, .dragSourceFinished:
+            .dragSourceDropPerformed, .dragSourceFinished, .dragSourceInvalidFinished:
             return try applyDragSource(action)
         case .selectionSourceChanged, .sourceCancelled:
             return try applySelectionSource(action)
@@ -375,6 +375,8 @@ extension DataTransferState {
             return try applyDragSourceDropPerformed(id)
         case .dragSourceFinished(let id):
             return try applyDragSourceFinished(id)
+        case .dragSourceInvalidFinished(let id):
+            return try applyDragSourceInvalidFinished(id)
         default:
             return []
         }
@@ -428,6 +430,14 @@ extension DataTransferState {
             .destroySource(sourceID),
             .publishDragSourceFinished(id: sourceID, finalAction: finalAction),
         ]
+    }
+
+    private mutating func applyDragSourceInvalidFinished(
+        _ sourceID: DataSourceID
+    ) throws -> [DataTransferEffect] {
+        _ = try requireDragSource(sourceID)
+        _ = sources.removeValue(forKey: sourceID)
+        return [.cancelSource(sourceID)]
     }
 
     func boundSeat(_ seatID: SeatID) throws -> SeatState {

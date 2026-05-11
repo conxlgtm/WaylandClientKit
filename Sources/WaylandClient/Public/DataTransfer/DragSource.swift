@@ -113,11 +113,44 @@ public struct DragSourceActionEvent: Equatable, Sendable {
     }
 }
 
+public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {
+    case copy
+    case move
+    case unknown(rawValue: UInt32)
+
+    package init(_ action: DragAction) throws {
+        switch action {
+        case .copy:
+            self = .copy
+        case .move:
+            self = .move
+        case .unknown(let rawValue):
+            self = .unknown(rawValue: rawValue)
+        case .none, .ask:
+            throw DataTransferError.invalidSourceEvent(.dndFinished)
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .copy:
+            "copy"
+        case .move:
+            "move"
+        case .unknown(let rawValue):
+            "unknown(\(rawValue))"
+        }
+    }
+}
+
 public struct DragSourceFinishedEvent: Equatable, Sendable {
     public let source: DragSourceIdentity
-    public let finalAction: DragAction
+    public let finalAction: DragSourceFinalAction
 
-    package init(sourceID eventSourceID: DataSourceID, finalAction eventAction: DragAction) {
+    package init(
+        sourceID eventSourceID: DataSourceID,
+        finalAction eventAction: DragSourceFinalAction
+    ) {
         source = DragSourceIdentity(eventSourceID)
         finalAction = eventAction
     }

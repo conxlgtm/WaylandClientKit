@@ -294,7 +294,7 @@ extension DataTransferManager {
                     callbackIdentity: callbackIdentity
                 )
                 try handleDragSourceOnlyEvent(.dndFinished, for: source) {
-                    try apply(.dragSourceFinished(sourceID))
+                    try finishDragSourceFromCallback(sourceID)
                 }
             case .action(let action):
                 let source = try sourceSnapshot(
@@ -337,6 +337,19 @@ extension DataTransferManager {
         }
 
         try operation()
+    }
+
+    private func finishDragSourceFromCallback(_ sourceID: DataSourceID) throws {
+        do {
+            try apply(.dragSourceFinished(sourceID))
+        } catch {
+            do {
+                try apply(.dragSourceInvalidFinished(sourceID))
+            } catch {
+                preconditionFailure("invalid drag source finish cleanup failed: \(error)")
+            }
+            throw error
+        }
     }
 
     private func sourceIsDragAndDrop(_ sourceID: DataSourceID) -> Bool {
