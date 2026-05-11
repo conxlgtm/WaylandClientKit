@@ -112,3 +112,13 @@ public struct DragSourceActionEvent: Equatable, Sendable {
         action = eventAction
     }
 }
+
+public struct DragSourceFinishedEvent: Equatable, Sendable {
+    public let source: DragSourceIdentity
+    public let finalAction: DragAction
+
+    package init(sourceID eventSourceID: DataSourceID, finalAction eventAction: DragAction) {
+        source = DragSourceIdentity(eventSourceID)
+        finalAction = eventAction
+    }
+}

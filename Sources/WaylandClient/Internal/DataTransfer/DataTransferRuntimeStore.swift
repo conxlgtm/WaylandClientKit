@@ -378,6 +378,25 @@ struct DataTransferStore {
         return pendingSourceSendRequests
     }
 
+    mutating func removeSourceSendRequests(
+        for sourceID: DataSourceID
+    ) -> [DataTransferSourceSendRequest] {
+        var removedRequests: [DataTransferSourceSendRequest] = []
+        var remainingRequests: [DataTransferSourceSendRequest] = []
+
+        for request in pendingSourceSendRequests {
+            if request.source.sourceID == sourceID {
+                removedRequests.append(request)
+            } else {
+                remainingRequests.append(request)
+            }
+        }
+
+        pendingSourceSendRequests = remainingRequests
+        pruneDetachedSourceSendIDs()
+        return removedRequests
+    }
+
     mutating func replaceSourceSendRequests(_ requests: [DataTransferSourceSendRequest]) {
         pendingSourceSendRequests = requests
         pruneDetachedSourceSendIDs()
