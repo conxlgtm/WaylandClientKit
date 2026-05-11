@@ -343,13 +343,13 @@ package struct DataTransferSourceState: Equatable, Sendable {
         return true
     }
 
-    package func finishedDragAction() throws -> DragAction {
+    package func finishedDragAction() throws -> DragSourceFinalAction {
         _ = try requireDragSourceActions()
         guard hasDragDropped, let selectedDragAction else {
             throw DataTransferError.invalidSourceEvent(.dndFinished)
         }
 
-        return selectedDragAction
+        return try DragSourceFinalAction(selectedDragAction)
     }
 
     private func requireDragSourceActions() throws -> DragActionSet {

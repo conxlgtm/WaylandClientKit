@@ -505,7 +505,8 @@ struct DataTransferManagerDragSourceCallbackTests {  // swiftlint:disable:this t
             manager.drainDataTransferEvents()
                 == [.dragSourceDropPerformed(DragSourceIdentity(source.id))]
         )
-        #expect(backend.sourceBinding(for: source.id)?.destroyCount == 0)
+        #expect(backend.sourceBinding(for: source.id)?.destroyCount == 1)
+        #expect(manager.sourceSnapshots.isEmpty)
     }
 
     @Test
@@ -532,7 +533,70 @@ struct DataTransferManagerDragSourceCallbackTests {  // swiftlint:disable:this t
                     )
                 ]
         )
-        #expect(backend.sourceBinding(for: source.id)?.destroyCount == 0)
+        #expect(backend.sourceBinding(for: source.id)?.destroyCount == 1)
+        #expect(manager.sourceSnapshots.isEmpty)
+    }
+
+    @Test
+    func dragSourceFinishedAfterAskWithoutFinalActionRecordsCallbackFailure() throws {
+        let (manager, backend, source) = try managerWithStartedDragSource(
+            actions: [.copy, .ask]
+        )
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        binding.emit(.action(.ask))
+        binding.emit(.dndDropPerformed)
+        binding.emit(.dndFinished)
+
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dragSource(DragSourceIdentity(source.id)),
+                error: .invalidSourceEvent(.dndFinished)
+            )
+        ) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .dragSourceActionChanged(
+                        DragSourceActionEvent(sourceID: source.id, action: .ask)
+                    ),
+                    .dragSourceDropPerformed(DragSourceIdentity(source.id)),
+                ]
+        )
+        #expect(binding.destroyCount == 1)
+        #expect(manager.sourceSnapshots.isEmpty)
+    }
+
+    @Test
+    func dragSourceFinishedAfterNoneRecordsCallbackFailure() throws {
+        let (manager, backend, source) = try managerWithStartedDragSource()
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        binding.emit(.action(.none))
+        binding.emit(.dndDropPerformed)
+        binding.emit(.dndFinished)
+
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dragSource(DragSourceIdentity(source.id)),
+                error: .invalidSourceEvent(.dndFinished)
+            )
+        ) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .dragSourceActionChanged(
+                        DragSourceActionEvent(sourceID: source.id, action: .none)
+                    ),
+                    .dragSourceDropPerformed(DragSourceIdentity(source.id)),
+                ]
+        )
+        #expect(binding.destroyCount == 1)
+        #expect(manager.sourceSnapshots.isEmpty)
     }
 
     @Test
