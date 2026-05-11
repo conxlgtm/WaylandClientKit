@@ -26,6 +26,29 @@ package struct DataTransferStartDragRequest {
 }
 
 extension DataTransferManager {
+    private enum DataSourceCallbackIdentity {
+        case selection(ClipboardSourceIdentity)
+        case dragAndDrop(DragSourceIdentity)
+
+        var context: DataTransferCallbackContext {
+            switch self {
+            case .selection(let source):
+                .dataSource(source)
+            case .dragAndDrop(let source):
+                .dragSource(source)
+            }
+        }
+
+        var unknownSourceError: DataTransferError {
+            switch self {
+            case .selection(let source):
+                .unknownSourceIdentity(source)
+            case .dragAndDrop(let source):
+                .unknownDragSourceIdentity(source)
+            }
+        }
+    }
+
     package func drainSourceSendRequests() -> [DataTransferSourceSendRequest] {
         backend.preconditionIsOwnerThread()
         return store.drainSourceSendRequests()
@@ -58,9 +81,13 @@ extension DataTransferManager {
 
         let deviceBinding = try selectionDeviceBinding(for: seatID)
         let sourceID = allocateSourceID()
-        let sourceBinding = try backend.createDataSource(id: sourceID) { [weak self] event in
-            self?.handleDataSourceEvent(event, sourceID: sourceID)
-        }
+        let callbackIdentity = DataSourceCallbackIdentity.selection(
+            ClipboardSourceIdentity(sourceID)
+        )
+        let sourceBinding = try createDataSourceBinding(
+            sourceID: sourceID,
+            callbackIdentity: callbackIdentity
+        )
         do {
             for mimeType in payloads.mimeTypes {
                 sourceBinding.offer(mimeType: mimeType)
@@ -103,9 +130,13 @@ extension DataTransferManager {
             )
         }
 
-        let sourceBinding = try backend.createDataSource(id: sourceID) { [weak self] event in
-            self?.handleDataSourceEvent(event, sourceID: sourceID)
-        }
+        let callbackIdentity = DataSourceCallbackIdentity.dragAndDrop(
+            DragSourceIdentity(sourceID)
+        )
+        let sourceBinding = try createDataSourceBinding(
+            sourceID: sourceID,
+            callbackIdentity: callbackIdentity
+        )
         do {
             guard sourceBinding.protocolVersion >= RawVersion(3) else {
                 throw DataTransferError.dragSourceActionNegotiationUnavailable(
@@ -212,9 +243,23 @@ extension DataTransferManager {
         return deviceBinding
     }
 
+    private func createDataSourceBinding(
+        sourceID: DataSourceID,
+        callbackIdentity: DataSourceCallbackIdentity
+    ) throws -> any DataTransferSourceBinding {
+        try backend.createDataSource(id: sourceID) { [weak self] event in
+            self?.handleDataSourceEvent(
+                event,
+                sourceID: sourceID,
+                callbackIdentity: callbackIdentity
+            )
+        }
+    }
+
     private func handleDataSourceEvent(
         _ event: RawDataSourceEvent,
-        sourceID: DataSourceID
+        sourceID: DataSourceID,
+        callbackIdentity: DataSourceCallbackIdentity
     ) {
         do {
             switch event {
@@ -222,27 +267,40 @@ extension DataTransferManager {
                 try handleDataSourceSend(
                     mimeType: rawMimeType,
                     descriptor: descriptor,
-                    sourceID: sourceID
+                    sourceID: sourceID,
+                    callbackIdentity: callbackIdentity
                 )
             case .cancelled:
                 try apply(.sourceCancelled(sourceID))
             case .target(let rawMimeType):
-                let source = try sourceSnapshot(for: sourceID)
+                let source = try sourceSnapshot(
+                    for: sourceID,
+                    callbackIdentity: callbackIdentity
+                )
                 try handleDragSourceOnlyEvent(.target, for: source) {
                     try handleDataSourceTarget(mimeType: rawMimeType, sourceID: sourceID)
                 }
             case .dndDropPerformed:
-                let source = try sourceSnapshot(for: sourceID)
+                let source = try sourceSnapshot(
+                    for: sourceID,
+                    callbackIdentity: callbackIdentity
+                )
                 try handleDragSourceOnlyEvent(.dndDropPerformed, for: source) {
                     try apply(.dragSourceDropPerformed(sourceID))
                 }
             case .dndFinished:
-                let source = try sourceSnapshot(for: sourceID)
+                let source = try sourceSnapshot(
+                    for: sourceID,
+                    callbackIdentity: callbackIdentity
+                )
                 try handleDragSourceOnlyEvent(.dndFinished, for: source) {
                     try apply(.dragSourceFinished(sourceID))
                 }
             case .action(let action):
-                let source = try sourceSnapshot(for: sourceID)
+                let source = try sourceSnapshot(
+                    for: sourceID,
+                    callbackIdentity: callbackIdentity
+                )
                 try handleDragSourceOnlyEvent(.action, for: source) {
                     try apply(
                         .dragSourceActionChanged(
@@ -254,13 +312,16 @@ extension DataTransferManager {
             }
             preconditionInvariantsHold()
         } catch {
-            recordCallbackError(error, context: callbackContext(for: sourceID))
+            recordCallbackError(error, context: callbackIdentity.context)
         }
     }
 
-    private func sourceSnapshot(for sourceID: DataSourceID) throws -> DataSourceSnapshot {
+    private func sourceSnapshot(
+        for sourceID: DataSourceID,
+        callbackIdentity: DataSourceCallbackIdentity
+    ) throws -> DataSourceSnapshot {
         guard let source = store.sourceSnapshot(sourceID) else {
-            throw DataTransferError.unknownSourceIdentity(ClipboardSourceIdentity(sourceID))
+            throw callbackIdentity.unknownSourceError
         }
 
         return source
@@ -286,17 +347,12 @@ extension DataTransferManager {
         return true
     }
 
-    private func callbackContext(for sourceID: DataSourceID) -> DataTransferCallbackContext {
-        guard case .dragAndDrop = store.sourceSnapshot(sourceID)?.role else {
-            return .dataSource(ClipboardSourceIdentity(sourceID))
-        }
-
-        return .dragSource(DragSourceIdentity(sourceID))
-    }
-
-    private func writeSource(for sourceID: DataSourceID) throws -> DataTransferSourceWriteSource {
+    private func writeSource(
+        for sourceID: DataSourceID,
+        callbackIdentity: DataSourceCallbackIdentity
+    ) throws -> DataTransferSourceWriteSource {
         guard let source = store.sourceSnapshot(sourceID) else {
-            throw DataTransferError.unknownSourceIdentity(ClipboardSourceIdentity(sourceID))
+            throw callbackIdentity.unknownSourceError
         }
 
         switch source.role {
@@ -323,13 +379,12 @@ extension DataTransferManager {
     private func handleDataSourceSend(
         mimeType rawMimeType: String?,
         descriptor: Int32,
-        sourceID: DataSourceID
+        sourceID: DataSourceID,
+        callbackIdentity: DataSourceCallbackIdentity
     ) throws {
         do {
             guard let source = store.sourceSnapshot(sourceID) else {
-                throw DataTransferError.unknownSourceIdentity(
-                    ClipboardSourceIdentity(sourceID)
-                )
+                throw callbackIdentity.unknownSourceError
             }
             let mimeType = try MIMEType(rawMimeType ?? "")
             guard source.mimeTypes.contains(mimeType) else {
@@ -346,7 +401,10 @@ extension DataTransferManager {
 
             store.appendSourceSendRequest(
                 try DataTransferSourceSendRequest(
-                    source: try writeSource(for: sourceID),
+                    source: try writeSource(
+                        for: sourceID,
+                        callbackIdentity: callbackIdentity
+                    ),
                     mimeType: mimeType,
                     descriptor: descriptor,
                     data: data,
