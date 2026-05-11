@@ -4,6 +4,7 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
     case unknownPopup
     case closedPopup
     case foreignWindow(WindowID)
+    case presentationTimeUnavailable
 
     public var description: String {
         switch self {
@@ -17,6 +18,8 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "popup is closed"
         case .foreignWindow(let windowID):
             "window belongs to another display: \(windowID)"
+        case .presentationTimeUnavailable:
+            "presentation-time protocol is unavailable"
         }
     }
 }

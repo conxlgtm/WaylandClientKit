@@ -49,6 +49,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Surface cropping and scaling support through `wp_viewporter`.
     public let viewporter: ProtocolAvailability
 
+    /// Compositor presentation feedback through `wp_presentation`.
+    public let presentationTime: ProtocolAvailability
+
     /// Fractional surface scale support through `wp_fractional_scale_manager_v1`.
     public let fractionalScale: ProtocolAvailability
 
@@ -60,6 +63,7 @@ public struct WaylandCapabilities: Equatable, Sendable {
         xdgDecoration: ProtocolAvailability,
         xdgOutput: ProtocolAvailability,
         viewporter: ProtocolAvailability,
+        presentationTime: ProtocolAvailability,
         fractionalScale: ProtocolAvailability
     ) {
         self.clipboard = clipboard
@@ -69,6 +73,7 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.xdgDecoration = xdgDecoration
         self.xdgOutput = xdgOutput
         self.viewporter = viewporter
+        self.presentationTime = presentationTime
         self.fractionalScale = fractionalScale
     }
 }
@@ -130,6 +135,10 @@ extension WaylandCapabilities {
             viewporter: ProtocolAvailability(
                 best("wp_viewporter"),
                 supportedByClient: SupportedVersions.wpViewporter
+            ),
+            presentationTime: ProtocolAvailability(
+                best("wp_presentation"),
+                supportedByClient: SupportedVersions.wpPresentation
             ),
             fractionalScale: ProtocolAvailability(
                 best("wp_fractional_scale_manager_v1"),

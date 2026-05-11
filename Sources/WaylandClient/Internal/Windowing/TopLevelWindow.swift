@@ -41,6 +41,9 @@ package final class TopLevelWindow {
     private var model: WindowModel
     private var surfaceRuntime = SurfaceRuntime<TopLevelWindowRoleResources>()
     private var pendingFrameRegistration: FrameCallbackRegistration?
+    private var nextPresentationFeedbackID: UInt64 = 1
+    private var pendingPresentationFeedbacks:
+        [SurfacePresentationIdentity: RawPresentationFeedback] = [:]
     private var outputMembership = WindowOutputMembershipState()
 
     #if DEBUG
@@ -902,6 +905,7 @@ extension TopLevelWindow {
         onCloseRequested = nil
         onRedrawRequested = nil
         onOutputMembershipChanged = nil
+        cancelPresentationFeedbacks()
 
         var removedRoleResources = surfaceRuntime.removeRoleResources()
         removedRoleResources?.destroy()
@@ -975,6 +979,35 @@ extension TopLevelWindow {
     package func requestRedrawOnOwnerThread() throws {
         connection.preconditionIsOwnerThread()
         markNeedsRedraw()
+    }
+
+    package func requestPresentationFeedbackOnOwnerThread(
+        presentation: RawPresentation,
+        outputIDForPresentationSyncOutput: @escaping (RawOutputPointerIdentity) throws
+            -> OutputID?,
+        onFeedback: @escaping (SurfacePresentationFeedback) -> Void
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        guard !model.isClosed else {
+            throw ClientError.display(.closed)
+        }
+        guard model.currentConfiguration != nil else {
+            throw ClientError.window(
+                id,
+                .invalidLifecycleTransition(.mapBeforeInitialConfigure)
+            )
+        }
+
+        let identity = allocatePresentationFeedbackIdentity()
+        let feedback = try presentation.requestFeedback(for: surface) { [weak self] rawEvent in
+            self?.handlePresentationFeedback(
+                identity,
+                event: rawEvent,
+                outputIDForPresentationSyncOutput: outputIDForPresentationSyncOutput,
+                onFeedback: onFeedback
+            )
+        }
+        pendingPresentationFeedbacks[identity] = feedback
     }
 
     package func setTitleOnOwnerThread(_ title: WaylandString) throws {
@@ -1195,5 +1228,60 @@ extension TopLevelWindow {
     )
     package func close() {
         closeOnOwnerThread()
+    }
+}
+
+extension TopLevelWindow {
+    private func allocatePresentationFeedbackIdentity() -> SurfacePresentationIdentity {
+        defer { nextPresentationFeedbackID += 1 }
+        return SurfacePresentationIdentity(rawValue: nextPresentationFeedbackID)
+    }
+
+    private func handlePresentationFeedback(
+        _ identity: SurfacePresentationIdentity,
+        event rawEvent: RawPresentationFeedbackEvent,
+        outputIDForPresentationSyncOutput: (RawOutputPointerIdentity) throws -> OutputID?,
+        onFeedback: (SurfacePresentationFeedback) -> Void
+    ) {
+        pendingPresentationFeedbacks.removeValue(forKey: identity)
+
+        do {
+            switch rawEvent {
+            case .presented(let rawPresented):
+                let synchronizedOutput = try rawPresented.synchronizedOutput.flatMap {
+                    try outputIDForPresentationSyncOutput($0)
+                }
+                onFeedback(
+                    .presented(
+                        PresentationFeedback(
+                            surface: identity,
+                            timestamp: PresentationTimestamp(
+                                seconds: rawPresented.timestamp.seconds,
+                                nanoseconds: rawPresented.timestamp.nanoseconds
+                            ),
+                            refreshNanoseconds: rawPresented.refreshNanoseconds == 0
+                                ? nil
+                                : rawPresented.refreshNanoseconds,
+                            sequence: PresentationSequence(
+                                value: rawPresented.sequence.value
+                            ),
+                            flags: PresentationFeedbackFlags(rawValue: rawPresented.flags),
+                            synchronizedOutput: synchronizedOutput
+                        )
+                    )
+                )
+            case .discarded:
+                onFeedback(.discarded(identity))
+            }
+        } catch {
+            reportCallbackFailure(operation: .presentationFeedback, error: error)
+        }
+    }
+
+    private func cancelPresentationFeedbacks() {
+        for feedback in pendingPresentationFeedbacks.values {
+            feedback.cancel()
+        }
+        pendingPresentationFeedbacks.removeAll()
     }
 }

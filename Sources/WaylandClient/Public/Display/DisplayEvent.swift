@@ -75,6 +75,7 @@ public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {
     case displayEvents
     case inputEvents
     case dataTransferEvents
+    case presentationEvents
     case diagnostics
 
     public var description: String {
@@ -85,6 +86,8 @@ public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {
             "input events"
         case .dataTransferEvents:
             "data transfer events"
+        case .presentationEvents:
+            "presentation events"
         case .diagnostics:
             "diagnostics"
         }
@@ -303,6 +306,7 @@ final class DisplayEventHub: Sendable {
     private let displayBroker: TypedEventBroker<DisplayEvent>
     private let inputBroker: TypedEventBroker<InputEvent>
     private let dataTransferBroker: TypedEventBroker<DataTransferEvent>
+    private let presentationBroker: TypedEventBroker<WindowPresentationEvent>
     private let diagnosticsBroker: TypedEventBroker<DisplayDiagnostic>
     private let diagnosticIDGenerator: DiagnosticIDGenerator
 
@@ -323,6 +327,10 @@ final class DisplayEventHub: Sendable {
         dataTransferBroker = TypedEventBroker<DataTransferEvent>(
             stream: .dataTransferEvents,
             capacity: configuration.dataTransferEventCapacity.rawValue
+        )
+        presentationBroker = TypedEventBroker<WindowPresentationEvent>(
+            stream: .presentationEvents,
+            capacity: configuration.displayEventCapacity.rawValue
         )
         diagnosticsBroker = TypedEventBroker<DisplayDiagnostic>(
             stream: .diagnostics,
@@ -347,6 +355,13 @@ final class DisplayEventHub: Sendable {
 
     func dataTransferEvents() -> DataTransferEvents {
         DataTransferEvents(dataTransferBroker.subscribe())
+    }
+
+    func windowPresentationEvents(windowID: WindowID) -> WindowPresentationEvents {
+        WindowPresentationEvents(
+            windowID: windowID,
+            subscription: presentationBroker.subscribe()
+        )
     }
 
     func diagnostics() -> DisplayDiagnostics {
@@ -392,6 +407,10 @@ final class DisplayEventHub: Sendable {
         dataTransferBroker.publish(event)
     }
 
+    func publishPresentation(_ event: WindowPresentationEvent) {
+        presentationBroker.publish(event)
+    }
+
     func publishWindowDiagnostic(_ diagnostic: WindowDiagnostic) {
         publishDiagnostic(
             makeDisplayDiagnostic(
@@ -414,6 +433,7 @@ final class DisplayEventHub: Sendable {
         displayBroker.finish(throwing: error)
         inputBroker.finish(throwing: error)
         dataTransferBroker.finish(throwing: error)
+        presentationBroker.finish(throwing: error)
         diagnosticsBroker.finish(throwing: error)
     }
 

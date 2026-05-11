@@ -24,6 +24,12 @@ public actor WaylandDisplay {
         runtime.dataTransferEvents
     }
 
+    package nonisolated func windowPresentationEvents(
+        for windowID: WindowID
+    ) -> WindowPresentationEvents {
+        runtime.windowPresentationEvents(for: windowID)
+    }
+
     public nonisolated var diagnostics: DisplayDiagnostics {
         runtime.diagnostics
     }
@@ -202,6 +208,10 @@ public actor WaylandDisplay {
 
     package func requestRedraw(_ windowID: WindowID) throws {
         try requireCore().requestRedraw(windowID)
+    }
+
+    package func requestPresentationFeedback(_ windowID: WindowID) throws {
+        try requireCore().requestPresentationFeedback(windowID)
     }
 
     package func popupIsClosed(_ popupID: PopupID) throws -> Bool {
@@ -391,6 +401,10 @@ private final class WaylandDisplayRuntime: Sendable {
 
     var dataTransferEvents: DataTransferEvents {
         eventHub.dataTransferEvents()
+    }
+
+    func windowPresentationEvents(for windowID: WindowID) -> WindowPresentationEvents {
+        eventHub.windowPresentationEvents(windowID: windowID)
     }
 
     var diagnostics: DisplayDiagnostics {
