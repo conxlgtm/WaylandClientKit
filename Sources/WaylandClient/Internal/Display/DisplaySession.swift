@@ -225,6 +225,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
                 advertisedProtocol(named: "zxdg_decoration_manager_v1"),
                 advertisedProtocol(named: "zxdg_output_manager_v1"),
                 advertisedProtocol(named: "wp_viewporter"),
+                advertisedProtocol(named: "wp_presentation"),
                 advertisedProtocol(named: "wp_fractional_scale_manager_v1"),
             ].compactMap(\.self))
     }
@@ -245,6 +246,29 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     ) {
         connection.preconditionIsOwnerThread()
         connection.setInvariantFailureReporter(reporter)
+    }
+
+    package func presentationOnOwnerThread() throws -> RawPresentation {
+        connection.preconditionIsOwnerThread()
+        let globals = try connection.bindRequiredGlobals()
+        guard case .bound(let presentation) = globals.extensions.presentation else {
+            throw ClientError.display(.presentationTimeUnavailable)
+        }
+
+        return presentation
+    }
+
+    package func outputIDForPresentationSyncOutput(
+        _ output: RawOutputPointerIdentity
+    ) throws -> OutputID? {
+        connection.preconditionIsOwnerThread()
+        guard let rawID = try connection.bindRequiredGlobals()
+            .outputRegistry.outputID(for: output)
+        else {
+            return nil
+        }
+
+        return OutputID(rawValue: rawID.rawValue)
     }
 
     @discardableResult

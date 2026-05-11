@@ -40,6 +40,14 @@ public struct Window: Sendable, Hashable {
         try await display.requestRedraw(id)
     }
 
+    public var presentationEvents: WindowPresentationEvents {
+        display.windowPresentationEvents(for: id)
+    }
+
+    public func requestPresentationFeedback() async throws {
+        try await display.requestPresentationFeedback(id)
+    }
+
     public func setTitle(_ title: WaylandString) async throws {
         try await display.setWindowTitle(id, title)
     }

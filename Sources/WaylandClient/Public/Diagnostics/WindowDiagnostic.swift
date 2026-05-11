@@ -7,6 +7,7 @@ public enum WindowCallbackOperation: Equatable, Sendable, CustomStringConvertibl
     case bufferReleased
     case markNeedsRedraw
     case surfaceScaleChanged
+    case presentationFeedback
     case close
 
     public var description: String {
@@ -23,6 +24,8 @@ public enum WindowCallbackOperation: Equatable, Sendable, CustomStringConvertibl
             "markNeedsRedraw"
         case .surfaceScaleChanged:
             "surfaceScaleChanged"
+        case .presentationFeedback:
+            "presentationFeedback"
         case .close:
             "close"
         }
