@@ -7,64 +7,101 @@ typealias RuntimeDataOfferHandleIndexEntry = (
 )
 
 enum RuntimeDataOffer {
-    case pending(
-        handle: RawDataOfferHandle,
-        binding: any DataTransferOfferBinding,
-        seatID: SeatID,
-        mimeTypes: [MIMEType]
-    )
+    case pending(PendingRuntimeDataOffer)
     case active(handle: RawDataOfferHandle, binding: any DataTransferOfferBinding)
 
     var handle: RawDataOfferHandle {
         switch self {
-        case .pending(let handle, _, _, _), .active(let handle, _):
+        case .pending(let offer):
+            offer.handle
+        case .active(let handle, _):
             handle
         }
     }
 
     var binding: any DataTransferOfferBinding {
         switch self {
-        case .pending(_, let binding, _, _), .active(_, let binding):
+        case .pending(let offer):
+            offer.binding
+        case .active(_, let binding):
             binding
         }
     }
 
     var pendingSeatID: SeatID? {
-        guard case .pending(_, _, let seatID, _) = self else {
+        guard case .pending(let offer) = self else {
             return nil
         }
 
-        return seatID
+        return offer.seatID
     }
 
     var pendingMIMETypes: [MIMEType] {
-        guard case .pending(_, _, _, let mimeTypes) = self else {
+        guard case .pending(let offer) = self else {
             return []
         }
 
-        return mimeTypes
+        return offer.mimeTypes
+    }
+
+    var pendingSourceActions: DragActionSet {
+        guard case .pending(let offer) = self else {
+            return []
+        }
+
+        return offer.sourceActions
+    }
+
+    var pendingSelectedAction: DragAction? {
+        guard case .pending(let offer) = self else {
+            return nil
+        }
+
+        return offer.selectedAction
     }
 
     mutating func appendPendingMIMEType(_ mimeType: MIMEType) {
-        guard case .pending(let handle, let binding, let seatID, var mimeTypes) = self else {
+        guard case .pending(var offer) = self else {
             return
         }
-        guard !mimeTypes.contains(mimeType) else {
+        guard !offer.mimeTypes.contains(mimeType) else {
             return
         }
 
-        mimeTypes.append(mimeType)
-        self = .pending(
-            handle: handle,
-            binding: binding,
-            seatID: seatID,
-            mimeTypes: mimeTypes
-        )
+        offer.mimeTypes.append(mimeType)
+        self = .pending(offer)
+    }
+
+    mutating func setPendingSourceActions(_ actions: DragActionSet) {
+        guard case .pending(var offer) = self else {
+            return
+        }
+
+        offer.sourceActions = actions
+        self = .pending(offer)
+    }
+
+    mutating func setPendingSelectedAction(_ action: DragAction) {
+        guard case .pending(var offer) = self else {
+            return
+        }
+
+        offer.selectedAction = action
+        self = .pending(offer)
     }
 
     mutating func markActive() {
         self = .active(handle: handle, binding: binding)
     }
+}
+
+struct PendingRuntimeDataOffer {
+    let handle: RawDataOfferHandle
+    let binding: any DataTransferOfferBinding
+    let seatID: SeatID
+    var mimeTypes: [MIMEType]
+    var sourceActions: DragActionSet
+    var selectedAction: DragAction?
 }
 
 struct RuntimeDataSource {
@@ -213,10 +250,14 @@ struct DataTransferStore {
     ) {
         offerIDsByHandle[handle] = offerID
         runtimeOffersByID[offerID] = .pending(
-            handle: handle,
-            binding: binding,
-            seatID: seatID,
-            mimeTypes: []
+            PendingRuntimeDataOffer(
+                handle: handle,
+                binding: binding,
+                seatID: seatID,
+                mimeTypes: [],
+                sourceActions: [],
+                selectedAction: nil
+            )
         )
     }
 
@@ -229,6 +270,30 @@ struct DataTransferStore {
         }
 
         runtimeOffer.appendPendingMIMEType(mimeType)
+        runtimeOffersByID[offerID] = runtimeOffer
+    }
+
+    mutating func setPendingSourceActions(
+        _ actions: DragActionSet,
+        offerID: DataOfferID
+    ) throws {
+        guard var runtimeOffer = runtimeOffersByID[offerID] else {
+            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
+        }
+
+        runtimeOffer.setPendingSourceActions(actions)
+        runtimeOffersByID[offerID] = runtimeOffer
+    }
+
+    mutating func setPendingSelectedAction(
+        _ action: DragAction,
+        offerID: DataOfferID
+    ) throws {
+        guard var runtimeOffer = runtimeOffersByID[offerID] else {
+            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
+        }
+
+        runtimeOffer.setPendingSelectedAction(action)
         runtimeOffersByID[offerID] = runtimeOffer
     }
 

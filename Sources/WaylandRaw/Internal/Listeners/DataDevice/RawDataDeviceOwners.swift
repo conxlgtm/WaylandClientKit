@@ -42,6 +42,7 @@ package enum RawDataSourceEvent: Equatable, Sendable {
 package struct RawDataDeviceEnter: Equatable {
     package let serial: UInt32
     @safe package let surface: OpaquePointer?
+    package let surfaceID: RawObjectID?
     package let x: WaylandFixed
     package let y: WaylandFixed
     package let offer: RawDataOfferHandle?
@@ -51,10 +52,12 @@ package struct RawDataDeviceEnter: Equatable {
         surface surfacePointer: OpaquePointer?,
         x positionX: WaylandFixed,
         y positionY: WaylandFixed,
-        offer offerHandle: RawDataOfferHandle?
+        offer offerHandle: RawDataOfferHandle?,
+        surfaceID eventSurfaceID: RawObjectID? = nil
     ) {
         serial = eventSerial
         unsafe surface = surfacePointer
+        surfaceID = eventSurfaceID
         x = positionX
         y = positionY
         offer = offerHandle
@@ -63,6 +66,7 @@ package struct RawDataDeviceEnter: Equatable {
     package static func == (lhs: RawDataDeviceEnter, rhs: RawDataDeviceEnter) -> Bool {
         lhs.serial == rhs.serial
             && (unsafe lhs.surface == rhs.surface)
+            && lhs.surfaceID == rhs.surfaceID
             && lhs.x == rhs.x
             && lhs.y == rhs.y
             && lhs.offer == rhs.offer
@@ -278,6 +282,7 @@ package final class RawDataSourceOwner {
 @safe
 package final class RawDataDeviceOwner {
     private let onEvent: (RawDataDeviceEvent) -> Void
+    private let operations: RawSeatProxyOperations
     private let invariantFailureSink: RawInvariantFailureSink?
     private var installState = DataDeviceListenerInstallState.idle
     @safe private lazy var listenerStorage = CListenerStorage(
@@ -292,9 +297,11 @@ package final class RawDataDeviceOwner {
 
     package init(
         onEvent eventHandler: @escaping (RawDataDeviceEvent) -> Void,
+        operations dataDeviceOperations: RawSeatProxyOperations = .live,
         invariantFailureSink failureSink: RawInvariantFailureSink? = nil
     ) {
         onEvent = eventHandler
+        operations = dataDeviceOperations
         invariantFailureSink = failureSink
         configureCallbacks()
     }
@@ -340,7 +347,8 @@ package final class RawDataDeviceOwner {
                             surface: unsafe surface,
                             x: WaylandFixed(rawValue: x),
                             y: WaylandFixed(rawValue: y),
-                            offer: unsafe RawDataOfferHandle(offer)
+                            offer: unsafe RawDataOfferHandle(offer),
+                            surfaceID: unsafe owner.operations.proxyObjectID(surface)
                         )
                     )
                 )

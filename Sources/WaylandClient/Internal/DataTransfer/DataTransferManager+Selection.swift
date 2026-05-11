@@ -18,4 +18,40 @@ extension DataTransferManager {
 
         return offer
     }
+
+    package func dragOffer(for seatID: SeatID) throws -> DataOfferSnapshot? {
+        backend.preconditionIsOwnerThread()
+        try throwPendingCallbackErrorIfAny()
+
+        guard let seat = store.seatSnapshot(seatID) else {
+            throw DataTransferError.unknownSeat(seatID)
+        }
+        guard seat.hasDataDevice else {
+            throw DataTransferError.missingDataDevice(seatID)
+        }
+        guard let offerID = seat.dragAndDropOfferID else {
+            return nil
+        }
+
+        return try dragOffer(id: offerID)
+    }
+
+    package func dragOffer(id offerID: DataOfferID) throws -> DataOfferSnapshot {
+        backend.preconditionIsOwnerThread()
+        try throwPendingCallbackErrorIfAny()
+
+        guard let offer = store.offerSnapshot(offerID),
+            case .dragAndDrop(let seatID) = offer.role
+        else {
+            throw DataTransferError.unknownDragOfferIdentity(DragOfferIdentity(offerID))
+        }
+        guard store.seatSnapshot(seatID)?.dragAndDropOfferID == offerID else {
+            throw DataTransferError.dragOfferNotActive(DragOfferIdentity(offerID))
+        }
+        guard offer.dragAndDrop?.enterSerial != nil else {
+            throw DataTransferError.dragOfferNotActive(DragOfferIdentity(offerID))
+        }
+
+        return offer
+    }
 }

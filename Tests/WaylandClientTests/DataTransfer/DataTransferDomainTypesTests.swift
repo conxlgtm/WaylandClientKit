@@ -124,6 +124,18 @@ struct DataTransferDomainTypesTests {
             _ = try ByteCount.megabytes(Int.max)
         }
     }
+
+    @Test
+    func dragActionsDistinguishAvailableSetFromSelectedAction() {
+        let actions: DragActionSet = [.copy, .move]
+
+        #expect(actions.contains(.copy))
+        #expect(actions.contains(.move))
+        #expect(!actions.contains(.ask))
+        #expect(actions.description == "copy,move")
+        #expect(DragAction.none.description == "none")
+        #expect(DragAction.copy.description == "copy")
+    }
 }
 
 @Suite
