@@ -49,6 +49,8 @@ struct WaylandDisplayPublicAPISurfaceTests {
         let availability = ProtocolAvailability.available(version: 1)
         let capabilities = WaylandCapabilities(
             clipboard: availability,
+            dragAndDrop: availability,
+            dragActionNegotiation: .unavailable,
             primarySelection: .unavailable,
             xdgDecoration: .available(version: 2),
             xdgOutput: .available(version: 3),
@@ -59,6 +61,8 @@ struct WaylandDisplayPublicAPISurfaceTests {
         #expect(availability.isAvailable)
         #expect(availability.version == 1)
         #expect(capabilities.clipboard == .available(version: 1))
+        #expect(capabilities.dragAndDrop == .available(version: 1))
+        #expect(capabilities.dragActionNegotiation == .unavailable)
         #expect(capabilities.primarySelection == .unavailable)
         #expect(capabilities.xdgOutput == .available(version: 3))
 
@@ -191,9 +195,42 @@ struct WaylandDisplayPublicAPISurfaceTests {
                 identity.description
             case .primarySelectionSourceCancelled(let identity):
                 identity.description
+            case .dragEntered(let event):
+                "\(event.offer.description):\(event.serial.description):\(event.target)"
+            case .dragMotion(let event):
+                "\(event.offer.description):\(event.time.description)"
+            case .dragLeft(let event):
+                event.offer.description
+            case .dragDropped(let event):
+                event.offer.description
+            case .dragOfferChanged(let event):
+                event.offer.description
             }
         }
 
         _ = consumeDataTransferEvent
+    }
+
+    @Test
+    func dragAndDropPublicTypesCompileForExternalClients() throws {
+        let actions: DragActionSet = [.copy, .move]
+
+        #expect(actions.contains(.copy))
+        #expect(DragAction.ask.description == "ask")
+
+        func useDragOfferAPI(display: WaylandDisplay, seatID: SeatID) async throws {
+            guard let offer = try await display.dragOffer(for: seatID) else {
+                return
+            }
+
+            try await offer.accept(.plainText)
+            try await offer.setActions([.copy, .move], preferredAction: .copy)
+            _ = try await offer.receive(.plainText)
+            _ = try await offer.read(.plainText)
+            try await offer.finish()
+            try await offer.cancel()
+        }
+
+        _ = useDragOfferAPI
     }
 }

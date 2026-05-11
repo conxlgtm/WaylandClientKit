@@ -9,7 +9,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     package static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000
 
     package let connection: RawDisplayConnection
-    private let inputRouter = InputRouter()
+    private let inputRouter: InputRouter
     private let keyboardInterpreter: KeyboardInterpreter
     private let cursorManager: CursorManager
     package let dataTransferGlobalProvider: any DataTransferGlobalProviding
@@ -32,7 +32,10 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
             ThreadedDataTransferSourceWriter()
     ) throws {
         rawConnection.preconditionIsOwnerThread()
+        let inputRouter = InputRouter()
+
         connection = rawConnection
+        self.inputRouter = inputRouter
         keyboardInterpreter = try KeyboardInterpreter(
             configuration: Self.keyboardInterpreterConfiguration(
                 for: keyboardInterpretationConfiguration
@@ -45,7 +48,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         dataTransferManager = DataTransferManager(
             connection: rawConnection,
             eventQueue: dataTransferEventQueue
-        )
+        ) { inputRouter.target(for: $0) }
         primarySelectionController = PrimarySelectionController(
             connection: rawConnection,
             eventQueue: dataTransferEventQueue

@@ -1,6 +1,7 @@
 public enum DataTransferCallbackContext: Equatable, Sendable {
     case dataDevice(SeatID)
     case dataOffer(ClipboardOfferIdentity)
+    case dragOffer(DragOfferIdentity)
     case dataSource(ClipboardSourceIdentity)
     case primarySelectionDevice(SeatID)
     case primarySelectionOffer(PrimarySelectionOfferIdentity)

@@ -31,6 +31,12 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Regular clipboard support through `wl_data_device_manager`.
     public let clipboard: ProtocolAvailability
 
+    /// Drag-and-drop target/source support through `wl_data_device_manager`.
+    public let dragAndDrop: ProtocolAvailability
+
+    /// Drag-and-drop action negotiation through `wl_data_device_manager` v3.
+    public let dragActionNegotiation: ProtocolAvailability
+
     /// Primary selection support through `zwp_primary_selection_device_manager_v1`.
     public let primarySelection: ProtocolAvailability
 
@@ -48,6 +54,8 @@ public struct WaylandCapabilities: Equatable, Sendable {
 
     public init(
         clipboard: ProtocolAvailability,
+        dragAndDrop: ProtocolAvailability,
+        dragActionNegotiation: ProtocolAvailability,
         primarySelection: ProtocolAvailability,
         xdgDecoration: ProtocolAvailability,
         xdgOutput: ProtocolAvailability,
@@ -55,6 +63,8 @@ public struct WaylandCapabilities: Equatable, Sendable {
         fractionalScale: ProtocolAvailability
     ) {
         self.clipboard = clipboard
+        self.dragAndDrop = dragAndDrop
+        self.dragActionNegotiation = dragActionNegotiation
         self.primarySelection = primarySelection
         self.xdgDecoration = xdgDecoration
         self.xdgOutput = xdgOutput
@@ -93,6 +103,15 @@ extension WaylandCapabilities {
             clipboard: ProtocolAvailability(
                 best("wl_data_device_manager"),
                 supportedByClient: SupportedVersions.wlDataDeviceManager
+            ),
+            dragAndDrop: ProtocolAvailability(
+                best("wl_data_device_manager"),
+                supportedByClient: SupportedVersions.wlDataDeviceManager
+            ),
+            dragActionNegotiation: ProtocolAvailability(
+                best("wl_data_device_manager"),
+                supportedByClient: SupportedVersions.wlDataDeviceManager,
+                minimumVersion: 3
             ),
             primarySelection: ProtocolAvailability(
                 best("zwp_primary_selection_device_manager_v1"),

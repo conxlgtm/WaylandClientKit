@@ -9,6 +9,8 @@ struct WaylandCapabilitiesTests {
         let capabilities = WaylandCapabilities.fromAdvertisedProtocols([])
 
         #expect(capabilities.clipboard == .unavailable)
+        #expect(capabilities.dragAndDrop == .unavailable)
+        #expect(capabilities.dragActionNegotiation == .unavailable)
         #expect(capabilities.primarySelection == .unavailable)
         #expect(capabilities.xdgDecoration == .unavailable)
         #expect(capabilities.xdgOutput == .unavailable)
@@ -31,6 +33,8 @@ struct WaylandCapabilitiesTests {
         ])
 
         #expect(capabilities.clipboard == .available(version: 3))
+        #expect(capabilities.dragAndDrop == .available(version: 3))
+        #expect(capabilities.dragActionNegotiation == .available(version: 3))
         #expect(capabilities.primarySelection == .available(version: 1))
         #expect(capabilities.xdgDecoration == .available(version: 2))
         #expect(capabilities.xdgOutput == .available(version: 3))
@@ -45,6 +49,8 @@ struct WaylandCapabilitiesTests {
         ])
 
         #expect(capabilities.clipboard == .available(version: 1))
+        #expect(capabilities.dragAndDrop == .available(version: 1))
+        #expect(capabilities.dragActionNegotiation == .unavailable)
     }
 
     @Test

@@ -119,7 +119,8 @@ extension DisplaySession {
                 writer.cancelJobs(
                     for: .primarySelection(DataSourceID(rawValue: source.rawValue))
                 )
-            case .clipboardSelectionChanged, .primarySelectionChanged:
+            case .clipboardSelectionChanged, .primarySelectionChanged,
+                .dragEntered, .dragMotion, .dragLeft, .dragDropped, .dragOfferChanged:
                 break
             }
         }
@@ -247,7 +248,7 @@ extension DisplaySession {
         try processPrimarySelectionState(requirement: .optional)
     }
 
-    private func processClipboardDataTransferState() throws {
+    package func processClipboardDataTransferState() throws {
         try processDataTransferState(requirement: .requiresDataDeviceManager)
     }
 
