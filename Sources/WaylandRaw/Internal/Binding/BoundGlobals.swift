@@ -11,6 +11,7 @@ package enum SupportedVersions {
     package static let zxdgOutputManagerV1Minimum: RawVersion = 2
     package static let zxdgOutputManagerV1: RawVersion = 3
     package static let wpViewporter: RawVersion = 1
+    package static let wpPresentation: RawVersion = 2
     package static let wpFractionalScaleManagerV1: RawVersion = 1
     package static let wlSeat: RawVersion = 10
     package static let wlDataDeviceManager: RawVersion = 3
@@ -68,6 +69,17 @@ package enum OptionalViewporter {
     }
 }
 
+package enum OptionalPresentation {
+    case missing
+    case bound(RawPresentation)
+
+    func destroy() {
+        guard case .bound(let presentation) = self else { return }
+
+        presentation.destroy()
+    }
+}
+
 package enum OptionalFractionalScaleManager {
     case missing
     case bound(RawFractionalScaleManager)
@@ -105,6 +117,7 @@ package struct OptionalGlobals {
     package let xdgDecorationManager: OptionalXDGDecorationManager
     package let xdgOutputManager: OptionalXDGOutputManager
     package let viewporter: OptionalViewporter
+    package let presentation: OptionalPresentation
     package let fractionalScaleManager: OptionalFractionalScaleManager
     package let dataDeviceManager: OptionalDataDeviceManager
     package let primarySelectionDeviceManager: OptionalPrimarySelectionDeviceManager
@@ -113,6 +126,7 @@ package struct OptionalGlobals {
         xdgDecorationManager manager: OptionalXDGDecorationManager = .missing,
         xdgOutputManager boundXDGOutputManager: OptionalXDGOutputManager = .missing,
         viewporter boundViewporter: OptionalViewporter = .missing,
+        presentation boundPresentation: OptionalPresentation = .missing,
         fractionalScaleManager boundFractionalScaleManager: OptionalFractionalScaleManager =
             .missing,
         dataDeviceManager boundDataDeviceManager: OptionalDataDeviceManager = .missing,
@@ -122,6 +136,7 @@ package struct OptionalGlobals {
         xdgDecorationManager = manager
         xdgOutputManager = boundXDGOutputManager
         viewporter = boundViewporter
+        presentation = boundPresentation
         fractionalScaleManager = boundFractionalScaleManager
         dataDeviceManager = boundDataDeviceManager
         primarySelectionDeviceManager = boundPrimarySelectionDeviceManager
@@ -131,6 +146,7 @@ package struct OptionalGlobals {
         primarySelectionDeviceManager.destroy()
         dataDeviceManager.destroy()
         fractionalScaleManager.destroy()
+        presentation.destroy()
         viewporter.destroy()
         xdgOutputManager.destroy()
         xdgDecorationManager.destroy()

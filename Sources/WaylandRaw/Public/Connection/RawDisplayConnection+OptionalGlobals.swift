@@ -5,36 +5,47 @@ extension RawDisplayConnection {
     package func bindOptionalGlobals(registry reg: OpaquePointer) throws -> OptionalGlobals {
         let decorationManager = try bindXDGDecorationManagerIfPresent(registry: reg)
 
-        do {
-            let xdgOutputManager = try bindXDGOutputManagerIfPresent(registry: reg)
             do {
-                let viewporter = try bindViewporterIfPresent(registry: reg)
+                let xdgOutputManager = try bindXDGOutputManagerIfPresent(registry: reg)
                 do {
-                    let fractionalScaleManager = try bindFractionalScaleManagerIfPresent(
-                        registry: reg
-                    )
+                    let viewporter = try bindViewporterIfPresent(registry: reg)
                     do {
-                        let dataDeviceManager = try bindDataDeviceManagerIfPresent(registry: reg)
+                        let presentation = try bindPresentationIfPresent(registry: reg)
                         do {
-                            let primarySelectionDeviceManager =
-                                try bindPrimarySelectionDeviceManagerIfPresent(registry: reg)
-                            return OptionalGlobals(
-                                xdgDecorationManager: decorationManager,
-                                xdgOutputManager: xdgOutputManager,
-                                viewporter: viewporter,
-                                fractionalScaleManager: fractionalScaleManager,
-                                dataDeviceManager: dataDeviceManager,
-                                primarySelectionDeviceManager: primarySelectionDeviceManager
+                            let fractionalScaleManager = try bindFractionalScaleManagerIfPresent(
+                                registry: reg
                             )
+                            do {
+                                let dataDeviceManager =
+                                    try bindDataDeviceManagerIfPresent(registry: reg)
+                                do {
+                                    let primarySelectionDeviceManager =
+                                        try bindPrimarySelectionDeviceManagerIfPresent(
+                                            registry: reg
+                                        )
+                                    return OptionalGlobals(
+                                        xdgDecorationManager: decorationManager,
+                                        xdgOutputManager: xdgOutputManager,
+                                        viewporter: viewporter,
+                                        presentation: presentation,
+                                        fractionalScaleManager: fractionalScaleManager,
+                                        dataDeviceManager: dataDeviceManager,
+                                        primarySelectionDeviceManager:
+                                            primarySelectionDeviceManager
+                                    )
+                                } catch {
+                                    dataDeviceManager.destroy()
+                                    throw error
+                                }
+                            } catch {
+                                fractionalScaleManager.destroy()
+                                throw error
+                            }
                         } catch {
-                            dataDeviceManager.destroy()
+                            presentation.destroy()
                             throw error
                         }
                     } catch {
-                        fractionalScaleManager.destroy()
-                        throw error
-                    }
-                } catch {
                     viewporter.destroy()
                     throw error
                 }
@@ -187,6 +198,36 @@ extension RawDisplayConnection {
             proxyAdoption: proxyAdoption
         )
         return .bound(wrappedViewporter)
+    }
+
+    @safe
+    private func bindPresentationIfPresent(
+        registry reg: OpaquePointer
+    ) throws -> OptionalPresentation {
+        guard let global = optionalGlobal(named: "wp_presentation") else {
+            return .missing
+        }
+
+        let version = global.negotiatedVersion(
+            supportedByClient: SupportedVersions.wpPresentation
+        )
+
+        guard
+            let presentation = unsafe swl_registry_bind_wp_presentation(
+                reg,
+                global.name,
+                version.value
+            )
+        else {
+            throw RuntimeError.bindFailed("wp_presentation")
+        }
+
+        let wrappedPresentation = try RawPresentation(
+            pointer: presentation,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
+        return .bound(wrappedPresentation)
     }
 
     @safe
