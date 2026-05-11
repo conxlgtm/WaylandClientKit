@@ -318,6 +318,28 @@ struct DataTransferManagerDragSourceCallbackTests {
     }
 
     @Test
+    func lateDragSourceCallbackAfterFinishKeepsDragSourceContext() throws {
+        let (manager, backend, source) = try managerWithStartedDragSource()
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        binding.emit(.dndFinished)
+        _ = manager.drainDataTransferEvents()
+
+        #expect(manager.sourceSnapshots.isEmpty)
+        binding.emit(.target(MIMEType.plainText.rawValue))
+
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dragSource(DragSourceIdentity(source.id)),
+                error: .unknownDragSourceIdentity(DragSourceIdentity(source.id))
+            )
+        ) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+        #expect(manager.drainDataTransferEvents().isEmpty)
+    }
+
+    @Test
     func selectionSourceTargetCallbackRecordsInvalidSourceEvent() throws {
         try expectSelectionSourceEventRejected(
             .target(MIMEType.plainText.rawValue),
