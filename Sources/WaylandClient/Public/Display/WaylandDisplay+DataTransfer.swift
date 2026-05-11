@@ -5,6 +5,12 @@ extension WaylandDisplay {
         }
     }
 
+    public func dragOffer(for seatID: SeatID) throws -> DragOffer? {
+        try requireCore().dragOffer(for: seatID).map { offer in
+            DragOffer(snapshot: offer, display: self)
+        }
+    }
+
     /// Requests ownership of the regular clipboard selection for a seat.
     ///
     /// The compositor validates `serial` at the protocol boundary. This call creates and installs
@@ -46,6 +52,41 @@ extension WaylandDisplay {
         mimeType: MIMEType
     ) throws -> OwnedFileDescriptor {
         try requireCore().receiveClipboardOffer(id: offerID, mimeType: mimeType)
+    }
+
+    package func dragOffer(id offerID: DataOfferID) throws -> DragOffer {
+        try DragOffer(snapshot: requireCore().dragOffer(id: offerID), display: self)
+    }
+
+    package func receiveDragOffer(
+        id offerID: DataOfferID,
+        mimeType: MIMEType
+    ) throws -> OwnedFileDescriptor {
+        try requireCore().receiveDragOffer(id: offerID, mimeType: mimeType)
+    }
+
+    package func acceptDragOffer(id offerID: DataOfferID, mimeType: MIMEType?) throws {
+        try requireCore().acceptDragOffer(id: offerID, mimeType: mimeType)
+    }
+
+    package func setDragOfferActions(
+        id offerID: DataOfferID,
+        actions: DragActionSet,
+        preferredAction: DragAction
+    ) throws {
+        try requireCore().setDragOfferActions(
+            id: offerID,
+            actions: actions,
+            preferredAction: preferredAction
+        )
+    }
+
+    package func finishDragOffer(id offerID: DataOfferID) throws {
+        try requireCore().finishDragOffer(id: offerID)
+    }
+
+    package func cancelDragOffer(id offerID: DataOfferID) throws {
+        try requireCore().cancelDragOffer(id: offerID)
     }
 }
 

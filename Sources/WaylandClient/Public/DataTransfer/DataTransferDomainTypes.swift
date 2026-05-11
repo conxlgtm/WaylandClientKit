@@ -1,5 +1,3 @@
-import WaylandRaw
-
 public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertible {
     case invalidMIMEType(String)
     case negativeByteCount(Int)
@@ -32,12 +30,20 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case unknownOfferHandle(rawValue: UInt, seatID: SeatID?)
     case unknownOfferIdentity(ClipboardOfferIdentity)
     case unknownPrimarySelectionOfferIdentity(PrimarySelectionOfferIdentity)
+    case unknownDragOfferIdentity(DragOfferIdentity)
     case mismatchedOfferSeat(
         offer: DataTransferOfferIdentity,
         expected: SeatID,
         actual: SeatID?
     )
     case offerExpired
+    case dragOfferNotActive(DragOfferIdentity)
+    case dragOfferNotFinishable(DragOfferIdentity)
+    case dragActionRequestNotAllowed(DragOfferIdentity)
+    case dragActionNegotiationUnavailable(DragOfferIdentity)
+    case unsupportedDragAction(action: DragAction, available: DragActionSet)
+    case invalidDragActionSet(rawValue: UInt32)
+    case invalidDragAction(rawValue: UInt32)
     case unknownSource
     case unknownSourceIdentity(ClipboardSourceIdentity)
     case unknownPrimarySelectionSourceIdentity(PrimarySelectionSourceIdentity)
@@ -107,12 +113,28 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "unknown data offer \(offer.description)"
         case .unknownPrimarySelectionOfferIdentity(let offer):
             "unknown primary selection offer \(offer.description)"
+        case .unknownDragOfferIdentity(let offer):
+            "unknown drag offer \(offer.description)"
         case .mismatchedOfferSeat(let offer, let expected, let actual):
             "data offer \(offer.description) belonged to "
                 + (actual?.description ?? "no seat")
                 + ", expected \(expected.description)"
         case .offerExpired:
             "data offer expired"
+        case .dragOfferNotActive(let offer):
+            "drag offer is not active: \(offer.description)"
+        case .dragOfferNotFinishable(let offer):
+            "drag offer is not finishable: \(offer.description)"
+        case .dragActionRequestNotAllowed(let offer):
+            "drag action request is not allowed for \(offer.description)"
+        case .dragActionNegotiationUnavailable(let offer):
+            "drag action negotiation is unavailable for \(offer.description)"
+        case .unsupportedDragAction(let action, let available):
+            "drag action \(action.description) is not available in \(available.description)"
+        case .invalidDragActionSet(let rawValue):
+            "invalid drag action set: \(rawValue)"
+        case .invalidDragAction(let rawValue):
+            "invalid drag action: \(rawValue)"
         case .unknownSource:
             "unknown data source"
         case .unknownSourceIdentity(let source):
@@ -147,12 +169,15 @@ public enum DataTransferCallbackFailureCause: Equatable, Sendable,
 public enum DataTransferOfferIdentity: Equatable, Sendable, CustomStringConvertible {
     case clipboard(ClipboardOfferIdentity)
     case primarySelection(PrimarySelectionOfferIdentity)
+    case dragAndDrop(DragOfferIdentity)
 
     public var description: String {
         switch self {
         case .clipboard(let offer):
             offer.description
         case .primarySelection(let offer):
+            offer.description
+        case .dragAndDrop(let offer):
             offer.description
         }
     }
@@ -231,6 +256,11 @@ public enum DataTransferEvent: Equatable, Sendable {
     case primarySelectionChanged(PrimarySelectionEvent)
     case clipboardSourceCancelled(ClipboardSourceIdentity)
     case primarySelectionSourceCancelled(PrimarySelectionSourceIdentity)
+    case dragEntered(DragEnterEvent)
+    case dragMotion(DragMotionEvent)
+    case dragLeft(DragLeaveEvent)
+    case dragDropped(DragDropEvent)
+    case dragOfferChanged(DragOfferChangedEvent)
 }
 
 public enum DataTransferDiagnosticOperation: Equatable, Sendable {

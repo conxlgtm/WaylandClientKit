@@ -314,14 +314,33 @@ final class RecordingDataTransferOfferBinding: DataTransferOfferBinding {
         let fd: Int32
     }
 
+    struct Accept: Equatable {
+        let serial: InputSerial
+        let mimeType: MIMEType?
+    }
+
+    struct ActionRequest: Equatable {
+        let actions: DragActionSet
+        let preferredAction: DragAction
+    }
+
     let id: DataOfferID
+    var protocolVersion: RawVersion
     var destroyCount = 0
     var receives: [Receive] = []
+    var accepts: [Accept] = []
+    var actionRequests: [ActionRequest] = []
+    var finishCount = 0
 
     private let onEvent: (RawDataOfferEvent) -> Void
 
-    init(id offerID: DataOfferID, onEvent eventHandler: @escaping (RawDataOfferEvent) -> Void) {
+    init(
+        id offerID: DataOfferID,
+        protocolVersion bindingProtocolVersion: RawVersion = 3,
+        onEvent eventHandler: @escaping (RawDataOfferEvent) -> Void
+    ) {
         id = offerID
+        protocolVersion = bindingProtocolVersion
         onEvent = eventHandler
     }
 
@@ -331,6 +350,18 @@ final class RecordingDataTransferOfferBinding: DataTransferOfferBinding {
 
     func receive(mimeType: MIMEType, fd: Int32) {
         receives.append(Receive(mimeType: mimeType, fd: fd))
+    }
+
+    func accept(serial: InputSerial, mimeType: MIMEType?) {
+        accepts.append(Accept(serial: serial, mimeType: mimeType))
+    }
+
+    func setDragActions(_ actions: DragActionSet, preferredAction: DragAction) {
+        actionRequests.append(ActionRequest(actions: actions, preferredAction: preferredAction))
+    }
+
+    func finish() {
+        finishCount += 1
     }
 
     func destroy() {
