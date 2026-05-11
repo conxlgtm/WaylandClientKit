@@ -1,0 +1,44 @@
+import Testing
+
+@testable import WaylandClient
+
+@Suite
+struct DisplayEventHubPresentationTests {
+    @Test
+    func presentationEventsAreScopedToWindow() async {
+        let hub = DisplayEventHub()
+        let expected = SurfacePresentationFeedback.presented(
+            PresentationFeedback(
+                surface: SurfacePresentationIdentity(rawValue: 1),
+                timestamp: PresentationTimestamp(seconds: 10, nanoseconds: 20),
+                refreshNanoseconds: nil,
+                sequence: PresentationSequence(value: 2),
+                flags: [.vsync],
+                synchronizedOutput: OutputID(rawValue: 3)
+            )
+        )
+        var iterator = hub.windowPresentationEvents(
+            windowID: WindowID(rawValue: 2)
+        ).makeAsyncIterator()
+
+        hub.publishPresentation(
+            WindowPresentationEvent(
+                windowID: WindowID(rawValue: 1),
+                feedback: .discarded(SurfacePresentationIdentity(rawValue: 99))
+            )
+        )
+        hub.publishPresentation(
+            WindowPresentationEvent(
+                windowID: WindowID(rawValue: 2),
+                feedback: expected
+            )
+        )
+
+        do {
+            let event = try await iterator.next()
+            #expect(event == expected)
+        } catch {
+            Issue.record("Expected presentation event, got \(error)")
+        }
+    }
+}

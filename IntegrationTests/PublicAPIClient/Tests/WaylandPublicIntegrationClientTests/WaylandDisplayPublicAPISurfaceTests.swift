@@ -55,6 +55,7 @@ struct WaylandDisplayPublicAPISurfaceTests {
             xdgDecoration: .available(version: 2),
             xdgOutput: .available(version: 3),
             viewporter: .available(version: 1),
+            presentationTime: .unavailable,
             fractionalScale: .unavailable
         )
 
@@ -65,6 +66,7 @@ struct WaylandDisplayPublicAPISurfaceTests {
         #expect(capabilities.dragActionNegotiation == .unavailable)
         #expect(capabilities.primarySelection == .unavailable)
         #expect(capabilities.xdgOutput == .available(version: 3))
+        #expect(capabilities.presentationTime == .unavailable)
 
         func useCapabilitiesAPI(display: WaylandDisplay) async throws -> WaylandCapabilities {
             try await display.capabilities()
@@ -181,6 +183,34 @@ struct WaylandDisplayPublicAPISurfaceTests {
         }
 
         _ = useWindowControls
+    }
+
+    @Test
+    func presentationFeedbackTypesCompileForExternalClients() throws {
+        let identity = SurfacePresentationIdentity(rawValue: 9)
+        let feedback = PresentationFeedback(
+            surface: identity,
+            timestamp: PresentationTimestamp(seconds: 12, nanoseconds: 345),
+            refreshNanoseconds: 16_666_667,
+            sequence: PresentationSequence(value: 99),
+            flags: [.vsync, .hardwareClock],
+            synchronizedOutput: OutputID(rawValue: 3)
+        )
+        let event = SurfacePresentationFeedback.presented(feedback)
+
+        #expect(identity.description == "presentation-9")
+        #expect(feedback.surface == identity)
+        #expect(feedback.flags.contains(.vsync))
+        #expect(event == .presented(feedback))
+        #expect(SurfacePresentationFeedback.discarded(identity) == .discarded(identity))
+
+        func usePresentationFeedbackAPI(window: Window) async throws {
+            let events = window.presentationEvents
+            _ = events.makeAsyncIterator()
+            try await window.requestPresentationFeedback()
+        }
+
+        _ = usePresentationFeedbackAPI
     }
 
     @Test
