@@ -8,6 +8,24 @@ extension DisplayCore {
         }
     }
 
+    func dragOffer(for seatID: SeatID) throws -> DataOfferSnapshot? {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            let offer = try activeSession.dragOfferOnOwnerThread(for: seatID)
+            publishDrainedDataTransfer(from: activeSession)
+            return offer
+        }
+    }
+
+    func dragOffer(id offerID: DataOfferID) throws -> DataOfferSnapshot {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            let offer = try activeSession.dragOfferOnOwnerThread(id: offerID)
+            publishDrainedDataTransfer(from: activeSession)
+            return offer
+        }
+    }
+
     func receiveClipboardOffer(
         id offerID: DataOfferID,
         mimeType: MIMEType
@@ -20,6 +38,67 @@ extension DisplayCore {
             )
             publishDrainedDataTransfer(from: activeSession)
             return descriptor
+        }
+    }
+
+    func receiveDragOffer(
+        id offerID: DataOfferID,
+        mimeType: MIMEType
+    ) throws -> OwnedFileDescriptor {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            let descriptor = try activeSession.receiveDragOfferOnOwnerThread(
+                id: offerID,
+                mimeType: mimeType
+            )
+            publishDrainedDataTransfer(from: activeSession)
+            return descriptor
+        }
+    }
+
+    func acceptDragOffer(
+        id offerID: DataOfferID,
+        mimeType: MIMEType?
+    ) throws {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            try activeSession.acceptDragOfferOnOwnerThread(
+                id: offerID,
+                mimeType: mimeType
+            )
+            publishDrainedDataTransfer(from: activeSession)
+        }
+    }
+
+    func setDragOfferActions(
+        id offerID: DataOfferID,
+        actions: DragActionSet,
+        preferredAction: DragAction
+    ) throws {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            try activeSession.setDragOfferActionsOnOwnerThread(
+                id: offerID,
+                actions: actions,
+                preferredAction: preferredAction
+            )
+            publishDrainedDataTransfer(from: activeSession)
+        }
+    }
+
+    func finishDragOffer(id offerID: DataOfferID) throws {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            try activeSession.finishDragOfferOnOwnerThread(id: offerID)
+            publishDrainedDataTransfer(from: activeSession)
+        }
+    }
+
+    func cancelDragOffer(id offerID: DataOfferID) throws {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            try activeSession.cancelDragOfferOnOwnerThread(id: offerID)
+            publishDrainedDataTransfer(from: activeSession)
         }
     }
 

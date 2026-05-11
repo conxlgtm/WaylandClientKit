@@ -9,8 +9,12 @@ package protocol DataTransferDeviceBinding: AnyObject {
 
 package protocol DataTransferOfferBinding: AnyObject {
     var id: DataOfferID { get }
+    var protocolVersion: RawVersion { get }
 
+    func accept(serial: InputSerial, mimeType: MIMEType?)
     func receive(mimeType: MIMEType, fd: Int32)
+    func setDragActions(_ actions: DragActionSet, preferredAction: DragAction)
+    func finish()
     func destroy()
 }
 
@@ -51,26 +55,33 @@ package protocol DataTransferManagerBackend: AnyObject {
 
 package final class DataTransferManager {
     package let backend: any DataTransferManagerBackend
-    private let eventQueue: DataTransferEventQueue
+    let eventQueue: DataTransferEventQueue
+    let surfaceTargetResolver: (RawObjectID?) -> InputEventTarget
     var store = DataTransferStore()
     private var nextOfferID: UInt64 = 1
     package var nextSourceID: UInt64 = 1
 
     package init(
         connection rawConnection: RawDisplayConnection,
-        eventQueue dataTransferEventQueue: DataTransferEventQueue = DataTransferEventQueue()
+        eventQueue dataTransferEventQueue: DataTransferEventQueue = DataTransferEventQueue(),
+        surfaceTargetResolver targetResolver: @escaping (RawObjectID?) -> InputEventTarget =
+            DataTransferManager.defaultTarget
     ) {
         backend = LiveDataTransferManagerBackend(connection: rawConnection)
         eventQueue = dataTransferEventQueue
+        surfaceTargetResolver = targetResolver
     }
 
     package init(
         backend dataTransferBackend: any DataTransferManagerBackend,
-        eventQueue dataTransferEventQueue: DataTransferEventQueue = DataTransferEventQueue()
+        eventQueue dataTransferEventQueue: DataTransferEventQueue = DataTransferEventQueue(),
+        surfaceTargetResolver targetResolver: @escaping (RawObjectID?) -> InputEventTarget =
+            DataTransferManager.defaultTarget
     ) {
         dataTransferBackend.preconditionIsOwnerThread()
         backend = dataTransferBackend
         eventQueue = dataTransferEventQueue
+        surfaceTargetResolver = targetResolver
     }
 
     package func synchronizeSeats(_ seatIDs: [SeatID]) throws {
@@ -126,6 +137,9 @@ package final class DataTransferManager {
                     ClipboardSelectionEvent(seatID: seatID, offerID: offerID)
                 )
             )
+        case .publishDragEntered, .publishDragMotion, .publishDragLeft, .publishDragDropped,
+            .publishDragOfferChanged:
+            appendDragAndDropEvent(for: effect)
         case .publishSourceCancelled(let sourceID):
             eventQueue.append(.clipboardSourceCancelled(ClipboardSourceIdentity(sourceID)))
         }
@@ -162,11 +176,19 @@ package final class DataTransferManager {
             case .selection(.some(let handle)):
                 try handleSelection(handle: handle, seatID: seatID)
             case .enter(let enter):
-                try handleUnsupportedDragEnter(enter, seatID: seatID)
-            case .leave, .drop:
-                break
-            case .motion:
-                break
+                try handleDragEnter(enter, seatID: seatID)
+            case .leave:
+                try apply(.dragLeft(seatID))
+            case .drop:
+                try apply(.dragDropped(seatID))
+            case .motion(let time, let x, let y):
+                try apply(
+                    .dragMotion(
+                        seatID: seatID,
+                        time: WaylandTimestampMilliseconds(rawValue: time),
+                        location: DragLocation(x: x.doubleValue, y: y.doubleValue)
+                    )
+                )
             }
             preconditionInvariantsHold()
         } catch {
@@ -200,24 +222,6 @@ package final class DataTransferManager {
             binding: binding,
             seatID: seatID
         )
-    }
-
-    private func handleDataOfferEvent(_ event: RawDataOfferEvent, offerID: DataOfferID) {
-        do {
-            guard case .offer(let rawMimeType) = event else {
-                return
-            }
-
-            guard let rawMimeType, let mimeType = MIMEType(rawValue: rawMimeType) else { return }
-            if store.offerSnapshot(offerID) != nil {
-                try apply(.offerMimeType(id: offerID, mimeType: mimeType))
-            } else {
-                try store.appendPendingMIMEType(mimeType, offerID: offerID)
-            }
-            preconditionInvariantsHold()
-        } catch {
-            recordCallbackError(error, context: .dataOffer(ClipboardOfferIdentity(offerID)))
-        }
     }
 
     private func handleSelection(handle: RawDataOfferHandle, seatID: SeatID) throws {
@@ -373,30 +377,5 @@ extension DataTransferManager {
                     description: String(describing: error)
                 )
             )
-    }
-
-    private func handleUnsupportedDragEnter(
-        _ enter: RawDataDeviceEnter,
-        seatID: SeatID
-    ) throws {
-        guard let handle = enter.offer else {
-            return
-        }
-        guard let offerID = store.offerID(for: handle) else {
-            throw DataTransferError.unknownOfferHandle(rawValue: handle.rawValue, seatID: seatID)
-        }
-
-        guard store.offerSnapshot(offerID) == nil else {
-            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
-        }
-        guard store.runtimeOffer(offerID)?.pendingSeatID == seatID else {
-            throw DataTransferError.mismatchedOfferSeat(
-                offer: .clipboard(ClipboardOfferIdentity(offerID)),
-                expected: seatID,
-                actual: store.runtimeOffer(offerID)?.pendingSeatID
-            )
-        }
-
-        destroyOfferBinding(offerID)
     }
 }

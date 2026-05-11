@@ -139,14 +139,14 @@ extension DataTransferManager {
                     DataTransferManagerInvariantViolation
                     .activeRuntimeOfferMissingState(offerID)
             }
-        case .pending(_, _, let seatID, _):
+        case .pending(let offer):
             guard activeOffersByID[offerID] == nil else {
                 throw DataTransferManagerInvariantViolation.pendingRuntimeOfferHasState(offerID)
             }
-            guard seatsWithDataDevice.contains(seatID) else {
+            guard seatsWithDataDevice.contains(offer.seatID) else {
                 throw
                     DataTransferManagerInvariantViolation
-                    .pendingRuntimeOfferMissingSeat(offerID, seatID)
+                    .pendingRuntimeOfferMissingSeat(offerID, offer.seatID)
             }
         }
     }

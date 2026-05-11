@@ -31,6 +31,34 @@ struct DataTransferManagerSelectionTests {
     }
 
     @Test
+    func selectionOfferIgnoresDragActionMetadataCallbacks() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let device = try #require(backend.binding(for: seat1))
+
+        device.emit(.dataOffer(offerHandle1))
+        let offer = try #require(backend.offerBinding(for: offerHandle1))
+        offer.emit(.offer(MIMEType.plainText.rawValue))
+        device.emit(.selection(offerHandle1))
+        _ = manager.drainDataTransferEvents()
+
+        offer.emit(.sourceActions([.copy]))
+        offer.emit(.action(.copy))
+
+        #expect(manager.pendingCallbackError == nil)
+        #expect(manager.drainDataTransferEvents().isEmpty)
+        #expect(
+            try manager.selectionOffer(for: seat1)
+                == (try DataOfferSnapshot(
+                    id: offer.id,
+                    role: .selection(seatID: seat1),
+                    mimeTypes: [.plainText]
+                ))
+        )
+    }
+
+    @Test
     func selectionWithNoMimeTypesRecordsCallbackError() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)

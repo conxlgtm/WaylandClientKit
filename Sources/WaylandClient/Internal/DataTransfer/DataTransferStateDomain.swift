@@ -34,15 +34,80 @@ package enum DataOfferRole: Equatable, Sendable {
     }
 }
 
+package enum DragSelectedAction: Equatable, Sendable {
+    case notReceived
+    case received(DragAction)
+
+    package var action: DragAction? {
+        guard case .received(let action) = self else {
+            return nil
+        }
+
+        return action
+    }
+
+    package var wasReceived: Bool {
+        action != nil
+    }
+
+    package func isFinishable(finalPreferredAction: DragAction?) -> Bool {
+        switch self {
+        case .notReceived:
+            false
+        case .received(.copy):
+            finalPreferredAction == nil || finalPreferredAction == .copy
+        case .received(.move):
+            finalPreferredAction == nil || finalPreferredAction == .move
+        case .received(.ask):
+            finalPreferredAction?.isFinalTransferAction == true
+        case .received(.none), .received(.unknown):
+            false
+        }
+    }
+}
+
+package enum DragAcceptState: Equatable, Sendable {
+    case notSent
+    case accepted(MIMEType)
+    case rejected
+}
+
+package struct DragAndDropOfferMetadata: Equatable, Sendable {
+    package var sourceActions: DragActionSet
+    package var selectedAction: DragSelectedAction
+    package var acceptState: DragAcceptState
+    package var hasDropped: Bool
+    package var finalPreferredAction: DragAction?
+    package var enterSerial: InputSerial?
+
+    package init(
+        sourceActions offerSourceActions: DragActionSet = [],
+        selectedAction offerSelectedAction: DragSelectedAction = .notReceived,
+        acceptState offerAcceptState: DragAcceptState = .notSent,
+        hasDropped offerHasDropped: Bool = false,
+        finalPreferredAction offerFinalPreferredAction: DragAction? = nil,
+        enterSerial offerEnterSerial: InputSerial? = nil
+    ) {
+        sourceActions = offerSourceActions
+        selectedAction = offerSelectedAction
+        acceptState = offerAcceptState
+        hasDropped = offerHasDropped
+        finalPreferredAction = offerFinalPreferredAction
+        enterSerial = offerEnterSerial
+    }
+}
+
 package struct DataOfferSnapshot: Equatable, Sendable {
     package let id: DataOfferID
     package let role: DataOfferRole
     package let mimeTypes: [MIMEType]
+    package let dragAndDrop: DragAndDropOfferMetadata?
 
     package init(
         id offerID: DataOfferID,
         role offerRole: DataOfferRole,
-        mimeTypes offerMIMETypes: [MIMEType]
+        mimeTypes offerMIMETypes: [MIMEType],
+        dragAndDrop offerDragAndDrop: DragAndDropOfferMetadata? = nil
     ) throws {
         try NonEmptyMIMETypeList.validate(
             offerMIMETypes,
@@ -51,6 +116,12 @@ package struct DataOfferSnapshot: Equatable, Sendable {
         id = offerID
         role = offerRole
         mimeTypes = offerMIMETypes
+        switch offerRole {
+        case .selection:
+            dragAndDrop = nil
+        case .dragAndDrop:
+            dragAndDrop = offerDragAndDrop ?? DragAndDropOfferMetadata()
+        }
     }
 }
 
@@ -128,6 +199,7 @@ package enum DataTransferSeatDeviceState: Equatable, Sendable {
 package struct DataTransferSeatSnapshot: Equatable, Sendable {
     package let seatID: SeatID
     package let device: DataTransferSeatDeviceState
+    package let dragAndDropOfferID: DataOfferID?
 
     package var hasDataDevice: Bool {
         device.hasDataDevice
@@ -147,10 +219,34 @@ package struct DataTransferSeatSnapshot: Equatable, Sendable {
 
     package init(
         seatID snapshotSeatID: SeatID,
-        device snapshotDevice: DataTransferSeatDeviceState
+        device snapshotDevice: DataTransferSeatDeviceState,
+        dragAndDropOfferID snapshotDragAndDropOfferID: DataOfferID? = nil
     ) {
         seatID = snapshotSeatID
         device = snapshotDevice
+        dragAndDropOfferID = snapshotDragAndDropOfferID
+    }
+}
+
+package struct DataTransferDragEnterTransition: Equatable, Sendable {
+    package let seatID: SeatID
+    package let offerID: DataOfferID
+    package let serial: InputSerial
+    package let location: DragLocation
+    package let target: InputEventTarget
+
+    package init(
+        seatID eventSeatID: SeatID,
+        offerID eventOfferID: DataOfferID,
+        serial eventSerial: InputSerial,
+        location eventLocation: DragLocation,
+        target eventTarget: InputEventTarget
+    ) {
+        seatID = eventSeatID
+        offerID = eventOfferID
+        serial = eventSerial
+        location = eventLocation
+        target = eventTarget
     }
 }
 
@@ -160,7 +256,21 @@ package enum DataTransferAction: Equatable, Sendable {
     case seatRemoved(SeatID)
     case offerCreated(id: DataOfferID, role: DataOfferRole)
     case offerMimeType(id: DataOfferID, mimeType: MIMEType)
+    case offerSourceActions(id: DataOfferID, actions: DragActionSet)
+    case offerSelectedAction(id: DataOfferID, action: DragAction)
+    case dragAccepted(id: DataOfferID, mimeType: MIMEType?)
+    case dragActionsRequested(id: DataOfferID, preferredAction: DragAction)
     case selectionChanged(seatID: SeatID, offerID: DataOfferID?)
+    case dragEntered(DataTransferDragEnterTransition)
+    case dragMotion(
+        seatID: SeatID,
+        time: WaylandTimestampMilliseconds,
+        location: DragLocation
+    )
+    case dragLeft(SeatID)
+    case dragDropped(SeatID)
+    case dragFinished(DataOfferID)
+    case dragCancelled(DataOfferID)
     case sourceCreated(id: DataSourceID, seatID: SeatID, mimeTypes: [MIMEType])
     case selectionSourceChanged(seatID: SeatID, sourceID: DataSourceID?)
     case sourceCancelled(DataSourceID)
@@ -172,6 +282,13 @@ package enum DataTransferEffect: Equatable, Sendable {
     case destroyOffer(DataOfferID)
     case cancelSource(DataSourceID)
     case publishSelectionChanged(seatID: SeatID, offerID: DataOfferID?)
+    case publishDragEntered(DataTransferDragEnterTransition)
+    case publishDragMotion(
+        seatID: SeatID, offerID: DataOfferID, time: WaylandTimestampMilliseconds,
+        location: DragLocation)
+    case publishDragLeft(seatID: SeatID, offerID: DataOfferID)
+    case publishDragDropped(seatID: SeatID, offerID: DataOfferID)
+    case publishDragOfferChanged(seatID: SeatID, offerID: DataOfferID)
     case publishSourceCancelled(DataSourceID)
 }
 

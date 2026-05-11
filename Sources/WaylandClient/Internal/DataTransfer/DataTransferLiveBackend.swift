@@ -172,6 +172,7 @@ private final class LiveDataTransferDeviceBinding: DataTransferDeviceBinding {
 
 private final class LiveDataTransferOfferBinding: DataTransferOfferBinding {
     let id: DataOfferID
+    var protocolVersion: RawVersion { offer.version }
 
     private let offer: RawDataOffer
     private let owner: RawDataOfferOwner
@@ -190,6 +191,24 @@ private final class LiveDataTransferOfferBinding: DataTransferOfferBinding {
     func receive(mimeType: MIMEType, fd: Int32) {
         precondition(!isDestroyed, "data transfer offer binding was already destroyed")
         offer.receive(mimeType: mimeType.rawValue, fd: fd)
+    }
+
+    func accept(serial: InputSerial, mimeType: MIMEType?) {
+        precondition(!isDestroyed, "data transfer offer binding was already destroyed")
+        offer.accept(serial: serial.rawValue, mimeType: mimeType?.rawValue)
+    }
+
+    func setDragActions(_ actions: DragActionSet, preferredAction: DragAction) {
+        precondition(!isDestroyed, "data transfer offer binding was already destroyed")
+        offer.setActions(
+            actions.rawDataDeviceDNDAction,
+            preferredAction: preferredAction.rawDataDeviceDNDAction
+        )
+    }
+
+    func finish() {
+        precondition(!isDestroyed, "data transfer offer binding was already destroyed")
+        offer.finish()
     }
 
     func destroy() {
