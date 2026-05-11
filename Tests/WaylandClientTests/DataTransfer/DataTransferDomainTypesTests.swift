@@ -136,6 +136,58 @@ struct DataTransferDomainTypesTests {
         #expect(DragAction.none.description == "none")
         #expect(DragAction.copy.description == "copy")
     }
+
+    @Test
+    func dragSourceConfigurationRequiresPayloadsAndKnownActions() throws {
+        let payload = DataTransferSourcePayload(
+            mimeType: .plainText,
+            data: Data("drag".utf8)
+        )
+
+        #expect(throws: DataTransferError.emptyDataSource) {
+            _ = try DragSourceConfiguration(payloads: [], actions: [.copy])
+        }
+        #expect(throws: DataTransferError.invalidDragActionSet(rawValue: 0)) {
+            _ = try DragSourceConfiguration(payloads: [payload], actions: [])
+        }
+        #expect(throws: DataTransferError.invalidDragActionSet(rawValue: 8)) {
+            _ = try DragSourceConfiguration(
+                payloads: [payload],
+                actions: DragActionSet(rawValue: 8)
+            )
+        }
+
+        let configuration = try DragSourceConfiguration(payloads: [payload], actions: [.copy])
+        #expect(configuration.payloads == [payload])
+        #expect(configuration.actions == [.copy])
+    }
+
+    @Test
+    func dragSourceActionsRejectEmptyAndUnknownActionSets() throws {
+        #expect(throws: DataTransferError.invalidDragActionSet(rawValue: 0)) {
+            _ = try DragSourceActions([])
+        }
+        #expect(throws: DataTransferError.invalidDragActionSet(rawValue: 8)) {
+            _ = try DragSourceActions(DragActionSet(rawValue: 8))
+        }
+
+        let actions = try DragSourceActions([.copy, .move])
+        #expect(actions.value == [.copy, .move])
+    }
+
+    @Test
+    func dragSourceSnapshotRequiresValidatedActions() throws {
+        let snapshot = try DataSourceSnapshot(
+            id: DataSourceID(rawValue: 55),
+            role: .dragAndDrop(
+                seatID: SeatID(rawValue: 7),
+                actions: try DragSourceActions([.copy])
+            ),
+            mimeTypes: [.plainText]
+        )
+
+        #expect(snapshot.role.dragActions == [.copy])
+    }
 }
 
 @Suite

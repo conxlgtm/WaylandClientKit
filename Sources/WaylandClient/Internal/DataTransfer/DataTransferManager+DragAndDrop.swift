@@ -44,6 +44,42 @@ extension DataTransferManager {
                     DragOfferChangedEvent(seatID: seatID, offerID: offerID)
                 )
             )
+        case .publishDragSourceCancelled, .publishDragSourceTargetChanged,
+            .publishDragSourceActionChanged, .publishDragSourceDropPerformed,
+            .publishDragSourceFinished:
+            appendDragSourceEvent(for: effect)
+        default:
+            return
+        }
+    }
+
+    private func appendDragSourceEvent(for effect: DataTransferEffect) {
+        switch effect {
+        case .publishDragSourceCancelled(let sourceID):
+            eventQueue.append(.dragSourceCancelled(DragSourceIdentity(sourceID)))
+        case .publishDragSourceTargetChanged(let sourceID, let mimeType):
+            eventQueue.append(
+                .dragSourceTargetChanged(
+                    DragSourceTargetEvent(sourceID: sourceID, mimeType: mimeType)
+                )
+            )
+        case .publishDragSourceActionChanged(let sourceID, let action):
+            eventQueue.append(
+                .dragSourceActionChanged(
+                    DragSourceActionEvent(sourceID: sourceID, action: action)
+                )
+            )
+        case .publishDragSourceDropPerformed(let sourceID):
+            eventQueue.append(.dragSourceDropPerformed(DragSourceIdentity(sourceID)))
+        case .publishDragSourceFinished(let sourceID, let finalAction):
+            eventQueue.append(
+                .dragSourceFinished(
+                    DragSourceFinishedEvent(
+                        sourceID: sourceID,
+                        finalAction: finalAction
+                    )
+                )
+            )
         default:
             return
         }

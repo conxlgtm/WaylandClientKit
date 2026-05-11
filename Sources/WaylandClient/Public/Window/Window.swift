@@ -114,6 +114,21 @@ public struct Window: Sendable, Hashable {
         )
     }
 
+    public func startDrag(
+        source configuration: DragSourceConfiguration,
+        seatID: SeatID,
+        serial: InputSerial,
+        icon: DragIcon = .none
+    ) async throws -> DragSource {
+        try await display.startDrag(
+            from: id,
+            source: configuration,
+            seatID: seatID,
+            serial: serial,
+            icon: icon
+        )
+    }
+
     public var isClosed: Bool {
         get async throws {
             try await display.windowIsClosed(id)

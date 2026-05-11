@@ -8,6 +8,12 @@
             try requireCore().surfaces.window(windowID)?.topLevelPointerAddressForTesting
         }
 
+        package func rawSurfacePointerAddressForTesting(
+            _ windowID: WindowID
+        ) throws -> UInt? {
+            try requireCore().surfaces.window(windowID)?.surfacePointerAddressForTesting
+        }
+
         package func firstRawOutputForTesting() throws -> (
             id: OutputID,
             pointerAddress: UInt
