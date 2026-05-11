@@ -276,6 +276,30 @@ struct DataTransferManagerDragAndDropFinishTests {
     }
 }
 
+@Suite
+struct DataTransferManagerDragAndDropAskFinishTests {
+    @Test
+    func askFinishUsesLastPreferredActionBeforeDrop() throws {
+        let (manager, device, offer) = try managerWithPendingDragOffer()
+        offer.emit(.sourceActions([.copy, .ask]))
+        offer.emit(.action(.ask))
+        try enterDrag(manager: manager)
+        try manager.acceptDragOffer(id: offer.id, mimeType: .plainText)
+        try manager.setDragOfferActions(
+            id: offer.id,
+            actions: [.copy],
+            preferredAction: .copy
+        )
+        device.emit(.drop)
+
+        try manager.finishDragOffer(id: offer.id)
+
+        #expect(offer.actionRequests == [.init(actions: [.copy], preferredAction: .copy)])
+        #expect(offer.finishCount == 1)
+        #expect(offer.destroyCount == 1)
+    }
+}
+
 private func managerWithPendingDragOffer() throws -> (
     manager: DataTransferManager,
     device: RecordingDataTransferDeviceBinding,

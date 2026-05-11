@@ -214,7 +214,7 @@ package enum DataTransferOfferState: Equatable, Sendable {
 
     package mutating func recordFinalPreferredAction(_ action: DragAction) throws {
         var metadata = try requireDragAndDropMetadata()
-        guard metadata.hasDropped else {
+        guard metadata.hasDropped || metadata.selectedAction == .received(.ask) else {
             return
         }
 
