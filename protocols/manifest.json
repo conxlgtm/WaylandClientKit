@@ -55,6 +55,17 @@
       "notes": "Optional extension for surface destination sizing used by fractional scaling."
     },
     {
+      "name": "presentation-time",
+      "localPath": "protocols/upstream/stable/presentation-time/presentation-time.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/stable/presentation-time/presentation-time.xml",
+      "sha256": "dffac93bcb2bb1d8c385e72b8a8c2c0d4d79a336866322f3ba886dce2b27b1e2",
+      "stability": "stable",
+      "notes": "Optional extension for compositor presentation feedback on committed surfaces."
+    },
+    {
       "name": "fractional-scale-v1",
       "localPath": "protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml",
       "upstreamProject": "wayland-protocols",

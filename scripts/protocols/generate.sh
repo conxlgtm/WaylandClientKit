@@ -37,6 +37,11 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
+[[ -f "$PROTO_DIR/stable/presentation-time/presentation-time.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/stable/presentation-time/presentation-time.xml"
+    exit 1
+}
+
 [[ -f "$PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml" ]] || {
     echo "Missing vendored protocol: $PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml"
     exit 1
@@ -52,6 +57,7 @@ mkdir -p \
     "$GEN_INC/core" \
     "$GEN_INC/stable/xdg-shell" \
     "$GEN_INC/stable/viewporter" \
+    "$GEN_INC/stable/presentation-time" \
     "$GEN_INC/staging/fractional-scale" \
     "$GEN_INC/legacy-unstable/xdg-decoration" \
     "$GEN_INC/legacy-unstable/xdg-output" \
@@ -59,6 +65,7 @@ mkdir -p \
     "$GEN_SRC/core" \
     "$GEN_SRC/stable/xdg-shell" \
     "$GEN_SRC/stable/viewporter" \
+    "$GEN_SRC/stable/presentation-time" \
     "$GEN_SRC/staging/fractional-scale" \
     "$GEN_SRC/legacy-unstable/xdg-decoration" \
     "$GEN_SRC/legacy-unstable/xdg-output" \
@@ -129,6 +136,14 @@ wayland-scanner client-header \
 wayland-scanner private-code \
     "$PROTO_DIR/stable/viewporter/viewporter.xml" \
     "$GEN_SRC/stable/viewporter/viewporter-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/stable/presentation-time/presentation-time.xml" \
+    "$GEN_INC/stable/presentation-time/presentation-time-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/stable/presentation-time/presentation-time.xml" \
+    "$GEN_SRC/stable/presentation-time/presentation-time-protocol.c"
 
 wayland-scanner client-header \
     "$PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml" \
