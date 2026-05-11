@@ -143,6 +143,37 @@ extension DisplayCore {
         }
     }
 
+    func startDrag(
+        from windowID: WindowID,
+        source configuration: DragSourceConfiguration,
+        seatID: SeatID,
+        serial: InputSerial,
+        icon: DragIcon
+    ) throws -> DataSourceSnapshot {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            let window = try requireOpenWindow(windowID)
+            let origin = try window.dataTransferDragOriginOnOwnerThread()
+            let source = try activeSession.startDragOnOwnerThread(
+                configuration,
+                seatID: seatID,
+                serial: serial,
+                origin: origin,
+                icon: icon
+            )
+            publishDrainedDataTransfer(from: activeSession)
+            return source
+        }
+    }
+
+    func cancelDragSource(id sourceID: DataSourceID) throws {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            try activeSession.cancelDragSourceOnOwnerThread(id: sourceID)
+            publishDrainedDataTransfer(from: activeSession)
+        }
+    }
+
     func clearClipboard(seatID: SeatID, serial: InputSerial) throws {
         try withFatalFailureFinalization {
             let activeSession = try requireSession()

@@ -274,9 +274,21 @@ package struct DataTransferSourceState: Equatable, Sendable {
         seatID sourceSeatID: SeatID,
         mimeTypes sourceTypes: [MIMEType]
     ) throws {
+        try self.init(
+            id: sourceID,
+            role: .selection(seatID: sourceSeatID),
+            mimeTypes: sourceTypes
+        )
+    }
+
+    package init(
+        id sourceID: DataSourceID,
+        role sourceRole: DataSourceRole,
+        mimeTypes sourceTypes: [MIMEType]
+    ) throws {
         storage = try DataSourceSnapshot(
             id: sourceID,
-            seatID: sourceSeatID,
+            role: sourceRole,
             mimeTypes: sourceTypes
         )
     }
@@ -291,6 +303,10 @@ package struct DataTransferSourceState: Equatable, Sendable {
 
     package var seatID: SeatID {
         storage.seatID
+    }
+
+    package var role: DataSourceRole {
+        storage.role
     }
 
     package var mimeTypes: [MIMEType] {

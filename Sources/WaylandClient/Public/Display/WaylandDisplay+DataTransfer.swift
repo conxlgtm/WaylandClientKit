@@ -35,6 +35,27 @@ extension WaylandDisplay {
         try requireCore().clearClipboard(seatID: seatID, serial: serial)
     }
 
+    package func startDrag(
+        from windowID: WindowID,
+        source configuration: DragSourceConfiguration,
+        seatID: SeatID,
+        serial: InputSerial,
+        icon: DragIcon
+    ) throws -> DragSource {
+        let source = try requireCore().startDrag(
+            from: windowID,
+            source: configuration,
+            seatID: seatID,
+            serial: serial,
+            icon: icon
+        )
+        return DragSource(snapshot: source, display: self)
+    }
+
+    package func cancelDragSource(id sourceID: DataSourceID) throws {
+        try requireCore().cancelDragSource(id: sourceID)
+    }
+
     package func requestClearClipboard(
         sourceID: DataSourceID,
         seatID: SeatID,

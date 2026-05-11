@@ -103,8 +103,13 @@ struct SourceWriterCancellationTests {
 
         #expect(probe.waitUntilStarted())
         writer.cancelJobs(for: .primarySelection(sourceID))
-        usleep(10_000)
+        let writeAttemptsAfterWrongCancellation = probe.writeAttemptCount
 
+        #expect(
+            probe.waitUntilWriteAttemptCount(
+                atLeast: writeAttemptsAfterWrongCancellation + 1
+            )
+        )
         #expect(probe.closedDescriptors.isEmpty)
         #expect(writer.drainResults().isEmpty)
 
@@ -126,10 +131,9 @@ struct SourceWriterCancellationTests {
 @Suite
 struct SourceWriterDisplayCancellationTests {
     @Test
-    func drainedSourceCancelledEventsCancelQueuedWritesForBothSourceKinds() throws {
+    func drainedSourceCancelledEventsCancelQueuedWritesForAllSourceKinds() throws {
         let inFlightProbe = SourceCancellationBackpressureProbe()
-        let clipboardCloseRecorder = SourceCancellationCloseRecorder()
-        let primaryCloseRecorder = SourceCancellationCloseRecorder()
+        let cancellationCases = queuedCancellationCases()
         let eventQueue = DataTransferEventQueue()
         let writer = ThreadedDataTransferSourceWriter()
         defer { writer.shutdown() }
@@ -142,48 +146,15 @@ struct SourceWriterDisplayCancellationTests {
             )
         ])
         #expect(inFlightProbe.waitUntilStarted())
-        writer.submit([
-            queuedWriteJob(
-                source: .clipboard(DataSourceID(rawValue: 31)),
-                descriptor: 511,
-                closeRecorder: clipboardCloseRecorder
-            ),
-            queuedWriteJob(
-                source: .primarySelection(DataSourceID(rawValue: 32)),
-                descriptor: 512,
-                closeRecorder: primaryCloseRecorder
-            ),
-        ])
-        eventQueue.append(
-            .clipboardSourceCancelled(
-                ClipboardSourceIdentity(DataSourceID(rawValue: 31))
-            )
-        )
-        eventQueue.append(
-            .primarySelectionSourceCancelled(
-                PrimarySelectionSourceIdentity(DataSourceID(rawValue: 32))
-            )
-        )
+        writer.submit(cancellationCases.map(\.queuedJob))
+        cancellationCases.map(\.event).forEach(eventQueue.append)
 
         DisplaySession.cancelSourceWrites(for: eventQueue.drain(), using: writer)
 
-        #expect(clipboardCloseRecorder.descriptors == [511])
-        #expect(primaryCloseRecorder.descriptors == [512])
-        #expect(
-            writer.drainResults()
-                == [
-                    .failed(
-                        source: .clipboard(DataSourceID(rawValue: 31)),
-                        mimeType: .plainText,
-                        error: .cancelled
-                    ),
-                    .failed(
-                        source: .primarySelection(DataSourceID(rawValue: 32)),
-                        mimeType: .plainText,
-                        error: .cancelled
-                    ),
-                ]
-        )
+        for cancellationCase in cancellationCases {
+            #expect(cancellationCase.closeRecorder.descriptors == [cancellationCase.descriptor])
+        }
+        #expect(writer.drainResults() == cancellationCases.map(\.cancelledResult))
     }
 
     @Test
@@ -205,6 +176,17 @@ struct SourceWriterDisplayCancellationTests {
                 PrimarySelectionSourceIdentity(DataSourceID(rawValue: 34))
             ),
             descriptor: 514
+        )
+    }
+
+    @Test
+    func drainedDragSourceCancelledEventCancelsInFlightWrite() throws {
+        try verifyDrainedSourceCancelledEventCancelsInFlightWrite(
+            source: .dragAndDrop(DataSourceID(rawValue: 40)),
+            event: .dragSourceCancelled(
+                DragSourceIdentity(DataSourceID(rawValue: 40))
+            ),
+            descriptor: 519
         )
     }
 
@@ -271,6 +253,19 @@ struct SourceWriterDisplayCancellationTests {
             )
         )
     }
+
+    @Test
+    func drainedDragSourceCancelledEventCollectsCloseFailureDiagnosticInSamePass() throws {
+        try verifyDrainedCancelledEventCollectsCloseFailureDiagnosticInSamePass(
+            source: .dragAndDrop(DataSourceID(rawValue: 41)),
+            event: .dragSourceCancelled(
+                DragSourceIdentity(DataSourceID(rawValue: 41))
+            ),
+            diagnosticSource: .dragAndDrop(
+                DragSourceIdentity(DataSourceID(rawValue: 41))
+            )
+        )
+    }
 }
 
 private func verifyDrainedCancelledEventCollectsCloseFailureDiagnosticInSamePass(
@@ -322,4 +317,49 @@ private func verifyDrainedCancelledEventCollectsCloseFailureDiagnosticInSamePass
                 )
             ]
     )
+}
+
+private struct QueuedSourceCancellationCase {
+    let source: DataTransferSourceWriteSource
+    let descriptor: Int32
+    let event: DataTransferEvent
+    let closeRecorder = SourceCancellationCloseRecorder()
+
+    var queuedJob: DataTransferSourceWriteJob {
+        queuedWriteJob(
+            source: source,
+            descriptor: descriptor,
+            closeRecorder: closeRecorder
+        )
+    }
+
+    var cancelledResult: DataTransferSourceWriteResult {
+        .failed(source: source, mimeType: .plainText, error: .cancelled)
+    }
+}
+
+private func queuedCancellationCases() -> [QueuedSourceCancellationCase] {
+    [
+        QueuedSourceCancellationCase(
+            source: .clipboard(DataSourceID(rawValue: 31)),
+            descriptor: 511,
+            event: .clipboardSourceCancelled(
+                ClipboardSourceIdentity(DataSourceID(rawValue: 31))
+            )
+        ),
+        QueuedSourceCancellationCase(
+            source: .primarySelection(DataSourceID(rawValue: 32)),
+            descriptor: 512,
+            event: .primarySelectionSourceCancelled(
+                PrimarySelectionSourceIdentity(DataSourceID(rawValue: 32))
+            )
+        ),
+        QueuedSourceCancellationCase(
+            source: .dragAndDrop(DataSourceID(rawValue: 33)),
+            descriptor: 513,
+            event: .dragSourceCancelled(
+                DragSourceIdentity(DataSourceID(rawValue: 33))
+            )
+        ),
+    ]
 }

@@ -31,6 +31,7 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case unknownOfferIdentity(ClipboardOfferIdentity)
     case unknownPrimarySelectionOfferIdentity(PrimarySelectionOfferIdentity)
     case unknownDragOfferIdentity(DragOfferIdentity)
+    case unknownDragSourceIdentity(DragSourceIdentity)
     case mismatchedOfferSeat(
         offer: DataTransferOfferIdentity,
         expected: SeatID,
@@ -41,9 +42,11 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case dragOfferNotFinishable(DragOfferIdentity)
     case dragActionRequestNotAllowed(DragOfferIdentity)
     case dragActionNegotiationUnavailable(DragOfferIdentity)
+    case dragSourceActionNegotiationUnavailable(DragSourceIdentity)
     case unsupportedDragAction(action: DragAction, available: DragActionSet)
     case invalidDragActionSet(rawValue: UInt32)
     case invalidDragAction(rawValue: UInt32)
+    case invalidSourceEvent(DataSourceCallbackEventKind)
     case unknownSource
     case unknownSourceIdentity(ClipboardSourceIdentity)
     case unknownPrimarySelectionSourceIdentity(PrimarySelectionSourceIdentity)
@@ -115,6 +118,8 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "unknown primary selection offer \(offer.description)"
         case .unknownDragOfferIdentity(let offer):
             "unknown drag offer \(offer.description)"
+        case .unknownDragSourceIdentity(let source):
+            "unknown drag source \(source.description)"
         case .mismatchedOfferSeat(let offer, let expected, let actual):
             "data offer \(offer.description) belonged to "
                 + (actual?.description ?? "no seat")
@@ -129,12 +134,16 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "drag action request is not allowed for \(offer.description)"
         case .dragActionNegotiationUnavailable(let offer):
             "drag action negotiation is unavailable for \(offer.description)"
+        case .dragSourceActionNegotiationUnavailable(let source):
+            "drag action negotiation is unavailable for \(source.description)"
         case .unsupportedDragAction(let action, let available):
             "drag action \(action.description) is not available in \(available.description)"
         case .invalidDragActionSet(let rawValue):
             "invalid drag action set: \(rawValue)"
         case .invalidDragAction(let rawValue):
             "invalid drag action: \(rawValue)"
+        case .invalidSourceEvent(let event):
+            "invalid data source callback event: \(event.description)"
         case .unknownSource:
             "unknown data source"
         case .unknownSourceIdentity(let source):
@@ -153,9 +162,7 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     }
 }
 
-public enum DataTransferCallbackFailureCause: Equatable, Sendable,
-    CustomStringConvertible
-{
+public enum DataTransferCallbackFailureCause: Equatable, Sendable, CustomStringConvertible {
     case backend(type: String, description: String)
 
     public var description: String {
@@ -256,6 +263,11 @@ public enum DataTransferEvent: Equatable, Sendable {
     case primarySelectionChanged(PrimarySelectionEvent)
     case clipboardSourceCancelled(ClipboardSourceIdentity)
     case primarySelectionSourceCancelled(PrimarySelectionSourceIdentity)
+    case dragSourceCancelled(DragSourceIdentity)
+    case dragSourceTargetChanged(DragSourceTargetEvent)
+    case dragSourceActionChanged(DragSourceActionEvent)
+    case dragSourceDropPerformed(DragSourceIdentity)
+    case dragSourceFinished(DragSourceIdentity)
     case dragEntered(DragEnterEvent)
     case dragMotion(DragMotionEvent)
     case dragLeft(DragLeaveEvent)
@@ -270,12 +282,15 @@ public enum DataTransferDiagnosticOperation: Equatable, Sendable {
 public enum DataTransferDiagnosticSource: Equatable, Sendable, CustomStringConvertible {
     case clipboard(ClipboardSourceIdentity)
     case primarySelection(PrimarySelectionSourceIdentity)
+    case dragAndDrop(DragSourceIdentity)
 
     public var description: String {
         switch self {
         case .clipboard(let source):
             source.description
         case .primarySelection(let source):
+            source.description
+        case .dragAndDrop(let source):
             source.description
         }
     }
@@ -325,6 +340,20 @@ public struct DataTransferDiagnostic: Equatable, Sendable {
     ) {
         self.init(
             source: .primarySelection(diagnosticSource),
+            mimeType: diagnosticMIMEType,
+            operation: diagnosticOperation,
+            error: diagnosticError
+        )
+    }
+
+    public init(
+        source diagnosticSource: DragSourceIdentity,
+        mimeType diagnosticMIMEType: MIMEType,
+        operation diagnosticOperation: DataTransferDiagnosticOperation,
+        error diagnosticError: DataTransferError
+    ) {
+        self.init(
+            source: .dragAndDrop(diagnosticSource),
             mimeType: diagnosticMIMEType,
             operation: diagnosticOperation,
             error: diagnosticError

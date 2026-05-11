@@ -132,6 +132,7 @@ struct DataTransferStore {
     private var deviceBindings: [SeatID: any DataTransferDeviceBinding] = [:]
     private var sourceRecords: [DataSourceID: RuntimeDataSource] = [:]
     private var pendingSourceSendRequests: [DataTransferSourceSendRequest] = []
+    private var detachedSourceSendIDs: Set<DataSourceID> = []
     private var offerIDsByHandle: [RawDataOfferHandle: DataOfferID] = [:]
     private var runtimeOffersByID: [DataOfferID: RuntimeDataOffer] = [:]
     private var pendingCallbackFailures: [DataTransferCallbackFailure] = []
@@ -146,6 +147,10 @@ struct DataTransferStore {
 
     var sourcesByIDForInvariantChecks: [DataSourceID: RuntimeDataSource] {
         sourceRecords
+    }
+
+    var detachedSourceSendIDsForInvariantChecks: Set<DataSourceID> {
+        detachedSourceSendIDs
     }
 
     var offerIDs: Set<DataOfferID> {
@@ -346,7 +351,19 @@ struct DataTransferStore {
 
     @discardableResult
     mutating func removeSource(_ sourceID: DataSourceID) -> RuntimeDataSource? {
-        sourceRecords.removeValue(forKey: sourceID)
+        detachedSourceSendIDs.remove(sourceID)
+        return sourceRecords.removeValue(forKey: sourceID)
+    }
+
+    @discardableResult
+    mutating func detachSourcePreservingPendingSends(
+        _ sourceID: DataSourceID
+    ) -> RuntimeDataSource? {
+        let source = sourceRecords.removeValue(forKey: sourceID)
+        if pendingSourceSendRequests.contains(where: { $0.source.sourceID == sourceID }) {
+            detachedSourceSendIDs.insert(sourceID)
+        }
+        return source
     }
 
     mutating func appendSourceSendRequest(_ request: DataTransferSourceSendRequest) {
@@ -354,12 +371,16 @@ struct DataTransferStore {
     }
 
     mutating func drainSourceSendRequests() -> [DataTransferSourceSendRequest] {
-        defer { pendingSourceSendRequests.removeAll(keepingCapacity: true) }
+        defer {
+            pendingSourceSendRequests.removeAll(keepingCapacity: true)
+            detachedSourceSendIDs.removeAll(keepingCapacity: true)
+        }
         return pendingSourceSendRequests
     }
 
     mutating func replaceSourceSendRequests(_ requests: [DataTransferSourceSendRequest]) {
         pendingSourceSendRequests = requests
+        pruneDetachedSourceSendIDs()
     }
 
     func pendingSourceSendRequestsForInvariantChecks() -> [DataTransferSourceSendRequest] {
@@ -380,5 +401,10 @@ struct DataTransferStore {
 
     mutating func recordCallbackFailure(_ failure: DataTransferCallbackFailure) {
         pendingCallbackFailures.append(failure)
+    }
+
+    private mutating func pruneDetachedSourceSendIDs() {
+        let pendingSourceIDs = Set(pendingSourceSendRequests.map(\.source.sourceID))
+        detachedSourceSendIDs = detachedSourceSendIDs.intersection(pendingSourceIDs)
     }
 }

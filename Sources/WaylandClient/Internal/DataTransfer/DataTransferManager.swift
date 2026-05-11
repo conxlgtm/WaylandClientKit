@@ -2,10 +2,19 @@ import WaylandRaw
 
 package protocol DataTransferDeviceBinding: AnyObject {
     var seatID: SeatID { get }
+    var protocolVersion: RawVersion { get }
 
     func setSelection(source: (any DataTransferSourceBinding)?, serial: InputSerial)
+    func startDrag(
+        source: any DataTransferSourceBinding,
+        origin: any DataTransferDragOriginBinding,
+        icon: DragIcon,
+        serial: InputSerial
+    )
     func release()
 }
+
+package protocol DataTransferDragOriginBinding: AnyObject {}
 
 package protocol DataTransferOfferBinding: AnyObject {
     var id: DataOfferID { get }
@@ -20,8 +29,10 @@ package protocol DataTransferOfferBinding: AnyObject {
 
 package protocol DataTransferSourceBinding: AnyObject {
     var id: DataSourceID { get }
+    var protocolVersion: RawVersion { get }
 
     func offer(mimeType: MIMEType)
+    func setDragActions(_ actions: DragActionSet)
     func destroy()
 }
 
@@ -129,8 +140,10 @@ package final class DataTransferManager {
             destroyPendingOfferBindings(for: seatID)
         case .destroyOffer(let offerID):
             destroyOfferBinding(offerID)
+        case .destroySource(let sourceID):
+            destroySourceBindingPreservingPendingSends(sourceID)
         case .cancelSource(let sourceID):
-            destroySourceBinding(sourceID)
+            cancelSourceBinding(sourceID)
         case .publishSelectionChanged(let seatID, let offerID):
             eventQueue.append(
                 .clipboardSelectionChanged(
@@ -138,7 +151,9 @@ package final class DataTransferManager {
                 )
             )
         case .publishDragEntered, .publishDragMotion, .publishDragLeft, .publishDragDropped,
-            .publishDragOfferChanged:
+            .publishDragOfferChanged, .publishDragSourceCancelled,
+            .publishDragSourceTargetChanged, .publishDragSourceActionChanged,
+            .publishDragSourceDropPerformed, .publishDragSourceFinished:
             appendDragAndDropEvent(for: effect)
         case .publishSourceCancelled(let sourceID):
             eventQueue.append(.clipboardSourceCancelled(ClipboardSourceIdentity(sourceID)))
@@ -273,6 +288,14 @@ package final class DataTransferManager {
 
     private func destroySourceBinding(_ sourceID: DataSourceID) {
         store.removeSource(sourceID)?.binding.destroy()
+    }
+
+    private func destroySourceBindingPreservingPendingSends(_ sourceID: DataSourceID) {
+        store.detachSourcePreservingPendingSends(sourceID)?.binding.destroy()
+    }
+
+    private func cancelSourceBinding(_ sourceID: DataSourceID) {
+        destroySourceBinding(sourceID)
         discardPendingSourceSendRequests(for: sourceID)
     }
 

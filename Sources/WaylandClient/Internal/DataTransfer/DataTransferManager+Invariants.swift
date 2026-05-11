@@ -165,7 +165,9 @@ extension DataTransferManager {
             }
         }
         for request in store.pendingSourceSendRequestsForInvariantChecks()
-        where !activeSourceIDs.contains(request.source.sourceID) {
+        where !activeSourceIDs.contains(request.source.sourceID)
+            && !store.detachedSourceSendIDsForInvariantChecks.contains(request.source.sourceID)
+        {
             throw
                 DataTransferManagerInvariantViolation
                 .pendingSourceSendRequestMissingSource(request.source.sourceID)

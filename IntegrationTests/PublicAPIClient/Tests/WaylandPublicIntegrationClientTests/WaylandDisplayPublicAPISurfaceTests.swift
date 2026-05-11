@@ -185,6 +185,7 @@ struct WaylandDisplayPublicAPISurfaceTests {
 
     @Test
     func primarySelectionDataTransferEventsCompileForExternalClients() {
+        // swiftlint:disable:next cyclomatic_complexity
         func consumeDataTransferEvent(_ event: DataTransferEvent) -> String {
             switch event {
             case .clipboardSelectionChanged(let event):
@@ -194,6 +195,16 @@ struct WaylandDisplayPublicAPISurfaceTests {
             case .clipboardSourceCancelled(let identity):
                 identity.description
             case .primarySelectionSourceCancelled(let identity):
+                identity.description
+            case .dragSourceCancelled(let identity):
+                identity.description
+            case .dragSourceTargetChanged(let event):
+                event.mimeType?.description ?? event.source.description
+            case .dragSourceActionChanged(let event):
+                "\(event.source.description):\(event.action.description)"
+            case .dragSourceDropPerformed(let identity):
+                identity.description
+            case .dragSourceFinished(let identity):
                 identity.description
             case .dragEntered(let event):
                 "\(event.offer.description):\(event.serial.description):\(event.target)"
@@ -214,15 +225,37 @@ struct WaylandDisplayPublicAPISurfaceTests {
     @Test
     func dragAndDropPublicTypesCompileForExternalClients() throws {
         let actions: DragActionSet = [.copy, .move]
+        let payload = DataTransferSourcePayload(
+            mimeType: .plainText,
+            data: Data("drag".utf8)
+        )
+        let sourceConfiguration = try DragSourceConfiguration(
+            payloads: [payload],
+            actions: actions
+        )
 
         #expect(actions.contains(.copy))
         #expect(DragAction.ask.description == "ask")
+        #expect(sourceConfiguration.payloads == [payload])
+        #expect(DragIcon.none == .none)
 
-        func useDragOfferAPI(display: WaylandDisplay, seatID: SeatID) async throws {
+        func useDragAndDropAPI(
+            display: WaylandDisplay,
+            window: Window,
+            seatID: SeatID,
+            serial: InputSerial
+        ) async throws {
             guard let offer = try await display.dragOffer(for: seatID) else {
                 return
             }
 
+            let source = try await window.startDrag(
+                source: sourceConfiguration,
+                seatID: seatID,
+                serial: serial
+            )
+            _ = source.identity.description
+            try await source.cancel()
             try await offer.accept(.plainText)
             try await offer.setActions([.copy, .move], preferredAction: .copy)
             _ = try await offer.receive(.plainText)
@@ -231,6 +264,6 @@ struct WaylandDisplayPublicAPISurfaceTests {
             try await offer.cancel()
         }
 
-        _ = useDragOfferAPI
+        _ = useDragAndDropAPI
     }
 }

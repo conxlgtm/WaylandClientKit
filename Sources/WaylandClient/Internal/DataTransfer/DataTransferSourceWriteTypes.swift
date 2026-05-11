@@ -37,6 +37,7 @@ package struct DataTransferSourceDescriptorIO: Sendable {
 package enum DataTransferSourceWriteSource: Equatable, Sendable {
     case clipboard(DataSourceID)
     case primarySelection(DataSourceID)
+    case dragAndDrop(DataSourceID)
 
     package var diagnosticSource: DataTransferDiagnosticSource {
         switch self {
@@ -44,12 +45,15 @@ package enum DataTransferSourceWriteSource: Equatable, Sendable {
             .clipboard(ClipboardSourceIdentity(sourceID))
         case .primarySelection(let sourceID):
             .primarySelection(PrimarySelectionSourceIdentity(sourceID))
+        case .dragAndDrop(let sourceID):
+            .dragAndDrop(DragSourceIdentity(sourceID))
         }
     }
 
     package var sourceID: DataSourceID {
         switch self {
-        case .clipboard(let sourceID), .primarySelection(let sourceID):
+        case .clipboard(let sourceID), .primarySelection(let sourceID),
+            .dragAndDrop(let sourceID):
             sourceID
         }
     }
