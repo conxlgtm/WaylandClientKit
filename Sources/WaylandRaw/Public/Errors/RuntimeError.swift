@@ -44,6 +44,7 @@ package enum RawSystemOperation: Equatable, Sendable, CustomStringConvertible {
     case displayError
     case keymapFstat
     case keymapMmap
+    case mapDmabufFormatTable
     case createPipe
     case readFileDescriptor
     case writeFileDescriptor
@@ -84,6 +85,8 @@ package enum RawSystemOperation: Equatable, Sendable, CustomStringConvertible {
             "inspect keyboard keymap file"
         case .keymapMmap:
             "map keyboard keymap file"
+        case .mapDmabufFormatTable:
+            "map dmabuf format table"
         case .createPipe:
             "create pipe"
         case .readFileDescriptor:
@@ -219,6 +222,8 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
     case operationTimedOut(String)
     case shortRead(expectedBytes: Int, actualBytes: Int)
     case invalidWaylandArrayByteCount(byteCount: Int, elementSize: Int)
+    case invalidDmabufFormatTableByteCount(byteCount: Int, entryByteCount: Int)
+    case invalidDmabufFormatTableIndex(index: UInt16, entryCount: Int)
     case invalidDecorationMode(UInt32)
     case invalidTopLevelConfigureSize(width: Int32, height: Int32)
     case invalidConfigureBounds(width: Int32, height: Int32)
@@ -333,6 +338,12 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
             "Short read: expected \(expectedBytes) bytes, got \(actualBytes)"
         case .invalidWaylandArrayByteCount(let byteCount, let elementSize):
             "Wayland array byte count \(byteCount) is not divisible by \(elementSize)"
+        case .invalidDmabufFormatTableByteCount(let byteCount, let entryByteCount):
+            "Dmabuf format table byte count \(byteCount) is not divisible by "
+                + "\(entryByteCount)"
+        case .invalidDmabufFormatTableIndex(let index, let entryCount):
+            "Dmabuf feedback references format table index \(index) with "
+                + "\(entryCount) entries"
         case .invalidDecorationMode(let rawValue):
             "Invalid zxdg_toplevel_decoration_v1 mode \(rawValue)"
         case .invalidTopLevelConfigureSize(let width, let height):
