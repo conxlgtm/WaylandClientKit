@@ -447,12 +447,14 @@ package final class TopLevelWindow {
             }
 
             do {
+                try surfaceRuntime.requestFrameCallback(generation: request.generation)
                 pendingFrameRegistration = try surface.requestFrame { [weak self] in
                     guard let self else { return }
 
                     handleFrameDone()
                 }
             } catch {
+                surfaceRuntime.cancelFrameCallback()
                 failActivePresentation(
                     generation: request.generation,
                     error: .frameCallbackRequest(String(describing: error))
@@ -471,6 +473,10 @@ package final class TopLevelWindow {
             surface.attach(buffer: buffer)
             applySurfaceDamage(commitPlan.damage)
             surface.commit()
+            try surfaceRuntime.recordCommittedFrame(
+                generation: request.generation,
+                plan: commitPlan
+            )
 
             try interpretWindowEffects(
                 model.reduce(
@@ -548,6 +554,7 @@ package final class TopLevelWindow {
 
     private func resetTransientState() {
         do {
+            surfaceRuntime.resetTransientTransactionState()
             _ = try model.reduce(.transientStateReset)
         } catch let error as ClientError {
             reportCallbackFailure(operation: .transientStateReset, error: error)
@@ -666,6 +673,11 @@ extension TopLevelWindow {
 
 extension TopLevelWindow {
     private func handleFrameDone() {
+        do {
+            _ = try surfaceRuntime.completeFrameCallback()
+        } catch {
+            reportCallbackFailure(operation: .frameDone, error: error)
+        }
         pendingFrameRegistration = nil
         dropReleasedRetiredPools()
 
@@ -850,6 +862,8 @@ extension TopLevelWindow {
                         )
                     )
                 }
+                surfaceRuntime.recordConfigureReceived(serial: serial)
+                try surfaceRuntime.acknowledgeConfigure(serial: serial)
                 activeXDGSurface.ackConfigure(serial: serial)
             case .publishCloseRequested:
                 onCloseRequested?()
@@ -862,6 +876,7 @@ extension TopLevelWindow {
                 failureSink.reportWindowFailure(.diagnostic(diagnostic))
             case .cancelFrameCallback:
                 pendingFrameRegistration = nil
+                surfaceRuntime.cancelFrameCallback()
             case .performSoftwarePresent:
                 throw ClientError.window(
                     id,

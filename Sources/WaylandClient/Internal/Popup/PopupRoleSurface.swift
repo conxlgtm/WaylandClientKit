@@ -291,6 +291,37 @@ extension PopupRoleSurface {
         try surfaceRuntime.updateScaleInstallation(update)
     }
 
+    package func recordSurfaceConfigureReceived(serial: UInt32) {
+        surfaceRuntime.recordConfigureReceived(serial: serial)
+    }
+
+    package func acknowledgeSurfaceConfigure(serial: UInt32) throws {
+        try surfaceRuntime.acknowledgeConfigure(serial: serial)
+    }
+
+    package func requestSurfaceFrameCallback(generation: UInt64) throws {
+        try surfaceRuntime.requestFrameCallback(generation: generation)
+    }
+
+    package func cancelSurfaceFrameCallback() {
+        surfaceRuntime.cancelFrameCallback()
+    }
+
+    package func completeSurfaceFrameCallback() throws {
+        _ = try surfaceRuntime.completeFrameCallback()
+    }
+
+    package func recordSurfaceCommittedFrame(
+        generation: UInt64,
+        plan: SurfaceCommitPlan
+    ) throws {
+        try surfaceRuntime.recordCommittedFrame(generation: generation, plan: plan)
+    }
+
+    package func resetTransientSurfaceTransactionState() {
+        surfaceRuntime.resetTransientTransactionState()
+    }
+
     package func currentOutputIDsOnOwnerThread() -> [OutputID] {
         connection.preconditionIsOwnerThread()
         guard let outputRegistry = connection.boundGlobals?.outputRegistry else { return [] }
