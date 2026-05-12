@@ -262,8 +262,9 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         _ output: RawOutputPointerIdentity
     ) throws -> OutputID? {
         connection.preconditionIsOwnerThread()
-        guard let rawID = try connection.bindRequiredGlobals()
-            .outputRegistry.outputID(for: output)
+        guard
+            let rawID = try connection.bindRequiredGlobals()
+                .outputRegistry.outputID(for: output)
         else {
             return nil
         }

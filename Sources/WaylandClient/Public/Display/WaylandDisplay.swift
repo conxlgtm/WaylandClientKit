@@ -5,7 +5,7 @@ public actor WaylandDisplay {
     public static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000
     public static let defaultConfigureTimeoutMilliseconds: Int32 = 1_000
 
-    private nonisolated let runtime: WaylandDisplayRuntime
+    nonisolated let runtime: WaylandDisplayRuntime
     private var lifecycle = WaylandDisplayLifecycle.initializing
 
     public nonisolated var unownedExecutor: UnownedSerialExecutor {
@@ -22,12 +22,6 @@ public actor WaylandDisplay {
 
     public nonisolated var dataTransferEvents: DataTransferEvents {
         runtime.dataTransferEvents
-    }
-
-    package nonisolated func windowPresentationEvents(
-        for windowID: WindowID
-    ) -> WindowPresentationEvents {
-        runtime.windowPresentationEvents(for: windowID)
     }
 
     public nonisolated var diagnostics: DisplayDiagnostics {
@@ -357,7 +351,7 @@ extension WaylandDisplay {
     }
 }
 
-private enum WaylandDisplayLifecycle {
+enum WaylandDisplayLifecycle {
     case initializing
     case active(core: DisplayCore, eventSource: DisplayEventSource)
     case primarySelectionTestHarness(any WaylandDisplayPrimarySelectionHandling)
@@ -375,7 +369,7 @@ private enum WaylandDisplayLifecycle {
 }
 
 @safe
-private final class WaylandDisplayRuntime: Sendable {
+final class WaylandDisplayRuntime: Sendable {
     let executor: WaylandThreadExecutor
     let eventHub: DisplayEventHub
 
@@ -448,7 +442,7 @@ private final class WaylandDisplayRuntime: Sendable {
 }
 
 @safe
-private final class DisplayEventSource: WaylandThreadEventSource {
+final class DisplayEventSource: WaylandThreadEventSource {
     private let core: DisplayCore
 
     init(core displayCore: DisplayCore) {

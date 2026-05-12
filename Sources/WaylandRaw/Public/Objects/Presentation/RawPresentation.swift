@@ -266,6 +266,7 @@ private final class RawPresentationFeedbackOwner {
             }
         }
 
+        // swiftlint:disable closure_parameter_position
         unsafe callbacks.pointee.presented = {
             data,
             _,
@@ -295,6 +296,7 @@ private final class RawPresentationFeedbackOwner {
                 owner.finish(.presented(presented))
             }
         }
+        // swiftlint:enable closure_parameter_position
 
         unsafe callbacks.pointee.discarded = { data, _ in
             RawPresentationFeedbackOwner.withOwner(

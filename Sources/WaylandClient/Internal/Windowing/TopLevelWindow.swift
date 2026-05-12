@@ -983,8 +983,10 @@ extension TopLevelWindow {
 
     package func requestPresentationFeedbackOnOwnerThread(
         presentation: RawPresentation,
-        outputIDForPresentationSyncOutput: @escaping (RawOutputPointerIdentity) throws
-            -> OutputID?,
+        outputIDForPresentationSyncOutput:
+            @escaping (
+                RawOutputPointerIdentity
+            ) throws -> OutputID?,
         onFeedback: @escaping (SurfacePresentationFeedback) -> Void
     ) throws {
         connection.preconditionIsOwnerThread()
@@ -1248,8 +1250,8 @@ extension TopLevelWindow {
         do {
             switch rawEvent {
             case .presented(let rawPresented):
-                let synchronizedOutput = try rawPresented.synchronizedOutput.flatMap {
-                    try outputIDForPresentationSyncOutput($0)
+                let synchronizedOutput = try rawPresented.synchronizedOutput.flatMap { output in
+                    try outputIDForPresentationSyncOutput(output)
                 }
                 onFeedback(
                     .presented(

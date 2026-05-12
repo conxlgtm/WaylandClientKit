@@ -5,47 +5,47 @@ extension RawDisplayConnection {
     package func bindOptionalGlobals(registry reg: OpaquePointer) throws -> OptionalGlobals {
         let decorationManager = try bindXDGDecorationManagerIfPresent(registry: reg)
 
+        do {
+            let xdgOutputManager = try bindXDGOutputManagerIfPresent(registry: reg)
             do {
-                let xdgOutputManager = try bindXDGOutputManagerIfPresent(registry: reg)
+                let viewporter = try bindViewporterIfPresent(registry: reg)
                 do {
-                    let viewporter = try bindViewporterIfPresent(registry: reg)
+                    let presentation = try bindPresentationIfPresent(registry: reg)
                     do {
-                        let presentation = try bindPresentationIfPresent(registry: reg)
+                        let fractionalScaleManager = try bindFractionalScaleManagerIfPresent(
+                            registry: reg
+                        )
                         do {
-                            let fractionalScaleManager = try bindFractionalScaleManagerIfPresent(
-                                registry: reg
-                            )
+                            let dataDeviceManager =
+                                try bindDataDeviceManagerIfPresent(registry: reg)
                             do {
-                                let dataDeviceManager =
-                                    try bindDataDeviceManagerIfPresent(registry: reg)
-                                do {
-                                    let primarySelectionDeviceManager =
-                                        try bindPrimarySelectionDeviceManagerIfPresent(
-                                            registry: reg
-                                        )
-                                    return OptionalGlobals(
-                                        xdgDecorationManager: decorationManager,
-                                        xdgOutputManager: xdgOutputManager,
-                                        viewporter: viewporter,
-                                        presentation: presentation,
-                                        fractionalScaleManager: fractionalScaleManager,
-                                        dataDeviceManager: dataDeviceManager,
-                                        primarySelectionDeviceManager:
-                                            primarySelectionDeviceManager
+                                let primarySelectionDeviceManager =
+                                    try bindPrimarySelectionDeviceManagerIfPresent(
+                                        registry: reg
                                     )
-                                } catch {
-                                    dataDeviceManager.destroy()
-                                    throw error
-                                }
+                                return OptionalGlobals(
+                                    xdgDecorationManager: decorationManager,
+                                    xdgOutputManager: xdgOutputManager,
+                                    viewporter: viewporter,
+                                    presentation: presentation,
+                                    fractionalScaleManager: fractionalScaleManager,
+                                    dataDeviceManager: dataDeviceManager,
+                                    primarySelectionDeviceManager:
+                                        primarySelectionDeviceManager
+                                )
                             } catch {
-                                fractionalScaleManager.destroy()
+                                dataDeviceManager.destroy()
                                 throw error
                             }
                         } catch {
-                            presentation.destroy()
+                            fractionalScaleManager.destroy()
                             throw error
                         }
                     } catch {
+                        presentation.destroy()
+                        throw error
+                    }
+                } catch {
                     viewporter.destroy()
                     throw error
                 }

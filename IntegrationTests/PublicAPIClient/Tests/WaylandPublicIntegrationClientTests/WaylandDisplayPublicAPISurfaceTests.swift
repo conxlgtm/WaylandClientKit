@@ -184,7 +184,10 @@ struct WaylandDisplayPublicAPISurfaceTests {
 
         _ = useWindowControls
     }
+}
 
+@Suite("WaylandDisplay presentation public API surface")
+struct WaylandPresentationAPISurfaceTests {
     @Test
     func presentationFeedbackTypesCompileForExternalClients() throws {
         let identity = SurfacePresentationIdentity(rawValue: 9)
@@ -212,7 +215,10 @@ struct WaylandDisplayPublicAPISurfaceTests {
 
         _ = usePresentationFeedbackAPI
     }
+}
 
+@Suite("WaylandDisplay data transfer public API surface")
+struct WaylandDataTransferAPISurfaceTests {
     @Test
     func primarySelectionDataTransferEventsCompileForExternalClients() {
         // swiftlint:disable:next cyclomatic_complexity
