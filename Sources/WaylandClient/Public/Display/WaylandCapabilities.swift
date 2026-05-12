@@ -55,6 +55,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Fractional surface scale support through `wp_fractional_scale_manager_v1`.
     public let fractionalScale: ProtocolAvailability
 
+    /// Dmabuf buffer sharing support through `zwp_linux_dmabuf_v1`.
+    public let linuxDmabuf: ProtocolAvailability
+
     public init(
         clipboard: ProtocolAvailability,
         dragAndDrop: ProtocolAvailability,
@@ -64,7 +67,8 @@ public struct WaylandCapabilities: Equatable, Sendable {
         xdgOutput: ProtocolAvailability,
         viewporter: ProtocolAvailability,
         presentationTime: ProtocolAvailability,
-        fractionalScale: ProtocolAvailability
+        fractionalScale: ProtocolAvailability,
+        linuxDmabuf: ProtocolAvailability
     ) {
         self.clipboard = clipboard
         self.dragAndDrop = dragAndDrop
@@ -75,6 +79,7 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.viewporter = viewporter
         self.presentationTime = presentationTime
         self.fractionalScale = fractionalScale
+        self.linuxDmabuf = linuxDmabuf
     }
 }
 
@@ -143,6 +148,10 @@ extension WaylandCapabilities {
             fractionalScale: ProtocolAvailability(
                 best("wp_fractional_scale_manager_v1"),
                 supportedByClient: SupportedVersions.wpFractionalScaleManagerV1
+            ),
+            linuxDmabuf: ProtocolAvailability(
+                best("zwp_linux_dmabuf_v1"),
+                supportedByClient: SupportedVersions.zwpLinuxDmabufV1
             )
         )
     }

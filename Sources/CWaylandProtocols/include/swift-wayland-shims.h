@@ -28,6 +28,9 @@ struct wp_presentation;
 struct wp_presentation_feedback;
 struct wp_fractional_scale_manager_v1;
 struct wp_fractional_scale_v1;
+struct zwp_linux_dmabuf_v1;
+struct zwp_linux_buffer_params_v1;
+struct zwp_linux_dmabuf_feedback_v1;
 struct wl_data_device_manager;
 struct wl_data_device;
 struct wl_data_offer;
@@ -80,6 +83,9 @@ struct wl_data_device_manager *swl_registry_bind_wl_data_device_manager(
 
 struct zwp_primary_selection_device_manager_v1 *
 swl_registry_bind_zwp_primary_selection_device_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct zwp_linux_dmabuf_v1 *swl_registry_bind_zwp_linux_dmabuf_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 /* ------------------------------------------------------------------ */
@@ -332,6 +338,8 @@ void swl_wp_fractional_scale_manager_v1_destroy(
 void swl_wp_presentation_destroy(struct wp_presentation *presentation);
 void swl_wp_presentation_feedback_destroy(
     struct wp_presentation_feedback *feedback);
+void swl_zwp_linux_dmabuf_v1_destroy(
+    struct zwp_linux_dmabuf_v1 *linux_dmabuf);
 
 /* ------------------------------------------------------------------ */
 /*  Display wrappers                                                  */
