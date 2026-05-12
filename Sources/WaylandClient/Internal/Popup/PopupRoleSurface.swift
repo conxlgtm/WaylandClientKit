@@ -325,12 +325,14 @@ extension PopupRoleSurface {
         geometry: SurfaceGeometry
     ) throws {
         try SurfaceFrameCommitter.commit(
-            buffer: buffer,
-            to: surface,
-            scaleInstallation: scaleInstallation,
+            SurfaceFrameCommitRequest(
+                buffer: buffer,
+                surface: surface,
+                scaleInstallation: scaleInstallation,
+                generation: generation,
+                geometry: geometry
+            ),
             runtime: &surfaceRuntime,
-            generation: generation,
-            geometry: geometry
         )
     }
 

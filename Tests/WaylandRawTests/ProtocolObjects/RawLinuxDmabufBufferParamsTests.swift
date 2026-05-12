@@ -3,7 +3,7 @@ import Testing
 
 @testable import WaylandRaw
 
-@Suite
+@Suite(.serialized)
 struct RawLinuxDmabufBufferParamsStateTests {
     @Test
     func prepareAddPlaneReleasesDescriptorForWaylandRequest() throws {
