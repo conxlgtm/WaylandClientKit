@@ -2,6 +2,9 @@ import CWaylandProtocols
 
 @safe
 package final class RawLinuxDmabuf {
+    package static let createParamsMinimumVersion = RawVersion(1)
+    package static let feedbackRequestMinimumVersion = RawVersion(4)
+
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
@@ -36,6 +39,7 @@ package final class RawLinuxDmabuf {
         onUpdate handleUpdate: @escaping (RawLinuxDmabufFeedbackSnapshot) -> Void,
         onFailure handleFailure: @escaping (RuntimeError) -> Void
     ) throws -> RawLinuxDmabufFeedback {
+        try Self.validateFeedbackRequestVersion(version)
         guard
             let feedback = unsafe swl_zwp_linux_dmabuf_v1_get_default_feedback(pointer)
         else {
@@ -56,6 +60,7 @@ package final class RawLinuxDmabuf {
         onUpdate handleUpdate: @escaping (RawLinuxDmabufFeedbackSnapshot) -> Void,
         onFailure handleFailure: @escaping (RuntimeError) -> Void
     ) throws -> RawLinuxDmabufFeedback {
+        try Self.validateFeedbackRequestVersion(version)
         guard
             let feedback = unsafe swl_zwp_linux_dmabuf_v1_get_surface_feedback(
                 pointer,
@@ -74,10 +79,23 @@ package final class RawLinuxDmabuf {
         )
     }
 
+    package static func validateFeedbackRequestVersion(
+        _ version: RawVersion
+    ) throws(RuntimeError) {
+        guard version >= feedbackRequestMinimumVersion else {
+            throw RuntimeError.unsupportedProtocolVersion(
+                interface: "zwp_linux_dmabuf_v1 feedback",
+                minimum: feedbackRequestMinimumVersion,
+                actual: version
+            )
+        }
+    }
+
     package func createBufferParams(
         onEvent handleEvent: @escaping (RawLinuxDmabufBufferParamsEvent) -> Void,
         onFailure handleFailure: @escaping (RuntimeError) -> Void
     ) throws -> RawLinuxDmabufBufferParams {
+        try Self.validateCreateParamsVersion(version)
         guard
             let params = unsafe swl_zwp_linux_dmabuf_v1_create_params(pointer)
         else {
@@ -90,6 +108,18 @@ package final class RawLinuxDmabuf {
             onEvent: handleEvent,
             onFailure: handleFailure
         )
+    }
+
+    package static func validateCreateParamsVersion(
+        _ version: RawVersion
+    ) throws(RuntimeError) {
+        guard version >= createParamsMinimumVersion else {
+            throw RuntimeError.unsupportedProtocolVersion(
+                interface: "zwp_linux_dmabuf_v1 create_params",
+                minimum: createParamsMinimumVersion,
+                actual: version
+            )
+        }
     }
 
     package func destroy() {

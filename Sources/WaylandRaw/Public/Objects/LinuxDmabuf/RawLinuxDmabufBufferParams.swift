@@ -64,7 +64,8 @@ package struct RawLinuxDmabufBufferParamsFlags: OptionSet, Sendable {
 }
 
 package enum RawLinuxDmabufBufferParamsLifecycle: Equatable, Sendable {
-    case pending
+    case collecting
+    case createRequested
     case created
     case failed
     case destroyed
@@ -73,6 +74,8 @@ package enum RawLinuxDmabufBufferParamsLifecycle: Equatable, Sendable {
 package enum RawLinuxDmabufBufferParamsStateError: Error, Equatable, CustomStringConvertible {
     case addAfterCreateRequest
     case createAfterCreateRequest
+    case createdBeforeCreateRequest
+    case failedBeforeCreateRequest
     case useAfterTerminalState(RawLinuxDmabufBufferParamsLifecycle)
 
     package var description: String {
@@ -81,6 +84,10 @@ package enum RawLinuxDmabufBufferParamsStateError: Error, Equatable, CustomStrin
             "add plane after linux-dmabuf buffer create request"
         case .createAfterCreateRequest:
             "repeat linux-dmabuf buffer create request"
+        case .createdBeforeCreateRequest:
+            "linux-dmabuf buffer params created before create request"
+        case .failedBeforeCreateRequest:
+            "linux-dmabuf buffer params failed before create request"
         case .useAfterTerminalState(let lifecycle):
             "use linux-dmabuf buffer params after \(lifecycle)"
         }
@@ -88,8 +95,7 @@ package enum RawLinuxDmabufBufferParamsStateError: Error, Equatable, CustomStrin
 }
 
 package struct RawLinuxDmabufBufferParamsState: Equatable, Sendable {
-    package private(set) var lifecycle = RawLinuxDmabufBufferParamsLifecycle.pending
-    private var didRequestCreate = false
+    package private(set) var lifecycle = RawLinuxDmabufBufferParamsLifecycle.collecting
 
     package init() {
         // Stored property defaults model a fresh params object.
@@ -99,56 +105,58 @@ package struct RawLinuxDmabufBufferParamsState: Equatable, Sendable {
         fileDescriptor: inout RawLinuxDmabufPlaneFileDescriptor
     ) throws(RawLinuxDmabufBufferParamsStateError) -> Int32 {
         switch lifecycle {
-        case .pending:
-            break
+        case .collecting:
+            return fileDescriptor.releaseForWaylandRequest()
+        case .createRequested:
+            fileDescriptor.close()
+            throw RawLinuxDmabufBufferParamsStateError.addAfterCreateRequest
         case .created, .failed, .destroyed:
             fileDescriptor.close()
             throw RawLinuxDmabufBufferParamsStateError.useAfterTerminalState(lifecycle)
         }
-
-        guard !didRequestCreate else {
-            fileDescriptor.close()
-            throw RawLinuxDmabufBufferParamsStateError.addAfterCreateRequest
-        }
-
-        return fileDescriptor.releaseForWaylandRequest()
     }
 
     package mutating func prepareCreate()
         throws(RawLinuxDmabufBufferParamsStateError)
     {
-        try requirePending()
-        guard !didRequestCreate else {
+        switch lifecycle {
+        case .collecting:
+            lifecycle = .createRequested
+        case .createRequested:
             throw RawLinuxDmabufBufferParamsStateError.createAfterCreateRequest
+        case .created, .failed, .destroyed:
+            throw RawLinuxDmabufBufferParamsStateError.useAfterTerminalState(lifecycle)
         }
-        didRequestCreate = true
     }
 
-    package mutating func markCreated() {
-        guard lifecycle == .pending else { return }
-
-        lifecycle = .created
+    package mutating func markCreated()
+        throws(RawLinuxDmabufBufferParamsStateError)
+    {
+        switch lifecycle {
+        case .collecting:
+            throw RawLinuxDmabufBufferParamsStateError.createdBeforeCreateRequest
+        case .createRequested:
+            lifecycle = .created
+        case .created, .failed, .destroyed:
+            throw RawLinuxDmabufBufferParamsStateError.useAfterTerminalState(lifecycle)
+        }
     }
 
-    package mutating func markFailed() {
-        guard lifecycle == .pending else { return }
-
-        lifecycle = .failed
+    package mutating func markFailed()
+        throws(RawLinuxDmabufBufferParamsStateError)
+    {
+        switch lifecycle {
+        case .collecting:
+            throw RawLinuxDmabufBufferParamsStateError.failedBeforeCreateRequest
+        case .createRequested:
+            lifecycle = .failed
+        case .created, .failed, .destroyed:
+            throw RawLinuxDmabufBufferParamsStateError.useAfterTerminalState(lifecycle)
+        }
     }
 
     package mutating func markDestroyed() {
         lifecycle = .destroyed
-    }
-
-    private func requirePending()
-        throws(RawLinuxDmabufBufferParamsStateError)
-    {
-        switch lifecycle {
-        case .pending:
-            return
-        case .created, .failed, .destroyed:
-            throw RawLinuxDmabufBufferParamsStateError.useAfterTerminalState(lifecycle)
-        }
     }
 }
 
@@ -349,8 +357,7 @@ private final class RawLinuxDmabufBufferParamsOwner {
                 message: "zwp_linux_buffer_params_v1 failed fired without Swift state"
             ) { owner in
                 guard !owner.isCanceled else { return }
-                owner.state.markFailed()
-                owner.onEvent(.failed)
+                owner.handleFailed()
             }
         }
     }
@@ -391,15 +398,47 @@ private final class RawLinuxDmabufBufferParamsOwner {
 
     private func handleCreated(buffer: OpaquePointer) {
         do {
+            try state.markCreated()
             let wrappedBuffer = try RawLinuxDmabufBuffer(
                 pointer: buffer,
                 proxyAdoption: proxyAdoption
             )
-            state.markCreated()
             onEvent(.created(wrappedBuffer))
+        } catch let error as RawLinuxDmabufBufferParamsStateError {
+            unsafe swl_buffer_destroy(buffer)
+            onFailure(runtimeError(for: error))
         } catch {
-            onFailure(error)
+            onFailure(runtimeError(from: error))
         }
+    }
+
+    private func handleFailed() {
+        do {
+            try state.markFailed()
+            onEvent(.failed)
+        } catch {
+            onFailure(runtimeError(for: error))
+        }
+    }
+
+    private func runtimeError(
+        for error: RawLinuxDmabufBufferParamsStateError
+    ) -> RuntimeError {
+        RuntimeError.systemError(
+            errno: EINVAL,
+            operation: .validateArgument(error.description)
+        )
+    }
+
+    private func runtimeError(from error: any Error) -> RuntimeError {
+        if let runtimeError = error as? RuntimeError {
+            return runtimeError
+        }
+
+        return RuntimeError.systemError(
+            errno: EINVAL,
+            operation: .validateArgument(String(describing: error))
+        )
     }
 
     @safe
