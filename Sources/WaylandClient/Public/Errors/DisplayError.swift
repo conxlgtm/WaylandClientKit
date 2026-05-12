@@ -43,6 +43,7 @@ public enum WaylandSystemOperation: Equatable, Sendable, CustomStringConvertible
     case displayError
     case keymapFstat
     case keymapMmap
+    case mapDmabufFormatTable
     case createPipe
     case readFileDescriptor
     case writeFileDescriptor
@@ -83,6 +84,8 @@ public enum WaylandSystemOperation: Equatable, Sendable, CustomStringConvertible
             "inspect keyboard keymap file"
         case .keymapMmap:
             "map keyboard keymap file"
+        case .mapDmabufFormatTable:
+            "map dmabuf format table"
         case .createPipe:
             "create pipe"
         case .readFileDescriptor:
@@ -109,7 +112,7 @@ extension WaylandSystemOperation {
         case .displayFlush, .displayReadEvents, .displayDispatchPending,
             .displayPrepareRead, .displayError:
             self = Self.displayOperation(rawOperation)
-        case .keymapFstat, .keymapMmap:
+        case .keymapFstat, .keymapMmap, .mapDmabufFormatTable:
             self = Self.keymapOperation(rawOperation)
         case .createPipe, .readFileDescriptor, .writeFileDescriptor, .duplicateFileDescriptor,
             .closeFileDescriptor:
@@ -189,6 +192,8 @@ extension WaylandSystemOperation {
             .keymapFstat
         case .keymapMmap:
             .keymapMmap
+        case .mapDmabufFormatTable:
+            .mapDmabufFormatTable
         default:
             preconditionFailure("operation is not keymap related")
         }
@@ -413,7 +418,9 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
             .bindFailed,
             .operationTimedOut,
             .shortRead,
-            .invalidWaylandArrayByteCount:
+            .invalidWaylandArrayByteCount,
+            .invalidDmabufFormatTableByteCount,
+            .invalidDmabufFormatTableIndex:
             self = .internalInvariantViolation(.message(runtimeError.description))
         }
     }
