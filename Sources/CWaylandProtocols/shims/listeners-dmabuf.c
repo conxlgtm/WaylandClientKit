@@ -89,3 +89,37 @@ int swl_zwp_linux_dmabuf_feedback_v1_add_listener(
         &swl_zwp_linux_dmabuf_feedback_v1_listener_impl,
         (void *)callbacks);
 }
+
+static void swl_zwp_linux_buffer_params_v1_handle_created(
+    void *data,
+    struct zwp_linux_buffer_params_v1 *params,
+    struct wl_buffer *buffer)
+{
+    const struct swl_zwp_linux_buffer_params_listener_callbacks *cb = data;
+    if (cb && cb->created)
+        cb->created(cb->data, params, buffer);
+}
+
+static void swl_zwp_linux_buffer_params_v1_handle_failed(
+    void *data, struct zwp_linux_buffer_params_v1 *params)
+{
+    const struct swl_zwp_linux_buffer_params_listener_callbacks *cb = data;
+    if (cb && cb->failed)
+        cb->failed(cb->data, params);
+}
+
+static const struct zwp_linux_buffer_params_v1_listener
+    swl_zwp_linux_buffer_params_v1_listener_impl = {
+        .created = swl_zwp_linux_buffer_params_v1_handle_created,
+        .failed = swl_zwp_linux_buffer_params_v1_handle_failed,
+};
+
+int swl_zwp_linux_buffer_params_v1_add_listener(
+    struct zwp_linux_buffer_params_v1 *params,
+    const struct swl_zwp_linux_buffer_params_listener_callbacks *callbacks)
+{
+    return zwp_linux_buffer_params_v1_add_listener(
+        params,
+        &swl_zwp_linux_buffer_params_v1_listener_impl,
+        (void *)callbacks);
+}

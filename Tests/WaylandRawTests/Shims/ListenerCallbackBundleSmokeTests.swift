@@ -310,4 +310,21 @@ struct ListenerCallbackBundleSmokeTests {  // swiftlint:disable:this type_body_l
         #expect(unsafe callbacks.done != nil)
         #expect(unsafe callbacks.tranche_flags != nil)
     }
+
+    @Test
+    func dmabufBufferParamsListenerCallbackSignaturesImportIntoSwift() {
+        var callbacks = unsafe swl_zwp_linux_buffer_params_listener_callbacks()
+        unsafe callbacks.created = { data, params, buffer in
+            _ = unsafe data
+            _ = unsafe params
+            _ = unsafe buffer
+        }
+        unsafe callbacks.failed = { data, params in
+            _ = unsafe data
+            _ = unsafe params
+        }
+        unsafe callbacks.data = nil
+        #expect(unsafe callbacks.created != nil)
+        #expect(unsafe callbacks.failed != nil)
+    }
 }
