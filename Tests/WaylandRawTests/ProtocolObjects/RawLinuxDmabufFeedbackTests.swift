@@ -260,7 +260,87 @@ struct RawLinuxDmabufFeedbackStateTests {
             Issue.record("Unexpected error: \(error)")
         }
     }
+}
 
+@Suite
+struct RawLinuxDmabufFeedbackFormatTableFailureTests {
+    @Test
+    func formatTablePartialEntryReportsSize() {
+        var state = RawLinuxDmabufFeedbackState()
+
+        let error = RawLinuxDmabufFeedbackFormatTableFailure.classify(
+            .invalidDmabufFormatTableByteCount(
+                byteCount: 15,
+                entryByteCount: RawLinuxDmabufFormatTable.entryByteCount
+            ),
+            state: &state,
+            scope: .defaultFeedback,
+            fileDescriptor: 8,
+            byteCount: 15
+        )
+
+        #expect(
+            error
+                == malformedFeedback(
+                    event: "format_table",
+                    field: "size",
+                    rawValue: 15,
+                    discardedStaleState: false
+                )
+        )
+    }
+
+    @Test
+    func formatTableInvalidFdReportsFd() {
+        var state = RawLinuxDmabufFeedbackState()
+
+        let error = RawLinuxDmabufFeedbackFormatTableFailure.classify(
+            .system(
+                RawSystemError(
+                    uncheckedErrno: EINVAL,
+                    operation: .validateArgument("dmabuf format table fd")
+                )
+            ),
+            state: &state,
+            scope: .defaultFeedback,
+            fileDescriptor: -1,
+            byteCount: 16
+        )
+
+        #expect(
+            error
+                == malformedFeedback(
+                    event: "format_table",
+                    field: "fd",
+                    discardedStaleState: false
+                )
+        )
+    }
+
+    @Test
+    func formatTableMapFailurePreservesSystemCause() {
+        var state = RawLinuxDmabufFeedbackState()
+        let mapFailure = RuntimeError.system(
+            RawSystemError(
+                uncheckedErrno: ENOMEM,
+                operation: .mapDmabufFormatTable
+            )
+        )
+
+        let error = RawLinuxDmabufFeedbackFormatTableFailure.classify(
+            mapFailure,
+            state: &state,
+            scope: .defaultFeedback,
+            fileDescriptor: 8,
+            byteCount: 16
+        )
+
+        #expect(error == mapFailure)
+    }
+}
+
+@Suite
+struct RawLinuxDmabufVersionGateTests {
     @Test
     func defaultFeedbackRequiresVersionFour() {
         #expect(

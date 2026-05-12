@@ -217,11 +217,12 @@ private final class RawLinuxDmabufFeedbackOwner {
             state.replaceFormatTable(formats)
         } catch {
             onFailure(
-                state.invalidateFeedback(
+                RawLinuxDmabufFeedbackFormatTableFailure.classify(
+                    error,
+                    state: &state,
                     scope: scope,
-                    event: "format_table",
-                    field: "size",
-                    rawValue: UInt64(byteCount)
+                    fileDescriptor: fd,
+                    byteCount: byteCount
                 )
             )
         }
@@ -273,5 +274,35 @@ private final class RawLinuxDmabufFeedbackOwner {
             RawLinuxDmabufFeedbackOwner,
             swl_zwp_linux_dmabuf_feedback_listener_callbacks
         >.withOwner(from: data, message: message(), body)
+    }
+}
+
+package enum RawLinuxDmabufFeedbackFormatTableFailure {
+    package static func classify(
+        _ error: RuntimeError,
+        state: inout RawLinuxDmabufFeedbackState,
+        scope feedbackScope: RawLinuxDmabufFeedbackScope,
+        fileDescriptor fd: Int32,
+        byteCount: UInt32
+    ) -> RuntimeError {
+        switch error {
+        case .invalidDmabufFormatTableByteCount:
+            return state.invalidateFeedback(
+                scope: feedbackScope,
+                event: "format_table",
+                field: "size",
+                rawValue: UInt64(byteCount)
+            )
+        case .system(let systemError)
+        where systemError.operation == .validateArgument("dmabuf format table fd"):
+            return state.invalidateFeedback(
+                scope: feedbackScope,
+                event: "format_table",
+                field: "fd",
+                rawValue: fd >= 0 ? UInt64(fd) : nil
+            )
+        default:
+            return error
+        }
     }
 }
