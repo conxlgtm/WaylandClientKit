@@ -31,8 +31,10 @@ enum ShimSmokeCheck {
         _ = unsafe swl_registry_bind_zxdg_decoration_manager_v1
         _ = unsafe swl_registry_bind_zxdg_output_manager_v1
         _ = unsafe swl_registry_bind_wp_viewporter
+        _ = unsafe swl_registry_bind_wp_presentation
         _ = unsafe swl_registry_bind_wp_fractional_scale_manager_v1
         _ = unsafe swl_registry_bind_wl_seat
+        _ = unsafe swl_registry_bind_zwp_linux_dmabuf_v1
     }
 
     private static func verifyCoreObjectShims() {
@@ -103,6 +105,9 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_viewporter_destroy
         _ = unsafe swl_wp_fractional_scale_v1_destroy
         _ = unsafe swl_wp_fractional_scale_manager_v1_destroy
+        _ = unsafe swl_wp_presentation_destroy
+        _ = unsafe swl_wp_presentation_feedback_destroy
+        _ = unsafe swl_zwp_linux_dmabuf_v1_destroy
     }
 
     private static func verifyListenerShims() {
@@ -117,6 +122,8 @@ enum ShimSmokeCheck {
         _ = unsafe swl_zxdg_toplevel_decoration_v1_add_listener
         _ = unsafe swl_zxdg_output_v1_add_listener
         _ = unsafe swl_wp_fractional_scale_v1_add_listener
+        _ = unsafe swl_wp_presentation_add_listener
+        _ = unsafe swl_wp_presentation_feedback_add_listener
         _ = unsafe swl_seat_add_listener
         _ = unsafe swl_pointer_add_listener
         _ = unsafe swl_keyboard_add_listener
