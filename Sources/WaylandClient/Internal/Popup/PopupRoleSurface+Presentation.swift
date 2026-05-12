@@ -53,10 +53,12 @@ extension PopupRoleSurface {
             }
 
             do {
+                try requestSurfaceFrameCallback(generation: request.generation)
                 pendingFrameRegistration = try surface.requestFrame { [weak self] in
                     self?.handleFrameDone()
                 }
             } catch {
+                cancelSurfaceFrameCallback()
                 failActivePresentation(
                     generation: request.generation,
                     error: .frameCallbackRequest(String(describing: error))
@@ -75,6 +77,10 @@ extension PopupRoleSurface {
             surface.attach(buffer: buffer)
             applySurfaceDamage(commitPlan.damage)
             surface.commit()
+            try recordSurfaceCommittedFrame(
+                generation: request.generation,
+                plan: commitPlan
+            )
 
             try interpretPopupEffects(
                 model.reduce(
@@ -118,6 +124,8 @@ extension PopupRoleSurface {
             parentWindowID: parentWindowID,
             handlers: PopupEffectHandlers(
                 ackConfigure: { [self] serial in
+                    recordSurfaceConfigureReceived(serial: serial)
+                    try acknowledgeSurfaceConfigure(serial: serial)
                     xdgSurface.ackConfigure(serial: serial)
                 },
                 publishDismissed: { [self] _ in
@@ -133,6 +141,7 @@ extension PopupRoleSurface {
                 },
                 cancelFrameCallback: { [self] in
                     pendingFrameRegistration = nil
+                    cancelSurfaceFrameCallback()
                 },
                 retireSwapchain: { [self] in
                     retireSwapchain()

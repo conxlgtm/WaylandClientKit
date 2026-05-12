@@ -47,6 +47,7 @@ struct SurfaceRuntime<RoleResources> {
         var retiredBufferPools: [RawSharedMemoryPool] = []
         var scaleInstallation = SurfaceScaleInstallation()
         var outputMembership = SurfaceOutputMembershipState()
+        var transactionState = SurfaceTransactionState()
     }
 
     private enum Phase {
@@ -212,6 +213,66 @@ struct SurfaceRuntime<RoleResources> {
         )
     }
 
+    var transactionSnapshot: SurfaceTransactionSnapshot {
+        switch phase {
+        case .unassigned(let objects),
+            .live(_, let objects),
+            .roleDestroyed(let objects):
+            objects.transactionState.snapshot
+        case .surfaceDestroyed:
+            SurfaceTransactionState().snapshot
+        }
+    }
+
+    mutating func recordConfigureReceived(serial: UInt32) {
+        updateSurfaceObjects { objects in
+            objects.transactionState.recordConfigureReceived(serial: serial)
+        }
+    }
+
+    mutating func acknowledgeConfigure(serial: UInt32) throws {
+        try updateSurfaceObjects { objects in
+            try objects.transactionState.acknowledgeConfigure(serial: serial)
+        }
+    }
+
+    mutating func requestFrameCallback(generation: UInt64) throws {
+        try updateSurfaceObjects { objects in
+            try objects.transactionState.requestFrameCallback(generation: generation)
+        }
+    }
+
+    mutating func cancelFrameCallback() {
+        updateSurfaceObjects { objects in
+            objects.transactionState.cancelFrameCallback()
+        }
+    }
+
+    @discardableResult
+    mutating func completeFrameCallback() throws -> UInt64? {
+        try mutateSurfaceObjects(default: nil) { objects in
+            try objects.transactionState.completeFrameCallback()
+        }
+    }
+
+    mutating func recordCommittedFrame(
+        generation: UInt64,
+        plan: SurfaceCommitPlan
+    ) throws {
+        try updateSurfaceObjects { objects in
+            try objects.transactionState.recordCommittedFrame(
+                generation: generation,
+                plan: plan
+            )
+        }
+    }
+
+    mutating func resetTransientTransactionState() {
+        updateSurfaceObjects { objects in
+            objects.transactionState.resetTransientState()
+        }
+    }
+
     mutating func installRoleResources(_ roleResources: RoleResources) throws {
         switch phase {
         case .unassigned(let objects):
@@ -303,17 +364,17 @@ struct SurfaceRuntime<RoleResources> {
     }
 
     private mutating func updateSurfaceObjects(
-        _ update: (inout SurfaceObjects) -> Void
-    ) {
+        _ update: (inout SurfaceObjects) throws -> Void
+    ) rethrows {
         switch phase {
         case .unassigned(var objects):
-            update(&objects)
+            try update(&objects)
             phase = .unassigned(objects)
         case .live(let roleResources, var objects):
-            update(&objects)
+            try update(&objects)
             phase = .live(roleResources: roleResources, objects)
         case .roleDestroyed(var objects):
-            update(&objects)
+            try update(&objects)
             phase = .roleDestroyed(objects)
         case .surfaceDestroyed:
             return
@@ -322,19 +383,19 @@ struct SurfaceRuntime<RoleResources> {
 
     private mutating func mutateSurfaceObjects<Result>(
         default defaultResult: Result,
-        _ update: (inout SurfaceObjects) -> Result
-    ) -> Result {
+        _ update: (inout SurfaceObjects) throws -> Result
+    ) rethrows -> Result {
         switch phase {
         case .unassigned(var objects):
-            let result = update(&objects)
+            let result = try update(&objects)
             phase = .unassigned(objects)
             return result
         case .live(let roleResources, var objects):
-            let result = update(&objects)
+            let result = try update(&objects)
             phase = .live(roleResources: roleResources, objects)
             return result
         case .roleDestroyed(var objects):
-            let result = update(&objects)
+            let result = try update(&objects)
             phase = .roleDestroyed(objects)
             return result
         case .surfaceDestroyed:

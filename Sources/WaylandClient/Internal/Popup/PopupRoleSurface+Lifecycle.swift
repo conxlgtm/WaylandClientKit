@@ -168,6 +168,7 @@ extension PopupRoleSurface {
 
     package func resetTransientState() {
         do {
+            resetTransientSurfaceTransactionState()
             _ = try model.reduce(.transientStateReset)
         } catch {
             reportCallbackFailure(operation: .transientStateReset, error: error)
@@ -175,6 +176,11 @@ extension PopupRoleSurface {
     }
 
     package func handleFrameDone() {
+        do {
+            try completeSurfaceFrameCallback()
+        } catch {
+            reportCallbackFailure(operation: .frameDone, error: error)
+        }
         pendingFrameRegistration = nil
         dropReleasedRetiredPools()
 
