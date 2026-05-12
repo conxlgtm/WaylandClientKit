@@ -74,6 +74,8 @@ package enum RawLinuxDmabufBufferParamsLifecycle: Equatable, Sendable {
 package enum RawLinuxDmabufBufferParamsStateError: Error, Equatable, CustomStringConvertible {
     case addAfterCreateRequest
     case createAfterCreateRequest
+    case createWithoutPlanes
+    case duplicatePlaneIndex(UInt32)
     case createdBeforeCreateRequest
     case failedBeforeCreateRequest
     case useAfterTerminalState(RawLinuxDmabufBufferParamsLifecycle)
@@ -84,6 +86,10 @@ package enum RawLinuxDmabufBufferParamsStateError: Error, Equatable, CustomStrin
             "add plane after linux-dmabuf buffer create request"
         case .createAfterCreateRequest:
             "repeat linux-dmabuf buffer create request"
+        case .createWithoutPlanes:
+            "linux-dmabuf buffer create request without planes"
+        case .duplicatePlaneIndex(let planeIndex):
+            "duplicate linux-dmabuf plane index \(planeIndex)"
         case .createdBeforeCreateRequest:
             "linux-dmabuf buffer params created before create request"
         case .failedBeforeCreateRequest:
@@ -96,16 +102,23 @@ package enum RawLinuxDmabufBufferParamsStateError: Error, Equatable, CustomStrin
 
 package struct RawLinuxDmabufBufferParamsState: Equatable, Sendable {
     package private(set) var lifecycle = RawLinuxDmabufBufferParamsLifecycle.collecting
+    package private(set) var planeIndices: Set<UInt32> = []
 
     package init() {
         // Stored property defaults model a fresh params object.
     }
 
     package mutating func prepareAddPlane(
-        fileDescriptor: inout RawLinuxDmabufPlaneFileDescriptor
+        fileDescriptor: inout RawLinuxDmabufPlaneFileDescriptor,
+        planeIndex: UInt32
     ) throws(RawLinuxDmabufBufferParamsStateError) -> Int32 {
         switch lifecycle {
         case .collecting:
+            guard !planeIndices.contains(planeIndex) else {
+                fileDescriptor.close()
+                throw RawLinuxDmabufBufferParamsStateError.duplicatePlaneIndex(planeIndex)
+            }
+            planeIndices.insert(planeIndex)
             return fileDescriptor.releaseForWaylandRequest()
         case .createRequested:
             fileDescriptor.close()
@@ -121,6 +134,9 @@ package struct RawLinuxDmabufBufferParamsState: Equatable, Sendable {
     {
         switch lifecycle {
         case .collecting:
+            guard !planeIndices.isEmpty else {
+                throw RawLinuxDmabufBufferParamsStateError.createWithoutPlanes
+            }
             lifecycle = .createRequested
         case .createRequested:
             throw RawLinuxDmabufBufferParamsStateError.createAfterCreateRequest
@@ -247,7 +263,13 @@ package final class RawLinuxDmabufBufferParams {
         modifier: UInt64
     ) throws(RuntimeError) {
         do {
-            let fd = try listenerOwner.prepareAddPlane(fileDescriptor: &planeDescriptor)
+            let fd = try listenerOwner.prepareAddPlane(
+                fileDescriptor: &planeDescriptor,
+                planeIndex: planeIndex
+            )
+            defer {
+                Glibc.close(fd)
+            }
             unsafe swl_zwp_linux_buffer_params_v1_add(
                 pointer,
                 fd,
@@ -378,9 +400,10 @@ private final class RawLinuxDmabufBufferParamsOwner {
     }
 
     func prepareAddPlane(
-        fileDescriptor: inout RawLinuxDmabufPlaneFileDescriptor
+        fileDescriptor: inout RawLinuxDmabufPlaneFileDescriptor,
+        planeIndex: UInt32
     ) throws(RawLinuxDmabufBufferParamsStateError) -> Int32 {
-        try state.prepareAddPlane(fileDescriptor: &fileDescriptor)
+        try state.prepareAddPlane(fileDescriptor: &fileDescriptor, planeIndex: planeIndex)
     }
 
     func prepareCreate() throws(RawLinuxDmabufBufferParamsStateError) {
