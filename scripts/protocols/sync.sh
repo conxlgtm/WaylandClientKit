@@ -13,6 +13,7 @@ viewporter_candidates=()
 presentation_time_candidates=()
 fractional_scale_candidates=()
 primary_selection_candidates=()
+linux_dmabuf_candidates=()
 
 mapfile -t wayland_candidates < <(protocol_sources_wayland_core_candidates)
 mapfile -t xdg_candidates < <(protocol_sources_xdg_shell_candidates)
@@ -22,6 +23,7 @@ mapfile -t viewporter_candidates < <(protocol_sources_viewporter_candidates)
 mapfile -t presentation_time_candidates < <(protocol_sources_presentation_time_candidates)
 mapfile -t fractional_scale_candidates < <(protocol_sources_fractional_scale_candidates)
 mapfile -t primary_selection_candidates < <(protocol_sources_primary_selection_candidates)
+mapfile -t linux_dmabuf_candidates < <(protocol_sources_linux_dmabuf_candidates)
 
 WAYLAND_CORE_XML_SOURCE="$(protocol_sources_first_existing_file "${wayland_candidates[@]}" || true)"
 XDG_SHELL_XML_SOURCE="$(protocol_sources_first_existing_file "${xdg_candidates[@]}" || true)"
@@ -38,6 +40,9 @@ FRACTIONAL_SCALE_XML_SOURCE="$(
 )"
 PRIMARY_SELECTION_XML_SOURCE="$(
     protocol_sources_first_existing_file "${primary_selection_candidates[@]}" || true
+)"
+LINUX_DMABUF_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${linux_dmabuf_candidates[@]}" || true
 )"
 
 [[ -f "$WAYLAND_CORE_XML_SOURCE" ]] || {
@@ -88,6 +93,12 @@ PRIMARY_SELECTION_XML_SOURCE="$(
     exit 1
 }
 
+[[ -f "$LINUX_DMABUF_XML_SOURCE" ]] || {
+    echo "Missing linux-dmabuf XML. Checked:"
+    printf '  %s\n' "${linux_dmabuf_candidates[@]}"
+    exit 1
+}
+
 mkdir -p \
     "$ROOT/protocols/upstream/core" \
     "$ROOT/protocols/upstream/stable/xdg-shell" \
@@ -96,7 +107,8 @@ mkdir -p \
     "$ROOT/protocols/upstream/stable/viewporter" \
     "$ROOT/protocols/upstream/stable/presentation-time" \
     "$ROOT/protocols/upstream/staging/fractional-scale" \
-    "$ROOT/protocols/upstream/legacy-unstable/primary-selection"
+    "$ROOT/protocols/upstream/legacy-unstable/primary-selection" \
+    "$ROOT/protocols/upstream/legacy-unstable/linux-dmabuf"
 
 cp "$WAYLAND_CORE_XML_SOURCE" "$ROOT/protocols/upstream/core/wayland.xml"
 cp "$XDG_SHELL_XML_SOURCE" "$ROOT/protocols/upstream/stable/xdg-shell/xdg-shell.xml"
@@ -111,5 +123,7 @@ cp "$FRACTIONAL_SCALE_XML_SOURCE" \
     "$ROOT/protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml"
 cp "$PRIMARY_SELECTION_XML_SOURCE" \
     "$ROOT/protocols/upstream/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml"
+cp "$LINUX_DMABUF_XML_SOURCE" \
+    "$ROOT/protocols/upstream/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
 
 echo "Vendored protocol XML into $ROOT/protocols"
