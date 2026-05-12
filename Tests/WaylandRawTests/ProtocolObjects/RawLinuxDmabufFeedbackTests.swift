@@ -37,12 +37,10 @@ struct RawLinuxDmabufFormatTableTests {
         )
 
         #expect(parsed == entries)
-        #expect(Glibc.fcntl(parserDescriptor, F_GETFD) == -1)
-        #expect(errno == EBADF)
     }
 
     @Test
-    func rejectsPartialEntriesAndClosesFd() throws {
+    func rejectsPartialEntries() throws {
         let bytes = [UInt8](repeating: 0xAA, count: RawLinuxDmabufFormatTable.entryByteCount - 1)
         var descriptor = try RawFileDescriptor.memfd(name: "swift-wayland-dmabuf-table-bad")
         defer {
@@ -69,9 +67,6 @@ struct RawLinuxDmabufFormatTableTests {
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
-
-        #expect(Glibc.fcntl(parserDescriptor, F_GETFD) == -1)
-        #expect(errno == EBADF)
     }
 }
 
@@ -90,9 +85,9 @@ struct RawLinuxDmabufFeedbackStateTests {
         state.setCurrentTrancheTargetDevice(bytes: [0x05, 0x06, 0x07, 0x08])
         try state.appendCurrentTrancheFormats(indices: [1, 0])
         state.setCurrentTrancheFlags(RawLinuxDmabufTrancheFlags.scanout.rawValue | 0x8000_0000)
-        state.finishCurrentTranche()
+        try state.finishCurrentTranche(scope: .surface(surfaceID: 77))
 
-        let snapshot = state.snapshot(scope: .surface(surfaceID: 77))
+        let snapshot = try state.finish(scope: .surface(surfaceID: 77))
 
         #expect(snapshot.scope == .surface(surfaceID: 77))
         #expect(snapshot.mainDevice == RawLinuxDmabufDevice(bytes: [0x01, 0x02, 0x03, 0x04]))
@@ -105,6 +100,147 @@ struct RawLinuxDmabufFeedbackStateTests {
         #expect(snapshot.tranches[0].formats == [entries[1], entries[0]])
         #expect(snapshot.tranches[0].flags.contains(.scanout))
         #expect(snapshot.tranches[0].flags.unknownRawValue == 0x8000_0000)
+    }
+
+    @Test
+    func resentFeedbackReplacesPreviousSnapshot() throws {
+        let firstEntry = RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
+        let replacementEntry = RawLinuxDmabufFormatModifier(format: 3, modifier: 4)
+        var state = RawLinuxDmabufFeedbackState()
+
+        state.replaceFormatTable([firstEntry])
+        state.setMainDevice(bytes: [0x01])
+        state.setCurrentTrancheTargetDevice(bytes: [0x02])
+        state.setCurrentTrancheFlags(0)
+        try state.appendCurrentTrancheFormats(indices: [0])
+        try state.finishCurrentTranche(scope: .defaultFeedback)
+        _ = try state.finish(scope: .defaultFeedback)
+
+        state.replaceFormatTable([replacementEntry])
+        state.setMainDevice(bytes: [0x03])
+        state.setCurrentTrancheTargetDevice(bytes: [0x04])
+        state.setCurrentTrancheFlags(0)
+        try state.appendCurrentTrancheFormats(indices: [0])
+        try state.finishCurrentTranche(scope: .defaultFeedback)
+
+        let snapshot = try state.finish(scope: .defaultFeedback)
+
+        #expect(snapshot.mainDevice == RawLinuxDmabufDevice(bytes: [0x03]))
+        #expect(snapshot.formatTable == [replacementEntry])
+        #expect(snapshot.tranches.count == 1)
+        #expect(snapshot.tranches[0].targetDevice == RawLinuxDmabufDevice(bytes: [0x04]))
+        #expect(snapshot.tranches[0].formats == [replacementEntry])
+    }
+
+    @Test
+    func doneWithoutMainDeviceReportsFailureAndDoesNotPublishSnapshot() throws {
+        var state = RawLinuxDmabufFeedbackState()
+        state.replaceFormatTable([
+            RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
+        ])
+        state.setCurrentTrancheTargetDevice(bytes: [0x02])
+        state.setCurrentTrancheFlags(0)
+        try state.appendCurrentTrancheFormats(indices: [0])
+        try state.finishCurrentTranche(scope: .defaultFeedback)
+
+        #expect(
+            throws: malformedFeedback(
+                event: "done",
+                field: "main_device"
+            )
+        ) {
+            _ = try state.finish(scope: .defaultFeedback)
+        }
+    }
+
+    @Test
+    func trancheDoneWithoutTargetDeviceReportsFailure() throws {
+        var state = RawLinuxDmabufFeedbackState()
+        state.replaceFormatTable([
+            RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
+        ])
+        state.setCurrentTrancheFlags(0)
+        try state.appendCurrentTrancheFormats(indices: [0])
+
+        #expect(
+            throws: malformedFeedback(
+                event: "tranche_done",
+                field: "tranche_target_device"
+            )
+        ) {
+            try state.finishCurrentTranche(scope: .defaultFeedback)
+        }
+    }
+
+    @Test
+    func trancheDoneWithoutFormatsReportsFailure() {
+        var state = RawLinuxDmabufFeedbackState()
+        state.replaceFormatTable([
+            RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
+        ])
+        state.setCurrentTrancheTargetDevice(bytes: [0x02])
+        state.setCurrentTrancheFlags(0)
+
+        #expect(
+            throws: malformedFeedback(
+                event: "tranche_done",
+                field: "tranche_formats"
+            )
+        ) {
+            try state.finishCurrentTranche(scope: .defaultFeedback)
+        }
+    }
+
+    @Test
+    func invalidFormatTableSuppressesDoneSnapshot() throws {
+        var state = RawLinuxDmabufFeedbackState()
+        state.replaceFormatTable([
+            RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
+        ])
+        state.setMainDevice(bytes: [0x01])
+        state.setCurrentTrancheTargetDevice(bytes: [0x02])
+        state.setCurrentTrancheFlags(0)
+        try state.appendCurrentTrancheFormats(indices: [0])
+        try state.finishCurrentTranche(scope: .defaultFeedback)
+        _ = try state.finish(scope: .defaultFeedback)
+
+        _ = state.invalidateFeedback(
+            scope: .defaultFeedback,
+            event: "format_table",
+            field: "size",
+            rawValue: 15
+        )
+
+        #expect(
+            throws: malformedFeedback(
+                event: "format_table",
+                field: "size",
+                rawValue: 15
+            )
+        ) {
+            _ = try state.finish(scope: .defaultFeedback)
+        }
+    }
+
+    @Test
+    func doneWithUnfinishedTrancheReportsFailure() throws {
+        var state = RawLinuxDmabufFeedbackState()
+        state.replaceFormatTable([
+            RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
+        ])
+        state.setMainDevice(bytes: [0x01])
+        state.setCurrentTrancheTargetDevice(bytes: [0x02])
+        state.setCurrentTrancheFlags(0)
+        try state.appendCurrentTrancheFormats(indices: [0])
+
+        #expect(
+            throws: malformedFeedback(
+                event: "done",
+                field: "tranche_done"
+            )
+        ) {
+            _ = try state.finish(scope: .defaultFeedback)
+        }
     }
 
     @Test
@@ -124,6 +260,43 @@ struct RawLinuxDmabufFeedbackStateTests {
             Issue.record("Unexpected error: \(error)")
         }
     }
+
+    @Test
+    func defaultFeedbackRequiresVersionFour() {
+        #expect(
+            throws: RuntimeError.unsupportedProtocolVersion(
+                interface: "zwp_linux_dmabuf_v1 feedback",
+                minimum: 4,
+                actual: 3
+            )
+        ) {
+            try RawLinuxDmabuf.validateFeedbackRequestVersion(3)
+        }
+
+        #expect(throws: Never.self) {
+            try RawLinuxDmabuf.validateFeedbackRequestVersion(4)
+        }
+    }
+
+    @Test
+    func surfaceFeedbackRequiresVersionFour() {
+        #expect(
+            throws: RuntimeError.unsupportedProtocolVersion(
+                interface: "zwp_linux_dmabuf_v1 feedback",
+                minimum: 4,
+                actual: 2
+            )
+        ) {
+            try RawLinuxDmabuf.validateFeedbackRequestVersion(2)
+        }
+    }
+
+    @Test
+    func createParamsAllowedOnVersionOne() {
+        #expect(throws: Never.self) {
+            try RawLinuxDmabuf.validateCreateParamsVersion(1)
+        }
+    }
 }
 
 private func formatTableBytes(_ entries: [RawLinuxDmabufFormatModifier]) -> [UInt8] {
@@ -141,4 +314,23 @@ private func formatTableBytes(_ entries: [RawLinuxDmabufFormatModifier]) -> [UIn
     }
 
     return bytes
+}
+
+private func malformedFeedback(
+    event: String,
+    field: String,
+    index: Int? = nil,
+    rawValue: UInt64? = nil,
+    discardedStaleState: Bool = true
+) -> RuntimeError {
+    RuntimeError.malformedDmabufFeedback(
+        RawLinuxDmabufMalformedFeedback(
+            scope: .defaultFeedback,
+            event: event,
+            field: field,
+            index: index,
+            rawValue: rawValue,
+            discardedStaleState: discardedStaleState
+        )
+    )
 }

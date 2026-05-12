@@ -420,7 +420,9 @@ public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvert
             .shortRead,
             .invalidWaylandArrayByteCount,
             .invalidDmabufFormatTableByteCount,
-            .invalidDmabufFormatTableIndex:
+            .invalidDmabufFormatTableIndex,
+            .malformedDmabufFeedback,
+            .unsupportedProtocolVersion:
             self = .internalInvariantViolation(.message(runtimeError.description))
         }
     }

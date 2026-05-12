@@ -1,187 +1,6 @@
 import CWaylandProtocols
 import Glibc
 
-package enum RawLinuxDmabufFeedbackScope: Equatable, Sendable {
-    case defaultFeedback
-    case surface(surfaceID: RawObjectID)
-}
-
-package struct RawLinuxDmabufDevice: Equatable, Sendable {
-    package let bytes: [UInt8]
-
-    package init(bytes deviceBytes: [UInt8]) {
-        bytes = deviceBytes
-    }
-}
-
-package struct RawLinuxDmabufFormatModifier: Equatable, Sendable {
-    package let format: UInt32
-    package let modifier: UInt64
-
-    package init(format drmFormat: UInt32, modifier drmModifier: UInt64) {
-        format = drmFormat
-        modifier = drmModifier
-    }
-}
-
-package struct RawLinuxDmabufTrancheFlags: OptionSet, Sendable {
-    package let rawValue: UInt32
-
-    package init(rawValue flags: UInt32) {
-        rawValue = flags
-    }
-
-    package static let scanout = RawLinuxDmabufTrancheFlags(rawValue: 1)
-
-    package var unknownRawValue: UInt32 {
-        rawValue & ~Self.scanout.rawValue
-    }
-}
-
-package struct RawLinuxDmabufTranche: Equatable, Sendable {
-    package let targetDevice: RawLinuxDmabufDevice?
-    package let flags: RawLinuxDmabufTrancheFlags
-    package let formats: [RawLinuxDmabufFormatModifier]
-}
-
-package struct RawLinuxDmabufFeedbackSnapshot: Equatable, Sendable {
-    package let scope: RawLinuxDmabufFeedbackScope
-    package let mainDevice: RawLinuxDmabufDevice?
-    package let formatTable: [RawLinuxDmabufFormatModifier]
-    package let tranches: [RawLinuxDmabufTranche]
-}
-
-package enum RawLinuxDmabufFormatTable {
-    package static let entryByteCount = 16
-
-    package static func parse(
-        fileDescriptor fd: Int32,
-        byteCount rawByteCount: UInt32
-    ) throws(RuntimeError) -> [RawLinuxDmabufFormatModifier] {
-        guard fd >= 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .validateArgument("dmabuf format table fd")
-            )
-        }
-
-        defer {
-            Glibc.close(fd)
-        }
-
-        let byteCount = Int(rawByteCount)
-        guard byteCount > 0 else { return [] }
-        guard byteCount.isMultiple(of: entryByteCount) else {
-            throw RuntimeError.invalidDmabufFormatTableByteCount(
-                byteCount: byteCount,
-                entryByteCount: entryByteCount
-            )
-        }
-
-        let failedMapping = unsafe MAP_FAILED
-        guard
-            let mapping = unsafe mmap(nil, byteCount, PROT_READ, MAP_PRIVATE, fd, 0),
-            unsafe mapping != failedMapping
-        else {
-            throw RuntimeError.systemError(errno: errno, operation: .mapDmabufFormatTable)
-        }
-
-        defer {
-            unsafe munmap(mapping, byteCount)
-        }
-
-        let bytes = unsafe UnsafeRawBufferPointer(start: mapping, count: byteCount)
-        return stride(from: 0, to: byteCount, by: entryByteCount).map { offset in
-            RawLinuxDmabufFormatModifier(
-                format: unsafe bytes.loadUnaligned(
-                    fromByteOffset: offset,
-                    as: UInt32.self
-                ),
-                modifier: unsafe bytes.loadUnaligned(
-                    fromByteOffset: offset + 8,
-                    as: UInt64.self
-                )
-            )
-        }
-    }
-}
-
-package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
-    private struct CurrentTranche: Equatable, Sendable {
-        var targetDevice: RawLinuxDmabufDevice?
-        var flags = RawLinuxDmabufTrancheFlags()
-        var formats: [RawLinuxDmabufFormatModifier] = []
-    }
-
-    private var formatTable: [RawLinuxDmabufFormatModifier] = []
-    private var mainDevice: RawLinuxDmabufDevice?
-    private var currentTranche = CurrentTranche()
-    private var tranches: [RawLinuxDmabufTranche] = []
-
-    package init() {
-        // Stored property defaults represent an empty feedback sequence.
-    }
-
-    package mutating func replaceFormatTable(
-        _ formats: [RawLinuxDmabufFormatModifier]
-    ) {
-        formatTable = formats
-    }
-
-    package mutating func setMainDevice(bytes: [UInt8]) {
-        mainDevice = RawLinuxDmabufDevice(bytes: bytes)
-    }
-
-    package mutating func setCurrentTrancheTargetDevice(bytes: [UInt8]) {
-        currentTranche.targetDevice = RawLinuxDmabufDevice(bytes: bytes)
-    }
-
-    package mutating func appendCurrentTrancheFormats(indices: [UInt16])
-        throws(RuntimeError)
-    {
-        var selectedFormats: [RawLinuxDmabufFormatModifier] = []
-        for index in indices {
-            let tableIndex = Int(index)
-            guard tableIndex < formatTable.count else {
-                throw RuntimeError.invalidDmabufFormatTableIndex(
-                    index: index,
-                    entryCount: formatTable.count
-                )
-            }
-
-            selectedFormats.append(formatTable[tableIndex])
-        }
-
-        currentTranche.formats.append(contentsOf: selectedFormats)
-    }
-
-    package mutating func setCurrentTrancheFlags(_ rawFlags: UInt32) {
-        currentTranche.flags = RawLinuxDmabufTrancheFlags(rawValue: rawFlags)
-    }
-
-    package mutating func finishCurrentTranche() {
-        tranches.append(
-            RawLinuxDmabufTranche(
-                targetDevice: currentTranche.targetDevice,
-                flags: currentTranche.flags,
-                formats: currentTranche.formats
-            )
-        )
-        currentTranche = CurrentTranche()
-    }
-
-    package func snapshot(scope feedbackScope: RawLinuxDmabufFeedbackScope)
-        -> RawLinuxDmabufFeedbackSnapshot
-    {
-        RawLinuxDmabufFeedbackSnapshot(
-            scope: feedbackScope,
-            mainDevice: mainDevice,
-            formatTable: formatTable,
-            tranches: tranches
-        )
-    }
-}
-
 @safe
 package final class RawLinuxDmabufFeedback {
     private let listenerOwner: RawLinuxDmabufFeedbackOwner
@@ -274,7 +93,12 @@ private final class RawLinuxDmabufFeedbackOwner {
                 message: "zwp_linux_dmabuf_feedback_v1 done fired without Swift state"
             ) { owner in
                 guard !owner.isCanceled else { return }
-                owner.onUpdate(owner.state.snapshot(scope: owner.scope))
+                do {
+                    let snapshot = try owner.state.finish(scope: owner.scope)
+                    owner.onUpdate(snapshot)
+                } catch {
+                    owner.onFailure(RawLinuxDmabufFeedbackOwner.runtimeError(from: error))
+                }
             }
         }
     }
@@ -317,7 +141,11 @@ private final class RawLinuxDmabufFeedbackOwner {
                 message: "zwp_linux_dmabuf_feedback_v1 tranche_done fired without Swift state"
             ) { owner in
                 guard !owner.isCanceled else { return }
-                owner.state.finishCurrentTranche()
+                do {
+                    try owner.state.finishCurrentTranche(scope: owner.scope)
+                } catch {
+                    owner.onFailure(RawLinuxDmabufFeedbackOwner.runtimeError(from: error))
+                }
             }
         }
     }
@@ -388,7 +216,14 @@ private final class RawLinuxDmabufFeedbackOwner {
             )
             state.replaceFormatTable(formats)
         } catch {
-            onFailure(error)
+            onFailure(
+                state.invalidateFeedback(
+                    scope: scope,
+                    event: "format_table",
+                    field: "size",
+                    rawValue: UInt64(byteCount)
+                )
+            )
         }
     }
 
@@ -396,9 +231,36 @@ private final class RawLinuxDmabufFeedbackOwner {
         do {
             let decodedIndices = try WaylandArray.uint16Values(from: indices)
             try state.appendCurrentTrancheFormats(indices: decodedIndices)
+        } catch RuntimeError.invalidDmabufFormatTableIndex(let index, _) {
+            onFailure(
+                state.invalidateFeedback(
+                    scope: scope,
+                    event: "tranche_formats",
+                    field: "indices",
+                    index: Int(index),
+                    rawValue: UInt64(index)
+                )
+            )
         } catch {
-            onFailure(error)
+            onFailure(
+                state.invalidateFeedback(
+                    scope: scope,
+                    event: "tranche_formats",
+                    field: "indices"
+                )
+            )
         }
+    }
+
+    private static func runtimeError(from error: any Error) -> RuntimeError {
+        if let runtimeError = error as? RuntimeError {
+            return runtimeError
+        }
+
+        return RuntimeError.systemError(
+            errno: EINVAL,
+            operation: .validateArgument(String(describing: error))
+        )
     }
 
     @safe

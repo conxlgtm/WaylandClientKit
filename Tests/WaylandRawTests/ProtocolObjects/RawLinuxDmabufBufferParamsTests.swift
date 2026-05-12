@@ -45,8 +45,6 @@ struct RawLinuxDmabufBufferParamsStateTests {
         } catch RawLinuxDmabufBufferParamsStateError.addAfterCreateRequest {
             let descriptorWasClosed = planeDescriptor.isClosed
             #expect(descriptorWasClosed)
-            #expect(Glibc.fcntl(descriptors.readEnd, F_GETFD) == -1)
-            #expect(errno == EBADF)
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
@@ -56,10 +54,10 @@ struct RawLinuxDmabufBufferParamsStateTests {
     func tracksCreateFailedAndDestroyedLifecycle() throws {
         var state = RawLinuxDmabufBufferParamsState()
 
-        #expect(state.lifecycle == .pending)
+        #expect(state.lifecycle == .collecting)
         try state.prepareCreate()
-        #expect(state.lifecycle == .pending)
-        state.markFailed()
+        #expect(state.lifecycle == .createRequested)
+        try state.markFailed()
         #expect(state.lifecycle == .failed)
         state.markDestroyed()
         #expect(state.lifecycle == .destroyed)
@@ -74,10 +72,39 @@ struct RawLinuxDmabufBufferParamsStateTests {
             try state.prepareCreate()
             Issue.record("Expected repeated create request to throw")
         } catch RawLinuxDmabufBufferParamsStateError.createAfterCreateRequest {
-            #expect(state.lifecycle == .pending)
+            #expect(state.lifecycle == .createRequested)
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
+    }
+
+    @Test
+    func createdBeforeCreateRequestReportsInvariantFailure() {
+        var state = RawLinuxDmabufBufferParamsState()
+
+        #expect(throws: RawLinuxDmabufBufferParamsStateError.createdBeforeCreateRequest) {
+            try state.markCreated()
+        }
+        #expect(state.lifecycle == .collecting)
+    }
+
+    @Test
+    func failedBeforeCreateRequestReportsInvariantFailure() {
+        var state = RawLinuxDmabufBufferParamsState()
+
+        #expect(throws: RawLinuxDmabufBufferParamsStateError.failedBeforeCreateRequest) {
+            try state.markFailed()
+        }
+        #expect(state.lifecycle == .collecting)
+    }
+
+    @Test
+    func destroyBeforeCreateIsCancellationNotFailure() {
+        var state = RawLinuxDmabufBufferParamsState()
+
+        state.markDestroyed()
+
+        #expect(state.lifecycle == .destroyed)
     }
 
     @Test

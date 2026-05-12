@@ -206,6 +206,15 @@ package enum RawEventLoopError: Error, Equatable, Sendable, CustomStringConverti
     }
 }
 
+package struct RawLinuxDmabufMalformedFeedback: Equatable, Sendable {
+    package let scope: RawLinuxDmabufFeedbackScope
+    package let event: String
+    package let field: String
+    package let index: Int?
+    package let rawValue: UInt64?
+    package let discardedStaleState: Bool
+}
+
 package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
     case connectionFailed
     case eventQueueCreationFailed
@@ -224,6 +233,8 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
     case invalidWaylandArrayByteCount(byteCount: Int, elementSize: Int)
     case invalidDmabufFormatTableByteCount(byteCount: Int, entryByteCount: Int)
     case invalidDmabufFormatTableIndex(index: UInt16, entryCount: Int)
+    case malformedDmabufFeedback(RawLinuxDmabufMalformedFeedback)
+    case unsupportedProtocolVersion(interface: String, minimum: RawVersion, actual: RawVersion)
     case invalidDecorationMode(UInt32)
     case invalidTopLevelConfigureSize(width: Int32, height: Int32)
     case invalidConfigureBounds(width: Int32, height: Int32)
@@ -344,6 +355,13 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
         case .invalidDmabufFormatTableIndex(let index, let entryCount):
             "Dmabuf feedback references format table index \(index) with "
                 + "\(entryCount) entries"
+        case .malformedDmabufFeedback(let feedback):
+            "Malformed dmabuf feedback scope \(feedback.scope), event \(feedback.event), "
+                + "field \(feedback.field), index \(String(describing: feedback.index)), "
+                + "raw value \(String(describing: feedback.rawValue)), stale state "
+                + "discarded \(feedback.discardedStaleState)"
+        case .unsupportedProtocolVersion(let interface, let minimum, let actual):
+            "\(interface) requires \(minimum), got \(actual)"
         case .invalidDecorationMode(let rawValue):
             "Invalid zxdg_toplevel_decoration_v1 mode \(rawValue)"
         case .invalidTopLevelConfigureSize(let width, let height):
