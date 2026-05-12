@@ -269,6 +269,30 @@ extension SurfaceRuntime {
         }
     }
 
+    func validateCommittedFrameCandidate(
+        generation: UInt64
+    ) throws {
+        switch phase {
+        case .unassigned(let objects),
+            .live(_, let objects),
+            .roleDestroyed(let objects):
+            try objects.transactionState.validateCommittedFrameCandidate(
+                generation: generation
+            )
+        case .surfaceDestroyed:
+            try SurfaceTransactionState().validateCommittedFrameCandidate(
+                generation: generation
+            )
+        }
+    }
+
+    mutating func prepareCommittedFrame(
+        generation: UInt64,
+        plan: SurfaceCommitPlan
+    ) throws {
+        try recordCommittedFrame(generation: generation, plan: plan)
+    }
+
     mutating func resetTransientTransactionState() {
         updateSurfaceObjects { objects in
             objects.transactionState.resetTransientState()

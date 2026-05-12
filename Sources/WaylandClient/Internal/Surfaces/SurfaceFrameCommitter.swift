@@ -1,11 +1,17 @@
 import WaylandRaw
 
 struct SurfaceFrameCommitRequest {
-    let buffer: RawBuffer
     let surface: RawSurface
     let scaleInstallation: SurfaceScaleInstallation
     let generation: UInt64
     let geometry: SurfaceGeometry
+}
+
+package struct PreparedSurfaceFrameCommit {
+    let surface: RawSurface
+    let scaleInstallation: SurfaceScaleInstallation
+    let generation: UInt64
+    let plan: SurfaceCommitPlan
 }
 
 enum SurfaceFrameCommitter {
@@ -25,10 +31,10 @@ enum SurfaceFrameCommitter {
     }
 
     @discardableResult
-    static func commit<RoleResources>(
+    static func prepare<RoleResources>(
         _ request: SurfaceFrameCommitRequest,
         runtime: inout SurfaceRuntime<RoleResources>,
-    ) throws -> SurfaceCommitPlan {
+    ) throws -> PreparedSurfaceFrameCommit {
         let damageMode: DamageCoordinateMode =
             request.surface.usesBufferDamage ? .buffer : .logical
         let plan = request.scaleInstallation.commitPlan(
@@ -36,13 +42,38 @@ enum SurfaceFrameCommitter {
             damageMode: damageMode
         )
 
-        request.surface.setBufferScale(plan.bufferScale)
-        request.scaleInstallation.applyViewportDestinationIfNeeded(plan.viewportDestination)
-        request.surface.attach(buffer: request.buffer)
-        apply(plan.damage, to: request.surface)
-        request.surface.commit()
-        try runtime.recordCommittedFrame(generation: request.generation, plan: plan)
-        return plan
+        try runtime.validateCommittedFrameCandidate(generation: request.generation)
+        return PreparedSurfaceFrameCommit(
+            surface: request.surface,
+            scaleInstallation: request.scaleInstallation,
+            generation: request.generation,
+            plan: plan
+        )
+    }
+
+    static func recordPreparedCommit<RoleResources>(
+        _ preparedCommit: PreparedSurfaceFrameCommit,
+        runtime: inout SurfaceRuntime<RoleResources>
+    ) throws {
+        try runtime.prepareCommittedFrame(
+            generation: preparedCommit.generation,
+            plan: preparedCommit.plan
+        )
+    }
+
+    @discardableResult
+    static func commit(
+        _ preparedCommit: PreparedSurfaceFrameCommit,
+        buffer: RawBuffer
+    ) -> SurfaceCommitPlan {
+        preparedCommit.surface.setBufferScale(preparedCommit.plan.bufferScale)
+        preparedCommit.scaleInstallation.applyViewportDestinationIfNeeded(
+            preparedCommit.plan.viewportDestination
+        )
+        preparedCommit.surface.attach(buffer: buffer)
+        apply(preparedCommit.plan.damage, to: preparedCommit.surface)
+        preparedCommit.surface.commit()
+        return preparedCommit.plan
     }
 
     private static func apply(_ damage: SurfaceDamageExtent, to surface: RawSurface) {

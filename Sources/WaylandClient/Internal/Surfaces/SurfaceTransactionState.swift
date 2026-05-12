@@ -89,9 +89,9 @@ package struct SurfaceTransactionState: Equatable, Sendable {
         generation: UInt64,
         plan: SurfaceCommitPlan
     ) throws {
-        guard let acknowledgedConfigureSerial else {
-            throw SurfaceTransactionError.commitBeforeConfigureAck(generation: generation)
-        }
+        let acknowledgedConfigureSerial = try validateCommittedFrameCandidate(
+            generation: generation
+        )
         guard let pendingGeneration = pendingFrameCallbackGeneration else {
             throw SurfaceTransactionError.frameCallbackMissing(generation: generation)
         }
@@ -113,6 +113,23 @@ package struct SurfaceTransactionState: Equatable, Sendable {
             configureSerial: acknowledgedConfigureSerial,
             plan: plan
         )
+    }
+
+    @discardableResult
+    package func validateCommittedFrameCandidate(
+        generation: UInt64
+    ) throws -> UInt32 {
+        guard let acknowledgedConfigureSerial else {
+            throw SurfaceTransactionError.commitBeforeConfigureAck(generation: generation)
+        }
+        if let lastGeneration = lastCommittedFrame?.generation, generation <= lastGeneration {
+            throw SurfaceTransactionError.commitGenerationDidNotAdvance(
+                previous: lastGeneration,
+                actual: generation
+            )
+        }
+
+        return acknowledgedConfigureSerial
     }
 
     package mutating func resetTransientState() {

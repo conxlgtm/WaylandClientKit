@@ -57,6 +57,7 @@ extension PopupRoleSurface {
             return nil
         }
 
+        recordSurfaceConfigureReceived(serial: sequence.serial)
         try interpretPopupEffects(model.reduce(.configureReceived(sequence)))
         return sequence
     }

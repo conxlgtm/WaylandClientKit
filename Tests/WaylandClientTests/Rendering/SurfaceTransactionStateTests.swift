@@ -45,6 +45,21 @@ struct SurfaceTransactionStateTests {
     }
 
     @Test
+    func latestConfigureSerialIsTheOnlyAckableSerial() throws {
+        var state = SurfaceTransactionState()
+
+        state.recordConfigureReceived(serial: 41)
+        state.recordConfigureReceived(serial: 42)
+
+        #expect(throws: SurfaceTransactionError.ackSerialMismatch(expected: 42, actual: 41)) {
+            try state.acknowledgeConfigure(serial: 41)
+        }
+
+        try state.acknowledgeConfigure(serial: 42)
+        #expect(state.snapshot.acknowledgedConfigureSerial == 42)
+    }
+
+    @Test
     func contentCommitRequiresConfigureAckAndFrameCallback() throws {
         var state = SurfaceTransactionState()
         let framePlan = try plan()
@@ -58,6 +73,29 @@ struct SurfaceTransactionStateTests {
 
         #expect(throws: SurfaceTransactionError.frameCallbackMissing(generation: 1)) {
             try state.recordCommittedFrame(generation: 1, plan: framePlan)
+        }
+    }
+
+    @Test
+    func commitCandidateWithoutConfigureAckDoesNotMutateRuntime() throws {
+        let framePlan = try plan()
+        var runtime = SurfaceRuntime<Void>(role: .toplevelWindow)
+
+        #expect(throws: SurfaceTransactionError.commitBeforeConfigureAck(generation: 1)) {
+            try runtime.validateCommittedFrameCandidate(generation: 1)
+        }
+
+        #expect(
+            runtime.transactionSnapshot
+                == SurfaceTransactionSnapshot(
+                    pendingConfigureSerial: nil,
+                    acknowledgedConfigureSerial: nil,
+                    pendingFrameCallbackGeneration: nil,
+                    lastCommittedFrame: nil
+                )
+        )
+        #expect(throws: SurfaceTransactionError.commitBeforeConfigureAck(generation: 1)) {
+            try runtime.prepareCommittedFrame(generation: 1, plan: framePlan)
         }
     }
 
@@ -107,6 +145,8 @@ struct SurfaceTransactionStateTests {
         ) {
             try state.recordCommittedFrame(generation: 2, plan: framePlan)
         }
+        #expect(state.snapshot.lastCommittedFrame == nil)
+        #expect(state.snapshot.pendingFrameCallbackGeneration == 1)
     }
 
     @Test
