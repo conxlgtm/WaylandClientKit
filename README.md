@@ -30,6 +30,7 @@ Current experimental baseline:
 - normal pointer cursor surfaces backed by `wayland-cursor`
 - regular clipboard selection offers and sources through `wl_data_device_manager`
 - primary selection offers and sources through `zwp_primary_selection_device_manager_v1`
+- explicit compositor presentation feedback through `wp_presentation`
 - compose and dead-key text results for interpreted keyboard events
 - display, input, data-transfer, and diagnostic event streams
 - noninteractive Wayland smoke executable
@@ -41,7 +42,7 @@ Not implemented yet:
 - text-input or IME behavior
 - drag icon surfaces
 - cursor animation, output-scale cursor selection, or custom cursor drawing APIs
-- output-management or presentation-time APIs
+- output-management APIs
 - high-level gesture recognizers or widgets
 - DocC reference documentation
 
@@ -81,6 +82,8 @@ Supported in the current experimental baseline:
 - `zxdg_output_v1`
 - `wp_viewporter`
 - `wp_viewport`
+- `wp_presentation`
+- `wp_presentation_feedback`
 - `wp_fractional_scale_manager_v1`
 - `wp_fractional_scale_v1`
 
@@ -124,7 +127,14 @@ Outputs:
 - public output snapshots report scale, transform, physical size, make, model, name, and description when advertised
 - output add, update, and remove events are exposed through the display event stream
 - window output membership tracks `wl_surface.enter` and `wl_surface.leave`
-- `zxdg_output_manager_v1` logical output geometry is reported when the compositor advertises version 3 or newer
+- `zxdg_output_manager_v1` logical output geometry is reported when the compositor advertises version 2 or newer
+
+Presentation timing:
+
+- `WaylandDisplay.capabilities()` reports optional `wp_presentation` availability
+- managed windows can request explicit presentation feedback after being configured
+- presentation feedback reports timestamp, refresh estimate, sequence, flags, and synchronized output when available
+- missing `wp_presentation` is reported as unavailable; frame callbacks are not treated as fake presentation feedback
 
 Popups:
 
@@ -137,7 +147,6 @@ Not supported in the current experimental baseline:
 
 - drag icon surfaces
 - cursor animation or per-output cursor scaling
-- presentation-time
 - output management or control APIs
 - linux-dmabuf, EGL, GBM, or GPU rendering
 - text-input or IME protocols

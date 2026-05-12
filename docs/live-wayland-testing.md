@@ -105,6 +105,7 @@ Skipping primary selection live test: compositor did not advertise zwp_primary_s
 Skipping fractional scale live test: compositor did not advertise wp_fractional_scale_manager_v1.
 Skipping xdg-decoration live test: compositor did not advertise zxdg_decoration_manager_v1.
 Skipping viewporter live test: compositor did not advertise wp_viewporter.
+Skipping presentation-time live test: compositor did not advertise wp_presentation.
 ```
 
 Do not hide an advertised-but-broken protocol behind a skip. That is a client
