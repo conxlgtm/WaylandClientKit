@@ -17,12 +17,14 @@ struct RawLinuxDmabufBufferParamsStateTests {
         var state = RawLinuxDmabufBufferParamsState()
 
         let requestDescriptor = try state.prepareAddPlane(
-            fileDescriptor: &planeDescriptor
+            fileDescriptor: &planeDescriptor,
+            planeIndex: 0
         )
 
         #expect(requestDescriptor == descriptors.readEnd)
         let descriptorWasReleased = planeDescriptor.isClosed
         #expect(descriptorWasReleased)
+        #expect(state.planeIndices == Set([0]))
         #expect(Glibc.fcntl(requestDescriptor, F_GETFD) != -1)
         Glibc.close(requestDescriptor)
     }
@@ -37,13 +39,29 @@ struct RawLinuxDmabufBufferParamsStateTests {
             adopting: descriptors.readEnd
         )
         var state = RawLinuxDmabufBufferParamsState()
+        let requestDescriptor = try state.prepareAddPlane(
+            fileDescriptor: &planeDescriptor,
+            planeIndex: 0
+        )
+        Glibc.close(requestDescriptor)
         try state.prepareCreate()
 
+        let rejectedDescriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(rejectedDescriptors.writeEnd)
+        }
+        var rejectedPlaneDescriptor = try RawLinuxDmabufPlaneFileDescriptor(
+            adopting: rejectedDescriptors.readEnd
+        )
+
         do {
-            _ = try state.prepareAddPlane(fileDescriptor: &planeDescriptor)
+            _ = try state.prepareAddPlane(
+                fileDescriptor: &rejectedPlaneDescriptor,
+                planeIndex: 1
+            )
             Issue.record("Expected add after create request to throw")
         } catch RawLinuxDmabufBufferParamsStateError.addAfterCreateRequest {
-            let descriptorWasClosed = planeDescriptor.isClosed
+            let descriptorWasClosed = rejectedPlaneDescriptor.isClosed
             #expect(descriptorWasClosed)
         } catch {
             Issue.record("Unexpected error: \(error)")
@@ -52,9 +70,21 @@ struct RawLinuxDmabufBufferParamsStateTests {
 
     @Test
     func tracksCreateFailedAndDestroyedLifecycle() throws {
+        let descriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(descriptors.writeEnd)
+        }
+        var planeDescriptor = try RawLinuxDmabufPlaneFileDescriptor(
+            adopting: descriptors.readEnd
+        )
         var state = RawLinuxDmabufBufferParamsState()
 
         #expect(state.lifecycle == .collecting)
+        let requestDescriptor = try state.prepareAddPlane(
+            fileDescriptor: &planeDescriptor,
+            planeIndex: 0
+        )
+        Glibc.close(requestDescriptor)
         try state.prepareCreate()
         #expect(state.lifecycle == .createRequested)
         try state.markFailed()
@@ -65,7 +95,19 @@ struct RawLinuxDmabufBufferParamsStateTests {
 
     @Test
     func rejectsRepeatedCreateRequest() throws {
+        let descriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(descriptors.writeEnd)
+        }
+        var planeDescriptor = try RawLinuxDmabufPlaneFileDescriptor(
+            adopting: descriptors.readEnd
+        )
         var state = RawLinuxDmabufBufferParamsState()
+        let requestDescriptor = try state.prepareAddPlane(
+            fileDescriptor: &planeDescriptor,
+            planeIndex: 0
+        )
+        Glibc.close(requestDescriptor)
         try state.prepareCreate()
 
         do {
@@ -73,6 +115,114 @@ struct RawLinuxDmabufBufferParamsStateTests {
             Issue.record("Expected repeated create request to throw")
         } catch RawLinuxDmabufBufferParamsStateError.createAfterCreateRequest {
             #expect(state.lifecycle == .createRequested)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func createWithoutPlanesIsRejectedBeforeWaylandRequest() {
+        var state = RawLinuxDmabufBufferParamsState()
+
+        #expect(throws: RawLinuxDmabufBufferParamsStateError.createWithoutPlanes) {
+            try state.prepareCreate()
+        }
+        #expect(state.lifecycle == .collecting)
+        #expect(state.planeIndices.isEmpty)
+    }
+
+    @Test
+    func duplicatePlaneIndexClosesDescriptorAndThrows() throws {
+        let descriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(descriptors.writeEnd)
+        }
+        var planeDescriptor = try RawLinuxDmabufPlaneFileDescriptor(
+            adopting: descriptors.readEnd
+        )
+        var state = RawLinuxDmabufBufferParamsState()
+
+        let requestDescriptor = try state.prepareAddPlane(
+            fileDescriptor: &planeDescriptor,
+            planeIndex: 0
+        )
+        Glibc.close(requestDescriptor)
+
+        let duplicateDescriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(duplicateDescriptors.writeEnd)
+        }
+        var duplicatePlaneDescriptor = try RawLinuxDmabufPlaneFileDescriptor(
+            adopting: duplicateDescriptors.readEnd
+        )
+
+        #expect(throws: RawLinuxDmabufBufferParamsStateError.duplicatePlaneIndex(0)) {
+            _ = try state.prepareAddPlane(
+                fileDescriptor: &duplicatePlaneDescriptor,
+                planeIndex: 0
+            )
+        }
+        let duplicateDescriptorWasClosed = duplicatePlaneDescriptor.isClosed
+        #expect(duplicateDescriptorWasClosed)
+        #expect(state.planeIndices == Set([0]))
+    }
+
+    @Test
+    func createAfterAtLeastOnePlaneTransitionsToCreateRequested() throws {
+        let descriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(descriptors.writeEnd)
+        }
+        var planeDescriptor = try RawLinuxDmabufPlaneFileDescriptor(
+            adopting: descriptors.readEnd
+        )
+        var state = RawLinuxDmabufBufferParamsState()
+
+        let requestDescriptor = try state.prepareAddPlane(
+            fileDescriptor: &planeDescriptor,
+            planeIndex: 0
+        )
+        Glibc.close(requestDescriptor)
+        try state.prepareCreate()
+
+        #expect(state.lifecycle == .createRequested)
+        #expect(state.planeIndices == Set([0]))
+    }
+
+    @Test
+    func rejectedPlaneDoesNotMutatePlaneSet() throws {
+        let descriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(descriptors.writeEnd)
+        }
+        var planeDescriptor = try RawLinuxDmabufPlaneFileDescriptor(
+            adopting: descriptors.readEnd
+        )
+        var state = RawLinuxDmabufBufferParamsState()
+
+        let requestDescriptor = try state.prepareAddPlane(
+            fileDescriptor: &planeDescriptor,
+            planeIndex: 0
+        )
+        Glibc.close(requestDescriptor)
+
+        let duplicateDescriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(duplicateDescriptors.writeEnd)
+        }
+        var duplicatePlaneDescriptor = try RawLinuxDmabufPlaneFileDescriptor(
+            adopting: duplicateDescriptors.readEnd
+        )
+
+        do {
+            _ = try state.prepareAddPlane(
+                fileDescriptor: &duplicatePlaneDescriptor,
+                planeIndex: 0
+            )
+            Issue.record("Expected duplicate plane index to throw")
+        } catch RawLinuxDmabufBufferParamsStateError.duplicatePlaneIndex(let planeIndex) {
+            #expect(planeIndex == 0)
+            #expect(state.planeIndices == Set([0]))
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
