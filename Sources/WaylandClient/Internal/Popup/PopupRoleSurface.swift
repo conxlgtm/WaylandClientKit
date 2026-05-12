@@ -31,7 +31,7 @@ package final class PopupRoleSurface {
     package let failureSink: any WindowFailureSink
     package let configureState = PopupConfigureState()
 
-    private var surfaceRuntime = SurfaceRuntime<PopupRoleResources>()
+    private var surfaceRuntime = SurfaceRuntime<PopupRoleResources>(role: .popup)
     package var pendingFrameRegistration: FrameCallbackRegistration?
     package var model: PopupModel
 
@@ -65,6 +65,9 @@ package final class PopupRoleSurface {
         )
 
         let globals = try rawConnection.bindRequiredGlobals()
+        surfaceRuntime.setPresentationFeedbackCapability(
+            globals.extensions.presentation.surfaceCapabilityStatus
+        )
         let newSurface = try globals.compositor.createSurface()
         let newXDGSurface = try globals.xdgWMBase.getSurface(for: newSurface)
         let newPositioner = try globals.xdgWMBase.createPositioner()
@@ -102,6 +105,12 @@ package final class PopupRoleSurface {
                     },
                     onFractionalScaleUnavailable: {
                         // Popups fall back to integer scale when viewporter is unavailable.
+                    },
+                    onOutputEnter: { [weak self] output in
+                        self?.handleSurfaceEnteredOutput(output)
+                    },
+                    onOutputLeave: { [weak self] output in
+                        self?.handleSurfaceLeftOutput(output)
                     }
                 )
             )
@@ -280,5 +289,36 @@ extension PopupRoleSurface {
         _ update: (inout SurfaceScaleInstallation) throws -> Bool
     ) rethrows -> Bool {
         try surfaceRuntime.updateScaleInstallation(update)
+    }
+
+    package func currentOutputIDsOnOwnerThread() -> [OutputID] {
+        connection.preconditionIsOwnerThread()
+        guard let outputRegistry = connection.boundGlobals?.outputRegistry else { return [] }
+
+        return surfaceRuntime.currentOutputIDs { outputRegistry.output(for: $0) != nil }
+    }
+
+    private func handleSurfaceEnteredOutput(_ output: RawOutputPointerIdentity) {
+        guard !model.isClosed else { return }
+
+        guard
+            let outputID = connection.boundGlobals?.outputRegistry.outputID(for: output)
+        else {
+            return
+        }
+
+        _ = surfaceRuntime.enterOutput(outputID)
+    }
+
+    private func handleSurfaceLeftOutput(_ output: RawOutputPointerIdentity) {
+        guard !model.isClosed else { return }
+
+        guard
+            let outputID = connection.boundGlobals?.outputRegistry.outputID(for: output)
+        else {
+            return
+        }
+
+        _ = surfaceRuntime.leaveOutput(outputID)
     }
 }

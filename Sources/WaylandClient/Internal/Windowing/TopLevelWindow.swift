@@ -39,12 +39,13 @@ package final class TopLevelWindow {
 
     private let failureSink: any WindowFailureSink
     private var model: WindowModel
-    private var surfaceRuntime = SurfaceRuntime<TopLevelWindowRoleResources>()
+    private var surfaceRuntime = SurfaceRuntime<TopLevelWindowRoleResources>(
+        role: .toplevelWindow
+    )
     private var pendingFrameRegistration: FrameCallbackRegistration?
     private var nextPresentationFeedbackID: UInt64 = 1
     private var pendingPresentationFeedbacks:
         [SurfacePresentationIdentity: RawPresentationFeedback] = [:]
-    private var outputMembership = WindowOutputMembershipState()
 
     #if DEBUG
         private var testingInteractionSeatsByID: [SeatID: RawSeat] = [:]
@@ -84,6 +85,9 @@ package final class TopLevelWindow {
             self?.markNeedsRedraw()
         }
 
+        surfaceRuntime.setPresentationFeedbackCapability(
+            globals.extensions.presentation.surfaceCapabilityStatus
+        )
         try installScaleObjects(globals: globals)
         try assignXDGRole(globals: globals)
     }
@@ -656,8 +660,7 @@ extension TopLevelWindow {
     private var outputIDsOnOwnerThread: [OutputID] {
         guard let outputRegistry = connection.boundGlobals?.outputRegistry else { return [] }
 
-        return
-            outputMembership.currentOutputIDs { outputRegistry.output(for: $0) != nil }
+        return surfaceRuntime.currentOutputIDs { outputRegistry.output(for: $0) != nil }
     }
 }
 
@@ -764,7 +767,7 @@ extension TopLevelWindow {
             return
         }
 
-        guard outputMembership.enter(outputID) else { return }
+        guard surfaceRuntime.enterOutput(outputID) else { return }
 
         onOutputMembershipChanged?(outputIDsOnOwnerThread)
     }
@@ -778,7 +781,7 @@ extension TopLevelWindow {
             return
         }
 
-        guard outputMembership.leave(outputID) else { return }
+        guard surfaceRuntime.leaveOutput(outputID) else { return }
 
         onOutputMembershipChanged?(outputIDsOnOwnerThread)
     }
@@ -971,7 +974,7 @@ extension TopLevelWindow {
     package func removeOutputMembershipOnOwnerThread(_ outputID: OutputID) {
         connection.preconditionIsOwnerThread()
         guard !model.isClosed else { return }
-        guard outputMembership.remove(outputID) else { return }
+        guard surfaceRuntime.removeOutput(outputID) else { return }
 
         onOutputMembershipChanged?(outputIDsOnOwnerThread)
     }

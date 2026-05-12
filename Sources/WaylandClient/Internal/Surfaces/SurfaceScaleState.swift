@@ -20,6 +20,15 @@ package struct SurfaceScaleState: Equatable, Sendable {
         }
     }
 
+    package var capability: SurfaceScaleCapability {
+        switch mode {
+        case .integerOnly:
+            .integerOnly
+        case .fractionalCapable:
+            .fractional
+        }
+    }
+
     package var effectiveScale: SurfaceScale {
         switch mode {
         case .integerOnly(let preferred):
