@@ -113,20 +113,6 @@ extension PopupRoleSurface {
         return try interpretPresentationEffects(effects, draw)
     }
 
-    package func applySurfaceCommitPlan(_ plan: SurfaceCommitPlan) {
-        surface.setBufferScale(plan.bufferScale)
-        scaleInstallation.applyViewportDestinationIfNeeded(plan.viewportDestination)
-    }
-
-    package func applySurfaceDamage(_ damage: SurfaceDamageExtent) {
-        switch damage {
-        case .buffer(let width, let height):
-            surface.damageFullBuffer(width: width, height: height)
-        case .logical(let width, let height):
-            surface.damageFullLogical(width: width, height: height)
-        }
-    }
-
     package func failPresentationIfStillActive(
         generation: UInt64,
         error: PresentationError

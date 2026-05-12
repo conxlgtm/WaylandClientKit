@@ -53,12 +53,12 @@ extension PopupRoleSurface {
             }
 
             do {
-                try requestSurfaceFrameCallback(generation: request.generation)
-                pendingFrameRegistration = try surface.requestFrame { [weak self] in
+                pendingFrameRegistration = try requestSurfaceFrameCallback(
+                    generation: request.generation
+                ) { [weak self] in
                     self?.handleFrameDone()
                 }
             } catch {
-                cancelSurfaceFrameCallback()
                 failActivePresentation(
                     generation: request.generation,
                     error: .frameCallbackRequest(String(describing: error))
@@ -68,18 +68,10 @@ extension PopupRoleSurface {
             }
 
             let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
-            let damageMode: DamageCoordinateMode = surface.usesBufferDamage ? .buffer : .logical
-            let commitPlan = scaleInstallation.commitPlan(
-                geometry: geometry,
-                damageMode: damageMode
-            )
-            applySurfaceCommitPlan(commitPlan)
-            surface.attach(buffer: buffer)
-            applySurfaceDamage(commitPlan.damage)
-            surface.commit()
-            try recordSurfaceCommittedFrame(
+            try commitSurfaceFrame(
+                buffer: buffer,
                 generation: request.generation,
-                plan: commitPlan
+                geometry: geometry
             )
 
             try interpretPopupEffects(
