@@ -91,7 +91,9 @@ package struct RawLinuxDmabufBufferParamsState: Equatable, Sendable {
     package private(set) var lifecycle = RawLinuxDmabufBufferParamsLifecycle.pending
     private var didRequestCreate = false
 
-    package init() {}
+    package init() {
+        // Stored property defaults model a fresh params object.
+    }
 
     package mutating func prepareAddPlane(
         fileDescriptor: inout RawLinuxDmabufPlaneFileDescriptor

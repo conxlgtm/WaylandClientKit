@@ -3,7 +3,7 @@ import Testing
 
 @testable import WaylandRaw
 
-@Suite
+@Suite(.serialized)
 struct RawLinuxDmabufFormatTableTests {
     @Test
     func parsesFormatModifierPairsFromReadOnlyMappedFd() throws {
@@ -23,7 +23,10 @@ struct RawLinuxDmabufFormatTableTests {
             descriptor.close()
         }
         try descriptor.resize(byteCount: bytes.count)
-        #expect(try RawFileDescriptor.write(descriptor: descriptor.rawValue, bytes: bytes) == bytes.count)
+        #expect(
+            try RawFileDescriptor.write(descriptor: descriptor.rawValue, bytes: bytes)
+                == bytes.count
+        )
 
         let parserDescriptor = Glibc.dup(descriptor.rawValue)
         #expect(parserDescriptor >= 0)
@@ -46,7 +49,10 @@ struct RawLinuxDmabufFormatTableTests {
             descriptor.close()
         }
         try descriptor.resize(byteCount: bytes.count)
-        #expect(try RawFileDescriptor.write(descriptor: descriptor.rawValue, bytes: bytes) == bytes.count)
+        #expect(
+            try RawFileDescriptor.write(descriptor: descriptor.rawValue, bytes: bytes)
+                == bytes.count
+        )
 
         let parserDescriptor = Glibc.dup(descriptor.rawValue)
         #expect(parserDescriptor >= 0)
@@ -92,7 +98,10 @@ struct RawLinuxDmabufFeedbackStateTests {
         #expect(snapshot.mainDevice == RawLinuxDmabufDevice(bytes: [0x01, 0x02, 0x03, 0x04]))
         #expect(snapshot.formatTable == entries)
         #expect(snapshot.tranches.count == 1)
-        #expect(snapshot.tranches[0].targetDevice == RawLinuxDmabufDevice(bytes: [0x05, 0x06, 0x07, 0x08]))
+        #expect(
+            snapshot.tranches[0].targetDevice
+                == RawLinuxDmabufDevice(bytes: [0x05, 0x06, 0x07, 0x08])
+        )
         #expect(snapshot.tranches[0].formats == [entries[1], entries[0]])
         #expect(snapshot.tranches[0].flags.contains(.scanout))
         #expect(snapshot.tranches[0].flags.unknownRawValue == 0x8000_0000)

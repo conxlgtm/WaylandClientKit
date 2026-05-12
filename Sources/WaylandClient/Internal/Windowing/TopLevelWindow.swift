@@ -465,12 +465,14 @@ package final class TopLevelWindow {
 
             let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
             try SurfaceFrameCommitter.commit(
-                buffer: buffer,
-                to: surface,
-                scaleInstallation: scaleInstallation,
+                SurfaceFrameCommitRequest(
+                    buffer: buffer,
+                    surface: surface,
+                    scaleInstallation: scaleInstallation,
+                    generation: request.generation,
+                    geometry: geometry
+                ),
                 runtime: &surfaceRuntime,
-                generation: request.generation,
-                geometry: geometry
             )
 
             try interpretWindowEffects(

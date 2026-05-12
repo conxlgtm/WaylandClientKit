@@ -12,9 +12,8 @@ extension RawDisplayConnection {
                 do {
                     let presentation = try bindPresentationIfPresent(registry: reg)
                     do {
-                        let fractionalScaleManager = try bindFractionalScaleManagerIfPresent(
-                            registry: reg
-                        )
+                        let fractionalScaleManager =
+                            try bindFractionalScaleManagerIfPresent(registry: reg)
                         do {
                             let dataDeviceManager =
                                 try bindDataDeviceManagerIfPresent(registry: reg)
@@ -24,9 +23,7 @@ extension RawDisplayConnection {
                                         registry: reg
                                     )
                                 do {
-                                    let linuxDmabuf = try bindLinuxDmabufIfPresent(
-                                        registry: reg
-                                    )
+                                    let linuxDmabuf = try bindLinuxDmabufIfPresent(registry: reg)
                                     return OptionalGlobals(
                                         xdgDecorationManager: decorationManager,
                                         xdgOutputManager: xdgOutputManager,

@@ -64,7 +64,9 @@ struct SurfaceRuntime<RoleResources> {
     init(role surfaceRole: SurfaceRuntimeRole) {
         role = surfaceRole
     }
+}
 
+extension SurfaceRuntime {
     var roleResources: RoleResources? {
         get {
             guard case .live(let roleResources, _) = phase else {

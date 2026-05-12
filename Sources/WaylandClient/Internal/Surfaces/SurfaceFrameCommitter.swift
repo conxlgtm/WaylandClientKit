@@ -1,5 +1,13 @@
 import WaylandRaw
 
+struct SurfaceFrameCommitRequest {
+    let buffer: RawBuffer
+    let surface: RawSurface
+    let scaleInstallation: SurfaceScaleInstallation
+    let generation: UInt64
+    let geometry: SurfaceGeometry
+}
+
 enum SurfaceFrameCommitter {
     static func requestFrameCallback<RoleResources>(
         on surface: RawSurface,
@@ -18,25 +26,22 @@ enum SurfaceFrameCommitter {
 
     @discardableResult
     static func commit<RoleResources>(
-        buffer: RawBuffer,
-        to surface: RawSurface,
-        scaleInstallation: SurfaceScaleInstallation,
+        _ request: SurfaceFrameCommitRequest,
         runtime: inout SurfaceRuntime<RoleResources>,
-        generation: UInt64,
-        geometry: SurfaceGeometry
     ) throws -> SurfaceCommitPlan {
-        let damageMode: DamageCoordinateMode = surface.usesBufferDamage ? .buffer : .logical
-        let plan = scaleInstallation.commitPlan(
-            geometry: geometry,
+        let damageMode: DamageCoordinateMode =
+            request.surface.usesBufferDamage ? .buffer : .logical
+        let plan = request.scaleInstallation.commitPlan(
+            geometry: request.geometry,
             damageMode: damageMode
         )
 
-        surface.setBufferScale(plan.bufferScale)
-        scaleInstallation.applyViewportDestinationIfNeeded(plan.viewportDestination)
-        surface.attach(buffer: buffer)
-        apply(plan.damage, to: surface)
-        surface.commit()
-        try runtime.recordCommittedFrame(generation: generation, plan: plan)
+        request.surface.setBufferScale(plan.bufferScale)
+        request.scaleInstallation.applyViewportDestinationIfNeeded(plan.viewportDestination)
+        request.surface.attach(buffer: request.buffer)
+        apply(plan.damage, to: request.surface)
+        request.surface.commit()
+        try runtime.recordCommittedFrame(generation: request.generation, plan: plan)
         return plan
     }
 

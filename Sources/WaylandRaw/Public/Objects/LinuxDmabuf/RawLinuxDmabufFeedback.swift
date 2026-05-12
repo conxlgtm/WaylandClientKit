@@ -118,7 +118,9 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
     private var currentTranche = CurrentTranche()
     private var tranches: [RawLinuxDmabufTranche] = []
 
-    package init() {}
+    package init() {
+        // Stored property defaults represent an empty feedback sequence.
+    }
 
     package mutating func replaceFormatTable(
         _ formats: [RawLinuxDmabufFormatModifier]
@@ -256,6 +258,16 @@ private final class RawLinuxDmabufFeedbackOwner {
         onUpdate = handleUpdate
         onFailure = handleFailure
 
+        installDoneCallback()
+        installFormatTableCallback()
+        installMainDeviceCallback()
+        installTrancheDoneCallback()
+        installTrancheTargetDeviceCallback()
+        installTrancheFormatsCallback()
+        installTrancheFlagsCallback()
+    }
+
+    private func installDoneCallback() {
         unsafe callbacks.pointee.done = { data, _ in
             RawLinuxDmabufFeedbackOwner.withOwner(
                 data,
@@ -265,6 +277,9 @@ private final class RawLinuxDmabufFeedbackOwner {
                 owner.onUpdate(owner.state.snapshot(scope: owner.scope))
             }
         }
+    }
+
+    private func installFormatTableCallback() {
         unsafe callbacks.pointee.format_table = { data, _, fd, size in
             guard unsafe data != nil else {
                 Glibc.close(fd)
@@ -281,6 +296,9 @@ private final class RawLinuxDmabufFeedbackOwner {
                 owner.handleFormatTable(fileDescriptor: fd, byteCount: size)
             }
         }
+    }
+
+    private func installMainDeviceCallback() {
         unsafe callbacks.pointee.main_device = { data, _, device in
             RawLinuxDmabufFeedbackOwner.withOwner(
                 data,
@@ -290,6 +308,9 @@ private final class RawLinuxDmabufFeedbackOwner {
                 owner.state.setMainDevice(bytes: WaylandArray.bytes(from: device))
             }
         }
+    }
+
+    private func installTrancheDoneCallback() {
         unsafe callbacks.pointee.tranche_done = { data, _ in
             RawLinuxDmabufFeedbackOwner.withOwner(
                 data,
@@ -299,6 +320,9 @@ private final class RawLinuxDmabufFeedbackOwner {
                 owner.state.finishCurrentTranche()
             }
         }
+    }
+
+    private func installTrancheTargetDeviceCallback() {
         unsafe callbacks.pointee.tranche_target_device = { data, _, device in
             RawLinuxDmabufFeedbackOwner.withOwner(
                 data,
@@ -310,6 +334,9 @@ private final class RawLinuxDmabufFeedbackOwner {
                 )
             }
         }
+    }
+
+    private func installTrancheFormatsCallback() {
         unsafe callbacks.pointee.tranche_formats = { data, _, indices in
             RawLinuxDmabufFeedbackOwner.withOwner(
                 data,
@@ -319,6 +346,9 @@ private final class RawLinuxDmabufFeedbackOwner {
                 unsafe owner.handleTrancheFormats(indices: indices)
             }
         }
+    }
+
+    private func installTrancheFlagsCallback() {
         unsafe callbacks.pointee.tranche_flags = { data, _, flags in
             RawLinuxDmabufFeedbackOwner.withOwner(
                 data,
