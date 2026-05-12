@@ -345,17 +345,18 @@ Supported:
 - static pointer cursor surfaces through wayland-cursor
 - regular clipboard selection offers and sources through data-device
 - primary selection offers and sources through primary-selection
+- receive-side and source-side drag and drop through data-device
 - public output snapshots and display events through `wl_output`
 - optional logical output geometry through `zxdg_output_manager_v1`
+- explicit window presentation feedback through presentation-time
 
 Not supported:
 
 - cursor animation or per-output cursor scaling
 - client-side decoration rendering
-- drag and drop
+- drag icon surfaces
 - output management or control APIs
 - text input or IME
-- presentation-time
 - EGL, GBM, dmabuf, or GPU rendering
 - widgets or retained UI
 
