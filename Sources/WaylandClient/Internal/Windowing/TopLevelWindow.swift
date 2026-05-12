@@ -323,6 +323,7 @@ package final class TopLevelWindow {
         } catch let error as WindowError {
             throw ClientError.window(id, error)
         }
+        surfaceRuntime.recordConfigureReceived(serial: configureEvent.serial)
         try interpretWindowEffects(model.reduce(.configureReceived(configureEvent)))
         return model.currentConfiguration
     }
@@ -446,6 +447,26 @@ package final class TopLevelWindow {
                 return .skippedClosed
             }
 
+            let preparedCommit: PreparedSurfaceFrameCommit
+            do {
+                preparedCommit = try SurfaceFrameCommitter.prepare(
+                    SurfaceFrameCommitRequest(
+                        surface: surface,
+                        scaleInstallation: scaleInstallation,
+                        generation: request.generation,
+                        geometry: geometry
+                    ),
+                    runtime: &surfaceRuntime,
+                )
+            } catch {
+                failActivePresentation(
+                    generation: request.generation,
+                    error: .surfaceCommit(String(describing: error))
+                )
+                drawingBuffer.discard()
+                throw error
+            }
+
             do {
                 pendingFrameRegistration = try SurfaceFrameCommitter.requestFrameCallback(
                     on: surface,
@@ -463,17 +484,19 @@ package final class TopLevelWindow {
                 throw error
             }
 
-            let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
-            try SurfaceFrameCommitter.commit(
-                SurfaceFrameCommitRequest(
-                    buffer: buffer,
-                    surface: surface,
-                    scaleInstallation: scaleInstallation,
-                    generation: request.generation,
-                    geometry: geometry
-                ),
-                runtime: &surfaceRuntime,
-            )
+            do {
+                try SurfaceFrameCommitter.recordPreparedCommit(
+                    preparedCommit,
+                    runtime: &surfaceRuntime
+                )
+                let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
+                SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
+            } catch {
+                pendingFrameRegistration = nil
+                surfaceRuntime.cancelFrameCallback()
+                drawingBuffer.discard()
+                throw error
+            }
 
             try interpretWindowEffects(
                 model.reduce(
@@ -845,7 +868,6 @@ extension TopLevelWindow {
                         )
                     )
                 }
-                surfaceRuntime.recordConfigureReceived(serial: serial)
                 try surfaceRuntime.acknowledgeConfigure(serial: serial)
                 activeXDGSurface.ackConfigure(serial: serial)
             case .publishCloseRequested:

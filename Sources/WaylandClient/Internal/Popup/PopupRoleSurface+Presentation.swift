@@ -52,6 +52,21 @@ extension PopupRoleSurface {
                 return .skippedClosed
             }
 
+            let preparedCommit: PreparedSurfaceFrameCommit
+            do {
+                preparedCommit = try prepareSurfaceFrameCommit(
+                    generation: request.generation,
+                    geometry: geometry
+                )
+            } catch {
+                failActivePresentation(
+                    generation: request.generation,
+                    error: .surfaceCommit(String(describing: error))
+                )
+                drawingBuffer.discard()
+                throw error
+            }
+
             do {
                 pendingFrameRegistration = try requestSurfaceFrameCallback(
                     generation: request.generation
@@ -67,12 +82,16 @@ extension PopupRoleSurface {
                 throw error
             }
 
-            let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
-            try commitSurfaceFrame(
-                buffer: buffer,
-                generation: request.generation,
-                geometry: geometry
-            )
+            do {
+                try recordPreparedSurfaceFrameCommit(preparedCommit)
+                let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
+                commitSurfaceFrame(preparedCommit, buffer: buffer)
+            } catch {
+                pendingFrameRegistration = nil
+                cancelSurfaceFrameCallback()
+                drawingBuffer.discard()
+                throw error
+            }
 
             try interpretPopupEffects(
                 model.reduce(
@@ -116,7 +135,6 @@ extension PopupRoleSurface {
             parentWindowID: parentWindowID,
             handlers: PopupEffectHandlers(
                 ackConfigure: { [self] serial in
-                    recordSurfaceConfigureReceived(serial: serial)
                     try acknowledgeSurfaceConfigure(serial: serial)
                     xdgSurface.ackConfigure(serial: serial)
                 },
