@@ -155,10 +155,7 @@ struct SurfaceRuntimeTests {
                     role: .toplevelWindow,
                     outputIDs: [],
                     fractionalScale: .integerOnly,
-                    presentationFeedback: .unavailable,
-                    dmabufFeedback: .unavailable,
-                    colorMetadata: .unavailable,
-                    explicitSync: .unavailable
+                    presentationFeedback: .unavailable
                 )
         )
     }
@@ -176,10 +173,7 @@ struct SurfaceRuntimeTests {
                     role: .popup,
                     outputIDs: [OutputID(rawValue: 2)],
                     fractionalScale: .integerOnly,
-                    presentationFeedback: .available,
-                    dmabufFeedback: .unavailable,
-                    colorMetadata: .unavailable,
-                    explicitSync: .unavailable
+                    presentationFeedback: .available
                 )
         )
     }

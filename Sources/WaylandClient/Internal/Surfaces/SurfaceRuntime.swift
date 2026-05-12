@@ -36,9 +36,6 @@ package struct SurfaceCapabilitySnapshot: Equatable, Sendable {
     package let outputIDs: [OutputID]
     package let fractionalScale: SurfaceScaleCapability
     package let presentationFeedback: SurfaceCapabilityStatus
-    package let dmabufFeedback: SurfaceCapabilityStatus
-    package let colorMetadata: SurfaceCapabilityStatus
-    package let explicitSync: SurfaceCapabilityStatus
 }
 
 struct SurfaceRuntime<RoleResources> {
@@ -208,10 +205,7 @@ extension SurfaceRuntime {
             role: role,
             outputIDs: outputIDs,
             fractionalScale: scaleCapability,
-            presentationFeedback: presentationFeedback,
-            dmabufFeedback: .unavailable,
-            colorMetadata: .unavailable,
-            explicitSync: .unavailable
+            presentationFeedback: presentationFeedback
         )
     }
 
