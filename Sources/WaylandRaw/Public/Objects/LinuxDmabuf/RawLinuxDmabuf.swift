@@ -74,6 +74,24 @@ package final class RawLinuxDmabuf {
         )
     }
 
+    package func createBufferParams(
+        onEvent handleEvent: @escaping (RawLinuxDmabufBufferParamsEvent) -> Void,
+        onFailure handleFailure: @escaping (RuntimeError) -> Void
+    ) throws -> RawLinuxDmabufBufferParams {
+        guard
+            let params = unsafe swl_zwp_linux_dmabuf_v1_create_params(pointer)
+        else {
+            throw RuntimeError.bindFailed("zwp_linux_buffer_params_v1")
+        }
+
+        return try RawLinuxDmabufBufferParams(
+            pointer: params,
+            proxyAdoption: proxyAdoption,
+            onEvent: handleEvent,
+            onFailure: handleFailure
+        )
+    }
+
     package func destroy() {
         proxy.destroy()
     }

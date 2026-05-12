@@ -85,6 +85,11 @@ protocol_symbols=(
     swl_zwp_linux_dmabuf_v1_destroy
     swl_zwp_linux_dmabuf_v1_get_default_feedback
     swl_zwp_linux_dmabuf_v1_get_surface_feedback
+    swl_zwp_linux_dmabuf_v1_create_params
+    swl_zwp_linux_buffer_params_v1_add
+    swl_zwp_linux_buffer_params_v1_create
+    swl_zwp_linux_buffer_params_v1_destroy
+    swl_zwp_linux_buffer_params_v1_add_listener
     swl_zwp_linux_dmabuf_feedback_v1_destroy
     swl_zwp_linux_dmabuf_feedback_v1_add_listener
     swl_wp_fractional_scale_manager_v1_get_fractional_scale
