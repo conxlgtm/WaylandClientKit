@@ -26,12 +26,14 @@ package enum SmokeArguments {
           --timeout-milliseconds <value>      Configure wait timeout. Default: 5000.
           --post-commit-pump-milliseconds <value>
                                              Event pump after first commit. Default: 16.
+          --require-linux-dmabuf              Skip if zwp_linux_dmabuf_v1 is not advertised.
           -h, --help                         Show this help.
         """
 
     package static func parse(_ arguments: [String]) throws -> SmokeCommand {
         var timeout = SmokeMilliseconds.defaultTimeout
         var postCommitPump = SmokeMilliseconds.defaultPostCommitPump
+        var requestedOptionalProtocols: [SmokeOptionalProtocol] = []
         var index = arguments.startIndex
 
         while index < arguments.endIndex {
@@ -56,6 +58,8 @@ package enum SmokeArguments {
                     index: &index,
                     field: .postCommitPumpMilliseconds
                 )
+            case "--require-linux-dmabuf":
+                requestedOptionalProtocols.append(.linuxDmabuf)
             default:
                 throw SmokeArgumentError.unknownArgument(argument)
             }
@@ -66,7 +70,8 @@ package enum SmokeArguments {
         return .run(
             SmokeConfiguration(
                 timeout: timeout,
-                postCommitPump: postCommitPump
+                postCommitPump: postCommitPump,
+                requestedOptionalProtocols: requestedOptionalProtocols
             )
         )
     }
