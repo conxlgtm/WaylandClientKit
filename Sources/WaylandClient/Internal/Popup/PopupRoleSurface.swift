@@ -299,8 +299,16 @@ extension PopupRoleSurface {
         try surfaceRuntime.acknowledgeConfigure(serial: serial)
     }
 
-    package func requestSurfaceFrameCallback(generation: UInt64) throws {
-        try surfaceRuntime.requestFrameCallback(generation: generation)
+    package func requestSurfaceFrameCallback(
+        generation: UInt64,
+        onFrame: @escaping () -> Void
+    ) throws -> FrameCallbackRegistration {
+        try SurfaceFrameCommitter.requestFrameCallback(
+            on: surface,
+            runtime: &surfaceRuntime,
+            generation: generation,
+            onFrame: onFrame
+        )
     }
 
     package func cancelSurfaceFrameCallback() {
@@ -311,11 +319,19 @@ extension PopupRoleSurface {
         _ = try surfaceRuntime.completeFrameCallback()
     }
 
-    package func recordSurfaceCommittedFrame(
+    package func commitSurfaceFrame(
+        buffer: RawBuffer,
         generation: UInt64,
-        plan: SurfaceCommitPlan
+        geometry: SurfaceGeometry
     ) throws {
-        try surfaceRuntime.recordCommittedFrame(generation: generation, plan: plan)
+        try SurfaceFrameCommitter.commit(
+            buffer: buffer,
+            to: surface,
+            scaleInstallation: scaleInstallation,
+            runtime: &surfaceRuntime,
+            generation: generation,
+            geometry: geometry
+        )
     }
 
     package func resetTransientSurfaceTransactionState() {

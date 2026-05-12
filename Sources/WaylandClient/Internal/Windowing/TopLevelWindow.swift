@@ -447,14 +447,14 @@ package final class TopLevelWindow {
             }
 
             do {
-                try surfaceRuntime.requestFrameCallback(generation: request.generation)
-                pendingFrameRegistration = try surface.requestFrame { [weak self] in
-                    guard let self else { return }
-
-                    handleFrameDone()
+                pendingFrameRegistration = try SurfaceFrameCommitter.requestFrameCallback(
+                    on: surface,
+                    runtime: &surfaceRuntime,
+                    generation: request.generation
+                ) { [weak self] in
+                    self?.handleFrameDone()
                 }
             } catch {
-                surfaceRuntime.cancelFrameCallback()
                 failActivePresentation(
                     generation: request.generation,
                     error: .frameCallbackRequest(String(describing: error))
@@ -464,18 +464,13 @@ package final class TopLevelWindow {
             }
 
             let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
-            let damageMode: DamageCoordinateMode = surface.usesBufferDamage ? .buffer : .logical
-            let commitPlan = scaleInstallation.commitPlan(
-                geometry: geometry,
-                damageMode: damageMode
-            )
-            applySurfaceCommitPlan(commitPlan)
-            surface.attach(buffer: buffer)
-            applySurfaceDamage(commitPlan.damage)
-            surface.commit()
-            try surfaceRuntime.recordCommittedFrame(
+            try SurfaceFrameCommitter.commit(
+                buffer: buffer,
+                to: surface,
+                scaleInstallation: scaleInstallation,
+                runtime: &surfaceRuntime,
                 generation: request.generation,
-                plan: commitPlan
+                geometry: geometry
             )
 
             try interpretWindowEffects(
@@ -493,20 +488,6 @@ package final class TopLevelWindow {
                 error: .surfaceCommit(String(describing: error))
             )
             throw error
-        }
-    }
-
-    private func applySurfaceCommitPlan(_ plan: SurfaceCommitPlan) {
-        surface.setBufferScale(plan.bufferScale)
-        scaleInstallation.applyViewportDestinationIfNeeded(plan.viewportDestination)
-    }
-
-    private func applySurfaceDamage(_ damage: SurfaceDamageExtent) {
-        switch damage {
-        case .buffer(let width, let height):
-            surface.damageFullBuffer(width: width, height: height)
-        case .logical(let width, let height):
-            surface.damageFullLogical(width: width, height: height)
         }
     }
 
