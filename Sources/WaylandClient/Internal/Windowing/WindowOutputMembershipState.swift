@@ -1,6 +1,8 @@
 import WaylandRaw
 
-package struct WindowOutputMembershipState: Equatable {
+package typealias WindowOutputMembershipState = SurfaceOutputMembershipState
+
+package struct SurfaceOutputMembershipState: Equatable, Sendable {
     private var outputIDs: Set<RawOutputID> = []
 
     package init() {
