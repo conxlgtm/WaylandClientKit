@@ -23,6 +23,28 @@ package enum SmokeConfigurationField: Equatable, Sendable, CustomStringConvertib
     }
 }
 
+package enum SmokeOptionalProtocol: Equatable, Sendable, CustomStringConvertible {
+    case linuxDmabuf
+
+    package var interfaceName: String {
+        switch self {
+        case .linuxDmabuf:
+            "zwp_linux_dmabuf_v1"
+        }
+    }
+
+    package var liveTestName: String {
+        switch self {
+        case .linuxDmabuf:
+            "linux-dmabuf"
+        }
+    }
+
+    package var description: String {
+        liveTestName
+    }
+}
+
 package struct SmokeMilliseconds: Equatable, Comparable, Sendable, CustomStringConvertible {
     package let rawValue: Int32
 
@@ -56,6 +78,7 @@ package struct SmokeMilliseconds: Equatable, Comparable, Sendable, CustomStringC
 package struct SmokeConfiguration: Equatable, Sendable {
     package var timeout: SmokeMilliseconds
     package var postCommitPump: SmokeMilliseconds
+    package var requestedOptionalProtocols: [SmokeOptionalProtocol]
 
     package var timeoutMilliseconds: Int32 {
         timeout.rawValue
@@ -67,15 +90,18 @@ package struct SmokeConfiguration: Equatable, Sendable {
 
     package init(
         timeout: SmokeMilliseconds = .defaultTimeout,
-        postCommitPump: SmokeMilliseconds = .defaultPostCommitPump
+        postCommitPump: SmokeMilliseconds = .defaultPostCommitPump,
+        requestedOptionalProtocols optionalProtocols: [SmokeOptionalProtocol] = []
     ) {
         self.timeout = timeout
         self.postCommitPump = postCommitPump
+        requestedOptionalProtocols = optionalProtocols
     }
 
     package init(
         timeoutMilliseconds timeout: Int32,
-        postCommitPumpMilliseconds postCommitPump: Int32
+        postCommitPumpMilliseconds postCommitPump: Int32,
+        requestedOptionalProtocols optionalProtocols: [SmokeOptionalProtocol] = []
     ) throws(SmokeConfigurationError) {
         self.timeout = try SmokeMilliseconds(
             timeout,
@@ -85,6 +111,7 @@ package struct SmokeConfiguration: Equatable, Sendable {
             postCommitPump,
             field: .postCommitPumpMilliseconds
         )
+        requestedOptionalProtocols = optionalProtocols
     }
 }
 
@@ -96,6 +123,7 @@ package enum SmokeCommand: Equatable, Sendable {
 package enum SmokeResult: Equatable, Sendable, CustomStringConvertible {
     case committedFrame
     case frameCallbackObserved
+    case skippedOptionalProtocol(SmokeOptionalProtocol)
 
     package var description: String {
         switch self {
@@ -103,6 +131,9 @@ package enum SmokeResult: Equatable, Sendable, CustomStringConvertible {
             "committed frame"
         case .frameCallbackObserved:
             "frame callback observed"
+        case .skippedOptionalProtocol(let optionalProtocol):
+            "Skipping \(optionalProtocol.liveTestName) live test: compositor did not advertise "
+                + "\(optionalProtocol.interfaceName)."
         }
     }
 }
