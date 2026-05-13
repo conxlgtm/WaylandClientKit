@@ -372,7 +372,13 @@ void swl_gbm_bo_export_close(struct swl_gbm_bo_export *exported_buffer)
         return;
     }
 
-    for (uint32_t index = 0; index < SWL_GBM_MAX_PLANES; index++)
+    uint32_t plane_count = exported_buffer->plane_count;
+    if (plane_count > SWL_GBM_MAX_PLANES)
+    {
+        plane_count = SWL_GBM_MAX_PLANES;
+    }
+
+    for (uint32_t index = 0; index < plane_count; index++)
     {
         int fd = exported_buffer->planes[index].fd;
         if (fd >= 0)
