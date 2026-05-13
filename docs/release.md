@@ -9,6 +9,8 @@ Run these from a clean working tree:
 
 ```bash
 swift --version
+pkg-config --modversion gbm
+pkg-config --modversion libdrm
 pkg-config --modversion wayland-client
 pkg-config --modversion xkbcommon
 command -v wayland-scanner
