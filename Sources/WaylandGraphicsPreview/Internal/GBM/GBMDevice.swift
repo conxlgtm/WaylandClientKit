@@ -81,6 +81,7 @@ package struct GBMBufferAllocationDescriptor: Equatable, Sendable {
 @safe
 package final class GBMDevice {
     private var pointer: OpaquePointer?
+    private var renderNodeFileDescriptor: Int32?
 
     @safe
     package init(
@@ -95,6 +96,15 @@ package final class GBMDevice {
         }
 
         unsafe pointer = devicePointer
+        renderNodeFileDescriptor = fd
+    }
+
+    package init(
+        testingAdoptingRenderNodeFileDescriptor renderNode: consuming GBMRenderNodeFileDescriptor
+    ) {
+        var renderNode = renderNode
+        unsafe pointer = nil
+        renderNodeFileDescriptor = renderNode.releaseForGBMDevice()
     }
 
     @safe package var backendName: String? {
@@ -173,10 +183,18 @@ package final class GBMDevice {
     }
 
     package func destroy() {
-        guard let devicePointer = unsafe pointer else { return }
+        let devicePointer = unsafe pointer
+        let renderNodeFD = renderNodeFileDescriptor
 
         unsafe self.pointer = nil
-        unsafe swl_gbm_device_destroy(devicePointer)
+        renderNodeFileDescriptor = nil
+
+        if let devicePointer = unsafe devicePointer {
+            unsafe swl_gbm_device_destroy(devicePointer)
+        }
+        if let renderNodeFD {
+            Glibc.close(renderNodeFD)
+        }
     }
 
     deinit {

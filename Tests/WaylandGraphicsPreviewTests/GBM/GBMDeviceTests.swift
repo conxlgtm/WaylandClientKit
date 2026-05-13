@@ -1,4 +1,5 @@
 import CGBMShims
+import Glibc
 import Testing
 
 @testable import WaylandGraphicsPreview
@@ -55,4 +56,32 @@ struct GBMDeviceTests {
             _ = try GBMRenderNodeFileDescriptor(adopting: -1)
         }
     }
+
+    @Test
+    func destroyClosesAdoptedRenderNodeDescriptor() throws {
+        let descriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(descriptors.readEnd)
+        }
+        try makeNonBlocking(descriptors.readEnd)
+        let renderNode = try GBMRenderNodeFileDescriptor(adopting: descriptors.writeEnd)
+        let device = GBMDevice(testingAdoptingRenderNodeFileDescriptor: renderNode)
+
+        device.destroy()
+
+        var byte = UInt8(0)
+        let readByteCount = unsafe withUnsafeMutableBytes(of: &byte) { buffer in
+            unsafe Glibc.read(descriptors.readEnd, buffer.baseAddress, 1)
+        }
+        #expect(readByteCount == 0)
+    }
+}
+
+private func makeNonBlocking(_ fileDescriptor: Int32) throws {
+    let flags = Glibc.fcntl(fileDescriptor, F_GETFL)
+    #expect(flags >= 0)
+    try #require(flags >= 0)
+
+    let result = Glibc.fcntl(fileDescriptor, F_SETFL, flags | O_NONBLOCK)
+    #expect(result == 0)
 }
