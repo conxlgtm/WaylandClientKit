@@ -1,7 +1,11 @@
 package struct GBMBufferPoolSlotID: Hashable, Comparable, Sendable {
     package let rawValue: Int
 
-    package init(_ value: Int) {
+    package init(_ value: Int) throws(GBMBufferPoolStateError) {
+        guard value >= 0 else {
+            throw GBMBufferPoolStateError.invalidSlotID(value)
+        }
+
         rawValue = value
     }
 
@@ -17,6 +21,7 @@ package enum GBMBufferPoolSlotLifecycle: Equatable, Sendable {
 }
 
 package enum GBMBufferPoolStateError: Error, Equatable, Sendable, CustomStringConvertible {
+    case invalidSlotID(Int)
     case duplicateSlot(GBMBufferPoolSlotID)
     case unknownSlot(GBMBufferPoolSlotID)
     case noAvailableSlots
@@ -26,6 +31,8 @@ package enum GBMBufferPoolStateError: Error, Equatable, Sendable, CustomStringCo
 
     package var description: String {
         switch self {
+        case .invalidSlotID(let rawValue):
+            "invalid GBM buffer pool slot \(rawValue)"
         case .duplicateSlot(let slotID):
             "duplicate GBM buffer pool slot \(slotID.rawValue)"
         case .unknownSlot(let slotID):
