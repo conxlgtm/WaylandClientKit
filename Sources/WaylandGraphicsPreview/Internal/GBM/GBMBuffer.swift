@@ -1,9 +1,8 @@
 import CGBMShims
 import WaylandRaw
 
-package struct GBMDmabufPlane: Equatable, Sendable {
+package struct GBMDmabufPlaneLayout: Equatable, Sendable {
     package let index: Int
-    package let fileDescriptor: Int32
     package let offset: UInt32
     package let stride: UInt32
 }
@@ -27,20 +26,16 @@ package final class GBMDmabufExport {
         planeCount = Int(exportedBuffer.plane_count)
     }
 
-    package func plane(at index: Int) throws(GBMAllocationError) -> GBMDmabufPlane {
+    package func planeLayout(
+        at index: Int
+    ) throws(GBMAllocationError) -> GBMDmabufPlaneLayout {
         guard index >= 0, index < planeCount else {
             throw GBMAllocationError.invalidPlaneIndex(index)
         }
 
         let planeIndex = UInt32(index)
-        let fileDescriptor = unsafe swl_gbm_bo_export_plane_fd(&rawExport, planeIndex)
-        guard fileDescriptor >= 0 else {
-            throw GBMAllocationError.planeFileDescriptorAlreadyTaken(index)
-        }
-
-        return GBMDmabufPlane(
+        return GBMDmabufPlaneLayout(
             index: index,
-            fileDescriptor: fileDescriptor,
             offset: unsafe swl_gbm_bo_export_plane_offset(&rawExport, planeIndex),
             stride: unsafe swl_gbm_bo_export_plane_stride(&rawExport, planeIndex)
         )

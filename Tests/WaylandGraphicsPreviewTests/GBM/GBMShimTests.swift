@@ -57,7 +57,6 @@ struct GBMShimTests {
 
         var exportedBuffer = swl_gbm_bo_export()
         let exportResult = unsafe swl_gbm_bo_export_dmabuf(nil, &exportedBuffer)
-        let missingPlaneFD = unsafe swl_gbm_bo_export_plane_fd(&exportedBuffer, 0)
         let missingPlaneTakenFD =
             unsafe swl_gbm_bo_export_take_plane_fd(&exportedBuffer, 0)
         let missingPlaneOffset =
@@ -66,7 +65,6 @@ struct GBMShimTests {
             unsafe swl_gbm_bo_export_plane_stride(&exportedBuffer, 0)
         #expect(exportedBuffer.plane_count == 0)
         #expect(exportResult == -1)
-        #expect(missingPlaneFD == -1)
         #expect(missingPlaneTakenFD == -1)
         #expect(missingPlaneOffset == 0)
         #expect(missingPlaneStride == 0)

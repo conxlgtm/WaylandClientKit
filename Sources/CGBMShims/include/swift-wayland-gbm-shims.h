@@ -85,9 +85,6 @@ void swl_gbm_bo_destroy(struct gbm_bo *buffer);
 int32_t swl_gbm_bo_export_dmabuf(
     struct gbm_bo *buffer,
     struct swl_gbm_bo_export *out_export);
-int32_t swl_gbm_bo_export_plane_fd(
-    const struct swl_gbm_bo_export *exported_buffer,
-    uint32_t plane_index);
 int32_t swl_gbm_bo_export_take_plane_fd(
     struct swl_gbm_bo_export *exported_buffer,
     uint32_t plane_index);
