@@ -1194,6 +1194,32 @@ struct swl_test_data_request_record {
     int32_t                         fd;
 };
 
+enum swl_test_dmabuf_request_kind {
+    SWL_TEST_DMABUF_REQUEST_NONE = 0,
+    SWL_TEST_DMABUF_GET_DEFAULT_FEEDBACK = 1,
+    SWL_TEST_DMABUF_GET_SURFACE_FEEDBACK = 2,
+    SWL_TEST_DMABUF_CREATE_PARAMS = 3,
+    SWL_TEST_DMABUF_BUFFER_PARAMS_ADD = 4,
+    SWL_TEST_DMABUF_BUFFER_PARAMS_CREATE = 5,
+};
+
+struct swl_test_dmabuf_request_record {
+    int32_t                           call_count;
+    enum swl_test_dmabuf_request_kind kind;
+    void                             *object;
+    void                             *surface;
+    int32_t                           fd;
+    uint32_t                          plane_idx;
+    uint32_t                          offset;
+    uint32_t                          stride;
+    uint32_t                          modifier_hi;
+    uint32_t                          modifier_lo;
+    int32_t                           width;
+    int32_t                           height;
+    uint32_t                          format;
+    uint32_t                          flags;
+};
+
 enum swl_test_data_destroy_kind {
     SWL_TEST_DATA_DESTROY_NONE = 0,
     SWL_TEST_DATA_DESTROY_OFFER = 1,
@@ -1414,6 +1440,9 @@ void swl_test_data_request_recording_begin(void);
 void swl_test_data_request_recording_end(void);
 struct swl_test_data_request_record swl_test_data_request_record(void);
 struct swl_test_data_destroy_record swl_test_data_destroy_record(void);
+void swl_test_dmabuf_request_recording_begin(void);
+void swl_test_dmabuf_request_recording_end(void);
+struct swl_test_dmabuf_request_record swl_test_dmabuf_request_record(void);
 
 void swl_test_primary_selection_offer_listener_emit_offer(
     void *data,
