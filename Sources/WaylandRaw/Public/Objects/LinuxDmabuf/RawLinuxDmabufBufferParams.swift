@@ -76,6 +76,7 @@ package enum RawLinuxDmabufBufferParamsStateError: Error, Equatable, CustomStrin
     case createAfterCreateRequest
     case createWithoutPlanes
     case duplicatePlaneIndex(UInt32)
+    case nonConsecutivePlaneIndices(Set<UInt32>)
     case createdBeforeCreateRequest
     case failedBeforeCreateRequest
     case useAfterTerminalState(RawLinuxDmabufBufferParamsLifecycle)
@@ -90,6 +91,8 @@ package enum RawLinuxDmabufBufferParamsStateError: Error, Equatable, CustomStrin
             "linux-dmabuf buffer create request without planes"
         case .duplicatePlaneIndex(let planeIndex):
             "duplicate linux-dmabuf plane index \(planeIndex)"
+        case .nonConsecutivePlaneIndices(let planeIndices):
+            "non-consecutive linux-dmabuf plane indices \(planeIndices.sorted())"
         case .createdBeforeCreateRequest:
             "linux-dmabuf buffer params created before create request"
         case .failedBeforeCreateRequest:
@@ -136,6 +139,12 @@ package struct RawLinuxDmabufBufferParamsState: Equatable, Sendable {
         case .collecting:
             guard !planeIndices.isEmpty else {
                 throw RawLinuxDmabufBufferParamsStateError.createWithoutPlanes
+            }
+            let expectedPlaneIndices = Set(UInt32(0)..<UInt32(planeIndices.count))
+            guard planeIndices == expectedPlaneIndices else {
+                throw
+                    RawLinuxDmabufBufferParamsStateError
+                    .nonConsecutivePlaneIndices(planeIndices)
             }
             lifecycle = .createRequested
         case .createRequested:

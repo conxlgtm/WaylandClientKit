@@ -190,45 +190,6 @@ struct RawLinuxDmabufBufferParamsStateTests {
     }
 
     @Test
-    func rejectedPlaneDoesNotMutatePlaneSet() throws {
-        let descriptors = try RawFileDescriptor.pipeDescriptors()
-        defer {
-            Glibc.close(descriptors.writeEnd)
-        }
-        var planeDescriptor = try RawLinuxDmabufPlaneFileDescriptor(
-            adopting: descriptors.readEnd
-        )
-        var state = RawLinuxDmabufBufferParamsState()
-
-        let requestDescriptor = try state.prepareAddPlane(
-            fileDescriptor: &planeDescriptor,
-            planeIndex: 0
-        )
-        Glibc.close(requestDescriptor)
-
-        let duplicateDescriptors = try RawFileDescriptor.pipeDescriptors()
-        defer {
-            Glibc.close(duplicateDescriptors.writeEnd)
-        }
-        var duplicatePlaneDescriptor = try RawLinuxDmabufPlaneFileDescriptor(
-            adopting: duplicateDescriptors.readEnd
-        )
-
-        do {
-            _ = try state.prepareAddPlane(
-                fileDescriptor: &duplicatePlaneDescriptor,
-                planeIndex: 0
-            )
-            Issue.record("Expected duplicate plane index to throw")
-        } catch RawLinuxDmabufBufferParamsStateError.duplicatePlaneIndex(let planeIndex) {
-            #expect(planeIndex == 0)
-            #expect(state.planeIndices == Set([0]))
-        } catch {
-            Issue.record("Unexpected error: \(error)")
-        }
-    }
-
-    @Test
     func createdBeforeCreateRequestReportsInvariantFailure() {
         var state = RawLinuxDmabufBufferParamsState()
 
@@ -265,5 +226,93 @@ struct RawLinuxDmabufBufferParamsStateTests {
 
         #expect(flags.contains(.yInvert))
         #expect(flags.unknownRawValue == 0x8000_0000)
+    }
+}
+
+@Suite(.serialized)
+struct RawLinuxDmabufBufferParamsPlaneSetTests {
+    @Test
+    func rejectedPlaneDoesNotMutatePlaneSet() throws {
+        var state = RawLinuxDmabufBufferParamsState()
+
+        try addPlane(index: 0, to: &state)
+
+        let duplicateDescriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(duplicateDescriptors.writeEnd)
+        }
+        var duplicatePlaneDescriptor = try RawLinuxDmabufPlaneFileDescriptor(
+            adopting: duplicateDescriptors.readEnd
+        )
+
+        do {
+            _ = try state.prepareAddPlane(
+                fileDescriptor: &duplicatePlaneDescriptor,
+                planeIndex: 0
+            )
+            Issue.record("Expected duplicate plane index to throw")
+        } catch RawLinuxDmabufBufferParamsStateError.duplicatePlaneIndex(let planeIndex) {
+            #expect(planeIndex == 0)
+            #expect(state.planeIndices == Set([0]))
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func createRejectsPlaneSetStartingAboveZero() throws {
+        var state = RawLinuxDmabufBufferParamsState()
+
+        try addPlane(index: 2, to: &state)
+
+        #expect(throws: RawLinuxDmabufBufferParamsStateError.nonConsecutivePlaneIndices([2])) {
+            try state.prepareCreate()
+        }
+        #expect(state.lifecycle == .collecting)
+    }
+
+    @Test
+    func createRejectsGappedPlaneSet() throws {
+        var state = RawLinuxDmabufBufferParamsState()
+
+        try addPlane(index: 0, to: &state)
+        try addPlane(index: 2, to: &state)
+
+        #expect(
+            throws: RawLinuxDmabufBufferParamsStateError.nonConsecutivePlaneIndices([0, 2])
+        ) {
+            try state.prepareCreate()
+        }
+        #expect(state.lifecycle == .collecting)
+    }
+
+    @Test
+    func createAcceptsOutOfOrderConsecutivePlanes() throws {
+        var state = RawLinuxDmabufBufferParamsState()
+
+        try addPlane(index: 1, to: &state)
+        try addPlane(index: 0, to: &state)
+        try state.prepareCreate()
+
+        #expect(state.lifecycle == .createRequested)
+        #expect(state.planeIndices == Set([0, 1]))
+    }
+
+    private func addPlane(
+        index planeIndex: UInt32,
+        to state: inout RawLinuxDmabufBufferParamsState
+    ) throws {
+        let descriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(descriptors.writeEnd)
+        }
+        var planeDescriptor = try RawLinuxDmabufPlaneFileDescriptor(
+            adopting: descriptors.readEnd
+        )
+        let requestDescriptor = try state.prepareAddPlane(
+            fileDescriptor: &planeDescriptor,
+            planeIndex: planeIndex
+        )
+        Glibc.close(requestDescriptor)
     }
 }
