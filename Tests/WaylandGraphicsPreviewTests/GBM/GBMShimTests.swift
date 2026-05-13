@@ -37,6 +37,15 @@ struct GBMShimTests {
                 0,
                 0
             ) == nil
+        let bufferWithModifierIsNil =
+            unsafe swl_gbm_bo_create_with_modifier2(
+                nil,
+                1,
+                1,
+                swl_drm_format_xrgb8888(),
+                swl_drm_format_mod_linear(),
+                0
+            ) == nil
 
         #expect(createDeviceIsNil)
         #expect(backendNameIsNil)
@@ -44,11 +53,23 @@ struct GBMShimTests {
         #expect(modifierPlaneCount == -1)
         #expect(bufferIsNil)
         #expect(bufferWithModifiersIsNil)
+        #expect(bufferWithModifierIsNil)
 
         var exportedBuffer = swl_gbm_bo_export()
         let exportResult = unsafe swl_gbm_bo_export_dmabuf(nil, &exportedBuffer)
+        let missingPlaneFD = unsafe swl_gbm_bo_export_plane_fd(&exportedBuffer, 0)
+        let missingPlaneTakenFD =
+            unsafe swl_gbm_bo_export_take_plane_fd(&exportedBuffer, 0)
+        let missingPlaneOffset =
+            unsafe swl_gbm_bo_export_plane_offset(&exportedBuffer, 0)
+        let missingPlaneStride =
+            unsafe swl_gbm_bo_export_plane_stride(&exportedBuffer, 0)
         #expect(exportedBuffer.plane_count == 0)
         #expect(exportResult == -1)
+        #expect(missingPlaneFD == -1)
+        #expect(missingPlaneTakenFD == -1)
+        #expect(missingPlaneOffset == 0)
+        #expect(missingPlaneStride == 0)
 
         swl_gbm_bo_destroy(nil)
         swl_gbm_device_destroy(nil)

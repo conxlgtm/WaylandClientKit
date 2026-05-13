@@ -20,6 +20,7 @@ Sources/WaylandRaw/Internal/EventLoop/EventLoop.swift	poll(	Wayland external eve
 Sources/WaylandRaw/Internal/EventLoop/QueueEventLoop.swift	poll(	Queue-specific Wayland external event-loop integration.
 Sources/WaylandRaw/Internal/Ownership/RawProxyAdoption.swift	swl_proxy_get_queue_raw	Centralized runtime queue assertion for proxy adoption.
 Sources/WaylandRaw/Internal/Support/ThreadAffinity.swift	pthread_*	Raw owner-thread affinity token.
+Sources/WaylandGraphicsPreview/Internal/GBM/**	OpaquePointer	GBM preview device and buffer object lifetime wrappers.
 Sources/WaylandRuntime/**	eventfd	Executor wake fd primitive.
 Sources/WaylandRuntime/**	nonisolated(unsafe)	Synchronized pthread-backed executor internals.
 Sources/WaylandRuntime/**	pthread_*	Executor owner thread, mutex, condition, and join primitives.

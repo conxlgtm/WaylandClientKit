@@ -66,10 +66,29 @@ struct gbm_bo *swl_gbm_bo_create_with_modifiers2(
     const uint64_t *modifiers,
     uint32_t count,
     uint32_t flags);
+struct gbm_bo *swl_gbm_bo_create_with_modifier2(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    uint64_t modifier,
+    uint32_t flags);
 void swl_gbm_bo_destroy(struct gbm_bo *buffer);
 int32_t swl_gbm_bo_export_dmabuf(
     struct gbm_bo *buffer,
     struct swl_gbm_bo_export *out_export);
+int32_t swl_gbm_bo_export_plane_fd(
+    const struct swl_gbm_bo_export *exported_buffer,
+    uint32_t plane_index);
+int32_t swl_gbm_bo_export_take_plane_fd(
+    struct swl_gbm_bo_export *exported_buffer,
+    uint32_t plane_index);
+uint32_t swl_gbm_bo_export_plane_offset(
+    const struct swl_gbm_bo_export *exported_buffer,
+    uint32_t plane_index);
+uint32_t swl_gbm_bo_export_plane_stride(
+    const struct swl_gbm_bo_export *exported_buffer,
+    uint32_t plane_index);
 void swl_gbm_bo_export_close(struct swl_gbm_bo_export *exported_buffer);
 
 #ifdef __cplusplus
