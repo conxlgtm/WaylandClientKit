@@ -162,6 +162,34 @@ struct GBMFormatSelectionTests {
         }
     }
 
+    @Test
+    func emptyModifierAllowListSelectsNoCandidates() throws {
+        let policy = try GBMFormatSelectionPolicy(
+            preferredFormats: [xrgb8888],
+            modifierPolicy: .only()
+        )
+        let feedback = feedbackSnapshot(
+            tranches: [
+                tranche(
+                    deviceByte: 1,
+                    formats: [format(xrgb8888, modifier: 20)]
+                )
+            ]
+        )
+
+        #expect(
+            throws: GBMFormatSelectionError.noCompatibleModifier(
+                format: xrgb8888,
+                modifiers: [20]
+            )
+        ) {
+            _ = try GBMFormatSelector.selectFormatModifier(
+                from: feedback,
+                policy: policy
+            )
+        }
+    }
+
     private func feedbackSnapshot(
         tranches: [RawLinuxDmabufTranche]
     ) -> RawLinuxDmabufFeedbackSnapshot {

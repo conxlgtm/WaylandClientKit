@@ -66,12 +66,21 @@ struct GBMDmabufExportTests {
     @Test
     func exportCloseClosesUntakenPlaneDescriptor() throws {
         let descriptors = try RawFileDescriptor.pipeDescriptors()
-        Glibc.close(descriptors.readEnd)
-        do {
-            _ = GBMDmabufExport(adopting: rawExport(fileDescriptor: descriptors.writeEnd))
+        defer {
+            Glibc.close(descriptors.readEnd)
         }
+        try makeNonBlocking(descriptors.readEnd)
+        var export: GBMDmabufExport? = GBMDmabufExport(
+            adopting: rawExport(fileDescriptor: descriptors.writeEnd)
+        )
+        #expect(export?.planeCount == 1)
+        export = nil
 
-        #expect(Glibc.fcntl(descriptors.writeEnd, F_GETFD) == -1)
+        var byte = UInt8(0)
+        let readByteCount = unsafe withUnsafeMutableBytes(of: &byte) { buffer in
+            unsafe Glibc.read(descriptors.readEnd, buffer.baseAddress, 1)
+        }
+        #expect(readByteCount == 0)
     }
 
     @Test
@@ -111,4 +120,13 @@ private func rawExport(
         stride: stride
     )
     return exportedBuffer
+}
+
+private func makeNonBlocking(_ fileDescriptor: Int32) throws {
+    let flags = Glibc.fcntl(fileDescriptor, F_GETFL)
+    #expect(flags >= 0)
+    try #require(flags >= 0)
+
+    let result = Glibc.fcntl(fileDescriptor, F_SETFL, flags | O_NONBLOCK)
+    #expect(result == 0)
 }
