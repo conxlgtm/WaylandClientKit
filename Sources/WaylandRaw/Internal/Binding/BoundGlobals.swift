@@ -13,6 +13,7 @@ package enum SupportedVersions {
     package static let wpViewporter: RawVersion = 1
     package static let wpPresentation: RawVersion = 2
     package static let wpFractionalScaleManagerV1: RawVersion = 1
+    package static let zwpLinuxDmabufV1: RawVersion = 5
     package static let wlSeat: RawVersion = 10
     package static let wlDataDeviceManager: RawVersion = 3
     package static let zwpPrimarySelectionDeviceManagerV1: RawVersion = 1
@@ -113,6 +114,17 @@ package enum OptionalPrimarySelectionDeviceManager {
     }
 }
 
+package enum OptionalLinuxDmabuf {
+    case missing
+    case bound(RawLinuxDmabuf)
+
+    func destroy() {
+        guard case .bound(let linuxDmabuf) = self else { return }
+
+        linuxDmabuf.destroy()
+    }
+}
+
 package struct OptionalGlobals {
     package let xdgDecorationManager: OptionalXDGDecorationManager
     package let xdgOutputManager: OptionalXDGOutputManager
@@ -121,6 +133,7 @@ package struct OptionalGlobals {
     package let fractionalScaleManager: OptionalFractionalScaleManager
     package let dataDeviceManager: OptionalDataDeviceManager
     package let primarySelectionDeviceManager: OptionalPrimarySelectionDeviceManager
+    package let linuxDmabuf: OptionalLinuxDmabuf
 
     package init(
         xdgDecorationManager manager: OptionalXDGDecorationManager = .missing,
@@ -131,7 +144,8 @@ package struct OptionalGlobals {
             .missing,
         dataDeviceManager boundDataDeviceManager: OptionalDataDeviceManager = .missing,
         primarySelectionDeviceManager boundPrimarySelectionDeviceManager:
-            OptionalPrimarySelectionDeviceManager = .missing
+            OptionalPrimarySelectionDeviceManager = .missing,
+        linuxDmabuf boundLinuxDmabuf: OptionalLinuxDmabuf = .missing
     ) {
         xdgDecorationManager = manager
         xdgOutputManager = boundXDGOutputManager
@@ -140,9 +154,11 @@ package struct OptionalGlobals {
         fractionalScaleManager = boundFractionalScaleManager
         dataDeviceManager = boundDataDeviceManager
         primarySelectionDeviceManager = boundPrimarySelectionDeviceManager
+        linuxDmabuf = boundLinuxDmabuf
     }
 
     func destroy() {
+        linuxDmabuf.destroy()
         primarySelectionDeviceManager.destroy()
         dataDeviceManager.destroy()
         fractionalScaleManager.destroy()

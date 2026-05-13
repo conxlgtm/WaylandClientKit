@@ -268,4 +268,63 @@ struct ListenerCallbackBundleSmokeTests {  // swiftlint:disable:this type_body_l
         #expect(unsafe callbacks.down != nil)
         #expect(unsafe callbacks.orientation != nil)
     }
+
+    @Test
+    func dmabufFeedbackListenerCallbackSignaturesImportIntoSwift() {
+        var callbacks = unsafe swl_zwp_linux_dmabuf_feedback_listener_callbacks()
+        unsafe callbacks.done = { data, feedback in
+            _ = unsafe data
+            _ = unsafe feedback
+        }
+        unsafe callbacks.format_table = { data, feedback, fd, size in
+            _ = unsafe data
+            _ = unsafe feedback
+            _ = fd
+            _ = size
+        }
+        unsafe callbacks.main_device = { data, feedback, device in
+            _ = unsafe data
+            _ = unsafe feedback
+            _ = unsafe device
+        }
+        unsafe callbacks.tranche_done = { data, feedback in
+            _ = unsafe data
+            _ = unsafe feedback
+        }
+        unsafe callbacks.tranche_target_device = { data, feedback, device in
+            _ = unsafe data
+            _ = unsafe feedback
+            _ = unsafe device
+        }
+        unsafe callbacks.tranche_formats = { data, feedback, indices in
+            _ = unsafe data
+            _ = unsafe feedback
+            _ = unsafe indices
+        }
+        unsafe callbacks.tranche_flags = { data, feedback, flags in
+            _ = unsafe data
+            _ = unsafe feedback
+            _ = flags
+        }
+        unsafe callbacks.data = nil
+        #expect(unsafe callbacks.done != nil)
+        #expect(unsafe callbacks.tranche_flags != nil)
+    }
+
+    @Test
+    func dmabufBufferParamsListenerCallbackSignaturesImportIntoSwift() {
+        var callbacks = unsafe swl_zwp_linux_buffer_params_listener_callbacks()
+        unsafe callbacks.created = { data, params, buffer in
+            _ = unsafe data
+            _ = unsafe params
+            _ = unsafe buffer
+        }
+        unsafe callbacks.failed = { data, params in
+            _ = unsafe data
+            _ = unsafe params
+        }
+        unsafe callbacks.data = nil
+        #expect(unsafe callbacks.created != nil)
+        #expect(unsafe callbacks.failed != nil)
+    }
 }

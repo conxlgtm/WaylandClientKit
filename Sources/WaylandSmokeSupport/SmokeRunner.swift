@@ -3,6 +3,13 @@ import WaylandClient
 package enum SmokeRunner {
     package static func run(configuration: SmokeConfiguration = .init()) throws -> SmokeResult {
         let session = try DisplaySession.connect()
+        let capabilities = session.capabilitiesOnOwnerThread()
+        for optionalProtocol in configuration.requestedOptionalProtocols {
+            guard isAdvertised(optionalProtocol, capabilities: capabilities) else {
+                return .skippedOptionalProtocol(optionalProtocol)
+            }
+        }
+
         let window = try session.createTopLevelWindow(
             configuration: WindowConfiguration(
                 title: "SwiftWayland Smoke",
@@ -28,6 +35,16 @@ package enum SmokeRunner {
         }
 
         return .committedFrame
+    }
+
+    private static func isAdvertised(
+        _ optionalProtocol: SmokeOptionalProtocol,
+        capabilities: WaylandCapabilities
+    ) -> Bool {
+        switch optionalProtocol {
+        case .linuxDmabuf:
+            capabilities.linuxDmabuf.isAvailable
+        }
     }
 
     private static func fill(_ frame: borrowing SoftwareFrame) {

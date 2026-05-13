@@ -3,6 +3,7 @@
 #include "generated/core/wayland-client-protocol.h"
 #include "generated/stable/presentation-time/presentation-time-client-protocol.h"
 #include "generated/stable/viewporter/viewporter-client-protocol.h"
+#include "generated/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/xdg-output/xdg-output-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/primary-selection/primary-selection-unstable-v1-client-protocol.h"
@@ -94,4 +95,11 @@ swl_registry_bind_zwp_primary_selection_device_manager_v1(
         name,
         &zwp_primary_selection_device_manager_v1_interface,
         version);
+}
+
+struct zwp_linux_dmabuf_v1 *swl_registry_bind_zwp_linux_dmabuf_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct zwp_linux_dmabuf_v1 *)wl_registry_bind(
+        registry, name, &zwp_linux_dmabuf_v1_interface, version);
 }

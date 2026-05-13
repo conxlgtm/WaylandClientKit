@@ -52,6 +52,11 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
+[[ -f "$PROTO_DIR/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
+    exit 1
+}
+
 rm -rf "$GEN_INC" "$GEN_SRC"
 mkdir -p \
     "$GEN_INC/core" \
@@ -62,6 +67,7 @@ mkdir -p \
     "$GEN_INC/legacy-unstable/xdg-decoration" \
     "$GEN_INC/legacy-unstable/xdg-output" \
     "$GEN_INC/legacy-unstable/primary-selection" \
+    "$GEN_INC/legacy-unstable/linux-dmabuf" \
     "$GEN_SRC/core" \
     "$GEN_SRC/stable/xdg-shell" \
     "$GEN_SRC/stable/viewporter" \
@@ -70,6 +76,7 @@ mkdir -p \
     "$GEN_SRC/legacy-unstable/xdg-decoration" \
     "$GEN_SRC/legacy-unstable/xdg-output" \
     "$GEN_SRC/legacy-unstable/primary-selection" \
+    "$GEN_SRC/legacy-unstable/linux-dmabuf" \
     "$OUT_DIR/shims"
 
 normalize_generated_file() {
@@ -160,6 +167,14 @@ wayland-scanner client-header \
 wayland-scanner private-code \
     "$PROTO_DIR/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml" \
     "$GEN_SRC/legacy-unstable/primary-selection/primary-selection-unstable-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml" \
+    "$GEN_INC/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml" \
+    "$GEN_SRC/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1-protocol.c"
 
 while IFS= read -r generated_file; do
     normalize_generated_file "$generated_file"

@@ -113,6 +113,10 @@ package enum SurfaceScaleInstallation {
         }
     }
 
+    package var capability: SurfaceScaleCapability {
+        state.capability
+    }
+
     package init() {
         self = .inactive(SurfaceScaleState())
     }

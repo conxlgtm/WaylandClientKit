@@ -39,12 +39,13 @@ package final class TopLevelWindow {
 
     private let failureSink: any WindowFailureSink
     private var model: WindowModel
-    private var surfaceRuntime = SurfaceRuntime<TopLevelWindowRoleResources>()
+    private var surfaceRuntime = SurfaceRuntime<TopLevelWindowRoleResources>(
+        role: .toplevelWindow
+    )
     private var pendingFrameRegistration: FrameCallbackRegistration?
     private var nextPresentationFeedbackID: UInt64 = 1
     private var pendingPresentationFeedbacks:
         [SurfacePresentationIdentity: RawPresentationFeedback] = [:]
-    private var outputMembership = WindowOutputMembershipState()
 
     #if DEBUG
         private var testingInteractionSeatsByID: [SeatID: RawSeat] = [:]
@@ -84,6 +85,9 @@ package final class TopLevelWindow {
             self?.markNeedsRedraw()
         }
 
+        surfaceRuntime.setPresentationFeedbackCapability(
+            globals.extensions.presentation.surfaceCapabilityStatus
+        )
         try installScaleObjects(globals: globals)
         try assignXDGRole(globals: globals)
     }
@@ -319,6 +323,7 @@ package final class TopLevelWindow {
         } catch let error as WindowError {
             throw ClientError.window(id, error)
         }
+        surfaceRuntime.recordConfigureReceived(serial: configureEvent.serial)
         try interpretWindowEffects(model.reduce(.configureReceived(configureEvent)))
         return model.currentConfiguration
     }
@@ -442,11 +447,33 @@ package final class TopLevelWindow {
                 return .skippedClosed
             }
 
+            let preparedCommit: PreparedSurfaceFrameCommit
             do {
-                pendingFrameRegistration = try surface.requestFrame { [weak self] in
-                    guard let self else { return }
+                preparedCommit = try SurfaceFrameCommitter.prepare(
+                    SurfaceFrameCommitRequest(
+                        surface: surface,
+                        scaleInstallation: scaleInstallation,
+                        generation: request.generation,
+                        geometry: geometry
+                    ),
+                    runtime: &surfaceRuntime,
+                )
+            } catch {
+                failActivePresentation(
+                    generation: request.generation,
+                    error: .surfaceCommit(String(describing: error))
+                )
+                drawingBuffer.discard()
+                throw error
+            }
 
-                    handleFrameDone()
+            do {
+                pendingFrameRegistration = try SurfaceFrameCommitter.requestFrameCallback(
+                    on: surface,
+                    runtime: &surfaceRuntime,
+                    generation: request.generation
+                ) { [weak self] in
+                    self?.handleFrameDone()
                 }
             } catch {
                 failActivePresentation(
@@ -457,16 +484,19 @@ package final class TopLevelWindow {
                 throw error
             }
 
-            let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
-            let damageMode: DamageCoordinateMode = surface.usesBufferDamage ? .buffer : .logical
-            let commitPlan = scaleInstallation.commitPlan(
-                geometry: geometry,
-                damageMode: damageMode
-            )
-            applySurfaceCommitPlan(commitPlan)
-            surface.attach(buffer: buffer)
-            applySurfaceDamage(commitPlan.damage)
-            surface.commit()
+            do {
+                try SurfaceFrameCommitter.recordPreparedCommit(
+                    preparedCommit,
+                    runtime: &surfaceRuntime
+                )
+                let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
+                SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
+            } catch {
+                pendingFrameRegistration = nil
+                surfaceRuntime.cancelFrameCallback()
+                drawingBuffer.discard()
+                throw error
+            }
 
             try interpretWindowEffects(
                 model.reduce(
@@ -483,20 +513,6 @@ package final class TopLevelWindow {
                 error: .surfaceCommit(String(describing: error))
             )
             throw error
-        }
-    }
-
-    private func applySurfaceCommitPlan(_ plan: SurfaceCommitPlan) {
-        surface.setBufferScale(plan.bufferScale)
-        scaleInstallation.applyViewportDestinationIfNeeded(plan.viewportDestination)
-    }
-
-    private func applySurfaceDamage(_ damage: SurfaceDamageExtent) {
-        switch damage {
-        case .buffer(let width, let height):
-            surface.damageFullBuffer(width: width, height: height)
-        case .logical(let width, let height):
-            surface.damageFullLogical(width: width, height: height)
         }
     }
 
@@ -544,6 +560,7 @@ package final class TopLevelWindow {
 
     private func resetTransientState() {
         do {
+            surfaceRuntime.resetTransientTransactionState()
             _ = try model.reduce(.transientStateReset)
         } catch let error as ClientError {
             reportCallbackFailure(operation: .transientStateReset, error: error)
@@ -656,13 +673,17 @@ extension TopLevelWindow {
     private var outputIDsOnOwnerThread: [OutputID] {
         guard let outputRegistry = connection.boundGlobals?.outputRegistry else { return [] }
 
-        return
-            outputMembership.currentOutputIDs { outputRegistry.output(for: $0) != nil }
+        return surfaceRuntime.currentOutputIDs { outputRegistry.output(for: $0) != nil }
     }
 }
 
 extension TopLevelWindow {
     private func handleFrameDone() {
+        do {
+            _ = try surfaceRuntime.completeFrameCallback()
+        } catch {
+            reportCallbackFailure(operation: .frameDone, error: error)
+        }
         pendingFrameRegistration = nil
         dropReleasedRetiredPools()
 
@@ -764,7 +785,7 @@ extension TopLevelWindow {
             return
         }
 
-        guard outputMembership.enter(outputID) else { return }
+        guard surfaceRuntime.enterOutput(outputID) else { return }
 
         onOutputMembershipChanged?(outputIDsOnOwnerThread)
     }
@@ -778,7 +799,7 @@ extension TopLevelWindow {
             return
         }
 
-        guard outputMembership.leave(outputID) else { return }
+        guard surfaceRuntime.leaveOutput(outputID) else { return }
 
         onOutputMembershipChanged?(outputIDsOnOwnerThread)
     }
@@ -847,6 +868,7 @@ extension TopLevelWindow {
                         )
                     )
                 }
+                try surfaceRuntime.acknowledgeConfigure(serial: serial)
                 activeXDGSurface.ackConfigure(serial: serial)
             case .publishCloseRequested:
                 onCloseRequested?()
@@ -859,6 +881,7 @@ extension TopLevelWindow {
                 failureSink.reportWindowFailure(.diagnostic(diagnostic))
             case .cancelFrameCallback:
                 pendingFrameRegistration = nil
+                surfaceRuntime.cancelFrameCallback()
             case .performSoftwarePresent:
                 throw ClientError.window(
                     id,
@@ -971,7 +994,7 @@ extension TopLevelWindow {
     package func removeOutputMembershipOnOwnerThread(_ outputID: OutputID) {
         connection.preconditionIsOwnerThread()
         guard !model.isClosed else { return }
-        guard outputMembership.remove(outputID) else { return }
+        guard surfaceRuntime.removeOutput(outputID) else { return }
 
         onOutputMembershipChanged?(outputIDsOnOwnerThread)
     }

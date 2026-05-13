@@ -38,18 +38,24 @@ package enum DamageCoordinateMode: Equatable, Sendable {
 }
 
 package struct SurfaceCommitPlan: Equatable, Sendable {
+    package let geometry: SurfaceGeometry
     package let bufferScale: Int32
+    package let viewportMode: ViewportCommitMode
     package let viewportDestination: PositiveLogicalSize?
+    package let damageMode: DamageCoordinateMode
     package let damage: SurfaceDamageExtent
 
     package init(
-        geometry: SurfaceGeometry,
+        geometry surfaceGeometry: SurfaceGeometry,
         bufferScale planBufferScale: Int32,
         viewportMode: ViewportCommitMode,
         damageMode: DamageCoordinateMode
     ) {
+        geometry = surfaceGeometry
         bufferScale = planBufferScale
-        viewportDestination = viewportMode.destination(for: geometry)
-        damage = damageMode.extent(for: geometry)
+        self.viewportMode = viewportMode
+        viewportDestination = viewportMode.destination(for: surfaceGeometry)
+        self.damageMode = damageMode
+        damage = damageMode.extent(for: surfaceGeometry)
     }
 }

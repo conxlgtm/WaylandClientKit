@@ -1,5 +1,5 @@
 package struct PopupEffectHandlers {
-    package var ackConfigure: (UInt32) -> Void
+    package var ackConfigure: (UInt32) throws -> Void
     package var publishDismissed: (PopupLifecycleEvent) -> Void
     package var publishClosed: (PopupLifecycleEvent) -> Void
     package var publishRedrawRequested: (PopupLifecycleEvent) -> Void
@@ -8,7 +8,7 @@ package struct PopupEffectHandlers {
     package var destroyRoleObjects: () throws -> Void
 
     package init(
-        ackConfigure configureAcknowledgement: @escaping (UInt32) -> Void,
+        ackConfigure configureAcknowledgement: @escaping (UInt32) throws -> Void,
         publishDismissed dismissedPublication: @escaping (PopupLifecycleEvent) -> Void,
         publishClosed closedPublication: @escaping (PopupLifecycleEvent) -> Void,
         publishRedrawRequested redrawPublication: @escaping (PopupLifecycleEvent) -> Void,
@@ -34,7 +34,7 @@ package func interpretPopupEffects(
     for effect in effects {
         switch effect {
         case .ackConfigure(let serial):
-            handlers.ackConfigure(serial)
+            try handlers.ackConfigure(serial)
         case .publishDismissed(let event):
             handlers.publishDismissed(event)
         case .publishClosed(let event):

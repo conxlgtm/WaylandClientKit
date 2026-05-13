@@ -86,6 +86,17 @@
       "sha256": "d568482ba84df6e531698b1f531810860995ca24d69495427fe43aee6017f52c",
       "stability": "unstable",
       "notes": "Optional extension for X-style primary selection transfer."
+    },
+    {
+      "name": "linux-dmabuf-unstable-v1",
+      "localPath": "protocols/upstream/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml",
+      "sha256": "0681c01199393662229b0d9f71a4bd502350ea8f782a7049fa30e392b50fb2c8",
+      "stability": "unstable",
+      "notes": "Optional foundation protocol for dmabuf-backed wl_buffer creation and default/per-surface feedback."
     }
   ]
 }

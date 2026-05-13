@@ -37,6 +37,31 @@ struct SmokeArgumentsTests {
     }
 
     @Test
+    func linuxDmabufRequirementIsRecordedInConfiguration() throws {
+        let command = try SmokeArguments.parse(["--require-linux-dmabuf"])
+
+        #expect(
+            command
+                == .run(
+                    SmokeConfiguration(
+                        requestedOptionalProtocols: [.linuxDmabuf]
+                    )
+                )
+        )
+    }
+
+    @Test
+    func linuxDmabufSkipMessageNamesExactInterface() {
+        let result = SmokeResult.skippedOptionalProtocol(.linuxDmabuf)
+
+        #expect(
+            result.description
+                == "Skipping linux-dmabuf live test: compositor did not advertise "
+                + "zwp_linux_dmabuf_v1."
+        )
+    }
+
+    @Test
     func doubleDashIsRejectedBecauseSmokeHasNoPositionals() {
         #expect(throws: SmokeArgumentError.unsupportedEndOfOptionsMarker) {
             try SmokeArguments.parse(["--"])

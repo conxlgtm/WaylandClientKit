@@ -29,6 +29,7 @@ protocol_symbols=(
     swl_registry_bind_wp_presentation
     swl_registry_bind_wp_fractional_scale_manager_v1
     swl_registry_bind_wl_seat
+    swl_registry_bind_zwp_linux_dmabuf_v1
     swl_registry_bind_zwp_primary_selection_device_manager_v1
     swl_registry_add_listener
     swl_callback_add_listener
@@ -81,6 +82,16 @@ protocol_symbols=(
     swl_wp_presentation_feedback_destroy
     swl_wp_presentation_add_listener
     swl_wp_presentation_feedback_add_listener
+    swl_zwp_linux_dmabuf_v1_destroy
+    swl_zwp_linux_dmabuf_v1_get_default_feedback
+    swl_zwp_linux_dmabuf_v1_get_surface_feedback
+    swl_zwp_linux_dmabuf_v1_create_params
+    swl_zwp_linux_buffer_params_v1_add
+    swl_zwp_linux_buffer_params_v1_create
+    swl_zwp_linux_buffer_params_v1_destroy
+    swl_zwp_linux_buffer_params_v1_add_listener
+    swl_zwp_linux_dmabuf_feedback_v1_destroy
+    swl_zwp_linux_dmabuf_feedback_v1_add_listener
     swl_wp_fractional_scale_manager_v1_get_fractional_scale
     swl_wp_fractional_scale_v1_destroy
     swl_wp_fractional_scale_manager_v1_destroy
