@@ -97,8 +97,7 @@ package final class GBMDevice {
         unsafe pointer = devicePointer
     }
 
-    @safe
-    package var backendName: String? {
+    @safe package var backendName: String? {
         guard let devicePointer = unsafe pointer else { return nil }
         guard let name = unsafe swl_gbm_device_get_backend_name(devicePointer) else {
             return nil

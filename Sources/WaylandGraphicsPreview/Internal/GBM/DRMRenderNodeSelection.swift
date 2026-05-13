@@ -38,9 +38,16 @@ package enum DRMRenderNodeSelector {
             )
         }
 
-        return unsafe pathBytes.withUnsafeBufferPointer { pathBuffer in
-            unsafe String(cString: pathBuffer.baseAddress!)
+        let path = unsafe pathBytes.withUnsafeBufferPointer { pathBuffer -> String? in
+            guard let baseAddress = pathBuffer.baseAddress else { return nil }
+
+            return unsafe String(cString: baseAddress)
         }
+        guard let path else {
+            throw GBMAllocationError.renderNodeLookupFailed(errno: EINVAL)
+        }
+
+        return path
     }
 
     package static func openRenderNode(

@@ -66,7 +66,7 @@ struct GBMFormatSelectionTests {
     func allowedModifiersFilterCandidates() throws {
         let policy = try GBMFormatSelectionPolicy(
             preferredFormats: [xrgb8888],
-            allowedModifiers: [30]
+            modifierPolicy: .only(30)
         )
         let feedback = feedbackSnapshot(
             tranches: [
@@ -135,7 +135,7 @@ struct GBMFormatSelectionTests {
     func missingModifierReportsRejectedModifiers() throws {
         let policy = try GBMFormatSelectionPolicy(
             preferredFormats: [xrgb8888],
-            allowedModifiers: [99]
+            modifierPolicy: .only(99)
         )
         let feedback = feedbackSnapshot(
             tranches: [
