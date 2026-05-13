@@ -13,7 +13,7 @@ package struct RawLinuxDmabufDevice: Equatable, Sendable {
     }
 }
 
-package struct RawLinuxDmabufFormatModifier: Equatable, Sendable {
+package struct RawLinuxDmabufFormatModifier: Equatable, Hashable, Sendable {
     package let format: UInt32
     package let modifier: UInt64
 
@@ -69,13 +69,23 @@ package enum RawLinuxDmabufFormatTable {
         }
 
         let byteCount = Int(rawByteCount)
-        guard byteCount > 0 else { return [] }
         guard byteCount.isMultiple(of: entryByteCount) else {
             throw RuntimeError.invalidDmabufFormatTableByteCount(
                 byteCount: byteCount,
                 entryByteCount: entryByteCount
             )
         }
+        var fileStatus = stat()
+        guard unsafe Glibc.fstat(fd, &fileStatus) == 0 else {
+            throw RuntimeError.systemError(errno: errno, operation: .mapDmabufFormatTable)
+        }
+        guard fileStatus.st_size >= 0, UInt64(fileStatus.st_size) >= UInt64(rawByteCount) else {
+            throw RuntimeError.invalidDmabufFormatTableByteCount(
+                byteCount: byteCount,
+                entryByteCount: entryByteCount
+            )
+        }
+        guard byteCount > 0 else { return [] }
 
         let failedMapping = unsafe MAP_FAILED
         guard
@@ -147,21 +157,48 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
         batch.formatTable = formats
     }
 
-    package mutating func setMainDevice(bytes: [UInt8]) {
+    package mutating func setMainDevice(
+        bytes: [UInt8],
+        scope feedbackScope: RawLinuxDmabufFeedbackScope
+    ) throws(RuntimeError) {
         prepareForEvent()
-        guard malformedFeedback == nil else { return }
+        if let malformedFeedback {
+            throw malformedFeedback
+        }
+        guard batch.mainDevice == nil else {
+            throw invalidateFeedback(
+                scope: feedbackScope,
+                event: "main_device",
+                field: "main_device"
+            )
+        }
 
         batch.mainDevice = RawLinuxDmabufDevice(bytes: bytes)
     }
 
-    package mutating func setCurrentTrancheTargetDevice(bytes: [UInt8]) {
+    package mutating func setCurrentTrancheTargetDevice(
+        bytes: [UInt8],
+        scope feedbackScope: RawLinuxDmabufFeedbackScope
+    ) throws(RuntimeError) {
         prepareForEvent()
-        guard malformedFeedback == nil else { return }
+        if let malformedFeedback {
+            throw malformedFeedback
+        }
+        guard batch.currentTranche.targetDevice == nil else {
+            throw invalidateFeedback(
+                scope: feedbackScope,
+                event: "tranche_target_device",
+                field: "tranche_target_device"
+            )
+        }
 
         batch.currentTranche.targetDevice = RawLinuxDmabufDevice(bytes: bytes)
     }
 
-    package mutating func appendCurrentTrancheFormats(indices: [UInt16])
+    package mutating func appendCurrentTrancheFormats(
+        indices: [UInt16],
+        scope feedbackScope: RawLinuxDmabufFeedbackScope
+    )
         throws(RuntimeError)
     {
         prepareForEvent()
@@ -169,8 +206,8 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
             throw malformedFeedback
         }
 
-        var selectedFormats: [RawLinuxDmabufFormatModifier] = []
-        for index in indices {
+        var trancheFormats = batch.currentTranche.formats
+        for (offset, index) in indices.enumerated() {
             let tableIndex = Int(index)
             guard tableIndex < batch.formatTable.count else {
                 throw RuntimeError.invalidDmabufFormatTableIndex(
@@ -179,15 +216,37 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
                 )
             }
 
-            selectedFormats.append(batch.formatTable[tableIndex])
+            let format = batch.formatTable[tableIndex]
+            guard !trancheFormats.contains(format) else {
+                throw invalidateFeedback(
+                    scope: feedbackScope,
+                    event: "tranche_formats",
+                    field: "formats",
+                    index: batch.currentTranche.formats.count + offset,
+                    rawValue: UInt64(index)
+                )
+            }
+            trancheFormats.append(format)
         }
 
-        batch.currentTranche.formats.append(contentsOf: selectedFormats)
+        batch.currentTranche.formats = trancheFormats
     }
 
-    package mutating func setCurrentTrancheFlags(_ rawFlags: UInt32) {
+    package mutating func setCurrentTrancheFlags(
+        _ rawFlags: UInt32,
+        scope feedbackScope: RawLinuxDmabufFeedbackScope
+    ) throws(RuntimeError) {
         prepareForEvent()
-        guard malformedFeedback == nil else { return }
+        if let malformedFeedback {
+            throw malformedFeedback
+        }
+        guard batch.currentTranche.flags == nil else {
+            throw invalidateFeedback(
+                scope: feedbackScope,
+                event: "tranche_flags",
+                field: "tranche_flags"
+            )
+        }
 
         batch.currentTranche.flags = RawLinuxDmabufTrancheFlags(rawValue: rawFlags)
     }
@@ -219,6 +278,19 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
                 scope: feedbackScope,
                 event: "tranche_done",
                 field: "tranche_formats"
+            )
+        }
+        if let duplicate = duplicateFormatInExistingTranche(
+            targetDevice: targetDevice,
+            flags: flags,
+            formats: batch.currentTranche.formats
+        ) {
+            throw invalidateFeedback(
+                scope: feedbackScope,
+                event: "tranche_done",
+                field: "tranche_formats",
+                index: duplicate.index,
+                rawValue: duplicate.rawValue
             )
         }
 
@@ -312,5 +384,23 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
         batch = FeedbackBatch()
         malformedFeedback = nil
         startsFreshBatchOnNextEvent = false
+    }
+}
+
+extension RawLinuxDmabufFeedbackState {
+    private func duplicateFormatInExistingTranche(
+        targetDevice: RawLinuxDmabufDevice,
+        flags: RawLinuxDmabufTrancheFlags,
+        formats: [RawLinuxDmabufFormatModifier]
+    ) -> (index: Int, rawValue: UInt64)? {
+        for tranche in batch.tranches
+        where tranche.targetDevice == targetDevice && tranche.flags == flags {
+            for (index, format) in formats.enumerated()
+            where tranche.formats.contains(format) {
+                return (index, UInt64(format.format))
+            }
+        }
+
+        return nil
     }
 }
