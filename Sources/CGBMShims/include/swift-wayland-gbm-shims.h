@@ -40,6 +40,14 @@ uint32_t swl_gbm_bo_use_rendering(void);
 uint32_t swl_gbm_bo_use_write(void);
 uint32_t swl_gbm_bo_use_linear(void);
 
+uint32_t swl_drm_device_id_byte_count(void);
+uint32_t swl_drm_render_node_path_max(void);
+int32_t swl_drm_render_node_path_from_device_bytes(
+    const uint8_t *device_id_bytes,
+    uint32_t byte_count,
+    char *out_path,
+    uint32_t out_path_count);
+
 struct gbm_device *swl_gbm_create_device(int32_t fd);
 void swl_gbm_device_destroy(struct gbm_device *device);
 const char *swl_gbm_device_get_backend_name(struct gbm_device *device);

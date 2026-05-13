@@ -1,7 +1,11 @@
 #include <errno.h>
 #include <gbm.h>
 #include <libdrm/drm_fourcc.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
 #include <unistd.h>
+#include <xf86drm.h>
 
 #include "swift-wayland-gbm-shims.h"
 
@@ -59,6 +63,76 @@ uint32_t swl_gbm_bo_use_write(void)
 uint32_t swl_gbm_bo_use_linear(void)
 {
     return GBM_BO_USE_LINEAR;
+}
+
+uint32_t swl_drm_device_id_byte_count(void)
+{
+    return (uint32_t) sizeof(dev_t);
+}
+
+uint32_t swl_drm_render_node_path_max(void)
+{
+    return 256;
+}
+
+int32_t swl_drm_render_node_path_from_device_bytes(
+    const uint8_t *device_id_bytes,
+    uint32_t byte_count,
+    char *out_path,
+    uint32_t out_path_count)
+{
+    if (device_id_bytes == NULL || out_path == NULL || out_path_count == 0)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (byte_count != sizeof(dev_t))
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    dev_t device_id = 0;
+    memcpy(&device_id, device_id_bytes, sizeof(device_id));
+
+    drmDevicePtr device = NULL;
+    int result = drmGetDeviceFromDevId(device_id, 0, &device);
+    if (result != 0)
+    {
+        errno = result < 0 ? -result : result;
+        return -1;
+    }
+
+    if (device == NULL)
+    {
+        errno = ENODEV;
+        return -1;
+    }
+
+    if ((device->available_nodes & (1 << DRM_NODE_RENDER)) == 0 ||
+        device->nodes == NULL ||
+        device->nodes[DRM_NODE_RENDER] == NULL)
+    {
+        drmFreeDevice(&device);
+        errno = ENODEV;
+        return -1;
+    }
+
+    int written = snprintf(
+        out_path,
+        out_path_count,
+        "%s",
+        device->nodes[DRM_NODE_RENDER]);
+    drmFreeDevice(&device);
+
+    if (written < 0 || (uint32_t) written >= out_path_count)
+    {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+
+    return 0;
 }
 
 struct gbm_device *swl_gbm_create_device(int32_t fd)

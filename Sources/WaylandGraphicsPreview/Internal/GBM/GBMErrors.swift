@@ -1,5 +1,8 @@
 package enum GBMAllocationError: Error, Equatable, Sendable, CustomStringConvertible {
     case invalidRenderNodeFileDescriptor(Int32)
+    case invalidDeviceIDByteCount(expected: Int, actual: Int)
+    case renderNodeLookupFailed(errno: Int32)
+    case openRenderNodeFailed(path: String, errno: Int32)
     case deviceCreationFailed(errno: Int32)
     case deviceDestroyed
     case invalidBufferDimensions(width: UInt32, height: UInt32)
@@ -18,6 +21,12 @@ package enum GBMAllocationError: Error, Equatable, Sendable, CustomStringConvert
         switch self {
         case .invalidRenderNodeFileDescriptor(let descriptor):
             "invalid GBM render node file descriptor \(descriptor)"
+        case .invalidDeviceIDByteCount(let expected, let actual):
+            "invalid DRM device ID byte count \(actual), expected \(expected)"
+        case .renderNodeLookupFailed(let errorNumber):
+            "DRM render node lookup failed with errno \(errorNumber)"
+        case .openRenderNodeFailed(let path, let errorNumber):
+            "open DRM render node \(path) failed with errno \(errorNumber)"
         case .deviceCreationFailed(let errorNumber):
             "GBM device creation failed with errno \(errorNumber)"
         case .deviceDestroyed:
