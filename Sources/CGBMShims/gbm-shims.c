@@ -318,19 +318,6 @@ int32_t swl_gbm_bo_export_dmabuf(
     return 0;
 }
 
-int32_t swl_gbm_bo_export_plane_fd(
-    const struct swl_gbm_bo_export *exported_buffer,
-    uint32_t plane_index)
-{
-    if (exported_buffer == NULL || plane_index >= exported_buffer->plane_count)
-    {
-        errno = EINVAL;
-        return -1;
-    }
-
-    return exported_buffer->planes[plane_index].fd;
-}
-
 int32_t swl_gbm_bo_export_take_plane_fd(
     struct swl_gbm_bo_export *exported_buffer,
     uint32_t plane_index)
@@ -342,6 +329,12 @@ int32_t swl_gbm_bo_export_take_plane_fd(
     }
 
     int fd = exported_buffer->planes[plane_index].fd;
+    if (fd < 0)
+    {
+        errno = EBADF;
+        return -1;
+    }
+
     exported_buffer->planes[plane_index].fd = -1;
     return fd;
 }
