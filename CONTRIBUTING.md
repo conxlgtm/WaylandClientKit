@@ -20,6 +20,8 @@ Core build requirements:
 - Swift 6.3.1 or newer
 - `clang`
 - `pkg-config`
+- `gbm`
+- `libdrm`
 - `wayland-client`
 - `wayland-cursor`
 - `xkbcommon`

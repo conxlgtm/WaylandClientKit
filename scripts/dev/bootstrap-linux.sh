@@ -163,6 +163,8 @@ set_packages_for_pm() {
             PACKAGES=(
                 clang
                 git
+                libdrm-dev
+                libgbm-dev
                 libwayland-dev
                 libxkbcommon-dev
                 make
@@ -175,6 +177,8 @@ set_packages_for_pm() {
             PACKAGES=(
                 clang
                 git
+                libdrm-devel
+                mesa-libgbm-devel
                 wayland-devel
                 wayland-protocols-devel
                 libxkbcommon-devel
@@ -187,6 +191,8 @@ set_packages_for_pm() {
             PACKAGES=(
                 clang
                 git
+                libdrm
+                mesa
                 wayland
                 wayland-protocols
                 libxkbcommon
@@ -199,6 +205,8 @@ set_packages_for_pm() {
             PACKAGES=(
                 clang
                 git
+                libdrm-devel
+                Mesa-libgbm-devel
                 wayland-devel
                 wayland-protocols-devel
                 libxkbcommon-devel
@@ -211,6 +219,8 @@ set_packages_for_pm() {
             PACKAGES=(
                 clang
                 git
+                libdrm-dev
+                mesa-gbm-dev
                 wayland-dev
                 wayland-protocols
                 libxkbcommon-dev
@@ -223,6 +233,8 @@ set_packages_for_pm() {
             PACKAGES=(
                 sys-devel/clang
                 dev-vcs/git
+                x11-libs/libdrm
+                media-libs/mesa
                 dev-libs/wayland
                 dev-libs/wayland-protocols
                 dev-util/wayland-scanner
@@ -236,6 +248,8 @@ set_packages_for_pm() {
             PACKAGES=(
                 nixpkgs#clang
                 nixpkgs#git
+                nixpkgs#libdrm
+                nixpkgs#mesa
                 nixpkgs#wayland
                 nixpkgs#wayland-protocols
                 nixpkgs#libxkbcommon
@@ -439,7 +453,7 @@ check_pkg_config() {
     local missing=()
     local module
 
-    for module in wayland-client wayland-cursor xkbcommon; do
+    for module in gbm libdrm wayland-client wayland-cursor xkbcommon; do
         if "$PKG_CONFIG" --exists "$module"; then
             ok "$module $("$PKG_CONFIG" --modversion "$module")"
         else

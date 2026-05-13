@@ -21,6 +21,8 @@ jobs:
             clang \
             curl \
             git \
+            libdrm-dev \
+            libgbm-dev \
             libwayland-dev \
             libxkbcommon-dev \
             make \
@@ -35,6 +37,8 @@ jobs:
       - name: Tool versions
         run: |
           swift --version
+          pkg-config --modversion gbm
+          pkg-config --modversion libdrm
           pkg-config --modversion wayland-client
           pkg-config --modversion xkbcommon
           command -v wayland-scanner
@@ -101,6 +105,8 @@ jobs:
           apt-get update
           apt-get install -y \
             git \
+            libdrm-dev \
+            libgbm-dev \
             libwayland-dev \
             pkg-config \
             wayland-protocols
@@ -119,6 +125,8 @@ jobs:
           apt-get install -y \
             clang \
             git \
+            libdrm-dev \
+            libgbm-dev \
             libwayland-dev \
             libxkbcommon-dev \
             pkg-config \
@@ -142,6 +150,8 @@ jobs:
             clang \
             coreutils \
             git \
+            libdrm-dev \
+            libgbm-dev \
             libwayland-dev \
             libxkbcommon-dev \
             make \
