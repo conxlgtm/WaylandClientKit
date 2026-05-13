@@ -59,6 +59,14 @@ let package = Package(
             ]
         ),
         .target(
+            name: "CGBMShims",
+            dependencies: ["CGBMSystem", "CDRMSystem"],
+            publicHeadersPath: "include",
+            cSettings: [
+                .define("_GNU_SOURCE", .when(platforms: [.linux]))
+            ]
+        ),
+        .target(
             name: "WaylandCursor",
             dependencies: ["WaylandRaw", "CWaylandCursorShims"],
             swiftSettings: strictMemorySafetySwiftSettings
@@ -106,7 +114,7 @@ let package = Package(
         ),
         .target(
             name: "WaylandGraphicsPreview",
-            dependencies: ["WaylandRaw"],
+            dependencies: ["WaylandRaw", "CGBMShims"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
@@ -160,7 +168,7 @@ let package = Package(
         ),
         .testTarget(
             name: "WaylandGraphicsPreviewTests",
-            dependencies: ["WaylandGraphicsPreview", "WaylandRaw"],
+            dependencies: ["WaylandGraphicsPreview", "WaylandRaw", "CGBMShims"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(

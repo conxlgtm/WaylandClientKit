@@ -1,0 +1,246 @@
+#include <errno.h>
+#include <gbm.h>
+#include <libdrm/drm_fourcc.h>
+#include <unistd.h>
+
+#include "swift-wayland-gbm-shims.h"
+
+static void swl_gbm_bo_export_init(struct swl_gbm_bo_export *out_export)
+{
+    out_export->width = 0;
+    out_export->height = 0;
+    out_export->format = 0;
+    out_export->modifier = DRM_FORMAT_MOD_INVALID;
+    out_export->plane_count = 0;
+
+    for (uint32_t index = 0; index < SWL_GBM_MAX_PLANES; index++)
+    {
+        out_export->planes[index].fd = -1;
+        out_export->planes[index].offset = 0;
+        out_export->planes[index].stride = 0;
+    }
+}
+
+uint32_t swl_drm_format_xrgb8888(void)
+{
+    return DRM_FORMAT_XRGB8888;
+}
+
+uint32_t swl_drm_format_argb8888(void)
+{
+    return DRM_FORMAT_ARGB8888;
+}
+
+uint64_t swl_drm_format_mod_linear(void)
+{
+    return DRM_FORMAT_MOD_LINEAR;
+}
+
+uint64_t swl_drm_format_mod_invalid(void)
+{
+    return DRM_FORMAT_MOD_INVALID;
+}
+
+uint32_t swl_gbm_bo_use_scanout(void)
+{
+    return GBM_BO_USE_SCANOUT;
+}
+
+uint32_t swl_gbm_bo_use_rendering(void)
+{
+    return GBM_BO_USE_RENDERING;
+}
+
+uint32_t swl_gbm_bo_use_write(void)
+{
+    return GBM_BO_USE_WRITE;
+}
+
+uint32_t swl_gbm_bo_use_linear(void)
+{
+    return GBM_BO_USE_LINEAR;
+}
+
+struct gbm_device *swl_gbm_create_device(int32_t fd)
+{
+    if (fd < 0)
+    {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    return gbm_create_device(fd);
+}
+
+void swl_gbm_device_destroy(struct gbm_device *device)
+{
+    if (device != NULL)
+    {
+        gbm_device_destroy(device);
+    }
+}
+
+const char *swl_gbm_device_get_backend_name(struct gbm_device *device)
+{
+    if (device == NULL)
+    {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    return gbm_device_get_backend_name(device);
+}
+
+int32_t swl_gbm_device_is_format_supported(
+    struct gbm_device *device,
+    uint32_t format,
+    uint32_t flags)
+{
+    if (device == NULL)
+    {
+        errno = EINVAL;
+        return 0;
+    }
+
+    return gbm_device_is_format_supported(device, format, flags);
+}
+
+int32_t swl_gbm_device_get_format_modifier_plane_count(
+    struct gbm_device *device,
+    uint32_t format,
+    uint64_t modifier)
+{
+    if (device == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    return gbm_device_get_format_modifier_plane_count(device, format, modifier);
+}
+
+struct gbm_bo *swl_gbm_bo_create(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    uint32_t flags)
+{
+    if (device == NULL || width == 0 || height == 0)
+    {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    return gbm_bo_create(device, width, height, format, flags);
+}
+
+struct gbm_bo *swl_gbm_bo_create_with_modifiers2(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    const uint64_t *modifiers,
+    uint32_t count,
+    uint32_t flags)
+{
+    if (device == NULL || width == 0 || height == 0)
+    {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (modifiers == NULL && count > 0)
+    {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    return gbm_bo_create_with_modifiers2(
+        device,
+        width,
+        height,
+        format,
+        modifiers,
+        count,
+        flags);
+}
+
+void swl_gbm_bo_destroy(struct gbm_bo *buffer)
+{
+    if (buffer != NULL)
+    {
+        gbm_bo_destroy(buffer);
+    }
+}
+
+int32_t swl_gbm_bo_export_dmabuf(
+    struct gbm_bo *buffer,
+    struct swl_gbm_bo_export *out_export)
+{
+    if (out_export == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    swl_gbm_bo_export_init(out_export);
+
+    if (buffer == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int plane_count = gbm_bo_get_plane_count(buffer);
+    if (plane_count <= 0 || plane_count > SWL_GBM_MAX_PLANES)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    out_export->width = gbm_bo_get_width(buffer);
+    out_export->height = gbm_bo_get_height(buffer);
+    out_export->format = gbm_bo_get_format(buffer);
+    out_export->modifier = gbm_bo_get_modifier(buffer);
+    out_export->plane_count = (uint32_t) plane_count;
+
+    for (int plane = 0; plane < plane_count; plane++)
+    {
+        int fd = gbm_bo_get_fd_for_plane(buffer, plane);
+        if (fd < 0)
+        {
+            int saved_errno = errno;
+            swl_gbm_bo_export_close(out_export);
+            errno = saved_errno > 0 ? saved_errno : EIO;
+            return -1;
+        }
+
+        out_export->planes[plane].fd = fd;
+        out_export->planes[plane].offset = gbm_bo_get_offset(buffer, plane);
+        out_export->planes[plane].stride =
+            gbm_bo_get_stride_for_plane(buffer, plane);
+    }
+
+    return 0;
+}
+
+void swl_gbm_bo_export_close(struct swl_gbm_bo_export *exported_buffer)
+{
+    if (exported_buffer == NULL)
+    {
+        return;
+    }
+
+    for (uint32_t index = 0; index < SWL_GBM_MAX_PLANES; index++)
+    {
+        int fd = exported_buffer->planes[index].fd;
+        if (fd >= 0)
+        {
+            close(fd);
+            exported_buffer->planes[index].fd = -1;
+        }
+    }
+
+    exported_buffer->plane_count = 0;
+}
