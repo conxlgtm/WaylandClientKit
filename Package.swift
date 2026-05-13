@@ -105,6 +105,11 @@ let package = Package(
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
+            name: "WaylandGraphicsPreview",
+            dependencies: ["WaylandRaw"],
+            swiftSettings: strictMemorySafetySwiftSettings
+        ),
+        .target(
             name: "WaylandSmokeSupport",
             dependencies: ["WaylandClient"],
             swiftSettings: strictMemorySafetySwiftSettings
@@ -151,6 +156,11 @@ let package = Package(
             resources: [
                 .copy("Fixtures")
             ],
+            swiftSettings: strictMemorySafetySwiftSettings
+        ),
+        .testTarget(
+            name: "WaylandGraphicsPreviewTests",
+            dependencies: ["WaylandGraphicsPreview", "WaylandRaw"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(
