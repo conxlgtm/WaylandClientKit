@@ -57,6 +57,7 @@ extension PopupRoleSurface {
             return nil
         }
 
+        recordSurfaceConfigureReceived(serial: sequence.serial)
         try interpretPopupEffects(model.reduce(.configureReceived(sequence)))
         return sequence
     }
@@ -113,20 +114,6 @@ extension PopupRoleSurface {
         return try interpretPresentationEffects(effects, draw)
     }
 
-    package func applySurfaceCommitPlan(_ plan: SurfaceCommitPlan) {
-        surface.setBufferScale(plan.bufferScale)
-        scaleInstallation.applyViewportDestinationIfNeeded(plan.viewportDestination)
-    }
-
-    package func applySurfaceDamage(_ damage: SurfaceDamageExtent) {
-        switch damage {
-        case .buffer(let width, let height):
-            surface.damageFullBuffer(width: width, height: height)
-        case .logical(let width, let height):
-            surface.damageFullLogical(width: width, height: height)
-        }
-    }
-
     package func failPresentationIfStillActive(
         generation: UInt64,
         error: PresentationError
@@ -168,6 +155,7 @@ extension PopupRoleSurface {
 
     package func resetTransientState() {
         do {
+            resetTransientSurfaceTransactionState()
             _ = try model.reduce(.transientStateReset)
         } catch {
             reportCallbackFailure(operation: .transientStateReset, error: error)
@@ -175,6 +163,11 @@ extension PopupRoleSurface {
     }
 
     package func handleFrameDone() {
+        do {
+            try completeSurfaceFrameCallback()
+        } catch {
+            reportCallbackFailure(operation: .frameDone, error: error)
+        }
         pendingFrameRegistration = nil
         dropReleasedRetiredPools()
 

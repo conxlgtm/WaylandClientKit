@@ -56,7 +56,8 @@ struct WaylandDisplayPublicAPISurfaceTests {
             xdgOutput: .available(version: 3),
             viewporter: .available(version: 1),
             presentationTime: .unavailable,
-            fractionalScale: .unavailable
+            fractionalScale: .unavailable,
+            linuxDmabuf: .available(version: 5)
         )
 
         #expect(availability.isAvailable)
@@ -67,6 +68,7 @@ struct WaylandDisplayPublicAPISurfaceTests {
         #expect(capabilities.primarySelection == .unavailable)
         #expect(capabilities.xdgOutput == .available(version: 3))
         #expect(capabilities.presentationTime == .unavailable)
+        #expect(capabilities.linuxDmabuf == .available(version: 5))
 
         func useCapabilitiesAPI(display: WaylandDisplay) async throws -> WaylandCapabilities {
             try await display.capabilities()

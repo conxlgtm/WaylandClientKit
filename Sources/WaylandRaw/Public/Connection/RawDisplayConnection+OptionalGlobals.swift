@@ -12,9 +12,8 @@ extension RawDisplayConnection {
                 do {
                     let presentation = try bindPresentationIfPresent(registry: reg)
                     do {
-                        let fractionalScaleManager = try bindFractionalScaleManagerIfPresent(
-                            registry: reg
-                        )
+                        let fractionalScaleManager =
+                            try bindFractionalScaleManagerIfPresent(registry: reg)
                         do {
                             let dataDeviceManager =
                                 try bindDataDeviceManagerIfPresent(registry: reg)
@@ -23,16 +22,23 @@ extension RawDisplayConnection {
                                     try bindPrimarySelectionDeviceManagerIfPresent(
                                         registry: reg
                                     )
-                                return OptionalGlobals(
-                                    xdgDecorationManager: decorationManager,
-                                    xdgOutputManager: xdgOutputManager,
-                                    viewporter: viewporter,
-                                    presentation: presentation,
-                                    fractionalScaleManager: fractionalScaleManager,
-                                    dataDeviceManager: dataDeviceManager,
-                                    primarySelectionDeviceManager:
-                                        primarySelectionDeviceManager
-                                )
+                                do {
+                                    let linuxDmabuf = try bindLinuxDmabufIfPresent(registry: reg)
+                                    return OptionalGlobals(
+                                        xdgDecorationManager: decorationManager,
+                                        xdgOutputManager: xdgOutputManager,
+                                        viewporter: viewporter,
+                                        presentation: presentation,
+                                        fractionalScaleManager: fractionalScaleManager,
+                                        dataDeviceManager: dataDeviceManager,
+                                        primarySelectionDeviceManager:
+                                            primarySelectionDeviceManager,
+                                        linuxDmabuf: linuxDmabuf
+                                    )
+                                } catch {
+                                    primarySelectionDeviceManager.destroy()
+                                    throw error
+                                }
                             } catch {
                                 dataDeviceManager.destroy()
                                 throw error
@@ -318,5 +324,35 @@ extension RawDisplayConnection {
             proxyAdoption: proxyAdoption
         )
         return .bound(wrappedManager)
+    }
+
+    @safe
+    private func bindLinuxDmabufIfPresent(
+        registry reg: OpaquePointer
+    ) throws -> OptionalLinuxDmabuf {
+        guard let global = optionalGlobal(named: "zwp_linux_dmabuf_v1") else {
+            return .missing
+        }
+
+        let version = global.negotiatedVersion(
+            supportedByClient: SupportedVersions.zwpLinuxDmabufV1
+        )
+
+        guard
+            let linuxDmabuf = unsafe swl_registry_bind_zwp_linux_dmabuf_v1(
+                reg,
+                global.name,
+                version.value
+            )
+        else {
+            throw RuntimeError.bindFailed("zwp_linux_dmabuf_v1")
+        }
+
+        let wrappedLinuxDmabuf = try RawLinuxDmabuf(
+            pointer: linuxDmabuf,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
+        return .bound(wrappedLinuxDmabuf)
     }
 }

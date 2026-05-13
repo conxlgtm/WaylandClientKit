@@ -28,6 +28,9 @@ struct wp_presentation;
 struct wp_presentation_feedback;
 struct wp_fractional_scale_manager_v1;
 struct wp_fractional_scale_v1;
+struct zwp_linux_dmabuf_v1;
+struct zwp_linux_buffer_params_v1;
+struct zwp_linux_dmabuf_feedback_v1;
 struct wl_data_device_manager;
 struct wl_data_device;
 struct wl_data_offer;
@@ -80,6 +83,9 @@ struct wl_data_device_manager *swl_registry_bind_wl_data_device_manager(
 
 struct zwp_primary_selection_device_manager_v1 *
 swl_registry_bind_zwp_primary_selection_device_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct zwp_linux_dmabuf_v1 *swl_registry_bind_zwp_linux_dmabuf_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 /* ------------------------------------------------------------------ */
@@ -282,6 +288,35 @@ struct wp_presentation_feedback *swl_wp_presentation_feedback(
     struct wl_surface *surface);
 
 /* ------------------------------------------------------------------ */
+/*  Linux dmabuf request wrappers                                     */
+/* ------------------------------------------------------------------ */
+
+struct zwp_linux_dmabuf_feedback_v1 *
+swl_zwp_linux_dmabuf_v1_get_default_feedback(
+    struct zwp_linux_dmabuf_v1 *linux_dmabuf);
+struct zwp_linux_dmabuf_feedback_v1 *
+swl_zwp_linux_dmabuf_v1_get_surface_feedback(
+    struct zwp_linux_dmabuf_v1 *linux_dmabuf,
+    struct wl_surface *surface);
+struct zwp_linux_buffer_params_v1 *
+swl_zwp_linux_dmabuf_v1_create_params(
+    struct zwp_linux_dmabuf_v1 *linux_dmabuf);
+void swl_zwp_linux_buffer_params_v1_add(
+    struct zwp_linux_buffer_params_v1 *params,
+    int32_t fd,
+    uint32_t plane_idx,
+    uint32_t offset,
+    uint32_t stride,
+    uint32_t modifier_hi,
+    uint32_t modifier_lo);
+void swl_zwp_linux_buffer_params_v1_create(
+    struct zwp_linux_buffer_params_v1 *params,
+    int32_t width,
+    int32_t height,
+    uint32_t format,
+    uint32_t flags);
+
+/* ------------------------------------------------------------------ */
 /*  Destroy / release wrappers                                        */
 /* ------------------------------------------------------------------ */
 
@@ -332,6 +367,12 @@ void swl_wp_fractional_scale_manager_v1_destroy(
 void swl_wp_presentation_destroy(struct wp_presentation *presentation);
 void swl_wp_presentation_feedback_destroy(
     struct wp_presentation_feedback *feedback);
+void swl_zwp_linux_dmabuf_v1_destroy(
+    struct zwp_linux_dmabuf_v1 *linux_dmabuf);
+void swl_zwp_linux_buffer_params_v1_destroy(
+    struct zwp_linux_buffer_params_v1 *params);
+void swl_zwp_linux_dmabuf_feedback_v1_destroy(
+    struct zwp_linux_dmabuf_feedback_v1 *feedback);
 
 /* ------------------------------------------------------------------ */
 /*  Display wrappers                                                  */
@@ -541,6 +582,40 @@ typedef void (*swl_wp_presentation_feedback_presented_fn)(
     uint32_t flags);
 typedef void (*swl_wp_presentation_feedback_discarded_fn)(
     void *data, struct wp_presentation_feedback *feedback);
+
+/* Linux dmabuf */
+typedef void (*swl_zwp_linux_dmabuf_feedback_done_fn)(
+    void *data, struct zwp_linux_dmabuf_feedback_v1 *feedback);
+typedef void (*swl_zwp_linux_dmabuf_feedback_format_table_fn)(
+    void *data,
+    struct zwp_linux_dmabuf_feedback_v1 *feedback,
+    int32_t fd,
+    uint32_t size);
+typedef void (*swl_zwp_linux_dmabuf_feedback_main_device_fn)(
+    void *data,
+    struct zwp_linux_dmabuf_feedback_v1 *feedback,
+    struct wl_array *device);
+typedef void (*swl_zwp_linux_dmabuf_feedback_tranche_done_fn)(
+    void *data, struct zwp_linux_dmabuf_feedback_v1 *feedback);
+typedef void (*swl_zwp_linux_dmabuf_feedback_tranche_target_device_fn)(
+    void *data,
+    struct zwp_linux_dmabuf_feedback_v1 *feedback,
+    struct wl_array *device);
+typedef void (*swl_zwp_linux_dmabuf_feedback_tranche_formats_fn)(
+    void *data,
+    struct zwp_linux_dmabuf_feedback_v1 *feedback,
+    struct wl_array *indices);
+typedef void (*swl_zwp_linux_dmabuf_feedback_tranche_flags_fn)(
+    void *data,
+    struct zwp_linux_dmabuf_feedback_v1 *feedback,
+    uint32_t flags);
+typedef void (*swl_zwp_linux_buffer_params_created_fn)(
+    void *data,
+    struct zwp_linux_buffer_params_v1 *params,
+    struct wl_buffer *buffer);
+typedef void (*swl_zwp_linux_buffer_params_failed_fn)(
+    void *data,
+    struct zwp_linux_buffer_params_v1 *params);
 
 /* Seat */
 typedef void (*swl_seat_capabilities_fn)(
@@ -752,6 +827,23 @@ struct swl_wp_presentation_feedback_listener_callbacks {
     void                                       *data;
 };
 
+struct swl_zwp_linux_dmabuf_feedback_listener_callbacks {
+    swl_zwp_linux_dmabuf_feedback_done_fn                  done;
+    swl_zwp_linux_dmabuf_feedback_format_table_fn          format_table;
+    swl_zwp_linux_dmabuf_feedback_main_device_fn           main_device;
+    swl_zwp_linux_dmabuf_feedback_tranche_done_fn          tranche_done;
+    swl_zwp_linux_dmabuf_feedback_tranche_target_device_fn tranche_target_device;
+    swl_zwp_linux_dmabuf_feedback_tranche_formats_fn       tranche_formats;
+    swl_zwp_linux_dmabuf_feedback_tranche_flags_fn         tranche_flags;
+    void                                                  *data;
+};
+
+struct swl_zwp_linux_buffer_params_listener_callbacks {
+    swl_zwp_linux_buffer_params_created_fn created;
+    swl_zwp_linux_buffer_params_failed_fn  failed;
+    void                                  *data;
+};
+
 struct swl_seat_listener_callbacks {
     swl_seat_capabilities_fn capabilities;
     swl_seat_name_fn         name;
@@ -877,6 +969,14 @@ int swl_wp_presentation_add_listener(
 int swl_wp_presentation_feedback_add_listener(
     struct wp_presentation_feedback *feedback,
     const struct swl_wp_presentation_feedback_listener_callbacks *callbacks);
+
+int swl_zwp_linux_dmabuf_feedback_v1_add_listener(
+    struct zwp_linux_dmabuf_feedback_v1 *feedback,
+    const struct swl_zwp_linux_dmabuf_feedback_listener_callbacks *callbacks);
+
+int swl_zwp_linux_buffer_params_v1_add_listener(
+    struct zwp_linux_buffer_params_v1 *params,
+    const struct swl_zwp_linux_buffer_params_listener_callbacks *callbacks);
 
 int swl_seat_add_listener(
     struct wl_seat *seat,
@@ -1092,6 +1192,32 @@ struct swl_test_data_request_record {
     uint32_t                        actions;
     uint32_t                        preferred_action;
     int32_t                         fd;
+};
+
+enum swl_test_dmabuf_request_kind {
+    SWL_TEST_DMABUF_REQUEST_NONE = 0,
+    SWL_TEST_DMABUF_GET_DEFAULT_FEEDBACK = 1,
+    SWL_TEST_DMABUF_GET_SURFACE_FEEDBACK = 2,
+    SWL_TEST_DMABUF_CREATE_PARAMS = 3,
+    SWL_TEST_DMABUF_BUFFER_PARAMS_ADD = 4,
+    SWL_TEST_DMABUF_BUFFER_PARAMS_CREATE = 5,
+};
+
+struct swl_test_dmabuf_request_record {
+    int32_t                           call_count;
+    enum swl_test_dmabuf_request_kind kind;
+    void                             *object;
+    void                             *surface;
+    int32_t                           fd;
+    uint32_t                          plane_idx;
+    uint32_t                          offset;
+    uint32_t                          stride;
+    uint32_t                          modifier_hi;
+    uint32_t                          modifier_lo;
+    int32_t                           width;
+    int32_t                           height;
+    uint32_t                          format;
+    uint32_t                          flags;
 };
 
 enum swl_test_data_destroy_kind {
@@ -1314,6 +1440,9 @@ void swl_test_data_request_recording_begin(void);
 void swl_test_data_request_recording_end(void);
 struct swl_test_data_request_record swl_test_data_request_record(void);
 struct swl_test_data_destroy_record swl_test_data_destroy_record(void);
+void swl_test_dmabuf_request_recording_begin(void);
+void swl_test_dmabuf_request_recording_end(void);
+struct swl_test_dmabuf_request_record swl_test_dmabuf_request_record(void);
 
 void swl_test_primary_selection_offer_listener_emit_offer(
     void *data,

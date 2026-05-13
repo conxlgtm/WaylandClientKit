@@ -162,8 +162,11 @@ struct SurfaceGeometryTests {
         )
 
         #expect(geometry.bufferSize == (try PositivePixelSize(width: 160, height: 120)))
+        #expect(plan.geometry == geometry)
         #expect(plan.bufferScale == 2)
+        #expect(plan.viewportMode == .omitDestination)
         #expect(plan.viewportDestination == nil)
+        #expect(plan.damageMode == .buffer)
         #expect(plan.damage == .buffer(width: 160, height: 120))
     }
 
@@ -180,8 +183,11 @@ struct SurfaceGeometryTests {
         )
 
         #expect(geometry.bufferSize == (try PositivePixelSize(width: 152, height: 77)))
+        #expect(plan.geometry == geometry)
         #expect(plan.bufferScale == 1)
+        #expect(plan.viewportMode == .useLogicalSizeAsDestination)
         #expect(plan.viewportDestination == logicalSize)
+        #expect(plan.damageMode == .buffer)
         #expect(plan.damage == .buffer(width: 152, height: 77))
     }
 
@@ -199,6 +205,8 @@ struct SurfaceGeometryTests {
             damageMode: .logical
         )
 
+        #expect(plan.geometry == geometry)
+        #expect(plan.damageMode == .logical)
         #expect(plan.damage == .logical(width: 80, height: 60))
     }
 

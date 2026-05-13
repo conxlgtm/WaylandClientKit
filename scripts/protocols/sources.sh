@@ -142,6 +142,22 @@ protocol_sources_primary_selection_candidates() {
         /usr/local/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml
 }
 
+protocol_sources_linux_dmabuf_candidates() {
+    local protocols_dir
+
+    if [[ -n "${LINUX_DMABUF_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$LINUX_DMABUF_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml}" \
+        /usr/share/wayland-protocols/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml \
+        /usr/local/share/wayland-protocols/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml
+}
+
 protocol_sources_first_existing_file() {
     local path
 
