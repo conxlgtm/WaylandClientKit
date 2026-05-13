@@ -42,6 +42,14 @@ let package = Package(
             name: "CWaylandCursorSystem",
             pkgConfig: "wayland-cursor"
         ),
+        .systemLibrary(
+            name: "CDRMSystem",
+            pkgConfig: "libdrm"
+        ),
+        .systemLibrary(
+            name: "CGBMSystem",
+            pkgConfig: "gbm"
+        ),
         .target(
             name: "CWaylandCursorShims",
             dependencies: ["CWaylandCursorSystem"],
@@ -119,7 +127,7 @@ let package = Package(
         ),
         .testTarget(
             name: "WaylandRawTests",
-            dependencies: ["WaylandRaw", "WaylandTestSupport"],
+            dependencies: ["WaylandRaw", "WaylandTestSupport", "CDRMSystem", "CGBMSystem"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(

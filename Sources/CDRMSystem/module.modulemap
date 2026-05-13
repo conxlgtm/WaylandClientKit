@@ -1,0 +1,6 @@
+module CDRMSystem [system] {
+    header "include/drm-umbrella.h"
+    link "drm"
+    export *
+}
+
