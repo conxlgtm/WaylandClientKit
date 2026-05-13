@@ -2,24 +2,36 @@ import WaylandRaw
 
 package struct GBMFormatSelectionPolicy: Equatable, Sendable {
     package let preferredFormats: [UInt32]
-    package let allowedModifiers: Set<UInt64>?
+    package let modifierPolicy: GBMModifierSelectionPolicy
 
     package init(
         preferredFormats formatPreference: [UInt32],
-        allowedModifiers modifierSet: Set<UInt64>? = nil
+        modifierPolicy selectionPolicy: GBMModifierSelectionPolicy = .any
     ) throws(GBMFormatSelectionError) {
         guard !formatPreference.isEmpty else {
             throw GBMFormatSelectionError.emptyPreferredFormats
         }
 
         preferredFormats = formatPreference
-        allowedModifiers = modifierSet
+        modifierPolicy = selectionPolicy
     }
 
     func allows(_ formatModifier: RawLinuxDmabufFormatModifier) -> Bool {
-        guard let allowedModifiers else { return true }
+        switch modifierPolicy {
+        case .any:
+            true
+        case .only(let allowedModifiers):
+            allowedModifiers.contains(formatModifier.modifier)
+        }
+    }
+}
 
-        return allowedModifiers.contains(formatModifier.modifier)
+package enum GBMModifierSelectionPolicy: Equatable, Sendable {
+    case any
+    case only(Set<UInt64>)
+
+    package static func only(_ modifiers: UInt64...) -> GBMModifierSelectionPolicy {
+        .only(Set(modifiers))
     }
 }
 
