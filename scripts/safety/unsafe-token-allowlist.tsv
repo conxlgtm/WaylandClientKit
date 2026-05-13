@@ -21,6 +21,8 @@ Sources/WaylandRaw/Internal/EventLoop/QueueEventLoop.swift	poll(	Queue-specific 
 Sources/WaylandRaw/Internal/Ownership/RawProxyAdoption.swift	swl_proxy_get_queue_raw	Centralized runtime queue assertion for proxy adoption.
 Sources/WaylandRaw/Internal/Support/ThreadAffinity.swift	pthread_*	Raw owner-thread affinity token.
 Sources/WaylandGraphicsPreview/Internal/GBM/**	OpaquePointer	GBM preview device and buffer object lifetime wrappers.
+Sources/WaylandGraphicsPreview/Internal/GBM/DRMRenderNodeSelection.swift	UnsafeBufferPointer	Borrow dmabuf device bytes and C string storage for libdrm render-node lookup.
+Sources/WaylandGraphicsPreview/Internal/GBM/DRMRenderNodeSelection.swift	UnsafeMutableBufferPointer	Borrow render-node path storage for libdrm render-node lookup.
 Sources/WaylandRuntime/**	eventfd	Executor wake fd primitive.
 Sources/WaylandRuntime/**	nonisolated(unsafe)	Synchronized pthread-backed executor internals.
 Sources/WaylandRuntime/**	pthread_*	Executor owner thread, mutex, condition, and join primitives.
