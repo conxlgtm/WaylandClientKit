@@ -5,6 +5,18 @@ import WaylandTestSupport
 @Suite(.serialized)
 struct LinuxDmabufRequestShimContractTests {
     @Test
+    func dmabufCreateParamsUsesLinuxDmabufTarget() async throws {
+        let linuxDmabuf = try unsafe #require(OpaquePointer(bitPattern: 0x5005))
+
+        try await assertDmabufRequest(
+            expectedKind: SWL_TEST_DMABUF_CREATE_PARAMS,
+            object: linuxDmabuf
+        ) {
+            _ = unsafe swl_zwp_linux_dmabuf_v1_create_params(linuxDmabuf)
+        }
+    }
+
+    @Test
     func dmabufBufferParamsAddPreservesPlaneOffsetStrideAndModifierHalves() async throws {
         let params = try unsafe #require(OpaquePointer(bitPattern: 0x1001))
 
