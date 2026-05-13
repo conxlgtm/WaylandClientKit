@@ -129,7 +129,14 @@ private final class RawLinuxDmabufFeedbackOwner {
                 message: "zwp_linux_dmabuf_feedback_v1 main_device fired without Swift state"
             ) { owner in
                 guard !owner.isCanceled else { return }
-                owner.state.setMainDevice(bytes: WaylandArray.bytes(from: device))
+                do {
+                    try owner.state.setMainDevice(
+                        bytes: WaylandArray.bytes(from: device),
+                        scope: owner.scope
+                    )
+                } catch {
+                    owner.onFailure(RawLinuxDmabufFeedbackOwner.runtimeError(from: error))
+                }
             }
         }
     }
@@ -157,9 +164,14 @@ private final class RawLinuxDmabufFeedbackOwner {
                 message: "zwp_linux_dmabuf_feedback_v1 target_device fired without Swift state"
             ) { owner in
                 guard !owner.isCanceled else { return }
-                owner.state.setCurrentTrancheTargetDevice(
-                    bytes: WaylandArray.bytes(from: device)
-                )
+                do {
+                    try owner.state.setCurrentTrancheTargetDevice(
+                        bytes: WaylandArray.bytes(from: device),
+                        scope: owner.scope
+                    )
+                } catch {
+                    owner.onFailure(RawLinuxDmabufFeedbackOwner.runtimeError(from: error))
+                }
             }
         }
     }
@@ -183,7 +195,11 @@ private final class RawLinuxDmabufFeedbackOwner {
                 message: "zwp_linux_dmabuf_feedback_v1 tranche_flags fired without Swift state"
             ) { owner in
                 guard !owner.isCanceled else { return }
-                owner.state.setCurrentTrancheFlags(flags)
+                do {
+                    try owner.state.setCurrentTrancheFlags(flags, scope: owner.scope)
+                } catch {
+                    owner.onFailure(RawLinuxDmabufFeedbackOwner.runtimeError(from: error))
+                }
             }
         }
     }
@@ -231,7 +247,7 @@ private final class RawLinuxDmabufFeedbackOwner {
     private func handleTrancheFormats(indices: UnsafeMutablePointer<wl_array>?) {
         do {
             let decodedIndices = try WaylandArray.uint16Values(from: indices)
-            try state.appendCurrentTrancheFormats(indices: decodedIndices)
+            try state.appendCurrentTrancheFormats(indices: decodedIndices, scope: scope)
         } catch RuntimeError.invalidDmabufFormatTableIndex(let index, _) {
             onFailure(
                 state.invalidateFeedback(

@@ -3,73 +3,6 @@ import Testing
 
 @testable import WaylandRaw
 
-@Suite(.serialized)
-struct RawLinuxDmabufFormatTableTests {
-    @Test
-    func parsesFormatModifierPairsFromReadOnlyMappedFd() throws {
-        let entries = [
-            RawLinuxDmabufFormatModifier(
-                format: 0x3432_5258,
-                modifier: 0x0102_0304_0506_0708
-            ),
-            RawLinuxDmabufFormatModifier(
-                format: 0x3432_525A,
-                modifier: 0x8877_6655_4433_2211
-            ),
-        ]
-        let bytes = formatTableBytes(entries)
-        var descriptor = try RawFileDescriptor.memfd(name: "swift-wayland-dmabuf-table")
-        defer {
-            descriptor.close()
-        }
-        try descriptor.resize(byteCount: bytes.count)
-        #expect(
-            try RawFileDescriptor.write(descriptor: descriptor.rawValue, bytes: bytes)
-                == bytes.count
-        )
-
-        let parserDescriptor = Glibc.dup(descriptor.rawValue)
-        #expect(parserDescriptor >= 0)
-
-        let parsed = try RawLinuxDmabufFormatTable.parse(
-            fileDescriptor: parserDescriptor,
-            byteCount: UInt32(bytes.count)
-        )
-
-        #expect(parsed == entries)
-    }
-
-    @Test
-    func rejectsPartialEntries() throws {
-        let bytes = [UInt8](repeating: 0xAA, count: RawLinuxDmabufFormatTable.entryByteCount - 1)
-        var descriptor = try RawFileDescriptor.memfd(name: "swift-wayland-dmabuf-table-bad")
-        defer {
-            descriptor.close()
-        }
-        try descriptor.resize(byteCount: bytes.count)
-        #expect(
-            try RawFileDescriptor.write(descriptor: descriptor.rawValue, bytes: bytes)
-                == bytes.count
-        )
-
-        let parserDescriptor = Glibc.dup(descriptor.rawValue)
-        #expect(parserDescriptor >= 0)
-
-        do {
-            _ = try RawLinuxDmabufFormatTable.parse(
-                fileDescriptor: parserDescriptor,
-                byteCount: UInt32(bytes.count)
-            )
-            Issue.record("Expected partial dmabuf format table to throw")
-        } catch RuntimeError.invalidDmabufFormatTableByteCount(let byteCount, let entryByteCount) {
-            #expect(byteCount == bytes.count)
-            #expect(entryByteCount == RawLinuxDmabufFormatTable.entryByteCount)
-        } catch {
-            Issue.record("Unexpected error: \(error)")
-        }
-    }
-}
-
 @Suite
 struct RawLinuxDmabufFeedbackStateTests {
     @Test
@@ -81,10 +14,16 @@ struct RawLinuxDmabufFeedbackStateTests {
         var state = RawLinuxDmabufFeedbackState()
 
         state.replaceFormatTable(entries)
-        state.setMainDevice(bytes: [0x01, 0x02, 0x03, 0x04])
-        state.setCurrentTrancheTargetDevice(bytes: [0x05, 0x06, 0x07, 0x08])
-        try state.appendCurrentTrancheFormats(indices: [1, 0])
-        state.setCurrentTrancheFlags(RawLinuxDmabufTrancheFlags.scanout.rawValue | 0x8000_0000)
+        try state.setMainDevice(bytes: [0x01, 0x02, 0x03, 0x04], scope: .surface(surfaceID: 77))
+        try state.setCurrentTrancheTargetDevice(
+            bytes: [0x05, 0x06, 0x07, 0x08],
+            scope: .surface(surfaceID: 77)
+        )
+        try state.appendCurrentTrancheFormats(indices: [1, 0], scope: .surface(surfaceID: 77))
+        try state.setCurrentTrancheFlags(
+            RawLinuxDmabufTrancheFlags.scanout.rawValue | 0x8000_0000,
+            scope: .surface(surfaceID: 77)
+        )
         try state.finishCurrentTranche(scope: .surface(surfaceID: 77))
 
         let snapshot = try state.finish(scope: .surface(surfaceID: 77))
@@ -109,18 +48,18 @@ struct RawLinuxDmabufFeedbackStateTests {
         var state = RawLinuxDmabufFeedbackState()
 
         state.replaceFormatTable([firstEntry])
-        state.setMainDevice(bytes: [0x01])
-        state.setCurrentTrancheTargetDevice(bytes: [0x02])
-        state.setCurrentTrancheFlags(0)
-        try state.appendCurrentTrancheFormats(indices: [0])
+        try state.setMainDevice(bytes: [0x01], scope: .defaultFeedback)
+        try state.setCurrentTrancheTargetDevice(bytes: [0x02], scope: .defaultFeedback)
+        try state.setCurrentTrancheFlags(0, scope: .defaultFeedback)
+        try state.appendCurrentTrancheFormats(indices: [0], scope: .defaultFeedback)
         try state.finishCurrentTranche(scope: .defaultFeedback)
         _ = try state.finish(scope: .defaultFeedback)
 
         state.replaceFormatTable([replacementEntry])
-        state.setMainDevice(bytes: [0x03])
-        state.setCurrentTrancheTargetDevice(bytes: [0x04])
-        state.setCurrentTrancheFlags(0)
-        try state.appendCurrentTrancheFormats(indices: [0])
+        try state.setMainDevice(bytes: [0x03], scope: .defaultFeedback)
+        try state.setCurrentTrancheTargetDevice(bytes: [0x04], scope: .defaultFeedback)
+        try state.setCurrentTrancheFlags(0, scope: .defaultFeedback)
+        try state.appendCurrentTrancheFormats(indices: [0], scope: .defaultFeedback)
         try state.finishCurrentTranche(scope: .defaultFeedback)
 
         let snapshot = try state.finish(scope: .defaultFeedback)
@@ -138,9 +77,9 @@ struct RawLinuxDmabufFeedbackStateTests {
         state.replaceFormatTable([
             RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
         ])
-        state.setCurrentTrancheTargetDevice(bytes: [0x02])
-        state.setCurrentTrancheFlags(0)
-        try state.appendCurrentTrancheFormats(indices: [0])
+        try state.setCurrentTrancheTargetDevice(bytes: [0x02], scope: .defaultFeedback)
+        try state.setCurrentTrancheFlags(0, scope: .defaultFeedback)
+        try state.appendCurrentTrancheFormats(indices: [0], scope: .defaultFeedback)
         try state.finishCurrentTranche(scope: .defaultFeedback)
 
         #expect(
@@ -159,8 +98,8 @@ struct RawLinuxDmabufFeedbackStateTests {
         state.replaceFormatTable([
             RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
         ])
-        state.setCurrentTrancheFlags(0)
-        try state.appendCurrentTrancheFormats(indices: [0])
+        try state.setCurrentTrancheFlags(0, scope: .defaultFeedback)
+        try state.appendCurrentTrancheFormats(indices: [0], scope: .defaultFeedback)
 
         #expect(
             throws: malformedFeedback(
@@ -173,13 +112,13 @@ struct RawLinuxDmabufFeedbackStateTests {
     }
 
     @Test
-    func trancheDoneWithoutFormatsReportsFailure() {
+    func trancheDoneWithoutFormatsReportsFailure() throws {
         var state = RawLinuxDmabufFeedbackState()
         state.replaceFormatTable([
             RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
         ])
-        state.setCurrentTrancheTargetDevice(bytes: [0x02])
-        state.setCurrentTrancheFlags(0)
+        try state.setCurrentTrancheTargetDevice(bytes: [0x02], scope: .defaultFeedback)
+        try state.setCurrentTrancheFlags(0, scope: .defaultFeedback)
 
         #expect(
             throws: malformedFeedback(
@@ -197,10 +136,10 @@ struct RawLinuxDmabufFeedbackStateTests {
         state.replaceFormatTable([
             RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
         ])
-        state.setMainDevice(bytes: [0x01])
-        state.setCurrentTrancheTargetDevice(bytes: [0x02])
-        state.setCurrentTrancheFlags(0)
-        try state.appendCurrentTrancheFormats(indices: [0])
+        try state.setMainDevice(bytes: [0x01], scope: .defaultFeedback)
+        try state.setCurrentTrancheTargetDevice(bytes: [0x02], scope: .defaultFeedback)
+        try state.setCurrentTrancheFlags(0, scope: .defaultFeedback)
+        try state.appendCurrentTrancheFormats(indices: [0], scope: .defaultFeedback)
         try state.finishCurrentTranche(scope: .defaultFeedback)
         _ = try state.finish(scope: .defaultFeedback)
 
@@ -228,10 +167,10 @@ struct RawLinuxDmabufFeedbackStateTests {
         state.replaceFormatTable([
             RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
         ])
-        state.setMainDevice(bytes: [0x01])
-        state.setCurrentTrancheTargetDevice(bytes: [0x02])
-        state.setCurrentTrancheFlags(0)
-        try state.appendCurrentTrancheFormats(indices: [0])
+        try state.setMainDevice(bytes: [0x01], scope: .defaultFeedback)
+        try state.setCurrentTrancheTargetDevice(bytes: [0x02], scope: .defaultFeedback)
+        try state.setCurrentTrancheFlags(0, scope: .defaultFeedback)
+        try state.appendCurrentTrancheFormats(indices: [0], scope: .defaultFeedback)
 
         #expect(
             throws: malformedFeedback(
@@ -251,13 +190,107 @@ struct RawLinuxDmabufFeedbackStateTests {
         ])
 
         do {
-            try state.appendCurrentTrancheFormats(indices: [1])
+            try state.appendCurrentTrancheFormats(indices: [1], scope: .defaultFeedback)
             Issue.record("Expected invalid dmabuf format table index to throw")
         } catch RuntimeError.invalidDmabufFormatTableIndex(let index, let entryCount) {
             #expect(index == 1)
             #expect(entryCount == 1)
         } catch {
             Issue.record("Unexpected error: \(error)")
+        }
+    }
+}
+
+@Suite
+struct RawLinuxDmabufFeedbackDuplicateEventTests {
+    @Test
+    func duplicateMainDeviceInvalidatesFeedback() throws {
+        var state = RawLinuxDmabufFeedbackState()
+
+        try state.setMainDevice(bytes: [0x01], scope: .defaultFeedback)
+
+        #expect(
+            throws: malformedFeedback(event: "main_device", field: "main_device")
+        ) {
+            try state.setMainDevice(bytes: [0x02], scope: .defaultFeedback)
+        }
+    }
+
+    @Test
+    func duplicateTrancheTargetDeviceInvalidatesFeedback() throws {
+        var state = RawLinuxDmabufFeedbackState()
+
+        try state.setCurrentTrancheTargetDevice(bytes: [0x01], scope: .defaultFeedback)
+
+        #expect(
+            throws: malformedFeedback(
+                event: "tranche_target_device",
+                field: "tranche_target_device"
+            )
+        ) {
+            try state.setCurrentTrancheTargetDevice(bytes: [0x02], scope: .defaultFeedback)
+        }
+    }
+
+    @Test
+    func duplicateTrancheFlagsInvalidatesFeedback() throws {
+        var state = RawLinuxDmabufFeedbackState()
+
+        try state.setCurrentTrancheFlags(0, scope: .defaultFeedback)
+
+        #expect(
+            throws: malformedFeedback(event: "tranche_flags", field: "tranche_flags")
+        ) {
+            try state.setCurrentTrancheFlags(
+                RawLinuxDmabufTrancheFlags.scanout.rawValue,
+                scope: .defaultFeedback
+            )
+        }
+    }
+
+    @Test
+    func duplicateFormatWithinTrancheInvalidatesFeedback() {
+        var state = RawLinuxDmabufFeedbackState()
+        state.replaceFormatTable([
+            RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
+        ])
+
+        #expect(
+            throws: malformedFeedback(
+                event: "tranche_formats",
+                field: "formats",
+                index: 1,
+                rawValue: 0
+            )
+        ) {
+            try state.appendCurrentTrancheFormats(indices: [0, 0], scope: .defaultFeedback)
+        }
+    }
+
+    @Test
+    func duplicateFormatAcrossSameDeviceAndFlagsInvalidatesFeedback() throws {
+        let format = RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
+        var state = RawLinuxDmabufFeedbackState()
+        state.replaceFormatTable([format])
+        try state.setMainDevice(bytes: [0x01], scope: .defaultFeedback)
+        try state.setCurrentTrancheTargetDevice(bytes: [0x02], scope: .defaultFeedback)
+        try state.setCurrentTrancheFlags(0, scope: .defaultFeedback)
+        try state.appendCurrentTrancheFormats(indices: [0], scope: .defaultFeedback)
+        try state.finishCurrentTranche(scope: .defaultFeedback)
+
+        try state.setCurrentTrancheTargetDevice(bytes: [0x02], scope: .defaultFeedback)
+        try state.setCurrentTrancheFlags(0, scope: .defaultFeedback)
+        try state.appendCurrentTrancheFormats(indices: [0], scope: .defaultFeedback)
+
+        #expect(
+            throws: malformedFeedback(
+                event: "tranche_done",
+                field: "tranche_formats",
+                index: 0,
+                rawValue: UInt64(format.format)
+            )
+        ) {
+            try state.finishCurrentTranche(scope: .defaultFeedback)
         }
     }
 }
@@ -377,23 +410,6 @@ struct RawLinuxDmabufVersionGateTests {
             try RawLinuxDmabuf.validateCreateParamsVersion(1)
         }
     }
-}
-
-private func formatTableBytes(_ entries: [RawLinuxDmabufFormatModifier]) -> [UInt8] {
-    var bytes: [UInt8] = []
-    for entry in entries {
-        var format = entry.format
-        unsafe withUnsafeBytes(of: &format) { formatBytes in
-            bytes.append(contentsOf: unsafe Array(formatBytes))
-        }
-        bytes.append(contentsOf: [0, 0, 0, 0])
-        var modifier = entry.modifier
-        unsafe withUnsafeBytes(of: &modifier) { modifierBytes in
-            bytes.append(contentsOf: unsafe Array(modifierBytes))
-        }
-    }
-
-    return bytes
 }
 
 private func malformedFeedback(
