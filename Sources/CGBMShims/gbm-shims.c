@@ -166,6 +166,25 @@ struct gbm_bo *swl_gbm_bo_create_with_modifiers2(
         flags);
 }
 
+struct gbm_bo *swl_gbm_bo_create_with_modifier2(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    uint64_t modifier,
+    uint32_t flags)
+{
+    uint64_t modifiers[1] = {modifier};
+    return swl_gbm_bo_create_with_modifiers2(
+        device,
+        width,
+        height,
+        format,
+        modifiers,
+        1,
+        flags);
+}
+
 void swl_gbm_bo_destroy(struct gbm_bo *buffer)
 {
     if (buffer != NULL)
@@ -223,6 +242,60 @@ int32_t swl_gbm_bo_export_dmabuf(
     }
 
     return 0;
+}
+
+int32_t swl_gbm_bo_export_plane_fd(
+    const struct swl_gbm_bo_export *exported_buffer,
+    uint32_t plane_index)
+{
+    if (exported_buffer == NULL || plane_index >= exported_buffer->plane_count)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    return exported_buffer->planes[plane_index].fd;
+}
+
+int32_t swl_gbm_bo_export_take_plane_fd(
+    struct swl_gbm_bo_export *exported_buffer,
+    uint32_t plane_index)
+{
+    if (exported_buffer == NULL || plane_index >= exported_buffer->plane_count)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int fd = exported_buffer->planes[plane_index].fd;
+    exported_buffer->planes[plane_index].fd = -1;
+    return fd;
+}
+
+uint32_t swl_gbm_bo_export_plane_offset(
+    const struct swl_gbm_bo_export *exported_buffer,
+    uint32_t plane_index)
+{
+    if (exported_buffer == NULL || plane_index >= exported_buffer->plane_count)
+    {
+        errno = EINVAL;
+        return 0;
+    }
+
+    return exported_buffer->planes[plane_index].offset;
+}
+
+uint32_t swl_gbm_bo_export_plane_stride(
+    const struct swl_gbm_bo_export *exported_buffer,
+    uint32_t plane_index)
+{
+    if (exported_buffer == NULL || plane_index >= exported_buffer->plane_count)
+    {
+        errno = EINVAL;
+        return 0;
+    }
+
+    return exported_buffer->planes[plane_index].stride;
 }
 
 void swl_gbm_bo_export_close(struct swl_gbm_bo_export *exported_buffer)
