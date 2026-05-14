@@ -446,13 +446,14 @@ struct gbm_bo *swl_gbm_bo_create_for_modifier(
         return swl_gbm_bo_create(device, width, height, format, flags);
     }
 
+    uint32_t explicit_modifier_flags = flags & ~GBM_BO_USE_LINEAR;
     return swl_gbm_bo_create_with_modifier2(
         device,
         width,
         height,
         format,
         modifier,
-        flags);
+        explicit_modifier_flags);
 }
 
 void swl_gbm_bo_destroy(struct gbm_bo *buffer)

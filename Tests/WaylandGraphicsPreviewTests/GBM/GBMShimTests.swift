@@ -97,7 +97,7 @@ struct GBMShimTests {
             32,
             swl_drm_format_xrgb8888(),
             swl_drm_format_mod_invalid(),
-            swl_gbm_bo_use_rendering()
+            swl_gbm_bo_use_rendering() | swl_gbm_bo_use_linear()
         )
 
         let record = unsafe swl_test_gbm_bo_create_record()
@@ -110,7 +110,7 @@ struct GBMShimTests {
         #expect(unsafe record.format == swl_drm_format_xrgb8888())
         #expect(unsafe record.modifier == swl_drm_format_mod_invalid())
         #expect(unsafe record.modifier_count == 0)
-        #expect(unsafe record.flags == swl_gbm_bo_use_rendering())
+        #expect(unsafe record.flags == swl_gbm_bo_use_rendering() | swl_gbm_bo_use_linear())
     }
 
     @Test
@@ -137,6 +137,31 @@ struct GBMShimTests {
         #expect(unsafe record.width == 128)
         #expect(unsafe record.height == 64)
         #expect(unsafe record.format == swl_drm_format_argb8888())
+        #expect(unsafe record.modifier == swl_drm_format_mod_linear())
+        #expect(unsafe record.modifier_count == 1)
+        #expect(unsafe record.flags == swl_gbm_bo_use_scanout())
+    }
+
+    @Test
+    func explicitModifierAllocationDropsLinearUseFlag() throws {
+        let device = try unsafe #require(OpaquePointer(bitPattern: 0x8008))
+
+        swl_test_gbm_bo_create_recording_begin()
+        defer { swl_test_gbm_bo_create_recording_end() }
+
+        let buffer = unsafe swl_gbm_bo_create_for_modifier(
+            device,
+            256,
+            128,
+            swl_drm_format_argb8888(),
+            swl_drm_format_mod_linear(),
+            swl_gbm_bo_use_scanout() | swl_gbm_bo_use_linear()
+        )
+
+        let record = unsafe swl_test_gbm_bo_create_record()
+        #expect(unsafe buffer == nil)
+        #expect(unsafe record.call_count == 1)
+        #expect(unsafe record.kind == SWL_TEST_GBM_BO_CREATE_WITH_MODIFIERS2)
         #expect(unsafe record.modifier == swl_drm_format_mod_linear())
         #expect(unsafe record.modifier_count == 1)
         #expect(unsafe record.flags == swl_gbm_bo_use_scanout())
