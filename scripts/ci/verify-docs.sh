@@ -32,6 +32,8 @@ required_patterns=(
     "CWaylandCursorShims"
     "CWaylandCursorSystem"
     "CXKBCommonSystem"
+    "gbm"
+    "libdrm"
     "wayland-cursor"
     "wayland-client"
     "wayland-protocols"

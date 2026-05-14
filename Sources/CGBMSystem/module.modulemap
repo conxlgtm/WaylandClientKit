@@ -1,0 +1,6 @@
+module CGBMSystem [system] {
+    header "include/gbm-umbrella.h"
+    link "gbm"
+    export *
+}
+

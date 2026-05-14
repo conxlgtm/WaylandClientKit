@@ -13,6 +13,11 @@ let strictMemorySafetySwiftSettings: [SwiftSetting] =
         .treatWarning("StrictMemorySafety", as: .error),
     ]
 
+let cShimTestingSwiftSettings: [SwiftSetting] =
+    strictMemorySafetySwiftSettings + [
+        .unsafeFlags(["-Xcc", "-DSWL_ENABLE_TESTING"], .when(configuration: .debug))
+    ]
+
 let executableSwiftSettings: [SwiftSetting] =
     strictMemorySafetySwiftSettings + [
         .defaultIsolation(MainActor.self)
@@ -42,12 +47,29 @@ let package = Package(
             name: "CWaylandCursorSystem",
             pkgConfig: "wayland-cursor"
         ),
+        .systemLibrary(
+            name: "CDRMSystem",
+            pkgConfig: "libdrm"
+        ),
+        .systemLibrary(
+            name: "CGBMSystem",
+            pkgConfig: "gbm"
+        ),
         .target(
             name: "CWaylandCursorShims",
             dependencies: ["CWaylandCursorSystem"],
             publicHeadersPath: "include",
             cSettings: [
                 .define("_GNU_SOURCE", .when(platforms: [.linux]))
+            ]
+        ),
+        .target(
+            name: "CGBMShims",
+            dependencies: ["CGBMSystem", "CDRMSystem"],
+            publicHeadersPath: "include",
+            cSettings: [
+                .define("SWL_ENABLE_TESTING", .when(configuration: .debug)),
+                .define("_GNU_SOURCE", .when(platforms: [.linux])),
             ]
         ),
         .target(
@@ -97,6 +119,11 @@ let package = Package(
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
+            name: "WaylandGraphicsPreview",
+            dependencies: ["WaylandRaw", "CGBMShims"],
+            swiftSettings: strictMemorySafetySwiftSettings
+        ),
+        .target(
             name: "WaylandSmokeSupport",
             dependencies: ["WaylandClient"],
             swiftSettings: strictMemorySafetySwiftSettings
@@ -119,8 +146,8 @@ let package = Package(
         ),
         .testTarget(
             name: "WaylandRawTests",
-            dependencies: ["WaylandRaw", "WaylandTestSupport"],
-            swiftSettings: strictMemorySafetySwiftSettings
+            dependencies: ["WaylandRaw", "WaylandTestSupport", "CDRMSystem", "CGBMSystem"],
+            swiftSettings: cShimTestingSwiftSettings
         ),
         .testTarget(
             name: "WaylandRuntimeTests",
@@ -135,7 +162,7 @@ let package = Package(
                 "CWaylandProtocols",
                 "WaylandTestSupport",
             ],
-            swiftSettings: strictMemorySafetySwiftSettings
+            swiftSettings: cShimTestingSwiftSettings
         ),
         .testTarget(
             name: "WaylandKeyboardTests",
@@ -144,6 +171,11 @@ let package = Package(
                 .copy("Fixtures")
             ],
             swiftSettings: strictMemorySafetySwiftSettings
+        ),
+        .testTarget(
+            name: "WaylandGraphicsPreviewTests",
+            dependencies: ["WaylandGraphicsPreview", "WaylandRaw", "CGBMShims"],
+            swiftSettings: cShimTestingSwiftSettings
         ),
         .testTarget(
             name: "WaylandCursorTests", dependencies: ["WaylandCursor"],

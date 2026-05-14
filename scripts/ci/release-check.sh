@@ -8,6 +8,7 @@ SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=0 make check-base
 ./scripts/dev/swift.sh build --disable-index-store -c release
 ./scripts/dev/swift.sh build --disable-index-store -c release --target SwiftWaylandDemo
 ./scripts/dev/swift.sh build --disable-index-store -c release --product swift-wayland-smoke
+./scripts/shims/verify-release-shim-symbols.sh
 
 if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
     ./scripts/smoke/smoke-wayland.sh
