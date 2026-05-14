@@ -220,7 +220,7 @@ set_packages_for_pm() {
                 clang
                 git
                 libdrm-dev
-                mesa-gbm-dev
+                mesa-dev
                 wayland-dev
                 wayland-protocols
                 libxkbcommon-dev

@@ -187,7 +187,7 @@ Supported package-manager mappings:
 | Fedora/RHEL-like | `clang git wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
 | Arch/Manjaro | `clang git wayland wayland-protocols libxkbcommon make pkgconf ripgrep` |
 | openSUSE | `clang git wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
-| Alpine | `clang git wayland-dev wayland-protocols libxkbcommon-dev make pkgconf ripgrep` |
+| Alpine | `clang git libdrm-dev mesa-dev wayland-dev wayland-protocols libxkbcommon-dev make pkgconf ripgrep` |
 | Gentoo | `sys-devel/clang dev-vcs/git dev-libs/wayland dev-libs/wayland-protocols dev-util/wayland-scanner x11-libs/libxkbcommon dev-build/make virtual/pkgconfig sys-apps/ripgrep` |
 | Nix/NixOS | `nixpkgs#clang nixpkgs#git nixpkgs#wayland nixpkgs#wayland-protocols nixpkgs#libxkbcommon nixpkgs#gnumake nixpkgs#pkg-config nixpkgs#ripgrep` |
 
