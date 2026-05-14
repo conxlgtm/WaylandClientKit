@@ -10,7 +10,7 @@ struct EGLShimTests {
         var minor: Int32 = 0
         let initializeResult = unsafe swl_egl_initialize(nil, &major, &minor)
         let extensionsAreNil = unsafe swl_egl_query_display_extensions(nil) == nil
-        let configIsNil = unsafe swl_egl_choose_gles_window_config(nil) == nil
+        let configIsNil = unsafe swl_egl_choose_gles_window_config(nil, 0) == nil
         let contextIsNil = unsafe swl_egl_create_gles2_context(nil, nil) == nil
         let surfaceIsNil = unsafe swl_egl_create_window_surface(nil, nil, nil) == nil
         let makeCurrentResult = swl_egl_make_current(nil, nil, nil)

@@ -142,7 +142,9 @@ int32_t swl_egl_bind_gles_api(void)
     return eglBindAPI(EGL_OPENGL_ES_API) == EGL_TRUE ? 0 : -1;
 }
 
-swl_egl_config swl_egl_choose_gles_window_config(swl_egl_display display)
+swl_egl_config swl_egl_choose_gles_window_config(
+    swl_egl_display display,
+    uint32_t native_visual_id)
 {
     EGLDisplay egl_display = swl_egl_cast_display(display);
     if (egl_display == EGL_NO_DISPLAY)
@@ -159,20 +161,35 @@ swl_egl_config swl_egl_choose_gles_window_config(swl_egl_display display)
         EGL_BLUE_SIZE, 8,
         EGL_NONE,
     };
-    EGLConfig config = NULL;
+    EGLConfig configs[64] = {NULL};
     EGLint config_count = 0;
-    if (eglChooseConfig(egl_display, attributes, &config, 1, &config_count) !=
+    if (eglChooseConfig(egl_display, attributes, configs, 64, &config_count) !=
         EGL_TRUE)
     {
         return NULL;
     }
-    if (config_count <= 0 || config == NULL)
+    if (config_count <= 0)
     {
         errno = ENODEV;
         return NULL;
     }
 
-    return (swl_egl_config) config;
+    for (EGLint index = 0; index < config_count && index < 64; index++)
+    {
+        EGLint visual_id = 0;
+        if (eglGetConfigAttrib(
+                egl_display,
+                configs[index],
+                EGL_NATIVE_VISUAL_ID,
+                &visual_id) == EGL_TRUE &&
+            (uint32_t) visual_id == native_visual_id)
+        {
+            return (swl_egl_config) configs[index];
+        }
+    }
+
+    errno = ENODEV;
+    return NULL;
 }
 
 swl_egl_context swl_egl_create_gles2_context(
