@@ -4,7 +4,6 @@ import WaylandRaw
 
 package struct GPUWindowPresentationLease: Equatable, Sendable {
     package let slotID: GBMBufferPoolSlotID
-    package let generation: UInt64
 }
 
 package struct GPUWindowPresentedFrame: Equatable, Sendable {
@@ -35,7 +34,6 @@ package enum GPUWindowPresenterError: Error, CustomStringConvertible {
 
 package struct GPUWindowPresenterState: Equatable, Sendable {
     private var poolState = GBMBufferPoolState()
-    private var nextGeneration: UInt64 = 1
 
     package init() {
         // Slots are installed as dmabuf wl_buffers become available.
@@ -57,17 +55,16 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
         throws(GBMBufferPoolStateError) -> GPUWindowPresentationLease
     {
         let slotID = try poolState.leaseNextAvailableSlot()
-        let generation = nextGeneration
-        nextGeneration += 1
-        return GPUWindowPresentationLease(slotID: slotID, generation: generation)
+        return GPUWindowPresentationLease(slotID: slotID)
     }
 
     package mutating func markSubmitted(
-        _ lease: GPUWindowPresentationLease
+        _ lease: GPUWindowPresentationLease,
+        generation: UInt64
     ) throws(GBMBufferPoolStateError) {
         try poolState.markSubmitted(
             lease.slotID,
-            commitGeneration: lease.generation
+            commitGeneration: generation
         )
     }
 
@@ -130,15 +127,14 @@ package final class GPUWindowPresenter {
         }
 
         do {
-            let commitPlan = try window.presentPreviewBufferOnOwnerThread(
-                buffer.surfaceBuffer,
-                generation: lease.generation
+            let presentation = try window.presentPreviewBufferOnOwnerThread(
+                buffer.surfaceBuffer
             )
-            try state.markSubmitted(lease)
+            try state.markSubmitted(lease, generation: presentation.generation)
             return GPUWindowPresentedFrame(
                 slotID: lease.slotID,
-                generation: lease.generation,
-                commitPlan: commitPlan
+                generation: presentation.generation,
+                commitPlan: presentation.commitPlan
             )
         } catch let error as GBMBufferPoolStateError {
             try cancelLeaseAfterFailedPresentation(lease)

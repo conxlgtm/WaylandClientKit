@@ -12,10 +12,10 @@ struct GPUWindowPresenterStateTests {
         try state.installSlot(slotID)
 
         let lease = try state.leaseNext()
-        try state.markSubmitted(lease)
+        try state.markSubmitted(lease, generation: 1)
         try state.markReleased(slotID)
 
-        #expect(lease == GPUWindowPresentationLease(slotID: slotID, generation: 1))
+        #expect(lease == GPUWindowPresentationLease(slotID: slotID))
         #expect(try state.lifecycle(for: slotID) == .available)
     }
 
@@ -32,16 +32,14 @@ struct GPUWindowPresenterStateTests {
     }
 
     @Test
-    func generationAdvancesForEachLease() throws {
+    func submissionUsesWindowCommitGeneration() throws {
         var state = GPUWindowPresenterState()
-        try state.installSlot(try GBMBufferPoolSlotID(0))
-        try state.installSlot(try GBMBufferPoolSlotID(1))
+        let slotID = try GBMBufferPoolSlotID(0)
+        try state.installSlot(slotID)
 
-        let first = try state.leaseNext()
-        try state.markSubmitted(first)
-        let second = try state.leaseNext()
+        let lease = try state.leaseNext()
+        try state.markSubmitted(lease, generation: 42)
 
-        #expect(first.generation == 1)
-        #expect(second.generation == 2)
+        #expect(try state.lifecycle(for: slotID) == .submitted(commitGeneration: 42))
     }
 }
