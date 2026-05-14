@@ -162,7 +162,7 @@ package final class GBMDevice {
         }
 
         guard
-            let bufferPointer = unsafe swl_gbm_bo_create_with_modifier2(
+            let bufferPointer = unsafe swl_gbm_bo_create_for_modifier(
                 devicePointer,
                 descriptor.size.width,
                 descriptor.size.height,
