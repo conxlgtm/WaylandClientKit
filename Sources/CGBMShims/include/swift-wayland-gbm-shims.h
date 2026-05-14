@@ -42,6 +42,14 @@ uint32_t swl_gbm_bo_use_linear(void);
 
 uint32_t swl_drm_device_id_byte_count(void);
 uint32_t swl_drm_render_node_path_max(void);
+uint32_t swl_drm_node_primary_bit(void);
+uint32_t swl_drm_node_render_bit(void);
+int32_t swl_drm_node_path_from_available_nodes(
+    uint32_t available_nodes,
+    const char *primary_node_path,
+    const char *render_node_path,
+    char *out_path,
+    uint32_t out_path_count);
 int32_t swl_drm_render_node_path_from_device_bytes(
     const uint8_t *device_id_bytes,
     uint32_t byte_count,
