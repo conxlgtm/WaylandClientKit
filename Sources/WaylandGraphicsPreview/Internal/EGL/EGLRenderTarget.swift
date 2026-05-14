@@ -92,15 +92,7 @@ package final class EGLGBMRenderTarget {
         )
         renderSize = surfaceDescriptor.size
 
-        let displayPointer = try device.withUnsafeDevicePointer { devicePointer in
-            unsafe swl_egl_display_for_gbm_device(devicePointer)
-        }
-        guard let displayPointer = unsafe displayPointer else {
-            throw EGLRenderError.displayCreationFailed(
-                errno: errno > 0 ? errno : ENODEV,
-                eglError: swl_egl_error()
-            )
-        }
+        let displayPointer = try Self.createDisplayPointer(for: device)
         unsafe display = displayPointer
 
         var major: Int32 = 0
@@ -158,11 +150,13 @@ package final class EGLGBMRenderTarget {
         alpha: Float
     ) throws(EGLRenderError) -> EGLRGBA8Pixel {
         let handles = try liveHandles()
-        guard unsafe swl_egl_make_current(
-            handles.display,
-            handles.surface,
-            handles.context
-        ) == 0 else {
+        guard
+            unsafe swl_egl_make_current(
+                handles.display,
+                handles.surface,
+                handles.context
+            ) == 0
+        else {
             throw EGLRenderError.makeCurrentFailed(eglError: swl_egl_error())
         }
         defer {
@@ -170,18 +164,29 @@ package final class EGLGBMRenderTarget {
         }
 
         let size = handles.size
-        guard swl_gles2_clear_rgba(size.width, size.height, red, green, blue, alpha) == 0 else {
+        guard
+            swl_gles2_clear_rgba(
+                size.width,
+                size.height,
+                red,
+                green,
+                blue,
+                alpha
+            ) == 0
+        else {
             throw EGLRenderError.clearFailed(glError: swl_gles2_error())
         }
 
         var pixelBytes = [UInt8](repeating: 0, count: 4)
-        guard unsafe pixelBytes.withUnsafeMutableBufferPointer({ pointer in
-            unsafe swl_gles2_read_center_pixel_rgba8(
-                size.width,
-                size.height,
-                pointer.baseAddress
-            )
-        }) == 0 else {
+        guard
+            unsafe pixelBytes.withUnsafeMutableBufferPointer({ pointer in
+                unsafe swl_gles2_read_center_pixel_rgba8(
+                    size.width,
+                    size.height,
+                    pointer.baseAddress
+                )
+            }) == 0
+        else {
             throw EGLRenderError.readPixelFailed(glError: swl_gles2_error())
         }
 
@@ -211,12 +216,12 @@ package final class EGLGBMRenderTarget {
         unsafe self.display = nil
 
         if let displayPointer = unsafe displayPointer,
-           let surfacePointer = unsafe surfacePointer
+            let surfacePointer = unsafe surfacePointer
         {
             unsafe swl_egl_destroy_surface(displayPointer, surfacePointer)
         }
         if let displayPointer = unsafe displayPointer,
-           let contextPointer = unsafe contextPointer
+            let contextPointer = unsafe contextPointer
         {
             unsafe swl_egl_destroy_context(displayPointer, contextPointer)
         }
@@ -239,9 +244,10 @@ package final class EGLGBMRenderTarget {
     }
 
     private func liveHandles() throws(EGLRenderError) -> LiveHandles {
-        guard let display = unsafe display,
-              let context = unsafe context,
-              let surface = unsafe surface
+        guard
+            let display = unsafe display,
+            let context = unsafe context,
+            let surface = unsafe surface
         else {
             throw EGLRenderError.targetDestroyed
         }
@@ -252,6 +258,22 @@ package final class EGLGBMRenderTarget {
             surface: surface,
             size: renderSize
         )
+    }
+
+    private static func createDisplayPointer(
+        for device: GBMDevice
+    ) throws -> UnsafeMutableRawPointer {
+        let displayPointer = try device.withUnsafeDevicePointer { devicePointer in
+            unsafe swl_egl_display_for_gbm_device(devicePointer)
+        }
+        guard let displayPointer = unsafe displayPointer else {
+            throw EGLRenderError.displayCreationFailed(
+                errno: errno > 0 ? errno : ENODEV,
+                eglError: swl_egl_error()
+            )
+        }
+
+        return unsafe displayPointer
     }
 
     private static func clientExtensions() -> String? {

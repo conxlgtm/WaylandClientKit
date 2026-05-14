@@ -20,13 +20,14 @@ struct GPUDmabufBufferImporterTests {
         let descriptor = try GPUDmabufBufferImport.importDescriptor(for: export)
 
         #expect(
-            descriptor == GPUDmabufBufferImportDescriptor(
-                width: 64,
-                height: 32,
-                format: swl_drm_format_xrgb8888(),
-                modifier: swl_drm_format_mod_linear(),
-                planeCount: 1
-            )
+            descriptor
+                == GPUDmabufBufferImportDescriptor(
+                    width: 64,
+                    height: 32,
+                    format: swl_drm_format_xrgb8888(),
+                    modifier: swl_drm_format_mod_linear(),
+                    planeCount: 1
+                )
         )
     }
 

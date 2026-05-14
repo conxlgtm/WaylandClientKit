@@ -20,8 +20,9 @@ struct EGLRenderTargetTests {
 
     @Test
     func gpuSmokeDrawsDeterministicPixelWhenEnabled() throws {
-        guard let smokeFlag = unsafe Glibc.getenv("SWL_RUN_GPU_SMOKE"),
-              unsafe String(cString: smokeFlag) == "1"
+        guard
+            let smokeFlag = unsafe Glibc.getenv("SWL_RUN_GPU_SMOKE"),
+            unsafe String(cString: smokeFlag) == "1"
         else {
             return
         }

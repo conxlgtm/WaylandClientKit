@@ -130,8 +130,12 @@ package final class GBMLockedSurfaceBuffer {
         guard let bufferPointer = unsafe pointer else { return }
 
         unsafe self.pointer = nil
-        try? surface.withUnsafeSurfacePointer { surfacePointer in
-            unsafe swl_gbm_surface_release_buffer(surfacePointer, bufferPointer)
+        do {
+            try surface.withUnsafeSurfacePointer { surfacePointer in
+                unsafe swl_gbm_surface_release_buffer(surfacePointer, bufferPointer)
+            }
+        } catch {
+            // The GBM surface is already gone, so there is nowhere to return this buffer.
         }
     }
 
