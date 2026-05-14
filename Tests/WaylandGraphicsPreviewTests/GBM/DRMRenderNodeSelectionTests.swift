@@ -48,4 +48,69 @@ struct DRMRenderNodeSelectionTests {
 
         #expect(result == -1)
     }
+
+    @Test
+    func drmShimPrefersRenderNodeOverPrimaryNode() throws {
+        let path = try selectedNodePath(
+            availableNodes: swl_drm_node_primary_bit() | swl_drm_node_render_bit(),
+            primaryNodePath: "/dev/dri/card0",
+            renderNodePath: "/dev/dri/renderD128"
+        )
+
+        #expect(path == "/dev/dri/renderD128")
+    }
+
+    @Test
+    func drmShimFallsBackToPrimaryNodeWhenRenderNodeIsAbsent() throws {
+        let path = try selectedNodePath(
+            availableNodes: swl_drm_node_primary_bit(),
+            primaryNodePath: "/dev/dri/card0",
+            renderNodePath: nil
+        )
+
+        #expect(path == "/dev/dri/card0")
+    }
+}
+
+private func selectedNodePath(
+    availableNodes: UInt32,
+    primaryNodePath: String?,
+    renderNodePath: String?
+) throws -> String {
+    var path = [CChar](repeating: 0, count: Int(swl_drm_render_node_path_max()))
+    let result = unsafe withOptionalCString(primaryNodePath) { primaryPathPointer in
+        unsafe withOptionalCString(renderNodePath) { renderPathPointer in
+            unsafe path.withUnsafeMutableBufferPointer { pathBytes in
+                unsafe swl_drm_node_path_from_available_nodes(
+                    availableNodes,
+                    primaryPathPointer,
+                    renderPathPointer,
+                    pathBytes.baseAddress,
+                    UInt32(pathBytes.count)
+                )
+            }
+        }
+    }
+    #expect(result == 0)
+    try #require(result == 0)
+
+    let selectedPath = unsafe path.withUnsafeBufferPointer { pathBytes -> String? in
+        guard let baseAddress = pathBytes.baseAddress else { return nil }
+
+        return unsafe String(cString: baseAddress)
+    }
+    return try #require(selectedPath)
+}
+
+private func withOptionalCString<Result>(
+    _ string: String?,
+    _ body: (UnsafePointer<CChar>?) -> Result
+) -> Result {
+    guard let string else {
+        return body(nil)
+    }
+
+    return unsafe string.withCString { pointer in
+        unsafe body(pointer)
+    }
 }

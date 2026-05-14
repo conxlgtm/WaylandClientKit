@@ -75,6 +75,76 @@ uint32_t swl_drm_render_node_path_max(void)
     return 256;
 }
 
+uint32_t swl_drm_node_primary_bit(void)
+{
+    return 1u << DRM_NODE_PRIMARY;
+}
+
+uint32_t swl_drm_node_render_bit(void)
+{
+    return 1u << DRM_NODE_RENDER;
+}
+
+static int32_t swl_drm_write_selected_node_path(
+    uint32_t available_nodes,
+    const char *const *nodes,
+    char *out_path,
+    uint32_t out_path_count)
+{
+    if (out_path == NULL || out_path_count == 0)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    const char *selected_node = NULL;
+    if (nodes != NULL &&
+        (available_nodes & swl_drm_node_render_bit()) != 0 &&
+        nodes[DRM_NODE_RENDER] != NULL)
+    {
+        selected_node = nodes[DRM_NODE_RENDER];
+    }
+    else if (nodes != NULL &&
+             (available_nodes & swl_drm_node_primary_bit()) != 0 &&
+             nodes[DRM_NODE_PRIMARY] != NULL)
+    {
+        selected_node = nodes[DRM_NODE_PRIMARY];
+    }
+
+    if (selected_node == NULL)
+    {
+        errno = ENODEV;
+        return -1;
+    }
+
+    int written = snprintf(out_path, out_path_count, "%s", selected_node);
+    if (written < 0 || (uint32_t) written >= out_path_count)
+    {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+
+    return 0;
+}
+
+int32_t swl_drm_node_path_from_available_nodes(
+    uint32_t available_nodes,
+    const char *primary_node_path,
+    const char *render_node_path,
+    char *out_path,
+    uint32_t out_path_count)
+{
+    const char *nodes[DRM_NODE_MAX] = {NULL};
+    nodes[DRM_NODE_PRIMARY] = primary_node_path;
+    nodes[DRM_NODE_RENDER] = render_node_path;
+
+    return swl_drm_write_selected_node_path(
+        available_nodes,
+        nodes,
+        out_path,
+        out_path_count);
+}
+
 int32_t swl_drm_render_node_path_from_device_bytes(
     const uint8_t *device_id_bytes,
     uint32_t byte_count,
@@ -110,25 +180,16 @@ int32_t swl_drm_render_node_path_from_device_bytes(
         return -1;
     }
 
-    if ((device->available_nodes & (1 << DRM_NODE_RENDER)) == 0 ||
-        device->nodes == NULL ||
-        device->nodes[DRM_NODE_RENDER] == NULL)
-    {
-        drmFreeDevice(&device);
-        errno = ENODEV;
-        return -1;
-    }
-
-    int written = snprintf(
+    int selection_result = swl_drm_write_selected_node_path(
+        (uint32_t) device->available_nodes,
+        (const char *const *) device->nodes,
         out_path,
-        out_path_count,
-        "%s",
-        device->nodes[DRM_NODE_RENDER]);
+        out_path_count);
+    int saved_errno = errno;
     drmFreeDevice(&device);
-
-    if (written < 0 || (uint32_t) written >= out_path_count)
+    if (selection_result != 0)
     {
-        errno = ENAMETOOLONG;
+        errno = saved_errno;
         return -1;
     }
 
