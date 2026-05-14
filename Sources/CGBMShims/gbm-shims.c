@@ -588,6 +588,68 @@ void swl_gbm_bo_export_close(struct swl_gbm_bo_export *exported_buffer)
     exported_buffer->plane_count = 0;
 }
 
+struct gbm_surface *swl_gbm_surface_create_for_modifier(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    uint64_t modifier,
+    uint32_t flags)
+{
+    if (device == NULL || width == 0 || height == 0)
+    {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (modifier == DRM_FORMAT_MOD_INVALID)
+    {
+        return gbm_surface_create(device, width, height, format, flags);
+    }
+
+    uint64_t modifiers[1] = {modifier};
+    uint32_t explicit_modifier_flags = flags & ~GBM_BO_USE_LINEAR;
+    return gbm_surface_create_with_modifiers2(
+        device,
+        width,
+        height,
+        format,
+        modifiers,
+        1,
+        explicit_modifier_flags);
+}
+
+void swl_gbm_surface_destroy(struct gbm_surface *surface)
+{
+    if (surface != NULL)
+    {
+        gbm_surface_destroy(surface);
+    }
+}
+
+struct gbm_bo *swl_gbm_surface_lock_front_buffer(struct gbm_surface *surface)
+{
+    if (surface == NULL)
+    {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    return gbm_surface_lock_front_buffer(surface);
+}
+
+void swl_gbm_surface_release_buffer(
+    struct gbm_surface *surface,
+    struct gbm_bo *buffer)
+{
+    if (surface == NULL || buffer == NULL)
+    {
+        return;
+    }
+
+    gbm_surface_release_buffer(surface, buffer);
+}
+
 #ifdef SWL_ENABLE_TESTING
 void swl_test_gbm_bo_create_recording_begin(void)
 {
