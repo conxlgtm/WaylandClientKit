@@ -192,6 +192,8 @@ package enum RawLinuxDmabufBufferParamsEvent {
 
 @safe
 package final class RawLinuxDmabufBuffer {
+    private let releaseOwner: BufferReleaseOwner
+    private var releaseObserver: (() -> Void)?
     private var proxy: RawOwnedProxy
 
     @safe package var pointer: OpaquePointer { proxy.pointer }
@@ -201,6 +203,9 @@ package final class RawLinuxDmabufBuffer {
         pointer bufferPointer: OpaquePointer,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
+        releaseOwner = BufferReleaseOwner(
+            invariantFailureSink: adoptionContext.invariantFailureSink
+        )
         do {
             let adoptedPointer = try adoptionContext.adopt(
                 bufferPointer,
@@ -214,9 +219,23 @@ package final class RawLinuxDmabufBuffer {
             unsafe swl_buffer_destroy(bufferPointer)
             throw error
         }
+
+        try unsafe releaseOwner.install(on: bufferPointer) { [weak buffer = self] in
+            buffer?.handleRelease()
+        }
+    }
+
+    package func setReleaseObserver(_ observer: @escaping () -> Void) {
+        releaseObserver = observer
+    }
+
+    private func handleRelease() {
+        releaseObserver?()
     }
 
     package func destroy() {
+        releaseObserver = nil
+        releaseOwner.cancel()
         proxy.destroy()
     }
 
