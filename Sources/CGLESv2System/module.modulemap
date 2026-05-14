@@ -1,0 +1,5 @@
+module CGLESv2System [system] {
+    header "include/glesv2-umbrella.h"
+    link "GLESv2"
+    export *
+}
