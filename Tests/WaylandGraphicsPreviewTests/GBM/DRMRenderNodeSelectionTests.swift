@@ -61,14 +61,14 @@ struct DRMRenderNodeSelectionTests {
     }
 
     @Test
-    func drmShimFallsBackToPrimaryNodeWhenRenderNodeIsAbsent() throws {
-        let path = try selectedNodePath(
+    func drmShimRejectsPrimaryNodeWhenRenderNodeIsAbsent() {
+        let result = nodePathSelectionResult(
             availableNodes: swl_drm_node_primary_bit(),
             primaryNodePath: "/dev/dri/card0",
             renderNodePath: nil
         )
 
-        #expect(path == "/dev/dri/card0")
+        #expect(result == -1)
     }
 }
 
@@ -100,6 +100,27 @@ private func selectedNodePath(
         return unsafe String(cString: baseAddress)
     }
     return try #require(selectedPath)
+}
+
+private func nodePathSelectionResult(
+    availableNodes: UInt32,
+    primaryNodePath: String?,
+    renderNodePath: String?
+) -> Int32 {
+    var path = [CChar](repeating: 0, count: Int(swl_drm_render_node_path_max()))
+    return unsafe withOptionalCString(primaryNodePath) { primaryPathPointer in
+        unsafe withOptionalCString(renderNodePath) { renderPathPointer in
+            unsafe path.withUnsafeMutableBufferPointer { pathBytes in
+                unsafe swl_drm_node_path_from_available_nodes(
+                    availableNodes,
+                    primaryPathPointer,
+                    renderPathPointer,
+                    pathBytes.baseAddress,
+                    UInt32(pathBytes.count)
+                )
+            }
+        }
+    }
 }
 
 private func withOptionalCString<Result>(
