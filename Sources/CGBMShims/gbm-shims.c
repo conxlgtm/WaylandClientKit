@@ -250,6 +250,8 @@ int32_t swl_gbm_device_get_format_modifier_plane_count(
 
 #ifdef SWL_ENABLE_TESTING
 static struct swl_test_gbm_bo_create_record swl_test_gbm_bo_create_latest;
+static struct swl_test_gbm_surface_lifecycle_record
+    swl_test_gbm_surface_lifecycle_latest;
 
 static struct gbm_bo *swl_gbm_bo_create_default(
     struct gbm_device *device,
@@ -295,6 +297,25 @@ static struct gbm_bo *(*swl_gbm_bo_create_with_modifiers2_impl)(
     const uint64_t *modifiers,
     uint32_t count,
     uint32_t flags) = swl_gbm_bo_create_with_modifiers2_default;
+
+static int32_t swl_gbm_bo_export_dmabuf_default(
+    struct gbm_bo *buffer,
+    struct swl_gbm_bo_export *out_export);
+static void swl_gbm_surface_destroy_default(struct gbm_surface *surface);
+static void swl_gbm_surface_release_buffer_default(
+    struct gbm_surface *surface,
+    struct gbm_bo *buffer);
+
+static int32_t (*swl_gbm_bo_export_dmabuf_impl)(
+    struct gbm_bo *buffer,
+    struct swl_gbm_bo_export *out_export) = swl_gbm_bo_export_dmabuf_default;
+
+static void (*swl_gbm_surface_destroy_impl)(
+    struct gbm_surface *surface) = swl_gbm_surface_destroy_default;
+
+static void (*swl_gbm_surface_release_buffer_impl)(
+    struct gbm_surface *surface,
+    struct gbm_bo *buffer) = swl_gbm_surface_release_buffer_default;
 
 static void swl_test_gbm_bo_create_record_call(
     enum swl_test_gbm_bo_create_kind kind,
@@ -362,9 +383,41 @@ static struct gbm_bo *swl_test_gbm_bo_create_with_modifiers2_record(
         flags);
     return NULL;
 }
+
+static int32_t swl_test_gbm_bo_export_dmabuf_record(
+    struct gbm_bo *buffer,
+    struct swl_gbm_bo_export *out_export)
+{
+    swl_test_gbm_surface_lifecycle_latest.export_call_count += 1;
+    swl_test_gbm_surface_lifecycle_latest.buffer = buffer;
+    if (out_export != NULL)
+    {
+        swl_gbm_bo_export_init(out_export);
+    }
+    errno = EINVAL;
+    return -1;
+}
+
+static void swl_test_gbm_surface_destroy_record(struct gbm_surface *surface)
+{
+    swl_test_gbm_surface_lifecycle_latest.destroy_call_count += 1;
+    swl_test_gbm_surface_lifecycle_latest.surface = surface;
+}
+
+static void swl_test_gbm_surface_release_buffer_record(
+    struct gbm_surface *surface,
+    struct gbm_bo *buffer)
+{
+    swl_test_gbm_surface_lifecycle_latest.release_call_count += 1;
+    swl_test_gbm_surface_lifecycle_latest.surface = surface;
+    swl_test_gbm_surface_lifecycle_latest.buffer = buffer;
+}
 #else
 #define swl_gbm_bo_create_impl gbm_bo_create
 #define swl_gbm_bo_create_with_modifiers2_impl gbm_bo_create_with_modifiers2
+#define swl_gbm_bo_export_dmabuf_impl swl_gbm_bo_export_dmabuf_default
+#define swl_gbm_surface_destroy_impl swl_gbm_surface_destroy_default
+#define swl_gbm_surface_release_buffer_impl swl_gbm_surface_release_buffer_default
 #endif
 
 struct gbm_bo *swl_gbm_bo_create(
@@ -464,7 +517,7 @@ void swl_gbm_bo_destroy(struct gbm_bo *buffer)
     }
 }
 
-int32_t swl_gbm_bo_export_dmabuf(
+static int32_t swl_gbm_bo_export_dmabuf_default(
     struct gbm_bo *buffer,
     struct swl_gbm_bo_export *out_export)
 {
@@ -513,6 +566,13 @@ int32_t swl_gbm_bo_export_dmabuf(
     }
 
     return 0;
+}
+
+int32_t swl_gbm_bo_export_dmabuf(
+    struct gbm_bo *buffer,
+    struct swl_gbm_bo_export *out_export)
+{
+    return swl_gbm_bo_export_dmabuf_impl(buffer, out_export);
 }
 
 int32_t swl_gbm_bo_export_take_plane_fd(
@@ -619,12 +679,17 @@ struct gbm_surface *swl_gbm_surface_create_for_modifier(
         explicit_modifier_flags);
 }
 
-void swl_gbm_surface_destroy(struct gbm_surface *surface)
+static void swl_gbm_surface_destroy_default(struct gbm_surface *surface)
 {
     if (surface != NULL)
     {
         gbm_surface_destroy(surface);
     }
+}
+
+void swl_gbm_surface_destroy(struct gbm_surface *surface)
+{
+    swl_gbm_surface_destroy_impl(surface);
 }
 
 struct gbm_bo *swl_gbm_surface_lock_front_buffer(struct gbm_surface *surface)
@@ -638,7 +703,7 @@ struct gbm_bo *swl_gbm_surface_lock_front_buffer(struct gbm_surface *surface)
     return gbm_surface_lock_front_buffer(surface);
 }
 
-void swl_gbm_surface_release_buffer(
+static void swl_gbm_surface_release_buffer_default(
     struct gbm_surface *surface,
     struct gbm_bo *buffer)
 {
@@ -648,6 +713,13 @@ void swl_gbm_surface_release_buffer(
     }
 
     gbm_surface_release_buffer(surface, buffer);
+}
+
+void swl_gbm_surface_release_buffer(
+    struct gbm_surface *surface,
+    struct gbm_bo *buffer)
+{
+    swl_gbm_surface_release_buffer_impl(surface, buffer);
 }
 
 #ifdef SWL_ENABLE_TESTING
@@ -674,5 +746,29 @@ void swl_test_gbm_bo_create_recording_end(void)
 struct swl_test_gbm_bo_create_record swl_test_gbm_bo_create_record(void)
 {
     return swl_test_gbm_bo_create_latest;
+}
+
+void swl_test_gbm_surface_lifecycle_recording_begin(void)
+{
+    swl_test_gbm_surface_lifecycle_latest =
+        (struct swl_test_gbm_surface_lifecycle_record){0};
+    swl_gbm_bo_export_dmabuf_impl = swl_test_gbm_bo_export_dmabuf_record;
+    swl_gbm_surface_destroy_impl = swl_test_gbm_surface_destroy_record;
+    swl_gbm_surface_release_buffer_impl =
+        swl_test_gbm_surface_release_buffer_record;
+}
+
+void swl_test_gbm_surface_lifecycle_recording_end(void)
+{
+    swl_gbm_bo_export_dmabuf_impl = swl_gbm_bo_export_dmabuf_default;
+    swl_gbm_surface_destroy_impl = swl_gbm_surface_destroy_default;
+    swl_gbm_surface_release_buffer_impl =
+        swl_gbm_surface_release_buffer_default;
+}
+
+struct swl_test_gbm_surface_lifecycle_record
+swl_test_gbm_surface_lifecycle_record(void)
+{
+    return swl_test_gbm_surface_lifecycle_latest;
 }
 #endif

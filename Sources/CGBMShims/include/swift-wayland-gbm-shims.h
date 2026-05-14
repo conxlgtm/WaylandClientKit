@@ -144,9 +144,22 @@ struct swl_test_gbm_bo_create_record {
     uint32_t                         flags;
 };
 
+struct swl_test_gbm_surface_lifecycle_record {
+    int32_t release_call_count;
+    int32_t destroy_call_count;
+    int32_t export_call_count;
+    void   *surface;
+    void   *buffer;
+};
+
 void swl_test_gbm_bo_create_recording_begin(void);
 void swl_test_gbm_bo_create_recording_end(void);
 struct swl_test_gbm_bo_create_record swl_test_gbm_bo_create_record(void);
+
+void swl_test_gbm_surface_lifecycle_recording_begin(void);
+void swl_test_gbm_surface_lifecycle_recording_end(void);
+struct swl_test_gbm_surface_lifecycle_record
+swl_test_gbm_surface_lifecycle_record(void);
 #endif
 
 #ifdef __cplusplus
