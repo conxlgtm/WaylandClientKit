@@ -80,15 +80,20 @@ The current baseline already has meaningful substrate pieces:
 - static cursor surfaces through `wayland-cursor`
 - regular clipboard, primary selection, receive-side drag-and-drop, and
   source-side drag-and-drop
-- presentation-time work in the current active branch
+- presentation-time support
+- shared surface transaction state for SHM and preview GPU commits
+- linux-dmabuf raw objects, feedback parsing, and buffer params lifecycle
+- GBM/DRM allocation, modifier selection, dmabuf export, and buffer-pool state
+- package-internal EGL/GLES render target probe through `WaylandGraphicsPreview`
+- package-internal GPU window presentation bridge through `WaylandGPUPreview`
 - live/headless Wayland smoke paths
 - strict Swift memory-safety diagnostics as errors
 
 Known foundation gaps:
 
-- a shared surface transaction model across SHM, GPU, cursor, drag icon, popup,
-  and future subsurface use
-- linux-dmabuf, GBM, EGL, and GPU buffer presentation
+- extending the shared surface transaction model to cursor, drag icon, and future
+  subsurface use
+- live compositor coverage for the package-internal GPU window presentation path
 - explicit GPU synchronization through `linux-drm-syncobj`
 - color-management, color-representation, content-type, and related metadata
   capability plumbing
@@ -1141,4 +1146,3 @@ The replacement second milestone should be GPU substrate:
 - `gpu-buffer-lifecycle`
 - `gpu-window-backing`
 - `gpu-live-smoke`
-

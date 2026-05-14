@@ -43,6 +43,7 @@ Not implemented yet:
 - drag icon surfaces
 - cursor animation, output-scale cursor selection, or custom cursor drawing APIs
 - output-management APIs
+- public GPU rendering APIs in `WaylandClient`
 - high-level gesture recognizers or widgets
 - DocC reference documentation
 
@@ -148,7 +149,7 @@ Not supported in the current experimental baseline:
 - drag icon surfaces
 - cursor animation or per-output cursor scaling
 - output management or control APIs
-- linux-dmabuf, EGL, GBM, or GPU rendering
+- public `WaylandClient` GPU rendering APIs
 - text-input or IME protocols
 - widgets or retained UI
 
@@ -168,6 +169,10 @@ The build dependency source of truth is the system capability surface:
 - Swift 6.3.1 or newer
 - `clang`
 - `pkg-config`
+- `pkg-config --exists egl`
+- `pkg-config --exists gbm`
+- `pkg-config --exists glesv2`
+- `pkg-config --exists libdrm`
 - `pkg-config --exists wayland-client`
 - `pkg-config --exists wayland-cursor`
 - `pkg-config --exists xkbcommon`
@@ -183,13 +188,13 @@ Supported package-manager mappings:
 
 | Family | Packages |
 | --- | --- |
-| Debian/Ubuntu | `clang git libwayland-dev libxkbcommon-dev make pkg-config ripgrep wayland-protocols` |
-| Fedora/RHEL-like | `clang git wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
-| Arch/Manjaro | `clang git wayland wayland-protocols libxkbcommon make pkgconf ripgrep` |
-| openSUSE | `clang git wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
+| Debian/Ubuntu | `clang git libdrm-dev libegl-dev libgbm-dev libgles-dev libwayland-dev libxkbcommon-dev make pkg-config ripgrep wayland-protocols` |
+| Fedora/RHEL-like | `clang git libdrm-devel mesa-libEGL-devel mesa-libgbm-devel mesa-libGLES-devel wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
+| Arch/Manjaro | `clang git libdrm mesa wayland wayland-protocols libxkbcommon make pkgconf ripgrep` |
+| openSUSE | `clang git libdrm-devel Mesa-libEGL-devel Mesa-libgbm-devel Mesa-libGLESv2-devel wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
 | Alpine | `clang git libdrm-dev mesa-dev wayland-dev wayland-protocols libxkbcommon-dev make pkgconf ripgrep` |
-| Gentoo | `sys-devel/clang dev-vcs/git dev-libs/wayland dev-libs/wayland-protocols dev-util/wayland-scanner x11-libs/libxkbcommon dev-build/make virtual/pkgconfig sys-apps/ripgrep` |
-| Nix/NixOS | `nixpkgs#clang nixpkgs#git nixpkgs#wayland nixpkgs#wayland-protocols nixpkgs#libxkbcommon nixpkgs#gnumake nixpkgs#pkg-config nixpkgs#ripgrep` |
+| Gentoo | `sys-devel/clang dev-vcs/git x11-libs/libdrm media-libs/mesa dev-libs/wayland dev-libs/wayland-protocols dev-util/wayland-scanner x11-libs/libxkbcommon dev-build/make virtual/pkgconfig sys-apps/ripgrep` |
+| Nix/NixOS | `nixpkgs#clang nixpkgs#git nixpkgs#libdrm nixpkgs#mesa nixpkgs#wayland nixpkgs#wayland-protocols nixpkgs#libxkbcommon nixpkgs#gnumake nixpkgs#pkg-config nixpkgs#ripgrep` |
 
 Alpine package installation is mapped for Wayland dependencies, but Swift toolchain availability may require separate setup.
 The Alpine row is a dependency lookup aid, not a Musl support claim.

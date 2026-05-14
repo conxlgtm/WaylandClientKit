@@ -22,7 +22,9 @@ jobs:
             curl \
             git \
             libdrm-dev \
+            libegl-dev \
             libgbm-dev \
+            libgles-dev \
             libwayland-dev \
             libxkbcommon-dev \
             make \
@@ -37,7 +39,9 @@ jobs:
       - name: Tool versions
         run: |
           swift --version
+          pkg-config --modversion egl
           pkg-config --modversion gbm
+          pkg-config --modversion glesv2
           pkg-config --modversion libdrm
           pkg-config --modversion wayland-client
           pkg-config --modversion xkbcommon
@@ -106,7 +110,9 @@ jobs:
           apt-get install -y \
             git \
             libdrm-dev \
+            libegl-dev \
             libgbm-dev \
+            libgles-dev \
             libwayland-dev \
             pkg-config \
             wayland-protocols
@@ -126,7 +132,9 @@ jobs:
             clang \
             git \
             libdrm-dev \
+            libegl-dev \
             libgbm-dev \
+            libgles-dev \
             libwayland-dev \
             libxkbcommon-dev \
             pkg-config \
@@ -152,7 +160,9 @@ jobs:
             coreutils \
             git \
             libdrm-dev \
+            libegl-dev \
             libgbm-dev \
+            libgles-dev \
             libwayland-dev \
             libxkbcommon-dev \
             make \

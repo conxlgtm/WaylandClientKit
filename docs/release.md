@@ -9,7 +9,9 @@ Run these from a clean working tree:
 
 ```bash
 swift --version
+pkg-config --modversion egl
 pkg-config --modversion gbm
+pkg-config --modversion glesv2
 pkg-config --modversion libdrm
 pkg-config --modversion wayland-client
 pkg-config --modversion xkbcommon
@@ -98,7 +100,7 @@ Not supported:
 - Client-side decorations.
 - Full output-management API.
 - Presentation timing.
-- EGL, GBM, dmabuf, or GPU rendering.
+- Public `WaylandClient` GPU rendering APIs.
 - Multi-threaded event queues.
 - Server-side Wayland or compositor APIs.
 
