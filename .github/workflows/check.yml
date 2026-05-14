@@ -136,6 +136,7 @@ jobs:
           swift build --disable-index-store -c release
           swift build --disable-index-store -c release --target SwiftWaylandDemo
           swift build --disable-index-store -c release --product swift-wayland-smoke
+          ./scripts/shims/verify-release-shim-symbols.sh
 
   wayland-smoke:
     runs-on: ubuntu-latest

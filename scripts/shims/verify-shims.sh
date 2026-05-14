@@ -8,6 +8,7 @@ RUNTIME_HEADER="$ROOT/Sources/CWaylandRuntimeShims/include/swift-wayland-runtime
 RUNTIME_SHIMS_DIR="$ROOT/Sources/CWaylandRuntimeShims"
 CURSOR_HEADER="$ROOT/Sources/CWaylandCursorShims/include/swift-wayland-cursor-shims.h"
 CURSOR_SHIMS_DIR="$ROOT/Sources/CWaylandCursorShims"
+GBM_HEADER="$ROOT/Sources/CGBMShims/include/swift-wayland-gbm-shims.h"
 
 protocol_symbols=(
     swl_display_get_registry
@@ -123,6 +124,15 @@ runtime_symbols=(
 )
 
 missing=0
+
+for header in "$PROTOCOL_HEADER" "$GBM_HEADER"; do
+    if [[ -f "$header" ]] &&
+        rg --quiet "\\bNDEBUG\\b|#define[[:space:]]+SWL_ENABLE_TESTING" "$header"; then
+        echo "Testing shims must be gated by Package.swift, not header defaults: $header"
+        missing=1
+    fi
+done
+
 check_symbol_group() {
     local header="$1"
     local implementation_dir="$2"

@@ -8,10 +8,6 @@
 
 #define SWL_GBM_MAX_PLANES 4
 
-#if !defined(SWL_ENABLE_TESTING) && !defined(NDEBUG)
-#define SWL_ENABLE_TESTING 1
-#endif
-
 struct gbm_device;
 struct gbm_bo;
 

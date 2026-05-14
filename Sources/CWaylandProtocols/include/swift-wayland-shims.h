@@ -9,10 +9,6 @@
 #include <sys/types.h>
 #include <wayland-client.h>
 
-#if !defined(SWL_ENABLE_TESTING) && !defined(NDEBUG)
-#define SWL_ENABLE_TESTING 1
-#endif
-
 struct xdg_wm_base;
 struct xdg_surface;
 struct xdg_toplevel;
