@@ -8,6 +8,10 @@
 
 #define SWL_GBM_MAX_PLANES 4
 
+#if !defined(SWL_ENABLE_TESTING) && !defined(NDEBUG)
+#define SWL_ENABLE_TESTING 1
+#endif
+
 struct gbm_device;
 struct gbm_bo;
 
@@ -89,6 +93,13 @@ struct gbm_bo *swl_gbm_bo_create_with_modifier2(
     uint32_t format,
     uint64_t modifier,
     uint32_t flags);
+struct gbm_bo *swl_gbm_bo_create_for_modifier(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    uint64_t modifier,
+    uint32_t flags);
 void swl_gbm_bo_destroy(struct gbm_bo *buffer);
 int32_t swl_gbm_bo_export_dmabuf(
     struct gbm_bo *buffer,
@@ -103,6 +114,30 @@ uint32_t swl_gbm_bo_export_plane_stride(
     const struct swl_gbm_bo_export *exported_buffer,
     uint32_t plane_index);
 void swl_gbm_bo_export_close(struct swl_gbm_bo_export *exported_buffer);
+
+#ifdef SWL_ENABLE_TESTING
+enum swl_test_gbm_bo_create_kind {
+    SWL_TEST_GBM_BO_CREATE_NONE = 0,
+    SWL_TEST_GBM_BO_CREATE = 1,
+    SWL_TEST_GBM_BO_CREATE_WITH_MODIFIERS2 = 2,
+};
+
+struct swl_test_gbm_bo_create_record {
+    int32_t                          call_count;
+    enum swl_test_gbm_bo_create_kind kind;
+    void                            *device;
+    uint32_t                         width;
+    uint32_t                         height;
+    uint32_t                         format;
+    uint64_t                         modifier;
+    uint32_t                         modifier_count;
+    uint32_t                         flags;
+};
+
+void swl_test_gbm_bo_create_recording_begin(void);
+void swl_test_gbm_bo_create_recording_end(void);
+struct swl_test_gbm_bo_create_record swl_test_gbm_bo_create_record(void);
+#endif
 
 #ifdef __cplusplus
 }

@@ -254,6 +254,125 @@ int32_t swl_gbm_device_get_format_modifier_plane_count(
     return gbm_device_get_format_modifier_plane_count(device, format, modifier);
 }
 
+#ifdef SWL_ENABLE_TESTING
+static struct swl_test_gbm_bo_create_record swl_test_gbm_bo_create_latest;
+
+static struct gbm_bo *swl_gbm_bo_create_default(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    uint32_t flags)
+{
+    return gbm_bo_create(device, width, height, format, flags);
+}
+
+static struct gbm_bo *swl_gbm_bo_create_with_modifiers2_default(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    const uint64_t *modifiers,
+    uint32_t count,
+    uint32_t flags)
+{
+    return gbm_bo_create_with_modifiers2(
+        device,
+        width,
+        height,
+        format,
+        modifiers,
+        count,
+        flags);
+}
+
+static struct gbm_bo *(*swl_gbm_bo_create_impl)(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    uint32_t flags) = swl_gbm_bo_create_default;
+
+static struct gbm_bo *(*swl_gbm_bo_create_with_modifiers2_impl)(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    const uint64_t *modifiers,
+    uint32_t count,
+    uint32_t flags) = swl_gbm_bo_create_with_modifiers2_default;
+
+static void swl_test_gbm_bo_create_record_call(
+    enum swl_test_gbm_bo_create_kind kind,
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    uint64_t modifier,
+    uint32_t modifier_count,
+    uint32_t flags)
+{
+    swl_test_gbm_bo_create_latest.call_count += 1;
+    swl_test_gbm_bo_create_latest.kind = kind;
+    swl_test_gbm_bo_create_latest.device = device;
+    swl_test_gbm_bo_create_latest.width = width;
+    swl_test_gbm_bo_create_latest.height = height;
+    swl_test_gbm_bo_create_latest.format = format;
+    swl_test_gbm_bo_create_latest.modifier = modifier;
+    swl_test_gbm_bo_create_latest.modifier_count = modifier_count;
+    swl_test_gbm_bo_create_latest.flags = flags;
+}
+
+static struct gbm_bo *swl_test_gbm_bo_create_record_impl(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    uint32_t flags)
+{
+    swl_test_gbm_bo_create_record_call(
+        SWL_TEST_GBM_BO_CREATE,
+        device,
+        width,
+        height,
+        format,
+        DRM_FORMAT_MOD_INVALID,
+        0,
+        flags);
+    return NULL;
+}
+
+static struct gbm_bo *swl_test_gbm_bo_create_with_modifiers2_record(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    const uint64_t *modifiers,
+    uint32_t count,
+    uint32_t flags)
+{
+    uint64_t modifier = DRM_FORMAT_MOD_INVALID;
+    if (modifiers != NULL && count > 0)
+    {
+        modifier = modifiers[0];
+    }
+
+    swl_test_gbm_bo_create_record_call(
+        SWL_TEST_GBM_BO_CREATE_WITH_MODIFIERS2,
+        device,
+        width,
+        height,
+        format,
+        modifier,
+        count,
+        flags);
+    return NULL;
+}
+#else
+#define swl_gbm_bo_create_impl gbm_bo_create
+#define swl_gbm_bo_create_with_modifiers2_impl gbm_bo_create_with_modifiers2
+#endif
+
 struct gbm_bo *swl_gbm_bo_create(
     struct gbm_device *device,
     uint32_t width,
@@ -267,7 +386,7 @@ struct gbm_bo *swl_gbm_bo_create(
         return NULL;
     }
 
-    return gbm_bo_create(device, width, height, format, flags);
+    return swl_gbm_bo_create_impl(device, width, height, format, flags);
 }
 
 struct gbm_bo *swl_gbm_bo_create_with_modifiers2(
@@ -291,7 +410,7 @@ struct gbm_bo *swl_gbm_bo_create_with_modifiers2(
         return NULL;
     }
 
-    return gbm_bo_create_with_modifiers2(
+    return swl_gbm_bo_create_with_modifiers2_impl(
         device,
         width,
         height,
@@ -317,6 +436,28 @@ struct gbm_bo *swl_gbm_bo_create_with_modifier2(
         format,
         modifiers,
         1,
+        flags);
+}
+
+struct gbm_bo *swl_gbm_bo_create_for_modifier(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    uint64_t modifier,
+    uint32_t flags)
+{
+    if (modifier == DRM_FORMAT_MOD_INVALID)
+    {
+        return swl_gbm_bo_create(device, width, height, format, flags);
+    }
+
+    return swl_gbm_bo_create_with_modifier2(
+        device,
+        width,
+        height,
+        format,
+        modifier,
         flags);
 }
 
@@ -451,3 +592,30 @@ void swl_gbm_bo_export_close(struct swl_gbm_bo_export *exported_buffer)
 
     exported_buffer->plane_count = 0;
 }
+
+#ifdef SWL_ENABLE_TESTING
+void swl_test_gbm_bo_create_recording_begin(void)
+{
+    swl_test_gbm_bo_create_latest =
+        (struct swl_test_gbm_bo_create_record){
+            .kind = SWL_TEST_GBM_BO_CREATE_NONE,
+            .modifier = DRM_FORMAT_MOD_INVALID,
+        };
+
+    swl_gbm_bo_create_impl = swl_test_gbm_bo_create_record_impl;
+    swl_gbm_bo_create_with_modifiers2_impl =
+        swl_test_gbm_bo_create_with_modifiers2_record;
+}
+
+void swl_test_gbm_bo_create_recording_end(void)
+{
+    swl_gbm_bo_create_impl = swl_gbm_bo_create_default;
+    swl_gbm_bo_create_with_modifiers2_impl =
+        swl_gbm_bo_create_with_modifiers2_default;
+}
+
+struct swl_test_gbm_bo_create_record swl_test_gbm_bo_create_record(void)
+{
+    return swl_test_gbm_bo_create_latest;
+}
+#endif

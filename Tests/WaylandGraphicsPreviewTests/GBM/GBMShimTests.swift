@@ -1,7 +1,7 @@
 import CGBMShims
 import Testing
 
-@Suite
+@Suite(.serialized)
 struct GBMShimTests {
     @Test
     func drmFormatConstantsAreAvailable() {
@@ -46,6 +46,15 @@ struct GBMShimTests {
                 swl_drm_format_mod_linear(),
                 0
             ) == nil
+        let bufferForModifierIsNil =
+            unsafe swl_gbm_bo_create_for_modifier(
+                nil,
+                1,
+                1,
+                swl_drm_format_xrgb8888(),
+                swl_drm_format_mod_invalid(),
+                0
+            ) == nil
 
         #expect(createDeviceIsNil)
         #expect(backendNameIsNil)
@@ -54,6 +63,7 @@ struct GBMShimTests {
         #expect(bufferIsNil)
         #expect(bufferWithModifiersIsNil)
         #expect(bufferWithModifierIsNil)
+        #expect(bufferForModifierIsNil)
 
         var exportedBuffer = swl_gbm_bo_export()
         let exportResult = unsafe swl_gbm_bo_export_dmabuf(nil, &exportedBuffer)
@@ -72,5 +82,63 @@ struct GBMShimTests {
         swl_gbm_bo_destroy(nil)
         swl_gbm_device_destroy(nil)
         swl_gbm_bo_export_close(nil)
+    }
+
+    @Test
+    func invalidModifierAllocationUsesImplicitGBMCreate() throws {
+        let device = try unsafe #require(OpaquePointer(bitPattern: 0x6006))
+
+        swl_test_gbm_bo_create_recording_begin()
+        defer { swl_test_gbm_bo_create_recording_end() }
+
+        let buffer = unsafe swl_gbm_bo_create_for_modifier(
+            device,
+            64,
+            32,
+            swl_drm_format_xrgb8888(),
+            swl_drm_format_mod_invalid(),
+            swl_gbm_bo_use_rendering()
+        )
+
+        let record = unsafe swl_test_gbm_bo_create_record()
+        #expect(unsafe buffer == nil)
+        #expect(unsafe record.call_count == 1)
+        #expect(unsafe record.kind == SWL_TEST_GBM_BO_CREATE)
+        #expect(unsafe record.device == UnsafeMutableRawPointer(device))
+        #expect(unsafe record.width == 64)
+        #expect(unsafe record.height == 32)
+        #expect(unsafe record.format == swl_drm_format_xrgb8888())
+        #expect(unsafe record.modifier == swl_drm_format_mod_invalid())
+        #expect(unsafe record.modifier_count == 0)
+        #expect(unsafe record.flags == swl_gbm_bo_use_rendering())
+    }
+
+    @Test
+    func explicitModifierAllocationUsesModifierGBMCreate() throws {
+        let device = try unsafe #require(OpaquePointer(bitPattern: 0x7007))
+
+        swl_test_gbm_bo_create_recording_begin()
+        defer { swl_test_gbm_bo_create_recording_end() }
+
+        let buffer = unsafe swl_gbm_bo_create_for_modifier(
+            device,
+            128,
+            64,
+            swl_drm_format_argb8888(),
+            swl_drm_format_mod_linear(),
+            swl_gbm_bo_use_scanout()
+        )
+
+        let record = unsafe swl_test_gbm_bo_create_record()
+        #expect(unsafe buffer == nil)
+        #expect(unsafe record.call_count == 1)
+        #expect(unsafe record.kind == SWL_TEST_GBM_BO_CREATE_WITH_MODIFIERS2)
+        #expect(unsafe record.device == UnsafeMutableRawPointer(device))
+        #expect(unsafe record.width == 128)
+        #expect(unsafe record.height == 64)
+        #expect(unsafe record.format == swl_drm_format_argb8888())
+        #expect(unsafe record.modifier == swl_drm_format_mod_linear())
+        #expect(unsafe record.modifier_count == 1)
+        #expect(unsafe record.flags == swl_gbm_bo_use_scanout())
     }
 }
