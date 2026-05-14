@@ -30,7 +30,9 @@ int32_t swl_egl_initialize(
     int32_t *out_minor);
 void swl_egl_terminate(swl_egl_display display);
 int32_t swl_egl_bind_gles_api(void);
-swl_egl_config swl_egl_choose_gles_window_config(swl_egl_display display);
+swl_egl_config swl_egl_choose_gles_window_config(
+    swl_egl_display display,
+    uint32_t native_visual_id);
 swl_egl_context swl_egl_create_gles2_context(
     swl_egl_display display,
     swl_egl_config config);
