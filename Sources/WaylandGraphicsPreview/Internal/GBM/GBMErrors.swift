@@ -12,7 +12,15 @@ package enum GBMAllocationError: Error, Equatable, Sendable, CustomStringConvert
         flags: UInt32,
         errno: Int32
     )
+    case surfaceCreationFailed(
+        format: UInt32,
+        modifier: UInt64,
+        flags: UInt32,
+        errno: Int32
+    )
     case bufferDestroyed
+    case surfaceDestroyed
+    case surfaceFrontBufferLockFailed(errno: Int32)
     case exportFailed(errno: Int32)
     case invalidPlaneIndex(Int)
     case planeFileDescriptorAlreadyTaken(Int)
@@ -36,8 +44,15 @@ package enum GBMAllocationError: Error, Equatable, Sendable, CustomStringConvert
         case .bufferAllocationFailed(let format, let modifier, let flags, let errorNumber):
             "GBM buffer allocation failed for format \(format), modifier \(modifier), "
                 + "flags \(flags), errno \(errorNumber)"
+        case .surfaceCreationFailed(let format, let modifier, let flags, let errorNumber):
+            "GBM surface creation failed for format \(format), modifier \(modifier), "
+                + "flags \(flags), errno \(errorNumber)"
         case .bufferDestroyed:
             "GBM buffer was already destroyed"
+        case .surfaceDestroyed:
+            "GBM surface was already destroyed"
+        case .surfaceFrontBufferLockFailed(let errorNumber):
+            "GBM surface front-buffer lock failed with errno \(errorNumber)"
         case .exportFailed(let errorNumber):
             "GBM dmabuf export failed with errno \(errorNumber)"
         case .invalidPlaneIndex(let index):
