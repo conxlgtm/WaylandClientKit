@@ -244,6 +244,17 @@ extension SurfaceRuntime {
         }
     }
 
+    var nextCommitGeneration: UInt64 {
+        switch phase {
+        case .unassigned(let objects),
+            .live(_, let objects),
+            .roleDestroyed(let objects):
+            objects.transactionState.nextCommitGeneration
+        case .surfaceDestroyed:
+            SurfaceTransactionState().nextCommitGeneration
+        }
+    }
+
     @discardableResult
     mutating func completeFrameCallback() throws -> UInt64? {
         try mutateSurfaceObjects(default: nil) { objects in

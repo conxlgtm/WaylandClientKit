@@ -1005,9 +1005,8 @@ extension TopLevelWindow {
     }
 
     package func presentPreviewBufferOnOwnerThread(
-        _ buffer: RawSurfaceBuffer,
-        generation: UInt64
-    ) throws -> SurfaceCommitPlan {
+        _ buffer: RawSurfaceBuffer
+    ) throws -> PreviewBufferPresentationResult {
         connection.preconditionIsOwnerThread()
 
         guard !model.isClosed else {
@@ -1019,7 +1018,12 @@ extension TopLevelWindow {
         guard pendingFrameRegistration == nil else {
             throw ClientError.window(id, .invalidLifecycleTransition(.nestedPresentation))
         }
+        guard model.presentation == .idle else {
+            throw ClientError.window(id, .invalidLifecycleTransition(.nestedPresentation))
+        }
 
+        let generation = surfaceRuntime.nextCommitGeneration
+        let bufferAvailability = try redrawBufferAvailability()
         let preparedCommit = try SurfaceFrameCommitter.prepare(
             SurfaceFrameCommitRequest(
                 surface: surface,
@@ -1043,7 +1047,19 @@ extension TopLevelWindow {
                 preparedCommit,
                 runtime: &surfaceRuntime
             )
-            return SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
+            let commitPlan = SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
+            try interpretWindowEffects(
+                model.reduce(
+                    .externalPresentationSucceeded(
+                        generation: generation,
+                        bufferAvailability: bufferAvailability
+                    )
+                )
+            )
+            return PreviewBufferPresentationResult(
+                generation: generation,
+                commitPlan: commitPlan
+            )
         } catch {
             pendingFrameRegistration = nil
             surfaceRuntime.cancelFrameCallback()
