@@ -104,12 +104,6 @@ static int32_t swl_drm_write_selected_node_path(
     {
         selected_node = nodes[DRM_NODE_RENDER];
     }
-    else if (nodes != NULL &&
-             (available_nodes & swl_drm_node_primary_bit()) != 0 &&
-             nodes[DRM_NODE_PRIMARY] != NULL)
-    {
-        selected_node = nodes[DRM_NODE_PRIMARY];
-    }
 
     if (selected_node == NULL)
     {
