@@ -20,7 +20,7 @@ struct GBMShimTests {
     }
 
     @Test
-    func nullGBMInputsFailWithoutDereference() {
+    func nullGBMDeviceAndBufferInputsFailWithoutDereference() {
         let createDeviceIsNil = unsafe swl_gbm_create_device(-1) == nil
         let backendNameIsNil = unsafe swl_gbm_device_get_backend_name(nil) == nil
         let formatSupported = swl_gbm_device_is_format_supported(nil, 0, 0)
@@ -82,7 +82,10 @@ struct GBMShimTests {
         swl_gbm_bo_destroy(nil)
         swl_gbm_device_destroy(nil)
         swl_gbm_bo_export_close(nil)
+    }
 
+    @Test
+    func nullGBMSurfaceInputsFailWithoutDereference() {
         let surfaceIsNil =
             unsafe swl_gbm_surface_create_for_modifier(
                 nil,

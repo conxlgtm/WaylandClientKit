@@ -125,7 +125,7 @@ package final class GPUWindowPresenter {
         }
 
         guard let buffer = buffers[lease.slotID] else {
-            try? state.cancelLease(lease)
+            try cancelLeaseAfterFailedPresentation(lease)
             throw GPUWindowPresenterError.missingBuffer(lease.slotID)
         }
 
@@ -141,11 +141,21 @@ package final class GPUWindowPresenter {
                 commitPlan: commitPlan
             )
         } catch let error as GBMBufferPoolStateError {
-            try? state.cancelLease(lease)
+            try cancelLeaseAfterFailedPresentation(lease)
             throw GPUWindowPresenterError.pool(error)
         } catch {
-            try? state.cancelLease(lease)
+            try cancelLeaseAfterFailedPresentation(lease)
             throw GPUWindowPresenterError.window(error)
+        }
+    }
+
+    private func cancelLeaseAfterFailedPresentation(
+        _ lease: GPUWindowPresentationLease
+    ) throws(GPUWindowPresenterError) {
+        do {
+            try state.cancelLease(lease)
+        } catch {
+            throw GPUWindowPresenterError.pool(error)
         }
     }
 

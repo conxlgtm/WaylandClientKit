@@ -105,6 +105,27 @@ package final class GPUDmabufBufferImport {
         )
         requestBox.importRequest = importRequest
 
+        try addPlanes(from: export, descriptor: descriptor, to: params)
+
+        do {
+            try params.create(
+                width: descriptor.width,
+                height: descriptor.height,
+                format: descriptor.format,
+                flags: flags
+            )
+        } catch {
+            throw GPUDmabufBufferImportError.createRequestFailed(runtimeError(from: error))
+        }
+
+        return importRequest
+    }
+
+    private static func addPlanes(
+        from export: GBMDmabufExport,
+        descriptor: GPUDmabufBufferImportDescriptor,
+        to params: RawLinuxDmabufBufferParams
+    ) throws(GPUDmabufBufferImportError) {
         for index in 0..<descriptor.planeCount {
             let layout: GBMDmabufPlaneLayout
             do {
@@ -139,19 +160,6 @@ package final class GPUDmabufBufferImport {
                 )
             }
         }
-
-        do {
-            try params.create(
-                width: descriptor.width,
-                height: descriptor.height,
-                format: descriptor.format,
-                flags: flags
-            )
-        } catch {
-            throw GPUDmabufBufferImportError.createRequestFailed(runtimeError(from: error))
-        }
-
-        return importRequest
     }
 
     package static func importDescriptor(
@@ -163,8 +171,9 @@ package final class GPUDmabufBufferImport {
         guard export.planeCount <= Int(UInt32.max) else {
             throw GPUDmabufBufferImportError.planeCountExceedsUInt32(export.planeCount)
         }
-        guard export.width <= UInt32(Int32.max),
-              export.height <= UInt32(Int32.max)
+        guard
+            export.width <= UInt32(Int32.max),
+            export.height <= UInt32(Int32.max)
         else {
             throw GPUDmabufBufferImportError.dimensionsExceedInt32(
                 width: export.width,
