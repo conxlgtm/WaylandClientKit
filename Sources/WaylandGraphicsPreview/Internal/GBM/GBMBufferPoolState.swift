@@ -109,6 +109,17 @@ package struct GBMBufferPoolState: Equatable, Sendable {
         slots[slotID] = .submitted(commitGeneration: commitGeneration)
     }
 
+    package mutating func cancelLease(
+        _ slotID: GBMBufferPoolSlotID
+    ) throws(GBMBufferPoolStateError) {
+        let lifecycle = try lifecycle(for: slotID)
+        guard lifecycle == .leased else {
+            throw GBMBufferPoolStateError.slotNotLeased(slotID, actual: lifecycle)
+        }
+
+        slots[slotID] = .available
+    }
+
     package mutating func markReleased(
         _ slotID: GBMBufferPoolSlotID
     ) throws(GBMBufferPoolStateError) {

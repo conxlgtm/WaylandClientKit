@@ -140,6 +140,11 @@ let package = Package(
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
+            name: "WaylandGPUPreview",
+            dependencies: ["WaylandClient", "WaylandGraphicsPreview", "WaylandRaw"],
+            swiftSettings: strictMemorySafetySwiftSettings
+        ),
+        .target(
             name: "WaylandSmokeSupport",
             dependencies: ["WaylandClient"],
             swiftSettings: strictMemorySafetySwiftSettings
@@ -204,6 +209,11 @@ let package = Package(
                 "CEGLShims",
             ],
             swiftSettings: cShimTestingSwiftSettings
+        ),
+        .testTarget(
+            name: "WaylandGPUPreviewTests",
+            dependencies: ["WaylandGPUPreview", "WaylandGraphicsPreview"],
+            swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(
             name: "WaylandCursorTests", dependencies: ["WaylandCursor"],

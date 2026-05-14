@@ -1004,6 +1004,53 @@ extension TopLevelWindow {
         markNeedsRedraw()
     }
 
+    package func presentPreviewBufferOnOwnerThread(
+        _ buffer: RawSurfaceBuffer,
+        generation: UInt64
+    ) throws -> SurfaceCommitPlan {
+        connection.preconditionIsOwnerThread()
+
+        guard !model.isClosed else {
+            throw ClientError.window(id, .invalidLifecycleTransition(.presentAfterDestroyed))
+        }
+        guard model.currentConfiguration != nil else {
+            throw ClientError.window(id, .invalidLifecycleTransition(.mapBeforeInitialConfigure))
+        }
+        guard pendingFrameRegistration == nil else {
+            throw ClientError.window(id, .invalidLifecycleTransition(.nestedPresentation))
+        }
+
+        let preparedCommit = try SurfaceFrameCommitter.prepare(
+            SurfaceFrameCommitRequest(
+                surface: surface,
+                scaleInstallation: scaleInstallation,
+                generation: generation,
+                geometry: try currentSurfaceGeometry()
+            ),
+            runtime: &surfaceRuntime,
+        )
+
+        pendingFrameRegistration = try SurfaceFrameCommitter.requestFrameCallback(
+            on: surface,
+            runtime: &surfaceRuntime,
+            generation: generation
+        ) { [weak self] in
+            self?.handleFrameDone()
+        }
+
+        do {
+            try SurfaceFrameCommitter.recordPreparedCommit(
+                preparedCommit,
+                runtime: &surfaceRuntime
+            )
+            return SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
+        } catch {
+            pendingFrameRegistration = nil
+            surfaceRuntime.cancelFrameCallback()
+            throw error
+        }
+    }
+
     package func requestPresentationFeedbackOnOwnerThread(
         presentation: RawPresentation,
         outputIDForPresentationSyncOutput:
