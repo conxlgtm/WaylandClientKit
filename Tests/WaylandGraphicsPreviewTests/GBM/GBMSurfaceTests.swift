@@ -1,3 +1,5 @@
+import CGBMShims
+import Glibc
 import Testing
 
 @testable import WaylandGraphicsPreview
@@ -23,5 +25,62 @@ struct GBMSurfaceTests {
         #expect(descriptor.format == GBMDRMFormat.xrgb8888)
         #expect(descriptor.modifier == GBMDRMModifier.invalid)
         #expect(descriptor.flags == [.rendering, .linear])
+    }
+
+    @Test
+    func destroyReleasesLockedBufferAndInvalidatesLease() throws {
+        let surfacePointer = try unsafe #require(OpaquePointer(bitPattern: 0x7007))
+        let bufferPointer = try unsafe #require(OpaquePointer(bitPattern: 0x8008))
+        let renderNodeDescriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(renderNodeDescriptors.readEnd)
+        }
+        let renderNode = try GBMRenderNodeFileDescriptor(
+            adopting: renderNodeDescriptors.writeEnd
+        )
+        let device = GBMDevice(
+            testingAdoptingRenderNodeFileDescriptor: renderNode
+        )
+        let surface = unsafe GBMSurface(
+            testingAdoptingSurfacePointer: surfacePointer,
+            device: device
+        )
+        let lockedBuffer = unsafe surface.testingRegisterLockedBuffer(pointer: bufferPointer)
+        let expectedSurfaceAddress = Int(
+            bitPattern: unsafe UnsafeMutableRawPointer(surfacePointer)
+        )
+        let expectedBufferAddress = Int(
+            bitPattern: unsafe UnsafeMutableRawPointer(bufferPointer)
+        )
+
+        swl_test_gbm_surface_lifecycle_recording_begin()
+        defer {
+            swl_test_gbm_surface_lifecycle_recording_end()
+        }
+
+        surface.destroy()
+        let destroyRecord = unsafe swl_test_gbm_surface_lifecycle_record()
+        let destroyReleaseCallCount = unsafe destroyRecord.release_call_count
+        let destroyCallCount = unsafe destroyRecord.destroy_call_count
+        let destroyExportCallCount = unsafe destroyRecord.export_call_count
+        let destroySurfaceAddress = Int(bitPattern: unsafe destroyRecord.surface)
+        let destroyBufferAddress = Int(bitPattern: unsafe destroyRecord.buffer)
+
+        #expect(destroyReleaseCallCount == 1)
+        #expect(destroyCallCount == 1)
+        #expect(destroyExportCallCount == 0)
+        #expect(destroySurfaceAddress == expectedSurfaceAddress)
+        #expect(destroyBufferAddress == expectedBufferAddress)
+        #expect(throws: GBMAllocationError.bufferDestroyed) {
+            _ = try lockedBuffer.exportDmabuf()
+        }
+
+        lockedBuffer.release()
+        let releaseRecord = unsafe swl_test_gbm_surface_lifecycle_record()
+        let releaseCallCount = unsafe releaseRecord.release_call_count
+        let releaseExportCallCount = unsafe releaseRecord.export_call_count
+
+        #expect(releaseCallCount == 1)
+        #expect(releaseExportCallCount == 0)
     }
 }
