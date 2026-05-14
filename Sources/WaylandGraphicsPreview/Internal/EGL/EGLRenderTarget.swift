@@ -92,7 +92,7 @@ package final class EGLGBMRenderTarget {
         )
         renderSize = surfaceDescriptor.size
 
-        let displayPointer = try Self.createDisplayPointer(for: device)
+        let displayPointer = try unsafe Self.createDisplayPointer(for: device)
         unsafe display = displayPointer
 
         var major: Int32 = 0
