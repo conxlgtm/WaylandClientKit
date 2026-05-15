@@ -21,12 +21,12 @@ extension DataTransferManager {
         }
 
         let descriptors = try backend.makeOfferReceivePipe()
-        var readEnd = try adoptReadEnd(descriptors)
-        try receiveIntoPipe(
-            binding,
+        var readEnd = try descriptors.adoptReadEnd(using: backend)
+        try descriptors.receive(
+            into: binding,
             mimeType: mimeType,
-            descriptors: descriptors,
-            readEnd: &readEnd
+            readEnd: &readEnd,
+            using: backend
         )
         return readEnd
     }
@@ -158,45 +158,4 @@ extension DataTransferManager {
         }
     }
 
-    private func adoptReadEnd(
-        _ descriptors: DataTransferPipeDescriptors
-    ) throws -> OwnedFileDescriptor {
-        do {
-            return try backend.adoptOwnedFileDescriptor(descriptors.readEnd)
-        } catch {
-            closePipeDescriptorIfValid(descriptors.readEnd)
-            closePipeDescriptorIfValid(descriptors.writeEnd)
-            throw error
-        }
-    }
-
-    private func receiveIntoPipe(
-        _ binding: any DataTransferOfferBinding,
-        mimeType: MIMEType,
-        descriptors: DataTransferPipeDescriptors,
-        readEnd: inout OwnedFileDescriptor
-    ) throws {
-        var rawWriteEnd: Int32? = descriptors.writeEnd
-        do {
-            var writeEnd = try backend.adoptOwnedFileDescriptor(descriptors.writeEnd)
-            rawWriteEnd = nil
-            binding.receive(mimeType: mimeType, fd: writeEnd.rawValue)
-            try writeEnd.close()
-        } catch {
-            if let rawWriteEnd {
-                closePipeDescriptorIfValid(rawWriteEnd)
-            }
-            do {
-                try readEnd.close()
-            } catch {
-                _ = error
-            }
-            throw error
-        }
-    }
-
-    private func closePipeDescriptorIfValid(_ descriptor: Int32) {
-        guard descriptor >= 0 else { return }
-        _ = backend.closeFileDescriptor(descriptor)
-    }
 }

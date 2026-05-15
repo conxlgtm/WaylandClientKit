@@ -7,7 +7,7 @@ package protocol PrimarySelectionDeviceBinding: AnyObject {
     func release()
 }
 
-package protocol PrimarySelectionOfferBinding: AnyObject {
+package protocol PrimarySelectionOfferBinding: AnyObject, DataTransferReceiveBinding {
     var id: DataOfferID { get }
 
     func receive(mimeType: MIMEType, fd: Int32)
@@ -21,7 +21,7 @@ package protocol PrimarySelectionSourceBinding: AnyObject {
     func destroy()
 }
 
-package protocol PrimarySelectionControllerBackend: AnyObject {
+package protocol PrimarySelectionControllerBackend: AnyObject, DataTransferReceivePipeBackend {
     func preconditionIsOwnerThread()
     func bindPrimarySelectionDevice(
         for seatID: SeatID,

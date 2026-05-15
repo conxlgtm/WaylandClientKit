@@ -80,12 +80,12 @@ package final class PrimarySelectionController {
         }
 
         let descriptors = try backend.makeOfferReceivePipe()
-        var readEnd = try adoptReadEnd(descriptors)
-        try receiveIntoPipe(
-            binding,
+        var readEnd = try descriptors.adoptReadEnd(using: backend)
+        try descriptors.receive(
+            into: binding,
             mimeType: mimeType,
-            descriptors: descriptors,
-            readEnd: &readEnd
+            readEnd: &readEnd,
+            using: backend
         )
         return readEnd
     }
