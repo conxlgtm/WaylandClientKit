@@ -16,19 +16,12 @@ package final class RawViewporter {
         version viewporterVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                viewporterPointer,
-                interface: "wp_viewporter"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_wp_viewporter_destroy
-            )
-        } catch {
-            unsafe swl_wp_viewporter_destroy(viewporterPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: viewporterPointer,
+            interface: "wp_viewporter",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_wp_viewporter_destroy
+        )
         version = viewporterVersion
         proxyAdoption = adoptionContext
     }
@@ -66,19 +59,12 @@ package final class RawViewport {
         version viewportVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                viewportPointer,
-                interface: "wp_viewport"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_wp_viewport_destroy
-            )
-        } catch {
-            unsafe swl_wp_viewport_destroy(viewportPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: viewportPointer,
+            interface: "wp_viewport",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_wp_viewport_destroy
+        )
         version = viewportVersion
     }
 
@@ -110,19 +96,12 @@ package final class RawFractionalScaleManager {
         version managerVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                managerPointer,
-                interface: "wp_fractional_scale_manager_v1"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_wp_fractional_scale_manager_v1_destroy
-            )
-        } catch {
-            unsafe swl_wp_fractional_scale_manager_v1_destroy(managerPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: managerPointer,
+            interface: "wp_fractional_scale_manager_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_wp_fractional_scale_manager_v1_destroy
+        )
         version = managerVersion
         proxyAdoption = adoptionContext
     }
@@ -167,19 +146,12 @@ package final class RawFractionalScale {
         version fractionalScaleVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                fractionalScalePointer,
-                interface: "wp_fractional_scale_v1"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_wp_fractional_scale_v1_destroy
-            )
-        } catch {
-            unsafe swl_wp_fractional_scale_v1_destroy(fractionalScalePointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: fractionalScalePointer,
+            interface: "wp_fractional_scale_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_wp_fractional_scale_v1_destroy
+        )
         version = fractionalScaleVersion
     }
 
