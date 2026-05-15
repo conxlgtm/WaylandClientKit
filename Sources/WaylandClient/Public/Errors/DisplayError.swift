@@ -22,7 +22,7 @@ public struct WaylandSystemErrno: Equatable, Sendable, CustomStringConvertible {
         rawValue = rawErrorNumber
     }
 
-    package init(capturingPOSIXErrno rawErrorNumber: Int32 = Glibc.errno, fallback: Int32) {
+    package init(capturingPOSIXErrno rawErrorNumber: Int32, fallback: Int32) {
         self.init(unchecked: rawErrorNumber > 0 ? rawErrorNumber : fallback)
     }
 

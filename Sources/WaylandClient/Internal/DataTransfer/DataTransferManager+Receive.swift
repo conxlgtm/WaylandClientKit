@@ -157,5 +157,4 @@ extension DataTransferManager {
             throw DataTransferError.dragOfferNotFinishable(offer.id.dragIdentity)
         }
     }
-
 }
