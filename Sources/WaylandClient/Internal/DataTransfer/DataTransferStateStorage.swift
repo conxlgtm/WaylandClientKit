@@ -354,7 +354,7 @@ package struct DataTransferSourceState: Equatable, Sendable {
 
     private func requireDragSourceActions() throws -> DragActionSet {
         guard let actions = storage.role.dragActions else {
-            throw DataTransferError.unknownDragSourceIdentity(DragSourceIdentity(id))
+            throw DataTransferError.unknownDragSourceIdentity(id.dragIdentity)
         }
 
         return actions

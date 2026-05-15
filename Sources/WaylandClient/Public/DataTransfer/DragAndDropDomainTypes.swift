@@ -171,7 +171,7 @@ public struct DragEnterEvent: Equatable, Sendable {
         target eventTarget: InputEventTarget
     ) {
         seatID = eventSeatID
-        offer = DragOfferIdentity(eventOfferID)
+        offer = eventOfferID.dragIdentity
         serial = eventSerial
         location = eventLocation
         target = eventTarget
@@ -191,7 +191,7 @@ public struct DragMotionEvent: Equatable, Sendable {
         location eventLocation: DragLocation
     ) {
         seatID = eventSeatID
-        offer = DragOfferIdentity(eventOfferID)
+        offer = eventOfferID.dragIdentity
         time = eventTime
         location = eventLocation
     }
@@ -203,7 +203,7 @@ public struct DragLeaveEvent: Equatable, Sendable {
 
     package init(seatID eventSeatID: SeatID, offerID eventOfferID: DataOfferID) {
         seatID = eventSeatID
-        offer = DragOfferIdentity(eventOfferID)
+        offer = eventOfferID.dragIdentity
     }
 }
 
@@ -213,7 +213,7 @@ public struct DragDropEvent: Equatable, Sendable {
 
     package init(seatID eventSeatID: SeatID, offerID eventOfferID: DataOfferID) {
         seatID = eventSeatID
-        offer = DragOfferIdentity(eventOfferID)
+        offer = eventOfferID.dragIdentity
     }
 }
 
@@ -223,6 +223,6 @@ public struct DragOfferChangedEvent: Equatable, Sendable {
 
     package init(seatID eventSeatID: SeatID, offerID eventOfferID: DataOfferID) {
         seatID = eventSeatID
-        offer = DragOfferIdentity(eventOfferID)
+        offer = eventOfferID.dragIdentity
     }
 }

@@ -75,7 +75,7 @@ public struct DragSource: Sendable, Hashable {
     }
 
     public var identity: DragSourceIdentity {
-        DragSourceIdentity(id)
+        id.dragIdentity
     }
 
     /// Cancels this source-side drag operation by destroying the underlying data source.
@@ -98,7 +98,7 @@ public struct DragSourceTargetEvent: Equatable, Sendable {
     public let mimeType: MIMEType?
 
     package init(sourceID eventSourceID: DataSourceID, mimeType eventMIMEType: MIMEType?) {
-        source = DragSourceIdentity(eventSourceID)
+        source = eventSourceID.dragIdentity
         mimeType = eventMIMEType
     }
 }
@@ -108,7 +108,7 @@ public struct DragSourceActionEvent: Equatable, Sendable {
     public let action: DragAction
 
     package init(sourceID eventSourceID: DataSourceID, action eventAction: DragAction) {
-        source = DragSourceIdentity(eventSourceID)
+        source = eventSourceID.dragIdentity
         action = eventAction
     }
 }
@@ -151,7 +151,7 @@ public struct DragSourceFinishedEvent: Equatable, Sendable {
         sourceID eventSourceID: DataSourceID,
         finalAction eventAction: DragSourceFinalAction
     ) {
-        source = DragSourceIdentity(eventSourceID)
+        source = eventSourceID.dragIdentity
         finalAction = eventAction
     }
 }

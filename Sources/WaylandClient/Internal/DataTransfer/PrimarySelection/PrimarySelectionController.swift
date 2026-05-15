@@ -69,7 +69,7 @@ package final class PrimarySelectionController {
 
         guard let offer = offersByID[offerID]?.snapshot else {
             throw DataTransferError.unknownPrimarySelectionOfferIdentity(
-                PrimarySelectionOfferIdentity(offerID)
+                offerID.primarySelectionIdentity
             )
         }
         guard offer.mimeTypes.contains(mimeType) else {
@@ -126,7 +126,7 @@ package final class PrimarySelectionController {
 
         guard let source = sourcesByID[sourceID]?.snapshot else {
             throw DataTransferError.unknownPrimarySelectionSourceIdentity(
-                PrimarySelectionSourceIdentity(sourceID)
+                sourceID.primarySelectionIdentity
             )
         }
 
@@ -293,7 +293,7 @@ extension PrimarySelectionController {
             guard let rawMimeType, let mimeType = MIMEType(rawValue: rawMimeType) else { return }
             guard var offer = offersByID[offerID] else {
                 throw DataTransferError.unknownPrimarySelectionOfferIdentity(
-                    PrimarySelectionOfferIdentity(offerID)
+                    offerID.primarySelectionIdentity
                 )
             }
             let changed = try offer.appendMIMETypeIfNew(mimeType)
@@ -304,7 +304,7 @@ extension PrimarySelectionController {
         } catch {
             recordCallbackError(
                 error,
-                context: .primarySelectionOffer(PrimarySelectionOfferIdentity(offerID))
+                context: .primarySelectionOffer(offerID.primarySelectionIdentity)
             )
         }
     }
@@ -321,13 +321,13 @@ extension PrimarySelectionController {
         }
         guard var offer = offersByID[offerID] else {
             throw DataTransferError.unknownPrimarySelectionOfferIdentity(
-                PrimarySelectionOfferIdentity(offerID)
+                offerID.primarySelectionIdentity
             )
         }
         if let snapshot = offer.snapshot {
             guard snapshot.role.seatID == seatID else {
                 throw DataTransferError.mismatchedOfferSeat(
-                    offer: .primarySelection(PrimarySelectionOfferIdentity(offerID)),
+                    offer: .primarySelection(offerID.primarySelectionIdentity),
                     expected: seatID,
                     actual: snapshot.role.seatID
                 )
@@ -335,7 +335,7 @@ extension PrimarySelectionController {
         } else {
             guard offer.pendingSeatID == seatID else {
                 throw DataTransferError.mismatchedOfferSeat(
-                    offer: .primarySelection(PrimarySelectionOfferIdentity(offerID)),
+                    offer: .primarySelection(offerID.primarySelectionIdentity),
                     expected: seatID,
                     actual: offer.pendingSeatID
                 )
@@ -371,14 +371,14 @@ extension PrimarySelectionController {
             case .cancelled:
                 if cancelSource(sourceID) {
                     eventQueue.append(
-                        .primarySelectionSourceCancelled(PrimarySelectionSourceIdentity(sourceID))
+                        .primarySelectionSourceCancelled(sourceID.primarySelectionIdentity)
                     )
                 }
             }
         } catch {
             recordCallbackError(
                 error,
-                context: .primarySelectionSource(PrimarySelectionSourceIdentity(sourceID))
+                context: .primarySelectionSource(sourceID.primarySelectionIdentity)
             )
         }
     }
@@ -399,7 +399,7 @@ extension PrimarySelectionController {
         do {
             guard let source = sourcesByID[sourceID] else {
                 throw DataTransferError.unknownPrimarySelectionSourceIdentity(
-                    PrimarySelectionSourceIdentity(sourceID)
+                    sourceID.primarySelectionIdentity
                 )
             }
             let mimeType = try MIMEType(rawMimeType ?? "")
@@ -444,7 +444,7 @@ extension PrimarySelectionController {
         case .ownedSource(let sourceID):
             if cancelSource(sourceID) {
                 eventQueue.append(
-                    .primarySelectionSourceCancelled(PrimarySelectionSourceIdentity(sourceID))
+                    .primarySelectionSourceCancelled(sourceID.primarySelectionIdentity)
                 )
             }
         }

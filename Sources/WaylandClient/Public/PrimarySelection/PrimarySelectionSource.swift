@@ -41,7 +41,7 @@ public struct PrimarySelectionSource: Sendable, Hashable {
     }
 
     public var identity: PrimarySelectionSourceIdentity {
-        PrimarySelectionSourceIdentity(id)
+        id.primarySelectionIdentity
     }
 
     /// Requests clearing this source from the primary selection.

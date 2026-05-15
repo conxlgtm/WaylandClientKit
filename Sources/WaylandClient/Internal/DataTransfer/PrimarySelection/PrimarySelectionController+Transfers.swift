@@ -87,7 +87,7 @@ extension PrimarySelectionController {
                     recordCallbackError(
                         error,
                         context: .primarySelectionSource(
-                            PrimarySelectionSourceIdentity(sourceID)
+                            sourceID.primarySelectionIdentity
                         )
                     )
                 }
