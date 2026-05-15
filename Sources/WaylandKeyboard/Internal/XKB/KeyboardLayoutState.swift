@@ -380,14 +380,10 @@ final class KeyboardLayoutState {
         resultKeysym: KeyboardKeysym?,
         resultKeysymName: String?
     ) -> KeyboardTextResult {
-        guard let keyText else { return .none }
-        return .committed(
-            KeyboardTextCommit(
-                string: keyText,
-                source: .xkbKey,
-                resultKeysym: resultKeysym,
-                resultKeysymName: resultKeysymName
-            )
+        .xkbKey(
+            keyText,
+            resultKeysym: resultKeysym,
+            resultKeysymName: resultKeysymName
         )
     }
 }
