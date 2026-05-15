@@ -6,15 +6,11 @@ extension RawOwnedProxy {
         proxyAdoption adoptionContext: RawProxyAdoptionContext,
         destroy destroyProxy: @escaping (OpaquePointer) -> Void
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                proxyPointer,
-                interface: interfaceName
-            )
-            self.init(pointer: adoptedPointer, destroy: destroyProxy)
-        } catch {
-            unsafe destroyProxy(proxyPointer)
-            throw error
-        }
+        let adoptedPointer = try unsafe adoptionContext.adoptOrDestroy(
+            proxyPointer,
+            interface: interfaceName,
+            destroy: destroyProxy
+        )
+        self.init(pointer: adoptedPointer, destroy: destroyProxy)
     }
 }
