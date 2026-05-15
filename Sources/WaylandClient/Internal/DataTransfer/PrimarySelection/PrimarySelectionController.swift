@@ -485,22 +485,13 @@ extension PrimarySelectionController {
         pendingCallbackFailures.append(
             DataTransferCallbackFailure(
                 context: context,
-                error: Self.dataTransferCallbackError(error)
+                error: DataTransferError(callbackBackendError: error)
             )
         )
     }
 
     private func publishSelectionChanged(seatID: SeatID, offerID: DataOfferID?) {
         eventQueue.append(.primarySelectionChanged(.init(seatID: seatID, offerID: offerID)))
-    }
-    private static func dataTransferCallbackError(_ error: any Error) -> DataTransferError {
-        (error as? DataTransferError)
-            ?? .callbackFailure(
-                .backend(
-                    type: String(describing: type(of: error)),
-                    description: String(describing: error)
-                )
-            )
     }
 
     private static func sortedSeatIDs(_ seatIDs: Set<SeatID>) -> [SeatID] {

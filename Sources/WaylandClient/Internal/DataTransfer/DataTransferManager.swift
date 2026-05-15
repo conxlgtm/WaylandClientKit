@@ -387,18 +387,8 @@ extension DataTransferManager {
         store.recordCallbackFailure(
             DataTransferCallbackFailure(
                 context: context,
-                error: Self.dataTransferCallbackError(error)
+                error: DataTransferError(callbackBackendError: error)
             )
         )
-    }
-
-    private static func dataTransferCallbackError(_ error: any Error) -> DataTransferError {
-        (error as? DataTransferError)
-            ?? .callbackFailure(
-                .backend(
-                    type: String(describing: type(of: error)),
-                    description: String(describing: error)
-                )
-            )
     }
 }
