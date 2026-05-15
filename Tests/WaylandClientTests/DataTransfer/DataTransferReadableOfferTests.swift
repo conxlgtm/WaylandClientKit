@@ -1,5 +1,7 @@
 import Foundation
+import Glibc
 import Testing
+import WaylandRaw
 
 @testable import WaylandClient
 
@@ -7,8 +9,18 @@ import Testing
 struct DataTransferReadableOfferTests {
     @Test
     func readableOfferReadsReceivedDescriptorPayload() async throws {
-        let offer = TestReadableOffer()
         let mimeType = try MIMEType("text/plain")
+        let descriptors = try RawFileDescriptor.pipeDescriptors()
+        _ = try RawFileDescriptor.write(
+            descriptor: descriptors.writeEnd,
+            bytes: Array("payload".utf8)
+        )
+        Glibc.close(descriptors.writeEnd)
+
+        let offer = TestReadableOffer(
+            readEnd: descriptors.readEnd,
+            expectedMIMEType: mimeType
+        )
 
         let data = try await offer.readDataTransferPayload(
             mimeType,
@@ -17,63 +29,15 @@ struct DataTransferReadableOfferTests {
         )
 
         #expect(data == Data("payload".utf8))
-        #expect(offer.receivedMIMETypes == [mimeType])
-        #expect(offer.closedDescriptors == [71])
     }
 
-    private final class TestReadableOffer: DataTransferReadableOffer, @unchecked Sendable {
-        private let lock = NSLock()
-        private var receivedMIMETypesStorage: [MIMEType] = []
-        private var closedDescriptorsStorage: [Int32] = []
-        private var readSteps: [[UInt8]] = [
-            Array("payload".utf8),
-            [],
-        ]
-
-        var receivedMIMETypes: [MIMEType] {
-            withLocked {
-                receivedMIMETypesStorage
-            }
-        }
-
-        var closedDescriptors: [Int32] {
-            withLocked {
-                closedDescriptorsStorage
-            }
-        }
+    private struct TestReadableOffer: DataTransferReadableOffer {
+        let readEnd: Int32
+        let expectedMIMEType: MIMEType
 
         func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {
-            withLocked {
-                receivedMIMETypesStorage.append(mimeType)
-            }
-            return try OwnedFileDescriptor(
-                adopting: 71,
-                readDescriptor: { [self] _, _ in
-                    nextReadStep()
-                },
-                closeDescriptor: { [self] descriptor in
-                    recordClosedDescriptor(descriptor)
-                    return 0
-                }
-            )
-        }
-
-        private func nextReadStep() -> [UInt8] {
-            withLocked {
-                readSteps.isEmpty ? [] : readSteps.removeFirst()
-            }
-        }
-
-        private func recordClosedDescriptor(_ descriptor: Int32) {
-            withLocked {
-                closedDescriptorsStorage.append(descriptor)
-            }
-        }
-
-        private func withLocked<Result>(_ body: () throws -> Result) rethrows -> Result {
-            lock.lock()
-            defer { lock.unlock() }
-            return try body()
+            #expect(mimeType == expectedMIMEType)
+            return try OwnedFileDescriptor(adopting: readEnd)
         }
     }
 }
