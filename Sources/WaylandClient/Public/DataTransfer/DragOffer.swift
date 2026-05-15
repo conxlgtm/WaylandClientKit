@@ -55,8 +55,11 @@ public struct DragOffer: Sendable, Hashable {
         limit: ByteCount = .defaultTransferReadLimit,
         timeout: Duration = Self.defaultReadTimeout
     ) async throws -> Data {
-        var descriptor = try await receive(mimeType)
-        return try await descriptor.readData(limit: limit, timeout: timeout)
+        try await readDataTransferPayload(
+            mimeType,
+            limit: limit,
+            timeout: timeout
+        )
     }
 
     public func finish() async throws {
