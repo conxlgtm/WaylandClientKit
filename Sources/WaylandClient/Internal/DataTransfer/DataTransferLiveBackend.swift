@@ -111,7 +111,6 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
     func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult {
         FileDescriptorCloseResult.posixReturn(Glibc.close(descriptor))
     }
-
 }
 
 private final class LiveDataTransferDeviceBinding: DataTransferDeviceBinding {
