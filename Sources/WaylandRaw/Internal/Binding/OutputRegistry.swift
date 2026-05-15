@@ -50,8 +50,7 @@ package final class OutputRegistry {
     }
 
     package func drainEvents() -> [RawOutputEvent] {
-        defer { pendingEvents.removeAll(keepingCapacity: true) }
-        return pendingEvents
+        pendingEvents.drain()
     }
 
     package func removeOutput(globalName: UInt32) {

@@ -371,28 +371,17 @@ struct DataTransferStore {
     }
 
     mutating func drainSourceSendRequests() -> [DataTransferSourceSendRequest] {
-        defer {
-            pendingSourceSendRequests.removeAll(keepingCapacity: true)
-            detachedSourceSendIDs.removeAll(keepingCapacity: true)
-        }
-        return pendingSourceSendRequests
+        let requests = pendingSourceSendRequests.drain()
+        detachedSourceSendIDs.removeAll(keepingCapacity: true)
+        return requests
     }
 
     mutating func removeSourceSendRequests(
         for sourceID: DataSourceID
     ) -> [DataTransferSourceSendRequest] {
-        var removedRequests: [DataTransferSourceSendRequest] = []
-        var remainingRequests: [DataTransferSourceSendRequest] = []
-
-        for request in pendingSourceSendRequests {
-            if request.source.sourceID == sourceID {
-                removedRequests.append(request)
-            } else {
-                remainingRequests.append(request)
-            }
+        let removedRequests = pendingSourceSendRequests.removeAllReturning {
+            $0.source.sourceID == sourceID
         }
-
-        pendingSourceSendRequests = remainingRequests
         pruneDetachedSourceSendIDs()
         return removedRequests
     }

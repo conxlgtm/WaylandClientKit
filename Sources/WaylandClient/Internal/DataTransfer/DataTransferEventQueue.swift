@@ -1,3 +1,5 @@
+import WaylandRaw
+
 package final class DataTransferEventQueue {
     private var pendingEvents: [DataTransferEvent] = []
 
@@ -10,7 +12,6 @@ package final class DataTransferEventQueue {
     }
 
     package func drain() -> [DataTransferEvent] {
-        defer { pendingEvents.removeAll(keepingCapacity: true) }
-        return pendingEvents
+        pendingEvents.drain()
     }
 }

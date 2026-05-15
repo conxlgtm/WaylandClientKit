@@ -97,8 +97,7 @@ extension DisplaySession {
     package func drainDataTransferDiagnosticsOnOwnerThread() -> [DataTransferDiagnostic] {
         connection.preconditionIsOwnerThread()
         collectDataTransferSourceWriteResults()
-        defer { pendingDataTransferDiagnostics.removeAll(keepingCapacity: true) }
-        return pendingDataTransferDiagnostics
+        return pendingDataTransferDiagnostics.drain()
     }
 
     package func cancelSourceWrites(for events: [DataTransferEvent]) {
@@ -139,8 +138,7 @@ extension DisplaySession {
     ) -> (diagnostics: [DataTransferDiagnostic], events: [DataTransferEvent]) {
         cancelSourceWrites(for: events, using: writer)
         collectDataTransferSourceWriteResults(from: writer, into: &pendingDiagnostics)
-        defer { pendingDiagnostics.removeAll(keepingCapacity: true) }
-        return (diagnostics: pendingDiagnostics, events: events)
+        return (diagnostics: pendingDiagnostics.drain(), events: events)
     }
 
     package func clipboardOfferOnOwnerThread(for seatID: SeatID) throws -> DataOfferSnapshot? {
