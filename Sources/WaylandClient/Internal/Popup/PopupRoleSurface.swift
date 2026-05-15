@@ -66,7 +66,7 @@ package final class PopupRoleSurface {
 
         let globals = try rawConnection.bindRequiredGlobals()
         surfaceRuntime.setPresentationFeedbackCapability(
-            globals.extensions.presentation.surfaceCapabilityStatus
+            globals.extensions.presentation.presentationFeedbackCapabilityStatus
         )
         let newSurface = try globals.compositor.createSurface()
         let newXDGSurface = try globals.xdgWMBase.getSurface(for: newSurface)
