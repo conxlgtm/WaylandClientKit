@@ -112,4 +112,15 @@ struct InputDomainValuesRawTests {
         )
         #expect(PointerAxisEvent(.frame) == .frame)
     }
+
+    @Test
+    func pointerLocationPreservesRawFixedCoordinates() {
+        #expect(
+            PointerLocation(
+                x: WaylandFixed(rawValue: 384),
+                y: WaylandFixed(rawValue: -128)
+            )
+                == PointerLocation(x: 1.5, y: -0.5)
+        )
+    }
 }
