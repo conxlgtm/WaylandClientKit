@@ -67,6 +67,25 @@ int32_t swl_gles2_read_center_pixel_rgba8(
     uint32_t height,
     uint8_t *out_rgba);
 
+#ifdef SWL_ENABLE_TESTING
+struct swl_test_egl_draw_record {
+    int32_t make_current_call_count;
+    int32_t clear_current_call_count;
+    int32_t clear_call_count;
+    int32_t read_pixel_call_count;
+    int32_t swap_buffers_call_count;
+    swl_egl_display display;
+    swl_egl_surface surface;
+    swl_egl_context context;
+};
+
+void swl_test_egl_draw_recording_begin(
+    int32_t clear_current_result,
+    int32_t egl_error);
+void swl_test_egl_draw_recording_end(void);
+struct swl_test_egl_draw_record swl_test_egl_draw_record(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

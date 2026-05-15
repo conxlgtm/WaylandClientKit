@@ -31,6 +31,133 @@ static EGLSurface swl_egl_cast_surface(swl_egl_surface surface)
     return (EGLSurface) surface;
 }
 
+#ifdef SWL_ENABLE_TESTING
+static int32_t swl_egl_error_default(void);
+static int32_t swl_egl_make_current_default(
+    swl_egl_display display,
+    swl_egl_surface surface,
+    swl_egl_context context);
+static int32_t swl_egl_clear_current_default(swl_egl_display display);
+static int32_t swl_egl_swap_buffers_default(
+    swl_egl_display display,
+    swl_egl_surface surface);
+static int32_t swl_gles2_clear_rgba_default(
+    uint32_t width,
+    uint32_t height,
+    float red,
+    float green,
+    float blue,
+    float alpha);
+static int32_t swl_gles2_read_center_pixel_rgba8_default(
+    uint32_t width,
+    uint32_t height,
+    uint8_t *out_rgba);
+
+static struct swl_test_egl_draw_record swl_test_egl_draw_latest;
+static int32_t swl_test_egl_clear_current_result;
+static int32_t swl_test_egl_error_value;
+
+static int32_t (*swl_egl_error_impl)(void) = swl_egl_error_default;
+static int32_t (*swl_egl_make_current_impl)(
+    swl_egl_display display,
+    swl_egl_surface surface,
+    swl_egl_context context) = swl_egl_make_current_default;
+static int32_t (*swl_egl_clear_current_impl)(
+    swl_egl_display display) = swl_egl_clear_current_default;
+static int32_t (*swl_egl_swap_buffers_impl)(
+    swl_egl_display display,
+    swl_egl_surface surface) = swl_egl_swap_buffers_default;
+static int32_t (*swl_gles2_clear_rgba_impl)(
+    uint32_t width,
+    uint32_t height,
+    float red,
+    float green,
+    float blue,
+    float alpha) = swl_gles2_clear_rgba_default;
+static int32_t (*swl_gles2_read_center_pixel_rgba8_impl)(
+    uint32_t width,
+    uint32_t height,
+    uint8_t *out_rgba) = swl_gles2_read_center_pixel_rgba8_default;
+
+static int32_t swl_test_egl_error_record(void)
+{
+    return swl_test_egl_error_value;
+}
+
+static int32_t swl_test_egl_make_current_record(
+    swl_egl_display display,
+    swl_egl_surface surface,
+    swl_egl_context context)
+{
+    swl_test_egl_draw_latest.make_current_call_count += 1;
+    swl_test_egl_draw_latest.display = display;
+    swl_test_egl_draw_latest.surface = surface;
+    swl_test_egl_draw_latest.context = context;
+    return 0;
+}
+
+static int32_t swl_test_egl_clear_current_record(swl_egl_display display)
+{
+    swl_test_egl_draw_latest.clear_current_call_count += 1;
+    swl_test_egl_draw_latest.display = display;
+    return swl_test_egl_clear_current_result;
+}
+
+static int32_t swl_test_egl_swap_buffers_record(
+    swl_egl_display display,
+    swl_egl_surface surface)
+{
+    swl_test_egl_draw_latest.swap_buffers_call_count += 1;
+    swl_test_egl_draw_latest.display = display;
+    swl_test_egl_draw_latest.surface = surface;
+    return 0;
+}
+
+static int32_t swl_test_gles2_clear_rgba_record(
+    uint32_t width,
+    uint32_t height,
+    float red,
+    float green,
+    float blue,
+    float alpha)
+{
+    (void) width;
+    (void) height;
+    (void) red;
+    (void) green;
+    (void) blue;
+    (void) alpha;
+    swl_test_egl_draw_latest.clear_call_count += 1;
+    return 0;
+}
+
+static int32_t swl_test_gles2_read_center_pixel_rgba8_record(
+    uint32_t width,
+    uint32_t height,
+    uint8_t *out_rgba)
+{
+    (void) width;
+    (void) height;
+    swl_test_egl_draw_latest.read_pixel_call_count += 1;
+    if (out_rgba != NULL)
+    {
+        out_rgba[0] = 255;
+        out_rgba[1] = 0;
+        out_rgba[2] = 0;
+        out_rgba[3] = 255;
+    }
+    return 0;
+}
+#else
+#define swl_egl_error_impl swl_egl_error_default
+#define swl_egl_make_current_impl swl_egl_make_current_default
+#define swl_egl_clear_current_impl swl_egl_clear_current_default
+#define swl_egl_swap_buffers_impl swl_egl_swap_buffers_default
+#define swl_gles2_clear_rgba_impl swl_gles2_clear_rgba_default
+#define swl_gles2_read_center_pixel_rgba8_impl \
+    swl_gles2_read_center_pixel_rgba8_default
+#endif
+
 const char *swl_egl_query_client_extensions(void)
 {
     return eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
@@ -48,9 +175,14 @@ const char *swl_egl_query_display_extensions(swl_egl_display display)
     return eglQueryString(egl_display, EGL_EXTENSIONS);
 }
 
-int32_t swl_egl_error(void)
+static int32_t swl_egl_error_default(void)
 {
     return (int32_t) eglGetError();
+}
+
+int32_t swl_egl_error(void)
+{
+    return swl_egl_error_impl();
 }
 
 uint32_t swl_gles2_error(void)
@@ -261,7 +393,7 @@ void swl_egl_destroy_surface(
     }
 }
 
-int32_t swl_egl_make_current(
+static int32_t swl_egl_make_current_default(
     swl_egl_display display,
     swl_egl_surface surface,
     swl_egl_context context)
@@ -287,7 +419,15 @@ int32_t swl_egl_make_current(
         : -1;
 }
 
-int32_t swl_egl_clear_current(swl_egl_display display)
+int32_t swl_egl_make_current(
+    swl_egl_display display,
+    swl_egl_surface surface,
+    swl_egl_context context)
+{
+    return swl_egl_make_current_impl(display, surface, context);
+}
+
+static int32_t swl_egl_clear_current_default(swl_egl_display display)
 {
     EGLDisplay egl_display = swl_egl_cast_display(display);
     if (egl_display == EGL_NO_DISPLAY)
@@ -305,7 +445,12 @@ int32_t swl_egl_clear_current(swl_egl_display display)
         : -1;
 }
 
-int32_t swl_egl_swap_buffers(
+int32_t swl_egl_clear_current(swl_egl_display display)
+{
+    return swl_egl_clear_current_impl(display);
+}
+
+static int32_t swl_egl_swap_buffers_default(
     swl_egl_display display,
     swl_egl_surface surface)
 {
@@ -320,7 +465,14 @@ int32_t swl_egl_swap_buffers(
     return eglSwapBuffers(egl_display, egl_surface) == EGL_TRUE ? 0 : -1;
 }
 
-int32_t swl_gles2_clear_rgba(
+int32_t swl_egl_swap_buffers(
+    swl_egl_display display,
+    swl_egl_surface surface)
+{
+    return swl_egl_swap_buffers_impl(display, surface);
+}
+
+static int32_t swl_gles2_clear_rgba_default(
     uint32_t width,
     uint32_t height,
     float red,
@@ -340,7 +492,18 @@ int32_t swl_gles2_clear_rgba(
     return glGetError() == GL_NO_ERROR ? 0 : -1;
 }
 
-int32_t swl_gles2_read_center_pixel_rgba8(
+int32_t swl_gles2_clear_rgba(
+    uint32_t width,
+    uint32_t height,
+    float red,
+    float green,
+    float blue,
+    float alpha)
+{
+    return swl_gles2_clear_rgba_impl(width, height, red, green, blue, alpha);
+}
+
+static int32_t swl_gles2_read_center_pixel_rgba8_default(
     uint32_t width,
     uint32_t height,
     uint8_t *out_rgba)
@@ -361,3 +524,45 @@ int32_t swl_gles2_read_center_pixel_rgba8(
         out_rgba);
     return glGetError() == GL_NO_ERROR ? 0 : -1;
 }
+
+int32_t swl_gles2_read_center_pixel_rgba8(
+    uint32_t width,
+    uint32_t height,
+    uint8_t *out_rgba)
+{
+    return swl_gles2_read_center_pixel_rgba8_impl(width, height, out_rgba);
+}
+
+#ifdef SWL_ENABLE_TESTING
+void swl_test_egl_draw_recording_begin(
+    int32_t clear_current_result,
+    int32_t egl_error)
+{
+    swl_test_egl_draw_latest = (struct swl_test_egl_draw_record){0};
+    swl_test_egl_clear_current_result = clear_current_result;
+    swl_test_egl_error_value = egl_error;
+    swl_egl_error_impl = swl_test_egl_error_record;
+    swl_egl_make_current_impl = swl_test_egl_make_current_record;
+    swl_egl_clear_current_impl = swl_test_egl_clear_current_record;
+    swl_egl_swap_buffers_impl = swl_test_egl_swap_buffers_record;
+    swl_gles2_clear_rgba_impl = swl_test_gles2_clear_rgba_record;
+    swl_gles2_read_center_pixel_rgba8_impl =
+        swl_test_gles2_read_center_pixel_rgba8_record;
+}
+
+void swl_test_egl_draw_recording_end(void)
+{
+    swl_egl_error_impl = swl_egl_error_default;
+    swl_egl_make_current_impl = swl_egl_make_current_default;
+    swl_egl_clear_current_impl = swl_egl_clear_current_default;
+    swl_egl_swap_buffers_impl = swl_egl_swap_buffers_default;
+    swl_gles2_clear_rgba_impl = swl_gles2_clear_rgba_default;
+    swl_gles2_read_center_pixel_rgba8_impl =
+        swl_gles2_read_center_pixel_rgba8_default;
+}
+
+struct swl_test_egl_draw_record swl_test_egl_draw_record(void)
+{
+    return swl_test_egl_draw_latest;
+}
+#endif

@@ -150,6 +150,33 @@ package final class EGLGBMRenderTarget {
         alpha: Float
     ) throws(EGLRenderError) -> EGLRGBA8Pixel {
         let handles = try liveHandles()
+        return try Self.drawClear(
+            using: handles,
+            color: ClearColor(red: red, green: green, blue: blue, alpha: alpha)
+        )
+    }
+
+    package static func testingDrawClear(
+        display: UnsafeMutableRawPointer,
+        surface: UnsafeMutableRawPointer,
+        context: UnsafeMutableRawPointer,
+        size: GBMBufferSize
+    ) throws(EGLRenderError) -> EGLRGBA8Pixel {
+        try unsafe drawClear(
+            using: LiveHandles(
+                display: display,
+                context: context,
+                surface: surface,
+                size: size
+            ),
+            color: ClearColor(red: 1, green: 0, blue: 0, alpha: 1)
+        )
+    }
+
+    private static func drawClear(
+        using handles: LiveHandles,
+        color: ClearColor
+    ) throws(EGLRenderError) -> EGLRGBA8Pixel {
         guard
             unsafe swl_egl_make_current(
                 handles.display,
@@ -159,21 +186,19 @@ package final class EGLGBMRenderTarget {
         else {
             throw EGLRenderError.makeCurrentFailed(eglError: swl_egl_error())
         }
-        defer {
-            _ = unsafe swl_egl_clear_current(handles.display)
-        }
 
         let size = handles.size
         guard
             swl_gles2_clear_rgba(
                 size.width,
                 size.height,
-                red,
-                green,
-                blue,
-                alpha
+                color.red,
+                color.green,
+                color.blue,
+                color.alpha
             ) == 0
         else {
+            try unsafe clearCurrent(handles.display)
             throw EGLRenderError.clearFailed(glError: swl_gles2_error())
         }
 
@@ -187,19 +212,30 @@ package final class EGLGBMRenderTarget {
                 )
             }) == 0
         else {
+            try unsafe clearCurrent(handles.display)
             throw EGLRenderError.readPixelFailed(glError: swl_gles2_error())
         }
 
         guard unsafe swl_egl_swap_buffers(handles.display, handles.surface) == 0 else {
+            try unsafe clearCurrent(handles.display)
             throw EGLRenderError.swapBuffersFailed(eglError: swl_egl_error())
         }
 
+        try unsafe clearCurrent(handles.display)
         return EGLRGBA8Pixel(
             red: pixelBytes[0],
             green: pixelBytes[1],
             blue: pixelBytes[2],
             alpha: pixelBytes[3]
         )
+    }
+
+    private static func clearCurrent(
+        _ display: UnsafeMutableRawPointer
+    ) throws(EGLRenderError) {
+        guard unsafe swl_egl_clear_current(display) == 0 else {
+            throw EGLRenderError.clearCurrentFailed(eglError: swl_egl_error())
+        }
     }
 
     package func lockFrontBuffer() throws(GBMAllocationError) -> GBMLockedSurfaceBuffer {
@@ -241,6 +277,14 @@ package final class EGLGBMRenderTarget {
         let context: UnsafeMutableRawPointer
         let surface: UnsafeMutableRawPointer
         let size: GBMBufferSize
+    }
+
+    @safe
+    private struct ClearColor {
+        let red: Float
+        let green: Float
+        let blue: Float
+        let alpha: Float
     }
 
     private func liveHandles() throws(EGLRenderError) -> LiveHandles {
