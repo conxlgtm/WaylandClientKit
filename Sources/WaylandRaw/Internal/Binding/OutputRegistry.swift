@@ -100,7 +100,7 @@ package final class OutputRegistry {
         }
 
         do {
-            if let manager = xdgOutputManager.manager {
+            if let manager = xdgOutputManager.boundObject {
                 xdgOutputsByID[id] = try manager.getXDGOutput(for: output)
             }
             outputsByID[id] = output
