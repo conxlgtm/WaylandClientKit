@@ -9,8 +9,8 @@ struct DataTransferDragRawTests {
     func dragLocationPreservesRawFixedCoordinates() {
         #expect(
             DragLocation(
-                x: WaylandFixed(rawValue: 384),
-                y: WaylandFixed(rawValue: -128)
+                waylandX: WaylandFixed(rawValue: 384),
+                waylandY: WaylandFixed(rawValue: -128)
             )
                 == DragLocation(x: 1.5, y: -0.5)
         )

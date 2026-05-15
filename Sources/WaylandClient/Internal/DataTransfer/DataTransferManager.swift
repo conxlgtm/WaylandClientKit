@@ -201,7 +201,7 @@ package final class DataTransferManager {
                     .dragMotion(
                         seatID: seatID,
                         time: WaylandTimestampMilliseconds(rawValue: time),
-                        location: DragLocation(x: x, y: y)
+                        location: DragLocation(waylandX: x, waylandY: y)
                     )
                 )
             }

@@ -1,7 +1,7 @@
 import WaylandRaw
 
 extension DragLocation {
-    package init(x positionX: WaylandFixed, y positionY: WaylandFixed) {
+    package init(waylandX positionX: WaylandFixed, waylandY positionY: WaylandFixed) {
         self.init(x: positionX.doubleValue, y: positionY.doubleValue)
     }
 }

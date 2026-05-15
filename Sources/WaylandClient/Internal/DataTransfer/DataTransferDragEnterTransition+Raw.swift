@@ -11,7 +11,7 @@ extension DataTransferDragEnterTransition {
             seatID: eventSeatID,
             offerID: eventOfferID,
             serial: InputSerial(rawValue: enter.serial),
-            location: DragLocation(x: enter.x, y: enter.y),
+            location: DragLocation(waylandX: enter.x, waylandY: enter.y),
             target: eventTarget
         )
     }
