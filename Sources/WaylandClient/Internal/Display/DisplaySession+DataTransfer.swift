@@ -398,39 +398,20 @@ extension DisplaySession {
     package static func dataTransferGlobalSnapshot(
         for globals: BoundGlobals
     ) -> DataTransferGlobalSnapshot {
-        let seatIDs = globals.seatRegistry.seats.map { SeatID($0.id) }
-
-        switch globals.extensions.dataDeviceManager {
-        case .bound:
-            return DataTransferGlobalSnapshot(
-                bindingState: .boundWithDataDeviceManager,
-                seatIDs: seatIDs
-            )
-        case .missing:
-            return DataTransferGlobalSnapshot(
-                bindingState: .boundWithoutDataDeviceManager,
-                seatIDs: seatIDs
-            )
-        }
+        DataTransferGlobalSnapshot(
+            bindingState: globals.extensions.dataDeviceManager.dataTransferBindingState,
+            seatIDs: globals.seatRegistry.seats.map { SeatID($0.id) }
+        )
     }
 
     package static func primarySelectionGlobalSnapshot(
         for globals: BoundGlobals
     ) -> PrimarySelectionGlobalSnapshot {
-        let seatIDs = globals.seatRegistry.seats.map { SeatID($0.id) }
-
-        switch globals.extensions.primarySelectionDeviceManager {
-        case .bound:
-            return PrimarySelectionGlobalSnapshot(
-                bindingState: .boundWithPrimaryManager,
-                seatIDs: seatIDs
-            )
-        case .missing:
-            return PrimarySelectionGlobalSnapshot(
-                bindingState: .boundWithoutPrimaryManager,
-                seatIDs: seatIDs
-            )
-        }
+        PrimarySelectionGlobalSnapshot(
+            bindingState: globals.extensions.primarySelectionDeviceManager
+                .primarySelectionBindingState,
+            seatIDs: globals.seatRegistry.seats.map { SeatID($0.id) }
+        )
     }
 
     private func submitPendingDataTransferSourceWrites() throws {
