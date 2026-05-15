@@ -1,7 +1,7 @@
 import WaylandRaw
 
 extension OptionalPresentation {
-    var surfaceCapabilityStatus: SurfaceCapabilityStatus {
+    var presentationFeedbackCapabilityStatus: SurfaceCapabilityStatus {
         switch self {
         case .bound:
             .available

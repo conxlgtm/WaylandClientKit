@@ -86,7 +86,7 @@ package final class TopLevelWindow {
         }
 
         surfaceRuntime.setPresentationFeedbackCapability(
-            globals.extensions.presentation.surfaceCapabilityStatus
+            globals.extensions.presentation.presentationFeedbackCapabilityStatus
         )
         try installScaleObjects(globals: globals)
         try assignXDGRole(globals: globals)
