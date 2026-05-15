@@ -24,7 +24,7 @@ package final class OutputRegistry {
     }
 
     package var snapshots: [RawOutputSnapshot] {
-        outputsByID.values.map(\.snapshot).sorted { $0.id.rawValue < $1.id.rawValue }
+        outputsByID.values.map(\.snapshot).sortedByRawValue(\.id)
     }
 
     package func bindOutputs(from globals: [RawGlobalAdvertisement]) throws {
@@ -50,8 +50,7 @@ package final class OutputRegistry {
     }
 
     package func drainEvents() -> [RawOutputEvent] {
-        defer { pendingEvents.removeAll(keepingCapacity: true) }
-        return pendingEvents
+        pendingEvents.drain()
     }
 
     package func removeOutput(globalName: UInt32) {

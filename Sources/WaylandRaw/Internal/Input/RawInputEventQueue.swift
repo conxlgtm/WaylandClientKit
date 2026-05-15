@@ -117,11 +117,9 @@ package final class RawInputEventQueue: RawInputEventSink, Sendable {
 
     package func drain() -> [RawInputEvent] {
         state.withLock { state in
-            defer {
-                state.events.removeAll(keepingCapacity: true)
-                state.hasPendingOverflow = false
-            }
-            return state.events
+            let events = state.events.drain()
+            state.hasPendingOverflow = false
+            return events
         }
     }
 

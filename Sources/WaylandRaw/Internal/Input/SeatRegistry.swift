@@ -26,9 +26,7 @@ package final class SeatRegistry {
     }
 
     package var seats: [RawSeat] {
-        seatsByGlobalName
-            .sorted { $0.key < $1.key }
-            .map(\.value)
+        seatsByGlobalName.valuesSortedByKey()
     }
 
     package var unsupportedSeatVersions: [UInt32: RawVersion] {
@@ -107,10 +105,7 @@ package final class SeatRegistry {
         guard !isDestroyed else { return }
 
         isDestroyed = true
-        let seats =
-            seatsByGlobalName
-            .sorted { $0.key < $1.key }
-            .map(\.value)
+        let seats = seatsByGlobalName.valuesSortedByKey()
         seatsByGlobalName.removeAll()
 
         for seat in seats {
