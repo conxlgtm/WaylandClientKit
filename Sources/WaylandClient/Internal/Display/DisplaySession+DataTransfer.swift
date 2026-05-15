@@ -108,26 +108,8 @@ extension DisplaySession {
         for events: [DataTransferEvent],
         using writer: ThreadedDataTransferSourceWriter
     ) {
-        for event in events {
-            switch event {
-            case .clipboardSourceCancelled(let source):
-                writer.cancelJobs(
-                    for: .clipboard(DataSourceID(rawValue: source.rawValue))
-                )
-            case .primarySelectionSourceCancelled(let source):
-                writer.cancelJobs(
-                    for: .primarySelection(DataSourceID(rawValue: source.rawValue))
-                )
-            case .dragSourceCancelled(let source):
-                writer.cancelJobs(
-                    for: .dragAndDrop(DataSourceID(rawValue: source.rawValue))
-                )
-            case .clipboardSelectionChanged, .primarySelectionChanged,
-                .dragEntered, .dragMotion, .dragLeft, .dragDropped, .dragOfferChanged,
-                .dragSourceTargetChanged, .dragSourceActionChanged, .dragSourceDropPerformed,
-                .dragSourceFinished:
-                break
-            }
+        for source in events.compactMap(\.cancelledWriteSource) {
+            writer.cancelJobs(for: source)
         }
     }
 
