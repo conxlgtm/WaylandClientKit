@@ -97,15 +97,7 @@ final class LivePrimarySelectionControllerBackend: PrimarySelectionControllerBac
     }
 
     func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors {
-        do {
-            let descriptors = try RawFileDescriptor.pipeDescriptors()
-            return DataTransferPipeDescriptors(
-                readEnd: descriptors.readEnd,
-                writeEnd: descriptors.writeEnd
-            )
-        } catch {
-            throw Self.dataTransferPipeError(error)
-        }
+        try DataTransferPipeDescriptors.makeOfferReceivePipe()
     }
 
     func adoptOwnedFileDescriptor(_ descriptor: Int32) throws -> OwnedFileDescriptor {
@@ -120,16 +112,6 @@ final class LivePrimarySelectionControllerBackend: PrimarySelectionControllerBac
         FileDescriptorCloseResult.posixReturn(Glibc.close(descriptor))
     }
 
-    private static func dataTransferPipeError(_ error: RuntimeError) -> DataTransferError {
-        switch error {
-        case .system(let systemError):
-            .createPipe(WaylandSystemErrno(unchecked: systemError.errno.rawValue))
-        case .systemErrnoUnavailable:
-            .createPipe(WaylandSystemErrno(unchecked: EIO))
-        default:
-            .unavailable
-        }
-    }
 }
 
 private final class LivePrimarySelectionDeviceBinding: PrimarySelectionDeviceBinding {
