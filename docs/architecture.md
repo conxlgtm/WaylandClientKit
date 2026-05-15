@@ -349,6 +349,7 @@ Supported:
 - public output snapshots and display events through `wl_output`
 - optional logical output geometry through `zxdg_output_manager_v1`
 - explicit window presentation feedback through presentation-time
+- package-internal graphics preview work through linux-dmabuf, GBM, EGL, and GLES
 
 Not supported:
 
@@ -357,7 +358,7 @@ Not supported:
 - drag icon surfaces
 - output management or control APIs
 - text input or IME
-- EGL, GBM, dmabuf, or GPU rendering
+- public `WaylandClient` GPU rendering APIs
 - widgets or retained UI
 
 ## Source Categories

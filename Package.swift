@@ -55,6 +55,14 @@ let package = Package(
             name: "CGBMSystem",
             pkgConfig: "gbm"
         ),
+        .systemLibrary(
+            name: "CEGLSystem",
+            pkgConfig: "egl"
+        ),
+        .systemLibrary(
+            name: "CGLESv2System",
+            pkgConfig: "glesv2"
+        ),
         .target(
             name: "CWaylandCursorShims",
             dependencies: ["CWaylandCursorSystem"],
@@ -66,6 +74,15 @@ let package = Package(
         .target(
             name: "CGBMShims",
             dependencies: ["CGBMSystem", "CDRMSystem"],
+            publicHeadersPath: "include",
+            cSettings: [
+                .define("SWL_ENABLE_TESTING", .when(configuration: .debug)),
+                .define("_GNU_SOURCE", .when(platforms: [.linux])),
+            ]
+        ),
+        .target(
+            name: "CEGLShims",
+            dependencies: ["CEGLSystem", "CGLESv2System", "CGBMSystem"],
             publicHeadersPath: "include",
             cSettings: [
                 .define("SWL_ENABLE_TESTING", .when(configuration: .debug)),
@@ -120,7 +137,12 @@ let package = Package(
         ),
         .target(
             name: "WaylandGraphicsPreview",
-            dependencies: ["WaylandRaw", "CGBMShims"],
+            dependencies: ["WaylandRaw", "CGBMShims", "CEGLShims"],
+            swiftSettings: strictMemorySafetySwiftSettings
+        ),
+        .target(
+            name: "WaylandGPUPreview",
+            dependencies: ["WaylandClient", "WaylandGraphicsPreview", "WaylandRaw"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
@@ -146,7 +168,14 @@ let package = Package(
         ),
         .testTarget(
             name: "WaylandRawTests",
-            dependencies: ["WaylandRaw", "WaylandTestSupport", "CDRMSystem", "CGBMSystem"],
+            dependencies: [
+                "WaylandRaw",
+                "WaylandTestSupport",
+                "CDRMSystem",
+                "CGBMSystem",
+                "CEGLSystem",
+                "CGLESv2System",
+            ],
             swiftSettings: cShimTestingSwiftSettings
         ),
         .testTarget(
@@ -174,8 +203,18 @@ let package = Package(
         ),
         .testTarget(
             name: "WaylandGraphicsPreviewTests",
-            dependencies: ["WaylandGraphicsPreview", "WaylandRaw", "CGBMShims"],
+            dependencies: [
+                "WaylandGraphicsPreview",
+                "WaylandRaw",
+                "CGBMShims",
+                "CEGLShims",
+            ],
             swiftSettings: cShimTestingSwiftSettings
+        ),
+        .testTarget(
+            name: "WaylandGPUPreviewTests",
+            dependencies: ["WaylandGPUPreview", "WaylandGraphicsPreview"],
+            swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(
             name: "WaylandCursorTests", dependencies: ["WaylandCursor"],

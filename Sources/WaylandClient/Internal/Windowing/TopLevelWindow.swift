@@ -1004,6 +1004,69 @@ extension TopLevelWindow {
         markNeedsRedraw()
     }
 
+    package func presentPreviewBufferOnOwnerThread(
+        _ buffer: RawSurfaceBuffer
+    ) throws -> PreviewBufferPresentationResult {
+        connection.preconditionIsOwnerThread()
+
+        guard !model.isClosed else {
+            throw ClientError.window(id, .invalidLifecycleTransition(.presentAfterDestroyed))
+        }
+        guard model.currentConfiguration != nil else {
+            throw ClientError.window(id, .invalidLifecycleTransition(.mapBeforeInitialConfigure))
+        }
+        guard pendingFrameRegistration == nil else {
+            throw ClientError.window(id, .invalidLifecycleTransition(.nestedPresentation))
+        }
+        guard model.presentation == .idle else {
+            throw ClientError.window(id, .invalidLifecycleTransition(.nestedPresentation))
+        }
+
+        let generation = surfaceRuntime.nextCommitGeneration
+        let bufferAvailability = try redrawBufferAvailability()
+        let preparedCommit = try SurfaceFrameCommitter.prepare(
+            SurfaceFrameCommitRequest(
+                surface: surface,
+                scaleInstallation: scaleInstallation,
+                generation: generation,
+                geometry: try currentSurfaceGeometry()
+            ),
+            runtime: &surfaceRuntime,
+        )
+
+        pendingFrameRegistration = try SurfaceFrameCommitter.requestFrameCallback(
+            on: surface,
+            runtime: &surfaceRuntime,
+            generation: generation
+        ) { [weak self] in
+            self?.handleFrameDone()
+        }
+
+        do {
+            try SurfaceFrameCommitter.recordPreparedCommit(
+                preparedCommit,
+                runtime: &surfaceRuntime
+            )
+            let commitPlan = SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
+            try interpretWindowEffects(
+                model.reduce(
+                    .externalPresentationSucceeded(
+                        generation: generation,
+                        bufferAvailability: bufferAvailability
+                    )
+                )
+            )
+            return PreviewBufferPresentationResult(
+                generation: generation,
+                commitPlan: commitPlan
+            )
+        } catch {
+            pendingFrameRegistration = nil
+            surfaceRuntime.cancelFrameCallback()
+            throw error
+        }
+    }
+
     package func requestPresentationFeedbackOnOwnerThread(
         presentation: RawPresentation,
         outputIDForPresentationSyncOutput:

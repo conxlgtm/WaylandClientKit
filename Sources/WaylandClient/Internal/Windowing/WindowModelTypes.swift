@@ -15,6 +15,10 @@ package enum WindowEvent: Equatable, Sendable {
     case presentationStarted(PresentationRequest)
     case presentationBlockedByBuffer
     case presentationSucceeded(generation: UInt64, bufferAvailability: RedrawBufferAvailability)
+    case externalPresentationSucceeded(
+        generation: UInt64,
+        bufferAvailability: RedrawBufferAvailability
+    )
     case presentationFailed(generation: UInt64, PresentationError)
     case compositorCloseRequested(policy: CloseRequestPolicy)
     case explicitClose
@@ -50,6 +54,11 @@ package struct PresentationRequest: Equatable, Sendable {
             decorationMode: configuration.decorationMode
         )
     }
+}
+
+package struct PreviewBufferPresentationResult: Equatable, Sendable {
+    package let generation: UInt64
+    package let commitPlan: SurfaceCommitPlan
 }
 
 package enum PresentationState<Request: Equatable & Sendable>: Equatable, Sendable {

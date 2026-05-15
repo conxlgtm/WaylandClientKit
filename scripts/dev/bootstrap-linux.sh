@@ -164,7 +164,9 @@ set_packages_for_pm() {
                 clang
                 git
                 libdrm-dev
+                libegl-dev
                 libgbm-dev
+                libgles-dev
                 libwayland-dev
                 libxkbcommon-dev
                 make
@@ -178,7 +180,9 @@ set_packages_for_pm() {
                 clang
                 git
                 libdrm-devel
+                mesa-libEGL-devel
                 mesa-libgbm-devel
+                mesa-libGLES-devel
                 wayland-devel
                 wayland-protocols-devel
                 libxkbcommon-devel
@@ -206,7 +210,9 @@ set_packages_for_pm() {
                 clang
                 git
                 libdrm-devel
+                Mesa-libEGL-devel
                 Mesa-libgbm-devel
+                Mesa-libGLESv2-devel
                 wayland-devel
                 wayland-protocols-devel
                 libxkbcommon-devel
@@ -453,7 +459,7 @@ check_pkg_config() {
     local missing=()
     local module
 
-    for module in gbm libdrm wayland-client wayland-cursor xkbcommon; do
+    for module in egl gbm glesv2 libdrm wayland-client wayland-cursor xkbcommon; do
         if "$PKG_CONFIG" --exists "$module"; then
             ok "$module $("$PKG_CONFIG" --modversion "$module")"
         else

@@ -58,6 +58,10 @@ package final class RawSurface {
         unsafe swl_surface_attach(pointer, buffer?.pointer, x, y)
     }
 
+    package func attach(buffer: RawSurfaceBuffer?, x: Int32 = 0, y: Int32 = 0) {
+        unsafe swl_surface_attach(pointer, buffer?.pointer, x, y)
+    }
+
     package func attachBorrowedBuffer(
         _ buffer: RawBorrowedBuffer?,
         x: Int32 = 0,

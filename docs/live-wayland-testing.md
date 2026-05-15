@@ -65,7 +65,7 @@ Ubuntu/Debian:
 ```bash
 sudo apt-get install \
   clang git make ripgrep pkg-config \
-  libdrm-dev libgbm-dev \
+  libdrm-dev libegl-dev libgbm-dev libgles-dev \
   libwayland-dev libxkbcommon-dev \
   wayland-protocols \
   weston
@@ -77,7 +77,7 @@ Fedora/RHEL-like:
 sudo dnf install \
   clang git make ripgrep \
   pkgconf-pkg-config \
-  libdrm-devel mesa-libgbm-devel \
+  libdrm-devel mesa-libEGL-devel mesa-libgbm-devel mesa-libGLES-devel \
   wayland-devel wayland-protocols-devel \
   libxkbcommon-devel \
   weston

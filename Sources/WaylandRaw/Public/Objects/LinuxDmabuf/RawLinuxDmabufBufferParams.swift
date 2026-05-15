@@ -1,52 +1,6 @@
 import CWaylandProtocols
 import Glibc
 
-package struct RawLinuxDmabufPlaneFileDescriptor: ~Copyable {
-    private var storage: Int32?
-
-    package init(adopting fileDescriptor: Int32) throws(RuntimeError) {
-        guard fileDescriptor >= 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .validateArgument("dmabuf plane fd")
-            )
-        }
-
-        storage = fileDescriptor
-    }
-
-    package var isClosed: Bool {
-        storage == nil
-    }
-
-    package var rawValue: Int32 {
-        guard let storage else {
-            preconditionFailure("dmabuf plane file descriptor was already released")
-        }
-
-        return storage
-    }
-
-    package mutating func releaseForWaylandRequest() -> Int32 {
-        let fd = rawValue
-        storage = nil
-        return fd
-    }
-
-    package mutating func close() {
-        guard let fd = storage else { return }
-
-        storage = nil
-        Glibc.close(fd)
-    }
-
-    deinit {
-        if let storage {
-            Glibc.close(storage)
-        }
-    }
-}
-
 package struct RawLinuxDmabufBufferParamsFlags: OptionSet, Sendable {
     package let rawValue: UInt32
 
@@ -192,6 +146,8 @@ package enum RawLinuxDmabufBufferParamsEvent {
 
 @safe
 package final class RawLinuxDmabufBuffer {
+    private let releaseOwner: BufferReleaseOwner
+    private var releaseObserver: (() -> Void)?
     private var proxy: RawOwnedProxy
 
     @safe package var pointer: OpaquePointer { proxy.pointer }
@@ -201,6 +157,9 @@ package final class RawLinuxDmabufBuffer {
         pointer bufferPointer: OpaquePointer,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
+        releaseOwner = BufferReleaseOwner(
+            invariantFailureSink: adoptionContext.invariantFailureSink
+        )
         do {
             let adoptedPointer = try adoptionContext.adopt(
                 bufferPointer,
@@ -214,9 +173,23 @@ package final class RawLinuxDmabufBuffer {
             unsafe swl_buffer_destroy(bufferPointer)
             throw error
         }
+
+        try unsafe releaseOwner.install(on: bufferPointer) { [weak buffer = self] in
+            buffer?.handleRelease()
+        }
+    }
+
+    package func setReleaseObserver(_ observer: @escaping () -> Void) {
+        releaseObserver = observer
+    }
+
+    private func handleRelease() {
+        releaseObserver?()
     }
 
     package func destroy() {
+        releaseObserver = nil
+        releaseOwner.cancel()
         proxy.destroy()
     }
 

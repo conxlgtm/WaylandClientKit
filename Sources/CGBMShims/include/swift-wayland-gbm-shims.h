@@ -10,6 +10,7 @@
 
 struct gbm_device;
 struct gbm_bo;
+struct gbm_surface;
 
 struct swl_gbm_bo_plane {
     int32_t fd;
@@ -111,6 +112,19 @@ uint32_t swl_gbm_bo_export_plane_stride(
     uint32_t plane_index);
 void swl_gbm_bo_export_close(struct swl_gbm_bo_export *exported_buffer);
 
+struct gbm_surface *swl_gbm_surface_create_for_modifier(
+    struct gbm_device *device,
+    uint32_t width,
+    uint32_t height,
+    uint32_t format,
+    uint64_t modifier,
+    uint32_t flags);
+void swl_gbm_surface_destroy(struct gbm_surface *surface);
+struct gbm_bo *swl_gbm_surface_lock_front_buffer(struct gbm_surface *surface);
+void swl_gbm_surface_release_buffer(
+    struct gbm_surface *surface,
+    struct gbm_bo *buffer);
+
 #ifdef SWL_ENABLE_TESTING
 enum swl_test_gbm_bo_create_kind {
     SWL_TEST_GBM_BO_CREATE_NONE = 0,
@@ -130,9 +144,22 @@ struct swl_test_gbm_bo_create_record {
     uint32_t                         flags;
 };
 
+struct swl_test_gbm_surface_lifecycle_record {
+    int32_t release_call_count;
+    int32_t destroy_call_count;
+    int32_t export_call_count;
+    void   *surface;
+    void   *buffer;
+};
+
 void swl_test_gbm_bo_create_recording_begin(void);
 void swl_test_gbm_bo_create_recording_end(void);
 struct swl_test_gbm_bo_create_record swl_test_gbm_bo_create_record(void);
+
+void swl_test_gbm_surface_lifecycle_recording_begin(void);
+void swl_test_gbm_surface_lifecycle_recording_end(void);
+struct swl_test_gbm_surface_lifecycle_record
+swl_test_gbm_surface_lifecycle_record(void);
 #endif
 
 #ifdef __cplusplus

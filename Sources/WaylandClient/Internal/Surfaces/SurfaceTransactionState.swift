@@ -41,6 +41,10 @@ package struct SurfaceTransactionState: Equatable, Sendable {
         )
     }
 
+    package var nextCommitGeneration: UInt64 {
+        (lastCommittedFrame?.generation ?? 0) + 1
+    }
+
     package mutating func recordConfigureReceived(serial: UInt32) {
         pendingConfigureSerial = serial
     }
