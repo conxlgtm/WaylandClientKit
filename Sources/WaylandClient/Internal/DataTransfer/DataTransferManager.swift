@@ -16,7 +16,7 @@ package protocol DataTransferDeviceBinding: AnyObject {
 
 package protocol DataTransferDragOriginBinding: AnyObject {}
 
-package protocol DataTransferOfferBinding: AnyObject {
+package protocol DataTransferOfferBinding: AnyObject, DataTransferReceiveBinding {
     var id: DataOfferID { get }
     var protocolVersion: RawVersion { get }
 
@@ -41,7 +41,7 @@ package struct DataTransferPipeDescriptors: Equatable, Sendable {
     package let writeEnd: Int32
 }
 
-package protocol DataTransferManagerBackend: AnyObject {
+package protocol DataTransferManagerBackend: AnyObject, DataTransferReceivePipeBackend {
     func preconditionIsOwnerThread()
     func bindDataDevice(
         for seatID: SeatID,
