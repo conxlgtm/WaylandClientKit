@@ -16,19 +16,12 @@ package final class RawPrimarySelectionDeviceManager {
         version managerVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                managerPointer,
-                interface: "zwp_primary_selection_device_manager_v1"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_primary_selection_device_manager_destroy
-            )
-        } catch {
-            unsafe swl_primary_selection_device_manager_destroy(managerPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: managerPointer,
+            interface: "zwp_primary_selection_device_manager_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_primary_selection_device_manager_destroy
+        )
         version = managerVersion
         proxyAdoption = adoptionContext
     }
@@ -91,19 +84,12 @@ package final class RawPrimarySelectionOffer {
         version offerVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                offerPointer,
-                interface: "zwp_primary_selection_offer_v1"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_primary_selection_offer_destroy
-            )
-        } catch {
-            unsafe swl_primary_selection_offer_destroy(offerPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: offerPointer,
+            interface: "zwp_primary_selection_offer_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_primary_selection_offer_destroy
+        )
         version = offerVersion
     }
 
@@ -136,19 +122,12 @@ package final class RawPrimarySelectionSource {
         version sourceVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                sourcePointer,
-                interface: "zwp_primary_selection_source_v1"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_primary_selection_source_destroy
-            )
-        } catch {
-            unsafe swl_primary_selection_source_destroy(sourcePointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: sourcePointer,
+            interface: "zwp_primary_selection_source_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_primary_selection_source_destroy
+        )
         version = sourceVersion
     }
 
@@ -181,19 +160,12 @@ package final class RawPrimarySelectionDevice {
         version deviceVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                devicePointer,
-                interface: "zwp_primary_selection_device_v1"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_primary_selection_device_destroy
-            )
-        } catch {
-            unsafe swl_primary_selection_device_destroy(devicePointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: devicePointer,
+            interface: "zwp_primary_selection_device_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_primary_selection_device_destroy
+        )
         version = deviceVersion
     }
 

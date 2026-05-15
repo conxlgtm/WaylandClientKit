@@ -84,7 +84,7 @@ package final class GBMBuffer {
 
         var exportedBuffer = swl_gbm_bo_export()
         guard unsafe swl_gbm_bo_export_dmabuf(bufferPointer, &exportedBuffer) == 0 else {
-            throw GBMAllocationError.exportFailed(errno: GBMAllocationError.capturedErrno())
+            throw GBMAllocationError.exportFailed(errno: GBMAllocationError.capturedCurrentErrno())
         }
 
         return GBMDmabufExport(adopting: exportedBuffer)

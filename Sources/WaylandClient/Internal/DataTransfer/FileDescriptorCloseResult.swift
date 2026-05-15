@@ -9,9 +9,17 @@ package enum FileDescriptorCloseResult: Equatable, Sendable {
         errno rawErrno: Int32 = Glibc.errno
     ) -> Self {
         guard result == 0 else {
-            return .failed(WaylandSystemErrno(unchecked: rawErrno > 0 ? rawErrno : EIO))
+            return .failed(WaylandSystemErrno(capturingPOSIXErrno: rawErrno, fallback: EIO))
         }
 
         return .closed
+    }
+
+    package func throwIfFailed() throws {
+        guard case .failed(let error) = self else {
+            return
+        }
+
+        throw DataTransferError.closeFileDescriptor(error)
     }
 }

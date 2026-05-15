@@ -327,7 +327,7 @@ extension CursorManager {
         cursorStateBySeat
             .filter(\.value.focus.isFocused)
             .map(\.key)
-            .sorted { $0.rawValue < $1.rawValue }
+            .sortedByRawValue()
     }
 
     private func reduceSeatState(
@@ -383,7 +383,7 @@ extension CursorManager {
     }
 
     package func publicSeatID(_ seatID: RawSeatID) -> SeatID {
-        SeatID(rawValue: seatID.rawValue)
+        SeatID(seatID)
     }
 
     private func recordCursorRequest(

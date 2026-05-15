@@ -29,7 +29,7 @@
             }
 
             return (
-                OutputID(rawValue: output.id.rawValue),
+                OutputID(output.id),
                 rawOutput.pointerAddressForTesting
             )
         }
@@ -44,7 +44,7 @@
             }
 
             return (
-                SeatID(rawValue: seat.id.rawValue),
+                SeatID(seat.id),
                 seat.pointerAddressForTesting
             )
         }

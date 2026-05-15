@@ -45,7 +45,7 @@ package final class GBMSurface {
                 format: descriptor.format,
                 modifier: descriptor.modifier,
                 flags: descriptor.flags.rawValue,
-                errno: GBMAllocationError.capturedErrno()
+                errno: GBMAllocationError.capturedCurrentErrno()
             )
         }
 
@@ -81,7 +81,7 @@ package final class GBMSurface {
             let bufferPointer = unsafe swl_gbm_surface_lock_front_buffer(surfacePointer)
         else {
             throw GBMAllocationError.surfaceFrontBufferLockFailed(
-                errno: GBMAllocationError.capturedErrno()
+                errno: GBMAllocationError.capturedCurrentErrno()
             )
         }
 
@@ -169,7 +169,7 @@ package final class GBMLockedSurfaceBuffer {
 
         var exportedBuffer = swl_gbm_bo_export()
         guard unsafe swl_gbm_bo_export_dmabuf(bufferPointer, &exportedBuffer) == 0 else {
-            throw GBMAllocationError.exportFailed(errno: GBMAllocationError.capturedErrno())
+            throw GBMAllocationError.exportFailed(errno: GBMAllocationError.capturedCurrentErrno())
         }
 
         return GBMDmabufExport(adopting: exportedBuffer)

@@ -96,7 +96,7 @@ final class InputRouter {
             return routedEvent(
                 event,
                 target: .display,
-                kind: .seat(.changed(convert(snapshot)))
+                kind: .seat(.changed(SeatStateSnapshot(snapshot)))
             )
         case .seatRemoved:
             deviceGraph.removeSeat(event.seatID)
@@ -164,7 +164,7 @@ final class InputRouter {
                             serial: InputSerial(rawValue: button.serial),
                             time: WaylandTimestampMilliseconds(rawValue: button.time),
                             button: PointerButtonCode(rawValue: button.button),
-                            state: ButtonState(rawValue: button.state.rawValue)
+                            state: ButtonState(button.state)
                         )
                     )
                 )
@@ -173,7 +173,7 @@ final class InputRouter {
             return routedEvent(
                 rawEvent,
                 target: target(forFocusedSurface: focusedPointerSurface(for: rawEvent.seatID)),
-                kind: .pointer(.axis(convert(axis)))
+                kind: .pointer(.axis(PointerAxisEvent(axis)))
             )
         }
     }
@@ -234,7 +234,7 @@ extension InputRouter {
                 .raw(
                     .keymapChanged(
                         KeyboardKeymapInfo(
-                            format: KeyboardKeymapFormat(rawValue: keymap.format.rawValue),
+                            format: KeyboardKeymapFormat(keymap.format),
                             size: keymap.size
                         )
                     )
@@ -292,7 +292,7 @@ extension InputRouter {
                             serial: InputSerial(rawValue: key.serial),
                             time: WaylandTimestampMilliseconds(rawValue: key.time),
                             rawKeycode: EvdevKeycode(rawValue: key.evdevKeycode),
-                            state: KeyState(rawValue: key.state.rawValue)
+                            state: KeyState(key.state)
                         )
                     )
                 )
@@ -347,7 +347,7 @@ extension InputRouter {
     ) -> InputEvent {
         InputEvent(
             sequence: rawEvent.sequence,
-            seatID: SeatID(rawValue: rawEvent.seatID.rawValue),
+            seatID: SeatID(rawEvent.seatID),
             target: target,
             kind: kind
         )
@@ -370,51 +370,6 @@ extension InputRouter {
         }
 
         return target(for: surfaceID)
-    }
-
-    func convert(_ snapshot: RawSeatEventSnapshot) -> SeatStateSnapshot {
-        SeatStateSnapshot(
-            uncheckedAdvertisedCapabilities: SeatCapabilities(
-                rawValue: snapshot.advertisedCapabilities.rawValue
-            ),
-            activeCapabilities: SeatCapabilities(rawValue: snapshot.activeCapabilities.rawValue),
-            name: snapshot.name.flatMap(SeatName.init(rawValue:))
-        )
-    }
-
-    func convert(_ axis: RawPointerAxisEvent) -> PointerAxisEvent {
-        switch axis {
-        case .axis(let time, let rawAxis, let value):
-            .axis(
-                time: WaylandTimestampMilliseconds(rawValue: time),
-                axis: PointerAxis(rawValue: rawAxis.rawValue),
-                value: value.doubleValue
-            )
-        case .source(let source):
-            .source(PointerAxisSource(rawValue: source.rawValue))
-        case .stop(let time, let axis):
-            .stop(
-                time: WaylandTimestampMilliseconds(rawValue: time),
-                axis: PointerAxis(rawValue: axis.rawValue)
-            )
-        case .discrete(let axis, let value):
-            .discrete(
-                axis: PointerAxis(rawValue: axis.rawValue),
-                value: PointerAxisDiscreteStep(rawValue: value)
-            )
-        case .value120(let axis, let value120):
-            .value120(
-                axis: PointerAxis(rawValue: axis.rawValue),
-                value120: PointerAxisValue120(rawValue: value120)
-            )
-        case .relativeDirection(let axis, let direction):
-            .relativeDirection(
-                axis: PointerAxis(rawValue: axis.rawValue),
-                direction: PointerAxisRelativeDirection(rawValue: direction.rawValue)
-            )
-        case .frame:
-            .frame
-        }
     }
 
     func windowID(for surfaceID: RawObjectID?) -> WindowID? {

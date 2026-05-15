@@ -50,10 +50,5 @@ private func stringFromNullTerminatedXKBBuffer(
     _ buffer: [CChar],
     writtenByteCount: Int
 ) -> String? {
-    let upperBound = min(max(writtenByteCount, 0), buffer.count)
-    let endIndex = buffer[..<upperBound].firstIndex(of: 0) ?? upperBound
-    return String(
-        validating: buffer[..<endIndex].map { UInt8(bitPattern: $0) },
-        as: UTF8.self
-    )
+    buffer.nullTerminatedUTF8String(writtenByteCount: writtenByteCount)
 }

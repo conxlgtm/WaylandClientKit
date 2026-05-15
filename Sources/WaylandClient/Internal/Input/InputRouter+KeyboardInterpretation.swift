@@ -5,7 +5,7 @@ extension InputRouter {
     func route(_ event: WaylandKeyboard.InterpretedKeyboardEvent) -> [InputEvent] {
         let routed = InputEvent(
             sequence: event.sequence,
-            seatID: SeatID(rawValue: event.seatID.rawValue),
+            seatID: SeatID(event.seatID),
             target: interpretedTarget(for: event),
             kind: .keyboard(.interpreted(convert(event.kind)))
         )
@@ -31,7 +31,7 @@ extension InputRouter {
         case .keymap(let keymap):
             .keymap(
                 InterpretedKeyboardKeymapInfo(
-                    format: KeyboardKeymapFormat(rawValue: keymap.format.rawValue),
+                    format: KeyboardKeymapFormat(keymap.format),
                     size: keymap.size
                 )
             )
@@ -161,8 +161,8 @@ extension InputRouter {
             .nonKeyboardInputDevice
         case .mismatchedKeyboardSeat(let expected, let actual):
             .mismatchedKeyboardSeat(
-                expected: SeatID(rawValue: expected.rawValue),
-                actual: SeatID(rawValue: actual.rawValue)
+                expected: SeatID(expected),
+                actual: SeatID(actual)
             )
         case .mismatchedKeyboardDevice:
             .mismatchedKeyboardDevice

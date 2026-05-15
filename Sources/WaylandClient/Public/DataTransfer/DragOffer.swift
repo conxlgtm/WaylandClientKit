@@ -28,7 +28,7 @@ public struct DragOffer: Sendable, Hashable {
     }
 
     public var identity: DragOfferIdentity {
-        DragOfferIdentity(id)
+        id.dragIdentity
     }
 
     public func accept(_ mimeType: MIMEType?) async throws {

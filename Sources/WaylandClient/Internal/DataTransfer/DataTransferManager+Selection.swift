@@ -13,7 +13,7 @@ extension DataTransferManager {
             return nil
         }
         guard let offer = store.offerSnapshot(offerID) else {
-            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
+            throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
         }
 
         return offer
@@ -43,13 +43,13 @@ extension DataTransferManager {
         guard let offer = store.offerSnapshot(offerID),
             case .dragAndDrop(let seatID) = offer.role
         else {
-            throw DataTransferError.unknownDragOfferIdentity(DragOfferIdentity(offerID))
+            throw DataTransferError.unknownDragOfferIdentity(offerID.dragIdentity)
         }
         guard store.seatSnapshot(seatID)?.dragAndDropOfferID == offerID else {
-            throw DataTransferError.dragOfferNotActive(DragOfferIdentity(offerID))
+            throw DataTransferError.dragOfferNotActive(offerID.dragIdentity)
         }
         guard offer.dragAndDrop?.enterSerial != nil else {
-            throw DataTransferError.dragOfferNotActive(DragOfferIdentity(offerID))
+            throw DataTransferError.dragOfferNotActive(offerID.dragIdentity)
         }
 
         return offer

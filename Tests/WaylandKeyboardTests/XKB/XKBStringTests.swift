@@ -5,6 +5,35 @@ import Testing
 @Suite
 struct XKBStringTests {
     @Test
+    func cCharBufferStopsAtFirstNULInsideWrittenRange() {
+        let buffer: [CChar] = [
+            CChar(UInt8(ascii: "a")),
+            CChar(UInt8(ascii: "b")),
+            0,
+            CChar(UInt8(ascii: "c")),
+        ]
+
+        #expect(buffer.nullTerminatedUTF8String(writtenByteCount: 4) == "ab")
+    }
+
+    @Test
+    func cCharBufferClampsWrittenByteCountToBufferLength() {
+        let buffer: [CChar] = [
+            CChar(UInt8(ascii: "o")),
+            CChar(UInt8(ascii: "k")),
+        ]
+
+        #expect(buffer.nullTerminatedUTF8String(writtenByteCount: 20) == "ok")
+    }
+
+    @Test
+    func cCharBufferRejectsInvalidUTF8() {
+        let buffer = [CChar(bitPattern: 0xff)]
+
+        #expect(buffer.nullTerminatedUTF8String(writtenByteCount: 1) == nil)
+    }
+
+    @Test
     func sizedCallRejectsTruncatedSecondRead() {
         var callCount = 0
         let value = stringFromXKBSizedCall { buffer, count in

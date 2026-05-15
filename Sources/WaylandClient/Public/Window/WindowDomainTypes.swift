@@ -468,18 +468,7 @@ package enum DecorationModeRequest: Equatable, Sendable {
 }
 
 extension WindowDecorationPreference {
-    package var requestedRawMode: RawDecorationMode? {
-        switch self {
-        case .preferServerSide:
-            .serverSide
-        case .preferClientSide:
-            .clientSide
-        case .compositorDefault:
-            nil
-        }
-    }
-
-    package var reportsUnavailableDecorationManager: Bool {
+    package var shouldReportMissingDecorationManager: Bool {
         self == .preferServerSide
     }
 }
