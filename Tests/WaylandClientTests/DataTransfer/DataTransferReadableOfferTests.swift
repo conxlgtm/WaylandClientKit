@@ -1,5 +1,4 @@
 import Foundation
-import Synchronization
 import Testing
 
 @testable import WaylandClient
@@ -18,32 +17,63 @@ struct DataTransferReadableOfferTests {
         )
 
         #expect(data == Data("payload".utf8))
-        #expect(offer.receivedMIMETypes.withLock { $0 } == [mimeType])
-        #expect(offer.closedDescriptors.withLock { $0 } == [71])
+        #expect(offer.receivedMIMETypes == [mimeType])
+        #expect(offer.closedDescriptors == [71])
     }
 
-    private final class TestReadableOffer: DataTransferReadableOffer, Sendable {
-        let receivedMIMETypes = Mutex<[MIMEType]>([])
-        let closedDescriptors = Mutex<[Int32]>([])
-        private let readSteps = Mutex<[[UInt8]]>([
+    private final class TestReadableOffer: DataTransferReadableOffer, @unchecked Sendable {
+        private let lock = NSLock()
+        private var receivedMIMETypesStorage: [MIMEType] = []
+        private var closedDescriptorsStorage: [Int32] = []
+        private var readSteps: [[UInt8]] = [
             Array("payload".utf8),
             [],
-        ])
+        ]
+
+        var receivedMIMETypes: [MIMEType] {
+            withLocked {
+                receivedMIMETypesStorage
+            }
+        }
+
+        var closedDescriptors: [Int32] {
+            withLocked {
+                closedDescriptorsStorage
+            }
+        }
 
         func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {
-            receivedMIMETypes.withLock { $0.append(mimeType) }
+            withLocked {
+                receivedMIMETypesStorage.append(mimeType)
+            }
             return try OwnedFileDescriptor(
                 adopting: 71,
-                readDescriptor: { [readSteps] _, _ in
-                    readSteps.withLock { steps in
-                        steps.isEmpty ? [] : steps.removeFirst()
-                    }
+                readDescriptor: { [self] _, _ in
+                    nextReadStep()
                 },
-                closeDescriptor: { [closedDescriptors] descriptor in
-                    closedDescriptors.withLock { $0.append(descriptor) }
+                closeDescriptor: { [self] descriptor in
+                    recordClosedDescriptor(descriptor)
                     return 0
                 }
             )
+        }
+
+        private func nextReadStep() -> [UInt8] {
+            withLocked {
+                readSteps.isEmpty ? [] : readSteps.removeFirst()
+            }
+        }
+
+        private func recordClosedDescriptor(_ descriptor: Int32) {
+            withLocked {
+                closedDescriptorsStorage.append(descriptor)
+            }
+        }
+
+        private func withLocked<Result>(_ body: () throws -> Result) rethrows -> Result {
+            lock.lock()
+            defer { lock.unlock() }
+            return try body()
         }
     }
 }
