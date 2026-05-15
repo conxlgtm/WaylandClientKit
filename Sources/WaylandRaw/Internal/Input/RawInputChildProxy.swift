@@ -25,20 +25,21 @@ package final class RawInputChildProxy {
         version = childVersion
         listenerOwner = childListenerOwner
         cancelListener = cancelChildListener
-        let adoptedPointer: OpaquePointer
-        do {
-            if let adoptionContext {
-                unsafe adoptedPointer = try adoptionContext.adopt(
-                    childPointer, interface: interfaceName)
-            } else {
-                unsafe adoptedPointer = childPointer
+        if let adoptionContext {
+            do {
+                proxy = try RawOwnedProxy(
+                    adopting: childPointer,
+                    interface: interfaceName,
+                    proxyAdoption: adoptionContext,
+                    destroy: releaseChildProxy
+                )
+            } catch {
+                cancelChildListener?()
+                throw error
             }
-        } catch {
-            cancelChildListener?()
-            unsafe releaseChildProxy(childPointer)
-            throw error
+        } else {
+            proxy = RawOwnedProxy(pointer: childPointer, destroy: releaseChildProxy)
         }
-        proxy = RawOwnedProxy(pointer: adoptedPointer, destroy: releaseChildProxy)
     }
 
     package func destroy() {

@@ -154,25 +154,19 @@ package final class RawOutput {
         id = outputID
         version = outputVersion
         onChanged = handleChanged
-        let adoptedPointer: OpaquePointer
-        do {
-            unsafe adoptedPointer = try adoptionContext.adopt(
-                outputPointer,
-                interface: "wl_output"
-            )
-        } catch {
-            unsafe swl_output_destroy(outputPointer)
-            throw error
-        }
-
         let destroyOutput: (OpaquePointer) -> Void =
             outputVersion >= 3
             ? { unsafe swl_output_release($0) }
             : { unsafe swl_output_destroy($0) }
-        proxy = RawOwnedProxy(pointer: adoptedPointer, destroy: destroyOutput)
+        proxy = try RawOwnedProxy(
+            adopting: outputPointer,
+            interface: "wl_output",
+            proxyAdoption: adoptionContext,
+            destroy: destroyOutput
+        )
         listenerOwner = OutputListenerOwner(invariantFailureSink: failureSink)
 
-        try unsafe listenerOwner.install(on: adoptedPointer) { [weak self] event in
+        try unsafe listenerOwner.install(on: pointer) { [weak self] event in
             self?.handle(event)
         }
     }

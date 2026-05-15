@@ -16,20 +16,12 @@ package final class RawSurface {
         version surfaceVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        let adoptedPointer: OpaquePointer
-        do {
-            unsafe adoptedPointer = try adoptionContext.adopt(
-                surfacePointer,
-                interface: "wl_surface"
-            )
-        } catch {
-            unsafe swl_surface_destroy(surfacePointer)
-            throw error
-        }
         version = surfaceVersion
         proxyAdoption = adoptionContext
-        proxy = RawOwnedProxy(
-            pointer: adoptedPointer,
+        proxy = try RawOwnedProxy(
+            adopting: surfacePointer,
+            interface: "wl_surface",
+            proxyAdoption: adoptionContext,
             destroy: unsafe swl_surface_destroy
         )
     }

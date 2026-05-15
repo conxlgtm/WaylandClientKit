@@ -14,26 +14,19 @@ package final class RawLinuxDmabufFeedback {
         onUpdate handleUpdate: @escaping (RawLinuxDmabufFeedbackSnapshot) -> Void,
         onFailure handleFailure: @escaping (RuntimeError) -> Void
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                feedbackPointer,
-                interface: "zwp_linux_dmabuf_feedback_v1"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_zwp_linux_dmabuf_feedback_v1_destroy
-            )
-            listenerOwner = RawLinuxDmabufFeedbackOwner(
-                scope: feedbackScope,
-                invariantFailureSink: adoptionContext.invariantFailureSink,
-                onUpdate: handleUpdate,
-                onFailure: handleFailure
-            )
-            try unsafe listenerOwner.install(on: adoptedPointer)
-        } catch {
-            unsafe swl_zwp_linux_dmabuf_feedback_v1_destroy(feedbackPointer)
-            throw error
-        }
+        listenerOwner = RawLinuxDmabufFeedbackOwner(
+            scope: feedbackScope,
+            invariantFailureSink: adoptionContext.invariantFailureSink,
+            onUpdate: handleUpdate,
+            onFailure: handleFailure
+        )
+        proxy = try RawOwnedProxy(
+            adopting: feedbackPointer,
+            interface: "zwp_linux_dmabuf_feedback_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_zwp_linux_dmabuf_feedback_v1_destroy
+        )
+        try unsafe listenerOwner.install(on: proxy.pointer)
     }
 
     package func cancel() {
