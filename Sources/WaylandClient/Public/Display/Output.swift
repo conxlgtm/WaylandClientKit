@@ -245,7 +245,7 @@ public struct OutputSnapshot: Equatable, Sendable {
 
     package init(_ raw: RawOutputSnapshot) {
         self.init(
-            id: OutputID(rawValue: raw.id.rawValue),
+            id: OutputID(raw.id),
             version: raw.version.value,
             geometry: raw.geometry.map(OutputGeometry.init),
             logicalGeometry: raw.logicalGeometry.map(OutputLogicalGeometry.init),

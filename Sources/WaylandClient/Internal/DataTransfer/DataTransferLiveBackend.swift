@@ -21,7 +21,7 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
         guard case .bound(let manager) = globals.extensions.dataDeviceManager else {
             throw DataTransferError.unavailable
         }
-        guard let seat = globals.seatRegistry.seat(for: RawSeatID(rawValue: seatID.rawValue)) else {
+        guard let seat = globals.seatRegistry.seat(for: RawSeatID(seatID)) else {
             throw DataTransferError.unknownSeat(seatID)
         }
 

@@ -45,7 +45,7 @@ extension InputRouter {
     private func unknownPointerAxisValues(
         _ rawAxis: RawPointerAxis
     ) -> [(UnknownInputProtocolValueField, UInt32)] {
-        guard case .unknown(let rawValue) = PointerAxis(rawValue: rawAxis.rawValue) else {
+        guard case .unknown(let rawValue) = PointerAxis(rawAxis) else {
             return []
         }
 
@@ -55,7 +55,7 @@ extension InputRouter {
     private func unknownPointerAxisSourceValues(
         _ source: RawPointerAxisSource
     ) -> [(UnknownInputProtocolValueField, UInt32)] {
-        guard case .unknown(let rawValue) = PointerAxisSource(rawValue: source.rawValue) else {
+        guard case .unknown(let rawValue) = PointerAxisSource(source) else {
             return []
         }
 
@@ -74,7 +74,7 @@ extension InputRouter {
     ) -> [(UnknownInputProtocolValueField, UInt32)] {
         guard
             case .unknown(let rawValue) =
-                PointerAxisRelativeDirection(rawValue: direction.rawValue)
+                PointerAxisRelativeDirection(direction)
         else {
             return []
         }
@@ -85,7 +85,7 @@ extension InputRouter {
     private func unknownPointerButtonStateValues(
         _ state: RawPointerButtonState
     ) -> [(UnknownInputProtocolValueField, UInt32)] {
-        guard case .unknown(let rawValue) = ButtonState(rawValue: state.rawValue) else {
+        guard case .unknown(let rawValue) = ButtonState(state) else {
             return []
         }
 
@@ -95,7 +95,7 @@ extension InputRouter {
     private func unknownKeyboardKeyStateValues(
         _ state: RawKeyboardKeyState
     ) -> [(UnknownInputProtocolValueField, UInt32)] {
-        guard case .unknown(let rawValue) = KeyState(rawValue: state.rawValue) else {
+        guard case .unknown(let rawValue) = KeyState(state) else {
             return []
         }
 
@@ -117,7 +117,7 @@ extension InputRouter {
         rawValue: UInt32,
         rawEvent: RawInputEvent
     ) -> InputEvent? {
-        let seatID = SeatID(rawValue: rawEvent.seatID.rawValue)
+        let seatID = SeatID(rawEvent.seatID)
         let key = ReportedUnknownInputProtocolValue(
             seatID: seatID,
             field: field,

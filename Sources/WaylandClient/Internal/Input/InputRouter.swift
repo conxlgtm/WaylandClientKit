@@ -164,7 +164,7 @@ final class InputRouter {
                             serial: InputSerial(rawValue: button.serial),
                             time: WaylandTimestampMilliseconds(rawValue: button.time),
                             button: PointerButtonCode(rawValue: button.button),
-                            state: ButtonState(rawValue: button.state.rawValue)
+                            state: ButtonState(button.state)
                         )
                     )
                 )
@@ -234,7 +234,7 @@ extension InputRouter {
                 .raw(
                     .keymapChanged(
                         KeyboardKeymapInfo(
-                            format: KeyboardKeymapFormat(rawValue: keymap.format.rawValue),
+                            format: KeyboardKeymapFormat(keymap.format),
                             size: keymap.size
                         )
                     )
@@ -292,7 +292,7 @@ extension InputRouter {
                             serial: InputSerial(rawValue: key.serial),
                             time: WaylandTimestampMilliseconds(rawValue: key.time),
                             rawKeycode: EvdevKeycode(rawValue: key.evdevKeycode),
-                            state: KeyState(rawValue: key.state.rawValue)
+                            state: KeyState(key.state)
                         )
                     )
                 )
@@ -347,7 +347,7 @@ extension InputRouter {
     ) -> InputEvent {
         InputEvent(
             sequence: rawEvent.sequence,
-            seatID: SeatID(rawValue: rawEvent.seatID.rawValue),
+            seatID: SeatID(rawEvent.seatID),
             target: target,
             kind: kind
         )
@@ -387,30 +387,30 @@ extension InputRouter {
         case .axis(let time, let rawAxis, let value):
             .axis(
                 time: WaylandTimestampMilliseconds(rawValue: time),
-                axis: PointerAxis(rawValue: rawAxis.rawValue),
+                axis: PointerAxis(rawAxis),
                 value: value.doubleValue
             )
         case .source(let source):
-            .source(PointerAxisSource(rawValue: source.rawValue))
+            .source(PointerAxisSource(source))
         case .stop(let time, let axis):
             .stop(
                 time: WaylandTimestampMilliseconds(rawValue: time),
-                axis: PointerAxis(rawValue: axis.rawValue)
+                axis: PointerAxis(axis)
             )
         case .discrete(let axis, let value):
             .discrete(
-                axis: PointerAxis(rawValue: axis.rawValue),
+                axis: PointerAxis(axis),
                 value: PointerAxisDiscreteStep(rawValue: value)
             )
         case .value120(let axis, let value120):
             .value120(
-                axis: PointerAxis(rawValue: axis.rawValue),
+                axis: PointerAxis(axis),
                 value120: PointerAxisValue120(rawValue: value120)
             )
         case .relativeDirection(let axis, let direction):
             .relativeDirection(
-                axis: PointerAxis(rawValue: axis.rawValue),
-                direction: PointerAxisRelativeDirection(rawValue: direction.rawValue)
+                axis: PointerAxis(axis),
+                direction: PointerAxisRelativeDirection(direction)
             )
         case .frame:
             .frame
