@@ -80,7 +80,10 @@ struct DataTransferPipeReceiveTests {
     }
 }
 
-private final class RecordingReceivePipeBackend: @unchecked Sendable, DataTransferReceivePipeBackend {
+private final class RecordingReceivePipeBackend:
+    @unchecked Sendable,
+    DataTransferReceivePipeBackend
+{
     private let failingAdoptions: Set<Int32>
     private let closeFailures: [Int32: Int32]
     private(set) var rawCloseCalls: [Int32] = []

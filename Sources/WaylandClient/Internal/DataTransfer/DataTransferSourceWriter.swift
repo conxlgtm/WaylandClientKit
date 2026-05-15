@@ -4,7 +4,6 @@ import Foundation
 import Glibc
 import Synchronization
 
-// swiftlint:disable:next type_body_length
 package final class DataTransferSourceWriteJob: Sendable {
     package let source: DataTransferSourceWriteSource
     package let mimeType: MIMEType
