@@ -4,7 +4,6 @@ import Foundation
 import Glibc
 import Synchronization
 
-// swiftlint:disable:next type_body_length
 package final class DataTransferSourceWriteJob: Sendable {
     package let source: DataTransferSourceWriteSource
     package let mimeType: MIMEType
@@ -237,12 +236,7 @@ package final class DataTransferSourceWriteJob: Sendable {
             throw DataTransferError.invalidFileDescriptor(rawDescriptor)
         }
 
-        switch descriptorIO.close(rawDescriptor) {
-        case .closed:
-            return
-        case .failed(let error):
-            throw DataTransferError.closeFileDescriptor(error)
-        }
+        try descriptorIO.close(rawDescriptor).throwIfFailed()
     }
 
     private func takeIdleRawDescriptor() -> Int32? {
@@ -335,121 +329,116 @@ package final class ThreadedDataTransferSourceWriter {
         func submit(_ submittedJobs: [DataTransferSourceWriteJob])
             -> [DataTransferSourceWriteJob]
         {
-            condition.lock()
-            defer { condition.unlock() }
+            condition.withLock {
+                guard lifecycle.acceptsJobs else {
+                    return submittedJobs
+                }
 
-            guard lifecycle.acceptsJobs else {
-                return submittedJobs
+                jobs.append(contentsOf: submittedJobs)
+                condition.signal()
+                return []
             }
-
-            jobs.append(contentsOf: submittedJobs)
-            condition.signal()
-            return []
         }
 
         func drainResults() -> [DataTransferSourceWriteResult] {
-            condition.lock()
-            defer { condition.unlock() }
-
-            defer { results.removeAll(keepingCapacity: true) }
-            return results
+            condition.withLock {
+                defer { results.removeAll(keepingCapacity: true) }
+                return results
+            }
         }
 
         func requestShutdown() -> (
             cancelledJobs: [DataTransferSourceWriteJob],
             currentJob: DataTransferSourceWriteJob?
         ) {
-            condition.lock()
-            defer { condition.unlock() }
+            condition.withLock {
+                guard lifecycle.acceptsJobs else {
+                    return (cancelledJobs: [], currentJob: currentJob)
+                }
 
-            guard lifecycle.acceptsJobs else {
-                return (cancelledJobs: [], currentJob: currentJob)
+                lifecycle = .shutdownRequested
+                let cancelledJobs = jobs
+                jobs.removeAll(keepingCapacity: false)
+                condition.broadcast()
+                return (cancelledJobs: cancelledJobs, currentJob: currentJob)
             }
-
-            lifecycle = .shutdownRequested
-            let cancelledJobs = jobs
-            jobs.removeAll(keepingCapacity: false)
-            condition.broadcast()
-            return (cancelledJobs: cancelledJobs, currentJob: currentJob)
         }
 
         func cancelJobs(for source: DataTransferSourceWriteSource) -> (
             cancelledJobs: [DataTransferSourceWriteJob],
             currentJob: DataTransferSourceWriteJob?
         ) {
-            condition.lock()
-            defer { condition.unlock() }
-
-            guard !lifecycle.isStopped else {
-                return (cancelledJobs: [], currentJob: nil)
-            }
-
-            var remainingJobs: [DataTransferSourceWriteJob] = []
-            var cancelledJobs: [DataTransferSourceWriteJob] = []
-            for job in jobs {
-                if job.source == source {
-                    cancelledJobs.append(job)
-                } else {
-                    remainingJobs.append(job)
+            condition.withLock {
+                guard !lifecycle.isStopped else {
+                    return (cancelledJobs: [], currentJob: nil)
                 }
-            }
-            jobs = remainingJobs
 
-            let currentJob = currentJob?.source == source ? currentJob : nil
-            condition.broadcast()
-            return (cancelledJobs: cancelledJobs, currentJob: currentJob)
+                var remainingJobs: [DataTransferSourceWriteJob] = []
+                var cancelledJobs: [DataTransferSourceWriteJob] = []
+                for job in jobs {
+                    if job.source == source {
+                        cancelledJobs.append(job)
+                    } else {
+                        remainingJobs.append(job)
+                    }
+                }
+                jobs = remainingJobs
+
+                let currentJob = currentJob?.source == source ? currentJob : nil
+                condition.broadcast()
+                return (cancelledJobs: cancelledJobs, currentJob: currentJob)
+            }
         }
 
         func markStopped() {
-            condition.lock()
-            currentJob = nil
-            lifecycle = .stopped
-            condition.broadcast()
-            condition.unlock()
+            condition.withLock {
+                currentJob = nil
+                lifecycle = .stopped
+                condition.broadcast()
+            }
         }
 
         func completeCurrentJob(with result: DataTransferSourceWriteResult) {
-            condition.lock()
-            currentJob = nil
-            results.append(result)
-            condition.broadcast()
-            condition.unlock()
+            condition.withLock {
+                currentJob = nil
+                results.append(result)
+                condition.broadcast()
+            }
         }
 
         func nextJob() -> DataTransferSourceWriteJob? {
-            condition.lock()
-            defer { condition.unlock() }
+            condition.withLock {
+                while jobs.isEmpty,
+                    lifecycle.waitsForJobs
+                {
+                    condition.wait()
+                }
 
-            while jobs.isEmpty,
-                lifecycle.waitsForJobs
-            {
-                condition.wait()
+                guard !jobs.isEmpty else {
+                    return nil
+                }
+
+                let job = jobs.removeFirst()
+                currentJob = job
+                return job
             }
-
-            guard !jobs.isEmpty else {
-                return nil
-            }
-
-            let job = jobs.removeFirst()
-            currentJob = job
-            return job
         }
 
         func append(_ newResults: [DataTransferSourceWriteResult]) {
             guard !newResults.isEmpty else { return }
 
-            condition.lock()
-            results.append(contentsOf: newResults)
-            condition.broadcast()
-            condition.unlock()
+            condition.withLock {
+                results.append(contentsOf: newResults)
+                condition.broadcast()
+            }
         }
 
         func waitUntilStopped() {
-            condition.lock()
-            while !lifecycle.isStopped {
-                condition.wait()
+            condition.withLock {
+                while !lifecycle.isStopped {
+                    condition.wait()
+                }
             }
-            condition.unlock()
         }
     }
 

@@ -61,9 +61,9 @@ extension DataTransferManager {
 
     private func callbackContext(forOffer offerID: DataOfferID) -> DataTransferCallbackContext {
         if let offer = store.offerSnapshot(offerID), case .dragAndDrop = offer.role {
-            return .dragOffer(DragOfferIdentity(offerID))
+            return .dragOffer(offerID.dragIdentity)
         }
 
-        return .dataOffer(ClipboardOfferIdentity(offerID))
+        return .dataOffer(offerID.clipboardIdentity)
     }
 }

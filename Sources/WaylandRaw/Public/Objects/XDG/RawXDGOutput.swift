@@ -16,19 +16,12 @@ package final class RawXDGOutputManager {
         version managerVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                managerPointer,
-                interface: "zxdg_output_manager_v1"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_zxdg_output_manager_v1_destroy
-            )
-        } catch {
-            unsafe swl_zxdg_output_manager_v1_destroy(managerPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: managerPointer,
+            interface: "zxdg_output_manager_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_zxdg_output_manager_v1_destroy
+        )
         version = managerVersion
         proxyAdoption = adoptionContext
     }
@@ -78,23 +71,16 @@ package final class RawXDGOutput {
         invariantFailureSink failureSink: RawInvariantFailureSink? = nil,
         onEvent handleEvent: @escaping (RawXDGOutputEvent) -> Void
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                outputPointer,
-                interface: "zxdg_output_v1"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_zxdg_output_v1_destroy
-            )
-        } catch {
-            unsafe swl_zxdg_output_v1_destroy(outputPointer)
-            throw error
-        }
         version = outputVersion
         listenerOwner = RawXDGOutputListenerOwner(
             onEvent: handleEvent,
             invariantFailureSink: failureSink
+        )
+        proxy = try RawOwnedProxy(
+            adopting: outputPointer,
+            interface: "zxdg_output_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_zxdg_output_v1_destroy
         )
 
         try unsafe listenerOwner.install(on: pointer)

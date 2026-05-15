@@ -56,7 +56,7 @@ extension DataTransferManager {
     private func appendDragSourceEvent(for effect: DataTransferEffect) {
         switch effect {
         case .publishDragSourceCancelled(let sourceID):
-            eventQueue.append(.dragSourceCancelled(DragSourceIdentity(sourceID)))
+            eventQueue.append(.dragSourceCancelled(sourceID.dragIdentity))
         case .publishDragSourceTargetChanged(let sourceID, let mimeType):
             eventQueue.append(
                 .dragSourceTargetChanged(
@@ -70,7 +70,7 @@ extension DataTransferManager {
                 )
             )
         case .publishDragSourceDropPerformed(let sourceID):
-            eventQueue.append(.dragSourceDropPerformed(DragSourceIdentity(sourceID)))
+            eventQueue.append(.dragSourceDropPerformed(sourceID.dragIdentity))
         case .publishDragSourceFinished(let sourceID, let finalAction):
             eventQueue.append(
                 .dragSourceFinished(
@@ -98,7 +98,7 @@ extension DataTransferManager {
         }
         if let existingOffer = store.offerSnapshot(offerID) {
             guard case .dragAndDrop(seatID) = existingOffer.role else {
-                throw DataTransferError.unknownDragOfferIdentity(DragOfferIdentity(offerID))
+                throw DataTransferError.unknownDragOfferIdentity(offerID.dragIdentity)
             }
             try apply(
                 .dragEntered(
@@ -107,11 +107,11 @@ extension DataTransferManager {
         }
 
         guard let runtimeOffer = store.runtimeOffer(offerID) else {
-            throw DataTransferError.unknownDragOfferIdentity(DragOfferIdentity(offerID))
+            throw DataTransferError.unknownDragOfferIdentity(offerID.dragIdentity)
         }
         guard runtimeOffer.pendingSeatID == seatID else {
             throw DataTransferError.mismatchedOfferSeat(
-                offer: .dragAndDrop(DragOfferIdentity(offerID)),
+                offer: .dragAndDrop(offerID.dragIdentity),
                 expected: seatID,
                 actual: runtimeOffer.pendingSeatID
             )

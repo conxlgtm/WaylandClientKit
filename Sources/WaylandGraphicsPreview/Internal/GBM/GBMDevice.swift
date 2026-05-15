@@ -90,7 +90,7 @@ package final class GBMDevice {
         var renderNode = renderNode
         let fd = renderNode.releaseForGBMDevice()
         guard let devicePointer = unsafe swl_gbm_create_device(fd) else {
-            let errorNumber = GBMAllocationError.capturedErrno()
+            let errorNumber = GBMAllocationError.capturedCurrentErrno()
             Glibc.close(fd)
             throw GBMAllocationError.deviceCreationFailed(errno: errorNumber)
         }
@@ -158,7 +158,7 @@ package final class GBMDevice {
             modifier
         )
         guard planeCount >= 0 else {
-            throw GBMAllocationError.exportFailed(errno: GBMAllocationError.capturedErrno())
+            throw GBMAllocationError.exportFailed(errno: GBMAllocationError.capturedCurrentErrno())
         }
 
         return Int(planeCount)
@@ -186,7 +186,7 @@ package final class GBMDevice {
                 format: descriptor.format,
                 modifier: descriptor.modifier,
                 flags: descriptor.flags.rawValue,
-                errno: GBMAllocationError.capturedErrno()
+                errno: GBMAllocationError.capturedCurrentErrno()
             )
         }
 
@@ -210,11 +210,5 @@ package final class GBMDevice {
 
     deinit {
         destroy()
-    }
-}
-
-extension GBMAllocationError {
-    package static func capturedErrno() -> Int32 {
-        errno > 0 ? errno : EIO
     }
 }

@@ -21,7 +21,7 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
         guard case .bound(let manager) = globals.extensions.dataDeviceManager else {
             throw DataTransferError.unavailable
         }
-        guard let seat = globals.seatRegistry.seat(for: RawSeatID(rawValue: seatID.rawValue)) else {
+        guard let seat = globals.seatRegistry.seat(for: RawSeatID(seatID)) else {
             throw DataTransferError.unknownSeat(seatID)
         }
 
@@ -97,15 +97,7 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
     }
 
     func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors {
-        do {
-            let descriptors = try RawFileDescriptor.pipeDescriptors()
-            return DataTransferPipeDescriptors(
-                readEnd: descriptors.readEnd,
-                writeEnd: descriptors.writeEnd
-            )
-        } catch {
-            throw Self.dataTransferPipeError(error)
-        }
+        try DataTransferPipeDescriptors.makeOfferReceivePipe()
     }
 
     func adoptOwnedFileDescriptor(_ descriptor: Int32) throws -> OwnedFileDescriptor {
@@ -118,17 +110,6 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
 
     func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult {
         FileDescriptorCloseResult.posixReturn(Glibc.close(descriptor))
-    }
-
-    private static func dataTransferPipeError(_ error: RuntimeError) -> DataTransferError {
-        switch error {
-        case .system(let systemError):
-            .createPipe(WaylandSystemErrno(unchecked: systemError.errno.rawValue))
-        case .systemErrnoUnavailable:
-            .createPipe(WaylandSystemErrno(unchecked: EIO))
-        default:
-            .unavailable
-        }
     }
 }
 

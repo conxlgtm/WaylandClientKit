@@ -39,8 +39,8 @@ package enum KeyboardComposeLocale: Equatable, Sendable {
 
     private func normalized(_ value: String?) -> String? {
         guard let value else { return nil }
-        let trimmed = trimmingXKBASCIIWhitespace(value)
-        guard !trimmed.isEmpty, !trimmed.utf8.contains(0) else {
+        let trimmed = value.xkbASCIITrimmed
+        guard !trimmed.isEmpty, !trimmed.containsNULByte else {
             return nil
         }
 
@@ -65,11 +65,11 @@ package struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {
     package let rawValue: String
 
     package init(_ value: String) throws(KeyboardComposeLocaleError) {
-        let trimmed = trimmingXKBASCIIWhitespace(value)
+        let trimmed = value.xkbASCIITrimmed
         guard !trimmed.isEmpty else {
             throw .emptyIdentifier
         }
-        guard !trimmed.utf8.contains(0) else {
+        guard !trimmed.containsNULByte else {
             throw .containsNUL
         }
 
@@ -81,7 +81,7 @@ package struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {
     package init(unchecked value: String) {
         precondition(!value.isEmpty, "compose locale identifier must not be empty")
         precondition(
-            !value.utf8.contains(0),
+            !value.containsNULByte,
             "compose locale identifier must not contain NUL bytes"
         )
         rawValue = value
@@ -268,14 +268,10 @@ final class XKBComposeStateOwner {
         resultKeysym: KeyboardKeysym?,
         resultKeysymName: String?
     ) -> KeyboardTextResult {
-        guard let keyText else { return .none }
-        return .committed(
-            KeyboardTextCommit(
-                string: keyText,
-                source: .xkbKey,
-                resultKeysym: resultKeysym,
-                resultKeysymName: resultKeysymName
-            )
+        .xkbKey(
+            keyText,
+            resultKeysym: resultKeysym,
+            resultKeysymName: resultKeysymName
         )
     }
 
@@ -295,24 +291,5 @@ final class XKBComposeStateOwner {
             resultKeysym: resultKeysym,
             resultKeysymName: resultKeysymName
         )
-    }
-}
-
-private func trimmingXKBASCIIWhitespace(_ value: String) -> String {
-    let trimmedScalars = value.unicodeScalars.drop { scalar in
-        isXKBASCIIWhitespace(scalar)
-    }
-    .reversed()
-    .drop { isXKBASCIIWhitespace($0) }
-    .reversed()
-    return String(String.UnicodeScalarView(trimmedScalars))
-}
-
-private func isXKBASCIIWhitespace(_ scalar: UnicodeScalar) -> Bool {
-    switch scalar.value {
-    case 0x09...0x0D, 0x20:
-        true
-    default:
-        false
     }
 }

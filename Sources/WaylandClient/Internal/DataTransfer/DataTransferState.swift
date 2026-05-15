@@ -57,7 +57,7 @@ package struct DataTransferState: Equatable, Sendable {
     package var seatSnapshots: [DataTransferSeatSnapshot] {
         seats
             .values
-            .sorted { $0.seatID.rawValue < $1.seatID.rawValue }
+            .sortedByRawValue(\.seatID)
             .map { seat in
                 DataTransferSeatSnapshot(
                     seatID: seat.seatID,
@@ -70,14 +70,14 @@ package struct DataTransferState: Equatable, Sendable {
     package var offerSnapshots: [DataOfferSnapshot] {
         offers
             .values
-            .sorted { $0.id.rawValue < $1.id.rawValue }
+            .sortedByRawValue(\.id)
             .compactMap(\.snapshot)
     }
 
     package var sourceSnapshots: [DataSourceSnapshot] {
         sources
             .values
-            .sorted { $0.id.rawValue < $1.id.rawValue }
+            .sortedByRawValue(\.id)
             .map(\.snapshot)
     }
 
@@ -176,11 +176,11 @@ extension DataTransferState {
         let offerIDsForSeat = offers.values
             .filter { $0.role.seatID == seatID }
             .map(\.id)
-            .sorted { $0.rawValue < $1.rawValue }
+            .sortedByRawValue()
         let sourceIDsForSeat = sources.values
             .filter { $0.seatID == seatID }
             .map(\.id)
-            .sorted { $0.rawValue < $1.rawValue }
+            .sortedByRawValue()
 
         var effects: [DataTransferEffect] = []
         if seat.hasDataDevice {
@@ -384,7 +384,7 @@ extension DataTransferState {
 
     private func requireDragSource(_ sourceID: DataSourceID) throws -> SourceState {
         guard let source = sources[sourceID], case .dragAndDrop = source.role else {
-            throw DataTransferError.unknownDragSourceIdentity(DragSourceIdentity(sourceID))
+            throw DataTransferError.unknownDragSourceIdentity(sourceID.dragIdentity)
         }
 
         return source
@@ -496,7 +496,7 @@ extension DataTransferState {
                 throw DataTransferError.emptyDataOffer
             }
             guard offer.dragAndDrop?.enterSerial != nil else {
-                throw DataTransferError.dragOfferNotActive(DragOfferIdentity(offerID))
+                throw DataTransferError.dragOfferNotActive(offerID.dragIdentity)
             }
             referencedOfferIDs.insert(offerID)
         }
@@ -506,7 +506,7 @@ extension DataTransferState {
                 continue
             }
             guard referencedOfferIDs.contains(offer.id) else {
-                throw DataTransferError.dragOfferNotActive(DragOfferIdentity(offer.id))
+                throw DataTransferError.dragOfferNotActive(offer.id.dragIdentity)
             }
         }
     }

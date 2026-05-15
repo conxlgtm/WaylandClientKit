@@ -106,14 +106,9 @@ struct InputDeviceGraph: Equatable {
         seatID: RawSeatID,
         activeCapabilities: WaylandRaw.SeatCapabilities
     ) {
-        if !activeCapabilities.hasPointer {
-            retireCurrentDevice(seatID: seatID, kind: .pointer)
-        }
-        if !activeCapabilities.hasKeyboard {
-            retireCurrentDevice(seatID: seatID, kind: .keyboard)
-        }
-        if !activeCapabilities.hasTouch {
-            retireCurrentDevice(seatID: seatID, kind: .touch)
+        for kind in RawInputDeviceID.Kind.inputDeviceKinds
+        where !activeCapabilities.containsDeviceKind(kind) {
+            retireCurrentDevice(seatID: seatID, kind: kind)
         }
     }
 
@@ -181,15 +176,15 @@ struct InputDeviceGraph: Equatable {
     }
 
     mutating func removeSeat(_ seatID: RawSeatID) {
-        retireCurrentDevice(seatID: seatID, kind: .pointer)
-        retireCurrentDevice(seatID: seatID, kind: .keyboard)
-        retireCurrentDevice(seatID: seatID, kind: .touch)
+        for kind in RawInputDeviceID.Kind.inputDeviceKinds {
+            retireCurrentDevice(seatID: seatID, kind: kind)
+        }
         clearGenerationHistory(for: seatID)
         seatsByID[seatID] = nil
     }
 
     mutating func removeSurface(_ surfaceID: RawObjectID) {
-        let seatIDs = seatsByID.keys.sorted { $0.rawValue < $1.rawValue }
+        let seatIDs = seatsByID.keys.sortedByRawValue()
         for seatID in seatIDs {
             updateSeatState(seatID) { state in
                 if state.pointer.focusedSurfaceID == surfaceID {
@@ -220,9 +215,9 @@ struct InputDeviceGraph: Equatable {
     }
 
     private mutating func clearGenerationHistory(for seatID: RawSeatID) {
-        lastSeenGenerationByDevice[InputDeviceKey(seatID: seatID, kind: .pointer)] = nil
-        lastSeenGenerationByDevice[InputDeviceKey(seatID: seatID, kind: .keyboard)] = nil
-        lastSeenGenerationByDevice[InputDeviceKey(seatID: seatID, kind: .touch)] = nil
+        for kind in RawInputDeviceID.Kind.inputDeviceKinds {
+            lastSeenGenerationByDevice[InputDeviceKey(seatID: seatID, kind: kind)] = nil
+        }
     }
 
     private mutating func retireCurrentDevice(

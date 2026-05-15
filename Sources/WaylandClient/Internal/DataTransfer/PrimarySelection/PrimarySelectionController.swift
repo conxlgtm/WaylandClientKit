@@ -69,7 +69,7 @@ package final class PrimarySelectionController {
 
         guard let offer = offersByID[offerID]?.snapshot else {
             throw DataTransferError.unknownPrimarySelectionOfferIdentity(
-                PrimarySelectionOfferIdentity(offerID)
+                offerID.primarySelectionIdentity
             )
         }
         guard offer.mimeTypes.contains(mimeType) else {
@@ -80,12 +80,12 @@ package final class PrimarySelectionController {
         }
 
         let descriptors = try backend.makeOfferReceivePipe()
-        var readEnd = try adoptReadEnd(descriptors)
-        try receiveIntoPipe(
-            binding,
+        var readEnd = try descriptors.adoptReadEnd(using: backend)
+        try descriptors.receive(
+            into: binding,
             mimeType: mimeType,
-            descriptors: descriptors,
-            readEnd: &readEnd
+            readEnd: &readEnd,
+            using: backend
         )
         return readEnd
     }
@@ -126,7 +126,7 @@ package final class PrimarySelectionController {
 
         guard let source = sourcesByID[sourceID]?.snapshot else {
             throw DataTransferError.unknownPrimarySelectionSourceIdentity(
-                PrimarySelectionSourceIdentity(sourceID)
+                sourceID.primarySelectionIdentity
             )
         }
 
@@ -169,13 +169,13 @@ package final class PrimarySelectionController {
 
     func shutdown() {
         backend.preconditionIsOwnerThread()
-        for sourceID in sourcesByID.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+        for sourceID in sourcesByID.keys.sortedByRawValue() {
             sourcesByID.removeValue(forKey: sourceID)?.binding.destroy()
         }
-        for offerID in offersByID.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+        for offerID in offersByID.keys.sortedByRawValue() {
             destroyOffer(offerID)
         }
-        for seatID in deviceBindings.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+        for seatID in deviceBindings.keys.sortedByRawValue() {
             deviceBindings.removeValue(forKey: seatID)?.release()
         }
         discardAllPendingSourceSendRequests()
@@ -210,13 +210,13 @@ extension PrimarySelectionController {
         for (offerID, offer) in offersByID where offer.pendingSeatID == seatID {
             pendingOfferIDsForSeat.append(offerID)
         }
-        pendingOfferIDsForSeat.sort { $0.rawValue < $1.rawValue }
+        pendingOfferIDsForSeat.sortByRawValue()
 
         var sourceIDsForSeat: [DataSourceID] = []
         for (sourceID, source) in sourcesByID where source.snapshot.seatID == seatID {
             sourceIDsForSeat.append(sourceID)
         }
-        sourceIDsForSeat.sort { $0.rawValue < $1.rawValue }
+        sourceIDsForSeat.sortByRawValue()
 
         deviceBindings.removeValue(forKey: seatID)?.release()
         cleanupSelection(selectionBySeat.removeValue(forKey: seatID) ?? .none)
@@ -293,7 +293,7 @@ extension PrimarySelectionController {
             guard let rawMimeType, let mimeType = MIMEType(rawValue: rawMimeType) else { return }
             guard var offer = offersByID[offerID] else {
                 throw DataTransferError.unknownPrimarySelectionOfferIdentity(
-                    PrimarySelectionOfferIdentity(offerID)
+                    offerID.primarySelectionIdentity
                 )
             }
             let changed = try offer.appendMIMETypeIfNew(mimeType)
@@ -304,7 +304,7 @@ extension PrimarySelectionController {
         } catch {
             recordCallbackError(
                 error,
-                context: .primarySelectionOffer(PrimarySelectionOfferIdentity(offerID))
+                context: .primarySelectionOffer(offerID.primarySelectionIdentity)
             )
         }
     }
@@ -321,13 +321,13 @@ extension PrimarySelectionController {
         }
         guard var offer = offersByID[offerID] else {
             throw DataTransferError.unknownPrimarySelectionOfferIdentity(
-                PrimarySelectionOfferIdentity(offerID)
+                offerID.primarySelectionIdentity
             )
         }
         if let snapshot = offer.snapshot {
             guard snapshot.role.seatID == seatID else {
                 throw DataTransferError.mismatchedOfferSeat(
-                    offer: .primarySelection(PrimarySelectionOfferIdentity(offerID)),
+                    offer: .primarySelection(offerID.primarySelectionIdentity),
                     expected: seatID,
                     actual: snapshot.role.seatID
                 )
@@ -335,7 +335,7 @@ extension PrimarySelectionController {
         } else {
             guard offer.pendingSeatID == seatID else {
                 throw DataTransferError.mismatchedOfferSeat(
-                    offer: .primarySelection(PrimarySelectionOfferIdentity(offerID)),
+                    offer: .primarySelection(offerID.primarySelectionIdentity),
                     expected: seatID,
                     actual: offer.pendingSeatID
                 )
@@ -371,14 +371,14 @@ extension PrimarySelectionController {
             case .cancelled:
                 if cancelSource(sourceID) {
                     eventQueue.append(
-                        .primarySelectionSourceCancelled(PrimarySelectionSourceIdentity(sourceID))
+                        .primarySelectionSourceCancelled(sourceID.primarySelectionIdentity)
                     )
                 }
             }
         } catch {
             recordCallbackError(
                 error,
-                context: .primarySelectionSource(PrimarySelectionSourceIdentity(sourceID))
+                context: .primarySelectionSource(sourceID.primarySelectionIdentity)
             )
         }
     }
@@ -399,7 +399,7 @@ extension PrimarySelectionController {
         do {
             guard let source = sourcesByID[sourceID] else {
                 throw DataTransferError.unknownPrimarySelectionSourceIdentity(
-                    PrimarySelectionSourceIdentity(sourceID)
+                    sourceID.primarySelectionIdentity
                 )
             }
             let mimeType = try MIMEType(rawMimeType ?? "")
@@ -444,7 +444,7 @@ extension PrimarySelectionController {
         case .ownedSource(let sourceID):
             if cancelSource(sourceID) {
                 eventQueue.append(
-                    .primarySelectionSourceCancelled(PrimarySelectionSourceIdentity(sourceID))
+                    .primarySelectionSourceCancelled(sourceID.primarySelectionIdentity)
                 )
             }
         }
@@ -485,7 +485,7 @@ extension PrimarySelectionController {
         pendingCallbackFailures.append(
             DataTransferCallbackFailure(
                 context: context,
-                error: Self.dataTransferCallbackError(error)
+                error: DataTransferError(callbackBackendError: error)
             )
         )
     }
@@ -493,18 +493,9 @@ extension PrimarySelectionController {
     private func publishSelectionChanged(seatID: SeatID, offerID: DataOfferID?) {
         eventQueue.append(.primarySelectionChanged(.init(seatID: seatID, offerID: offerID)))
     }
-    private static func dataTransferCallbackError(_ error: any Error) -> DataTransferError {
-        (error as? DataTransferError)
-            ?? .callbackFailure(
-                .backend(
-                    type: String(describing: type(of: error)),
-                    description: String(describing: error)
-                )
-            )
-    }
 
     private static func sortedSeatIDs(_ seatIDs: Set<SeatID>) -> [SeatID] {
-        seatIDs.sorted { $0.rawValue < $1.rawValue }
+        seatIDs.sortedByRawValue()
     }
 
     private func allocateOfferID() -> DataOfferID {

@@ -86,7 +86,7 @@ package final class TopLevelWindow {
         }
 
         surfaceRuntime.setPresentationFeedbackCapability(
-            globals.extensions.presentation.surfaceCapabilityStatus
+            globals.extensions.presentation.presentationFeedbackCapabilityStatus
         )
         try installScaleObjects(globals: globals)
         try assignXDGRole(globals: globals)
@@ -250,7 +250,7 @@ package final class TopLevelWindow {
     }
 
     private func reportDecorationUnavailableIfNeeded(reason: DecorationUnavailableReason) {
-        guard configuration.decorationPreference.reportsUnavailableDecorationManager else {
+        guard configuration.decorationPreference.shouldReportMissingDecorationManager else {
             return
         }
 
@@ -624,7 +624,7 @@ extension TopLevelWindow {
         let globals = try connection.bindRequiredGlobals()
         guard
             let seat = globals.seatRegistry.seat(
-                for: RawSeatID(rawValue: seatID.rawValue)
+                for: RawSeatID(seatID)
             )
         else {
             throw ClientError.invalidWindowState(.unknownWindowInteractionSeat(seatID))
@@ -639,7 +639,7 @@ extension TopLevelWindow {
         let globals = try connection.bindRequiredGlobals()
         guard
             let output = globals.outputRegistry.output(
-                for: RawOutputID(rawValue: outputID.rawValue)
+                for: RawOutputID(outputID)
             )
         else {
             throw ClientError.invalidWindowState(.unknownWindowFullscreenOutput(outputID))
@@ -658,7 +658,7 @@ extension TopLevelWindow {
             }
 
             let seat = try RawSeat.testingNoopSeatForRequestRecording(
-                id: RawSeatID(rawValue: seatID.rawValue),
+                id: RawSeatID(seatID),
                 pointerAddress: pointerAddress
             )
             testingInteractionSeatsByID[seatID] = seat

@@ -56,13 +56,6 @@ struct WaylandClientTests {
     }
 
     @Test
-    func decorationPreferenceMapsToRawModeRequest() {
-        #expect(WindowDecorationPreference.preferServerSide.requestedRawMode == .serverSide)
-        #expect(WindowDecorationPreference.preferClientSide.requestedRawMode == .clientSide)
-        #expect(WindowDecorationPreference.compositorDefault.requestedRawMode == nil)
-    }
-
-    @Test
     func decorationPreferencePlansRawRequestSideEffects() {
         #expect(
             DecorationModeRequest(preference: .preferServerSide)
@@ -77,9 +70,15 @@ struct WaylandClientTests {
 
     @Test
     func unavailableDecorationManagerDiagnosticsOnlyReportForServerSidePreference() {
-        #expect(WindowDecorationPreference.preferServerSide.reportsUnavailableDecorationManager)
-        #expect(!WindowDecorationPreference.preferClientSide.reportsUnavailableDecorationManager)
-        #expect(!WindowDecorationPreference.compositorDefault.reportsUnavailableDecorationManager)
+        #expect(
+            WindowDecorationPreference.preferServerSide.shouldReportMissingDecorationManager
+        )
+        #expect(
+            !WindowDecorationPreference.preferClientSide.shouldReportMissingDecorationManager
+        )
+        #expect(
+            !WindowDecorationPreference.compositorDefault.shouldReportMissingDecorationManager
+        )
     }
 
     @Test

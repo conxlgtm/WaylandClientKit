@@ -16,7 +16,7 @@ package protocol DataTransferDeviceBinding: AnyObject {
 
 package protocol DataTransferDragOriginBinding: AnyObject {}
 
-package protocol DataTransferOfferBinding: AnyObject {
+package protocol DataTransferOfferBinding: AnyObject, DataTransferReceiveBinding {
     var id: DataOfferID { get }
     var protocolVersion: RawVersion { get }
 
@@ -41,7 +41,7 @@ package struct DataTransferPipeDescriptors: Equatable, Sendable {
     package let writeEnd: Int32
 }
 
-package protocol DataTransferManagerBackend: AnyObject {
+package protocol DataTransferManagerBackend: AnyObject, DataTransferReceivePipeBackend {
     func preconditionIsOwnerThread()
     func bindDataDevice(
         for seatID: SeatID,
@@ -156,7 +156,7 @@ package final class DataTransferManager {
             .publishDragSourceDropPerformed, .publishDragSourceFinished:
             appendDragAndDropEvent(for: effect)
         case .publishSourceCancelled(let sourceID):
-            eventQueue.append(.clipboardSourceCancelled(ClipboardSourceIdentity(sourceID)))
+            eventQueue.append(.clipboardSourceCancelled(sourceID.clipboardIdentity))
         }
     }
 
@@ -250,18 +250,18 @@ package final class DataTransferManager {
         if let existingOffer = store.offerSnapshot(offerID) {
             guard existingOffer.role.seatID == seatID else {
                 throw DataTransferError.mismatchedOfferSeat(
-                    offer: .clipboard(ClipboardOfferIdentity(offerID)),
+                    offer: .clipboard(offerID.clipboardIdentity),
                     expected: seatID,
                     actual: existingOffer.role.seatID
                 )
             }
         } else {
             guard let runtimeOffer = store.runtimeOffer(offerID) else {
-                throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
+                throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
             }
             guard runtimeOffer.pendingSeatID == seatID else {
                 throw DataTransferError.mismatchedOfferSeat(
-                    offer: .clipboard(ClipboardOfferIdentity(offerID)),
+                    offer: .clipboard(offerID.clipboardIdentity),
                     expected: seatID,
                     actual: runtimeOffer.pendingSeatID
                 )
@@ -306,15 +306,15 @@ package final class DataTransferManager {
     }
 
     private static func sortedSeatIDs(_ seatIDs: Set<SeatID>) -> [SeatID] {
-        seatIDs.sorted { $0.rawValue < $1.rawValue }
+        seatIDs.sortedByRawValue()
     }
 
     private static func sortedOfferIDs(_ offerIDs: Set<DataOfferID>) -> [DataOfferID] {
-        offerIDs.sorted { $0.rawValue < $1.rawValue }
+        offerIDs.sortedByRawValue()
     }
 
     private static func sortedSourceIDs(_ sourceIDs: Set<DataSourceID>) -> [DataSourceID] {
-        sourceIDs.sorted { $0.rawValue < $1.rawValue }
+        sourceIDs.sortedByRawValue()
     }
 
     private func allocateOfferID() -> DataOfferID {
@@ -387,18 +387,8 @@ extension DataTransferManager {
         store.recordCallbackFailure(
             DataTransferCallbackFailure(
                 context: context,
-                error: Self.dataTransferCallbackError(error)
+                error: DataTransferError(callbackBackendError: error)
             )
         )
-    }
-
-    private static func dataTransferCallbackError(_ error: any Error) -> DataTransferError {
-        (error as? DataTransferError)
-            ?? .callbackFailure(
-                .backend(
-                    type: String(describing: type(of: error)),
-                    description: String(describing: error)
-                )
-            )
     }
 }
