@@ -16,6 +16,8 @@ struct OptionalGlobalTests {
         #expect(recorder.destroyCount == 1)
         #expect(bound.boundObject === recorder)
         #expect(missing.boundObject == nil)
+        #expect(bound.isBound)
+        #expect(!missing.isBound)
     }
 
     @Test
@@ -33,6 +35,7 @@ struct OptionalGlobalTests {
         }
 
         #expect(unsupported.boundObject == nil)
+        #expect(!unsupported.isBound)
     }
 
     private final class DestroyableRecorder: RawDestroyableObject {

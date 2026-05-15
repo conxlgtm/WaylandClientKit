@@ -12,6 +12,10 @@ package enum OptionalGlobal<Bound: RawDestroyableObject> {
         return object
     }
 
+    package var isBound: Bool {
+        boundObject != nil
+    }
+
     package func destroy() {
         boundObject?.destroy()
     }
@@ -26,6 +30,10 @@ package enum OptionalVersionedGlobal<Bound: RawDestroyableObject> {
         guard case .bound(let object) = self else { return nil }
 
         return object
+    }
+
+    package var isBound: Bool {
+        boundObject != nil
     }
 
     package func destroy() {
