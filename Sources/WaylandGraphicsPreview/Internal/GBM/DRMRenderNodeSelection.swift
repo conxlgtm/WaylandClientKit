@@ -34,7 +34,7 @@ package enum DRMRenderNodeSelector {
         }
         guard result == 0 else {
             throw GBMAllocationError.renderNodeLookupFailed(
-                errno: GBMAllocationError.capturedErrno()
+                errno: GBMAllocationError.capturedCurrentErrno()
             )
         }
 
@@ -60,7 +60,7 @@ package enum DRMRenderNodeSelector {
         guard fd >= 0 else {
             throw GBMAllocationError.openRenderNodeFailed(
                 path: path,
-                errno: GBMAllocationError.capturedErrno()
+                errno: GBMAllocationError.capturedCurrentErrno()
             )
         }
 

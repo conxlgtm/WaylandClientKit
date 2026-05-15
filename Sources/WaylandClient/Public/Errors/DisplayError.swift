@@ -1,3 +1,4 @@
+import Glibc
 import WaylandRaw
 import WaylandRuntime
 
@@ -19,6 +20,10 @@ public struct WaylandSystemErrno: Equatable, Sendable, CustomStringConvertible {
     package init(unchecked rawErrorNumber: Int32) {
         precondition(rawErrorNumber > 0, "errno must be positive")
         rawValue = rawErrorNumber
+    }
+
+    package init(capturingPOSIXErrno rawErrorNumber: Int32 = Glibc.errno, fallback: Int32) {
+        self.init(unchecked: rawErrorNumber > 0 ? rawErrorNumber : fallback)
     }
 
     public var description: String {

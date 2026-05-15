@@ -93,12 +93,12 @@ package func defaultPrepareDataTransferSourceDescriptorForWriting(
     let flags = Glibc.fcntl(descriptor, F_GETFL)
     guard flags >= 0 else {
         throw DataTransferError.writeFileDescriptor(
-            WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
+            WaylandSystemErrno(capturingPOSIXErrno: errno, fallback: EIO)
         )
     }
     guard Glibc.fcntl(descriptor, F_SETFL, flags | O_NONBLOCK) == 0 else {
         throw DataTransferError.writeFileDescriptor(
-            WaylandSystemErrno(unchecked: errno > 0 ? errno : EIO)
+            WaylandSystemErrno(capturingPOSIXErrno: errno, fallback: EIO)
         )
     }
 }

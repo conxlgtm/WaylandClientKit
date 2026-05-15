@@ -237,12 +237,7 @@ package final class DataTransferSourceWriteJob: Sendable {
             throw DataTransferError.invalidFileDescriptor(rawDescriptor)
         }
 
-        switch descriptorIO.close(rawDescriptor) {
-        case .closed:
-            return
-        case .failed(let error):
-            throw DataTransferError.closeFileDescriptor(error)
-        }
+        try descriptorIO.close(rawDescriptor).throwIfFailed()
     }
 
     private func takeIdleRawDescriptor() -> Int32? {
