@@ -33,14 +33,13 @@ package final class RawSurface {
             throw RuntimeError.frameRequestFailed
         }
 
-        do {
-            _ = try proxyAdoption.adopt(callback, interface: "wl_callback")
-        } catch {
-            unsafe swl_callback_destroy(callback)
-            throw error
-        }
+        let adoptedCallback = try unsafe proxyAdoption.adoptOrDestroy(
+            callback,
+            interface: "wl_callback",
+            destroy: unsafe swl_callback_destroy
+        )
         return try .init(
-            pointer: callback,
+            pointer: adoptedCallback,
             onDone: handler,
             invariantFailureSink: proxyAdoption.invariantFailureSink
         )
