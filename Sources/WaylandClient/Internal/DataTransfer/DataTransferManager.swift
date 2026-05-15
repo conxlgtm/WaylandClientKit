@@ -156,7 +156,7 @@ package final class DataTransferManager {
             .publishDragSourceDropPerformed, .publishDragSourceFinished:
             appendDragAndDropEvent(for: effect)
         case .publishSourceCancelled(let sourceID):
-            eventQueue.append(.clipboardSourceCancelled(ClipboardSourceIdentity(sourceID)))
+            eventQueue.append(.clipboardSourceCancelled(sourceID.clipboardIdentity))
         }
     }
 
@@ -250,18 +250,18 @@ package final class DataTransferManager {
         if let existingOffer = store.offerSnapshot(offerID) {
             guard existingOffer.role.seatID == seatID else {
                 throw DataTransferError.mismatchedOfferSeat(
-                    offer: .clipboard(ClipboardOfferIdentity(offerID)),
+                    offer: .clipboard(offerID.clipboardIdentity),
                     expected: seatID,
                     actual: existingOffer.role.seatID
                 )
             }
         } else {
             guard let runtimeOffer = store.runtimeOffer(offerID) else {
-                throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
+                throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
             }
             guard runtimeOffer.pendingSeatID == seatID else {
                 throw DataTransferError.mismatchedOfferSeat(
-                    offer: .clipboard(ClipboardOfferIdentity(offerID)),
+                    offer: .clipboard(offerID.clipboardIdentity),
                     expected: seatID,
                     actual: runtimeOffer.pendingSeatID
                 )

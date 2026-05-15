@@ -11,7 +11,7 @@ extension DataTransferManager {
         try throwPendingCallbackErrorIfAny()
 
         guard let offer = store.offerSnapshot(offerID) else {
-            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
+            throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
         }
         guard offer.mimeTypes.contains(mimeType) else {
             throw DataTransferError.mimeTypeUnavailable(mimeType)
@@ -46,7 +46,7 @@ extension DataTransferManager {
         backend.preconditionIsOwnerThread()
         let offer = try dragOffer(id: offerID)
         guard let serial = offer.dragAndDrop?.enterSerial else {
-            throw DataTransferError.dragOfferNotActive(DragOfferIdentity(offerID))
+            throw DataTransferError.dragOfferNotActive(offerID.dragIdentity)
         }
         if let mimeType, !offer.mimeTypes.contains(mimeType) {
             throw DataTransferError.mimeTypeUnavailable(mimeType)
@@ -126,7 +126,7 @@ extension DataTransferManager {
     ) throws {
         guard binding.protocolVersion >= Self.minimumDragActionNegotiationVersion else {
             throw DataTransferError.dragActionNegotiationUnavailable(
-                DragOfferIdentity(offerID)
+                offerID.dragIdentity
             )
         }
     }
@@ -142,7 +142,7 @@ extension DataTransferManager {
         guard metadata.selectedAction == .received(.ask),
             preferredAction.isFinalTransferAction
         else {
-            throw DataTransferError.dragActionRequestNotAllowed(DragOfferIdentity(offer.id))
+            throw DataTransferError.dragActionRequestNotAllowed(offer.id.dragIdentity)
         }
     }
 
@@ -154,7 +154,7 @@ extension DataTransferManager {
             ),
             case .accepted = metadata.acceptState
         else {
-            throw DataTransferError.dragOfferNotFinishable(DragOfferIdentity(offer.id))
+            throw DataTransferError.dragOfferNotFinishable(offer.id.dragIdentity)
         }
     }
 

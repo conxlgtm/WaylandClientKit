@@ -19,7 +19,7 @@ public struct ClipboardOffer: Sendable, Hashable {
     }
 
     public var identity: ClipboardOfferIdentity {
-        ClipboardOfferIdentity(id)
+        id.clipboardIdentity
     }
 
     public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {

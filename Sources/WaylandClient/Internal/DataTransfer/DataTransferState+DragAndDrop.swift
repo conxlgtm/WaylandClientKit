@@ -73,7 +73,7 @@ extension DataTransferState {
         }
 
         guard case .dragAndDrop = offer.role else {
-            throw DataTransferError.unknownDragOfferIdentity(DragOfferIdentity(id))
+            throw DataTransferError.unknownDragOfferIdentity(id.dragIdentity)
         }
 
         if let mimeType, !offer.mimeTypes.contains(mimeType) {
@@ -81,7 +81,7 @@ extension DataTransferState {
         }
 
         guard let currentMetadata = offer.dragAndDrop else {
-            throw DataTransferError.unknownDragOfferIdentity(DragOfferIdentity(id))
+            throw DataTransferError.unknownDragOfferIdentity(id.dragIdentity)
         }
         let acceptState: DragAcceptState
         if currentMetadata.acceptState == .rejected {
@@ -105,7 +105,7 @@ extension DataTransferState {
         }
 
         guard case .dragAndDrop = offer.role else {
-            throw DataTransferError.unknownDragOfferIdentity(DragOfferIdentity(id))
+            throw DataTransferError.unknownDragOfferIdentity(id.dragIdentity)
         }
 
         try offer.recordFinalPreferredAction(preferredAction)

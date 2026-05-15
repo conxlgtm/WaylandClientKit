@@ -82,7 +82,7 @@ extension DataTransferManager {
         let deviceBinding = try selectionDeviceBinding(for: seatID)
         let sourceID = allocateSourceID()
         let callbackIdentity = DataSourceCallbackIdentity.selection(
-            ClipboardSourceIdentity(sourceID)
+            sourceID.clipboardIdentity
         )
         let sourceBinding = try createDataSourceBinding(
             sourceID: sourceID,
@@ -108,7 +108,7 @@ extension DataTransferManager {
         }
 
         guard let source = store.sourceSnapshot(sourceID) else {
-            throw DataTransferError.unknownSourceIdentity(ClipboardSourceIdentity(sourceID))
+            throw DataTransferError.unknownSourceIdentity(sourceID.clipboardIdentity)
         }
 
         preconditionInvariantsHold()
@@ -126,12 +126,12 @@ extension DataTransferManager {
         let sourceID = allocateSourceID()
         guard deviceBinding.protocolVersion >= RawVersion(3) else {
             throw DataTransferError.dragSourceActionNegotiationUnavailable(
-                DragSourceIdentity(sourceID)
+                sourceID.dragIdentity
             )
         }
 
         let callbackIdentity = DataSourceCallbackIdentity.dragAndDrop(
-            DragSourceIdentity(sourceID)
+            sourceID.dragIdentity
         )
         let sourceBinding = try createDataSourceBinding(
             sourceID: sourceID,
@@ -140,7 +140,7 @@ extension DataTransferManager {
         do {
             guard sourceBinding.protocolVersion >= RawVersion(3) else {
                 throw DataTransferError.dragSourceActionNegotiationUnavailable(
-                    DragSourceIdentity(sourceID)
+                    sourceID.dragIdentity
                 )
             }
 
@@ -175,7 +175,7 @@ extension DataTransferManager {
         }
 
         guard let source = store.sourceSnapshot(sourceID) else {
-            throw DataTransferError.unknownDragSourceIdentity(DragSourceIdentity(sourceID))
+            throw DataTransferError.unknownDragSourceIdentity(sourceID.dragIdentity)
         }
 
         preconditionInvariantsHold()
@@ -186,7 +186,7 @@ extension DataTransferManager {
         backend.preconditionIsOwnerThread()
         try throwPendingCallbackErrorIfAny()
         guard sourceIsDragAndDrop(sourceID) else {
-            throw DataTransferError.unknownDragSourceIdentity(DragSourceIdentity(sourceID))
+            throw DataTransferError.unknownDragSourceIdentity(sourceID.dragIdentity)
         }
 
         try apply(.sourceCancelled(sourceID))

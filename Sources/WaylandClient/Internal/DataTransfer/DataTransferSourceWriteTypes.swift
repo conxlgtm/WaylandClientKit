@@ -42,11 +42,11 @@ package enum DataTransferSourceWriteSource: Equatable, Sendable {
     package var diagnosticSource: DataTransferDiagnosticSource {
         switch self {
         case .clipboard(let sourceID):
-            .clipboard(ClipboardSourceIdentity(sourceID))
+            .clipboard(sourceID.clipboardIdentity)
         case .primarySelection(let sourceID):
-            .primarySelection(PrimarySelectionSourceIdentity(sourceID))
+            .primarySelection(sourceID.primarySelectionIdentity)
         case .dragAndDrop(let sourceID):
-            .dragAndDrop(DragSourceIdentity(sourceID))
+            .dragAndDrop(sourceID.dragIdentity)
         }
     }
 

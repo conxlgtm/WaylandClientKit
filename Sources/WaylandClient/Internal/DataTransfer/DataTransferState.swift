@@ -384,7 +384,7 @@ extension DataTransferState {
 
     private func requireDragSource(_ sourceID: DataSourceID) throws -> SourceState {
         guard let source = sources[sourceID], case .dragAndDrop = source.role else {
-            throw DataTransferError.unknownDragSourceIdentity(DragSourceIdentity(sourceID))
+            throw DataTransferError.unknownDragSourceIdentity(sourceID.dragIdentity)
         }
 
         return source
@@ -496,7 +496,7 @@ extension DataTransferState {
                 throw DataTransferError.emptyDataOffer
             }
             guard offer.dragAndDrop?.enterSerial != nil else {
-                throw DataTransferError.dragOfferNotActive(DragOfferIdentity(offerID))
+                throw DataTransferError.dragOfferNotActive(offerID.dragIdentity)
             }
             referencedOfferIDs.insert(offerID)
         }
@@ -506,7 +506,7 @@ extension DataTransferState {
                 continue
             }
             guard referencedOfferIDs.contains(offer.id) else {
-                throw DataTransferError.dragOfferNotActive(DragOfferIdentity(offer.id))
+                throw DataTransferError.dragOfferNotActive(offer.id.dragIdentity)
             }
         }
     }

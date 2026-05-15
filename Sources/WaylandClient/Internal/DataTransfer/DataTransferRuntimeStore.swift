@@ -271,7 +271,7 @@ struct DataTransferStore {
         offerID: DataOfferID
     ) throws {
         guard var runtimeOffer = runtimeOffersByID[offerID] else {
-            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
+            throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
         }
 
         runtimeOffer.appendPendingMIMEType(mimeType)
@@ -283,7 +283,7 @@ struct DataTransferStore {
         offerID: DataOfferID
     ) throws {
         guard var runtimeOffer = runtimeOffersByID[offerID] else {
-            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
+            throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
         }
 
         runtimeOffer.setPendingSourceActions(actions)
@@ -295,7 +295,7 @@ struct DataTransferStore {
         offerID: DataOfferID
     ) throws {
         guard var runtimeOffer = runtimeOffersByID[offerID] else {
-            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
+            throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
         }
 
         runtimeOffer.setPendingSelectedAction(action)
@@ -304,7 +304,7 @@ struct DataTransferStore {
 
     mutating func markOfferActive(_ offerID: DataOfferID) throws -> RuntimeDataOffer {
         guard var runtimeOffer = runtimeOffersByID[offerID] else {
-            throw DataTransferError.unknownOfferIdentity(ClipboardOfferIdentity(offerID))
+            throw DataTransferError.unknownOfferIdentity(offerID.clipboardIdentity)
         }
 
         runtimeOffer.markActive()

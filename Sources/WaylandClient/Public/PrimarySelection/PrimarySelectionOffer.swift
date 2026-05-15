@@ -19,7 +19,7 @@ public struct PrimarySelectionOffer: Sendable, Hashable {
     }
 
     public var identity: PrimarySelectionOfferIdentity {
-        PrimarySelectionOfferIdentity(id)
+        id.primarySelectionIdentity
     }
 
     public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {

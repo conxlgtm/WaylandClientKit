@@ -41,7 +41,7 @@ public struct ClipboardSource: Sendable, Hashable {
     }
 
     public var identity: ClipboardSourceIdentity {
-        ClipboardSourceIdentity(id)
+        id.clipboardIdentity
     }
 
     /// Requests clearing this source from the regular clipboard selection.
