@@ -1,8 +1,9 @@
+import WaylandRaw
+
 extension PrimarySelectionController {
     package func drainSourceSendRequests() -> [DataTransferSourceSendRequest] {
         backend.preconditionIsOwnerThread()
-        defer { pendingSourceSendRequests.removeAll(keepingCapacity: true) }
-        return pendingSourceSendRequests
+        return pendingSourceSendRequests.drain()
     }
 
     package func drainSourceWriteJobs() throws -> [DataTransferSourceWriteJob] {
