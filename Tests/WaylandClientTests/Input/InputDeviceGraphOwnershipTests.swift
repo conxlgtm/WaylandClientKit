@@ -6,6 +6,16 @@ import WaylandRaw
 @Suite
 struct InputDeviceGraphOwnershipTests {
     @Test
+    func rawInputDeviceKindsMatchSeatCapabilityMembership() {
+        let capabilities: WaylandRaw.SeatCapabilities = [.pointer, .touch]
+
+        #expect(RawInputDeviceID.Kind.inputDeviceKinds == [.pointer, .keyboard, .touch])
+        #expect(capabilities.containsDeviceKind(.pointer))
+        #expect(!capabilities.containsDeviceKind(.keyboard))
+        #expect(capabilities.containsDeviceKind(.touch))
+    }
+
+    @Test
     func pointerCapabilityRemovalRetiresCurrentDeviceGeneration() {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 17)
