@@ -96,7 +96,7 @@ final class InputRouter {
             return routedEvent(
                 event,
                 target: .display,
-                kind: .seat(.changed(convert(snapshot)))
+                kind: .seat(.changed(SeatStateSnapshot(snapshot)))
             )
         case .seatRemoved:
             deviceGraph.removeSeat(event.seatID)
@@ -173,7 +173,7 @@ final class InputRouter {
             return routedEvent(
                 rawEvent,
                 target: target(forFocusedSurface: focusedPointerSurface(for: rawEvent.seatID)),
-                kind: .pointer(.axis(convert(axis)))
+                kind: .pointer(.axis(PointerAxisEvent(axis)))
             )
         }
     }
@@ -370,51 +370,6 @@ extension InputRouter {
         }
 
         return target(for: surfaceID)
-    }
-
-    func convert(_ snapshot: RawSeatEventSnapshot) -> SeatStateSnapshot {
-        SeatStateSnapshot(
-            uncheckedAdvertisedCapabilities: SeatCapabilities(
-                rawValue: snapshot.advertisedCapabilities.rawValue
-            ),
-            activeCapabilities: SeatCapabilities(rawValue: snapshot.activeCapabilities.rawValue),
-            name: snapshot.name.flatMap(SeatName.init(rawValue:))
-        )
-    }
-
-    func convert(_ axis: RawPointerAxisEvent) -> PointerAxisEvent {
-        switch axis {
-        case .axis(let time, let rawAxis, let value):
-            .axis(
-                time: WaylandTimestampMilliseconds(rawValue: time),
-                axis: PointerAxis(rawAxis),
-                value: value.doubleValue
-            )
-        case .source(let source):
-            .source(PointerAxisSource(source))
-        case .stop(let time, let axis):
-            .stop(
-                time: WaylandTimestampMilliseconds(rawValue: time),
-                axis: PointerAxis(axis)
-            )
-        case .discrete(let axis, let value):
-            .discrete(
-                axis: PointerAxis(axis),
-                value: PointerAxisDiscreteStep(rawValue: value)
-            )
-        case .value120(let axis, let value120):
-            .value120(
-                axis: PointerAxis(axis),
-                value120: PointerAxisValue120(rawValue: value120)
-            )
-        case .relativeDirection(let axis, let direction):
-            .relativeDirection(
-                axis: PointerAxis(axis),
-                direction: PointerAxisRelativeDirection(direction)
-            )
-        case .frame:
-            .frame
-        }
     }
 
     func windowID(for surfaceID: RawObjectID?) -> WindowID? {
