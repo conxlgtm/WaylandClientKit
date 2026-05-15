@@ -1,10 +1,11 @@
 @safe
 extension String {
     package var xkbASCIITrimmed: String {
-        let trimmedScalars = unicodeScalars
-            .drop { $0.isXKBASCIIWhitespace }
+        let trimmedScalars =
+            unicodeScalars
+            .drop(while: \.isXKBASCIIWhitespace)
             .reversed()
-            .drop { $0.isXKBASCIIWhitespace }
+            .drop(while: \.isXKBASCIIWhitespace)
             .reversed()
 
         return String(String.UnicodeScalarView(trimmedScalars))
@@ -16,8 +17,8 @@ extension String {
 }
 
 @safe
-private extension UnicodeScalar {
-    var isXKBASCIIWhitespace: Bool {
+extension UnicodeScalar {
+    package var isXKBASCIIWhitespace: Bool {
         switch value {
         case 0x09...0x0D, 0x20:
             true
