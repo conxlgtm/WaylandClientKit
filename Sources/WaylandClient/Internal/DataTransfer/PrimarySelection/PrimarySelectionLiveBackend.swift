@@ -111,7 +111,6 @@ final class LivePrimarySelectionControllerBackend: PrimarySelectionControllerBac
     func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult {
         FileDescriptorCloseResult.posixReturn(Glibc.close(descriptor))
     }
-
 }
 
 private final class LivePrimarySelectionDeviceBinding: PrimarySelectionDeviceBinding {
