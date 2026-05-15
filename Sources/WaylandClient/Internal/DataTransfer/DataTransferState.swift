@@ -1,5 +1,7 @@
 // swiftlint:disable file_length
 
+import WaylandRaw
+
 package struct DataTransferState: Equatable, Sendable {
     private var seats: [SeatID: SeatState]
     var offers: [DataOfferID: OfferState]

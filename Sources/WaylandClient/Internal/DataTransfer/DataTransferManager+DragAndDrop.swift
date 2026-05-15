@@ -102,7 +102,14 @@ extension DataTransferManager {
             }
             try apply(
                 .dragEntered(
-                    enterTransition(enter, seatID: seatID, offerID: offerID, target: target)))
+                    DataTransferDragEnterTransition(
+                        enter,
+                        seatID: seatID,
+                        offerID: offerID,
+                        target: target
+                    )
+                )
+            )
             return
         }
 
@@ -130,21 +137,14 @@ extension DataTransferManager {
         }
         _ = try store.markOfferActive(offerID)
         try apply(
-            .dragEntered(enterTransition(enter, seatID: seatID, offerID: offerID, target: target)))
-    }
-
-    private func enterTransition(
-        _ enter: RawDataDeviceEnter,
-        seatID: SeatID,
-        offerID: DataOfferID,
-        target: InputEventTarget
-    ) -> DataTransferDragEnterTransition {
-        DataTransferDragEnterTransition(
-            seatID: seatID,
-            offerID: offerID,
-            serial: InputSerial(rawValue: enter.serial),
-            location: DragLocation(x: enter.x.doubleValue, y: enter.y.doubleValue),
-            target: target
+            .dragEntered(
+                DataTransferDragEnterTransition(
+                    enter,
+                    seatID: seatID,
+                    offerID: offerID,
+                    target: target
+                )
+            )
         )
     }
 }

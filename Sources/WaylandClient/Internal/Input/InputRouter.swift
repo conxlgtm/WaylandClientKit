@@ -130,7 +130,7 @@ final class InputRouter {
                 target: target(for: enter.surfaceID),
                 kind: .pointer(
                     .entered(
-                        PointerLocation(x: enter.x.doubleValue, y: enter.y.doubleValue),
+                        PointerLocation(waylandX: enter.x, waylandY: enter.y),
                         serial: InputSerial(rawValue: enter.serial)
                     )
                 )
@@ -149,7 +149,7 @@ final class InputRouter {
                 target: target(forFocusedSurface: focusedPointerSurface(for: rawEvent.seatID)),
                 kind: .pointer(
                     .moved(
-                        PointerLocation(x: motion.x.doubleValue, y: motion.y.doubleValue),
+                        PointerLocation(waylandX: motion.x, waylandY: motion.y),
                         time: WaylandTimestampMilliseconds(rawValue: motion.time)
                     )
                 )

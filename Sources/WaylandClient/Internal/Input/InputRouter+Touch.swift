@@ -21,10 +21,7 @@ extension InputRouter {
                         serial: InputSerial(rawValue: down.serial),
                         time: WaylandTimestampMilliseconds(rawValue: down.time),
                         id: touchID(down.id),
-                        location: PointerLocation(
-                            x: down.x.doubleValue,
-                            y: down.y.doubleValue
-                        )
+                        location: PointerLocation(waylandX: down.x, waylandY: down.y)
                     )
                 )
             )
@@ -71,10 +68,7 @@ extension InputRouter {
                     TouchMotionEvent(
                         time: WaylandTimestampMilliseconds(rawValue: motion.time),
                         id: touchID(motion.id),
-                        location: PointerLocation(
-                            x: motion.x.doubleValue,
-                            y: motion.y.doubleValue
-                        )
+                        location: PointerLocation(waylandX: motion.x, waylandY: motion.y)
                     )
                 )
             )

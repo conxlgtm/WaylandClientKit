@@ -25,6 +25,19 @@ package struct RawProxyAdoptionContext {
         )
         return unsafe proxy
     }
+
+    package func adoptOrDestroy(
+        _ proxyPointer: OpaquePointer,
+        interface interfaceName: StaticString,
+        destroy destroyProxy: (OpaquePointer) -> Void
+    ) throws(RuntimeError) -> OpaquePointer {
+        do {
+            return try adopt(proxyPointer, interface: interfaceName)
+        } catch {
+            unsafe destroyProxy(proxyPointer)
+            throw error
+        }
+    }
 }
 
 extension RawEventQueue {

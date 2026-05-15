@@ -90,15 +90,14 @@ package final class RawPresentation {
             throw RuntimeError.bindFailed("wp_presentation_feedback")
         }
 
-        do {
-            _ = try proxyAdoption.adopt(feedback, interface: "wp_presentation_feedback")
-        } catch {
-            unsafe swl_wp_presentation_feedback_destroy(feedback)
-            throw error
-        }
+        let adoptedFeedback = try unsafe proxyAdoption.adoptOrDestroy(
+            feedback,
+            interface: "wp_presentation_feedback",
+            destroy: unsafe swl_wp_presentation_feedback_destroy
+        )
 
         return try RawPresentationFeedback(
-            pointer: feedback,
+            pointer: adoptedFeedback,
             invariantFailureSink: proxyAdoption.invariantFailureSink,
             onEvent: handler
         )

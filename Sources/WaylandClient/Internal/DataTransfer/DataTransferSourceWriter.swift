@@ -1,8 +1,7 @@
-// swiftlint:disable file_length
-
 import Foundation
 import Glibc
 import Synchronization
+import WaylandRaw
 
 package final class DataTransferSourceWriteJob: Sendable {
     package let source: DataTransferSourceWriteSource
@@ -342,8 +341,7 @@ package final class ThreadedDataTransferSourceWriter {
 
         func drainResults() -> [DataTransferSourceWriteResult] {
             condition.withLock {
-                defer { results.removeAll(keepingCapacity: true) }
-                return results
+                results.drain()
             }
         }
 
@@ -357,8 +355,7 @@ package final class ThreadedDataTransferSourceWriter {
                 }
 
                 lifecycle = .shutdownRequested
-                let cancelledJobs = jobs
-                jobs.removeAll(keepingCapacity: false)
+                let cancelledJobs = jobs.drain(keepingCapacity: false)
                 condition.broadcast()
                 return (cancelledJobs: cancelledJobs, currentJob: currentJob)
             }
@@ -373,16 +370,7 @@ package final class ThreadedDataTransferSourceWriter {
                     return (cancelledJobs: [], currentJob: nil)
                 }
 
-                var remainingJobs: [DataTransferSourceWriteJob] = []
-                var cancelledJobs: [DataTransferSourceWriteJob] = []
-                for job in jobs {
-                    if job.source == source {
-                        cancelledJobs.append(job)
-                    } else {
-                        remainingJobs.append(job)
-                    }
-                }
-                jobs = remainingJobs
+                let cancelledJobs = jobs.removeAllReturning { $0.source == source }
 
                 let currentJob = currentJob?.source == source ? currentJob : nil
                 condition.broadcast()

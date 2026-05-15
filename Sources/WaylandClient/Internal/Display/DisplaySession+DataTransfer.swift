@@ -97,8 +97,7 @@ extension DisplaySession {
     package func drainDataTransferDiagnosticsOnOwnerThread() -> [DataTransferDiagnostic] {
         connection.preconditionIsOwnerThread()
         collectDataTransferSourceWriteResults()
-        defer { pendingDataTransferDiagnostics.removeAll(keepingCapacity: true) }
-        return pendingDataTransferDiagnostics
+        return pendingDataTransferDiagnostics.drain()
     }
 
     package func cancelSourceWrites(for events: [DataTransferEvent]) {
@@ -109,26 +108,8 @@ extension DisplaySession {
         for events: [DataTransferEvent],
         using writer: ThreadedDataTransferSourceWriter
     ) {
-        for event in events {
-            switch event {
-            case .clipboardSourceCancelled(let source):
-                writer.cancelJobs(
-                    for: .clipboard(DataSourceID(rawValue: source.rawValue))
-                )
-            case .primarySelectionSourceCancelled(let source):
-                writer.cancelJobs(
-                    for: .primarySelection(DataSourceID(rawValue: source.rawValue))
-                )
-            case .dragSourceCancelled(let source):
-                writer.cancelJobs(
-                    for: .dragAndDrop(DataSourceID(rawValue: source.rawValue))
-                )
-            case .clipboardSelectionChanged, .primarySelectionChanged,
-                .dragEntered, .dragMotion, .dragLeft, .dragDropped, .dragOfferChanged,
-                .dragSourceTargetChanged, .dragSourceActionChanged, .dragSourceDropPerformed,
-                .dragSourceFinished:
-                break
-            }
+        for source in events.compactMap(\.cancelledWriteSource) {
+            writer.cancelJobs(for: source)
         }
     }
 
@@ -139,8 +120,7 @@ extension DisplaySession {
     ) -> (diagnostics: [DataTransferDiagnostic], events: [DataTransferEvent]) {
         cancelSourceWrites(for: events, using: writer)
         collectDataTransferSourceWriteResults(from: writer, into: &pendingDiagnostics)
-        defer { pendingDiagnostics.removeAll(keepingCapacity: true) }
-        return (diagnostics: pendingDiagnostics, events: events)
+        return (diagnostics: pendingDiagnostics.drain(), events: events)
     }
 
     package func clipboardOfferOnOwnerThread(for seatID: SeatID) throws -> DataOfferSnapshot? {
@@ -418,39 +398,20 @@ extension DisplaySession {
     package static func dataTransferGlobalSnapshot(
         for globals: BoundGlobals
     ) -> DataTransferGlobalSnapshot {
-        let seatIDs = globals.seatRegistry.seats.map { SeatID($0.id) }
-
-        switch globals.extensions.dataDeviceManager {
-        case .bound:
-            return DataTransferGlobalSnapshot(
-                bindingState: .boundWithDataDeviceManager,
-                seatIDs: seatIDs
-            )
-        case .missing:
-            return DataTransferGlobalSnapshot(
-                bindingState: .boundWithoutDataDeviceManager,
-                seatIDs: seatIDs
-            )
-        }
+        DataTransferGlobalSnapshot(
+            bindingState: globals.extensions.dataDeviceManager.dataTransferBindingState,
+            seatIDs: globals.seatRegistry.seats.map { SeatID($0.id) }
+        )
     }
 
     package static func primarySelectionGlobalSnapshot(
         for globals: BoundGlobals
     ) -> PrimarySelectionGlobalSnapshot {
-        let seatIDs = globals.seatRegistry.seats.map { SeatID($0.id) }
-
-        switch globals.extensions.primarySelectionDeviceManager {
-        case .bound:
-            return PrimarySelectionGlobalSnapshot(
-                bindingState: .boundWithPrimaryManager,
-                seatIDs: seatIDs
-            )
-        case .missing:
-            return PrimarySelectionGlobalSnapshot(
-                bindingState: .boundWithoutPrimaryManager,
-                seatIDs: seatIDs
-            )
-        }
+        PrimarySelectionGlobalSnapshot(
+            bindingState: globals.extensions.primarySelectionDeviceManager
+                .primarySelectionBindingState,
+            seatIDs: globals.seatRegistry.seats.map { SeatID($0.id) }
+        )
     }
 
     private func submitPendingDataTransferSourceWrites() throws {
