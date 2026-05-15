@@ -1,4 +1,5 @@
 import Glibc
+import Synchronization
 import Testing
 
 @testable import WaylandClient
@@ -80,14 +81,19 @@ struct DataTransferPipeReceiveTests {
     }
 }
 
-private final class RecordingReceivePipeBackend:
-    @unchecked Sendable,
-    DataTransferReceivePipeBackend
-{
+private final class RecordingReceivePipeBackend: DataTransferReceivePipeBackend, Sendable {
     private let failingAdoptions: Set<Int32>
     private let closeFailures: [Int32: Int32]
-    private(set) var rawCloseCalls: [Int32] = []
-    private(set) var adoptedCloseCalls: [Int32] = []
+    private let rawCloseCallStorage = Mutex<[Int32]>([])
+    private let adoptedCloseCallStorage = Mutex<[Int32]>([])
+
+    var rawCloseCalls: [Int32] {
+        rawCloseCallStorage.withLock { $0 }
+    }
+
+    var adoptedCloseCalls: [Int32] {
+        adoptedCloseCallStorage.withLock { $0 }
+    }
 
     init(failingAdoptions: Set<Int32> = [], closeFailures: [Int32: Int32] = [:]) {
         self.failingAdoptions = failingAdoptions
@@ -99,15 +105,19 @@ private final class RecordingReceivePipeBackend:
             throw DataTransferError.invalidFileDescriptor(descriptor)
         }
 
-        return try OwnedFileDescriptor(adopting: descriptor) { [self] descriptor in
-            adoptedCloseCalls.append(descriptor)
-            return closeFailures[descriptor] ?? 0
+        return try OwnedFileDescriptor(adopting: descriptor) { descriptor in
+            self.recordAdoptedClose(descriptor)
+            return self.closeFailures[descriptor] ?? 0
         }
     }
 
     func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult {
-        rawCloseCalls.append(descriptor)
+        rawCloseCallStorage.withLock { $0.append(descriptor) }
         return .closed
+    }
+
+    private func recordAdoptedClose(_ descriptor: Int32) {
+        adoptedCloseCallStorage.withLock { $0.append(descriptor) }
     }
 }
 
