@@ -1,3 +1,5 @@
+import WaylandRaw
+
 package enum DisplaySurfaceStoreError: Error, Equatable, Sendable {
     case duplicateWindow(WindowID)
     case duplicateSurface(SurfaceID)

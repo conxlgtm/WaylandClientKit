@@ -1,5 +1,3 @@
-import WaylandRaw
-
 package protocol RawValueOrdered {
     associatedtype RawValue: Comparable
 
@@ -28,9 +26,11 @@ extension Array where Element: RawValueOrdered {
     }
 }
 
-extension SeatID: RawValueOrdered {}
-extension WindowID: RawValueOrdered {}
-extension OutputID: RawValueOrdered {}
-extension DataOfferID: RawValueOrdered {}
-extension DataSourceID: RawValueOrdered {}
+extension Dictionary where Key: Comparable {
+    package func valuesSortedByKey() -> [Value] {
+        sorted { $0.key < $1.key }.map(\.value)
+    }
+}
+
 extension RawSeatID: RawValueOrdered {}
+extension RawOutputID: RawValueOrdered {}
