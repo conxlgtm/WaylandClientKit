@@ -81,10 +81,14 @@ package struct WindowModel: Equatable, Sendable {
             return try reduceRedrawRequestConsumed(bufferAvailability: bufferAvailability)
         case .presentationStarted(let request):
             return try reducePresentationStarted(request)
-        case .presentationBlockedByBuffer:
-            return try reducePresentationBlockedByBuffer()
+        case .presentationBlockedByBuffer: return try reducePresentationBlockedByBuffer()
         case .presentationSucceeded(let generation, let bufferAvailability):
             return try reducePresentationSucceeded(
+                generation: generation,
+                bufferAvailability: bufferAvailability
+            )
+        case .externalPresentationSucceeded(let generation, let bufferAvailability):
+            return try reduceExternalPresentationSucceeded(
                 generation: generation,
                 bufferAvailability: bufferAvailability
             )
@@ -295,6 +299,26 @@ extension WindowModel {
                 windowID: windowID
             )
             activeState.presentation = .idle
+            return Self.mapRedrawEffects(
+                activeState.redraw.reduce(
+                    .presented(generation: generation),
+                    bufferAvailability: bufferAvailability
+                ),
+                windowID: windowID
+            )
+        }
+    }
+
+    private mutating func reduceExternalPresentationSucceeded(
+        generation: UInt64,
+        bufferAvailability: RedrawBufferAvailability
+    ) throws -> [WindowEffect] {
+        let windowID = id
+        return try transitionActiveWindowState { activeState in
+            guard activeState.presentation == .idle else {
+                throw ClientError.window(windowID, .invalidLifecycleTransition(.nestedPresentation))
+            }
+
             return Self.mapRedrawEffects(
                 activeState.redraw.reduce(
                     .presented(generation: generation),

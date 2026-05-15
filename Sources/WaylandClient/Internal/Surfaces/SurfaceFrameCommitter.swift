@@ -66,6 +66,14 @@ enum SurfaceFrameCommitter {
         _ preparedCommit: PreparedSurfaceFrameCommit,
         buffer: RawBuffer
     ) -> SurfaceCommitPlan {
+        commit(preparedCommit, buffer: buffer.surfaceBuffer)
+    }
+
+    @discardableResult
+    static func commit(
+        _ preparedCommit: PreparedSurfaceFrameCommit,
+        buffer: RawSurfaceBuffer
+    ) -> SurfaceCommitPlan {
         preparedCommit.surface.setBufferScale(preparedCommit.plan.bufferScale)
         preparedCommit.scaleInstallation.applyViewportDestinationIfNeeded(
             preparedCommit.plan.viewportDestination

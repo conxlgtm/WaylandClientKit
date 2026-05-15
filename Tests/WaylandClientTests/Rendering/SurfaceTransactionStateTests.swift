@@ -172,6 +172,21 @@ struct SurfaceTransactionStateTests {
     }
 
     @Test
+    func nextCommitGenerationComesFromLastCommittedFrame() throws {
+        var state = SurfaceTransactionState()
+        let framePlan = try plan()
+
+        #expect(state.nextCommitGeneration == 1)
+
+        state.recordConfigureReceived(serial: 11)
+        try state.acknowledgeConfigure(serial: 11)
+        try state.requestFrameCallback(generation: state.nextCommitGeneration)
+        try state.recordCommittedFrame(generation: 1, plan: framePlan)
+
+        #expect(state.nextCommitGeneration == 2)
+    }
+
+    @Test
     func transientResetDropsPendingConfigureAndFrameCallback() throws {
         var state = SurfaceTransactionState()
 

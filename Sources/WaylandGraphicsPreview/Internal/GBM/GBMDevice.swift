@@ -117,6 +117,17 @@ package final class GBMDevice {
     }
 
     @safe
+    package func withUnsafeDevicePointer<Result>(
+        _ body: (OpaquePointer) -> Result
+    ) throws(GBMAllocationError) -> Result {
+        guard let devicePointer = unsafe pointer else {
+            throw GBMAllocationError.deviceDestroyed
+        }
+
+        return unsafe body(devicePointer)
+    }
+
+    @safe
     package func isFormatSupported(
         format: UInt32,
         flags: GBMBufferUseFlags

@@ -72,6 +72,19 @@ struct GBMBufferPoolStateTests {
     }
 
     @Test
+    func cancelLeaseReturnsSlotToAvailable() throws {
+        var state = GBMBufferPoolState()
+        let slotID = try GBMBufferPoolSlotID(1)
+        try state.insertAvailableSlot(slotID)
+        _ = try state.leaseNextAvailableSlot()
+
+        try state.cancelLease(slotID)
+
+        #expect(try state.lifecycle(for: slotID) == .available)
+        #expect(try state.leaseNextAvailableSlot() == slotID)
+    }
+
+    @Test
     func duplicateSlotsAreRejected() throws {
         var state = GBMBufferPoolState()
         let slotID = try GBMBufferPoolSlotID(1)

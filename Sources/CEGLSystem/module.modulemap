@@ -1,0 +1,5 @@
+module CEGLSystem [system] {
+    header "include/egl-umbrella.h"
+    link "EGL"
+    export *
+}
