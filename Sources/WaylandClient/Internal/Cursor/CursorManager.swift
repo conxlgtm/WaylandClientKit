@@ -327,7 +327,7 @@ extension CursorManager {
         cursorStateBySeat
             .filter(\.value.focus.isFocused)
             .map(\.key)
-            .sorted { $0.rawValue < $1.rawValue }
+            .sortedByRawValue()
     }
 
     private func reduceSeatState(

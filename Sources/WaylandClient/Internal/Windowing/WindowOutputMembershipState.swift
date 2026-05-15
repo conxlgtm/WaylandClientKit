@@ -27,6 +27,6 @@ package struct SurfaceOutputMembershipState: Equatable, Sendable {
         outputIDs
             .filter(isStillBound)
             .map { OutputID(rawValue: $0.rawValue) }
-            .sorted { $0.rawValue < $1.rawValue }
+            .sortedByRawValue()
     }
 }

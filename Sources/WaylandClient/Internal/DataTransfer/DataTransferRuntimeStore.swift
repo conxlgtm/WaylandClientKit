@@ -326,7 +326,7 @@ struct DataTransferStore {
         runtimeOffersByID
             .filter { _, runtimeOffer in runtimeOffer.pendingSeatID == seatID }
             .map(\.key)
-            .sorted { $0.rawValue < $1.rawValue }
+            .sortedByRawValue()
     }
 
     mutating func insertSource(

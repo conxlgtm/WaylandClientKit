@@ -169,13 +169,13 @@ package final class PrimarySelectionController {
 
     func shutdown() {
         backend.preconditionIsOwnerThread()
-        for sourceID in sourcesByID.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+        for sourceID in sourcesByID.keys.sortedByRawValue() {
             sourcesByID.removeValue(forKey: sourceID)?.binding.destroy()
         }
-        for offerID in offersByID.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+        for offerID in offersByID.keys.sortedByRawValue() {
             destroyOffer(offerID)
         }
-        for seatID in deviceBindings.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+        for seatID in deviceBindings.keys.sortedByRawValue() {
             deviceBindings.removeValue(forKey: seatID)?.release()
         }
         discardAllPendingSourceSendRequests()
@@ -210,13 +210,13 @@ extension PrimarySelectionController {
         for (offerID, offer) in offersByID where offer.pendingSeatID == seatID {
             pendingOfferIDsForSeat.append(offerID)
         }
-        pendingOfferIDsForSeat.sort { $0.rawValue < $1.rawValue }
+        pendingOfferIDsForSeat.sortByRawValue()
 
         var sourceIDsForSeat: [DataSourceID] = []
         for (sourceID, source) in sourcesByID where source.snapshot.seatID == seatID {
             sourceIDsForSeat.append(sourceID)
         }
-        sourceIDsForSeat.sort { $0.rawValue < $1.rawValue }
+        sourceIDsForSeat.sortByRawValue()
 
         deviceBindings.removeValue(forKey: seatID)?.release()
         cleanupSelection(selectionBySeat.removeValue(forKey: seatID) ?? .none)
@@ -495,7 +495,7 @@ extension PrimarySelectionController {
     }
 
     private static func sortedSeatIDs(_ seatIDs: Set<SeatID>) -> [SeatID] {
-        seatIDs.sorted { $0.rawValue < $1.rawValue }
+        seatIDs.sortedByRawValue()
     }
 
     private func allocateOfferID() -> DataOfferID {
