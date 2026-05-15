@@ -189,7 +189,7 @@ struct InputDeviceGraph: Equatable {
     }
 
     mutating func removeSurface(_ surfaceID: RawObjectID) {
-        let seatIDs = seatsByID.keys.sorted { $0.rawValue < $1.rawValue }
+        let seatIDs = seatsByID.keys.sortedByRawValue()
         for seatID in seatIDs {
             updateSeatState(seatID) { state in
                 if state.pointer.focusedSurfaceID == surfaceID {

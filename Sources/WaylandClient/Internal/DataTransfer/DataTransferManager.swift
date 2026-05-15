@@ -306,15 +306,15 @@ package final class DataTransferManager {
     }
 
     private static func sortedSeatIDs(_ seatIDs: Set<SeatID>) -> [SeatID] {
-        seatIDs.sorted { $0.rawValue < $1.rawValue }
+        seatIDs.sortedByRawValue()
     }
 
     private static func sortedOfferIDs(_ offerIDs: Set<DataOfferID>) -> [DataOfferID] {
-        offerIDs.sorted { $0.rawValue < $1.rawValue }
+        offerIDs.sortedByRawValue()
     }
 
     private static func sortedSourceIDs(_ sourceIDs: Set<DataSourceID>) -> [DataSourceID] {
-        sourceIDs.sorted { $0.rawValue < $1.rawValue }
+        sourceIDs.sortedByRawValue()
     }
 
     private func allocateOfferID() -> DataOfferID {
