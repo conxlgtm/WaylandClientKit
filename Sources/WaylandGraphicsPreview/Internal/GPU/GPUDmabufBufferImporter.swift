@@ -77,6 +77,17 @@ package final class GPUDmabufBufferImport {
         onFailure = handleFailure
     }
 
+    package init(
+        testingInitialState initialState: GPUDmabufBufferImportState,
+        onCreated handleCreated: @escaping (RawLinuxDmabufBuffer) -> Void,
+        onFailure handleFailure: @escaping (GPUDmabufBufferImportError) -> Void
+    ) {
+        params = nil
+        stateStorage = initialState
+        onCreated = handleCreated
+        onFailure = handleFailure
+    }
+
     package static func requestImport(
         export: GBMDmabufExport,
         linuxDmabuf: RawLinuxDmabuf,
@@ -205,6 +216,10 @@ package final class GPUDmabufBufferImport {
         destroy()
     }
 
+    package func testingHandle(_ event: RawLinuxDmabufBufferParamsEvent) {
+        handle(event)
+    }
+
     private func handle(_ event: RawLinuxDmabufBufferParamsEvent) {
         guard stateStorage == .createRequested else {
             handleFailure(.useAfterTerminalState(stateStorage))
@@ -223,10 +238,10 @@ package final class GPUDmabufBufferImport {
     }
 
     private func handleFailure(_ error: GPUDmabufBufferImportError) {
-        guard stateStorage == .createRequested else { return }
-
-        stateStorage = .failed
-        params = nil
+        if stateStorage == .createRequested {
+            stateStorage = .failed
+            params = nil
+        }
         onFailure?(error)
     }
 

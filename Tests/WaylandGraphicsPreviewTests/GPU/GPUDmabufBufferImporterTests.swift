@@ -55,6 +55,40 @@ struct GPUDmabufBufferImporterTests {
             _ = try GPUDmabufBufferImport.importDescriptor(for: export)
         }
     }
+
+    @Test
+    func terminalEventAfterCreatedReportsFailure() {
+        var failures: [GPUDmabufBufferImportError] = []
+        let importRequest = GPUDmabufBufferImport(
+            testingInitialState: .created
+        ) { _ in
+            Issue.record("terminal-state test should not create a buffer")
+        } onFailure: { error in
+            failures.append(error)
+        }
+
+        importRequest.testingHandle(.failed)
+
+        #expect(failures == [.useAfterTerminalState(.created)])
+        #expect(importRequest.state == .created)
+    }
+
+    @Test
+    func terminalEventAfterFailedReportsFailure() {
+        var failures: [GPUDmabufBufferImportError] = []
+        let importRequest = GPUDmabufBufferImport(
+            testingInitialState: .failed
+        ) { _ in
+            Issue.record("terminal-state test should not create a buffer")
+        } onFailure: { error in
+            failures.append(error)
+        }
+
+        importRequest.testingHandle(.failed)
+
+        #expect(failures == [.useAfterTerminalState(.failed)])
+        #expect(importRequest.state == .failed)
+    }
 }
 
 private func rawExport(
