@@ -418,7 +418,7 @@ extension DisplaySession {
     package static func dataTransferGlobalSnapshot(
         for globals: BoundGlobals
     ) -> DataTransferGlobalSnapshot {
-        let seatIDs = globals.seatRegistry.seats.map { SeatID(rawValue: $0.id.rawValue) }
+        let seatIDs = globals.seatRegistry.seats.map { SeatID($0.id) }
 
         switch globals.extensions.dataDeviceManager {
         case .bound:
@@ -437,7 +437,7 @@ extension DisplaySession {
     package static func primarySelectionGlobalSnapshot(
         for globals: BoundGlobals
     ) -> PrimarySelectionGlobalSnapshot {
-        let seatIDs = globals.seatRegistry.seats.map { SeatID(rawValue: $0.id.rawValue) }
+        let seatIDs = globals.seatRegistry.seats.map { SeatID($0.id) }
 
         switch globals.extensions.primarySelectionDeviceManager {
         case .bound:

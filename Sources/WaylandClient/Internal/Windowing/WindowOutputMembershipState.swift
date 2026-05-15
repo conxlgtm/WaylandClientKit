@@ -18,7 +18,7 @@ package struct SurfaceOutputMembershipState: Equatable, Sendable {
     }
 
     package mutating func remove(_ outputID: OutputID) -> Bool {
-        outputIDs.remove(RawOutputID(rawValue: outputID.rawValue)) != nil
+        outputIDs.remove(RawOutputID(outputID)) != nil
     }
 
     package func currentOutputIDs(
@@ -26,7 +26,7 @@ package struct SurfaceOutputMembershipState: Equatable, Sendable {
     ) -> [OutputID] {
         outputIDs
             .filter(isStillBound)
-            .map { OutputID(rawValue: $0.rawValue) }
+            .map { OutputID($0) }
             .sortedByRawValue()
     }
 }

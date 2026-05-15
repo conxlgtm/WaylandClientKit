@@ -624,7 +624,7 @@ extension TopLevelWindow {
         let globals = try connection.bindRequiredGlobals()
         guard
             let seat = globals.seatRegistry.seat(
-                for: RawSeatID(rawValue: seatID.rawValue)
+                for: RawSeatID(seatID)
             )
         else {
             throw ClientError.invalidWindowState(.unknownWindowInteractionSeat(seatID))
@@ -639,7 +639,7 @@ extension TopLevelWindow {
         let globals = try connection.bindRequiredGlobals()
         guard
             let output = globals.outputRegistry.output(
-                for: RawOutputID(rawValue: outputID.rawValue)
+                for: RawOutputID(outputID)
             )
         else {
             throw ClientError.invalidWindowState(.unknownWindowFullscreenOutput(outputID))
@@ -658,7 +658,7 @@ extension TopLevelWindow {
             }
 
             let seat = try RawSeat.testingNoopSeatForRequestRecording(
-                id: RawSeatID(rawValue: seatID.rawValue),
+                id: RawSeatID(seatID),
                 pointerAddress: pointerAddress
             )
             testingInteractionSeatsByID[seatID] = seat

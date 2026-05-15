@@ -270,7 +270,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
             return nil
         }
 
-        return OutputID(rawValue: rawID.rawValue)
+        return OutputID(rawID)
     }
 
     @discardableResult

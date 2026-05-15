@@ -9,7 +9,7 @@ extension PopupRoleSurface {
 
         guard
             let seat = globals.seatRegistry.seat(
-                for: RawSeatID(rawValue: seatID.rawValue)
+                for: RawSeatID(seatID)
             )
         else {
             throw ClientError.invalidWindowState(.unknownPopupGrabSeat(seatID))

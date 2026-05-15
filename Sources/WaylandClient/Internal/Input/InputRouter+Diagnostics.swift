@@ -97,7 +97,7 @@ extension InputRouter {
         switch error {
         case .unsupportedFormat(let format, let advertisedSize):
             .unsupportedFormat(
-                format: KeyboardKeymapFormat(rawValue: format.rawValue),
+                format: KeyboardKeymapFormat(format),
                 advertisedSize: advertisedSize
             )
         case .invalidFileDescriptor(let descriptor):

@@ -6,7 +6,7 @@ extension DisplayEvent {
         case .changed(let snapshot):
             self = .outputChanged(OutputSnapshot(snapshot))
         case .removed(let id):
-            self = .outputRemoved(OutputID(rawValue: id.rawValue))
+            self = .outputRemoved(OutputID(id))
         }
     }
 }
