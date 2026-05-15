@@ -250,7 +250,7 @@ package final class TopLevelWindow {
     }
 
     private func reportDecorationUnavailableIfNeeded(reason: DecorationUnavailableReason) {
-        guard configuration.decorationPreference.reportsUnavailableDecorationManager else {
+        guard configuration.decorationPreference.shouldReportMissingDecorationManager else {
             return
         }
 

@@ -288,8 +288,8 @@ extension OutputMode {
         let flags = OutputModeFlags(rawValue: raw.flags)
         guard
             flags.contains(.current),
-            let width = PositiveInt32(rawOutputModeDimension: raw.width),
-            let height = PositiveInt32(rawOutputModeDimension: raw.height),
+            let width = PositiveInt32(validatingRawOutputModeDimension: raw.width),
+            let height = PositiveInt32(validatingRawOutputModeDimension: raw.height),
             let refresh = OutputRefreshRate(raw.refreshMilliHertz)
         else {
             return nil
@@ -305,7 +305,7 @@ extension OutputMode {
 }
 
 extension PositiveInt32 {
-    package init?(rawOutputModeDimension value: Int32) {
+    package init?(validatingRawOutputModeDimension value: Int32) {
         guard value > 0 else { return nil }
 
         self.init(unchecked: value)
