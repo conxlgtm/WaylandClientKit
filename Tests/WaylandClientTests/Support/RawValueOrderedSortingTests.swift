@@ -1,4 +1,6 @@
 import Testing
+import WaylandRaw
+
 @testable import WaylandClient
 
 @Suite
