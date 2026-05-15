@@ -160,21 +160,14 @@ package final class RawLinuxDmabufBuffer {
         releaseOwner = BufferReleaseOwner(
             invariantFailureSink: adoptionContext.invariantFailureSink
         )
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                bufferPointer,
-                interface: "wl_buffer"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_buffer_destroy
-            )
-        } catch {
-            unsafe swl_buffer_destroy(bufferPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: bufferPointer,
+            interface: "wl_buffer",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_buffer_destroy
+        )
 
-        try unsafe releaseOwner.install(on: bufferPointer) { [weak buffer = self] in
+        try unsafe releaseOwner.install(on: pointer) { [weak buffer = self] in
             buffer?.handleRelease()
         }
     }
@@ -216,25 +209,18 @@ package final class RawLinuxDmabufBufferParams {
         onEvent handleEvent: @escaping (RawLinuxDmabufBufferParamsEvent) -> Void,
         onFailure handleFailure: @escaping (RuntimeError) -> Void
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                paramsPointer,
-                interface: "zwp_linux_buffer_params_v1"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_zwp_linux_buffer_params_v1_destroy
-            )
-            listenerOwner = RawLinuxDmabufBufferParamsOwner(
-                proxyAdoption: adoptionContext,
-                onEvent: handleEvent,
-                onFailure: handleFailure
-            )
-            try unsafe listenerOwner.install(on: adoptedPointer)
-        } catch {
-            unsafe swl_zwp_linux_buffer_params_v1_destroy(paramsPointer)
-            throw error
-        }
+        listenerOwner = RawLinuxDmabufBufferParamsOwner(
+            proxyAdoption: adoptionContext,
+            onEvent: handleEvent,
+            onFailure: handleFailure
+        )
+        proxy = try RawOwnedProxy(
+            adopting: paramsPointer,
+            interface: "zwp_linux_buffer_params_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_zwp_linux_buffer_params_v1_destroy
+        )
+        try unsafe listenerOwner.install(on: pointer)
     }
 
     package func addPlane(

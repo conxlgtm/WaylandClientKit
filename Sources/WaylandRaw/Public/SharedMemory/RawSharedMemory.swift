@@ -18,16 +18,10 @@ package final class RawSharedMemory {
     ) throws(RuntimeError) {
         version = sharedMemoryVersion
         proxyAdoption = adoptionContext
-        let adoptedPointer: OpaquePointer
-        do {
-            unsafe adoptedPointer = try adoptionContext.adopt(
-                sharedMemoryPointer, interface: "wl_shm")
-        } catch {
-            unsafe swl_shm_destroy(sharedMemoryPointer)
-            throw error
-        }
-        proxy = RawOwnedProxy(
-            pointer: adoptedPointer,
+        proxy = try RawOwnedProxy(
+            adopting: sharedMemoryPointer,
+            interface: "wl_shm",
+            proxyAdoption: adoptionContext,
             destroy: unsafe swl_shm_destroy
         )
     }
@@ -165,20 +159,14 @@ package final class RawBuffer {
         releaseOwner = BufferReleaseOwner(
             invariantFailureSink: adoptionContext.invariantFailureSink
         )
-        let adoptedPointer: OpaquePointer
-        do {
-            unsafe adoptedPointer = try adoptionContext.adopt(
-                bufferPointer, interface: "wl_buffer")
-        } catch {
-            unsafe swl_buffer_destroy(bufferPointer)
-            throw error
-        }
-        proxy = RawOwnedProxy(
-            pointer: adoptedPointer,
+        proxy = try RawOwnedProxy(
+            adopting: bufferPointer,
+            interface: "wl_buffer",
+            proxyAdoption: adoptionContext,
             destroy: unsafe swl_buffer_destroy
         )
 
-        try unsafe releaseOwner.install(on: bufferPointer) { [weak buffer = self] in
+        try unsafe releaseOwner.install(on: pointer) { [weak buffer = self] in
             guard let buffer else { return }
 
             buffer.handleRelease()

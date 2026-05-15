@@ -194,29 +194,16 @@ package final class RawDataDevice {
         version deviceVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                devicePointer,
-                interface: "wl_data_device"
-            )
-            let destroyDevice: (OpaquePointer?) -> Void
-            if deviceVersion >= RawVersion(2) {
-                unsafe destroyDevice = Self.releaseDataDevice
-            } else {
-                unsafe destroyDevice = Self.destroyDataDevice
-            }
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: destroyDevice
-            )
-        } catch {
-            if deviceVersion >= RawVersion(2) {
-                unsafe swl_data_device_release(devicePointer)
-            } else {
-                unsafe swl_data_device_destroy(devicePointer)
-            }
-            throw error
-        }
+        let destroyDevice: (OpaquePointer) -> Void =
+            deviceVersion >= RawVersion(2)
+            ? { unsafe swl_data_device_release($0) }
+            : { unsafe swl_data_device_destroy($0) }
+        proxy = try RawOwnedProxy(
+            adopting: devicePointer,
+            interface: "wl_data_device",
+            proxyAdoption: adoptionContext,
+            destroy: destroyDevice
+        )
         version = deviceVersion
     }
 

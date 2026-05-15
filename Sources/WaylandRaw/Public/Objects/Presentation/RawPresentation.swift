@@ -64,26 +64,19 @@ package final class RawPresentation {
         version presentationVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            let adoptedPointer = try adoptionContext.adopt(
-                presentationPointer,
-                interface: "wp_presentation"
-            )
-            proxy = RawOwnedProxy(
-                pointer: adoptedPointer,
-                destroy: unsafe swl_wp_presentation_destroy
-            )
-            version = presentationVersion
-            proxyAdoption = adoptionContext
-            listenerOwner = RawPresentationOwner(
-                invariantFailureSink: adoptionContext.invariantFailureSink
-            )
-            try unsafe listenerOwner.install(on: adoptedPointer) { [weak self] clockID in
-                self?.clockID = clockID
-            }
-        } catch {
-            unsafe swl_wp_presentation_destroy(presentationPointer)
-            throw error
+        version = presentationVersion
+        proxyAdoption = adoptionContext
+        listenerOwner = RawPresentationOwner(
+            invariantFailureSink: adoptionContext.invariantFailureSink
+        )
+        proxy = try RawOwnedProxy(
+            adopting: presentationPointer,
+            interface: "wp_presentation",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_wp_presentation_destroy
+        )
+        try unsafe listenerOwner.install(on: pointer) { [weak self] clockID in
+            self?.clockID = clockID
         }
     }
 
