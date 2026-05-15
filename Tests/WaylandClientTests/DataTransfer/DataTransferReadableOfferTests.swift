@@ -39,7 +39,6 @@ struct DataTransferReadableOfferTests {
                         steps.isEmpty ? [] : steps.removeFirst()
                     }
                 },
-                prepareReadDescriptor: { _ in },
                 closeDescriptor: { [closedDescriptors] descriptor in
                     closedDescriptors.withLock { $0.append(descriptor) }
                     return 0
