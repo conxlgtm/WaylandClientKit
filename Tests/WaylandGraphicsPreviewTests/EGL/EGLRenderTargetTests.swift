@@ -1,3 +1,4 @@
+import CEGLShims
 import Glibc
 import Testing
 
@@ -67,6 +68,44 @@ struct EGLRenderTargetTests {
         #expect(pixel.blue <= 5)
         #expect(exportedBuffer.width == 16)
         #expect(exportedBuffer.height == 16)
+    }
+
+    @Test
+    func drawClearReportsClearCurrentFailure() throws {
+        let display = try unsafe #require(UnsafeMutableRawPointer(bitPattern: 0xE001))
+        let surface = try unsafe #require(UnsafeMutableRawPointer(bitPattern: 0xE002))
+        let context = try unsafe #require(UnsafeMutableRawPointer(bitPattern: 0xE003))
+        let size = try GBMBufferSize(width: 16, height: 16)
+        let eglContextLost: Int32 = 0x300E
+
+        swl_test_egl_draw_recording_begin(-1, eglContextLost)
+        defer {
+            swl_test_egl_draw_recording_end()
+        }
+
+        do {
+            _ = try unsafe EGLGBMRenderTarget.testingDrawClear(
+                display: display,
+                surface: surface,
+                context: context,
+                size: size
+            )
+            Issue.record("drawClear should report clear-current failure")
+        } catch {
+            #expect(error == .clearCurrentFailed(eglError: eglContextLost))
+        }
+        let record = unsafe swl_test_egl_draw_record()
+        let makeCurrentCallCount = unsafe record.make_current_call_count
+        let clearCallCount = unsafe record.clear_call_count
+        let readPixelCallCount = unsafe record.read_pixel_call_count
+        let swapBuffersCallCount = unsafe record.swap_buffers_call_count
+        let clearCurrentCallCount = unsafe record.clear_current_call_count
+
+        #expect(makeCurrentCallCount == 1)
+        #expect(clearCallCount == 1)
+        #expect(readPixelCallCount == 1)
+        #expect(swapBuffersCallCount == 1)
+        #expect(clearCurrentCallCount == 1)
     }
 
     private func firstRenderNodePath() -> String? {

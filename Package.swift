@@ -85,7 +85,8 @@ let package = Package(
             dependencies: ["CEGLSystem", "CGLESv2System", "CGBMSystem"],
             publicHeadersPath: "include",
             cSettings: [
-                .define("_GNU_SOURCE", .when(platforms: [.linux]))
+                .define("SWL_ENABLE_TESTING", .when(configuration: .debug)),
+                .define("_GNU_SOURCE", .when(platforms: [.linux])),
             ]
         ),
         .target(
