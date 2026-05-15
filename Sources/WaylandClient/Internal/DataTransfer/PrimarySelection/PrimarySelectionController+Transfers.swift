@@ -27,12 +27,7 @@ extension PrimarySelectionController {
             throw DataTransferError.invalidFileDescriptor(descriptor)
         }
 
-        switch backend.closeFileDescriptor(descriptor) {
-        case .closed:
-            return
-        case .failed(let error):
-            throw DataTransferError.closeFileDescriptor(error)
-        }
+        try backend.closeFileDescriptor(descriptor).throwIfFailed()
     }
 
     package func discardPendingSourceSendRequests(for sourceID: DataSourceID) {

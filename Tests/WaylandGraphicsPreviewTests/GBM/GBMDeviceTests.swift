@@ -58,6 +58,15 @@ struct GBMDeviceTests {
     }
 
     @Test
+    func allocationErrorCapturesCurrentErrnoOrFallback() {
+        errno = ENODEV
+        #expect(GBMAllocationError.capturedCurrentErrno() == ENODEV)
+
+        errno = 0
+        #expect(GBMAllocationError.capturedCurrentErrno() == EIO)
+    }
+
+    @Test
     func destroyClosesAdoptedRenderNodeDescriptor() throws {
         let descriptors = try RawFileDescriptor.pipeDescriptors()
         defer {
