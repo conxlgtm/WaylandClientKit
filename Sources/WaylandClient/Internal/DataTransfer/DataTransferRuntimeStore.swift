@@ -379,8 +379,8 @@ struct DataTransferStore {
     mutating func removeSourceSendRequests(
         for sourceID: DataSourceID
     ) -> [DataTransferSourceSendRequest] {
-        let removedRequests = pendingSourceSendRequests.removeAllReturning {
-            $0.source.sourceID == sourceID
+        let removedRequests = pendingSourceSendRequests.removeAllReturning { request in
+            request.source.sourceID == sourceID
         }
         pruneDetachedSourceSendIDs()
         return removedRequests

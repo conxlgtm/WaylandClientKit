@@ -31,10 +31,12 @@ struct DataTransferIdentityTests {
     @Test
     func cancellationEventsExposeWriteSources() {
         let sourceID = DataSourceID(rawValue: 99)
-        let clipboardCancellation = DataTransferEvent
-            .clipboardSourceCancelled(sourceID.clipboardIdentity)
-        let primarySelectionCancellation = DataTransferEvent
-            .primarySelectionSourceCancelled(sourceID.primarySelectionIdentity)
+        let clipboardCancellation =
+            DataTransferEvent.clipboardSourceCancelled(sourceID.clipboardIdentity)
+        let primarySelectionCancellation =
+            DataTransferEvent.primarySelectionSourceCancelled(
+                sourceID.primarySelectionIdentity
+            )
         let dragCancellation = DataTransferEvent.dragSourceCancelled(sourceID.dragIdentity)
 
         #expect(clipboardCancellation.cancelledWriteSource == .clipboard(sourceID))
