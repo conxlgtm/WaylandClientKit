@@ -31,8 +31,10 @@ Current experimental baseline:
 - regular clipboard selection offers and sources through `wl_data_device_manager`
 - primary selection offers and sources through `zwp_primary_selection_device_manager_v1`
 - explicit compositor presentation feedback through `wp_presentation`
+- linux-dmabuf capability discovery and package-internal GBM/EGL preview pieces
 - compose and dead-key text results for interpreted keyboard events
 - display, input, data-transfer, and diagnostic event streams
+- minimal DocC catalog and public API baseline checks
 - noninteractive Wayland smoke executable
 - tests for system imports, shim imports, raw lifecycle, and client drawing helpers
 
@@ -45,7 +47,6 @@ Not implemented yet:
 - output-management APIs
 - public GPU rendering APIs in `WaylandClient`
 - high-level gesture recognizers or widgets
-- DocC reference documentation
 
 ## Support Matrix
 
@@ -87,6 +88,9 @@ Supported in the current experimental baseline:
 - `wp_presentation_feedback`
 - `wp_fractional_scale_manager_v1`
 - `wp_fractional_scale_v1`
+- `zwp_linux_dmabuf_v1`
+- `zwp_linux_dmabuf_feedback_v1`
+- `zwp_linux_buffer_params_v1`
 
 Window geometry:
 
@@ -342,6 +346,7 @@ swift run swift-wayland-smoke
 - [Architecture](docs/architecture.md)
 - [Protocol Generation](docs/generation.md)
 - [Public API Audit](docs/public-api-audit.md)
+- [WaylandClient DocC Catalog](Sources/WaylandClient/WaylandClient.docc/WaylandClient.md)
 - [Development Checkpoint Checklist](docs/release.md)
 - [Contributing](CONTRIBUTING.md)
 
@@ -349,4 +354,6 @@ swift run swift-wayland-smoke
 
 Conceptual and maintenance documents are plain Markdown in the repository.
 
-DocC is not set up yet. It can be added later for public API reference when `WaylandClient` has a stable API.
+The minimal `WaylandClient` DocC catalog lives beside the target in
+`Sources/WaylandClient/WaylandClient.docc/`. It records the public reference
+entry point while the API remains experimental.
