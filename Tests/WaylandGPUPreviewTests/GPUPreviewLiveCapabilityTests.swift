@@ -20,7 +20,10 @@ struct GPUPreviewLiveCapabilityTests {
 
             guard capabilities.linuxDmabuf.isAvailable else {
                 Issue.record(
-                    "Skipping GPU preview live test: compositor did not advertise zwp_linux_dmabuf_v1."
+                    """
+                    Skipping GPU preview live test: compositor did not advertise \
+                    zwp_linux_dmabuf_v1.
+                    """
                 )
                 return
             }
