@@ -58,10 +58,7 @@ package enum RawLinuxDmabufFormatTable {
         byteCount rawByteCount: UInt32
     ) throws(RuntimeError) -> [RawLinuxDmabufFormatModifier] {
         guard fd >= 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .validateArgument("dmabuf format table fd")
-            )
+            throw RuntimeError.invalidArgument("dmabuf format table fd")
         }
 
         defer {

@@ -248,10 +248,7 @@ package final class RawLinuxDmabufBufferParams {
                 UInt32(modifier & 0xffff_ffff)
             )
         } catch {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .validateArgument(error.description)
-            )
+            throw RuntimeError.invalidArgument(error.description)
         }
     }
 
@@ -262,10 +259,7 @@ package final class RawLinuxDmabufBufferParams {
         flags: RawLinuxDmabufBufferParamsFlags = []
     ) throws(RuntimeError) {
         guard width > 0, height > 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .validateArgument("dmabuf buffer dimensions")
-            )
+            throw RuntimeError.invalidArgument("dmabuf buffer dimensions")
         }
 
         do {
@@ -278,10 +272,7 @@ package final class RawLinuxDmabufBufferParams {
                 flags.rawValue
             )
         } catch {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .validateArgument(error.description)
-            )
+            throw RuntimeError.invalidArgument(error.description)
         }
     }
 
@@ -415,21 +406,11 @@ private final class RawLinuxDmabufBufferParamsOwner {
     private func runtimeError(
         for error: RawLinuxDmabufBufferParamsStateError
     ) -> RuntimeError {
-        RuntimeError.systemError(
-            errno: EINVAL,
-            operation: .validateArgument(error.description)
-        )
+        RuntimeError.invalidArgument(error.description)
     }
 
     private func runtimeError(from error: any Error) -> RuntimeError {
-        if let runtimeError = error as? RuntimeError {
-            return runtimeError
-        }
-
-        return RuntimeError.systemError(
-            errno: EINVAL,
-            operation: .validateArgument(String(describing: error))
-        )
+        RuntimeError.fromRuntimeOrInvalidArgument(error)
     }
 
     @safe
