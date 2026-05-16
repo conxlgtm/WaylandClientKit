@@ -7,6 +7,10 @@ package struct GPUDmabufBufferImportDescriptor: Equatable, Sendable {
     package let format: UInt32
     package let modifier: UInt64
     package let planeCount: Int
+
+    package var planeIndices: Range<Int> {
+        0..<planeCount
+    }
 }
 
 package enum GPUDmabufBufferImportState: Equatable, Sendable {
@@ -14,6 +18,23 @@ package enum GPUDmabufBufferImportState: Equatable, Sendable {
     case created
     case failed
     case destroyed
+
+    package var acceptsCompositorEvent: Bool {
+        self == .createRequested
+    }
+
+    package var isDestroyed: Bool {
+        self == .destroyed
+    }
+
+    package var isTerminal: Bool {
+        switch self {
+        case .created, .failed, .destroyed:
+            true
+        case .createRequested:
+            false
+        }
+    }
 }
 
 package enum GPUDmabufBufferImportError: Error, Equatable, Sendable, CustomStringConvertible {
@@ -137,39 +158,41 @@ package final class GPUDmabufBufferImport {
         descriptor: GPUDmabufBufferImportDescriptor,
         to params: RawLinuxDmabufBufferParams
     ) throws(GPUDmabufBufferImportError) {
-        for index in 0..<descriptor.planeCount {
-            let layout: GBMDmabufPlaneLayout
+        for index in descriptor.planeIndices {
+            var plane: GBMDmabufPlaneExport
             do {
-                layout = try export.planeLayout(at: index)
+                plane = try export.takePlaneExport(at: index)
             } catch {
-                throw GPUDmabufBufferImportError.planeLayoutFailed(index: index, error)
-            }
-
-            var planeDescriptor: RawLinuxDmabufPlaneFileDescriptor
-            do {
-                planeDescriptor = try export.takePlaneFileDescriptor(at: index)
-            } catch {
-                throw GPUDmabufBufferImportError.planeFileDescriptorFailed(
-                    index: index,
-                    error
-                )
+                throw planeExportError(error, index: index)
             }
 
             do {
                 try params.addPlane(
-                    fileDescriptor: &planeDescriptor,
+                    fileDescriptor: &plane.descriptor,
                     planeIndex: UInt32(index),
-                    offset: layout.offset,
-                    stride: layout.stride,
+                    offset: plane.layout.offset,
+                    stride: plane.layout.stride,
                     modifier: export.modifier
                 )
             } catch {
-                planeDescriptor.close()
+                plane.descriptor.close()
                 throw GPUDmabufBufferImportError.addPlaneFailed(
                     index: index,
                     runtimeError(from: error)
                 )
             }
+        }
+    }
+
+    private static func planeExportError(
+        _ error: GBMAllocationError,
+        index: Int
+    ) -> GPUDmabufBufferImportError {
+        switch error {
+        case .planeFileDescriptorAlreadyTaken:
+            .planeFileDescriptorFailed(index: index, error)
+        default:
+            .planeLayoutFailed(index: index, error)
         }
     }
 
@@ -202,7 +225,7 @@ package final class GPUDmabufBufferImport {
     }
 
     package func destroy() {
-        guard stateStorage != .destroyed else { return }
+        guard !stateStorage.isDestroyed else { return }
 
         stateStorage = .destroyed
         params?.destroy()
@@ -221,7 +244,7 @@ package final class GPUDmabufBufferImport {
     }
 
     private func handle(_ event: RawLinuxDmabufBufferParamsEvent) {
-        guard stateStorage == .createRequested else {
+        guard stateStorage.acceptsCompositorEvent else {
             handleFailure(.useAfterTerminalState(stateStorage))
             return
         }
@@ -238,7 +261,7 @@ package final class GPUDmabufBufferImport {
     }
 
     private func handleFailure(_ error: GPUDmabufBufferImportError) {
-        if stateStorage == .createRequested {
+        if stateStorage.acceptsCompositorEvent {
             stateStorage = .failed
             params = nil
         }
