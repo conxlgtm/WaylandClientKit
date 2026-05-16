@@ -1,5 +1,4 @@
 import CWaylandProtocols
-import Glibc
 
 package struct RawXDGPositionerAnchor: Equatable, Sendable {
     package let rawValue: UInt32
@@ -170,18 +169,13 @@ package final class RawXDGPopup {
     }
 }
 
-private enum XDGPopupListenerInstallState {
-    case idle
-    case installed
-}
-
 @safe
 package final class XDGPopupOwner {
     private let onConfigure: (RawXDGPopupConfigure) -> Void
     private let onPopupDone: () -> Void
     private let onRepositioned: (UInt32) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
-    private var installState = XDGPopupListenerInstallState.idle
+    private var installState = ListenerInstallState.idle
     @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
         initialValue: unsafe swl_xdg_popup_listener_callbacks(),
@@ -241,28 +235,14 @@ package final class XDGPopupOwner {
     }
 
     package func install(on popup: RawXDGPopup) throws {
-        guard installState == .idle else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .installListener("xdg_popup")
-            )
-        }
-
         unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
-        let result = unsafe swl_xdg_popup_add_listener(
-            popup.pointer,
-            callbacks
-        )
-
-        guard result == 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .installListener("xdg_popup")
+        try installState.install(interface: "xdg_popup") {
+            unsafe swl_xdg_popup_add_listener(
+                popup.pointer,
+                callbacks
             )
         }
-
-        installState = .installed
     }
 
     package func cancel() {
