@@ -993,47 +993,29 @@ extension TopLevelWindow {
 
         let generation = surfaceRuntime.nextCommitGeneration
         let bufferAvailability = try redrawBufferAvailability()
-        let preparedCommit = try SurfaceFrameCommitter.prepare(
-            SurfaceFrameCommitRequest(
-                surface: surface,
-                scaleInstallation: scaleInstallation,
-                generation: generation,
-                geometry: try currentSurfaceGeometry()
-            ),
-            runtime: &surfaceRuntime,
-        )
-
-        pendingFrameRegistration = try SurfaceFrameCommitter.requestFrameCallback(
+        let commitPlan = try WindowExternalBufferPresenter.present(
+            buffer,
             on: surface,
+            scaleInstallation: scaleInstallation,
             runtime: &surfaceRuntime,
-            generation: generation
+            pendingFrameRegistration: &pendingFrameRegistration,
+            generation: generation,
+            geometry: try currentSurfaceGeometry()
         ) { [weak self] in
             self?.handleFrameDone()
         }
-
-        do {
-            try SurfaceFrameCommitter.recordPreparedCommit(
-                preparedCommit,
-                runtime: &surfaceRuntime
-            )
-            let commitPlan = SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
-            try interpretWindowEffects(
-                model.reduce(
-                    .externalPresentationSucceeded(
-                        generation: generation,
-                        bufferAvailability: bufferAvailability
-                    )
+        try interpretWindowEffects(
+            model.reduce(
+                .externalPresentationSucceeded(
+                    generation: generation,
+                    bufferAvailability: bufferAvailability
                 )
             )
-            return PreviewBufferPresentationResult(
-                generation: generation,
-                commitPlan: commitPlan
-            )
-        } catch {
-            pendingFrameRegistration = nil
-            surfaceRuntime.cancelFrameCallback()
-            throw error
-        }
+        )
+        return PreviewBufferPresentationResult(
+            generation: generation,
+            commitPlan: commitPlan
+        )
     }
 
     package func requestPresentationFeedbackOnOwnerThread(
