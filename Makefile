@@ -2,7 +2,7 @@ SWIFT_FORMAT := ./scripts/dev/swift-format.sh
 SWIFTLINT := ./scripts/dev/swiftlint.sh
 SWIFT := ./scripts/dev/swift.sh
 
-.PHONY: format lint verify-generated verify-shims verify-release-shim-symbols verify-docs verify-unsafe-allowlist strict-concurrency test test-public-api-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless wayland-headless release-check install-pre-commit
+.PHONY: format lint verify-generated verify-shims verify-release-shim-symbols verify-docs verify-public-api-audit verify-unsafe-allowlist strict-concurrency test test-public-api-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless wayland-headless release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
@@ -27,6 +27,9 @@ verify-release-shim-symbols:
 verify-docs:
 	@./scripts/ci/verify-docs.sh
 
+verify-public-api-audit:
+	@./scripts/ci/verify-public-api-audit.sh
+
 verify-unsafe-allowlist:
 	@bash ./scripts/safety/verify-unsafe-allowlist.sh
 
@@ -39,7 +42,7 @@ test:
 test-public-api-client:
 	@./scripts/ci/test-public-api-client.sh
 
-check-base: lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency test test-public-api-client
+check-base: lint verify-generated verify-shims verify-docs verify-public-api-audit verify-unsafe-allowlist strict-concurrency test test-public-api-client
 
 check: check-base check-wayland-smoke-if-available
 

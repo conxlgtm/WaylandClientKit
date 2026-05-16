@@ -9,12 +9,17 @@ required_files=(
     docs/architecture.md
     docs/generation.md
     docs/live-wayland-testing.md
+    docs/public-api-audit.md
+    docs/public-api-baseline.md
+    docs/release.md
+    docs/strict-memory-safety-audit.md
 )
 
 required_executables=(
     scripts/dev/bootstrap-linux.sh
     scripts/protocols/generate.sh
     scripts/protocols/verify-generated.sh
+    scripts/ci/verify-public-api-audit.sh
     scripts/shims/verify-shims.sh
 )
 
@@ -50,6 +55,7 @@ required_patterns=(
     "make wayland-headless"
     "./scripts/protocols/generate.sh"
     "./scripts/protocols/verify-generated.sh"
+    "./scripts/ci/verify-public-api-audit.sh"
     "./scripts/shims/verify-shims.sh"
 )
 
