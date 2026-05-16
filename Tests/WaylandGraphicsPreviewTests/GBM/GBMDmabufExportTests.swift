@@ -45,6 +45,31 @@ struct GBMDmabufExportTests {
     }
 
     @Test
+    func takingPlaneExportTransfersLayoutAndDescriptor() throws {
+        let descriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(descriptors.readEnd)
+        }
+        let export = GBMDmabufExport(
+            adopting: rawExport(
+                fileDescriptor: descriptors.writeEnd,
+                offset: 32,
+                stride: 128
+            )
+        )
+        #expect(Array(export.planeIndices) == [0])
+
+        var plane = try export.takePlaneExport(at: 0)
+        defer {
+            plane.descriptor.close()
+        }
+
+        #expect(plane.layout == GBMDmabufPlaneLayout(index: 0, offset: 32, stride: 128))
+        #expect(plane.descriptor.rawValue == descriptors.writeEnd)
+        #expect(Glibc.fcntl(plane.descriptor.rawValue, F_GETFD) != -1)
+    }
+
+    @Test
     func exportCloseDoesNotCloseTakenPlaneDescriptor() throws {
         let descriptors = try RawFileDescriptor.pipeDescriptors()
         defer {

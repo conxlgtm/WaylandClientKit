@@ -227,6 +227,8 @@ struct RawLinuxDmabufBufferParamsStateTests {
         #expect(flags.contains(.yInvert))
         #expect(flags.unknownRawValue == 0x8000_0000)
         #expect(flags.hasUnknownBits)
+        #expect(!flags.containsOnlyKnownBits)
+        #expect(RawLinuxDmabufBufferParamsFlags.yInvert.containsOnlyKnownBits)
     }
 }
 

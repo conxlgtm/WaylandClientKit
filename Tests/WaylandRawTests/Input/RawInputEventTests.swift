@@ -59,8 +59,10 @@ struct RawInputEventTests {
     func seatCapabilitiesDescriptionIncludesUnknownBits() {
         let capabilities = SeatCapabilities(rawValue: 0x80)
         #expect(capabilities.unknownBits == 0x80)
+        #expect(capabilities.unknownRawValue == 0x80)
         #expect(capabilities.description == "unknown(0x80)")
         #expect(SeatCapabilities(rawValue: 0x81).description == "pointer+unknown(0x80)")
+        #expect(SeatCapabilities.pointer.containsOnlyKnownBits)
     }
     @Test
     func pointerAxisComponentsPreserveRawValues() {

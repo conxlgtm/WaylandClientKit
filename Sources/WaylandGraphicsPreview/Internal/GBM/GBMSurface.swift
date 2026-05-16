@@ -63,8 +63,8 @@ package final class GBMSurface {
 
     @safe
     package func withUnsafeSurfacePointer<Result>(
-        _ body: (OpaquePointer) throws -> Result
-    ) throws -> Result {
+        _ body: (OpaquePointer) throws(GBMAllocationError) -> Result
+    ) throws(GBMAllocationError) -> Result {
         guard let surfacePointer = unsafe pointer else {
             throw GBMAllocationError.surfaceDestroyed
         }
@@ -74,12 +74,10 @@ package final class GBMSurface {
 
     @safe
     package func lockFrontBuffer() throws(GBMAllocationError) -> GBMLockedSurfaceBuffer {
-        guard let surfacePointer = unsafe pointer else {
-            throw GBMAllocationError.surfaceDestroyed
+        let bufferPointer = try withUnsafeSurfacePointer { surfacePointer in
+            unsafe swl_gbm_surface_lock_front_buffer(surfacePointer)
         }
-        guard
-            let bufferPointer = unsafe swl_gbm_surface_lock_front_buffer(surfacePointer)
-        else {
+        guard let bufferPointer = unsafe bufferPointer else {
             throw GBMAllocationError.surfaceFrontBufferLockFailed(
                 errno: GBMAllocationError.capturedCurrentErrno()
             )
@@ -162,17 +160,21 @@ package final class GBMLockedSurfaceBuffer {
     }
 
     @safe
-    package func exportDmabuf() throws(GBMAllocationError) -> GBMDmabufExport {
+    package func withLiveBufferPointer<Result>(
+        _ body: (OpaquePointer) throws(GBMAllocationError) -> Result
+    ) throws(GBMAllocationError) -> Result {
         guard let bufferPointer = unsafe pointer else {
             throw GBMAllocationError.bufferDestroyed
         }
 
-        var exportedBuffer = swl_gbm_bo_export()
-        guard unsafe swl_gbm_bo_export_dmabuf(bufferPointer, &exportedBuffer) == 0 else {
-            throw GBMAllocationError.exportFailed(errno: GBMAllocationError.capturedCurrentErrno())
-        }
+        return unsafe try body(bufferPointer)
+    }
 
-        return GBMDmabufExport(adopting: exportedBuffer)
+    @safe
+    package func exportDmabuf() throws(GBMAllocationError) -> GBMDmabufExport {
+        try withLiveBufferPointer { bufferPointer throws(GBMAllocationError) in
+            unsafe try GBMDmabufExport.exportingBuffer(bufferPointer)
+        }
     }
 
     package func release() {

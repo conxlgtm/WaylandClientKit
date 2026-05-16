@@ -23,7 +23,7 @@ package struct RawLinuxDmabufFormatModifier: Equatable, Hashable, Sendable {
     }
 }
 
-package struct RawLinuxDmabufTrancheFlags: OptionSet, Sendable {
+package struct RawLinuxDmabufTrancheFlags: OptionSet, Sendable, KnownUInt32OptionSet {
     package let rawValue: UInt32
 
     package init(rawValue flags: UInt32) {
@@ -32,14 +32,6 @@ package struct RawLinuxDmabufTrancheFlags: OptionSet, Sendable {
 
     package static let scanout = RawLinuxDmabufTrancheFlags(rawValue: 1)
     package static let known: RawLinuxDmabufTrancheFlags = [.scanout]
-
-    package var unknownRawValue: UInt32 {
-        rawValue & ~Self.known.rawValue
-    }
-
-    package var hasUnknownBits: Bool {
-        unknownRawValue != 0
-    }
 }
 
 package struct RawLinuxDmabufTranche: Equatable, Sendable {
@@ -312,31 +304,13 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
         }
 
         guard let mainDevice = batch.mainDevice else {
-            let error = invalidateFeedback(
-                scope: feedbackScope,
-                event: "done",
-                field: "main_device"
-            )
-            startsFreshBatchOnNextEvent = true
-            throw error
+            try finishFailure(scope: feedbackScope, field: "main_device")
         }
         guard batch.currentTranche.isEmpty else {
-            let error = invalidateFeedback(
-                scope: feedbackScope,
-                event: "done",
-                field: "tranche_done"
-            )
-            startsFreshBatchOnNextEvent = true
-            throw error
+            try finishFailure(scope: feedbackScope, field: "tranche_done")
         }
         guard !batch.tranches.isEmpty else {
-            let error = invalidateFeedback(
-                scope: feedbackScope,
-                event: "done",
-                field: "tranche"
-            )
-            startsFreshBatchOnNextEvent = true
-            throw error
+            try finishFailure(scope: feedbackScope, field: "tranche")
         }
 
         startsFreshBatchOnNextEvent = true
@@ -391,6 +365,19 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
         if let malformedFeedback {
             throw malformedFeedback
         }
+    }
+
+    private mutating func finishFailure(
+        scope feedbackScope: RawLinuxDmabufFeedbackScope,
+        field: String
+    ) throws(RuntimeError) -> Never {
+        let error = invalidateFeedback(
+            scope: feedbackScope,
+            event: "done",
+            field: field
+        )
+        startsFreshBatchOnNextEvent = true
+        throw error
     }
 }
 
