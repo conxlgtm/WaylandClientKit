@@ -240,7 +240,7 @@ extension PopupModel {
         }
 
         return try transitionActivePopupState { activeState in
-            guard activeState.presentation == .idle else {
+            guard activeState.presentation.isIdle else {
                 throw ClientError.window(
                     windowID,
                     .invalidLifecycleTransition(.nestedPresentation)
@@ -269,16 +269,14 @@ extension PopupModel {
     ) throws -> [PopupEffect] {
         let windowID = parentWindowID
         return try transitionActivePopupState { activeState in
-            let pendingRequest: PopupPresentationRequest
-            switch activeState.presentation {
-            case .idle:
-                throw ClientError.window(
-                    windowID,
-                    .invalidLifecycleTransition(.presentWithoutRedrawRequest)
-                )
-            case .requested(let request):
-                pendingRequest = request
-            case .drawing:
+            guard let pendingRequest = activeState.presentation.requestedRequest else {
+                if activeState.presentation.isIdle {
+                    throw ClientError.window(
+                        windowID,
+                        .invalidLifecycleTransition(.presentWithoutRedrawRequest)
+                    )
+                }
+
                 throw ClientError.window(
                     windowID,
                     .invalidLifecycleTransition(.nestedPresentation)
@@ -413,11 +411,8 @@ extension PopupModel {
         _ effects: [WindowRedrawEffect],
         event: PopupLifecycleEvent
     ) -> [PopupEffect] {
-        effects.map { effect in
-            switch effect {
-            case .publishRedrawRequested:
-                .publishRedrawRequested(event)
-            }
+        effects.mapRedrawRequested {
+            .publishRedrawRequested(event)
         }
     }
 
@@ -426,15 +421,14 @@ extension PopupModel {
         in activeState: ActivePopupState,
         windowID: WindowID
     ) throws -> UInt64 {
-        switch activeState.presentation {
-        case .drawing(let request):
-            return request.generation
-        case .idle, .requested:
+        guard let generation = activeState.presentation.drawingGeneration else {
             throw ClientError.window(
                 windowID,
                 .invalidLifecycleTransition(.inactivePresentationCompletion)
             )
         }
+
+        return generation
     }
 
     private static func requireActivePresentation(
