@@ -208,5 +208,4 @@ private final class RawXDGOutputListenerOwner {
         >
         .withOwner(from: data, message: message(), body)
     }
-
 }
