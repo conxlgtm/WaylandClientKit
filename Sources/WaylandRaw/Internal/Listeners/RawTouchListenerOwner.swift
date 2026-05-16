@@ -160,11 +160,7 @@ final class TouchListenerOwner {
         guard !isCanceled, isCurrentDevice(deviceID) else { return }
 
         eventSink.append(
-            RawInputEventDraft(
-                seatID: deviceID.seatID,
-                deviceID: deviceID,
-                kind: .touch(event)
-            )
+            RawInputEventDraft(deviceID: deviceID, kind: .touch(event))
         )
     }
 
