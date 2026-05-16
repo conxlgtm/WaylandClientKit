@@ -1,7 +1,7 @@
 import CWaylandProtocols
 import Glibc
 
-package struct RawLinuxDmabufBufferParamsFlags: OptionSet, Sendable {
+package struct RawLinuxDmabufBufferParamsFlags: OptionSet, Sendable, KnownUInt32OptionSet {
     package let rawValue: UInt32
 
     package init(rawValue flags: UInt32) {
@@ -16,14 +16,6 @@ package struct RawLinuxDmabufBufferParamsFlags: OptionSet, Sendable {
         .interlaced,
         .bottomFirst,
     ]
-
-    package var unknownRawValue: UInt32 {
-        rawValue & ~Self.known.rawValue
-    }
-
-    package var hasUnknownBits: Bool {
-        unknownRawValue != 0
-    }
 }
 
 package enum RawLinuxDmabufBufferParamsLifecycle: Equatable, Sendable {

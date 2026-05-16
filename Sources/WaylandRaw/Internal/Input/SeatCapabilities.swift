@@ -1,4 +1,10 @@
-package struct SeatCapabilities: OptionSet, Sendable, Equatable, CustomStringConvertible {
+package struct SeatCapabilities:
+    OptionSet,
+    Sendable,
+    Equatable,
+    KnownUInt32OptionSet,
+    CustomStringConvertible
+{
     package let rawValue: UInt32
 
     package init(rawValue capabilityRawValue: UInt32) {
@@ -11,11 +17,7 @@ package struct SeatCapabilities: OptionSet, Sendable, Equatable, CustomStringCon
     package static let known: Self = [.pointer, .keyboard, .touch]
 
     package var unknownBits: UInt32 {
-        rawValue & ~Self.known.rawValue
-    }
-
-    package var hasUnknownBits: Bool {
-        unknownBits != 0
+        unknownRawValue
     }
 
     package var hasPointer: Bool {
