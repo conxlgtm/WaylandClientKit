@@ -27,6 +27,7 @@ swift build -c release --product swift-wayland-smoke
 Under a real Wayland session:
 
 ```bash
+./scripts/smoke/collect-compositor-facts.sh
 ./scripts/smoke/smoke-wayland.sh
 ./scripts/smoke/integration-wayland.sh
 swift run SwiftWaylandDemo
@@ -34,6 +35,7 @@ swift run SwiftWaylandDemo
 
 Compositor targets are Weston, GNOME/Mutter, KDE/KWin, and Sway/wlroots. A checkpoint
 should not treat Weston-only behavior as sufficient for compositor compatibility.
+Record results in [compositor-matrix.md](compositor-matrix.md).
 
 ## Tag Checklist
 
@@ -46,13 +48,14 @@ should not treat Weston-only behavior as sufficient for compositor compatibility
 7. Run `./scripts/smoke/integration-wayland.sh` under a Wayland session.
 8. Manually run `swift run SwiftWaylandDemo` on at least one non-Weston desktop
    before treating compositor compatibility as proven.
-9. Regenerate protocols and confirm no diff.
-10. Generate and review the public API report.
-11. Run `./scripts/ci/verify-public-api-audit.sh`.
-12. Review `docs/public-api-audit.md`.
-13. Update README support and unsupported lists if behavior changed.
-14. Tag the checkpoint.
-15. If publishing GitHub checkpoint notes, copy the supported and unsupported scope from README.
+9. Update `docs/compositor-matrix.md` with the compositor facts and check results.
+10. Regenerate protocols and confirm no diff.
+11. Generate and review the public API report.
+12. Run `./scripts/ci/verify-public-api-audit.sh`.
+13. Review `docs/public-api-audit.md`.
+14. Update README support and unsupported lists if behavior changed.
+15. Tag the checkpoint.
+16. If publishing GitHub checkpoint notes, copy the supported and unsupported scope from README.
 
 ## Stop Conditions
 

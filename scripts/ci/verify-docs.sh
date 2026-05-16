@@ -7,6 +7,7 @@ required_files=(
     README.md
     CONTRIBUTING.md
     docs/architecture.md
+    docs/compositor-matrix.md
     docs/generation.md
     docs/live-wayland-testing.md
     docs/public-api-audit.md
@@ -20,6 +21,7 @@ required_executables=(
     scripts/protocols/generate.sh
     scripts/protocols/verify-generated.sh
     scripts/ci/verify-public-api-audit.sh
+    scripts/smoke/collect-compositor-facts.sh
     scripts/shims/verify-shims.sh
 )
 
@@ -53,9 +55,11 @@ required_patterns=(
     "ripgrep"
     "make check"
     "make wayland-headless"
+    "compositor-matrix.md"
     "./scripts/protocols/generate.sh"
     "./scripts/protocols/verify-generated.sh"
     "./scripts/ci/verify-public-api-audit.sh"
+    "./scripts/smoke/collect-compositor-facts.sh"
     "./scripts/shims/verify-shims.sh"
 )
 
