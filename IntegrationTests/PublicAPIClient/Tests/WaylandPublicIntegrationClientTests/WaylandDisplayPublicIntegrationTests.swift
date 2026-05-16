@@ -67,6 +67,35 @@ struct WaylandDisplayPublicIntegrationTests {
     }
 
     @Test
+    func dragOfferForUnknownSeatReportsPublicError() async throws {
+        try await withPublicConnection { display in
+            let capabilities = try await display.capabilities()
+            let unknownSeatID = SeatID(rawValue: UInt32.max)
+
+            do {
+                _ = try await display.dragOffer(for: unknownSeatID)
+                Issue.record("Expected a drag-and-drop public error")
+            } catch let error as DataTransferError {
+                switch error {
+                case .unavailable:
+                    #expect(capabilities.dragAndDrop == .unavailable)
+                    noteOptionalProtocolSkip(
+                        test: "drag-and-drop",
+                        interfaceName: "wl_data_device_manager"
+                    )
+                case .unknownSeat(let seatID), .missingDataDevice(let seatID):
+                    #expect(capabilities.dragAndDrop.isAvailable)
+                    #expect(seatID == unknownSeatID)
+                default:
+                    Issue.record("Expected drag-and-drop error, got \(error)")
+                }
+            } catch {
+                Issue.record("Expected DataTransferError, got \(error)")
+            }
+        }
+    }
+
+    @Test
     func toplevelWindowShowsRedrawsAndClosesThroughPublicAPI() async throws {
         try await withPublicConnection { display in
             let displayEvents = display.events
@@ -124,6 +153,62 @@ struct WaylandDisplayPublicIntegrationTests {
     }
 
     @Test
+    func presentationFeedbackReportsUnavailableOrPublishesResult() async throws {
+        try await withPublicConnection { display in
+            let capabilities = try await display.capabilities()
+            let window = try await display.createTopLevelWindow(
+                configuration: testWindowConfiguration()
+            )
+
+            try await show(window, color: 0x0014_2434)
+            let presentationEvents = window.presentationEvents
+
+            guard capabilities.presentationTime.isAvailable else {
+                do {
+                    try await window.requestPresentationFeedback()
+                    Issue.record("Expected presentation-time unavailable error")
+                } catch ClientError.display(.presentationTimeUnavailable) {
+                    noteOptionalProtocolSkip(
+                        test: "presentation feedback",
+                        interfaceName: "wp_presentation"
+                    )
+                } catch {
+                    Issue.record("Expected presentation-time error, got \(error)")
+                }
+
+                await window.close()
+                return
+            }
+
+            try await window.requestPresentationFeedback()
+            try await window.requestRedraw()
+            try await window.redraw { frame in
+                fill(frame, color: 0x0044_2414)
+            }
+
+            let feedback = try await withTimeout(
+                nanoseconds: publicIntegrationWaitTimeoutNanoseconds,
+                operation: "waiting for presentation feedback"
+            ) {
+                try await nextPresentationFeedback(in: presentationEvents)
+            }
+
+            guard let feedback else {
+                throw PublicIntegrationError.streamEnded
+            }
+
+            switch feedback {
+            case .presented(let presentation):
+                #expect(presentation.surface == feedback.surface)
+            case .discarded(let identity):
+                #expect(identity == feedback.surface)
+            }
+
+            await window.close()
+        }
+    }
+
+    @Test
     func hiddenCursorRequestWithoutPointerFocusIsDeterministic() async throws {
         try await WaylandDisplay.withConnection(
             cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
@@ -138,6 +223,13 @@ struct WaylandDisplayPublicIntegrationTests {
             #expect(finalCursor == .hidden)
         }
     }
+}
+
+private func nextPresentationFeedback(
+    in events: WindowPresentationEvents
+) async throws -> SurfacePresentationFeedback? {
+    var iterator = events.makeAsyncIterator()
+    return try await iterator.next()
 }
 
 func noteOptionalProtocolSkip(test: String, interfaceName: String) {
