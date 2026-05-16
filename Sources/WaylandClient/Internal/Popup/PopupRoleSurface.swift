@@ -1,7 +1,7 @@
 import Glibc
 import WaylandRaw
 
-private struct PopupRoleResources {
+struct PopupRoleResources {
     let surface: RawSurface
     let xdgSurface: RawXDGSurface
     let popup: RawXDGPopup
@@ -31,7 +31,7 @@ package final class PopupRoleSurface {
     package let failureSink: any WindowFailureSink
     package let configureState = PopupConfigureState()
 
-    private var surfaceRuntime = SurfaceRuntime<PopupRoleResources>(role: .popup)
+    var surfaceRuntime = SurfaceRuntime<PopupRoleResources>(role: .popup)
     package var pendingFrameRegistration: FrameCallbackRegistration?
     package var model: PopupModel
 
@@ -234,16 +234,6 @@ extension PopupRoleSurface {
     package var scaleInstallation: SurfaceScaleInstallation {
         get { surfaceRuntime.scaleInstallation }
         set { surfaceRuntime.scaleInstallation = newValue }
-    }
-
-    package var buffers: RawSharedMemoryPool? {
-        get { surfaceRuntime.buffers }
-        set { surfaceRuntime.buffers = newValue }
-    }
-
-    package var retiredBufferPools: [RawSharedMemoryPool] {
-        get { surfaceRuntime.retiredBufferPools }
-        set { surfaceRuntime.retiredBufferPools = newValue }
     }
 
     private var liveRoleResources: PopupRoleResources {
