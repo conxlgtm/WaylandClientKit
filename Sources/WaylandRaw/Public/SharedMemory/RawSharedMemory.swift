@@ -102,8 +102,7 @@ private final class SharedMemoryMapping {
 
     init(fileDescriptor: Int32, byteCount requestedByteCount: Int) throws(RuntimeError) {
         guard requestedByteCount > 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL, operation: .validateArgument("shared memory mapping byte count"))
+            throw RuntimeError.invalidArgument("shared memory mapping byte count")
         }
 
         mappedRegion = try MappedRegion(
@@ -285,8 +284,7 @@ package final class RawSharedMemoryPool {
         onBufferReleased: @escaping () -> Void
     ) throws(RuntimeError) {
         guard bufferCount > 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL, operation: .validateArgument("shared memory buffer count"))
+            throw RuntimeError.invalidArgument("shared memory buffer count")
         }
 
         let bufferLayout = try BufferLayout(width: width, height: height)

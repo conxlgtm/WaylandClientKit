@@ -8,8 +8,7 @@ package struct BufferLayout: Equatable, Sendable {
 
     package init(width bufferWidth: Int32, height bufferHeight: Int32) throws(RuntimeError) {
         guard bufferWidth > 0, bufferHeight > 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL, operation: .validateArgument("buffer dimensions"))
+            throw RuntimeError.invalidArgument("buffer dimensions")
         }
 
         let strideResult = Int(bufferWidth).multipliedReportingOverflow(

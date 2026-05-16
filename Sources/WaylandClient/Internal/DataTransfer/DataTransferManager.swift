@@ -132,6 +132,11 @@ package final class DataTransferManager {
         _ effect: DataTransferEffect,
         nextState: inout DataTransferState
     ) throws {
+        if let event = effect.publishedEvent {
+            eventQueue.append(event)
+            return
+        }
+
         switch effect {
         case .bindDataDevice(let seatID):
             try bindDataDevice(for: seatID, nextState: &nextState)
@@ -144,19 +149,12 @@ package final class DataTransferManager {
             destroySourceBindingPreservingPendingSends(sourceID)
         case .cancelSource(let sourceID):
             cancelSourceBinding(sourceID)
-        case .publishSelectionChanged(let seatID, let offerID):
-            eventQueue.append(
-                .clipboardSelectionChanged(
-                    ClipboardSelectionEvent(seatID: seatID, offerID: offerID)
-                )
-            )
         case .publishDragEntered, .publishDragMotion, .publishDragLeft, .publishDragDropped,
             .publishDragOfferChanged, .publishDragSourceCancelled,
             .publishDragSourceTargetChanged, .publishDragSourceActionChanged,
-            .publishDragSourceDropPerformed, .publishDragSourceFinished:
-            appendDragAndDropEvent(for: effect)
-        case .publishSourceCancelled(let sourceID):
-            eventQueue.append(.clipboardSourceCancelled(sourceID.clipboardIdentity))
+            .publishDragSourceDropPerformed, .publishDragSourceFinished,
+            .publishSelectionChanged, .publishSourceCancelled:
+            return
         }
     }
 

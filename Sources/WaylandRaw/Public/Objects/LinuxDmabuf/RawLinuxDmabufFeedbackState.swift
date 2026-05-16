@@ -31,9 +31,14 @@ package struct RawLinuxDmabufTrancheFlags: OptionSet, Sendable {
     }
 
     package static let scanout = RawLinuxDmabufTrancheFlags(rawValue: 1)
+    package static let known: RawLinuxDmabufTrancheFlags = [.scanout]
 
     package var unknownRawValue: UInt32 {
-        rawValue & ~Self.scanout.rawValue
+        rawValue & ~Self.known.rawValue
+    }
+
+    package var hasUnknownBits: Bool {
+        unknownRawValue != 0
     }
 }
 
@@ -41,6 +46,16 @@ package struct RawLinuxDmabufTranche: Equatable, Sendable {
     package let targetDevice: RawLinuxDmabufDevice
     package let flags: RawLinuxDmabufTrancheFlags
     package let formats: [RawLinuxDmabufFormatModifier]
+
+    package func formatModifiers(for format: UInt32) -> [RawLinuxDmabufFormatModifier] {
+        formats.filter { $0.format == format }
+    }
+}
+
+extension Sequence where Element == RawLinuxDmabufFormatModifier {
+    package var modifiers: [UInt64] {
+        map(\.modifier)
+    }
 }
 
 package struct RawLinuxDmabufFeedbackSnapshot: Equatable, Sendable {
@@ -58,10 +73,7 @@ package enum RawLinuxDmabufFormatTable {
         byteCount rawByteCount: UInt32
     ) throws(RuntimeError) -> [RawLinuxDmabufFormatModifier] {
         guard fd >= 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .validateArgument("dmabuf format table fd")
-            )
+            throw RuntimeError.invalidArgument("dmabuf format table fd")
         }
 
         defer {
@@ -161,10 +173,7 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
         bytes: [UInt8],
         scope feedbackScope: RawLinuxDmabufFeedbackScope
     ) throws(RuntimeError) {
-        prepareForEvent()
-        if let malformedFeedback {
-            throw malformedFeedback
-        }
+        try prepareForValidEvent()
         guard batch.mainDevice == nil else {
             throw invalidateFeedback(
                 scope: feedbackScope,
@@ -180,10 +189,7 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
         bytes: [UInt8],
         scope feedbackScope: RawLinuxDmabufFeedbackScope
     ) throws(RuntimeError) {
-        prepareForEvent()
-        if let malformedFeedback {
-            throw malformedFeedback
-        }
+        try prepareForValidEvent()
         guard batch.currentTranche.targetDevice == nil else {
             throw invalidateFeedback(
                 scope: feedbackScope,
@@ -201,10 +207,7 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
     )
         throws(RuntimeError)
     {
-        prepareForEvent()
-        if let malformedFeedback {
-            throw malformedFeedback
-        }
+        try prepareForValidEvent()
 
         var trancheFormats = batch.currentTranche.formats
         for (offset, index) in indices.enumerated() {
@@ -236,10 +239,7 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
         _ rawFlags: UInt32,
         scope feedbackScope: RawLinuxDmabufFeedbackScope
     ) throws(RuntimeError) {
-        prepareForEvent()
-        if let malformedFeedback {
-            throw malformedFeedback
-        }
+        try prepareForValidEvent()
         guard batch.currentTranche.flags == nil else {
             throw invalidateFeedback(
                 scope: feedbackScope,
@@ -254,10 +254,7 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
     package mutating func finishCurrentTranche(
         scope feedbackScope: RawLinuxDmabufFeedbackScope
     ) throws(RuntimeError) {
-        prepareForEvent()
-        if let malformedFeedback {
-            throw malformedFeedback
-        }
+        try prepareForValidEvent()
 
         guard let targetDevice = batch.currentTranche.targetDevice else {
             throw invalidateFeedback(
@@ -307,9 +304,11 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
     package mutating func finish(scope feedbackScope: RawLinuxDmabufFeedbackScope)
         throws(RuntimeError) -> RawLinuxDmabufFeedbackSnapshot
     {
-        if let malformedFeedback {
+        do {
+            try prepareForValidEvent()
+        } catch {
             startsFreshBatchOnNextEvent = true
-            throw malformedFeedback
+            throw error
         }
 
         guard let mainDevice = batch.mainDevice else {
@@ -385,6 +384,14 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
         malformedFeedback = nil
         startsFreshBatchOnNextEvent = false
     }
+
+    private mutating func prepareForValidEvent() throws(RuntimeError) {
+        prepareForEvent()
+
+        if let malformedFeedback {
+            throw malformedFeedback
+        }
+    }
 }
 
 extension RawLinuxDmabufFeedbackState {
@@ -396,7 +403,7 @@ extension RawLinuxDmabufFeedbackState {
         for tranche in batch.tranches
         where tranche.targetDevice == targetDevice && tranche.flags == flags {
             for (index, format) in formats.enumerated()
-            where tranche.formats.contains(format) {
+            where tranche.formatModifiers(for: format.format).contains(format) {
                 return (index, UInt64(format.format))
             }
         }

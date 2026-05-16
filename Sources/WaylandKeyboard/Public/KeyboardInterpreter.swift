@@ -113,10 +113,7 @@ package final class KeyboardInterpreter {
 
     var trackedDeviceIDs: [RawInputDeviceID] {
         threadAffinity.preconditionIsOwnerThread()
-        return devicesByID.keys.sorted { lhs, rhs in
-            (lhs.seatID.rawValue, lhs.kind.description, lhs.generation)
-                < (rhs.seatID.rawValue, rhs.kind.description, rhs.generation)
-        }
+        return devicesByID.keys.sortedByInputDeviceIdentity()
     }
 
     deinit {

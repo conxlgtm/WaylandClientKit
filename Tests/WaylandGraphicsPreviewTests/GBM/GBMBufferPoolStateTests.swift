@@ -60,7 +60,9 @@ struct GBMBufferPoolStateTests {
         try state.insertAvailableSlot(slotID)
 
         let leasedSlotID = try state.leaseNextAvailableSlot()
+        #expect(try state.lifecycle(for: leasedSlotID).isLeased)
         try state.markSubmitted(leasedSlotID, commitGeneration: 4)
+        #expect(try state.lifecycle(for: leasedSlotID).submittedCommitGeneration == 4)
 
         #expect(throws: GBMBufferPoolStateError.noAvailableSlots) {
             _ = try state.leaseNextAvailableSlot()
@@ -68,6 +70,7 @@ struct GBMBufferPoolStateTests {
 
         try state.markReleased(leasedSlotID)
 
+        #expect(try state.lifecycle(for: leasedSlotID).isAvailable)
         #expect(try state.leaseNextAvailableSlot() == slotID)
     }
 

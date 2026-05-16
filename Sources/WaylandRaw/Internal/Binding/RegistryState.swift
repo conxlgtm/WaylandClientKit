@@ -39,7 +39,7 @@ package final class RegistryState {
     }
 
     package var snapshot: [RawGlobalAdvertisement] {
-        globalsByName.values.sorted { $0.name < $1.name }
+        globalsByName.values.sortedByGlobalName()
     }
 
     package var rejectedGlobals: [RawGlobalAdvertisementRejection] {
@@ -51,22 +51,6 @@ package final class RegistryState {
     }
 
     package func firstGlobal(named interfaceName: String) -> RawGlobalAdvertisement? {
-        var selected: RawGlobalAdvertisement?
-        for global in globalsByName.values where global.interfaceName == interfaceName {
-            guard let current = selected else {
-                selected = global
-                continue
-            }
-
-            let hasNewerVersion = global.advertisedVersion > current.advertisedVersion
-            let hasEarlierNameAtSameVersion =
-                global.advertisedVersion == current.advertisedVersion
-                && global.name < current.name
-            if hasNewerVersion || hasEarlierNameAtSameVersion {
-                selected = global
-            }
-        }
-
-        return selected
+        globalsByName.values.bestGlobal(named: interfaceName)
     }
 }
