@@ -1012,14 +1012,21 @@ extension TopLevelWindow {
             runtime: &surfaceRuntime,
             pendingFrameRegistration: &pendingFrameRegistration
         )
-        try interpretWindowEffects(
-            model.reduce(
-                .externalPresentationSucceeded(
-                    generation: generation,
-                    bufferAvailability: bufferAvailability
+        do {
+            try interpretWindowEffects(
+                model.reduce(
+                    .externalPresentationSucceeded(
+                        generation: generation,
+                        bufferAvailability: bufferAvailability
+                    )
                 )
             )
-        )
+        } catch {
+            pendingFrameRegistration = nil
+            surfaceRuntime.cancelFrameCallback()
+            throw error
+        }
+
         return PreviewBufferPresentationResult(
             generation: generation,
             commitPlan: commitPlan
