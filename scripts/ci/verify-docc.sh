@@ -4,8 +4,6 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CATALOG="$ROOT/Sources/WaylandClient/WaylandClient.docc"
 ARTICLE="$CATALOG/WaylandClient.md"
-SYMBOL_GRAPH_DIR="$ROOT/.build/x86_64-unknown-linux-gnu/symbolgraph"
-SYMBOL_GRAPH="$SYMBOL_GRAPH_DIR/WaylandClient.symbols.json"
 
 missing=0
 
@@ -27,8 +25,16 @@ fi
     --minimum-access-level public \
     --skip-synthesized-members
 
+SYMBOL_GRAPH="$(
+    find "$ROOT/.build" \
+        -path "*/symbolgraph/WaylandClient.symbols.json" \
+        -type f \
+        -print \
+        -quit
+)"
+
 if [[ ! -f "$SYMBOL_GRAPH" ]]; then
-    echo "Missing WaylandClient symbol graph: $SYMBOL_GRAPH"
+    echo "Missing WaylandClient symbol graph under .build/*/symbolgraph"
     exit 1
 fi
 
@@ -36,4 +42,3 @@ if ! grep --fixed-strings --quiet '"module":{"name":"WaylandClient"' "$SYMBOL_GR
     echo "WaylandClient symbol graph has unexpected module metadata"
     exit 1
 fi
-
