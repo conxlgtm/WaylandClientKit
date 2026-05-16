@@ -382,7 +382,6 @@ package final class TopLevelWindow {
         return try interpretPresentationEffects(effects, draw)
     }
 
-    // swiftlint:disable:next function_body_length
     private func performSoftwarePresent(
         _ request: PresentationRequest,
         _ draw: (borrowing SoftwareFrame) throws -> Void
@@ -392,109 +391,45 @@ package final class TopLevelWindow {
         )
 
         do {
-            guard pendingFrameRegistration == nil else {
-                failActivePresentation(
-                    generation: request.generation,
-                    error: .frameCallbackRequest("frame callback is still pending")
-                )
-                return .skippedPendingFrame
-            }
-
-            let geometry = try surfaceGeometry(logicalSize: request.configuration.size)
-            let pool = try bufferPool(for: geometry.bufferSize)
-            dropReleasedRetiredPools()
-
-            guard var drawingBuffer = pool.acquireDrawingBuffer() else {
-                try interpretWindowEffects(model.reduce(.presentationBlockedByBuffer))
-                return .waitingForBuffer
-            }
-
-            do {
-                try unsafe drawingBuffer.withUnsafeMutableBytes { bytes in
-                    let frame = try unsafe SoftwareFrame(
-                        width: drawingBuffer.width,
-                        height: drawingBuffer.height,
-                        stride: drawingBuffer.stride,
-                        geometry: SoftwareFrameGeometry(surface: geometry),
-                        bytes: bytes
-                    )
-                    try draw(frame)
-                }
-            } catch {
-                failActivePresentation(
-                    generation: request.generation,
-                    error: .userDraw(String(describing: error))
-                )
-                drawingBuffer.discard()
-                throw error
-            }
-
-            guard !model.isClosed else {
-                try interpretWindowEffects(model.reduce(.transientStateReset))
-                drawingBuffer.discard()
-                return .skippedClosed
-            }
-
-            let preparedCommit: PreparedSurfaceFrameCommit
-            do {
-                preparedCommit = try SurfaceFrameCommitter.prepare(
-                    SurfaceFrameCommitRequest(
-                        surface: surface,
-                        scaleInstallation: scaleInstallation,
-                        generation: request.generation,
-                        geometry: geometry
-                    ),
-                    runtime: &surfaceRuntime,
-                )
-            } catch {
-                failActivePresentation(
-                    generation: request.generation,
-                    error: .surfaceCommit(String(describing: error))
-                )
-                drawingBuffer.discard()
-                throw error
-            }
-
-            do {
-                pendingFrameRegistration = try SurfaceFrameCommitter.requestFrameCallback(
-                    on: surface,
-                    runtime: &surfaceRuntime,
-                    generation: request.generation
-                ) { [weak self] in
+            return try WindowSoftwarePresenter(
+                surface: surface,
+                scaleInstallation: scaleInstallation,
+                geometryForLogicalSize: { [self] logicalSize in
+                    try surfaceGeometry(logicalSize: logicalSize)
+                },
+                bufferPool: { [self] bufferSize in
+                    try bufferPool(for: bufferSize)
+                },
+                isWindowClosed: { [self] in model.isClosed },
+                dropReleasedRetiredPools: { [self] in dropReleasedRetiredPools() },
+                onFrame: { [weak self] in
                     self?.handleFrameDone()
-                }
-            } catch {
-                failActivePresentation(
-                    generation: request.generation,
-                    error: .frameCallbackRequest(String(describing: error))
-                )
-                drawingBuffer.discard()
-                throw error
-            }
-
-            do {
-                try SurfaceFrameCommitter.recordPreparedCommit(
-                    preparedCommit,
-                    runtime: &surfaceRuntime
-                )
-                let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
-                SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
-            } catch {
-                pendingFrameRegistration = nil
-                surfaceRuntime.cancelFrameCallback()
-                drawingBuffer.discard()
-                throw error
-            }
-
-            try interpretWindowEffects(
-                model.reduce(
-                    .presentationSucceeded(
-                        generation: request.generation,
-                        bufferAvailability: try redrawBufferAvailability()
+                },
+                failActivePresentation: { [self] generation, error in
+                    failActivePresentation(generation: generation, error: error)
+                },
+                onPresentationBlockedByBuffer: { [self] in
+                    try interpretWindowEffects(model.reduce(.presentationBlockedByBuffer))
+                },
+                onTransientStateReset: { [self] in
+                    try interpretWindowEffects(model.reduce(.transientStateReset))
+                },
+                onPresentationSucceeded: { [self] generation in
+                    try interpretWindowEffects(
+                        model.reduce(
+                            .presentationSucceeded(
+                                generation: generation,
+                                bufferAvailability: try redrawBufferAvailability()
+                            )
+                        )
                     )
-                )
+                }
+            ).present(
+                request: request,
+                draw: draw,
+                runtime: &surfaceRuntime,
+                pendingFrameRegistration: &pendingFrameRegistration
             )
-            return .presented
         } catch {
             failPresentationIfStillActive(
                 generation: request.generation,
