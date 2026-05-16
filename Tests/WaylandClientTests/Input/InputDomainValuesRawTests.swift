@@ -125,7 +125,7 @@ struct InputDomainValuesRawTests {
     }
 
     @Test
-    func touchEventsPreserveRawFacts() {
+    func touchDownAndMotionEventsPreserveRawFacts() {
         let rawTouchID = RawTouchID(rawValue: 7)
 
         #expect(TouchID(rawTouchID) == TouchID(rawValue: 7))
@@ -148,14 +148,6 @@ struct InputDomainValuesRawTests {
                 )
         )
         #expect(
-            TouchUpEvent(RawTouchUp(serial: 31, time: 32, id: rawTouchID))
-                == TouchUpEvent(
-                    serial: InputSerial(rawValue: 31),
-                    time: WaylandTimestampMilliseconds(rawValue: 32),
-                    id: TouchID(rawValue: 7)
-                )
-        )
-        #expect(
             TouchMotionEvent(
                 RawTouchMotion(
                     time: 41,
@@ -168,6 +160,20 @@ struct InputDomainValuesRawTests {
                     time: WaylandTimestampMilliseconds(rawValue: 41),
                     id: TouchID(rawValue: 7),
                     location: PointerLocation(x: 1.0, y: 2.0)
+                )
+        )
+    }
+
+    @Test
+    func touchUpShapeAndOrientationEventsPreserveRawFacts() {
+        let rawTouchID = RawTouchID(rawValue: 7)
+
+        #expect(
+            TouchUpEvent(RawTouchUp(serial: 31, time: 32, id: rawTouchID))
+                == TouchUpEvent(
+                    serial: InputSerial(rawValue: 31),
+                    time: WaylandTimestampMilliseconds(rawValue: 32),
+                    id: TouchID(rawValue: 7)
                 )
         )
         #expect(
