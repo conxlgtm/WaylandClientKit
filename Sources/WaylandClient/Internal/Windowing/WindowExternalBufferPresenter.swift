@@ -1,31 +1,35 @@
 import WaylandRaw
 
+struct WindowExternalBufferPresentationRequest {
+    let buffer: RawSurfaceBuffer
+    let surface: RawSurface
+    let scaleInstallation: SurfaceScaleInstallation
+    let generation: UInt64
+    let geometry: SurfaceGeometry
+    let onFrameDone: () -> Void
+}
+
 enum WindowExternalBufferPresenter {
     static func present<RoleResources>(
-        _ buffer: RawSurfaceBuffer,
-        on surface: RawSurface,
-        scaleInstallation: SurfaceScaleInstallation,
+        _ request: WindowExternalBufferPresentationRequest,
         runtime: inout SurfaceRuntime<RoleResources>,
-        pendingFrameRegistration: inout FrameCallbackRegistration?,
-        generation: UInt64,
-        geometry: SurfaceGeometry,
-        onFrameDone: @escaping () -> Void
+        pendingFrameRegistration: inout FrameCallbackRegistration?
     ) throws -> SurfaceCommitPlan {
         let preparedCommit = try SurfaceFrameCommitter.prepare(
             SurfaceFrameCommitRequest(
-                surface: surface,
-                scaleInstallation: scaleInstallation,
-                generation: generation,
-                geometry: geometry
+                surface: request.surface,
+                scaleInstallation: request.scaleInstallation,
+                generation: request.generation,
+                geometry: request.geometry
             ),
             runtime: &runtime,
         )
 
         pendingFrameRegistration = try SurfaceFrameCommitter.requestFrameCallback(
-            on: surface,
+            on: request.surface,
             runtime: &runtime,
-            generation: generation,
-            onFrame: onFrameDone
+            generation: request.generation,
+            onFrame: request.onFrameDone
         )
 
         do {
@@ -33,7 +37,7 @@ enum WindowExternalBufferPresenter {
                 preparedCommit,
                 runtime: &runtime
             )
-            return SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
+            return SurfaceFrameCommitter.commit(preparedCommit, buffer: request.buffer)
         } catch {
             pendingFrameRegistration = nil
             runtime.cancelFrameCallback()
