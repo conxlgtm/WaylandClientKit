@@ -118,13 +118,13 @@ package final class GBMDevice {
 
     @safe
     package func withUnsafeDevicePointer<Result>(
-        _ body: (OpaquePointer) -> Result
+        _ body: (OpaquePointer) throws(GBMAllocationError) -> Result
     ) throws(GBMAllocationError) -> Result {
         guard let devicePointer = unsafe pointer else {
             throw GBMAllocationError.deviceDestroyed
         }
 
-        return unsafe body(devicePointer)
+        return unsafe try body(devicePointer)
     }
 
     @safe
@@ -132,15 +132,13 @@ package final class GBMDevice {
         format: UInt32,
         flags: GBMBufferUseFlags
     ) throws(GBMAllocationError) -> Bool {
-        guard let devicePointer = unsafe pointer else {
-            throw GBMAllocationError.deviceDestroyed
+        try withUnsafeDevicePointer { devicePointer in
+            unsafe swl_gbm_device_is_format_supported(
+                devicePointer,
+                format,
+                flags.rawValue
+            ) != 0
         }
-
-        return unsafe swl_gbm_device_is_format_supported(
-            devicePointer,
-            format,
-            flags.rawValue
-        ) != 0
     }
 
     @safe
@@ -148,32 +146,28 @@ package final class GBMDevice {
         format: UInt32,
         modifier: UInt64
     ) throws(GBMAllocationError) -> Int {
-        guard let devicePointer = unsafe pointer else {
-            throw GBMAllocationError.deviceDestroyed
-        }
+        try withUnsafeDevicePointer { devicePointer throws(GBMAllocationError) in
+            let planeCount = unsafe swl_gbm_device_get_format_modifier_plane_count(
+                devicePointer,
+                format,
+                modifier
+            )
+            guard planeCount >= 0 else {
+                throw GBMAllocationError.exportFailed(
+                    errno: GBMAllocationError.capturedCurrentErrno()
+                )
+            }
 
-        let planeCount = unsafe swl_gbm_device_get_format_modifier_plane_count(
-            devicePointer,
-            format,
-            modifier
-        )
-        guard planeCount >= 0 else {
-            throw GBMAllocationError.exportFailed(errno: GBMAllocationError.capturedCurrentErrno())
+            return Int(planeCount)
         }
-
-        return Int(planeCount)
     }
 
     @safe
     package func allocateBuffer(
         _ descriptor: GBMBufferAllocationDescriptor
     ) throws(GBMAllocationError) -> GBMBuffer {
-        guard let devicePointer = unsafe pointer else {
-            throw GBMAllocationError.deviceDestroyed
-        }
-
-        guard
-            let bufferPointer = unsafe swl_gbm_bo_create_for_modifier(
+        let bufferPointer = try withUnsafeDevicePointer { devicePointer in
+            unsafe swl_gbm_bo_create_for_modifier(
                 devicePointer,
                 descriptor.size.width,
                 descriptor.size.height,
@@ -181,7 +175,8 @@ package final class GBMDevice {
                 descriptor.modifier,
                 descriptor.flags.rawValue
             )
-        else {
+        }
+        guard let bufferPointer = unsafe bufferPointer else {
             throw GBMAllocationError.bufferAllocationFailed(
                 format: descriptor.format,
                 modifier: descriptor.modifier,

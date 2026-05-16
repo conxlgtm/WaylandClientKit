@@ -7,6 +7,11 @@ package struct GBMDmabufPlaneLayout: Equatable, Sendable {
     package let stride: UInt32
 }
 
+package struct GBMDmabufPlaneExport: ~Copyable {
+    package let layout: GBMDmabufPlaneLayout
+    package var descriptor: RawLinuxDmabufPlaneFileDescriptor
+}
+
 @safe
 package final class GBMDmabufExport {
     private var rawExport: swl_gbm_bo_export
@@ -24,6 +29,23 @@ package final class GBMDmabufExport {
         format = exportedBuffer.format
         modifier = exportedBuffer.modifier
         planeCount = Int(exportedBuffer.plane_count)
+    }
+
+    package static func exportingBuffer(
+        _ bufferPointer: OpaquePointer
+    ) throws(GBMAllocationError) -> GBMDmabufExport {
+        var exportedBuffer = swl_gbm_bo_export()
+        guard unsafe swl_gbm_bo_export_dmabuf(bufferPointer, &exportedBuffer) == 0 else {
+            throw GBMAllocationError.exportFailed(
+                errno: GBMAllocationError.capturedCurrentErrno()
+            )
+        }
+
+        return GBMDmabufExport(adopting: exportedBuffer)
+    }
+
+    package var planeIndices: Range<Int> {
+        0..<planeCount
     }
 
     package func planeLayout(
@@ -60,6 +82,15 @@ package final class GBMDmabufExport {
         }
     }
 
+    package func takePlaneExport(
+        at index: Int
+    ) throws(GBMAllocationError) -> GBMDmabufPlaneExport {
+        let layout = try planeLayout(at: index)
+        let descriptor = try takePlaneFileDescriptor(at: index)
+
+        return GBMDmabufPlaneExport(layout: layout, descriptor: descriptor)
+    }
+
     deinit {
         unsafe swl_gbm_bo_export_close(&rawExport)
     }
@@ -77,17 +108,21 @@ package final class GBMBuffer {
     }
 
     @safe
-    package func exportDmabuf() throws(GBMAllocationError) -> GBMDmabufExport {
+    package func withUnsafeBufferPointer<Result>(
+        _ body: (OpaquePointer) throws(GBMAllocationError) -> Result
+    ) throws(GBMAllocationError) -> Result {
         guard let bufferPointer = unsafe pointer else {
             throw GBMAllocationError.bufferDestroyed
         }
 
-        var exportedBuffer = swl_gbm_bo_export()
-        guard unsafe swl_gbm_bo_export_dmabuf(bufferPointer, &exportedBuffer) == 0 else {
-            throw GBMAllocationError.exportFailed(errno: GBMAllocationError.capturedCurrentErrno())
-        }
+        return unsafe try body(bufferPointer)
+    }
 
-        return GBMDmabufExport(adopting: exportedBuffer)
+    @safe
+    package func exportDmabuf() throws(GBMAllocationError) -> GBMDmabufExport {
+        try withUnsafeBufferPointer { bufferPointer throws(GBMAllocationError) in
+            unsafe try GBMDmabufExport.exportingBuffer(bufferPointer)
+        }
     }
 
     package func destroy() {
