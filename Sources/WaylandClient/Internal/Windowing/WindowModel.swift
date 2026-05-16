@@ -229,7 +229,7 @@ extension WindowModel {
 
         let windowID = id
         return try transitionActiveWindowState { activeState in
-            guard activeState.presentation == .idle else {
+            guard activeState.presentation.isIdle else {
                 throw ClientError.window(windowID, .invalidLifecycleTransition(.nestedPresentation))
             }
 
@@ -256,17 +256,18 @@ extension WindowModel {
     ) throws -> [WindowEffect] {
         let windowID = id
         return try transitionActiveWindowState { activeState in
-            let pendingRequest: PresentationRequest
-            switch activeState.presentation {
-            case .idle:
+            guard let pendingRequest = activeState.presentation.requestedRequest else {
+                if activeState.presentation.isIdle {
+                    throw ClientError.window(
+                        windowID,
+                        .invalidLifecycleTransition(.presentWithoutRedrawRequest)
+                    )
+                }
+
                 throw ClientError.window(
                     windowID,
-                    .invalidLifecycleTransition(.presentWithoutRedrawRequest)
+                    .invalidLifecycleTransition(.nestedPresentation)
                 )
-            case .requested(let request):
-                pendingRequest = request
-            case .drawing:
-                throw ClientError.window(windowID, .invalidLifecycleTransition(.nestedPresentation))
             }
             guard pendingRequest == request else {
                 throw ClientError.window(
@@ -315,7 +316,7 @@ extension WindowModel {
     ) throws -> [WindowEffect] {
         let windowID = id
         return try transitionActiveWindowState { activeState in
-            guard activeState.presentation == .idle else {
+            guard activeState.presentation.isIdle else {
                 throw ClientError.window(windowID, .invalidLifecycleTransition(.nestedPresentation))
             }
 
@@ -379,11 +380,8 @@ extension WindowModel {
         _ effects: [WindowRedrawEffect],
         windowID: WindowID
     ) -> [WindowEffect] {
-        effects.map { effect in
-            switch effect {
-            case .publishRedrawRequested:
-                .publishRedrawRequested(windowID)
-            }
+        effects.mapRedrawRequested {
+            .publishRedrawRequested(windowID)
         }
     }
 
@@ -397,15 +395,14 @@ extension WindowModel {
         in activeState: ActiveWindowState,
         windowID: WindowID
     ) throws -> UInt64 {
-        switch activeState.presentation {
-        case .drawing(let request):
-            return request.generation
-        case .idle, .requested:
+        guard let generation = activeState.presentation.drawingGeneration else {
             throw ClientError.window(
                 windowID,
                 .invalidLifecycleTransition(.inactivePresentationCompletion)
             )
         }
+
+        return generation
     }
 
     private func requireActivePresentation(
