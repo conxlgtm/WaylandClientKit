@@ -160,7 +160,7 @@ package final class GBMLockedSurfaceBuffer {
     }
 
     @safe
-    package func withUnsafeBufferPointer<Result>(
+    package func withLiveBufferPointer<Result>(
         _ body: (OpaquePointer) throws(GBMAllocationError) -> Result
     ) throws(GBMAllocationError) -> Result {
         guard let bufferPointer = unsafe pointer else {
@@ -172,7 +172,7 @@ package final class GBMLockedSurfaceBuffer {
 
     @safe
     package func exportDmabuf() throws(GBMAllocationError) -> GBMDmabufExport {
-        try withUnsafeBufferPointer { bufferPointer throws(GBMAllocationError) in
+        try withLiveBufferPointer { bufferPointer throws(GBMAllocationError) in
             unsafe try GBMDmabufExport.exportingBuffer(bufferPointer)
         }
     }
