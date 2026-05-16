@@ -2,6 +2,7 @@ import Testing
 
 @testable import WaylandGPUPreview
 @testable import WaylandGraphicsPreview
+@testable import WaylandRaw
 
 @Suite
 struct GPUWindowPresenterStateTests {
@@ -77,5 +78,120 @@ struct GPUWindowPresenterStateTests {
         try state.markReleased(slotID)
 
         #expect(state.isRetired)
+    }
+
+    @Test
+    func presenterRetireAllDestroysInstalledBuffersOnce() throws {
+        let presenter = GPUWindowPresenter()
+        let firstSlotID = try GBMBufferPoolSlotID(0)
+        let secondSlotID = try GBMBufferPoolSlotID(1)
+        let firstBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let secondBuffer = try FakePresenterBuffer(pointer: 0x1002)
+
+        try presenter.installBuffer(firstBuffer, slotID: firstSlotID)
+        try presenter.installBuffer(secondBuffer, slotID: secondSlotID)
+        presenter.retireAll(reason: .windowClosed)
+
+        #expect(firstBuffer.destroyCallCount == 1)
+        #expect(secondBuffer.destroyCallCount == 1)
+        #expect(presenter.installedSlotIDs.isEmpty)
+        #expect(presenter.outstandingSubmittedSlotIDs.isEmpty)
+
+        presenter.retireAll(reason: .windowClosed)
+
+        #expect(firstBuffer.destroyCallCount == 1)
+        #expect(secondBuffer.destroyCallCount == 1)
+    }
+
+    @Test
+    func presenterRetireAllClearsReleaseObserverSoLateReleaseIsIgnored() throws {
+        let presenter = GPUWindowPresenter()
+        let slotID = try GBMBufferPoolSlotID(0)
+        let buffer = try FakePresenterBuffer(pointer: 0x1001)
+
+        try presenter.installBuffer(buffer, slotID: slotID)
+        presenter.retireAll(reason: .windowClosed)
+        buffer.triggerRelease()
+
+        #expect(buffer.destroyCallCount == 1)
+        #expect(!buffer.hasReleaseObserver)
+        #expect(presenter.releaseFailuresSnapshot.isEmpty)
+    }
+
+    @Test
+    func presenterRejectsInstallAfterRetire() throws {
+        let presenter = GPUWindowPresenter()
+        let slotID = try GBMBufferPoolSlotID(0)
+
+        presenter.retireAll(reason: .windowClosed)
+
+        do {
+            try presenter.installBuffer(try FakePresenterBuffer(pointer: 0x1001), slotID: slotID)
+            Issue.record("Expected retired presenter to reject buffer installation")
+        } catch GPUWindowPresenterError.state(.retired(.windowClosed)) {
+            // Expected.
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func presenterRejectsDuplicateInstall() throws {
+        let presenter = GPUWindowPresenter()
+        let slotID = try GBMBufferPoolSlotID(0)
+
+        try presenter.installBuffer(try FakePresenterBuffer(pointer: 0x1001), slotID: slotID)
+
+        do {
+            try presenter.installBuffer(try FakePresenterBuffer(pointer: 0x1002), slotID: slotID)
+            Issue.record("Expected duplicate slot installation to fail")
+        } catch GPUWindowPresenterError.state(.pool(.duplicateSlot(let duplicateSlotID))) {
+            #expect(duplicateSlotID == slotID)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func presenterDeinitRetiresInstalledBuffers() throws {
+        var presenter: GPUWindowPresenter? = GPUWindowPresenter()
+        let slotID = try GBMBufferPoolSlotID(0)
+        let buffer = try FakePresenterBuffer(pointer: 0x1001)
+
+        try presenter?.installBuffer(buffer, slotID: slotID)
+        presenter = nil
+        buffer.triggerRelease()
+
+        #expect(buffer.destroyCallCount == 1)
+        #expect(!buffer.hasReleaseObserver)
+    }
+}
+
+private final class FakePresenterBuffer: GPUWindowPresenterBuffer {
+    let surfaceBuffer: RawSurfaceBuffer
+    private(set) var destroyCallCount = 0
+    private var releaseObserver: (() -> Void)?
+
+    init(pointer rawPointer: UInt) throws {
+        let pointer = try unsafe #require(OpaquePointer(bitPattern: rawPointer))
+
+        surfaceBuffer = RawSurfaceBuffer(pointer: pointer)
+    }
+
+    var hasReleaseObserver: Bool {
+        releaseObserver != nil
+    }
+
+    func setReleaseObserver(_ observer: @escaping () -> Void) {
+        releaseObserver = observer
+    }
+
+    func destroy() {
+        destroyCallCount += 1
+        releaseObserver = nil
+    }
+
+    func triggerRelease() {
+        releaseObserver?()
     }
 }
