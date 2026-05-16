@@ -4,6 +4,9 @@ This audit records the current API boundary for the experimental `WaylandClient`
 product. There is no compatibility promise yet, but public declarations in this
 product should still be treated as intentional user-facing API.
 
+The minimal DocC catalog for this boundary lives in
+`Sources/WaylandClient/WaylandClient.docc/WaylandClient.md`.
+
 ## Products
 
 ### `WaylandClient`

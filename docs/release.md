@@ -22,6 +22,7 @@ swift build -c release --target SwiftWaylandDemo
 swift build -c release --product swift-wayland-smoke
 ./scripts/ci/dump-public-api.sh > /tmp/swiftwayland-public-api.md
 ./scripts/ci/verify-public-api-audit.sh
+./scripts/ci/verify-docc.sh
 ```
 
 Under a real Wayland session:
@@ -52,10 +53,11 @@ Record results in [compositor-matrix.md](compositor-matrix.md).
 10. Regenerate protocols and confirm no diff.
 11. Generate and review the public API report.
 12. Run `./scripts/ci/verify-public-api-audit.sh`.
-13. Review `docs/public-api-audit.md`.
-14. Update README support and unsupported lists if behavior changed.
-15. Tag the checkpoint.
-16. If publishing GitHub checkpoint notes, copy the supported and unsupported scope from README.
+13. Run `./scripts/ci/verify-docc.sh`.
+14. Review `docs/public-api-audit.md`.
+15. Update README support and unsupported lists if behavior changed.
+16. Tag the checkpoint.
+17. If publishing GitHub checkpoint notes, copy the supported and unsupported scope from README.
 
 ## Stop Conditions
 
