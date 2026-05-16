@@ -54,10 +54,11 @@ package struct RawXDGPositionerConstraintAdjustment: OptionSet, Sendable {
 
 @safe
 package final class RawXDGPositioner {
-    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
     @safe
     init(
@@ -65,12 +66,12 @@ package final class RawXDGPositioner {
         version positionerVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            pointer = try adoptionContext.adopt(positionerPointer, interface: "xdg_positioner")
-        } catch {
-            unsafe swl_xdg_positioner_destroy(positionerPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: positionerPointer,
+            interface: "xdg_positioner",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_xdg_positioner_destroy
+        )
         version = positionerVersion
     }
 
@@ -101,10 +102,7 @@ package final class RawXDGPositioner {
     }
 
     package func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        unsafe swl_xdg_positioner_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
@@ -133,10 +131,11 @@ package struct RawXDGPopupConfigure: Equatable, Sendable {
 
 @safe
 package final class RawXDGPopup {
-    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
     @safe
     init(
@@ -144,12 +143,12 @@ package final class RawXDGPopup {
         version popupVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            pointer = try adoptionContext.adopt(popupPointer, interface: "xdg_popup")
-        } catch {
-            unsafe swl_xdg_popup_destroy(popupPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: popupPointer,
+            interface: "xdg_popup",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_xdg_popup_destroy
+        )
         version = popupVersion
     }
 
@@ -158,10 +157,7 @@ package final class RawXDGPopup {
     }
 
     package func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        unsafe swl_xdg_popup_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
