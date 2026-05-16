@@ -1,5 +1,4 @@
 import CWaylandProtocols
-import Glibc
 
 @safe
 package struct RawPrimarySelectionOfferHandle: Equatable, Hashable, Sendable {
@@ -40,16 +39,11 @@ package enum RawPrimarySelectionDeviceEvent: Equatable, Sendable {
     case selection(RawPrimarySelectionOfferHandle?)
 }
 
-private enum PrimarySelectionListenerInstallState {
-    case idle
-    case installed
-}
-
 @safe
 package final class RawPrimarySelectionOfferOwner {
     private let onEvent: (RawPrimarySelectionOfferEvent) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
-    private var installState = PrimarySelectionListenerInstallState.idle
+    private var installState = ListenerInstallState.idle
     @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
         initialValue: unsafe swl_primary_selection_offer_listener_callbacks(),
@@ -74,22 +68,14 @@ package final class RawPrimarySelectionOfferOwner {
     }
 
     package func install(on offer: RawPrimarySelectionOffer) throws {
-        guard installState == .idle else {
-            throw listenerInstallError("zwp_primary_selection_offer_v1")
-        }
-
         unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
-        let result = unsafe swl_primary_selection_offer_add_listener(
-            offer.pointer,
-            callbacks
-        )
-
-        guard result == 0 else {
-            throw listenerInstallError("zwp_primary_selection_offer_v1")
+        try installState.install(interface: "zwp_primary_selection_offer_v1") {
+            unsafe swl_primary_selection_offer_add_listener(
+                offer.pointer,
+                callbacks
+            )
         }
-
-        installState = .installed
     }
 
     package func cancel() {
@@ -102,7 +88,7 @@ package final class RawPrimarySelectionOfferOwner {
                 data,
                 message: "zwp_primary_selection_offer_v1 offer fired without Swift state"
             ) { owner in
-                owner.onEvent(.offer(optionalString(from: mimeType)))
+                owner.onEvent(.offer(stringFromNullableCString(mimeType)))
             }
         }
     }
@@ -125,7 +111,7 @@ package final class RawPrimarySelectionOfferOwner {
 package final class RawPrimarySelectionSourceOwner {
     private let onEvent: (RawPrimarySelectionSourceEvent) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
-    private var installState = PrimarySelectionListenerInstallState.idle
+    private var installState = ListenerInstallState.idle
     @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
         initialValue: unsafe swl_primary_selection_source_listener_callbacks(),
@@ -150,22 +136,14 @@ package final class RawPrimarySelectionSourceOwner {
     }
 
     package func install(on source: RawPrimarySelectionSource) throws {
-        guard installState == .idle else {
-            throw listenerInstallError("zwp_primary_selection_source_v1")
-        }
-
         unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
-        let result = unsafe swl_primary_selection_source_add_listener(
-            source.pointer,
-            callbacks
-        )
-
-        guard result == 0 else {
-            throw listenerInstallError("zwp_primary_selection_source_v1")
+        try installState.install(interface: "zwp_primary_selection_source_v1") {
+            unsafe swl_primary_selection_source_add_listener(
+                source.pointer,
+                callbacks
+            )
         }
-
-        installState = .installed
     }
 
     package func cancel() {
@@ -178,7 +156,7 @@ package final class RawPrimarySelectionSourceOwner {
                 data,
                 message: "zwp_primary_selection_source_v1 send fired without Swift state"
             ) { owner in
-                owner.onEvent(.send(mimeType: optionalString(from: mimeType), fd: fd))
+                owner.onEvent(.send(mimeType: stringFromNullableCString(mimeType), fd: fd))
             }
         }
         unsafe callbacks.pointee.cancelled = { data, _ in
@@ -209,7 +187,7 @@ package final class RawPrimarySelectionSourceOwner {
 package final class RawPrimarySelectionDeviceOwner {
     private let onEvent: (RawPrimarySelectionDeviceEvent) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
-    private var installState = PrimarySelectionListenerInstallState.idle
+    private var installState = ListenerInstallState.idle
     @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
         initialValue: unsafe swl_primary_selection_device_listener_callbacks(),
@@ -234,22 +212,14 @@ package final class RawPrimarySelectionDeviceOwner {
     }
 
     package func install(on device: RawPrimarySelectionDevice) throws {
-        guard installState == .idle else {
-            throw listenerInstallError("zwp_primary_selection_device_v1")
-        }
-
         unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
-        let result = unsafe swl_primary_selection_device_add_listener(
-            device.pointer,
-            callbacks
-        )
-
-        guard result == 0 else {
-            throw listenerInstallError("zwp_primary_selection_device_v1")
+        try installState.install(interface: "zwp_primary_selection_device_v1") {
+            unsafe swl_primary_selection_device_add_listener(
+                device.pointer,
+                callbacks
+            )
         }
-
-        installState = .installed
     }
 
     package func cancel() {
@@ -287,13 +257,4 @@ package final class RawPrimarySelectionDeviceOwner {
         >
         .withOwner(from: data, message: message(), body)
     }
-}
-
-private func listenerInstallError(_ interface: String) -> RuntimeError {
-    RuntimeError.systemError(errno: EINVAL, operation: .installListener(interface))
-}
-
-@safe
-private func optionalString(from cString: UnsafePointer<CChar>?) -> String? {
-    unsafe cString.map { unsafe String(cString: $0) }
 }
