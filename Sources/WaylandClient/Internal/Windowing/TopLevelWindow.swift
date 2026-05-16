@@ -996,17 +996,20 @@ extension TopLevelWindow {
 
         let generation = surfaceRuntime.nextCommitGeneration
         let bufferAvailability = try redrawBufferAvailability()
-        let commitPlan = try WindowExternalBufferPresenter.present(
-            buffer,
-            on: surface,
+        let presentationRequest = WindowExternalBufferPresentationRequest(
+            buffer: buffer,
+            surface: surface,
             scaleInstallation: scaleInstallation,
-            runtime: &surfaceRuntime,
-            pendingFrameRegistration: &pendingFrameRegistration,
             generation: generation,
             geometry: try currentSurfaceGeometry()
         ) { [weak self] in
             self?.handleFrameDone()
         }
+        let commitPlan = try WindowExternalBufferPresenter.present(
+            presentationRequest,
+            runtime: &surfaceRuntime,
+            pendingFrameRegistration: &pendingFrameRegistration
+        )
         try interpretWindowEffects(
             model.reduce(
                 .externalPresentationSucceeded(
