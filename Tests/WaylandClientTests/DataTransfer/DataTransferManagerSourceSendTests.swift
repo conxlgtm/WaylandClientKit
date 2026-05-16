@@ -64,6 +64,9 @@ struct DataTransferManagerSourceSendTests {  // swiftlint:disable:this type_body
             let releasedDescriptor = try request.releaseRawDescriptor()
 
             #expect(releasedDescriptor == 211)
+            #expect(throws: DataTransferError.fileDescriptorAlreadyReleased) {
+                try request.releaseRawDescriptor()
+            }
         }
 
         #expect(backend.closedDescriptors.isEmpty)
