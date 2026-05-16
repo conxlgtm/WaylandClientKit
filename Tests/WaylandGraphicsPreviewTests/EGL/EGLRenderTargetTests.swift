@@ -9,6 +9,20 @@ import Testing
 struct EGLRenderTargetTests {
     @Test
     func gbmPlatformExtensionDetectionRequiresNamedExtension() {
+        let khrExtensions = EGLClientExtensions("EGL_KHR_platform_gbm")
+        let mesaExtensions = EGLClientExtensions("EGL_MESA_platform_gbm")
+        let surfacelessExtensions = EGLClientExtensions(
+            "EGL_EXT_platform_base EGL_KHR_surfaceless_context"
+        )
+        let missingExtensions = EGLClientExtensions(nil)
+
+        #expect(khrExtensions.supportsGBMPlatform)
+        #expect(mesaExtensions.supportsGBMPlatform)
+        #expect(!surfacelessExtensions.supportsGBMPlatform)
+        #expect(!missingExtensions.supportsGBMPlatform)
+        #expect(khrExtensions.contains("EGL_KHR_platform_gbm"))
+        #expect(khrExtensions.rawValue == "EGL_KHR_platform_gbm")
+
         #expect(EGLGBMRenderTarget.supportsGBMPlatform(clientExtensions: "EGL_KHR_platform_gbm"))
         #expect(EGLGBMRenderTarget.supportsGBMPlatform(clientExtensions: "EGL_MESA_platform_gbm"))
         #expect(
