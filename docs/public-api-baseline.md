@@ -1,0 +1,1787 @@
+# WaylandClient Public API Baseline
+
+This baseline records the public declarations exported by the `WaylandClient`
+library product. It is intentionally limited to the user-facing product and
+excludes package-internal targets that use `public` for cross-target builds.
+
+Run `./scripts/ci/verify-public-api-audit.sh --update` only after reviewing and
+updating `docs/public-api-audit.md` for the API contract change.
+
+## WaylandClient Public Declarations
+
+### `Sources/WaylandClient/Public/Clipboard/ClipboardOffer.swift`
+
+- L3: `public struct ClipboardOffer: Sendable, Hashable {`
+- L4: `    public static let defaultReadTimeout: Duration = .seconds(5)`
+- L7: `    public let seatID: SeatID`
+- L8: `    public let mimeTypes: [MIMEType]`
+- L21: `    public var identity: ClipboardOfferIdentity {`
+- L25: `    public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {`
+- L29: `    public func read(`
+- L41: `    public static func == (lhs: ClipboardOffer, rhs: ClipboardOffer) -> Bool {`
+- L45: `    public func hash(into hasher: inout Hasher) {`
+
+### `Sources/WaylandClient/Public/Clipboard/ClipboardSource.swift`
+
+- L3: `public struct ClipboardSourceConfiguration: Equatable, Sendable {`
+- L4: `    public let payloads: [DataTransferSourcePayload]`
+- L7: `    public init(payloads sourcePayloads: [DataTransferSourcePayload]) throws {`
+- L13: `    public static func data(`
+- L27: `public struct ClipboardSource: Sendable, Hashable {`
+- L29: `    public let seatID: SeatID`
+- L30: `    public let mimeTypes: [MIMEType]`
+- L43: `    public var identity: ClipboardSourceIdentity {`
+- L50: `    public func requestClear(serial: InputSerial) async throws {`
+- L54: `    public static func == (lhs: ClipboardSource, rhs: ClipboardSource) -> Bool {`
+- L58: `    public func hash(into hasher: inout Hasher) {`
+
+### `Sources/WaylandClient/Public/Configuration/ConfigurationDomainTypes.swift`
+
+- L1: `public enum CursorConfigurationError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L2: `    case emptyThemeName`
+- L3: `    case themeNameContainsInteriorNUL`
+- L4: `    case invalidSize(Int32)`
+- L5: `    case cursorNameContainsInteriorNUL`
+- L6: `    case emptyCursorName`
+- L8: `    public var description: String {`
+- L24: `public struct CursorThemeName: Equatable, Sendable, CustomStringConvertible {`
+- L25: `    public let value: String`
+- L27: `    public init(_ name: String) throws {`
+- L45: `    public var description: String {`
+- L50: `public struct CursorSize: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L51: `    public let rawValue: Int32`
+- L53: `    public static let `default` = CursorSize(unchecked: 24)`
+- L55: `    public init(_ value: Int32) throws {`
+- L68: `    public var description: String {`
+- L72: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L77: `public enum DisplayConfigurationField: Equatable, Sendable, CustomStringConvertible {`
+- L78: `    case displayEventCapacity`
+- L79: `    case inputEventCapacity`
+- L80: `    case dataTransferEventCapacity`
+- L81: `    case rawInputQueueCapacity`
+- L82: `    case pendingInputEventCapacity`
+- L83: `    case diagnosticsCapacity`
+- L85: `    public var description: String {`
+- L103: `public enum DisplayConfigurationError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L104: `    case nonPositiveCapacity(field: DisplayConfigurationField, value: Int)`
+- L106: `    public var description: String {`
+- L114: `public enum EventStreamCapacityField: Equatable, Sendable {`
+- L115: `    case displayEventCapacity`
+- L116: `    case inputEventCapacity`
+- L117: `    case dataTransferEventCapacity`
+- L131: `public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L132: `    public let rawValue: Int`
+- L134: `    public static let defaultDisplayEvents = EventStreamCapacity(unchecked: 256)`
+- L135: `    public static let defaultInputEvents = EventStreamCapacity(unchecked: 1_024)`
+- L136: `    public static let defaultDataTransferEvents = EventStreamCapacity(unchecked: 256)`
+- L138: `    public init(`
+- L157: `    public var description: String {`
+- L161: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L166: `public enum InputQueueCapacityField: Equatable, Sendable {`
+- L167: `    case rawInputQueueCapacity`
+- L168: `    case pendingInputEventCapacity`
+- L180: `public struct InputQueueCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L181: `    public let rawValue: Int`
+- L183: `    public static let defaultRawInput = InputQueueCapacity(unchecked: 4_096)`
+- L184: `    public static let defaultPendingInput = InputQueueCapacity(unchecked: 2_048)`
+- L186: `    public init(`
+- L205: `    public var description: String {`
+- L209: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L214: `public struct DiagnosticsCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L215: `    public let rawValue: Int`
+- L217: `    public static let `default` = DiagnosticsCapacity(unchecked: 128)`
+- L219: `    public init(_ value: Int) throws {`
+- L235: `    public var description: String {`
+- L239: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+
+### `Sources/WaylandClient/Public/Configuration/DisplayConfiguration.swift`
+
+- L1: `public struct EventStreamConfiguration: Equatable, Sendable {`
+- L2: `    public var displayEventCapacity: EventStreamCapacity`
+- L3: `    public var inputEventCapacity: EventStreamCapacity`
+- L4: `    public var dataTransferEventCapacity: EventStreamCapacity`
+- L6: `    public init(`
+- L17: `    public init(`
+- L37: `    public init(`
+- L58: `    public init(`
+- L79: `public struct InputMotionCoalescing: OptionSet, Equatable, Sendable {`
+- L80: `    public let rawValue: Int`
+- L82: `    public init(rawValue coalescingRawValue: Int) {`
+- L86: `    public static let pointerMotion = InputMotionCoalescing(rawValue: 1 << 0)`
+- L87: `    public static let touchMotion = InputMotionCoalescing(rawValue: 1 << 1)`
+- L88: `    public static let all: InputMotionCoalescing = [.pointerMotion, .touchMotion]`
+- L91: `public struct InputPipelineConfiguration: Equatable, Sendable {`
+- L92: `    public var rawInputQueueCapacity: InputQueueCapacity`
+- L93: `    public var pendingInputEventCapacity: InputQueueCapacity`
+- L94: `    public var motionCoalescing: InputMotionCoalescing`
+- L96: `    public var pointerMotionCoalescing: Bool {`
+- L107: `    public var touchMotionCoalescing: Bool {`
+- L118: `    public init(`
+- L131: `    public init(`
+- L141: `    public init(`
+- L161: `    public init(`
+- L181: `public struct KeyboardInterpretationConfiguration: Equatable, Sendable {`
+- L182: `    public var compose: KeyboardComposeConfiguration`
+- L184: `    public init(compose composeConfiguration: KeyboardComposeConfiguration = .enabled()) {`
+- L189: `public enum KeyboardComposeConfiguration: Equatable, Sendable {`
+- L190: `    case disabled`
+- L191: `    case enabled(`
+- L197: `public enum KeyboardComposeLocale: Equatable, Sendable {`
+- L198: `    case processEnvironment`
+- L199: `    case identifier(KeyboardComposeLocaleIdentifier)`
+- L202: `public enum KeyboardComposeLocaleError: Error, Equatable, Sendable {`
+- L203: `    case emptyIdentifier`
+- L204: `    case containsNUL`
+- L207: `public struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {`
+- L208: `    public let rawValue: String`
+- L210: `    public init(_ value: String) throws(KeyboardComposeLocaleError) {`
+- L222: `    public static let posixC = Self(unchecked: "C")`
+- L253: `public enum KeyboardComposeCancellationPolicy: Equatable, Sendable {`
+- L254: `    case passThroughCancellingKey`
+- L255: `    case swallowCancellingKey`
+- L258: `public struct DiagnosticsConfiguration: Equatable, Sendable {`
+- L259: `    public var capacity: DiagnosticsCapacity`
+- L261: `    public init(capacity diagnosticsCapacity: DiagnosticsCapacity = .default) {`
+- L265: `    public init(capacity diagnosticsCapacity: Int) throws {`
+- L270: `public struct DisplayConfiguration: Equatable, Sendable {`
+- L271: `    public var eventStreams: EventStreamConfiguration`
+- L272: `    public var inputPipeline: InputPipelineConfiguration`
+- L273: `    public var keyboardInterpretation: KeyboardInterpretationConfiguration`
+- L274: `    public var diagnostics: DiagnosticsConfiguration`
+- L276: `    public init(`
+
+### `Sources/WaylandClient/Public/Cursor/CursorConfiguration.swift`
+
+- L1: `public struct CursorConfiguration: Equatable, Sendable {`
+- L2: `    public var themeName: CursorThemeName?`
+- L3: `    public var size: CursorSize`
+- L4: `    public var fallbackCursor: PointerCursor`
+- L6: `    public init(`
+- L16: `    public init(`
+
+### `Sources/WaylandClient/Public/Cursor/CursorRequestResult.swift`
+
+- L1: `public enum CursorRequestResult: Equatable, Sendable {`
+- L2: `    case set(seatID: SeatID, serial: UInt32, cursor: PointerCursor)`
+- L3: `    case hidden(seatID: SeatID, serial: UInt32)`
+- L4: `    case skippedNoPointerFocus(seatID: SeatID)`
+
+### `Sources/WaylandClient/Public/Cursor/PointerCursor.swift`
+
+- L1: `public struct PointerCursor: Equatable, Sendable {`
+- L9: `    public var name: String? {`
+- L14: `    public init(name cursorName: String) throws {`
+- L36: `    public static let defaultArrow = Self(validatedName: "left_ptr")`
+- L37: `    public static let text = Self(validatedName: "text")`
+- L38: `    public static let pointer = Self(validatedName: "hand2")`
+- L39: `    public static let crosshair = Self(validatedName: "crosshair")`
+- L40: `    public static let resizeLeftRight = Self(validatedName: "sb_h_double_arrow")`
+- L41: `    public static let resizeUpDown = Self(validatedName: "sb_v_double_arrow")`
+- L42: `    public static let hidden = Self(kind: .hidden)`
+
+### `Sources/WaylandClient/Public/DataTransfer/DataTransferCallbackFailure.swift`
+
+- L1: `public enum DataTransferCallbackContext: Equatable, Sendable {`
+- L2: `    case dataDevice(SeatID)`
+- L3: `    case dataOffer(ClipboardOfferIdentity)`
+- L4: `    case dragOffer(DragOfferIdentity)`
+- L5: `    case dataSource(ClipboardSourceIdentity)`
+- L6: `    case dragSource(DragSourceIdentity)`
+- L7: `    case primarySelectionDevice(SeatID)`
+- L8: `    case primarySelectionOffer(PrimarySelectionOfferIdentity)`
+- L9: `    case primarySelectionSource(PrimarySelectionSourceIdentity)`
+- L10: `    case sourceWrite(DataTransferDiagnosticSource)`
+- L13: `public enum DataSourceCallbackEventKind: Equatable, Sendable,`
+- L16: `    case target`
+- L17: `    case action`
+- L18: `    case dndDropPerformed`
+- L19: `    case dndFinished`
+- L21: `    public var description: String {`
+- L35: `public struct DataTransferCallbackFailure:`
+- L41: `    public let context: DataTransferCallbackContext`
+- L42: `    public let error: DataTransferError`
+- L44: `    public var description: String {`
+
+### `Sources/WaylandClient/Public/DataTransfer/DataTransferDomainTypes.swift`
+
+- L1: `public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L2: `    case invalidMIMEType(String)`
+- L3: `    case negativeByteCount(Int)`
+- L4: `    case byteCountOverflow(value: Int, multiplier: Int)`
+- L5: `    case invalidFileDescriptor(Int32)`
+- L6: `    case createPipe(WaylandSystemErrno)`
+- L7: `    case readFileDescriptor(WaylandSystemErrno)`
+- L8: `    case writeFileDescriptor(WaylandSystemErrno)`
+- L9: `    case closeFileDescriptor(WaylandSystemErrno)`
+- L10: `    case fileDescriptorAlreadyReleased`
+- L11: `    case transferTooLarge(limit: ByteCount)`
+- L12: `    case transferTimedOut`
+- L13: `    case callbackFailure(DataTransferCallbackFailureCause)`
+- L14: `    case emptyDataSource`
+- L15: `    case emptyDataOffer`
+- L16: `    case duplicateMIMEType(MIMEType)`
+- L17: `    case unavailable`
+- L18: `    case unknownSeat(SeatID)`
+- L19: `    case missingDataDevice(SeatID)`
+- L20: `    case missingPrimarySelectionDevice(SeatID)`
+- L21: `    case duplicateOffer`
+- L22: `    case duplicateOfferHandle(rawValue: UInt, existingOffer: ClipboardOfferIdentity?)`
+- L23: `    case duplicatePrimarySelectionOfferHandle(`
+- L27: `    case duplicateSource`
+- L28: `    case unknownOffer`
+- L29: `    case missingOfferHandle(seatID: SeatID)`
+- L30: `    case unknownOfferHandle(rawValue: UInt, seatID: SeatID?)`
+- L31: `    case unknownOfferIdentity(ClipboardOfferIdentity)`
+- L32: `    case unknownPrimarySelectionOfferIdentity(PrimarySelectionOfferIdentity)`
+- L33: `    case unknownDragOfferIdentity(DragOfferIdentity)`
+- L34: `    case unknownDragSourceIdentity(DragSourceIdentity)`
+- L35: `    case mismatchedOfferSeat(`
+- L40: `    case offerExpired`
+- L41: `    case dragOfferNotActive(DragOfferIdentity)`
+- L42: `    case dragOfferNotFinishable(DragOfferIdentity)`
+- L43: `    case dragActionRequestNotAllowed(DragOfferIdentity)`
+- L44: `    case dragActionNegotiationUnavailable(DragOfferIdentity)`
+- L45: `    case dragSourceActionNegotiationUnavailable(DragSourceIdentity)`
+- L46: `    case unsupportedDragAction(action: DragAction, available: DragActionSet)`
+- L47: `    case invalidDragActionSet(rawValue: UInt32)`
+- L48: `    case invalidDragAction(rawValue: UInt32)`
+- L49: `    case invalidSourceEvent(DataSourceCallbackEventKind)`
+- L50: `    case unknownSource`
+- L51: `    case unknownSourceIdentity(ClipboardSourceIdentity)`
+- L52: `    case unknownPrimarySelectionSourceIdentity(PrimarySelectionSourceIdentity)`
+- L53: `    case sourceCancelled`
+- L54: `    case sourceDataUnavailable(MIMEType)`
+- L55: `    case mimeTypeUnavailable(MIMEType)`
+- L56: `    case cancelled`
+- L58: `    public var description: String {`
+- L165: `public enum DataTransferCallbackFailureCause: Equatable, Sendable, CustomStringConvertible {`
+- L166: `    case backend(type: String, description: String)`
+- L168: `    public var description: String {`
+- L176: `public enum DataTransferOfferIdentity: Equatable, Sendable, CustomStringConvertible {`
+- L177: `    case clipboard(ClipboardOfferIdentity)`
+- L178: `    case primarySelection(PrimarySelectionOfferIdentity)`
+- L179: `    case dragAndDrop(DragOfferIdentity)`
+- L181: `    public var description: String {`
+- L193: `public struct ClipboardOfferIdentity: Hashable, Sendable, CustomStringConvertible {`
+- L200: `    public var description: String {`
+- L205: `public struct ClipboardSourceIdentity: Hashable, Sendable, CustomStringConvertible {`
+- L212: `    public var description: String {`
+- L217: `public struct PrimarySelectionOfferIdentity: Hashable, Sendable, CustomStringConvertible {`
+- L224: `    public var description: String {`
+- L229: `public struct PrimarySelectionSourceIdentity: Hashable, Sendable, CustomStringConvertible {`
+- L236: `    public var description: String {`
+- L241: `public struct ClipboardSelectionEvent: Equatable, Sendable {`
+- L242: `    public let seatID: SeatID`
+- L243: `    public let offer: ClipboardOfferIdentity?`
+- L251: `public struct PrimarySelectionEvent: Equatable, Sendable {`
+- L252: `    public let seatID: SeatID`
+- L253: `    public let offer: PrimarySelectionOfferIdentity?`
+- L261: `public enum DataTransferEvent: Equatable, Sendable {`
+- L262: `    case clipboardSelectionChanged(ClipboardSelectionEvent)`
+- L263: `    case primarySelectionChanged(PrimarySelectionEvent)`
+- L264: `    case clipboardSourceCancelled(ClipboardSourceIdentity)`
+- L265: `    case primarySelectionSourceCancelled(PrimarySelectionSourceIdentity)`
+- L266: `    case dragSourceCancelled(DragSourceIdentity)`
+- L267: `    case dragSourceTargetChanged(DragSourceTargetEvent)`
+- L268: `    case dragSourceActionChanged(DragSourceActionEvent)`
+- L269: `    case dragSourceDropPerformed(DragSourceIdentity)`
+- L270: `    case dragSourceFinished(DragSourceFinishedEvent)`
+- L271: `    case dragEntered(DragEnterEvent)`
+- L272: `    case dragMotion(DragMotionEvent)`
+- L273: `    case dragLeft(DragLeaveEvent)`
+- L274: `    case dragDropped(DragDropEvent)`
+- L275: `    case dragOfferChanged(DragOfferChangedEvent)`
+- L278: `public enum DataTransferDiagnosticOperation: Equatable, Sendable {`
+- L279: `    case sourceWriteFailed`
+- L282: `public enum DataTransferDiagnosticSource: Equatable, Sendable, CustomStringConvertible {`
+- L283: `    case clipboard(ClipboardSourceIdentity)`
+- L284: `    case primarySelection(PrimarySelectionSourceIdentity)`
+- L285: `    case dragAndDrop(DragSourceIdentity)`
+- L287: `    public var description: String {`
+- L299: `public struct DataTransferDiagnostic: Equatable, Sendable {`
+- L300: `    public let source: DataTransferDiagnosticSource`
+- L301: `    public let mimeType: MIMEType`
+- L302: `    public let operation: DataTransferDiagnosticOperation`
+- L303: `    public let error: DataTransferError`
+- L305: `    public var message: String {`
+- L309: `    public init(`
+- L321: `    public init(`
+- L335: `    public init(`
+- L349: `    public init(`
+- L364: `public struct MIMEType: RawRepresentable, Equatable, Hashable, Sendable,`
+- L367: `    public let rawValue: String`
+- L369: `    public static let plainText = MIMEType(unchecked: "text/plain")`
+- L370: `    public static let plainTextUTF8 = MIMEType(unchecked: "text/plain;charset=utf-8")`
+- L371: `    public static let uriList = MIMEType(unchecked: "text/uri-list")`
+- L373: `    public init(_ value: String) throws {`
+- L381: `    public init?(rawValue value: String) {`
+- L394: `    public var description: String {`
+- L449: `public struct ByteCount: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L450: `    public let rawValue: Int`
+- L452: `    public static let defaultTransferReadLimit = ByteCount(unchecked: 16 * 1_024 * 1_024)`
+- L454: `    public init(_ value: Int) throws {`
+- L462: `    public static func bytes(_ value: Int) throws -> ByteCount {`
+- L466: `    public static func kilobytes(_ value: Int) throws -> ByteCount {`
+- L470: `    public static func megabytes(_ value: Int) throws -> ByteCount {`
+- L479: `    public var description: String {`
+- L483: `    public static func < (lhs: ByteCount, rhs: ByteCount) -> Bool {`
+
+### `Sources/WaylandClient/Public/DataTransfer/DataTransferSourcePayload.swift`
+
+- L3: `public struct DataTransferSourcePayload: Equatable, Sendable {`
+- L4: `    public let mimeType: MIMEType`
+- L5: `    public let data: Data`
+- L7: `    public init(mimeType payloadMIMEType: MIMEType, data payloadData: Data) {`
+- L13: `public typealias ClipboardSourcePayload = DataTransferSourcePayload`
+
+### `Sources/WaylandClient/Public/DataTransfer/DragAndDropDomainTypes.swift`
+
+- L3: `public struct DragActionSet: OptionSet, Sendable, Hashable, CustomStringConvertible {`
+- L4: `    public let rawValue: UInt32`
+- L6: `    public static let copy = Self(rawValue: 1 << 0)`
+- L7: `    public static let move = Self(rawValue: 1 << 1)`
+- L8: `    public static let ask = Self(rawValue: 1 << 2)`
+- L12: `    public init(rawValue actionRawValue: UInt32) {`
+- L32: `    public var description: String {`
+- L51: `public enum DragAction: Equatable, Sendable, CustomStringConvertible {`
+- L52: `    case none`
+- L53: `    case copy`
+- L54: `    case move`
+- L55: `    case ask`
+- L56: `    case unknown(rawValue: UInt32)`
+- L121: `    public var description: String {`
+- L137: `public struct DragOfferIdentity: Hashable, Sendable, CustomStringConvertible {`
+- L144: `    public var description: String {`
+- L149: `public struct DragLocation: Equatable, Sendable {`
+- L150: `    public let x: Double`
+- L151: `    public let y: Double`
+- L159: `public struct DragEnterEvent: Equatable, Sendable {`
+- L160: `    public let seatID: SeatID`
+- L161: `    public let offer: DragOfferIdentity`
+- L162: `    public let serial: InputSerial`
+- L163: `    public let location: DragLocation`
+- L164: `    public let target: InputEventTarget`
+- L181: `public struct DragMotionEvent: Equatable, Sendable {`
+- L182: `    public let seatID: SeatID`
+- L183: `    public let offer: DragOfferIdentity`
+- L184: `    public let time: WaylandTimestampMilliseconds`
+- L185: `    public let location: DragLocation`
+- L200: `public struct DragLeaveEvent: Equatable, Sendable {`
+- L201: `    public let seatID: SeatID`
+- L202: `    public let offer: DragOfferIdentity`
+- L210: `public struct DragDropEvent: Equatable, Sendable {`
+- L211: `    public let seatID: SeatID`
+- L212: `    public let offer: DragOfferIdentity`
+- L220: `public struct DragOfferChangedEvent: Equatable, Sendable {`
+- L221: `    public let seatID: SeatID`
+- L222: `    public let offer: DragOfferIdentity`
+
+### `Sources/WaylandClient/Public/DataTransfer/DragOffer.swift`
+
+- L3: `public struct DragOffer: Sendable, Hashable {`
+- L4: `    public static let defaultReadTimeout: Duration = .seconds(5)`
+- L7: `    public let seatID: SeatID`
+- L8: `    public let mimeTypes: [MIMEType]`
+- L9: `    public let sourceActions: DragActionSet`
+- L10: `    public let selectedAction: DragAction?`
+- L30: `    public var identity: DragOfferIdentity {`
+- L34: `    public func accept(_ mimeType: MIMEType?) async throws {`
+- L38: `    public func setActions(`
+- L49: `    public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {`
+- L53: `    public func read(`
+- L65: `    public func finish() async throws {`
+- L69: `    public func cancel() async throws {`
+- L73: `    public static func == (lhs: DragOffer, rhs: DragOffer) -> Bool {`
+- L77: `    public func hash(into hasher: inout Hasher) {`
+
+### `Sources/WaylandClient/Public/DataTransfer/DragSource.swift`
+
+- L3: `public enum DragIcon: Equatable, Sendable {`
+- L4: `    case none`
+- L7: `public struct DragSourceIdentity: Hashable, Sendable, CustomStringConvertible {`
+- L14: `    public var description: String {`
+- L19: `public struct DragSourceConfiguration: Equatable, Sendable {`
+- L20: `    public let payloads: [DataTransferSourcePayload]`
+- L21: `    public let actions: DragActionSet`
+- L24: `    public init(`
+- L38: `    public static func data(`
+- L54: `public struct DragSource: Sendable, Hashable {`
+- L56: `    public let seatID: SeatID`
+- L57: `    public let mimeTypes: [MIMEType]`
+- L58: `    public let actions: DragActionSet`
+- L77: `    public var identity: DragSourceIdentity {`
+- L82: `    public func cancel() async throws {`
+- L86: `    public static func == (lhs: DragSource, rhs: DragSource) -> Bool {`
+- L90: `    public func hash(into hasher: inout Hasher) {`
+- L96: `public struct DragSourceTargetEvent: Equatable, Sendable {`
+- L97: `    public let source: DragSourceIdentity`
+- L98: `    public let mimeType: MIMEType?`
+- L106: `public struct DragSourceActionEvent: Equatable, Sendable {`
+- L107: `    public let source: DragSourceIdentity`
+- L108: `    public let action: DragAction`
+- L116: `public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {`
+- L117: `    case copy`
+- L118: `    case move`
+- L119: `    case unknown(rawValue: UInt32)`
+- L134: `    public var description: String {`
+- L146: `public struct DragSourceFinishedEvent: Equatable, Sendable {`
+- L147: `    public let source: DragSourceIdentity`
+- L148: `    public let finalAction: DragSourceFinalAction`
+
+### `Sources/WaylandClient/Public/DataTransfer/OwnedFileDescriptor.swift`
+
+- L5: `public struct OwnedFileDescriptor: ~Copyable, Sendable {`
+- L15: `    public init(adopting rawValue: Int32) throws {`
+- L61: `    public var isClosed: Bool {`
+- L65: `    public var description: String {`
+- L73: `    public mutating func readData(`
+- L119: `    public mutating func writeData(_ data: Data) throws {`
+- L134: `    public mutating func close() throws {`
+- L148: `    public mutating func releaseRawValue() -> Int32 {`
+
+### `Sources/WaylandClient/Public/Diagnostics/InputDiagnostic.swift`
+
+- L1: `public struct InputDiagnostic: Equatable, Sendable {`
+- L2: `    public let payload: InputDiagnosticPayload`
+- L4: `    public init(_ diagnosticPayload: InputDiagnosticPayload) {`
+- L8: `    public var operation: InputDiagnosticOperation {`
+- L12: `    public var message: String {`
+- L17: `public enum InputDiagnosticPayload: Equatable, Sendable {`
+- L18: `    case keymap(KeymapDiagnostic)`
+- L19: `    case keyboardRepeat(KeyboardRepeatDiagnostic)`
+- L20: `    case listener(InputListenerDiagnostic)`
+- L21: `    case seatBinding(InputSeatBindingDiagnostic)`
+- L22: `    case inputPipelineOverflow(InputPipelineOverflow)`
+- L23: `    case cursor(CursorDiagnostic)`
+- L24: `    case unknownProtocolValue(UnknownInputProtocolValueDiagnostic)`
+- L26: `    public var operation: InputDiagnosticOperation {`
+- L47: `    public var description: String {`
+- L67: `public enum KeymapDiagnostic: Equatable, Sendable, CustomStringConvertible {`
+- L68: `    case readFailed(KeymapReadFailure)`
+- L70: `    public var description: String {`
+- L78: `public struct KeyboardRepeatDiagnostic: Equatable, Sendable, CustomStringConvertible {`
+- L79: `    public let failure: KeyboardRepeatFailure`
+- L81: `    public init(_ diagnosticFailure: KeyboardRepeatFailure) {`
+- L85: `    public var description: String {`
+- L90: `public enum KeyboardRepeatFailure: Equatable, Sendable, CustomStringConvertible {`
+- L91: `    case negativeRate(rate: Int32, delay: Int32)`
+- L92: `    case negativeDelay(rate: Int32, delay: Int32)`
+- L94: `    public var description: String {`
+- L104: `public enum KeymapReadFailure: Equatable, Sendable, CustomStringConvertible {`
+- L105: `    case unsupportedFormat(format: KeyboardKeymapFormat, advertisedSize: UInt32)`
+- L106: `    case invalidFileDescriptor(Int32)`
+- L107: `    case invalidSizeLimit(maxSize: UInt32, hardMaximumSize: UInt32)`
+- L108: `    case emptyXKBV1Payload(size: UInt32)`
+- L109: `    case tooLarge(size: UInt32, maxSize: UInt32)`
+- L110: `    case tooLargeForProtocolSize(Int)`
+- L111: `    case fdTooSmall(size: UInt32, actualSize: Int64)`
+- L112: `    case missingNULTerminator(size: UInt32)`
+- L113: `    case system(WaylandSystemError)`
+- L115: `    public var description: String {`
+- L139: `public struct InputListenerDiagnostic: Equatable, Sendable, CustomStringConvertible {`
+- L140: `    public let listener: String`
+- L141: `    public let message: String`
+- L143: `    public init(listener listenerName: String, message diagnosticMessage: String) {`
+- L148: `    public var description: String {`
+- L153: `public struct InputSeatBindingDiagnostic: Equatable, Sendable, CustomStringConvertible {`
+- L154: `    public let interface: String`
+- L155: `    public let failure: InputSeatBindingFailure`
+- L157: `    public init(interface interfaceName: String, failure bindingFailure: InputSeatBindingFailure) {`
+- L162: `    public var description: String {`
+- L167: `public enum InputSeatBindingFailure: Equatable, Sendable, CustomStringConvertible {`
+- L168: `    case bindFailed(interface: String)`
+- L169: `    case listener(InputSeatBindingListener)`
+- L170: `    case proxyQueueMismatch(interface: String, objectID: UInt32?)`
+- L171: `    case system(WaylandSystemError)`
+- L172: `    case systemErrnoUnavailable(WaylandSystemOperation)`
+- L173: `    case other(String)`
+- L175: `    public var description: String {`
+- L194: `public enum InputSeatBindingListener: Equatable, Sendable, CustomStringConvertible {`
+- L195: `    case registry`
+- L196: `    case output`
+- L197: `    case seat`
+- L198: `    case pointer`
+- L199: `    case keyboard`
+- L200: `    case touch`
+- L201: `    case syncCallback`
+- L203: `    public var description: String {`
+- L223: `public enum CursorDiagnosticOperation: Equatable, Sendable {`
+- L224: `    case missingCursor`
+- L225: `    case automaticPointerEnter`
+- L228: `public enum AutomaticPointerEnterFailure: Error, Equatable, Sendable, CustomStringConvertible {`
+- L229: `    case cursorImageResolution(String)`
+- L230: `    case cursorSurfaceCreation(String)`
+- L231: `    case cursorRequest(PointerCursorRequestFailure)`
+- L232: `    case cursorApplication(String)`
+- L234: `    public var description: String {`
+- L248: `public enum CursorDiagnostic: Equatable, Sendable, CustomStringConvertible {`
+- L249: `    case missingCursor(name: String)`
+- L250: `    case automaticPointerEnterFailed(AutomaticPointerEnterFailure)`
+- L252: `    public var operation: CursorDiagnosticOperation {`
+- L261: `    public var description: String {`
+- L271: `public enum UnknownInputProtocolValueField: Equatable, Hashable, Sendable,`
+- L274: `    case pointerAxis`
+- L275: `    case pointerAxisSource`
+- L276: `    case pointerAxisRelativeDirection`
+- L277: `    case pointerButtonState`
+- L278: `    case keyboardKeyState`
+- L279: `    case seatCapability`
+- L281: `    public var description: String {`
+- L299: `public struct UnknownInputProtocolValueDiagnostic: Equatable, Sendable,`
+- L302: `    public let field: UnknownInputProtocolValueField`
+- L303: `    public let rawValue: UInt32`
+- L304: `    public let seatID: SeatID`
+- L305: `    public let sequence: UInt64`
+- L307: `    public init(`
+- L319: `    public var description: String {`
+- L324: `public enum InputDiagnosticOperation: Equatable, Sendable {`
+- L325: `    case keyboardKeymap`
+- L326: `    case keyboardRepeat`
+- L327: `    case listener(String)`
+- L328: `    case seatBinding(String)`
+- L329: `    case inputPipelineOverflow(InputPipelineOverflow)`
+- L330: `    case cursor(CursorDiagnosticOperation)`
+- L331: `    case unknownProtocolValue(UnknownInputProtocolValueField)`
+
+### `Sources/WaylandClient/Public/Diagnostics/WindowDiagnostic.swift`
+
+- L3: `public enum WindowCallbackOperation: Equatable, Sendable, CustomStringConvertible {`
+- L4: `    case closeRequested`
+- L5: `    case transientStateReset`
+- L6: `    case frameDone`
+- L7: `    case bufferReleased`
+- L8: `    case markNeedsRedraw`
+- L9: `    case surfaceScaleChanged`
+- L10: `    case presentationFeedback`
+- L11: `    case close`
+- L13: `    public var description: String {`
+- L35: `public enum WindowLifecycleOperation: Equatable, Sendable, CustomStringConvertible {`
+- L36: `    case close`
+- L38: `    public var description: String {`
+- L46: `public enum WindowDecorationOperation: Equatable, Sendable, CustomStringConvertible {`
+- L47: `    case decorationUnavailable`
+- L49: `    public var description: String {`
+- L57: `public enum WindowPresentationOperation: Equatable, Sendable, CustomStringConvertible {`
+- L58: `    case presentationFailed`
+- L60: `    public var description: String {`
+- L68: `public enum WindowScaleOperation: Equatable, Sendable, CustomStringConvertible {`
+- L69: `    case fractionalScaleUnavailable`
+- L71: `    public var description: String {`
+- L79: `public enum UnknownWindowProtocolValueField: Equatable, Hashable, Sendable,`
+- L82: `    case xdgTopLevelState`
+- L83: `    case xdgWMCapability`
+- L84: `    case xdgDecorationMode`
+- L86: `    public var description: String {`
+- L98: `public struct UnknownWindowProtocolValueDiagnostic: Equatable, Sendable,`
+- L101: `    public let field: UnknownWindowProtocolValueField`
+- L102: `    public let rawValue: UInt32`
+- L103: `    public let configureSerial: UInt32`
+- L105: `    public init(`
+- L115: `    public var description: String {`
+- L120: `public enum WindowDiagnosticOperation: Equatable, Sendable {`
+- L121: `    case callback(WindowCallbackOperation)`
+- L122: `    case lifecycle(WindowLifecycleOperation)`
+- L123: `    case decoration(WindowDecorationOperation)`
+- L124: `    case presentation(WindowPresentationOperation)`
+- L125: `    case scale(WindowScaleOperation)`
+- L126: `    case unknownProtocolValue(UnknownWindowProtocolValueField)`
+- L129: `public struct WindowDiagnostic: Equatable, Sendable {`
+- L130: `    public let windowID: WindowID`
+- L131: `    public let payload: WindowDiagnosticPayload`
+- L133: `    public var operation: WindowDiagnosticOperation {`
+- L137: `    public var message: String {`
+- L141: `    public init(`
+- L150: `public enum WindowDiagnosticPayload: Equatable, Sendable, CustomStringConvertible {`
+- L151: `    case callback(WindowCallbackDiagnostic)`
+- L152: `    case decoration(WindowDecorationDiagnostic)`
+- L153: `    case presentation(WindowPresentationDiagnostic)`
+- L154: `    case scale(WindowScaleDiagnostic)`
+- L155: `    case unknownProtocolValue(UnknownWindowProtocolValueDiagnostic)`
+- L157: `    public var operation: WindowDiagnosticOperation {`
+- L172: `    public var description: String {`
+- L188: `public struct WindowCallbackDiagnostic: Equatable, Sendable, CustomStringConvertible {`
+- L189: `    public let operation: WindowCallbackOperation`
+- L190: `    public let failure: WindowCallbackFailure`
+- L192: `    public init(`
+- L200: `    public var description: String {`
+- L205: `public enum WindowCallbackFailure: Equatable, Sendable, CustomStringConvertible {`
+- L206: `    case displayClosed`
+- L208: `    public var description: String {`
+- L216: `public struct WindowDecorationDiagnostic: Equatable, Sendable, CustomStringConvertible {`
+- L217: `    public let operation: WindowDecorationOperation`
+- L218: `    public let reason: WindowDecorationUnavailableReason`
+- L220: `    public init(`
+- L228: `    public var description: String {`
+- L233: `public enum WindowDecorationUnavailableReason: Equatable, Sendable, CustomStringConvertible {`
+- L234: `    case managerMissing`
+- L235: `    case unsupportedManagerVersion(advertised: UInt32, minimum: UInt32)`
+- L249: `    public var description: String {`
+- L260: `public struct WindowPresentationDiagnostic: Equatable, Sendable, CustomStringConvertible {`
+- L261: `    public let operation: WindowPresentationOperation`
+- L262: `    public let error: PresentationError`
+- L264: `    public init(`
+- L272: `    public var description: String {`
+- L277: `public struct WindowScaleDiagnostic: Equatable, Sendable, CustomStringConvertible {`
+- L278: `    public let operation: WindowScaleOperation`
+- L279: `    public let reason: WindowScaleFailure`
+- L281: `    public init(`
+- L289: `    public var description: String {`
+- L294: `public enum WindowScaleFailure: Equatable, Sendable, CustomStringConvertible {`
+- L295: `    case viewporterMissing`
+- L297: `    public var description: String {`
+
+### `Sources/WaylandClient/Public/Display/DisplayEvent.swift`
+
+- L1: `public enum DisplayEvent: Equatable, Sendable {`
+- L2: `    case input(InputEvent)`
+- L3: `    case diagnostic(DisplayDiagnostic)`
+- L4: `    case windowCloseRequested(WindowID)`
+- L5: `    case windowClosed(WindowID)`
+- L6: `    case popupDismissed(PopupLifecycleEvent)`
+- L7: `    case popupClosed(PopupLifecycleEvent)`
+- L8: `    case redrawRequested(WindowID)`
+- L9: `    case popupRedrawRequested(PopupLifecycleEvent)`
+- L10: `    case outputChanged(OutputSnapshot)`
+- L11: `    case outputRemoved(OutputID)`
+- L12: `    case windowOutputsChanged(WindowOutputMembershipEvent)`
+- L15: `public struct PopupLifecycleEvent: Equatable, Sendable {`
+- L16: `    public let popup: PopupSurfaceIdentity`
+- L17: `    public let parentWindowID: WindowID`
+- L25: `public struct WindowOutputMembershipEvent: Equatable, Sendable {`
+- L26: `    public let windowID: WindowID`
+- L27: `    public let outputs: [OutputID]`
+- L29: `    public init(windowID eventWindowID: WindowID, outputs eventOutputs: [OutputID]) {`
+- L35: `public enum DiagnosticSeverity: Equatable, Sendable {`
+- L36: `    case warning`
+- L37: `    case degraded`
+- L38: `    case error`
+- L41: `public struct DiagnosticID: Equatable, Hashable, Sendable {`
+- L42: `    public let rawValue: UInt64`
+- L44: `    public init(rawValue diagnosticRawValue: UInt64) {`
+- L49: `public struct DisplayDiagnostic: Equatable, Sendable {`
+- L50: `    public let id: DiagnosticID`
+- L51: `    public let severity: DiagnosticSeverity`
+- L52: `    public let payload: DisplayDiagnosticPayload`
+- L54: `    public init(`
+- L65: `public enum DisplayDiagnosticPayload: Equatable, Sendable {`
+- L66: `    case input(InputDiagnostic)`
+- L67: `    case window(WindowDiagnostic)`
+- L68: `    case dataTransfer(DataTransferDiagnostic)`
+- L69: `    case diagnosticsDropped(count: Int)`
+- L72: `public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {`
+- L73: `    case displayEvents`
+- L74: `    case inputEvents`
+- L75: `    case dataTransferEvents`
+- L76: `    case presentationEvents`
+- L77: `    case diagnostics`
+- L79: `    public var description: String {`
+- L139: `public struct DisplayEvents: AsyncSequence, Sendable {`
+- L140: `    public typealias Element = DisplayEvent`
+- L141: `    public typealias Failure = WaylandDisplayError`
+- L149: `    public func makeAsyncIterator() -> DisplayEventsIterator {`
+- L155: `public struct DisplayEventsIterator: AsyncIteratorProtocol {`
+- L156: `    public typealias Element = DisplayEvent`
+- L157: `    public typealias Failure = WaylandDisplayError`
+- L165: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayEvent? {`
+- L169: `    public mutating func next(`
+- L177: `public struct InputEvents: AsyncSequence, Sendable {`
+- L178: `    public typealias Element = InputEvent`
+- L179: `    public typealias Failure = WaylandDisplayError`
+- L187: `    public func makeAsyncIterator() -> InputEventsIterator {`
+- L193: `public struct InputEventsIterator: AsyncIteratorProtocol {`
+- L194: `    public typealias Element = InputEvent`
+- L195: `    public typealias Failure = WaylandDisplayError`
+- L203: `    public mutating func next() async throws(WaylandDisplayError) -> InputEvent? {`
+- L207: `    public mutating func next(`
+- L215: `public struct DataTransferEvents: AsyncSequence, Sendable {`
+- L216: `    public typealias Element = DataTransferEvent`
+- L217: `    public typealias Failure = WaylandDisplayError`
+- L225: `    public func makeAsyncIterator() -> DataTransferEventsIterator {`
+- L231: `public struct DataTransferEventsIterator: AsyncIteratorProtocol {`
+- L232: `    public typealias Element = DataTransferEvent`
+- L233: `    public typealias Failure = WaylandDisplayError`
+- L241: `    public mutating func next() async throws(WaylandDisplayError) -> DataTransferEvent? {`
+- L245: `    public mutating func next(`
+- L253: `public struct DisplayDiagnostics: AsyncSequence, Sendable {`
+- L254: `    public typealias Element = DisplayDiagnostic`
+- L255: `    public typealias Failure = WaylandDisplayError`
+- L263: `    public func makeAsyncIterator() -> DisplayDiagnosticsIterator {`
+- L269: `public struct DisplayDiagnosticsIterator: AsyncIteratorProtocol {`
+- L270: `    public typealias Element = DisplayDiagnostic`
+- L271: `    public typealias Failure = WaylandDisplayError`
+- L279: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayDiagnostic? {`
+- L283: `    public mutating func next(`
+
+### `Sources/WaylandClient/Public/Display/Output.swift`
+
+- L3: `public struct OutputID: Hashable, Sendable, CustomStringConvertible {`
+- L4: `    public let rawValue: UInt32`
+- L6: `    public init(rawValue outputRawValue: UInt32) {`
+- L10: `    public var description: String {`
+- L15: `public enum OutputSubpixelLayout: Equatable, Sendable {`
+- L16: `    case unknown`
+- L17: `    case none`
+- L18: `    case horizontalRGB`
+- L19: `    case horizontalBGR`
+- L20: `    case verticalRGB`
+- L21: `    case verticalBGR`
+- L22: `    case unrecognized(Int32)`
+- L24: `    public init(rawValue outputRawValue: Int32) {`
+- L43: `    public var rawValue: Int32 {`
+- L63: `public enum OutputTransform: Equatable, Sendable {`
+- L64: `    case normal`
+- L65: `    case rotated90`
+- L66: `    case rotated180`
+- L67: `    case rotated270`
+- L68: `    case flipped`
+- L69: `    case flipped90`
+- L70: `    case flipped180`
+- L71: `    case flipped270`
+- L72: `    case unrecognized(Int32)`
+- L74: `    public init(rawValue outputRawValue: Int32) {`
+- L97: `    public var rawValue: Int32 {`
+- L121: `public struct OutputGeometry: Equatable, Sendable {`
+- L122: `    public let x: Int32`
+- L123: `    public let y: Int32`
+- L124: `    public let physicalWidthMillimeters: Int32`
+- L125: `    public let physicalHeightMillimeters: Int32`
+- L126: `    public let subpixel: OutputSubpixelLayout`
+- L127: `    public let make: String?`
+- L128: `    public let model: String?`
+- L129: `    public let transform: OutputTransform`
+- L131: `    public init(`
+- L152: `public struct OutputModeFlags: OptionSet, Sendable {`
+- L153: `    public let rawValue: UInt32`
+- L155: `    public init(rawValue modeRawValue: UInt32) {`
+- L159: `    public static let current = OutputModeFlags(rawValue: 0x1)`
+- L160: `    public static let preferred = OutputModeFlags(rawValue: 0x2)`
+- L163: `public struct OutputMode: Equatable, Sendable {`
+- L164: `    public let flags: OutputModeFlags`
+- L165: `    public let width: PositiveInt32`
+- L166: `    public let height: PositiveInt32`
+- L167: `    public let refresh: OutputRefreshRate`
+- L169: `    public init(`
+- L182: `public enum OutputRefreshRate: Equatable, Sendable {`
+- L183: `    case unspecified`
+- L184: `    case milliHertz(PositiveInt32)`
+- L197: `public struct OutputLogicalGeometry: Equatable, Sendable {`
+- L198: `    public let x: Int32`
+- L199: `    public let y: Int32`
+- L200: `    public let width: PositiveInt32`
+- L201: `    public let height: PositiveInt32`
+- L203: `    public init(`
+- L216: `public struct OutputSnapshot: Equatable, Sendable {`
+- L217: `    public let id: OutputID`
+- L218: `    public let version: UInt32`
+- L219: `    public let geometry: OutputGeometry?`
+- L220: `    public let logicalGeometry: OutputLogicalGeometry?`
+- L221: `    public let currentMode: OutputMode?`
+- L222: `    public let scale: PositiveInt32`
+- L223: `    public let name: String?`
+- L224: `    public let description: String?`
+- L226: `    public init(`
+
+### `Sources/WaylandClient/Public/Display/WaylandCapabilities.swift`
+
+- L4: `public enum ProtocolAvailability: Equatable, Sendable {`
+- L5: `    case unavailable`
+- L6: `    case available(version: UInt32)`
+- L9: `    public var isAvailable: Bool {`
+- L19: `    public var version: UInt32? {`
+- L30: `public struct WaylandCapabilities: Equatable, Sendable {`
+- L32: `    public let clipboard: ProtocolAvailability`
+- L35: `    public let dragAndDrop: ProtocolAvailability`
+- L38: `    public let dragActionNegotiation: ProtocolAvailability`
+- L41: `    public let primarySelection: ProtocolAvailability`
+- L44: `    public let xdgDecoration: ProtocolAvailability`
+- L47: `    public let xdgOutput: ProtocolAvailability`
+- L50: `    public let viewporter: ProtocolAvailability`
+- L53: `    public let presentationTime: ProtocolAvailability`
+- L56: `    public let fractionalScale: ProtocolAvailability`
+- L59: `    public let linuxDmabuf: ProtocolAvailability`
+- L61: `    public init(`
+
+### `Sources/WaylandClient/Public/Display/WaylandDisplay+DataTransfer.swift`
+
+- L2: `    public func clipboardOffer(for seatID: SeatID) throws -> ClipboardOffer? {`
+- L8: `    public func dragOffer(for seatID: SeatID) throws -> DragOffer? {`
+- L18: `    public func requestClipboardSelection(`
+- L34: `    public func requestClearClipboard(seatID: SeatID, serial: InputSerial) throws {`
+- L115: `    public func primarySelectionOffer(for seatID: SeatID) throws -> PrimarySelectionOffer? {`
+- L125: `    public func requestPrimarySelection(`
+- L141: `    public func requestClearPrimarySelection(seatID: SeatID, serial: InputSerial) throws {`
+
+### `Sources/WaylandClient/Public/Display/WaylandDisplay.swift`
+
+- L4: `public actor WaylandDisplay {`
+- L5: `    public static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000`
+- L6: `    public static let defaultConfigureTimeoutMilliseconds: Int32 = 1_000`
+- L11: `    public nonisolated var unownedExecutor: UnownedSerialExecutor {`
+- L15: `    public nonisolated var events: DisplayEvents {`
+- L19: `    public nonisolated var inputEvents: InputEvents {`
+- L23: `    public nonisolated var dataTransferEvents: DataTransferEvents {`
+- L27: `    public nonisolated var diagnostics: DisplayDiagnostics {`
+- L54: `    public static func withConnection<ResultValue: Sendable>(`
+- L76: `    public static func withConnection<ResultValue: Sendable>(`
+- L90: `    public func currentPointerCursor() throws -> PointerCursor {`
+- L98: `    public func capabilities() throws -> WaylandCapabilities {`
+- L102: `    public func outputs() throws -> [OutputSnapshot] {`
+- L107: `    public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {`
+- L112: `    public func createTopLevelWindow(`
+- L247: `    public func close() {`
+- L306: `    public var isClosed: Bool {`
+
+### `Sources/WaylandClient/Public/Errors/ClientError.swift`
+
+- L1: `public enum ClientError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L2: `    case windowCreationFailed(WindowCreationFailure)`
+- L3: `    case invalidWindowState(InvalidWindowState)`
+- L4: `    case display(DisplayOperationError)`
+- L5: `    case invalidWindowConfiguration(WindowConfigurationError)`
+- L6: `    case cursor(PointerCursorError)`
+- L7: `    case window(WindowID, WindowError)`
+- L9: `    public var description: String {`
+- L27: `public enum WindowCreationFailure: Equatable, Sendable, CustomStringConvertible {`
+- L28: `    case requiredGlobalsNotBound`
+- L29: `    case clockGetTimeFailed(errno: Int32)`
+- L30: `    case message(String)`
+- L32: `    public var description: String {`
+- L44: `public enum InvalidWindowState: Equatable, Sendable, CustomStringConvertible {`
+- L45: `    case unknownPopupGrabSeat(SeatID)`
+- L46: `    case unknownWindowInteractionSeat(SeatID)`
+- L47: `    case unknownWindowFullscreenOutput(OutputID)`
+- L48: `    case unexpectedPopupConfigureError(String)`
+- L49: `    case softwareFrameLayout(SoftwareFrameLayoutError)`
+- L50: `    case message(String)`
+- L52: `    public var description: String {`
+- L70: `public enum SoftwareFrameLayoutError: Equatable, Sendable, CustomStringConvertible {`
+- L71: `    case nonPositiveDimensions(width: Int32, height: Int32)`
+- L72: `    case minimumStrideOverflow(width: Int32)`
+- L73: `    case strideTooSmall(width: Int32, stride: Int32, minimumStride: Int)`
+- L74: `    case requiredByteCountOverflow(stride: Int32, height: Int32)`
+- L75: `    case storageTooSmall(requiredByteCount: Int, actualByteCount: Int)`
+- L77: `    public var description: String {`
+
+### `Sources/WaylandClient/Public/Errors/ClientErrorDomain.swift`
+
+- L1: `public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L2: `    case closed`
+- L3: `    case unknownWindow(WindowID)`
+- L4: `    case unknownPopup`
+- L5: `    case closedPopup`
+- L6: `    case foreignWindow(WindowID)`
+- L7: `    case presentationTimeUnavailable`
+- L9: `    public var description: String {`
+- L27: `public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {`
+- L28: `    case skippedUnknownSeat`
+- L29: `    case skippedNoPointer`
+- L31: `    public var description: String {`
+- L41: `public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConvertible {`
+- L42: `    public let seatID: SeatID`
+- L43: `    public let requestedCursor: PointerCursor`
+- L44: `    public let backendResult: PointerCursorBackendResult`
+- L46: `    public init(`
+- L56: `    public var description: String {`
+- L70: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L71: `    case invalidConfiguration(CursorConfigurationError)`
+- L72: `    case requestFailed(PointerCursorRequestFailure)`
+- L74: `    public var description: String {`
+
+### `Sources/WaylandClient/Public/Errors/DisplayError.swift`
+
+- L5: `public enum WaylandSystemErrorConstructionError: Error, Equatable, Sendable {`
+- L6: `    case nonPositiveErrno(Int32)`
+- L9: `public struct WaylandSystemErrno: Equatable, Sendable, CustomStringConvertible {`
+- L10: `    public let rawValue: Int32`
+- L12: `    public init(_ rawErrorNumber: Int32) throws {`
+- L29: `    public var description: String {`
+- L34: `public enum WaylandSystemOperation: Equatable, Sendable, CustomStringConvertible {`
+- L35: `    case validateArgument(String)`
+- L36: `    case createSharedMemoryFile`
+- L37: `    case resizeSharedMemoryFile`
+- L38: `    case mapSharedMemory`
+- L39: `    case createBuffer`
+- L40: `    case installListener(String)`
+- L41: `    case connectDisplay`
+- L42: `    case readMonotonicClock`
+- L43: `    case pollEventLoop`
+- L44: `    case displayFlush`
+- L45: `    case displayReadEvents`
+- L46: `    case displayDispatchPending`
+- L47: `    case displayPrepareRead`
+- L48: `    case displayError`
+- L49: `    case keymapFstat`
+- L50: `    case keymapMmap`
+- L51: `    case mapDmabufFormatTable`
+- L52: `    case createPipe`
+- L53: `    case readFileDescriptor`
+- L54: `    case writeFileDescriptor`
+- L55: `    case duplicateFileDescriptor`
+- L56: `    case closeFileDescriptor`
+- L58: `    public var description: String {`
+- L227: `public struct WaylandSystemError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L228: `    public let errno: WaylandSystemErrno`
+- L229: `    public let operation: WaylandSystemOperation`
+- L231: `    public init(`
+- L239: `    public init(`
+- L252: `    public var description: String {`
+- L257: `public struct WaylandProtocolObjectID: Equatable, Hashable, Sendable, CustomStringConvertible {`
+- L258: `    public let rawValue: UInt32`
+- L260: `    public init(rawValue objectRawValue: UInt32) {`
+- L268: `    public var description: String {`
+- L273: `public enum WaylandProtocolError: Equatable, Sendable, CustomStringConvertible {`
+- L274: `    case display(interface: String?, objectID: UInt32, code: Int32)`
+- L275: `    case invalidXDGConfigureDimensions(windowID: WindowID, width: Int32, height: Int32)`
+- L276: `    case invalidXDGTopLevelConfigureSize(width: Int32, height: Int32)`
+- L277: `    case invalidXDGConfigureBounds(width: Int32, height: Int32)`
+- L278: `    case invalidConfigureSerial(windowID: WindowID, serial: UInt32)`
+- L279: `    case invalidDecorationMode(rawValue: UInt32)`
+- L280: `    case invalidPreferredBufferScale(windowID: WindowID, factor: Int32)`
+- L281: `    case invalidFractionalScale(windowID: WindowID, numerator: UInt32)`
+- L282: `    case unrepresentableSurfaceBufferSize(`
+- L288: `    case proxyQueueMismatch(interface: String, objectID: WaylandProtocolObjectID?)`
+- L290: `    public var description: String {`
+- L327: `public enum WaylandEventLoopError: Equatable, Sendable, CustomStringConvertible {`
+- L328: `    case unexpectedDisplayRevents(revents: Int16)`
+- L329: `    case unexpectedWakeRevents(revents: Int16)`
+- L331: `    public var description: String {`
+- L341: `public enum InternalInvariantViolation: Equatable, Sendable, CustomStringConvertible {`
+- L342: `    case message(String)`
+- L343: `    case rawListenerFiredAfterInvalidation(String)`
+- L344: `    case frameCallbackAfterLocalDestroy(WindowID)`
+- L345: `    case bufferReleaseWithoutBufferState(WindowID)`
+- L346: `    case invalidWindowTransition(WindowID, transition: WindowLifecycleTransitionError)`
+- L347: `    case effectInterpreterInvariant(WindowID, String)`
+- L348: `    case unexpectedWindowCallbackError(`
+- L353: `    case eventSubscriberAwaitedTwice`
+- L355: `    public var description: String {`
+- L377: `public enum WaylandDisplayError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L378: `    case closed`
+- L379: `    case protocolError(WaylandProtocolError)`
+- L380: `    case systemError(WaylandSystemError)`
+- L381: `    case eventLoopError(WaylandEventLoopError)`
+- L382: `    case eventSubscriberOverflow(stream: EventStreamIdentity, capacity: Int)`
+- L383: `    case inputPipelineOverflow(InputPipelineOverflow)`
+- L384: `    case internalInvariantViolation(InternalInvariantViolation)`
+- L464: `    public var description: String {`
+
+### `Sources/WaylandClient/Public/Errors/WindowError.swift`
+
+- L1: `public enum WindowError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L2: `    case invalidConfigure(WindowConfigureError)`
+- L3: `    case invalidLifecycleTransition(WindowLifecycleTransitionError)`
+- L4: `    case initialConfigureTimedOut(milliseconds: Int32)`
+- L5: `    case presentationFailed(PresentationError)`
+- L7: `    public var description: String {`
+- L21: `public enum WindowConfigurationError: Equatable, Sendable, CustomStringConvertible {`
+- L22: `    case nonPositiveInitialWidth(Int32)`
+- L23: `    case nonPositiveInitialHeight(Int32)`
+- L24: `    case nonPositiveBufferCount(Int)`
+- L25: `    case negativeMilliseconds(value: Int32)`
+- L26: `    case emptyString(field: String)`
+- L27: `    case interiorNUL(field: String)`
+- L28: `    case nonPositiveInt32(value: Int32)`
+- L29: `    case nonPositiveInt(value: Int)`
+- L30: `    case nonPositiveScaleNumerator(UInt32)`
+- L31: `    case scaleNumeratorTooLarge(UInt32)`
+- L32: `    case zeroScaleDenominator`
+- L34: `    public var description: String {`
+- L62: `public enum WindowConfigureError: Equatable, Sendable, CustomStringConvertible {`
+- L63: `    case negativeSuggestedDimension(width: Int32, height: Int32)`
+- L64: `    case unresolvedSize`
+- L65: `    case invalidSerial(UInt32)`
+- L66: `    case invalidDecorationMode(UInt32)`
+- L67: `    case invalidPreferredBufferScale(Int32)`
+- L68: `    case invalidFractionalScale(UInt32)`
+- L69: `    case unrepresentableSurfaceBufferSize(`
+- L75: `    public var description: String {`
+- L100: `public enum WindowLifecycleTransitionError: Equatable, Sendable, CustomStringConvertible {`
+- L101: `    case mapBeforeInitialConfigure`
+- L102: `    case redrawAfterDestroyed`
+- L103: `    case presentWhileClosing`
+- L104: `    case closeAfterDestroyed`
+- L105: `    case presentWithoutRedrawRequest`
+- L106: `    case nestedPresentation`
+- L107: `    case presentAfterDestroyed`
+- L108: `    case inactivePresentationCompletion`
+- L109: `    case presentationRequestMismatch(PresentationRequestMismatch)`
+- L110: `    case presentationGenerationMismatch(expected: UInt64, actual: UInt64)`
+- L111: `    case invalidTransition(from: String, event: String)`
+- L113: `    public var description: String {`
+- L141: `public enum PresentationRequestMismatch: Equatable, Sendable, CustomStringConvertible {`
+- L142: `    case window(`
+- L146: `    case popup(`
+- L151: `    public var description: String {`
+- L161: `public struct WindowPresentationRequestSummary:`
+- L166: `    public let generation: UInt64`
+- L167: `    public let configureSerial: UInt32`
+- L168: `    public let size: PositiveLogicalSize`
+- L169: `    public let bounds: PositiveLogicalSize?`
+- L170: `    public let states: [WindowStateToken]`
+- L171: `    public let wmCapabilities: [WindowManagerCapability]`
+- L172: `    public let decorationMode: WindowDecorationMode?`
+- L174: `    public var description: String {`
+- L183: `public struct PopupPresentationRequestSummary:`
+- L188: `    public let generation: UInt64`
+- L189: `    public let placement: PopupPlacement`
+- L191: `    public var description: String {`
+- L196: `public enum PresentationError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L197: `    case noFreeBuffer`
+- L198: `    case userDraw(String)`
+- L199: `    case frameCallbackRequest(String)`
+- L200: `    case surfaceCommit(String)`
+- L202: `    public var description: String {`
+
+### `Sources/WaylandClient/Public/Input/InputDomainValues.swift`
+
+- L1: `public struct SeatName: RawRepresentable, Equatable, Hashable, Sendable,`
+- L4: `    public let rawValue: String`
+- L6: `    public init?(rawValue seatNameRawValue: String) {`
+- L14: `    public var description: String {`
+- L19: `public struct WaylandTimestampMilliseconds: RawRepresentable, Equatable, Hashable,`
+- L22: `    public let rawValue: UInt32`
+- L24: `    public init(rawValue timestampRawValue: UInt32) {`
+- L28: `    public init(integerLiteral value: UInt32) {`
+- L32: `    public var description: String {`
+- L37: `public struct PointerButtonCode: RawRepresentable, Equatable, Hashable, Sendable,`
+- L40: `    public let rawValue: UInt32`
+- L42: `    public init(rawValue buttonRawValue: UInt32) {`
+- L46: `    public init(integerLiteral value: UInt32) {`
+- L50: `    public var description: String {`
+- L55: `public struct EvdevKeycode: RawRepresentable, Equatable, Hashable, Sendable,`
+- L58: `    public let rawValue: UInt32`
+- L60: `    public init(rawValue keycodeRawValue: UInt32) {`
+- L64: `    public init(integerLiteral value: UInt32) {`
+- L68: `    public var description: String {`
+- L73: `public struct XKBKeycode: RawRepresentable, Equatable, Hashable, Sendable,`
+- L76: `    public let rawValue: UInt32`
+- L78: `    public init(rawValue keycodeRawValue: UInt32) {`
+- L82: `    public init(integerLiteral value: UInt32) {`
+- L86: `    public var description: String {`
+- L91: `public struct PointerAxisDiscreteStep: RawRepresentable, Equatable, Hashable,`
+- L94: `    public let rawValue: Int32`
+- L96: `    public init(rawValue stepRawValue: Int32) {`
+- L100: `    public init(integerLiteral value: Int32) {`
+- L104: `    public var description: String {`
+- L109: `public struct PointerAxisValue120: RawRepresentable, Equatable, Hashable,`
+- L112: `    public let rawValue: Int32`
+- L114: `    public init(rawValue valueRawValue: Int32) {`
+- L118: `    public init(integerLiteral value: Int32) {`
+- L122: `    public var description: String {`
+- L127: `public enum PointerAxis: Equatable, Sendable {`
+- L128: `    case verticalScroll`
+- L129: `    case horizontalScroll`
+- L130: `    case unknown(UInt32)`
+- L132: `    public init(rawValue axisRawValue: UInt32) {`
+- L143: `    public var rawValue: UInt32 {`
+- L155: `public enum PointerAxisSource: Equatable, Sendable {`
+- L156: `    case wheel`
+- L157: `    case finger`
+- L158: `    case continuous`
+- L159: `    case wheelTilt`
+- L160: `    case unknown(UInt32)`
+- L162: `    public init(rawValue sourceRawValue: UInt32) {`
+- L177: `    public var rawValue: UInt32 {`
+- L193: `public enum PointerAxisRelativeDirection: Equatable, Sendable {`
+- L194: `    case identical`
+- L195: `    case inverted`
+- L196: `    case unknown(UInt32)`
+- L198: `    public init(rawValue directionRawValue: UInt32) {`
+- L209: `    public var rawValue: UInt32 {`
+- L221: `public struct KeyboardModifierMask: RawRepresentable, Equatable, Hashable, Sendable,`
+- L224: `    public let rawValue: UInt32`
+- L226: `    public init(rawValue modifierMaskRawValue: UInt32) {`
+- L230: `    public var description: String {`
+- L235: `public struct KeyboardLayoutGroup: RawRepresentable, Equatable, Hashable, Sendable,`
+- L238: `    public let rawValue: UInt32`
+- L240: `    public init(rawValue layoutGroupRawValue: UInt32) {`
+- L244: `    public var description: String {`
+
+### `Sources/WaylandClient/Public/Input/InputEvent+InterpretedKeyboard.swift`
+
+- L1: `public struct InterpretedKeyboardKeyEvent: Equatable, Sendable {`
+- L2: `    public let serial: InputSerial`
+- L3: `    public let time: WaylandTimestampMilliseconds`
+- L4: `    public let rawKeycode: EvdevKeycode`
+- L5: `    public let xkbKeycode: XKBKeycode`
+- L6: `    public let symbolResolution: KeyboardSymbolResolution`
+- L7: `    public let interpretation: InterpretedKeyboardKeyInterpretation`
+- L8: `    public let text: KeyboardTextResult`
+- L10: `    public init(`
+- L30: `    public init(`
+- L48: `    public var keysym: KeyboardKeysym {`
+- L52: `    public var keySymbols: [KeyboardKeysym] {`
+- L56: `    public var primaryKeySymbol: KeyboardKeysym {`
+- L60: `    public var state: InterpretedKeyboardKeyState {`
+- L64: `    public var keysymName: String? {`
+- L68: `    public var utf8: String? {`
+- L72: `    public var keyText: String? {`
+- L76: `    public var repeatCapability: KeyboardKeyRepeatCapability? {`
+- L81: `public enum KeyboardSymbolResolutionError: Error, Equatable, Sendable {`
+- L82: `    case emptySymbols`
+- L83: `    case primaryNotFirst(primary: KeyboardKeysym, first: KeyboardKeysym)`
+- L86: `public struct KeyboardSymbolResolution: Equatable, Sendable {`
+- L87: `    public let primary: KeyboardKeysym`
+- L88: `    public let all: [KeyboardKeysym]`
+- L90: `    public init(`
+- L105: `    public static func single(_ keysym: KeyboardKeysym) -> Self {`
+- L109: `    public static func resolved(_ keysyms: [KeyboardKeysym]) -> Self {`
+- L123: `public enum InterpretedKeyboardKeyInterpretation: Equatable, Sendable {`
+- L124: `    case released(keysymName: String?)`
+- L125: `    case pressed(`
+- L130: `    case repeated(keysymName: String?, utf8: String?)`
+- L131: `    case unknown(state: InterpretedKeyboardKeyState, keysymName: String?)`
+- L133: `    public init(`
+- L155: `    public var state: InterpretedKeyboardKeyState {`
+- L168: `    public var keysymName: String? {`
+- L178: `    public var utf8: String? {`
+- L187: `    public var repeatCapability: KeyboardKeyRepeatCapability? {`
+- L199: `public enum KeyboardKeyRepeatCapability: Equatable, Sendable {`
+- L200: `    case nonRepeating`
+- L201: `    case repeating`
+- L204: `public enum KeyboardTextResult: Equatable, Sendable {`
+- L205: `    case none`
+- L206: `    case composing(KeyboardComposeProgress)`
+- L207: `    case committed(KeyboardTextCommit)`
+- L208: `    case cancelled(KeyboardComposeCancellation)`
+- L210: `    public var committedString: String? {`
+- L222: `public struct KeyboardTextCommit: Equatable, Sendable {`
+- L223: `    public let string: String`
+- L224: `    public let source: KeyboardTextSource`
+- L225: `    public let resultKeysym: KeyboardKeysym?`
+- L226: `    public let resultKeysymName: String?`
+- L228: `    public init(`
+- L241: `public enum KeyboardTextSource: Equatable, Sendable {`
+- L242: `    case xkbKey`
+- L243: `    case compose`
+- L244: `    case composeCancellationFallback`
+- L247: `public struct KeyboardComposeProgress: Equatable, Sendable {`
+- L248: `    public let startedBy: KeyboardKeysym?`
+- L249: `    public let startedByName: String?`
+- L251: `    public init(startedBy keysym: KeyboardKeysym?, startedByName keysymName: String?) {`
+- L257: `public struct KeyboardComposeCancellation: Equatable, Sendable {`
+- L258: `    public let cancellingKeysym: KeyboardKeysym?`
+- L259: `    public let cancellingKeysymName: String?`
+- L260: `    public let fallbackCommit: KeyboardTextCommit?`
+- L262: `    public init(`
+
+### `Sources/WaylandClient/Public/Input/InputEvent.swift`
+
+- L1: `public struct InputEvent: Equatable, Sendable {`
+- L2: `    public let sequence: UInt64`
+- L3: `    public let seatID: SeatID`
+- L4: `    public let target: InputEventTarget`
+- L5: `    public let kind: InputEventKind`
+- L7: `    public init(`
+- L19: `    public var windowID: WindowID? {`
+- L27: `    public var popup: PopupSurfaceIdentity? {`
+- L36: `public enum InputEventKind: Equatable, Sendable {`
+- L37: `    case seat(SeatEvent)`
+- L38: `    case diagnostic(InputDiagnostic)`
+- L39: `    case pointer(PointerEvent)`
+- L40: `    case keyboard(KeyboardEvent)`
+- L41: `    case touch(TouchEvent)`
+- L44: `public enum SeatEvent: Equatable, Sendable {`
+- L45: `    case changed(SeatStateSnapshot)`
+- L46: `    case removed`
+- L49: `public enum PointerEvent: Equatable, Sendable {`
+- L50: `    case entered(PointerLocation, serial: InputSerial)`
+- L51: `    case left(serial: InputSerial)`
+- L52: `    case moved(PointerLocation, time: WaylandTimestampMilliseconds)`
+- L53: `    case button(PointerButtonEvent)`
+- L54: `    case axis(PointerAxisEvent)`
+- L57: `public struct PointerLocation: Equatable, Sendable {`
+- L58: `    public let x: Double`
+- L59: `    public let y: Double`
+- L61: `    public init(x locationX: Double, y locationY: Double) {`
+- L67: `public struct PointerButtonEvent: Equatable, Sendable {`
+- L68: `    public let serial: InputSerial`
+- L69: `    public let time: WaylandTimestampMilliseconds`
+- L70: `    public let button: PointerButtonCode`
+- L71: `    public let state: ButtonState`
+- L73: `    public init(`
+- L86: `public enum PointerAxisEvent: Equatable, Sendable {`
+- L87: `    case axis(time: WaylandTimestampMilliseconds, axis: PointerAxis, value: Double)`
+- L88: `    case source(PointerAxisSource)`
+- L89: `    case stop(time: WaylandTimestampMilliseconds, axis: PointerAxis)`
+- L90: `    case discrete(axis: PointerAxis, value: PointerAxisDiscreteStep)`
+- L91: `    case value120(axis: PointerAxis, value120: PointerAxisValue120)`
+- L92: `    case relativeDirection(axis: PointerAxis, direction: PointerAxisRelativeDirection)`
+- L93: `    case frame`
+- L96: `public enum KeyboardEvent: Equatable, Sendable {`
+- L97: `    case raw(RawKeyboardEvent)`
+- L98: `    case interpreted(InterpretedKeyboardEvent)`
+- L101: `public enum RawKeyboardEvent: Equatable, Sendable {`
+- L102: `    case keymapChanged(KeyboardKeymapInfo)`
+- L103: `    case entered(serial: InputSerial, pressedKeys: [EvdevKeycode])`
+- L104: `    case left(serial: InputSerial)`
+- L105: `    case key(KeyboardKeyEvent)`
+- L106: `    case modifiers(KeyboardModifiers)`
+- L107: `    case repeatInfo(KeyboardRepeatPolicy)`
+- L110: `public enum InterpretedKeyboardEvent: Equatable, Sendable {`
+- L111: `    case keymap(InterpretedKeyboardKeymapInfo)`
+- L112: `    case key(InterpretedKeyboardKeyEvent)`
+- L113: `    case modifiers(InterpretedKeyboardModifiers)`
+- L114: `    case repeatInfo(KeyboardRepeatPolicy)`
+- L115: `    case unavailable(KeyboardInterpretationUnavailable)`
+- L118: `public struct InterpretedKeyboardKeymapInfo: Equatable, Sendable {`
+- L119: `    public let format: KeyboardKeymapFormat`
+- L120: `    public let size: UInt32`
+- L122: `    public init(format keymapFormat: KeyboardKeymapFormat, size keymapSize: UInt32) {`
+- L128: `public struct KeyboardKeymapInfo: Equatable, Sendable {`
+- L129: `    public let format: KeyboardKeymapFormat`
+- L130: `    public let size: UInt32`
+- L132: `    public init(format keymapFormat: KeyboardKeymapFormat, size keymapSize: UInt32) {`
+- L138: `public struct KeyboardKeyEvent: Equatable, Sendable {`
+- L139: `    public let serial: InputSerial`
+- L140: `    public let time: WaylandTimestampMilliseconds`
+- L141: `    public let rawKeycode: EvdevKeycode`
+- L142: `    public let state: KeyState`
+- L144: `    public init(`
+- L157: `public struct KeyboardKeysym: Equatable, Sendable {`
+- L158: `    public let rawValue: UInt32`
+- L160: `    public init(rawValue keysymRawValue: UInt32) {`
+- L164: `    public static let noSymbol = Self(rawValue: 0)`
+- L167: `public struct KeyboardModifiers: Equatable, Sendable {`
+- L168: `    public let serial: InputSerial`
+- L169: `    public let depressed: KeyboardModifierMask`
+- L170: `    public let latched: KeyboardModifierMask`
+- L171: `    public let locked: KeyboardModifierMask`
+- L172: `    public let group: KeyboardLayoutGroup`
+- L174: `    public init(`
+- L188: `    public init(`
+- L203: `public struct InterpretedKeyboardModifiers: Equatable, Sendable {`
+- L204: `    public let serial: InputSerial`
+- L205: `    public let depressed: KeyboardModifierMask`
+- L206: `    public let latched: KeyboardModifierMask`
+- L207: `    public let locked: KeyboardModifierMask`
+- L208: `    public let group: KeyboardLayoutGroup`
+- L209: `    public let changedComponents: KeyboardModifierStateComponents`
+- L211: `    public init(`
+- L227: `    public init(`
+- L244: `public struct KeyboardModifierStateComponents: OptionSet, Equatable, Sendable {`
+- L245: `    public let rawValue: UInt32`
+- L247: `    public init(rawValue componentsRawValue: UInt32) {`
+- L251: `    public static let modsDepressed = Self(rawValue: 1 << 0)`
+- L252: `    public static let modsLatched = Self(rawValue: 1 << 1)`
+- L253: `    public static let modsLocked = Self(rawValue: 1 << 2)`
+- L254: `    public static let modsEffective = Self(rawValue: 1 << 3)`
+- L255: `    public static let layoutDepressed = Self(rawValue: 1 << 4)`
+- L256: `    public static let layoutLatched = Self(rawValue: 1 << 5)`
+- L257: `    public static let layoutLocked = Self(rawValue: 1 << 6)`
+- L258: `    public static let layoutEffective = Self(rawValue: 1 << 7)`
+- L259: `    public static let leds = Self(rawValue: 1 << 8)`
+- L262: `public enum KeyboardRepeatPolicy: Equatable, Sendable {`
+- L263: `    case disabled`
+- L264: `    case enabled(rate: KeyboardRepeatRate, delay: KeyboardRepeatDelay)`
+- L266: `    public init(rate repeatRate: Int32, delay repeatDelay: Int32) throws {`
+- L284: `    public var rate: Int32 {`
+- L293: `    public var delayMilliseconds: Int32? {`
+- L303: `public struct KeyboardRepeatRate: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L304: `    public let rawValue: Int32`
+- L306: `    public init(_ value: Int32) throws {`
+- L319: `    public var description: String {`
+- L323: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L328: `public struct KeyboardRepeatDelay: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L329: `    public let rawValue: Int32`
+- L331: `    public init(_ value: Int32) throws {`
+- L344: `    public var description: String {`
+- L348: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L353: `public enum KeyboardRepeatPolicyError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L354: `    case nonPositiveRate(Int32)`
+- L355: `    case negativeRate(rate: Int32, delay: Int32)`
+- L356: `    case negativeDelay(rate: Int32, delay: Int32)`
+- L358: `    public var description: String {`
+- L370: `public struct KeyboardInterpretationUnavailable: Equatable, Sendable {`
+- L371: `    public let reason: KeyboardInterpretationUnavailableReason`
+- L373: `    public init(reason unavailableReason: KeyboardInterpretationUnavailableReason) {`
+- L378: `public enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {`
+- L379: `    case missingDeviceID`
+- L380: `    case noKeymap`
+- L381: `    case unsupportedKeymapFormat(UInt32)`
+- L382: `    case emptyKeymap`
+- L383: `    case invalidKeymap`
+- L384: `    case keymapReadFailed(KeymapReadFailure)`
+- L385: `    case composeTableUnavailable(locale: String)`
+- L386: `    case invalidComposeConfiguration`
+- L387: `    case composeStateCreationFailed`
+- L388: `    case missingKeymap`
+- L389: `    case missingKeyboardState`
+- L390: `    case invalidKeycode(UInt32)`
+- L391: `    case nonKeyboardInputDevice`
+- L392: `    case mismatchedKeyboardSeat(expected: SeatID, actual: SeatID)`
+- L393: `    case mismatchedKeyboardDevice`
+- L396: `public enum TouchEvent: Equatable, Sendable {`
+- L397: `    case down(TouchDownEvent)`
+- L398: `    case up(TouchUpEvent)`
+- L399: `    case motion(TouchMotionEvent)`
+- L400: `    case frame`
+- L401: `    case cancel`
+- L402: `    case shape(TouchShapeEvent)`
+- L403: `    case orientation(TouchOrientationEvent)`
+- L406: `public struct TouchDownEvent: Equatable, Sendable {`
+- L407: `    public let serial: InputSerial`
+- L408: `    public let time: WaylandTimestampMilliseconds`
+- L409: `    public let id: TouchID`
+- L410: `    public let location: PointerLocation`
+- L412: `    public init(`
+- L425: `public struct TouchUpEvent: Equatable, Sendable {`
+- L426: `    public let serial: InputSerial`
+- L427: `    public let time: WaylandTimestampMilliseconds`
+- L428: `    public let id: TouchID`
+- L430: `    public init(`
+- L441: `public struct TouchMotionEvent: Equatable, Sendable {`
+- L442: `    public let time: WaylandTimestampMilliseconds`
+- L443: `    public let id: TouchID`
+- L444: `    public let location: PointerLocation`
+- L446: `    public init(`
+- L457: `public struct TouchShapeEvent: Equatable, Sendable {`
+- L458: `    public let id: TouchID`
+- L459: `    public let major: Double`
+- L460: `    public let minor: Double`
+- L462: `    public init(id touchID: TouchID, major touchMajor: Double, minor touchMinor: Double) {`
+- L469: `public struct TouchOrientationEvent: Equatable, Sendable {`
+- L470: `    public let id: TouchID`
+- L471: `    public let orientation: Double`
+- L473: `    public init(id touchID: TouchID, orientation touchOrientation: Double) {`
+
+### `Sources/WaylandClient/Public/Input/InputEventState.swift`
+
+- L1: `public enum ButtonState: Equatable, Sendable {`
+- L2: `    case released`
+- L3: `    case pressed`
+- L4: `    case unknown(UInt32)`
+- L6: `    public init(rawValue stateRawValue: UInt32) {`
+- L17: `    public var rawValue: UInt32 {`
+- L29: `public enum KeyboardKeymapFormat: Equatable, Sendable {`
+- L30: `    case noKeymap`
+- L31: `    case xkbV1`
+- L32: `    case unknown(UInt32)`
+- L34: `    public init(rawValue formatRawValue: UInt32) {`
+- L45: `    public var rawValue: UInt32 {`
+- L57: `public enum KeyState: Equatable, Sendable {`
+- L58: `    case released`
+- L59: `    case pressed`
+- L60: `    case repeated`
+- L61: `    case unknown(UInt32)`
+- L63: `    public init(rawValue stateRawValue: UInt32) {`
+- L76: `    public var rawValue: UInt32 {`
+- L90: `public enum InterpretedKeyboardKeyState: Equatable, Sendable {`
+- L91: `    case released`
+- L92: `    case pressed`
+- L93: `    case repeated`
+- L94: `    case unknown(UInt32)`
+- L96: `    public init(rawValue stateRawValue: UInt32) {`
+- L109: `    public var rawValue: UInt32 {`
+
+### `Sources/WaylandClient/Public/Input/InputEventTarget.swift`
+
+- L1: `public enum InputEventTarget: Equatable, Sendable {`
+- L2: `    case display`
+- L3: `    case surface(SurfaceTarget)`
+- L4: `    case unmanagedSurface`
+- L5: `    case focusless`
+- L8: `public enum SurfaceTarget: Equatable, Sendable {`
+- L9: `    case window(WindowID)`
+- L10: `    case popup(PopupSurfaceIdentity, parentWindowID: WindowID)`
+- L12: `    public var windowID: WindowID {`
+
+### `Sources/WaylandClient/Public/Input/InputIdentity.swift`
+
+- L1: `public struct SeatID: Hashable, Sendable, CustomStringConvertible {`
+- L2: `    public let rawValue: UInt32`
+- L4: `    public init(rawValue seatRawValue: UInt32) {`
+- L8: `    public var description: String {`
+- L13: `public struct InputSerial:`
+- L19: `    public let rawValue: UInt32`
+- L21: `    public init(rawValue serialRawValue: UInt32) {`
+- L25: `    public init(integerLiteral value: UInt32) {`
+- L29: `    public var description: String {`
+- L34: `public struct WindowID: Hashable, Sendable, CustomStringConvertible {`
+- L41: `    public var description: String {`
+- L46: `public struct PopupSurfaceIdentity: Hashable, Sendable, CustomStringConvertible {`
+- L53: `    public var description: String {`
+
+### `Sources/WaylandClient/Public/Input/InputPipelineOverflow.swift`
+
+- L1: `public enum InputPipelineOverflowStage: Equatable, Sendable {`
+- L2: `    case rawInputQueue`
+- L3: `    case sessionPendingInput`
+- L7: `    public var description: String {`
+- L17: `public struct InputPipelineOverflow: Equatable, Sendable {`
+- L18: `    public let stage: InputPipelineOverflowStage`
+- L19: `    public let capacity: InputPipelineCapacity`
+- L21: `    public init(`
+- L29: `    public init(stage overflowStage: InputPipelineOverflowStage, capacity value: Int) throws {`
+- L34: `public enum InputPipelineOverflowError: Error, Equatable, Sendable {`
+- L35: `    case nonPositiveCapacity(Int)`
+- L38: `public struct InputPipelineCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L39: `    public let rawValue: Int`
+- L41: `    public init(_ value: Int) throws {`
+- L54: `    public var description: String {`
+- L58: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+
+### `Sources/WaylandClient/Public/Input/SeatCapabilities.swift`
+
+- L1: `public struct SeatCapabilities: OptionSet, Sendable, Equatable, CustomStringConvertible {`
+- L2: `    public let rawValue: UInt32`
+- L4: `    public init(rawValue capabilityRawValue: UInt32) {`
+- L8: `    public static let pointer = Self(rawValue: 1)`
+- L9: `    public static let keyboard = Self(rawValue: 2)`
+- L10: `    public static let touch = Self(rawValue: 4)`
+- L11: `    public static let known: Self = [.pointer, .keyboard, .touch]`
+- L13: `    public var unknownBits: UInt32 {`
+- L17: `    public var hasUnknownBits: Bool {`
+- L21: `    public var hasPointer: Bool {`
+- L25: `    public var hasKeyboard: Bool {`
+- L29: `    public var hasTouch: Bool {`
+- L33: `    public var description: String {`
+
+### `Sources/WaylandClient/Public/Input/SeatStateSnapshot.swift`
+
+- L1: `public struct SeatStateSnapshot: Equatable, Sendable {`
+- L2: `    public let advertisedCapabilities: SeatCapabilities`
+- L3: `    public let activeCapabilities: SeatCapabilities`
+- L4: `    public let name: SeatName?`
+- L6: `    public init(`
+- L36: `public enum SeatStateSnapshotError: Error, Equatable, Sendable {`
+- L37: `    case activeCapabilityNotAdvertised(`
+
+### `Sources/WaylandClient/Public/Input/TouchID.swift`
+
+- L1: `public struct TouchID: Equatable, Hashable, Sendable, CustomStringConvertible,`
+- L4: `    public typealias IntegerLiteralType = Int32`
+- L6: `    public let rawValue: Int32`
+- L8: `    public init(rawValue touchIDRawValue: Int32) {`
+- L12: `    public init(integerLiteral value: Int32) {`
+- L16: `    public var description: String {`
+
+### `Sources/WaylandClient/Public/Popup/PopupDomainTypes.swift`
+
+- L3: `public struct LogicalOffset: Equatable, Sendable, CustomStringConvertible {`
+- L4: `    public let x: Int32`
+- L5: `    public let y: Int32`
+- L7: `    public init(x offsetX: Int32, y offsetY: Int32) {`
+- L12: `    public static let zero = LogicalOffset(x: 0, y: 0)`
+- L14: `    public var description: String {`
+- L19: `public struct LogicalRect: Equatable, Sendable, CustomStringConvertible {`
+- L20: `    public let origin: LogicalOffset`
+- L21: `    public let size: PositiveLogicalSize`
+- L23: `    public init(origin rectOrigin: LogicalOffset, size rectSize: PositiveLogicalSize) {`
+- L28: `    public init(x rectX: Int32, y rectY: Int32, width rectWidth: Int32, height rectHeight: Int32)`
+- L35: `    public var description: String {`
+- L40: `public enum PopupAnchor: Equatable, Sendable {`
+- L41: `    case none`
+- L42: `    case top`
+- L43: `    case bottom`
+- L44: `    case left`
+- L45: `    case right`
+- L46: `    case topLeft`
+- L47: `    case bottomLeft`
+- L48: `    case topRight`
+- L49: `    case bottomRight`
+- L52: `public enum PopupGravity: Equatable, Sendable {`
+- L53: `    case none`
+- L54: `    case top`
+- L55: `    case bottom`
+- L56: `    case left`
+- L57: `    case right`
+- L58: `    case topLeft`
+- L59: `    case bottomLeft`
+- L60: `    case topRight`
+- L61: `    case bottomRight`
+- L64: `public struct PopupConstraintAdjustment:`
+- L75: `    public init(_ adjustments: [PopupConstraintAdjustment]) {`
+- L81: `    public init(arrayLiteral adjustments: PopupConstraintAdjustment...) {`
+- L85: `    public func contains(_ adjustment: PopupConstraintAdjustment) -> Bool {`
+- L89: `    public func union(_ adjustment: PopupConstraintAdjustment) -> PopupConstraintAdjustment {`
+- L93: `    public static let none = Self(rawValue: 0)`
+- L94: `    public static let slideX = Self(rawValue: 1)`
+- L95: `    public static let slideY = Self(rawValue: 2)`
+- L96: `    public static let flipX = Self(rawValue: 4)`
+- L97: `    public static let flipY = Self(rawValue: 8)`
+- L98: `    public static let resizeX = Self(rawValue: 16)`
+- L99: `    public static let resizeY = Self(rawValue: 32)`
+- L102: `public struct PopupPositioner: Equatable, Sendable {`
+- L103: `    public var anchorRect: LogicalRect`
+- L104: `    public var size: PositiveLogicalSize`
+- L105: `    public var anchor: PopupAnchor`
+- L106: `    public var gravity: PopupGravity`
+- L107: `    public var constraintAdjustment: PopupConstraintAdjustment`
+- L108: `    public var offset: LogicalOffset`
+- L110: `    public init(`
+- L127: `public enum PopupGrabPolicy: Equatable, Sendable {`
+- L128: `    case none`
+- L129: `    case explicit(seatID: SeatID, serial: InputSerial)`
+- L132: `public struct PopupConfiguration: Equatable, Sendable {`
+- L133: `    public var positioner: PopupPositioner`
+- L134: `    public var grab: PopupGrabPolicy`
+- L136: `    public init(`
+- L145: `public struct PopupPlacement: Equatable, Sendable {`
+- L146: `    public let origin: LogicalOffset`
+- L147: `    public let size: PositiveLogicalSize`
+- L149: `    public init(origin placementOrigin: LogicalOffset, size placementSize: PositiveLogicalSize) {`
+
+### `Sources/WaylandClient/Public/Popup/PopupSurface.swift`
+
+- L1: `public struct PopupSurface: Sendable, Hashable {`
+- L3: `    public let parentWindowID: WindowID`
+- L19: `    public var identity: PopupSurfaceIdentity {`
+- L23: `    public func show(`
+- L30: `    public func redraw(`
+- L36: `    public func requestRedraw() async throws {`
+- L40: `    public func close() async {`
+- L44: `    public var isClosed: Bool {`
+- L50: `    public var needsRedraw: Bool {`
+- L56: `    public var geometry: SurfaceGeometry {`
+- L62: `    public var placement: PopupPlacement {`
+- L68: `    public static func == (lhs: PopupSurface, rhs: PopupSurface) -> Bool {`
+- L72: `    public func hash(into hasher: inout Hasher) {`
+
+### `Sources/WaylandClient/Public/Presentation/PresentationFeedback.swift`
+
+- L1: `public struct PresentationTimestamp: Equatable, Sendable {`
+- L2: `    public let seconds: UInt64`
+- L3: `    public let nanoseconds: UInt32`
+- L5: `    public init(seconds timestampSeconds: UInt64, nanoseconds timestampNanoseconds: UInt32) {`
+- L11: `public struct PresentationSequence: Equatable, Sendable {`
+- L12: `    public let value: UInt64`
+- L14: `    public init(value sequenceValue: UInt64) {`
+- L19: `public struct PresentationFeedbackFlags: OptionSet, Equatable, Sendable, Hashable {`
+- L20: `    public let rawValue: UInt32`
+- L22: `    public init(rawValue flagsRawValue: UInt32) {`
+- L26: `    public static let vsync = PresentationFeedbackFlags(rawValue: 0x1)`
+- L27: `    public static let hardwareClock = PresentationFeedbackFlags(rawValue: 0x2)`
+- L28: `    public static let hardwareCompletion = PresentationFeedbackFlags(rawValue: 0x4)`
+- L29: `    public static let zeroCopy = PresentationFeedbackFlags(rawValue: 0x8)`
+- L32: `public struct SurfacePresentationIdentity:`
+- L38: `    public let rawValue: UInt64`
+- L40: `    public init(rawValue identityRawValue: UInt64) {`
+- L44: `    public var description: String {`
+- L49: `public enum SurfacePresentationFeedback: Equatable, Sendable {`
+- L50: `    case presented(PresentationFeedback)`
+- L51: `    case discarded(SurfacePresentationIdentity)`
+- L53: `    public var surface: SurfacePresentationIdentity {`
+- L63: `public struct PresentationFeedback: Equatable, Sendable {`
+- L64: `    public let surface: SurfacePresentationIdentity`
+- L65: `    public let timestamp: PresentationTimestamp`
+- L66: `    public let refreshNanoseconds: UInt32?`
+- L67: `    public let sequence: PresentationSequence`
+- L68: `    public let flags: PresentationFeedbackFlags`
+- L69: `    public let synchronizedOutput: OutputID?`
+- L71: `    public init(`
+- L102: `public struct WindowPresentationEvents: AsyncSequence, Sendable {`
+- L103: `    public typealias Element = SurfacePresentationFeedback`
+- L104: `    public typealias Failure = WaylandDisplayError`
+- L117: `    public func makeAsyncIterator() -> WindowPresentationEventsIterator {`
+- L126: `public struct WindowPresentationEventsIterator: AsyncIteratorProtocol {`
+- L127: `    public typealias Element = SurfacePresentationFeedback`
+- L128: `    public typealias Failure = WaylandDisplayError`
+- L141: `    public mutating func next() async throws(WaylandDisplayError) -> SurfacePresentationFeedback? {`
+- L145: `    public mutating func next(`
+
+### `Sources/WaylandClient/Public/PrimarySelection/PrimarySelectionOffer.swift`
+
+- L3: `public struct PrimarySelectionOffer: Sendable, Hashable {`
+- L4: `    public static let defaultReadTimeout: Duration = .seconds(5)`
+- L7: `    public let seatID: SeatID`
+- L8: `    public let mimeTypes: [MIMEType]`
+- L21: `    public var identity: PrimarySelectionOfferIdentity {`
+- L25: `    public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {`
+- L29: `    public func read(`
+- L41: `    public static func == (lhs: PrimarySelectionOffer, rhs: PrimarySelectionOffer) -> Bool {`
+- L45: `    public func hash(into hasher: inout Hasher) {`
+
+### `Sources/WaylandClient/Public/PrimarySelection/PrimarySelectionSource.swift`
+
+- L3: `public struct PrimarySelectionSourceConfiguration: Equatable, Sendable {`
+- L4: `    public let payloads: [DataTransferSourcePayload]`
+- L7: `    public init(payloads sourcePayloads: [DataTransferSourcePayload]) throws {`
+- L13: `    public static func data(`
+- L27: `public struct PrimarySelectionSource: Sendable, Hashable {`
+- L29: `    public let seatID: SeatID`
+- L30: `    public let mimeTypes: [MIMEType]`
+- L43: `    public var identity: PrimarySelectionSourceIdentity {`
+- L50: `    public func requestClear(serial: InputSerial) async throws {`
+- L54: `    public static func == (lhs: PrimarySelectionSource, rhs: PrimarySelectionSource) -> Bool {`
+- L58: `    public func hash(into hasher: inout Hasher) {`
+
+### `Sources/WaylandClient/Public/Rendering/SoftwareFrame.swift`
+
+- L2: `public struct SoftwareFrame: ~Copyable {`
+- L3: `    public let width: Int32`
+- L4: `    public let height: Int32`
+- L5: `    public let stride: Int32`
+- L6: `    public let geometry: SoftwareFrameGeometry`
+- L76: `    public borrowing func withXRGB8888Rows(`
+
+### `Sources/WaylandClient/Public/Rendering/SurfaceCoordinateMapping.swift`
+
+- L6: `public struct BufferPixelPoint: Equatable, Sendable {`
+- L7: `    public let x: Int`
+- L8: `    public let y: Int`
+- L10: `    public init(x pointX: Int, y pointY: Int) {`
+- L17: `    public func bufferPixelPoint(logicalX: Double, logicalY: Double) -> BufferPixelPoint {`
+
+### `Sources/WaylandClient/Public/Window/Window.swift`
+
+- L1: `public struct Window: Sendable, Hashable {`
+- L2: `    public let id: WindowID`
+- L16: `    public func show(`
+- L23: `    public func redraw(`
+- L29: `    public func close() async {`
+- L33: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
+- L39: `    public func requestRedraw() async throws {`
+- L43: `    public var presentationEvents: WindowPresentationEvents {`
+- L47: `    public func requestPresentationFeedback() async throws {`
+- L51: `    public func setTitle(_ title: WaylandString) async throws {`
+- L55: `    public func setTitle(_ title: String) async throws {`
+- L59: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L63: `    public func setAppID(_ appID: String) async throws {`
+- L67: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L71: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L75: `    public func requestMaximize() async throws {`
+- L79: `    public func requestUnmaximize() async throws {`
+- L83: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L87: `    public func requestExitFullscreen() async throws {`
+- L91: `    public func requestMinimize() async throws {`
+- L95: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L99: `    public func requestInteractiveResize(`
+- L112: `    public func requestWindowMenu(`
+- L125: `    public func startDrag(`
+- L140: `    public var isClosed: Bool {`
+- L146: `    public var needsRedraw: Bool {`
+- L152: `    public var decorationMode: WindowDecorationMode {`
+- L158: `    public var geometry: SurfaceGeometry {`
+- L164: `    public var stateSnapshot: WindowStateSnapshot {`
+- L170: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L174: `    public func hash(into hasher: inout Hasher) {`
+
+### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
+
+- L1: `public enum CloseRequestPolicy: Equatable, Sendable {`
+- L2: `    case requestOnly`
+- L3: `    case autoClose`
+- L6: `public enum WindowDecorationPreference: Equatable, Sendable {`
+- L7: `    case compositorDefault`
+- L8: `    case preferServerSide`
+- L9: `    case preferClientSide`
+- L12: `public enum WindowDecorationMode: Equatable, Sendable {`
+- L13: `    case clientSide`
+- L14: `    case serverSide`
+- L15: `    case unavailable`
+- L16: `    case unknown(UInt32)`
+- L19: `public struct WindowConfiguration: Equatable, Sendable {`
+- L20: `    public var title: WaylandString`
+- L21: `    public var appID: NonEmptyWaylandString`
+- L22: `    public var initialSize: PositiveLogicalSize`
+- L23: `    public var bufferCount: PositiveInt`
+- L24: `    public var closeRequestPolicy: CloseRequestPolicy`
+- L25: `    public var decorationPreference: WindowDecorationPreference`
+- L27: `    public static let `default` = WindowConfiguration(`
+- L36: `    public init(`
+- L52: `    public init(`
+
+### `Sources/WaylandClient/Public/Window/WindowDomainTypes.swift`
+
+- L3: `public struct WaylandString: Equatable, Sendable, CustomStringConvertible {`
+- L4: `    public let value: String`
+- L6: `    public init(_ string: String) throws {`
+- L19: `    public var description: String {`
+- L24: `public struct NonEmptyWaylandString: Equatable, Sendable, CustomStringConvertible {`
+- L25: `    public let value: String`
+- L27: `    public init(_ string: String) throws {`
+- L49: `    public var description: String {`
+- L54: `public struct PositiveInt32: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L55: `    public let rawValue: Int32`
+- L57: `    public init(_ value: Int32) throws {`
+- L70: `    public var description: String {`
+- L74: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L79: `public struct PositiveInt: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L80: `    public let rawValue: Int`
+- L82: `    public init(_ value: Int) throws {`
+- L95: `    public var description: String {`
+- L99: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L104: `public struct PositiveLogicalSize: Equatable, Sendable, CustomStringConvertible {`
+- L105: `    public let width: PositiveInt32`
+- L106: `    public let height: PositiveInt32`
+- L108: `    public static let `default` = PositiveLogicalSize(`
+- L113: `    public init(width sizeWidth: PositiveInt32, height sizeHeight: PositiveInt32) {`
+- L118: `    public init(width sizeWidth: Int32, height sizeHeight: Int32) throws {`
+- L127: `    public var description: String {`
+- L132: `public struct PositivePixelSize: Equatable, Sendable, CustomStringConvertible {`
+- L133: `    public let width: PositiveInt32`
+- L134: `    public let height: PositiveInt32`
+- L136: `    public init(width sizeWidth: PositiveInt32, height sizeHeight: PositiveInt32) {`
+- L141: `    public init(width sizeWidth: Int32, height sizeHeight: Int32) throws {`
+- L150: `    public var description: String {`
+- L155: `public struct SurfaceScale: Equatable, Sendable, CustomStringConvertible {`
+- L156: `    public let numerator: UInt32`
+- L157: `    public let denominator: UInt32`
+- L159: `    public static let one = SurfaceScale(uncheckedNumerator: 1, denominator: 1)`
+- L162: `    public init(numerator scaleNumerator: UInt32, denominator scaleDenominator: UInt32)`
+- L219: `    public var description: String {`
+- L267: `public struct SurfaceGeometry: Equatable, Sendable, CustomStringConvertible {`
+- L268: `    public let logicalSize: PositiveLogicalSize`
+- L269: `    public let bufferSize: PositivePixelSize`
+- L270: `    public let scale: SurfaceScale`
+- L272: `    public init(`
+- L281: `    public var description: String {`
+- L286: `public struct SoftwareFrameGeometry: Equatable, Sendable {`
+- L287: `    public let surface: SurfaceGeometry`
+- L289: `    public var logicalSize: PositiveLogicalSize {`
+- L293: `    public var bufferSize: PositivePixelSize {`
+- L297: `    public var scale: SurfaceScale {`
+- L301: `    public init(surface surfaceGeometry: SurfaceGeometry) {`
+- L306: `public struct Milliseconds: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L307: `    public let rawValue: Int32`
+- L309: `    public init(_ value: Int32) throws {`
+- L322: `    public var description: String {`
+- L326: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+
+### `Sources/WaylandClient/Public/Window/WindowStateSnapshot.swift`
+
+- L1: `public struct WindowStateSnapshot: Equatable, Sendable {`
+- L2: `    public let configureSerial: UInt32`
+- L3: `    public let size: PositiveLogicalSize`
+- L4: `    public let states: [WindowStateToken]`
+- L5: `    public let bounds: PositiveLogicalSize?`
+- L6: `    public let managerCapabilities: [WindowManagerCapability]`
+- L7: `    public let decorationMode: WindowDecorationMode?`
+- L8: `    public let outputs: [OutputID]`
+- L10: `    public init(`
+
+### `Sources/WaylandClient/Public/Window/WindowStateToken.swift`
+
+- L3: `public enum WindowEdge: Equatable, Hashable, Sendable {`
+- L4: `    case left`
+- L5: `    case right`
+- L6: `    case top`
+- L7: `    case bottom`
+- L10: `public enum WindowResizeEdge: Equatable, Hashable, Sendable {`
+- L11: `    case top`
+- L12: `    case bottom`
+- L13: `    case left`
+- L14: `    case topLeft`
+- L15: `    case bottomLeft`
+- L16: `    case right`
+- L17: `    case topRight`
+- L18: `    case bottomRight`
+- L21: `public enum WindowStateToken: Equatable, Hashable, Sendable {`
+- L22: `    case maximized`
+- L23: `    case fullscreen`
+- L24: `    case resizing`
+- L25: `    case activated`
+- L26: `    case tiled(WindowEdge)`
+- L27: `    case suspended`
+- L28: `    case constrained(WindowEdge)`
+- L29: `    case unknown(UInt32)`
+- L51: `    public var rawValue: UInt32 {`
+- L122: `public enum WindowManagerCapability: Equatable, Hashable, Sendable {`
+- L123: `    case windowMenu`
+- L124: `    case maximize`
+- L125: `    case fullscreen`
+- L126: `    case minimize`
+- L127: `    case unknown(UInt32)`
+- L140: `    public var rawValue: UInt32 {`
+

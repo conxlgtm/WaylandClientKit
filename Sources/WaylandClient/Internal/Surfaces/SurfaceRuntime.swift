@@ -36,6 +36,7 @@ package struct SurfaceCapabilitySnapshot: Equatable, Sendable {
     package let outputIDs: [OutputID]
     package let fractionalScale: SurfaceScaleCapability
     package let presentationFeedback: SurfaceCapabilityStatus
+    package let dmabuf: SurfaceDmabufCapability
 }
 
 struct SurfaceRuntime<RoleResources> {
@@ -55,11 +56,14 @@ struct SurfaceRuntime<RoleResources> {
     }
 
     private let role: SurfaceRuntimeRole
+    private let surfaceID: RawObjectID?
     private var presentationFeedbackCapability = SurfaceCapabilityStatus.unavailable
+    private var dmabufCapability = SurfaceDmabufCapability.unavailable
     private var phase: Phase = .unassigned(SurfaceObjects())
 
-    init(role surfaceRole: SurfaceRuntimeRole) {
+    init(role surfaceRole: SurfaceRuntimeRole, surfaceID runtimeSurfaceID: RawObjectID? = nil) {
         role = surfaceRole
+        surfaceID = runtimeSurfaceID
     }
 }
 
@@ -150,6 +154,30 @@ extension SurfaceRuntime {
         presentationFeedbackCapability = capability
     }
 
+    mutating func setDmabufAdvertisement(_ advertisement: SurfaceDmabufAdvertisement) {
+        switch advertisement {
+        case .unavailable:
+            dmabufCapability = .unavailable
+        case .advertised(let version, let canRequestSurfaceFeedback):
+            dmabufCapability = .advertised(
+                version: version,
+                canRequestSurfaceFeedback: canRequestSurfaceFeedback
+            )
+        }
+    }
+
+    mutating func setSurfaceDmabufFeedback(
+        _ snapshot: RawLinuxDmabufFeedbackSnapshot
+    ) throws(SurfaceDmabufCapabilityError) {
+        guard let surfaceID else {
+            throw SurfaceDmabufCapabilityError.missingSurfaceIdentity
+        }
+
+        dmabufCapability = .surfaceFeedback(
+            try SurfaceDmabufFeedback(snapshot: snapshot, surfaceID: surfaceID)
+        )
+    }
+
     mutating func enterOutput(_ outputID: RawOutputID) -> Bool {
         mutateSurfaceObjects(default: false) { objects in
             objects.outputMembership.enter(outputID)
@@ -187,6 +215,7 @@ extension SurfaceRuntime {
         let scaleCapability: SurfaceScaleCapability
         let outputIDs: [OutputID]
         let presentationFeedback: SurfaceCapabilityStatus
+        let dmabuf: SurfaceDmabufCapability
 
         switch phase {
         case .unassigned(let objects),
@@ -195,17 +224,20 @@ extension SurfaceRuntime {
             scaleCapability = objects.scaleInstallation.capability
             outputIDs = objects.outputMembership.currentOutputIDs(where: isStillBound)
             presentationFeedback = presentationFeedbackCapability
+            dmabuf = dmabufCapability
         case .surfaceDestroyed:
             scaleCapability = .integerOnly
             outputIDs = []
             presentationFeedback = .unavailable
+            dmabuf = .unavailable
         }
 
         return SurfaceCapabilitySnapshot(
             role: role,
             outputIDs: outputIDs,
             fractionalScale: scaleCapability,
-            presentationFeedback: presentationFeedback
+            presentationFeedback: presentationFeedback,
+            dmabuf: dmabuf
         )
     }
 

@@ -39,6 +39,17 @@ package struct RawLinuxDmabufTranche: Equatable, Sendable {
     package let flags: RawLinuxDmabufTrancheFlags
     package let formats: [RawLinuxDmabufFormatModifier]
 
+    package init(
+        targetDevice trancheTargetDevice: RawLinuxDmabufDevice,
+        flags trancheFlags: RawLinuxDmabufTrancheFlags,
+        formats trancheFormats: [RawLinuxDmabufFormatModifier],
+        validatedBy _: RawLinuxDmabufFeedbackState.ValidatedConstructionToken
+    ) {
+        targetDevice = trancheTargetDevice
+        flags = trancheFlags
+        formats = trancheFormats
+    }
+
     package func formatModifiers(for format: UInt32) -> [RawLinuxDmabufFormatModifier] {
         formats.filter { $0.format == format }
     }
@@ -55,6 +66,19 @@ package struct RawLinuxDmabufFeedbackSnapshot: Equatable, Sendable {
     package let mainDevice: RawLinuxDmabufDevice
     package let formatTable: [RawLinuxDmabufFormatModifier]
     package let tranches: [RawLinuxDmabufTranche]
+
+    package init(
+        scope feedbackScope: RawLinuxDmabufFeedbackScope,
+        mainDevice feedbackMainDevice: RawLinuxDmabufDevice,
+        formatTable feedbackFormatTable: [RawLinuxDmabufFormatModifier],
+        tranches feedbackTranches: [RawLinuxDmabufTranche],
+        validatedBy _: RawLinuxDmabufFeedbackState.ValidatedConstructionToken
+    ) {
+        scope = feedbackScope
+        mainDevice = feedbackMainDevice
+        formatTable = feedbackFormatTable
+        tranches = feedbackTranches
+    }
 }
 
 package enum RawLinuxDmabufFormatTable {
@@ -120,6 +144,12 @@ package enum RawLinuxDmabufFormatTable {
 }
 
 package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
+    package struct ValidatedConstructionToken: Equatable, Sendable {
+        // Compiler-synthesized initializer stays internal to WaylandRaw.
+    }
+
+    private static let validatedConstructionToken = ValidatedConstructionToken()
+
     private struct CurrentTranche: Equatable, Sendable {
         var targetDevice: RawLinuxDmabufDevice?
         var flags: RawLinuxDmabufTrancheFlags?
@@ -287,7 +317,8 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
             RawLinuxDmabufTranche(
                 targetDevice: targetDevice,
                 flags: flags,
-                formats: batch.currentTranche.formats
+                formats: batch.currentTranche.formats,
+                validatedBy: Self.validatedConstructionToken
             )
         )
         batch.currentTranche = CurrentTranche()
@@ -318,7 +349,8 @@ package struct RawLinuxDmabufFeedbackState: Equatable, Sendable {
             scope: feedbackScope,
             mainDevice: mainDevice,
             formatTable: batch.formatTable,
-            tranches: batch.tranches
+            tranches: batch.tranches,
+            validatedBy: Self.validatedConstructionToken
         )
     }
 

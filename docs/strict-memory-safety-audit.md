@@ -104,3 +104,191 @@ Tests:
   values, and the integer-to-fractional scale state transition.
 - `VersionNegotiationTests` covers supported protocol versions for the scale
   globals.
+
+## Data Transfer File Descriptors
+
+Remaining unsafe constructs:
+
+- `RawFileDescriptor` owns POSIX descriptors returned by pipe creation and raw
+  Wayland data-transfer callbacks.
+- `OwnedFileDescriptor` exposes a public, noncopyable read handle for offer
+  payloads.
+- `DataTransferPipeDescriptors` models the read/write pipe pair used for
+  receive requests.
+- `DataTransferSourceSendRequest` stores one raw descriptor slot for compositor
+  send requests.
+- `ThreadedDataTransferSourceWriter` writes local payload bytes to compositor
+  pipes on a worker thread.
+
+Audit invariant:
+
+- A descriptor is either owned by one Swift wrapper, transferred exactly once to
+  a Wayland request, or closed exactly once.
+- Receive-pipe write ends are transferred only after read-end adoption succeeds.
+- Rejected receive requests close both pipe ends that remain locally owned.
+- Source send descriptors are released from their mutex-backed slot at most
+  once, then closed by the write job or cancellation path.
+- Public `OwnedFileDescriptor.readData` bounds the read size and uses a timeout
+  so a compositor-provided pipe cannot force unbounded memory growth or an
+  indefinite public API call.
+
+Tests:
+
+- `DataTransferPipeDescriptorTests` covers pipe descriptor value behavior.
+- `DataTransferPipeReceiveTests` covers read-end adoption, write-end transfer,
+  receive failure, and descriptor close paths.
+- `ClipboardOfferReadTests` and `DataTransferReadableOfferTests` cover bounded
+  public reads.
+- `DataTransferSourceWriteJobLifecycleTests`,
+  `DataTransferSourceWriteJobCloseResultTests`,
+  `DataTransferSourceWriterShutdownTests`, and
+  `DataTransferSourceWriterSourceCancellationTests` cover source-side write
+  job descriptor release and cancellation behavior.
+
+## linux-dmabuf Boundary
+
+Remaining unsafe constructs:
+
+- `RawLinuxDmabufFeedback` accumulates compositor feedback events into typed
+  snapshots.
+- `RawLinuxDmabufFormatTable` maps compositor-provided format-table file
+  descriptors.
+- `RawLinuxDmabufBufferParams` sends plane descriptors and creates dmabuf
+  buffers.
+- `RawLinuxDmabufPlaneFileDescriptor` owns a plane descriptor before it is
+  transferred to `zwp_linux_buffer_params_v1.add`.
+- linux-dmabuf listener callbacks recover Swift owners from C listener `data`
+  pointers.
+
+Audit invariant:
+
+- Feedback batches are atomic. A new batch must not merge stale tranche data
+  with newly received compositor events.
+- Exact-one feedback events reject duplicates before producing
+  `RawLinuxDmabufFeedbackSnapshot`.
+- Format-table byte count, descriptor validity, and descriptor size are
+  validated before reading mapped bytes, so a short fd cannot become a SIGBUS
+  process termination.
+- Buffer params reject empty, duplicate, non-zero-starting, and gapped plane
+  sets before sending `create`.
+- Version-gated feedback requests require a bound linux-dmabuf object that
+  supports protocol version 4.
+- Plane descriptors are released only for the `add` request path; rejected
+  planes remain locally owned and are closed by their wrapper.
+
+Tests:
+
+- `RawLinuxDmabufFeedbackTests` covers complete feedback batches, malformed
+  ordering, duplicate exact-one events, duplicate formats, and stale-batch
+  replacement.
+- `RawLinuxDmabufFormatTableTests` covers byte count validation, short fd
+  rejection, descriptor closure, and system mapping failures.
+- `RawLinuxDmabufBufferParamsTests` covers lifecycle state, descriptor
+  transfer, duplicate plane index rejection, empty plane rejection, and
+  consecutive plane-set validation.
+- `LinuxDmabufShimContractTests` covers request wrapper targets, dimensions,
+  flags, modifier splitting, and feedback request targets.
+
+## GBM and DRM Boundary
+
+Remaining unsafe constructs:
+
+- `GBMRenderNodeFileDescriptor` owns a DRM render-node fd before it is adopted
+  by `GBMDevice`.
+- `GBMDevice` owns the `gbm_device` pointer and the adopted render-node fd.
+- `GBMBuffer`, `GBMSurface`, and `GBMLockedSurfaceBuffer` wrap GBM pointers with
+  explicit live-pointer checks.
+- `GBMDmabufExport` owns exported plane fds until each plane descriptor is
+  transferred or the export object is destroyed.
+- CGBM shims call libgbm/libdrm functions and expose test-recording hooks only
+  in explicit testing builds.
+
+Audit invariant:
+
+- Render-node fds are preferred for unprivileged clients. Primary-node fallback
+  is not used without a DRM-authentication model.
+- The render-node fd adopted by GBM is closed after `gbm_device_destroy`.
+- `DRM_FORMAT_MOD_INVALID` uses implicit GBM allocation, while explicit
+  modifier allocation masks `GBM_BO_USE_LINEAR` before calling Mesa's
+  modifier-aware API.
+- Borrowed plane layout does not expose an owned-looking raw fd.
+- Exported plane fds are transferred only through
+  `GBMDmabufExport.takePlaneFileDescriptor(at:)`; untaken fds close during
+  export destruction.
+- Locked GBM surface buffers cannot be exported or released after their surface
+  has been destroyed.
+
+Tests:
+
+- `DRMRenderNodeSelectionTests` covers DRM device-byte validation and render-node
+  selection behavior.
+- `GBMDeviceTests` covers fd adoption, invalid descriptor rejection, device
+  destruction, and allocation policy.
+- `GBMDmabufExportTests` covers plane layout, descriptor transfer, second-take
+  rejection, and close behavior for taken and untaken plane descriptors.
+- `GBMSurfaceTests` covers front-buffer lease behavior and destroyed-surface
+  errors.
+- `GBMShimTests` covers C shim null-input and allocation recording behavior.
+
+## EGL Rendering Boundary
+
+Remaining unsafe constructs:
+
+- `EGLGBMRenderTarget` owns an EGL display, config, context, surface, and its
+  backing `GBMSurface`.
+- EGL C shims make and clear current context state for deterministic test draws.
+- `EGLClientExtensions` parses client extension strings from EGL.
+
+Audit invariant:
+
+- EGL display/context/surface handles are created as one live-handle set and
+  destroyed at most once.
+- `drawClear` enters the context through a scoped make-current path and reports
+  clear-current failure instead of returning success with a still-current
+  context.
+- GBM platform support is detected from the parsed EGL client extension set.
+- Render-target destruction marks live GBM surface-buffer leases terminal before
+  destroying the backing surface.
+
+Tests:
+
+- `EGLRenderTargetTests` covers extension parsing, live target creation when
+  GBM/EGL are available, clear-current failure propagation, and destroyed-target
+  behavior.
+- `EGLShimTests` covers EGL shim failure paths and test-mode recording.
+
+## GPU Preview Boundary
+
+Remaining unsafe constructs:
+
+- `GPUDmabufBufferImport` owns a one-shot dmabuf params create request and its
+  callback box.
+- `GPUDmabufBufferImporter` transfers GBM-exported plane descriptors into
+  linux-dmabuf params.
+- `GPUWindowPresenter` tracks installed `wl_buffer` objects, GBM buffer-pool
+  slots, and Wayland release callbacks.
+- `RawLinuxDmabufBuffer` wraps imported `wl_buffer` proxies and reports release
+  callbacks.
+
+Audit invariant:
+
+- A dmabuf import request starts in `createRequested`, accepts compositor
+  created/failed events only in that state, and reports terminal-state events
+  through the failure callback.
+- Plane descriptors are added before `create`; add/create failures destroy the
+  params object and close any plane descriptor that remains locally owned.
+- GPU presentation uses the window's surface transaction generation authority;
+  software and GPU commits do not allocate independent generation sequences.
+- Submitted GPU buffer-pool slots return to availability only after the matching
+  Wayland buffer release.
+- GPU preview APIs remain package-internal until the public graphics contract
+  has surface capability, color metadata, and synchronization requirements.
+
+Tests:
+
+- `GPUDmabufBufferImporterTests` covers import descriptor validation, plane
+  export transfer, terminal-state events, and import request lifecycle.
+- `GPUWindowPresenterStateTests` covers install, lease, submit, release, and
+  release-failure state transitions.
+- `WindowModelExternalPresentationTests` and `SurfaceTransactionStateTests`
+  cover shared commit-generation rules used by software and GPU presentation.

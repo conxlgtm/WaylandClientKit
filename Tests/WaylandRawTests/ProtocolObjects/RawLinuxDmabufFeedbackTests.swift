@@ -121,6 +121,24 @@ struct RawLinuxDmabufFeedbackStateTests {
     }
 
     @Test
+    func doneWithoutTranchesReportsFailureAndDoesNotPublishSnapshot() throws {
+        var state = RawLinuxDmabufFeedbackState()
+        state.replaceFormatTable([
+            RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
+        ])
+        try state.setMainDevice(bytes: [0x01], scope: .defaultFeedback)
+
+        #expect(
+            throws: malformedFeedback(
+                event: "done",
+                field: "tranche"
+            )
+        ) {
+            _ = try state.finish(scope: .defaultFeedback)
+        }
+    }
+
+    @Test
     func trancheDoneWithoutTargetDeviceReportsFailure() throws {
         var state = RawLinuxDmabufFeedbackState()
         state.replaceFormatTable([

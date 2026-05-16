@@ -1,7 +1,7 @@
 import Glibc
 import WaylandRaw
 
-private struct PopupRoleResources {
+struct PopupRoleResources {
     let surface: RawSurface
     let xdgSurface: RawXDGSurface
     let popup: RawXDGPopup
@@ -31,7 +31,7 @@ package final class PopupRoleSurface {
     package let failureSink: any WindowFailureSink
     package let configureState = PopupConfigureState()
 
-    private var surfaceRuntime = SurfaceRuntime<PopupRoleResources>(role: .popup)
+    var surfaceRuntime: SurfaceRuntime<PopupRoleResources>
     package var pendingFrameRegistration: FrameCallbackRegistration?
     package var model: PopupModel
 
@@ -65,10 +65,14 @@ package final class PopupRoleSurface {
         )
 
         let globals = try rawConnection.bindRequiredGlobals()
+        let newSurface = try globals.compositor.createSurface()
+        surfaceRuntime = SurfaceRuntime(role: .popup, surfaceID: newSurface.objectID)
         surfaceRuntime.setPresentationFeedbackCapability(
             globals.extensions.presentation.presentationFeedbackCapabilityStatus
         )
-        let newSurface = try globals.compositor.createSurface()
+        surfaceRuntime.setDmabufAdvertisement(
+            globals.extensions.linuxDmabuf.surfaceDmabufAdvertisement
+        )
         let newXDGSurface = try globals.xdgWMBase.getSurface(for: newSurface)
         let newPositioner = try globals.xdgWMBase.createPositioner()
         popupConfiguration.positioner.apply(to: newPositioner)
@@ -234,16 +238,6 @@ extension PopupRoleSurface {
     package var scaleInstallation: SurfaceScaleInstallation {
         get { surfaceRuntime.scaleInstallation }
         set { surfaceRuntime.scaleInstallation = newValue }
-    }
-
-    package var buffers: RawSharedMemoryPool? {
-        get { surfaceRuntime.buffers }
-        set { surfaceRuntime.buffers = newValue }
-    }
-
-    package var retiredBufferPools: [RawSharedMemoryPool] {
-        get { surfaceRuntime.retiredBufferPools }
-        set { surfaceRuntime.retiredBufferPools = newValue }
     }
 
     private var liveRoleResources: PopupRoleResources {

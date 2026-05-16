@@ -78,6 +78,16 @@ package struct GBMBufferPoolState: Equatable, Sendable {
         }.sorted()
     }
 
+    package var slotIDs: [GBMBufferPoolSlotID] {
+        slots.keys.sorted()
+    }
+
+    package var submittedSlotIDs: [GBMBufferPoolSlotID] {
+        slots.compactMap { slotID, lifecycle in
+            lifecycle.submittedCommitGeneration != nil ? slotID : nil
+        }.sorted()
+    }
+
     package func lifecycle(
         for slotID: GBMBufferPoolSlotID
     ) throws(GBMBufferPoolStateError) -> GBMBufferPoolSlotLifecycle {

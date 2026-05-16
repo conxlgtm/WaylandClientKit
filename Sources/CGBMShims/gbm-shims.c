@@ -388,6 +388,16 @@ static int32_t swl_test_gbm_bo_export_dmabuf_record(
     struct gbm_bo *buffer,
     struct swl_gbm_bo_export *out_export)
 {
+    if (buffer == NULL)
+    {
+        if (out_export != NULL)
+        {
+            swl_gbm_bo_export_init(out_export);
+        }
+        errno = EINVAL;
+        return -1;
+    }
+
     swl_test_gbm_surface_lifecycle_latest.export_call_count += 1;
     swl_test_gbm_surface_lifecycle_latest.buffer = buffer;
     if (out_export != NULL)
@@ -400,6 +410,11 @@ static int32_t swl_test_gbm_bo_export_dmabuf_record(
 
 static void swl_test_gbm_surface_destroy_record(struct gbm_surface *surface)
 {
+    if (surface == NULL)
+    {
+        return;
+    }
+
     swl_test_gbm_surface_lifecycle_latest.destroy_call_count += 1;
     swl_test_gbm_surface_lifecycle_latest.surface = surface;
 }
@@ -408,6 +423,11 @@ static void swl_test_gbm_surface_release_buffer_record(
     struct gbm_surface *surface,
     struct gbm_bo *buffer)
 {
+    if (surface == NULL || buffer == NULL)
+    {
+        return;
+    }
+
     swl_test_gbm_surface_lifecycle_latest.release_call_count += 1;
     swl_test_gbm_surface_lifecycle_latest.surface = surface;
     swl_test_gbm_surface_lifecycle_latest.buffer = buffer;

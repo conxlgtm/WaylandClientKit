@@ -2,7 +2,7 @@ SWIFT_FORMAT := ./scripts/dev/swift-format.sh
 SWIFTLINT := ./scripts/dev/swiftlint.sh
 SWIFT := ./scripts/dev/swift.sh
 
-.PHONY: format lint verify-generated verify-shims verify-release-shim-symbols verify-docs verify-unsafe-allowlist strict-concurrency test test-public-api-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless wayland-headless release-check install-pre-commit
+.PHONY: format lint verify-generated verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-unsafe-allowlist strict-concurrency test test-public-api-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless gpu-preview-wayland gpu-preview-headless wayland-headless release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
@@ -27,6 +27,14 @@ verify-release-shim-symbols:
 verify-docs:
 	@./scripts/ci/verify-docs.sh
 
+verify-docc:
+	@./scripts/ci/verify-docc.sh
+
+docc: verify-docc
+
+verify-public-api-audit:
+	@./scripts/ci/verify-public-api-audit.sh
+
 verify-unsafe-allowlist:
 	@bash ./scripts/safety/verify-unsafe-allowlist.sh
 
@@ -39,7 +47,7 @@ test:
 test-public-api-client:
 	@./scripts/ci/test-public-api-client.sh
 
-check-base: lint verify-generated verify-shims verify-docs verify-unsafe-allowlist strict-concurrency test test-public-api-client
+check-base: lint verify-generated verify-shims verify-docs verify-docc verify-public-api-audit verify-unsafe-allowlist strict-concurrency test test-public-api-client
 
 check: check-base check-wayland-smoke-if-available
 
@@ -61,6 +69,12 @@ integration-wayland:
 
 integration-wayland-headless:
 	@./scripts/smoke/with-headless-weston.sh -- ./scripts/smoke/integration-wayland.sh
+
+gpu-preview-wayland:
+	@./scripts/smoke/gpu-preview-wayland.sh
+
+gpu-preview-headless:
+	@./scripts/smoke/with-headless-weston.sh -- ./scripts/smoke/gpu-preview-wayland.sh
 
 wayland-headless:
 	@./scripts/smoke/with-headless-weston.sh -- bash -c './scripts/smoke/smoke-wayland.sh && ./scripts/smoke/integration-wayland.sh'
