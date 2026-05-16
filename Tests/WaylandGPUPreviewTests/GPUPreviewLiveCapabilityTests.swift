@@ -23,7 +23,8 @@ struct GPUPreviewLiveCapabilityTests {
                     """
                     Skipping GPU preview live test: compositor did not advertise \
                     zwp_linux_dmabuf_v1.
-                    """
+                    """,
+                    severity: .warning
                 )
                 return
             }
