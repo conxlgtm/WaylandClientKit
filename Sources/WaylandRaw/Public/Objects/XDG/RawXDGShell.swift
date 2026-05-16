@@ -3,10 +3,11 @@ import CWaylandProtocols
 
 @safe
 package final class RawXDGTopLevel {
-    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
     #if DEBUG
         package var pointerAddressForTesting: UInt {
@@ -20,12 +21,12 @@ package final class RawXDGTopLevel {
         version topLevelVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            pointer = try adoptionContext.adopt(topLevelPointer, interface: "xdg_toplevel")
-        } catch {
-            unsafe swl_xdg_toplevel_destroy(topLevelPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: topLevelPointer,
+            interface: "xdg_toplevel",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_xdg_toplevel_destroy
+        )
         version = topLevelVersion
     }
 
@@ -42,10 +43,7 @@ package final class RawXDGTopLevel {
     }
 
     package func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        unsafe swl_xdg_toplevel_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
@@ -55,11 +53,12 @@ package final class RawXDGTopLevel {
 
 @safe
 package final class RawXDGSurface {
-    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
     @safe
     init(
@@ -67,12 +66,12 @@ package final class RawXDGSurface {
         version surfaceVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            pointer = try adoptionContext.adopt(surfacePointer, interface: "xdg_surface")
-        } catch {
-            unsafe swl_xdg_surface_destroy(surfacePointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: surfacePointer,
+            interface: "xdg_surface",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_xdg_surface_destroy
+        )
         version = surfaceVersion
         proxyAdoption = adoptionContext
     }
@@ -111,10 +110,7 @@ package final class RawXDGSurface {
     }
 
     package func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        unsafe swl_xdg_surface_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
@@ -124,12 +120,13 @@ package final class RawXDGSurface {
 
 @safe
 package final class RawXDGWMBase {
-    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
     private let owner: XDGWMBaseOwner
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    @safe private var pointer: OpaquePointer { proxy.pointer }
 
     @safe
     init(
@@ -142,17 +139,16 @@ package final class RawXDGWMBase {
             invariantFailureSink: adoptionContext.invariantFailureSink
         )
 
-        do {
-            try newOwner.install()
-            pointer = try adoptionContext.adopt(wmBasePointer, interface: "xdg_wm_base")
-        } catch {
-            newOwner.cancel()
-            unsafe swl_xdg_wm_base_destroy(wmBasePointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: wmBasePointer,
+            interface: "xdg_wm_base",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_xdg_wm_base_destroy
+        )
         version = wmBaseVersion
         proxyAdoption = adoptionContext
         owner = newOwner
+        try newOwner.install()
     }
 
     package func getSurface(for surface: RawSurface) throws -> RawXDGSurface {
@@ -181,11 +177,8 @@ package final class RawXDGWMBase {
     }
 
     func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
         owner.cancel()
-        unsafe swl_xdg_wm_base_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {

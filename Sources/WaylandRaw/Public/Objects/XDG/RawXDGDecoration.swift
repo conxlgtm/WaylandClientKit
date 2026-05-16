@@ -31,11 +31,12 @@ package enum RawDecorationMode: Equatable, Sendable {
 
 @safe
 package final class RawXDGDecorationManager {
-    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    @safe private var pointer: OpaquePointer { proxy.pointer }
 
     @safe
     init(
@@ -43,15 +44,12 @@ package final class RawXDGDecorationManager {
         version managerVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            pointer = try adoptionContext.adopt(
-                managerPointer,
-                interface: "zxdg_decoration_manager_v1"
-            )
-        } catch {
-            unsafe swl_zxdg_decoration_manager_v1_destroy(managerPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: managerPointer,
+            interface: "zxdg_decoration_manager_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_zxdg_decoration_manager_v1_destroy
+        )
         version = managerVersion
         proxyAdoption = adoptionContext
     }
@@ -72,10 +70,7 @@ package final class RawXDGDecorationManager {
     }
 
     package func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        unsafe swl_zxdg_decoration_manager_v1_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
@@ -85,10 +80,11 @@ package final class RawXDGDecorationManager {
 
 @safe
 package final class RawXDGToplevelDecoration {
-    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
     @safe
     init(
@@ -96,15 +92,12 @@ package final class RawXDGToplevelDecoration {
         version decorationVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            pointer = try adoptionContext.adopt(
-                decorationPointer,
-                interface: "zxdg_toplevel_decoration_v1"
-            )
-        } catch {
-            unsafe swl_zxdg_toplevel_decoration_v1_destroy(decorationPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: decorationPointer,
+            interface: "zxdg_toplevel_decoration_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_zxdg_toplevel_decoration_v1_destroy
+        )
         version = decorationVersion
     }
 
@@ -117,10 +110,7 @@ package final class RawXDGToplevelDecoration {
     }
 
     package func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        unsafe swl_zxdg_toplevel_decoration_v1_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
