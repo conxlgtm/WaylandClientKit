@@ -88,6 +88,9 @@ package final class TopLevelWindow {
         surfaceRuntime.setPresentationFeedbackCapability(
             globals.extensions.presentation.presentationFeedbackCapabilityStatus
         )
+        surfaceRuntime.setDmabufCapability(
+            globals.extensions.linuxDmabuf.surfaceDmabufCapability
+        )
         try installScaleObjects(globals: globals)
         try assignXDGRole(globals: globals)
     }

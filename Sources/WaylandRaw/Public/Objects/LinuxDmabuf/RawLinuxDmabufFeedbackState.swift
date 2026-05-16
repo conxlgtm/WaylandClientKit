@@ -39,6 +39,16 @@ package struct RawLinuxDmabufTranche: Equatable, Sendable {
     package let flags: RawLinuxDmabufTrancheFlags
     package let formats: [RawLinuxDmabufFormatModifier]
 
+    package init(
+        targetDevice trancheTargetDevice: RawLinuxDmabufDevice,
+        flags trancheFlags: RawLinuxDmabufTrancheFlags,
+        formats trancheFormats: [RawLinuxDmabufFormatModifier]
+    ) {
+        targetDevice = trancheTargetDevice
+        flags = trancheFlags
+        formats = trancheFormats
+    }
+
     package func formatModifiers(for format: UInt32) -> [RawLinuxDmabufFormatModifier] {
         formats.filter { $0.format == format }
     }
@@ -55,6 +65,18 @@ package struct RawLinuxDmabufFeedbackSnapshot: Equatable, Sendable {
     package let mainDevice: RawLinuxDmabufDevice
     package let formatTable: [RawLinuxDmabufFormatModifier]
     package let tranches: [RawLinuxDmabufTranche]
+
+    package init(
+        scope feedbackScope: RawLinuxDmabufFeedbackScope,
+        mainDevice feedbackMainDevice: RawLinuxDmabufDevice,
+        formatTable feedbackFormatTable: [RawLinuxDmabufFormatModifier],
+        tranches feedbackTranches: [RawLinuxDmabufTranche]
+    ) {
+        scope = feedbackScope
+        mainDevice = feedbackMainDevice
+        formatTable = feedbackFormatTable
+        tranches = feedbackTranches
+    }
 }
 
 package enum RawLinuxDmabufFormatTable {
