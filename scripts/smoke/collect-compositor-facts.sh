@@ -56,6 +56,24 @@ print_pkg_config_version() {
     fi
 }
 
+print_wayland_globals() {
+    local probe="$1"
+
+    echo '```text'
+    if timeout 10 "$probe"; then
+        :
+    else
+        local status="$?"
+
+        if [[ "$status" -eq 124 ]]; then
+            printf '%s timed out after 10 seconds.\n' "$probe"
+        else
+            printf '%s failed with exit status %s.\n' "$probe" "$status"
+        fi
+    fi
+    echo '```'
+}
+
 echo "# SwiftWayland Compositor Facts"
 echo
 print_command_value "Collected" date -u "+%Y-%m-%dT%H:%M:%SZ"
@@ -82,13 +100,9 @@ echo
 if [[ -z "${WAYLAND_DISPLAY:-}" ]]; then
     echo "WAYLAND_DISPLAY is not set."
 elif command -v wayland-info >/dev/null 2>&1; then
-    echo '```text'
-    timeout 10 wayland-info
-    echo '```'
+    print_wayland_globals wayland-info
 elif command -v weston-info >/dev/null 2>&1; then
-    echo '```text'
-    timeout 10 weston-info
-    echo '```'
+    print_wayland_globals weston-info
 else
     echo "Install wayland-utils or weston-info to collect advertised globals."
 fi
@@ -101,4 +115,3 @@ if [[ "$include_smoke" -eq 1 ]]; then
     "$ROOT/scripts/smoke/smoke-wayland.sh"
     echo '```'
 fi
-
