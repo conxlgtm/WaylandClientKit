@@ -39,6 +39,8 @@ struct RawLinuxDmabufFeedbackStateTests {
         #expect(snapshot.tranches[0].formats == [entries[1], entries[0]])
         #expect(snapshot.tranches[0].flags.contains(.scanout))
         #expect(snapshot.tranches[0].flags.unknownRawValue == 0x8000_0000)
+        #expect(snapshot.tranches[0].flags.hasUnknownBits)
+        #expect(snapshot.tranches[0].formatModifiers(for: entries[1].format) == [entries[1]])
     }
 
     @Test
@@ -69,6 +71,30 @@ struct RawLinuxDmabufFeedbackStateTests {
         #expect(snapshot.tranches.count == 1)
         #expect(snapshot.tranches[0].targetDevice == RawLinuxDmabufDevice(bytes: [0x04]))
         #expect(snapshot.tranches[0].formats == [replacementEntry])
+    }
+
+    @Test
+    func doneAfterCompletedBatchStartsFreshBatch() throws {
+        let entry = RawLinuxDmabufFormatModifier(format: 1, modifier: 2)
+        var state = RawLinuxDmabufFeedbackState()
+
+        state.replaceFormatTable([entry])
+        try state.setMainDevice(bytes: [0x01], scope: .defaultFeedback)
+        try state.setCurrentTrancheTargetDevice(bytes: [0x02], scope: .defaultFeedback)
+        try state.setCurrentTrancheFlags(0, scope: .defaultFeedback)
+        try state.appendCurrentTrancheFormats(indices: [0], scope: .defaultFeedback)
+        try state.finishCurrentTranche(scope: .defaultFeedback)
+        _ = try state.finish(scope: .defaultFeedback)
+
+        #expect(
+            throws: malformedFeedback(
+                event: "done",
+                field: "main_device",
+                discardedStaleState: false
+            )
+        ) {
+            _ = try state.finish(scope: .defaultFeedback)
+        }
     }
 
     @Test

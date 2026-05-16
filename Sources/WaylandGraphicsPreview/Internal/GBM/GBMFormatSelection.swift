@@ -86,7 +86,7 @@ package enum GBMFormatSelector {
         var rejectedModifiersByFormat: [UInt32: Set<UInt64>] = [:]
         for (trancheIndex, tranche) in feedback.tranches.enumerated() {
             for preferredFormat in policy.preferredFormats {
-                let candidates = tranche.formats.filter { $0.format == preferredFormat }
+                let candidates = tranche.formatModifiers(for: preferredFormat)
                 if candidates.isEmpty { continue }
 
                 if let selected = candidates.first(where: policy.allows) {
@@ -99,7 +99,7 @@ package enum GBMFormatSelector {
                 }
 
                 rejectedModifiersByFormat[preferredFormat, default: []]
-                    .formUnion(candidates.map(\.modifier))
+                    .formUnion(candidates.modifiers)
             }
         }
 
