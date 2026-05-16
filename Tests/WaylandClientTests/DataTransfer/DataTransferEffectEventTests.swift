@@ -127,4 +127,50 @@ struct DataTransferEffectEventTests {
         #expect(DataTransferEffect.destroySource(sourceID).publishedEvent == nil)
         #expect(DataTransferEffect.cancelSource(sourceID).publishedEvent == nil)
     }
+
+    @Test
+    func sideEffectsMapToRuntimeSideEffects() {
+        #expect(
+            DataTransferEffect.bindDataDevice(seatID).runtimeSideEffect
+                == .bindDataDevice(seatID)
+        )
+        #expect(
+            DataTransferEffect.releaseDataDevice(seatID).runtimeSideEffect
+                == .releaseDataDevice(seatID)
+        )
+        #expect(
+            DataTransferEffect.destroyOffer(offerID).runtimeSideEffect
+                == .destroyOffer(offerID)
+        )
+        #expect(
+            DataTransferEffect.destroySource(sourceID).runtimeSideEffect
+                == .destroySource(sourceID)
+        )
+        #expect(
+            DataTransferEffect.cancelSource(sourceID).runtimeSideEffect
+                == .cancelSource(sourceID)
+        )
+    }
+
+    @Test
+    func publishEffectsDoNotMapToRuntimeSideEffects() {
+        #expect(
+            DataTransferEffect.publishSelectionChanged(
+                seatID: seatID,
+                offerID: offerID
+            )
+            .runtimeSideEffect == nil
+        )
+        #expect(DataTransferEffect.publishSourceCancelled(sourceID).runtimeSideEffect == nil)
+        #expect(
+            DataTransferEffect.publishDragDropped(
+                seatID: seatID,
+                offerID: offerID
+            )
+            .runtimeSideEffect == nil
+        )
+        #expect(
+            DataTransferEffect.publishDragSourceCancelled(sourceID).runtimeSideEffect == nil
+        )
+    }
 }

@@ -40,6 +40,8 @@ struct RawLinuxDmabufFeedbackStateTests {
         #expect(snapshot.tranches[0].flags.contains(.scanout))
         #expect(snapshot.tranches[0].flags.unknownRawValue == 0x8000_0000)
         #expect(snapshot.tranches[0].flags.hasUnknownBits)
+        #expect(!snapshot.tranches[0].flags.containsOnlyKnownBits)
+        #expect(RawLinuxDmabufTrancheFlags.scanout.containsOnlyKnownBits)
         #expect(snapshot.tranches[0].formatModifiers(for: entries[1].format) == [entries[1]])
     }
 

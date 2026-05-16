@@ -29,6 +29,7 @@ struct GPUDmabufBufferImporterTests {
                     planeCount: 1
                 )
         )
+        #expect(Array(descriptor.planeIndices) == [0])
     }
 
     @Test
@@ -88,6 +89,23 @@ struct GPUDmabufBufferImporterTests {
 
         #expect(failures == [.useAfterTerminalState(.failed)])
         #expect(importRequest.state == .failed)
+    }
+
+    @Test
+    func importStateClassifiesEventAcceptanceAndTerminalStates() {
+        #expect(GPUDmabufBufferImportState.createRequested.acceptsCompositorEvent)
+        #expect(!GPUDmabufBufferImportState.createRequested.isTerminal)
+        #expect(!GPUDmabufBufferImportState.createRequested.isDestroyed)
+
+        #expect(!GPUDmabufBufferImportState.created.acceptsCompositorEvent)
+        #expect(GPUDmabufBufferImportState.created.isTerminal)
+
+        #expect(!GPUDmabufBufferImportState.failed.acceptsCompositorEvent)
+        #expect(GPUDmabufBufferImportState.failed.isTerminal)
+
+        #expect(!GPUDmabufBufferImportState.destroyed.acceptsCompositorEvent)
+        #expect(GPUDmabufBufferImportState.destroyed.isTerminal)
+        #expect(GPUDmabufBufferImportState.destroyed.isDestroyed)
     }
 }
 

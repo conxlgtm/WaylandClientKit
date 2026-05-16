@@ -5,7 +5,7 @@ import Testing
 @testable import WaylandGraphicsPreview
 @testable import WaylandRaw
 
-@Suite
+@Suite(.serialized)
 struct GBMSurfaceTests {
     @Test
     func surfaceDescriptorCapturesDmabufSelection() throws {
@@ -82,5 +82,48 @@ struct GBMSurfaceTests {
 
         #expect(releaseCallCount == 1)
         #expect(releaseExportCallCount == 0)
+    }
+
+    @Test
+    func lockedBufferExportUsesLivePointer() throws {
+        let surfacePointer = try unsafe #require(OpaquePointer(bitPattern: 0x7107))
+        let bufferPointer = try unsafe #require(OpaquePointer(bitPattern: 0x8108))
+        let renderNodeDescriptors = try RawFileDescriptor.pipeDescriptors()
+        defer {
+            Glibc.close(renderNodeDescriptors.readEnd)
+        }
+        let renderNode = try GBMRenderNodeFileDescriptor(
+            adopting: renderNodeDescriptors.writeEnd
+        )
+        let device = GBMDevice(
+            testingAdoptingRenderNodeFileDescriptor: renderNode
+        )
+        let surface = unsafe GBMSurface(
+            testingAdoptingSurfacePointer: surfacePointer,
+            device: device
+        )
+        let lockedBuffer = unsafe surface.testingRegisterLockedBuffer(pointer: bufferPointer)
+        let expectedBufferAddress = Int(
+            bitPattern: unsafe UnsafeMutableRawPointer(bufferPointer)
+        )
+
+        swl_test_gbm_surface_lifecycle_recording_begin()
+        defer {
+            swl_test_gbm_surface_lifecycle_recording_end()
+        }
+
+        #expect(throws: GBMAllocationError.exportFailed(errno: EINVAL)) {
+            _ = try lockedBuffer.exportDmabuf()
+        }
+
+        let exportRecord = unsafe swl_test_gbm_surface_lifecycle_record()
+        let exportCallCount = unsafe exportRecord.export_call_count
+        let exportBufferAddress = Int(bitPattern: unsafe exportRecord.buffer)
+
+        #expect(exportCallCount == 1)
+        #expect(exportBufferAddress == expectedBufferAddress)
+
+        lockedBuffer.release()
+        surface.destroy()
     }
 }
