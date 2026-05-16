@@ -52,6 +52,28 @@ struct WindowModelExternalPresentationTests {
 
         #expect(try presentationRequest(from: effects).generation == 2)
     }
+
+    @Test
+    func externalPresentationFailsDuringSoftwarePresentation() throws {
+        var (model, _) = try activeModelWithStartedPresentation()
+
+        do {
+            _ = try model.reduce(
+                .externalPresentationSucceeded(
+                    generation: 1,
+                    bufferAvailability: .available
+                )
+            )
+            Issue.record("Expected external presentation during software presentation to throw.")
+        } catch ClientError.window(
+            windowID,
+            .invalidLifecycleTransition(.nestedPresentation)
+        ) {
+            // Expected while the software presentation is drawing.
+        } catch {
+            Issue.record("Expected nested presentation error, got \(error).")
+        }
+    }
 }
 
 extension WindowModelExternalPresentationTests {
