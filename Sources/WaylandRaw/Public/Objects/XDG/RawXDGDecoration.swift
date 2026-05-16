@@ -1,5 +1,4 @@
 import CWaylandProtocols
-import Glibc
 
 @safe
 package enum RawDecorationMode: Equatable, Sendable {
@@ -129,11 +128,6 @@ package final class RawXDGToplevelDecoration {
     }
 }
 
-private enum DecorationListenerInstallState {
-    case idle
-    case installed
-}
-
 private typealias DecorationListenerCallbacks =
     swl_zxdg_toplevel_decoration_v1_listener_callbacks
 
@@ -141,7 +135,7 @@ private typealias DecorationListenerCallbacks =
 package final class XDGDecorationOwner {
     private let configureState: XDGConfigureState
     private let invariantFailureSink: RawInvariantFailureSink?
-    private var installState = DecorationListenerInstallState.idle
+    private var installState = ListenerInstallState.idle
     @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
         initialValue: unsafe swl_zxdg_toplevel_decoration_v1_listener_callbacks(),
@@ -170,28 +164,14 @@ package final class XDGDecorationOwner {
     }
 
     package func install(on decoration: RawXDGToplevelDecoration) throws {
-        guard installState == .idle else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .installListener("zxdg_toplevel_decoration_v1")
-            )
-        }
-
         unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
-        let result = unsafe swl_zxdg_toplevel_decoration_v1_add_listener(
-            decoration.pointer,
-            callbacks
-        )
-
-        guard result == 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .installListener("zxdg_toplevel_decoration_v1")
+        try installState.install(interface: "zxdg_toplevel_decoration_v1") {
+            unsafe swl_zxdg_toplevel_decoration_v1_add_listener(
+                decoration.pointer,
+                callbacks
             )
         }
-
-        installState = .installed
     }
 
     package func cancel() {

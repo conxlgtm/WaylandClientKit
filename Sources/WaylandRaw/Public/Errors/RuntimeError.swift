@@ -271,6 +271,10 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
         .invalidArgument(String(describing: error))
     }
 
+    package static func listenerInstallFailed(_ interface: String) -> RuntimeError {
+        .systemError(errno: EINVAL, operation: .installListener(interface))
+    }
+
     package static func fromRuntimeOrInvalidArgument(_ error: any Error) -> RuntimeError {
         if let runtimeError = error as? RuntimeError {
             return runtimeError

@@ -1,5 +1,4 @@
 import CWaylandProtocols
-import Glibc
 
 @safe
 package final class RawXDGOutputManager {
@@ -96,11 +95,6 @@ package final class RawXDGOutput {
     }
 }
 
-private enum XDGOutputListenerInstallState {
-    case idle
-    case installed
-}
-
 private typealias XDGOutputListenerCallbacks =
     swl_zxdg_output_v1_listener_callbacks
 
@@ -108,7 +102,7 @@ private typealias XDGOutputListenerCallbacks =
 private final class RawXDGOutputListenerOwner {
     private let onEvent: (RawXDGOutputEvent) -> Void
     private let invariantFailureSink: RawInvariantFailureSink?
-    private var installState = XDGOutputListenerInstallState.idle
+    private var installState = ListenerInstallState.idle
     @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
         initialValue: unsafe swl_zxdg_output_v1_listener_callbacks(),
@@ -191,18 +185,11 @@ private final class RawXDGOutputListenerOwner {
     }
 
     func install(on output: OpaquePointer) throws(RuntimeError) {
-        guard installState == .idle else {
-            throw listenerInstallError()
-        }
-
         unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
-        let result = unsafe swl_zxdg_output_v1_add_listener(output, callbacks)
-        guard result == 0 else {
-            throw listenerInstallError()
+        try installState.install(interface: "zxdg_output_v1") {
+            unsafe swl_zxdg_output_v1_add_listener(output, callbacks)
         }
-
-        installState = .installed
     }
 
     func cancel() {
@@ -222,10 +209,4 @@ private final class RawXDGOutputListenerOwner {
         .withOwner(from: data, message: message(), body)
     }
 
-    private func listenerInstallError() -> RuntimeError {
-        RuntimeError.systemError(
-            errno: EINVAL,
-            operation: .installListener("zxdg_output_v1")
-        )
-    }
 }
