@@ -22,12 +22,14 @@ Then run the relevant checks:
 ```bash
 make smoke-wayland
 make integration-wayland
+make gpu-preview-wayland
 ```
 
 For headless Weston:
 
 ```bash
 make wayland-headless
+make gpu-preview-headless
 ```
 
 Use `--include-smoke` when collecting facts if you also want the script to run
@@ -67,4 +69,3 @@ the noninteractive smoke executable:
 - `skip: <protocol>`: the compositor did not advertise an optional protocol.
 - `fail: <reason>`: an advertised path failed or the compositor disconnected.
 - `not run`: no evidence was collected for that cell.
-

@@ -213,7 +213,7 @@ let package = Package(
         ),
         .testTarget(
             name: "WaylandGPUPreviewTests",
-            dependencies: ["WaylandGPUPreview", "WaylandGraphicsPreview"],
+            dependencies: ["WaylandGPUPreview", "WaylandGraphicsPreview", "WaylandClient"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(
