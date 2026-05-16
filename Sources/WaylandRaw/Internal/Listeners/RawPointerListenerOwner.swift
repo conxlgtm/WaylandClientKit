@@ -211,11 +211,7 @@ final class PointerListenerOwner {
         guard !isCanceled, isCurrentDevice(deviceID) else { return }
 
         eventSink.append(
-            RawInputEventDraft(
-                seatID: deviceID.seatID,
-                deviceID: deviceID,
-                kind: .pointer(event)
-            )
+            RawInputEventDraft(deviceID: deviceID, kind: .pointer(event))
         )
     }
 

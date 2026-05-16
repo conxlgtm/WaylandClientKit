@@ -1,5 +1,4 @@
 import CWaylandProtocols
-import Glibc
 
 @safe
 package enum RawDecorationMode: Equatable, Sendable {
@@ -32,11 +31,12 @@ package enum RawDecorationMode: Equatable, Sendable {
 
 @safe
 package final class RawXDGDecorationManager {
-    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    @safe private var pointer: OpaquePointer { proxy.pointer }
 
     @safe
     init(
@@ -44,15 +44,12 @@ package final class RawXDGDecorationManager {
         version managerVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            pointer = try adoptionContext.adopt(
-                managerPointer,
-                interface: "zxdg_decoration_manager_v1"
-            )
-        } catch {
-            unsafe swl_zxdg_decoration_manager_v1_destroy(managerPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: managerPointer,
+            interface: "zxdg_decoration_manager_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_zxdg_decoration_manager_v1_destroy
+        )
         version = managerVersion
         proxyAdoption = adoptionContext
     }
@@ -73,10 +70,7 @@ package final class RawXDGDecorationManager {
     }
 
     package func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        unsafe swl_zxdg_decoration_manager_v1_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
@@ -86,10 +80,11 @@ package final class RawXDGDecorationManager {
 
 @safe
 package final class RawXDGToplevelDecoration {
-    @safe let pointer: OpaquePointer
     package let version: RawVersion
 
-    private var isDestroyed = false
+    private var proxy: RawOwnedProxy
+
+    @safe var pointer: OpaquePointer { proxy.pointer }
 
     @safe
     init(
@@ -97,15 +92,12 @@ package final class RawXDGToplevelDecoration {
         version decorationVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
-        do {
-            pointer = try adoptionContext.adopt(
-                decorationPointer,
-                interface: "zxdg_toplevel_decoration_v1"
-            )
-        } catch {
-            unsafe swl_zxdg_toplevel_decoration_v1_destroy(decorationPointer)
-            throw error
-        }
+        proxy = try RawOwnedProxy(
+            adopting: decorationPointer,
+            interface: "zxdg_toplevel_decoration_v1",
+            proxyAdoption: adoptionContext,
+            destroy: unsafe swl_zxdg_toplevel_decoration_v1_destroy
+        )
         version = decorationVersion
     }
 
@@ -118,20 +110,12 @@ package final class RawXDGToplevelDecoration {
     }
 
     package func destroy() {
-        guard !isDestroyed else { return }
-
-        isDestroyed = true
-        unsafe swl_zxdg_toplevel_decoration_v1_destroy(pointer)
+        proxy.destroy()
     }
 
     deinit {
         destroy()
     }
-}
-
-private enum DecorationListenerInstallState {
-    case idle
-    case installed
 }
 
 private typealias DecorationListenerCallbacks =
@@ -141,7 +125,7 @@ private typealias DecorationListenerCallbacks =
 package final class XDGDecorationOwner {
     private let configureState: XDGConfigureState
     private let invariantFailureSink: RawInvariantFailureSink?
-    private var installState = DecorationListenerInstallState.idle
+    private var installState = ListenerInstallState.idle
     @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
         initialValue: unsafe swl_zxdg_toplevel_decoration_v1_listener_callbacks(),
@@ -170,28 +154,14 @@ package final class XDGDecorationOwner {
     }
 
     package func install(on decoration: RawXDGToplevelDecoration) throws {
-        guard installState == .idle else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .installListener("zxdg_toplevel_decoration_v1")
-            )
-        }
-
         unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
 
-        let result = unsafe swl_zxdg_toplevel_decoration_v1_add_listener(
-            decoration.pointer,
-            callbacks
-        )
-
-        guard result == 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .installListener("zxdg_toplevel_decoration_v1")
+        try installState.install(interface: "zxdg_toplevel_decoration_v1") {
+            unsafe swl_zxdg_toplevel_decoration_v1_add_listener(
+                decoration.pointer,
+                callbacks
             )
         }
-
-        installState = .installed
     }
 
     package func cancel() {

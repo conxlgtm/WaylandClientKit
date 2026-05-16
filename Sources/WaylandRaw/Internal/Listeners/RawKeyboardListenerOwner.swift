@@ -211,11 +211,7 @@ final class KeyboardListenerOwner {
         guard !isCanceled, isCurrentDevice(deviceID) else { return }
 
         eventSink.append(
-            RawInputEventDraft(
-                seatID: deviceID.seatID,
-                deviceID: deviceID,
-                kind: .keyboard(event)
-            )
+            RawInputEventDraft(deviceID: deviceID, kind: .keyboard(event))
         )
     }
 
@@ -223,10 +219,10 @@ final class KeyboardListenerOwner {
         guard !isCanceled, isCurrentDevice(deviceID) else { return }
 
         eventSink.append(
-            RawInputEventDraft(
+            RawInputEventDraft.diagnostic(
                 seatID: deviceID.seatID,
                 deviceID: deviceID,
-                kind: .diagnostic(RawInputDiagnostic(payload))
+                payload
             )
         )
     }
