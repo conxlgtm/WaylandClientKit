@@ -397,21 +397,13 @@ package final class RawSeat {
 
     private func appendSnapshot() {
         eventSink.append(
-            RawInputEventDraft(
-                seatID: id,
-                deviceID: nil,
-                kind: .seat(snapshot)
-            )
+            RawInputEventDraft(seatID: id, kind: .seat(snapshot))
         )
     }
 
     private func appendSeatRemoved() {
         eventSink.append(
-            RawInputEventDraft(
-                seatID: id,
-                deviceID: nil,
-                kind: .seatRemoved
-            )
+            RawInputEventDraft(seatID: id, kind: .seatRemoved)
         )
     }
 
@@ -433,10 +425,10 @@ package final class RawSeat {
         }
 
         eventSink.append(
-            RawInputEventDraft(
+            RawInputEventDraft.diagnostic(
                 seatID: id,
                 deviceID: deviceID,
-                kind: .diagnostic(RawInputDiagnostic(payload))
+                payload
             )
         )
     }
@@ -447,17 +439,13 @@ package final class RawSeat {
         error: any Error
     ) {
         eventSink.append(
-            RawInputEventDraft(
+            RawInputEventDraft.diagnostic(
                 seatID: id,
                 deviceID: deviceID,
-                kind: .diagnostic(
-                    RawInputDiagnostic(
-                        .listener(
-                            RawListenerDiagnostic(
-                                listener: listener,
-                                message: String(describing: error)
-                            )
-                        )
+                .listener(
+                    RawListenerDiagnostic(
+                        listener: listener,
+                        message: String(describing: error)
                     )
                 )
             )
@@ -475,17 +463,13 @@ package final class RawSeat {
         }
 
         eventSink.append(
-            RawInputEventDraft(
+            RawInputEventDraft.diagnostic(
                 seatID: id,
                 deviceID: deviceID,
-                kind: .diagnostic(
-                    RawInputDiagnostic(
-                        .seatBinding(
-                            RawSeatBindingDiagnostic(
-                                interface: interface,
-                                error: runtimeError
-                            )
-                        )
+                .seatBinding(
+                    RawSeatBindingDiagnostic(
+                        interface: interface,
+                        error: runtimeError
                     )
                 )
             )
