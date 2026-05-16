@@ -329,11 +329,7 @@ package final class TopLevelWindow {
     }
 
     private func bufferPool(for size: PositivePixelSize) throws -> RawSharedMemoryPool {
-        try BufferPoolReplacement.pool(
-            for: size.rawSize,
-            active: &buffers,
-            retired: &retiredBufferPools
-        ) {
+        try surfaceRuntime.sharedMemoryPool(for: size) {
             guard let globals = connection.boundGlobals else {
                 throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
             }
@@ -349,24 +345,11 @@ package final class TopLevelWindow {
     }
 
     private func dropReleasedRetiredPools() {
-        retiredBufferPools.removeAll { pool in
-            !pool.hasBusyBuffers
-        }
+        surfaceRuntime.dropReleasedRetiredBufferPools()
     }
 
     private func retireSwapchain() {
-        if let activeBuffers = buffers {
-            activeBuffers.retire(reason: .windowClosed)
-            if activeBuffers.hasBusyBuffers {
-                retiredBufferPools.append(activeBuffers)
-            }
-            buffers = nil
-        }
-
-        for pool in retiredBufferPools {
-            pool.retire(reason: .windowClosed)
-        }
-        dropReleasedRetiredPools()
+        surfaceRuntime.retireSharedMemoryPools(reason: .windowClosed)
     }
 
     private func handleCloseRequested() {
@@ -584,16 +567,6 @@ extension TopLevelWindow {
     private var roleResources: TopLevelWindowRoleResources? {
         get { surfaceRuntime.roleResources }
         set { surfaceRuntime.roleResources = newValue }
-    }
-
-    private var buffers: RawSharedMemoryPool? {
-        get { surfaceRuntime.buffers }
-        set { surfaceRuntime.buffers = newValue }
-    }
-
-    private var retiredBufferPools: [RawSharedMemoryPool] {
-        get { surfaceRuntime.retiredBufferPools }
-        set { surfaceRuntime.retiredBufferPools = newValue }
     }
 
     private var scaleInstallation: SurfaceScaleInstallation {
@@ -846,13 +819,9 @@ extension TopLevelWindow {
     }
 
     private func redrawBufferAvailability() throws -> RedrawBufferAvailability {
-        guard let buffers else { return .available }
-
-        if buffers.size != (try currentSurfaceGeometry()).bufferSize.rawSize {
-            return .available
-        }
-
-        return RedrawBufferAvailability(isAvailable: buffers.hasFreeBuffers)
+        surfaceRuntime.redrawBufferAvailability(
+            matching: try currentSurfaceGeometry().bufferSize.rawSize
+        )
     }
 
     // swiftlint:disable:next cyclomatic_complexity

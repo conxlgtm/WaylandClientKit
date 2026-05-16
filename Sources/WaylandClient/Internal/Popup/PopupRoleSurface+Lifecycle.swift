@@ -63,11 +63,7 @@ extension PopupRoleSurface {
     }
 
     package func bufferPool(for size: PositivePixelSize) throws -> RawSharedMemoryPool {
-        try BufferPoolReplacement.pool(
-            for: size.rawSize,
-            active: &buffers,
-            retired: &retiredBufferPools
-        ) {
+        try surfaceRuntime.sharedMemoryPool(for: size) {
             guard let globals = connection.boundGlobals else {
                 throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
             }
@@ -83,24 +79,11 @@ extension PopupRoleSurface {
     }
 
     package func dropReleasedRetiredPools() {
-        retiredBufferPools.removeAll { pool in
-            !pool.hasBusyBuffers
-        }
+        surfaceRuntime.dropReleasedRetiredBufferPools()
     }
 
     package func retireSwapchain() {
-        if let activeBuffers = buffers {
-            activeBuffers.retire(reason: .windowClosed)
-            if activeBuffers.hasBusyBuffers {
-                retiredBufferPools.append(activeBuffers)
-            }
-            buffers = nil
-        }
-
-        for pool in retiredBufferPools {
-            pool.retire(reason: .windowClosed)
-        }
-        dropReleasedRetiredPools()
+        surfaceRuntime.retireSharedMemoryPools(reason: .windowClosed)
     }
 
     func drawAndPresent(
@@ -268,13 +251,9 @@ extension PopupRoleSurface {
     }
 
     package func redrawBufferAvailability() throws -> RedrawBufferAvailability {
-        guard let buffers else { return .available }
-
-        if buffers.size != (try currentSurfaceGeometry()).bufferSize.rawSize {
-            return .available
-        }
-
-        return RedrawBufferAvailability(isAvailable: buffers.hasFreeBuffers)
+        surfaceRuntime.redrawBufferAvailability(
+            matching: try currentSurfaceGeometry().bufferSize.rawSize
+        )
     }
 
     package func handlePopupDone() {
