@@ -2,6 +2,15 @@ import WaylandClient
 import WaylandGraphicsPreview
 import WaylandRaw
 
+package protocol GPUWindowPresenterBuffer: AnyObject {
+    var surfaceBuffer: RawSurfaceBuffer { get }
+
+    func setReleaseObserver(_ observer: @escaping () -> Void)
+    func destroy()
+}
+
+extension RawLinuxDmabufBuffer: GPUWindowPresenterBuffer {}
+
 package struct GPUWindowPresentationLease: Equatable, Sendable {
     package let slotID: GBMBufferPoolSlotID
 }
@@ -163,7 +172,7 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
 @safe
 package final class GPUWindowPresenter {
     private var state = GPUWindowPresenterState()
-    private var buffers: [GBMBufferPoolSlotID: RawLinuxDmabufBuffer] = [:]
+    private var buffers: [GBMBufferPoolSlotID: any GPUWindowPresenterBuffer] = [:]
     private var releaseFailures: [GPUWindowPresenterStateError] = []
 
     package init() {
@@ -183,7 +192,7 @@ package final class GPUWindowPresenter {
     }
 
     package func installBuffer(
-        _ buffer: RawLinuxDmabufBuffer,
+        _ buffer: any GPUWindowPresenterBuffer,
         slotID: GBMBufferPoolSlotID
     ) throws(GPUWindowPresenterError) {
         do {
@@ -265,5 +274,9 @@ package final class GPUWindowPresenter {
         buffers.removeAll()
         releaseFailures.removeAll()
         state.retireAll(reason: reason)
+    }
+
+    deinit {
+        retireAll(reason: .windowClosed)
     }
 }
