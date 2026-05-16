@@ -96,6 +96,22 @@ struct DataTransferDomainTypesTests {
     }
 
     @Test
+    func sourcePayloadSetSortsDictionaryPayloadsByMimeType() throws {
+        let payloadSet = try DataTransferSourcePayloadSet(
+            data: [
+                .uriList: Data("file:///tmp/example\n".utf8),
+                .plainText: Data("plain".utf8),
+                .plainTextUTF8: Data("utf8".utf8),
+            ]
+        )
+
+        #expect(payloadSet.mimeTypes == [.plainText, .plainTextUTF8, .uriList])
+        #expect(payloadSet.data(for: .plainText) == Data("plain".utf8))
+        #expect(payloadSet.data(for: .plainTextUTF8) == Data("utf8".utf8))
+        #expect(payloadSet.data(for: .uriList) == Data("file:///tmp/example\n".utf8))
+    }
+
+    @Test
     func byteCountRejectsNegativeValuesAndScalesUnits() throws {
         #expect(throws: DataTransferError.negativeByteCount(-1)) {
             _ = try ByteCount(-1)

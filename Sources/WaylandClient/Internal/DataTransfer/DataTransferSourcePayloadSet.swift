@@ -11,36 +11,12 @@ package struct DataTransferSourcePayloadSet: Equatable, Sendable {
     }
 
     package init(payloads sourcePayloads: [DataTransferSourcePayload]) throws {
-        guard !sourcePayloads.isEmpty else {
-            throw DataTransferError.emptyDataSource
-        }
-
-        var seenMIMETypes: Set<MIMEType> = []
-        for payload in sourcePayloads {
-            guard seenMIMETypes.insert(payload.mimeType).inserted else {
-                throw DataTransferError.duplicateMIMEType(payload.mimeType)
-            }
-        }
-
         payloads = sourcePayloads
-        var payloadsByMIMEType: [MIMEType: Data] = [:]
-        for payload in sourcePayloads {
-            payloadsByMIMEType[payload.mimeType] = payload.data
-        }
-        self.payloadsByMIMEType = payloadsByMIMEType
+        payloadsByMIMEType = try sourcePayloads.payloadsByMIMEType()
     }
 
     package init(data payloads: [MIMEType: Data]) throws {
-        var sourcePayloads: [DataTransferSourcePayload] = []
-        for mimeType in payloads.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
-            guard let data = payloads[mimeType] else {
-                preconditionFailure("Payload dictionary key disappeared during iteration")
-            }
-            sourcePayloads.append(
-                DataTransferSourcePayload(mimeType: mimeType, data: data)
-            )
-        }
-        try self.init(payloads: sourcePayloads)
+        try self.init(payloads: payloads.sourcePayloadsSortedByMIMEType)
     }
 
     package func data(for mimeType: MIMEType) -> Data? {
@@ -107,10 +83,7 @@ package final class DataTransferSourceSendRequest {
     }
 
     package func releaseRawDescriptor() throws -> Int32 {
-        let releasedDescriptor = descriptor.withLock { storage -> Int32? in
-            defer { storage = nil }
-            return storage
-        }
+        let releasedDescriptor = descriptor.takeDescriptor()
         guard let releasedDescriptor else {
             throw DataTransferError.fileDescriptorAlreadyReleased
         }
@@ -149,12 +122,7 @@ package final class DataTransferSourceSendRequest {
     }
 
     deinit {
-        guard
-            let releasedDescriptor = descriptor.withLock({ storage -> Int32? in
-                defer { storage = nil }
-                return storage
-            })
-        else {
+        guard let releasedDescriptor = descriptor.takeDescriptor() else {
             return
         }
 
@@ -163,5 +131,36 @@ package final class DataTransferSourceSendRequest {
         }
 
         _ = descriptorIO.close(releasedDescriptor)
+    }
+}
+
+extension Array where Element == DataTransferSourcePayload {
+    package var mimeTypes: [MIMEType] {
+        map(\.mimeType)
+    }
+
+    package func payloadsByMIMEType() throws -> [MIMEType: Data] {
+        try NonEmptyMIMETypeList.validate(
+            mimeTypes,
+            emptyError: .emptyDataSource
+        )
+
+        return Dictionary(
+            uniqueKeysWithValues: map { payload in
+                (payload.mimeType, payload.data)
+            }
+        )
+    }
+}
+
+extension Dictionary where Key == MIMEType, Value == Data {
+    package var sourcePayloadsSortedByMIMEType: [DataTransferSourcePayload] {
+        keys.sorted { $0.rawValue < $1.rawValue }.map { mimeType in
+            guard let data = self[mimeType] else {
+                preconditionFailure("Payload dictionary key disappeared during iteration")
+            }
+
+            return DataTransferSourcePayload(mimeType: mimeType, data: data)
+        }
     }
 }
