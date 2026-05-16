@@ -19,10 +19,7 @@ package struct RawFileDescriptor: ~Copyable {
 
     package static func memfd(name: String) throws(RuntimeError) -> RawFileDescriptor {
         guard !name.utf8.contains(0) else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .validateArgument("shared memory file name")
-            )
+            throw RuntimeError.invalidArgument("shared memory file name")
         }
 
         let fd = unsafe name.withCString { namePointer in
@@ -57,10 +54,7 @@ package struct RawFileDescriptor: ~Copyable {
         maximumByteCount: Int
     ) throws(RuntimeError) -> [UInt8] {
         guard maximumByteCount >= 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .validateArgument("file descriptor read byte count")
-            )
+            throw RuntimeError.invalidArgument("file descriptor read byte count")
         }
 
         var buffer = [UInt8](repeating: 0, count: maximumByteCount)
