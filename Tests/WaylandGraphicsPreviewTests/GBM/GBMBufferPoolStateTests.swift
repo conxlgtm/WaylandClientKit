@@ -63,6 +63,7 @@ struct GBMBufferPoolStateTests {
         #expect(try state.lifecycle(for: leasedSlotID).isLeased)
         try state.markSubmitted(leasedSlotID, commitGeneration: 4)
         #expect(try state.lifecycle(for: leasedSlotID).submittedCommitGeneration == 4)
+        #expect(state.submittedSlotIDs == [slotID])
 
         #expect(throws: GBMBufferPoolStateError.noAvailableSlots) {
             _ = try state.leaseNextAvailableSlot()
@@ -91,8 +92,12 @@ struct GBMBufferPoolStateTests {
     func duplicateSlotsAreRejected() throws {
         var state = GBMBufferPoolState()
         let slotID = try GBMBufferPoolSlotID(1)
+        let secondSlotID = try GBMBufferPoolSlotID(2)
 
         try state.insertAvailableSlot(slotID)
+        try state.insertAvailableSlot(secondSlotID)
+
+        #expect(state.slotIDs == [slotID, secondSlotID])
 
         #expect(throws: GBMBufferPoolStateError.duplicateSlot(slotID)) {
             try state.insertAvailableSlot(slotID)
