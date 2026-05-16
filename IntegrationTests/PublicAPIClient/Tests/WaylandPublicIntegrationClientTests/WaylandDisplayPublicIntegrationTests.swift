@@ -153,62 +153,6 @@ struct WaylandDisplayPublicIntegrationTests {
     }
 
     @Test
-    func presentationFeedbackReportsUnavailableOrPublishesResult() async throws {
-        try await withPublicConnection { display in
-            let capabilities = try await display.capabilities()
-            let window = try await display.createTopLevelWindow(
-                configuration: testWindowConfiguration()
-            )
-
-            try await show(window, color: 0x0014_2434)
-            let presentationEvents = window.presentationEvents
-
-            guard capabilities.presentationTime.isAvailable else {
-                do {
-                    try await window.requestPresentationFeedback()
-                    Issue.record("Expected presentation-time unavailable error")
-                } catch ClientError.display(.presentationTimeUnavailable) {
-                    noteOptionalProtocolSkip(
-                        test: "presentation feedback",
-                        interfaceName: "wp_presentation"
-                    )
-                } catch {
-                    Issue.record("Expected presentation-time error, got \(error)")
-                }
-
-                await window.close()
-                return
-            }
-
-            try await window.requestPresentationFeedback()
-            try await window.requestRedraw()
-            try await window.redraw { frame in
-                fill(frame, color: 0x0044_2414)
-            }
-
-            let feedback = try await withTimeout(
-                nanoseconds: publicIntegrationWaitTimeoutNanoseconds,
-                operation: "waiting for presentation feedback"
-            ) {
-                try await nextPresentationFeedback(in: presentationEvents)
-            }
-
-            guard let feedback else {
-                throw PublicIntegrationError.streamEnded
-            }
-
-            switch feedback {
-            case .presented(let presentation):
-                #expect(presentation.surface == feedback.surface)
-            case .discarded(let identity):
-                #expect(identity == feedback.surface)
-            }
-
-            await window.close()
-        }
-    }
-
-    @Test
     func hiddenCursorRequestWithoutPointerFocusIsDeterministic() async throws {
         try await WaylandDisplay.withConnection(
             cursorConfiguration: CursorConfiguration(fallbackCursor: .hidden),
@@ -223,13 +167,6 @@ struct WaylandDisplayPublicIntegrationTests {
             #expect(finalCursor == .hidden)
         }
     }
-}
-
-private func nextPresentationFeedback(
-    in events: WindowPresentationEvents
-) async throws -> SurfacePresentationFeedback? {
-    var iterator = events.makeAsyncIterator()
-    return try await iterator.next()
 }
 
 func noteOptionalProtocolSkip(test: String, interfaceName: String) {
@@ -493,7 +430,7 @@ private func isPopupLifecycleEvent(
         && lifecycleEvent.parentWindowID == expectedParentWindowID
 }
 
-private enum PublicIntegrationEnvironment {
+enum PublicIntegrationEnvironment {
     static var isEnabled: Bool {
         environmentValue("SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS") == "1"
             && environmentValue("WAYLAND_DISPLAY") != nil
@@ -510,7 +447,7 @@ private enum PublicIntegrationEnvironment {
     }
 }
 
-private enum PublicIntegrationError: Error, CustomStringConvertible {
+enum PublicIntegrationError: Error, CustomStringConvertible {
     case timeout(operation: String)
     case streamEnded
 
@@ -547,7 +484,7 @@ func withTimeout<Value: Sendable>(
     }
 }
 
-private func fill(_ frame: borrowing SoftwareFrame, color: UInt32) {
+func fill(_ frame: borrowing SoftwareFrame, color: UInt32) {
     frame.withXRGB8888Rows { _, pixels in
         for index in 0..<pixels.count {
             pixels[unchecked: index] = color
@@ -555,9 +492,7 @@ private func fill(_ frame: borrowing SoftwareFrame, color: UInt32) {
     }
 }
 
-private func drawColor(
-    _ color: UInt32
-) -> @Sendable (borrowing SoftwareFrame) throws -> Void {
+private func drawColor(_ color: UInt32) -> @Sendable (borrowing SoftwareFrame) throws -> Void {
     { frame in
         fill(frame, color: color)
     }
