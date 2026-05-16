@@ -1,4 +1,12 @@
 extension DataTransferEffect {
+    package enum RuntimeSideEffect: Equatable, Sendable {
+        case bindDataDevice(SeatID)
+        case releaseDataDevice(SeatID)
+        case destroyOffer(DataOfferID)
+        case destroySource(DataSourceID)
+        case cancelSource(DataSourceID)
+    }
+
     package var publishedEvent: DataTransferEvent? {
         switch self {
         case .publishSelectionChanged(let seatID, let offerID):
@@ -55,6 +63,28 @@ extension DataTransferEffect {
             )
         case .bindDataDevice, .releaseDataDevice, .destroyOffer,
             .destroySource, .cancelSource:
+            nil
+        }
+    }
+
+    package var runtimeSideEffect: RuntimeSideEffect? {
+        switch self {
+        case .bindDataDevice(let seatID):
+            .bindDataDevice(seatID)
+        case .releaseDataDevice(let seatID):
+            .releaseDataDevice(seatID)
+        case .destroyOffer(let offerID):
+            .destroyOffer(offerID)
+        case .destroySource(let sourceID):
+            .destroySource(sourceID)
+        case .cancelSource(let sourceID):
+            .cancelSource(sourceID)
+        case .publishSelectionChanged, .publishSourceCancelled,
+            .publishDragEntered, .publishDragMotion, .publishDragLeft,
+            .publishDragDropped, .publishDragOfferChanged,
+            .publishDragSourceCancelled, .publishDragSourceTargetChanged,
+            .publishDragSourceActionChanged, .publishDragSourceDropPerformed,
+            .publishDragSourceFinished:
             nil
         }
     }

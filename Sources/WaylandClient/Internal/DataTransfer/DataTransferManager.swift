@@ -137,7 +137,11 @@ package final class DataTransferManager {
             return
         }
 
-        switch effect {
+        guard let sideEffect = effect.runtimeSideEffect else {
+            return
+        }
+
+        switch sideEffect {
         case .bindDataDevice(let seatID):
             try bindDataDevice(for: seatID, nextState: &nextState)
         case .releaseDataDevice(let seatID):
@@ -149,12 +153,6 @@ package final class DataTransferManager {
             destroySourceBindingPreservingPendingSends(sourceID)
         case .cancelSource(let sourceID):
             cancelSourceBinding(sourceID)
-        case .publishDragEntered, .publishDragMotion, .publishDragLeft, .publishDragDropped,
-            .publishDragOfferChanged, .publishDragSourceCancelled,
-            .publishDragSourceTargetChanged, .publishDragSourceActionChanged,
-            .publishDragSourceDropPerformed, .publishDragSourceFinished,
-            .publishSelectionChanged, .publishSourceCancelled:
-            return
         }
     }
 
