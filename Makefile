@@ -47,7 +47,7 @@ test:
 test-public-api-client:
 	@./scripts/ci/test-public-api-client.sh
 
-check-base: lint verify-generated verify-shims verify-docs verify-public-api-audit verify-unsafe-allowlist strict-concurrency test test-public-api-client
+check-base: lint verify-generated verify-shims verify-docs verify-docc verify-public-api-audit verify-unsafe-allowlist strict-concurrency test test-public-api-client
 
 check: check-base check-wayland-smoke-if-available
 
