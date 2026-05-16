@@ -123,4 +123,71 @@ struct InputDomainValuesRawTests {
                 == PointerLocation(x: 1.5, y: -0.5)
         )
     }
+
+    @Test
+    func touchEventsPreserveRawFacts() {
+        let rawTouchID = RawTouchID(rawValue: 7)
+
+        #expect(TouchID(rawTouchID) == TouchID(rawValue: 7))
+        #expect(
+            TouchDownEvent(
+                RawTouchDown(
+                    serial: 21,
+                    time: 22,
+                    surfaceID: nil,
+                    id: rawTouchID,
+                    x: WaylandFixed(rawValue: 384),
+                    y: WaylandFixed(rawValue: -128)
+                )
+            )
+                == TouchDownEvent(
+                    serial: InputSerial(rawValue: 21),
+                    time: WaylandTimestampMilliseconds(rawValue: 22),
+                    id: TouchID(rawValue: 7),
+                    location: PointerLocation(x: 1.5, y: -0.5)
+                )
+        )
+        #expect(
+            TouchUpEvent(RawTouchUp(serial: 31, time: 32, id: rawTouchID))
+                == TouchUpEvent(
+                    serial: InputSerial(rawValue: 31),
+                    time: WaylandTimestampMilliseconds(rawValue: 32),
+                    id: TouchID(rawValue: 7)
+                )
+        )
+        #expect(
+            TouchMotionEvent(
+                RawTouchMotion(
+                    time: 41,
+                    id: rawTouchID,
+                    x: WaylandFixed(rawValue: 256),
+                    y: WaylandFixed(rawValue: 512)
+                )
+            )
+                == TouchMotionEvent(
+                    time: WaylandTimestampMilliseconds(rawValue: 41),
+                    id: TouchID(rawValue: 7),
+                    location: PointerLocation(x: 1.0, y: 2.0)
+                )
+        )
+        #expect(
+            TouchShapeEvent(
+                RawTouchShape(
+                    id: rawTouchID,
+                    major: WaylandFixed(rawValue: 512),
+                    minor: WaylandFixed(rawValue: 256)
+                )
+            )
+                == TouchShapeEvent(id: TouchID(rawValue: 7), major: 2.0, minor: 1.0)
+        )
+        #expect(
+            TouchOrientationEvent(
+                RawTouchOrientation(
+                    id: rawTouchID,
+                    orientation: WaylandFixed(rawValue: -64)
+                )
+            )
+                == TouchOrientationEvent(id: TouchID(rawValue: 7), orientation: -0.25)
+        )
+    }
 }
