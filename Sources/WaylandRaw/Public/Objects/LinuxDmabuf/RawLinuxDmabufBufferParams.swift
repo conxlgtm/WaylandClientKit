@@ -11,9 +11,18 @@ package struct RawLinuxDmabufBufferParamsFlags: OptionSet, Sendable {
     package static let yInvert = RawLinuxDmabufBufferParamsFlags(rawValue: 1)
     package static let interlaced = RawLinuxDmabufBufferParamsFlags(rawValue: 2)
     package static let bottomFirst = RawLinuxDmabufBufferParamsFlags(rawValue: 4)
+    package static let known: RawLinuxDmabufBufferParamsFlags = [
+        .yInvert,
+        .interlaced,
+        .bottomFirst,
+    ]
 
     package var unknownRawValue: UInt32 {
-        rawValue & ~(Self.yInvert.rawValue | Self.interlaced.rawValue | Self.bottomFirst.rawValue)
+        rawValue & ~Self.known.rawValue
+    }
+
+    package var hasUnknownBits: Bool {
+        unknownRawValue != 0
     }
 }
 
