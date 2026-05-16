@@ -67,6 +67,35 @@ struct WaylandDisplayPublicIntegrationTests {
     }
 
     @Test
+    func dragOfferForUnknownSeatReportsPublicError() async throws {
+        try await withPublicConnection { display in
+            let capabilities = try await display.capabilities()
+            let unknownSeatID = SeatID(rawValue: UInt32.max)
+
+            do {
+                _ = try await display.dragOffer(for: unknownSeatID)
+                Issue.record("Expected a drag-and-drop public error")
+            } catch let error as DataTransferError {
+                switch error {
+                case .unavailable:
+                    #expect(capabilities.dragAndDrop == .unavailable)
+                    noteOptionalProtocolSkip(
+                        test: "drag-and-drop",
+                        interfaceName: "wl_data_device_manager"
+                    )
+                case .unknownSeat(let seatID), .missingDataDevice(let seatID):
+                    #expect(capabilities.dragAndDrop.isAvailable)
+                    #expect(seatID == unknownSeatID)
+                default:
+                    Issue.record("Expected drag-and-drop error, got \(error)")
+                }
+            } catch {
+                Issue.record("Expected DataTransferError, got \(error)")
+            }
+        }
+    }
+
+    @Test
     func toplevelWindowShowsRedrawsAndClosesThroughPublicAPI() async throws {
         try await withPublicConnection { display in
             let displayEvents = display.events
@@ -401,7 +430,7 @@ private func isPopupLifecycleEvent(
         && lifecycleEvent.parentWindowID == expectedParentWindowID
 }
 
-private enum PublicIntegrationEnvironment {
+enum PublicIntegrationEnvironment {
     static var isEnabled: Bool {
         environmentValue("SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS") == "1"
             && environmentValue("WAYLAND_DISPLAY") != nil
@@ -418,7 +447,7 @@ private enum PublicIntegrationEnvironment {
     }
 }
 
-private enum PublicIntegrationError: Error, CustomStringConvertible {
+enum PublicIntegrationError: Error, CustomStringConvertible {
     case timeout(operation: String)
     case streamEnded
 
@@ -455,7 +484,7 @@ func withTimeout<Value: Sendable>(
     }
 }
 
-private func fill(_ frame: borrowing SoftwareFrame, color: UInt32) {
+func fill(_ frame: borrowing SoftwareFrame, color: UInt32) {
     frame.withXRGB8888Rows { _, pixels in
         for index in 0..<pixels.count {
             pixels[unchecked: index] = color
@@ -463,9 +492,7 @@ private func fill(_ frame: borrowing SoftwareFrame, color: UInt32) {
     }
 }
 
-private func drawColor(
-    _ color: UInt32
-) -> @Sendable (borrowing SoftwareFrame) throws -> Void {
+private func drawColor(_ color: UInt32) -> @Sendable (borrowing SoftwareFrame) throws -> Void {
     { frame in
         fill(frame, color: color)
     }

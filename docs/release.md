@@ -21,18 +21,23 @@ swift build -c release
 swift build -c release --target SwiftWaylandDemo
 swift build -c release --product swift-wayland-smoke
 ./scripts/ci/dump-public-api.sh > /tmp/swiftwayland-public-api.md
+./scripts/ci/verify-public-api-audit.sh
+./scripts/ci/verify-docc.sh
 ```
 
 Under a real Wayland session:
 
 ```bash
+./scripts/smoke/collect-compositor-facts.sh
 ./scripts/smoke/smoke-wayland.sh
 ./scripts/smoke/integration-wayland.sh
+make gpu-preview-wayland
 swift run SwiftWaylandDemo
 ```
 
 Compositor targets are Weston, GNOME/Mutter, KDE/KWin, and Sway/wlroots. A checkpoint
 should not treat Weston-only behavior as sufficient for compositor compatibility.
+Record results in [compositor-matrix.md](compositor-matrix.md).
 
 ## Tag Checklist
 
@@ -43,14 +48,18 @@ should not treat Weston-only behavior as sufficient for compositor compatibility
 5. Run optimized builds for the package, demo, and smoke executable.
 6. Run `./scripts/smoke/smoke-wayland.sh` under a Wayland session.
 7. Run `./scripts/smoke/integration-wayland.sh` under a Wayland session.
-8. Manually run `swift run SwiftWaylandDemo` on at least one non-Weston desktop
+8. Run `make gpu-preview-wayland` under a Wayland session.
+9. Manually run `swift run SwiftWaylandDemo` on at least one non-Weston desktop
    before treating compositor compatibility as proven.
-9. Regenerate protocols and confirm no diff.
-10. Generate and review the public API report.
-11. Review `docs/public-api-audit.md`.
-12. Update README support and unsupported lists if behavior changed.
-13. Tag the checkpoint.
-14. If publishing GitHub checkpoint notes, copy the supported and unsupported scope from README.
+10. Update `docs/compositor-matrix.md` with the compositor facts and check results.
+11. Regenerate protocols and confirm no diff.
+12. Generate and review the public API report.
+13. Run `./scripts/ci/verify-public-api-audit.sh`.
+14. Run `./scripts/ci/verify-docc.sh`.
+15. Review `docs/public-api-audit.md`.
+16. Update README support and unsupported lists if behavior changed.
+17. Tag the checkpoint.
+18. If publishing GitHub checkpoint notes, copy the supported and unsupported scope from README.
 
 ## Stop Conditions
 
@@ -62,6 +71,7 @@ Do not tag if any of these fail:
 - tests,
 - optimized build,
 - public API report review,
+- public API audit verification,
 - live Wayland smoke test,
 - or live Wayland public API integration test.
 
@@ -89,17 +99,19 @@ Supported:
 - Static pointer cursor surfaces through wayland-cursor.
 - Server-side decoration negotiation through xdg-decoration.
 - Popup surfaces with placement, redraw, dismissal, and target identity.
+- Explicit presentation feedback through `wp_presentation`.
 - Regular clipboard selection offers and sources through data-device.
 - Primary selection offers and sources through primary-selection.
+- Receive-side drag-and-drop offers through data-device.
+- Source-side drag-and-drop sources through data-device.
 
 Not supported:
 - Widgets.
 - Text input or IME.
-- Drag and drop.
+- Drag icon surfaces.
 - Cursor animation or per-output cursor scaling.
 - Client-side decorations.
 - Full output-management API.
-- Presentation timing.
 - Public `WaylandClient` GPU rendering APIs.
 - Multi-threaded event queues.
 - Server-side Wayland or compositor APIs.
@@ -109,5 +121,6 @@ Verification:
 - swift build -c release
 - swift run swift-wayland-smoke
 - ./scripts/smoke/integration-wayland.sh
+- make gpu-preview-wayland
 - manual demo smoke test
 ```

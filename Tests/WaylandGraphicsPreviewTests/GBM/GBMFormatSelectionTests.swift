@@ -13,13 +13,13 @@ struct GBMFormatSelectionTests {
         let policy = try GBMFormatSelectionPolicy(
             preferredFormats: [xrgb8888, argb8888]
         )
-        let feedback = feedbackSnapshot(
+        let feedback = try feedbackSnapshot(
             tranches: [
-                tranche(
+                FixtureTranche(
                     deviceByte: 1,
                     formats: [format(argb8888, modifier: 10)]
                 ),
-                tranche(
+                FixtureTranche(
                     deviceByte: 2,
                     formats: [format(xrgb8888, modifier: 20)]
                 ),
@@ -41,9 +41,9 @@ struct GBMFormatSelectionTests {
         let policy = try GBMFormatSelectionPolicy(
             preferredFormats: [xrgb8888, argb8888]
         )
-        let feedback = feedbackSnapshot(
+        let feedback = try feedbackSnapshot(
             tranches: [
-                tranche(
+                FixtureTranche(
                     deviceByte: 1,
                     formats: [
                         format(argb8888, modifier: 10),
@@ -68,9 +68,9 @@ struct GBMFormatSelectionTests {
             preferredFormats: [xrgb8888],
             modifierPolicy: .only(30)
         )
-        let feedback = feedbackSnapshot(
+        let feedback = try feedbackSnapshot(
             tranches: [
-                tranche(
+                FixtureTranche(
                     deviceByte: 1,
                     formats: [
                         format(xrgb8888, modifier: 20),
@@ -97,14 +97,10 @@ struct GBMFormatSelectionTests {
 
     @Test
     func emptyTranchesAreRejected() throws {
-        let policy = try GBMFormatSelectionPolicy(preferredFormats: [xrgb8888])
-        let feedback = feedbackSnapshot(tranches: [])
-
-        #expect(throws: GBMFormatSelectionError.noFeedbackTranches) {
-            _ = try GBMFormatSelector.selectFormatModifier(
-                from: feedback,
-                policy: policy
-            )
+        #expect(
+            throws: malformedFeedback(event: "done", field: "tranche")
+        ) {
+            _ = try feedbackSnapshot(tranches: [])
         }
     }
 
@@ -113,9 +109,9 @@ struct GBMFormatSelectionTests {
         let policy = try GBMFormatSelectionPolicy(
             preferredFormats: [xrgb8888, argb8888]
         )
-        let feedback = feedbackSnapshot(
+        let feedback = try feedbackSnapshot(
             tranches: [
-                tranche(deviceByte: 1, formats: [format(1, modifier: 10)])
+                FixtureTranche(deviceByte: 1, formats: [format(1, modifier: 10)])
             ]
         )
 
@@ -137,9 +133,9 @@ struct GBMFormatSelectionTests {
             preferredFormats: [xrgb8888],
             modifierPolicy: .only(99)
         )
-        let feedback = feedbackSnapshot(
+        let feedback = try feedbackSnapshot(
             tranches: [
-                tranche(
+                FixtureTranche(
                     deviceByte: 1,
                     formats: [
                         format(xrgb8888, modifier: 30),
@@ -168,9 +164,9 @@ struct GBMFormatSelectionTests {
             preferredFormats: [xrgb8888],
             modifierPolicy: .only()
         )
-        let feedback = feedbackSnapshot(
+        let feedback = try feedbackSnapshot(
             tranches: [
-                tranche(
+                FixtureTranche(
                     deviceByte: 1,
                     formats: [format(xrgb8888, modifier: 20)]
                 )
@@ -191,25 +187,43 @@ struct GBMFormatSelectionTests {
     }
 
     private func feedbackSnapshot(
-        tranches: [RawLinuxDmabufTranche]
-    ) -> RawLinuxDmabufFeedbackSnapshot {
-        RawLinuxDmabufFeedbackSnapshot(
-            scope: .defaultFeedback,
-            mainDevice: RawLinuxDmabufDevice(bytes: [0]),
-            formatTable: [],
-            tranches: tranches
-        )
+        tranches: [FixtureTranche]
+    ) throws -> RawLinuxDmabufFeedbackSnapshot {
+        let formats = tranches.reduce(into: [RawLinuxDmabufFormatModifier]()) { result, tranche in
+            for format in tranche.formats where !result.contains(format) {
+                result.append(format)
+            }
+        }
+        var state = RawLinuxDmabufFeedbackState()
+
+        state.replaceFormatTable(formats)
+        try state.setMainDevice(bytes: [0], scope: .defaultFeedback)
+        for tranche in tranches {
+            try state.setCurrentTrancheTargetDevice(
+                bytes: [tranche.deviceByte],
+                scope: .defaultFeedback
+            )
+            try state.setCurrentTrancheFlags(0, scope: .defaultFeedback)
+            let formatIndices = try tranche.formats.map { format -> UInt16 in
+                guard let index = formats.firstIndex(of: format) else {
+                    throw RuntimeError.invalidArgument("dmabuf feedback fixture format")
+                }
+
+                return UInt16(index)
+            }
+            try state.appendCurrentTrancheFormats(
+                indices: formatIndices,
+                scope: .defaultFeedback
+            )
+            try state.finishCurrentTranche(scope: .defaultFeedback)
+        }
+
+        return try state.finish(scope: .defaultFeedback)
     }
 
-    private func tranche(
-        deviceByte: UInt8,
-        formats: [RawLinuxDmabufFormatModifier]
-    ) -> RawLinuxDmabufTranche {
-        RawLinuxDmabufTranche(
-            targetDevice: RawLinuxDmabufDevice(bytes: [deviceByte]),
-            flags: [],
-            formats: formats
-        )
+    private struct FixtureTranche {
+        let deviceByte: UInt8
+        let formats: [RawLinuxDmabufFormatModifier]
     }
 
     private func format(
@@ -217,5 +231,18 @@ struct GBMFormatSelectionTests {
         modifier: UInt64
     ) -> RawLinuxDmabufFormatModifier {
         RawLinuxDmabufFormatModifier(format: drmFormat, modifier: modifier)
+    }
+
+    private func malformedFeedback(event: String, field: String) -> RuntimeError {
+        RuntimeError.malformedDmabufFeedback(
+            RawLinuxDmabufMalformedFeedback(
+                scope: .defaultFeedback,
+                event: event,
+                field: field,
+                index: nil,
+                rawValue: nil,
+                discardedStaleState: true
+            )
+        )
     }
 }

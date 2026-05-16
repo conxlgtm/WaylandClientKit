@@ -4,11 +4,15 @@ This audit records the current API boundary for the experimental `WaylandClient`
 product. There is no compatibility promise yet, but public declarations in this
 product should still be treated as intentional user-facing API.
 
+The minimal DocC catalog for this boundary lives in
+`Sources/WaylandClient/WaylandClient.docc/WaylandClient.md`.
+
 ## Products
 
 ### `WaylandClient`
 
-Only library product. The raw, keyboard interpretation, and cursor modules are
+Only library product. The raw, runtime, keyboard interpretation, cursor,
+graphics-preview, GPU-preview, smoke-support, and test-support modules are
 implementation targets for this product, not separately vended library products.
 
 Intentionally public:
@@ -28,6 +32,13 @@ Intentionally public:
 - `SoftwareFrameGeometry`
 - `PositivePixelSize`
 - `SoftwareFrame`
+- `SurfacePresentationIdentity`
+- `SurfacePresentationFeedback`
+- `PresentationFeedback`
+- `PresentationTimestamp`
+- `PresentationSequence`
+- `PresentationFeedbackFlags`
+- `WindowPresentationEvents`
 - `DisplayEvent`
 - `DisplayDiagnostic`
 - `DiagnosticSeverity`
@@ -63,6 +74,24 @@ Intentionally public:
 - `PrimarySelectionOfferIdentity`
 - `PrimarySelectionSourceIdentity`
 - `PrimarySelectionEvent`
+- `DragOffer`
+- `DragSource`
+- `DragIcon`
+- `DragOfferIdentity`
+- `DragSourceIdentity`
+- `DragSourceConfiguration`
+- `DragAction`
+- `DragActionSet`
+- `DragLocation`
+- `DragEnterEvent`
+- `DragMotionEvent`
+- `DragLeaveEvent`
+- `DragDropEvent`
+- `DragOfferChangedEvent`
+- `DragSourceTargetEvent`
+- `DragSourceActionEvent`
+- `DragSourceFinalAction`
+- `DragSourceFinishedEvent`
 - `DataTransferEvent`
 - `DataTransferDiagnostic`
 - `MIMEType`
@@ -76,7 +105,8 @@ Current user-facing contract:
 - Display connection, window creation and close, request-redraw, software
   XRGB8888 drawing, basic pointer/keyboard/touch events, interpreted keyboard
   payloads, server-side decoration negotiation, scale-aware window geometry,
-  popup surfaces, regular clipboard selection, primary selection, cursor
+  popup surfaces, presentation feedback, regular clipboard selection, primary
+  selection, receive-side and source-side drag-and-drop data transfer, cursor
   requests, diagnostics, and terminal display errors are the current product
   surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
@@ -96,16 +126,27 @@ Current user-facing contract:
   current SHM frame.
 - Regular clipboard means `wl_data_device_manager` selection offers and sources.
 - `WaylandDisplay.capabilities()` reports currently advertised compositor support
-  for regular clipboard, primary selection, server-side decorations, viewporter,
-  and fractional scaling without binding new protocol objects.
+  for regular clipboard, drag-and-drop, drag action negotiation, primary
+  selection, server-side decorations, xdg-output, viewporter, presentation time,
+  fractional scaling, and linux-dmabuf without binding new protocol objects.
 - Primary selection means `zwp_primary_selection_device_manager_v1` offers and
   sources. It is selection-driven, focus-sensitive, and serial-scoped.
-- Drag-and-drop transfer handling is not part of this contract.
+- Drag-and-drop means `wl_data_device_manager` target offers and local sources,
+  including MIME negotiation, action negotiation when the compositor supports
+  version 3, source lifecycle events, bounded reads, and local source
+  cancellation. Drag icon surfaces are not part of this contract yet.
+- Presentation feedback means `wp_presentation` feedback for managed surfaces.
+  Frame callbacks, presentation feedback, future FIFO or commit-timing controls,
+  and explicit sync remain separate concepts.
+- GPU and GBM/EGL/dmabuf work remains package-internal preview. There is no
+  public renderer, swapchain, drawable, or GPU buffer API in `WaylandClient`.
 
 Intentionally package-internal:
 
 - `DisplaySession`
 - `TopLevelWindow`
+- `WaylandGraphicsPreview`
+- `WaylandGPUPreview`
 
 Notes:
 
@@ -121,6 +162,9 @@ Notes:
   `WaylandDisplay.close()`.
 - `PopupSurface` is the public popup handle. Popup lifecycle display events carry
   the popup identity and parent window identity.
+- `WindowPresentationEvents` is a public async sequence for presentation
+  feedback requested through a managed window. A discarded result is distinct
+  from a presented result with timestamps and feedback flags.
 - `Window.decorationMode` reports the current effective xdg-decoration mode when
   the compositor supports `zxdg_decoration_manager_v1`. Mode absence is explicit
   as `.unavailable`.
@@ -147,6 +191,10 @@ Notes:
 - Clipboard offers are seat-scoped. `ClipboardOffer.read` performs a bounded read
   with a timeout, and `ClipboardSourceConfiguration` represents local regular
   clipboard payloads.
+- Drag offers are seat-scoped and serial-bound to the current drag operation.
+  `DragOffer.read` uses the same bounded transfer rules as clipboard and primary
+  selection reads. `DragSourceConfiguration` requires non-empty MIME payloads
+  and known drag actions.
 - `WaylandCapabilities` is a registry-discovery snapshot. It lets applications
   branch before requesting optional features, but request APIs still throw typed
   availability errors because Wayland globals can be removed after discovery.
@@ -171,6 +219,11 @@ These targets are package-internal architecture units:
 - `WaylandRaw`: low-level protocol-shaped wrappers, raw input capture, and copied keymap payloads.
 - `WaylandKeyboard`: xkbcommon-backed interpretation of copied `xkb_v1` keymaps.
 - `WaylandCursor`: wayland-cursor theme loading and cursor image lifetime handling.
+- `WaylandRuntime`: owner-thread executor and runtime event loop.
+- `WaylandGraphicsPreview`: package-internal GBM, DRM, EGL, and GLES substrate.
+- `WaylandGPUPreview`: package-internal dmabuf import and GPU window presentation.
+- `WaylandSmokeSupport`: shared smoke-test support.
+- `WaylandTestSupport`: test-only support code.
 
 They may contain `public` declarations for cross-target compilation mechanics, but they are
 not vended as package library products.

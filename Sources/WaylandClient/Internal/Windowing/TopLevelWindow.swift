@@ -39,9 +39,7 @@ package final class TopLevelWindow {
 
     private let failureSink: any WindowFailureSink
     private var model: WindowModel
-    private var surfaceRuntime = SurfaceRuntime<TopLevelWindowRoleResources>(
-        role: .toplevelWindow
-    )
+    private var surfaceRuntime: SurfaceRuntime<TopLevelWindowRoleResources>
     private var pendingFrameRegistration: FrameCallbackRegistration?
     private var nextPresentationFeedbackID: UInt64 = 1
     private var pendingPresentationFeedbacks:
@@ -76,6 +74,10 @@ package final class TopLevelWindow {
         let globals = try rawConnection.bindRequiredGlobals()
         configureState = .init()
         surface = try globals.compositor.createSurface()
+        surfaceRuntime = SurfaceRuntime(
+            role: .toplevelWindow,
+            surfaceID: surface.objectID
+        )
         model = WindowModel(
             id: windowID,
             fallbackSize: windowConfiguration.initialSize
@@ -87,6 +89,9 @@ package final class TopLevelWindow {
 
         surfaceRuntime.setPresentationFeedbackCapability(
             globals.extensions.presentation.presentationFeedbackCapabilityStatus
+        )
+        surfaceRuntime.setDmabufAdvertisement(
+            globals.extensions.linuxDmabuf.surfaceDmabufAdvertisement
         )
         try installScaleObjects(globals: globals)
         try assignXDGRole(globals: globals)
@@ -329,11 +334,7 @@ package final class TopLevelWindow {
     }
 
     private func bufferPool(for size: PositivePixelSize) throws -> RawSharedMemoryPool {
-        try BufferPoolReplacement.pool(
-            for: size.rawSize,
-            active: &buffers,
-            retired: &retiredBufferPools
-        ) {
+        try surfaceRuntime.sharedMemoryPool(for: size) {
             guard let globals = connection.boundGlobals else {
                 throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
             }
@@ -349,24 +350,11 @@ package final class TopLevelWindow {
     }
 
     private func dropReleasedRetiredPools() {
-        retiredBufferPools.removeAll { pool in
-            !pool.hasBusyBuffers
-        }
+        surfaceRuntime.dropReleasedRetiredBufferPools()
     }
 
     private func retireSwapchain() {
-        if let activeBuffers = buffers {
-            activeBuffers.retire(reason: .windowClosed)
-            if activeBuffers.hasBusyBuffers {
-                retiredBufferPools.append(activeBuffers)
-            }
-            buffers = nil
-        }
-
-        for pool in retiredBufferPools {
-            pool.retire(reason: .windowClosed)
-        }
-        dropReleasedRetiredPools()
+        surfaceRuntime.retireSharedMemoryPools(reason: .windowClosed)
     }
 
     private func handleCloseRequested() {
@@ -584,16 +572,6 @@ extension TopLevelWindow {
     private var roleResources: TopLevelWindowRoleResources? {
         get { surfaceRuntime.roleResources }
         set { surfaceRuntime.roleResources = newValue }
-    }
-
-    private var buffers: RawSharedMemoryPool? {
-        get { surfaceRuntime.buffers }
-        set { surfaceRuntime.buffers = newValue }
-    }
-
-    private var retiredBufferPools: [RawSharedMemoryPool] {
-        get { surfaceRuntime.retiredBufferPools }
-        set { surfaceRuntime.retiredBufferPools = newValue }
     }
 
     private var scaleInstallation: SurfaceScaleInstallation {
@@ -846,13 +824,9 @@ extension TopLevelWindow {
     }
 
     private func redrawBufferAvailability() throws -> RedrawBufferAvailability {
-        guard let buffers else { return .available }
-
-        if buffers.size != (try currentSurfaceGeometry()).bufferSize.rawSize {
-            return .available
-        }
-
-        return RedrawBufferAvailability(isAvailable: buffers.hasFreeBuffers)
+        surfaceRuntime.redrawBufferAvailability(
+            matching: try currentSurfaceGeometry().bufferSize.rawSize
+        )
     }
 
     // swiftlint:disable:next cyclomatic_complexity
@@ -1024,30 +998,21 @@ extension TopLevelWindow {
 
         let generation = surfaceRuntime.nextCommitGeneration
         let bufferAvailability = try redrawBufferAvailability()
-        let preparedCommit = try SurfaceFrameCommitter.prepare(
-            SurfaceFrameCommitRequest(
-                surface: surface,
-                scaleInstallation: scaleInstallation,
-                generation: generation,
-                geometry: try currentSurfaceGeometry()
-            ),
-            runtime: &surfaceRuntime,
-        )
-
-        pendingFrameRegistration = try SurfaceFrameCommitter.requestFrameCallback(
-            on: surface,
-            runtime: &surfaceRuntime,
-            generation: generation
+        let presentationRequest = WindowExternalBufferPresentationRequest(
+            buffer: buffer,
+            surface: surface,
+            scaleInstallation: scaleInstallation,
+            generation: generation,
+            geometry: try currentSurfaceGeometry()
         ) { [weak self] in
             self?.handleFrameDone()
         }
-
+        let commitPlan = try WindowExternalBufferPresenter.present(
+            presentationRequest,
+            runtime: &surfaceRuntime,
+            pendingFrameRegistration: &pendingFrameRegistration
+        )
         do {
-            try SurfaceFrameCommitter.recordPreparedCommit(
-                preparedCommit,
-                runtime: &surfaceRuntime
-            )
-            let commitPlan = SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
             try interpretWindowEffects(
                 model.reduce(
                     .externalPresentationSucceeded(
@@ -1056,15 +1021,16 @@ extension TopLevelWindow {
                     )
                 )
             )
-            return PreviewBufferPresentationResult(
-                generation: generation,
-                commitPlan: commitPlan
-            )
         } catch {
             pendingFrameRegistration = nil
             surfaceRuntime.cancelFrameCallback()
             throw error
         }
+
+        return PreviewBufferPresentationResult(
+            generation: generation,
+            commitPlan: commitPlan
+        )
     }
 
     package func requestPresentationFeedbackOnOwnerThread(

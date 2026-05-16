@@ -155,7 +155,8 @@ struct SurfaceRuntimeTests {
                     role: .toplevelWindow,
                     outputIDs: [],
                     fractionalScale: .integerOnly,
-                    presentationFeedback: .unavailable
+                    presentationFeedback: .unavailable,
+                    dmabuf: .unavailable
                 )
         )
     }
@@ -173,8 +174,102 @@ struct SurfaceRuntimeTests {
                     role: .popup,
                     outputIDs: [OutputID(rawValue: 2)],
                     fractionalScale: .integerOnly,
-                    presentationFeedback: .available
+                    presentationFeedback: .available,
+                    dmabuf: .unavailable
                 )
         )
+    }
+
+    @Test
+    func capabilitySnapshotPublishesSurfaceDmabufFacts() {
+        var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
+
+        runtime.setDmabufAdvertisement(
+            .advertised(version: 5, canRequestSurfaceFeedback: .available)
+        )
+        #expect(
+            runtime.capabilitySnapshot().dmabuf
+                == .advertised(version: 5, canRequestSurfaceFeedback: .available)
+        )
+    }
+
+    @Test
+    func surfaceFeedbackRejectsDefaultFeedback() throws {
+        let feedback = try feedbackSnapshot(scope: .defaultFeedback)
+
+        #expect(throws: SurfaceDmabufCapabilityError.defaultFeedbackForSurface) {
+            _ = try SurfaceDmabufFeedback(
+                snapshot: feedback,
+                surfaceID: RawObjectID(42)
+            )
+        }
+    }
+
+    @Test
+    func surfaceFeedbackRejectsMismatchedSurfaceID() throws {
+        let feedback = try feedbackSnapshot(scope: .surface(surfaceID: RawObjectID(42)))
+
+        #expect(
+            throws: SurfaceDmabufCapabilityError.mismatchedSurfaceFeedback(
+                expected: RawObjectID(7),
+                actual: RawObjectID(42)
+            )
+        ) {
+            _ = try SurfaceDmabufFeedback(
+                snapshot: feedback,
+                surfaceID: RawObjectID(7)
+            )
+        }
+    }
+
+    @Test
+    func runtimeStoresOnlySurfaceMatchedDmabufFeedback() throws {
+        var runtime = SurfaceRuntime<RoleToken>(
+            role: .toplevelWindow,
+            surfaceID: RawObjectID(42)
+        )
+        let feedback = try feedbackSnapshot(scope: .surface(surfaceID: RawObjectID(42)))
+        let surfaceFeedback = try SurfaceDmabufFeedback(
+            snapshot: feedback,
+            surfaceID: RawObjectID(42)
+        )
+
+        try runtime.setSurfaceDmabufFeedback(feedback)
+
+        #expect(runtime.capabilitySnapshot().dmabuf == .surfaceFeedback(surfaceFeedback))
+    }
+
+    @Test
+    func runtimeWithoutSurfaceIdentityRejectsDmabufFeedback() throws {
+        var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
+        let feedback = try feedbackSnapshot(scope: .surface(surfaceID: RawObjectID(42)))
+
+        #expect(throws: SurfaceDmabufCapabilityError.missingSurfaceIdentity) {
+            try runtime.setSurfaceDmabufFeedback(feedback)
+        }
+    }
+
+    private func feedbackSnapshot(
+        scope: RawLinuxDmabufFeedbackScope
+    ) throws -> RawLinuxDmabufFeedbackSnapshot {
+        let formatModifier = RawLinuxDmabufFormatModifier(
+            format: 875_713_112,
+            modifier: 0
+        )
+        var state = RawLinuxDmabufFeedbackState()
+
+        state.replaceFormatTable([formatModifier])
+        try state.setMainDevice(bytes: [1, 2, 3, 4, 5, 6, 7, 8], scope: scope)
+        try state.setCurrentTrancheTargetDevice(
+            bytes: [1, 2, 3, 4, 5, 6, 7, 8],
+            scope: scope
+        )
+        try state.setCurrentTrancheFlags(
+            RawLinuxDmabufTrancheFlags.scanout.rawValue,
+            scope: scope
+        )
+        try state.appendCurrentTrancheFormats(indices: [0], scope: scope)
+        try state.finishCurrentTranche(scope: scope)
+        return try state.finish(scope: scope)
     }
 }
