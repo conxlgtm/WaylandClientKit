@@ -12,10 +12,6 @@ cleanup() {
 
 trap cleanup EXIT
 
-if [[ -n "${WAYLAND_DISPLAY:-}" && -z "${SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS+x}" ]]; then
-    export SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=1
-fi
-
 env CC="${REPO_ROOT}/scripts/dev/clang-filter-index-store.sh" \
     "${REPO_ROOT}/scripts/dev/swift.sh" test \
         --package-path "${REPO_ROOT}/IntegrationTests/PublicAPIClient" \

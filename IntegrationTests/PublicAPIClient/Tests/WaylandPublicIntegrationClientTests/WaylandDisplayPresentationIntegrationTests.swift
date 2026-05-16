@@ -1,15 +1,7 @@
 import Testing
 import WaylandClient
 
-@Suite(
-    "WaylandDisplay presentation integration",
-    .enabled(
-        if: PublicIntegrationEnvironment.isEnabled,
-        "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=1"
-    ),
-    .serialized
-)
-struct WaylandDisplayPresentationIntegrationTests {
+extension WaylandDisplayPublicIntegrationTests {
     @Test
     func presentationFeedbackReportsUnavailableOrPublishesResult() async throws {
         try await withPublicConnection { display in
