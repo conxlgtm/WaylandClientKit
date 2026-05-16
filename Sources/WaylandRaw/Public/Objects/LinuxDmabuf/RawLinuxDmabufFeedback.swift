@@ -263,14 +263,7 @@ private final class RawLinuxDmabufFeedbackOwner {
     }
 
     private static func runtimeError(from error: any Error) -> RuntimeError {
-        if let runtimeError = error as? RuntimeError {
-            return runtimeError
-        }
-
-        return RuntimeError.systemError(
-            errno: EINVAL,
-            operation: .validateArgument(String(describing: error))
-        )
+        RuntimeError.fromRuntimeOrInvalidArgument(error)
     }
 
     @safe

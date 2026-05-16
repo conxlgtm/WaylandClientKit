@@ -5,10 +5,7 @@ package struct RawLinuxDmabufPlaneFileDescriptor: ~Copyable {
 
     package init(adopting fileDescriptor: Int32) throws(RuntimeError) {
         guard fileDescriptor >= 0 else {
-            throw RuntimeError.systemError(
-                errno: EINVAL,
-                operation: .validateArgument("dmabuf plane fd")
-            )
+            throw RuntimeError.invalidArgument("dmabuf plane fd")
         }
 
         storage = fileDescriptor

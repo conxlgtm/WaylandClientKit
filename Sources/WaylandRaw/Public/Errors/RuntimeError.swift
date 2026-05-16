@@ -263,6 +263,22 @@ package enum RuntimeError: Error, Equatable, Sendable, CustomStringConvertible {
         )
     }
 
+    package static func invalidArgument(_ detail: String) -> RuntimeError {
+        .systemError(errno: EINVAL, operation: .validateArgument(detail))
+    }
+
+    package static func invalidArgument(_ error: any Error) -> RuntimeError {
+        .invalidArgument(String(describing: error))
+    }
+
+    package static func fromRuntimeOrInvalidArgument(_ error: any Error) -> RuntimeError {
+        if let runtimeError = error as? RuntimeError {
+            return runtimeError
+        }
+
+        return .invalidArgument(error)
+    }
+
     package static func protocolError(
         interfaceName: String?,
         objectID: UInt32,

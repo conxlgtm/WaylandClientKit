@@ -18,6 +18,22 @@ package enum GBMBufferPoolSlotLifecycle: Equatable, Sendable {
     case available
     case leased
     case submitted(commitGeneration: UInt64)
+
+    package var isAvailable: Bool {
+        self == .available
+    }
+
+    package var isLeased: Bool {
+        self == .leased
+    }
+
+    package var submittedCommitGeneration: UInt64? {
+        guard case .submitted(let generation) = self else {
+            return nil
+        }
+
+        return generation
+    }
 }
 
 package enum GBMBufferPoolStateError: Error, Equatable, Sendable, CustomStringConvertible {
@@ -58,7 +74,7 @@ package struct GBMBufferPoolState: Equatable, Sendable {
 
     package var availableSlotIDs: [GBMBufferPoolSlotID] {
         slots.compactMap { slotID, lifecycle in
-            lifecycle == .available ? slotID : nil
+            lifecycle.isAvailable ? slotID : nil
         }.sorted()
     }
 
@@ -102,7 +118,7 @@ package struct GBMBufferPoolState: Equatable, Sendable {
         }
 
         let lifecycle = try lifecycle(for: slotID)
-        guard lifecycle == .leased else {
+        guard lifecycle.isLeased else {
             throw GBMBufferPoolStateError.slotNotLeased(slotID, actual: lifecycle)
         }
 
@@ -113,7 +129,7 @@ package struct GBMBufferPoolState: Equatable, Sendable {
         _ slotID: GBMBufferPoolSlotID
     ) throws(GBMBufferPoolStateError) {
         let lifecycle = try lifecycle(for: slotID)
-        guard lifecycle == .leased else {
+        guard lifecycle.isLeased else {
             throw GBMBufferPoolStateError.slotNotLeased(slotID, actual: lifecycle)
         }
 
@@ -124,7 +140,7 @@ package struct GBMBufferPoolState: Equatable, Sendable {
         _ slotID: GBMBufferPoolSlotID
     ) throws(GBMBufferPoolStateError) {
         let lifecycle = try lifecycle(for: slotID)
-        guard case .submitted = lifecycle else {
+        guard lifecycle.submittedCommitGeneration != nil else {
             throw GBMBufferPoolStateError.slotNotSubmitted(slotID, actual: lifecycle)
         }
 

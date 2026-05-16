@@ -1,10 +1,6 @@
 import WaylandRaw
 
 extension InputRouter {
-    private func touchID(_ rawID: RawTouchID) -> TouchID {
-        TouchID(rawValue: rawID.rawValue)
-    }
-
     func routeTouchDown(
         _ rawEvent: RawInputEvent,
         _ down: RawTouchDown
@@ -16,14 +12,7 @@ extension InputRouter {
             rawEvent,
             target: target(for: down.surfaceID),
             kind: .touch(
-                .down(
-                    TouchDownEvent(
-                        serial: InputSerial(rawValue: down.serial),
-                        time: WaylandTimestampMilliseconds(rawValue: down.time),
-                        id: touchID(down.id),
-                        location: PointerLocation(waylandX: down.x, waylandY: down.y)
-                    )
-                )
+                .down(TouchDownEvent(down))
             )
         )
     }
@@ -40,13 +29,7 @@ extension InputRouter {
             rawEvent,
             target: target,
             kind: .touch(
-                .up(
-                    TouchUpEvent(
-                        serial: InputSerial(rawValue: up.serial),
-                        time: WaylandTimestampMilliseconds(rawValue: up.time),
-                        id: touchID(up.id)
-                    )
-                )
+                .up(TouchUpEvent(up))
             )
         )
     }
@@ -64,13 +47,7 @@ extension InputRouter {
                 )
             ),
             kind: .touch(
-                .motion(
-                    TouchMotionEvent(
-                        time: WaylandTimestampMilliseconds(rawValue: motion.time),
-                        id: touchID(motion.id),
-                        location: PointerLocation(waylandX: motion.x, waylandY: motion.y)
-                    )
-                )
+                .motion(TouchMotionEvent(motion))
             )
         )
     }
@@ -88,13 +65,7 @@ extension InputRouter {
                 )
             ),
             kind: .touch(
-                .shape(
-                    TouchShapeEvent(
-                        id: touchID(shape.id),
-                        major: shape.major.doubleValue,
-                        minor: shape.minor.doubleValue
-                    )
-                )
+                .shape(TouchShapeEvent(shape))
             )
         )
     }
@@ -112,12 +83,7 @@ extension InputRouter {
                 )
             ),
             kind: .touch(
-                .orientation(
-                    TouchOrientationEvent(
-                        id: touchID(orientation.id),
-                        orientation: orientation.orientation.doubleValue
-                    )
-                )
+                .orientation(TouchOrientationEvent(orientation))
             )
         )
     }
