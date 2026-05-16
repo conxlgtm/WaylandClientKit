@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 required_files=(
     README.md
     CONTRIBUTING.md
+    Sources/WaylandClient/WaylandClient.docc/WaylandClient.md
     docs/architecture.md
     docs/compositor-matrix.md
     docs/generation.md
@@ -21,6 +22,7 @@ required_executables=(
     scripts/protocols/generate.sh
     scripts/protocols/verify-generated.sh
     scripts/ci/verify-public-api-audit.sh
+    scripts/ci/verify-docc.sh
     scripts/smoke/collect-compositor-facts.sh
     scripts/shims/verify-shims.sh
 )
@@ -35,6 +37,7 @@ required_patterns=(
     "WaylandCursor"
     "WaylandGPUPreview"
     "WaylandSmokeSupport"
+    "WaylandClient.docc"
     "CWaylandProtocols"
     "CWaylandClientSystem"
     "CWaylandCursorShims"
@@ -59,6 +62,7 @@ required_patterns=(
     "./scripts/protocols/generate.sh"
     "./scripts/protocols/verify-generated.sh"
     "./scripts/ci/verify-public-api-audit.sh"
+    "./scripts/ci/verify-docc.sh"
     "./scripts/smoke/collect-compositor-facts.sh"
     "./scripts/shims/verify-shims.sh"
 )
