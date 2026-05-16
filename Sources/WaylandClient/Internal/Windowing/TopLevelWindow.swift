@@ -39,9 +39,7 @@ package final class TopLevelWindow {
 
     private let failureSink: any WindowFailureSink
     private var model: WindowModel
-    private var surfaceRuntime = SurfaceRuntime<TopLevelWindowRoleResources>(
-        role: .toplevelWindow
-    )
+    private var surfaceRuntime: SurfaceRuntime<TopLevelWindowRoleResources>
     private var pendingFrameRegistration: FrameCallbackRegistration?
     private var nextPresentationFeedbackID: UInt64 = 1
     private var pendingPresentationFeedbacks:
@@ -76,6 +74,10 @@ package final class TopLevelWindow {
         let globals = try rawConnection.bindRequiredGlobals()
         configureState = .init()
         surface = try globals.compositor.createSurface()
+        surfaceRuntime = SurfaceRuntime(
+            role: .toplevelWindow,
+            surfaceID: surface.objectID
+        )
         model = WindowModel(
             id: windowID,
             fallbackSize: windowConfiguration.initialSize
@@ -88,8 +90,8 @@ package final class TopLevelWindow {
         surfaceRuntime.setPresentationFeedbackCapability(
             globals.extensions.presentation.presentationFeedbackCapabilityStatus
         )
-        surfaceRuntime.setDmabufCapability(
-            globals.extensions.linuxDmabuf.surfaceDmabufCapability
+        surfaceRuntime.setDmabufAdvertisement(
+            globals.extensions.linuxDmabuf.surfaceDmabufAdvertisement
         )
         try installScaleObjects(globals: globals)
         try assignXDGRole(globals: globals)

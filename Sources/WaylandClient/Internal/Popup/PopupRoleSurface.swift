@@ -31,7 +31,7 @@ package final class PopupRoleSurface {
     package let failureSink: any WindowFailureSink
     package let configureState = PopupConfigureState()
 
-    var surfaceRuntime = SurfaceRuntime<PopupRoleResources>(role: .popup)
+    var surfaceRuntime: SurfaceRuntime<PopupRoleResources>
     package var pendingFrameRegistration: FrameCallbackRegistration?
     package var model: PopupModel
 
@@ -65,13 +65,14 @@ package final class PopupRoleSurface {
         )
 
         let globals = try rawConnection.bindRequiredGlobals()
+        let newSurface = try globals.compositor.createSurface()
+        surfaceRuntime = SurfaceRuntime(role: .popup, surfaceID: newSurface.objectID)
         surfaceRuntime.setPresentationFeedbackCapability(
             globals.extensions.presentation.presentationFeedbackCapabilityStatus
         )
-        surfaceRuntime.setDmabufCapability(
-            globals.extensions.linuxDmabuf.surfaceDmabufCapability
+        surfaceRuntime.setDmabufAdvertisement(
+            globals.extensions.linuxDmabuf.surfaceDmabufAdvertisement
         )
-        let newSurface = try globals.compositor.createSurface()
         let newXDGSurface = try globals.xdgWMBase.getSurface(for: newSurface)
         let newPositioner = try globals.xdgWMBase.createPositioner()
         popupConfiguration.positioner.apply(to: newPositioner)
