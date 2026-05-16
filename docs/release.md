@@ -31,6 +31,7 @@ Under a real Wayland session:
 ./scripts/smoke/collect-compositor-facts.sh
 ./scripts/smoke/smoke-wayland.sh
 ./scripts/smoke/integration-wayland.sh
+make gpu-preview-wayland
 swift run SwiftWaylandDemo
 ```
 
@@ -47,17 +48,18 @@ Record results in [compositor-matrix.md](compositor-matrix.md).
 5. Run optimized builds for the package, demo, and smoke executable.
 6. Run `./scripts/smoke/smoke-wayland.sh` under a Wayland session.
 7. Run `./scripts/smoke/integration-wayland.sh` under a Wayland session.
-8. Manually run `swift run SwiftWaylandDemo` on at least one non-Weston desktop
+8. Run `make gpu-preview-wayland` under a Wayland session.
+9. Manually run `swift run SwiftWaylandDemo` on at least one non-Weston desktop
    before treating compositor compatibility as proven.
-9. Update `docs/compositor-matrix.md` with the compositor facts and check results.
-10. Regenerate protocols and confirm no diff.
-11. Generate and review the public API report.
-12. Run `./scripts/ci/verify-public-api-audit.sh`.
-13. Run `./scripts/ci/verify-docc.sh`.
-14. Review `docs/public-api-audit.md`.
-15. Update README support and unsupported lists if behavior changed.
-16. Tag the checkpoint.
-17. If publishing GitHub checkpoint notes, copy the supported and unsupported scope from README.
+10. Update `docs/compositor-matrix.md` with the compositor facts and check results.
+11. Regenerate protocols and confirm no diff.
+12. Generate and review the public API report.
+13. Run `./scripts/ci/verify-public-api-audit.sh`.
+14. Run `./scripts/ci/verify-docc.sh`.
+15. Review `docs/public-api-audit.md`.
+16. Update README support and unsupported lists if behavior changed.
+17. Tag the checkpoint.
+18. If publishing GitHub checkpoint notes, copy the supported and unsupported scope from README.
 
 ## Stop Conditions
 
@@ -119,5 +121,6 @@ Verification:
 - swift build -c release
 - swift run swift-wayland-smoke
 - ./scripts/smoke/integration-wayland.sh
+- make gpu-preview-wayland
 - manual demo smoke test
 ```

@@ -24,6 +24,7 @@ required_executables=(
     scripts/ci/verify-public-api-audit.sh
     scripts/ci/verify-docc.sh
     scripts/smoke/collect-compositor-facts.sh
+    scripts/smoke/gpu-preview-wayland.sh
     scripts/shims/verify-shims.sh
 )
 
@@ -58,12 +59,14 @@ required_patterns=(
     "ripgrep"
     "make check"
     "make wayland-headless"
+    "make gpu-preview-headless"
     "compositor-matrix.md"
     "./scripts/protocols/generate.sh"
     "./scripts/protocols/verify-generated.sh"
     "./scripts/ci/verify-public-api-audit.sh"
     "./scripts/ci/verify-docc.sh"
     "./scripts/smoke/collect-compositor-facts.sh"
+    "./scripts/smoke/gpu-preview-wayland.sh"
     "./scripts/shims/verify-shims.sh"
 )
 

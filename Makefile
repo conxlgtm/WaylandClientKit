@@ -2,7 +2,7 @@ SWIFT_FORMAT := ./scripts/dev/swift-format.sh
 SWIFTLINT := ./scripts/dev/swiftlint.sh
 SWIFT := ./scripts/dev/swift.sh
 
-.PHONY: format lint verify-generated verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-unsafe-allowlist strict-concurrency test test-public-api-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless wayland-headless release-check install-pre-commit
+.PHONY: format lint verify-generated verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-unsafe-allowlist strict-concurrency test test-public-api-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless gpu-preview-wayland gpu-preview-headless wayland-headless release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
@@ -69,6 +69,12 @@ integration-wayland:
 
 integration-wayland-headless:
 	@./scripts/smoke/with-headless-weston.sh -- ./scripts/smoke/integration-wayland.sh
+
+gpu-preview-wayland:
+	@./scripts/smoke/gpu-preview-wayland.sh
+
+gpu-preview-headless:
+	@./scripts/smoke/with-headless-weston.sh -- ./scripts/smoke/gpu-preview-wayland.sh
 
 wayland-headless:
 	@./scripts/smoke/with-headless-weston.sh -- bash -c './scripts/smoke/smoke-wayland.sh && ./scripts/smoke/integration-wayland.sh'

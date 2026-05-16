@@ -14,7 +14,9 @@ GNOME.
 ```bash
 make smoke-wayland
 make integration-wayland
+make gpu-preview-wayland
 make wayland-headless
+make gpu-preview-headless
 make check
 make release-check
 ```
@@ -26,9 +28,20 @@ current compositor. It requires `WAYLAND_DISPLAY`.
 against the current compositor. It requires `WAYLAND_DISPLAY` and sets
 `SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=1`.
 
+`make gpu-preview-wayland` runs package-internal GPU preview live capability
+tests against the current compositor. It requires `WAYLAND_DISPLAY` and sets
+`SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1`. The current test path proves the
+linux-dmabuf capability gate; future GPU allocation and presentation checks can
+attach to the same command.
+
+The command runs `./scripts/smoke/gpu-preview-wayland.sh`.
+
 `make wayland-headless` starts headless Weston through
 `scripts/smoke/with-headless-weston.sh`, then runs both smoke and public
 integration tests against that private compositor.
+
+`make gpu-preview-headless` starts headless Weston, then runs the GPU preview
+capability gate against that private compositor.
 
 `make check` runs the normal local check set. It runs the live Wayland smoke
 check only when `WAYLAND_DISPLAY` is already set.
@@ -109,6 +122,7 @@ Skipping xdg-decoration live test: compositor did not advertise zxdg_decoration_
 Skipping viewporter live test: compositor did not advertise wp_viewporter.
 Skipping presentation-time live test: compositor did not advertise wp_presentation.
 Skipping linux-dmabuf live test: compositor did not advertise zwp_linux_dmabuf_v1.
+Skipping GPU preview live test: compositor did not advertise zwp_linux_dmabuf_v1.
 ```
 
 Do not hide an advertised-but-broken protocol behind a skip. That is a client
