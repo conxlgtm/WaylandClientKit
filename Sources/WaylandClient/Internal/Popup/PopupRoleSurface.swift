@@ -68,6 +68,9 @@ package final class PopupRoleSurface {
         surfaceRuntime.setPresentationFeedbackCapability(
             globals.extensions.presentation.presentationFeedbackCapabilityStatus
         )
+        surfaceRuntime.setDmabufCapability(
+            globals.extensions.linuxDmabuf.surfaceDmabufCapability
+        )
         let newSurface = try globals.compositor.createSurface()
         let newXDGSurface = try globals.xdgWMBase.getSurface(for: newSurface)
         let newPositioner = try globals.xdgWMBase.createPositioner()

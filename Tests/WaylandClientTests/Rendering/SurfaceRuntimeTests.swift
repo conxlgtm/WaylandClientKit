@@ -155,7 +155,8 @@ struct SurfaceRuntimeTests {
                     role: .toplevelWindow,
                     outputIDs: [],
                     fractionalScale: .integerOnly,
-                    presentationFeedback: .unavailable
+                    presentationFeedback: .unavailable,
+                    dmabuf: .unavailable
                 )
         )
     }
@@ -173,8 +174,42 @@ struct SurfaceRuntimeTests {
                     role: .popup,
                     outputIDs: [OutputID(rawValue: 2)],
                     fractionalScale: .integerOnly,
-                    presentationFeedback: .available
+                    presentationFeedback: .available,
+                    dmabuf: .unavailable
                 )
         )
+    }
+
+    @Test
+    func capabilitySnapshotPublishesSurfaceDmabufFacts() {
+        var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
+        let device = RawLinuxDmabufDevice(bytes: [1, 2, 3, 4, 5, 6, 7, 8])
+        let formatModifier = RawLinuxDmabufFormatModifier(
+            format: 875_713_112,
+            modifier: 0
+        )
+        let feedback = RawLinuxDmabufFeedbackSnapshot(
+            scope: .surface(surfaceID: RawObjectID(42)),
+            mainDevice: device,
+            formatTable: [formatModifier],
+            tranches: [
+                RawLinuxDmabufTranche(
+                    targetDevice: device,
+                    flags: [.scanout],
+                    formats: [formatModifier]
+                )
+            ]
+        )
+
+        runtime.setDmabufCapability(
+            .advertised(version: 5, surfaceFeedback: .available)
+        )
+        #expect(
+            runtime.capabilitySnapshot().dmabuf
+                == .advertised(version: 5, surfaceFeedback: .available)
+        )
+
+        runtime.setDmabufCapability(.feedback(feedback))
+        #expect(runtime.capabilitySnapshot().dmabuf == .feedback(feedback))
     }
 }
