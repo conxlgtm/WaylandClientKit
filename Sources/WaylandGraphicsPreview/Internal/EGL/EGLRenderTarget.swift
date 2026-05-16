@@ -15,6 +15,24 @@ package struct EGLRGBA8Pixel: Equatable, Sendable {
     package let alpha: UInt8
 }
 
+package struct EGLClientExtensions: Equatable, Sendable {
+    package let rawValue: String?
+    private let names: Set<String>
+
+    package init(_ clientExtensionString: String?) {
+        rawValue = clientExtensionString
+        names = Set(clientExtensionString?.split(separator: " ").map(String.init) ?? [])
+    }
+
+    package func contains(_ extensionName: String) -> Bool {
+        names.contains(extensionName)
+    }
+
+    package var supportsGBMPlatform: Bool {
+        contains("EGL_KHR_platform_gbm") || contains("EGL_MESA_platform_gbm")
+    }
+}
+
 package enum EGLRenderError: Error, Equatable, Sendable, CustomStringConvertible {
     case gbmPlatformUnavailable(clientExtensions: String?)
     case displayCreationFailed(errno: Int32, eglError: Int32)
@@ -79,10 +97,10 @@ package final class EGLGBMRenderTarget {
         device: GBMDevice,
         surfaceDescriptor: GBMSurfaceDescriptor
     ) throws {
-        let clientExtensions = Self.clientExtensions()
-        guard Self.supportsGBMPlatform(clientExtensions: clientExtensions) else {
+        let clientExtensions = EGLClientExtensions(Self.clientExtensions())
+        guard clientExtensions.supportsGBMPlatform else {
             throw EGLRenderError.gbmPlatformUnavailable(
-                clientExtensions: clientExtensions
+                clientExtensions: clientExtensions.rawValue
             )
         }
 
@@ -177,16 +195,15 @@ package final class EGLGBMRenderTarget {
         using handles: LiveHandles,
         color: ClearColor
     ) throws(EGLRenderError) -> EGLRGBA8Pixel {
-        guard
-            unsafe swl_egl_make_current(
-                handles.display,
-                handles.surface,
-                handles.context
-            ) == 0
-        else {
-            throw EGLRenderError.makeCurrentFailed(eglError: swl_egl_error())
+        try withCurrent(handles) { () throws(EGLRenderError) -> EGLRGBA8Pixel in
+            try drawClearFrame(using: handles, color: color)
         }
+    }
 
+    private static func drawClearFrame(
+        using handles: LiveHandles,
+        color: ClearColor
+    ) throws(EGLRenderError) -> EGLRGBA8Pixel {
         let size = handles.size
         guard
             swl_gles2_clear_rgba(
@@ -198,7 +215,6 @@ package final class EGLGBMRenderTarget {
                 color.alpha
             ) == 0
         else {
-            try unsafe clearCurrent(handles.display)
             throw EGLRenderError.clearFailed(glError: swl_gles2_error())
         }
 
@@ -212,22 +228,44 @@ package final class EGLGBMRenderTarget {
                 )
             }) == 0
         else {
-            try unsafe clearCurrent(handles.display)
             throw EGLRenderError.readPixelFailed(glError: swl_gles2_error())
         }
 
         guard unsafe swl_egl_swap_buffers(handles.display, handles.surface) == 0 else {
-            try unsafe clearCurrent(handles.display)
             throw EGLRenderError.swapBuffersFailed(eglError: swl_egl_error())
         }
 
-        try unsafe clearCurrent(handles.display)
         return EGLRGBA8Pixel(
             red: pixelBytes[0],
             green: pixelBytes[1],
             blue: pixelBytes[2],
             alpha: pixelBytes[3]
         )
+    }
+
+    private static func withCurrent<Output>(
+        _ handles: LiveHandles,
+        _ body: () throws(EGLRenderError) -> Output
+    ) throws(EGLRenderError) -> Output {
+        guard
+            unsafe swl_egl_make_current(
+                handles.display,
+                handles.surface,
+                handles.context
+            ) == 0
+        else {
+            throw EGLRenderError.makeCurrentFailed(eglError: swl_egl_error())
+        }
+
+        let result: Result<Output, EGLRenderError>
+        do {
+            result = .success(try body())
+        } catch {
+            result = .failure(error)
+        }
+
+        try unsafe clearCurrent(handles.display)
+        return try result.get()
     }
 
     private static func clearCurrent(
@@ -319,7 +357,9 @@ package final class EGLGBMRenderTarget {
 
         return unsafe displayPointer
     }
+}
 
+extension EGLGBMRenderTarget {
     private static func clientExtensions() -> String? {
         guard let extensions = unsafe swl_egl_query_client_extensions() else {
             return nil
@@ -331,9 +371,6 @@ package final class EGLGBMRenderTarget {
     package static func supportsGBMPlatform(
         clientExtensions extensions: String?
     ) -> Bool {
-        guard let extensions else { return false }
-
-        return extensions.split(separator: " ").contains("EGL_KHR_platform_gbm")
-            || extensions.split(separator: " ").contains("EGL_MESA_platform_gbm")
+        EGLClientExtensions(extensions).supportsGBMPlatform
     }
 }
