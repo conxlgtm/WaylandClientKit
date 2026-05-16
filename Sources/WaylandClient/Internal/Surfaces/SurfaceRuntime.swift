@@ -11,23 +11,6 @@ extension OptionalPresentation {
     }
 }
 
-extension OptionalLinuxDmabuf {
-    var surfaceDmabufCapability: SurfaceDmabufCapability {
-        switch self {
-        case .missing:
-            .unavailable
-        case .bound(let linuxDmabuf):
-            .advertised(
-                version: linuxDmabuf.version,
-                surfaceFeedback: linuxDmabuf.version
-                    >= RawLinuxDmabuf.feedbackRequestMinimumVersion
-                    ? .available
-                    : .unavailable
-            )
-        }
-    }
-}
-
 enum SurfaceRuntimeError: Error, Equatable {
     case surfaceDestroyedWithActiveBufferPool
     case surfaceDestroyedWithLiveRoleResources
@@ -46,12 +29,6 @@ package enum SurfaceRuntimeRole: Equatable, Sendable {
 package enum SurfaceCapabilityStatus: Equatable, Sendable {
     case unavailable
     case available
-}
-
-package enum SurfaceDmabufCapability: Equatable, Sendable {
-    case unavailable
-    case advertised(version: RawVersion, surfaceFeedback: SurfaceCapabilityStatus)
-    case feedback(RawLinuxDmabufFeedbackSnapshot)
 }
 
 package struct SurfaceCapabilitySnapshot: Equatable, Sendable {
@@ -79,12 +56,14 @@ struct SurfaceRuntime<RoleResources> {
     }
 
     private let role: SurfaceRuntimeRole
+    private let surfaceID: RawObjectID?
     private var presentationFeedbackCapability = SurfaceCapabilityStatus.unavailable
     private var dmabufCapability = SurfaceDmabufCapability.unavailable
     private var phase: Phase = .unassigned(SurfaceObjects())
 
-    init(role surfaceRole: SurfaceRuntimeRole) {
+    init(role surfaceRole: SurfaceRuntimeRole, surfaceID runtimeSurfaceID: RawObjectID? = nil) {
         role = surfaceRole
+        surfaceID = runtimeSurfaceID
     }
 }
 
@@ -175,8 +154,28 @@ extension SurfaceRuntime {
         presentationFeedbackCapability = capability
     }
 
-    mutating func setDmabufCapability(_ capability: SurfaceDmabufCapability) {
-        dmabufCapability = capability
+    mutating func setDmabufAdvertisement(_ advertisement: SurfaceDmabufAdvertisement) {
+        switch advertisement {
+        case .unavailable:
+            dmabufCapability = .unavailable
+        case .advertised(let version, let canRequestSurfaceFeedback):
+            dmabufCapability = .advertised(
+                version: version,
+                canRequestSurfaceFeedback: canRequestSurfaceFeedback
+            )
+        }
+    }
+
+    mutating func setSurfaceDmabufFeedback(
+        _ snapshot: RawLinuxDmabufFeedbackSnapshot
+    ) throws(SurfaceDmabufCapabilityError) {
+        guard let surfaceID else {
+            throw SurfaceDmabufCapabilityError.missingSurfaceIdentity
+        }
+
+        dmabufCapability = .surfaceFeedback(
+            try SurfaceDmabufFeedback(snapshot: snapshot, surfaceID: surfaceID)
+        )
     }
 
     mutating func enterOutput(_ outputID: RawOutputID) -> Bool {
