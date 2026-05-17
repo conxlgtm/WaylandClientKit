@@ -57,6 +57,8 @@ struct WaylandDisplayPublicAPISurfaceTests {
             viewporter: .available(version: 1),
             presentationTime: .unavailable,
             fractionalScale: .unavailable,
+            cursorShape: .available(version: 1),
+            textInput: .unavailable,
             linuxDmabuf: .available(version: 5)
         )
 
@@ -68,6 +70,8 @@ struct WaylandDisplayPublicAPISurfaceTests {
         #expect(capabilities.primarySelection == .unavailable)
         #expect(capabilities.xdgOutput == .available(version: 3))
         #expect(capabilities.presentationTime == .unavailable)
+        #expect(capabilities.cursorShape == .available(version: 1))
+        #expect(capabilities.textInput == .unavailable)
         #expect(capabilities.linuxDmabuf == .available(version: 5))
 
         func useCapabilitiesAPI(display: WaylandDisplay) async throws -> WaylandCapabilities {
@@ -276,6 +280,17 @@ struct WaylandDataTransferAPISurfaceTests {
         #expect(DragAction.ask.description == "ask")
         #expect(sourceConfiguration.payloads == [payload])
         #expect(DragIcon.none == .none)
+        #expect(
+            try DragIcon.xrgb8888(
+                DragIconImage(
+                    size: PositivePixelSize(
+                        width: try PositiveInt32(1),
+                        height: try PositiveInt32(1)
+                    ),
+                    pixels: [0x00ff_ffff]
+                )
+            ) != .none
+        )
 
         func useDragAndDropAPI(
             display: WaylandDisplay,
@@ -303,5 +318,66 @@ struct WaylandDataTransferAPISurfaceTests {
         }
 
         _ = useDragAndDropAPI
+    }
+}
+
+@Suite("WaylandDisplay text-input public API surface")
+struct WaylandTextInputAPISurfaceTests {
+    @Test
+    func textInputTypesCompileForExternalClients() throws {
+        let hints: TextInputContentHints = [.completion, .spellcheck, .preeditShown]
+        let purpose = TextInputContentPurpose.email
+        let preeditHint = TextInputPreeditHint(
+            start: 0,
+            end: 3,
+            kind: .prediction
+        )
+        let seatID = SeatID(rawValue: 3)
+        let event = TextInputEvent.preedit(
+            TextInputPreeditEvent(
+                seatID: seatID,
+                text: "pre",
+                cursorBegin: 0,
+                cursorEnd: 3,
+                hints: [preeditHint]
+            )
+        )
+
+        #expect(hints.contains(.completion))
+        #expect(purpose == .email)
+        #expect(TextInputChangeCause.other.rawValue == 1)
+        #expect(TextInputAction.submit.rawValue == 1)
+        #expect(event == .preedit(
+            TextInputPreeditEvent(
+                seatID: seatID,
+                text: "pre",
+                cursorBegin: 0,
+                cursorEnd: 3,
+                hints: [preeditHint]
+            )
+        ))
+
+        func useTextInputAPI(
+            display: WaylandDisplay,
+            window: Window,
+            rect: LogicalRect
+        ) async throws {
+            let session = try await display.textInputSession(for: seatID)
+            var iterator = display.textInputEvents.makeAsyncIterator()
+            try await session.enable(for: window)
+            try await session.setSurroundingText(
+                "hello",
+                cursor: "hello".endIndex,
+                anchor: "hello".startIndex
+            )
+            try await session.setTextChangeCause(.other)
+            try await session.setContentType(hints: hints, purpose: purpose)
+            try await session.setCursorRectangle(rect)
+            try await session.commit()
+            try await session.disable()
+            _ = try await iterator.next()
+        }
+
+        _ = useTextInputAPI
     }
 }
