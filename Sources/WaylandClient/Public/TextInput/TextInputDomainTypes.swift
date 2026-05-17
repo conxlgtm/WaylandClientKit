@@ -2,11 +2,13 @@ public enum TextInputError: Error, Equatable, Sendable, CustomStringConvertible 
     case unavailable
     case unknownSeat(SeatID)
     case foreignWindow(WindowID)
+    case inactiveSession(seatID: SeatID, operation: TextInputRequestOperation)
     case surroundingTextContainsNUL
     case surroundingTextTooLarge(byteCount: Int, limit: Int)
     case surroundingTextOffsetOutOfBounds(offset: Int, byteCount: Int)
     case surroundingTextOffsetInsideCodePoint(offset: Int)
     case surroundingTextOffsetOverflow(byteCount: Int)
+    case surroundingTextIndexOutOfBounds
 
     public var description: String {
         switch self {
@@ -16,6 +18,8 @@ public enum TextInputError: Error, Equatable, Sendable, CustomStringConvertible 
             "unknown text-input seat \(seatID)"
         case .foreignWindow(let windowID):
             "window belongs to another display: \(windowID)"
+        case .inactiveSession(let seatID, let operation):
+            "text-input \(operation.description) requires an enabled session for seat \(seatID)"
         case .surroundingTextContainsNUL:
             "surrounding text must not contain a NUL byte"
         case .surroundingTextTooLarge(let byteCount, let limit):
@@ -26,6 +30,37 @@ public enum TextInputError: Error, Equatable, Sendable, CustomStringConvertible 
             "surrounding text byte offset \(offset) is inside a UTF-8 code point"
         case .surroundingTextOffsetOverflow(let byteCount):
             "surrounding text byte offset \(byteCount) exceeds Int32"
+        case .surroundingTextIndexOutOfBounds:
+            "surrounding text index does not belong to the provided text"
+        }
+    }
+}
+
+public enum TextInputRequestOperation: Equatable, Sendable, CustomStringConvertible {
+    case enable
+    case disable
+    case setSurroundingText
+    case setTextChangeCause
+    case setContentType
+    case setCursorRectangle
+    case commit
+
+    public var description: String {
+        switch self {
+        case .enable:
+            "enable"
+        case .disable:
+            "disable"
+        case .setSurroundingText:
+            "set_surrounding_text"
+        case .setTextChangeCause:
+            "set_text_change_cause"
+        case .setContentType:
+            "set_content_type"
+        case .setCursorRectangle:
+            "set_cursor_rectangle"
+        case .commit:
+            "commit"
         }
     }
 }
@@ -68,6 +103,42 @@ public struct TextInputSurroundingText: Equatable, Sendable {
         text = requestText
         cursorUTF8Offset = requestCursorUTF8Offset
         anchorUTF8Offset = requestAnchorUTF8Offset
+    }
+
+    public init(
+        text requestText: String,
+        cursor requestCursor: String.Index,
+        anchor requestAnchor: String.Index
+    ) throws {
+        let cursorOffset = try Self.utf8Offset(for: requestCursor, in: requestText)
+        let anchorOffset = try Self.utf8Offset(for: requestAnchor, in: requestText)
+        try self.init(
+            text: requestText,
+            cursorUTF8Offset: cursorOffset,
+            anchorUTF8Offset: anchorOffset
+        )
+    }
+
+    public static func insertionPoint(
+        _ text: String,
+        cursor: String.Index
+    ) throws -> TextInputSurroundingText {
+        try TextInputSurroundingText(
+            text: text,
+            cursor: cursor,
+            anchor: cursor
+        )
+    }
+
+    private static func utf8Offset(
+        for index: String.Index,
+        in text: String
+    ) throws(TextInputError) -> Int {
+        guard let utf8Index = index.samePosition(in: text.utf8) else {
+            throw .surroundingTextIndexOutOfBounds
+        }
+
+        return text.utf8.distance(from: text.utf8.startIndex, to: utf8Index)
     }
 
     private static func validateOffset(
@@ -306,6 +377,31 @@ public struct TextInputDoneEvent: Equatable, Sendable {
     }
 }
 
+public struct TextInputDiagnostic: Equatable, Sendable {
+    public let seatID: SeatID?
+    public let operation: TextInputDiagnosticOperation
+    public let message: String
+
+    public init(
+        seatID diagnosticSeatID: SeatID?,
+        operation diagnosticOperation: TextInputDiagnosticOperation,
+        message diagnosticMessage: String
+    ) {
+        seatID = diagnosticSeatID
+        operation = diagnosticOperation
+        message = diagnosticMessage
+    }
+}
+
+public enum TextInputDiagnosticOperation: Equatable, Sendable {
+    case unavailable
+    case listener
+    case invalidEventOrder
+    case invalidRequest(TextInputRequestOperation)
+    case unknownProtocolValue
+    case seatRemoved
+}
+
 public enum TextInputEvent: Equatable, Sendable {
     case entered(TextInputFocusEvent)
     case left(TextInputFocusEvent)
@@ -315,4 +411,5 @@ public enum TextInputEvent: Equatable, Sendable {
     case action(TextInputActionEvent)
     case language(TextInputLanguageEvent)
     case done(TextInputDoneEvent)
+    case diagnostic(TextInputDiagnostic)
 }

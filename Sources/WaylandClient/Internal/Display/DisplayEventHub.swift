@@ -42,11 +42,11 @@ final class DisplayEventHub: Sendable {
         )
         textInputBroker = TypedEventBroker<TextInputEvent>(
             stream: .textInputEvents,
-            capacity: configuration.inputEventCapacity.rawValue
+            capacity: configuration.textInputEventCapacity.rawValue
         )
         presentationBroker = TypedEventBroker<WindowPresentationEvent>(
             stream: .presentationEvents,
-            capacity: configuration.displayEventCapacity.rawValue
+            capacity: configuration.presentationEventCapacity.rawValue
         )
         diagnosticsBroker = TypedEventBroker<DisplayDiagnostic>(
             stream: .diagnostics,
@@ -128,6 +128,10 @@ final class DisplayEventHub: Sendable {
     }
 
     func publishTextInput(_ event: TextInputEvent) {
+        if case .diagnostic(let diagnostic) = event {
+            publishTextInputDiagnostic(diagnostic)
+        }
+
         textInputBroker.publish(event)
     }
 
@@ -148,6 +152,15 @@ final class DisplayEventHub: Sendable {
         publishDiagnostic(
             makeDisplayDiagnostic(
                 payload: .dataTransfer(diagnostic),
+                severity: displaySeverity(for: diagnostic)
+            )
+        )
+    }
+
+    func publishTextInputDiagnostic(_ diagnostic: TextInputDiagnostic) {
+        publishDiagnostic(
+            makeDisplayDiagnostic(
+                payload: .textInput(diagnostic),
                 severity: displaySeverity(for: diagnostic)
             )
         )
@@ -191,6 +204,19 @@ final class DisplayEventHub: Sendable {
     private func displaySeverity(for diagnostic: DataTransferDiagnostic) -> DiagnosticSeverity {
         switch diagnostic.operation {
         case .sourceWriteFailed:
+            .degraded
+        }
+    }
+
+    private func displaySeverity(for diagnostic: TextInputDiagnostic) -> DiagnosticSeverity {
+        switch diagnostic.operation {
+        case .invalidRequest:
+            .warning
+        case .unavailable,
+            .listener,
+            .invalidEventOrder,
+            .unknownProtocolValue,
+            .seatRemoved:
             .degraded
         }
     }

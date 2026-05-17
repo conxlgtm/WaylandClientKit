@@ -1,16 +1,16 @@
 public struct Window: Sendable, Hashable {
     public let id: WindowID
     private let display: WaylandDisplay
-    private let displayIdentity: ObjectIdentifier
+    private let ownership: DisplayOwnedIdentity<WindowID>
 
     package init(id windowID: WindowID, display owningDisplay: WaylandDisplay) {
         id = windowID
         display = owningDisplay
-        displayIdentity = ObjectIdentifier(owningDisplay)
+        ownership = DisplayOwnedIdentity(id: windowID, display: owningDisplay)
     }
 
     package func isOwned(by owningDisplay: WaylandDisplay) -> Bool {
-        displayIdentity == ObjectIdentifier(owningDisplay)
+        ownership.isOwned(by: owningDisplay)
     }
 
     public func show(
@@ -168,11 +168,10 @@ public struct Window: Sendable, Hashable {
     }
 
     public static func == (lhs: Window, rhs: Window) -> Bool {
-        lhs.id == rhs.id && lhs.displayIdentity == rhs.displayIdentity
+        lhs.ownership == rhs.ownership
     }
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(displayIdentity)
-        hasher.combine(id)
+        hasher.combine(ownership)
     }
 }

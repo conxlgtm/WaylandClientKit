@@ -55,6 +55,53 @@ struct WaylandCapabilitiesTests {
     }
 
     @Test
+    func exactMinimumAndSupportedVersionsAreAvailable() {
+        let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
+            .init(interfaceName: "wl_data_device_manager", advertisedVersion: 3),
+            .init(
+                interfaceName: "zwp_primary_selection_device_manager_v1",
+                advertisedVersion: 1
+            ),
+            .init(interfaceName: "zxdg_decoration_manager_v1", advertisedVersion: 2),
+            .init(interfaceName: "zxdg_output_manager_v1", advertisedVersion: 2),
+            .init(interfaceName: "wp_viewporter", advertisedVersion: 1),
+            .init(interfaceName: "wp_presentation", advertisedVersion: 2),
+            .init(interfaceName: "wp_fractional_scale_manager_v1", advertisedVersion: 1),
+            .init(interfaceName: "wp_cursor_shape_manager_v1", advertisedVersion: 2),
+            .init(interfaceName: "zwp_text_input_manager_v3", advertisedVersion: 2),
+            .init(interfaceName: "zwp_linux_dmabuf_v1", advertisedVersion: 5),
+        ])
+
+        #expect(capabilities.clipboard == .available(version: 3))
+        #expect(capabilities.dragAndDrop == .available(version: 3))
+        #expect(capabilities.dragActionNegotiation == .available(version: 3))
+        #expect(capabilities.primarySelection == .available(version: 1))
+        #expect(capabilities.xdgDecoration == .available(version: 2))
+        #expect(capabilities.xdgOutput == .available(version: 2))
+        #expect(capabilities.viewporter == .available(version: 1))
+        #expect(capabilities.presentationTime == .available(version: 2))
+        #expect(capabilities.fractionalScale == .available(version: 1))
+        #expect(capabilities.cursorShape == .available(version: 2))
+        #expect(capabilities.textInput == .available(version: 2))
+        #expect(capabilities.linuxDmabuf == .available(version: 5))
+    }
+
+    @Test
+    func versionGatedCapabilitiesRejectTooOldAdvertisements() {
+        let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
+            .init(interfaceName: "wl_data_device_manager", advertisedVersion: 2),
+            .init(interfaceName: "zxdg_decoration_manager_v1", advertisedVersion: 1),
+            .init(interfaceName: "zxdg_output_manager_v1", advertisedVersion: 1),
+        ])
+
+        #expect(capabilities.clipboard == .available(version: 2))
+        #expect(capabilities.dragAndDrop == .available(version: 2))
+        #expect(capabilities.dragActionNegotiation == .unavailable)
+        #expect(capabilities.xdgDecoration == .unavailable)
+        #expect(capabilities.xdgOutput == .unavailable)
+    }
+
+    @Test
     func lowerAdvertisedVersionIsPreserved() {
         let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
             .init(interfaceName: "wl_data_device_manager", advertisedVersion: 1)

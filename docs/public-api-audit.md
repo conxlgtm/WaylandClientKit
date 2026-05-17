@@ -40,6 +40,7 @@ Intentionally public:
 - `PresentationFeedbackFlags`
 - `WindowPresentationEvents`
 - `DisplayEvent`
+- `EventStreamConfiguration`
 - `EventStreamIdentity`
 - `DisplayDiagnostic`
 - `DiagnosticSeverity`
@@ -103,6 +104,7 @@ Intentionally public:
 - `ByteCount`
 - `TextInputSession`
 - `TextInputError`
+- `TextInputRequestOperation`
 - `TextInputSurroundingText`
 - `TextInputContentHints`
 - `TextInputContentPurpose`
@@ -118,6 +120,8 @@ Intentionally public:
 - `TextInputLanguage`
 - `TextInputLanguageEvent`
 - `TextInputDoneEvent`
+- `TextInputDiagnostic`
+- `TextInputDiagnosticOperation`
 - `TextInputEvent`
 - `ClientError`
 
@@ -184,6 +188,8 @@ Notes:
   display/input event streams are passive subscribers and do not drive Wayland dispatch.
 - Display streams terminate normally on explicit close and terminate with
   `WaylandDisplayError` on fatal display failure or per-subscriber overflow.
+- `EventStreamConfiguration` controls display, input, text-input, data-transfer,
+  and presentation stream capacities independently.
 - Nonterminal runtime degradation is surfaced through `DisplayEvent.diagnostic`.
   Input-specific diagnostics also remain available on `inputEvents`.
 - `Window` is the ergonomic async handle. Windows are still addressable by `WindowID`,
@@ -225,11 +231,15 @@ Notes:
 - Drag offers are seat-scoped and serial-bound to the current drag operation.
   `DragOffer.read` uses the same bounded transfer rules as clipboard and primary
   selection reads. `DragSourceConfiguration` requires non-empty MIME payloads
-  and known drag actions.
+  and known drag actions. `DragIconImage.solid(size:color:)` is a convenience
+  constructor for a simple XRGB8888 drag icon payload.
 - `TextInputSession` is seat-scoped. Enabling text input targets a managed
-  window, request methods stage protocol state on the text-input object, and
-  `commit()` sends the protocol commit request. `WaylandDisplay.textInputEvents`
-  is separate from `inputEvents`.
+  window, request methods require an enabled or focused session, and `commit()`
+  sends the protocol commit request. `TextInputSurroundingText` supports both
+  protocol UTF-8 byte offsets and Swift `String.Index` construction.
+  `WaylandDisplay.textInputEvents` is separate from `inputEvents`, and
+  text-input diagnostics can publish on both text-input and display diagnostic
+  streams.
 - `WaylandCapabilities` is a registry-discovery snapshot. It lets applications
   branch before requesting optional features, but request APIs still throw typed
   availability errors because Wayland globals can be removed after discovery.

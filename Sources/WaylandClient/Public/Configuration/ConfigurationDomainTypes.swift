@@ -77,7 +77,9 @@ public struct CursorSize: Equatable, Comparable, Sendable, CustomStringConvertib
 public enum DisplayConfigurationField: Equatable, Sendable, CustomStringConvertible {
     case displayEventCapacity
     case inputEventCapacity
+    case textInputEventCapacity
     case dataTransferEventCapacity
+    case presentationEventCapacity
     case rawInputQueueCapacity
     case pendingInputEventCapacity
     case diagnosticsCapacity
@@ -88,8 +90,12 @@ public enum DisplayConfigurationField: Equatable, Sendable, CustomStringConverti
             "displayEventCapacity"
         case .inputEventCapacity:
             "inputEventCapacity"
+        case .textInputEventCapacity:
+            "textInputEventCapacity"
         case .dataTransferEventCapacity:
             "dataTransferEventCapacity"
+        case .presentationEventCapacity:
+            "presentationEventCapacity"
         case .rawInputQueueCapacity:
             "rawInputQueueCapacity"
         case .pendingInputEventCapacity:
@@ -114,7 +120,9 @@ public enum DisplayConfigurationError: Error, Equatable, Sendable, CustomStringC
 public enum EventStreamCapacityField: Equatable, Sendable {
     case displayEventCapacity
     case inputEventCapacity
+    case textInputEventCapacity
     case dataTransferEventCapacity
+    case presentationEventCapacity
 
     var displayConfigurationField: DisplayConfigurationField {
         switch self {
@@ -122,8 +130,12 @@ public enum EventStreamCapacityField: Equatable, Sendable {
             .displayEventCapacity
         case .inputEventCapacity:
             .inputEventCapacity
+        case .textInputEventCapacity:
+            .textInputEventCapacity
         case .dataTransferEventCapacity:
             .dataTransferEventCapacity
+        case .presentationEventCapacity:
+            .presentationEventCapacity
         }
     }
 }
@@ -133,7 +145,9 @@ public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomString
 
     public static let defaultDisplayEvents = EventStreamCapacity(unchecked: 256)
     public static let defaultInputEvents = EventStreamCapacity(unchecked: 1_024)
+    public static let defaultTextInputEvents = EventStreamCapacity(unchecked: 512)
     public static let defaultDataTransferEvents = EventStreamCapacity(unchecked: 256)
+    public static let defaultPresentationEvents = EventStreamCapacity(unchecked: 256)
 
     public init(
         _ value: Int,

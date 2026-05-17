@@ -4,9 +4,9 @@ extension DisplaySession {
         try textInputManager.prepareSession(for: seatID)
     }
 
-    package func enableTextInputOnOwnerThread(seatID: SeatID) throws {
+    package func enableTextInputOnOwnerThread(seatID: SeatID, windowID: WindowID) throws {
         connection.preconditionIsOwnerThread()
-        try textInputManager.enable(seatID: seatID)
+        try textInputManager.enable(seatID: seatID, windowID: windowID)
     }
 
     package func disableTextInputOnOwnerThread(seatID: SeatID) throws {

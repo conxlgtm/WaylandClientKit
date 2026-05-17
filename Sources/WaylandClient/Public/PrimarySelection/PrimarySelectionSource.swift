@@ -30,14 +30,14 @@ public struct PrimarySelectionSource: Sendable, Hashable {
     public let mimeTypes: [MIMEType]
 
     private let display: WaylandDisplay
-    private let displayIdentity: ObjectIdentifier
+    private let ownership: DisplayOwnedIdentity<DataSourceID>
 
     package init(snapshot: DataSourceSnapshot, display owningDisplay: WaylandDisplay) {
         id = snapshot.id
         seatID = snapshot.seatID
         mimeTypes = snapshot.mimeTypes
         display = owningDisplay
-        displayIdentity = ObjectIdentifier(owningDisplay)
+        ownership = DisplayOwnedIdentity(id: snapshot.id, display: owningDisplay)
     }
 
     public var identity: PrimarySelectionSourceIdentity {
@@ -52,11 +52,10 @@ public struct PrimarySelectionSource: Sendable, Hashable {
     }
 
     public static func == (lhs: PrimarySelectionSource, rhs: PrimarySelectionSource) -> Bool {
-        lhs.id == rhs.id && lhs.displayIdentity == rhs.displayIdentity
+        lhs.ownership == rhs.ownership
     }
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(displayIdentity)
-        hasher.combine(id)
+        hasher.combine(ownership)
     }
 }

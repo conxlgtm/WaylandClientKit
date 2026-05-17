@@ -24,14 +24,18 @@ extension DisplayCore {
     }
 
     func publishSessionEvents(_ activeSession: DisplaySession) {
+        // Topology changes publish first so later input, text-input, and transfer
+        // events can be interpreted against the latest output membership. Input
+        // focus then precedes text-input transactions, and data-transfer effects
+        // publish last because they may be triggered by the same input pump.
         let outputEvents = activeSession.drainOutputEventsOnOwnerThread()
         publishOutputEvents(outputEvents)
         publishWindowOutputMembershipEvents(after: outputEvents)
+        publishInputEvents(activeSession.drainInputEventsOnOwnerThread())
+        publishTextInputEvents(activeSession.drainTextInputEventsOnOwnerThread())
         let dataTransfer = activeSession.drainDataTransferEventsAndDiagnosticsOnOwnerThread()
         publishDataTransferDiagnostics(dataTransfer.diagnostics)
         publishDataTransferEvents(dataTransfer.events)
-        publishTextInputEvents(activeSession.drainTextInputEventsOnOwnerThread())
-        publishInputEvents(activeSession.drainInputEventsOnOwnerThread())
     }
 
     private func publishWindowOutputMembershipEvents(after outputEvents: [DisplayEvent]) {

@@ -73,6 +73,12 @@ Verify that vendored XML and generated outputs are in sync:
 ./scripts/protocols/verify-generated.sh
 ```
 
+Verify that every manifest entry records tier, exposure, and test policy:
+
+```bash
+./scripts/protocols/verify-manifest.py
+```
+
 Run the full local gate:
 
 ```bash
@@ -84,6 +90,12 @@ currently-supported Swift surface:
 
 ```bash
 make verify-shims
+```
+
+Verify DocC symbol references:
+
+```bash
+./scripts/ci/verify-docc-symbol-links.py
 ```
 
 ## Script Responsibilities

@@ -244,7 +244,7 @@ extension DisplayCore {
     }
 
     package func publishDataTransferDrain(
-        _ drained: (diagnostics: [DataTransferDiagnostic], events: [DataTransferEvent])
+        _ drained: DataTransferDrain
     ) {
         publishDataTransferDiagnostics(drained.diagnostics)
         publishDataTransferEvents(drained.events)

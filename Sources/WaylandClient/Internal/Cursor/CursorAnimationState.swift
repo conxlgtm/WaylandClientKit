@@ -68,6 +68,10 @@ package struct CursorAnimationState {
     package func acceptsScheduledTick(generation scheduledGeneration: UInt64) -> Bool {
         isAnimated && scheduledGeneration == generation
     }
+
+    package mutating func invalidate() {
+        generation += 1
+    }
 }
 
 package enum CursorAnimationStateError: Error, Equatable, Sendable {

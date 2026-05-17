@@ -60,6 +60,8 @@ the noninteractive smoke executable:
 - `zwp_linux_dmabuf_v1`
 - `wl_data_device_manager`
 - `zwp_primary_selection_device_manager_v1`
+- `wp_cursor_shape_manager_v1`
+- `zwp_text_input_manager_v3`
 - `zxdg_decoration_manager_v1`
 - `zxdg_output_manager_v1`
 
