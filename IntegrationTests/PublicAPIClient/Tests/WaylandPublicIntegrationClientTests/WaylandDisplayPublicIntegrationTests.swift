@@ -20,18 +20,20 @@ struct WaylandDisplayPublicIntegrationTests {
             let displayEvents = display.events
             let inputEvents = display.inputEvents
             let dataTransferEvents = display.dataTransferEvents
+            let textInputEvents = display.textInputEvents
             let diagnostics = display.diagnostics
 
             let streamResults = try await streamCloseResults(
                 displayEvents: displayEvents,
                 inputEvents: inputEvents,
                 dataTransferEvents: dataTransferEvents,
+                textInputEvents: textInputEvents,
                 diagnostics: diagnostics
             ) {
                 await display.close()
             }
 
-            #expect(streamResults.count == 4)
+            #expect(streamResults.count == 5)
             #expect(!streamResults.contains(false))
             #expect(await display.isClosed)
         }
@@ -190,6 +192,7 @@ private func streamCloseResults(
     displayEvents: DisplayEvents,
     inputEvents: InputEvents,
     dataTransferEvents: DataTransferEvents,
+    textInputEvents: TextInputEvents,
     diagnostics: DisplayDiagnostics,
     close: @escaping @Sendable () async -> Void
 ) async throws -> [Bool] {
@@ -206,6 +209,9 @@ private func streamCloseResults(
             }
             group.addTask {
                 try await waitForTermination(of: dataTransferEvents)
+            }
+            group.addTask {
+                try await waitForTermination(of: textInputEvents)
             }
             group.addTask {
                 try await waitForTermination(of: diagnostics)
