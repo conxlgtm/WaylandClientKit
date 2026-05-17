@@ -1,47 +1,60 @@
 import WaylandRaw
 
+struct WindowSoftwarePresentationResult {
+    let outcome: RedrawOutcome
+    let followUp: WindowSoftwarePresentationFollowUp?
+}
+
+enum WindowSoftwarePresentationFollowUp {
+    case fail(generation: UInt64, PresentationError)
+    case blockedByBuffer
+    case resetTransientState
+    case succeeded(generation: UInt64)
+}
+
+struct WindowSoftwarePresentationFailure: Error {
+    let presentationError: PresentationError
+    let underlying: any Error
+}
+
 struct WindowSoftwarePresenter {
     let surface: RawSurface
     let scaleInstallation: SurfaceScaleInstallation
-    let geometryForLogicalSize: (PositiveLogicalSize) throws -> SurfaceGeometry
-    let bufferPool: (PositivePixelSize) throws -> RawSharedMemoryPool
+    let createSharedMemoryPool: (PositivePixelSize) throws -> RawSharedMemoryPool
     let isWindowClosed: () -> Bool
-    let dropReleasedRetiredPools: () -> Void
     let onFrame: () -> Void
-    let failActivePresentation: (UInt64, PresentationError) -> Void
-    let onPresentationBlockedByBuffer: () throws -> Void
-    let onTransientStateReset: () throws -> Void
-    let onPresentationSucceeded: (UInt64) throws -> Void
 
     func present<RoleResources>(
         request: PresentationRequest,
         draw: (borrowing SoftwareFrame) throws -> Void,
         runtime: inout SurfaceRuntime<RoleResources>,
         pendingFrameRegistration: inout FrameCallbackRegistration?
-    ) throws -> RedrawOutcome {
+    ) throws -> WindowSoftwarePresentationResult {
         guard pendingFrameRegistration == nil else {
-            failActivePresentation(
-                request.generation,
-                .frameCallbackRequest("frame callback is still pending")
+            return .init(
+                outcome: .skippedPendingFrame,
+                followUp: .fail(
+                    generation: request.generation,
+                    .frameCallbackRequest("frame callback is still pending")
+                )
             )
-            return .skippedPendingFrame
         }
 
-        let geometry = try geometryForLogicalSize(request.configuration.size)
-        let pool = try bufferPool(geometry.bufferSize)
-        dropReleasedRetiredPools()
+        let geometry = try scaleInstallation.geometry(logicalSize: request.configuration.size)
+        let pool = try runtime.sharedMemoryPool(for: geometry.bufferSize) {
+            try createSharedMemoryPool(geometry.bufferSize)
+        }
+        runtime.dropReleasedRetiredBufferPools()
 
         guard var drawingBuffer = pool.acquireDrawingBuffer() else {
-            try onPresentationBlockedByBuffer()
-            return .waitingForBuffer
+            return .init(outcome: .waitingForBuffer, followUp: .blockedByBuffer)
         }
 
-        try drawFrame(&drawingBuffer, request: request, geometry: geometry, draw: draw)
+        try drawFrame(&drawingBuffer, geometry: geometry, draw: draw)
 
         guard !isWindowClosed() else {
-            try onTransientStateReset()
             drawingBuffer.discard()
-            return .skippedClosed
+            return .init(outcome: .skippedClosed, followUp: .resetTransientState)
         }
 
         let preparedCommit = try prepareCommit(
@@ -64,13 +77,14 @@ struct WindowSoftwarePresenter {
             drawingBuffer: &drawingBuffer
         )
 
-        try onPresentationSucceeded(request.generation)
-        return .presented
+        return .init(
+            outcome: .presented,
+            followUp: .succeeded(generation: request.generation)
+        )
     }
 
     private func drawFrame(
         _ drawingBuffer: inout RawBuffer.DrawingBuffer,
-        request: PresentationRequest,
         geometry: SurfaceGeometry,
         draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
@@ -86,12 +100,11 @@ struct WindowSoftwarePresenter {
                 try draw(frame)
             }
         } catch {
-            failActivePresentation(
-                request.generation,
-                .userDraw(String(describing: error))
-            )
             drawingBuffer.discard()
-            throw error
+            throw WindowSoftwarePresentationFailure(
+                presentationError: .userDraw(String(describing: error)),
+                underlying: error
+            )
         }
     }
 
@@ -112,12 +125,11 @@ struct WindowSoftwarePresenter {
                 runtime: &runtime,
             )
         } catch {
-            failActivePresentation(
-                request.generation,
-                .surfaceCommit(String(describing: error))
-            )
             drawingBuffer.discard()
-            throw error
+            throw WindowSoftwarePresentationFailure(
+                presentationError: .surfaceCommit(String(describing: error)),
+                underlying: error
+            )
         }
     }
 
@@ -135,12 +147,11 @@ struct WindowSoftwarePresenter {
                 onFrame: onFrame
             )
         } catch {
-            failActivePresentation(
-                request.generation,
-                .frameCallbackRequest(String(describing: error))
-            )
             drawingBuffer.discard()
-            throw error
+            throw WindowSoftwarePresentationFailure(
+                presentationError: .frameCallbackRequest(String(describing: error)),
+                underlying: error
+            )
         }
     }
 
@@ -162,7 +173,10 @@ struct WindowSoftwarePresenter {
             pendingFrameRegistration = nil
             runtime.cancelFrameCallback()
             drawingBuffer.discard()
-            throw error
+            throw WindowSoftwarePresentationFailure(
+                presentationError: .surfaceCommit(String(describing: error)),
+                underlying: error
+            )
         }
     }
 }
