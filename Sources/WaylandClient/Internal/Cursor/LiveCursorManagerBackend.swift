@@ -20,6 +20,10 @@ final class LiveCursorManagerBackend: CursorManagerBackend {
         connection.preconditionIsOwnerThread()
     }
 
+    var supportsCursorShape: Bool {
+        connection.supportsCursorShape
+    }
+
     func cursorImage(named name: String) throws -> CursorImage {
         try cursorTheme().cursorImage(named: name)
     }
@@ -51,6 +55,18 @@ final class LiveCursorManagerBackend: CursorManagerBackend {
             surface: rawSurface,
             hotspotX: hotspotX,
             hotspotY: hotspotY
+        )
+    }
+
+    func setPointerCursorShape(
+        seatID: RawSeatID,
+        serial: UInt32,
+        shape: RawCursorShapeName
+    ) throws -> RawPointerCursorResult {
+        try connection.setPointerCursorShape(
+            seatID: seatID,
+            serial: serial,
+            shape: shape
         )
     }
 

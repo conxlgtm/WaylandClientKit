@@ -55,6 +55,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Fractional surface scale support through `wp_fractional_scale_manager_v1`.
     public let fractionalScale: ProtocolAvailability
 
+    /// Compositor-managed pointer cursor shapes through `wp_cursor_shape_manager_v1`.
+    public let cursorShape: ProtocolAvailability
+
     /// Dmabuf buffer sharing support through `zwp_linux_dmabuf_v1`.
     public let linuxDmabuf: ProtocolAvailability
 
@@ -68,6 +71,7 @@ public struct WaylandCapabilities: Equatable, Sendable {
         viewporter: ProtocolAvailability,
         presentationTime: ProtocolAvailability,
         fractionalScale: ProtocolAvailability,
+        cursorShape: ProtocolAvailability,
         linuxDmabuf: ProtocolAvailability
     ) {
         self.clipboard = clipboard
@@ -79,6 +83,7 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.viewporter = viewporter
         self.presentationTime = presentationTime
         self.fractionalScale = fractionalScale
+        self.cursorShape = cursorShape
         self.linuxDmabuf = linuxDmabuf
     }
 }
@@ -148,6 +153,10 @@ extension WaylandCapabilities {
             fractionalScale: ProtocolAvailability(
                 best("wp_fractional_scale_manager_v1"),
                 supportedByClient: SupportedVersions.wpFractionalScaleManagerV1
+            ),
+            cursorShape: ProtocolAvailability(
+                best("wp_cursor_shape_manager_v1"),
+                supportedByClient: SupportedVersions.wpCursorShapeManagerV1
             ),
             linuxDmabuf: ProtocolAvailability(
                 best("zwp_linux_dmabuf_v1"),

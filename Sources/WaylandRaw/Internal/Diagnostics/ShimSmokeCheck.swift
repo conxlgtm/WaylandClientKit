@@ -33,6 +33,7 @@ enum ShimSmokeCheck {
         _ = unsafe swl_registry_bind_wp_viewporter
         _ = unsafe swl_registry_bind_wp_presentation
         _ = unsafe swl_registry_bind_wp_fractional_scale_manager_v1
+        _ = unsafe swl_registry_bind_wp_cursor_shape_manager_v1
         _ = unsafe swl_registry_bind_wl_seat
         _ = unsafe swl_registry_bind_zwp_linux_dmabuf_v1
     }
@@ -77,6 +78,8 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_viewporter_get_viewport
         _ = unsafe swl_wp_viewport_set_destination
         _ = unsafe swl_wp_fractional_scale_manager_v1_get_fractional_scale
+        _ = unsafe swl_wp_cursor_shape_manager_v1_get_pointer
+        _ = unsafe swl_wp_cursor_shape_device_v1_set_shape
         _ = unsafe swl_zwp_linux_dmabuf_v1_get_default_feedback
         _ = unsafe swl_zwp_linux_dmabuf_v1_get_surface_feedback
         _ = unsafe swl_zwp_linux_dmabuf_v1_create_params
@@ -110,6 +113,8 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_viewporter_destroy
         _ = unsafe swl_wp_fractional_scale_v1_destroy
         _ = unsafe swl_wp_fractional_scale_manager_v1_destroy
+        _ = unsafe swl_wp_cursor_shape_device_v1_destroy
+        _ = unsafe swl_wp_cursor_shape_manager_v1_destroy
         _ = unsafe swl_wp_presentation_destroy
         _ = unsafe swl_wp_presentation_feedback_destroy
         _ = unsafe swl_zwp_linux_dmabuf_v1_destroy
