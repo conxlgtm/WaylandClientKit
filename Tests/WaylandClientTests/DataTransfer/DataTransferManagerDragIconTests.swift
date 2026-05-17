@@ -72,6 +72,22 @@ struct DataTransferManagerDragIconTests {
     }
 
     @Test
+    func dragIconImageRejectsPixelCountOverflowWithoutTrapping() {
+        #expect(
+            throws: DataTransferError.invalidDragIconPixelCount(
+                expected: Int.max,
+                actual: 0
+            )
+        ) {
+            _ = try DragIconImage.validatePixelCount(
+                width: Int.max,
+                height: 2,
+                actual: 0
+            )
+        }
+    }
+
+    @Test
     func dragIconRoleSurfaceCopiesAttachesDamagesCommitsAndDestroys() async throws {
         try await CoreRequestRecordingGate.withExclusiveRecording {
             try assertDragIconRoleSurfaceEffects()
