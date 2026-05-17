@@ -26,6 +26,7 @@ struct WindowSoftwarePresenter {
 
     func present<RoleResources>(
         request: PresentationRequest,
+        geometry: SurfaceGeometry,
         draw: (borrowing SoftwareFrame) throws -> Void,
         runtime: inout SurfaceRuntime<RoleResources>,
         pendingFrameRegistration: inout FrameCallbackRegistration?
@@ -40,7 +41,6 @@ struct WindowSoftwarePresenter {
             )
         }
 
-        let geometry = try scaleInstallation.geometry(logicalSize: request.configuration.size)
         let pool = try runtime.sharedMemoryPool(for: geometry.bufferSize) {
             try createSharedMemoryPool(geometry.bufferSize)
         }

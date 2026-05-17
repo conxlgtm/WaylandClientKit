@@ -375,6 +375,7 @@ package final class TopLevelWindow {
         )
 
         do {
+            let geometry = try surfaceGeometry(logicalSize: request.configuration.size)
             let result = try WindowSoftwarePresenter(
                 surface: surface,
                 scaleInstallation: scaleInstallation,
@@ -397,6 +398,7 @@ package final class TopLevelWindow {
                 }
             ).present(
                 request: request,
+                geometry: geometry,
                 draw: draw,
                 runtime: &surfaceRuntime,
                 pendingFrameRegistration: &pendingFrameRegistration
