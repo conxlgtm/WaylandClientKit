@@ -86,7 +86,7 @@ struct TextInputStateTests {
                             seatID: seatID,
                             target: .surface(.window(WindowID(rawValue: 7)))
                         )
-                    ),
+                    )
                 ]
         )
         #expect(
@@ -103,7 +103,7 @@ struct TextInputStateTests {
                             seatID: seatID,
                             target: .unmanagedSurface
                         )
-                    ),
+                    )
                 ]
         )
         #expect(
@@ -125,7 +125,7 @@ struct TextInputStateTests {
                             seatID: seatID,
                             language: "fr-CA"
                         )
-                    ),
+                    )
                 ]
         )
     }

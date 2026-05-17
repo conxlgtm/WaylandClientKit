@@ -1,4 +1,8 @@
 extension WaylandDisplay {
+    public nonisolated var textInputEvents: TextInputEvents {
+        runtime.textInputEvents
+    }
+
     public func textInputSession(for seatID: SeatID) throws -> TextInputSession {
         try requireCore().textInputSession(for: seatID)
         return TextInputSession(seatID: seatID, display: self)
@@ -50,5 +54,11 @@ extension WaylandDisplay {
 
     package func commitTextInput(seatID: SeatID) throws {
         try requireCore().commitTextInput(seatID: seatID)
+    }
+}
+
+extension WaylandDisplayRuntime {
+    var textInputEvents: TextInputEvents {
+        eventHub.textInputEvents()
     }
 }

@@ -24,11 +24,13 @@ struct WaylandDisplayPublicIntegrationTests {
             let diagnostics = display.diagnostics
 
             let streamResults = try await streamCloseResults(
-                displayEvents: displayEvents,
-                inputEvents: inputEvents,
-                dataTransferEvents: dataTransferEvents,
-                textInputEvents: textInputEvents,
-                diagnostics: diagnostics
+                sources: PublicStreamSources(
+                    displayEvents: displayEvents,
+                    inputEvents: inputEvents,
+                    dataTransferEvents: dataTransferEvents,
+                    textInputEvents: textInputEvents,
+                    diagnostics: diagnostics
+                )
             ) {
                 await display.close()
             }
@@ -188,12 +190,16 @@ private func nextDisplayEvent(
     throw PublicIntegrationError.streamEnded
 }
 
+private struct PublicStreamSources: Sendable {
+    let displayEvents: DisplayEvents
+    let inputEvents: InputEvents
+    let dataTransferEvents: DataTransferEvents
+    let textInputEvents: TextInputEvents
+    let diagnostics: DisplayDiagnostics
+}
+
 private func streamCloseResults(
-    displayEvents: DisplayEvents,
-    inputEvents: InputEvents,
-    dataTransferEvents: DataTransferEvents,
-    textInputEvents: TextInputEvents,
-    diagnostics: DisplayDiagnostics,
+    sources: PublicStreamSources,
     close: @escaping @Sendable () async -> Void
 ) async throws -> [Bool] {
     try await withTimeout(
@@ -202,19 +208,19 @@ private func streamCloseResults(
     ) {
         try await withThrowingTaskGroup(of: Bool.self) { group in
             group.addTask {
-                try await waitForTermination(of: displayEvents)
+                try await waitForTermination(of: sources.displayEvents)
             }
             group.addTask {
-                try await waitForTermination(of: inputEvents)
+                try await waitForTermination(of: sources.inputEvents)
             }
             group.addTask {
-                try await waitForTermination(of: dataTransferEvents)
+                try await waitForTermination(of: sources.dataTransferEvents)
             }
             group.addTask {
-                try await waitForTermination(of: textInputEvents)
+                try await waitForTermination(of: sources.textInputEvents)
             }
             group.addTask {
-                try await waitForTermination(of: diagnostics)
+                try await waitForTermination(of: sources.diagnostics)
             }
 
             await Task.yield()

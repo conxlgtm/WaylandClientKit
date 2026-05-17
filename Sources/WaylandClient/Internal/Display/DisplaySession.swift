@@ -54,10 +54,9 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
             connection: rawConnection,
             eventQueue: dataTransferEventQueue
         )
-        textInputManager = TextInputManager(
-            connection: rawConnection,
-            targetResolver: { inputRouter.target(for: $0) }
-        )
+        textInputManager = TextInputManager(connection: rawConnection) { target in
+            inputRouter.target(for: target)
+        }
         dataTransferSourceWriter = sourceWriter
         maximumPendingInputEventCount =
             inputPipelineConfiguration.pendingInputEventCapacity.rawValue

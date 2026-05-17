@@ -347,15 +347,18 @@ struct WaylandTextInputAPISurfaceTests {
         #expect(purpose == .email)
         #expect(TextInputChangeCause.other.rawValue == 1)
         #expect(TextInputAction.submit.rawValue == 1)
-        #expect(event == .preedit(
-            TextInputPreeditEvent(
-                seatID: seatID,
-                text: "pre",
-                cursorBegin: 0,
-                cursorEnd: 3,
-                hints: [preeditHint]
-            )
-        ))
+        #expect(
+            event
+                == .preedit(
+                    TextInputPreeditEvent(
+                        seatID: seatID,
+                        text: "pre",
+                        cursorBegin: 0,
+                        cursorEnd: 3,
+                        hints: [preeditHint]
+                    )
+                )
+        )
 
         func useTextInputAPI(
             display: WaylandDisplay,

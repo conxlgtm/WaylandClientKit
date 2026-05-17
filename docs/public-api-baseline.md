@@ -179,6 +179,18 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L41: `    public static let resizeUpDown = Self(validatedName: "sb_v_double_arrow")`
 - L42: `    public static let hidden = Self(kind: .hidden)`
 
+### `Sources/WaylandClient/Public/DataTransfer/ByteCount.swift`
+
+- L1: `public struct ByteCount: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L2: `    public let rawValue: Int`
+- L4: `    public static let defaultTransferReadLimit = ByteCount(unchecked: 16 * 1_024 * 1_024)`
+- L6: `    public init(_ value: Int) throws {`
+- L14: `    public static func bytes(_ value: Int) throws -> ByteCount {`
+- L18: `    public static func kilobytes(_ value: Int) throws -> ByteCount {`
+- L22: `    public static func megabytes(_ value: Int) throws -> ByteCount {`
+- L31: `    public var description: String {`
+- L35: `    public static func < (lhs: ByteCount, rhs: ByteCount) -> Bool {`
+
 ### `Sources/WaylandClient/Public/DataTransfer/DataTransferCallbackFailure.swift`
 
 - L1: `public enum DataTransferCallbackContext: Equatable, Sendable {`
@@ -317,15 +329,6 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L376: `    public init(_ value: String) throws {`
 - L384: `    public init?(rawValue value: String) {`
 - L397: `    public var description: String {`
-- L452: `public struct ByteCount: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L453: `    public let rawValue: Int`
-- L455: `    public static let defaultTransferReadLimit = ByteCount(unchecked: 16 * 1_024 * 1_024)`
-- L457: `    public init(_ value: Int) throws {`
-- L465: `    public static func bytes(_ value: Int) throws -> ByteCount {`
-- L469: `    public static func kilobytes(_ value: Int) throws -> ByteCount {`
-- L473: `    public static func megabytes(_ value: Int) throws -> ByteCount {`
-- L482: `    public var description: String {`
-- L486: `    public static func < (lhs: ByteCount, rhs: ByteCount) -> Bool {`
 
 ### `Sources/WaylandClient/Public/DataTransfer/DataTransferSourcePayload.swift`
 
@@ -831,7 +834,8 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+TextInput.swift`
 
-- L2: `    public func textInputSession(for seatID: SeatID) throws -> TextInputSession {`
+- L2: `    public nonisolated var textInputEvents: TextInputEvents {`
+- L6: `    public func textInputSession(for seatID: SeatID) throws -> TextInputSession {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay.swift`
 
@@ -842,17 +846,16 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L15: `    public nonisolated var events: DisplayEvents {`
 - L19: `    public nonisolated var inputEvents: InputEvents {`
 - L23: `    public nonisolated var dataTransferEvents: DataTransferEvents {`
-- L27: `    public nonisolated var textInputEvents: TextInputEvents {`
-- L31: `    public nonisolated var diagnostics: DisplayDiagnostics {`
-- L58: `    public static func withConnection<ResultValue: Sendable>(`
-- L80: `    public static func withConnection<ResultValue: Sendable>(`
-- L94: `    public func currentPointerCursor() throws -> PointerCursor {`
-- L102: `    public func capabilities() throws -> WaylandCapabilities {`
-- L106: `    public func outputs() throws -> [OutputSnapshot] {`
-- L111: `    public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {`
-- L116: `    public func createTopLevelWindow(`
-- L251: `    public func close() {`
-- L310: `    public var isClosed: Bool {`
+- L27: `    public nonisolated var diagnostics: DisplayDiagnostics {`
+- L54: `    public static func withConnection<ResultValue: Sendable>(`
+- L76: `    public static func withConnection<ResultValue: Sendable>(`
+- L90: `    public func currentPointerCursor() throws -> PointerCursor {`
+- L98: `    public func capabilities() throws -> WaylandCapabilities {`
+- L102: `    public func outputs() throws -> [OutputSnapshot] {`
+- L107: `    public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {`
+- L112: `    public func createTopLevelWindow(`
+- L247: `    public func close() {`
+- L306: `    public var isClosed: Bool {`
 
 ### `Sources/WaylandClient/Public/Errors/ClientError.swift`
 

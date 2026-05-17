@@ -44,7 +44,10 @@ extension RawDisplayConnection {
         preconditionIsOwnerThread()
 
         guard let boundGlobals else { return .skippedUnknownSeat(seatID) }
-        guard case .bound(let cursorShapeManager) = boundGlobals.extensions.cursorShapeManager else {
+        guard
+            case .bound(let cursorShapeManager) =
+                boundGlobals.extensions.cursorShapeManager
+        else {
             return .skippedUnknownSeat(seatID)
         }
 

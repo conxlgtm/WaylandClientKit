@@ -12,9 +12,7 @@ package final class RawTextInputOwner {
         invariantFailureSink: invariantFailureSink
     )
 
-    @safe private var callbacks:
-        UnsafeMutablePointer<swl_text_input_v3_listener_callbacks>
-    {
+    @safe private var callbacks: UnsafeMutablePointer<swl_text_input_v3_listener_callbacks> {
         listenerStorage.callbacks
     }
 
@@ -40,6 +38,12 @@ package final class RawTextInputOwner {
     }
 
     private func configureCallbacks() {
+        configureFocusCallbacks()
+        configureTextCallbacks()
+        configureActionCallbacks()
+    }
+
+    private func configureFocusCallbacks() {
         unsafe callbacks.pointee.enter = { data, _, surface in
             RawTextInputOwner.withOwner(
                 data,
@@ -56,6 +60,9 @@ package final class RawTextInputOwner {
                 owner.onEvent(.leave(surfaceID: RawTextInputOwner.surfaceID(surface)))
             }
         }
+    }
+
+    private func configureTextCallbacks() {
         unsafe callbacks.pointee.preedit_string = { data, _, text, cursorBegin, cursorEnd in
             RawTextInputOwner.withOwner(
                 data,
@@ -96,6 +103,9 @@ package final class RawTextInputOwner {
                 owner.onEvent(.done(serial: serial))
             }
         }
+    }
+
+    private func configureActionCallbacks() {
         unsafe callbacks.pointee.action = { data, _, action, serial in
             RawTextInputOwner.withOwner(
                 data,
