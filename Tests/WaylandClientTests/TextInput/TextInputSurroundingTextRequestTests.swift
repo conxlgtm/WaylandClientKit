@@ -105,6 +105,32 @@ struct TextInputSurroundingTextRequestTests {
     }
 
     @Test
+    func rejectsCursorOffsetInsideUTF8CodePoint() {
+        #expect(
+            throws: TextInputError.surroundingTextOffsetInsideCodePoint(offset: 2)
+        ) {
+            _ = try TextInputSurroundingText(
+                text: "aéz",
+                cursorUTF8Offset: 2,
+                anchorUTF8Offset: 0
+            )
+        }
+    }
+
+    @Test
+    func rejectsAnchorOffsetInsideUTF8CodePoint() {
+        #expect(
+            throws: TextInputError.surroundingTextOffsetInsideCodePoint(offset: 2)
+        ) {
+            _ = try TextInputSurroundingText(
+                text: "aéz",
+                cursorUTF8Offset: 0,
+                anchorUTF8Offset: 2
+            )
+        }
+    }
+
+    @Test
     func rejectsOffsetAboveInt32Max() {
         let overflowOffset = Int(Int32.max) + 1
 
