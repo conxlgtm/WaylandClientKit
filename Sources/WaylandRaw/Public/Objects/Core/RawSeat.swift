@@ -1,7 +1,7 @@
 import CWaylandProtocols
 import Glibc
 
-// swiftlint:disable type_body_length
+// swiftlint:disable file_length type_body_length
 @safe
 package final class RawSeat {
     package let id: RawSeatID
@@ -365,6 +365,30 @@ package final class RawSeat {
                 surfaceID: unsafe operations.proxyObjectID(surfacePointer),
                 hotspotX: hotspotX,
                 hotspotY: hotspotY
+            )
+        )
+    }
+
+    package func setPointerCursorShape(
+        manager cursorShapeManager: RawCursorShapeManager,
+        serial: UInt32,
+        shape: RawCursorShapeName
+    ) throws -> RawPointerCursorResult {
+        guard let pointerDevice else { return .skippedNoPointer(id) }
+
+        let shapeDevice = try unsafe cursorShapeManager.cursorShapeDevice(
+            forPointer: pointerDevice.pointer
+        )
+        shapeDevice.setShape(serial: serial, shape: shape)
+        shapeDevice.destroy()
+
+        return .set(
+            RawPointerCursorSetResult(
+                seatID: id,
+                serial: serial,
+                surfaceID: nil,
+                hotspotX: 0,
+                hotspotY: 0
             )
         )
     }

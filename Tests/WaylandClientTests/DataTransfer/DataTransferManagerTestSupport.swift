@@ -16,6 +16,8 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
     var pipeCreationCount = 0
     var failingDescriptorAdoptions: Set<Int32> = []
     var failingSourceCreationIDs: Set<DataSourceID> = []
+    var preparedDragIcons: [DragIcon] = []
+    var failingDragIcon: DragIcon?
     var sourceBindingIDOverride: DataSourceID?
     var sourceBindingProtocolVersion: RawVersion = 3
     var failingWriteDescriptors: [Int32: DataTransferError] {
@@ -95,6 +97,21 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
         )
         sourceBindings[id] = binding
         return binding
+    }
+
+    func prepareDragIcon(_ icon: DragIcon) throws -> (any DataTransferDragIconBinding)? {
+        preparedDragIcons.append(icon)
+
+        if icon == failingDragIcon {
+            throw DataTransferError.cancelled
+        }
+
+        switch icon {
+        case .none:
+            return nil
+        case .xrgb8888:
+            return RecordingDataTransferDragIconBinding(icon: icon)
+        }
     }
 
     func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors {
@@ -286,7 +303,7 @@ final class RecordingDataTransferDeviceBinding: DataTransferDeviceBinding {
     struct DragStart: Equatable {
         let sourceID: DataSourceID
         let originID: UInt64
-        let icon: DragIcon
+        let icon: DragIcon?
         let serial: InputSerial
     }
 
@@ -319,18 +336,19 @@ final class RecordingDataTransferDeviceBinding: DataTransferDeviceBinding {
     func startDrag(
         source: any DataTransferSourceBinding,
         origin: any DataTransferDragOriginBinding,
-        icon: DragIcon,
+        icon: (any DataTransferDragIconBinding)?,
         serial: InputSerial
     ) {
         let recordingOrigin = origin as? RecordingDataTransferDragOriginBinding
         guard let recordingOrigin else {
             preconditionFailure("test drag origin is missing")
         }
+        let recordingIcon = icon as? RecordingDataTransferDragIconBinding
         dragStarts.append(
             DragStart(
                 sourceID: source.id,
                 originID: recordingOrigin.id,
-                icon: icon,
+                icon: recordingIcon?.icon,
                 serial: serial
             )
         )
@@ -346,6 +364,19 @@ final class RecordingDataTransferDragOriginBinding: DataTransferDragOriginBindin
 
     init(id originID: UInt64) {
         id = originID
+    }
+}
+
+final class RecordingDataTransferDragIconBinding: DataTransferDragIconBinding {
+    let icon: DragIcon
+    var destroyCount = 0
+
+    init(icon dragIcon: DragIcon) {
+        icon = dragIcon
+    }
+
+    func destroy() {
+        destroyCount += 1
     }
 }
 
@@ -415,6 +446,7 @@ final class RecordingDataTransferSourceBinding: DataTransferSourceBinding {
     var protocolVersion: RawVersion
     var offeredMimeTypes: [MIMEType] = []
     var actionRequests: [DragActionSet] = []
+    var dragIcon: (any DataTransferDragIconBinding)?
     var destroyCount = 0
 
     private let onEvent: (RawDataSourceEvent) -> Void
@@ -441,7 +473,13 @@ final class RecordingDataTransferSourceBinding: DataTransferSourceBinding {
         actionRequests.append(actions)
     }
 
+    func attachDragIcon(_ icon: (any DataTransferDragIconBinding)?) {
+        dragIcon = icon
+    }
+
     func destroy() {
+        dragIcon?.destroy()
+        dragIcon = nil
         destroyCount += 1
     }
 }

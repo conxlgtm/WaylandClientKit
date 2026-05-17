@@ -78,8 +78,11 @@ The current baseline already has meaningful substrate pieces:
 - xkbcommon-backed keyboard interpretation
 - pointer, keyboard, and touch event capture
 - static cursor surfaces through `wayland-cursor`
+- compositor cursor-shape requests for mapped pointer cursors
 - regular clipboard, primary selection, receive-side drag-and-drop, and
   source-side drag-and-drop
+- managed XRGB8888 drag icon surfaces for source-side drags
+- seat-scoped text-input sessions and text-input event streams
 - presentation-time support
 - shared surface transaction state for SHM and preview GPU commits
 - linux-dmabuf raw objects, feedback parsing, and buffer params lifecycle
@@ -99,10 +102,7 @@ Known foundation gaps:
   capability plumbing
 - frame pacing protocols beyond `wp_presentation`, such as FIFO and commit
   timing
-- text-input and IME protocols
-- drag icon surfaces
-- cursor animation and output-scale cursor selection
-- optional cursor-shape protocol support
+- public cursor animation and output-scale cursor policy APIs
 - advanced pointer and tablet protocols
 - xdg-session-management and activation/session integration where needed by app
   launch and restoration workflows

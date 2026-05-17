@@ -40,11 +40,14 @@ Intentionally public:
 - `PresentationFeedbackFlags`
 - `WindowPresentationEvents`
 - `DisplayEvent`
+- `EventStreamIdentity`
 - `DisplayDiagnostic`
 - `DiagnosticSeverity`
 - `DisplayEvents`
 - `InputEvents`
 - `DataTransferEvents`
+- `TextInputEvents`
+- `TextInputEventsIterator`
 - `DisplayDiagnostics`
 - `WaylandCapabilities`
 - `ProtocolAvailability`
@@ -77,6 +80,7 @@ Intentionally public:
 - `DragOffer`
 - `DragSource`
 - `DragIcon`
+- `DragIconImage`
 - `DragOfferIdentity`
 - `DragSourceIdentity`
 - `DragSourceConfiguration`
@@ -97,6 +101,24 @@ Intentionally public:
 - `MIMEType`
 - `OwnedFileDescriptor`
 - `ByteCount`
+- `TextInputSession`
+- `TextInputError`
+- `TextInputSurroundingText`
+- `TextInputContentHints`
+- `TextInputContentPurpose`
+- `TextInputChangeCause`
+- `TextInputAction`
+- `TextInputPreeditHintKind`
+- `TextInputPreeditHint`
+- `TextInputFocusEvent`
+- `TextInputPreeditEvent`
+- `TextInputCommitEvent`
+- `TextInputDeleteSurroundingTextEvent`
+- `TextInputActionEvent`
+- `TextInputLanguage`
+- `TextInputLanguageEvent`
+- `TextInputDoneEvent`
+- `TextInputEvent`
 - `ClientError`
 
 Current user-facing contract:
@@ -106,16 +128,17 @@ Current user-facing contract:
   XRGB8888 drawing, basic pointer/keyboard/touch events, interpreted keyboard
   payloads, server-side decoration negotiation, scale-aware window geometry,
   popup surfaces, presentation feedback, regular clipboard selection, primary
-  selection, receive-side and source-side drag-and-drop data transfer, cursor
-  requests, diagnostics, and terminal display errors are the current product
-  surface.
+  selection, receive-side and source-side drag-and-drop data transfer, drag icon
+  surfaces, cursor requests, text-input sessions and events, diagnostics, and
+  terminal display errors are the current product surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
   are derived display text, not control-flow payloads.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
   protocol values are intentionally preserved when useful to clients.
 - Interpreted keyboard events expose local keyboard text through
   `KeyboardTextResult`. Shortcut matching should still use `keySymbols`,
-  `primaryKeySymbol`, and modifiers. This is not text-input or IME support.
+  `primaryKeySymbol`, and modifiers. Text-input/IME output is reported through
+  the separate text-input event stream.
 - Raw keymap bytes, raw file descriptors, raw proxies, listener owners, event
   queues, SHM pool internals, and owner-thread executor machinery are not
   product API.
@@ -128,13 +151,19 @@ Current user-facing contract:
 - `WaylandDisplay.capabilities()` reports currently advertised compositor support
   for regular clipboard, drag-and-drop, drag action negotiation, primary
   selection, server-side decorations, xdg-output, viewporter, presentation time,
-  fractional scaling, and linux-dmabuf without binding new protocol objects.
+  fractional scaling, cursor-shape, text-input, and linux-dmabuf without binding
+  new protocol objects.
 - Primary selection means `zwp_primary_selection_device_manager_v1` offers and
   sources. It is selection-driven, focus-sensitive, and serial-scoped.
 - Drag-and-drop means `wl_data_device_manager` target offers and local sources,
   including MIME negotiation, action negotiation when the compositor supports
   version 3, source lifecycle events, bounded reads, and local source
-  cancellation. Drag icon surfaces are not part of this contract yet.
+  cancellation. Drag icon surfaces are managed XRGB8888 surfaces attached to a
+  local source-side drag request.
+- Text input means `zwp_text_input_manager_v3` seat-scoped sessions and
+  `zwp_text_input_v3` events. Surrounding text offsets are UTF-8 byte offsets at
+  the protocol boundary. Preedit, delete, commit, action, and done events are
+  grouped by the protocol's `done` transaction event.
 - Presentation feedback means `wp_presentation` feedback for managed surfaces.
   Frame callbacks, presentation feedback, future FIFO or commit-timing controls,
   and explicit sync remain separate concepts.
@@ -188,6 +217,8 @@ Notes:
 - Cursor management is display-level. `PointerCursor` names theme cursors, and
   `WaylandDisplay.setPointerCursor(_:)` applies the desired cursor to focused seats.
   Explicit cursor changes throw when the cursor stack cannot fulfill the request.
+  Cursor-shape is used when advertised and the requested cursor maps to a known
+  compositor shape; otherwise the theme cursor path remains the fallback.
 - Clipboard offers are seat-scoped. `ClipboardOffer.read` performs a bounded read
   with a timeout, and `ClipboardSourceConfiguration` represents local regular
   clipboard payloads.
@@ -195,6 +226,10 @@ Notes:
   `DragOffer.read` uses the same bounded transfer rules as clipboard and primary
   selection reads. `DragSourceConfiguration` requires non-empty MIME payloads
   and known drag actions.
+- `TextInputSession` is seat-scoped. Enabling text input targets a managed
+  window, request methods stage protocol state on the text-input object, and
+  `commit()` sends the protocol commit request. `WaylandDisplay.textInputEvents`
+  is separate from `inputEvents`.
 - `WaylandCapabilities` is a registry-discovery snapshot. It lets applications
   branch before requesting optional features, but request APIs still throw typed
   availability errors because Wayland globals can be removed after discovery.

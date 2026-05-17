@@ -73,12 +73,44 @@ static const struct wl_buffer_listener swl_buffer_listener_impl = {
     .release = swl_buffer_handle_release,
 };
 
-int swl_buffer_add_listener(
+#ifdef SWL_ENABLE_TESTING
+static int swl_buffer_add_listener_default(
     struct wl_buffer *buffer,
     const struct swl_buffer_listener_callbacks *callbacks)
 {
     return wl_buffer_add_listener(
         buffer, &swl_buffer_listener_impl, (void *)callbacks);
+}
+
+static int swl_test_buffer_add_listener(
+    struct wl_buffer *buffer,
+    const struct swl_buffer_listener_callbacks *callbacks)
+{
+    (void)buffer;
+    (void)callbacks;
+    return 0;
+}
+
+static int (*swl_buffer_add_listener_impl)(
+    struct wl_buffer *buffer,
+    const struct swl_buffer_listener_callbacks *callbacks) =
+        swl_buffer_add_listener_default;
+#else
+#define swl_buffer_add_listener_impl swl_buffer_add_listener_default
+static int swl_buffer_add_listener_default(
+    struct wl_buffer *buffer,
+    const struct swl_buffer_listener_callbacks *callbacks)
+{
+    return wl_buffer_add_listener(
+        buffer, &swl_buffer_listener_impl, (void *)callbacks);
+}
+#endif
+
+int swl_buffer_add_listener(
+    struct wl_buffer *buffer,
+    const struct swl_buffer_listener_callbacks *callbacks)
+{
+    return swl_buffer_add_listener_impl(buffer, callbacks);
 }
 
 /*
@@ -342,5 +374,15 @@ void swl_test_surface_listener_emit_leave(
 
     if (record)
         *record = swl_test_surface_output_latest;
+}
+
+void swl_test_buffer_listener_recording_begin(void)
+{
+    swl_buffer_add_listener_impl = swl_test_buffer_add_listener;
+}
+
+void swl_test_buffer_listener_recording_end(void)
+{
+    swl_buffer_add_listener_impl = swl_buffer_add_listener_default;
 }
 #endif

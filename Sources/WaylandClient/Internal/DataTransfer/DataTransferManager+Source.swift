@@ -1,5 +1,4 @@
 import WaylandRaw
-
 package struct DataTransferStartDragRequest {
     package let seatID: SeatID
     package let payloads: DataTransferSourcePayloadSet
@@ -121,7 +120,6 @@ extension DataTransferManager {
         guard !request.actions.isEmpty, request.actions.containsOnlyKnownProtocolActions else {
             throw DataTransferError.invalidDragActionSet(rawValue: request.actions.rawValue)
         }
-
         let deviceBinding = try selectionDeviceBinding(for: request.seatID)
         let sourceID = allocateSourceID()
         guard deviceBinding.protocolVersion >= RawVersion(3) else {
@@ -130,20 +128,10 @@ extension DataTransferManager {
             )
         }
 
-        let callbackIdentity = DataSourceCallbackIdentity.dragAndDrop(
-            sourceID.dragIdentity
-        )
-        let sourceBinding = try createDataSourceBinding(
-            sourceID: sourceID,
-            callbackIdentity: callbackIdentity
-        )
+        let sourceBinding = try createDragSourceBinding(sourceID: sourceID)
+        var iconBinding: (any DataTransferDragIconBinding)?
         do {
-            guard sourceBinding.protocolVersion >= RawVersion(3) else {
-                throw DataTransferError.dragSourceActionNegotiationUnavailable(
-                    sourceID.dragIdentity
-                )
-            }
-
+            iconBinding = try backend.prepareDragIcon(request.icon)
             for mimeType in request.payloads.mimeTypes {
                 sourceBinding.offer(mimeType: mimeType)
             }
@@ -164,11 +152,14 @@ extension DataTransferManager {
             deviceBinding.startDrag(
                 source: sourceBinding,
                 origin: request.origin,
-                icon: request.icon,
+                icon: iconBinding,
                 serial: request.serial
             )
+            sourceBinding.attachDragIcon(iconBinding)
+            iconBinding = nil
             preconditionInvariantsHold()
         } catch {
+            iconBinding?.destroy()
             sourceBinding.destroy()
             store.removeSource(sourceID)
             throw error
@@ -254,6 +245,26 @@ extension DataTransferManager {
                 callbackIdentity: callbackIdentity
             )
         }
+    }
+
+    private func createDragSourceBinding(
+        sourceID: DataSourceID
+    ) throws -> any DataTransferSourceBinding {
+        let callbackIdentity = DataSourceCallbackIdentity.dragAndDrop(
+            sourceID.dragIdentity
+        )
+        let sourceBinding = try createDataSourceBinding(
+            sourceID: sourceID,
+            callbackIdentity: callbackIdentity
+        )
+        guard sourceBinding.protocolVersion >= RawVersion(3) else {
+            sourceBinding.destroy()
+            throw DataTransferError.dragSourceActionNegotiationUnavailable(
+                sourceID.dragIdentity
+            )
+        }
+
+        return sourceBinding
     }
 
     private func handleDataSourceEvent(

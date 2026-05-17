@@ -97,6 +97,7 @@ Supported:
 - Basic xkb_v1 keyboard interpretation through xkbcommon.
 - Compose and dead-key text results for interpreted keyboard events.
 - Static pointer cursor surfaces through wayland-cursor.
+- Cursor-shape requests where `wp_cursor_shape_manager_v1` is advertised.
 - Server-side decoration negotiation through xdg-decoration.
 - Popup surfaces with placement, redraw, dismissal, and target identity.
 - Explicit presentation feedback through `wp_presentation`.
@@ -104,12 +105,12 @@ Supported:
 - Primary selection offers and sources through primary-selection.
 - Receive-side drag-and-drop offers through data-device.
 - Source-side drag-and-drop sources through data-device.
+- Managed XRGB8888 drag icon surfaces for local source-side drags.
+- Seat-scoped text-input sessions and text-input event streams through text-input-v3.
 
 Not supported:
 - Widgets.
-- Text input or IME.
-- Drag icon surfaces.
-- Cursor animation or per-output cursor scaling.
+- Public cursor animation or per-output cursor policy APIs.
 - Client-side decorations.
 - Full output-management API.
 - Public `WaylandClient` GPU rendering APIs.

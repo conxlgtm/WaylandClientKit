@@ -8,6 +8,297 @@
 #define SWL_HAS_WL_PROXY_GET_QUEUE 0
 #endif
 
+#ifdef SWL_ENABLE_TESTING
+static struct swl_test_core_request_record swl_test_core_request_latest;
+static uint32_t swl_test_core_request_sequence;
+
+static struct wl_shm_pool *swl_shm_create_pool_default(
+    struct wl_shm *shm,
+    int32_t fd,
+    int32_t size)
+{
+    return wl_shm_create_pool(shm, fd, size);
+}
+
+static struct wl_buffer *swl_shm_pool_create_buffer_default(
+    struct wl_shm_pool *pool,
+    int32_t offset,
+    int32_t width,
+    int32_t height,
+    int32_t stride,
+    uint32_t format)
+{
+    return wl_shm_pool_create_buffer(pool, offset, width, height, stride, format);
+}
+
+static void swl_surface_attach_default(
+    struct wl_surface *surface,
+    struct wl_buffer *buffer,
+    int32_t x,
+    int32_t y)
+{
+    wl_surface_attach(surface, buffer, x, y);
+}
+
+static void swl_surface_commit_default(struct wl_surface *surface)
+{
+    wl_surface_commit(surface);
+}
+
+static void swl_surface_damage_default(
+    struct wl_surface *surface,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height)
+{
+    wl_surface_damage(surface, x, y, width, height);
+}
+
+static void swl_surface_damage_buffer_default(
+    struct wl_surface *surface,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height)
+{
+    wl_surface_damage_buffer(surface, x, y, width, height);
+}
+
+static void swl_buffer_destroy_default(struct wl_buffer *buffer)
+{
+    wl_buffer_destroy(buffer);
+}
+
+static void swl_surface_destroy_default(struct wl_surface *surface)
+{
+    wl_surface_destroy(surface);
+}
+
+static void swl_shm_pool_destroy_default(struct wl_shm_pool *pool)
+{
+    wl_shm_pool_destroy(pool);
+}
+
+static void swl_shm_destroy_default(struct wl_shm *shm)
+{
+    wl_shm_destroy(shm);
+}
+
+static struct wl_event_queue *swl_proxy_get_queue_raw_default(void *proxy)
+{
+#if SWL_HAS_WL_PROXY_GET_QUEUE
+    return wl_proxy_get_queue((struct wl_proxy *)proxy);
+#else
+    (void)proxy;
+    return NULL;
+#endif
+}
+
+static uint32_t swl_proxy_get_id_default(void *proxy)
+{
+    return wl_proxy_get_id((struct wl_proxy *)proxy);
+}
+
+static struct wl_shm_pool *(*swl_shm_create_pool_impl)(
+    struct wl_shm *shm,
+    int32_t fd,
+    int32_t size) = swl_shm_create_pool_default;
+static struct wl_buffer *(*swl_shm_pool_create_buffer_impl)(
+    struct wl_shm_pool *pool,
+    int32_t offset,
+    int32_t width,
+    int32_t height,
+    int32_t stride,
+    uint32_t format) = swl_shm_pool_create_buffer_default;
+static void (*swl_surface_attach_impl)(
+    struct wl_surface *surface,
+    struct wl_buffer *buffer,
+    int32_t x,
+    int32_t y) = swl_surface_attach_default;
+static void (*swl_surface_commit_impl)(struct wl_surface *surface) =
+    swl_surface_commit_default;
+static void (*swl_surface_damage_impl)(
+    struct wl_surface *surface,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height) = swl_surface_damage_default;
+static void (*swl_surface_damage_buffer_impl)(
+    struct wl_surface *surface,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height) = swl_surface_damage_buffer_default;
+static void (*swl_buffer_destroy_impl)(struct wl_buffer *buffer) =
+    swl_buffer_destroy_default;
+static void (*swl_surface_destroy_impl)(struct wl_surface *surface) =
+    swl_surface_destroy_default;
+static void (*swl_shm_pool_destroy_impl)(struct wl_shm_pool *pool) =
+    swl_shm_pool_destroy_default;
+static void (*swl_shm_destroy_impl)(struct wl_shm *shm) =
+    swl_shm_destroy_default;
+static struct wl_event_queue *(*swl_proxy_get_queue_raw_impl)(void *proxy) =
+    swl_proxy_get_queue_raw_default;
+static uint32_t (*swl_proxy_get_id_impl)(void *proxy) =
+    swl_proxy_get_id_default;
+
+static uint32_t swl_test_core_next_sequence(void)
+{
+    swl_test_core_request_sequence += 1;
+    swl_test_core_request_latest.latest_sequence =
+        swl_test_core_request_sequence;
+    return swl_test_core_request_sequence;
+}
+
+static void swl_test_record_core_request(
+    enum swl_test_core_request_kind kind,
+    void *object)
+{
+    swl_test_core_request_latest.call_count += 1;
+    swl_test_core_request_latest.kind = kind;
+    swl_test_core_request_latest.object = object;
+    swl_test_core_next_sequence();
+}
+
+static struct wl_shm_pool *swl_test_shm_create_pool_record(
+    struct wl_shm *shm,
+    int32_t fd,
+    int32_t size)
+{
+    swl_test_record_core_request(SWL_TEST_CORE_SHM_CREATE_POOL, shm);
+    swl_test_core_request_latest.fd = fd;
+    swl_test_core_request_latest.size = size;
+    return (struct wl_shm_pool *)0x5101;
+}
+
+static struct wl_buffer *swl_test_shm_pool_create_buffer_record(
+    struct wl_shm_pool *pool,
+    int32_t offset,
+    int32_t width,
+    int32_t height,
+    int32_t stride,
+    uint32_t format)
+{
+    swl_test_record_core_request(SWL_TEST_CORE_SHM_POOL_CREATE_BUFFER, pool);
+    swl_test_core_request_latest.offset = offset;
+    swl_test_core_request_latest.width = width;
+    swl_test_core_request_latest.height = height;
+    swl_test_core_request_latest.stride = stride;
+    swl_test_core_request_latest.format = format;
+    return (struct wl_buffer *)0x5202;
+}
+
+static void swl_test_surface_attach_record(
+    struct wl_surface *surface,
+    struct wl_buffer *buffer,
+    int32_t x,
+    int32_t y)
+{
+    swl_test_record_core_request(SWL_TEST_CORE_SURFACE_ATTACH, surface);
+    swl_test_core_request_latest.buffer = buffer;
+    swl_test_core_request_latest.x = x;
+    swl_test_core_request_latest.y = y;
+    swl_test_core_request_latest.attach_sequence =
+        swl_test_core_request_latest.latest_sequence;
+}
+
+static void swl_test_surface_commit_record(struct wl_surface *surface)
+{
+    swl_test_record_core_request(SWL_TEST_CORE_SURFACE_COMMIT, surface);
+    swl_test_core_request_latest.commit_sequence =
+        swl_test_core_request_latest.latest_sequence;
+}
+
+static void swl_test_surface_damage_record(
+    enum swl_test_core_request_kind kind,
+    struct wl_surface *surface,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height)
+{
+    swl_test_record_core_request(kind, surface);
+    swl_test_core_request_latest.x = x;
+    swl_test_core_request_latest.y = y;
+    swl_test_core_request_latest.width = width;
+    swl_test_core_request_latest.height = height;
+    swl_test_core_request_latest.damage_sequence =
+        swl_test_core_request_latest.latest_sequence;
+}
+
+static void swl_test_surface_damage_legacy_record(
+    struct wl_surface *surface,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height)
+{
+    swl_test_surface_damage_record(
+        SWL_TEST_CORE_SURFACE_DAMAGE, surface, x, y, width, height);
+}
+
+static void swl_test_surface_damage_buffer_record(
+    struct wl_surface *surface,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height)
+{
+    swl_test_surface_damage_record(
+        SWL_TEST_CORE_SURFACE_DAMAGE_BUFFER, surface, x, y, width, height);
+}
+
+static void swl_test_buffer_destroy_record(struct wl_buffer *buffer)
+{
+    swl_test_record_core_request(SWL_TEST_CORE_BUFFER_DESTROY, buffer);
+    swl_test_core_request_latest.buffer_destroy_sequence =
+        swl_test_core_request_latest.latest_sequence;
+}
+
+static void swl_test_surface_destroy_record(struct wl_surface *surface)
+{
+    swl_test_record_core_request(SWL_TEST_CORE_SURFACE_DESTROY, surface);
+    swl_test_core_request_latest.surface_destroy_sequence =
+        swl_test_core_request_latest.latest_sequence;
+}
+
+static void swl_test_shm_pool_destroy_record(struct wl_shm_pool *pool)
+{
+    swl_test_record_core_request(SWL_TEST_CORE_SHM_POOL_DESTROY, pool);
+    swl_test_core_request_latest.shm_pool_destroy_sequence =
+        swl_test_core_request_latest.latest_sequence;
+}
+
+static void swl_test_shm_destroy_record(struct wl_shm *shm)
+{
+    swl_test_record_core_request(SWL_TEST_CORE_SHM_DESTROY, shm);
+}
+
+static struct wl_event_queue *swl_test_proxy_get_queue_raw(void *proxy)
+{
+    (void)proxy;
+    return NULL;
+}
+
+static uint32_t swl_test_proxy_get_id(void *proxy)
+{
+    (void)proxy;
+    return 42;
+}
+#else
+#define swl_shm_create_pool_impl wl_shm_create_pool
+#define swl_shm_pool_create_buffer_impl wl_shm_pool_create_buffer
+#define swl_surface_attach_impl wl_surface_attach
+#define swl_surface_commit_impl wl_surface_commit
+#define swl_surface_damage_impl wl_surface_damage
+#define swl_surface_damage_buffer_impl wl_surface_damage_buffer
+#define swl_buffer_destroy_impl wl_buffer_destroy
+#define swl_surface_destroy_impl wl_surface_destroy
+#define swl_shm_pool_destroy_impl wl_shm_pool_destroy
+#define swl_shm_destroy_impl wl_shm_destroy
+#endif
+
 struct wl_surface *swl_compositor_create_surface(struct wl_compositor *compositor)
 {
     return wl_compositor_create_surface(compositor);
@@ -15,14 +306,15 @@ struct wl_surface *swl_compositor_create_surface(struct wl_compositor *composito
 
 struct wl_shm_pool *swl_shm_create_pool(struct wl_shm *shm, int32_t fd, int32_t size)
 {
-    return wl_shm_create_pool(shm, fd, size);
+    return swl_shm_create_pool_impl(shm, fd, size);
 }
 
 struct wl_buffer *swl_shm_pool_create_buffer(
     struct wl_shm_pool *pool, int32_t offset, int32_t width,
     int32_t height, int32_t stride, uint32_t format)
 {
-    return wl_shm_pool_create_buffer(pool, offset, width, height, stride, format);
+    return swl_shm_pool_create_buffer_impl(
+        pool, offset, width, height, stride, format);
 }
 
 struct wl_callback *swl_surface_frame(struct wl_surface *surface)
@@ -33,20 +325,20 @@ struct wl_callback *swl_surface_frame(struct wl_surface *surface)
 void swl_surface_attach(
     struct wl_surface *surface, struct wl_buffer *buffer, int32_t x, int32_t y)
 {
-    wl_surface_attach(surface, buffer, x, y);
+    swl_surface_attach_impl(surface, buffer, x, y);
 }
 
 void swl_surface_commit(struct wl_surface *surface)
 {
-    wl_surface_commit(surface);
+    swl_surface_commit_impl(surface);
 }
 
 void swl_surface_damage(
     struct wl_surface *surface, int32_t x, int32_t y,
     int32_t width, int32_t height)
-    {
-        wl_surface_damage(surface, x, y, width, height);
-    }
+{
+    swl_surface_damage_impl(surface, x, y, width, height);
+}
 
 uint32_t swl_shm_format_xrgb8888(void)
 {
@@ -62,7 +354,7 @@ void swl_surface_damage_buffer(
     struct wl_surface *surface, int32_t x, int32_t y,
     int32_t width, int32_t height)
 {
-    wl_surface_damage_buffer(surface, x, y, width, height);
+    swl_surface_damage_buffer_impl(surface, x, y, width, height);
 }
 
 void swl_surface_set_buffer_scale(struct wl_surface *surface, int32_t scale)
@@ -102,12 +394,18 @@ uint32_t swl_proxy_get_version(void *proxy)
 
 uint32_t swl_proxy_get_id(void *proxy)
 {
+#ifdef SWL_ENABLE_TESTING
+    return swl_proxy_get_id_impl(proxy);
+#else
     return wl_proxy_get_id((struct wl_proxy *)proxy);
+#endif
 }
 
 struct wl_event_queue *swl_proxy_get_queue_raw(void *proxy)
 {
-#if SWL_HAS_WL_PROXY_GET_QUEUE
+#ifdef SWL_ENABLE_TESTING
+    return swl_proxy_get_queue_raw_impl(proxy);
+#elif SWL_HAS_WL_PROXY_GET_QUEUE
     return wl_proxy_get_queue((struct wl_proxy *)proxy);
 #else
     (void)proxy;
@@ -132,7 +430,7 @@ void swl_compositor_destroy(struct wl_compositor *compositor)
 
 void swl_shm_destroy(struct wl_shm *shm)
 {
-    wl_shm_destroy(shm);
+    swl_shm_destroy_impl(shm);
 }
 
 void swl_output_destroy(struct wl_output *output)
@@ -147,17 +445,17 @@ void swl_output_release(struct wl_output *output)
 
 void swl_buffer_destroy(struct wl_buffer *buffer)
 {
-    wl_buffer_destroy(buffer);
+    swl_buffer_destroy_impl(buffer);
 }
 
 void swl_surface_destroy(struct wl_surface *surface)
 {
-    wl_surface_destroy(surface);
+    swl_surface_destroy_impl(surface);
 }
 
 void swl_shm_pool_destroy(struct wl_shm_pool *pool)
 {
-    wl_shm_pool_destroy(pool);
+    swl_shm_pool_destroy_impl(pool);
 }
 
 void swl_pointer_release(struct wl_pointer *pointer)
@@ -184,3 +482,44 @@ void swl_seat_release(struct wl_seat *seat)
 {
     wl_seat_release(seat);
 }
+
+#ifdef SWL_ENABLE_TESTING
+void swl_test_core_request_recording_begin(void)
+{
+    swl_test_core_request_latest = (struct swl_test_core_request_record){0};
+    swl_test_core_request_sequence = 0;
+    swl_shm_create_pool_impl = swl_test_shm_create_pool_record;
+    swl_shm_pool_create_buffer_impl = swl_test_shm_pool_create_buffer_record;
+    swl_surface_attach_impl = swl_test_surface_attach_record;
+    swl_surface_commit_impl = swl_test_surface_commit_record;
+    swl_surface_damage_impl = swl_test_surface_damage_legacy_record;
+    swl_surface_damage_buffer_impl = swl_test_surface_damage_buffer_record;
+    swl_buffer_destroy_impl = swl_test_buffer_destroy_record;
+    swl_surface_destroy_impl = swl_test_surface_destroy_record;
+    swl_shm_pool_destroy_impl = swl_test_shm_pool_destroy_record;
+    swl_shm_destroy_impl = swl_test_shm_destroy_record;
+    swl_proxy_get_queue_raw_impl = swl_test_proxy_get_queue_raw;
+    swl_proxy_get_id_impl = swl_test_proxy_get_id;
+}
+
+void swl_test_core_request_recording_end(void)
+{
+    swl_shm_create_pool_impl = swl_shm_create_pool_default;
+    swl_shm_pool_create_buffer_impl = swl_shm_pool_create_buffer_default;
+    swl_surface_attach_impl = swl_surface_attach_default;
+    swl_surface_commit_impl = swl_surface_commit_default;
+    swl_surface_damage_impl = swl_surface_damage_default;
+    swl_surface_damage_buffer_impl = swl_surface_damage_buffer_default;
+    swl_buffer_destroy_impl = swl_buffer_destroy_default;
+    swl_surface_destroy_impl = swl_surface_destroy_default;
+    swl_shm_pool_destroy_impl = swl_shm_pool_destroy_default;
+    swl_shm_destroy_impl = swl_shm_destroy_default;
+    swl_proxy_get_queue_raw_impl = swl_proxy_get_queue_raw_default;
+    swl_proxy_get_id_impl = swl_proxy_get_id_default;
+}
+
+struct swl_test_core_request_record swl_test_core_request_record(void)
+{
+    return swl_test_core_request_latest;
+}
+#endif

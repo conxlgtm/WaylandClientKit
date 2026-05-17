@@ -5,8 +5,8 @@ substrate code without taking on a widget toolkit, scene graph, or renderer.
 
 SwiftWayland's public `WaylandClient` API covers display connection lifetime,
 window and popup surfaces, software rendering through shared memory, input
-events, keyboard interpretation, cursor requests, data transfer, presentation
-feedback, diagnostics, and capability reporting.
+events, keyboard interpretation, cursor requests, data transfer, text-input
+sessions, presentation feedback, diagnostics, and capability reporting.
 
 GPU allocation and presentation experiments live in package-internal preview
 targets. They are not public `WaylandClient` API.
@@ -24,14 +24,15 @@ targets. They are not public `WaylandClient` API.
 
 - ``Window``
 - ``WindowConfiguration``
-- ``Popup``
+- ``PopupSurface``
 - ``PopupConfiguration``
 
 ### Rendering
 
-- ``WindowDrawingContext``
-- ``PixelBuffer``
+- ``SoftwareFrame``
+- ``SurfaceGeometry``
 - ``SurfaceScale``
+- ``PositivePixelSize``
 
 ### Input
 
@@ -49,10 +50,19 @@ targets. They are not public `WaylandClient` API.
 - ``PrimarySelectionSource``
 - ``DragOffer``
 - ``DragSource``
+- ``DragIcon``
+
+### Text Input
+
+- ``TextInputSession``
+- ``TextInputEvents``
+- ``TextInputEvent``
+- ``TextInputContentHints``
+- ``TextInputContentPurpose``
+- ``TextInputError``
 
 ### Diagnostics
 
 - ``DisplayDiagnostic``
 - ``WindowDiagnostic``
-- ``WaylandSystemError``
-
+- ``WaylandDisplayError``

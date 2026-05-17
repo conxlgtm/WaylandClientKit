@@ -99,3 +99,18 @@ package final class RawSurface {
         destroy()
     }
 }
+
+extension RawSurface {
+    @safe
+    package static func testingSurface(
+        pointer surfacePointer: OpaquePointer,
+        version surfaceVersion: RawVersion,
+        proxyAdoption adoptionContext: RawProxyAdoptionContext
+    ) throws(RuntimeError) -> RawSurface {
+        try RawSurface(
+            pointer: surfacePointer,
+            version: surfaceVersion,
+            proxyAdoption: adoptionContext
+        )
+    }
+}

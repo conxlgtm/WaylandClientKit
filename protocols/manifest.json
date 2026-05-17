@@ -66,6 +66,17 @@
       "notes": "Optional extension for compositor presentation feedback on committed surfaces."
     },
     {
+      "name": "tablet-v2",
+      "localPath": "protocols/upstream/stable/tablet/tablet-v2.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/stable/tablet/tablet-v2.xml",
+      "sha256": "ac1128b26c779cf90b9ed71182ba5e34a7262826789adae206d825a4d45908b4",
+      "stability": "stable",
+      "notes": "Private generation dependency for cursor-shape tablet-tool request interfaces; SwiftWayland does not expose tablet APIs yet."
+    },
+    {
       "name": "fractional-scale-v1",
       "localPath": "protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml",
       "upstreamProject": "wayland-protocols",
@@ -77,6 +88,17 @@
       "notes": "Optional extension for compositor-preferred fractional surface scales."
     },
     {
+      "name": "cursor-shape-v1",
+      "localPath": "protocols/upstream/staging/cursor-shape/cursor-shape-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/staging/cursor-shape/cursor-shape-v1.xml",
+      "sha256": "bb57d91e53a79dadab7c612dab87c233393cee73673feefa7442cfbfdd9aed2f",
+      "stability": "staging",
+      "notes": "Optional extension for compositor-managed pointer cursor shapes."
+    },
+    {
       "name": "primary-selection-unstable-v1",
       "localPath": "protocols/upstream/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml",
       "upstreamProject": "wayland-protocols",
@@ -86,6 +108,17 @@
       "sha256": "d568482ba84df6e531698b1f531810860995ca24d69495427fe43aee6017f52c",
       "stability": "unstable",
       "notes": "Optional extension for X-style primary selection transfer."
+    },
+    {
+      "name": "text-input-unstable-v3",
+      "localPath": "protocols/upstream/legacy-unstable/text-input/text-input-unstable-v3.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/text-input/text-input-unstable-v3.xml",
+      "sha256": "160815cda13c285a30df1971d8f0a5b3aac07071537df59916d2f748b18e4f59",
+      "stability": "unstable",
+      "notes": "Optional foundation protocol for compositor/IME text input."
     },
     {
       "name": "linux-dmabuf-unstable-v1",
