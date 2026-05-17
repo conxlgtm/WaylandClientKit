@@ -407,35 +407,35 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L9: `    public let size: PositivePixelSize`
 - L10: `    public let pixels: [UInt32]`
 - L12: `    public init(size imageSize: PositivePixelSize, pixels xrgb8888Pixels: [UInt32]) throws {`
-- L28: `public struct DragSourceIdentity: Hashable, Sendable, CustomStringConvertible {`
-- L35: `    public var description: String {`
-- L40: `public struct DragSourceConfiguration: Equatable, Sendable {`
-- L41: `    public let payloads: [DataTransferSourcePayload]`
-- L42: `    public let actions: DragActionSet`
-- L45: `    public init(`
-- L59: `    public static func data(`
-- L75: `public struct DragSource: Sendable, Hashable {`
-- L77: `    public let seatID: SeatID`
-- L78: `    public let mimeTypes: [MIMEType]`
-- L79: `    public let actions: DragActionSet`
-- L98: `    public var identity: DragSourceIdentity {`
-- L103: `    public func cancel() async throws {`
-- L107: `    public static func == (lhs: DragSource, rhs: DragSource) -> Bool {`
-- L111: `    public func hash(into hasher: inout Hasher) {`
-- L117: `public struct DragSourceTargetEvent: Equatable, Sendable {`
-- L118: `    public let source: DragSourceIdentity`
-- L119: `    public let mimeType: MIMEType?`
-- L127: `public struct DragSourceActionEvent: Equatable, Sendable {`
-- L128: `    public let source: DragSourceIdentity`
-- L129: `    public let action: DragAction`
-- L137: `public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {`
-- L138: `    case copy`
-- L139: `    case move`
-- L140: `    case unknown(rawValue: UInt32)`
-- L155: `    public var description: String {`
-- L167: `public struct DragSourceFinishedEvent: Equatable, Sendable {`
-- L168: `    public let source: DragSourceIdentity`
-- L169: `    public let finalAction: DragSourceFinalAction`
+- L52: `public struct DragSourceIdentity: Hashable, Sendable, CustomStringConvertible {`
+- L59: `    public var description: String {`
+- L64: `public struct DragSourceConfiguration: Equatable, Sendable {`
+- L65: `    public let payloads: [DataTransferSourcePayload]`
+- L66: `    public let actions: DragActionSet`
+- L69: `    public init(`
+- L83: `    public static func data(`
+- L99: `public struct DragSource: Sendable, Hashable {`
+- L101: `    public let seatID: SeatID`
+- L102: `    public let mimeTypes: [MIMEType]`
+- L103: `    public let actions: DragActionSet`
+- L122: `    public var identity: DragSourceIdentity {`
+- L127: `    public func cancel() async throws {`
+- L131: `    public static func == (lhs: DragSource, rhs: DragSource) -> Bool {`
+- L135: `    public func hash(into hasher: inout Hasher) {`
+- L141: `public struct DragSourceTargetEvent: Equatable, Sendable {`
+- L142: `    public let source: DragSourceIdentity`
+- L143: `    public let mimeType: MIMEType?`
+- L151: `public struct DragSourceActionEvent: Equatable, Sendable {`
+- L152: `    public let source: DragSourceIdentity`
+- L153: `    public let action: DragAction`
+- L161: `public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {`
+- L162: `    case copy`
+- L163: `    case move`
+- L164: `    case unknown(rawValue: UInt32)`
+- L179: `    public var description: String {`
+- L191: `public struct DragSourceFinishedEvent: Equatable, Sendable {`
+- L192: `    public let source: DragSourceIdentity`
+- L193: `    public let finalAction: DragSourceFinalAction`
 
 ### `Sources/WaylandClient/Public/DataTransfer/OwnedFileDescriptor.swift`
 
@@ -1656,117 +1656,118 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L3: `    case unknownSeat(SeatID)`
 - L4: `    case foreignWindow(WindowID)`
 - L5: `    case surroundingTextContainsNUL`
-- L6: `    case surroundingTextOffsetOutOfBounds(offset: Int, byteCount: Int)`
-- L7: `    case surroundingTextOffsetOverflow(byteCount: Int)`
-- L9: `    public var description: String {`
-- L27: `public struct TextInputSurroundingText: Equatable, Sendable {`
-- L28: `    public let text: String`
-- L29: `    public let cursorUTF8Offset: Int`
-- L30: `    public let anchorUTF8Offset: Int`
-- L32: `    public init(`
-- L79: `public struct TextInputContentHints: OptionSet, Equatable, Sendable {`
-- L80: `    public let rawValue: UInt32`
-- L82: `    public init(rawValue hintsRawValue: UInt32) {`
-- L86: `    public static let completion = Self(rawValue: 0x1)`
-- L87: `    public static let spellcheck = Self(rawValue: 0x2)`
-- L88: `    public static let autoCapitalization = Self(rawValue: 0x4)`
-- L89: `    public static let lowercase = Self(rawValue: 0x8)`
-- L90: `    public static let uppercase = Self(rawValue: 0x10)`
-- L91: `    public static let titlecase = Self(rawValue: 0x20)`
-- L92: `    public static let hiddenText = Self(rawValue: 0x40)`
-- L93: `    public static let sensitiveData = Self(rawValue: 0x80)`
-- L94: `    public static let latin = Self(rawValue: 0x100)`
-- L95: `    public static let multiline = Self(rawValue: 0x200)`
-- L96: `    public static let onScreenInputProvided = Self(rawValue: 0x400)`
-- L97: `    public static let noEmoji = Self(rawValue: 0x800)`
-- L98: `    public static let preeditShown = Self(rawValue: 0x1000)`
-- L101: `public struct TextInputContentPurpose: Equatable, Sendable {`
-- L102: `    public let rawValue: UInt32`
-- L104: `    public init(rawValue purposeRawValue: UInt32) {`
-- L108: `    public static let normal = Self(rawValue: 0)`
-- L109: `    public static let alpha = Self(rawValue: 1)`
-- L110: `    public static let digits = Self(rawValue: 2)`
-- L111: `    public static let number = Self(rawValue: 3)`
-- L112: `    public static let phone = Self(rawValue: 4)`
-- L113: `    public static let url = Self(rawValue: 5)`
-- L114: `    public static let email = Self(rawValue: 6)`
-- L115: `    public static let name = Self(rawValue: 7)`
-- L116: `    public static let password = Self(rawValue: 8)`
-- L117: `    public static let pin = Self(rawValue: 9)`
-- L118: `    public static let date = Self(rawValue: 10)`
-- L119: `    public static let time = Self(rawValue: 11)`
-- L120: `    public static let datetime = Self(rawValue: 12)`
-- L121: `    public static let terminal = Self(rawValue: 13)`
-- L124: `public struct TextInputChangeCause: Equatable, Sendable {`
-- L125: `    public let rawValue: UInt32`
-- L127: `    public init(rawValue causeRawValue: UInt32) {`
-- L131: `    public static let inputMethod = Self(rawValue: 0)`
-- L132: `    public static let other = Self(rawValue: 1)`
-- L135: `public struct TextInputAction: Equatable, Sendable {`
-- L136: `    public let rawValue: UInt32`
-- L138: `    public init(rawValue actionRawValue: UInt32) {`
-- L142: `    public static let none = Self(rawValue: 0)`
-- L143: `    public static let submit = Self(rawValue: 1)`
-- L146: `public struct TextInputPreeditHintKind: Equatable, Sendable {`
-- L147: `    public let rawValue: UInt32`
-- L149: `    public init(rawValue hintRawValue: UInt32) {`
-- L153: `    public static let whole = Self(rawValue: 1)`
-- L154: `    public static let selection = Self(rawValue: 2)`
-- L155: `    public static let prediction = Self(rawValue: 3)`
-- L156: `    public static let prefix = Self(rawValue: 4)`
-- L157: `    public static let suffix = Self(rawValue: 5)`
-- L158: `    public static let spellingError = Self(rawValue: 6)`
-- L159: `    public static let composeError = Self(rawValue: 7)`
-- L162: `public struct TextInputPreeditHint: Equatable, Sendable {`
-- L163: `    public let start: UInt32`
-- L164: `    public let end: UInt32`
-- L165: `    public let kind: TextInputPreeditHintKind`
-- L167: `    public init(`
-- L178: `public struct TextInputFocusEvent: Equatable, Sendable {`
-- L179: `    public let seatID: SeatID`
-- L180: `    public let target: InputEventTarget`
-- L182: `    public init(seatID eventSeatID: SeatID, target eventTarget: InputEventTarget) {`
-- L188: `public struct TextInputPreeditEvent: Equatable, Sendable {`
-- L189: `    public let seatID: SeatID`
-- L190: `    public let text: String`
-- L191: `    public let cursorBegin: Int32`
-- L192: `    public let cursorEnd: Int32`
-- L193: `    public let hints: [TextInputPreeditHint]`
-- L195: `    public init(`
-- L210: `public struct TextInputCommitEvent: Equatable, Sendable {`
-- L211: `    public let seatID: SeatID`
-- L212: `    public let text: String`
-- L214: `    public init(seatID eventSeatID: SeatID, text eventText: String) {`
-- L220: `public struct TextInputDeleteSurroundingTextEvent: Equatable, Sendable {`
-- L221: `    public let seatID: SeatID`
-- L222: `    public let beforeLength: UInt32`
-- L223: `    public let afterLength: UInt32`
-- L225: `    public init(`
-- L236: `public struct TextInputActionEvent: Equatable, Sendable {`
-- L237: `    public let seatID: SeatID`
-- L238: `    public let action: TextInputAction`
-- L239: `    public let serial: UInt32`
-- L241: `    public init(`
-- L252: `public enum TextInputLanguage: Equatable, Sendable {`
-- L253: `    case unknown`
-- L254: `    case tag(String)`
-- L257: `public struct TextInputLanguageEvent: Equatable, Sendable {`
-- L258: `    public let seatID: SeatID`
-- L259: `    public let language: TextInputLanguage`
-- L261: `    public init(seatID eventSeatID: SeatID, language eventLanguage: TextInputLanguage) {`
-- L267: `public struct TextInputDoneEvent: Equatable, Sendable {`
-- L268: `    public let seatID: SeatID`
-- L269: `    public let serial: UInt32`
-- L271: `    public init(seatID eventSeatID: SeatID, serial eventSerial: UInt32) {`
-- L277: `public enum TextInputEvent: Equatable, Sendable {`
-- L278: `    case entered(TextInputFocusEvent)`
-- L279: `    case left(TextInputFocusEvent)`
-- L280: `    case preedit(TextInputPreeditEvent)`
-- L281: `    case committed(TextInputCommitEvent)`
-- L282: `    case deleteSurroundingText(TextInputDeleteSurroundingTextEvent)`
-- L283: `    case action(TextInputActionEvent)`
-- L284: `    case language(TextInputLanguageEvent)`
-- L285: `    case done(TextInputDoneEvent)`
+- L6: `    case surroundingTextTooLarge(byteCount: Int, limit: Int)`
+- L7: `    case surroundingTextOffsetOutOfBounds(offset: Int, byteCount: Int)`
+- L8: `    case surroundingTextOffsetOverflow(byteCount: Int)`
+- L10: `    public var description: String {`
+- L30: `public struct TextInputSurroundingText: Equatable, Sendable {`
+- L33: `    public let text: String`
+- L34: `    public let cursorUTF8Offset: Int`
+- L35: `    public let anchorUTF8Offset: Int`
+- L37: `    public init(`
+- L92: `public struct TextInputContentHints: OptionSet, Equatable, Sendable {`
+- L93: `    public let rawValue: UInt32`
+- L95: `    public init(rawValue hintsRawValue: UInt32) {`
+- L99: `    public static let completion = Self(rawValue: 0x1)`
+- L100: `    public static let spellcheck = Self(rawValue: 0x2)`
+- L101: `    public static let autoCapitalization = Self(rawValue: 0x4)`
+- L102: `    public static let lowercase = Self(rawValue: 0x8)`
+- L103: `    public static let uppercase = Self(rawValue: 0x10)`
+- L104: `    public static let titlecase = Self(rawValue: 0x20)`
+- L105: `    public static let hiddenText = Self(rawValue: 0x40)`
+- L106: `    public static let sensitiveData = Self(rawValue: 0x80)`
+- L107: `    public static let latin = Self(rawValue: 0x100)`
+- L108: `    public static let multiline = Self(rawValue: 0x200)`
+- L109: `    public static let onScreenInputProvided = Self(rawValue: 0x400)`
+- L110: `    public static let noEmoji = Self(rawValue: 0x800)`
+- L111: `    public static let preeditShown = Self(rawValue: 0x1000)`
+- L114: `public struct TextInputContentPurpose: Equatable, Sendable {`
+- L115: `    public let rawValue: UInt32`
+- L117: `    public init(rawValue purposeRawValue: UInt32) {`
+- L121: `    public static let normal = Self(rawValue: 0)`
+- L122: `    public static let alpha = Self(rawValue: 1)`
+- L123: `    public static let digits = Self(rawValue: 2)`
+- L124: `    public static let number = Self(rawValue: 3)`
+- L125: `    public static let phone = Self(rawValue: 4)`
+- L126: `    public static let url = Self(rawValue: 5)`
+- L127: `    public static let email = Self(rawValue: 6)`
+- L128: `    public static let name = Self(rawValue: 7)`
+- L129: `    public static let password = Self(rawValue: 8)`
+- L130: `    public static let pin = Self(rawValue: 9)`
+- L131: `    public static let date = Self(rawValue: 10)`
+- L132: `    public static let time = Self(rawValue: 11)`
+- L133: `    public static let datetime = Self(rawValue: 12)`
+- L134: `    public static let terminal = Self(rawValue: 13)`
+- L137: `public struct TextInputChangeCause: Equatable, Sendable {`
+- L138: `    public let rawValue: UInt32`
+- L140: `    public init(rawValue causeRawValue: UInt32) {`
+- L144: `    public static let inputMethod = Self(rawValue: 0)`
+- L145: `    public static let other = Self(rawValue: 1)`
+- L148: `public struct TextInputAction: Equatable, Sendable {`
+- L149: `    public let rawValue: UInt32`
+- L151: `    public init(rawValue actionRawValue: UInt32) {`
+- L155: `    public static let none = Self(rawValue: 0)`
+- L156: `    public static let submit = Self(rawValue: 1)`
+- L159: `public struct TextInputPreeditHintKind: Equatable, Sendable {`
+- L160: `    public let rawValue: UInt32`
+- L162: `    public init(rawValue hintRawValue: UInt32) {`
+- L166: `    public static let whole = Self(rawValue: 1)`
+- L167: `    public static let selection = Self(rawValue: 2)`
+- L168: `    public static let prediction = Self(rawValue: 3)`
+- L169: `    public static let prefix = Self(rawValue: 4)`
+- L170: `    public static let suffix = Self(rawValue: 5)`
+- L171: `    public static let spellingError = Self(rawValue: 6)`
+- L172: `    public static let composeError = Self(rawValue: 7)`
+- L175: `public struct TextInputPreeditHint: Equatable, Sendable {`
+- L176: `    public let start: UInt32`
+- L177: `    public let end: UInt32`
+- L178: `    public let kind: TextInputPreeditHintKind`
+- L180: `    public init(`
+- L191: `public struct TextInputFocusEvent: Equatable, Sendable {`
+- L192: `    public let seatID: SeatID`
+- L193: `    public let target: InputEventTarget`
+- L195: `    public init(seatID eventSeatID: SeatID, target eventTarget: InputEventTarget) {`
+- L201: `public struct TextInputPreeditEvent: Equatable, Sendable {`
+- L202: `    public let seatID: SeatID`
+- L203: `    public let text: String`
+- L204: `    public let cursorBegin: Int32`
+- L205: `    public let cursorEnd: Int32`
+- L206: `    public let hints: [TextInputPreeditHint]`
+- L208: `    public init(`
+- L223: `public struct TextInputCommitEvent: Equatable, Sendable {`
+- L224: `    public let seatID: SeatID`
+- L225: `    public let text: String`
+- L227: `    public init(seatID eventSeatID: SeatID, text eventText: String) {`
+- L233: `public struct TextInputDeleteSurroundingTextEvent: Equatable, Sendable {`
+- L234: `    public let seatID: SeatID`
+- L235: `    public let beforeLength: UInt32`
+- L236: `    public let afterLength: UInt32`
+- L238: `    public init(`
+- L249: `public struct TextInputActionEvent: Equatable, Sendable {`
+- L250: `    public let seatID: SeatID`
+- L251: `    public let action: TextInputAction`
+- L252: `    public let serial: UInt32`
+- L254: `    public init(`
+- L265: `public enum TextInputLanguage: Equatable, Sendable {`
+- L266: `    case unknown`
+- L267: `    case tag(String)`
+- L270: `public struct TextInputLanguageEvent: Equatable, Sendable {`
+- L271: `    public let seatID: SeatID`
+- L272: `    public let language: TextInputLanguage`
+- L274: `    public init(seatID eventSeatID: SeatID, language eventLanguage: TextInputLanguage) {`
+- L280: `public struct TextInputDoneEvent: Equatable, Sendable {`
+- L281: `    public let seatID: SeatID`
+- L282: `    public let serial: UInt32`
+- L284: `    public init(seatID eventSeatID: SeatID, serial eventSerial: UInt32) {`
+- L290: `public enum TextInputEvent: Equatable, Sendable {`
+- L291: `    case entered(TextInputFocusEvent)`
+- L292: `    case left(TextInputFocusEvent)`
+- L293: `    case preedit(TextInputPreeditEvent)`
+- L294: `    case committed(TextInputCommitEvent)`
+- L295: `    case deleteSurroundingText(TextInputDeleteSurroundingTextEvent)`
+- L296: `    case action(TextInputActionEvent)`
+- L297: `    case language(TextInputLanguageEvent)`
+- L298: `    case done(TextInputDoneEvent)`
 
 ### `Sources/WaylandClient/Public/TextInput/TextInputSession.swift`
 

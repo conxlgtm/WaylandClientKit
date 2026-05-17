@@ -33,6 +33,46 @@ struct TextInputSurroundingTextRequestTests {
     }
 
     @Test
+    func rejectsTextAboveProtocolByteLimit() {
+        let text = String(
+            repeating: "a",
+            count: TextInputSurroundingText.maximumUTF8ByteCount + 1
+        )
+
+        #expect(
+            throws: TextInputError.surroundingTextTooLarge(
+                byteCount: TextInputSurroundingText.maximumUTF8ByteCount + 1,
+                limit: TextInputSurroundingText.maximumUTF8ByteCount
+            )
+        ) {
+            _ = try TextInputSurroundingText(
+                text: text,
+                cursorUTF8Offset: 0,
+                anchorUTF8Offset: 0
+            )
+        }
+    }
+
+    @Test
+    func acceptsTextAtProtocolByteLimit() throws {
+        let text = String(
+            repeating: "a",
+            count: TextInputSurroundingText.maximumUTF8ByteCount
+        )
+
+        let surroundingText = try TextInputSurroundingText(
+            text: text,
+            cursorUTF8Offset: TextInputSurroundingText.maximumUTF8ByteCount,
+            anchorUTF8Offset: 0
+        )
+
+        let request = try TextInputSurroundingTextRequest(surroundingText)
+        #expect(request.text == text)
+        #expect(request.cursorByteOffset == 4_000)
+        #expect(request.anchorByteOffset == 0)
+    }
+
+    @Test
     func rejectsCursorOffsetPastUTF8Count() {
         #expect(
             throws: TextInputError.surroundingTextOffsetOutOfBounds(

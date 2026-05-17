@@ -3,6 +3,7 @@ public enum TextInputError: Error, Equatable, Sendable, CustomStringConvertible 
     case unknownSeat(SeatID)
     case foreignWindow(WindowID)
     case surroundingTextContainsNUL
+    case surroundingTextTooLarge(byteCount: Int, limit: Int)
     case surroundingTextOffsetOutOfBounds(offset: Int, byteCount: Int)
     case surroundingTextOffsetOverflow(byteCount: Int)
 
@@ -16,6 +17,8 @@ public enum TextInputError: Error, Equatable, Sendable, CustomStringConvertible 
             "window belongs to another display: \(windowID)"
         case .surroundingTextContainsNUL:
             "surrounding text must not contain a NUL byte"
+        case .surroundingTextTooLarge(let byteCount, let limit):
+            "surrounding text is \(byteCount) UTF-8 bytes, exceeding limit \(limit)"
         case .surroundingTextOffsetOutOfBounds(let offset, let byteCount):
             "surrounding text byte offset \(offset) is outside 0...\(byteCount)"
         case .surroundingTextOffsetOverflow(let byteCount):
@@ -25,6 +28,8 @@ public enum TextInputError: Error, Equatable, Sendable, CustomStringConvertible 
 }
 
 public struct TextInputSurroundingText: Equatable, Sendable {
+    package static let maximumUTF8ByteCount = 4_000
+
     public let text: String
     public let cursorUTF8Offset: Int
     public let anchorUTF8Offset: Int
@@ -38,13 +43,21 @@ public struct TextInputSurroundingText: Equatable, Sendable {
             throw TextInputError.surroundingTextContainsNUL
         }
 
+        let byteCount = requestText.utf8.count
+        guard byteCount <= Self.maximumUTF8ByteCount else {
+            throw TextInputError.surroundingTextTooLarge(
+                byteCount: byteCount,
+                limit: Self.maximumUTF8ByteCount
+            )
+        }
+
         try Self.validateOffset(
             requestCursorUTF8Offset,
-            byteCount: requestText.utf8.count
+            byteCount: byteCount
         )
         try Self.validateOffset(
             requestAnchorUTF8Offset,
-            byteCount: requestText.utf8.count
+            byteCount: byteCount
         )
 
         text = requestText
