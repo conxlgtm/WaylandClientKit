@@ -8,7 +8,7 @@ package enum TextInputProtocolEvent: Equatable, Sendable {
     case deleteSurroundingText(beforeLength: UInt32, afterLength: UInt32)
     case done(serial: UInt32)
     case action(action: TextInputAction, serial: UInt32)
-    case language(String)
+    case language(TextInputLanguage)
     case preeditHint(TextInputPreeditHint)
 }
 

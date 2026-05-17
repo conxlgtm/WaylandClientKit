@@ -64,6 +64,21 @@ package final class RawSharedMemory {
     }
 }
 
+extension RawSharedMemory {
+    @safe
+    package static func testingSharedMemory(
+        pointer sharedMemoryPointer: OpaquePointer,
+        version sharedMemoryVersion: RawVersion,
+        proxyAdoption adoptionContext: RawProxyAdoptionContext
+    ) throws(RuntimeError) -> RawSharedMemory {
+        try RawSharedMemory(
+            pointer: sharedMemoryPointer,
+            version: sharedMemoryVersion,
+            proxyAdoption: adoptionContext
+        )
+    }
+}
+
 @safe
 private struct MappedRegion: ~Copyable {
     let byteCount: Int
@@ -350,6 +365,15 @@ package final class RawSharedMemoryPool {
     package var hasFreeBuffers: Bool { buffers.contains(where: \.isReusable) }
 
     package var hasBusyBuffers: Bool { buffers.contains(where: \.isBusy) }
+
+    package func mappedBytes(prefixByteCount byteCount: Int) -> [UInt8] {
+        let count = Swift.min(byteCount, mapping.byteCount)
+        let bytes = unsafe UnsafeRawBufferPointer(
+            start: mapping.baseAddress,
+            count: count
+        )
+        return unsafe Array(bytes)
+    }
 
     package func retire(reason: BufferRetirementReason) {
         for buffer in buffers {

@@ -1118,6 +1118,43 @@ struct swl_test_surface_output_record {
     struct wl_output  *output;
 };
 
+enum swl_test_core_request_kind {
+    SWL_TEST_CORE_REQUEST_NONE = 0,
+    SWL_TEST_CORE_SHM_CREATE_POOL = 1,
+    SWL_TEST_CORE_SHM_POOL_CREATE_BUFFER = 2,
+    SWL_TEST_CORE_SURFACE_ATTACH = 3,
+    SWL_TEST_CORE_SURFACE_DAMAGE = 4,
+    SWL_TEST_CORE_SURFACE_DAMAGE_BUFFER = 5,
+    SWL_TEST_CORE_SURFACE_COMMIT = 6,
+    SWL_TEST_CORE_BUFFER_DESTROY = 7,
+    SWL_TEST_CORE_SURFACE_DESTROY = 8,
+    SWL_TEST_CORE_SHM_POOL_DESTROY = 9,
+    SWL_TEST_CORE_SHM_DESTROY = 10,
+};
+
+struct swl_test_core_request_record {
+    int32_t                         call_count;
+    enum swl_test_core_request_kind kind;
+    void                           *object;
+    struct wl_buffer               *buffer;
+    int32_t                         fd;
+    int32_t                         size;
+    int32_t                         offset;
+    int32_t                         width;
+    int32_t                         height;
+    int32_t                         stride;
+    uint32_t                        format;
+    int32_t                         x;
+    int32_t                         y;
+    uint32_t                        latest_sequence;
+    uint32_t                        attach_sequence;
+    uint32_t                        damage_sequence;
+    uint32_t                        commit_sequence;
+    uint32_t                        buffer_destroy_sequence;
+    uint32_t                        surface_destroy_sequence;
+    uint32_t                        shm_pool_destroy_sequence;
+};
+
 struct swl_test_fractional_preferred_scale_record {
     int32_t                        call_count;
     void                          *data;
@@ -1299,6 +1336,105 @@ struct swl_test_data_request_record {
     int32_t                         fd;
 };
 
+enum swl_test_text_input_request_kind {
+    SWL_TEST_TEXT_INPUT_REQUEST_NONE = 0,
+    SWL_TEST_TEXT_INPUT_MANAGER_GET_TEXT_INPUT = 1,
+    SWL_TEST_TEXT_INPUT_ENABLE = 2,
+    SWL_TEST_TEXT_INPUT_DISABLE = 3,
+    SWL_TEST_TEXT_INPUT_SET_SURROUNDING_TEXT = 4,
+    SWL_TEST_TEXT_INPUT_SET_TEXT_CHANGE_CAUSE = 5,
+    SWL_TEST_TEXT_INPUT_SET_CONTENT_TYPE = 6,
+    SWL_TEST_TEXT_INPUT_SET_CURSOR_RECTANGLE = 7,
+    SWL_TEST_TEXT_INPUT_COMMIT = 8,
+};
+
+struct swl_test_text_input_request_record {
+    int32_t                               call_count;
+    enum swl_test_text_input_request_kind kind;
+    void                                 *object;
+    struct wl_seat                       *seat;
+    const char                           *text;
+    int32_t                               cursor;
+    int32_t                               anchor;
+    uint32_t                              cause;
+    uint32_t                              hint;
+    uint32_t                              purpose;
+    int32_t                               x;
+    int32_t                               y;
+    int32_t                               width;
+    int32_t                               height;
+};
+
+enum swl_test_text_input_destroy_kind {
+    SWL_TEST_TEXT_INPUT_DESTROY_NONE = 0,
+    SWL_TEST_TEXT_INPUT_DESTROY_TEXT_INPUT = 1,
+    SWL_TEST_TEXT_INPUT_DESTROY_MANAGER = 2,
+};
+
+struct swl_test_text_input_destroy_record {
+    int32_t                               call_count;
+    enum swl_test_text_input_destroy_kind kind;
+    void                                 *object;
+};
+
+enum swl_test_text_input_listener_kind {
+    SWL_TEST_TEXT_INPUT_LISTENER_NONE = 0,
+    SWL_TEST_TEXT_INPUT_LISTENER_ENTER = 1,
+    SWL_TEST_TEXT_INPUT_LISTENER_LEAVE = 2,
+    SWL_TEST_TEXT_INPUT_LISTENER_PREEDIT_STRING = 3,
+    SWL_TEST_TEXT_INPUT_LISTENER_COMMIT_STRING = 4,
+    SWL_TEST_TEXT_INPUT_LISTENER_DELETE_SURROUNDING_TEXT = 5,
+    SWL_TEST_TEXT_INPUT_LISTENER_DONE = 6,
+    SWL_TEST_TEXT_INPUT_LISTENER_ACTION = 7,
+    SWL_TEST_TEXT_INPUT_LISTENER_LANGUAGE = 8,
+    SWL_TEST_TEXT_INPUT_LISTENER_PREEDIT_HINT = 9,
+};
+
+struct swl_test_text_input_listener_record {
+    int32_t                                call_count;
+    enum swl_test_text_input_listener_kind kind;
+    void                                  *data;
+    struct zwp_text_input_v3              *text_input;
+    struct wl_surface                     *surface;
+    const char                            *text;
+    int32_t                                cursor_begin;
+    int32_t                                cursor_end;
+    uint32_t                               before_length;
+    uint32_t                               after_length;
+    uint32_t                               serial;
+    uint32_t                               action;
+    uint32_t                               start;
+    uint32_t                               end;
+    uint32_t                               hint;
+};
+
+enum swl_test_cursor_shape_request_kind {
+    SWL_TEST_CURSOR_SHAPE_REQUEST_NONE = 0,
+    SWL_TEST_CURSOR_SHAPE_GET_POINTER = 1,
+    SWL_TEST_CURSOR_SHAPE_SET_SHAPE = 2,
+};
+
+struct swl_test_cursor_shape_request_record {
+    int32_t                                  call_count;
+    enum swl_test_cursor_shape_request_kind kind;
+    void                                    *object;
+    struct wl_pointer                       *pointer;
+    uint32_t                                 serial;
+    uint32_t                                 shape;
+};
+
+enum swl_test_cursor_shape_destroy_kind {
+    SWL_TEST_CURSOR_SHAPE_DESTROY_NONE = 0,
+    SWL_TEST_CURSOR_SHAPE_DESTROY_DEVICE = 1,
+    SWL_TEST_CURSOR_SHAPE_DESTROY_MANAGER = 2,
+};
+
+struct swl_test_cursor_shape_destroy_record {
+    int32_t                                  call_count;
+    enum swl_test_cursor_shape_destroy_kind kind;
+    void                                    *object;
+};
+
 enum swl_test_dmabuf_request_kind {
     SWL_TEST_DMABUF_REQUEST_NONE = 0,
     SWL_TEST_DMABUF_GET_DEFAULT_FEEDBACK = 1,
@@ -1458,6 +1594,12 @@ void swl_test_fractional_scale_listener_emit_preferred_scale(
     uint32_t scale,
     struct swl_test_fractional_preferred_scale_record *record);
 
+void swl_test_core_request_recording_begin(void);
+void swl_test_core_request_recording_end(void);
+struct swl_test_core_request_record swl_test_core_request_record(void);
+void swl_test_buffer_listener_recording_begin(void);
+void swl_test_buffer_listener_recording_end(void);
+
 void swl_test_scale_request_recording_begin(void);
 void swl_test_scale_request_recording_end(void);
 struct swl_test_viewport_destination_record
@@ -1545,6 +1687,72 @@ void swl_test_data_request_recording_begin(void);
 void swl_test_data_request_recording_end(void);
 struct swl_test_data_request_record swl_test_data_request_record(void);
 struct swl_test_data_destroy_record swl_test_data_destroy_record(void);
+
+void swl_test_text_input_request_recording_begin(void);
+void swl_test_text_input_request_recording_end(void);
+struct swl_test_text_input_request_record
+swl_test_text_input_request_record(void);
+struct swl_test_text_input_destroy_record
+swl_test_text_input_destroy_record(void);
+void swl_test_text_input_listener_emit_enter(
+    void *data,
+    struct zwp_text_input_v3 *text_input,
+    struct wl_surface *surface,
+    struct swl_test_text_input_listener_record *record);
+void swl_test_text_input_listener_emit_leave(
+    void *data,
+    struct zwp_text_input_v3 *text_input,
+    struct wl_surface *surface,
+    struct swl_test_text_input_listener_record *record);
+void swl_test_text_input_listener_emit_preedit_string(
+    void *data,
+    struct zwp_text_input_v3 *text_input,
+    const char *text,
+    int32_t cursor_begin,
+    int32_t cursor_end,
+    struct swl_test_text_input_listener_record *record);
+void swl_test_text_input_listener_emit_commit_string(
+    void *data,
+    struct zwp_text_input_v3 *text_input,
+    const char *text,
+    struct swl_test_text_input_listener_record *record);
+void swl_test_text_input_listener_emit_delete_surrounding_text(
+    void *data,
+    struct zwp_text_input_v3 *text_input,
+    uint32_t before_length,
+    uint32_t after_length,
+    struct swl_test_text_input_listener_record *record);
+void swl_test_text_input_listener_emit_done(
+    void *data,
+    struct zwp_text_input_v3 *text_input,
+    uint32_t serial,
+    struct swl_test_text_input_listener_record *record);
+void swl_test_text_input_listener_emit_action(
+    void *data,
+    struct zwp_text_input_v3 *text_input,
+    uint32_t action,
+    uint32_t serial,
+    struct swl_test_text_input_listener_record *record);
+void swl_test_text_input_listener_emit_language(
+    void *data,
+    struct zwp_text_input_v3 *text_input,
+    const char *language,
+    struct swl_test_text_input_listener_record *record);
+void swl_test_text_input_listener_emit_preedit_hint(
+    void *data,
+    struct zwp_text_input_v3 *text_input,
+    uint32_t start,
+    uint32_t end,
+    uint32_t hint,
+    struct swl_test_text_input_listener_record *record);
+
+void swl_test_cursor_shape_request_recording_begin(void);
+void swl_test_cursor_shape_request_recording_end(void);
+struct swl_test_cursor_shape_request_record
+swl_test_cursor_shape_request_record(void);
+struct swl_test_cursor_shape_destroy_record
+swl_test_cursor_shape_destroy_record(void);
+
 void swl_test_dmabuf_request_recording_begin(void);
 void swl_test_dmabuf_request_recording_end(void);
 struct swl_test_dmabuf_request_record swl_test_dmabuf_request_record(void);

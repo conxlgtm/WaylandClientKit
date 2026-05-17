@@ -126,7 +126,7 @@ package final class RawTextInputOwner {
                 data,
                 message: "zwp_text_input_v3 language fired without Swift state"
             ) { owner in
-                owner.onEvent(.language(stringFromNullableCString(language) ?? ""))
+                owner.onEvent(.language(stringFromNullableCString(language)))
             }
         }
         unsafe callbacks.pointee.preedit_hint = { data, _, start, end, hint in

@@ -17,16 +17,12 @@ extension WaylandDisplay {
     }
 
     package func setTextInputSurroundingText(
-        _ text: String,
-        seatID: SeatID,
-        cursor: String.Index,
-        anchor: String.Index
+        _ surroundingText: TextInputSurroundingText,
+        seatID: SeatID
     ) throws {
         try requireCore().setTextInputSurroundingText(
-            text,
-            seatID: seatID,
-            cursor: cursor,
-            anchor: anchor
+            surroundingText,
+            seatID: seatID
         )
     }
 

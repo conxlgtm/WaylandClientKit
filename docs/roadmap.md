@@ -110,14 +110,6 @@ Known foundation gaps:
 - public DocC reference documentation
 - compatibility and release policy
 
-Near-term follow-up story:
-
-- `docs/cursor-text-input-sprints-2026-05-17.md` records the post-foundation
-  checkpoint plan for cursor surfaces, cursor-shape, cursor scaling, cursor
-  animation, drag icon surface substrate, and text-input/IME substrate. The
-  branch implementing that plan leaves future public cursor policy and richer
-  live IME coverage as follow-up work.
-
 ## Roadmap Principles
 
 - Keep public API protocol-truthful. Do not hide serials, capability absence,

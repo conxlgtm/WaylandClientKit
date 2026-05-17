@@ -3,6 +3,7 @@ public enum TextInputError: Error, Equatable, Sendable, CustomStringConvertible 
     case unknownSeat(SeatID)
     case foreignWindow(WindowID)
     case surroundingTextContainsNUL
+    case surroundingTextOffsetOutOfBounds(offset: Int, byteCount: Int)
     case surroundingTextOffsetOverflow(byteCount: Int)
 
     public var description: String {
@@ -15,8 +16,62 @@ public enum TextInputError: Error, Equatable, Sendable, CustomStringConvertible 
             "window belongs to another display: \(windowID)"
         case .surroundingTextContainsNUL:
             "surrounding text must not contain a NUL byte"
+        case .surroundingTextOffsetOutOfBounds(let offset, let byteCount):
+            "surrounding text byte offset \(offset) is outside 0...\(byteCount)"
         case .surroundingTextOffsetOverflow(let byteCount):
             "surrounding text byte offset \(byteCount) exceeds Int32"
+        }
+    }
+}
+
+public struct TextInputSurroundingText: Equatable, Sendable {
+    public let text: String
+    public let cursorUTF8Offset: Int
+    public let anchorUTF8Offset: Int
+
+    public init(
+        text requestText: String,
+        cursorUTF8Offset requestCursorUTF8Offset: Int,
+        anchorUTF8Offset requestAnchorUTF8Offset: Int
+    ) throws {
+        guard !requestText.utf8.contains(0) else {
+            throw TextInputError.surroundingTextContainsNUL
+        }
+
+        try Self.validateOffset(
+            requestCursorUTF8Offset,
+            byteCount: requestText.utf8.count
+        )
+        try Self.validateOffset(
+            requestAnchorUTF8Offset,
+            byteCount: requestText.utf8.count
+        )
+
+        text = requestText
+        cursorUTF8Offset = requestCursorUTF8Offset
+        anchorUTF8Offset = requestAnchorUTF8Offset
+    }
+
+    private static func validateOffset(
+        _ offset: Int,
+        byteCount: Int
+    ) throws(TextInputError) {
+        guard offset >= 0 else {
+            throw .surroundingTextOffsetOutOfBounds(
+                offset: offset,
+                byteCount: byteCount
+            )
+        }
+
+        guard offset <= Int(Int32.max) else {
+            throw .surroundingTextOffsetOverflow(byteCount: offset)
+        }
+
+        guard offset <= byteCount else {
+            throw .surroundingTextOffsetOutOfBounds(
+                offset: offset,
+                byteCount: byteCount
+            )
         }
     }
 }
@@ -194,11 +249,16 @@ public struct TextInputActionEvent: Equatable, Sendable {
     }
 }
 
+public enum TextInputLanguage: Equatable, Sendable {
+    case unknown
+    case tag(String)
+}
+
 public struct TextInputLanguageEvent: Equatable, Sendable {
     public let seatID: SeatID
-    public let language: String
+    public let language: TextInputLanguage
 
-    public init(seatID eventSeatID: SeatID, language eventLanguage: String) {
+    public init(seatID eventSeatID: SeatID, language eventLanguage: TextInputLanguage) {
         seatID = eventSeatID
         language = eventLanguage
     }

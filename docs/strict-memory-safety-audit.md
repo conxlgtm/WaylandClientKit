@@ -91,8 +91,9 @@ Audit invariant:
 - Listener storage is cancelled before destroying the raw text-input proxy.
 - Surrounding text rejects embedded NUL bytes before crossing the C request
   boundary.
-- Public `String.Index` cursor and anchor positions are converted to UTF-8 byte
-  offsets at the text-input boundary, matching protocol requirements.
+- Public surrounding-text requests carry validated UTF-8 cursor and anchor
+  offsets so stale `String.Index` values cannot trap before typed error
+  handling.
 - Preedit, delete-surrounding-text, commit-string, action, and done events are
   grouped by the protocol's `done` transaction event before publication.
 - Late text-input callbacks after manager shutdown do not publish new events.
@@ -101,8 +102,8 @@ Tests:
 
 - `TextInputStateTests` covers transaction grouping, focus reset, and immediate
   language events.
-- `TextInputSurroundingTextRequestTests` covers UTF-8 byte-offset conversion
-  and NUL rejection.
+- `TextInputSurroundingTextRequestTests` covers UTF-8 offset validation,
+  overflow, and NUL rejection.
 - `TextInputManagerTests` covers request forwarding, unavailable errors,
   target resolution, binding destruction, and late callback behavior.
 - `DisplayEventHubTextInputTests` covers delivery on the text-input stream.
