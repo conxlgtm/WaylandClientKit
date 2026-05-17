@@ -45,8 +45,8 @@ Remaining unsafe constructs:
 - `CallbackBoxStorage` keeps the Swift owner reachable while the listener is
   valid.
 - Seat, pointer, keyboard, touch, data-device, XDG, buffer-release, frame
-  callback, and scale-extension listeners recover Swift owners from C callback
-  payloads.
+  callback, scale-extension, cursor-shape, and text-input listeners recover
+  Swift owners from C callback payloads.
 - `RawInputChildProxy` keeps pointer, keyboard, and touch listener owners alive
   until the child proxy is destroyed.
 
@@ -72,6 +72,74 @@ Tests:
 - `RawSeatLifecycleTests` covers pointer, keyboard, and touch callback delivery
   after child listener installation, child creation failure cleanup, and child
   proxy release on capability removal.
+
+## Text-Input Boundary
+
+Remaining unsafe constructs:
+
+- `RawTextInputManager` and `RawTextInput` wrap `zwp_text_input_manager_v3` and
+  `zwp_text_input_v3` proxies returned by C shims.
+- `RawTextInputOwner` owns the listener callback table and forwards compositor
+  text-input events to `TextInputManager`.
+- Text-input request strings cross from Swift into C through NUL-terminated
+  UTF-8 storage during `set_surrounding_text`.
+
+Audit invariant:
+
+- Text-input objects are seat-scoped and destroyed when their binding or display
+  session is shut down.
+- Listener storage is cancelled before destroying the raw text-input proxy.
+- Surrounding text rejects embedded NUL bytes before crossing the C request
+  boundary.
+- Public `String.Index` cursor and anchor positions are converted to UTF-8 byte
+  offsets at the text-input boundary, matching protocol requirements.
+- Preedit, delete-surrounding-text, commit-string, action, and done events are
+  grouped by the protocol's `done` transaction event before publication.
+- Late text-input callbacks after manager shutdown do not publish new events.
+
+Tests:
+
+- `TextInputStateTests` covers transaction grouping, focus reset, and immediate
+  language events.
+- `TextInputSurroundingTextRequestTests` covers UTF-8 byte-offset conversion
+  and NUL rejection.
+- `TextInputManagerTests` covers request forwarding, unavailable errors,
+  target resolution, binding destruction, and late callback behavior.
+- `DisplayEventHubTextInputTests` covers delivery on the text-input stream.
+
+## Cursor And Drag Visual Surfaces
+
+Remaining unsafe constructs:
+
+- `RawCursorShapeManager` and `RawCursorShapeDevice` wrap compositor-managed
+  cursor-shape protocol objects.
+- `CursorRoleSurface` owns a `wl_surface` used as the pointer cursor image
+  surface and routes commits through `SurfaceRuntime`.
+- `DragIconRoleSurface` owns a `wl_surface` and SHM buffer used as a source-side
+  drag icon surface.
+
+Audit invariant:
+
+- Cursor-shape device listeners and raw proxies are destroyed with the cursor
+  manager backend.
+- A cursor request uses compositor cursor-shape only when the requested
+  `PointerCursor` maps to a known protocol shape; otherwise the theme-surface
+  path remains the fallback.
+- Cursor surfaces and drag icon surfaces have explicit surface-runtime roles and
+  are destroyed through role-specific owners.
+- Drag icon pixels are validated against the declared XRGB8888 image size before
+  SHM storage is filled.
+- Drag icon surfaces are destroyed on source cancellation, source completion,
+  failed drag start, and display teardown.
+
+Tests:
+
+- `CursorManagerTests` covers cursor-shape selection, cursor surface creation,
+  theme fallback, and cursor surface destruction requests.
+- `CursorScalePolicyTests` and `CursorAnimationStateTests` cover internal cursor
+  scale and animation state models.
+- `DataTransferManagerDragSourceTests` covers drag icon preparation and source
+  lifecycle cleanup.
 
 ## Scale Extension Raw Boundary
 
