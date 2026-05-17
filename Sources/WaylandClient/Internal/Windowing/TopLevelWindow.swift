@@ -333,22 +333,6 @@ package final class TopLevelWindow {
         return model.currentConfiguration
     }
 
-    private func bufferPool(for size: PositivePixelSize) throws -> RawSharedMemoryPool {
-        try surfaceRuntime.sharedMemoryPool(for: size) {
-            guard let globals = connection.boundGlobals else {
-                throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
-            }
-
-            return try globals.sharedMemory.createPool(
-                width: size.width.rawValue,
-                height: size.height.rawValue,
-                bufferCount: configuration.bufferCount.rawValue
-            ) { [weak self] in
-                self?.handleBufferReleased()
-            }
-        }
-    }
-
     private func dropReleasedRetiredPools() {
         surfaceRuntime.dropReleasedRetiredBufferPools()
     }
@@ -391,38 +375,25 @@ package final class TopLevelWindow {
         )
 
         do {
-            return try WindowSoftwarePresenter(
+            let result = try WindowSoftwarePresenter(
                 surface: surface,
                 scaleInstallation: scaleInstallation,
-                geometryForLogicalSize: { [self] logicalSize in
-                    try surfaceGeometry(logicalSize: logicalSize)
-                },
-                bufferPool: { [self] bufferSize in
-                    try bufferPool(for: bufferSize)
+                createSharedMemoryPool: { [self] bufferSize in
+                    guard let globals = connection.boundGlobals else {
+                        throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
+                    }
+
+                    return try globals.sharedMemory.createPool(
+                        width: bufferSize.width.rawValue,
+                        height: bufferSize.height.rawValue,
+                        bufferCount: configuration.bufferCount.rawValue
+                    ) { [weak self] in
+                        self?.handleBufferReleased()
+                    }
                 },
                 isWindowClosed: { [self] in model.isClosed },
-                dropReleasedRetiredPools: { [self] in dropReleasedRetiredPools() },
                 onFrame: { [weak self] in
                     self?.handleFrameDone()
-                },
-                failActivePresentation: { [self] generation, error in
-                    failActivePresentation(generation: generation, error: error)
-                },
-                onPresentationBlockedByBuffer: { [self] in
-                    try interpretWindowEffects(model.reduce(.presentationBlockedByBuffer))
-                },
-                onTransientStateReset: { [self] in
-                    try interpretWindowEffects(model.reduce(.transientStateReset))
-                },
-                onPresentationSucceeded: { [self] generation in
-                    try interpretWindowEffects(
-                        model.reduce(
-                            .presentationSucceeded(
-                                generation: generation,
-                                bufferAvailability: try redrawBufferAvailability()
-                            )
-                        )
-                    )
                 }
             ).present(
                 request: request,
@@ -430,12 +401,47 @@ package final class TopLevelWindow {
                 runtime: &surfaceRuntime,
                 pendingFrameRegistration: &pendingFrameRegistration
             )
+            try interpretSoftwarePresentationFollowUp(result.followUp)
+            return result.outcome
+        } catch let failure as WindowSoftwarePresentationFailure {
+            failActivePresentation(
+                generation: request.generation,
+                error: failure.presentationError
+            )
+            throw failure.underlying
         } catch {
             failPresentationIfStillActive(
                 generation: request.generation,
                 error: .surfaceCommit(String(describing: error))
             )
             throw error
+        }
+    }
+
+    private func interpretSoftwarePresentationFollowUp(
+        _ followUp: WindowSoftwarePresentationFollowUp?
+    ) throws {
+        guard let followUp else { return }
+
+        switch followUp {
+        case .fail(let generation, let error):
+            failActivePresentation(
+                generation: generation,
+                error: error
+            )
+        case .blockedByBuffer:
+            try interpretWindowEffects(model.reduce(.presentationBlockedByBuffer))
+        case .resetTransientState:
+            try interpretWindowEffects(model.reduce(.transientStateReset))
+        case .succeeded(let generation):
+            try interpretWindowEffects(
+                model.reduce(
+                    .presentationSucceeded(
+                        generation: generation,
+                        bufferAvailability: try redrawBufferAvailability()
+                    )
+                )
+            )
         }
     }
 
