@@ -333,22 +333,6 @@ package final class TopLevelWindow {
         return model.currentConfiguration
     }
 
-    private func bufferPool(for size: PositivePixelSize) throws -> RawSharedMemoryPool {
-        try surfaceRuntime.sharedMemoryPool(for: size) {
-            guard let globals = connection.boundGlobals else {
-                throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
-            }
-
-            return try globals.sharedMemory.createPool(
-                width: size.width.rawValue,
-                height: size.height.rawValue,
-                bufferCount: configuration.bufferCount.rawValue
-            ) { [weak self] in
-                self?.handleBufferReleased()
-            }
-        }
-    }
-
     private func dropReleasedRetiredPools() {
         surfaceRuntime.dropReleasedRetiredBufferPools()
     }
@@ -382,7 +366,6 @@ package final class TopLevelWindow {
         return try interpretPresentationEffects(effects, draw)
     }
 
-    // swiftlint:disable:next function_body_length
     private func performSoftwarePresent(
         _ request: PresentationRequest,
         _ draw: (borrowing SoftwareFrame) throws -> Void
@@ -392,115 +375,75 @@ package final class TopLevelWindow {
         )
 
         do {
-            guard pendingFrameRegistration == nil else {
-                failActivePresentation(
-                    generation: request.generation,
-                    error: .frameCallbackRequest("frame callback is still pending")
-                )
-                return .skippedPendingFrame
-            }
-
             let geometry = try surfaceGeometry(logicalSize: request.configuration.size)
-            let pool = try bufferPool(for: geometry.bufferSize)
-            dropReleasedRetiredPools()
+            let result = try WindowSoftwarePresenter(
+                surface: surface,
+                scaleInstallation: scaleInstallation,
+                createSharedMemoryPool: { [self] bufferSize in
+                    guard let globals = connection.boundGlobals else {
+                        throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
+                    }
 
-            guard var drawingBuffer = pool.acquireDrawingBuffer() else {
-                try interpretWindowEffects(model.reduce(.presentationBlockedByBuffer))
-                return .waitingForBuffer
-            }
-
-            do {
-                try unsafe drawingBuffer.withUnsafeMutableBytes { bytes in
-                    let frame = try unsafe SoftwareFrame(
-                        width: drawingBuffer.width,
-                        height: drawingBuffer.height,
-                        stride: drawingBuffer.stride,
-                        geometry: SoftwareFrameGeometry(surface: geometry),
-                        bytes: bytes
-                    )
-                    try draw(frame)
-                }
-            } catch {
-                failActivePresentation(
-                    generation: request.generation,
-                    error: .userDraw(String(describing: error))
-                )
-                drawingBuffer.discard()
-                throw error
-            }
-
-            guard !model.isClosed else {
-                try interpretWindowEffects(model.reduce(.transientStateReset))
-                drawingBuffer.discard()
-                return .skippedClosed
-            }
-
-            let preparedCommit: PreparedSurfaceFrameCommit
-            do {
-                preparedCommit = try SurfaceFrameCommitter.prepare(
-                    SurfaceFrameCommitRequest(
-                        surface: surface,
-                        scaleInstallation: scaleInstallation,
-                        generation: request.generation,
-                        geometry: geometry
-                    ),
-                    runtime: &surfaceRuntime,
-                )
-            } catch {
-                failActivePresentation(
-                    generation: request.generation,
-                    error: .surfaceCommit(String(describing: error))
-                )
-                drawingBuffer.discard()
-                throw error
-            }
-
-            do {
-                pendingFrameRegistration = try SurfaceFrameCommitter.requestFrameCallback(
-                    on: surface,
-                    runtime: &surfaceRuntime,
-                    generation: request.generation
-                ) { [weak self] in
+                    return try globals.sharedMemory.createPool(
+                        width: bufferSize.width.rawValue,
+                        height: bufferSize.height.rawValue,
+                        bufferCount: configuration.bufferCount.rawValue
+                    ) { [weak self] in
+                        self?.handleBufferReleased()
+                    }
+                },
+                isWindowClosed: { [self] in model.isClosed },
+                onFrame: { [weak self] in
                     self?.handleFrameDone()
                 }
-            } catch {
-                failActivePresentation(
-                    generation: request.generation,
-                    error: .frameCallbackRequest(String(describing: error))
-                )
-                drawingBuffer.discard()
-                throw error
-            }
-
-            do {
-                try SurfaceFrameCommitter.recordPreparedCommit(
-                    preparedCommit,
-                    runtime: &surfaceRuntime
-                )
-                let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
-                SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
-            } catch {
-                pendingFrameRegistration = nil
-                surfaceRuntime.cancelFrameCallback()
-                drawingBuffer.discard()
-                throw error
-            }
-
-            try interpretWindowEffects(
-                model.reduce(
-                    .presentationSucceeded(
-                        generation: request.generation,
-                        bufferAvailability: try redrawBufferAvailability()
-                    )
-                )
+            ).present(
+                request: request,
+                geometry: geometry,
+                draw: draw,
+                runtime: &surfaceRuntime,
+                pendingFrameRegistration: &pendingFrameRegistration
             )
-            return .presented
+            try interpretSoftwarePresentationFollowUp(result.followUp)
+            return result.outcome
+        } catch let failure as WindowSoftwarePresentationFailure {
+            failActivePresentation(
+                generation: request.generation,
+                error: failure.presentationError
+            )
+            throw failure.underlying
         } catch {
             failPresentationIfStillActive(
                 generation: request.generation,
                 error: .surfaceCommit(String(describing: error))
             )
             throw error
+        }
+    }
+
+    private func interpretSoftwarePresentationFollowUp(
+        _ followUp: WindowSoftwarePresentationFollowUp?
+    ) throws {
+        guard let followUp else { return }
+
+        switch followUp {
+        case .fail(let generation, let error):
+            failActivePresentation(
+                generation: generation,
+                error: error
+            )
+        case .blockedByBuffer:
+            try interpretWindowEffects(model.reduce(.presentationBlockedByBuffer))
+        case .resetTransientState:
+            try interpretWindowEffects(model.reduce(.transientStateReset))
+        case .succeeded(let generation):
+            try interpretWindowEffects(
+                model.reduce(
+                    .presentationSucceeded(
+                        generation: generation,
+                        bufferAvailability: try redrawBufferAvailability()
+                    )
+                )
+            )
         }
     }
 

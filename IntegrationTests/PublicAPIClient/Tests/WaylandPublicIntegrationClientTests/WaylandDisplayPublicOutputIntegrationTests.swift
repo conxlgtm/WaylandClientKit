@@ -3,6 +3,31 @@ import WaylandClient
 
 extension WaylandDisplayPublicIntegrationTests {
     @Test
+    func outputsAreDiscoverableOrEmptyButStable() async throws {
+        try await withPublicConnection { display in
+            let firstOutputs = try await display.outputs()
+            try await Task.sleep(nanoseconds: 20_000_000)
+            let secondOutputs = try await display.outputs()
+
+            let firstIDs = firstOutputs.map(\.id)
+            let secondIDs = secondOutputs.map(\.id)
+
+            #expect(firstIDs == firstIDs.sorted { $0.rawValue < $1.rawValue })
+            #expect(secondIDs == secondIDs.sorted { $0.rawValue < $1.rawValue })
+            #expect(Set(firstIDs).count == firstIDs.count)
+            #expect(Set(secondIDs).count == secondIDs.count)
+            #expect(firstIDs == secondIDs)
+
+            if firstOutputs.isEmpty {
+                Issue.record(
+                    "Compositor reported no outputs during public integration.",
+                    severity: .warning
+                )
+            }
+        }
+    }
+
+    @Test
     func xdgOutputLogicalGeometryIsPublishedWhenAdvertised() async throws {
         try await withPublicConnection { display in
             let capabilities = try await display.capabilities()

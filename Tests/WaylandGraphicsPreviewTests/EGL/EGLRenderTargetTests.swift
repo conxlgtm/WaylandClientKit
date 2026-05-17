@@ -42,6 +42,10 @@ struct EGLRenderTargetTests {
             return
         }
         guard let path = firstRenderNodePath() else {
+            Issue.record(
+                "Skipping GPU smoke test: no accessible DRM render node.",
+                severity: .warning
+            )
             return
         }
 
@@ -49,6 +53,10 @@ struct EGLRenderTargetTests {
             unsafe Glibc.open(pathPointer, O_RDWR | O_CLOEXEC)
         }
         guard fd >= 0 else {
+            Issue.record(
+                "Skipping GPU smoke test: could not open \(path) with errno \(errno).",
+                severity: .warning
+            )
             return
         }
 
