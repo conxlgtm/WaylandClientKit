@@ -113,19 +113,86 @@ struct TextInputStateTests {
     }
 
     @Test
-    func languagePublishesOutsideDoneTransaction() {
+    func languagePublishesKnownTagOutsideDoneTransaction() {
         let seatID = SeatID(rawValue: 5)
         var state = TextInputState(seatID: seatID)
 
         #expect(
-            state.reduce(.language("fr-CA"))
+            state.reduce(.language(.tag("fr-CA")))
                 == [
                     .language(
                         TextInputLanguageEvent(
                             seatID: seatID,
-                            language: "fr-CA"
+                            language: .tag("fr-CA")
                         )
                     )
+                ]
+        )
+    }
+
+    @Test
+    func languagePublishesUnknownResetOutsideDoneTransaction() {
+        let seatID = SeatID(rawValue: 6)
+        var state = TextInputState(seatID: seatID)
+
+        #expect(
+            state.reduce(.language(.unknown))
+                == [
+                    .language(
+                        TextInputLanguageEvent(
+                            seatID: seatID,
+                            language: .unknown
+                        )
+                    )
+                ]
+        )
+    }
+
+    @Test
+    func unknownActionAndHintRawValuesSurviveDoneTransaction() {
+        let seatID = SeatID(rawValue: 7)
+        let unknownAction = TextInputAction(rawValue: 99)
+        let unknownHint = TextInputPreeditHint(
+            start: 2,
+            end: 5,
+            kind: TextInputPreeditHintKind(rawValue: 777)
+        )
+        var state = TextInputState(seatID: seatID)
+
+        #expect(state.reduce(.preeditHint(unknownHint)).isEmpty)
+        #expect(
+            state.reduce(
+                .preeditString(
+                    RawTextInputPreedit(
+                        text: "prediction",
+                        cursorBegin: 2,
+                        cursorEnd: 5
+                    )
+                )
+            ).isEmpty
+        )
+        #expect(state.reduce(.action(action: unknownAction, serial: 12)).isEmpty)
+
+        #expect(
+            state.reduce(.done(serial: 13))
+                == [
+                    .preedit(
+                        TextInputPreeditEvent(
+                            seatID: seatID,
+                            text: "prediction",
+                            cursorBegin: 2,
+                            cursorEnd: 5,
+                            hints: [unknownHint]
+                        )
+                    ),
+                    .action(
+                        TextInputActionEvent(
+                            seatID: seatID,
+                            action: unknownAction,
+                            serial: 12
+                        )
+                    ),
+                    .done(TextInputDoneEvent(seatID: seatID, serial: 13)),
                 ]
         )
     }

@@ -64,17 +64,11 @@ package final class TextInputManager {
     }
 
     package func setSurroundingText(
-        _ text: String,
-        seatID: SeatID,
-        cursor: String.Index,
-        anchor: String.Index
+        _ surroundingText: TextInputSurroundingText,
+        seatID: SeatID
     ) throws {
         backend.preconditionIsOwnerThread()
-        let request = try TextInputSurroundingTextRequest(
-            text: text,
-            cursor: cursor,
-            anchor: anchor
-        )
+        let request = try TextInputSurroundingTextRequest(surroundingText)
         try binding(for: seatID).setSurroundingText(
             request.text,
             cursor: request.cursorByteOffset,
@@ -169,7 +163,7 @@ package final class TextInputManager {
         case .action(let action):
             .action(action: action.action.textInputAction, serial: action.serial)
         case .language(let language):
-            .language(language)
+            .language(language.textInputLanguage)
         case .preeditHint(let hint):
             .preeditHint(hint.textInputPreeditHint)
         }

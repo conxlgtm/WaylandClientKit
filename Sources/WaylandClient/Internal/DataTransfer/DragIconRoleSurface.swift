@@ -6,6 +6,7 @@ package final class DragIconRoleSurface: DataTransferDragIconBinding {
     let surface: RawSurface
     private var runtime: SurfaceRuntime<DragIconRoleResources>
     private var isDestroyed = false
+    private let committedByteCount: Int
 
     package init(
         surface iconSurface: RawSurface,
@@ -14,8 +15,13 @@ package final class DragIconRoleSurface: DataTransferDragIconBinding {
     ) throws {
         surface = iconSurface
         runtime = SurfaceRuntime(role: .dragIcon, surfaceID: iconSurface.objectID)
+        committedByteCount = image.pixels.count * MemoryLayout<UInt32>.stride
         try runtime.installRoleResources(DragIconRoleResources())
         try commit(image: image, sharedMemory: sharedMemory)
+    }
+
+    package func committedBytesForTesting() -> [UInt8] {
+        runtime.buffers?.mappedBytes(prefixByteCount: committedByteCount) ?? []
     }
 
     private func commit(image: DragIconImage, sharedMemory: RawSharedMemory) throws {

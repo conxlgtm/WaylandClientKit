@@ -19,17 +19,13 @@ extension DisplayCore {
     }
 
     func setTextInputSurroundingText(
-        _ text: String,
-        seatID: SeatID,
-        cursor: String.Index,
-        anchor: String.Index
+        _ surroundingText: TextInputSurroundingText,
+        seatID: SeatID
     ) throws {
         try withFatalFailureFinalization {
             try requireSession().setTextInputSurroundingTextOnOwnerThread(
-                text,
-                seatID: seatID,
-                cursor: cursor,
-                anchor: anchor
+                surroundingText,
+                seatID: seatID
             )
         }
     }

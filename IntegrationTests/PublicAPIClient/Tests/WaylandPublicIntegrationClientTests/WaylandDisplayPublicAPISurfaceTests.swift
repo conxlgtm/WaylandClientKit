@@ -369,9 +369,11 @@ struct WaylandTextInputAPISurfaceTests {
             var iterator = display.textInputEvents.makeAsyncIterator()
             try await session.enable(for: window)
             try await session.setSurroundingText(
-                "hello",
-                cursor: "hello".endIndex,
-                anchor: "hello".startIndex
+                TextInputSurroundingText(
+                    text: "hello",
+                    cursorUTF8Offset: 5,
+                    anchorUTF8Offset: 0
+                )
             )
             try await session.setTextChangeCause(.other)
             try await session.setContentType(hints: hints, purpose: purpose)

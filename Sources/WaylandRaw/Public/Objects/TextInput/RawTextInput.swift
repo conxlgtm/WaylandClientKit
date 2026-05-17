@@ -117,7 +117,7 @@ package enum RawTextInputEvent: Equatable, Sendable {
     case deleteSurroundingText(beforeLength: UInt32, afterLength: UInt32)
     case done(serial: UInt32)
     case action(RawTextInputActionEvent)
-    case language(String)
+    case language(String?)
     case preeditHint(RawTextInputPreeditHint)
 }
 

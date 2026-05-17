@@ -103,6 +103,7 @@ Intentionally public:
 - `ByteCount`
 - `TextInputSession`
 - `TextInputError`
+- `TextInputSurroundingText`
 - `TextInputContentHints`
 - `TextInputContentPurpose`
 - `TextInputChangeCause`
@@ -114,6 +115,7 @@ Intentionally public:
 - `TextInputCommitEvent`
 - `TextInputDeleteSurroundingTextEvent`
 - `TextInputActionEvent`
+- `TextInputLanguage`
 - `TextInputLanguageEvent`
 - `TextInputDoneEvent`
 - `TextInputEvent`

@@ -15,17 +15,13 @@ extension DisplaySession {
     }
 
     package func setTextInputSurroundingTextOnOwnerThread(
-        _ text: String,
-        seatID: SeatID,
-        cursor: String.Index,
-        anchor: String.Index
+        _ surroundingText: TextInputSurroundingText,
+        seatID: SeatID
     ) throws {
         connection.preconditionIsOwnerThread()
         try textInputManager.setSurroundingText(
-            text,
-            seatID: seatID,
-            cursor: cursor,
-            anchor: anchor
+            surroundingText,
+            seatID: seatID
         )
     }
 

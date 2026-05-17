@@ -33,3 +33,13 @@ extension RawTextInputPreeditHint {
         )
     }
 }
+
+extension Optional where Wrapped == String {
+    package var textInputLanguage: TextInputLanguage {
+        guard let self, !self.isEmpty else {
+            return .unknown
+        }
+
+        return .tag(self)
+    }
+}

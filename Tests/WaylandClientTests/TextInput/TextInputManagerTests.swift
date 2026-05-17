@@ -27,10 +27,12 @@ struct TextInputManagerTests {
 
         try manager.enable(seatID: seatID)
         try manager.setSurroundingText(
-            text,
-            seatID: seatID,
-            cursor: text.endIndex,
-            anchor: text.index(after: text.startIndex)
+            TextInputSurroundingText(
+                text: text,
+                cursorUTF8Offset: 3,
+                anchorUTF8Offset: 1
+            ),
+            seatID: seatID
         )
         try manager.setTextChangeCause(.other, seatID: seatID)
         try manager.setContentType(
@@ -93,6 +95,35 @@ struct TextInputManagerTests {
                 ),
                 .committed(TextInputCommitEvent(seatID: seatID, text: "text")),
                 .done(TextInputDoneEvent(seatID: seatID, serial: 55)),
+            ]
+        )
+    }
+
+    @Test
+    func rawLanguageEventsNormalizeEmptyAndNilToUnknown() throws {
+        let backend = RecordingTextInputBackend()
+        let manager = TextInputManager(backend: backend)
+        let seatID = SeatID(rawValue: 13)
+
+        try manager.prepareSession(for: seatID)
+        backend.emit(.language("en-US"), seatID: seatID)
+        backend.emit(.language(""), seatID: seatID)
+        backend.emit(.language(nil), seatID: seatID)
+
+        #expect(
+            manager.drainEvents() == [
+                .language(
+                    TextInputLanguageEvent(
+                        seatID: seatID,
+                        language: .tag("en-US")
+                    )
+                ),
+                .language(
+                    TextInputLanguageEvent(seatID: seatID, language: .unknown)
+                ),
+                .language(
+                    TextInputLanguageEvent(seatID: seatID, language: .unknown)
+                ),
             ]
         )
     }

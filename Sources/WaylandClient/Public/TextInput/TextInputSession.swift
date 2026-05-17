@@ -22,16 +22,12 @@ public struct TextInputSession: Sendable, Hashable {
         try await display.disableTextInput(seatID: seatID)
     }
 
-    public func setSurroundingText(
-        _ text: String,
-        cursor: String.Index,
-        anchor: String.Index
-    ) async throws {
+    public func setSurroundingText(_ surroundingText: TextInputSurroundingText)
+        async throws
+    {
         try await display.setTextInputSurroundingText(
-            text,
-            seatID: seatID,
-            cursor: cursor,
-            anchor: anchor
+            surroundingText,
+            seatID: seatID
         )
     }
 
