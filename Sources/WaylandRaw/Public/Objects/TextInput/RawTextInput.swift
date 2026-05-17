@@ -71,17 +71,42 @@ package struct RawTextInputPreedit: Equatable, Sendable {
     package let text: String?
     package let cursorBegin: Int32
     package let cursorEnd: Int32
+
+    package init(
+        text preeditText: String?,
+        cursorBegin preeditCursorBegin: Int32,
+        cursorEnd preeditCursorEnd: Int32
+    ) {
+        text = preeditText
+        cursorBegin = preeditCursorBegin
+        cursorEnd = preeditCursorEnd
+    }
 }
 
 package struct RawTextInputActionEvent: Equatable, Sendable {
     package let action: RawTextInputAction
     package let serial: UInt32
+
+    package init(action eventAction: RawTextInputAction, serial eventSerial: UInt32) {
+        action = eventAction
+        serial = eventSerial
+    }
 }
 
 package struct RawTextInputPreeditHint: Equatable, Sendable {
     package let start: UInt32
     package let end: UInt32
     package let hint: UInt32
+
+    package init(
+        start hintStart: UInt32,
+        end hintEnd: UInt32,
+        hint hintKind: UInt32
+    ) {
+        start = hintStart
+        end = hintEnd
+        hint = hintKind
+    }
 }
 
 package enum RawTextInputEvent: Equatable, Sendable {

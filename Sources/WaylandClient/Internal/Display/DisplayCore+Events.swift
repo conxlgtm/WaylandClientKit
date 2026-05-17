@@ -30,6 +30,7 @@ extension DisplayCore {
         let dataTransfer = activeSession.drainDataTransferEventsAndDiagnosticsOnOwnerThread()
         publishDataTransferDiagnostics(dataTransfer.diagnostics)
         publishDataTransferEvents(dataTransfer.events)
+        publishTextInputEvents(activeSession.drainTextInputEventsOnOwnerThread())
         publishInputEvents(activeSession.drainInputEventsOnOwnerThread())
     }
 
