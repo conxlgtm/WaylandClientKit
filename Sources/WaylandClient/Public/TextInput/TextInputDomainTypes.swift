@@ -5,6 +5,7 @@ public enum TextInputError: Error, Equatable, Sendable, CustomStringConvertible 
     case surroundingTextContainsNUL
     case surroundingTextTooLarge(byteCount: Int, limit: Int)
     case surroundingTextOffsetOutOfBounds(offset: Int, byteCount: Int)
+    case surroundingTextOffsetInsideCodePoint(offset: Int)
     case surroundingTextOffsetOverflow(byteCount: Int)
 
     public var description: String {
@@ -21,6 +22,8 @@ public enum TextInputError: Error, Equatable, Sendable, CustomStringConvertible 
             "surrounding text is \(byteCount) UTF-8 bytes, exceeding limit \(limit)"
         case .surroundingTextOffsetOutOfBounds(let offset, let byteCount):
             "surrounding text byte offset \(offset) is outside 0...\(byteCount)"
+        case .surroundingTextOffsetInsideCodePoint(let offset):
+            "surrounding text byte offset \(offset) is inside a UTF-8 code point"
         case .surroundingTextOffsetOverflow(let byteCount):
             "surrounding text byte offset \(byteCount) exceeds Int32"
         }
@@ -53,10 +56,12 @@ public struct TextInputSurroundingText: Equatable, Sendable {
 
         try Self.validateOffset(
             requestCursorUTF8Offset,
+            in: requestText,
             byteCount: byteCount
         )
         try Self.validateOffset(
             requestAnchorUTF8Offset,
+            in: requestText,
             byteCount: byteCount
         )
 
@@ -67,6 +72,7 @@ public struct TextInputSurroundingText: Equatable, Sendable {
 
     private static func validateOffset(
         _ offset: Int,
+        in text: String,
         byteCount: Int
     ) throws(TextInputError) {
         guard offset >= 0 else {
@@ -86,6 +92,19 @@ public struct TextInputSurroundingText: Equatable, Sendable {
                 byteCount: byteCount
             )
         }
+
+        guard isCodePointBoundary(offset, in: text) else {
+            throw .surroundingTextOffsetInsideCodePoint(offset: offset)
+        }
+    }
+
+    private static func isCodePointBoundary(_ offset: Int, in text: String) -> Bool {
+        guard offset != 0, offset != text.utf8.count else {
+            return true
+        }
+
+        let index = text.utf8.index(text.utf8.startIndex, offsetBy: offset)
+        return (text.utf8[index] & 0b1100_0000) != 0b1000_0000
     }
 }
 
