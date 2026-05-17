@@ -35,6 +35,7 @@ enum ShimSmokeCheck {
         _ = unsafe swl_registry_bind_wp_fractional_scale_manager_v1
         _ = unsafe swl_registry_bind_wp_cursor_shape_manager_v1
         _ = unsafe swl_registry_bind_wl_seat
+        _ = unsafe swl_registry_bind_zwp_text_input_manager_v3
         _ = unsafe swl_registry_bind_zwp_linux_dmabuf_v1
     }
 
@@ -80,6 +81,14 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_fractional_scale_manager_v1_get_fractional_scale
         _ = unsafe swl_wp_cursor_shape_manager_v1_get_pointer
         _ = unsafe swl_wp_cursor_shape_device_v1_set_shape
+        _ = unsafe swl_text_input_manager_v3_get_text_input
+        _ = unsafe swl_text_input_v3_enable
+        _ = unsafe swl_text_input_v3_disable
+        _ = unsafe swl_text_input_v3_set_surrounding_text
+        _ = unsafe swl_text_input_v3_set_text_change_cause
+        _ = unsafe swl_text_input_v3_set_content_type
+        _ = unsafe swl_text_input_v3_set_cursor_rectangle
+        _ = unsafe swl_text_input_v3_commit
         _ = unsafe swl_zwp_linux_dmabuf_v1_get_default_feedback
         _ = unsafe swl_zwp_linux_dmabuf_v1_get_surface_feedback
         _ = unsafe swl_zwp_linux_dmabuf_v1_create_params
@@ -115,6 +124,8 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_fractional_scale_manager_v1_destroy
         _ = unsafe swl_wp_cursor_shape_device_v1_destroy
         _ = unsafe swl_wp_cursor_shape_manager_v1_destroy
+        _ = unsafe swl_text_input_v3_destroy
+        _ = unsafe swl_text_input_manager_v3_destroy
         _ = unsafe swl_wp_presentation_destroy
         _ = unsafe swl_wp_presentation_feedback_destroy
         _ = unsafe swl_zwp_linux_dmabuf_v1_destroy
@@ -138,6 +149,7 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_presentation_feedback_add_listener
         _ = unsafe swl_zwp_linux_dmabuf_feedback_v1_add_listener
         _ = unsafe swl_zwp_linux_buffer_params_v1_add_listener
+        _ = unsafe swl_text_input_v3_add_listener
         _ = unsafe swl_seat_add_listener
         _ = unsafe swl_pointer_add_listener
         _ = unsafe swl_keyboard_add_listener
