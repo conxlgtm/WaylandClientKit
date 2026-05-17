@@ -42,8 +42,18 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
+[[ -f "$PROTO_DIR/stable/tablet/tablet-v2.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/stable/tablet/tablet-v2.xml"
+    exit 1
+}
+
 [[ -f "$PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml" ]] || {
     echo "Missing vendored protocol: $PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml"
+    exit 1
+}
+
+[[ -f "$PROTO_DIR/staging/cursor-shape/cursor-shape-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/staging/cursor-shape/cursor-shape-v1.xml"
     exit 1
 }
 
@@ -63,7 +73,9 @@ mkdir -p \
     "$GEN_INC/stable/xdg-shell" \
     "$GEN_INC/stable/viewporter" \
     "$GEN_INC/stable/presentation-time" \
+    "$GEN_INC/stable/tablet" \
     "$GEN_INC/staging/fractional-scale" \
+    "$GEN_INC/staging/cursor-shape" \
     "$GEN_INC/legacy-unstable/xdg-decoration" \
     "$GEN_INC/legacy-unstable/xdg-output" \
     "$GEN_INC/legacy-unstable/primary-selection" \
@@ -72,7 +84,9 @@ mkdir -p \
     "$GEN_SRC/stable/xdg-shell" \
     "$GEN_SRC/stable/viewporter" \
     "$GEN_SRC/stable/presentation-time" \
+    "$GEN_SRC/stable/tablet" \
     "$GEN_SRC/staging/fractional-scale" \
+    "$GEN_SRC/staging/cursor-shape" \
     "$GEN_SRC/legacy-unstable/xdg-decoration" \
     "$GEN_SRC/legacy-unstable/xdg-output" \
     "$GEN_SRC/legacy-unstable/primary-selection" \
@@ -153,12 +167,28 @@ wayland-scanner private-code \
     "$GEN_SRC/stable/presentation-time/presentation-time-protocol.c"
 
 wayland-scanner client-header \
+    "$PROTO_DIR/stable/tablet/tablet-v2.xml" \
+    "$GEN_INC/stable/tablet/tablet-v2-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/stable/tablet/tablet-v2.xml" \
+    "$GEN_SRC/stable/tablet/tablet-v2-protocol.c"
+
+wayland-scanner client-header \
     "$PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml" \
     "$GEN_INC/staging/fractional-scale/fractional-scale-v1-client-protocol.h"
 
 wayland-scanner private-code \
     "$PROTO_DIR/staging/fractional-scale/fractional-scale-v1.xml" \
     "$GEN_SRC/staging/fractional-scale/fractional-scale-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/staging/cursor-shape/cursor-shape-v1.xml" \
+    "$GEN_INC/staging/cursor-shape/cursor-shape-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/staging/cursor-shape/cursor-shape-v1.xml" \
+    "$GEN_SRC/staging/cursor-shape/cursor-shape-v1-protocol.c"
 
 wayland-scanner client-header \
     "$PROTO_DIR/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml" \

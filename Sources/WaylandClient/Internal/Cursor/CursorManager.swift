@@ -15,6 +15,8 @@ package protocol CursorManagerSurface: AnyObject {
 }
 
 package protocol CursorManagerBackend: AnyObject {
+    var supportsCursorShape: Bool { get }
+
     func preconditionIsOwnerThread()
     func cursorImage(named name: String) throws -> CursorImage
     func createCursorSurface(for seatID: RawSeatID) throws -> CursorManagerSurface
@@ -25,6 +27,11 @@ package protocol CursorManagerBackend: AnyObject {
         hotspotX: Int32,
         hotspotY: Int32
     ) -> RawPointerCursorResult
+    func setPointerCursorShape(
+        seatID: RawSeatID,
+        serial: UInt32,
+        shape: RawCursorShapeName
+    ) throws -> RawPointerCursorResult
 }
 
 // swiftlint:disable:next type_body_length
@@ -137,6 +144,9 @@ package final class CursorManager: RawInputEventObserving {
         _ cursor: PointerCursor
     ) throws -> ResolvedPointerCursorImage? {
         guard case .named = cursor.kind else { return nil }
+        if backend.supportsCursorShape, cursor.cursorShapeName != nil {
+            return nil
+        }
 
         return try resolveCursorImage(cursor)
     }
@@ -171,11 +181,40 @@ package final class CursorManager: RawInputEventObserving {
             markCursorApplied(.hidden(serial: serial), for: seatID)
             return .hidden(seatID: publicSeatID(seatID), serial: serial)
         case .named:
+            if backend.supportsCursorShape, let shape = cursor.cursorShapeName {
+                return try applyShapeCursor(to: seatID, serial: serial, cursor: cursor, shape: shape)
+            }
+
             let resolved = try resolvedCursor ?? cachedResolvedDesiredCursor()
             return try applyNamedCursor(
                 to: seatID,
                 serial: serial,
                 resolvedCursor: resolved
+            )
+        }
+    }
+
+    private func applyShapeCursor(
+        to seatID: RawSeatID,
+        serial: UInt32,
+        cursor: PointerCursor,
+        shape: RawCursorShapeName
+    ) throws -> CursorRequestResult {
+        let rawResult = try backend.setPointerCursorShape(
+            seatID: seatID,
+            serial: serial,
+            shape: shape
+        )
+
+        switch rawResult {
+        case .set:
+            markCursorApplied(.named(cursor: cursor, serial: serial, surfaceID: nil), for: seatID)
+            return .set(seatID: publicSeatID(seatID), serial: serial, cursor: cursor)
+        case .skippedNoPointer, .skippedUnknownSeat:
+            throw cursorRequestFailure(
+                seatID: seatID,
+                cursor: cursor,
+                rawResult: rawResult
             )
         }
     }

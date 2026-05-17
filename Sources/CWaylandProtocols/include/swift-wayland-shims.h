@@ -24,6 +24,8 @@ struct wp_presentation;
 struct wp_presentation_feedback;
 struct wp_fractional_scale_manager_v1;
 struct wp_fractional_scale_v1;
+struct wp_cursor_shape_manager_v1;
+struct wp_cursor_shape_device_v1;
 struct zwp_linux_dmabuf_v1;
 struct zwp_linux_buffer_params_v1;
 struct zwp_linux_dmabuf_feedback_v1;
@@ -69,6 +71,9 @@ struct wp_presentation *swl_registry_bind_wp_presentation(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wp_fractional_scale_manager_v1 *swl_registry_bind_wp_fractional_scale_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_cursor_shape_manager_v1 *swl_registry_bind_wp_cursor_shape_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wl_seat *swl_registry_bind_wl_seat(
@@ -276,6 +281,18 @@ struct wp_fractional_scale_v1 *swl_wp_fractional_scale_manager_v1_get_fractional
     struct wl_surface *surface);
 
 /* ------------------------------------------------------------------ */
+/*  Cursor-shape request wrappers                                     */
+/* ------------------------------------------------------------------ */
+
+struct wp_cursor_shape_device_v1 *swl_wp_cursor_shape_manager_v1_get_pointer(
+    struct wp_cursor_shape_manager_v1 *manager,
+    struct wl_pointer *pointer);
+void swl_wp_cursor_shape_device_v1_set_shape(
+    struct wp_cursor_shape_device_v1 *device,
+    uint32_t serial,
+    uint32_t shape);
+
+/* ------------------------------------------------------------------ */
 /*  Presentation-time request wrappers                                */
 /* ------------------------------------------------------------------ */
 
@@ -360,6 +377,10 @@ void swl_wp_viewporter_destroy(struct wp_viewporter *viewporter);
 void swl_wp_fractional_scale_v1_destroy(struct wp_fractional_scale_v1 *fractional_scale);
 void swl_wp_fractional_scale_manager_v1_destroy(
     struct wp_fractional_scale_manager_v1 *manager);
+void swl_wp_cursor_shape_device_v1_destroy(
+    struct wp_cursor_shape_device_v1 *device);
+void swl_wp_cursor_shape_manager_v1_destroy(
+    struct wp_cursor_shape_manager_v1 *manager);
 void swl_wp_presentation_destroy(struct wp_presentation *presentation);
 void swl_wp_presentation_feedback_destroy(
     struct wp_presentation_feedback *feedback);

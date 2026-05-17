@@ -54,6 +54,21 @@ package final class SeatRegistry {
         )
     }
 
+    package func setPointerCursorShape(
+        seatID: RawSeatID,
+        manager cursorShapeManager: RawCursorShapeManager,
+        serial: UInt32,
+        shape: RawCursorShapeName
+    ) throws -> RawPointerCursorResult {
+        guard let seat = seat(for: seatID) else { return .skippedUnknownSeat(seatID) }
+
+        return try seat.setPointerCursorShape(
+            manager: cursorShapeManager,
+            serial: serial,
+            shape: shape
+        )
+    }
+
     package func bindSeats(from globals: [RawGlobalAdvertisement]) throws {
         for global in globals where global.interfaceName == "wl_seat" {
             try bindSeat(globalName: global.name, advertisedVersion: global.advertisedVersion)

@@ -13,6 +13,7 @@ package enum SupportedVersions {
     package static let wpViewporter: RawVersion = 1
     package static let wpPresentation: RawVersion = 2
     package static let wpFractionalScaleManagerV1: RawVersion = 1
+    package static let wpCursorShapeManagerV1: RawVersion = 2
     package static let zwpLinuxDmabufV1: RawVersion = 5
     package static let wlSeat: RawVersion = 10
     package static let wlDataDeviceManager: RawVersion = 3
@@ -35,6 +36,7 @@ package struct OptionalGlobals {
     package let viewporter: OptionalViewporter
     package let presentation: OptionalPresentation
     package let fractionalScaleManager: OptionalFractionalScaleManager
+    package let cursorShapeManager: OptionalCursorShapeManager
     package let dataDeviceManager: OptionalDataDeviceManager
     package let primarySelectionDeviceManager: OptionalPrimarySelectionDeviceManager
     package let linuxDmabuf: OptionalLinuxDmabuf
@@ -46,6 +48,7 @@ package struct OptionalGlobals {
         presentation boundPresentation: OptionalPresentation = .missing,
         fractionalScaleManager boundFractionalScaleManager: OptionalFractionalScaleManager =
             .missing,
+        cursorShapeManager boundCursorShapeManager: OptionalCursorShapeManager = .missing,
         dataDeviceManager boundDataDeviceManager: OptionalDataDeviceManager = .missing,
         primarySelectionDeviceManager boundPrimarySelectionDeviceManager:
             OptionalPrimarySelectionDeviceManager = .missing,
@@ -56,6 +59,7 @@ package struct OptionalGlobals {
         viewporter = boundViewporter
         presentation = boundPresentation
         fractionalScaleManager = boundFractionalScaleManager
+        cursorShapeManager = boundCursorShapeManager
         dataDeviceManager = boundDataDeviceManager
         primarySelectionDeviceManager = boundPrimarySelectionDeviceManager
         linuxDmabuf = boundLinuxDmabuf
@@ -65,6 +69,7 @@ package struct OptionalGlobals {
         linuxDmabuf.destroy()
         primarySelectionDeviceManager.destroy()
         dataDeviceManager.destroy()
+        cursorShapeManager.destroy()
         fractionalScaleManager.destroy()
         presentation.destroy()
         viewporter.destroy()

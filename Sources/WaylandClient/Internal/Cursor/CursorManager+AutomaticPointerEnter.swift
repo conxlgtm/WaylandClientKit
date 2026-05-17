@@ -49,6 +49,10 @@ extension CursorManager {
         to seatID: RawSeatID,
         serial explicitSerial: UInt32
     ) throws -> CursorRequestResult {
+        if backend.supportsCursorShape, let shape = desiredCursor.cursor.cursorShapeName {
+            return try applyAutomaticShapeCursor(to: seatID, serial: explicitSerial, shape: shape)
+        }
+
         let resolved = try automaticResolvedCursor()
         let surface = try automaticCursorSurface(for: seatID)
 
@@ -77,6 +81,39 @@ extension CursorManager {
                 seatID: publicSeatID(seatID),
                 serial: explicitSerial,
                 cursor: resolved.cursor
+            )
+        case .skippedNoPointer, .skippedUnknownSeat:
+            throw AutomaticPointerEnterFailure.cursorRequest(
+                pointerCursorRequestFailure(
+                    seatID: seatID,
+                    cursor: desiredCursor.cursor,
+                    rawResult: rawResult
+                )
+            )
+        }
+    }
+
+    private func applyAutomaticShapeCursor(
+        to seatID: RawSeatID,
+        serial explicitSerial: UInt32,
+        shape: RawCursorShapeName
+    ) throws -> CursorRequestResult {
+        let rawResult = try backend.setPointerCursorShape(
+            seatID: seatID,
+            serial: explicitSerial,
+            shape: shape
+        )
+
+        switch rawResult {
+        case .set:
+            markCursorApplied(
+                .named(cursor: desiredCursor.cursor, serial: explicitSerial, surfaceID: nil),
+                for: seatID
+            )
+            return .set(
+                seatID: publicSeatID(seatID),
+                serial: explicitSerial,
+                cursor: desiredCursor.cursor
             )
         case .skippedNoPointer, .skippedUnknownSeat:
             throw AutomaticPointerEnterFailure.cursorRequest(

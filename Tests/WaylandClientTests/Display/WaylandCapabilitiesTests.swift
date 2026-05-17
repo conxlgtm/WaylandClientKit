@@ -17,6 +17,7 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.viewporter == .unavailable)
         #expect(capabilities.presentationTime == .unavailable)
         #expect(capabilities.fractionalScale == .unavailable)
+        #expect(capabilities.cursorShape == .unavailable)
         #expect(capabilities.linuxDmabuf == .unavailable)
     }
 
@@ -33,6 +34,7 @@ struct WaylandCapabilitiesTests {
             .init(interfaceName: "wp_viewporter", advertisedVersion: 4),
             .init(interfaceName: "wp_presentation", advertisedVersion: 4),
             .init(interfaceName: "wp_fractional_scale_manager_v1", advertisedVersion: 3),
+            .init(interfaceName: "wp_cursor_shape_manager_v1", advertisedVersion: 9),
             .init(interfaceName: "zwp_linux_dmabuf_v1", advertisedVersion: 7),
         ])
 
@@ -45,6 +47,7 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.viewporter == .available(version: 1))
         #expect(capabilities.presentationTime == .available(version: 2))
         #expect(capabilities.fractionalScale == .available(version: 1))
+        #expect(capabilities.cursorShape == .available(version: 2))
         #expect(capabilities.linuxDmabuf == .available(version: 5))
     }
 

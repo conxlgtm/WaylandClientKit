@@ -15,32 +15,42 @@ extension RawDisplayConnection {
                         let fractionalScaleManager =
                             try bindFractionalScaleManagerIfPresent(registry: reg)
                         do {
-                            let dataDeviceManager =
-                                try bindDataDeviceManagerIfPresent(registry: reg)
+                            let cursorShapeManager =
+                                try bindCursorShapeManagerIfPresent(registry: reg)
                             do {
-                                let primarySelectionDeviceManager =
-                                    try bindPrimarySelectionDeviceManagerIfPresent(
-                                        registry: reg
-                                    )
+                                let dataDeviceManager =
+                                    try bindDataDeviceManagerIfPresent(registry: reg)
                                 do {
-                                    let linuxDmabuf = try bindLinuxDmabufIfPresent(registry: reg)
-                                    return OptionalGlobals(
-                                        xdgDecorationManager: decorationManager,
-                                        xdgOutputManager: xdgOutputManager,
-                                        viewporter: viewporter,
-                                        presentation: presentation,
-                                        fractionalScaleManager: fractionalScaleManager,
-                                        dataDeviceManager: dataDeviceManager,
-                                        primarySelectionDeviceManager:
-                                            primarySelectionDeviceManager,
-                                        linuxDmabuf: linuxDmabuf
-                                    )
+                                    let primarySelectionDeviceManager =
+                                        try bindPrimarySelectionDeviceManagerIfPresent(
+                                            registry: reg
+                                        )
+                                    do {
+                                        let linuxDmabuf = try bindLinuxDmabufIfPresent(
+                                            registry: reg
+                                        )
+                                        return OptionalGlobals(
+                                            xdgDecorationManager: decorationManager,
+                                            xdgOutputManager: xdgOutputManager,
+                                            viewporter: viewporter,
+                                            presentation: presentation,
+                                            fractionalScaleManager: fractionalScaleManager,
+                                            cursorShapeManager: cursorShapeManager,
+                                            dataDeviceManager: dataDeviceManager,
+                                            primarySelectionDeviceManager:
+                                                primarySelectionDeviceManager,
+                                            linuxDmabuf: linuxDmabuf
+                                        )
+                                    } catch {
+                                        primarySelectionDeviceManager.destroy()
+                                        throw error
+                                    }
                                 } catch {
-                                    primarySelectionDeviceManager.destroy()
+                                    dataDeviceManager.destroy()
                                     throw error
                                 }
                             } catch {
-                                dataDeviceManager.destroy()
+                                cursorShapeManager.destroy()
                                 throw error
                             }
                         } catch {
@@ -259,6 +269,36 @@ extension RawDisplayConnection {
         }
 
         let wrappedManager = try RawFractionalScaleManager(
+            pointer: manager,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
+        return .bound(wrappedManager)
+    }
+
+    @safe
+    private func bindCursorShapeManagerIfPresent(
+        registry reg: OpaquePointer
+    ) throws -> OptionalCursorShapeManager {
+        guard let global = optionalGlobal(named: "wp_cursor_shape_manager_v1") else {
+            return .missing
+        }
+
+        let version = global.negotiatedVersion(
+            supportedByClient: SupportedVersions.wpCursorShapeManagerV1
+        )
+
+        guard
+            let manager = unsafe swl_registry_bind_wp_cursor_shape_manager_v1(
+                reg,
+                global.name,
+                version.value
+            )
+        else {
+            throw RuntimeError.bindFailed("wp_cursor_shape_manager_v1")
+        }
+
+        let wrappedManager = try RawCursorShapeManager(
             pointer: manager,
             version: version,
             proxyAdoption: proxyAdoption
