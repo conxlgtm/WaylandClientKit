@@ -28,10 +28,12 @@ current compositor. It requires `WAYLAND_DISPLAY`.
 against the current compositor. It requires `WAYLAND_DISPLAY` and sets
 `SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=1`.
 
-`make gpu-preview-wayland` runs package-internal GPU preview live capability
-tests against the current compositor. It requires `WAYLAND_DISPLAY` and sets
-`SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1`. The current test path proves the
-linux-dmabuf capability gate; future GPU allocation and presentation checks can
+`make gpu-preview-wayland` runs package-internal GPU preview checks against the
+current compositor. It requires `WAYLAND_DISPLAY`, sets
+`SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1`, and enables the GBM/EGL smoke path
+with `SWL_RUN_GPU_SMOKE=1`. The current test path proves the linux-dmabuf
+capability gate and a local GBM/EGL clear plus dmabuf export when an accessible
+DRM render node is present. Future compositor import and presentation checks can
 attach to the same command.
 
 The command runs `./scripts/smoke/gpu-preview-wayland.sh`.
@@ -41,7 +43,7 @@ The command runs `./scripts/smoke/gpu-preview-wayland.sh`.
 integration tests against that private compositor.
 
 `make gpu-preview-headless` starts headless Weston, then runs the GPU preview
-capability gate against that private compositor.
+capability and GBM/EGL smoke path against that private compositor.
 
 `make check` runs the normal local check set. It runs the live Wayland smoke
 check only when `WAYLAND_DISPLAY` is already set.

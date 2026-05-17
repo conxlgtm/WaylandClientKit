@@ -11,8 +11,8 @@ fi
 PROCESS_TIMEOUT_SECONDS="${SWIFT_WAYLAND_GPU_PREVIEW_TIMEOUT_SECONDS:-240}"
 
 env \
+    SWL_RUN_GPU_SMOKE=1 \
     SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1 \
     timeout "${PROCESS_TIMEOUT_SECONDS}s" \
     "$ROOT/scripts/dev/swift.sh" test \
-    --filter GPUPreviewLiveCapability
-
+    --filter 'GPUPreviewLiveCapability|gpuSmokeDrawsDeterministicPixelWhenEnabled'
