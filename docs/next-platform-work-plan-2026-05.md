@@ -1,8 +1,12 @@
 # Next Platform Work Plan
 
-Status: active near-term plan  
+Status: historical near-term plan  
 Date: 2026-05-12  
 Planning horizon: the next two working weeks after the presentation-time merge
+
+This plan predates the foundation checkpoint work through PR #47. Use
+`docs/cursor-text-input-sprints-2026-05-17.md` for the current near-term cursor,
+drag visual, and text-input story.
 
 This document turns the updated platform roadmap into immediate work. The goal
 is to land the presentation-time branch, then move directly into the shared
@@ -279,4 +283,3 @@ A workstream is not ready if:
 - shim verification is stale
 - optional protocol absence is reported as an error during normal baseline use
 - an advertised optional protocol path silently skips instead of failing
-
