@@ -125,6 +125,8 @@ Skipping viewporter live test: compositor did not advertise wp_viewporter.
 Skipping presentation-time live test: compositor did not advertise wp_presentation.
 Skipping linux-dmabuf live test: compositor did not advertise zwp_linux_dmabuf_v1.
 Skipping GPU preview live test: compositor did not advertise zwp_linux_dmabuf_v1.
+Skipping cursor-shape live test: compositor did not advertise wp_cursor_shape_manager_v1.
+Skipping text-input live test: compositor did not advertise zwp_text_input_manager_v3.
 ```
 
 Do not hide an advertised-but-broken protocol behind a skip. That is a client
