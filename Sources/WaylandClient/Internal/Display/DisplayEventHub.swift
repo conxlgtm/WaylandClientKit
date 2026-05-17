@@ -17,6 +17,7 @@ final class DisplayEventHub: Sendable {
     private let displayBroker: TypedEventBroker<DisplayEvent>
     private let inputBroker: TypedEventBroker<InputEvent>
     private let dataTransferBroker: TypedEventBroker<DataTransferEvent>
+    private let textInputBroker: TypedEventBroker<TextInputEvent>
     private let presentationBroker: TypedEventBroker<WindowPresentationEvent>
     private let diagnosticsBroker: TypedEventBroker<DisplayDiagnostic>
     private let diagnosticIDGenerator: DiagnosticIDGenerator
@@ -38,6 +39,10 @@ final class DisplayEventHub: Sendable {
         dataTransferBroker = TypedEventBroker<DataTransferEvent>(
             stream: .dataTransferEvents,
             capacity: configuration.dataTransferEventCapacity.rawValue
+        )
+        textInputBroker = TypedEventBroker<TextInputEvent>(
+            stream: .textInputEvents,
+            capacity: configuration.inputEventCapacity.rawValue
         )
         presentationBroker = TypedEventBroker<WindowPresentationEvent>(
             stream: .presentationEvents,
@@ -66,6 +71,10 @@ final class DisplayEventHub: Sendable {
 
     func dataTransferEvents() -> DataTransferEvents {
         DataTransferEvents(dataTransferBroker.subscribe())
+    }
+
+    func textInputEvents() -> TextInputEvents {
+        TextInputEvents(textInputBroker.subscribe())
     }
 
     func windowPresentationEvents(windowID: WindowID) -> WindowPresentationEvents {
@@ -118,6 +127,10 @@ final class DisplayEventHub: Sendable {
         dataTransferBroker.publish(event)
     }
 
+    func publishTextInput(_ event: TextInputEvent) {
+        textInputBroker.publish(event)
+    }
+
     func publishPresentation(_ event: WindowPresentationEvent) {
         presentationBroker.publish(event)
     }
@@ -144,6 +157,7 @@ final class DisplayEventHub: Sendable {
         displayBroker.finish(throwing: error)
         inputBroker.finish(throwing: error)
         dataTransferBroker.finish(throwing: error)
+        textInputBroker.finish(throwing: error)
         presentationBroker.finish(throwing: error)
         diagnosticsBroker.finish(throwing: error)
     }

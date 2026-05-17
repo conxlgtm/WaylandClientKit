@@ -24,6 +24,10 @@ public actor WaylandDisplay {
         runtime.dataTransferEvents
     }
 
+    public nonisolated var textInputEvents: TextInputEvents {
+        runtime.textInputEvents
+    }
+
     public nonisolated var diagnostics: DisplayDiagnostics {
         runtime.diagnostics
     }
@@ -395,6 +399,10 @@ final class WaylandDisplayRuntime: Sendable {
 
     var dataTransferEvents: DataTransferEvents {
         eventHub.dataTransferEvents()
+    }
+
+    var textInputEvents: TextInputEvents {
+        eventHub.textInputEvents()
     }
 
     func windowPresentationEvents(for windowID: WindowID) -> WindowPresentationEvents {

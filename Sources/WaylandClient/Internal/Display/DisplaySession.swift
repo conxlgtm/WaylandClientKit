@@ -15,6 +15,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     package let dataTransferGlobalProvider: any DataTransferGlobalProviding
     package let dataTransferManager: DataTransferManager
     package let primarySelectionController: PrimarySelectionController
+    package let textInputManager: TextInputManager
     package let dataTransferSourceWriter: ThreadedDataTransferSourceWriter
     private let dataTransferEventQueue = DataTransferEventQueue()
     private let maximumPendingInputEventCount: Int
@@ -53,6 +54,10 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
             connection: rawConnection,
             eventQueue: dataTransferEventQueue
         )
+        textInputManager = TextInputManager(
+            connection: rawConnection,
+            targetResolver: { inputRouter.target(for: $0) }
+        )
         dataTransferSourceWriter = sourceWriter
         maximumPendingInputEventCount =
             inputPipelineConfiguration.pendingInputEventCapacity.rawValue
@@ -72,6 +77,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         connection.preconditionIsOwnerThread()
         primarySelectionController.shutdown()
         dataTransferManager.shutdown()
+        textInputManager.shutdown()
         dataTransferSourceWriter.shutdown()
     }
 
