@@ -25,7 +25,7 @@ final class LiveCursorManagerBackend: CursorManagerBackend {
     }
 
     func createCursorSurface(for _: RawSeatID) throws -> CursorManagerSurface {
-        try LiveCursorManagerSurface(surface: connection.createRawSurface())
+        try CursorRoleSurface(surface: connection.createRawSurface())
     }
 
     func setPointerCursor(
@@ -37,7 +37,7 @@ final class LiveCursorManagerBackend: CursorManagerBackend {
     ) -> RawPointerCursorResult {
         let rawSurface: RawSurface?
         if let surface {
-            guard let liveSurface = surface as? LiveCursorManagerSurface else {
+            guard let liveSurface = surface as? CursorRoleSurface else {
                 preconditionFailure("Live cursor backend received a non-live cursor surface")
             }
             rawSurface = liveSurface.rawSurface
@@ -66,30 +66,5 @@ final class LiveCursorManagerBackend: CursorManagerBackend {
         )
         theme = loadedTheme
         return loadedTheme
-    }
-}
-
-private final class LiveCursorManagerSurface: CursorManagerSurface {
-    let rawSurface: RawSurface
-
-    init(surface: RawSurface) {
-        rawSurface = surface
-    }
-
-    var objectID: RawObjectID? {
-        rawSurface.objectID
-    }
-
-    func attach(_ image: CursorImage) {
-        rawSurface.attachBorrowedBuffer(image.buffer)
-        rawSurface.damageFullBuffer(width: image.width, height: image.height)
-    }
-
-    func commit() {
-        rawSurface.commit()
-    }
-
-    func destroy() {
-        rawSurface.destroy()
     }
 }
