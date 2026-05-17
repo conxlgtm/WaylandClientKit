@@ -30,10 +30,12 @@ Current experimental baseline:
 - normal pointer cursor surfaces backed by `wayland-cursor`
 - regular clipboard selection offers and sources through `wl_data_device_manager`
 - primary selection offers and sources through `zwp_primary_selection_device_manager_v1`
+- compositor/IME text entry through `zwp_text_input_manager_v3`
+- compositor cursor-shape requests through `wp_cursor_shape_manager_v1`
 - explicit compositor presentation feedback through `wp_presentation`
 - linux-dmabuf capability discovery and package-internal GBM/EGL preview pieces
 - compose and dead-key text results for interpreted keyboard events
-- display, input, data-transfer, and diagnostic event streams
+- display, input, data-transfer, text-input, and diagnostic event streams
 - minimal DocC catalog and public API baseline checks
 - noninteractive Wayland smoke executable
 - tests for system imports, shim imports, raw lifecycle, and client drawing helpers
@@ -41,9 +43,7 @@ Current experimental baseline:
 Not implemented yet:
 
 - protocol coverage beyond the listed current support matrix
-- text-input or IME behavior
-- drag icon surfaces
-- cursor animation, output-scale cursor selection, or custom cursor drawing APIs
+- public cursor animation, output-scale cursor policy, or custom cursor drawing APIs
 - output-management APIs
 - public GPU rendering APIs in `WaylandClient`
 - high-level gesture recognizers or widgets
@@ -88,6 +88,10 @@ Supported in the current experimental baseline:
 - `wp_presentation_feedback`
 - `wp_fractional_scale_manager_v1`
 - `wp_fractional_scale_v1`
+- `wp_cursor_shape_manager_v1`
+- `wp_cursor_shape_device_v1`
+- `zwp_text_input_manager_v3`
+- `zwp_text_input_v3`
 - `zwp_linux_dmabuf_v1`
 - `zwp_linux_dmabuf_feedback_v1`
 - `zwp_linux_buffer_params_v1`
@@ -106,11 +110,13 @@ Keyboard interpretation:
 - key symbol lists, primary key symbols, and UTF-8 key text derived from `xkbcommon`
 - compose and dead-key sequences through `xkbcommon` compose state
 - shortcut logic should use key symbols and modifiers, not composed text
-- composed text is local keyboard text and is not Wayland text-input or IME output
+- composed text is local keyboard text and is separate from Wayland text-input
+  or IME output
 
 Pointer cursors:
 
 - session-level `PointerCursor` values
+- compositor-managed cursor-shape requests when advertised and mapped
 - static cursor surfaces from installed cursor themes through `wayland-cursor`
 
 Clipboard and data transfer:
@@ -125,7 +131,15 @@ Clipboard and data transfer:
 - receive-side drag-and-drop offers can be inspected, negotiated, received, finished, and cancelled
 - source-side drag-and-drop sources can be started and cancelled from managed windows with explicit input serials
 - drag source target, action, drop, finished, and cancelled lifecycle events are exposed
-- drag icon surfaces are not yet supported
+- source-side drags can use managed XRGB8888 drag icon surfaces
+
+Text input:
+
+- `WaylandDisplay.textInputSession(for:)` creates seat-scoped text-input sessions
+- `WaylandDisplay.textInputEvents` publishes compositor/IME text-input events
+- surrounding text, content type, change cause, cursor rectangle, enable, disable,
+  and commit requests are protocol-shaped
+- text-input is separate from local keyboard interpretation and shortcut state
 
 Outputs:
 
@@ -150,11 +164,9 @@ Popups:
 
 Not supported in the current experimental baseline:
 
-- drag icon surfaces
-- cursor animation or per-output cursor scaling
+- public cursor animation or per-output cursor policy APIs
 - output management or control APIs
 - public `WaylandClient` GPU rendering APIs
-- text-input or IME protocols
 - widgets or retained UI
 
 ## Linux Dependencies

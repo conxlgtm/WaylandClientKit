@@ -317,12 +317,20 @@ struct SetCursorRequest: Equatable {
     let hotspotY: Int32
 }
 
+struct SetCursorShapeRequest: Equatable {
+    let seatID: RawSeatID
+    let serial: UInt32
+    let shape: RawCursorShapeName
+}
+
 final class RecordingCursorBackend: CursorManagerBackend {
+    var cursorShapeSupported = false
     var resolvedCursorNames: [String] = []
     var createdSurfaceSeatIDs: [RawSeatID] = []
     var cursorSurfaceRequestSeatIDs: [RawSeatID] = []
     var createdSurfaces: [RecordingCursorSurface] = []
     var setCursorRequests: [SetCursorRequest] = []
+    var setCursorShapeRequests: [SetCursorShapeRequest] = []
     var missingCursorNames: Set<String> = []
     var setCursorResultOverride: RawPointerCursorResult?
     var cursorSurfaceCreationError: (any Error)?
@@ -344,6 +352,10 @@ final class RecordingCursorBackend: CursorManagerBackend {
 
     func preconditionIsOwnerThread() {
         // Test backend is always used on the test thread.
+    }
+
+    var supportsCursorShape: Bool {
+        cursorShapeSupported
     }
 
     func cursorImage(named name: String) throws -> CursorImage {
@@ -398,6 +410,30 @@ final class RecordingCursorBackend: CursorManagerBackend {
                 surfaceID: surface?.objectID,
                 hotspotX: hotspotX,
                 hotspotY: hotspotY
+            )
+        )
+    }
+
+    func setPointerCursorShape(
+        seatID: RawSeatID,
+        serial: UInt32,
+        shape: RawCursorShapeName
+    ) throws -> RawPointerCursorResult {
+        setCursorShapeRequests.append(
+            SetCursorShapeRequest(seatID: seatID, serial: serial, shape: shape)
+        )
+
+        if let setCursorResultOverride {
+            return setCursorResultOverride
+        }
+
+        return .set(
+            RawPointerCursorSetResult(
+                seatID: seatID,
+                serial: serial,
+                surfaceID: nil,
+                hotspotX: 0,
+                hotspotY: 0
             )
         )
     }

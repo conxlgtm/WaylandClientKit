@@ -73,6 +73,7 @@ public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {
     case displayEvents
     case inputEvents
     case dataTransferEvents
+    case textInputEvents
     case presentationEvents
     case diagnostics
 
@@ -84,6 +85,8 @@ public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {
             "input events"
         case .dataTransferEvents:
             "data transfer events"
+        case .textInputEvents:
+            "text input events"
         case .presentationEvents:
             "presentation events"
         case .diagnostics:
@@ -245,6 +248,44 @@ public struct DataTransferEventsIterator: AsyncIteratorProtocol {
     public mutating func next(
         isolation actor: isolated (any Actor)?
     ) async throws(WaylandDisplayError) -> DataTransferEvent? {
+        try await base.next(isolation: actor)
+    }
+}
+
+@safe
+public struct TextInputEvents: AsyncSequence, Sendable {
+    public typealias Element = TextInputEvent
+    public typealias Failure = WaylandDisplayError
+
+    private let subscription: InternalEventSubscription<TextInputEvent>
+
+    package init(_ eventSubscription: InternalEventSubscription<TextInputEvent>) {
+        subscription = eventSubscription
+    }
+
+    public func makeAsyncIterator() -> TextInputEventsIterator {
+        TextInputEventsIterator(base: subscription.makeAsyncIterator())
+    }
+}
+
+@safe
+public struct TextInputEventsIterator: AsyncIteratorProtocol {
+    public typealias Element = TextInputEvent
+    public typealias Failure = WaylandDisplayError
+
+    private var base: InternalEventSubscriptionIterator<TextInputEvent>
+
+    package init(base iterator: InternalEventSubscriptionIterator<TextInputEvent>) {
+        base = iterator
+    }
+
+    public mutating func next() async throws(WaylandDisplayError) -> TextInputEvent? {
+        try await next(isolation: nil)
+    }
+
+    public mutating func next(
+        isolation actor: isolated (any Actor)?
+    ) async throws(WaylandDisplayError) -> TextInputEvent? {
         try await base.next(isolation: actor)
     }
 }

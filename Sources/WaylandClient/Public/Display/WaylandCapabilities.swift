@@ -55,6 +55,12 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Fractional surface scale support through `wp_fractional_scale_manager_v1`.
     public let fractionalScale: ProtocolAvailability
 
+    /// Compositor-managed pointer cursor shapes through `wp_cursor_shape_manager_v1`.
+    public let cursorShape: ProtocolAvailability
+
+    /// Compositor/IME text entry support through `zwp_text_input_manager_v3`.
+    public let textInput: ProtocolAvailability
+
     /// Dmabuf buffer sharing support through `zwp_linux_dmabuf_v1`.
     public let linuxDmabuf: ProtocolAvailability
 
@@ -68,6 +74,8 @@ public struct WaylandCapabilities: Equatable, Sendable {
         viewporter: ProtocolAvailability,
         presentationTime: ProtocolAvailability,
         fractionalScale: ProtocolAvailability,
+        cursorShape: ProtocolAvailability,
+        textInput: ProtocolAvailability,
         linuxDmabuf: ProtocolAvailability
     ) {
         self.clipboard = clipboard
@@ -79,6 +87,8 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.viewporter = viewporter
         self.presentationTime = presentationTime
         self.fractionalScale = fractionalScale
+        self.cursorShape = cursorShape
+        self.textInput = textInput
         self.linuxDmabuf = linuxDmabuf
     }
 }
@@ -92,68 +102,82 @@ extension WaylandCapabilities {
     static func fromAdvertisedProtocols(
         _ protocols: [AdvertisedWaylandProtocol]
     ) -> WaylandCapabilities {
-        func best(_ interfaceName: String) -> AdvertisedWaylandProtocol? {
-            var selected: AdvertisedWaylandProtocol?
-            for advertisedProtocol in protocols
-            where advertisedProtocol.interfaceName == interfaceName {
-                guard let current = selected else {
-                    selected = advertisedProtocol
-                    continue
-                }
-
-                if advertisedProtocol.advertisedVersion > current.advertisedVersion {
-                    selected = advertisedProtocol
-                }
-            }
-
-            return selected
-        }
-
         return WaylandCapabilities(
             clipboard: ProtocolAvailability(
-                best("wl_data_device_manager"),
+                protocols.bestAdvertisedProtocol(named: "wl_data_device_manager"),
                 supportedByClient: SupportedVersions.wlDataDeviceManager
             ),
             dragAndDrop: ProtocolAvailability(
-                best("wl_data_device_manager"),
+                protocols.bestAdvertisedProtocol(named: "wl_data_device_manager"),
                 supportedByClient: SupportedVersions.wlDataDeviceManager
             ),
             dragActionNegotiation: ProtocolAvailability(
-                best("wl_data_device_manager"),
+                protocols.bestAdvertisedProtocol(named: "wl_data_device_manager"),
                 supportedByClient: SupportedVersions.wlDataDeviceManager,
                 minimumVersion: 3
             ),
             primarySelection: ProtocolAvailability(
-                best("zwp_primary_selection_device_manager_v1"),
+                protocols.bestAdvertisedProtocol(
+                    named: "zwp_primary_selection_device_manager_v1"
+                ),
                 supportedByClient: SupportedVersions.zwpPrimarySelectionDeviceManagerV1
             ),
             xdgDecoration: ProtocolAvailability(
-                best("zxdg_decoration_manager_v1"),
+                protocols.bestAdvertisedProtocol(named: "zxdg_decoration_manager_v1"),
                 supportedByClient: SupportedVersions.zxdgDecorationManagerV1,
                 minimumVersion: SupportedVersions.zxdgDecorationManagerV1Minimum
             ),
             xdgOutput: ProtocolAvailability(
-                best("zxdg_output_manager_v1"),
+                protocols.bestAdvertisedProtocol(named: "zxdg_output_manager_v1"),
                 supportedByClient: SupportedVersions.zxdgOutputManagerV1,
                 minimumVersion: SupportedVersions.zxdgOutputManagerV1Minimum
             ),
             viewporter: ProtocolAvailability(
-                best("wp_viewporter"),
+                protocols.bestAdvertisedProtocol(named: "wp_viewporter"),
                 supportedByClient: SupportedVersions.wpViewporter
             ),
             presentationTime: ProtocolAvailability(
-                best("wp_presentation"),
+                protocols.bestAdvertisedProtocol(named: "wp_presentation"),
                 supportedByClient: SupportedVersions.wpPresentation
             ),
             fractionalScale: ProtocolAvailability(
-                best("wp_fractional_scale_manager_v1"),
+                protocols.bestAdvertisedProtocol(
+                    named: "wp_fractional_scale_manager_v1"
+                ),
                 supportedByClient: SupportedVersions.wpFractionalScaleManagerV1
             ),
+            cursorShape: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "wp_cursor_shape_manager_v1"),
+                supportedByClient: SupportedVersions.wpCursorShapeManagerV1
+            ),
+            textInput: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "zwp_text_input_manager_v3"),
+                supportedByClient: SupportedVersions.zwpTextInputManagerV3
+            ),
             linuxDmabuf: ProtocolAvailability(
-                best("zwp_linux_dmabuf_v1"),
+                protocols.bestAdvertisedProtocol(named: "zwp_linux_dmabuf_v1"),
                 supportedByClient: SupportedVersions.zwpLinuxDmabufV1
             )
         )
+    }
+}
+
+extension Sequence where Element == AdvertisedWaylandProtocol {
+    func bestAdvertisedProtocol(named interfaceName: String) -> AdvertisedWaylandProtocol? {
+        var selected: AdvertisedWaylandProtocol?
+        for advertisedProtocol in self
+        where advertisedProtocol.interfaceName == interfaceName {
+            guard let current = selected else {
+                selected = advertisedProtocol
+                continue
+            }
+
+            if advertisedProtocol.advertisedVersion > current.advertisedVersion {
+                selected = advertisedProtocol
+            }
+        }
+
+        return selected
     }
 }
 

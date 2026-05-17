@@ -37,7 +37,7 @@ struct DataTransferManagerDragSourceTests {
                     .init(
                         sourceID: source.id,
                         originID: origin.id,
-                        icon: .none,
+                        icon: nil,
                         serial: serial
                     )
                 ]
@@ -270,14 +270,17 @@ struct DataTransferManagerDragSourceTests {
         return (manager, backend, source)
     }
 
-    private func startDragRequest(actions: DragActionSet) throws -> DataTransferStartDragRequest {
+    private func startDragRequest(
+        actions: DragActionSet,
+        icon: DragIcon = .none
+    ) throws -> DataTransferStartDragRequest {
         try DataTransferStartDragRequest(
             seatID: seatID,
             payloads: dragPayloads(),
             actions: actions,
             serial: serial,
             origin: origin,
-            icon: .none
+            icon: icon
         )
     }
 

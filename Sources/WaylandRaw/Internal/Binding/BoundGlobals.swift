@@ -13,10 +13,12 @@ package enum SupportedVersions {
     package static let wpViewporter: RawVersion = 1
     package static let wpPresentation: RawVersion = 2
     package static let wpFractionalScaleManagerV1: RawVersion = 1
+    package static let wpCursorShapeManagerV1: RawVersion = 2
     package static let zwpLinuxDmabufV1: RawVersion = 5
     package static let wlSeat: RawVersion = 10
     package static let wlDataDeviceManager: RawVersion = 3
     package static let zwpPrimarySelectionDeviceManagerV1: RawVersion = 1
+    package static let zwpTextInputManagerV3: RawVersion = 2
 }
 
 package enum XDGDecorationManagerBindingDecision: Equatable, Sendable {
@@ -35,8 +37,10 @@ package struct OptionalGlobals {
     package let viewporter: OptionalViewporter
     package let presentation: OptionalPresentation
     package let fractionalScaleManager: OptionalFractionalScaleManager
+    package let cursorShapeManager: OptionalCursorShapeManager
     package let dataDeviceManager: OptionalDataDeviceManager
     package let primarySelectionDeviceManager: OptionalPrimarySelectionDeviceManager
+    package let textInputManager: OptionalTextInputManager
     package let linuxDmabuf: OptionalLinuxDmabuf
 
     package init(
@@ -46,9 +50,11 @@ package struct OptionalGlobals {
         presentation boundPresentation: OptionalPresentation = .missing,
         fractionalScaleManager boundFractionalScaleManager: OptionalFractionalScaleManager =
             .missing,
+        cursorShapeManager boundCursorShapeManager: OptionalCursorShapeManager = .missing,
         dataDeviceManager boundDataDeviceManager: OptionalDataDeviceManager = .missing,
         primarySelectionDeviceManager boundPrimarySelectionDeviceManager:
             OptionalPrimarySelectionDeviceManager = .missing,
+        textInputManager boundTextInputManager: OptionalTextInputManager = .missing,
         linuxDmabuf boundLinuxDmabuf: OptionalLinuxDmabuf = .missing
     ) {
         xdgDecorationManager = manager
@@ -56,15 +62,19 @@ package struct OptionalGlobals {
         viewporter = boundViewporter
         presentation = boundPresentation
         fractionalScaleManager = boundFractionalScaleManager
+        cursorShapeManager = boundCursorShapeManager
         dataDeviceManager = boundDataDeviceManager
         primarySelectionDeviceManager = boundPrimarySelectionDeviceManager
+        textInputManager = boundTextInputManager
         linuxDmabuf = boundLinuxDmabuf
     }
 
     func destroy() {
         linuxDmabuf.destroy()
+        textInputManager.destroy()
         primarySelectionDeviceManager.destroy()
         dataDeviceManager.destroy()
+        cursorShapeManager.destroy()
         fractionalScaleManager.destroy()
         presentation.destroy()
         viewporter.destroy()

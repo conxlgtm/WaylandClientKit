@@ -8,13 +8,17 @@ package protocol DataTransferDeviceBinding: AnyObject {
     func startDrag(
         source: any DataTransferSourceBinding,
         origin: any DataTransferDragOriginBinding,
-        icon: DragIcon,
+        icon: (any DataTransferDragIconBinding)?,
         serial: InputSerial
     )
     func release()
 }
 
 package protocol DataTransferDragOriginBinding: AnyObject {}
+
+package protocol DataTransferDragIconBinding: AnyObject {
+    func destroy()
+}
 
 package protocol DataTransferOfferBinding: AnyObject, DataTransferReceiveBinding {
     var id: DataOfferID { get }
@@ -33,6 +37,7 @@ package protocol DataTransferSourceBinding: AnyObject {
 
     func offer(mimeType: MIMEType)
     func setDragActions(_ actions: DragActionSet)
+    func attachDragIcon(_ icon: (any DataTransferDragIconBinding)?)
     func destroy()
 }
 
@@ -56,6 +61,7 @@ package protocol DataTransferManagerBackend: AnyObject, DataTransferReceivePipeB
         id: DataSourceID,
         onEvent: @escaping (RawDataSourceEvent) -> Void
     ) throws -> any DataTransferSourceBinding
+    func prepareDragIcon(_ icon: DragIcon) throws -> (any DataTransferDragIconBinding)?
     func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors
     func adoptOwnedFileDescriptor(_ descriptor: Int32) throws -> OwnedFileDescriptor
 

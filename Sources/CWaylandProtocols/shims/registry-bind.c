@@ -1,9 +1,11 @@
 #include "swift-wayland-shims.h"
 #include "generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h"
+#include "generated/staging/cursor-shape/cursor-shape-v1-client-protocol.h"
 #include "generated/core/wayland-client-protocol.h"
 #include "generated/stable/presentation-time/presentation-time-client-protocol.h"
 #include "generated/stable/viewporter/viewporter-client-protocol.h"
 #include "generated/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1-client-protocol.h"
+#include "generated/legacy-unstable/text-input/text-input-unstable-v3-client-protocol.h"
 #include "generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/xdg-output/xdg-output-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/primary-selection/primary-selection-unstable-v1-client-protocol.h"
@@ -72,6 +74,13 @@ struct wp_fractional_scale_manager_v1 *swl_registry_bind_wp_fractional_scale_man
         registry, name, &wp_fractional_scale_manager_v1_interface, version);
 }
 
+struct wp_cursor_shape_manager_v1 *swl_registry_bind_wp_cursor_shape_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wp_cursor_shape_manager_v1 *)wl_registry_bind(
+        registry, name, &wp_cursor_shape_manager_v1_interface, version);
+}
+
 struct wl_seat *swl_registry_bind_wl_seat(
     struct wl_registry *registry, uint32_t name, uint32_t version)
 {
@@ -95,6 +104,13 @@ swl_registry_bind_zwp_primary_selection_device_manager_v1(
         name,
         &zwp_primary_selection_device_manager_v1_interface,
         version);
+}
+
+struct zwp_text_input_manager_v3 *swl_registry_bind_zwp_text_input_manager_v3(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct zwp_text_input_manager_v3 *)wl_registry_bind(
+        registry, name, &zwp_text_input_manager_v3_interface, version);
 }
 
 struct zwp_linux_dmabuf_v1 *swl_registry_bind_zwp_linux_dmabuf_v1(

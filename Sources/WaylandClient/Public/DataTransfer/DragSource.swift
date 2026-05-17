@@ -2,6 +2,51 @@ import Foundation
 
 public enum DragIcon: Equatable, Sendable {
     case none
+    case xrgb8888(DragIconImage)
+}
+
+public struct DragIconImage: Equatable, Sendable {
+    public let size: PositivePixelSize
+    public let pixels: [UInt32]
+
+    public init(size imageSize: PositivePixelSize, pixels xrgb8888Pixels: [UInt32]) throws {
+        let width = Int(imageSize.width.rawValue)
+        let height = Int(imageSize.height.rawValue)
+        try Self.validatePixelCount(
+            width: width,
+            height: height,
+            actual: xrgb8888Pixels.count
+        )
+
+        size = imageSize
+        pixels = xrgb8888Pixels
+    }
+
+    @discardableResult
+    package static func validatePixelCount(
+        width: Int,
+        height: Int,
+        actual: Int
+    ) throws(DataTransferError) -> Int {
+        let (expectedCount, overflowed) = width.multipliedReportingOverflow(
+            by: height
+        )
+        guard !overflowed else {
+            throw DataTransferError.invalidDragIconPixelCount(
+                expected: Int.max,
+                actual: actual
+            )
+        }
+
+        guard actual == expectedCount else {
+            throw DataTransferError.invalidDragIconPixelCount(
+                expected: expectedCount,
+                actual: actual
+            )
+        }
+
+        return expectedCount
+    }
 }
 
 public struct DragSourceIdentity: Hashable, Sendable, CustomStringConvertible {
