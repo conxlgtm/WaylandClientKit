@@ -42,3 +42,5 @@ if ! grep --fixed-strings --quiet '"module":{"name":"WaylandClient"' "$SYMBOL_GR
     echo "WaylandClient symbol graph has unexpected module metadata"
     exit 1
 fi
+
+"$ROOT/scripts/ci/verify-docc-symbol-links.py"

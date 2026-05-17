@@ -73,6 +73,53 @@ struct TextInputStateTests {
     }
 
     @Test
+    func committedTransactionNamesDoneBoundaryBeforeFlattening() {
+        let seatID = SeatID(rawValue: 18)
+        let hint = TextInputPreeditHint(start: 0, end: 4, kind: .prediction)
+        var state = TextInputState(seatID: seatID)
+
+        _ = state.reduce(.preeditHint(hint))
+        _ = state.reduce(
+            .preeditString(
+                RawTextInputPreedit(
+                    text: "first",
+                    cursorBegin: 1,
+                    cursorEnd: 1
+                )
+            )
+        )
+        _ = state.reduce(
+            .preeditString(
+                RawTextInputPreedit(
+                    text: "second",
+                    cursorBegin: 2,
+                    cursorEnd: 3
+                )
+            )
+        )
+        _ = state.reduce(.commitString("done"))
+
+        let transaction = state.committedTransaction(serial: 44)
+
+        #expect(
+            transaction
+                == TextInputTransaction(
+                    preedit: TextInputPreeditEvent(
+                        seatID: seatID,
+                        text: "second",
+                        cursorBegin: 2,
+                        cursorEnd: 3,
+                        hints: [hint]
+                    ),
+                    deleteSurroundingText: nil,
+                    commit: TextInputCommitEvent(seatID: seatID, text: "done"),
+                    action: nil,
+                    done: TextInputDoneEvent(seatID: seatID, serial: 44)
+                )
+        )
+    }
+
+    @Test
     func enterAndLeaveResetPendingTransaction() {
         let seatID = SeatID(rawValue: 4)
         var state = TextInputState(seatID: seatID)

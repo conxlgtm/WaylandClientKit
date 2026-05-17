@@ -57,98 +57,108 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L77: `public enum DisplayConfigurationField: Equatable, Sendable, CustomStringConvertible {`
 - L78: `    case displayEventCapacity`
 - L79: `    case inputEventCapacity`
-- L80: `    case dataTransferEventCapacity`
-- L81: `    case rawInputQueueCapacity`
-- L82: `    case pendingInputEventCapacity`
-- L83: `    case diagnosticsCapacity`
-- L85: `    public var description: String {`
-- L103: `public enum DisplayConfigurationError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L104: `    case nonPositiveCapacity(field: DisplayConfigurationField, value: Int)`
-- L106: `    public var description: String {`
-- L114: `public enum EventStreamCapacityField: Equatable, Sendable {`
-- L115: `    case displayEventCapacity`
-- L116: `    case inputEventCapacity`
-- L117: `    case dataTransferEventCapacity`
-- L131: `public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L132: `    public let rawValue: Int`
-- L134: `    public static let defaultDisplayEvents = EventStreamCapacity(unchecked: 256)`
-- L135: `    public static let defaultInputEvents = EventStreamCapacity(unchecked: 1_024)`
-- L136: `    public static let defaultDataTransferEvents = EventStreamCapacity(unchecked: 256)`
-- L138: `    public init(`
-- L157: `    public var description: String {`
-- L161: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L166: `public enum InputQueueCapacityField: Equatable, Sendable {`
-- L167: `    case rawInputQueueCapacity`
-- L168: `    case pendingInputEventCapacity`
-- L180: `public struct InputQueueCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L181: `    public let rawValue: Int`
-- L183: `    public static let defaultRawInput = InputQueueCapacity(unchecked: 4_096)`
-- L184: `    public static let defaultPendingInput = InputQueueCapacity(unchecked: 2_048)`
-- L186: `    public init(`
-- L205: `    public var description: String {`
-- L209: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L214: `public struct DiagnosticsCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L215: `    public let rawValue: Int`
-- L217: `    public static let `default` = DiagnosticsCapacity(unchecked: 128)`
-- L219: `    public init(_ value: Int) throws {`
-- L235: `    public var description: String {`
-- L239: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L80: `    case textInputEventCapacity`
+- L81: `    case dataTransferEventCapacity`
+- L82: `    case presentationEventCapacity`
+- L83: `    case rawInputQueueCapacity`
+- L84: `    case pendingInputEventCapacity`
+- L85: `    case diagnosticsCapacity`
+- L87: `    public var description: String {`
+- L109: `public enum DisplayConfigurationError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L110: `    case nonPositiveCapacity(field: DisplayConfigurationField, value: Int)`
+- L112: `    public var description: String {`
+- L120: `public enum EventStreamCapacityField: Equatable, Sendable {`
+- L121: `    case displayEventCapacity`
+- L122: `    case inputEventCapacity`
+- L123: `    case textInputEventCapacity`
+- L124: `    case dataTransferEventCapacity`
+- L125: `    case presentationEventCapacity`
+- L143: `public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L144: `    public let rawValue: Int`
+- L146: `    public static let defaultDisplayEvents = EventStreamCapacity(unchecked: 256)`
+- L147: `    public static let defaultInputEvents = EventStreamCapacity(unchecked: 1_024)`
+- L148: `    public static let defaultTextInputEvents = EventStreamCapacity(unchecked: 512)`
+- L149: `    public static let defaultDataTransferEvents = EventStreamCapacity(unchecked: 256)`
+- L150: `    public static let defaultPresentationEvents = EventStreamCapacity(unchecked: 256)`
+- L152: `    public init(`
+- L171: `    public var description: String {`
+- L175: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L180: `public enum InputQueueCapacityField: Equatable, Sendable {`
+- L181: `    case rawInputQueueCapacity`
+- L182: `    case pendingInputEventCapacity`
+- L194: `public struct InputQueueCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L195: `    public let rawValue: Int`
+- L197: `    public static let defaultRawInput = InputQueueCapacity(unchecked: 4_096)`
+- L198: `    public static let defaultPendingInput = InputQueueCapacity(unchecked: 2_048)`
+- L200: `    public init(`
+- L219: `    public var description: String {`
+- L223: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L228: `public struct DiagnosticsCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L229: `    public let rawValue: Int`
+- L231: `    public static let `default` = DiagnosticsCapacity(unchecked: 128)`
+- L233: `    public init(_ value: Int) throws {`
+- L249: `    public var description: String {`
+- L253: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
 
 ### `Sources/WaylandClient/Public/Configuration/DisplayConfiguration.swift`
 
 - L1: `public struct EventStreamConfiguration: Equatable, Sendable {`
 - L2: `    public var displayEventCapacity: EventStreamCapacity`
 - L3: `    public var inputEventCapacity: EventStreamCapacity`
-- L4: `    public var dataTransferEventCapacity: EventStreamCapacity`
-- L6: `    public init(`
-- L17: `    public init(`
-- L37: `    public init(`
-- L58: `    public init(`
-- L79: `public struct InputMotionCoalescing: OptionSet, Equatable, Sendable {`
-- L80: `    public let rawValue: Int`
-- L82: `    public init(rawValue coalescingRawValue: Int) {`
-- L86: `    public static let pointerMotion = InputMotionCoalescing(rawValue: 1 << 0)`
-- L87: `    public static let touchMotion = InputMotionCoalescing(rawValue: 1 << 1)`
-- L88: `    public static let all: InputMotionCoalescing = [.pointerMotion, .touchMotion]`
-- L91: `public struct InputPipelineConfiguration: Equatable, Sendable {`
-- L92: `    public var rawInputQueueCapacity: InputQueueCapacity`
-- L93: `    public var pendingInputEventCapacity: InputQueueCapacity`
-- L94: `    public var motionCoalescing: InputMotionCoalescing`
-- L96: `    public var pointerMotionCoalescing: Bool {`
-- L107: `    public var touchMotionCoalescing: Bool {`
-- L118: `    public init(`
-- L131: `    public init(`
-- L141: `    public init(`
-- L161: `    public init(`
-- L181: `public struct KeyboardInterpretationConfiguration: Equatable, Sendable {`
-- L182: `    public var compose: KeyboardComposeConfiguration`
-- L184: `    public init(compose composeConfiguration: KeyboardComposeConfiguration = .enabled()) {`
-- L189: `public enum KeyboardComposeConfiguration: Equatable, Sendable {`
-- L190: `    case disabled`
-- L191: `    case enabled(`
-- L197: `public enum KeyboardComposeLocale: Equatable, Sendable {`
-- L198: `    case processEnvironment`
-- L199: `    case identifier(KeyboardComposeLocaleIdentifier)`
-- L202: `public enum KeyboardComposeLocaleError: Error, Equatable, Sendable {`
-- L203: `    case emptyIdentifier`
-- L204: `    case containsNUL`
-- L207: `public struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {`
-- L208: `    public let rawValue: String`
-- L210: `    public init(_ value: String) throws(KeyboardComposeLocaleError) {`
-- L222: `    public static let posixC = Self(unchecked: "C")`
-- L253: `public enum KeyboardComposeCancellationPolicy: Equatable, Sendable {`
-- L254: `    case passThroughCancellingKey`
-- L255: `    case swallowCancellingKey`
-- L258: `public struct DiagnosticsConfiguration: Equatable, Sendable {`
-- L259: `    public var capacity: DiagnosticsCapacity`
-- L261: `    public init(capacity diagnosticsCapacity: DiagnosticsCapacity = .default) {`
-- L265: `    public init(capacity diagnosticsCapacity: Int) throws {`
-- L270: `public struct DisplayConfiguration: Equatable, Sendable {`
-- L271: `    public var eventStreams: EventStreamConfiguration`
-- L272: `    public var inputPipeline: InputPipelineConfiguration`
-- L273: `    public var keyboardInterpretation: KeyboardInterpretationConfiguration`
-- L274: `    public var diagnostics: DiagnosticsConfiguration`
-- L276: `    public init(`
+- L4: `    public var textInputEventCapacity: EventStreamCapacity`
+- L5: `    public var dataTransferEventCapacity: EventStreamCapacity`
+- L6: `    public var presentationEventCapacity: EventStreamCapacity`
+- L8: `    public init(`
+- L25: `    public init(`
+- L57: `    public init(`
+- L90: `    public init(`
+- L122: `    public init(`
+- L154: `    public init(`
+- L187: `public struct InputMotionCoalescing: OptionSet, Equatable, Sendable {`
+- L188: `    public let rawValue: Int`
+- L190: `    public init(rawValue coalescingRawValue: Int) {`
+- L194: `    public static let pointerMotion = InputMotionCoalescing(rawValue: 1 << 0)`
+- L195: `    public static let touchMotion = InputMotionCoalescing(rawValue: 1 << 1)`
+- L196: `    public static let all: InputMotionCoalescing = [.pointerMotion, .touchMotion]`
+- L199: `public struct InputPipelineConfiguration: Equatable, Sendable {`
+- L200: `    public var rawInputQueueCapacity: InputQueueCapacity`
+- L201: `    public var pendingInputEventCapacity: InputQueueCapacity`
+- L202: `    public var motionCoalescing: InputMotionCoalescing`
+- L204: `    public var pointerMotionCoalescing: Bool {`
+- L215: `    public var touchMotionCoalescing: Bool {`
+- L226: `    public init(`
+- L239: `    public init(`
+- L249: `    public init(`
+- L269: `    public init(`
+- L289: `public struct KeyboardInterpretationConfiguration: Equatable, Sendable {`
+- L290: `    public var compose: KeyboardComposeConfiguration`
+- L292: `    public init(compose composeConfiguration: KeyboardComposeConfiguration = .enabled()) {`
+- L297: `public enum KeyboardComposeConfiguration: Equatable, Sendable {`
+- L298: `    case disabled`
+- L299: `    case enabled(`
+- L305: `public enum KeyboardComposeLocale: Equatable, Sendable {`
+- L306: `    case processEnvironment`
+- L307: `    case identifier(KeyboardComposeLocaleIdentifier)`
+- L310: `public enum KeyboardComposeLocaleError: Error, Equatable, Sendable {`
+- L311: `    case emptyIdentifier`
+- L312: `    case containsNUL`
+- L315: `public struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {`
+- L316: `    public let rawValue: String`
+- L318: `    public init(_ value: String) throws(KeyboardComposeLocaleError) {`
+- L330: `    public static let posixC = Self(unchecked: "C")`
+- L361: `public enum KeyboardComposeCancellationPolicy: Equatable, Sendable {`
+- L362: `    case passThroughCancellingKey`
+- L363: `    case swallowCancellingKey`
+- L366: `public struct DiagnosticsConfiguration: Equatable, Sendable {`
+- L367: `    public var capacity: DiagnosticsCapacity`
+- L369: `    public init(capacity diagnosticsCapacity: DiagnosticsCapacity = .default) {`
+- L373: `    public init(capacity diagnosticsCapacity: Int) throws {`
+- L378: `public struct DisplayConfiguration: Equatable, Sendable {`
+- L379: `    public var eventStreams: EventStreamConfiguration`
+- L380: `    public var inputPipeline: InputPipelineConfiguration`
+- L381: `    public var keyboardInterpretation: KeyboardInterpretationConfiguration`
+- L382: `    public var diagnostics: DiagnosticsConfiguration`
+- L384: `    public init(`
 
 ### `Sources/WaylandClient/Public/Cursor/CursorConfiguration.swift`
 
@@ -407,35 +417,36 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L9: `    public let size: PositivePixelSize`
 - L10: `    public let pixels: [UInt32]`
 - L12: `    public init(size imageSize: PositivePixelSize, pixels xrgb8888Pixels: [UInt32]) throws {`
-- L52: `public struct DragSourceIdentity: Hashable, Sendable, CustomStringConvertible {`
-- L59: `    public var description: String {`
-- L64: `public struct DragSourceConfiguration: Equatable, Sendable {`
-- L65: `    public let payloads: [DataTransferSourcePayload]`
-- L66: `    public let actions: DragActionSet`
-- L69: `    public init(`
-- L83: `    public static func data(`
-- L99: `public struct DragSource: Sendable, Hashable {`
-- L101: `    public let seatID: SeatID`
-- L102: `    public let mimeTypes: [MIMEType]`
-- L103: `    public let actions: DragActionSet`
-- L122: `    public var identity: DragSourceIdentity {`
-- L127: `    public func cancel() async throws {`
-- L131: `    public static func == (lhs: DragSource, rhs: DragSource) -> Bool {`
-- L135: `    public func hash(into hasher: inout Hasher) {`
-- L141: `public struct DragSourceTargetEvent: Equatable, Sendable {`
-- L142: `    public let source: DragSourceIdentity`
-- L143: `    public let mimeType: MIMEType?`
-- L151: `public struct DragSourceActionEvent: Equatable, Sendable {`
-- L152: `    public let source: DragSourceIdentity`
-- L153: `    public let action: DragAction`
-- L161: `public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {`
-- L162: `    case copy`
-- L163: `    case move`
-- L164: `    case unknown(rawValue: UInt32)`
-- L179: `    public var description: String {`
-- L191: `public struct DragSourceFinishedEvent: Equatable, Sendable {`
-- L192: `    public let source: DragSourceIdentity`
-- L193: `    public let finalAction: DragSourceFinalAction`
+- L25: `    public static func solid(`
+- L83: `public struct DragSourceIdentity: Hashable, Sendable, CustomStringConvertible {`
+- L90: `    public var description: String {`
+- L95: `public struct DragSourceConfiguration: Equatable, Sendable {`
+- L96: `    public let payloads: [DataTransferSourcePayload]`
+- L97: `    public let actions: DragActionSet`
+- L100: `    public init(`
+- L114: `    public static func data(`
+- L130: `public struct DragSource: Sendable, Hashable {`
+- L132: `    public let seatID: SeatID`
+- L133: `    public let mimeTypes: [MIMEType]`
+- L134: `    public let actions: DragActionSet`
+- L153: `    public var identity: DragSourceIdentity {`
+- L158: `    public func cancel() async throws {`
+- L162: `    public static func == (lhs: DragSource, rhs: DragSource) -> Bool {`
+- L166: `    public func hash(into hasher: inout Hasher) {`
+- L171: `public struct DragSourceTargetEvent: Equatable, Sendable {`
+- L172: `    public let source: DragSourceIdentity`
+- L173: `    public let mimeType: MIMEType?`
+- L181: `public struct DragSourceActionEvent: Equatable, Sendable {`
+- L182: `    public let source: DragSourceIdentity`
+- L183: `    public let action: DragAction`
+- L191: `public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {`
+- L192: `    case copy`
+- L193: `    case move`
+- L194: `    case unknown(rawValue: UInt32)`
+- L209: `    public var description: String {`
+- L221: `public struct DragSourceFinishedEvent: Equatable, Sendable {`
+- L222: `    public let source: DragSourceIdentity`
+- L223: `    public let finalAction: DragSourceFinalAction`
 
 ### `Sources/WaylandClient/Public/DataTransfer/OwnedFileDescriptor.swift`
 
@@ -676,60 +687,61 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L66: `    case input(InputDiagnostic)`
 - L67: `    case window(WindowDiagnostic)`
 - L68: `    case dataTransfer(DataTransferDiagnostic)`
-- L69: `    case diagnosticsDropped(count: Int)`
-- L72: `public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {`
-- L73: `    case displayEvents`
-- L74: `    case inputEvents`
-- L75: `    case dataTransferEvents`
-- L76: `    case textInputEvents`
-- L77: `    case presentationEvents`
-- L78: `    case diagnostics`
-- L80: `    public var description: String {`
-- L142: `public struct DisplayEvents: AsyncSequence, Sendable {`
-- L143: `    public typealias Element = DisplayEvent`
-- L144: `    public typealias Failure = WaylandDisplayError`
-- L152: `    public func makeAsyncIterator() -> DisplayEventsIterator {`
-- L158: `public struct DisplayEventsIterator: AsyncIteratorProtocol {`
-- L159: `    public typealias Element = DisplayEvent`
-- L160: `    public typealias Failure = WaylandDisplayError`
-- L168: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayEvent? {`
-- L172: `    public mutating func next(`
-- L180: `public struct InputEvents: AsyncSequence, Sendable {`
-- L181: `    public typealias Element = InputEvent`
-- L182: `    public typealias Failure = WaylandDisplayError`
-- L190: `    public func makeAsyncIterator() -> InputEventsIterator {`
-- L196: `public struct InputEventsIterator: AsyncIteratorProtocol {`
-- L197: `    public typealias Element = InputEvent`
-- L198: `    public typealias Failure = WaylandDisplayError`
-- L206: `    public mutating func next() async throws(WaylandDisplayError) -> InputEvent? {`
-- L210: `    public mutating func next(`
-- L218: `public struct DataTransferEvents: AsyncSequence, Sendable {`
-- L219: `    public typealias Element = DataTransferEvent`
-- L220: `    public typealias Failure = WaylandDisplayError`
-- L228: `    public func makeAsyncIterator() -> DataTransferEventsIterator {`
-- L234: `public struct DataTransferEventsIterator: AsyncIteratorProtocol {`
-- L235: `    public typealias Element = DataTransferEvent`
-- L236: `    public typealias Failure = WaylandDisplayError`
-- L244: `    public mutating func next() async throws(WaylandDisplayError) -> DataTransferEvent? {`
-- L248: `    public mutating func next(`
-- L256: `public struct TextInputEvents: AsyncSequence, Sendable {`
-- L257: `    public typealias Element = TextInputEvent`
-- L258: `    public typealias Failure = WaylandDisplayError`
-- L266: `    public func makeAsyncIterator() -> TextInputEventsIterator {`
-- L272: `public struct TextInputEventsIterator: AsyncIteratorProtocol {`
-- L273: `    public typealias Element = TextInputEvent`
-- L274: `    public typealias Failure = WaylandDisplayError`
-- L282: `    public mutating func next() async throws(WaylandDisplayError) -> TextInputEvent? {`
-- L286: `    public mutating func next(`
-- L294: `public struct DisplayDiagnostics: AsyncSequence, Sendable {`
-- L295: `    public typealias Element = DisplayDiagnostic`
-- L296: `    public typealias Failure = WaylandDisplayError`
-- L304: `    public func makeAsyncIterator() -> DisplayDiagnosticsIterator {`
-- L310: `public struct DisplayDiagnosticsIterator: AsyncIteratorProtocol {`
-- L311: `    public typealias Element = DisplayDiagnostic`
-- L312: `    public typealias Failure = WaylandDisplayError`
-- L320: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayDiagnostic? {`
-- L324: `    public mutating func next(`
+- L69: `    case textInput(TextInputDiagnostic)`
+- L70: `    case diagnosticsDropped(count: Int)`
+- L73: `public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {`
+- L74: `    case displayEvents`
+- L75: `    case inputEvents`
+- L76: `    case dataTransferEvents`
+- L77: `    case textInputEvents`
+- L78: `    case presentationEvents`
+- L79: `    case diagnostics`
+- L81: `    public var description: String {`
+- L143: `public struct DisplayEvents: AsyncSequence, Sendable {`
+- L144: `    public typealias Element = DisplayEvent`
+- L145: `    public typealias Failure = WaylandDisplayError`
+- L153: `    public func makeAsyncIterator() -> DisplayEventsIterator {`
+- L159: `public struct DisplayEventsIterator: AsyncIteratorProtocol {`
+- L160: `    public typealias Element = DisplayEvent`
+- L161: `    public typealias Failure = WaylandDisplayError`
+- L169: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayEvent? {`
+- L173: `    public mutating func next(`
+- L181: `public struct InputEvents: AsyncSequence, Sendable {`
+- L182: `    public typealias Element = InputEvent`
+- L183: `    public typealias Failure = WaylandDisplayError`
+- L191: `    public func makeAsyncIterator() -> InputEventsIterator {`
+- L197: `public struct InputEventsIterator: AsyncIteratorProtocol {`
+- L198: `    public typealias Element = InputEvent`
+- L199: `    public typealias Failure = WaylandDisplayError`
+- L207: `    public mutating func next() async throws(WaylandDisplayError) -> InputEvent? {`
+- L211: `    public mutating func next(`
+- L219: `public struct DataTransferEvents: AsyncSequence, Sendable {`
+- L220: `    public typealias Element = DataTransferEvent`
+- L221: `    public typealias Failure = WaylandDisplayError`
+- L229: `    public func makeAsyncIterator() -> DataTransferEventsIterator {`
+- L235: `public struct DataTransferEventsIterator: AsyncIteratorProtocol {`
+- L236: `    public typealias Element = DataTransferEvent`
+- L237: `    public typealias Failure = WaylandDisplayError`
+- L245: `    public mutating func next() async throws(WaylandDisplayError) -> DataTransferEvent? {`
+- L249: `    public mutating func next(`
+- L257: `public struct TextInputEvents: AsyncSequence, Sendable {`
+- L258: `    public typealias Element = TextInputEvent`
+- L259: `    public typealias Failure = WaylandDisplayError`
+- L267: `    public func makeAsyncIterator() -> TextInputEventsIterator {`
+- L273: `public struct TextInputEventsIterator: AsyncIteratorProtocol {`
+- L274: `    public typealias Element = TextInputEvent`
+- L275: `    public typealias Failure = WaylandDisplayError`
+- L283: `    public mutating func next() async throws(WaylandDisplayError) -> TextInputEvent? {`
+- L287: `    public mutating func next(`
+- L295: `public struct DisplayDiagnostics: AsyncSequence, Sendable {`
+- L296: `    public typealias Element = DisplayDiagnostic`
+- L297: `    public typealias Failure = WaylandDisplayError`
+- L305: `    public func makeAsyncIterator() -> DisplayDiagnosticsIterator {`
+- L311: `public struct DisplayDiagnosticsIterator: AsyncIteratorProtocol {`
+- L312: `    public typealias Element = DisplayDiagnostic`
+- L313: `    public typealias Failure = WaylandDisplayError`
+- L321: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayDiagnostic? {`
+- L325: `    public mutating func next(`
 
 ### `Sources/WaylandClient/Public/Display/Output.swift`
 
@@ -1655,120 +1667,146 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L2: `    case unavailable`
 - L3: `    case unknownSeat(SeatID)`
 - L4: `    case foreignWindow(WindowID)`
-- L5: `    case surroundingTextContainsNUL`
-- L6: `    case surroundingTextTooLarge(byteCount: Int, limit: Int)`
-- L7: `    case surroundingTextOffsetOutOfBounds(offset: Int, byteCount: Int)`
-- L8: `    case surroundingTextOffsetInsideCodePoint(offset: Int)`
-- L9: `    case surroundingTextOffsetOverflow(byteCount: Int)`
-- L11: `    public var description: String {`
-- L33: `public struct TextInputSurroundingText: Equatable, Sendable {`
-- L36: `    public let text: String`
-- L37: `    public let cursorUTF8Offset: Int`
-- L38: `    public let anchorUTF8Offset: Int`
-- L40: `    public init(`
-- L111: `public struct TextInputContentHints: OptionSet, Equatable, Sendable {`
-- L112: `    public let rawValue: UInt32`
-- L114: `    public init(rawValue hintsRawValue: UInt32) {`
-- L118: `    public static let completion = Self(rawValue: 0x1)`
-- L119: `    public static let spellcheck = Self(rawValue: 0x2)`
-- L120: `    public static let autoCapitalization = Self(rawValue: 0x4)`
-- L121: `    public static let lowercase = Self(rawValue: 0x8)`
-- L122: `    public static let uppercase = Self(rawValue: 0x10)`
-- L123: `    public static let titlecase = Self(rawValue: 0x20)`
-- L124: `    public static let hiddenText = Self(rawValue: 0x40)`
-- L125: `    public static let sensitiveData = Self(rawValue: 0x80)`
-- L126: `    public static let latin = Self(rawValue: 0x100)`
-- L127: `    public static let multiline = Self(rawValue: 0x200)`
-- L128: `    public static let onScreenInputProvided = Self(rawValue: 0x400)`
-- L129: `    public static let noEmoji = Self(rawValue: 0x800)`
-- L130: `    public static let preeditShown = Self(rawValue: 0x1000)`
-- L133: `public struct TextInputContentPurpose: Equatable, Sendable {`
-- L134: `    public let rawValue: UInt32`
-- L136: `    public init(rawValue purposeRawValue: UInt32) {`
-- L140: `    public static let normal = Self(rawValue: 0)`
-- L141: `    public static let alpha = Self(rawValue: 1)`
-- L142: `    public static let digits = Self(rawValue: 2)`
-- L143: `    public static let number = Self(rawValue: 3)`
-- L144: `    public static let phone = Self(rawValue: 4)`
-- L145: `    public static let url = Self(rawValue: 5)`
-- L146: `    public static let email = Self(rawValue: 6)`
-- L147: `    public static let name = Self(rawValue: 7)`
-- L148: `    public static let password = Self(rawValue: 8)`
-- L149: `    public static let pin = Self(rawValue: 9)`
-- L150: `    public static let date = Self(rawValue: 10)`
-- L151: `    public static let time = Self(rawValue: 11)`
-- L152: `    public static let datetime = Self(rawValue: 12)`
-- L153: `    public static let terminal = Self(rawValue: 13)`
-- L156: `public struct TextInputChangeCause: Equatable, Sendable {`
-- L157: `    public let rawValue: UInt32`
-- L159: `    public init(rawValue causeRawValue: UInt32) {`
-- L163: `    public static let inputMethod = Self(rawValue: 0)`
-- L164: `    public static let other = Self(rawValue: 1)`
-- L167: `public struct TextInputAction: Equatable, Sendable {`
-- L168: `    public let rawValue: UInt32`
-- L170: `    public init(rawValue actionRawValue: UInt32) {`
-- L174: `    public static let none = Self(rawValue: 0)`
-- L175: `    public static let submit = Self(rawValue: 1)`
-- L178: `public struct TextInputPreeditHintKind: Equatable, Sendable {`
-- L179: `    public let rawValue: UInt32`
-- L181: `    public init(rawValue hintRawValue: UInt32) {`
-- L185: `    public static let whole = Self(rawValue: 1)`
-- L186: `    public static let selection = Self(rawValue: 2)`
-- L187: `    public static let prediction = Self(rawValue: 3)`
-- L188: `    public static let prefix = Self(rawValue: 4)`
-- L189: `    public static let suffix = Self(rawValue: 5)`
-- L190: `    public static let spellingError = Self(rawValue: 6)`
-- L191: `    public static let composeError = Self(rawValue: 7)`
-- L194: `public struct TextInputPreeditHint: Equatable, Sendable {`
-- L195: `    public let start: UInt32`
-- L196: `    public let end: UInt32`
-- L197: `    public let kind: TextInputPreeditHintKind`
-- L199: `    public init(`
-- L210: `public struct TextInputFocusEvent: Equatable, Sendable {`
-- L211: `    public let seatID: SeatID`
-- L212: `    public let target: InputEventTarget`
-- L214: `    public init(seatID eventSeatID: SeatID, target eventTarget: InputEventTarget) {`
-- L220: `public struct TextInputPreeditEvent: Equatable, Sendable {`
-- L221: `    public let seatID: SeatID`
-- L222: `    public let text: String`
-- L223: `    public let cursorBegin: Int32`
-- L224: `    public let cursorEnd: Int32`
-- L225: `    public let hints: [TextInputPreeditHint]`
-- L227: `    public init(`
-- L242: `public struct TextInputCommitEvent: Equatable, Sendable {`
-- L243: `    public let seatID: SeatID`
-- L244: `    public let text: String`
-- L246: `    public init(seatID eventSeatID: SeatID, text eventText: String) {`
-- L252: `public struct TextInputDeleteSurroundingTextEvent: Equatable, Sendable {`
-- L253: `    public let seatID: SeatID`
-- L254: `    public let beforeLength: UInt32`
-- L255: `    public let afterLength: UInt32`
-- L257: `    public init(`
-- L268: `public struct TextInputActionEvent: Equatable, Sendable {`
-- L269: `    public let seatID: SeatID`
-- L270: `    public let action: TextInputAction`
-- L271: `    public let serial: UInt32`
-- L273: `    public init(`
-- L284: `public enum TextInputLanguage: Equatable, Sendable {`
-- L285: `    case unknown`
-- L286: `    case tag(String)`
-- L289: `public struct TextInputLanguageEvent: Equatable, Sendable {`
-- L290: `    public let seatID: SeatID`
-- L291: `    public let language: TextInputLanguage`
-- L293: `    public init(seatID eventSeatID: SeatID, language eventLanguage: TextInputLanguage) {`
-- L299: `public struct TextInputDoneEvent: Equatable, Sendable {`
-- L300: `    public let seatID: SeatID`
-- L301: `    public let serial: UInt32`
-- L303: `    public init(seatID eventSeatID: SeatID, serial eventSerial: UInt32) {`
-- L309: `public enum TextInputEvent: Equatable, Sendable {`
-- L310: `    case entered(TextInputFocusEvent)`
-- L311: `    case left(TextInputFocusEvent)`
-- L312: `    case preedit(TextInputPreeditEvent)`
-- L313: `    case committed(TextInputCommitEvent)`
-- L314: `    case deleteSurroundingText(TextInputDeleteSurroundingTextEvent)`
-- L315: `    case action(TextInputActionEvent)`
-- L316: `    case language(TextInputLanguageEvent)`
-- L317: `    case done(TextInputDoneEvent)`
+- L5: `    case inactiveSession(seatID: SeatID, operation: TextInputRequestOperation)`
+- L6: `    case surroundingTextContainsNUL`
+- L7: `    case surroundingTextTooLarge(byteCount: Int, limit: Int)`
+- L8: `    case surroundingTextOffsetOutOfBounds(offset: Int, byteCount: Int)`
+- L9: `    case surroundingTextOffsetInsideCodePoint(offset: Int)`
+- L10: `    case surroundingTextOffsetOverflow(byteCount: Int)`
+- L11: `    case surroundingTextIndexOutOfBounds`
+- L13: `    public var description: String {`
+- L39: `public enum TextInputRequestOperation: Equatable, Sendable, CustomStringConvertible {`
+- L40: `    case enable`
+- L41: `    case disable`
+- L42: `    case setSurroundingText`
+- L43: `    case setTextChangeCause`
+- L44: `    case setContentType`
+- L45: `    case setCursorRectangle`
+- L46: `    case commit`
+- L48: `    public var description: String {`
+- L68: `public struct TextInputSurroundingText: Equatable, Sendable {`
+- L71: `    public let text: String`
+- L72: `    public let cursorUTF8Offset: Int`
+- L73: `    public let anchorUTF8Offset: Int`
+- L75: `    public init(`
+- L108: `    public init(`
+- L122: `    public static func insertionPoint(`
+- L182: `public struct TextInputContentHints: OptionSet, Equatable, Sendable {`
+- L183: `    public let rawValue: UInt32`
+- L185: `    public init(rawValue hintsRawValue: UInt32) {`
+- L189: `    public static let completion = Self(rawValue: 0x1)`
+- L190: `    public static let spellcheck = Self(rawValue: 0x2)`
+- L191: `    public static let autoCapitalization = Self(rawValue: 0x4)`
+- L192: `    public static let lowercase = Self(rawValue: 0x8)`
+- L193: `    public static let uppercase = Self(rawValue: 0x10)`
+- L194: `    public static let titlecase = Self(rawValue: 0x20)`
+- L195: `    public static let hiddenText = Self(rawValue: 0x40)`
+- L196: `    public static let sensitiveData = Self(rawValue: 0x80)`
+- L197: `    public static let latin = Self(rawValue: 0x100)`
+- L198: `    public static let multiline = Self(rawValue: 0x200)`
+- L199: `    public static let onScreenInputProvided = Self(rawValue: 0x400)`
+- L200: `    public static let noEmoji = Self(rawValue: 0x800)`
+- L201: `    public static let preeditShown = Self(rawValue: 0x1000)`
+- L204: `public struct TextInputContentPurpose: Equatable, Sendable {`
+- L205: `    public let rawValue: UInt32`
+- L207: `    public init(rawValue purposeRawValue: UInt32) {`
+- L211: `    public static let normal = Self(rawValue: 0)`
+- L212: `    public static let alpha = Self(rawValue: 1)`
+- L213: `    public static let digits = Self(rawValue: 2)`
+- L214: `    public static let number = Self(rawValue: 3)`
+- L215: `    public static let phone = Self(rawValue: 4)`
+- L216: `    public static let url = Self(rawValue: 5)`
+- L217: `    public static let email = Self(rawValue: 6)`
+- L218: `    public static let name = Self(rawValue: 7)`
+- L219: `    public static let password = Self(rawValue: 8)`
+- L220: `    public static let pin = Self(rawValue: 9)`
+- L221: `    public static let date = Self(rawValue: 10)`
+- L222: `    public static let time = Self(rawValue: 11)`
+- L223: `    public static let datetime = Self(rawValue: 12)`
+- L224: `    public static let terminal = Self(rawValue: 13)`
+- L227: `public struct TextInputChangeCause: Equatable, Sendable {`
+- L228: `    public let rawValue: UInt32`
+- L230: `    public init(rawValue causeRawValue: UInt32) {`
+- L234: `    public static let inputMethod = Self(rawValue: 0)`
+- L235: `    public static let other = Self(rawValue: 1)`
+- L238: `public struct TextInputAction: Equatable, Sendable {`
+- L239: `    public let rawValue: UInt32`
+- L241: `    public init(rawValue actionRawValue: UInt32) {`
+- L245: `    public static let none = Self(rawValue: 0)`
+- L246: `    public static let submit = Self(rawValue: 1)`
+- L249: `public struct TextInputPreeditHintKind: Equatable, Sendable {`
+- L250: `    public let rawValue: UInt32`
+- L252: `    public init(rawValue hintRawValue: UInt32) {`
+- L256: `    public static let whole = Self(rawValue: 1)`
+- L257: `    public static let selection = Self(rawValue: 2)`
+- L258: `    public static let prediction = Self(rawValue: 3)`
+- L259: `    public static let prefix = Self(rawValue: 4)`
+- L260: `    public static let suffix = Self(rawValue: 5)`
+- L261: `    public static let spellingError = Self(rawValue: 6)`
+- L262: `    public static let composeError = Self(rawValue: 7)`
+- L265: `public struct TextInputPreeditHint: Equatable, Sendable {`
+- L266: `    public let start: UInt32`
+- L267: `    public let end: UInt32`
+- L268: `    public let kind: TextInputPreeditHintKind`
+- L270: `    public init(`
+- L281: `public struct TextInputFocusEvent: Equatable, Sendable {`
+- L282: `    public let seatID: SeatID`
+- L283: `    public let target: InputEventTarget`
+- L285: `    public init(seatID eventSeatID: SeatID, target eventTarget: InputEventTarget) {`
+- L291: `public struct TextInputPreeditEvent: Equatable, Sendable {`
+- L292: `    public let seatID: SeatID`
+- L293: `    public let text: String`
+- L294: `    public let cursorBegin: Int32`
+- L295: `    public let cursorEnd: Int32`
+- L296: `    public let hints: [TextInputPreeditHint]`
+- L298: `    public init(`
+- L313: `public struct TextInputCommitEvent: Equatable, Sendable {`
+- L314: `    public let seatID: SeatID`
+- L315: `    public let text: String`
+- L317: `    public init(seatID eventSeatID: SeatID, text eventText: String) {`
+- L323: `public struct TextInputDeleteSurroundingTextEvent: Equatable, Sendable {`
+- L324: `    public let seatID: SeatID`
+- L325: `    public let beforeLength: UInt32`
+- L326: `    public let afterLength: UInt32`
+- L328: `    public init(`
+- L339: `public struct TextInputActionEvent: Equatable, Sendable {`
+- L340: `    public let seatID: SeatID`
+- L341: `    public let action: TextInputAction`
+- L342: `    public let serial: UInt32`
+- L344: `    public init(`
+- L355: `public enum TextInputLanguage: Equatable, Sendable {`
+- L356: `    case unknown`
+- L357: `    case tag(String)`
+- L360: `public struct TextInputLanguageEvent: Equatable, Sendable {`
+- L361: `    public let seatID: SeatID`
+- L362: `    public let language: TextInputLanguage`
+- L364: `    public init(seatID eventSeatID: SeatID, language eventLanguage: TextInputLanguage) {`
+- L370: `public struct TextInputDoneEvent: Equatable, Sendable {`
+- L371: `    public let seatID: SeatID`
+- L372: `    public let serial: UInt32`
+- L374: `    public init(seatID eventSeatID: SeatID, serial eventSerial: UInt32) {`
+- L380: `public struct TextInputDiagnostic: Equatable, Sendable {`
+- L381: `    public let seatID: SeatID?`
+- L382: `    public let operation: TextInputDiagnosticOperation`
+- L383: `    public let message: String`
+- L385: `    public init(`
+- L396: `public enum TextInputDiagnosticOperation: Equatable, Sendable {`
+- L397: `    case unavailable`
+- L398: `    case listener`
+- L399: `    case invalidEventOrder`
+- L400: `    case invalidRequest(TextInputRequestOperation)`
+- L401: `    case unknownProtocolValue`
+- L402: `    case seatRemoved`
+- L405: `public enum TextInputEvent: Equatable, Sendable {`
+- L406: `    case entered(TextInputFocusEvent)`
+- L407: `    case left(TextInputFocusEvent)`
+- L408: `    case preedit(TextInputPreeditEvent)`
+- L409: `    case committed(TextInputCommitEvent)`
+- L410: `    case deleteSurroundingText(TextInputDeleteSurroundingTextEvent)`
+- L411: `    case action(TextInputActionEvent)`
+- L412: `    case language(TextInputLanguageEvent)`
+- L413: `    case done(TextInputDoneEvent)`
+- L414: `    case diagnostic(TextInputDiagnostic)`
 
 ### `Sources/WaylandClient/Public/TextInput/TextInputSession.swift`
 

@@ -2,12 +2,12 @@ public struct TextInputSession: Sendable, Hashable {
     public let seatID: SeatID
 
     private let display: WaylandDisplay
-    private let displayIdentity: ObjectIdentifier
+    private let ownership: DisplayOwnedIdentity<SeatID>
 
     package init(seatID sessionSeatID: SeatID, display owningDisplay: WaylandDisplay) {
         seatID = sessionSeatID
         display = owningDisplay
-        displayIdentity = ObjectIdentifier(owningDisplay)
+        ownership = DisplayOwnedIdentity(id: sessionSeatID, display: owningDisplay)
     }
 
     public func enable(for window: Window) async throws {
@@ -55,11 +55,10 @@ public struct TextInputSession: Sendable, Hashable {
     }
 
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.seatID == rhs.seatID && lhs.displayIdentity == rhs.displayIdentity
+        lhs.ownership == rhs.ownership
     }
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(displayIdentity)
-        hasher.combine(seatID)
+        hasher.combine(ownership)
     }
 }

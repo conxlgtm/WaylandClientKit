@@ -61,6 +61,21 @@ struct CursorAnimationStateTests {
         #expect(state.currentFrame.image === replacement.image)
         #expect(state.currentFrameIndex == 0)
     }
+
+    @Test
+    func invalidateRejectsPreviouslyScheduledTick() throws {
+        let first = try animatedFrame(delay: 100)
+        let second = try animatedFrame(delay: 200)
+        var state = try CursorAnimationState(frames: [first, second])
+        let scheduledGeneration = state.generation
+
+        #expect(state.acceptsScheduledTick(generation: scheduledGeneration))
+
+        state.invalidate()
+
+        #expect(!state.acceptsScheduledTick(generation: scheduledGeneration))
+        #expect(state.acceptsScheduledTick(generation: state.generation))
+    }
 }
 
 private func animatedFrame(delay: UInt32) throws -> AnimatedCursorFrame {

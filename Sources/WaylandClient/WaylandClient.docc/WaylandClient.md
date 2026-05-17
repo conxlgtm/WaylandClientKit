@@ -15,6 +15,7 @@ targets. They are not public `WaylandClient` API.
 
 ### Display Connection
 
+- <doc:DisplayLifecycle>
 - ``WaylandDisplay``
 - ``WaylandDisplayError``
 - ``WaylandCapabilities``
@@ -22,6 +23,7 @@ targets. They are not public `WaylandClient` API.
 
 ### Windows And Popups
 
+- <doc:WindowDrawing>
 - ``Window``
 - ``WindowConfiguration``
 - ``PopupSurface``
@@ -36,6 +38,7 @@ targets. They are not public `WaylandClient` API.
 
 ### Input
 
+- <doc:InputAndTextInput>
 - ``InputEvent``
 - ``SeatID``
 - ``KeyboardKeyEvent``
@@ -44,6 +47,7 @@ targets. They are not public `WaylandClient` API.
 
 ### Data Transfer
 
+- <doc:DataTransferAndDragIcons>
 - ``ClipboardOffer``
 - ``ClipboardSource``
 - ``PrimarySelectionOffer``
@@ -54,6 +58,7 @@ targets. They are not public `WaylandClient` API.
 
 ### Text Input
 
+- <doc:InputAndTextInput>
 - ``TextInputSession``
 - ``TextInputEvents``
 - ``TextInputEvent``
@@ -61,8 +66,37 @@ targets. They are not public `WaylandClient` API.
 - ``TextInputContentPurpose``
 - ``TextInputError``
 
+### Capabilities
+
+- <doc:CapabilitiesAndOptionalProtocols>
+- ``WaylandCapabilities``
+- ``ProtocolAvailability``
+
+### Event Streams
+
+- <doc:EventStreamsAndOverflow>
+- ``DisplayEvents``
+- ``InputEvents``
+- ``TextInputEvents``
+- ``DataTransferEvents``
+
+### Cursor
+
+- <doc:CursorShapeAndThemeFallback>
+- ``PointerCursor``
+- ``CursorConfiguration``
+- ``CursorRequestResult``
+
+### Presentation
+
+- <doc:PresentationFeedbackAndFrameCallbacks>
+- ``WindowPresentationEvents``
+- ``PresentationFeedback``
+
 ### Diagnostics
 
+- <doc:DiagnosticsAndDisplayFailures>
 - ``DisplayDiagnostic``
 - ``WindowDiagnostic``
+- ``TextInputDiagnostic``
 - ``WaylandDisplayError``

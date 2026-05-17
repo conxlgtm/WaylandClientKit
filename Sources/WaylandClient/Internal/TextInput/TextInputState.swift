@@ -12,7 +12,33 @@ package enum TextInputProtocolEvent: Equatable, Sendable {
     case preeditHint(TextInputPreeditHint)
 }
 
-private struct PendingTextInputBatch: Equatable, Sendable {
+package struct TextInputTransaction: Equatable, Sendable {
+    package var preedit: TextInputPreeditEvent?
+    package var deleteSurroundingText: TextInputDeleteSurroundingTextEvent?
+    package var commit: TextInputCommitEvent?
+    package var action: TextInputActionEvent?
+    package var done: TextInputDoneEvent
+
+    package var events: [TextInputEvent] {
+        var transactionEvents: [TextInputEvent] = []
+        if let preedit {
+            transactionEvents.append(.preedit(preedit))
+        }
+        if let deleteSurroundingText {
+            transactionEvents.append(.deleteSurroundingText(deleteSurroundingText))
+        }
+        if let commit {
+            transactionEvents.append(.committed(commit))
+        }
+        if let action {
+            transactionEvents.append(.action(action))
+        }
+        transactionEvents.append(.done(done))
+        return transactionEvents
+    }
+}
+
+private struct PendingTextInputTransaction: Equatable, Sendable {
     var preedit: RawTextInputPreedit?
     var commitString: String?
     var deleteSurroundingText: TextInputDeleteSurroundingTextEvent?
@@ -30,7 +56,7 @@ private struct PendingTextInputBatch: Equatable, Sendable {
 
 package struct TextInputState: Equatable, Sendable {
     package let seatID: SeatID
-    private var pending = PendingTextInputBatch()
+    private var pending = PendingTextInputTransaction()
 
     package init(seatID stateSeatID: SeatID) {
         seatID = stateSeatID
@@ -70,39 +96,97 @@ package struct TextInputState: Equatable, Sendable {
             pending.preeditHints.append(hint)
             return []
         case .done(let serial):
-            let events = committedEvents(serial: serial)
+            let events = committedTransaction(serial: serial).events
             pending.reset()
             return events
         }
     }
 
-    private func committedEvents(serial: UInt32) -> [TextInputEvent] {
-        var events: [TextInputEvent] = []
+    package func committedTransaction(serial: UInt32) -> TextInputTransaction {
+        let preeditEvent: TextInputPreeditEvent?
         if let preedit = pending.preedit {
-            events.append(
-                .preedit(
-                    TextInputPreeditEvent(
-                        seatID: seatID,
-                        text: preedit.text ?? "",
-                        cursorBegin: preedit.cursorBegin,
-                        cursorEnd: preedit.cursorEnd,
-                        hints: pending.preeditHints
-                    )
-                )
+            preeditEvent = TextInputPreeditEvent(
+                seatID: seatID,
+                text: preedit.text ?? "",
+                cursorBegin: preedit.cursorBegin,
+                cursorEnd: preedit.cursorEnd,
+                hints: pending.preeditHints
             )
+        } else {
+            preeditEvent = nil
         }
-        if let deleteSurroundingText = pending.deleteSurroundingText {
-            events.append(.deleteSurroundingText(deleteSurroundingText))
-        }
+
+        let commitEvent: TextInputCommitEvent?
         if let commitString = pending.commitString {
-            events.append(
-                .committed(TextInputCommitEvent(seatID: seatID, text: commitString))
-            )
+            commitEvent = TextInputCommitEvent(seatID: seatID, text: commitString)
+        } else {
+            commitEvent = nil
         }
-        if let action = pending.action {
-            events.append(.action(action))
+
+        return TextInputTransaction(
+            preedit: preeditEvent,
+            deleteSurroundingText: pending.deleteSurroundingText,
+            commit: commitEvent,
+            action: pending.action,
+            done: TextInputDoneEvent(seatID: seatID, serial: serial)
+        )
+    }
+}
+
+package enum TextInputSessionLifecycle: Equatable, Sendable {
+    case inactive
+    case enabled(windowID: WindowID)
+    case focused(target: InputEventTarget)
+    case disabled
+
+    package var permitsRequestMutation: Bool {
+        switch self {
+        case .enabled, .focused:
+            true
+        case .inactive, .disabled:
+            false
         }
-        events.append(.done(TextInputDoneEvent(seatID: seatID, serial: serial)))
-        return events
+    }
+
+    package mutating func markEntered(_ target: InputEventTarget) {
+        switch self {
+        case .enabled, .focused:
+            self = .focused(target: target)
+        case .inactive, .disabled:
+            break
+        }
+    }
+
+    package mutating func markLeft(_ target: InputEventTarget) {
+        guard case .focused = self else { return }
+
+        switch target {
+        case .surface(let surfaceTarget):
+            self = .enabled(windowID: surfaceTarget.windowID)
+        case .display, .unmanagedSurface, .focusless:
+            self = .disabled
+        }
+    }
+}
+
+extension TextInputDiagnostic {
+    package static func invalidRequest(
+        seatID: SeatID,
+        operation: TextInputRequestOperation,
+        lifecycle: TextInputSessionLifecycle
+    ) -> TextInputDiagnostic {
+        TextInputDiagnostic(
+            seatID: seatID,
+            operation: .invalidRequest(operation),
+            message: "ignored text-input \(operation.description) request in \(lifecycle)"
+        )
+    }
+
+    package static func seatRemoved(_ seatID: SeatID) -> TextInputDiagnostic {
+        TextInputDiagnostic(
+            seatID: seatID,
+            operation: .seatRemoved,
+            message: "text-input seat \(seatID) was removed"
+        )
     }
 }

@@ -59,6 +59,9 @@ package struct PrimarySelectionGlobalSnapshot: Equatable, Sendable {
     }
 }
 
+package typealias DataTransferDrain =
+    EventAndDiagnostics<DataTransferEvent, DataTransferDiagnostic>
+
 package protocol DataTransferGlobalProviding {
     var currentDataTransferGlobalSnapshot: DataTransferGlobalSnapshot? { get }
     var currentPrimarySelectionGlobalSnapshot: PrimarySelectionGlobalSnapshot? { get }
@@ -117,10 +120,13 @@ extension DisplaySession {
         _ events: [DataTransferEvent],
         using writer: ThreadedDataTransferSourceWriter,
         pendingDiagnostics: inout [DataTransferDiagnostic]
-    ) -> (diagnostics: [DataTransferDiagnostic], events: [DataTransferEvent]) {
+    ) -> DataTransferDrain {
         cancelSourceWrites(for: events, using: writer)
         collectDataTransferSourceWriteResults(from: writer, into: &pendingDiagnostics)
-        return (diagnostics: pendingDiagnostics.drain(), events: events)
+        return DataTransferDrain(
+            events: events,
+            diagnostics: pendingDiagnostics.drain()
+        )
     }
 
     package func clipboardOfferOnOwnerThread(for seatID: SeatID) throws -> DataOfferSnapshot? {

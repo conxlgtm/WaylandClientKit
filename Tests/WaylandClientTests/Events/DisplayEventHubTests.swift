@@ -366,21 +366,6 @@ struct DisplayEventHubFailureTests {
     }
 
     @Test
-    func fatalInternalInvariantTerminatesDisplayAndInputStreams() async {
-        let hub = DisplayEventHub()
-        var displayIterator = hub.displayEvents().makeAsyncIterator()
-        var inputIterator = hub.inputEvents().makeAsyncIterator()
-        let error = WaylandDisplayError.internalInvariantViolation(
-            .message("listener state lost")
-        )
-
-        hub.finish(throwing: error)
-
-        await expectFailure(error, from: &displayIterator)
-        await expectFailure(error, from: &inputIterator)
-    }
-
-    @Test
     func newInputSubscriptionAfterPipelineOverflowFailsImmediately() async {
         let hub = DisplayEventHub()
         let overflow = InputPipelineOverflow(

@@ -58,10 +58,12 @@ print_pkg_config_version() {
 
 print_wayland_globals() {
     local probe="$1"
+    local output
 
     echo '```text'
-    if timeout 10 "$probe"; then
-        :
+    if output="$(timeout 10 "$probe" 2>/dev/null)"; then
+        printf '%s\n' "$output"
+        WAYLAND_GLOBALS_TEXT="$output"
     else
         local status="$?"
 
@@ -73,6 +75,44 @@ print_wayland_globals() {
     fi
     echo '```'
 }
+
+print_protocol_summary() {
+    local globals="$1"
+    local protocol
+    local protocols=(
+        wl_compositor
+        wl_shm
+        wl_seat
+        xdg_wm_base
+        wp_viewporter
+        wp_fractional_scale_manager_v1
+        wp_presentation
+        zwp_linux_dmabuf_v1
+        wl_data_device_manager
+        zwp_primary_selection_device_manager_v1
+        wp_cursor_shape_manager_v1
+        zwp_text_input_manager_v3
+        zxdg_decoration_manager_v1
+        zxdg_output_manager_v1
+    )
+
+    echo "## Protocol Summary"
+    echo
+    if [[ -z "$globals" ]]; then
+        echo "Global protocol summary unavailable."
+        return
+    fi
+
+    for protocol in "${protocols[@]}"; do
+        if grep -Eq "(^|[^[:alnum:]_])${protocol}([^[:alnum:]_]|$)" <<<"$globals"; then
+            printf -- '- %s: present\n' "$protocol"
+        else
+            printf -- '- %s: absent\n' "$protocol"
+        fi
+    done
+}
+
+WAYLAND_GLOBALS_TEXT=""
 
 echo "# SwiftWayland Compositor Facts"
 echo
@@ -106,6 +146,9 @@ elif command -v weston-info >/dev/null 2>&1; then
 else
     echo "Install wayland-utils or weston-info to collect advertised globals."
 fi
+
+echo
+print_protocol_summary "$WAYLAND_GLOBALS_TEXT"
 
 if [[ "$include_smoke" -eq 1 ]]; then
     echo

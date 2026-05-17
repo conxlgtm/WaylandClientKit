@@ -1,24 +1,36 @@
 public struct EventStreamConfiguration: Equatable, Sendable {
     public var displayEventCapacity: EventStreamCapacity
     public var inputEventCapacity: EventStreamCapacity
+    public var textInputEventCapacity: EventStreamCapacity
     public var dataTransferEventCapacity: EventStreamCapacity
+    public var presentationEventCapacity: EventStreamCapacity
 
     public init(
         displayEventCapacity displayCapacity: EventStreamCapacity = .defaultDisplayEvents,
         inputEventCapacity inputCapacity: EventStreamCapacity = .defaultInputEvents,
+        textInputEventCapacity textInputCapacity: EventStreamCapacity =
+            .defaultTextInputEvents,
         dataTransferEventCapacity dataTransferCapacity: EventStreamCapacity =
-            .defaultDataTransferEvents
+            .defaultDataTransferEvents,
+        presentationEventCapacity presentationCapacity: EventStreamCapacity =
+            .defaultPresentationEvents
     ) {
         displayEventCapacity = displayCapacity
         inputEventCapacity = inputCapacity
+        textInputEventCapacity = textInputCapacity
         dataTransferEventCapacity = dataTransferCapacity
+        presentationEventCapacity = presentationCapacity
     }
 
     public init(
         displayEventCapacity displayCapacity: Int,
         inputEventCapacity inputCapacity: Int = EventStreamCapacity.defaultInputEvents.rawValue,
+        textInputEventCapacity textInputCapacity: Int =
+            EventStreamCapacity.defaultTextInputEvents.rawValue,
         dataTransferEventCapacity dataTransferCapacity: Int =
-            EventStreamCapacity.defaultDataTransferEvents.rawValue
+            EventStreamCapacity.defaultDataTransferEvents.rawValue,
+        presentationEventCapacity presentationCapacity: Int =
+            EventStreamCapacity.defaultPresentationEvents.rawValue
     ) throws {
         displayEventCapacity = try EventStreamCapacity(
             displayCapacity,
@@ -28,9 +40,17 @@ public struct EventStreamConfiguration: Equatable, Sendable {
             inputCapacity,
             field: .inputEventCapacity
         )
+        textInputEventCapacity = try EventStreamCapacity(
+            textInputCapacity,
+            field: .textInputEventCapacity
+        )
         dataTransferEventCapacity = try EventStreamCapacity(
             dataTransferCapacity,
             field: .dataTransferEventCapacity
+        )
+        presentationEventCapacity = try EventStreamCapacity(
+            presentationCapacity,
+            field: .presentationEventCapacity
         )
     }
 
@@ -38,6 +58,106 @@ public struct EventStreamConfiguration: Equatable, Sendable {
         inputEventCapacity inputCapacity: Int,
         displayEventCapacity displayCapacity: Int =
             EventStreamCapacity.defaultDisplayEvents.rawValue,
+        textInputEventCapacity textInputCapacity: Int =
+            EventStreamCapacity.defaultTextInputEvents.rawValue,
+        dataTransferEventCapacity dataTransferCapacity: Int =
+            EventStreamCapacity.defaultDataTransferEvents.rawValue,
+        presentationEventCapacity presentationCapacity: Int =
+            EventStreamCapacity.defaultPresentationEvents.rawValue
+    ) throws {
+        displayEventCapacity = try EventStreamCapacity(
+            displayCapacity,
+            field: .displayEventCapacity
+        )
+        inputEventCapacity = try EventStreamCapacity(
+            inputCapacity,
+            field: .inputEventCapacity
+        )
+        textInputEventCapacity = try EventStreamCapacity(
+            textInputCapacity,
+            field: .textInputEventCapacity
+        )
+        dataTransferEventCapacity = try EventStreamCapacity(
+            dataTransferCapacity,
+            field: .dataTransferEventCapacity
+        )
+        presentationEventCapacity = try EventStreamCapacity(
+            presentationCapacity,
+            field: .presentationEventCapacity
+        )
+    }
+
+    public init(
+        textInputEventCapacity textInputCapacity: Int,
+        displayEventCapacity displayCapacity: Int =
+            EventStreamCapacity.defaultDisplayEvents.rawValue,
+        inputEventCapacity inputCapacity: Int = EventStreamCapacity.defaultInputEvents.rawValue,
+        dataTransferEventCapacity dataTransferCapacity: Int =
+            EventStreamCapacity.defaultDataTransferEvents.rawValue,
+        presentationEventCapacity presentationCapacity: Int =
+            EventStreamCapacity.defaultPresentationEvents.rawValue
+    ) throws {
+        displayEventCapacity = try EventStreamCapacity(
+            displayCapacity,
+            field: .displayEventCapacity
+        )
+        inputEventCapacity = try EventStreamCapacity(
+            inputCapacity,
+            field: .inputEventCapacity
+        )
+        textInputEventCapacity = try EventStreamCapacity(
+            textInputCapacity,
+            field: .textInputEventCapacity
+        )
+        dataTransferEventCapacity = try EventStreamCapacity(
+            dataTransferCapacity,
+            field: .dataTransferEventCapacity
+        )
+        presentationEventCapacity = try EventStreamCapacity(
+            presentationCapacity,
+            field: .presentationEventCapacity
+        )
+    }
+
+    public init(
+        dataTransferEventCapacity dataTransferCapacity: Int,
+        displayEventCapacity displayCapacity: Int =
+            EventStreamCapacity.defaultDisplayEvents.rawValue,
+        inputEventCapacity inputCapacity: Int = EventStreamCapacity.defaultInputEvents.rawValue,
+        textInputEventCapacity textInputCapacity: Int =
+            EventStreamCapacity.defaultTextInputEvents.rawValue,
+        presentationEventCapacity presentationCapacity: Int =
+            EventStreamCapacity.defaultPresentationEvents.rawValue
+    ) throws {
+        displayEventCapacity = try EventStreamCapacity(
+            displayCapacity,
+            field: .displayEventCapacity
+        )
+        inputEventCapacity = try EventStreamCapacity(
+            inputCapacity,
+            field: .inputEventCapacity
+        )
+        textInputEventCapacity = try EventStreamCapacity(
+            textInputCapacity,
+            field: .textInputEventCapacity
+        )
+        dataTransferEventCapacity = try EventStreamCapacity(
+            dataTransferCapacity,
+            field: .dataTransferEventCapacity
+        )
+        presentationEventCapacity = try EventStreamCapacity(
+            presentationCapacity,
+            field: .presentationEventCapacity
+        )
+    }
+
+    public init(
+        presentationEventCapacity presentationCapacity: Int,
+        displayEventCapacity displayCapacity: Int =
+            EventStreamCapacity.defaultDisplayEvents.rawValue,
+        inputEventCapacity inputCapacity: Int = EventStreamCapacity.defaultInputEvents.rawValue,
+        textInputEventCapacity textInputCapacity: Int =
+            EventStreamCapacity.defaultTextInputEvents.rawValue,
         dataTransferEventCapacity dataTransferCapacity: Int =
             EventStreamCapacity.defaultDataTransferEvents.rawValue
     ) throws {
@@ -49,29 +169,17 @@ public struct EventStreamConfiguration: Equatable, Sendable {
             inputCapacity,
             field: .inputEventCapacity
         )
-        dataTransferEventCapacity = try EventStreamCapacity(
-            dataTransferCapacity,
-            field: .dataTransferEventCapacity
-        )
-    }
-
-    public init(
-        dataTransferEventCapacity dataTransferCapacity: Int,
-        displayEventCapacity displayCapacity: Int =
-            EventStreamCapacity.defaultDisplayEvents.rawValue,
-        inputEventCapacity inputCapacity: Int = EventStreamCapacity.defaultInputEvents.rawValue
-    ) throws {
-        displayEventCapacity = try EventStreamCapacity(
-            displayCapacity,
-            field: .displayEventCapacity
-        )
-        inputEventCapacity = try EventStreamCapacity(
-            inputCapacity,
-            field: .inputEventCapacity
+        textInputEventCapacity = try EventStreamCapacity(
+            textInputCapacity,
+            field: .textInputEventCapacity
         )
         dataTransferEventCapacity = try EventStreamCapacity(
             dataTransferCapacity,
             field: .dataTransferEventCapacity
+        )
+        presentationEventCapacity = try EventStreamCapacity(
+            presentationCapacity,
+            field: .presentationEventCapacity
         )
     }
 }
