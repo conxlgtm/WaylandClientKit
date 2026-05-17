@@ -137,6 +137,7 @@ extension DataTransferManager {
             sourceID: sourceID,
             callbackIdentity: callbackIdentity
         )
+        var iconBinding: (any DataTransferDragIconBinding)?
         do {
             guard sourceBinding.protocolVersion >= RawVersion(3) else {
                 throw DataTransferError.dragSourceActionNegotiationUnavailable(
@@ -144,6 +145,7 @@ extension DataTransferManager {
                 )
             }
 
+            iconBinding = try backend.prepareDragIcon(request.icon)
             for mimeType in request.payloads.mimeTypes {
                 sourceBinding.offer(mimeType: mimeType)
             }
@@ -164,11 +166,14 @@ extension DataTransferManager {
             deviceBinding.startDrag(
                 source: sourceBinding,
                 origin: request.origin,
-                icon: request.icon,
+                icon: iconBinding,
                 serial: request.serial
             )
+            sourceBinding.attachDragIcon(iconBinding)
+            iconBinding = nil
             preconditionInvariantsHold()
         } catch {
+            iconBinding?.destroy()
             sourceBinding.destroy()
             store.removeSource(sourceID)
             throw error

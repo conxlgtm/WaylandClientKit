@@ -46,6 +46,7 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
     case unsupportedDragAction(action: DragAction, available: DragActionSet)
     case invalidDragActionSet(rawValue: UInt32)
     case invalidDragAction(rawValue: UInt32)
+    case invalidDragIconPixelCount(expected: Int, actual: Int)
     case invalidSourceEvent(DataSourceCallbackEventKind)
     case unknownSource
     case unknownSourceIdentity(ClipboardSourceIdentity)
@@ -142,6 +143,8 @@ public enum DataTransferError: Error, Equatable, Sendable, CustomStringConvertib
             "invalid drag action set: \(rawValue)"
         case .invalidDragAction(let rawValue):
             "invalid drag action: \(rawValue)"
+        case .invalidDragIconPixelCount(let expected, let actual):
+            "invalid drag icon pixel count: expected \(expected), got \(actual)"
         case .invalidSourceEvent(let event):
             "invalid data source callback event: \(event.description)"
         case .unknownSource:
