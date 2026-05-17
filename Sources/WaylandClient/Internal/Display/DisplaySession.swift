@@ -227,6 +227,8 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
                 advertisedProtocol(named: "wp_viewporter"),
                 advertisedProtocol(named: "wp_presentation"),
                 advertisedProtocol(named: "wp_fractional_scale_manager_v1"),
+                advertisedProtocol(named: "wp_cursor_shape_manager_v1"),
+                advertisedProtocol(named: "zwp_text_input_manager_v3"),
                 advertisedProtocol(named: "zwp_linux_dmabuf_v1"),
             ].compactMap(\.self))
     }

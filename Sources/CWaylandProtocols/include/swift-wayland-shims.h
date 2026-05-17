@@ -37,6 +37,8 @@ struct zwp_primary_selection_device_manager_v1;
 struct zwp_primary_selection_device_v1;
 struct zwp_primary_selection_offer_v1;
 struct zwp_primary_selection_source_v1;
+struct zwp_text_input_manager_v3;
+struct zwp_text_input_v3;
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,6 +86,9 @@ struct wl_data_device_manager *swl_registry_bind_wl_data_device_manager(
 
 struct zwp_primary_selection_device_manager_v1 *
 swl_registry_bind_zwp_primary_selection_device_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct zwp_text_input_manager_v3 *swl_registry_bind_zwp_text_input_manager_v3(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct zwp_linux_dmabuf_v1 *swl_registry_bind_zwp_linux_dmabuf_v1(
@@ -178,6 +183,35 @@ void swl_primary_selection_device_set_selection(
     struct zwp_primary_selection_device_v1 *device,
     struct zwp_primary_selection_source_v1 *source,
     uint32_t serial);
+
+/* ------------------------------------------------------------------ */
+/*  Text-input request wrappers                                       */
+/* ------------------------------------------------------------------ */
+
+struct zwp_text_input_v3 *swl_text_input_manager_v3_get_text_input(
+    struct zwp_text_input_manager_v3 *manager,
+    struct wl_seat *seat);
+void swl_text_input_v3_enable(struct zwp_text_input_v3 *text_input);
+void swl_text_input_v3_disable(struct zwp_text_input_v3 *text_input);
+void swl_text_input_v3_set_surrounding_text(
+    struct zwp_text_input_v3 *text_input,
+    const char *text,
+    int32_t cursor,
+    int32_t anchor);
+void swl_text_input_v3_set_text_change_cause(
+    struct zwp_text_input_v3 *text_input,
+    uint32_t cause);
+void swl_text_input_v3_set_content_type(
+    struct zwp_text_input_v3 *text_input,
+    uint32_t hint,
+    uint32_t purpose);
+void swl_text_input_v3_set_cursor_rectangle(
+    struct zwp_text_input_v3 *text_input,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height);
+void swl_text_input_v3_commit(struct zwp_text_input_v3 *text_input);
 
 /* ------------------------------------------------------------------ */
 /*  XDG request wrappers                                              */
@@ -360,6 +394,9 @@ void swl_primary_selection_device_destroy(
     struct zwp_primary_selection_device_v1 *device);
 void swl_primary_selection_device_manager_destroy(
     struct zwp_primary_selection_device_manager_v1 *manager);
+void swl_text_input_v3_destroy(struct zwp_text_input_v3 *text_input);
+void swl_text_input_manager_v3_destroy(
+    struct zwp_text_input_manager_v3 *manager);
 void swl_xdg_surface_destroy(struct xdg_surface *xdg_surface);
 void swl_xdg_toplevel_destroy(struct xdg_toplevel *xdg_toplevel);
 void swl_xdg_positioner_destroy(struct xdg_positioner *positioner);
@@ -634,6 +671,40 @@ typedef void (*swl_zwp_linux_buffer_params_failed_fn)(
     void *data,
     struct zwp_linux_buffer_params_v1 *params);
 
+/* Text input */
+typedef void (*swl_text_input_v3_enter_fn)(
+    void *data, struct zwp_text_input_v3 *text_input, struct wl_surface *surface);
+typedef void (*swl_text_input_v3_leave_fn)(
+    void *data, struct zwp_text_input_v3 *text_input, struct wl_surface *surface);
+typedef void (*swl_text_input_v3_preedit_string_fn)(
+    void *data,
+    struct zwp_text_input_v3 *text_input,
+    const char *text,
+    int32_t cursor_begin,
+    int32_t cursor_end);
+typedef void (*swl_text_input_v3_commit_string_fn)(
+    void *data, struct zwp_text_input_v3 *text_input, const char *text);
+typedef void (*swl_text_input_v3_delete_surrounding_text_fn)(
+    void *data,
+    struct zwp_text_input_v3 *text_input,
+    uint32_t before_length,
+    uint32_t after_length);
+typedef void (*swl_text_input_v3_done_fn)(
+    void *data, struct zwp_text_input_v3 *text_input, uint32_t serial);
+typedef void (*swl_text_input_v3_action_fn)(
+    void *data,
+    struct zwp_text_input_v3 *text_input,
+    uint32_t action,
+    uint32_t serial);
+typedef void (*swl_text_input_v3_language_fn)(
+    void *data, struct zwp_text_input_v3 *text_input, const char *language);
+typedef void (*swl_text_input_v3_preedit_hint_fn)(
+    void *data,
+    struct zwp_text_input_v3 *text_input,
+    uint32_t start,
+    uint32_t end,
+    uint32_t hint);
+
 /* Seat */
 typedef void (*swl_seat_capabilities_fn)(
     void *data, struct wl_seat *seat, uint32_t capabilities);
@@ -861,6 +932,19 @@ struct swl_zwp_linux_buffer_params_listener_callbacks {
     void                                  *data;
 };
 
+struct swl_text_input_v3_listener_callbacks {
+    swl_text_input_v3_enter_fn                   enter;
+    swl_text_input_v3_leave_fn                   leave;
+    swl_text_input_v3_preedit_string_fn          preedit_string;
+    swl_text_input_v3_commit_string_fn           commit_string;
+    swl_text_input_v3_delete_surrounding_text_fn delete_surrounding_text;
+    swl_text_input_v3_done_fn                    done;
+    swl_text_input_v3_action_fn                  action;
+    swl_text_input_v3_language_fn                language;
+    swl_text_input_v3_preedit_hint_fn            preedit_hint;
+    void                                        *data;
+};
+
 struct swl_seat_listener_callbacks {
     swl_seat_capabilities_fn capabilities;
     swl_seat_name_fn         name;
@@ -994,6 +1078,10 @@ int swl_zwp_linux_dmabuf_feedback_v1_add_listener(
 int swl_zwp_linux_buffer_params_v1_add_listener(
     struct zwp_linux_buffer_params_v1 *params,
     const struct swl_zwp_linux_buffer_params_listener_callbacks *callbacks);
+
+int swl_text_input_v3_add_listener(
+    struct zwp_text_input_v3 *text_input,
+    const struct swl_text_input_v3_listener_callbacks *callbacks);
 
 int swl_seat_add_listener(
     struct wl_seat *seat,

@@ -49,6 +49,7 @@ extension RawFractionalScaleManager: RawDestroyableObject {}
 extension RawCursorShapeManager: RawDestroyableObject {}
 extension RawDataDeviceManager: RawDestroyableObject {}
 extension RawPrimarySelectionDeviceManager: RawDestroyableObject {}
+extension RawTextInputManager: RawDestroyableObject {}
 extension RawLinuxDmabuf: RawDestroyableObject {}
 
 package typealias OptionalXDGDecorationManager = OptionalVersionedGlobal<RawXDGDecorationManager>
@@ -60,4 +61,5 @@ package typealias OptionalCursorShapeManager = OptionalGlobal<RawCursorShapeMana
 package typealias OptionalDataDeviceManager = OptionalGlobal<RawDataDeviceManager>
 package typealias OptionalPrimarySelectionDeviceManager =
     OptionalGlobal<RawPrimarySelectionDeviceManager>
+package typealias OptionalTextInputManager = OptionalGlobal<RawTextInputManager>
 package typealias OptionalLinuxDmabuf = OptionalGlobal<RawLinuxDmabuf>

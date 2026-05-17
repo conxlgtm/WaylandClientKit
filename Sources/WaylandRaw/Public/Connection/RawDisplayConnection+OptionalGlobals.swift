@@ -26,21 +26,30 @@ extension RawDisplayConnection {
                                             registry: reg
                                         )
                                     do {
-                                        let linuxDmabuf = try bindLinuxDmabufIfPresent(
-                                            registry: reg
-                                        )
-                                        return OptionalGlobals(
-                                            xdgDecorationManager: decorationManager,
-                                            xdgOutputManager: xdgOutputManager,
-                                            viewporter: viewporter,
-                                            presentation: presentation,
-                                            fractionalScaleManager: fractionalScaleManager,
-                                            cursorShapeManager: cursorShapeManager,
-                                            dataDeviceManager: dataDeviceManager,
-                                            primarySelectionDeviceManager:
-                                                primarySelectionDeviceManager,
-                                            linuxDmabuf: linuxDmabuf
-                                        )
+                                        let textInputManager =
+                                            try bindTextInputManagerIfPresent(registry: reg)
+                                        do {
+                                            let linuxDmabuf = try bindLinuxDmabufIfPresent(
+                                                registry: reg
+                                            )
+                                            return OptionalGlobals(
+                                                xdgDecorationManager: decorationManager,
+                                                xdgOutputManager: xdgOutputManager,
+                                                viewporter: viewporter,
+                                                presentation: presentation,
+                                                fractionalScaleManager:
+                                                    fractionalScaleManager,
+                                                cursorShapeManager: cursorShapeManager,
+                                                dataDeviceManager: dataDeviceManager,
+                                                primarySelectionDeviceManager:
+                                                    primarySelectionDeviceManager,
+                                                textInputManager: textInputManager,
+                                                linuxDmabuf: linuxDmabuf
+                                            )
+                                        } catch {
+                                            textInputManager.destroy()
+                                            throw error
+                                        }
                                     } catch {
                                         primarySelectionDeviceManager.destroy()
                                         throw error
@@ -359,6 +368,36 @@ extension RawDisplayConnection {
         }
 
         let wrappedManager = try RawPrimarySelectionDeviceManager(
+            pointer: manager,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
+        return .bound(wrappedManager)
+    }
+
+    @safe
+    private func bindTextInputManagerIfPresent(
+        registry reg: OpaquePointer
+    ) throws -> OptionalTextInputManager {
+        guard let global = optionalGlobal(named: "zwp_text_input_manager_v3") else {
+            return .missing
+        }
+
+        let version = global.negotiatedVersion(
+            supportedByClient: SupportedVersions.zwpTextInputManagerV3
+        )
+
+        guard
+            let manager = unsafe swl_registry_bind_zwp_text_input_manager_v3(
+                reg,
+                global.name,
+                version.value
+            )
+        else {
+            throw RuntimeError.bindFailed("zwp_text_input_manager_v3")
+        }
+
+        let wrappedManager = try RawTextInputManager(
             pointer: manager,
             version: version,
             proxyAdoption: proxyAdoption

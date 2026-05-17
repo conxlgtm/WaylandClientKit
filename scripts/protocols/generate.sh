@@ -62,6 +62,11 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
+[[ -f "$PROTO_DIR/legacy-unstable/text-input/text-input-unstable-v3.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/legacy-unstable/text-input/text-input-unstable-v3.xml"
+    exit 1
+}
+
 [[ -f "$PROTO_DIR/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml" ]] || {
     echo "Missing vendored protocol: $PROTO_DIR/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
     exit 1
@@ -79,6 +84,7 @@ mkdir -p \
     "$GEN_INC/legacy-unstable/xdg-decoration" \
     "$GEN_INC/legacy-unstable/xdg-output" \
     "$GEN_INC/legacy-unstable/primary-selection" \
+    "$GEN_INC/legacy-unstable/text-input" \
     "$GEN_INC/legacy-unstable/linux-dmabuf" \
     "$GEN_SRC/core" \
     "$GEN_SRC/stable/xdg-shell" \
@@ -90,6 +96,7 @@ mkdir -p \
     "$GEN_SRC/legacy-unstable/xdg-decoration" \
     "$GEN_SRC/legacy-unstable/xdg-output" \
     "$GEN_SRC/legacy-unstable/primary-selection" \
+    "$GEN_SRC/legacy-unstable/text-input" \
     "$GEN_SRC/legacy-unstable/linux-dmabuf" \
     "$OUT_DIR/shims"
 
@@ -197,6 +204,14 @@ wayland-scanner client-header \
 wayland-scanner private-code \
     "$PROTO_DIR/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml" \
     "$GEN_SRC/legacy-unstable/primary-selection/primary-selection-unstable-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/legacy-unstable/text-input/text-input-unstable-v3.xml" \
+    "$GEN_INC/legacy-unstable/text-input/text-input-unstable-v3-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/legacy-unstable/text-input/text-input-unstable-v3.xml" \
+    "$GEN_SRC/legacy-unstable/text-input/text-input-unstable-v3-protocol.c"
 
 wayland-scanner client-header \
     "$PROTO_DIR/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml" \

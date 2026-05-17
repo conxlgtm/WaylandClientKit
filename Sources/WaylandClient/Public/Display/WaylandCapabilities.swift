@@ -58,6 +58,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Compositor-managed pointer cursor shapes through `wp_cursor_shape_manager_v1`.
     public let cursorShape: ProtocolAvailability
 
+    /// Compositor/IME text entry support through `zwp_text_input_manager_v3`.
+    public let textInput: ProtocolAvailability
+
     /// Dmabuf buffer sharing support through `zwp_linux_dmabuf_v1`.
     public let linuxDmabuf: ProtocolAvailability
 
@@ -72,6 +75,7 @@ public struct WaylandCapabilities: Equatable, Sendable {
         presentationTime: ProtocolAvailability,
         fractionalScale: ProtocolAvailability,
         cursorShape: ProtocolAvailability,
+        textInput: ProtocolAvailability,
         linuxDmabuf: ProtocolAvailability
     ) {
         self.clipboard = clipboard
@@ -84,6 +88,7 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.presentationTime = presentationTime
         self.fractionalScale = fractionalScale
         self.cursorShape = cursorShape
+        self.textInput = textInput
         self.linuxDmabuf = linuxDmabuf
     }
 }
@@ -157,6 +162,10 @@ extension WaylandCapabilities {
             cursorShape: ProtocolAvailability(
                 best("wp_cursor_shape_manager_v1"),
                 supportedByClient: SupportedVersions.wpCursorShapeManagerV1
+            ),
+            textInput: ProtocolAvailability(
+                best("zwp_text_input_manager_v3"),
+                supportedByClient: SupportedVersions.zwpTextInputManagerV3
             ),
             linuxDmabuf: ProtocolAvailability(
                 best("zwp_linux_dmabuf_v1"),

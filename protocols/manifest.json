@@ -110,6 +110,17 @@
       "notes": "Optional extension for X-style primary selection transfer."
     },
     {
+      "name": "text-input-unstable-v3",
+      "localPath": "protocols/upstream/legacy-unstable/text-input/text-input-unstable-v3.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/text-input/text-input-unstable-v3.xml",
+      "sha256": "160815cda13c285a30df1971d8f0a5b3aac07071537df59916d2f748b18e4f59",
+      "stability": "unstable",
+      "notes": "Optional foundation protocol for compositor/IME text input."
+    },
+    {
       "name": "linux-dmabuf-unstable-v1",
       "localPath": "protocols/upstream/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml",
       "upstreamProject": "wayland-protocols",
