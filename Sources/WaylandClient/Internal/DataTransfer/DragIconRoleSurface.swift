@@ -63,7 +63,11 @@ package final class DragIconRoleSurface: DataTransferDragIconBinding {
         isDestroyed = true
         _ = runtime.removeRoleResources()
         runtime.retireSharedMemoryPools(reason: .destroyed)
-        try? runtime.markSurfaceDestroyed()
+        do {
+            try runtime.markSurfaceDestroyed()
+        } catch {
+            assertionFailure("drag icon surface destroy failed: \(error)")
+        }
         surface.destroy()
     }
 

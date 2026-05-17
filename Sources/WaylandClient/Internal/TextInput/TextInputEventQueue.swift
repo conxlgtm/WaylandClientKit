@@ -1,7 +1,9 @@
 package struct TextInputEventQueue {
     private var pendingEvents: [TextInputEvent] = []
 
-    package init() {}
+    package init() {
+        // Starts with no pending text-input events.
+    }
 
     package mutating func append(_ event: TextInputEvent) {
         pendingEvents.append(event)

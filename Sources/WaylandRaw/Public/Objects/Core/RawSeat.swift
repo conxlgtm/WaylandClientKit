@@ -1,7 +1,7 @@
 import CWaylandProtocols
 import Glibc
 
-// swiftlint:disable type_body_length
+// swiftlint:disable file_length type_body_length
 @safe
 package final class RawSeat {
     package let id: RawSeatID

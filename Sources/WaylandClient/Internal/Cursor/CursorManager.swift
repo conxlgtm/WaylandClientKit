@@ -182,7 +182,12 @@ package final class CursorManager: RawInputEventObserving {
             return .hidden(seatID: publicSeatID(seatID), serial: serial)
         case .named:
             if backend.supportsCursorShape, let shape = cursor.cursorShapeName {
-                return try applyShapeCursor(to: seatID, serial: serial, cursor: cursor, shape: shape)
+                return try applyShapeCursor(
+                    to: seatID,
+                    serial: serial,
+                    cursor: cursor,
+                    shape: shape
+                )
             }
 
             let resolved = try resolvedCursor ?? cachedResolvedDesiredCursor()

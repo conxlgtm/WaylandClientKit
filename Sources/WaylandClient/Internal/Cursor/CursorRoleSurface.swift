@@ -56,7 +56,11 @@ package final class CursorRoleSurface: CursorManagerSurface {
         guard !isDestroyed else { return }
 
         isDestroyed = true
-        try? runtime.destroy()
+        do {
+            try runtime.destroy()
+        } catch {
+            assertionFailure("cursor surface runtime destroy failed: \(error)")
+        }
         rawSurface.destroy()
     }
 }

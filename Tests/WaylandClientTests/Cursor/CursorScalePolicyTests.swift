@@ -59,33 +59,39 @@ struct CursorScalePolicyTests {
             availableOutputs: []
         )
 
-        #expect(try CursorScalePolicy.matchFocusedSurface.cursorSize(in: context)
-            == CursorSize(unchecked: 24))
-        #expect(try CursorScalePolicy.maximumOutputScale.cursorSize(in: context)
-            == CursorSize(unchecked: 24))
+        #expect(
+            try CursorScalePolicy.matchFocusedSurface.cursorSize(in: context)
+                == CursorSize(unchecked: 24)
+        )
+        #expect(
+            try CursorScalePolicy.maximumOutputScale.cursorSize(in: context)
+                == CursorSize(unchecked: 24)
+        )
     }
 
     @Test
     func scalePolicyRejectsCursorSizeOverflow() throws {
         let context = try cursorScaleContext(
-            baseSize: CursorSize(unchecked: Int32.max),
             focusedOutputs: [outputScale(id: 1, scale: 2)],
-            availableOutputs: [outputScale(id: 1, scale: 2)]
+            availableOutputs: [outputScale(id: 1, scale: 2)],
+            baseSize: CursorSize(unchecked: Int32.max)
         )
 
-        #expect(throws: CursorScalePolicyError.cursorSizeOverflow(
-            baseSize: Int32.max,
-            scale: 2
-        )) {
+        #expect(
+            throws: CursorScalePolicyError.cursorSizeOverflow(
+                baseSize: Int32.max,
+                scale: 2
+            )
+        ) {
             _ = try CursorScalePolicy.matchFocusedSurface.cursorSize(in: context)
         }
     }
 }
 
 private func cursorScaleContext(
-    baseSize: CursorSize = CursorSize(unchecked: 24),
     focusedOutputs: [CursorOutputScale],
-    availableOutputs: [CursorOutputScale]
+    availableOutputs: [CursorOutputScale],
+    baseSize: CursorSize = CursorSize(unchecked: 24)
 ) throws -> CursorScaleContext {
     CursorScaleContext(
         seatID: SeatID(rawValue: 1),
