@@ -2,6 +2,27 @@ import Foundation
 
 public enum DragIcon: Equatable, Sendable {
     case none
+    case xrgb8888(DragIconImage)
+}
+
+public struct DragIconImage: Equatable, Sendable {
+    public let size: PositivePixelSize
+    public let pixels: [UInt32]
+
+    public init(size imageSize: PositivePixelSize, pixels xrgb8888Pixels: [UInt32]) throws {
+        let width = Int(imageSize.width.rawValue)
+        let height = Int(imageSize.height.rawValue)
+        let expectedCount = width * height
+        guard xrgb8888Pixels.count == expectedCount else {
+            throw DataTransferError.invalidDragIconPixelCount(
+                expected: expectedCount,
+                actual: xrgb8888Pixels.count
+            )
+        }
+
+        size = imageSize
+        pixels = xrgb8888Pixels
+    }
 }
 
 public struct DragSourceIdentity: Hashable, Sendable, CustomStringConvertible {

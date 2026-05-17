@@ -96,6 +96,19 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
         return LiveDataTransferSourceBinding(id: id, source: source, owner: owner)
     }
 
+    func prepareDragIcon(_ icon: DragIcon) throws -> (any DataTransferDragIconBinding)? {
+        switch icon {
+        case .none:
+            nil
+        case .xrgb8888(let image):
+            try DragIconRoleSurface(
+                surface: connection.createRawSurface(),
+                sharedMemory: connection.bindRequiredGlobals().sharedMemory,
+                image: image
+            )
+        }
+    }
+
     func makeOfferReceivePipe() throws -> DataTransferPipeDescriptors {
         try DataTransferPipeDescriptors.makeOfferReceivePipe()
     }
@@ -140,7 +153,7 @@ private final class LiveDataTransferDeviceBinding: DataTransferDeviceBinding {
     func startDrag(
         source: any DataTransferSourceBinding,
         origin: any DataTransferDragOriginBinding,
-        icon: DragIcon,
+        icon: (any DataTransferDragIconBinding)?,
         serial: InputSerial
     ) {
         precondition(!isReleased, "data transfer device binding was already released")
@@ -150,15 +163,22 @@ private final class LiveDataTransferDeviceBinding: DataTransferDeviceBinding {
         guard let liveOrigin = origin as? LiveDataTransferDragOriginBinding else {
             preconditionFailure("drag origin binding is not backed by Wayland raw state")
         }
-        switch icon {
-        case .none:
-            device.startDrag(
-                source: liveSource.source,
-                origin: liveOrigin.surface,
-                icon: nil,
-                serial: serial.rawValue
-            )
+        let iconSurface: RawSurface?
+        if let icon {
+            guard let liveIcon = icon as? DragIconRoleSurface else {
+                preconditionFailure("drag icon binding is not backed by Wayland raw state")
+            }
+            iconSurface = liveIcon.surface
+        } else {
+            iconSurface = nil
         }
+
+        device.startDrag(
+            source: liveSource.source,
+            origin: liveOrigin.surface,
+            icon: iconSurface,
+            serial: serial.rawValue
+        )
     }
 
     func release() {
@@ -246,6 +266,7 @@ private final class LiveDataTransferSourceBinding: DataTransferSourceBinding {
 
     let source: RawDataSource
     private let owner: RawDataSourceOwner
+    private var dragIcon: (any DataTransferDragIconBinding)?
     private var isDestroyed = false
 
     init(
@@ -268,12 +289,19 @@ private final class LiveDataTransferSourceBinding: DataTransferSourceBinding {
         source.setActions(actions.rawDataDeviceDNDAction)
     }
 
+    func attachDragIcon(_ icon: (any DataTransferDragIconBinding)?) {
+        precondition(!isDestroyed, "data transfer source binding was already destroyed")
+        dragIcon = icon
+    }
+
     func destroy() {
         guard !isDestroyed else {
             return
         }
 
         isDestroyed = true
+        dragIcon?.destroy()
+        dragIcon = nil
         owner.cancel()
         source.destroy()
     }
