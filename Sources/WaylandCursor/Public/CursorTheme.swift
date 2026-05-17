@@ -31,6 +31,14 @@ package final class CursorTheme {
     }
 
     package func cursorImage(named name: String) throws -> CursorImage {
+        guard let image = try cursorImages(named: name).first else {
+            throw CursorError.missingImage(name)
+        }
+
+        return image
+    }
+
+    package func cursorImages(named name: String) throws -> [CursorImage] {
         let cursorPointer = unsafe name.withCString { namePointer in
             unsafe swl_cursor_theme_get_cursor(pointer, namePointer)
         }
@@ -39,25 +47,36 @@ package final class CursorTheme {
             throw CursorError.missingCursor(name)
         }
 
-        guard unsafe swl_cursor_image_count(cursorPointer) > 0,
-            let imagePointer = unsafe swl_cursor_image_at(cursorPointer, 0)
-        else {
+        let imageCount = unsafe swl_cursor_image_count(cursorPointer)
+        guard imageCount > 0 else {
             throw CursorError.missingImage(name)
         }
 
-        guard let bufferPointer = unsafe swl_cursor_image_get_buffer(imagePointer) else {
-            throw CursorError.missingBuffer(name)
+        var images: [CursorImage] = []
+        images.reserveCapacity(Int(imageCount))
+
+        for index in 0..<imageCount {
+            guard let imagePointer = unsafe swl_cursor_image_at(cursorPointer, index) else {
+                throw CursorError.missingImage(name)
+            }
+
+            guard let bufferPointer = unsafe swl_cursor_image_get_buffer(imagePointer) else {
+                throw CursorError.missingBuffer(name)
+            }
+
+            try images.append(
+                CursorImage(
+                    width: unsafe swl_cursor_image_width(imagePointer),
+                    height: unsafe swl_cursor_image_height(imagePointer),
+                    hotspotX: unsafe swl_cursor_image_hotspot_x(imagePointer),
+                    hotspotY: unsafe swl_cursor_image_hotspot_y(imagePointer),
+                    delay: unsafe swl_cursor_image_delay(imagePointer),
+                    buffer: RawBorrowedBuffer(pointer: bufferPointer),
+                    owner: self
+                ))
         }
 
-        return try CursorImage(
-            width: unsafe swl_cursor_image_width(imagePointer),
-            height: unsafe swl_cursor_image_height(imagePointer),
-            hotspotX: unsafe swl_cursor_image_hotspot_x(imagePointer),
-            hotspotY: unsafe swl_cursor_image_hotspot_y(imagePointer),
-            delay: unsafe swl_cursor_image_delay(imagePointer),
-            buffer: RawBorrowedBuffer(pointer: bufferPointer),
-            owner: self
-        )
+        return images
     }
 
     deinit {
