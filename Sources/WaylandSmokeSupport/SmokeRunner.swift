@@ -52,7 +52,8 @@ package enum SmokeRunner {
         switch optionalProtocol {
         case .linuxDmabuf:
             capabilities.linuxDmabuf.isAvailable
-        case .linuxDrmSyncobj, .fifo, .commitTiming:
+        case .linuxDrmSyncobj, .fifo, .commitTiming, .contentType, .alphaModifier,
+            .tearingControl, .colorRepresentation, .colorManagement:
             session.isProtocolAdvertisedOnOwnerThread(
                 named: optionalProtocol.interfaceName
             )
@@ -80,7 +81,32 @@ package enum SmokeRunner {
             egl: .unavailable,
             presentationFeedback: capabilities.presentationTime.isAvailable
                 ? .advertised
-                : .unavailable
+                : .unavailable,
+            contentType: advertisedStatus(
+                .contentType,
+                capabilities: capabilities,
+                session: session
+            ),
+            alphaModifier: advertisedStatus(
+                .alphaModifier,
+                capabilities: capabilities,
+                session: session
+            ),
+            tearingControl: advertisedStatus(
+                .tearingControl,
+                capabilities: capabilities,
+                session: session
+            ),
+            colorRepresentation: advertisedStatus(
+                .colorRepresentation,
+                capabilities: capabilities,
+                session: session
+            ),
+            colorManagement: advertisedStatus(
+                .colorManagement,
+                capabilities: capabilities,
+                session: session
+            )
         )
     }
 

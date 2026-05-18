@@ -43,6 +43,11 @@ struct SmokeArgumentsTests {
             "--require-syncobj",
             "--require-fifo",
             "--require-commit-timing",
+            "--require-content-type",
+            "--require-alpha-modifier",
+            "--require-tearing-control",
+            "--require-color-representation",
+            "--require-color-management",
         ])
 
         #expect(
@@ -54,6 +59,11 @@ struct SmokeArgumentsTests {
                             .linuxDrmSyncobj,
                             .fifo,
                             .commitTiming,
+                            .contentType,
+                            .alphaModifier,
+                            .tearingControl,
+                            .colorRepresentation,
+                            .colorManagement,
                         ]
                     )
                 )
@@ -87,6 +97,31 @@ struct SmokeArgumentsTests {
             "Skipping commit-timing live test: compositor did not advertise "
                 + "wp_commit_timing_manager_v1."
         ),
+        (
+            SmokeOptionalProtocol.contentType,
+            "Skipping content-type live test: compositor did not advertise "
+                + "wp_content_type_manager_v1."
+        ),
+        (
+            SmokeOptionalProtocol.alphaModifier,
+            "Skipping alpha-modifier live test: compositor did not advertise "
+                + "wp_alpha_modifier_v1."
+        ),
+        (
+            SmokeOptionalProtocol.tearingControl,
+            "Skipping tearing-control live test: compositor did not advertise "
+                + "wp_tearing_control_manager_v1."
+        ),
+        (
+            SmokeOptionalProtocol.colorRepresentation,
+            "Skipping color-representation live test: compositor did not advertise "
+                + "wp_color_representation_manager_v1."
+        ),
+        (
+            SmokeOptionalProtocol.colorManagement,
+            "Skipping color-management live test: compositor did not advertise "
+                + "wp_color_manager_v1."
+        ),
     ])
     func submitProtocolSkipMessagesNameExactInterface(
         optionalProtocol: SmokeOptionalProtocol,
@@ -106,7 +141,12 @@ struct SmokeArgumentsTests {
             dmabuf: .unavailable,
             gbm: .active,
             egl: .active,
-            presentationFeedback: .observed
+            presentationFeedback: .observed,
+            contentType: .advertised,
+            alphaModifier: .advertised,
+            tearingControl: .advertised,
+            colorRepresentation: .advertised,
+            colorManagement: .advertised
         )
 
         #expect(
@@ -120,6 +160,11 @@ struct SmokeArgumentsTests {
                 gbm: active
                 egl: active
                 presentationFeedback: observed
+                contentType: advertised
+                alphaModifier: advertised
+                tearingControl: advertised
+                colorRepresentation: advertised
+                colorManagement: advertised
                 """
         )
     }

@@ -255,6 +255,11 @@ struct GPUWindowRuntimePathSnapshotTests {
         #expect(snapshot.egl == .configured)
         #expect(snapshot.synchronization == .explicitAdvertised)
         #expect(snapshot.pacing == .fifoAdvertised)
+        #expect(snapshot.contentType == .unavailable)
+        #expect(snapshot.alpha == .unavailable)
+        #expect(snapshot.colorRepresentation == .unavailable)
+        #expect(snapshot.colorManagement == .unavailable)
+        #expect(snapshot.presentationHint == nil)
     }
 
     @Test
@@ -278,6 +283,56 @@ struct GPUWindowRuntimePathSnapshotTests {
 
         #expect(snapshot.synchronization == .explicitActive)
         #expect(snapshot.pacing == .commitTimingActive)
+    }
+
+    @Test
+    func runtimePathSnapshotReportsAdvertisedMetadataCapabilities() {
+        let snapshot = GPURuntimePathSnapshot.afterPresentation(
+            capabilities: capabilitySnapshot(
+                contentType: .available,
+                alphaModifier: .available,
+                tearingControl: .available,
+                colorRepresentation: .available(version: 1),
+                color: .available(version: 1)
+            ),
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(snapshot.contentType == .advertised)
+        #expect(snapshot.alpha == .advertised)
+        #expect(snapshot.colorRepresentation == .advertised)
+        #expect(snapshot.colorManagement == .advertised)
+        #expect(snapshot.presentationHint == nil)
+    }
+
+    @Test
+    func runtimePathSnapshotReportsRequestedMetadata() {
+        let metadata = SurfaceCommitMetadata(
+            contentType: .game,
+            alpha: SurfaceAlphaMetadata(multiplier: .opaque),
+            colorRepresentation: SurfaceColorRepresentation(alphaMode: .straight),
+            colorDescription: SurfaceColorDescriptionReference(identity: 1),
+            presentationHint: .async
+        )
+        let snapshot = GPURuntimePathSnapshot.afterPresentation(
+            capabilities: capabilitySnapshot(
+                contentType: .available,
+                alphaModifier: .available,
+                tearingControl: .available,
+                colorRepresentation: .available(version: 1),
+                color: .available(version: 1)
+            ),
+            synchronization: .implicit,
+            pacing: .none,
+            metadata: metadata
+        )
+
+        #expect(snapshot.contentType == .configured)
+        #expect(snapshot.alpha == .configured)
+        #expect(snapshot.colorRepresentation == .configured)
+        #expect(snapshot.colorManagement == .configured)
+        #expect(snapshot.presentationHint == .async)
     }
 
     @Test
@@ -453,7 +508,12 @@ private func presentedFrame(
 
 private func capabilitySnapshot(
     synchronization: SurfaceSynchronizationCapability = .implicitOnly,
-    pacing: SurfacePacingCapability = .unavailable
+    pacing: SurfacePacingCapability = .unavailable,
+    contentType: SurfaceCapabilityStatus = .unavailable,
+    alphaModifier: SurfaceCapabilityStatus = .unavailable,
+    tearingControl: SurfaceCapabilityStatus = .unavailable,
+    colorRepresentation: SurfaceColorRepresentationCapability = .unavailable,
+    color: SurfaceColorCapability = .unavailable
 ) -> SurfaceCapabilitySnapshot {
     SurfaceCapabilitySnapshot(
         role: .toplevelWindow,
@@ -462,7 +522,12 @@ private func capabilitySnapshot(
         presentationFeedback: .unavailable,
         dmabuf: .advertised(version: 1, canRequestSurfaceFeedback: .available),
         synchronization: synchronization,
-        pacing: pacing
+        pacing: pacing,
+        contentType: contentType,
+        alphaModifier: alphaModifier,
+        tearingControl: tearingControl,
+        colorRepresentation: colorRepresentation,
+        color: color
     )
 }
 

@@ -160,6 +160,11 @@ package enum GPURuntimePathReason: Equatable, Sendable {
     case explicitSynchronizationNotConfigured
     case fifoUnavailable
     case commitTimingUnavailable
+    case contentTypeUnavailable
+    case alphaModifierUnavailable
+    case colorRepresentationUnavailable
+    case colorManagementUnavailable
+    case presentationHintUnavailable
 }
 
 package enum GPUSynchronizationRuntimeStatus: Equatable, Sendable {
@@ -190,6 +195,11 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
     package let synchronization: GPUSynchronizationRuntimeStatus
     package let pacing: GPUFramePacingRuntimeStatus
     package let presentationFeedback: SurfaceCapabilityStatus
+    package let contentType: RuntimePathStatus
+    package let alpha: RuntimePathStatus
+    package let colorRepresentation: RuntimePathStatus
+    package let colorManagement: RuntimePathStatus
+    package let presentationHint: SurfacePresentationHint?
 
     package static let empty = Self(
         dmabuf: .unavailable,
@@ -197,13 +207,19 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         egl: .unavailable,
         synchronization: .implicit,
         pacing: .none,
-        presentationFeedback: .unavailable
+        presentationFeedback: .unavailable,
+        contentType: .unavailable,
+        alpha: .unavailable,
+        colorRepresentation: .unavailable,
+        colorManagement: .unavailable,
+        presentationHint: nil
     )
 
     package static func afterPresentation(
         capabilities: SurfaceCapabilitySnapshot,
         synchronization: GPUBufferSubmissionSynchronization,
-        pacing: SurfacePacingConstraint
+        pacing: SurfacePacingConstraint,
+        metadata: SurfaceCommitMetadata = .default
     ) -> Self {
         Self(
             dmabuf: dmabufStatus(capabilities.dmabuf),
@@ -214,7 +230,26 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
                 capability: capabilities.synchronization
             ),
             pacing: pacingStatus(pacing, capability: capabilities.pacing),
-            presentationFeedback: capabilities.presentationFeedback
+            presentationFeedback: capabilities.presentationFeedback,
+            contentType: capabilityStatus(
+                capabilities.contentType,
+                requested: metadata.contentType != nil,
+                missingReason: .contentTypeUnavailable
+            ),
+            alpha: capabilityStatus(
+                capabilities.alphaModifier,
+                requested: metadata.alpha != nil,
+                missingReason: .alphaModifierUnavailable
+            ),
+            colorRepresentation: colorRepresentationStatus(
+                capabilities.colorRepresentation,
+                requested: metadata.colorRepresentation != nil
+            ),
+            colorManagement: colorStatus(
+                capabilities.color,
+                requested: metadata.colorDescription != nil
+            ),
+            presentationHint: metadata.presentationHint
         )
     }
 
@@ -272,6 +307,57 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
             case .fifoAndCommitTiming:
                 return .fifoAndCommitTimingAdvertised
             }
+        }
+    }
+
+    private static func capabilityStatus(
+        _ capability: SurfaceCapabilityStatus,
+        requested: Bool,
+        missingReason: GPURuntimePathReason
+    ) -> RuntimePathStatus {
+        switch (capability, requested) {
+        case (.available, true):
+            .configured
+        case (.available, false):
+            .advertised
+        case (.unavailable, true):
+            .failed(missingReason)
+        case (.unavailable, false):
+            .unavailable
+        }
+    }
+
+    private static func colorRepresentationStatus(
+        _ capability: SurfaceColorRepresentationCapability,
+        requested: Bool
+    ) -> RuntimePathStatus {
+        switch (capability, requested) {
+        case (.available, true):
+            .configured
+        case (.available, false):
+            .advertised
+        case (.unavailable, true):
+            .failed(.colorRepresentationUnavailable)
+        case (.unavailable, false):
+            .unavailable
+        }
+    }
+
+    private static func colorStatus(
+        _ capability: SurfaceColorCapability,
+        requested: Bool
+    ) -> RuntimePathStatus {
+        switch (capability, requested) {
+        case (.available, true),
+            (.preferredDescription, true):
+            .configured
+        case (.available, false),
+            (.preferredDescription, false):
+            .advertised
+        case (.unavailable, true):
+            .failed(.colorManagementUnavailable)
+        case (.unavailable, false):
+            .unavailable
         }
     }
 }
