@@ -298,6 +298,42 @@ Tests:
   synchronization validation, FIFO and commit-timing capability checks, and
   timestamp validation.
 
+## Surface Metadata Boundary
+
+Remaining unsafe constructs:
+
+- `RawContentTypeManager`, `RawAlphaModifierManager`,
+  `RawTearingControlManager`, `RawColorRepresentationManager`, and
+  `RawColorManager` own staging protocol manager proxies through
+  `RawOwnedProxy`.
+- Per-surface metadata wrappers own the corresponding content type, alpha,
+  tearing-control, color-representation, and color-management proxy objects.
+- `RawImageDescription` and `RawImageDescriptionReference` own immutable
+  color-management image-description proxies.
+- CWaylandProtocols metadata shims forward generated protocol requests for
+  metadata object creation, metadata setters, image-description retrieval, and
+  destroy requests.
+
+Audit invariant:
+
+- Metadata manager wrappers locally reject duplicate per-surface or per-output
+  object creation before the compositor can raise protocol errors.
+- Surface metadata objects are destroyed with the `SurfaceRuntime` surface
+  object set and capabilities are reset on surface destruction.
+- Unknown raw content, alpha, presentation, color-representation, and
+  render-intent values are preserved at the raw/value boundary.
+- `SurfaceCommitMetadata.default` does not create optional protocol objects or
+  change existing SHM/GPU commit behavior.
+
+Tests:
+
+- `RawSurfaceMetadataTests` covers protocol raw values, unknown-value
+  preservation, boundary alpha multiplier values, and idempotent metadata/image
+  description destruction.
+- `SurfaceCommitMetadataTests` covers default behavior, unavailable capability
+  errors, available capability validation, capability snapshot publication, and
+  unknown-value preservation.
+
 ## GBM and DRM Boundary
 
 Remaining unsafe constructs:

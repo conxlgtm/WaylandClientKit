@@ -122,6 +122,8 @@ The current baseline already has meaningful substrate pieces:
 - package-internal GPU window presentation bridge through `WaylandGPUPreview`
 - package-internal submit-constraint model for linux-drm-syncobj, FIFO, and
   commit-timing capability facts
+- package-internal surface commit metadata model for content type, alpha,
+  tearing-control hints, color representation, and color-management references
 - live/headless Wayland smoke paths
 - strict Swift memory-safety diagnostics as errors
 
@@ -130,10 +132,8 @@ Known foundation gaps:
 - extending the shared surface transaction model to cursor, drag icon, and future
   subsurface use
 - live compositor coverage for the package-internal GPU window presentation path
-- GPU presenter integration for explicit synchronization release points
-- color-management, color-representation, content-type, and related metadata
-  capability plumbing
-- GPU presenter integration for FIFO and commit-timing constraints
+- broader live compositor coverage for explicit sync, FIFO, commit timing, and
+  metadata protocols beyond local unit and smoke reporting
 - public cursor animation and output-scale cursor policy APIs
 - advanced pointer and tablet protocols
 - xdg-session-management and activation/session integration where needed by app
@@ -243,8 +243,9 @@ support tier. These are related facts, not the same fact.
 | `zwp_linux_dmabuf_v1` | legacy unstable but widely deployed | optional foundation | capability and managed buffer path; raw internal | fixture plus compositor matrix | raw internals may change; public capability semantics reviewed |
 | `wp_linux_drm_syncobj_v1` | staging | optional/preview foundation | capability-gated; public facts only after proven | compositor path where advertised | allow source/API change while preview |
 | `wp_fractional_scale_v1` | staging | optional but important | public capability and surface scale facts | unit and compositor matrix | allow version-gated additions |
-| `wp_color_manager_v1` | staging | optional/preview | capability facts and metadata plumbing first | compositor matrix where available | allow source/API change while preview |
-| `wp_color_representation_v1` | staging | optional/preview | capability facts and metadata plumbing first | compositor matrix where available | allow source/API change while preview |
+| `wp_content_type_v1`, `wp_alpha_modifier_v1`, `wp_tearing_control_v1` | staging | optional/preview metadata | internal commit metadata first; no public renderer API yet | unit and compositor matrix where available | allow source/API change while preview |
+| `wp_color_manager_v1` | staging | optional/preview metadata | internal capability facts and image-description references first | unit and compositor matrix where available | allow source/API change while preview |
+| `wp_color_representation_v1` | staging | optional/preview metadata | internal commit metadata first; no public color pipeline API yet | unit and compositor matrix where available | allow source/API change while preview |
 | `wp_fifo_v1`, `wp_commit_timing_v1` | staging | optional/preview pacing | capability facts before public scheduling API | compositor path where advertised | allow source/API change while preview |
 | `zwp_text_input_manager_v3` | legacy unstable, active minor updates | optional foundation | public typed text-input API | live IME path where feasible | version-gated additions; preserve unknown values |
 | `wp_cursor_shape_manager_v1` | staging | optional foundation | public cursor capability and requests | unit plus live where advertised | allow version-gated additions |
@@ -743,10 +744,9 @@ Work packages:
 Required behavior:
 
 - bind color-management and related metadata protocols when advertised
-- expose output image descriptions and surface preferred image descriptions as
-  typed facts
-- allow a renderer-facing layer to attach or preserve relevant surface/content
-  metadata
+- provide raw output image-description and surface preferred-description
+  retrieval paths for internal callers
+- carry renderer-adjacent surface/content metadata through commit planning
 - preserve unknown color, transfer, metadata, and rendering-intent values
 - model protocol version differences, including new minor versions
 - avoid assuming all future graphics paths are 8-bit sRGB-only

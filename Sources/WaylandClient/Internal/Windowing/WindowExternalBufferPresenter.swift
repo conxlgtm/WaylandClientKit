@@ -7,6 +7,7 @@ struct WindowExternalBufferPresentationRequest {
     let generation: UInt64
     let geometry: SurfaceGeometry
     let submitConstraints: SurfaceSubmitConstraints
+    let metadata: SurfaceCommitMetadata
     let onFrameDone: () -> Void
 }
 
@@ -22,7 +23,8 @@ enum WindowExternalBufferPresenter {
                 scaleInstallation: request.scaleInstallation,
                 generation: request.generation,
                 geometry: request.geometry,
-                submitConstraints: request.submitConstraints
+                submitConstraints: request.submitConstraints,
+                metadata: request.metadata
             ),
             runtime: &runtime,
         )

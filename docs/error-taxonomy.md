@@ -36,3 +36,9 @@ nonterminal runtime diagnostics, and fatal display failure.
 - Surface-level facts belong in `SurfaceCapabilitySnapshot`.
 - Runtime-path facts, such as dmabuf allocation/import viability, must not be
   inferred from registry advertisement alone.
+- Submit constraints use `SurfaceSubmitConstraintError` internally to
+  distinguish missing explicit sync points, illegal points without an attached
+  buffer, unavailable FIFO/commit-timing objects, and commit-timestamp conflicts.
+- Surface commit metadata uses `SurfaceCommitMetadataError` internally to
+  distinguish unavailable metadata protocols from missing per-surface metadata
+  objects or unknown color-description references.

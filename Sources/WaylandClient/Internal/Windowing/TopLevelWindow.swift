@@ -943,13 +943,15 @@ extension TopLevelWindow {
     ) throws -> PreviewBufferPresentationResult {
         try presentPreviewBufferOnOwnerThread(
             buffer,
-            submitConstraints: .default
+            submitConstraints: .default,
+            metadata: .default
         )
     }
 
     package func presentPreviewBufferOnOwnerThread(
         _ buffer: RawSurfaceBuffer,
-        submitConstraints: SurfaceSubmitConstraints
+        submitConstraints: SurfaceSubmitConstraints,
+        metadata: SurfaceCommitMetadata = .default
     ) throws -> PreviewBufferPresentationResult {
         connection.preconditionIsOwnerThread()
 
@@ -969,13 +971,15 @@ extension TopLevelWindow {
         let generation = surfaceRuntime.nextCommitGeneration
         let bufferAvailability = try redrawBufferAvailability()
         try ensureSubmitConstraintObjectsInstalled(for: submitConstraints)
+        try ensureMetadataObjectsInstalled(for: metadata)
         let presentationRequest = WindowExternalBufferPresentationRequest(
             buffer: buffer,
             surface: surface,
             scaleInstallation: scaleInstallation,
             generation: generation,
             geometry: try currentSurfaceGeometry(),
-            submitConstraints: submitConstraints
+            submitConstraints: submitConstraints,
+            metadata: metadata
         ) { [weak self] in
             self?.handleFrameDone()
         }
@@ -1081,6 +1085,90 @@ extension TopLevelWindow {
         }
 
         surfaceRuntime.installCommitTimerObject(try manager.timer(for: surface))
+    }
+
+    private func ensureMetadataObjectsInstalled(
+        for metadata: SurfaceCommitMetadata
+    ) throws {
+        if metadata.contentType != nil {
+            try ensureContentTypeObjectInstalled()
+        }
+        if metadata.alpha != nil {
+            try ensureAlphaModifierObjectInstalled()
+        }
+        if metadata.presentationHint != nil {
+            try ensureTearingControlObjectInstalled()
+        }
+        if metadata.colorRepresentation != nil {
+            try ensureColorRepresentationObjectInstalled()
+        }
+        if metadata.colorDescription != nil {
+            try ensureColorManagementObjectInstalled()
+        }
+    }
+
+    private func ensureContentTypeObjectInstalled() throws {
+        guard !surfaceRuntime.hasContentTypeObject else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .contentTypeManager.boundObject
+        else {
+            throw SurfaceCommitMetadataError.contentTypeUnavailable
+        }
+
+        surfaceRuntime.installContentTypeObject(try manager.contentType(for: surface))
+    }
+
+    private func ensureAlphaModifierObjectInstalled() throws {
+        guard !surfaceRuntime.hasAlphaModifierObject else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .alphaModifierManager.boundObject
+        else {
+            throw SurfaceCommitMetadataError.alphaModifierUnavailable
+        }
+
+        surfaceRuntime.installAlphaModifierObject(try manager.alphaModifier(for: surface))
+    }
+
+    private func ensureTearingControlObjectInstalled() throws {
+        guard !surfaceRuntime.hasTearingControlObject else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .tearingControlManager.boundObject
+        else {
+            throw SurfaceCommitMetadataError.tearingControlUnavailable
+        }
+
+        surfaceRuntime.installTearingControlObject(
+            try manager.tearingControl(for: surface)
+        )
+    }
+
+    private func ensureColorRepresentationObjectInstalled() throws {
+        guard !surfaceRuntime.hasColorRepresentationObject else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .colorRepresentationManager.boundObject
+        else {
+            throw SurfaceCommitMetadataError.colorRepresentationUnavailable
+        }
+
+        surfaceRuntime.installColorRepresentationObject(
+            try manager.colorRepresentation(for: surface)
+        )
+    }
+
+    private func ensureColorManagementObjectInstalled() throws {
+        guard !surfaceRuntime.hasColorManagementObject else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .colorManager.boundObject
+        else {
+            throw SurfaceCommitMetadataError.colorUnavailable
+        }
+
+        surfaceRuntime.installColorManagementObject(try manager.surface(for: surface))
     }
 
     package func requestPresentationFeedbackOnOwnerThread(
