@@ -988,7 +988,8 @@ extension TopLevelWindow {
 
         return PreviewBufferPresentationResult(
             generation: generation,
-            commitPlan: commitPlan
+            commitPlan: commitPlan,
+            capabilities: surfaceRuntime.capabilitySnapshot()
         )
     }
 

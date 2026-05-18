@@ -148,23 +148,39 @@ package enum GPUBufferSubmissionState: Equatable, Sendable {
 
 package enum RuntimePathStatus: Equatable, Sendable {
     case unavailable
-    case available
+    case advertised
+    case configured
     case active
+    case failed(GPURuntimePathReason)
+    case fallback(GPURuntimePathReason)
+}
+
+package enum GPURuntimePathReason: Equatable, Sendable {
+    case explicitSynchronizationUnavailable
+    case explicitSynchronizationNotConfigured
+    case fifoUnavailable
+    case commitTimingUnavailable
 }
 
 package enum GPUSynchronizationRuntimeStatus: Equatable, Sendable {
     case implicit
+    case explicitAdvertised
+    case explicitConfigured
     case explicitActive
-    case explicitUnavailableFallback
-    case explicitRequiredUnavailable
+    case explicitFallback(GPURuntimePathReason)
+    case explicitFailed(GPURuntimePathReason)
 }
 
 package enum GPUFramePacingRuntimeStatus: Equatable, Sendable {
     case none
+    case fifoAdvertised
+    case commitTimingAdvertised
+    case fifoAndCommitTimingAdvertised
     case fifoActive
     case commitTimingActive
     case fifoAndCommitTimingActive
-    case unavailable
+    case failed(GPURuntimePathReason)
+    case fallback(GPURuntimePathReason)
 }
 
 package struct GPURuntimePathSnapshot: Equatable, Sendable {
@@ -183,6 +199,81 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         pacing: .none,
         presentationFeedback: .unavailable
     )
+
+    package static func afterPresentation(
+        capabilities: SurfaceCapabilitySnapshot,
+        synchronization: GPUBufferSubmissionSynchronization,
+        pacing: SurfacePacingConstraint
+    ) -> Self {
+        Self(
+            dmabuf: dmabufStatus(capabilities.dmabuf),
+            gbm: .active,
+            egl: .configured,
+            synchronization: synchronizationStatus(
+                synchronization,
+                capability: capabilities.synchronization
+            ),
+            pacing: pacingStatus(pacing, capability: capabilities.pacing),
+            presentationFeedback: capabilities.presentationFeedback
+        )
+    }
+
+    private static func dmabufStatus(
+        _ capability: SurfaceDmabufCapability
+    ) -> RuntimePathStatus {
+        switch capability {
+        case .unavailable:
+            .unavailable
+        case .advertised:
+            .advertised
+        case .surfaceFeedback:
+            .active
+        }
+    }
+
+    private static func synchronizationStatus(
+        _ synchronization: GPUBufferSubmissionSynchronization,
+        capability: SurfaceSynchronizationCapability
+    ) -> GPUSynchronizationRuntimeStatus {
+        switch synchronization {
+        case .explicit:
+            return .explicitActive
+        case .implicit:
+            switch capability {
+            case .implicitOnly:
+                return .implicit
+            case .explicitAvailable:
+                return .explicitAdvertised
+            case .explicitActive:
+                return .explicitConfigured
+            }
+        }
+    }
+
+    private static func pacingStatus(
+        _ pacing: SurfacePacingConstraint,
+        capability: SurfacePacingCapability
+    ) -> GPUFramePacingRuntimeStatus {
+        switch pacing {
+        case .fifo:
+            return .fifoActive
+        case .targetTime:
+            return .commitTimingActive
+        case .fifoAndTargetTime:
+            return .fifoAndCommitTimingActive
+        case .none:
+            switch capability {
+            case .unavailable:
+                return .none
+            case .fifo:
+                return .fifoAdvertised
+            case .commitTiming:
+                return .commitTimingAdvertised
+            case .fifoAndCommitTiming:
+                return .fifoAndCommitTimingAdvertised
+            }
+        }
+    }
 }
 
 package struct GPUWindowPresentationCorrelation: Equatable, Sendable {
