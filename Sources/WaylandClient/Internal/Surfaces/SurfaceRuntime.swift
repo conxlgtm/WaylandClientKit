@@ -74,7 +74,7 @@ package struct SurfaceCapabilitySnapshot: Equatable, Sendable {
 }
 
 struct SurfaceRuntime<RoleResources> {
-    private struct SurfaceObjects {
+    struct SurfaceObjects {
         var buffers: RawSharedMemoryPool?
         var retiredBufferPools: [RawSharedMemoryPool] = []
         var scaleInstallation = SurfaceScaleInstallation()
@@ -83,7 +83,7 @@ struct SurfaceRuntime<RoleResources> {
         var submitConstraintObjects = SurfaceSubmitConstraintObjects()
     }
 
-    private enum Phase {
+    enum Phase {
         case unassigned(SurfaceObjects)
         case live(roleResources: RoleResources, SurfaceObjects)
         case roleDestroyed(SurfaceObjects)
@@ -94,9 +94,9 @@ struct SurfaceRuntime<RoleResources> {
     private let surfaceID: RawObjectID?
     private var presentationFeedbackCapability = SurfaceCapabilityStatus.unavailable
     private var dmabufCapability = SurfaceDmabufCapability.unavailable
-    private var synchronizationCapability = SurfaceSynchronizationCapability.implicitOnly
-    private var pacingCapability = SurfacePacingCapability.unavailable
-    private var phase: Phase = .unassigned(SurfaceObjects())
+    var synchronizationCapability = SurfaceSynchronizationCapability.implicitOnly
+    var pacingCapability = SurfacePacingCapability.unavailable
+    var phase: Phase = .unassigned(SurfaceObjects())
 
     init(role surfaceRole: SurfaceRuntimeRole, surfaceID runtimeSurfaceID: RawObjectID? = nil) {
         role = surfaceRole
@@ -200,107 +200,6 @@ extension SurfaceRuntime {
                 version: version,
                 canRequestSurfaceFeedback: canRequestSurfaceFeedback
             )
-        }
-    }
-
-    mutating func setSynchronizationCapability(
-        _ capability: SurfaceSynchronizationCapability
-    ) {
-        synchronizationCapability = capability
-    }
-
-    mutating func setExplicitSynchronizationActive() {
-        synchronizationCapability = .explicitActive
-    }
-
-    mutating func setPacingCapability(_ capability: SurfacePacingCapability) {
-        pacingCapability = capability
-    }
-
-    var hasExplicitSynchronizationObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.submitConstraintObjects.hasExplicitSynchronization
-        case .surfaceDestroyed:
-            false
-        }
-    }
-
-    var hasFifoObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.submitConstraintObjects.hasFifo
-        case .surfaceDestroyed:
-            false
-        }
-    }
-
-    var hasCommitTimerObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.submitConstraintObjects.hasCommitTimer
-        case .surfaceDestroyed:
-            false
-        }
-    }
-
-    mutating func installExplicitSynchronizationObject(
-        _ syncobjSurface: RawLinuxDrmSyncobjSurface
-    ) {
-        synchronizationCapability = .explicitActive
-        updateSurfaceObjects { objects in
-            objects.submitConstraintObjects.installSynchronization(syncobjSurface)
-        }
-    }
-
-    mutating func installSynchronizationTimeline(
-        _ timeline: RawLinuxDrmSyncobjTimeline,
-        identity: SurfaceSyncTimelineIdentity
-    ) {
-        updateSurfaceObjects { objects in
-            objects.submitConstraintObjects.installTimeline(timeline, identity: identity)
-        }
-    }
-
-    mutating func installFifoObject(_ fifo: RawFifo) {
-        updateSurfaceObjects { objects in
-            objects.submitConstraintObjects.installFifo(fifo)
-        }
-    }
-
-    mutating func installCommitTimerObject(_ timer: RawCommitTimer) {
-        updateSurfaceObjects { objects in
-            objects.submitConstraintObjects.installCommitTimer(timer)
-        }
-    }
-
-    mutating func applySubmitConstraints(
-        _ constraints: SurfaceSubmitConstraints
-    ) throws(SurfaceSubmitConstraintError) {
-        switch phase {
-        case .unassigned(var objects):
-            try objects.submitConstraintObjects.apply(constraints)
-            phase = .unassigned(objects)
-        case .live(let roleResources, var objects):
-            try objects.submitConstraintObjects.apply(constraints)
-            phase = .live(roleResources: roleResources, objects)
-        case .roleDestroyed(var objects):
-            try objects.submitConstraintObjects.apply(constraints)
-            phase = .roleDestroyed(objects)
-        case .surfaceDestroyed:
-            return
-        }
-    }
-
-    mutating func markSubmitConstraintsCommitted() {
-        updateSurfaceObjects { objects in
-            objects.submitConstraintObjects.markCommitted()
         }
     }
 
@@ -575,7 +474,7 @@ extension SurfaceRuntime {
         }
     }
 
-    private mutating func updateSurfaceObjects(
+    mutating func updateSurfaceObjects(
         _ update: (inout SurfaceObjects) throws -> Void
     ) rethrows {
         switch phase {
@@ -593,7 +492,7 @@ extension SurfaceRuntime {
         }
     }
 
-    private mutating func mutateSurfaceObjects<Result>(
+    mutating func mutateSurfaceObjects<Result>(
         default defaultResult: Result,
         _ update: (inout SurfaceObjects) throws -> Result
     ) rethrows -> Result {

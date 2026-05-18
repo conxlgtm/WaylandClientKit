@@ -7,7 +7,7 @@ import WaylandTestSupport
 
 private struct RoleToken: Equatable {}
 
-@Suite
+@Suite(.serialized)
 struct SurfaceRuntimeSubmitTests {
     @Test
     func submitCapabilitySnapshotPublishesSynchronizationAndPacingFacts() {
@@ -153,6 +153,36 @@ struct SurfaceRuntimeSubmitTests {
             }
             #expect(runtime.transactionSnapshot.lastCommittedFrame == nil)
             #expect(unsafe swl_test_core_request_record().call_count == 0)
+        }
+    }
+
+    @Test
+    func frameCommitterCanPrepareMetadataOnlyCommitWithoutSyncPoints() async throws {
+        try await CoreRequestRecordingGate.withExclusiveRecording {
+            swl_test_core_request_recording_begin()
+            defer { swl_test_core_request_recording_end() }
+
+            let surface = try testSurface(pointer: 0x5801)
+            defer { surface.destroy() }
+            var runtime = try configuredRuntime()
+            runtime.setExplicitSynchronizationActive()
+
+            let preparedCommit = try SurfaceFrameCommitter.prepare(
+                SurfaceFrameCommitRequest(
+                    surface: surface,
+                    scaleInstallation: SurfaceScaleInstallation(),
+                    generation: 1,
+                    geometry: try testSurfaceGeometry(),
+                    submitConstraints: SurfaceSubmitConstraints(
+                        synchronization: .explicit(acquire: nil, release: nil),
+                        pacing: .none
+                    ),
+                    attachesBuffer: false
+                ),
+                runtime: &runtime,
+            )
+
+            #expect(!preparedCommit.attachesBuffer)
         }
     }
 }
