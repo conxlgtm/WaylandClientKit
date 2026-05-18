@@ -5,18 +5,28 @@ import WaylandTestSupport
 
 @testable import WaylandClient
 
+private let activeCapabilities = SurfaceCapabilitySnapshot(
+    role: .toplevelWindow,
+    outputIDs: [],
+    fractionalScale: .integerOnly,
+    presentationFeedback: .unavailable,
+    dmabuf: .unavailable,
+    synchronization: .explicitActive,
+    pacing: .fifoAndCommitTiming(fifo: 1, commitTiming: 1)
+)
+
+private let pacingCapabilities = SurfaceCapabilitySnapshot(
+    role: .toplevelWindow,
+    outputIDs: [],
+    fractionalScale: .integerOnly,
+    presentationFeedback: .unavailable,
+    dmabuf: .unavailable,
+    synchronization: .implicitOnly,
+    pacing: .fifoAndCommitTiming(fifo: 1, commitTiming: 1)
+)
+
 @Suite(.serialized)
 struct SurfaceSubmitConstraintsTests {
-    private let activeCapabilities = SurfaceCapabilitySnapshot(
-        role: .toplevelWindow,
-        outputIDs: [],
-        fractionalScale: .integerOnly,
-        presentationFeedback: .unavailable,
-        dmabuf: .unavailable,
-        synchronization: .explicitActive,
-        pacing: .fifoAndCommitTiming(fifo: 1, commitTiming: 1)
-    )
-
     @Test
     func defaultConstraintsValidateForImplicitSurface() throws {
         let capabilities = SurfaceCapabilitySnapshot(
@@ -32,6 +42,21 @@ struct SurfaceSubmitConstraintsTests {
         try SurfaceSubmitConstraints.default.validate(
             capabilities: capabilities,
             attachesBuffer: true
+        )
+    }
+
+    @Test
+    func implicitSyncRejectsBufferCommitWhenExplicitSyncIsActive() throws {
+        #expect(throws: SurfaceSubmitConstraintError.explicitSyncRequired) {
+            try SurfaceSubmitConstraints.default.validate(
+                capabilities: activeCapabilities,
+                attachesBuffer: true
+            )
+        }
+
+        try SurfaceSubmitConstraints.default.validate(
+            capabilities: activeCapabilities,
+            attachesBuffer: false
         )
     }
 
@@ -187,7 +212,7 @@ struct SurfaceSubmitConstraintsTests {
             pacing: .fifoAndTargetTime(.setBarrier, target)
         )
 
-        try constraints.validate(capabilities: activeCapabilities, attachesBuffer: true)
+        try constraints.validate(capabilities: pacingCapabilities, attachesBuffer: true)
     }
 
     @Test

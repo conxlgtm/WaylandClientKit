@@ -332,15 +332,6 @@ extension PopupRoleSurface {
         )
     }
 
-    package func recordPreparedSurfaceFrameCommit(
-        _ preparedCommit: PreparedSurfaceFrameCommit
-    ) throws {
-        try SurfaceFrameCommitter.recordPreparedCommit(
-            preparedCommit,
-            runtime: &surfaceRuntime
-        )
-    }
-
     package func commitSurfaceFrame(
         _ preparedCommit: PreparedSurfaceFrameCommit,
         buffer: RawBuffer

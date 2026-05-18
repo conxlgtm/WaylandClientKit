@@ -35,10 +35,6 @@ enum WindowExternalBufferPresenter {
         )
 
         do {
-            try SurfaceFrameCommitter.recordPreparedCommit(
-                preparedCommit,
-                runtime: &runtime
-            )
             return try SurfaceFrameCommitter.commit(
                 preparedCommit,
                 buffer: request.buffer,

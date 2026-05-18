@@ -96,6 +96,9 @@ package struct SurfaceSubmitConstraints: Equatable, Sendable {
     ) throws(SurfaceSubmitConstraintError) {
         switch synchronization {
         case .implicit:
+            if capability == .explicitActive, attachesBuffer {
+                throw SurfaceSubmitConstraintError.explicitSyncRequired
+            }
             return
         case .explicit(let acquire, let release):
             guard capability == .explicitActive else {
@@ -164,6 +167,7 @@ package struct SurfaceSubmitConstraints: Equatable, Sendable {
 
 package enum SurfaceSubmitConstraintError: Error, Equatable, Sendable {
     case explicitSyncUnavailable
+    case explicitSyncRequired
     case acquirePointRequired
     case releasePointRequired
     case acquirePointWithoutAttachedBuffer
