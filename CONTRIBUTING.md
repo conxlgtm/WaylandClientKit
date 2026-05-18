@@ -4,7 +4,7 @@ SwiftWayland is an experimental Linux Wayland client package. Keep changes small
 
 ## Environment
 
-Swift 6.3.1 or newer must already be installed.
+Swift 6.3.2 or newer must already be installed.
 The bootstrap script verifies Swift and Linux system dependencies by default.
 It does not install or switch Swift toolchains.
 It uses `scripts/dev/swift.sh` by default.
@@ -17,7 +17,7 @@ static linking need dedicated CI before they are treated as supported.
 
 Core build requirements:
 
-- Swift 6.3.1 or newer
+- Swift 6.3.2 or newer
 - `clang`
 - `pkg-config`
 - `gbm`
