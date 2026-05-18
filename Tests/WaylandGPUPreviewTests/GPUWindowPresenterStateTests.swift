@@ -1,5 +1,6 @@
 import Testing
 
+@testable import WaylandClient
 @testable import WaylandGPUPreview
 @testable import WaylandGraphicsPreview
 @testable import WaylandRaw
@@ -45,6 +46,129 @@ struct GPUWindowPresenterStateTests {
 
         #expect(try state.lifecycle(for: slotID) == .submitted(commitGeneration: 42))
         #expect(state.outstandingSubmittedSlotIDs == [slotID])
+    }
+
+    @Test
+    func implicitSubmissionUsesBufferReleaseForReuse() throws {
+        var state = GPUWindowPresenterState()
+        let slotID = try GBMBufferPoolSlotID(0)
+        try state.installSlot(slotID)
+
+        let lease = try state.leaseNext()
+        try state.markSubmitted(
+            lease,
+            generation: 42,
+            synchronization: .implicit
+        )
+
+        #expect(
+            try state.submissionState(for: slotID)
+                == .submittedImplicit(commitGeneration: 42)
+        )
+
+        try state.markReleased(slotID)
+
+        #expect(try state.submissionState(for: slotID) == .available)
+    }
+
+    @Test
+    func explicitSubmissionIgnoresBufferReleaseUntilReleasePointSignals() throws {
+        var state = GPUWindowPresenterState()
+        let slotID = try GBMBufferPoolSlotID(0)
+        let releasePoint = syncPoint(timeline: 5, point: 8)
+        try state.installSlot(slotID)
+
+        let lease = try state.leaseNext()
+        try state.markSubmitted(
+            lease,
+            generation: 42,
+            synchronization: .explicit(
+                GPUSubmittedBufferSyncState(
+                    slotID: slotID,
+                    acquirePoint: syncPoint(timeline: 5, point: 6),
+                    releasePoint: releasePoint
+                )
+            )
+        )
+
+        #expect(
+            try state.submissionState(for: slotID)
+                == .submittedExplicit(commitGeneration: 42, releasePoint: releasePoint)
+        )
+
+        try state.markReleased(slotID)
+
+        #expect(
+            try state.submissionState(for: slotID)
+                == .submittedExplicit(commitGeneration: 42, releasePoint: releasePoint)
+        )
+
+        try state.markExplicitReleaseSignaled(slotID)
+
+        #expect(try state.submissionState(for: slotID) == .available)
+    }
+
+    @Test
+    func synchronizationPolicyFallsBackOrFailsByMode() throws {
+        let explicit = GPUExplicitSynchronization(
+            acquireTimeline: GPUSyncTimeline(1),
+            releaseTimeline: GPUSyncTimeline(2)
+        )
+
+        #expect(
+            try GPUSynchronizationPolicy.preferExplicitFallbackToImplicit.selectMode(
+                capability: .implicitOnly,
+                explicitSynchronization: explicit
+            ) == .implicit
+        )
+        #expect(
+            try GPUSynchronizationPolicy.preferExplicitFallbackToImplicit.selectMode(
+                capability: .explicitActive,
+                explicitSynchronization: explicit
+            ) == .explicit(explicit)
+        )
+        #expect(throws: GPUSynchronizationPolicyError.explicitSynchronizationUnavailable) {
+            _ = try GPUSynchronizationPolicy.requireExplicit.selectMode(
+                capability: .implicitOnly,
+                explicitSynchronization: explicit
+            )
+        }
+        #expect(throws: GPUSynchronizationPolicyError.explicitSynchronizationNotConfigured) {
+            _ = try GPUSynchronizationPolicy.requireExplicit.selectMode(
+                capability: .explicitActive,
+                explicitSynchronization: nil
+            )
+        }
+    }
+
+    @Test
+    func presentationCorrelationMapsGenerationToSlot() throws {
+        var correlation = GPUWindowPresentationCorrelation()
+        let slotID = try GBMBufferPoolSlotID(0)
+        let geometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 4, height: 3),
+            scale: .one
+        )
+        let frame = GPUWindowPresentedFrame(
+            slotID: slotID,
+            generation: 77,
+            commitPlan: SurfaceCommitPlan(
+                geometry: geometry,
+                bufferScale: 1,
+                viewportMode: .omitDestination,
+                damageMode: .buffer
+            ),
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        correlation.record(frame)
+
+        #expect(correlation.slotID(for: 77) == slotID)
+
+        correlation.remove(generation: 77)
+
+        #expect(correlation.slotID(for: 77) == nil)
     }
 
     @Test
@@ -165,6 +289,13 @@ struct GPUWindowPresenterStateTests {
         #expect(buffer.destroyCallCount == 1)
         #expect(!buffer.hasReleaseObserver)
     }
+}
+
+private func syncPoint(timeline: UInt64, point: UInt64) -> GPUSyncPoint {
+    GPUSyncPoint(
+        timeline: GPUSyncTimeline(timeline),
+        point: RawSyncobjTimelinePoint(point)
+    )
 }
 
 private final class FakePresenterBuffer: GPUWindowPresenterBuffer {

@@ -95,6 +95,13 @@ Supported in the current experimental baseline:
 - `zwp_linux_dmabuf_v1`
 - `zwp_linux_dmabuf_feedback_v1`
 - `zwp_linux_buffer_params_v1`
+- `wp_linux_drm_syncobj_manager_v1` (package-internal preview)
+- `wp_linux_drm_syncobj_surface_v1` (package-internal preview)
+- `wp_linux_drm_syncobj_timeline_v1` (package-internal preview)
+- `wp_fifo_manager_v1` (package-internal preview)
+- `wp_fifo_v1` (package-internal preview)
+- `wp_commit_timing_manager_v1` (package-internal preview)
+- `wp_commit_timer_v1` (package-internal preview)
 
 Window geometry:
 
@@ -167,6 +174,7 @@ Not supported in the current experimental baseline:
 - public cursor animation or per-output cursor policy APIs
 - output management or control APIs
 - public `WaylandClient` GPU rendering APIs
+- public explicit synchronization or frame-pacing APIs
 - widgets or retained UI
 
 ## Linux Dependencies

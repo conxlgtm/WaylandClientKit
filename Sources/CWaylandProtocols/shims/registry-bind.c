@@ -1,6 +1,9 @@
 #include "swift-wayland-shims.h"
 #include "generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h"
 #include "generated/staging/cursor-shape/cursor-shape-v1-client-protocol.h"
+#include "generated/staging/linux-drm-syncobj/linux-drm-syncobj-v1-client-protocol.h"
+#include "generated/staging/fifo/fifo-v1-client-protocol.h"
+#include "generated/staging/commit-timing/commit-timing-v1-client-protocol.h"
 #include "generated/core/wayland-client-protocol.h"
 #include "generated/stable/presentation-time/presentation-time-client-protocol.h"
 #include "generated/stable/viewporter/viewporter-client-protocol.h"
@@ -79,6 +82,28 @@ struct wp_cursor_shape_manager_v1 *swl_registry_bind_wp_cursor_shape_manager_v1(
 {
     return (struct wp_cursor_shape_manager_v1 *)wl_registry_bind(
         registry, name, &wp_cursor_shape_manager_v1_interface, version);
+}
+
+struct wp_linux_drm_syncobj_manager_v1 *
+swl_registry_bind_wp_linux_drm_syncobj_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wp_linux_drm_syncobj_manager_v1 *)wl_registry_bind(
+        registry, name, &wp_linux_drm_syncobj_manager_v1_interface, version);
+}
+
+struct wp_fifo_manager_v1 *swl_registry_bind_wp_fifo_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wp_fifo_manager_v1 *)wl_registry_bind(
+        registry, name, &wp_fifo_manager_v1_interface, version);
+}
+
+struct wp_commit_timing_manager_v1 *swl_registry_bind_wp_commit_timing_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wp_commit_timing_manager_v1 *)wl_registry_bind(
+        registry, name, &wp_commit_timing_manager_v1_interface, version);
 }
 
 struct wl_seat *swl_registry_bind_wl_seat(

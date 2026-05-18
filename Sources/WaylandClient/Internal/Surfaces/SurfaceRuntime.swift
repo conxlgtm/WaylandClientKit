@@ -31,12 +31,45 @@ package enum SurfaceCapabilityStatus: Equatable, Sendable {
     case available
 }
 
+package enum SurfaceSynchronizationCapability: Equatable, Sendable {
+    case implicitOnly
+    case explicitAvailable(version: RawVersion)
+    case explicitActive
+}
+
+package enum SurfacePacingCapability: Equatable, Sendable {
+    case unavailable
+    case fifo(version: RawVersion)
+    case commitTiming(version: RawVersion)
+    case fifoAndCommitTiming(fifo: RawVersion, commitTiming: RawVersion)
+
+    package var supportsFifo: Bool {
+        switch self {
+        case .fifo, .fifoAndCommitTiming:
+            true
+        case .unavailable, .commitTiming:
+            false
+        }
+    }
+
+    package var supportsCommitTiming: Bool {
+        switch self {
+        case .commitTiming, .fifoAndCommitTiming:
+            true
+        case .unavailable, .fifo:
+            false
+        }
+    }
+}
+
 package struct SurfaceCapabilitySnapshot: Equatable, Sendable {
     package let role: SurfaceRuntimeRole
     package let outputIDs: [OutputID]
     package let fractionalScale: SurfaceScaleCapability
     package let presentationFeedback: SurfaceCapabilityStatus
     package let dmabuf: SurfaceDmabufCapability
+    package let synchronization: SurfaceSynchronizationCapability
+    package let pacing: SurfacePacingCapability
 }
 
 struct SurfaceRuntime<RoleResources> {
@@ -59,6 +92,8 @@ struct SurfaceRuntime<RoleResources> {
     private let surfaceID: RawObjectID?
     private var presentationFeedbackCapability = SurfaceCapabilityStatus.unavailable
     private var dmabufCapability = SurfaceDmabufCapability.unavailable
+    private var synchronizationCapability = SurfaceSynchronizationCapability.implicitOnly
+    private var pacingCapability = SurfacePacingCapability.unavailable
     private var phase: Phase = .unassigned(SurfaceObjects())
 
     init(role surfaceRole: SurfaceRuntimeRole, surfaceID runtimeSurfaceID: RawObjectID? = nil) {
@@ -166,6 +201,20 @@ extension SurfaceRuntime {
         }
     }
 
+    mutating func setSynchronizationCapability(
+        _ capability: SurfaceSynchronizationCapability
+    ) {
+        synchronizationCapability = capability
+    }
+
+    mutating func setExplicitSynchronizationActive() {
+        synchronizationCapability = .explicitActive
+    }
+
+    mutating func setPacingCapability(_ capability: SurfacePacingCapability) {
+        pacingCapability = capability
+    }
+
     mutating func setSurfaceDmabufFeedback(
         _ snapshot: RawLinuxDmabufFeedbackSnapshot
     ) throws(SurfaceDmabufCapabilityError) {
@@ -216,6 +265,8 @@ extension SurfaceRuntime {
         let outputIDs: [OutputID]
         let presentationFeedback: SurfaceCapabilityStatus
         let dmabuf: SurfaceDmabufCapability
+        let synchronization: SurfaceSynchronizationCapability
+        let pacing: SurfacePacingCapability
 
         switch phase {
         case .unassigned(let objects),
@@ -225,11 +276,15 @@ extension SurfaceRuntime {
             outputIDs = objects.outputMembership.currentOutputIDs(where: isStillBound)
             presentationFeedback = presentationFeedbackCapability
             dmabuf = dmabufCapability
+            synchronization = synchronizationCapability
+            pacing = pacingCapability
         case .surfaceDestroyed:
             scaleCapability = .integerOnly
             outputIDs = []
             presentationFeedback = .unavailable
             dmabuf = .unavailable
+            synchronization = .implicitOnly
+            pacing = .unavailable
         }
 
         return SurfaceCapabilitySnapshot(
@@ -237,7 +292,9 @@ extension SurfaceRuntime {
             outputIDs: outputIDs,
             fractionalScale: scaleCapability,
             presentationFeedback: presentationFeedback,
-            dmabuf: dmabuf
+            dmabuf: dmabuf,
+            synchronization: synchronization,
+            pacing: pacing
         )
     }
 
@@ -393,6 +450,8 @@ extension SurfaceRuntime {
                 throw SurfaceRuntimeError.surfaceDestroyedWithActiveBufferPool
             }
             objects.scaleInstallation.destroy()
+            synchronizationCapability = .implicitOnly
+            pacingCapability = .unavailable
             phase = .surfaceDestroyed(retiredBufferPools: objects.retiredBufferPools)
         case .live:
             throw SurfaceRuntimeError.surfaceDestroyedWithLiveRoleResources
