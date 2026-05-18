@@ -206,6 +206,86 @@ protocol_sources_commit_timing_candidates() {
         /usr/local/share/wayland-protocols/staging/commit-timing/commit-timing-v1.xml
 }
 
+protocol_sources_content_type_candidates() {
+    local protocols_dir
+
+    if [[ -n "${CONTENT_TYPE_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$CONTENT_TYPE_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/staging/content-type/content-type-v1.xml}" \
+        /usr/share/wayland-protocols/staging/content-type/content-type-v1.xml \
+        /usr/local/share/wayland-protocols/staging/content-type/content-type-v1.xml
+}
+
+protocol_sources_alpha_modifier_candidates() {
+    local protocols_dir
+
+    if [[ -n "${ALPHA_MODIFIER_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$ALPHA_MODIFIER_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/staging/alpha-modifier/alpha-modifier-v1.xml}" \
+        /usr/share/wayland-protocols/staging/alpha-modifier/alpha-modifier-v1.xml \
+        /usr/local/share/wayland-protocols/staging/alpha-modifier/alpha-modifier-v1.xml
+}
+
+protocol_sources_tearing_control_candidates() {
+    local protocols_dir
+
+    if [[ -n "${TEARING_CONTROL_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$TEARING_CONTROL_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/staging/tearing-control/tearing-control-v1.xml}" \
+        /usr/share/wayland-protocols/staging/tearing-control/tearing-control-v1.xml \
+        /usr/local/share/wayland-protocols/staging/tearing-control/tearing-control-v1.xml
+}
+
+protocol_sources_color_representation_candidates() {
+    local protocols_dir
+
+    if [[ -n "${COLOR_REPRESENTATION_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$COLOR_REPRESENTATION_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/staging/color-representation/color-representation-v1.xml}" \
+        /usr/share/wayland-protocols/staging/color-representation/color-representation-v1.xml \
+        /usr/local/share/wayland-protocols/staging/color-representation/color-representation-v1.xml
+}
+
+protocol_sources_color_management_candidates() {
+    local protocols_dir
+
+    if [[ -n "${COLOR_MANAGEMENT_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$COLOR_MANAGEMENT_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/staging/color-management/color-management-v1.xml}" \
+        /usr/share/wayland-protocols/staging/color-management/color-management-v1.xml \
+        /usr/local/share/wayland-protocols/staging/color-management/color-management-v1.xml
+}
+
 protocol_sources_first_existing_file() {
     local path
 
