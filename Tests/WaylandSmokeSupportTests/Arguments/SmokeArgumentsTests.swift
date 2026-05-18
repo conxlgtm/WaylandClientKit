@@ -38,13 +38,23 @@ struct SmokeArgumentsTests {
 
     @Test
     func linuxDmabufRequirementIsRecordedInConfiguration() throws {
-        let command = try SmokeArguments.parse(["--require-linux-dmabuf"])
+        let command = try SmokeArguments.parse([
+            "--require-linux-dmabuf",
+            "--require-syncobj",
+            "--require-fifo",
+            "--require-commit-timing",
+        ])
 
         #expect(
             command
                 == .run(
                     SmokeConfiguration(
-                        requestedOptionalProtocols: [.linuxDmabuf]
+                        requestedOptionalProtocols: [
+                            .linuxDmabuf,
+                            .linuxDrmSyncobj,
+                            .fifo,
+                            .commitTiming,
+                        ]
                     )
                 )
         )
@@ -59,6 +69,30 @@ struct SmokeArgumentsTests {
                 == "Skipping linux-dmabuf live test: compositor did not advertise "
                 + "zwp_linux_dmabuf_v1."
         )
+    }
+
+    @Test(arguments: [
+        (
+            SmokeOptionalProtocol.linuxDrmSyncobj,
+            "Skipping syncobj live test: compositor did not advertise "
+                + "wp_linux_drm_syncobj_manager_v1."
+        ),
+        (
+            SmokeOptionalProtocol.fifo,
+            "Skipping FIFO live test: compositor did not advertise "
+                + "wp_fifo_manager_v1."
+        ),
+        (
+            SmokeOptionalProtocol.commitTiming,
+            "Skipping commit-timing live test: compositor did not advertise "
+                + "wp_commit_timing_manager_v1."
+        ),
+    ])
+    func submitProtocolSkipMessagesNameExactInterface(
+        optionalProtocol: SmokeOptionalProtocol,
+        expectedMessage: String
+    ) {
+        #expect(SmokeResult.skippedOptionalProtocol(optionalProtocol).description == expectedMessage)
     }
 
     @Test

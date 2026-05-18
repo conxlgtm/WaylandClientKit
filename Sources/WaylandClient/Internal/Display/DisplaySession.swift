@@ -237,6 +237,13 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
             ].compactMap(\.self))
     }
 
+    package func isProtocolAdvertisedOnOwnerThread(
+        named interfaceName: String
+    ) -> Bool {
+        connection.preconditionIsOwnerThread()
+        return connection.optionalGlobal(named: interfaceName) != nil
+    }
+
     private func advertisedProtocol(named interfaceName: String) -> AdvertisedWaylandProtocol? {
         guard let global = connection.optionalGlobal(named: interfaceName) else {
             return nil

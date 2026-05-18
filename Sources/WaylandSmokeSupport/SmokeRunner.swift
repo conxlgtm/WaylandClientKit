@@ -5,7 +5,11 @@ package enum SmokeRunner {
         let session = try DisplaySession.connect()
         let capabilities = session.capabilitiesOnOwnerThread()
         for optionalProtocol in configuration.requestedOptionalProtocols {
-            guard isAdvertised(optionalProtocol, capabilities: capabilities) else {
+            guard isAdvertised(
+                optionalProtocol,
+                capabilities: capabilities,
+                session: session
+            ) else {
                 return .skippedOptionalProtocol(optionalProtocol)
             }
         }
@@ -39,11 +43,16 @@ package enum SmokeRunner {
 
     private static func isAdvertised(
         _ optionalProtocol: SmokeOptionalProtocol,
-        capabilities: WaylandCapabilities
+        capabilities: WaylandCapabilities,
+        session: DisplaySession
     ) -> Bool {
         switch optionalProtocol {
         case .linuxDmabuf:
             capabilities.linuxDmabuf.isAvailable
+        case .linuxDrmSyncobj, .fifo, .commitTiming:
+            session.isProtocolAdvertisedOnOwnerThread(
+                named: optionalProtocol.interfaceName
+            )
         }
     }
 
