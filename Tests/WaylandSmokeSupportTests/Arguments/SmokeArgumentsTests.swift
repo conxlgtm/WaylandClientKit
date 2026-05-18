@@ -92,7 +92,9 @@ struct SmokeArgumentsTests {
         optionalProtocol: SmokeOptionalProtocol,
         expectedMessage: String
     ) {
-        #expect(SmokeResult.skippedOptionalProtocol(optionalProtocol).description == expectedMessage)
+        #expect(
+            SmokeResult.skippedOptionalProtocol(optionalProtocol).description == expectedMessage
+        )
     }
 
     @Test
