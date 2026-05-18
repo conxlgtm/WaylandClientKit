@@ -115,6 +115,19 @@ struct SurfaceSubmitConstraintsTests {
     }
 
     @Test
+    func explicitSyncAcceptsBufferCommitWithAcquireAndReleasePoints() throws {
+        let constraints = SurfaceSubmitConstraints(
+            synchronization: .explicit(
+                acquire: syncPoint(timeline: 1, point: 1),
+                release: syncPoint(timeline: 1, point: 2)
+            ),
+            pacing: .none
+        )
+
+        try constraints.validate(capabilities: activeCapabilities, attachesBuffer: true)
+    }
+
+    @Test
     func explicitSyncRejectsPointsWithoutBufferCommit() throws {
         let acquireOnly = SurfaceSubmitConstraints(
             synchronization: .explicit(
@@ -140,10 +153,20 @@ struct SurfaceSubmitConstraintsTests {
     }
 
     @Test
+    func explicitSyncAllowsMetadataOnlyCommitWithoutPoints() throws {
+        let constraints = SurfaceSubmitConstraints(
+            synchronization: .explicit(acquire: nil, release: nil),
+            pacing: .none
+        )
+
+        try constraints.validate(capabilities: activeCapabilities, attachesBuffer: false)
+    }
+
+    @Test
     func explicitSyncRejectsConflictingPointsOnSameTimeline() throws {
         let constraints = SurfaceSubmitConstraints(
             synchronization: .explicit(
-                acquire: syncPoint(timeline: 7, point: 9),
+                acquire: syncPoint(timeline: 7, point: 10),
                 release: syncPoint(timeline: 7, point: 9)
             ),
             pacing: .none
@@ -152,6 +175,19 @@ struct SurfaceSubmitConstraintsTests {
         #expect(throws: SurfaceSubmitConstraintError.conflictingSyncPoints) {
             try constraints.validate(capabilities: activeCapabilities, attachesBuffer: true)
         }
+    }
+
+    @Test
+    func explicitSyncAllowsDifferentTimelinePointsWithoutOrdering() throws {
+        let constraints = SurfaceSubmitConstraints(
+            synchronization: .explicit(
+                acquire: syncPoint(timeline: 7, point: 10),
+                release: syncPoint(timeline: 8, point: 9)
+            ),
+            pacing: .none
+        )
+
+        try constraints.validate(capabilities: activeCapabilities, attachesBuffer: true)
     }
 
     @Test
@@ -214,7 +250,10 @@ struct SurfaceSubmitConstraintsTests {
 
         try constraints.validate(capabilities: pacingCapabilities, attachesBuffer: true)
     }
+}
 
+@Suite(.serialized)
+struct SurfaceSubmitConstraintObjectsTests {
     @Test
     func submitConstraintObjectsApplySyncPointsToRawSurface() async throws {
         let syncobjPointer = try unsafe #require(OpaquePointer(bitPattern: 0x5A01))
