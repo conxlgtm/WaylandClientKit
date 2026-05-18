@@ -28,6 +28,11 @@ package enum SmokeOptionalProtocol: Equatable, Sendable, CustomStringConvertible
     case linuxDrmSyncobj
     case fifo
     case commitTiming
+    case contentType
+    case alphaModifier
+    case tearingControl
+    case colorRepresentation
+    case colorManagement
 
     package var interfaceName: String {
         switch self {
@@ -39,6 +44,16 @@ package enum SmokeOptionalProtocol: Equatable, Sendable, CustomStringConvertible
             "wp_fifo_manager_v1"
         case .commitTiming:
             "wp_commit_timing_manager_v1"
+        case .contentType:
+            "wp_content_type_manager_v1"
+        case .alphaModifier:
+            "wp_alpha_modifier_v1"
+        case .tearingControl:
+            "wp_tearing_control_manager_v1"
+        case .colorRepresentation:
+            "wp_color_representation_manager_v1"
+        case .colorManagement:
+            "wp_color_manager_v1"
         }
     }
 
@@ -52,6 +67,16 @@ package enum SmokeOptionalProtocol: Equatable, Sendable, CustomStringConvertible
             "FIFO"
         case .commitTiming:
             "commit-timing"
+        case .contentType:
+            "content-type"
+        case .alphaModifier:
+            "alpha-modifier"
+        case .tearingControl:
+            "tearing-control"
+        case .colorRepresentation:
+            "color-representation"
+        case .colorManagement:
+            "color-management"
         }
     }
 
@@ -152,6 +177,11 @@ package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
     package var gbm: SmokePathStatus
     package var egl: SmokePathStatus
     package var presentationFeedback: SmokePathStatus
+    package var contentType: SmokePathStatus
+    package var alphaModifier: SmokePathStatus
+    package var tearingControl: SmokePathStatus
+    package var colorRepresentation: SmokePathStatus
+    package var colorManagement: SmokePathStatus
 
     package static let unavailable = Self(
         syncobj: .unavailable,
@@ -160,7 +190,12 @@ package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
         dmabuf: .unavailable,
         gbm: .unavailable,
         egl: .unavailable,
-        presentationFeedback: .unavailable
+        presentationFeedback: .unavailable,
+        contentType: .unavailable,
+        alphaModifier: .unavailable,
+        tearingControl: .unavailable,
+        colorRepresentation: .unavailable,
+        colorManagement: .unavailable
     )
 
     package init(
@@ -170,7 +205,12 @@ package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
         dmabuf: SmokePathStatus,
         gbm: SmokePathStatus,
         egl: SmokePathStatus,
-        presentationFeedback: SmokePathStatus
+        presentationFeedback: SmokePathStatus,
+        contentType: SmokePathStatus,
+        alphaModifier: SmokePathStatus,
+        tearingControl: SmokePathStatus,
+        colorRepresentation: SmokePathStatus,
+        colorManagement: SmokePathStatus
     ) {
         self.syncobj = syncobj
         self.fifo = fifo
@@ -179,6 +219,11 @@ package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
         self.gbm = gbm
         self.egl = egl
         self.presentationFeedback = presentationFeedback
+        self.contentType = contentType
+        self.alphaModifier = alphaModifier
+        self.tearingControl = tearingControl
+        self.colorRepresentation = colorRepresentation
+        self.colorManagement = colorManagement
     }
 
     package var description: String {
@@ -190,6 +235,11 @@ package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
             "gbm: \(gbm)",
             "egl: \(egl)",
             "presentationFeedback: \(presentationFeedback)",
+            "contentType: \(contentType)",
+            "alphaModifier: \(alphaModifier)",
+            "tearingControl: \(tearingControl)",
+            "colorRepresentation: \(colorRepresentation)",
+            "colorManagement: \(colorManagement)",
         ].joined(separator: "\n")
     }
 }

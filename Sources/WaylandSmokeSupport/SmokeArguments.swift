@@ -30,6 +30,11 @@ package enum SmokeArguments {
           --require-syncobj                   Skip if syncobj manager is not advertised.
           --require-fifo                      Skip if wp_fifo_manager_v1 is not advertised.
           --require-commit-timing             Skip if wp_commit_timing_manager_v1 is not advertised.
+          --require-content-type              Skip if wp_content_type_manager_v1 is not advertised.
+          --require-alpha-modifier            Skip if wp_alpha_modifier_v1 is not advertised.
+          --require-tearing-control           Skip if wp_tearing_control_manager_v1 is not advertised.
+          --require-color-representation      Skip if wp_color_representation_manager_v1 is not advertised.
+          --require-color-management          Skip if wp_color_manager_v1 is not advertised.
           -h, --help                         Show this help.
         """
 
@@ -69,6 +74,16 @@ package enum SmokeArguments {
                 requestedOptionalProtocols.append(.fifo)
             case "--require-commit-timing":
                 requestedOptionalProtocols.append(.commitTiming)
+            case "--require-content-type":
+                requestedOptionalProtocols.append(.contentType)
+            case "--require-alpha-modifier":
+                requestedOptionalProtocols.append(.alphaModifier)
+            case "--require-tearing-control":
+                requestedOptionalProtocols.append(.tearingControl)
+            case "--require-color-representation":
+                requestedOptionalProtocols.append(.colorRepresentation)
+            case "--require-color-management":
+                requestedOptionalProtocols.append(.colorManagement)
             default:
                 throw SmokeArgumentError.unknownArgument(argument)
             }
