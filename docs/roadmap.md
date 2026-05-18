@@ -37,6 +37,37 @@ The completion target is:
 This target is not met until a GPU buffer path exists. A software-only SHM
 client is useful, but it is not a complete foundation for a modern GUI stack.
 
+## Foundation Checkpoint 1
+
+A development checkpoint is useful before claiming the full foundation target.
+Checkpoint 1 means the current public and package-internal substrate is ready
+for the next protocol family without changing the compatibility promise.
+
+The checkpoint bar is:
+
+- public API audit, baseline, DocC link, protocol manifest, and target-import
+  gates pass
+- DocC concept pages exist for display lifecycle, windows, input, text input,
+  data transfer, cursor behavior, capabilities, events, presentation, and
+  diagnostics
+- text-input request lifecycle and transaction behavior are represented by
+  tested state values
+- cursor-shape fallback, cursor role surfaces, cursor scale policy, cursor
+  animation state, and drag icon lifetimes have focused tests
+- event stream capacity and overflow behavior is local to the documented stream
+  family
+- `SurfaceRuntime` role transitions are tested for all current roles
+- the compositor matrix has collected data for headless Weston and at least one
+  desktop compositor before a release candidate
+- GPU preview remains package-internal and reports capability skips or runtime
+  path failures without creating public GPU API
+- the strict memory-safety audit covers current fd, proxy, callback, surface,
+  GBM, EGL, dmabuf, text-input, cursor, and drag-icon ownership rules
+
+This checkpoint is not a foundation release candidate. Explicit sync, frame
+pacing beyond presentation-time, color metadata, public GPU rendering APIs, and
+output-management work remain later milestones.
+
 ## Non-Goals
 
 These belong above SwiftWayland:

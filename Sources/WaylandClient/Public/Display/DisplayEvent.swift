@@ -66,6 +66,7 @@ public enum DisplayDiagnosticPayload: Equatable, Sendable {
     case input(InputDiagnostic)
     case window(WindowDiagnostic)
     case dataTransfer(DataTransferDiagnostic)
+    case textInput(TextInputDiagnostic)
     case diagnosticsDropped(count: Int)
 }
 

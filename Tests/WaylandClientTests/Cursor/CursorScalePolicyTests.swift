@@ -70,6 +70,40 @@ struct CursorScalePolicyTests {
     }
 
     @Test
+    func focusedSurfacePolicyFallsBackAfterFocusedOutputsAreRemoved() throws {
+        let context = try cursorScaleContext(
+            focusedOutputs: [],
+            availableOutputs: [outputScale(id: 1, scale: 4)]
+        )
+
+        #expect(
+            try CursorScalePolicy.matchFocusedSurface.cursorSize(in: context)
+                == CursorSize(unchecked: 24)
+        )
+    }
+
+    @Test
+    func policyResultChangesWhenOutputScaleChanges() throws {
+        let lowScaleContext = try cursorScaleContext(
+            focusedOutputs: [outputScale(id: 1, scale: 1)],
+            availableOutputs: [outputScale(id: 1, scale: 1)]
+        )
+        let highScaleContext = try cursorScaleContext(
+            focusedOutputs: [outputScale(id: 1, scale: 3)],
+            availableOutputs: [outputScale(id: 1, scale: 3)]
+        )
+
+        #expect(
+            try CursorScalePolicy.matchFocusedSurface.cursorSize(in: lowScaleContext)
+                == CursorSize(unchecked: 24)
+        )
+        #expect(
+            try CursorScalePolicy.matchFocusedSurface.cursorSize(in: highScaleContext)
+                == CursorSize(unchecked: 72)
+        )
+    }
+
+    @Test
     func scalePolicyRejectsCursorSizeOverflow() throws {
         let context = try cursorScaleContext(
             focusedOutputs: [outputScale(id: 1, scale: 2)],

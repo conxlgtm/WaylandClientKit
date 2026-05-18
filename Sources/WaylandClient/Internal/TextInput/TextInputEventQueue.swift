@@ -1,4 +1,4 @@
-package struct TextInputEventQueue {
+package struct TextInputEventQueue: DrainableEventQueue {
     private var pendingEvents: [TextInputEvent] = []
 
     package init() {
@@ -7,10 +7,6 @@ package struct TextInputEventQueue {
 
     package mutating func append(_ event: TextInputEvent) {
         pendingEvents.append(event)
-    }
-
-    package mutating func append(contentsOf events: [TextInputEvent]) {
-        pendingEvents.append(contentsOf: events)
     }
 
     package mutating func drain() -> [TextInputEvent] {

@@ -8,14 +8,14 @@ public struct PrimarySelectionOffer: Sendable, Hashable {
     public let mimeTypes: [MIMEType]
 
     private let display: WaylandDisplay
-    private let displayIdentity: ObjectIdentifier
+    private let ownership: DisplayOwnedIdentity<DataOfferID>
 
     package init(snapshot: DataOfferSnapshot, display owningDisplay: WaylandDisplay) {
         id = snapshot.id
         seatID = snapshot.role.seatID
         mimeTypes = snapshot.mimeTypes
         display = owningDisplay
-        displayIdentity = ObjectIdentifier(owningDisplay)
+        ownership = DisplayOwnedIdentity(id: snapshot.id, display: owningDisplay)
     }
 
     public var identity: PrimarySelectionOfferIdentity {
@@ -39,11 +39,10 @@ public struct PrimarySelectionOffer: Sendable, Hashable {
     }
 
     public static func == (lhs: PrimarySelectionOffer, rhs: PrimarySelectionOffer) -> Bool {
-        lhs.id == rhs.id && lhs.displayIdentity == rhs.displayIdentity
+        lhs.ownership == rhs.ownership
     }
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(displayIdentity)
-        hasher.combine(id)
+        hasher.combine(ownership)
     }
 }

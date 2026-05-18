@@ -20,6 +20,50 @@ struct TextInputSurroundingTextRequestTests {
     }
 
     @Test
+    func stringIndexInitializerUsesUTF8Offsets() throws {
+        let text = "aé🙂中"
+        let cursor = try #require(text.firstIndex(of: "🙂"))
+        let anchor = try #require(text.firstIndex(of: "中"))
+
+        let surroundingText = try TextInputSurroundingText(
+            text: text,
+            cursor: cursor,
+            anchor: anchor
+        )
+
+        #expect(surroundingText.cursorUTF8Offset == 3)
+        #expect(surroundingText.anchorUTF8Offset == 7)
+    }
+
+    @Test
+    func insertionPointUsesSameCursorAndAnchorOffset() throws {
+        let text = "Cafe\u{301}"
+        let cursor = text.endIndex
+
+        let surroundingText = try TextInputSurroundingText.insertionPoint(
+            text,
+            cursor: cursor
+        )
+
+        #expect(surroundingText.cursorUTF8Offset == text.utf8.count)
+        #expect(surroundingText.anchorUTF8Offset == text.utf8.count)
+    }
+
+    @Test
+    func stringIndexInitializerRejectsOutOfBoundsIndex() {
+        let longer = "abcdef"
+        let staleIndex = longer.index(longer.startIndex, offsetBy: 5)
+
+        #expect(throws: TextInputError.surroundingTextIndexOutOfBounds) {
+            _ = try TextInputSurroundingText(
+                text: "abc",
+                cursor: staleIndex,
+                anchor: "abc".startIndex
+            )
+        }
+    }
+
+    @Test
     func rejectsNULByte() {
         let text = "abc\0def"
 
