@@ -27,6 +27,7 @@ package final class TextInputManager {
     private let targetResolver: (RawObjectID?) -> InputEventTarget
     private var bindingsBySeatID: [SeatID: any TextInputBinding] = [:]
     private var statesBySeatID: [SeatID: TextInputState] = [:]
+    private var lifecyclesBySeatID: [SeatID: TextInputSessionLifecycle] = [:]
     private var eventQueue = TextInputEventQueue()
     private var isShutdown = false
 
@@ -53,14 +54,25 @@ package final class TextInputManager {
         _ = try binding(for: seatID)
     }
 
-    package func enable(seatID: SeatID) throws {
+    package func enable(seatID: SeatID, windowID: WindowID) throws {
         backend.preconditionIsOwnerThread()
         try binding(for: seatID).enable()
+        lifecyclesBySeatID[seatID] = .enabled(windowID: windowID)
     }
 
     package func disable(seatID: SeatID) throws {
         backend.preconditionIsOwnerThread()
-        try binding(for: seatID).disable()
+        guard let binding = bindingsBySeatID[seatID] else {
+            return
+        }
+
+        switch lifecycle(for: seatID) {
+        case .enabled, .focused:
+            binding.disable()
+            lifecyclesBySeatID[seatID] = .disabled
+        case .inactive, .disabled:
+            return
+        }
     }
 
     package func setSurroundingText(
@@ -68,8 +80,9 @@ package final class TextInputManager {
         seatID: SeatID
     ) throws {
         backend.preconditionIsOwnerThread()
+        try requireRequestMutation(seatID: seatID, operation: .setSurroundingText)
         let request = try TextInputSurroundingTextRequest(surroundingText)
-        try binding(for: seatID).setSurroundingText(
+        try existingBinding(for: seatID).setSurroundingText(
             request.text,
             cursor: request.cursorByteOffset,
             anchor: request.anchorByteOffset
@@ -78,7 +91,8 @@ package final class TextInputManager {
 
     package func setTextChangeCause(_ cause: TextInputChangeCause, seatID: SeatID) throws {
         backend.preconditionIsOwnerThread()
-        try binding(for: seatID).setTextChangeCause(cause)
+        try requireRequestMutation(seatID: seatID, operation: .setTextChangeCause)
+        try existingBinding(for: seatID).setTextChangeCause(cause)
     }
 
     package func setContentType(
@@ -87,17 +101,20 @@ package final class TextInputManager {
         seatID: SeatID
     ) throws {
         backend.preconditionIsOwnerThread()
-        try binding(for: seatID).setContentType(hints: hints, purpose: purpose)
+        try requireRequestMutation(seatID: seatID, operation: .setContentType)
+        try existingBinding(for: seatID).setContentType(hints: hints, purpose: purpose)
     }
 
     package func setCursorRectangle(_ rect: LogicalRect, seatID: SeatID) throws {
         backend.preconditionIsOwnerThread()
-        try binding(for: seatID).setCursorRectangle(rect)
+        try requireRequestMutation(seatID: seatID, operation: .setCursorRectangle)
+        try existingBinding(for: seatID).setCursorRectangle(rect)
     }
 
     package func commit(seatID: SeatID) throws {
         backend.preconditionIsOwnerThread()
-        try binding(for: seatID).commit()
+        try requireRequestMutation(seatID: seatID, operation: .commit)
+        try existingBinding(for: seatID).commit()
     }
 
     package func drainEvents() -> [TextInputEvent] {
@@ -114,7 +131,20 @@ package final class TextInputManager {
             bindingsBySeatID.removeValue(forKey: seatID)?.destroy()
         }
         statesBySeatID.removeAll(keepingCapacity: false)
+        lifecyclesBySeatID.removeAll(keepingCapacity: false)
         _ = eventQueue.drain()
+    }
+
+    package func removeSeat(_ seatID: SeatID) {
+        backend.preconditionIsOwnerThread()
+        guard let binding = bindingsBySeatID.removeValue(forKey: seatID) else {
+            return
+        }
+
+        binding.destroy()
+        statesBySeatID.removeValue(forKey: seatID)
+        lifecyclesBySeatID.removeValue(forKey: seatID)
+        eventQueue.append(.diagnostic(.seatRemoved(seatID)))
     }
 
     private func binding(for seatID: SeatID) throws -> any TextInputBinding {
@@ -131,17 +161,74 @@ package final class TextInputManager {
         }
         bindingsBySeatID[seatID] = binding
         statesBySeatID[seatID] = TextInputState(seatID: seatID)
+        lifecyclesBySeatID[seatID] = .inactive
         return binding
+    }
+
+    private func existingBinding(for seatID: SeatID) throws -> any TextInputBinding {
+        if let binding = bindingsBySeatID[seatID] {
+            return binding
+        }
+
+        throw TextInputError.unknownSeat(seatID)
+    }
+
+    private func lifecycle(for seatID: SeatID) -> TextInputSessionLifecycle {
+        lifecyclesBySeatID[seatID] ?? .inactive
+    }
+
+    private func requireRequestMutation(
+        seatID: SeatID,
+        operation: TextInputRequestOperation
+    ) throws {
+        guard bindingsBySeatID[seatID] != nil else {
+            throw TextInputError.unknownSeat(seatID)
+        }
+
+        let lifecycle = lifecycle(for: seatID)
+        guard lifecycle.permitsRequestMutation else {
+            eventQueue.append(
+                .diagnostic(
+                    .invalidRequest(
+                        seatID: seatID,
+                        operation: operation,
+                        lifecycle: lifecycle
+                    )
+                )
+            )
+            throw TextInputError.inactiveSession(
+                seatID: seatID,
+                operation: operation
+            )
+        }
     }
 
     private func handleRawEvent(_ event: RawTextInputEvent, seatID: SeatID) {
         guard !isShutdown else { return }
+        guard bindingsBySeatID[seatID] != nil else { return }
 
         let protocolEvent = textInputProtocolEvent(from: event)
+        updateLifecycle(for: seatID, event: protocolEvent)
         var state = statesBySeatID[seatID] ?? TextInputState(seatID: seatID)
         let events = state.reduce(protocolEvent)
         statesBySeatID[seatID] = state
         eventQueue.append(contentsOf: events)
+    }
+
+    private func updateLifecycle(for seatID: SeatID, event: TextInputProtocolEvent) {
+        switch event {
+        case .enter(let target):
+            var lifecycle = lifecycle(for: seatID)
+            lifecycle.markEntered(target)
+            lifecyclesBySeatID[seatID] = lifecycle
+        case .leave(let target):
+            var lifecycle = lifecycle(for: seatID)
+            lifecycle.markLeft(target)
+            lifecyclesBySeatID[seatID] = lifecycle
+        case .preeditString, .commitString, .deleteSurroundingText, .done, .action,
+            .language, .preeditHint:
+            break
+        }
     }
 
     private func textInputProtocolEvent(

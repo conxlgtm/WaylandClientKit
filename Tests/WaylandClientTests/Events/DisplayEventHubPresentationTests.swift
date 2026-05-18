@@ -41,4 +41,39 @@ struct DisplayEventHubPresentationTests {
             Issue.record("Expected presentation event, got \(error)")
         }
     }
+
+    @Test
+    func presentationSubscriberOverflowUsesConfiguredCapacity() async throws {
+        let hub = DisplayEventHub(
+            configuration: try EventStreamConfiguration(presentationEventCapacity: 1)
+        )
+        let windowID = WindowID(rawValue: 4)
+        var iterator = hub.windowPresentationEvents(windowID: windowID).makeAsyncIterator()
+
+        hub.publishPresentation(
+            WindowPresentationEvent(
+                windowID: windowID,
+                feedback: .discarded(SurfacePresentationIdentity(rawValue: 1))
+            )
+        )
+        hub.publishPresentation(
+            WindowPresentationEvent(
+                windowID: windowID,
+                feedback: .discarded(SurfacePresentationIdentity(rawValue: 2))
+            )
+        )
+
+        do {
+            _ = try await iterator.next()
+            Issue.record("Expected presentation event overflow")
+        } catch {
+            #expect(
+                error
+                    == .eventSubscriberOverflow(
+                        stream: .presentationEvents,
+                        capacity: 1
+                    )
+            )
+        }
+    }
 }

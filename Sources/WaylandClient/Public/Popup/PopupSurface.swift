@@ -3,7 +3,7 @@ public struct PopupSurface: Sendable, Hashable {
     public let parentWindowID: WindowID
 
     private let display: WaylandDisplay
-    private let displayIdentity: ObjectIdentifier
+    private let ownership: DisplayOwnedIdentity<PopupID>
 
     package init(
         id popupID: PopupID,
@@ -13,7 +13,7 @@ public struct PopupSurface: Sendable, Hashable {
         id = popupID
         parentWindowID = popupParentWindowID
         display = owningDisplay
-        displayIdentity = ObjectIdentifier(owningDisplay)
+        ownership = DisplayOwnedIdentity(id: popupID, display: owningDisplay)
     }
 
     public var identity: PopupSurfaceIdentity {
@@ -66,11 +66,10 @@ public struct PopupSurface: Sendable, Hashable {
     }
 
     public static func == (lhs: PopupSurface, rhs: PopupSurface) -> Bool {
-        lhs.id == rhs.id && lhs.displayIdentity == rhs.displayIdentity
+        lhs.ownership == rhs.ownership
     }
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(displayIdentity)
-        hasher.combine(id)
+        hasher.combine(ownership)
     }
 }

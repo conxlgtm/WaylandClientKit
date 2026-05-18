@@ -8,7 +8,10 @@ extension DisplayCore {
     func enableTextInput(seatID: SeatID, windowID: WindowID) throws {
         try withFatalFailureFinalization {
             _ = try requireOpenWindow(windowID)
-            try requireSession().enableTextInputOnOwnerThread(seatID: seatID)
+            try requireSession().enableTextInputOnOwnerThread(
+                seatID: seatID,
+                windowID: windowID
+            )
         }
     }
 

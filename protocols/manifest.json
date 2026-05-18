@@ -8,6 +8,9 @@
       "vendoredFromPackage": "wayland-devel-1.24.0-3.fc44.x86_64",
       "vendoredFromPath": "/usr/share/wayland/wayland.xml",
       "sha256": "60abb5864546288a660f3d8af0c838fc87c85bb386582da23e52cb8476e9adbf",
+      "swiftWaylandTier": "required",
+      "apiExposure": "internal",
+      "testStrategy": "unit-and-live",
       "notes": "Canonical core Wayland protocol used for reproducible generation."
     },
     {
@@ -19,6 +22,9 @@
       "vendoredFromPath": "/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml",
       "sha256": "5084e76386f6c3959bee957a784c57de204be0de3f57533ce07b4be0617b171a",
       "stability": "stable",
+      "swiftWaylandTier": "required",
+      "apiExposure": "internal",
+      "testStrategy": "unit-and-live",
       "notes": "Required for modern toplevel windows. Vendored from the canonical Fedora wayland-protocols package path."
     },
     {
@@ -30,6 +36,9 @@
       "vendoredFromPath": "/usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml",
       "sha256": "68753c4a85a28659e3aa1fe0f138329a8bf3dff0b4789f4663a2c7fedbfecf2f",
       "stability": "unstable",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "publicCapability",
+      "testStrategy": "unit-and-live-when-advertised",
       "notes": "Optional extension for compositor-managed toplevel decorations."
     },
     {
@@ -41,6 +50,9 @@
       "vendoredFromPath": "/usr/share/wayland-protocols/unstable/xdg-output/xdg-output-unstable-v1.xml",
       "sha256": "363d547c3eefe8959160cac903ff90b311d4b183005557d73640d9df2cfd7f79",
       "stability": "unstable",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "publicCapability",
+      "testStrategy": "unit-and-live-when-advertised",
       "notes": "Optional extension for desktop logical output geometry."
     },
     {
@@ -52,6 +64,9 @@
       "vendoredFromPath": "/usr/share/wayland-protocols/stable/viewporter/viewporter.xml",
       "sha256": "dcb12279a03746301fe490aaed4b38a403485a925abfce2ccfceb644e104fe71",
       "stability": "stable",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "internal",
+      "testStrategy": "unit-and-live-when-advertised",
       "notes": "Optional extension for surface destination sizing used by fractional scaling."
     },
     {
@@ -63,6 +78,9 @@
       "vendoredFromPath": "/usr/share/wayland-protocols/stable/presentation-time/presentation-time.xml",
       "sha256": "dffac93bcb2bb1d8c385e72b8a8c2c0d4d79a336866322f3ba886dce2b27b1e2",
       "stability": "stable",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "public",
+      "testStrategy": "unit-and-live-when-advertised",
       "notes": "Optional extension for compositor presentation feedback on committed surfaces."
     },
     {
@@ -74,6 +92,9 @@
       "vendoredFromPath": "/usr/share/wayland-protocols/stable/tablet/tablet-v2.xml",
       "sha256": "ac1128b26c779cf90b9ed71182ba5e34a7262826789adae206d825a4d45908b4",
       "stability": "stable",
+      "swiftWaylandTier": "privateGenerationDependency",
+      "apiExposure": "none",
+      "testStrategy": "generation-only",
       "notes": "Private generation dependency for cursor-shape tablet-tool request interfaces; SwiftWayland does not expose tablet APIs yet."
     },
     {
@@ -85,6 +106,9 @@
       "vendoredFromPath": "/usr/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml",
       "sha256": "5941de5d28f427ecdadddc8623a6f6af0a30b0ab4726847236ba7a7652b81316",
       "stability": "staging",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "publicCapability",
+      "testStrategy": "unit-and-live-when-advertised",
       "notes": "Optional extension for compositor-preferred fractional surface scales."
     },
     {
@@ -96,6 +120,9 @@
       "vendoredFromPath": "/usr/share/wayland-protocols/staging/cursor-shape/cursor-shape-v1.xml",
       "sha256": "bb57d91e53a79dadab7c612dab87c233393cee73673feefa7442cfbfdd9aed2f",
       "stability": "staging",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "public",
+      "testStrategy": "unit-and-live-when-advertised",
       "notes": "Optional extension for compositor-managed pointer cursor shapes."
     },
     {
@@ -107,6 +134,9 @@
       "vendoredFromPath": "/usr/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml",
       "sha256": "d568482ba84df6e531698b1f531810860995ca24d69495427fe43aee6017f52c",
       "stability": "unstable",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "public",
+      "testStrategy": "unit-and-live-when-advertised",
       "notes": "Optional extension for X-style primary selection transfer."
     },
     {
@@ -118,6 +148,9 @@
       "vendoredFromPath": "/usr/share/wayland-protocols/unstable/text-input/text-input-unstable-v3.xml",
       "sha256": "160815cda13c285a30df1971d8f0a5b3aac07071537df59916d2f748b18e4f59",
       "stability": "unstable",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "public",
+      "testStrategy": "unit-and-live-when-advertised",
       "notes": "Optional foundation protocol for compositor/IME text input."
     },
     {
@@ -129,6 +162,9 @@
       "vendoredFromPath": "/usr/share/wayland-protocols/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml",
       "sha256": "0681c01199393662229b0d9f71a4bd502350ea8f782a7049fa30e392b50fb2c8",
       "stability": "unstable",
+      "swiftWaylandTier": "previewFoundation",
+      "apiExposure": "preview",
+      "testStrategy": "unit-and-live-when-advertised",
       "notes": "Optional foundation protocol for dmabuf-backed wl_buffer creation and default/per-surface feedback."
     }
   ]

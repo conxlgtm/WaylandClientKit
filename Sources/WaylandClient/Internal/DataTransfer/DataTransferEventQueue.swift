@@ -1,6 +1,6 @@
 import WaylandRaw
 
-package final class DataTransferEventQueue {
+package final class DataTransferEventQueue: DrainableEventQueue {
     private var pendingEvents: [DataTransferEvent] = []
 
     package init() {

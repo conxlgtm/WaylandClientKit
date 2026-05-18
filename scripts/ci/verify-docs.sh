@@ -21,8 +21,11 @@ required_executables=(
     scripts/dev/bootstrap-linux.sh
     scripts/protocols/generate.sh
     scripts/protocols/verify-generated.sh
+    scripts/protocols/verify-manifest.py
     scripts/ci/verify-public-api-audit.sh
+    scripts/ci/verify-target-imports.sh
     scripts/ci/verify-docc.sh
+    scripts/ci/verify-docc-symbol-links.py
     scripts/smoke/collect-compositor-facts.sh
     scripts/smoke/gpu-preview-wayland.sh
     scripts/shims/verify-shims.sh
@@ -63,8 +66,11 @@ required_patterns=(
     "compositor-matrix.md"
     "./scripts/protocols/generate.sh"
     "./scripts/protocols/verify-generated.sh"
+    "./scripts/protocols/verify-manifest.py"
     "./scripts/ci/verify-public-api-audit.sh"
+    "./scripts/ci/verify-target-imports.sh"
     "./scripts/ci/verify-docc.sh"
+    "./scripts/ci/verify-docc-symbol-links.py"
     "./scripts/smoke/collect-compositor-facts.sh"
     "./scripts/smoke/gpu-preview-wayland.sh"
     "./scripts/shims/verify-shims.sh"

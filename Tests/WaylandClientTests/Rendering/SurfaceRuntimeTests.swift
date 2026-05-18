@@ -103,6 +103,25 @@ struct SurfaceRuntimeTests {
         #expect(runtime.roleResources == RoleToken(rawValue: 1))
     }
 
+    @Test(arguments: [
+        SurfaceRuntimeRole.toplevelWindow,
+        .popup,
+        .cursor,
+        .dragIcon,
+    ])
+    func everyRoleRemovesResourcesBeforeSurfaceDestruction(
+        role: SurfaceRuntimeRole
+    ) throws {
+        var runtime = SurfaceRuntime<RoleToken>(role: role)
+
+        try runtime.installRoleResources(RoleToken(rawValue: 1))
+
+        #expect(runtime.removeRoleResources() == RoleToken(rawValue: 1))
+        try runtime.markSurfaceDestroyed()
+        #expect(runtime.roleResources == nil)
+        #expect(runtime.capabilitySnapshot().role == role)
+    }
+
     @Test
     func roleResourcesCannotBeInstalledAfterRoleRemoval() throws {
         var runtime = SurfaceRuntime<RoleToken>(role: .dragIcon)

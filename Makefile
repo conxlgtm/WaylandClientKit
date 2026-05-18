@@ -2,7 +2,7 @@ SWIFT_FORMAT := ./scripts/dev/swift-format.sh
 SWIFTLINT := ./scripts/dev/swiftlint.sh
 SWIFT := ./scripts/dev/swift.sh
 
-.PHONY: format lint verify-generated verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-unsafe-allowlist strict-concurrency test test-public-api-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless gpu-preview-wayland gpu-preview-headless wayland-headless release-check install-pre-commit
+.PHONY: format lint verify-generated verify-protocol-manifest verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-public-api-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless gpu-preview-wayland gpu-preview-headless wayland-headless release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
@@ -17,6 +17,9 @@ lint:
 
 verify-generated:
 	@./scripts/protocols/verify-generated.sh
+
+verify-protocol-manifest:
+	@./scripts/protocols/verify-manifest.py
 
 verify-shims:
 	@./scripts/shims/verify-shims.sh
@@ -35,6 +38,9 @@ docc: verify-docc
 verify-public-api-audit:
 	@./scripts/ci/verify-public-api-audit.sh
 
+verify-target-imports:
+	@./scripts/ci/verify-target-imports.sh
+
 verify-unsafe-allowlist:
 	@bash ./scripts/safety/verify-unsafe-allowlist.sh
 
@@ -47,7 +53,7 @@ test:
 test-public-api-client:
 	@./scripts/ci/test-public-api-client.sh
 
-check-base: lint verify-generated verify-shims verify-docs verify-docc verify-public-api-audit verify-unsafe-allowlist strict-concurrency test test-public-api-client
+check-base: lint verify-generated verify-protocol-manifest verify-shims verify-docs verify-docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-public-api-client
 
 check: check-base check-wayland-smoke-if-available
 

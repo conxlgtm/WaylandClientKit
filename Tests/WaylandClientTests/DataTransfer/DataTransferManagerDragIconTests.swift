@@ -88,6 +88,16 @@ struct DataTransferManagerDragIconTests {
     }
 
     @Test
+    func dragIconSolidImageFillsEveryPixel() throws {
+        let size = try PositivePixelSize(width: 2, height: 3)
+
+        let image = try DragIconImage.solid(size: size, color: 0x00AA_55CC)
+
+        #expect(image.size == size)
+        #expect(image.pixels == Array(repeating: 0x00AA_55CC, count: 6))
+    }
+
+    @Test
     func dragIconRoleSurfaceCopiesAttachesDamagesCommitsAndDestroys() async throws {
         try await CoreRequestRecordingGate.withExclusiveRecording {
             try assertDragIconRoleSurfaceEffects()

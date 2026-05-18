@@ -25,7 +25,7 @@ struct TextInputManagerTests {
         let text = "Aé"
         let rect = try LogicalRect(x: 1, y: 2, width: 3, height: 4)
 
-        try manager.enable(seatID: seatID)
+        try manager.enable(seatID: seatID, windowID: WindowID(rawValue: 3))
         try manager.setSurroundingText(
             TextInputSurroundingText(
                 text: text,
@@ -55,6 +55,102 @@ struct TextInputManagerTests {
                 .disable,
             ]
         )
+    }
+
+    @Test
+    func requestBeforeEnableThrowsInactiveSessionAndPublishesDiagnostic() throws {
+        let backend = RecordingTextInputBackend()
+        let manager = TextInputManager(backend: backend)
+        let seatID = SeatID(rawValue: 14)
+
+        try manager.prepareSession(for: seatID)
+
+        #expect(
+            throws: TextInputError.inactiveSession(
+                seatID: seatID,
+                operation: .commit
+            )
+        ) {
+            try manager.commit(seatID: seatID)
+        }
+        #expect(backend.binding(for: seatID)?.operations.isEmpty == true)
+        #expect(
+            manager.drainEvents() == [
+                .diagnostic(
+                    TextInputDiagnostic(
+                        seatID: seatID,
+                        operation: .invalidRequest(.commit),
+                        message: "ignored text-input commit request in inactive"
+                    )
+                )
+            ]
+        )
+    }
+
+    @Test
+    func repeatedDisableIsIdempotentAfterEnabledSession() throws {
+        let backend = RecordingTextInputBackend()
+        let manager = TextInputManager(backend: backend)
+        let seatID = SeatID(rawValue: 15)
+
+        try manager.enable(seatID: seatID, windowID: WindowID(rawValue: 31))
+        try manager.disable(seatID: seatID)
+        try manager.disable(seatID: seatID)
+
+        #expect(
+            backend.binding(for: seatID)?.operations == [
+                .enable,
+                .disable,
+            ]
+        )
+    }
+
+    @Test
+    func removedSeatDestroysBindingAndPublishesDiagnostic() throws {
+        let backend = RecordingTextInputBackend()
+        let manager = TextInputManager(backend: backend)
+        let seatID = SeatID(rawValue: 16)
+
+        try manager.enable(seatID: seatID, windowID: WindowID(rawValue: 32))
+        manager.removeSeat(seatID)
+
+        #expect(
+            backend.binding(for: seatID)?.operations == [
+                .enable,
+                .destroy,
+            ]
+        )
+        #expect(
+            manager.drainEvents() == [
+                .diagnostic(
+                    TextInputDiagnostic(
+                        seatID: seatID,
+                        operation: .seatRemoved,
+                        message: "text-input seat \(seatID) was removed"
+                    )
+                )
+            ]
+        )
+        #expect(throws: TextInputError.unknownSeat(seatID)) {
+            try manager.commit(seatID: seatID)
+        }
+    }
+
+    @Test
+    func lateRawEventsAfterSeatRemovalAreIgnored() throws {
+        let backend = RecordingTextInputBackend()
+        let manager = TextInputManager(backend: backend)
+        let seatID = SeatID(rawValue: 17)
+
+        try manager.enable(seatID: seatID, windowID: WindowID(rawValue: 34))
+        manager.removeSeat(seatID)
+        _ = manager.drainEvents()
+
+        backend.emit(.commitString("late"), seatID: seatID)
+        backend.emit(.done(serial: 1), seatID: seatID)
+
+        #expect(manager.drainEvents().isEmpty)
+        #expect(backend.boundSeatIDs == [seatID])
     }
 
     @Test
@@ -143,7 +239,7 @@ struct TextInputManagerTests {
         #expect(backend.binding(for: seatID)?.operations == [.destroy])
         #expect(manager.drainEvents().isEmpty)
         #expect(throws: TextInputError.unavailable) {
-            try manager.enable(seatID: seatID)
+            try manager.enable(seatID: seatID, windowID: WindowID(rawValue: 33))
         }
     }
 }

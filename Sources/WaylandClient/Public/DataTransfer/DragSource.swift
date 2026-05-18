@@ -22,11 +22,49 @@ public struct DragIconImage: Equatable, Sendable {
         pixels = xrgb8888Pixels
     }
 
+    public static func solid(
+        size imageSize: PositivePixelSize,
+        color xrgb8888Color: UInt32
+    ) throws -> DragIconImage {
+        let width = Int(imageSize.width.rawValue)
+        let height = Int(imageSize.height.rawValue)
+        let expectedCount = try expectedPixelCount(
+            width: width,
+            height: height,
+            actualForError: 0
+        )
+        return try DragIconImage(
+            size: imageSize,
+            pixels: Array(repeating: xrgb8888Color, count: expectedCount)
+        )
+    }
+
     @discardableResult
     package static func validatePixelCount(
         width: Int,
         height: Int,
         actual: Int
+    ) throws(DataTransferError) -> Int {
+        let expectedCount = try expectedPixelCount(
+            width: width,
+            height: height,
+            actualForError: actual
+        )
+
+        guard actual == expectedCount else {
+            throw DataTransferError.invalidDragIconPixelCount(
+                expected: expectedCount,
+                actual: actual
+            )
+        }
+
+        return expectedCount
+    }
+
+    private static func expectedPixelCount(
+        width: Int,
+        height: Int,
+        actualForError actual: Int
     ) throws(DataTransferError) -> Int {
         let (expectedCount, overflowed) = width.multipliedReportingOverflow(
             by: height
@@ -34,13 +72,6 @@ public struct DragIconImage: Equatable, Sendable {
         guard !overflowed else {
             throw DataTransferError.invalidDragIconPixelCount(
                 expected: Int.max,
-                actual: actual
-            )
-        }
-
-        guard actual == expectedCount else {
-            throw DataTransferError.invalidDragIconPixelCount(
-                expected: expectedCount,
                 actual: actual
             )
         }
@@ -103,7 +134,7 @@ public struct DragSource: Sendable, Hashable {
     public let actions: DragActionSet
 
     private let display: WaylandDisplay
-    private let displayIdentity: ObjectIdentifier
+    private let ownership: DisplayOwnedIdentity<DataSourceID>
 
     package init(snapshot: DataSourceSnapshot, display owningDisplay: WaylandDisplay) {
         precondition(
@@ -116,7 +147,7 @@ public struct DragSource: Sendable, Hashable {
         mimeTypes = snapshot.mimeTypes
         actions = snapshot.role.dragActions ?? []
         display = owningDisplay
-        displayIdentity = ObjectIdentifier(owningDisplay)
+        ownership = DisplayOwnedIdentity(id: snapshot.id, display: owningDisplay)
     }
 
     public var identity: DragSourceIdentity {
@@ -129,12 +160,11 @@ public struct DragSource: Sendable, Hashable {
     }
 
     public static func == (lhs: DragSource, rhs: DragSource) -> Bool {
-        lhs.id == rhs.id && lhs.displayIdentity == rhs.displayIdentity
+        lhs.ownership == rhs.ownership
     }
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(displayIdentity)
-        hasher.combine(id)
+        hasher.combine(ownership)
     }
 }
 

@@ -1,5 +1,3 @@
-// swiftlint:disable file_length
-
 import Foundation
 import WaylandCursor
 import WaylandKeyboard
@@ -9,17 +7,13 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     package static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000
 
     package let connection: RawDisplayConnection
-    private let inputRouter: InputRouter
-    private let keyboardInterpreter: KeyboardInterpreter
-    private let cursorManager: CursorManager
+    private let inputCoordinator: SessionInputCoordinator
     package let dataTransferGlobalProvider: any DataTransferGlobalProviding
     package let dataTransferManager: DataTransferManager
     package let primarySelectionController: PrimarySelectionController
     package let textInputManager: TextInputManager
     package let dataTransferSourceWriter: ThreadedDataTransferSourceWriter
     private let dataTransferEventQueue = DataTransferEventQueue()
-    private let maximumPendingInputEventCount: Int
-    private var pendingInputState = PendingInputState.accepting([])
     package var pendingDataTransferDiagnostics: [DataTransferDiagnostic] = []
     private var nextWindowID: UInt64 = 1
     private var nextPopupID: UInt64 = 1
@@ -34,32 +28,37 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     ) throws {
         rawConnection.preconditionIsOwnerThread()
         let inputRouter = InputRouter()
-
-        connection = rawConnection
-        self.inputRouter = inputRouter
-        keyboardInterpreter = try KeyboardInterpreter(
+        let keyboardInterpreter = try KeyboardInterpreter(
             configuration: Self.keyboardInterpreterConfiguration(
                 for: keyboardInterpretationConfiguration
             ),
             composeEnvironment: Self.keyboardComposeEnvironment()
         )
-        cursorManager = try CursorManager(
+        let cursorManager = try CursorManager(
             connection: rawConnection, configuration: cursorConfiguration)
+        let inputCoordinator = SessionInputCoordinator(
+            inputRouter: inputRouter,
+            keyboardInterpreter: keyboardInterpreter,
+            cursorManager: cursorManager,
+            maximumPendingInputEventCount:
+                inputPipelineConfiguration.pendingInputEventCapacity.rawValue
+        )
+
+        connection = rawConnection
+        self.inputCoordinator = inputCoordinator
         dataTransferGlobalProvider = rawConnection
         dataTransferManager = DataTransferManager(
             connection: rawConnection,
             eventQueue: dataTransferEventQueue
-        ) { inputRouter.target(for: $0) }
+        ) { inputCoordinator.target(for: $0) }
         primarySelectionController = PrimarySelectionController(
             connection: rawConnection,
             eventQueue: dataTransferEventQueue
         )
         textInputManager = TextInputManager(connection: rawConnection) { target in
-            inputRouter.target(for: target)
+            inputCoordinator.target(for: target)
         }
         dataTransferSourceWriter = sourceWriter
-        maximumPendingInputEventCount =
-            inputPipelineConfiguration.pendingInputEventCapacity.rawValue
     }
 
     package static func keyboardInterpreterConfiguration(
@@ -208,7 +207,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
 
     package var pointerCursorOnOwnerThread: PointerCursor {
         connection.preconditionIsOwnerThread()
-        return cursorManager.pointerCursor
+        return inputCoordinator.pointerCursor
     }
 
     package func outputSnapshotsOnOwnerThread() throws -> [OutputSnapshot] {
@@ -285,14 +284,14 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         _ cursor: PointerCursor
     ) throws -> [CursorRequestResult] {
         connection.preconditionIsOwnerThread()
-        return try cursorManager.setPointerCursor(cursor)
+        return try inputCoordinator.setPointerCursor(cursor)
     }
 
     package func drainInputEventsOnOwnerThread() -> [InputEvent] {
         connection.preconditionIsOwnerThread()
         processPendingSessionInputEvents()
 
-        return pendingInputState.drain()
+        return inputCoordinator.drainInputEvents()
     }
 
     package func drainDataTransferEventsOnOwnerThread() -> [DataTransferEvent] {
@@ -302,10 +301,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         return events
     }
 
-    package func drainDataTransferEventsAndDiagnosticsOnOwnerThread() -> (
-        diagnostics: [DataTransferDiagnostic],
-        events: [DataTransferEvent]
-    ) {
+    package func drainDataTransferEventsAndDiagnosticsOnOwnerThread() -> DataTransferDrain {
         connection.preconditionIsOwnerThread()
         return Self.drainDataTransferEventsAndDiagnostics(
             dataTransferEventQueue.drain(),
@@ -334,11 +330,9 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         }
         let surfaceID = window.surfaceID
 
-        inputRouter.register(windowID: windowID, surfaceID: surfaceID)
-        cursorManager.register(surfaceID: surfaceID)
-        window.onClose = { [cursorManager, inputRouter] in
-            inputRouter.unregister(surfaceID: surfaceID)
-            cursorManager.unregister(surfaceID: surfaceID)
+        inputCoordinator.registerWindow(windowID: windowID, surfaceID: surfaceID)
+        window.onClose = { [inputCoordinator] in
+            inputCoordinator.unregisterSurface(surfaceID)
         }
 
         return window
@@ -362,136 +356,11 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     }
 
     private func processPendingSessionInputEvents() {
-        if pendingInputState.hasFailed {
-            _ = connection.drainInputEvents()
-            return
+        inputCoordinator.processPendingSessionInputEvents(
+            from: connection.drainInputEvents()
+        ) { [textInputManager] seatID in
+            textInputManager.removeSeat(seatID)
         }
-
-        let routedEvents = routeSessionInputEvents(
-            from: connection.drainInputEvents(),
-            inputRouter: inputRouter,
-            keyboardInterpreter: keyboardInterpreter,
-            rawInputObserver: cursorManager
-        )
-
-        appendPendingInputEvents(routedEvents)
-    }
-
-    private func appendPendingInputEvents(_ inputEvents: [InputEvent]) {
-        guard !inputEvents.isEmpty else { return }
-        pendingInputState.append(
-            inputEvents,
-            capacity: maximumPendingInputEventCount,
-            makeOverflowEvent: makePendingInputOverflowDiagnostic
-        )
-    }
-
-    private func makePendingInputOverflowDiagnostic(from event: InputEvent) -> InputEvent {
-        InputEvent(
-            sequence: event.sequence,
-            seatID: event.seatID,
-            target: .display,
-            kind: .diagnostic(
-                InputDiagnostic(
-                    .inputPipelineOverflow(
-                        InputPipelineOverflow(
-                            stage: .sessionPendingInput,
-                            capacity: InputPipelineCapacity(
-                                unchecked: maximumPendingInputEventCount
-                            )
-                        )
-                    )
-                )
-            )
-        )
-    }
-}
-
-enum PendingInputState {
-    case accepting([InputEvent])
-    case failed(bufferedPrefix: [InputEvent], overflow: PendingInputOverflowEvent)
-    case drainedAfterFailure
-
-    var hasFailed: Bool {
-        switch self {
-        case .accepting:
-            false
-        case .failed, .drainedAfterFailure:
-            true
-        }
-    }
-
-    mutating func append(
-        _ inputEvents: [InputEvent],
-        capacity: Int,
-        makeOverflowEvent: (InputEvent) -> InputEvent
-    ) {
-        guard case .accepting(var pendingEvents) = self else { return }
-
-        for inputEvent in inputEvents {
-            if let overflow = PendingInputOverflowEvent(inputEvent) {
-                self = .failed(bufferedPrefix: pendingEvents, overflow: overflow)
-                return
-            }
-
-            guard pendingEvents.count < capacity else {
-                self = .failed(
-                    bufferedPrefix: pendingEvents,
-                    overflow: PendingInputOverflowEvent(
-                        from: inputEvent,
-                        makeOverflowEvent: makeOverflowEvent
-                    )
-                )
-                return
-            }
-
-            pendingEvents.append(inputEvent)
-        }
-
-        self = .accepting(pendingEvents)
-    }
-
-    mutating func drain() -> [InputEvent] {
-        switch self {
-        case .accepting(let inputEvents):
-            self = .accepting([])
-            return inputEvents
-        case .failed(let bufferedPrefix, let overflow):
-            self = .drainedAfterFailure
-            return bufferedPrefix + [overflow.inputEvent]
-        case .drainedAfterFailure:
-            return []
-        }
-    }
-}
-
-struct PendingInputOverflowEvent {
-    let inputEvent: InputEvent
-
-    init?(_ event: InputEvent) {
-        guard Self.isInputPipelineOverflowDiagnostic(event) else { return nil }
-        inputEvent = event
-    }
-
-    init(
-        from rejectedEvent: InputEvent,
-        makeOverflowEvent: (InputEvent) -> InputEvent
-    ) {
-        let overflow = makeOverflowEvent(rejectedEvent)
-        precondition(
-            Self.isInputPipelineOverflowDiagnostic(overflow),
-            "Pending input overflow event must be an input-pipeline overflow diagnostic"
-        )
-        inputEvent = overflow
-    }
-
-    private static func isInputPipelineOverflowDiagnostic(_ event: InputEvent) -> Bool {
-        guard case .diagnostic(let diagnostic) = event.kind else { return false }
-        if case .inputPipelineOverflow = diagnostic.operation {
-            return true
-        }
-
-        return false
     }
 }
 
@@ -509,38 +378,15 @@ extension DisplaySession {
         )
         let popupSurfaceID = popup.surfaceID
 
-        try inputRouter.registerPopup(
+        try inputCoordinator.registerPopup(
             popupID: popup.id,
             parentSurfaceID: parentWindow.surfaceID,
             surfaceID: popupSurfaceID
         )
-        cursorManager.register(surfaceID: popupSurfaceID)
-        popup.onClose = { [cursorManager, inputRouter] in
-            inputRouter.unregister(surfaceID: popupSurfaceID)
-            cursorManager.unregister(surfaceID: popupSurfaceID)
+        popup.onClose = { [inputCoordinator] in
+            inputCoordinator.unregisterSurface(popupSurfaceID)
         }
 
         return popup
     }
-}
-
-func routeSessionInputEvents(
-    from rawEvents: [RawInputEvent],
-    inputRouter: InputRouter,
-    keyboardInterpreter: KeyboardInterpreter,
-    rawInputObserver: RawInputEventObserving? = nil
-) -> [InputEvent] {
-    var inputEvents: [InputEvent] = []
-    for rawEvent in rawEvents {
-        if let acceptedEvent = inputRouter.acceptRawInputEvent(rawEvent) {
-            inputEvents.append(contentsOf: rawInputObserver?.observe(acceptedEvent.raw) ?? [])
-            inputEvents.append(contentsOf: inputRouter.route(acceptedEvent))
-
-            for interpretedEvent in keyboardInterpreter.consume(acceptedEvent.raw) {
-                inputEvents.append(contentsOf: inputRouter.route(interpretedEvent))
-            }
-        }
-    }
-
-    return inputEvents
 }
