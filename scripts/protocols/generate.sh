@@ -72,6 +72,32 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
+[[ -f "$PROTO_DIR/staging/content-type/content-type-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/staging/content-type/content-type-v1.xml"
+    exit 1
+}
+
+[[ -f "$PROTO_DIR/staging/alpha-modifier/alpha-modifier-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/staging/alpha-modifier/alpha-modifier-v1.xml"
+    exit 1
+}
+
+[[ -f "$PROTO_DIR/staging/tearing-control/tearing-control-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/staging/tearing-control/tearing-control-v1.xml"
+    exit 1
+}
+
+[[ -f "$PROTO_DIR/staging/color-representation/color-representation-v1.xml" ]] || {
+    echo "Missing vendored protocol: "
+    echo "$PROTO_DIR/staging/color-representation/color-representation-v1.xml"
+    exit 1
+}
+
+[[ -f "$PROTO_DIR/staging/color-management/color-management-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/staging/color-management/color-management-v1.xml"
+    exit 1
+}
+
 [[ -f "$PROTO_DIR/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml" ]] || {
     echo "Missing vendored protocol: $PROTO_DIR/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml"
     exit 1
@@ -99,6 +125,11 @@ mkdir -p \
     "$GEN_INC/staging/linux-drm-syncobj" \
     "$GEN_INC/staging/fifo" \
     "$GEN_INC/staging/commit-timing" \
+    "$GEN_INC/staging/content-type" \
+    "$GEN_INC/staging/alpha-modifier" \
+    "$GEN_INC/staging/tearing-control" \
+    "$GEN_INC/staging/color-representation" \
+    "$GEN_INC/staging/color-management" \
     "$GEN_INC/legacy-unstable/xdg-decoration" \
     "$GEN_INC/legacy-unstable/xdg-output" \
     "$GEN_INC/legacy-unstable/primary-selection" \
@@ -114,6 +145,11 @@ mkdir -p \
     "$GEN_SRC/staging/linux-drm-syncobj" \
     "$GEN_SRC/staging/fifo" \
     "$GEN_SRC/staging/commit-timing" \
+    "$GEN_SRC/staging/content-type" \
+    "$GEN_SRC/staging/alpha-modifier" \
+    "$GEN_SRC/staging/tearing-control" \
+    "$GEN_SRC/staging/color-representation" \
+    "$GEN_SRC/staging/color-management" \
     "$GEN_SRC/legacy-unstable/xdg-decoration" \
     "$GEN_SRC/legacy-unstable/xdg-output" \
     "$GEN_SRC/legacy-unstable/primary-selection" \
@@ -241,6 +277,46 @@ wayland-scanner client-header \
 wayland-scanner private-code \
     "$PROTO_DIR/staging/commit-timing/commit-timing-v1.xml" \
     "$GEN_SRC/staging/commit-timing/commit-timing-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/staging/content-type/content-type-v1.xml" \
+    "$GEN_INC/staging/content-type/content-type-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/staging/content-type/content-type-v1.xml" \
+    "$GEN_SRC/staging/content-type/content-type-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/staging/alpha-modifier/alpha-modifier-v1.xml" \
+    "$GEN_INC/staging/alpha-modifier/alpha-modifier-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/staging/alpha-modifier/alpha-modifier-v1.xml" \
+    "$GEN_SRC/staging/alpha-modifier/alpha-modifier-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/staging/tearing-control/tearing-control-v1.xml" \
+    "$GEN_INC/staging/tearing-control/tearing-control-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/staging/tearing-control/tearing-control-v1.xml" \
+    "$GEN_SRC/staging/tearing-control/tearing-control-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/staging/color-representation/color-representation-v1.xml" \
+    "$GEN_INC/staging/color-representation/color-representation-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/staging/color-representation/color-representation-v1.xml" \
+    "$GEN_SRC/staging/color-representation/color-representation-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/staging/color-management/color-management-v1.xml" \
+    "$GEN_INC/staging/color-management/color-management-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/staging/color-management/color-management-v1.xml" \
+    "$GEN_SRC/staging/color-management/color-management-v1-protocol.c"
 
 wayland-scanner client-header \
     "$PROTO_DIR/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml" \
