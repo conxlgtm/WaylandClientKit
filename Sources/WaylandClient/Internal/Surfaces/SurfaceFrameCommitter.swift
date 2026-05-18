@@ -6,6 +6,7 @@ struct SurfaceFrameCommitRequest {
     let generation: UInt64
     let geometry: SurfaceGeometry
     let submitConstraints: SurfaceSubmitConstraints
+    let metadata: SurfaceCommitMetadata
     let attachesBuffer: Bool
 
     init(
@@ -14,6 +15,7 @@ struct SurfaceFrameCommitRequest {
         generation commitGeneration: UInt64,
         geometry commitGeometry: SurfaceGeometry,
         submitConstraints commitSubmitConstraints: SurfaceSubmitConstraints = .default,
+        metadata commitMetadata: SurfaceCommitMetadata = .default,
         attachesBuffer commitAttachesBuffer: Bool = true
     ) {
         surface = commitSurface
@@ -21,6 +23,7 @@ struct SurfaceFrameCommitRequest {
         generation = commitGeneration
         geometry = commitGeometry
         submitConstraints = commitSubmitConstraints
+        metadata = commitMetadata
         attachesBuffer = commitAttachesBuffer
     }
 }
@@ -31,6 +34,7 @@ package struct PreparedSurfaceFrameCommit {
     let generation: UInt64
     let plan: SurfaceCommitPlan
     let submitConstraints: SurfaceSubmitConstraints
+    let metadata: SurfaceCommitMetadata
     let attachesBuffer: Bool
 }
 
@@ -67,12 +71,14 @@ enum SurfaceFrameCommitter {
             capabilities: runtime.capabilitySnapshot(),
             attachesBuffer: request.attachesBuffer
         )
+        try request.metadata.validate(capabilities: runtime.capabilitySnapshot())
         return PreparedSurfaceFrameCommit(
             surface: request.surface,
             scaleInstallation: request.scaleInstallation,
             generation: request.generation,
             plan: plan,
             submitConstraints: request.submitConstraints,
+            metadata: request.metadata,
             attachesBuffer: request.attachesBuffer
         )
     }
@@ -93,6 +99,7 @@ enum SurfaceFrameCommitter {
         runtime: inout SurfaceRuntime<RoleResources>
     ) throws -> SurfaceCommitPlan {
         try runtime.applySubmitConstraints(preparedCommit.submitConstraints)
+        try runtime.applyCommitMetadata(preparedCommit.metadata)
         preparedCommit.surface.setBufferScale(preparedCommit.plan.bufferScale)
         preparedCommit.scaleInstallation.applyViewportDestinationIfNeeded(
             preparedCommit.plan.viewportDestination
