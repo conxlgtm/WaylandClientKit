@@ -25,11 +25,20 @@ package enum SmokeConfigurationField: Equatable, Sendable, CustomStringConvertib
 
 package enum SmokeOptionalProtocol: Equatable, Sendable, CustomStringConvertible {
     case linuxDmabuf
+    case linuxDrmSyncobj
+    case fifo
+    case commitTiming
 
     package var interfaceName: String {
         switch self {
         case .linuxDmabuf:
             "zwp_linux_dmabuf_v1"
+        case .linuxDrmSyncobj:
+            "wp_linux_drm_syncobj_manager_v1"
+        case .fifo:
+            "wp_fifo_manager_v1"
+        case .commitTiming:
+            "wp_commit_timing_manager_v1"
         }
     }
 
@@ -37,6 +46,12 @@ package enum SmokeOptionalProtocol: Equatable, Sendable, CustomStringConvertible
         switch self {
         case .linuxDmabuf:
             "linux-dmabuf"
+        case .linuxDrmSyncobj:
+            "syncobj"
+        case .fifo:
+            "FIFO"
+        case .commitTiming:
+            "commit-timing"
         }
     }
 
