@@ -283,6 +283,14 @@ package struct GPUWindowPresentationCorrelation: Equatable, Sendable {
         // Frames are recorded after successful surface commits.
     }
 
+    package var count: Int {
+        slotsByGeneration.count
+    }
+
+    package var isEmpty: Bool {
+        slotsByGeneration.isEmpty
+    }
+
     package mutating func record(_ frame: GPUWindowPresentedFrame) {
         slotsByGeneration[frame.generation] = frame.slotID
     }

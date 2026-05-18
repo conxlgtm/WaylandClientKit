@@ -98,6 +98,33 @@ struct SmokeArgumentsTests {
     }
 
     @Test
+    func smokeResultPrintsRuntimeFactsForMatrixRows() {
+        let facts = SmokeRuntimeFacts(
+            syncobj: .advertised,
+            fifo: .active,
+            commitTiming: .configured,
+            dmabuf: .unavailable,
+            gbm: .active,
+            egl: .active,
+            presentationFeedback: .observed
+        )
+
+        #expect(
+            SmokeResult.frameCallbackObserved(facts).description
+                == """
+                frame callback observed
+                syncobj: advertised
+                fifo: active
+                commitTiming: configured
+                dmabuf: unavailable
+                gbm: active
+                egl: active
+                presentationFeedback: observed
+                """
+        )
+    }
+
+    @Test
     func doubleDashIsRejectedBecauseSmokeHasNoPositionals() {
         #expect(throws: SmokeArgumentError.unsupportedEndOfOptionsMarker) {
             try SmokeArguments.parse(["--"])
