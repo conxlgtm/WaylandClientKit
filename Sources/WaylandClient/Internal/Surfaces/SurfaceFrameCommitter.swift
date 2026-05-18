@@ -83,18 +83,21 @@ enum SurfaceFrameCommitter {
     }
 
     @discardableResult
-    static func commit(
+    static func commit<RoleResources>(
         _ preparedCommit: PreparedSurfaceFrameCommit,
-        buffer: RawBuffer
-    ) -> SurfaceCommitPlan {
-        commit(preparedCommit, buffer: buffer.surfaceBuffer)
+        buffer: RawBuffer,
+        runtime: inout SurfaceRuntime<RoleResources>
+    ) throws -> SurfaceCommitPlan {
+        try commit(preparedCommit, buffer: buffer.surfaceBuffer, runtime: &runtime)
     }
 
     @discardableResult
-    static func commit(
+    static func commit<RoleResources>(
         _ preparedCommit: PreparedSurfaceFrameCommit,
-        buffer: RawSurfaceBuffer
-    ) -> SurfaceCommitPlan {
+        buffer: RawSurfaceBuffer,
+        runtime: inout SurfaceRuntime<RoleResources>
+    ) throws -> SurfaceCommitPlan {
+        try runtime.applySubmitConstraints(preparedCommit.submitConstraints)
         preparedCommit.surface.setBufferScale(preparedCommit.plan.bufferScale)
         preparedCommit.scaleInstallation.applyViewportDestinationIfNeeded(
             preparedCommit.plan.viewportDestination
@@ -102,6 +105,7 @@ enum SurfaceFrameCommitter {
         preparedCommit.surface.attach(buffer: buffer)
         apply(preparedCommit.plan.damage, to: preparedCommit.surface)
         preparedCommit.surface.commit()
+        runtime.markSubmitConstraintsCommitted()
         return preparedCommit.plan
     }
 

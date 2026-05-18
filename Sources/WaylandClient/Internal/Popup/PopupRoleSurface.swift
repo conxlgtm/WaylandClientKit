@@ -344,8 +344,12 @@ extension PopupRoleSurface {
     package func commitSurfaceFrame(
         _ preparedCommit: PreparedSurfaceFrameCommit,
         buffer: RawBuffer
-    ) {
-        SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
+    ) throws {
+        try SurfaceFrameCommitter.commit(
+            preparedCommit,
+            buffer: buffer,
+            runtime: &surfaceRuntime
+        )
     }
 
     package func resetTransientSurfaceTransactionState() {

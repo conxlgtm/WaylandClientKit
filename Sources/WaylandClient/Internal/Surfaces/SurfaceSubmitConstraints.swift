@@ -169,5 +169,5 @@ package enum SurfaceSubmitConstraintError: Error, Equatable, Sendable {
     case fifoUnavailable
     case commitTimingUnavailable
     case invalidCommitTimestamp
+    case syncTimelineUnavailable(SurfaceSyncTimelineIdentity)
 }
-

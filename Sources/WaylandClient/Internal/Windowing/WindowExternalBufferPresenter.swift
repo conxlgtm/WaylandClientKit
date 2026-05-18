@@ -39,7 +39,11 @@ enum WindowExternalBufferPresenter {
                 preparedCommit,
                 runtime: &runtime
             )
-            return SurfaceFrameCommitter.commit(preparedCommit, buffer: request.buffer)
+            return try SurfaceFrameCommitter.commit(
+                preparedCommit,
+                buffer: request.buffer,
+                runtime: &runtime
+            )
         } catch {
             pendingFrameRegistration = nil
             runtime.cancelFrameCallback()
