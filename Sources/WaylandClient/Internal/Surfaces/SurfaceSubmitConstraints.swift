@@ -175,6 +175,7 @@ package enum SurfaceSubmitConstraintError: Error, Equatable, Sendable {
     case conflictingSyncPoints
     case fifoUnavailable
     case commitTimingUnavailable
+    case commitTimestampAlreadyExists
     case invalidCommitTimestamp
     case syncTimelineUnavailable(SurfaceSyncTimelineIdentity)
 }
