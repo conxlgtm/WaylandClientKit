@@ -15,6 +15,10 @@ Wayland, XKB, and cursor libraries resolved through `pkg-config`. Package-manage
 rows are dependency hints for contributors. Musl, static Linux SDK builds, and
 static linking need dedicated CI before they are treated as supported.
 
+On openSUSE, Swift 6.3.2 SwiftPM may need a compatibility `libxml2.so.2`.
+Project Swift wrappers load `$SWIFT_COMPAT_LIBS` when present, defaulting to
+`$HOME/.local/share/swift-compat-libs`.
+
 Core build requirements:
 
 - Swift 6.3.2 or newer

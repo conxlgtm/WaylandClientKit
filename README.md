@@ -215,7 +215,7 @@ Supported package-manager mappings:
 | Debian/Ubuntu | `clang git libdrm-dev libegl-dev libgbm-dev libgles-dev libwayland-dev libxkbcommon-dev make pkg-config ripgrep wayland-protocols` |
 | Fedora/RHEL-like | `clang git libdrm-devel mesa-libEGL-devel mesa-libgbm-devel mesa-libGLES-devel wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
 | Arch/Manjaro | `clang git libdrm mesa wayland wayland-protocols libxkbcommon make pkgconf ripgrep` |
-| openSUSE | `clang git libdrm-devel Mesa-libEGL-devel Mesa-libgbm-devel Mesa-libGLESv2-devel wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
+| openSUSE | `clang git libdrm-devel Mesa-libEGL-devel libgbm-devel Mesa-libGLESv2-devel wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
 | Alpine | `clang git libdrm-dev mesa-dev wayland-dev wayland-protocols libxkbcommon-dev make pkgconf ripgrep` |
 | Gentoo | `sys-devel/clang dev-vcs/git x11-libs/libdrm media-libs/mesa dev-libs/wayland dev-libs/wayland-protocols dev-util/wayland-scanner x11-libs/libxkbcommon dev-build/make virtual/pkgconfig sys-apps/ripgrep` |
 | Nix/NixOS | `nixpkgs#clang nixpkgs#git nixpkgs#libdrm nixpkgs#mesa nixpkgs#wayland nixpkgs#wayland-protocols nixpkgs#libxkbcommon nixpkgs#gnumake nixpkgs#pkg-config nixpkgs#ripgrep` |
@@ -223,6 +223,12 @@ Supported package-manager mappings:
 Alpine package installation is mapped for Wayland dependencies, but Swift toolchain availability may require separate setup.
 The Alpine row is a dependency lookup aid, not a Musl support claim.
 Nix/NixOS support is shell/declarative: `./scripts/dev/bootstrap-linux.sh --dry-run --package-manager nix` prints a `nix shell` command, and `--install` intentionally does not mutate a Nix profile or NixOS system configuration.
+On openSUSE, Swift 6.3.2 SwiftPM may require a compatibility `libxml2.so.2`
+that the distro `libxml2-16` package does not provide. Project Swift wrappers
+load `$SWIFT_COMPAT_LIBS` when present, defaulting to
+`$HOME/.local/share/swift-compat-libs`. Tools that invoke the Swift toolchain
+directly must set `LD_LIBRARY_PATH` to include that directory or make the
+compatibility library available in the toolchain runtime path.
 
 ## Targets
 

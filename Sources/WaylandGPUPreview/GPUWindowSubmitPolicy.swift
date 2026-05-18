@@ -189,8 +189,18 @@ package struct GPUWindowPresentationCorrelation: Equatable, Sendable {
         slotsByGeneration[generation]
     }
 
+    package mutating func takeSlotID(for generation: UInt64) -> GBMBufferPoolSlotID? {
+        slotsByGeneration.removeValue(forKey: generation)
+    }
+
     package mutating func remove(generation: UInt64) {
         slotsByGeneration.removeValue(forKey: generation)
+    }
+
+    package mutating func remove(slotID: GBMBufferPoolSlotID) {
+        slotsByGeneration = slotsByGeneration.filter { _, correlatedSlotID in
+            correlatedSlotID != slotID
+        }
     }
 
     package mutating func removeAll() {

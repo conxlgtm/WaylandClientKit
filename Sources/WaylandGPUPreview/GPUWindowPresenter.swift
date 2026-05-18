@@ -183,26 +183,34 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
         }
     }
 
+    @discardableResult
     package mutating func markReleased(
         _ slotID: GBMBufferPoolSlotID
-    ) throws(GPUWindowPresenterStateError) {
-        guard !isRetired else { return }
-        guard explicitSubmissions[slotID] == nil else { return }
+    ) throws(GPUWindowPresenterStateError) -> Bool {
+        guard !isRetired else { return false }
+        let lifecycle = try lifecycle(for: slotID)
+        guard case .submitted = lifecycle else { return false }
+        guard explicitSubmissions[slotID] == nil else { return false }
 
         try mapPoolError {
             try poolState.markReleased(slotID)
         }
+        return true
     }
 
+    @discardableResult
     package mutating func markExplicitReleaseSignaled(
         _ slotID: GBMBufferPoolSlotID
-    ) throws(GPUWindowPresenterStateError) {
-        guard !isRetired else { return }
+    ) throws(GPUWindowPresenterStateError) -> Bool {
+        guard !isRetired else { return false }
+        let lifecycle = try lifecycle(for: slotID)
+        guard case .submitted = lifecycle else { return false }
         explicitSubmissions.removeValue(forKey: slotID)
 
         try mapPoolError {
             try poolState.markReleased(slotID)
         }
+        return true
     }
 
     package mutating func retireAll(reason: GPUWindowPresenterRetireReason) {
@@ -261,7 +269,7 @@ package final class GPUWindowPresenter {
     package func correlatedSlotID(
         forPresentationGeneration generation: UInt64
     ) -> GBMBufferPoolSlotID? {
-        presentationCorrelation.slotID(for: generation)
+        presentationCorrelation.takeSlotID(for: generation)
     }
 
     package func installBuffer(
@@ -362,7 +370,9 @@ package final class GPUWindowPresenter {
 
     private func recordRelease(_ slotID: GBMBufferPoolSlotID) {
         do {
-            try state.markReleased(slotID)
+            if try state.markReleased(slotID) {
+                presentationCorrelation.remove(slotID: slotID)
+            }
         } catch {
             releaseFailures.append(error)
         }
@@ -372,7 +382,9 @@ package final class GPUWindowPresenter {
         slotID: GBMBufferPoolSlotID
     ) throws(GPUWindowPresenterError) {
         do {
-            try state.markExplicitReleaseSignaled(slotID)
+            if try state.markExplicitReleaseSignaled(slotID) {
+                presentationCorrelation.remove(slotID: slotID)
+            }
         } catch {
             throw .state(error)
         }
