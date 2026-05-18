@@ -93,6 +93,10 @@ package final class TopLevelWindow {
         surfaceRuntime.setDmabufAdvertisement(
             globals.extensions.linuxDmabuf.surfaceDmabufAdvertisement
         )
+        surfaceRuntime.setSynchronizationCapability(
+            globals.extensions.surfaceSynchronizationCapability
+        )
+        surfaceRuntime.setPacingCapability(globals.extensions.surfacePacingCapability)
         try installScaleObjects(globals: globals)
         try assignXDGRole(globals: globals)
     }
@@ -924,6 +928,16 @@ extension TopLevelWindow {
     package func presentPreviewBufferOnOwnerThread(
         _ buffer: RawSurfaceBuffer
     ) throws -> PreviewBufferPresentationResult {
+        try presentPreviewBufferOnOwnerThread(
+            buffer,
+            submitConstraints: .default
+        )
+    }
+
+    package func presentPreviewBufferOnOwnerThread(
+        _ buffer: RawSurfaceBuffer,
+        submitConstraints: SurfaceSubmitConstraints
+    ) throws -> PreviewBufferPresentationResult {
         connection.preconditionIsOwnerThread()
 
         guard !model.isClosed else {
@@ -941,12 +955,14 @@ extension TopLevelWindow {
 
         let generation = surfaceRuntime.nextCommitGeneration
         let bufferAvailability = try redrawBufferAvailability()
+        try ensureSubmitConstraintObjectsInstalled(for: submitConstraints)
         let presentationRequest = WindowExternalBufferPresentationRequest(
             buffer: buffer,
             surface: surface,
             scaleInstallation: scaleInstallation,
             generation: generation,
-            geometry: try currentSurfaceGeometry()
+            geometry: try currentSurfaceGeometry(),
+            submitConstraints: submitConstraints
         ) { [weak self] in
             self?.handleFrameDone()
         }
@@ -974,6 +990,83 @@ extension TopLevelWindow {
             generation: generation,
             commitPlan: commitPlan
         )
+    }
+
+    package func importPreviewSynchronizationTimelineOnOwnerThread(
+        _ fileDescriptor: inout RawDrmSyncobjTimelineFD,
+        identity: SurfaceSyncTimelineIdentity
+    ) throws {
+        connection.preconditionIsOwnerThread()
+
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .linuxDrmSyncobjManager.boundObject
+        else {
+            throw SurfaceSubmitConstraintError.explicitSyncUnavailable
+        }
+
+        let timeline = try manager.importTimeline(fileDescriptor: &fileDescriptor)
+        surfaceRuntime.installSynchronizationTimeline(timeline, identity: identity)
+    }
+
+    private func ensureSubmitConstraintObjectsInstalled(
+        for constraints: SurfaceSubmitConstraints
+    ) throws {
+        try ensureSynchronizationObjectInstalled(for: constraints.synchronization)
+        try ensurePacingObjectsInstalled(for: constraints.pacing)
+    }
+
+    private func ensureSynchronizationObjectInstalled(
+        for constraint: SurfaceSynchronizationConstraint
+    ) throws {
+        guard case .explicit = constraint else { return }
+        guard !surfaceRuntime.hasExplicitSynchronizationObject else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .linuxDrmSyncobjManager.boundObject
+        else {
+            throw SurfaceSubmitConstraintError.explicitSyncUnavailable
+        }
+
+        let syncobjSurface = try manager.syncobjSurface(for: surface)
+        surfaceRuntime.installExplicitSynchronizationObject(syncobjSurface)
+    }
+
+    private func ensurePacingObjectsInstalled(
+        for constraint: SurfacePacingConstraint
+    ) throws {
+        switch constraint {
+        case .none:
+            return
+        case .fifo:
+            try ensureFifoObjectInstalled()
+        case .targetTime:
+            try ensureCommitTimerObjectInstalled()
+        case .fifoAndTargetTime:
+            try ensureFifoObjectInstalled()
+            try ensureCommitTimerObjectInstalled()
+        }
+    }
+
+    private func ensureFifoObjectInstalled() throws {
+        guard !surfaceRuntime.hasFifoObject else { return }
+        guard let manager = connection.boundGlobals?.extensions.fifoManager.boundObject else {
+            throw SurfaceSubmitConstraintError.fifoUnavailable
+        }
+
+        surfaceRuntime.installFifoObject(try manager.fifo(for: surface))
+    }
+
+    private func ensureCommitTimerObjectInstalled() throws {
+        guard !surfaceRuntime.hasCommitTimerObject else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .commitTimingManager.boundObject
+        else {
+            throw SurfaceSubmitConstraintError.commitTimingUnavailable
+        }
+
+        surfaceRuntime.installCommitTimerObject(try manager.timer(for: surface))
     }
 
     package func requestPresentationFeedbackOnOwnerThread(

@@ -27,6 +27,9 @@ package enum SmokeArguments {
           --post-commit-pump-milliseconds <value>
                                              Event pump after first commit. Default: 16.
           --require-linux-dmabuf              Skip if zwp_linux_dmabuf_v1 is not advertised.
+          --require-syncobj                   Skip if syncobj manager is not advertised.
+          --require-fifo                      Skip if wp_fifo_manager_v1 is not advertised.
+          --require-commit-timing             Skip if wp_commit_timing_manager_v1 is not advertised.
           -h, --help                         Show this help.
         """
 
@@ -60,6 +63,12 @@ package enum SmokeArguments {
                 )
             case "--require-linux-dmabuf":
                 requestedOptionalProtocols.append(.linuxDmabuf)
+            case "--require-syncobj":
+                requestedOptionalProtocols.append(.linuxDrmSyncobj)
+            case "--require-fifo":
+                requestedOptionalProtocols.append(.fifo)
+            case "--require-commit-timing":
+                requestedOptionalProtocols.append(.commitTiming)
             default:
                 throw SmokeArgumentError.unknownArgument(argument)
             }

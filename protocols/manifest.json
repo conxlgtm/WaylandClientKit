@@ -126,6 +126,48 @@
       "notes": "Optional extension for compositor-managed pointer cursor shapes."
     },
     {
+      "name": "linux-drm-syncobj-v1",
+      "localPath": "protocols/upstream/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml",
+      "sha256": "5ede41a56eced6aa635caa7ab2996066bff9fd211620dbf9f73aafab740bec71",
+      "stability": "staging",
+      "swiftWaylandTier": "previewFoundation",
+      "apiExposure": "internal",
+      "testStrategy": "unit-and-live-when-advertised",
+      "notes": "Package-internal explicit synchronization substrate for dmabuf submit readiness and release points."
+    },
+    {
+      "name": "fifo-v1",
+      "localPath": "protocols/upstream/staging/fifo/fifo-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/staging/fifo/fifo-v1.xml",
+      "sha256": "0b6c31dfe6bca19b712745c9de7a4a398558cfa1087b1938e96fd3b10ffc1069",
+      "stability": "staging",
+      "swiftWaylandTier": "previewFoundation",
+      "apiExposure": "internal",
+      "testStrategy": "unit-and-live-when-advertised",
+      "notes": "Package-internal display-refresh readiness constraint substrate."
+    },
+    {
+      "name": "commit-timing-v1",
+      "localPath": "protocols/upstream/staging/commit-timing/commit-timing-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/staging/commit-timing/commit-timing-v1.xml",
+      "sha256": "ff3fcf31d13d44bad756a50fda663a43008bacbbd2bf8cba3a1bf5ffe7f54172",
+      "stability": "staging",
+      "swiftWaylandTier": "previewFoundation",
+      "apiExposure": "internal",
+      "testStrategy": "unit-and-live-when-advertised",
+      "notes": "Package-internal target latch time substrate."
+    },
+    {
       "name": "primary-selection-unstable-v1",
       "localPath": "protocols/upstream/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml",
       "upstreamProject": "wayland-protocols",

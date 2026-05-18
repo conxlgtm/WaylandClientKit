@@ -258,6 +258,44 @@ Tests:
 - `LinuxDmabufShimContractTests` covers request wrapper targets, dimensions,
   flags, modifier splitting, and feedback request targets.
 
+## Surface Submit Constraint Boundary
+
+Remaining unsafe constructs:
+
+- `RawDrmSyncobjTimelineFD` owns a DRM syncobj timeline fd before it is
+  transferred to `wp_linux_drm_syncobj_manager_v1.import_timeline`.
+- `RawLinuxDrmSyncobjManager`, `RawLinuxDrmSyncobjSurface`, and
+  `RawLinuxDrmSyncobjTimeline` own protocol proxies through `RawOwnedProxy`.
+- `RawFifoManager`, `RawFifo`, `RawCommitTimingManager`, and `RawCommitTimer`
+  own staging protocol objects for surface submit constraints.
+- CWaylandProtocols request shims forward syncobj, FIFO, and commit-timing
+  requests and expose test recording only in explicit testing builds.
+
+Audit invariant:
+
+- Timeline fds reject negative descriptors before ownership starts.
+- A timeline fd transfers at most once. Rejected descriptors close through the
+  fd wrapper; imported descriptors close after the Wayland request has copied
+  the fd into the protocol call.
+- Syncobj surface, FIFO, and commit-timer objects are locally limited to one
+  object per `wl_surface`.
+- Explicit submit constraints are validated before surface commit effects:
+  release points are required for buffer commits, acquire/release points are
+  rejected without an attached buffer, and same-timeline acquire points must be
+  earlier than release points.
+- Commit-timing timestamps reject nanosecond values outside the POSIX timespec
+  range before crossing the C boundary.
+
+Tests:
+
+- `RawSubmitConstraintTests` covers syncobj timeline point splitting, timeline
+  fd validation and transfer, and commit-timing timestamp validation.
+- `SubmitConstraintShimContractTests` covers C request wrapper targets,
+  argument ordering, point splitting, timestamp splitting, and destroy targets.
+- `SurfaceSubmitConstraintsTests` covers implicit defaults, explicit
+  synchronization validation, FIFO and commit-timing capability checks, and
+  timestamp validation.
+
 ## GBM and DRM Boundary
 
 Remaining unsafe constructs:

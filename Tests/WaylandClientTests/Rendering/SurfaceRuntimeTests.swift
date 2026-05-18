@@ -175,7 +175,9 @@ struct SurfaceRuntimeTests {
                     outputIDs: [],
                     fractionalScale: .integerOnly,
                     presentationFeedback: .unavailable,
-                    dmabuf: .unavailable
+                    dmabuf: .unavailable,
+                    synchronization: .implicitOnly,
+                    pacing: .unavailable
                 )
         )
     }
@@ -194,7 +196,9 @@ struct SurfaceRuntimeTests {
                     outputIDs: [OutputID(rawValue: 2)],
                     fractionalScale: .integerOnly,
                     presentationFeedback: .available,
-                    dmabuf: .unavailable
+                    dmabuf: .unavailable,
+                    synchronization: .implicitOnly,
+                    pacing: .unavailable
                 )
         )
     }

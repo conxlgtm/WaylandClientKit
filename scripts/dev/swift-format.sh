@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/swift-runtime-env.sh"
+
 if [[ -n "${SWIFT_FORMAT_BIN:-}" ]]; then
     exec "${SWIFT_FORMAT_BIN}" "$@"
 fi

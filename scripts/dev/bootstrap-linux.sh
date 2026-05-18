@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
 source "$ROOT/scripts/protocols/sources.sh"
+source "$ROOT/scripts/dev/swift-runtime-env.sh"
 
 MODE="check"
 MODE_SELECTED=0
@@ -211,7 +212,7 @@ set_packages_for_pm() {
                 git
                 libdrm-devel
                 Mesa-libEGL-devel
-                Mesa-libgbm-devel
+                libgbm-devel
                 Mesa-libGLESv2-devel
                 wayland-devel
                 wayland-protocols-devel
@@ -436,6 +437,33 @@ check_swift_version() {
     ok "swift $installed: $SWIFT_COMMAND"
 }
 
+print_swiftpm_libxml_hint() {
+    cat >&2 <<'EOF'
+hint: SwiftPM could not load libxml2.so.2. On current openSUSE systems,
+      the distro libxml2 package may not provide that legacy soname.
+      Provide a compatible libxml2.so.2 and make it visible to SwiftPM.
+      Project Swift wrappers add $SWIFT_COMPAT_LIBS to LD_LIBRARY_PATH
+      when set, defaulting to $HOME/.local/share/swift-compat-libs.
+      Tools that bypass scripts/dev/swift.sh must set LD_LIBRARY_PATH
+      themselves or make the library available in the toolchain runtime path.
+EOF
+}
+
+check_swift_package_manager() {
+    local output
+
+    if output="$("$SWIFT_COMMAND" package describe --type json 2>&1 >/dev/null)"; then
+        ok "swift package describe"
+        return 0
+    fi
+
+    printf '%s\n' "$output" >&2
+    if grep --fixed-strings --quiet "libxml2.so.2" <<< "$output"; then
+        print_swiftpm_libxml_hint
+    fi
+    die "SwiftPM package description failed"
+}
+
 check_commands() {
     local missing=()
 
@@ -533,6 +561,7 @@ fi
 
 check_commands
 check_pkg_config
+check_swift_package_manager
 
 if [[ "$MAINTAINER" -eq 1 ]]; then
     check_protocols_for_maintainers

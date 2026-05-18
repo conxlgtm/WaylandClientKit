@@ -26,6 +26,13 @@ struct wp_fractional_scale_manager_v1;
 struct wp_fractional_scale_v1;
 struct wp_cursor_shape_manager_v1;
 struct wp_cursor_shape_device_v1;
+struct wp_linux_drm_syncobj_manager_v1;
+struct wp_linux_drm_syncobj_surface_v1;
+struct wp_linux_drm_syncobj_timeline_v1;
+struct wp_fifo_manager_v1;
+struct wp_fifo_v1;
+struct wp_commit_timing_manager_v1;
+struct wp_commit_timer_v1;
 struct zwp_linux_dmabuf_v1;
 struct zwp_linux_buffer_params_v1;
 struct zwp_linux_dmabuf_feedback_v1;
@@ -76,6 +83,16 @@ struct wp_fractional_scale_manager_v1 *swl_registry_bind_wp_fractional_scale_man
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wp_cursor_shape_manager_v1 *swl_registry_bind_wp_cursor_shape_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_linux_drm_syncobj_manager_v1 *
+swl_registry_bind_wp_linux_drm_syncobj_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_fifo_manager_v1 *swl_registry_bind_wp_fifo_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_commit_timing_manager_v1 *swl_registry_bind_wp_commit_timing_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wl_seat *swl_registry_bind_wl_seat(
@@ -327,6 +344,52 @@ void swl_wp_cursor_shape_device_v1_set_shape(
     uint32_t shape);
 
 /* ------------------------------------------------------------------ */
+/*  Linux DRM syncobj request wrappers                                */
+/* ------------------------------------------------------------------ */
+
+struct wp_linux_drm_syncobj_surface_v1 *
+swl_wp_linux_drm_syncobj_manager_v1_get_surface(
+    struct wp_linux_drm_syncobj_manager_v1 *manager,
+    struct wl_surface *surface);
+struct wp_linux_drm_syncobj_timeline_v1 *
+swl_wp_linux_drm_syncobj_manager_v1_import_timeline(
+    struct wp_linux_drm_syncobj_manager_v1 *manager,
+    int32_t fd);
+void swl_wp_linux_drm_syncobj_surface_v1_set_acquire_point(
+    struct wp_linux_drm_syncobj_surface_v1 *syncobj_surface,
+    struct wp_linux_drm_syncobj_timeline_v1 *timeline,
+    uint32_t point_hi,
+    uint32_t point_lo);
+void swl_wp_linux_drm_syncobj_surface_v1_set_release_point(
+    struct wp_linux_drm_syncobj_surface_v1 *syncobj_surface,
+    struct wp_linux_drm_syncobj_timeline_v1 *timeline,
+    uint32_t point_hi,
+    uint32_t point_lo);
+
+/* ------------------------------------------------------------------ */
+/*  FIFO request wrappers                                             */
+/* ------------------------------------------------------------------ */
+
+struct wp_fifo_v1 *swl_wp_fifo_manager_v1_get_fifo(
+    struct wp_fifo_manager_v1 *manager,
+    struct wl_surface *surface);
+void swl_wp_fifo_v1_set_barrier(struct wp_fifo_v1 *fifo);
+void swl_wp_fifo_v1_wait_barrier(struct wp_fifo_v1 *fifo);
+
+/* ------------------------------------------------------------------ */
+/*  Commit-timing request wrappers                                    */
+/* ------------------------------------------------------------------ */
+
+struct wp_commit_timer_v1 *swl_wp_commit_timing_manager_v1_get_timer(
+    struct wp_commit_timing_manager_v1 *manager,
+    struct wl_surface *surface);
+void swl_wp_commit_timer_v1_set_timestamp(
+    struct wp_commit_timer_v1 *timer,
+    uint32_t tv_sec_hi,
+    uint32_t tv_sec_lo,
+    uint32_t tv_nsec);
+
+/* ------------------------------------------------------------------ */
 /*  Presentation-time request wrappers                                */
 /* ------------------------------------------------------------------ */
 
@@ -418,6 +481,17 @@ void swl_wp_cursor_shape_device_v1_destroy(
     struct wp_cursor_shape_device_v1 *device);
 void swl_wp_cursor_shape_manager_v1_destroy(
     struct wp_cursor_shape_manager_v1 *manager);
+void swl_wp_linux_drm_syncobj_surface_v1_destroy(
+    struct wp_linux_drm_syncobj_surface_v1 *syncobj_surface);
+void swl_wp_linux_drm_syncobj_timeline_v1_destroy(
+    struct wp_linux_drm_syncobj_timeline_v1 *timeline);
+void swl_wp_linux_drm_syncobj_manager_v1_destroy(
+    struct wp_linux_drm_syncobj_manager_v1 *manager);
+void swl_wp_fifo_v1_destroy(struct wp_fifo_v1 *fifo);
+void swl_wp_fifo_manager_v1_destroy(struct wp_fifo_manager_v1 *manager);
+void swl_wp_commit_timer_v1_destroy(struct wp_commit_timer_v1 *timer);
+void swl_wp_commit_timing_manager_v1_destroy(
+    struct wp_commit_timing_manager_v1 *manager);
 void swl_wp_presentation_destroy(struct wp_presentation *presentation);
 void swl_wp_presentation_feedback_destroy(
     struct wp_presentation_feedback *feedback);
@@ -1435,6 +1509,92 @@ struct swl_test_cursor_shape_destroy_record {
     void                                    *object;
 };
 
+enum swl_test_syncobj_request_kind {
+    SWL_TEST_SYNCOBJ_REQUEST_NONE = 0,
+    SWL_TEST_SYNCOBJ_GET_SURFACE = 1,
+    SWL_TEST_SYNCOBJ_IMPORT_TIMELINE = 2,
+    SWL_TEST_SYNCOBJ_SET_ACQUIRE_POINT = 3,
+    SWL_TEST_SYNCOBJ_SET_RELEASE_POINT = 4,
+};
+
+struct swl_test_syncobj_request_record {
+    int32_t                            call_count;
+    enum swl_test_syncobj_request_kind kind;
+    void                              *object;
+    void                              *surface;
+    void                              *timeline;
+    int32_t                            fd;
+    uint32_t                           point_hi;
+    uint32_t                           point_lo;
+};
+
+enum swl_test_syncobj_destroy_kind {
+    SWL_TEST_SYNCOBJ_DESTROY_NONE = 0,
+    SWL_TEST_SYNCOBJ_DESTROY_SURFACE = 1,
+    SWL_TEST_SYNCOBJ_DESTROY_TIMELINE = 2,
+    SWL_TEST_SYNCOBJ_DESTROY_MANAGER = 3,
+};
+
+struct swl_test_syncobj_destroy_record {
+    int32_t                             call_count;
+    enum swl_test_syncobj_destroy_kind  kind;
+    void                               *object;
+};
+
+enum swl_test_fifo_request_kind {
+    SWL_TEST_FIFO_REQUEST_NONE = 0,
+    SWL_TEST_FIFO_GET_FIFO = 1,
+    SWL_TEST_FIFO_SET_BARRIER = 2,
+    SWL_TEST_FIFO_WAIT_BARRIER = 3,
+};
+
+struct swl_test_fifo_request_record {
+    int32_t                         call_count;
+    enum swl_test_fifo_request_kind kind;
+    void                           *object;
+    void                           *surface;
+};
+
+enum swl_test_fifo_destroy_kind {
+    SWL_TEST_FIFO_DESTROY_NONE = 0,
+    SWL_TEST_FIFO_DESTROY_FIFO = 1,
+    SWL_TEST_FIFO_DESTROY_MANAGER = 2,
+};
+
+struct swl_test_fifo_destroy_record {
+    int32_t                         call_count;
+    enum swl_test_fifo_destroy_kind kind;
+    void                           *object;
+};
+
+enum swl_test_commit_timing_request_kind {
+    SWL_TEST_COMMIT_TIMING_REQUEST_NONE = 0,
+    SWL_TEST_COMMIT_TIMING_GET_TIMER = 1,
+    SWL_TEST_COMMIT_TIMING_SET_TIMESTAMP = 2,
+};
+
+struct swl_test_commit_timing_request_record {
+    int32_t                                  call_count;
+    enum swl_test_commit_timing_request_kind kind;
+    void                                    *object;
+    void                                    *surface;
+    uint32_t                                 tv_sec_hi;
+    uint32_t                                 tv_sec_lo;
+    uint32_t                                 tv_nsec;
+};
+
+enum swl_test_commit_timing_destroy_kind {
+    SWL_TEST_COMMIT_TIMING_DESTROY_NONE = 0,
+    SWL_TEST_COMMIT_TIMING_DESTROY_TIMER = 1,
+    SWL_TEST_COMMIT_TIMING_DESTROY_MANAGER = 2,
+};
+
+struct swl_test_commit_timing_destroy_record {
+    int32_t                                 call_count;
+    enum swl_test_commit_timing_destroy_kind kind;
+    void                                   *object;
+};
+
 enum swl_test_dmabuf_request_kind {
     SWL_TEST_DMABUF_REQUEST_NONE = 0,
     SWL_TEST_DMABUF_GET_DEFAULT_FEEDBACK = 1,
@@ -1752,6 +1912,23 @@ struct swl_test_cursor_shape_request_record
 swl_test_cursor_shape_request_record(void);
 struct swl_test_cursor_shape_destroy_record
 swl_test_cursor_shape_destroy_record(void);
+
+void swl_test_syncobj_request_recording_begin(void);
+void swl_test_syncobj_request_recording_end(void);
+struct swl_test_syncobj_request_record swl_test_syncobj_request_record(void);
+struct swl_test_syncobj_destroy_record swl_test_syncobj_destroy_record(void);
+
+void swl_test_fifo_request_recording_begin(void);
+void swl_test_fifo_request_recording_end(void);
+struct swl_test_fifo_request_record swl_test_fifo_request_record(void);
+struct swl_test_fifo_destroy_record swl_test_fifo_destroy_record(void);
+
+void swl_test_commit_timing_request_recording_begin(void);
+void swl_test_commit_timing_request_recording_end(void);
+struct swl_test_commit_timing_request_record
+swl_test_commit_timing_request_record(void);
+struct swl_test_commit_timing_destroy_record
+swl_test_commit_timing_destroy_record(void);
 
 void swl_test_dmabuf_request_recording_begin(void);
 void swl_test_dmabuf_request_recording_end(void);

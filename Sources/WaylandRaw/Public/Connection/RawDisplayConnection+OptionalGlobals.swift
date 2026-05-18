@@ -33,20 +33,37 @@ extension RawDisplayConnection {
                                             let linuxDmabuf = try bindLinuxDmabufIfPresent(
                                                 registry: reg
                                             )
-                                            return OptionalGlobals(
-                                                xdgDecorationManager: decorationManager,
-                                                xdgOutputManager: xdgOutputManager,
-                                                viewporter: viewporter,
-                                                presentation: presentation,
-                                                fractionalScaleManager:
-                                                    fractionalScaleManager,
-                                                cursorShapeManager: cursorShapeManager,
-                                                dataDeviceManager: dataDeviceManager,
-                                                primarySelectionDeviceManager:
-                                                    primarySelectionDeviceManager,
-                                                textInputManager: textInputManager,
-                                                linuxDmabuf: linuxDmabuf
-                                            )
+                                            do {
+                                                let submitGlobals =
+                                                    try bindSurfaceSubmitOptionalGlobalsIfPresent(
+                                                        registry: reg
+                                                    )
+                                                return OptionalGlobals(
+                                                    xdgDecorationManager:
+                                                        decorationManager,
+                                                    xdgOutputManager:
+                                                        xdgOutputManager,
+                                                    viewporter: viewporter,
+                                                    presentation: presentation,
+                                                    fractionalScaleManager:
+                                                        fractionalScaleManager,
+                                                    cursorShapeManager:
+                                                        cursorShapeManager,
+                                                    linuxDrmSyncobjManager:
+                                                        submitGlobals.linuxDrmSyncobjManager,
+                                                    fifoManager: submitGlobals.fifoManager,
+                                                    commitTimingManager:
+                                                        submitGlobals.commitTimingManager,
+                                                    dataDeviceManager: dataDeviceManager,
+                                                    primarySelectionDeviceManager:
+                                                        primarySelectionDeviceManager,
+                                                    textInputManager: textInputManager,
+                                                    linuxDmabuf: linuxDmabuf
+                                                )
+                                            } catch {
+                                                linuxDmabuf.destroy()
+                                                throw error
+                                            }
                                         } catch {
                                             textInputManager.destroy()
                                             throw error
