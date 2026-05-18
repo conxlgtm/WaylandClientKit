@@ -134,7 +134,19 @@ struct GPUWindowPresenterStateTests {
         )
         #expect(
             try GPUSynchronizationPolicy.preferExplicitFallbackToImplicit.selectMode(
+                capability: .explicitAvailable(version: 1),
+                explicitSynchronization: explicit
+            ) == .explicit(explicit)
+        )
+        #expect(
+            try GPUSynchronizationPolicy.preferExplicitFallbackToImplicit.selectMode(
                 capability: .explicitActive,
+                explicitSynchronization: explicit
+            ) == .explicit(explicit)
+        )
+        #expect(
+            try GPUSynchronizationPolicy.requireExplicit.selectMode(
+                capability: .explicitAvailable(version: 1),
                 explicitSynchronization: explicit
             ) == .explicit(explicit)
         )
@@ -146,7 +158,7 @@ struct GPUWindowPresenterStateTests {
         }
         #expect(throws: GPUSynchronizationPolicyError.explicitSynchronizationNotConfigured) {
             _ = try GPUSynchronizationPolicy.requireExplicit.selectMode(
-                capability: .explicitActive,
+                capability: .explicitAvailable(version: 1),
                 explicitSynchronization: nil
             )
         }

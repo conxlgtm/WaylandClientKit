@@ -59,7 +59,7 @@ package enum GPUSynchronizationPolicy: Equatable, Sendable {
             return .implicit
         case .preferExplicitFallbackToImplicit:
             guard
-                capability == .explicitActive,
+                supportsExplicitSynchronization(capability),
                 let explicitSynchronization
             else {
                 return .implicit
@@ -67,7 +67,7 @@ package enum GPUSynchronizationPolicy: Equatable, Sendable {
 
             return .explicit(explicitSynchronization)
         case .requireExplicit:
-            guard capability == .explicitActive else {
+            guard supportsExplicitSynchronization(capability) else {
                 throw .explicitSynchronizationUnavailable
             }
             guard let explicitSynchronization else {
@@ -76,6 +76,17 @@ package enum GPUSynchronizationPolicy: Equatable, Sendable {
 
             return .explicit(explicitSynchronization)
         }
+    }
+}
+
+private func supportsExplicitSynchronization(
+    _ capability: SurfaceSynchronizationCapability
+) -> Bool {
+    switch capability {
+    case .implicitOnly:
+        false
+    case .explicitAvailable, .explicitActive:
+        true
     }
 }
 
