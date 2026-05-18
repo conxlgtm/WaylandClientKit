@@ -6,6 +6,7 @@ struct WindowExternalBufferPresentationRequest {
     let scaleInstallation: SurfaceScaleInstallation
     let generation: UInt64
     let geometry: SurfaceGeometry
+    let submitConstraints: SurfaceSubmitConstraints
     let onFrameDone: () -> Void
 }
 
@@ -20,7 +21,8 @@ enum WindowExternalBufferPresenter {
                 surface: request.surface,
                 scaleInstallation: request.scaleInstallation,
                 generation: request.generation,
-                geometry: request.geometry
+                geometry: request.geometry,
+                submitConstraints: request.submitConstraints
             ),
             runtime: &runtime,
         )
@@ -33,11 +35,11 @@ enum WindowExternalBufferPresenter {
         )
 
         do {
-            try SurfaceFrameCommitter.recordPreparedCommit(
+            return try SurfaceFrameCommitter.commit(
                 preparedCommit,
+                buffer: request.buffer,
                 runtime: &runtime
             )
-            return SurfaceFrameCommitter.commit(preparedCommit, buffer: request.buffer)
         } catch {
             pendingFrameRegistration = nil
             runtime.cancelFrameCallback()

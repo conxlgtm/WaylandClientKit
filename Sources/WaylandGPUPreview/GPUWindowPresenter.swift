@@ -19,6 +19,8 @@ package struct GPUWindowPresentedFrame: Equatable, Sendable {
     package let slotID: GBMBufferPoolSlotID
     package let generation: UInt64
     package let commitPlan: SurfaceCommitPlan
+    package let synchronization: GPUBufferSubmissionSynchronization
+    package let pacing: SurfacePacingConstraint
 }
 
 package enum GPUWindowPresenterRetireReason: Equatable, Sendable, CustomStringConvertible {
@@ -68,6 +70,7 @@ package enum GPUWindowPresenterError: Error, CustomStringConvertible {
 
 package struct GPUWindowPresenterState: Equatable, Sendable {
     private var poolState = GBMBufferPoolState()
+    private var explicitSubmissions: [GBMBufferPoolSlotID: GPUSubmittedBufferSyncState] = [:]
     private var retireReason: GPUWindowPresenterRetireReason?
 
     package init() {
@@ -94,6 +97,31 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
         }
     }
 
+    package func submissionState(
+        for slotID: GBMBufferPoolSlotID
+    ) throws(GPUWindowPresenterStateError) -> GPUBufferSubmissionState {
+        if isRetired {
+            return .retired
+        }
+
+        let lifecycle = try lifecycle(for: slotID)
+        switch lifecycle {
+        case .available:
+            return .available
+        case .leased:
+            return .leased
+        case .submitted(let generation):
+            if let explicitSubmission = explicitSubmissions[slotID] {
+                return .submittedExplicit(
+                    commitGeneration: generation,
+                    releasePoint: explicitSubmission.releasePoint
+                )
+            }
+
+            return .submittedImplicit(commitGeneration: generation)
+        }
+    }
+
     package mutating func installSlot(
         _ slotID: GBMBufferPoolSlotID
     ) throws(GPUWindowPresenterStateError) {
@@ -117,6 +145,18 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
         _ lease: GPUWindowPresentationLease,
         generation: UInt64
     ) throws(GPUWindowPresenterStateError) {
+        try markSubmitted(
+            lease,
+            generation: generation,
+            synchronization: .implicit
+        )
+    }
+
+    package mutating func markSubmitted(
+        _ lease: GPUWindowPresentationLease,
+        generation: UInt64,
+        synchronization: GPUBufferSubmissionSynchronization
+    ) throws(GPUWindowPresenterStateError) {
         try ensureLive()
         try mapPoolError {
             try poolState.markSubmitted(
@@ -124,29 +164,58 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
                 commitGeneration: generation
             )
         }
+
+        switch synchronization {
+        case .implicit:
+            explicitSubmissions.removeValue(forKey: lease.slotID)
+        case .explicit(let syncState):
+            explicitSubmissions[lease.slotID] = syncState
+        }
     }
 
     package mutating func cancelLease(
         _ lease: GPUWindowPresentationLease
     ) throws(GPUWindowPresenterStateError) {
         try ensureLive()
+        explicitSubmissions.removeValue(forKey: lease.slotID)
         try mapPoolError {
             try poolState.cancelLease(lease.slotID)
         }
     }
 
+    @discardableResult
     package mutating func markReleased(
         _ slotID: GBMBufferPoolSlotID
-    ) throws(GPUWindowPresenterStateError) {
-        guard !isRetired else { return }
+    ) throws(GPUWindowPresenterStateError) -> Bool {
+        guard !isRetired else { return false }
+        let lifecycle = try lifecycle(for: slotID)
+        guard case .submitted = lifecycle else { return false }
+        guard explicitSubmissions[slotID] == nil else { return false }
 
         try mapPoolError {
             try poolState.markReleased(slotID)
         }
+        return true
+    }
+
+    @discardableResult
+    package mutating func markExplicitReleaseSignaled(
+        _ slotID: GBMBufferPoolSlotID
+    ) throws(GPUWindowPresenterStateError) -> Bool {
+        guard !isRetired else { return false }
+        let lifecycle = try lifecycle(for: slotID)
+        guard case .submitted = lifecycle else { return false }
+        explicitSubmissions.removeValue(forKey: slotID)
+
+        try mapPoolError {
+            try poolState.markReleased(slotID)
+        }
+        return true
     }
 
     package mutating func retireAll(reason: GPUWindowPresenterRetireReason) {
         retireReason = reason
+        explicitSubmissions.removeAll()
         poolState = GBMBufferPoolState()
     }
 
@@ -174,6 +243,8 @@ package final class GPUWindowPresenter {
     private var state = GPUWindowPresenterState()
     private var buffers: [GBMBufferPoolSlotID: any GPUWindowPresenterBuffer] = [:]
     private var releaseFailures: [GPUWindowPresenterStateError] = []
+    private var presentationCorrelation = GPUWindowPresentationCorrelation()
+    private var runtimePath = GPURuntimePathSnapshot.empty
 
     package init() {
         // Buffers are installed after dmabuf import completes.
@@ -189,6 +260,16 @@ package final class GPUWindowPresenter {
 
     package var releaseFailuresSnapshot: [GPUWindowPresenterStateError] {
         releaseFailures
+    }
+
+    package var runtimePathSnapshot: GPURuntimePathSnapshot {
+        runtimePath
+    }
+
+    package func correlatedSlotID(
+        forPresentationGeneration generation: UInt64
+    ) -> GBMBufferPoolSlotID? {
+        presentationCorrelation.takeSlotID(for: generation)
     }
 
     package func installBuffer(
@@ -210,6 +291,18 @@ package final class GPUWindowPresenter {
     package func presentNext(
         on window: TopLevelWindow
     ) throws(GPUWindowPresenterError) -> GPUWindowPresentedFrame {
+        try presentNext(
+            on: window,
+            synchronization: .implicit,
+            pacing: .none
+        )
+    }
+
+    package func presentNext(
+        on window: TopLevelWindow,
+        synchronization: GPUBufferSubmissionSynchronization,
+        pacing: SurfacePacingConstraint
+    ) throws(GPUWindowPresenterError) -> GPUWindowPresentedFrame {
         if let releaseFailure = releaseFailures.first {
             throw GPUWindowPresenterError.releaseFailure(releaseFailure)
         }
@@ -227,15 +320,32 @@ package final class GPUWindowPresenter {
         }
 
         do {
-            let presentation = try window.presentPreviewBufferOnOwnerThread(
-                buffer.surfaceBuffer
+            let submitConstraints = SurfaceSubmitConstraints(
+                synchronization: synchronization.submitConstraint,
+                pacing: pacing
             )
-            try state.markSubmitted(lease, generation: presentation.generation)
-            return GPUWindowPresentedFrame(
+            let presentation = try window.presentPreviewBufferOnOwnerThread(
+                buffer.surfaceBuffer,
+                submitConstraints: submitConstraints
+            )
+            try state.markSubmitted(
+                lease,
+                generation: presentation.generation,
+                synchronization: synchronization
+            )
+            let frame = GPUWindowPresentedFrame(
                 slotID: lease.slotID,
                 generation: presentation.generation,
-                commitPlan: presentation.commitPlan
+                commitPlan: presentation.commitPlan,
+                synchronization: synchronization,
+                pacing: pacing
             )
+            presentationCorrelation.record(frame)
+            runtimePath = runtimePathSnapshotAfterPresentation(
+                synchronization: synchronization,
+                pacing: pacing
+            )
+            return frame
         } catch let error as GBMBufferPoolStateError {
             try cancelLeaseAfterFailedPresentation(lease)
             throw GPUWindowPresenterError.state(.pool(error))
@@ -260,9 +370,23 @@ package final class GPUWindowPresenter {
 
     private func recordRelease(_ slotID: GBMBufferPoolSlotID) {
         do {
-            try state.markReleased(slotID)
+            if try state.markReleased(slotID) {
+                presentationCorrelation.remove(slotID: slotID)
+            }
         } catch {
             releaseFailures.append(error)
+        }
+    }
+
+    package func recordExplicitReleaseSignal(
+        slotID: GBMBufferPoolSlotID
+    ) throws(GPUWindowPresenterError) {
+        do {
+            if try state.markExplicitReleaseSignaled(slotID) {
+                presentationCorrelation.remove(slotID: slotID)
+            }
+        } catch {
+            throw .state(error)
         }
     }
 
@@ -273,7 +397,49 @@ package final class GPUWindowPresenter {
 
         buffers.removeAll()
         releaseFailures.removeAll()
+        presentationCorrelation.removeAll()
+        runtimePath = .empty
         state.retireAll(reason: reason)
+    }
+
+    private func runtimePathSnapshotAfterPresentation(
+        synchronization: GPUBufferSubmissionSynchronization,
+        pacing: SurfacePacingConstraint
+    ) -> GPURuntimePathSnapshot {
+        GPURuntimePathSnapshot(
+            dmabuf: .active,
+            gbm: .active,
+            egl: .available,
+            synchronization: runtimeSynchronizationStatus(synchronization),
+            pacing: runtimePacingStatus(pacing),
+            presentationFeedback: .unavailable
+        )
+    }
+
+    private func runtimeSynchronizationStatus(
+        _ synchronization: GPUBufferSubmissionSynchronization
+    ) -> GPUSynchronizationRuntimeStatus {
+        switch synchronization {
+        case .implicit:
+            .implicit
+        case .explicit:
+            .explicitActive
+        }
+    }
+
+    private func runtimePacingStatus(
+        _ pacing: SurfacePacingConstraint
+    ) -> GPUFramePacingRuntimeStatus {
+        switch pacing {
+        case .none:
+            .none
+        case .fifo:
+            .fifoActive
+        case .targetTime:
+            .commitTimingActive
+        case .fifoAndTargetTime:
+            .fifoAndCommitTimingActive
+        }
     }
 
     deinit {

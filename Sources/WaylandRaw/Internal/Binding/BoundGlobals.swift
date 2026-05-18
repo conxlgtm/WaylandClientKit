@@ -14,6 +14,9 @@ package enum SupportedVersions {
     package static let wpPresentation: RawVersion = 2
     package static let wpFractionalScaleManagerV1: RawVersion = 1
     package static let wpCursorShapeManagerV1: RawVersion = 2
+    package static let wpLinuxDrmSyncobjManagerV1: RawVersion = 1
+    package static let wpFifoManagerV1: RawVersion = 1
+    package static let wpCommitTimingManagerV1: RawVersion = 1
     package static let zwpLinuxDmabufV1: RawVersion = 5
     package static let wlSeat: RawVersion = 10
     package static let wlDataDeviceManager: RawVersion = 3
@@ -38,6 +41,9 @@ package struct OptionalGlobals {
     package let presentation: OptionalPresentation
     package let fractionalScaleManager: OptionalFractionalScaleManager
     package let cursorShapeManager: OptionalCursorShapeManager
+    package let linuxDrmSyncobjManager: OptionalLinuxDrmSyncobjManager
+    package let fifoManager: OptionalFifoManager
+    package let commitTimingManager: OptionalCommitTimingManager
     package let dataDeviceManager: OptionalDataDeviceManager
     package let primarySelectionDeviceManager: OptionalPrimarySelectionDeviceManager
     package let textInputManager: OptionalTextInputManager
@@ -51,6 +57,10 @@ package struct OptionalGlobals {
         fractionalScaleManager boundFractionalScaleManager: OptionalFractionalScaleManager =
             .missing,
         cursorShapeManager boundCursorShapeManager: OptionalCursorShapeManager = .missing,
+        linuxDrmSyncobjManager boundLinuxDrmSyncobjManager:
+            OptionalLinuxDrmSyncobjManager = .missing,
+        fifoManager boundFifoManager: OptionalFifoManager = .missing,
+        commitTimingManager boundCommitTimingManager: OptionalCommitTimingManager = .missing,
         dataDeviceManager boundDataDeviceManager: OptionalDataDeviceManager = .missing,
         primarySelectionDeviceManager boundPrimarySelectionDeviceManager:
             OptionalPrimarySelectionDeviceManager = .missing,
@@ -63,6 +73,9 @@ package struct OptionalGlobals {
         presentation = boundPresentation
         fractionalScaleManager = boundFractionalScaleManager
         cursorShapeManager = boundCursorShapeManager
+        linuxDrmSyncobjManager = boundLinuxDrmSyncobjManager
+        fifoManager = boundFifoManager
+        commitTimingManager = boundCommitTimingManager
         dataDeviceManager = boundDataDeviceManager
         primarySelectionDeviceManager = boundPrimarySelectionDeviceManager
         textInputManager = boundTextInputManager
@@ -71,6 +84,9 @@ package struct OptionalGlobals {
 
     func destroy() {
         linuxDmabuf.destroy()
+        commitTimingManager.destroy()
+        fifoManager.destroy()
+        linuxDrmSyncobjManager.destroy()
         textInputManager.destroy()
         primarySelectionDeviceManager.destroy()
         dataDeviceManager.destroy()

@@ -73,6 +73,10 @@ package final class PopupRoleSurface {
         surfaceRuntime.setDmabufAdvertisement(
             globals.extensions.linuxDmabuf.surfaceDmabufAdvertisement
         )
+        surfaceRuntime.setSynchronizationCapability(
+            globals.extensions.surfaceSynchronizationCapability
+        )
+        surfaceRuntime.setPacingCapability(globals.extensions.surfacePacingCapability)
         let newXDGSurface = try globals.xdgWMBase.getSurface(for: newSurface)
         let newPositioner = try globals.xdgWMBase.createPositioner()
         popupConfiguration.positioner.apply(to: newPositioner)
@@ -328,20 +332,15 @@ extension PopupRoleSurface {
         )
     }
 
-    package func recordPreparedSurfaceFrameCommit(
-        _ preparedCommit: PreparedSurfaceFrameCommit
-    ) throws {
-        try SurfaceFrameCommitter.recordPreparedCommit(
-            preparedCommit,
-            runtime: &surfaceRuntime
-        )
-    }
-
     package func commitSurfaceFrame(
         _ preparedCommit: PreparedSurfaceFrameCommit,
         buffer: RawBuffer
-    ) {
-        SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
+    ) throws {
+        try SurfaceFrameCommitter.commit(
+            preparedCommit,
+            buffer: buffer,
+            runtime: &surfaceRuntime
+        )
     }
 
     package func resetTransientSurfaceTransactionState() {

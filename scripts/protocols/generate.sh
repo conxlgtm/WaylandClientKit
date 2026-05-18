@@ -57,6 +57,21 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
+[[ -f "$PROTO_DIR/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml"
+    exit 1
+}
+
+[[ -f "$PROTO_DIR/staging/fifo/fifo-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/staging/fifo/fifo-v1.xml"
+    exit 1
+}
+
+[[ -f "$PROTO_DIR/staging/commit-timing/commit-timing-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/staging/commit-timing/commit-timing-v1.xml"
+    exit 1
+}
+
 [[ -f "$PROTO_DIR/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml" ]] || {
     echo "Missing vendored protocol: $PROTO_DIR/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml"
     exit 1
@@ -81,6 +96,9 @@ mkdir -p \
     "$GEN_INC/stable/tablet" \
     "$GEN_INC/staging/fractional-scale" \
     "$GEN_INC/staging/cursor-shape" \
+    "$GEN_INC/staging/linux-drm-syncobj" \
+    "$GEN_INC/staging/fifo" \
+    "$GEN_INC/staging/commit-timing" \
     "$GEN_INC/legacy-unstable/xdg-decoration" \
     "$GEN_INC/legacy-unstable/xdg-output" \
     "$GEN_INC/legacy-unstable/primary-selection" \
@@ -93,6 +111,9 @@ mkdir -p \
     "$GEN_SRC/stable/tablet" \
     "$GEN_SRC/staging/fractional-scale" \
     "$GEN_SRC/staging/cursor-shape" \
+    "$GEN_SRC/staging/linux-drm-syncobj" \
+    "$GEN_SRC/staging/fifo" \
+    "$GEN_SRC/staging/commit-timing" \
     "$GEN_SRC/legacy-unstable/xdg-decoration" \
     "$GEN_SRC/legacy-unstable/xdg-output" \
     "$GEN_SRC/legacy-unstable/primary-selection" \
@@ -196,6 +217,30 @@ wayland-scanner client-header \
 wayland-scanner private-code \
     "$PROTO_DIR/staging/cursor-shape/cursor-shape-v1.xml" \
     "$GEN_SRC/staging/cursor-shape/cursor-shape-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml" \
+    "$GEN_INC/staging/linux-drm-syncobj/linux-drm-syncobj-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml" \
+    "$GEN_SRC/staging/linux-drm-syncobj/linux-drm-syncobj-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/staging/fifo/fifo-v1.xml" \
+    "$GEN_INC/staging/fifo/fifo-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/staging/fifo/fifo-v1.xml" \
+    "$GEN_SRC/staging/fifo/fifo-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/staging/commit-timing/commit-timing-v1.xml" \
+    "$GEN_INC/staging/commit-timing/commit-timing-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/staging/commit-timing/commit-timing-v1.xml" \
+    "$GEN_SRC/staging/commit-timing/commit-timing-v1-protocol.c"
 
 wayland-scanner client-header \
     "$PROTO_DIR/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml" \

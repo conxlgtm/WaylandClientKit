@@ -158,6 +158,54 @@ protocol_sources_linux_dmabuf_candidates() {
         /usr/local/share/wayland-protocols/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml
 }
 
+protocol_sources_linux_drm_syncobj_candidates() {
+    local protocols_dir
+
+    if [[ -n "${LINUX_DRM_SYNCOBJ_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$LINUX_DRM_SYNCOBJ_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml}" \
+        /usr/share/wayland-protocols/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml \
+        /usr/local/share/wayland-protocols/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
+}
+
+protocol_sources_fifo_candidates() {
+    local protocols_dir
+
+    if [[ -n "${FIFO_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$FIFO_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/staging/fifo/fifo-v1.xml}" \
+        /usr/share/wayland-protocols/staging/fifo/fifo-v1.xml \
+        /usr/local/share/wayland-protocols/staging/fifo/fifo-v1.xml
+}
+
+protocol_sources_commit_timing_candidates() {
+    local protocols_dir
+
+    if [[ -n "${COMMIT_TIMING_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$COMMIT_TIMING_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/staging/commit-timing/commit-timing-v1.xml}" \
+        /usr/share/wayland-protocols/staging/commit-timing/commit-timing-v1.xml \
+        /usr/local/share/wayland-protocols/staging/commit-timing/commit-timing-v1.xml
+}
+
 protocol_sources_first_existing_file() {
     local path
 

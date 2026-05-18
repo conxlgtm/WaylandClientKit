@@ -14,6 +14,9 @@ presentation_time_candidates=()
 fractional_scale_candidates=()
 primary_selection_candidates=()
 linux_dmabuf_candidates=()
+linux_drm_syncobj_candidates=()
+fifo_candidates=()
+commit_timing_candidates=()
 
 mapfile -t wayland_candidates < <(protocol_sources_wayland_core_candidates)
 mapfile -t xdg_candidates < <(protocol_sources_xdg_shell_candidates)
@@ -24,6 +27,9 @@ mapfile -t presentation_time_candidates < <(protocol_sources_presentation_time_c
 mapfile -t fractional_scale_candidates < <(protocol_sources_fractional_scale_candidates)
 mapfile -t primary_selection_candidates < <(protocol_sources_primary_selection_candidates)
 mapfile -t linux_dmabuf_candidates < <(protocol_sources_linux_dmabuf_candidates)
+mapfile -t linux_drm_syncobj_candidates < <(protocol_sources_linux_drm_syncobj_candidates)
+mapfile -t fifo_candidates < <(protocol_sources_fifo_candidates)
+mapfile -t commit_timing_candidates < <(protocol_sources_commit_timing_candidates)
 
 WAYLAND_CORE_XML_SOURCE="$(protocol_sources_first_existing_file "${wayland_candidates[@]}" || true)"
 XDG_SHELL_XML_SOURCE="$(protocol_sources_first_existing_file "${xdg_candidates[@]}" || true)"
@@ -43,6 +49,13 @@ PRIMARY_SELECTION_XML_SOURCE="$(
 )"
 LINUX_DMABUF_XML_SOURCE="$(
     protocol_sources_first_existing_file "${linux_dmabuf_candidates[@]}" || true
+)"
+LINUX_DRM_SYNCOBJ_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${linux_drm_syncobj_candidates[@]}" || true
+)"
+FIFO_XML_SOURCE="$(protocol_sources_first_existing_file "${fifo_candidates[@]}" || true)"
+COMMIT_TIMING_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${commit_timing_candidates[@]}" || true
 )"
 
 [[ -f "$WAYLAND_CORE_XML_SOURCE" ]] || {
@@ -99,6 +112,24 @@ LINUX_DMABUF_XML_SOURCE="$(
     exit 1
 }
 
+[[ -f "$LINUX_DRM_SYNCOBJ_XML_SOURCE" ]] || {
+    echo "Missing linux-drm-syncobj XML. Checked:"
+    printf '  %s\n' "${linux_drm_syncobj_candidates[@]}"
+    exit 1
+}
+
+[[ -f "$FIFO_XML_SOURCE" ]] || {
+    echo "Missing FIFO XML. Checked:"
+    printf '  %s\n' "${fifo_candidates[@]}"
+    exit 1
+}
+
+[[ -f "$COMMIT_TIMING_XML_SOURCE" ]] || {
+    echo "Missing commit-timing XML. Checked:"
+    printf '  %s\n' "${commit_timing_candidates[@]}"
+    exit 1
+}
+
 mkdir -p \
     "$ROOT/protocols/upstream/core" \
     "$ROOT/protocols/upstream/stable/xdg-shell" \
@@ -107,6 +138,9 @@ mkdir -p \
     "$ROOT/protocols/upstream/stable/viewporter" \
     "$ROOT/protocols/upstream/stable/presentation-time" \
     "$ROOT/protocols/upstream/staging/fractional-scale" \
+    "$ROOT/protocols/upstream/staging/linux-drm-syncobj" \
+    "$ROOT/protocols/upstream/staging/fifo" \
+    "$ROOT/protocols/upstream/staging/commit-timing" \
     "$ROOT/protocols/upstream/legacy-unstable/primary-selection" \
     "$ROOT/protocols/upstream/legacy-unstable/linux-dmabuf"
 
@@ -125,5 +159,10 @@ cp "$PRIMARY_SELECTION_XML_SOURCE" \
     "$ROOT/protocols/upstream/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml"
 cp "$LINUX_DMABUF_XML_SOURCE" \
     "$ROOT/protocols/upstream/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
+cp "$LINUX_DRM_SYNCOBJ_XML_SOURCE" \
+    "$ROOT/protocols/upstream/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml"
+cp "$FIFO_XML_SOURCE" "$ROOT/protocols/upstream/staging/fifo/fifo-v1.xml"
+cp "$COMMIT_TIMING_XML_SOURCE" \
+    "$ROOT/protocols/upstream/staging/commit-timing/commit-timing-v1.xml"
 
 echo "Vendored protocol XML into $ROOT/protocols"

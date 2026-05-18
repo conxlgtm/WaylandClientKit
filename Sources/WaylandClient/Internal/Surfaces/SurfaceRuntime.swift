@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 import WaylandRaw
 
 extension OptionalPresentation {
@@ -31,12 +32,45 @@ package enum SurfaceCapabilityStatus: Equatable, Sendable {
     case available
 }
 
+package enum SurfaceSynchronizationCapability: Equatable, Sendable {
+    case implicitOnly
+    case explicitAvailable(version: RawVersion)
+    case explicitActive
+}
+
+package enum SurfacePacingCapability: Equatable, Sendable {
+    case unavailable
+    case fifo(version: RawVersion)
+    case commitTiming(version: RawVersion)
+    case fifoAndCommitTiming(fifo: RawVersion, commitTiming: RawVersion)
+
+    package var supportsFifo: Bool {
+        switch self {
+        case .fifo, .fifoAndCommitTiming:
+            true
+        case .unavailable, .commitTiming:
+            false
+        }
+    }
+
+    package var supportsCommitTiming: Bool {
+        switch self {
+        case .commitTiming, .fifoAndCommitTiming:
+            true
+        case .unavailable, .fifo:
+            false
+        }
+    }
+}
+
 package struct SurfaceCapabilitySnapshot: Equatable, Sendable {
     package let role: SurfaceRuntimeRole
     package let outputIDs: [OutputID]
     package let fractionalScale: SurfaceScaleCapability
     package let presentationFeedback: SurfaceCapabilityStatus
     package let dmabuf: SurfaceDmabufCapability
+    package let synchronization: SurfaceSynchronizationCapability
+    package let pacing: SurfacePacingCapability
 }
 
 struct SurfaceRuntime<RoleResources> {
@@ -46,6 +80,7 @@ struct SurfaceRuntime<RoleResources> {
         var scaleInstallation = SurfaceScaleInstallation()
         var outputMembership = SurfaceOutputMembershipState()
         var transactionState = SurfaceTransactionState()
+        var submitConstraintObjects = SurfaceSubmitConstraintObjects()
     }
 
     private enum Phase {
@@ -59,6 +94,8 @@ struct SurfaceRuntime<RoleResources> {
     private let surfaceID: RawObjectID?
     private var presentationFeedbackCapability = SurfaceCapabilityStatus.unavailable
     private var dmabufCapability = SurfaceDmabufCapability.unavailable
+    private var synchronizationCapability = SurfaceSynchronizationCapability.implicitOnly
+    private var pacingCapability = SurfacePacingCapability.unavailable
     private var phase: Phase = .unassigned(SurfaceObjects())
 
     init(role surfaceRole: SurfaceRuntimeRole, surfaceID runtimeSurfaceID: RawObjectID? = nil) {
@@ -166,6 +203,107 @@ extension SurfaceRuntime {
         }
     }
 
+    mutating func setSynchronizationCapability(
+        _ capability: SurfaceSynchronizationCapability
+    ) {
+        synchronizationCapability = capability
+    }
+
+    mutating func setExplicitSynchronizationActive() {
+        synchronizationCapability = .explicitActive
+    }
+
+    mutating func setPacingCapability(_ capability: SurfacePacingCapability) {
+        pacingCapability = capability
+    }
+
+    var hasExplicitSynchronizationObject: Bool {
+        switch phase {
+        case .unassigned(let objects),
+            .live(_, let objects),
+            .roleDestroyed(let objects):
+            objects.submitConstraintObjects.hasExplicitSynchronization
+        case .surfaceDestroyed:
+            false
+        }
+    }
+
+    var hasFifoObject: Bool {
+        switch phase {
+        case .unassigned(let objects),
+            .live(_, let objects),
+            .roleDestroyed(let objects):
+            objects.submitConstraintObjects.hasFifo
+        case .surfaceDestroyed:
+            false
+        }
+    }
+
+    var hasCommitTimerObject: Bool {
+        switch phase {
+        case .unassigned(let objects),
+            .live(_, let objects),
+            .roleDestroyed(let objects):
+            objects.submitConstraintObjects.hasCommitTimer
+        case .surfaceDestroyed:
+            false
+        }
+    }
+
+    mutating func installExplicitSynchronizationObject(
+        _ syncobjSurface: RawLinuxDrmSyncobjSurface
+    ) {
+        synchronizationCapability = .explicitActive
+        updateSurfaceObjects { objects in
+            objects.submitConstraintObjects.installSynchronization(syncobjSurface)
+        }
+    }
+
+    mutating func installSynchronizationTimeline(
+        _ timeline: RawLinuxDrmSyncobjTimeline,
+        identity: SurfaceSyncTimelineIdentity
+    ) {
+        updateSurfaceObjects { objects in
+            objects.submitConstraintObjects.installTimeline(timeline, identity: identity)
+        }
+    }
+
+    mutating func installFifoObject(_ fifo: RawFifo) {
+        updateSurfaceObjects { objects in
+            objects.submitConstraintObjects.installFifo(fifo)
+        }
+    }
+
+    mutating func installCommitTimerObject(_ timer: RawCommitTimer) {
+        updateSurfaceObjects { objects in
+            objects.submitConstraintObjects.installCommitTimer(timer)
+        }
+    }
+
+    mutating func applySubmitConstraints(
+        _ constraints: SurfaceSubmitConstraints
+    ) throws(SurfaceSubmitConstraintError) {
+        switch phase {
+        case .unassigned(var objects):
+            try objects.submitConstraintObjects.apply(constraints)
+            phase = .unassigned(objects)
+        case .live(let roleResources, var objects):
+            try objects.submitConstraintObjects.apply(constraints)
+            phase = .live(roleResources: roleResources, objects)
+        case .roleDestroyed(var objects):
+            try objects.submitConstraintObjects.apply(constraints)
+            phase = .roleDestroyed(objects)
+        case .surfaceDestroyed:
+            return
+        }
+    }
+
+    mutating func markSubmitConstraintsCommitted() {
+        updateSurfaceObjects { objects in
+            objects.submitConstraintObjects.markCommitted()
+        }
+    }
+
     mutating func setSurfaceDmabufFeedback(
         _ snapshot: RawLinuxDmabufFeedbackSnapshot
     ) throws(SurfaceDmabufCapabilityError) {
@@ -216,6 +354,8 @@ extension SurfaceRuntime {
         let outputIDs: [OutputID]
         let presentationFeedback: SurfaceCapabilityStatus
         let dmabuf: SurfaceDmabufCapability
+        let synchronization: SurfaceSynchronizationCapability
+        let pacing: SurfacePacingCapability
 
         switch phase {
         case .unassigned(let objects),
@@ -225,11 +365,15 @@ extension SurfaceRuntime {
             outputIDs = objects.outputMembership.currentOutputIDs(where: isStillBound)
             presentationFeedback = presentationFeedbackCapability
             dmabuf = dmabufCapability
+            synchronization = synchronizationCapability
+            pacing = pacingCapability
         case .surfaceDestroyed:
             scaleCapability = .integerOnly
             outputIDs = []
             presentationFeedback = .unavailable
             dmabuf = .unavailable
+            synchronization = .implicitOnly
+            pacing = .unavailable
         }
 
         return SurfaceCapabilitySnapshot(
@@ -237,7 +381,9 @@ extension SurfaceRuntime {
             outputIDs: outputIDs,
             fractionalScale: scaleCapability,
             presentationFeedback: presentationFeedback,
-            dmabuf: dmabuf
+            dmabuf: dmabuf,
+            synchronization: synchronization,
+            pacing: pacing
         )
     }
 
@@ -392,7 +538,10 @@ extension SurfaceRuntime {
             guard objects.buffers == nil else {
                 throw SurfaceRuntimeError.surfaceDestroyedWithActiveBufferPool
             }
+            objects.submitConstraintObjects.destroy()
             objects.scaleInstallation.destroy()
+            synchronizationCapability = .implicitOnly
+            pacingCapability = .unavailable
             phase = .surfaceDestroyed(retiredBufferPools: objects.retiredBufferPools)
         case .live:
             throw SurfaceRuntimeError.surfaceDestroyedWithLiveRoleResources
