@@ -168,7 +168,11 @@ struct WindowSoftwarePresenter {
                 runtime: &runtime
             )
             let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
-            SurfaceFrameCommitter.commit(preparedCommit, buffer: buffer)
+            try SurfaceFrameCommitter.commit(
+                preparedCommit,
+                buffer: buffer,
+                runtime: &runtime
+            )
         } catch {
             pendingFrameRegistration = nil
             runtime.cancelFrameCallback()

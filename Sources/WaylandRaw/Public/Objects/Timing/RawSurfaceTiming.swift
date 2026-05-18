@@ -141,7 +141,7 @@ package final class RawFifo {
     }
 
     @safe
-    init(
+    package init(
         pointer fifoPointer: OpaquePointer,
         destroy destroyFifo: @escaping (OpaquePointer) -> Void,
         onDestroy handleDestroy: @escaping () -> Void = {}
@@ -254,7 +254,7 @@ package final class RawCommitTimer {
     }
 
     @safe
-    init(
+    package init(
         pointer timerPointer: OpaquePointer,
         destroy destroyTimer: @escaping (OpaquePointer) -> Void,
         onDestroy handleDestroy: @escaping () -> Void = {}
@@ -295,4 +295,3 @@ package final class RawCommitTimer {
         destroy()
     }
 }
-

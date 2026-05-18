@@ -199,7 +199,7 @@ package final class RawLinuxDrmSyncobjTimeline {
     }
 
     @safe
-    init(
+    package init(
         pointer timelinePointer: OpaquePointer,
         destroy destroyTimeline: @escaping (OpaquePointer) -> Void
     ) {
@@ -226,7 +226,7 @@ package final class RawLinuxDrmSyncobjSurface {
     }
 
     @safe
-    init(
+    package init(
         pointer surfacePointer: OpaquePointer,
         destroy destroySurface: @escaping (OpaquePointer) -> Void,
         onDestroy handleDestroy: @escaping () -> Void = {}
@@ -271,4 +271,3 @@ package final class RawLinuxDrmSyncobjSurface {
         destroy()
     }
 }
-
