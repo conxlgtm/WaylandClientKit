@@ -1915,6 +1915,7 @@ swl_test_cursor_shape_destroy_record(void);
 
 void swl_test_syncobj_request_recording_begin(void);
 void swl_test_syncobj_request_recording_end(void);
+void swl_test_syncobj_import_timeline_set_failure(int should_fail);
 struct swl_test_syncobj_request_record swl_test_syncobj_request_record(void);
 struct swl_test_syncobj_destroy_record swl_test_syncobj_destroy_record(void);
 

@@ -276,7 +276,8 @@ Audit invariant:
 - Timeline fds reject negative descriptors before ownership starts.
 - A timeline fd transfers at most once. Rejected descriptors close through the
   fd wrapper; imported descriptors close after the Wayland request has copied
-  the fd into the protocol call.
+  the fd into the protocol call, including both successful and failed
+  `import_timeline` requests.
 - Syncobj surface, FIFO, and commit-timer objects are locally limited to one
   object per `wl_surface`.
 - Explicit submit constraints are validated before surface commit effects:
@@ -289,7 +290,8 @@ Audit invariant:
 Tests:
 
 - `RawSubmitConstraintTests` covers syncobj timeline point splitting, timeline
-  fd validation and transfer, and commit-timing timestamp validation.
+  fd validation, release semantics, deinit close behavior, import success and
+  failure close behavior, and commit-timing timestamp validation.
 - `SubmitConstraintShimContractTests` covers C request wrapper targets,
   argument ordering, point splitting, timestamp splitting, and destroy targets.
 - `SurfaceSubmitConstraintsTests` covers implicit defaults, explicit
