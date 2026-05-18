@@ -59,6 +59,7 @@ package struct PresentationRequest: Equatable, Sendable {
 package struct PreviewBufferPresentationResult: Equatable, Sendable {
     package let generation: UInt64
     package let commitPlan: SurfaceCommitPlan
+    package let capabilities: SurfaceCapabilitySnapshot
 }
 
 package enum PresentationState<Request: Equatable & Sendable>: Equatable, Sendable {

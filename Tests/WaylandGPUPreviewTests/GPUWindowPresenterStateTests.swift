@@ -192,7 +192,72 @@ struct GPUWindowPresenterStateTests {
         #expect(correlation.slotID(for: 77) == nil)
         #expect(correlation.slotID(for: 78) == secondSlotID)
     }
+}
 
+@Suite
+struct GPUWindowRuntimePathSnapshotTests {
+    @Test
+    func runtimePathSnapshotReportsAdvertisedExplicitSyncNotConfigured() {
+        let snapshot = GPURuntimePathSnapshot.afterPresentation(
+            capabilities: capabilitySnapshot(
+                synchronization: .explicitAvailable(version: 1),
+                pacing: .fifo(version: 1)
+            ),
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(snapshot.dmabuf == .advertised)
+        #expect(snapshot.gbm == .active)
+        #expect(snapshot.egl == .configured)
+        #expect(snapshot.synchronization == .explicitAdvertised)
+        #expect(snapshot.pacing == .fifoAdvertised)
+    }
+
+    @Test
+    func runtimePathSnapshotReportsExplicitAndCommitTimingActive() throws {
+        let snapshot = GPURuntimePathSnapshot.afterPresentation(
+            capabilities: capabilitySnapshot(
+                synchronization: .explicitActive,
+                pacing: .fifoAndCommitTiming(fifo: 1, commitTiming: 1)
+            ),
+            synchronization: .explicit(
+                GPUSubmittedBufferSyncState(
+                    slotID: try GBMBufferPoolSlotID(0),
+                    acquirePoint: syncPoint(timeline: 1, point: 1),
+                    releasePoint: syncPoint(timeline: 1, point: 2)
+                )
+            ),
+            pacing: .targetTime(
+                try SurfaceCommitTargetTime(seconds: 1, nanoseconds: 2)
+            )
+        )
+
+        #expect(snapshot.synchronization == .explicitActive)
+        #expect(snapshot.pacing == .commitTimingActive)
+    }
+
+    @Test
+    func runtimePathStatusesRepresentFailedAndFallbackPaths() {
+        #expect(
+            RuntimePathStatus.failed(.commitTimingUnavailable)
+                == .failed(.commitTimingUnavailable)
+        )
+        #expect(
+            GPUSynchronizationRuntimeStatus.explicitFailed(
+                .explicitSynchronizationUnavailable
+            )
+                == .explicitFailed(.explicitSynchronizationUnavailable)
+        )
+        #expect(
+            GPUFramePacingRuntimeStatus.fallback(.fifoUnavailable)
+                == .fallback(.fifoUnavailable)
+        )
+    }
+}
+
+@Suite
+struct GPUWindowPresenterLifecycleTests {
     @Test
     func retiredStateRejectsNewPresentationWork() throws {
         var state = GPUWindowPresenterState()
@@ -340,6 +405,21 @@ private func presentedFrame(
         ),
         synchronization: .implicit,
         pacing: .none
+    )
+}
+
+private func capabilitySnapshot(
+    synchronization: SurfaceSynchronizationCapability = .implicitOnly,
+    pacing: SurfacePacingCapability = .unavailable
+) -> SurfaceCapabilitySnapshot {
+    SurfaceCapabilitySnapshot(
+        role: .toplevelWindow,
+        outputIDs: [],
+        fractionalScale: .integerOnly,
+        presentationFeedback: .unavailable,
+        dmabuf: .advertised(version: 1, canRequestSurfaceFeedback: .available),
+        synchronization: synchronization,
+        pacing: pacing
     )
 }
 

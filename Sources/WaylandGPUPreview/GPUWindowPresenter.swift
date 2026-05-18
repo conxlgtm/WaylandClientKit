@@ -341,7 +341,8 @@ package final class GPUWindowPresenter {
                 pacing: pacing
             )
             presentationCorrelation.record(frame)
-            runtimePath = runtimePathSnapshotAfterPresentation(
+            runtimePath = GPURuntimePathSnapshot.afterPresentation(
+                capabilities: presentation.capabilities,
                 synchronization: synchronization,
                 pacing: pacing
             )
@@ -400,46 +401,6 @@ package final class GPUWindowPresenter {
         presentationCorrelation.removeAll()
         runtimePath = .empty
         state.retireAll(reason: reason)
-    }
-
-    private func runtimePathSnapshotAfterPresentation(
-        synchronization: GPUBufferSubmissionSynchronization,
-        pacing: SurfacePacingConstraint
-    ) -> GPURuntimePathSnapshot {
-        GPURuntimePathSnapshot(
-            dmabuf: .active,
-            gbm: .active,
-            egl: .available,
-            synchronization: runtimeSynchronizationStatus(synchronization),
-            pacing: runtimePacingStatus(pacing),
-            presentationFeedback: .unavailable
-        )
-    }
-
-    private func runtimeSynchronizationStatus(
-        _ synchronization: GPUBufferSubmissionSynchronization
-    ) -> GPUSynchronizationRuntimeStatus {
-        switch synchronization {
-        case .implicit:
-            .implicit
-        case .explicit:
-            .explicitActive
-        }
-    }
-
-    private func runtimePacingStatus(
-        _ pacing: SurfacePacingConstraint
-    ) -> GPUFramePacingRuntimeStatus {
-        switch pacing {
-        case .none:
-            .none
-        case .fifo:
-            .fifoActive
-        case .targetTime:
-            .commitTimingActive
-        case .fifoAndTargetTime:
-            .fifoAndCommitTimingActive
-        }
     }
 
     deinit {
