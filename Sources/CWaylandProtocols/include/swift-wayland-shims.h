@@ -33,6 +33,20 @@ struct wp_fifo_manager_v1;
 struct wp_fifo_v1;
 struct wp_commit_timing_manager_v1;
 struct wp_commit_timer_v1;
+struct wp_content_type_manager_v1;
+struct wp_content_type_v1;
+struct wp_alpha_modifier_v1;
+struct wp_alpha_modifier_surface_v1;
+struct wp_tearing_control_manager_v1;
+struct wp_tearing_control_v1;
+struct wp_color_representation_manager_v1;
+struct wp_color_representation_surface_v1;
+struct wp_color_manager_v1;
+struct wp_color_management_output_v1;
+struct wp_color_management_surface_v1;
+struct wp_color_management_surface_feedback_v1;
+struct wp_image_description_v1;
+struct wp_image_description_reference_v1;
 struct zwp_linux_dmabuf_v1;
 struct zwp_linux_buffer_params_v1;
 struct zwp_linux_dmabuf_feedback_v1;
@@ -93,6 +107,23 @@ struct wp_fifo_manager_v1 *swl_registry_bind_wp_fifo_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wp_commit_timing_manager_v1 *swl_registry_bind_wp_commit_timing_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_content_type_manager_v1 *swl_registry_bind_wp_content_type_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_alpha_modifier_v1 *swl_registry_bind_wp_alpha_modifier_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_tearing_control_manager_v1 *
+swl_registry_bind_wp_tearing_control_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_color_representation_manager_v1 *
+swl_registry_bind_wp_color_representation_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_color_manager_v1 *swl_registry_bind_wp_color_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wl_seat *swl_registry_bind_wl_seat(
@@ -390,6 +421,73 @@ void swl_wp_commit_timer_v1_set_timestamp(
     uint32_t tv_nsec);
 
 /* ------------------------------------------------------------------ */
+/*  Surface metadata request wrappers                                 */
+/* ------------------------------------------------------------------ */
+
+struct wp_content_type_v1 *swl_wp_content_type_manager_v1_get_surface_content_type(
+    struct wp_content_type_manager_v1 *manager,
+    struct wl_surface *surface);
+void swl_wp_content_type_v1_set_content_type(
+    struct wp_content_type_v1 *content_type,
+    uint32_t value);
+
+struct wp_alpha_modifier_surface_v1 *swl_wp_alpha_modifier_v1_get_surface(
+    struct wp_alpha_modifier_v1 *manager,
+    struct wl_surface *surface);
+void swl_wp_alpha_modifier_surface_v1_set_multiplier(
+    struct wp_alpha_modifier_surface_v1 *surface,
+    uint32_t factor);
+
+struct wp_tearing_control_v1 *
+swl_wp_tearing_control_manager_v1_get_tearing_control(
+    struct wp_tearing_control_manager_v1 *manager,
+    struct wl_surface *surface);
+void swl_wp_tearing_control_v1_set_presentation_hint(
+    struct wp_tearing_control_v1 *tearing_control,
+    uint32_t hint);
+
+struct wp_color_representation_surface_v1 *
+swl_wp_color_representation_manager_v1_get_surface(
+    struct wp_color_representation_manager_v1 *manager,
+    struct wl_surface *surface);
+void swl_wp_color_representation_surface_v1_set_alpha_mode(
+    struct wp_color_representation_surface_v1 *surface,
+    uint32_t alpha_mode);
+void swl_wp_color_representation_surface_v1_set_coefficients_and_range(
+    struct wp_color_representation_surface_v1 *surface,
+    uint32_t coefficients,
+    uint32_t range);
+void swl_wp_color_representation_surface_v1_set_chroma_location(
+    struct wp_color_representation_surface_v1 *surface,
+    uint32_t chroma_location);
+
+struct wp_color_management_output_v1 *swl_wp_color_manager_v1_get_output(
+    struct wp_color_manager_v1 *manager,
+    struct wl_output *output);
+struct wp_color_management_surface_v1 *swl_wp_color_manager_v1_get_surface(
+    struct wp_color_manager_v1 *manager,
+    struct wl_surface *surface);
+struct wp_color_management_surface_feedback_v1 *
+swl_wp_color_manager_v1_get_surface_feedback(
+    struct wp_color_manager_v1 *manager,
+    struct wl_surface *surface);
+struct wp_image_description_v1 *swl_wp_color_manager_v1_get_image_description(
+    struct wp_color_manager_v1 *manager,
+    struct wp_image_description_reference_v1 *reference);
+struct wp_image_description_v1 *
+swl_wp_color_management_output_v1_get_image_description(
+    struct wp_color_management_output_v1 *output);
+void swl_wp_color_management_surface_v1_set_image_description(
+    struct wp_color_management_surface_v1 *surface,
+    struct wp_image_description_v1 *image_description,
+    uint32_t render_intent);
+void swl_wp_color_management_surface_v1_unset_image_description(
+    struct wp_color_management_surface_v1 *surface);
+struct wp_image_description_v1 *
+swl_wp_color_management_surface_feedback_v1_get_preferred(
+    struct wp_color_management_surface_feedback_v1 *feedback);
+
+/* ------------------------------------------------------------------ */
 /*  Presentation-time request wrappers                                */
 /* ------------------------------------------------------------------ */
 
@@ -492,6 +590,31 @@ void swl_wp_fifo_manager_v1_destroy(struct wp_fifo_manager_v1 *manager);
 void swl_wp_commit_timer_v1_destroy(struct wp_commit_timer_v1 *timer);
 void swl_wp_commit_timing_manager_v1_destroy(
     struct wp_commit_timing_manager_v1 *manager);
+void swl_wp_content_type_v1_destroy(struct wp_content_type_v1 *content_type);
+void swl_wp_content_type_manager_v1_destroy(
+    struct wp_content_type_manager_v1 *manager);
+void swl_wp_alpha_modifier_surface_v1_destroy(
+    struct wp_alpha_modifier_surface_v1 *surface);
+void swl_wp_alpha_modifier_v1_destroy(struct wp_alpha_modifier_v1 *manager);
+void swl_wp_tearing_control_v1_destroy(
+    struct wp_tearing_control_v1 *tearing_control);
+void swl_wp_tearing_control_manager_v1_destroy(
+    struct wp_tearing_control_manager_v1 *manager);
+void swl_wp_color_representation_surface_v1_destroy(
+    struct wp_color_representation_surface_v1 *surface);
+void swl_wp_color_representation_manager_v1_destroy(
+    struct wp_color_representation_manager_v1 *manager);
+void swl_wp_color_management_output_v1_destroy(
+    struct wp_color_management_output_v1 *output);
+void swl_wp_color_management_surface_v1_destroy(
+    struct wp_color_management_surface_v1 *surface);
+void swl_wp_color_management_surface_feedback_v1_destroy(
+    struct wp_color_management_surface_feedback_v1 *feedback);
+void swl_wp_image_description_v1_destroy(
+    struct wp_image_description_v1 *image_description);
+void swl_wp_image_description_reference_v1_destroy(
+    struct wp_image_description_reference_v1 *reference);
+void swl_wp_color_manager_v1_destroy(struct wp_color_manager_v1 *manager);
 void swl_wp_presentation_destroy(struct wp_presentation *presentation);
 void swl_wp_presentation_feedback_destroy(
     struct wp_presentation_feedback *feedback);
