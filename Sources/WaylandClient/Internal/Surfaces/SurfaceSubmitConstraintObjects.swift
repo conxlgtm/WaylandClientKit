@@ -134,6 +134,8 @@ struct SurfaceSubmitConstraintObjects {
             try commitTimer.setTimestamp(try targetTime.rawTargetTime)
         } catch RawCommitTimingError.invalidTimestamp {
             throw .invalidCommitTimestamp
+        } catch RawCommitTimingError.timestampAlreadyExists {
+            throw .commitTimestampAlreadyExists
         } catch {
             throw .commitTimingUnavailable
         }
