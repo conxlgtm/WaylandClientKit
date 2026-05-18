@@ -102,6 +102,20 @@ Supported in the current experimental baseline:
 - `wp_fifo_v1` (package-internal preview)
 - `wp_commit_timing_manager_v1` (package-internal preview)
 - `wp_commit_timer_v1` (package-internal preview)
+- `wp_content_type_manager_v1` (package-internal preview)
+- `wp_content_type_v1` (package-internal preview)
+- `wp_alpha_modifier_v1` (package-internal preview)
+- `wp_alpha_modifier_surface_v1` (package-internal preview)
+- `wp_tearing_control_manager_v1` (package-internal preview)
+- `wp_tearing_control_v1` (package-internal preview)
+- `wp_color_representation_manager_v1` (package-internal preview)
+- `wp_color_representation_surface_v1` (package-internal preview)
+- `wp_color_manager_v1` (package-internal preview)
+- `wp_color_management_surface_v1` (package-internal preview)
+- `wp_color_management_surface_feedback_v1` (package-internal preview)
+- `wp_color_management_output_v1` (package-internal preview)
+- `wp_image_description_v1` (package-internal preview)
+- `wp_image_description_reference_v1` (package-internal preview)
 
 Window geometry:
 

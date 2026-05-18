@@ -1,6 +1,61 @@
 import WaylandRaw
 
 extension SurfaceRuntime {
+    var hasContentTypeObject: Bool {
+        switch phase {
+        case .unassigned(let objects),
+            .live(_, let objects),
+            .roleDestroyed(let objects):
+            objects.metadataObjects.hasContentType
+        case .surfaceDestroyed:
+            false
+        }
+    }
+
+    var hasAlphaModifierObject: Bool {
+        switch phase {
+        case .unassigned(let objects),
+            .live(_, let objects),
+            .roleDestroyed(let objects):
+            objects.metadataObjects.hasAlphaModifier
+        case .surfaceDestroyed:
+            false
+        }
+    }
+
+    var hasTearingControlObject: Bool {
+        switch phase {
+        case .unassigned(let objects),
+            .live(_, let objects),
+            .roleDestroyed(let objects):
+            objects.metadataObjects.hasTearingControl
+        case .surfaceDestroyed:
+            false
+        }
+    }
+
+    var hasColorRepresentationObject: Bool {
+        switch phase {
+        case .unassigned(let objects),
+            .live(_, let objects),
+            .roleDestroyed(let objects):
+            objects.metadataObjects.hasColorRepresentation
+        case .surfaceDestroyed:
+            false
+        }
+    }
+
+    var hasColorManagementObject: Bool {
+        switch phase {
+        case .unassigned(let objects),
+            .live(_, let objects),
+            .roleDestroyed(let objects):
+            objects.metadataObjects.hasColorManagement
+        case .surfaceDestroyed:
+            false
+        }
+    }
+
     mutating func setContentTypeCapability(_ capability: SurfaceCapabilityStatus) {
         contentTypeCapability = capability
     }

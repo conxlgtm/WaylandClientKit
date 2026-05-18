@@ -502,7 +502,8 @@ private func presentedFrame(
             damageMode: .buffer
         ),
         synchronization: .implicit,
-        pacing: .none
+        pacing: .none,
+        metadata: .default
     )
 }
 

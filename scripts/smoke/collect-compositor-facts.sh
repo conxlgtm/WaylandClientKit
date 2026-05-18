@@ -91,6 +91,11 @@ print_protocol_summary() {
         wp_linux_drm_syncobj_manager_v1
         wp_fifo_manager_v1
         wp_commit_timing_manager_v1
+        wp_content_type_manager_v1
+        wp_alpha_modifier_v1
+        wp_tearing_control_manager_v1
+        wp_color_representation_manager_v1
+        wp_color_manager_v1
         wl_data_device_manager
         zwp_primary_selection_device_manager_v1
         wp_cursor_shape_manager_v1
