@@ -97,6 +97,19 @@ package final class TopLevelWindow {
             globals.extensions.surfaceSynchronizationCapability
         )
         surfaceRuntime.setPacingCapability(globals.extensions.surfacePacingCapability)
+        surfaceRuntime.setContentTypeCapability(
+            globals.extensions.surfaceContentTypeCapability
+        )
+        surfaceRuntime.setAlphaModifierCapability(
+            globals.extensions.surfaceAlphaModifierCapability
+        )
+        surfaceRuntime.setTearingControlCapability(
+            globals.extensions.surfaceTearingControlCapability
+        )
+        surfaceRuntime.setColorRepresentationCapability(
+            globals.extensions.surfaceColorRepresentationCapability
+        )
+        surfaceRuntime.setColorCapability(globals.extensions.surfaceColorCapability)
         try installScaleObjects(globals: globals)
         try assignXDGRole(globals: globals)
     }

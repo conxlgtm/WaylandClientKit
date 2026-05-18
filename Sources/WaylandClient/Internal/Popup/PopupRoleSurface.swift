@@ -77,6 +77,19 @@ package final class PopupRoleSurface {
             globals.extensions.surfaceSynchronizationCapability
         )
         surfaceRuntime.setPacingCapability(globals.extensions.surfacePacingCapability)
+        surfaceRuntime.setContentTypeCapability(
+            globals.extensions.surfaceContentTypeCapability
+        )
+        surfaceRuntime.setAlphaModifierCapability(
+            globals.extensions.surfaceAlphaModifierCapability
+        )
+        surfaceRuntime.setTearingControlCapability(
+            globals.extensions.surfaceTearingControlCapability
+        )
+        surfaceRuntime.setColorRepresentationCapability(
+            globals.extensions.surfaceColorRepresentationCapability
+        )
+        surfaceRuntime.setColorCapability(globals.extensions.surfaceColorCapability)
         let newXDGSurface = try globals.xdgWMBase.getSurface(for: newSurface)
         let newPositioner = try globals.xdgWMBase.createPositioner()
         popupConfiguration.positioner.apply(to: newPositioner)
