@@ -120,6 +120,8 @@ The current baseline already has meaningful substrate pieces:
 - GBM/DRM allocation, modifier selection, dmabuf export, and buffer-pool state
 - package-internal EGL/GLES render target probe through `WaylandGraphicsPreview`
 - package-internal GPU window presentation bridge through `WaylandGPUPreview`
+- package-internal submit-constraint model for linux-drm-syncobj, FIFO, and
+  commit-timing capability facts
 - live/headless Wayland smoke paths
 - strict Swift memory-safety diagnostics as errors
 
@@ -128,11 +130,10 @@ Known foundation gaps:
 - extending the shared surface transaction model to cursor, drag icon, and future
   subsurface use
 - live compositor coverage for the package-internal GPU window presentation path
-- explicit GPU synchronization through `linux-drm-syncobj`
+- GPU presenter integration for explicit synchronization release points
 - color-management, color-representation, content-type, and related metadata
   capability plumbing
-- frame pacing protocols beyond `wp_presentation`, such as FIFO and commit
-  timing
+- GPU presenter integration for FIFO and commit-timing constraints
 - public cursor animation and output-scale cursor policy APIs
 - advanced pointer and tablet protocols
 - xdg-session-management and activation/session integration where needed by app

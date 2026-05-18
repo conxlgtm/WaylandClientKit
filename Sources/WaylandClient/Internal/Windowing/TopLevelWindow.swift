@@ -93,6 +93,10 @@ package final class TopLevelWindow {
         surfaceRuntime.setDmabufAdvertisement(
             globals.extensions.linuxDmabuf.surfaceDmabufAdvertisement
         )
+        surfaceRuntime.setSynchronizationCapability(
+            globals.extensions.surfaceSynchronizationCapability
+        )
+        surfaceRuntime.setPacingCapability(globals.extensions.surfacePacingCapability)
         try installScaleObjects(globals: globals)
         try assignXDGRole(globals: globals)
     }
@@ -924,6 +928,16 @@ extension TopLevelWindow {
     package func presentPreviewBufferOnOwnerThread(
         _ buffer: RawSurfaceBuffer
     ) throws -> PreviewBufferPresentationResult {
+        try presentPreviewBufferOnOwnerThread(
+            buffer,
+            submitConstraints: .default
+        )
+    }
+
+    package func presentPreviewBufferOnOwnerThread(
+        _ buffer: RawSurfaceBuffer,
+        submitConstraints: SurfaceSubmitConstraints
+    ) throws -> PreviewBufferPresentationResult {
         connection.preconditionIsOwnerThread()
 
         guard !model.isClosed else {
@@ -946,7 +960,8 @@ extension TopLevelWindow {
             surface: surface,
             scaleInstallation: scaleInstallation,
             generation: generation,
-            geometry: try currentSurfaceGeometry()
+            geometry: try currentSurfaceGeometry(),
+            submitConstraints: submitConstraints
         ) { [weak self] in
             self?.handleFrameDone()
         }

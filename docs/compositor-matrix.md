@@ -58,6 +58,9 @@ the noninteractive smoke executable:
 - `wp_fractional_scale_manager_v1`
 - `wp_presentation`
 - `zwp_linux_dmabuf_v1`
+- `wp_linux_drm_syncobj_manager_v1`
+- `wp_fifo_manager_v1`
+- `wp_commit_timing_manager_v1`
 - `wl_data_device_manager`
 - `zwp_primary_selection_device_manager_v1`
 - `wp_cursor_shape_manager_v1`

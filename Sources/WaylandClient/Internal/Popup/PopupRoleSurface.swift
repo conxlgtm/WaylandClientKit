@@ -73,6 +73,10 @@ package final class PopupRoleSurface {
         surfaceRuntime.setDmabufAdvertisement(
             globals.extensions.linuxDmabuf.surfaceDmabufAdvertisement
         )
+        surfaceRuntime.setSynchronizationCapability(
+            globals.extensions.surfaceSynchronizationCapability
+        )
+        surfaceRuntime.setPacingCapability(globals.extensions.surfacePacingCapability)
         let newXDGSurface = try globals.xdgWMBase.getSurface(for: newSurface)
         let newPositioner = try globals.xdgWMBase.createPositioner()
         popupConfiguration.positioner.apply(to: newPositioner)

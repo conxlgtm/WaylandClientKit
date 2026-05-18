@@ -5,6 +5,21 @@ struct SurfaceFrameCommitRequest {
     let scaleInstallation: SurfaceScaleInstallation
     let generation: UInt64
     let geometry: SurfaceGeometry
+    let submitConstraints: SurfaceSubmitConstraints
+
+    init(
+        surface commitSurface: RawSurface,
+        scaleInstallation commitScaleInstallation: SurfaceScaleInstallation,
+        generation commitGeneration: UInt64,
+        geometry commitGeometry: SurfaceGeometry,
+        submitConstraints commitSubmitConstraints: SurfaceSubmitConstraints = .default
+    ) {
+        surface = commitSurface
+        scaleInstallation = commitScaleInstallation
+        generation = commitGeneration
+        geometry = commitGeometry
+        submitConstraints = commitSubmitConstraints
+    }
 }
 
 package struct PreparedSurfaceFrameCommit {
@@ -12,6 +27,7 @@ package struct PreparedSurfaceFrameCommit {
     let scaleInstallation: SurfaceScaleInstallation
     let generation: UInt64
     let plan: SurfaceCommitPlan
+    let submitConstraints: SurfaceSubmitConstraints
 }
 
 enum SurfaceFrameCommitter {
@@ -43,11 +59,16 @@ enum SurfaceFrameCommitter {
         )
 
         try runtime.validateCommittedFrameCandidate(generation: request.generation)
+        try request.submitConstraints.validate(
+            capabilities: runtime.capabilitySnapshot(),
+            attachesBuffer: true
+        )
         return PreparedSurfaceFrameCommit(
             surface: request.surface,
             scaleInstallation: request.scaleInstallation,
             generation: request.generation,
-            plan: plan
+            plan: plan,
+            submitConstraints: request.submitConstraints
         )
     }
 
