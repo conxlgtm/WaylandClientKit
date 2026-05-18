@@ -60,6 +60,21 @@ struct SurfaceSubmitConstraintsTests {
     }
 
     @Test
+    func explicitSyncRequiresAcquirePointForBufferCommit() throws {
+        let constraints = SurfaceSubmitConstraints(
+            synchronization: .explicit(
+                acquire: nil,
+                release: syncPoint(timeline: 1, point: 1)
+            ),
+            pacing: .none
+        )
+
+        #expect(throws: SurfaceSubmitConstraintError.acquirePointRequired) {
+            try constraints.validate(capabilities: activeCapabilities, attachesBuffer: true)
+        }
+    }
+
+    @Test
     func explicitSyncRequiresReleasePointForBufferCommit() throws {
         let constraints = SurfaceSubmitConstraints(
             synchronization: .explicit(
@@ -179,11 +194,11 @@ struct SurfaceSubmitConstraintsTests {
     func submitConstraintObjectsApplySyncPointsToRawSurface() async throws {
         let syncobjPointer = try unsafe #require(OpaquePointer(bitPattern: 0x5A01))
         let timelinePointer = try unsafe #require(OpaquePointer(bitPattern: 0x5A02))
-        let syncobjSurface = RawLinuxDrmSyncobjSurface(pointer: syncobjPointer) {
-            unsafe _ = $0
+        let syncobjSurface = RawLinuxDrmSyncobjSurface(pointer: syncobjPointer) { pointer in
+            unsafe _ = pointer
         }
-        let timeline = RawLinuxDrmSyncobjTimeline(pointer: timelinePointer) {
-            unsafe _ = $0
+        let timeline = RawLinuxDrmSyncobjTimeline(pointer: timelinePointer) { pointer in
+            unsafe _ = pointer
         }
         var objects = SurfaceSubmitConstraintObjects()
 
@@ -218,11 +233,11 @@ struct SurfaceSubmitConstraintsTests {
     func submitConstraintObjectsApplyFifoAndCommitTimingBeforeCommit() async throws {
         let fifoPointer = try unsafe #require(OpaquePointer(bitPattern: 0x5B01))
         let timerPointer = try unsafe #require(OpaquePointer(bitPattern: 0x5B02))
-        let fifo = RawFifo(pointer: fifoPointer) {
-            unsafe _ = $0
+        let fifo = RawFifo(pointer: fifoPointer) { pointer in
+            unsafe _ = pointer
         }
-        let timer = RawCommitTimer(pointer: timerPointer) {
-            unsafe _ = $0
+        let timer = RawCommitTimer(pointer: timerPointer) { pointer in
+            unsafe _ = pointer
         }
         let targetTime = try SurfaceCommitTargetTime(
             seconds: 0x1122_3344_5566_7788,
@@ -270,11 +285,11 @@ struct SurfaceSubmitConstraintsTests {
             #expect(unsafe record.tv_nsec == 999_999_999)
         }
     }
+}
 
-    private func syncPoint(timeline: UInt64, point: UInt64) -> SurfaceSyncPoint {
-        SurfaceSyncPoint(
-            timeline: SurfaceSyncTimelineIdentity(timeline),
-            point: RawSyncobjTimelinePoint(point)
-        )
-    }
+private func syncPoint(timeline: UInt64, point: UInt64) -> SurfaceSyncPoint {
+    SurfaceSyncPoint(
+        timeline: SurfaceSyncTimelineIdentity(timeline),
+        point: RawSyncobjTimelinePoint(point)
+    )
 }

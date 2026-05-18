@@ -112,13 +112,15 @@ package struct SurfaceSubmitConstraints: Equatable, Sendable {
                 return
             }
 
+            guard let acquire else {
+                throw SurfaceSubmitConstraintError.acquirePointRequired
+            }
+
             guard let release else {
                 throw SurfaceSubmitConstraintError.releasePointRequired
             }
 
-            if let acquire {
-                try validateOrdering(acquire: acquire, release: release)
-            }
+            try validateOrdering(acquire: acquire, release: release)
         }
     }
 
@@ -162,6 +164,7 @@ package struct SurfaceSubmitConstraints: Equatable, Sendable {
 
 package enum SurfaceSubmitConstraintError: Error, Equatable, Sendable {
     case explicitSyncUnavailable
+    case acquirePointRequired
     case releasePointRequired
     case acquirePointWithoutAttachedBuffer
     case releasePointWithoutAttachedBuffer
