@@ -1,6 +1,10 @@
 import CWaylandProtocols
 import Glibc
 
+private func ignoreSyncobjProxyDestroy() {
+    // Optional destruction hook for tests.
+}
+
 package enum RawLinuxDrmSyncobjError: Error, Equatable, Sendable, CustomStringConvertible {
     case surfaceAlreadyHasSyncObject
     case invalidTimeline
@@ -147,11 +151,10 @@ package final class RawLinuxDrmSyncobjManager {
         surfaceIDs.insert(surfaceID)
         return RawLinuxDrmSyncobjSurface(
             pointer: adoptedSurface,
-            destroy: unsafe swl_wp_linux_drm_syncobj_surface_v1_destroy,
-            onDestroy: { [weak self] in
-                self?.surfaceIDs.remove(surfaceID)
-            }
-        )
+            destroy: unsafe swl_wp_linux_drm_syncobj_surface_v1_destroy
+        ) { [weak self] in
+            self?.surfaceIDs.remove(surfaceID)
+        }
     }
 
     package func importTimeline(
@@ -229,7 +232,7 @@ package final class RawLinuxDrmSyncobjSurface {
     package init(
         pointer surfacePointer: OpaquePointer,
         destroy destroySurface: @escaping (OpaquePointer) -> Void,
-        onDestroy handleDestroy: @escaping () -> Void = {}
+        onDestroy handleDestroy: @escaping () -> Void = ignoreSyncobjProxyDestroy
     ) {
         proxy = RawOwnedProxy(pointer: surfacePointer, destroy: destroySurface)
         onDestroy = handleDestroy

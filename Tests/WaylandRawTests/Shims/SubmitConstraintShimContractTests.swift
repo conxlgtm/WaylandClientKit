@@ -147,7 +147,6 @@ struct SyncobjShimContractTests {
         }
     }
 }
-
 @Suite(.serialized)
 struct FifoShimContractTests {
     @Test
@@ -342,4 +341,3 @@ struct CommitTimingShimContractTests {
         }
     }
 }
-

@@ -58,8 +58,9 @@ package enum GPUSynchronizationPolicy: Equatable, Sendable {
         case .implicitOnly:
             return .implicit
         case .preferExplicitFallbackToImplicit:
-            guard capability == .explicitActive,
-                  let explicitSynchronization
+            guard
+                capability == .explicitActive,
+                let explicitSynchronization
             else {
                 return .implicit
             }

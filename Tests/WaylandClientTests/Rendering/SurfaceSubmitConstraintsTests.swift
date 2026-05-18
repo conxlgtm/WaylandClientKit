@@ -179,14 +179,12 @@ struct SurfaceSubmitConstraintsTests {
     func submitConstraintObjectsApplySyncPointsToRawSurface() async throws {
         let syncobjPointer = try unsafe #require(OpaquePointer(bitPattern: 0x5A01))
         let timelinePointer = try unsafe #require(OpaquePointer(bitPattern: 0x5A02))
-        let syncobjSurface = RawLinuxDrmSyncobjSurface(
-            pointer: syncobjPointer,
-            destroy: { _ in }
-        )
-        let timeline = RawLinuxDrmSyncobjTimeline(
-            pointer: timelinePointer,
-            destroy: { _ in }
-        )
+        let syncobjSurface = RawLinuxDrmSyncobjSurface(pointer: syncobjPointer) {
+            unsafe _ = $0
+        }
+        let timeline = RawLinuxDrmSyncobjTimeline(pointer: timelinePointer) {
+            unsafe _ = $0
+        }
         var objects = SurfaceSubmitConstraintObjects()
 
         objects.installSynchronization(syncobjSurface)
@@ -220,8 +218,12 @@ struct SurfaceSubmitConstraintsTests {
     func submitConstraintObjectsApplyFifoAndCommitTimingBeforeCommit() async throws {
         let fifoPointer = try unsafe #require(OpaquePointer(bitPattern: 0x5B01))
         let timerPointer = try unsafe #require(OpaquePointer(bitPattern: 0x5B02))
-        let fifo = RawFifo(pointer: fifoPointer, destroy: { _ in })
-        let timer = RawCommitTimer(pointer: timerPointer, destroy: { _ in })
+        let fifo = RawFifo(pointer: fifoPointer) {
+            unsafe _ = $0
+        }
+        let timer = RawCommitTimer(pointer: timerPointer) {
+            unsafe _ = $0
+        }
         let targetTime = try SurfaceCommitTargetTime(
             seconds: 0x1122_3344_5566_7788,
             nanoseconds: 999_999_999

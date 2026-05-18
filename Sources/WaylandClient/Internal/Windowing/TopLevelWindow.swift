@@ -998,8 +998,9 @@ extension TopLevelWindow {
     ) throws {
         connection.preconditionIsOwnerThread()
 
-        guard let manager = connection.boundGlobals?.extensions
-            .linuxDrmSyncobjManager.boundObject
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .linuxDrmSyncobjManager.boundObject
         else {
             throw SurfaceSubmitConstraintError.explicitSyncUnavailable
         }
@@ -1020,8 +1021,9 @@ extension TopLevelWindow {
     ) throws {
         guard case .explicit = constraint else { return }
         guard !surfaceRuntime.hasExplicitSynchronizationObject else { return }
-        guard let manager = connection.boundGlobals?.extensions
-            .linuxDrmSyncobjManager.boundObject
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .linuxDrmSyncobjManager.boundObject
         else {
             throw SurfaceSubmitConstraintError.explicitSyncUnavailable
         }
@@ -1057,8 +1059,9 @@ extension TopLevelWindow {
 
     private func ensureCommitTimerObjectInstalled() throws {
         guard !surfaceRuntime.hasCommitTimerObject else { return }
-        guard let manager = connection.boundGlobals?.extensions
-            .commitTimingManager.boundObject
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .commitTimingManager.boundObject
         else {
             throw SurfaceSubmitConstraintError.commitTimingUnavailable
         }

@@ -1,5 +1,9 @@
 import CWaylandProtocols
 
+private func ignoreSurfaceTimingProxyDestroy() {
+    // Optional destruction hook for tests.
+}
+
 package enum RawFifoError: Error, Equatable, Sendable, CustomStringConvertible {
     case alreadyExists
     case surfaceDestroyed
@@ -113,11 +117,10 @@ package final class RawFifoManager {
         surfaceIDs.insert(surfaceID)
         return RawFifo(
             pointer: adoptedFifo,
-            destroy: unsafe swl_wp_fifo_v1_destroy,
-            onDestroy: { [weak self] in
-                self?.surfaceIDs.remove(surfaceID)
-            }
-        )
+            destroy: unsafe swl_wp_fifo_v1_destroy
+        ) { [weak self] in
+            self?.surfaceIDs.remove(surfaceID)
+        }
     }
 
     package func destroy() {
@@ -144,7 +147,7 @@ package final class RawFifo {
     package init(
         pointer fifoPointer: OpaquePointer,
         destroy destroyFifo: @escaping (OpaquePointer) -> Void,
-        onDestroy handleDestroy: @escaping () -> Void = {}
+        onDestroy handleDestroy: @escaping () -> Void = ignoreSurfaceTimingProxyDestroy
     ) {
         proxy = RawOwnedProxy(pointer: fifoPointer, destroy: destroyFifo)
         onDestroy = handleDestroy
@@ -225,11 +228,10 @@ package final class RawCommitTimingManager {
         surfaceIDs.insert(surfaceID)
         return RawCommitTimer(
             pointer: adoptedTimer,
-            destroy: unsafe swl_wp_commit_timer_v1_destroy,
-            onDestroy: { [weak self] in
-                self?.surfaceIDs.remove(surfaceID)
-            }
-        )
+            destroy: unsafe swl_wp_commit_timer_v1_destroy
+        ) { [weak self] in
+            self?.surfaceIDs.remove(surfaceID)
+        }
     }
 
     package func destroy() {
@@ -257,7 +259,7 @@ package final class RawCommitTimer {
     package init(
         pointer timerPointer: OpaquePointer,
         destroy destroyTimer: @escaping (OpaquePointer) -> Void,
-        onDestroy handleDestroy: @escaping () -> Void = {}
+        onDestroy handleDestroy: @escaping () -> Void = ignoreSurfaceTimingProxyDestroy
     ) {
         proxy = RawOwnedProxy(pointer: timerPointer, destroy: destroyTimer)
         onDestroy = handleDestroy

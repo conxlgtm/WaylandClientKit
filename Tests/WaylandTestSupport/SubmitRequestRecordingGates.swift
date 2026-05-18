@@ -15,7 +15,6 @@ public enum SyncobjRequestRecordingGate {
         }
     }
 }
-
 public enum FifoRequestRecordingGate {
     private static let state = SubmitRequestRecordingGateState()
 
@@ -77,4 +76,3 @@ private actor SubmitRequestRecordingGateState {
         next.resume()
     }
 }
-

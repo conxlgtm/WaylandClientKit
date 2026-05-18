@@ -5,11 +5,13 @@ package enum SmokeRunner {
         let session = try DisplaySession.connect()
         let capabilities = session.capabilitiesOnOwnerThread()
         for optionalProtocol in configuration.requestedOptionalProtocols {
-            guard isAdvertised(
-                optionalProtocol,
-                capabilities: capabilities,
-                session: session
-            ) else {
+            guard
+                isAdvertised(
+                    optionalProtocol,
+                    capabilities: capabilities,
+                    session: session
+                )
+            else {
                 return .skippedOptionalProtocol(optionalProtocol)
             }
         }
