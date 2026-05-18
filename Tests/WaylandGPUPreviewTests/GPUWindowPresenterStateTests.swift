@@ -96,16 +96,27 @@ struct GPUWindowPresenterStateTests {
                 == .submittedExplicit(commitGeneration: 42, releasePoint: releasePoint)
         )
 
-        try state.markReleased(slotID)
+        #expect(try state.markReleased(slotID) == false)
 
         #expect(
             try state.submissionState(for: slotID)
                 == .submittedExplicit(commitGeneration: 42, releasePoint: releasePoint)
         )
 
-        try state.markExplicitReleaseSignaled(slotID)
+        #expect(try state.markExplicitReleaseSignaled(slotID))
 
         #expect(try state.submissionState(for: slotID) == .available)
+
+        #expect(try state.markReleased(slotID) == false)
+        #expect(try state.markExplicitReleaseSignaled(slotID) == false)
+
+        #expect(try state.submissionState(for: slotID) == .available)
+
+        _ = try state.leaseNext()
+
+        #expect(try state.markReleased(slotID) == false)
+        #expect(try state.markExplicitReleaseSignaled(slotID) == false)
+        #expect(try state.submissionState(for: slotID) == .leased)
     }
 
     @Test
@@ -145,30 +156,29 @@ struct GPUWindowPresenterStateTests {
     func presentationCorrelationMapsGenerationToSlot() throws {
         var correlation = GPUWindowPresentationCorrelation()
         let slotID = try GBMBufferPoolSlotID(0)
-        let geometry = try SurfaceGeometry(
-            logicalSize: PositiveLogicalSize(width: 4, height: 3),
-            scale: .one
-        )
-        let frame = GPUWindowPresentedFrame(
-            slotID: slotID,
-            generation: 77,
-            commitPlan: SurfaceCommitPlan(
-                geometry: geometry,
-                bufferScale: 1,
-                viewportMode: .omitDestination,
-                damageMode: .buffer
-            ),
-            synchronization: .implicit,
-            pacing: .none
-        )
+        let frame = try presentedFrame(slotID: slotID, generation: 77)
 
         correlation.record(frame)
 
         #expect(correlation.slotID(for: 77) == slotID)
+        #expect(correlation.takeSlotID(for: 77) == slotID)
+        #expect(correlation.slotID(for: 77) == nil)
+
+        correlation.record(frame)
 
         correlation.remove(generation: 77)
 
         #expect(correlation.slotID(for: 77) == nil)
+
+        let secondSlotID = try GBMBufferPoolSlotID(1)
+        let secondFrame = try presentedFrame(slotID: secondSlotID, generation: 78)
+        correlation.record(frame)
+        correlation.record(secondFrame)
+
+        correlation.remove(slotID: slotID)
+
+        #expect(correlation.slotID(for: 77) == nil)
+        #expect(correlation.slotID(for: 78) == secondSlotID)
     }
 
     @Test
@@ -295,6 +305,29 @@ private func syncPoint(timeline: UInt64, point: UInt64) -> GPUSyncPoint {
     GPUSyncPoint(
         timeline: GPUSyncTimeline(timeline),
         point: RawSyncobjTimelinePoint(point)
+    )
+}
+
+private func presentedFrame(
+    slotID: GBMBufferPoolSlotID,
+    generation: UInt64
+) throws -> GPUWindowPresentedFrame {
+    let geometry = try SurfaceGeometry(
+        logicalSize: PositiveLogicalSize(width: 4, height: 3),
+        scale: .one
+    )
+
+    return GPUWindowPresentedFrame(
+        slotID: slotID,
+        generation: generation,
+        commitPlan: SurfaceCommitPlan(
+            geometry: geometry,
+            bufferScale: 1,
+            viewportMode: .omitDestination,
+            damageMode: .buffer
+        ),
+        synchronization: .implicit,
+        pacing: .none
     )
 }
 
