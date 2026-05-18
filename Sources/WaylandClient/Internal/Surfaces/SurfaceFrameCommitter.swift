@@ -72,16 +72,6 @@ enum SurfaceFrameCommitter {
         )
     }
 
-    static func recordPreparedCommit<RoleResources>(
-        _ preparedCommit: PreparedSurfaceFrameCommit,
-        runtime: inout SurfaceRuntime<RoleResources>
-    ) throws {
-        try runtime.prepareCommittedFrame(
-            generation: preparedCommit.generation,
-            plan: preparedCommit.plan
-        )
-    }
-
     @discardableResult
     static func commit<RoleResources>(
         _ preparedCommit: PreparedSurfaceFrameCommit,
@@ -105,6 +95,10 @@ enum SurfaceFrameCommitter {
         preparedCommit.surface.attach(buffer: buffer)
         apply(preparedCommit.plan.damage, to: preparedCommit.surface)
         preparedCommit.surface.commit()
+        try runtime.prepareCommittedFrame(
+            generation: preparedCommit.generation,
+            plan: preparedCommit.plan
+        )
         runtime.markSubmitConstraintsCommitted()
         return preparedCommit.plan
     }

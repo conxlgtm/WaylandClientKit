@@ -163,10 +163,6 @@ struct WindowSoftwarePresenter {
         drawingBuffer: inout RawBuffer.DrawingBuffer
     ) throws {
         do {
-            try SurfaceFrameCommitter.recordPreparedCommit(
-                preparedCommit,
-                runtime: &runtime
-            )
             let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
             try SurfaceFrameCommitter.commit(
                 preparedCommit,
