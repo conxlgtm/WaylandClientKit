@@ -22,6 +22,7 @@ swift build -c release --target SwiftWaylandDemo
 swift build -c release --product swift-wayland-smoke
 ./scripts/ci/dump-public-api.sh > /tmp/swiftwayland-public-api.md
 ./scripts/ci/verify-public-api-audit.sh
+./scripts/ci/verify-target-imports.sh
 ./scripts/ci/verify-docc.sh
 ```
 
@@ -42,7 +43,7 @@ Record results in [compositor-matrix.md](compositor-matrix.md).
 ## Tag Checklist
 
 1. Confirm the working tree is clean.
-2. Confirm Swift 6.3.1 is active.
+2. Confirm Swift 6.3.2 is active.
 3. Confirm dynamic glibc Linux bootstrap dependencies are installed or CI uses equivalent packages.
 4. Run `make check`.
 5. Run optimized builds for the package, demo, and smoke executable.
@@ -83,7 +84,7 @@ Use factual scope text:
 SwiftWayland is a development checkpoint for Linux Wayland client work.
 
 Supported:
-- Swift 6.3.1 package build.
+- Swift 6.3.2 package build.
 - Dynamic glibc Linux bootstrap dependency checks through `pkg-config`.
 - Core Wayland and stable xdg-shell generated artifacts.
 - Project-owned C shims for supported requests and listeners.

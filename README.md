@@ -179,7 +179,7 @@ Not supported in the current experimental baseline:
 
 ## Linux Dependencies
 
-Swift 6.3.1 or newer must already be installed.
+Swift 6.3.2 or newer must already be installed.
 The bootstrap script verifies Swift through `scripts/dev/swift.sh` by default.
 It does not install or switch toolchains.
 Set `SWIFT_COMMAND=/path/to/swift` for custom toolchain resolution.
@@ -190,7 +190,7 @@ are not part of the current support contract.
 
 The build dependency source of truth is the system capability surface:
 
-- Swift 6.3.1 or newer
+- Swift 6.3.2 or newer
 - `clang`
 - `pkg-config`
 - `pkg-config --exists egl`

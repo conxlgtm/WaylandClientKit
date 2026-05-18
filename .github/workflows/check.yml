@@ -11,7 +11,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.1-noble
+      image: swift:6.3.2-noble
     steps:
       - uses: actions/checkout@v4
       - name: Install system dependencies
@@ -101,7 +101,7 @@ jobs:
   generated-freshness:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.1-noble
+      image: swift:6.3.2-noble
     steps:
       - uses: actions/checkout@v4
       - name: Install generation dependencies
@@ -122,7 +122,7 @@ jobs:
   release-build:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.1-noble
+      image: swift:6.3.2-noble
     steps:
       - uses: actions/checkout@v4
       - name: Install build dependencies
@@ -138,6 +138,7 @@ jobs:
             libwayland-dev \
             libxkbcommon-dev \
             pkg-config \
+            ripgrep \
             wayland-protocols
       - name: Release build
         run: |
@@ -149,7 +150,7 @@ jobs:
   wayland-smoke:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.1-noble
+      image: swift:6.3.2-noble
     steps:
       - uses: actions/checkout@v4
       - name: Install smoke dependencies

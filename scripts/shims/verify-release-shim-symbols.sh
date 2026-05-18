@@ -12,6 +12,11 @@ if ! command -v nm >/dev/null 2>&1; then
     exit 1
 fi
 
+if ! command -v rg >/dev/null 2>&1; then
+    echo "rg is required to verify release shim symbols." >&2
+    exit 1
+fi
+
 mapfile -d '' release_objects < <(
     find "$ROOT/.build" \
         -type f \
