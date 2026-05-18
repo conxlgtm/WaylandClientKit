@@ -130,22 +130,86 @@ package struct SmokeConfiguration: Equatable, Sendable {
     }
 }
 
+package enum SmokePathStatus: String, Equatable, Sendable, CustomStringConvertible {
+    case unavailable
+    case advertised
+    case configured
+    case active
+    case fallback
+    case requested
+    case observed
+
+    package var description: String {
+        rawValue
+    }
+}
+
+package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
+    package var syncobj: SmokePathStatus
+    package var fifo: SmokePathStatus
+    package var commitTiming: SmokePathStatus
+    package var dmabuf: SmokePathStatus
+    package var gbm: SmokePathStatus
+    package var egl: SmokePathStatus
+    package var presentationFeedback: SmokePathStatus
+
+    package static let unavailable = Self(
+        syncobj: .unavailable,
+        fifo: .unavailable,
+        commitTiming: .unavailable,
+        dmabuf: .unavailable,
+        gbm: .unavailable,
+        egl: .unavailable,
+        presentationFeedback: .unavailable
+    )
+
+    package init(
+        syncobj: SmokePathStatus,
+        fifo: SmokePathStatus,
+        commitTiming: SmokePathStatus,
+        dmabuf: SmokePathStatus,
+        gbm: SmokePathStatus,
+        egl: SmokePathStatus,
+        presentationFeedback: SmokePathStatus
+    ) {
+        self.syncobj = syncobj
+        self.fifo = fifo
+        self.commitTiming = commitTiming
+        self.dmabuf = dmabuf
+        self.gbm = gbm
+        self.egl = egl
+        self.presentationFeedback = presentationFeedback
+    }
+
+    package var description: String {
+        [
+            "syncobj: \(syncobj)",
+            "fifo: \(fifo)",
+            "commitTiming: \(commitTiming)",
+            "dmabuf: \(dmabuf)",
+            "gbm: \(gbm)",
+            "egl: \(egl)",
+            "presentationFeedback: \(presentationFeedback)",
+        ].joined(separator: "\n")
+    }
+}
+
 package enum SmokeCommand: Equatable, Sendable {
     case run(SmokeConfiguration)
     case help
 }
 
 package enum SmokeResult: Equatable, Sendable, CustomStringConvertible {
-    case committedFrame
-    case frameCallbackObserved
+    case committedFrame(SmokeRuntimeFacts)
+    case frameCallbackObserved(SmokeRuntimeFacts)
     case skippedOptionalProtocol(SmokeOptionalProtocol)
 
     package var description: String {
         switch self {
-        case .committedFrame:
-            "committed frame"
-        case .frameCallbackObserved:
-            "frame callback observed"
+        case .committedFrame(let facts):
+            "committed frame\n\(facts)"
+        case .frameCallbackObserved(let facts):
+            "frame callback observed\n\(facts)"
         case .skippedOptionalProtocol(let optionalProtocol):
             "Skipping \(optionalProtocol.liveTestName) live test: compositor did not advertise "
                 + "\(optionalProtocol.interfaceName)."

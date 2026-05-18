@@ -172,9 +172,12 @@ struct GPUWindowPresenterStateTests {
 
         correlation.record(frame)
 
+        #expect(correlation.count == 1)
+        #expect(!correlation.isEmpty)
         #expect(correlation.slotID(for: 77) == slotID)
         #expect(correlation.takeSlotID(for: 77) == slotID)
         #expect(correlation.slotID(for: 77) == nil)
+        #expect(correlation.isEmpty)
 
         correlation.record(frame)
 
@@ -191,6 +194,46 @@ struct GPUWindowPresenterStateTests {
 
         #expect(correlation.slotID(for: 77) == nil)
         #expect(correlation.slotID(for: 78) == secondSlotID)
+    }
+
+    @Test
+    func presentationCorrelationConsumesTerminalFeedbackGenerations() throws {
+        var correlation = GPUWindowPresentationCorrelation()
+        let firstSlotID = try GBMBufferPoolSlotID(0)
+        let secondSlotID = try GBMBufferPoolSlotID(1)
+
+        correlation.record(try presentedFrame(slotID: firstSlotID, generation: 40))
+        correlation.record(try presentedFrame(slotID: secondSlotID, generation: 41))
+
+        #expect(correlation.takeSlotID(for: 40) == firstSlotID)
+        #expect(correlation.takeSlotID(for: 40) == nil)
+        #expect(correlation.slotID(for: 41) == secondSlotID)
+        #expect(correlation.count == 1)
+
+        correlation.remove(generation: 41)
+
+        #expect(correlation.takeSlotID(for: 41) == nil)
+        #expect(correlation.isEmpty)
+    }
+
+    @Test
+    func presentationCorrelationClearsReleaseAndRetireCases() throws {
+        var correlation = GPUWindowPresentationCorrelation()
+        let firstSlotID = try GBMBufferPoolSlotID(0)
+        let secondSlotID = try GBMBufferPoolSlotID(1)
+
+        correlation.record(try presentedFrame(slotID: firstSlotID, generation: 50))
+        correlation.record(try presentedFrame(slotID: secondSlotID, generation: 51))
+
+        correlation.remove(slotID: firstSlotID)
+
+        #expect(correlation.slotID(for: 50) == nil)
+        #expect(correlation.slotID(for: 51) == secondSlotID)
+
+        correlation.removeAll()
+
+        #expect(correlation.isEmpty)
+        #expect(correlation.takeSlotID(for: 51) == nil)
     }
 }
 
