@@ -218,6 +218,7 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
     case compositorRejectedBuffer
     case submitConstraintRejected
     case commitFailed
+    case presentationTrackingFailed
 
     package init(_ fallbackReason: GPUFallbackReason) {
         if let failure = Self.platformFailure(for: fallbackReason)
@@ -229,6 +230,22 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
         }
 
         preconditionFailure("policy-forced SHM is not a GPU backing failure")
+    }
+
+    package init(_ submitError: SurfaceSubmitConstraintError) {
+        switch submitError {
+        case .explicitSyncUnavailable:
+            self = .explicitSyncRequiredButUnavailable
+        case .fifoUnavailable:
+            self = .fifoRequiredButUnavailable
+        case .commitTimingUnavailable:
+            self = .commitTimingRequiredButUnavailable
+        case .explicitSyncRequired, .acquirePointRequired, .releasePointRequired,
+            .acquirePointWithoutAttachedBuffer, .releasePointWithoutAttachedBuffer,
+            .conflictingSyncPoints, .commitTimestampAlreadyExists,
+            .invalidCommitTimestamp, .syncTimelineUnavailable:
+            self = .submitConstraintRejected
+        }
     }
 
     private static func platformFailure(
@@ -306,6 +323,8 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
             "submit constraints were rejected"
         case .commitFailed:
             "surface commit failed"
+        case .presentationTrackingFailed:
+            "presentation tracking failed"
         }
     }
 }
@@ -450,10 +469,10 @@ package enum GPUBackingOperation: Equatable, Sendable {
     case metadataSetup
     case submitConstraintApplication
     case surfaceCommit
+    case presentationTracking
     case releaseTracking
     case fallbackSelection
 }
-
 package enum GPUBackingDiagnosticPayload: Equatable, Sendable {
     case dmabufFeedbackUnavailable
     case formatSelectionFailed
@@ -463,6 +482,7 @@ package enum GPUBackingDiagnosticPayload: Equatable, Sendable {
     case metadataSetupFailed
     case submitConstraintRejected
     case commitFailed
+    case presentationTrackingFailed
     case releaseSignalMissing(GBMBufferPoolSlotID)
     case fallbackSelected(GPUFallbackReason)
     case failure(GPUBackingFailure)

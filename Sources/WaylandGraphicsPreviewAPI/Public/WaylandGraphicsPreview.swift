@@ -239,7 +239,13 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
     public let pacing: WaylandGraphicsPacingStatus
     public let metadata: WaylandGraphicsMetadataStatus
     public let presentationFeedback: WaylandGraphicsRuntimeStatus
-    public let fallback: WaylandGraphicsFallbackReason?
+    public var fallback: WaylandGraphicsFallbackReason? {
+        guard case .fallback(let reason) = backing else {
+            return nil
+        }
+
+        return reason
+    }
 
     public init(
         capabilities: WaylandGraphicsSurfaceCapabilities,
@@ -250,8 +256,7 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
         explicitSync: WaylandGraphicsRuntimeStatus,
         pacing: WaylandGraphicsPacingStatus,
         metadata: WaylandGraphicsMetadataStatus,
-        presentationFeedback: WaylandGraphicsRuntimeStatus,
-        fallback: WaylandGraphicsFallbackReason?
+        presentationFeedback: WaylandGraphicsRuntimeStatus
     ) {
         self.capabilities = capabilities
         self.backing = backing
@@ -262,7 +267,6 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
         self.pacing = pacing
         self.metadata = metadata
         self.presentationFeedback = presentationFeedback
-        self.fallback = fallback
     }
 
     public static func projected(
@@ -311,8 +315,7 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
                 ),
                 colorManagement: protocolStatus(capabilities.colorMetadata.colorManagement)
             ),
-            presentationFeedback: protocolStatus(capabilities.presentationFeedback),
-            fallback: fallback
+            presentationFeedback: protocolStatus(capabilities.presentationFeedback)
         )
     }
 
