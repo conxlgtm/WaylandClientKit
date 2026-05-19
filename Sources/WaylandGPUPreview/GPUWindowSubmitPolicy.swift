@@ -156,6 +156,9 @@ package enum RuntimePathStatus: Equatable, Sendable {
 }
 
 package enum GPURuntimePathReason: Equatable, Sendable {
+    case dmabufUnavailable
+    case gbmUnavailable
+    case eglUnavailable
     case explicitSynchronizationUnavailable
     case explicitSynchronizationNotConfigured
     case fifoUnavailable
@@ -190,17 +193,17 @@ package enum GPUFramePacingRuntimeStatus: Equatable, Sendable {
 }
 
 package struct GPURuntimePathSnapshot: Equatable, Sendable {
-    package let dmabuf: RuntimePathStatus
-    package let gbm: RuntimePathStatus
-    package let egl: RuntimePathStatus
-    package let synchronization: GPUSynchronizationRuntimeStatus
-    package let pacing: GPUFramePacingRuntimeStatus
-    package let presentationFeedback: SurfaceCapabilityStatus
-    package let contentType: RuntimePathStatus
-    package let alpha: RuntimePathStatus
-    package let colorRepresentation: RuntimePathStatus
-    package let colorManagement: RuntimePathStatus
-    package let presentationHint: SurfacePresentationHint?
+    package var dmabuf: RuntimePathStatus
+    package var gbm: RuntimePathStatus
+    package var egl: RuntimePathStatus
+    package var synchronization: GPUSynchronizationRuntimeStatus
+    package var pacing: GPUFramePacingRuntimeStatus
+    package var presentationFeedback: SurfaceCapabilityStatus
+    package var contentType: RuntimePathStatus
+    package var alpha: RuntimePathStatus
+    package var colorRepresentation: RuntimePathStatus
+    package var colorManagement: RuntimePathStatus
+    package var presentationHint: SurfacePresentationHint?
 
     package static let empty = Self(
         dmabuf: .unavailable,
@@ -254,7 +257,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         )
     }
 
-    private static func dmabufStatus(
+    package static func dmabufStatus(
         _ capability: SurfaceDmabufCapability
     ) -> RuntimePathStatus {
         switch capability {
@@ -267,7 +270,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         }
     }
 
-    private static func synchronizationStatus(
+    package static func synchronizationStatus(
         _ synchronization: GPUBufferSubmissionSynchronization,
         capability: SurfaceSynchronizationCapability
     ) -> GPUSynchronizationRuntimeStatus {
@@ -286,7 +289,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         }
     }
 
-    private static func pacingStatus(
+    package static func pacingStatus(
         _ pacing: SurfacePacingConstraint,
         capability: SurfacePacingCapability
     ) -> GPUFramePacingRuntimeStatus {
@@ -311,7 +314,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         }
     }
 
-    private static func capabilityStatus(
+    package static func capabilityStatus(
         _ capability: SurfaceCapabilityStatus,
         requested: Bool,
         missingReason: GPURuntimePathReason
@@ -328,7 +331,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         }
     }
 
-    private static func colorRepresentationStatus(
+    package static func colorRepresentationStatus(
         _ capability: SurfaceColorRepresentationCapability,
         requested: Bool
     ) -> RuntimePathStatus {
@@ -348,7 +351,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         }
     }
 
-    private static func colorStatus(
+    package static func colorStatus(
         _ capability: SurfaceColorCapability,
         requested: Bool
     ) -> RuntimePathStatus {

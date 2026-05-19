@@ -241,6 +241,58 @@ struct GPUWindowPresenterStateTests {
 @Suite
 struct GPUWindowRuntimePathSnapshotTests {
     @Test
+    func runtimePathSnapshotReportsSetupMilestones() {
+        let capabilities = capabilitySnapshot(
+            synchronization: .explicitAvailable(version: 1),
+            pacing: .fifo(version: 1),
+            contentType: .available
+        )
+
+        let discovered = GPURuntimePathSnapshot.afterCapabilityDiscovery(
+            capabilities: capabilities
+        )
+        #expect(discovered.dmabuf == .advertised)
+        #expect(discovered.gbm == .unavailable)
+        #expect(discovered.egl == .unavailable)
+        #expect(discovered.synchronization == .explicitAdvertised)
+        #expect(discovered.pacing == .fifoAdvertised)
+
+        let gbm = GPURuntimePathSnapshot.afterGBMDeviceSelection(
+            capabilities: capabilities
+        )
+        #expect(gbm.gbm == .configured)
+        #expect(gbm.egl == .unavailable)
+
+        let egl = GPURuntimePathSnapshot.afterEGLTargetSetup(
+            capabilities: capabilities
+        )
+        #expect(egl.gbm == .configured)
+        #expect(egl.egl == .configured)
+
+        let dmabuf = GPURuntimePathSnapshot.afterDmabufImportSetup(
+            capabilities: capabilities
+        )
+        #expect(dmabuf.dmabuf == .active)
+    }
+
+    @Test
+    func runtimePathSnapshotReportsFailureAndFallbackReasons() {
+        let capabilities = capabilitySnapshot()
+        let fallback = GPURuntimePathSnapshot.afterFallback(
+            capabilities: capabilities,
+            reason: .noCompatibleFormat
+        )
+        let failure = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilities,
+            failure: .eglUnavailable
+        )
+
+        #expect(fallback.gbm == .fallback(.gbmUnavailable))
+        #expect(fallback.egl == .fallback(.gbmUnavailable))
+        #expect(failure.egl == .failed(.eglUnavailable))
+    }
+
+    @Test
     func runtimePathSnapshotReportsAdvertisedExplicitSyncNotConfigured() {
         let snapshot = GPURuntimePathSnapshot.afterPresentation(
             capabilities: capabilitySnapshot(
@@ -356,6 +408,104 @@ struct GPUWindowRuntimePathSnapshotTests {
 }
 
 @Suite
+struct GPUWindowBackingStateTests {
+    @Test
+    func fallbackPolicyDistinguishesFallbackFromUnavailable() {
+        let unavailable = capabilitySnapshot(dmabuf: .unavailable)
+
+        #expect(
+            GPUFallbackPolicy.preferGPUFallbackToSHM.decide(
+                capabilities: unavailable
+            ) == .shm(.dmabufUnavailable)
+        )
+        #expect(
+            GPUFallbackPolicy.requireGPU.decide(capabilities: unavailable)
+                == .unavailable(.dmabufUnavailable)
+        )
+        #expect(
+            GPUFallbackPolicy.forceSHM.decide(capabilities: capabilitySnapshot())
+                == .shm(.policyForcedSHM)
+        )
+    }
+
+    @Test
+    func backingStateRecordsSuccessFailureFallbackAndRetire() throws {
+        let capabilities = capabilitySnapshot()
+        let frame = try presentedFrame(
+            slotID: try GBMBufferPoolSlotID(0),
+            generation: 10
+        )
+        var state = GPUWindowBackingState.unconfigured
+
+        state.recordCapabilities(capabilities)
+        #expect(state.lifecycle == .configuring)
+        #expect(state.runtimePath.dmabuf == .advertised)
+
+        state.markReady(
+            runtimePath: .afterPresentation(
+                capabilities: capabilities,
+                synchronization: .implicit,
+                pacing: .none
+            ),
+            capabilities: capabilities,
+            bufferPool: .ready(installedSlots: 2, availableSlots: 1, submittedSlots: 1),
+            frame: frame
+        )
+        #expect(state.lifecycle == .ready)
+        #expect(state.lastSubmittedFrame == frame)
+
+        state.markFallback(.noCompatibleFormat, capabilities: capabilities)
+        #expect(state.lifecycle == .fallbackToSHM(.noCompatibleFormat))
+        #expect(state.diagnostics.last?.payload == .fallbackSelected(.noCompatibleFormat))
+
+        state.markFailed(.eglUnavailable, operation: .eglSetup)
+        #expect(state.lifecycle == .failed(.eglUnavailable))
+        #expect(state.diagnostics.last?.payload == .failure(.eglUnavailable))
+
+        state.markRetired()
+        #expect(state.lifecycle == .retired)
+        #expect(state.bufferPool == .retired)
+        #expect(state.lastSubmittedFrame == nil)
+    }
+
+    @Test
+    func invalidationReportsCapabilityGeometryAndMetadataChanges() throws {
+        let oldSnapshot = capabilitySnapshot()
+        let newSnapshot = capabilitySnapshot(
+            synchronization: .explicitAvailable(version: 1),
+            contentType: .available,
+            color: .available(version: 1)
+        )
+        let oldGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 10, height: 10),
+            scale: .one
+        )
+        let newGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 20, height: 10),
+            scale: try SurfaceScale(numerator: 2, denominator: 1)
+        )
+        let invalidations = GPUBackingInvalidation.changes(
+            oldSnapshot: oldSnapshot,
+            newSnapshot: newSnapshot,
+            oldGeometry: oldGeometry,
+            newGeometry: newGeometry,
+            oldSynchronization: .implicitOnly,
+            newSynchronization: .explicitAvailable(version: 1),
+            oldMetadata: .default,
+            newMetadata: SurfaceCommitMetadata(contentType: .game),
+            oldPacing: .unavailable,
+            newPacing: .fifo(version: 1)
+        ).map(\.reason)
+
+        #expect(invalidations.contains(.logicalSizeChanged))
+        #expect(invalidations.contains(.bufferScaleChanged))
+        #expect(invalidations.contains(.synchronizationModeChanged))
+        #expect(invalidations.contains(.colorMetadataChanged))
+        #expect(invalidations.contains(.presentationModeChanged))
+    }
+}
+
+@Suite
 struct GPUWindowPresenterLifecycleTests {
     @Test
     func retiredStateRejectsNewPresentationWork() throws {
@@ -400,12 +550,17 @@ struct GPUWindowPresenterLifecycleTests {
 
         try presenter.installBuffer(firstBuffer, slotID: firstSlotID)
         try presenter.installBuffer(secondBuffer, slotID: secondSlotID)
+        #expect(
+            presenter.backingStateSnapshot.bufferPool
+                == .ready(installedSlots: 2, availableSlots: 2, submittedSlots: 0)
+        )
         presenter.retireAll(reason: .windowClosed)
 
         #expect(firstBuffer.destroyCallCount == 1)
         #expect(secondBuffer.destroyCallCount == 1)
         #expect(presenter.installedSlotIDs.isEmpty)
         #expect(presenter.outstandingSubmittedSlotIDs.isEmpty)
+        #expect(presenter.backingStateSnapshot.lifecycle == .retired)
 
         presenter.retireAll(reason: .windowClosed)
 
@@ -509,6 +664,10 @@ private func presentedFrame(
 }
 
 private func capabilitySnapshot(
+    dmabuf: SurfaceDmabufCapability = .advertised(
+        version: 1,
+        canRequestSurfaceFeedback: .available
+    ),
     synchronization: SurfaceSynchronizationCapability = .implicitOnly,
     pacing: SurfacePacingCapability = .unavailable,
     contentType: SurfaceCapabilityStatus = .unavailable,
@@ -522,7 +681,7 @@ private func capabilitySnapshot(
         outputIDs: [],
         fractionalScale: .integerOnly,
         presentationFeedback: .unavailable,
-        dmabuf: .advertised(version: 1, canRequestSurfaceFeedback: .available),
+        dmabuf: dmabuf,
         synchronization: synchronization,
         pacing: pacing,
         contentType: contentType,
