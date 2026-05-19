@@ -44,7 +44,6 @@ private func expectPresentationFeedback(
 ) async throws {
     let presentationEvents = window.presentationEvents
 
-    try await window.requestPresentationFeedback()
     _ = try await displayEvent(
         in: displayEvents,
         matching: { event in
@@ -54,6 +53,7 @@ private func expectPresentationFeedback(
             try await window.requestRedraw()
         }
     )
+    try await window.requestPresentationFeedback()
     try await window.redraw { frame in
         fill(frame, color: 0x0044_2414)
     }
