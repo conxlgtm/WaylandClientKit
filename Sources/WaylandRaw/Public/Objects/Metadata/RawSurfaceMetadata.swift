@@ -482,10 +482,23 @@ package final class RawColorRepresentationManager {
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
+    private let owner: ColorRepresentationManagerOwner
     private var proxy: RawOwnedProxy
     private var surfaceIDs: Set<RawObjectID> = []
 
     @safe private var pointer: OpaquePointer { proxy.pointer }
+
+    package var supportedAlphaModes: [RawSurfaceAlphaMode] {
+        owner.supportedAlphaModes
+    }
+
+    package var supportedCoefficientsAndRanges: [RawSurfaceCoefficientsAndRange] {
+        owner.supportedCoefficientsAndRanges
+    }
+
+    package var hasReceivedSupportDone: Bool {
+        owner.hasReceivedDone
+    }
 
     @safe
     init(
@@ -493,14 +506,21 @@ package final class RawColorRepresentationManager {
         version managerVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
+        let newOwner = ColorRepresentationManagerOwner(
+            manager: managerPointer,
+            invariantFailureSink: adoptionContext.invariantFailureSink
+        )
+
         version = managerVersion
         proxyAdoption = adoptionContext
+        owner = newOwner
         proxy = try RawOwnedProxy(
             adopting: managerPointer,
             interface: "wp_color_representation_manager_v1",
             proxyAdoption: adoptionContext,
             destroy: unsafe swl_wp_color_representation_manager_v1_destroy
         )
+        try newOwner.install()
     }
 
     package func colorRepresentation(for surface: RawSurface)
@@ -538,12 +558,110 @@ package final class RawColorRepresentationManager {
     }
 
     package func destroy() {
+        owner.cancel()
         surfaceIDs.removeAll(keepingCapacity: false)
         proxy.destroy()
     }
 
     deinit {
         destroy()
+    }
+}
+
+@safe
+private final class ColorRepresentationManagerOwner {
+    @safe private let manager: OpaquePointer
+    private let invariantFailureSink: RawInvariantFailureSink?
+    private var installState = ListenerInstallState.idle
+    private(set) var supportedAlphaModes: [RawSurfaceAlphaMode] = []
+    private(set) var supportedCoefficientsAndRanges: [RawSurfaceCoefficientsAndRange] = []
+    private(set) var hasReceivedDone = false
+
+    @safe private lazy var listenerStorage = CListenerStorage(
+        owner: self,
+        initialValue:
+            unsafe swl_wp_color_representation_manager_v1_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
+    )
+
+    @safe private var callbacks:
+        UnsafeMutablePointer<swl_wp_color_representation_manager_v1_listener_callbacks>
+    {
+        listenerStorage.callbacks
+    }
+
+    @safe
+    init(
+        manager managerPointer: OpaquePointer,
+        invariantFailureSink failureSink: RawInvariantFailureSink?
+    ) {
+        unsafe manager = managerPointer
+        invariantFailureSink = failureSink
+        let cb = callbacks
+
+        unsafe cb.pointee.supported_alpha_mode = { data, _, alphaMode in
+            ColorRepresentationManagerOwner.withOwner(
+                data,
+                message: "color representation manager alpha mode fired without Swift state"
+            ) { owner in
+                owner.supportedAlphaModes.append(
+                    RawSurfaceAlphaMode(rawValue: alphaMode)
+                )
+            }
+        }
+
+        unsafe cb.pointee.supported_coefficients_and_ranges = { data, _, coefficients, range in
+            ColorRepresentationManagerOwner.withOwner(
+                data,
+                message:
+                    "color representation manager coefficients fired without Swift state"
+            ) { owner in
+                owner.supportedCoefficientsAndRanges.append(
+                    RawSurfaceCoefficientsAndRange(
+                        coefficients:
+                            RawSurfaceMatrixCoefficients(rawValue: coefficients),
+                        range: RawSurfaceQuantizationRange(rawValue: range)
+                    )
+                )
+            }
+        }
+
+        unsafe cb.pointee.done = { data, _ in
+            ColorRepresentationManagerOwner.withOwner(
+                data,
+                message: "color representation manager done fired without Swift state"
+            ) { owner in
+                owner.hasReceivedDone = true
+            }
+        }
+    }
+
+    func install() throws(RuntimeError) {
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+
+        try installState.install(interface: "wp_color_representation_manager_v1") {
+            unsafe swl_wp_color_representation_manager_v1_add_listener(
+                manager,
+                callbacks
+            )
+        }
+    }
+
+    func cancel() {
+        listenerStorage.invalidate()
+    }
+
+    @safe
+    private static func withOwner(
+        _ data: UnsafeMutableRawPointer?,
+        message: @autoclosure () -> String,
+        _ body: (ColorRepresentationManagerOwner) -> Void
+    ) {
+        CListenerStorage<
+            ColorRepresentationManagerOwner,
+            swl_wp_color_representation_manager_v1_listener_callbacks
+        >
+        .withOwner(from: data, message: message(), body)
     }
 }
 
@@ -608,6 +726,7 @@ package final class RawColorManager {
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
+    private let owner: ColorManagerOwner
     private var proxy: RawOwnedProxy
     private var outputIDs: Set<RawOutputID> = []
     private var surfaceIDs: Set<RawObjectID> = []
@@ -615,20 +734,47 @@ package final class RawColorManager {
 
     @safe private var pointer: OpaquePointer { proxy.pointer }
 
+    package var supportedRenderIntents: [RawColorRenderIntent] {
+        owner.supportedRenderIntents
+    }
+
+    package var supportedFeatures: [UInt32] {
+        owner.supportedFeatures
+    }
+
+    package var supportedNamedTransferFunctions: [UInt32] {
+        owner.supportedNamedTransferFunctions
+    }
+
+    package var supportedNamedPrimaries: [UInt32] {
+        owner.supportedNamedPrimaries
+    }
+
+    package var hasReceivedSupportDone: Bool {
+        owner.hasReceivedDone
+    }
+
     @safe
     init(
         pointer managerPointer: OpaquePointer,
         version managerVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext
     ) throws(RuntimeError) {
+        let newOwner = ColorManagerOwner(
+            manager: managerPointer,
+            invariantFailureSink: adoptionContext.invariantFailureSink
+        )
+
         version = managerVersion
         proxyAdoption = adoptionContext
+        owner = newOwner
         proxy = try RawOwnedProxy(
             adopting: managerPointer,
             interface: "wp_color_manager_v1",
             proxyAdoption: adoptionContext,
             destroy: unsafe swl_wp_color_manager_v1_destroy
         )
+        try newOwner.install()
     }
 
     package func output(for output: RawOutput) throws(RuntimeError)
@@ -736,6 +882,14 @@ package final class RawColorManager {
     package func imageDescription(for reference: RawImageDescriptionReference)
         throws(RuntimeError) -> RawImageDescription
     {
+        guard version >= 2 else {
+            throw RuntimeError.unsupportedProtocolVersion(
+                interface: "wp_color_manager_v1.get_image_description",
+                minimum: 2,
+                actual: version
+            )
+        }
+
         guard
             let imageDescription = unsafe swl_wp_color_manager_v1_get_image_description(
                 pointer,
@@ -757,6 +911,7 @@ package final class RawColorManager {
     }
 
     package func destroy() {
+        owner.cancel()
         outputIDs.removeAll(keepingCapacity: false)
         surfaceIDs.removeAll(keepingCapacity: false)
         surfaceFeedbackIDs.removeAll(keepingCapacity: false)
@@ -765,6 +920,108 @@ package final class RawColorManager {
 
     deinit {
         destroy()
+    }
+}
+
+@safe
+private final class ColorManagerOwner {
+    @safe private let manager: OpaquePointer
+    private let invariantFailureSink: RawInvariantFailureSink?
+    private var installState = ListenerInstallState.idle
+    private(set) var supportedRenderIntents: [RawColorRenderIntent] = []
+    private(set) var supportedFeatures: [UInt32] = []
+    private(set) var supportedNamedTransferFunctions: [UInt32] = []
+    private(set) var supportedNamedPrimaries: [UInt32] = []
+    private(set) var hasReceivedDone = false
+
+    @safe private lazy var listenerStorage = CListenerStorage(
+        owner: self,
+        initialValue: unsafe swl_wp_color_manager_v1_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
+    )
+
+    @safe private var callbacks: UnsafeMutablePointer<swl_wp_color_manager_v1_listener_callbacks> {
+        listenerStorage.callbacks
+    }
+
+    @safe
+    init(
+        manager managerPointer: OpaquePointer,
+        invariantFailureSink failureSink: RawInvariantFailureSink?
+    ) {
+        unsafe manager = managerPointer
+        invariantFailureSink = failureSink
+        let cb = callbacks
+
+        unsafe cb.pointee.supported_intent = { data, _, renderIntent in
+            ColorManagerOwner.withOwner(
+                data,
+                message: "color manager supported intent fired without Swift state"
+            ) { owner in
+                owner.supportedRenderIntents.append(
+                    RawColorRenderIntent(rawValue: renderIntent)
+                )
+            }
+        }
+
+        unsafe cb.pointee.supported_feature = { data, _, feature in
+            ColorManagerOwner.withOwner(
+                data,
+                message: "color manager supported feature fired without Swift state"
+            ) { owner in
+                owner.supportedFeatures.append(feature)
+            }
+        }
+
+        unsafe cb.pointee.supported_tf_named = { data, _, transferFunction in
+            ColorManagerOwner.withOwner(
+                data,
+                message:
+                    "color manager supported transfer function fired without Swift state"
+            ) { owner in
+                owner.supportedNamedTransferFunctions.append(transferFunction)
+            }
+        }
+
+        unsafe cb.pointee.supported_primaries_named = { data, _, primaries in
+            ColorManagerOwner.withOwner(
+                data,
+                message: "color manager supported primaries fired without Swift state"
+            ) { owner in
+                owner.supportedNamedPrimaries.append(primaries)
+            }
+        }
+
+        unsafe cb.pointee.done = { data, _ in
+            ColorManagerOwner.withOwner(
+                data,
+                message: "color manager done fired without Swift state"
+            ) { owner in
+                owner.hasReceivedDone = true
+            }
+        }
+    }
+
+    func install() throws(RuntimeError) {
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+
+        try installState.install(interface: "wp_color_manager_v1") {
+            unsafe swl_wp_color_manager_v1_add_listener(manager, callbacks)
+        }
+    }
+
+    func cancel() {
+        listenerStorage.invalidate()
+    }
+
+    @safe
+    private static func withOwner(
+        _ data: UnsafeMutableRawPointer?,
+        message: @autoclosure () -> String,
+        _ body: (ColorManagerOwner) -> Void
+    ) {
+        CListenerStorage<ColorManagerOwner, swl_wp_color_manager_v1_listener_callbacks>
+            .withOwner(from: data, message: message(), body)
     }
 }
 

@@ -120,7 +120,8 @@ struct WindowSoftwarePresenter {
                     surface: surface,
                     scaleInstallation: scaleInstallation,
                     generation: request.generation,
-                    geometry: geometry
+                    geometry: geometry,
+                    payload: .buffer(drawingBuffer.surfaceBuffer)
                 ),
                 runtime: &runtime,
             )
@@ -163,10 +164,9 @@ struct WindowSoftwarePresenter {
         drawingBuffer: inout RawBuffer.DrawingBuffer
     ) throws {
         do {
-            let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
+            _ = drawingBuffer.markBusy(commitGeneration: request.generation)
             try SurfaceFrameCommitter.commit(
                 preparedCommit,
-                buffer: buffer,
                 runtime: &runtime
             )
         } catch {

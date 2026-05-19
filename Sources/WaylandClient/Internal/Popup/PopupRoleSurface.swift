@@ -332,26 +332,26 @@ extension PopupRoleSurface {
 
     package func prepareSurfaceFrameCommit(
         generation: UInt64,
-        geometry: SurfaceGeometry
+        geometry: SurfaceGeometry,
+        payload: SurfaceCommitPayload
     ) throws -> PreparedSurfaceFrameCommit {
         try SurfaceFrameCommitter.prepare(
             SurfaceFrameCommitRequest(
                 surface: surface,
                 scaleInstallation: scaleInstallation,
                 generation: generation,
-                geometry: geometry
+                geometry: geometry,
+                payload: payload
             ),
             runtime: &surfaceRuntime,
         )
     }
 
     package func commitSurfaceFrame(
-        _ preparedCommit: PreparedSurfaceFrameCommit,
-        buffer: RawBuffer
+        _ preparedCommit: PreparedSurfaceFrameCommit
     ) throws {
         try SurfaceFrameCommitter.commit(
             preparedCommit,
-            buffer: buffer,
             runtime: &surfaceRuntime
         )
     }

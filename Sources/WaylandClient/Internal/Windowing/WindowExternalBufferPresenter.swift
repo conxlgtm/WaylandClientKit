@@ -23,6 +23,7 @@ enum WindowExternalBufferPresenter {
                 scaleInstallation: request.scaleInstallation,
                 generation: request.generation,
                 geometry: request.geometry,
+                payload: .buffer(request.buffer),
                 submitConstraints: request.submitConstraints,
                 metadata: request.metadata
             ),
@@ -39,7 +40,6 @@ enum WindowExternalBufferPresenter {
         do {
             return try SurfaceFrameCommitter.commit(
                 preparedCommit,
-                buffer: request.buffer,
                 runtime: &runtime
             )
         } catch {

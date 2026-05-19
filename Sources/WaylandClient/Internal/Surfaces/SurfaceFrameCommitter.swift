@@ -1,5 +1,19 @@
 import WaylandRaw
 
+package enum SurfaceCommitPayload {
+    case buffer(RawSurfaceBuffer)
+    case metadataOnly
+
+    var attachesBuffer: Bool {
+        switch self {
+        case .buffer:
+            true
+        case .metadataOnly:
+            false
+        }
+    }
+}
+
 struct SurfaceFrameCommitRequest {
     let surface: RawSurface
     let scaleInstallation: SurfaceScaleInstallation
@@ -7,24 +21,24 @@ struct SurfaceFrameCommitRequest {
     let geometry: SurfaceGeometry
     let submitConstraints: SurfaceSubmitConstraints
     let metadata: SurfaceCommitMetadata
-    let attachesBuffer: Bool
+    let payload: SurfaceCommitPayload
 
     init(
         surface commitSurface: RawSurface,
         scaleInstallation commitScaleInstallation: SurfaceScaleInstallation,
         generation commitGeneration: UInt64,
         geometry commitGeometry: SurfaceGeometry,
+        payload commitPayload: SurfaceCommitPayload,
         submitConstraints commitSubmitConstraints: SurfaceSubmitConstraints = .default,
-        metadata commitMetadata: SurfaceCommitMetadata = .default,
-        attachesBuffer commitAttachesBuffer: Bool = true
+        metadata commitMetadata: SurfaceCommitMetadata = .default
     ) {
         surface = commitSurface
         scaleInstallation = commitScaleInstallation
         generation = commitGeneration
         geometry = commitGeometry
+        payload = commitPayload
         submitConstraints = commitSubmitConstraints
         metadata = commitMetadata
-        attachesBuffer = commitAttachesBuffer
     }
 }
 
@@ -35,7 +49,7 @@ package struct PreparedSurfaceFrameCommit {
     let plan: SurfaceCommitPlan
     let submitConstraints: SurfaceSubmitConstraints
     let metadata: SurfaceCommitMetadata
-    let attachesBuffer: Bool
+    let payload: SurfaceCommitPayload
 }
 
 enum SurfaceFrameCommitter {
@@ -69,7 +83,7 @@ enum SurfaceFrameCommitter {
         try runtime.validateCommittedFrameCandidate(generation: request.generation)
         try request.submitConstraints.validate(
             capabilities: runtime.capabilitySnapshot(),
-            attachesBuffer: request.attachesBuffer
+            payload: request.payload
         )
         try request.metadata.validate(capabilities: runtime.capabilitySnapshot())
         return PreparedSurfaceFrameCommit(
@@ -79,23 +93,13 @@ enum SurfaceFrameCommitter {
             plan: plan,
             submitConstraints: request.submitConstraints,
             metadata: request.metadata,
-            attachesBuffer: request.attachesBuffer
+            payload: request.payload
         )
     }
 
     @discardableResult
     static func commit<RoleResources>(
         _ preparedCommit: PreparedSurfaceFrameCommit,
-        buffer: RawBuffer,
-        runtime: inout SurfaceRuntime<RoleResources>
-    ) throws -> SurfaceCommitPlan {
-        try commit(preparedCommit, buffer: buffer.surfaceBuffer, runtime: &runtime)
-    }
-
-    @discardableResult
-    static func commit<RoleResources>(
-        _ preparedCommit: PreparedSurfaceFrameCommit,
-        buffer: RawSurfaceBuffer,
         runtime: inout SurfaceRuntime<RoleResources>
     ) throws -> SurfaceCommitPlan {
         try runtime.applySubmitConstraints(preparedCommit.submitConstraints)
@@ -104,8 +108,13 @@ enum SurfaceFrameCommitter {
         preparedCommit.scaleInstallation.applyViewportDestinationIfNeeded(
             preparedCommit.plan.viewportDestination
         )
-        preparedCommit.surface.attach(buffer: buffer)
-        apply(preparedCommit.plan.damage, to: preparedCommit.surface)
+        switch preparedCommit.payload {
+        case .buffer(let buffer):
+            preparedCommit.surface.attach(buffer: buffer)
+            apply(preparedCommit.plan.damage, to: preparedCommit.surface)
+        case .metadataOnly:
+            break
+        }
         preparedCommit.surface.commit()
         try runtime.prepareCommittedFrame(
             generation: preparedCommit.generation,
