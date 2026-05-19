@@ -14,7 +14,7 @@ struct SurfaceCommitColorDescriptionTests {
             defer { swl_test_metadata_request_recording_end() }
 
             var objects = SurfaceMetadataObjects()
-            let reference = SurfaceColorDescriptionReference(identity: 12)
+            let reference = try SurfaceColorDescriptionReference(identity: 12)
             objects.installColorManagement(try testColorManagementSurface(pointer: 0xD402))
             objects.installColorDescription(
                 try testImageDescription(pointer: 0xD403, state: .pending),
@@ -37,7 +37,7 @@ struct SurfaceCommitColorDescriptionTests {
             defer { swl_test_metadata_request_recording_end() }
 
             var objects = SurfaceMetadataObjects()
-            let reference = SurfaceColorDescriptionReference(identity: 13)
+            let reference = try SurfaceColorDescriptionReference(identity: 13)
             objects.installColorManagement(try testColorManagementSurface(pointer: 0xD502))
             objects.installColorDescription(
                 try testImageDescription(
@@ -67,12 +67,12 @@ struct SurfaceCommitColorDescriptionTests {
             defer { swl_test_metadata_request_recording_end() }
 
             var objects = SurfaceMetadataObjects()
-            let reference = SurfaceColorDescriptionReference(identity: 14)
+            let reference = try SurfaceColorDescriptionReference(identity: 14)
             objects.installColorManagement(try testColorManagementSurface(pointer: 0xD602))
             objects.installColorDescription(
                 try testImageDescription(
                     pointer: 0xD603,
-                    state: .ready(identity: 15)
+                    state: .ready(identity: try RawImageDescriptionIdentity(15))
                 ),
                 reference: reference
             )
@@ -83,6 +83,26 @@ struct SurfaceCommitColorDescriptionTests {
                 )
             ) {
                 try objects.apply(SurfaceCommitMetadata(colorDescription: reference))
+            }
+            #expect(unsafe swl_test_metadata_request_record().call_count == 0)
+        }
+    }
+
+    @Test
+    func surfaceImageDescriptionIdentityRejectsZero() {
+        #expect(throws: SurfaceCommitMetadataError.invalidColorDescriptionIdentity(0)) {
+            _ = try SurfaceImageDescriptionIdentity(0)
+        }
+    }
+
+    @Test
+    func zeroColorDescriptionReferenceCannotReachMetadataApply() async throws {
+        try await MetadataRequestRecordingGate.withExclusiveRecording {
+            swl_test_metadata_request_recording_begin()
+            defer { swl_test_metadata_request_recording_end() }
+
+            #expect(throws: SurfaceCommitMetadataError.invalidColorDescriptionIdentity(0)) {
+                _ = try SurfaceColorDescriptionReference(identity: 0)
             }
             #expect(unsafe swl_test_metadata_request_record().call_count == 0)
         }

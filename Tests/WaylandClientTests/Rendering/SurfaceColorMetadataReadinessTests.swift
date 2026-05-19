@@ -111,7 +111,7 @@ struct SurfaceColorMetadataReadinessTests {
                 role: .toplevelWindow,
                 surfaceID: surface.objectID
             )
-            let reference = SurfaceColorDescriptionReference(identity: 11)
+            let reference = try SurfaceColorDescriptionReference(identity: 11)
             runtime.installColorManagementObject(try manager.surface(for: surface))
 
             try runtime.resolveColorDescriptionIfNeeded(
@@ -138,7 +138,7 @@ struct SurfaceColorMetadataReadinessTests {
                 role: .toplevelWindow,
                 surfaceID: surface.objectID
             )
-            let reference = SurfaceColorDescriptionReference(identity: 11)
+            let reference = try SurfaceColorDescriptionReference(identity: 11)
             runtime.installColorManagementObject(try manager.surface(for: surface))
 
             try runtime.resolveColorDescriptionIfNeeded(
@@ -149,7 +149,7 @@ struct SurfaceColorMetadataReadinessTests {
             #expect(
                 swl_test_image_description_listener_emit_ready2(
                     0,
-                    UInt32(reference.identity)
+                    UInt32(reference.identity.rawValue)
                 ) == 1
             )
             #expect(runtime.hasColorDescription(reference))
@@ -169,7 +169,7 @@ struct SurfaceColorMetadataReadinessTests {
                 role: .toplevelWindow,
                 surfaceID: surface.objectID
             )
-            let reference = SurfaceColorDescriptionReference(identity: 12)
+            let reference = try SurfaceColorDescriptionReference(identity: 12)
             runtime.installColorManagementObject(try manager.surface(for: surface))
 
             try runtime.resolveColorDescriptionIfNeeded(

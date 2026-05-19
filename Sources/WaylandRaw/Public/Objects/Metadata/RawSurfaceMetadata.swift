@@ -13,6 +13,7 @@ package enum RawSurfaceMetadataError: Error, Equatable, Sendable, CustomStringCo
     case colorManagementSurfaceAlreadyExists
     case surfaceFeedbackAlreadyExists
     case colorManagementOutputAlreadyExists
+    case invalidImageDescriptionIdentity
 
     package var description: String {
         switch self {
@@ -30,6 +31,8 @@ package enum RawSurfaceMetadataError: Error, Equatable, Sendable, CustomStringCo
             "surface already has a color management feedback object"
         case .colorManagementOutputAlreadyExists:
             "output already has a color management object"
+        case .invalidImageDescriptionIdentity:
+            "image description identity must be nonzero"
         }
     }
 }
@@ -174,8 +177,20 @@ package struct RawImageDescriptionFailureCause: Equatable, Sendable {
 
 package enum RawImageDescriptionState: Equatable, Sendable {
     case pending
-    case ready(identity: UInt64)
+    case ready(identity: RawImageDescriptionIdentity)
     case failed(cause: RawImageDescriptionFailureCause, message: String)
+}
+
+package struct RawImageDescriptionIdentity: Equatable, Hashable, Sendable {
+    package let rawValue: UInt64
+
+    package init(_ identity: UInt64) throws(RawSurfaceMetadataError) {
+        guard identity != 0 else {
+            throw .invalidImageDescriptionIdentity
+        }
+
+        rawValue = identity
+    }
 }
 
 @safe
@@ -1340,14 +1355,14 @@ private final class ImageDescriptionOwner {
     }
 
     private static func readyState(identity: UInt64) -> RawImageDescriptionState {
-        guard identity != 0 else {
+        do {
+            return .ready(identity: try RawImageDescriptionIdentity(identity))
+        } catch {
             return .failed(
                 cause: .invalidIdentity,
                 message: "image description identity must be nonzero"
             )
         }
-
-        return .ready(identity: identity)
     }
 
     func install() throws(RuntimeError) {
