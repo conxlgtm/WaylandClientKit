@@ -95,7 +95,7 @@ struct WaylandGraphicsPreviewAPITests {
     }
 
     @Test
-    func projectedRuntimePathReportsFallbackReason() {
+    func projectedRuntimePathConstructsFallbackFromSingleBackingDecision() {
         let capabilities = WaylandGraphicsSurfaceCapabilities(
             dmabuf: .unavailable,
             explicitSync: .unavailable,
@@ -140,58 +140,6 @@ struct WaylandGraphicsPreviewAPITests {
         #expect(decision == .software(.forcedSoftware))
         #expect(path.backing == .fallback(.forcedSoftware))
         #expect(path.fallback == .forcedSoftware)
-    }
-
-    @Test
-    func runtimePathFallbackIsDerivedFromBacking() {
-        let path = WaylandGraphicsRuntimePath(
-            capabilities: gpuCapableSurfaceCapabilities(),
-            backing: .fallback(.forcedSoftware),
-            dmabuf: .advertised,
-            gbm: .unavailable,
-            egl: .unavailable,
-            explicitSync: .advertised,
-            pacing: WaylandGraphicsPacingStatus(
-                fifo: .advertised,
-                commitTiming: .advertised
-            ),
-            metadata: WaylandGraphicsMetadataStatus(
-                contentType: .advertised,
-                alphaModifier: .advertised,
-                tearingControl: .advertised,
-                colorRepresentation: .advertised,
-                colorManagement: .advertised
-            ),
-            presentationFeedback: .unavailable
-        )
-
-        #expect(path.fallback == .forcedSoftware)
-    }
-
-    @Test
-    func runtimePathDoesNotReportFallbackWhenBackingIsAdvertised() {
-        let path = WaylandGraphicsRuntimePath(
-            capabilities: gpuCapableSurfaceCapabilities(),
-            backing: .advertised,
-            dmabuf: .fallback(.dmabufUnavailable),
-            gbm: .unavailable,
-            egl: .unavailable,
-            explicitSync: .advertised,
-            pacing: WaylandGraphicsPacingStatus(
-                fifo: .advertised,
-                commitTiming: .advertised
-            ),
-            metadata: WaylandGraphicsMetadataStatus(
-                contentType: .advertised,
-                alphaModifier: .advertised,
-                tearingControl: .advertised,
-                colorRepresentation: .advertised,
-                colorManagement: .advertised
-            ),
-            presentationFeedback: .unavailable
-        )
-
-        #expect(path.fallback == nil)
     }
 }
 

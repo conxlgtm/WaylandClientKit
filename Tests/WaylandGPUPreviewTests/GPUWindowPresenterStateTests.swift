@@ -420,6 +420,26 @@ struct GPUWindowRuntimePathSnapshotTests {
     }
 
     @Test
+    func runtimePathReportsCommitTimingRejectedForTimestampFailure() {
+        #expect(
+            GPUBackingFailure(.commitTimestampAlreadyExists)
+                == .commitTimingRejected
+        )
+        #expect(
+            GPUBackingFailure(.invalidCommitTimestamp)
+                == .commitTimingRejected
+        )
+
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(pacing: .commitTiming(version: 1)),
+            failure: GPUBackingFailure(.invalidCommitTimestamp)
+        )
+
+        #expect(snapshot.pacing == .failed(.commitTimingRejected))
+        #expect(snapshot.synchronization != .explicitFailed(.commitTimingRejected))
+    }
+
+    @Test
     func runtimePathReportsCompositorRejectedBuffer() {
         let snapshot = GPURuntimePathSnapshot.afterFailure(
             capabilities: capabilitySnapshot(),

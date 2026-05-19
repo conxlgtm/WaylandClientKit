@@ -214,6 +214,7 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
     case explicitSyncRequiredButUnavailable
     case fifoRequiredButUnavailable
     case commitTimingRequiredButUnavailable
+    case commitTimingRejected
     case metadataRequiredButUnavailable(SurfaceCommitMetadataError)
     case compositorRejectedBuffer
     case submitConstraintRejected
@@ -240,10 +241,11 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
             self = .fifoRequiredButUnavailable
         case .commitTimingUnavailable:
             self = .commitTimingRequiredButUnavailable
+        case .commitTimestampAlreadyExists, .invalidCommitTimestamp:
+            self = .commitTimingRejected
         case .explicitSyncRequired, .acquirePointRequired, .releasePointRequired,
             .acquirePointWithoutAttachedBuffer, .releasePointWithoutAttachedBuffer,
-            .conflictingSyncPoints, .commitTimestampAlreadyExists,
-            .invalidCommitTimestamp, .syncTimelineUnavailable:
+            .conflictingSyncPoints, .syncTimelineUnavailable:
             self = .submitConstraintRejected
         }
     }
@@ -315,6 +317,8 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
             "FIFO pacing was required but unavailable"
         case .commitTimingRequiredButUnavailable:
             "commit timing was required but unavailable"
+        case .commitTimingRejected:
+            "commit timing constraints were rejected"
         case .metadataRequiredButUnavailable(let error):
             "required surface metadata was unavailable: \(error.description)"
         case .compositorRejectedBuffer:
@@ -486,15 +490,4 @@ package enum GPUBackingDiagnosticPayload: Equatable, Sendable {
     case releaseSignalMissing(GBMBufferPoolSlotID)
     case fallbackSelected(GPUFallbackReason)
     case failure(GPUBackingFailure)
-}
-
-extension SurfaceSynchronizationCapability {
-    package var supportsExplicit: Bool {
-        switch self {
-        case .implicitOnly:
-            false
-        case .explicitAvailable, .explicitActive:
-            true
-        }
-    }
 }

@@ -247,7 +247,7 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
         return reason
     }
 
-    public init(
+    private init(
         capabilities: WaylandGraphicsSurfaceCapabilities,
         backing: WaylandGraphicsRuntimeStatus,
         dmabuf: WaylandGraphicsRuntimeStatus,
