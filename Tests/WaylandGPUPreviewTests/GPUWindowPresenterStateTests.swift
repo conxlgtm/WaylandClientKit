@@ -429,6 +429,75 @@ struct GPUWindowBackingStateTests {
     }
 
     @Test
+    func backingPolicyRejectsRequestedColorDescriptionWhenColorManagementUnavailable() throws {
+        let requirements = GPUBackingRequirements(
+            metadata: SurfaceCommitMetadata(
+                colorDescription: try SurfaceColorDescriptionReference(identity: 1)
+            )
+        )
+        let capabilities = capabilitySnapshot(contentType: .available, color: .unavailable)
+
+        #expect(
+            GPUFallbackPolicy.requireGPU.decide(
+                capabilities: capabilities,
+                requirements: requirements
+            ) == .unavailable(.metadataRequiredButUnavailable)
+        )
+    }
+
+    @Test
+    func backingPolicyAcceptsContentTypeWhenOnlyContentTypeIsRequested() {
+        let decision = GPUFallbackPolicy.requireGPU.decide(
+            capabilities: capabilitySnapshot(contentType: .available),
+            requirements: GPUBackingRequirements(
+                metadata: SurfaceCommitMetadata(contentType: .game)
+            )
+        )
+
+        guard case .gpu(let state) = decision else {
+            Issue.record("Expected GPU backing decision, got \(decision)")
+            return
+        }
+
+        #expect(state.lifecycle == .configuring)
+    }
+
+    @Test
+    func backingPolicyRejectsPresentationHintWhenTearingControlUnavailable() {
+        let requirements = GPUBackingRequirements(
+            metadata: SurfaceCommitMetadata(presentationHint: .async)
+        )
+
+        #expect(
+            GPUFallbackPolicy.requireGPU.decide(
+                capabilities: capabilitySnapshot(tearingControl: .unavailable),
+                requirements: requirements
+            ) == .unavailable(.metadataRequiredButUnavailable)
+        )
+    }
+
+    @Test
+    func backingPolicyPreservesRequireGPUVsFallbackPolicyForMetadataFailure() {
+        let requirements = GPUBackingRequirements(
+            metadata: SurfaceCommitMetadata(contentType: .game)
+        )
+        let capabilities = capabilitySnapshot(contentType: .unavailable)
+
+        #expect(
+            GPUFallbackPolicy.requireGPU.decide(
+                capabilities: capabilities,
+                requirements: requirements
+            ) == .unavailable(.metadataRequiredButUnavailable)
+        )
+        #expect(
+            GPUFallbackPolicy.preferGPUFallbackToSHM.decide(
+                capabilities: capabilities,
+                requirements: requirements
+            ) == .shm(.metadataRequiredButUnavailable)
+        )
+    }
+
+    @Test
     func backingStateRecordsSuccessFailureFallbackAndRetire() throws {
         let capabilities = capabilitySnapshot()
         let frame = try presentedFrame(
@@ -502,6 +571,62 @@ struct GPUWindowBackingStateTests {
         #expect(invalidations.contains(.synchronizationModeChanged))
         #expect(invalidations.contains(.colorMetadataChanged))
         #expect(invalidations.contains(.presentationModeChanged))
+    }
+
+    @Test
+    func contentTypeMetadataChangeInvalidatesBacking() {
+        let reasons = invalidationReasons(
+            oldMetadata: .default,
+            newMetadata: SurfaceCommitMetadata(contentType: .game)
+        )
+
+        #expect(reasons == [.colorMetadataChanged])
+    }
+
+    @Test
+    func alphaMetadataChangeInvalidatesBacking() {
+        let reasons = invalidationReasons(
+            oldMetadata: .default,
+            newMetadata: SurfaceCommitMetadata(
+                alpha: SurfaceAlphaMetadata(multiplier: .transparent)
+            )
+        )
+
+        #expect(reasons == [.colorMetadataChanged])
+    }
+
+    @Test
+    func colorRepresentationMetadataChangeInvalidatesBacking() {
+        let reasons = invalidationReasons(
+            oldMetadata: .default,
+            newMetadata: SurfaceCommitMetadata(
+                colorRepresentation: SurfaceColorRepresentation(alphaMode: .straight)
+            )
+        )
+
+        #expect(reasons == [.colorMetadataChanged])
+    }
+
+    @Test
+    func colorDescriptionMetadataChangeInvalidatesBacking() throws {
+        let reasons = invalidationReasons(
+            oldMetadata: .default,
+            newMetadata: SurfaceCommitMetadata(
+                colorDescription: try SurfaceColorDescriptionReference(identity: 1)
+            )
+        )
+
+        #expect(reasons == [.colorMetadataChanged])
+    }
+
+    @Test
+    func presentationHintChangeInvalidatesPresentationModeOnly() {
+        let reasons = invalidationReasons(
+            oldMetadata: .default,
+            newMetadata: SurfaceCommitMetadata(presentationHint: .async)
+        )
+
+        #expect(reasons == [.presentationModeChanged])
     }
 }
 
@@ -618,6 +743,24 @@ struct GPUWindowPresenterLifecycleTests {
     }
 
     @Test
+    func presenterFailureAfterSuccessReportsFailedRuntimePath() {
+        let presenter = GPUWindowPresenter()
+        let capabilities = capabilitySnapshot()
+
+        presenter.markReadyForTesting(capabilities: capabilities)
+        #expect(presenter.backingStateSnapshot.lifecycle == .ready)
+        #expect(presenter.runtimePathSnapshot.gbm == .active)
+
+        presenter.markFailureForTesting(.commitFailed, operation: .surfaceCommit)
+        let snapshot = presenter.backingStateSnapshot
+
+        #expect(snapshot.lifecycle == .failed(.commitFailed))
+        #expect(snapshot.runtimePath.dmabuf == .failed(.dmabufUnavailable))
+        #expect(snapshot.runtimePath.gbm == .unavailable)
+        #expect(presenter.runtimePathSnapshot == snapshot.runtimePath)
+    }
+
+    @Test
     func presenterDeinitRetiresInstalledBuffers() throws {
         var presenter: GPUWindowPresenter? = GPUWindowPresenter()
         let slotID = try GBMBufferPoolSlotID(0)
@@ -702,6 +845,20 @@ private func supportedColorRepresentationCapability()
             coefficientsAndRanges: []
         )
     )
+}
+
+private func invalidationReasons(
+    oldMetadata: SurfaceCommitMetadata,
+    newMetadata: SurfaceCommitMetadata,
+    oldSnapshot: SurfaceCapabilitySnapshot = capabilitySnapshot(),
+    newSnapshot: SurfaceCapabilitySnapshot = capabilitySnapshot()
+) -> [GPUBackingInvalidationReason] {
+    GPUBackingInvalidation.changes(
+        oldSnapshot: oldSnapshot,
+        newSnapshot: newSnapshot,
+        oldMetadata: oldMetadata,
+        newMetadata: newMetadata
+    ).map(\.reason)
 }
 
 private final class FakePresenterBuffer: GPUWindowPresenterBuffer {

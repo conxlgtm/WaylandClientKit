@@ -110,6 +110,9 @@ extension GPURuntimePathSnapshot {
         if reason == .explicitSyncRequiredButUnavailable {
             snapshot.synchronization = .explicitFallback(runtimeReason)
         }
+        if reason == .pacingRequiredButUnavailable {
+            snapshot.pacing = .fallback(runtimeReason)
+        }
         if reason == .metadataRequiredButUnavailable {
             snapshot.contentType = snapshot.contentType.fallback(runtimeReason)
             snapshot.alpha = snapshot.alpha.fallback(runtimeReason)
@@ -128,6 +131,10 @@ extension GPURuntimePathSnapshot {
         var snapshot = afterCapabilityDiscovery(capabilities: capabilities)
         let runtimeReason = GPURuntimePathReason(failure)
         switch failure {
+        case .policyForcedSHM:
+            snapshot.dmabuf = snapshot.dmabuf.fallback(runtimeReason)
+            snapshot.gbm = .fallback(runtimeReason)
+            snapshot.egl = .fallback(runtimeReason)
         case .dmabufUnavailable, .compositorRejectedBuffer:
             snapshot.dmabuf = .failed(runtimeReason)
         case .noCompatibleFormat, .noRenderNode, .gbmUnavailable,
@@ -137,6 +144,8 @@ extension GPURuntimePathSnapshot {
             snapshot.egl = .failed(runtimeReason)
         case .explicitSyncRequiredButUnavailable, .submitConstraintRejected:
             snapshot.synchronization = .explicitFailed(runtimeReason)
+        case .pacingRequiredButUnavailable:
+            snapshot.pacing = .failed(runtimeReason)
         case .metadataRequiredButUnavailable:
             snapshot.contentType = .failed(runtimeReason)
             snapshot.alpha = .failed(runtimeReason)
@@ -187,8 +196,12 @@ extension RuntimePathStatus {
 extension GPURuntimePathReason {
     package init(_ fallbackReason: GPUFallbackReason) {
         switch fallbackReason {
+        case .policyForcedSHM:
+            self = .policyForcedSHM
         case .explicitSyncRequiredButUnavailable:
             self = .explicitSynchronizationUnavailable
+        case .pacingRequiredButUnavailable:
+            self = .fifoUnavailable
         case .metadataRequiredButUnavailable:
             self = .colorManagementUnavailable
         case .gbmUnavailable, .noCompatibleFormat, .noRenderNode:
@@ -202,8 +215,12 @@ extension GPURuntimePathReason {
 
     package init(_ failure: GPUBackingFailure) {
         switch failure {
+        case .policyForcedSHM:
+            self = .policyForcedSHM
         case .explicitSyncRequiredButUnavailable, .submitConstraintRejected:
             self = .explicitSynchronizationUnavailable
+        case .pacingRequiredButUnavailable:
+            self = .fifoUnavailable
         case .metadataRequiredButUnavailable:
             self = .colorManagementUnavailable
         case .gbmUnavailable, .gbmAllocationFailed, .noCompatibleFormat,

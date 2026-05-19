@@ -156,6 +156,7 @@ package enum RuntimePathStatus: Equatable, Sendable {
 }
 
 package enum GPURuntimePathReason: Equatable, Sendable {
+    case policyForcedSHM
     case dmabufUnavailable
     case gbmUnavailable
     case eglUnavailable

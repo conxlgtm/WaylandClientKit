@@ -105,8 +105,7 @@ package enum GPUFallbackPolicy: Equatable, Sendable {
 
     package func decide(
         capabilities: SurfaceCapabilitySnapshot,
-        requiresExplicitSynchronization: Bool = false,
-        requiresMetadata: Bool = false
+        requirements: GPUBackingRequirements = .default
     ) -> GPUBackingDecision {
         if self == .forceSHM {
             return .shm(.policyForcedSHM)
@@ -116,16 +115,17 @@ package enum GPUFallbackPolicy: Equatable, Sendable {
             return unavailableOrFallback(.dmabufUnavailable)
         }
 
-        if requiresExplicitSynchronization,
-            !capabilities.synchronization.supportsExplicit
-        {
-            return unavailableOrFallback(.explicitSyncRequiredButUnavailable)
-        }
-
-        if requiresMetadata,
-            !capabilities.supportsAnyMetadata
-        {
-            return unavailableOrFallback(.metadataRequiredButUnavailable)
+        do {
+            try requirements.validate(capabilities: capabilities)
+        } catch {
+            switch error {
+            case .explicitSyncUnavailable:
+                return unavailableOrFallback(.explicitSyncRequiredButUnavailable)
+            case .pacingUnavailable:
+                return unavailableOrFallback(.pacingRequiredButUnavailable)
+            case .metadataUnavailable:
+                return unavailableOrFallback(.metadataRequiredButUnavailable)
+            }
         }
 
         return .gpu(
@@ -166,6 +166,7 @@ package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
     case gbmUnavailable
     case eglUnavailable
     case explicitSyncRequiredButUnavailable
+    case pacingRequiredButUnavailable
     case metadataRequiredButUnavailable
     case compositorRejectedBuffer
 
@@ -185,6 +186,8 @@ package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
             "EGL is unavailable"
         case .explicitSyncRequiredButUnavailable:
             "explicit synchronization was required but unavailable"
+        case .pacingRequiredButUnavailable:
+            "frame pacing was required but unavailable"
         case .metadataRequiredButUnavailable:
             "required surface metadata was unavailable"
         case .compositorRejectedBuffer:
@@ -194,6 +197,7 @@ package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
 }
 
 package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
+    case policyForcedSHM
     case dmabufUnavailable
     case noCompatibleFormat
     case noRenderNode
@@ -201,6 +205,7 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
     case gbmAllocationFailed
     case eglUnavailable
     case explicitSyncRequiredButUnavailable
+    case pacingRequiredButUnavailable
     case metadataRequiredButUnavailable
     case compositorRejectedBuffer
     case submitConstraintRejected
@@ -209,7 +214,7 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
     package init(_ fallbackReason: GPUFallbackReason) {
         switch fallbackReason {
         case .policyForcedSHM:
-            self = .dmabufUnavailable
+            self = .policyForcedSHM
         case .dmabufUnavailable:
             self = .dmabufUnavailable
         case .noCompatibleFormat:
@@ -222,6 +227,8 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
             self = .eglUnavailable
         case .explicitSyncRequiredButUnavailable:
             self = .explicitSyncRequiredButUnavailable
+        case .pacingRequiredButUnavailable:
+            self = .pacingRequiredButUnavailable
         case .metadataRequiredButUnavailable:
             self = .metadataRequiredButUnavailable
         case .compositorRejectedBuffer:
@@ -231,6 +238,8 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
 
     package var description: String {
         switch self {
+        case .policyForcedSHM:
+            "SHM was forced by policy"
         case .dmabufUnavailable:
             "linux-dmabuf is unavailable"
         case .noCompatibleFormat:
@@ -245,6 +254,8 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
             "EGL is unavailable"
         case .explicitSyncRequiredButUnavailable:
             "explicit synchronization was required but unavailable"
+        case .pacingRequiredButUnavailable:
+            "frame pacing was required but unavailable"
         case .metadataRequiredButUnavailable:
             "required surface metadata was unavailable"
         case .compositorRejectedBuffer:
@@ -346,7 +357,12 @@ package enum GPUBackingInvalidationReason: Equatable, Sendable {
         {
             changes.append(.synchronizationModeChanged)
         }
-        if oldMetadata.colorDescription != newMetadata.colorDescription
+        if oldMetadata.contentType != newMetadata.contentType
+            || oldMetadata.alpha != newMetadata.alpha
+            || oldMetadata.colorRepresentation != newMetadata.colorRepresentation
+            || oldMetadata.colorDescription != newMetadata.colorDescription
+            || oldSnapshot.contentType != newSnapshot.contentType
+            || oldSnapshot.alphaModifier != newSnapshot.alphaModifier
             || oldSnapshot.color != newSnapshot.color
             || oldSnapshot.colorRepresentation != newSnapshot.colorRepresentation
         {
@@ -355,6 +371,7 @@ package enum GPUBackingInvalidationReason: Equatable, Sendable {
         if oldMetadata.presentationHint != newMetadata.presentationHint
             || oldPacing != newPacing
             || oldSnapshot.pacing != newSnapshot.pacing
+            || oldSnapshot.tearingControl != newSnapshot.tearingControl
             || oldSnapshot.presentationFeedback != newSnapshot.presentationFeedback
         {
             changes.append(.presentationModeChanged)
@@ -415,34 +432,6 @@ extension SurfaceSynchronizationCapability {
         case .implicitOnly:
             false
         case .explicitAvailable, .explicitActive:
-            true
-        }
-    }
-}
-
-extension SurfaceCapabilitySnapshot {
-    package var supportsAnyMetadata: Bool {
-        contentType == .available
-            || alphaModifier == .available
-            || tearingControl == .available
-            || colorRepresentation.isUsable
-            || color.isUsable
-    }
-}
-
-extension SurfaceColorRepresentationCapability {
-    package var isUsable: Bool {
-        guard case .available = self else { return false }
-        return true
-    }
-}
-
-extension SurfaceColorCapability {
-    package var isUsable: Bool {
-        switch self {
-        case .unavailable:
-            false
-        case .available, .preferredDescription:
             true
         }
     }
