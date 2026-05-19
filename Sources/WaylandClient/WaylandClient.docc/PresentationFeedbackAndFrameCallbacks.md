@@ -14,3 +14,8 @@ separate from presentation feedback: submit constraints describe when a commit
 may latch or when a buffer may be reused, while presentation feedback reports
 what the compositor later observed. The public window redraw path continues to
 use default metadata.
+
+The `WaylandGraphicsPreview` product can project renderer-neutral graphics path
+facts from public display capabilities, including presentation-feedback
+advertisement and software fallback decisions. It does not change how frame
+callbacks or presentation feedback are requested for ordinary `Window` redraws.

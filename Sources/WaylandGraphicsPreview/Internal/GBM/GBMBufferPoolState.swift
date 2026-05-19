@@ -18,6 +18,7 @@ package enum GBMBufferPoolSlotLifecycle: Equatable, Sendable {
     case available
     case leased
     case submitted(commitGeneration: UInt64)
+    case committedUntracked
 
     package var isAvailable: Bool {
         self == .available
@@ -25,6 +26,10 @@ package enum GBMBufferPoolSlotLifecycle: Equatable, Sendable {
 
     package var isLeased: Bool {
         self == .leased
+    }
+
+    package var isInCompositorUse: Bool {
+        submittedCommitGeneration != nil || self == .committedUntracked
     }
 
     package var submittedCommitGeneration: UInt64? {
@@ -84,7 +89,7 @@ package struct GBMBufferPoolState: Equatable, Sendable {
 
     package var submittedSlotIDs: [GBMBufferPoolSlotID] {
         slots.compactMap { slotID, lifecycle in
-            lifecycle.submittedCommitGeneration != nil ? slotID : nil
+            lifecycle.isInCompositorUse ? slotID : nil
         }.sorted()
     }
 
@@ -135,6 +140,13 @@ package struct GBMBufferPoolState: Equatable, Sendable {
         slots[slotID] = .submitted(commitGeneration: commitGeneration)
     }
 
+    package mutating func markCommittedUntracked(
+        _ slotID: GBMBufferPoolSlotID
+    ) throws(GBMBufferPoolStateError) {
+        _ = try lifecycle(for: slotID)
+        slots[slotID] = .committedUntracked
+    }
+
     package mutating func cancelLease(
         _ slotID: GBMBufferPoolSlotID
     ) throws(GBMBufferPoolStateError) {
@@ -150,7 +162,7 @@ package struct GBMBufferPoolState: Equatable, Sendable {
         _ slotID: GBMBufferPoolSlotID
     ) throws(GBMBufferPoolStateError) {
         let lifecycle = try lifecycle(for: slotID)
-        guard lifecycle.submittedCommitGeneration != nil else {
+        guard lifecycle.isInCompositorUse else {
             throw GBMBufferPoolStateError.slotNotSubmitted(slotID, actual: lifecycle)
         }
 
