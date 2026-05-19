@@ -48,6 +48,7 @@ Sources/CWaylandProtocols/shims/requests-core.c	swl_proxy_get_queue_raw	Queue as
 Sources/WaylandClient/Public/Rendering/SoftwareFrame.swift	UnsafeMutableBufferPointer	Scoped software-frame row spans.
 Sources/WaylandClient/Public/Rendering/SoftwareFrame.swift	UnsafeMutableRawBufferPointer	Scoped software-frame backing bytes.
 Sources/WaylandClient/Internal/DataTransfer/DataTransferSourceWriter.swift	@unchecked Sendable	Private condition-protected data-transfer writer state shared with one worker thread.
+Tests/WaylandRuntimeTests/Executor/WaylandThreadExecutorConcurrencyTests.swift	@unchecked Sendable	Private NSLock-protected test recorder state shared by detached shutdown caller threads.
 Tests/**	OpaquePointer	Test doubles for raw C object wrappers.
 Tests/**	UnsafeMutablePointer	Test doubles for C listener and buffer APIs.
 Tests/**	UnsafeMutableBufferPointer	Test doubles for C buffer APIs.
