@@ -11,8 +11,8 @@ The minimal DocC catalog for this boundary lives in
 
 ### `WaylandClient`
 
-Only library product. The raw, runtime, keyboard interpretation, cursor,
-graphics-preview, GPU-preview, smoke-support, and test-support modules are
+Main client library product. The raw, runtime, keyboard interpretation, cursor,
+graphics-core, GPU-preview, smoke-support, and test-support modules are
 implementation targets for this product, not separately vended library products.
 
 Intentionally public:
@@ -174,11 +174,47 @@ Current user-facing contract:
 - GPU and GBM/EGL/dmabuf work remains package-internal preview. There is no
   public renderer, swapchain, drawable, or GPU buffer API in `WaylandClient`.
 
+### `WaylandGraphicsPreview`
+
+Preview library product. This product is renderer-neutral and source-breaking
+until the graphics backing foundation is promoted.
+
+Intentionally public:
+
+- `WaylandGraphicsProtocolAvailability`
+- `WaylandGraphicsFramePacingAvailability`
+- `WaylandGraphicsColorMetadataAvailability`
+- `WaylandGraphicsSurfaceCapabilities`
+- `WaylandGraphicsFallbackPolicy`
+- `WaylandGraphicsFallbackReason`
+- `WaylandGraphicsUnavailableReason`
+- `WaylandGraphicsBackingDecision`
+- `WaylandGraphicsRuntimeStatus`
+- `WaylandGraphicsPacingStatus`
+- `WaylandGraphicsMetadataStatus`
+- `WaylandGraphicsRuntimePath`
+- `WaylandDisplay.graphicsSurfaceCapabilities()`
+- `WaylandDisplay.graphicsRuntimePath(policy:)`
+- `WaylandDisplay.graphicsBackingDecision(policy:)`
+
+Current preview contract:
+
+- The product reports renderer-neutral graphics capabilities, projected
+  runtime-path facts, software fallback decisions, and required-GPU
+  unavailability.
+- It does not expose raw Wayland proxies, EGL/GBM/DRM handles, syncobj fds,
+  scene rendering, swapchains, drawables, or public metadata/color APIs.
+- The current projection does not allocate GPU resources. Effectful GPU backing
+  setup remains package-internal.
+- Downstream code that wants this boundary imports `WaylandGraphicsPreview`
+  explicitly; importing `WaylandClient` alone does not opt into renderer-facing
+  preview API.
+
 Intentionally package-internal:
 
 - `DisplaySession`
 - `TopLevelWindow`
-- `WaylandGraphicsPreview`
+- `WaylandGraphicsCore`
 - `WaylandGPUPreview`
 
 Notes:
@@ -265,7 +301,7 @@ These targets are package-internal architecture units:
 - `WaylandKeyboard`: xkbcommon-backed interpretation of copied `xkb_v1` keymaps.
 - `WaylandCursor`: wayland-cursor theme loading and cursor image lifetime handling.
 - `WaylandRuntime`: owner-thread executor and runtime event loop.
-- `WaylandGraphicsPreview`: package-internal GBM, DRM, EGL, and GLES substrate.
+- `WaylandGraphicsCore`: package-internal GBM, DRM, EGL, and GLES substrate.
 - `WaylandGPUPreview`: package-internal dmabuf import and GPU window presentation.
 - `WaylandSmokeSupport`: shared smoke-test support.
 - `WaylandTestSupport`: test-only support code.

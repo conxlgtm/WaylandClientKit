@@ -88,6 +88,12 @@ Smoke and GPU-preview notes should use these terms when available:
 - `contentType`, `alphaModifier`, `tearingControl`,
   `colorRepresentation`, and `colorManagement`: `unavailable`, `advertised`,
   `configured`, or `failed(<reason>)`
+- `backing`: `gpu`, `shm`, `fallback(<reason>)`, or `unavailable(<reason>)`
+- `surface`: `scale=<value>` and `outputs=<count>`
+
+The preview graphics API uses the same vocabulary for public projected runtime
+paths. A projection can say that dmabuf is advertised or unavailable, but only
+live smoke and GPU-preview checks can prove configured or active GPU resources.
 
 ## Result Terms
 

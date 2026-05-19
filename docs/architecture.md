@@ -349,7 +349,8 @@ Supported:
 - public output snapshots and display events through `wl_output`
 - optional logical output geometry through `zxdg_output_manager_v1`
 - explicit window presentation feedback through presentation-time
-- package-internal graphics preview work through linux-dmabuf, GBM, EGL, and GLES
+- package-internal graphics core work through linux-dmabuf, GBM, EGL, and GLES
+- preview `WaylandGraphicsPreview` capability and fallback value API
 
 Not supported:
 

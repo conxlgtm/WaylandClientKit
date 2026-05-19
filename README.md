@@ -246,12 +246,16 @@ compatibility library available in the toolchain runtime path.
 
 ## Targets
 
-The package currently vends one library product: `WaylandClient`. The other
-Swift targets are implementation modules used by that product and by tests.
+The package currently vends `WaylandClient` and the preview
+`WaylandGraphicsPreview` library product. Other Swift targets are
+implementation modules used by those products and by tests.
 
 ```text
 WaylandClient
     public Swift layer with WaylandDisplay, Window, typed events, and drawing helpers
+
+WaylandGraphicsPreview
+    preview graphics capability, runtime-path, and fallback value API
 
 WaylandSmokeSupport
     command parsing and runtime helper for smoke checks
@@ -267,6 +271,9 @@ WaylandCursor
 
 WaylandRaw
     low-level Swift layer, shared queue-specific event-loop engine, and raw input subsystem
+
+WaylandGraphicsCore
+    package-internal GBM/EGL/DRM substrate for GPU preview work
 
 WaylandRuntime
     owner-thread executor and audited unsafe Swift runtime machinery
@@ -363,6 +370,16 @@ The demo draws a small marker for pointer motion and prints basic pointer/keyboa
 Interpreted keyboard events include local compose/dead-key text results when compose support is enabled.
 It sets a normal pointer cursor when pointer focus enters the demo window.
 
+Run the graphics preview smoke client:
+
+```bash
+swift run GPUPreviewSmokeClient
+```
+
+The graphics preview client prints projected renderer-neutral graphics path
+facts and draws a deterministic SHM frame. It does not expose or require public
+GPU buffer submission.
+
 Run the noninteractive Wayland smoke check under a real Wayland session:
 
 ```bash
@@ -386,6 +403,7 @@ swift run swift-wayland-smoke
 - [Architecture](docs/architecture.md)
 - [Protocol Generation](docs/generation.md)
 - [Public API Audit](docs/public-api-audit.md)
+- [Graphics Preview API](docs/graphics-preview-api.md)
 - [WaylandClient DocC Catalog](Sources/WaylandClient/WaylandClient.docc/WaylandClient.md)
 - [Development Checkpoint Checklist](docs/release.md)
 - [Contributing](CONTRIBUTING.md)

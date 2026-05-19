@@ -35,14 +35,19 @@ Do not rename it into a generic renderer before a second rendering implementatio
 
 ## Preview Target Shape
 
-The graphics preview target is additive:
+The graphics preview product is additive:
 
 ```text
 WaylandGraphicsPreview
-    depends on WaylandRaw
-    depends on GBM, DRM, EGL, and GLES system-library targets
+    public preview facade
+    depends on WaylandClient
+    reports renderer-neutral capability, runtime-path, and fallback facts
+    does not expose raw Wayland/EGL/GBM/DRM handles
+
+WaylandGraphicsCore
+    package-internal target
+    depends on WaylandRaw plus GBM, DRM, EGL, and GLES system-library targets
     owns GBM/EGL/dmabuf adapters while they are still under development
-    not required by WaylandClient in the experimental baseline
 ```
 
 Current graphics system-library targets:
@@ -59,8 +64,11 @@ Current graphics protocol XML:
 - viewporter,
 - fractional-scale.
 
-`WaylandGPUPreview` bridges the graphics preview target to package-internal
+`WaylandGPUPreview` bridges the graphics core target to package-internal
 managed-window presentation. It is not a public `WaylandClient` renderer API.
+
+The public preview boundary is documented in
+[Graphics Preview API](graphics-preview-api.md).
 
 ## API Risks
 
@@ -90,5 +98,6 @@ Advanced graphics work must still preserve Wayland invariants:
 
 No GPU feature is required for the current experimental baseline.
 
-The current output is this design boundary plus a package-internal EGL/GBM/dmabuf
-probe. It is not a public rendering API.
+The current output is this design boundary, a public preview capability/fallback
+API, and a package-internal EGL/GBM/dmabuf probe. It is not a public rendering
+API.
