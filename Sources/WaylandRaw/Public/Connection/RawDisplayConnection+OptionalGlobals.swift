@@ -1,7 +1,7 @@
 import CWaylandProtocols
 
 extension RawDisplayConnection {
-    // swiftlint:disable function_body_length
+    // swiftlint:disable cyclomatic_complexity function_body_length
     @safe
     package func bindOptionalGlobals(registry reg: OpaquePointer) throws -> OptionalGlobals {
         let decorationManager = try bindXDGDecorationManagerIfPresent(registry: reg)
@@ -124,7 +124,7 @@ extension RawDisplayConnection {
             throw error
         }
     }
-    // swiftlint:enable function_body_length
+    // swiftlint:enable cyclomatic_complexity function_body_length
 
     @safe
     private func bindXDGDecorationManagerIfPresent(

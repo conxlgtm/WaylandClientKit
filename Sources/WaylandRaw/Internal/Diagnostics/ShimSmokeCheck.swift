@@ -89,6 +89,11 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_fractional_scale_manager_v1_get_fractional_scale
         _ = unsafe swl_wp_cursor_shape_manager_v1_get_pointer
         _ = unsafe swl_wp_cursor_shape_device_v1_set_shape
+        verifySubmitAndMetadataShims()
+        verifyTextInputAndDmabufShims()
+    }
+
+    private static func verifySubmitAndMetadataShims() {
         _ = unsafe swl_wp_linux_drm_syncobj_manager_v1_get_surface
         _ = unsafe swl_wp_linux_drm_syncobj_manager_v1_import_timeline
         _ = unsafe swl_wp_linux_drm_syncobj_surface_v1_set_acquire_point
@@ -116,6 +121,9 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_color_management_surface_v1_set_image_description
         _ = unsafe swl_wp_color_management_surface_v1_unset_image_description
         _ = unsafe swl_wp_color_management_surface_feedback_v1_get_preferred
+    }
+
+    private static func verifyTextInputAndDmabufShims() {
         _ = unsafe swl_text_input_manager_v3_get_text_input
         _ = unsafe swl_text_input_v3_enable
         _ = unsafe swl_text_input_v3_disable

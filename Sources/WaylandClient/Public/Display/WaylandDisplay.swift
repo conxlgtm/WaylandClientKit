@@ -8,23 +8,23 @@ public actor WaylandDisplay {
     nonisolated let runtime: WaylandDisplayRuntime
     private var lifecycle = WaylandDisplayLifecycle.initializing
 
-    public nonisolated var unownedExecutor: UnownedSerialExecutor {
+    nonisolated public var unownedExecutor: UnownedSerialExecutor {
         unsafe runtime.executor.asUnownedSerialExecutor()
     }
 
-    public nonisolated var events: DisplayEvents {
+    nonisolated public var events: DisplayEvents {
         runtime.events
     }
 
-    public nonisolated var inputEvents: InputEvents {
+    nonisolated public var inputEvents: InputEvents {
         runtime.inputEvents
     }
 
-    public nonisolated var dataTransferEvents: DataTransferEvents {
+    nonisolated public var dataTransferEvents: DataTransferEvents {
         runtime.dataTransferEvents
     }
 
-    public nonisolated var diagnostics: DisplayDiagnostics {
+    nonisolated public var diagnostics: DisplayDiagnostics {
         runtime.diagnostics
     }
 

@@ -63,11 +63,10 @@ struct RawSurfaceMetadataTests {
     func metadataSurfaceDestroyIsIdempotent() throws {
         let destroyCounter = DestroyCounter()
         let contentType = RawContentTypeSurface(
-            pointer: try unsafe #require(OpaquePointer(bitPattern: 0xC001)),
-            destroy: { pointer in
-                unsafe destroyCounter.destroy(pointer)
-            }
-        )
+            pointer: try unsafe #require(OpaquePointer(bitPattern: 0xC001))
+        ) { pointer in
+            unsafe destroyCounter.destroy(pointer)
+        }
 
         contentType.destroy()
         contentType.destroy()
@@ -79,11 +78,10 @@ struct RawSurfaceMetadataTests {
     func imageDescriptionDestroyIsIdempotent() throws {
         let destroyCounter = DestroyCounter()
         let description = RawImageDescription(
-            pointer: try unsafe #require(OpaquePointer(bitPattern: 0xC101)),
-            destroy: { pointer in
-                unsafe destroyCounter.destroy(pointer)
-            }
-        )
+            pointer: try unsafe #require(OpaquePointer(bitPattern: 0xC101))
+        ) { pointer in
+            unsafe destroyCounter.destroy(pointer)
+        }
 
         description.destroy()
         description.destroy()

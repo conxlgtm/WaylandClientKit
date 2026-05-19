@@ -29,11 +29,11 @@ package enum SmokeArguments {
           --require-linux-dmabuf              Skip if zwp_linux_dmabuf_v1 is not advertised.
           --require-syncobj                   Skip if syncobj manager is not advertised.
           --require-fifo                      Skip if wp_fifo_manager_v1 is not advertised.
-          --require-commit-timing             Skip if wp_commit_timing_manager_v1 is not advertised.
+          --require-commit-timing             Skip if commit-timing manager is missing.
           --require-content-type              Skip if wp_content_type_manager_v1 is not advertised.
           --require-alpha-modifier            Skip if wp_alpha_modifier_v1 is not advertised.
-          --require-tearing-control           Skip if wp_tearing_control_manager_v1 is not advertised.
-          --require-color-representation      Skip if wp_color_representation_manager_v1 is not advertised.
+          --require-tearing-control           Skip if tearing-control manager is missing.
+          --require-color-representation      Skip if color-representation is missing.
           --require-color-management          Skip if wp_color_manager_v1 is not advertised.
           -h, --help                         Show this help.
         """
@@ -46,6 +46,12 @@ package enum SmokeArguments {
 
         while index < arguments.endIndex {
             let argument = arguments[index]
+
+            if let optionalProtocol = optionalProtocol(for: argument) {
+                requestedOptionalProtocols.append(optionalProtocol)
+                arguments.formIndex(after: &index)
+                continue
+            }
 
             switch argument {
             case "-h", "--help":
@@ -66,24 +72,6 @@ package enum SmokeArguments {
                     index: &index,
                     field: .postCommitPumpMilliseconds
                 )
-            case "--require-linux-dmabuf":
-                requestedOptionalProtocols.append(.linuxDmabuf)
-            case "--require-syncobj":
-                requestedOptionalProtocols.append(.linuxDrmSyncobj)
-            case "--require-fifo":
-                requestedOptionalProtocols.append(.fifo)
-            case "--require-commit-timing":
-                requestedOptionalProtocols.append(.commitTiming)
-            case "--require-content-type":
-                requestedOptionalProtocols.append(.contentType)
-            case "--require-alpha-modifier":
-                requestedOptionalProtocols.append(.alphaModifier)
-            case "--require-tearing-control":
-                requestedOptionalProtocols.append(.tearingControl)
-            case "--require-color-representation":
-                requestedOptionalProtocols.append(.colorRepresentation)
-            case "--require-color-management":
-                requestedOptionalProtocols.append(.colorManagement)
             default:
                 throw SmokeArgumentError.unknownArgument(argument)
             }
@@ -98,6 +86,31 @@ package enum SmokeArguments {
                 requestedOptionalProtocols: requestedOptionalProtocols
             )
         )
+    }
+
+    private static func optionalProtocol(for argument: String) -> SmokeOptionalProtocol? {
+        switch argument {
+        case "--require-linux-dmabuf":
+            .linuxDmabuf
+        case "--require-syncobj":
+            .linuxDrmSyncobj
+        case "--require-fifo":
+            .fifo
+        case "--require-commit-timing":
+            .commitTiming
+        case "--require-content-type":
+            .contentType
+        case "--require-alpha-modifier":
+            .alphaModifier
+        case "--require-tearing-control":
+            .tearingControl
+        case "--require-color-representation":
+            .colorRepresentation
+        case "--require-color-management":
+            .colorManagement
+        default:
+            nil
+        }
     }
 
     private static func readMilliseconds(
