@@ -169,7 +169,39 @@ package enum SmokePathStatus: String, Equatable, Sendable, CustomStringConvertib
     }
 }
 
+package enum SmokeBackingStatus: String, Equatable, Sendable, CustomStringConvertible {
+    case unavailable
+    case gpu
+    case shm
+    case fallback
+
+    package var description: String {
+        rawValue
+    }
+}
+
+package struct SmokeSurfaceFacts: Equatable, Sendable, CustomStringConvertible {
+    package var scale: String
+    package var outputs: Int
+
+    package static let unknown = Self(scale: "unknown", outputs: 0)
+
+    package init(scale: String, outputs: Int) {
+        self.scale = scale
+        self.outputs = outputs
+    }
+
+    package var description: String {
+        [
+            "surface:",
+            "  scale: \(scale)",
+            "  outputs: \(outputs)",
+        ].joined(separator: "\n")
+    }
+}
+
 package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
+    package var surface: SmokeSurfaceFacts
     package var syncobj: SmokePathStatus
     package var fifo: SmokePathStatus
     package var commitTiming: SmokePathStatus
@@ -177,6 +209,7 @@ package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
     package var gbm: SmokePathStatus
     package var egl: SmokePathStatus
     package var presentationFeedback: SmokePathStatus
+    package var backing: SmokeBackingStatus
     package var contentType: SmokePathStatus
     package var alphaModifier: SmokePathStatus
     package var tearingControl: SmokePathStatus
@@ -195,7 +228,9 @@ package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
         alphaModifier: .unavailable,
         tearingControl: .unavailable,
         colorRepresentation: .unavailable,
-        colorManagement: .unavailable
+        colorManagement: .unavailable,
+        surface: .unknown,
+        backing: .unavailable
     )
 
     package init(
@@ -210,8 +245,11 @@ package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
         alphaModifier: SmokePathStatus,
         tearingControl: SmokePathStatus,
         colorRepresentation: SmokePathStatus,
-        colorManagement: SmokePathStatus
+        colorManagement: SmokePathStatus,
+        surface: SmokeSurfaceFacts = .unknown,
+        backing: SmokeBackingStatus = .unavailable
     ) {
+        self.surface = surface
         self.syncobj = syncobj
         self.fifo = fifo
         self.commitTiming = commitTiming
@@ -219,6 +257,7 @@ package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
         self.gbm = gbm
         self.egl = egl
         self.presentationFeedback = presentationFeedback
+        self.backing = backing
         self.contentType = contentType
         self.alphaModifier = alphaModifier
         self.tearingControl = tearingControl
@@ -228,6 +267,7 @@ package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
 
     package var description: String {
         [
+            surface.description,
             "syncobj: \(syncobj)",
             "fifo: \(fifo)",
             "commitTiming: \(commitTiming)",
@@ -235,6 +275,7 @@ package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
             "gbm: \(gbm)",
             "egl: \(egl)",
             "presentationFeedback: \(presentationFeedback)",
+            "backing: \(backing)",
             "contentType: \(contentType)",
             "alphaModifier: \(alphaModifier)",
             "tearingControl: \(tearingControl)",

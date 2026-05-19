@@ -4,7 +4,7 @@ package enum SmokeRunner {
     package static func run(configuration: SmokeConfiguration = .init()) throws -> SmokeResult {
         let session = try DisplaySession.connect()
         let capabilities = session.capabilitiesOnOwnerThread()
-        let runtimeFacts = runtimeFacts(capabilities: capabilities, session: session)
+        var runtimeFacts = runtimeFacts(capabilities: capabilities, session: session)
         for optionalProtocol in configuration.requestedOptionalProtocols {
             guard
                 isAdvertised(
@@ -31,6 +31,8 @@ package enum SmokeRunner {
         try window.show(timeoutMilliseconds: configuration.timeoutMilliseconds) { frame in
             fill(frame)
         }
+        runtimeFacts.surface = try surfaceFacts(for: window)
+        runtimeFacts.backing = .shm
 
         try session.pumpEvents(
             timeoutMilliseconds: configuration.postCommitPumpMilliseconds
@@ -107,6 +109,15 @@ package enum SmokeRunner {
                 capabilities: capabilities,
                 session: session
             )
+        )
+    }
+
+    private static func surfaceFacts(for window: TopLevelWindow) throws -> SmokeSurfaceFacts {
+        let geometry = try window.geometryOnOwnerThread
+        let state = try window.stateSnapshotOnOwnerThread
+        return SmokeSurfaceFacts(
+            scale: geometry.scale.description,
+            outputs: state.outputs.count
         )
     }
 
