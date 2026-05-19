@@ -1861,6 +1861,26 @@ struct swl_test_commit_timing_destroy_record {
     void                                   *object;
 };
 
+enum swl_test_presentation_request_kind {
+    SWL_TEST_PRESENTATION_REQUEST_NONE = 0,
+    SWL_TEST_PRESENTATION_FEEDBACK = 1,
+    SWL_TEST_PRESENTATION_DESTROY = 2,
+    SWL_TEST_PRESENTATION_FEEDBACK_DESTROY = 3,
+};
+
+struct swl_test_presentation_request_record {
+    int32_t                                 call_count;
+    enum swl_test_presentation_request_kind kind;
+    void                                   *object;
+    void                                   *surface;
+    void                                   *feedback;
+};
+
+struct swl_test_presentation_listener_record {
+    int32_t call_count;
+    void   *object;
+};
+
 enum swl_test_dmabuf_request_kind {
     SWL_TEST_DMABUF_REQUEST_NONE = 0,
     SWL_TEST_DMABUF_GET_DEFAULT_FEEDBACK = 1,
@@ -2217,6 +2237,27 @@ struct swl_test_commit_timing_request_record
 swl_test_commit_timing_request_record(void);
 struct swl_test_commit_timing_destroy_record
 swl_test_commit_timing_destroy_record(void);
+
+void swl_test_presentation_request_recording_begin(void);
+void swl_test_presentation_request_recording_end(void);
+struct swl_test_presentation_request_record
+swl_test_presentation_request_record(void);
+
+void swl_test_presentation_listener_recording_begin(void);
+void swl_test_presentation_listener_recording_end(void);
+struct swl_test_presentation_listener_record
+swl_test_presentation_listener_record(void);
+int swl_test_presentation_feedback_listener_emit_sync_output(
+    struct wl_output *output);
+int swl_test_presentation_feedback_listener_emit_presented(
+    uint32_t tv_sec_hi,
+    uint32_t tv_sec_lo,
+    uint32_t tv_nsec,
+    uint32_t refresh,
+    uint32_t seq_hi,
+    uint32_t seq_lo,
+    uint32_t flags);
+int swl_test_presentation_feedback_listener_emit_discarded(void);
 
 void swl_test_dmabuf_request_recording_begin(void);
 void swl_test_dmabuf_request_recording_end(void);

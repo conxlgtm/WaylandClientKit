@@ -308,12 +308,12 @@ struct GPUWindowRuntimePathSnapshotTests {
     }
 
     @Test
-    func runtimePathSnapshotReportsRequestedMetadata() {
+    func runtimePathSnapshotReportsRequestedMetadata() throws {
         let metadata = SurfaceCommitMetadata(
             contentType: .game,
             alpha: SurfaceAlphaMetadata(multiplier: .opaque),
             colorRepresentation: SurfaceColorRepresentation(alphaMode: .straight),
-            colorDescription: SurfaceColorDescriptionReference(identity: 1),
+            colorDescription: try SurfaceColorDescriptionReference(identity: 1),
             presentationHint: .async
         )
         let snapshot = GPURuntimePathSnapshot.afterPresentation(

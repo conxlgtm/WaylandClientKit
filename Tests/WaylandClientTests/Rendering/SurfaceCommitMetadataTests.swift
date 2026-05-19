@@ -15,7 +15,7 @@ struct SurfaceCommitMetadataTests {
     }
 
     @Test
-    func metadataRejectsUnavailableCapabilities() {
+    func metadataRejectsUnavailableCapabilities() throws {
         #expect(throws: SurfaceCommitMetadataError.contentTypeUnavailable) {
             try SurfaceCommitMetadata(contentType: .video)
                 .validate(capabilities: metadataCapabilities())
@@ -36,7 +36,7 @@ struct SurfaceCommitMetadataTests {
         }
         #expect(throws: SurfaceCommitMetadataError.colorUnavailable) {
             try SurfaceCommitMetadata(
-                colorDescription: SurfaceColorDescriptionReference(identity: 7)
+                colorDescription: try SurfaceColorDescriptionReference(identity: 7)
             ).validate(capabilities: metadataCapabilities())
         }
     }
@@ -54,7 +54,7 @@ struct SurfaceCommitMetadataTests {
                 ),
                 chromaLocation: .type1
             ),
-            colorDescription: SurfaceColorDescriptionReference(identity: 9),
+            colorDescription: try SurfaceColorDescriptionReference(identity: 9),
             presentationHint: .async
         )
 
@@ -173,7 +173,7 @@ struct SurfaceCommitMetadataTests {
             defer { swl_test_metadata_request_recording_end() }
 
             var objects = SurfaceMetadataObjects()
-            let missingReference = SurfaceColorDescriptionReference(identity: 7)
+            let missingReference = try SurfaceColorDescriptionReference(identity: 7)
             objects.installContentType(try testContentTypeSurface(pointer: 0xD001))
             objects.installColorManagement(try testColorManagementSurface(pointer: 0xD002))
 
@@ -198,15 +198,8 @@ struct SurfaceCommitMetadataTests {
             swl_test_metadata_request_recording_begin()
             defer { swl_test_metadata_request_recording_end() }
 
-            var objects = SurfaceMetadataObjects()
-            let reference = SurfaceColorDescriptionReference(identity: 8)
-            objects.installContentType(try testContentTypeSurface(pointer: 0xD101))
-            objects.installColorManagement(try testColorManagementSurface(pointer: 0xD102))
-            objects.installColorDescription(
-                try testImageDescription(
-                    pointer: 0xD103,
-                    state: .ready(identity: reference.identity)
-                ),
+            let reference = try SurfaceColorDescriptionReference(identity: 8)
+            let objects = try metadataObjectsWithReadyColorDescription(
                 reference: reference
             )
 
@@ -243,13 +236,15 @@ struct SurfaceCommitMetadataTests {
 
             #expect(
                 throws: SurfaceCommitMetadataError.colorDescriptionUnavailable(
-                    SurfaceColorDescriptionReference(identity: 9)
+                    try SurfaceColorDescriptionReference(identity: 9)
                 )
             ) {
                 try objects.apply(
                     SurfaceCommitMetadata(
                         contentType: .game,
-                        colorDescription: SurfaceColorDescriptionReference(identity: 9)
+                        colorDescription: try SurfaceColorDescriptionReference(
+                            identity: 9
+                        )
                     ))
             }
 
@@ -265,7 +260,7 @@ struct SurfaceCommitMetadataTests {
             defer { swl_test_metadata_request_recording_end() }
 
             var objects = SurfaceMetadataObjects()
-            let reference = SurfaceColorDescriptionReference(identity: 10)
+            let reference = try SurfaceColorDescriptionReference(identity: 10)
             objects.installColorManagement(try testColorManagementSurface(pointer: 0xD302))
 
             #expect(
@@ -278,6 +273,26 @@ struct SurfaceCommitMetadataTests {
             #expect(unsafe swl_test_metadata_request_record().call_count == 0)
         }
     }
+}
+
+private func metadataObjectsWithReadyColorDescription(
+    reference: SurfaceColorDescriptionReference
+) throws -> SurfaceMetadataObjects {
+    var objects = SurfaceMetadataObjects()
+    objects.installContentType(try testContentTypeSurface(pointer: 0xD101))
+    objects.installColorManagement(try testColorManagementSurface(pointer: 0xD102))
+    objects.installColorDescription(
+        try testImageDescription(
+            pointer: 0xD103,
+            state: .ready(
+                identity: try RawImageDescriptionIdentity(
+                    reference.identity.rawValue
+                )
+            )
+        ),
+        reference: reference
+    )
+    return objects
 }
 
 private func metadataCapabilities(

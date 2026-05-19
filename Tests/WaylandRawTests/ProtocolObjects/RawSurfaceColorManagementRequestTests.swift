@@ -128,7 +128,11 @@ struct RawSurfaceColorManagementRequestTests {
             )
             #expect(
                 imageDescription.state
-                    == .ready(identity: 0x1122_3344_5566_7788)
+                    == .ready(
+                        identity: try RawImageDescriptionIdentity(
+                            0x1122_3344_5566_7788
+                        )
+                    )
             )
         }
     }
@@ -163,7 +167,17 @@ struct RawSurfaceColorManagementRequestTests {
             defer { imageDescription.destroy() }
 
             #expect(swl_test_image_description_listener_emit_ready(19) == 1)
-            #expect(imageDescription.state == .ready(identity: 19))
+            #expect(
+                imageDescription.state
+                    == .ready(identity: try RawImageDescriptionIdentity(19))
+            )
+        }
+    }
+
+    @Test
+    func readyImageDescriptionCannotBeConstructedWithZeroIdentity() {
+        #expect(throws: RawSurfaceMetadataError.invalidImageDescriptionIdentity) {
+            _ = try RawImageDescriptionIdentity(0)
         }
     }
 

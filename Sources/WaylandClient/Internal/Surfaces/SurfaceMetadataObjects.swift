@@ -170,7 +170,7 @@ struct SurfaceMetadataObjects {
         case .failed(let cause, let message):
             throw .colorDescriptionFailed(reference, cause: cause, message: message)
         case .ready(let identity):
-            guard identity == reference.identity else {
+            guard identity.rawValue == reference.identity.rawValue else {
                 throw .colorDescriptionUnavailable(reference)
             }
         }

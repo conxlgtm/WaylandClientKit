@@ -186,11 +186,27 @@ package struct SurfaceColorRepresentation: Equatable, Sendable {
     }
 }
 
-package struct SurfaceColorDescriptionReference: Equatable, Hashable, Sendable {
-    package let identity: UInt64
+package struct SurfaceImageDescriptionIdentity: Equatable, Hashable, Sendable {
+    package let rawValue: UInt64
 
-    package init(identity referenceIdentity: UInt64) {
+    package init(_ identity: UInt64) throws(SurfaceCommitMetadataError) {
+        guard identity != 0 else {
+            throw .invalidColorDescriptionIdentity(identity)
+        }
+
+        rawValue = identity
+    }
+}
+
+package struct SurfaceColorDescriptionReference: Equatable, Hashable, Sendable {
+    package let identity: SurfaceImageDescriptionIdentity
+
+    package init(identity referenceIdentity: SurfaceImageDescriptionIdentity) {
         identity = referenceIdentity
+    }
+
+    package init(identity referenceIdentity: UInt64) throws(SurfaceCommitMetadataError) {
+        identity = try SurfaceImageDescriptionIdentity(referenceIdentity)
     }
 }
 
@@ -296,6 +312,7 @@ package enum SurfaceCommitMetadataError: Error, Equatable, Sendable,
         cause: RawImageDescriptionFailureCause,
         message: String
     )
+    case invalidColorDescriptionIdentity(UInt64)
     case unsupportedContentType(SurfaceContentType)
     case unsupportedAlphaMode(SurfaceAlphaMode)
     case unsupportedCoefficientsAndRange(SurfaceMatrixCoefficientsAndRange)
@@ -326,12 +343,14 @@ package enum SurfaceCommitMetadataError: Error, Equatable, Sendable,
         case .colorManagementObjectUnavailable:
             "color management surface object is unavailable"
         case .colorDescriptionUnavailable(let reference):
-            "color description \(reference.identity) is unavailable"
+            "color description \(reference.identity.rawValue) is unavailable"
         case .colorDescriptionPending(let reference):
-            "color description \(reference.identity) is not ready"
+            "color description \(reference.identity.rawValue) is not ready"
         case .colorDescriptionFailed(let reference, let cause, let message):
-            "color description \(reference.identity) failed with cause "
+            "color description \(reference.identity.rawValue) failed with cause "
                 + "\(cause.rawValue): \(message)"
+        case .invalidColorDescriptionIdentity(let identity):
+            "color description identity \(identity) is invalid"
         case .unsupportedContentType(let contentType):
             "content type \(contentType.rawValue) is not supported for outbound commits"
         case .unsupportedAlphaMode(let alphaMode):
