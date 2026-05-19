@@ -139,8 +139,10 @@ extension GPURuntimePathSnapshot {
         var snapshot = afterCapabilityDiscovery(capabilities: capabilities)
         let runtimeReason = GPURuntimePathReason(failure)
         switch failure {
-        case .dmabufUnavailable, .compositorRejectedBuffer:
+        case .dmabufUnavailable:
             snapshot.dmabuf = .failed(runtimeReason)
+        case .compositorRejectedBuffer:
+            snapshot.dmabuf = snapshot.dmabuf.failed(runtimeReason)
         case .noCompatibleFormat, .noRenderNode, .gbmUnavailable,
             .gbmAllocationFailed:
             snapshot.gbm = .failed(runtimeReason)
@@ -152,7 +154,7 @@ extension GPURuntimePathSnapshot {
             snapshot.pacing = .failed(runtimeReason)
         case .metadataRequiredButUnavailable(let error):
             markMetadataRequirementFailure(error, in: &snapshot)
-        case .commitFailed:
+        case .commitFailed, .presentationTrackingFailed:
             snapshot.dmabuf = snapshot.dmabuf.failed(runtimeReason)
         }
         return snapshot
@@ -211,6 +213,8 @@ extension GPURuntimePathReason {
             self = .gbmUnavailable
         case .eglUnavailable:
             self = .eglUnavailable
+        case .compositorRejectedBuffer:
+            self = .compositorRejectedBuffer
         default:
             self = .dmabufUnavailable
         }
@@ -231,6 +235,12 @@ extension GPURuntimePathReason {
             self = .gbmUnavailable
         case .eglUnavailable:
             self = .eglUnavailable
+        case .compositorRejectedBuffer:
+            self = .compositorRejectedBuffer
+        case .commitFailed:
+            self = .commitFailed
+        case .presentationTrackingFailed:
+            self = .presentationTrackingFailed
         default:
             self = .dmabufUnavailable
         }

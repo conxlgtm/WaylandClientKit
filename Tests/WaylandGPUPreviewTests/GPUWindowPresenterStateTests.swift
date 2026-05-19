@@ -420,6 +420,26 @@ struct GPUWindowRuntimePathSnapshotTests {
     }
 
     @Test
+    func runtimePathReportsCompositorRejectedBuffer() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(),
+            failure: .compositorRejectedBuffer
+        )
+
+        #expect(snapshot.dmabuf == .failed(.compositorRejectedBuffer))
+    }
+
+    @Test
+    func runtimePathReportsCommitFailure() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(),
+            failure: .commitFailed
+        )
+
+        #expect(snapshot.dmabuf == .failed(.commitFailed))
+    }
+
+    @Test
     func runtimePathReportsContentTypeUnavailableForContentTypeRequirement() {
         let snapshot = GPURuntimePathSnapshot.afterFailure(
             capabilities: capabilitySnapshot(contentType: .unavailable),
@@ -886,7 +906,7 @@ struct GPUWindowPresenterLifecycleTests {
         let snapshot = presenter.backingStateSnapshot
 
         #expect(snapshot.lifecycle == .failed(.commitFailed))
-        #expect(snapshot.runtimePath.dmabuf == .failed(.dmabufUnavailable))
+        #expect(snapshot.runtimePath.dmabuf == .failed(.commitFailed))
         #expect(snapshot.runtimePath.gbm == .unavailable)
         #expect(presenter.runtimePathSnapshot == snapshot.runtimePath)
     }
@@ -895,18 +915,21 @@ struct GPUWindowPresenterLifecycleTests {
     func presenterPreservesPostCommitStateErrorWithoutCancelingLease() throws {
         let presenter = GPUWindowPresenter()
         let slotID = try GBMBufferPoolSlotID(0)
-        try presenter.installBuffer(try FakePresenterBuffer(pointer: 0x1001), slotID: slotID)
+        let buffer = try FakePresenterBuffer(pointer: 0x1001)
+        try presenter.installBuffer(buffer, slotID: slotID)
         let lease = try presenter.leaseNextForTesting()
+        try presenter.cancelLeaseForTesting(lease)
 
         do {
             _ = try presenter.recordPresentedFrameForTesting(
-                generation: 0,
-                commitPlan: surfaceCommitPlan(),
-                capabilities: capabilitySnapshot(),
+                try previewPresentationResult(),
                 lease: lease
             )
             Issue.record("Expected invalid generation to fail presentation recording")
-        } catch GPUWindowPresenterError.state(.pool(.invalidCommitGeneration(0))) {
+        } catch GPUWindowPresenterError.state(
+            .pool(.slotNotLeased(let failedSlotID, actual: .available))
+        ) {
+            #expect(failedSlotID == slotID)
             // Expected.
         } catch {
             Issue.record("Unexpected error: \(error)")
@@ -914,9 +937,37 @@ struct GPUWindowPresenterLifecycleTests {
 
         #expect(
             presenter.backingStateSnapshot.bufferPool
-                == .exhausted(installedSlots: 1, submittedSlots: 0)
+                == .exhausted(installedSlots: 1, submittedSlots: 1)
         )
-        #expect(presenter.backingStateSnapshot.lifecycle == .configuring)
+        #expect(
+            presenter.backingStateSnapshot.lifecycle
+                == .failed(.presentationTrackingFailed)
+        )
+        #expect(
+            presenter.backingStateSnapshot.diagnostics.last?.payload
+                == .failure(.presentationTrackingFailed)
+        )
+
+        buffer.triggerRelease()
+
+        #expect(
+            presenter.backingStateSnapshot.bufferPool
+                == .ready(installedSlots: 1, availableSlots: 1, submittedSlots: 0)
+        )
+        #expect(presenter.releaseFailuresSnapshot.isEmpty)
+    }
+
+    @Test
+    func previewBufferPresentationResultRejectsZeroGeneration() throws {
+        let commitPlan = try surfaceCommitPlan()
+
+        #expect(throws: PreviewBufferPresentationResultError.invalidGeneration(0)) {
+            try PreviewBufferPresentationResult(
+                generation: 0,
+                commitPlan: commitPlan,
+                capabilities: capabilitySnapshot()
+            )
+        }
     }
 
     @Test
@@ -976,6 +1027,17 @@ private func presentedFrame(
         synchronization: .implicit,
         pacing: .none,
         metadata: .default
+    )
+}
+
+private func previewPresentationResult(
+    generation: UInt64 = 1,
+    capabilities: SurfaceCapabilitySnapshot = capabilitySnapshot()
+) throws -> PreviewBufferPresentationResult {
+    try PreviewBufferPresentationResult(
+        generation: generation,
+        commitPlan: surfaceCommitPlan(),
+        capabilities: capabilities
     )
 }
 

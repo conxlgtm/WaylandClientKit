@@ -143,6 +143,7 @@ package enum GPUBufferSubmissionState: Equatable, Sendable {
     case leased
     case submittedImplicit(commitGeneration: UInt64)
     case submittedExplicit(commitGeneration: UInt64, releasePoint: GPUSyncPoint)
+    case committedUntracked
     case retired
 }
 
@@ -170,6 +171,9 @@ package enum GPURuntimePathReason: Equatable, Sendable {
     case colorRepresentationSupportPending
     case colorManagementUnavailable
     case presentationHintUnavailable
+    case compositorRejectedBuffer
+    case commitFailed
+    case presentationTrackingFailed
 }
 
 package enum GPUSynchronizationRuntimeStatus: Equatable, Sendable {

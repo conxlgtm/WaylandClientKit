@@ -1008,7 +1008,7 @@ extension TopLevelWindow {
             throw error
         }
 
-        return PreviewBufferPresentationResult(
+        return try PreviewBufferPresentationResult(
             generation: generation,
             commitPlan: commitPlan,
             capabilities: surfaceRuntime.capabilitySnapshot()

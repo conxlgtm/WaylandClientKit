@@ -54,6 +54,8 @@ package enum GPUWindowPresenterError: Error, CustomStringConvertible {
     case state(GPUWindowPresenterStateError)
     case missingBuffer(GBMBufferPoolSlotID)
     case releaseFailure(GPUWindowPresenterStateError)
+    case submitConstraints(SurfaceSubmitConstraintError)
+    case metadata(SurfaceCommitMetadataError)
     case window(any Error)
 
     package var description: String {
@@ -64,6 +66,10 @@ package enum GPUWindowPresenterError: Error, CustomStringConvertible {
             "missing GPU buffer for slot \(slotID.rawValue)"
         case .releaseFailure(let error):
             "GPU buffer release failed: \(error.description)"
+        case .submitConstraints(let error):
+            "GPU submit constraints failed: \(String(describing: error))"
+        case .metadata(let error):
+            "GPU metadata failed: \(error.description)"
         case .window(let error):
             "GPU window presentation failed: \(String(describing: error))"
         }
@@ -146,6 +152,8 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
             }
 
             return .submittedImplicit(commitGeneration: generation)
+        case .committedUntracked:
+            return .committedUntracked
         }
     }
 
@@ -210,13 +218,23 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
         }
     }
 
+    package mutating func markCommittedUntracked(
+        _ lease: GPUWindowPresentationLease
+    ) throws(GPUWindowPresenterStateError) {
+        try ensureLive()
+        explicitSubmissions.removeValue(forKey: lease.slotID)
+        try mapPoolError {
+            try poolState.markCommittedUntracked(lease.slotID)
+        }
+    }
+
     @discardableResult
     package mutating func markReleased(
         _ slotID: GBMBufferPoolSlotID
     ) throws(GPUWindowPresenterStateError) -> Bool {
         guard !isRetired else { return false }
         let lifecycle = try lifecycle(for: slotID)
-        guard case .submitted = lifecycle else { return false }
+        guard lifecycle.isInCompositorUse else { return false }
         guard explicitSubmissions[slotID] == nil else { return false }
 
         try mapPoolError {
@@ -231,7 +249,7 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
     ) throws(GPUWindowPresenterStateError) -> Bool {
         guard !isRetired else { return false }
         let lifecycle = try lifecycle(for: slotID)
-        guard case .submitted = lifecycle else { return false }
+        guard lifecycle.isInCompositorUse else { return false }
         explicitSubmissions.removeValue(forKey: slotID)
 
         try mapPoolError {
@@ -374,6 +392,20 @@ package final class GPUWindowPresenter {
                 operation: .submitConstraintApplication
             )
             throw GPUWindowPresenterError.state(error)
+        } catch let error as SurfaceSubmitConstraintError {
+            try cancelLeaseAfterFailedPresentation(lease)
+            recordBackingFailure(
+                GPUBackingFailure(error),
+                operation: .submitConstraintApplication
+            )
+            throw GPUWindowPresenterError.submitConstraints(error)
+        } catch let error as SurfaceCommitMetadataError {
+            try cancelLeaseAfterFailedPresentation(lease)
+            recordBackingFailure(
+                .metadataRequiredButUnavailable(error),
+                operation: .metadataSetup
+            )
+            throw GPUWindowPresenterError.metadata(error)
         } catch {
             try cancelLeaseAfterFailedPresentation(lease)
             recordBackingFailure(.commitFailed, operation: .surfaceCommit)
@@ -409,6 +441,47 @@ package final class GPUWindowPresenter {
         return (lease, buffer)
     }
 
+    private func cancelLeaseAfterFailedPresentation(
+        _ lease: GPUWindowPresentationLease
+    ) throws(GPUWindowPresenterError) {
+        do {
+            try state.cancelLease(lease)
+        } catch {
+            throw GPUWindowPresenterError.state(error)
+        }
+    }
+
+    package func recordExplicitReleaseSignal(
+        slotID: GBMBufferPoolSlotID
+    ) throws(GPUWindowPresenterError) {
+        do {
+            if try state.markExplicitReleaseSignaled(slotID) {
+                presentationCorrelation.remove(slotID: slotID)
+            }
+        } catch {
+            throw .state(error)
+        }
+    }
+
+    package func retireAll(reason: GPUWindowPresenterRetireReason) {
+        for buffer in buffers.values {
+            buffer.destroy()
+        }
+
+        buffers.removeAll()
+        releaseFailures.removeAll()
+        presentationCorrelation.removeAll()
+        runtimePath = .empty
+        state.retireAll(reason: reason)
+        backingState.markRetired()
+    }
+
+    deinit {
+        retireAll(reason: .windowClosed)
+    }
+}
+
+extension GPUWindowPresenter {
     private func recordSuccessfulPresentation(
         _ presentation: PreviewBufferPresentationResult,
         lease: GPUWindowPresentationLease,
@@ -461,7 +534,22 @@ package final class GPUWindowPresenter {
                 metadata: metadata
             )
         } catch {
+            markCommittedUntrackedAfterTrackingFailure(lease)
+            recordBackingFailure(
+                .presentationTrackingFailed,
+                operation: .presentationTracking
+            )
             throw GPUWindowPresenterError.state(error)
+        }
+    }
+
+    private func markCommittedUntrackedAfterTrackingFailure(
+        _ lease: GPUWindowPresentationLease
+    ) {
+        do {
+            try state.markCommittedUntracked(lease)
+        } catch {
+            releaseFailures.append(error)
         }
     }
 
@@ -473,16 +561,6 @@ package final class GPUWindowPresenter {
         runtimePath = backingState.runtimePath
     }
 
-    private func cancelLeaseAfterFailedPresentation(
-        _ lease: GPUWindowPresentationLease
-    ) throws(GPUWindowPresenterError) {
-        do {
-            try state.cancelLease(lease)
-        } catch {
-            throw GPUWindowPresenterError.state(error)
-        }
-    }
-
     private func recordRelease(_ slotID: GBMBufferPoolSlotID) {
         do {
             if try state.markReleased(slotID) {
@@ -491,35 +569,6 @@ package final class GPUWindowPresenter {
         } catch {
             releaseFailures.append(error)
         }
-    }
-
-    package func recordExplicitReleaseSignal(
-        slotID: GBMBufferPoolSlotID
-    ) throws(GPUWindowPresenterError) {
-        do {
-            if try state.markExplicitReleaseSignaled(slotID) {
-                presentationCorrelation.remove(slotID: slotID)
-            }
-        } catch {
-            throw .state(error)
-        }
-    }
-
-    package func retireAll(reason: GPUWindowPresenterRetireReason) {
-        for buffer in buffers.values {
-            buffer.destroy()
-        }
-
-        buffers.removeAll()
-        releaseFailures.removeAll()
-        presentationCorrelation.removeAll()
-        runtimePath = .empty
-        state.retireAll(reason: reason)
-        backingState.markRetired()
-    }
-
-    deinit {
-        retireAll(reason: .windowClosed)
     }
 }
 
@@ -531,21 +580,21 @@ extension GPUWindowPresenter {
         return lease
     }
 
+    package func cancelLeaseForTesting(
+        _ lease: GPUWindowPresentationLease
+    ) throws(GPUWindowPresenterError) {
+        try cancelLeaseAfterFailedPresentation(lease)
+    }
+
     package func recordPresentedFrameForTesting(
-        generation: UInt64,
-        commitPlan: SurfaceCommitPlan,
-        capabilities: SurfaceCapabilitySnapshot,
+        _ presentation: PreviewBufferPresentationResult,
         lease: GPUWindowPresentationLease,
         synchronization: GPUBufferSubmissionSynchronization = .implicit,
         pacing: SurfacePacingConstraint = .none,
         metadata: SurfaceCommitMetadata = .default
     ) throws(GPUWindowPresenterError) -> GPUWindowPresentedFrame {
         try recordPresentedFrameAfterCommit(
-            PreviewBufferPresentationResult(
-                generation: generation,
-                commitPlan: commitPlan,
-                capabilities: capabilities
-            ),
+            presentation,
             lease: lease,
             synchronization: synchronization,
             pacing: pacing,
