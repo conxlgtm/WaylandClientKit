@@ -105,7 +105,7 @@ struct SurfaceColorMetadataReadinessTests {
     }
 
     @Test
-    func colorDescriptionResolutionInstallsPreferredDescriptionBeforeApply() async throws {
+    func pendingImageDescriptionCannotBeCommitted() async throws {
         try await withColorManagerAndSurface { manager, surface in
             var runtime = SurfaceRuntime<RoleToken>(
                 role: .toplevelWindow,
@@ -119,23 +119,82 @@ struct SurfaceColorMetadataReadinessTests {
                 using: manager,
                 surface: surface
             )
+            #expect(!runtime.hasColorDescription(reference))
+
+            #expect(
+                throws: SurfaceCommitMetadataError.colorDescriptionPending(reference)
+            ) {
+                try runtime.applyCommitMetadata(
+                    SurfaceCommitMetadata(colorDescription: reference)
+                )
+            }
+        }
+    }
+
+    @Test
+    func readyImageDescriptionCanBeCommitted() async throws {
+        try await withColorManagerAndSurface { manager, surface in
+            var runtime = SurfaceRuntime<RoleToken>(
+                role: .toplevelWindow,
+                surfaceID: surface.objectID
+            )
+            let reference = SurfaceColorDescriptionReference(identity: 11)
+            runtime.installColorManagementObject(try manager.surface(for: surface))
+
+            try runtime.resolveColorDescriptionIfNeeded(
+                reference,
+                using: manager,
+                surface: surface
+            )
+            #expect(
+                swl_test_image_description_listener_emit_ready2(
+                    0,
+                    UInt32(reference.identity)
+                ) == 1
+            )
             #expect(runtime.hasColorDescription(reference))
 
             try runtime.applyCommitMetadata(
                 SurfaceCommitMetadata(colorDescription: reference)
             )
 
-            let record = unsafe swl_test_metadata_request_record()
-            #expect(unsafe record.call_count == 4)
-            #expect(
-                unsafe record.kind
-                    == SWL_TEST_METADATA_COLOR_SURFACE_SET_IMAGE_DESCRIPTION
+            expectColorDescriptionSetRequest()
+        }
+    }
+
+    @Test
+    func failedImageDescriptionIsRejectedWithCause() async throws {
+        try await withColorManagerAndSurface { manager, surface in
+            var runtime = SurfaceRuntime<RoleToken>(
+                role: .toplevelWindow,
+                surfaceID: surface.objectID
             )
-            #expect(unsafe record.object == UnsafeMutableRawPointer(bitPattern: 0xC706))
-            #expect(
-                unsafe record.image_description
-                    == UnsafeMutableRawPointer(bitPattern: 0xC708)
+            let reference = SurfaceColorDescriptionReference(identity: 12)
+            runtime.installColorManagementObject(try manager.surface(for: surface))
+
+            try runtime.resolveColorDescriptionIfNeeded(
+                reference,
+                using: manager,
+                surface: surface
             )
+            #expect(
+                unsafe swl_test_image_description_listener_emit_failed(
+                    RawImageDescriptionFailureCause.noOutput.rawValue,
+                    "gone"
+                ) == 1
+            )
+
+            #expect(
+                throws: SurfaceCommitMetadataError.colorDescriptionFailed(
+                    reference,
+                    cause: .noOutput,
+                    message: "gone"
+                )
+            ) {
+                try runtime.applyCommitMetadata(
+                    SurfaceCommitMetadata(colorDescription: reference)
+                )
+            }
         }
     }
 }
@@ -220,6 +279,18 @@ private func emitColorRepresentationCoefficientsAndRange(
     swl_test_color_representation_listener_emit_supported_coefficients_and_ranges(
         coefficients.rawValue,
         range.rawValue
+    )
+}
+
+private func expectColorDescriptionSetRequest() {
+    let record = unsafe swl_test_metadata_request_record()
+    #expect(unsafe record.call_count == 4)
+    #expect(
+        unsafe record.kind == SWL_TEST_METADATA_COLOR_SURFACE_SET_IMAGE_DESCRIPTION
+    )
+    #expect(unsafe record.object == UnsafeMutableRawPointer(bitPattern: 0xC706))
+    #expect(
+        unsafe record.image_description == UnsafeMutableRawPointer(bitPattern: 0xC708)
     )
 }
 

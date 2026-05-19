@@ -69,6 +69,19 @@ extension SurfaceRuntime {
         }
     }
 
+    func tracksColorDescription(
+        _ reference: SurfaceColorDescriptionReference
+    ) -> Bool {
+        switch phase {
+        case .unassigned(let objects),
+            .live(_, let objects),
+            .roleDestroyed(let objects):
+            objects.metadataObjects.tracksColorDescription(reference)
+        case .surfaceDestroyed:
+            false
+        }
+    }
+
     mutating func setContentTypeCapability(_ capability: SurfaceCapabilityStatus) {
         contentTypeCapability = capability
     }
@@ -142,7 +155,7 @@ extension SurfaceRuntime {
         using manager: RawColorManager,
         surface: RawSurface
     ) throws {
-        guard !hasColorDescription(reference) else { return }
+        guard !tracksColorDescription(reference) else { return }
 
         let feedback = try manager.surfaceFeedback(for: surface)
         defer { feedback.destroy() }
@@ -163,6 +176,21 @@ extension SurfaceRuntime {
             try objects.metadataObjects.apply(metadata)
         case .roleDestroyed(let objects):
             try objects.metadataObjects.apply(metadata)
+        case .surfaceDestroyed:
+            return
+        }
+    }
+
+    func preflightCommitMetadata(
+        _ metadata: SurfaceCommitMetadata
+    ) throws(SurfaceCommitMetadataError) {
+        switch phase {
+        case .unassigned(let objects):
+            _ = try objects.metadataObjects.preflight(metadata)
+        case .live(_, let objects):
+            _ = try objects.metadataObjects.preflight(metadata)
+        case .roleDestroyed(let objects):
+            _ = try objects.metadataObjects.preflight(metadata)
         case .surfaceDestroyed:
             return
         }

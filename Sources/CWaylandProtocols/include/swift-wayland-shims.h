@@ -900,6 +900,20 @@ typedef void (*swl_wp_color_manager_v1_supported_primaries_named_fn)(
 typedef void (*swl_wp_color_manager_v1_done_fn)(
     void *data,
     struct wp_color_manager_v1 *manager);
+typedef void (*swl_wp_image_description_v1_failed_fn)(
+    void *data,
+    struct wp_image_description_v1 *image_description,
+    uint32_t cause,
+    const char *message);
+typedef void (*swl_wp_image_description_v1_ready_fn)(
+    void *data,
+    struct wp_image_description_v1 *image_description,
+    uint32_t identity);
+typedef void (*swl_wp_image_description_v1_ready2_fn)(
+    void *data,
+    struct wp_image_description_v1 *image_description,
+    uint32_t identity_hi,
+    uint32_t identity_lo);
 
 /* Text input */
 typedef void (*swl_text_input_v3_enter_fn)(
@@ -1179,6 +1193,13 @@ struct swl_wp_color_manager_v1_listener_callbacks {
     void                                                *data;
 };
 
+struct swl_wp_image_description_v1_listener_callbacks {
+    swl_wp_image_description_v1_failed_fn failed;
+    swl_wp_image_description_v1_ready_fn  ready;
+    swl_wp_image_description_v1_ready2_fn ready2;
+    void                                 *data;
+};
+
 struct swl_text_input_v3_listener_callbacks {
     swl_text_input_v3_enter_fn                   enter;
     swl_text_input_v3_leave_fn                   leave;
@@ -1333,6 +1354,10 @@ int swl_wp_color_representation_manager_v1_add_listener(
 int swl_wp_color_manager_v1_add_listener(
     struct wp_color_manager_v1 *manager,
     const struct swl_wp_color_manager_v1_listener_callbacks *callbacks);
+
+int swl_wp_image_description_v1_add_listener(
+    struct wp_image_description_v1 *image_description,
+    const struct swl_wp_image_description_v1_listener_callbacks *callbacks);
 
 int swl_text_input_v3_add_listener(
     struct zwp_text_input_v3 *text_input,
@@ -2012,6 +2037,13 @@ int swl_test_color_representation_listener_emit_supported_coefficients_and_range
     uint32_t coefficients,
     uint32_t range);
 int swl_test_color_representation_listener_emit_done(void);
+int swl_test_image_description_listener_emit_ready(uint32_t identity);
+int swl_test_image_description_listener_emit_ready2(
+    uint32_t identity_hi,
+    uint32_t identity_lo);
+int swl_test_image_description_listener_emit_failed(
+    uint32_t cause,
+    const char *message);
 void swl_test_buffer_listener_recording_begin(void);
 void swl_test_buffer_listener_recording_end(void);
 

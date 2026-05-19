@@ -100,6 +100,29 @@ struct SurfaceSubmitConstraintsTests {
     }
 
     @Test
+    func explicitSyncShapeRejectsMissingPointsBeforeCapabilityMutation() throws {
+        let constraints = SurfaceSubmitConstraints(
+            synchronization: .explicit(
+                acquire: nil,
+                release: syncPoint(timeline: 1, point: 1)
+            ),
+            pacing: .none
+        )
+
+        #expect(throws: SurfaceSubmitConstraintError.acquirePointRequired) {
+            try constraints.validateShape(
+                payload: .buffer(
+                    RawSurfaceBuffer(
+                        pointer: try unsafe #require(
+                            OpaquePointer(bitPattern: 0x5C01)
+                        )
+                    )
+                )
+            )
+        }
+    }
+
+    @Test
     func explicitSyncRequiresReleasePointForBufferCommit() throws {
         let constraints = SurfaceSubmitConstraints(
             synchronization: .explicit(

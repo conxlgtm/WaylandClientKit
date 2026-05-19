@@ -6,8 +6,7 @@ struct SurfaceMetadataObjects {
     private var tearingControl: RawTearingControl?
     private var colorRepresentation: RawColorRepresentationSurface?
     private var colorManagement: RawColorManagementSurface?
-    private var colorDescriptions: [SurfaceColorDescriptionReference: RawImageDescription] =
-        [:]
+    private var colorDescriptions: [SurfaceColorDescriptionReference: RawImageDescription] = [:]
 
     var hasContentType: Bool {
         contentType != nil
@@ -30,6 +29,13 @@ struct SurfaceMetadataObjects {
     }
 
     func hasColorDescription(_ reference: SurfaceColorDescriptionReference) -> Bool {
+        guard case .ready = colorDescriptions[reference]?.state else {
+            return false
+        }
+        return true
+    }
+
+    func tracksColorDescription(_ reference: SurfaceColorDescriptionReference) -> Bool {
         colorDescriptions[reference] != nil
     }
 
@@ -156,6 +162,17 @@ struct SurfaceMetadataObjects {
         }
         guard let imageDescription = colorDescriptions[reference] else {
             throw .colorDescriptionUnavailable(reference)
+        }
+
+        switch imageDescription.state {
+        case .pending:
+            throw .colorDescriptionPending(reference)
+        case .failed(let cause, let message):
+            throw .colorDescriptionFailed(reference, cause: cause, message: message)
+        case .ready(let identity):
+            guard identity == 0 || identity == reference.identity else {
+                throw .colorDescriptionUnavailable(reference)
+            }
         }
 
         return (colorManagement, imageDescription)
