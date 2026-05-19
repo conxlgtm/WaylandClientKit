@@ -66,18 +66,22 @@ struct RawSubmitConstraintTests {
     func importTimelineSuccessTransfersAndClosesLocalDescriptor() async throws {
         try await withSyncobjManagerRecording { manager in
             let descriptors = try RawFileDescriptor.pipeDescriptors()
-            close(descriptors.readEnd)
+            defer { close(descriptors.readEnd) }
             var descriptor = try RawDrmSyncobjTimelineFD(adopting: descriptors.writeEnd)
 
             let timeline = try manager.importTimeline(fileDescriptor: &descriptor)
             defer { timeline.destroy() }
             let descriptorIsClosed = descriptor.isClosed
+            let writeEndClosed = pipeWriteEndIsClosed(readEnd: descriptors.readEnd)
+            if !writeEndClosed {
+                close(descriptors.writeEnd)
+            }
 
             let record = unsafe swl_test_syncobj_request_record()
             #expect(unsafe record.kind == SWL_TEST_SYNCOBJ_IMPORT_TIMELINE)
             #expect(unsafe record.fd == descriptors.writeEnd)
             #expect(descriptorIsClosed)
-            #expect(!fileDescriptorIsOpen(descriptors.writeEnd))
+            #expect(writeEndClosed)
         }
     }
 
@@ -85,7 +89,7 @@ struct RawSubmitConstraintTests {
     func importTimelineFailureClosesReleasedDescriptor() async throws {
         try await withSyncobjManagerRecording { manager in
             let descriptors = try RawFileDescriptor.pipeDescriptors()
-            close(descriptors.readEnd)
+            defer { close(descriptors.readEnd) }
             var descriptor = try RawDrmSyncobjTimelineFD(adopting: descriptors.writeEnd)
 
             swl_test_syncobj_import_timeline_set_failure(1)
@@ -94,10 +98,14 @@ struct RawSubmitConstraintTests {
                 _ = try manager.importTimeline(fileDescriptor: &descriptor)
             }
             let descriptorIsClosed = descriptor.isClosed
+            let writeEndClosed = pipeWriteEndIsClosed(readEnd: descriptors.readEnd)
+            if !writeEndClosed {
+                close(descriptors.writeEnd)
+            }
             let record = unsafe swl_test_syncobj_request_record()
             #expect(unsafe record.kind == SWL_TEST_SYNCOBJ_IMPORT_TIMELINE)
             #expect(descriptorIsClosed)
-            #expect(!fileDescriptorIsOpen(descriptors.writeEnd))
+            #expect(writeEndClosed)
         }
     }
 
@@ -152,4 +160,35 @@ private func withSyncobjManagerRecording(
 
 private func fileDescriptorIsOpen(_ fileDescriptor: Int32) -> Bool {
     fcntl(fileDescriptor, F_GETFD) != -1
+}
+
+private func pipeWriteEndIsClosed(readEnd: Int32) -> Bool {
+    let flags = fcntl(readEnd, F_GETFL)
+    guard flags != -1 else { return false }
+
+    guard fcntl(readEnd, F_SETFL, flags | O_NONBLOCK) != -1 else {
+        return false
+    }
+    defer { _ = fcntl(readEnd, F_SETFL, flags) }
+
+    var byte: UInt8 = 0
+    while true {
+        let readCount = unsafe withUnsafeMutableBytes(of: &byte) { byteBuffer in
+            unsafe Glibc.read(readEnd, byteBuffer.baseAddress, 1)
+        }
+
+        if readCount == 0 {
+            return true
+        }
+        if readCount > 0 {
+            return false
+        }
+        if errno == EINTR {
+            continue
+        }
+        if errno == EAGAIN || errno == EWOULDBLOCK {
+            return false
+        }
+        return false
+    }
 }

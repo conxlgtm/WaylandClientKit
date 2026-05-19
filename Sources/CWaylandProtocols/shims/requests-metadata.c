@@ -726,14 +726,20 @@ static void swl_test_color_manager_destroy_record(
 #define swl_color_representation_manager_destroy_impl \
     wp_color_representation_manager_v1_destroy
 #define swl_color_manager_get_surface_impl wp_color_manager_v1_get_surface
+#define swl_color_manager_get_surface_feedback_impl \
+    wp_color_manager_v1_get_surface_feedback
 #define swl_color_manager_get_image_description_impl \
     wp_color_manager_v1_get_image_description
+#define swl_color_management_surface_feedback_get_preferred_impl \
+    wp_color_management_surface_feedback_v1_get_preferred
 #define swl_color_management_surface_set_image_description_impl \
     wp_color_management_surface_v1_set_image_description
 #define swl_color_management_surface_unset_image_description_impl \
     wp_color_management_surface_v1_unset_image_description
 #define swl_color_management_surface_destroy_impl \
     wp_color_management_surface_v1_destroy
+#define swl_color_management_surface_feedback_destroy_impl \
+    wp_color_management_surface_feedback_v1_destroy
 #define swl_image_description_destroy_impl wp_image_description_v1_destroy
 #define swl_color_manager_destroy_impl wp_color_manager_v1_destroy
 #endif
