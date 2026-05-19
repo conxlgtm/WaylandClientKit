@@ -338,14 +338,7 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
             return .failed(unavailable)
         }
         if let fallback {
-            switch fallback {
-            case .forcedSoftware:
-                return .active
-            case .dmabufUnavailable, .noCompatibleFormat, .noRenderNode,
-                .gbmUnavailable, .eglUnavailable, .explicitSyncRequiredButUnavailable,
-                .metadataRequiredButUnavailable, .compositorRejectedBuffer:
-                return .fallback(fallback)
-            }
+            return .fallback(fallback)
         }
         return .advertised
     }

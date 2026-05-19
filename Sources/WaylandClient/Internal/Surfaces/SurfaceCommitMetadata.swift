@@ -235,7 +235,7 @@ package struct SurfaceCommitMetadata: Equatable, Sendable {
         presentationHint = surfacePresentationHint
     }
 
-    func validate(capabilities: SurfaceCapabilitySnapshot)
+    package func validate(capabilities: SurfaceCapabilitySnapshot)
         throws(SurfaceCommitMetadataError)
     {
         if contentType != nil, capabilities.contentType == .unavailable {

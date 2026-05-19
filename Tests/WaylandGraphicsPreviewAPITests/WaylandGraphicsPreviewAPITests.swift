@@ -113,4 +113,51 @@ struct WaylandGraphicsPreviewAPITests {
         #expect(path.dmabuf == .fallback(.dmabufUnavailable))
         #expect(path.fallback == .dmabufUnavailable)
     }
+
+    @Test
+    func forceSoftwareProjectedRuntimePathReportsSoftwareFallback() {
+        let path = WaylandGraphicsRuntimePath.projected(
+            capabilities: gpuCapableSurfaceCapabilities(),
+            policy: .forceSoftware
+        )
+
+        #expect(path.backing == .fallback(.forcedSoftware))
+        #expect(path.dmabuf == .fallback(.forcedSoftware))
+        #expect(path.fallback == .forcedSoftware)
+    }
+
+    @Test
+    func forceSoftwareDecisionAndProjectedPathAgree() {
+        let capabilities = gpuCapableSurfaceCapabilities()
+        let decision = WaylandGraphicsFallbackPolicy.forceSoftware.decide(
+            capabilities: capabilities
+        )
+        let path = WaylandGraphicsRuntimePath.projected(
+            capabilities: capabilities,
+            policy: .forceSoftware
+        )
+
+        #expect(decision == .software(.forcedSoftware))
+        #expect(path.backing == .fallback(.forcedSoftware))
+        #expect(path.fallback == .forcedSoftware)
+    }
+}
+
+private func gpuCapableSurfaceCapabilities() -> WaylandGraphicsSurfaceCapabilities {
+    WaylandGraphicsSurfaceCapabilities(
+        dmabuf: .available(version: 4),
+        explicitSync: .available(version: 1),
+        framePacing: WaylandGraphicsFramePacingAvailability(
+            fifo: .available(version: 1),
+            commitTiming: .available(version: 1)
+        ),
+        colorMetadata: WaylandGraphicsColorMetadataAvailability(
+            contentType: .available(version: 1),
+            alphaModifier: .available(version: 1),
+            tearingControl: .available(version: 1),
+            colorRepresentation: .available(version: 1),
+            colorManagement: .available(version: 1)
+        ),
+        presentationFeedback: .available(version: 1)
+    )
 }

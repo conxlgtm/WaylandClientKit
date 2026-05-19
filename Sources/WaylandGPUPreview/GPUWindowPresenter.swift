@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 import WaylandClient
 import WaylandGraphicsCore
 import WaylandRaw
@@ -295,7 +296,6 @@ package final class GPUWindowPresenter {
 
     package var backingStateSnapshot: GPUWindowBackingState {
         var snapshot = backingState
-        snapshot.runtimePath = runtimePath
         snapshot.bufferPool = state.bufferPoolReadiness
         return snapshot
     }
@@ -368,21 +368,21 @@ package final class GPUWindowPresenter {
             )
         } catch let error as GBMBufferPoolStateError {
             try cancelLeaseAfterFailedPresentation(lease)
-            backingState.markFailed(
+            recordBackingFailure(
                 .gbmAllocationFailed,
                 operation: .gbmAllocation
             )
             throw GPUWindowPresenterError.state(.pool(error))
         } catch let error as GPUWindowPresenterStateError {
             try cancelLeaseAfterFailedPresentation(lease)
-            backingState.markFailed(
+            recordBackingFailure(
                 .submitConstraintRejected,
                 operation: .submitConstraintApplication
             )
             throw GPUWindowPresenterError.state(error)
         } catch {
             try cancelLeaseAfterFailedPresentation(lease)
-            backingState.markFailed(.commitFailed, operation: .surfaceCommit)
+            recordBackingFailure(.commitFailed, operation: .surfaceCommit)
             throw GPUWindowPresenterError.window(error)
         }
     }
@@ -447,6 +447,14 @@ package final class GPUWindowPresenter {
         return frame
     }
 
+    private func recordBackingFailure(
+        _ failure: GPUBackingFailure,
+        operation: GPUBackingOperation
+    ) {
+        backingState.markFailed(failure, operation: operation)
+        runtimePath = backingState.runtimePath
+    }
+
     private func cancelLeaseAfterFailedPresentation(
         _ lease: GPUWindowPresentationLease
     ) throws(GPUWindowPresenterError) {
@@ -494,5 +502,34 @@ package final class GPUWindowPresenter {
 
     deinit {
         retireAll(reason: .windowClosed)
+    }
+}
+
+extension GPUWindowPresenter {
+    package func markReadyForTesting(
+        capabilities: SurfaceCapabilitySnapshot,
+        synchronization: GPUBufferSubmissionSynchronization = .implicit,
+        pacing: SurfacePacingConstraint = .none,
+        metadata: SurfaceCommitMetadata = .default
+    ) {
+        runtimePath = .afterPresentation(
+            capabilities: capabilities,
+            synchronization: synchronization,
+            pacing: pacing,
+            metadata: metadata
+        )
+        backingState.markReady(
+            runtimePath: runtimePath,
+            capabilities: capabilities,
+            bufferPool: state.bufferPoolReadiness,
+            frame: nil
+        )
+    }
+
+    package func markFailureForTesting(
+        _ failure: GPUBackingFailure,
+        operation: GPUBackingOperation
+    ) {
+        recordBackingFailure(failure, operation: operation)
     }
 }
