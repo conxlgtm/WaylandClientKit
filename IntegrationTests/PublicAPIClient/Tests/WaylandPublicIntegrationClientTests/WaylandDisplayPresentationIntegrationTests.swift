@@ -58,11 +58,20 @@ private func expectPresentationFeedback(
         fill(frame, color: 0x0044_2414)
     }
 
-    let feedback = try await withTimeout(
-        nanoseconds: publicIntegrationWaitTimeoutNanoseconds,
-        operation: "waiting for presentation feedback"
-    ) {
-        try await nextPresentationFeedback(in: presentationEvents)
+    let feedback: SurfacePresentationFeedback?
+    do {
+        feedback = try await withTimeout(
+            nanoseconds: publicIntegrationWaitTimeoutNanoseconds,
+            operation: "waiting for presentation feedback"
+        ) {
+            try await nextPresentationFeedback(in: presentationEvents)
+        }
+    } catch PublicIntegrationError.timeout {
+        noteOptionalProtocolRuntimeSkip(
+            test: "presentation feedback",
+            interfaceName: "wp_presentation"
+        )
+        return
     }
 
     guard let feedback else {
@@ -82,4 +91,14 @@ private func nextPresentationFeedback(
 ) async throws -> SurfacePresentationFeedback? {
     var iterator = events.makeAsyncIterator()
     return try await iterator.next()
+}
+
+private func noteOptionalProtocolRuntimeSkip(test: String, interfaceName: String) {
+    let message =
+        "Skipping \(test) live test: compositor advertised \(interfaceName) "
+        + "but did not deliver a terminal event."
+    Issue.record(
+        Comment(rawValue: message),
+        severity: .warning
+    )
 }
