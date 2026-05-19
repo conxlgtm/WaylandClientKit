@@ -24,6 +24,11 @@ extension GPURuntimePathSnapshot {
                 requested: false,
                 missingReason: .alphaModifierUnavailable
             ),
+            tearingControl: capabilityStatus(
+                capabilities.tearingControl,
+                requested: false,
+                missingReason: .presentationHintUnavailable
+            ),
             colorRepresentation: colorRepresentationStatus(
                 capabilities.colorRepresentation,
                 requested: false
@@ -86,6 +91,11 @@ extension GPURuntimePathSnapshot {
             requested: metadata.alpha != nil,
             missingReason: .alphaModifierUnavailable
         )
+        snapshot.tearingControl = capabilityStatus(
+            capabilities.tearingControl,
+            requested: metadata.presentationHint != nil,
+            missingReason: .presentationHintUnavailable
+        )
         snapshot.colorRepresentation = colorRepresentationStatus(
             capabilities.colorRepresentation,
             requested: metadata.colorRepresentation != nil
@@ -110,16 +120,14 @@ extension GPURuntimePathSnapshot {
         if reason == .explicitSyncRequiredButUnavailable {
             snapshot.synchronization = .explicitFallback(runtimeReason)
         }
-        if reason == .pacingRequiredButUnavailable {
+        if case .fifoRequiredButUnavailable = reason {
             snapshot.pacing = .fallback(runtimeReason)
         }
-        if reason == .metadataRequiredButUnavailable {
-            snapshot.contentType = snapshot.contentType.fallback(runtimeReason)
-            snapshot.alpha = snapshot.alpha.fallback(runtimeReason)
-            snapshot.colorRepresentation = snapshot.colorRepresentation.fallback(
-                runtimeReason
-            )
-            snapshot.colorManagement = snapshot.colorManagement.fallback(runtimeReason)
+        if case .commitTimingRequiredButUnavailable = reason {
+            snapshot.pacing = .fallback(runtimeReason)
+        }
+        if case .metadataRequiredButUnavailable(let error) = reason {
+            markMetadataRequirementFallback(error, in: &snapshot)
         }
         return snapshot
     }
@@ -131,10 +139,6 @@ extension GPURuntimePathSnapshot {
         var snapshot = afterCapabilityDiscovery(capabilities: capabilities)
         let runtimeReason = GPURuntimePathReason(failure)
         switch failure {
-        case .policyForcedSHM:
-            snapshot.dmabuf = snapshot.dmabuf.fallback(runtimeReason)
-            snapshot.gbm = .fallback(runtimeReason)
-            snapshot.egl = .fallback(runtimeReason)
         case .dmabufUnavailable, .compositorRejectedBuffer:
             snapshot.dmabuf = .failed(runtimeReason)
         case .noCompatibleFormat, .noRenderNode, .gbmUnavailable,
@@ -144,13 +148,10 @@ extension GPURuntimePathSnapshot {
             snapshot.egl = .failed(runtimeReason)
         case .explicitSyncRequiredButUnavailable, .submitConstraintRejected:
             snapshot.synchronization = .explicitFailed(runtimeReason)
-        case .pacingRequiredButUnavailable:
+        case .fifoRequiredButUnavailable, .commitTimingRequiredButUnavailable:
             snapshot.pacing = .failed(runtimeReason)
-        case .metadataRequiredButUnavailable:
-            snapshot.contentType = .failed(runtimeReason)
-            snapshot.alpha = .failed(runtimeReason)
-            snapshot.colorRepresentation = .failed(runtimeReason)
-            snapshot.colorManagement = .failed(runtimeReason)
+        case .metadataRequiredButUnavailable(let error):
+            markMetadataRequirementFailure(error, in: &snapshot)
         case .commitFailed:
             snapshot.dmabuf = snapshot.dmabuf.failed(runtimeReason)
         }
@@ -200,10 +201,12 @@ extension GPURuntimePathReason {
             self = .policyForcedSHM
         case .explicitSyncRequiredButUnavailable:
             self = .explicitSynchronizationUnavailable
-        case .pacingRequiredButUnavailable:
+        case .fifoRequiredButUnavailable:
             self = .fifoUnavailable
-        case .metadataRequiredButUnavailable:
-            self = .colorManagementUnavailable
+        case .commitTimingRequiredButUnavailable:
+            self = .commitTimingUnavailable
+        case .metadataRequiredButUnavailable(let error):
+            self = GPURuntimePathReason(error)
         case .gbmUnavailable, .noCompatibleFormat, .noRenderNode:
             self = .gbmUnavailable
         case .eglUnavailable:
@@ -215,14 +218,14 @@ extension GPURuntimePathReason {
 
     package init(_ failure: GPUBackingFailure) {
         switch failure {
-        case .policyForcedSHM:
-            self = .policyForcedSHM
         case .explicitSyncRequiredButUnavailable, .submitConstraintRejected:
             self = .explicitSynchronizationUnavailable
-        case .pacingRequiredButUnavailable:
+        case .fifoRequiredButUnavailable:
             self = .fifoUnavailable
-        case .metadataRequiredButUnavailable:
-            self = .colorManagementUnavailable
+        case .commitTimingRequiredButUnavailable:
+            self = .commitTimingUnavailable
+        case .metadataRequiredButUnavailable(let error):
+            self = GPURuntimePathReason(error)
         case .gbmUnavailable, .gbmAllocationFailed, .noCompatibleFormat,
             .noRenderNode:
             self = .gbmUnavailable
@@ -231,5 +234,98 @@ extension GPURuntimePathReason {
         default:
             self = .dmabufUnavailable
         }
+    }
+
+    package init(_ metadataError: SurfaceCommitMetadataError) {
+        switch metadataError {
+        case .contentTypeUnavailable, .contentTypeObjectUnavailable,
+            .unsupportedContentType:
+            self = .contentTypeUnavailable
+        case .alphaModifierUnavailable, .alphaModifierObjectUnavailable:
+            self = .alphaModifierUnavailable
+        case .tearingControlUnavailable, .tearingControlObjectUnavailable:
+            self = .presentationHintUnavailable
+        case .colorRepresentationUnavailable, .colorRepresentationObjectUnavailable,
+            .unsupportedAlphaMode, .unsupportedCoefficientsAndRange,
+            .unsupportedChromaLocation:
+            self = .colorRepresentationUnavailable
+        case .colorRepresentationSupportPending:
+            self = .colorRepresentationSupportPending
+        case .colorUnavailable, .colorManagementObjectUnavailable,
+            .colorDescriptionUnavailable, .colorDescriptionPending,
+            .colorDescriptionFailed, .invalidColorDescriptionIdentity:
+            self = .colorManagementUnavailable
+        }
+    }
+}
+
+private func markMetadataRequirementFallback(
+    _ error: SurfaceCommitMetadataError,
+    in snapshot: inout GPURuntimePathSnapshot
+) {
+    markMetadataRequirement(
+        error,
+        status: .fallback(GPURuntimePathReason(error)),
+        in: &snapshot
+    )
+}
+
+private func markMetadataRequirementFailure(
+    _ error: SurfaceCommitMetadataError,
+    in snapshot: inout GPURuntimePathSnapshot
+) {
+    markMetadataRequirement(
+        error,
+        status: .failed(GPURuntimePathReason(error)),
+        in: &snapshot
+    )
+}
+
+private func markMetadataRequirement(
+    _ error: SurfaceCommitMetadataError,
+    status: RuntimePathStatus,
+    in snapshot: inout GPURuntimePathSnapshot
+) {
+    switch metadataRuntimePathComponent(for: error) {
+    case .contentType:
+        snapshot.contentType = status
+    case .alpha:
+        snapshot.alpha = status
+    case .tearingControl:
+        snapshot.tearingControl = status
+    case .colorRepresentation:
+        snapshot.colorRepresentation = status
+    case .colorManagement:
+        snapshot.colorManagement = status
+    }
+}
+
+private enum MetadataRuntimePathComponent {
+    case contentType
+    case alpha
+    case tearingControl
+    case colorRepresentation
+    case colorManagement
+}
+
+private func metadataRuntimePathComponent(
+    for error: SurfaceCommitMetadataError
+) -> MetadataRuntimePathComponent {
+    switch error {
+    case .contentTypeUnavailable, .contentTypeObjectUnavailable,
+        .unsupportedContentType:
+        .contentType
+    case .alphaModifierUnavailable, .alphaModifierObjectUnavailable:
+        .alpha
+    case .tearingControlUnavailable, .tearingControlObjectUnavailable:
+        .tearingControl
+    case .colorRepresentationUnavailable, .colorRepresentationObjectUnavailable,
+        .colorRepresentationSupportPending, .unsupportedAlphaMode,
+        .unsupportedCoefficientsAndRange, .unsupportedChromaLocation:
+        .colorRepresentation
+    case .colorUnavailable, .colorManagementObjectUnavailable,
+        .colorDescriptionUnavailable, .colorDescriptionPending,
+        .colorDescriptionFailed, .invalidColorDescriptionIdentity:
+        .colorManagement
     }
 }

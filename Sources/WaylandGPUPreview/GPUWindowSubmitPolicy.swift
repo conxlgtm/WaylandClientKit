@@ -202,6 +202,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
     package var presentationFeedback: SurfaceCapabilityStatus
     package var contentType: RuntimePathStatus
     package var alpha: RuntimePathStatus
+    package var tearingControl: RuntimePathStatus
     package var colorRepresentation: RuntimePathStatus
     package var colorManagement: RuntimePathStatus
     package var presentationHint: SurfacePresentationHint?
@@ -215,6 +216,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         presentationFeedback: .unavailable,
         contentType: .unavailable,
         alpha: .unavailable,
+        tearingControl: .unavailable,
         colorRepresentation: .unavailable,
         colorManagement: .unavailable,
         presentationHint: nil
@@ -245,6 +247,11 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
                 capabilities.alphaModifier,
                 requested: metadata.alpha != nil,
                 missingReason: .alphaModifierUnavailable
+            ),
+            tearingControl: capabilityStatus(
+                capabilities.tearingControl,
+                requested: metadata.presentationHint != nil,
+                missingReason: .presentationHintUnavailable
             ),
             colorRepresentation: colorRepresentationStatus(
                 capabilities.colorRepresentation,

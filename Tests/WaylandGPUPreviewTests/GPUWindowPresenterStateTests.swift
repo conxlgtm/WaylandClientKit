@@ -310,6 +310,7 @@ struct GPUWindowRuntimePathSnapshotTests {
         #expect(snapshot.pacing == .fifoAdvertised)
         #expect(snapshot.contentType == .unavailable)
         #expect(snapshot.alpha == .unavailable)
+        #expect(snapshot.tearingControl == .unavailable)
         #expect(snapshot.colorRepresentation == .unavailable)
         #expect(snapshot.colorManagement == .unavailable)
         #expect(snapshot.presentationHint == nil)
@@ -354,6 +355,7 @@ struct GPUWindowRuntimePathSnapshotTests {
 
         #expect(snapshot.contentType == .advertised)
         #expect(snapshot.alpha == .advertised)
+        #expect(snapshot.tearingControl == .advertised)
         #expect(snapshot.colorRepresentation == .advertised)
         #expect(snapshot.colorManagement == .advertised)
         #expect(snapshot.presentationHint == nil)
@@ -383,6 +385,7 @@ struct GPUWindowRuntimePathSnapshotTests {
 
         #expect(snapshot.contentType == .configured)
         #expect(snapshot.alpha == .configured)
+        #expect(snapshot.tearingControl == .configured)
         #expect(snapshot.colorRepresentation == .configured)
         #expect(snapshot.colorManagement == .configured)
         #expect(snapshot.presentationHint == .async)
@@ -404,6 +407,56 @@ struct GPUWindowRuntimePathSnapshotTests {
             GPUFramePacingRuntimeStatus.fallback(.fifoUnavailable)
                 == .fallback(.fifoUnavailable)
         )
+    }
+
+    @Test
+    func runtimePathReportsCommitTimingUnavailableForTargetTimeFailure() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(pacing: .fifo(version: 1)),
+            failure: .commitTimingRequiredButUnavailable
+        )
+
+        #expect(snapshot.pacing == .failed(.commitTimingUnavailable))
+    }
+
+    @Test
+    func runtimePathReportsContentTypeUnavailableForContentTypeRequirement() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(contentType: .unavailable),
+            failure: .metadataRequiredButUnavailable(.contentTypeUnavailable)
+        )
+
+        #expect(snapshot.contentType == .failed(.contentTypeUnavailable))
+    }
+
+    @Test
+    func runtimePathReportsAlphaModifierUnavailableForAlphaRequirement() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(alphaModifier: .unavailable),
+            failure: .metadataRequiredButUnavailable(.alphaModifierUnavailable)
+        )
+
+        #expect(snapshot.alpha == .failed(.alphaModifierUnavailable))
+    }
+
+    @Test
+    func runtimePathReportsTearingControlUnavailableForPresentationHintRequirement() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(tearingControl: .unavailable),
+            failure: .metadataRequiredButUnavailable(.tearingControlUnavailable)
+        )
+
+        #expect(snapshot.tearingControl == .failed(.presentationHintUnavailable))
+    }
+
+    @Test
+    func runtimePathReportsColorManagementUnavailableForColorDescriptionRequirement() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(color: .unavailable),
+            failure: .metadataRequiredButUnavailable(.colorUnavailable)
+        )
+
+        #expect(snapshot.colorManagement == .failed(.colorManagementUnavailable))
     }
 }
 
@@ -441,7 +494,52 @@ struct GPUWindowBackingStateTests {
             GPUFallbackPolicy.requireGPU.decide(
                 capabilities: capabilities,
                 requirements: requirements
-            ) == .unavailable(.metadataRequiredButUnavailable)
+            ) == .unavailable(.metadataRequiredButUnavailable(.colorUnavailable))
+        )
+    }
+
+    @Test
+    func backingPolicyRejectsTargetTimeWhenCommitTimingUnavailable() throws {
+        let requirements = GPUBackingRequirements(
+            pacing: .targetTime(
+                try SurfaceCommitTargetTime(seconds: 1, nanoseconds: 2)
+            )
+        )
+
+        #expect(
+            GPUFallbackPolicy.requireGPU.decide(
+                capabilities: capabilitySnapshot(pacing: .fifo(version: 1)),
+                requirements: requirements
+            ) == .unavailable(.commitTimingRequiredButUnavailable)
+        )
+    }
+
+    @Test
+    func backingPolicyRejectsFifoWhenFifoUnavailable() {
+        let requirements = GPUBackingRequirements(pacing: .fifo(.setBarrier))
+
+        #expect(
+            GPUFallbackPolicy.requireGPU.decide(
+                capabilities: capabilitySnapshot(pacing: .commitTiming(version: 1)),
+                requirements: requirements
+            ) == .unavailable(.fifoRequiredButUnavailable)
+        )
+    }
+
+    @Test
+    func fifoAndTargetTimeReportsFirstMissingPacingProtocol() throws {
+        let requirements = GPUBackingRequirements(
+            pacing: .fifoAndTargetTime(
+                .waitBarrier,
+                try SurfaceCommitTargetTime(seconds: 1, nanoseconds: 2)
+            )
+        )
+
+        #expect(
+            GPUFallbackPolicy.requireGPU.decide(
+                capabilities: capabilitySnapshot(pacing: .unavailable),
+                requirements: requirements
+            ) == .unavailable(.fifoRequiredButUnavailable)
         )
     }
 
@@ -467,13 +565,15 @@ struct GPUWindowBackingStateTests {
         let requirements = GPUBackingRequirements(
             metadata: SurfaceCommitMetadata(presentationHint: .async)
         )
-
-        #expect(
-            GPUFallbackPolicy.requireGPU.decide(
-                capabilities: capabilitySnapshot(tearingControl: .unavailable),
-                requirements: requirements
-            ) == .unavailable(.metadataRequiredButUnavailable)
+        let decision = GPUFallbackPolicy.requireGPU.decide(
+            capabilities: capabilitySnapshot(tearingControl: .unavailable),
+            requirements: requirements
         )
+        let expected = GPUBackingDecision.unavailable(
+            .metadataRequiredButUnavailable(.tearingControlUnavailable)
+        )
+
+        #expect(decision == expected)
     }
 
     @Test
@@ -487,13 +587,13 @@ struct GPUWindowBackingStateTests {
             GPUFallbackPolicy.requireGPU.decide(
                 capabilities: capabilities,
                 requirements: requirements
-            ) == .unavailable(.metadataRequiredButUnavailable)
+            ) == .unavailable(.metadataRequiredButUnavailable(.contentTypeUnavailable))
         )
         #expect(
             GPUFallbackPolicy.preferGPUFallbackToSHM.decide(
                 capabilities: capabilities,
                 requirements: requirements
-            ) == .shm(.metadataRequiredButUnavailable)
+            ) == .shm(.metadataRequiredButUnavailable(.contentTypeUnavailable))
         )
     }
 

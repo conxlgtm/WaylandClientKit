@@ -121,10 +121,14 @@ package enum GPUFallbackPolicy: Equatable, Sendable {
             switch error {
             case .explicitSyncUnavailable:
                 return unavailableOrFallback(.explicitSyncRequiredButUnavailable)
-            case .pacingUnavailable:
-                return unavailableOrFallback(.pacingRequiredButUnavailable)
-            case .metadataUnavailable:
-                return unavailableOrFallback(.metadataRequiredButUnavailable)
+            case .fifoUnavailable:
+                return unavailableOrFallback(.fifoRequiredButUnavailable)
+            case .commitTimingUnavailable:
+                return unavailableOrFallback(.commitTimingRequiredButUnavailable)
+            case .metadataUnavailable(let metadataError):
+                return unavailableOrFallback(
+                    .metadataRequiredButUnavailable(metadataError)
+                )
             }
         }
 
@@ -166,8 +170,9 @@ package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
     case gbmUnavailable
     case eglUnavailable
     case explicitSyncRequiredButUnavailable
-    case pacingRequiredButUnavailable
-    case metadataRequiredButUnavailable
+    case fifoRequiredButUnavailable
+    case commitTimingRequiredButUnavailable
+    case metadataRequiredButUnavailable(SurfaceCommitMetadataError)
     case compositorRejectedBuffer
 
     package var description: String {
@@ -186,10 +191,12 @@ package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
             "EGL is unavailable"
         case .explicitSyncRequiredButUnavailable:
             "explicit synchronization was required but unavailable"
-        case .pacingRequiredButUnavailable:
-            "frame pacing was required but unavailable"
-        case .metadataRequiredButUnavailable:
-            "required surface metadata was unavailable"
+        case .fifoRequiredButUnavailable:
+            "FIFO pacing was required but unavailable"
+        case .commitTimingRequiredButUnavailable:
+            "commit timing was required but unavailable"
+        case .metadataRequiredButUnavailable(let error):
+            "required surface metadata was unavailable: \(error.description)"
         case .compositorRejectedBuffer:
             "the compositor rejected the GPU buffer"
         }
@@ -197,7 +204,6 @@ package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
 }
 
 package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
-    case policyForcedSHM
     case dmabufUnavailable
     case noCompatibleFormat
     case noRenderNode
@@ -205,41 +211,74 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
     case gbmAllocationFailed
     case eglUnavailable
     case explicitSyncRequiredButUnavailable
-    case pacingRequiredButUnavailable
-    case metadataRequiredButUnavailable
+    case fifoRequiredButUnavailable
+    case commitTimingRequiredButUnavailable
+    case metadataRequiredButUnavailable(SurfaceCommitMetadataError)
     case compositorRejectedBuffer
     case submitConstraintRejected
     case commitFailed
 
     package init(_ fallbackReason: GPUFallbackReason) {
+        if let failure = Self.platformFailure(for: fallbackReason)
+            ?? Self.requirementFailure(for: fallbackReason)
+            ?? Self.compositorFailure(for: fallbackReason)
+        {
+            self = failure
+            return
+        }
+
+        preconditionFailure("policy-forced SHM is not a GPU backing failure")
+    }
+
+    private static func platformFailure(
+        for fallbackReason: GPUFallbackReason
+    ) -> Self? {
         switch fallbackReason {
-        case .policyForcedSHM:
-            self = .policyForcedSHM
         case .dmabufUnavailable:
-            self = .dmabufUnavailable
+            .dmabufUnavailable
         case .noCompatibleFormat:
-            self = .noCompatibleFormat
+            .noCompatibleFormat
         case .noRenderNode:
-            self = .noRenderNode
+            .noRenderNode
         case .gbmUnavailable:
-            self = .gbmUnavailable
+            .gbmUnavailable
         case .eglUnavailable:
-            self = .eglUnavailable
+            .eglUnavailable
+        default:
+            nil
+        }
+    }
+
+    private static func requirementFailure(
+        for fallbackReason: GPUFallbackReason
+    ) -> Self? {
+        switch fallbackReason {
         case .explicitSyncRequiredButUnavailable:
-            self = .explicitSyncRequiredButUnavailable
-        case .pacingRequiredButUnavailable:
-            self = .pacingRequiredButUnavailable
-        case .metadataRequiredButUnavailable:
-            self = .metadataRequiredButUnavailable
+            .explicitSyncRequiredButUnavailable
+        case .fifoRequiredButUnavailable:
+            .fifoRequiredButUnavailable
+        case .commitTimingRequiredButUnavailable:
+            .commitTimingRequiredButUnavailable
+        case .metadataRequiredButUnavailable(let error):
+            .metadataRequiredButUnavailable(error)
+        default:
+            nil
+        }
+    }
+
+    private static func compositorFailure(
+        for fallbackReason: GPUFallbackReason
+    ) -> Self? {
+        switch fallbackReason {
         case .compositorRejectedBuffer:
-            self = .compositorRejectedBuffer
+            .compositorRejectedBuffer
+        default:
+            nil
         }
     }
 
     package var description: String {
         switch self {
-        case .policyForcedSHM:
-            "SHM was forced by policy"
         case .dmabufUnavailable:
             "linux-dmabuf is unavailable"
         case .noCompatibleFormat:
@@ -254,10 +293,12 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
             "EGL is unavailable"
         case .explicitSyncRequiredButUnavailable:
             "explicit synchronization was required but unavailable"
-        case .pacingRequiredButUnavailable:
-            "frame pacing was required but unavailable"
-        case .metadataRequiredButUnavailable:
-            "required surface metadata was unavailable"
+        case .fifoRequiredButUnavailable:
+            "FIFO pacing was required but unavailable"
+        case .commitTimingRequiredButUnavailable:
+            "commit timing was required but unavailable"
+        case .metadataRequiredButUnavailable(let error):
+            "required surface metadata was unavailable: \(error.description)"
         case .compositorRejectedBuffer:
             "the compositor rejected the GPU buffer"
         case .submitConstraintRejected:
