@@ -165,6 +165,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "GPUPreviewSmokeClient",
+            dependencies: ["WaylandClient", "WaylandGraphicsPreview"],
+            path: "Examples/GPUPreviewSmokeClient",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "SwiftWaylandSmoke",
             dependencies: ["WaylandSmokeSupport"],
             swiftSettings: executableSwiftSettings

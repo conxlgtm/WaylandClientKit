@@ -19,6 +19,7 @@ make wayland-headless
 make gpu-preview-headless
 make check
 make release-check
+make test-graphics-preview-client
 ```
 
 `make smoke-wayland` runs the `swift-wayland-smoke` executable against the
@@ -27,6 +28,10 @@ current compositor. It requires `WAYLAND_DISPLAY`.
 `make integration-wayland` runs the external public API integration package
 against the current compositor. It requires `WAYLAND_DISPLAY` and sets
 `SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=1`.
+
+`make test-graphics-preview-client` runs an external compile/test package for
+the `WaylandGraphicsPreview` product. It does not require a live compositor or a
+GPU-capable session.
 
 `make gpu-preview-wayland` runs package-internal GPU preview checks against the
 current compositor. It requires `WAYLAND_DISPLAY`, sets
