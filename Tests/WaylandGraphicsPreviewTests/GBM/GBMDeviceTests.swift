@@ -2,7 +2,7 @@ import CGBMShims
 import Glibc
 import Testing
 
-@testable import WaylandGraphicsPreview
+@testable import WaylandGraphicsCore
 @testable import WaylandRaw
 
 @Suite

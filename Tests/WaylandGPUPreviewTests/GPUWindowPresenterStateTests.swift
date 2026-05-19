@@ -3,7 +3,7 @@ import Testing
 
 @testable import WaylandClient
 @testable import WaylandGPUPreview
-@testable import WaylandGraphicsPreview
+@testable import WaylandGraphicsCore
 @testable import WaylandRaw
 
 @Suite

@@ -1,5 +1,5 @@
 import WaylandClient
-import WaylandGraphicsPreview
+import WaylandGraphicsCore
 import WaylandRaw
 
 package struct GPUSyncTimeline: Equatable, Hashable, Sendable {

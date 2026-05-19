@@ -2,17 +2,19 @@ SWIFT_FORMAT := ./scripts/dev/swift-format.sh
 SWIFTLINT := ./scripts/dev/swiftlint.sh
 SWIFT := ./scripts/dev/swift.sh
 
-.PHONY: format lint verify-generated verify-protocol-manifest verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-public-api-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless gpu-preview-wayland gpu-preview-headless wayland-headless release-check install-pre-commit
+.PHONY: format lint verify-generated verify-protocol-manifest verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-public-api-client test-graphics-preview-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless gpu-preview-wayland gpu-preview-headless wayland-headless release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place IntegrationTests/PublicAPIClient/Package.swift
-	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place --parallel --recursive Sources Tests Examples IntegrationTests/PublicAPIClient/Tests
+	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place IntegrationTests/GraphicsPreviewClient/Package.swift
+	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place --parallel --recursive Sources Tests Examples IntegrationTests/PublicAPIClient/Tests IntegrationTests/GraphicsPreviewClient/Tests
 
 lint:
 	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict Package.swift
 	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict IntegrationTests/PublicAPIClient/Package.swift
-	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict --parallel --recursive Sources Tests Examples IntegrationTests/PublicAPIClient/Tests
+	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict IntegrationTests/GraphicsPreviewClient/Package.swift
+	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict --parallel --recursive Sources Tests Examples IntegrationTests/PublicAPIClient/Tests IntegrationTests/GraphicsPreviewClient/Tests
 	@$(SWIFTLINT) lint --strict --no-cache --force-exclude --config .swiftlint.yml
 
 verify-generated:
@@ -53,7 +55,10 @@ test:
 test-public-api-client:
 	@./scripts/ci/test-public-api-client.sh
 
-check-base: lint verify-generated verify-protocol-manifest verify-shims verify-docs verify-docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-public-api-client
+test-graphics-preview-client:
+	@./scripts/ci/test-graphics-preview-client.sh
+
+check-base: lint verify-generated verify-protocol-manifest verify-shims verify-docs verify-docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-public-api-client test-graphics-preview-client
 
 check: check-base check-wayland-smoke-if-available
 

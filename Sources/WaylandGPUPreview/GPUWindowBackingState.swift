@@ -1,5 +1,5 @@
 import WaylandClient
-import WaylandGraphicsPreview
+import WaylandGraphicsCore
 
 package struct GPUWindowBackingState: Equatable, Sendable {
     package var lifecycle: GPUWindowBackingLifecycle

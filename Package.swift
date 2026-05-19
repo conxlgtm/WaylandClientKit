@@ -32,6 +32,7 @@ let package = Package(
     name: "SwiftWayland",
     products: [
         .library(name: "WaylandClient", targets: ["WaylandClient"]),
+        .library(name: "WaylandGraphicsPreview", targets: ["WaylandGraphicsPreview"]),
         .executable(name: "swift-wayland-smoke", targets: ["SwiftWaylandSmoke"]),
     ],
     targets: [
@@ -136,13 +137,20 @@ let package = Package(
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
-            name: "WaylandGraphicsPreview",
+            name: "WaylandGraphicsCore",
             dependencies: ["WaylandRaw", "CGBMShims", "CEGLShims"],
+            path: "Sources/WaylandGraphicsPreview",
+            swiftSettings: strictMemorySafetySwiftSettings
+        ),
+        .target(
+            name: "WaylandGraphicsPreview",
+            dependencies: ["WaylandClient"],
+            path: "Sources/WaylandGraphicsPreviewAPI",
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
             name: "WaylandGPUPreview",
-            dependencies: ["WaylandClient", "WaylandGraphicsPreview", "WaylandRaw"],
+            dependencies: ["WaylandClient", "WaylandGraphicsCore", "WaylandRaw"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
@@ -204,7 +212,7 @@ let package = Package(
         .testTarget(
             name: "WaylandGraphicsPreviewTests",
             dependencies: [
-                "WaylandGraphicsPreview",
+                "WaylandGraphicsCore",
                 "WaylandRaw",
                 "CGBMShims",
                 "CEGLShims",
@@ -212,8 +220,13 @@ let package = Package(
             swiftSettings: cShimTestingSwiftSettings
         ),
         .testTarget(
+            name: "WaylandGraphicsPreviewAPITests",
+            dependencies: ["WaylandGraphicsPreview", "WaylandClient"],
+            swiftSettings: strictMemorySafetySwiftSettings
+        ),
+        .testTarget(
             name: "WaylandGPUPreviewTests",
-            dependencies: ["WaylandGPUPreview", "WaylandGraphicsPreview", "WaylandClient"],
+            dependencies: ["WaylandGPUPreview", "WaylandGraphicsCore", "WaylandClient"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(

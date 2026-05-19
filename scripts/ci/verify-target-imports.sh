@@ -25,11 +25,12 @@ check_forbidden_imports \
     WaylandClient \
     WaylandKeyboard \
     WaylandCursor \
+    WaylandGraphicsCore \
     WaylandGraphicsPreview
 
 check_forbidden_imports WaylandKeyboard WaylandClient
 check_forbidden_imports WaylandCursor WaylandClient
-check_forbidden_imports WaylandGraphicsPreview WaylandClient
+check_forbidden_imports WaylandGraphicsCore WaylandClient
 
 if [[ "$failed" -ne 0 ]]; then
     exit 1
