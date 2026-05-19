@@ -29,6 +29,10 @@ struct SurfaceMetadataObjects {
         colorManagement != nil
     }
 
+    func hasColorDescription(_ reference: SurfaceColorDescriptionReference) -> Bool {
+        colorDescriptions[reference] != nil
+    }
+
     mutating func installContentType(_ newContentType: RawContentTypeSurface) {
         contentType?.destroy()
         contentType = newContentType

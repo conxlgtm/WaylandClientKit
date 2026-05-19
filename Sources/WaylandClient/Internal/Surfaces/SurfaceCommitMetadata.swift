@@ -252,18 +252,20 @@ extension SurfaceColorRepresentation {
         guard
             case .available(
                 _,
-                let supportedAlphaModes,
-                let supportedCoefficientsAndRanges
+                let support
             ) = capabilities
         else {
+            if case .pending = capabilities {
+                throw .colorRepresentationSupportPending
+            }
             throw .colorRepresentationUnavailable
         }
 
-        if let alphaMode, !supportedAlphaModes.contains(alphaMode) {
+        if let alphaMode, !support.alphaModes.contains(alphaMode) {
             throw .unsupportedAlphaMode(alphaMode)
         }
         if let coefficientsAndRange,
-            !supportedCoefficientsAndRanges.contains(coefficientsAndRange)
+            !support.coefficientsAndRanges.contains(coefficientsAndRange)
         {
             throw .unsupportedCoefficientsAndRange(coefficientsAndRange)
         }
@@ -280,6 +282,7 @@ package enum SurfaceCommitMetadataError: Error, Equatable, Sendable,
     case alphaModifierUnavailable
     case tearingControlUnavailable
     case colorRepresentationUnavailable
+    case colorRepresentationSupportPending
     case colorUnavailable
     case contentTypeObjectUnavailable
     case alphaModifierObjectUnavailable
@@ -302,6 +305,8 @@ package enum SurfaceCommitMetadataError: Error, Equatable, Sendable,
             "tearing-control protocol is unavailable"
         case .colorRepresentationUnavailable:
             "color-representation protocol is unavailable"
+        case .colorRepresentationSupportPending:
+            "color-representation support discovery is pending"
         case .colorUnavailable:
             "color-management protocol is unavailable"
         case .contentTypeObjectUnavailable:

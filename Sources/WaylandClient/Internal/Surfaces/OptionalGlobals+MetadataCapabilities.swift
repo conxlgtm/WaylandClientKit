@@ -18,24 +18,30 @@ extension OptionalGlobals {
             return .unavailable
         }
 
+        guard manager.hasReceivedSupportDone else {
+            return .pending(version: manager.version)
+        }
+
         return .available(
             version: manager.version,
-            supportedAlphaModes: Set(
-                manager.supportedAlphaModes.map { alphaMode in
-                    SurfaceAlphaMode(rawValue: alphaMode.rawValue)
-                }
-            ),
-            supportedCoefficientsAndRanges: Set(
-                manager.supportedCoefficientsAndRanges.map { coefficientsAndRange in
-                    SurfaceMatrixCoefficientsAndRange(
-                        coefficients: SurfaceMatrixCoefficients(
-                            rawValue: coefficientsAndRange.coefficients.rawValue
-                        ),
-                        range: SurfaceQuantizationRange(
-                            rawValue: coefficientsAndRange.range.rawValue
+            support: SurfaceColorRepresentationSupport(
+                alphaModes: Set(
+                    manager.supportedAlphaModes.map { alphaMode in
+                        SurfaceAlphaMode(rawValue: alphaMode.rawValue)
+                    }
+                ),
+                coefficientsAndRanges: Set(
+                    manager.supportedCoefficientsAndRanges.map { coefficientsAndRange in
+                        SurfaceMatrixCoefficientsAndRange(
+                            coefficients: SurfaceMatrixCoefficients(
+                                rawValue: coefficientsAndRange.coefficients.rawValue
+                            ),
+                            range: SurfaceQuantizationRange(
+                                rawValue: coefficientsAndRange.range.rawValue
+                            )
                         )
-                    )
-                }
+                    }
+                )
             )
         )
     }

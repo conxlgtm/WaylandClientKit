@@ -5,6 +5,10 @@
 #ifdef SWL_ENABLE_TESTING
 static struct swl_test_metadata_listener_record
     swl_test_metadata_listener_latest;
+static struct wp_color_representation_manager_v1
+    *swl_test_color_representation_manager_latest;
+static const struct swl_wp_color_representation_manager_v1_listener_callbacks
+    *swl_test_color_representation_callbacks_latest;
 
 static int swl_wp_color_representation_manager_v1_add_listener_default(
     struct wp_color_representation_manager_v1 *manager,
@@ -26,9 +30,10 @@ static int swl_test_color_representation_manager_add_listener_record(
     struct wp_color_representation_manager_v1 *manager,
     const struct swl_wp_color_representation_manager_v1_listener_callbacks *callbacks)
 {
-    (void)callbacks;
     swl_test_metadata_listener_latest.call_count += 1;
     swl_test_metadata_listener_latest.object = manager;
+    swl_test_color_representation_manager_latest = manager;
+    swl_test_color_representation_callbacks_latest = callbacks;
     return 0;
 }
 
@@ -194,6 +199,8 @@ void swl_test_metadata_listener_recording_begin(void)
 {
     swl_test_metadata_listener_latest =
         (struct swl_test_metadata_listener_record){0};
+    swl_test_color_representation_manager_latest = NULL;
+    swl_test_color_representation_callbacks_latest = NULL;
     swl_wp_color_representation_manager_v1_add_listener_impl =
         swl_test_color_representation_manager_add_listener_record;
     swl_wp_color_manager_v1_add_listener_impl =
@@ -202,6 +209,8 @@ void swl_test_metadata_listener_recording_begin(void)
 
 void swl_test_metadata_listener_recording_end(void)
 {
+    swl_test_color_representation_manager_latest = NULL;
+    swl_test_color_representation_callbacks_latest = NULL;
     swl_wp_color_representation_manager_v1_add_listener_impl =
         swl_wp_color_representation_manager_v1_add_listener_default;
     swl_wp_color_manager_v1_add_listener_impl =
@@ -211,5 +220,47 @@ void swl_test_metadata_listener_recording_end(void)
 struct swl_test_metadata_listener_record swl_test_metadata_listener_record(void)
 {
     return swl_test_metadata_listener_latest;
+}
+
+int swl_test_color_representation_listener_emit_supported_alpha_mode(
+    uint32_t alpha_mode)
+{
+    if (!swl_test_color_representation_callbacks_latest ||
+        !swl_test_color_representation_manager_latest)
+        return 0;
+
+    swl_wp_color_representation_manager_v1_handle_supported_alpha_mode(
+        (void *)swl_test_color_representation_callbacks_latest,
+        swl_test_color_representation_manager_latest,
+        alpha_mode);
+    return 1;
+}
+
+int swl_test_color_representation_listener_emit_supported_coefficients_and_ranges(
+    uint32_t coefficients,
+    uint32_t range)
+{
+    if (!swl_test_color_representation_callbacks_latest ||
+        !swl_test_color_representation_manager_latest)
+        return 0;
+
+    swl_wp_color_representation_manager_v1_handle_supported_coefficients_and_ranges(
+        (void *)swl_test_color_representation_callbacks_latest,
+        swl_test_color_representation_manager_latest,
+        coefficients,
+        range);
+    return 1;
+}
+
+int swl_test_color_representation_listener_emit_done(void)
+{
+    if (!swl_test_color_representation_callbacks_latest ||
+        !swl_test_color_representation_manager_latest)
+        return 0;
+
+    swl_wp_color_representation_manager_v1_handle_done(
+        (void *)swl_test_color_representation_callbacks_latest,
+        swl_test_color_representation_manager_latest);
+    return 1;
 }
 #endif

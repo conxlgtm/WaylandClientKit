@@ -163,6 +163,7 @@ package enum GPURuntimePathReason: Equatable, Sendable {
     case contentTypeUnavailable
     case alphaModifierUnavailable
     case colorRepresentationUnavailable
+    case colorRepresentationSupportPending
     case colorManagementUnavailable
     case presentationHintUnavailable
 }
@@ -335,6 +336,10 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         case (.available, true):
             .configured
         case (.available, false):
+            .advertised
+        case (.pending, true):
+            .failed(.colorRepresentationSupportPending)
+        case (.pending, false):
             .advertised
         case (.unavailable, true):
             .failed(.colorRepresentationUnavailable)

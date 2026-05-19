@@ -1102,8 +1102,9 @@ extension TopLevelWindow {
         if metadata.colorRepresentation != nil {
             try ensureColorRepresentationObjectInstalled()
         }
-        if metadata.colorDescription != nil {
+        if let colorDescription = metadata.colorDescription {
             try ensureColorManagementObjectInstalled()
+            try ensureColorDescriptionInstalled(colorDescription)
         }
     }
 
@@ -1173,6 +1174,24 @@ extension TopLevelWindow {
         }
 
         surfaceRuntime.installColorManagementObject(try manager.surface(for: surface))
+    }
+
+    private func ensureColorDescriptionInstalled(
+        _ reference: SurfaceColorDescriptionReference
+    ) throws {
+        guard !surfaceRuntime.hasColorDescription(reference) else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .colorManager.boundObject
+        else {
+            throw SurfaceCommitMetadataError.colorUnavailable
+        }
+
+        try surfaceRuntime.resolveColorDescriptionIfNeeded(
+            reference,
+            using: manager,
+            surface: surface
+        )
     }
 
     package func requestPresentationFeedbackOnOwnerThread(

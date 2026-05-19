@@ -1,9 +1,9 @@
 import CWaylandProtocols
 import Testing
-import WaylandRaw
 import WaylandTestSupport
 
 @testable import WaylandClient
+@testable import WaylandRaw
 
 @Suite(.serialized)
 struct SurfaceCommitMetadataTests {
@@ -147,8 +147,10 @@ struct SurfaceCommitMetadataTests {
             capabilities: metadataCapabilities(
                 colorRepresentation: .available(
                     version: 1,
-                    supportedAlphaModes: [advertisedAlphaMode],
-                    supportedCoefficientsAndRanges: [advertisedCoefficientsAndRange]
+                    support: SurfaceColorRepresentationSupport(
+                        alphaModes: [advertisedAlphaMode],
+                        coefficientsAndRanges: [advertisedCoefficientsAndRange]
+                    )
                 )
             ))
     }
@@ -303,14 +305,19 @@ private func supportedColorRepresentationCapability()
 {
     .available(
         version: 2,
-        supportedAlphaModes: [
-            .premultipliedElectrical,
-            .premultipliedOptical,
-            .straight,
-        ],
-        supportedCoefficientsAndRanges: [
-            SurfaceMatrixCoefficientsAndRange(coefficients: .bt709, range: .limited)
-        ]
+        support: SurfaceColorRepresentationSupport(
+            alphaModes: [
+                .premultipliedElectrical,
+                .premultipliedOptical,
+                .straight,
+            ],
+            coefficientsAndRanges: [
+                SurfaceMatrixCoefficientsAndRange(
+                    coefficients: .bt709,
+                    range: .limited
+                )
+            ]
+        )
     )
 }
 

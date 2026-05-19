@@ -79,6 +79,38 @@ struct RawSurfaceColorManagementRequestTests {
     }
 
     @Test
+    func surfaceFeedbackPreferredDescriptionRecordsRequests() async throws {
+        try await withColorManagerFixture { surface, manager in
+            let feedback = try manager.surfaceFeedback(for: surface)
+            defer { feedback.destroy() }
+            expectMetadataRequest(
+                kind: SWL_TEST_METADATA_COLOR_MANAGER_GET_SURFACE_FEEDBACK,
+                callCount: 1,
+                object: 0xC802,
+                surface: 0xC801
+            )
+
+            let imageDescription = try feedback.preferredImageDescription()
+            defer { imageDescription.destroy() }
+            expectMetadataRequest(
+                kind: SWL_TEST_METADATA_COLOR_FEEDBACK_GET_PREFERRED,
+                callCount: 2,
+                object: 0xC707
+            )
+
+            #expect(
+                throws: RuntimeError.invalidArgument(
+                    RawSurfaceMetadataError.surfaceFeedbackAlreadyExists
+                        .description
+                )
+            ) {
+                try manager.surfaceFeedback(for: surface)
+            }
+            expectMetadataRequestCallCount(2)
+        }
+    }
+
+    @Test
     func surfaceSettersRecordRequests() async throws {
         try await withColorManagerFixture { surface, manager in
             let colorSurface = try manager.surface(for: surface)

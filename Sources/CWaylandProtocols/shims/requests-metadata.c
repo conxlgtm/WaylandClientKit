@@ -138,6 +138,14 @@ static struct wp_color_management_surface_v1 *swl_color_manager_get_surface_defa
     return wp_color_manager_v1_get_surface(manager, surface);
 }
 
+static struct wp_color_management_surface_feedback_v1 *
+swl_color_manager_get_surface_feedback_default(
+    struct wp_color_manager_v1 *manager,
+    struct wl_surface *surface)
+{
+    return wp_color_manager_v1_get_surface_feedback(manager, surface);
+}
+
 static struct wp_image_description_v1 *swl_color_manager_get_image_description_default(
     struct wp_color_manager_v1 *manager,
     struct wp_image_description_reference_v1 *reference)
@@ -164,6 +172,19 @@ static void swl_color_management_surface_destroy_default(
     struct wp_color_management_surface_v1 *surface)
 {
     wp_color_management_surface_v1_destroy(surface);
+}
+
+static struct wp_image_description_v1 *
+swl_color_management_surface_feedback_get_preferred_default(
+    struct wp_color_management_surface_feedback_v1 *feedback)
+{
+    return wp_color_management_surface_feedback_v1_get_preferred(feedback);
+}
+
+static void swl_color_management_surface_feedback_destroy_default(
+    struct wp_color_management_surface_feedback_v1 *feedback)
+{
+    wp_color_management_surface_feedback_v1_destroy(feedback);
 }
 
 static void swl_image_description_destroy_default(
@@ -252,6 +273,11 @@ static struct wp_color_management_surface_v1 *
         struct wp_color_manager_v1 *manager,
         struct wl_surface *surface) =
             swl_color_manager_get_surface_default;
+static struct wp_color_management_surface_feedback_v1 *
+    (*swl_color_manager_get_surface_feedback_impl)(
+        struct wp_color_manager_v1 *manager,
+        struct wl_surface *surface) =
+            swl_color_manager_get_surface_feedback_default;
 static struct wp_image_description_v1 *
     (*swl_color_manager_get_image_description_impl)(
         struct wp_color_manager_v1 *manager,
@@ -268,6 +294,13 @@ static void (*swl_color_management_surface_unset_image_description_impl)(
 static void (*swl_color_management_surface_destroy_impl)(
     struct wp_color_management_surface_v1 *surface) =
         swl_color_management_surface_destroy_default;
+static struct wp_image_description_v1 *
+    (*swl_color_management_surface_feedback_get_preferred_impl)(
+        struct wp_color_management_surface_feedback_v1 *feedback) =
+            swl_color_management_surface_feedback_get_preferred_default;
+static void (*swl_color_management_surface_feedback_destroy_impl)(
+    struct wp_color_management_surface_feedback_v1 *feedback) =
+        swl_color_management_surface_feedback_destroy_default;
 static void (*swl_image_description_destroy_impl)(
     struct wp_image_description_v1 *image_description) =
         swl_image_description_destroy_default;
@@ -549,6 +582,24 @@ swl_test_color_manager_get_surface_record(
     return (struct wp_color_management_surface_v1 *)0xC706;
 }
 
+static struct wp_color_management_surface_feedback_v1 *
+swl_test_color_manager_get_surface_feedback_record(
+    struct wp_color_manager_v1 *manager,
+    struct wl_surface *surface)
+{
+    swl_test_record_metadata_request(
+        SWL_TEST_METADATA_COLOR_MANAGER_GET_SURFACE_FEEDBACK,
+        manager,
+        surface,
+        NULL,
+        NULL,
+        0,
+        0,
+        0,
+        0);
+    return (struct wp_color_management_surface_feedback_v1 *)0xC707;
+}
+
 static struct wp_image_description_v1 *
 swl_test_color_manager_get_image_description_record(
     struct wp_color_manager_v1 *manager,
@@ -565,6 +616,23 @@ swl_test_color_manager_get_image_description_record(
         0,
         0);
     return (struct wp_image_description_v1 *)0xC703;
+}
+
+static struct wp_image_description_v1 *
+swl_test_color_management_surface_feedback_get_preferred_record(
+    struct wp_color_management_surface_feedback_v1 *feedback)
+{
+    swl_test_record_metadata_request(
+        SWL_TEST_METADATA_COLOR_FEEDBACK_GET_PREFERRED,
+        feedback,
+        NULL,
+        NULL,
+        NULL,
+        0,
+        0,
+        0,
+        0);
+    return (struct wp_image_description_v1 *)0xC708;
 }
 
 static void swl_test_color_management_surface_set_image_description_record(
@@ -604,6 +672,13 @@ static void swl_test_color_management_surface_destroy_record(
 {
     swl_test_record_metadata_destroy(
         SWL_TEST_METADATA_DESTROY_COLOR_MANAGEMENT_SURFACE, surface);
+}
+
+static void swl_test_color_management_surface_feedback_destroy_record(
+    struct wp_color_management_surface_feedback_v1 *feedback)
+{
+    swl_test_record_metadata_destroy(
+        SWL_TEST_METADATA_DESTROY_COLOR_MANAGEMENT_SURFACE_FEEDBACK, feedback);
 }
 
 static void swl_test_image_description_destroy_record(
@@ -802,7 +877,7 @@ swl_wp_color_manager_v1_get_surface_feedback(
     struct wp_color_manager_v1 *manager,
     struct wl_surface *surface)
 {
-    return wp_color_manager_v1_get_surface_feedback(manager, surface);
+    return swl_color_manager_get_surface_feedback_impl(manager, surface);
 }
 
 struct wp_image_description_v1 *swl_wp_color_manager_v1_get_image_description(
@@ -838,7 +913,7 @@ struct wp_image_description_v1 *
 swl_wp_color_management_surface_feedback_v1_get_preferred(
     struct wp_color_management_surface_feedback_v1 *feedback)
 {
-    return wp_color_management_surface_feedback_v1_get_preferred(feedback);
+    return swl_color_management_surface_feedback_get_preferred_impl(feedback);
 }
 
 void swl_wp_color_management_output_v1_destroy(
@@ -856,7 +931,7 @@ void swl_wp_color_management_surface_v1_destroy(
 void swl_wp_color_management_surface_feedback_v1_destroy(
     struct wp_color_management_surface_feedback_v1 *feedback)
 {
-    wp_color_management_surface_feedback_v1_destroy(feedback);
+    swl_color_management_surface_feedback_destroy_impl(feedback);
 }
 
 void swl_wp_image_description_v1_destroy(
@@ -916,14 +991,20 @@ void swl_test_metadata_request_recording_begin(void)
     swl_color_representation_manager_destroy_impl =
         swl_test_color_representation_manager_destroy_record;
     swl_color_manager_get_surface_impl = swl_test_color_manager_get_surface_record;
+    swl_color_manager_get_surface_feedback_impl =
+        swl_test_color_manager_get_surface_feedback_record;
     swl_color_manager_get_image_description_impl =
         swl_test_color_manager_get_image_description_record;
+    swl_color_management_surface_feedback_get_preferred_impl =
+        swl_test_color_management_surface_feedback_get_preferred_record;
     swl_color_management_surface_set_image_description_impl =
         swl_test_color_management_surface_set_image_description_record;
     swl_color_management_surface_unset_image_description_impl =
         swl_test_color_management_surface_unset_image_description_record;
     swl_color_management_surface_destroy_impl =
         swl_test_color_management_surface_destroy_record;
+    swl_color_management_surface_feedback_destroy_impl =
+        swl_test_color_management_surface_feedback_destroy_record;
     swl_image_description_destroy_impl = swl_test_image_description_destroy_record;
     swl_color_manager_destroy_impl = swl_test_color_manager_destroy_record;
 }
@@ -962,14 +1043,20 @@ void swl_test_metadata_request_recording_end(void)
     swl_color_representation_manager_destroy_impl =
         swl_color_representation_manager_destroy_default;
     swl_color_manager_get_surface_impl = swl_color_manager_get_surface_default;
+    swl_color_manager_get_surface_feedback_impl =
+        swl_color_manager_get_surface_feedback_default;
     swl_color_manager_get_image_description_impl =
         swl_color_manager_get_image_description_default;
+    swl_color_management_surface_feedback_get_preferred_impl =
+        swl_color_management_surface_feedback_get_preferred_default;
     swl_color_management_surface_set_image_description_impl =
         swl_color_management_surface_set_image_description_default;
     swl_color_management_surface_unset_image_description_impl =
         swl_color_management_surface_unset_image_description_default;
     swl_color_management_surface_destroy_impl =
         swl_color_management_surface_destroy_default;
+    swl_color_management_surface_feedback_destroy_impl =
+        swl_color_management_surface_feedback_destroy_default;
     swl_image_description_destroy_impl = swl_image_description_destroy_default;
     swl_color_manager_destroy_impl = swl_color_manager_destroy_default;
 }

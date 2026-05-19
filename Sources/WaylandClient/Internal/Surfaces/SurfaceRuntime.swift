@@ -63,17 +63,31 @@ package enum SurfacePacingCapability: Equatable, Sendable {
     }
 }
 
+package struct SurfaceColorRepresentationSupport: Equatable, Sendable {
+    package let alphaModes: Set<SurfaceAlphaMode>
+    package let coefficientsAndRanges: Set<SurfaceMatrixCoefficientsAndRange>
+
+    package init(
+        alphaModes supportedAlphaModes: Set<SurfaceAlphaMode> = [],
+        coefficientsAndRanges supportedCoefficientsAndRanges:
+            Set<SurfaceMatrixCoefficientsAndRange> = []
+    ) {
+        alphaModes = supportedAlphaModes
+        coefficientsAndRanges = supportedCoefficientsAndRanges
+    }
+}
+
 package enum SurfaceColorRepresentationCapability: Equatable, Sendable {
     case unavailable
+    case pending(version: RawVersion)
     case available(
         version: RawVersion,
-        supportedAlphaModes: Set<SurfaceAlphaMode> = [],
-        supportedCoefficientsAndRanges: Set<SurfaceMatrixCoefficientsAndRange> = []
+        support: SurfaceColorRepresentationSupport
     )
 
     package var isAvailable: Bool {
         switch self {
-        case .unavailable:
+        case .unavailable, .pending:
             false
         case .available:
             true
