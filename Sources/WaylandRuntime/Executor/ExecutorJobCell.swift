@@ -1,7 +1,7 @@
 @safe
 final class ExecutorJobCell {
     @safe private let storage: UnsafeMutablePointer<ExecutorJob>
-    private nonisolated(unsafe) var containsJob = true
+    nonisolated(unsafe) private var containsJob = true
 
     init(_ job: consuming ExecutorJob) {
         storage = UnsafeMutablePointer<ExecutorJob>.allocate(capacity: 1)

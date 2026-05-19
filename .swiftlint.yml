@@ -79,7 +79,7 @@ opt_in_rules:
   - reduce_into
   - redundant_discardable_let
   - redundant_nil_coalescing
-  - redundant_self_in_closure
+  - redundant_self
   - redundant_sendable
   - redundant_type_annotation
   - raw_value_for_camel_cased_codable_enum
@@ -154,7 +154,7 @@ custom_rules:
     regex: "\\bDispatchQueue\\b"
     severity: error
 
-redundant_self_in_closure:
+redundant_self:
   severity: error
 
 explicit_init:

@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 import CWaylandProtocols
 
 private func ignoreSurfaceMetadataProxyDestroy() {
@@ -10,7 +11,7 @@ package enum RawSurfaceMetadataError: Error, Equatable, Sendable, CustomStringCo
     case tearingControlAlreadyExists
     case colorRepresentationAlreadyExists
     case colorManagementSurfaceAlreadyExists
-    case colorManagementSurfaceFeedbackAlreadyExists
+    case surfaceFeedbackAlreadyExists
     case colorManagementOutputAlreadyExists
 
     package var description: String {
@@ -25,7 +26,7 @@ package enum RawSurfaceMetadataError: Error, Equatable, Sendable, CustomStringCo
             "surface already has a color representation object"
         case .colorManagementSurfaceAlreadyExists:
             "surface already has a color management object"
-        case .colorManagementSurfaceFeedbackAlreadyExists:
+        case .surfaceFeedbackAlreadyExists:
             "surface already has a color management feedback object"
         case .colorManagementOutputAlreadyExists:
             "output already has a color management object"
@@ -703,7 +704,7 @@ package final class RawColorManager {
         let surfaceID = surface.objectID
         guard !surfaceFeedbackIDs.contains(surfaceID) else {
             throw RuntimeError.invalidArgument(
-                RawSurfaceMetadataError.colorManagementSurfaceFeedbackAlreadyExists
+                RawSurfaceMetadataError.surfaceFeedbackAlreadyExists
                     .description
             )
         }

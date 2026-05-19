@@ -12,12 +12,12 @@ package final class WaylandThreadExecutor: SerialExecutor {
     // checks that compare against the already-started thread identity. The wake
     // fd and primitive liveness flag are initialized before the owner thread is
     // visible and are torn down only after shutdown joins the owner thread.
-    private nonisolated(unsafe) var mutex = unsafe pthread_mutex_t()
-    private nonisolated(unsafe) var condition = pthread_cond_t()
-    private nonisolated(unsafe) var readyCondition = pthread_cond_t()
-    private nonisolated(unsafe) var wakeFileDescriptorStorage: CInt = -1
-    private nonisolated(unsafe) var synchronizationPrimitivesAreLive = false
-    private nonisolated(unsafe) var state = WaylandThreadExecutorState()
+    nonisolated(unsafe) private var mutex = unsafe pthread_mutex_t()
+    nonisolated(unsafe) private var condition = pthread_cond_t()
+    nonisolated(unsafe) private var readyCondition = pthread_cond_t()
+    nonisolated(unsafe) private var wakeFileDescriptorStorage: CInt = -1
+    nonisolated(unsafe) private var synchronizationPrimitivesAreLive = false
+    nonisolated(unsafe) private var state = WaylandThreadExecutorState()
 
     package init(name _: String = "swift-wayland") throws {
         try initialize(forcedThreadCreationFailureForTesting: nil)
