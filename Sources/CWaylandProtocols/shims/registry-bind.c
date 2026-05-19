@@ -4,6 +4,11 @@
 #include "generated/staging/linux-drm-syncobj/linux-drm-syncobj-v1-client-protocol.h"
 #include "generated/staging/fifo/fifo-v1-client-protocol.h"
 #include "generated/staging/commit-timing/commit-timing-v1-client-protocol.h"
+#include "generated/staging/content-type/content-type-v1-client-protocol.h"
+#include "generated/staging/alpha-modifier/alpha-modifier-v1-client-protocol.h"
+#include "generated/staging/tearing-control/tearing-control-v1-client-protocol.h"
+#include "generated/staging/color-representation/color-representation-v1-client-protocol.h"
+#include "generated/staging/color-management/color-management-v1-client-protocol.h"
 #include "generated/core/wayland-client-protocol.h"
 #include "generated/stable/presentation-time/presentation-time-client-protocol.h"
 #include "generated/stable/viewporter/viewporter-client-protocol.h"
@@ -104,6 +109,43 @@ struct wp_commit_timing_manager_v1 *swl_registry_bind_wp_commit_timing_manager_v
 {
     return (struct wp_commit_timing_manager_v1 *)wl_registry_bind(
         registry, name, &wp_commit_timing_manager_v1_interface, version);
+}
+
+struct wp_content_type_manager_v1 *swl_registry_bind_wp_content_type_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wp_content_type_manager_v1 *)wl_registry_bind(
+        registry, name, &wp_content_type_manager_v1_interface, version);
+}
+
+struct wp_alpha_modifier_v1 *swl_registry_bind_wp_alpha_modifier_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wp_alpha_modifier_v1 *)wl_registry_bind(
+        registry, name, &wp_alpha_modifier_v1_interface, version);
+}
+
+struct wp_tearing_control_manager_v1 *
+swl_registry_bind_wp_tearing_control_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wp_tearing_control_manager_v1 *)wl_registry_bind(
+        registry, name, &wp_tearing_control_manager_v1_interface, version);
+}
+
+struct wp_color_representation_manager_v1 *
+swl_registry_bind_wp_color_representation_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wp_color_representation_manager_v1 *)wl_registry_bind(
+        registry, name, &wp_color_representation_manager_v1_interface, version);
+}
+
+struct wp_color_manager_v1 *swl_registry_bind_wp_color_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wp_color_manager_v1 *)wl_registry_bind(
+        registry, name, &wp_color_manager_v1_interface, version);
 }
 
 struct wl_seat *swl_registry_bind_wl_seat(

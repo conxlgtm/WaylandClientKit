@@ -37,6 +37,11 @@ enum ShimSmokeCheck {
         _ = unsafe swl_registry_bind_wp_linux_drm_syncobj_manager_v1
         _ = unsafe swl_registry_bind_wp_fifo_manager_v1
         _ = unsafe swl_registry_bind_wp_commit_timing_manager_v1
+        _ = unsafe swl_registry_bind_wp_content_type_manager_v1
+        _ = unsafe swl_registry_bind_wp_alpha_modifier_v1
+        _ = unsafe swl_registry_bind_wp_tearing_control_manager_v1
+        _ = unsafe swl_registry_bind_wp_color_representation_manager_v1
+        _ = unsafe swl_registry_bind_wp_color_manager_v1
         _ = unsafe swl_registry_bind_wl_seat
         _ = unsafe swl_registry_bind_zwp_text_input_manager_v3
         _ = unsafe swl_registry_bind_zwp_linux_dmabuf_v1
@@ -84,6 +89,11 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_fractional_scale_manager_v1_get_fractional_scale
         _ = unsafe swl_wp_cursor_shape_manager_v1_get_pointer
         _ = unsafe swl_wp_cursor_shape_device_v1_set_shape
+        verifySubmitAndMetadataShims()
+        verifyTextInputAndDmabufShims()
+    }
+
+    private static func verifySubmitAndMetadataShims() {
         _ = unsafe swl_wp_linux_drm_syncobj_manager_v1_get_surface
         _ = unsafe swl_wp_linux_drm_syncobj_manager_v1_import_timeline
         _ = unsafe swl_wp_linux_drm_syncobj_surface_v1_set_acquire_point
@@ -93,6 +103,29 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_fifo_v1_wait_barrier
         _ = unsafe swl_wp_commit_timing_manager_v1_get_timer
         _ = unsafe swl_wp_commit_timer_v1_set_timestamp
+        _ = unsafe swl_wp_content_type_manager_v1_get_surface_content_type
+        _ = unsafe swl_wp_content_type_v1_set_content_type
+        _ = unsafe swl_wp_alpha_modifier_v1_get_surface
+        _ = unsafe swl_wp_alpha_modifier_surface_v1_set_multiplier
+        _ = unsafe swl_wp_tearing_control_manager_v1_get_tearing_control
+        _ = unsafe swl_wp_tearing_control_v1_set_presentation_hint
+        _ = unsafe swl_wp_color_representation_manager_v1_get_surface
+        _ = unsafe swl_wp_color_representation_manager_v1_add_listener
+        _ = unsafe swl_wp_color_representation_surface_v1_set_alpha_mode
+        _ = unsafe swl_wp_color_representation_surface_v1_set_coefficients_and_range
+        _ = unsafe swl_wp_color_representation_surface_v1_set_chroma_location
+        _ = unsafe swl_wp_color_manager_v1_get_output
+        _ = unsafe swl_wp_color_manager_v1_get_surface
+        _ = unsafe swl_wp_color_manager_v1_get_surface_feedback
+        _ = unsafe swl_wp_color_manager_v1_get_image_description
+        _ = unsafe swl_wp_color_manager_v1_add_listener
+        _ = unsafe swl_wp_color_management_output_v1_get_image_description
+        _ = unsafe swl_wp_color_management_surface_v1_set_image_description
+        _ = unsafe swl_wp_color_management_surface_v1_unset_image_description
+        _ = unsafe swl_wp_color_management_surface_feedback_v1_get_preferred
+    }
+
+    private static func verifyTextInputAndDmabufShims() {
         _ = unsafe swl_text_input_manager_v3_get_text_input
         _ = unsafe swl_text_input_v3_enable
         _ = unsafe swl_text_input_v3_disable
@@ -143,6 +176,20 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_fifo_manager_v1_destroy
         _ = unsafe swl_wp_commit_timer_v1_destroy
         _ = unsafe swl_wp_commit_timing_manager_v1_destroy
+        _ = unsafe swl_wp_content_type_v1_destroy
+        _ = unsafe swl_wp_content_type_manager_v1_destroy
+        _ = unsafe swl_wp_alpha_modifier_surface_v1_destroy
+        _ = unsafe swl_wp_alpha_modifier_v1_destroy
+        _ = unsafe swl_wp_tearing_control_v1_destroy
+        _ = unsafe swl_wp_tearing_control_manager_v1_destroy
+        _ = unsafe swl_wp_color_representation_surface_v1_destroy
+        _ = unsafe swl_wp_color_representation_manager_v1_destroy
+        _ = unsafe swl_wp_color_management_output_v1_destroy
+        _ = unsafe swl_wp_color_management_surface_v1_destroy
+        _ = unsafe swl_wp_color_management_surface_feedback_v1_destroy
+        _ = unsafe swl_wp_image_description_v1_destroy
+        _ = unsafe swl_wp_image_description_reference_v1_destroy
+        _ = unsafe swl_wp_color_manager_v1_destroy
         _ = unsafe swl_text_input_v3_destroy
         _ = unsafe swl_text_input_manager_v3_destroy
         _ = unsafe swl_wp_presentation_destroy

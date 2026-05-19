@@ -4,6 +4,7 @@ package enum SmokeRunner {
     package static func run(configuration: SmokeConfiguration = .init()) throws -> SmokeResult {
         let session = try DisplaySession.connect()
         let capabilities = session.capabilitiesOnOwnerThread()
+        let runtimeFacts = runtimeFacts(capabilities: capabilities, session: session)
         for optionalProtocol in configuration.requestedOptionalProtocols {
             guard
                 isAdvertised(
@@ -37,10 +38,10 @@ package enum SmokeRunner {
         _ = session.drainInputEvents()
 
         if window.needsRedraw {
-            return .frameCallbackObserved
+            return .frameCallbackObserved(runtimeFacts)
         }
 
-        return .committedFrame
+        return .committedFrame(runtimeFacts)
     }
 
     private static func isAdvertised(
@@ -51,11 +52,74 @@ package enum SmokeRunner {
         switch optionalProtocol {
         case .linuxDmabuf:
             capabilities.linuxDmabuf.isAvailable
-        case .linuxDrmSyncobj, .fifo, .commitTiming:
+        case .linuxDrmSyncobj, .fifo, .commitTiming, .contentType, .alphaModifier,
+            .tearingControl, .colorRepresentation, .colorManagement:
             session.isProtocolAdvertisedOnOwnerThread(
                 named: optionalProtocol.interfaceName
             )
         }
+    }
+
+    private static func runtimeFacts(
+        capabilities: WaylandCapabilities,
+        session: DisplaySession
+    ) -> SmokeRuntimeFacts {
+        SmokeRuntimeFacts(
+            syncobj: advertisedStatus(
+                .linuxDrmSyncobj,
+                capabilities: capabilities,
+                session: session
+            ),
+            fifo: advertisedStatus(.fifo, capabilities: capabilities, session: session),
+            commitTiming: advertisedStatus(
+                .commitTiming,
+                capabilities: capabilities,
+                session: session
+            ),
+            dmabuf: capabilities.linuxDmabuf.isAvailable ? .advertised : .unavailable,
+            gbm: .unavailable,
+            egl: .unavailable,
+            presentationFeedback: capabilities.presentationTime.isAvailable
+                ? .advertised
+                : .unavailable,
+            contentType: advertisedStatus(
+                .contentType,
+                capabilities: capabilities,
+                session: session
+            ),
+            alphaModifier: advertisedStatus(
+                .alphaModifier,
+                capabilities: capabilities,
+                session: session
+            ),
+            tearingControl: advertisedStatus(
+                .tearingControl,
+                capabilities: capabilities,
+                session: session
+            ),
+            colorRepresentation: advertisedStatus(
+                .colorRepresentation,
+                capabilities: capabilities,
+                session: session
+            ),
+            colorManagement: advertisedStatus(
+                .colorManagement,
+                capabilities: capabilities,
+                session: session
+            )
+        )
+    }
+
+    private static func advertisedStatus(
+        _ optionalProtocol: SmokeOptionalProtocol,
+        capabilities: WaylandCapabilities,
+        session: DisplaySession
+    ) -> SmokePathStatus {
+        isAdvertised(
+            optionalProtocol,
+            capabilities: capabilities,
+            session: session
+        ) ? .advertised : .unavailable
     }
 
     private static func fill(_ frame: borrowing SoftwareFrame) {

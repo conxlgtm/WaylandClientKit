@@ -268,9 +268,7 @@ package final class RawCommitTimer {
     package func setTimestamp(_ targetTime: RawCommitTargetTime)
         throws(RawCommitTimingError)
     {
-        guard !hasPendingTimestamp else {
-            throw RawCommitTimingError.timestampAlreadyExists
-        }
+        try validateCanSetTimestamp(targetTime)
 
         hasPendingTimestamp = true
         unsafe swl_wp_commit_timer_v1_set_timestamp(
@@ -279,6 +277,14 @@ package final class RawCommitTimer {
             targetTime.secondsLowBits,
             targetTime.nanoseconds
         )
+    }
+
+    package func validateCanSetTimestamp(_: RawCommitTargetTime)
+        throws(RawCommitTimingError)
+    {
+        guard !hasPendingTimestamp else {
+            throw RawCommitTimingError.timestampAlreadyExists
+        }
     }
 
     package func markCommitted() {

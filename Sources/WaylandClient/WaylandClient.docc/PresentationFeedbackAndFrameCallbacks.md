@@ -7,3 +7,10 @@ submitted commit when the optional presentation-time protocol is available.
 
 Use ``WindowPresentationEvents`` and ``PresentationFeedback`` for presentation
 timing. Use window redraw requests to schedule drawing work.
+
+Package-internal GPU preview commits may also carry submit constraints and
+surface commit metadata before the `wl_surface.commit` request. These facts are
+separate from presentation feedback: submit constraints describe when a commit
+may latch or when a buffer may be reused, while presentation feedback reports
+what the compositor later observed. The public window redraw path continues to
+use default metadata.

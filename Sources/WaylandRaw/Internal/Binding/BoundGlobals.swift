@@ -17,6 +17,11 @@ package enum SupportedVersions {
     package static let wpLinuxDrmSyncobjManagerV1: RawVersion = 1
     package static let wpFifoManagerV1: RawVersion = 1
     package static let wpCommitTimingManagerV1: RawVersion = 1
+    package static let wpContentTypeManagerV1: RawVersion = 1
+    package static let wpAlphaModifierV1: RawVersion = 1
+    package static let wpTearingControlManagerV1: RawVersion = 1
+    package static let wpColorRepresentationManagerV1: RawVersion = 1
+    package static let wpColorManagerV1: RawVersion = 2
     package static let zwpLinuxDmabufV1: RawVersion = 5
     package static let wlSeat: RawVersion = 10
     package static let wlDataDeviceManager: RawVersion = 3
@@ -44,6 +49,11 @@ package struct OptionalGlobals {
     package let linuxDrmSyncobjManager: OptionalLinuxDrmSyncobjManager
     package let fifoManager: OptionalFifoManager
     package let commitTimingManager: OptionalCommitTimingManager
+    package let contentTypeManager: OptionalContentTypeManager
+    package let alphaModifierManager: OptionalAlphaModifierManager
+    package let tearingControlManager: OptionalTearingControlManager
+    package let colorRepresentationManager: OptionalColorRepresentationManager
+    package let colorManager: OptionalColorManager
     package let dataDeviceManager: OptionalDataDeviceManager
     package let primarySelectionDeviceManager: OptionalPrimarySelectionDeviceManager
     package let textInputManager: OptionalTextInputManager
@@ -61,6 +71,14 @@ package struct OptionalGlobals {
             OptionalLinuxDrmSyncobjManager = .missing,
         fifoManager boundFifoManager: OptionalFifoManager = .missing,
         commitTimingManager boundCommitTimingManager: OptionalCommitTimingManager = .missing,
+        contentTypeManager boundContentTypeManager: OptionalContentTypeManager = .missing,
+        alphaModifierManager boundAlphaModifierManager: OptionalAlphaModifierManager =
+            .missing,
+        tearingControlManager boundTearingControlManager:
+            OptionalTearingControlManager = .missing,
+        colorRepresentationManager boundColorRepresentationManager:
+            OptionalColorRepresentationManager = .missing,
+        colorManager boundColorManager: OptionalColorManager = .missing,
         dataDeviceManager boundDataDeviceManager: OptionalDataDeviceManager = .missing,
         primarySelectionDeviceManager boundPrimarySelectionDeviceManager:
             OptionalPrimarySelectionDeviceManager = .missing,
@@ -76,6 +94,11 @@ package struct OptionalGlobals {
         linuxDrmSyncobjManager = boundLinuxDrmSyncobjManager
         fifoManager = boundFifoManager
         commitTimingManager = boundCommitTimingManager
+        contentTypeManager = boundContentTypeManager
+        alphaModifierManager = boundAlphaModifierManager
+        tearingControlManager = boundTearingControlManager
+        colorRepresentationManager = boundColorRepresentationManager
+        colorManager = boundColorManager
         dataDeviceManager = boundDataDeviceManager
         primarySelectionDeviceManager = boundPrimarySelectionDeviceManager
         textInputManager = boundTextInputManager
@@ -83,6 +106,11 @@ package struct OptionalGlobals {
     }
 
     func destroy() {
+        colorManager.destroy()
+        colorRepresentationManager.destroy()
+        tearingControlManager.destroy()
+        alphaModifierManager.destroy()
+        contentTypeManager.destroy()
         linuxDmabuf.destroy()
         commitTimingManager.destroy()
         fifoManager.destroy()

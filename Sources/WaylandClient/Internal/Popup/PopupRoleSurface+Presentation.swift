@@ -56,7 +56,8 @@ extension PopupRoleSurface {
             do {
                 preparedCommit = try prepareSurfaceFrameCommit(
                     generation: request.generation,
-                    geometry: geometry
+                    geometry: geometry,
+                    payload: .buffer(drawingBuffer.surfaceBuffer)
                 )
             } catch {
                 failActivePresentation(
@@ -83,8 +84,8 @@ extension PopupRoleSurface {
             }
 
             do {
-                let buffer = drawingBuffer.markBusy(commitGeneration: request.generation)
-                try commitSurfaceFrame(preparedCommit, buffer: buffer)
+                _ = drawingBuffer.markBusy(commitGeneration: request.generation)
+                try commitSurfaceFrame(preparedCommit)
             } catch {
                 pendingFrameRegistration = nil
                 cancelSurfaceFrameCallback()

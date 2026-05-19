@@ -97,6 +97,19 @@ package final class TopLevelWindow {
             globals.extensions.surfaceSynchronizationCapability
         )
         surfaceRuntime.setPacingCapability(globals.extensions.surfacePacingCapability)
+        surfaceRuntime.setContentTypeCapability(
+            globals.extensions.surfaceContentTypeCapability
+        )
+        surfaceRuntime.setAlphaModifierCapability(
+            globals.extensions.surfaceAlphaModifierCapability
+        )
+        surfaceRuntime.setTearingControlCapability(
+            globals.extensions.surfaceTearingControlCapability
+        )
+        surfaceRuntime.setColorRepresentationCapability(
+            globals.extensions.surfaceColorRepresentationCapability
+        )
+        surfaceRuntime.setColorCapability(globals.extensions.surfaceColorCapability)
         try installScaleObjects(globals: globals)
         try assignXDGRole(globals: globals)
     }
@@ -930,13 +943,15 @@ extension TopLevelWindow {
     ) throws -> PreviewBufferPresentationResult {
         try presentPreviewBufferOnOwnerThread(
             buffer,
-            submitConstraints: .default
+            submitConstraints: .default,
+            metadata: .default
         )
     }
 
     package func presentPreviewBufferOnOwnerThread(
         _ buffer: RawSurfaceBuffer,
-        submitConstraints: SurfaceSubmitConstraints
+        submitConstraints: SurfaceSubmitConstraints,
+        metadata: SurfaceCommitMetadata = .default
     ) throws -> PreviewBufferPresentationResult {
         connection.preconditionIsOwnerThread()
 
@@ -955,14 +970,21 @@ extension TopLevelWindow {
 
         let generation = surfaceRuntime.nextCommitGeneration
         let bufferAvailability = try redrawBufferAvailability()
+        let payload = SurfaceCommitPayload.buffer(buffer)
+        try submitConstraints.validateShape(payload: payload)
+        refreshMetadataCapabilitiesFromBoundGlobals()
+        try metadata.validate(capabilities: surfaceRuntime.capabilitySnapshot())
         try ensureSubmitConstraintObjectsInstalled(for: submitConstraints)
+        try ensureMetadataObjectsInstalled(for: metadata)
+        try surfaceRuntime.preflightCommitMetadata(metadata)
         let presentationRequest = WindowExternalBufferPresentationRequest(
             buffer: buffer,
             surface: surface,
             scaleInstallation: scaleInstallation,
             generation: generation,
             geometry: try currentSurfaceGeometry(),
-            submitConstraints: submitConstraints
+            submitConstraints: submitConstraints,
+            metadata: metadata
         ) { [weak self] in
             self?.handleFrameDone()
         }
@@ -988,7 +1010,8 @@ extension TopLevelWindow {
 
         return PreviewBufferPresentationResult(
             generation: generation,
-            commitPlan: commitPlan
+            commitPlan: commitPlan,
+            capabilities: surfaceRuntime.capabilitySnapshot()
         )
     }
 
@@ -1067,6 +1090,138 @@ extension TopLevelWindow {
         }
 
         surfaceRuntime.installCommitTimerObject(try manager.timer(for: surface))
+    }
+
+    private func ensureMetadataObjectsInstalled(
+        for metadata: SurfaceCommitMetadata
+    ) throws {
+        if metadata.contentType != nil {
+            try ensureContentTypeObjectInstalled()
+        }
+        if metadata.alpha != nil {
+            try ensureAlphaModifierObjectInstalled()
+        }
+        if metadata.presentationHint != nil {
+            try ensureTearingControlObjectInstalled()
+        }
+        if metadata.colorRepresentation != nil {
+            try ensureColorRepresentationObjectInstalled()
+        }
+        if let colorDescription = metadata.colorDescription {
+            try ensureColorManagementObjectInstalled()
+            try ensureColorDescriptionInstalled(colorDescription)
+        }
+    }
+
+    private func refreshMetadataCapabilitiesFromBoundGlobals() {
+        guard let extensions = connection.boundGlobals?.extensions else {
+            surfaceRuntime.setContentTypeCapability(.unavailable)
+            surfaceRuntime.setAlphaModifierCapability(.unavailable)
+            surfaceRuntime.setTearingControlCapability(.unavailable)
+            surfaceRuntime.setColorRepresentationCapability(.unavailable)
+            surfaceRuntime.setColorCapability(.unavailable)
+            return
+        }
+
+        surfaceRuntime.setContentTypeCapability(
+            extensions.surfaceContentTypeCapability
+        )
+        surfaceRuntime.setAlphaModifierCapability(
+            extensions.surfaceAlphaModifierCapability
+        )
+        surfaceRuntime.setTearingControlCapability(
+            extensions.surfaceTearingControlCapability
+        )
+        surfaceRuntime.setColorRepresentationCapability(
+            extensions.surfaceColorRepresentationCapability
+        )
+        surfaceRuntime.setColorCapability(extensions.surfaceColorCapability)
+    }
+
+    private func ensureContentTypeObjectInstalled() throws {
+        guard !surfaceRuntime.hasContentTypeObject else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .contentTypeManager.boundObject
+        else {
+            throw SurfaceCommitMetadataError.contentTypeUnavailable
+        }
+
+        surfaceRuntime.installContentTypeObject(try manager.contentType(for: surface))
+    }
+
+    private func ensureAlphaModifierObjectInstalled() throws {
+        guard !surfaceRuntime.hasAlphaModifierObject else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .alphaModifierManager.boundObject
+        else {
+            throw SurfaceCommitMetadataError.alphaModifierUnavailable
+        }
+
+        surfaceRuntime.installAlphaModifierObject(try manager.alphaModifier(for: surface))
+    }
+
+    private func ensureTearingControlObjectInstalled() throws {
+        guard !surfaceRuntime.hasTearingControlObject else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .tearingControlManager.boundObject
+        else {
+            throw SurfaceCommitMetadataError.tearingControlUnavailable
+        }
+
+        surfaceRuntime.installTearingControlObject(
+            try manager.tearingControl(for: surface)
+        )
+    }
+
+    private func ensureColorRepresentationObjectInstalled() throws {
+        surfaceRuntime.setColorRepresentationCapability(
+            connection.boundGlobals?.extensions.surfaceColorRepresentationCapability
+                ?? .unavailable
+        )
+        guard !surfaceRuntime.hasColorRepresentationObject else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .colorRepresentationManager.boundObject
+        else {
+            throw SurfaceCommitMetadataError.colorRepresentationUnavailable
+        }
+
+        surfaceRuntime.installColorRepresentationObject(
+            try manager.colorRepresentation(for: surface)
+        )
+    }
+
+    private func ensureColorManagementObjectInstalled() throws {
+        guard !surfaceRuntime.hasColorManagementObject else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .colorManager.boundObject
+        else {
+            throw SurfaceCommitMetadataError.colorUnavailable
+        }
+
+        surfaceRuntime.installColorManagementObject(try manager.surface(for: surface))
+    }
+
+    private func ensureColorDescriptionInstalled(
+        _ reference: SurfaceColorDescriptionReference
+    ) throws {
+        guard !surfaceRuntime.hasColorDescription(reference) else { return }
+        guard
+            let manager = connection.boundGlobals?.extensions
+                .colorManager.boundObject
+        else {
+            throw SurfaceCommitMetadataError.colorUnavailable
+        }
+
+        try surfaceRuntime.resolveColorDescriptionIfNeeded(
+            reference,
+            using: manager,
+            surface: surface
+        )
     }
 
     package func requestPresentationFeedbackOnOwnerThread(

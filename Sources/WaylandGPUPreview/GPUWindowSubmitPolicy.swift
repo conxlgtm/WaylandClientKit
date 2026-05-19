@@ -148,23 +148,45 @@ package enum GPUBufferSubmissionState: Equatable, Sendable {
 
 package enum RuntimePathStatus: Equatable, Sendable {
     case unavailable
-    case available
+    case advertised
+    case configured
     case active
+    case failed(GPURuntimePathReason)
+    case fallback(GPURuntimePathReason)
+}
+
+package enum GPURuntimePathReason: Equatable, Sendable {
+    case explicitSynchronizationUnavailable
+    case explicitSynchronizationNotConfigured
+    case fifoUnavailable
+    case commitTimingUnavailable
+    case contentTypeUnavailable
+    case alphaModifierUnavailable
+    case colorRepresentationUnavailable
+    case colorRepresentationSupportPending
+    case colorManagementUnavailable
+    case presentationHintUnavailable
 }
 
 package enum GPUSynchronizationRuntimeStatus: Equatable, Sendable {
     case implicit
+    case explicitAdvertised
+    case explicitConfigured
     case explicitActive
-    case explicitUnavailableFallback
-    case explicitRequiredUnavailable
+    case explicitFallback(GPURuntimePathReason)
+    case explicitFailed(GPURuntimePathReason)
 }
 
 package enum GPUFramePacingRuntimeStatus: Equatable, Sendable {
     case none
+    case fifoAdvertised
+    case commitTimingAdvertised
+    case fifoAndCommitTimingAdvertised
     case fifoActive
     case commitTimingActive
     case fifoAndCommitTimingActive
-    case unavailable
+    case failed(GPURuntimePathReason)
+    case fallback(GPURuntimePathReason)
 }
 
 package struct GPURuntimePathSnapshot: Equatable, Sendable {
@@ -174,6 +196,11 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
     package let synchronization: GPUSynchronizationRuntimeStatus
     package let pacing: GPUFramePacingRuntimeStatus
     package let presentationFeedback: SurfaceCapabilityStatus
+    package let contentType: RuntimePathStatus
+    package let alpha: RuntimePathStatus
+    package let colorRepresentation: RuntimePathStatus
+    package let colorManagement: RuntimePathStatus
+    package let presentationHint: SurfacePresentationHint?
 
     package static let empty = Self(
         dmabuf: .unavailable,
@@ -181,8 +208,163 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         egl: .unavailable,
         synchronization: .implicit,
         pacing: .none,
-        presentationFeedback: .unavailable
+        presentationFeedback: .unavailable,
+        contentType: .unavailable,
+        alpha: .unavailable,
+        colorRepresentation: .unavailable,
+        colorManagement: .unavailable,
+        presentationHint: nil
     )
+
+    package static func afterPresentation(
+        capabilities: SurfaceCapabilitySnapshot,
+        synchronization: GPUBufferSubmissionSynchronization,
+        pacing: SurfacePacingConstraint,
+        metadata: SurfaceCommitMetadata = .default
+    ) -> Self {
+        Self(
+            dmabuf: dmabufStatus(capabilities.dmabuf),
+            gbm: .active,
+            egl: .configured,
+            synchronization: synchronizationStatus(
+                synchronization,
+                capability: capabilities.synchronization
+            ),
+            pacing: pacingStatus(pacing, capability: capabilities.pacing),
+            presentationFeedback: capabilities.presentationFeedback,
+            contentType: capabilityStatus(
+                capabilities.contentType,
+                requested: metadata.contentType != nil,
+                missingReason: .contentTypeUnavailable
+            ),
+            alpha: capabilityStatus(
+                capabilities.alphaModifier,
+                requested: metadata.alpha != nil,
+                missingReason: .alphaModifierUnavailable
+            ),
+            colorRepresentation: colorRepresentationStatus(
+                capabilities.colorRepresentation,
+                requested: metadata.colorRepresentation != nil
+            ),
+            colorManagement: colorStatus(
+                capabilities.color,
+                requested: metadata.colorDescription != nil
+            ),
+            presentationHint: metadata.presentationHint
+        )
+    }
+
+    private static func dmabufStatus(
+        _ capability: SurfaceDmabufCapability
+    ) -> RuntimePathStatus {
+        switch capability {
+        case .unavailable:
+            .unavailable
+        case .advertised:
+            .advertised
+        case .surfaceFeedback:
+            .active
+        }
+    }
+
+    private static func synchronizationStatus(
+        _ synchronization: GPUBufferSubmissionSynchronization,
+        capability: SurfaceSynchronizationCapability
+    ) -> GPUSynchronizationRuntimeStatus {
+        switch synchronization {
+        case .explicit:
+            return .explicitActive
+        case .implicit:
+            switch capability {
+            case .implicitOnly:
+                return .implicit
+            case .explicitAvailable:
+                return .explicitAdvertised
+            case .explicitActive:
+                return .explicitConfigured
+            }
+        }
+    }
+
+    private static func pacingStatus(
+        _ pacing: SurfacePacingConstraint,
+        capability: SurfacePacingCapability
+    ) -> GPUFramePacingRuntimeStatus {
+        switch pacing {
+        case .fifo:
+            return .fifoActive
+        case .targetTime:
+            return .commitTimingActive
+        case .fifoAndTargetTime:
+            return .fifoAndCommitTimingActive
+        case .none:
+            switch capability {
+            case .unavailable:
+                return .none
+            case .fifo:
+                return .fifoAdvertised
+            case .commitTiming:
+                return .commitTimingAdvertised
+            case .fifoAndCommitTiming:
+                return .fifoAndCommitTimingAdvertised
+            }
+        }
+    }
+
+    private static func capabilityStatus(
+        _ capability: SurfaceCapabilityStatus,
+        requested: Bool,
+        missingReason: GPURuntimePathReason
+    ) -> RuntimePathStatus {
+        switch (capability, requested) {
+        case (.available, true):
+            .configured
+        case (.available, false):
+            .advertised
+        case (.unavailable, true):
+            .failed(missingReason)
+        case (.unavailable, false):
+            .unavailable
+        }
+    }
+
+    private static func colorRepresentationStatus(
+        _ capability: SurfaceColorRepresentationCapability,
+        requested: Bool
+    ) -> RuntimePathStatus {
+        switch (capability, requested) {
+        case (.available, true):
+            .configured
+        case (.available, false):
+            .advertised
+        case (.pending, true):
+            .failed(.colorRepresentationSupportPending)
+        case (.pending, false):
+            .advertised
+        case (.unavailable, true):
+            .failed(.colorRepresentationUnavailable)
+        case (.unavailable, false):
+            .unavailable
+        }
+    }
+
+    private static func colorStatus(
+        _ capability: SurfaceColorCapability,
+        requested: Bool
+    ) -> RuntimePathStatus {
+        switch (capability, requested) {
+        case (.available, true),
+            (.preferredDescription, true):
+            .configured
+        case (.available, false),
+            (.preferredDescription, false):
+            .advertised
+        case (.unavailable, true):
+            .failed(.colorManagementUnavailable)
+        case (.unavailable, false):
+            .unavailable
+        }
+    }
 }
 
 package struct GPUWindowPresentationCorrelation: Equatable, Sendable {
@@ -190,6 +372,14 @@ package struct GPUWindowPresentationCorrelation: Equatable, Sendable {
 
     package init() {
         // Frames are recorded after successful surface commits.
+    }
+
+    package var count: Int {
+        slotsByGeneration.count
+    }
+
+    package var isEmpty: Bool {
+        slotsByGeneration.isEmpty
     }
 
     package mutating func record(_ frame: GPUWindowPresentedFrame) {

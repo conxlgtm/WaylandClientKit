@@ -90,6 +90,41 @@ package struct SurfaceSubmitConstraints: Equatable, Sendable {
         try validatePacing(capabilities.pacing)
     }
 
+    func validate(
+        capabilities: SurfaceCapabilitySnapshot,
+        payload: SurfaceCommitPayload
+    ) throws(SurfaceSubmitConstraintError) {
+        try validate(capabilities: capabilities, attachesBuffer: payload.attachesBuffer)
+    }
+
+    func validateShape(
+        payload: SurfaceCommitPayload
+    ) throws(SurfaceSubmitConstraintError) {
+        switch synchronization {
+        case .implicit:
+            return
+        case .explicit(let acquire, let release):
+            guard payload.attachesBuffer else {
+                if acquire != nil {
+                    throw SurfaceSubmitConstraintError.acquirePointWithoutAttachedBuffer
+                }
+                if release != nil {
+                    throw SurfaceSubmitConstraintError.releasePointWithoutAttachedBuffer
+                }
+                return
+            }
+
+            guard let acquire else {
+                throw SurfaceSubmitConstraintError.acquirePointRequired
+            }
+            guard let release else {
+                throw SurfaceSubmitConstraintError.releasePointRequired
+            }
+
+            try validateOrdering(acquire: acquire, release: release)
+        }
+    }
+
     private func validateSynchronization(
         _ capability: SurfaceSynchronizationCapability,
         attachesBuffer: Bool
@@ -175,6 +210,7 @@ package enum SurfaceSubmitConstraintError: Error, Equatable, Sendable {
     case conflictingSyncPoints
     case fifoUnavailable
     case commitTimingUnavailable
+    case commitTimestampAlreadyExists
     case invalidCommitTimestamp
     case syncTimelineUnavailable(SurfaceSyncTimelineIdentity)
 }

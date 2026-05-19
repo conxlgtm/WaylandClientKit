@@ -846,7 +846,7 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+TextInput.swift`
 
-- L2: `    public nonisolated var textInputEvents: TextInputEvents {`
+- L2: `    nonisolated public var textInputEvents: TextInputEvents {`
 - L6: `    public func textInputSession(for seatID: SeatID) throws -> TextInputSession {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay.swift`
@@ -854,11 +854,11 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L4: `public actor WaylandDisplay {`
 - L5: `    public static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000`
 - L6: `    public static let defaultConfigureTimeoutMilliseconds: Int32 = 1_000`
-- L11: `    public nonisolated var unownedExecutor: UnownedSerialExecutor {`
-- L15: `    public nonisolated var events: DisplayEvents {`
-- L19: `    public nonisolated var inputEvents: InputEvents {`
-- L23: `    public nonisolated var dataTransferEvents: DataTransferEvents {`
-- L27: `    public nonisolated var diagnostics: DisplayDiagnostics {`
+- L11: `    nonisolated public var unownedExecutor: UnownedSerialExecutor {`
+- L15: `    nonisolated public var events: DisplayEvents {`
+- L19: `    nonisolated public var inputEvents: InputEvents {`
+- L23: `    nonisolated public var dataTransferEvents: DataTransferEvents {`
+- L27: `    nonisolated public var diagnostics: DisplayDiagnostics {`
 - L54: `    public static func withConnection<ResultValue: Sendable>(`
 - L76: `    public static func withConnection<ResultValue: Sendable>(`
 - L90: `    public func currentPointerCursor() throws -> PointerCursor {`

@@ -26,12 +26,12 @@ public_declarations() {
             }
         }
 
-        /^[[:space:]]*public[[:space:]]+/ {
+        /^[[:space:]]*([[:alpha:]_][[:alnum:]_]*[[:space:]]+)*public[[:space:]]+/ {
             print FNR ":" $0
         }
 
         {
-            starts_public_enum = $0 ~ /^[[:space:]]*public[[:space:]]+(indirect[[:space:]]+)?enum[[:space:]]+/
+            starts_public_enum = $0 ~ /^[[:space:]]*([[:alpha:]_][[:alnum:]_]*[[:space:]]+)*public[[:space:]]+(indirect[[:space:]]+)?enum[[:space:]]+/
             if (starts_public_enum) {
                 in_public_enum = 1
                 enum_depth = 0

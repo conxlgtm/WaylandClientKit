@@ -44,8 +44,7 @@ struct SurfaceSubmitConstraintObjects {
     mutating func apply(
         _ constraints: SurfaceSubmitConstraints
     ) throws(SurfaceSubmitConstraintError) {
-        try applySynchronization(constraints.synchronization)
-        try applyPacing(constraints.pacing)
+        try preflight(constraints).apply()
     }
 
     mutating func markCommitted() {
@@ -68,75 +67,96 @@ struct SurfaceSubmitConstraintObjects {
         synchronization = nil
     }
 
-    private func applySynchronization(
+    func preflight(
+        _ constraints: SurfaceSubmitConstraints
+    ) throws(SurfaceSubmitConstraintError) -> ResolvedSurfaceSubmitConstraints {
+        ResolvedSurfaceSubmitConstraints(
+            synchronization: try preflightSynchronization(
+                constraints.synchronization
+            ),
+            pacing: try preflightPacing(constraints.pacing)
+        )
+    }
+
+    private func preflightSynchronization(
         _ constraint: SurfaceSynchronizationConstraint
-    ) throws(SurfaceSubmitConstraintError) {
+    ) throws(SurfaceSubmitConstraintError) -> ResolvedSurfaceSynchronization? {
         switch constraint {
         case .implicit:
-            return
+            return nil
         case .explicit(let acquire, let release):
             guard let synchronization else {
                 throw .explicitSyncUnavailable
             }
 
-            if let acquire {
-                try synchronization.setAcquirePoint(
-                    timeline: timeline(for: acquire.timeline),
-                    point: acquire.point
-                )
-            }
-            if let release {
-                try synchronization.setReleasePoint(
-                    timeline: timeline(for: release.timeline),
-                    point: release.point
-                )
-            }
+            return ResolvedSurfaceSynchronization(
+                object: synchronization,
+                acquire: try acquire.map(resolve),
+                release: try release.map(resolve)
+            )
         }
     }
 
-    private func applyPacing(
+    private func preflightPacing(
         _ constraint: SurfacePacingConstraint
-    ) throws(SurfaceSubmitConstraintError) {
+    ) throws(SurfaceSubmitConstraintError) -> ResolvedSurfacePacing {
         switch constraint {
         case .none:
-            return
+            return .none
         case .fifo(let mode):
-            try applyFifo(mode)
+            return ResolvedSurfacePacing(fifo: try preflightFifo(mode))
         case .targetTime(let targetTime):
-            try setCommitTargetTime(targetTime)
+            return ResolvedSurfacePacing(
+                targetTime: try preflightCommitTargetTime(targetTime)
+            )
         case .fifoAndTargetTime(let mode, let targetTime):
-            try applyFifo(mode)
-            try setCommitTargetTime(targetTime)
+            return ResolvedSurfacePacing(
+                fifo: try preflightFifo(mode),
+                targetTime: try preflightCommitTargetTime(targetTime)
+            )
         }
     }
 
-    private func applyFifo(_ mode: FifoMode) throws(SurfaceSubmitConstraintError) {
+    private func preflightFifo(
+        _ mode: FifoMode
+    ) throws(SurfaceSubmitConstraintError) -> ResolvedSurfaceFifo {
         guard let fifo else {
             throw .fifoUnavailable
         }
 
-        switch mode {
-        case .setBarrier:
-            fifo.apply(.setBarrier)
-        case .waitBarrier:
-            fifo.apply(.waitBarrier)
-        }
+        return ResolvedSurfaceFifo(object: fifo, mode: mode)
     }
 
-    private func setCommitTargetTime(
+    private func preflightCommitTargetTime(
         _ targetTime: SurfaceCommitTargetTime
-    ) throws(SurfaceSubmitConstraintError) {
+    ) throws(SurfaceSubmitConstraintError) -> ResolvedSurfaceCommitTargetTime {
         guard let commitTimer else {
             throw .commitTimingUnavailable
         }
 
         do {
-            try commitTimer.setTimestamp(try targetTime.rawTargetTime)
+            let rawTargetTime = try targetTime.rawTargetTime
+            try commitTimer.validateCanSetTimestamp(rawTargetTime)
+            return ResolvedSurfaceCommitTargetTime(
+                object: commitTimer,
+                targetTime: rawTargetTime
+            )
         } catch RawCommitTimingError.invalidTimestamp {
             throw .invalidCommitTimestamp
+        } catch RawCommitTimingError.timestampAlreadyExists {
+            throw .commitTimestampAlreadyExists
         } catch {
             throw .commitTimingUnavailable
         }
+    }
+
+    private func resolve(
+        _ point: SurfaceSyncPoint
+    ) throws(SurfaceSubmitConstraintError) -> ResolvedSurfaceSyncPoint {
+        try ResolvedSurfaceSyncPoint(
+            timeline: timeline(for: point.timeline),
+            point: point.point
+        )
     }
 
     private func timeline(
@@ -148,4 +168,87 @@ struct SurfaceSubmitConstraintObjects {
 
         return timeline
     }
+}
+
+struct ResolvedSurfaceSubmitConstraints {
+    let synchronization: ResolvedSurfaceSynchronization?
+    let pacing: ResolvedSurfacePacing
+
+    func apply() throws(SurfaceSubmitConstraintError) {
+        try pacing.applyCommitTiming()
+        synchronization?.apply()
+        pacing.applyFifo()
+    }
+}
+
+struct ResolvedSurfaceSynchronization {
+    let object: RawLinuxDrmSyncobjSurface
+    let acquire: ResolvedSurfaceSyncPoint?
+    let release: ResolvedSurfaceSyncPoint?
+
+    func apply() {
+        if let acquire {
+            object.setAcquirePoint(timeline: acquire.timeline, point: acquire.point)
+        }
+        if let release {
+            object.setReleasePoint(timeline: release.timeline, point: release.point)
+        }
+    }
+}
+
+struct ResolvedSurfaceSyncPoint {
+    let timeline: RawLinuxDrmSyncobjTimeline
+    let point: RawSyncobjTimelinePoint
+}
+
+struct ResolvedSurfacePacing {
+    static var none: Self {
+        Self(fifo: nil, targetTime: nil)
+    }
+
+    let fifo: ResolvedSurfaceFifo?
+    let targetTime: ResolvedSurfaceCommitTargetTime?
+
+    init(
+        fifo resolvedFifo: ResolvedSurfaceFifo? = nil,
+        targetTime resolvedTargetTime: ResolvedSurfaceCommitTargetTime? = nil
+    ) {
+        fifo = resolvedFifo
+        targetTime = resolvedTargetTime
+    }
+
+    func applyCommitTiming() throws(SurfaceSubmitConstraintError) {
+        guard let targetTime else { return }
+
+        do {
+            try targetTime.object.setTimestamp(targetTime.targetTime)
+        } catch RawCommitTimingError.invalidTimestamp {
+            throw .invalidCommitTimestamp
+        } catch RawCommitTimingError.timestampAlreadyExists {
+            throw .commitTimestampAlreadyExists
+        } catch {
+            throw .commitTimingUnavailable
+        }
+    }
+
+    func applyFifo() {
+        guard let fifo else { return }
+
+        switch fifo.mode {
+        case .setBarrier:
+            fifo.object.apply(.setBarrier)
+        case .waitBarrier:
+            fifo.object.apply(.waitBarrier)
+        }
+    }
+}
+
+struct ResolvedSurfaceFifo {
+    let object: RawFifo
+    let mode: FifoMode
+}
+
+struct ResolvedSurfaceCommitTargetTime {
+    let object: RawCommitTimer
+    let targetTime: RawCommitTargetTime
 }
