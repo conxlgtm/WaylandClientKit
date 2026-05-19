@@ -165,6 +165,7 @@ package struct RawImageDescriptionFailureCause: Equatable, Sendable {
     package static let unsupported = Self(rawValue: 1)
     package static let operatingSystem = Self(rawValue: 2)
     package static let noOutput = Self(rawValue: 3)
+    package static let invalidIdentity = Self(rawValue: UInt32.max)
 
     package init(rawValue value: UInt32) {
         rawValue = value
@@ -1222,7 +1223,7 @@ package final class RawImageDescription {
     package init(
         pointer imageDescriptionPointer: OpaquePointer,
         destroy destroyImageDescription: @escaping (OpaquePointer) -> Void,
-        state initialState: RawImageDescriptionState = .ready(identity: 0)
+        state initialState: RawImageDescriptionState = .pending
     ) {
         owner = nil
         testingState = initialState
@@ -1320,7 +1321,9 @@ private final class ImageDescriptionOwner {
                 data,
                 message: "image description ready fired without Swift state"
             ) { owner in
-                owner.state = .ready(identity: UInt64(identity))
+                owner.state = ImageDescriptionOwner.readyState(
+                    identity: UInt64(identity)
+                )
             }
         }
 
@@ -1329,11 +1332,22 @@ private final class ImageDescriptionOwner {
                 data,
                 message: "image description ready2 fired without Swift state"
             ) { owner in
-                owner.state = .ready(
+                owner.state = ImageDescriptionOwner.readyState(
                     identity: UInt64(identityHigh) << 32 | UInt64(identityLow)
                 )
             }
         }
+    }
+
+    private static func readyState(identity: UInt64) -> RawImageDescriptionState {
+        guard identity != 0 else {
+            return .failed(
+                cause: .invalidIdentity,
+                message: "image description identity must be nonzero"
+            )
+        }
+
+        return .ready(identity: identity)
     }
 
     func install() throws(RuntimeError) {

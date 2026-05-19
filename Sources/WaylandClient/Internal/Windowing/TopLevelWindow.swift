@@ -972,6 +972,7 @@ extension TopLevelWindow {
         let bufferAvailability = try redrawBufferAvailability()
         let payload = SurfaceCommitPayload.buffer(buffer)
         try submitConstraints.validateShape(payload: payload)
+        refreshMetadataCapabilitiesFromBoundGlobals()
         try metadata.validate(capabilities: surfaceRuntime.capabilitySnapshot())
         try ensureSubmitConstraintObjectsInstalled(for: submitConstraints)
         try ensureMetadataObjectsInstalled(for: metadata)
@@ -1110,6 +1111,31 @@ extension TopLevelWindow {
             try ensureColorManagementObjectInstalled()
             try ensureColorDescriptionInstalled(colorDescription)
         }
+    }
+
+    private func refreshMetadataCapabilitiesFromBoundGlobals() {
+        guard let extensions = connection.boundGlobals?.extensions else {
+            surfaceRuntime.setContentTypeCapability(.unavailable)
+            surfaceRuntime.setAlphaModifierCapability(.unavailable)
+            surfaceRuntime.setTearingControlCapability(.unavailable)
+            surfaceRuntime.setColorRepresentationCapability(.unavailable)
+            surfaceRuntime.setColorCapability(.unavailable)
+            return
+        }
+
+        surfaceRuntime.setContentTypeCapability(
+            extensions.surfaceContentTypeCapability
+        )
+        surfaceRuntime.setAlphaModifierCapability(
+            extensions.surfaceAlphaModifierCapability
+        )
+        surfaceRuntime.setTearingControlCapability(
+            extensions.surfaceTearingControlCapability
+        )
+        surfaceRuntime.setColorRepresentationCapability(
+            extensions.surfaceColorRepresentationCapability
+        )
+        surfaceRuntime.setColorCapability(extensions.surfaceColorCapability)
     }
 
     private func ensureContentTypeObjectInstalled() throws {

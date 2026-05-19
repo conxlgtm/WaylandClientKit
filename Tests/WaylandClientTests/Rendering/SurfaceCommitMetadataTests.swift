@@ -344,7 +344,7 @@ private func testColorManagementSurface(pointer rawPointer: UInt) throws
 
 private func testImageDescription(
     pointer rawPointer: UInt,
-    state initialState: RawImageDescriptionState = .ready(identity: 0)
+    state initialState: RawImageDescriptionState
 ) throws
     -> RawImageDescription
 {

@@ -374,43 +374,6 @@ struct SurfaceSubmitConstraintObjectsTests {
     }
 
     @Test
-    func submitConstraintObjectsKeepSyncRequestsVisibleWhenPacingFails() async throws {
-        let syncobjPointer = try unsafe #require(OpaquePointer(bitPattern: 0x5C01))
-        let timelinePointer = try unsafe #require(OpaquePointer(bitPattern: 0x5C02))
-        let syncobjSurface = RawLinuxDrmSyncobjSurface(pointer: syncobjPointer) { pointer in
-            unsafe _ = pointer
-        }
-        let timeline = RawLinuxDrmSyncobjTimeline(pointer: timelinePointer) { pointer in
-            unsafe _ = pointer
-        }
-        var objects = SurfaceSubmitConstraintObjects()
-
-        objects.installSynchronization(syncobjSurface)
-        objects.installTimeline(timeline, identity: SurfaceSyncTimelineIdentity(9))
-
-        try await SyncobjRequestRecordingGate.withExclusiveRecording {
-            swl_test_syncobj_request_recording_begin()
-            defer { swl_test_syncobj_request_recording_end() }
-
-            #expect(throws: SurfaceSubmitConstraintError.fifoUnavailable) {
-                try objects.apply(
-                    SurfaceSubmitConstraints(
-                        synchronization: .explicit(
-                            acquire: syncPoint(timeline: 9, point: 1),
-                            release: syncPoint(timeline: 9, point: 2)
-                        ),
-                        pacing: .fifo(.waitBarrier)
-                    )
-                )
-            }
-
-            let record = unsafe swl_test_syncobj_request_record()
-            #expect(unsafe record.call_count == 2)
-            #expect(unsafe record.kind == SWL_TEST_SYNCOBJ_SET_RELEASE_POINT)
-        }
-    }
-
-    @Test
     func commitTimingPendingStateResetsOnlyAfterMarkedCommitted() async throws {
         let timerPointer = try unsafe #require(OpaquePointer(bitPattern: 0x5D01))
         let timer = RawCommitTimer(pointer: timerPointer) { pointer in

@@ -134,6 +134,26 @@ struct RawSurfaceColorManagementRequestTests {
     }
 
     @Test
+    func imageDescriptionReady2WithZeroIdentityIsRejected() async throws {
+        try await withColorManagerFixture { surface, manager in
+            let feedback = try manager.surfaceFeedback(for: surface)
+            defer { feedback.destroy() }
+
+            let imageDescription = try feedback.preferredImageDescription()
+            defer { imageDescription.destroy() }
+
+            #expect(swl_test_image_description_listener_emit_ready2(0, 0) == 1)
+            #expect(
+                imageDescription.state
+                    == .failed(
+                        cause: .invalidIdentity,
+                        message: "image description identity must be nonzero"
+                    )
+            )
+        }
+    }
+
+    @Test
     func imageDescriptionReadyPublishesLegacyIdentity() async throws {
         try await withColorManagerFixture { surface, manager in
             let feedback = try manager.surfaceFeedback(for: surface)
