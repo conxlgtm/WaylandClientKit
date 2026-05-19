@@ -78,6 +78,22 @@ git_in_repo ls-files \
         echo
     done
 
+echo "## WaylandGraphicsPreview Public Declarations"
+echo
+git_in_repo ls-files \
+    | rg '^Sources/WaylandGraphicsPreviewAPI/.*\.swift$' \
+    | sort \
+    | while IFS= read -r file; do
+        [[ -f "$file" ]] || continue
+        declarations="$(public_declarations "$file")"
+        [[ -n "$declarations" ]] || continue
+        echo "### \`$file\`"
+        echo
+        printf '%s\n' "$declarations" \
+            | sed -E 's/^([0-9]+):(.*)$/- L\1: `\2`/'
+        echo
+    done
+
 echo "## Non-Product Target Public Declarations"
 echo
 echo "These declarations are not part of a vended library product unless the package manifest changes."
@@ -85,6 +101,7 @@ echo
 git_in_repo ls-files \
     | rg '^Sources/.*\.swift$' \
     | rg -v '^Sources/WaylandClient/' \
+    | rg -v '^Sources/WaylandGraphicsPreviewAPI/' \
     | sort \
     | while IFS= read -r file; do
         [[ -f "$file" ]] || continue

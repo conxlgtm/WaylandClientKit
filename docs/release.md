@@ -8,7 +8,7 @@ Do not tag while docs, public API audit, support lists, and checks disagree.
 Run these from a clean working tree:
 
 ```bash
-swift --version
+./scripts/dev/swift.sh --version
 pkg-config --modversion egl
 pkg-config --modversion gbm
 pkg-config --modversion glesv2
@@ -17,14 +17,31 @@ pkg-config --modversion wayland-client
 pkg-config --modversion xkbcommon
 command -v wayland-scanner
 make check
-swift build -c release
-swift build -c release --target SwiftWaylandDemo
-swift build -c release --product swift-wayland-smoke
+./scripts/dev/swift.sh build --disable-index-store -c release
+./scripts/dev/swift.sh build --disable-index-store -c release --target SwiftWaylandDemo
+./scripts/dev/swift.sh build --disable-index-store -c release --target GPUPreviewSmokeClient
+./scripts/dev/swift.sh build --disable-index-store -c release --product swift-wayland-smoke
 ./scripts/ci/dump-public-api.sh > /tmp/swiftwayland-public-api.md
 ./scripts/ci/verify-public-api-audit.sh
 ./scripts/ci/verify-target-imports.sh
 ./scripts/ci/verify-docc.sh
+bash ./scripts/safety/verify-unsafe-allowlist.sh
 ```
+
+Prefer `make release-check` for the release build path. Direct `swift`
+commands require equivalent runtime library configuration; the wrapper sources
+`scripts/dev/swift-runtime-env.sh` before invoking Swift.
+
+Where the environment supports Swift sanitizers, also run:
+
+```bash
+make test-tsan
+make test-asan
+```
+
+ThreadSanitizer is the primary concurrency lifecycle check. AddressSanitizer
+can be environment-dependent on Linux and may require host support for its
+runtime and process instrumentation.
 
 Under a real Wayland session:
 
@@ -33,7 +50,7 @@ Under a real Wayland session:
 ./scripts/smoke/smoke-wayland.sh
 ./scripts/smoke/integration-wayland.sh
 make gpu-preview-wayland
-swift run SwiftWaylandDemo
+./scripts/dev/swift.sh run SwiftWaylandDemo
 ```
 
 Compositor targets are Weston, GNOME/Mutter, KDE/KWin, and Sway/wlroots. A checkpoint
@@ -46,11 +63,11 @@ Record results in [compositor-matrix.md](compositor-matrix.md).
 2. Confirm Swift 6.3.2 is active.
 3. Confirm dynamic glibc Linux bootstrap dependencies are installed or CI uses equivalent packages.
 4. Run `make check`.
-5. Run optimized builds for the package, demo, and smoke executable.
+5. Run optimized builds for the package, demo, GPU preview smoke client, and smoke executable.
 6. Run `./scripts/smoke/smoke-wayland.sh` under a Wayland session.
 7. Run `./scripts/smoke/integration-wayland.sh` under a Wayland session.
 8. Run `make gpu-preview-wayland` under a Wayland session.
-9. Manually run `swift run SwiftWaylandDemo` on at least one non-Weston desktop
+9. Manually run `./scripts/dev/swift.sh run SwiftWaylandDemo` on at least one non-Weston desktop
    before treating compositor compatibility as proven.
 10. Update `docs/compositor-matrix.md` with the compositor facts and check results.
 11. Regenerate protocols and confirm no diff.
@@ -120,8 +137,8 @@ Not supported:
 
 Verification:
 - make check
-- swift build -c release
-- swift run swift-wayland-smoke
+- ./scripts/dev/swift.sh build --disable-index-store -c release
+- ./scripts/dev/swift.sh run swift-wayland-smoke
 - ./scripts/smoke/integration-wayland.sh
 - make gpu-preview-wayland
 - manual demo smoke test
