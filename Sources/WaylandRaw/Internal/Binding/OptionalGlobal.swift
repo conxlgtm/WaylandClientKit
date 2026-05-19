@@ -50,6 +50,11 @@ extension RawCursorShapeManager: RawDestroyableObject {}
 extension RawLinuxDrmSyncobjManager: RawDestroyableObject {}
 extension RawFifoManager: RawDestroyableObject {}
 extension RawCommitTimingManager: RawDestroyableObject {}
+extension RawContentTypeManager: RawDestroyableObject {}
+extension RawAlphaModifierManager: RawDestroyableObject {}
+extension RawTearingControlManager: RawDestroyableObject {}
+extension RawColorRepresentationManager: RawDestroyableObject {}
+extension RawColorManager: RawDestroyableObject {}
 extension RawDataDeviceManager: RawDestroyableObject {}
 extension RawPrimarySelectionDeviceManager: RawDestroyableObject {}
 extension RawTextInputManager: RawDestroyableObject {}
@@ -64,6 +69,12 @@ package typealias OptionalCursorShapeManager = OptionalGlobal<RawCursorShapeMana
 package typealias OptionalLinuxDrmSyncobjManager = OptionalGlobal<RawLinuxDrmSyncobjManager>
 package typealias OptionalFifoManager = OptionalGlobal<RawFifoManager>
 package typealias OptionalCommitTimingManager = OptionalGlobal<RawCommitTimingManager>
+package typealias OptionalContentTypeManager = OptionalGlobal<RawContentTypeManager>
+package typealias OptionalAlphaModifierManager = OptionalGlobal<RawAlphaModifierManager>
+package typealias OptionalTearingControlManager = OptionalGlobal<RawTearingControlManager>
+package typealias OptionalColorRepresentationManager =
+    OptionalGlobal<RawColorRepresentationManager>
+package typealias OptionalColorManager = OptionalGlobal<RawColorManager>
 package typealias OptionalDataDeviceManager = OptionalGlobal<RawDataDeviceManager>
 package typealias OptionalPrimarySelectionDeviceManager =
     OptionalGlobal<RawPrimarySelectionDeviceManager>

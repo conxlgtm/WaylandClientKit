@@ -98,6 +98,24 @@ sudo dnf install \
   weston
 ```
 
+openSUSE:
+
+```bash
+sudo zypper --non-interactive install \
+  clang git make ripgrep \
+  pkgconf-pkg-config \
+  libdrm-devel Mesa-libEGL-devel libgbm-devel Mesa-libGLESv2-devel \
+  wayland-devel wayland-protocols-devel \
+  libxkbcommon-devel \
+  weston
+```
+
+Swift 6.3.2 SwiftPM may also need a compatibility `libxml2.so.2` on
+openSUSE. The project Swift wrappers load `$SWIFT_COMPAT_LIBS` when present,
+defaulting to `$HOME/.local/share/swift-compat-libs`; direct toolchain calls
+must expose that directory through `LD_LIBRARY_PATH` or another runtime loader
+path.
+
 The support contract is SwiftPM plus system libraries resolved through
 `pkg-config`. Distro package files are not part of the current repository.
 
@@ -127,6 +145,11 @@ Skipping linux-dmabuf live test: compositor did not advertise zwp_linux_dmabuf_v
 Skipping syncobj live test: compositor did not advertise wp_linux_drm_syncobj_manager_v1.
 Skipping FIFO live test: compositor did not advertise wp_fifo_manager_v1.
 Skipping commit-timing live test: compositor did not advertise wp_commit_timing_manager_v1.
+Skipping content-type live test: compositor did not advertise wp_content_type_manager_v1.
+Skipping alpha-modifier live test: compositor did not advertise wp_alpha_modifier_v1.
+Skipping tearing-control live test: compositor did not advertise wp_tearing_control_manager_v1.
+Skipping color-representation live test: compositor did not advertise wp_color_representation_manager_v1.
+Skipping color-management live test: compositor did not advertise wp_color_manager_v1.
 Skipping GPU preview live test: compositor did not advertise zwp_linux_dmabuf_v1.
 Skipping cursor-shape live test: compositor did not advertise wp_cursor_shape_manager_v1.
 Skipping text-input live test: compositor did not advertise zwp_text_input_manager_v3.

@@ -21,6 +21,7 @@ package struct GPUWindowPresentedFrame: Equatable, Sendable {
     package let commitPlan: SurfaceCommitPlan
     package let synchronization: GPUBufferSubmissionSynchronization
     package let pacing: SurfacePacingConstraint
+    package let metadata: SurfaceCommitMetadata
 }
 
 package enum GPUWindowPresenterRetireReason: Equatable, Sendable, CustomStringConvertible {
@@ -294,14 +295,16 @@ package final class GPUWindowPresenter {
         try presentNext(
             on: window,
             synchronization: .implicit,
-            pacing: .none
+            pacing: .none,
+            metadata: .default
         )
     }
 
     package func presentNext(
         on window: TopLevelWindow,
         synchronization: GPUBufferSubmissionSynchronization,
-        pacing: SurfacePacingConstraint
+        pacing: SurfacePacingConstraint,
+        metadata: SurfaceCommitMetadata = .default
     ) throws(GPUWindowPresenterError) -> GPUWindowPresentedFrame {
         if let releaseFailure = releaseFailures.first {
             throw GPUWindowPresenterError.releaseFailure(releaseFailure)
@@ -326,7 +329,8 @@ package final class GPUWindowPresenter {
             )
             let presentation = try window.presentPreviewBufferOnOwnerThread(
                 buffer.surfaceBuffer,
-                submitConstraints: submitConstraints
+                submitConstraints: submitConstraints,
+                metadata: metadata
             )
             try state.markSubmitted(
                 lease,
@@ -338,12 +342,15 @@ package final class GPUWindowPresenter {
                 generation: presentation.generation,
                 commitPlan: presentation.commitPlan,
                 synchronization: synchronization,
-                pacing: pacing
+                pacing: pacing,
+                metadata: metadata
             )
             presentationCorrelation.record(frame)
-            runtimePath = runtimePathSnapshotAfterPresentation(
+            runtimePath = GPURuntimePathSnapshot.afterPresentation(
+                capabilities: presentation.capabilities,
                 synchronization: synchronization,
-                pacing: pacing
+                pacing: pacing,
+                metadata: metadata
             )
             return frame
         } catch let error as GBMBufferPoolStateError {
@@ -400,46 +407,6 @@ package final class GPUWindowPresenter {
         presentationCorrelation.removeAll()
         runtimePath = .empty
         state.retireAll(reason: reason)
-    }
-
-    private func runtimePathSnapshotAfterPresentation(
-        synchronization: GPUBufferSubmissionSynchronization,
-        pacing: SurfacePacingConstraint
-    ) -> GPURuntimePathSnapshot {
-        GPURuntimePathSnapshot(
-            dmabuf: .active,
-            gbm: .active,
-            egl: .available,
-            synchronization: runtimeSynchronizationStatus(synchronization),
-            pacing: runtimePacingStatus(pacing),
-            presentationFeedback: .unavailable
-        )
-    }
-
-    private func runtimeSynchronizationStatus(
-        _ synchronization: GPUBufferSubmissionSynchronization
-    ) -> GPUSynchronizationRuntimeStatus {
-        switch synchronization {
-        case .implicit:
-            .implicit
-        case .explicit:
-            .explicitActive
-        }
-    }
-
-    private func runtimePacingStatus(
-        _ pacing: SurfacePacingConstraint
-    ) -> GPUFramePacingRuntimeStatus {
-        switch pacing {
-        case .none:
-            .none
-        case .fifo:
-            .fifoActive
-        case .targetTime:
-            .commitTimingActive
-        case .fifoAndTargetTime:
-            .fifoAndCommitTimingActive
-        }
     }
 
     deinit {

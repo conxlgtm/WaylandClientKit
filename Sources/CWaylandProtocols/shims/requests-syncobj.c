@@ -4,6 +4,7 @@
 #ifdef SWL_ENABLE_TESTING
 static struct swl_test_syncobj_request_record swl_test_syncobj_request_latest;
 static struct swl_test_syncobj_destroy_record swl_test_syncobj_destroy_latest;
+static int swl_test_syncobj_import_timeline_should_fail;
 
 static struct wp_linux_drm_syncobj_surface_v1 *
 swl_syncobj_get_surface_default(
@@ -124,6 +125,9 @@ swl_test_syncobj_import_timeline_record(
 {
     swl_test_record_syncobj_request(
         SWL_TEST_SYNCOBJ_IMPORT_TIMELINE, manager, NULL, NULL, fd, 0, 0);
+    if (swl_test_syncobj_import_timeline_should_fail) {
+        return NULL;
+    }
     return (struct wp_linux_drm_syncobj_timeline_v1 *)0xD502;
 }
 
@@ -244,6 +248,7 @@ void swl_test_syncobj_request_recording_begin(void)
             .kind = SWL_TEST_SYNCOBJ_REQUEST_NONE,
             .fd = -1,
         };
+    swl_test_syncobj_import_timeline_should_fail = 0;
     swl_test_syncobj_destroy_latest =
         (struct swl_test_syncobj_destroy_record){0};
     swl_syncobj_get_surface_impl = swl_test_syncobj_get_surface_record;
@@ -259,6 +264,7 @@ void swl_test_syncobj_request_recording_begin(void)
 
 void swl_test_syncobj_request_recording_end(void)
 {
+    swl_test_syncobj_import_timeline_should_fail = 0;
     swl_syncobj_get_surface_impl = swl_syncobj_get_surface_default;
     swl_syncobj_import_timeline_impl = swl_syncobj_import_timeline_default;
     swl_syncobj_set_acquire_point_impl = swl_syncobj_set_acquire_point_default;
@@ -266,6 +272,11 @@ void swl_test_syncobj_request_recording_end(void)
     swl_syncobj_surface_destroy_impl = swl_syncobj_surface_destroy_default;
     swl_syncobj_timeline_destroy_impl = swl_syncobj_timeline_destroy_default;
     swl_syncobj_manager_destroy_impl = swl_syncobj_manager_destroy_default;
+}
+
+void swl_test_syncobj_import_timeline_set_failure(int should_fail)
+{
+    swl_test_syncobj_import_timeline_should_fail = should_fail;
 }
 
 struct swl_test_syncobj_request_record swl_test_syncobj_request_record(void)
@@ -278,4 +289,3 @@ struct swl_test_syncobj_destroy_record swl_test_syncobj_destroy_record(void)
     return swl_test_syncobj_destroy_latest;
 }
 #endif
-

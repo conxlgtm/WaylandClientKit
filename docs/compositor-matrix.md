@@ -61,12 +61,33 @@ the noninteractive smoke executable:
 - `wp_linux_drm_syncobj_manager_v1`
 - `wp_fifo_manager_v1`
 - `wp_commit_timing_manager_v1`
+- `wp_content_type_manager_v1`
+- `wp_alpha_modifier_v1`
+- `wp_tearing_control_manager_v1`
+- `wp_color_representation_manager_v1`
+- `wp_color_manager_v1`
 - `wl_data_device_manager`
 - `zwp_primary_selection_device_manager_v1`
 - `wp_cursor_shape_manager_v1`
 - `zwp_text_input_manager_v3`
 - `zxdg_decoration_manager_v1`
 - `zxdg_output_manager_v1`
+
+## Runtime Facts
+
+Smoke and GPU-preview notes should use these terms when available:
+
+- `syncobj`: `unavailable`, `advertised`, `configured`, `active`, or
+  `fallback(<reason>)`
+- `fifo`: `unavailable`, `advertised`, or `active`
+- `commitTiming`: `unavailable`, `advertised`, `configured`, or `active`
+- `dmabuf`, `gbm`, `egl`: `unavailable`, `advertised`, `configured`, `active`,
+  or `failed(<reason>)`
+- `presentationFeedback`: `unavailable`, `available`, `requested`, or
+  `observed`
+- `contentType`, `alphaModifier`, `tearingControl`,
+  `colorRepresentation`, and `colorManagement`: `unavailable`, `advertised`,
+  `configured`, or `failed(<reason>)`
 
 ## Result Terms
 

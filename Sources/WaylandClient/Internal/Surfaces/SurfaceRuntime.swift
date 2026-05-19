@@ -63,6 +63,53 @@ package enum SurfacePacingCapability: Equatable, Sendable {
     }
 }
 
+package struct SurfaceColorRepresentationSupport: Equatable, Sendable {
+    package let alphaModes: Set<SurfaceAlphaMode>
+    package let coefficientsAndRanges: Set<SurfaceMatrixCoefficientsAndRange>
+
+    package init(
+        alphaModes supportedAlphaModes: Set<SurfaceAlphaMode> = [],
+        coefficientsAndRanges supportedCoefficientsAndRanges:
+            Set<SurfaceMatrixCoefficientsAndRange> = []
+    ) {
+        alphaModes = supportedAlphaModes
+        coefficientsAndRanges = supportedCoefficientsAndRanges
+    }
+}
+
+package enum SurfaceColorRepresentationCapability: Equatable, Sendable {
+    case unavailable
+    case pending(version: RawVersion)
+    case available(
+        version: RawVersion,
+        support: SurfaceColorRepresentationSupport
+    )
+
+    package var isAvailable: Bool {
+        switch self {
+        case .unavailable, .pending:
+            false
+        case .available:
+            true
+        }
+    }
+}
+
+package enum SurfaceColorCapability: Equatable, Sendable {
+    case unavailable
+    case available(version: RawVersion)
+    case preferredDescription(SurfaceColorDescriptionReference)
+
+    package var isAvailable: Bool {
+        switch self {
+        case .unavailable:
+            false
+        case .available, .preferredDescription:
+            true
+        }
+    }
+}
+
 package struct SurfaceCapabilitySnapshot: Equatable, Sendable {
     package let role: SurfaceRuntimeRole
     package let outputIDs: [OutputID]
@@ -71,19 +118,54 @@ package struct SurfaceCapabilitySnapshot: Equatable, Sendable {
     package let dmabuf: SurfaceDmabufCapability
     package let synchronization: SurfaceSynchronizationCapability
     package let pacing: SurfacePacingCapability
+    package let contentType: SurfaceCapabilityStatus
+    package let alphaModifier: SurfaceCapabilityStatus
+    package let tearingControl: SurfaceCapabilityStatus
+    package let colorRepresentation: SurfaceColorRepresentationCapability
+    package let color: SurfaceColorCapability
+
+    package init(
+        role surfaceRole: SurfaceRuntimeRole,
+        outputIDs surfaceOutputIDs: [OutputID],
+        fractionalScale surfaceFractionalScale: SurfaceScaleCapability,
+        presentationFeedback surfacePresentationFeedback: SurfaceCapabilityStatus,
+        dmabuf surfaceDmabuf: SurfaceDmabufCapability,
+        synchronization surfaceSynchronization: SurfaceSynchronizationCapability,
+        pacing surfacePacing: SurfacePacingCapability,
+        contentType surfaceContentType: SurfaceCapabilityStatus = .unavailable,
+        alphaModifier surfaceAlphaModifier: SurfaceCapabilityStatus = .unavailable,
+        tearingControl surfaceTearingControl: SurfaceCapabilityStatus = .unavailable,
+        colorRepresentation surfaceColorRepresentation:
+            SurfaceColorRepresentationCapability = .unavailable,
+        color surfaceColor: SurfaceColorCapability = .unavailable
+    ) {
+        role = surfaceRole
+        outputIDs = surfaceOutputIDs
+        fractionalScale = surfaceFractionalScale
+        presentationFeedback = surfacePresentationFeedback
+        dmabuf = surfaceDmabuf
+        synchronization = surfaceSynchronization
+        pacing = surfacePacing
+        contentType = surfaceContentType
+        alphaModifier = surfaceAlphaModifier
+        tearingControl = surfaceTearingControl
+        colorRepresentation = surfaceColorRepresentation
+        color = surfaceColor
+    }
 }
 
 struct SurfaceRuntime<RoleResources> {
-    private struct SurfaceObjects {
+    struct SurfaceObjects {
         var buffers: RawSharedMemoryPool?
         var retiredBufferPools: [RawSharedMemoryPool] = []
         var scaleInstallation = SurfaceScaleInstallation()
         var outputMembership = SurfaceOutputMembershipState()
         var transactionState = SurfaceTransactionState()
         var submitConstraintObjects = SurfaceSubmitConstraintObjects()
+        var metadataObjects = SurfaceMetadataObjects()
     }
 
-    private enum Phase {
+    enum Phase {
         case unassigned(SurfaceObjects)
         case live(roleResources: RoleResources, SurfaceObjects)
         case roleDestroyed(SurfaceObjects)
@@ -94,9 +176,14 @@ struct SurfaceRuntime<RoleResources> {
     private let surfaceID: RawObjectID?
     private var presentationFeedbackCapability = SurfaceCapabilityStatus.unavailable
     private var dmabufCapability = SurfaceDmabufCapability.unavailable
-    private var synchronizationCapability = SurfaceSynchronizationCapability.implicitOnly
-    private var pacingCapability = SurfacePacingCapability.unavailable
-    private var phase: Phase = .unassigned(SurfaceObjects())
+    var synchronizationCapability = SurfaceSynchronizationCapability.implicitOnly
+    var pacingCapability = SurfacePacingCapability.unavailable
+    var contentTypeCapability = SurfaceCapabilityStatus.unavailable
+    var alphaModifierCapability = SurfaceCapabilityStatus.unavailable
+    var tearingControlCapability = SurfaceCapabilityStatus.unavailable
+    var colorRepresentationCapability = SurfaceColorRepresentationCapability.unavailable
+    var colorCapability = SurfaceColorCapability.unavailable
+    var phase: Phase = .unassigned(SurfaceObjects())
 
     init(role surfaceRole: SurfaceRuntimeRole, surfaceID runtimeSurfaceID: RawObjectID? = nil) {
         role = surfaceRole
@@ -203,107 +290,6 @@ extension SurfaceRuntime {
         }
     }
 
-    mutating func setSynchronizationCapability(
-        _ capability: SurfaceSynchronizationCapability
-    ) {
-        synchronizationCapability = capability
-    }
-
-    mutating func setExplicitSynchronizationActive() {
-        synchronizationCapability = .explicitActive
-    }
-
-    mutating func setPacingCapability(_ capability: SurfacePacingCapability) {
-        pacingCapability = capability
-    }
-
-    var hasExplicitSynchronizationObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.submitConstraintObjects.hasExplicitSynchronization
-        case .surfaceDestroyed:
-            false
-        }
-    }
-
-    var hasFifoObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.submitConstraintObjects.hasFifo
-        case .surfaceDestroyed:
-            false
-        }
-    }
-
-    var hasCommitTimerObject: Bool {
-        switch phase {
-        case .unassigned(let objects),
-            .live(_, let objects),
-            .roleDestroyed(let objects):
-            objects.submitConstraintObjects.hasCommitTimer
-        case .surfaceDestroyed:
-            false
-        }
-    }
-
-    mutating func installExplicitSynchronizationObject(
-        _ syncobjSurface: RawLinuxDrmSyncobjSurface
-    ) {
-        synchronizationCapability = .explicitActive
-        updateSurfaceObjects { objects in
-            objects.submitConstraintObjects.installSynchronization(syncobjSurface)
-        }
-    }
-
-    mutating func installSynchronizationTimeline(
-        _ timeline: RawLinuxDrmSyncobjTimeline,
-        identity: SurfaceSyncTimelineIdentity
-    ) {
-        updateSurfaceObjects { objects in
-            objects.submitConstraintObjects.installTimeline(timeline, identity: identity)
-        }
-    }
-
-    mutating func installFifoObject(_ fifo: RawFifo) {
-        updateSurfaceObjects { objects in
-            objects.submitConstraintObjects.installFifo(fifo)
-        }
-    }
-
-    mutating func installCommitTimerObject(_ timer: RawCommitTimer) {
-        updateSurfaceObjects { objects in
-            objects.submitConstraintObjects.installCommitTimer(timer)
-        }
-    }
-
-    mutating func applySubmitConstraints(
-        _ constraints: SurfaceSubmitConstraints
-    ) throws(SurfaceSubmitConstraintError) {
-        switch phase {
-        case .unassigned(var objects):
-            try objects.submitConstraintObjects.apply(constraints)
-            phase = .unassigned(objects)
-        case .live(let roleResources, var objects):
-            try objects.submitConstraintObjects.apply(constraints)
-            phase = .live(roleResources: roleResources, objects)
-        case .roleDestroyed(var objects):
-            try objects.submitConstraintObjects.apply(constraints)
-            phase = .roleDestroyed(objects)
-        case .surfaceDestroyed:
-            return
-        }
-    }
-
-    mutating func markSubmitConstraintsCommitted() {
-        updateSurfaceObjects { objects in
-            objects.submitConstraintObjects.markCommitted()
-        }
-    }
-
     mutating func setSurfaceDmabufFeedback(
         _ snapshot: RawLinuxDmabufFeedbackSnapshot
     ) throws(SurfaceDmabufCapabilityError) {
@@ -356,6 +342,11 @@ extension SurfaceRuntime {
         let dmabuf: SurfaceDmabufCapability
         let synchronization: SurfaceSynchronizationCapability
         let pacing: SurfacePacingCapability
+        let contentType: SurfaceCapabilityStatus
+        let alphaModifier: SurfaceCapabilityStatus
+        let tearingControl: SurfaceCapabilityStatus
+        let colorRepresentation: SurfaceColorRepresentationCapability
+        let color: SurfaceColorCapability
 
         switch phase {
         case .unassigned(let objects),
@@ -367,6 +358,11 @@ extension SurfaceRuntime {
             dmabuf = dmabufCapability
             synchronization = synchronizationCapability
             pacing = pacingCapability
+            contentType = contentTypeCapability
+            alphaModifier = alphaModifierCapability
+            tearingControl = tearingControlCapability
+            colorRepresentation = colorRepresentationCapability
+            color = colorCapability
         case .surfaceDestroyed:
             scaleCapability = .integerOnly
             outputIDs = []
@@ -374,6 +370,11 @@ extension SurfaceRuntime {
             dmabuf = .unavailable
             synchronization = .implicitOnly
             pacing = .unavailable
+            contentType = .unavailable
+            alphaModifier = .unavailable
+            tearingControl = .unavailable
+            colorRepresentation = .unavailable
+            color = .unavailable
         }
 
         return SurfaceCapabilitySnapshot(
@@ -383,7 +384,12 @@ extension SurfaceRuntime {
             presentationFeedback: presentationFeedback,
             dmabuf: dmabuf,
             synchronization: synchronization,
-            pacing: pacing
+            pacing: pacing,
+            contentType: contentType,
+            alphaModifier: alphaModifier,
+            tearingControl: tearingControl,
+            colorRepresentation: colorRepresentation,
+            color: color
         )
     }
 
@@ -539,9 +545,15 @@ extension SurfaceRuntime {
                 throw SurfaceRuntimeError.surfaceDestroyedWithActiveBufferPool
             }
             objects.submitConstraintObjects.destroy()
+            objects.metadataObjects.destroy()
             objects.scaleInstallation.destroy()
             synchronizationCapability = .implicitOnly
             pacingCapability = .unavailable
+            contentTypeCapability = .unavailable
+            alphaModifierCapability = .unavailable
+            tearingControlCapability = .unavailable
+            colorRepresentationCapability = .unavailable
+            colorCapability = .unavailable
             phase = .surfaceDestroyed(retiredBufferPools: objects.retiredBufferPools)
         case .live:
             throw SurfaceRuntimeError.surfaceDestroyedWithLiveRoleResources
@@ -575,7 +587,7 @@ extension SurfaceRuntime {
         }
     }
 
-    private mutating func updateSurfaceObjects(
+    mutating func updateSurfaceObjects(
         _ update: (inout SurfaceObjects) throws -> Void
     ) rethrows {
         switch phase {
@@ -593,7 +605,7 @@ extension SurfaceRuntime {
         }
     }
 
-    private mutating func mutateSurfaceObjects<Result>(
+    mutating func mutateSurfaceObjects<Result>(
         default defaultResult: Result,
         _ update: (inout SurfaceObjects) throws -> Result
     ) rethrows -> Result {

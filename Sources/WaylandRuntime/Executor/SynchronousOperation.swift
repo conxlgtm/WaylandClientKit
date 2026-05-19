@@ -3,10 +3,10 @@ import Glibc
 @safe
 final class SynchronousOperation<ResultValue: Sendable>: Sendable {
     private let operation: @Sendable () throws(WaylandThreadExecutorError) -> ResultValue
-    private nonisolated(unsafe) var mutex = unsafe pthread_mutex_t()
-    private nonisolated(unsafe) var condition = pthread_cond_t()
-    private nonisolated(unsafe) var synchronizationPrimitivesAreLive = false
-    private nonisolated(unsafe) var result: Result<ResultValue, WaylandThreadExecutorError>?
+    nonisolated(unsafe) private var mutex = unsafe pthread_mutex_t()
+    nonisolated(unsafe) private var condition = pthread_cond_t()
+    nonisolated(unsafe) private var synchronizationPrimitivesAreLive = false
+    nonisolated(unsafe) private var result: Result<ResultValue, WaylandThreadExecutorError>?
 
     init(
         _ body: @Sendable @escaping () throws(WaylandThreadExecutorError) -> ResultValue

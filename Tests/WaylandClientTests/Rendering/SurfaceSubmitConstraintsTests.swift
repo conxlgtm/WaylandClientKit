@@ -100,6 +100,29 @@ struct SurfaceSubmitConstraintsTests {
     }
 
     @Test
+    func explicitSyncShapeRejectsMissingPointsBeforeCapabilityMutation() throws {
+        let constraints = SurfaceSubmitConstraints(
+            synchronization: .explicit(
+                acquire: nil,
+                release: syncPoint(timeline: 1, point: 1)
+            ),
+            pacing: .none
+        )
+
+        #expect(throws: SurfaceSubmitConstraintError.acquirePointRequired) {
+            try constraints.validateShape(
+                payload: .buffer(
+                    RawSurfaceBuffer(
+                        pointer: try unsafe #require(
+                            OpaquePointer(bitPattern: 0x5C01)
+                        )
+                    )
+                )
+            )
+        }
+    }
+
+    @Test
     func explicitSyncRequiresReleasePointForBufferCommit() throws {
         let constraints = SurfaceSubmitConstraints(
             synchronization: .explicit(
@@ -112,6 +135,19 @@ struct SurfaceSubmitConstraintsTests {
         #expect(throws: SurfaceSubmitConstraintError.releasePointRequired) {
             try constraints.validate(capabilities: activeCapabilities, attachesBuffer: true)
         }
+    }
+
+    @Test
+    func explicitSyncAcceptsBufferCommitWithAcquireAndReleasePoints() throws {
+        let constraints = SurfaceSubmitConstraints(
+            synchronization: .explicit(
+                acquire: syncPoint(timeline: 1, point: 1),
+                release: syncPoint(timeline: 1, point: 2)
+            ),
+            pacing: .none
+        )
+
+        try constraints.validate(capabilities: activeCapabilities, attachesBuffer: true)
     }
 
     @Test
@@ -140,10 +176,20 @@ struct SurfaceSubmitConstraintsTests {
     }
 
     @Test
+    func explicitSyncAllowsMetadataOnlyCommitWithoutPoints() throws {
+        let constraints = SurfaceSubmitConstraints(
+            synchronization: .explicit(acquire: nil, release: nil),
+            pacing: .none
+        )
+
+        try constraints.validate(capabilities: activeCapabilities, attachesBuffer: false)
+    }
+
+    @Test
     func explicitSyncRejectsConflictingPointsOnSameTimeline() throws {
         let constraints = SurfaceSubmitConstraints(
             synchronization: .explicit(
-                acquire: syncPoint(timeline: 7, point: 9),
+                acquire: syncPoint(timeline: 7, point: 10),
                 release: syncPoint(timeline: 7, point: 9)
             ),
             pacing: .none
@@ -152,6 +198,19 @@ struct SurfaceSubmitConstraintsTests {
         #expect(throws: SurfaceSubmitConstraintError.conflictingSyncPoints) {
             try constraints.validate(capabilities: activeCapabilities, attachesBuffer: true)
         }
+    }
+
+    @Test
+    func explicitSyncAllowsDifferentTimelinePointsWithoutOrdering() throws {
+        let constraints = SurfaceSubmitConstraints(
+            synchronization: .explicit(
+                acquire: syncPoint(timeline: 7, point: 10),
+                release: syncPoint(timeline: 8, point: 9)
+            ),
+            pacing: .none
+        )
+
+        try constraints.validate(capabilities: activeCapabilities, attachesBuffer: true)
     }
 
     @Test
@@ -214,7 +273,10 @@ struct SurfaceSubmitConstraintsTests {
 
         try constraints.validate(capabilities: pacingCapabilities, attachesBuffer: true)
     }
+}
 
+@Suite(.serialized)
+struct SurfaceSubmitConstraintObjectsTests {
     @Test
     func submitConstraintObjectsApplySyncPointsToRawSurface() async throws {
         let syncobjPointer = try unsafe #require(OpaquePointer(bitPattern: 0x5A01))
@@ -308,6 +370,86 @@ struct SurfaceSubmitConstraintsTests {
             #expect(unsafe record.tv_sec_hi == 0x1122_3344)
             #expect(unsafe record.tv_sec_lo == 0x5566_7788)
             #expect(unsafe record.tv_nsec == 999_999_999)
+        }
+    }
+
+    @Test
+    func commitTimingPendingStateResetsOnlyAfterMarkedCommitted() async throws {
+        let timerPointer = try unsafe #require(OpaquePointer(bitPattern: 0x5D01))
+        let timer = RawCommitTimer(pointer: timerPointer) { pointer in
+            unsafe _ = pointer
+        }
+        let firstTarget = try SurfaceCommitTargetTime(seconds: 1, nanoseconds: 2)
+        let secondTarget = try SurfaceCommitTargetTime(seconds: 3, nanoseconds: 4)
+        var objects = SurfaceSubmitConstraintObjects()
+
+        objects.installCommitTimer(timer)
+
+        try await CommitTimingRequestRecordingGate.withExclusiveRecording {
+            swl_test_commit_timing_request_recording_begin()
+            defer { swl_test_commit_timing_request_recording_end() }
+
+            try objects.apply(
+                SurfaceSubmitConstraints(
+                    synchronization: .implicit,
+                    pacing: .targetTime(firstTarget)
+                )
+            )
+            #expect(throws: SurfaceSubmitConstraintError.commitTimestampAlreadyExists) {
+                try objects.apply(
+                    SurfaceSubmitConstraints(
+                        synchronization: .implicit,
+                        pacing: .targetTime(secondTarget)
+                    )
+                )
+            }
+
+            objects.markCommitted()
+            try objects.apply(
+                SurfaceSubmitConstraints(
+                    synchronization: .implicit,
+                    pacing: .targetTime(secondTarget)
+                )
+            )
+
+            let record = unsafe swl_test_commit_timing_request_record()
+            #expect(unsafe record.call_count == 2)
+            #expect(unsafe record.tv_sec_lo == 3)
+            #expect(unsafe record.tv_nsec == 4)
+        }
+    }
+
+    @Test
+    func fifoBarriersApplyInRequestedCommitCycles() async throws {
+        let fifoPointer = try unsafe #require(OpaquePointer(bitPattern: 0x5E01))
+        let fifo = RawFifo(pointer: fifoPointer) { pointer in
+            unsafe _ = pointer
+        }
+        var objects = SurfaceSubmitConstraintObjects()
+
+        objects.installFifo(fifo)
+
+        try await FifoRequestRecordingGate.withExclusiveRecording {
+            swl_test_fifo_request_recording_begin()
+            defer { swl_test_fifo_request_recording_end() }
+
+            try objects.apply(
+                SurfaceSubmitConstraints(
+                    synchronization: .implicit,
+                    pacing: .fifo(.setBarrier)
+                )
+            )
+            try objects.apply(
+                SurfaceSubmitConstraints(
+                    synchronization: .implicit,
+                    pacing: .fifo(.waitBarrier)
+                )
+            )
+
+            let record = unsafe swl_test_fifo_request_record()
+            #expect(unsafe record.call_count == 2)
+            #expect(unsafe record.kind == SWL_TEST_FIFO_WAIT_BARRIER)
+            #expect(unsafe record.object == UnsafeMutableRawPointer(fifoPointer))
         }
     }
 }

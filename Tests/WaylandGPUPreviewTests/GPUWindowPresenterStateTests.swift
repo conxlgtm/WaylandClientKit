@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 import Testing
 
 @testable import WaylandClient
@@ -172,9 +173,12 @@ struct GPUWindowPresenterStateTests {
 
         correlation.record(frame)
 
+        #expect(correlation.count == 1)
+        #expect(!correlation.isEmpty)
         #expect(correlation.slotID(for: 77) == slotID)
         #expect(correlation.takeSlotID(for: 77) == slotID)
         #expect(correlation.slotID(for: 77) == nil)
+        #expect(correlation.isEmpty)
 
         correlation.record(frame)
 
@@ -193,6 +197,166 @@ struct GPUWindowPresenterStateTests {
         #expect(correlation.slotID(for: 78) == secondSlotID)
     }
 
+    @Test
+    func presentationCorrelationConsumesTerminalFeedbackGenerations() throws {
+        var correlation = GPUWindowPresentationCorrelation()
+        let firstSlotID = try GBMBufferPoolSlotID(0)
+        let secondSlotID = try GBMBufferPoolSlotID(1)
+
+        correlation.record(try presentedFrame(slotID: firstSlotID, generation: 40))
+        correlation.record(try presentedFrame(slotID: secondSlotID, generation: 41))
+
+        #expect(correlation.takeSlotID(for: 40) == firstSlotID)
+        #expect(correlation.takeSlotID(for: 40) == nil)
+        #expect(correlation.slotID(for: 41) == secondSlotID)
+        #expect(correlation.count == 1)
+
+        correlation.remove(generation: 41)
+
+        #expect(correlation.takeSlotID(for: 41) == nil)
+        #expect(correlation.isEmpty)
+    }
+
+    @Test
+    func presentationCorrelationClearsReleaseAndRetireCases() throws {
+        var correlation = GPUWindowPresentationCorrelation()
+        let firstSlotID = try GBMBufferPoolSlotID(0)
+        let secondSlotID = try GBMBufferPoolSlotID(1)
+
+        correlation.record(try presentedFrame(slotID: firstSlotID, generation: 50))
+        correlation.record(try presentedFrame(slotID: secondSlotID, generation: 51))
+
+        correlation.remove(slotID: firstSlotID)
+
+        #expect(correlation.slotID(for: 50) == nil)
+        #expect(correlation.slotID(for: 51) == secondSlotID)
+
+        correlation.removeAll()
+
+        #expect(correlation.isEmpty)
+        #expect(correlation.takeSlotID(for: 51) == nil)
+    }
+}
+
+@Suite
+struct GPUWindowRuntimePathSnapshotTests {
+    @Test
+    func runtimePathSnapshotReportsAdvertisedExplicitSyncNotConfigured() {
+        let snapshot = GPURuntimePathSnapshot.afterPresentation(
+            capabilities: capabilitySnapshot(
+                synchronization: .explicitAvailable(version: 1),
+                pacing: .fifo(version: 1)
+            ),
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(snapshot.dmabuf == .advertised)
+        #expect(snapshot.gbm == .active)
+        #expect(snapshot.egl == .configured)
+        #expect(snapshot.synchronization == .explicitAdvertised)
+        #expect(snapshot.pacing == .fifoAdvertised)
+        #expect(snapshot.contentType == .unavailable)
+        #expect(snapshot.alpha == .unavailable)
+        #expect(snapshot.colorRepresentation == .unavailable)
+        #expect(snapshot.colorManagement == .unavailable)
+        #expect(snapshot.presentationHint == nil)
+    }
+
+    @Test
+    func runtimePathSnapshotReportsExplicitAndCommitTimingActive() throws {
+        let snapshot = GPURuntimePathSnapshot.afterPresentation(
+            capabilities: capabilitySnapshot(
+                synchronization: .explicitActive,
+                pacing: .fifoAndCommitTiming(fifo: 1, commitTiming: 1)
+            ),
+            synchronization: .explicit(
+                GPUSubmittedBufferSyncState(
+                    slotID: try GBMBufferPoolSlotID(0),
+                    acquirePoint: syncPoint(timeline: 1, point: 1),
+                    releasePoint: syncPoint(timeline: 1, point: 2)
+                )
+            ),
+            pacing: .targetTime(
+                try SurfaceCommitTargetTime(seconds: 1, nanoseconds: 2)
+            )
+        )
+
+        #expect(snapshot.synchronization == .explicitActive)
+        #expect(snapshot.pacing == .commitTimingActive)
+    }
+
+    @Test
+    func runtimePathSnapshotReportsAdvertisedMetadataCapabilities() {
+        let snapshot = GPURuntimePathSnapshot.afterPresentation(
+            capabilities: capabilitySnapshot(
+                contentType: .available,
+                alphaModifier: .available,
+                tearingControl: .available,
+                colorRepresentation: supportedColorRepresentationCapability(),
+                color: .available(version: 1)
+            ),
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(snapshot.contentType == .advertised)
+        #expect(snapshot.alpha == .advertised)
+        #expect(snapshot.colorRepresentation == .advertised)
+        #expect(snapshot.colorManagement == .advertised)
+        #expect(snapshot.presentationHint == nil)
+    }
+
+    @Test
+    func runtimePathSnapshotReportsRequestedMetadata() throws {
+        let metadata = SurfaceCommitMetadata(
+            contentType: .game,
+            alpha: SurfaceAlphaMetadata(multiplier: .opaque),
+            colorRepresentation: SurfaceColorRepresentation(alphaMode: .straight),
+            colorDescription: try SurfaceColorDescriptionReference(identity: 1),
+            presentationHint: .async
+        )
+        let snapshot = GPURuntimePathSnapshot.afterPresentation(
+            capabilities: capabilitySnapshot(
+                contentType: .available,
+                alphaModifier: .available,
+                tearingControl: .available,
+                colorRepresentation: supportedColorRepresentationCapability(),
+                color: .available(version: 1)
+            ),
+            synchronization: .implicit,
+            pacing: .none,
+            metadata: metadata
+        )
+
+        #expect(snapshot.contentType == .configured)
+        #expect(snapshot.alpha == .configured)
+        #expect(snapshot.colorRepresentation == .configured)
+        #expect(snapshot.colorManagement == .configured)
+        #expect(snapshot.presentationHint == .async)
+    }
+
+    @Test
+    func runtimePathStatusesRepresentFailedAndFallbackPaths() {
+        #expect(
+            RuntimePathStatus.failed(.commitTimingUnavailable)
+                == .failed(.commitTimingUnavailable)
+        )
+        #expect(
+            GPUSynchronizationRuntimeStatus.explicitFailed(
+                .explicitSynchronizationUnavailable
+            )
+                == .explicitFailed(.explicitSynchronizationUnavailable)
+        )
+        #expect(
+            GPUFramePacingRuntimeStatus.fallback(.fifoUnavailable)
+                == .fallback(.fifoUnavailable)
+        )
+    }
+}
+
+@Suite
+struct GPUWindowPresenterLifecycleTests {
     @Test
     func retiredStateRejectsNewPresentationWork() throws {
         var state = GPUWindowPresenterState()
@@ -339,7 +503,45 @@ private func presentedFrame(
             damageMode: .buffer
         ),
         synchronization: .implicit,
-        pacing: .none
+        pacing: .none,
+        metadata: .default
+    )
+}
+
+private func capabilitySnapshot(
+    synchronization: SurfaceSynchronizationCapability = .implicitOnly,
+    pacing: SurfacePacingCapability = .unavailable,
+    contentType: SurfaceCapabilityStatus = .unavailable,
+    alphaModifier: SurfaceCapabilityStatus = .unavailable,
+    tearingControl: SurfaceCapabilityStatus = .unavailable,
+    colorRepresentation: SurfaceColorRepresentationCapability = .unavailable,
+    color: SurfaceColorCapability = .unavailable
+) -> SurfaceCapabilitySnapshot {
+    SurfaceCapabilitySnapshot(
+        role: .toplevelWindow,
+        outputIDs: [],
+        fractionalScale: .integerOnly,
+        presentationFeedback: .unavailable,
+        dmabuf: .advertised(version: 1, canRequestSurfaceFeedback: .available),
+        synchronization: synchronization,
+        pacing: pacing,
+        contentType: contentType,
+        alphaModifier: alphaModifier,
+        tearingControl: tearingControl,
+        colorRepresentation: colorRepresentation,
+        color: color
+    )
+}
+
+private func supportedColorRepresentationCapability()
+    -> SurfaceColorRepresentationCapability
+{
+    .available(
+        version: 1,
+        support: SurfaceColorRepresentationSupport(
+            alphaModes: [.straight],
+            coefficientsAndRanges: []
+        )
     )
 }
 

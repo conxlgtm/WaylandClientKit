@@ -1,5 +1,5 @@
 extension WaylandDisplay {
-    public nonisolated var textInputEvents: TextInputEvents {
+    nonisolated public var textInputEvents: TextInputEvents {
         runtime.textInputEvents
     }
 

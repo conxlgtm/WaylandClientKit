@@ -17,6 +17,11 @@ linux_dmabuf_candidates=()
 linux_drm_syncobj_candidates=()
 fifo_candidates=()
 commit_timing_candidates=()
+content_type_candidates=()
+alpha_modifier_candidates=()
+tearing_control_candidates=()
+color_representation_candidates=()
+color_management_candidates=()
 
 mapfile -t wayland_candidates < <(protocol_sources_wayland_core_candidates)
 mapfile -t xdg_candidates < <(protocol_sources_xdg_shell_candidates)
@@ -30,6 +35,11 @@ mapfile -t linux_dmabuf_candidates < <(protocol_sources_linux_dmabuf_candidates)
 mapfile -t linux_drm_syncobj_candidates < <(protocol_sources_linux_drm_syncobj_candidates)
 mapfile -t fifo_candidates < <(protocol_sources_fifo_candidates)
 mapfile -t commit_timing_candidates < <(protocol_sources_commit_timing_candidates)
+mapfile -t content_type_candidates < <(protocol_sources_content_type_candidates)
+mapfile -t alpha_modifier_candidates < <(protocol_sources_alpha_modifier_candidates)
+mapfile -t tearing_control_candidates < <(protocol_sources_tearing_control_candidates)
+mapfile -t color_representation_candidates < <(protocol_sources_color_representation_candidates)
+mapfile -t color_management_candidates < <(protocol_sources_color_management_candidates)
 
 WAYLAND_CORE_XML_SOURCE="$(protocol_sources_first_existing_file "${wayland_candidates[@]}" || true)"
 XDG_SHELL_XML_SOURCE="$(protocol_sources_first_existing_file "${xdg_candidates[@]}" || true)"
@@ -56,6 +66,21 @@ LINUX_DRM_SYNCOBJ_XML_SOURCE="$(
 FIFO_XML_SOURCE="$(protocol_sources_first_existing_file "${fifo_candidates[@]}" || true)"
 COMMIT_TIMING_XML_SOURCE="$(
     protocol_sources_first_existing_file "${commit_timing_candidates[@]}" || true
+)"
+CONTENT_TYPE_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${content_type_candidates[@]}" || true
+)"
+ALPHA_MODIFIER_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${alpha_modifier_candidates[@]}" || true
+)"
+TEARING_CONTROL_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${tearing_control_candidates[@]}" || true
+)"
+COLOR_REPRESENTATION_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${color_representation_candidates[@]}" || true
+)"
+COLOR_MANAGEMENT_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${color_management_candidates[@]}" || true
 )"
 
 [[ -f "$WAYLAND_CORE_XML_SOURCE" ]] || {
@@ -130,6 +155,36 @@ COMMIT_TIMING_XML_SOURCE="$(
     exit 1
 }
 
+[[ -f "$CONTENT_TYPE_XML_SOURCE" ]] || {
+    echo "Missing content-type XML. Checked:"
+    printf '  %s\n' "${content_type_candidates[@]}"
+    exit 1
+}
+
+[[ -f "$ALPHA_MODIFIER_XML_SOURCE" ]] || {
+    echo "Missing alpha-modifier XML. Checked:"
+    printf '  %s\n' "${alpha_modifier_candidates[@]}"
+    exit 1
+}
+
+[[ -f "$TEARING_CONTROL_XML_SOURCE" ]] || {
+    echo "Missing tearing-control XML. Checked:"
+    printf '  %s\n' "${tearing_control_candidates[@]}"
+    exit 1
+}
+
+[[ -f "$COLOR_REPRESENTATION_XML_SOURCE" ]] || {
+    echo "Missing color-representation XML. Checked:"
+    printf '  %s\n' "${color_representation_candidates[@]}"
+    exit 1
+}
+
+[[ -f "$COLOR_MANAGEMENT_XML_SOURCE" ]] || {
+    echo "Missing color-management XML. Checked:"
+    printf '  %s\n' "${color_management_candidates[@]}"
+    exit 1
+}
+
 mkdir -p \
     "$ROOT/protocols/upstream/core" \
     "$ROOT/protocols/upstream/stable/xdg-shell" \
@@ -141,6 +196,11 @@ mkdir -p \
     "$ROOT/protocols/upstream/staging/linux-drm-syncobj" \
     "$ROOT/protocols/upstream/staging/fifo" \
     "$ROOT/protocols/upstream/staging/commit-timing" \
+    "$ROOT/protocols/upstream/staging/content-type" \
+    "$ROOT/protocols/upstream/staging/alpha-modifier" \
+    "$ROOT/protocols/upstream/staging/tearing-control" \
+    "$ROOT/protocols/upstream/staging/color-representation" \
+    "$ROOT/protocols/upstream/staging/color-management" \
     "$ROOT/protocols/upstream/legacy-unstable/primary-selection" \
     "$ROOT/protocols/upstream/legacy-unstable/linux-dmabuf"
 
@@ -164,5 +224,15 @@ cp "$LINUX_DRM_SYNCOBJ_XML_SOURCE" \
 cp "$FIFO_XML_SOURCE" "$ROOT/protocols/upstream/staging/fifo/fifo-v1.xml"
 cp "$COMMIT_TIMING_XML_SOURCE" \
     "$ROOT/protocols/upstream/staging/commit-timing/commit-timing-v1.xml"
+cp "$CONTENT_TYPE_XML_SOURCE" \
+    "$ROOT/protocols/upstream/staging/content-type/content-type-v1.xml"
+cp "$ALPHA_MODIFIER_XML_SOURCE" \
+    "$ROOT/protocols/upstream/staging/alpha-modifier/alpha-modifier-v1.xml"
+cp "$TEARING_CONTROL_XML_SOURCE" \
+    "$ROOT/protocols/upstream/staging/tearing-control/tearing-control-v1.xml"
+cp "$COLOR_REPRESENTATION_XML_SOURCE" \
+    "$ROOT/protocols/upstream/staging/color-representation/color-representation-v1.xml"
+cp "$COLOR_MANAGEMENT_XML_SOURCE" \
+    "$ROOT/protocols/upstream/staging/color-management/color-management-v1.xml"
 
 echo "Vendored protocol XML into $ROOT/protocols"

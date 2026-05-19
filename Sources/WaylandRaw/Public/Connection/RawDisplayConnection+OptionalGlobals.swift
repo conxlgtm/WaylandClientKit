@@ -1,7 +1,7 @@
 import CWaylandProtocols
 
 extension RawDisplayConnection {
-    // swiftlint:disable function_body_length
+    // swiftlint:disable cyclomatic_complexity function_body_length
     @safe
     package func bindOptionalGlobals(registry reg: OpaquePointer) throws -> OptionalGlobals {
         let decorationManager = try bindXDGDecorationManagerIfPresent(registry: reg)
@@ -38,28 +38,51 @@ extension RawDisplayConnection {
                                                     try bindSurfaceSubmitOptionalGlobalsIfPresent(
                                                         registry: reg
                                                     )
-                                                return OptionalGlobals(
-                                                    xdgDecorationManager:
-                                                        decorationManager,
-                                                    xdgOutputManager:
-                                                        xdgOutputManager,
-                                                    viewporter: viewporter,
-                                                    presentation: presentation,
-                                                    fractionalScaleManager:
-                                                        fractionalScaleManager,
-                                                    cursorShapeManager:
-                                                        cursorShapeManager,
-                                                    linuxDrmSyncobjManager:
-                                                        submitGlobals.linuxDrmSyncobjManager,
-                                                    fifoManager: submitGlobals.fifoManager,
-                                                    commitTimingManager:
-                                                        submitGlobals.commitTimingManager,
-                                                    dataDeviceManager: dataDeviceManager,
-                                                    primarySelectionDeviceManager:
-                                                        primarySelectionDeviceManager,
-                                                    textInputManager: textInputManager,
-                                                    linuxDmabuf: linuxDmabuf
-                                                )
+                                                do {
+                                                    let metadataGlobals =
+                                                        try
+                                                        bindSurfaceMetadataOptionalGlobalsIfPresent(
+                                                            registry: reg
+                                                        )
+                                                    return OptionalGlobals(
+                                                        xdgDecorationManager:
+                                                            decorationManager,
+                                                        xdgOutputManager:
+                                                            xdgOutputManager,
+                                                        viewporter: viewporter,
+                                                        presentation: presentation,
+                                                        fractionalScaleManager:
+                                                            fractionalScaleManager,
+                                                        cursorShapeManager:
+                                                            cursorShapeManager,
+                                                        linuxDrmSyncobjManager:
+                                                            submitGlobals.linuxDrmSyncobjManager,
+                                                        fifoManager: submitGlobals.fifoManager,
+                                                        commitTimingManager:
+                                                            submitGlobals.commitTimingManager,
+                                                        contentTypeManager:
+                                                            metadataGlobals.contentTypeManager,
+                                                        alphaModifierManager:
+                                                            metadataGlobals.alphaModifierManager,
+                                                        tearingControlManager:
+                                                            metadataGlobals.tearingControlManager,
+                                                        colorRepresentationManager:
+                                                            metadataGlobals
+                                                            .colorRepresentationManager,
+                                                        colorManager:
+                                                            metadataGlobals.colorManager,
+                                                        dataDeviceManager: dataDeviceManager,
+                                                        primarySelectionDeviceManager:
+                                                            primarySelectionDeviceManager,
+                                                        textInputManager: textInputManager,
+                                                        linuxDmabuf: linuxDmabuf
+                                                    )
+                                                } catch {
+                                                    submitGlobals.linuxDrmSyncobjManager.destroy()
+                                                    submitGlobals.fifoManager.destroy()
+                                                    submitGlobals.commitTimingManager.destroy()
+                                                    throw error
+                                                }
                                             } catch {
                                                 linuxDmabuf.destroy()
                                                 throw error
@@ -101,7 +124,7 @@ extension RawDisplayConnection {
             throw error
         }
     }
-    // swiftlint:enable function_body_length
+    // swiftlint:enable cyclomatic_complexity function_body_length
 
     @safe
     private func bindXDGDecorationManagerIfPresent(

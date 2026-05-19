@@ -33,6 +33,20 @@ struct wp_fifo_manager_v1;
 struct wp_fifo_v1;
 struct wp_commit_timing_manager_v1;
 struct wp_commit_timer_v1;
+struct wp_content_type_manager_v1;
+struct wp_content_type_v1;
+struct wp_alpha_modifier_v1;
+struct wp_alpha_modifier_surface_v1;
+struct wp_tearing_control_manager_v1;
+struct wp_tearing_control_v1;
+struct wp_color_representation_manager_v1;
+struct wp_color_representation_surface_v1;
+struct wp_color_manager_v1;
+struct wp_color_management_output_v1;
+struct wp_color_management_surface_v1;
+struct wp_color_management_surface_feedback_v1;
+struct wp_image_description_v1;
+struct wp_image_description_reference_v1;
 struct zwp_linux_dmabuf_v1;
 struct zwp_linux_buffer_params_v1;
 struct zwp_linux_dmabuf_feedback_v1;
@@ -93,6 +107,23 @@ struct wp_fifo_manager_v1 *swl_registry_bind_wp_fifo_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wp_commit_timing_manager_v1 *swl_registry_bind_wp_commit_timing_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_content_type_manager_v1 *swl_registry_bind_wp_content_type_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_alpha_modifier_v1 *swl_registry_bind_wp_alpha_modifier_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_tearing_control_manager_v1 *
+swl_registry_bind_wp_tearing_control_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_color_representation_manager_v1 *
+swl_registry_bind_wp_color_representation_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_color_manager_v1 *swl_registry_bind_wp_color_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wl_seat *swl_registry_bind_wl_seat(
@@ -390,6 +421,73 @@ void swl_wp_commit_timer_v1_set_timestamp(
     uint32_t tv_nsec);
 
 /* ------------------------------------------------------------------ */
+/*  Surface metadata request wrappers                                 */
+/* ------------------------------------------------------------------ */
+
+struct wp_content_type_v1 *swl_wp_content_type_manager_v1_get_surface_content_type(
+    struct wp_content_type_manager_v1 *manager,
+    struct wl_surface *surface);
+void swl_wp_content_type_v1_set_content_type(
+    struct wp_content_type_v1 *content_type,
+    uint32_t value);
+
+struct wp_alpha_modifier_surface_v1 *swl_wp_alpha_modifier_v1_get_surface(
+    struct wp_alpha_modifier_v1 *manager,
+    struct wl_surface *surface);
+void swl_wp_alpha_modifier_surface_v1_set_multiplier(
+    struct wp_alpha_modifier_surface_v1 *surface,
+    uint32_t factor);
+
+struct wp_tearing_control_v1 *
+swl_wp_tearing_control_manager_v1_get_tearing_control(
+    struct wp_tearing_control_manager_v1 *manager,
+    struct wl_surface *surface);
+void swl_wp_tearing_control_v1_set_presentation_hint(
+    struct wp_tearing_control_v1 *tearing_control,
+    uint32_t hint);
+
+struct wp_color_representation_surface_v1 *
+swl_wp_color_representation_manager_v1_get_surface(
+    struct wp_color_representation_manager_v1 *manager,
+    struct wl_surface *surface);
+void swl_wp_color_representation_surface_v1_set_alpha_mode(
+    struct wp_color_representation_surface_v1 *surface,
+    uint32_t alpha_mode);
+void swl_wp_color_representation_surface_v1_set_coefficients_and_range(
+    struct wp_color_representation_surface_v1 *surface,
+    uint32_t coefficients,
+    uint32_t range);
+void swl_wp_color_representation_surface_v1_set_chroma_location(
+    struct wp_color_representation_surface_v1 *surface,
+    uint32_t chroma_location);
+
+struct wp_color_management_output_v1 *swl_wp_color_manager_v1_get_output(
+    struct wp_color_manager_v1 *manager,
+    struct wl_output *output);
+struct wp_color_management_surface_v1 *swl_wp_color_manager_v1_get_surface(
+    struct wp_color_manager_v1 *manager,
+    struct wl_surface *surface);
+struct wp_color_management_surface_feedback_v1 *
+swl_wp_color_manager_v1_get_surface_feedback(
+    struct wp_color_manager_v1 *manager,
+    struct wl_surface *surface);
+struct wp_image_description_v1 *swl_wp_color_manager_v1_get_image_description(
+    struct wp_color_manager_v1 *manager,
+    struct wp_image_description_reference_v1 *reference);
+struct wp_image_description_v1 *
+swl_wp_color_management_output_v1_get_image_description(
+    struct wp_color_management_output_v1 *output);
+void swl_wp_color_management_surface_v1_set_image_description(
+    struct wp_color_management_surface_v1 *surface,
+    struct wp_image_description_v1 *image_description,
+    uint32_t render_intent);
+void swl_wp_color_management_surface_v1_unset_image_description(
+    struct wp_color_management_surface_v1 *surface);
+struct wp_image_description_v1 *
+swl_wp_color_management_surface_feedback_v1_get_preferred(
+    struct wp_color_management_surface_feedback_v1 *feedback);
+
+/* ------------------------------------------------------------------ */
 /*  Presentation-time request wrappers                                */
 /* ------------------------------------------------------------------ */
 
@@ -492,6 +590,31 @@ void swl_wp_fifo_manager_v1_destroy(struct wp_fifo_manager_v1 *manager);
 void swl_wp_commit_timer_v1_destroy(struct wp_commit_timer_v1 *timer);
 void swl_wp_commit_timing_manager_v1_destroy(
     struct wp_commit_timing_manager_v1 *manager);
+void swl_wp_content_type_v1_destroy(struct wp_content_type_v1 *content_type);
+void swl_wp_content_type_manager_v1_destroy(
+    struct wp_content_type_manager_v1 *manager);
+void swl_wp_alpha_modifier_surface_v1_destroy(
+    struct wp_alpha_modifier_surface_v1 *surface);
+void swl_wp_alpha_modifier_v1_destroy(struct wp_alpha_modifier_v1 *manager);
+void swl_wp_tearing_control_v1_destroy(
+    struct wp_tearing_control_v1 *tearing_control);
+void swl_wp_tearing_control_manager_v1_destroy(
+    struct wp_tearing_control_manager_v1 *manager);
+void swl_wp_color_representation_surface_v1_destroy(
+    struct wp_color_representation_surface_v1 *surface);
+void swl_wp_color_representation_manager_v1_destroy(
+    struct wp_color_representation_manager_v1 *manager);
+void swl_wp_color_management_output_v1_destroy(
+    struct wp_color_management_output_v1 *output);
+void swl_wp_color_management_surface_v1_destroy(
+    struct wp_color_management_surface_v1 *surface);
+void swl_wp_color_management_surface_feedback_v1_destroy(
+    struct wp_color_management_surface_feedback_v1 *feedback);
+void swl_wp_image_description_v1_destroy(
+    struct wp_image_description_v1 *image_description);
+void swl_wp_image_description_reference_v1_destroy(
+    struct wp_image_description_reference_v1 *reference);
+void swl_wp_color_manager_v1_destroy(struct wp_color_manager_v1 *manager);
 void swl_wp_presentation_destroy(struct wp_presentation *presentation);
 void swl_wp_presentation_feedback_destroy(
     struct wp_presentation_feedback *feedback);
@@ -744,6 +867,53 @@ typedef void (*swl_zwp_linux_buffer_params_created_fn)(
 typedef void (*swl_zwp_linux_buffer_params_failed_fn)(
     void *data,
     struct zwp_linux_buffer_params_v1 *params);
+
+/* Surface metadata */
+typedef void (*swl_wp_color_representation_manager_v1_supported_alpha_mode_fn)(
+    void *data,
+    struct wp_color_representation_manager_v1 *manager,
+    uint32_t alpha_mode);
+typedef void (*swl_wp_color_representation_manager_v1_supported_coefficients_and_ranges_fn)(
+    void *data,
+    struct wp_color_representation_manager_v1 *manager,
+    uint32_t coefficients,
+    uint32_t range);
+typedef void (*swl_wp_color_representation_manager_v1_done_fn)(
+    void *data,
+    struct wp_color_representation_manager_v1 *manager);
+typedef void (*swl_wp_color_manager_v1_supported_intent_fn)(
+    void *data,
+    struct wp_color_manager_v1 *manager,
+    uint32_t render_intent);
+typedef void (*swl_wp_color_manager_v1_supported_feature_fn)(
+    void *data,
+    struct wp_color_manager_v1 *manager,
+    uint32_t feature);
+typedef void (*swl_wp_color_manager_v1_supported_tf_named_fn)(
+    void *data,
+    struct wp_color_manager_v1 *manager,
+    uint32_t transfer_function);
+typedef void (*swl_wp_color_manager_v1_supported_primaries_named_fn)(
+    void *data,
+    struct wp_color_manager_v1 *manager,
+    uint32_t primaries);
+typedef void (*swl_wp_color_manager_v1_done_fn)(
+    void *data,
+    struct wp_color_manager_v1 *manager);
+typedef void (*swl_wp_image_description_v1_failed_fn)(
+    void *data,
+    struct wp_image_description_v1 *image_description,
+    uint32_t cause,
+    const char *message);
+typedef void (*swl_wp_image_description_v1_ready_fn)(
+    void *data,
+    struct wp_image_description_v1 *image_description,
+    uint32_t identity);
+typedef void (*swl_wp_image_description_v1_ready2_fn)(
+    void *data,
+    struct wp_image_description_v1 *image_description,
+    uint32_t identity_hi,
+    uint32_t identity_lo);
 
 /* Text input */
 typedef void (*swl_text_input_v3_enter_fn)(
@@ -1006,6 +1176,30 @@ struct swl_zwp_linux_buffer_params_listener_callbacks {
     void                                  *data;
 };
 
+struct swl_wp_color_representation_manager_v1_listener_callbacks {
+    swl_wp_color_representation_manager_v1_supported_alpha_mode_fn supported_alpha_mode;
+    swl_wp_color_representation_manager_v1_supported_coefficients_and_ranges_fn
+        supported_coefficients_and_ranges;
+    swl_wp_color_representation_manager_v1_done_fn done;
+    void                                          *data;
+};
+
+struct swl_wp_color_manager_v1_listener_callbacks {
+    swl_wp_color_manager_v1_supported_intent_fn          supported_intent;
+    swl_wp_color_manager_v1_supported_feature_fn         supported_feature;
+    swl_wp_color_manager_v1_supported_tf_named_fn        supported_tf_named;
+    swl_wp_color_manager_v1_supported_primaries_named_fn supported_primaries_named;
+    swl_wp_color_manager_v1_done_fn                      done;
+    void                                                *data;
+};
+
+struct swl_wp_image_description_v1_listener_callbacks {
+    swl_wp_image_description_v1_failed_fn failed;
+    swl_wp_image_description_v1_ready_fn  ready;
+    swl_wp_image_description_v1_ready2_fn ready2;
+    void                                 *data;
+};
+
 struct swl_text_input_v3_listener_callbacks {
     swl_text_input_v3_enter_fn                   enter;
     swl_text_input_v3_leave_fn                   leave;
@@ -1153,6 +1347,18 @@ int swl_zwp_linux_buffer_params_v1_add_listener(
     struct zwp_linux_buffer_params_v1 *params,
     const struct swl_zwp_linux_buffer_params_listener_callbacks *callbacks);
 
+int swl_wp_color_representation_manager_v1_add_listener(
+    struct wp_color_representation_manager_v1 *manager,
+    const struct swl_wp_color_representation_manager_v1_listener_callbacks *callbacks);
+
+int swl_wp_color_manager_v1_add_listener(
+    struct wp_color_manager_v1 *manager,
+    const struct swl_wp_color_manager_v1_listener_callbacks *callbacks);
+
+int swl_wp_image_description_v1_add_listener(
+    struct wp_image_description_v1 *image_description,
+    const struct swl_wp_image_description_v1_listener_callbacks *callbacks);
+
 int swl_text_input_v3_add_listener(
     struct zwp_text_input_v3 *text_input,
     const struct swl_text_input_v3_listener_callbacks *callbacks);
@@ -1206,6 +1412,42 @@ enum swl_test_core_request_kind {
     SWL_TEST_CORE_SHM_DESTROY = 10,
 };
 
+enum swl_test_metadata_request_kind {
+    SWL_TEST_METADATA_REQUEST_NONE = 0,
+    SWL_TEST_METADATA_CONTENT_TYPE_GET_SURFACE = 1,
+    SWL_TEST_METADATA_CONTENT_TYPE_SET = 2,
+    SWL_TEST_METADATA_COLOR_REPRESENTATION_GET_SURFACE = 3,
+    SWL_TEST_METADATA_COLOR_REPRESENTATION_SET_ALPHA_MODE = 4,
+    SWL_TEST_METADATA_COLOR_REPRESENTATION_SET_COEFFICIENTS_AND_RANGE = 5,
+    SWL_TEST_METADATA_COLOR_REPRESENTATION_SET_CHROMA_LOCATION = 6,
+    SWL_TEST_METADATA_COLOR_MANAGER_GET_IMAGE_DESCRIPTION = 7,
+    SWL_TEST_METADATA_COLOR_SURFACE_SET_IMAGE_DESCRIPTION = 8,
+    SWL_TEST_METADATA_COLOR_SURFACE_UNSET_IMAGE_DESCRIPTION = 9,
+    SWL_TEST_METADATA_ALPHA_MODIFIER_GET_SURFACE = 10,
+    SWL_TEST_METADATA_ALPHA_MODIFIER_SET_MULTIPLIER = 11,
+    SWL_TEST_METADATA_TEARING_CONTROL_GET_SURFACE = 12,
+    SWL_TEST_METADATA_TEARING_CONTROL_SET_PRESENTATION_HINT = 13,
+    SWL_TEST_METADATA_COLOR_MANAGER_GET_SURFACE = 14,
+    SWL_TEST_METADATA_COLOR_MANAGER_GET_SURFACE_FEEDBACK = 15,
+    SWL_TEST_METADATA_COLOR_FEEDBACK_GET_PREFERRED = 16,
+};
+
+enum swl_test_metadata_destroy_kind {
+    SWL_TEST_METADATA_DESTROY_NONE = 0,
+    SWL_TEST_METADATA_DESTROY_CONTENT_TYPE = 1,
+    SWL_TEST_METADATA_DESTROY_CONTENT_TYPE_MANAGER = 2,
+    SWL_TEST_METADATA_DESTROY_COLOR_REPRESENTATION_SURFACE = 3,
+    SWL_TEST_METADATA_DESTROY_COLOR_REPRESENTATION_MANAGER = 4,
+    SWL_TEST_METADATA_DESTROY_COLOR_MANAGER = 5,
+    SWL_TEST_METADATA_DESTROY_IMAGE_DESCRIPTION = 6,
+    SWL_TEST_METADATA_DESTROY_ALPHA_MODIFIER_SURFACE = 7,
+    SWL_TEST_METADATA_DESTROY_ALPHA_MODIFIER_MANAGER = 8,
+    SWL_TEST_METADATA_DESTROY_TEARING_CONTROL = 9,
+    SWL_TEST_METADATA_DESTROY_TEARING_CONTROL_MANAGER = 10,
+    SWL_TEST_METADATA_DESTROY_COLOR_MANAGEMENT_SURFACE = 11,
+    SWL_TEST_METADATA_DESTROY_COLOR_MANAGEMENT_SURFACE_FEEDBACK = 12,
+};
+
 struct swl_test_core_request_record {
     int32_t                         call_count;
     enum swl_test_core_request_kind kind;
@@ -1227,6 +1469,30 @@ struct swl_test_core_request_record {
     uint32_t                        buffer_destroy_sequence;
     uint32_t                        surface_destroy_sequence;
     uint32_t                        shm_pool_destroy_sequence;
+};
+
+struct swl_test_metadata_request_record {
+    int32_t                             call_count;
+    enum swl_test_metadata_request_kind kind;
+    void                               *object;
+    void                               *surface;
+    void                               *reference;
+    void                               *image_description;
+    uint32_t                            value;
+    uint32_t                            coefficients;
+    uint32_t                            range;
+    uint32_t                            render_intent;
+};
+
+struct swl_test_metadata_destroy_record {
+    int32_t                             call_count;
+    enum swl_test_metadata_destroy_kind kind;
+    void                               *object;
+};
+
+struct swl_test_metadata_listener_record {
+    int32_t call_count;
+    void   *object;
 };
 
 struct swl_test_fractional_preferred_scale_record {
@@ -1595,6 +1861,26 @@ struct swl_test_commit_timing_destroy_record {
     void                                   *object;
 };
 
+enum swl_test_presentation_request_kind {
+    SWL_TEST_PRESENTATION_REQUEST_NONE = 0,
+    SWL_TEST_PRESENTATION_FEEDBACK = 1,
+    SWL_TEST_PRESENTATION_DESTROY = 2,
+    SWL_TEST_PRESENTATION_FEEDBACK_DESTROY = 3,
+};
+
+struct swl_test_presentation_request_record {
+    int32_t                                 call_count;
+    enum swl_test_presentation_request_kind kind;
+    void                                   *object;
+    void                                   *surface;
+    void                                   *feedback;
+};
+
+struct swl_test_presentation_listener_record {
+    int32_t call_count;
+    void   *object;
+};
+
 enum swl_test_dmabuf_request_kind {
     SWL_TEST_DMABUF_REQUEST_NONE = 0,
     SWL_TEST_DMABUF_GET_DEFAULT_FEEDBACK = 1,
@@ -1757,6 +2043,27 @@ void swl_test_fractional_scale_listener_emit_preferred_scale(
 void swl_test_core_request_recording_begin(void);
 void swl_test_core_request_recording_end(void);
 struct swl_test_core_request_record swl_test_core_request_record(void);
+
+void swl_test_metadata_request_recording_begin(void);
+void swl_test_metadata_request_recording_end(void);
+struct swl_test_metadata_request_record swl_test_metadata_request_record(void);
+struct swl_test_metadata_destroy_record swl_test_metadata_destroy_record(void);
+void swl_test_metadata_listener_recording_begin(void);
+void swl_test_metadata_listener_recording_end(void);
+struct swl_test_metadata_listener_record swl_test_metadata_listener_record(void);
+int swl_test_color_representation_listener_emit_supported_alpha_mode(
+    uint32_t alpha_mode);
+int swl_test_color_representation_listener_emit_supported_coefficients_and_ranges(
+    uint32_t coefficients,
+    uint32_t range);
+int swl_test_color_representation_listener_emit_done(void);
+int swl_test_image_description_listener_emit_ready(uint32_t identity);
+int swl_test_image_description_listener_emit_ready2(
+    uint32_t identity_hi,
+    uint32_t identity_lo);
+int swl_test_image_description_listener_emit_failed(
+    uint32_t cause,
+    const char *message);
 void swl_test_buffer_listener_recording_begin(void);
 void swl_test_buffer_listener_recording_end(void);
 
@@ -1915,6 +2222,7 @@ swl_test_cursor_shape_destroy_record(void);
 
 void swl_test_syncobj_request_recording_begin(void);
 void swl_test_syncobj_request_recording_end(void);
+void swl_test_syncobj_import_timeline_set_failure(int should_fail);
 struct swl_test_syncobj_request_record swl_test_syncobj_request_record(void);
 struct swl_test_syncobj_destroy_record swl_test_syncobj_destroy_record(void);
 
@@ -1929,6 +2237,27 @@ struct swl_test_commit_timing_request_record
 swl_test_commit_timing_request_record(void);
 struct swl_test_commit_timing_destroy_record
 swl_test_commit_timing_destroy_record(void);
+
+void swl_test_presentation_request_recording_begin(void);
+void swl_test_presentation_request_recording_end(void);
+struct swl_test_presentation_request_record
+swl_test_presentation_request_record(void);
+
+void swl_test_presentation_listener_recording_begin(void);
+void swl_test_presentation_listener_recording_end(void);
+struct swl_test_presentation_listener_record
+swl_test_presentation_listener_record(void);
+int swl_test_presentation_feedback_listener_emit_sync_output(
+    struct wl_output *output);
+int swl_test_presentation_feedback_listener_emit_presented(
+    uint32_t tv_sec_hi,
+    uint32_t tv_sec_lo,
+    uint32_t tv_nsec,
+    uint32_t refresh,
+    uint32_t seq_hi,
+    uint32_t seq_lo,
+    uint32_t flags);
+int swl_test_presentation_feedback_listener_emit_discarded(void);
 
 void swl_test_dmabuf_request_recording_begin(void);
 void swl_test_dmabuf_request_recording_end(void);
