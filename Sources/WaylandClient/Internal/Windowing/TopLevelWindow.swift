@@ -970,8 +970,12 @@ extension TopLevelWindow {
 
         let generation = surfaceRuntime.nextCommitGeneration
         let bufferAvailability = try redrawBufferAvailability()
+        let payload = SurfaceCommitPayload.buffer(buffer)
+        try submitConstraints.validateShape(payload: payload)
+        try metadata.validate(capabilities: surfaceRuntime.capabilitySnapshot())
         try ensureSubmitConstraintObjectsInstalled(for: submitConstraints)
         try ensureMetadataObjectsInstalled(for: metadata)
+        try surfaceRuntime.preflightCommitMetadata(metadata)
         let presentationRequest = WindowExternalBufferPresentationRequest(
             buffer: buffer,
             surface: surface,

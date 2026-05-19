@@ -203,7 +203,10 @@ struct SurfaceCommitMetadataTests {
             objects.installContentType(try testContentTypeSurface(pointer: 0xD101))
             objects.installColorManagement(try testColorManagementSurface(pointer: 0xD102))
             objects.installColorDescription(
-                try testImageDescription(pointer: 0xD103),
+                try testImageDescription(
+                    pointer: 0xD103,
+                    state: .ready(identity: reference.identity)
+                ),
                 reference: reference
             )
 
@@ -339,12 +342,16 @@ private func testColorManagementSurface(pointer rawPointer: UInt) throws
     )
 }
 
-private func testImageDescription(pointer rawPointer: UInt) throws
+private func testImageDescription(
+    pointer rawPointer: UInt,
+    state initialState: RawImageDescriptionState = .ready(identity: 0)
+) throws
     -> RawImageDescription
 {
     try unsafe RawImageDescription(
         pointer: testMetadataPointer(rawPointer),
-        destroy: ignoreTestMetadataDestroy
+        destroy: ignoreTestMetadataDestroy,
+        state: initialState
     )
 }
 

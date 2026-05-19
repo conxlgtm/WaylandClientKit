@@ -111,6 +111,68 @@ struct RawSurfaceColorManagementRequestTests {
     }
 
     @Test
+    func preferredImageDescriptionIsPendingUntilReady2() async throws {
+        try await withColorManagerFixture { surface, manager in
+            let feedback = try manager.surfaceFeedback(for: surface)
+            defer { feedback.destroy() }
+
+            let imageDescription = try feedback.preferredImageDescription()
+            defer { imageDescription.destroy() }
+
+            #expect(imageDescription.state == .pending)
+            #expect(
+                swl_test_image_description_listener_emit_ready2(
+                    0x1122_3344,
+                    0x5566_7788
+                ) == 1
+            )
+            #expect(
+                imageDescription.state
+                    == .ready(identity: 0x1122_3344_5566_7788)
+            )
+        }
+    }
+
+    @Test
+    func imageDescriptionReadyPublishesLegacyIdentity() async throws {
+        try await withColorManagerFixture { surface, manager in
+            let feedback = try manager.surfaceFeedback(for: surface)
+            defer { feedback.destroy() }
+
+            let imageDescription = try feedback.preferredImageDescription()
+            defer { imageDescription.destroy() }
+
+            #expect(swl_test_image_description_listener_emit_ready(19) == 1)
+            #expect(imageDescription.state == .ready(identity: 19))
+        }
+    }
+
+    @Test
+    func failedImageDescriptionPublishesCauseAndMessage() async throws {
+        try await withColorManagerFixture { surface, manager in
+            let feedback = try manager.surfaceFeedback(for: surface)
+            defer { feedback.destroy() }
+
+            let imageDescription = try feedback.preferredImageDescription()
+            defer { imageDescription.destroy() }
+
+            #expect(
+                unsafe swl_test_image_description_listener_emit_failed(
+                    RawImageDescriptionFailureCause.unsupported.rawValue,
+                    "unsupported profile"
+                ) == 1
+            )
+            #expect(
+                imageDescription.state
+                    == .failed(
+                        cause: .unsupported,
+                        message: "unsupported profile"
+                    )
+            )
+        }
+    }
+
+    @Test
     func surfaceSettersRecordRequests() async throws {
         try await withColorManagerFixture { surface, manager in
             let colorSurface = try manager.surface(for: surface)

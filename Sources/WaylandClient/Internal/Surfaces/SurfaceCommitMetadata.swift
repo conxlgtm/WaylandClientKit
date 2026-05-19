@@ -290,6 +290,12 @@ package enum SurfaceCommitMetadataError: Error, Equatable, Sendable,
     case colorRepresentationObjectUnavailable
     case colorManagementObjectUnavailable
     case colorDescriptionUnavailable(SurfaceColorDescriptionReference)
+    case colorDescriptionPending(SurfaceColorDescriptionReference)
+    case colorDescriptionFailed(
+        SurfaceColorDescriptionReference,
+        cause: RawImageDescriptionFailureCause,
+        message: String
+    )
     case unsupportedContentType(SurfaceContentType)
     case unsupportedAlphaMode(SurfaceAlphaMode)
     case unsupportedCoefficientsAndRange(SurfaceMatrixCoefficientsAndRange)
@@ -321,6 +327,11 @@ package enum SurfaceCommitMetadataError: Error, Equatable, Sendable,
             "color management surface object is unavailable"
         case .colorDescriptionUnavailable(let reference):
             "color description \(reference.identity) is unavailable"
+        case .colorDescriptionPending(let reference):
+            "color description \(reference.identity) is not ready"
+        case .colorDescriptionFailed(let reference, let cause, let message):
+            "color description \(reference.identity) failed with cause "
+                + "\(cause.rawValue): \(message)"
         case .unsupportedContentType(let contentType):
             "content type \(contentType.rawValue) is not supported for outbound commits"
         case .unsupportedAlphaMode(let alphaMode):
