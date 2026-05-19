@@ -1,6 +1,6 @@
 import Testing
 
-@testable import WaylandGraphicsPreview
+@testable import WaylandGraphicsCore
 
 @Suite
 struct GBMBufferPoolStateTests {
