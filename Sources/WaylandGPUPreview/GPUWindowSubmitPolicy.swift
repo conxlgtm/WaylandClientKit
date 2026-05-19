@@ -165,6 +165,7 @@ package enum GPURuntimePathReason: Equatable, Sendable {
     case explicitSynchronizationNotConfigured
     case fifoUnavailable
     case commitTimingUnavailable
+    case commitTimingRejected
     case contentTypeUnavailable
     case alphaModifierUnavailable
     case colorRepresentationUnavailable

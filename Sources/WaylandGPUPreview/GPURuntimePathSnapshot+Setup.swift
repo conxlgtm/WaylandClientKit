@@ -150,7 +150,8 @@ extension GPURuntimePathSnapshot {
             snapshot.egl = .failed(runtimeReason)
         case .explicitSyncRequiredButUnavailable, .submitConstraintRejected:
             snapshot.synchronization = .explicitFailed(runtimeReason)
-        case .fifoRequiredButUnavailable, .commitTimingRequiredButUnavailable:
+        case .fifoRequiredButUnavailable, .commitTimingRequiredButUnavailable,
+            .commitTimingRejected:
             snapshot.pacing = .failed(runtimeReason)
         case .metadataRequiredButUnavailable(let error):
             markMetadataRequirementFailure(error, in: &snapshot)
@@ -226,8 +227,11 @@ extension GPURuntimePathReason {
             self = .explicitSynchronizationUnavailable
         case .fifoRequiredButUnavailable:
             self = .fifoUnavailable
-        case .commitTimingRequiredButUnavailable:
-            self = .commitTimingUnavailable
+        case .commitTimingRequiredButUnavailable, .commitTimingRejected:
+            self =
+                failure == .commitTimingRejected
+                ? .commitTimingRejected
+                : .commitTimingUnavailable
         case .metadataRequiredButUnavailable(let error):
             self = GPURuntimePathReason(error)
         case .gbmUnavailable, .gbmAllocationFailed, .noCompatibleFormat,
