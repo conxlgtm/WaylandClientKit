@@ -31,7 +31,7 @@ struct WaylandThreadExecutorState {
             return false
         case .joining:
             return false
-        case .loopExited, .joined:
+        case .loopExited, .joined, .detachedAfterOwnerThreadExit:
             return false
         case .failedToStart, .destroying:
             return false
@@ -48,7 +48,7 @@ struct WaylandThreadExecutorState {
             phase = .loopExited(mode)
         case .joining:
             return
-        case .joined, .failedToStart, .destroying:
+        case .joined, .detachedAfterOwnerThreadExit, .failedToStart, .destroying:
             return
         }
     }
@@ -61,7 +61,7 @@ struct WaylandThreadExecutorState {
             preconditionFailure("rejectionError called while executor is running")
         case .stopRequested(let mode), .joining(let mode):
             .executorStopping(mode)
-        case .loopExited, .joined, .destroying:
+        case .loopExited, .joined, .detachedAfterOwnerThreadExit, .destroying:
             .executorStopped
         case .failedToStart(let failure):
             .executorFailedToStart(failure)
