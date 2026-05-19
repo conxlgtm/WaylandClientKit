@@ -1403,6 +1403,8 @@ enum swl_test_metadata_request_kind {
     SWL_TEST_METADATA_TEARING_CONTROL_GET_SURFACE = 12,
     SWL_TEST_METADATA_TEARING_CONTROL_SET_PRESENTATION_HINT = 13,
     SWL_TEST_METADATA_COLOR_MANAGER_GET_SURFACE = 14,
+    SWL_TEST_METADATA_COLOR_MANAGER_GET_SURFACE_FEEDBACK = 15,
+    SWL_TEST_METADATA_COLOR_FEEDBACK_GET_PREFERRED = 16,
 };
 
 enum swl_test_metadata_destroy_kind {
@@ -1418,6 +1420,7 @@ enum swl_test_metadata_destroy_kind {
     SWL_TEST_METADATA_DESTROY_TEARING_CONTROL = 9,
     SWL_TEST_METADATA_DESTROY_TEARING_CONTROL_MANAGER = 10,
     SWL_TEST_METADATA_DESTROY_COLOR_MANAGEMENT_SURFACE = 11,
+    SWL_TEST_METADATA_DESTROY_COLOR_MANAGEMENT_SURFACE_FEEDBACK = 12,
 };
 
 struct swl_test_core_request_record {
@@ -2003,6 +2006,12 @@ struct swl_test_metadata_destroy_record swl_test_metadata_destroy_record(void);
 void swl_test_metadata_listener_recording_begin(void);
 void swl_test_metadata_listener_recording_end(void);
 struct swl_test_metadata_listener_record swl_test_metadata_listener_record(void);
+int swl_test_color_representation_listener_emit_supported_alpha_mode(
+    uint32_t alpha_mode);
+int swl_test_color_representation_listener_emit_supported_coefficients_and_ranges(
+    uint32_t coefficients,
+    uint32_t range);
+int swl_test_color_representation_listener_emit_done(void);
 void swl_test_buffer_listener_recording_begin(void);
 void swl_test_buffer_listener_recording_end(void);
 

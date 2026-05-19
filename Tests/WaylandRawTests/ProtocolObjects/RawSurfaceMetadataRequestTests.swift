@@ -195,6 +195,41 @@ struct RawColorRepresentationMetadataRequestTests {
     }
 
     @Test
+    func managerRecordsSupportEventsFromListenerBoundary() async throws {
+        try await withCoreMetadataRequestAndListenerRecording {
+            let manager = try RawColorRepresentationManager(
+                pointer: try unsafe testPointer(0xC432),
+                version: 1,
+                proxyAdoption: try testAdoptionContext()
+            )
+            defer { manager.destroy() }
+
+            #expect(
+                swl_test_color_representation_listener_emit_supported_alpha_mode(
+                    RawSurfaceAlphaMode.straight.rawValue
+                ) == 1
+            )
+            let emittedCoefficients = emitColorRepresentationCoefficientsAndRange(
+                coefficients: .bt709,
+                range: .limited
+            )
+            #expect(emittedCoefficients == 1)
+            #expect(swl_test_color_representation_listener_emit_done() == 1)
+
+            #expect(manager.supportedAlphaModes == [.straight])
+            #expect(
+                manager.supportedCoefficientsAndRanges == [
+                    RawSurfaceCoefficientsAndRange(
+                        coefficients: .bt709,
+                        range: .limited
+                    )
+                ]
+            )
+            #expect(manager.hasReceivedSupportDone)
+        }
+    }
+
+    @Test
     func settersRecordProtocolValues() async throws {
         try await withMetadataRequestRecording {
             let surface = RawColorRepresentationSurface(
@@ -264,4 +299,14 @@ private func withTearingControlFixture(
         defer { manager.destroy() }
         try operation(surface, manager)
     }
+}
+
+private func emitColorRepresentationCoefficientsAndRange(
+    coefficients: RawSurfaceMatrixCoefficients,
+    range: RawSurfaceQuantizationRange
+) -> Int32 {
+    swl_test_color_representation_listener_emit_supported_coefficients_and_ranges(
+        coefficients.rawValue,
+        range.rawValue
+    )
 }

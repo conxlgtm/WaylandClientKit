@@ -56,6 +56,19 @@ extension SurfaceRuntime {
         }
     }
 
+    func hasColorDescription(
+        _ reference: SurfaceColorDescriptionReference
+    ) -> Bool {
+        switch phase {
+        case .unassigned(let objects),
+            .live(_, let objects),
+            .roleDestroyed(let objects):
+            objects.metadataObjects.hasColorDescription(reference)
+        case .surfaceDestroyed:
+            false
+        }
+    }
+
     mutating func setContentTypeCapability(_ capability: SurfaceCapabilityStatus) {
         contentTypeCapability = capability
     }
@@ -122,6 +135,22 @@ extension SurfaceRuntime {
                 reference: reference
             )
         }
+    }
+
+    mutating func resolveColorDescriptionIfNeeded(
+        _ reference: SurfaceColorDescriptionReference,
+        using manager: RawColorManager,
+        surface: RawSurface
+    ) throws {
+        guard !hasColorDescription(reference) else { return }
+
+        let feedback = try manager.surfaceFeedback(for: surface)
+        defer { feedback.destroy() }
+
+        installColorDescription(
+            try feedback.preferredImageDescription(),
+            reference: reference
+        )
     }
 
     mutating func applyCommitMetadata(

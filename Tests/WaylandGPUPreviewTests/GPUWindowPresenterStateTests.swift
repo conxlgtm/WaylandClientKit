@@ -293,7 +293,7 @@ struct GPUWindowRuntimePathSnapshotTests {
                 contentType: .available,
                 alphaModifier: .available,
                 tearingControl: .available,
-                colorRepresentation: .available(version: 1),
+                colorRepresentation: supportedColorRepresentationCapability(),
                 color: .available(version: 1)
             ),
             synchronization: .implicit,
@@ -321,7 +321,7 @@ struct GPUWindowRuntimePathSnapshotTests {
                 contentType: .available,
                 alphaModifier: .available,
                 tearingControl: .available,
-                colorRepresentation: .available(version: 1),
+                colorRepresentation: supportedColorRepresentationCapability(),
                 color: .available(version: 1)
             ),
             synchronization: .implicit,
@@ -530,6 +530,18 @@ private func capabilitySnapshot(
         tearingControl: tearingControl,
         colorRepresentation: colorRepresentation,
         color: color
+    )
+}
+
+private func supportedColorRepresentationCapability()
+    -> SurfaceColorRepresentationCapability
+{
+    .available(
+        version: 1,
+        support: SurfaceColorRepresentationSupport(
+            alphaModes: [.straight],
+            coefficientsAndRanges: []
+        )
     )
 }
 
