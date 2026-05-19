@@ -31,17 +31,18 @@ package struct GPUBackingRequirements: Equatable, Sendable {
             break
         case .fifo:
             guard capabilities.pacing.supportsFifo else {
-                throw .pacingUnavailable
+                throw .fifoUnavailable
             }
         case .targetTime:
             guard capabilities.pacing.supportsCommitTiming else {
-                throw .pacingUnavailable
+                throw .commitTimingUnavailable
             }
         case .fifoAndTargetTime:
-            guard capabilities.pacing.supportsFifo,
-                capabilities.pacing.supportsCommitTiming
-            else {
-                throw .pacingUnavailable
+            guard capabilities.pacing.supportsFifo else {
+                throw .fifoUnavailable
+            }
+            guard capabilities.pacing.supportsCommitTiming else {
+                throw .commitTimingUnavailable
             }
         }
 
@@ -55,6 +56,7 @@ package struct GPUBackingRequirements: Equatable, Sendable {
 
 package enum GPUBackingRequirementError: Error, Equatable, Sendable {
     case explicitSyncUnavailable
-    case pacingUnavailable
+    case fifoUnavailable
+    case commitTimingUnavailable
     case metadataUnavailable(SurfaceCommitMetadataError)
 }
