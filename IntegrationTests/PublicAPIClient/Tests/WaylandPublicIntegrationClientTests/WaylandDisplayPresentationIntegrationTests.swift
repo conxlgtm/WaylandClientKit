@@ -6,6 +6,7 @@ extension WaylandDisplayPublicIntegrationTests {
     func presentationFeedbackReportsUnavailableOrPublishesResult() async throws {
         try await withPublicConnection { display in
             let capabilities = try await display.capabilities()
+            let displayEvents = display.events
             let window = try await display.createTopLevelWindow(
                 configuration: testWindowConfiguration()
             )
@@ -13,7 +14,7 @@ extension WaylandDisplayPublicIntegrationTests {
             try await show(window, color: 0x0014_2434)
 
             if capabilities.presentationTime.isAvailable {
-                try await expectPresentationFeedback(from: window)
+                try await expectPresentationFeedback(from: window, events: displayEvents)
             } else {
                 try await expectPresentationFeedbackUnavailable(from: window)
             }
@@ -37,11 +38,22 @@ private func expectPresentationFeedbackUnavailable(from window: Window) async th
     }
 }
 
-private func expectPresentationFeedback(from window: Window) async throws {
+private func expectPresentationFeedback(
+    from window: Window,
+    events displayEvents: DisplayEvents
+) async throws {
     let presentationEvents = window.presentationEvents
 
     try await window.requestPresentationFeedback()
-    try await window.requestRedraw()
+    _ = try await displayEvent(
+        in: displayEvents,
+        matching: { event in
+            event == .redrawRequested(window.id)
+        },
+        after: {
+            try await window.requestRedraw()
+        }
+    )
     try await window.redraw { frame in
         fill(frame, color: 0x0044_2414)
     }
