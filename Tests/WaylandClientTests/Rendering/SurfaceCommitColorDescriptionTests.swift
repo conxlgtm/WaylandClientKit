@@ -59,6 +59,34 @@ struct SurfaceCommitColorDescriptionTests {
             #expect(unsafe swl_test_metadata_request_record().call_count == 0)
         }
     }
+
+    @Test
+    func readyImageDescriptionIdentityMustMatchRequestedReference() async throws {
+        try await MetadataRequestRecordingGate.withExclusiveRecording {
+            swl_test_metadata_request_recording_begin()
+            defer { swl_test_metadata_request_recording_end() }
+
+            var objects = SurfaceMetadataObjects()
+            let reference = SurfaceColorDescriptionReference(identity: 14)
+            objects.installColorManagement(try testColorManagementSurface(pointer: 0xD602))
+            objects.installColorDescription(
+                try testImageDescription(
+                    pointer: 0xD603,
+                    state: .ready(identity: 15)
+                ),
+                reference: reference
+            )
+
+            #expect(
+                throws: SurfaceCommitMetadataError.colorDescriptionUnavailable(
+                    reference
+                )
+            ) {
+                try objects.apply(SurfaceCommitMetadata(colorDescription: reference))
+            }
+            #expect(unsafe swl_test_metadata_request_record().call_count == 0)
+        }
+    }
 }
 
 private func testColorManagementSurface(pointer rawPointer: UInt) throws
