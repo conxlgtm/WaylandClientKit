@@ -42,3 +42,6 @@ nonterminal runtime diagnostics, and fatal display failure.
 - Surface commit metadata uses `SurfaceCommitMetadataError` internally to
   distinguish unavailable metadata protocols from missing per-surface metadata
   objects or unknown color-description references.
+- `WaylandGraphicsPreview` exposes preview fallback and unavailable reasons for
+  renderer-facing capability decisions. Software fallback is nonfatal; a
+  required-GPU decision reports unavailability without closing the display.

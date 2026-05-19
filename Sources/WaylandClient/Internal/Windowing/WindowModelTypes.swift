@@ -60,6 +60,24 @@ package struct PreviewBufferPresentationResult: Equatable, Sendable {
     package let generation: UInt64
     package let commitPlan: SurfaceCommitPlan
     package let capabilities: SurfaceCapabilitySnapshot
+
+    package init(
+        generation commitGeneration: UInt64,
+        commitPlan surfaceCommitPlan: SurfaceCommitPlan,
+        capabilities surfaceCapabilities: SurfaceCapabilitySnapshot
+    ) throws(PreviewBufferPresentationResultError) {
+        guard commitGeneration > 0 else {
+            throw PreviewBufferPresentationResultError.invalidGeneration(commitGeneration)
+        }
+
+        generation = commitGeneration
+        commitPlan = surfaceCommitPlan
+        capabilities = surfaceCapabilities
+    }
+}
+
+package enum PreviewBufferPresentationResultError: Error, Equatable, Sendable {
+    case invalidGeneration(UInt64)
 }
 
 package enum PresentationState<Request: Equatable & Sendable>: Equatable, Sendable {

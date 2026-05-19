@@ -146,13 +146,18 @@ struct SmokeArgumentsTests {
             alphaModifier: .advertised,
             tearingControl: .advertised,
             colorRepresentation: .advertised,
-            colorManagement: .advertised
+            colorManagement: .advertised,
+            surface: SmokeSurfaceFacts(scale: "2", outputs: 1),
+            backing: .gpu
         )
 
         #expect(
             SmokeResult.frameCallbackObserved(facts).description
                 == """
                 frame callback observed
+                surface:
+                  scale: 2
+                  outputs: 1
                 syncobj: advertised
                 fifo: active
                 commitTiming: configured
@@ -160,6 +165,7 @@ struct SmokeArgumentsTests {
                 gbm: active
                 egl: active
                 presentationFeedback: observed
+                backing: gpu
                 contentType: advertised
                 alphaModifier: advertised
                 tearingControl: advertised

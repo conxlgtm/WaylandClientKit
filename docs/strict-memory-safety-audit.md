@@ -324,6 +324,14 @@ Audit invariant:
   render-intent values are preserved at the raw/value boundary.
 - `SurfaceCommitMetadata.default` does not create optional protocol objects or
   change existing SHM/GPU commit behavior.
+- Color-representation support is not published as final capability state until
+  the compositor's support-list `done` event is observed.
+- Image descriptions are not usable as commit metadata until their ready event
+  publishes a nonzero identity. Pending, failed, malformed, or mismatched
+  image-description objects are rejected before metadata requests are emitted.
+- Metadata application preflights object availability and color-description
+  identity before sending double-buffered Wayland state requests, so failed
+  metadata commits do not dirty later commits.
 
 Tests:
 
@@ -333,6 +341,9 @@ Tests:
 - `SurfaceCommitMetadataTests` covers default behavior, unavailable capability
   errors, available capability validation, capability snapshot publication, and
   unknown-value preservation.
+- `SurfaceColorMetadataReadinessTests` and
+  `SurfaceCommitColorDescriptionTests` cover color-representation support
+  readiness and image-description pending/ready/failed states.
 
 ## GBM and DRM Boundary
 
@@ -428,6 +439,12 @@ Audit invariant:
   Wayland buffer release.
 - GPU preview APIs remain package-internal until the public graphics contract
   has surface capability, color metadata, and synchronization requirements.
+- `GPUWindowBackingState` is the internal state snapshot for lifecycle,
+  runtime-path facts, buffer-pool readiness, last submitted frame, diagnostics,
+  fallback, and failure.
+- Preview diagnostics remain package-internal typed payloads. The public
+  `WaylandGraphicsPreview` product exposes only renderer-neutral capability,
+  runtime-path, fallback, and unavailable values.
 
 Tests:
 
@@ -435,5 +452,8 @@ Tests:
   export transfer, terminal-state events, and import request lifecycle.
 - `GPUWindowPresenterStateTests` covers install, lease, submit, release, and
   release-failure state transitions.
+- `WaylandGraphicsPreviewAPITests` and
+  `IntegrationTests/GraphicsPreviewClient` cover the public preview value
+  boundary without exposing raw unsafe handles.
 - `WindowModelExternalPresentationTests` and `SurfaceTransactionStateTests`
   cover shared commit-generation rules used by software and GPU presentation.

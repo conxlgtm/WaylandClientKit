@@ -3,7 +3,7 @@ import Testing
 
 @testable import WaylandClient
 @testable import WaylandGPUPreview
-@testable import WaylandGraphicsPreview
+@testable import WaylandGraphicsCore
 @testable import WaylandRaw
 
 @Suite
@@ -241,6 +241,58 @@ struct GPUWindowPresenterStateTests {
 @Suite
 struct GPUWindowRuntimePathSnapshotTests {
     @Test
+    func runtimePathSnapshotReportsSetupMilestones() {
+        let capabilities = capabilitySnapshot(
+            synchronization: .explicitAvailable(version: 1),
+            pacing: .fifo(version: 1),
+            contentType: .available
+        )
+
+        let discovered = GPURuntimePathSnapshot.afterCapabilityDiscovery(
+            capabilities: capabilities
+        )
+        #expect(discovered.dmabuf == .advertised)
+        #expect(discovered.gbm == .unavailable)
+        #expect(discovered.egl == .unavailable)
+        #expect(discovered.synchronization == .explicitAdvertised)
+        #expect(discovered.pacing == .fifoAdvertised)
+
+        let gbm = GPURuntimePathSnapshot.afterGBMDeviceSelection(
+            capabilities: capabilities
+        )
+        #expect(gbm.gbm == .configured)
+        #expect(gbm.egl == .unavailable)
+
+        let egl = GPURuntimePathSnapshot.afterEGLTargetSetup(
+            capabilities: capabilities
+        )
+        #expect(egl.gbm == .configured)
+        #expect(egl.egl == .configured)
+
+        let dmabuf = GPURuntimePathSnapshot.afterDmabufImportSetup(
+            capabilities: capabilities
+        )
+        #expect(dmabuf.dmabuf == .active)
+    }
+
+    @Test
+    func runtimePathSnapshotReportsFailureAndFallbackReasons() {
+        let capabilities = capabilitySnapshot()
+        let fallback = GPURuntimePathSnapshot.afterFallback(
+            capabilities: capabilities,
+            reason: .noCompatibleFormat
+        )
+        let failure = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilities,
+            failure: .eglUnavailable
+        )
+
+        #expect(fallback.gbm == .fallback(.gbmUnavailable))
+        #expect(fallback.egl == .fallback(.gbmUnavailable))
+        #expect(failure.egl == .failed(.eglUnavailable))
+    }
+
+    @Test
     func runtimePathSnapshotReportsAdvertisedExplicitSyncNotConfigured() {
         let snapshot = GPURuntimePathSnapshot.afterPresentation(
             capabilities: capabilitySnapshot(
@@ -258,6 +310,7 @@ struct GPUWindowRuntimePathSnapshotTests {
         #expect(snapshot.pacing == .fifoAdvertised)
         #expect(snapshot.contentType == .unavailable)
         #expect(snapshot.alpha == .unavailable)
+        #expect(snapshot.tearingControl == .unavailable)
         #expect(snapshot.colorRepresentation == .unavailable)
         #expect(snapshot.colorManagement == .unavailable)
         #expect(snapshot.presentationHint == nil)
@@ -302,6 +355,7 @@ struct GPUWindowRuntimePathSnapshotTests {
 
         #expect(snapshot.contentType == .advertised)
         #expect(snapshot.alpha == .advertised)
+        #expect(snapshot.tearingControl == .advertised)
         #expect(snapshot.colorRepresentation == .advertised)
         #expect(snapshot.colorManagement == .advertised)
         #expect(snapshot.presentationHint == nil)
@@ -331,6 +385,7 @@ struct GPUWindowRuntimePathSnapshotTests {
 
         #expect(snapshot.contentType == .configured)
         #expect(snapshot.alpha == .configured)
+        #expect(snapshot.tearingControl == .configured)
         #expect(snapshot.colorRepresentation == .configured)
         #expect(snapshot.colorManagement == .configured)
         #expect(snapshot.presentationHint == .async)
@@ -352,6 +407,397 @@ struct GPUWindowRuntimePathSnapshotTests {
             GPUFramePacingRuntimeStatus.fallback(.fifoUnavailable)
                 == .fallback(.fifoUnavailable)
         )
+    }
+
+    @Test
+    func runtimePathReportsCommitTimingUnavailableForTargetTimeFailure() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(pacing: .fifo(version: 1)),
+            failure: .commitTimingRequiredButUnavailable
+        )
+
+        #expect(snapshot.pacing == .failed(.commitTimingUnavailable))
+    }
+
+    @Test
+    func runtimePathReportsCommitTimingRejectedForTimestampFailure() {
+        #expect(
+            GPUBackingFailure(.commitTimestampAlreadyExists)
+                == .commitTimingRejected
+        )
+        #expect(
+            GPUBackingFailure(.invalidCommitTimestamp)
+                == .commitTimingRejected
+        )
+
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(pacing: .commitTiming(version: 1)),
+            failure: GPUBackingFailure(.invalidCommitTimestamp)
+        )
+
+        #expect(snapshot.pacing == .failed(.commitTimingRejected))
+        #expect(snapshot.synchronization != .explicitFailed(.commitTimingRejected))
+    }
+
+    @Test
+    func runtimePathReportsCompositorRejectedBuffer() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(),
+            failure: .compositorRejectedBuffer
+        )
+
+        #expect(snapshot.dmabuf == .failed(.compositorRejectedBuffer))
+    }
+
+    @Test
+    func runtimePathReportsCommitFailure() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(),
+            failure: .commitFailed
+        )
+
+        #expect(snapshot.dmabuf == .failed(.commitFailed))
+    }
+
+    @Test
+    func runtimePathReportsContentTypeUnavailableForContentTypeRequirement() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(contentType: .unavailable),
+            failure: .metadataRequiredButUnavailable(.contentTypeUnavailable)
+        )
+
+        #expect(snapshot.contentType == .failed(.contentTypeUnavailable))
+    }
+
+    @Test
+    func runtimePathReportsAlphaModifierUnavailableForAlphaRequirement() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(alphaModifier: .unavailable),
+            failure: .metadataRequiredButUnavailable(.alphaModifierUnavailable)
+        )
+
+        #expect(snapshot.alpha == .failed(.alphaModifierUnavailable))
+    }
+
+    @Test
+    func runtimePathReportsTearingControlUnavailableForPresentationHintRequirement() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(tearingControl: .unavailable),
+            failure: .metadataRequiredButUnavailable(.tearingControlUnavailable)
+        )
+
+        #expect(snapshot.tearingControl == .failed(.presentationHintUnavailable))
+    }
+
+    @Test
+    func runtimePathReportsColorManagementUnavailableForColorDescriptionRequirement() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(color: .unavailable),
+            failure: .metadataRequiredButUnavailable(.colorUnavailable)
+        )
+
+        #expect(snapshot.colorManagement == .failed(.colorManagementUnavailable))
+    }
+}
+
+@Suite
+struct GPUWindowBackingPolicyTests {
+    @Test
+    func fallbackPolicyDistinguishesFallbackFromUnavailable() {
+        let unavailable = capabilitySnapshot(dmabuf: .unavailable)
+
+        #expect(
+            GPUFallbackPolicy.preferGPUFallbackToSHM.decide(
+                capabilities: unavailable
+            ) == .shm(.dmabufUnavailable)
+        )
+        #expect(
+            GPUFallbackPolicy.requireGPU.decide(capabilities: unavailable)
+                == .unavailable(.dmabufUnavailable)
+        )
+        #expect(
+            GPUFallbackPolicy.forceSHM.decide(capabilities: capabilitySnapshot())
+                == .shm(.policyForcedSHM)
+        )
+    }
+
+    @Test
+    func backingPolicyRejectsRequestedColorDescriptionWhenColorManagementUnavailable() throws {
+        let requirements = GPUBackingRequirements(
+            metadata: SurfaceCommitMetadata(
+                colorDescription: try SurfaceColorDescriptionReference(identity: 1)
+            )
+        )
+        let capabilities = capabilitySnapshot(contentType: .available, color: .unavailable)
+
+        #expect(
+            GPUFallbackPolicy.requireGPU.decide(
+                capabilities: capabilities,
+                requirements: requirements
+            ) == .unavailable(.metadataRequiredButUnavailable(.colorUnavailable))
+        )
+    }
+
+    @Test
+    func backingPolicyRejectsTargetTimeWhenCommitTimingUnavailable() throws {
+        let requirements = GPUBackingRequirements(
+            pacing: .targetTime(
+                try SurfaceCommitTargetTime(seconds: 1, nanoseconds: 2)
+            )
+        )
+
+        #expect(
+            GPUFallbackPolicy.requireGPU.decide(
+                capabilities: capabilitySnapshot(pacing: .fifo(version: 1)),
+                requirements: requirements
+            ) == .unavailable(.commitTimingRequiredButUnavailable)
+        )
+    }
+
+    @Test
+    func backingPolicyRejectsFifoWhenFifoUnavailable() {
+        let requirements = GPUBackingRequirements(pacing: .fifo(.setBarrier))
+
+        #expect(
+            GPUFallbackPolicy.requireGPU.decide(
+                capabilities: capabilitySnapshot(pacing: .commitTiming(version: 1)),
+                requirements: requirements
+            ) == .unavailable(.fifoRequiredButUnavailable)
+        )
+    }
+
+    @Test
+    func fifoAndTargetTimeReportsFirstMissingPacingProtocol() throws {
+        let requirements = GPUBackingRequirements(
+            pacing: .fifoAndTargetTime(
+                .waitBarrier,
+                try SurfaceCommitTargetTime(seconds: 1, nanoseconds: 2)
+            )
+        )
+
+        #expect(
+            GPUFallbackPolicy.requireGPU.decide(
+                capabilities: capabilitySnapshot(pacing: .unavailable),
+                requirements: requirements
+            ) == .unavailable(.fifoRequiredButUnavailable)
+        )
+    }
+
+    @Test
+    func backingPolicyAcceptsContentTypeWhenOnlyContentTypeIsRequested() {
+        let decision = GPUFallbackPolicy.requireGPU.decide(
+            capabilities: capabilitySnapshot(contentType: .available),
+            requirements: GPUBackingRequirements(
+                metadata: SurfaceCommitMetadata(contentType: .game)
+            )
+        )
+
+        guard case .gpu(let state) = decision else {
+            Issue.record("Expected GPU backing decision, got \(decision)")
+            return
+        }
+
+        #expect(state.lifecycle == .configuring)
+    }
+
+    @Test
+    func backingPolicyRejectsPresentationHintWhenTearingControlUnavailable() {
+        let requirements = GPUBackingRequirements(
+            metadata: SurfaceCommitMetadata(presentationHint: .async)
+        )
+        let decision = GPUFallbackPolicy.requireGPU.decide(
+            capabilities: capabilitySnapshot(tearingControl: .unavailable),
+            requirements: requirements
+        )
+        let expected = GPUBackingDecision.unavailable(
+            .metadataRequiredButUnavailable(.tearingControlUnavailable)
+        )
+
+        #expect(decision == expected)
+    }
+
+    @Test
+    func backingPolicyPreservesRequireGPUVsFallbackPolicyForMetadataFailure() {
+        let requirements = GPUBackingRequirements(
+            metadata: SurfaceCommitMetadata(contentType: .game)
+        )
+        let capabilities = capabilitySnapshot(contentType: .unavailable)
+
+        #expect(
+            GPUFallbackPolicy.requireGPU.decide(
+                capabilities: capabilities,
+                requirements: requirements
+            ) == .unavailable(.metadataRequiredButUnavailable(.contentTypeUnavailable))
+        )
+        #expect(
+            GPUFallbackPolicy.preferGPUFallbackToSHM.decide(
+                capabilities: capabilities,
+                requirements: requirements
+            ) == .shm(.metadataRequiredButUnavailable(.contentTypeUnavailable))
+        )
+    }
+}
+
+@Suite
+struct GPUWindowBackingStateTests {
+    @Test
+    func backingStateRecordsSuccessFailureFallbackAndRetire() throws {
+        let capabilities = capabilitySnapshot()
+        let frame = try presentedFrame(
+            slotID: try GBMBufferPoolSlotID(0),
+            generation: 10
+        )
+        var state = GPUWindowBackingState.unconfigured
+
+        state.recordCapabilities(capabilities)
+        #expect(state.lifecycle == .configuring)
+        #expect(state.runtimePath.dmabuf == .advertised)
+
+        state.markReady(
+            runtimePath: .afterPresentation(
+                capabilities: capabilities,
+                synchronization: .implicit,
+                pacing: .none
+            ),
+            capabilities: capabilities,
+            bufferPool: .ready(installedSlots: 2, availableSlots: 1, submittedSlots: 1),
+            frame: frame
+        )
+        #expect(state.lifecycle == .ready)
+        #expect(state.lastSubmittedFrame == frame)
+
+        state.markFallback(.noCompatibleFormat, capabilities: capabilities)
+        #expect(state.lifecycle == .fallbackToSHM(.noCompatibleFormat))
+        #expect(state.diagnostics.last?.payload == .fallbackSelected(.noCompatibleFormat))
+
+        state.markFailed(.eglUnavailable, operation: .eglSetup)
+        #expect(state.lifecycle == .failed(.eglUnavailable))
+        #expect(state.diagnostics.last?.payload == .failure(.eglUnavailable))
+
+        state.markRetired()
+        #expect(state.lifecycle == .retired)
+        #expect(state.runtimePath == .empty)
+        #expect(state.bufferPool == .retired)
+        #expect(state.lastSubmittedFrame == nil)
+    }
+
+    @Test
+    func backingStateRetireClearsRuntimePath() throws {
+        let capabilities = capabilitySnapshot()
+        var state = GPUWindowBackingState.unconfigured
+        state.markReady(
+            runtimePath: .afterPresentation(
+                capabilities: capabilities,
+                synchronization: .implicit,
+                pacing: .none
+            ),
+            capabilities: capabilities,
+            bufferPool: .ready(installedSlots: 1, availableSlots: 0, submittedSlots: 1),
+            frame: try presentedFrame(
+                slotID: try GBMBufferPoolSlotID(0),
+                generation: 11
+            )
+        )
+        #expect(state.runtimePath.gbm == .active)
+
+        state.markRetired()
+
+        #expect(state.lifecycle == .retired)
+        #expect(state.runtimePath == .empty)
+        #expect(state.bufferPool == .retired)
+        #expect(state.lastSubmittedFrame == nil)
+    }
+
+    @Test
+    func invalidationReportsCapabilityGeometryAndMetadataChanges() throws {
+        let oldSnapshot = capabilitySnapshot()
+        let newSnapshot = capabilitySnapshot(
+            synchronization: .explicitAvailable(version: 1),
+            contentType: .available,
+            color: .available(version: 1)
+        )
+        let oldGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 10, height: 10),
+            scale: .one
+        )
+        let newGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 20, height: 10),
+            scale: try SurfaceScale(numerator: 2, denominator: 1)
+        )
+        let invalidations = GPUBackingInvalidation.changes(
+            oldSnapshot: oldSnapshot,
+            newSnapshot: newSnapshot,
+            oldGeometry: oldGeometry,
+            newGeometry: newGeometry,
+            oldSynchronization: .implicitOnly,
+            newSynchronization: .explicitAvailable(version: 1),
+            oldMetadata: .default,
+            newMetadata: SurfaceCommitMetadata(contentType: .game),
+            oldPacing: .unavailable,
+            newPacing: .fifo(version: 1)
+        ).map(\.reason)
+
+        #expect(invalidations.contains(.logicalSizeChanged))
+        #expect(invalidations.contains(.bufferScaleChanged))
+        #expect(invalidations.contains(.synchronizationModeChanged))
+        #expect(invalidations.contains(.colorMetadataChanged))
+        #expect(invalidations.contains(.presentationModeChanged))
+    }
+
+    @Test
+    func contentTypeMetadataChangeInvalidatesBacking() {
+        let reasons = invalidationReasons(
+            oldMetadata: .default,
+            newMetadata: SurfaceCommitMetadata(contentType: .game)
+        )
+
+        #expect(reasons == [.colorMetadataChanged])
+    }
+
+    @Test
+    func alphaMetadataChangeInvalidatesBacking() {
+        let reasons = invalidationReasons(
+            oldMetadata: .default,
+            newMetadata: SurfaceCommitMetadata(
+                alpha: SurfaceAlphaMetadata(multiplier: .transparent)
+            )
+        )
+
+        #expect(reasons == [.colorMetadataChanged])
+    }
+
+    @Test
+    func colorRepresentationMetadataChangeInvalidatesBacking() {
+        let reasons = invalidationReasons(
+            oldMetadata: .default,
+            newMetadata: SurfaceCommitMetadata(
+                colorRepresentation: SurfaceColorRepresentation(alphaMode: .straight)
+            )
+        )
+
+        #expect(reasons == [.colorMetadataChanged])
+    }
+
+    @Test
+    func colorDescriptionMetadataChangeInvalidatesBacking() throws {
+        let reasons = invalidationReasons(
+            oldMetadata: .default,
+            newMetadata: SurfaceCommitMetadata(
+                colorDescription: try SurfaceColorDescriptionReference(identity: 1)
+            )
+        )
+
+        #expect(reasons == [.colorMetadataChanged])
+    }
+
+    @Test
+    func presentationHintChangeInvalidatesPresentationModeOnly() {
+        let reasons = invalidationReasons(
+            oldMetadata: .default,
+            newMetadata: SurfaceCommitMetadata(presentationHint: .async)
+        )
+
+        #expect(reasons == [.presentationModeChanged])
     }
 }
 
@@ -400,12 +846,17 @@ struct GPUWindowPresenterLifecycleTests {
 
         try presenter.installBuffer(firstBuffer, slotID: firstSlotID)
         try presenter.installBuffer(secondBuffer, slotID: secondSlotID)
+        #expect(
+            presenter.backingStateSnapshot.bufferPool
+                == .ready(installedSlots: 2, availableSlots: 2, submittedSlots: 0)
+        )
         presenter.retireAll(reason: .windowClosed)
 
         #expect(firstBuffer.destroyCallCount == 1)
         #expect(secondBuffer.destroyCallCount == 1)
         #expect(presenter.installedSlotIDs.isEmpty)
         #expect(presenter.outstandingSubmittedSlotIDs.isEmpty)
+        #expect(presenter.backingStateSnapshot.lifecycle == .retired)
 
         presenter.retireAll(reason: .windowClosed)
 
@@ -463,6 +914,107 @@ struct GPUWindowPresenterLifecycleTests {
     }
 
     @Test
+    func presenterFailureAfterSuccessReportsFailedRuntimePath() {
+        let presenter = GPUWindowPresenter()
+        let capabilities = capabilitySnapshot()
+
+        presenter.markReadyForTesting(capabilities: capabilities)
+        #expect(presenter.backingStateSnapshot.lifecycle == .ready)
+        #expect(presenter.runtimePathSnapshot.gbm == .active)
+
+        presenter.markFailureForTesting(.commitFailed, operation: .surfaceCommit)
+        let snapshot = presenter.backingStateSnapshot
+
+        #expect(snapshot.lifecycle == .failed(.commitFailed))
+        #expect(snapshot.runtimePath.dmabuf == .failed(.commitFailed))
+        #expect(snapshot.runtimePath.gbm == .unavailable)
+        #expect(presenter.runtimePathSnapshot == snapshot.runtimePath)
+    }
+
+    @Test
+    func presenterPreservesPostCommitStateErrorWithoutCancelingLease() throws {
+        let presenter = GPUWindowPresenter()
+        let slotID = try GBMBufferPoolSlotID(0)
+        let buffer = try FakePresenterBuffer(pointer: 0x1001)
+        try presenter.installBuffer(buffer, slotID: slotID)
+        let lease = try presenter.leaseNextForTesting()
+        try presenter.cancelLeaseForTesting(lease)
+
+        do {
+            _ = try presenter.recordPresentedFrameForTesting(
+                try previewPresentationResult(),
+                lease: lease
+            )
+            Issue.record("Expected invalid generation to fail presentation recording")
+        } catch GPUWindowPresenterError.state(
+            .pool(.slotNotLeased(let failedSlotID, actual: .available))
+        ) {
+            #expect(failedSlotID == slotID)
+            // Expected.
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(
+            presenter.backingStateSnapshot.bufferPool
+                == .exhausted(installedSlots: 1, submittedSlots: 1)
+        )
+        #expect(
+            presenter.backingStateSnapshot.lifecycle
+                == .failed(.presentationTrackingFailed)
+        )
+        #expect(
+            presenter.backingStateSnapshot.diagnostics.last?.payload
+                == .failure(.presentationTrackingFailed)
+        )
+
+        buffer.triggerRelease()
+
+        #expect(
+            presenter.backingStateSnapshot.bufferPool
+                == .ready(installedSlots: 1, availableSlots: 1, submittedSlots: 0)
+        )
+        #expect(presenter.releaseFailuresSnapshot.isEmpty)
+    }
+
+    @Test
+    func previewBufferPresentationResultRejectsZeroGeneration() throws {
+        let commitPlan = try surfaceCommitPlan()
+
+        #expect(throws: PreviewBufferPresentationResultError.invalidGeneration(0)) {
+            try PreviewBufferPresentationResult(
+                generation: 0,
+                commitPlan: commitPlan,
+                capabilities: capabilitySnapshot()
+            )
+        }
+    }
+
+    @Test
+    func presenterRetireAfterReadyClearsBackingRuntimePath() {
+        let presenter = GPUWindowPresenter()
+        presenter.markReadyForTesting(capabilities: capabilitySnapshot())
+        #expect(presenter.backingStateSnapshot.runtimePath.gbm == .active)
+
+        presenter.retireAll(reason: .windowClosed)
+        let snapshot = presenter.backingStateSnapshot
+
+        #expect(snapshot.lifecycle == .retired)
+        #expect(snapshot.runtimePath == .empty)
+        #expect(presenter.runtimePathSnapshot == .empty)
+    }
+
+    @Test
+    func retiredBackingSnapshotMatchesPresenterRuntimePath() {
+        let presenter = GPUWindowPresenter()
+        presenter.markReadyForTesting(capabilities: capabilitySnapshot())
+
+        presenter.retireAll(reason: .windowClosed)
+
+        #expect(presenter.backingStateSnapshot.runtimePath == presenter.runtimePathSnapshot)
+    }
+
+    @Test
     func presenterDeinitRetiresInstalledBuffers() throws {
         var presenter: GPUWindowPresenter? = GPUWindowPresenter()
         let slotID = try GBMBufferPoolSlotID(0)
@@ -488,27 +1040,46 @@ private func presentedFrame(
     slotID: GBMBufferPoolSlotID,
     generation: UInt64
 ) throws -> GPUWindowPresentedFrame {
-    let geometry = try SurfaceGeometry(
-        logicalSize: PositiveLogicalSize(width: 4, height: 3),
-        scale: .one
-    )
-
     return GPUWindowPresentedFrame(
         slotID: slotID,
         generation: generation,
-        commitPlan: SurfaceCommitPlan(
-            geometry: geometry,
-            bufferScale: 1,
-            viewportMode: .omitDestination,
-            damageMode: .buffer
-        ),
+        commitPlan: try surfaceCommitPlan(),
         synchronization: .implicit,
         pacing: .none,
         metadata: .default
     )
 }
 
+private func previewPresentationResult(
+    generation: UInt64 = 1,
+    capabilities: SurfaceCapabilitySnapshot = capabilitySnapshot()
+) throws -> PreviewBufferPresentationResult {
+    try PreviewBufferPresentationResult(
+        generation: generation,
+        commitPlan: surfaceCommitPlan(),
+        capabilities: capabilities
+    )
+}
+
+private func surfaceCommitPlan() throws -> SurfaceCommitPlan {
+    let geometry = try SurfaceGeometry(
+        logicalSize: PositiveLogicalSize(width: 4, height: 3),
+        scale: .one
+    )
+
+    return SurfaceCommitPlan(
+        geometry: geometry,
+        bufferScale: 1,
+        viewportMode: .omitDestination,
+        damageMode: .buffer
+    )
+}
+
 private func capabilitySnapshot(
+    dmabuf: SurfaceDmabufCapability = .advertised(
+        version: 1,
+        canRequestSurfaceFeedback: .available
+    ),
     synchronization: SurfaceSynchronizationCapability = .implicitOnly,
     pacing: SurfacePacingCapability = .unavailable,
     contentType: SurfaceCapabilityStatus = .unavailable,
@@ -522,7 +1093,7 @@ private func capabilitySnapshot(
         outputIDs: [],
         fractionalScale: .integerOnly,
         presentationFeedback: .unavailable,
-        dmabuf: .advertised(version: 1, canRequestSurfaceFeedback: .available),
+        dmabuf: dmabuf,
         synchronization: synchronization,
         pacing: pacing,
         contentType: contentType,
@@ -543,6 +1114,20 @@ private func supportedColorRepresentationCapability()
             coefficientsAndRanges: []
         )
     )
+}
+
+private func invalidationReasons(
+    oldMetadata: SurfaceCommitMetadata,
+    newMetadata: SurfaceCommitMetadata,
+    oldSnapshot: SurfaceCapabilitySnapshot = capabilitySnapshot(),
+    newSnapshot: SurfaceCapabilitySnapshot = capabilitySnapshot()
+) -> [GPUBackingInvalidationReason] {
+    GPUBackingInvalidation.changes(
+        oldSnapshot: oldSnapshot,
+        newSnapshot: newSnapshot,
+        oldMetadata: oldMetadata,
+        newMetadata: newMetadata
+    ).map(\.reason)
 }
 
 private final class FakePresenterBuffer: GPUWindowPresenterBuffer {

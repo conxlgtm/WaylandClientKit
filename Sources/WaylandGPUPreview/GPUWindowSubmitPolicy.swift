@@ -1,5 +1,5 @@
 import WaylandClient
-import WaylandGraphicsPreview
+import WaylandGraphicsCore
 import WaylandRaw
 
 package struct GPUSyncTimeline: Equatable, Hashable, Sendable {
@@ -143,6 +143,7 @@ package enum GPUBufferSubmissionState: Equatable, Sendable {
     case leased
     case submittedImplicit(commitGeneration: UInt64)
     case submittedExplicit(commitGeneration: UInt64, releasePoint: GPUSyncPoint)
+    case committedUntracked
     case retired
 }
 
@@ -156,16 +157,24 @@ package enum RuntimePathStatus: Equatable, Sendable {
 }
 
 package enum GPURuntimePathReason: Equatable, Sendable {
+    case policyForcedSHM
+    case dmabufUnavailable
+    case gbmUnavailable
+    case eglUnavailable
     case explicitSynchronizationUnavailable
     case explicitSynchronizationNotConfigured
     case fifoUnavailable
     case commitTimingUnavailable
+    case commitTimingRejected
     case contentTypeUnavailable
     case alphaModifierUnavailable
     case colorRepresentationUnavailable
     case colorRepresentationSupportPending
     case colorManagementUnavailable
     case presentationHintUnavailable
+    case compositorRejectedBuffer
+    case commitFailed
+    case presentationTrackingFailed
 }
 
 package enum GPUSynchronizationRuntimeStatus: Equatable, Sendable {
@@ -190,17 +199,18 @@ package enum GPUFramePacingRuntimeStatus: Equatable, Sendable {
 }
 
 package struct GPURuntimePathSnapshot: Equatable, Sendable {
-    package let dmabuf: RuntimePathStatus
-    package let gbm: RuntimePathStatus
-    package let egl: RuntimePathStatus
-    package let synchronization: GPUSynchronizationRuntimeStatus
-    package let pacing: GPUFramePacingRuntimeStatus
-    package let presentationFeedback: SurfaceCapabilityStatus
-    package let contentType: RuntimePathStatus
-    package let alpha: RuntimePathStatus
-    package let colorRepresentation: RuntimePathStatus
-    package let colorManagement: RuntimePathStatus
-    package let presentationHint: SurfacePresentationHint?
+    package var dmabuf: RuntimePathStatus
+    package var gbm: RuntimePathStatus
+    package var egl: RuntimePathStatus
+    package var synchronization: GPUSynchronizationRuntimeStatus
+    package var pacing: GPUFramePacingRuntimeStatus
+    package var presentationFeedback: SurfaceCapabilityStatus
+    package var contentType: RuntimePathStatus
+    package var alpha: RuntimePathStatus
+    package var tearingControl: RuntimePathStatus
+    package var colorRepresentation: RuntimePathStatus
+    package var colorManagement: RuntimePathStatus
+    package var presentationHint: SurfacePresentationHint?
 
     package static let empty = Self(
         dmabuf: .unavailable,
@@ -211,6 +221,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         presentationFeedback: .unavailable,
         contentType: .unavailable,
         alpha: .unavailable,
+        tearingControl: .unavailable,
         colorRepresentation: .unavailable,
         colorManagement: .unavailable,
         presentationHint: nil
@@ -242,6 +253,11 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
                 requested: metadata.alpha != nil,
                 missingReason: .alphaModifierUnavailable
             ),
+            tearingControl: capabilityStatus(
+                capabilities.tearingControl,
+                requested: metadata.presentationHint != nil,
+                missingReason: .presentationHintUnavailable
+            ),
             colorRepresentation: colorRepresentationStatus(
                 capabilities.colorRepresentation,
                 requested: metadata.colorRepresentation != nil
@@ -254,7 +270,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         )
     }
 
-    private static func dmabufStatus(
+    package static func dmabufStatus(
         _ capability: SurfaceDmabufCapability
     ) -> RuntimePathStatus {
         switch capability {
@@ -267,7 +283,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         }
     }
 
-    private static func synchronizationStatus(
+    package static func synchronizationStatus(
         _ synchronization: GPUBufferSubmissionSynchronization,
         capability: SurfaceSynchronizationCapability
     ) -> GPUSynchronizationRuntimeStatus {
@@ -286,7 +302,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         }
     }
 
-    private static func pacingStatus(
+    package static func pacingStatus(
         _ pacing: SurfacePacingConstraint,
         capability: SurfacePacingCapability
     ) -> GPUFramePacingRuntimeStatus {
@@ -311,7 +327,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         }
     }
 
-    private static func capabilityStatus(
+    package static func capabilityStatus(
         _ capability: SurfaceCapabilityStatus,
         requested: Bool,
         missingReason: GPURuntimePathReason
@@ -328,7 +344,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         }
     }
 
-    private static func colorRepresentationStatus(
+    package static func colorRepresentationStatus(
         _ capability: SurfaceColorRepresentationCapability,
         requested: Bool
     ) -> RuntimePathStatus {
@@ -348,7 +364,7 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
         }
     }
 
-    private static func colorStatus(
+    package static func colorStatus(
         _ capability: SurfaceColorCapability,
         requested: Bool
     ) -> RuntimePathStatus {

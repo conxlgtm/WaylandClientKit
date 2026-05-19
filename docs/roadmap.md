@@ -118,8 +118,10 @@ The current baseline already has meaningful substrate pieces:
 - shared surface transaction state for SHM and preview GPU commits
 - linux-dmabuf raw objects, feedback parsing, and buffer params lifecycle
 - GBM/DRM allocation, modifier selection, dmabuf export, and buffer-pool state
-- package-internal EGL/GLES render target probe through `WaylandGraphicsPreview`
+- package-internal EGL/GLES render target probe through `WaylandGraphicsCore`
 - package-internal GPU window presentation bridge through `WaylandGPUPreview`
+- preview graphics product `WaylandGraphicsPreview` for renderer-neutral
+  capability, runtime-path, and fallback facts
 - package-internal submit-constraint model for linux-drm-syncobj, FIFO, and
   commit-timing capability facts
 - package-internal surface commit metadata model for content type, alpha,
@@ -140,7 +142,8 @@ Known foundation gaps:
   launch and restoration workflows
 - compositor matrix coverage beyond headless Weston
 - public DocC reference documentation
-- compatibility and release policy
+- compatibility and release policy for stable client APIs and preview graphics
+  APIs
 
 ## Roadmap Principles
 
