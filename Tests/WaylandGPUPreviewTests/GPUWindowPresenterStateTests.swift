@@ -633,6 +633,34 @@ struct GPUWindowBackingStateTests {
 
         state.markRetired()
         #expect(state.lifecycle == .retired)
+        #expect(state.runtimePath == .empty)
+        #expect(state.bufferPool == .retired)
+        #expect(state.lastSubmittedFrame == nil)
+    }
+
+    @Test
+    func backingStateRetireClearsRuntimePath() throws {
+        let capabilities = capabilitySnapshot()
+        var state = GPUWindowBackingState.unconfigured
+        state.markReady(
+            runtimePath: .afterPresentation(
+                capabilities: capabilities,
+                synchronization: .implicit,
+                pacing: .none
+            ),
+            capabilities: capabilities,
+            bufferPool: .ready(installedSlots: 1, availableSlots: 0, submittedSlots: 1),
+            frame: try presentedFrame(
+                slotID: try GBMBufferPoolSlotID(0),
+                generation: 11
+            )
+        )
+        #expect(state.runtimePath.gbm == .active)
+
+        state.markRetired()
+
+        #expect(state.lifecycle == .retired)
+        #expect(state.runtimePath == .empty)
         #expect(state.bufferPool == .retired)
         #expect(state.lastSubmittedFrame == nil)
     }
@@ -858,6 +886,30 @@ struct GPUWindowPresenterLifecycleTests {
         #expect(snapshot.runtimePath.dmabuf == .failed(.dmabufUnavailable))
         #expect(snapshot.runtimePath.gbm == .unavailable)
         #expect(presenter.runtimePathSnapshot == snapshot.runtimePath)
+    }
+
+    @Test
+    func presenterRetireAfterReadyClearsBackingRuntimePath() {
+        let presenter = GPUWindowPresenter()
+        presenter.markReadyForTesting(capabilities: capabilitySnapshot())
+        #expect(presenter.backingStateSnapshot.runtimePath.gbm == .active)
+
+        presenter.retireAll(reason: .windowClosed)
+        let snapshot = presenter.backingStateSnapshot
+
+        #expect(snapshot.lifecycle == .retired)
+        #expect(snapshot.runtimePath == .empty)
+        #expect(presenter.runtimePathSnapshot == .empty)
+    }
+
+    @Test
+    func retiredBackingSnapshotMatchesPresenterRuntimePath() {
+        let presenter = GPUWindowPresenter()
+        presenter.markReadyForTesting(capabilities: capabilitySnapshot())
+
+        presenter.retireAll(reason: .windowClosed)
+
+        #expect(presenter.backingStateSnapshot.runtimePath == presenter.runtimePathSnapshot)
     }
 
     @Test

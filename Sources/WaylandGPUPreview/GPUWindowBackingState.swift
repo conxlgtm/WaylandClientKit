@@ -76,6 +76,7 @@ package struct GPUWindowBackingState: Equatable, Sendable {
 
     package mutating func markRetired() {
         lifecycle = .retired
+        runtimePath = .empty
         bufferPool = .retired
         lastSubmittedFrame = nil
     }
