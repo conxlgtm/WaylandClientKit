@@ -21,7 +21,7 @@ package enum SupportedVersions {
     package static let wpAlphaModifierV1: RawVersion = 1
     package static let wpTearingControlManagerV1: RawVersion = 1
     package static let wpColorRepresentationManagerV1: RawVersion = 1
-    package static let wpColorManagerV1: RawVersion = 1
+    package static let wpColorManagerV1: RawVersion = 2
     package static let zwpLinuxDmabufV1: RawVersion = 5
     package static let wlSeat: RawVersion = 10
     package static let wlDataDeviceManager: RawVersion = 3

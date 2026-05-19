@@ -2,7 +2,7 @@ import Testing
 
 @testable import WaylandRaw
 
-@Suite
+@Suite(.serialized)
 struct RawSurfaceMetadataTests {
     @Test
     func contentTypeValuesPreserveProtocolRawValues() {

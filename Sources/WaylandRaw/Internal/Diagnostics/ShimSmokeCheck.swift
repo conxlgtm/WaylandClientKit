@@ -110,6 +110,7 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_tearing_control_manager_v1_get_tearing_control
         _ = unsafe swl_wp_tearing_control_v1_set_presentation_hint
         _ = unsafe swl_wp_color_representation_manager_v1_get_surface
+        _ = unsafe swl_wp_color_representation_manager_v1_add_listener
         _ = unsafe swl_wp_color_representation_surface_v1_set_alpha_mode
         _ = unsafe swl_wp_color_representation_surface_v1_set_coefficients_and_range
         _ = unsafe swl_wp_color_representation_surface_v1_set_chroma_location
@@ -117,6 +118,7 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_color_manager_v1_get_surface
         _ = unsafe swl_wp_color_manager_v1_get_surface_feedback
         _ = unsafe swl_wp_color_manager_v1_get_image_description
+        _ = unsafe swl_wp_color_manager_v1_add_listener
         _ = unsafe swl_wp_color_management_output_v1_get_image_description
         _ = unsafe swl_wp_color_management_surface_v1_set_image_description
         _ = unsafe swl_wp_color_management_surface_v1_unset_image_description

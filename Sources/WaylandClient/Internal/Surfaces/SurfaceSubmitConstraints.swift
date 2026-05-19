@@ -90,6 +90,13 @@ package struct SurfaceSubmitConstraints: Equatable, Sendable {
         try validatePacing(capabilities.pacing)
     }
 
+    func validate(
+        capabilities: SurfaceCapabilitySnapshot,
+        payload: SurfaceCommitPayload
+    ) throws(SurfaceSubmitConstraintError) {
+        try validate(capabilities: capabilities, attachesBuffer: payload.attachesBuffer)
+    }
+
     private func validateSynchronization(
         _ capability: SurfaceSynchronizationCapability,
         attachesBuffer: Bool

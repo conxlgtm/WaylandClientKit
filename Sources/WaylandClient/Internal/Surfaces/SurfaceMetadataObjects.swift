@@ -64,35 +64,45 @@ struct SurfaceMetadataObjects {
         colorDescriptions[reference] = imageDescription
     }
 
-    func apply(_ metadata: SurfaceCommitMetadata) throws(SurfaceCommitMetadataError) {
+    func preflight(_ metadata: SurfaceCommitMetadata)
+        throws(SurfaceCommitMetadataError) -> ResolvedSurfaceCommitMetadata
+    {
+        var resolved = ResolvedSurfaceCommitMetadata()
+
         if let contentType = metadata.contentType {
             guard let object = self.contentType else {
                 throw .contentTypeObjectUnavailable
             }
-            object.setContentType(contentType.rawContentType)
+            resolved.contentType = (object, contentType.rawContentType)
         }
 
         if let alpha = metadata.alpha {
             guard let object = alphaModifier else {
                 throw .alphaModifierObjectUnavailable
             }
-            object.setMultiplier(alpha.multiplier.rawMultiplier)
+            resolved.alpha = (object, alpha.multiplier.rawMultiplier)
         }
 
         if let presentationHint = metadata.presentationHint {
             guard let object = tearingControl else {
                 throw .tearingControlObjectUnavailable
             }
-            object.setPresentationHint(presentationHint.rawPresentationHint)
+            resolved.presentationHint = (object, presentationHint.rawPresentationHint)
         }
 
         if let colorRepresentation = metadata.colorRepresentation {
-            try apply(colorRepresentation)
+            resolved.colorRepresentation = try preflight(colorRepresentation)
         }
 
         if let colorDescription = metadata.colorDescription {
-            try apply(colorDescription)
+            resolved.colorDescription = try preflight(colorDescription)
         }
+
+        return resolved
+    }
+
+    func apply(_ metadata: SurfaceCommitMetadata) throws(SurfaceCommitMetadataError) {
+        try preflight(metadata).apply()
     }
 
     mutating func destroy() {
@@ -117,28 +127,25 @@ struct SurfaceMetadataObjects {
         contentType = nil
     }
 
-    private func apply(_ representation: SurfaceColorRepresentation)
-        throws(SurfaceCommitMetadataError)
+    private func preflight(_ representation: SurfaceColorRepresentation)
+        throws(SurfaceCommitMetadataError) -> ResolvedSurfaceColorRepresentation
     {
         guard let object = colorRepresentation else {
             throw .colorRepresentationObjectUnavailable
         }
 
-        if let alphaMode = representation.alphaMode {
-            object.setAlphaMode(alphaMode.rawAlphaMode)
-        }
-        if let coefficientsAndRange = representation.coefficientsAndRange {
-            object.setCoefficientsAndRange(
-                coefficientsAndRange.rawCoefficientsAndRange
-            )
-        }
-        if let chromaLocation = representation.chromaLocation {
-            object.setChromaLocation(chromaLocation.rawChromaLocation)
-        }
+        return ResolvedSurfaceColorRepresentation(
+            object: object,
+            alphaMode: representation.alphaMode?.rawAlphaMode,
+            coefficientsAndRange:
+                representation.coefficientsAndRange?.rawCoefficientsAndRange,
+            chromaLocation: representation.chromaLocation?.rawChromaLocation
+        )
     }
 
-    private func apply(_ reference: SurfaceColorDescriptionReference)
+    private func preflight(_ reference: SurfaceColorDescriptionReference)
         throws(SurfaceCommitMetadataError)
+        -> (RawColorManagementSurface, RawImageDescription)
     {
         guard let colorManagement else {
             throw .colorManagementObjectUnavailable
@@ -147,6 +154,52 @@ struct SurfaceMetadataObjects {
             throw .colorDescriptionUnavailable(reference)
         }
 
-        colorManagement.setImageDescription(imageDescription, renderIntent: .perceptual)
+        return (colorManagement, imageDescription)
+    }
+}
+
+struct ResolvedSurfaceCommitMetadata {
+    var contentType: (RawContentTypeSurface, RawContentType)?
+    var alpha: (RawAlphaModifierSurface, RawAlphaMultiplier)?
+    var presentationHint: (RawTearingControl, RawPresentationHint)?
+    var colorRepresentation: ResolvedSurfaceColorRepresentation?
+    var colorDescription: (RawColorManagementSurface, RawImageDescription)?
+
+    func apply() {
+        if let contentType {
+            contentType.0.setContentType(contentType.1)
+        }
+        if let alpha {
+            alpha.0.setMultiplier(alpha.1)
+        }
+        if let presentationHint {
+            presentationHint.0.setPresentationHint(presentationHint.1)
+        }
+        colorRepresentation?.apply()
+        if let colorDescription {
+            colorDescription.0.setImageDescription(
+                colorDescription.1,
+                renderIntent: .perceptual
+            )
+        }
+    }
+}
+
+struct ResolvedSurfaceColorRepresentation {
+    let object: RawColorRepresentationSurface
+    let alphaMode: RawSurfaceAlphaMode?
+    let coefficientsAndRange: RawSurfaceCoefficientsAndRange?
+    let chromaLocation: RawSurfaceChromaLocation?
+
+    func apply() {
+        if let alphaMode {
+            object.setAlphaMode(alphaMode)
+        }
+        if let coefficientsAndRange {
+            object.setCoefficientsAndRange(coefficientsAndRange)
+        }
+        if let chromaLocation {
+            object.setChromaLocation(chromaLocation)
+        }
     }
 }

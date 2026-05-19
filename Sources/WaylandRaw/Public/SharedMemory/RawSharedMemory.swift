@@ -261,6 +261,11 @@ package final class RawBuffer {
             buffer.stride
         }
 
+        package var surfaceBuffer: RawSurfaceBuffer {
+            lease.preconditionCanWrite()
+            return buffer.surfaceBuffer
+        }
+
         package func withUnsafeMutableBytes<R>(
             _ body: (UnsafeMutableRawBufferPointer) throws -> R
         ) rethrows -> R {

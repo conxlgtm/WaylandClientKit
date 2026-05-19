@@ -1,6 +1,6 @@
 import WaylandRaw
 
-package struct SurfaceContentType: Equatable, Sendable {
+package struct SurfaceContentType: Equatable, Hashable, Sendable {
     package let rawValue: UInt32
 
     package static let none = Self(rawValue: 0)
@@ -15,6 +15,17 @@ package struct SurfaceContentType: Equatable, Sendable {
     var rawContentType: RawContentType {
         RawContentType(rawValue: rawValue)
     }
+
+    var isValidOutboundValue: Bool {
+        Self.validOutboundValues.contains(self)
+    }
+
+    private static let validOutboundValues: Set<Self> = [
+        .none,
+        .photo,
+        .video,
+        .game,
+    ]
 }
 
 package struct SurfaceAlphaMultiplier: Equatable, Sendable {
@@ -54,7 +65,7 @@ package enum SurfacePresentationHint: Equatable, Sendable {
     }
 }
 
-package struct SurfaceAlphaMode: Equatable, Sendable {
+package struct SurfaceAlphaMode: Equatable, Hashable, Sendable {
     package let rawValue: UInt32
 
     package static let premultipliedElectrical = Self(rawValue: 0)
@@ -70,7 +81,7 @@ package struct SurfaceAlphaMode: Equatable, Sendable {
     }
 }
 
-package struct SurfaceMatrixCoefficients: Equatable, Sendable {
+package struct SurfaceMatrixCoefficients: Equatable, Hashable, Sendable {
     package let rawValue: UInt32
 
     package static let identity = Self(rawValue: 1)
@@ -91,7 +102,7 @@ package struct SurfaceMatrixCoefficients: Equatable, Sendable {
     }
 }
 
-package struct SurfaceQuantizationRange: Equatable, Sendable {
+package struct SurfaceQuantizationRange: Equatable, Hashable, Sendable {
     package let rawValue: UInt32
 
     package static let full = Self(rawValue: 1)
@@ -106,7 +117,7 @@ package struct SurfaceQuantizationRange: Equatable, Sendable {
     }
 }
 
-package struct SurfaceMatrixCoefficientsAndRange: Equatable, Sendable {
+package struct SurfaceMatrixCoefficientsAndRange: Equatable, Hashable, Sendable {
     package var coefficients: SurfaceMatrixCoefficients
     package var range: SurfaceQuantizationRange
 
@@ -126,7 +137,7 @@ package struct SurfaceMatrixCoefficientsAndRange: Equatable, Sendable {
     }
 }
 
-package struct SurfaceChromaLocation: Equatable, Sendable {
+package struct SurfaceChromaLocation: Equatable, Hashable, Sendable {
     package let rawValue: UInt32
 
     package static let type0 = Self(rawValue: 1)
@@ -143,6 +154,19 @@ package struct SurfaceChromaLocation: Equatable, Sendable {
     var rawChromaLocation: RawSurfaceChromaLocation {
         RawSurfaceChromaLocation(rawValue: rawValue)
     }
+
+    var isValidOutboundValue: Bool {
+        Self.validOutboundValues.contains(self)
+    }
+
+    private static let validOutboundValues: Set<Self> = [
+        .type0,
+        .type1,
+        .type2,
+        .type3,
+        .type4,
+        .type5,
+    ]
 }
 
 package struct SurfaceColorRepresentation: Equatable, Sendable {
@@ -201,17 +225,50 @@ package struct SurfaceCommitMetadata: Equatable, Sendable {
         if contentType != nil, capabilities.contentType == .unavailable {
             throw .contentTypeUnavailable
         }
+        if let contentType, !contentType.isValidOutboundValue {
+            throw .unsupportedContentType(contentType)
+        }
         if alpha != nil, capabilities.alphaModifier == .unavailable {
             throw .alphaModifierUnavailable
         }
         if presentationHint != nil, capabilities.tearingControl == .unavailable {
             throw .tearingControlUnavailable
         }
-        if colorRepresentation != nil, !capabilities.colorRepresentation.isAvailable {
-            throw .colorRepresentationUnavailable
+        if let colorRepresentation {
+            try colorRepresentation.validate(
+                capabilities: capabilities.colorRepresentation
+            )
         }
         if colorDescription != nil, !capabilities.color.isAvailable {
             throw .colorUnavailable
+        }
+    }
+}
+
+extension SurfaceColorRepresentation {
+    func validate(
+        capabilities: SurfaceColorRepresentationCapability
+    ) throws(SurfaceCommitMetadataError) {
+        guard
+            case .available(
+                _,
+                let supportedAlphaModes,
+                let supportedCoefficientsAndRanges
+            ) = capabilities
+        else {
+            throw .colorRepresentationUnavailable
+        }
+
+        if let alphaMode, !supportedAlphaModes.contains(alphaMode) {
+            throw .unsupportedAlphaMode(alphaMode)
+        }
+        if let coefficientsAndRange,
+            !supportedCoefficientsAndRanges.contains(coefficientsAndRange)
+        {
+            throw .unsupportedCoefficientsAndRange(coefficientsAndRange)
+        }
+        if let chromaLocation, !chromaLocation.isValidOutboundValue {
+            throw .unsupportedChromaLocation(chromaLocation)
         }
     }
 }
@@ -230,6 +287,10 @@ package enum SurfaceCommitMetadataError: Error, Equatable, Sendable,
     case colorRepresentationObjectUnavailable
     case colorManagementObjectUnavailable
     case colorDescriptionUnavailable(SurfaceColorDescriptionReference)
+    case unsupportedContentType(SurfaceContentType)
+    case unsupportedAlphaMode(SurfaceAlphaMode)
+    case unsupportedCoefficientsAndRange(SurfaceMatrixCoefficientsAndRange)
+    case unsupportedChromaLocation(SurfaceChromaLocation)
 
     package var description: String {
         switch self {
@@ -255,6 +316,15 @@ package enum SurfaceCommitMetadataError: Error, Equatable, Sendable,
             "color management surface object is unavailable"
         case .colorDescriptionUnavailable(let reference):
             "color description \(reference.identity) is unavailable"
+        case .unsupportedContentType(let contentType):
+            "content type \(contentType.rawValue) is not supported for outbound commits"
+        case .unsupportedAlphaMode(let alphaMode):
+            "alpha mode \(alphaMode.rawValue) is not supported by the compositor"
+        case .unsupportedCoefficientsAndRange(let coefficientsAndRange):
+            "coefficients \(coefficientsAndRange.coefficients.rawValue) range "
+                + "\(coefficientsAndRange.range.rawValue) is not supported by the compositor"
+        case .unsupportedChromaLocation(let chromaLocation):
+            "chroma location \(chromaLocation.rawValue) is not supported for outbound commits"
         }
     }
 }

@@ -1146,6 +1146,10 @@ extension TopLevelWindow {
     }
 
     private func ensureColorRepresentationObjectInstalled() throws {
+        surfaceRuntime.setColorRepresentationCapability(
+            connection.boundGlobals?.extensions.surfaceColorRepresentationCapability
+                ?? .unavailable
+        )
         guard !surfaceRuntime.hasColorRepresentationObject else { return }
         guard
             let manager = connection.boundGlobals?.extensions

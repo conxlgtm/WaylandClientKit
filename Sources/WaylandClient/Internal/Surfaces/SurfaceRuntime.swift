@@ -65,7 +65,11 @@ package enum SurfacePacingCapability: Equatable, Sendable {
 
 package enum SurfaceColorRepresentationCapability: Equatable, Sendable {
     case unavailable
-    case available(version: RawVersion)
+    case available(
+        version: RawVersion,
+        supportedAlphaModes: Set<SurfaceAlphaMode> = [],
+        supportedCoefficientsAndRanges: Set<SurfaceMatrixCoefficientsAndRange> = []
+    )
 
     package var isAvailable: Bool {
         switch self {
