@@ -349,21 +349,15 @@ package final class GPUWindowPresenter {
 
         let (lease, buffer) = try leaseBufferForPresentation()
 
+        let presentation: PreviewBufferPresentationResult
         do {
             let submitConstraints = SurfaceSubmitConstraints(
                 synchronization: synchronization.submitConstraint,
                 pacing: pacing
             )
-            let presentation = try window.presentPreviewBufferOnOwnerThread(
+            presentation = try window.presentPreviewBufferOnOwnerThread(
                 buffer.surfaceBuffer,
                 submitConstraints: submitConstraints,
-                metadata: metadata
-            )
-            return try recordSuccessfulPresentation(
-                presentation,
-                lease: lease,
-                synchronization: synchronization,
-                pacing: pacing,
                 metadata: metadata
             )
         } catch let error as GBMBufferPoolStateError {
@@ -385,6 +379,14 @@ package final class GPUWindowPresenter {
             recordBackingFailure(.commitFailed, operation: .surfaceCommit)
             throw GPUWindowPresenterError.window(error)
         }
+
+        return try recordPresentedFrameAfterCommit(
+            presentation,
+            lease: lease,
+            synchronization: synchronization,
+            pacing: pacing,
+            metadata: metadata
+        )
     }
 
     private func leaseBufferForPresentation()
@@ -413,16 +415,12 @@ package final class GPUWindowPresenter {
         synchronization: GPUBufferSubmissionSynchronization,
         pacing: SurfacePacingConstraint,
         metadata: SurfaceCommitMetadata
-    ) throws(GPUWindowPresenterError) -> GPUWindowPresentedFrame {
-        do {
-            try state.markSubmitted(
-                lease,
-                generation: presentation.generation,
-                synchronization: synchronization
-            )
-        } catch {
-            throw GPUWindowPresenterError.state(error)
-        }
+    ) throws(GPUWindowPresenterStateError) -> GPUWindowPresentedFrame {
+        try state.markSubmitted(
+            lease,
+            generation: presentation.generation,
+            synchronization: synchronization
+        )
         let frame = GPUWindowPresentedFrame(
             slotID: lease.slotID,
             generation: presentation.generation,
@@ -445,6 +443,26 @@ package final class GPUWindowPresenter {
             frame: frame
         )
         return frame
+    }
+
+    private func recordPresentedFrameAfterCommit(
+        _ presentation: PreviewBufferPresentationResult,
+        lease: GPUWindowPresentationLease,
+        synchronization: GPUBufferSubmissionSynchronization,
+        pacing: SurfacePacingConstraint,
+        metadata: SurfaceCommitMetadata
+    ) throws(GPUWindowPresenterError) -> GPUWindowPresentedFrame {
+        do {
+            return try recordSuccessfulPresentation(
+                presentation,
+                lease: lease,
+                synchronization: synchronization,
+                pacing: pacing,
+                metadata: metadata
+            )
+        } catch {
+            throw GPUWindowPresenterError.state(error)
+        }
     }
 
     private func recordBackingFailure(
@@ -506,6 +524,35 @@ package final class GPUWindowPresenter {
 }
 
 extension GPUWindowPresenter {
+    package func leaseNextForTesting()
+        throws(GPUWindowPresenterError) -> GPUWindowPresentationLease
+    {
+        let (lease, _) = try leaseBufferForPresentation()
+        return lease
+    }
+
+    package func recordPresentedFrameForTesting(
+        generation: UInt64,
+        commitPlan: SurfaceCommitPlan,
+        capabilities: SurfaceCapabilitySnapshot,
+        lease: GPUWindowPresentationLease,
+        synchronization: GPUBufferSubmissionSynchronization = .implicit,
+        pacing: SurfacePacingConstraint = .none,
+        metadata: SurfaceCommitMetadata = .default
+    ) throws(GPUWindowPresenterError) -> GPUWindowPresentedFrame {
+        try recordPresentedFrameAfterCommit(
+            PreviewBufferPresentationResult(
+                generation: generation,
+                commitPlan: commitPlan,
+                capabilities: capabilities
+            ),
+            lease: lease,
+            synchronization: synchronization,
+            pacing: pacing,
+            metadata: metadata
+        )
+    }
+
     package func markReadyForTesting(
         capabilities: SurfaceCapabilitySnapshot,
         synchronization: GPUBufferSubmissionSynchronization = .implicit,

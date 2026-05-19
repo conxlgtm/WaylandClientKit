@@ -461,7 +461,7 @@ struct GPUWindowRuntimePathSnapshotTests {
 }
 
 @Suite
-struct GPUWindowBackingStateTests {
+struct GPUWindowBackingPolicyTests {
     @Test
     func fallbackPolicyDistinguishesFallbackFromUnavailable() {
         let unavailable = capabilitySnapshot(dmabuf: .unavailable)
@@ -596,7 +596,10 @@ struct GPUWindowBackingStateTests {
             ) == .shm(.metadataRequiredButUnavailable(.contentTypeUnavailable))
         )
     }
+}
 
+@Suite
+struct GPUWindowBackingStateTests {
     @Test
     func backingStateRecordsSuccessFailureFallbackAndRetire() throws {
         let capabilities = capabilitySnapshot()
@@ -889,6 +892,34 @@ struct GPUWindowPresenterLifecycleTests {
     }
 
     @Test
+    func presenterPreservesPostCommitStateErrorWithoutCancelingLease() throws {
+        let presenter = GPUWindowPresenter()
+        let slotID = try GBMBufferPoolSlotID(0)
+        try presenter.installBuffer(try FakePresenterBuffer(pointer: 0x1001), slotID: slotID)
+        let lease = try presenter.leaseNextForTesting()
+
+        do {
+            _ = try presenter.recordPresentedFrameForTesting(
+                generation: 0,
+                commitPlan: surfaceCommitPlan(),
+                capabilities: capabilitySnapshot(),
+                lease: lease
+            )
+            Issue.record("Expected invalid generation to fail presentation recording")
+        } catch GPUWindowPresenterError.state(.pool(.invalidCommitGeneration(0))) {
+            // Expected.
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(
+            presenter.backingStateSnapshot.bufferPool
+                == .exhausted(installedSlots: 1, submittedSlots: 0)
+        )
+        #expect(presenter.backingStateSnapshot.lifecycle == .configuring)
+    }
+
+    @Test
     func presenterRetireAfterReadyClearsBackingRuntimePath() {
         let presenter = GPUWindowPresenter()
         presenter.markReadyForTesting(capabilities: capabilitySnapshot())
@@ -938,23 +969,27 @@ private func presentedFrame(
     slotID: GBMBufferPoolSlotID,
     generation: UInt64
 ) throws -> GPUWindowPresentedFrame {
+    return GPUWindowPresentedFrame(
+        slotID: slotID,
+        generation: generation,
+        commitPlan: try surfaceCommitPlan(),
+        synchronization: .implicit,
+        pacing: .none,
+        metadata: .default
+    )
+}
+
+private func surfaceCommitPlan() throws -> SurfaceCommitPlan {
     let geometry = try SurfaceGeometry(
         logicalSize: PositiveLogicalSize(width: 4, height: 3),
         scale: .one
     )
 
-    return GPUWindowPresentedFrame(
-        slotID: slotID,
-        generation: generation,
-        commitPlan: SurfaceCommitPlan(
-            geometry: geometry,
-            bufferScale: 1,
-            viewportMode: .omitDestination,
-            damageMode: .buffer
-        ),
-        synchronization: .implicit,
-        pacing: .none,
-        metadata: .default
+    return SurfaceCommitPlan(
+        geometry: geometry,
+        bufferScale: 1,
+        viewportMode: .omitDestination,
+        damageMode: .buffer
     )
 }
 
