@@ -42,14 +42,20 @@ Where the environment supports Swift sanitizers, also run:
 
 ```bash
 make test-tsan
-make test-asan
+ASAN_OPTIONS=detect_leaks=0 make test-asan
 ```
 
 ThreadSanitizer is the primary concurrency lifecycle check. AddressSanitizer
-can be environment-dependent on Linux and may require host support for its
-runtime and process instrumentation. LeakSanitizer can also exit with a
-ptrace-related fatal error even after the Swift test process reports passing
-tests; record that as an environment limitation rather than a test failure.
+with `detect_leaks=0` is the required ASan gate. LeakSanitizer remains a
+separate informational check because it can exit with a ptrace-related fatal
+error even after the Swift test process reports passing tests; record that as
+an environment limitation rather than a test failure. To attempt the
+LeakSanitizer path explicitly, run `make test-asan` without overriding
+`ASAN_OPTIONS`.
+
+The public API baseline covers both vended library products, `WaylandClient`
+and `WaylandGraphicsPreview`. Preview API drift should still be reviewed and
+reflected in the audit and baseline before tagging.
 
 Under a real Wayland session:
 

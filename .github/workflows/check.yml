@@ -137,15 +137,70 @@ jobs:
             libgles-dev \
             libwayland-dev \
             libxkbcommon-dev \
+            make \
             pkg-config \
             ripgrep \
             wayland-protocols
       - name: Release build
         run: |
-          swift build --disable-index-store -c release
-          swift build --disable-index-store -c release --target SwiftWaylandDemo
-          swift build --disable-index-store -c release --product swift-wayland-smoke
+          ./scripts/dev/swift.sh build --disable-index-store -c release
+          ./scripts/dev/swift.sh build --disable-index-store -c release --target SwiftWaylandDemo
+          ./scripts/dev/swift.sh build --disable-index-store -c release --target GPUPreviewSmokeClient
+          ./scripts/dev/swift.sh build --disable-index-store -c release --product swift-wayland-smoke
+          make test-release
           ./scripts/shims/verify-release-shim-symbols.sh
+
+  sanitizer-tsan:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.3.2-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sanitizer dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            clang \
+            git \
+            libdrm-dev \
+            libegl-dev \
+            libgbm-dev \
+            libgles-dev \
+            libwayland-dev \
+            libxkbcommon-dev \
+            make \
+            pkg-config \
+            ripgrep \
+            wayland-protocols
+      - name: ThreadSanitizer tests
+        run: make test-tsan
+
+  sanitizer-asan:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.3.2-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sanitizer dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            clang \
+            git \
+            libdrm-dev \
+            libegl-dev \
+            libgbm-dev \
+            libgles-dev \
+            libwayland-dev \
+            libxkbcommon-dev \
+            make \
+            pkg-config \
+            ripgrep \
+            wayland-protocols
+      - name: AddressSanitizer tests
+        env:
+          ASAN_OPTIONS: detect_leaks=0
+        run: make test-asan
 
   wayland-smoke:
     runs-on: ubuntu-latest
