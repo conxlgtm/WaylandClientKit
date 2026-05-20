@@ -1,5 +1,4 @@
 import Foundation
-import Glibc
 import Synchronization
 import WaylandRaw
 
@@ -16,6 +15,7 @@ package final class DataTransferSourceWriteJob: Sendable {
     private let descriptorIO: DataTransferSourceDescriptorIO
     private let writePolicy: DataTransferSourceWritePolicy
 
+    @safe
     package convenience init(
         sourceID jobSourceID: DataSourceID,
         mimeType jobMIMEType: MIMEType,
@@ -24,7 +24,11 @@ package final class DataTransferSourceWriteJob: Sendable {
         writePolicy jobWritePolicy: DataTransferSourceWritePolicy = .default,
         prepareDescriptorForWriting prepare: @escaping @Sendable (Int32) throws -> Void =
             defaultPrepareDataTransferSourceDescriptorForWriting,
-        writeDescriptor write: @escaping @Sendable (Int32, ArraySlice<UInt8>) throws -> Int =
+        writeDescriptor write:
+            @escaping @Sendable (
+                Int32,
+                UnsafeRawBufferPointer
+            ) throws -> Int =
             defaultWriteDataTransferSourceDescriptor,
         closeDescriptor close: @escaping @Sendable (Int32) -> FileDescriptorCloseResult =
             defaultCloseDataTransferSourceDescriptor
@@ -131,46 +135,13 @@ package final class DataTransferSourceWriteJob: Sendable {
     }
 
     private func writeData(to rawDescriptor: Int32) throws {
-        let bytes = Array(data)
-        var writtenByteCount = 0
-        var temporaryWriteFailureCount = 0
-
-        while writtenByteCount < bytes.count {
-            try throwIfCancelled()
-            let remainingBytes = bytes[writtenByteCount...]
-            do {
-                let count = try descriptorIO.write(rawDescriptor, bytes: remainingBytes)
-                guard count > 0, count <= remainingBytes.count else {
-                    throw DataTransferError.writeFileDescriptor(
-                        WaylandSystemErrno(unchecked: EIO)
-                    )
-                }
-
-                writtenByteCount += count
-                temporaryWriteFailureCount = 0
-            } catch let error as DataTransferError {
-                if let cancellationError = cancellationError() {
-                    throw cancellationError
-                }
-                if isTemporaryDataTransferSourceWriteBackpressure(error) {
-                    temporaryWriteFailureCount += 1
-                    guard
-                        temporaryWriteFailureCount
-                            <= writePolicy.maximumTemporaryWriteFailures
-                    else {
-                        throw DataTransferError.transferTimedOut
-                    }
-                    if writePolicy.retryDelayMicroseconds > 0 {
-                        usleep(writePolicy.retryDelayMicroseconds)
-                    }
-                    continue
-                }
-
-                throw error
-            }
-        }
-
-        try throwIfCancelled()
+        try unsafe DescriptorDataWriter.writeAll(
+            data,
+            to: rawDescriptor,
+            write: descriptorIO.write,
+            shouldCancel: throwIfCancelled,
+            temporaryFailurePolicy: writePolicy
+        )
     }
 
     private func throwIfCancelled() throws {
@@ -284,16 +255,6 @@ package final class DataTransferSourceWriteJob: Sendable {
     deinit {
         closeDescriptorOnDeinit()
     }
-}
-
-private func isTemporaryDataTransferSourceWriteBackpressure(
-    _ error: DataTransferError
-) -> Bool {
-    guard case .writeFileDescriptor(let error) = error else {
-        return false
-    }
-
-    return error.rawValue == EAGAIN || error.rawValue == EWOULDBLOCK
 }
 
 package final class ThreadedDataTransferSourceWriter {

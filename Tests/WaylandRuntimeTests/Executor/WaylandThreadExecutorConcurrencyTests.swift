@@ -1,79 +1,99 @@
 import Foundation
 import Glibc
-import Synchronization
 import Testing
 
 @testable import WaylandRuntime
 
-private final class ShutdownCompletionRecorder: Sendable {
+// SAFETY: Mutable recorder state is private and every access is protected by
+// NSLock, which ThreadSanitizer recognizes for these detached-thread tests.
+private final class ShutdownCompletionRecorder: @unchecked Sendable {
     private struct State: Sendable {
         var starts: [String] = []
         var completions: [String] = []
     }
 
-    private let state = Mutex(State())
+    private let lock = NSLock()
+    private var state = State()
 
     var startedValues: Set<String> {
-        state.withLock { Set($0.starts) }
+        withState { Set($0.starts) }
     }
 
     var values: Set<String> {
-        state.withLock { Set($0.completions) }
+        withState { Set($0.completions) }
     }
 
     var completionCount: Int {
-        state.withLock { $0.completions.count }
+        withState { $0.completions.count }
     }
 
     func startCount(for value: String) -> Int {
-        state.withLock { state in
+        withState { state in
             state.starts.count { $0 == value }
         }
     }
 
     func completionCount(for value: String) -> Int {
-        state.withLock { state in
+        withState { state in
             state.completions.count { $0 == value }
         }
     }
 
     func appendStarted(_ value: String) {
-        state.withLock { state in
+        withState { state in
             state.starts.append(value)
         }
     }
 
     func append(_ value: String) {
-        state.withLock { state in
+        withState { state in
             state.completions.append(value)
         }
     }
+
+    private func withState<Result: Sendable>(
+        _ body: (inout State) -> Result
+    ) -> Result {
+        lock.lock()
+        defer { lock.unlock() }
+        return body(&state)
+    }
 }
 
-private final class ConcurrentShutdownGate: Sendable {
+// SAFETY: Gate state is private and every access is protected by NSLock.
+private final class ConcurrentShutdownGate: @unchecked Sendable {
     private struct State: Sendable {
         var didEnter = false
         var isOpen = false
     }
 
-    private let state = Mutex(State())
+    private let lock = NSLock()
+    private var state = State()
 
     func enterAndWaitUntilOpened() {
-        state.withLock { $0.didEnter = true }
+        withState { $0.didEnter = true }
 
-        while !state.withLock({ $0.isOpen }) {
+        while !withState({ $0.isOpen }) {
             usleep(1_000)
         }
     }
 
     func waitUntilEntered() -> Bool {
         waitUntil {
-            state.withLock { $0.didEnter }
+            withState { $0.didEnter }
         }
     }
 
     func open() {
-        state.withLock { $0.isOpen = true }
+        withState { $0.isOpen = true }
+    }
+
+    private func withState<Result: Sendable>(
+        _ body: (inout State) -> Result
+    ) -> Result {
+        lock.lock()
+        defer { lock.unlock() }
+        return body(&state)
     }
 }
 

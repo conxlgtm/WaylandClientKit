@@ -103,6 +103,28 @@ package struct RawFileDescriptor: ~Copyable {
         }
     }
 
+    @safe
+    package static func write(
+        descriptor fileDescriptor: Int32,
+        bytes: UnsafeRawBufferPointer
+    ) throws(RuntimeError) -> Int {
+        while true {
+            let writeCount = unsafe swl_write_no_sigpipe(
+                fileDescriptor,
+                bytes.baseAddress,
+                bytes.count
+            )
+
+            if writeCount >= 0 {
+                return Int(writeCount)
+            }
+
+            if errno != EINTR {
+                throw RuntimeError.systemError(errno: errno, operation: .writeFileDescriptor)
+            }
+        }
+    }
+
     package func resize(byteCount: Int) throws(RuntimeError) {
         guard ftruncate(rawValue, off_t(byteCount)) == 0 else {
             throw RuntimeError.systemError(errno: errno, operation: .resizeSharedMemoryFile)

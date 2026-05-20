@@ -36,12 +36,14 @@ package enum ExecutorLifecycle: Equatable, Sendable {
     case loopExited(ShutdownMode)
     case joining(ShutdownMode)
     case joined(ShutdownMode)
+    case detachedAfterOwnerThreadExit(ShutdownMode)
     case failedToStart(ExecutorStartFailure)
     case destroying
 
     package var isStopping: Bool {
         switch self {
-        case .stopRequested, .loopExited, .joining, .joined, .destroying:
+        case .stopRequested, .loopExited, .joining, .joined,
+            .detachedAfterOwnerThreadExit, .destroying:
             true
         case .starting, .running, .failedToStart:
             false
@@ -54,7 +56,7 @@ package enum ExecutorLifecycle: Equatable, Sendable {
 
     package var loopHasExited: Bool {
         switch self {
-        case .loopExited, .joined, .destroying:
+        case .loopExited, .joined, .detachedAfterOwnerThreadExit, .destroying:
             true
         case .joining:
             false
@@ -67,16 +69,18 @@ package enum ExecutorLifecycle: Equatable, Sendable {
         switch self {
         case .joined, .destroying:
             true
-        case .starting, .running, .stopRequested, .loopExited, .joining, .failedToStart:
+        case .starting, .running, .stopRequested, .loopExited, .joining,
+            .detachedAfterOwnerThreadExit, .failedToStart:
             false
         }
     }
 
     package var canDestroySynchronizationPrimitives: Bool {
         switch self {
-        case .loopExited, .joined, .failedToStart:
+        case .joined, .detachedAfterOwnerThreadExit, .failedToStart:
             true
-        case .starting, .running, .stopRequested, .joining, .destroying:
+        case .starting, .running, .stopRequested, .loopExited, .joining,
+            .destroying:
             false
         }
     }
@@ -86,7 +90,8 @@ package enum ExecutorLifecycle: Equatable, Sendable {
         case .stopRequested(let mode),
             .loopExited(let mode),
             .joining(let mode),
-            .joined(let mode):
+            .joined(let mode),
+            .detachedAfterOwnerThreadExit(let mode):
             mode
         case .starting, .running, .failedToStart, .destroying:
             nil

@@ -52,14 +52,13 @@ struct RawSubmitConstraintTests {
     @Test
     func syncobjTimelineFileDescriptorDeinitClosesUnreleasedDescriptor() throws {
         let descriptors = try RawFileDescriptor.pipeDescriptors()
-        close(descriptors.readEnd)
-        let ownedDescriptor = descriptors.writeEnd
+        defer { close(descriptors.readEnd) }
 
         do {
-            _ = try RawDrmSyncobjTimelineFD(adopting: ownedDescriptor)
+            _ = try RawDrmSyncobjTimelineFD(adopting: descriptors.writeEnd)
         }
 
-        #expect(!fileDescriptorIsOpen(ownedDescriptor))
+        #expect(pipeWriteEndIsClosed(readEnd: descriptors.readEnd))
     }
 
     @Test
