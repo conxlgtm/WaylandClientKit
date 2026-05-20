@@ -1,5 +1,4 @@
 import Foundation
-import Glibc
 import Synchronization
 
 package struct DataTransferSourcePayloadSet: Equatable, Sendable {
@@ -54,24 +53,6 @@ package final class DataTransferSourceSendRequest {
         descriptorIO = requestDescriptorIO
     }
 
-    package func write() throws {
-        let releasedDescriptor = try releaseRawDescriptor()
-        do {
-            try descriptorIO.prepareForWriting(releasedDescriptor)
-            try writeData(to: releasedDescriptor)
-        } catch {
-            let writeError = error
-            do {
-                try closeRawDescriptor(releasedDescriptor)
-            } catch {
-                _ = error
-            }
-            throw writeError
-        }
-
-        try closeRawDescriptor(releasedDescriptor)
-    }
-
     package func makeWriteJob() throws -> DataTransferSourceWriteJob {
         DataTransferSourceWriteJob(
             source: source,
@@ -94,23 +75,6 @@ package final class DataTransferSourceSendRequest {
     package func close() throws {
         let releasedDescriptor = try releaseRawDescriptor()
         try closeRawDescriptor(releasedDescriptor)
-    }
-
-    private func writeData(to rawDescriptor: Int32) throws {
-        let bytes = Array(data)
-        var writtenByteCount = 0
-
-        while writtenByteCount < bytes.count {
-            let remainingBytes = bytes[writtenByteCount...]
-            let count = try descriptorIO.write(rawDescriptor, bytes: remainingBytes)
-            guard count > 0, count <= remainingBytes.count else {
-                throw DataTransferError.writeFileDescriptor(
-                    WaylandSystemErrno(unchecked: EIO)
-                )
-            }
-
-            writtenByteCount += count
-        }
     }
 
     private func closeRawDescriptor(_ rawDescriptor: Int32) throws {

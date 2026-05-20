@@ -2,6 +2,7 @@ import Foundation
 import Glibc
 import WaylandRaw
 
+@safe
 public struct OwnedFileDescriptor: ~Copyable, Sendable {
     private static let readChunkByteCount = 16 * 1_024
     private static let asyncReadRetryInterval: Duration = .milliseconds(10)
@@ -9,7 +10,7 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
     private var storage: Int32?
     private let readDescriptor: @Sendable (Int32, Int) throws -> [UInt8]
     private let prepareReadDescriptor: @Sendable (Int32) throws -> Void
-    private let writeDescriptor: @Sendable (Int32, ArraySlice<UInt8>) throws -> Int
+    private let writeDescriptor: @Sendable (Int32, UnsafeRawBufferPointer) throws -> Int
     private let closeDescriptor: @Sendable (Int32) -> Int32
 
     public init(adopting rawValue: Int32) throws {
@@ -21,13 +22,18 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
         )
     }
 
+    @safe
     package init(
         adopting rawValue: Int32,
         readDescriptor read: @escaping @Sendable (Int32, Int) throws -> [UInt8] =
             Self.defaultReadDescriptor,
         prepareReadDescriptor prepareRead: @escaping @Sendable (Int32) throws -> Void =
             Self.defaultPrepareReadDescriptor,
-        writeDescriptor write: @escaping @Sendable (Int32, ArraySlice<UInt8>) throws -> Int =
+        writeDescriptor write:
+            @escaping @Sendable (
+                Int32,
+                UnsafeRawBufferPointer
+            ) throws -> Int =
             Self.defaultWriteDescriptor,
         closeDescriptor close: @escaping @Sendable (Int32) -> Int32
     ) throws {
@@ -38,7 +44,7 @@ public struct OwnedFileDescriptor: ~Copyable, Sendable {
         storage = rawValue
         readDescriptor = read
         prepareReadDescriptor = prepareRead
-        writeDescriptor = write
+        unsafe writeDescriptor = write
         closeDescriptor = close
     }
 
@@ -257,20 +263,11 @@ extension OwnedFileDescriptor {
     }
 
     private func writeDataWithoutClosing(_ data: Data) throws {
-        let bytes = Array(data)
-        var writtenByteCount = 0
-
-        while writtenByteCount < bytes.count {
-            let remainingBytes = bytes[writtenByteCount...]
-            let count = try writeDescriptor(rawValue, remainingBytes)
-            guard count > 0, count <= remainingBytes.count else {
-                throw DataTransferError.writeFileDescriptor(
-                    WaylandSystemErrno(unchecked: EIO)
-                )
-            }
-
-            writtenByteCount += count
-        }
+        try unsafe DescriptorDataWriter.writeAll(
+            data,
+            to: rawValue,
+            write: writeDescriptor
+        )
     }
 
     private static func defaultReadDescriptor(
@@ -316,9 +313,10 @@ extension OwnedFileDescriptor {
         }
     }
 
+    @safe
     private static func defaultWriteDescriptor(
         _ descriptor: Int32,
-        bytes: ArraySlice<UInt8>
+        bytes: UnsafeRawBufferPointer
     ) throws -> Int {
         do {
             return try RawFileDescriptor.write(descriptor: descriptor, bytes: bytes)

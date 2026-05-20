@@ -81,7 +81,10 @@ struct DataTransferManagerSourceSendTests {  // swiftlint:disable:this type_body
             backend: backend
         )
 
-        try request.write()
+        #expect(
+            try request.makeWriteJob().write()
+                == .succeeded(sourceID: request.sourceID, mimeType: request.mimeType)
+        )
 
         #expect(
             backend.descriptorWrites == [
@@ -104,7 +107,10 @@ struct DataTransferManagerSourceSendTests {  // swiftlint:disable:this type_body
             backend: backend
         )
 
-        try request.write()
+        #expect(
+            try request.makeWriteJob().write()
+                == .succeeded(sourceID: request.sourceID, mimeType: request.mimeType)
+        )
 
         #expect(
             backend.descriptorWrites == [
@@ -129,12 +135,13 @@ struct DataTransferManagerSourceSendTests {  // swiftlint:disable:this type_body
         )
 
         #expect(
-            throws: DataTransferError.writeFileDescriptor(
-                WaylandSystemErrno(unchecked: EIO)
-            )
-        ) {
-            try request.write()
-        }
+            try request.makeWriteJob().write()
+                == .failed(
+                    sourceID: request.sourceID,
+                    mimeType: request.mimeType,
+                    error: .writeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
+                )
+        )
         #expect(backend.closedDescriptors == [216])
     }
 
@@ -149,12 +156,13 @@ struct DataTransferManagerSourceSendTests {  // swiftlint:disable:this type_body
         )
 
         #expect(
-            throws: DataTransferError.closeFileDescriptor(
-                WaylandSystemErrno(unchecked: EIO)
-            )
-        ) {
-            try request.write()
-        }
+            try request.makeWriteJob().write()
+                == .failed(
+                    sourceID: request.sourceID,
+                    mimeType: request.mimeType,
+                    error: .closeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
+                )
+        )
         #expect(
             backend.descriptorWrites == [
                 .init(descriptor: 217, bytes: Array("clipboard".utf8))
@@ -173,12 +181,13 @@ struct DataTransferManagerSourceSendTests {  // swiftlint:disable:this type_body
         )
 
         #expect(
-            throws: DataTransferError.closeFileDescriptor(
-                WaylandSystemErrno(unchecked: EIO)
-            )
-        ) {
-            try request.write()
-        }
+            try request.makeWriteJob().write()
+                == .failed(
+                    sourceID: request.sourceID,
+                    mimeType: request.mimeType,
+                    error: .closeFileDescriptor(WaylandSystemErrno(unchecked: EIO))
+                )
+        )
     }
 
     @Test
@@ -236,7 +245,10 @@ struct DataTransferManagerSourceSendTests {  // swiftlint:disable:this type_body
             backend: backend
         )
 
-        try request.write()
+        #expect(
+            try request.makeWriteJob().write()
+                == .succeeded(sourceID: request.sourceID, mimeType: request.mimeType)
+        )
 
         #expect(backend.descriptorWrites.isEmpty)
         #expect(backend.closedDescriptors == [218])

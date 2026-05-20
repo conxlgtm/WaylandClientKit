@@ -123,7 +123,8 @@ final class SourceCancellationBackpressureProbe: Sendable {
         state.withLock(\.writeAttemptCount)
     }
 
-    func write(descriptor _: Int32, bytes _: ArraySlice<UInt8>) throws -> Int {
+    @safe
+    func write(descriptor _: Int32, bytes _: UnsafeRawBufferPointer) throws -> Int {
         condition.lock()
         state.withLock { storage in
             storage.started = true

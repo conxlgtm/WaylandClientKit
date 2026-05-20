@@ -445,7 +445,7 @@ struct OwnedFileDescriptorWriteTests {
             adopting: 31,
             writeDescriptor: { _, bytes in
                 writeState.withLock { state in
-                    state.writeAttempts.append(Array(bytes))
+                    state.writeAttempts.append(unsafe Array(bytes))
                     return min(state.maximumWriteByteCount, bytes.count)
                 }
             },

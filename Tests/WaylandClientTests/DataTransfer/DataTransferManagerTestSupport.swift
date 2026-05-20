@@ -135,7 +135,8 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
         sourceDescriptorRecorder.descriptorIO
     }
 
-    func writeFileDescriptor(_ descriptor: Int32, bytes: ArraySlice<UInt8>) throws -> Int {
+    @safe
+    func writeFileDescriptor(_ descriptor: Int32, bytes: UnsafeRawBufferPointer) throws -> Int {
         try sourceDescriptorRecorder.writeFileDescriptor(descriptor, bytes: bytes)
     }
 
@@ -253,7 +254,8 @@ private final class RecordingSourceDescriptorIO: Sendable {
         try prepare(descriptor)
     }
 
-    func writeFileDescriptor(_ descriptor: Int32, bytes: ArraySlice<UInt8>) throws -> Int {
+    @safe
+    func writeFileDescriptor(_ descriptor: Int32, bytes: UnsafeRawBufferPointer) throws -> Int {
         try storage.withLock { storage in
             if let error = storage.failingWriteDescriptors[descriptor] {
                 throw error
@@ -261,9 +263,9 @@ private final class RecordingSourceDescriptorIO: Sendable {
 
             let bytesToWrite: [UInt8]
             if let maximumWriteByteCount = storage.maximumWriteByteCount {
-                bytesToWrite = Array(bytes.prefix(maximumWriteByteCount))
+                bytesToWrite = unsafe Array(bytes.prefix(maximumWriteByteCount))
             } else {
-                bytesToWrite = Array(bytes)
+                bytesToWrite = unsafe Array(bytes)
             }
 
             storage.descriptorWrites.append(
