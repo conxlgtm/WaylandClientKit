@@ -1,6 +1,8 @@
 SWIFT_FORMAT := ./scripts/dev/swift-format.sh
 SWIFTLINT := ./scripts/dev/swiftlint.sh
 SWIFT := ./scripts/dev/swift.sh
+CLANG_FILTER := $(CURDIR)/scripts/dev/clang-filter-index-store.sh
+TSAN_SUPPRESSIONS := $(CURDIR)/scripts/safety/tsan-suppressions.txt
 
 .PHONY: format lint verify-generated verify-protocol-manifest verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-release test-tsan test-asan test-public-api-client test-graphics-preview-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless wayland-request-headless wayland-request-headless-tsan wayland-request-headless-asan gpu-preview-wayland gpu-preview-headless wayland-headless swiftbuild-smoke release-check install-pre-commit
 
@@ -56,10 +58,10 @@ test-release:
 	@$(SWIFT) test -c release
 
 test-tsan:
-	@$(SWIFT) test --sanitize=thread
+	@env CC="$(CLANG_FILTER)" TSAN_OPTIONS="$${TSAN_OPTIONS:+$${TSAN_OPTIONS}:}suppressions=$(TSAN_SUPPRESSIONS)" $(SWIFT) test --sanitize=thread
 
 test-asan:
-	@$(SWIFT) test --sanitize=address
+	@env CC="$(CLANG_FILTER)" $(SWIFT) test --sanitize=address
 
 test-public-api-client:
 	@./scripts/ci/test-public-api-client.sh

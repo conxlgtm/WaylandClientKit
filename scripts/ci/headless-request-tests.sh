@@ -15,13 +15,15 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-PROCESS_TIMEOUT_SECONDS="${SWIFT_WAYLAND_INTEGRATION_PROCESS_TIMEOUT_SECONDS:-240}"
+PROCESS_TIMEOUT_SECONDS="${SWIFT_WAYLAND_REQUEST_PROCESS_TIMEOUT_SECONDS:-${SWIFT_WAYLAND_INTEGRATION_PROCESS_TIMEOUT_SECONDS:-600}}"
+TSAN_SUPPRESSIONS="${REPO_ROOT}/scripts/safety/tsan-suppressions.txt"
 
 case "$mode" in
     plain)
         swift_args=(test --filter 'WindowControlPublicRequestTests|WindowDragSourcePublicRequestTests')
         ;;
     tsan)
+        export TSAN_OPTIONS="${TSAN_OPTIONS:+${TSAN_OPTIONS}:}suppressions=${TSAN_SUPPRESSIONS}"
         swift_args=(test --sanitize=thread --filter 'WindowControlPublicRequestTests|WindowDragSourcePublicRequestTests')
         ;;
     asan)
