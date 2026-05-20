@@ -15,6 +15,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+PROCESS_TIMEOUT_SECONDS="${SWIFT_WAYLAND_INTEGRATION_PROCESS_TIMEOUT_SECONDS:-240}"
 
 case "$mode" in
     plain)
@@ -38,4 +39,5 @@ export SWIFT_WAYLAND_ENABLE_DND_SOURCE_REQUEST_TESTS=1
 
 "${REPO_ROOT}/scripts/smoke/with-headless-weston.sh" -- \
     env CC="${REPO_ROOT}/scripts/dev/clang-filter-index-store.sh" \
+    timeout "${PROCESS_TIMEOUT_SECONDS}s" \
     "${REPO_ROOT}/scripts/dev/swift.sh" "${swift_args[@]}"
