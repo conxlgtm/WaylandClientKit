@@ -54,20 +54,10 @@ extension DataTransferManager {
     }
 
     package func drainSourceWriteJobs() throws -> [DataTransferSourceWriteJob] {
-        let requests = drainSourceSendRequests()
-        var jobs: [DataTransferSourceWriteJob] = []
-
-        for index in requests.indices {
-            do {
-                jobs.append(try requests[index].makeWriteJob())
-            } catch {
-                discardSourceWriteJobs(jobs)
-                discardRemainingSourceSendRequests(requests[(index + 1)...])
-                throw error
-            }
-        }
-
-        return jobs
+        try DataTransferSourceSendLifecycle.makeWriteJobs(
+            from: drainSourceSendRequests(),
+            recordDiscardError: recordSourceSendDiscardError
+        )
     }
 
     package func setSelectionSource(
@@ -442,55 +432,35 @@ extension DataTransferManager {
     }
 
     private func closeSourceSendDescriptor(_ descriptor: Int32) throws {
-        guard descriptor >= 0 else {
-            throw DataTransferError.invalidFileDescriptor(descriptor)
-        }
-
-        try backend.closeFileDescriptor(descriptor).throwIfFailed()
+        try DataTransferSourceSendLifecycle.closeCallbackDescriptor(
+            descriptor,
+            close: backend.closeFileDescriptor
+        )
     }
 
     package func discardPendingSourceSendRequests(for sourceID: DataSourceID) {
-        for request in store.removeSourceSendRequests(for: sourceID) {
-            do {
-                try request.close()
-            } catch {
-                recordCallbackError(
-                    error,
-                    context: .sourceWrite(request.source.diagnosticSource)
-                )
-            }
-        }
+        DataTransferSourceSendLifecycle.discardRequests(
+            store.removeSourceSendRequests(for: sourceID),
+            recordError: recordSourceSendDiscardError
+        )
     }
 
     func discardAllPendingSourceSendRequests() {
-        for request in store.drainSourceSendRequests() {
-            do {
-                try request.close()
-            } catch {
-                _ = error
-            }
+        DataTransferSourceSendLifecycle.discardRequests(
+            store.drainSourceSendRequests()
+        ) { _, _ in
+            // Discard-all runs during teardown; pending close failures cannot be routed.
         }
     }
 
-    private func discardSourceWriteJobs(_ jobs: [DataTransferSourceWriteJob]) {
-        for job in jobs {
-            _ = job.closeAsCancelled()
-        }
-    }
-
-    private func discardRemainingSourceSendRequests(
-        _ requests: ArraySlice<DataTransferSourceSendRequest>
+    private func recordSourceSendDiscardError(
+        request: DataTransferSourceSendRequest,
+        error: any Error
     ) {
-        for request in requests {
-            do {
-                try request.close()
-            } catch {
-                recordCallbackError(
-                    error,
-                    context: .sourceWrite(request.source.diagnosticSource)
-                )
-            }
-        }
+        recordCallbackError(
+            error,
+            context: .sourceWrite(request.source.diagnosticSource)
+        )
     }
 
     private func allocateSourceID() -> DataSourceID {
