@@ -3,6 +3,9 @@
 #include <GLES2/gl2.h>
 #include <errno.h>
 #include <gbm.h>
+#ifdef SWL_ENABLE_TESTING
+#include <pthread.h>
+#endif
 #include <stdint.h>
 
 #include "swift-wayland-egl-shims.h"
@@ -56,6 +59,7 @@ static int32_t swl_gles2_read_center_pixel_rgba8_default(
 static struct swl_test_egl_draw_record swl_test_egl_draw_latest;
 static int32_t swl_test_egl_clear_current_result;
 static int32_t swl_test_egl_error_value;
+static pthread_mutex_t swl_test_egl_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static int32_t (*swl_egl_error_impl)(void) = swl_egl_error_default;
 static int32_t (*swl_egl_make_current_impl)(
@@ -182,7 +186,14 @@ static int32_t swl_egl_error_default(void)
 
 int32_t swl_egl_error(void)
 {
+#ifdef SWL_ENABLE_TESTING
+    pthread_mutex_lock(&swl_test_egl_lock);
+    int32_t result = swl_egl_error_impl();
+    pthread_mutex_unlock(&swl_test_egl_lock);
+    return result;
+#else
     return swl_egl_error_impl();
+#endif
 }
 
 uint32_t swl_gles2_error(void)
@@ -424,7 +435,14 @@ int32_t swl_egl_make_current(
     swl_egl_surface surface,
     swl_egl_context context)
 {
+#ifdef SWL_ENABLE_TESTING
+    pthread_mutex_lock(&swl_test_egl_lock);
+    int32_t result = swl_egl_make_current_impl(display, surface, context);
+    pthread_mutex_unlock(&swl_test_egl_lock);
+    return result;
+#else
     return swl_egl_make_current_impl(display, surface, context);
+#endif
 }
 
 static int32_t swl_egl_clear_current_default(swl_egl_display display)
@@ -447,7 +465,14 @@ static int32_t swl_egl_clear_current_default(swl_egl_display display)
 
 int32_t swl_egl_clear_current(swl_egl_display display)
 {
+#ifdef SWL_ENABLE_TESTING
+    pthread_mutex_lock(&swl_test_egl_lock);
+    int32_t result = swl_egl_clear_current_impl(display);
+    pthread_mutex_unlock(&swl_test_egl_lock);
+    return result;
+#else
     return swl_egl_clear_current_impl(display);
+#endif
 }
 
 static int32_t swl_egl_swap_buffers_default(
@@ -469,7 +494,14 @@ int32_t swl_egl_swap_buffers(
     swl_egl_display display,
     swl_egl_surface surface)
 {
+#ifdef SWL_ENABLE_TESTING
+    pthread_mutex_lock(&swl_test_egl_lock);
+    int32_t result = swl_egl_swap_buffers_impl(display, surface);
+    pthread_mutex_unlock(&swl_test_egl_lock);
+    return result;
+#else
     return swl_egl_swap_buffers_impl(display, surface);
+#endif
 }
 
 static int32_t swl_gles2_clear_rgba_default(
@@ -500,7 +532,20 @@ int32_t swl_gles2_clear_rgba(
     float blue,
     float alpha)
 {
+#ifdef SWL_ENABLE_TESTING
+    pthread_mutex_lock(&swl_test_egl_lock);
+    int32_t result = swl_gles2_clear_rgba_impl(
+        width,
+        height,
+        red,
+        green,
+        blue,
+        alpha);
+    pthread_mutex_unlock(&swl_test_egl_lock);
+    return result;
+#else
     return swl_gles2_clear_rgba_impl(width, height, red, green, blue, alpha);
+#endif
 }
 
 static int32_t swl_gles2_read_center_pixel_rgba8_default(
@@ -530,7 +575,17 @@ int32_t swl_gles2_read_center_pixel_rgba8(
     uint32_t height,
     uint8_t *out_rgba)
 {
+#ifdef SWL_ENABLE_TESTING
+    pthread_mutex_lock(&swl_test_egl_lock);
+    int32_t result = swl_gles2_read_center_pixel_rgba8_impl(
+        width,
+        height,
+        out_rgba);
+    pthread_mutex_unlock(&swl_test_egl_lock);
+    return result;
+#else
     return swl_gles2_read_center_pixel_rgba8_impl(width, height, out_rgba);
+#endif
 }
 
 #ifdef SWL_ENABLE_TESTING
@@ -538,6 +593,7 @@ void swl_test_egl_draw_recording_begin(
     int32_t clear_current_result,
     int32_t egl_error)
 {
+    pthread_mutex_lock(&swl_test_egl_lock);
     swl_test_egl_draw_latest = (struct swl_test_egl_draw_record){0};
     swl_test_egl_clear_current_result = clear_current_result;
     swl_test_egl_error_value = egl_error;
@@ -548,10 +604,12 @@ void swl_test_egl_draw_recording_begin(
     swl_gles2_clear_rgba_impl = swl_test_gles2_clear_rgba_record;
     swl_gles2_read_center_pixel_rgba8_impl =
         swl_test_gles2_read_center_pixel_rgba8_record;
+    pthread_mutex_unlock(&swl_test_egl_lock);
 }
 
 void swl_test_egl_draw_recording_end(void)
 {
+    pthread_mutex_lock(&swl_test_egl_lock);
     swl_egl_error_impl = swl_egl_error_default;
     swl_egl_make_current_impl = swl_egl_make_current_default;
     swl_egl_clear_current_impl = swl_egl_clear_current_default;
@@ -559,10 +617,14 @@ void swl_test_egl_draw_recording_end(void)
     swl_gles2_clear_rgba_impl = swl_gles2_clear_rgba_default;
     swl_gles2_read_center_pixel_rgba8_impl =
         swl_gles2_read_center_pixel_rgba8_default;
+    pthread_mutex_unlock(&swl_test_egl_lock);
 }
 
 struct swl_test_egl_draw_record swl_test_egl_draw_record(void)
 {
-    return swl_test_egl_draw_latest;
+    pthread_mutex_lock(&swl_test_egl_lock);
+    struct swl_test_egl_draw_record record = swl_test_egl_draw_latest;
+    pthread_mutex_unlock(&swl_test_egl_lock);
+    return record;
 }
 #endif
