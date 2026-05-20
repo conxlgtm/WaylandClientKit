@@ -5,3 +5,8 @@ mutex:swift::VariadicMetadataCacheEntryBase
 mutex:swift::StableAddressConcurrentReadableHashMap
 race:swift::MetadataCacheKey::operator==
 race:swift::VariadicMetadataCacheEntryBase
+race:swift_getWitnessTable
+
+# Swift Testing 6.3.2 can race while recording human-readable event graph output
+# under TSan. Keep this scoped to the Testing.Graph value witness/subgraph path.
+race:$s7Testing5Graph

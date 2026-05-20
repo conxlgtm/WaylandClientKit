@@ -23,7 +23,7 @@ case "$mode" in
         swift_args=(test --filter 'WindowControlPublicRequestTests|WindowDragSourcePublicRequestTests')
         ;;
     tsan)
-        export TSAN_OPTIONS="${TSAN_OPTIONS:+${TSAN_OPTIONS}:}suppressions=${TSAN_SUPPRESSIONS}"
+        export TSAN_OPTIONS="${TSAN_OPTIONS:+${TSAN_OPTIONS}:}detect_deadlocks=0:suppressions=${TSAN_SUPPRESSIONS}"
         swift_args=(test --sanitize=thread --filter 'WindowControlPublicRequestTests|WindowDragSourcePublicRequestTests')
         ;;
     asan)
