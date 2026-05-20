@@ -46,6 +46,8 @@ ASAN_OPTIONS=detect_leaks=0 make test-asan
 make wayland-request-headless
 make wayland-request-headless-tsan
 make wayland-request-headless-asan
+make swiftbuild-smoke
+./scripts/ci/repeat-test.sh --count 20 --filter WaylandThreadExecutorConcurrencyTests
 ```
 
 ThreadSanitizer is the primary concurrency lifecycle check. AddressSanitizer
@@ -66,6 +68,16 @@ release gate for live request wrappers under sanitizers. GPU preview sanitizer
 smoke remains optional and compositor/hardware dependent; use
 `SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1` under a known GPU-capable session
 when collecting compositor matrix facts.
+
+`make swiftbuild-smoke` is informational. Native SwiftPM remains the supported
+build system; the Swift Build preview can report `unsupported`,
+`failed-toolchain-layout`, or `failed-package` depending on the active Swift
+toolchain. Do not block a release on Swift Build preview unless the failure is a
+confirmed package regression.
+
+Use `scripts/ci/repeat-test.sh` for local stress validation of
+concurrency-sensitive suites. It intentionally stays out of the default release
+gate because useful counts are environment- and time-dependent.
 
 Under a real Wayland session:
 
