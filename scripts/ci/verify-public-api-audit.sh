@@ -8,9 +8,9 @@ usage() {
     cat <<'EOF'
 Usage: scripts/ci/verify-public-api-audit.sh [--update]
 
-Checks the WaylandClient public API baseline against the current tracked Swift
-sources. Pass --update after reviewing docs/public-api-audit.md for the API
-contract change.
+Checks the public API baseline for vended library products against the current
+tracked Swift sources. Pass --update after reviewing docs/public-api-audit.md
+for the API contract change.
 EOF
 }
 
@@ -35,11 +35,11 @@ report="$("$ROOT/scripts/ci/dump-public-api.sh")"
 
 {
     cat <<'EOF'
-# WaylandClient Public API Baseline
+# SwiftWayland Public API Baseline
 
-This baseline records the public declarations exported by the `WaylandClient`
-library product. It is intentionally limited to the user-facing product and
-excludes package-internal targets that use `public` for cross-target builds.
+This baseline records the public declarations exported by vended library
+products. Preview products are included so source-breaking preview API drift is
+visible and reviewed.
 
 Run `./scripts/ci/verify-public-api-audit.sh --update` only after reviewing and
 updating `docs/public-api-audit.md` for the API contract change.
@@ -48,6 +48,12 @@ EOF
 
     awk '
         /^## WaylandClient Public Declarations$/ {
+            in_section = 1
+            print
+            next
+        }
+
+        /^## WaylandGraphicsPreview Public Declarations$/ {
             in_section = 1
             print
             next
@@ -76,7 +82,7 @@ fi
 
 if ! diff -u "$BASELINE" "$tmp_baseline"; then
     echo >&2
-    echo "WaylandClient public API changed." >&2
+    echo "SwiftWayland public API changed." >&2
     echo "Review docs/public-api-audit.md, then update docs/public-api-baseline.md." >&2
     exit 1
 fi

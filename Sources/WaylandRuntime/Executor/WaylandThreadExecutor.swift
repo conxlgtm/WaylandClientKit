@@ -109,6 +109,7 @@ package final class WaylandThreadExecutor: SerialExecutor {
                 loopHasExited,
                 "WaylandThreadExecutor owner thread released before loop exit"
             )
+            detachOwnerThreadAfterLoopExit()
         } else {
             shutdown()
         }
@@ -515,6 +516,34 @@ extension WaylandThreadExecutor {
 
         pthread_join(threadToJoin, nil)
         markJoined()
+    }
+
+    private func detachOwnerThreadAfterLoopExit() {
+        unsafe pthread_mutex_lock(&mutex)
+        let phase = unsafe state.phase
+        precondition(
+            phase.loopHasExited,
+            "WaylandThreadExecutor owner thread detached before loop exit"
+        )
+        guard let threadToDetach = unsafe state.thread else {
+            unsafe pthread_mutex_unlock(&mutex)
+            return
+        }
+        let mode = phase.shutdownMode ?? .orderly
+        unsafe pthread_mutex_unlock(&mutex)
+
+        let detachResult = pthread_detach(threadToDetach)
+        precondition(
+            detachResult == 0,
+            "pthread_detach returned \(detachResult)"
+        )
+
+        unsafe pthread_mutex_lock(&mutex)
+        unsafe state.thread = nil
+        unsafe state.phase = .detachedAfterOwnerThreadExit(mode)
+        unsafe pthread_cond_broadcast(&condition)
+        unsafe pthread_cond_broadcast(&readyCondition)
+        unsafe pthread_mutex_unlock(&mutex)
     }
 
     private func closeWakeFileDescriptor(

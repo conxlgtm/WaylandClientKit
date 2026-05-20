@@ -1,8 +1,8 @@
-# WaylandClient Public API Baseline
+# SwiftWayland Public API Baseline
 
-This baseline records the public declarations exported by the `WaylandClient`
-library product. It is intentionally limited to the user-facing product and
-excludes package-internal targets that use `public` for cross-target builds.
+This baseline records the public declarations exported by vended library
+products. Preview products are included so source-breaking preview API drift is
+visible and reviewed.
 
 Run `./scripts/ci/verify-public-api-audit.sh --update` only after reviewing and
 updating `docs/public-api-audit.md` for the API contract change.
@@ -103,62 +103,62 @@ updating `docs/public-api-audit.md` for the API contract change.
 ### `Sources/WaylandClient/Public/Configuration/DisplayConfiguration.swift`
 
 - L1: `public struct EventStreamConfiguration: Equatable, Sendable {`
-- L2: `    public var displayEventCapacity: EventStreamCapacity`
-- L3: `    public var inputEventCapacity: EventStreamCapacity`
-- L4: `    public var textInputEventCapacity: EventStreamCapacity`
-- L5: `    public var dataTransferEventCapacity: EventStreamCapacity`
-- L6: `    public var presentationEventCapacity: EventStreamCapacity`
-- L8: `    public init(`
-- L25: `    public init(`
-- L57: `    public init(`
-- L90: `    public init(`
-- L122: `    public init(`
-- L154: `    public init(`
-- L187: `public struct InputMotionCoalescing: OptionSet, Equatable, Sendable {`
-- L188: `    public let rawValue: Int`
-- L190: `    public init(rawValue coalescingRawValue: Int) {`
-- L194: `    public static let pointerMotion = InputMotionCoalescing(rawValue: 1 << 0)`
-- L195: `    public static let touchMotion = InputMotionCoalescing(rawValue: 1 << 1)`
-- L196: `    public static let all: InputMotionCoalescing = [.pointerMotion, .touchMotion]`
-- L199: `public struct InputPipelineConfiguration: Equatable, Sendable {`
-- L200: `    public var rawInputQueueCapacity: InputQueueCapacity`
-- L201: `    public var pendingInputEventCapacity: InputQueueCapacity`
-- L202: `    public var motionCoalescing: InputMotionCoalescing`
-- L204: `    public var pointerMotionCoalescing: Bool {`
-- L215: `    public var touchMotionCoalescing: Bool {`
-- L226: `    public init(`
-- L239: `    public init(`
-- L249: `    public init(`
-- L269: `    public init(`
-- L289: `public struct KeyboardInterpretationConfiguration: Equatable, Sendable {`
-- L290: `    public var compose: KeyboardComposeConfiguration`
-- L292: `    public init(compose composeConfiguration: KeyboardComposeConfiguration = .enabled()) {`
-- L297: `public enum KeyboardComposeConfiguration: Equatable, Sendable {`
-- L298: `    case disabled`
-- L299: `    case enabled(`
-- L305: `public enum KeyboardComposeLocale: Equatable, Sendable {`
-- L306: `    case processEnvironment`
-- L307: `    case identifier(KeyboardComposeLocaleIdentifier)`
-- L310: `public enum KeyboardComposeLocaleError: Error, Equatable, Sendable {`
-- L311: `    case emptyIdentifier`
-- L312: `    case containsNUL`
-- L315: `public struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {`
-- L316: `    public let rawValue: String`
-- L318: `    public init(_ value: String) throws(KeyboardComposeLocaleError) {`
-- L330: `    public static let posixC = Self(unchecked: "C")`
-- L361: `public enum KeyboardComposeCancellationPolicy: Equatable, Sendable {`
-- L362: `    case passThroughCancellingKey`
-- L363: `    case swallowCancellingKey`
-- L366: `public struct DiagnosticsConfiguration: Equatable, Sendable {`
-- L367: `    public var capacity: DiagnosticsCapacity`
-- L369: `    public init(capacity diagnosticsCapacity: DiagnosticsCapacity = .default) {`
-- L373: `    public init(capacity diagnosticsCapacity: Int) throws {`
-- L378: `public struct DisplayConfiguration: Equatable, Sendable {`
-- L379: `    public var eventStreams: EventStreamConfiguration`
-- L380: `    public var inputPipeline: InputPipelineConfiguration`
-- L381: `    public var keyboardInterpretation: KeyboardInterpretationConfiguration`
-- L382: `    public var diagnostics: DiagnosticsConfiguration`
-- L384: `    public init(`
+- L10: `    public var displayEventCapacity: EventStreamCapacity`
+- L11: `    public var inputEventCapacity: EventStreamCapacity`
+- L12: `    public var textInputEventCapacity: EventStreamCapacity`
+- L13: `    public var dataTransferEventCapacity: EventStreamCapacity`
+- L14: `    public var presentationEventCapacity: EventStreamCapacity`
+- L16: `    public init(`
+- L33: `    public init(`
+- L53: `    public init(`
+- L74: `    public init(`
+- L94: `    public init(`
+- L114: `    public init(`
+- L176: `public struct InputMotionCoalescing: OptionSet, Equatable, Sendable {`
+- L177: `    public let rawValue: Int`
+- L179: `    public init(rawValue coalescingRawValue: Int) {`
+- L183: `    public static let pointerMotion = InputMotionCoalescing(rawValue: 1 << 0)`
+- L184: `    public static let touchMotion = InputMotionCoalescing(rawValue: 1 << 1)`
+- L185: `    public static let all: InputMotionCoalescing = [.pointerMotion, .touchMotion]`
+- L188: `public struct InputPipelineConfiguration: Equatable, Sendable {`
+- L194: `    public var rawInputQueueCapacity: InputQueueCapacity`
+- L195: `    public var pendingInputEventCapacity: InputQueueCapacity`
+- L196: `    public var motionCoalescing: InputMotionCoalescing`
+- L198: `    public var pointerMotionCoalescing: Bool {`
+- L209: `    public var touchMotionCoalescing: Bool {`
+- L220: `    public init(`
+- L233: `    public init(`
+- L243: `    public init(`
+- L262: `    public init(`
+- L297: `public struct KeyboardInterpretationConfiguration: Equatable, Sendable {`
+- L298: `    public var compose: KeyboardComposeConfiguration`
+- L300: `    public init(compose composeConfiguration: KeyboardComposeConfiguration = .enabled()) {`
+- L305: `public enum KeyboardComposeConfiguration: Equatable, Sendable {`
+- L306: `    case disabled`
+- L307: `    case enabled(`
+- L313: `public enum KeyboardComposeLocale: Equatable, Sendable {`
+- L314: `    case processEnvironment`
+- L315: `    case identifier(KeyboardComposeLocaleIdentifier)`
+- L318: `public enum KeyboardComposeLocaleError: Error, Equatable, Sendable {`
+- L319: `    case emptyIdentifier`
+- L320: `    case containsNUL`
+- L323: `public struct KeyboardComposeLocaleIdentifier: Equatable, Sendable {`
+- L324: `    public let rawValue: String`
+- L326: `    public init(_ value: String) throws(KeyboardComposeLocaleError) {`
+- L338: `    public static let posixC = Self(unchecked: "C")`
+- L369: `public enum KeyboardComposeCancellationPolicy: Equatable, Sendable {`
+- L370: `    case passThroughCancellingKey`
+- L371: `    case swallowCancellingKey`
+- L374: `public struct DiagnosticsConfiguration: Equatable, Sendable {`
+- L375: `    public var capacity: DiagnosticsCapacity`
+- L377: `    public init(capacity diagnosticsCapacity: DiagnosticsCapacity = .default) {`
+- L381: `    public init(capacity diagnosticsCapacity: Int) throws {`
+- L386: `public struct DisplayConfiguration: Equatable, Sendable {`
+- L387: `    public var eventStreams: EventStreamConfiguration`
+- L388: `    public var inputPipeline: InputPipelineConfiguration`
+- L389: `    public var keyboardInterpretation: KeyboardInterpretationConfiguration`
+- L390: `    public var diagnostics: DiagnosticsConfiguration`
+- L392: `    public init(`
 
 ### `Sources/WaylandClient/Public/Cursor/CursorConfiguration.swift`
 
@@ -450,14 +450,14 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 ### `Sources/WaylandClient/Public/DataTransfer/OwnedFileDescriptor.swift`
 
-- L5: `public struct OwnedFileDescriptor: ~Copyable, Sendable {`
-- L15: `    public init(adopting rawValue: Int32) throws {`
-- L61: `    public var isClosed: Bool {`
-- L65: `    public var description: String {`
-- L73: `    public mutating func readData(`
-- L119: `    public mutating func writeData(_ data: Data) throws {`
-- L134: `    public mutating func close() throws {`
-- L148: `    public mutating func releaseRawValue() -> Int32 {`
+- L6: `public struct OwnedFileDescriptor: ~Copyable, Sendable {`
+- L16: `    public init(adopting rawValue: Int32) throws {`
+- L67: `    public var isClosed: Bool {`
+- L71: `    public var description: String {`
+- L79: `    public mutating func readData(`
+- L125: `    public mutating func writeData(_ data: Data) throws {`
+- L140: `    public mutating func close() throws {`
+- L154: `    public mutating func releaseRawValue() -> Int32 {`
 
 ### `Sources/WaylandClient/Public/Diagnostics/InputDiagnostic.swift`
 
@@ -1983,4 +1983,99 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L126: `    case minimize`
 - L127: `    case unknown(UInt32)`
 - L140: `    public var rawValue: UInt32 {`
+
+## WaylandGraphicsPreview Public Declarations
+
+### `Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsPreview.swift`
+
+- L4: `public enum WaylandGraphicsProtocolAvailability: Equatable, Sendable {`
+- L5: `    case unavailable`
+- L6: `    case available(version: UInt32)`
+- L8: `    public init(_ availability: ProtocolAvailability) {`
+- L17: `    public var isAvailable: Bool {`
+- L26: `    public var version: UInt32? {`
+- L37: `public struct WaylandGraphicsFramePacingAvailability: Equatable, Sendable {`
+- L38: `    public let fifo: WaylandGraphicsProtocolAvailability`
+- L39: `    public let commitTiming: WaylandGraphicsProtocolAvailability`
+- L41: `    public static let unavailable = Self(`
+- L46: `    public init(`
+- L56: `public struct WaylandGraphicsColorMetadataAvailability: Equatable, Sendable {`
+- L57: `    public let contentType: WaylandGraphicsProtocolAvailability`
+- L58: `    public let alphaModifier: WaylandGraphicsProtocolAvailability`
+- L59: `    public let tearingControl: WaylandGraphicsProtocolAvailability`
+- L60: `    public let colorRepresentation: WaylandGraphicsProtocolAvailability`
+- L61: `    public let colorManagement: WaylandGraphicsProtocolAvailability`
+- L63: `    public static let unavailable = Self(`
+- L71: `    public init(`
+- L87: `public struct WaylandGraphicsSurfaceCapabilities: Equatable, Sendable {`
+- L88: `    public let dmabuf: WaylandGraphicsProtocolAvailability`
+- L89: `    public let explicitSync: WaylandGraphicsProtocolAvailability`
+- L90: `    public let framePacing: WaylandGraphicsFramePacingAvailability`
+- L91: `    public let colorMetadata: WaylandGraphicsColorMetadataAvailability`
+- L92: `    public let presentationFeedback: WaylandGraphicsProtocolAvailability`
+- L94: `    public init(`
+- L108: `    public init(capabilities: WaylandCapabilities) {`
+- L122: `public enum WaylandGraphicsFallbackPolicy: Equatable, Sendable {`
+- L123: `    case preferGPUFallbackToSoftware`
+- L124: `    case requireGPU`
+- L125: `    case forceSoftware`
+- L127: `    public func decide(`
+- L147: `    public func decide(capabilities: WaylandCapabilities) -> WaylandGraphicsBackingDecision {`
+- L153: `public enum WaylandGraphicsFallbackReason: Equatable, Sendable {`
+- L154: `    case forcedSoftware`
+- L155: `    case dmabufUnavailable`
+- L156: `    case noCompatibleFormat`
+- L157: `    case noRenderNode`
+- L158: `    case gbmUnavailable`
+- L159: `    case eglUnavailable`
+- L160: `    case explicitSyncRequiredButUnavailable`
+- L161: `    case metadataRequiredButUnavailable`
+- L162: `    case compositorRejectedBuffer`
+- L166: `public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {`
+- L167: `    case dmabufUnavailable`
+- L168: `    case noCompatibleFormat`
+- L169: `    case noRenderNode`
+- L170: `    case gbmUnavailable`
+- L171: `    case eglUnavailable`
+- L172: `    case explicitSyncRequiredButUnavailable`
+- L173: `    case metadataRequiredButUnavailable`
+- L174: `    case compositorRejectedBuffer`
+- L178: `public enum WaylandGraphicsBackingDecision: Equatable, Sendable {`
+- L179: `    case gpu(WaylandGraphicsRuntimePath)`
+- L180: `    case software(WaylandGraphicsFallbackReason)`
+- L181: `    case unavailable(WaylandGraphicsUnavailableReason)`
+- L185: `public enum WaylandGraphicsRuntimeStatus: Equatable, Sendable {`
+- L186: `    case unavailable`
+- L187: `    case advertised`
+- L188: `    case configured`
+- L189: `    case active`
+- L190: `    case failed(WaylandGraphicsUnavailableReason)`
+- L191: `    case fallback(WaylandGraphicsFallbackReason)`
+- L195: `public struct WaylandGraphicsPacingStatus: Equatable, Sendable {`
+- L196: `    public let fifo: WaylandGraphicsRuntimeStatus`
+- L197: `    public let commitTiming: WaylandGraphicsRuntimeStatus`
+- L199: `    public init(`
+- L209: `public struct WaylandGraphicsMetadataStatus: Equatable, Sendable {`
+- L210: `    public let contentType: WaylandGraphicsRuntimeStatus`
+- L211: `    public let alphaModifier: WaylandGraphicsRuntimeStatus`
+- L212: `    public let tearingControl: WaylandGraphicsRuntimeStatus`
+- L213: `    public let colorRepresentation: WaylandGraphicsRuntimeStatus`
+- L214: `    public let colorManagement: WaylandGraphicsRuntimeStatus`
+- L216: `    public init(`
+- L232: `public struct WaylandGraphicsRuntimePath: Equatable, Sendable {`
+- L233: `    public let capabilities: WaylandGraphicsSurfaceCapabilities`
+- L234: `    public let backing: WaylandGraphicsRuntimeStatus`
+- L235: `    public let dmabuf: WaylandGraphicsRuntimeStatus`
+- L236: `    public let gbm: WaylandGraphicsRuntimeStatus`
+- L237: `    public let egl: WaylandGraphicsRuntimeStatus`
+- L238: `    public let explicitSync: WaylandGraphicsRuntimeStatus`
+- L239: `    public let pacing: WaylandGraphicsPacingStatus`
+- L240: `    public let metadata: WaylandGraphicsMetadataStatus`
+- L241: `    public let presentationFeedback: WaylandGraphicsRuntimeStatus`
+- L242: `    public var fallback: WaylandGraphicsFallbackReason? {`
+- L272: `    public static func projected(`
+- L282: `    public static func projected(`
+- L378: `    public func graphicsSurfaceCapabilities() throws -> WaylandGraphicsSurfaceCapabilities {`
+- L383: `    public func graphicsRuntimePath(`
+- L393: `    public func graphicsBackingDecision(`
 
