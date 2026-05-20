@@ -237,6 +237,36 @@ struct DataTransferManagerSourceSendTests {  // swiftlint:disable:this type_body
     }
 
     @Test
+    func sourceSendWithUnavailableMIMEClosesDescriptorAndRecordsCallbackFailure() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+
+        let source = try manager.setSelectionSource(
+            seatID: seat1,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 97),
+            payloads: DataTransferSourcePayloadSet(
+                data: [.plainText: Data("clipboard".utf8)]
+            )
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+
+        sourceBinding.emit(.send(mimeType: MIMEType.uriList.rawValue, fd: 219))
+
+        #expect(
+            throws: DataTransferCallbackFailure(
+                context: .dataSource(ClipboardSourceIdentity(source.id)),
+                error: .mimeTypeUnavailable(.uriList)
+            )
+        ) {
+            try manager.throwPendingCallbackErrorIfAny()
+        }
+        #expect(backend.closedDescriptors == [219])
+        #expect(manager.drainSourceSendRequests().isEmpty)
+    }
+
+    @Test
     func sourceSendRequestWriteClosesEmptyPayloadWithoutWriting() throws {
         let backend = RecordingDataTransferBackend()
         let request = try queuedSourceSendRequest(
