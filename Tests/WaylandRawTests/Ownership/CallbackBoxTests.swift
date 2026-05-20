@@ -106,23 +106,25 @@ struct CallbackBoxTests {
         }
         #expect(weakStorage.storage == nil)
     }
-    @Test
-    func cListenerStorageForwardsFatalInvariantFailures() {
-        let recorder = FailureRecorder()
-        let sink = RawInvariantFailureSink()
-        sink.reporter = recorder
-        let owner = ReleasingListenerOwner()
-        let storage = CListenerStorage(
-            owner: owner,
-            initialValue: ListenerCallbacks(),
-            invariantFailureSink: sink
-        )
-        let failure = RawInvariantFailure.callbackWithoutSwiftState(
-            "test listener storage missing owner"
-        )
-        storage.reportFatalInvariantFailureForTesting(failure)
-        #expect(recorder.failures == [failure])
-    }
+    #if DEBUG
+        @Test
+        func cListenerStorageForwardsFatalInvariantFailures() {
+            let recorder = FailureRecorder()
+            let sink = RawInvariantFailureSink()
+            sink.reporter = recorder
+            let owner = ReleasingListenerOwner()
+            let storage = CListenerStorage(
+                owner: owner,
+                initialValue: ListenerCallbacks(),
+                invariantFailureSink: sink
+            )
+            let failure = RawInvariantFailure.callbackWithoutSwiftState(
+                "test listener storage missing owner"
+            )
+            storage.reportFatalInvariantFailureForTesting(failure)
+            #expect(recorder.failures == [failure])
+        }
+    #endif
     @Test
     func callbackBoxInvalidationClearsOwner() {
         let owner = Owner()
