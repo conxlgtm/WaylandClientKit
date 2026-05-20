@@ -38,6 +38,7 @@ Sources/WaylandRuntime/EventLoop/UnsafeDefaultQueueEventLoop.swift	UnsafeDefault
 Sources/WaylandRuntime/EventLoop/UnsafeDefaultQueueEventLoop.swift	wl_display_dispatch_pending	Quarantined unsafe default-queue event-loop escape hatch.
 Sources/WaylandRuntime/EventLoop/UnsafeDefaultQueueEventLoop.swift	wl_display_prepare_read	Quarantined unsafe default-queue event-loop escape hatch.
 Sources/CEGLShims/egl-shims.c	pthread_*	Testing-only EGL shim recording lock used to serialize hook globals under ThreadSanitizer.
+Sources/CGBMShims/gbm-shims.c	pthread_*	Testing-only GBM shim recording lock used to serialize hook globals under ThreadSanitizer.
 Sources/CWaylandProtocols/include/swift-wayland-shims.h	wl_proxy_get_queue	Queue assertion shim declaration.
 Sources/CWaylandProtocols/include/swift-wayland-shims.h	swl_proxy_get_queue_raw	Queue assertion shim declaration.
 Sources/CWaylandProtocols/shims/display-core.c	wl_proxy_create_wrapper	Queue-at-creation wrapper shim.

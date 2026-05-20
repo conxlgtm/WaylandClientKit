@@ -31,7 +31,11 @@ bash ./scripts/safety/verify-unsafe-allowlist.sh
 
 Prefer `make release-check` for the release build path. Direct `swift`
 commands require equivalent runtime library configuration; the wrapper sources
-`scripts/dev/swift-runtime-env.sh` before invoking Swift.
+`scripts/dev/swift-runtime-env.sh` before invoking Swift. On openSUSE-style
+toolchains that use a compatibility `libxml2.so.2`, the wrapper filters the
+known loader warning about missing version information; set
+`SWIFT_WAYLAND_SHOW_COMPAT_WARNINGS=1` when raw Swift toolchain stderr is
+needed.
 
 `make test-release` runs the release-compatible test subset. Shim-contract and
 instrumentation tests that depend on debug-only C or Swift test hooks are

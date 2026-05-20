@@ -146,7 +146,10 @@ Swift 6.3.2 SwiftPM may also need a compatibility `libxml2.so.2` on
 openSUSE. The project Swift wrappers load `$SWIFT_COMPAT_LIBS` when present,
 defaulting to `$HOME/.local/share/swift-compat-libs`; direct toolchain calls
 must expose that directory through `LD_LIBRARY_PATH` or another runtime loader
-path.
+path. The wrapper suppresses the known Swiftly/openSUSE
+`libxml2.so.2: no version information available` loader warning so test logs
+stay readable; set `SWIFT_WAYLAND_SHOW_COMPAT_WARNINGS=1` to inspect raw Swift
+toolchain stderr.
 
 The support contract is SwiftPM plus system libraries resolved through
 `pkg-config`. Distro package files are not part of the current repository.
