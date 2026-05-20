@@ -1,212 +1,180 @@
-import CWaylandProtocols
-import Testing
-import WaylandRaw
-import WaylandTestSupport
+#if SWL_ENABLE_TESTING
+    import CWaylandProtocols
+    import Testing
+    import WaylandRaw
+    import WaylandTestSupport
 
-@testable import WaylandClient
+    @testable import WaylandClient
 
-private struct RoleToken: Equatable {}
+    private struct RoleToken: Equatable {}
 
-@Suite(.serialized)
-struct SurfaceRuntimeSubmitTests {
-    @Test
-    func submitCapabilitySnapshotPublishesSynchronizationAndPacingFacts() {
-        var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
+    @Suite(.serialized)
+    struct SurfaceRuntimeSubmitTests {
+        @Test
+        func submitCapabilitySnapshotPublishesSynchronizationAndPacingFacts() {
+            var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
 
-        runtime.setSynchronizationCapability(.explicitAvailable(version: 1))
-        runtime.setPacingCapability(.fifoAndCommitTiming(fifo: 1, commitTiming: 1))
+            runtime.setSynchronizationCapability(.explicitAvailable(version: 1))
+            runtime.setPacingCapability(.fifoAndCommitTiming(fifo: 1, commitTiming: 1))
 
-        let snapshot = runtime.capabilitySnapshot()
+            let snapshot = runtime.capabilitySnapshot()
 
-        #expect(snapshot.synchronization == .explicitAvailable(version: 1))
-        #expect(snapshot.pacing == .fifoAndCommitTiming(fifo: 1, commitTiming: 1))
-    }
-
-    @Test
-    func activatingExplicitSynchronizationUpdatesCapabilitySnapshot() throws {
-        var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
-
-        runtime.setSynchronizationCapability(.explicitAvailable(version: 1))
-        runtime.setExplicitSynchronizationActive()
-
-        #expect(runtime.capabilitySnapshot().synchronization == .explicitActive)
-    }
-
-    @Test
-    func missingSubmitConstraintObjectsRejectNonDefaultConstraints() throws {
-        var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
-        let syncPoint = SurfaceSyncPoint(
-            timeline: SurfaceSyncTimelineIdentity(1),
-            point: RawSyncobjTimelinePoint(2)
-        )
-        let targetTime = try SurfaceCommitTargetTime(seconds: 1, nanoseconds: 2)
-
-        runtime.setExplicitSynchronizationActive()
-        runtime.setPacingCapability(.fifoAndCommitTiming(fifo: 1, commitTiming: 1))
-
-        #expect(throws: SurfaceSubmitConstraintError.explicitSyncUnavailable) {
-            try runtime.applySubmitConstraints(
-                SurfaceSubmitConstraints(
-                    synchronization: .explicit(acquire: nil, release: syncPoint),
-                    pacing: .none
-                )
-            )
+            #expect(snapshot.synchronization == .explicitAvailable(version: 1))
+            #expect(snapshot.pacing == .fifoAndCommitTiming(fifo: 1, commitTiming: 1))
         }
-        #expect(throws: SurfaceSubmitConstraintError.fifoUnavailable) {
-            try runtime.applySubmitConstraints(
-                SurfaceSubmitConstraints(
-                    synchronization: .implicit,
-                    pacing: .fifo(.waitBarrier)
-                )
-            )
-        }
-        #expect(throws: SurfaceSubmitConstraintError.commitTimingUnavailable) {
-            try runtime.applySubmitConstraints(
-                SurfaceSubmitConstraints(
-                    synchronization: .implicit,
-                    pacing: .targetTime(targetTime)
-                )
-            )
-        }
-    }
 
-    @Test
-    func missingSyncTimelineRejectsExplicitConstraintApplication() throws {
-        var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
-        let syncSurface = try StubSyncobjSurface()
-        let syncPoint = SurfaceSyncPoint(
-            timeline: SurfaceSyncTimelineIdentity(77),
-            point: RawSyncobjTimelinePoint(2)
-        )
+        @Test
+        func activatingExplicitSynchronizationUpdatesCapabilitySnapshot() throws {
+            var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
 
-        runtime.installExplicitSynchronizationObject(syncSurface.object)
-
-        #expect(
-            throws: SurfaceSubmitConstraintError.syncTimelineUnavailable(
-                SurfaceSyncTimelineIdentity(77)
-            )
-        ) {
-            try runtime.applySubmitConstraints(
-                SurfaceSubmitConstraints(
-                    synchronization: .explicit(acquire: syncPoint, release: syncPoint),
-                    pacing: .none
-                )
-            )
-        }
-    }
-
-    @Test
-    func frameCommitterRecordsCommittedFrameAfterSurfaceCommit() async throws {
-        try await CoreRequestRecordingGate.withExclusiveRecording {
-            swl_test_core_request_recording_begin()
-            defer { swl_test_core_request_recording_end() }
-
-            let surface = try testSurface(pointer: 0x5601)
-            defer { surface.destroy() }
-            var runtime = try configuredRuntime()
-            let preparedCommit = try preparedCommit(
-                surface: surface,
-                runtime: &runtime,
-                constraints: .default,
-                payload: .buffer(try testSurfaceBuffer(pointer: 0x5602))
-            )
-
-            let committedPlan = try SurfaceFrameCommitter.commit(
-                preparedCommit,
-                runtime: &runtime
-            )
-
-            #expect(
-                runtime.transactionSnapshot.lastCommittedFrame
-                    == SurfaceCommittedFrame(
-                        generation: 1,
-                        configureSerial: 7,
-                        plan: committedPlan
-                    )
-            )
-            #expect(unsafe swl_test_core_request_record().kind == SWL_TEST_CORE_SURFACE_COMMIT)
-        }
-    }
-
-    @Test
-    func frameCommitterDoesNotRecordFrameWhenSubmitConstraintsFail() async throws {
-        try await CoreRequestRecordingGate.withExclusiveRecording {
-            swl_test_core_request_recording_begin()
-            defer { swl_test_core_request_recording_end() }
-
-            let surface = try testSurface(pointer: 0x5701)
-            defer { surface.destroy() }
-            var runtime = try configuredRuntime()
+            runtime.setSynchronizationCapability(.explicitAvailable(version: 1))
             runtime.setExplicitSynchronizationActive()
-            let preparedCommit = try preparedCommit(
-                surface: surface,
-                runtime: &runtime,
-                constraints: explicitConstraints(timeline: 77, acquire: 2, release: 3),
-                payload: .buffer(try testSurfaceBuffer(pointer: 0x5702))
+
+            #expect(runtime.capabilitySnapshot().synchronization == .explicitActive)
+        }
+
+        @Test
+        func missingSubmitConstraintObjectsRejectNonDefaultConstraints() throws {
+            var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
+            let syncPoint = SurfaceSyncPoint(
+                timeline: SurfaceSyncTimelineIdentity(1),
+                point: RawSyncobjTimelinePoint(2)
             )
+            let targetTime = try SurfaceCommitTargetTime(seconds: 1, nanoseconds: 2)
+
+            runtime.setExplicitSynchronizationActive()
+            runtime.setPacingCapability(.fifoAndCommitTiming(fifo: 1, commitTiming: 1))
 
             #expect(throws: SurfaceSubmitConstraintError.explicitSyncUnavailable) {
-                try SurfaceFrameCommitter.commit(
+                try runtime.applySubmitConstraints(
+                    SurfaceSubmitConstraints(
+                        synchronization: .explicit(acquire: nil, release: syncPoint),
+                        pacing: .none
+                    )
+                )
+            }
+            #expect(throws: SurfaceSubmitConstraintError.fifoUnavailable) {
+                try runtime.applySubmitConstraints(
+                    SurfaceSubmitConstraints(
+                        synchronization: .implicit,
+                        pacing: .fifo(.waitBarrier)
+                    )
+                )
+            }
+            #expect(throws: SurfaceSubmitConstraintError.commitTimingUnavailable) {
+                try runtime.applySubmitConstraints(
+                    SurfaceSubmitConstraints(
+                        synchronization: .implicit,
+                        pacing: .targetTime(targetTime)
+                    )
+                )
+            }
+        }
+
+        @Test
+        func missingSyncTimelineRejectsExplicitConstraintApplication() throws {
+            var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
+            let syncSurface = try StubSyncobjSurface()
+            let syncPoint = SurfaceSyncPoint(
+                timeline: SurfaceSyncTimelineIdentity(77),
+                point: RawSyncobjTimelinePoint(2)
+            )
+
+            runtime.installExplicitSynchronizationObject(syncSurface.object)
+
+            #expect(
+                throws: SurfaceSubmitConstraintError.syncTimelineUnavailable(
+                    SurfaceSyncTimelineIdentity(77)
+                )
+            ) {
+                try runtime.applySubmitConstraints(
+                    SurfaceSubmitConstraints(
+                        synchronization: .explicit(acquire: syncPoint, release: syncPoint),
+                        pacing: .none
+                    )
+                )
+            }
+        }
+
+        @Test
+        func frameCommitterRecordsCommittedFrameAfterSurfaceCommit() async throws {
+            try await CoreRequestRecordingGate.withExclusiveRecording {
+                swl_test_core_request_recording_begin()
+                defer { swl_test_core_request_recording_end() }
+
+                let surface = try testSurface(pointer: 0x5601)
+                defer { surface.destroy() }
+                var runtime = try configuredRuntime()
+                let preparedCommit = try preparedCommit(
+                    surface: surface,
+                    runtime: &runtime,
+                    constraints: .default,
+                    payload: .buffer(try testSurfaceBuffer(pointer: 0x5602))
+                )
+
+                let committedPlan = try SurfaceFrameCommitter.commit(
                     preparedCommit,
                     runtime: &runtime
                 )
+
+                #expect(
+                    runtime.transactionSnapshot.lastCommittedFrame
+                        == SurfaceCommittedFrame(
+                            generation: 1,
+                            configureSerial: 7,
+                            plan: committedPlan
+                        )
+                )
+                #expect(unsafe swl_test_core_request_record().kind == SWL_TEST_CORE_SURFACE_COMMIT)
             }
-            #expect(runtime.transactionSnapshot.lastCommittedFrame == nil)
-            #expect(unsafe swl_test_core_request_record().call_count == 0)
         }
-    }
 
-    @Test
-    func frameCommitterCanPrepareMetadataOnlyCommitWithoutSyncPoints() async throws {
-        try await CoreRequestRecordingGate.withExclusiveRecording {
-            swl_test_core_request_recording_begin()
-            defer { swl_test_core_request_recording_end() }
+        @Test
+        func frameCommitterDoesNotRecordFrameWhenSubmitConstraintsFail() async throws {
+            try await CoreRequestRecordingGate.withExclusiveRecording {
+                swl_test_core_request_recording_begin()
+                defer { swl_test_core_request_recording_end() }
 
-            let surface = try testSurface(pointer: 0x5801)
-            defer { surface.destroy() }
-            var runtime = try configuredRuntime()
-            runtime.setExplicitSynchronizationActive()
-
-            let preparedCommit = try SurfaceFrameCommitter.prepare(
-                SurfaceFrameCommitRequest(
+                let surface = try testSurface(pointer: 0x5701)
+                defer { surface.destroy() }
+                var runtime = try configuredRuntime()
+                runtime.setExplicitSynchronizationActive()
+                let preparedCommit = try preparedCommit(
                     surface: surface,
-                    scaleInstallation: SurfaceScaleInstallation(),
-                    generation: 1,
-                    geometry: try testSurfaceGeometry(),
-                    payload: .metadataOnly,
-                    submitConstraints: SurfaceSubmitConstraints(
-                        synchronization: .explicit(acquire: nil, release: nil),
-                        pacing: .none
+                    runtime: &runtime,
+                    constraints: explicitConstraints(timeline: 77, acquire: 2, release: 3),
+                    payload: .buffer(try testSurfaceBuffer(pointer: 0x5702))
+                )
+
+                #expect(throws: SurfaceSubmitConstraintError.explicitSyncUnavailable) {
+                    try SurfaceFrameCommitter.commit(
+                        preparedCommit,
+                        runtime: &runtime
                     )
-                ),
-                runtime: &runtime,
-            )
-
-            #expect(!preparedCommit.payload.attachesBuffer)
+                }
+                #expect(runtime.transactionSnapshot.lastCommittedFrame == nil)
+                #expect(unsafe swl_test_core_request_record().call_count == 0)
+            }
         }
-    }
 
-    @Test
-    func explicitSyncBufferCommitWithoutAcquireReleaseIsRejectedAtCommitBoundary()
-        async throws
-    {
-        try await CoreRequestRecordingGate.withExclusiveRecording {
-            swl_test_core_request_recording_begin()
-            defer { swl_test_core_request_recording_end() }
+        @Test
+        func frameCommitterCanPrepareMetadataOnlyCommitWithoutSyncPoints() async throws {
+            try await CoreRequestRecordingGate.withExclusiveRecording {
+                swl_test_core_request_recording_begin()
+                defer { swl_test_core_request_recording_end() }
 
-            let surface = try testSurface(pointer: 0x5901)
-            defer { surface.destroy() }
-            var runtime = try configuredRuntime()
-            runtime.setExplicitSynchronizationActive()
+                let surface = try testSurface(pointer: 0x5801)
+                defer { surface.destroy() }
+                var runtime = try configuredRuntime()
+                runtime.setExplicitSynchronizationActive()
 
-            #expect(throws: SurfaceSubmitConstraintError.acquirePointRequired) {
-                try SurfaceFrameCommitter.prepare(
+                let preparedCommit = try SurfaceFrameCommitter.prepare(
                     SurfaceFrameCommitRequest(
                         surface: surface,
                         scaleInstallation: SurfaceScaleInstallation(),
                         generation: 1,
                         geometry: try testSurfaceGeometry(),
-                        payload: .buffer(try testSurfaceBuffer(pointer: 0x5902)),
+                        payload: .metadataOnly,
                         submitConstraints: SurfaceSubmitConstraints(
                             synchronization: .explicit(acquire: nil, release: nil),
                             pacing: .none
@@ -214,145 +182,180 @@ struct SurfaceRuntimeSubmitTests {
                     ),
                     runtime: &runtime,
                 )
+
+                #expect(!preparedCommit.payload.attachesBuffer)
             }
-            #expect(unsafe swl_test_core_request_record().call_count == 0)
+        }
+
+        @Test
+        func explicitSyncBufferCommitWithoutAcquireReleaseIsRejectedAtCommitBoundary()
+            async throws
+        {
+            try await CoreRequestRecordingGate.withExclusiveRecording {
+                swl_test_core_request_recording_begin()
+                defer { swl_test_core_request_recording_end() }
+
+                let surface = try testSurface(pointer: 0x5901)
+                defer { surface.destroy() }
+                var runtime = try configuredRuntime()
+                runtime.setExplicitSynchronizationActive()
+
+                #expect(throws: SurfaceSubmitConstraintError.acquirePointRequired) {
+                    try SurfaceFrameCommitter.prepare(
+                        SurfaceFrameCommitRequest(
+                            surface: surface,
+                            scaleInstallation: SurfaceScaleInstallation(),
+                            generation: 1,
+                            geometry: try testSurfaceGeometry(),
+                            payload: .buffer(try testSurfaceBuffer(pointer: 0x5902)),
+                            submitConstraints: SurfaceSubmitConstraints(
+                                synchronization: .explicit(acquire: nil, release: nil),
+                                pacing: .none
+                            )
+                        ),
+                        runtime: &runtime,
+                    )
+                }
+                #expect(unsafe swl_test_core_request_record().call_count == 0)
+            }
+        }
+
+        @Test
+        func metadataOnlyCommitDoesNotAttachBuffer() async throws {
+            try await CoreRequestRecordingGate.withExclusiveRecording {
+                swl_test_core_request_recording_begin()
+                defer { swl_test_core_request_recording_end() }
+
+                let surface = try testSurface(pointer: 0x5A01)
+                defer { surface.destroy() }
+                var runtime = try configuredRuntime()
+                let preparedCommit = try preparedCommit(
+                    surface: surface,
+                    runtime: &runtime,
+                    constraints: .default,
+                    payload: .metadataOnly
+                )
+
+                _ = try SurfaceFrameCommitter.commit(preparedCommit, runtime: &runtime)
+
+                let record = unsafe swl_test_core_request_record()
+                #expect(unsafe record.kind == SWL_TEST_CORE_SURFACE_COMMIT)
+                #expect(unsafe record.attach_sequence == 0)
+                #expect(unsafe record.damage_sequence == 0)
+            }
+        }
+
+        @Test
+        func preparedMetadataOnlyCommitCannotBeCommittedWithBuffer() async throws {
+            try await CoreRequestRecordingGate.withExclusiveRecording {
+                swl_test_core_request_recording_begin()
+                defer { swl_test_core_request_recording_end() }
+
+                let surface = try testSurface(pointer: 0x5B01)
+                defer { surface.destroy() }
+                var runtime = try configuredRuntime()
+                let unusedBuffer = try testSurfaceBuffer(pointer: 0x5B02)
+                let preparedCommit = try preparedCommit(
+                    surface: surface,
+                    runtime: &runtime,
+                    constraints: .default,
+                    payload: .metadataOnly
+                )
+
+                #expect(!preparedCommit.payload.attachesBuffer)
+                _ = unusedBuffer
+                _ = try SurfaceFrameCommitter.commit(preparedCommit, runtime: &runtime)
+
+                let record = unsafe swl_test_core_request_record()
+                #expect(unsafe record.kind == SWL_TEST_CORE_SURFACE_COMMIT)
+                #expect(unsafe record.attach_sequence == 0)
+            }
         }
     }
 
-    @Test
-    func metadataOnlyCommitDoesNotAttachBuffer() async throws {
-        try await CoreRequestRecordingGate.withExclusiveRecording {
-            swl_test_core_request_recording_begin()
-            defer { swl_test_core_request_recording_end() }
+    private func configuredRuntime() throws -> SurfaceRuntime<RoleToken> {
+        var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
+        runtime.recordConfigureReceived(serial: 7)
+        try runtime.acknowledgeConfigure(serial: 7)
+        try runtime.requestFrameCallback(generation: 1)
+        return runtime
+    }
 
-            let surface = try testSurface(pointer: 0x5A01)
-            defer { surface.destroy() }
-            var runtime = try configuredRuntime()
-            let preparedCommit = try preparedCommit(
+    private func preparedCommit(
+        surface: RawSurface,
+        runtime: inout SurfaceRuntime<RoleToken>,
+        constraints: SurfaceSubmitConstraints,
+        payload: SurfaceCommitPayload
+    ) throws -> PreparedSurfaceFrameCommit {
+        try SurfaceFrameCommitter.prepare(
+            SurfaceFrameCommitRequest(
                 surface: surface,
-                runtime: &runtime,
-                constraints: .default,
-                payload: .metadataOnly
-            )
-
-            _ = try SurfaceFrameCommitter.commit(preparedCommit, runtime: &runtime)
-
-            let record = unsafe swl_test_core_request_record()
-            #expect(unsafe record.kind == SWL_TEST_CORE_SURFACE_COMMIT)
-            #expect(unsafe record.attach_sequence == 0)
-            #expect(unsafe record.damage_sequence == 0)
-        }
-    }
-
-    @Test
-    func preparedMetadataOnlyCommitCannotBeCommittedWithBuffer() async throws {
-        try await CoreRequestRecordingGate.withExclusiveRecording {
-            swl_test_core_request_recording_begin()
-            defer { swl_test_core_request_recording_end() }
-
-            let surface = try testSurface(pointer: 0x5B01)
-            defer { surface.destroy() }
-            var runtime = try configuredRuntime()
-            let unusedBuffer = try testSurfaceBuffer(pointer: 0x5B02)
-            let preparedCommit = try preparedCommit(
-                surface: surface,
-                runtime: &runtime,
-                constraints: .default,
-                payload: .metadataOnly
-            )
-
-            #expect(!preparedCommit.payload.attachesBuffer)
-            _ = unusedBuffer
-            _ = try SurfaceFrameCommitter.commit(preparedCommit, runtime: &runtime)
-
-            let record = unsafe swl_test_core_request_record()
-            #expect(unsafe record.kind == SWL_TEST_CORE_SURFACE_COMMIT)
-            #expect(unsafe record.attach_sequence == 0)
-        }
-    }
-}
-
-private func configuredRuntime() throws -> SurfaceRuntime<RoleToken> {
-    var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
-    runtime.recordConfigureReceived(serial: 7)
-    try runtime.acknowledgeConfigure(serial: 7)
-    try runtime.requestFrameCallback(generation: 1)
-    return runtime
-}
-
-private func preparedCommit(
-    surface: RawSurface,
-    runtime: inout SurfaceRuntime<RoleToken>,
-    constraints: SurfaceSubmitConstraints,
-    payload: SurfaceCommitPayload
-) throws -> PreparedSurfaceFrameCommit {
-    try SurfaceFrameCommitter.prepare(
-        SurfaceFrameCommitRequest(
-            surface: surface,
-            scaleInstallation: SurfaceScaleInstallation(),
-            generation: 1,
-            geometry: try testSurfaceGeometry(),
-            payload: payload,
-            submitConstraints: constraints
-        ),
-        runtime: &runtime,
-    )
-}
-
-private func explicitConstraints(
-    timeline: UInt64,
-    acquire: UInt64,
-    release: UInt64
-) -> SurfaceSubmitConstraints {
-    let identity = SurfaceSyncTimelineIdentity(timeline)
-    return SurfaceSubmitConstraints(
-        synchronization: .explicit(
-            acquire: SurfaceSyncPoint(
-                timeline: identity,
-                point: RawSyncobjTimelinePoint(acquire)
+                scaleInstallation: SurfaceScaleInstallation(),
+                generation: 1,
+                geometry: try testSurfaceGeometry(),
+                payload: payload,
+                submitConstraints: constraints
             ),
-            release: SurfaceSyncPoint(
-                timeline: identity,
-                point: RawSyncobjTimelinePoint(release)
-            )
-        ),
-        pacing: .none
-    )
-}
+            runtime: &runtime,
+        )
+    }
 
-private func testSurfaceGeometry() throws -> SurfaceGeometry {
-    try SurfaceGeometry(
-        logicalSize: PositiveLogicalSize(width: 80, height: 60),
-        scale: .one
-    )
-}
+    private func explicitConstraints(
+        timeline: UInt64,
+        acquire: UInt64,
+        release: UInt64
+    ) -> SurfaceSubmitConstraints {
+        let identity = SurfaceSyncTimelineIdentity(timeline)
+        return SurfaceSubmitConstraints(
+            synchronization: .explicit(
+                acquire: SurfaceSyncPoint(
+                    timeline: identity,
+                    point: RawSyncobjTimelinePoint(acquire)
+                ),
+                release: SurfaceSyncPoint(
+                    timeline: identity,
+                    point: RawSyncobjTimelinePoint(release)
+                )
+            ),
+            pacing: .none
+        )
+    }
 
-private func testSurface(pointer rawPointer: UInt) throws -> RawSurface {
-    let pointer = try unsafe #require(OpaquePointer(bitPattern: rawPointer))
-    let queuePointer = try unsafe #require(OpaquePointer(bitPattern: 0x5001))
-    let eventQueue = RawEventQueue.testingQueueWithoutDestroy(opaquePointer: queuePointer)
-    let proxyAdoption = RawProxyAdoptionContext(eventQueue: eventQueue)
+    private func testSurfaceGeometry() throws -> SurfaceGeometry {
+        try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 80, height: 60),
+            scale: .one
+        )
+    }
 
-    return try RawSurface.testingSurface(
-        pointer: pointer,
-        version: 2,
-        proxyAdoption: proxyAdoption
-    )
-}
+    private func testSurface(pointer rawPointer: UInt) throws -> RawSurface {
+        let pointer = try unsafe #require(OpaquePointer(bitPattern: rawPointer))
+        let queuePointer = try unsafe #require(OpaquePointer(bitPattern: 0x5001))
+        let eventQueue = RawEventQueue.testingQueueWithoutDestroy(opaquePointer: queuePointer)
+        let proxyAdoption = RawProxyAdoptionContext(eventQueue: eventQueue)
 
-private func testSurfaceBuffer(pointer rawPointer: UInt) throws -> RawSurfaceBuffer {
-    RawSurfaceBuffer(
-        pointer: try unsafe #require(OpaquePointer(bitPattern: rawPointer))
-    )
-}
+        return try RawSurface.testingSurface(
+            pointer: pointer,
+            version: 2,
+            proxyAdoption: proxyAdoption
+        )
+    }
 
-private final class StubSyncobjSurface {
-    let object: RawLinuxDrmSyncobjSurface
+    private func testSurfaceBuffer(pointer rawPointer: UInt) throws -> RawSurfaceBuffer {
+        RawSurfaceBuffer(
+            pointer: try unsafe #require(OpaquePointer(bitPattern: rawPointer))
+        )
+    }
 
-    init() throws {
-        let pointer = try unsafe #require(OpaquePointer(bitPattern: 0x5501))
-        object = RawLinuxDrmSyncobjSurface(pointer: pointer) { pointer in
-            unsafe _ = pointer
+    private final class StubSyncobjSurface {
+        let object: RawLinuxDrmSyncobjSurface
+
+        init() throws {
+            let pointer = try unsafe #require(OpaquePointer(bitPattern: 0x5501))
+            object = RawLinuxDrmSyncobjSurface(pointer: pointer) { pointer in
+                unsafe _ = pointer
+            }
         }
     }
-}
+
+#endif

@@ -21,6 +21,7 @@ make check
 ./scripts/dev/swift.sh build --disable-index-store -c release --target SwiftWaylandDemo
 ./scripts/dev/swift.sh build --disable-index-store -c release --target GPUPreviewSmokeClient
 ./scripts/dev/swift.sh build --disable-index-store -c release --product swift-wayland-smoke
+make test-release
 ./scripts/ci/dump-public-api.sh > /tmp/swiftwayland-public-api.md
 ./scripts/ci/verify-public-api-audit.sh
 ./scripts/ci/verify-target-imports.sh
@@ -31,6 +32,11 @@ bash ./scripts/safety/verify-unsafe-allowlist.sh
 Prefer `make release-check` for the release build path. Direct `swift`
 commands require equivalent runtime library configuration; the wrapper sources
 `scripts/dev/swift-runtime-env.sh` before invoking Swift.
+
+`make test-release` runs the release-compatible test subset. Shim-contract and
+instrumentation tests that depend on debug-only C or Swift test hooks are
+compile-gated out of release test binaries so production release products do
+not expose those symbols.
 
 Where the environment supports Swift sanitizers, also run:
 

@@ -2,7 +2,7 @@ SWIFT_FORMAT := ./scripts/dev/swift-format.sh
 SWIFTLINT := ./scripts/dev/swiftlint.sh
 SWIFT := ./scripts/dev/swift.sh
 
-.PHONY: format lint verify-generated verify-protocol-manifest verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-tsan test-asan test-public-api-client test-graphics-preview-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless gpu-preview-wayland gpu-preview-headless wayland-headless release-check install-pre-commit
+.PHONY: format lint verify-generated verify-protocol-manifest verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-release test-tsan test-asan test-public-api-client test-graphics-preview-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless gpu-preview-wayland gpu-preview-headless wayland-headless release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
@@ -51,6 +51,9 @@ strict-concurrency:
 
 test:
 	@./scripts/ci/test-with-warnings-as-errors.sh
+
+test-release:
+	@$(SWIFT) test -c release
 
 test-tsan:
 	@$(SWIFT) test --sanitize=thread

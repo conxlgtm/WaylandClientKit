@@ -15,7 +15,8 @@ let strictMemorySafetySwiftSettings: [SwiftSetting] =
 
 let cShimTestingSwiftSettings: [SwiftSetting] =
     strictMemorySafetySwiftSettings + [
-        .unsafeFlags(["-Xcc", "-DSWL_ENABLE_TESTING"], .when(configuration: .debug))
+        .define("SWL_ENABLE_TESTING", .when(configuration: .debug)),
+        .unsafeFlags(["-Xcc", "-DSWL_ENABLE_TESTING"], .when(configuration: .debug)),
     ]
 
 let executableSwiftSettings: [SwiftSetting] =
@@ -24,6 +25,11 @@ let executableSwiftSettings: [SwiftSetting] =
     ]
 
 let runtimeSwiftSettings: [SwiftSetting] =
+    strictMemorySafetySwiftSettings + [
+        .define("ENABLE_TESTING", .when(configuration: .debug))
+    ]
+
+let runtimeTestingSwiftSettings: [SwiftSetting] =
     strictMemorySafetySwiftSettings + [
         .define("ENABLE_TESTING", .when(configuration: .debug))
     ]
@@ -195,7 +201,7 @@ let package = Package(
         .testTarget(
             name: "WaylandRuntimeTests",
             dependencies: ["WaylandRaw", "WaylandRuntime"],
-            swiftSettings: strictMemorySafetySwiftSettings
+            swiftSettings: runtimeTestingSwiftSettings
         ),
         .testTarget(
             name: "WaylandClientTests",
