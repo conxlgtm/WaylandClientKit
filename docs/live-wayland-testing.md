@@ -23,6 +23,8 @@ make gpu-preview-headless
 make check
 make release-check
 make test-graphics-preview-client
+make swiftbuild-smoke
+./scripts/ci/repeat-test.sh --count 20 --filter WaylandThreadExecutorConcurrencyTests
 ```
 
 `make smoke-wayland` runs the `swift-wayland-smoke` executable against the
@@ -71,6 +73,15 @@ check only when `WAYLAND_DISPLAY` is already set.
 current compositor when `WAYLAND_DISPLAY` is set, uses headless Weston when
 `weston` is installed, and fails in CI or when `REQUIRE_WAYLAND_SMOKE=1` if no
 live Wayland path is available.
+
+`make swiftbuild-smoke` runs an informational Swift Build preview check. Native
+SwiftPM remains the supported build system; the smoke reports unsupported
+toolchains and Swiftly layout issues without treating those as package
+correctness failures.
+
+`scripts/ci/repeat-test.sh` repeats one filtered test suite for local stress
+validation. Use it for concurrency-sensitive suites before promoting a
+scheduler, event-loop, or descriptor-lifecycle change.
 
 ## Headless Weston
 
