@@ -47,6 +47,9 @@ Sources/CWaylandProtocols/shims/requests-core.c	wl_proxy_get_queue	Queue asserti
 Sources/CWaylandProtocols/shims/requests-core.c	swl_proxy_get_queue_raw	Queue assertion shim implementation.
 Sources/WaylandClient/Public/Rendering/SoftwareFrame.swift	UnsafeMutableBufferPointer	Scoped software-frame row spans.
 Sources/WaylandClient/Public/Rendering/SoftwareFrame.swift	UnsafeMutableRawBufferPointer	Scoped software-frame backing bytes.
+Sources/WaylandClient/Internal/DataTransfer/DataTransferSourceWriteTypes.swift	UnsafeRawBufferPointer	Scoped borrowed data-transfer write buffer.
+Sources/WaylandClient/Internal/DataTransfer/DataTransferSourceWriter.swift	UnsafeRawBufferPointer	Descriptor write injection accepts borrowed data-transfer write buffers.
+Sources/WaylandClient/Public/DataTransfer/OwnedFileDescriptor.swift	UnsafeRawBufferPointer	Scoped borrowed public file-descriptor write buffer.
 Sources/WaylandClient/Internal/DataTransfer/DataTransferSourceWriter.swift	@unchecked Sendable	Private condition-protected data-transfer writer state shared with one worker thread.
 Tests/WaylandRuntimeTests/Executor/WaylandThreadExecutorConcurrencyTests.swift	@unchecked Sendable	Private NSLock-protected test recorder state shared by detached shutdown caller threads.
 Tests/**	OpaquePointer	Test doubles for raw C object wrappers.

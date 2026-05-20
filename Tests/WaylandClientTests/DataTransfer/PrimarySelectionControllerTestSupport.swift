@@ -247,12 +247,13 @@ private final class RecordingPrimarySelectionSourceDescriptorIO: Sendable {
         storage.withLock(\.descriptorWrites)
     }
 
-    func writeFileDescriptor(_ descriptor: Int32, bytes: ArraySlice<UInt8>) throws -> Int {
+    @safe
+    func writeFileDescriptor(_ descriptor: Int32, bytes: UnsafeRawBufferPointer) throws -> Int {
         storage.withLock { storage in
             storage.descriptorWrites.append(
                 RecordingPrimarySelectionBackend.DescriptorWrite(
                     descriptor: descriptor,
-                    bytes: Array(bytes)
+                    bytes: unsafe Array(bytes)
                 )
             )
             return bytes.count
