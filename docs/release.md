@@ -58,7 +58,10 @@ an environment limitation rather than a test failure. To attempt the
 LeakSanitizer path explicitly, run `make test-asan` without overriding
 `ASAN_OPTIONS`. The TSan target uses
 `scripts/safety/tsan-suppressions.txt` only for known Swift runtime
-metadata-cache reports; project race reports should remain unsuppressed.
+metadata-cache and Swift Testing event graph reports. It also disables TSan's
+deadlock detector because Swift runtime metadata initialization currently
+produces lock-order false positives; project data-race reports should remain
+unsuppressed.
 
 The public API baseline covers both vended library products, `WaylandClient`
 and `WaylandGraphicsPreview`. Preview API drift should still be reviewed and
