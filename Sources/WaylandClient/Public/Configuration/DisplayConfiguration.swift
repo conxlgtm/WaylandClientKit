@@ -1,4 +1,12 @@
 public struct EventStreamConfiguration: Equatable, Sendable {
+    private struct ValidatedCapacities {
+        var display: EventStreamCapacity
+        var input: EventStreamCapacity
+        var textInput: EventStreamCapacity
+        var dataTransfer: EventStreamCapacity
+        var presentation: EventStreamCapacity
+    }
+
     public var displayEventCapacity: EventStreamCapacity
     public var inputEventCapacity: EventStreamCapacity
     public var textInputEventCapacity: EventStreamCapacity
@@ -32,26 +40,14 @@ public struct EventStreamConfiguration: Equatable, Sendable {
         presentationEventCapacity presentationCapacity: Int =
             EventStreamCapacity.defaultPresentationEvents.rawValue
     ) throws {
-        displayEventCapacity = try EventStreamCapacity(
-            displayCapacity,
-            field: .displayEventCapacity
-        )
-        inputEventCapacity = try EventStreamCapacity(
-            inputCapacity,
-            field: .inputEventCapacity
-        )
-        textInputEventCapacity = try EventStreamCapacity(
-            textInputCapacity,
-            field: .textInputEventCapacity
-        )
-        dataTransferEventCapacity = try EventStreamCapacity(
-            dataTransferCapacity,
-            field: .dataTransferEventCapacity
-        )
-        presentationEventCapacity = try EventStreamCapacity(
-            presentationCapacity,
-            field: .presentationEventCapacity
-        )
+        self.init(
+            try Self.validatedCapacities(
+                displayCapacity,
+                inputCapacity,
+                textInputCapacity,
+                dataTransferCapacity,
+                presentationCapacity
+            ))
     }
 
     public init(
@@ -65,26 +61,14 @@ public struct EventStreamConfiguration: Equatable, Sendable {
         presentationEventCapacity presentationCapacity: Int =
             EventStreamCapacity.defaultPresentationEvents.rawValue
     ) throws {
-        displayEventCapacity = try EventStreamCapacity(
-            displayCapacity,
-            field: .displayEventCapacity
-        )
-        inputEventCapacity = try EventStreamCapacity(
-            inputCapacity,
-            field: .inputEventCapacity
-        )
-        textInputEventCapacity = try EventStreamCapacity(
-            textInputCapacity,
-            field: .textInputEventCapacity
-        )
-        dataTransferEventCapacity = try EventStreamCapacity(
-            dataTransferCapacity,
-            field: .dataTransferEventCapacity
-        )
-        presentationEventCapacity = try EventStreamCapacity(
-            presentationCapacity,
-            field: .presentationEventCapacity
-        )
+        self.init(
+            try Self.validatedCapacities(
+                displayCapacity,
+                inputCapacity,
+                textInputCapacity,
+                dataTransferCapacity,
+                presentationCapacity
+            ))
     }
 
     public init(
@@ -97,26 +81,14 @@ public struct EventStreamConfiguration: Equatable, Sendable {
         presentationEventCapacity presentationCapacity: Int =
             EventStreamCapacity.defaultPresentationEvents.rawValue
     ) throws {
-        displayEventCapacity = try EventStreamCapacity(
-            displayCapacity,
-            field: .displayEventCapacity
-        )
-        inputEventCapacity = try EventStreamCapacity(
-            inputCapacity,
-            field: .inputEventCapacity
-        )
-        textInputEventCapacity = try EventStreamCapacity(
-            textInputCapacity,
-            field: .textInputEventCapacity
-        )
-        dataTransferEventCapacity = try EventStreamCapacity(
-            dataTransferCapacity,
-            field: .dataTransferEventCapacity
-        )
-        presentationEventCapacity = try EventStreamCapacity(
-            presentationCapacity,
-            field: .presentationEventCapacity
-        )
+        self.init(
+            try Self.validatedCapacities(
+                displayCapacity,
+                inputCapacity,
+                textInputCapacity,
+                dataTransferCapacity,
+                presentationCapacity
+            ))
     }
 
     public init(
@@ -129,26 +101,14 @@ public struct EventStreamConfiguration: Equatable, Sendable {
         presentationEventCapacity presentationCapacity: Int =
             EventStreamCapacity.defaultPresentationEvents.rawValue
     ) throws {
-        displayEventCapacity = try EventStreamCapacity(
-            displayCapacity,
-            field: .displayEventCapacity
-        )
-        inputEventCapacity = try EventStreamCapacity(
-            inputCapacity,
-            field: .inputEventCapacity
-        )
-        textInputEventCapacity = try EventStreamCapacity(
-            textInputCapacity,
-            field: .textInputEventCapacity
-        )
-        dataTransferEventCapacity = try EventStreamCapacity(
-            dataTransferCapacity,
-            field: .dataTransferEventCapacity
-        )
-        presentationEventCapacity = try EventStreamCapacity(
-            presentationCapacity,
-            field: .presentationEventCapacity
-        )
+        self.init(
+            try Self.validatedCapacities(
+                displayCapacity,
+                inputCapacity,
+                textInputCapacity,
+                dataTransferCapacity,
+                presentationCapacity
+            ))
     }
 
     public init(
@@ -161,25 +121,54 @@ public struct EventStreamConfiguration: Equatable, Sendable {
         dataTransferEventCapacity dataTransferCapacity: Int =
             EventStreamCapacity.defaultDataTransferEvents.rawValue
     ) throws {
-        displayEventCapacity = try EventStreamCapacity(
-            displayCapacity,
-            field: .displayEventCapacity
+        self.init(
+            try Self.validatedCapacities(
+                displayCapacity,
+                inputCapacity,
+                textInputCapacity,
+                dataTransferCapacity,
+                presentationCapacity
+            ))
+    }
+
+    private init(_ capacities: ValidatedCapacities) {
+        self.init(
+            displayEventCapacity: capacities.display,
+            inputEventCapacity: capacities.input,
+            textInputEventCapacity: capacities.textInput,
+            dataTransferEventCapacity: capacities.dataTransfer,
+            presentationEventCapacity: capacities.presentation
         )
-        inputEventCapacity = try EventStreamCapacity(
-            inputCapacity,
-            field: .inputEventCapacity
-        )
-        textInputEventCapacity = try EventStreamCapacity(
-            textInputCapacity,
-            field: .textInputEventCapacity
-        )
-        dataTransferEventCapacity = try EventStreamCapacity(
-            dataTransferCapacity,
-            field: .dataTransferEventCapacity
-        )
-        presentationEventCapacity = try EventStreamCapacity(
-            presentationCapacity,
-            field: .presentationEventCapacity
+    }
+
+    private static func validatedCapacities(
+        _ displayCapacity: Int,
+        _ inputCapacity: Int,
+        _ textInputCapacity: Int,
+        _ dataTransferCapacity: Int,
+        _ presentationCapacity: Int
+    ) throws -> ValidatedCapacities {
+        ValidatedCapacities(
+            display: try EventStreamCapacity(
+                displayCapacity,
+                field: .displayEventCapacity
+            ),
+            input: try EventStreamCapacity(
+                inputCapacity,
+                field: .inputEventCapacity
+            ),
+            textInput: try EventStreamCapacity(
+                textInputCapacity,
+                field: .textInputEventCapacity
+            ),
+            dataTransfer: try EventStreamCapacity(
+                dataTransferCapacity,
+                field: .dataTransferEventCapacity
+            ),
+            presentation: try EventStreamCapacity(
+                presentationCapacity,
+                field: .presentationEventCapacity
+            )
         )
     }
 }
@@ -197,6 +186,11 @@ public struct InputMotionCoalescing: OptionSet, Equatable, Sendable {
 }
 
 public struct InputPipelineConfiguration: Equatable, Sendable {
+    private struct ValidatedCapacities {
+        var raw: InputQueueCapacity
+        var pending: InputQueueCapacity
+    }
+
     public var rawInputQueueCapacity: InputQueueCapacity
     public var pendingInputEventCapacity: InputQueueCapacity
     public var motionCoalescing: InputMotionCoalescing
@@ -253,17 +247,16 @@ public struct InputPipelineConfiguration: Equatable, Sendable {
         pointerMotionCoalescing shouldCoalescePointerMotion: Bool = true,
         touchMotionCoalescing shouldCoalesceTouchMotion: Bool = true
     ) throws {
-        rawInputQueueCapacity = try InputQueueCapacity(
+        let capacities = try Self.validatedCapacities(
             rawCapacity,
-            field: .rawInputQueueCapacity
+            pendingCapacity
         )
-        pendingInputEventCapacity = try InputQueueCapacity(
-            pendingCapacity,
-            field: .pendingInputEventCapacity
+        self.init(
+            rawInputQueueCapacity: capacities.raw,
+            pendingInputEventCapacity: capacities.pending,
+            pointerMotionCoalescing: shouldCoalescePointerMotion,
+            touchMotionCoalescing: shouldCoalesceTouchMotion
         )
-        motionCoalescing = []
-        pointerMotionCoalescing = shouldCoalescePointerMotion
-        touchMotionCoalescing = shouldCoalesceTouchMotion
     }
 
     public init(
@@ -272,17 +265,32 @@ public struct InputPipelineConfiguration: Equatable, Sendable {
         pointerMotionCoalescing shouldCoalescePointerMotion: Bool = true,
         touchMotionCoalescing shouldCoalesceTouchMotion: Bool = true
     ) throws {
-        rawInputQueueCapacity = try InputQueueCapacity(
+        let capacities = try Self.validatedCapacities(
             rawCapacity,
-            field: .rawInputQueueCapacity
+            pendingCapacity
         )
-        pendingInputEventCapacity = try InputQueueCapacity(
-            pendingCapacity,
-            field: .pendingInputEventCapacity
+        self.init(
+            rawInputQueueCapacity: capacities.raw,
+            pendingInputEventCapacity: capacities.pending,
+            pointerMotionCoalescing: shouldCoalescePointerMotion,
+            touchMotionCoalescing: shouldCoalesceTouchMotion
         )
-        motionCoalescing = []
-        pointerMotionCoalescing = shouldCoalescePointerMotion
-        touchMotionCoalescing = shouldCoalesceTouchMotion
+    }
+
+    private static func validatedCapacities(
+        _ rawCapacity: Int,
+        _ pendingCapacity: Int
+    ) throws -> ValidatedCapacities {
+        ValidatedCapacities(
+            raw: try InputQueueCapacity(
+                rawCapacity,
+                field: .rawInputQueueCapacity
+            ),
+            pending: try InputQueueCapacity(
+                pendingCapacity,
+                field: .pendingInputEventCapacity
+            )
+        )
     }
 }
 
