@@ -61,7 +61,9 @@ compositor. It sets `SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1` and
 under ThreadSanitizer. `make wayland-request-headless-asan` runs them under
 AddressSanitizer with LeakSanitizer disabled by default. These jobs are focused
 on request wrapper ordering and descriptor/request lifecycles; GPU hardware
-paths remain separate.
+paths remain separate. The request-path runner defaults to a 600 second timeout
+because sanitizer builds can spend several minutes compiling before tests start.
+Override it with `SWIFT_WAYLAND_REQUEST_PROCESS_TIMEOUT_SECONDS`.
 
 `make gpu-preview-headless` starts headless Weston, then runs the GPU preview
 capability and GBM/EGL smoke path against that private compositor.

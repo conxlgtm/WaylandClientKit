@@ -1,0 +1,7 @@
+# Swift 6.3.2 runtime metadata cache can report lock-order and race warnings
+# under ThreadSanitizer before package tests start. These suppressions are
+# limited to Swift runtime metadata-cache frames so project races still fail.
+mutex:swift::VariadicMetadataCacheEntryBase
+mutex:swift::StableAddressConcurrentReadableHashMap
+race:swift::MetadataCacheKey::operator==
+race:swift::VariadicMetadataCacheEntryBase

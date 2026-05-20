@@ -1,6 +1,26 @@
 import Foundation
-import Synchronization
 import WaylandRaw
+
+// SAFETY: Descriptor state is private to one write job. All access is
+// serialized through NSLock so ThreadSanitizer can observe cancellation and
+// writer-thread synchronization.
+@safe
+private final class DataTransferSourceDescriptorStateBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var state: DataTransferSourceDescriptorState
+
+    init(_ initialState: DataTransferSourceDescriptorState) {
+        state = initialState
+    }
+
+    func withLock<Result>(
+        _ body: (inout DataTransferSourceDescriptorState) throws -> Result
+    ) rethrows -> Result {
+        lock.lock()
+        defer { lock.unlock() }
+        return try body(&state)
+    }
+}
 
 package final class DataTransferSourceWriteJob: Sendable {
     package let source: DataTransferSourceWriteSource
@@ -11,7 +31,7 @@ package final class DataTransferSourceWriteJob: Sendable {
         source.sourceID
     }
 
-    private let descriptor: Mutex<DataTransferSourceDescriptorState>
+    private let descriptor: DataTransferSourceDescriptorStateBox
     private let descriptorIO: DataTransferSourceDescriptorIO
     private let writePolicy: DataTransferSourceWritePolicy
 
@@ -58,7 +78,9 @@ package final class DataTransferSourceWriteJob: Sendable {
         source = jobSource
         mimeType = jobMIMEType
         data = jobData
-        descriptor = Mutex(DataTransferSourceDescriptorState(rawValue: jobDescriptor))
+        descriptor = DataTransferSourceDescriptorStateBox(
+            DataTransferSourceDescriptorState(rawValue: jobDescriptor)
+        )
         descriptorIO = jobDescriptorIO
         writePolicy = jobWritePolicy
     }

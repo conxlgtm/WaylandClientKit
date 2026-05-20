@@ -56,7 +56,9 @@ separate informational check because it can exit with a ptrace-related fatal
 error even after the Swift test process reports passing tests; record that as
 an environment limitation rather than a test failure. To attempt the
 LeakSanitizer path explicitly, run `make test-asan` without overriding
-`ASAN_OPTIONS`.
+`ASAN_OPTIONS`. The TSan target uses
+`scripts/safety/tsan-suppressions.txt` only for known Swift runtime
+metadata-cache reports; project race reports should remain unsuppressed.
 
 The public API baseline covers both vended library products, `WaylandClient`
 and `WaylandGraphicsPreview`. Preview API drift should still be reviewed and
@@ -67,7 +69,10 @@ source-side drag request tests under a private Weston compositor. They are the
 release gate for live request wrappers under sanitizers. GPU preview sanitizer
 smoke remains optional and compositor/hardware dependent; use
 `SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1` under a known GPU-capable session
-when collecting compositor matrix facts.
+when collecting compositor matrix facts. The request-path targets default to a
+600 second timeout because sanitizer builds can spend several minutes compiling
+before tests start; override it with
+`SWIFT_WAYLAND_REQUEST_PROCESS_TIMEOUT_SECONDS`.
 
 `make swiftbuild-smoke` is informational. Native SwiftPM remains the supported
 build system; the Swift Build preview can report `unsupported`,
