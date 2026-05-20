@@ -43,6 +43,9 @@ Where the environment supports Swift sanitizers, also run:
 ```bash
 make test-tsan
 ASAN_OPTIONS=detect_leaks=0 make test-asan
+make wayland-request-headless
+make wayland-request-headless-tsan
+make wayland-request-headless-asan
 ```
 
 ThreadSanitizer is the primary concurrency lifecycle check. AddressSanitizer
@@ -56,6 +59,13 @@ LeakSanitizer path explicitly, run `make test-asan` without overriding
 The public API baseline covers both vended library products, `WaylandClient`
 and `WaylandGraphicsPreview`. Preview API drift should still be reviewed and
 reflected in the audit and baseline before tagging.
+
+The headless request-path sanitizer targets run the window-control and
+source-side drag request tests under a private Weston compositor. They are the
+release gate for live request wrappers under sanitizers. GPU preview sanitizer
+smoke remains optional and compositor/hardware dependent; use
+`SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1` under a known GPU-capable session
+when collecting compositor matrix facts.
 
 Under a real Wayland session:
 
