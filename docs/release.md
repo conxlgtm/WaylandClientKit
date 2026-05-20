@@ -41,7 +41,9 @@ make test-asan
 
 ThreadSanitizer is the primary concurrency lifecycle check. AddressSanitizer
 can be environment-dependent on Linux and may require host support for its
-runtime and process instrumentation.
+runtime and process instrumentation. LeakSanitizer can also exit with a
+ptrace-related fatal error even after the Swift test process reports passing
+tests; record that as an environment limitation rather than a test failure.
 
 Under a real Wayland session:
 
