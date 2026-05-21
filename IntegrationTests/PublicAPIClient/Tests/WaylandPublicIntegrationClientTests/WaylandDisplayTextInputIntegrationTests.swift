@@ -15,7 +15,7 @@ extension WaylandDisplayPublicIntegrationTests {
                 switch error {
                 case .unavailable:
                     #expect(capabilities.textInput == .unavailable)
-                    noteOptionalProtocolSkip(
+                    try noteOptionalProtocolSkip(
                         test: "text-input",
                         interfaceName: "zwp_text_input_manager_v3"
                     )

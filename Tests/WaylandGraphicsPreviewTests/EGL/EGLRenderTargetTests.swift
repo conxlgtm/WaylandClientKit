@@ -6,7 +6,7 @@
     @testable import WaylandGraphicsCore
     @testable import WaylandRaw
 
-    @Suite
+    @Suite(.timeLimit(.minutes(1)))
     struct EGLRenderTargetTests {
         @Test
         func gbmPlatformExtensionDetectionRequiresNamedExtension() {
@@ -42,25 +42,17 @@
                 let smokeFlag = unsafe Glibc.getenv("SWL_RUN_GPU_SMOKE"),
                 unsafe String(cString: smokeFlag) == "1"
             else {
-                return
+                try Test.cancel("Set SWL_RUN_GPU_SMOKE=1 to run the GPU smoke test.")
             }
             guard let path = firstRenderNodePath() else {
-                Issue.record(
-                    "Skipping GPU smoke test: no accessible DRM render node.",
-                    severity: .warning
-                )
-                return
+                try Test.cancel("No accessible DRM render node.")
             }
 
             let fd = unsafe path.withCString { pathPointer in
                 unsafe Glibc.open(pathPointer, O_RDWR | O_CLOEXEC)
             }
             guard fd >= 0 else {
-                Issue.record(
-                    "Skipping GPU smoke test: could not open \(path) with errno \(errno).",
-                    severity: .warning
-                )
-                return
+                try Test.cancel("Could not open \(path) with errno \(errno).")
             }
 
             let renderNode = try GBMRenderNodeFileDescriptor(adopting: fd)
