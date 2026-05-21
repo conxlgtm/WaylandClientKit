@@ -6,4 +6,5 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 env CC="${REPO_ROOT}/scripts/dev/clang-filter-index-store.sh" \
     "${REPO_ROOT}/scripts/dev/swift.sh" test \
+        --no-parallel \
         -Xswiftc -warnings-as-errors

@@ -15,7 +15,7 @@ extension WaylandDisplayPublicIntegrationTests {
                 switch error {
                 case .unavailable:
                     #expect(capabilities.primarySelection == .unavailable)
-                    noteOptionalProtocolSkip(
+                    try noteOptionalProtocolSkip(
                         test: "primary selection",
                         interfaceName: "zwp_primary_selection_device_manager_v1"
                     )
@@ -44,7 +44,7 @@ extension WaylandDisplayPublicIntegrationTests {
                 switch error {
                 case .unavailable:
                     #expect(capabilities.clipboard == .unavailable)
-                    noteOptionalProtocolSkip(
+                    try noteOptionalProtocolSkip(
                         test: "clipboard",
                         interfaceName: "wl_data_device_manager"
                     )
@@ -73,7 +73,7 @@ extension WaylandDisplayPublicIntegrationTests {
                 switch error {
                 case .unavailable:
                     #expect(capabilities.dragAndDrop == .unavailable)
-                    noteOptionalProtocolSkip(
+                    try noteOptionalProtocolSkip(
                         test: "drag-and-drop",
                         interfaceName: "wl_data_device_manager"
                     )

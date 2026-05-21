@@ -29,7 +29,7 @@ private func expectPresentationFeedbackUnavailable(from window: Window) async th
         try await window.requestPresentationFeedback()
         Issue.record("Expected presentation-time unavailable error")
     } catch ClientError.display(.presentationTimeUnavailable) {
-        noteOptionalProtocolSkip(
+        try noteOptionalProtocolSkip(
             test: "presentation feedback",
             interfaceName: "wp_presentation"
         )
@@ -67,7 +67,7 @@ private func expectPresentationFeedback(
             try await nextPresentationFeedback(in: presentationEvents)
         }
     } catch PublicIntegrationError.timeout {
-        noteOptionalProtocolRuntimeSkip(
+        try noteOptionalProtocolRuntimeSkip(
             test: "presentation feedback",
             interfaceName: "wp_presentation"
         )
@@ -93,12 +93,8 @@ private func nextPresentationFeedback(
     return try await iterator.next()
 }
 
-private func noteOptionalProtocolRuntimeSkip(test: String, interfaceName: String) {
-    let message =
-        "Skipping \(test) live test: compositor advertised \(interfaceName) "
-        + "but did not deliver a terminal event."
-    Issue.record(
-        Comment(rawValue: message),
-        severity: .warning
+private func noteOptionalProtocolRuntimeSkip(test: String, interfaceName: String) throws {
+    try Test.cancel(
+        "Compositor advertised \(interfaceName) for \(test) but did not deliver a terminal event."
     )
 }

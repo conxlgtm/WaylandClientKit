@@ -2,8 +2,20 @@ import Testing
 
 @testable import WaylandClient
 
-@Suite
+@Suite(.timeLimit(.minutes(1)))
 struct DisplayEventHubTests {
+    @Test
+    func redrawEventPublishesToDisplayStream() async {
+        let hub = DisplayEventHub()
+        let windowID = WindowID(rawValue: 42)
+        let stream = hub.displayEvents()
+        var iterator = stream.makeAsyncIterator()
+
+        hub.publish(.redrawRequested(windowID))
+
+        await expectNext(.redrawRequested(windowID), from: &iterator)
+    }
+
     @Test
     func displaySubscriberOverflowTerminatesOnlyThatSubscriber() async throws {
         let hub = DisplayEventHub(

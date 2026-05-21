@@ -45,7 +45,11 @@
             unsafe width = record.width
             unsafe height = record.height
             unsafe value = record.value
-            unsafe text = record.text.map { unsafe String(cString: $0) }
+            if let rawText = unsafe record.text {
+                text = unsafe String(cString: rawText)
+            } else {
+                text = nil
+            }
         }
 
         private static func pointerAddress(_ pointer: OpaquePointer?) -> UInt? {

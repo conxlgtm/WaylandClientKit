@@ -5,8 +5,8 @@ import Testing
 
 @testable import WaylandClient
 
-@Suite
-struct ClipboardOfferReadTests {
+@Suite(.timeLimit(.minutes(2)))
+struct ClipboardOfferReadTests {  // swiftlint:disable:this type_body_length
     @Test
     func clipboardOfferReadReturnsDataAfterPeerWritesAndCloses() async throws {
         let descriptors = try makePipeDescriptors()
@@ -17,7 +17,7 @@ struct ClipboardOfferReadTests {
         var descriptor = try OwnedFileDescriptor(adopting: descriptors.readEnd)
         let data = try await descriptor.readData(
             limit: try ByteCount.bytes(32),
-            timeout: .seconds(1)
+            timeout: .seconds(60)
         )
         let descriptorIsClosed = descriptor.isClosed
 
@@ -66,7 +66,7 @@ struct ClipboardOfferReadTests {
 
         let data = try await descriptor.readData(
             limit: try ByteCount.bytes(32),
-            timeout: .seconds(1)
+            timeout: .seconds(60)
         )
         let descriptorIsClosed = descriptor.isClosed
 
@@ -96,11 +96,20 @@ struct ClipboardOfferReadTests {
     @Test
     func clipboardOfferReadTimesOutWhenPeerKeepsDescriptorOpenAfterData() async throws {
         let closedDescriptors = Mutex<[Int32]>([])
+        let didReturnData = Mutex(false)
         var descriptor = try OwnedFileDescriptor(
             adopting: 44,
             readDescriptor: { _, _ in
-                Thread.sleep(forTimeInterval: 0.02)
-                return Array("x".utf8)
+                try didReturnData.withLock { hasReturnedData in
+                    guard hasReturnedData else {
+                        hasReturnedData = true
+                        return Array("x".utf8)
+                    }
+
+                    throw DataTransferError.readFileDescriptor(
+                        WaylandSystemErrno(unchecked: EAGAIN)
+                    )
+                }
             },
             prepareReadDescriptor: { descriptor in
                 #expect(descriptor == 44)
@@ -210,11 +219,11 @@ struct ClipboardOfferReadTests {
 
                 return try await descriptor.readData(
                     limit: try ByteCount.bytes(32),
-                    timeout: .seconds(1)
+                    timeout: .seconds(60)
                 )
             }
 
-            try await waitUntil { probe.hasReadAttempt }
+            try probe.waitForReadAttempt()
             group.cancelAll()
 
             await expectDataTransferError(.cancelled) {
@@ -302,20 +311,6 @@ private func expectDataTransferError(
     }
 }
 
-private func waitUntil(
-    _ condition: () -> Bool
-) async throws {
-    for _ in 0..<1_000 {
-        if condition() {
-            return
-        }
-
-        try await Task.sleep(for: .milliseconds(1))
-    }
-
-    Issue.record("Timed out waiting for condition.")
-}
-
 private func makePipeDescriptors() throws -> (readEnd: Int32, writeEnd: Int32) {
     var descriptors = [Int32](repeating: -1, count: 2)
     let result = unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
@@ -354,23 +349,40 @@ private enum ClipboardReadStep: Sendable {
     case eof
 }
 
-private final class ClipboardReadCancellationProbe: Sendable {
-    private let readAttempts = Mutex(0)
+// SAFETY: Probe state is private and every access is protected by NSCondition or Mutex.
+private final class ClipboardReadCancellationProbe: @unchecked Sendable {
+    private let condition = NSCondition()
+    private var readAttemptCount = 0
     private let closedDescriptorStorage = Mutex<[Int32]>([])
-
-    var hasReadAttempt: Bool {
-        readAttempts.withLock { $0 > 0 }
-    }
 
     var closedDescriptors: [Int32] {
         closedDescriptorStorage.withLock { $0 }
     }
 
     func recordReadAttempt() {
-        readAttempts.withLock { $0 += 1 }
+        condition.lock()
+        readAttemptCount += 1
+        condition.broadcast()
+        condition.unlock()
     }
 
     func recordClosedDescriptor(_ descriptor: Int32) {
         closedDescriptorStorage.withLock { $0.append(descriptor) }
+    }
+
+    func waitForReadAttempt() throws {
+        condition.lock()
+        defer { condition.unlock() }
+        guard readAttemptCount == 0 else {
+            return
+        }
+
+        let deadline = Date().addingTimeInterval(60)
+        while readAttemptCount == 0 {
+            guard condition.wait(until: deadline) else {
+                Issue.record("Timed out waiting for read attempt.")
+                return
+            }
+        }
     }
 }

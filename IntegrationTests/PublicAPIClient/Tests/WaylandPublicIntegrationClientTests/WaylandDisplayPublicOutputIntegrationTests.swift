@@ -19,10 +19,7 @@ extension WaylandDisplayPublicIntegrationTests {
             #expect(firstIDs == secondIDs)
 
             if firstOutputs.isEmpty {
-                Issue.record(
-                    "Compositor reported no outputs during public integration.",
-                    severity: .warning
-                )
+                try Test.cancel("Compositor reported no outputs.")
             }
         }
     }
@@ -32,7 +29,7 @@ extension WaylandDisplayPublicIntegrationTests {
         try await withPublicConnection { display in
             let capabilities = try await display.capabilities()
             guard capabilities.xdgOutput.isAvailable else {
-                noteOptionalProtocolSkip(
+                try noteOptionalProtocolSkip(
                     test: "xdg-output logical geometry",
                     interfaceName: "zxdg_output_manager_v1"
                 )

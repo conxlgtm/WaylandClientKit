@@ -16,10 +16,17 @@ export SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=1
 
 timeout "${PROCESS_TIMEOUT_SECONDS}s" "${REPO_ROOT}/scripts/ci/test-public-api-client.sh"
 
-env \
-    CC="${REPO_ROOT}/scripts/dev/clang-filter-index-store.sh" \
-    SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1 \
-    SWIFT_WAYLAND_ENABLE_DND_SOURCE_REQUEST_TESTS=1 \
-    timeout "${PROCESS_TIMEOUT_SECONDS}s" \
-    "${REPO_ROOT}/scripts/dev/swift.sh" test \
-    --filter 'WindowControlPublicRequest|WindowDragSourcePublicRequest'
+run_request_suite() {
+    local filter="$1"
+
+    env \
+        CC="${REPO_ROOT}/scripts/dev/clang-filter-index-store.sh" \
+        SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1 \
+        SWIFT_WAYLAND_ENABLE_DND_SOURCE_REQUEST_TESTS=1 \
+        timeout "${PROCESS_TIMEOUT_SECONDS}s" \
+        "${REPO_ROOT}/scripts/dev/swift.sh" test \
+        --filter "$filter"
+}
+
+run_request_suite "WindowControlPublicRequestTests"
+run_request_suite "WindowDragSourcePublicRequestTests"

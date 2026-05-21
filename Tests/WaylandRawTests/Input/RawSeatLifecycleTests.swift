@@ -2,6 +2,7 @@
 import CWaylandProtocols
 import Glibc
 import Testing
+import WaylandTestSupport
 
 @testable import WaylandRaw
 
@@ -865,21 +866,8 @@ private func hex(_ pointer: OpaquePointer?) -> String {
     return "0x\(unsafe String(UInt(bitPattern: UnsafeRawPointer(pointer)), radix: 16))"
 }
 private func makeTemporaryFileDescriptor(bytes: [UInt8]) throws -> Int32 {
-    var template = Array("/tmp/swift-wayland-seat-keymap-XXXXXX".utf8CString)
-    let descriptor = unsafe template.withUnsafeMutableBufferPointer { buffer in
-        guard let baseAddress = buffer.baseAddress else { return Int32(-1) }
-        return unsafe mkstemp(baseAddress)
-    }
-    try #require(descriptor >= 0)
-    unsafe template.withUnsafeBufferPointer { buffer in
-        if let baseAddress = buffer.baseAddress {
-            unsafe unlink(baseAddress)
-        }
-    }
-    let writeResult = unsafe bytes.withUnsafeBytes { rawBytes in
-        unsafe write(descriptor, rawBytes.baseAddress, bytes.count)
-    }
-    try #require(writeResult == bytes.count)
-    try #require(lseek(descriptor, 0, SEEK_SET) == 0)
-    return descriptor
+    try WaylandTestSupport.makeTemporaryFileDescriptor(
+        prefix: "swift-wayland-seat-keymap",
+        bytes: bytes
+    )
 }

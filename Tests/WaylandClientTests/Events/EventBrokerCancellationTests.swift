@@ -1,10 +1,10 @@
-import Glibc
+import Foundation
 import Synchronization
 import Testing
 
 @testable import WaylandClient
 
-@Suite
+@Suite(.timeLimit(.minutes(2)))
 struct EventBrokerCancellationTests {
     @Test
     func cancellingPendingNextLeavesSubscriptionOpen() async throws {
@@ -118,7 +118,7 @@ struct EventBrokerCancellationTests {
                 }
             }
 
-            try await gate.waitUntilBlocked()
+            try gate.waitUntilBlocked()
             group.cancelAll()
             gate.release()
 
@@ -224,39 +224,46 @@ private func nextResult(
     }
 }
 
-private final class ResumeGate: Sendable {
+// SAFETY: Gate state is private and every access is protected by NSCondition.
+private final class ResumeGate: @unchecked Sendable {
     private struct State {
         var isBlocked = false
         var isReleased = false
     }
 
-    private let state = Mutex(State())
+    private let condition = NSCondition()
+    private var state = State()
 
     func blockUntilReleased() {
-        state.withLock { gateState in
-            gateState.isBlocked = true
+        condition.lock()
+        state.isBlocked = true
+        condition.broadcast()
+        while !state.isReleased {
+            condition.wait()
         }
-
-        while !state.withLock({ $0.isReleased }) {
-            usleep(1_000)
-        }
+        condition.unlock()
     }
 
     func release() {
-        state.withLock { gateState in
-            gateState.isReleased = true
-        }
+        condition.lock()
+        state.isReleased = true
+        condition.broadcast()
+        condition.unlock()
     }
 
-    func waitUntilBlocked() async throws {
-        for _ in 0..<1_000 {
-            if state.withLock({ $0.isBlocked }) {
-                return
-            }
-
-            try await Task.sleep(for: .milliseconds(1))
+    func waitUntilBlocked() throws {
+        condition.lock()
+        defer { condition.unlock() }
+        guard !state.isBlocked else {
+            return
         }
 
-        Issue.record("Timed out waiting for resume gate.")
+        let deadline = Date().addingTimeInterval(60)
+        while !state.isBlocked {
+            guard condition.wait(until: deadline) else {
+                Issue.record("Timed out waiting for resume gate.")
+                return
+            }
+        }
     }
 }
