@@ -64,10 +64,10 @@ LeakSanitizer path explicitly, run `make test-asan` without overriding
 `scripts/safety/tsan-suppressions.txt` only for known Swift runtime
 metadata-cache and Swift Testing event graph reports. It also disables TSan's
 deadlock detector because Swift runtime metadata initialization currently
-produces lock-order false positives. The target runs Swift Testing with one
-worker so sanitizer output is not polluted by unrelated test-runner and runtime
-parallel initialization reports; project data-race reports inside tests should
-remain unsuppressed.
+produces lock-order false positives. The target runs Swift Testing with
+parallel execution disabled so sanitizer output is not polluted by unrelated
+test-runner and runtime parallel initialization reports; project data-race
+reports inside tests should remain unsuppressed.
 
 The public API baseline covers both vended library products, `WaylandClient`
 and `WaylandGraphicsPreview`. Preview API drift should still be reviewed and
