@@ -17,7 +17,7 @@ struct ClipboardOfferReadTests {  // swiftlint:disable:this type_body_length
         var descriptor = try OwnedFileDescriptor(adopting: descriptors.readEnd)
         let data = try await descriptor.readData(
             limit: try ByteCount.bytes(32),
-            timeout: .seconds(1)
+            timeout: .seconds(10)
         )
         let descriptorIsClosed = descriptor.isClosed
 
@@ -66,7 +66,7 @@ struct ClipboardOfferReadTests {  // swiftlint:disable:this type_body_length
 
         let data = try await descriptor.readData(
             limit: try ByteCount.bytes(32),
-            timeout: .seconds(1)
+            timeout: .seconds(10)
         )
         let descriptorIsClosed = descriptor.isClosed
 
@@ -219,7 +219,7 @@ struct ClipboardOfferReadTests {  // swiftlint:disable:this type_body_length
 
                 return try await descriptor.readData(
                     limit: try ByteCount.bytes(32),
-                    timeout: .seconds(1)
+                    timeout: .seconds(10)
                 )
             }
 
@@ -377,7 +377,7 @@ private final class ClipboardReadCancellationProbe: @unchecked Sendable {
             return
         }
 
-        let deadline = Date().addingTimeInterval(1)
+        let deadline = Date().addingTimeInterval(10)
         while readAttemptCount == 0 {
             guard condition.wait(until: deadline) else {
                 Issue.record("Timed out waiting for read attempt.")

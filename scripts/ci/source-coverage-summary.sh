@@ -2,12 +2,39 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-coverage_json="${1:-"${repo_root}/.build/x86_64-unknown-linux-gnu/debug/codecov/SwiftWayland.json"}"
+
+if [[ $# -gt 1 ]]; then
+  cat >&2 <<'EOF'
+usage: scripts/ci/source-coverage-summary.sh [coverage-json]
+EOF
+  exit 2
+fi
+
+if [[ $# -eq 1 ]]; then
+  coverage_json="$1"
+else
+  coverage_json="$(
+    python3 - "${repo_root}" <<'PY'
+import pathlib
+import sys
+
+repo_root = pathlib.Path(sys.argv[1])
+candidates = sorted(
+    (repo_root / ".build").glob("*/debug/codecov/SwiftWayland.json"),
+    key=lambda path: path.stat().st_mtime,
+    reverse=True,
+)
+if candidates:
+    print(candidates[0])
+PY
+  )"
+fi
 
 if [[ ! -f "${coverage_json}" ]]; then
   cat >&2 <<EOF
-Coverage JSON was not found: ${coverage_json}
+Coverage JSON was not found: ${coverage_json:-${repo_root}/.build/*/debug/codecov/SwiftWayland.json}
 Run ./scripts/dev/swift.sh test --enable-code-coverage --disable-index-store first.
+Pass an explicit coverage JSON path if multiple build triples are present.
 EOF
   exit 1
 fi
