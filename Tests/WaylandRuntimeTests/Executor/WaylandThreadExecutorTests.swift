@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 #if ENABLE_TESTING
     import Foundation
     import Glibc
@@ -175,6 +177,7 @@
         }
     }
 
+    // SAFETY: Gate state is private and every access is protected by NSCondition.
     private final class OwnerThreadGate: @unchecked Sendable {
         private struct State: Sendable {
             var didEnter = false

@@ -224,6 +224,7 @@ private func nextResult(
     }
 }
 
+// SAFETY: Gate state is private and every access is protected by NSCondition.
 private final class ResumeGate: @unchecked Sendable {
     private struct State {
         var isBlocked = false
