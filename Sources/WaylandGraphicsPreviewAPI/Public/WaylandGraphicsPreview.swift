@@ -369,6 +369,66 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
         )
     }
 
+    public static func softwareFallback(
+        capabilities: WaylandGraphicsSurfaceCapabilities,
+        reason: WaylandGraphicsFallbackReason
+    ) -> Self {
+        Self(
+            capabilities: capabilities,
+            backing: .fallback(reason),
+            dmabuf: capabilities.dmabuf.isAvailable
+                ? protocolStatus(capabilities.dmabuf)
+                : .fallback(reason),
+            gbm: .fallback(reason),
+            egl: .fallback(reason),
+            explicitSync: protocolStatus(capabilities.explicitSync),
+            pacing: WaylandGraphicsPacingStatus(
+                fifo: protocolStatus(capabilities.framePacing.fifo),
+                commitTiming: protocolStatus(capabilities.framePacing.commitTiming)
+            ),
+            metadata: WaylandGraphicsMetadataStatus(
+                contentType: protocolStatus(capabilities.colorMetadata.contentType),
+                alphaModifier: protocolStatus(capabilities.colorMetadata.alphaModifier),
+                tearingControl: protocolStatus(capabilities.colorMetadata.tearingControl),
+                colorRepresentation: protocolStatus(
+                    capabilities.colorMetadata.colorRepresentation
+                ),
+                colorManagement: protocolStatus(capabilities.colorMetadata.colorManagement)
+            ),
+            presentationFeedback: protocolStatus(capabilities.presentationFeedback)
+        )
+    }
+
+    public static func unavailable(
+        capabilities: WaylandGraphicsSurfaceCapabilities,
+        reason: WaylandGraphicsUnavailableReason
+    ) -> Self {
+        Self(
+            capabilities: capabilities,
+            backing: .failed(reason),
+            dmabuf: capabilities.dmabuf.isAvailable
+                ? protocolStatus(capabilities.dmabuf)
+                : .failed(reason),
+            gbm: .failed(reason),
+            egl: .failed(reason),
+            explicitSync: protocolStatus(capabilities.explicitSync),
+            pacing: WaylandGraphicsPacingStatus(
+                fifo: protocolStatus(capabilities.framePacing.fifo),
+                commitTiming: protocolStatus(capabilities.framePacing.commitTiming)
+            ),
+            metadata: WaylandGraphicsMetadataStatus(
+                contentType: protocolStatus(capabilities.colorMetadata.contentType),
+                alphaModifier: protocolStatus(capabilities.colorMetadata.alphaModifier),
+                tearingControl: protocolStatus(capabilities.colorMetadata.tearingControl),
+                colorRepresentation: protocolStatus(
+                    capabilities.colorMetadata.colorRepresentation
+                ),
+                colorManagement: protocolStatus(capabilities.colorMetadata.colorManagement)
+            ),
+            presentationFeedback: protocolStatus(capabilities.presentationFeedback)
+        )
+    }
+
     private static func protocolStatus(
         _ availability: WaylandGraphicsProtocolAvailability,
         fallback: WaylandGraphicsFallbackReason? = nil,
