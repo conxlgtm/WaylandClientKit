@@ -95,6 +95,31 @@ struct WaylandGraphicsPreviewAPITests {
     }
 
     @Test
+    func projectedRuntimePathPreservesPendingMetadataSupport() {
+        let capabilities = WaylandGraphicsSurfaceCapabilities(
+            dmabuf: .available(version: 4),
+            explicitSync: .unavailable,
+            framePacing: .unavailable,
+            colorMetadata: WaylandGraphicsColorMetadataAvailability(
+                contentType: .available(version: 1),
+                alphaModifier: .unavailable,
+                tearingControl: .unavailable,
+                colorRepresentation: .pending(version: 1),
+                colorManagement: .available(version: 2)
+            ),
+            presentationFeedback: .unavailable
+        )
+
+        let path = WaylandGraphicsRuntimePath.projected(capabilities: capabilities)
+
+        #expect(capabilities.colorMetadata.colorRepresentation.isAvailable == false)
+        #expect(capabilities.colorMetadata.colorRepresentation.version == 1)
+        #expect(path.metadata.contentType == .advertised)
+        #expect(path.metadata.colorRepresentation == .pending)
+        #expect(path.metadata.colorManagement == .advertised)
+    }
+
+    @Test
     func projectedRuntimePathConstructsFallbackFromSingleBackingDecision() {
         let capabilities = WaylandGraphicsSurfaceCapabilities(
             dmabuf: .unavailable,
