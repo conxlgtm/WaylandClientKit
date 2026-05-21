@@ -489,29 +489,3 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
         }
     }
 }
-
-extension WaylandDisplay {
-    /// Returns renderer-neutral graphics preview capabilities discovered so far.
-    public func graphicsSurfaceCapabilities() throws -> WaylandGraphicsSurfaceCapabilities {
-        try WaylandGraphicsSurfaceCapabilities(
-            snapshot: graphicsPreviewSurfaceCapabilitySnapshot()
-        )
-    }
-
-    /// Returns a projected graphics runtime path without creating GPU resources.
-    public func graphicsRuntimePath(
-        policy: WaylandGraphicsFallbackPolicy = .preferGPUFallbackToSoftware
-    ) throws -> WaylandGraphicsRuntimePath {
-        try WaylandGraphicsRuntimePath.projected(
-            capabilities: graphicsSurfaceCapabilities(),
-            policy: policy
-        )
-    }
-
-    /// Returns the projected graphics backing decision without creating GPU resources.
-    public func graphicsBackingDecision(
-        policy: WaylandGraphicsFallbackPolicy = .preferGPUFallbackToSoftware
-    ) throws -> WaylandGraphicsBackingDecision {
-        try policy.decide(capabilities: graphicsSurfaceCapabilities())
-    }
-}
