@@ -866,8 +866,8 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L102: `    public func outputs() throws -> [OutputSnapshot] {`
 - L107: `    public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {`
 - L112: `    public func createTopLevelWindow(`
-- L270: `    public func close() {`
-- L329: `    public var isClosed: Bool {`
+- L228: `    public func close() {`
+- L287: `    public var isClosed: Bool {`
 
 ### `Sources/WaylandClient/Public/Errors/ClientError.swift`
 
@@ -2039,7 +2039,7 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L209: `    case eglUnavailable`
 - L210: `    case explicitSyncRequiredButUnavailable`
 - L211: `    case metadataRequiredButUnavailable`
-- L212: `    case presentationFeedbackRequiredButUnavailable`
+- L212: `    case presentationFeedbackUnavailable`
 - L213: `    case compositorRejectedBuffer`
 - L217: `public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {`
 - L218: `    case dmabufUnavailable`
@@ -2050,7 +2050,7 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L223: `    case eglUnavailable`
 - L224: `    case explicitSyncRequiredButUnavailable`
 - L225: `    case metadataRequiredButUnavailable`
-- L226: `    case presentationFeedbackRequiredButUnavailable`
+- L226: `    case presentationFeedbackUnavailable`
 - L227: `    case compositorRejectedBuffer`
 - L231: `public enum WaylandGraphicsBackingDecision: Equatable, Sendable {`
 - L232: `    case gpu(WaylandGraphicsRuntimePath)`

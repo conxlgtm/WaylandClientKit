@@ -21,7 +21,7 @@ public struct Window: Sendable, Hashable {
     }
 
     package func show(
-        timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
+        timeoutMilliseconds: Int32,
         metadata: SurfaceCommitMetadata,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws {

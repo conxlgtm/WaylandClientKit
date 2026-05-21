@@ -17,6 +17,12 @@ struct WindowSoftwarePresentationFailure: Error {
     let underlying: any Error
 }
 
+struct WindowSoftwarePresentationContext {
+    let request: PresentationRequest
+    let geometry: SurfaceGeometry
+    let metadata: SurfaceCommitMetadata
+}
+
 struct WindowSoftwarePresenter {
     let surface: RawSurface
     let scaleInstallation: SurfaceScaleInstallation
@@ -25,9 +31,7 @@ struct WindowSoftwarePresenter {
     let onFrame: () -> Void
 
     func present<RoleResources>(
-        request: PresentationRequest,
-        geometry: SurfaceGeometry,
-        metadata: SurfaceCommitMetadata = .default,
+        context: WindowSoftwarePresentationContext,
         draw: (borrowing SoftwareFrame) throws -> Void,
         runtime: inout SurfaceRuntime<RoleResources>,
         pendingFrameRegistration: inout FrameCallbackRegistration?
@@ -36,14 +40,14 @@ struct WindowSoftwarePresenter {
             return .init(
                 outcome: .skippedPendingFrame,
                 followUp: .fail(
-                    generation: request.generation,
+                    generation: context.request.generation,
                     .frameCallbackRequest("frame callback is still pending")
                 )
             )
         }
 
-        let pool = try runtime.sharedMemoryPool(for: geometry.bufferSize) {
-            try createSharedMemoryPool(geometry.bufferSize)
+        let pool = try runtime.sharedMemoryPool(for: context.geometry.bufferSize) {
+            try createSharedMemoryPool(context.geometry.bufferSize)
         }
         runtime.dropReleasedRetiredBufferPools()
 
@@ -51,7 +55,7 @@ struct WindowSoftwarePresenter {
             return .init(outcome: .waitingForBuffer, followUp: .blockedByBuffer)
         }
 
-        try drawFrame(&drawingBuffer, geometry: geometry, draw: draw)
+        try drawFrame(&drawingBuffer, geometry: context.geometry, draw: draw)
 
         guard !isWindowClosed() else {
             drawingBuffer.discard()
@@ -59,21 +63,21 @@ struct WindowSoftwarePresenter {
         }
 
         let preparedCommit = try prepareCommit(
-            request: request,
-            geometry: geometry,
-            metadata: metadata,
+            request: context.request,
+            geometry: context.geometry,
+            metadata: context.metadata,
             runtime: &runtime,
             drawingBuffer: &drawingBuffer
         )
         try requestFrameCallback(
-            request: request,
+            request: context.request,
             runtime: &runtime,
             pendingFrameRegistration: &pendingFrameRegistration,
             drawingBuffer: &drawingBuffer
         )
         try recordAndCommit(
             preparedCommit,
-            request: request,
+            request: context.request,
             runtime: &runtime,
             pendingFrameRegistration: &pendingFrameRegistration,
             drawingBuffer: &drawingBuffer
@@ -81,7 +85,7 @@ struct WindowSoftwarePresenter {
 
         return .init(
             outcome: .presented,
-            followUp: .succeeded(generation: request.generation)
+            followUp: .succeeded(generation: context.request.generation)
         )
     }
 
