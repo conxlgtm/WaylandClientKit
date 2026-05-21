@@ -2,8 +2,35 @@ import Testing
 
 @testable import WaylandClient
 
-@Suite
+@Suite(.timeLimit(.minutes(1)))
 struct DisplayEventHubTests {
+    @Test
+    func redrawEventPublishesExactlyOnce() async {
+        let hub = DisplayEventHub()
+        let windowID = WindowID(rawValue: 42)
+        let stream = hub.displayEvents()
+
+        await confirmation("redraw event delivered once", expectedCount: 1) { received in
+            let task = Task {
+                var iterator = stream.makeAsyncIterator()
+                do {
+                    while let event = try await iterator.next() {
+                        guard event == .redrawRequested(windowID) else {
+                            continue
+                        }
+                        received()
+                        return
+                    }
+                } catch {
+                    Issue.record("Expected redraw event, got \(error)")
+                }
+            }
+
+            hub.publish(.redrawRequested(windowID))
+            await task.value
+        }
+    }
+
     @Test
     func displaySubscriberOverflowTerminatesOnlyThatSubscriber() async throws {
         let hub = DisplayEventHub(

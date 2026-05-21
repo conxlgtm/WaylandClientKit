@@ -17,7 +17,7 @@
         return false
     }
 
-    @Suite
+    @Suite(.timeLimit(.minutes(1)))
     struct WaylandThreadExecutorLifecycleTests {
         @Test
         func ownerThreadDeinitDetachesAfterLoopExit() throws {

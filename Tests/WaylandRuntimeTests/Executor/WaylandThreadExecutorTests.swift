@@ -1,4 +1,5 @@
 #if ENABLE_TESTING
+    import Foundation
     import Glibc
     import Synchronization
     import Testing
@@ -157,40 +158,50 @@
         }
     }
 
-    private final class OwnerThreadGate: Sendable {
+    private final class OwnerThreadGate: @unchecked Sendable {
         private struct State: Sendable {
             var didEnter = false
             var isOpen = false
         }
 
-        private let state = Mutex(State())
+        private let condition = NSCondition()
+        private var state = State()
 
         func enterAndWaitUntilOpened() {
-            state.withLock { $0.didEnter = true }
-
-            while !state.withLock({ $0.isOpen }) {
-                usleep(1_000)
+            condition.lock()
+            state.didEnter = true
+            condition.broadcast()
+            while !state.isOpen {
+                condition.wait()
             }
+            condition.unlock()
         }
 
         func waitUntilEntered() -> Bool {
-            for _ in 0..<1_000 {
-                if state.withLock({ $0.didEnter }) {
-                    return true
-                }
-
-                usleep(1_000)
+            condition.lock()
+            defer { condition.unlock() }
+            guard !state.didEnter else {
+                return true
             }
 
-            return false
+            let deadline = Date().addingTimeInterval(1)
+            while !state.didEnter {
+                guard condition.wait(until: deadline) else {
+                    return false
+                }
+            }
+            return true
         }
 
         func open() {
-            state.withLock { $0.isOpen = true }
+            condition.lock()
+            state.isOpen = true
+            condition.broadcast()
+            condition.unlock()
         }
     }
 
-    @Suite
+    @Suite(.timeLimit(.minutes(1)))
     struct WaylandThreadExecutorTests {
         @Test
         func threadCreationFailureClosesWakeFileDescriptor() throws {
@@ -385,6 +396,15 @@
             let state = WaylandThreadExecutorState()
 
             #expect(state.rejectionError() == .executorNotReady)
+        }
+
+        @Test
+        func runningStateRejectionErrorExits() async {
+            await #expect(processExitsWith: .failure) {
+                var state = WaylandThreadExecutorState()
+                state.phase = .running
+                _ = state.rejectionError()
+            }
         }
 
         @Test

@@ -2,41 +2,50 @@ import Testing
 
 @testable import WaylandKeyboard
 
-@Suite
+@Suite(.timeLimit(.minutes(1)))
 struct KeyboardComposeConcurrencyTests {
     @Test
     func concurrentLocaleComposeTableCreationCompletes() async throws {
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            for _ in 0..<16 {
-                group.addTask {
-                    _ = try KeyboardInterpreter(
-                        configuration: KeyboardInterpreterConfiguration(
-                            compose: .enabled(locale: .identifier(.posixC))
-                        ),
-                        composeEnvironment: KeyboardComposeEnvironment()
-                    )
-                }
-            }
+        let createdCount = try await interpreterCreationCount(
+            configuration: KeyboardInterpreterConfiguration(
+                compose: .enabled(locale: .identifier(.posixC))
+            )
+        )
 
-            try await group.waitForAll()
-        }
+        #expect(createdCount == 16)
     }
 
     @Test
     func concurrentBufferComposeTableCreationCompletes() async throws {
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            for _ in 0..<16 {
+        let createdCount = try await interpreterCreationCount(
+            configuration: KeyboardInterpreterConfiguration(
+                compose: .tableBuffer(composeTableText())
+            )
+        )
+
+        #expect(createdCount == 16)
+    }
+
+    private func interpreterCreationCount(
+        configuration: KeyboardInterpreterConfiguration,
+        count: Int = 16
+    ) async throws -> Int {
+        try await withThrowingTaskGroup(of: Bool.self) { group in
+            for _ in 0..<count {
                 group.addTask {
                     _ = try KeyboardInterpreter(
-                        configuration: KeyboardInterpreterConfiguration(
-                            compose: .tableBuffer(composeTableText())
-                        ),
+                        configuration: configuration,
                         composeEnvironment: KeyboardComposeEnvironment()
                     )
+                    return true
                 }
             }
 
-            try await group.waitForAll()
+            var createdCount = 0
+            for try await didCreate in group where didCreate {
+                createdCount += 1
+            }
+            return createdCount
         }
     }
 }
