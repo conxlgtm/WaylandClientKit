@@ -85,6 +85,15 @@ before tests start; override it with
 the window-control and drag-source suites as separate test processes because
 both use package-wide C request-recording hooks.
 
+Graphics preview evidence is separate from ordinary Wayland smoke. Do not
+promote graphics preview readiness unless
+[compositor-matrix.md](compositor-matrix.md) contains graphics-preview rows for
+headless Weston, one wlroots compositor such as Sway, and one desktop
+compositor such as Mutter or KWin when available. Each row should include the
+pasteable `SwiftWayland GPU Preview Runtime Path` block from
+`make gpu-preview-wayland`, exact missing optional interface names, and any
+advertised-but-broken optional path failures.
+
 `make swiftbuild-smoke` is informational. Native SwiftPM remains the supported
 build system; the Swift Build preview can report `unsupported`,
 `failed-toolchain-layout`, or `failed-package` depending on the active Swift
