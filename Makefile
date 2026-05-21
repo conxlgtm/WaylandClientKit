@@ -4,19 +4,23 @@ SWIFT := ./scripts/dev/swift.sh
 CLANG_FILTER := $(CURDIR)/scripts/dev/clang-filter-index-store.sh
 TSAN_SUPPRESSIONS := $(CURDIR)/scripts/safety/tsan-suppressions.txt
 
-.PHONY: format lint verify-generated verify-protocol-manifest verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-release test-tsan test-asan test-public-api-client test-graphics-preview-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless wayland-request-headless wayland-request-headless-tsan wayland-request-headless-asan gpu-preview-wayland gpu-preview-headless wayland-headless swiftbuild-smoke release-check install-pre-commit
+.PHONY: format lint verify-generated verify-protocol-manifest verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-release test-tsan test-asan test-public-api-client test-graphics-preview-client test-framework-host-client test-tiny-ui-prototype check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless wayland-request-headless wayland-request-headless-tsan wayland-request-headless-asan gpu-preview-wayland gpu-preview-headless wayland-headless swiftbuild-smoke release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place IntegrationTests/PublicAPIClient/Package.swift
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place IntegrationTests/GraphicsPreviewClient/Package.swift
-	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place --parallel --recursive Sources Tests Examples IntegrationTests/PublicAPIClient/Tests IntegrationTests/GraphicsPreviewClient/Tests
+	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place IntegrationTests/FrameworkHostClient/Package.swift
+	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place IntegrationTests/TinyUIPrototype/Package.swift
+	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place --parallel --recursive Sources Tests Examples IntegrationTests/PublicAPIClient/Tests IntegrationTests/GraphicsPreviewClient/Tests IntegrationTests/FrameworkHostClient/Tests IntegrationTests/TinyUIPrototype/Tests
 
 lint:
 	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict Package.swift
 	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict IntegrationTests/PublicAPIClient/Package.swift
 	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict IntegrationTests/GraphicsPreviewClient/Package.swift
-	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict --parallel --recursive Sources Tests Examples IntegrationTests/PublicAPIClient/Tests IntegrationTests/GraphicsPreviewClient/Tests
+	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict IntegrationTests/FrameworkHostClient/Package.swift
+	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict IntegrationTests/TinyUIPrototype/Package.swift
+	@$(SWIFT_FORMAT) lint --configuration .swift-format --strict --parallel --recursive Sources Tests Examples IntegrationTests/PublicAPIClient/Tests IntegrationTests/GraphicsPreviewClient/Tests IntegrationTests/FrameworkHostClient/Tests IntegrationTests/TinyUIPrototype/Tests
 	@$(SWIFTLINT) lint --strict --no-cache --force-exclude --config .swiftlint.yml
 
 verify-generated:
@@ -69,7 +73,13 @@ test-public-api-client:
 test-graphics-preview-client:
 	@./scripts/ci/test-graphics-preview-client.sh
 
-check-base: lint verify-generated verify-protocol-manifest verify-shims verify-docs verify-docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-public-api-client test-graphics-preview-client
+test-framework-host-client:
+	@./scripts/ci/test-framework-host-client.sh
+
+test-tiny-ui-prototype:
+	@./scripts/ci/test-tiny-ui-prototype.sh
+
+check-base: lint verify-generated verify-protocol-manifest verify-shims verify-docs verify-docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-public-api-client test-graphics-preview-client test-framework-host-client test-tiny-ui-prototype
 
 check: check-base check-wayland-smoke-if-available
 
