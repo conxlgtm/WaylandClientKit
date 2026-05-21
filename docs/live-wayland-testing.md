@@ -42,9 +42,11 @@ GPU-capable session.
 current compositor. It requires `WAYLAND_DISPLAY`, sets
 `SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1`, and enables the GBM/EGL smoke path
 with `SWL_RUN_GPU_SMOKE=1`. The current test path proves the linux-dmabuf
-capability gate and a local GBM/EGL clear plus dmabuf export when an accessible
-DRM render node is present. Future compositor import and presentation checks can
-attach to the same command.
+capability gate, public graphics fact projection, explicit software fallback
+projection, and a local GBM/EGL clear plus dmabuf export when an accessible DRM
+render node is present. It also runs `GPUPreviewSmokeClient`, which prints a
+pasteable `SwiftWayland GPU Preview Runtime Path` block for
+[compositor-matrix.md](compositor-matrix.md).
 
 The command runs `./scripts/smoke/gpu-preview-wayland.sh`.
 
@@ -69,7 +71,10 @@ tests start. Override it with
 `SWIFT_WAYLAND_REQUEST_PROCESS_TIMEOUT_SECONDS`.
 
 `make gpu-preview-headless` starts headless Weston, then runs the GPU preview
-capability and GBM/EGL smoke path against that private compositor.
+capability, graphics fact projection, pasteable runtime-path report, and
+GBM/EGL smoke path against that private compositor. The render-node-dependent
+portion reports a skip/fact when the private CI environment has no accessible
+DRM render node.
 
 `make check` runs the normal local check set. It runs the live Wayland smoke
 check only when `WAYLAND_DISPLAY` is already set.

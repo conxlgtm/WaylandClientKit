@@ -3,6 +3,7 @@ import WaylandClient
 /// Protocol availability as seen by the graphics preview API.
 public enum WaylandGraphicsProtocolAvailability: Equatable, Sendable {
     case unavailable
+    case pending(version: UInt32)
     case available(version: UInt32)
 
     public init(_ availability: ProtocolAvailability) {
@@ -16,7 +17,7 @@ public enum WaylandGraphicsProtocolAvailability: Equatable, Sendable {
 
     public var isAvailable: Bool {
         switch self {
-        case .unavailable:
+        case .unavailable, .pending:
             false
         case .available:
             true
@@ -27,6 +28,8 @@ public enum WaylandGraphicsProtocolAvailability: Equatable, Sendable {
         switch self {
         case .unavailable:
             nil
+        case .pending(let version):
+            version
         case .available(let version):
             version
         }
@@ -116,6 +119,52 @@ public struct WaylandGraphicsSurfaceCapabilities: Equatable, Sendable {
             )
         )
     }
+
+    package init(snapshot: GraphicsPreviewSurfaceCapabilitySnapshot) {
+        self.init(
+            dmabuf: WaylandGraphicsProtocolAvailability(snapshot.dmabuf),
+            explicitSync: WaylandGraphicsProtocolAvailability(snapshot.explicitSync),
+            framePacing: WaylandGraphicsFramePacingAvailability(
+                fifo: WaylandGraphicsProtocolAvailability(snapshot.framePacing.fifo),
+                commitTiming: WaylandGraphicsProtocolAvailability(
+                    snapshot.framePacing.commitTiming
+                )
+            ),
+            colorMetadata: WaylandGraphicsColorMetadataAvailability(
+                contentType: WaylandGraphicsProtocolAvailability(
+                    snapshot.metadata.contentType
+                ),
+                alphaModifier: WaylandGraphicsProtocolAvailability(
+                    snapshot.metadata.alphaModifier
+                ),
+                tearingControl: WaylandGraphicsProtocolAvailability(
+                    snapshot.metadata.tearingControl
+                ),
+                colorRepresentation: WaylandGraphicsProtocolAvailability(
+                    snapshot.metadata.colorRepresentation
+                ),
+                colorManagement: WaylandGraphicsProtocolAvailability(
+                    snapshot.metadata.colorManagement
+                )
+            ),
+            presentationFeedback: WaylandGraphicsProtocolAvailability(
+                snapshot.presentationFeedback
+            )
+        )
+    }
+}
+
+extension WaylandGraphicsProtocolAvailability {
+    package init(_ capability: GraphicsPreviewProtocolCapability) {
+        switch capability {
+        case .unavailable:
+            self = .unavailable
+        case .pending(let version):
+            self = .pending(version: version)
+        case .available(let version):
+            self = .available(version: version)
+        }
+    }
 }
 
 /// Policy for choosing between GPU backing and software fallback.
@@ -153,6 +202,7 @@ public enum WaylandGraphicsFallbackPolicy: Equatable, Sendable {
 public enum WaylandGraphicsFallbackReason: Equatable, Sendable {
     case forcedSoftware
     case dmabufUnavailable
+    case managedGPUSubmissionUnavailable
     case noCompatibleFormat
     case noRenderNode
     case gbmUnavailable
@@ -165,6 +215,7 @@ public enum WaylandGraphicsFallbackReason: Equatable, Sendable {
 /// Reasons GPU backing can be unavailable.
 public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {
     case dmabufUnavailable
+    case managedGPUSubmissionUnavailable
     case noCompatibleFormat
     case noRenderNode
     case gbmUnavailable
@@ -184,6 +235,7 @@ public enum WaylandGraphicsBackingDecision: Equatable, Sendable {
 /// Runtime status for one graphics path component.
 public enum WaylandGraphicsRuntimeStatus: Equatable, Sendable {
     case unavailable
+    case pending
     case advertised
     case configured
     case active
@@ -319,6 +371,66 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
         )
     }
 
+    public static func softwareFallback(
+        capabilities: WaylandGraphicsSurfaceCapabilities,
+        reason: WaylandGraphicsFallbackReason
+    ) -> Self {
+        Self(
+            capabilities: capabilities,
+            backing: .fallback(reason),
+            dmabuf: capabilities.dmabuf.isAvailable
+                ? protocolStatus(capabilities.dmabuf)
+                : .fallback(reason),
+            gbm: .fallback(reason),
+            egl: .fallback(reason),
+            explicitSync: protocolStatus(capabilities.explicitSync),
+            pacing: WaylandGraphicsPacingStatus(
+                fifo: protocolStatus(capabilities.framePacing.fifo),
+                commitTiming: protocolStatus(capabilities.framePacing.commitTiming)
+            ),
+            metadata: WaylandGraphicsMetadataStatus(
+                contentType: protocolStatus(capabilities.colorMetadata.contentType),
+                alphaModifier: protocolStatus(capabilities.colorMetadata.alphaModifier),
+                tearingControl: protocolStatus(capabilities.colorMetadata.tearingControl),
+                colorRepresentation: protocolStatus(
+                    capabilities.colorMetadata.colorRepresentation
+                ),
+                colorManagement: protocolStatus(capabilities.colorMetadata.colorManagement)
+            ),
+            presentationFeedback: protocolStatus(capabilities.presentationFeedback)
+        )
+    }
+
+    public static func unavailable(
+        capabilities: WaylandGraphicsSurfaceCapabilities,
+        reason: WaylandGraphicsUnavailableReason
+    ) -> Self {
+        Self(
+            capabilities: capabilities,
+            backing: .failed(reason),
+            dmabuf: capabilities.dmabuf.isAvailable
+                ? protocolStatus(capabilities.dmabuf)
+                : .failed(reason),
+            gbm: .failed(reason),
+            egl: .failed(reason),
+            explicitSync: protocolStatus(capabilities.explicitSync),
+            pacing: WaylandGraphicsPacingStatus(
+                fifo: protocolStatus(capabilities.framePacing.fifo),
+                commitTiming: protocolStatus(capabilities.framePacing.commitTiming)
+            ),
+            metadata: WaylandGraphicsMetadataStatus(
+                contentType: protocolStatus(capabilities.colorMetadata.contentType),
+                alphaModifier: protocolStatus(capabilities.colorMetadata.alphaModifier),
+                tearingControl: protocolStatus(capabilities.colorMetadata.tearingControl),
+                colorRepresentation: protocolStatus(
+                    capabilities.colorMetadata.colorRepresentation
+                ),
+                colorManagement: protocolStatus(capabilities.colorMetadata.colorManagement)
+            ),
+            presentationFeedback: protocolStatus(capabilities.presentationFeedback)
+        )
+    }
+
     private static func protocolStatus(
         _ availability: WaylandGraphicsProtocolAvailability,
         fallback: WaylandGraphicsFallbackReason? = nil,
@@ -330,7 +442,14 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
         if let fallback {
             return .fallback(fallback)
         }
-        return availability.isAvailable ? .advertised : .unavailable
+        switch availability {
+        case .unavailable:
+            return .unavailable
+        case .pending:
+            return .pending
+        case .available:
+            return .advertised
+        }
     }
 
     private static func backingStatus(
@@ -370,29 +489,5 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
         case .preferGPUFallbackToSoftware, .requireGPU, .forceSoftware:
             return nil
         }
-    }
-}
-
-extension WaylandDisplay {
-    /// Returns renderer-neutral graphics preview capabilities discovered so far.
-    public func graphicsSurfaceCapabilities() throws -> WaylandGraphicsSurfaceCapabilities {
-        try WaylandGraphicsSurfaceCapabilities(capabilities: capabilities())
-    }
-
-    /// Returns a projected graphics runtime path without creating GPU resources.
-    public func graphicsRuntimePath(
-        policy: WaylandGraphicsFallbackPolicy = .preferGPUFallbackToSoftware
-    ) throws -> WaylandGraphicsRuntimePath {
-        try WaylandGraphicsRuntimePath.projected(
-            capabilities: capabilities(),
-            policy: policy
-        )
-    }
-
-    /// Returns the projected graphics backing decision without creating GPU resources.
-    public func graphicsBackingDecision(
-        policy: WaylandGraphicsFallbackPolicy = .preferGPUFallbackToSoftware
-    ) throws -> WaylandGraphicsBackingDecision {
-        try policy.decide(capabilities: graphicsSurfaceCapabilities())
     }
 }

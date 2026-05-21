@@ -39,6 +39,10 @@ the noninteractive smoke executable:
 ./scripts/smoke/collect-compositor-facts.sh --include-smoke
 ```
 
+`make gpu-preview-wayland` prints a `SwiftWayland GPU Preview Runtime Path`
+block. Paste that block into the Graphics Preview Evidence table before
+summarizing the result in the main matrix.
+
 ## Matrix
 
 | Compositor | Version | Protocol facts | Smoke | Public integration | GPU preview | Notes |
@@ -47,6 +51,39 @@ the noninteractive smoke executable:
 | GNOME / Mutter | pending | pending | pending | pending | pending | Real desktop target. |
 | KDE / KWin | pending | pending | pending | pending | pending | Real desktop target. |
 | Sway / wlroots | pending | pending | pending | pending | pending | wlroots target. |
+
+## Graphics Preview Evidence
+
+Each row should come from the pasteable GPU preview runtime-path report plus
+the raw protocol facts collected under the same compositor session.
+
+| Compositor | Display | Globals | dmabuf | GBM | EGL | explicit sync | FIFO | commit timing | metadata | presentation feedback | backing | failure/fallback |
+| ---------- | ------- | ------- | ------ | --- | --- | ------------- | ---- | ------------- | -------- | --------------------- | ------- | ---------------- |
+| Weston headless | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending |
+| GNOME / Mutter | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending |
+| KDE / KWin | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending |
+| Sway / wlroots | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending |
+
+Record graphics facts in this form:
+
+```text
+SwiftWayland GPU Preview Runtime Path
+display: <WAYLAND_DISPLAY>
+compositor: <name/version or unknown>
+window: <created/submitted/fallback>
+dmabuf: <advertised vN/unavailable>, runtime <status>
+gbm: <status>
+egl: <status>
+explicit-sync: <advertised vN/unavailable>, runtime <status>
+pacing: fifo <status>, commit-timing <status>
+metadata: content-type <status>, alpha-modifier <status>, tearing-control <status>, color-representation <status>, color-management <status>
+presentation: <status>
+backing: <gpu/software fallback(reason)/unavailable(reason)>
+```
+
+The `Globals` column should include exact interface names for missing optional
+protocols. If a protocol is advertised but object creation or request use
+fails, record that as a failure for that protocol rather than as a skip.
 
 ## Protocols To Record
 
