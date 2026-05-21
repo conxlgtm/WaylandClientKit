@@ -10,6 +10,7 @@ import WaylandGraphicsPreview
         if: GPUPreviewLiveEnvironment.isEnabled,
         "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1"
     ),
+    .timeLimit(.minutes(1)),
     .serialized
 )
 struct GPUPreviewLiveCapabilityTests {
@@ -21,14 +22,9 @@ struct GPUPreviewLiveCapabilityTests {
             let capabilities = try await display.capabilities()
 
             guard capabilities.linuxDmabuf.isAvailable else {
-                Issue.record(
-                    """
-                    Skipping GPU preview live test: compositor did not advertise \
-                    zwp_linux_dmabuf_v1.
-                    """,
-                    severity: .warning
+                try Test.cancel(
+                    "Compositor did not advertise zwp_linux_dmabuf_v1."
                 )
-                return
             }
 
             #expect(capabilities.linuxDmabuf.version != nil)
@@ -69,13 +65,9 @@ struct GPUPreviewLiveCapabilityTests {
     }
 
     @Test
-    func optionalRenderNodeFactIsReportedWithoutFailingHeadlessRuns() {
+    func optionalRenderNodeFactIsReportedWithoutFailingHeadlessRuns() throws {
         guard let path = firstRenderNodePath() else {
-            Issue.record(
-                "Skipping optional GPU validation: no accessible DRM render node.",
-                severity: .warning
-            )
-            return
+            try Test.cancel("No accessible DRM render node.")
         }
 
         #expect(path.hasPrefix("/dev/dri/renderD"))

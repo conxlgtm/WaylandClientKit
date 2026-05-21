@@ -11,6 +11,7 @@ let publicIntegrationWaitTimeoutNanoseconds: UInt64 = 5_000_000_000
         if: PublicIntegrationEnvironment.isEnabled,
         "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=1"
     ),
+    .timeLimit(.minutes(1)),
     .serialized
 )
 struct WaylandDisplayPublicIntegrationTests {
@@ -115,10 +116,9 @@ struct WaylandDisplayPublicIntegrationTests {
     }
 }
 
-func noteOptionalProtocolSkip(test: String, interfaceName: String) {
-    Issue.record(
-        "Skipping \(test) live test: compositor did not advertise \(interfaceName).",
-        severity: .warning
+func noteOptionalProtocolSkip(test: String, interfaceName: String) throws {
+    try Test.cancel(
+        "Compositor did not advertise \(interfaceName) for \(test)."
     )
 }
 
