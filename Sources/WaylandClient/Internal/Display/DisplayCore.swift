@@ -48,7 +48,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     func showWindow(
         _ windowID: WindowID,
         timeoutMilliseconds: Int32,
-        metadata: SurfaceCommitMetadata = .default,
+        metadata: SurfaceCommitMetadata,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try withFatalFailureFinalization {
@@ -65,7 +65,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     func redraw(
         _ windowID: WindowID,
-        metadata: SurfaceCommitMetadata = .default,
+        metadata: SurfaceCommitMetadata,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try withFatalFailureFinalization {

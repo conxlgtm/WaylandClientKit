@@ -416,9 +416,11 @@ package final class TopLevelWindow {
                     self?.handleFrameDone()
                 }
             ).present(
-                request: request,
-                geometry: geometry,
-                metadata: metadata,
+                context: WindowSoftwarePresentationContext(
+                    request: request,
+                    geometry: geometry,
+                    metadata: metadata
+                ),
                 draw: draw,
                 runtime: &surfaceRuntime,
                 pendingFrameRegistration: &pendingFrameRegistration

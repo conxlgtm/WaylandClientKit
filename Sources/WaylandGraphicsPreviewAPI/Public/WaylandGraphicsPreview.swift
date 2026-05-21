@@ -209,7 +209,7 @@ public enum WaylandGraphicsFallbackReason: Equatable, Sendable {
     case eglUnavailable
     case explicitSyncRequiredButUnavailable
     case metadataRequiredButUnavailable
-    case presentationFeedbackRequiredButUnavailable
+    case presentationFeedbackUnavailable
     case compositorRejectedBuffer
 }
 
@@ -223,7 +223,7 @@ public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {
     case eglUnavailable
     case explicitSyncRequiredButUnavailable
     case metadataRequiredButUnavailable
-    case presentationFeedbackRequiredButUnavailable
+    case presentationFeedbackUnavailable
     case compositorRejectedBuffer
 }
 
