@@ -12,6 +12,7 @@
             "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_DND_SOURCE_REQUEST_TESTS=1"
         ),
         .timeLimit(.minutes(1)),
+        .tags(.linux, .integration, .liveWayland, .publicAPI),
         .serialized
     )
     struct WindowDragSourcePublicRequestTests {
