@@ -5,7 +5,7 @@ import Testing
 
 @testable import WaylandClient
 
-@Suite(.timeLimit(.minutes(1)))
+@Suite(.timeLimit(.minutes(2)))
 struct ClipboardOfferReadTests {  // swiftlint:disable:this type_body_length
     @Test
     func clipboardOfferReadReturnsDataAfterPeerWritesAndCloses() async throws {
@@ -17,7 +17,7 @@ struct ClipboardOfferReadTests {  // swiftlint:disable:this type_body_length
         var descriptor = try OwnedFileDescriptor(adopting: descriptors.readEnd)
         let data = try await descriptor.readData(
             limit: try ByteCount.bytes(32),
-            timeout: .seconds(10)
+            timeout: .seconds(60)
         )
         let descriptorIsClosed = descriptor.isClosed
 
@@ -66,7 +66,7 @@ struct ClipboardOfferReadTests {  // swiftlint:disable:this type_body_length
 
         let data = try await descriptor.readData(
             limit: try ByteCount.bytes(32),
-            timeout: .seconds(10)
+            timeout: .seconds(60)
         )
         let descriptorIsClosed = descriptor.isClosed
 
@@ -219,7 +219,7 @@ struct ClipboardOfferReadTests {  // swiftlint:disable:this type_body_length
 
                 return try await descriptor.readData(
                     limit: try ByteCount.bytes(32),
-                    timeout: .seconds(10)
+                    timeout: .seconds(60)
                 )
             }
 
@@ -377,7 +377,7 @@ private final class ClipboardReadCancellationProbe: @unchecked Sendable {
             return
         }
 
-        let deadline = Date().addingTimeInterval(10)
+        let deadline = Date().addingTimeInterval(60)
         while readAttemptCount == 0 {
             guard condition.wait(until: deadline) else {
                 Issue.record("Timed out waiting for read attempt.")

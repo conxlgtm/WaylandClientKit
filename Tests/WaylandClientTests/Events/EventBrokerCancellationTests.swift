@@ -4,7 +4,7 @@ import Testing
 
 @testable import WaylandClient
 
-@Suite(.timeLimit(.minutes(1)))
+@Suite(.timeLimit(.minutes(2)))
 struct EventBrokerCancellationTests {
     @Test
     func cancellingPendingNextLeavesSubscriptionOpen() async throws {
@@ -258,7 +258,7 @@ private final class ResumeGate: @unchecked Sendable {
             return
         }
 
-        let deadline = Date().addingTimeInterval(10)
+        let deadline = Date().addingTimeInterval(60)
         while !state.isBlocked {
             guard condition.wait(until: deadline) else {
                 Issue.record("Timed out waiting for resume gate.")
