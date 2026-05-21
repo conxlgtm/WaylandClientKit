@@ -80,6 +80,33 @@ struct GPUPreviewLiveCapabilityTests {
 
         #expect(path.hasPrefix("/dev/dri/renderD"))
     }
+
+    @Test
+    func managedPreviewBackingSubmitsClearFrameThroughSoftwareFallback() async throws {
+        try await WaylandDisplay.withConnection(
+            discoveryTimeoutMilliseconds: 5_000
+        ) { display in
+            let backing = try await display.createGraphicsWindowBacking(
+                windowConfiguration: WindowConfiguration(
+                    title: "SwiftWayland Graphics Preview Test",
+                    appID: "swift-wayland-graphics-preview-test",
+                    initialWidth: 32,
+                    initialHeight: 32
+                ),
+                graphicsConfiguration: WaylandGraphicsConfiguration(
+                    fallbackPolicy: .forceSoftware
+                )
+            )
+            let lease = try await backing.nextFrame()
+            try await lease.submit(
+                .clearColor(WaylandGraphicsXRGBColor(red: 0, green: 0, blue: 0))
+            )
+            let runtimePath = try await backing.runtimePath
+            try await backing.close()
+
+            #expect(runtimePath.backing == .fallback(.forcedSoftware))
+        }
+    }
 }
 
 private enum GPUPreviewLiveEnvironment {

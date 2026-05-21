@@ -166,6 +166,49 @@ struct WaylandGraphicsPreviewAPITests {
         #expect(path.backing == .fallback(.forcedSoftware))
         #expect(path.fallback == .forcedSoftware)
     }
+
+    @Test
+    func managedPreviewFallbackPathPreservesAdvertisedDmabufFact() {
+        let capabilities = gpuCapableSurfaceCapabilities()
+        let path = WaylandGraphicsRuntimePath.softwareFallback(
+            capabilities: capabilities,
+            reason: .gbmUnavailable
+        )
+
+        #expect(path.backing == .fallback(.gbmUnavailable))
+        #expect(path.dmabuf == .advertised)
+        #expect(path.gbm == .fallback(.gbmUnavailable))
+        #expect(path.egl == .fallback(.gbmUnavailable))
+    }
+
+    @Test
+    func managedPreviewConfigurationDefaultsAreConservative() {
+        let configuration = WaylandGraphicsConfiguration.default
+
+        #expect(configuration.fallbackPolicy == .preferGPUFallbackToSoftware)
+        #expect(configuration.synchronizationPolicy == .implicitOnly)
+        #expect(configuration.pacingPolicy == .none)
+        #expect(configuration.metadataPolicy == .none)
+    }
+
+    @Test
+    func clearFrameCarriesColorAndOptionalMetadata() {
+        let color = WaylandGraphicsXRGBColor(red: 0x10, green: 0x20, blue: 0x30)
+        let metadata = WaylandGraphicsFrameMetadata(
+            contentType: .game,
+            presentationHint: .vsync
+        )
+        let clearFrame = WaylandGraphicsClearFrame(color: color, metadata: metadata)
+
+        #expect(color.red == 0x10)
+        #expect(color.green == 0x20)
+        #expect(color.blue == 0x30)
+        #expect(clearFrame.metadata.contentType == .game)
+        #expect(clearFrame.metadata.presentationHint == .vsync)
+        #expect(WaylandGraphicsSubmittedFrame.clearColor(color) == .clearColor(
+            WaylandGraphicsClearFrame(color: color)
+        ))
+    }
 }
 
 private func gpuCapableSurfaceCapabilities() -> WaylandGraphicsSurfaceCapabilities {

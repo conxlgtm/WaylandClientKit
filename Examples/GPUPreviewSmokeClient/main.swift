@@ -6,11 +6,8 @@ import WaylandGraphicsPreview
 struct GPUPreviewSmokeClient {
     static func main() async throws {
         try await WaylandDisplay.withConnection { display in
-            let runtimePath = try await display.graphicsRuntimePath()
-            let backingDecision = try await display.graphicsBackingDecision()
-
-            let window = try await display.createTopLevelWindow(
-                configuration: WindowConfiguration(
+            let backing = try await display.createGraphicsWindowBacking(
+                windowConfiguration: WindowConfiguration(
                     title: "SwiftWayland Graphics Preview",
                     appID: "swift-wayland-graphics-preview",
                     initialWidth: 96,
@@ -18,27 +15,18 @@ struct GPUPreviewSmokeClient {
                     bufferCount: 2
                 )
             )
-            try await window.show { frame in
-                clear(frame)
-            }
-            await window.close()
-            printReport(runtimePath: runtimePath, backingDecision: backingDecision)
-        }
-    }
-
-    nonisolated private static func clear(_ frame: borrowing SoftwareFrame) {
-        frame.withXRGB8888Rows { row, pixels in
-            for column in 0..<pixels.count {
-                let red = UInt32((column * 255) / max(pixels.count, 1))
-                let blue = UInt32((row * 255) / max(Int(frame.height), 1))
-                unsafe pixels[unchecked: column] = (red << 16) | 0x3F00 | blue
-            }
+            let lease = try await backing.nextFrame()
+            try await lease.submit(.clearColor(
+                WaylandGraphicsXRGBColor(red: 0x3F, green: 0x80, blue: 0xFF)
+            ))
+            let runtimePath = try await backing.runtimePath
+            try await backing.close()
+            printReport(runtimePath: runtimePath)
         }
     }
 
     nonisolated private static func printReport(
-        runtimePath: WaylandGraphicsRuntimePath,
-        backingDecision: WaylandGraphicsBackingDecision
+        runtimePath: WaylandGraphicsRuntimePath
     ) {
         let capabilities = runtimePath.capabilities
         print("SwiftWayland GPU Preview Runtime Path")
@@ -72,7 +60,7 @@ struct GPUPreviewSmokeClient {
             """
         )
         print("presentation: \(status(runtimePath.presentationFeedback))")
-        print("backing: \(backing(backingDecision))")
+        print("backing: \(backing(runtimePath))")
     }
 
     nonisolated private static func displayName() -> String {
@@ -113,16 +101,22 @@ struct GPUPreviewSmokeClient {
         }
     }
 
-    nonisolated private static func backing(
-        _ decision: WaylandGraphicsBackingDecision
-    ) -> String {
-        switch decision {
-        case .gpu(let path):
-            "gpu \(status(path.backing))"
-        case .software(let reason):
+    nonisolated private static func backing(_ path: WaylandGraphicsRuntimePath) -> String {
+        switch path.backing {
+        case .active:
+            "gpu active"
+        case .configured:
+            "gpu configured"
+        case .advertised:
+            "gpu projected"
+        case .fallback(let reason):
             "software fallback(\(reason))"
-        case .unavailable(let reason):
+        case .failed(let reason):
             "unavailable(\(reason))"
+        case .pending:
+            "pending"
+        case .unavailable:
+            "unavailable"
         }
     }
 }
