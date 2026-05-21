@@ -9,31 +9,40 @@ import Testing
 
 @Suite
 struct DataTransferDomainTypesTests {
-    @Test
-    func mimeTypeRejectsMalformedValues() {
-        #expect(throws: DataTransferError.invalidMIMEType("")) {
-            _ = try MIMEType("")
+    @Test(
+        "Malformed MIME types are rejected",
+        arguments: [
+            "",
+            "text/plain\0hidden",
+            " text/plain ",
+            "text/",
+            "text/plain\nbad",
+            "/plain",
+            "text",
+        ]
+    )
+    func mimeTypeRejectsMalformedValues(_ value: String) {
+        #expect(throws: DataTransferError.invalidMIMEType(value)) {
+            _ = try MIMEType(value)
         }
 
-        #expect(throws: DataTransferError.invalidMIMEType("text/plain\0hidden")) {
-            _ = try MIMEType("text/plain\0hidden")
-        }
+        #expect(MIMEType(rawValue: value) == nil)
+    }
 
-        #expect(throws: DataTransferError.invalidMIMEType(" text/plain ")) {
-            _ = try MIMEType(" text/plain ")
-        }
+    @Test(
+        "Valid MIME types preserve their exact string",
+        arguments: [
+            "application/x-swiftwayland-test",
+            "text/plain;charset=utf-8",
+            "image/png",
+            "text/uri-list",
+        ]
+    )
+    func mimeTypePreservesValidValues(_ value: String) throws {
+        let mimeType = try MIMEType(value)
 
-        #expect(throws: DataTransferError.invalidMIMEType("text/")) {
-            _ = try MIMEType("text/")
-        }
-
-        #expect(throws: DataTransferError.invalidMIMEType("text/plain\nbad")) {
-            _ = try MIMEType("text/plain\nbad")
-        }
-
-        #expect(MIMEType(rawValue: "") == nil)
-        #expect(MIMEType(rawValue: "text/plain\0hidden") == nil)
-        #expect(MIMEType(rawValue: "text/") == nil)
+        #expect(mimeType.rawValue == value)
+        #expect(mimeType.description == value)
     }
 
     @Test

@@ -61,40 +61,47 @@
         }
     }
 
-    // SAFETY: Gate state is private and every access is protected by NSLock.
+    // SAFETY: Gate state is private and every access is protected by NSCondition.
     private final class ConcurrentShutdownGate: @unchecked Sendable {
         private struct State: Sendable {
             var didEnter = false
             var isOpen = false
         }
 
-        private let lock = NSLock()
+        private let condition = NSCondition()
         private var state = State()
 
         func enterAndWaitUntilOpened() {
-            withState { $0.didEnter = true }
-
-            while !withState({ $0.isOpen }) {
-                usleep(1_000)
+            condition.lock()
+            state.didEnter = true
+            condition.broadcast()
+            while !state.isOpen {
+                condition.wait()
             }
+            condition.unlock()
         }
 
         func waitUntilEntered() -> Bool {
-            waitUntil {
-                withState { $0.didEnter }
+            condition.lock()
+            defer { condition.unlock() }
+            guard !state.didEnter else {
+                return true
             }
+
+            let deadline = Date().addingTimeInterval(10)
+            while !state.didEnter {
+                guard condition.wait(until: deadline) else {
+                    return false
+                }
+            }
+            return true
         }
 
         func open() {
-            withState { $0.isOpen = true }
-        }
-
-        private func withState<Result: Sendable>(
-            _ body: (inout State) -> Result
-        ) -> Result {
-            lock.lock()
-            defer { lock.unlock() }
-            return body(&state)
+            condition.lock()
+            state.isOpen = true
+            condition.broadcast()
+            condition.unlock()
         }
     }
 
@@ -123,7 +130,7 @@
         }
     }
 
-    @Suite
+    @Suite(.timeLimit(.minutes(1)))
     struct WaylandThreadExecutorConcurrencyTests {
         @Test
         func concurrentShutdownCallerWaitsForFirstJoiner() throws {
