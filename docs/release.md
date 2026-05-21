@@ -64,8 +64,10 @@ LeakSanitizer path explicitly, run `make test-asan` without overriding
 `scripts/safety/tsan-suppressions.txt` only for known Swift runtime
 metadata-cache and Swift Testing event graph reports. It also disables TSan's
 deadlock detector because Swift runtime metadata initialization currently
-produces lock-order false positives; project data-race reports should remain
-unsuppressed.
+produces lock-order false positives. The target runs Swift Testing with one
+worker so sanitizer output is not polluted by unrelated test-runner and runtime
+parallel initialization reports; project data-race reports inside tests should
+remain unsuppressed.
 
 The public API baseline covers both vended library products, `WaylandClient`
 and `WaylandGraphicsPreview`. Preview API drift should still be reviewed and
@@ -79,7 +81,9 @@ smoke remains optional and compositor/hardware dependent; use
 when collecting compositor matrix facts. The request-path targets default to a
 600 second timeout because sanitizer builds can spend several minutes compiling
 before tests start; override it with
-`SWIFT_WAYLAND_REQUEST_PROCESS_TIMEOUT_SECONDS`.
+`SWIFT_WAYLAND_REQUEST_PROCESS_TIMEOUT_SECONDS`. The request runner invokes
+the window-control and drag-source suites as separate test processes because
+both use package-wide C request-recording hooks.
 
 `make swiftbuild-smoke` is informational. Native SwiftPM remains the supported
 build system; the Swift Build preview can report `unsupported`,
