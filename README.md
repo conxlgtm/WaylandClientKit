@@ -36,6 +36,7 @@ Current experimental baseline:
 - linux-dmabuf capability discovery and package-internal GBM/EGL preview pieces
 - compose and dead-key text results for interpreted keyboard events
 - display, input, data-transfer, text-input, and diagnostic event streams
+- framework-host guidance and external consumer checks for packages building above `WaylandClient`
 - minimal DocC catalog and public API baseline checks
 - noninteractive Wayland smoke executable
 - tests for system imports, shim imports, raw lifecycle, and client drawing helpers
@@ -47,6 +48,11 @@ Not implemented yet:
 - output-management APIs
 - public GPU rendering APIs in `WaylandClient`
 - high-level gesture recognizers or widgets
+
+For packages building a GUI layer on top of SwiftWayland, see
+`docs/framework-host-contract.md` and `docs/building-a-gui-layer.md`.
+`Examples/FrameworkHostSmoke` shows a small app-host loop without defining
+widgets, layout, or a scene graph.
 
 ## Support Matrix
 
