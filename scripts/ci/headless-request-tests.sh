@@ -24,7 +24,7 @@ case "$mode" in
         ;;
     tsan)
         export TSAN_OPTIONS="${TSAN_OPTIONS:+${TSAN_OPTIONS}:}detect_deadlocks=0:suppressions=${TSAN_SUPPRESSIONS}"
-        swift_args=(test --sanitize=thread --parallel --num-workers 1)
+        swift_args=(test --sanitize=thread --no-parallel)
         ;;
     asan)
         export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
