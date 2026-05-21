@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import Testing
 
 @testable import WaylandClient

@@ -6,7 +6,7 @@ import Testing
 @testable import WaylandClient
 
 @Suite(.timeLimit(.minutes(1)))
-struct ClipboardOfferReadTests {
+struct ClipboardOfferReadTests {  // swiftlint:disable:this type_body_length
     @Test
     func clipboardOfferReadReturnsDataAfterPeerWritesAndCloses() async throws {
         let descriptors = try makePipeDescriptors()
@@ -349,6 +349,7 @@ private enum ClipboardReadStep: Sendable {
     case eof
 }
 
+// SAFETY: Probe state is private and every access is protected by NSCondition or Mutex.
 private final class ClipboardReadCancellationProbe: @unchecked Sendable {
     private let condition = NSCondition()
     private var readAttemptCount = 0

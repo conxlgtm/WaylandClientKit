@@ -1,13 +1,13 @@
 import Testing
 
-public extension Tag {
-    @Tag static var critical: Self
-    @Tag static var regression: Self
-    @Tag static var linux: Self
-    @Tag static var integration: Self
-    @Tag static var liveWayland: Self
-    @Tag static var gpu: Self
-    @Tag static var concurrency: Self
-    @Tag static var shim: Self
-    @Tag static var publicAPI: Self
+extension Tag {
+    @Tag public static var critical: Self
+    @Tag public static var regression: Self
+    @Tag public static var linux: Self
+    @Tag public static var integration: Self
+    @Tag public static var liveWayland: Self
+    @Tag public static var gpu: Self
+    @Tag public static var concurrency: Self
+    @Tag public static var shim: Self
+    @Tag public static var publicAPI: Self
 }
