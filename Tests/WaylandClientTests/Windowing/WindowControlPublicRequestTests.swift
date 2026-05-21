@@ -2,6 +2,7 @@
     import CWaylandProtocols
     import Foundation
     import Testing
+    import WaylandTestSupport
 
     @testable import WaylandClient
 
@@ -12,6 +13,7 @@
             "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1"
         ),
         .timeLimit(.minutes(1)),
+        .tags(.linux, .integration, .liveWayland, .publicAPI),
         .serialized
     )
     struct WindowControlPublicRequestTests {
