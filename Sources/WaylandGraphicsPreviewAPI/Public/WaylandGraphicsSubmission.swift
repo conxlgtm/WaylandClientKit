@@ -5,6 +5,7 @@ public struct WaylandGraphicsConfiguration: Equatable, Sendable {
     public var synchronizationPolicy: WaylandGraphicsSynchronizationPolicy
     public var pacingPolicy: WaylandGraphicsPacingPolicy
     public var metadataPolicy: WaylandGraphicsMetadataPolicy
+    public var presentationFeedbackPolicy: WaylandGraphicsPresentationFeedbackPolicy
 
     public static let `default` = WaylandGraphicsConfiguration()
 
@@ -14,12 +15,15 @@ public struct WaylandGraphicsConfiguration: Equatable, Sendable {
         synchronizationPolicy frameSynchronizationPolicy:
             WaylandGraphicsSynchronizationPolicy = .implicitOnly,
         pacingPolicy framePacingPolicy: WaylandGraphicsPacingPolicy = .none,
-        metadataPolicy frameMetadataPolicy: WaylandGraphicsMetadataPolicy = .none
+        metadataPolicy frameMetadataPolicy: WaylandGraphicsMetadataPolicy = .none,
+        presentationFeedbackPolicy framePresentationFeedbackPolicy:
+            WaylandGraphicsPresentationFeedbackPolicy = .none
     ) {
         fallbackPolicy = backingFallbackPolicy
         synchronizationPolicy = frameSynchronizationPolicy
         pacingPolicy = framePacingPolicy
         metadataPolicy = frameMetadataPolicy
+        presentationFeedbackPolicy = framePresentationFeedbackPolicy
     }
 }
 
@@ -47,6 +51,17 @@ extension WaylandGraphicsConfiguration {
         case .preferFIFO, .preferCommitTiming:
             throw WaylandGraphicsError.unsupportedPacing
         }
+
+        switch presentationFeedbackPolicy {
+        case .none, .requestWhenAvailable:
+            break
+        case .require:
+            guard capabilities.presentationFeedback.isAvailable else {
+                throw WaylandGraphicsError.unavailable(
+                    .presentationFeedbackRequiredButUnavailable
+                )
+            }
+        }
     }
 }
 
@@ -67,18 +82,37 @@ public enum WaylandGraphicsMetadataPolicy: Equatable, Sendable {
     case preferAvailable
 }
 
+public enum WaylandGraphicsPresentationFeedbackPolicy: Equatable, Sendable {
+    case none
+    case requestWhenAvailable
+    case require
+}
+
+public struct WaylandGraphicsDamageRegion: Equatable, Sendable {
+    public let rects: [LogicalRect]
+
+    public static let fullFrame = WaylandGraphicsDamageRegion(rects: [])
+
+    public init(rects damageRects: [LogicalRect]) {
+        rects = damageRects
+    }
+}
+
 public struct WaylandGraphicsFrameMetadata: Equatable, Sendable {
     public var contentType: WaylandGraphicsContentType?
     public var presentationHint: WaylandGraphicsPresentationHint?
+    public var damage: WaylandGraphicsDamageRegion?
 
     public static let `default` = WaylandGraphicsFrameMetadata()
 
     public init(
         contentType frameContentType: WaylandGraphicsContentType? = nil,
-        presentationHint framePresentationHint: WaylandGraphicsPresentationHint? = nil
+        presentationHint framePresentationHint: WaylandGraphicsPresentationHint? = nil,
+        damage frameDamage: WaylandGraphicsDamageRegion? = nil
     ) {
         contentType = frameContentType
         presentationHint = framePresentationHint
+        damage = frameDamage
     }
 }
 
@@ -138,6 +172,22 @@ public enum WaylandGraphicsSubmissionOperation: Equatable, Sendable {
     case redraw
 }
 
+public struct WaylandGraphicsFrameResult: Equatable, Sendable {
+    public let runtimePath: WaylandGraphicsRuntimePath
+    public let operation: WaylandGraphicsSubmissionOperation
+    public let size: PositivePixelSize
+
+    public init(
+        runtimePath frameRuntimePath: WaylandGraphicsRuntimePath,
+        operation frameOperation: WaylandGraphicsSubmissionOperation,
+        size frameSize: PositivePixelSize
+    ) {
+        runtimePath = frameRuntimePath
+        operation = frameOperation
+        size = frameSize
+    }
+}
+
 public enum WaylandGraphicsSubmissionStage: Equatable, Sendable {
     case windowStateCheck
     case frameGeometry
@@ -184,6 +234,8 @@ public enum WaylandGraphicsError: Error, Equatable, Sendable {
     case frameLeaseActive
     case frameLeaseConsumed
     case unsupportedMetadata
+    case unsupportedDamage
+    case invalidDamageRegion
     case unsupportedPacing
     case submissionFailed(WaylandGraphicsSubmissionFailure)
 }
@@ -240,14 +292,30 @@ public struct WaylandGraphicsFrameLease: Sendable {
         storage = backingStorage
     }
 
-    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws {
+    @discardableResult
+    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws
+        -> WaylandGraphicsFrameResult
+    {
         try await storage.submit(leaseID: id, frame: frame)
     }
 
+    @discardableResult
+    public func submitSoftware(
+        metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws -> WaylandGraphicsFrameResult {
+        try await storage.submitSoftware(
+            leaseID: id,
+            metadata: frameMetadata,
+            draw
+        )
+    }
+
+    @discardableResult
     package func submitForTestingBeforeSubmissionEffect(
         _ frame: WaylandGraphicsSubmittedFrame,
         _ beforeSubmissionEffect: @Sendable @escaping () async throws -> Void
-    ) async throws {
+    ) async throws -> WaylandGraphicsFrameResult {
         try await storage.submit(
             leaseID: id,
             frame: frame,
@@ -256,10 +324,11 @@ public struct WaylandGraphicsFrameLease: Sendable {
         )
     }
 
+    @discardableResult
     package func submitForTesting(
         _ frame: WaylandGraphicsSubmittedFrame,
         afterSubmissionEffect: @Sendable @escaping () async throws -> Void
-    ) async throws {
+    ) async throws -> WaylandGraphicsFrameResult {
         try await storage.submit(
             leaseID: id,
             frame: frame,
@@ -275,14 +344,17 @@ public struct WaylandGraphicsFrameLease: Sendable {
 
 actor WaylandGraphicsWindowBackingStorage {
     let window: Window
+    private let configuration: WaylandGraphicsConfiguration
     private var backingRuntimePath: WaylandGraphicsRuntimePath
     private var leaseState = WaylandGraphicsFrameLeaseState()
 
     init(
         window backingWindow: Window,
-        runtimePath initialRuntimePath: WaylandGraphicsRuntimePath
+        runtimePath initialRuntimePath: WaylandGraphicsRuntimePath,
+        configuration backingConfiguration: WaylandGraphicsConfiguration = .default
     ) {
         window = backingWindow
+        configuration = backingConfiguration
         backingRuntimePath = initialRuntimePath
     }
 
@@ -322,7 +394,7 @@ actor WaylandGraphicsWindowBackingStorage {
     func submit(
         leaseID: UInt64,
         frame: WaylandGraphicsSubmittedFrame
-    ) async throws {
+    ) async throws -> WaylandGraphicsFrameResult {
         try await submit(
             leaseID: leaseID,
             frame: frame,
@@ -336,11 +408,16 @@ actor WaylandGraphicsWindowBackingStorage {
         frame: WaylandGraphicsSubmittedFrame,
         beforeSubmissionEffect: @Sendable () async throws -> Void,
         afterSubmissionEffect: @Sendable () async throws -> Void
-    ) async throws {
+    ) async throws -> WaylandGraphicsFrameResult {
         try leaseState.requireNotClosed()
         try await ensureWindowOpen()
 
-        let operation = try leaseState.prepareSubmission(leaseID: leaseID, frame: frame)
+        let geometry = try await submissionGeometry(for: leaseID)
+        try frame.validateManagedPreviewSupport(
+            capabilities: backingRuntimePath.capabilities,
+            geometry: geometry
+        )
+        let operation = try leaseState.prepareSubmission(leaseID: leaseID)
         var stage = WaylandGraphicsSubmissionStage.submissionPreparation
         do {
             try await beforeSubmissionEffect()
@@ -349,9 +426,51 @@ actor WaylandGraphicsWindowBackingStorage {
             stage = .submissionCompletion
             try await afterSubmissionEffect()
             try leaseState.finishSubmission()
+            return frameResult(operation: operation, size: geometry.bufferSize)
         } catch {
             leaseState.failSubmission()
             throw graphicsError(for: error, stage: stage, operation: operation)
+        }
+    }
+
+    func submitSoftware(
+        leaseID: UInt64,
+        metadata frameMetadata: WaylandGraphicsFrameMetadata,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws -> WaylandGraphicsFrameResult {
+        try leaseState.requireNotClosed()
+        try await ensureWindowOpen()
+
+        let geometry = try await submissionGeometry(for: leaseID)
+        try frameMetadata.validateManagedPreviewSupport(
+            capabilities: backingRuntimePath.capabilities,
+            geometry: geometry
+        )
+        let operation = try leaseState.prepareSubmission(leaseID: leaseID)
+        var stage = WaylandGraphicsSubmissionStage.submissionPreparation
+        do {
+            stage = .frameSubmission
+            try await submitSoftwareFrame(
+                metadata: frameMetadata,
+                operation: operation,
+                draw
+            )
+            stage = .submissionCompletion
+            try leaseState.finishSubmission()
+            return frameResult(operation: operation, size: geometry.bufferSize)
+        } catch {
+            leaseState.failSubmission()
+            throw graphicsError(for: error, stage: stage, operation: operation)
+        }
+    }
+
+    private func submissionGeometry(for leaseID: UInt64) async throws -> SurfaceGeometry {
+        do {
+            let geometry = try await window.geometry
+            try leaseState.requireSubmittable(leaseID: leaseID)
+            return geometry
+        } catch {
+            throw graphicsError(for: error, stage: .frameGeometry)
         }
     }
 
@@ -414,16 +533,65 @@ actor WaylandGraphicsWindowBackingStorage {
         operation: WaylandGraphicsFrameSubmissionOperation
     ) async throws {
         let color = frame.color.xrgb8888
+        let metadata = try frame.metadata.surfaceCommitMetadata()
         switch operation {
         case .show:
-            try await window.show { softwareFrame in
+            try await window.show(metadata: metadata) { softwareFrame in
                 Self.clear(softwareFrame, color: color)
             }
+            try await requestPresentationFeedbackAfterInitialShowIfNeeded()
         case .redraw:
-            try await window.redraw { softwareFrame in
+            try await requestPresentationFeedbackBeforeRedrawIfNeeded()
+            try await window.redraw(metadata: metadata) { softwareFrame in
                 Self.clear(softwareFrame, color: color)
             }
         }
+    }
+
+    private func submitSoftwareFrame(
+        metadata frameMetadata: WaylandGraphicsFrameMetadata,
+        operation: WaylandGraphicsFrameSubmissionOperation,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws {
+        let metadata = try frameMetadata.surfaceCommitMetadata()
+        switch operation {
+        case .show:
+            try await window.show(metadata: metadata, draw)
+            try await requestPresentationFeedbackAfterInitialShowIfNeeded()
+        case .redraw:
+            try await requestPresentationFeedbackBeforeRedrawIfNeeded()
+            try await window.redraw(metadata: metadata, draw)
+        }
+    }
+
+    private func requestPresentationFeedbackBeforeRedrawIfNeeded() async throws {
+        guard shouldRequestPresentationFeedback else { return }
+        try await window.requestPresentationFeedback()
+    }
+
+    private func requestPresentationFeedbackAfterInitialShowIfNeeded() async throws {
+        guard shouldRequestPresentationFeedback else { return }
+        try await window.requestPresentationFeedback()
+    }
+
+    private var shouldRequestPresentationFeedback: Bool {
+        switch configuration.presentationFeedbackPolicy {
+        case .none:
+            false
+        case .requestWhenAvailable, .require:
+            backingRuntimePath.capabilities.presentationFeedback.isAvailable
+        }
+    }
+
+    private func frameResult(
+        operation: WaylandGraphicsFrameSubmissionOperation,
+        size: PositivePixelSize
+    ) -> WaylandGraphicsFrameResult {
+        WaylandGraphicsFrameResult(
+            runtimePath: backingRuntimePath,
+            operation: operation.graphicsSubmissionOperation,
+            size: size
+        )
     }
 
     nonisolated private static func clear(
@@ -434,6 +602,91 @@ actor WaylandGraphicsWindowBackingStorage {
             for index in 0..<pixels.count {
                 unsafe pixels[unchecked: index] = color
             }
+        }
+    }
+}
+
+extension WaylandGraphicsSubmittedFrame {
+    package func validateManagedPreviewSupport(
+        capabilities: WaylandGraphicsSurfaceCapabilities,
+        geometry: SurfaceGeometry
+    ) throws {
+        switch self {
+        case .clearColor(let clearFrame):
+            try clearFrame.metadata.validateManagedPreviewSupport(
+                capabilities: capabilities,
+                geometry: geometry
+            )
+        }
+    }
+}
+
+extension WaylandGraphicsFrameMetadata {
+    package func validateManagedPreviewSupport(
+        capabilities: WaylandGraphicsSurfaceCapabilities,
+        geometry: SurfaceGeometry
+    ) throws {
+        try damage?.validateManagedPreviewSupport(geometry: geometry)
+        if contentType != nil, !capabilities.colorMetadata.contentType.isAvailable {
+            throw WaylandGraphicsError.unavailable(.metadataRequiredButUnavailable)
+        }
+        if presentationHint != nil, !capabilities.colorMetadata.tearingControl.isAvailable {
+            throw WaylandGraphicsError.unavailable(.metadataRequiredButUnavailable)
+        }
+    }
+
+    package func surfaceCommitMetadata() throws -> SurfaceCommitMetadata {
+        SurfaceCommitMetadata(
+            contentType: contentType?.surfaceContentType,
+            presentationHint: presentationHint?.surfacePresentationHint
+        )
+    }
+}
+
+extension WaylandGraphicsDamageRegion {
+    package func validateManagedPreviewSupport(geometry: SurfaceGeometry) throws {
+        guard !rects.isEmpty else {
+            return
+        }
+
+        let width = Int64(geometry.logicalSize.width.rawValue)
+        let height = Int64(geometry.logicalSize.height.rawValue)
+        for rect in rects {
+            let x = Int64(rect.origin.x)
+            let y = Int64(rect.origin.y)
+            let rectWidth = Int64(rect.size.width.rawValue)
+            let rectHeight = Int64(rect.size.height.rawValue)
+            guard x >= 0, y >= 0, x + rectWidth <= width, y + rectHeight <= height else {
+                throw WaylandGraphicsError.invalidDamageRegion
+            }
+        }
+
+        throw WaylandGraphicsError.unsupportedDamage
+    }
+}
+
+extension WaylandGraphicsContentType {
+    package var surfaceContentType: SurfaceContentType {
+        switch self {
+        case .none:
+            .none
+        case .photo:
+            .photo
+        case .video:
+            .video
+        case .game:
+            .game
+        }
+    }
+}
+
+extension WaylandGraphicsPresentationHint {
+    package var surfacePresentationHint: SurfacePresentationHint {
+        switch self {
+        case .vsync:
+            .vsync
+        case .async:
+            .async
         }
     }
 }

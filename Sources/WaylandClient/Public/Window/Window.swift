@@ -20,10 +20,30 @@ public struct Window: Sendable, Hashable {
         try await display.showWindow(id, timeoutMilliseconds: timeoutMilliseconds, draw)
     }
 
+    package func show(
+        timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
+        metadata: SurfaceCommitMetadata,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws {
+        try await display.showWindow(
+            id,
+            timeoutMilliseconds: timeoutMilliseconds,
+            metadata: metadata,
+            draw
+        )
+    }
+
     public func redraw(
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws {
         try await display.redraw(id, draw)
+    }
+
+    package func redraw(
+        metadata: SurfaceCommitMetadata,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws {
+        try await display.redraw(id, metadata: metadata, draw)
     }
 
     public func close() async {

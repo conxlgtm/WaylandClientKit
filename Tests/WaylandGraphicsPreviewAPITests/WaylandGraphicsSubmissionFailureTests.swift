@@ -10,10 +10,7 @@ struct WaylandGraphicsSubmissionFailureTests {
         let firstLeaseID = try leaseState.issueLease()
 
         #expect(
-            try leaseState.prepareSubmission(
-                leaseID: firstLeaseID,
-                frame: .clearColor(.black)
-            ) == .show
+            try leaseState.prepareSubmission(leaseID: firstLeaseID) == .show
         )
 
         leaseState.failSubmission()
@@ -27,20 +24,14 @@ struct WaylandGraphicsSubmissionFailureTests {
         let firstLeaseID = try leaseState.issueLease()
 
         #expect(
-            try leaseState.prepareSubmission(
-                leaseID: firstLeaseID,
-                frame: .clearColor(.black)
-            ) == .show
+            try leaseState.prepareSubmission(leaseID: firstLeaseID) == .show
         )
 
         leaseState.failSubmission()
 
         let retryLeaseID = try leaseState.issueLease()
         #expect(
-            try leaseState.prepareSubmission(
-                leaseID: retryLeaseID,
-                frame: .clearColor(.black)
-            ) == .show
+            try leaseState.prepareSubmission(leaseID: retryLeaseID) == .show
         )
     }
 
@@ -49,28 +40,19 @@ struct WaylandGraphicsSubmissionFailureTests {
         var leaseState = WaylandGraphicsFrameLeaseState()
         let firstLeaseID = try leaseState.issueLease()
 
-        _ = try leaseState.prepareSubmission(
-            leaseID: firstLeaseID,
-            frame: .clearColor(.black)
-        )
+        _ = try leaseState.prepareSubmission(leaseID: firstLeaseID)
         try leaseState.finishSubmission()
 
         let secondLeaseID = try leaseState.issueLease()
         #expect(
-            try leaseState.prepareSubmission(
-                leaseID: secondLeaseID,
-                frame: .clearColor(.black)
-            ) == .redraw
+            try leaseState.prepareSubmission(leaseID: secondLeaseID) == .redraw
         )
 
         leaseState.failSubmission()
 
         let retryLeaseID = try leaseState.issueLease()
         #expect(
-            try leaseState.prepareSubmission(
-                leaseID: retryLeaseID,
-                frame: .clearColor(.black)
-            ) == .redraw
+            try leaseState.prepareSubmission(leaseID: retryLeaseID) == .redraw
         )
     }
 
@@ -79,10 +61,7 @@ struct WaylandGraphicsSubmissionFailureTests {
         var leaseState = WaylandGraphicsFrameLeaseState()
         let leaseID = try leaseState.issueLease()
 
-        _ = try leaseState.prepareSubmission(
-            leaseID: leaseID,
-            frame: .clearColor(.black)
-        )
+        _ = try leaseState.prepareSubmission(leaseID: leaseID)
         leaseState.close()
         leaseState.failSubmission()
 
