@@ -16,10 +16,15 @@ make smoke-wayland
 make integration-wayland
 make gpu-preview-wayland
 make wayland-headless
+make wayland-request-headless
+make wayland-request-headless-tsan
+make wayland-request-headless-asan
 make gpu-preview-headless
 make check
 make release-check
 make test-graphics-preview-client
+make swiftbuild-smoke
+./scripts/ci/repeat-test.sh --count 20 --filter WaylandThreadExecutorConcurrencyTests
 ```
 
 `make smoke-wayland` runs the `swift-wayland-smoke` executable against the
@@ -47,6 +52,22 @@ The command runs `./scripts/smoke/gpu-preview-wayland.sh`.
 `scripts/smoke/with-headless-weston.sh`, then runs both smoke and public
 integration tests against that private compositor.
 
+`make wayland-request-headless` starts headless Weston and runs the env-gated
+window-control and source-side drag request-path tests against that private
+compositor. It sets `SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1` and
+`SWIFT_WAYLAND_ENABLE_DND_SOURCE_REQUEST_TESTS=1`.
+
+`make wayland-request-headless-tsan` runs the same focused request-path tests
+under ThreadSanitizer. `make wayland-request-headless-asan` runs them under
+AddressSanitizer with LeakSanitizer disabled by default. These jobs are focused
+on request wrapper ordering and descriptor/request lifecycles; GPU hardware
+paths remain separate. The request runner invokes the window-control and
+drag-source suites as separate test processes because both use package-wide C
+request-recording hooks. The request-path runner defaults to a 600 second
+timeout because sanitizer builds can spend several minutes compiling before
+tests start. Override it with
+`SWIFT_WAYLAND_REQUEST_PROCESS_TIMEOUT_SECONDS`.
+
 `make gpu-preview-headless` starts headless Weston, then runs the GPU preview
 capability and GBM/EGL smoke path against that private compositor.
 
@@ -57,6 +78,15 @@ check only when `WAYLAND_DISPLAY` is already set.
 current compositor when `WAYLAND_DISPLAY` is set, uses headless Weston when
 `weston` is installed, and fails in CI or when `REQUIRE_WAYLAND_SMOKE=1` if no
 live Wayland path is available.
+
+`make swiftbuild-smoke` runs an informational Swift Build preview check. Native
+SwiftPM remains the supported build system; the smoke reports unsupported
+toolchains and Swiftly layout issues without treating those as package
+correctness failures.
+
+`scripts/ci/repeat-test.sh` repeats one filtered test suite for local stress
+validation. Use it for concurrency-sensitive suites before promoting a
+scheduler, event-loop, or descriptor-lifecycle change.
 
 ## Headless Weston
 
@@ -119,7 +149,10 @@ Swift 6.3.2 SwiftPM may also need a compatibility `libxml2.so.2` on
 openSUSE. The project Swift wrappers load `$SWIFT_COMPAT_LIBS` when present,
 defaulting to `$HOME/.local/share/swift-compat-libs`; direct toolchain calls
 must expose that directory through `LD_LIBRARY_PATH` or another runtime loader
-path.
+path. The wrapper suppresses the known Swiftly/openSUSE
+`libxml2.so.2: no version information available` loader warning so test logs
+stay readable; set `SWIFT_WAYLAND_SHOW_COMPAT_WARNINGS=1` to inspect raw Swift
+toolchain stderr.
 
 The support contract is SwiftPM plus system libraries resolved through
 `pkg-config`. Distro package files are not part of the current repository.

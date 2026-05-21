@@ -1,8 +1,10 @@
 SWIFT_FORMAT := ./scripts/dev/swift-format.sh
 SWIFTLINT := ./scripts/dev/swiftlint.sh
 SWIFT := ./scripts/dev/swift.sh
+CLANG_FILTER := $(CURDIR)/scripts/dev/clang-filter-index-store.sh
+TSAN_SUPPRESSIONS := $(CURDIR)/scripts/safety/tsan-suppressions.txt
 
-.PHONY: format lint verify-generated verify-protocol-manifest verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-tsan test-asan test-public-api-client test-graphics-preview-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless gpu-preview-wayland gpu-preview-headless wayland-headless release-check install-pre-commit
+.PHONY: format lint verify-generated verify-protocol-manifest verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-release test-tsan test-asan test-public-api-client test-graphics-preview-client check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless wayland-request-headless wayland-request-headless-tsan wayland-request-headless-asan gpu-preview-wayland gpu-preview-headless wayland-headless swiftbuild-smoke release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
@@ -52,11 +54,14 @@ strict-concurrency:
 test:
 	@./scripts/ci/test-with-warnings-as-errors.sh
 
+test-release:
+	@$(SWIFT) test -c release
+
 test-tsan:
-	@$(SWIFT) test --sanitize=thread
+	@env CC="$(CLANG_FILTER)" TSAN_OPTIONS="$${TSAN_OPTIONS:+$${TSAN_OPTIONS}:}detect_deadlocks=0:suppressions=$(TSAN_SUPPRESSIONS)" $(SWIFT) test --sanitize=thread --no-parallel
 
 test-asan:
-	@$(SWIFT) test --sanitize=address
+	@env CC="$(CLANG_FILTER)" $(SWIFT) test --sanitize=address
 
 test-public-api-client:
 	@./scripts/ci/test-public-api-client.sh
@@ -87,6 +92,15 @@ integration-wayland:
 integration-wayland-headless:
 	@./scripts/smoke/with-headless-weston.sh -- ./scripts/smoke/integration-wayland.sh
 
+wayland-request-headless:
+	@./scripts/ci/headless-request-tests.sh plain
+
+wayland-request-headless-tsan:
+	@./scripts/ci/headless-request-tests.sh tsan
+
+wayland-request-headless-asan:
+	@./scripts/ci/headless-request-tests.sh asan
+
 gpu-preview-wayland:
 	@./scripts/smoke/gpu-preview-wayland.sh
 
@@ -95,6 +109,9 @@ gpu-preview-headless:
 
 wayland-headless:
 	@./scripts/smoke/with-headless-weston.sh -- bash -c './scripts/smoke/smoke-wayland.sh && ./scripts/smoke/integration-wayland.sh'
+
+swiftbuild-smoke:
+	@./scripts/ci/swiftbuild-smoke.sh
 
 release-check:
 	@./scripts/ci/release-check.sh

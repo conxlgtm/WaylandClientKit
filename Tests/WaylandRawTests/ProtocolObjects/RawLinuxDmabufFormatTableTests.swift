@@ -95,13 +95,14 @@ struct RawLinuxDmabufFormatTableTests {
 
     @Test
     func formatTableShortFdClosesDescriptor() throws {
-        var descriptor = try RawFileDescriptor.memfd(name: "swift-wayland-dmabuf-table-short")
+        let descriptors = try RawFileDescriptor.pipeDescriptors()
+        var parserDescriptorClosed = false
         defer {
-            descriptor.close()
+            Glibc.close(descriptors.readEnd)
+            if !parserDescriptorClosed {
+                Glibc.close(descriptors.writeEnd)
+            }
         }
-
-        let parserDescriptor = Glibc.dup(descriptor.rawValue)
-        #expect(parserDescriptor >= 0)
 
         #expect(
             throws: RuntimeError.invalidDmabufFormatTableByteCount(
@@ -110,11 +111,12 @@ struct RawLinuxDmabufFormatTableTests {
             )
         ) {
             _ = try RawLinuxDmabufFormatTable.parse(
-                fileDescriptor: parserDescriptor,
+                fileDescriptor: descriptors.writeEnd,
                 byteCount: UInt32(RawLinuxDmabufFormatTable.entryByteCount)
             )
         }
-        #expect(Glibc.fcntl(parserDescriptor, F_GETFD) == -1)
+        parserDescriptorClosed = pipeWriteEndIsClosed(readEnd: descriptors.readEnd)
+        #expect(parserDescriptorClosed)
     }
 }
 
@@ -133,4 +135,35 @@ private func formatTableBytes(_ entries: [RawLinuxDmabufFormatModifier]) -> [UIn
     }
 
     return bytes
+}
+
+private func pipeWriteEndIsClosed(readEnd: Int32) -> Bool {
+    let flags = Glibc.fcntl(readEnd, F_GETFL)
+    guard flags != -1 else { return false }
+
+    guard Glibc.fcntl(readEnd, F_SETFL, flags | O_NONBLOCK) != -1 else {
+        return false
+    }
+    defer { _ = Glibc.fcntl(readEnd, F_SETFL, flags) }
+
+    var byte: UInt8 = 0
+    while true {
+        let readCount = unsafe withUnsafeMutableBytes(of: &byte) { byteBuffer in
+            unsafe Glibc.read(readEnd, byteBuffer.baseAddress, 1)
+        }
+
+        if readCount == 0 {
+            return true
+        }
+        if readCount > 0 {
+            return false
+        }
+        if errno == EINTR {
+            continue
+        }
+        if errno == EAGAIN || errno == EWOULDBLOCK {
+            return false
+        }
+        return false
+    }
 }
