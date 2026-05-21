@@ -55,13 +55,13 @@ test:
 	@./scripts/ci/test-with-warnings-as-errors.sh
 
 test-release:
-	@$(SWIFT) test -c release
+	@$(SWIFT) test -c release --no-parallel
 
 test-tsan:
 	@env CC="$(CLANG_FILTER)" TSAN_OPTIONS="$${TSAN_OPTIONS:+$${TSAN_OPTIONS}:}detect_deadlocks=0:suppressions=$(TSAN_SUPPRESSIONS)" $(SWIFT) test --sanitize=thread --no-parallel
 
 test-asan:
-	@env CC="$(CLANG_FILTER)" $(SWIFT) test --sanitize=address
+	@env CC="$(CLANG_FILTER)" $(SWIFT) test --sanitize=address --no-parallel
 
 test-public-api-client:
 	@./scripts/ci/test-public-api-client.sh

@@ -54,7 +54,10 @@ Sources/WaylandClient/Internal/DataTransfer/DataTransferSourceWriteTypes.swift	U
 Sources/WaylandClient/Internal/DataTransfer/DataTransferSourceWriter.swift	UnsafeRawBufferPointer	Descriptor write injection accepts borrowed data-transfer write buffers.
 Sources/WaylandClient/Public/DataTransfer/OwnedFileDescriptor.swift	UnsafeRawBufferPointer	Scoped borrowed public file-descriptor write buffer.
 Sources/WaylandClient/Internal/DataTransfer/DataTransferSourceWriter.swift	@unchecked Sendable	Private condition-protected data-transfer writer state shared with one worker thread.
-Tests/WaylandRuntimeTests/Executor/WaylandThreadExecutorConcurrencyTests.swift	@unchecked Sendable	Private NSLock-protected test recorder state shared by detached shutdown caller threads.
+Tests/WaylandRuntimeTests/Executor/WaylandThreadExecutorConcurrencyTests.swift	@unchecked Sendable	Private condition-protected test recorder and gate state shared by detached shutdown caller threads.
+Tests/WaylandRuntimeTests/Executor/WaylandThreadExecutorTests.swift	@unchecked Sendable	Private condition-protected owner-thread test gate shared with executor thread.
+Tests/WaylandClientTests/Events/EventBrokerCancellationTests.swift	@unchecked Sendable	Private condition-protected event broker cancellation gate shared with a child task.
+Tests/WaylandClientTests/DataTransfer/ClipboardOfferReadTests.swift	@unchecked Sendable	Private condition-protected read cancellation probe shared with a child task.
 Tests/WaylandRuntimeTests/Executor/WaylandThreadExecutorTestSupport.swift	poll(	Test-only pipe wait used to observe executor-thread progress without racing shared Swift state.
 Tests/**	OpaquePointer	Test doubles for raw C object wrappers.
 Tests/**	UnsafeMutablePointer	Test doubles for C listener and buffer APIs.

@@ -1,4 +1,7 @@
+// swiftlint:disable file_length
+
 #if ENABLE_TESTING
+    import Foundation
     import Glibc
     import Synchronization
     import Testing
@@ -30,10 +33,15 @@
         }
 
         private let executor: WaylandThreadExecutor
+        private let signalWriteDescriptor: CInt?
         private let state = Mutex(State())
 
-        init(executor sourceExecutor: WaylandThreadExecutor) {
+        init(
+            executor sourceExecutor: WaylandThreadExecutor,
+            signalWriteDescriptor descriptor: CInt? = nil
+        ) {
             executor = sourceExecutor
+            signalWriteDescriptor = descriptor
         }
 
         var isClosed: Bool {
@@ -63,6 +71,7 @@
                 state.didRunOnOwnerThread = didRunOnOwnerThread
                 state.isClosed = true
             }
+            signalReadEvents()
         }
 
         func cancelRead() {
@@ -75,6 +84,17 @@
 
         func snapshot() -> (pollCount: Int, didRunOnOwnerThread: Bool) {
             state.withLock { ($0.pollCount, $0.didRunOnOwnerThread) }
+        }
+
+        private func signalReadEvents() {
+            guard let signalWriteDescriptor else {
+                return
+            }
+
+            var byte = UInt8(1)
+            _ = unsafe withUnsafeBytes(of: &byte) { buffer in
+                unsafe Glibc.write(signalWriteDescriptor, buffer.baseAddress, 1)
+            }
         }
     }
 
@@ -157,40 +177,51 @@
         }
     }
 
-    private final class OwnerThreadGate: Sendable {
+    // SAFETY: Gate state is private and every access is protected by NSCondition.
+    private final class OwnerThreadGate: @unchecked Sendable {
         private struct State: Sendable {
             var didEnter = false
             var isOpen = false
         }
 
-        private let state = Mutex(State())
+        private let condition = NSCondition()
+        private var state = State()
 
         func enterAndWaitUntilOpened() {
-            state.withLock { $0.didEnter = true }
-
-            while !state.withLock({ $0.isOpen }) {
-                usleep(1_000)
+            condition.lock()
+            state.didEnter = true
+            condition.broadcast()
+            while !state.isOpen {
+                condition.wait()
             }
+            condition.unlock()
         }
 
         func waitUntilEntered() -> Bool {
-            for _ in 0..<1_000 {
-                if state.withLock({ $0.didEnter }) {
-                    return true
-                }
-
-                usleep(1_000)
+            condition.lock()
+            defer { condition.unlock() }
+            guard !state.didEnter else {
+                return true
             }
 
-            return false
+            let deadline = Date().addingTimeInterval(1)
+            while !state.didEnter {
+                guard condition.wait(until: deadline) else {
+                    return false
+                }
+            }
+            return true
         }
 
         func open() {
-            state.withLock { $0.isOpen = true }
+            condition.lock()
+            state.isOpen = true
+            condition.broadcast()
+            condition.unlock()
         }
     }
 
-    @Suite
+    @Suite(.timeLimit(.minutes(1)))
     struct WaylandThreadExecutorTests {
         @Test
         func threadCreationFailureClosesWakeFileDescriptor() throws {
@@ -388,6 +419,15 @@
         }
 
         @Test
+        func runningStateRejectionErrorExits() async {
+            await #expect(processExitsWith: .failure) {
+                var state = WaylandThreadExecutorState()
+                state.phase = .running
+                _ = state.rejectionError()
+            }
+        }
+
+        @Test
         func requestStopAfterLoopExitDoesNotRewriteShutdownMode() {
             var state = WaylandThreadExecutorState()
             state.phase = .loopExited(.orderly)
@@ -430,26 +470,27 @@
 
         @Test
         func installedEventSourceRunsInsideExecutorLoop() throws {
+            let signalDescriptors = try makeExecutorTestPipeDescriptors()
+            defer {
+                closeExecutorTestDescriptor(signalDescriptors.readEnd)
+                closeExecutorTestDescriptor(signalDescriptors.writeEnd)
+            }
             let executor = try WaylandThreadExecutor()
             defer { executor.shutdown() }
-            let source = EventSourceProbe(executor: executor)
+            let source = EventSourceProbe(
+                executor: executor,
+                signalWriteDescriptor: signalDescriptors.writeEnd
+            )
             let installSource: @Sendable () throws(WaylandThreadExecutorError) -> Void = {
                 try executor.installEventSource(source)
             }
 
             try executor.syncBootstrapOnly(installSource)
+            try waitForExecutorTestPipeSignal(signalDescriptors.readEnd)
 
-            for _ in 0..<100 {
-                let snapshot = source.snapshot()
-                if snapshot.pollCount > 0 {
-                    #expect(snapshot.didRunOnOwnerThread)
-                    return
-                }
-
-                usleep(10_000)
-            }
-
-            #expect(Bool(false), "installed event source was not polled")
+            let snapshot = source.snapshot()
+            #expect(snapshot.pollCount > 0)
+            #expect(snapshot.didRunOnOwnerThread)
         }
 
         @Test

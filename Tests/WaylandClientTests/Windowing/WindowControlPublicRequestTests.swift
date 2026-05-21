@@ -2,6 +2,7 @@
     import CWaylandProtocols
     import Foundation
     import Testing
+    import WaylandTestSupport
 
     @testable import WaylandClient
 
@@ -11,6 +12,8 @@
             if: WindowControlRequestTestEnvironment.isEnabled,
             "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1"
         ),
+        .timeLimit(.minutes(1)),
+        .tags(.linux, .integration, .liveWayland, .publicAPI),
         .serialized
     )
     struct WindowControlPublicRequestTests {
@@ -103,11 +106,7 @@
         func requestFullscreenUsesResolvedOutputPointer() async throws {
             try await withWindowControlConnection { display, window in
                 guard let output = try await display.firstRawOutputForTesting() else {
-                    Issue.record(
-                        "Skipping fullscreen request test: compositor advertised no outputs.",
-                        severity: .warning
-                    )
-                    return
+                    try Test.cancel("Compositor advertised no outputs.")
                 }
                 let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
 

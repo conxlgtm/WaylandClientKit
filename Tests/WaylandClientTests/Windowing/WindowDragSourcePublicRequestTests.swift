@@ -11,6 +11,8 @@
             if: DragSourceRequestTestEnvironment.isEnabled,
             "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_DND_SOURCE_REQUEST_TESTS=1"
         ),
+        .timeLimit(.minutes(1)),
+        .tags(.linux, .integration, .liveWayland, .publicAPI),
         .serialized
     )
     struct WindowDragSourcePublicRequestTests {
@@ -18,11 +20,7 @@
         func startDragSendsSourceActionsAndStartDragRequest() async throws {
             try await withDragSourceConnection { display, window in
                 guard let seat = try await display.firstRawSeatForTesting() else {
-                    Issue.record(
-                        "Skipping drag source request test: compositor advertised no seats.",
-                        severity: .warning
-                    )
-                    return
+                    try Test.cancel("Compositor advertised no seats.")
                 }
                 let originPointer = try await requireSurfacePointer(in: display, for: window)
                 let configuration = try DragSourceConfiguration(

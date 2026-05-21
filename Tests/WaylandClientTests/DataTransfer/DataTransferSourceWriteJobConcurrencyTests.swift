@@ -5,7 +5,7 @@ import Testing
 
 @testable import WaylandClient
 
-@Suite
+@Suite(.timeLimit(.minutes(1)))
 struct DataTransferSourceWriteJobConcurrencyTests {
     @Test
     func sourceWriteJobCrossesThreadBoundaryAsSendable() {

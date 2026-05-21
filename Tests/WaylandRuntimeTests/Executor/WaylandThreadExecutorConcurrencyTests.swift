@@ -6,14 +6,14 @@
     @testable import WaylandRuntime
 
     // SAFETY: Mutable recorder state is private and every access is protected by
-    // NSLock, which ThreadSanitizer recognizes for these detached-thread tests.
+    // NSCondition, which ThreadSanitizer recognizes for these detached-thread tests.
     private final class ShutdownCompletionRecorder: @unchecked Sendable {
         private struct State: Sendable {
             var starts: [String] = []
             var completions: [String] = []
         }
 
-        private let lock = NSLock()
+        private let condition = NSCondition()
         private var state = State()
 
         var startedValues: Set<String> {
@@ -52,49 +52,82 @@
             }
         }
 
+        func waitUntilStartedValues(_ expectedValues: Set<String>) -> Bool {
+            waitUntil { Set($0.starts) == expectedValues }
+        }
+
+        func waitUntilValues(_ expectedValues: Set<String>) -> Bool {
+            waitUntil { Set($0.completions) == expectedValues }
+        }
+
         private func withState<Result: Sendable>(
             _ body: (inout State) -> Result
         ) -> Result {
-            lock.lock()
-            defer { lock.unlock() }
-            return body(&state)
+            condition.lock()
+            let result = body(&state)
+            condition.broadcast()
+            condition.unlock()
+            return result
+        }
+
+        private func waitUntil(_ predicate: (State) -> Bool) -> Bool {
+            condition.lock()
+            defer { condition.unlock() }
+            guard !predicate(state) else {
+                return true
+            }
+
+            let deadline = Date().addingTimeInterval(10)
+            while !predicate(state) {
+                guard condition.wait(until: deadline) else {
+                    return predicate(state)
+                }
+            }
+            return true
         }
     }
 
-    // SAFETY: Gate state is private and every access is protected by NSLock.
+    // SAFETY: Gate state is private and every access is protected by NSCondition.
     private final class ConcurrentShutdownGate: @unchecked Sendable {
         private struct State: Sendable {
             var didEnter = false
             var isOpen = false
         }
 
-        private let lock = NSLock()
+        private let condition = NSCondition()
         private var state = State()
 
         func enterAndWaitUntilOpened() {
-            withState { $0.didEnter = true }
-
-            while !withState({ $0.isOpen }) {
-                usleep(1_000)
+            condition.lock()
+            state.didEnter = true
+            condition.broadcast()
+            while !state.isOpen {
+                condition.wait()
             }
+            condition.unlock()
         }
 
         func waitUntilEntered() -> Bool {
-            waitUntil {
-                withState { $0.didEnter }
+            condition.lock()
+            defer { condition.unlock() }
+            guard !state.didEnter else {
+                return true
             }
+
+            let deadline = Date().addingTimeInterval(10)
+            while !state.didEnter {
+                guard condition.wait(until: deadline) else {
+                    return false
+                }
+            }
+            return true
         }
 
         func open() {
-            withState { $0.isOpen = true }
-        }
-
-        private func withState<Result: Sendable>(
-            _ body: (inout State) -> Result
-        ) -> Result {
-            lock.lock()
-            defer { lock.unlock() }
-            return body(&state)
+            condition.lock()
+            state.isOpen = true
+            condition.broadcast()
+            condition.unlock()
         }
     }
 
@@ -123,7 +156,7 @@
         }
     }
 
-    @Suite
+    @Suite(.timeLimit(.minutes(1)))
     struct WaylandThreadExecutorConcurrencyTests {
         @Test
         func concurrentShutdownCallerWaitsForFirstJoiner() throws {
@@ -160,9 +193,7 @@
             )
 
             #expect(
-                waitUntil {
-                    completions.startedValues == ["first", "second"]
-                }
+                completions.waitUntilStartedValues(["first", "second"])
             )
             #expect(
                 waitUntil {
@@ -175,9 +206,7 @@
 
             gate.open()
             #expect(
-                waitUntil {
-                    completions.values == ["first", "second"]
-                }
+                completions.waitUntilValues(["first", "second"])
             )
             let stopped = executor.lifecycleSnapshotForTesting
 
@@ -222,9 +251,7 @@
             }
 
             #expect(
-                waitUntil {
-                    completions.startedValues == Set(["first"] + lateCallerLabels)
-                }
+                completions.waitUntilStartedValues(Set(["first"] + lateCallerLabels))
             )
             #expect(
                 waitUntil {
@@ -237,9 +264,7 @@
 
             gate.open()
             #expect(
-                waitUntil {
-                    completions.values == Set(["first"] + lateCallerLabels)
-                }
+                completions.waitUntilValues(Set(["first"] + lateCallerLabels))
             )
             let stopped = executor.lifecycleSnapshotForTesting
 
