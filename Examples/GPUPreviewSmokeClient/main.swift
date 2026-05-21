@@ -16,9 +16,11 @@ struct GPUPreviewSmokeClient {
                 )
             )
             let lease = try await backing.nextFrame()
-            try await lease.submit(.clearColor(
-                WaylandGraphicsXRGBColor(red: 0x3F, green: 0x80, blue: 0xFF)
-            ))
+            try await lease.submit(
+                .clearColor(
+                    WaylandGraphicsXRGBColor(red: 0x3F, green: 0x80, blue: 0xFF)
+                )
+            )
             let runtimePath = try await backing.runtimePath
             try await backing.close()
             printReport(runtimePath: runtimePath)

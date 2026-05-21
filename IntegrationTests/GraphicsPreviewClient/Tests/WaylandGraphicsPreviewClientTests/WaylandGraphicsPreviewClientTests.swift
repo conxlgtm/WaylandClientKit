@@ -80,11 +80,14 @@ struct WaylandGraphicsPreviewClientTests {
         let frame = WaylandGraphicsSubmittedFrame.clearColor(
             WaylandGraphicsXRGBColor(red: 1, green: 2, blue: 3)
         )
+        let expectedFrame = WaylandGraphicsSubmittedFrame.clearColor(
+            WaylandGraphicsClearFrame(
+                color: WaylandGraphicsXRGBColor(red: 1, green: 2, blue: 3)
+            )
+        )
 
         #expect(configuration.synchronizationPolicy == .preferExplicit)
         #expect(metadata.contentType == .video)
-        #expect(frame == .clearColor(WaylandGraphicsClearFrame(
-            color: WaylandGraphicsXRGBColor(red: 1, green: 2, blue: 3)
-        )))
+        #expect(frame == expectedFrame)
     }
 }

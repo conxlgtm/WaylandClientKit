@@ -2079,9 +2079,6 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L332: `    public static func projected(`
 - L372: `    public static func softwareFallback(`
 - L402: `    public static func unavailable(`
-- L495: `    public func graphicsSurfaceCapabilities() throws -> WaylandGraphicsSurfaceCapabilities {`
-- L502: `    public func graphicsRuntimePath(`
-- L512: `    public func graphicsBackingDecision(`
 
 ### `Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsSubmission.swift`
 
@@ -2148,5 +2145,4 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L149: `    public let runtimePath: WaylandGraphicsRuntimePath`
 - L166: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws {`
 - L170: `    public func cancel() async {`
-- L176: `    public func createGraphicsWindowBacking(`
 

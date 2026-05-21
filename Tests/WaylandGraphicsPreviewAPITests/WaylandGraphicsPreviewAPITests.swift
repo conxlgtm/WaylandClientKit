@@ -199,15 +199,16 @@ struct WaylandGraphicsPreviewAPITests {
             presentationHint: .vsync
         )
         let clearFrame = WaylandGraphicsClearFrame(color: color, metadata: metadata)
+        let expectedSubmittedFrame = WaylandGraphicsSubmittedFrame.clearColor(
+            WaylandGraphicsClearFrame(color: color)
+        )
 
         #expect(color.red == 0x10)
         #expect(color.green == 0x20)
         #expect(color.blue == 0x30)
         #expect(clearFrame.metadata.contentType == .game)
         #expect(clearFrame.metadata.presentationHint == .vsync)
-        #expect(WaylandGraphicsSubmittedFrame.clearColor(color) == .clearColor(
-            WaylandGraphicsClearFrame(color: color)
-        ))
+        #expect(WaylandGraphicsSubmittedFrame.clearColor(color) == expectedSubmittedFrame)
     }
 }
 

@@ -121,7 +121,7 @@ public struct WaylandGraphicsWindowBacking: Sendable {
     public let window: Window
     private let storage: WaylandGraphicsWindowBackingStorage
 
-    fileprivate init(
+    init(
         window backingWindow: Window,
         storage backingStorage: WaylandGraphicsWindowBackingStorage
     ) {
@@ -151,7 +151,7 @@ public struct WaylandGraphicsFrameLease: Sendable {
     private let storage: WaylandGraphicsWindowBackingStorage
     private let id: UInt64
 
-    fileprivate init(
+    init(
         id leaseID: UInt64,
         size frameSize: PositivePixelSize,
         runtimePath frameRuntimePath: WaylandGraphicsRuntimePath,
@@ -172,45 +172,7 @@ public struct WaylandGraphicsFrameLease: Sendable {
     }
 }
 
-extension WaylandDisplay {
-    public func createGraphicsWindowBacking(
-        windowConfiguration: WindowConfiguration = .default,
-        graphicsConfiguration: WaylandGraphicsConfiguration = .default
-    ) throws -> WaylandGraphicsWindowBacking {
-        let capabilities = try graphicsSurfaceCapabilities()
-        let runtimePath = try Self.managedPreviewRuntimePath(
-            capabilities: capabilities,
-            configuration: graphicsConfiguration
-        )
-        let window = try createTopLevelWindow(configuration: windowConfiguration)
-        let storage = WaylandGraphicsWindowBackingStorage(
-            window: window,
-            runtimePath: runtimePath,
-            configuration: graphicsConfiguration
-        )
-        return WaylandGraphicsWindowBacking(window: window, storage: storage)
-    }
-
-    private static func managedPreviewRuntimePath(
-        capabilities: WaylandGraphicsSurfaceCapabilities,
-        configuration: WaylandGraphicsConfiguration
-    ) throws -> WaylandGraphicsRuntimePath {
-        switch configuration.fallbackPolicy {
-        case .forceSoftware:
-            return .softwareFallback(capabilities: capabilities, reason: .forcedSoftware)
-        case .preferGPUFallbackToSoftware where !capabilities.dmabuf.isAvailable:
-            return .softwareFallback(capabilities: capabilities, reason: .dmabufUnavailable)
-        case .requireGPU where !capabilities.dmabuf.isAvailable:
-            throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
-        case .preferGPUFallbackToSoftware:
-            return .softwareFallback(capabilities: capabilities, reason: .gbmUnavailable)
-        case .requireGPU:
-            throw WaylandGraphicsError.unavailable(.gbmUnavailable)
-        }
-    }
-}
-
-private actor WaylandGraphicsWindowBackingStorage {
+actor WaylandGraphicsWindowBackingStorage {
     let window: Window
     private let configuration: WaylandGraphicsConfiguration
     private var backingRuntimePath: WaylandGraphicsRuntimePath
@@ -330,7 +292,7 @@ private actor WaylandGraphicsWindowBackingStorage {
         }
     }
 
-    private nonisolated static func clear(
+    nonisolated private static func clear(
         _ frame: borrowing SoftwareFrame,
         color: UInt32
     ) {
