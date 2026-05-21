@@ -58,7 +58,7 @@ test-release:
 	@$(SWIFT) test -c release
 
 test-tsan:
-	@env CC="$(CLANG_FILTER)" TSAN_OPTIONS="$${TSAN_OPTIONS:+$${TSAN_OPTIONS}:}detect_deadlocks=0:suppressions=$(TSAN_SUPPRESSIONS)" $(SWIFT) test --sanitize=thread
+	@env CC="$(CLANG_FILTER)" TSAN_OPTIONS="$${TSAN_OPTIONS:+$${TSAN_OPTIONS}:}detect_deadlocks=0:suppressions=$(TSAN_SUPPRESSIONS)" $(SWIFT) test --sanitize=thread --parallel --num-workers 1
 
 test-asan:
 	@env CC="$(CLANG_FILTER)" $(SWIFT) test --sanitize=address
