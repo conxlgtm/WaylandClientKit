@@ -21,6 +21,7 @@ make check
 ./scripts/dev/swift.sh build --disable-index-store -c release --target SwiftWaylandDemo
 ./scripts/dev/swift.sh build --disable-index-store -c release --target GPUPreviewSmokeClient
 ./scripts/dev/swift.sh build --disable-index-store -c release --product swift-wayland-smoke
+make test-release
 ./scripts/ci/dump-public-api.sh > /tmp/swiftwayland-public-api.md
 ./scripts/ci/verify-public-api-audit.sh
 ./scripts/ci/verify-target-imports.sh
@@ -30,20 +31,69 @@ bash ./scripts/safety/verify-unsafe-allowlist.sh
 
 Prefer `make release-check` for the release build path. Direct `swift`
 commands require equivalent runtime library configuration; the wrapper sources
-`scripts/dev/swift-runtime-env.sh` before invoking Swift.
+`scripts/dev/swift-runtime-env.sh` before invoking Swift. On openSUSE-style
+toolchains that use a compatibility `libxml2.so.2`, the wrapper filters the
+known loader warning about missing version information; set
+`SWIFT_WAYLAND_SHOW_COMPAT_WARNINGS=1` when raw Swift toolchain stderr is
+needed.
+
+`make test-release` runs the release-compatible test subset. Shim-contract and
+instrumentation tests that depend on debug-only C or Swift test hooks are
+compile-gated out of release test binaries so production release products do
+not expose those symbols.
 
 Where the environment supports Swift sanitizers, also run:
 
 ```bash
 make test-tsan
-make test-asan
+ASAN_OPTIONS=detect_leaks=0 make test-asan
+make wayland-request-headless
+make wayland-request-headless-tsan
+make wayland-request-headless-asan
+make swiftbuild-smoke
+./scripts/ci/repeat-test.sh --count 20 --filter WaylandThreadExecutorConcurrencyTests
 ```
 
 ThreadSanitizer is the primary concurrency lifecycle check. AddressSanitizer
-can be environment-dependent on Linux and may require host support for its
-runtime and process instrumentation. LeakSanitizer can also exit with a
-ptrace-related fatal error even after the Swift test process reports passing
-tests; record that as an environment limitation rather than a test failure.
+with `detect_leaks=0` is the required ASan gate. LeakSanitizer remains a
+separate informational check because it can exit with a ptrace-related fatal
+error even after the Swift test process reports passing tests; record that as
+an environment limitation rather than a test failure. To attempt the
+LeakSanitizer path explicitly, run `make test-asan` without overriding
+`ASAN_OPTIONS`. The TSan target uses
+`scripts/safety/tsan-suppressions.txt` only for known Swift runtime
+metadata-cache and Swift Testing event graph reports. It also disables TSan's
+deadlock detector because Swift runtime metadata initialization currently
+produces lock-order false positives. The target runs Swift Testing with
+parallel execution disabled so sanitizer output is not polluted by unrelated
+test-runner and runtime parallel initialization reports; project data-race
+reports inside tests should remain unsuppressed.
+
+The public API baseline covers both vended library products, `WaylandClient`
+and `WaylandGraphicsPreview`. Preview API drift should still be reviewed and
+reflected in the audit and baseline before tagging.
+
+The headless request-path sanitizer targets run the window-control and
+source-side drag request tests under a private Weston compositor. They are the
+release gate for live request wrappers under sanitizers. GPU preview sanitizer
+smoke remains optional and compositor/hardware dependent; use
+`SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1` under a known GPU-capable session
+when collecting compositor matrix facts. The request-path targets default to a
+600 second timeout because sanitizer builds can spend several minutes compiling
+before tests start; override it with
+`SWIFT_WAYLAND_REQUEST_PROCESS_TIMEOUT_SECONDS`. The request runner invokes
+the window-control and drag-source suites as separate test processes because
+both use package-wide C request-recording hooks.
+
+`make swiftbuild-smoke` is informational. Native SwiftPM remains the supported
+build system; the Swift Build preview can report `unsupported`,
+`failed-toolchain-layout`, or `failed-package` depending on the active Swift
+toolchain. Do not block a release on Swift Build preview unless the failure is a
+confirmed package regression.
+
+Use `scripts/ci/repeat-test.sh` for local stress validation of
+concurrency-sensitive suites. It intentionally stays out of the default release
+gate because useful counts are environment- and time-dependent.
 
 Under a real Wayland session:
 

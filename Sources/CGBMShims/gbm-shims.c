@@ -1,6 +1,9 @@
 #include <errno.h>
 #include <gbm.h>
 #include <libdrm/drm_fourcc.h>
+#ifdef SWL_ENABLE_TESTING
+#include <pthread.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -249,6 +252,7 @@ int32_t swl_gbm_device_get_format_modifier_plane_count(
 }
 
 #ifdef SWL_ENABLE_TESTING
+static pthread_mutex_t swl_test_gbm_recording_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct swl_test_gbm_bo_create_record swl_test_gbm_bo_create_latest;
 static struct swl_test_gbm_surface_lifecycle_record
     swl_test_gbm_surface_lifecycle_latest;
@@ -453,7 +457,15 @@ struct gbm_bo *swl_gbm_bo_create(
         return NULL;
     }
 
+    #ifdef SWL_ENABLE_TESTING
+    pthread_mutex_lock(&swl_test_gbm_recording_lock);
+    struct gbm_bo *buffer =
+        swl_gbm_bo_create_impl(device, width, height, format, flags);
+    pthread_mutex_unlock(&swl_test_gbm_recording_lock);
+    return buffer;
+    #else
     return swl_gbm_bo_create_impl(device, width, height, format, flags);
+    #endif
 }
 
 struct gbm_bo *swl_gbm_bo_create_with_modifiers2(
@@ -477,6 +489,19 @@ struct gbm_bo *swl_gbm_bo_create_with_modifiers2(
         return NULL;
     }
 
+    #ifdef SWL_ENABLE_TESTING
+    pthread_mutex_lock(&swl_test_gbm_recording_lock);
+    struct gbm_bo *buffer = swl_gbm_bo_create_with_modifiers2_impl(
+        device,
+        width,
+        height,
+        format,
+        modifiers,
+        count,
+        flags);
+    pthread_mutex_unlock(&swl_test_gbm_recording_lock);
+    return buffer;
+    #else
     return swl_gbm_bo_create_with_modifiers2_impl(
         device,
         width,
@@ -485,6 +510,7 @@ struct gbm_bo *swl_gbm_bo_create_with_modifiers2(
         modifiers,
         count,
         flags);
+    #endif
 }
 
 struct gbm_bo *swl_gbm_bo_create_with_modifier2(
@@ -592,7 +618,14 @@ int32_t swl_gbm_bo_export_dmabuf(
     struct gbm_bo *buffer,
     struct swl_gbm_bo_export *out_export)
 {
+    #ifdef SWL_ENABLE_TESTING
+    pthread_mutex_lock(&swl_test_gbm_recording_lock);
+    int32_t result = swl_gbm_bo_export_dmabuf_impl(buffer, out_export);
+    pthread_mutex_unlock(&swl_test_gbm_recording_lock);
+    return result;
+    #else
     return swl_gbm_bo_export_dmabuf_impl(buffer, out_export);
+    #endif
 }
 
 int32_t swl_gbm_bo_export_take_plane_fd(
@@ -709,7 +742,13 @@ static void swl_gbm_surface_destroy_default(struct gbm_surface *surface)
 
 void swl_gbm_surface_destroy(struct gbm_surface *surface)
 {
+    #ifdef SWL_ENABLE_TESTING
+    pthread_mutex_lock(&swl_test_gbm_recording_lock);
     swl_gbm_surface_destroy_impl(surface);
+    pthread_mutex_unlock(&swl_test_gbm_recording_lock);
+    #else
+    swl_gbm_surface_destroy_impl(surface);
+    #endif
 }
 
 struct gbm_bo *swl_gbm_surface_lock_front_buffer(struct gbm_surface *surface)
@@ -739,12 +778,19 @@ void swl_gbm_surface_release_buffer(
     struct gbm_surface *surface,
     struct gbm_bo *buffer)
 {
+    #ifdef SWL_ENABLE_TESTING
+    pthread_mutex_lock(&swl_test_gbm_recording_lock);
     swl_gbm_surface_release_buffer_impl(surface, buffer);
+    pthread_mutex_unlock(&swl_test_gbm_recording_lock);
+    #else
+    swl_gbm_surface_release_buffer_impl(surface, buffer);
+    #endif
 }
 
 #ifdef SWL_ENABLE_TESTING
 void swl_test_gbm_bo_create_recording_begin(void)
 {
+    pthread_mutex_lock(&swl_test_gbm_recording_lock);
     swl_test_gbm_bo_create_latest =
         (struct swl_test_gbm_bo_create_record){
             .kind = SWL_TEST_GBM_BO_CREATE_NONE,
@@ -754,41 +800,56 @@ void swl_test_gbm_bo_create_recording_begin(void)
     swl_gbm_bo_create_impl = swl_test_gbm_bo_create_record_impl;
     swl_gbm_bo_create_with_modifiers2_impl =
         swl_test_gbm_bo_create_with_modifiers2_record;
+    pthread_mutex_unlock(&swl_test_gbm_recording_lock);
 }
 
 void swl_test_gbm_bo_create_recording_end(void)
 {
+    pthread_mutex_lock(&swl_test_gbm_recording_lock);
     swl_gbm_bo_create_impl = swl_gbm_bo_create_default;
     swl_gbm_bo_create_with_modifiers2_impl =
         swl_gbm_bo_create_with_modifiers2_default;
+    pthread_mutex_unlock(&swl_test_gbm_recording_lock);
 }
 
 struct swl_test_gbm_bo_create_record swl_test_gbm_bo_create_record(void)
 {
-    return swl_test_gbm_bo_create_latest;
+    pthread_mutex_lock(&swl_test_gbm_recording_lock);
+    struct swl_test_gbm_bo_create_record record =
+        swl_test_gbm_bo_create_latest;
+    pthread_mutex_unlock(&swl_test_gbm_recording_lock);
+    return record;
 }
 
 void swl_test_gbm_surface_lifecycle_recording_begin(void)
 {
+    pthread_mutex_lock(&swl_test_gbm_recording_lock);
     swl_test_gbm_surface_lifecycle_latest =
         (struct swl_test_gbm_surface_lifecycle_record){0};
     swl_gbm_bo_export_dmabuf_impl = swl_test_gbm_bo_export_dmabuf_record;
     swl_gbm_surface_destroy_impl = swl_test_gbm_surface_destroy_record;
     swl_gbm_surface_release_buffer_impl =
         swl_test_gbm_surface_release_buffer_record;
+    pthread_mutex_unlock(&swl_test_gbm_recording_lock);
 }
 
 void swl_test_gbm_surface_lifecycle_recording_end(void)
 {
+    pthread_mutex_lock(&swl_test_gbm_recording_lock);
     swl_gbm_bo_export_dmabuf_impl = swl_gbm_bo_export_dmabuf_default;
     swl_gbm_surface_destroy_impl = swl_gbm_surface_destroy_default;
     swl_gbm_surface_release_buffer_impl =
         swl_gbm_surface_release_buffer_default;
+    pthread_mutex_unlock(&swl_test_gbm_recording_lock);
 }
 
 struct swl_test_gbm_surface_lifecycle_record
 swl_test_gbm_surface_lifecycle_record(void)
 {
-    return swl_test_gbm_surface_lifecycle_latest;
+    pthread_mutex_lock(&swl_test_gbm_recording_lock);
+    struct swl_test_gbm_surface_lifecycle_record record =
+        swl_test_gbm_surface_lifecycle_latest;
+    pthread_mutex_unlock(&swl_test_gbm_recording_lock);
+    return record;
 }
 #endif
