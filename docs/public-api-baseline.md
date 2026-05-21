@@ -1986,6 +1986,13 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 ## WaylandGraphicsPreview Public Declarations
 
+### `Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsDisplay.swift`
+
+- L5: `    public func graphicsSurfaceCapabilities() throws -> WaylandGraphicsSurfaceCapabilities {`
+- L12: `    public func graphicsRuntimePath(`
+- L22: `    public func graphicsBackingDecision(`
+- L28: `    public func createGraphicsWindowBacking(`
+
 ### `Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsPreview.swift`
 
 - L4: `public enum WaylandGraphicsProtocolAvailability: Equatable, Sendable {`
