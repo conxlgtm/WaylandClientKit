@@ -193,19 +193,38 @@ Intentionally public:
 - `WaylandGraphicsPacingStatus`
 - `WaylandGraphicsMetadataStatus`
 - `WaylandGraphicsRuntimePath`
+- `WaylandGraphicsConfiguration`
+- `WaylandGraphicsSynchronizationPolicy`
+- `WaylandGraphicsPacingPolicy`
+- `WaylandGraphicsMetadataPolicy`
+- `WaylandGraphicsFrameMetadata`
+- `WaylandGraphicsContentType`
+- `WaylandGraphicsPresentationHint`
+- `WaylandGraphicsXRGBColor`
+- `WaylandGraphicsClearFrame`
+- `WaylandGraphicsSubmittedFrame`
+- `WaylandGraphicsError`
+- `WaylandGraphicsWindowBacking`
+- `WaylandGraphicsFrameLease`
 - `WaylandDisplay.graphicsSurfaceCapabilities()`
 - `WaylandDisplay.graphicsRuntimePath(policy:)`
 - `WaylandDisplay.graphicsBackingDecision(policy:)`
+- `WaylandDisplay.createGraphicsWindowBacking(windowConfiguration:graphicsConfiguration:)`
 
 Current preview contract:
 
 - The product reports renderer-neutral graphics capabilities, projected
   runtime-path facts, software fallback decisions, and required-GPU
   unavailability.
+- The managed preview submission path can create a window backing, lease a
+  frame, submit a deterministic clear frame, and cancel or close resources
+  without exposing raw graphics handles.
 - It does not expose raw Wayland proxies, EGL/GBM/DRM handles, syncobj fds,
-  scene rendering, swapchains, drawables, or public metadata/color APIs.
-- The current projection does not allocate GPU resources. Effectful GPU backing
-  setup remains package-internal.
+  scene rendering, swapchains, drawables, or public color-management image
+  descriptions.
+- Public frame metadata is intentionally narrow. Non-default managed metadata
+  requests currently fail with typed preview errors until live compositor
+  evidence proves a stable public shape.
 - Downstream code that wants this boundary imports `WaylandGraphicsPreview`
   explicitly; importing `WaylandClient` alone does not opt into renderer-facing
   preview API.

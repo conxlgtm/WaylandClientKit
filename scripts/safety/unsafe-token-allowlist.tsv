@@ -55,6 +55,7 @@ Sources/WaylandClient/Internal/DataTransfer/DataTransferSourceWriter.swift	Unsaf
 Sources/WaylandClient/Public/DataTransfer/OwnedFileDescriptor.swift	UnsafeRawBufferPointer	Scoped borrowed public file-descriptor write buffer.
 Sources/WaylandClient/Internal/DataTransfer/DataTransferSourceWriter.swift	@unchecked Sendable	Private condition-protected data-transfer writer state shared with one worker thread.
 Tests/WaylandRuntimeTests/Executor/WaylandThreadExecutorConcurrencyTests.swift	@unchecked Sendable	Private NSLock-protected test recorder state shared by detached shutdown caller threads.
+Tests/WaylandRuntimeTests/Executor/WaylandThreadExecutorTestSupport.swift	poll(	Test-only pipe wait used to observe executor-thread progress without racing shared Swift state.
 Tests/**	OpaquePointer	Test doubles for raw C object wrappers.
 Tests/**	UnsafeMutablePointer	Test doubles for C listener and buffer APIs.
 Tests/**	UnsafeMutableBufferPointer	Test doubles for C buffer APIs.

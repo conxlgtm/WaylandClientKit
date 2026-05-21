@@ -59,13 +59,15 @@ The checkpoint bar is:
 - `SurfaceRuntime` role transitions are tested for all current roles
 - the compositor matrix has collected data for headless Weston and at least one
   desktop compositor before a release candidate
-- GPU preview remains package-internal and reports capability skips or runtime
-  path failures without creating public GPU API
+- GPU preview keeps raw GBM/EGL/dmabuf handles package-internal while the
+  public `WaylandGraphicsPreview` product reports capability skips, runtime
+  path failures, and managed clear-frame software fallback without becoming a
+  renderer API
 - the strict memory-safety audit covers current fd, proxy, callback, surface,
   GBM, EGL, dmabuf, text-input, cursor, and drag-icon ownership rules
 
-This checkpoint is not a foundation release candidate. Explicit sync, frame
-pacing beyond presentation-time, color metadata, public GPU rendering APIs, and
+This checkpoint is not a foundation release candidate. Public raw GPU handles,
+renderer-owned swapchains, color-management image descriptions, and
 output-management work remain later milestones.
 
 ## Non-Goals

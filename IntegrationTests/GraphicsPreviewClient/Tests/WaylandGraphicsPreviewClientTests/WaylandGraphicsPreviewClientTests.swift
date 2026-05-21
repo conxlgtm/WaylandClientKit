@@ -42,8 +42,60 @@ struct WaylandGraphicsPreviewClientTests {
             _ = try await display.graphicsSurfaceCapabilities()
             _ = try await display.graphicsRuntimePath(policy: .forceSoftware)
             _ = try await display.graphicsBackingDecision(policy: .requireGPU)
+            let backing = try await display.createGraphicsWindowBacking(
+                windowConfiguration: WindowConfiguration(
+                    title: "Graphics Preview Client",
+                    appID: "graphics-preview-client",
+                    initialWidth: 16,
+                    initialHeight: 16
+                ),
+                graphicsConfiguration: WaylandGraphicsConfiguration(
+                    fallbackPolicy: .forceSoftware
+                )
+            )
+            _ = backing.window
+            _ = try await backing.runtimePath
+            let lease = try await backing.nextFrame()
+            try await lease.submit(
+                .clearColor(WaylandGraphicsXRGBColor(red: 0, green: 0, blue: 0))
+            )
+            try await backing.close()
         }
 
         _ = acceptsDisplay
+    }
+
+    @Test
+    func managedPreviewSubmissionTypesCompileForExternalClients() {
+        let configuration = WaylandGraphicsConfiguration(
+            fallbackPolicy: .preferGPUFallbackToSoftware,
+            synchronizationPolicy: .preferExplicit,
+            pacingPolicy: .preferFIFO,
+            metadataPolicy: .preferAvailable
+        )
+        let metadata = WaylandGraphicsFrameMetadata(
+            contentType: .video,
+            presentationHint: .async
+        )
+        let frame = WaylandGraphicsSubmittedFrame.clearColor(
+            WaylandGraphicsXRGBColor(red: 1, green: 2, blue: 3)
+        )
+        let expectedFrame = WaylandGraphicsSubmittedFrame.clearColor(
+            WaylandGraphicsClearFrame(
+                color: WaylandGraphicsXRGBColor(red: 1, green: 2, blue: 3)
+            )
+        )
+        let submissionFailure = WaylandGraphicsSubmissionFailure.unexpected(
+            operation: .show,
+            stage: .frameSubmission,
+            description: "external client diagnostic"
+        )
+
+        #expect(configuration.synchronizationPolicy == .preferExplicit)
+        #expect(metadata.contentType == .video)
+        #expect(frame == expectedFrame)
+        #expect(
+            WaylandGraphicsError.submissionFailed(submissionFailure)
+                == .submissionFailed(submissionFailure))
     }
 }

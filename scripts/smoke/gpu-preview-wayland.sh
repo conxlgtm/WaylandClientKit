@@ -16,3 +16,6 @@ env \
     timeout "${PROCESS_TIMEOUT_SECONDS}s" \
     "$ROOT/scripts/dev/swift.sh" test \
     --filter 'GPUPreviewLiveCapability|gpuSmokeDrawsDeterministicPixelWhenEnabled'
+
+timeout "${PROCESS_TIMEOUT_SECONDS}s" \
+    "$ROOT/scripts/dev/swift.sh" run --disable-index-store GPUPreviewSmokeClient
