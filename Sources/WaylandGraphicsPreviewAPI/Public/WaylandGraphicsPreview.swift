@@ -202,6 +202,7 @@ public enum WaylandGraphicsFallbackPolicy: Equatable, Sendable {
 public enum WaylandGraphicsFallbackReason: Equatable, Sendable {
     case forcedSoftware
     case dmabufUnavailable
+    case managedGPUSubmissionUnavailable
     case noCompatibleFormat
     case noRenderNode
     case gbmUnavailable
@@ -214,6 +215,7 @@ public enum WaylandGraphicsFallbackReason: Equatable, Sendable {
 /// Reasons GPU backing can be unavailable.
 public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {
     case dmabufUnavailable
+    case managedGPUSubmissionUnavailable
     case noCompatibleFormat
     case noRenderNode
     case gbmUnavailable

@@ -85,9 +85,17 @@ struct WaylandGraphicsPreviewClientTests {
                 color: WaylandGraphicsXRGBColor(red: 1, green: 2, blue: 3)
             )
         )
+        let submissionFailure = WaylandGraphicsSubmissionFailure.unexpected(
+            operation: .show,
+            stage: .frameSubmission,
+            description: "external client diagnostic"
+        )
 
         #expect(configuration.synchronizationPolicy == .preferExplicit)
         #expect(metadata.contentType == .video)
         #expect(frame == expectedFrame)
+        #expect(
+            WaylandGraphicsError.submissionFailed(submissionFailure)
+                == .submissionFailed(submissionFailure))
     }
 }

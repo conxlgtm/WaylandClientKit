@@ -297,8 +297,18 @@ extension SurfaceRuntime {
             throw SurfaceDmabufCapabilityError.missingSurfaceIdentity
         }
 
+        let dmabufVersion: RawVersion =
+            switch dmabufCapability {
+            case .advertised(let version, _),
+                .surfaceFeedback(let version, feedback: _):
+                version
+            case .unavailable:
+                RawLinuxDmabuf.feedbackRequestMinimumVersion
+            }
+
         dmabufCapability = .surfaceFeedback(
-            try SurfaceDmabufFeedback(snapshot: snapshot, surfaceID: surfaceID)
+            version: dmabufVersion,
+            feedback: try SurfaceDmabufFeedback(snapshot: snapshot, surfaceID: surfaceID)
         )
     }
 

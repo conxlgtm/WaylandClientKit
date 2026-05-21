@@ -1,3 +1,5 @@
+import WaylandRaw
+
 package enum GraphicsPreviewProtocolCapability: Equatable, Sendable {
     case unavailable
     case pending(version: UInt32)
@@ -81,8 +83,8 @@ package struct GraphicsPreviewSurfaceCapabilitySnapshot: Equatable, Sendable {
             .unavailable
         case .advertised(let version, _):
             .available(version: version.value)
-        case .surfaceFeedback:
-            .available(version: 1)
+        case .surfaceFeedback(let version, feedback: _):
+            .available(version: version.value)
         }
     }
 
