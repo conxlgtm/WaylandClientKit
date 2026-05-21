@@ -1,8 +1,9 @@
 # Public API Audit
 
 This audit records the current API boundary for the experimental `WaylandClient`
-product. There is no compatibility promise yet, but public declarations in this
-product should still be treated as intentional user-facing API.
+product and the source-breaking preview `WaylandGraphicsPreview` product. There
+is no compatibility promise yet, but public declarations in vended products
+should still be treated as intentional user-facing API.
 
 The minimal DocC catalog for this boundary lives in
 `Sources/WaylandClient/WaylandClient.docc/WaylandClient.md`.
@@ -197,12 +198,15 @@ Intentionally public:
 - `WaylandGraphicsSynchronizationPolicy`
 - `WaylandGraphicsPacingPolicy`
 - `WaylandGraphicsMetadataPolicy`
+- `WaylandGraphicsPresentationFeedbackPolicy`
+- `WaylandGraphicsDamageRegion`
 - `WaylandGraphicsFrameMetadata`
 - `WaylandGraphicsContentType`
 - `WaylandGraphicsPresentationHint`
 - `WaylandGraphicsXRGBColor`
 - `WaylandGraphicsClearFrame`
 - `WaylandGraphicsSubmittedFrame`
+- `WaylandGraphicsFrameResult`
 - `WaylandGraphicsError`
 - `WaylandGraphicsWindowBacking`
 - `WaylandGraphicsFrameLease`
@@ -217,14 +221,20 @@ Current preview contract:
   runtime-path facts, software fallback decisions, and required-GPU
   unavailability.
 - The managed preview submission path can create a window backing, lease a
-  frame, submit a deterministic clear frame, and cancel or close resources
-  without exposing raw graphics handles.
+  frame, submit a deterministic clear frame, submit arbitrary software drawing,
+  return a typed frame result, and cancel or close resources without exposing
+  raw graphics handles.
 - It does not expose raw Wayland proxies, EGL/GBM/DRM handles, syncobj fds,
-  scene rendering, swapchains, drawables, or public color-management image
-  descriptions.
-- Public frame metadata is intentionally narrow. Non-default managed metadata
-  requests currently fail with typed preview errors until live compositor
-  evidence proves a stable public shape.
+  SHM pools, scene rendering, swapchains, drawables, or public color-management
+  image descriptions.
+- Public frame metadata is intentionally narrow. Content type and presentation
+  hint map to safe surface commit metadata when their protocols are available.
+  Full-frame damage is the supported default. Partial damage is represented but
+  currently reports a typed unsupported-damage error after geometry validation.
+- Presentation feedback policy can request feedback when available or require
+  it before creating a managed backing. Feedback observations still arrive on
+  `WindowPresentationEvents`; frame submission results do not claim that feedback
+  was observed.
 - Downstream code that wants this boundary imports `WaylandGraphicsPreview`
   explicitly; importing `WaylandClient` alone does not opt into renderer-facing
   preview API.
