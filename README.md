@@ -377,8 +377,10 @@ swift run GPUPreviewSmokeClient
 ```
 
 The graphics preview client prints projected renderer-neutral graphics path
-facts and draws a deterministic SHM frame. It does not expose or require public
-GPU buffer submission.
+facts, creates a managed preview backing, and submits one deterministic clear
+frame through the preview submission API. The preview API does not expose raw
+Wayland, GBM, EGL, DRM, or sync handles and still reports software fallback
+explicitly when public managed GPU submission is unavailable.
 
 Run the noninteractive Wayland smoke check under a real Wayland session:
 

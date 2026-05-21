@@ -17,10 +17,19 @@ The preview product exposes:
 - `WaylandGraphicsRuntimePath`
 - `WaylandGraphicsFallbackPolicy`
 - `WaylandGraphicsBackingDecision`
+- `WaylandGraphicsConfiguration`
+- `WaylandGraphicsWindowBacking`
+- `WaylandGraphicsFrameLease`
+- `WaylandGraphicsSubmittedFrame`
+- `WaylandGraphicsClearFrame`
+- `WaylandGraphicsXRGBColor`
+- `WaylandGraphicsFrameMetadata`
+- `WaylandGraphicsError`
 - small status and reason enums used by those values
 - `WaylandDisplay.graphicsSurfaceCapabilities()`
 - `WaylandDisplay.graphicsRuntimePath(policy:)`
 - `WaylandDisplay.graphicsBackingDecision(policy:)`
+- `WaylandDisplay.createGraphicsWindowBacking(windowConfiguration:graphicsConfiguration:)`
 
 These APIs are renderer-neutral. They do not define a swapchain, drawable,
 scene graph, shader model, or color-management API.
@@ -34,17 +43,38 @@ scene graph, shader model, or color-management API.
 - `requireGPU`: report GPU unavailability instead of hiding it behind SHM.
 - `forceSoftware`: choose software even when GPU-related protocols are present.
 
-The current public preview projection is capability-only. It can report that a
-protocol is advertised and can explain why a software fallback would be chosen,
-but it does not allocate GBM buffers or create EGL resources from public API.
-Those effectful paths remain package-internal while the backing state machine
-and compositor matrix mature.
+The public preview projection can report that a protocol is advertised and can
+explain why a software fallback would be chosen. The managed preview submission
+API can create a window backing, lease a frame, cancel a lease, and submit a
+deterministic clear frame. The first managed submission path remains software
+backed and reports GPU fallback reasons explicitly; GBM/EGL allocation and
+compositor dmabuf import remain package-internal while the backing state
+machine and compositor matrix mature.
+
+## Managed Submission Boundary
+
+`WaylandGraphicsConfiguration` describes fallback, synchronization, pacing, and
+metadata preferences. Defaults are conservative: software fallback is allowed,
+implicit synchronization is used, pacing is not requested, and public metadata
+requests are disabled.
+
+`WaylandGraphicsWindowBacking` owns a managed `Window` and exposes the current
+runtime path. `nextFrame()` returns a single-use `WaylandGraphicsFrameLease`.
+Callers either submit a `WaylandGraphicsSubmittedFrame.clearColor` frame or
+cancel the lease. The lease does not expose Wayland proxies, fds, GBM buffers,
+EGL surfaces, DRM nodes, or syncobj handles.
+
+`WaylandGraphicsFrameMetadata` currently exposes only content type and
+presentation hint values. The managed clear-frame implementation rejects
+non-default metadata with `WaylandGraphicsError.unsupportedMetadata`; public
+color-management image descriptions remain internal.
 
 ## External Compile Contract
 
 `IntegrationTests/GraphicsPreviewClient` imports both `WaylandClient` and
 `WaylandGraphicsPreview`. It verifies that external packages can compile the
-preview value model and `WaylandDisplay` extension methods without requiring a
+preview value model, `WaylandDisplay` extension methods, managed backing,
+frame lease, cancel/submit surface, and clear-frame types without requiring a
 GPU-capable compositor.
 
 ## Breakage Policy
