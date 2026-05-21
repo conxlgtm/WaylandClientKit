@@ -56,9 +56,11 @@ struct WaylandGraphicsPreviewClientTests {
             _ = backing.window
             _ = try await backing.runtimePath
             let lease = try await backing.nextFrame()
-            try await lease.submit(
+            let result = try await lease.submit(
                 .clearColor(WaylandGraphicsXRGBColor(red: 0, green: 0, blue: 0))
             )
+            _ = result.runtimePath
+            _ = result.size
             try await backing.close()
         }
 
@@ -66,16 +68,18 @@ struct WaylandGraphicsPreviewClientTests {
     }
 
     @Test
-    func managedPreviewSubmissionTypesCompileForExternalClients() {
+    func managedPreviewSubmissionTypesCompileForExternalClients() throws {
         let configuration = WaylandGraphicsConfiguration(
             fallbackPolicy: .preferGPUFallbackToSoftware,
             synchronizationPolicy: .preferExplicit,
             pacingPolicy: .preferFIFO,
-            metadataPolicy: .preferAvailable
+            metadataPolicy: .preferAvailable,
+            presentationFeedbackPolicy: .requestWhenAvailable
         )
         let metadata = WaylandGraphicsFrameMetadata(
             contentType: .video,
-            presentationHint: .async
+            presentationHint: .async,
+            damage: .fullFrame
         )
         let frame = WaylandGraphicsSubmittedFrame.clearColor(
             WaylandGraphicsXRGBColor(red: 1, green: 2, blue: 3)
@@ -90,12 +94,60 @@ struct WaylandGraphicsPreviewClientTests {
             stage: .frameSubmission,
             description: "external client diagnostic"
         )
+        let result = WaylandGraphicsFrameResult(
+            runtimePath: .projected(
+                capabilities: WaylandGraphicsSurfaceCapabilities(
+                    capabilities: WaylandCapabilities(
+                        clipboard: .unavailable,
+                        dragAndDrop: .unavailable,
+                        dragActionNegotiation: .unavailable,
+                        primarySelection: .unavailable,
+                        xdgDecoration: .unavailable,
+                        xdgOutput: .unavailable,
+                        viewporter: .unavailable,
+                        presentationTime: .unavailable,
+                        fractionalScale: .unavailable,
+                        cursorShape: .unavailable,
+                        textInput: .unavailable,
+                        linuxDmabuf: .unavailable
+                    )
+                ),
+                policy: .forceSoftware
+            ),
+            operation: .show,
+            size: try PositivePixelSize(width: 1, height: 1)
+        )
 
         #expect(configuration.synchronizationPolicy == .preferExplicit)
+        #expect(configuration.presentationFeedbackPolicy == .requestWhenAvailable)
         #expect(metadata.contentType == .video)
+        #expect(metadata.damage == .fullFrame)
         #expect(frame == expectedFrame)
+        #expect(result.operation == .show)
         #expect(
             WaylandGraphicsError.submissionFailed(submissionFailure)
                 == .submissionFailed(submissionFailure))
+    }
+
+    @Test
+    func softwareSubmissionClosureCompilesForExternalClients() async throws {
+        func submitSoftwareFrame(backing: WaylandGraphicsWindowBacking) async throws {
+            let firstLease = try await backing.nextFrame()
+            await firstLease.cancel()
+
+            let secondLease = try await backing.nextFrame()
+            let result = try await secondLease.submitSoftware(
+                metadata: WaylandGraphicsFrameMetadata(damage: .fullFrame)
+            ) { frame in
+                frame.withXRGB8888Rows { _, pixels in
+                    for index in 0..<pixels.count {
+                        pixels[unchecked: index] = 0x0010_2030
+                    }
+                }
+            }
+            #expect(result.operation == .show || result.operation == .redraw)
+        }
+
+        _ = submitSoftwareFrame
     }
 }
