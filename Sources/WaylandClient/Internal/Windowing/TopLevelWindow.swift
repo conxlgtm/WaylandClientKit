@@ -373,6 +373,7 @@ package final class TopLevelWindow {
     }
 
     private func drawAndPresent(
+        metadata: SurfaceCommitMetadata = .default,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         guard !model.isClosed else { return .skippedClosed }
@@ -380,11 +381,12 @@ package final class TopLevelWindow {
         let effects = try model.reduce(
             .redrawRequestConsumed(bufferAvailability: try redrawBufferAvailability())
         )
-        return try interpretPresentationEffects(effects, draw)
+        return try interpretPresentationEffects(effects, metadata: metadata, draw)
     }
 
     private func performSoftwarePresent(
         _ request: PresentationRequest,
+        metadata: SurfaceCommitMetadata,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         try interpretWindowEffects(
@@ -416,6 +418,7 @@ package final class TopLevelWindow {
             ).present(
                 request: request,
                 geometry: geometry,
+                metadata: metadata,
                 draw: draw,
                 runtime: &surfaceRuntime,
                 pendingFrameRegistration: &pendingFrameRegistration
@@ -840,6 +843,7 @@ extension TopLevelWindow {
 
     private func interpretPresentationEffects(
         _ effects: [WindowEffect],
+        metadata: SurfaceCommitMetadata,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         var outcome = RedrawOutcome.skippedPendingFrame
@@ -847,7 +851,7 @@ extension TopLevelWindow {
         for effect in effects {
             switch effect {
             case .performSoftwarePresent(let request):
-                outcome = try performSoftwarePresent(request, draw)
+                outcome = try performSoftwarePresent(request, metadata: metadata, draw)
             default:
                 try interpretWindowEffects([effect])
             }
@@ -1393,6 +1397,7 @@ extension TopLevelWindow {
 
     package func showOnOwnerThread(
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
+        metadata: SurfaceCommitMetadata = .default,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         connection.preconditionIsOwnerThread()
@@ -1401,10 +1406,11 @@ extension TopLevelWindow {
             _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
         }
 
-        _ = try drawAndPresent(draw)
+        _ = try drawAndPresent(metadata: metadata, draw)
     }
 
     package func redrawOnOwnerThread(
+        metadata: SurfaceCommitMetadata = .default,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         connection.preconditionIsOwnerThread()
@@ -1412,7 +1418,7 @@ extension TopLevelWindow {
         guard !model.isClosed else { return }
 
         _ = try consumeLatestConfigureIfAvailable()
-        _ = try drawAndPresent(draw)
+        _ = try drawAndPresent(metadata: metadata, draw)
     }
 
     package func closeOnOwnerThread() {
@@ -1452,9 +1458,14 @@ extension TopLevelWindow {
     )
     package func show(
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
+        metadata: SurfaceCommitMetadata = .default,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
-        try showOnOwnerThread(timeoutMilliseconds: timeoutMilliseconds, draw)
+        try showOnOwnerThread(
+            timeoutMilliseconds: timeoutMilliseconds,
+            metadata: metadata,
+            draw
+        )
     }
 
     @available(
@@ -1462,8 +1473,11 @@ extension TopLevelWindow {
         noasync,
         message: "Redraw windows from the owner-thread Wayland loop."
     )
-    package func redraw(_ draw: (borrowing SoftwareFrame) throws -> Void) throws {
-        try redrawOnOwnerThread(draw)
+    package func redraw(
+        metadata: SurfaceCommitMetadata = .default,
+        _ draw: (borrowing SoftwareFrame) throws -> Void
+    ) throws {
+        try redrawOnOwnerThread(metadata: metadata, draw)
     }
 
     @available(

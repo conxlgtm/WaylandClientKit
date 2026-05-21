@@ -37,7 +37,8 @@ extension WaylandDisplay {
         let window = try createTopLevelWindow(configuration: windowConfiguration)
         let storage = WaylandGraphicsWindowBackingStorage(
             window: window,
-            runtimePath: runtimePath
+            runtimePath: runtimePath,
+            configuration: graphicsConfiguration
         )
         return WaylandGraphicsWindowBacking(window: window, storage: storage)
     }

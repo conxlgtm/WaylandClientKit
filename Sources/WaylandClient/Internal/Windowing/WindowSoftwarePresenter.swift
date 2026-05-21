@@ -27,6 +27,7 @@ struct WindowSoftwarePresenter {
     func present<RoleResources>(
         request: PresentationRequest,
         geometry: SurfaceGeometry,
+        metadata: SurfaceCommitMetadata = .default,
         draw: (borrowing SoftwareFrame) throws -> Void,
         runtime: inout SurfaceRuntime<RoleResources>,
         pendingFrameRegistration: inout FrameCallbackRegistration?
@@ -60,6 +61,7 @@ struct WindowSoftwarePresenter {
         let preparedCommit = try prepareCommit(
             request: request,
             geometry: geometry,
+            metadata: metadata,
             runtime: &runtime,
             drawingBuffer: &drawingBuffer
         )
@@ -111,6 +113,7 @@ struct WindowSoftwarePresenter {
     private func prepareCommit<RoleResources>(
         request: PresentationRequest,
         geometry: SurfaceGeometry,
+        metadata: SurfaceCommitMetadata,
         runtime: inout SurfaceRuntime<RoleResources>,
         drawingBuffer: inout RawBuffer.DrawingBuffer
     ) throws -> PreparedSurfaceFrameCommit {
@@ -121,7 +124,8 @@ struct WindowSoftwarePresenter {
                     scaleInstallation: scaleInstallation,
                     generation: request.generation,
                     geometry: geometry,
-                    payload: .buffer(drawingBuffer.surfaceBuffer)
+                    payload: .buffer(drawingBuffer.surfaceBuffer),
+                    metadata: metadata
                 ),
                 runtime: &runtime,
             )

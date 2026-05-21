@@ -189,6 +189,7 @@ struct WaylandGraphicsPreviewAPITests {
         #expect(configuration.synchronizationPolicy == .implicitOnly)
         #expect(configuration.pacingPolicy == .none)
         #expect(configuration.metadataPolicy == .none)
+        #expect(configuration.presentationFeedbackPolicy == .none)
     }
 
     @Test
@@ -196,7 +197,8 @@ struct WaylandGraphicsPreviewAPITests {
         let color = WaylandGraphicsXRGBColor(red: 0x10, green: 0x20, blue: 0x30)
         let metadata = WaylandGraphicsFrameMetadata(
             contentType: .game,
-            presentationHint: .vsync
+            presentationHint: .vsync,
+            damage: .fullFrame
         )
         let clearFrame = WaylandGraphicsClearFrame(color: color, metadata: metadata)
         let expectedSubmittedFrame = WaylandGraphicsSubmittedFrame.clearColor(
@@ -208,6 +210,7 @@ struct WaylandGraphicsPreviewAPITests {
         #expect(color.blue == 0x30)
         #expect(clearFrame.metadata.contentType == .game)
         #expect(clearFrame.metadata.presentationHint == .vsync)
+        #expect(clearFrame.metadata.damage == .fullFrame)
         #expect(WaylandGraphicsSubmittedFrame.clearColor(color) == expectedSubmittedFrame)
     }
 }
@@ -226,14 +229,18 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
             capabilities: gpuCapableSurfaceCapabilities()
         )
         let leaseID = try leaseState.issueLease()
+        try defaultFrame.validateManagedPreviewSupport(
+            capabilities: gpuCapableSurfaceCapabilities(),
+            geometry: testGraphicsSurfaceGeometry()
+        )
         #expect(
-            try leaseState.prepareSubmission(leaseID: leaseID, frame: defaultFrame)
+            try leaseState.prepareSubmission(leaseID: leaseID)
                 == .show
         )
     }
 
     @Test
-    func nonDefaultMetadataIsRejectedBeforeLeaseIsConsumed() throws {
+    func unsupportedMetadataIsRejectedBeforeLeaseIsConsumed() throws {
         var leaseState = WaylandGraphicsFrameLeaseState()
         let leaseID = try leaseState.issueLease()
         let frame = WaylandGraphicsSubmittedFrame.clearColor(
@@ -243,10 +250,63 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
             )
         )
 
-        #expect(throws: WaylandGraphicsError.unsupportedMetadata) {
-            try leaseState.prepareSubmission(leaseID: leaseID, frame: frame)
+        #expect(
+            throws: WaylandGraphicsError.unavailable(.metadataRequiredButUnavailable)
+        ) {
+            try frame.validateManagedPreviewSupport(
+                capabilities: softwareOnlySurfaceCapabilities(),
+                geometry: testGraphicsSurfaceGeometry()
+            )
         }
         #expect(leaseState.activeLeaseID == leaseID)
+    }
+
+    @Test
+    func safeMetadataIsAcceptedWhenProtocolsAreAvailable() throws {
+        let frame = WaylandGraphicsSubmittedFrame.clearColor(
+            WaylandGraphicsClearFrame(
+                color: .black,
+                metadata: WaylandGraphicsFrameMetadata(
+                    contentType: .game,
+                    presentationHint: .vsync
+                )
+            )
+        )
+
+        try frame.validateManagedPreviewSupport(
+            capabilities: gpuCapableSurfaceCapabilities(),
+            geometry: testGraphicsSurfaceGeometry()
+        )
+    }
+
+    @Test
+    func partialDamageIsValidatedThenReportedUnsupported() throws {
+        let damage = WaylandGraphicsDamageRegion(
+            rects: [try LogicalRect(x: 0, y: 0, width: 10, height: 10)]
+        )
+        let metadata = WaylandGraphicsFrameMetadata(damage: damage)
+
+        #expect(throws: WaylandGraphicsError.unsupportedDamage) {
+            try metadata.validateManagedPreviewSupport(
+                capabilities: gpuCapableSurfaceCapabilities(),
+                geometry: testGraphicsSurfaceGeometry()
+            )
+        }
+    }
+
+    @Test
+    func outOfBoundsDamageIsRejectedBeforeUnsupportedPartialDamage() throws {
+        let damage = WaylandGraphicsDamageRegion(
+            rects: [try LogicalRect(x: 90, y: 0, width: 20, height: 10)]
+        )
+        let metadata = WaylandGraphicsFrameMetadata(damage: damage)
+
+        #expect(throws: WaylandGraphicsError.invalidDamageRegion) {
+            try metadata.validateManagedPreviewSupport(
+                capabilities: gpuCapableSurfaceCapabilities(),
+                geometry: testGraphicsSurfaceGeometry()
+            )
+        }
     }
 
     @Test
@@ -357,13 +417,12 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
     func doubleSubmitConsumesLeaseOnce() throws {
         var leaseState = WaylandGraphicsFrameLeaseState()
         let leaseID = try leaseState.issueLease()
-        let frame = WaylandGraphicsSubmittedFrame.clearColor(.black)
 
         #expect(
-            try leaseState.prepareSubmission(leaseID: leaseID, frame: frame) == .show
+            try leaseState.prepareSubmission(leaseID: leaseID) == .show
         )
         #expect(throws: WaylandGraphicsError.frameLeaseConsumed) {
-            try leaseState.prepareSubmission(leaseID: leaseID, frame: frame)
+            try leaseState.prepareSubmission(leaseID: leaseID)
         }
     }
 
@@ -371,16 +430,10 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
     func consumedLeaseReportsConsumedBeforeMetadataValidation() throws {
         var leaseState = WaylandGraphicsFrameLeaseState()
         let leaseID = try leaseState.issueLease()
-        _ = try leaseState.prepareSubmission(leaseID: leaseID, frame: .clearColor(.black))
-        let unsupportedFrame = WaylandGraphicsSubmittedFrame.clearColor(
-            WaylandGraphicsClearFrame(
-                color: .black,
-                metadata: WaylandGraphicsFrameMetadata(contentType: .game)
-            )
-        )
+        _ = try leaseState.prepareSubmission(leaseID: leaseID)
 
         #expect(throws: WaylandGraphicsError.frameLeaseConsumed) {
-            try leaseState.prepareSubmission(leaseID: leaseID, frame: unsupportedFrame)
+            try leaseState.prepareSubmission(leaseID: leaseID)
         }
     }
 
@@ -388,15 +441,9 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
     func wrongLeaseReportsConsumedBeforeMetadataValidation() throws {
         var leaseState = WaylandGraphicsFrameLeaseState()
         _ = try leaseState.issueLease()
-        let unsupportedFrame = WaylandGraphicsSubmittedFrame.clearColor(
-            WaylandGraphicsClearFrame(
-                color: .black,
-                metadata: WaylandGraphicsFrameMetadata(contentType: .game)
-            )
-        )
 
         #expect(throws: WaylandGraphicsError.frameLeaseConsumed) {
-            try leaseState.prepareSubmission(leaseID: 999, frame: unsupportedFrame)
+            try leaseState.prepareSubmission(leaseID: 999)
         }
     }
 
@@ -405,10 +452,7 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
         var leaseState = WaylandGraphicsFrameLeaseState()
         let leaseID = try leaseState.issueLease()
 
-        _ = try leaseState.prepareSubmission(
-            leaseID: leaseID,
-            frame: .clearColor(.black)
-        )
+        _ = try leaseState.prepareSubmission(leaseID: leaseID)
 
         #expect(throws: WaylandGraphicsError.frameLeaseActive) {
             try leaseState.issueLease()
@@ -423,28 +467,24 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
         leaseState.close()
 
         #expect(throws: WaylandGraphicsError.backingClosed) {
-            try leaseState.prepareSubmission(
-                leaseID: leaseID,
-                frame: .clearColor(.black)
-            )
+            try leaseState.prepareSubmission(leaseID: leaseID)
         }
     }
 
     @Test
     func secondSubmittedFrameUsesRedrawNotShow() throws {
         var leaseState = WaylandGraphicsFrameLeaseState()
-        let frame = WaylandGraphicsSubmittedFrame.clearColor(.black)
 
         let firstLeaseID = try leaseState.issueLease()
         #expect(
-            try leaseState.prepareSubmission(leaseID: firstLeaseID, frame: frame)
+            try leaseState.prepareSubmission(leaseID: firstLeaseID)
                 == .show
         )
         try leaseState.finishSubmission()
 
         let secondLeaseID = try leaseState.issueLease()
         #expect(
-            try leaseState.prepareSubmission(leaseID: secondLeaseID, frame: frame)
+            try leaseState.prepareSubmission(leaseID: secondLeaseID)
                 == .redraw
         )
     }
@@ -496,5 +536,12 @@ private func softwareOnlySurfaceCapabilities() -> WaylandGraphicsSurfaceCapabili
         framePacing: .unavailable,
         colorMetadata: .unavailable,
         presentationFeedback: .unavailable
+    )
+}
+
+private func testGraphicsSurfaceGeometry() throws -> SurfaceGeometry {
+    try SurfaceGeometry(
+        logicalSize: PositiveLogicalSize(width: 100, height: 80),
+        scale: .one
     )
 }
