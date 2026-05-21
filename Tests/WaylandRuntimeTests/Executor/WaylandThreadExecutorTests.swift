@@ -31,10 +31,15 @@
         }
 
         private let executor: WaylandThreadExecutor
+        private let signalWriteDescriptor: CInt?
         private let state = Mutex(State())
 
-        init(executor sourceExecutor: WaylandThreadExecutor) {
+        init(
+            executor sourceExecutor: WaylandThreadExecutor,
+            signalWriteDescriptor descriptor: CInt? = nil
+        ) {
             executor = sourceExecutor
+            signalWriteDescriptor = descriptor
         }
 
         var isClosed: Bool {
@@ -64,6 +69,7 @@
                 state.didRunOnOwnerThread = didRunOnOwnerThread
                 state.isClosed = true
             }
+            signalReadEvents()
         }
 
         func cancelRead() {
@@ -76,6 +82,17 @@
 
         func snapshot() -> (pollCount: Int, didRunOnOwnerThread: Bool) {
             state.withLock { ($0.pollCount, $0.didRunOnOwnerThread) }
+        }
+
+        private func signalReadEvents() {
+            guard let signalWriteDescriptor else {
+                return
+            }
+
+            var byte = UInt8(1)
+            _ = unsafe withUnsafeBytes(of: &byte) { buffer in
+                unsafe Glibc.write(signalWriteDescriptor, buffer.baseAddress, 1)
+            }
         }
     }
 
@@ -450,26 +467,27 @@
 
         @Test
         func installedEventSourceRunsInsideExecutorLoop() throws {
+            let signalDescriptors = try makeExecutorTestPipeDescriptors()
+            defer {
+                closeExecutorTestDescriptor(signalDescriptors.readEnd)
+                closeExecutorTestDescriptor(signalDescriptors.writeEnd)
+            }
             let executor = try WaylandThreadExecutor()
             defer { executor.shutdown() }
-            let source = EventSourceProbe(executor: executor)
+            let source = EventSourceProbe(
+                executor: executor,
+                signalWriteDescriptor: signalDescriptors.writeEnd
+            )
             let installSource: @Sendable () throws(WaylandThreadExecutorError) -> Void = {
                 try executor.installEventSource(source)
             }
 
             try executor.syncBootstrapOnly(installSource)
+            try waitForExecutorTestPipeSignal(signalDescriptors.readEnd)
 
-            for _ in 0..<100 {
-                let snapshot = source.snapshot()
-                if snapshot.pollCount > 0 {
-                    #expect(snapshot.didRunOnOwnerThread)
-                    return
-                }
-
-                usleep(10_000)
-            }
-
-            #expect(Bool(false), "installed event source was not polled")
+            let snapshot = source.snapshot()
+            #expect(snapshot.pollCount > 0)
+            #expect(snapshot.didRunOnOwnerThread)
         }
 
         @Test

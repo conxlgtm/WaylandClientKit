@@ -6,14 +6,14 @@
     @testable import WaylandRuntime
 
     // SAFETY: Mutable recorder state is private and every access is protected by
-    // NSLock, which ThreadSanitizer recognizes for these detached-thread tests.
+    // NSCondition, which ThreadSanitizer recognizes for these detached-thread tests.
     private final class ShutdownCompletionRecorder: @unchecked Sendable {
         private struct State: Sendable {
             var starts: [String] = []
             var completions: [String] = []
         }
 
-        private let lock = NSLock()
+        private let condition = NSCondition()
         private var state = State()
 
         var startedValues: Set<String> {
@@ -52,12 +52,38 @@
             }
         }
 
+        func waitUntilStartedValues(_ expectedValues: Set<String>) -> Bool {
+            waitUntil { Set($0.starts) == expectedValues }
+        }
+
+        func waitUntilValues(_ expectedValues: Set<String>) -> Bool {
+            waitUntil { Set($0.completions) == expectedValues }
+        }
+
         private func withState<Result: Sendable>(
             _ body: (inout State) -> Result
         ) -> Result {
-            lock.lock()
-            defer { lock.unlock() }
-            return body(&state)
+            condition.lock()
+            let result = body(&state)
+            condition.broadcast()
+            condition.unlock()
+            return result
+        }
+
+        private func waitUntil(_ predicate: (State) -> Bool) -> Bool {
+            condition.lock()
+            defer { condition.unlock() }
+            guard !predicate(state) else {
+                return true
+            }
+
+            let deadline = Date().addingTimeInterval(10)
+            while !predicate(state) {
+                guard condition.wait(until: deadline) else {
+                    return predicate(state)
+                }
+            }
+            return true
         }
     }
 
@@ -167,9 +193,7 @@
             )
 
             #expect(
-                waitUntil {
-                    completions.startedValues == ["first", "second"]
-                }
+                completions.waitUntilStartedValues(["first", "second"])
             )
             #expect(
                 waitUntil {
@@ -182,9 +206,7 @@
 
             gate.open()
             #expect(
-                waitUntil {
-                    completions.values == ["first", "second"]
-                }
+                completions.waitUntilValues(["first", "second"])
             )
             let stopped = executor.lifecycleSnapshotForTesting
 
@@ -229,9 +251,7 @@
             }
 
             #expect(
-                waitUntil {
-                    completions.startedValues == Set(["first"] + lateCallerLabels)
-                }
+                completions.waitUntilStartedValues(Set(["first"] + lateCallerLabels))
             )
             #expect(
                 waitUntil {
@@ -244,9 +264,7 @@
 
             gate.open()
             #expect(
-                waitUntil {
-                    completions.values == Set(["first"] + lateCallerLabels)
-                }
+                completions.waitUntilValues(Set(["first"] + lateCallerLabels))
             )
             let stopped = executor.lifecycleSnapshotForTesting
 
