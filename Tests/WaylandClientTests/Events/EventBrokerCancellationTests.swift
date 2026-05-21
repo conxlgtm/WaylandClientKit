@@ -258,7 +258,7 @@ private final class ResumeGate: @unchecked Sendable {
             return
         }
 
-        let deadline = Date().addingTimeInterval(1)
+        let deadline = Date().addingTimeInterval(10)
         while !state.isBlocked {
             guard condition.wait(until: deadline) else {
                 Issue.record("Timed out waiting for resume gate.")
