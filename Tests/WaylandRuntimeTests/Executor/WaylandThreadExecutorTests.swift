@@ -86,10 +86,15 @@
         }
 
         private let executor: WaylandThreadExecutor
+        private let signalWriteDescriptor: CInt?
         private let state = Mutex(State())
 
-        init(executor sourceExecutor: WaylandThreadExecutor) {
+        init(
+            executor sourceExecutor: WaylandThreadExecutor,
+            signalWriteDescriptor descriptor: CInt? = nil
+        ) {
             executor = sourceExecutor
+            signalWriteDescriptor = descriptor
         }
 
         var isClosed: Bool {
@@ -123,6 +128,18 @@
 
         func handleEventLoopError(_: any Error) {
             state.withLock { $0.eventLoopErrorCount += 1 }
+            signalReadEventFailure()
+        }
+
+        private func signalReadEventFailure() {
+            guard let signalWriteDescriptor else {
+                return
+            }
+
+            var byte = UInt8(1)
+            _ = unsafe withUnsafeBytes(of: &byte) { buffer in
+                unsafe Glibc.write(signalWriteDescriptor, buffer.baseAddress, 1)
+            }
         }
 
         func snapshot() -> (
@@ -437,27 +454,29 @@
 
         @Test
         func readEventFailureDoesNotCancelResolvedReadIntent() throws {
+            let signalDescriptors = try makeExecutorTestPipeDescriptors()
+            defer {
+                closeExecutorTestDescriptor(signalDescriptors.readEnd)
+                closeExecutorTestDescriptor(signalDescriptors.writeEnd)
+            }
             let executor = try WaylandThreadExecutor()
             defer { executor.shutdown() }
-            let source = FailingReadEventSourceProbe(executor: executor)
+            let source = FailingReadEventSourceProbe(
+                executor: executor,
+                signalWriteDescriptor: signalDescriptors.writeEnd
+            )
             let installSource: @Sendable () throws(WaylandThreadExecutorError) -> Void = {
                 try executor.installEventSource(source)
             }
 
             try executor.syncBootstrapOnly(installSource)
+            try waitForExecutorTestPipeSignal(signalDescriptors.readEnd)
+            executor.shutdown()
 
-            for _ in 0..<100 {
-                let snapshot = source.snapshot()
-                if snapshot.eventLoopErrorCount > 0 {
-                    #expect(snapshot.readEventsCallCount == 1)
-                    #expect(snapshot.cancelReadCallCount == 0)
-                    return
-                }
-
-                usleep(10_000)
-            }
-
-            #expect(Bool(false), "failing event source was not polled")
+            let snapshot = source.snapshot()
+            #expect(snapshot.eventLoopErrorCount == 1)
+            #expect(snapshot.readEventsCallCount == 1)
+            #expect(snapshot.cancelReadCallCount == 0)
         }
     }
 

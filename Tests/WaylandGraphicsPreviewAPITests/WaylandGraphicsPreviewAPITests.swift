@@ -172,13 +172,13 @@ struct WaylandGraphicsPreviewAPITests {
         let capabilities = gpuCapableSurfaceCapabilities()
         let path = WaylandGraphicsRuntimePath.softwareFallback(
             capabilities: capabilities,
-            reason: .gbmUnavailable
+            reason: .managedGPUSubmissionUnavailable
         )
 
-        #expect(path.backing == .fallback(.gbmUnavailable))
+        #expect(path.backing == .fallback(.managedGPUSubmissionUnavailable))
         #expect(path.dmabuf == .advertised)
-        #expect(path.gbm == .fallback(.gbmUnavailable))
-        #expect(path.egl == .fallback(.gbmUnavailable))
+        #expect(path.gbm == .fallback(.managedGPUSubmissionUnavailable))
+        #expect(path.egl == .fallback(.managedGPUSubmissionUnavailable))
     }
 
     @Test
@@ -212,6 +212,264 @@ struct WaylandGraphicsPreviewAPITests {
     }
 }
 
+@Suite
+struct WaylandGraphicsPreviewManagedSubmissionTests {
+    @Test
+    func preferAvailableMetadataDoesNotRejectDefaultFrame() throws {
+        let configuration = WaylandGraphicsConfiguration(
+            metadataPolicy: .preferAvailable
+        )
+        let defaultFrame = WaylandGraphicsSubmittedFrame.clearColor(.black)
+        var leaseState = WaylandGraphicsFrameLeaseState()
+
+        try configuration.validateManagedPreviewSupport(
+            capabilities: gpuCapableSurfaceCapabilities()
+        )
+        let leaseID = try leaseState.issueLease()
+        #expect(
+            try leaseState.prepareSubmission(leaseID: leaseID, frame: defaultFrame)
+                == .show
+        )
+    }
+
+    @Test
+    func nonDefaultMetadataIsRejectedBeforeLeaseIsConsumed() throws {
+        var leaseState = WaylandGraphicsFrameLeaseState()
+        let leaseID = try leaseState.issueLease()
+        let frame = WaylandGraphicsSubmittedFrame.clearColor(
+            WaylandGraphicsClearFrame(
+                color: .black,
+                metadata: WaylandGraphicsFrameMetadata(contentType: .game)
+            )
+        )
+
+        #expect(throws: WaylandGraphicsError.unsupportedMetadata) {
+            try leaseState.prepareSubmission(leaseID: leaseID, frame: frame)
+        }
+        #expect(leaseState.activeLeaseID == leaseID)
+    }
+
+    @Test
+    func requireExplicitFailsWhenExplicitSyncUnavailable() {
+        let configuration = WaylandGraphicsConfiguration(
+            synchronizationPolicy: .requireExplicit
+        )
+
+        #expect(
+            throws: WaylandGraphicsError.unavailable(
+                .explicitSyncRequiredButUnavailable
+            )
+        ) {
+            try configuration.validateManagedPreviewSupport(
+                capabilities: softwareOnlySurfaceCapabilities()
+            )
+        }
+    }
+
+    @Test
+    func requireExplicitFailsWithManagedGpuUnavailableWhenExplicitSyncExists() {
+        let configuration = WaylandGraphicsConfiguration(
+            synchronizationPolicy: .requireExplicit
+        )
+
+        #expect(
+            throws: WaylandGraphicsError.unavailable(
+                .managedGPUSubmissionUnavailable
+            )
+        ) {
+            try configuration.validateManagedPreviewSupport(
+                capabilities: gpuCapableSurfaceCapabilities()
+            )
+        }
+    }
+
+    @Test
+    func pacingPolicyIsRejectedUntilManagedPacingExists() {
+        let fifoConfiguration = WaylandGraphicsConfiguration(
+            pacingPolicy: .preferFIFO
+        )
+        let commitTimingConfiguration = WaylandGraphicsConfiguration(
+            pacingPolicy: .preferCommitTiming
+        )
+
+        #expect(throws: WaylandGraphicsError.unsupportedPacing) {
+            try fifoConfiguration.validateManagedPreviewSupport(
+                capabilities: gpuCapableSurfaceCapabilities()
+            )
+        }
+        #expect(throws: WaylandGraphicsError.unsupportedPacing) {
+            try commitTimingConfiguration.validateManagedPreviewSupport(
+                capabilities: gpuCapableSurfaceCapabilities()
+            )
+        }
+    }
+
+    @Test
+    func managedPreviewDoesNotReportGbmUnavailableWithoutGbmProbe() throws {
+        let path = try WaylandDisplay.managedPreviewRuntimePath(
+            capabilities: gpuCapableSurfaceCapabilities(),
+            configuration: .default
+        )
+
+        #expect(path.backing == .fallback(.managedGPUSubmissionUnavailable))
+        #expect(path.dmabuf == .advertised)
+        #expect(path.gbm == .fallback(.managedGPUSubmissionUnavailable))
+        #expect(path.egl == .fallback(.managedGPUSubmissionUnavailable))
+    }
+
+    @Test
+    func requireGPUFailsWithManagedGpuSubmissionUnavailableWhenGpuPathIsNotPublic() {
+        #expect(
+            throws: WaylandGraphicsError.unavailable(
+                .managedGPUSubmissionUnavailable
+            )
+        ) {
+            _ = try WaylandDisplay.managedPreviewRuntimePath(
+                capabilities: gpuCapableSurfaceCapabilities(),
+                configuration: WaylandGraphicsConfiguration(fallbackPolicy: .requireGPU)
+            )
+        }
+    }
+
+    @Test
+    func nextFrameRejectsSecondActiveLease() throws {
+        var leaseState = WaylandGraphicsFrameLeaseState()
+
+        let leaseID = try leaseState.issueLease()
+
+        #expect(leaseID == 1)
+        #expect(throws: WaylandGraphicsError.frameLeaseActive) {
+            try leaseState.issueLease()
+        }
+    }
+
+    @Test
+    func cancelAllowsNextFrame() throws {
+        var leaseState = WaylandGraphicsFrameLeaseState()
+
+        let leaseID = try leaseState.issueLease()
+        leaseState.cancel(leaseID: leaseID)
+
+        #expect(try leaseState.issueLease() == 2)
+    }
+
+    @Test
+    func doubleSubmitConsumesLeaseOnce() throws {
+        var leaseState = WaylandGraphicsFrameLeaseState()
+        let leaseID = try leaseState.issueLease()
+        let frame = WaylandGraphicsSubmittedFrame.clearColor(.black)
+
+        #expect(
+            try leaseState.prepareSubmission(leaseID: leaseID, frame: frame) == .show
+        )
+        #expect(throws: WaylandGraphicsError.frameLeaseConsumed) {
+            try leaseState.prepareSubmission(leaseID: leaseID, frame: frame)
+        }
+    }
+
+    @Test
+    func consumedLeaseReportsConsumedBeforeMetadataValidation() throws {
+        var leaseState = WaylandGraphicsFrameLeaseState()
+        let leaseID = try leaseState.issueLease()
+        _ = try leaseState.prepareSubmission(leaseID: leaseID, frame: .clearColor(.black))
+        let unsupportedFrame = WaylandGraphicsSubmittedFrame.clearColor(
+            WaylandGraphicsClearFrame(
+                color: .black,
+                metadata: WaylandGraphicsFrameMetadata(contentType: .game)
+            )
+        )
+
+        #expect(throws: WaylandGraphicsError.frameLeaseConsumed) {
+            try leaseState.prepareSubmission(leaseID: leaseID, frame: unsupportedFrame)
+        }
+    }
+
+    @Test
+    func wrongLeaseReportsConsumedBeforeMetadataValidation() throws {
+        var leaseState = WaylandGraphicsFrameLeaseState()
+        _ = try leaseState.issueLease()
+        let unsupportedFrame = WaylandGraphicsSubmittedFrame.clearColor(
+            WaylandGraphicsClearFrame(
+                color: .black,
+                metadata: WaylandGraphicsFrameMetadata(contentType: .game)
+            )
+        )
+
+        #expect(throws: WaylandGraphicsError.frameLeaseConsumed) {
+            try leaseState.prepareSubmission(leaseID: 999, frame: unsupportedFrame)
+        }
+    }
+
+    @Test
+    func submissionInFlightRejectsNewLease() throws {
+        var leaseState = WaylandGraphicsFrameLeaseState()
+        let leaseID = try leaseState.issueLease()
+
+        _ = try leaseState.prepareSubmission(
+            leaseID: leaseID,
+            frame: .clearColor(.black)
+        )
+
+        #expect(throws: WaylandGraphicsError.frameLeaseActive) {
+            try leaseState.issueLease()
+        }
+    }
+
+    @Test
+    func submitAfterCloseFailsWithoutDrawing() throws {
+        var leaseState = WaylandGraphicsFrameLeaseState()
+        let leaseID = try leaseState.issueLease()
+
+        leaseState.close()
+
+        #expect(throws: WaylandGraphicsError.backingClosed) {
+            try leaseState.prepareSubmission(
+                leaseID: leaseID,
+                frame: .clearColor(.black)
+            )
+        }
+    }
+
+    @Test
+    func secondSubmittedFrameUsesRedrawNotShow() throws {
+        var leaseState = WaylandGraphicsFrameLeaseState()
+        let frame = WaylandGraphicsSubmittedFrame.clearColor(.black)
+
+        let firstLeaseID = try leaseState.issueLease()
+        #expect(
+            try leaseState.prepareSubmission(leaseID: firstLeaseID, frame: frame)
+                == .show
+        )
+        try leaseState.finishSubmission()
+
+        let secondLeaseID = try leaseState.issueLease()
+        #expect(
+            try leaseState.prepareSubmission(leaseID: secondLeaseID, frame: frame)
+                == .redraw
+        )
+    }
+
+    @Test
+    func closedWindowDisplayFailuresMapToTypedPreviewError() {
+        let windowID = WindowID(rawValue: 42)
+
+        #expect(
+            WaylandGraphicsErrorMapper.mapWindowLifecycleError(
+                ClientError.display(.unknownWindow(windowID)),
+                windowID: windowID
+            ) == .windowClosed
+        )
+        #expect(
+            WaylandGraphicsErrorMapper.mapWindowLifecycleError(
+                ClientError.window(
+                    windowID,
+                    .invalidLifecycleTransition(.presentAfterDestroyed)
+                ),
+                windowID: windowID
+            ) == .windowClosed
+        )
+    }
+}
 private func gpuCapableSurfaceCapabilities() -> WaylandGraphicsSurfaceCapabilities {
     WaylandGraphicsSurfaceCapabilities(
         dmabuf: .available(version: 4),
@@ -228,5 +486,15 @@ private func gpuCapableSurfaceCapabilities() -> WaylandGraphicsSurfaceCapabiliti
             colorManagement: .available(version: 1)
         ),
         presentationFeedback: .available(version: 1)
+    )
+}
+
+private func softwareOnlySurfaceCapabilities() -> WaylandGraphicsSurfaceCapabilities {
+    WaylandGraphicsSurfaceCapabilities(
+        dmabuf: .unavailable,
+        explicitSync: .unavailable,
+        framePacing: .unavailable,
+        colorMetadata: .unavailable,
+        presentationFeedback: .unavailable
     )
 }

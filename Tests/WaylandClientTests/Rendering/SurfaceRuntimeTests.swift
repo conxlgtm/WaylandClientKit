@@ -257,9 +257,18 @@ struct SurfaceRuntimeTests {
             surfaceID: RawObjectID(42)
         )
 
+        runtime.setDmabufAdvertisement(
+            .advertised(version: 6, canRequestSurfaceFeedback: .available)
+        )
         try runtime.setSurfaceDmabufFeedback(feedback)
 
-        #expect(runtime.capabilitySnapshot().dmabuf == .surfaceFeedback(surfaceFeedback))
+        #expect(
+            runtime.capabilitySnapshot().dmabuf
+                == .surfaceFeedback(
+                    version: 6,
+                    feedback: surfaceFeedback
+                )
+        )
     }
 
     @Test

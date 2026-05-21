@@ -23,6 +23,33 @@ public struct WaylandGraphicsConfiguration: Equatable, Sendable {
     }
 }
 
+extension WaylandGraphicsConfiguration {
+    package func validateManagedPreviewSupport(
+        capabilities: WaylandGraphicsSurfaceCapabilities
+    ) throws {
+        switch synchronizationPolicy {
+        case .implicitOnly, .preferExplicit:
+            break
+        case .requireExplicit:
+            guard capabilities.explicitSync.isAvailable else {
+                throw WaylandGraphicsError.unavailable(
+                    .explicitSyncRequiredButUnavailable
+                )
+            }
+            throw WaylandGraphicsError.unavailable(
+                .managedGPUSubmissionUnavailable
+            )
+        }
+
+        switch pacingPolicy {
+        case .none:
+            break
+        case .preferFIFO, .preferCommitTiming:
+            throw WaylandGraphicsError.unsupportedPacing
+        }
+    }
+}
+
 public enum WaylandGraphicsSynchronizationPolicy: Equatable, Sendable {
     case implicitOnly
     case preferExplicit
@@ -106,6 +133,49 @@ public enum WaylandGraphicsSubmittedFrame: Equatable, Sendable {
     }
 }
 
+public enum WaylandGraphicsSubmissionOperation: Equatable, Sendable {
+    case show
+    case redraw
+}
+
+public enum WaylandGraphicsSubmissionStage: Equatable, Sendable {
+    case windowStateCheck
+    case frameGeometry
+    case submissionPreparation
+    case frameSubmission
+    case submissionCompletion
+}
+
+public enum WaylandGraphicsSubmissionFailure: Equatable, Sendable {
+    case windowLifecycle(
+        windowID: WindowID,
+        transition: WindowLifecycleTransitionError,
+        operation: WaylandGraphicsSubmissionOperation?,
+        stage: WaylandGraphicsSubmissionStage
+    )
+    case window(
+        windowID: WindowID,
+        error: WindowError,
+        operation: WaylandGraphicsSubmissionOperation?,
+        stage: WaylandGraphicsSubmissionStage
+    )
+    case display(
+        error: DisplayOperationError,
+        operation: WaylandGraphicsSubmissionOperation?,
+        stage: WaylandGraphicsSubmissionStage
+    )
+    case client(
+        error: ClientError,
+        operation: WaylandGraphicsSubmissionOperation?,
+        stage: WaylandGraphicsSubmissionStage
+    )
+    case unexpected(
+        operation: WaylandGraphicsSubmissionOperation?,
+        stage: WaylandGraphicsSubmissionStage,
+        description: String
+    )
+}
+
 public enum WaylandGraphicsError: Error, Equatable, Sendable {
     case unavailable(WaylandGraphicsUnavailableReason)
     case fallbackRequired(WaylandGraphicsFallbackReason)
@@ -114,7 +184,8 @@ public enum WaylandGraphicsError: Error, Equatable, Sendable {
     case frameLeaseActive
     case frameLeaseConsumed
     case unsupportedMetadata
-    case internalFailure(String)
+    case unsupportedPacing
+    case submissionFailed(WaylandGraphicsSubmissionFailure)
 }
 
 public struct WaylandGraphicsWindowBacking: Sendable {
@@ -137,6 +208,12 @@ public struct WaylandGraphicsWindowBacking: Sendable {
 
     public func nextFrame() async throws -> WaylandGraphicsFrameLease {
         try await storage.nextFrame()
+    }
+
+    package func nextFrameForTesting(
+        afterWindowCheck: @Sendable @escaping () async -> Void
+    ) async throws -> WaylandGraphicsFrameLease {
+        try await storage.nextFrame(afterWindowCheck: afterWindowCheck)
     }
 
     public func close() async throws {
@@ -167,6 +244,30 @@ public struct WaylandGraphicsFrameLease: Sendable {
         try await storage.submit(leaseID: id, frame: frame)
     }
 
+    package func submitForTestingBeforeSubmissionEffect(
+        _ frame: WaylandGraphicsSubmittedFrame,
+        _ beforeSubmissionEffect: @Sendable @escaping () async throws -> Void
+    ) async throws {
+        try await storage.submit(
+            leaseID: id,
+            frame: frame,
+            beforeSubmissionEffect: beforeSubmissionEffect,
+            afterSubmissionEffect: noThrowingGraphicsPreviewSubmissionHook
+        )
+    }
+
+    package func submitForTesting(
+        _ frame: WaylandGraphicsSubmittedFrame,
+        afterSubmissionEffect: @Sendable @escaping () async throws -> Void
+    ) async throws {
+        try await storage.submit(
+            leaseID: id,
+            frame: frame,
+            beforeSubmissionEffect: noThrowingGraphicsPreviewSubmissionHook,
+            afterSubmissionEffect: afterSubmissionEffect
+        )
+    }
+
     public func cancel() async {
         await storage.cancel(leaseID: id)
     }
@@ -174,46 +275,42 @@ public struct WaylandGraphicsFrameLease: Sendable {
 
 actor WaylandGraphicsWindowBackingStorage {
     let window: Window
-    private let configuration: WaylandGraphicsConfiguration
     private var backingRuntimePath: WaylandGraphicsRuntimePath
-    private var isClosed = false
-    private var hasSubmittedFrame = false
-    private var activeLeaseID: UInt64?
-    private var nextLeaseID: UInt64 = 1
+    private var leaseState = WaylandGraphicsFrameLeaseState()
 
     init(
         window backingWindow: Window,
-        runtimePath initialRuntimePath: WaylandGraphicsRuntimePath,
-        configuration graphicsConfiguration: WaylandGraphicsConfiguration
+        runtimePath initialRuntimePath: WaylandGraphicsRuntimePath
     ) {
         window = backingWindow
         backingRuntimePath = initialRuntimePath
-        configuration = graphicsConfiguration
     }
 
     func runtimePath() throws -> WaylandGraphicsRuntimePath {
-        guard !isClosed else {
-            throw WaylandGraphicsError.backingClosed
-        }
-
+        try leaseState.requireNotClosed()
         return backingRuntimePath
     }
 
     func nextFrame() async throws -> WaylandGraphicsFrameLease {
-        guard !isClosed else {
-            throw WaylandGraphicsError.backingClosed
-        }
-        guard activeLeaseID == nil else {
-            throw WaylandGraphicsError.frameLeaseActive
-        }
-        guard try await !window.isClosed else {
-            throw WaylandGraphicsError.windowClosed
-        }
+        try await nextFrame(afterWindowCheck: noGraphicsPreviewSubmissionHook)
+    }
 
-        let geometry = try await window.geometry
-        let leaseID = nextLeaseID
-        nextLeaseID += 1
-        activeLeaseID = leaseID
+    func nextFrame(
+        afterWindowCheck: @Sendable () async -> Void
+    ) async throws -> WaylandGraphicsFrameLease {
+        try leaseState.requireNotClosed()
+        try await ensureWindowOpen()
+        await afterWindowCheck()
+        try leaseState.requireNotClosed()
+
+        let geometry: SurfaceGeometry
+        do {
+            geometry = try await window.geometry
+            try leaseState.requireNotClosed()
+        } catch {
+            throw graphicsError(for: error, stage: .frameGeometry)
+        }
+        let leaseID = try leaseState.issueLease()
         return WaylandGraphicsFrameLease(
             id: leaseID,
             size: geometry.bufferSize,
@@ -226,69 +323,106 @@ actor WaylandGraphicsWindowBackingStorage {
         leaseID: UInt64,
         frame: WaylandGraphicsSubmittedFrame
     ) async throws {
-        try consumeLease(leaseID)
-        guard !isClosed else {
-            throw WaylandGraphicsError.backingClosed
-        }
+        try await submit(
+            leaseID: leaseID,
+            frame: frame,
+            beforeSubmissionEffect: noThrowingGraphicsPreviewSubmissionHook,
+            afterSubmissionEffect: noGraphicsPreviewSubmissionHook
+        )
+    }
 
+    func submit(
+        leaseID: UInt64,
+        frame: WaylandGraphicsSubmittedFrame,
+        beforeSubmissionEffect: @Sendable () async throws -> Void,
+        afterSubmissionEffect: @Sendable () async throws -> Void
+    ) async throws {
+        try leaseState.requireNotClosed()
+        try await ensureWindowOpen()
+
+        let operation = try leaseState.prepareSubmission(leaseID: leaseID, frame: frame)
+        var stage = WaylandGraphicsSubmissionStage.submissionPreparation
         do {
-            try await submitFrame(frame)
-        } catch let graphicsError as WaylandGraphicsError {
-            throw graphicsError
+            try await beforeSubmissionEffect()
+            stage = .frameSubmission
+            try await submitFrame(frame, operation: operation)
+            stage = .submissionCompletion
+            try await afterSubmissionEffect()
+            try leaseState.finishSubmission()
         } catch {
-            throw WaylandGraphicsError.internalFailure(String(describing: error))
+            leaseState.failSubmission()
+            throw graphicsError(for: error, stage: stage, operation: operation)
         }
+    }
+
+    private func ensureWindowOpen() async throws {
+        do {
+            let windowIsClosed = try await window.isClosed
+            try leaseState.requireNotClosed()
+            guard !windowIsClosed else {
+                throw WaylandGraphicsError.windowClosed
+            }
+        } catch {
+            throw graphicsError(for: error, stage: .windowStateCheck)
+        }
+    }
+
+    private func graphicsError(
+        for error: any Error,
+        stage: WaylandGraphicsSubmissionStage,
+        operation: WaylandGraphicsFrameSubmissionOperation? = nil
+    ) -> WaylandGraphicsError {
+        if leaseState.isClosed {
+            return .backingClosed
+        }
+        if let graphicsError = error as? WaylandGraphicsError {
+            return graphicsError
+        }
+        return WaylandGraphicsErrorMapper.mapSubmissionError(
+            error,
+            windowID: window.id,
+            operation: operation?.graphicsSubmissionOperation,
+            stage: stage
+        )
     }
 
     func cancel(leaseID: UInt64) {
-        guard activeLeaseID == leaseID else {
-            return
-        }
-
-        activeLeaseID = nil
+        leaseState.cancel(leaseID: leaseID)
     }
 
     func close() async throws {
-        guard !isClosed else {
+        guard !leaseState.isClosed else {
             return
         }
 
-        isClosed = true
-        activeLeaseID = nil
+        leaseState.close()
         await window.close()
     }
 
-    private func consumeLease(_ leaseID: UInt64) throws {
-        guard activeLeaseID == leaseID else {
-            throw WaylandGraphicsError.frameLeaseConsumed
-        }
-
-        activeLeaseID = nil
-    }
-
-    private func submitFrame(_ frame: WaylandGraphicsSubmittedFrame) async throws {
+    private func submitFrame(
+        _ frame: WaylandGraphicsSubmittedFrame,
+        operation: WaylandGraphicsFrameSubmissionOperation
+    ) async throws {
         switch frame {
         case .clearColor(let clearFrame):
-            guard clearFrame.metadata == .default, configuration.metadataPolicy == .none
-            else {
-                throw WaylandGraphicsError.unsupportedMetadata
-            }
-
-            try await submitClearFrame(clearFrame)
+            try await submitClearFrame(clearFrame, operation: operation)
         }
     }
 
-    private func submitClearFrame(_ frame: WaylandGraphicsClearFrame) async throws {
+    private func submitClearFrame(
+        _ frame: WaylandGraphicsClearFrame,
+        operation: WaylandGraphicsFrameSubmissionOperation
+    ) async throws {
         let color = frame.color.xrgb8888
-        if hasSubmittedFrame {
-            try await window.redraw { softwareFrame in
-                Self.clear(softwareFrame, color: color)
-            }
-        } else {
+        switch operation {
+        case .show:
             try await window.show { softwareFrame in
                 Self.clear(softwareFrame, color: color)
             }
-            hasSubmittedFrame = true
+        case .redraw:
+            try await window.redraw { softwareFrame in
+                Self.clear(softwareFrame, color: color)
+            }
         }
     }
 
@@ -302,4 +436,12 @@ actor WaylandGraphicsWindowBackingStorage {
             }
         }
     }
+}
+
+private func noGraphicsPreviewSubmissionHook() async {
+    _ = ()
+}
+
+private func noThrowingGraphicsPreviewSubmissionHook() async throws {
+    _ = ()
 }

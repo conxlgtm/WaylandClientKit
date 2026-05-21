@@ -54,5 +54,5 @@ package enum SurfaceDmabufAdvertisement: Equatable, Sendable {
 package enum SurfaceDmabufCapability: Equatable, Sendable {
     case unavailable
     case advertised(version: RawVersion, canRequestSurfaceFeedback: SurfaceCapabilityStatus)
-    case surfaceFeedback(SurfaceDmabufFeedback)
+    case surfaceFeedback(version: RawVersion, feedback: SurfaceDmabufFeedback)
 }

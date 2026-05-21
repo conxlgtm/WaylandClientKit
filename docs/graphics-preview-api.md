@@ -47,16 +47,21 @@ The public preview projection can report that a protocol is advertised and can
 explain why a software fallback would be chosen. The managed preview submission
 API can create a window backing, lease a frame, cancel a lease, and submit a
 deterministic clear frame. The first managed submission path remains software
-backed and reports GPU fallback reasons explicitly; GBM/EGL allocation and
-compositor dmabuf import remain package-internal while the backing state
-machine and compositor matrix mature.
+backed. When dmabuf is advertised but public managed GPU submission is not
+implemented, it reports `managedGPUSubmissionUnavailable` rather than treating
+the unprobed GBM/EGL path as failed. GBM/EGL allocation and compositor dmabuf
+import remain package-internal while the backing state machine and compositor
+matrix mature.
 
 ## Managed Submission Boundary
 
 `WaylandGraphicsConfiguration` describes fallback, synchronization, pacing, and
 metadata preferences. Defaults are conservative: software fallback is allowed,
 implicit synchronization is used, pacing is not requested, and public metadata
-requests are disabled.
+requests are disabled. `requireExplicit` fails with a typed unavailable reason
+until managed explicit-sync GPU submission exists, and pacing policies are
+rejected with `WaylandGraphicsError.unsupportedPacing` until managed pacing is
+implemented.
 
 `WaylandGraphicsWindowBacking` owns a managed `Window` and exposes the current
 runtime path. `nextFrame()` returns a single-use `WaylandGraphicsFrameLease`.
@@ -67,7 +72,9 @@ EGL surfaces, DRM nodes, or syncobj handles.
 `WaylandGraphicsFrameMetadata` currently exposes only content type and
 presentation hint values. The managed clear-frame implementation rejects
 non-default metadata with `WaylandGraphicsError.unsupportedMetadata`; public
-color-management image descriptions remain internal.
+color-management image descriptions remain internal. Unsupported frame metadata
+is validated before the lease is consumed, so callers can cancel or retry the
+active lease deterministically.
 
 ## External Compile Contract
 

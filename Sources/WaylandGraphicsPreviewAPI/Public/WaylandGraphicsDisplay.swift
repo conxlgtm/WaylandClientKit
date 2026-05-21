@@ -37,16 +37,17 @@ extension WaylandDisplay {
         let window = try createTopLevelWindow(configuration: windowConfiguration)
         let storage = WaylandGraphicsWindowBackingStorage(
             window: window,
-            runtimePath: runtimePath,
-            configuration: graphicsConfiguration
+            runtimePath: runtimePath
         )
         return WaylandGraphicsWindowBacking(window: window, storage: storage)
     }
 
-    private static func managedPreviewRuntimePath(
+    package static func managedPreviewRuntimePath(
         capabilities: WaylandGraphicsSurfaceCapabilities,
         configuration: WaylandGraphicsConfiguration
     ) throws -> WaylandGraphicsRuntimePath {
+        try configuration.validateManagedPreviewSupport(capabilities: capabilities)
+
         switch configuration.fallbackPolicy {
         case .forceSoftware:
             return .softwareFallback(capabilities: capabilities, reason: .forcedSoftware)
@@ -55,9 +56,12 @@ extension WaylandDisplay {
         case .requireGPU where !capabilities.dmabuf.isAvailable:
             throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
         case .preferGPUFallbackToSoftware:
-            return .softwareFallback(capabilities: capabilities, reason: .gbmUnavailable)
+            return .softwareFallback(
+                capabilities: capabilities,
+                reason: .managedGPUSubmissionUnavailable
+            )
         case .requireGPU:
-            throw WaylandGraphicsError.unavailable(.gbmUnavailable)
+            throw WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
         }
     }
 }
