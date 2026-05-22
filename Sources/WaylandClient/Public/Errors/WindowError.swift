@@ -197,6 +197,7 @@ public enum PresentationError: Error, Equatable, Sendable, CustomStringConvertib
     case noFreeBuffer
     case userDraw(String)
     case frameCallbackRequest(String)
+    case presentationFeedbackRequest(String)
     case surfaceCommit(String)
 
     public var description: String {
@@ -205,6 +206,7 @@ public enum PresentationError: Error, Equatable, Sendable, CustomStringConvertib
             "no free buffer is available"
         case .userDraw(let detail),
             .frameCallbackRequest(let detail),
+            .presentationFeedbackRequest(let detail),
             .surfaceCommit(let detail):
             detail
         }

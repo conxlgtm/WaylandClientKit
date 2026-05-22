@@ -866,8 +866,8 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L102: `    public func outputs() throws -> [OutputSnapshot] {`
 - L107: `    public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {`
 - L112: `    public func createTopLevelWindow(`
-- L247: `    public func close() {`
-- L306: `    public var isClosed: Bool {`
+- L228: `    public func close() {`
+- L287: `    public var isClosed: Bool {`
 
 ### `Sources/WaylandClient/Public/Errors/ClientError.swift`
 
@@ -1067,8 +1067,9 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L197: `    case noFreeBuffer`
 - L198: `    case userDraw(String)`
 - L199: `    case frameCallbackRequest(String)`
-- L200: `    case surfaceCommit(String)`
-- L202: `    public var description: String {`
+- L200: `    case presentationFeedbackRequest(String)`
+- L201: `    case surfaceCommit(String)`
+- L203: `    public var description: String {`
 
 ### `Sources/WaylandClient/Public/Input/InputDomainValues.swift`
 
@@ -1827,34 +1828,34 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L1: `public struct Window: Sendable, Hashable {`
 - L2: `    public let id: WindowID`
 - L16: `    public func show(`
-- L23: `    public func redraw(`
-- L29: `    public func close() async {`
-- L33: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
-- L39: `    public func requestRedraw() async throws {`
-- L43: `    public var presentationEvents: WindowPresentationEvents {`
-- L47: `    public func requestPresentationFeedback() async throws {`
-- L51: `    public func setTitle(_ title: WaylandString) async throws {`
-- L55: `    public func setTitle(_ title: String) async throws {`
-- L59: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
-- L63: `    public func setAppID(_ appID: String) async throws {`
-- L67: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
-- L71: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
-- L75: `    public func requestMaximize() async throws {`
-- L79: `    public func requestUnmaximize() async throws {`
-- L83: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
-- L87: `    public func requestExitFullscreen() async throws {`
-- L91: `    public func requestMinimize() async throws {`
-- L95: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
-- L99: `    public func requestInteractiveResize(`
-- L112: `    public func requestWindowMenu(`
-- L125: `    public func startDrag(`
-- L140: `    public var isClosed: Bool {`
-- L146: `    public var needsRedraw: Bool {`
-- L152: `    public var decorationMode: WindowDecorationMode {`
-- L158: `    public var geometry: SurfaceGeometry {`
-- L164: `    public var stateSnapshot: WindowStateSnapshot {`
-- L170: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L174: `    public func hash(into hasher: inout Hasher) {`
+- L38: `    public func redraw(`
+- L57: `    public func close() async {`
+- L61: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
+- L67: `    public func requestRedraw() async throws {`
+- L71: `    public var presentationEvents: WindowPresentationEvents {`
+- L75: `    public func requestPresentationFeedback() async throws {`
+- L79: `    public func setTitle(_ title: WaylandString) async throws {`
+- L83: `    public func setTitle(_ title: String) async throws {`
+- L87: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L91: `    public func setAppID(_ appID: String) async throws {`
+- L95: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L99: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L103: `    public func requestMaximize() async throws {`
+- L107: `    public func requestUnmaximize() async throws {`
+- L111: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L115: `    public func requestExitFullscreen() async throws {`
+- L119: `    public func requestMinimize() async throws {`
+- L123: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L127: `    public func requestInteractiveResize(`
+- L140: `    public func requestWindowMenu(`
+- L153: `    public func startDrag(`
+- L168: `    public var isClosed: Bool {`
+- L174: `    public var needsRedraw: Bool {`
+- L180: `    public var decorationMode: WindowDecorationMode {`
+- L186: `    public var geometry: SurfaceGeometry {`
+- L192: `    public var stateSnapshot: WindowStateSnapshot {`
+- L198: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L202: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 
@@ -2039,55 +2040,57 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L209: `    case eglUnavailable`
 - L210: `    case explicitSyncRequiredButUnavailable`
 - L211: `    case metadataRequiredButUnavailable`
-- L212: `    case compositorRejectedBuffer`
-- L216: `public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {`
-- L217: `    case dmabufUnavailable`
-- L218: `    case managedGPUSubmissionUnavailable`
-- L219: `    case noCompatibleFormat`
-- L220: `    case noRenderNode`
-- L221: `    case gbmUnavailable`
-- L222: `    case eglUnavailable`
-- L223: `    case explicitSyncRequiredButUnavailable`
-- L224: `    case metadataRequiredButUnavailable`
-- L225: `    case compositorRejectedBuffer`
-- L229: `public enum WaylandGraphicsBackingDecision: Equatable, Sendable {`
-- L230: `    case gpu(WaylandGraphicsRuntimePath)`
-- L231: `    case software(WaylandGraphicsFallbackReason)`
-- L232: `    case unavailable(WaylandGraphicsUnavailableReason)`
-- L236: `public enum WaylandGraphicsRuntimeStatus: Equatable, Sendable {`
-- L237: `    case unavailable`
-- L238: `    case pending`
-- L239: `    case advertised`
-- L240: `    case configured`
-- L241: `    case active`
-- L242: `    case failed(WaylandGraphicsUnavailableReason)`
-- L243: `    case fallback(WaylandGraphicsFallbackReason)`
-- L247: `public struct WaylandGraphicsPacingStatus: Equatable, Sendable {`
-- L248: `    public let fifo: WaylandGraphicsRuntimeStatus`
-- L249: `    public let commitTiming: WaylandGraphicsRuntimeStatus`
-- L251: `    public init(`
-- L261: `public struct WaylandGraphicsMetadataStatus: Equatable, Sendable {`
-- L262: `    public let contentType: WaylandGraphicsRuntimeStatus`
-- L263: `    public let alphaModifier: WaylandGraphicsRuntimeStatus`
-- L264: `    public let tearingControl: WaylandGraphicsRuntimeStatus`
-- L265: `    public let colorRepresentation: WaylandGraphicsRuntimeStatus`
-- L266: `    public let colorManagement: WaylandGraphicsRuntimeStatus`
-- L268: `    public init(`
-- L284: `public struct WaylandGraphicsRuntimePath: Equatable, Sendable {`
-- L285: `    public let capabilities: WaylandGraphicsSurfaceCapabilities`
-- L286: `    public let backing: WaylandGraphicsRuntimeStatus`
-- L287: `    public let dmabuf: WaylandGraphicsRuntimeStatus`
-- L288: `    public let gbm: WaylandGraphicsRuntimeStatus`
-- L289: `    public let egl: WaylandGraphicsRuntimeStatus`
-- L290: `    public let explicitSync: WaylandGraphicsRuntimeStatus`
-- L291: `    public let pacing: WaylandGraphicsPacingStatus`
-- L292: `    public let metadata: WaylandGraphicsMetadataStatus`
-- L293: `    public let presentationFeedback: WaylandGraphicsRuntimeStatus`
-- L294: `    public var fallback: WaylandGraphicsFallbackReason? {`
-- L324: `    public static func projected(`
-- L334: `    public static func projected(`
-- L374: `    public static func softwareFallback(`
-- L404: `    public static func unavailable(`
+- L212: `    case presentationFeedbackUnavailable`
+- L213: `    case compositorRejectedBuffer`
+- L217: `public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {`
+- L218: `    case dmabufUnavailable`
+- L219: `    case managedGPUSubmissionUnavailable`
+- L220: `    case noCompatibleFormat`
+- L221: `    case noRenderNode`
+- L222: `    case gbmUnavailable`
+- L223: `    case eglUnavailable`
+- L224: `    case explicitSyncRequiredButUnavailable`
+- L225: `    case metadataRequiredButUnavailable`
+- L226: `    case presentationFeedbackUnavailable`
+- L227: `    case compositorRejectedBuffer`
+- L231: `public enum WaylandGraphicsBackingDecision: Equatable, Sendable {`
+- L232: `    case gpu(WaylandGraphicsRuntimePath)`
+- L233: `    case software(WaylandGraphicsFallbackReason)`
+- L234: `    case unavailable(WaylandGraphicsUnavailableReason)`
+- L238: `public enum WaylandGraphicsRuntimeStatus: Equatable, Sendable {`
+- L239: `    case unavailable`
+- L240: `    case pending`
+- L241: `    case advertised`
+- L242: `    case configured`
+- L243: `    case active`
+- L244: `    case failed(WaylandGraphicsUnavailableReason)`
+- L245: `    case fallback(WaylandGraphicsFallbackReason)`
+- L249: `public struct WaylandGraphicsPacingStatus: Equatable, Sendable {`
+- L250: `    public let fifo: WaylandGraphicsRuntimeStatus`
+- L251: `    public let commitTiming: WaylandGraphicsRuntimeStatus`
+- L253: `    public init(`
+- L263: `public struct WaylandGraphicsMetadataStatus: Equatable, Sendable {`
+- L264: `    public let contentType: WaylandGraphicsRuntimeStatus`
+- L265: `    public let alphaModifier: WaylandGraphicsRuntimeStatus`
+- L266: `    public let tearingControl: WaylandGraphicsRuntimeStatus`
+- L267: `    public let colorRepresentation: WaylandGraphicsRuntimeStatus`
+- L268: `    public let colorManagement: WaylandGraphicsRuntimeStatus`
+- L270: `    public init(`
+- L286: `public struct WaylandGraphicsRuntimePath: Equatable, Sendable {`
+- L287: `    public let capabilities: WaylandGraphicsSurfaceCapabilities`
+- L288: `    public let backing: WaylandGraphicsRuntimeStatus`
+- L289: `    public let dmabuf: WaylandGraphicsRuntimeStatus`
+- L290: `    public let gbm: WaylandGraphicsRuntimeStatus`
+- L291: `    public let egl: WaylandGraphicsRuntimeStatus`
+- L292: `    public let explicitSync: WaylandGraphicsRuntimeStatus`
+- L293: `    public let pacing: WaylandGraphicsPacingStatus`
+- L294: `    public let metadata: WaylandGraphicsMetadataStatus`
+- L295: `    public let presentationFeedback: WaylandGraphicsRuntimeStatus`
+- L296: `    public var fallback: WaylandGraphicsFallbackReason? {`
+- L326: `    public static func projected(`
+- L336: `    public static func projected(`
+- L376: `    public static func softwareFallback(`
+- L406: `    public static func unavailable(`
 
 ### `Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsSubmission.swift`
 
@@ -2096,78 +2099,96 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L5: `    public var synchronizationPolicy: WaylandGraphicsSynchronizationPolicy`
 - L6: `    public var pacingPolicy: WaylandGraphicsPacingPolicy`
 - L7: `    public var metadataPolicy: WaylandGraphicsMetadataPolicy`
-- L9: `    public static let `default` = WaylandGraphicsConfiguration()`
-- L11: `    public init(`
-- L53: `public enum WaylandGraphicsSynchronizationPolicy: Equatable, Sendable {`
-- L54: `    case implicitOnly`
-- L55: `    case preferExplicit`
-- L56: `    case requireExplicit`
-- L59: `public enum WaylandGraphicsPacingPolicy: Equatable, Sendable {`
-- L60: `    case none`
-- L61: `    case preferFIFO`
-- L62: `    case preferCommitTiming`
-- L65: `public enum WaylandGraphicsMetadataPolicy: Equatable, Sendable {`
-- L66: `    case none`
-- L67: `    case preferAvailable`
-- L70: `public struct WaylandGraphicsFrameMetadata: Equatable, Sendable {`
-- L71: `    public var contentType: WaylandGraphicsContentType?`
-- L72: `    public var presentationHint: WaylandGraphicsPresentationHint?`
-- L74: `    public static let `default` = WaylandGraphicsFrameMetadata()`
-- L76: `    public init(`
-- L85: `public enum WaylandGraphicsContentType: Equatable, Sendable {`
+- L8: `    public var presentationFeedbackPolicy: WaylandGraphicsPresentationFeedbackPolicy`
+- L10: `    public static let `default` = WaylandGraphicsConfiguration()`
+- L12: `    public init(`
+- L68: `public enum WaylandGraphicsSynchronizationPolicy: Equatable, Sendable {`
+- L69: `    case implicitOnly`
+- L70: `    case preferExplicit`
+- L71: `    case requireExplicit`
+- L74: `public enum WaylandGraphicsPacingPolicy: Equatable, Sendable {`
+- L75: `    case none`
+- L76: `    case preferFIFO`
+- L77: `    case preferCommitTiming`
+- L80: `public enum WaylandGraphicsMetadataPolicy: Equatable, Sendable {`
+- L81: `    case none`
+- L82: `    case preferAvailable`
+- L85: `public enum WaylandGraphicsPresentationFeedbackPolicy: Equatable, Sendable {`
 - L86: `    case none`
-- L87: `    case photo`
-- L88: `    case video`
-- L89: `    case game`
-- L92: `public enum WaylandGraphicsPresentationHint: Equatable, Sendable {`
-- L93: `    case vsync`
-- L94: `    case async`
-- L97: `public struct WaylandGraphicsXRGBColor: Equatable, Sendable {`
-- L98: `    public let red: UInt8`
-- L99: `    public let green: UInt8`
-- L100: `    public let blue: UInt8`
-- L102: `    public static let black = WaylandGraphicsXRGBColor(red: 0, green: 0, blue: 0)`
-- L104: `    public init(red colorRed: UInt8, green colorGreen: UInt8, blue colorBlue: UInt8) {`
-- L115: `public struct WaylandGraphicsClearFrame: Equatable, Sendable {`
-- L116: `    public let color: WaylandGraphicsXRGBColor`
-- L117: `    public let metadata: WaylandGraphicsFrameMetadata`
-- L119: `    public init(`
-- L128: `public enum WaylandGraphicsSubmittedFrame: Equatable, Sendable {`
-- L129: `    case clearColor(WaylandGraphicsClearFrame)`
-- L131: `    public static func clearColor(_ color: WaylandGraphicsXRGBColor) -> Self {`
-- L136: `public enum WaylandGraphicsSubmissionOperation: Equatable, Sendable {`
-- L137: `    case show`
-- L138: `    case redraw`
-- L141: `public enum WaylandGraphicsSubmissionStage: Equatable, Sendable {`
-- L142: `    case windowStateCheck`
-- L143: `    case frameGeometry`
-- L144: `    case submissionPreparation`
-- L145: `    case frameSubmission`
-- L146: `    case submissionCompletion`
-- L149: `public enum WaylandGraphicsSubmissionFailure: Equatable, Sendable {`
-- L150: `    case windowLifecycle(`
-- L156: `    case window(`
-- L162: `    case display(`
-- L167: `    case client(`
-- L172: `    case unexpected(`
-- L179: `public enum WaylandGraphicsError: Error, Equatable, Sendable {`
-- L180: `    case unavailable(WaylandGraphicsUnavailableReason)`
-- L181: `    case fallbackRequired(WaylandGraphicsFallbackReason)`
-- L182: `    case windowClosed`
-- L183: `    case backingClosed`
-- L184: `    case frameLeaseActive`
-- L185: `    case frameLeaseConsumed`
-- L186: `    case unsupportedMetadata`
-- L187: `    case unsupportedPacing`
-- L188: `    case submissionFailed(WaylandGraphicsSubmissionFailure)`
-- L191: `public struct WaylandGraphicsWindowBacking: Sendable {`
-- L192: `    public let window: Window`
-- L203: `    public var runtimePath: WaylandGraphicsRuntimePath {`
-- L209: `    public func nextFrame() async throws -> WaylandGraphicsFrameLease {`
-- L219: `    public func close() async throws {`
-- L224: `public struct WaylandGraphicsFrameLease: Sendable {`
-- L225: `    public let size: PositivePixelSize`
-- L226: `    public let runtimePath: WaylandGraphicsRuntimePath`
-- L243: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws {`
-- L271: `    public func cancel() async {`
+- L87: `    case requestWhenAvailable`
+- L88: `    case require`
+- L91: `public struct WaylandGraphicsDamageRegion: Equatable, Sendable {`
+- L92: `    public let rects: [LogicalRect]`
+- L94: `    public static let fullFrame = WaylandGraphicsDamageRegion(rects: [])`
+- L96: `    public init(rects damageRects: [LogicalRect]) {`
+- L101: `public struct WaylandGraphicsFrameMetadata: Equatable, Sendable {`
+- L102: `    public var contentType: WaylandGraphicsContentType?`
+- L103: `    public var presentationHint: WaylandGraphicsPresentationHint?`
+- L104: `    public var damage: WaylandGraphicsDamageRegion?`
+- L106: `    public static let `default` = WaylandGraphicsFrameMetadata()`
+- L108: `    public init(`
+- L119: `public enum WaylandGraphicsContentType: Equatable, Sendable {`
+- L120: `    case none`
+- L121: `    case photo`
+- L122: `    case video`
+- L123: `    case game`
+- L126: `public enum WaylandGraphicsPresentationHint: Equatable, Sendable {`
+- L127: `    case vsync`
+- L128: `    case async`
+- L131: `public struct WaylandGraphicsXRGBColor: Equatable, Sendable {`
+- L132: `    public let red: UInt8`
+- L133: `    public let green: UInt8`
+- L134: `    public let blue: UInt8`
+- L136: `    public static let black = WaylandGraphicsXRGBColor(red: 0, green: 0, blue: 0)`
+- L138: `    public init(red colorRed: UInt8, green colorGreen: UInt8, blue colorBlue: UInt8) {`
+- L149: `public struct WaylandGraphicsClearFrame: Equatable, Sendable {`
+- L150: `    public let color: WaylandGraphicsXRGBColor`
+- L151: `    public let metadata: WaylandGraphicsFrameMetadata`
+- L153: `    public init(`
+- L162: `public enum WaylandGraphicsSubmittedFrame: Equatable, Sendable {`
+- L163: `    case clearColor(WaylandGraphicsClearFrame)`
+- L165: `    public static func clearColor(_ color: WaylandGraphicsXRGBColor) -> Self {`
+- L170: `public enum WaylandGraphicsSubmissionOperation: Equatable, Sendable {`
+- L171: `    case show`
+- L172: `    case redraw`
+- L175: `public struct WaylandGraphicsFrameResult: Equatable, Sendable {`
+- L176: `    public let runtimePath: WaylandGraphicsRuntimePath`
+- L177: `    public let operation: WaylandGraphicsSubmissionOperation`
+- L178: `    public let size: PositivePixelSize`
+- L180: `    public init(`
+- L191: `public enum WaylandGraphicsSubmissionStage: Equatable, Sendable {`
+- L192: `    case windowStateCheck`
+- L193: `    case frameGeometry`
+- L194: `    case submissionPreparation`
+- L195: `    case frameSubmission`
+- L196: `    case submissionCompletion`
+- L199: `public enum WaylandGraphicsSubmissionFailure: Equatable, Sendable {`
+- L200: `    case windowLifecycle(`
+- L206: `    case window(`
+- L212: `    case display(`
+- L217: `    case client(`
+- L222: `    case unexpected(`
+- L229: `public enum WaylandGraphicsError: Error, Equatable, Sendable {`
+- L230: `    case unavailable(WaylandGraphicsUnavailableReason)`
+- L231: `    case fallbackRequired(WaylandGraphicsFallbackReason)`
+- L232: `    case windowClosed`
+- L233: `    case backingClosed`
+- L234: `    case frameLeaseActive`
+- L235: `    case frameLeaseConsumed`
+- L236: `    case unsupportedMetadata`
+- L237: `    case unsupportedDamage`
+- L238: `    case invalidDamageRegion`
+- L239: `    case unsupportedPacing`
+- L240: `    case submissionFailed(WaylandGraphicsSubmissionFailure)`
+- L243: `public struct WaylandGraphicsWindowBacking: Sendable {`
+- L244: `    public let window: Window`
+- L255: `    public var runtimePath: WaylandGraphicsRuntimePath {`
+- L261: `    public func nextFrame() async throws -> WaylandGraphicsFrameLease {`
+- L271: `    public func close() async throws {`
+- L276: `public struct WaylandGraphicsFrameLease: Sendable {`
+- L277: `    public let size: PositivePixelSize`
+- L278: `    public let runtimePath: WaylandGraphicsRuntimePath`
+- L296: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws`
+- L303: `    public func submitSoftware(`
+- L340: `    public func cancel() async {`
 
