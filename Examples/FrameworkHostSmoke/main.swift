@@ -39,7 +39,11 @@ enum FrameworkHostSmoke {
                     try await consumeInputEvents(display.inputEvents, window: window, state: state)
                 }
                 group.addTask {
-                    try await consumeTextInputEvents(display.textInputEvents, state: state)
+                    try await consumeTextInputEvents(
+                        display.textInputEvents,
+                        window: window,
+                        state: state
+                    )
                 }
                 group.addTask {
                     try await consumeDiagnostics(display.diagnostics)
@@ -72,8 +76,11 @@ enum FrameworkHostSmoke {
                 return
             case .windowOutputsChanged(let event) where event.windowID == window.id:
                 await state.recordOutputs(event.outputs.count)
-            case .input(let inputEvent):
-                await state.recordInput(inputEvent, windowID: window.id)
+                if await state.consumeNeedsRedraw() {
+                    try await window.requestRedraw()
+                }
+            case .input:
+                break
             case .diagnostic(let diagnostic):
                 log("display diagnostic \(diagnostic)")
             case .popupDismissed, .popupClosed, .popupRedrawRequested, .outputChanged,
@@ -100,11 +107,15 @@ enum FrameworkHostSmoke {
 
     nonisolated private static func consumeTextInputEvents(
         _ events: TextInputEvents,
+        window: Window,
         state: FrameworkHostState
     ) async throws {
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             await state.recordTextInput(event)
+            if await state.consumeNeedsRedraw() {
+                try await window.requestRedraw()
+            }
         }
     }
 
@@ -229,6 +240,7 @@ actor FrameworkHostState {
 
     func recordOutputs(_ count: Int) {
         current.outputCount = count
+        redrawNeeded = true
     }
 
     func consumeNeedsRedraw() -> Bool {

@@ -72,6 +72,7 @@ actor WaylandGraphicsWindowBackingStorage {
 
         let geometry = try await submissionGeometry(for: leaseID)
         try frame.validateManagedPreviewSupport(
+            configuration: configuration,
             capabilities: backingRuntimePath.capabilities,
             geometry: geometry
         )
@@ -101,6 +102,7 @@ actor WaylandGraphicsWindowBackingStorage {
 
         let geometry = try await submissionGeometry(for: leaseID)
         try frameMetadata.validateManagedPreviewSupport(
+            configuration: configuration,
             capabilities: backingRuntimePath.capabilities,
             geometry: geometry
         )
@@ -118,6 +120,9 @@ actor WaylandGraphicsWindowBackingStorage {
             return frameResult(operation: operation, size: geometry.bufferSize)
         } catch {
             leaseState.failSubmission()
+            if let drawError = WaylandGraphicsErrorMapper.callerDrawError(from: error) {
+                throw drawError
+            }
             throw graphicsError(for: error, stage: stage, operation: operation)
         }
     }
@@ -196,14 +201,16 @@ actor WaylandGraphicsWindowBackingStorage {
         case .show:
             try await window.show(
                 timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds,
-                metadata: metadata
+                metadata: metadata,
+                requestPresentationFeedback: shouldRequestPresentationFeedback
             ) { softwareFrame in
                 Self.clear(softwareFrame, color: color)
             }
-            try await requestPresentationFeedbackAfterInitialShowIfNeeded()
         case .redraw:
-            try await requestPresentationFeedbackBeforeRedrawIfNeeded()
-            try await window.redraw(metadata: metadata) { softwareFrame in
+            try await window.redraw(
+                metadata: metadata,
+                requestPresentationFeedback: shouldRequestPresentationFeedback
+            ) { softwareFrame in
                 Self.clear(softwareFrame, color: color)
             }
         }
@@ -220,23 +227,16 @@ actor WaylandGraphicsWindowBackingStorage {
             try await window.show(
                 timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds,
                 metadata: metadata,
+                requestPresentationFeedback: shouldRequestPresentationFeedback,
                 draw
             )
-            try await requestPresentationFeedbackAfterInitialShowIfNeeded()
         case .redraw:
-            try await requestPresentationFeedbackBeforeRedrawIfNeeded()
-            try await window.redraw(metadata: metadata, draw)
+            try await window.redraw(
+                metadata: metadata,
+                requestPresentationFeedback: shouldRequestPresentationFeedback,
+                draw
+            )
         }
-    }
-
-    private func requestPresentationFeedbackBeforeRedrawIfNeeded() async throws {
-        guard shouldRequestPresentationFeedback else { return }
-        try await window.requestPresentationFeedback()
-    }
-
-    private func requestPresentationFeedbackAfterInitialShowIfNeeded() async throws {
-        guard shouldRequestPresentationFeedback else { return }
-        try await window.requestPresentationFeedback()
     }
 
     private var shouldRequestPresentationFeedback: Bool {

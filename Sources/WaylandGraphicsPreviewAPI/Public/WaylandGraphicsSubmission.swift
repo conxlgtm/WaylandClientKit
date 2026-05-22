@@ -344,12 +344,14 @@ public struct WaylandGraphicsFrameLease: Sendable {
 
 extension WaylandGraphicsSubmittedFrame {
     package func validateManagedPreviewSupport(
+        configuration: WaylandGraphicsConfiguration,
         capabilities: WaylandGraphicsSurfaceCapabilities,
         geometry: SurfaceGeometry
     ) throws {
         switch self {
         case .clearColor(let clearFrame):
             try clearFrame.metadata.validateManagedPreviewSupport(
+                configuration: configuration,
                 capabilities: capabilities,
                 geometry: geometry
             )
@@ -359,10 +361,14 @@ extension WaylandGraphicsSubmittedFrame {
 
 extension WaylandGraphicsFrameMetadata {
     package func validateManagedPreviewSupport(
+        configuration: WaylandGraphicsConfiguration,
         capabilities: WaylandGraphicsSurfaceCapabilities,
         geometry: SurfaceGeometry
     ) throws {
         try damage?.validateManagedPreviewSupport(geometry: geometry)
+        if hasCommitMetadata, configuration.metadataPolicy == .none {
+            throw WaylandGraphicsError.unsupportedMetadata
+        }
         if contentType != nil, !capabilities.colorMetadata.contentType.isAvailable {
             throw WaylandGraphicsError.unavailable(.metadataRequiredButUnavailable)
         }
@@ -376,6 +382,10 @@ extension WaylandGraphicsFrameMetadata {
             contentType: contentType?.surfaceContentType,
             presentationHint: presentationHint?.surfacePresentationHint
         )
+    }
+
+    private var hasCommitMetadata: Bool {
+        contentType != nil || presentationHint != nil
     }
 }
 

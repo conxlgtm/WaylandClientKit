@@ -1067,8 +1067,9 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L197: `    case noFreeBuffer`
 - L198: `    case userDraw(String)`
 - L199: `    case frameCallbackRequest(String)`
-- L200: `    case surfaceCommit(String)`
-- L202: `    public var description: String {`
+- L200: `    case presentationFeedbackRequest(String)`
+- L201: `    case surfaceCommit(String)`
+- L203: `    public var description: String {`
 
 ### `Sources/WaylandClient/Public/Input/InputDomainValues.swift`
 
@@ -1827,34 +1828,34 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L1: `public struct Window: Sendable, Hashable {`
 - L2: `    public let id: WindowID`
 - L16: `    public func show(`
-- L36: `    public func redraw(`
-- L49: `    public func close() async {`
-- L53: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
-- L59: `    public func requestRedraw() async throws {`
-- L63: `    public var presentationEvents: WindowPresentationEvents {`
-- L67: `    public func requestPresentationFeedback() async throws {`
-- L71: `    public func setTitle(_ title: WaylandString) async throws {`
-- L75: `    public func setTitle(_ title: String) async throws {`
-- L79: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
-- L83: `    public func setAppID(_ appID: String) async throws {`
-- L87: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
-- L91: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
-- L95: `    public func requestMaximize() async throws {`
-- L99: `    public func requestUnmaximize() async throws {`
-- L103: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
-- L107: `    public func requestExitFullscreen() async throws {`
-- L111: `    public func requestMinimize() async throws {`
-- L115: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
-- L119: `    public func requestInteractiveResize(`
-- L132: `    public func requestWindowMenu(`
-- L145: `    public func startDrag(`
-- L160: `    public var isClosed: Bool {`
-- L166: `    public var needsRedraw: Bool {`
-- L172: `    public var decorationMode: WindowDecorationMode {`
-- L178: `    public var geometry: SurfaceGeometry {`
-- L184: `    public var stateSnapshot: WindowStateSnapshot {`
-- L190: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L194: `    public func hash(into hasher: inout Hasher) {`
+- L38: `    public func redraw(`
+- L57: `    public func close() async {`
+- L61: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
+- L67: `    public func requestRedraw() async throws {`
+- L71: `    public var presentationEvents: WindowPresentationEvents {`
+- L75: `    public func requestPresentationFeedback() async throws {`
+- L79: `    public func setTitle(_ title: WaylandString) async throws {`
+- L83: `    public func setTitle(_ title: String) async throws {`
+- L87: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L91: `    public func setAppID(_ appID: String) async throws {`
+- L95: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L99: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L103: `    public func requestMaximize() async throws {`
+- L107: `    public func requestUnmaximize() async throws {`
+- L111: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L115: `    public func requestExitFullscreen() async throws {`
+- L119: `    public func requestMinimize() async throws {`
+- L123: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L127: `    public func requestInteractiveResize(`
+- L140: `    public func requestWindowMenu(`
+- L153: `    public func startDrag(`
+- L168: `    public var isClosed: Bool {`
+- L174: `    public var needsRedraw: Bool {`
+- L180: `    public var decorationMode: WindowDecorationMode {`
+- L186: `    public var geometry: SurfaceGeometry {`
+- L192: `    public var stateSnapshot: WindowStateSnapshot {`
+- L198: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L202: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 

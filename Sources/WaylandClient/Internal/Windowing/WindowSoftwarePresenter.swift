@@ -17,10 +17,39 @@ struct WindowSoftwarePresentationFailure: Error {
     let underlying: any Error
 }
 
+package struct WindowSoftwareDrawFailure: Error {
+    package let underlying: any Error
+
+    package init(underlying drawError: any Error) {
+        underlying = drawError
+    }
+}
+
+package struct WindowPresentationFeedbackCommitRequest {
+    let request: () throws -> SurfacePresentationIdentity
+    let cancel: (SurfacePresentationIdentity) -> Void
+
+    package init(
+        request feedbackRequest: @escaping () throws -> SurfacePresentationIdentity,
+        cancel cancelFeedback: @escaping (SurfacePresentationIdentity) -> Void
+    ) {
+        request = feedbackRequest
+        cancel = cancelFeedback
+    }
+}
+
 struct WindowSoftwarePresentationContext {
     let request: PresentationRequest
     let geometry: SurfaceGeometry
     let metadata: SurfaceCommitMetadata
+    let presentationFeedback: WindowPresentationFeedbackCommitRequest?
+}
+
+private struct WindowSoftwareCommitContext {
+    let preparedCommit: PreparedSurfaceFrameCommit
+    let request: PresentationRequest
+    let presentationFeedback: WindowPresentationFeedbackCommitRequest?
+    let feedbackIdentity: SurfacePresentationIdentity?
 }
 
 struct WindowSoftwarePresenter {
@@ -75,9 +104,19 @@ struct WindowSoftwarePresenter {
             pendingFrameRegistration: &pendingFrameRegistration,
             drawingBuffer: &drawingBuffer
         )
+        let feedbackIdentity = try requestPresentationFeedback(
+            context.presentationFeedback,
+            runtime: &runtime,
+            pendingFrameRegistration: &pendingFrameRegistration,
+            drawingBuffer: &drawingBuffer
+        )
         try recordAndCommit(
-            preparedCommit,
-            request: context.request,
+            context: WindowSoftwareCommitContext(
+                preparedCommit: preparedCommit,
+                request: context.request,
+                presentationFeedback: context.presentationFeedback,
+                feedbackIdentity: feedbackIdentity
+            ),
             runtime: &runtime,
             pendingFrameRegistration: &pendingFrameRegistration,
             drawingBuffer: &drawingBuffer
@@ -164,22 +203,45 @@ struct WindowSoftwarePresenter {
         }
     }
 
+    private func requestPresentationFeedback<RoleResources>(
+        _ presentationFeedback: WindowPresentationFeedbackCommitRequest?,
+        runtime: inout SurfaceRuntime<RoleResources>,
+        pendingFrameRegistration: inout FrameCallbackRegistration?,
+        drawingBuffer: inout RawBuffer.DrawingBuffer
+    ) throws -> SurfacePresentationIdentity? {
+        guard let presentationFeedback else { return nil }
+
+        do {
+            return try presentationFeedback.request()
+        } catch {
+            pendingFrameRegistration = nil
+            runtime.cancelFrameCallback()
+            drawingBuffer.discard()
+            throw WindowSoftwarePresentationFailure(
+                presentationError: .presentationFeedbackRequest(String(describing: error)),
+                underlying: error
+            )
+        }
+    }
+
     private func recordAndCommit<RoleResources>(
-        _ preparedCommit: PreparedSurfaceFrameCommit,
-        request: PresentationRequest,
+        context: WindowSoftwareCommitContext,
         runtime: inout SurfaceRuntime<RoleResources>,
         pendingFrameRegistration: inout FrameCallbackRegistration?,
         drawingBuffer: inout RawBuffer.DrawingBuffer
     ) throws {
         do {
-            _ = drawingBuffer.markBusy(commitGeneration: request.generation)
+            _ = drawingBuffer.markBusy(commitGeneration: context.request.generation)
             try SurfaceFrameCommitter.commit(
-                preparedCommit,
+                context.preparedCommit,
                 runtime: &runtime
             )
         } catch {
             pendingFrameRegistration = nil
             runtime.cancelFrameCallback()
+            if let feedbackIdentity = context.feedbackIdentity {
+                context.presentationFeedback?.cancel(feedbackIdentity)
+            }
             drawingBuffer.discard()
             throw WindowSoftwarePresentationFailure(
                 presentationError: .surfaceCommit(String(describing: error)),
