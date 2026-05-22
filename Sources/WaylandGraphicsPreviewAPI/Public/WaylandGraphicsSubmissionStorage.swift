@@ -1,13 +1,36 @@
 import WaylandClient
 
-actor WaylandGraphicsWindowBackingStorage {
-    let window: Window
+package protocol WaylandGraphicsManagedWindow: Sendable {
+    var id: WindowID { get }
+    var geometry: SurfaceGeometry { get async throws }
+    var isClosed: Bool { get async throws }
+
+    func show(
+        timeoutMilliseconds: Int32,
+        metadata: SurfaceCommitMetadata,
+        requestPresentationFeedback: Bool,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws
+
+    func redraw(
+        metadata: SurfaceCommitMetadata,
+        requestPresentationFeedback: Bool,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws
+
+    func close() async
+}
+
+extension Window: WaylandGraphicsManagedWindow {}
+
+package actor WaylandGraphicsWindowBackingStorage {
+    let window: any WaylandGraphicsManagedWindow
     private let configuration: WaylandGraphicsConfiguration
     private var backingRuntimePath: WaylandGraphicsRuntimePath
     private var leaseState = WaylandGraphicsFrameLeaseState()
 
-    init(
-        window backingWindow: Window,
+    package init(
+        window backingWindow: any WaylandGraphicsManagedWindow,
         runtimePath initialRuntimePath: WaylandGraphicsRuntimePath,
         configuration backingConfiguration: WaylandGraphicsConfiguration = .default
     ) {
@@ -21,7 +44,7 @@ actor WaylandGraphicsWindowBackingStorage {
         return backingRuntimePath
     }
 
-    func nextFrame() async throws -> WaylandGraphicsFrameLease {
+    package func nextFrame() async throws -> WaylandGraphicsFrameLease {
         try await nextFrame(afterWindowCheck: noGraphicsPreviewSubmissionHook)
     }
 
@@ -239,15 +262,6 @@ actor WaylandGraphicsWindowBackingStorage {
         }
     }
 
-    private var shouldRequestPresentationFeedback: Bool {
-        switch configuration.presentationFeedbackPolicy {
-        case .none:
-            false
-        case .requestWhenAvailable, .require:
-            backingRuntimePath.capabilities.presentationFeedback.isAvailable
-        }
-    }
-
     private func frameResult(
         operation: WaylandGraphicsFrameSubmissionOperation,
         size: PositivePixelSize
@@ -268,5 +282,26 @@ actor WaylandGraphicsWindowBackingStorage {
                 unsafe pixels[unchecked: index] = color
             }
         }
+    }
+}
+
+extension WaylandGraphicsWindowBackingStorage {
+    package static func shouldRequestPresentationFeedback(
+        configuration: WaylandGraphicsConfiguration,
+        capabilities: WaylandGraphicsSurfaceCapabilities
+    ) -> Bool {
+        switch configuration.presentationFeedbackPolicy {
+        case .none:
+            false
+        case .requestWhenAvailable, .require:
+            capabilities.presentationFeedback.isAvailable
+        }
+    }
+
+    private var shouldRequestPresentationFeedback: Bool {
+        Self.shouldRequestPresentationFeedback(
+            configuration: configuration,
+            capabilities: backingRuntimePath.capabilities
+        )
     }
 }

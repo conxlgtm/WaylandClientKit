@@ -154,6 +154,60 @@ struct WaylandGraphicsSubmissionFailureTests {
     }
 
     @Test
+    func submitSoftwareRethrowsCallerDrawError() async throws {
+        let window = try FakeManagedGraphicsWindow(showDrawFailures: 1)
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .softwareFallback(
+                capabilities: softwareOnlySurfaceCapabilities(),
+                reason: .forcedSoftware
+            )
+        )
+        let lease = try await storage.nextFrame()
+
+        do {
+            _ = try await lease.submitSoftware { _ in
+                _ = ()
+            }
+            Issue.record("expected caller draw failure")
+        } catch is InjectedDrawFailure {
+            #expect(await window.operations() == [.show])
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func submitSoftwareDrawErrorAllowsRetryAsShow() async throws {
+        let window = try FakeManagedGraphicsWindow(showDrawFailures: 1)
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .softwareFallback(
+                capabilities: softwareOnlySurfaceCapabilities(),
+                reason: .forcedSoftware
+            )
+        )
+        let failedLease = try await storage.nextFrame()
+
+        do {
+            _ = try await failedLease.submitSoftware { _ in
+                _ = ()
+            }
+            Issue.record("expected caller draw failure")
+        } catch is InjectedDrawFailure {
+            let retryLease = try await storage.nextFrame()
+            let result = try await retryLease.submitSoftware { _ in
+                _ = ()
+            }
+
+            #expect(result.operation == .show)
+            #expect(await window.operations() == [.show, .show])
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
+    @Test
     func windowLifecycleAndWindowSubmissionFailuresAreDistinct() {
         let windowID = WindowID(rawValue: 45)
 
@@ -197,4 +251,60 @@ private struct InjectedUnexpectedSubmissionError: Error, CustomStringConvertible
     }
 }
 
-private struct InjectedDrawFailure: Error {}
+private actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
+    nonisolated let id = WindowID(rawValue: 700)
+
+    private let geometryValue: SurfaceGeometry
+    private var remainingShowDrawFailures: Int
+    private var recordedOperations: [WaylandGraphicsSubmissionOperation] = []
+
+    init(showDrawFailures: Int) throws {
+        geometryValue = try testGraphicsSurfaceGeometry()
+        remainingShowDrawFailures = showDrawFailures
+    }
+
+    var geometry: SurfaceGeometry {
+        get async throws {
+            geometryValue
+        }
+    }
+
+    var isClosed: Bool {
+        get async throws {
+            false
+        }
+    }
+
+    func show(
+        timeoutMilliseconds _: Int32,
+        metadata _: SurfaceCommitMetadata,
+        requestPresentationFeedback _: Bool,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws {
+        _ = draw
+        recordedOperations.append(.show)
+        if remainingShowDrawFailures > 0 {
+            remainingShowDrawFailures -= 1
+            throw WindowSoftwareDrawFailure(underlying: InjectedDrawFailure())
+        }
+    }
+
+    func redraw(
+        metadata _: SurfaceCommitMetadata,
+        requestPresentationFeedback _: Bool,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws {
+        _ = draw
+        recordedOperations.append(.redraw)
+    }
+
+    func close() async {
+        _ = ()
+    }
+
+    func operations() -> [WaylandGraphicsSubmissionOperation] {
+        recordedOperations
+    }
+}
+
+private struct InjectedDrawFailure: Error, Sendable {}

@@ -38,6 +38,42 @@ package struct WindowPresentationFeedbackCommitRequest {
     }
 }
 
+package enum WindowSoftwarePresentationCommitSequence {
+    @discardableResult
+    package static func perform(
+        requestFrameCallback: () throws -> Void,
+        requestPresentationFeedback: () throws -> SurfacePresentationIdentity?,
+        commit: () throws -> Void,
+        cancelFrameCallback: () -> Void,
+        cleanupAfterFailure: (SurfacePresentationIdentity?) -> Void
+    ) throws -> SurfacePresentationIdentity? {
+        do {
+            try requestFrameCallback()
+        } catch {
+            cleanupAfterFailure(nil)
+            throw error
+        }
+
+        let feedbackIdentity: SurfacePresentationIdentity?
+        do {
+            feedbackIdentity = try requestPresentationFeedback()
+        } catch {
+            cancelFrameCallback()
+            cleanupAfterFailure(nil)
+            throw error
+        }
+
+        do {
+            try commit()
+            return feedbackIdentity
+        } catch {
+            cancelFrameCallback()
+            cleanupAfterFailure(feedbackIdentity)
+            throw error
+        }
+    }
+}
+
 struct WindowSoftwarePresentationContext {
     let request: PresentationRequest
     let geometry: SurfaceGeometry
@@ -49,7 +85,6 @@ private struct WindowSoftwareCommitContext {
     let preparedCommit: PreparedSurfaceFrameCommit
     let request: PresentationRequest
     let presentationFeedback: WindowPresentationFeedbackCommitRequest?
-    let feedbackIdentity: SurfacePresentationIdentity?
 }
 
 struct WindowSoftwarePresenter {
@@ -98,24 +133,11 @@ struct WindowSoftwarePresenter {
             runtime: &runtime,
             drawingBuffer: &drawingBuffer
         )
-        try requestFrameCallback(
-            request: context.request,
-            runtime: &runtime,
-            pendingFrameRegistration: &pendingFrameRegistration,
-            drawingBuffer: &drawingBuffer
-        )
-        let feedbackIdentity = try requestPresentationFeedback(
-            context.presentationFeedback,
-            runtime: &runtime,
-            pendingFrameRegistration: &pendingFrameRegistration,
-            drawingBuffer: &drawingBuffer
-        )
-        try recordAndCommit(
+        try performPreparedCommit(
             context: WindowSoftwareCommitContext(
                 preparedCommit: preparedCommit,
                 request: context.request,
-                presentationFeedback: context.presentationFeedback,
-                feedbackIdentity: feedbackIdentity
+                presentationFeedback: context.presentationFeedback
             ),
             runtime: &runtime,
             pendingFrameRegistration: &pendingFrameRegistration,
@@ -125,6 +147,43 @@ struct WindowSoftwarePresenter {
         return .init(
             outcome: .presented,
             followUp: .succeeded(generation: context.request.generation)
+        )
+    }
+
+    private func performPreparedCommit<RoleResources>(
+        context: WindowSoftwareCommitContext,
+        runtime: inout SurfaceRuntime<RoleResources>,
+        pendingFrameRegistration: inout FrameCallbackRegistration?,
+        drawingBuffer: inout RawBuffer.DrawingBuffer
+    ) throws {
+        _ = try WindowSoftwarePresentationCommitSequence.perform(
+            requestFrameCallback: {
+                try requestFrameCallback(
+                    request: context.request,
+                    runtime: &runtime,
+                    pendingFrameRegistration: &pendingFrameRegistration
+                )
+            },
+            requestPresentationFeedback: {
+                try requestPresentationFeedback(context.presentationFeedback)
+            },
+            commit: {
+                try recordAndCommit(
+                    context: context,
+                    runtime: &runtime,
+                    drawingBuffer: &drawingBuffer
+                )
+            },
+            cancelFrameCallback: {
+                pendingFrameRegistration = nil
+                runtime.cancelFrameCallback()
+            },
+            cleanupAfterFailure: { identity in
+                if let identity {
+                    context.presentationFeedback?.cancel(identity)
+                }
+                drawingBuffer.discard()
+            }
         )
     }
 
@@ -184,8 +243,7 @@ struct WindowSoftwarePresenter {
     private func requestFrameCallback<RoleResources>(
         request: PresentationRequest,
         runtime: inout SurfaceRuntime<RoleResources>,
-        pendingFrameRegistration: inout FrameCallbackRegistration?,
-        drawingBuffer: inout RawBuffer.DrawingBuffer
+        pendingFrameRegistration: inout FrameCallbackRegistration?
     ) throws {
         do {
             pendingFrameRegistration = try SurfaceFrameCommitter.requestFrameCallback(
@@ -195,7 +253,6 @@ struct WindowSoftwarePresenter {
                 onFrame: onFrame
             )
         } catch {
-            drawingBuffer.discard()
             throw WindowSoftwarePresentationFailure(
                 presentationError: .frameCallbackRequest(String(describing: error)),
                 underlying: error
@@ -203,20 +260,14 @@ struct WindowSoftwarePresenter {
         }
     }
 
-    private func requestPresentationFeedback<RoleResources>(
-        _ presentationFeedback: WindowPresentationFeedbackCommitRequest?,
-        runtime: inout SurfaceRuntime<RoleResources>,
-        pendingFrameRegistration: inout FrameCallbackRegistration?,
-        drawingBuffer: inout RawBuffer.DrawingBuffer
+    private func requestPresentationFeedback(
+        _ presentationFeedback: WindowPresentationFeedbackCommitRequest?
     ) throws -> SurfacePresentationIdentity? {
         guard let presentationFeedback else { return nil }
 
         do {
             return try presentationFeedback.request()
         } catch {
-            pendingFrameRegistration = nil
-            runtime.cancelFrameCallback()
-            drawingBuffer.discard()
             throw WindowSoftwarePresentationFailure(
                 presentationError: .presentationFeedbackRequest(String(describing: error)),
                 underlying: error
@@ -227,7 +278,6 @@ struct WindowSoftwarePresenter {
     private func recordAndCommit<RoleResources>(
         context: WindowSoftwareCommitContext,
         runtime: inout SurfaceRuntime<RoleResources>,
-        pendingFrameRegistration: inout FrameCallbackRegistration?,
         drawingBuffer: inout RawBuffer.DrawingBuffer
     ) throws {
         do {
@@ -237,12 +287,6 @@ struct WindowSoftwarePresenter {
                 runtime: &runtime
             )
         } catch {
-            pendingFrameRegistration = nil
-            runtime.cancelFrameCallback()
-            if let feedbackIdentity = context.feedbackIdentity {
-                context.presentationFeedback?.cancel(feedbackIdentity)
-            }
-            drawingBuffer.discard()
             throw WindowSoftwarePresentationFailure(
                 presentationError: .surfaceCommit(String(describing: error)),
                 underlying: error
