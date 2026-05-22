@@ -142,6 +142,18 @@ struct WaylandGraphicsSubmissionFailureTests {
     }
 
     @Test
+    func submitSoftwarePreservesCallerDrawErrorCause() throws {
+        let original = InjectedDrawFailure()
+        let wrapped = WindowSoftwareDrawFailure(underlying: original)
+
+        let extracted = try #require(
+            WaylandGraphicsErrorMapper.callerDrawError(from: wrapped)
+        )
+
+        #expect(extracted is InjectedDrawFailure)
+    }
+
+    @Test
     func windowLifecycleAndWindowSubmissionFailuresAreDistinct() {
         let windowID = WindowID(rawValue: 45)
 
@@ -184,3 +196,5 @@ private struct InjectedUnexpectedSubmissionError: Error, CustomStringConvertible
         "injected graphics submission failure"
     }
 }
+
+private struct InjectedDrawFailure: Error {}

@@ -1,6 +1,14 @@
 import WaylandClient
 
 package enum WaylandGraphicsErrorMapper {
+    package static func callerDrawError(from error: any Error) -> (any Error)? {
+        guard let drawFailure = error as? WindowSoftwareDrawFailure else {
+            return nil
+        }
+
+        return drawFailure.underlying
+    }
+
     package static func mapWindowLifecycleError(
         _ error: any Error,
         windowID: WindowID
@@ -226,7 +234,7 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
         case .closed:
             throw WaylandGraphicsError.backingClosed
         case .open:
-            return
+            throw WaylandGraphicsError.frameLeaseConsumed
         case .submitting(let submissionState):
             state = .open(
                 OpenState(

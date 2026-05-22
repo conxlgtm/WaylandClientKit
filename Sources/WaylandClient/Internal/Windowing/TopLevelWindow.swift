@@ -374,6 +374,7 @@ package final class TopLevelWindow {
 
     private func drawAndPresent(
         metadata: SurfaceCommitMetadata = .default,
+        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         guard !model.isClosed else { return .skippedClosed }
@@ -381,12 +382,18 @@ package final class TopLevelWindow {
         let effects = try model.reduce(
             .redrawRequestConsumed(bufferAvailability: try redrawBufferAvailability())
         )
-        return try interpretPresentationEffects(effects, metadata: metadata, draw)
+        return try interpretPresentationEffects(
+            effects,
+            metadata: metadata,
+            presentationFeedback: presentationFeedback,
+            draw
+        )
     }
 
     private func performSoftwarePresent(
         _ request: PresentationRequest,
         metadata: SurfaceCommitMetadata,
+        presentationFeedback: WindowPresentationFeedbackCommitRequest?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         try interpretWindowEffects(
@@ -419,7 +426,8 @@ package final class TopLevelWindow {
                 context: WindowSoftwarePresentationContext(
                     request: request,
                     geometry: geometry,
-                    metadata: metadata
+                    metadata: metadata,
+                    presentationFeedback: presentationFeedback
                 ),
                 draw: draw,
                 runtime: &surfaceRuntime,
@@ -432,6 +440,9 @@ package final class TopLevelWindow {
                 generation: request.generation,
                 error: failure.presentationError
             )
+            if case .userDraw = failure.presentationError {
+                throw WindowSoftwareDrawFailure(underlying: failure.underlying)
+            }
             throw failure.underlying
         } catch {
             failPresentationIfStillActive(
@@ -846,6 +857,7 @@ extension TopLevelWindow {
     private func interpretPresentationEffects(
         _ effects: [WindowEffect],
         metadata: SurfaceCommitMetadata,
+        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
         var outcome = RedrawOutcome.skippedPendingFrame
@@ -853,7 +865,12 @@ extension TopLevelWindow {
         for effect in effects {
             switch effect {
             case .performSoftwarePresent(let request):
-                outcome = try performSoftwarePresent(request, metadata: metadata, draw)
+                outcome = try performSoftwarePresent(
+                    request,
+                    metadata: metadata,
+                    presentationFeedback: presentationFeedback,
+                    draw
+                )
             default:
                 try interpretWindowEffects([effect])
             }
@@ -1237,7 +1254,7 @@ extension TopLevelWindow {
                 RawOutputPointerIdentity
             ) throws -> OutputID?,
         onFeedback: @escaping (SurfacePresentationFeedback) -> Void
-    ) throws {
+    ) throws -> SurfacePresentationIdentity {
         connection.preconditionIsOwnerThread()
         guard !model.isClosed else {
             throw ClientError.display(.closed)
@@ -1259,6 +1276,14 @@ extension TopLevelWindow {
             )
         }
         pendingPresentationFeedbacks[identity] = feedback
+        return identity
+    }
+
+    package func cancelPresentationFeedbackOnOwnerThread(
+        _ identity: SurfacePresentationIdentity
+    ) {
+        connection.preconditionIsOwnerThread()
+        pendingPresentationFeedbacks.removeValue(forKey: identity)?.cancel()
     }
 
     package func setTitleOnOwnerThread(_ title: WaylandString) throws {
@@ -1400,6 +1425,7 @@ extension TopLevelWindow {
     package func showOnOwnerThread(
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
         metadata: SurfaceCommitMetadata = .default,
+        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         connection.preconditionIsOwnerThread()
@@ -1408,11 +1434,16 @@ extension TopLevelWindow {
             _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
         }
 
-        _ = try drawAndPresent(metadata: metadata, draw)
+        _ = try drawAndPresent(
+            metadata: metadata,
+            presentationFeedback: presentationFeedback,
+            draw
+        )
     }
 
     package func redrawOnOwnerThread(
         metadata: SurfaceCommitMetadata = .default,
+        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         connection.preconditionIsOwnerThread()
@@ -1420,7 +1451,11 @@ extension TopLevelWindow {
         guard !model.isClosed else { return }
 
         _ = try consumeLatestConfigureIfAvailable()
-        _ = try drawAndPresent(metadata: metadata, draw)
+        _ = try drawAndPresent(
+            metadata: metadata,
+            presentationFeedback: presentationFeedback,
+            draw
+        )
     }
 
     package func closeOnOwnerThread() {
@@ -1461,11 +1496,13 @@ extension TopLevelWindow {
     package func show(
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
         metadata: SurfaceCommitMetadata = .default,
+        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try showOnOwnerThread(
             timeoutMilliseconds: timeoutMilliseconds,
             metadata: metadata,
+            presentationFeedback: presentationFeedback,
             draw
         )
     }
@@ -1477,9 +1514,14 @@ extension TopLevelWindow {
     )
     package func redraw(
         metadata: SurfaceCommitMetadata = .default,
+        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
-        try redrawOnOwnerThread(metadata: metadata, draw)
+        try redrawOnOwnerThread(
+            metadata: metadata,
+            presentationFeedback: presentationFeedback,
+            draw
+        )
     }
 
     @available(

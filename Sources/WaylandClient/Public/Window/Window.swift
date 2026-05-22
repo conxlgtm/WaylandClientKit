@@ -23,12 +23,14 @@ public struct Window: Sendable, Hashable {
     package func show(
         timeoutMilliseconds: Int32,
         metadata: SurfaceCommitMetadata,
+        requestPresentationFeedback: Bool,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws {
         try await display.showWindow(
             id,
             timeoutMilliseconds: timeoutMilliseconds,
             metadata: metadata,
+            requestPresentationFeedback: requestPresentationFeedback,
             draw
         )
     }
@@ -41,9 +43,15 @@ public struct Window: Sendable, Hashable {
 
     package func redraw(
         metadata: SurfaceCommitMetadata,
+        requestPresentationFeedback: Bool,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws {
-        try await display.redraw(id, metadata: metadata, draw)
+        try await display.redraw(
+            id,
+            metadata: metadata,
+            requestPresentationFeedback: requestPresentationFeedback,
+            draw
+        )
     }
 
     public func close() async {

@@ -103,6 +103,15 @@ struct WaylandGraphicsFrameLeaseStateTests {
     }
 
     @Test
+    func finishSubmissionWithoutInFlightSubmissionIsRejected() {
+        var leaseState = WaylandGraphicsFrameLeaseState()
+
+        #expect(throws: WaylandGraphicsError.frameLeaseConsumed) {
+            try leaseState.finishSubmission()
+        }
+    }
+
+    @Test
     func closedWindowDisplayFailuresMapToTypedPreviewError() {
         let windowID = WindowID(rawValue: 42)
 
