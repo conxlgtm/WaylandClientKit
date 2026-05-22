@@ -1,6 +1,14 @@
 import WaylandClient
 
 package enum WaylandGraphicsErrorMapper {
+    package static func callerDrawError(from error: any Error) -> (any Error)? {
+        guard let drawFailure = error as? WindowSoftwareDrawFailure else {
+            return nil
+        }
+
+        return drawFailure.underlying
+    }
+
     package static func mapWindowLifecycleError(
         _ error: any Error,
         windowID: WindowID
@@ -179,8 +187,7 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
     }
 
     package mutating func prepareSubmission(
-        leaseID: UInt64,
-        frame: WaylandGraphicsSubmittedFrame
+        leaseID: UInt64
     ) throws -> WaylandGraphicsFrameSubmissionOperation {
         switch state {
         case .closed:
@@ -192,7 +199,6 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
                 throw WaylandGraphicsError.frameLeaseConsumed
             }
 
-            try frame.validateManagedPreviewSupport()
             let operation: WaylandGraphicsFrameSubmissionOperation
             if openState.hasSubmittedFrame {
                 operation = .redraw
@@ -210,12 +216,25 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
         }
     }
 
+    package func requireSubmittable(leaseID: UInt64) throws {
+        switch state {
+        case .closed:
+            throw WaylandGraphicsError.backingClosed
+        case .submitting:
+            throw WaylandGraphicsError.frameLeaseConsumed
+        case .open(let openState):
+            guard openState.activeLeaseID == leaseID else {
+                throw WaylandGraphicsError.frameLeaseConsumed
+            }
+        }
+    }
+
     package mutating func finishSubmission() throws {
         switch state {
         case .closed:
             throw WaylandGraphicsError.backingClosed
         case .open:
-            return
+            throw WaylandGraphicsError.frameLeaseConsumed
         case .submitting(let submissionState):
             state = .open(
                 OpenState(
@@ -254,17 +273,6 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
 
     package mutating func close() {
         state = .closed
-    }
-}
-
-extension WaylandGraphicsSubmittedFrame {
-    package func validateManagedPreviewSupport() throws {
-        switch self {
-        case .clearColor(let clearFrame):
-            guard clearFrame.metadata == .default else {
-                throw WaylandGraphicsError.unsupportedMetadata
-            }
-        }
     }
 }
 

@@ -33,6 +33,9 @@ The completion target is:
   behavior
 - public API boundaries are clear enough for downstream packages to depend on
   them
+- external framework-consumer checks prove a future GUI package can import only
+  public products and still exercise host lifecycle, events, windows, popups,
+  and preview graphics software submission
 
 This target is not met until a GPU buffer path exists. A software-only SHM
 client is useful, but it is not a complete foundation for a modern GUI stack.
@@ -124,6 +127,10 @@ The current baseline already has meaningful substrate pieces:
 - package-internal GPU window presentation bridge through `WaylandGPUPreview`
 - preview graphics product `WaylandGraphicsPreview` for renderer-neutral
   capability, runtime-path, and fallback facts
+- managed software submission in `WaylandGraphicsPreview` for framework-facing
+  software rendering experiments without raw platform handles
+- framework-host contract documentation and external consumer packages that
+  exercise public host-loop and tiny UI prototype shapes
 - package-internal submit-constraint model for linux-drm-syncobj, FIFO, and
   commit-timing capability facts
 - package-internal surface commit metadata model for content type, alpha,

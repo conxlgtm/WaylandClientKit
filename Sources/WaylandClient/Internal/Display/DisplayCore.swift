@@ -48,11 +48,23 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     func showWindow(
         _ windowID: WindowID,
         timeoutMilliseconds: Int32,
+        metadata: SurfaceCommitMetadata,
+        requestPresentationFeedback: Bool,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try withFatalFailureFinalization {
             let window = try requireOpenWindow(windowID)
-            try window.showOnOwnerThread(timeoutMilliseconds: timeoutMilliseconds, draw)
+            let presentationFeedback = try presentationFeedbackCommitRequest(
+                for: window,
+                windowID: windowID,
+                isRequested: requestPresentationFeedback
+            )
+            try window.showOnOwnerThread(
+                timeoutMilliseconds: timeoutMilliseconds,
+                metadata: metadata,
+                presentationFeedback: presentationFeedback,
+                draw
+            )
             guard !isClosed, let activeSession else { return }
             publishSessionEvents(activeSession)
         }
@@ -60,11 +72,22 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     func redraw(
         _ windowID: WindowID,
+        metadata: SurfaceCommitMetadata,
+        requestPresentationFeedback: Bool,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try withFatalFailureFinalization {
             let window = try requireOpenWindow(windowID)
-            try window.redrawOnOwnerThread(draw)
+            let presentationFeedback = try presentationFeedbackCommitRequest(
+                for: window,
+                windowID: windowID,
+                isRequested: requestPresentationFeedback
+            )
+            try window.redrawOnOwnerThread(
+                metadata: metadata,
+                presentationFeedback: presentationFeedback,
+                draw
+            )
             guard !isClosed else {
                 throw ClientError.display(.closed)
             }
@@ -98,25 +121,6 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     func requestRedraw(_ windowID: WindowID) throws {
         try withFatalFailureFinalization {
             try requireOpenWindow(windowID).requestRedrawOnOwnerThread()
-        }
-    }
-
-    func requestPresentationFeedback(_ windowID: WindowID) throws {
-        try withFatalFailureFinalization {
-            let session = try requireSession()
-            let presentation = try session.presentationOnOwnerThread()
-            let window = try requireOpenWindow(windowID)
-            try window.requestPresentationFeedbackOnOwnerThread(
-                presentation: presentation,
-                outputIDForPresentationSyncOutput: { output in
-                    try session.outputIDForPresentationSyncOutput(output)
-                },
-                onFeedback: { [weak self] feedback in
-                    self?.eventHub.publishPresentation(
-                        WindowPresentationEvent(windowID: windowID, feedback: feedback)
-                    )
-                }
-            )
         }
     }
 

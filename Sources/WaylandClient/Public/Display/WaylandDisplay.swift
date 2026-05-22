@@ -146,25 +146,6 @@ public actor WaylandDisplay {
         try requireCore().createPopup(parent: windowID, configuration: popupConfiguration)
     }
 
-    package func showWindow(
-        _ windowID: WindowID,
-        timeoutMilliseconds: Int32 = defaultConfigureTimeoutMilliseconds,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        try requireCore().showWindow(
-            windowID,
-            timeoutMilliseconds: timeoutMilliseconds,
-            draw
-        )
-    }
-
-    package func redraw(
-        _ windowID: WindowID,
-        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        try requireCore().redraw(windowID, draw)
-    }
-
     package func showPopup(
         _ popupID: PopupID,
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMilliseconds,
