@@ -195,6 +195,51 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
     }
 
     @Test
+    func requirePresentationFeedbackFailsWhenUnavailable() {
+        let configuration = WaylandGraphicsConfiguration(
+            presentationFeedbackPolicy: .require
+        )
+
+        #expect(
+            throws: WaylandGraphicsError.unavailable(
+                .presentationFeedbackUnavailable
+            )
+        ) {
+            try configuration.validateManagedPreviewSupport(
+                capabilities: softwareOnlySurfaceCapabilities()
+            )
+        }
+    }
+
+    @Test
+    func requestWhenAvailableSkipsFeedbackWhenUnavailable() {
+        let configuration = WaylandGraphicsConfiguration(
+            presentationFeedbackPolicy: .requestWhenAvailable
+        )
+
+        #expect(
+            !WaylandGraphicsWindowBackingStorage.shouldRequestPresentationFeedback(
+                configuration: configuration,
+                capabilities: softwareOnlySurfaceCapabilities()
+            )
+        )
+    }
+
+    @Test
+    func requestWhenAvailableRequestsFeedbackWhenAvailable() {
+        let configuration = WaylandGraphicsConfiguration(
+            presentationFeedbackPolicy: .requestWhenAvailable
+        )
+
+        #expect(
+            WaylandGraphicsWindowBackingStorage.shouldRequestPresentationFeedback(
+                configuration: configuration,
+                capabilities: gpuCapableSurfaceCapabilities()
+            )
+        )
+    }
+
+    @Test
     func managedPreviewDoesNotReportGbmUnavailableWithoutGbmProbe() throws {
         let path = try WaylandDisplay.managedPreviewRuntimePath(
             capabilities: gpuCapableSurfaceCapabilities(),
