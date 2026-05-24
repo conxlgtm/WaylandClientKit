@@ -189,6 +189,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "TwoWindowFrameworkHost",
+            dependencies: ["WaylandClient"],
+            path: "Examples/TwoWindowFrameworkHost",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "SwiftWaylandSmoke",
             dependencies: ["WaylandSmokeSupport"],
             swiftSettings: executableSwiftSettings
