@@ -183,6 +183,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "PresentationFeedbackAnimation",
+            dependencies: ["WaylandClient"],
+            path: "Examples/PresentationFeedbackAnimation",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "SwiftWaylandSmoke",
             dependencies: ["WaylandSmokeSupport"],
             swiftSettings: executableSwiftSettings
