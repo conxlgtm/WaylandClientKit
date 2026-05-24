@@ -157,16 +157,16 @@ extension DisplayCore {
                 core?.handlePopupClosed(popupID)
             },
             onRedrawRequested: { [weak core = self] in
-                core?.eventHub.publish(
-                    .popupRedrawRequested(
-                        PopupLifecycleEvent(popup: popupID, parentWindowID: parentWindowID)
-                    )
+                core?.publishPopupRedrawRequested(
+                    popupID: popupID,
+                    parentWindowID: parentWindowID
                 )
             }
         )
     }
 
     private func handlePopupDismissed(_ popupID: PopupID, parentWindowID: WindowID) {
+        guard surfaceGraphAcceptsLifecycleCallback() else { return }
         do {
             guard let dismissal = try surfaces.beginCompositorPopupDismissal(popupID) else {
                 eventHub.publish(
@@ -188,6 +188,7 @@ extension DisplayCore {
     }
 
     private func handlePopupClosed(_ popupID: PopupID) {
+        guard surfaceGraphAcceptsLifecycleCallback() else { return }
         let parentWindowID = surfaces.markPopupClosed(popupID)
         if let parentWindowID {
             eventHub.publish(
@@ -197,6 +198,15 @@ extension DisplayCore {
             )
         }
         assertSurfaceStoreInvariants()
+    }
+
+    private func publishPopupRedrawRequested(popupID: PopupID, parentWindowID: WindowID) {
+        guard surfaceGraphAcceptsLifecycleCallback() else { return }
+        eventHub.publish(
+            .popupRedrawRequested(
+                PopupLifecycleEvent(popup: popupID, parentWindowID: parentWindowID)
+            )
+        )
     }
 
     func popupIDsTopDown(parentedBy windowID: WindowID) -> [PopupID] {
