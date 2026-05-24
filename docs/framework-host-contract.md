@@ -226,6 +226,7 @@ A downstream framework owns:
 - accessibility semantics
 - focus policy above protocol target facts
 - damage calculation policy beyond the public damage values
+- diagonal resize cursor fallback until portable cursor theme names are proven
 
 SwiftWayland should continue exposing typed platform facts and narrow commit
 operations, not framework policy.
