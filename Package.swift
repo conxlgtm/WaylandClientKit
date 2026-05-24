@@ -195,6 +195,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "ClientSideResizeChrome",
+            dependencies: ["WaylandClient"],
+            path: "Examples/ClientSideResizeChrome",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "SwiftWaylandSmoke",
             dependencies: ["WaylandSmokeSupport"],
             swiftSettings: executableSwiftSettings
