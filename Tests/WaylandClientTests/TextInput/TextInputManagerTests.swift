@@ -106,6 +106,42 @@ struct TextInputManagerTests {
     }
 
     @Test
+    func disableFinalizesSessionAndCommitAfterDisableIsInvalid() throws {
+        let backend = RecordingTextInputBackend()
+        let manager = TextInputManager(backend: backend)
+        let seatID = SeatID(rawValue: 18)
+
+        try manager.enable(seatID: seatID, windowID: WindowID(rawValue: 35))
+        try manager.disable(seatID: seatID)
+
+        #expect(
+            throws: TextInputError.inactiveSession(
+                seatID: seatID,
+                operation: .commit
+            )
+        ) {
+            try manager.commit(seatID: seatID)
+        }
+        #expect(
+            backend.binding(for: seatID)?.operations == [
+                .enable,
+                .disable,
+            ]
+        )
+        #expect(
+            manager.drainEvents() == [
+                .diagnostic(
+                    TextInputDiagnostic(
+                        seatID: seatID,
+                        operation: .invalidRequest(.commit),
+                        message: "ignored text-input commit request in disabled"
+                    )
+                )
+            ]
+        )
+    }
+
+    @Test
     func removedSeatDestroysBindingAndPublishesDiagnostic() throws {
         let backend = RecordingTextInputBackend()
         let manager = TextInputManager(backend: backend)

@@ -94,6 +94,10 @@ Build the framework focus model above these facts:
 SwiftWayland preserves the target facts. The framework owns policy such as
 "focused scene", tab focus, gesture capture, menu focus, and accessibility focus.
 
+For text fields, commit enabled request state before disabling the session.
+`TextInputSession.disable()` finalizes the disable request; a later
+`TextInputSession.commit()` is an invalid request and may produce a diagnostic.
+
 ## Rendering Loop
 
 A framework-host render loop should be platform-shaped:
