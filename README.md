@@ -145,6 +145,8 @@ Pointer cursors:
 - session-level `PointerCursor` values
 - compositor-managed cursor-shape requests when advertised and mapped
 - static cursor surfaces from installed cursor themes through `wayland-cursor`
+- diagonal resize cursor convenience presets are deferred until portable cursor
+  theme names are verified across common compositors
 
 Clipboard and data transfer:
 
@@ -166,6 +168,8 @@ Text input:
 - `WaylandDisplay.textInputEvents` publishes compositor/IME text-input events
 - surrounding text, content type, change cause, cursor rectangle, enable, disable,
   and commit requests are protocol-shaped
+- callers should commit enabled text-input request state before `disable()`;
+  `disable()` finalizes the disable request and should not be followed by `commit()`
 - text-input is separate from local keyboard interpretation and shortcut state
 
 Outputs:

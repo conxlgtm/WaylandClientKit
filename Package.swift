@@ -183,6 +183,48 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "PresentationFeedbackAnimation",
+            dependencies: ["WaylandClient"],
+            path: "Examples/PresentationFeedbackAnimation",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "TwoWindowFrameworkHost",
+            dependencies: ["WaylandClient"],
+            path: "Examples/TwoWindowFrameworkHost",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "ClientSideResizeChrome",
+            dependencies: ["WaylandClient"],
+            path: "Examples/ClientSideResizeChrome",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "TextInputSmoke",
+            dependencies: ["WaylandClient"],
+            path: "Examples/TextInputSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "DataTransferSmoke",
+            dependencies: ["WaylandClient"],
+            path: "Examples/DataTransferSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "TwoWindowOrderStress",
+            dependencies: ["WaylandClient"],
+            path: "Examples/TwoWindowOrderStress",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "SerialActionsProbe",
+            dependencies: ["WaylandClient"],
+            path: "Examples/SerialActionsProbe",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "SwiftWaylandSmoke",
             dependencies: ["WaylandSmokeSupport"],
             swiftSettings: executableSwiftSettings

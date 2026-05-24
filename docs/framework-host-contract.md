@@ -29,6 +29,9 @@ Start with these public APIs:
 Do not depend on `WaylandRaw`, `WaylandRuntime`, `WaylandGraphicsCore`,
 `WaylandGPUPreview`, package-only symbols, or `@testable` imports.
 
+For requests that depend on input serials, see
+[`serial-sensitive-interactions.md`](serial-sensitive-interactions.md).
+
 ## Display Lifecycle
 
 Use `WaylandDisplay.withConnection` as the default host boundary. It opens the
@@ -93,6 +96,10 @@ Build the framework focus model above these facts:
 
 SwiftWayland preserves the target facts. The framework owns policy such as
 "focused scene", tab focus, gesture capture, menu focus, and accessibility focus.
+
+For text fields, commit enabled request state before disabling the session.
+`TextInputSession.disable()` finalizes the disable request; a later
+`TextInputSession.commit()` is an invalid request and may produce a diagnostic.
 
 ## Rendering Loop
 
@@ -219,6 +226,7 @@ A downstream framework owns:
 - accessibility semantics
 - focus policy above protocol target facts
 - damage calculation policy beyond the public damage values
+- diagonal resize cursor fallback until portable cursor theme names are proven
 
 SwiftWayland should continue exposing typed platform facts and narrow commit
 operations, not framework policy.
