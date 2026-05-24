@@ -290,6 +290,9 @@ Notes:
   Explicit cursor changes throw when the cursor stack cannot fulfill the request.
   Cursor-shape is used when advertised and the requested cursor maps to a known
   compositor shape; otherwise the theme cursor path remains the fallback.
+  Diagonal resize convenience presets are deferred until cursor theme names are
+  verified across KDE, GNOME, Sway/wlroots, and Weston; frameworks may use
+  custom names such as `nw-resize`, `ne-resize`, `sw-resize`, and `se-resize`.
 - Clipboard offers are seat-scoped. `ClipboardOffer.read` performs a bounded read
   with a timeout, and `ClipboardSourceConfiguration` represents local regular
   clipboard payloads.

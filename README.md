@@ -145,6 +145,8 @@ Pointer cursors:
 - session-level `PointerCursor` values
 - compositor-managed cursor-shape requests when advertised and mapped
 - static cursor surfaces from installed cursor themes through `wayland-cursor`
+- diagonal resize cursor convenience presets are deferred until portable cursor
+  theme names are verified across common compositors
 
 Clipboard and data transfer:
 
