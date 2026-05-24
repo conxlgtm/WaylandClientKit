@@ -14,5 +14,19 @@ surrounding text, text-change cause, content type, cursor rectangle, or commit.
 Requests made before enable or after a disabled/inactive transition throw a
 typed ``TextInputError`` and may publish a ``TextInputDiagnostic``.
 
+Commit enabled request state before disabling the session. ``TextInputSession/disable()``
+finalizes the disable request in SwiftWayland, so callers should not call
+``TextInputSession/commit()`` after disable:
+
+```swift
+let session = try await display.textInputSession(for: seatID)
+try await session.enable(for: window)
+try await session.setContentType(hints: [.completion], purpose: .normal)
+try await session.setCursorRectangle(cursorRect)
+try await session.commit()
+
+try await session.disable()
+```
+
 Keyboard interpretation can produce simple key text, but it is not a replacement
 for compositor text input.

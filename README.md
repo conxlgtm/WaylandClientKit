@@ -166,6 +166,8 @@ Text input:
 - `WaylandDisplay.textInputEvents` publishes compositor/IME text-input events
 - surrounding text, content type, change cause, cursor rectangle, enable, disable,
   and commit requests are protocol-shaped
+- callers should commit enabled text-input request state before `disable()`;
+  `disable()` finalizes the disable request and should not be followed by `commit()`
 - text-input is separate from local keyboard interpretation and shortcut state
 
 Outputs:

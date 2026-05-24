@@ -301,7 +301,9 @@ Notes:
 - `TextInputSession` is seat-scoped. Enabling text input targets a managed
   window, request methods require an enabled or focused session, and `commit()`
   sends the protocol commit request. `TextInputSurroundingText` supports both
-  protocol UTF-8 byte offsets and Swift `String.Index` construction.
+  protocol UTF-8 byte offsets and Swift `String.Index` construction. `disable()`
+  finalizes the disable request; callers should commit pending enabled-state
+  changes before disabling and should not call `commit()` after `disable()`.
   `WaylandDisplay.textInputEvents` is separate from `inputEvents`, and
   text-input diagnostics can publish on both text-input and display diagnostic
   streams.
