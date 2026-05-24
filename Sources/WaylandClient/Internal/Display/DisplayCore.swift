@@ -4,6 +4,7 @@ import WaylandRaw
 final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     let eventHub: DisplayEventHub
     private var lifecycle: DisplayCoreLifecycle
+    private var isDiscardingSurfaceGraph = false
     var surfaces = DisplaySurfaceStore<TopLevelWindow, PopupRoleSurface>()
     var isClosed: Bool { lifecycle.isClosed }
     var activeSession: DisplaySession? { lifecycle.activeSession }
@@ -167,7 +168,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         guard !isClosed else { return }
         let session = activeSession
         // Non-callback failures can synchronously discard the owned graph.
-        surfaces.removeAll()
+        discardSurfaceGraphForFatalCleanup()
         session?.releaseWaylandResourcesOnOwnerThread()
         lifecycle = .closed
         eventHub.finish(throwing: error)
@@ -186,9 +187,15 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     private func finalizeFatalFailureAfterDispatch() {
         guard hasPendingFatalFailure else { return }
-        surfaces.removeAll()
+        discardSurfaceGraphForFatalCleanup()
         lifecycle = .closed
         assertSurfaceStoreInvariants()
+    }
+
+    private func discardSurfaceGraphForFatalCleanup() {
+        isDiscardingSurfaceGraph = true
+        defer { isDiscardingSurfaceGraph = false }
+        surfaces.removeAll()
     }
 
     private func installEventCallbacks(for window: TopLevelWindow) {
@@ -200,22 +207,72 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             core?.handleWindowClosed(windowID)
         }
         window.onRedrawRequested = { [weak core = self] in
-            core?.eventHub.publish(.redrawRequested(windowID))
+            core?.publishWindowRedrawRequested(windowID)
         }
         window.onOutputMembershipChanged = { [weak core = self] outputs in
-            core?.eventHub.publish(
-                .windowOutputsChanged(
-                    WindowOutputMembershipEvent(windowID: windowID, outputs: outputs)
-                )
+            core?.publishWindowOutputsChanged(
+                windowID: windowID,
+                outputs: outputs
             )
         }
     }
 
+    func surfaceGraphAcceptsLifecycleCallback() -> Bool {
+        !isClosed && !isDiscardingSurfaceGraph
+    }
+
+    private func publishWindowRedrawRequested(_ windowID: WindowID) {
+        guard surfaceGraphAcceptsLifecycleCallback() else { return }
+        eventHub.publish(.redrawRequested(windowID))
+    }
+
+    private func publishWindowOutputsChanged(
+        windowID: WindowID,
+        outputs: [OutputID]
+    ) {
+        guard surfaceGraphAcceptsLifecycleCallback() else { return }
+        eventHub.publish(
+            .windowOutputsChanged(
+                WindowOutputMembershipEvent(windowID: windowID, outputs: outputs)
+            )
+        )
+    }
+
+    package func surfaceLifecycleCallbacksForTesting(windowID: WindowID) -> (
+        closeRequested: () -> Void,
+        closed: () -> Void,
+        redrawRequested: () -> Void,
+        outputsChanged: ([OutputID]) -> Void
+    ) {
+        (
+            closeRequested: { [weak self] in
+                self?.handleWindowCloseRequested(windowID)
+            },
+            closed: { [weak self] in
+                self?.handleWindowClosed(windowID)
+            },
+            redrawRequested: { [weak self] in
+                self?.publishWindowRedrawRequested(windowID)
+            },
+            outputsChanged: { [weak self] outputs in
+                self?.publishWindowOutputsChanged(windowID: windowID, outputs: outputs)
+            }
+        )
+    }
+
+    package func withSurfaceGraphDiscardForTesting(_ body: () -> Void) {
+        isDiscardingSurfaceGraph = true
+        defer { isDiscardingSurfaceGraph = false }
+        body()
+    }
+
     private func handleWindowCloseRequested(_ windowID: WindowID) {
+        guard surfaceGraphAcceptsLifecycleCallback() else { return }
         eventHub.publish(.windowCloseRequested(windowID))
     }
 
     private func handleWindowClosed(_ windowID: WindowID) {
+        guard surfaceGraphAcceptsLifecycleCallback() else { return }
         for popupID in popupIDsTopDown(parentedBy: windowID) {
             closePopup(popupID)
         }

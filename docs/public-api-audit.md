@@ -290,6 +290,9 @@ Notes:
   Explicit cursor changes throw when the cursor stack cannot fulfill the request.
   Cursor-shape is used when advertised and the requested cursor maps to a known
   compositor shape; otherwise the theme cursor path remains the fallback.
+  Diagonal resize convenience presets are deferred until cursor theme names are
+  verified across KDE, GNOME, Sway/wlroots, and Weston; frameworks may use
+  custom names such as `nw-resize`, `ne-resize`, `sw-resize`, and `se-resize`.
 - Clipboard offers are seat-scoped. `ClipboardOffer.read` performs a bounded read
   with a timeout, and `ClipboardSourceConfiguration` represents local regular
   clipboard payloads.
@@ -301,7 +304,9 @@ Notes:
 - `TextInputSession` is seat-scoped. Enabling text input targets a managed
   window, request methods require an enabled or focused session, and `commit()`
   sends the protocol commit request. `TextInputSurroundingText` supports both
-  protocol UTF-8 byte offsets and Swift `String.Index` construction.
+  protocol UTF-8 byte offsets and Swift `String.Index` construction. `disable()`
+  finalizes the disable request; callers should commit pending enabled-state
+  changes before disabling and should not call `commit()` after `disable()`.
   `WaylandDisplay.textInputEvents` is separate from `inputEvents`, and
   text-input diagnostics can publish on both text-input and display diagnostic
   streams.

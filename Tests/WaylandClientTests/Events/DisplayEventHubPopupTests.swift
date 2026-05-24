@@ -58,6 +58,34 @@ struct DisplayEventHubPopupTests {
 
         await expectPopupEvent(.popupRedrawRequested(expected), from: &iterator)
     }
+
+    @Test
+    func fatalSurfaceGraphDiscardSuppressesSurfaceLifecycleCallbacks() async throws {
+        let hub = DisplayEventHub()
+        let core = DisplayCore(eventHub: hub)
+        let windowID = WindowID(rawValue: 3)
+        let popupID = PopupID(rawValue: 7)
+        var iterator = hub.displayEvents().makeAsyncIterator()
+
+        let windowCallbacks = core.surfaceLifecycleCallbacksForTesting(windowID: windowID)
+        let popupCallbacks = core.popupEventCallbacks(
+            popupID: popupID,
+            parentWindowID: windowID
+        )
+
+        core.withSurfaceGraphDiscardForTesting {
+            windowCallbacks.closeRequested()
+            windowCallbacks.closed()
+            windowCallbacks.redrawRequested()
+            windowCallbacks.outputsChanged([OutputID(rawValue: 11)])
+            popupCallbacks.onDismissed()
+            popupCallbacks.onClosed()
+            popupCallbacks.onRedrawRequested()
+        }
+
+        hub.finish()
+        await expectNoDisplayEvent(from: &iterator)
+    }
 }
 
 private func expectPopupEvent(
@@ -69,5 +97,14 @@ private func expectPopupEvent(
         #expect(event == expectedEvent)
     } catch {
         Issue.record("Expected popup display event, got \(error)")
+    }
+}
+
+private func expectNoDisplayEvent(from iterator: inout DisplayEventsIterator) async {
+    do {
+        let event = try await iterator.next()
+        #expect(event == nil)
+    } catch {
+        Issue.record("Expected display stream finish without event, got \(error)")
     }
 }
