@@ -213,6 +213,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "TwoWindowOrderStress",
+            dependencies: ["WaylandClient"],
+            path: "Examples/TwoWindowOrderStress",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "SwiftWaylandSmoke",
             dependencies: ["WaylandSmokeSupport"],
             swiftSettings: executableSwiftSettings
