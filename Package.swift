@@ -201,6 +201,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "TextInputSmoke",
+            dependencies: ["WaylandClient"],
+            path: "Examples/TextInputSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "SwiftWaylandSmoke",
             dependencies: ["WaylandSmokeSupport"],
             swiftSettings: executableSwiftSettings
