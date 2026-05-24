@@ -29,6 +29,9 @@ Start with these public APIs:
 Do not depend on `WaylandRaw`, `WaylandRuntime`, `WaylandGraphicsCore`,
 `WaylandGPUPreview`, package-only symbols, or `@testable` imports.
 
+For requests that depend on input serials, see
+[`serial-sensitive-interactions.md`](serial-sensitive-interactions.md).
+
 ## Display Lifecycle
 
 Use `WaylandDisplay.withConnection` as the default host boundary. It opens the
