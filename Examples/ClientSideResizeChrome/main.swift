@@ -29,8 +29,13 @@ enum ClientSideResizeChrome {
             ]
             let registry = ResizeWindowRegistry(controllers)
 
+            log("client-side chrome policy lives above SwiftWayland")
+            for controller in controllers {
+                log("registered resize window=\(controller.window.id)")
+            }
             for controller in controllers {
                 try await controller.showInitialFrame()
+                log("first show resize window=\(controller.window.id)")
             }
 
             try await withThrowingTaskGroup(of: Void.self) { group in
@@ -115,23 +120,60 @@ enum ClientSideResizeChrome {
 
             switch event.kind {
             case .pointer(.entered(let location, _)), .pointer(.moved(let location, _)):
-                await controller.state.recordPointer(location)
                 let edge = try await resizeEdge(at: location, in: controller.window.geometry)
-                _ = try? await display.setPointerCursor(cursor(for: edge))
+                let cursor = cursor(for: edge)
+                let changed = await controller.state.recordPointer(
+                    location,
+                    edge: edge,
+                    cursor: cursor
+                )
+                do {
+                    let results = try await display.setPointerCursor(cursor)
+                    if changed {
+                        log(
+                            "cursor window=\(windowID) edge=\(edgeDescription(edge)) "
+                                + "cursor=\(cursorDescription(cursor)) results=\(cursorResultsDescription(results))"
+                        )
+                    }
+                } catch {
+                    log(
+                        "cursor failed window=\(windowID) edge=\(edgeDescription(edge)) "
+                            + "cursor=\(cursorDescription(cursor)) error=\(error)"
+                    )
+                }
                 try await controller.window.requestRedraw()
             case .pointer(.left):
-                await controller.state.recordPointer(nil)
-                _ = try? await display.setPointerCursor(.defaultArrow)
+                _ = await controller.state.recordPointer(
+                    nil,
+                    edge: nil,
+                    cursor: .defaultArrow
+                )
+                do {
+                    let results = try await display.setPointerCursor(.defaultArrow)
+                    log("cursor window=\(windowID) edge=none cursor=left_ptr results=\(cursorResultsDescription(results))")
+                } catch {
+                    log("cursor failed window=\(windowID) edge=none cursor=left_ptr error=\(error)")
+                }
                 try await controller.window.requestRedraw()
             case .pointer(.button(let button)) where button.state == .pressed:
                 guard let location = await controller.state.pointerLocation else { continue }
                 let geometry = try await controller.window.geometry
                 guard let edge = resizeEdge(at: location, in: geometry) else { continue }
-                try await controller.window.requestInteractiveResize(
-                    seatID: event.seatID,
-                    serial: button.serial,
-                    edge: edge
+                log(
+                    "resize request window=\(windowID) seat=\(event.seatID) "
+                        + "serial=\(button.serial) edge=\(edgeDescription(edge)) "
+                        + "geometry=\(geometryDescription(geometry)) location=\(location.x),\(location.y)"
                 )
+                do {
+                    try await controller.window.requestInteractiveResize(
+                        seatID: event.seatID,
+                        serial: button.serial,
+                        edge: edge
+                    )
+                    log("resize request result window=\(windowID) threw=false")
+                } catch {
+                    log("resize request result window=\(windowID) threw=true error=\(error)")
+                }
             default:
                 break
             }
@@ -188,6 +230,53 @@ enum ClientSideResizeChrome {
         case .bottomRight:
             return (try? PointerCursor(name: "se-resize")) ?? .crosshair
         }
+    }
+
+    nonisolated private static func edgeDescription(_ edge: WindowResizeEdge?) -> String {
+        guard let edge else { return "none" }
+        switch edge {
+        case .top:
+            return "top"
+        case .bottom:
+            return "bottom"
+        case .left:
+            return "left"
+        case .right:
+            return "right"
+        case .topLeft:
+            return "topLeft"
+        case .topRight:
+            return "topRight"
+        case .bottomLeft:
+            return "bottomLeft"
+        case .bottomRight:
+            return "bottomRight"
+        }
+    }
+
+    nonisolated private static func cursorDescription(_ cursor: PointerCursor) -> String {
+        cursor.name ?? "hidden"
+    }
+
+    nonisolated private static func cursorResultsDescription(_ results: [CursorRequestResult]) -> String {
+        if results.isEmpty { return "none" }
+        return results.map(cursorResultDescription).joined(separator: ",")
+    }
+
+    nonisolated private static func cursorResultDescription(_ result: CursorRequestResult) -> String {
+        switch result {
+        case .set(let seatID, let serial, let cursor):
+            return "set(seat=\(seatID),serial=\(serial),cursor=\(cursorDescription(cursor)))"
+        case .hidden(let seatID, let serial):
+            return "hidden(seat=\(seatID),serial=\(serial))"
+        case .skippedNoPointerFocus(let seatID):
+            return "skippedNoPointerFocus(seat=\(seatID))"
+        }
+    }
+
+    nonisolated private static func geometryDescription(_ geometry: SurfaceGeometry) -> String {
+        let size = geometry.logicalSize
+        return "\(size.width.rawValue)x\(size.height.rawValue)"
     }
 
     nonisolated private static func log(_ message: String) {
@@ -257,9 +346,17 @@ private actor ResizeWindowState {
         current.pointer
     }
 
-    func recordPointer(_ location: PointerLocation?) {
+    func recordPointer(
+        _ location: PointerLocation?,
+        edge: WindowResizeEdge?,
+        cursor: PointerCursor
+    ) -> Bool {
+        let changed = current.edge != edge || current.cursor != cursor
         current.pointer = location
+        current.edge = edge
+        current.cursor = cursor
         current.counter += 1
+        return changed
     }
 
     func snapshot() -> ResizeSnapshot {
@@ -271,4 +368,6 @@ private struct ResizeSnapshot: Sendable {
     var colorSeed: UInt32
     var counter = 0
     var pointer: PointerLocation?
+    var edge: WindowResizeEdge?
+    var cursor = PointerCursor.defaultArrow
 }
