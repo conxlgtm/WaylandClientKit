@@ -1,10 +1,13 @@
 import Foundation
 import WaylandClient
+import WaylandExampleSupport
 
 @main
 enum TwoWindowOrderStress {
     static func main() async throws {
-        let reversed = CommandLine.arguments.contains("--reversed")
+        let arguments = Array(CommandLine.arguments.dropFirst())
+        let options = try ExampleRunOptions.parse(arguments.filter { $0 != "--reversed" }[...])
+        let reversed = arguments.contains("--reversed")
 
         try await WaylandDisplay.withConnection(
             eventStreamConfiguration: try EventStreamConfiguration(
@@ -29,6 +32,7 @@ enum TwoWindowOrderStress {
                 log("window \(controller.name) id=\(controller.window.id)")
                 try await controller.showInitialFrame()
             }
+            let autoCloseControllers = controllers
 
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
@@ -37,9 +41,21 @@ enum TwoWindowOrderStress {
                 group.addTask {
                     try await consumeInputEvents(display.inputEvents, registry: registry)
                 }
+                if let seconds = options.autoCloseSeconds {
+                    group.addTask {
+                        try await Task.sleep(for: .seconds(seconds))
+                        for controller in autoCloseControllers {
+                            await controller.window.close()
+                        }
+                    }
+                }
 
                 _ = try await group.next()
                 group.cancelAll()
+            }
+
+            if options.printSummary {
+                log(await registry.summary())
             }
         }
     }
@@ -260,11 +276,14 @@ private struct OrderStressController: Sendable {
 
 private actor OrderStressRegistry {
     private var controllersByWindowID: [WindowID: OrderStressController]
+    private let createdCount: Int
+    private var closedCount = 0
 
     init(_ controllers: [OrderStressController]) {
         controllersByWindowID = Dictionary(
             uniqueKeysWithValues: controllers.map { ($0.window.id, $0) }
         )
+        createdCount = controllers.count
     }
 
     func controller(for windowID: WindowID) -> OrderStressController? {
@@ -272,8 +291,15 @@ private actor OrderStressRegistry {
     }
 
     func remove(_ windowID: WindowID) -> Int {
-        controllersByWindowID.removeValue(forKey: windowID)
+        if controllersByWindowID.removeValue(forKey: windowID) != nil {
+            closedCount += 1
+        }
         return controllersByWindowID.count
+    }
+
+    func summary() -> String {
+        "two-window order stress summary created=\(createdCount) closed=\(closedCount) "
+            + "remaining=\(controllersByWindowID.count)"
     }
 }
 

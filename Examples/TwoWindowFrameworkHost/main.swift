@@ -1,9 +1,12 @@
 import Foundation
 import WaylandClient
+import WaylandExampleSupport
 
 @main
 enum TwoWindowFrameworkHost {
     static func main() async throws {
+        let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
+
         try await WaylandDisplay.withConnection(
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 128,
@@ -27,8 +30,12 @@ enum TwoWindowFrameworkHost {
             )
             let registry = WindowControllerRegistry([first, second])
 
+            log("registered window id=\(first.window.id) label=SwiftWayland Window A")
+            log("registered window id=\(second.window.id) label=SwiftWayland Window B")
             try await first.showInitialFrame()
+            log("first show window=\(first.window.id)")
             try await second.showInitialFrame()
+            log("first show window=\(second.window.id)")
 
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
@@ -40,17 +47,29 @@ enum TwoWindowFrameworkHost {
                 group.addTask {
                     try await consumeTextInputEvents(display.textInputEvents, registry: registry)
                 }
-                group.addTask {
-                    try await Task.sleep(for: .seconds(6))
-                    await first.window.close()
-                }
-                group.addTask {
-                    try await Task.sleep(for: .seconds(10))
-                    await second.window.close()
+                if let seconds = options.autoCloseSeconds {
+                    group.addTask {
+                        try await Task.sleep(for: .seconds(seconds))
+                        await first.window.close()
+                        await second.window.close()
+                    }
+                } else {
+                    group.addTask {
+                        try await Task.sleep(for: .seconds(6))
+                        await first.window.close()
+                    }
+                    group.addTask {
+                        try await Task.sleep(for: .seconds(10))
+                        await second.window.close()
+                    }
                 }
 
                 _ = try await group.next()
                 group.cancelAll()
+            }
+
+            if options.printSummary {
+                log(await registry.summary())
             }
         }
     }
@@ -85,13 +104,16 @@ enum TwoWindowFrameworkHost {
             switch event {
             case .redrawRequested(let windowID):
                 if let controller = await registry.controller(for: windowID) {
+                    log("redraw requested window=\(windowID)")
                     try await controller.redrawIfNeeded()
                 }
             case .windowCloseRequested(let windowID):
                 if let controller = await registry.controller(for: windowID) {
+                    log("close requested window=\(windowID)")
                     await controller.window.close()
                 }
             case .windowClosed(let windowID):
+                log("closed window=\(windowID)")
                 if await registry.remove(windowID) {
                     return
                 }
@@ -181,11 +203,14 @@ private struct WindowController: Sendable {
 
 private actor WindowControllerRegistry {
     private var controllersByWindowID: [WindowID: WindowController]
+    private let createdCount: Int
+    private var closedCount = 0
 
     init(_ controllers: [WindowController]) {
         controllersByWindowID = Dictionary(
             uniqueKeysWithValues: controllers.map { ($0.window.id, $0) }
         )
+        createdCount = controllers.count
     }
 
     func controller(for windowID: WindowID) -> WindowController? {
@@ -193,8 +218,15 @@ private actor WindowControllerRegistry {
     }
 
     func remove(_ windowID: WindowID) -> Bool {
-        controllersByWindowID.removeValue(forKey: windowID)
+        if controllersByWindowID.removeValue(forKey: windowID) != nil {
+            closedCount += 1
+        }
         return controllersByWindowID.isEmpty
+    }
+
+    func summary() -> String {
+        "two-window host summary created=\(createdCount) closed=\(closedCount) "
+            + "remaining=\(controllersByWindowID.count)"
     }
 }
 
