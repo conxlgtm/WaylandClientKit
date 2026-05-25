@@ -130,8 +130,8 @@ The current baseline already has meaningful substrate pieces:
 - managed software submission and managed-GPU backing preference in
   `WaylandGraphicsPreview` for framework-facing preview experiments without raw
   platform handles
-- xdg-activation protocol XML, raw manager binding, public capability reporting,
-  and `XDGActivationSmoke`
+- xdg-activation protocol XML, raw manager/token binding, public capability
+  reporting, public token request and activate APIs, and `XDGActivationSmoke`
 - framework-host contract documentation and external consumer packages that
   exercise public host-loop and tiny UI prototype shapes
 - package-internal submit-constraint model for linux-drm-syncobj, FIFO, and
@@ -151,8 +151,8 @@ Known foundation gaps:
   metadata protocols beyond local unit and smoke reporting
 - public cursor animation and output-scale cursor policy APIs
 - advanced pointer and tablet protocols
-- xdg-session-management design and activation/session integration where needed
-  by app launch and restoration workflows
+- xdg-session-management design and session integration where needed by app
+  launch and restoration workflows
 - compositor matrix coverage beyond headless Weston
 - public DocC reference documentation
 - compatibility and release policy for stable client APIs and preview graphics
@@ -265,7 +265,7 @@ support tier. These are related facts, not the same fact.
 | `wp_fifo_v1`, `wp_commit_timing_v1` | staging | optional/preview pacing | capability facts before public scheduling API | compositor path where advertised | allow source/API change while preview |
 | `zwp_text_input_manager_v3` | legacy unstable, active minor updates | optional foundation | public typed text-input API | live IME path where feasible | version-gated additions; preserve unknown values |
 | `wp_cursor_shape_manager_v1` | staging | optional foundation | public cursor capability and requests | unit plus live where advertised | allow version-gated additions |
-| `xdg_activation_v1` | staging | optional desktop integration | public capability now; typed token API when implemented | live where advertised | staging protocol, product API review required |
+| `xdg_activation_v1` | staging | optional desktop integration | public capability, token request, and activate APIs | unit and live where advertised | staging protocol, product API review required |
 | `xx_session_manager_v1` or promoted successor | experimental/staging as upstream evolves | preview | typed optional API only behind preview policy | smoke where available | expected to change |
 | `wp_pointer_warp_v1` | staging | preview/advanced input | capability-gated only | use-case gated tests | allow source/API change while preview |
 
@@ -994,7 +994,7 @@ Protocol candidates:
 
 Required behavior:
 
-- expose xdg activation as a typed app-client API when implemented
+- expose xdg activation as a typed app-client API
 - expose session-management tokens/restoration facts without owning document
   lifecycle; see [session-management-plan.md](session-management-plan.md)
 - expose toplevel icon and dialog metadata only as protocol-shaped desktop

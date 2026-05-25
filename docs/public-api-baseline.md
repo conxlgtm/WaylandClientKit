@@ -9,6 +9,31 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 ## WaylandClient Public Declarations
 
+### `Sources/WaylandClient/Public/Activation/ActivationDomainTypes.swift`
+
+- L1: `public struct ActivationToken: Equatable, Hashable, Sendable, CustomStringConvertible {`
+- L2: `    public let value: String`
+- L4: `    public init(_ tokenValue: String) throws {`
+- L22: `    public var description: String {`
+- L27: `public struct ActivationTokenRequest: Equatable, Sendable {`
+- L28: `    public var appID: String?`
+- L29: `    public var window: Window?`
+- L30: `    public var seatID: SeatID?`
+- L31: `    public var serial: InputSerial?`
+- L33: `    public init(`
+- L60: `public enum ActivationError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L61: `    case unavailable`
+- L62: `    case foreignWindow(WindowID)`
+- L63: `    case unknownWindow(WindowID)`
+- L64: `    case closedWindow(WindowID)`
+- L65: `    case invalidAppID`
+- L66: `    case invalidToken`
+- L67: `    case tokenRequestTimedOut`
+- L68: `    case displayClosed`
+- L69: `    case unknownSeat(SeatID)`
+- L70: `    case incompleteSerialContext`
+- L72: `    public var description: String {`
+
 ### `Sources/WaylandClient/Public/Clipboard/ClipboardOffer.swift`
 
 - L3: `public struct ClipboardOffer: Sendable, Hashable {`
@@ -835,6 +860,12 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L68: `    public let linuxDmabuf: ProtocolAvailability`
 - L70: `    public init(`
 - L100: `    public init(`
+
+### `Sources/WaylandClient/Public/Display/WaylandDisplay+Activation.swift`
+
+- L2: `    public static let defaultActivationTokenTimeoutMilliseconds: Int32 = 1_000`
+- L4: `    public func requestActivationToken(`
+- L30: `    public func activate(window: Window, token: ActivationToken) throws {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+DataTransfer.swift`
 
@@ -1836,28 +1867,30 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L67: `    public func requestRedraw() async throws {`
 - L71: `    public var presentationEvents: WindowPresentationEvents {`
 - L75: `    public func requestPresentationFeedback() async throws {`
-- L79: `    public func setTitle(_ title: WaylandString) async throws {`
-- L83: `    public func setTitle(_ title: String) async throws {`
-- L87: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
-- L91: `    public func setAppID(_ appID: String) async throws {`
-- L95: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
-- L99: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
-- L103: `    public func requestMaximize() async throws {`
-- L107: `    public func requestUnmaximize() async throws {`
-- L111: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
-- L115: `    public func requestExitFullscreen() async throws {`
-- L119: `    public func requestMinimize() async throws {`
-- L123: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
-- L127: `    public func requestInteractiveResize(`
-- L140: `    public func requestWindowMenu(`
-- L153: `    public func startDrag(`
-- L168: `    public var isClosed: Bool {`
-- L174: `    public var needsRedraw: Bool {`
-- L180: `    public var decorationMode: WindowDecorationMode {`
-- L186: `    public var geometry: SurfaceGeometry {`
-- L192: `    public var stateSnapshot: WindowStateSnapshot {`
-- L198: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L202: `    public func hash(into hasher: inout Hasher) {`
+- L79: `    public func requestActivationToken(`
+- L96: `    public func activate(using token: ActivationToken) async throws {`
+- L100: `    public func setTitle(_ title: WaylandString) async throws {`
+- L104: `    public func setTitle(_ title: String) async throws {`
+- L108: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L112: `    public func setAppID(_ appID: String) async throws {`
+- L116: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L120: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L124: `    public func requestMaximize() async throws {`
+- L128: `    public func requestUnmaximize() async throws {`
+- L132: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L136: `    public func requestExitFullscreen() async throws {`
+- L140: `    public func requestMinimize() async throws {`
+- L144: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L148: `    public func requestInteractiveResize(`
+- L161: `    public func requestWindowMenu(`
+- L174: `    public func startDrag(`
+- L189: `    public var isClosed: Bool {`
+- L195: `    public var needsRedraw: Bool {`
+- L201: `    public var decorationMode: WindowDecorationMode {`
+- L207: `    public var geometry: SurfaceGeometry {`
+- L213: `    public var stateSnapshot: WindowStateSnapshot {`
+- L219: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L223: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 

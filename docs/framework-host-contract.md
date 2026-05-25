@@ -20,6 +20,8 @@ Start with these public APIs:
 - `Window.show`, `redraw`, `requestRedraw`, `needsRedraw`, `geometry`, and `stateSnapshot`
 - `Window.presentationEvents` and `requestPresentationFeedback()`
 - `Window.createPopup(configuration:)`
+- `ActivationToken`, `ActivationTokenRequest`, and
+  `Window.requestActivationToken(...)` for compositor-mediated focus handoff
 - `TextInputSession` and `WaylandDisplay.textInputSession(for:)`
 - clipboard, primary-selection, and drag-and-drop source and offer APIs
 - cursor APIs through `PointerCursor`, `CursorConfiguration`, and `setPointerCursor(_:)`
@@ -96,6 +98,11 @@ Build the framework focus model above these facts:
 
 SwiftWayland preserves the target facts. The framework owns policy such as
 "focused scene", tab focus, gesture capture, menu focus, and accessibility focus.
+
+XDG activation tokens are opaque compositor-mediated focus facts. A framework
+can request a token with app ID, window, seat ID, and serial hints, then send
+`Window.activate(using:)`. It should not treat a sent activate request as a
+guaranteed focus change.
 
 For text fields, commit enabled request state before disabling the session.
 `TextInputSession.disable()` finalizes the disable request; a later

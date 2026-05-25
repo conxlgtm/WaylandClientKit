@@ -53,6 +53,7 @@ Run bounded examples when a compositor session is available:
 - advertised optional protocols
 - client-side resize and cursor cleanup result
 - serial-sensitive resize, move, menu, and drag-source result
+- xdg activation capability, token request result, and activate request result
 - text-input capability, IME commits, and interpreted keyboard fallback
 - clipboard, primary-selection, drag/drop, private MIME, and stale-offer behavior
 - popup lifecycle and shutdown behavior

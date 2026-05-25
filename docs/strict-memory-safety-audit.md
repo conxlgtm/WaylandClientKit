@@ -159,9 +159,9 @@ Remaining unsafe constructs:
   `wp_fractional_scale_manager_v1` globals through registry C shims.
 - `RawViewporter`, `RawViewport`, `RawFractionalScaleManager`, and
   `RawFractionalScale` wrap extension proxies returned by those shims.
-- `RawXDGActivation` wraps the optional `xdg_activation_v1` manager and destroys
-  the proxy through an explicit C shim. Token request objects are not wrapped
-  yet.
+- `RawXDGActivation` wraps the optional `xdg_activation_v1` manager and
+  `RawXDGActivationToken` wraps async token request objects. Both destroy their
+  proxies through explicit C shims, and token listeners use `CListenerStorage`.
 - `RawSurfaceScaleOwner` and `RawFractionalScaleOwner` store C listener
   callback tables through `CListenerStorage`.
 - Listener callbacks recover Swift owners from C `data` pointers and forward
