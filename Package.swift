@@ -181,6 +181,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "GraphicsPreviewManagedGPUClear",
+            dependencies: ["WaylandClient", "WaylandGraphicsPreview"],
+            path: "Examples/GraphicsPreviewManagedGPUClear",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "FrameworkHostSmoke",
             dependencies: ["WaylandClient"],
             path: "Examples/FrameworkHostSmoke",

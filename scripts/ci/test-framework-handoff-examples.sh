@@ -15,6 +15,7 @@ TARGETS=(
     XDGActivationSmoke
     FrameworkHostSmoke
     GPUPreviewSmokeClient
+    GraphicsPreviewManagedGPUClear
 )
 
 BUILD_ROOT="${BUILD_ROOT:-${TMPDIR:-/tmp}/swiftwayland-framework-handoff-examples}"

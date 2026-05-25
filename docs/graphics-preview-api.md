@@ -24,6 +24,9 @@ DRM, dmabuf, or syncobj handles remain out of scope.
 uses one line per runtime-path fact so a compositor run can be pasted into
 `docs/compositor-matrix.md` without inferring whether a protocol was advertised,
 configured, active, failed, or selected as software fallback.
+`GraphicsPreviewManagedGPUClear` is the small managed submission example: it
+requests managed GPU backing with software fallback allowed, submits one clear
+frame, prints the actual runtime path, and closes.
 
 ## Current Scope
 
