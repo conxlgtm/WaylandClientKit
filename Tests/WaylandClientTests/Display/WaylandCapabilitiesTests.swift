@@ -58,6 +58,26 @@ struct WaylandCapabilitiesTests {
     }
 
     @Test
+    func displaySessionCapabilityAssemblyIncludesXDGActivation() {
+        var requestedInterfaces: [String] = []
+        let capabilities = DisplaySession.capabilities { interfaceName in
+            requestedInterfaces.append(interfaceName)
+            guard interfaceName == "xdg_activation_v1" else {
+                return nil
+            }
+
+            return AdvertisedWaylandProtocol(
+                interfaceName: interfaceName,
+                advertisedVersion: 1
+            )
+        }
+
+        #expect(DisplaySession.capabilityProtocolInterfaceNames.contains("xdg_activation_v1"))
+        #expect(requestedInterfaces == DisplaySession.capabilityProtocolInterfaceNames)
+        #expect(capabilities.xdgActivation == .available(version: 1))
+    }
+
+    @Test
     func exactMinimumAndSupportedVersionsAreAvailable() {
         let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
             .init(interfaceName: "wl_data_device_manager", advertisedVersion: 3),
