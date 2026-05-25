@@ -15,7 +15,34 @@ enum XDGActivationSmoke {
         ) { display in
             let capabilities = try await display.capabilities()
             log("xdg-activation capability \(availabilityDescription(capabilities.xdgActivation))")
-            log("xdg-activation token requests are protocol groundwork in this checkpoint")
+            guard capabilities.xdgActivation.isAvailable else {
+                log("xdg-activation unavailable; skipping token request")
+                return
+            }
+
+            let window = try await display.createTopLevelWindow(
+                configuration: try WindowConfiguration(
+                    title: "SwiftWayland XDG Activation Smoke",
+                    appID: "swift-wayland-xdg-activation-smoke",
+                    initialWidth: 240,
+                    initialHeight: 160
+                )
+            )
+            try await window.show(drawFrame)
+
+            do {
+                log("requesting activation token")
+                let token = try await window.requestActivationToken(
+                    appID: "swift-wayland-xdg-activation-smoke"
+                )
+                log("activation token received length=\(token.value.count)")
+                try await window.activate(using: token)
+                log("activate request sent window=\(window.id)")
+            } catch {
+                log("activation request failed \(error)")
+            }
+
+            await window.close()
         }
     }
 
@@ -32,5 +59,16 @@ enum XDGActivationSmoke {
 
     nonisolated private static func log(_ message: String) {
         FileHandle.standardError.write(Data((message + "\n").utf8))
+    }
+
+    nonisolated private static func drawFrame(_ frame: borrowing SoftwareFrame) {
+        frame.withXRGB8888Rows { row, pixels in
+            for x in 0..<Int(frame.width) {
+                let red = UInt32((x * 255) / max(Int(frame.width), 1))
+                let green = UInt32((row * 255) / max(Int(frame.height), 1))
+                let blue = UInt32(0xA0)
+                unsafe pixels[unchecked: x] = (red << 16) | (green << 8) | blue
+            }
+        }
     }
 }

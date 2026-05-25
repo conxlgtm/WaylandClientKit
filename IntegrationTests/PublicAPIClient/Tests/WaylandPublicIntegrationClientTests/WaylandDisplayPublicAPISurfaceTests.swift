@@ -83,6 +83,38 @@ struct WaylandDisplayPublicAPISurfaceTests {
     }
 
     @Test
+    func activationTypesAndMethodsCompileForExternalClients() throws {
+        let token = try ActivationToken("opaque-token")
+        let request = ActivationTokenRequest(
+            appID: "org.swiftwayland.Client",
+            seatID: SeatID(rawValue: 1),
+            serial: InputSerial(rawValue: 2)
+        )
+
+        #expect(token.value == "opaque-token")
+        #expect(request.appID == "org.swiftwayland.Client")
+        #expect(request.seatID == SeatID(rawValue: 1))
+        #expect(request.serial == InputSerial(rawValue: 2))
+        #expect(ActivationError.invalidToken.description.contains("activation token"))
+
+        func useActivationAPI(display: WaylandDisplay, window: Window) async throws {
+            let displayToken = try await display.requestActivationToken(
+                ActivationTokenRequest(window: window),
+                timeoutMilliseconds: 1
+            )
+            try await display.activate(window: window, token: displayToken)
+
+            let windowToken = try await window.requestActivationToken(
+                appID: "org.swiftwayland.Client",
+                timeoutMilliseconds: 1
+            )
+            try await window.activate(using: windowToken)
+        }
+
+        _ = useActivationAPI
+    }
+
+    @Test
     func outputSnapshotTypesAndDisplayMethodCompileForExternalClients() throws {
         let scale = try PositiveInt32(2)
         let logicalWidth = try PositiveInt32(1_280)

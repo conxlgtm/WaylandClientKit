@@ -1,0 +1,225 @@
+import Testing
+import WaylandRaw
+
+@testable import WaylandClient
+
+@Suite
+struct ActivationManagerTests {
+    @Test
+    func tokenDoneResolvesPendingRequest() async throws {
+        let backend = RecordingActivationBackend()
+        let manager = ActivationManager(backend: backend)
+
+        let pending = try manager.beginTokenRequest(
+            appID: "org.swiftwayland.Test",
+            surface: nil,
+            seat: nil,
+            serial: nil
+        )
+        backend.emitDone("opaque-token")
+
+        let token = try await pending.value()
+
+        #expect(token == ActivationToken(unchecked: "opaque-token"))
+        #expect(
+            backend.latestBinding?.operations == [
+                .setAppID("org.swiftwayland.Test"),
+                .commit,
+                .destroy,
+            ]
+        )
+    }
+
+    @Test
+    func unavailableBackendErrorIsPreserved() {
+        let backend = RecordingActivationBackend()
+        backend.requestError = ActivationError.unavailable
+        let manager = ActivationManager(backend: backend)
+
+        #expect(throws: ActivationError.unavailable) {
+            _ = try manager.beginTokenRequest(
+                appID: nil,
+                surface: nil,
+                seat: nil,
+                serial: nil
+            )
+        }
+    }
+
+    @Test
+    func invalidAppIDIsRejectedBeforeRequest() {
+        let backend = RecordingActivationBackend()
+        let manager = ActivationManager(backend: backend)
+
+        #expect(throws: ActivationError.invalidAppID) {
+            _ = try manager.beginTokenRequest(
+                appID: "bad\0id",
+                surface: nil,
+                seat: nil,
+                serial: nil
+            )
+        }
+        #expect(backend.requestCount == 0)
+    }
+
+    @Test
+    func serialRequiresSeatContext() {
+        let backend = RecordingActivationBackend()
+        let manager = ActivationManager(backend: backend)
+
+        #expect(throws: ActivationError.incompleteSerialContext) {
+            _ = try manager.beginTokenRequest(
+                appID: nil,
+                surface: nil,
+                seat: nil,
+                serial: InputSerial(rawValue: 55)
+            )
+        }
+        #expect(backend.requestCount == 0)
+    }
+
+    @Test
+    func cancelPendingRequestDestroysBindingAndFailsWaiter() async throws {
+        let backend = RecordingActivationBackend()
+        let manager = ActivationManager(backend: backend)
+        let pending = try manager.beginTokenRequest(
+            appID: nil,
+            surface: nil,
+            seat: nil,
+            serial: nil
+        )
+
+        manager.cancelTokenRequest(pending.id, error: .tokenRequestTimedOut)
+
+        let error = await activationError {
+            _ = try await pending.value()
+        }
+        #expect(error == .tokenRequestTimedOut)
+        #expect(backend.latestBinding?.operations == [.commit, .cancel])
+    }
+
+    @Test
+    func shutdownCancelsPendingRequestsAndIsIdempotent() async throws {
+        let backend = RecordingActivationBackend()
+        let manager = ActivationManager(backend: backend)
+        let pending = try manager.beginTokenRequest(
+            appID: nil,
+            surface: nil,
+            seat: nil,
+            serial: nil
+        )
+
+        manager.shutdown()
+        manager.shutdown()
+
+        let error = await activationError {
+            _ = try await pending.value()
+        }
+        #expect(error == .displayClosed)
+        #expect(backend.latestBinding?.operations == [.commit, .cancel])
+    }
+
+    @Test
+    func lateDoneAfterCancelDoesNotReplaceFailure() async throws {
+        let backend = RecordingActivationBackend()
+        let manager = ActivationManager(backend: backend)
+        let pending = try manager.beginTokenRequest(
+            appID: nil,
+            surface: nil,
+            seat: nil,
+            serial: nil
+        )
+
+        manager.cancelTokenRequest(pending.id, error: .tokenRequestTimedOut)
+        backend.emitDone("late-token")
+
+        let error = await activationError {
+            _ = try await pending.value()
+        }
+        #expect(error == .tokenRequestTimedOut)
+    }
+}
+
+private func activationError(
+    _ body: () async throws -> Void
+) async -> ActivationError? {
+    do {
+        try await body()
+        return nil
+    } catch let error as ActivationError {
+        return error
+    } catch {
+        Issue.record("unexpected error: \(error)")
+        return nil
+    }
+}
+
+private final class RecordingActivationBackend: ActivationManagerBackend {
+    var requestCount = 0
+    var requestError: (any Error)?
+    private(set) var latestBinding: RecordingActivationTokenBinding?
+    private var onDone: ((RawXDGActivationTokenValue) -> Void)?
+
+    func preconditionIsOwnerThread() {
+        // Test backend has no thread-affinity boundary.
+    }
+
+    func requestToken(
+        onDone handler: @escaping (RawXDGActivationTokenValue) -> Void
+    ) throws -> any ActivationTokenBinding {
+        requestCount += 1
+        if let requestError {
+            throw requestError
+        }
+
+        let binding = RecordingActivationTokenBinding()
+        latestBinding = binding
+        onDone = handler
+        return binding
+    }
+
+    func activate(token _: ActivationToken, surface _: RawSurface) throws {
+        // Activation request forwarding uses live raw surfaces and is covered by compile tests.
+    }
+
+    func emitDone(_ tokenValue: String) {
+        onDone?(RawXDGActivationTokenValue(tokenValue))
+    }
+}
+
+private final class RecordingActivationTokenBinding: ActivationTokenBinding {
+    enum Operation: Equatable {
+        case setAppID(String)
+        case setSurface
+        case setSerial(InputSerial)
+        case commit
+        case cancel
+        case destroy
+    }
+
+    private(set) var operations: [Operation] = []
+
+    func setAppID(_ appID: String) {
+        operations.append(.setAppID(appID))
+    }
+
+    func setSurface(_: RawSurface) {
+        operations.append(.setSurface)
+    }
+
+    func setSerial(_ serial: InputSerial, seat _: RawSeat) {
+        operations.append(.setSerial(serial))
+    }
+
+    func commit() {
+        operations.append(.commit)
+    }
+
+    func cancel() {
+        operations.append(.cancel)
+    }
+
+    func destroy() {
+        operations.append(.destroy)
+    }
+}
