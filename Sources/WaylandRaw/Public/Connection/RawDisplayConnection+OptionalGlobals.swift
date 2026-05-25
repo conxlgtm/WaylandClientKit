@@ -44,39 +44,50 @@ extension RawDisplayConnection {
                                                         bindSurfaceMetadataOptionalGlobalsIfPresent(
                                                             registry: reg
                                                         )
-                                                    return OptionalGlobals(
-                                                        xdgDecorationManager:
-                                                            decorationManager,
-                                                        xdgOutputManager:
-                                                            xdgOutputManager,
-                                                        viewporter: viewporter,
-                                                        presentation: presentation,
-                                                        fractionalScaleManager:
-                                                            fractionalScaleManager,
-                                                        cursorShapeManager:
-                                                            cursorShapeManager,
-                                                        linuxDrmSyncobjManager:
-                                                            submitGlobals.linuxDrmSyncobjManager,
-                                                        fifoManager: submitGlobals.fifoManager,
-                                                        commitTimingManager:
-                                                            submitGlobals.commitTimingManager,
-                                                        contentTypeManager:
-                                                            metadataGlobals.contentTypeManager,
-                                                        alphaModifierManager:
-                                                            metadataGlobals.alphaModifierManager,
-                                                        tearingControlManager:
-                                                            metadataGlobals.tearingControlManager,
-                                                        colorRepresentationManager:
-                                                            metadataGlobals
-                                                            .colorRepresentationManager,
-                                                        colorManager:
-                                                            metadataGlobals.colorManager,
-                                                        dataDeviceManager: dataDeviceManager,
-                                                        primarySelectionDeviceManager:
-                                                            primarySelectionDeviceManager,
-                                                        textInputManager: textInputManager,
-                                                        linuxDmabuf: linuxDmabuf
-                                                    )
+                                                    do {
+                                                        let xdgActivation =
+                                                            try bindXDGActivationIfPresent(
+                                                                registry: reg
+                                                            )
+                                                        return OptionalGlobals(
+                                                            xdgDecorationManager:
+                                                                decorationManager,
+                                                            xdgOutputManager:
+                                                                xdgOutputManager,
+                                                            viewporter: viewporter,
+                                                            presentation: presentation,
+                                                            fractionalScaleManager:
+                                                                fractionalScaleManager,
+                                                            cursorShapeManager:
+                                                                cursorShapeManager,
+                                                            xdgActivation: xdgActivation,
+                                                            linuxDrmSyncobjManager:
+                                                                submitGlobals
+                                                                .linuxDrmSyncobjManager,
+                                                            fifoManager: submitGlobals.fifoManager,
+                                                            commitTimingManager:
+                                                                submitGlobals.commitTimingManager,
+                                                            contentTypeManager:
+                                                                metadataGlobals.contentTypeManager,
+                                                            alphaModifierManager:
+                                                                metadataGlobals.alphaModifierManager,
+                                                            tearingControlManager:
+                                                                metadataGlobals.tearingControlManager,
+                                                            colorRepresentationManager:
+                                                                metadataGlobals
+                                                                .colorRepresentationManager,
+                                                            colorManager:
+                                                                metadataGlobals.colorManager,
+                                                            dataDeviceManager: dataDeviceManager,
+                                                            primarySelectionDeviceManager:
+                                                                primarySelectionDeviceManager,
+                                                            textInputManager: textInputManager,
+                                                            linuxDmabuf: linuxDmabuf
+                                                        )
+                                                    } catch {
+                                                        metadataGlobals.destroy()
+                                                        throw error
+                                                    }
                                                 } catch {
                                                     submitGlobals.linuxDrmSyncobjManager.destroy()
                                                     submitGlobals.fifoManager.destroy()
@@ -355,6 +366,36 @@ extension RawDisplayConnection {
             proxyAdoption: proxyAdoption
         )
         return .bound(wrappedManager)
+    }
+
+    @safe
+    private func bindXDGActivationIfPresent(
+        registry reg: OpaquePointer
+    ) throws -> OptionalXDGActivation {
+        guard let global = optionalGlobal(named: "xdg_activation_v1") else {
+            return .missing
+        }
+
+        let version = global.negotiatedVersion(
+            supportedByClient: SupportedVersions.xdgActivationV1
+        )
+
+        guard
+            let activation = unsafe swl_registry_bind_xdg_activation_v1(
+                reg,
+                global.name,
+                version.value
+            )
+        else {
+            throw RuntimeError.bindFailed("xdg_activation_v1")
+        }
+
+        let wrappedActivation = try RawXDGActivation(
+            pointer: activation,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
+        return .bound(wrappedActivation)
     }
 
     @safe

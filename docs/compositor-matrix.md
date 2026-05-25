@@ -127,6 +127,7 @@ fails, record that as a failure for that protocol rather than as a skip.
 - `wp_viewporter`
 - `wp_fractional_scale_manager_v1`
 - `wp_presentation`
+- `xdg_activation_v1`
 - `zwp_linux_dmabuf_v1`
 - `wp_linux_drm_syncobj_manager_v1`
 - `wp_fifo_manager_v1`

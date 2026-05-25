@@ -99,6 +99,7 @@ Supported in the current experimental baseline:
 - `wp_fractional_scale_v1`
 - `wp_cursor_shape_manager_v1`
 - `wp_cursor_shape_device_v1`
+- `xdg_activation_v1`
 - `zwp_text_input_manager_v3`
 - `zwp_text_input_v3`
 - `zwp_linux_dmabuf_v1`
@@ -393,6 +394,7 @@ swift run TwoWindowOrderStress --duration-seconds 3 --print-summary
 swift run TextInputSmoke --auto-close --print-summary
 swift run DataTransferSmoke --auto-close --print-summary
 swift run PresentationFeedbackAnimation --duration-seconds 3 --print-summary
+swift run XDGActivationSmoke
 ```
 
 `ClientSideResizeChrome` demonstrates edge hit testing, resize cursors, and
@@ -401,6 +403,8 @@ the target window, seat, serial, pointer location, decoration mode, capabilities
 and request result for move, resize, and window-menu requests. The bounded modes
 let CI and release checks prove the examples still build while manual sessions
 can collect compositor-specific behavior.
+`XDGActivationSmoke` prints desktop activation capability; token request APIs
+are not public yet.
 
 Run the graphics preview smoke client:
 

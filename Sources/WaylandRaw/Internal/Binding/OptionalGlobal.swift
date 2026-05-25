@@ -47,6 +47,7 @@ extension RawViewporter: RawDestroyableObject {}
 extension RawPresentation: RawDestroyableObject {}
 extension RawFractionalScaleManager: RawDestroyableObject {}
 extension RawCursorShapeManager: RawDestroyableObject {}
+extension RawXDGActivation: RawDestroyableObject {}
 extension RawLinuxDrmSyncobjManager: RawDestroyableObject {}
 extension RawFifoManager: RawDestroyableObject {}
 extension RawCommitTimingManager: RawDestroyableObject {}
@@ -66,6 +67,7 @@ package typealias OptionalViewporter = OptionalGlobal<RawViewporter>
 package typealias OptionalPresentation = OptionalGlobal<RawPresentation>
 package typealias OptionalFractionalScaleManager = OptionalGlobal<RawFractionalScaleManager>
 package typealias OptionalCursorShapeManager = OptionalGlobal<RawCursorShapeManager>
+package typealias OptionalXDGActivation = OptionalGlobal<RawXDGActivation>
 package typealias OptionalLinuxDrmSyncobjManager = OptionalGlobal<RawLinuxDrmSyncobjManager>
 package typealias OptionalFifoManager = OptionalGlobal<RawFifoManager>
 package typealias OptionalCommitTimingManager = OptionalGlobal<RawCommitTimingManager>

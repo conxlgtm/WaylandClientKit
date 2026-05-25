@@ -26,6 +26,8 @@ struct wp_fractional_scale_manager_v1;
 struct wp_fractional_scale_v1;
 struct wp_cursor_shape_manager_v1;
 struct wp_cursor_shape_device_v1;
+struct xdg_activation_v1;
+struct xdg_activation_token_v1;
 struct wp_linux_drm_syncobj_manager_v1;
 struct wp_linux_drm_syncobj_surface_v1;
 struct wp_linux_drm_syncobj_timeline_v1;
@@ -97,6 +99,9 @@ struct wp_fractional_scale_manager_v1 *swl_registry_bind_wp_fractional_scale_man
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wp_cursor_shape_manager_v1 *swl_registry_bind_wp_cursor_shape_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct xdg_activation_v1 *swl_registry_bind_xdg_activation_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wp_linux_drm_syncobj_manager_v1 *
@@ -579,6 +584,9 @@ void swl_wp_cursor_shape_device_v1_destroy(
     struct wp_cursor_shape_device_v1 *device);
 void swl_wp_cursor_shape_manager_v1_destroy(
     struct wp_cursor_shape_manager_v1 *manager);
+void swl_xdg_activation_v1_destroy(struct xdg_activation_v1 *activation);
+void swl_xdg_activation_token_v1_destroy(
+    struct xdg_activation_token_v1 *token);
 void swl_wp_linux_drm_syncobj_surface_v1_destroy(
     struct wp_linux_drm_syncobj_surface_v1 *syncobj_surface);
 void swl_wp_linux_drm_syncobj_timeline_v1_destroy(
