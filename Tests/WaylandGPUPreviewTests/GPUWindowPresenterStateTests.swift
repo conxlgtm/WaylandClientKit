@@ -837,6 +837,32 @@ struct GPUWindowPresenterLifecycleTests {
     }
 
     @Test
+    func explicitReleaseAfterRetireIsIgnored() throws {
+        var state = GPUWindowPresenterState()
+        let slotID = try GBMBufferPoolSlotID(0)
+        try state.installSlot(slotID)
+        let lease = try state.leaseNext()
+        let releasePoint = syncPoint(timeline: 4, point: 9)
+        try state.markSubmitted(
+            lease,
+            generation: 8,
+            synchronization: .explicit(
+                GPUSubmittedBufferSyncState(
+                    slotID: slotID,
+                    acquirePoint: nil,
+                    releasePoint: releasePoint
+                )
+            )
+        )
+
+        state.retireAll(reason: .windowClosed)
+
+        #expect(try state.markExplicitReleaseSignaled(slotID) == false)
+        #expect(try state.submissionState(for: slotID) == .retired)
+        #expect(state.bufferPoolReadiness == .retired)
+    }
+
+    @Test
     func presenterRetireAllDestroysInstalledBuffersOnce() throws {
         let presenter = GPUWindowPresenter()
         let firstSlotID = try GBMBufferPoolSlotID(0)
@@ -876,6 +902,34 @@ struct GPUWindowPresenterLifecycleTests {
 
         #expect(buffer.destroyCallCount == 1)
         #expect(!buffer.hasReleaseObserver)
+        #expect(presenter.releaseFailuresSnapshot.isEmpty)
+    }
+
+    @Test
+    func presenterRetireAllClearsPresentationCorrelationSoLateFeedbackIsIgnored()
+        throws
+    {
+        let presenter = GPUWindowPresenter()
+        let slotID = try GBMBufferPoolSlotID(0)
+        let buffer = try FakePresenterBuffer(pointer: 0x1001)
+
+        try presenter.installBuffer(buffer, slotID: slotID)
+        let lease = try presenter.leaseNextForTesting()
+        let frame = try presenter.recordPresentedFrameForTesting(
+            previewPresentationResult(generation: 99),
+            lease: lease
+        )
+
+        #expect(presenter.backingStateSnapshot.lastSubmittedFrame == frame)
+
+        presenter.retireAll(reason: .windowClosed)
+
+        #expect(
+            presenter.correlatedSlotID(
+                forPresentationGeneration: frame.generation
+            ) == nil
+        )
+        #expect(presenter.backingStateSnapshot.lastSubmittedFrame == nil)
         #expect(presenter.releaseFailuresSnapshot.isEmpty)
     }
 
