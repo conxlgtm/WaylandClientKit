@@ -4,7 +4,7 @@ import WaylandRaw
 final class LiveCursorManagerBackend: CursorManagerBackend {
     private let connection: RawDisplayConnection
     private let configuration: CursorConfiguration
-    private var theme: CursorTheme?
+    private var themesBySize: [CursorSize: CursorTheme] = [:]
 
     init(
         connection rawConnection: RawDisplayConnection,
@@ -24,8 +24,8 @@ final class LiveCursorManagerBackend: CursorManagerBackend {
         connection.supportsCursorShape
     }
 
-    func cursorImage(named name: String) throws -> CursorImage {
-        try cursorTheme().cursorImage(named: name)
+    func cursorImage(named name: String, size: CursorSize) throws -> CursorImage {
+        try cursorTheme(size: size).cursorImage(named: name)
     }
 
     func createCursorSurface(for _: RawSeatID) throws -> CursorManagerSurface {
@@ -70,17 +70,17 @@ final class LiveCursorManagerBackend: CursorManagerBackend {
         )
     }
 
-    private func cursorTheme() throws -> CursorTheme {
-        if let theme {
+    private func cursorTheme(size: CursorSize) throws -> CursorTheme {
+        if let theme = themesBySize[size] {
             return theme
         }
 
         let loadedTheme = try CursorTheme(
             shm: connection.cursorSharedMemory(),
             name: configuration.themeName?.value,
-            size: configuration.size.rawValue
+            size: size.rawValue
         )
-        theme = loadedTheme
+        themesBySize[size] = loadedTheme
         return loadedTheme
     }
 }

@@ -57,6 +57,18 @@ final class SessionInputCoordinator {
         cursorManager.unregister(surfaceID: surfaceID)
     }
 
+    func updateCursorOutputScales(
+        surfaceID: RawObjectID,
+        focusedOutputs: [CursorOutputScale],
+        availableOutputs: [CursorOutputScale]
+    ) throws {
+        try cursorManager.updateOutputScales(
+            for: surfaceID,
+            focusedOutputs: focusedOutputs,
+            availableOutputs: availableOutputs
+        )
+    }
+
     func shutdown() {
         cursorManager.shutdown()
     }
