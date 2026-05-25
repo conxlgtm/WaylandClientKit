@@ -830,9 +830,10 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L53: `    public let presentationTime: ProtocolAvailability`
 - L56: `    public let fractionalScale: ProtocolAvailability`
 - L59: `    public let cursorShape: ProtocolAvailability`
-- L62: `    public let textInput: ProtocolAvailability`
-- L65: `    public let linuxDmabuf: ProtocolAvailability`
-- L67: `    public init(`
+- L62: `    public let xdgActivation: ProtocolAvailability`
+- L65: `    public let textInput: ProtocolAvailability`
+- L68: `    public let linuxDmabuf: ProtocolAvailability`
+- L70: `    public init(`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+DataTransfer.swift`
 

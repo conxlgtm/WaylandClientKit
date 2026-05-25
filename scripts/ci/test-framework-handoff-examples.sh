@@ -12,6 +12,7 @@ TARGETS=(
     PresentationFeedbackAnimation
     SerialActionsProbe
     TwoWindowOrderStress
+    XDGActivationSmoke
     FrameworkHostSmoke
     GPUPreviewSmokeClient
 )
