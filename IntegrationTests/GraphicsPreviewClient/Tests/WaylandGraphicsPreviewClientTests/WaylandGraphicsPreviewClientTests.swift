@@ -52,7 +52,8 @@ struct WaylandGraphicsPreviewClientTests {
                     initialHeight: 16
                 ),
                 graphicsConfiguration: WaylandGraphicsConfiguration(
-                    fallbackPolicy: .forceSoftware
+                    fallbackPolicy: .forceSoftware,
+                    backingPreference: .software
                 )
             )
             _ = backing.window
@@ -73,6 +74,7 @@ struct WaylandGraphicsPreviewClientTests {
     func managedPreviewSubmissionTypesCompileForExternalClients() throws {
         let configuration = WaylandGraphicsConfiguration(
             fallbackPolicy: .preferGPUFallbackToSoftware,
+            backingPreference: .managedGPU,
             synchronizationPolicy: .preferExplicit,
             pacingPolicy: .preferFIFO,
             metadataPolicy: .preferAvailable,
@@ -97,35 +99,27 @@ struct WaylandGraphicsPreviewClientTests {
             description: "external client diagnostic"
         )
         let result = WaylandGraphicsFrameResult(
-            runtimePath: .projected(
-                capabilities: WaylandGraphicsSurfaceCapabilities(
-                    capabilities: WaylandCapabilities(
-                        clipboard: .unavailable,
-                        dragAndDrop: .unavailable,
-                        dragActionNegotiation: .unavailable,
-                        primarySelection: .unavailable,
-                        xdgDecoration: .unavailable,
-                        xdgOutput: .unavailable,
-                        viewporter: .unavailable,
-                        presentationTime: .unavailable,
-                        fractionalScale: .unavailable,
-                        cursorShape: .unavailable,
-                        textInput: .unavailable,
-                        linuxDmabuf: .unavailable
-                    )
-                ),
-                policy: .forceSoftware
-            ),
+            runtimePath: externalClientSoftwareRuntimePath(),
             operation: .show,
-            size: try PositivePixelSize(width: 1, height: 1)
+            size: try PositivePixelSize(width: 1, height: 1),
+            metadata: metadata,
+            presentationFeedbackRequested: true,
+            synchronizationPolicy: .preferExplicit,
+            pacingPolicy: .preferFIFO
         )
 
+        #expect(configuration.backingPreference == .managedGPU)
         #expect(configuration.synchronizationPolicy == .preferExplicit)
         #expect(configuration.presentationFeedbackPolicy == .requestWhenAvailable)
         #expect(metadata.contentType == .video)
         #expect(metadata.damage == .fullFrame)
         #expect(frame == expectedFrame)
         #expect(result.operation == .show)
+        #expect(result.backing == .fallback(.forcedSoftware))
+        #expect(result.metadata == metadata)
+        #expect(result.presentationFeedbackRequested)
+        #expect(result.synchronizationPolicy == .preferExplicit)
+        #expect(result.pacingPolicy == .preferFIFO)
         #expect(
             WaylandGraphicsError.submissionFailed(submissionFailure)
                 == .submissionFailed(submissionFailure))
@@ -152,4 +146,26 @@ struct WaylandGraphicsPreviewClientTests {
 
         _ = submitSoftwareFrame
     }
+}
+
+private func externalClientSoftwareRuntimePath() -> WaylandGraphicsRuntimePath {
+    WaylandGraphicsRuntimePath.projected(
+        capabilities: WaylandGraphicsSurfaceCapabilities(
+            capabilities: WaylandCapabilities(
+                clipboard: .unavailable,
+                dragAndDrop: .unavailable,
+                dragActionNegotiation: .unavailable,
+                primarySelection: .unavailable,
+                xdgDecoration: .unavailable,
+                xdgOutput: .unavailable,
+                viewporter: .unavailable,
+                presentationTime: .unavailable,
+                fractionalScale: .unavailable,
+                cursorShape: .unavailable,
+                textInput: .unavailable,
+                linuxDmabuf: .unavailable
+            )
+        ),
+        policy: .forceSoftware
+    )
 }

@@ -20,6 +20,7 @@ make check
 ./scripts/dev/swift.sh build --disable-index-store -c release
 ./scripts/dev/swift.sh build --disable-index-store -c release --target SwiftWaylandDemo
 ./scripts/dev/swift.sh build --disable-index-store -c release --target GPUPreviewSmokeClient
+./scripts/dev/swift.sh build --disable-index-store -c release --target GraphicsPreviewManagedGPUClear
 ./scripts/dev/swift.sh build --disable-index-store -c release --product swift-wayland-smoke
 ./scripts/ci/test-framework-handoff-examples.sh
 make test-release
@@ -92,8 +93,9 @@ promote graphics preview readiness unless
 headless Weston, one wlroots compositor such as Sway, and one desktop
 compositor such as Mutter or KWin when available. Each row should include the
 pasteable `SwiftWayland GPU Preview Runtime Path` block from
-`make gpu-preview-wayland`, exact missing optional interface names, and any
-advertised-but-broken optional path failures.
+`make gpu-preview-wayland`, the `GraphicsPreviewManagedGPUClear` result when
+available, exact missing optional interface names, and any advertised-but-broken
+optional path failures.
 
 `make swiftbuild-smoke` is informational. Native SwiftPM remains the supported
 build system; the Swift Build preview can report `unsupported`,
@@ -112,6 +114,7 @@ Under a real Wayland session:
 ./scripts/smoke/smoke-wayland.sh
 ./scripts/smoke/integration-wayland.sh
 make gpu-preview-wayland
+./scripts/dev/swift.sh run GraphicsPreviewManagedGPUClear
 ./scripts/dev/swift.sh run SwiftWaylandDemo
 ```
 
@@ -125,7 +128,7 @@ Record results in [compositor-matrix.md](compositor-matrix.md).
 2. Confirm Swift 6.3.2 is active.
 3. Confirm dynamic glibc Linux bootstrap dependencies are installed or CI uses equivalent packages.
 4. Run `make check`.
-5. Run optimized builds for the package, demo, GPU preview smoke client, and smoke executable.
+5. Run optimized builds for the package, demo, GPU preview clients, and smoke executable.
 6. Run `./scripts/smoke/smoke-wayland.sh` under a Wayland session.
 7. Run `./scripts/smoke/integration-wayland.sh` under a Wayland session.
 8. Run `make gpu-preview-wayland` under a Wayland session.

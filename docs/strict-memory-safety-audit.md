@@ -461,8 +461,10 @@ Audit invariant:
 Tests:
 
 - `GPUDmabufBufferImporterTests` covers import descriptor validation, plane
-  export transfer, terminal-state events, and import request lifecycle.
-- `GPUWindowPresenterStateTests` covers install, lease, submit, release, and
+  export transfer, compositor import failure, destroy-before-late-callback
+  behavior, terminal-state events, and import request lifecycle.
+- `GPUWindowPresenterStateTests` covers install, lease, submit, release,
+  committed-untracked release/reuse, failed runtime-path projection, and
   release-failure state transitions.
 - `WaylandGraphicsPreviewAPITests` and
   `IntegrationTests/GraphicsPreviewClient` cover the public preview value
