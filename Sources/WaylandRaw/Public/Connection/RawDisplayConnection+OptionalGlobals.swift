@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import CWaylandProtocols
 
 extension RawDisplayConnection {
@@ -70,9 +72,11 @@ extension RawDisplayConnection {
                                                             contentTypeManager:
                                                                 metadataGlobals.contentTypeManager,
                                                             alphaModifierManager:
-                                                                metadataGlobals.alphaModifierManager,
+                                                                metadataGlobals
+                                                                .alphaModifierManager,
                                                             tearingControlManager:
-                                                                metadataGlobals.tearingControlManager,
+                                                                metadataGlobals
+                                                                .tearingControlManager,
                                                             colorRepresentationManager:
                                                                 metadataGlobals
                                                                 .colorRepresentationManager,

@@ -92,7 +92,10 @@ enum SerialActionsProbe {
             switch event.kind {
             case .pointer(.entered(let location, let serial)):
                 await state.recordPointer(location)
-                log("pointer entered seat=\(event.seatID) serial=\(serial) location=\(locationDescription(location))")
+                log(
+                    "pointer entered seat=\(event.seatID) serial=\(serial) "
+                        + "location=\(locationDescription(location))"
+                )
                 try await window.requestRedraw()
             case .pointer(.moved(let location, _)):
                 await state.recordPointer(location)

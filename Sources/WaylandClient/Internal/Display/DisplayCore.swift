@@ -2,6 +2,7 @@ import WaylandRaw
 
 @safe
 final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
+    // swiftlint:disable:previous type_body_length
     let eventHub: DisplayEventHub
     private var lifecycle: DisplayCoreLifecycle
     private var isDiscardingSurfaceGraph = false
@@ -241,6 +242,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         )
     }
 
+    // swiftlint:disable:next large_tuple
     package func surfaceLifecycleCallbacksForTesting(windowID: WindowID) -> (
         closeRequested: () -> Void,
         closed: () -> Void,

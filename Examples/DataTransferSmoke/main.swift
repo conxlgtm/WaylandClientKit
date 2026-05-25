@@ -377,8 +377,11 @@ enum DataTransferSmoke {
         ]
     }
 
-    nonisolated private static func preferredMIMEType(from mimeTypes: [MIMEType]) -> MIMEType? {
-        for candidate in [MIMEType.plainTextUTF8, .plainText, .uriList] where mimeTypes.contains(candidate) {
+    nonisolated private static func preferredMIMEType(
+        from mimeTypes: [MIMEType]
+    ) -> MIMEType? {
+        for candidate in [MIMEType.plainTextUTF8, .plainText, .uriList]
+        where mimeTypes.contains(candidate) {
             return candidate
         }
         return nil

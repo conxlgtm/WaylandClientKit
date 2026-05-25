@@ -150,7 +150,10 @@ enum ClientSideResizeChrome {
                 )
                 do {
                     let results = try await display.setPointerCursor(.defaultArrow)
-                    log("cursor window=\(windowID) edge=none cursor=left_ptr results=\(cursorResultsDescription(results))")
+                    log(
+                        "cursor window=\(windowID) edge=none cursor=left_ptr "
+                            + "results=\(cursorResultsDescription(results))"
+                    )
                 } catch {
                     log("cursor failed window=\(windowID) edge=none cursor=left_ptr error=\(error)")
                 }
@@ -258,12 +261,16 @@ enum ClientSideResizeChrome {
         cursor.name ?? "hidden"
     }
 
-    nonisolated private static func cursorResultsDescription(_ results: [CursorRequestResult]) -> String {
+    nonisolated private static func cursorResultsDescription(
+        _ results: [CursorRequestResult]
+    ) -> String {
         if results.isEmpty { return "none" }
         return results.map(cursorResultDescription).joined(separator: ",")
     }
 
-    nonisolated private static func cursorResultDescription(_ result: CursorRequestResult) -> String {
+    nonisolated private static func cursorResultDescription(
+        _ result: CursorRequestResult
+    ) -> String {
         switch result {
         case .set(let seatID, let serial, let cursor):
             return "set(seat=\(seatID),serial=\(serial),cursor=\(cursorDescription(cursor)))"

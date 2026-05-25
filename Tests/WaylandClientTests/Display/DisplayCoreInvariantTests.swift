@@ -45,7 +45,11 @@ struct DisplayCoreInvariantTests {
         core.reportWindowFailure(.internalInvariant(invariant))
         core.closeWindow(windowID)
         core.closePopup(popupID)
-        _ = try? core.windowIsClosed(windowID)
+        do {
+            _ = try core.windowIsClosed(windowID)
+        } catch {
+            // The forced finalization path can discard the window before lookup.
+        }
         core.fail(error)
 
         try core.checkInvariantsForTesting()

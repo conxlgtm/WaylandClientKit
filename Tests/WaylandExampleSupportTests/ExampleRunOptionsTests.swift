@@ -5,13 +5,15 @@ import WaylandExampleSupport
 struct ExampleRunOptionsTests {
     @Test
     func doubleDashStopsOptionParsing() throws {
-        let options = try ExampleRunOptions.parse([
-            "--duration-seconds",
-            "5",
-            "--print-summary",
-            "--",
-            "--unknown-launcher-argument",
-        ][...])
+        let options = try ExampleRunOptions.parse(
+            [
+                "--duration-seconds",
+                "5",
+                "--print-summary",
+                "--",
+                "--unknown-launcher-argument",
+            ][...]
+        )
 
         #expect(options == ExampleRunOptions(durationSeconds: 5, printSummary: true))
     }
