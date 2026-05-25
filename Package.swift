@@ -312,6 +312,11 @@ let package = Package(
             dependencies: ["WaylandSmokeSupport"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
+        .testTarget(
+            name: "WaylandExampleSupportTests",
+            dependencies: ["WaylandExampleSupport"],
+            swiftSettings: strictMemorySafetySwiftSettings
+        ),
     ],
     cLanguageStandard: .c17
 )

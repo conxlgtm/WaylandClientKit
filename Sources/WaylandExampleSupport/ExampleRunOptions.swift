@@ -44,7 +44,7 @@ public struct ExampleRunOptions: Equatable, Sendable {
         var printSummary = false
         var index = arguments.startIndex
 
-        while index < arguments.endIndex {
+        parseLoop: while index < arguments.endIndex {
             let argument = arguments[index]
             switch argument {
             case "--duration-seconds":
@@ -63,7 +63,7 @@ public struct ExampleRunOptions: Equatable, Sendable {
             case "--print-summary":
                 printSummary = true
             case "--":
-                break
+                break parseLoop
             default:
                 throw ExampleRunOptionError.unknownArgument(argument)
             }
