@@ -90,12 +90,16 @@ public presets and update the public API baseline. If not, keep
 Each row should come from the pasteable GPU preview runtime-path report plus
 the raw protocol facts collected under the same compositor session.
 
-| Compositor | Display | Globals | dmabuf | GBM | EGL | explicit sync | FIFO | commit timing | metadata | presentation feedback | backing | failure/fallback |
-| ---------- | ------- | ------- | ------ | --- | --- | ------------- | ---- | ------------- | -------- | --------------------- | ------- | ---------------- |
-| Weston headless | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending |
-| GNOME / Mutter | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending |
-| KDE / KWin | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending |
-| Sway / wlroots | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending |
+Use these status terms for GPU path fields: `advertised`, `configured`,
+`active`, `failed(<reason>)`, `fallback(<reason>)`, and `not tested`. Keep
+registry advertisement separate from resource setup and frame submission.
+
+| Compositor | Display | Globals | dmabuf | surface feedback | GBM | EGL | explicit sync | FIFO | commit timing | metadata | presentation feedback | submitted frame | release/reuse | backing | failure/fallback |
+| ---------- | ------- | ------- | ------ | ---------------- | --- | --- | ------------- | ---- | ------------- | -------- | --------------------- | --------------- | ------------- | ------- | ---------------- |
+| Weston headless | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested |
+| GNOME / Mutter | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested |
+| KDE / KWin | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested |
+| Sway / wlroots | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested |
 
 Record graphics facts in this form:
 
@@ -103,15 +107,31 @@ Record graphics facts in this form:
 SwiftWayland GPU Preview Runtime Path
 display: <WAYLAND_DISPLAY>
 compositor: <name/version or unknown>
-window: <created/submitted/fallback>
-dmabuf: <advertised vN/unavailable>, runtime <status>
-gbm: <status>
-egl: <status>
-explicit-sync: <advertised vN/unavailable>, runtime <status>
-pacing: fifo <status>, commit-timing <status>
-metadata: content-type <status>, alpha-modifier <status>, tearing-control <status>, color-representation <status>, color-management <status>
-presentation: <status>
+window creation: <success/failure>
+dmabuf advertised version: <advertised vN/unavailable/pending>
+surface dmabuf feedback: <usable/not configured/fallback/failed>
+selected device: <selected/not selected/fallback/failed>
+selected format/modifier: <selected/not selected/fallback/failed>
+gbm device: <status>
+gbm buffer allocation: <status>
+egl display/context: <status>
+egl clear/render: <status>
+dmabuf import: <status>
+explicit sync: <advertised vN/unavailable>, runtime <status>
+fifo: <status>
+commit timing: <status>
+metadata content type: <status>
+metadata alpha modifier: <status>
+metadata tearing control: <status>
+metadata color representation: <status>
+metadata color management: <status>
+presentation feedback: <status>
+submitted frame: <success/failure>
+frame size: <pixels>
+release/reuse: <status>
 backing: <gpu/software fallback(reason)/unavailable(reason)>
+fallback reason: <reason/none>
+failure: <error/none>
 ```
 
 The `Globals` column should include exact interface names for missing optional
