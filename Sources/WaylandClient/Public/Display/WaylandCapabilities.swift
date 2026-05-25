@@ -61,6 +61,12 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Desktop activation token support through `xdg_activation_v1`.
     public let xdgActivation: ProtocolAvailability
 
+    /// Relative pointer motion support through `zwp_relative_pointer_manager_v1`.
+    public let relativePointer: ProtocolAvailability
+
+    /// Pointer lock/confinement support through `zwp_pointer_constraints_v1`.
+    public let pointerConstraints: ProtocolAvailability
+
     /// Compositor/IME text entry support through `zwp_text_input_manager_v3`.
     public let textInput: ProtocolAvailability
 
@@ -79,6 +85,8 @@ public struct WaylandCapabilities: Equatable, Sendable {
         fractionalScale: ProtocolAvailability,
         cursorShape: ProtocolAvailability,
         xdgActivation: ProtocolAvailability,
+        relativePointer: ProtocolAvailability,
+        pointerConstraints: ProtocolAvailability,
         textInput: ProtocolAvailability,
         linuxDmabuf: ProtocolAvailability
     ) {
@@ -93,8 +101,44 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.fractionalScale = fractionalScale
         self.cursorShape = cursorShape
         self.xdgActivation = xdgActivation
+        self.relativePointer = relativePointer
+        self.pointerConstraints = pointerConstraints
         self.textInput = textInput
         self.linuxDmabuf = linuxDmabuf
+    }
+
+    public init(
+        clipboard: ProtocolAvailability,
+        dragAndDrop: ProtocolAvailability,
+        dragActionNegotiation: ProtocolAvailability,
+        primarySelection: ProtocolAvailability,
+        xdgDecoration: ProtocolAvailability,
+        xdgOutput: ProtocolAvailability,
+        viewporter: ProtocolAvailability,
+        presentationTime: ProtocolAvailability,
+        fractionalScale: ProtocolAvailability,
+        cursorShape: ProtocolAvailability,
+        xdgActivation: ProtocolAvailability,
+        textInput: ProtocolAvailability,
+        linuxDmabuf: ProtocolAvailability
+    ) {
+        self.init(
+            clipboard: clipboard,
+            dragAndDrop: dragAndDrop,
+            dragActionNegotiation: dragActionNegotiation,
+            primarySelection: primarySelection,
+            xdgDecoration: xdgDecoration,
+            xdgOutput: xdgOutput,
+            viewporter: viewporter,
+            presentationTime: presentationTime,
+            fractionalScale: fractionalScale,
+            cursorShape: cursorShape,
+            xdgActivation: xdgActivation,
+            relativePointer: .unavailable,
+            pointerConstraints: .unavailable,
+            textInput: textInput,
+            linuxDmabuf: linuxDmabuf
+        )
     }
 
     public init(
@@ -123,6 +167,8 @@ public struct WaylandCapabilities: Equatable, Sendable {
             fractionalScale: fractionalScale,
             cursorShape: cursorShape,
             xdgActivation: .unavailable,
+            relativePointer: .unavailable,
+            pointerConstraints: .unavailable,
             textInput: textInput,
             linuxDmabuf: linuxDmabuf
         )
@@ -190,6 +236,14 @@ extension WaylandCapabilities {
             xdgActivation: ProtocolAvailability(
                 protocols.bestAdvertisedProtocol(named: "xdg_activation_v1"),
                 supportedByClient: SupportedVersions.xdgActivationV1
+            ),
+            relativePointer: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "zwp_relative_pointer_manager_v1"),
+                supportedByClient: SupportedVersions.zwpRelativePointerManagerV1
+            ),
+            pointerConstraints: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "zwp_pointer_constraints_v1"),
+                supportedByClient: SupportedVersions.zwpPointerConstraintsV1
             ),
             textInput: ProtocolAvailability(
                 protocols.bestAdvertisedProtocol(named: "zwp_text_input_manager_v3"),

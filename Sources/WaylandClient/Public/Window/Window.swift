@@ -97,6 +97,38 @@ public struct Window: Sendable, Hashable {
         try await display.activate(window: self, token: token)
     }
 
+    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {
+        try await display.relativePointer(seatID: seatID)
+    }
+
+    public func lockPointer(
+        seatID: SeatID,
+        cursorHint: PointerLocation? = nil,
+        region: PointerConstraintRegion? = nil,
+        lifetime: PointerConstraintLifetime = .oneShot
+    ) async throws -> PointerConstraint {
+        try await display.lockPointer(
+            window: self,
+            seatID: seatID,
+            cursorHint: cursorHint,
+            region: region,
+            lifetime: lifetime
+        )
+    }
+
+    public func confinePointer(
+        seatID: SeatID,
+        region: PointerConstraintRegion? = nil,
+        lifetime: PointerConstraintLifetime = .oneShot
+    ) async throws -> PointerConstraint {
+        try await display.confinePointer(
+            window: self,
+            seatID: seatID,
+            region: region,
+            lifetime: lifetime
+        )
+    }
+
     public func setTitle(_ title: WaylandString) async throws {
         try await display.setWindowTitle(id, title)
     }
