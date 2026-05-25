@@ -93,8 +93,8 @@ private struct ManagedGPUClearReportFormatter {
 
     private func lines() -> [String] {
         guard let capabilities = report.capabilities,
-              let runtimePath = report.runtimePath,
-              let frameResult = report.frameResult
+            let runtimePath = report.runtimePath,
+            let frameResult = report.frameResult
         else {
             return [
                 "SwiftWayland Managed GPU Clear",
