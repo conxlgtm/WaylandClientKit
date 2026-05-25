@@ -12,10 +12,9 @@ struct CursorScalePolicyTests {
             availableOutputs: [outputScale(id: 1, scale: 2)]
         )
 
-        let size = try CursorScalePolicy.fixed(CursorSize(unchecked: 48))
-            .cursorSize(in: context)
+        let size = try CursorScalePolicy.fixed.cursorSize(in: context)
 
-        #expect(size == CursorSize(unchecked: 48))
+        #expect(size == CursorSize(unchecked: 24))
     }
 
     @Test

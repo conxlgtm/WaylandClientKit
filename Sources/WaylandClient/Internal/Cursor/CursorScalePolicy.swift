@@ -8,6 +8,11 @@ package struct CursorOutputScale: Equatable, Sendable {
         outputID = cursorOutputID
         scale = cursorOutputScale
     }
+
+    package init(_ snapshot: RawOutputSnapshot) {
+        outputID = OutputID(snapshot.id)
+        scale = PositiveInt32(unchecked: snapshot.scale)
+    }
 }
 
 package struct CursorScaleContext: Equatable, Sendable {
@@ -33,7 +38,7 @@ package struct CursorScaleContext: Equatable, Sendable {
 }
 
 package enum CursorScalePolicy: Equatable, Sendable {
-    case fixed(CursorSize)
+    case fixed
     case matchFocusedSurface
     case maximumOutputScale
 
@@ -41,8 +46,8 @@ package enum CursorScalePolicy: Equatable, Sendable {
         in context: CursorScaleContext
     ) throws(CursorScalePolicyError) -> CursorSize {
         switch self {
-        case .fixed(let size):
-            size
+        case .fixed:
+            context.baseSize
         case .matchFocusedSurface:
             try scaledSize(
                 baseSize: context.baseSize,

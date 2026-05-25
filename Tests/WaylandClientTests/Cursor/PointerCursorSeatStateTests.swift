@@ -135,10 +135,14 @@ struct PointerCursorSeatStateTests {
 
         let state = DesiredPointerCursorState(
             cursor: .hidden,
-            resolved: ResolvedPointerCursorImage(cursor: .text, image: image)
+            resolved: ResolvedPointerCursorImage(
+                cursor: .text,
+                size: .default,
+                image: image
+            )
         )
 
-        #expect(state.cursor == .hidden)
+        #expect(state.cursor == PointerCursor.hidden)
         #expect(state.resolvedImage == nil)
     }
 

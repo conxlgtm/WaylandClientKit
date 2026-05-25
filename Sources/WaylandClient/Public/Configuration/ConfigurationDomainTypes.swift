@@ -47,7 +47,7 @@ public struct CursorThemeName: Equatable, Sendable, CustomStringConvertible {
     }
 }
 
-public struct CursorSize: Equatable, Comparable, Sendable, CustomStringConvertible {
+public struct CursorSize: Equatable, Hashable, Comparable, Sendable, CustomStringConvertible {
     public let rawValue: Int32
 
     public static let `default` = CursorSize(unchecked: 24)

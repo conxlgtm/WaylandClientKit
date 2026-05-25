@@ -315,6 +315,20 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         return try inputCoordinator.setPointerCursor(cursor)
     }
 
+    package func updateCursorOutputScalesOnOwnerThread(
+        surfaceID: RawObjectID,
+        outputIDs: [OutputID]
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        guard let outputRegistry = connection.boundGlobals?.outputRegistry else { return }
+
+        try inputCoordinator.updateCursorOutputScales(
+            surfaceID: surfaceID,
+            focusedOutputs: outputScales(for: outputIDs, outputRegistry: outputRegistry),
+            availableOutputs: outputRegistry.snapshots.map(CursorOutputScale.init)
+        )
+    }
+
     package func drainInputEventsOnOwnerThread() -> [InputEvent] {
         connection.preconditionIsOwnerThread()
         processPendingSessionInputEvents()
@@ -390,6 +404,17 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         ) { [textInputManager, pointerCaptureManager] seatID in
             textInputManager.removeSeat(seatID)
             pointerCaptureManager.removeSeat(seatID)
+        }
+    }
+
+    private func outputScales(
+        for outputIDs: [OutputID],
+        outputRegistry: OutputRegistry
+    ) -> [CursorOutputScale] {
+        outputIDs.compactMap { outputID in
+            outputRegistry.output(for: RawOutputID(outputID))
+                .map(\.snapshot)
+                .map(CursorOutputScale.init)
         }
     }
 }

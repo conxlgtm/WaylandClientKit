@@ -53,7 +53,7 @@ extension CursorManager {
             return try applyAutomaticShapeCursor(to: seatID, serial: explicitSerial, shape: shape)
         }
 
-        let resolved = try automaticResolvedCursor()
+        let resolved = try automaticResolvedCursor(for: seatID)
         let surface = try automaticCursorSurface(for: seatID)
 
         surface.attach(resolved.image)
@@ -126,9 +126,11 @@ extension CursorManager {
         }
     }
 
-    private func automaticResolvedCursor() throws -> ResolvedPointerCursorImage {
+    private func automaticResolvedCursor(for seatID: RawSeatID) throws
+        -> ResolvedPointerCursorImage
+    {
         do {
-            return try cachedResolvedDesiredCursor()
+            return try cachedResolvedDesiredCursor(size: cursorSize(for: seatID))
         } catch CursorError.missingCursor(let name) {
             throw CursorError.missingCursor(name)
         } catch {

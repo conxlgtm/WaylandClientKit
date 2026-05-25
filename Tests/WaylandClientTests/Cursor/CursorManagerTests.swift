@@ -46,6 +46,74 @@ struct CursorManagerTests {
     }
 
     @Test
+    func matchFocusedOutputPolicyUsesFocusedSurfaceScale() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(
+            backend: backend,
+            configuration: CursorConfiguration(scalePolicy: .matchFocusedOutput)
+        )
+
+        manager.register(surfaceID: 100)
+        try manager.updateOutputScales(
+            for: 100,
+            focusedOutputs: [cursorOutputScale(id: 1, scale: 2)],
+            availableOutputs: [
+                cursorOutputScale(id: 1, scale: 2),
+                cursorOutputScale(id: 2, scale: 3),
+            ]
+        )
+        manager.observe(rawPointerEnter(sequence: 1, seatID: RawSeatID(rawValue: 1), surfaceID: 100))
+
+        #expect(backend.resolvedCursorSizes == [CursorSize(unchecked: 48)])
+    }
+
+    @Test
+    func cursorOutputScaleChangeReappliesFocusedThemeCursor() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(
+            backend: backend,
+            configuration: CursorConfiguration(scalePolicy: .matchFocusedOutput)
+        )
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: RawSeatID(rawValue: 1), surfaceID: 100))
+
+        try manager.updateOutputScales(
+            for: 100,
+            focusedOutputs: [cursorOutputScale(id: 1, scale: 3)],
+            availableOutputs: [cursorOutputScale(id: 1, scale: 3)]
+        )
+
+        #expect(backend.resolvedCursorSizes == [
+            CursorSize(unchecked: 24),
+            CursorSize(unchecked: 72),
+        ])
+        #expect(backend.setCursorRequests.count == 2)
+    }
+
+    @Test
+    func maximumOutputScalePolicyUsesLargestKnownOutput() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(
+            backend: backend,
+            configuration: CursorConfiguration(scalePolicy: .maximumOutputScale)
+        )
+
+        manager.register(surfaceID: 100)
+        try manager.updateOutputScales(
+            for: 100,
+            focusedOutputs: [cursorOutputScale(id: 1, scale: 1)],
+            availableOutputs: [
+                cursorOutputScale(id: 1, scale: 1),
+                cursorOutputScale(id: 2, scale: 4),
+            ]
+        )
+        manager.observe(rawPointerEnter(sequence: 1, seatID: RawSeatID(rawValue: 1), surfaceID: 100))
+
+        #expect(backend.resolvedCursorSizes == [CursorSize(unchecked: 96)])
+    }
+
+    @Test
     func pointerEnterForUnknownSurfaceDoesNotSetCursor() throws {
         let backend = try RecordingCursorBackend()
         let manager = try CursorManager(backend: backend, configuration: .init())
@@ -373,6 +441,7 @@ struct SetCursorShapeRequest: Equatable {
 final class RecordingCursorBackend: CursorManagerBackend {
     var cursorShapeSupported = false
     var resolvedCursorNames: [String] = []
+    var resolvedCursorSizes: [CursorSize] = []
     var createdSurfaceSeatIDs: [RawSeatID] = []
     var cursorSurfaceRequestSeatIDs: [RawSeatID] = []
     var createdSurfaces: [RecordingCursorSurface] = []
@@ -405,8 +474,9 @@ final class RecordingCursorBackend: CursorManagerBackend {
         cursorShapeSupported
     }
 
-    func cursorImage(named name: String) throws -> CursorImage {
+    func cursorImage(named name: String, size: CursorSize) throws -> CursorImage {
         resolvedCursorNames.append(name)
+        resolvedCursorSizes.append(size)
 
         if missingCursorNames.contains(name) {
             throw CursorError.missingCursor(name)
@@ -532,6 +602,13 @@ enum CursorSurfaceOperation: Equatable {
     case detach
     case commit
     case destroy
+}
+
+private func cursorOutputScale(id: UInt32, scale: Int32) throws -> CursorOutputScale {
+    try CursorOutputScale(
+        outputID: OutputID(rawValue: id),
+        scale: PositiveInt32(scale)
+    )
 }
 
 private func rawSeatRemoved(sequence: UInt64, seatID: RawSeatID) -> RawInputEvent {
