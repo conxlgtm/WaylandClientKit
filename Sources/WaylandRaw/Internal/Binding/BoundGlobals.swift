@@ -15,6 +15,8 @@ package enum SupportedVersions {
     package static let wpFractionalScaleManagerV1: RawVersion = 1
     package static let wpCursorShapeManagerV1: RawVersion = 2
     package static let xdgActivationV1: RawVersion = 1
+    package static let zwpRelativePointerManagerV1: RawVersion = 1
+    package static let zwpPointerConstraintsV1: RawVersion = 1
     package static let wpLinuxDrmSyncobjManagerV1: RawVersion = 1
     package static let wpFifoManagerV1: RawVersion = 1
     package static let wpCommitTimingManagerV1: RawVersion = 1
@@ -48,6 +50,8 @@ package struct OptionalGlobals {
     package let fractionalScaleManager: OptionalFractionalScaleManager
     package let cursorShapeManager: OptionalCursorShapeManager
     package let xdgActivation: OptionalXDGActivation
+    package let relativePointerManager: OptionalRelativePointerManager
+    package let pointerConstraints: OptionalPointerConstraints
     package let linuxDrmSyncobjManager: OptionalLinuxDrmSyncobjManager
     package let fifoManager: OptionalFifoManager
     package let commitTimingManager: OptionalCommitTimingManager
@@ -70,6 +74,9 @@ package struct OptionalGlobals {
             .missing,
         cursorShapeManager boundCursorShapeManager: OptionalCursorShapeManager = .missing,
         xdgActivation boundXDGActivation: OptionalXDGActivation = .missing,
+        relativePointerManager boundRelativePointerManager: OptionalRelativePointerManager =
+            .missing,
+        pointerConstraints boundPointerConstraints: OptionalPointerConstraints = .missing,
         linuxDrmSyncobjManager boundLinuxDrmSyncobjManager:
             OptionalLinuxDrmSyncobjManager = .missing,
         fifoManager boundFifoManager: OptionalFifoManager = .missing,
@@ -95,6 +102,8 @@ package struct OptionalGlobals {
         fractionalScaleManager = boundFractionalScaleManager
         cursorShapeManager = boundCursorShapeManager
         xdgActivation = boundXDGActivation
+        relativePointerManager = boundRelativePointerManager
+        pointerConstraints = boundPointerConstraints
         linuxDrmSyncobjManager = boundLinuxDrmSyncobjManager
         fifoManager = boundFifoManager
         commitTimingManager = boundCommitTimingManager
@@ -119,6 +128,8 @@ package struct OptionalGlobals {
         commitTimingManager.destroy()
         fifoManager.destroy()
         linuxDrmSyncobjManager.destroy()
+        pointerConstraints.destroy()
+        relativePointerManager.destroy()
         xdgActivation.destroy()
         textInputManager.destroy()
         primarySelectionDeviceManager.destroy()

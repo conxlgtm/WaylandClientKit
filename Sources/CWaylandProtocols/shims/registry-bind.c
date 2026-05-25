@@ -2,6 +2,8 @@
 #include "generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h"
 #include "generated/staging/cursor-shape/cursor-shape-v1-client-protocol.h"
 #include "generated/staging/xdg-activation/xdg-activation-v1-client-protocol.h"
+#include "generated/legacy-unstable/relative-pointer/relative-pointer-unstable-v1-client-protocol.h"
+#include "generated/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1-client-protocol.h"
 #include "generated/staging/linux-drm-syncobj/linux-drm-syncobj-v1-client-protocol.h"
 #include "generated/staging/fifo/fifo-v1-client-protocol.h"
 #include "generated/staging/commit-timing/commit-timing-v1-client-protocol.h"
@@ -95,6 +97,22 @@ struct xdg_activation_v1 *swl_registry_bind_xdg_activation_v1(
 {
     return (struct xdg_activation_v1 *)wl_registry_bind(
         registry, name, &xdg_activation_v1_interface, version);
+}
+
+struct zwp_relative_pointer_manager_v1 *
+swl_registry_bind_zwp_relative_pointer_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct zwp_relative_pointer_manager_v1 *)wl_registry_bind(
+        registry, name, &zwp_relative_pointer_manager_v1_interface, version);
+}
+
+struct zwp_pointer_constraints_v1 *
+swl_registry_bind_zwp_pointer_constraints_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct zwp_pointer_constraints_v1 *)wl_registry_bind(
+        registry, name, &zwp_pointer_constraints_v1_interface, version);
 }
 
 struct wp_linux_drm_syncobj_manager_v1 *

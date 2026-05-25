@@ -175,7 +175,60 @@ final class InputRouter {
                 target: target(forFocusedSurface: focusedPointerSurface(for: rawEvent.seatID)),
                 kind: .pointer(.axis(PointerAxisEvent(axis)))
             )
+        case .relativeMotion(let motion):
+            return routedEvent(
+                rawEvent,
+                target: target(forFocusedSurface: focusedPointerSurface(for: rawEvent.seatID)),
+                kind: .pointer(
+                    .relativeMotion(
+                        RelativePointerMotionEvent(
+                            time: WaylandTimestampMicroseconds(
+                                rawValue: motion.timestampMicroseconds
+                            ),
+                            delta: PointerDelta(
+                                dx: motion.dx.doubleValue,
+                                dy: motion.dy.doubleValue
+                            ),
+                            unacceleratedDelta: PointerDelta(
+                                dx: motion.dxUnaccelerated.doubleValue,
+                                dy: motion.dyUnaccelerated.doubleValue
+                            )
+                        )
+                    )
+                )
+            )
+        case .constraint(let constraint):
+            return routePointerConstraint(rawEvent, constraint)
         }
+    }
+
+    private func routePointerConstraint(
+        _ rawEvent: RawInputEvent,
+        _ constraint: RawPointerConstraintEvent
+    ) -> InputEvent {
+        let surfaceID: RawObjectID
+        let event: PointerConstraintEvent
+
+        switch constraint {
+        case .locked(let identity, let targetSurfaceID):
+            surfaceID = targetSurfaceID
+            event = .locked(PointerConstraintID(identity))
+        case .unlocked(let identity, let targetSurfaceID):
+            surfaceID = targetSurfaceID
+            event = .unlocked(PointerConstraintID(identity))
+        case .confined(let identity, let targetSurfaceID):
+            surfaceID = targetSurfaceID
+            event = .confined(PointerConstraintID(identity))
+        case .unconfined(let identity, let targetSurfaceID):
+            surfaceID = targetSurfaceID
+            event = .unconfined(PointerConstraintID(identity))
+        }
+
+        return routedEvent(
+            rawEvent,
+            target: target(for: surfaceID),
+            kind: .pointer(.constraint(event))
+        )
     }
 
     private func routeKeyboard(
