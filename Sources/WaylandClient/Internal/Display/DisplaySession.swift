@@ -10,6 +10,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     private let inputCoordinator: SessionInputCoordinator
     package let dataTransferGlobalProvider: any DataTransferGlobalProviding
     package let activationManager: ActivationManager
+    package let pointerCaptureManager: PointerCaptureManager
     package let dataTransferManager: DataTransferManager
     package let primarySelectionController: PrimarySelectionController
     package let textInputManager: TextInputManager
@@ -49,6 +50,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         self.inputCoordinator = inputCoordinator
         dataTransferGlobalProvider = rawConnection
         activationManager = ActivationManager(connection: rawConnection)
+        pointerCaptureManager = PointerCaptureManager(connection: rawConnection)
         dataTransferManager = DataTransferManager(
             connection: rawConnection,
             eventQueue: dataTransferEventQueue
@@ -80,6 +82,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         dataTransferManager.shutdown()
         textInputManager.shutdown()
         activationManager.shutdown()
+        pointerCaptureManager.shutdown()
         dataTransferSourceWriter.shutdown()
     }
 
@@ -249,6 +252,8 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         "wp_fractional_scale_manager_v1",
         "wp_cursor_shape_manager_v1",
         "xdg_activation_v1",
+        "zwp_relative_pointer_manager_v1",
+        "zwp_pointer_constraints_v1",
         "zwp_text_input_manager_v3",
         "zwp_linux_dmabuf_v1",
     ]
@@ -354,7 +359,8 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         let surfaceID = window.surfaceID
 
         inputCoordinator.registerWindow(windowID: windowID, surfaceID: surfaceID)
-        window.onClose = { [inputCoordinator] in
+        window.onClose = { [inputCoordinator, pointerCaptureManager] in
+            pointerCaptureManager.removeSurface(surfaceID)
             inputCoordinator.unregisterSurface(surfaceID)
         }
 
@@ -381,8 +387,9 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     private func processPendingSessionInputEvents() {
         inputCoordinator.processPendingSessionInputEvents(
             from: connection.drainInputEvents()
-        ) { [textInputManager] seatID in
+        ) { [textInputManager, pointerCaptureManager] seatID in
             textInputManager.removeSeat(seatID)
+            pointerCaptureManager.removeSeat(seatID)
         }
     }
 }
@@ -406,7 +413,8 @@ extension DisplaySession {
             parentSurfaceID: parentWindow.surfaceID,
             surfaceID: popupSurfaceID
         )
-        popup.onClose = { [inputCoordinator] in
+        popup.onClose = { [inputCoordinator, pointerCaptureManager] in
+            pointerCaptureManager.removeSurface(popupSurfaceID)
             inputCoordinator.unregisterSurface(popupSurfaceID)
         }
 
