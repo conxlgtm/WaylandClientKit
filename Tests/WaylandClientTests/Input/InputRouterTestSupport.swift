@@ -66,6 +66,48 @@ func rawPointerMotion(
     )
 }
 
+func rawRelativePointerMotion(
+    sequence: UInt64,
+    seatID: RawSeatID,
+    timestampMicroseconds: UInt64 = 4_294_967_298,
+    dxRaw: Int32 = 256,
+    dyRaw: Int32 = -512,
+    dxUnacceleratedRaw: Int32 = 128,
+    dyUnacceleratedRaw: Int32 = -256,
+    deviceID: RawInputDeviceID? = nil
+) -> RawInputEvent {
+    rawEvent(
+        sequence: sequence,
+        seatID: seatID,
+        kind: .pointer(
+            .relativeMotion(
+                RawRelativePointerMotion(
+                    timestampMicroseconds: timestampMicroseconds,
+                    dx: WaylandFixed(rawValue: dxRaw),
+                    dy: WaylandFixed(rawValue: dyRaw),
+                    dxUnaccelerated: WaylandFixed(rawValue: dxUnacceleratedRaw),
+                    dyUnaccelerated: WaylandFixed(rawValue: dyUnacceleratedRaw)
+                )
+            )
+        ),
+        deviceID: deviceID
+    )
+}
+
+func rawPointerConstraintEvent(
+    sequence: UInt64,
+    seatID: RawSeatID,
+    event: RawPointerConstraintEvent,
+    deviceID: RawInputDeviceID? = nil
+) -> RawInputEvent {
+    rawEvent(
+        sequence: sequence,
+        seatID: seatID,
+        kind: .pointer(.constraint(event)),
+        deviceID: deviceID
+    )
+}
+
 func rawPointerButton(
     sequence: UInt64,
     seatID: RawSeatID
