@@ -96,6 +96,37 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.textInput = textInput
         self.linuxDmabuf = linuxDmabuf
     }
+
+    public init(
+        clipboard: ProtocolAvailability,
+        dragAndDrop: ProtocolAvailability,
+        dragActionNegotiation: ProtocolAvailability,
+        primarySelection: ProtocolAvailability,
+        xdgDecoration: ProtocolAvailability,
+        xdgOutput: ProtocolAvailability,
+        viewporter: ProtocolAvailability,
+        presentationTime: ProtocolAvailability,
+        fractionalScale: ProtocolAvailability,
+        cursorShape: ProtocolAvailability,
+        textInput: ProtocolAvailability,
+        linuxDmabuf: ProtocolAvailability
+    ) {
+        self.init(
+            clipboard: clipboard,
+            dragAndDrop: dragAndDrop,
+            dragActionNegotiation: dragActionNegotiation,
+            primarySelection: primarySelection,
+            xdgDecoration: xdgDecoration,
+            xdgOutput: xdgOutput,
+            viewporter: viewporter,
+            presentationTime: presentationTime,
+            fractionalScale: fractionalScale,
+            cursorShape: cursorShape,
+            xdgActivation: .unavailable,
+            textInput: textInput,
+            linuxDmabuf: linuxDmabuf
+        )
+    }
 }
 
 struct AdvertisedWaylandProtocol: Equatable, Sendable {
@@ -104,6 +135,7 @@ struct AdvertisedWaylandProtocol: Equatable, Sendable {
 }
 
 extension WaylandCapabilities {
+    // swiftlint:disable:next function_body_length
     static func fromAdvertisedProtocols(
         _ protocols: [AdvertisedWaylandProtocol]
     ) -> WaylandCapabilities {
