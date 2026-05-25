@@ -60,7 +60,50 @@ struct DisplayEventHubPopupTests {
     }
 
     @Test
-    func fatalSurfaceGraphDiscardSuppressesSurfaceLifecycleCallbacks() async throws {
+    func fatalSurfaceGraphDiscardSuppressesWindowLifecycleCallbacks() async throws {
+        let hub = DisplayEventHub()
+        let core = DisplayCore(eventHub: hub)
+        let windowID = WindowID(rawValue: 3)
+        var iterator = hub.displayEvents().makeAsyncIterator()
+
+        let windowCallbacks = core.surfaceLifecycleCallbacksForTesting(windowID: windowID)
+
+        core.withSurfaceGraphDiscardForTesting {
+            windowCallbacks.closeRequested()
+            windowCallbacks.closed()
+            windowCallbacks.redrawRequested()
+            windowCallbacks.outputsChanged([OutputID(rawValue: 11)])
+        }
+
+        hub.finish()
+        await expectNoDisplayEvent(from: &iterator)
+    }
+
+    @Test
+    func fatalSurfaceGraphDiscardSuppressesPopupLifecycleCallbacks() async throws {
+        let hub = DisplayEventHub()
+        let core = DisplayCore(eventHub: hub)
+        let windowID = WindowID(rawValue: 3)
+        let popupID = PopupID(rawValue: 7)
+        var iterator = hub.displayEvents().makeAsyncIterator()
+
+        let popupCallbacks = core.popupEventCallbacks(
+            popupID: popupID,
+            parentWindowID: windowID
+        )
+
+        core.withSurfaceGraphDiscardForTesting {
+            popupCallbacks.onDismissed()
+            popupCallbacks.onClosed()
+            popupCallbacks.onRedrawRequested()
+        }
+
+        hub.finish()
+        await expectNoDisplayEvent(from: &iterator)
+    }
+
+    @Test
+    func fatalSurfaceGraphDiscardSuppressesWindowWithPopupCallbacks() async throws {
         let hub = DisplayEventHub()
         let core = DisplayCore(eventHub: hub)
         let windowID = WindowID(rawValue: 3)

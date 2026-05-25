@@ -195,7 +195,10 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     private func discardSurfaceGraphForFatalCleanup() {
         isDiscardingSurfaceGraph = true
         defer { isDiscardingSurfaceGraph = false }
-        surfaces.removeAll()
+
+        var discardedSurfaces = DisplaySurfaceStore<TopLevelWindow, PopupRoleSurface>()
+        swap(&surfaces, &discardedSurfaces)
+        discardedSurfaces.removeAll()
     }
 
     private func installEventCallbacks(for window: TopLevelWindow) {
