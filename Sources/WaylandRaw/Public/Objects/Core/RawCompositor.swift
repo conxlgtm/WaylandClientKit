@@ -33,11 +33,48 @@ package final class RawCompositor {
         return try RawSurface(pointer: surface, version: version, proxyAdoption: proxyAdoption)
     }
 
+    package func createRegion() throws -> RawRegion {
+        guard let region = unsafe swl_compositor_create_region(pointer) else {
+            throw RuntimeError.bindFailed("wl_region")
+        }
+
+        return RawRegion(pointer: region)
+    }
+
     func destroy() {
         guard !isDestroyed else { return }
 
         isDestroyed = true
         unsafe swl_compositor_destroy(pointer)
+    }
+
+    deinit {
+        destroy()
+    }
+}
+
+@safe
+package final class RawRegion {
+    private var proxy: RawOwnedProxy
+
+    @safe var pointer: OpaquePointer {
+        proxy.pointer
+    }
+
+    @safe
+    init(pointer regionPointer: OpaquePointer) {
+        proxy = RawOwnedProxy(
+            pointer: regionPointer,
+            destroy: unsafe swl_region_destroy
+        )
+    }
+
+    package func add(x: Int32, y: Int32, width: Int32, height: Int32) {
+        unsafe swl_region_add(pointer, x, y, width, height)
+    }
+
+    package func destroy() {
+        proxy.destroy()
     }
 
     deinit {
