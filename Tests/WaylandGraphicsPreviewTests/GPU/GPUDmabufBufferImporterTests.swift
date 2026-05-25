@@ -92,6 +92,43 @@ struct GPUDmabufBufferImporterTests {
     }
 
     @Test
+    func compositorFailureMovesImportToFailedTerminalState() {
+        var failures: [GPUDmabufBufferImportError] = []
+        let importRequest = GPUDmabufBufferImport(
+            testingInitialState: .createRequested
+        ) { _ in
+            Issue.record("failed compositor import should not create a buffer")
+        } onFailure: { error in
+            failures.append(error)
+        }
+
+        importRequest.testingHandle(.failed)
+
+        #expect(failures == [.compositorImportFailed])
+        #expect(importRequest.state == .failed)
+        #expect(importRequest.buffer == nil)
+    }
+
+    @Test
+    func destroyBeforeLateImportEventSuppressesCallbacks() {
+        var callbacks: [String] = []
+        let importRequest = GPUDmabufBufferImport(
+            testingInitialState: .createRequested
+        ) { _ in
+            callbacks.append("created")
+        } onFailure: { error in
+            callbacks.append("failure \(error)")
+        }
+
+        importRequest.destroy()
+        importRequest.testingHandle(.failed)
+
+        #expect(importRequest.state == .destroyed)
+        #expect(importRequest.buffer == nil)
+        #expect(callbacks.isEmpty)
+    }
+
+    @Test
     func importStateClassifiesEventAcceptanceAndTerminalStates() {
         #expect(GPUDmabufBufferImportState.createRequested.acceptsCompositorEvent)
         #expect(!GPUDmabufBufferImportState.createRequested.isTerminal)

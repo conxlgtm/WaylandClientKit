@@ -501,6 +501,43 @@ struct GPUWindowRuntimePathSnapshotTests {
 }
 
 @Suite
+struct GPUWindowRuntimePathFailureTests {
+    @Test
+    func runtimePathReportsGBMAllocationFailure() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(),
+            failure: .gbmAllocationFailed
+        )
+
+        #expect(snapshot.gbm == .failed(.gbmUnavailable))
+        #expect(snapshot.egl == .unavailable)
+    }
+
+    @Test
+    func runtimePathReportsNoRenderNodeFailure() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(),
+            failure: .noRenderNode
+        )
+
+        #expect(snapshot.gbm == .failed(.gbmUnavailable))
+        #expect(snapshot.dmabuf == .advertised)
+    }
+
+    @Test
+    func runtimePathReportsEGLFailureAfterDmabufDiscovery() {
+        let snapshot = GPURuntimePathSnapshot.afterFailure(
+            capabilities: capabilitySnapshot(),
+            failure: .eglUnavailable
+        )
+
+        #expect(snapshot.egl == .failed(.eglUnavailable))
+        #expect(snapshot.gbm == .unavailable)
+        #expect(snapshot.dmabuf == .advertised)
+    }
+}
+
+@Suite
 struct GPUWindowBackingPolicyTests {
     @Test
     func fallbackPolicyDistinguishesFallbackFromUnavailable() {
