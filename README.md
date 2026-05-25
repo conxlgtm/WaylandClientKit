@@ -395,6 +395,8 @@ Run framework-facing examples as needed:
 ./scripts/dev/swift.sh run DataTransferSmoke -- --auto-close --print-summary
 ./scripts/dev/swift.sh run PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
 ./scripts/dev/swift.sh run XDGActivationSmoke
+./scripts/dev/swift.sh run PointerCaptureSmoke
+./scripts/dev/swift.sh run CursorPolicySmoke
 ```
 
 `ClientSideResizeChrome` demonstrates edge hit testing, resize cursors, and
@@ -405,6 +407,10 @@ let CI and release checks prove the examples still build while manual sessions
 can collect compositor-specific behavior.
 `XDGActivationSmoke` prints desktop activation capability, requests a token
 when advertised, and sends an activate request for its managed window.
+`PointerCaptureSmoke` prints relative-pointer and pointer-constraint
+capabilities, then lets left, right, and middle clicks request lock, confine,
+and relative-motion paths. `CursorPolicySmoke` runs with focused-output cursor
+scale policy and logs named, hidden, and resize cursor requests.
 
 Use [Manual Testing](docs/manual-testing.md) as the checklist for compositor
 QA and record new live evidence in [Compositor Matrix](docs/compositor-matrix.md).

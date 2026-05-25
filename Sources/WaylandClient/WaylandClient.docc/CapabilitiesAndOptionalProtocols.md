@@ -12,3 +12,8 @@ Applications should branch on ``ProtocolAvailability`` and handle unavailable
 features with typed public errors. For example,
 ``WaylandCapabilities/xdgActivation`` can be available while a compositor still
 declines a later activation request according to focus policy.
+
+``WaylandCapabilities/relativePointer`` and
+``WaylandCapabilities/pointerConstraints`` report advanced pointer protocols.
+Applications should treat these as optional input features and keep a fallback
+for compositors that do not support pointer capture.
