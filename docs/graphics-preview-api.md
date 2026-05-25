@@ -34,6 +34,7 @@ The preview product exposes:
 - `WaylandGraphicsFallbackPolicy`
 - `WaylandGraphicsBackingDecision`
 - `WaylandGraphicsConfiguration`
+- `WaylandGraphicsBackingKind`
 - `WaylandGraphicsWindowBacking`
 - `WaylandGraphicsFrameLease`
 - `WaylandGraphicsSubmittedFrame`
@@ -76,9 +77,13 @@ matrix mature.
 ## Managed Submission Boundary
 
 `WaylandGraphicsConfiguration` describes fallback, synchronization, pacing,
-metadata, and presentation-feedback preferences. Defaults are conservative:
-software fallback is allowed, implicit synchronization is used, pacing is not
-requested, metadata is opt-in, and presentation feedback is not requested.
+metadata, presentation-feedback, and backing preferences. Defaults are
+conservative: managed GPU backing is requested, software fallback is allowed,
+implicit synchronization is used, pacing is not requested, metadata is opt-in,
+and presentation feedback is not requested. `backingPreference: .software`
+selects software backing directly. `backingPreference: .managedGPU` attempts
+the managed GPU path and then follows the fallback policy when that path is not
+available.
 `requireExplicit` fails with a typed unavailable reason until managed
 explicit-sync GPU submission exists, and pacing policies are rejected with
 `WaylandGraphicsError.unsupportedPacing` until managed pacing is implemented.
@@ -90,10 +95,11 @@ runtime path. `nextFrame()` returns a single-use `WaylandGraphicsFrameLease`.
 Callers submit a `WaylandGraphicsSubmittedFrame.clearColor`, submit arbitrary
 software drawing with `submitSoftware`, or cancel the lease. Submission returns
 `WaylandGraphicsFrameResult`, which reports runtime path, submitted operation,
-and buffer size. The result does not imply presentation feedback was observed;
-feedback still arrives through `WindowPresentationEvents`. The lease does not
-expose Wayland proxies, fds, SHM pools, GBM buffers, EGL surfaces, DRM nodes, or
-syncobj handles.
+buffer size, metadata, synchronization policy, pacing policy, backing status,
+and whether presentation feedback was requested. The result does not imply
+presentation feedback was observed; feedback still arrives through
+`WindowPresentationEvents`. The lease does not expose Wayland proxies, fds, SHM
+pools, GBM buffers, EGL surfaces, DRM nodes, or syncobj handles.
 
 `WaylandGraphicsFrameMetadata` currently exposes only content type and
 presentation hint values plus `WaylandGraphicsDamageRegion`. Content type and

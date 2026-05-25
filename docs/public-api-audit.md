@@ -195,6 +195,7 @@ Intentionally public:
 - `WaylandGraphicsMetadataStatus`
 - `WaylandGraphicsRuntimePath`
 - `WaylandGraphicsConfiguration`
+- `WaylandGraphicsBackingKind`
 - `WaylandGraphicsSynchronizationPolicy`
 - `WaylandGraphicsPacingPolicy`
 - `WaylandGraphicsMetadataPolicy`
@@ -220,6 +221,8 @@ Current preview contract:
 - The product reports renderer-neutral graphics capabilities, projected
   runtime-path facts, software fallback decisions, and required-GPU
   unavailability.
+- `WaylandGraphicsBackingKind` lets callers request software backing or
+  managed GPU backing without exposing raw buffer, device, EGL, or sync handles.
 - The managed preview submission path can create a window backing, lease a
   frame, submit a deterministic clear frame, submit arbitrary software drawing,
   return a typed frame result, and cancel or close resources without exposing
@@ -233,8 +236,8 @@ Current preview contract:
   currently reports a typed unsupported-damage error after geometry validation.
 - Presentation feedback policy can request feedback when available or require
   it before creating a managed backing. Feedback observations still arrive on
-  `WindowPresentationEvents`; frame submission results do not claim that feedback
-  was observed.
+  `WindowPresentationEvents`; frame submission results only report whether
+  feedback was requested for that submit, not whether it was later observed.
 - Downstream code that wants this boundary imports `WaylandGraphicsPreview`
   explicitly; importing `WaylandClient` alone does not opt into renderer-facing
   preview API.

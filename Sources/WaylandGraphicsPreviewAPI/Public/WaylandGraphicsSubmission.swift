@@ -2,6 +2,7 @@ import WaylandClient
 
 public struct WaylandGraphicsConfiguration: Equatable, Sendable {
     public var fallbackPolicy: WaylandGraphicsFallbackPolicy
+    public var backingPreference: WaylandGraphicsBackingKind
     public var synchronizationPolicy: WaylandGraphicsSynchronizationPolicy
     public var pacingPolicy: WaylandGraphicsPacingPolicy
     public var metadataPolicy: WaylandGraphicsMetadataPolicy
@@ -12,6 +13,7 @@ public struct WaylandGraphicsConfiguration: Equatable, Sendable {
     public init(
         fallbackPolicy backingFallbackPolicy: WaylandGraphicsFallbackPolicy =
             .preferGPUFallbackToSoftware,
+        backingPreference preferredBacking: WaylandGraphicsBackingKind = .managedGPU,
         synchronizationPolicy frameSynchronizationPolicy:
             WaylandGraphicsSynchronizationPolicy = .implicitOnly,
         pacingPolicy framePacingPolicy: WaylandGraphicsPacingPolicy = .none,
@@ -20,6 +22,7 @@ public struct WaylandGraphicsConfiguration: Equatable, Sendable {
             WaylandGraphicsPresentationFeedbackPolicy = .none
     ) {
         fallbackPolicy = backingFallbackPolicy
+        backingPreference = preferredBacking
         synchronizationPolicy = frameSynchronizationPolicy
         pacingPolicy = framePacingPolicy
         metadataPolicy = frameMetadataPolicy
@@ -63,6 +66,11 @@ extension WaylandGraphicsConfiguration {
             }
         }
     }
+}
+
+public enum WaylandGraphicsBackingKind: Equatable, Sendable {
+    case software
+    case managedGPU
 }
 
 public enum WaylandGraphicsSynchronizationPolicy: Equatable, Sendable {
@@ -165,6 +173,13 @@ public enum WaylandGraphicsSubmittedFrame: Equatable, Sendable {
     public static func clearColor(_ color: WaylandGraphicsXRGBColor) -> Self {
         .clearColor(WaylandGraphicsClearFrame(color: color))
     }
+
+    package var metadata: WaylandGraphicsFrameMetadata {
+        switch self {
+        case .clearColor(let clearFrame):
+            clearFrame.metadata
+        }
+    }
 }
 
 public enum WaylandGraphicsSubmissionOperation: Equatable, Sendable {
@@ -176,15 +191,31 @@ public struct WaylandGraphicsFrameResult: Equatable, Sendable {
     public let runtimePath: WaylandGraphicsRuntimePath
     public let operation: WaylandGraphicsSubmissionOperation
     public let size: PositivePixelSize
+    public let metadata: WaylandGraphicsFrameMetadata
+    public let presentationFeedbackRequested: Bool
+    public let synchronizationPolicy: WaylandGraphicsSynchronizationPolicy
+    public let pacingPolicy: WaylandGraphicsPacingPolicy
+    public var backing: WaylandGraphicsRuntimeStatus {
+        runtimePath.backing
+    }
 
     public init(
         runtimePath frameRuntimePath: WaylandGraphicsRuntimePath,
         operation frameOperation: WaylandGraphicsSubmissionOperation,
-        size frameSize: PositivePixelSize
+        size frameSize: PositivePixelSize,
+        metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+        presentationFeedbackRequested framePresentationFeedbackRequested: Bool = false,
+        synchronizationPolicy frameSynchronizationPolicy:
+            WaylandGraphicsSynchronizationPolicy = .implicitOnly,
+        pacingPolicy framePacingPolicy: WaylandGraphicsPacingPolicy = .none
     ) {
         runtimePath = frameRuntimePath
         operation = frameOperation
         size = frameSize
+        metadata = frameMetadata
+        presentationFeedbackRequested = framePresentationFeedbackRequested
+        synchronizationPolicy = frameSynchronizationPolicy
+        pacingPolicy = framePacingPolicy
     }
 }
 
