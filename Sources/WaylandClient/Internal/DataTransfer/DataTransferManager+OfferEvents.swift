@@ -2,6 +2,7 @@ import WaylandRaw
 
 extension DataTransferManager {
     func handleDataOfferEvent(_ event: RawDataOfferEvent, offerID: DataOfferID) {
+        guard !isShutdown else { return }
         do {
             switch event {
             case .offer(let rawMimeType):
