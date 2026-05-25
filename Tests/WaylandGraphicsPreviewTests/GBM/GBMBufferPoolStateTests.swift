@@ -132,4 +132,25 @@ struct GBMBufferPoolStateTests {
             try state.markReleased(slotID)
         }
     }
+
+    @Test
+    func committedUntrackedSlotReusesOnlyAfterRelease() throws {
+        var state = GBMBufferPoolState()
+        let slotID = try GBMBufferPoolSlotID(1)
+        try state.insertAvailableSlot(slotID)
+        let lease = try state.leaseNextAvailableSlot()
+
+        try state.markCommittedUntracked(lease)
+
+        #expect(try state.lifecycle(for: slotID) == .committedUntracked)
+        #expect(state.submittedSlotIDs == [slotID])
+        #expect(throws: GBMBufferPoolStateError.noAvailableSlots) {
+            _ = try state.leaseNextAvailableSlot()
+        }
+
+        try state.markReleased(slotID)
+
+        #expect(try state.lifecycle(for: slotID) == .available)
+        #expect(try state.leaseNextAvailableSlot() == slotID)
+    }
 }

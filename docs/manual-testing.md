@@ -44,6 +44,7 @@ Run bounded examples when a compositor session is available:
 ./scripts/dev/swift.sh run DataTransferSmoke -- --auto-close --print-summary
 ./scripts/dev/swift.sh run PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
 ./scripts/dev/swift.sh run GPUPreviewSmokeClient
+./scripts/dev/swift.sh run GraphicsPreviewManagedGPUClear
 ```
 
 ## Notes To Capture
