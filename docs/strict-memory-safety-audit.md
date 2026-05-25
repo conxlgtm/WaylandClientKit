@@ -131,6 +131,9 @@ Audit invariant:
 - `CursorManager.shutdown()` is an explicit display-session teardown step. It
   detaches and commits cursor surfaces before destroying them so theme-owned SHM
   buffers are no longer attached when cursor theme resources are released.
+- Fatal display cleanup swaps the live surface graph to an empty store before
+  releasing the discarded graph, and the discard flag suppresses window and popup
+  lifecycle callbacks while that release is in progress.
 - Drag icon pixels are validated against the declared XRGB8888 image size before
   SHM storage is filled.
 - Drag icon surfaces are destroyed on source cancellation, source completion,
@@ -145,6 +148,8 @@ Tests:
   scale and animation state models.
 - `DataTransferManagerDragSourceTests` covers drag icon preparation and source
   lifecycle cleanup.
+- `DisplayEventHubPopupTests` and `DisplayCoreInvariantTests` cover fatal
+  cleanup callback suppression and repeated close/fail cleanup calls.
 
 ## Scale Extension Raw Boundary
 
