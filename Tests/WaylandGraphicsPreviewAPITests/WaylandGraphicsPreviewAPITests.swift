@@ -18,6 +18,8 @@ struct WaylandGraphicsPreviewAPITests {
             fractionalScale: .unavailable,
             cursorShape: .unavailable,
             xdgActivation: .unavailable,
+            relativePointer: .unavailable,
+            pointerConstraints: .unavailable,
             textInput: .unavailable,
             linuxDmabuf: .available(version: 4)
         )
