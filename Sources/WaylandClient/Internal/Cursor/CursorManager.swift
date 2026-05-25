@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import WaylandCursor
 import WaylandRaw
 
@@ -10,6 +12,7 @@ package protocol CursorManagerSurface: AnyObject {
     var objectID: RawObjectID? { get }
 
     func attach(_ image: CursorImage)
+    func detach()
     func commit()
     func destroy()
 }
@@ -41,6 +44,7 @@ package final class CursorManager: RawInputEventObserving {
     package var desiredCursor: DesiredPointerCursorState
     private var registeredSurfaceIDs: Set<RawObjectID> = []
     private var cursorStateBySeat: [RawSeatID: PointerCursorSeatState] = [:]
+    private var isShutdown = false
 
     init(
         connection rawConnection: RawDisplayConnection,
@@ -67,9 +71,13 @@ package final class CursorManager: RawInputEventObserving {
 
     var pointerCursor: PointerCursor { desiredCursor.cursor }
 
-    func register(surfaceID: RawObjectID) { registeredSurfaceIDs.insert(surfaceID) }
+    func register(surfaceID: RawObjectID) {
+        guard !isShutdown else { return }
+        registeredSurfaceIDs.insert(surfaceID)
+    }
 
     func unregister(surfaceID: RawObjectID) {
+        guard !isShutdown else { return }
         registeredSurfaceIDs.remove(surfaceID)
 
         for seatID in Array(cursorStateBySeat.keys) {
@@ -81,6 +89,7 @@ package final class CursorManager: RawInputEventObserving {
     @discardableResult
     func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {
         backend.preconditionIsOwnerThread()
+        guard !isShutdown else { return [] }
         let resolvedCursor = try resolvedCursorIfNeeded(cursor)
         desiredCursor = DesiredPointerCursorState(cursor: cursor, resolved: resolvedCursor)
 
@@ -95,6 +104,7 @@ package final class CursorManager: RawInputEventObserving {
     @discardableResult
     package func observe(_ rawEvent: RawInputEvent) -> [InputEvent] {
         backend.preconditionIsOwnerThread()
+        guard !isShutdown else { return [] }
 
         switch rawEvent.kind {
         case .pointer(.enter(let enter)):
@@ -311,11 +321,37 @@ package final class CursorManager: RawInputEventObserving {
         interpret(effects, seatID: seatID)
     }
 
+    package func shutdown() {
+        shutdown(preconditionOwnerThread: true)
+    }
+
     deinit {
-        for state in cursorStateBySeat.values {
-            guard let surface = state.cursorSurface else { continue }
+        shutdown(preconditionOwnerThread: false)
+    }
+
+    private func shutdown(preconditionOwnerThread: Bool) {
+        if preconditionOwnerThread {
+            backend.preconditionIsOwnerThread()
+        }
+        guard !isShutdown else { return }
+
+        isShutdown = true
+        let surfaces = cursorStateBySeat.values.compactMap(\.cursorSurface)
+        cursorStateBySeat.removeAll(keepingCapacity: false)
+        registeredSurfaceIDs.removeAll(keepingCapacity: false)
+        desiredCursor = DesiredPointerCursorState(cursor: configuration.fallbackCursor)
+
+        for surface in surfaces {
+            surface.detach()
+            surface.commit()
             surface.destroy()
         }
+    }
+
+    private func destroyCursorSurface(_ surface: CursorManagerSurface) {
+        surface.detach()
+        surface.commit()
+        surface.destroy()
     }
 
     private func cursorRequestFailure(
@@ -419,7 +455,7 @@ extension CursorManager {
                         rawEvent: sourceEvent
                     ))
             case .destroyCursorSurface(let surface):
-                surface.destroy()
+                destroyCursorSurface(surface)
             }
         }
 

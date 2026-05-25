@@ -1,9 +1,12 @@
 import Foundation
 import WaylandClient
+import WaylandExampleSupport
 
 @main
 enum TextInputSmoke {
     static func main() async throws {
+        let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
+
         try await WaylandDisplay.withConnection(
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
@@ -15,6 +18,7 @@ enum TextInputSmoke {
         ) { display in
             let capabilities = try await display.capabilities()
             log("text-input capability \(availabilityDescription(capabilities.textInput))")
+            log("text-input lifecycle disable finalizes; do not commit after disable")
 
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
@@ -55,9 +59,20 @@ enum TextInputSmoke {
                 group.addTask {
                     try await consumeDiagnostics(display.diagnostics)
                 }
+                if let seconds = options.autoCloseSeconds {
+                    group.addTask {
+                        try await Task.sleep(for: .seconds(seconds))
+                        await disableAllSessions(state: state)
+                        await window.close()
+                    }
+                }
 
                 _ = try await group.next()
                 group.cancelAll()
+            }
+
+            if options.printSummary {
+                log(await state.summary())
             }
         }
     }
@@ -98,9 +113,19 @@ enum TextInputSmoke {
 
             switch event.kind {
             case .pointer(.button(let button)) where button.state == .pressed:
-                await enableTextInput(display: display, window: window, seatID: event.seatID, state: state)
+                await enableTextInput(
+                    display: display,
+                    window: window,
+                    seatID: event.seatID,
+                    state: state
+                )
             case .keyboard(.raw(.entered)):
-                await enableTextInput(display: display, window: window, seatID: event.seatID, state: state)
+                await enableTextInput(
+                    display: display,
+                    window: window,
+                    seatID: event.seatID,
+                    state: state
+                )
             case .keyboard(.raw(.left)):
                 await disableTextInput(seatID: event.seatID, state: state)
             case .keyboard(.interpreted(.key(let key))):
@@ -354,6 +379,7 @@ private actor TextInputSmokeState {
         case .committed(let commit):
             current.textInputText += commit.text
             current.preeditText = ""
+            current.commitCount += 1
         case .deleteSurroundingText:
             current.preeditText = ""
         case .entered, .left, .action, .language, .done, .diagnostic:
@@ -364,6 +390,20 @@ private actor TextInputSmokeState {
     func snapshot() -> TextInputSmokeSnapshot {
         current
     }
+
+    func summary() -> String {
+        var fields = [
+            "text-input summary activeSeats=\(current.activeSeatCount)",
+            "commits=\(current.commitCount)",
+            "keyboardFallbackBytes=\(current.keyboardFallbackText.utf8.count)",
+            "textInputBytes=\(current.textInputText.utf8.count)",
+            "sequence=\(current.sequence)",
+        ]
+        if current.commitCount == 0 {
+            fields.append("no text-input commits observed")
+        }
+        return fields.joined(separator: " ")
+    }
 }
 
 private struct TextInputSmokeSnapshot: Sendable {
@@ -371,5 +411,6 @@ private struct TextInputSmokeSnapshot: Sendable {
     var keyboardFallbackText = ""
     var preeditText = ""
     var activeSeatCount = 0
+    var commitCount = 0
     var sequence = 0
 }

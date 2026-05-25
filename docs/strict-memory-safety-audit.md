@@ -128,6 +128,12 @@ Audit invariant:
   path remains the fallback.
 - Cursor surfaces and drag icon surfaces have explicit surface-runtime roles and
   are destroyed through role-specific owners.
+- `CursorManager.shutdown()` is an explicit display-session teardown step. It
+  detaches and commits cursor surfaces before destroying them so theme-owned SHM
+  buffers are no longer attached when cursor theme resources are released.
+- Fatal display cleanup swaps the live surface graph to an empty store before
+  releasing the discarded graph, and the discard flag suppresses window and popup
+  lifecycle callbacks while that release is in progress.
 - Drag icon pixels are validated against the declared XRGB8888 image size before
   SHM storage is filled.
 - Drag icon surfaces are destroyed on source cancellation, source completion,
@@ -136,11 +142,14 @@ Audit invariant:
 Tests:
 
 - `CursorManagerTests` covers cursor-shape selection, cursor surface creation,
-  theme fallback, and cursor surface destruction requests.
+  theme fallback, cursor surface destruction requests, and idempotent shutdown
+  ordering.
 - `CursorScalePolicyTests` and `CursorAnimationStateTests` cover internal cursor
   scale and animation state models.
 - `DataTransferManagerDragSourceTests` covers drag icon preparation and source
   lifecycle cleanup.
+- `DisplayEventHubPopupTests` and `DisplayCoreInvariantTests` cover fatal
+  cleanup callback suppression and repeated close/fail cleanup calls.
 
 ## Scale Extension Raw Boundary
 
@@ -150,6 +159,9 @@ Remaining unsafe constructs:
   `wp_fractional_scale_manager_v1` globals through registry C shims.
 - `RawViewporter`, `RawViewport`, `RawFractionalScaleManager`, and
   `RawFractionalScale` wrap extension proxies returned by those shims.
+- `RawXDGActivation` wraps the optional `xdg_activation_v1` manager and destroys
+  the proxy through an explicit C shim. Token request objects are not wrapped
+  yet.
 - `RawSurfaceScaleOwner` and `RawFractionalScaleOwner` store C listener
   callback tables through `CListenerStorage`.
 - Listener callbacks recover Swift owners from C `data` pointers and forward

@@ -6,6 +6,14 @@ package struct SurfaceMetadataOptionalGlobals {
     package let tearingControlManager: OptionalTearingControlManager
     package let colorRepresentationManager: OptionalColorRepresentationManager
     package let colorManager: OptionalColorManager
+
+    package func destroy() {
+        colorManager.destroy()
+        colorRepresentationManager.destroy()
+        tearingControlManager.destroy()
+        alphaModifierManager.destroy()
+        contentTypeManager.destroy()
+    }
 }
 
 extension RawDisplayConnection {

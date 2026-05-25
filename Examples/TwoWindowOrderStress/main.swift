@@ -1,15 +1,18 @@
 import Foundation
 import WaylandClient
+import WaylandExampleSupport
 
 @main
 enum TwoWindowOrderStress {
     static func main() async throws {
-        let reversed = CommandLine.arguments.contains("--reversed")
+        let arguments = Array(CommandLine.arguments.dropFirst())
+        let options = try ExampleRunOptions.parse(arguments.filter { $0 != "--reversed" }[...])
+        let reversed = arguments.contains("--reversed")
 
         try await WaylandDisplay.withConnection(
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 128,
-                inputEventCapacity: 256,
+                inputEventCapacity: 4_096,
                 textInputEventCapacity: 16,
                 dataTransferEventCapacity: 16,
                 presentationEventCapacity: 16
@@ -23,11 +26,13 @@ enum TwoWindowOrderStress {
             }
             let registry = OrderStressRegistry(controllers)
 
+            log("purpose two-window input routing stress; resize traffic is expected")
             log("creation order \(controllers.map { $0.name }.joined(separator: ","))")
             for controller in controllers {
                 log("window \(controller.name) id=\(controller.window.id)")
                 try await controller.showInitialFrame()
             }
+            let autoCloseControllers = controllers
 
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
@@ -36,9 +41,21 @@ enum TwoWindowOrderStress {
                 group.addTask {
                     try await consumeInputEvents(display.inputEvents, registry: registry)
                 }
+                if let seconds = options.autoCloseSeconds {
+                    group.addTask {
+                        try await Task.sleep(for: .seconds(seconds))
+                        for controller in autoCloseControllers {
+                            await controller.window.close()
+                        }
+                    }
+                }
 
                 _ = try await group.next()
                 group.cancelAll()
+            }
+
+            if options.printSummary {
+                log(await registry.summary())
             }
         }
     }
@@ -103,54 +120,63 @@ enum TwoWindowOrderStress {
         registry: OrderStressRegistry
     ) async throws {
         var iterator = events.makeAsyncIterator()
-        while !Task.isCancelled, let event = try await iterator.next() {
-            guard let windowID = event.windowID,
-                let controller = await registry.controller(for: windowID)
-            else {
-                continue
-            }
-
-            switch event.kind {
-            case .pointer(.entered(let location, let serial)):
-                await controller.state.recordPointer(location)
-                log("pointer entered window=\(controller.name) id=\(windowID) serial=\(serial)")
-                try await controller.window.requestRedraw()
-            case .pointer(.moved(let location, _)):
-                await controller.state.recordPointer(location)
-                try await controller.window.requestRedraw()
-            case .pointer(.left(let serial)):
-                await controller.state.recordPointer(nil)
-                log("pointer left window=\(controller.name) id=\(windowID) serial=\(serial)")
-                try await controller.window.requestRedraw()
-            case .pointer(.button(let button)) where button.state == .pressed:
-                await controller.state.recordButtonPress()
-                let geometry = try await controller.window.geometry
-                let location = await controller.state.pointerLocation
-                let edge = location.flatMap { resizeEdge(at: $0, in: geometry) }
-                log(
-                    "button press window=\(controller.name) id=\(windowID) "
-                        + "button=\(button.button) serial=\(button.serial) edge=\(edgeDescription(edge))"
-                )
-                if let edge {
-                    try await controller.window.requestInteractiveResize(
-                        seatID: event.seatID,
-                        serial: button.serial,
-                        edge: edge
-                    )
-                    log(
-                        "interactive resize requested window=\(controller.name) "
-                            + "id=\(windowID) serial=\(button.serial) edge=\(edge)"
-                    )
-                } else {
-                    try await controller.window.requestRedraw()
+        do {
+            while !Task.isCancelled, let event = try await iterator.next() {
+                guard let windowID = event.windowID,
+                    let controller = await registry.controller(for: windowID)
+                else {
+                    continue
                 }
-            case .keyboard(.raw(.entered(let serial, _))):
-                log("keyboard entered window=\(controller.name) id=\(windowID) serial=\(serial)")
-            case .keyboard(.raw(.left(let serial))):
-                log("keyboard left window=\(controller.name) id=\(windowID) serial=\(serial)")
-            default:
-                break
+
+                switch event.kind {
+                case .pointer(.entered(let location, let serial)):
+                    _ = await controller.state.recordPointer(location)
+                    log("pointer entered window=\(controller.name) id=\(windowID) serial=\(serial)")
+                    try await controller.window.requestRedraw()
+                case .pointer(.moved(let location, _)):
+                    let eventCount = await controller.state.recordPointer(location)
+                    if eventCount.isMultiple(of: 8) {
+                        try await controller.window.requestRedraw()
+                    }
+                case .pointer(.left(let serial)):
+                    _ = await controller.state.recordPointer(nil)
+                    log("pointer left window=\(controller.name) id=\(windowID) serial=\(serial)")
+                    try await controller.window.requestRedraw()
+                case .pointer(.button(let button)) where button.state == .pressed:
+                    await controller.state.recordButtonPress()
+                    let geometry = try await controller.window.geometry
+                    let location = await controller.state.pointerLocation
+                    let edge = location.flatMap { resizeEdge(at: $0, in: geometry) }
+                    log(
+                        "button press window=\(controller.name) id=\(windowID) "
+                            + "button=\(button.button) serial=\(button.serial) edge=\(edgeDescription(edge))"
+                    )
+                    if let edge {
+                        try await controller.window.requestInteractiveResize(
+                            seatID: event.seatID,
+                            serial: button.serial,
+                            edge: edge
+                        )
+                        log(
+                            "interactive resize requested window=\(controller.name) "
+                                + "id=\(windowID) serial=\(button.serial) edge=\(edge)"
+                        )
+                    } else {
+                        try await controller.window.requestRedraw()
+                    }
+                case .keyboard(.raw(.entered(let serial, _))):
+                    log(
+                        "keyboard entered window=\(controller.name) "
+                            + "id=\(windowID) serial=\(serial)"
+                    )
+                case .keyboard(.raw(.left(let serial))):
+                    log("keyboard left window=\(controller.name) id=\(windowID) serial=\(serial)")
+                default:
+                    break
+                }
             }
+        } catch {
+            log("input stream stopped: \(overflowDescription(error))")
         }
     }
 
@@ -190,6 +216,21 @@ enum TwoWindowOrderStress {
 
     nonisolated private static func edgeDescription(_ edge: WindowResizeEdge?) -> String {
         edge.map(String.init(describing:)) ?? "none"
+    }
+
+    nonisolated private static func overflowDescription(_ error: any Error) -> String {
+        guard let displayError = error as? WaylandDisplayError else {
+            return "\(error)"
+        }
+
+        return switch displayError {
+        case .eventSubscriberOverflow(let stream, let capacity):
+            "subscriber overflow stream=\(stream) capacity=\(capacity)"
+        case .inputPipelineOverflow(let overflow):
+            "input pipeline overflow stage=\(overflow.stage) capacity=\(overflow.capacity)"
+        default:
+            "\(error)"
+        }
     }
 
     nonisolated private static func log(_ message: String) {
@@ -238,11 +279,14 @@ private struct OrderStressController: Sendable {
 
 private actor OrderStressRegistry {
     private var controllersByWindowID: [WindowID: OrderStressController]
+    private let createdCount: Int
+    private var closedCount = 0
 
     init(_ controllers: [OrderStressController]) {
         controllersByWindowID = Dictionary(
             uniqueKeysWithValues: controllers.map { ($0.window.id, $0) }
         )
+        createdCount = controllers.count
     }
 
     func controller(for windowID: WindowID) -> OrderStressController? {
@@ -250,8 +294,15 @@ private actor OrderStressRegistry {
     }
 
     func remove(_ windowID: WindowID) -> Int {
-        controllersByWindowID.removeValue(forKey: windowID)
+        if controllersByWindowID.removeValue(forKey: windowID) != nil {
+            closedCount += 1
+        }
         return controllersByWindowID.count
+    }
+
+    func summary() -> String {
+        "two-window order stress summary created=\(createdCount) closed=\(closedCount) "
+            + "remaining=\(controllersByWindowID.count)"
     }
 }
 
@@ -266,9 +317,10 @@ private actor OrderStressState {
         current.pointer
     }
 
-    func recordPointer(_ location: PointerLocation?) {
+    func recordPointer(_ location: PointerLocation?) -> Int {
         current.pointer = location
         current.eventCount += 1
+        return current.eventCount
     }
 
     func recordButtonPress() {

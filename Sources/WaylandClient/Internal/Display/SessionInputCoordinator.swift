@@ -57,6 +57,10 @@ final class SessionInputCoordinator {
         cursorManager.unregister(surfaceID: surfaceID)
     }
 
+    func shutdown() {
+        cursorManager.shutdown()
+    }
+
     func drainInputEvents() -> [InputEvent] {
         pendingInputState.drain()
     }

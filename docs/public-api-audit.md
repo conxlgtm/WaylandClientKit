@@ -313,6 +313,9 @@ Notes:
 - `WaylandCapabilities` is a registry-discovery snapshot. It lets applications
   branch before requesting optional features, but request APIs still throw typed
   availability errors because Wayland globals can be removed after discovery.
+  `xdgActivation` is capability-only in this checkpoint; token request and
+  activate APIs are not public yet. The previous initializer remains available
+  and defaults `xdgActivation` to unavailable for source compatibility.
 - Primary selection offers are seat-scoped and expire when the compositor sends
   a null selection or focus changes. `PrimarySelectionOffer.read` uses the same
   bounded transfer rules as clipboard reads, and `PrimarySelectionSourceConfiguration`

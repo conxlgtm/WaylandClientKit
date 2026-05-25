@@ -73,6 +73,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
 
     func releaseWaylandResourcesOnOwnerThread() {
         connection.preconditionIsOwnerThread()
+        inputCoordinator.shutdown()
         primarySelectionController.shutdown()
         dataTransferManager.shutdown()
         textInputManager.shutdown()
@@ -222,20 +223,32 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
 
     package func capabilitiesOnOwnerThread() -> WaylandCapabilities {
         connection.preconditionIsOwnerThread()
-        return WaylandCapabilities.fromAdvertisedProtocols(
-            [
-                advertisedProtocol(named: "wl_data_device_manager"),
-                advertisedProtocol(named: "zwp_primary_selection_device_manager_v1"),
-                advertisedProtocol(named: "zxdg_decoration_manager_v1"),
-                advertisedProtocol(named: "zxdg_output_manager_v1"),
-                advertisedProtocol(named: "wp_viewporter"),
-                advertisedProtocol(named: "wp_presentation"),
-                advertisedProtocol(named: "wp_fractional_scale_manager_v1"),
-                advertisedProtocol(named: "wp_cursor_shape_manager_v1"),
-                advertisedProtocol(named: "zwp_text_input_manager_v3"),
-                advertisedProtocol(named: "zwp_linux_dmabuf_v1"),
-            ].compactMap(\.self))
+        return Self.capabilities { interfaceName in
+            advertisedProtocol(named: interfaceName)
+        }
     }
+
+    static func capabilities(
+        advertisedProtocol namedProtocol: (String) -> AdvertisedWaylandProtocol?
+    ) -> WaylandCapabilities {
+        WaylandCapabilities.fromAdvertisedProtocols(
+            capabilityProtocolInterfaceNames.compactMap(namedProtocol)
+        )
+    }
+
+    static let capabilityProtocolInterfaceNames = [
+        "wl_data_device_manager",
+        "zwp_primary_selection_device_manager_v1",
+        "zxdg_decoration_manager_v1",
+        "zxdg_output_manager_v1",
+        "wp_viewporter",
+        "wp_presentation",
+        "wp_fractional_scale_manager_v1",
+        "wp_cursor_shape_manager_v1",
+        "xdg_activation_v1",
+        "zwp_text_input_manager_v3",
+        "zwp_linux_dmabuf_v1",
+    ]
 
     package func isProtocolAdvertisedOnOwnerThread(
         named interfaceName: String

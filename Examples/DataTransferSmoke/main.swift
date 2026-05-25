@@ -1,5 +1,6 @@
 import Foundation
 import WaylandClient
+import WaylandExampleSupport
 
 @main
 enum DataTransferSmoke {
@@ -7,6 +8,8 @@ enum DataTransferSmoke {
     nonisolated private static let rightButton = PointerButtonCode(rawValue: 0x111)
 
     static func main() async throws {
+        let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
+
         try await WaylandDisplay.withConnection(
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
@@ -20,6 +23,7 @@ enum DataTransferSmoke {
             log("clipboard capability \(availabilityDescription(capabilities.clipboard))")
             log("drag capability \(availabilityDescription(capabilities.dragAndDrop))")
             log("primary capability \(availabilityDescription(capabilities.primarySelection))")
+            log("source readiness text/plain;charset=utf-8,text/plain")
 
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
@@ -56,9 +60,19 @@ enum DataTransferSmoke {
                 group.addTask {
                     try await consumeDiagnostics(display.diagnostics)
                 }
+                if let seconds = options.autoCloseSeconds {
+                    group.addTask {
+                        try await Task.sleep(for: .seconds(seconds))
+                        await window.close()
+                    }
+                }
 
                 _ = try await group.next()
                 group.cancelAll()
+            }
+
+            if options.printSummary {
+                log(await state.summary())
             }
         }
     }
@@ -363,8 +377,11 @@ enum DataTransferSmoke {
         ]
     }
 
-    nonisolated private static func preferredMIMEType(from mimeTypes: [MIMEType]) -> MIMEType? {
-        for candidate in [MIMEType.plainTextUTF8, .plainText, .uriList] where mimeTypes.contains(candidate) {
+    nonisolated private static func preferredMIMEType(
+        from mimeTypes: [MIMEType]
+    ) -> MIMEType? {
+        for candidate in [MIMEType.plainTextUTF8, .plainText, .uriList]
+        where mimeTypes.contains(candidate) {
             return candidate
         }
         return nil
@@ -499,6 +516,12 @@ private actor DataTransferSmokeState {
 
     func snapshot() -> DataTransferSmokeSnapshot {
         current
+    }
+
+    func summary() -> String {
+        "data-transfer summary events=\(current.eventCount) reads=\(current.readCount) "
+            + "sources=\(current.sourceCount) lastSource=\(current.lastSource) "
+            + "lastRead=\(current.lastRead)"
     }
 }
 

@@ -12,6 +12,7 @@ xdg_output_candidates=()
 viewporter_candidates=()
 presentation_time_candidates=()
 fractional_scale_candidates=()
+xdg_activation_candidates=()
 primary_selection_candidates=()
 linux_dmabuf_candidates=()
 linux_drm_syncobj_candidates=()
@@ -30,6 +31,7 @@ mapfile -t xdg_output_candidates < <(protocol_sources_xdg_output_candidates)
 mapfile -t viewporter_candidates < <(protocol_sources_viewporter_candidates)
 mapfile -t presentation_time_candidates < <(protocol_sources_presentation_time_candidates)
 mapfile -t fractional_scale_candidates < <(protocol_sources_fractional_scale_candidates)
+mapfile -t xdg_activation_candidates < <(protocol_sources_xdg_activation_candidates)
 mapfile -t primary_selection_candidates < <(protocol_sources_primary_selection_candidates)
 mapfile -t linux_dmabuf_candidates < <(protocol_sources_linux_dmabuf_candidates)
 mapfile -t linux_drm_syncobj_candidates < <(protocol_sources_linux_drm_syncobj_candidates)
@@ -53,6 +55,9 @@ PRESENTATION_TIME_XML_SOURCE="$(
 )"
 FRACTIONAL_SCALE_XML_SOURCE="$(
     protocol_sources_first_existing_file "${fractional_scale_candidates[@]}" || true
+)"
+XDG_ACTIVATION_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${xdg_activation_candidates[@]}" || true
 )"
 PRIMARY_SELECTION_XML_SOURCE="$(
     protocol_sources_first_existing_file "${primary_selection_candidates[@]}" || true
@@ -125,6 +130,12 @@ COLOR_MANAGEMENT_XML_SOURCE="$(
     exit 1
 }
 
+[[ -f "$XDG_ACTIVATION_XML_SOURCE" ]] || {
+    echo "Missing xdg-activation XML. Checked:"
+    printf '  %s\n' "${xdg_activation_candidates[@]}"
+    exit 1
+}
+
 [[ -f "$PRIMARY_SELECTION_XML_SOURCE" ]] || {
     echo "Missing primary-selection XML. Checked:"
     printf '  %s\n' "${primary_selection_candidates[@]}"
@@ -193,6 +204,7 @@ mkdir -p \
     "$ROOT/protocols/upstream/stable/viewporter" \
     "$ROOT/protocols/upstream/stable/presentation-time" \
     "$ROOT/protocols/upstream/staging/fractional-scale" \
+    "$ROOT/protocols/upstream/staging/xdg-activation" \
     "$ROOT/protocols/upstream/staging/linux-drm-syncobj" \
     "$ROOT/protocols/upstream/staging/fifo" \
     "$ROOT/protocols/upstream/staging/commit-timing" \
@@ -215,6 +227,8 @@ cp "$PRESENTATION_TIME_XML_SOURCE" \
     "$ROOT/protocols/upstream/stable/presentation-time/presentation-time.xml"
 cp "$FRACTIONAL_SCALE_XML_SOURCE" \
     "$ROOT/protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml"
+cp "$XDG_ACTIVATION_XML_SOURCE" \
+    "$ROOT/protocols/upstream/staging/xdg-activation/xdg-activation-v1.xml"
 cp "$PRIMARY_SELECTION_XML_SOURCE" \
     "$ROOT/protocols/upstream/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml"
 cp "$LINUX_DMABUF_XML_SOURCE" \

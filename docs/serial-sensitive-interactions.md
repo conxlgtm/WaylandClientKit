@@ -92,3 +92,8 @@ In a multi-window host, route surface-targeted pointer presses by public identit
 values before using broader focus fallback. Keep a registry keyed by `WindowID`
 and dispatch the request to the controller for the event target. Keyboard focus
 is not a safe substitute for a surface-targeted pointer press.
+
+`Examples/ClientSideResizeChrome` shows the resize path with edge/corner hit
+testing and two windows. `Examples/SerialActionsProbe` logs the full request
+context for resize, move, and window-menu requests so compositor-specific
+behavior can be copied into matrix notes.

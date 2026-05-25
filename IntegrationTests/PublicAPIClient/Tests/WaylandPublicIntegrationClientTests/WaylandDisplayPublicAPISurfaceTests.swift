@@ -71,6 +71,7 @@ struct WaylandDisplayPublicAPISurfaceTests {
         #expect(capabilities.xdgOutput == .available(version: 3))
         #expect(capabilities.presentationTime == .unavailable)
         #expect(capabilities.cursorShape == .available(version: 1))
+        #expect(capabilities.xdgActivation == .unavailable)
         #expect(capabilities.textInput == .unavailable)
         #expect(capabilities.linuxDmabuf == .available(version: 5))
 

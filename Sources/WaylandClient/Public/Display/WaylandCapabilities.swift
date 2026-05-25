@@ -58,6 +58,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Compositor-managed pointer cursor shapes through `wp_cursor_shape_manager_v1`.
     public let cursorShape: ProtocolAvailability
 
+    /// Desktop activation token support through `xdg_activation_v1`.
+    public let xdgActivation: ProtocolAvailability
+
     /// Compositor/IME text entry support through `zwp_text_input_manager_v3`.
     public let textInput: ProtocolAvailability
 
@@ -75,6 +78,7 @@ public struct WaylandCapabilities: Equatable, Sendable {
         presentationTime: ProtocolAvailability,
         fractionalScale: ProtocolAvailability,
         cursorShape: ProtocolAvailability,
+        xdgActivation: ProtocolAvailability,
         textInput: ProtocolAvailability,
         linuxDmabuf: ProtocolAvailability
     ) {
@@ -88,8 +92,40 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.presentationTime = presentationTime
         self.fractionalScale = fractionalScale
         self.cursorShape = cursorShape
+        self.xdgActivation = xdgActivation
         self.textInput = textInput
         self.linuxDmabuf = linuxDmabuf
+    }
+
+    public init(
+        clipboard: ProtocolAvailability,
+        dragAndDrop: ProtocolAvailability,
+        dragActionNegotiation: ProtocolAvailability,
+        primarySelection: ProtocolAvailability,
+        xdgDecoration: ProtocolAvailability,
+        xdgOutput: ProtocolAvailability,
+        viewporter: ProtocolAvailability,
+        presentationTime: ProtocolAvailability,
+        fractionalScale: ProtocolAvailability,
+        cursorShape: ProtocolAvailability,
+        textInput: ProtocolAvailability,
+        linuxDmabuf: ProtocolAvailability
+    ) {
+        self.init(
+            clipboard: clipboard,
+            dragAndDrop: dragAndDrop,
+            dragActionNegotiation: dragActionNegotiation,
+            primarySelection: primarySelection,
+            xdgDecoration: xdgDecoration,
+            xdgOutput: xdgOutput,
+            viewporter: viewporter,
+            presentationTime: presentationTime,
+            fractionalScale: fractionalScale,
+            cursorShape: cursorShape,
+            xdgActivation: .unavailable,
+            textInput: textInput,
+            linuxDmabuf: linuxDmabuf
+        )
     }
 }
 
@@ -99,6 +135,7 @@ struct AdvertisedWaylandProtocol: Equatable, Sendable {
 }
 
 extension WaylandCapabilities {
+    // swiftlint:disable:next function_body_length
     static func fromAdvertisedProtocols(
         _ protocols: [AdvertisedWaylandProtocol]
     ) -> WaylandCapabilities {
@@ -149,6 +186,10 @@ extension WaylandCapabilities {
             cursorShape: ProtocolAvailability(
                 protocols.bestAdvertisedProtocol(named: "wp_cursor_shape_manager_v1"),
                 supportedByClient: SupportedVersions.wpCursorShapeManagerV1
+            ),
+            xdgActivation: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "xdg_activation_v1"),
+                supportedByClient: SupportedVersions.xdgActivationV1
             ),
             textInput: ProtocolAvailability(
                 protocols.bestAdvertisedProtocol(named: "zwp_text_input_manager_v3"),

@@ -161,6 +161,10 @@ private final class ReducerCursorSurface: CursorManagerSurface {
         // Reducer tests only need object identity.
     }
 
+    func detach() {
+        // Reducer tests only need object identity.
+    }
+
     func commit() {
         // Reducer tests only need object identity.
     }

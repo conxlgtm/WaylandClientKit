@@ -87,6 +87,7 @@ print_protocol_summary() {
         wp_viewporter
         wp_fractional_scale_manager_v1
         wp_presentation
+        xdg_activation_v1
         zwp_linux_dmabuf_v1
         wp_linux_drm_syncobj_manager_v1
         wp_fifo_manager_v1
