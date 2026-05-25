@@ -15,6 +15,8 @@ fractional_scale_candidates=()
 xdg_activation_candidates=()
 primary_selection_candidates=()
 linux_dmabuf_candidates=()
+relative_pointer_candidates=()
+pointer_constraints_candidates=()
 linux_drm_syncobj_candidates=()
 fifo_candidates=()
 commit_timing_candidates=()
@@ -34,6 +36,8 @@ mapfile -t fractional_scale_candidates < <(protocol_sources_fractional_scale_can
 mapfile -t xdg_activation_candidates < <(protocol_sources_xdg_activation_candidates)
 mapfile -t primary_selection_candidates < <(protocol_sources_primary_selection_candidates)
 mapfile -t linux_dmabuf_candidates < <(protocol_sources_linux_dmabuf_candidates)
+mapfile -t relative_pointer_candidates < <(protocol_sources_relative_pointer_candidates)
+mapfile -t pointer_constraints_candidates < <(protocol_sources_pointer_constraints_candidates)
 mapfile -t linux_drm_syncobj_candidates < <(protocol_sources_linux_drm_syncobj_candidates)
 mapfile -t fifo_candidates < <(protocol_sources_fifo_candidates)
 mapfile -t commit_timing_candidates < <(protocol_sources_commit_timing_candidates)
@@ -64,6 +68,12 @@ PRIMARY_SELECTION_XML_SOURCE="$(
 )"
 LINUX_DMABUF_XML_SOURCE="$(
     protocol_sources_first_existing_file "${linux_dmabuf_candidates[@]}" || true
+)"
+RELATIVE_POINTER_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${relative_pointer_candidates[@]}" || true
+)"
+POINTER_CONSTRAINTS_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${pointer_constraints_candidates[@]}" || true
 )"
 LINUX_DRM_SYNCOBJ_XML_SOURCE="$(
     protocol_sources_first_existing_file "${linux_drm_syncobj_candidates[@]}" || true
@@ -148,6 +158,18 @@ COLOR_MANAGEMENT_XML_SOURCE="$(
     exit 1
 }
 
+[[ -f "$RELATIVE_POINTER_XML_SOURCE" ]] || {
+    echo "Missing relative-pointer XML. Checked:"
+    printf '  %s\n' "${relative_pointer_candidates[@]}"
+    exit 1
+}
+
+[[ -f "$POINTER_CONSTRAINTS_XML_SOURCE" ]] || {
+    echo "Missing pointer-constraints XML. Checked:"
+    printf '  %s\n' "${pointer_constraints_candidates[@]}"
+    exit 1
+}
+
 [[ -f "$LINUX_DRM_SYNCOBJ_XML_SOURCE" ]] || {
     echo "Missing linux-drm-syncobj XML. Checked:"
     printf '  %s\n' "${linux_drm_syncobj_candidates[@]}"
@@ -214,7 +236,9 @@ mkdir -p \
     "$ROOT/protocols/upstream/staging/color-representation" \
     "$ROOT/protocols/upstream/staging/color-management" \
     "$ROOT/protocols/upstream/legacy-unstable/primary-selection" \
-    "$ROOT/protocols/upstream/legacy-unstable/linux-dmabuf"
+    "$ROOT/protocols/upstream/legacy-unstable/linux-dmabuf" \
+    "$ROOT/protocols/upstream/legacy-unstable/relative-pointer" \
+    "$ROOT/protocols/upstream/legacy-unstable/pointer-constraints"
 
 cp "$WAYLAND_CORE_XML_SOURCE" "$ROOT/protocols/upstream/core/wayland.xml"
 cp "$XDG_SHELL_XML_SOURCE" "$ROOT/protocols/upstream/stable/xdg-shell/xdg-shell.xml"
@@ -233,6 +257,10 @@ cp "$PRIMARY_SELECTION_XML_SOURCE" \
     "$ROOT/protocols/upstream/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml"
 cp "$LINUX_DMABUF_XML_SOURCE" \
     "$ROOT/protocols/upstream/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
+cp "$RELATIVE_POINTER_XML_SOURCE" \
+    "$ROOT/protocols/upstream/legacy-unstable/relative-pointer/relative-pointer-unstable-v1.xml"
+cp "$POINTER_CONSTRAINTS_XML_SOURCE" \
+    "$ROOT/protocols/upstream/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1.xml"
 cp "$LINUX_DRM_SYNCOBJ_XML_SOURCE" \
     "$ROOT/protocols/upstream/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml"
 cp "$FIFO_XML_SOURCE" "$ROOT/protocols/upstream/staging/fifo/fifo-v1.xml"

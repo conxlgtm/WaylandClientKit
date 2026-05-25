@@ -135,7 +135,7 @@
       "sha256": "d8418be2d5738d50aff788bef1c7574f33f26659aa045447ff2ef9b78c58fe01",
       "stability": "staging",
       "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "publicCapability",
+      "apiExposure": "public",
       "testStrategy": "unit-and-live-when-advertised",
       "notes": "Optional desktop-integration protocol for activation tokens and surface activation."
     },
@@ -292,6 +292,34 @@
       "apiExposure": "preview",
       "testStrategy": "unit-and-live-when-advertised",
       "notes": "Optional foundation protocol for dmabuf-backed wl_buffer creation and default/per-surface feedback."
+    },
+    {
+      "name": "relative-pointer-unstable-v1",
+      "localPath": "protocols/upstream/legacy-unstable/relative-pointer/relative-pointer-unstable-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/relative-pointer/relative-pointer-unstable-v1.xml",
+      "sha256": "ab4930dd3084f732b6fdd12ee6dbd0a112a758ed8a57b170366391dbeb1a22ff",
+      "stability": "unstable",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "public",
+      "testStrategy": "unit-and-live-when-advertised",
+      "notes": "Optional foundation protocol for relative pointer motion on wl_pointer seats."
+    },
+    {
+      "name": "pointer-constraints-unstable-v1",
+      "localPath": "protocols/upstream/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml",
+      "sha256": "f980fac900ba1dcfbbe97f588fc17b893926bd2b57624563653a1bfe4d035948",
+      "stability": "unstable",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "public",
+      "testStrategy": "unit-and-live-when-advertised",
+      "notes": "Optional foundation protocol for pointer lock and confinement requests."
     }
   ]
 }
