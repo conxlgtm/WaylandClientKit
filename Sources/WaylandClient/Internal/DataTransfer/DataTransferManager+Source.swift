@@ -263,6 +263,7 @@ extension DataTransferManager {
         sourceID: DataSourceID,
         callbackIdentity: DataSourceCallbackIdentity
     ) {
+        guard !isShutdown else { return }
         do {
             switch event {
             case .send(let rawMimeType, let descriptor):

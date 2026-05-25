@@ -77,6 +77,7 @@ package final class DataTransferManager {
     var store = DataTransferStore()
     private var nextOfferID: UInt64 = 1
     package var nextSourceID: UInt64 = 1
+    var isShutdown = false
 
     package init(
         connection rawConnection: RawDisplayConnection,
@@ -184,6 +185,7 @@ package final class DataTransferManager {
     }
 
     private func handleDataDeviceEvent(_ event: RawDataDeviceEvent, seatID: SeatID) {
+        guard !isShutdown else { return }
         do {
             switch event {
             case .dataOffer(let handle):
@@ -366,6 +368,8 @@ extension DataTransferManager {
 
     func shutdown() {
         backend.preconditionIsOwnerThread()
+        guard !isShutdown else { return }
+        isShutdown = true
 
         for sourceID in Self.sortedSourceIDs(store.sourceIDs) {
             store.removeSource(sourceID)?.binding.destroy()
@@ -386,6 +390,7 @@ extension DataTransferManager {
         _ error: any Error,
         context: DataTransferCallbackContext
     ) {
+        guard !isShutdown else { return }
         store.recordCallbackFailure(
             DataTransferCallbackFailure(
                 context: context,
