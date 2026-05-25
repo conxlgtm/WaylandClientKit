@@ -403,8 +403,8 @@ the target window, seat, serial, pointer location, decoration mode, capabilities
 and request result for move, resize, and window-menu requests. The bounded modes
 let CI and release checks prove the examples still build while manual sessions
 can collect compositor-specific behavior.
-`XDGActivationSmoke` prints desktop activation capability; token request APIs
-are not public yet.
+`XDGActivationSmoke` prints desktop activation capability, requests a token
+when advertised, and sends an activate request for its managed window.
 
 Use [Manual Testing](docs/manual-testing.md) as the checklist for compositor
 QA and record new live evidence in [Compositor Matrix](docs/compositor-matrix.md).
