@@ -73,6 +73,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
 
     func releaseWaylandResourcesOnOwnerThread() {
         connection.preconditionIsOwnerThread()
+        inputCoordinator.shutdown()
         primarySelectionController.shutdown()
         dataTransferManager.shutdown()
         textInputManager.shutdown()
