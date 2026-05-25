@@ -9,6 +9,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     package let connection: RawDisplayConnection
     private let inputCoordinator: SessionInputCoordinator
     package let dataTransferGlobalProvider: any DataTransferGlobalProviding
+    package let activationManager: ActivationManager
     package let dataTransferManager: DataTransferManager
     package let primarySelectionController: PrimarySelectionController
     package let textInputManager: TextInputManager
@@ -47,6 +48,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         connection = rawConnection
         self.inputCoordinator = inputCoordinator
         dataTransferGlobalProvider = rawConnection
+        activationManager = ActivationManager(connection: rawConnection)
         dataTransferManager = DataTransferManager(
             connection: rawConnection,
             eventQueue: dataTransferEventQueue
@@ -77,6 +79,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         primarySelectionController.shutdown()
         dataTransferManager.shutdown()
         textInputManager.shutdown()
+        activationManager.shutdown()
         dataTransferSourceWriter.shutdown()
     }
 

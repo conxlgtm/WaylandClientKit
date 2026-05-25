@@ -119,6 +119,11 @@ package final class TopLevelWindow {
         return surface.objectID
     }
 
+    package var rawSurfaceOnOwnerThread: RawSurface {
+        connection.preconditionIsOwnerThread()
+        return surface
+    }
+
     package var closeRequestPolicy: CloseRequestPolicy {
         configuration.closeRequestPolicy
     }
