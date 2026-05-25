@@ -128,6 +128,9 @@ Audit invariant:
   path remains the fallback.
 - Cursor surfaces and drag icon surfaces have explicit surface-runtime roles and
   are destroyed through role-specific owners.
+- `CursorManager.shutdown()` is an explicit display-session teardown step. It
+  detaches and commits cursor surfaces before destroying them so theme-owned SHM
+  buffers are no longer attached when cursor theme resources are released.
 - Drag icon pixels are validated against the declared XRGB8888 image size before
   SHM storage is filled.
 - Drag icon surfaces are destroyed on source cancellation, source completion,
@@ -136,7 +139,8 @@ Audit invariant:
 Tests:
 
 - `CursorManagerTests` covers cursor-shape selection, cursor surface creation,
-  theme fallback, and cursor surface destruction requests.
+  theme fallback, cursor surface destruction requests, and idempotent shutdown
+  ordering.
 - `CursorScalePolicyTests` and `CursorAnimationStateTests` cover internal cursor
   scale and animation state models.
 - `DataTransferManagerDragSourceTests` covers drag icon preparation and source

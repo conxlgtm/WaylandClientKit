@@ -48,6 +48,10 @@ package final class CursorRoleSurface: CursorManagerSurface {
         rawSurface.damageFullBuffer(width: image.width, height: image.height)
     }
 
+    package func detach() {
+        rawSurface.attachBorrowedBuffer(nil)
+    }
+
     package func commit() {
         rawSurface.commit()
     }
