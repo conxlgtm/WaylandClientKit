@@ -48,9 +48,42 @@ summarizing the result in the main matrix.
 | Compositor | Version | Protocol facts | Smoke | Public integration | GPU preview | Notes |
 | ---------- | ------- | -------------- | ----- | ------------------ | ----------- | ----- |
 | Weston headless | pending | pending | pending | pending | pending | CI and local repeatability target. |
-| GNOME / Mutter | pending | pending | pending | pending | pending | Real desktop target. |
-| KDE / KWin | pending | pending | pending | pending | pending | Real desktop target. |
+| GNOME / Mutter | Ubuntu/GNOME session, 2026-05-24 | facts script ran; globals unavailable because `wayland-info`/`weston-info` is not installed | bounded framework-facing examples ran | public import checks passed in framework handoff | pending | Real desktop target. |
+| KDE / KWin | openSUSE Tumbleweed KDE/KWin, 2026-05-23 handoff | pending | framework handoff ran live probes | public import checks passed in framework handoff | software submission usable in handoff | Re-run data-transfer cleanup after the shutdown fixes. |
 | Sway / wlroots | pending | pending | pending | pending | pending | wlroots target. |
+
+## Framework Host Evidence
+
+Use this table for framework-facing behavior that is not captured by generic
+smoke tests. Record whether the evidence came from a bounded SwiftWayland
+example, a manual example run, or an external framework harness.
+
+| Compositor | Client-side resize chrome | Serial-sensitive resize/move/menu/drag | Text input | Interpreted keyboard fallback | Clipboard/private MIME behavior | Drag-source behavior | Popup lifecycle | Presentation feedback | Cursor theme behavior | Graphics preview software fallback | Fatal cleanup/shutdown |
+| ---------- | ------------------------- | -------------------------------------- | ---------- | ----------------------------- | ------------------------------- | -------------------- | --------------- | --------------------- | --------------------- | ---------------------------------- | ---------------------- |
+| GNOME / Mutter | SwiftWayland bounded two-window examples create and close both windows; manual `ClientSideResizeChrome` resize/close still needs a post-fix run. | `SerialActionsProbe` logs target, seat, serial, location, decoration mode, capabilities, snapshot, and thrown status. Earlier GNOME manual run logged requests but move/resize/menu did not visibly start. | `TextInputSmoke --auto-close --print-summary` reports text-input v1 available and zero commits without user typing. | External framework handoff observed ordinary text through interpreted keyboard events. | `DataTransferSmoke --auto-close --print-summary` reports clipboard v3, drag v3, and primary v1 available. Earlier GNOME handoff logged stale offers as controlled unknown-offer diagnostics. | Earlier GNOME full probe completed drag source, offer, drop, text read, and final copy action; KDE cleanup crash did not reproduce on GNOME. | Bounded two-window examples closed both windows without lifecycle callback crashes. | `PresentationFeedbackAnimation --duration-seconds 3 --print-summary` reports presentation feedback available; bounded unattended run observed no frames in that short run. | Cursor cleanup has unit coverage; live resize-cursor close still needs manual GNOME resize/close confirmation. | Pending current run; prior handoff reported graphics-preview software submission usable. | Fatal cleanup suppression has unit coverage; bounded GNOME examples close without display teardown crashes. |
+| KDE / KWin | Handoff reported basic hosting, redraw, resize, cursor shape, and multi-window behavior usable. | Drag-source serial ordering was fixed in the framework before the crash repro; SwiftWayland serial examples need a KDE run. | Handoff reported text-input advertised but ordinary typing arrived through interpreted keyboard text more than text-input commits. | Handoff confirmed ordinary text through interpreted keyboard events. | Handoff observed KDE/private MIME types such as `application/x-kde-onlyReplaceEmpty`; framework should filter unknown/private MIME unless explicitly supported. | Handoff reproduced a right-click drag-source cleanup crash on the older path; current shutdown guard needs a KDE re-run. | Handoff reported popup creation/rendering usable; fatal popup cleanup now has unit coverage. | Handoff reported animation usable; current presentation example needs a KDE bounded run. | Handoff reported cursor shape usable; cursor theme shutdown order now has unit coverage and needs a KDE resize-close run. | Handoff reported graphics-preview software submission usable. | The old crash path was `DisplayCore.fail(_) -> surfaces.removeAll() -> TopLevelWindow.deinit -> close() -> onClosed`; current fatal cleanup tests cover callback suppression and store replacement. |
+| Weston headless | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending |
+| Sway / wlroots | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending | pending |
+
+## Diagonal Cursor Policy
+
+Decision for this checkpoint: do not add public diagonal `PointerCursor` presets
+yet. Keep custom cursor names in examples and docs, with a known fallback such
+as `.crosshair`, until the same names are verified across GNOME/Mutter, KDE/KWin,
+Sway/wlroots, and Weston.
+
+Names to test:
+
+- `nw-resize`
+- `ne-resize`
+- `sw-resize`
+- `se-resize`
+- `nwse-resize`
+- `nesw-resize`
+
+If multiple compositor/theme families resolve the same names consistently, add
+public presets and update the public API baseline. If not, keep
+`PointerCursor(name:)` plus fallback guidance as the public shape.
 
 ## Graphics Preview Evidence
 
