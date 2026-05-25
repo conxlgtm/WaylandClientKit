@@ -50,6 +50,46 @@ Start software-first:
 Keep the render adapter platform-shaped. A useful adapter knows about windows,
 geometry, redraw, and frame submission. It should not know about widgets.
 
+## Framework-Facing Examples
+
+Use these examples as references before adding framework policy:
+
+- `ClientSideResizeChrome`: client-side edge/corner hit testing, cursor choice,
+  two-window resize routing, and serial-preserving
+  `requestInteractiveResize(seatID:serial:edge:)`.
+- `SerialActionsProbe`: target window, seat ID, pointer serial, pointer
+  location, decoration mode, capability, snapshot, and thrown-error logging for
+  resize, move, and window-menu requests.
+- `TwoWindowFrameworkHost`: independent per-window state, event routing by
+  `WindowID`, startup registration before first show, and close handling that
+  keeps the second window alive.
+- `TwoWindowOrderStress`: high-volume two-window input routing with a larger
+  input queue and controlled overflow diagnostics.
+- `TextInputSmoke`: text-input capability, enable/disable lifecycle, IME
+  commits, and interpreted keyboard fallback. `disable()` finalizes the
+  session; do not call `commit()` after disabling.
+- `DataTransferSmoke`: clipboard, primary-selection, drag/drop source and offer
+  behavior, private MIME filtering, stale-offer handling, bounded reads, and
+  source cancellation.
+- `PresentationFeedbackAnimation`: redraw-driven animation and optional
+  presentation feedback.
+- `FrameworkHostSmoke`: the smallest app-host loop that imports only public
+  SwiftWayland products.
+- `GPUPreviewSmokeClient`: preview graphics capability and software-submission
+  facts without exposing raw GPU handles.
+
+The examples that can run unattended accept common flags:
+
+```bash
+--auto-close
+--duration-seconds 3
+--print-summary
+```
+
+`scripts/ci/test-framework-handoff-examples.sh` builds the framework-facing
+example set in debug and release so these references do not drift out of build
+coverage.
+
 ## Software Rendering Path
 
 Use `Window.show` for the first frame and `Window.redraw` after
