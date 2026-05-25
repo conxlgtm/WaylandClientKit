@@ -93,6 +93,29 @@ struct DataTransferManagerShutdownTests {
     }
 
     @Test
+    func shutdownClosesLateSourceSendDescriptor() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+        let source = try manager.setSelectionSource(
+            seatID: seat1,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 91),
+            payloads: sourcePayloads(for: [.plainText])
+        )
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+
+        manager.shutdown()
+        sourceBinding.emit(.send(mimeType: MIMEType.plainText.rawValue, fd: 89))
+
+        try manager.throwPendingCallbackErrorIfAny()
+        #expect(backend.closedDescriptors == [89])
+        #expect(manager.drainSourceSendRequests().isEmpty)
+        #expect(manager.drainDataTransferEvents().isEmpty)
+        #expect(sourceBinding.destroyCount == 1)
+    }
+
+    @Test
     func shutdownIgnoresLateOfferAndDeviceCallbacks() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
