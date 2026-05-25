@@ -73,7 +73,7 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L25: `    public let value: String`
 - L27: `    public init(_ name: String) throws {`
 - L45: `    public var description: String {`
-- L50: `public struct CursorSize: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L50: `public struct CursorSize: Equatable, Hashable, Comparable, Sendable, CustomStringConvertible {`
 - L51: `    public let rawValue: Int32`
 - L53: `    public static let `default` = CursorSize(unchecked: 24)`
 - L55: `    public init(_ value: Int32) throws {`
@@ -187,12 +187,17 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 ### `Sources/WaylandClient/Public/Cursor/CursorConfiguration.swift`
 
-- L1: `public struct CursorConfiguration: Equatable, Sendable {`
-- L2: `    public var themeName: CursorThemeName?`
-- L3: `    public var size: CursorSize`
-- L4: `    public var fallbackCursor: PointerCursor`
-- L6: `    public init(`
-- L16: `    public init(`
+- L1: `public enum PointerCursorScalePolicy: Equatable, Sendable {`
+- L2: `    case fixed`
+- L3: `    case matchFocusedOutput`
+- L4: `    case maximumOutputScale`
+- L7: `public struct CursorConfiguration: Equatable, Sendable {`
+- L8: `    public var themeName: CursorThemeName?`
+- L9: `    public var size: CursorSize`
+- L10: `    public var scalePolicy: PointerCursorScalePolicy`
+- L11: `    public var fallbackCursor: PointerCursor`
+- L13: `    public init(`
+- L25: `    public init(`
 
 ### `Sources/WaylandClient/Public/Cursor/CursorRequestResult.swift`
 
@@ -856,10 +861,13 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L56: `    public let fractionalScale: ProtocolAvailability`
 - L59: `    public let cursorShape: ProtocolAvailability`
 - L62: `    public let xdgActivation: ProtocolAvailability`
-- L65: `    public let textInput: ProtocolAvailability`
-- L68: `    public let linuxDmabuf: ProtocolAvailability`
-- L70: `    public init(`
-- L100: `    public init(`
+- L65: `    public let relativePointer: ProtocolAvailability`
+- L68: `    public let pointerConstraints: ProtocolAvailability`
+- L71: `    public let textInput: ProtocolAvailability`
+- L74: `    public let linuxDmabuf: ProtocolAvailability`
+- L76: `    public init(`
+- L110: `    public init(`
+- L144: `    public init(`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+Activation.swift`
 
@@ -876,6 +884,14 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L115: `    public func primarySelectionOffer(for seatID: SeatID) throws -> PrimarySelectionOffer? {`
 - L125: `    public func requestPrimarySelection(`
 - L141: `    public func requestClearPrimarySelection(seatID: SeatID, serial: InputSerial) throws {`
+
+### `Sources/WaylandClient/Public/Display/WaylandDisplay+PointerCapture.swift`
+
+- L2: `    public func relativePointer(`
+- L9: `    public func lockPointer(`
+- L30: `    public func confinePointer(`
+- L49: `    public func destroyRelativePointerSubscription(`
+- L59: `    public func destroyPointerConstraint(_ constraint: PointerConstraint) throws {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+TextInput.swift`
 
@@ -1115,59 +1131,64 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L24: `    public init(rawValue timestampRawValue: UInt32) {`
 - L28: `    public init(integerLiteral value: UInt32) {`
 - L32: `    public var description: String {`
-- L37: `public struct PointerButtonCode: RawRepresentable, Equatable, Hashable, Sendable,`
-- L40: `    public let rawValue: UInt32`
-- L42: `    public init(rawValue buttonRawValue: UInt32) {`
-- L46: `    public init(integerLiteral value: UInt32) {`
+- L37: `public struct WaylandTimestampMicroseconds: RawRepresentable, Equatable, Hashable,`
+- L40: `    public let rawValue: UInt64`
+- L42: `    public init(rawValue timestampRawValue: UInt64) {`
+- L46: `    public init(integerLiteral value: UInt64) {`
 - L50: `    public var description: String {`
-- L55: `public struct EvdevKeycode: RawRepresentable, Equatable, Hashable, Sendable,`
+- L55: `public struct PointerButtonCode: RawRepresentable, Equatable, Hashable, Sendable,`
 - L58: `    public let rawValue: UInt32`
-- L60: `    public init(rawValue keycodeRawValue: UInt32) {`
+- L60: `    public init(rawValue buttonRawValue: UInt32) {`
 - L64: `    public init(integerLiteral value: UInt32) {`
 - L68: `    public var description: String {`
-- L73: `public struct XKBKeycode: RawRepresentable, Equatable, Hashable, Sendable,`
+- L73: `public struct EvdevKeycode: RawRepresentable, Equatable, Hashable, Sendable,`
 - L76: `    public let rawValue: UInt32`
 - L78: `    public init(rawValue keycodeRawValue: UInt32) {`
 - L82: `    public init(integerLiteral value: UInt32) {`
 - L86: `    public var description: String {`
-- L91: `public struct PointerAxisDiscreteStep: RawRepresentable, Equatable, Hashable,`
-- L94: `    public let rawValue: Int32`
-- L96: `    public init(rawValue stepRawValue: Int32) {`
-- L100: `    public init(integerLiteral value: Int32) {`
+- L91: `public struct XKBKeycode: RawRepresentable, Equatable, Hashable, Sendable,`
+- L94: `    public let rawValue: UInt32`
+- L96: `    public init(rawValue keycodeRawValue: UInt32) {`
+- L100: `    public init(integerLiteral value: UInt32) {`
 - L104: `    public var description: String {`
-- L109: `public struct PointerAxisValue120: RawRepresentable, Equatable, Hashable,`
+- L109: `public struct PointerAxisDiscreteStep: RawRepresentable, Equatable, Hashable,`
 - L112: `    public let rawValue: Int32`
-- L114: `    public init(rawValue valueRawValue: Int32) {`
+- L114: `    public init(rawValue stepRawValue: Int32) {`
 - L118: `    public init(integerLiteral value: Int32) {`
 - L122: `    public var description: String {`
-- L127: `public enum PointerAxis: Equatable, Sendable {`
-- L128: `    case verticalScroll`
-- L129: `    case horizontalScroll`
-- L130: `    case unknown(UInt32)`
-- L132: `    public init(rawValue axisRawValue: UInt32) {`
-- L143: `    public var rawValue: UInt32 {`
-- L155: `public enum PointerAxisSource: Equatable, Sendable {`
-- L156: `    case wheel`
-- L157: `    case finger`
-- L158: `    case continuous`
-- L159: `    case wheelTilt`
-- L160: `    case unknown(UInt32)`
-- L162: `    public init(rawValue sourceRawValue: UInt32) {`
-- L177: `    public var rawValue: UInt32 {`
-- L193: `public enum PointerAxisRelativeDirection: Equatable, Sendable {`
-- L194: `    case identical`
-- L195: `    case inverted`
-- L196: `    case unknown(UInt32)`
-- L198: `    public init(rawValue directionRawValue: UInt32) {`
-- L209: `    public var rawValue: UInt32 {`
-- L221: `public struct KeyboardModifierMask: RawRepresentable, Equatable, Hashable, Sendable,`
-- L224: `    public let rawValue: UInt32`
-- L226: `    public init(rawValue modifierMaskRawValue: UInt32) {`
-- L230: `    public var description: String {`
-- L235: `public struct KeyboardLayoutGroup: RawRepresentable, Equatable, Hashable, Sendable,`
-- L238: `    public let rawValue: UInt32`
-- L240: `    public init(rawValue layoutGroupRawValue: UInt32) {`
-- L244: `    public var description: String {`
+- L127: `public struct PointerAxisValue120: RawRepresentable, Equatable, Hashable,`
+- L130: `    public let rawValue: Int32`
+- L132: `    public init(rawValue valueRawValue: Int32) {`
+- L136: `    public init(integerLiteral value: Int32) {`
+- L140: `    public var description: String {`
+- L145: `public enum PointerAxis: Equatable, Sendable {`
+- L146: `    case verticalScroll`
+- L147: `    case horizontalScroll`
+- L148: `    case unknown(UInt32)`
+- L150: `    public init(rawValue axisRawValue: UInt32) {`
+- L161: `    public var rawValue: UInt32 {`
+- L173: `public enum PointerAxisSource: Equatable, Sendable {`
+- L174: `    case wheel`
+- L175: `    case finger`
+- L176: `    case continuous`
+- L177: `    case wheelTilt`
+- L178: `    case unknown(UInt32)`
+- L180: `    public init(rawValue sourceRawValue: UInt32) {`
+- L195: `    public var rawValue: UInt32 {`
+- L211: `public enum PointerAxisRelativeDirection: Equatable, Sendable {`
+- L212: `    case identical`
+- L213: `    case inverted`
+- L214: `    case unknown(UInt32)`
+- L216: `    public init(rawValue directionRawValue: UInt32) {`
+- L227: `    public var rawValue: UInt32 {`
+- L239: `public struct KeyboardModifierMask: RawRepresentable, Equatable, Hashable, Sendable,`
+- L242: `    public let rawValue: UInt32`
+- L244: `    public init(rawValue modifierMaskRawValue: UInt32) {`
+- L248: `    public var description: String {`
+- L253: `public struct KeyboardLayoutGroup: RawRepresentable, Equatable, Hashable, Sendable,`
+- L256: `    public let rawValue: UInt32`
+- L258: `    public init(rawValue layoutGroupRawValue: UInt32) {`
+- L262: `    public var description: String {`
 
 ### `Sources/WaylandClient/Public/Input/InputEvent+InterpretedKeyboard.swift`
 
@@ -1262,160 +1283,184 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L52: `    case moved(PointerLocation, time: WaylandTimestampMilliseconds)`
 - L53: `    case button(PointerButtonEvent)`
 - L54: `    case axis(PointerAxisEvent)`
-- L57: `public struct PointerLocation: Equatable, Sendable {`
-- L58: `    public let x: Double`
-- L59: `    public let y: Double`
-- L61: `    public init(x locationX: Double, y locationY: Double) {`
-- L67: `public struct PointerButtonEvent: Equatable, Sendable {`
-- L68: `    public let serial: InputSerial`
-- L69: `    public let time: WaylandTimestampMilliseconds`
-- L70: `    public let button: PointerButtonCode`
-- L71: `    public let state: ButtonState`
-- L73: `    public init(`
-- L86: `public enum PointerAxisEvent: Equatable, Sendable {`
-- L87: `    case axis(time: WaylandTimestampMilliseconds, axis: PointerAxis, value: Double)`
-- L88: `    case source(PointerAxisSource)`
-- L89: `    case stop(time: WaylandTimestampMilliseconds, axis: PointerAxis)`
-- L90: `    case discrete(axis: PointerAxis, value: PointerAxisDiscreteStep)`
-- L91: `    case value120(axis: PointerAxis, value120: PointerAxisValue120)`
-- L92: `    case relativeDirection(axis: PointerAxis, direction: PointerAxisRelativeDirection)`
-- L93: `    case frame`
-- L96: `public enum KeyboardEvent: Equatable, Sendable {`
-- L97: `    case raw(RawKeyboardEvent)`
-- L98: `    case interpreted(InterpretedKeyboardEvent)`
-- L101: `public enum RawKeyboardEvent: Equatable, Sendable {`
-- L102: `    case keymapChanged(KeyboardKeymapInfo)`
-- L103: `    case entered(serial: InputSerial, pressedKeys: [EvdevKeycode])`
-- L104: `    case left(serial: InputSerial)`
-- L105: `    case key(KeyboardKeyEvent)`
-- L106: `    case modifiers(KeyboardModifiers)`
-- L107: `    case repeatInfo(KeyboardRepeatPolicy)`
-- L110: `public enum InterpretedKeyboardEvent: Equatable, Sendable {`
-- L111: `    case keymap(InterpretedKeyboardKeymapInfo)`
-- L112: `    case key(InterpretedKeyboardKeyEvent)`
-- L113: `    case modifiers(InterpretedKeyboardModifiers)`
-- L114: `    case repeatInfo(KeyboardRepeatPolicy)`
-- L115: `    case unavailable(KeyboardInterpretationUnavailable)`
-- L118: `public struct InterpretedKeyboardKeymapInfo: Equatable, Sendable {`
-- L119: `    public let format: KeyboardKeymapFormat`
-- L120: `    public let size: UInt32`
-- L122: `    public init(format keymapFormat: KeyboardKeymapFormat, size keymapSize: UInt32) {`
-- L128: `public struct KeyboardKeymapInfo: Equatable, Sendable {`
-- L129: `    public let format: KeyboardKeymapFormat`
-- L130: `    public let size: UInt32`
-- L132: `    public init(format keymapFormat: KeyboardKeymapFormat, size keymapSize: UInt32) {`
-- L138: `public struct KeyboardKeyEvent: Equatable, Sendable {`
-- L139: `    public let serial: InputSerial`
-- L140: `    public let time: WaylandTimestampMilliseconds`
-- L141: `    public let rawKeycode: EvdevKeycode`
-- L142: `    public let state: KeyState`
-- L144: `    public init(`
-- L157: `public struct KeyboardKeysym: Equatable, Sendable {`
-- L158: `    public let rawValue: UInt32`
-- L160: `    public init(rawValue keysymRawValue: UInt32) {`
-- L164: `    public static let noSymbol = Self(rawValue: 0)`
-- L167: `public struct KeyboardModifiers: Equatable, Sendable {`
-- L168: `    public let serial: InputSerial`
-- L169: `    public let depressed: KeyboardModifierMask`
-- L170: `    public let latched: KeyboardModifierMask`
-- L171: `    public let locked: KeyboardModifierMask`
-- L172: `    public let group: KeyboardLayoutGroup`
-- L174: `    public init(`
-- L188: `    public init(`
-- L203: `public struct InterpretedKeyboardModifiers: Equatable, Sendable {`
-- L204: `    public let serial: InputSerial`
-- L205: `    public let depressed: KeyboardModifierMask`
-- L206: `    public let latched: KeyboardModifierMask`
-- L207: `    public let locked: KeyboardModifierMask`
-- L208: `    public let group: KeyboardLayoutGroup`
-- L209: `    public let changedComponents: KeyboardModifierStateComponents`
-- L211: `    public init(`
-- L227: `    public init(`
-- L244: `public struct KeyboardModifierStateComponents: OptionSet, Equatable, Sendable {`
-- L245: `    public let rawValue: UInt32`
-- L247: `    public init(rawValue componentsRawValue: UInt32) {`
-- L251: `    public static let modsDepressed = Self(rawValue: 1 << 0)`
-- L252: `    public static let modsLatched = Self(rawValue: 1 << 1)`
-- L253: `    public static let modsLocked = Self(rawValue: 1 << 2)`
-- L254: `    public static let modsEffective = Self(rawValue: 1 << 3)`
-- L255: `    public static let layoutDepressed = Self(rawValue: 1 << 4)`
-- L256: `    public static let layoutLatched = Self(rawValue: 1 << 5)`
-- L257: `    public static let layoutLocked = Self(rawValue: 1 << 6)`
-- L258: `    public static let layoutEffective = Self(rawValue: 1 << 7)`
-- L259: `    public static let leds = Self(rawValue: 1 << 8)`
-- L262: `public enum KeyboardRepeatPolicy: Equatable, Sendable {`
-- L263: `    case disabled`
-- L264: `    case enabled(rate: KeyboardRepeatRate, delay: KeyboardRepeatDelay)`
-- L266: `    public init(rate repeatRate: Int32, delay repeatDelay: Int32) throws {`
-- L284: `    public var rate: Int32 {`
-- L293: `    public var delayMilliseconds: Int32? {`
-- L303: `public struct KeyboardRepeatRate: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L304: `    public let rawValue: Int32`
-- L306: `    public init(_ value: Int32) throws {`
-- L319: `    public var description: String {`
-- L323: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L328: `public struct KeyboardRepeatDelay: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L329: `    public let rawValue: Int32`
-- L331: `    public init(_ value: Int32) throws {`
-- L344: `    public var description: String {`
-- L348: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L353: `public enum KeyboardRepeatPolicyError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L354: `    case nonPositiveRate(Int32)`
-- L355: `    case negativeRate(rate: Int32, delay: Int32)`
-- L356: `    case negativeDelay(rate: Int32, delay: Int32)`
-- L358: `    public var description: String {`
-- L370: `public struct KeyboardInterpretationUnavailable: Equatable, Sendable {`
-- L371: `    public let reason: KeyboardInterpretationUnavailableReason`
-- L373: `    public init(reason unavailableReason: KeyboardInterpretationUnavailableReason) {`
-- L378: `public enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {`
-- L379: `    case missingDeviceID`
-- L380: `    case noKeymap`
-- L381: `    case unsupportedKeymapFormat(UInt32)`
-- L382: `    case emptyKeymap`
-- L383: `    case invalidKeymap`
-- L384: `    case keymapReadFailed(KeymapReadFailure)`
-- L385: `    case composeTableUnavailable(locale: String)`
-- L386: `    case invalidComposeConfiguration`
-- L387: `    case composeStateCreationFailed`
-- L388: `    case missingKeymap`
-- L389: `    case missingKeyboardState`
-- L390: `    case invalidKeycode(UInt32)`
-- L391: `    case nonKeyboardInputDevice`
-- L392: `    case mismatchedKeyboardSeat(expected: SeatID, actual: SeatID)`
-- L393: `    case mismatchedKeyboardDevice`
-- L396: `public enum TouchEvent: Equatable, Sendable {`
-- L397: `    case down(TouchDownEvent)`
-- L398: `    case up(TouchUpEvent)`
-- L399: `    case motion(TouchMotionEvent)`
-- L400: `    case frame`
-- L401: `    case cancel`
-- L402: `    case shape(TouchShapeEvent)`
-- L403: `    case orientation(TouchOrientationEvent)`
-- L406: `public struct TouchDownEvent: Equatable, Sendable {`
-- L407: `    public let serial: InputSerial`
-- L408: `    public let time: WaylandTimestampMilliseconds`
-- L409: `    public let id: TouchID`
-- L410: `    public let location: PointerLocation`
-- L412: `    public init(`
-- L425: `public struct TouchUpEvent: Equatable, Sendable {`
-- L426: `    public let serial: InputSerial`
-- L427: `    public let time: WaylandTimestampMilliseconds`
-- L428: `    public let id: TouchID`
-- L430: `    public init(`
-- L441: `public struct TouchMotionEvent: Equatable, Sendable {`
-- L442: `    public let time: WaylandTimestampMilliseconds`
-- L443: `    public let id: TouchID`
-- L444: `    public let location: PointerLocation`
-- L446: `    public init(`
-- L457: `public struct TouchShapeEvent: Equatable, Sendable {`
-- L458: `    public let id: TouchID`
-- L459: `    public let major: Double`
-- L460: `    public let minor: Double`
-- L462: `    public init(id touchID: TouchID, major touchMajor: Double, minor touchMinor: Double) {`
-- L469: `public struct TouchOrientationEvent: Equatable, Sendable {`
-- L470: `    public let id: TouchID`
-- L471: `    public let orientation: Double`
-- L473: `    public init(id touchID: TouchID, orientation touchOrientation: Double) {`
+- L55: `    case relativeMotion(RelativePointerMotionEvent)`
+- L56: `    case constraint(PointerConstraintEvent)`
+- L59: `public struct PointerLocation: Equatable, Sendable {`
+- L60: `    public let x: Double`
+- L61: `    public let y: Double`
+- L63: `    public init(x locationX: Double, y locationY: Double) {`
+- L69: `public struct PointerDelta: Equatable, Sendable {`
+- L70: `    public let dx: Double`
+- L71: `    public let dy: Double`
+- L73: `    public init(dx pointerDX: Double, dy pointerDY: Double) {`
+- L79: `public struct RelativePointerMotionEvent: Equatable, Sendable {`
+- L80: `    public let time: WaylandTimestampMicroseconds`
+- L81: `    public let delta: PointerDelta`
+- L82: `    public let unacceleratedDelta: PointerDelta`
+- L84: `    public init(`
+- L95: `public enum PointerConstraintKind: Equatable, Hashable, Sendable {`
+- L96: `    case locked`
+- L97: `    case confined`
+- L100: `public struct PointerConstraintID: Equatable, Hashable, Sendable, CustomStringConvertible {`
+- L101: `    public let rawValue: UInt32`
+- L102: `    public let kind: PointerConstraintKind`
+- L104: `    public init(rawValue constraintRawValue: UInt32, kind constraintKind: PointerConstraintKind) {`
+- L109: `    public var description: String {`
+- L119: `public enum PointerConstraintEvent: Equatable, Sendable {`
+- L120: `    case locked(PointerConstraintID)`
+- L121: `    case unlocked(PointerConstraintID)`
+- L122: `    case confined(PointerConstraintID)`
+- L123: `    case unconfined(PointerConstraintID)`
+- L126: `public struct PointerButtonEvent: Equatable, Sendable {`
+- L127: `    public let serial: InputSerial`
+- L128: `    public let time: WaylandTimestampMilliseconds`
+- L129: `    public let button: PointerButtonCode`
+- L130: `    public let state: ButtonState`
+- L132: `    public init(`
+- L145: `public enum PointerAxisEvent: Equatable, Sendable {`
+- L146: `    case axis(time: WaylandTimestampMilliseconds, axis: PointerAxis, value: Double)`
+- L147: `    case source(PointerAxisSource)`
+- L148: `    case stop(time: WaylandTimestampMilliseconds, axis: PointerAxis)`
+- L149: `    case discrete(axis: PointerAxis, value: PointerAxisDiscreteStep)`
+- L150: `    case value120(axis: PointerAxis, value120: PointerAxisValue120)`
+- L151: `    case relativeDirection(axis: PointerAxis, direction: PointerAxisRelativeDirection)`
+- L152: `    case frame`
+- L155: `public enum KeyboardEvent: Equatable, Sendable {`
+- L156: `    case raw(RawKeyboardEvent)`
+- L157: `    case interpreted(InterpretedKeyboardEvent)`
+- L160: `public enum RawKeyboardEvent: Equatable, Sendable {`
+- L161: `    case keymapChanged(KeyboardKeymapInfo)`
+- L162: `    case entered(serial: InputSerial, pressedKeys: [EvdevKeycode])`
+- L163: `    case left(serial: InputSerial)`
+- L164: `    case key(KeyboardKeyEvent)`
+- L165: `    case modifiers(KeyboardModifiers)`
+- L166: `    case repeatInfo(KeyboardRepeatPolicy)`
+- L169: `public enum InterpretedKeyboardEvent: Equatable, Sendable {`
+- L170: `    case keymap(InterpretedKeyboardKeymapInfo)`
+- L171: `    case key(InterpretedKeyboardKeyEvent)`
+- L172: `    case modifiers(InterpretedKeyboardModifiers)`
+- L173: `    case repeatInfo(KeyboardRepeatPolicy)`
+- L174: `    case unavailable(KeyboardInterpretationUnavailable)`
+- L177: `public struct InterpretedKeyboardKeymapInfo: Equatable, Sendable {`
+- L178: `    public let format: KeyboardKeymapFormat`
+- L179: `    public let size: UInt32`
+- L181: `    public init(format keymapFormat: KeyboardKeymapFormat, size keymapSize: UInt32) {`
+- L187: `public struct KeyboardKeymapInfo: Equatable, Sendable {`
+- L188: `    public let format: KeyboardKeymapFormat`
+- L189: `    public let size: UInt32`
+- L191: `    public init(format keymapFormat: KeyboardKeymapFormat, size keymapSize: UInt32) {`
+- L197: `public struct KeyboardKeyEvent: Equatable, Sendable {`
+- L198: `    public let serial: InputSerial`
+- L199: `    public let time: WaylandTimestampMilliseconds`
+- L200: `    public let rawKeycode: EvdevKeycode`
+- L201: `    public let state: KeyState`
+- L203: `    public init(`
+- L216: `public struct KeyboardKeysym: Equatable, Sendable {`
+- L217: `    public let rawValue: UInt32`
+- L219: `    public init(rawValue keysymRawValue: UInt32) {`
+- L223: `    public static let noSymbol = Self(rawValue: 0)`
+- L226: `public struct KeyboardModifiers: Equatable, Sendable {`
+- L227: `    public let serial: InputSerial`
+- L228: `    public let depressed: KeyboardModifierMask`
+- L229: `    public let latched: KeyboardModifierMask`
+- L230: `    public let locked: KeyboardModifierMask`
+- L231: `    public let group: KeyboardLayoutGroup`
+- L233: `    public init(`
+- L247: `    public init(`
+- L262: `public struct InterpretedKeyboardModifiers: Equatable, Sendable {`
+- L263: `    public let serial: InputSerial`
+- L264: `    public let depressed: KeyboardModifierMask`
+- L265: `    public let latched: KeyboardModifierMask`
+- L266: `    public let locked: KeyboardModifierMask`
+- L267: `    public let group: KeyboardLayoutGroup`
+- L268: `    public let changedComponents: KeyboardModifierStateComponents`
+- L270: `    public init(`
+- L286: `    public init(`
+- L303: `public struct KeyboardModifierStateComponents: OptionSet, Equatable, Sendable {`
+- L304: `    public let rawValue: UInt32`
+- L306: `    public init(rawValue componentsRawValue: UInt32) {`
+- L310: `    public static let modsDepressed = Self(rawValue: 1 << 0)`
+- L311: `    public static let modsLatched = Self(rawValue: 1 << 1)`
+- L312: `    public static let modsLocked = Self(rawValue: 1 << 2)`
+- L313: `    public static let modsEffective = Self(rawValue: 1 << 3)`
+- L314: `    public static let layoutDepressed = Self(rawValue: 1 << 4)`
+- L315: `    public static let layoutLatched = Self(rawValue: 1 << 5)`
+- L316: `    public static let layoutLocked = Self(rawValue: 1 << 6)`
+- L317: `    public static let layoutEffective = Self(rawValue: 1 << 7)`
+- L318: `    public static let leds = Self(rawValue: 1 << 8)`
+- L321: `public enum KeyboardRepeatPolicy: Equatable, Sendable {`
+- L322: `    case disabled`
+- L323: `    case enabled(rate: KeyboardRepeatRate, delay: KeyboardRepeatDelay)`
+- L325: `    public init(rate repeatRate: Int32, delay repeatDelay: Int32) throws {`
+- L343: `    public var rate: Int32 {`
+- L352: `    public var delayMilliseconds: Int32? {`
+- L362: `public struct KeyboardRepeatRate: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L363: `    public let rawValue: Int32`
+- L365: `    public init(_ value: Int32) throws {`
+- L378: `    public var description: String {`
+- L382: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L387: `public struct KeyboardRepeatDelay: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L388: `    public let rawValue: Int32`
+- L390: `    public init(_ value: Int32) throws {`
+- L403: `    public var description: String {`
+- L407: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L412: `public enum KeyboardRepeatPolicyError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L413: `    case nonPositiveRate(Int32)`
+- L414: `    case negativeRate(rate: Int32, delay: Int32)`
+- L415: `    case negativeDelay(rate: Int32, delay: Int32)`
+- L417: `    public var description: String {`
+- L429: `public struct KeyboardInterpretationUnavailable: Equatable, Sendable {`
+- L430: `    public let reason: KeyboardInterpretationUnavailableReason`
+- L432: `    public init(reason unavailableReason: KeyboardInterpretationUnavailableReason) {`
+- L437: `public enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {`
+- L438: `    case missingDeviceID`
+- L439: `    case noKeymap`
+- L440: `    case unsupportedKeymapFormat(UInt32)`
+- L441: `    case emptyKeymap`
+- L442: `    case invalidKeymap`
+- L443: `    case keymapReadFailed(KeymapReadFailure)`
+- L444: `    case composeTableUnavailable(locale: String)`
+- L445: `    case invalidComposeConfiguration`
+- L446: `    case composeStateCreationFailed`
+- L447: `    case missingKeymap`
+- L448: `    case missingKeyboardState`
+- L449: `    case invalidKeycode(UInt32)`
+- L450: `    case nonKeyboardInputDevice`
+- L451: `    case mismatchedKeyboardSeat(expected: SeatID, actual: SeatID)`
+- L452: `    case mismatchedKeyboardDevice`
+- L455: `public enum TouchEvent: Equatable, Sendable {`
+- L456: `    case down(TouchDownEvent)`
+- L457: `    case up(TouchUpEvent)`
+- L458: `    case motion(TouchMotionEvent)`
+- L459: `    case frame`
+- L460: `    case cancel`
+- L461: `    case shape(TouchShapeEvent)`
+- L462: `    case orientation(TouchOrientationEvent)`
+- L465: `public struct TouchDownEvent: Equatable, Sendable {`
+- L466: `    public let serial: InputSerial`
+- L467: `    public let time: WaylandTimestampMilliseconds`
+- L468: `    public let id: TouchID`
+- L469: `    public let location: PointerLocation`
+- L471: `    public init(`
+- L484: `public struct TouchUpEvent: Equatable, Sendable {`
+- L485: `    public let serial: InputSerial`
+- L486: `    public let time: WaylandTimestampMilliseconds`
+- L487: `    public let id: TouchID`
+- L489: `    public init(`
+- L500: `public struct TouchMotionEvent: Equatable, Sendable {`
+- L501: `    public let time: WaylandTimestampMilliseconds`
+- L502: `    public let id: TouchID`
+- L503: `    public let location: PointerLocation`
+- L505: `    public init(`
+- L516: `public struct TouchShapeEvent: Equatable, Sendable {`
+- L517: `    public let id: TouchID`
+- L518: `    public let major: Double`
+- L519: `    public let minor: Double`
+- L521: `    public init(id touchID: TouchID, major touchMajor: Double, minor touchMinor: Double) {`
+- L528: `public struct TouchOrientationEvent: Equatable, Sendable {`
+- L529: `    public let id: TouchID`
+- L530: `    public let orientation: Double`
+- L532: `    public init(id touchID: TouchID, orientation touchOrientation: Double) {`
 
 ### `Sources/WaylandClient/Public/Input/InputEventState.swift`
 
@@ -1492,6 +1537,47 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L41: `    public init(_ value: Int) throws {`
 - L54: `    public var description: String {`
 - L58: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+
+### `Sources/WaylandClient/Public/Input/PointerCaptureDomainTypes.swift`
+
+- L1: `public enum PointerCaptureFeature: Equatable, Sendable, CustomStringConvertible {`
+- L2: `    case relativePointer`
+- L3: `    case pointerConstraints`
+- L5: `    public var description: String {`
+- L15: `public enum PointerConstraintLifetime: Equatable, Sendable {`
+- L16: `    case oneShot`
+- L17: `    case persistent`
+- L20: `public struct PointerConstraintRegion: Equatable, Sendable {`
+- L21: `    public let rectangles: [LogicalRect]`
+- L23: `    public init(_ constraintRectangles: [LogicalRect]) throws {`
+- L31: `    public init(_ rectangle: LogicalRect) {`
+- L36: `public enum PointerCaptureError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L37: `    case unavailable(PointerCaptureFeature)`
+- L38: `    case foreignWindow(WindowID)`
+- L39: `    case unknownWindow(WindowID)`
+- L40: `    case closedWindow(WindowID)`
+- L41: `    case unknownSeat(SeatID)`
+- L42: `    case displayClosed`
+- L43: `    case emptyRegion`
+- L44: `    case unknownRelativePointerSubscription(RelativePointerSubscriptionID)`
+- L45: `    case unknownPointerConstraint(PointerConstraintID)`
+- L46: `    case foreignRelativePointerSubscription(RelativePointerSubscriptionID)`
+- L47: `    case foreignPointerConstraint(PointerConstraintID)`
+- L49: `    public var description: String {`
+- L77: `public struct RelativePointerSubscriptionID: Equatable, Hashable, Sendable,`
+- L80: `    public let rawValue: UInt64`
+- L82: `    public init(rawValue subscriptionRawValue: UInt64) {`
+- L86: `    public var description: String {`
+- L91: `public struct RelativePointerSubscription: Hashable, Sendable {`
+- L92: `    public let id: RelativePointerSubscriptionID`
+- L109: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
+- L113: `    public func hash(into hasher: inout Hasher) {`
+- L117: `    public func destroy() async throws {`
+- L122: `public struct PointerConstraint: Hashable, Sendable {`
+- L123: `    public let id: PointerConstraintID`
+- L137: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
+- L141: `    public func hash(into hasher: inout Hasher) {`
+- L145: `    public func destroy() async throws {`
 
 ### `Sources/WaylandClient/Public/Input/SeatCapabilities.swift`
 
@@ -1869,28 +1955,31 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L75: `    public func requestPresentationFeedback() async throws {`
 - L79: `    public func requestActivationToken(`
 - L96: `    public func activate(using token: ActivationToken) async throws {`
-- L100: `    public func setTitle(_ title: WaylandString) async throws {`
-- L104: `    public func setTitle(_ title: String) async throws {`
-- L108: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
-- L112: `    public func setAppID(_ appID: String) async throws {`
-- L116: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
-- L120: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
-- L124: `    public func requestMaximize() async throws {`
-- L128: `    public func requestUnmaximize() async throws {`
-- L132: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
-- L136: `    public func requestExitFullscreen() async throws {`
-- L140: `    public func requestMinimize() async throws {`
-- L144: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
-- L148: `    public func requestInteractiveResize(`
-- L161: `    public func requestWindowMenu(`
-- L174: `    public func startDrag(`
-- L189: `    public var isClosed: Bool {`
-- L195: `    public var needsRedraw: Bool {`
-- L201: `    public var decorationMode: WindowDecorationMode {`
-- L207: `    public var geometry: SurfaceGeometry {`
-- L213: `    public var stateSnapshot: WindowStateSnapshot {`
-- L219: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L223: `    public func hash(into hasher: inout Hasher) {`
+- L100: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
+- L104: `    public func lockPointer(`
+- L119: `    public func confinePointer(`
+- L132: `    public func setTitle(_ title: WaylandString) async throws {`
+- L136: `    public func setTitle(_ title: String) async throws {`
+- L140: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L144: `    public func setAppID(_ appID: String) async throws {`
+- L148: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L152: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L156: `    public func requestMaximize() async throws {`
+- L160: `    public func requestUnmaximize() async throws {`
+- L164: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L168: `    public func requestExitFullscreen() async throws {`
+- L172: `    public func requestMinimize() async throws {`
+- L176: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L180: `    public func requestInteractiveResize(`
+- L193: `    public func requestWindowMenu(`
+- L206: `    public func startDrag(`
+- L221: `    public var isClosed: Bool {`
+- L227: `    public var needsRedraw: Bool {`
+- L233: `    public var decorationMode: WindowDecorationMode {`
+- L239: `    public var geometry: SurfaceGeometry {`
+- L245: `    public var stateSnapshot: WindowStateSnapshot {`
+- L251: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L255: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 

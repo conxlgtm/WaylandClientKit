@@ -132,6 +132,10 @@ The current baseline already has meaningful substrate pieces:
   platform handles
 - xdg-activation protocol XML, raw manager/token binding, public capability
   reporting, public token request and activate APIs, and `XDGActivationSmoke`
+- relative pointer and pointer-constraint protocol XML, raw wrappers, public
+  capability reporting, typed input events, managed lock/confine requests, and
+  `PointerCaptureSmoke`
+- public focused-output cursor scale policy and `CursorPolicySmoke`
 - framework-host contract documentation and external consumer packages that
   exercise public host-loop and tiny UI prototype shapes
 - package-internal submit-constraint model for linux-drm-syncobj, FIFO, and
@@ -149,8 +153,8 @@ Known foundation gaps:
   beyond public managed-GPU software fallback evidence
 - broader live compositor coverage for explicit sync, FIFO, commit timing, and
   metadata protocols beyond local unit and smoke reporting
-- public cursor animation and output-scale cursor policy APIs
-- advanced pointer and tablet protocols
+- public cursor animation and custom cursor image API
+- tablet and pointer-warp protocols
 - xdg-session-management design and session integration where needed by app
   launch and restoration workflows
 - compositor matrix coverage beyond headless Weston
@@ -927,7 +931,8 @@ Required behavior:
 - support compositor-managed cursor shape protocol when advertised
 - treat cursor surfaces as tests of the shared surface role, scale, commit, and
   destruction model
-- keep custom cursor drawing out unless a higher framework requirement proves it
+- keep custom cursor drawing out until a public buffer lifetime design keeps raw
+  Wayland buffers private
 
 Resource semantics:
 
@@ -951,8 +956,8 @@ Goal:
 
 Candidate protocols:
 
-- relative pointer
-- pointer constraints
+- relative pointer (public capability, events, and subscription API exist)
+- pointer constraints (public lock/confine API and lifecycle events exist)
 - tablet v2
 - pointer warp as preview/use-case-gated support
 

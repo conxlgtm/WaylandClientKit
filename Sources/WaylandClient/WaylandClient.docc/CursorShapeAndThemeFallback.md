@@ -10,6 +10,12 @@ request.
 
 Cursor diagnostics are reported through the input diagnostic path.
 
+``CursorConfiguration/scalePolicy`` controls how theme cursor size is selected.
+`PointerCursorScalePolicy.fixed` uses the configured base size.
+`PointerCursorScalePolicy.matchFocusedOutput` scales the theme cursor for the
+focused surface's outputs. `PointerCursorScalePolicy.maximumOutputScale` uses
+the largest known output scale.
+
 SwiftWayland currently provides built-in presets for default arrow, text,
 pointer, crosshair, horizontal resize, vertical resize, and hidden cursors.
 Diagonal resize cursors are intentionally not built in yet because portable
@@ -30,3 +36,8 @@ Treat these names as best-effort theme requests. If a cursor cannot be resolved,
 fall back to an existing built-in such as ``PointerCursor/crosshair`` or keep the
 current cursor until the framework has compositor/theme evidence for a better
 choice.
+
+Custom software cursor images are intentionally deferred. SwiftWayland currently
+supports compositor cursor-shape requests, named theme cursors, hidden cursors,
+and output-aware theme scale policy. A public image cursor API still needs a
+buffer lifetime design that does not expose raw Wayland buffers or SHM pools.

@@ -5,9 +5,9 @@ substrate code without taking on a widget toolkit, scene graph, or renderer.
 
 SwiftWayland's public `WaylandClient` API covers display connection lifetime,
 window and popup surfaces, software rendering through shared memory, input
-events, keyboard interpretation, cursor requests, data transfer, text-input
-sessions, XDG activation, presentation feedback, diagnostics, and capability
-reporting.
+events, keyboard interpretation, relative pointer and pointer constraints,
+cursor requests, data transfer, text-input sessions, XDG activation,
+presentation feedback, diagnostics, and capability reporting.
 
 GPU allocation and presentation experiments live in package-internal preview
 targets. They are not public `WaylandClient` API.
@@ -40,10 +40,16 @@ targets. They are not public `WaylandClient` API.
 ### Input
 
 - <doc:InputAndTextInput>
+- <doc:PointerCapture>
 - ``InputEvent``
 - ``SeatID``
 - ``KeyboardKeyEvent``
 - ``PointerEvent``
+- ``RelativePointerMotionEvent``
+- ``RelativePointerSubscription``
+- ``PointerConstraint``
+- ``PointerConstraintEvent``
+- ``PointerCaptureError``
 - ``TouchEvent``
 
 ### Data Transfer
@@ -93,6 +99,7 @@ targets. They are not public `WaylandClient` API.
 - <doc:CursorShapeAndThemeFallback>
 - ``PointerCursor``
 - ``CursorConfiguration``
+- ``PointerCursorScalePolicy``
 - ``CursorRequestResult``
 
 ### Presentation
