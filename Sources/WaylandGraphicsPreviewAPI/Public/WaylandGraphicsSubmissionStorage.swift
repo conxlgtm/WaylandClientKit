@@ -108,7 +108,11 @@ package actor WaylandGraphicsWindowBackingStorage {
             stage = .submissionCompletion
             try await afterSubmissionEffect()
             try leaseState.finishSubmission()
-            return frameResult(operation: operation, size: geometry.bufferSize)
+            return frameResult(
+                operation: operation,
+                size: geometry.bufferSize,
+                metadata: frame.metadata
+            )
         } catch {
             leaseState.failSubmission()
             throw graphicsError(for: error, stage: stage, operation: operation)
@@ -140,7 +144,11 @@ package actor WaylandGraphicsWindowBackingStorage {
             )
             stage = .submissionCompletion
             try leaseState.finishSubmission()
-            return frameResult(operation: operation, size: geometry.bufferSize)
+            return frameResult(
+                operation: operation,
+                size: geometry.bufferSize,
+                metadata: frameMetadata
+            )
         } catch {
             leaseState.failSubmission()
             if let drawError = WaylandGraphicsErrorMapper.callerDrawError(from: error) {
@@ -262,17 +270,6 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
     }
 
-    private func frameResult(
-        operation: WaylandGraphicsFrameSubmissionOperation,
-        size: PositivePixelSize
-    ) -> WaylandGraphicsFrameResult {
-        WaylandGraphicsFrameResult(
-            runtimePath: backingRuntimePath,
-            operation: operation.graphicsSubmissionOperation,
-            size: size
-        )
-    }
-
     nonisolated private static func clear(
         _ frame: borrowing SoftwareFrame,
         color: UInt32
@@ -302,6 +299,22 @@ extension WaylandGraphicsWindowBackingStorage {
         Self.shouldRequestPresentationFeedback(
             configuration: configuration,
             capabilities: backingRuntimePath.capabilities
+        )
+    }
+
+    private func frameResult(
+        operation: WaylandGraphicsFrameSubmissionOperation,
+        size: PositivePixelSize,
+        metadata: WaylandGraphicsFrameMetadata
+    ) -> WaylandGraphicsFrameResult {
+        WaylandGraphicsFrameResult(
+            runtimePath: backingRuntimePath,
+            operation: operation.graphicsSubmissionOperation,
+            size: size,
+            metadata: metadata,
+            presentationFeedbackRequested: shouldRequestPresentationFeedback,
+            synchronizationPolicy: configuration.synchronizationPolicy,
+            pacingPolicy: configuration.pacingPolicy
         )
     }
 }
