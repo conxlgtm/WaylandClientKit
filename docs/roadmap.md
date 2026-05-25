@@ -127,8 +127,9 @@ The current baseline already has meaningful substrate pieces:
 - package-internal GPU window presentation bridge through `WaylandGPUPreview`
 - preview graphics product `WaylandGraphicsPreview` for renderer-neutral
   capability, runtime-path, and fallback facts
-- managed software submission in `WaylandGraphicsPreview` for framework-facing
-  software rendering experiments without raw platform handles
+- managed software submission and managed-GPU backing preference in
+  `WaylandGraphicsPreview` for framework-facing preview experiments without raw
+  platform handles
 - xdg-activation protocol XML, raw manager binding, public capability reporting,
   and `XDGActivationSmoke`
 - framework-host contract documentation and external consumer packages that
@@ -145,6 +146,7 @@ Known foundation gaps:
 - extending the shared surface transaction model to cursor, drag icon, and future
   subsurface use
 - live compositor coverage for the package-internal GPU window presentation path
+  beyond public managed-GPU software fallback evidence
 - broader live compositor coverage for explicit sync, FIFO, commit timing, and
   metadata protocols beyond local unit and smoke reporting
 - public cursor animation and output-scale cursor policy APIs
