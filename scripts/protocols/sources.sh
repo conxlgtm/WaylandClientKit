@@ -174,6 +174,38 @@ protocol_sources_linux_dmabuf_candidates() {
         /usr/local/share/wayland-protocols/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml
 }
 
+protocol_sources_relative_pointer_candidates() {
+    local protocols_dir
+
+    if [[ -n "${RELATIVE_POINTER_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$RELATIVE_POINTER_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/unstable/relative-pointer/relative-pointer-unstable-v1.xml}" \
+        /usr/share/wayland-protocols/unstable/relative-pointer/relative-pointer-unstable-v1.xml \
+        /usr/local/share/wayland-protocols/unstable/relative-pointer/relative-pointer-unstable-v1.xml
+}
+
+protocol_sources_pointer_constraints_candidates() {
+    local protocols_dir
+
+    if [[ -n "${POINTER_CONSTRAINTS_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$POINTER_CONSTRAINTS_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml}" \
+        /usr/share/wayland-protocols/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml \
+        /usr/local/share/wayland-protocols/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml
+}
+
 protocol_sources_linux_drm_syncobj_candidates() {
     local protocols_dir
 
