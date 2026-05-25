@@ -267,6 +267,29 @@ void swl_text_input_v3_set_cursor_rectangle(
 void swl_text_input_v3_commit(struct zwp_text_input_v3 *text_input);
 
 /* ------------------------------------------------------------------ */
+/*  XDG activation request wrappers                                   */
+/* ------------------------------------------------------------------ */
+
+struct xdg_activation_token_v1 *swl_xdg_activation_v1_get_activation_token(
+    struct xdg_activation_v1 *activation);
+void swl_xdg_activation_v1_activate(
+    struct xdg_activation_v1 *activation,
+    const char *token,
+    struct wl_surface *surface);
+void swl_xdg_activation_token_v1_set_serial(
+    struct xdg_activation_token_v1 *token,
+    uint32_t serial,
+    struct wl_seat *seat);
+void swl_xdg_activation_token_v1_set_app_id(
+    struct xdg_activation_token_v1 *token,
+    const char *app_id);
+void swl_xdg_activation_token_v1_set_surface(
+    struct xdg_activation_token_v1 *token,
+    struct wl_surface *surface);
+void swl_xdg_activation_token_v1_commit(
+    struct xdg_activation_token_v1 *token);
+
+/* ------------------------------------------------------------------ */
 /*  XDG request wrappers                                              */
 /* ------------------------------------------------------------------ */
 
@@ -923,6 +946,12 @@ typedef void (*swl_wp_image_description_v1_ready2_fn)(
     uint32_t identity_hi,
     uint32_t identity_lo);
 
+/* XDG activation */
+typedef void (*swl_xdg_activation_token_v1_done_fn)(
+    void *data,
+    struct xdg_activation_token_v1 *token,
+    const char *token_value);
+
 /* Text input */
 typedef void (*swl_text_input_v3_enter_fn)(
     void *data, struct zwp_text_input_v3 *text_input, struct wl_surface *surface);
@@ -1208,6 +1237,11 @@ struct swl_wp_image_description_v1_listener_callbacks {
     void                                 *data;
 };
 
+struct swl_xdg_activation_token_v1_listener_callbacks {
+    swl_xdg_activation_token_v1_done_fn done;
+    void                              *data;
+};
+
 struct swl_text_input_v3_listener_callbacks {
     swl_text_input_v3_enter_fn                   enter;
     swl_text_input_v3_leave_fn                   leave;
@@ -1366,6 +1400,10 @@ int swl_wp_color_manager_v1_add_listener(
 int swl_wp_image_description_v1_add_listener(
     struct wp_image_description_v1 *image_description,
     const struct swl_wp_image_description_v1_listener_callbacks *callbacks);
+
+int swl_xdg_activation_token_v1_add_listener(
+    struct xdg_activation_token_v1 *token,
+    const struct swl_xdg_activation_token_v1_listener_callbacks *callbacks);
 
 int swl_text_input_v3_add_listener(
     struct zwp_text_input_v3 *text_input,
