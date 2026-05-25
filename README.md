@@ -421,6 +421,15 @@ preview submission API. The preview API does not expose raw Wayland, GBM, EGL,
 DRM, or sync handles and still reports software fallback explicitly when public
 managed GPU submission is unavailable.
 
+Run the managed GPU clear preview example:
+
+```bash
+./scripts/dev/swift.sh run GraphicsPreviewManagedGPUClear
+```
+
+This example requests managed GPU backing with software fallback allowed,
+submits one clear frame, prints the selected runtime path, and closes cleanly.
+
 Run the noninteractive Wayland smoke check under a real Wayland session:
 
 ```bash
