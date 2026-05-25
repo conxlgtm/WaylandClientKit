@@ -21,6 +21,8 @@ struct WaylandGraphicsPreviewClientTests {
             linuxDmabuf: .unavailable
         )
 
+        #expect(clientCapabilities.xdgActivation == .unavailable)
+
         let capabilities = WaylandGraphicsSurfaceCapabilities(
             capabilities: clientCapabilities
         )

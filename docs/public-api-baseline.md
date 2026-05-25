@@ -834,6 +834,7 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L65: `    public let textInput: ProtocolAvailability`
 - L68: `    public let linuxDmabuf: ProtocolAvailability`
 - L70: `    public init(`
+- L100: `    public init(`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+DataTransfer.swift`
 
