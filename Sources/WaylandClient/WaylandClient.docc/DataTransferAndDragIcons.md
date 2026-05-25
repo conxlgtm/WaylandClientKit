@@ -13,3 +13,7 @@ pixels.
 
 Data-transfer events use their own stream so clipboard, primary selection, and
 drag lifecycles can be observed independently from pointer and keyboard input.
+Offers are external compositor state and can become stale between advertisement
+and receive or read. SwiftWayland reports stale or unknown offers as typed
+failures or diagnostics so clients can log the compositor behavior, ignore
+unsupported private MIME types, and keep cleanup paths crash-free.

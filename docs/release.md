@@ -21,6 +21,7 @@ make check
 ./scripts/dev/swift.sh build --disable-index-store -c release --target SwiftWaylandDemo
 ./scripts/dev/swift.sh build --disable-index-store -c release --target GPUPreviewSmokeClient
 ./scripts/dev/swift.sh build --disable-index-store -c release --product swift-wayland-smoke
+./scripts/ci/test-framework-handoff-examples.sh
 make test-release
 ./scripts/ci/dump-public-api.sh > /tmp/swiftwayland-public-api.md
 ./scripts/ci/verify-public-api-audit.sh

@@ -126,6 +126,20 @@
       "notes": "Optional extension for compositor-managed pointer cursor shapes."
     },
     {
+      "name": "xdg-activation-v1",
+      "localPath": "protocols/upstream/staging/xdg-activation/xdg-activation-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.47",
+      "vendoredFromPackage": "wayland-protocols 1.47",
+      "vendoredFromPath": "/usr/share/wayland-protocols/staging/xdg-activation/xdg-activation-v1.xml",
+      "sha256": "d8418be2d5738d50aff788bef1c7574f33f26659aa045447ff2ef9b78c58fe01",
+      "stability": "staging",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "publicCapability",
+      "testStrategy": "unit-and-live-when-advertised",
+      "notes": "Optional desktop-integration protocol for activation tokens and surface activation."
+    },
+    {
       "name": "linux-drm-syncobj-v1",
       "localPath": "protocols/upstream/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml",
       "upstreamProject": "wayland-protocols",

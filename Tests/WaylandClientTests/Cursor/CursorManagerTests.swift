@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import Testing
 import WaylandCursor
 import WaylandRaw
@@ -105,6 +107,7 @@ struct CursorManagerTests {
         manager.observe(rawSeatRemoved(sequence: 3, seatID: seatA))
 
         #expect(firstSurface.destroyCount == 1)
+        #expect(Array(firstSurface.operationLog.suffix(3)) == [.detach, .commit, .destroy])
         #expect(secondSurface.destroyCount == 0)
     }
 
@@ -127,8 +130,52 @@ struct CursorManagerTests {
         try manager.setPointerCursor(.text)
 
         #expect(firstSurface.destroyCount == 1)
+        #expect(Array(firstSurface.operationLog.suffix(3)) == [.detach, .commit, .destroy])
         #expect(secondSurface.destroyCount == 0)
         #expect(backend.setCursorRequests.map(\.seatID) == [seatB])
+    }
+
+    @Test
+    func shutdownDetachesCommitsAndDestroysCursorSurfaces() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatA = RawSeatID(rawValue: 1)
+        let seatB = RawSeatID(rawValue: 2)
+
+        manager.register(surfaceID: 100)
+        manager.register(surfaceID: 200)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatA, surfaceID: 100))
+        manager.observe(rawPointerEnter(sequence: 2, seatID: seatB, surfaceID: 200))
+        let firstSurface = try #require(backend.surface(for: seatA))
+        let secondSurface = try #require(backend.surface(for: seatB))
+
+        manager.shutdown()
+
+        #expect(firstSurface.operationLog == [.attach, .commit, .detach, .commit, .destroy])
+        #expect(secondSurface.operationLog == [.attach, .commit, .detach, .commit, .destroy])
+    }
+
+    @Test
+    func shutdownIsIdempotentAndIgnoresLaterInput() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 1)
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100))
+        let cursorSurface = try #require(backend.surface(for: seatID))
+
+        manager.shutdown()
+        manager.shutdown()
+        manager.register(surfaceID: 200)
+        let diagnostics = manager.observe(
+            rawPointerEnter(sequence: 2, seatID: seatID, surfaceID: 200))
+        let requestResults = try manager.setPointerCursor(.text)
+
+        #expect(cursorSurface.operationLog == [.attach, .commit, .detach, .commit, .destroy])
+        #expect(diagnostics.isEmpty)
+        #expect(requestResults.isEmpty)
+        #expect(backend.createdSurfaces.count == 1)
     }
 
     @Test
@@ -450,8 +497,10 @@ final class RecordingCursorBackend: CursorManagerBackend {
 final class RecordingCursorSurface: CursorManagerSurface {
     let objectID: RawObjectID?
     private(set) var attachedCount = 0
+    private(set) var detachCount = 0
     private(set) var commitCount = 0
     private(set) var destroyCount = 0
+    private(set) var operationLog: [CursorSurfaceOperation] = []
 
     init(objectID cursorSurfaceID: RawObjectID) {
         objectID = cursorSurfaceID
@@ -459,15 +508,30 @@ final class RecordingCursorSurface: CursorManagerSurface {
 
     func attach(_: CursorImage) {
         attachedCount += 1
+        operationLog.append(.attach)
+    }
+
+    func detach() {
+        detachCount += 1
+        operationLog.append(.detach)
     }
 
     func commit() {
         commitCount += 1
+        operationLog.append(.commit)
     }
 
     func destroy() {
         destroyCount += 1
+        operationLog.append(.destroy)
     }
+}
+
+enum CursorSurfaceOperation: Equatable {
+    case attach
+    case detach
+    case commit
+    case destroy
 }
 
 private func rawSeatRemoved(sequence: UInt64, seatID: RawSeatID) -> RawInputEvent {

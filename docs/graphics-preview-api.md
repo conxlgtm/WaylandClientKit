@@ -9,6 +9,17 @@ The stable-ish client surface remains `WaylandClient`. Importing
 `WaylandGraphicsPreview` is an explicit opt-in to preview graphics types that
 may change before a foundation candidate.
 
+## Current Decision
+
+Keep `WaylandGraphicsPreview` at software submission plus runtime facts for this
+checkpoint. Do not expose raw GPU handles and do not promote the preview product
+to stable API. The compositor matrix still needs broader graphics-preview rows
+before public managed GPU submission is worth shaping.
+
+Near-term work should improve examples and matrix evidence around frame results,
+fallback reasons, presentation feedback, and damage validation. Public GBM, EGL,
+DRM, dmabuf, or syncobj handles remain out of scope.
+
 ## Current Scope
 
 The preview product exposes:

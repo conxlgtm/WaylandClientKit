@@ -2,6 +2,7 @@ import WaylandRaw
 
 @safe
 final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
+    // swiftlint:disable:previous type_body_length
     let eventHub: DisplayEventHub
     private var lifecycle: DisplayCoreLifecycle
     private var isDiscardingSurfaceGraph = false
@@ -195,7 +196,10 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     private func discardSurfaceGraphForFatalCleanup() {
         isDiscardingSurfaceGraph = true
         defer { isDiscardingSurfaceGraph = false }
-        surfaces.removeAll()
+
+        var discardedSurfaces = DisplaySurfaceStore<TopLevelWindow, PopupRoleSurface>()
+        swap(&surfaces, &discardedSurfaces)
+        discardedSurfaces.removeAll()
     }
 
     private func installEventCallbacks(for window: TopLevelWindow) {
@@ -238,6 +242,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         )
     }
 
+    // swiftlint:disable:next large_tuple
     package func surfaceLifecycleCallbacksForTesting(windowID: WindowID) -> (
         closeRequested: () -> Void,
         closed: () -> Void,

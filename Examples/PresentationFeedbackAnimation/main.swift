@@ -1,9 +1,12 @@
 import Foundation
 import WaylandClient
+import WaylandExampleSupport
 
 @main
 enum PresentationFeedbackAnimation {
     static func main() async throws {
+        let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
+
         try await WaylandDisplay.withConnection(
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
@@ -15,6 +18,10 @@ enum PresentationFeedbackAnimation {
         ) { display in
             let capabilities = try await display.capabilities()
             let usePresentationFeedback = capabilities.presentationTime.isAvailable
+            log(
+                "presentation feedback "
+                    + (usePresentationFeedback ? "available" : "unavailable")
+            )
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
                     title: "SwiftWayland Presentation Animation",
@@ -29,7 +36,6 @@ enum PresentationFeedbackAnimation {
             try await window.show { frame in
                 draw(frame, phase: 0)
             }
-            try await window.requestRedraw()
 
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
@@ -41,15 +47,22 @@ enum PresentationFeedbackAnimation {
                     )
                 }
                 group.addTask {
-                    try await consumePresentationEvents(window.presentationEvents)
+                    try await consumePresentationEvents(
+                        window.presentationEvents,
+                        animation: animation
+                    )
                 }
                 group.addTask {
-                    try await Task.sleep(for: .seconds(10))
+                    try await Task.sleep(for: .seconds(options.autoCloseSeconds ?? 10))
                     await window.close()
                 }
 
                 _ = try await group.next()
                 group.cancelAll()
+            }
+
+            if options.printSummary {
+                log(await animation.summary())
             }
         }
     }
@@ -60,6 +73,8 @@ enum PresentationFeedbackAnimation {
         animation: AnimationState,
         usePresentationFeedback: Bool
     ) async throws {
+        try await window.requestRedraw()
+
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             switch event {
@@ -87,16 +102,24 @@ enum PresentationFeedbackAnimation {
     }
 
     nonisolated private static func consumePresentationEvents(
-        _ events: WindowPresentationEvents
+        _ events: WindowPresentationEvents,
+        animation: AnimationState
     ) async throws {
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             switch event {
             case .presented(let feedback):
+                await animation.recordPresented()
                 log("presented \(feedback.surface) sequence=\(feedback.sequence.value)")
             case .discarded(let identity):
+                await animation.recordDiscarded()
                 log("discarded \(identity)")
             }
+        }
+
+        log("presentation feedback stream ended")
+        while !Task.isCancelled {
+            try await Task.sleep(for: .seconds(1))
         }
     }
 
@@ -118,9 +141,24 @@ enum PresentationFeedbackAnimation {
 
 actor AnimationState {
     private var phase = 0
+    private var presentedCount = 0
+    private var discardedCount = 0
 
     func nextPhase() -> Int {
         defer { phase += 1 }
         return phase
+    }
+
+    func recordPresented() {
+        presentedCount += 1
+    }
+
+    func recordDiscarded() {
+        discardedCount += 1
+    }
+
+    func summary() -> String {
+        "presentation animation summary frames=\(phase) presented=\(presentedCount) "
+            + "discarded=\(discardedCount)"
     }
 }

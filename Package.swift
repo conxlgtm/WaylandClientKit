@@ -164,6 +164,10 @@ let package = Package(
             dependencies: ["WaylandClient"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
+        .target(
+            name: "WaylandExampleSupport",
+            swiftSettings: strictMemorySafetySwiftSettings
+        ),
         .executableTarget(
             name: "SwiftWaylandDemo",
             dependencies: ["WaylandClient"],
@@ -184,13 +188,13 @@ let package = Package(
         ),
         .executableTarget(
             name: "PresentationFeedbackAnimation",
-            dependencies: ["WaylandClient"],
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/PresentationFeedbackAnimation",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
             name: "TwoWindowFrameworkHost",
-            dependencies: ["WaylandClient"],
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/TwoWindowFrameworkHost",
             swiftSettings: executableSwiftSettings
         ),
@@ -202,19 +206,19 @@ let package = Package(
         ),
         .executableTarget(
             name: "TextInputSmoke",
-            dependencies: ["WaylandClient"],
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/TextInputSmoke",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
             name: "DataTransferSmoke",
-            dependencies: ["WaylandClient"],
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/DataTransferSmoke",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
             name: "TwoWindowOrderStress",
-            dependencies: ["WaylandClient"],
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/TwoWindowOrderStress",
             swiftSettings: executableSwiftSettings
         ),
@@ -222,6 +226,12 @@ let package = Package(
             name: "SerialActionsProbe",
             dependencies: ["WaylandClient"],
             path: "Examples/SerialActionsProbe",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "XDGActivationSmoke",
+            dependencies: ["WaylandClient"],
+            path: "Examples/XDGActivationSmoke",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
@@ -300,6 +310,11 @@ let package = Package(
         .testTarget(
             name: "WaylandSmokeSupportTests",
             dependencies: ["WaylandSmokeSupport"],
+            swiftSettings: strictMemorySafetySwiftSettings
+        ),
+        .testTarget(
+            name: "WaylandExampleSupportTests",
+            dependencies: ["WaylandExampleSupport"],
             swiftSettings: strictMemorySafetySwiftSettings
         ),
     ],

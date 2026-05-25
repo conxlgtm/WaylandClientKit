@@ -17,6 +17,7 @@ struct WaylandGraphicsPreviewAPITests {
             presentationTime: .available(version: 1),
             fractionalScale: .unavailable,
             cursorShape: .unavailable,
+            xdgActivation: .unavailable,
             textInput: .unavailable,
             linuxDmabuf: .available(version: 4)
         )

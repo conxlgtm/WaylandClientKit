@@ -53,6 +53,9 @@ For packages building a GUI layer on top of SwiftWayland, see
 `docs/framework-host-contract.md` and `docs/building-a-gui-layer.md`.
 `Examples/FrameworkHostSmoke` shows a small app-host loop without defining
 widgets, layout, or a scene graph.
+The framework-facing examples cover multi-window hosting, client-side resize
+chrome, serial-sensitive window actions, text input, data transfer, and
+presentation-feedback animation.
 
 ## Support Matrix
 
@@ -96,6 +99,7 @@ Supported in the current experimental baseline:
 - `wp_fractional_scale_v1`
 - `wp_cursor_shape_manager_v1`
 - `wp_cursor_shape_device_v1`
+- `xdg_activation_v1`
 - `zwp_text_input_manager_v3`
 - `zwp_text_input_v3`
 - `zwp_linux_dmabuf_v1`
@@ -373,17 +377,42 @@ make verify-unsafe-allowlist
 Run the demo target:
 
 ```bash
-swift run SwiftWaylandDemo
+./scripts/dev/swift.sh run SwiftWaylandDemo
 ```
 
 The demo draws a small marker for pointer motion and prints basic pointer/keyboard/touch/seat events, including interpreted keyboard events when keymap interpretation is available.
 Interpreted keyboard events include local compose/dead-key text results when compose support is enabled.
 It sets a normal pointer cursor when pointer focus enters the demo window.
 
+Run framework-facing examples as needed:
+
+```bash
+./scripts/dev/swift.sh run ClientSideResizeChrome
+./scripts/dev/swift.sh run SerialActionsProbe
+./scripts/dev/swift.sh run TwoWindowFrameworkHost -- --auto-close --print-summary
+./scripts/dev/swift.sh run TwoWindowOrderStress -- --duration-seconds 3 --print-summary
+./scripts/dev/swift.sh run TextInputSmoke -- --auto-close --print-summary
+./scripts/dev/swift.sh run DataTransferSmoke -- --auto-close --print-summary
+./scripts/dev/swift.sh run PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
+./scripts/dev/swift.sh run XDGActivationSmoke
+```
+
+`ClientSideResizeChrome` demonstrates edge hit testing, resize cursors, and
+serial-preserving resize requests for two windows. `SerialActionsProbe` prints
+the target window, seat, serial, pointer location, decoration mode, capabilities,
+and request result for move, resize, and window-menu requests. The bounded modes
+let CI and release checks prove the examples still build while manual sessions
+can collect compositor-specific behavior.
+`XDGActivationSmoke` prints desktop activation capability; token request APIs
+are not public yet.
+
+Use [Manual Testing](docs/manual-testing.md) as the checklist for compositor
+QA and record new live evidence in [Compositor Matrix](docs/compositor-matrix.md).
+
 Run the graphics preview smoke client:
 
 ```bash
-swift run GPUPreviewSmokeClient
+./scripts/dev/swift.sh run GPUPreviewSmokeClient
 ```
 
 The graphics preview client prints projected renderer-neutral graphics path
@@ -404,10 +433,10 @@ Run public API integration tests under a real Wayland session:
 ./scripts/smoke/integration-wayland.sh
 ```
 
-Or run the executable directly:
+Or run the executable through the repository Swift wrapper:
 
 ```bash
-swift run swift-wayland-smoke
+./scripts/dev/swift.sh run swift-wayland-smoke
 ```
 
 ## Documents

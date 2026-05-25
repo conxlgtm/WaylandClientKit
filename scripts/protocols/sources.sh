@@ -126,6 +126,22 @@ protocol_sources_fractional_scale_candidates() {
         /usr/local/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml
 }
 
+protocol_sources_xdg_activation_candidates() {
+    local protocols_dir
+
+    if [[ -n "${XDG_ACTIVATION_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$XDG_ACTIVATION_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/staging/xdg-activation/xdg-activation-v1.xml}" \
+        /usr/share/wayland-protocols/staging/xdg-activation/xdg-activation-v1.xml \
+        /usr/local/share/wayland-protocols/staging/xdg-activation/xdg-activation-v1.xml
+}
+
 protocol_sources_primary_selection_candidates() {
     local protocols_dir
 

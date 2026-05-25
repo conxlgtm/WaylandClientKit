@@ -17,6 +17,9 @@ enum SerialActionsProbe {
                 presentationEventCapacity: 16
             )
         ) { display in
+            let capabilities = try await display.capabilities()
+            log("display capabilities \(capabilitiesDescription(capabilities))")
+
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
                     title: "SwiftWayland Serial Actions Probe",
@@ -89,7 +92,10 @@ enum SerialActionsProbe {
             switch event.kind {
             case .pointer(.entered(let location, let serial)):
                 await state.recordPointer(location)
-                log("pointer entered seat=\(event.seatID) serial=\(serial) location=\(locationDescription(location))")
+                log(
+                    "pointer entered seat=\(event.seatID) serial=\(serial) "
+                        + "location=\(locationDescription(location))"
+                )
                 try await window.requestRedraw()
             case .pointer(.moved(let location, _)):
                 await state.recordPointer(location)
@@ -130,45 +136,65 @@ enum SerialActionsProbe {
         state: SerialProbeState
     ) async throws {
         await state.recordButtonPress()
-        let action: String
+        let action = actionName(for: button.button)
+        let decorationMode = try await window.decorationMode
+        let snapshot = try await window.stateSnapshot
+
+        log(
+            "serial action attempt action=\(action) window=\(window.id) seat=\(seatID) "
+                + "serial=\(button.serial) button=\(button.button) "
+                + "location=\(locationDescription(location)) decoration=\(decorationMode) "
+                + "snapshot=\(snapshotDescription(snapshot)) "
+                + "managerCapabilities=\(snapshot.managerCapabilities)"
+        )
 
         do {
             switch button.button {
             case leftButton:
-                action = "move"
                 try await window.requestInteractiveMove(
                     seatID: seatID,
                     serial: button.serial
                 )
             case middleButton:
-                action = "resize"
                 try await window.requestInteractiveResize(
                     seatID: seatID,
                     serial: button.serial,
                     edge: .bottomRight
                 )
             case rightButton:
-                action = "window-menu"
                 try await window.requestWindowMenu(
                     seatID: seatID,
                     serial: button.serial,
                     position: menuPosition(for: location)
                 )
             default:
-                action = "ignored"
+                break
             }
             log(
-                "serial action=\(action) seat=\(seatID) serial=\(button.serial) "
-                    + "button=\(button.button) location=\(locationDescription(location))"
+                "serial action result action=\(action) window=\(window.id) "
+                    + "seat=\(seatID) serial=\(button.serial) threw=false"
             )
         } catch {
             log(
-                "serial action failed seat=\(seatID) serial=\(button.serial) "
-                    + "button=\(button.button) error=\(error)"
+                "serial action result action=\(action) window=\(window.id) "
+                    + "seat=\(seatID) serial=\(button.serial) threw=true error=\(error)"
             )
         }
 
         try await window.requestRedraw()
+    }
+
+    nonisolated private static func actionName(for button: PointerButtonCode) -> String {
+        switch button {
+        case leftButton:
+            "move"
+        case middleButton:
+            "resize"
+        case rightButton:
+            "window-menu"
+        default:
+            "ignored"
+        }
     }
 
     nonisolated private static func menuPosition(for location: PointerLocation?) -> LogicalOffset {
@@ -223,6 +249,33 @@ enum SerialActionsProbe {
 
     nonisolated private static func locationDescription(_ location: PointerLocation) -> String {
         "x=\(location.x) y=\(location.y)"
+    }
+
+    nonisolated private static func snapshotDescription(_ snapshot: WindowStateSnapshot) -> String {
+        "configureSerial=\(snapshot.configureSerial) size=\(snapshot.size) "
+            + "states=\(snapshot.states) bounds=\(String(describing: snapshot.bounds)) "
+            + "decoration=\(String(describing: snapshot.decorationMode)) "
+            + "outputs=\(snapshot.outputs)"
+    }
+
+    nonisolated private static func capabilitiesDescription(
+        _ capabilities: WaylandCapabilities
+    ) -> String {
+        "xdgDecoration=\(availabilityDescription(capabilities.xdgDecoration)) "
+            + "dragAndDrop=\(availabilityDescription(capabilities.dragAndDrop)) "
+            + "dragActions=\(availabilityDescription(capabilities.dragActionNegotiation)) "
+            + "cursorShape=\(availabilityDescription(capabilities.cursorShape))"
+    }
+
+    nonisolated private static func availabilityDescription(
+        _ availability: ProtocolAvailability
+    ) -> String {
+        switch availability {
+        case .available(let version):
+            "available(v\(version))"
+        case .unavailable:
+            "unavailable"
+        }
     }
 
     nonisolated private static func log(_ message: String) {

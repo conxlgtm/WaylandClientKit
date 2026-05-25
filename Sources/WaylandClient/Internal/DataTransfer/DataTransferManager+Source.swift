@@ -263,6 +263,10 @@ extension DataTransferManager {
         sourceID: DataSourceID,
         callbackIdentity: DataSourceCallbackIdentity
     ) {
+        guard !isShutdown else {
+            closeLateDataSourceSendIfNeeded(event, callbackIdentity: callbackIdentity)
+            return
+        }
         do {
             switch event {
             case .send(let rawMimeType, let descriptor):
@@ -313,6 +317,21 @@ extension DataTransferManager {
                 }
             }
             preconditionInvariantsHold()
+        } catch {
+            recordCallbackError(error, context: callbackIdentity.context)
+        }
+    }
+
+    private func closeLateDataSourceSendIfNeeded(
+        _ event: RawDataSourceEvent,
+        callbackIdentity: DataSourceCallbackIdentity
+    ) {
+        guard case .send(_, let descriptor) = event else {
+            return
+        }
+
+        do {
+            try closeSourceSendDescriptor(descriptor)
         } catch {
             recordCallbackError(error, context: callbackIdentity.context)
         }
