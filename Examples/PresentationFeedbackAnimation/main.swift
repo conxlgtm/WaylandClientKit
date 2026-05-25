@@ -36,7 +36,6 @@ enum PresentationFeedbackAnimation {
             try await window.show { frame in
                 draw(frame, phase: 0)
             }
-            try await window.requestRedraw()
 
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
@@ -74,6 +73,8 @@ enum PresentationFeedbackAnimation {
         animation: AnimationState,
         usePresentationFeedback: Bool
     ) async throws {
+        try await window.requestRedraw()
+
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             switch event {
@@ -114,6 +115,11 @@ enum PresentationFeedbackAnimation {
                 await animation.recordDiscarded()
                 log("discarded \(identity)")
             }
+        }
+
+        log("presentation feedback stream ended")
+        while !Task.isCancelled {
+            try await Task.sleep(for: .seconds(1))
         }
     }
 
