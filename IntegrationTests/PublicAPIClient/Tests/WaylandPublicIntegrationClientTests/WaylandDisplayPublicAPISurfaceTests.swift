@@ -58,6 +58,9 @@ struct WaylandDisplayPublicAPISurfaceTests {
             presentationTime: .unavailable,
             fractionalScale: .unavailable,
             cursorShape: .available(version: 1),
+            xdgActivation: .unavailable,
+            relativePointer: .available(version: 1),
+            pointerConstraints: .available(version: 1),
             textInput: .unavailable,
             linuxDmabuf: .available(version: 5)
         )
@@ -72,6 +75,8 @@ struct WaylandDisplayPublicAPISurfaceTests {
         #expect(capabilities.presentationTime == .unavailable)
         #expect(capabilities.cursorShape == .available(version: 1))
         #expect(capabilities.xdgActivation == .unavailable)
+        #expect(capabilities.relativePointer == .available(version: 1))
+        #expect(capabilities.pointerConstraints == .available(version: 1))
         #expect(capabilities.textInput == .unavailable)
         #expect(capabilities.linuxDmabuf == .available(version: 5))
 
@@ -112,6 +117,63 @@ struct WaylandDisplayPublicAPISurfaceTests {
         }
 
         _ = useActivationAPI
+    }
+
+    @Test
+    func pointerCaptureTypesAndMethodsCompileForExternalClients() throws {
+        let region = PointerConstraintRegion(
+            try LogicalRect(
+                x: 0,
+                y: 0,
+                width: 20,
+                height: 20
+            )
+        )
+        let motion = RelativePointerMotionEvent(
+            time: WaylandTimestampMicroseconds(rawValue: 10),
+            delta: PointerDelta(dx: 1.5, dy: -2),
+            unacceleratedDelta: PointerDelta(dx: 2, dy: -3)
+        )
+
+        #expect(region.rectangles.count == 1)
+        #expect(motion.delta.dx == 1.5)
+        #expect(PointerCaptureError.unavailable(.relativePointer).description.contains("relative"))
+
+        func usePointerCaptureAPI(display: WaylandDisplay, window: Window, seatID: SeatID)
+            async throws
+        {
+            let subscription = try await display.relativePointer(seatID: seatID)
+            try await subscription.destroy()
+
+            let displayConstraint = try await display.lockPointer(
+                window: window,
+                seatID: seatID,
+                region: region,
+                lifetime: .oneShot
+            )
+            try await displayConstraint.destroy()
+
+            let windowConstraint = try await window.confinePointer(
+                seatID: seatID,
+                region: region,
+                lifetime: .persistent
+            )
+            try await windowConstraint.destroy()
+        }
+
+        _ = usePointerCaptureAPI
+    }
+
+    @Test
+    func cursorPolicyTypesCompileForExternalClients() throws {
+        let configuration = CursorConfiguration(
+            scalePolicy: .matchFocusedOutput,
+            fallbackCursor: .crosshair
+        )
+        let named = try PointerCursor(name: "nw-resize")
+
+        #expect(configuration.scalePolicy == .matchFocusedOutput)
+        #expect(named.name == "nw-resize")
     }
 
     @Test
