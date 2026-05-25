@@ -1,6 +1,23 @@
 import Synchronization
 import WaylandRaw
 
+package protocol ActivationTokenBinding: AnyObject {
+    func setAppID(_ appID: String)
+    func setSurface(_ surface: RawSurface)
+    func setSerial(_ serial: InputSerial, seat: RawSeat)
+    func commit()
+    func cancel()
+    func destroy()
+}
+
+package protocol ActivationManagerBackend: AnyObject {
+    func preconditionIsOwnerThread()
+    func requestToken(
+        onDone: @escaping (RawXDGActivationTokenValue) -> Void
+    ) throws -> any ActivationTokenBinding
+    func activate(token: ActivationToken, surface: RawSurface) throws
+}
+
 package struct ActivationRequestID: Hashable, Sendable {
     package let rawValue: UInt64
 }
@@ -63,14 +80,19 @@ private enum ActivationTokenRequestState {
 }
 
 package final class ActivationManager {
-    private let connection: RawDisplayConnection
+    private let backend: any ActivationManagerBackend
     private var nextRequestID: UInt64 = 1
-    private var pendingTokenRequests: [ActivationRequestID: RawXDGActivationToken] = [:]
+    private var pendingTokenRequests: [ActivationRequestID: any ActivationTokenBinding] = [:]
     private var pendingWaiters: [ActivationRequestID: PendingActivationTokenRequest] = [:]
     private var isShutDown = false
 
     package init(connection rawConnection: RawDisplayConnection) {
-        connection = rawConnection
+        backend = LiveActivationManagerBackend(connection: rawConnection)
+    }
+
+    package init(backend managerBackend: any ActivationManagerBackend) {
+        managerBackend.preconditionIsOwnerThread()
+        backend = managerBackend
     }
 
     package func beginTokenRequest(
@@ -79,16 +101,15 @@ package final class ActivationManager {
         seat: RawSeat?,
         serial: InputSerial?
     ) throws -> PendingActivationTokenRequest {
-        connection.preconditionIsOwnerThread()
+        backend.preconditionIsOwnerThread()
         guard !isShutDown else {
             throw ActivationError.displayClosed
         }
 
         try validate(appID: appID, seat: seat, serial: serial)
-        let activation = try activationGlobal()
         let requestID = makeRequestID()
         let pending = PendingActivationTokenRequest(id: requestID)
-        let tokenRequest = try activation.requestToken { [weak self, weak pending] tokenValue in
+        let tokenRequest = try backend.requestToken { [weak self, weak pending] tokenValue in
             let token = ActivationToken(unchecked: tokenValue.value)
             pending?.complete(.success(token))
             self?.finishTokenRequest(requestID)
@@ -101,7 +122,7 @@ package final class ActivationManager {
             tokenRequest.setSurface(surface)
         }
         if let seat, let serial {
-            tokenRequest.setSerial(serial.rawValue, seat: seat)
+            tokenRequest.setSerial(serial, seat: seat)
         }
 
         pendingTokenRequests[requestID] = tokenRequest
@@ -111,28 +132,25 @@ package final class ActivationManager {
     }
 
     package func activate(token: ActivationToken, surface: RawSurface) throws {
-        connection.preconditionIsOwnerThread()
+        backend.preconditionIsOwnerThread()
         guard !isShutDown else {
             throw ActivationError.displayClosed
         }
 
-        try activationGlobal().activate(
-            token: RawXDGActivationTokenValue(token.value),
-            surface: surface
-        )
+        try backend.activate(token: token, surface: surface)
     }
 
     package func cancelTokenRequest(
         _ requestID: ActivationRequestID,
         error: ActivationError
     ) {
-        connection.preconditionIsOwnerThread()
+        backend.preconditionIsOwnerThread()
         pendingTokenRequests.removeValue(forKey: requestID)?.cancel()
         pendingWaiters.removeValue(forKey: requestID)?.complete(.failure(error))
     }
 
     package func shutdown() {
-        connection.preconditionIsOwnerThread()
+        backend.preconditionIsOwnerThread()
         guard !isShutDown else { return }
 
         isShutDown = true
@@ -147,15 +165,6 @@ package final class ActivationManager {
         for waiter in waiters.values {
             waiter.complete(.failure(.displayClosed))
         }
-    }
-
-    private func activationGlobal() throws -> RawXDGActivation {
-        let globals = try connection.bindRequiredGlobals()
-        guard case .bound(let activation) = globals.extensions.xdgActivation else {
-            throw ActivationError.unavailable
-        }
-
-        return activation
     }
 
     private func validate(appID: String?, seat: RawSeat?, serial: InputSerial?) throws {
@@ -179,8 +188,14 @@ package final class ActivationManager {
     }
 
     private func finishTokenRequest(_ requestID: ActivationRequestID) {
-        connection.preconditionIsOwnerThread()
+        backend.preconditionIsOwnerThread()
         pendingTokenRequests.removeValue(forKey: requestID)?.destroy()
         pendingWaiters.removeValue(forKey: requestID)
+    }
+}
+
+extension RawXDGActivationToken: ActivationTokenBinding {
+    package func setSerial(_ serial: InputSerial, seat: RawSeat) {
+        setSerial(serial.rawValue, seat: seat)
     }
 }
