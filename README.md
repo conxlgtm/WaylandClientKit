@@ -415,11 +415,11 @@ Run the graphics preview smoke client:
 ./scripts/dev/swift.sh run GPUPreviewSmokeClient
 ```
 
-The graphics preview client prints projected renderer-neutral graphics path
-facts, creates a managed preview backing, and submits one deterministic clear
-frame through the preview submission API. The preview API does not expose raw
-Wayland, GBM, EGL, DRM, or sync handles and still reports software fallback
-explicitly when public managed GPU submission is unavailable.
+The graphics preview client prints a pasteable runtime-path report, creates a
+managed preview backing, and submits one deterministic clear frame through the
+preview submission API. The preview API does not expose raw Wayland, GBM, EGL,
+DRM, or sync handles and still reports software fallback explicitly when public
+managed GPU submission is unavailable.
 
 Run the noninteractive Wayland smoke check under a real Wayland session:
 
