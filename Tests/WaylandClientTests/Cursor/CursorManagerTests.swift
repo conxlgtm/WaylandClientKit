@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import Testing
 import WaylandCursor
 import WaylandRaw

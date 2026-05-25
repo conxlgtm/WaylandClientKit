@@ -165,7 +165,10 @@ enum TwoWindowOrderStress {
                         try await controller.window.requestRedraw()
                     }
                 case .keyboard(.raw(.entered(let serial, _))):
-                    log("keyboard entered window=\(controller.name) id=\(windowID) serial=\(serial)")
+                    log(
+                        "keyboard entered window=\(controller.name) "
+                            + "id=\(windowID) serial=\(serial)"
+                    )
                 case .keyboard(.raw(.left(let serial))):
                     log("keyboard left window=\(controller.name) id=\(windowID) serial=\(serial)")
                 default:

@@ -377,7 +377,7 @@ make verify-unsafe-allowlist
 Run the demo target:
 
 ```bash
-swift run SwiftWaylandDemo
+./scripts/dev/swift.sh run SwiftWaylandDemo
 ```
 
 The demo draws a small marker for pointer motion and prints basic pointer/keyboard/touch/seat events, including interpreted keyboard events when keymap interpretation is available.
@@ -387,14 +387,14 @@ It sets a normal pointer cursor when pointer focus enters the demo window.
 Run framework-facing examples as needed:
 
 ```bash
-swift run ClientSideResizeChrome
-swift run SerialActionsProbe
-swift run TwoWindowFrameworkHost --auto-close --print-summary
-swift run TwoWindowOrderStress --duration-seconds 3 --print-summary
-swift run TextInputSmoke --auto-close --print-summary
-swift run DataTransferSmoke --auto-close --print-summary
-swift run PresentationFeedbackAnimation --duration-seconds 3 --print-summary
-swift run XDGActivationSmoke
+./scripts/dev/swift.sh run ClientSideResizeChrome
+./scripts/dev/swift.sh run SerialActionsProbe
+./scripts/dev/swift.sh run TwoWindowFrameworkHost -- --auto-close --print-summary
+./scripts/dev/swift.sh run TwoWindowOrderStress -- --duration-seconds 3 --print-summary
+./scripts/dev/swift.sh run TextInputSmoke -- --auto-close --print-summary
+./scripts/dev/swift.sh run DataTransferSmoke -- --auto-close --print-summary
+./scripts/dev/swift.sh run PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
+./scripts/dev/swift.sh run XDGActivationSmoke
 ```
 
 `ClientSideResizeChrome` demonstrates edge hit testing, resize cursors, and
@@ -406,10 +406,13 @@ can collect compositor-specific behavior.
 `XDGActivationSmoke` prints desktop activation capability; token request APIs
 are not public yet.
 
+Use [Manual Testing](docs/manual-testing.md) as the checklist for compositor
+QA and record new live evidence in [Compositor Matrix](docs/compositor-matrix.md).
+
 Run the graphics preview smoke client:
 
 ```bash
-swift run GPUPreviewSmokeClient
+./scripts/dev/swift.sh run GPUPreviewSmokeClient
 ```
 
 The graphics preview client prints projected renderer-neutral graphics path

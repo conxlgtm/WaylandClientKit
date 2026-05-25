@@ -288,8 +288,8 @@ private struct WindowSnapshot: Sendable {
     var lastKey: String?
 }
 
-private extension TextInputEvent {
-    nonisolated var windowID: WindowID? {
+extension TextInputEvent {
+    nonisolated fileprivate var windowID: WindowID? {
         switch self {
         case .entered(let focus), .left(let focus):
             focus.target.windowID
@@ -300,8 +300,8 @@ private extension TextInputEvent {
     }
 }
 
-private extension InputEventTarget {
-    nonisolated var windowID: WindowID? {
+extension InputEventTarget {
+    nonisolated fileprivate var windowID: WindowID? {
         switch self {
         case .surface(let surfaceTarget):
             surfaceTarget.windowID

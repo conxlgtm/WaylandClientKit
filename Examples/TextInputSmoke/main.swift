@@ -113,9 +113,19 @@ enum TextInputSmoke {
 
             switch event.kind {
             case .pointer(.button(let button)) where button.state == .pressed:
-                await enableTextInput(display: display, window: window, seatID: event.seatID, state: state)
+                await enableTextInput(
+                    display: display,
+                    window: window,
+                    seatID: event.seatID,
+                    state: state
+                )
             case .keyboard(.raw(.entered)):
-                await enableTextInput(display: display, window: window, seatID: event.seatID, state: state)
+                await enableTextInput(
+                    display: display,
+                    window: window,
+                    seatID: event.seatID,
+                    state: state
+                )
             case .keyboard(.raw(.left)):
                 await disableTextInput(seatID: event.seatID, state: state)
             case .keyboard(.interpreted(.key(let key))):
