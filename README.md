@@ -53,6 +53,9 @@ For packages building a GUI layer on top of SwiftWayland, see
 `docs/framework-host-contract.md` and `docs/building-a-gui-layer.md`.
 `Examples/FrameworkHostSmoke` shows a small app-host loop without defining
 widgets, layout, or a scene graph.
+The framework-facing examples cover multi-window hosting, client-side resize
+chrome, serial-sensitive window actions, text input, data transfer, and
+presentation-feedback animation.
 
 ## Support Matrix
 
@@ -379,6 +382,25 @@ swift run SwiftWaylandDemo
 The demo draws a small marker for pointer motion and prints basic pointer/keyboard/touch/seat events, including interpreted keyboard events when keymap interpretation is available.
 Interpreted keyboard events include local compose/dead-key text results when compose support is enabled.
 It sets a normal pointer cursor when pointer focus enters the demo window.
+
+Run framework-facing examples as needed:
+
+```bash
+swift run ClientSideResizeChrome
+swift run SerialActionsProbe
+swift run TwoWindowFrameworkHost --auto-close --print-summary
+swift run TwoWindowOrderStress --duration-seconds 3 --print-summary
+swift run TextInputSmoke --auto-close --print-summary
+swift run DataTransferSmoke --auto-close --print-summary
+swift run PresentationFeedbackAnimation --duration-seconds 3 --print-summary
+```
+
+`ClientSideResizeChrome` demonstrates edge hit testing, resize cursors, and
+serial-preserving resize requests for two windows. `SerialActionsProbe` prints
+the target window, seat, serial, pointer location, decoration mode, capabilities,
+and request result for move, resize, and window-menu requests. The bounded modes
+let CI and release checks prove the examples still build while manual sessions
+can collect compositor-specific behavior.
 
 Run the graphics preview smoke client:
 
