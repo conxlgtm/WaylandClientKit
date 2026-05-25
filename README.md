@@ -433,10 +433,10 @@ Run public API integration tests under a real Wayland session:
 ./scripts/smoke/integration-wayland.sh
 ```
 
-Or run the executable directly:
+Or run the executable through the repository Swift wrapper:
 
 ```bash
-swift run swift-wayland-smoke
+./scripts/dev/swift.sh run swift-wayland-smoke
 ```
 
 ## Documents
