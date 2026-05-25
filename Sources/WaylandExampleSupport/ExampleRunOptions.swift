@@ -62,6 +62,8 @@ public struct ExampleRunOptions: Equatable, Sendable {
                 autoClose = true
             case "--print-summary":
                 printSummary = true
+            case "--":
+                break
             default:
                 throw ExampleRunOptionError.unknownArgument(argument)
             }
