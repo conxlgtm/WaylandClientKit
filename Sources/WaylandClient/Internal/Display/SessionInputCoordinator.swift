@@ -85,7 +85,8 @@ final class SessionInputCoordinator {
 
     func processPendingSessionInputEvents(
         from rawEvents: [RawInputEvent],
-        onSeatRemoved: (SeatID) -> Void
+        onSeatRemoved: (SeatID) -> Void,
+        onPointerCapabilityLost: (SeatID) -> Void
     ) {
         guard !pendingInputState.hasFailed else { return }
 
@@ -97,8 +98,14 @@ final class SessionInputCoordinator {
         )
 
         for inputEvent in routedEvents {
-            guard case .seat(.removed) = inputEvent.kind else { continue }
-            onSeatRemoved(inputEvent.seatID)
+            switch inputEvent.kind {
+            case .seat(.removed):
+                onSeatRemoved(inputEvent.seatID)
+            case .seat(.changed(let snapshot)) where !snapshot.activeCapabilities.hasPointer:
+                onPointerCapabilityLost(inputEvent.seatID)
+            default:
+                continue
+            }
         }
 
         appendPendingInputEvents(routedEvents)

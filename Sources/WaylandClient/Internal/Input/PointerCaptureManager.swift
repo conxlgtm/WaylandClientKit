@@ -167,6 +167,15 @@ package final class PointerCaptureManager {
 
     package func removeSeat(_ seatID: SeatID) {
         connection.preconditionIsOwnerThread()
+        removePointerState(for: seatID)
+    }
+
+    package func removePointerCapability(_ seatID: SeatID) {
+        connection.preconditionIsOwnerThread()
+        removePointerState(for: seatID)
+    }
+
+    private func removePointerState(for seatID: SeatID) {
         let relativeIDs = relativePointers.filter { $0.value.seatID == seatID }.map(\.key)
         for id in relativeIDs {
             _ = relativePointerRegistry.remove(id)
