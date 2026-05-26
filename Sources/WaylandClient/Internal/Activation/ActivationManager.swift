@@ -55,6 +55,14 @@ package final class PendingActivationTokenRequest: Sendable {
         return try result.get()
     }
 
+    package func completedResult() -> ActivationTokenResult? {
+        state.withLock { tokenState in
+            guard case .completed(let result) = tokenState else { return nil }
+
+            return result
+        }
+    }
+
     package func complete(_ result: ActivationTokenResult) {
         let waiter: CheckedContinuation<ActivationTokenResult, Never>? =
             state.withLock { tokenState in

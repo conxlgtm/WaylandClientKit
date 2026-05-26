@@ -58,11 +58,19 @@ extension WaylandDisplay {
         core.cancelActivationTokenRequest(requestID, error: error)
     }
 
-    private static func waitForActivationToken(
+    package static func waitForActivationToken(
         _ pending: PendingActivationTokenRequest,
         timeoutMilliseconds: Int32
     ) async throws -> ActivationToken {
-        try await withThrowingTaskGroup(of: ActivationToken.self) { group in
+        if let result = pending.completedResult() {
+            return try result.get()
+        }
+
+        guard timeoutMilliseconds != 0 else {
+            throw ActivationError.tokenRequestTimedOut
+        }
+
+        return try await withThrowingTaskGroup(of: ActivationToken.self) { group in
             group.addTask {
                 try await pending.value()
             }
