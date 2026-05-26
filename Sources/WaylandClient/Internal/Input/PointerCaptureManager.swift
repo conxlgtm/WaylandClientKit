@@ -31,7 +31,9 @@ package final class PointerCaptureManager {
     private var relativePointers:
         [RelativePointerSubscriptionID: (seatID: SeatID, pointer: RawRelativePointer)] = [:]
     private var constraints:
-        [PointerConstraintID: (seatID: SeatID, surfaceID: RawObjectID, constraint: ManagedPointerConstraint)] =
+        [PointerConstraintID: (
+            seatID: SeatID, surfaceID: RawObjectID, constraint: ManagedPointerConstraint
+        )] =
             [:]
     private var constraintRegistry = PointerConstraintRegistry()
     private var isShutDown = false
@@ -92,6 +94,7 @@ package final class PointerCaptureManager {
                 x: fixedCursorHint.x,
                 y: fixedCursorHint.y
             )
+            surface.commit()
         }
 
         let managed = ManagedPointerConstraint.locked(constraint.pointer, region: constraint.region)
@@ -306,7 +309,9 @@ package struct PointerConstraintRegistry {
     private var keyByID: [PointerConstraintID: PointerConstraintKey] = [:]
     private var idByKey: [PointerConstraintKey: PointerConstraintID] = [:]
 
-    package init() {}
+    package init() {
+        // Exposes the synthesized initializer at package scope.
+    }
 
     package func preflight(surfaceID: RawObjectID, seatID: SeatID) throws {
         let key = PointerConstraintKey(surfaceID: surfaceID, seatID: seatID)
