@@ -41,6 +41,8 @@ public enum PointerCaptureError: Error, Equatable, Sendable, CustomStringConvert
     case unknownSeat(SeatID)
     case displayClosed
     case emptyRegion
+    case alreadyConstrained(seatID: SeatID)
+    case invalidCursorHint(PointerLocation)
     case unknownRelativePointerSubscription(RelativePointerSubscriptionID)
     case unknownPointerConstraint(PointerConstraintID)
     case foreignRelativePointerSubscription(RelativePointerSubscriptionID)
@@ -62,6 +64,10 @@ public enum PointerCaptureError: Error, Equatable, Sendable, CustomStringConvert
             "display is closed"
         case .emptyRegion:
             "pointer constraint region must contain at least one rectangle"
+        case .alreadyConstrained(let seatID):
+            "seat \(seatID) already has a pointer constraint for this surface"
+        case .invalidCursorHint(let location):
+            "pointer constraint cursor hint \(location) cannot be represented as Wayland fixed point"
         case .unknownRelativePointerSubscription(let subscriptionID):
             "relative pointer subscription \(subscriptionID) is not registered"
         case .unknownPointerConstraint(let constraintID):

@@ -315,6 +315,11 @@ Notes:
   Diagonal resize convenience presets are deferred until cursor theme names are
   verified across KDE, GNOME, Sway/wlroots, and Weston; frameworks may use
   custom names such as `nw-resize`, `ne-resize`, `sw-resize`, and `se-resize`.
+- Pointer lock/confine requests reject duplicate constraints for the same
+  surface and seat with `PointerCaptureError.alreadyConstrained` before sending
+  protocol requests. Cursor hints are validated before Wayland fixed-point
+  conversion and report `PointerCaptureError.invalidCursorHint` for
+  non-finite or out-of-range coordinates.
 - Clipboard offers are seat-scoped. `ClipboardOffer.read` performs a bounded read
   with a timeout, and `ClipboardSourceConfiguration` represents local regular
   clipboard payloads.
