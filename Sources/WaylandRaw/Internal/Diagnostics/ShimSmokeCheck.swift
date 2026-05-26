@@ -166,6 +166,7 @@ enum ShimSmokeCheck {
         _ = unsafe swl_zwp_linux_buffer_params_v1_create
     }
 
+    // swiftlint:disable:next function_body_length
     private static func verifyDestroyShims() {
         _ = unsafe swl_registry_destroy
         _ = unsafe swl_callback_destroy

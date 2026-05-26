@@ -7,7 +7,7 @@ import WaylandRaw
 @testable import WaylandClient
 
 @Suite
-struct CursorManagerTests {
+struct CursorManagerTests {  // swiftlint:disable:this type_body_length
     @Test
     func cursorConfigurationRejectsThemeNamesThatWouldTruncateAtCBoundary() throws {
         #expect(
@@ -62,7 +62,8 @@ struct CursorManagerTests {
                 cursorOutputScale(id: 2, scale: 3),
             ]
         )
-        manager.observe(rawPointerEnter(sequence: 1, seatID: RawSeatID(rawValue: 1), surfaceID: 100))
+        manager.observe(
+            rawPointerEnter(sequence: 1, seatID: RawSeatID(rawValue: 1), surfaceID: 100))
 
         #expect(backend.resolvedCursorSizes == [CursorSize(unchecked: 48)])
     }
@@ -76,7 +77,8 @@ struct CursorManagerTests {
         )
 
         manager.register(surfaceID: 100)
-        manager.observe(rawPointerEnter(sequence: 1, seatID: RawSeatID(rawValue: 1), surfaceID: 100))
+        manager.observe(
+            rawPointerEnter(sequence: 1, seatID: RawSeatID(rawValue: 1), surfaceID: 100))
 
         try manager.updateOutputScales(
             for: 100,
@@ -84,10 +86,11 @@ struct CursorManagerTests {
             availableOutputs: [cursorOutputScale(id: 1, scale: 3)]
         )
 
-        #expect(backend.resolvedCursorSizes == [
-            CursorSize(unchecked: 24),
-            CursorSize(unchecked: 72),
-        ])
+        #expect(
+            backend.resolvedCursorSizes == [
+                CursorSize(unchecked: 24),
+                CursorSize(unchecked: 72),
+            ])
         #expect(backend.setCursorRequests.count == 2)
     }
 
@@ -108,7 +111,8 @@ struct CursorManagerTests {
                 cursorOutputScale(id: 2, scale: 4),
             ]
         )
-        manager.observe(rawPointerEnter(sequence: 1, seatID: RawSeatID(rawValue: 1), surfaceID: 100))
+        manager.observe(
+            rawPointerEnter(sequence: 1, seatID: RawSeatID(rawValue: 1), surfaceID: 100))
 
         #expect(backend.resolvedCursorSizes == [CursorSize(unchecked: 96)])
     }

@@ -116,6 +116,7 @@ final class InputRouter {
         }
     }
 
+    // swiftlint:disable:next function_body_length
     private func routePointer(
         _ rawEvent: RawInputEvent,
         _ pointerEvent: RawPointerEvent

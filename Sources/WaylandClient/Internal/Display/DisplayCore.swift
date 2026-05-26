@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import WaylandRaw
 
 @safe
@@ -238,10 +240,14 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         outputs: [OutputID]
     ) {
         guard surfaceGraphAcceptsLifecycleCallback() else { return }
-        try? activeSession?.updateCursorOutputScalesOnOwnerThread(
-            surfaceID: surfaceID,
-            outputIDs: outputs
-        )
+        do {
+            try activeSession?.updateCursorOutputScalesOnOwnerThread(
+                surfaceID: surfaceID,
+                outputIDs: outputs
+            )
+        } catch {
+            markSurfaceStoreInvariantFailed(error)
+        }
         publishWindowOutputsChanged(windowID: windowID, outputs: outputs)
     }
 

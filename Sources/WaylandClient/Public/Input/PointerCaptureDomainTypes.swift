@@ -67,7 +67,8 @@ public enum PointerCaptureError: Error, Equatable, Sendable, CustomStringConvert
         case .alreadyConstrained(let seatID):
             "seat \(seatID) already has a pointer constraint for this surface"
         case .invalidCursorHint(let location):
-            "pointer constraint cursor hint \(location) cannot be represented as Wayland fixed point"
+            "pointer constraint cursor hint \(location) cannot be represented "
+                + "as Wayland fixed point"
         case .unknownRelativePointerSubscription(let subscriptionID):
             "relative pointer subscription \(subscriptionID) is not registered"
         case .unknownPointerConstraint(let constraintID):
