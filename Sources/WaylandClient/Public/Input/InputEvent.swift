@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 public struct InputEvent: Equatable, Sendable {
     public let sequence: UInt64
     public let seatID: SeatID

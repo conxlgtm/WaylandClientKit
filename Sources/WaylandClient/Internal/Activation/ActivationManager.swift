@@ -1,6 +1,8 @@
 import Synchronization
 import WaylandRaw
 
+package typealias ActivationTokenResult = Result<ActivationToken, ActivationError>
+
 package protocol ActivationTokenBinding: AnyObject {
     func setAppID(_ appID: String)
     func setSurface(_ surface: RawSurface)
@@ -33,8 +35,7 @@ package final class PendingActivationTokenRequest: Sendable {
 
     package func value() async throws -> ActivationToken {
         let result = await withCheckedContinuation { continuation in
-            let immediate: Result<ActivationToken, ActivationError>? = state.withLock {
-                tokenState in
+            let immediate: ActivationTokenResult? = state.withLock { tokenState in
                 switch tokenState {
                 case .pending:
                     tokenState = .waiting(continuation)
@@ -54,20 +55,20 @@ package final class PendingActivationTokenRequest: Sendable {
         return try result.get()
     }
 
-    package func complete(_ result: Result<ActivationToken, ActivationError>) {
-        let waiter: CheckedContinuation<Result<ActivationToken, ActivationError>, Never>? =
+    package func complete(_ result: ActivationTokenResult) {
+        let waiter: CheckedContinuation<ActivationTokenResult, Never>? =
             state.withLock { tokenState in
-            switch tokenState {
-            case .pending:
-                tokenState = .completed(result)
-                return nil
-            case .waiting(let waiter):
-                tokenState = .completed(result)
-                return waiter
-            case .completed:
-                return nil
+                switch tokenState {
+                case .pending:
+                    tokenState = .completed(result)
+                    return nil
+                case .waiting(let waiter):
+                    tokenState = .completed(result)
+                    return waiter
+                case .completed:
+                    return nil
+                }
             }
-        }
 
         waiter?.resume(returning: result)
     }

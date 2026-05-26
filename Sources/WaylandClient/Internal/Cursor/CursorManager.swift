@@ -291,7 +291,8 @@ package final class CursorManager: RawInputEventObserving {
         }
     }
 
-    package func cachedResolvedDesiredCursor(size: CursorSize) throws -> ResolvedPointerCursorImage {
+    package func cachedResolvedDesiredCursor(size: CursorSize) throws -> ResolvedPointerCursorImage
+    {
         if let resolvedDesiredCursor = desiredCursor.resolvedImage(size: size) {
             return resolvedDesiredCursor
         }

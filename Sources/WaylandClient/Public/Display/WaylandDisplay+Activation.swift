@@ -1,4 +1,5 @@
 extension WaylandDisplay {
+    // swiftlint:disable:next identifier_name
     public static let defaultActivationTokenTimeoutMilliseconds: Int32 = 1_000
 
     public func requestActivationToken(
@@ -47,7 +48,12 @@ extension WaylandDisplay {
         _ requestID: ActivationRequestID,
         error: ActivationError
     ) {
-        guard let core = try? requireCore() else { return }
+        let core: DisplayCore
+        do {
+            core = try requireCore()
+        } catch {
+            return
+        }
 
         core.cancelActivationTokenRequest(requestID, error: error)
     }

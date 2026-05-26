@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import CWaylandProtocols
 import Glibc
 
@@ -375,6 +377,7 @@ private final class RawRelativePointerOwner {
         eventSink = inputEventSink
         invariantFailureSink = failureSink
 
+        // swiftlint:disable closure_parameter_position
         unsafe callbacks.pointee.relative_motion = {
             data, _, utimeHi, utimeLo, dx, dy, dxUnaccel, dyUnaccel in
             RawRelativePointerOwner.withOwner(
@@ -393,6 +396,7 @@ private final class RawRelativePointerOwner {
                 )
             }
         }
+        // swiftlint:enable closure_parameter_position
     }
 
     func install(on relativePointer: OpaquePointer) throws(RuntimeError) {
@@ -453,8 +457,7 @@ private final class RawLockedPointerOwner {
         invariantFailureSink: invariantFailureSink
     )
 
-    @safe private var callbacks:
-        UnsafeMutablePointer<swl_zwp_locked_pointer_v1_listener_callbacks>
+    @safe private var callbacks: UnsafeMutablePointer<swl_zwp_locked_pointer_v1_listener_callbacks>
     {
         listenerStorage.callbacks
     }

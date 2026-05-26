@@ -3,7 +3,7 @@ import Testing
 import WaylandClient
 
 @Suite("WaylandDisplay public API surface")
-struct WaylandDisplayPublicAPISurfaceTests {
+struct WaylandDisplayPublicAPISurfaceTests {  // swiftlint:disable:this type_body_length
     @Test
     func primarySelectionPublicTypesCompileForExternalClients() throws {
         let payload = DataTransferSourcePayload(

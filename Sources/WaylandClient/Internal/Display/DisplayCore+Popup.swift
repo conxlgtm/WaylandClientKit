@@ -66,10 +66,14 @@ extension DisplayCore {
         popup.onRedrawRequested = callbacks.onRedrawRequested
         popup.onOutputMembershipChanged = { [weak core = self] outputs in
             guard let core, core.surfaceGraphAcceptsLifecycleCallback() else { return }
-            try? core.activeSession?.updateCursorOutputScalesOnOwnerThread(
-                surfaceID: popupSurfaceID,
-                outputIDs: outputs
-            )
+            do {
+                try core.activeSession?.updateCursorOutputScalesOnOwnerThread(
+                    surfaceID: popupSurfaceID,
+                    outputIDs: outputs
+                )
+            } catch {
+                core.markSurfaceStoreInvariantFailed(error)
+            }
         }
     }
 

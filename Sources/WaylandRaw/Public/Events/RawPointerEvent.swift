@@ -78,7 +78,9 @@ package struct RawPointerConstraintIdentity: Equatable, Hashable, Sendable {
     package let objectID: RawObjectID
     package let kind: RawPointerConstraintKind
 
-    package init(objectID constraintObjectID: RawObjectID, kind constraintKind: RawPointerConstraintKind) {
+    package init(
+        objectID constraintObjectID: RawObjectID, kind constraintKind: RawPointerConstraintKind
+    ) {
         objectID = constraintObjectID
         kind = constraintKind
     }

@@ -63,6 +63,7 @@ extension RawDisplayConnection {
                                                                     bindPointerConstraintsIfPresent(
                                                                         registry: reg
                                                                     )
+                                                                // swiftlint:disable line_length
                                                                 return OptionalGlobals(
                                                                     xdgDecorationManager:
                                                                         decorationManager,
@@ -106,9 +107,11 @@ extension RawDisplayConnection {
                                                                         dataDeviceManager,
                                                                     primarySelectionDeviceManager:
                                                                         primarySelectionDeviceManager,
-                                                                    textInputManager: textInputManager,
+                                                                    textInputManager:
+                                                                        textInputManager,
                                                                     linuxDmabuf: linuxDmabuf
                                                                 )
+                                                                // swiftlint:enable line_length
                                                             } catch {
                                                                 relativePointerManager.destroy()
                                                                 throw error
