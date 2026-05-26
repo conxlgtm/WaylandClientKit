@@ -110,8 +110,12 @@ package final class ActivationManager {
         let requestID = makeRequestID()
         let pending = PendingActivationTokenRequest(id: requestID)
         let tokenRequest = try backend.requestToken { [weak self, weak pending] tokenValue in
-            let token = ActivationToken(unchecked: tokenValue.value)
-            pending?.complete(.success(token))
+            do {
+                let token = try ActivationToken(tokenValue.value)
+                pending?.complete(.success(token))
+            } catch {
+                pending?.complete(.failure(.invalidToken))
+            }
             self?.finishTokenRequest(requestID)
         }
 
