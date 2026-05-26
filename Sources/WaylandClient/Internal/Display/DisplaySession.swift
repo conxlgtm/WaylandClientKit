@@ -413,6 +413,8 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         ) { [textInputManager, pointerCaptureManager] seatID in
             textInputManager.removeSeat(seatID)
             pointerCaptureManager.removeSeat(seatID)
+        } onPointerCapabilityLost: { [pointerCaptureManager] seatID in
+            pointerCaptureManager.removePointerCapability(seatID)
         }
     }
 

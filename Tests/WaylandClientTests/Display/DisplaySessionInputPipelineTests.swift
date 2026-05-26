@@ -244,6 +244,58 @@ struct DisplaySessionInputPipelineTests {
     }
 }
 
+@Suite
+struct DisplaySessionPointerCapabilityTests {
+    @Test
+    func sessionInputCoordinatorReportsPointerCapabilityLoss() throws {
+        let coordinator = try makeSessionInputCoordinator()
+        let seatID = RawSeatID(rawValue: 44)
+        var removedSeats: [SeatID] = []
+        var pointerLostSeats: [SeatID] = []
+
+        coordinator.processPendingSessionInputEvents(
+            from: [
+                rawSeatChanged(
+                    sequence: 1,
+                    seatID: seatID,
+                    name: "seat0",
+                    advertisedCapabilities: [.pointer],
+                    activeCapabilities: [.pointer]
+                ),
+                rawSeatChanged(
+                    sequence: 2,
+                    seatID: seatID,
+                    name: "seat0",
+                    advertisedCapabilities: [],
+                    activeCapabilities: []
+                ),
+            ],
+            onSeatRemoved: { removedSeats.append($0) },
+            onPointerCapabilityLost: { pointerLostSeats.append($0) }
+        )
+
+        #expect(removedSeats.isEmpty)
+        #expect(pointerLostSeats == [SeatID(rawValue: 44)])
+    }
+
+    @Test
+    func sessionInputCoordinatorDoesNotReportPointerLossForSeatRemoval() throws {
+        let coordinator = try makeSessionInputCoordinator()
+        let seatID = RawSeatID(rawValue: 45)
+        var removedSeats: [SeatID] = []
+        var pointerLostSeats: [SeatID] = []
+
+        coordinator.processPendingSessionInputEvents(
+            from: [rawEvent(sequence: 1, seatID: seatID, kind: .seatRemoved)],
+            onSeatRemoved: { removedSeats.append($0) },
+            onPointerCapabilityLost: { pointerLostSeats.append($0) }
+        )
+
+        #expect(removedSeats == [SeatID(rawValue: 45)])
+        #expect(pointerLostSeats.isEmpty)
+    }
+}
+
 private final class RegisteringRawObserver: RawInputEventObserving {
     private let router: InputRouter
     private let surfaceID: RawObjectID
@@ -309,5 +361,22 @@ private func sessionPendingOverflowEvent(from event: InputEvent) -> InputEvent {
                 )
             )
         )
+    )
+}
+
+private func makeSessionInputCoordinator() throws -> SessionInputCoordinator {
+    let keyboardInterpreter = try KeyboardInterpreter(
+        configuration: .init(compose: .disabled),
+        composeEnvironment: .init()
+    )
+    let cursorManager = try CursorManager(
+        backend: RecordingCursorBackend(),
+        configuration: .init()
+    )
+    return SessionInputCoordinator(
+        inputRouter: InputRouter(),
+        keyboardInterpreter: keyboardInterpreter,
+        cursorManager: cursorManager,
+        maximumPendingInputEventCount: 16
     )
 }

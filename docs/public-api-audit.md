@@ -320,7 +320,9 @@ Notes:
   sending protocol requests. Pointer lock/confine requests reject duplicate
   constraints for the same surface and seat with
   `PointerCaptureError.alreadyConstrained` before sending protocol requests.
-  Seats without an active pointer child report
+  Pointer capture state is discarded when a seat loses pointer capability so
+  later hotplug or compositor capability churn can create fresh subscriptions
+  and constraints. Seats without an active pointer child report
   `PointerCaptureError.pointerUnavailable` for relative pointer, lock, and
   confine requests before raw protocol requests are sent. Cursor hints are
   validated before Wayland fixed-point conversion and report
