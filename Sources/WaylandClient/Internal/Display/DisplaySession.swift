@@ -438,6 +438,10 @@ extension DisplaySession {
             parentSurfaceID: parentWindow.surfaceID,
             surfaceID: popupSurfaceID
         )
+        try updateCursorOutputScalesOnOwnerThread(
+            surfaceID: popupSurfaceID,
+            outputIDs: parentWindow.currentOutputIDsOnOwnerThread()
+        )
         popup.onClose = { [inputCoordinator, pointerCaptureManager] in
             pointerCaptureManager.removeSurface(popupSurfaceID)
             inputCoordinator.unregisterSurface(popupSurfaceID)

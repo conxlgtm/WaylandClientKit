@@ -634,6 +634,11 @@ extension TopLevelWindow {
 
         return surfaceRuntime.currentOutputIDs { outputRegistry.output(for: $0) != nil }
     }
+
+    package func currentOutputIDsOnOwnerThread() -> [OutputID] {
+        connection.preconditionIsOwnerThread()
+        return outputIDsOnOwnerThread
+    }
 }
 
 extension TopLevelWindow {

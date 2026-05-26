@@ -39,6 +39,7 @@ package final class PopupRoleSurface {
     package var onDismissed: (() -> Void)?
     package var onClosed: (() -> Void)?
     package var onRedrawRequested: (() -> Void)?
+    package var onOutputMembershipChanged: (([OutputID]) -> Void)?
 
     // swiftlint:disable:next function_body_length
     package init(
@@ -376,7 +377,8 @@ extension PopupRoleSurface {
             return
         }
 
-        _ = surfaceRuntime.enterOutput(outputID)
+        guard surfaceRuntime.enterOutput(outputID) else { return }
+        onOutputMembershipChanged?(currentOutputIDsOnOwnerThread())
     }
 
     private func handleSurfaceLeftOutput(_ output: RawOutputPointerIdentity) {
@@ -388,6 +390,7 @@ extension PopupRoleSurface {
             return
         }
 
-        _ = surfaceRuntime.leaveOutput(outputID)
+        guard surfaceRuntime.leaveOutput(outputID) else { return }
+        onOutputMembershipChanged?(currentOutputIDsOnOwnerThread())
     }
 }
