@@ -33,6 +33,7 @@ package final class PointerCaptureManager {
     private var constraints:
         [PointerConstraintID: (seatID: SeatID, surfaceID: RawObjectID, constraint: ManagedPointerConstraint)] =
             [:]
+    private var constraintRegistry = PointerConstraintRegistry()
     private var isShutDown = false
 
     package init(connection rawConnection: RawDisplayConnection) {
@@ -69,6 +70,8 @@ package final class PointerCaptureManager {
         lifetime: PointerConstraintLifetime
     ) throws -> PointerConstraintID {
         connection.preconditionIsOwnerThread()
+        let fixedCursorHint = try cursorHint.map(FixedPointerLocation.init)
+        try constraintRegistry.preflight(surfaceID: surface.objectID, seatID: seatID)
         let constraint = try createConstraint(
             surface: surface,
             seatID: seatID,
@@ -84,10 +87,10 @@ package final class PointerCaptureManager {
             )
         }
 
-        if let cursorHint {
+        if let fixedCursorHint {
             constraint.pointer.setCursorPositionHint(
-                x: WaylandFixed(pointerLocationCoordinate: cursorHint.x),
-                y: WaylandFixed(pointerLocationCoordinate: cursorHint.y)
+                x: fixedCursorHint.x,
+                y: fixedCursorHint.y
             )
         }
 
@@ -106,6 +109,7 @@ package final class PointerCaptureManager {
         lifetime: PointerConstraintLifetime
     ) throws -> PointerConstraintID {
         connection.preconditionIsOwnerThread()
+        try constraintRegistry.preflight(surfaceID: surface.objectID, seatID: seatID)
         let constraint = try createConstraint(
             surface: surface,
             seatID: seatID,
@@ -149,6 +153,7 @@ package final class PointerCaptureManager {
             throw PointerCaptureError.unknownPointerConstraint(id)
         }
 
+        _ = constraintRegistry.remove(id)
         constraint.destroy()
     }
 
@@ -161,6 +166,7 @@ package final class PointerCaptureManager {
 
         let constraintIDs = constraints.filter { $0.value.seatID == seatID }.map(\.key)
         for id in constraintIDs {
+            _ = constraintRegistry.remove(id)
             constraints.removeValue(forKey: id)?.constraint.destroy()
         }
     }
@@ -169,6 +175,7 @@ package final class PointerCaptureManager {
         connection.preconditionIsOwnerThread()
         let constraintIDs = constraints.filter { $0.value.surfaceID == surfaceID }.map(\.key)
         for id in constraintIDs {
+            _ = constraintRegistry.remove(id)
             constraints.removeValue(forKey: id)?.constraint.destroy()
         }
     }
@@ -186,6 +193,7 @@ package final class PointerCaptureManager {
         }
         relativePointers.removeAll()
         constraints.removeAll()
+        constraintRegistry.removeAll()
     }
 
     private func createConstraint<Pointer>(
@@ -234,6 +242,7 @@ package final class PointerCaptureManager {
     ) -> PointerConstraintID {
         let id = constraint.id
         constraints[id] = (seatID: seatID, surfaceID: surfaceID, constraint: constraint)
+        constraintRegistry.insert(id: id, surfaceID: surfaceID, seatID: seatID)
         return id
     }
 
@@ -269,6 +278,66 @@ package final class PointerCaptureManager {
     }
 }
 
+package struct FixedPointerLocation: Equatable, Sendable {
+    package let x: WaylandFixed
+    package let y: WaylandFixed
+
+    package init(_ location: PointerLocation) throws {
+        do {
+            x = try WaylandFixed(pointerLocationCoordinate: location.x)
+            y = try WaylandFixed(pointerLocationCoordinate: location.y)
+        } catch {
+            throw PointerCaptureError.invalidCursorHint(location)
+        }
+    }
+}
+
+package struct PointerConstraintKey: Equatable, Hashable, Sendable {
+    package let surfaceID: RawObjectID
+    package let seatID: SeatID
+
+    package init(surfaceID constraintSurfaceID: RawObjectID, seatID constraintSeatID: SeatID) {
+        surfaceID = constraintSurfaceID
+        seatID = constraintSeatID
+    }
+}
+
+package struct PointerConstraintRegistry {
+    private var keyByID: [PointerConstraintID: PointerConstraintKey] = [:]
+    private var idByKey: [PointerConstraintKey: PointerConstraintID] = [:]
+
+    package init() {}
+
+    package func preflight(surfaceID: RawObjectID, seatID: SeatID) throws {
+        let key = PointerConstraintKey(surfaceID: surfaceID, seatID: seatID)
+        guard idByKey[key] == nil else {
+            throw PointerCaptureError.alreadyConstrained(seatID: seatID)
+        }
+    }
+
+    package mutating func insert(
+        id: PointerConstraintID,
+        surfaceID: RawObjectID,
+        seatID: SeatID
+    ) {
+        let key = PointerConstraintKey(surfaceID: surfaceID, seatID: seatID)
+        keyByID[id] = key
+        idByKey[key] = id
+    }
+
+    @discardableResult
+    package mutating func remove(_ id: PointerConstraintID) -> PointerConstraintKey? {
+        guard let key = keyByID.removeValue(forKey: id) else { return nil }
+        idByKey.removeValue(forKey: key)
+        return key
+    }
+
+    package mutating func removeAll() {
+        keyByID.removeAll()
+        idByKey.removeAll()
+    }
+}
+
 extension RawPointerConstraintLifetime {
     package init(_ lifetime: PointerConstraintLifetime) {
         switch lifetime {
@@ -281,7 +350,17 @@ extension RawPointerConstraintLifetime {
 }
 
 extension WaylandFixed {
-    package init(pointerLocationCoordinate coordinate: Double) {
-        self.init(rawValue: Int32((coordinate * 256.0).rounded()))
+    package init(pointerLocationCoordinate coordinate: Double) throws {
+        let scaled = (coordinate * 256.0).rounded()
+        guard
+            coordinate.isFinite,
+            scaled.isFinite,
+            scaled >= Double(Int32.min),
+            scaled <= Double(Int32.max)
+        else {
+            throw PointerCaptureError.invalidCursorHint(PointerLocation(x: coordinate, y: 0))
+        }
+
+        self.init(rawValue: Int32(scaled))
     }
 }

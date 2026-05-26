@@ -1,4 +1,5 @@
 import Testing
+import WaylandRaw
 
 @testable import WaylandClient
 
@@ -43,4 +44,116 @@ struct PointerCaptureDomainTypesTests {
                 == "confined-pointer-8"
         )
     }
+
+    @Test
+    func pointerConstraintRegistryRejectsDuplicateLockForSurfaceAndSeat() throws {
+        var registry = PointerConstraintRegistry()
+        let surfaceID = RawObjectID(100)
+        let seatID = SeatID(rawValue: 1)
+
+        try registry.preflight(surfaceID: surfaceID, seatID: seatID)
+        registry.insert(
+            id: PointerConstraintID(rawValue: 1, kind: .locked),
+            surfaceID: surfaceID,
+            seatID: seatID
+        )
+
+        #expect(throws: PointerCaptureError.alreadyConstrained(seatID: seatID)) {
+            try registry.preflight(surfaceID: surfaceID, seatID: seatID)
+        }
+    }
+
+    @Test
+    func pointerConstraintRegistryRejectsConfineAfterLock() throws {
+        var registry = PointerConstraintRegistry()
+        let surfaceID = RawObjectID(101)
+        let seatID = SeatID(rawValue: 2)
+
+        registry.insert(
+            id: PointerConstraintID(rawValue: 2, kind: .locked),
+            surfaceID: surfaceID,
+            seatID: seatID
+        )
+
+        #expect(throws: PointerCaptureError.alreadyConstrained(seatID: seatID)) {
+            try registry.preflight(surfaceID: surfaceID, seatID: seatID)
+        }
+    }
+
+    @Test
+    func pointerConstraintRegistryRejectsLockAfterConfine() throws {
+        var registry = PointerConstraintRegistry()
+        let surfaceID = RawObjectID(102)
+        let seatID = SeatID(rawValue: 3)
+
+        registry.insert(
+            id: PointerConstraintID(rawValue: 3, kind: .confined),
+            surfaceID: surfaceID,
+            seatID: seatID
+        )
+
+        #expect(throws: PointerCaptureError.alreadyConstrained(seatID: seatID)) {
+            try registry.preflight(surfaceID: surfaceID, seatID: seatID)
+        }
+    }
+
+    @Test
+    func pointerConstraintRegistryAllowsConstraintAfterRemoval() throws {
+        var registry = PointerConstraintRegistry()
+        let surfaceID = RawObjectID(103)
+        let seatID = SeatID(rawValue: 4)
+        let id = PointerConstraintID(rawValue: 4, kind: .confined)
+
+        registry.insert(id: id, surfaceID: surfaceID, seatID: seatID)
+        _ = registry.remove(id)
+
+        try registry.preflight(surfaceID: surfaceID, seatID: seatID)
+    }
+
+    @Test
+    func fixedPointerLocationRejectsInvalidCoordinates() {
+        let nanError = pointerCaptureError {
+            _ = try FixedPointerLocation(PointerLocation(x: .nan, y: 1))
+        }
+        guard case .invalidCursorHint(let nanLocation) = nanError else {
+            Issue.record("expected invalid cursor hint for NaN coordinate")
+            return
+        }
+        #expect(nanLocation.x.isNaN)
+        #expect(nanLocation.y == 1)
+
+        #expect(
+            throws: PointerCaptureError.invalidCursorHint(
+                PointerLocation(x: 1, y: .infinity)
+            )
+        ) {
+            _ = try FixedPointerLocation(PointerLocation(x: 1, y: .infinity))
+        }
+        #expect(
+            throws: PointerCaptureError.invalidCursorHint(
+                PointerLocation(x: Double(Int32.max), y: 0)
+            )
+        ) {
+            _ = try FixedPointerLocation(PointerLocation(x: Double(Int32.max), y: 0))
+        }
+    }
+
+    @Test
+    func fixedPointerLocationConvertsCoordinatesToWaylandFixed() throws {
+        let location = try FixedPointerLocation(PointerLocation(x: 1.5, y: -0.5))
+
+        #expect(location.x == WaylandFixed(rawValue: 384))
+        #expect(location.y == WaylandFixed(rawValue: -128))
+    }
+}
+
+private func pointerCaptureError(_ body: () throws -> Void) -> PointerCaptureError? {
+    do {
+        try body()
+    } catch let error as PointerCaptureError {
+        return error
+    } catch {
+        Issue.record("unexpected error: \(error)")
+    }
+    return nil
 }
