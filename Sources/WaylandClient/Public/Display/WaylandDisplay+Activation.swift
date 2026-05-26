@@ -18,7 +18,12 @@ extension WaylandDisplay {
             return try await Self.waitForActivationToken(
                 pending,
                 timeoutMilliseconds: timeoutMilliseconds
-            )
+            ) { [self] in
+                await self.cancelActivationTokenRequest(
+                    pending.id,
+                    error: .tokenRequestTimedOut
+                )
+            }
         } catch let error as ActivationError {
             cancelActivationTokenRequest(pending.id, error: error)
             throw error
@@ -60,34 +65,42 @@ extension WaylandDisplay {
 
     package static func waitForActivationToken(
         _ pending: PendingActivationTokenRequest,
-        timeoutMilliseconds: Int32
+        timeoutMilliseconds: Int32,
+        onTimeout: @Sendable @escaping () async -> Void
     ) async throws -> ActivationToken {
-        if let result = pending.completedResult() {
-            return try result.get()
-        }
-
-        guard timeoutMilliseconds != 0 else {
-            throw ActivationError.tokenRequestTimedOut
-        }
-
-        return try await withThrowingTaskGroup(of: ActivationToken.self) { group in
-            group.addTask {
-                try await pending.value()
+        try await withTaskCancellationHandler {
+            if let result = pending.completedResult() {
+                return try result.get()
             }
 
-            if timeoutMilliseconds >= 0 {
+            guard timeoutMilliseconds != 0 else {
+                await onTimeout()
+                throw ActivationError.tokenRequestTimedOut
+            }
+
+            return try await withThrowingTaskGroup(of: ActivationToken.self) { group in
                 group.addTask {
-                    try await Task.sleep(for: .milliseconds(Int(timeoutMilliseconds)))
-                    throw ActivationError.tokenRequestTimedOut
+                    try await pending.value()
                 }
-            }
 
-            guard let token = try await group.next() else {
-                throw ActivationError.displayClosed
-            }
+                if timeoutMilliseconds >= 0 {
+                    group.addTask {
+                        try await Task.sleep(for: .milliseconds(Int(timeoutMilliseconds)))
+                        await onTimeout()
+                        throw ActivationError.tokenRequestTimedOut
+                    }
+                }
 
-            group.cancelAll()
-            return token
+                guard let token = try await group.next() else {
+                    pending.complete(.failure(.displayClosed))
+                    throw ActivationError.displayClosed
+                }
+
+                group.cancelAll()
+                return token
+            }
+        } onCancel: {
+            pending.complete(.failure(.displayClosed))
         }
     }
 }

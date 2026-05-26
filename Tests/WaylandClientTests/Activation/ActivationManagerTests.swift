@@ -59,28 +59,63 @@ struct ActivationManagerTests {
         let token = try await WaylandDisplay.waitForActivationToken(
             pending,
             timeoutMilliseconds: 0
-        )
+        ) {
+            // Already completed requests return before timeout cancellation runs.
+        }
 
         #expect(token == ActivationToken(unchecked: "ready-token"))
     }
 
     @Test
-    func zeroTimeoutWaitFailsPendingRequestWithoutWaiting() async throws {
+    func zeroTimeoutWaitCancelsPendingRequest() async throws {
         let pending = PendingActivationTokenRequest(id: ActivationRequestID(rawValue: 1))
 
         let error = await activationError {
             _ = try await WaylandDisplay.waitForActivationToken(
                 pending,
                 timeoutMilliseconds: 0
-            )
+            ) {
+                pending.complete(.failure(.tokenRequestTimedOut))
+            }
         }
 
         #expect(error == .tokenRequestTimedOut)
+        let completedError = await activationError {
+            guard let result = pending.completedResult() else {
+                Issue.record("expected completed activation token request")
+                return
+            }
 
-        pending.complete(.success(ActivationToken(unchecked: "late-token")))
-        let token = try await pending.value()
+            _ = try result.get()
+        }
 
-        #expect(token == ActivationToken(unchecked: "late-token"))
+        #expect(completedError == .tokenRequestTimedOut)
+    }
+
+    @Test
+    func positiveTimeoutWaitCancelsPendingRequestBeforeReturning() async throws {
+        let pending = PendingActivationTokenRequest(id: ActivationRequestID(rawValue: 1))
+
+        let error = await activationError {
+            _ = try await WaylandDisplay.waitForActivationToken(
+                pending,
+                timeoutMilliseconds: 1
+            ) {
+                pending.complete(.failure(.tokenRequestTimedOut))
+            }
+        }
+
+        #expect(error == .tokenRequestTimedOut)
+        let completedError = await activationError {
+            guard let result = pending.completedResult() else {
+                Issue.record("expected completed activation token request")
+                return
+            }
+
+            _ = try result.get()
+        }
+
+        #expect(completedError == .tokenRequestTimedOut)
     }
 
     @Test
