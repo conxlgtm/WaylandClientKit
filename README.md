@@ -44,7 +44,7 @@ Current experimental baseline:
 Not implemented yet:
 
 - protocol coverage beyond the listed current support matrix
-- public cursor animation, output-scale cursor policy, or custom cursor drawing APIs
+- public cursor animation or custom cursor drawing APIs
 - output-management APIs
 - public GPU rendering APIs in `WaylandClient`
 - high-level gesture recognizers or widgets
