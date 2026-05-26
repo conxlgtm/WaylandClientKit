@@ -111,6 +111,19 @@ struct PointerCaptureDomainTypesTests {
     }
 
     @Test
+    func pointerlessSeatReportsPointerCaptureError() throws {
+        let seatID = SeatID(rawValue: 41)
+        let seat = try RawSeat.testingNoopSeatForRequestRecording(
+            id: RawSeatID(seatID),
+            pointerAddress: 0x5EA7
+        )
+
+        #expect(throws: PointerCaptureError.pointerUnavailable(seatID)) {
+            try PointerCaptureManager.requirePointerDevice(on: seat, seatID: seatID)
+        }
+    }
+
+    @Test
     func fixedPointerLocationRejectsInvalidCoordinates() {
         let nanError = pointerCaptureError {
             _ = try FixedPointerLocation(PointerLocation(x: .nan, y: 1))

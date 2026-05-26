@@ -373,6 +373,10 @@ package final class RawSeat {
         pointerDevice?.pointer
     }
 
+    package var hasPointerDevice: Bool {
+        pointerDevice != nil
+    }
+
     package var pointerDeviceID: RawInputDeviceID? {
         pointerDevice?.id
     }

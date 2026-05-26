@@ -317,9 +317,12 @@ Notes:
   custom names such as `nw-resize`, `ne-resize`, `sw-resize`, and `se-resize`.
 - Pointer lock/confine requests reject duplicate constraints for the same
   surface and seat with `PointerCaptureError.alreadyConstrained` before sending
-  protocol requests. Cursor hints are validated before Wayland fixed-point
-  conversion and report `PointerCaptureError.invalidCursorHint` for
-  non-finite or out-of-range coordinates.
+  protocol requests. Seats without an active pointer child report
+  `PointerCaptureError.pointerUnavailable` for relative pointer, lock, and
+  confine requests before raw protocol requests are sent. Cursor hints are
+  validated before Wayland fixed-point conversion and report
+  `PointerCaptureError.invalidCursorHint` for non-finite or out-of-range
+  coordinates.
 - Clipboard offers are seat-scoped. `ClipboardOffer.read` performs a bounded read
   with a timeout, and `ClipboardSourceConfiguration` represents local regular
   clipboard payloads.

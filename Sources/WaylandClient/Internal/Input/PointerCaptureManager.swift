@@ -55,6 +55,7 @@ package final class PointerCaptureManager {
             throw PointerCaptureError.unavailable(.relativePointer)
         }
         let seat = try requireSeat(seatID, globals: globals)
+        try Self.requirePointerDevice(on: seat, seatID: seatID)
         let relativePointer = try manager.relativePointer(
             for: seat,
             eventSink: connection.inputEventSink
@@ -221,6 +222,7 @@ package final class PointerCaptureManager {
             throw PointerCaptureError.unavailable(.pointerConstraints)
         }
         let seat = try requireSeat(seatID, globals: globals)
+        try Self.requirePointerDevice(on: seat, seatID: seatID)
         let rawRegion = try makeRegion(region, globals: globals)
 
         do {
@@ -278,6 +280,12 @@ package final class PointerCaptureManager {
     private func allocateRelativePointerSubscriptionID() -> RelativePointerSubscriptionID {
         defer { nextRelativePointerSubscriptionID += 1 }
         return RelativePointerSubscriptionID(rawValue: nextRelativePointerSubscriptionID)
+    }
+
+    package static func requirePointerDevice(on seat: RawSeat, seatID: SeatID) throws {
+        guard seat.hasPointerDevice else {
+            throw PointerCaptureError.pointerUnavailable(seatID)
+        }
     }
 }
 
