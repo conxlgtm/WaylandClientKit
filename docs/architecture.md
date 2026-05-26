@@ -354,7 +354,7 @@ Supported:
 
 Not supported:
 
-- cursor animation or per-output cursor scaling
+- cursor animation or custom software cursor images
 - client-side decoration rendering
 - drag icon surfaces
 - output management or control APIs

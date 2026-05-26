@@ -199,7 +199,7 @@ Popups:
 
 Not supported in the current experimental baseline:
 
-- public cursor animation or per-output cursor policy APIs
+- public cursor animation or custom software cursor image APIs
 - output management or control APIs
 - public `WaylandClient` GPU rendering APIs
 - public explicit synchronization or frame-pacing APIs

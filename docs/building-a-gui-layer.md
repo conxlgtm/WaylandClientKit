@@ -180,7 +180,7 @@ framework's widget layer. Keep data transfer at the app-host boundary.
 - Partial damage is represented in `WaylandGraphicsDamageRegion`, but managed
   preview submission currently reports unsupported partial damage.
 - Color-management image descriptions remain internal.
-- Public cursor animation and per-output cursor policy APIs are not available.
+- Public cursor animation and custom software cursor image APIs are not available.
 - Output-management APIs are out of scope.
 - `WaylandGraphicsPreview` remains source-breaking preview API.
 
