@@ -52,6 +52,51 @@ struct ActivationManagerTests {
     }
 
     @Test
+    func zeroTimeoutWaitReturnsAlreadyCompletedToken() async throws {
+        let pending = PendingActivationTokenRequest(id: ActivationRequestID(rawValue: 1))
+        pending.complete(.success(ActivationToken(unchecked: "ready-token")))
+
+        let token = try await WaylandDisplay.waitForActivationToken(
+            pending,
+            timeoutMilliseconds: 0
+        )
+
+        #expect(token == ActivationToken(unchecked: "ready-token"))
+    }
+
+    @Test
+    func zeroTimeoutWaitFailsPendingRequestWithoutWaiting() async throws {
+        let pending = PendingActivationTokenRequest(id: ActivationRequestID(rawValue: 1))
+
+        let error = await activationError {
+            _ = try await WaylandDisplay.waitForActivationToken(
+                pending,
+                timeoutMilliseconds: 0
+            )
+        }
+
+        #expect(error == .tokenRequestTimedOut)
+
+        pending.complete(.success(ActivationToken(unchecked: "late-token")))
+        let token = try await pending.value()
+
+        #expect(token == ActivationToken(unchecked: "late-token"))
+    }
+
+    @Test
+    func completedResultReportsAlreadyFinishedRequest() throws {
+        let pending = PendingActivationTokenRequest(id: ActivationRequestID(rawValue: 1))
+        #expect(pending.completedResult() == nil)
+
+        pending.complete(.success(ActivationToken(unchecked: "ready-token")))
+
+        #expect(
+            try pending.completedResult()?.get()
+                == ActivationToken(unchecked: "ready-token")
+        )
+    }
+
+    @Test
     func unavailableBackendErrorIsPreserved() {
         let backend = RecordingActivationBackend()
         backend.requestError = ActivationError.unavailable
