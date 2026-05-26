@@ -315,9 +315,12 @@ Notes:
   Diagonal resize convenience presets are deferred until cursor theme names are
   verified across KDE, GNOME, Sway/wlroots, and Weston; frameworks may use
   custom names such as `nw-resize`, `ne-resize`, `sw-resize`, and `se-resize`.
-- Pointer lock/confine requests reject duplicate constraints for the same
-  surface and seat with `PointerCaptureError.alreadyConstrained` before sending
-  protocol requests. Seats without an active pointer child report
+- Relative pointer requests reject duplicate active subscriptions for the same
+  seat with `PointerCaptureError.relativePointerAlreadySubscribed` before
+  sending protocol requests. Pointer lock/confine requests reject duplicate
+  constraints for the same surface and seat with
+  `PointerCaptureError.alreadyConstrained` before sending protocol requests.
+  Seats without an active pointer child report
   `PointerCaptureError.pointerUnavailable` for relative pointer, lock, and
   confine requests before raw protocol requests are sent. Cursor hints are
   validated before Wayland fixed-point conversion and report

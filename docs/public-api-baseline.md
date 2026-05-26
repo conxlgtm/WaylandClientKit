@@ -1560,27 +1560,28 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L42: `    case pointerUnavailable(SeatID)`
 - L43: `    case displayClosed`
 - L44: `    case emptyRegion`
-- L45: `    case alreadyConstrained(seatID: SeatID)`
-- L46: `    case invalidCursorHint(PointerLocation)`
-- L47: `    case unknownRelativePointerSubscription(RelativePointerSubscriptionID)`
-- L48: `    case unknownPointerConstraint(PointerConstraintID)`
-- L49: `    case foreignRelativePointerSubscription(RelativePointerSubscriptionID)`
-- L50: `    case foreignPointerConstraint(PointerConstraintID)`
-- L52: `    public var description: String {`
-- L87: `public struct RelativePointerSubscriptionID: Equatable, Hashable, Sendable,`
-- L90: `    public let rawValue: UInt64`
-- L92: `    public init(rawValue subscriptionRawValue: UInt64) {`
-- L96: `    public var description: String {`
-- L101: `public struct RelativePointerSubscription: Hashable, Sendable {`
-- L102: `    public let id: RelativePointerSubscriptionID`
-- L119: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
-- L123: `    public func hash(into hasher: inout Hasher) {`
-- L127: `    public func destroy() async throws {`
-- L132: `public struct PointerConstraint: Hashable, Sendable {`
-- L133: `    public let id: PointerConstraintID`
-- L147: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
-- L151: `    public func hash(into hasher: inout Hasher) {`
-- L155: `    public func destroy() async throws {`
+- L45: `    case relativePointerAlreadySubscribed(seatID: SeatID)`
+- L46: `    case alreadyConstrained(seatID: SeatID)`
+- L47: `    case invalidCursorHint(PointerLocation)`
+- L48: `    case unknownRelativePointerSubscription(RelativePointerSubscriptionID)`
+- L49: `    case unknownPointerConstraint(PointerConstraintID)`
+- L50: `    case foreignRelativePointerSubscription(RelativePointerSubscriptionID)`
+- L51: `    case foreignPointerConstraint(PointerConstraintID)`
+- L53: `    public var description: String {`
+- L90: `public struct RelativePointerSubscriptionID: Equatable, Hashable, Sendable,`
+- L93: `    public let rawValue: UInt64`
+- L95: `    public init(rawValue subscriptionRawValue: UInt64) {`
+- L99: `    public var description: String {`
+- L104: `public struct RelativePointerSubscription: Hashable, Sendable {`
+- L105: `    public let id: RelativePointerSubscriptionID`
+- L122: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
+- L126: `    public func hash(into hasher: inout Hasher) {`
+- L130: `    public func destroy() async throws {`
+- L135: `public struct PointerConstraint: Hashable, Sendable {`
+- L136: `    public let id: PointerConstraintID`
+- L150: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
+- L154: `    public func hash(into hasher: inout Hasher) {`
+- L158: `    public func destroy() async throws {`
 
 ### `Sources/WaylandClient/Public/Input/SeatCapabilities.swift`
 

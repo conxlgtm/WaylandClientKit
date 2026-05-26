@@ -46,6 +46,44 @@ struct PointerCaptureDomainTypesTests {
     }
 
     @Test
+    func relativePointerRegistryRejectsDuplicateSeatSubscription() throws {
+        var registry = RelativePointerSubscriptionRegistry()
+        let seatID = SeatID(rawValue: 9)
+
+        try registry.preflight(seatID: seatID)
+        registry.insert(id: RelativePointerSubscriptionID(rawValue: 1), seatID: seatID)
+
+        #expect(
+            throws: PointerCaptureError.relativePointerAlreadySubscribed(seatID: seatID)
+        ) {
+            try registry.preflight(seatID: seatID)
+        }
+    }
+
+    @Test
+    func relativePointerRegistryAllowsSubscriptionAfterRemoval() throws {
+        var registry = RelativePointerSubscriptionRegistry()
+        let seatID = SeatID(rawValue: 10)
+        let id = RelativePointerSubscriptionID(rawValue: 2)
+
+        registry.insert(id: id, seatID: seatID)
+        #expect(registry.remove(id) == seatID)
+
+        try registry.preflight(seatID: seatID)
+    }
+
+    @Test
+    func relativePointerRegistryAllowsSubscriptionAfterRemoveAll() throws {
+        var registry = RelativePointerSubscriptionRegistry()
+        let seatID = SeatID(rawValue: 11)
+
+        registry.insert(id: RelativePointerSubscriptionID(rawValue: 3), seatID: seatID)
+        registry.removeAll()
+
+        try registry.preflight(seatID: seatID)
+    }
+
+    @Test
     func pointerConstraintRegistryRejectsDuplicateLockForSurfaceAndSeat() throws {
         var registry = PointerConstraintRegistry()
         let surfaceID = RawObjectID(100)
