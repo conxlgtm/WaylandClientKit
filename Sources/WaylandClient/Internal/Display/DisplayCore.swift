@@ -249,6 +249,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         windowID: WindowID,
         outputs: [OutputID]
     ) {
+        guard surfaceGraphAcceptsLifecycleCallback() else { return }
         eventHub.publish(
             .windowOutputsChanged(
                 WindowOutputMembershipEvent(windowID: windowID, outputs: outputs)
