@@ -329,6 +329,15 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         )
     }
 
+    package func updateAvailableCursorOutputScalesOnOwnerThread() throws {
+        connection.preconditionIsOwnerThread()
+        guard let outputRegistry = connection.boundGlobals?.outputRegistry else { return }
+
+        try inputCoordinator.updateAvailableCursorOutputScales(
+            availableOutputs: outputRegistry.snapshots.map(CursorOutputScale.init)
+        )
+    }
+
     package func drainInputEventsOnOwnerThread() -> [InputEvent] {
         connection.preconditionIsOwnerThread()
         processPendingSessionInputEvents()

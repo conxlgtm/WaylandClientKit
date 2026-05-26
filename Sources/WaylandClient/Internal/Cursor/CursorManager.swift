@@ -106,6 +106,24 @@ package final class CursorManager: RawInputEventObserving {
         }
     }
 
+    func updateAvailableOutputScales(_ availableOutputs: [CursorOutputScale]) throws {
+        backend.preconditionIsOwnerThread()
+        guard !isShutdown else { return }
+
+        var outputScaleByID: [OutputID: CursorOutputScale] = [:]
+        for output in availableOutputs {
+            outputScaleByID[output.outputID] = output
+        }
+        outputScalesBySurfaceID = outputScalesBySurfaceID.mapValues { focusedOutputs in
+            focusedOutputs.compactMap { outputScaleByID[$0.outputID] }
+        }
+        availableOutputScales = availableOutputs
+
+        for seatID in focusedPointerSeatIDs() {
+            _ = try applyCursor(to: seatID)
+        }
+    }
+
     @discardableResult
     func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {
         backend.preconditionIsOwnerThread()
