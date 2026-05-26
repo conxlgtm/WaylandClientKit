@@ -39,6 +39,7 @@ public enum PointerCaptureError: Error, Equatable, Sendable, CustomStringConvert
     case unknownWindow(WindowID)
     case closedWindow(WindowID)
     case unknownSeat(SeatID)
+    case pointerUnavailable(SeatID)
     case displayClosed
     case emptyRegion
     case alreadyConstrained(seatID: SeatID)
@@ -60,6 +61,8 @@ public enum PointerCaptureError: Error, Equatable, Sendable, CustomStringConvert
             "window \(windowID) is closed"
         case .unknownSeat(let seatID):
             "seat \(seatID) is not registered on this display"
+        case .pointerUnavailable(let seatID):
+            "seat \(seatID) does not have an active pointer"
         case .displayClosed:
             "display is closed"
         case .emptyRegion:
