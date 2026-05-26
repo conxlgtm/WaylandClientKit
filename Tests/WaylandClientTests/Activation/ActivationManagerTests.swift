@@ -31,6 +31,27 @@ struct ActivationManagerTests {
     }
 
     @Test
+    func invalidTokenDoneFailsPendingRequestAndDestroysBinding() async throws {
+        let backend = RecordingActivationBackend()
+        let manager = ActivationManager(backend: backend)
+
+        let pending = try manager.beginTokenRequest(
+            appID: nil,
+            surface: nil,
+            seat: nil,
+            serial: nil
+        )
+        backend.emitDone("")
+
+        let error = await activationError {
+            _ = try await pending.value()
+        }
+
+        #expect(error == .invalidToken)
+        #expect(backend.latestBinding?.operations == [.commit, .destroy])
+    }
+
+    @Test
     func unavailableBackendErrorIsPreserved() {
         let backend = RecordingActivationBackend()
         backend.requestError = ActivationError.unavailable
