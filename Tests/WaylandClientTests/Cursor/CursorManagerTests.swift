@@ -95,6 +95,66 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
+    func outputScaleChangeRecomputesFocusedCursorScale() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(
+            backend: backend,
+            configuration: CursorConfiguration(scalePolicy: .matchFocusedOutput)
+        )
+
+        manager.register(surfaceID: 100)
+        try manager.updateOutputScales(
+            for: 100,
+            focusedOutputs: [cursorOutputScale(id: 1, scale: 1)],
+            availableOutputs: [cursorOutputScale(id: 1, scale: 1)]
+        )
+        manager.observe(
+            rawPointerEnter(sequence: 1, seatID: RawSeatID(rawValue: 1), surfaceID: 100))
+
+        try manager.updateAvailableOutputScales([cursorOutputScale(id: 1, scale: 3)])
+
+        #expect(
+            backend.resolvedCursorSizes == [
+                CursorSize(unchecked: 24),
+                CursorSize(unchecked: 72),
+            ])
+        #expect(backend.setCursorRequests.count == 2)
+    }
+
+    @Test
+    func outputScaleChangeRecomputesMaximumCursorScale() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(
+            backend: backend,
+            configuration: CursorConfiguration(scalePolicy: .maximumOutputScale)
+        )
+
+        manager.register(surfaceID: 100)
+        try manager.updateOutputScales(
+            for: 100,
+            focusedOutputs: [cursorOutputScale(id: 1, scale: 1)],
+            availableOutputs: [
+                cursorOutputScale(id: 1, scale: 1),
+                cursorOutputScale(id: 2, scale: 2),
+            ]
+        )
+        manager.observe(
+            rawPointerEnter(sequence: 1, seatID: RawSeatID(rawValue: 1), surfaceID: 100))
+
+        try manager.updateAvailableOutputScales([
+            cursorOutputScale(id: 1, scale: 1),
+            cursorOutputScale(id: 2, scale: 4),
+        ])
+
+        #expect(
+            backend.resolvedCursorSizes == [
+                CursorSize(unchecked: 48),
+                CursorSize(unchecked: 96),
+            ])
+        #expect(backend.setCursorRequests.count == 2)
+    }
+
+    @Test
     func maximumOutputScalePolicyUsesLargestKnownOutput() throws {
         let backend = try RecordingCursorBackend()
         let manager = try CursorManager(

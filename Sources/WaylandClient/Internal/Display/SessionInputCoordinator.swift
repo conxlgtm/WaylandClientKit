@@ -69,6 +69,12 @@ final class SessionInputCoordinator {
         )
     }
 
+    func updateAvailableCursorOutputScales(
+        availableOutputs: [CursorOutputScale]
+    ) throws {
+        try cursorManager.updateAvailableOutputScales(availableOutputs)
+    }
+
     func shutdown() {
         cursorManager.shutdown()
     }
