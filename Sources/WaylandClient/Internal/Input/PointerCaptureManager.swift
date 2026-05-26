@@ -35,6 +35,7 @@ package final class PointerCaptureManager {
             seatID: SeatID, surfaceID: RawObjectID, constraint: ManagedPointerConstraint
         )] =
             [:]
+    private var relativePointerRegistry = RelativePointerSubscriptionRegistry()
     private var constraintRegistry = PointerConstraintRegistry()
     private var isShutDown = false
 
@@ -50,6 +51,7 @@ package final class PointerCaptureManager {
             throw PointerCaptureError.displayClosed
         }
 
+        try relativePointerRegistry.preflight(seatID: seatID)
         let globals = try connection.bindRequiredGlobals()
         guard case .bound(let manager) = globals.extensions.relativePointerManager else {
             throw PointerCaptureError.unavailable(.relativePointer)
@@ -62,6 +64,7 @@ package final class PointerCaptureManager {
         )
         let subscriptionID = allocateRelativePointerSubscriptionID()
         relativePointers[subscriptionID] = (seatID: seatID, pointer: relativePointer)
+        relativePointerRegistry.insert(id: subscriptionID, seatID: seatID)
         return subscriptionID
     }
 
@@ -148,6 +151,7 @@ package final class PointerCaptureManager {
             throw PointerCaptureError.unknownRelativePointerSubscription(id)
         }
 
+        _ = relativePointerRegistry.remove(id)
         pointer.destroy()
     }
 
@@ -165,6 +169,7 @@ package final class PointerCaptureManager {
         connection.preconditionIsOwnerThread()
         let relativeIDs = relativePointers.filter { $0.value.seatID == seatID }.map(\.key)
         for id in relativeIDs {
+            _ = relativePointerRegistry.remove(id)
             relativePointers.removeValue(forKey: id)?.pointer.destroy()
         }
 
@@ -197,6 +202,7 @@ package final class PointerCaptureManager {
         }
         relativePointers.removeAll()
         constraints.removeAll()
+        relativePointerRegistry.removeAll()
         constraintRegistry.removeAll()
     }
 
@@ -310,6 +316,38 @@ package struct PointerConstraintKey: Equatable, Hashable, Sendable {
     package init(surfaceID constraintSurfaceID: RawObjectID, seatID constraintSeatID: SeatID) {
         surfaceID = constraintSurfaceID
         seatID = constraintSeatID
+    }
+}
+
+package struct RelativePointerSubscriptionRegistry {
+    private var seatByID: [RelativePointerSubscriptionID: SeatID] = [:]
+    private var idBySeat: [SeatID: RelativePointerSubscriptionID] = [:]
+
+    package init() {
+        // Exposes the synthesized initializer at package scope.
+    }
+
+    package func preflight(seatID: SeatID) throws {
+        guard idBySeat[seatID] == nil else {
+            throw PointerCaptureError.relativePointerAlreadySubscribed(seatID: seatID)
+        }
+    }
+
+    package mutating func insert(id: RelativePointerSubscriptionID, seatID: SeatID) {
+        seatByID[id] = seatID
+        idBySeat[seatID] = id
+    }
+
+    @discardableResult
+    package mutating func remove(_ id: RelativePointerSubscriptionID) -> SeatID? {
+        guard let seatID = seatByID.removeValue(forKey: id) else { return nil }
+        idBySeat.removeValue(forKey: seatID)
+        return seatID
+    }
+
+    package mutating func removeAll() {
+        seatByID.removeAll()
+        idBySeat.removeAll()
     }
 }
 
