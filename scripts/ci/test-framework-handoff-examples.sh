@@ -13,6 +13,8 @@ TARGETS=(
     SerialActionsProbe
     TwoWindowOrderStress
     XDGActivationSmoke
+    PointerCaptureSmoke
+    CursorPolicySmoke
     FrameworkHostSmoke
     GPUPreviewSmokeClient
     GraphicsPreviewManagedGPUClear
