@@ -11,6 +11,7 @@ package protocol RawInputEventObserving: AnyObject {
 package protocol CursorManagerSurface: AnyObject {
     var objectID: RawObjectID? { get }
 
+    func setBufferScale(_ scale: Int32)
     func attach(_ image: CursorImage)
     func detach()
     func commit()
@@ -209,7 +210,7 @@ package final class CursorManager: RawInputEventObserving {
         }
 
         let cursor = desiredCursor.cursor
-        let size = try cursorSize(for: seatID)
+        let resolution = try cursorResolution(for: seatID)
         switch cursor.kind {
         case .hidden:
             let rawResult = backend.setPointerCursor(
@@ -239,11 +240,12 @@ package final class CursorManager: RawInputEventObserving {
                 )
             }
 
-            let resolved = try cachedResolvedDesiredCursor(size: size)
+            let resolved = try cachedResolvedDesiredCursor(size: resolution.size)
             return try applyNamedCursor(
                 to: seatID,
                 serial: serial,
-                resolvedCursor: resolved
+                resolvedCursor: resolved,
+                bufferScale: resolution.bufferScale
             )
         }
     }
@@ -276,21 +278,21 @@ package final class CursorManager: RawInputEventObserving {
     private func applyNamedCursor(
         to seatID: RawSeatID,
         serial: UInt32,
-        resolvedCursor resolved: ResolvedPointerCursorImage
+        resolvedCursor resolved: ResolvedPointerCursorImage,
+        bufferScale: PositiveInt32
     ) throws
         -> CursorRequestResult
     {
         let surface = try cursorSurface(for: seatID)
 
-        surface.attach(resolved.image)
-        surface.commit()
+        attachCursorImage(resolved.image, to: surface, bufferScale: bufferScale)
 
         let rawResult = backend.setPointerCursor(
             seatID: seatID,
             serial: serial,
             surface: surface,
-            hotspotX: resolved.image.hotspotX,
-            hotspotY: resolved.image.hotspotY
+            hotspotX: cursorHotspot(resolved.image.hotspotX, bufferScale: bufferScale),
+            hotspotY: cursorHotspot(resolved.image.hotspotY, bufferScale: bufferScale)
         )
 
         switch rawResult {
@@ -349,10 +351,10 @@ package final class CursorManager: RawInputEventObserving {
         }
     }
 
-    package func cursorSize(for seatID: RawSeatID) throws -> CursorSize {
+    package func cursorResolution(for seatID: RawSeatID) throws -> CursorScaleResolution {
         let focusedSurfaceID = cursorStateBySeat[seatID]?.focus.surfaceID
         let focusedOutputs = focusedSurfaceID.flatMap { outputScalesBySurfaceID[$0] } ?? []
-        return try configuration.scalePolicy.internalPolicy.cursorSize(
+        return try configuration.scalePolicy.internalPolicy.cursorResolution(
             in: CursorScaleContext(
                 seatID: publicSeatID(seatID),
                 focusedSurfaceID: focusedSurfaceID ?? RawObjectID(0),
@@ -360,6 +362,10 @@ package final class CursorManager: RawInputEventObserving {
                 availableOutputs: availableOutputScales,
                 baseSize: configuration.size
             ))
+    }
+
+    package func cursorSize(for seatID: RawSeatID) throws -> CursorSize {
+        try cursorResolution(for: seatID).size
     }
 
     package func cursorSurface(for seatID: RawSeatID) throws -> CursorManagerSurface {
@@ -412,6 +418,20 @@ package final class CursorManager: RawInputEventObserving {
         surface.detach()
         surface.commit()
         surface.destroy()
+    }
+
+    package func attachCursorImage(
+        _ image: CursorImage,
+        to surface: CursorManagerSurface,
+        bufferScale: PositiveInt32
+    ) {
+        surface.setBufferScale(bufferScale.rawValue)
+        surface.attach(image)
+        surface.commit()
+    }
+
+    package func cursorHotspot(_ hotspot: Int32, bufferScale: PositiveInt32) -> Int32 {
+        hotspot / bufferScale.rawValue
     }
 
     private func cursorRequestFailure(
