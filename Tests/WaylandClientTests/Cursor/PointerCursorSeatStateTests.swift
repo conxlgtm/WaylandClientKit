@@ -161,6 +161,10 @@ struct PointerCursorSeatStateTests {
 private final class ReducerCursorSurface: CursorManagerSurface {
     let objectID: RawObjectID? = 0xC00
 
+    func setBufferScale(_: Int32) {
+        // Reducer tests only need object identity.
+    }
+
     func attach(_: CursorImage) {
         // Reducer tests only need object identity.
     }

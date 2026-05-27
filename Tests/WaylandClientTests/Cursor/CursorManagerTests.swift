@@ -63,9 +63,107 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
             ]
         )
         manager.observe(
-            rawPointerEnter(sequence: 1, seatID: RawSeatID(rawValue: 1), surfaceID: 100))
+            rawPointerEnter(
+                sequence: 1,
+                seatID: RawSeatID(rawValue: 1),
+                surfaceID: 100,
+                serial: 77
+            ))
 
         #expect(backend.resolvedCursorSizes == [CursorSize(unchecked: 48)])
+    }
+
+    @Test
+    func scaledAutomaticThemeCursorUsesBufferScaleAndLogicalHotspot() throws {
+        let backend = try RecordingCursorBackend()
+        let scaledSize = CursorSize(unchecked: 48)
+        backend.cursorImagesBySize[scaledSize] = try makeCursorImage(
+            width: 48,
+            height: 48,
+            hotspotX: 6,
+            hotspotY: 8
+        )
+        let manager = try CursorManager(
+            backend: backend,
+            configuration: CursorConfiguration(scalePolicy: .matchFocusedOutput)
+        )
+
+        manager.register(surfaceID: 100)
+        try manager.updateOutputScales(
+            for: 100,
+            focusedOutputs: [cursorOutputScale(id: 1, scale: 2)],
+            availableOutputs: [cursorOutputScale(id: 1, scale: 2)]
+        )
+        manager.observe(
+            rawPointerEnter(
+                sequence: 1,
+                seatID: RawSeatID(rawValue: 1),
+                surfaceID: 100,
+                serial: 77
+            ))
+
+        let surface = try #require(backend.surface(for: RawSeatID(rawValue: 1)))
+        #expect(surface.bufferScaleRequests == [2])
+        #expect(backend.resolvedCursorSizes == [scaledSize])
+        #expect(
+            backend.setCursorRequests == [
+                SetCursorRequest(
+                    seatID: RawSeatID(rawValue: 1),
+                    serial: 77,
+                    surfaceID: 0xC00,
+                    hotspotX: 3,
+                    hotspotY: 4
+                )
+            ])
+    }
+
+    @Test
+    func scaledExplicitThemeCursorUsesBufferScaleAndLogicalHotspot() throws {
+        let backend = try RecordingCursorBackend()
+        let scaledSize = CursorSize(unchecked: 48)
+        backend.cursorImagesBySize[scaledSize] = try makeCursorImage(
+            width: 48,
+            height: 48,
+            hotspotX: 10,
+            hotspotY: 12
+        )
+        let manager = try CursorManager(
+            backend: backend,
+            configuration: CursorConfiguration(scalePolicy: .maximumOutputScale)
+        )
+
+        manager.register(surfaceID: 100)
+        try manager.updateOutputScales(
+            for: 100,
+            focusedOutputs: [cursorOutputScale(id: 1, scale: 1)],
+            availableOutputs: [
+                cursorOutputScale(id: 1, scale: 1),
+                cursorOutputScale(id: 2, scale: 2),
+            ]
+        )
+        manager.observe(
+            rawPointerEnter(
+                sequence: 1,
+                seatID: RawSeatID(rawValue: 1),
+                surfaceID: 100,
+                serial: 77
+            ))
+        backend.setCursorRequests.removeAll()
+
+        try manager.setPointerCursor(.text)
+
+        let surface = try #require(backend.surface(for: RawSeatID(rawValue: 1)))
+        #expect(surface.bufferScaleRequests == [2, 2])
+        #expect(
+            backend.setCursorRequests == [
+                SetCursorRequest(
+                    seatID: RawSeatID(rawValue: 1),
+                    serial: 77,
+                    surfaceID: 0xC00,
+                    hotspotX: 5,
+                    hotspotY: 6
+                )
+            ])
     }
 
     @Test
@@ -506,6 +604,7 @@ final class RecordingCursorBackend: CursorManagerBackend {
     var cursorShapeSupported = false
     var resolvedCursorNames: [String] = []
     var resolvedCursorSizes: [CursorSize] = []
+    var cursorImagesBySize: [CursorSize: CursorImage] = [:]
     var createdSurfaceSeatIDs: [RawSeatID] = []
     var cursorSurfaceRequestSeatIDs: [RawSeatID] = []
     var createdSurfaces: [RecordingCursorSurface] = []
@@ -519,14 +618,11 @@ final class RecordingCursorBackend: CursorManagerBackend {
     private var nextSurfaceID = UInt32(0xC00)
 
     init() throws {
-        image = try CursorImage(
+        image = try makeCursorImage(
             width: 16,
             height: 24,
             hotspotX: 3,
-            hotspotY: 4,
-            delay: 0,
-            buffer: RawBorrowedBuffer(
-                pointer: try unsafe #require(OpaquePointer(bitPattern: 0xB00)))
+            hotspotY: 4
         )
     }
 
@@ -546,7 +642,7 @@ final class RecordingCursorBackend: CursorManagerBackend {
             throw CursorError.missingCursor(name)
         }
 
-        return image
+        return cursorImagesBySize[size] ?? image
     }
 
     func createCursorSurface(for seatID: RawSeatID) throws -> CursorManagerSurface {
@@ -634,10 +730,15 @@ final class RecordingCursorSurface: CursorManagerSurface {
     private(set) var detachCount = 0
     private(set) var commitCount = 0
     private(set) var destroyCount = 0
+    private(set) var bufferScaleRequests: [Int32] = []
     private(set) var operationLog: [CursorSurfaceOperation] = []
 
     init(objectID cursorSurfaceID: RawObjectID) {
         objectID = cursorSurfaceID
+    }
+
+    func setBufferScale(_ scale: Int32) {
+        bufferScaleRequests.append(scale)
     }
 
     func attach(_: CursorImage) {
@@ -672,6 +773,23 @@ private func cursorOutputScale(id: UInt32, scale: Int32) throws -> CursorOutputS
     try CursorOutputScale(
         outputID: OutputID(rawValue: id),
         scale: PositiveInt32(scale)
+    )
+}
+
+private func makeCursorImage(
+    width: UInt32,
+    height: UInt32,
+    hotspotX: UInt32,
+    hotspotY: UInt32
+) throws -> CursorImage {
+    try CursorImage(
+        width: width,
+        height: height,
+        hotspotX: hotspotX,
+        hotspotY: hotspotY,
+        delay: 0,
+        buffer: RawBorrowedBuffer(
+            pointer: try unsafe #require(OpaquePointer(bitPattern: 0xB00)))
     )
 }
 
