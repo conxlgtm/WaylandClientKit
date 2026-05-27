@@ -8,7 +8,7 @@ Activation is optional and policy-controlled by the compositor. Check
 activation errors at request time because globals can disappear.
 
 Request tokens through ``WaylandDisplay/requestActivationToken(_:timeoutMilliseconds:)``
-or ``Window/requestActivationToken(appID:seatID:serial:timeoutMilliseconds:)``.
+or ``Window/requestActivationToken(appID:serialContext:timeoutMilliseconds:)``.
 The returned ``ActivationToken`` is opaque. Do not parse it, store unrelated
 app state in it, or treat receipt as proof that a future activate request will
 focus a window.
@@ -19,8 +19,10 @@ When activation follows a user action, pass the same ``SeatID`` and
 ```swift
 let token = try await window.requestActivationToken(
     appID: "org.example.App",
-    seatID: event.seatID,
-    serial: button.serial
+    serialContext: ActivationSerialContext(
+        seatID: event.seatID,
+        serial: button.serial
+    )
 )
 try await window.activate(using: token)
 ```

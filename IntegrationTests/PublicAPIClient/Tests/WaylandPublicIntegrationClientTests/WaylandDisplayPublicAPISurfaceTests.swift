@@ -90,16 +90,20 @@ struct WaylandDisplayPublicAPISurfaceTests {  // swiftlint:disable:this type_bod
     @Test
     func activationTypesAndMethodsCompileForExternalClients() throws {
         let token = try ActivationToken("opaque-token")
-        let request = ActivationTokenRequest(
-            appID: "org.swiftwayland.Client",
+        let appID = try ActivationAppID("org.swiftwayland.Client")
+        let serialContext = ActivationSerialContext(
             seatID: SeatID(rawValue: 1),
             serial: InputSerial(rawValue: 2)
         )
+        let request = ActivationTokenRequest(
+            appID: appID,
+            serialContext: serialContext
+        )
 
         #expect(token.value == "opaque-token")
-        #expect(request.appID == "org.swiftwayland.Client")
-        #expect(request.seatID == SeatID(rawValue: 1))
-        #expect(request.serial == InputSerial(rawValue: 2))
+        #expect(appID.value == "org.swiftwayland.Client")
+        #expect(request.appID == appID)
+        #expect(request.serialContext == serialContext)
         #expect(ActivationError.invalidToken.description.contains("activation token"))
 
         func useActivationAPI(display: WaylandDisplay, window: Window) async throws {

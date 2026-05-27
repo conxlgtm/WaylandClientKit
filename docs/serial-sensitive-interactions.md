@@ -94,8 +94,10 @@ are triggered by user input:
 ```swift
 let token = try await window.requestActivationToken(
     appID: "org.example.App",
-    seatID: event.seatID,
-    serial: button.serial
+    serialContext: ActivationSerialContext(
+        seatID: event.seatID,
+        serial: button.serial
+    )
 )
 try await window.activate(using: token)
 ```

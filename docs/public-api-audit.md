@@ -352,6 +352,10 @@ Notes:
   APIs request opaque tokens and send managed-window activate requests without
   exposing raw activation proxies. Activation remains compositor-mediated:
   serial, surface, and app ID values are request facts, not a focus guarantee.
+  `ActivationAppID` and `ActivationSerialContext` keep invalid app IDs and
+  half-formed seat/serial pairs out of `ActivationTokenRequest`. Caller
+  cancellation reports `ActivationError.cancelled`, while display teardown still
+  reports `ActivationError.displayClosed`.
   The previous `WaylandCapabilities` initializer remains available and defaults
   `xdgActivation` to unavailable for source compatibility.
 - Primary selection offers are seat-scoped and expire when the compositor sends

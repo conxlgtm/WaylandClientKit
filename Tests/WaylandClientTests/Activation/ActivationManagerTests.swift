@@ -11,7 +11,7 @@ struct ActivationManagerTests {
         let manager = ActivationManager(backend: backend)
 
         let pending = try manager.beginTokenRequest(
-            appID: "org.swiftwayland.Test",
+            appID: try ActivationAppID("org.swiftwayland.Test"),
             surface: nil,
             seat: nil,
             serial: nil
@@ -148,38 +148,6 @@ struct ActivationManagerTests {
     }
 
     @Test
-    func invalidAppIDIsRejectedBeforeRequest() {
-        let backend = RecordingActivationBackend()
-        let manager = ActivationManager(backend: backend)
-
-        #expect(throws: ActivationError.invalidAppID) {
-            _ = try manager.beginTokenRequest(
-                appID: "bad\0id",
-                surface: nil,
-                seat: nil,
-                serial: nil
-            )
-        }
-        #expect(backend.requestCount == 0)
-    }
-
-    @Test
-    func serialRequiresSeatContext() {
-        let backend = RecordingActivationBackend()
-        let manager = ActivationManager(backend: backend)
-
-        #expect(throws: ActivationError.incompleteSerialContext) {
-            _ = try manager.beginTokenRequest(
-                appID: nil,
-                surface: nil,
-                seat: nil,
-                serial: InputSerial(rawValue: 55)
-            )
-        }
-        #expect(backend.requestCount == 0)
-    }
-
-    @Test
     func cancelPendingRequestDestroysBindingAndFailsWaiter() async throws {
         let backend = RecordingActivationBackend()
         let manager = ActivationManager(backend: backend)
@@ -196,6 +164,56 @@ struct ActivationManagerTests {
             _ = try await pending.value()
         }
         #expect(error == .tokenRequestTimedOut)
+        #expect(backend.latestBinding?.operations == [.commit, .cancel])
+    }
+
+    @Test
+    func taskCancellationCompletesPendingRequestAsCancelled() async throws {
+        let pending = PendingActivationTokenRequest(id: ActivationRequestID(rawValue: 2))
+        let task = Task {
+            try await WaylandDisplay.waitForActivationToken(
+                pending,
+                timeoutMilliseconds: -1
+            ) {
+                Issue.record("timeout should not run for cancellation test")
+            }
+        }
+
+        task.cancel()
+
+        let error = await activationError {
+            _ = try await task.value
+        }
+        #expect(error == .cancelled)
+        let completedError = await activationError {
+            guard let result = pending.completedResult() else {
+                Issue.record("expected completed activation token request")
+                return
+            }
+
+            _ = try result.get()
+        }
+        #expect(completedError == .cancelled)
+    }
+
+    @Test
+    func lateDoneAfterTaskCancellationIsIgnored() async throws {
+        let backend = RecordingActivationBackend()
+        let manager = ActivationManager(backend: backend)
+        let pending = try manager.beginTokenRequest(
+            appID: nil,
+            surface: nil,
+            seat: nil,
+            serial: nil
+        )
+
+        manager.cancelTokenRequest(pending.id, error: .cancelled)
+        backend.emitDone("late-token")
+
+        let error = await activationError {
+            _ = try await pending.value()
+        }
+        #expect(error == .cancelled)
         #expect(backend.latestBinding?.operations == [.commit, .cancel])
     }
 

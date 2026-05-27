@@ -27,6 +27,9 @@ extension WaylandDisplay {
         } catch let error as ActivationError {
             cancelActivationTokenRequest(pending.id, error: error)
             throw error
+        } catch is CancellationError {
+            cancelActivationTokenRequest(pending.id, error: .cancelled)
+            throw ActivationError.cancelled
         } catch {
             cancelActivationTokenRequest(pending.id, error: .displayClosed)
             throw error
@@ -100,7 +103,7 @@ extension WaylandDisplay {
                 return token
             }
         } onCancel: {
-            pending.complete(.failure(.displayClosed))
+            pending.complete(.failure(.cancelled))
         }
     }
 }
