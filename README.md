@@ -409,8 +409,10 @@ can collect compositor-specific behavior.
 when advertised, and sends an activate request for its managed window.
 `PointerCaptureSmoke` prints relative-pointer and pointer-constraint
 capabilities, then lets left, right, and middle clicks request lock, confine,
-and relative-motion paths. `CursorPolicySmoke` runs with focused-output cursor
-scale policy and logs named, hidden, and resize cursor requests.
+and relative-motion paths. Constraint logs distinguish one-shot defunct and
+persistent inactive lifecycle transitions. `CursorPolicySmoke` runs with
+focused-output cursor scale policy and logs named, hidden, and resize cursor
+requests.
 
 Use [Manual Testing](docs/manual-testing.md) as the checklist for compositor
 QA and record new live evidence in [Compositor Matrix](docs/compositor-matrix.md).

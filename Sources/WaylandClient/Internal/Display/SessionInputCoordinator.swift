@@ -85,6 +85,9 @@ final class SessionInputCoordinator {
 
     func processPendingSessionInputEvents(
         from rawEvents: [RawInputEvent],
+        pointerConstraintLifecycleEvent: (RawInputEvent) -> PointerConstraintLifecycleEvent? = {
+            _ in nil
+        },
         onSeatRemoved: (SeatID) -> Void,
         onPointerCapabilityLost: (SeatID) -> Void
     ) {
@@ -94,7 +97,8 @@ final class SessionInputCoordinator {
             from: rawEvents,
             inputRouter: inputRouter,
             keyboardInterpreter: keyboardInterpreter,
-            rawInputObserver: cursorManager
+            rawInputObserver: cursorManager,
+            pointerConstraintLifecycleEvent: pointerConstraintLifecycleEvent
         )
 
         for inputEvent in routedEvents {
@@ -233,13 +237,23 @@ func routeSessionInputEvents(
     from rawEvents: [RawInputEvent],
     inputRouter: InputRouter,
     keyboardInterpreter: KeyboardInterpreter,
-    rawInputObserver: RawInputEventObserving? = nil
+    rawInputObserver: RawInputEventObserving? = nil,
+    pointerConstraintLifecycleEvent: (RawInputEvent) -> PointerConstraintLifecycleEvent? = {
+        _ in nil
+    }
 ) -> [InputEvent] {
     var inputEvents: [InputEvent] = []
     for rawEvent in rawEvents {
         if let acceptedEvent = inputRouter.acceptRawInputEvent(rawEvent) {
             inputEvents.append(contentsOf: rawInputObserver?.observe(acceptedEvent.raw) ?? [])
-            inputEvents.append(contentsOf: inputRouter.route(acceptedEvent))
+            inputEvents.append(
+                contentsOf: inputRouter.route(
+                    acceptedEvent,
+                    pointerConstraintLifecycleEvent: pointerConstraintLifecycleEvent(
+                        acceptedEvent.raw
+                    )
+                )
+            )
 
             for interpretedEvent in keyboardInterpreter.consume(acceptedEvent.raw) {
                 inputEvents.append(contentsOf: inputRouter.route(interpretedEvent))

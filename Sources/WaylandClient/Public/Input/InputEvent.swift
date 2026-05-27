@@ -55,7 +55,7 @@ public enum PointerEvent: Equatable, Sendable {
     case button(PointerButtonEvent)
     case axis(PointerAxisEvent)
     case relativeMotion(RelativePointerMotionEvent)
-    case constraint(PointerConstraintEvent)
+    case constraintLifecycle(PointerConstraintLifecycleEvent)
 }
 
 public struct PointerLocation: Equatable, Sendable {
@@ -118,11 +118,10 @@ public struct PointerConstraintID: Equatable, Hashable, Sendable, CustomStringCo
     }
 }
 
-public enum PointerConstraintEvent: Equatable, Sendable {
-    case locked(PointerConstraintID)
-    case unlocked(PointerConstraintID)
-    case confined(PointerConstraintID)
-    case unconfined(PointerConstraintID)
+public enum PointerConstraintLifecycleEvent: Equatable, Sendable {
+    case activated(PointerConstraintID)
+    case inactivePersistent(PointerConstraintID)
+    case defunctOneShot(PointerConstraintID)
 }
 
 public struct PointerButtonEvent: Equatable, Sendable {

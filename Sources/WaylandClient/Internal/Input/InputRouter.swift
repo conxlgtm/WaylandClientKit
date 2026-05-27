@@ -81,15 +81,26 @@ final class InputRouter {
         return AcceptedRawInputEvent(raw: event)
     }
 
-    func route(_ event: AcceptedRawInputEvent) -> [InputEvent] {
-        guard let routed = routeOne(event.raw) else {
+    func route(
+        _ event: AcceptedRawInputEvent,
+        pointerConstraintLifecycleEvent: PointerConstraintLifecycleEvent? = nil
+    ) -> [InputEvent] {
+        guard
+            let routed = routeOne(
+                event.raw,
+                pointerConstraintLifecycleEvent: pointerConstraintLifecycleEvent
+            )
+        else {
             return []
         }
 
         return [routed] + unknownProtocolValueDiagnostics(for: event.raw)
     }
 
-    private func routeOne(_ event: RawInputEvent) -> InputEvent? {
+    private func routeOne(
+        _ event: RawInputEvent,
+        pointerConstraintLifecycleEvent: PointerConstraintLifecycleEvent?
+    ) -> InputEvent? {
         switch event.kind {
         case .seat(let snapshot):
             applySeatSnapshot(event, snapshot)
@@ -108,7 +119,11 @@ final class InputRouter {
                 kind: .diagnostic(convert(diagnostic))
             )
         case .pointer(let pointerEvent):
-            return routePointer(event, pointerEvent)
+            return routePointer(
+                event,
+                pointerEvent,
+                pointerConstraintLifecycleEvent: pointerConstraintLifecycleEvent
+            )
         case .keyboard(let keyboardEvent):
             return routeKeyboard(event, keyboardEvent)
         case .touch(let touchEvent):
@@ -119,8 +134,9 @@ final class InputRouter {
     // swiftlint:disable:next function_body_length
     private func routePointer(
         _ rawEvent: RawInputEvent,
-        _ pointerEvent: RawPointerEvent
-    ) -> InputEvent {
+        _ pointerEvent: RawPointerEvent,
+        pointerConstraintLifecycleEvent: PointerConstraintLifecycleEvent?
+    ) -> InputEvent? {
         switch pointerEvent {
         case .enter(let enter):
             if let surfaceID = enter.surfaceID {
@@ -199,36 +215,46 @@ final class InputRouter {
                 )
             )
         case .constraint(let constraint):
-            return routePointerConstraint(rawEvent, constraint)
+            return routePointerConstraint(
+                rawEvent,
+                constraint,
+                lifecycleEvent: pointerConstraintLifecycleEvent
+            )
         }
     }
 
     private func routePointerConstraint(
         _ rawEvent: RawInputEvent,
-        _ constraint: RawPointerConstraintEvent
-    ) -> InputEvent {
+        _ constraint: RawPointerConstraintEvent,
+        lifecycleEvent: PointerConstraintLifecycleEvent?
+    ) -> InputEvent? {
+        guard let lifecycleEvent else { return nil }
+
         let surfaceID: RawObjectID
-        let event: PointerConstraintEvent
 
         switch constraint {
         case .locked(let identity, let targetSurfaceID):
             surfaceID = targetSurfaceID
-            event = .locked(PointerConstraintID(identity))
+            guard lifecycleEvent == .activated(PointerConstraintID(identity)) else { return nil }
         case .unlocked(let identity, let targetSurfaceID):
             surfaceID = targetSurfaceID
-            event = .unlocked(PointerConstraintID(identity))
+            let id = PointerConstraintID(identity)
+            guard lifecycleEvent == .inactivePersistent(id) || lifecycleEvent == .defunctOneShot(id)
+            else { return nil }
         case .confined(let identity, let targetSurfaceID):
             surfaceID = targetSurfaceID
-            event = .confined(PointerConstraintID(identity))
+            guard lifecycleEvent == .activated(PointerConstraintID(identity)) else { return nil }
         case .unconfined(let identity, let targetSurfaceID):
             surfaceID = targetSurfaceID
-            event = .unconfined(PointerConstraintID(identity))
+            let id = PointerConstraintID(identity)
+            guard lifecycleEvent == .inactivePersistent(id) || lifecycleEvent == .defunctOneShot(id)
+            else { return nil }
         }
 
         return routedEvent(
             rawEvent,
             target: target(for: surfaceID),
-            kind: .pointer(.constraint(event))
+            kind: .pointer(.constraintLifecycle(lifecycleEvent))
         )
     }
 

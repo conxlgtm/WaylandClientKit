@@ -320,6 +320,9 @@ Notes:
   sending protocol requests. Pointer lock/confine requests reject duplicate
   constraints for the same surface and seat with
   `PointerCaptureError.alreadyConstrained` before sending protocol requests.
+  Pointer constraint input events publish lifecycle transitions rather than raw
+  protocol vocabulary, so one-shot defunct state and persistent inactive state
+  are distinct public facts.
   Pointer capture state is discarded when a seat loses pointer capability so
   later hotplug or compositor capability churn can create fresh subscriptions
   and constraints. Seats without an active pointer child report

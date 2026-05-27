@@ -169,14 +169,19 @@ package final class PointerCaptureManager {
         constraint.destroy()
     }
 
-    package func processRawInputEvent(_ event: RawInputEvent) {
+    package func processRawInputEvent(_ event: RawInputEvent) -> PointerConstraintLifecycleEvent? {
         connection.preconditionIsOwnerThread()
-        guard case .pointer(.constraint(let constraintEvent)) = event.kind else { return }
+        guard case .pointer(.constraint(let constraintEvent)) = event.kind else { return nil }
 
-        let transition = constraintRegistry.transition(PointerConstraintEvent(constraintEvent))
-        guard case .defunctOneShot(let id) = transition else { return }
+        let transition = constraintRegistry.transition(
+            PointerConstraintProtocolEvent(constraintEvent)
+        )
+        guard case .defunctOneShot(let id) = transition else {
+            return transition.lifecycleEvent
+        }
 
         constraints.removeValue(forKey: id)?.constraint.destroy()
+        return transition.lifecycleEvent
     }
 
     package func removeSeat(_ seatID: SeatID) {
@@ -369,6 +374,19 @@ package enum PointerConstraintLifecycleTransition: Equatable, Sendable {
     case inactivePersistent(PointerConstraintID)
     case defunctOneShot(PointerConstraintID)
     case ignored
+
+    package var lifecycleEvent: PointerConstraintLifecycleEvent? {
+        switch self {
+        case .activated(let id):
+            .activated(id)
+        case .inactivePersistent(let id):
+            .inactivePersistent(id)
+        case .defunctOneShot(let id):
+            .defunctOneShot(id)
+        case .ignored:
+            nil
+        }
+    }
 }
 
 package struct RelativePointerSubscriptionRegistry {
@@ -446,7 +464,7 @@ package struct PointerConstraintRegistry {
 
     @discardableResult
     package mutating func transition(
-        _ event: PointerConstraintEvent
+        _ event: PointerConstraintProtocolEvent
     ) -> PointerConstraintLifecycleTransition {
         let id = event.constraintID
         guard
@@ -487,7 +505,14 @@ private enum PointerConstraintEventPhase {
     case deactivated
 }
 
-extension PointerConstraintEvent {
+package enum PointerConstraintProtocolEvent: Equatable, Sendable {
+    case locked(PointerConstraintID)
+    case unlocked(PointerConstraintID)
+    case confined(PointerConstraintID)
+    case unconfined(PointerConstraintID)
+}
+
+extension PointerConstraintProtocolEvent {
     fileprivate var constraintID: PointerConstraintID {
         switch self {
         case .locked(let id), .unlocked(let id), .confined(let id), .unconfined(let id):

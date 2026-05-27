@@ -87,8 +87,8 @@ enum PointerCaptureSmoke {
                         + "unaccelerated=\(motion.unacceleratedDelta.dx),"
                         + "\(motion.unacceleratedDelta.dy)"
                 )
-            case .pointer(.constraint(let constraintEvent)):
-                log("constraint event seat=\(event.seatID) \(constraintEvent)")
+            case .pointer(.constraintLifecycle(let lifecycleEvent)):
+                log("constraint lifecycle seat=\(event.seatID) \(lifecycleEvent)")
             default:
                 break
             }
