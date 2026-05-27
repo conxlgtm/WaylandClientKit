@@ -233,18 +233,20 @@ struct PointerCaptureDomainTypesTests {
         }
     }
 
-    @Test
-    func pointerlessSeatReportsPointerCaptureError() throws {
-        let seatID = SeatID(rawValue: 41)
-        let seat = try RawSeat.testingNoopSeatForRequestRecording(
-            id: RawSeatID(seatID),
-            pointerAddress: 0x5EA7
-        )
+    #if DEBUG
+        @Test
+        func pointerlessSeatReportsPointerCaptureError() throws {
+            let seatID = SeatID(rawValue: 41)
+            let seat = try RawSeat.testingNoopSeatForRequestRecording(
+                id: RawSeatID(seatID),
+                pointerAddress: 0x5EA7
+            )
 
-        #expect(throws: PointerCaptureError.pointerUnavailable(seatID)) {
-            try PointerCaptureManager.requirePointerDevice(on: seat, seatID: seatID)
+            #expect(throws: PointerCaptureError.pointerUnavailable(seatID)) {
+                try PointerCaptureManager.requirePointerDevice(on: seat, seatID: seatID)
+            }
         }
-    }
+    #endif
 
     @Test
     func fixedPointerLocationRejectsInvalidCoordinates() {
