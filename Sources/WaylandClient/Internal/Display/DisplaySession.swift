@@ -408,8 +408,13 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     }
 
     private func processPendingSessionInputEvents() {
+        let rawEvents = connection.drainInputEvents()
+        for event in rawEvents {
+            pointerCaptureManager.processRawInputEvent(event)
+        }
+
         inputCoordinator.processPendingSessionInputEvents(
-            from: connection.drainInputEvents()
+            from: rawEvents
         ) { [textInputManager, pointerCaptureManager] seatID in
             textInputManager.removeSeat(seatID)
             pointerCaptureManager.removeSeat(seatID)
