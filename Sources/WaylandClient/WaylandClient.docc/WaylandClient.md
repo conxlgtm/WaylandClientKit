@@ -48,7 +48,7 @@ targets. They are not public `WaylandClient` API.
 - ``RelativePointerMotionEvent``
 - ``RelativePointerSubscription``
 - ``PointerConstraint``
-- ``PointerConstraintEvent``
+- ``PointerConstraintLifecycleEvent``
 - ``PointerCaptureError``
 - ``TouchEvent``
 

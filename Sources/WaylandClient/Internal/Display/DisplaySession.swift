@@ -409,18 +409,20 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
 
     private func processPendingSessionInputEvents() {
         let rawEvents = connection.drainInputEvents()
-        for event in rawEvents {
-            pointerCaptureManager.processRawInputEvent(event)
-        }
 
         inputCoordinator.processPendingSessionInputEvents(
-            from: rawEvents
-        ) { [textInputManager, pointerCaptureManager] seatID in
-            textInputManager.removeSeat(seatID)
-            pointerCaptureManager.removeSeat(seatID)
-        } onPointerCapabilityLost: { [pointerCaptureManager] seatID in
-            pointerCaptureManager.removePointerCapability(seatID)
-        }
+            from: rawEvents,
+            pointerConstraintLifecycleEvent: { [pointerCaptureManager] event in
+                pointerCaptureManager.processRawInputEvent(event)
+            },
+            onSeatRemoved: { [textInputManager, pointerCaptureManager] seatID in
+                textInputManager.removeSeat(seatID)
+                pointerCaptureManager.removeSeat(seatID)
+            },
+            onPointerCapabilityLost: { [pointerCaptureManager] seatID in
+                pointerCaptureManager.removePointerCapability(seatID)
+            }
+        )
     }
 
     private func outputScales(

@@ -101,23 +101,45 @@ struct PointerInputRouterTests {
         )
         router.register(windowID: windowID, surfaceID: 3_300)
 
-        let routed = router.route(
-            rawPointerConstraintEvent(
-                sequence: 1,
-                seatID: seatID,
-                event: .locked(identity, surfaceID: 3_300)
-            )
+        let rawEvent = rawPointerConstraintEvent(
+            sequence: 1,
+            seatID: seatID,
+            event: .locked(identity, surfaceID: 3_300)
         )
+        let accepted = router.acceptRawInputEvent(rawEvent)
+        let id = PointerConstraintID(rawValue: 77, kind: .locked)
+        let routed =
+            accepted.map {
+                router.route($0, pointerConstraintLifecycleEvent: .activated(id))
+            } ?? []
 
         #expect(routed.first?.windowID == windowID)
         #expect(
             routed.first?.kind
                 == .pointer(
-                    .constraint(
-                        .locked(PointerConstraintID(rawValue: 77, kind: .locked))
-                    )
+                    .constraintLifecycle(.activated(id))
                 )
         )
+    }
+
+    @Test
+    func pointerConstraintRawEventsWithoutLifecycleTransitionAreNotPublished() {
+        let router = InputRouter()
+        let identity = RawPointerConstraintIdentity(
+            objectID: RawObjectID(78),
+            kind: .locked
+        )
+        router.register(windowID: WindowID(rawValue: 331), surfaceID: 3_301)
+
+        let routed = router.route(
+            rawPointerConstraintEvent(
+                sequence: 1,
+                seatID: RawSeatID(rawValue: 34),
+                event: .unlocked(identity, surfaceID: 3_301)
+            )
+        )
+
+        #expect(routed.isEmpty)
     }
 
     @Test

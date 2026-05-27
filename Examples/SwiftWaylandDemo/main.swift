@@ -199,7 +199,7 @@ private struct DemoState {
             )
         case .axis(let axis):
             DemoLog.write("pointer axis \(axis)")
-        case .relativeMotion, .constraint:
+        case .relativeMotion, .constraintLifecycle:
             break
         }
     }

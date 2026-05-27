@@ -132,6 +132,100 @@ struct DisplaySessionInputPipelineTests {
     }
 
     @Test
+    func sessionRoutesConstraintLifecycleTransitionToConstraintSurface() throws {
+        let router = InputRouter()
+        let keyboardInterpreter = try KeyboardInterpreter(
+            configuration: .init(compose: .disabled), composeEnvironment: .init())
+        let seatID = RawSeatID(rawValue: 21)
+        let windowID = WindowID(rawValue: 210)
+        let rawIdentity = RawPointerConstraintIdentity(
+            objectID: RawObjectID(21),
+            kind: .locked
+        )
+        let id = PointerConstraintID(rawValue: 21, kind: .locked)
+        router.register(windowID: windowID, surfaceID: 2_100)
+
+        let routed = routeSessionInputEvents(
+            from: [
+                rawPointerConstraintEvent(
+                    sequence: 1,
+                    seatID: seatID,
+                    event: .unlocked(rawIdentity, surfaceID: 2_100)
+                )
+            ],
+            inputRouter: router,
+            keyboardInterpreter: keyboardInterpreter
+        ) { _ in
+            .defunctOneShot(id)
+        }
+
+        #expect(routed.count == 1)
+        #expect(routed.first?.windowID == windowID)
+        #expect(routed.first?.kind == .pointer(.constraintLifecycle(.defunctOneShot(id))))
+    }
+
+    @Test
+    func sessionRoutesPersistentInactiveConstraintLifecycleTransition() throws {
+        let router = InputRouter()
+        let keyboardInterpreter = try KeyboardInterpreter(
+            configuration: .init(compose: .disabled), composeEnvironment: .init())
+        let seatID = RawSeatID(rawValue: 23)
+        let windowID = WindowID(rawValue: 230)
+        let rawIdentity = RawPointerConstraintIdentity(
+            objectID: RawObjectID(23),
+            kind: .confined
+        )
+        let id = PointerConstraintID(rawValue: 23, kind: .confined)
+        router.register(windowID: windowID, surfaceID: 2_300)
+
+        let routed = routeSessionInputEvents(
+            from: [
+                rawPointerConstraintEvent(
+                    sequence: 1,
+                    seatID: seatID,
+                    event: .unconfined(rawIdentity, surfaceID: 2_300)
+                )
+            ],
+            inputRouter: router,
+            keyboardInterpreter: keyboardInterpreter
+        ) { _ in
+            .inactivePersistent(id)
+        }
+
+        #expect(routed.count == 1)
+        #expect(routed.first?.windowID == windowID)
+        #expect(routed.first?.kind == .pointer(.constraintLifecycle(.inactivePersistent(id))))
+    }
+
+    @Test
+    func sessionDoesNotPublishIgnoredConstraintLifecycleTransition() throws {
+        let router = InputRouter()
+        let keyboardInterpreter = try KeyboardInterpreter(
+            configuration: .init(compose: .disabled), composeEnvironment: .init())
+        let rawIdentity = RawPointerConstraintIdentity(
+            objectID: RawObjectID(22),
+            kind: .locked
+        )
+        router.register(windowID: WindowID(rawValue: 220), surfaceID: 2_200)
+
+        let routed = routeSessionInputEvents(
+            from: [
+                rawPointerConstraintEvent(
+                    sequence: 1,
+                    seatID: RawSeatID(rawValue: 22),
+                    event: .unlocked(rawIdentity, surfaceID: 2_200)
+                )
+            ],
+            inputRouter: router,
+            keyboardInterpreter: keyboardInterpreter
+        ) { _ in
+            nil
+        }
+
+        #expect(routed.isEmpty)
+    }
+
+    @Test
     func pendingInputOverflowDrainsPrefixThenFailureAndIgnoresFutureInput() {
         var state = PendingInputState.accepting(
             [clientSeatRemoved(sequence: 1)]

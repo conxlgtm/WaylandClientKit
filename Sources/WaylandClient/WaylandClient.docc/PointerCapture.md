@@ -10,8 +10,13 @@ If a compositor does not advertise a protocol, the request fails with
 `PointerCaptureError.unavailable`.
 
 Relative motion events arrive through ``InputEvents`` as
-`PointerEvent.relativeMotion`. Constraint lifecycle events arrive through
-`PointerEvent.constraint` and keep their locked or confined identity.
+`PointerEvent.relativeMotion`. Constraint lifecycle transitions arrive through
+`PointerEvent.constraintLifecycle`. One-shot terminal transitions are reported
+as `PointerConstraintLifecycleEvent.defunctOneShot`, which means SwiftWayland
+has already destroyed the protocol object and callers do not need to destroy
+the handle. Persistent terminal transitions are reported as
+`PointerConstraintLifecycleEvent.inactivePersistent`, which means the protocol
+object remains valid and may later become active again.
 
 Pointer capture is still application policy. SwiftWayland does not decide when a
 game mode starts, how the user exits pointer lock, what cursor is shown, or how
