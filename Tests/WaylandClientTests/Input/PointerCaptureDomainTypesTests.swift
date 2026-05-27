@@ -233,6 +233,183 @@ struct PointerCaptureDomainTypesTests {
         }
     }
 
+    @Test
+    func oneShotUnlockedPublishesDefunctAndDestroysManagedConstraintAndRegion() throws {
+        var runtime = PointerConstraintRuntime()
+        let surfaceID = RawObjectID(109)
+        let seatID = SeatID(rawValue: 12)
+        let rawSeatID = RawSeatID(seatID)
+        let id = PointerConstraintID(rawValue: 109, kind: .locked)
+        let rawIdentity = RawPointerConstraintIdentity(objectID: RawObjectID(109), kind: .locked)
+        let recorder = PointerConstraintDestroyRecorder(id: id)
+
+        runtime.insert(
+            id: id,
+            seatID: seatID,
+            surfaceID: surfaceID,
+            constraint: recorder.managedConstraint(),
+            lifetime: .oneShot
+        )
+
+        #expect(
+            runtime.processRawInputEvent(
+                rawPointerConstraintEvent(
+                    sequence: 1,
+                    seatID: rawSeatID,
+                    event: .locked(rawIdentity, surfaceID: surfaceID)
+                )
+            ) == .activated(id)
+        )
+        #expect(recorder.constraintDestroyCount == 0)
+        #expect(recorder.regionDestroyCount == 0)
+
+        #expect(
+            runtime.processRawInputEvent(
+                rawPointerConstraintEvent(
+                    sequence: 2,
+                    seatID: rawSeatID,
+                    event: .unlocked(rawIdentity, surfaceID: surfaceID)
+                )
+            ) == .defunctOneShot(id)
+        )
+        #expect(recorder.constraintDestroyCount == 1)
+        #expect(recorder.regionDestroyCount == 1)
+        #expect(runtime.lifecycle(for: id) == nil)
+        #expect(throws: PointerCaptureError.unknownPointerConstraint(id)) {
+            try runtime.destroyPointerConstraint(id)
+        }
+
+        try runtime.preflight(surfaceID: surfaceID, seatID: seatID)
+        #expect(recorder.constraintDestroyCount == 1)
+        #expect(recorder.regionDestroyCount == 1)
+    }
+
+    @Test
+    func oneShotUnconfinedPublishesDefunctAndDestroysManagedConstraintAndRegion() throws {
+        var runtime = PointerConstraintRuntime()
+        let surfaceID = RawObjectID(110)
+        let seatID = SeatID(rawValue: 13)
+        let rawSeatID = RawSeatID(seatID)
+        let id = PointerConstraintID(rawValue: 110, kind: .confined)
+        let rawIdentity = RawPointerConstraintIdentity(objectID: RawObjectID(110), kind: .confined)
+        let recorder = PointerConstraintDestroyRecorder(id: id)
+
+        runtime.insert(
+            id: id,
+            seatID: seatID,
+            surfaceID: surfaceID,
+            constraint: recorder.managedConstraint(),
+            lifetime: .oneShot
+        )
+
+        #expect(
+            runtime.processRawInputEvent(
+                rawPointerConstraintEvent(
+                    sequence: 1,
+                    seatID: rawSeatID,
+                    event: .confined(rawIdentity, surfaceID: surfaceID)
+                )
+            ) == .activated(id)
+        )
+        #expect(
+            runtime.processRawInputEvent(
+                rawPointerConstraintEvent(
+                    sequence: 2,
+                    seatID: rawSeatID,
+                    event: .unconfined(rawIdentity, surfaceID: surfaceID)
+                )
+            ) == .defunctOneShot(id)
+        )
+        #expect(recorder.constraintDestroyCount == 1)
+        #expect(recorder.regionDestroyCount == 1)
+        #expect(runtime.lifecycle(for: id) == nil)
+    }
+
+    @Test
+    func persistentUnlockedPublishesInactiveAndDoesNotDestroyManagedConstraint() throws {
+        var runtime = PointerConstraintRuntime()
+        let surfaceID = RawObjectID(111)
+        let seatID = SeatID(rawValue: 14)
+        let rawSeatID = RawSeatID(seatID)
+        let id = PointerConstraintID(rawValue: 111, kind: .locked)
+        let rawIdentity = RawPointerConstraintIdentity(objectID: RawObjectID(111), kind: .locked)
+        let recorder = PointerConstraintDestroyRecorder(id: id)
+
+        runtime.insert(
+            id: id,
+            seatID: seatID,
+            surfaceID: surfaceID,
+            constraint: recorder.managedConstraint(),
+            lifetime: .persistent
+        )
+
+        #expect(
+            runtime.processRawInputEvent(
+                rawPointerConstraintEvent(
+                    sequence: 1,
+                    seatID: rawSeatID,
+                    event: .locked(rawIdentity, surfaceID: surfaceID)
+                )
+            ) == .activated(id)
+        )
+        #expect(
+            runtime.processRawInputEvent(
+                rawPointerConstraintEvent(
+                    sequence: 2,
+                    seatID: rawSeatID,
+                    event: .unlocked(rawIdentity, surfaceID: surfaceID)
+                )
+            ) == .inactivePersistent(id)
+        )
+        #expect(recorder.constraintDestroyCount == 0)
+        #expect(recorder.regionDestroyCount == 0)
+        #expect(runtime.lifecycle(for: id) == .inactivePersistent)
+        #expect(throws: PointerCaptureError.alreadyConstrained(seatID: seatID)) {
+            try runtime.preflight(surfaceID: surfaceID, seatID: seatID)
+        }
+
+        try runtime.destroyPointerConstraint(id)
+        #expect(recorder.constraintDestroyCount == 1)
+        #expect(recorder.regionDestroyCount == 1)
+    }
+
+    @Test
+    func mismatchedConstraintEventDoesNotDestroyManagedConstraint() throws {
+        var runtime = PointerConstraintRuntime()
+        let surfaceID = RawObjectID(112)
+        let seatID = SeatID(rawValue: 15)
+        let id = PointerConstraintID(rawValue: 112, kind: .locked)
+        let mismatchedRawIdentity = RawPointerConstraintIdentity(
+            objectID: RawObjectID(112),
+            kind: .confined
+        )
+        let recorder = PointerConstraintDestroyRecorder(id: id)
+
+        runtime.insert(
+            id: id,
+            seatID: seatID,
+            surfaceID: surfaceID,
+            constraint: recorder.managedConstraint(),
+            lifetime: .oneShot
+        )
+
+        #expect(
+            runtime.processRawInputEvent(
+                rawPointerConstraintEvent(
+                    sequence: 1,
+                    seatID: RawSeatID(seatID),
+                    event: .confined(mismatchedRawIdentity, surfaceID: surfaceID)
+                )
+            ) == nil
+        )
+        #expect(recorder.constraintDestroyCount == 0)
+        #expect(recorder.regionDestroyCount == 0)
+        #expect(runtime.lifecycle(for: id) == .requested)
+        #expect(throws: PointerCaptureError.alreadyConstrained(seatID: seatID)) {
+            try runtime.preflight(surfaceID: surfaceID, seatID: seatID)
+        }
+    }
+
     #if DEBUG
         @Test
         func pointerlessSeatReportsPointerCaptureError() throws {
@@ -282,6 +459,24 @@ struct PointerCaptureDomainTypesTests {
 
         #expect(location.x == WaylandFixed(rawValue: 384))
         #expect(location.y == WaylandFixed(rawValue: -128))
+    }
+}
+
+private final class PointerConstraintDestroyRecorder {
+    private let id: PointerConstraintID
+
+    var constraintDestroyCount = 0
+    var regionDestroyCount = 0
+
+    init(id constraintID: PointerConstraintID) {
+        id = constraintID
+    }
+
+    func managedConstraint() -> ManagedPointerConstraint {
+        ManagedPointerConstraint(id: id) { [self] in
+            constraintDestroyCount += 1
+            regionDestroyCount += 1
+        }
     }
 }
 
