@@ -25,16 +25,18 @@ private enum ManagedPointerConstraint {
     }
 }
 
+private struct ManagedPointerConstraintState {
+    let seatID: SeatID
+    let surfaceID: RawObjectID
+    let constraint: ManagedPointerConstraint
+}
+
 package final class PointerCaptureManager {
     private let connection: RawDisplayConnection
     private var nextRelativePointerSubscriptionID: UInt64 = 1
     private var relativePointers:
         [RelativePointerSubscriptionID: (seatID: SeatID, pointer: RawRelativePointer)] = [:]
-    private var constraints:
-        [PointerConstraintID: (
-            seatID: SeatID, surfaceID: RawObjectID, constraint: ManagedPointerConstraint
-        )] =
-            [:]
+    private var constraints: [PointerConstraintID: ManagedPointerConstraintState] = [:]
     private var relativePointerRegistry = RelativePointerSubscriptionRegistry()
     private var constraintRegistry = PointerConstraintRegistry()
     private var isShutDown = false
@@ -105,7 +107,8 @@ package final class PointerCaptureManager {
         return storeConstraint(
             managed,
             seatID: seatID,
-            surfaceID: surface.objectID
+            surfaceID: surface.objectID,
+            lifetime: lifetime
         )
     }
 
@@ -139,7 +142,8 @@ package final class PointerCaptureManager {
         return storeConstraint(
             managed,
             seatID: seatID,
-            surfaceID: surface.objectID
+            surfaceID: surface.objectID,
+            lifetime: lifetime
         )
     }
 
@@ -163,6 +167,16 @@ package final class PointerCaptureManager {
 
         _ = constraintRegistry.remove(id)
         constraint.destroy()
+    }
+
+    package func processRawInputEvent(_ event: RawInputEvent) {
+        connection.preconditionIsOwnerThread()
+        guard case .pointer(.constraint(let constraintEvent)) = event.kind else { return }
+
+        let transition = constraintRegistry.transition(PointerConstraintEvent(constraintEvent))
+        guard case .defunctOneShot(let id) = transition else { return }
+
+        constraints.removeValue(forKey: id)?.constraint.destroy()
     }
 
     package func removeSeat(_ seatID: SeatID) {
@@ -258,11 +272,21 @@ package final class PointerCaptureManager {
     private func storeConstraint(
         _ constraint: ManagedPointerConstraint,
         seatID: SeatID,
-        surfaceID: RawObjectID
+        surfaceID: RawObjectID,
+        lifetime: PointerConstraintLifetime
     ) -> PointerConstraintID {
         let id = constraint.id
-        constraints[id] = (seatID: seatID, surfaceID: surfaceID, constraint: constraint)
-        constraintRegistry.insert(id: id, surfaceID: surfaceID, seatID: seatID)
+        constraints[id] = ManagedPointerConstraintState(
+            seatID: seatID,
+            surfaceID: surfaceID,
+            constraint: constraint
+        )
+        constraintRegistry.insert(
+            id: id,
+            surfaceID: surfaceID,
+            seatID: seatID,
+            lifetime: lifetime
+        )
         return id
     }
 
@@ -328,6 +352,25 @@ package struct PointerConstraintKey: Equatable, Hashable, Sendable {
     }
 }
 
+package enum PointerConstraintLifecycle: Equatable, Sendable {
+    case requested
+    case active
+    case inactivePersistent
+}
+
+package struct PointerConstraintRegistryEntry: Equatable, Sendable {
+    package let key: PointerConstraintKey
+    package let lifetime: PointerConstraintLifetime
+    package var lifecycle: PointerConstraintLifecycle
+}
+
+package enum PointerConstraintLifecycleTransition: Equatable, Sendable {
+    case activated(PointerConstraintID)
+    case inactivePersistent(PointerConstraintID)
+    case defunctOneShot(PointerConstraintID)
+    case ignored
+}
+
 package struct RelativePointerSubscriptionRegistry {
     private var seatByID: [RelativePointerSubscriptionID: SeatID] = [:]
     private var idBySeat: [SeatID: RelativePointerSubscriptionID] = [:]
@@ -361,7 +404,7 @@ package struct RelativePointerSubscriptionRegistry {
 }
 
 package struct PointerConstraintRegistry {
-    private var keyByID: [PointerConstraintID: PointerConstraintKey] = [:]
+    private var entryByID: [PointerConstraintID: PointerConstraintRegistryEntry] = [:]
     private var idByKey: [PointerConstraintKey: PointerConstraintID] = [:]
 
     package init() {
@@ -378,23 +421,109 @@ package struct PointerConstraintRegistry {
     package mutating func insert(
         id: PointerConstraintID,
         surfaceID: RawObjectID,
-        seatID: SeatID
+        seatID: SeatID,
+        lifetime: PointerConstraintLifetime
     ) {
         let key = PointerConstraintKey(surfaceID: surfaceID, seatID: seatID)
-        keyByID[id] = key
+        entryByID[id] = PointerConstraintRegistryEntry(
+            key: key,
+            lifetime: lifetime,
+            lifecycle: .requested
+        )
         idByKey[key] = id
     }
 
     @discardableResult
     package mutating func remove(_ id: PointerConstraintID) -> PointerConstraintKey? {
-        guard let key = keyByID.removeValue(forKey: id) else { return nil }
+        guard let key = entryByID.removeValue(forKey: id)?.key else { return nil }
         idByKey.removeValue(forKey: key)
         return key
     }
 
+    package func lifecycle(for id: PointerConstraintID) -> PointerConstraintLifecycle? {
+        entryByID[id]?.lifecycle
+    }
+
+    @discardableResult
+    package mutating func transition(
+        _ event: PointerConstraintEvent
+    ) -> PointerConstraintLifecycleTransition {
+        let id = event.constraintID
+        guard
+            event.matchesConstraintKind,
+            var entry = entryByID[id]
+        else {
+            return .ignored
+        }
+
+        switch event.phase {
+        case .activated:
+            guard entry.lifecycle != .active else { return .ignored }
+
+            entry.lifecycle = .active
+            entryByID[id] = entry
+            return .activated(id)
+        case .deactivated:
+            switch entry.lifetime {
+            case .oneShot:
+                remove(id)
+                return .defunctOneShot(id)
+            case .persistent:
+                entry.lifecycle = .inactivePersistent
+                entryByID[id] = entry
+                return .inactivePersistent(id)
+            }
+        }
+    }
+
     package mutating func removeAll() {
-        keyByID.removeAll()
+        entryByID.removeAll()
         idByKey.removeAll()
+    }
+}
+
+private enum PointerConstraintEventPhase {
+    case activated
+    case deactivated
+}
+
+extension PointerConstraintEvent {
+    fileprivate var constraintID: PointerConstraintID {
+        switch self {
+        case .locked(let id), .unlocked(let id), .confined(let id), .unconfined(let id):
+            id
+        }
+    }
+
+    fileprivate var phase: PointerConstraintEventPhase {
+        switch self {
+        case .locked, .confined:
+            .activated
+        case .unlocked, .unconfined:
+            .deactivated
+        }
+    }
+
+    fileprivate var matchesConstraintKind: Bool {
+        switch self {
+        case .locked(let id), .unlocked(let id):
+            id.kind == .locked
+        case .confined(let id), .unconfined(let id):
+            id.kind == .confined
+        }
+    }
+
+    package init(_ raw: RawPointerConstraintEvent) {
+        switch raw {
+        case .locked(let identity, _):
+            self = .locked(PointerConstraintID(identity))
+        case .unlocked(let identity, _):
+            self = .unlocked(PointerConstraintID(identity))
+        case .confined(let identity, _):
+            self = .confined(PointerConstraintID(identity))
+        case .unconfined(let identity, _):
+            self = .unconfined(PointerConstraintID(identity))
+        }
     }
 }
 

@@ -93,7 +93,8 @@ struct PointerCaptureDomainTypesTests {
         registry.insert(
             id: PointerConstraintID(rawValue: 1, kind: .locked),
             surfaceID: surfaceID,
-            seatID: seatID
+            seatID: seatID,
+            lifetime: .oneShot
         )
 
         #expect(throws: PointerCaptureError.alreadyConstrained(seatID: seatID)) {
@@ -110,7 +111,8 @@ struct PointerCaptureDomainTypesTests {
         registry.insert(
             id: PointerConstraintID(rawValue: 2, kind: .locked),
             surfaceID: surfaceID,
-            seatID: seatID
+            seatID: seatID,
+            lifetime: .oneShot
         )
 
         #expect(throws: PointerCaptureError.alreadyConstrained(seatID: seatID)) {
@@ -127,7 +129,8 @@ struct PointerCaptureDomainTypesTests {
         registry.insert(
             id: PointerConstraintID(rawValue: 3, kind: .confined),
             surfaceID: surfaceID,
-            seatID: seatID
+            seatID: seatID,
+            lifetime: .oneShot
         )
 
         #expect(throws: PointerCaptureError.alreadyConstrained(seatID: seatID)) {
@@ -142,10 +145,92 @@ struct PointerCaptureDomainTypesTests {
         let seatID = SeatID(rawValue: 4)
         let id = PointerConstraintID(rawValue: 4, kind: .confined)
 
-        registry.insert(id: id, surfaceID: surfaceID, seatID: seatID)
+        registry.insert(id: id, surfaceID: surfaceID, seatID: seatID, lifetime: .oneShot)
         _ = registry.remove(id)
 
         try registry.preflight(surfaceID: surfaceID, seatID: seatID)
+    }
+
+    @Test
+    func oneShotLockUnlockedRemovesConstraintAndAllowsRelock() throws {
+        var registry = PointerConstraintRegistry()
+        let surfaceID = RawObjectID(104)
+        let seatID = SeatID(rawValue: 5)
+        let id = PointerConstraintID(rawValue: 5, kind: .locked)
+
+        registry.insert(id: id, surfaceID: surfaceID, seatID: seatID, lifetime: .oneShot)
+        #expect(registry.transition(.locked(id)) == .activated(id))
+        #expect(registry.transition(.unlocked(id)) == .defunctOneShot(id))
+        #expect(registry.lifecycle(for: id) == nil)
+
+        try registry.preflight(surfaceID: surfaceID, seatID: seatID)
+    }
+
+    @Test
+    func oneShotConfineUnconfinedRemovesConstraintAndAllowsReconfinement() throws {
+        var registry = PointerConstraintRegistry()
+        let surfaceID = RawObjectID(105)
+        let seatID = SeatID(rawValue: 6)
+        let id = PointerConstraintID(rawValue: 6, kind: .confined)
+
+        registry.insert(id: id, surfaceID: surfaceID, seatID: seatID, lifetime: .oneShot)
+        #expect(registry.transition(.confined(id)) == .activated(id))
+        #expect(registry.transition(.unconfined(id)) == .defunctOneShot(id))
+        #expect(registry.lifecycle(for: id) == nil)
+
+        try registry.preflight(surfaceID: surfaceID, seatID: seatID)
+    }
+
+    @Test
+    func persistentLockUnlockedKeepsConstraintAndRejectsSecondConstraint() throws {
+        var registry = PointerConstraintRegistry()
+        let surfaceID = RawObjectID(106)
+        let seatID = SeatID(rawValue: 7)
+        let id = PointerConstraintID(rawValue: 7, kind: .locked)
+
+        registry.insert(id: id, surfaceID: surfaceID, seatID: seatID, lifetime: .persistent)
+        #expect(registry.transition(.locked(id)) == .activated(id))
+        #expect(registry.transition(.unlocked(id)) == .inactivePersistent(id))
+        #expect(registry.lifecycle(for: id) == .inactivePersistent)
+        #expect(registry.transition(.locked(id)) == .activated(id))
+        #expect(registry.lifecycle(for: id) == .active)
+
+        #expect(throws: PointerCaptureError.alreadyConstrained(seatID: seatID)) {
+            try registry.preflight(surfaceID: surfaceID, seatID: seatID)
+        }
+    }
+
+    @Test
+    func duplicateConstraintRejectedOnlyBeforeOneShotTerminalEvent() throws {
+        var registry = PointerConstraintRegistry()
+        let surfaceID = RawObjectID(107)
+        let seatID = SeatID(rawValue: 8)
+        let id = PointerConstraintID(rawValue: 8, kind: .locked)
+
+        registry.insert(id: id, surfaceID: surfaceID, seatID: seatID, lifetime: .oneShot)
+        #expect(throws: PointerCaptureError.alreadyConstrained(seatID: seatID)) {
+            try registry.preflight(surfaceID: surfaceID, seatID: seatID)
+        }
+        #expect(registry.transition(.unlocked(id)) == .defunctOneShot(id))
+
+        try registry.preflight(surfaceID: surfaceID, seatID: seatID)
+    }
+
+    @Test
+    func outOfOrderConstraintEventDoesNotCorruptRegistry() throws {
+        var registry = PointerConstraintRegistry()
+        let surfaceID = RawObjectID(108)
+        let seatID = SeatID(rawValue: 9)
+        let id = PointerConstraintID(rawValue: 9, kind: .locked)
+        let mismatchedID = PointerConstraintID(rawValue: 9, kind: .confined)
+
+        registry.insert(id: id, surfaceID: surfaceID, seatID: seatID, lifetime: .oneShot)
+        #expect(registry.transition(.confined(mismatchedID)) == .ignored)
+        #expect(registry.lifecycle(for: id) == .requested)
+
+        #expect(throws: PointerCaptureError.alreadyConstrained(seatID: seatID)) {
+            try registry.preflight(surfaceID: surfaceID, seatID: seatID)
+        }
     }
 
     @Test
