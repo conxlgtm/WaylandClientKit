@@ -105,7 +105,7 @@ package final class ActivationManager {
     }
 
     package func beginTokenRequest(
-        appID: String?,
+        appID: ActivationAppID?,
         surface: RawSurface?,
         seat: RawSeat?,
         serial: InputSerial?
@@ -115,7 +115,6 @@ package final class ActivationManager {
             throw ActivationError.displayClosed
         }
 
-        try validate(appID: appID, seat: seat, serial: serial)
         let requestID = makeRequestID()
         let pending = PendingActivationTokenRequest(id: requestID)
         let tokenRequest = try backend.requestToken { [weak self, weak pending] tokenValue in
@@ -129,7 +128,7 @@ package final class ActivationManager {
         }
 
         if let appID {
-            tokenRequest.setAppID(appID)
+            tokenRequest.setAppID(appID.value)
         }
         if let surface {
             tokenRequest.setSurface(surface)
@@ -177,21 +176,6 @@ package final class ActivationManager {
         }
         for waiter in waiters.values {
             waiter.complete(.failure(.displayClosed))
-        }
-    }
-
-    private func validate(appID: String?, seat: RawSeat?, serial: InputSerial?) throws {
-        if let appID {
-            guard !appID.isEmpty, !appID.contains("\0") else {
-                throw ActivationError.invalidAppID
-            }
-        }
-
-        switch (seat, serial) {
-        case (.some, .some), (.none, .none):
-            return
-        case (.some, .none), (.none, .some):
-            throw ActivationError.incompleteSerialContext
         }
     }
 

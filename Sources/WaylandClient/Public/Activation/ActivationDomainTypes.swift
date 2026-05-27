@@ -24,36 +24,73 @@ public struct ActivationToken: Equatable, Hashable, Sendable, CustomStringConver
     }
 }
 
+public struct ActivationAppID: Equatable, Hashable, Sendable, CustomStringConvertible {
+    public let value: String
+
+    public init(_ appIDValue: String) throws {
+        guard !appIDValue.isEmpty, !appIDValue.contains("\0") else {
+            throw ActivationError.invalidAppID
+        }
+
+        value = appIDValue
+    }
+
+    public var description: String {
+        value
+    }
+}
+
+public struct ActivationSerialContext: Equatable, Hashable, Sendable {
+    public let seatID: SeatID
+    public let serial: InputSerial
+
+    public init(seatID contextSeatID: SeatID, serial contextSerial: InputSerial) {
+        seatID = contextSeatID
+        serial = contextSerial
+    }
+}
+
 public struct ActivationTokenRequest: Equatable, Sendable {
-    public var appID: String?
+    public var appID: ActivationAppID?
     public var window: Window?
-    public var seatID: SeatID?
-    public var serial: InputSerial?
+    public var serialContext: ActivationSerialContext?
+
+    public init() {
+        appID = nil
+        window = nil
+        serialContext = nil
+    }
 
     public init(
-        appID requestAppID: String? = nil,
+        appID requestAppID: ActivationAppID? = nil,
         window requestWindow: Window? = nil,
-        seatID requestSeatID: SeatID? = nil,
-        serial requestSerial: InputSerial? = nil
+        serialContext requestSerialContext: ActivationSerialContext? = nil
     ) {
         appID = requestAppID
         window = requestWindow
-        seatID = requestSeatID
-        serial = requestSerial
+        serialContext = requestSerialContext
+    }
+
+    public init(
+        validatingAppID requestAppID: String?,
+        window requestWindow: Window? = nil,
+        serialContext requestSerialContext: ActivationSerialContext? = nil
+    ) throws {
+        appID = try requestAppID.map(ActivationAppID.init)
+        window = requestWindow
+        serialContext = requestSerialContext
     }
 }
 
 package struct ActivationTokenRequestPlan: Equatable, Sendable {
-    package let appID: String?
+    package let appID: ActivationAppID?
     package let windowID: WindowID?
-    package let seatID: SeatID?
-    package let serial: InputSerial?
+    package let serialContext: ActivationSerialContext?
 
     package init(_ request: ActivationTokenRequest) {
         appID = request.appID
         windowID = request.window?.id
-        seatID = request.seatID
-        serial = request.serial
+        serialContext = request.serialContext
     }
 }
 
@@ -65,9 +102,9 @@ public enum ActivationError: Error, Equatable, Sendable, CustomStringConvertible
     case invalidAppID
     case invalidToken
     case tokenRequestTimedOut
+    case cancelled
     case displayClosed
     case unknownSeat(SeatID)
-    case incompleteSerialContext
 
     public var description: String {
         switch self {
@@ -85,12 +122,12 @@ public enum ActivationError: Error, Equatable, Sendable, CustomStringConvertible
             "activation token must not be empty or contain NUL bytes"
         case .tokenRequestTimedOut:
             "activation token request timed out"
+        case .cancelled:
+            "activation token request was cancelled"
         case .displayClosed:
             "display is closed"
         case .unknownSeat(let seatID):
             "seat \(seatID) is not registered on this display"
-        case .incompleteSerialContext:
-            "activation serial context requires both a seat ID and an input serial"
         }
     }
 }

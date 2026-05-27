@@ -78,16 +78,14 @@ public struct Window: Sendable, Hashable {
 
     public func requestActivationToken(
         appID: String? = nil,
-        seatID: SeatID? = nil,
-        serial: InputSerial? = nil,
+        serialContext: ActivationSerialContext? = nil,
         timeoutMilliseconds: Int32 = WaylandDisplay.defaultActivationTokenTimeoutMilliseconds
     ) async throws -> ActivationToken {
         try await display.requestActivationToken(
-            ActivationTokenRequest(
-                appID: appID,
+            try ActivationTokenRequest(
+                validatingAppID: appID,
                 window: self,
-                seatID: seatID,
-                serial: serial
+                serialContext: serialContext
             ),
             timeoutMilliseconds: timeoutMilliseconds
         )

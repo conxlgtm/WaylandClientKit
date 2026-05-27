@@ -15,24 +15,33 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L2: `    public let value: String`
 - L4: `    public init(_ tokenValue: String) throws {`
 - L22: `    public var description: String {`
-- L27: `public struct ActivationTokenRequest: Equatable, Sendable {`
-- L28: `    public var appID: String?`
-- L29: `    public var window: Window?`
-- L30: `    public var seatID: SeatID?`
-- L31: `    public var serial: InputSerial?`
-- L33: `    public init(`
-- L60: `public enum ActivationError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L61: `    case unavailable`
-- L62: `    case foreignWindow(WindowID)`
-- L63: `    case unknownWindow(WindowID)`
-- L64: `    case closedWindow(WindowID)`
-- L65: `    case invalidAppID`
-- L66: `    case invalidToken`
-- L67: `    case tokenRequestTimedOut`
-- L68: `    case displayClosed`
-- L69: `    case unknownSeat(SeatID)`
-- L70: `    case incompleteSerialContext`
-- L72: `    public var description: String {`
+- L27: `public struct ActivationAppID: Equatable, Hashable, Sendable, CustomStringConvertible {`
+- L28: `    public let value: String`
+- L30: `    public init(_ appIDValue: String) throws {`
+- L38: `    public var description: String {`
+- L43: `public struct ActivationSerialContext: Equatable, Hashable, Sendable {`
+- L44: `    public let seatID: SeatID`
+- L45: `    public let serial: InputSerial`
+- L47: `    public init(seatID contextSeatID: SeatID, serial contextSerial: InputSerial) {`
+- L53: `public struct ActivationTokenRequest: Equatable, Sendable {`
+- L54: `    public var appID: ActivationAppID?`
+- L55: `    public var window: Window?`
+- L56: `    public var serialContext: ActivationSerialContext?`
+- L58: `    public init() {`
+- L64: `    public init(`
+- L74: `    public init(`
+- L97: `public enum ActivationError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L98: `    case unavailable`
+- L99: `    case foreignWindow(WindowID)`
+- L100: `    case unknownWindow(WindowID)`
+- L101: `    case closedWindow(WindowID)`
+- L102: `    case invalidAppID`
+- L103: `    case invalidToken`
+- L104: `    case tokenRequestTimedOut`
+- L105: `    case cancelled`
+- L106: `    case displayClosed`
+- L107: `    case unknownSeat(SeatID)`
+- L109: `    public var description: String {`
 
 ### `Sources/WaylandClient/Public/Clipboard/ClipboardOffer.swift`
 
@@ -873,7 +882,7 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 - L3: `    public static let defaultActivationTokenTimeoutMilliseconds: Int32 = 1_000`
 - L5: `    public func requestActivationToken(`
-- L36: `    public func activate(window: Window, token: ActivationToken) throws {`
+- L39: `    public func activate(window: Window, token: ActivationToken) throws {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+DataTransfer.swift`
 
@@ -1958,32 +1967,32 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L71: `    public var presentationEvents: WindowPresentationEvents {`
 - L75: `    public func requestPresentationFeedback() async throws {`
 - L79: `    public func requestActivationToken(`
-- L96: `    public func activate(using token: ActivationToken) async throws {`
-- L100: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
-- L104: `    public func lockPointer(`
-- L119: `    public func confinePointer(`
-- L132: `    public func setTitle(_ title: WaylandString) async throws {`
-- L136: `    public func setTitle(_ title: String) async throws {`
-- L140: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
-- L144: `    public func setAppID(_ appID: String) async throws {`
-- L148: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
-- L152: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
-- L156: `    public func requestMaximize() async throws {`
-- L160: `    public func requestUnmaximize() async throws {`
-- L164: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
-- L168: `    public func requestExitFullscreen() async throws {`
-- L172: `    public func requestMinimize() async throws {`
-- L176: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
-- L180: `    public func requestInteractiveResize(`
-- L193: `    public func requestWindowMenu(`
-- L206: `    public func startDrag(`
-- L221: `    public var isClosed: Bool {`
-- L227: `    public var needsRedraw: Bool {`
-- L233: `    public var decorationMode: WindowDecorationMode {`
-- L239: `    public var geometry: SurfaceGeometry {`
-- L245: `    public var stateSnapshot: WindowStateSnapshot {`
-- L251: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L255: `    public func hash(into hasher: inout Hasher) {`
+- L94: `    public func activate(using token: ActivationToken) async throws {`
+- L98: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
+- L102: `    public func lockPointer(`
+- L117: `    public func confinePointer(`
+- L130: `    public func setTitle(_ title: WaylandString) async throws {`
+- L134: `    public func setTitle(_ title: String) async throws {`
+- L138: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L142: `    public func setAppID(_ appID: String) async throws {`
+- L146: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L150: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L154: `    public func requestMaximize() async throws {`
+- L158: `    public func requestUnmaximize() async throws {`
+- L162: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L166: `    public func requestExitFullscreen() async throws {`
+- L170: `    public func requestMinimize() async throws {`
+- L174: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L178: `    public func requestInteractiveResize(`
+- L191: `    public func requestWindowMenu(`
+- L204: `    public func startDrag(`
+- L219: `    public var isClosed: Bool {`
+- L225: `    public var needsRedraw: Bool {`
+- L231: `    public var decorationMode: WindowDecorationMode {`
+- L237: `    public var geometry: SurfaceGeometry {`
+- L243: `    public var stateSnapshot: WindowStateSnapshot {`
+- L249: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L253: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 

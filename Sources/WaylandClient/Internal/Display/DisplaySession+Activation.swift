@@ -7,15 +7,14 @@ extension DisplaySession {
     ) throws -> PendingActivationTokenRequest {
         connection.preconditionIsOwnerThread()
         let seat = try activationSeatOnOwnerThread(
-            seatID: request.seatID,
-            serial: request.serial
+            serialContext: request.serialContext
         )
 
         return try activationManager.beginTokenRequest(
             appID: request.appID,
             surface: surface,
             seat: seat,
-            serial: request.serial
+            serial: request.serialContext?.serial
         )
     }
 
@@ -36,23 +35,16 @@ extension DisplaySession {
     }
 
     private func activationSeatOnOwnerThread(
-        seatID: SeatID?,
-        serial: InputSerial?
+        serialContext: ActivationSerialContext?
     ) throws -> RawSeat? {
         connection.preconditionIsOwnerThread()
+        guard let serialContext else { return nil }
 
-        switch (seatID, serial) {
-        case (.none, .none):
-            return nil
-        case (.none, .some), (.some, .none):
-            throw ActivationError.incompleteSerialContext
-        case (.some(let seatID), .some):
-            let globals = try connection.bindRequiredGlobals()
-            guard let seat = globals.seatRegistry.seat(for: RawSeatID(seatID)) else {
-                throw ActivationError.unknownSeat(seatID)
-            }
-
-            return seat
+        let globals = try connection.bindRequiredGlobals()
+        guard let seat = globals.seatRegistry.seat(for: RawSeatID(serialContext.seatID)) else {
+            throw ActivationError.unknownSeat(serialContext.seatID)
         }
+
+        return seat
     }
 }
