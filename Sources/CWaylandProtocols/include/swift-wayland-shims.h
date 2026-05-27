@@ -1939,6 +1939,114 @@ struct swl_test_cursor_shape_destroy_record {
     void                                    *object;
 };
 
+enum swl_test_activation_request_kind {
+    SWL_TEST_ACTIVATION_REQUEST_NONE = 0,
+    SWL_TEST_ACTIVATION_GET_TOKEN = 1,
+    SWL_TEST_ACTIVATION_ACTIVATE = 2,
+    SWL_TEST_ACTIVATION_TOKEN_SET_SERIAL = 3,
+    SWL_TEST_ACTIVATION_TOKEN_SET_APP_ID = 4,
+    SWL_TEST_ACTIVATION_TOKEN_SET_SURFACE = 5,
+    SWL_TEST_ACTIVATION_TOKEN_COMMIT = 6,
+};
+
+struct swl_test_activation_request_record {
+    int32_t                                call_count;
+    enum swl_test_activation_request_kind kind;
+    void                                  *object;
+    void                                  *seat;
+    void                                  *surface;
+    uint32_t                               serial;
+    const char                            *text;
+};
+
+enum swl_test_activation_destroy_kind {
+    SWL_TEST_ACTIVATION_DESTROY_NONE = 0,
+    SWL_TEST_ACTIVATION_DESTROY_MANAGER = 1,
+    SWL_TEST_ACTIVATION_DESTROY_TOKEN = 2,
+};
+
+struct swl_test_activation_destroy_record {
+    int32_t                                call_count;
+    enum swl_test_activation_destroy_kind kind;
+    void                                  *object;
+};
+
+enum swl_test_activation_listener_kind {
+    SWL_TEST_ACTIVATION_LISTENER_NONE = 0,
+    SWL_TEST_ACTIVATION_LISTENER_DONE = 1,
+};
+
+struct swl_test_activation_listener_record {
+    int32_t                                call_count;
+    enum swl_test_activation_listener_kind kind;
+    void                                  *data;
+    void                                  *token;
+    const char                            *text;
+};
+
+enum swl_test_pointer_capture_request_kind {
+    SWL_TEST_POINTER_CAPTURE_REQUEST_NONE = 0,
+    SWL_TEST_POINTER_CAPTURE_GET_RELATIVE_POINTER = 1,
+    SWL_TEST_POINTER_CAPTURE_LOCK_POINTER = 2,
+    SWL_TEST_POINTER_CAPTURE_CONFINE_POINTER = 3,
+    SWL_TEST_POINTER_CAPTURE_LOCK_SET_CURSOR_HINT = 4,
+    SWL_TEST_POINTER_CAPTURE_LOCK_SET_REGION = 5,
+    SWL_TEST_POINTER_CAPTURE_CONFINE_SET_REGION = 6,
+    SWL_TEST_POINTER_CAPTURE_REGION_ADD = 7,
+};
+
+struct swl_test_pointer_capture_request_record {
+    int32_t                                      call_count;
+    enum swl_test_pointer_capture_request_kind kind;
+    void                                        *object;
+    void                                        *surface;
+    void                                        *pointer;
+    void                                        *region;
+    uint32_t                                     lifetime;
+    int32_t                                      x;
+    int32_t                                      y;
+    int32_t                                      width;
+    int32_t                                      height;
+};
+
+enum swl_test_pointer_capture_destroy_kind {
+    SWL_TEST_POINTER_CAPTURE_DESTROY_NONE = 0,
+    SWL_TEST_POINTER_CAPTURE_DESTROY_RELATIVE_MANAGER = 1,
+    SWL_TEST_POINTER_CAPTURE_DESTROY_RELATIVE_POINTER = 2,
+    SWL_TEST_POINTER_CAPTURE_DESTROY_CONSTRAINTS = 3,
+    SWL_TEST_POINTER_CAPTURE_DESTROY_LOCKED_POINTER = 4,
+    SWL_TEST_POINTER_CAPTURE_DESTROY_CONFINED_POINTER = 5,
+    SWL_TEST_POINTER_CAPTURE_DESTROY_REGION = 6,
+};
+
+struct swl_test_pointer_capture_destroy_record {
+    int32_t                                      call_count;
+    enum swl_test_pointer_capture_destroy_kind kind;
+    void                                        *object;
+};
+
+enum swl_test_pointer_capture_listener_kind {
+    SWL_TEST_POINTER_CAPTURE_LISTENER_NONE = 0,
+    SWL_TEST_POINTER_CAPTURE_LISTENER_RELATIVE_MOTION = 1,
+    SWL_TEST_POINTER_CAPTURE_LISTENER_LOCKED = 2,
+    SWL_TEST_POINTER_CAPTURE_LISTENER_UNLOCKED = 3,
+    SWL_TEST_POINTER_CAPTURE_LISTENER_CONFINED = 4,
+    SWL_TEST_POINTER_CAPTURE_LISTENER_UNCONFINED = 5,
+};
+
+struct swl_test_pointer_capture_listener_record {
+    int32_t                                      call_count;
+    enum swl_test_pointer_capture_listener_kind kind;
+    void                                        *data;
+    void                                        *object;
+    uint32_t                                     utime_hi;
+    uint32_t                                     utime_lo;
+    int32_t                                      dx;
+    int32_t                                      dy;
+    int32_t                                      dx_unaccel;
+    int32_t                                      dy_unaccel;
+};
+
 enum swl_test_syncobj_request_kind {
     SWL_TEST_SYNCOBJ_REQUEST_NONE = 0,
     SWL_TEST_SYNCOBJ_GET_SURFACE = 1,
@@ -2383,6 +2491,49 @@ struct swl_test_cursor_shape_request_record
 swl_test_cursor_shape_request_record(void);
 struct swl_test_cursor_shape_destroy_record
 swl_test_cursor_shape_destroy_record(void);
+
+void swl_test_activation_request_recording_begin(void);
+void swl_test_activation_request_recording_end(void);
+struct swl_test_activation_request_record swl_test_activation_request_record(void);
+struct swl_test_activation_destroy_record swl_test_activation_destroy_record(void);
+void swl_test_activation_listener_emit_done(
+    void *data,
+    struct xdg_activation_token_v1 *token,
+    const char *token_value,
+    struct swl_test_activation_listener_record *record);
+
+void swl_test_pointer_capture_request_recording_begin(void);
+void swl_test_pointer_capture_request_recording_end(void);
+struct swl_test_pointer_capture_request_record
+swl_test_pointer_capture_request_record(void);
+struct swl_test_pointer_capture_destroy_record
+swl_test_pointer_capture_destroy_record(void);
+void swl_test_relative_pointer_listener_emit_relative_motion(
+    void *data,
+    struct zwp_relative_pointer_v1 *relative_pointer,
+    uint32_t utime_hi,
+    uint32_t utime_lo,
+    int32_t dx,
+    int32_t dy,
+    int32_t dx_unaccel,
+    int32_t dy_unaccel,
+    struct swl_test_pointer_capture_listener_record *record);
+void swl_test_locked_pointer_listener_emit_locked(
+    void *data,
+    struct zwp_locked_pointer_v1 *locked_pointer,
+    struct swl_test_pointer_capture_listener_record *record);
+void swl_test_locked_pointer_listener_emit_unlocked(
+    void *data,
+    struct zwp_locked_pointer_v1 *locked_pointer,
+    struct swl_test_pointer_capture_listener_record *record);
+void swl_test_confined_pointer_listener_emit_confined(
+    void *data,
+    struct zwp_confined_pointer_v1 *confined_pointer,
+    struct swl_test_pointer_capture_listener_record *record);
+void swl_test_confined_pointer_listener_emit_unconfined(
+    void *data,
+    struct zwp_confined_pointer_v1 *confined_pointer,
+    struct swl_test_pointer_capture_listener_record *record);
 
 void swl_test_syncobj_request_recording_begin(void);
 void swl_test_syncobj_request_recording_end(void);
