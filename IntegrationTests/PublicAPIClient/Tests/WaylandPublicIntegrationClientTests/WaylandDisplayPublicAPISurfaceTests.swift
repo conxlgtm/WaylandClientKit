@@ -142,6 +142,25 @@ struct WaylandDisplayPublicAPISurfaceTests {  // swiftlint:disable:this type_bod
         #expect(region.rectangles.count == 1)
         #expect(motion.delta.dx == 1.5)
         #expect(PointerCaptureError.unavailable(.relativePointer).description.contains("relative"))
+        let constraintID = PointerConstraintID(rawValue: 7, kind: .locked)
+        let lifecycleEvents: [PointerEvent] = [
+            .constraintLifecycle(.activated(constraintID)),
+            .constraintLifecycle(.inactivePersistent(constraintID)),
+            .constraintLifecycle(.defunctOneShot(constraintID)),
+        ]
+        let lifecycleNames = lifecycleEvents.map { event in
+            switch event {
+            case .constraintLifecycle(.activated):
+                "activated"
+            case .constraintLifecycle(.inactivePersistent):
+                "inactivePersistent"
+            case .constraintLifecycle(.defunctOneShot):
+                "defunctOneShot"
+            default:
+                "other"
+            }
+        }
+        #expect(lifecycleNames == ["activated", "inactivePersistent", "defunctOneShot"])
 
         func usePointerCaptureAPI(display: WaylandDisplay, window: Window, seatID: SeatID)
             async throws
