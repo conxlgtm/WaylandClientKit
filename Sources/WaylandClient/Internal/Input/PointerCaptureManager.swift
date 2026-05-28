@@ -1,12 +1,17 @@
 import WaylandRaw
 
+private struct ManagedRelativePointerSubscription {
+    let seatID: SeatID
+    let pointer: RawRelativePointer
+}
+
 package final class PointerCaptureManager {
     private let connection: RawDisplayConnection
     private var relativePointerSubscriptionIDs =
         IDGenerator<RelativePointerSubscriptionID>()
     private var pointerConstraintIDs = IDGenerator<PointerConstraintID>()
-    private var relativePointers:
-        [RelativePointerSubscriptionID: (seatID: SeatID, pointer: RawRelativePointer)] = [:]
+    private var relativePointers =
+        DisplayResourceTable<RelativePointerSubscriptionID, ManagedRelativePointerSubscription>()
     private var relativePointerRegistry = RelativePointerSubscriptionRegistry()
     private var constraintRuntime = PointerConstraintRuntime()
     private var isShutDown = false
@@ -35,7 +40,18 @@ package final class PointerCaptureManager {
             eventSink: connection.inputEventSink
         )
         let subscriptionID = allocateRelativePointerSubscriptionID()
-        relativePointers[subscriptionID] = (seatID: seatID, pointer: relativePointer)
+        do {
+            try relativePointers.insert(
+                ManagedRelativePointerSubscription(
+                    seatID: seatID,
+                    pointer: relativePointer
+                ),
+                id: subscriptionID
+            )
+        } catch {
+            relativePointer.destroy()
+            throw error
+        }
         relativePointerRegistry.insert(id: subscriptionID, seatID: seatID)
         return subscriptionID
     }
@@ -128,7 +144,7 @@ package final class PointerCaptureManager {
         _ id: RelativePointerSubscriptionID
     ) throws {
         connection.preconditionIsOwnerThread()
-        guard let pointer = relativePointers.removeValue(forKey: id)?.pointer else {
+        guard let pointer = relativePointers.remove(id)?.pointer else {
             throw PointerCaptureError.unknownRelativePointerSubscription(id)
         }
 
@@ -157,10 +173,12 @@ package final class PointerCaptureManager {
     }
 
     private func removePointerState(for seatID: SeatID) {
-        let relativeIDs = relativePointers.filter { $0.value.seatID == seatID }.map(\.key)
+        let relativeIDs = relativePointers.ids.filter { id in
+            relativePointers.get(id)?.seatID == seatID
+        }
         for id in relativeIDs {
             _ = relativePointerRegistry.remove(id)
-            relativePointers.removeValue(forKey: id)?.pointer.destroy()
+            relativePointers.remove(id)?.pointer.destroy()
         }
 
         constraintRuntime.removeSeat(seatID)
@@ -176,10 +194,9 @@ package final class PointerCaptureManager {
         guard !isShutDown else { return }
 
         isShutDown = true
-        for relativePointer in relativePointers.values {
+        for relativePointer in relativePointers.removeAll() {
             relativePointer.pointer.destroy()
         }
-        relativePointers.removeAll()
         relativePointerRegistry.removeAll()
         constraintRuntime.removeAll()
     }

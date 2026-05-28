@@ -103,8 +103,10 @@ private enum ActivationTokenRequestState {
 package final class ActivationManager {
     private let backend: any ActivationManagerBackend
     private var requestIDs = IDGenerator<ActivationRequestID>()
-    private var pendingTokenRequests: [ActivationRequestID: any ActivationTokenBinding] = [:]
-    private var pendingWaiters: [ActivationRequestID: PendingActivationTokenRequest] = [:]
+    private var pendingTokenRequests =
+        DisplayResourceTable<ActivationRequestID, any ActivationTokenBinding>()
+    private var pendingWaiters =
+        DisplayResourceTable<ActivationRequestID, PendingActivationTokenRequest>()
     private var isShutDown = false
 
     package init(connection rawConnection: RawDisplayConnection) {
@@ -129,7 +131,7 @@ package final class ActivationManager {
 
         let requestID = makeRequestID()
         let pending = PendingActivationTokenRequest(id: requestID)
-        pendingWaiters[requestID] = pending
+        try pendingWaiters.insert(pending, id: requestID)
 
         let tokenRequest: any ActivationTokenBinding
         do {
@@ -143,11 +145,11 @@ package final class ActivationManager {
                 self?.finishTokenRequest(requestID)
             }
         } catch {
-            pendingWaiters.removeValue(forKey: requestID)
+            _ = pendingWaiters.remove(requestID)
             throw error
         }
 
-        guard pendingWaiters[requestID] != nil else {
+        guard pendingWaiters.get(requestID) != nil else {
             tokenRequest.destroy()
             return pending
         }
@@ -162,7 +164,13 @@ package final class ActivationManager {
             tokenRequest.setSerial(serial, seat: seat)
         }
 
-        pendingTokenRequests[requestID] = tokenRequest
+        do {
+            try pendingTokenRequests.insert(tokenRequest, id: requestID)
+        } catch {
+            tokenRequest.destroy()
+            _ = pendingWaiters.remove(requestID)
+            throw error
+        }
         tokenRequest.commit()
         return pending
     }
@@ -181,8 +189,8 @@ package final class ActivationManager {
         error: ActivationError
     ) {
         backend.preconditionIsOwnerThread()
-        pendingTokenRequests.removeValue(forKey: requestID)?.cancel()
-        pendingWaiters.removeValue(forKey: requestID)?.complete(.failure(error))
+        pendingTokenRequests.remove(requestID)?.cancel()
+        pendingWaiters.remove(requestID)?.complete(.failure(error))
     }
 
     package func shutdown() {
@@ -190,15 +198,13 @@ package final class ActivationManager {
         guard !isShutDown else { return }
 
         isShutDown = true
-        let tokenRequests = pendingTokenRequests
-        let waiters = pendingWaiters
-        pendingTokenRequests.removeAll()
-        pendingWaiters.removeAll()
+        let tokenRequests = pendingTokenRequests.removeAll()
+        let waiters = pendingWaiters.removeAll()
 
-        for tokenRequest in tokenRequests.values {
+        for tokenRequest in tokenRequests {
             tokenRequest.cancel()
         }
-        for waiter in waiters.values {
+        for waiter in waiters {
             waiter.complete(.failure(.displayClosed))
         }
     }
@@ -209,8 +215,8 @@ package final class ActivationManager {
 
     private func finishTokenRequest(_ requestID: ActivationRequestID) {
         backend.preconditionIsOwnerThread()
-        pendingTokenRequests.removeValue(forKey: requestID)?.destroy()
-        pendingWaiters.removeValue(forKey: requestID)
+        pendingTokenRequests.remove(requestID)?.destroy()
+        _ = pendingWaiters.remove(requestID)
     }
 }
 
