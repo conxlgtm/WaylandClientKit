@@ -109,8 +109,8 @@ struct PointerInputRouterTests {
         let accepted = router.acceptRawInputEvent(rawEvent)
         let id = PointerConstraintID(rawValue: 77, kind: .locked)
         let routed =
-            accepted.map {
-                router.route($0, pointerConstraintLifecycleEvent: .activated(id))
+            accepted.map { acceptedEvent in
+                router.route(acceptedEvent, pointerConstraintLifecycleEvent: .activated(id))
             } ?? []
 
         #expect(routed.first?.windowID == windowID)

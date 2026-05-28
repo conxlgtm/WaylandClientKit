@@ -71,6 +71,7 @@
             let confinedPointer = try unsafe #require(OpaquePointer(bitPattern: 0xB302))
             let region = try unsafe #require(OpaquePointer(bitPattern: 0xB303))
 
+            // swiftlint:disable:next closure_body_length
             ShimRequestRecordingLock.pointerCapture.withLock { _ in
                 swl_test_pointer_capture_request_recording_begin()
                 defer { swl_test_pointer_capture_request_recording_end() }
@@ -184,6 +185,7 @@
             let confinedPointer = try unsafe #require(OpaquePointer(bitPattern: 0xB605))
             let region = try unsafe #require(OpaquePointer(bitPattern: 0xB606))
 
+            // swiftlint:disable:next closure_body_length
             ShimRequestRecordingLock.pointerCapture.withLock { _ in
                 swl_test_pointer_capture_request_recording_begin()
                 defer { swl_test_pointer_capture_request_recording_end() }

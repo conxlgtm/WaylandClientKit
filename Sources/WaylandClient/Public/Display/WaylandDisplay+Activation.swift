@@ -19,7 +19,7 @@ extension WaylandDisplay {
                 pending,
                 timeoutMilliseconds: timeoutMilliseconds
             ) { [self] in
-                await self.cancelActivationTokenRequest(
+                await cancelActivationTokenRequest(
                     pending.id,
                     error: .tokenRequestTimedOut
                 )

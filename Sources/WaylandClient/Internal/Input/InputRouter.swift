@@ -228,33 +228,10 @@ final class InputRouter {
         _ constraint: RawPointerConstraintEvent,
         lifecycleEvent: PointerConstraintLifecycleEvent?
     ) -> InputEvent? {
-        guard let lifecycleEvent else { return nil }
-
-        let surfaceID: RawObjectID
-
-        switch constraint {
-        case .locked(let identity, let targetSurfaceID):
-            surfaceID = targetSurfaceID
-            guard lifecycleEvent == .activated(PointerConstraintID(identity)) else { return nil }
-        case .unlocked(let identity, let targetSurfaceID):
-            surfaceID = targetSurfaceID
-            let id = PointerConstraintID(identity)
-            guard lifecycleEvent == .inactivePersistent(id) || lifecycleEvent == .defunctOneShot(id)
-            else { return nil }
-        case .confined(let identity, let targetSurfaceID):
-            surfaceID = targetSurfaceID
-            guard lifecycleEvent == .activated(PointerConstraintID(identity)) else { return nil }
-        case .unconfined(let identity, let targetSurfaceID):
-            surfaceID = targetSurfaceID
-            let id = PointerConstraintID(identity)
-            guard lifecycleEvent == .inactivePersistent(id) || lifecycleEvent == .defunctOneShot(id)
-            else { return nil }
-        }
-
-        return routedEvent(
+        routePointerConstraintLifecycle(
             rawEvent,
-            target: target(for: surfaceID),
-            kind: .pointer(.constraintLifecycle(lifecycleEvent))
+            constraint,
+            lifecycleEvent: lifecycleEvent
         )
     }
 
@@ -303,6 +280,41 @@ final class InputRouter {
 }
 
 extension InputRouter {
+    private func routePointerConstraintLifecycle(
+        _ rawEvent: RawInputEvent,
+        _ constraint: RawPointerConstraintEvent,
+        lifecycleEvent: PointerConstraintLifecycleEvent?
+    ) -> InputEvent? {
+        guard let lifecycleEvent else { return nil }
+
+        let surfaceID: RawObjectID
+
+        switch constraint {
+        case .locked(let identity, let targetSurfaceID):
+            surfaceID = targetSurfaceID
+            guard lifecycleEvent == .activated(PointerConstraintID(identity)) else { return nil }
+        case .unlocked(let identity, let targetSurfaceID):
+            surfaceID = targetSurfaceID
+            let id = PointerConstraintID(identity)
+            guard lifecycleEvent == .inactivePersistent(id) || lifecycleEvent == .defunctOneShot(id)
+            else { return nil }
+        case .confined(let identity, let targetSurfaceID):
+            surfaceID = targetSurfaceID
+            guard lifecycleEvent == .activated(PointerConstraintID(identity)) else { return nil }
+        case .unconfined(let identity, let targetSurfaceID):
+            surfaceID = targetSurfaceID
+            let id = PointerConstraintID(identity)
+            guard lifecycleEvent == .inactivePersistent(id) || lifecycleEvent == .defunctOneShot(id)
+            else { return nil }
+        }
+
+        return routedEvent(
+            rawEvent,
+            target: target(for: surfaceID),
+            kind: .pointer(.constraintLifecycle(lifecycleEvent))
+        )
+    }
+
     func routeKeyboardKeymap(
         _ rawEvent: RawInputEvent,
         _ keymap: RawKeyboardKeymapPayload

@@ -2,6 +2,8 @@ import WaylandCursor
 import WaylandKeyboard
 import WaylandRaw
 
+typealias PointerConstraintLifecycleResolver = (RawInputEvent) -> PointerConstraintLifecycleEvent?
+
 final class SessionInputCoordinator {
     private let inputRouter: InputRouter
     private let keyboardInterpreter: KeyboardInterpreter
@@ -85,9 +87,7 @@ final class SessionInputCoordinator {
 
     func processPendingSessionInputEvents(
         from rawEvents: [RawInputEvent],
-        pointerConstraintLifecycleEvent: (RawInputEvent) -> PointerConstraintLifecycleEvent? = {
-            _ in nil
-        },
+        pointerConstraintLifecycleEvent: PointerConstraintLifecycleResolver = { _ in nil },
         onSeatRemoved: (SeatID) -> Void,
         onPointerCapabilityLost: (SeatID) -> Void
     ) {
@@ -238,9 +238,7 @@ func routeSessionInputEvents(
     inputRouter: InputRouter,
     keyboardInterpreter: KeyboardInterpreter,
     rawInputObserver: RawInputEventObserving? = nil,
-    pointerConstraintLifecycleEvent: (RawInputEvent) -> PointerConstraintLifecycleEvent? = {
-        _ in nil
-    }
+    pointerConstraintLifecycleEvent: PointerConstraintLifecycleResolver = { _ in nil }
 ) -> [InputEvent] {
     var inputEvents: [InputEvent] = []
     for rawEvent in rawEvents {
