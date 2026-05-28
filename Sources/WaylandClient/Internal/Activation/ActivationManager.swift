@@ -63,22 +63,30 @@ package final class PendingActivationTokenRequest: Sendable {
         }
     }
 
-    package func complete(_ result: ActivationTokenResult) {
-        let waiter: CheckedContinuation<ActivationTokenResult, Never>? =
+    @discardableResult
+    package func complete(_ result: ActivationTokenResult) -> Bool {
+        let completion =
             state.withLock { tokenState in
                 switch tokenState {
                 case .pending:
                     tokenState = .completed(result)
-                    return nil
+                    return (
+                        waiter: nil as CheckedContinuation<ActivationTokenResult, Never>?,
+                        didComplete: true
+                    )
                 case .waiting(let waiter):
                     tokenState = .completed(result)
-                    return waiter
+                    return (waiter: waiter, didComplete: true)
                 case .completed:
-                    return nil
+                    return (
+                        waiter: nil as CheckedContinuation<ActivationTokenResult, Never>?,
+                        didComplete: false
+                    )
                 }
             }
 
-        waiter?.resume(returning: result)
+        completion.waiter?.resume(returning: result)
+        return completion.didComplete
     }
 }
 

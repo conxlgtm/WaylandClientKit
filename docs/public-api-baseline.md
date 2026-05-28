@@ -882,7 +882,7 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 - L3: `    public static let defaultActivationTokenTimeoutMilliseconds: Int32 = 1_000`
 - L5: `    public func requestActivationToken(`
-- L39: `    public func activate(window: Window, token: ActivationToken) throws {`
+- L34: `    public func activate(window: Window, token: ActivationToken) throws {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+DataTransfer.swift`
 
