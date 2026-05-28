@@ -186,6 +186,35 @@ Tests:
 - `VersionNegotiationTests` covers supported protocol versions for the scale
   globals.
 
+## Surface Region Boundary
+
+Remaining unsafe constructs:
+
+- `RawRegion` wraps compositor-created `wl_region` proxies.
+- `RawSurface` passes region proxies to `wl_surface.set_input_region` and
+  `wl_surface.set_opaque_region`.
+
+Audit invariant:
+
+- Public API accepts only logical `SurfaceRegion` and `SurfaceDamageRegion`
+  values; raw `wl_region` objects are not public.
+- One-shot region application creates a raw region, adds its rectangles, sends
+  the surface request, and destroys the region before returning.
+- `nil` input or opaque region sends a null region pointer to reset compositor
+  defaults.
+- Damage rectangles are nonempty, map from logical coordinates through current
+  surface geometry, clip partial overhang to surface bounds, and reject
+  rectangles with no surface intersection.
+
+Tests:
+
+- `RawSurfaceRegionRequestTests` covers raw region creation, add, subtract,
+  surface input/opaque region requests, null resets, and destroy ordering.
+- `SurfaceGeometryTests` covers logical-to-buffer damage mapping, fractional
+  scale rounding, clipped partial damage, and rejected non-intersecting damage.
+- `SurfaceRuntimeSubmitTests` covers commit ordering for explicit logical
+  damage when buffer damage is unavailable.
+
 ## Data Transfer File Descriptors
 
 Remaining unsafe constructs:

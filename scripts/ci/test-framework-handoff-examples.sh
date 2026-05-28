@@ -15,6 +15,8 @@ TARGETS=(
     XDGActivationSmoke
     PointerCaptureSmoke
     CursorPolicySmoke
+    SurfaceRegionSmoke
+    DamageRegionSmoke
     FrameworkHostSmoke
     GPUPreviewSmokeClient
     GraphicsPreviewManagedGPUClear
