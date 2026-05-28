@@ -52,6 +52,26 @@ struct ActivationManagerTests {
     }
 
     @Test
+    func synchronousTokenDoneDuringRequestDoesNotLeavePendingBinding() async throws {
+        let backend = RecordingActivationBackend()
+        backend.synchronousDoneTokenValue = "sync-token"
+        let manager = ActivationManager(backend: backend)
+
+        let pending = try manager.beginTokenRequest(
+            appID: try ActivationAppID("org.swiftwayland.Test"),
+            surface: nil,
+            seat: nil,
+            serial: nil
+        )
+        let token = try await pending.value()
+
+        manager.cancelTokenRequest(pending.id, error: .tokenRequestTimedOut)
+
+        #expect(token == ActivationToken(unchecked: "sync-token"))
+        #expect(backend.latestBinding?.operations == [.destroy])
+    }
+
+    @Test
     func zeroTimeoutWaitReturnsAlreadyCompletedToken() async throws {
         let pending = PendingActivationTokenRequest(id: ActivationRequestID(rawValue: 1))
         pending.complete(.success(ActivationToken(unchecked: "ready-token")))
@@ -270,6 +290,7 @@ private func activationError(
 private final class RecordingActivationBackend: ActivationManagerBackend {
     var requestCount = 0
     var requestError: (any Error)?
+    var synchronousDoneTokenValue: String?
     private(set) var latestBinding: RecordingActivationTokenBinding?
     private var onDone: ((RawXDGActivationTokenValue) -> Void)?
 
@@ -288,6 +309,9 @@ private final class RecordingActivationBackend: ActivationManagerBackend {
         let binding = RecordingActivationTokenBinding()
         latestBinding = binding
         onDone = handler
+        if let synchronousDoneTokenValue {
+            handler(RawXDGActivationTokenValue(synchronousDoneTokenValue))
+        }
         return binding
     }
 

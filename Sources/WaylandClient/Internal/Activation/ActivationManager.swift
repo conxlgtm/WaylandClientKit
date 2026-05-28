@@ -125,14 +125,27 @@ package final class ActivationManager {
 
         let requestID = makeRequestID()
         let pending = PendingActivationTokenRequest(id: requestID)
-        let tokenRequest = try backend.requestToken { [weak self, weak pending] tokenValue in
-            do {
-                let token = try ActivationToken(tokenValue.value)
-                pending?.complete(.success(token))
-            } catch {
-                pending?.complete(.failure(.invalidToken))
+        pendingWaiters[requestID] = pending
+
+        let tokenRequest: any ActivationTokenBinding
+        do {
+            tokenRequest = try backend.requestToken { [weak self, weak pending] tokenValue in
+                do {
+                    let token = try ActivationToken(tokenValue.value)
+                    pending?.complete(.success(token))
+                } catch {
+                    pending?.complete(.failure(.invalidToken))
+                }
+                self?.finishTokenRequest(requestID)
             }
-            self?.finishTokenRequest(requestID)
+        } catch {
+            pendingWaiters.removeValue(forKey: requestID)
+            throw error
+        }
+
+        guard pendingWaiters[requestID] != nil else {
+            tokenRequest.destroy()
+            return pending
         }
 
         if let appID {
@@ -146,7 +159,6 @@ package final class ActivationManager {
         }
 
         pendingTokenRequests[requestID] = tokenRequest
-        pendingWaiters[requestID] = pending
         tokenRequest.commit()
         return pending
     }
