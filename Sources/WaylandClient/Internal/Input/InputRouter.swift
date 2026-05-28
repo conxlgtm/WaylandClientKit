@@ -290,22 +290,18 @@ extension InputRouter {
         let surfaceID: RawObjectID
 
         switch constraint {
-        case .locked(let identity, let targetSurfaceID):
+        case .locked(_, let targetSurfaceID):
             surfaceID = targetSurfaceID
-            guard lifecycleEvent == .activated(PointerConstraintID(identity)) else { return nil }
-        case .unlocked(let identity, let targetSurfaceID):
+            guard case .activated(let id) = lifecycleEvent, id.kind == .locked else { return nil }
+        case .unlocked(_, let targetSurfaceID):
             surfaceID = targetSurfaceID
-            let id = PointerConstraintID(identity)
-            guard lifecycleEvent == .inactivePersistent(id) || lifecycleEvent == .defunctOneShot(id)
-            else { return nil }
-        case .confined(let identity, let targetSurfaceID):
+            guard isTerminal(lifecycleEvent, for: .locked) else { return nil }
+        case .confined(_, let targetSurfaceID):
             surfaceID = targetSurfaceID
-            guard lifecycleEvent == .activated(PointerConstraintID(identity)) else { return nil }
-        case .unconfined(let identity, let targetSurfaceID):
+            guard case .activated(let id) = lifecycleEvent, id.kind == .confined else { return nil }
+        case .unconfined(_, let targetSurfaceID):
             surfaceID = targetSurfaceID
-            let id = PointerConstraintID(identity)
-            guard lifecycleEvent == .inactivePersistent(id) || lifecycleEvent == .defunctOneShot(id)
-            else { return nil }
+            guard isTerminal(lifecycleEvent, for: .confined) else { return nil }
         }
 
         return routedEvent(
@@ -313,6 +309,18 @@ extension InputRouter {
             target: target(for: surfaceID),
             kind: .pointer(.constraintLifecycle(lifecycleEvent))
         )
+    }
+
+    private func isTerminal(
+        _ lifecycleEvent: PointerConstraintLifecycleEvent,
+        for kind: PointerConstraintKind
+    ) -> Bool {
+        switch lifecycleEvent {
+        case .inactivePersistent(let id), .defunctOneShot(let id):
+            id.kind == kind
+        case .activated:
+            false
+        }
     }
 
     func routeKeyboardKeymap(
