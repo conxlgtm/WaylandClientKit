@@ -9,12 +9,14 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
         timeoutMilliseconds: Int32,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
+        damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws
 
     func redraw(
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
+        damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws
 
@@ -230,19 +232,22 @@ package actor WaylandGraphicsWindowBackingStorage {
     ) async throws {
         let color = frame.color.xrgb8888
         let metadata = try frame.metadata.surfaceCommitMetadata()
+        let damage = try frame.metadata.surfaceDamageRegion()
         switch operation {
         case .show:
             try await window.show(
                 timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds,
                 metadata: metadata,
-                requestPresentationFeedback: shouldRequestPresentationFeedback
+                requestPresentationFeedback: shouldRequestPresentationFeedback,
+                damage: damage
             ) { softwareFrame in
                 Self.clear(softwareFrame, color: color)
             }
         case .redraw:
             try await window.redraw(
                 metadata: metadata,
-                requestPresentationFeedback: shouldRequestPresentationFeedback
+                requestPresentationFeedback: shouldRequestPresentationFeedback,
+                damage: damage
             ) { softwareFrame in
                 Self.clear(softwareFrame, color: color)
             }
@@ -255,18 +260,21 @@ package actor WaylandGraphicsWindowBackingStorage {
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws {
         let metadata = try frameMetadata.surfaceCommitMetadata()
+        let damage = try frameMetadata.surfaceDamageRegion()
         switch operation {
         case .show:
             try await window.show(
                 timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds,
                 metadata: metadata,
                 requestPresentationFeedback: shouldRequestPresentationFeedback,
+                damage: damage,
                 draw
             )
         case .redraw:
             try await window.redraw(
                 metadata: metadata,
                 requestPresentationFeedback: shouldRequestPresentationFeedback,
+                damage: damage,
                 draw
             )
         }

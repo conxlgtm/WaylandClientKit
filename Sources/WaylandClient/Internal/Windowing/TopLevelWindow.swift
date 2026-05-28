@@ -379,6 +379,7 @@ package final class TopLevelWindow {
 
     private func drawAndPresent(
         metadata: SurfaceCommitMetadata = .default,
+        damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
@@ -390,6 +391,7 @@ package final class TopLevelWindow {
         return try interpretPresentationEffects(
             effects,
             metadata: metadata,
+            damage: damage,
             presentationFeedback: presentationFeedback,
             draw
         )
@@ -416,6 +418,7 @@ package final class TopLevelWindow {
     private func performSoftwarePresent(
         _ request: PresentationRequest,
         metadata: SurfaceCommitMetadata,
+        damage: SurfaceDamageRegion?,
         presentationFeedback: WindowPresentationFeedbackCommitRequest?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
@@ -450,6 +453,7 @@ package final class TopLevelWindow {
                     request: request,
                     geometry: geometry,
                     metadata: metadata,
+                    damage: damage,
                     presentationFeedback: presentationFeedback
                 ),
                 draw: draw,
@@ -885,6 +889,7 @@ extension TopLevelWindow {
     private func interpretPresentationEffects(
         _ effects: [WindowEffect],
         metadata: SurfaceCommitMetadata,
+        damage: SurfaceDamageRegion?,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
@@ -896,6 +901,7 @@ extension TopLevelWindow {
                 outcome = try performSoftwarePresent(
                     request,
                     metadata: metadata,
+                    damage: damage,
                     presentationFeedback: presentationFeedback,
                     draw
                 )
@@ -1453,6 +1459,7 @@ extension TopLevelWindow {
     package func showOnOwnerThread(
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
         metadata: SurfaceCommitMetadata = .default,
+        damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
@@ -1464,6 +1471,7 @@ extension TopLevelWindow {
 
         _ = try drawAndPresent(
             metadata: metadata,
+            damage: damage,
             presentationFeedback: presentationFeedback,
             draw
         )
@@ -1485,6 +1493,7 @@ extension TopLevelWindow {
 
     package func redrawOnOwnerThread(
         metadata: SurfaceCommitMetadata = .default,
+        damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
@@ -1495,6 +1504,7 @@ extension TopLevelWindow {
         _ = try consumeLatestConfigureIfAvailable()
         _ = try drawAndPresent(
             metadata: metadata,
+            damage: damage,
             presentationFeedback: presentationFeedback,
             draw
         )
@@ -1538,12 +1548,14 @@ extension TopLevelWindow {
     package func show(
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
         metadata: SurfaceCommitMetadata = .default,
+        damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try showOnOwnerThread(
             timeoutMilliseconds: timeoutMilliseconds,
             metadata: metadata,
+            damage: damage,
             presentationFeedback: presentationFeedback,
             draw
         )
@@ -1556,11 +1568,13 @@ extension TopLevelWindow {
     )
     package func redraw(
         metadata: SurfaceCommitMetadata = .default,
+        damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try redrawOnOwnerThread(
             metadata: metadata,
+            damage: damage,
             presentationFeedback: presentationFeedback,
             draw
         )

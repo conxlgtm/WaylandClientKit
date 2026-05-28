@@ -54,6 +54,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         timeoutMilliseconds: Int32,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
+        damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try withFatalFailureFinalization {
@@ -66,6 +67,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             try window.showOnOwnerThread(
                 timeoutMilliseconds: timeoutMilliseconds,
                 metadata: metadata,
+                damage: damage,
                 presentationFeedback: presentationFeedback,
                 draw
             )
@@ -78,6 +80,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         _ windowID: WindowID,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
+        damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try withFatalFailureFinalization {
@@ -89,6 +92,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             )
             try window.redrawOnOwnerThread(
                 metadata: metadata,
+                damage: damage,
                 presentationFeedback: presentationFeedback,
                 draw
             )

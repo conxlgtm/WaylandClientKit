@@ -246,6 +246,49 @@
         }
 
         @Test
+        func explicitLogicalDamageIsCommittedWhenBufferDamageIsUnavailable() async throws {
+            try await CoreRequestRecordingGate.withExclusiveRecording {
+                swl_test_core_request_recording_begin()
+                defer { swl_test_core_request_recording_end() }
+
+                let surface = try testSurface(pointer: 0x5C01)
+                defer { surface.destroy() }
+                var runtime = try configuredRuntime()
+                let damage = try SurfaceDamageRegion([
+                    LogicalRect(
+                        origin: LogicalOffset(x: 10, y: 5),
+                        size: PositiveLogicalSize(width: 20, height: 15)
+                    )
+                ])
+                let preparedCommit = try SurfaceFrameCommitter.prepare(
+                    SurfaceFrameCommitRequest(
+                        surface: surface,
+                        scaleInstallation: SurfaceScaleInstallation(),
+                        generation: 1,
+                        geometry: try SurfaceGeometry(
+                            logicalSize: PositiveLogicalSize(width: 80, height: 60),
+                            scale: SurfaceScale(numerator: 2, denominator: 1)
+                        ),
+                        payload: .buffer(try testSurfaceBuffer(pointer: 0x5C02)),
+                        damage: damage
+                    ),
+                    runtime: &runtime,
+                )
+
+                _ = try SurfaceFrameCommitter.commit(preparedCommit, runtime: &runtime)
+
+                let record = unsafe swl_test_core_request_record()
+                #expect(unsafe record.kind == SWL_TEST_CORE_SURFACE_COMMIT)
+                #expect(unsafe record.damage_sequence > 0)
+                #expect(unsafe record.damage_sequence < record.commit_sequence)
+                #expect(unsafe record.x == 10)
+                #expect(unsafe record.y == 5)
+                #expect(unsafe record.width == 20)
+                #expect(unsafe record.height == 15)
+            }
+        }
+
+        @Test
         func preparedMetadataOnlyCommitCannotBeCommittedWithBuffer() async throws {
             try await CoreRequestRecordingGate.withExclusiveRecording {
                 swl_test_core_request_recording_begin()
@@ -328,7 +371,9 @@
         )
     }
 
-    private func testSurface(pointer rawPointer: UInt) throws -> RawSurface {
+    private func testSurface(pointer rawPointer: UInt, version: RawVersion = 2) throws
+        -> RawSurface
+    {
         let pointer = try unsafe #require(OpaquePointer(bitPattern: rawPointer))
         let queuePointer = try unsafe #require(OpaquePointer(bitPattern: 0x5001))
         let eventQueue = RawEventQueue.testingQueueWithoutDestroy(opaquePointer: queuePointer)
@@ -336,7 +381,7 @@
 
         return try RawSurface.testingSurface(
             pointer: pointer,
-            version: 2,
+            version: version,
             proxyAdoption: proxyAdoption
         )
     }

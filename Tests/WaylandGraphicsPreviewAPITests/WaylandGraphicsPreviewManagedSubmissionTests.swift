@@ -108,19 +108,17 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
     }
 
     @Test
-    func partialDamageIsValidatedThenReportedUnsupported() throws {
+    func partialDamageIsAcceptedWhenWithinSurfaceBounds() throws {
         let damage = WaylandGraphicsDamageRegion(
             rects: [try LogicalRect(x: 0, y: 0, width: 10, height: 10)]
         )
         let metadata = WaylandGraphicsFrameMetadata(damage: damage)
 
-        #expect(throws: WaylandGraphicsError.unsupportedDamage) {
-            try metadata.validateManagedPreviewSupport(
-                configuration: .default,
-                capabilities: gpuCapableSurfaceCapabilities(),
-                geometry: testGraphicsSurfaceGeometry()
-            )
-        }
+        try metadata.validateManagedPreviewSupport(
+            configuration: .default,
+            capabilities: gpuCapableSurfaceCapabilities(),
+            geometry: testGraphicsSurfaceGeometry()
+        )
     }
 
     @Test
