@@ -101,13 +101,15 @@ package struct SurfaceScaleState: Equatable, Sendable {
 
     package func commitPlan(
         geometry: SurfaceGeometry,
-        damageMode: DamageCoordinateMode
-    ) -> SurfaceCommitPlan {
-        SurfaceCommitPlan(
+        damageMode: DamageCoordinateMode,
+        damage: SurfaceDamageRegion? = nil
+    ) throws -> SurfaceCommitPlan {
+        try SurfaceCommitPlan(
             geometry: geometry,
             bufferScale: bufferScaleForCommit,
             viewportMode: viewportCommitMode,
-            damageMode: damageMode
+            damageMode: damageMode,
+            damage: damage
         )
     }
 

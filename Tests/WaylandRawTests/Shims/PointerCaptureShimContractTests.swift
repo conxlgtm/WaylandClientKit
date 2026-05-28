@@ -114,6 +114,19 @@
                 #expect(unsafe regionAddRecord.y == 2)
                 #expect(unsafe regionAddRecord.width == 3)
                 #expect(unsafe regionAddRecord.height == 4)
+
+                unsafe swl_region_subtract(region, 5, 6, 7, 8)
+                let regionSubtractRecord = unsafe swl_test_pointer_capture_request_record()
+                #expect(unsafe regionSubtractRecord.call_count == 5)
+                #expect(
+                    unsafe regionSubtractRecord.kind
+                        == SWL_TEST_POINTER_CAPTURE_REGION_SUBTRACT
+                )
+                #expect(unsafe regionSubtractRecord.object == UnsafeMutableRawPointer(region))
+                #expect(unsafe regionSubtractRecord.x == 5)
+                #expect(unsafe regionSubtractRecord.y == 6)
+                #expect(unsafe regionSubtractRecord.width == 7)
+                #expect(unsafe regionSubtractRecord.height == 8)
             }
         }
 

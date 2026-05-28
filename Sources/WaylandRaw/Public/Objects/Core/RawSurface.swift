@@ -62,15 +62,31 @@ package final class RawSurface {
     }
 
     package func damageFullBuffer(width: Int32, height: Int32) {
+        damageBuffer(x: 0, y: 0, width: width, height: height)
+    }
+
+    package func damageBuffer(x: Int32, y: Int32, width: Int32, height: Int32) {
         if usesBufferDamage {
-            unsafe swl_surface_damage_buffer(pointer, 0, 0, width, height)
+            unsafe swl_surface_damage_buffer(pointer, x, y, width, height)
         } else {
-            unsafe swl_surface_damage(pointer, 0, 0, width, height)
+            unsafe swl_surface_damage(pointer, x, y, width, height)
         }
     }
 
     package func damageFullLogical(width: Int32, height: Int32) {
-        unsafe swl_surface_damage(pointer, 0, 0, width, height)
+        damageLogical(x: 0, y: 0, width: width, height: height)
+    }
+
+    package func damageLogical(x: Int32, y: Int32, width: Int32, height: Int32) {
+        unsafe swl_surface_damage(pointer, x, y, width, height)
+    }
+
+    package func setOpaqueRegion(_ region: RawRegion?) {
+        unsafe swl_surface_set_opaque_region(pointer, region?.pointer)
+    }
+
+    package func setInputRegion(_ region: RawRegion?) {
+        unsafe swl_surface_set_input_region(pointer, region?.pointer)
     }
 
     package func setBufferScale(_ scale: Int32) {
