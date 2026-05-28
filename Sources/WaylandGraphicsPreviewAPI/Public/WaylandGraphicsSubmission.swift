@@ -421,6 +421,10 @@ extension WaylandGraphicsFrameMetadata {
         )
     }
 
+    package func surfaceDamageRegion() throws -> SurfaceDamageRegion? {
+        try damage?.surfaceDamageRegion()
+    }
+
     private var hasCommitMetadata: Bool {
         contentType != nil || presentationHint != nil
     }
@@ -428,23 +432,22 @@ extension WaylandGraphicsFrameMetadata {
 
 extension WaylandGraphicsDamageRegion {
     package func validateManagedPreviewSupport(geometry: SurfaceGeometry) throws {
-        guard !rects.isEmpty else {
-            return
+        let region = try surfaceDamageRegion()
+        do {
+            try region?.validate(within: geometry)
+        } catch {
+            throw WaylandGraphicsError.invalidDamageRegion
         }
+    }
 
-        let width = Int64(geometry.logicalSize.width.rawValue)
-        let height = Int64(geometry.logicalSize.height.rawValue)
-        for rect in rects {
-            let x = Int64(rect.origin.x)
-            let y = Int64(rect.origin.y)
-            let rectWidth = Int64(rect.size.width.rawValue)
-            let rectHeight = Int64(rect.size.height.rawValue)
-            guard x >= 0, y >= 0, x + rectWidth <= width, y + rectHeight <= height else {
-                throw WaylandGraphicsError.invalidDamageRegion
-            }
+    package func surfaceDamageRegion() throws -> SurfaceDamageRegion? {
+        guard !rects.isEmpty else { return nil }
+
+        do {
+            return try SurfaceDamageRegion(rects)
+        } catch {
+            throw WaylandGraphicsError.invalidDamageRegion
         }
-
-        throw WaylandGraphicsError.unsupportedDamage
     }
 }
 
