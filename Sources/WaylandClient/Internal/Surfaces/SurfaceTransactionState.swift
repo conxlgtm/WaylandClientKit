@@ -9,10 +9,29 @@ package enum SurfaceTransactionError: Error, Equatable {
     case commitGenerationDidNotAdvance(previous: UInt64, actual: UInt64)
 }
 
+package enum SurfaceCommittedPayload: Equatable, Sendable {
+    case buffer
+    case metadataOnly
+}
+
 package struct SurfaceCommittedFrame: Equatable, Sendable {
     package let generation: UInt64
     package let configureSerial: UInt32
     package let plan: SurfaceCommitPlan
+
+    package let payload: SurfaceCommittedPayload
+
+    package init(
+        generation committedGeneration: UInt64,
+        configureSerial committedConfigureSerial: UInt32,
+        plan committedPlan: SurfaceCommitPlan,
+        payload committedPayload: SurfaceCommittedPayload = .buffer
+    ) {
+        generation = committedGeneration
+        configureSerial = committedConfigureSerial
+        plan = committedPlan
+        payload = committedPayload
+    }
 }
 
 package struct SurfaceTransactionSnapshot: Equatable, Sendable {
@@ -20,6 +39,21 @@ package struct SurfaceTransactionSnapshot: Equatable, Sendable {
     package let acknowledgedConfigureSerial: UInt32?
     package let pendingFrameCallbackGeneration: UInt64?
     package let lastCommittedFrame: SurfaceCommittedFrame?
+    package let hasCommittedBufferContent: Bool
+
+    package init(
+        pendingConfigureSerial snapshotPendingConfigureSerial: UInt32?,
+        acknowledgedConfigureSerial snapshotAcknowledgedConfigureSerial: UInt32?,
+        pendingFrameCallbackGeneration snapshotPendingFrameCallbackGeneration: UInt64?,
+        lastCommittedFrame snapshotLastCommittedFrame: SurfaceCommittedFrame?,
+        hasCommittedBufferContent snapshotHasCommittedBufferContent: Bool = false
+    ) {
+        pendingConfigureSerial = snapshotPendingConfigureSerial
+        acknowledgedConfigureSerial = snapshotAcknowledgedConfigureSerial
+        pendingFrameCallbackGeneration = snapshotPendingFrameCallbackGeneration
+        lastCommittedFrame = snapshotLastCommittedFrame
+        hasCommittedBufferContent = snapshotHasCommittedBufferContent
+    }
 }
 
 package struct SurfaceTransactionState: Equatable, Sendable {
@@ -27,6 +61,7 @@ package struct SurfaceTransactionState: Equatable, Sendable {
     private var acknowledgedConfigureSerial: UInt32?
     private var pendingFrameCallbackGeneration: UInt64?
     private var lastCommittedFrame: SurfaceCommittedFrame?
+    private var hasCommittedBufferContent = false
 
     package init() {
         // Starts before any role configure or content frame commit.
@@ -37,7 +72,8 @@ package struct SurfaceTransactionState: Equatable, Sendable {
             pendingConfigureSerial: pendingConfigureSerial,
             acknowledgedConfigureSerial: acknowledgedConfigureSerial,
             pendingFrameCallbackGeneration: pendingFrameCallbackGeneration,
-            lastCommittedFrame: lastCommittedFrame
+            lastCommittedFrame: lastCommittedFrame,
+            hasCommittedBufferContent: hasCommittedBufferContent
         )
     }
 
@@ -91,7 +127,8 @@ package struct SurfaceTransactionState: Equatable, Sendable {
 
     package mutating func recordCommittedFrame(
         generation: UInt64,
-        plan: SurfaceCommitPlan
+        plan: SurfaceCommitPlan,
+        payload: SurfaceCommittedPayload = .buffer
     ) throws {
         let acknowledgedConfigureSerial = try validateCommittedFrameCandidate(
             generation: generation
@@ -115,8 +152,12 @@ package struct SurfaceTransactionState: Equatable, Sendable {
         lastCommittedFrame = SurfaceCommittedFrame(
             generation: generation,
             configureSerial: acknowledgedConfigureSerial,
-            plan: plan
+            plan: plan,
+            payload: payload
         )
+        if payload == .buffer {
+            hasCommittedBufferContent = true
+        }
     }
 
     @discardableResult

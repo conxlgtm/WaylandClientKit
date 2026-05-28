@@ -166,10 +166,12 @@ shared shape first.
 
 When a framework already has dirty rectangles, pass them as logical
 `SurfaceDamageRegion` values to `show(damage:_:)` or `redraw(damage:_:)`.
-SwiftWayland maps logical damage to buffer damage using the current surface
-geometry and clips partial overhang to the surface bounds. No damage argument
-means full-frame damage. Damage remains a performance hint; it is not a retained
-UI invalidation system.
+SwiftWayland validates damage supplied to the initial `show`, but sends
+full-frame damage for the first buffer-backed commit because there are no
+previous surface contents. Later redraw damage is mapped to buffer damage using
+the current surface geometry and clipped to the surface bounds. No damage
+argument means full-frame damage. Damage remains a performance hint; it is not a
+retained UI invalidation system.
 
 ## Minimal Software Host Sketch
 
