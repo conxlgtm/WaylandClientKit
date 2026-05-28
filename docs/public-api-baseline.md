@@ -1311,9 +1311,9 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L98: `    case locked`
 - L99: `    case confined`
 - L102: `public struct PointerConstraintID: Equatable, Hashable, Sendable, CustomStringConvertible {`
-- L103: `    public let rawValue: UInt32`
+- L103: `    public let rawValue: UInt64`
 - L104: `    public let kind: PointerConstraintKind`
-- L106: `    public init(rawValue constraintRawValue: UInt32, kind constraintKind: PointerConstraintKind) {`
+- L106: `    public init(rawValue constraintRawValue: UInt64, kind constraintKind: PointerConstraintKind) {`
 - L111: `    public var description: String {`
 - L121: `public enum PointerConstraintLifecycleEvent: Equatable, Sendable {`
 - L122: `    case activated(PointerConstraintID)`

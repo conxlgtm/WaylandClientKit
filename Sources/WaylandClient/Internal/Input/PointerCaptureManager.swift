@@ -3,6 +3,7 @@ import WaylandRaw
 package final class PointerCaptureManager {
     private let connection: RawDisplayConnection
     private var nextRelativePointerSubscriptionID: UInt64 = 1
+    private var nextPointerConstraintID: UInt64 = 1
     private var relativePointers:
         [RelativePointerSubscriptionID: (seatID: SeatID, pointer: RawRelativePointer)] = [:]
     private var relativePointerRegistry = RelativePointerSubscriptionRegistry()
@@ -62,6 +63,7 @@ package final class PointerCaptureManager {
                 eventSink: connection.inputEventSink
             )
         }
+        let id = allocatePointerConstraintID(kind: .locked)
 
         if let fixedCursorHint {
             constraint.pointer.setCursorPositionHint(
@@ -73,6 +75,7 @@ package final class PointerCaptureManager {
 
         let managed = ManagedPointerConstraint.locked(
             constraint.pointer,
+            id: id,
             region: constraint.region
         )
         return storeConstraint(
@@ -105,9 +108,11 @@ package final class PointerCaptureManager {
                 eventSink: connection.inputEventSink
             )
         }
+        let id = allocatePointerConstraintID(kind: .confined)
 
         let managed = ManagedPointerConstraint.confined(
             constraint.pointer,
+            id: id,
             region: constraint.region
         )
         return storeConstraint(
@@ -233,6 +238,11 @@ package final class PointerCaptureManager {
             lifetime: lifetime
         )
         return id
+    }
+
+    private func allocatePointerConstraintID(kind: PointerConstraintKind) -> PointerConstraintID {
+        defer { nextPointerConstraintID += 1 }
+        return PointerConstraintID(rawValue: nextPointerConstraintID, kind: kind)
     }
 
     private func requireSeat(_ seatID: SeatID, globals: BoundGlobals) throws -> RawSeat {

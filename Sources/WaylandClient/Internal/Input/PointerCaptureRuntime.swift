@@ -4,17 +4,24 @@ package struct ManagedPointerConstraint {
     private let destroyImplementation: () -> Void
 
     package let id: PointerConstraintID
+    package let rawIdentity: RawPointerConstraintIdentity
 
-    package init(id constraintID: PointerConstraintID, destroy: @escaping () -> Void) {
+    package init(
+        id constraintID: PointerConstraintID,
+        rawIdentity constraintRawIdentity: RawPointerConstraintIdentity,
+        destroy: @escaping () -> Void
+    ) {
         id = constraintID
+        rawIdentity = constraintRawIdentity
         destroyImplementation = destroy
     }
 
     package static func locked(
         _ pointer: RawLockedPointer,
+        id constraintID: PointerConstraintID,
         region: RawRegion?
     ) -> ManagedPointerConstraint {
-        ManagedPointerConstraint(id: PointerConstraintID(pointer.identity)) {
+        ManagedPointerConstraint(id: constraintID, rawIdentity: pointer.identity) {
             pointer.destroy()
             region?.destroy()
         }
@@ -22,9 +29,10 @@ package struct ManagedPointerConstraint {
 
     package static func confined(
         _ pointer: RawConfinedPointer,
+        id constraintID: PointerConstraintID,
         region: RawRegion?
     ) -> ManagedPointerConstraint {
-        ManagedPointerConstraint(id: PointerConstraintID(pointer.identity)) {
+        ManagedPointerConstraint(id: constraintID, rawIdentity: pointer.identity) {
             pointer.destroy()
             region?.destroy()
         }
@@ -120,6 +128,7 @@ package struct PointerConstraintRuntimeResult: Equatable, Sendable {
 
 package struct PointerConstraintRuntime {
     private var constraints: [PointerConstraintID: ManagedPointerConstraintState] = [:]
+    private var idByRawIdentity: [RawPointerConstraintIdentity: PointerConstraintID] = [:]
     private var registry = PointerConstraintRegistry()
 
     package init() {
@@ -142,6 +151,7 @@ package struct PointerConstraintRuntime {
             surfaceID: surfaceID,
             constraint: constraint
         )
+        idByRawIdentity[constraint.rawIdentity] = id
         registry.insert(
             id: id,
             surfaceID: surfaceID,
@@ -151,21 +161,23 @@ package struct PointerConstraintRuntime {
     }
 
     package mutating func destroyPointerConstraint(_ id: PointerConstraintID) throws {
-        guard let constraint = constraints.removeValue(forKey: id)?.constraint else {
+        guard let state = constraints.removeValue(forKey: id) else {
             throw PointerCaptureError.unknownPointerConstraint(id)
         }
 
         _ = registry.remove(id)
-        constraint.destroy()
+        idByRawIdentity.removeValue(forKey: state.constraint.rawIdentity)
+        state.constraint.destroy()
     }
 
     package mutating func processRawInputEvent(
         _ event: RawInputEvent
     ) -> PointerConstraintLifecycleEvent? {
         guard case .pointer(.constraint(let constraintEvent)) = event.kind else { return nil }
+        guard let id = idByRawIdentity[constraintEvent.identity] else { return nil }
 
         let transition = registry.transition(
-            PointerConstraintProtocolEvent(constraintEvent)
+            PointerConstraintProtocolEvent(constraintEvent, id: id)
         )
         let result = PointerConstraintRuntimeResult(transition)
         interpret(result.effects)
@@ -187,6 +199,7 @@ package struct PointerConstraintRuntime {
             pointerConstraint.constraint.destroy()
         }
         constraints.removeAll()
+        idByRawIdentity.removeAll()
         registry.removeAll()
     }
 
@@ -198,7 +211,9 @@ package struct PointerConstraintRuntime {
         for effect in effects {
             switch effect {
             case .destroyOneShotConstraint(let id):
-                constraints.removeValue(forKey: id)?.constraint.destroy()
+                guard let state = constraints.removeValue(forKey: id) else { continue }
+                idByRawIdentity.removeValue(forKey: state.constraint.rawIdentity)
+                state.constraint.destroy()
             }
         }
     }
@@ -206,7 +221,9 @@ package struct PointerConstraintRuntime {
     private mutating func destroyAndRemoveConstraints(_ ids: [PointerConstraintID]) {
         for id in ids {
             _ = registry.remove(id)
-            constraints.removeValue(forKey: id)?.constraint.destroy()
+            guard let state = constraints.removeValue(forKey: id) else { continue }
+            idByRawIdentity.removeValue(forKey: state.constraint.rawIdentity)
+            state.constraint.destroy()
         }
     }
 }
@@ -334,6 +351,18 @@ package enum PointerConstraintProtocolEvent: Equatable, Sendable {
     case unconfined(PointerConstraintID)
 }
 
+extension RawPointerConstraintEvent {
+    package var identity: RawPointerConstraintIdentity {
+        switch self {
+        case .locked(let identity, _),
+            .unlocked(let identity, _),
+            .confined(let identity, _),
+            .unconfined(let identity, _):
+            identity
+        }
+    }
+}
+
 extension PointerConstraintProtocolEvent {
     package var constraintID: PointerConstraintID {
         switch self {
@@ -360,16 +389,16 @@ extension PointerConstraintProtocolEvent {
         }
     }
 
-    package init(_ raw: RawPointerConstraintEvent) {
+    package init(_ raw: RawPointerConstraintEvent, id: PointerConstraintID) {
         switch raw {
-        case .locked(let identity, _):
-            self = .locked(PointerConstraintID(identity))
-        case .unlocked(let identity, _):
-            self = .unlocked(PointerConstraintID(identity))
-        case .confined(let identity, _):
-            self = .confined(PointerConstraintID(identity))
-        case .unconfined(let identity, _):
-            self = .unconfined(PointerConstraintID(identity))
+        case .locked:
+            self = .locked(id)
+        case .unlocked:
+            self = .unlocked(id)
+        case .confined:
+            self = .confined(id)
+        case .unconfined:
+            self = .unconfined(id)
         }
     }
 }
