@@ -4,7 +4,7 @@ import WaylandRaw
 @testable import WaylandClient
 
 @Suite
-struct PointerCaptureDomainTypesTests {
+struct PointerCaptureDomainTypesTests {  // swiftlint:disable:this type_body_length
     @Test
     func emptyConstraintRegionIsRejected() {
         #expect(throws: PointerCaptureError.emptyRegion) {

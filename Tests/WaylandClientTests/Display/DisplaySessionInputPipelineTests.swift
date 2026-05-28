@@ -5,7 +5,7 @@ import WaylandRaw
 @testable import WaylandClient
 
 @Suite
-struct DisplaySessionInputPipelineTests {
+struct DisplaySessionInputPipelineTests {  // swiftlint:disable:this type_body_length
     @Test
     func rawKeyboardEventPrecedesInterpretedDiagnosticFromSameRawEvent() throws {
         let router = InputRouter()

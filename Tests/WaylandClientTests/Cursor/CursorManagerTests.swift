@@ -104,6 +104,7 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
 
         let surface = try #require(backend.surface(for: RawSeatID(rawValue: 1)))
         #expect(surface.bufferScaleRequests == [2])
+        #expect(surface.operationLog == [.setBufferScale(2), .attach, .commit])
         #expect(backend.resolvedCursorSizes == [scaledSize])
         #expect(
             backend.setCursorRequests == [
@@ -155,6 +156,15 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
         let surface = try #require(backend.surface(for: RawSeatID(rawValue: 1)))
         #expect(surface.bufferScaleRequests == [2, 2])
         #expect(
+            surface.operationLog == [
+                .setBufferScale(2),
+                .attach,
+                .commit,
+                .setBufferScale(2),
+                .attach,
+                .commit,
+            ])
+        #expect(
             backend.setCursorRequests == [
                 SetCursorRequest(
                     seatID: RawSeatID(rawValue: 1),
@@ -162,6 +172,47 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
                     surfaceID: 0xC00,
                     hotspotX: 5,
                     hotspotY: 6
+                )
+            ])
+    }
+
+    @Test
+    func scaledThemeCursorHotspotUsesIntegerSurfaceCoordinates() throws {
+        let backend = try RecordingCursorBackend()
+        let scaledSize = CursorSize(unchecked: 48)
+        backend.cursorImagesBySize[scaledSize] = try makeCursorImage(
+            width: 48,
+            height: 48,
+            hotspotX: 7,
+            hotspotY: 9
+        )
+        let manager = try CursorManager(
+            backend: backend,
+            configuration: CursorConfiguration(scalePolicy: .matchFocusedOutput)
+        )
+
+        manager.register(surfaceID: 100)
+        try manager.updateOutputScales(
+            for: 100,
+            focusedOutputs: [cursorOutputScale(id: 1, scale: 2)],
+            availableOutputs: [cursorOutputScale(id: 1, scale: 2)]
+        )
+        manager.observe(
+            rawPointerEnter(
+                sequence: 1,
+                seatID: RawSeatID(rawValue: 1),
+                surfaceID: 100,
+                serial: 77
+            ))
+
+        #expect(
+            backend.setCursorRequests == [
+                SetCursorRequest(
+                    seatID: RawSeatID(rawValue: 1),
+                    serial: 77,
+                    surfaceID: 0xC00,
+                    hotspotX: 3,
+                    hotspotY: 4
                 )
             ])
     }
@@ -381,8 +432,24 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
 
         manager.shutdown()
 
-        #expect(firstSurface.operationLog == [.attach, .commit, .detach, .commit, .destroy])
-        #expect(secondSurface.operationLog == [.attach, .commit, .detach, .commit, .destroy])
+        #expect(
+            firstSurface.operationLog == [
+                .setBufferScale(1),
+                .attach,
+                .commit,
+                .detach,
+                .commit,
+                .destroy,
+            ])
+        #expect(
+            secondSurface.operationLog == [
+                .setBufferScale(1),
+                .attach,
+                .commit,
+                .detach,
+                .commit,
+                .destroy,
+            ])
     }
 
     @Test
@@ -402,7 +469,15 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
             rawPointerEnter(sequence: 2, seatID: seatID, surfaceID: 200))
         let requestResults = try manager.setPointerCursor(.text)
 
-        #expect(cursorSurface.operationLog == [.attach, .commit, .detach, .commit, .destroy])
+        #expect(
+            cursorSurface.operationLog == [
+                .setBufferScale(1),
+                .attach,
+                .commit,
+                .detach,
+                .commit,
+                .destroy,
+            ])
         #expect(diagnostics.isEmpty)
         #expect(requestResults.isEmpty)
         #expect(backend.createdSurfaces.count == 1)
@@ -739,6 +814,7 @@ final class RecordingCursorSurface: CursorManagerSurface {
 
     func setBufferScale(_ scale: Int32) {
         bufferScaleRequests.append(scale)
+        operationLog.append(.setBufferScale(scale))
     }
 
     func attach(_: CursorImage) {
@@ -763,6 +839,7 @@ final class RecordingCursorSurface: CursorManagerSurface {
 }
 
 enum CursorSurfaceOperation: Equatable {
+    case setBufferScale(Int32)
     case attach
     case detach
     case commit
