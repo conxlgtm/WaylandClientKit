@@ -34,7 +34,9 @@ enum SurfaceRegionSmoke {
             try await window.setInputRegion(activeRegion)
             try await window.setOpaqueRegion(activeRegion)
             log("input and opaque regions set to \(activeRegion.rectangles)")
-            log("clicks outside the marked center should miss this window if the compositor honors input regions")
+            log(
+                "clicks outside the marked center should miss this window if the compositor honors input regions"
+            )
 
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask { try await consumeDisplayEvents(display.events, window: window) }
@@ -95,7 +97,8 @@ enum SurfaceRegionSmoke {
         }
     }
 
-    nonisolated private static func resetRegions(after seconds: Int64, window: Window) async throws {
+    nonisolated private static func resetRegions(after seconds: Int64, window: Window) async throws
+    {
         try await Task.sleep(for: .seconds(seconds))
         guard try await !window.isClosed else { return }
         try await window.setInputRegion(nil)
@@ -106,7 +109,9 @@ enum SurfaceRegionSmoke {
         log("input and opaque regions reset to compositor defaults")
     }
 
-    nonisolated private static func centerRegion(for geometry: SurfaceGeometry) throws -> SurfaceRegion {
+    nonisolated private static func centerRegion(for geometry: SurfaceGeometry) throws
+        -> SurfaceRegion
+    {
         let width = geometry.logicalSize.width.rawValue
         let height = geometry.logicalSize.height.rawValue
         let regionWidth = max(width / 2, 1)

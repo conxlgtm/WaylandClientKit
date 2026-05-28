@@ -246,6 +246,50 @@
         }
 
         @Test
+        func firstGenerationCommitForcesFullFrameDamage() async throws {
+            try await CoreRequestRecordingGate.withExclusiveRecording {
+                swl_test_core_request_recording_begin()
+                defer { swl_test_core_request_recording_end() }
+
+                let surface = try testSurface(pointer: 0x5D01)
+                defer { surface.destroy() }
+                var runtime = try configuredRuntime()
+                let damageRect = try LogicalRect(x: 10, y: 5, width: 20, height: 15)
+                let damage = try SurfaceDamageRegion([damageRect])
+                let geometry = try testSurfaceGeometry()
+                let preparedCommit = try SurfaceFrameCommitter.prepare(
+                    SurfaceFrameCommitRequest(
+                        surface: surface,
+                        scaleInstallation: SurfaceScaleInstallation(),
+                        generation: 1,
+                        geometry: geometry,
+                        payload: .buffer(try testSurfaceBuffer(pointer: 0x5D02)),
+                        damage: damage
+                    ),
+                    runtime: &runtime,
+                )
+
+                #expect(
+                    preparedCommit.plan.damage
+                        == .logical([
+                            LogicalRect(origin: .zero, size: geometry.logicalSize)
+                        ])
+                )
+
+                _ = try SurfaceFrameCommitter.commit(preparedCommit, runtime: &runtime)
+
+                let record = unsafe swl_test_core_request_record()
+                #expect(unsafe record.kind == SWL_TEST_CORE_SURFACE_COMMIT)
+                #expect(unsafe record.damage_sequence > 0)
+                #expect(unsafe record.damage_sequence < record.commit_sequence)
+                #expect(unsafe record.x == 0)
+                #expect(unsafe record.y == 0)
+                #expect(unsafe record.width == 80)
+                #expect(unsafe record.height == 60)
+            }
+        }
+
+        @Test
         func explicitLogicalDamageIsCommittedWhenBufferDamageIsUnavailable() async throws {
             try await CoreRequestRecordingGate.withExclusiveRecording {
                 swl_test_core_request_recording_begin()
@@ -254,6 +298,18 @@
                 let surface = try testSurface(pointer: 0x5C01)
                 defer { surface.destroy() }
                 var runtime = try configuredRuntime()
+                let firstCommit = try preparedCommit(
+                    surface: surface,
+                    runtime: &runtime,
+                    constraints: .default,
+                    payload: .buffer(try testSurfaceBuffer(pointer: 0x5C02))
+                )
+                _ = try SurfaceFrameCommitter.commit(firstCommit, runtime: &runtime)
+                _ = try runtime.completeFrameCallback()
+                try runtime.requestFrameCallback(generation: 2)
+
+                swl_test_core_request_recording_begin()
+
                 let damage = try SurfaceDamageRegion([
                     LogicalRect(
                         origin: LogicalOffset(x: 10, y: 5),
@@ -264,12 +320,12 @@
                     SurfaceFrameCommitRequest(
                         surface: surface,
                         scaleInstallation: SurfaceScaleInstallation(),
-                        generation: 1,
+                        generation: 2,
                         geometry: try SurfaceGeometry(
                             logicalSize: PositiveLogicalSize(width: 80, height: 60),
                             scale: SurfaceScale(numerator: 2, denominator: 1)
                         ),
-                        payload: .buffer(try testSurfaceBuffer(pointer: 0x5C02)),
+                        payload: .buffer(try testSurfaceBuffer(pointer: 0x5C03)),
                         damage: damage
                     ),
                     runtime: &runtime,

@@ -78,10 +78,11 @@ enum SurfaceFrameCommitter {
     ) throws -> PreparedSurfaceFrameCommit {
         let damageMode: DamageCoordinateMode =
             request.surface.usesBufferDamage ? .buffer : .logical
+        let damage = request.generation == 1 ? nil : request.damage
         let plan = try request.scaleInstallation.commitPlan(
             geometry: request.geometry,
             damageMode: damageMode,
-            damage: request.damage
+            damage: damage
         )
 
         try runtime.validateCommittedFrameCandidate(generation: request.generation)

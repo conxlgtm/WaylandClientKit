@@ -40,4 +40,3 @@ extension IDGenerator where ID: UInt64WaylandEntityID {
         ID(rawValue: nextRawValueForCompositeID())
     }
 }
-
