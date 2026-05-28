@@ -1,9 +1,10 @@
 import Foundation
 
-public struct ClipboardOffer: Sendable, Hashable {
+public struct ClipboardOffer: Sendable, Hashable, Identifiable {
     public static let defaultReadTimeout: Duration = .seconds(5)
 
-    package let id: DataOfferID
+    package let offerID: DataOfferID
+    public let id: ClipboardOfferIdentity
     public let seatID: SeatID
     public let mimeTypes: [MIMEType]
 
@@ -11,7 +12,8 @@ public struct ClipboardOffer: Sendable, Hashable {
     private let ownership: DisplayOwnedIdentity<DataOfferID>
 
     package init(snapshot: DataOfferSnapshot, display owningDisplay: WaylandDisplay) {
-        id = snapshot.id
+        offerID = snapshot.id
+        id = snapshot.id.clipboardIdentity
         seatID = snapshot.role.seatID
         mimeTypes = snapshot.mimeTypes
         display = owningDisplay
@@ -19,11 +21,11 @@ public struct ClipboardOffer: Sendable, Hashable {
     }
 
     public var identity: ClipboardOfferIdentity {
-        id.clipboardIdentity
+        id
     }
 
     public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {
-        try await display.receiveClipboardOffer(id: id, mimeType: mimeType)
+        try await display.receiveClipboardOffer(id: offerID, mimeType: mimeType)
     }
 
     public func read(

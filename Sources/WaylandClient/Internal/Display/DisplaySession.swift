@@ -17,8 +17,8 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     package let dataTransferSourceWriter: ThreadedDataTransferSourceWriter
     private let dataTransferEventQueue = DataTransferEventQueue()
     package var pendingDataTransferDiagnostics: [DataTransferDiagnostic] = []
-    private var nextWindowID: UInt64 = 1
-    private var nextPopupID: UInt64 = 1
+    private var windowIDs = IDGenerator<WindowID>()
+    private var popupIDs = IDGenerator<PopupID>()
 
     package init(
         connection rawConnection: RawDisplayConnection,
@@ -392,14 +392,12 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
 
     private func allocateWindowID() -> WindowID {
         connection.preconditionIsOwnerThread()
-        defer { nextWindowID += 1 }
-        return WindowID(rawValue: nextWindowID)
+        return windowIDs.next()
     }
 
     private func allocatePopupID() -> PopupID {
         connection.preconditionIsOwnerThread()
-        defer { nextPopupID += 1 }
-        return PopupID(rawValue: nextPopupID)
+        return popupIDs.next()
     }
 
     private func processPendingRawInputEvents() throws {

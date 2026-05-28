@@ -73,7 +73,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     func submit(
-        leaseID: UInt64,
+        leaseID: WaylandGraphicsFrameLeaseID,
         frame: WaylandGraphicsSubmittedFrame
     ) async throws -> WaylandGraphicsFrameResult {
         try await submit(
@@ -85,7 +85,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     func submit(
-        leaseID: UInt64,
+        leaseID: WaylandGraphicsFrameLeaseID,
         frame: WaylandGraphicsSubmittedFrame,
         beforeSubmissionEffect: @Sendable () async throws -> Void,
         afterSubmissionEffect: @Sendable () async throws -> Void
@@ -120,7 +120,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     func submitSoftware(
-        leaseID: UInt64,
+        leaseID: WaylandGraphicsFrameLeaseID,
         metadata frameMetadata: WaylandGraphicsFrameMetadata,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws -> WaylandGraphicsFrameResult {
@@ -158,7 +158,9 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
     }
 
-    private func submissionGeometry(for leaseID: UInt64) async throws -> SurfaceGeometry {
+    private func submissionGeometry(
+        for leaseID: WaylandGraphicsFrameLeaseID
+    ) async throws -> SurfaceGeometry {
         do {
             let geometry = try await window.geometry
             try leaseState.requireSubmittable(leaseID: leaseID)
@@ -199,7 +201,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         )
     }
 
-    func cancel(leaseID: UInt64) {
+    func cancel(leaseID: WaylandGraphicsFrameLeaseID) {
         leaseState.cancel(leaseID: leaseID)
     }
 

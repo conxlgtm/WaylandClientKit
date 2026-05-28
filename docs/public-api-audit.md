@@ -7,6 +7,8 @@ should still be treated as intentional user-facing API.
 
 The minimal DocC catalog for this boundary lives in
 `Sources/WaylandClient/WaylandClient.docc/WaylandClient.md`.
+Identity taxonomy, raw-value visibility, and display-owned handle semantics are
+tracked in [`identity-model.md`](identity-model.md).
 
 ## Products
 

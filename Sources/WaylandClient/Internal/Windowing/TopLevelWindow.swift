@@ -41,7 +41,7 @@ package final class TopLevelWindow {
     private var model: WindowModel
     private var surfaceRuntime: SurfaceRuntime<TopLevelWindowRoleResources>
     private var pendingFrameRegistration: FrameCallbackRegistration?
-    private var nextPresentationFeedbackID: UInt64 = 1
+    private var presentationFeedbackIDs = IDGenerator<SurfacePresentationIdentity>()
     private var pendingPresentationFeedbacks:
         [SurfacePresentationIdentity: RawPresentationFeedback] = [:]
 
@@ -1546,8 +1546,7 @@ extension TopLevelWindow {
 
 extension TopLevelWindow {
     private func allocatePresentationFeedbackIdentity() -> SurfacePresentationIdentity {
-        defer { nextPresentationFeedbackID += 1 }
-        return SurfacePresentationIdentity(rawValue: nextPresentationFeedbackID)
+        presentationFeedbackIDs.next()
     }
 
     private func handlePresentationFeedback(

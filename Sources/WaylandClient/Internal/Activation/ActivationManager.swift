@@ -22,6 +22,10 @@ package protocol ActivationManagerBackend: AnyObject {
 
 package struct ActivationRequestID: Hashable, Sendable {
     package let rawValue: UInt64
+
+    package init(rawValue requestRawValue: UInt64) {
+        rawValue = requestRawValue
+    }
 }
 
 package final class PendingActivationTokenRequest: Sendable {
@@ -98,7 +102,7 @@ private enum ActivationTokenRequestState {
 
 package final class ActivationManager {
     private let backend: any ActivationManagerBackend
-    private var nextRequestID: UInt64 = 1
+    private var requestIDs = IDGenerator<ActivationRequestID>()
     private var pendingTokenRequests: [ActivationRequestID: any ActivationTokenBinding] = [:]
     private var pendingWaiters: [ActivationRequestID: PendingActivationTokenRequest] = [:]
     private var isShutDown = false
@@ -200,8 +204,7 @@ package final class ActivationManager {
     }
 
     private func makeRequestID() -> ActivationRequestID {
-        defer { nextRequestID += 1 }
-        return ActivationRequestID(rawValue: nextRequestID)
+        requestIDs.next()
     }
 
     private func finishTokenRequest(_ requestID: ActivationRequestID) {

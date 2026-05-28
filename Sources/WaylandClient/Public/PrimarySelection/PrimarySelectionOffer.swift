@@ -1,9 +1,10 @@
 import Foundation
 
-public struct PrimarySelectionOffer: Sendable, Hashable {
+public struct PrimarySelectionOffer: Sendable, Hashable, Identifiable {
     public static let defaultReadTimeout: Duration = .seconds(5)
 
-    package let id: DataOfferID
+    package let offerID: DataOfferID
+    public let id: PrimarySelectionOfferIdentity
     public let seatID: SeatID
     public let mimeTypes: [MIMEType]
 
@@ -11,7 +12,8 @@ public struct PrimarySelectionOffer: Sendable, Hashable {
     private let ownership: DisplayOwnedIdentity<DataOfferID>
 
     package init(snapshot: DataOfferSnapshot, display owningDisplay: WaylandDisplay) {
-        id = snapshot.id
+        offerID = snapshot.id
+        id = snapshot.id.primarySelectionIdentity
         seatID = snapshot.role.seatID
         mimeTypes = snapshot.mimeTypes
         display = owningDisplay
@@ -19,11 +21,11 @@ public struct PrimarySelectionOffer: Sendable, Hashable {
     }
 
     public var identity: PrimarySelectionOfferIdentity {
-        id.primarySelectionIdentity
+        id
     }
 
     public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {
-        try await display.receivePrimarySelectionOffer(id: id, mimeType: mimeType)
+        try await display.receivePrimarySelectionOffer(id: offerID, mimeType: mimeType)
     }
 
     public func read(

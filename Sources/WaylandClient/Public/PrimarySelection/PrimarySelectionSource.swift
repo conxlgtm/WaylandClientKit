@@ -24,8 +24,9 @@ public struct PrimarySelectionSourceConfiguration: Equatable, Sendable {
     }
 }
 
-public struct PrimarySelectionSource: Sendable, Hashable {
-    package let id: DataSourceID
+public struct PrimarySelectionSource: Sendable, Hashable, Identifiable {
+    package let sourceID: DataSourceID
+    public let id: PrimarySelectionSourceIdentity
     public let seatID: SeatID
     public let mimeTypes: [MIMEType]
 
@@ -33,7 +34,8 @@ public struct PrimarySelectionSource: Sendable, Hashable {
     private let ownership: DisplayOwnedIdentity<DataSourceID>
 
     package init(snapshot: DataSourceSnapshot, display owningDisplay: WaylandDisplay) {
-        id = snapshot.id
+        sourceID = snapshot.id
+        id = snapshot.id.primarySelectionIdentity
         seatID = snapshot.seatID
         mimeTypes = snapshot.mimeTypes
         display = owningDisplay
@@ -41,14 +43,18 @@ public struct PrimarySelectionSource: Sendable, Hashable {
     }
 
     public var identity: PrimarySelectionSourceIdentity {
-        id.primarySelectionIdentity
+        id
     }
 
     /// Requests clearing this source from the primary selection.
     ///
     /// The compositor validates `serial` at the protocol boundary.
     public func requestClear(serial: InputSerial) async throws {
-        try await display.requestClearPrimarySelection(sourceID: id, seatID: seatID, serial: serial)
+        try await display.requestClearPrimarySelection(
+            sourceID: sourceID,
+            seatID: seatID,
+            serial: serial
+        )
     }
 
     public static func == (lhs: PrimarySelectionSource, rhs: PrimarySelectionSource) -> Bool {
