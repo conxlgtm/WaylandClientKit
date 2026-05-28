@@ -241,6 +241,18 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "PointerCaptureSmoke",
+            dependencies: ["WaylandClient"],
+            path: "Examples/PointerCaptureSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "CursorPolicySmoke",
+            dependencies: ["WaylandClient"],
+            path: "Examples/CursorPolicySmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "SwiftWaylandSmoke",
             dependencies: ["WaylandSmokeSupport"],
             swiftSettings: executableSwiftSettings

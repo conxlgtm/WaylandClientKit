@@ -2,6 +2,7 @@ import WaylandCursor
 
 package struct ResolvedPointerCursorImage {
     let cursor: PointerCursor
+    let size: CursorSize
     let image: CursorImage
 }
 
@@ -17,6 +18,12 @@ package enum PointerCursorResolutionState {
         case .resolved(let resolved):
             resolved
         }
+    }
+
+    func resolvedImage(size: CursorSize) -> ResolvedPointerCursorImage? {
+        guard let resolvedImage, resolvedImage.size == size else { return nil }
+
+        return resolvedImage
     }
 
     var unavailableDiagnostic: CursorDiagnostic? {
@@ -60,6 +67,15 @@ package enum DesiredPointerCursorState {
             nil
         case .named(_, let resolution):
             resolution.resolvedImage
+        }
+    }
+
+    func resolvedImage(size: CursorSize) -> ResolvedPointerCursorImage? {
+        switch self {
+        case .hidden:
+            nil
+        case .named(_, let resolution):
+            resolution.resolvedImage(size: size)
         }
     }
 

@@ -119,6 +119,11 @@ package final class TopLevelWindow {
         return surface.objectID
     }
 
+    package var rawSurfaceOnOwnerThread: RawSurface {
+        connection.preconditionIsOwnerThread()
+        return surface
+    }
+
     package var closeRequestPolicy: CloseRequestPolicy {
         configuration.closeRequestPolicy
     }
@@ -628,6 +633,11 @@ extension TopLevelWindow {
         guard let outputRegistry = connection.boundGlobals?.outputRegistry else { return [] }
 
         return surfaceRuntime.currentOutputIDs { outputRegistry.output(for: $0) != nil }
+    }
+
+    package func currentOutputIDsOnOwnerThread() -> [OutputID] {
+        connection.preconditionIsOwnerThread()
+        return outputIDsOnOwnerThread
     }
 }
 

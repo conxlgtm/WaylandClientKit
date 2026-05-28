@@ -369,6 +369,18 @@ package final class RawSeat {
         )
     }
 
+    package var pointerDevicePointer: OpaquePointer? {
+        pointerDevice?.pointer
+    }
+
+    package var hasPointerDevice: Bool {
+        pointerDevice != nil
+    }
+
+    package var pointerDeviceID: RawInputDeviceID? {
+        pointerDevice?.id
+    }
+
     package func setPointerCursorShape(
         manager cursorShapeManager: RawCursorShapeManager,
         serial: UInt32,

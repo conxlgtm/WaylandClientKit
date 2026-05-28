@@ -81,15 +81,26 @@ final class InputRouter {
         return AcceptedRawInputEvent(raw: event)
     }
 
-    func route(_ event: AcceptedRawInputEvent) -> [InputEvent] {
-        guard let routed = routeOne(event.raw) else {
+    func route(
+        _ event: AcceptedRawInputEvent,
+        pointerConstraintLifecycleEvent: PointerConstraintLifecycleEvent? = nil
+    ) -> [InputEvent] {
+        guard
+            let routed = routeOne(
+                event.raw,
+                pointerConstraintLifecycleEvent: pointerConstraintLifecycleEvent
+            )
+        else {
             return []
         }
 
         return [routed] + unknownProtocolValueDiagnostics(for: event.raw)
     }
 
-    private func routeOne(_ event: RawInputEvent) -> InputEvent? {
+    private func routeOne(
+        _ event: RawInputEvent,
+        pointerConstraintLifecycleEvent: PointerConstraintLifecycleEvent?
+    ) -> InputEvent? {
         switch event.kind {
         case .seat(let snapshot):
             applySeatSnapshot(event, snapshot)
@@ -108,7 +119,11 @@ final class InputRouter {
                 kind: .diagnostic(convert(diagnostic))
             )
         case .pointer(let pointerEvent):
-            return routePointer(event, pointerEvent)
+            return routePointer(
+                event,
+                pointerEvent,
+                pointerConstraintLifecycleEvent: pointerConstraintLifecycleEvent
+            )
         case .keyboard(let keyboardEvent):
             return routeKeyboard(event, keyboardEvent)
         case .touch(let touchEvent):
@@ -116,10 +131,12 @@ final class InputRouter {
         }
     }
 
+    // swiftlint:disable:next function_body_length
     private func routePointer(
         _ rawEvent: RawInputEvent,
-        _ pointerEvent: RawPointerEvent
-    ) -> InputEvent {
+        _ pointerEvent: RawPointerEvent,
+        pointerConstraintLifecycleEvent: PointerConstraintLifecycleEvent?
+    ) -> InputEvent? {
         switch pointerEvent {
         case .enter(let enter):
             if let surfaceID = enter.surfaceID {
@@ -175,7 +192,47 @@ final class InputRouter {
                 target: target(forFocusedSurface: focusedPointerSurface(for: rawEvent.seatID)),
                 kind: .pointer(.axis(PointerAxisEvent(axis)))
             )
+        case .relativeMotion(let motion):
+            return routedEvent(
+                rawEvent,
+                target: target(forFocusedSurface: focusedPointerSurface(for: rawEvent.seatID)),
+                kind: .pointer(
+                    .relativeMotion(
+                        RelativePointerMotionEvent(
+                            time: WaylandTimestampMicroseconds(
+                                rawValue: motion.timestampMicroseconds
+                            ),
+                            delta: PointerDelta(
+                                dx: motion.dx.doubleValue,
+                                dy: motion.dy.doubleValue
+                            ),
+                            unacceleratedDelta: PointerDelta(
+                                dx: motion.dxUnaccelerated.doubleValue,
+                                dy: motion.dyUnaccelerated.doubleValue
+                            )
+                        )
+                    )
+                )
+            )
+        case .constraint(let constraint):
+            return routePointerConstraint(
+                rawEvent,
+                constraint,
+                lifecycleEvent: pointerConstraintLifecycleEvent
+            )
         }
+    }
+
+    private func routePointerConstraint(
+        _ rawEvent: RawInputEvent,
+        _ constraint: RawPointerConstraintEvent,
+        lifecycleEvent: PointerConstraintLifecycleEvent?
+    ) -> InputEvent? {
+        routePointerConstraintLifecycle(
+            rawEvent,
+            constraint,
+            lifecycleEvent: lifecycleEvent
+        )
     }
 
     private func routeKeyboard(
@@ -223,6 +280,49 @@ final class InputRouter {
 }
 
 extension InputRouter {
+    private func routePointerConstraintLifecycle(
+        _ rawEvent: RawInputEvent,
+        _ constraint: RawPointerConstraintEvent,
+        lifecycleEvent: PointerConstraintLifecycleEvent?
+    ) -> InputEvent? {
+        guard let lifecycleEvent else { return nil }
+
+        let surfaceID: RawObjectID
+
+        switch constraint {
+        case .locked(_, let targetSurfaceID):
+            surfaceID = targetSurfaceID
+            guard case .activated(let id) = lifecycleEvent, id.kind == .locked else { return nil }
+        case .unlocked(_, let targetSurfaceID):
+            surfaceID = targetSurfaceID
+            guard isTerminal(lifecycleEvent, for: .locked) else { return nil }
+        case .confined(_, let targetSurfaceID):
+            surfaceID = targetSurfaceID
+            guard case .activated(let id) = lifecycleEvent, id.kind == .confined else { return nil }
+        case .unconfined(_, let targetSurfaceID):
+            surfaceID = targetSurfaceID
+            guard isTerminal(lifecycleEvent, for: .confined) else { return nil }
+        }
+
+        return routedEvent(
+            rawEvent,
+            target: target(for: surfaceID),
+            kind: .pointer(.constraintLifecycle(lifecycleEvent))
+        )
+    }
+
+    private func isTerminal(
+        _ lifecycleEvent: PointerConstraintLifecycleEvent,
+        for kind: PointerConstraintKind
+    ) -> Bool {
+        switch lifecycleEvent {
+        case .inactivePersistent(let id), .defunctOneShot(let id):
+            id.kind == kind
+        case .activated:
+            false
+        }
+    }
+
     func routeKeyboardKeymap(
         _ rawEvent: RawInputEvent,
         _ keymap: RawKeyboardKeymapPayload

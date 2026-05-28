@@ -21,6 +21,8 @@ make check
 ./scripts/dev/swift.sh build --disable-index-store -c release --target SwiftWaylandDemo
 ./scripts/dev/swift.sh build --disable-index-store -c release --target GPUPreviewSmokeClient
 ./scripts/dev/swift.sh build --disable-index-store -c release --target GraphicsPreviewManagedGPUClear
+./scripts/dev/swift.sh build --disable-index-store -c release --target PointerCaptureSmoke
+./scripts/dev/swift.sh build --disable-index-store -c release --target CursorPolicySmoke
 ./scripts/dev/swift.sh build --disable-index-store -c release --product swift-wayland-smoke
 ./scripts/ci/test-framework-handoff-examples.sh
 make test-release
@@ -193,7 +195,7 @@ Supported:
 
 Not supported:
 - Widgets.
-- Public cursor animation or per-output cursor policy APIs.
+- Public cursor animation or custom software cursor image APIs.
 - Client-side decorations.
 - Full output-management API.
 - Public `WaylandClient` GPU rendering APIs.

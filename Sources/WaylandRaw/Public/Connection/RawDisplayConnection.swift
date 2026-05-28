@@ -22,6 +22,9 @@ package final class RawDisplayConnection {
     let proxyAdoption: RawProxyAdoptionContext
     let registry: RawRegistry
     package private(set) var boundGlobals: BoundGlobals?
+    package var inputEventSink: any RawInputEventSink {
+        inputEventQueue
+    }
 
     private let registryState: RegistryState
     private let registryListenerOwner: RegistryListenerOwner

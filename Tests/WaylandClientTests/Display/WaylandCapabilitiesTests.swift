@@ -19,6 +19,8 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.fractionalScale == .unavailable)
         #expect(capabilities.cursorShape == .unavailable)
         #expect(capabilities.xdgActivation == .unavailable)
+        #expect(capabilities.relativePointer == .unavailable)
+        #expect(capabilities.pointerConstraints == .unavailable)
         #expect(capabilities.textInput == .unavailable)
         #expect(capabilities.linuxDmabuf == .unavailable)
     }
@@ -38,6 +40,8 @@ struct WaylandCapabilitiesTests {
             .init(interfaceName: "wp_fractional_scale_manager_v1", advertisedVersion: 3),
             .init(interfaceName: "wp_cursor_shape_manager_v1", advertisedVersion: 9),
             .init(interfaceName: "xdg_activation_v1", advertisedVersion: 3),
+            .init(interfaceName: "zwp_relative_pointer_manager_v1", advertisedVersion: 4),
+            .init(interfaceName: "zwp_pointer_constraints_v1", advertisedVersion: 4),
             .init(interfaceName: "zwp_text_input_manager_v3", advertisedVersion: 9),
             .init(interfaceName: "zwp_linux_dmabuf_v1", advertisedVersion: 7),
         ])
@@ -53,16 +57,24 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.fractionalScale == .available(version: 1))
         #expect(capabilities.cursorShape == .available(version: 2))
         #expect(capabilities.xdgActivation == .available(version: 1))
+        #expect(capabilities.relativePointer == .available(version: 1))
+        #expect(capabilities.pointerConstraints == .available(version: 1))
         #expect(capabilities.textInput == .available(version: 2))
         #expect(capabilities.linuxDmabuf == .available(version: 5))
     }
 
     @Test
-    func displaySessionCapabilityAssemblyIncludesXDGActivation() {
+    func displaySessionCapabilityAssemblyIncludesXDGActivationAndPointerCapture() {
         var requestedInterfaces: [String] = []
         let capabilities = DisplaySession.capabilities { interfaceName in
             requestedInterfaces.append(interfaceName)
-            guard interfaceName == "xdg_activation_v1" else {
+            guard
+                [
+                    "xdg_activation_v1",
+                    "zwp_relative_pointer_manager_v1",
+                    "zwp_pointer_constraints_v1",
+                ].contains(interfaceName)
+            else {
                 return nil
             }
 
@@ -73,8 +85,20 @@ struct WaylandCapabilitiesTests {
         }
 
         #expect(DisplaySession.capabilityProtocolInterfaceNames.contains("xdg_activation_v1"))
+        #expect(
+            DisplaySession.capabilityProtocolInterfaceNames.contains(
+                "zwp_relative_pointer_manager_v1"
+            )
+        )
+        #expect(
+            DisplaySession.capabilityProtocolInterfaceNames.contains(
+                "zwp_pointer_constraints_v1"
+            )
+        )
         #expect(requestedInterfaces == DisplaySession.capabilityProtocolInterfaceNames)
         #expect(capabilities.xdgActivation == .available(version: 1))
+        #expect(capabilities.relativePointer == .available(version: 1))
+        #expect(capabilities.pointerConstraints == .available(version: 1))
     }
 
     @Test
@@ -92,6 +116,8 @@ struct WaylandCapabilitiesTests {
             .init(interfaceName: "wp_fractional_scale_manager_v1", advertisedVersion: 1),
             .init(interfaceName: "wp_cursor_shape_manager_v1", advertisedVersion: 2),
             .init(interfaceName: "xdg_activation_v1", advertisedVersion: 1),
+            .init(interfaceName: "zwp_relative_pointer_manager_v1", advertisedVersion: 1),
+            .init(interfaceName: "zwp_pointer_constraints_v1", advertisedVersion: 1),
             .init(interfaceName: "zwp_text_input_manager_v3", advertisedVersion: 2),
             .init(interfaceName: "zwp_linux_dmabuf_v1", advertisedVersion: 5),
         ])
@@ -107,6 +133,8 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.fractionalScale == .available(version: 1))
         #expect(capabilities.cursorShape == .available(version: 2))
         #expect(capabilities.xdgActivation == .available(version: 1))
+        #expect(capabilities.relativePointer == .available(version: 1))
+        #expect(capabilities.pointerConstraints == .available(version: 1))
         #expect(capabilities.textInput == .available(version: 2))
         #expect(capabilities.linuxDmabuf == .available(version: 5))
     }

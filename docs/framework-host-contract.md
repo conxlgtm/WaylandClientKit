@@ -20,9 +20,15 @@ Start with these public APIs:
 - `Window.show`, `redraw`, `requestRedraw`, `needsRedraw`, `geometry`, and `stateSnapshot`
 - `Window.presentationEvents` and `requestPresentationFeedback()`
 - `Window.createPopup(configuration:)`
+- `ActivationToken`, `ActivationTokenRequest`, and
+  `Window.requestActivationToken(...)` for compositor-mediated focus handoff
+- relative pointer and pointer constraint APIs through
+  `Window.relativePointer(seatID:)`, `Window.lockPointer(...)`, and
+  `Window.confinePointer(...)`
 - `TextInputSession` and `WaylandDisplay.textInputSession(for:)`
 - clipboard, primary-selection, and drag-and-drop source and offer APIs
-- cursor APIs through `PointerCursor`, `CursorConfiguration`, and `setPointerCursor(_:)`
+- cursor APIs through `PointerCursor`, `CursorConfiguration`,
+  `PointerCursorScalePolicy`, and `setPointerCursor(_:)`
 - preview graphics APIs in `WaylandGraphicsPreview` when the framework wants
   renderer-neutral capability and software submission experiments
 
@@ -96,6 +102,17 @@ Build the framework focus model above these facts:
 
 SwiftWayland preserves the target facts. The framework owns policy such as
 "focused scene", tab focus, gesture capture, menu focus, and accessibility focus.
+
+XDG activation tokens are opaque compositor-mediated focus facts. A framework
+can request a token with app ID, window, seat ID, and serial hints, then send
+`Window.activate(using:)`. It should not treat a sent activate request as a
+guaranteed focus change.
+
+Pointer capture is optional compositor functionality. Use
+`WaylandCapabilities.relativePointer` and `.pointerConstraints` before exposing
+capture-dependent modes. SwiftWayland manages relative-pointer and
+lock/confine proxy lifetime, but the framework owns game mode, capture consent,
+escape/unlock UI, camera mapping, gesture mapping, and cursor policy.
 
 For text fields, commit enabled request state before disabling the session.
 `TextInputSession.disable()` finalizes the disable request; a later
@@ -210,6 +227,21 @@ try await WaylandDisplay.withConnection { display in
 `WaylandGraphicsPreview` is preview API. It reports runtime path and fallback
 facts and currently provides managed software submission. It does not expose raw
 Wayland, SHM pool, GBM, EGL, DRM, dmabuf, or sync handles.
+
+## Cursor Policy
+
+Use `CursorConfiguration.scalePolicy` to choose how named theme cursors scale:
+fixed base size, focused-output scale, or maximum known output scale.
+SwiftWayland applies that policy when resolving theme cursor images. Frameworks
+still own which cursor to show for a widget, drag, resize edge, text field, or
+pointer-capture mode.
+
+Diagonal resize cursor presets are not public yet because the portable names
+are not proven across compositor/theme families. Use `PointerCursor(name:)` with
+fallbacks for theme-specific policy.
+
+Custom software cursor images are deferred until SwiftWayland has a public
+buffer-lifetime design that keeps raw Wayland buffers and SHM pools private.
 
 ## Boundaries SwiftWayland Does Not Own
 

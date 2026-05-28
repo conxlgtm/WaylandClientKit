@@ -33,6 +33,8 @@ Run the manual interaction probes:
 ./scripts/dev/swift.sh run ClientSideResizeChrome
 ./scripts/dev/swift.sh run SerialActionsProbe
 ./scripts/dev/swift.sh run XDGActivationSmoke
+./scripts/dev/swift.sh run PointerCaptureSmoke
+./scripts/dev/swift.sh run CursorPolicySmoke
 ```
 
 Run bounded examples when a compositor session is available:
@@ -53,6 +55,9 @@ Run bounded examples when a compositor session is available:
 - advertised optional protocols
 - client-side resize and cursor cleanup result
 - serial-sensitive resize, move, menu, and drag-source result
+- xdg activation capability, token request result, and activate request result
+- relative pointer and pointer lock/confine capability and request result
+- cursor shape, theme fallback, focused-output scale policy, and close result
 - text-input capability, IME commits, and interpreted keyboard fallback
 - clipboard, primary-selection, drag/drop, private MIME, and stale-offer behavior
 - popup lifecycle and shutdown behavior

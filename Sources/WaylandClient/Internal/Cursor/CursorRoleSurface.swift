@@ -43,6 +43,10 @@ package final class CursorRoleSurface: CursorManagerSurface {
         runtime.capabilitySnapshot
     }
 
+    package func setBufferScale(_ scale: Int32) {
+        rawSurface.setBufferScale(scale)
+    }
+
     package func attach(_ image: CursorImage) {
         rawSurface.attachBorrowedBuffer(image.buffer)
         rawSurface.damageFullBuffer(width: image.width, height: image.height)

@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 public struct InputEvent: Equatable, Sendable {
     public let sequence: UInt64
     public let seatID: SeatID
@@ -52,6 +54,8 @@ public enum PointerEvent: Equatable, Sendable {
     case moved(PointerLocation, time: WaylandTimestampMilliseconds)
     case button(PointerButtonEvent)
     case axis(PointerAxisEvent)
+    case relativeMotion(RelativePointerMotionEvent)
+    case constraintLifecycle(PointerConstraintLifecycleEvent)
 }
 
 public struct PointerLocation: Equatable, Sendable {
@@ -62,6 +66,62 @@ public struct PointerLocation: Equatable, Sendable {
         x = locationX
         y = locationY
     }
+}
+
+public struct PointerDelta: Equatable, Sendable {
+    public let dx: Double
+    public let dy: Double
+
+    public init(dx pointerDX: Double, dy pointerDY: Double) {
+        dx = pointerDX
+        dy = pointerDY
+    }
+}
+
+public struct RelativePointerMotionEvent: Equatable, Sendable {
+    public let time: WaylandTimestampMicroseconds
+    public let delta: PointerDelta
+    public let unacceleratedDelta: PointerDelta
+
+    public init(
+        time eventTime: WaylandTimestampMicroseconds,
+        delta eventDelta: PointerDelta,
+        unacceleratedDelta eventUnacceleratedDelta: PointerDelta
+    ) {
+        time = eventTime
+        delta = eventDelta
+        unacceleratedDelta = eventUnacceleratedDelta
+    }
+}
+
+public enum PointerConstraintKind: Equatable, Hashable, Sendable {
+    case locked
+    case confined
+}
+
+public struct PointerConstraintID: Equatable, Hashable, Sendable, CustomStringConvertible {
+    public let rawValue: UInt64
+    public let kind: PointerConstraintKind
+
+    public init(rawValue constraintRawValue: UInt64, kind constraintKind: PointerConstraintKind) {
+        rawValue = constraintRawValue
+        kind = constraintKind
+    }
+
+    public var description: String {
+        switch kind {
+        case .locked:
+            "locked-pointer-\(rawValue)"
+        case .confined:
+            "confined-pointer-\(rawValue)"
+        }
+    }
+}
+
+public enum PointerConstraintLifecycleEvent: Equatable, Sendable {
+    case activated(PointerConstraintID)
+    case inactivePersistent(PointerConstraintID)
+    case defunctOneShot(PointerConstraintID)
 }
 
 public struct PointerButtonEvent: Equatable, Sendable {

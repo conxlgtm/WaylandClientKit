@@ -118,6 +118,16 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
+[[ -f "$PROTO_DIR/legacy-unstable/relative-pointer/relative-pointer-unstable-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/legacy-unstable/relative-pointer/relative-pointer-unstable-v1.xml"
+    exit 1
+}
+
+[[ -f "$PROTO_DIR/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1.xml"
+    exit 1
+}
+
 rm -rf "$GEN_INC" "$GEN_SRC"
 mkdir -p \
     "$GEN_INC/core" \
@@ -141,6 +151,8 @@ mkdir -p \
     "$GEN_INC/legacy-unstable/primary-selection" \
     "$GEN_INC/legacy-unstable/text-input" \
     "$GEN_INC/legacy-unstable/linux-dmabuf" \
+    "$GEN_INC/legacy-unstable/relative-pointer" \
+    "$GEN_INC/legacy-unstable/pointer-constraints" \
     "$GEN_SRC/core" \
     "$GEN_SRC/stable/xdg-shell" \
     "$GEN_SRC/stable/viewporter" \
@@ -162,6 +174,8 @@ mkdir -p \
     "$GEN_SRC/legacy-unstable/primary-selection" \
     "$GEN_SRC/legacy-unstable/text-input" \
     "$GEN_SRC/legacy-unstable/linux-dmabuf" \
+    "$GEN_SRC/legacy-unstable/relative-pointer" \
+    "$GEN_SRC/legacy-unstable/pointer-constraints" \
     "$OUT_DIR/shims"
 
 normalize_generated_file() {
@@ -356,6 +370,22 @@ wayland-scanner client-header \
 wayland-scanner private-code \
     "$PROTO_DIR/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml" \
     "$GEN_SRC/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/legacy-unstable/relative-pointer/relative-pointer-unstable-v1.xml" \
+    "$GEN_INC/legacy-unstable/relative-pointer/relative-pointer-unstable-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/legacy-unstable/relative-pointer/relative-pointer-unstable-v1.xml" \
+    "$GEN_SRC/legacy-unstable/relative-pointer/relative-pointer-unstable-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1.xml" \
+    "$GEN_INC/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1.xml" \
+    "$GEN_SRC/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1-protocol.c"
 
 while IFS= read -r generated_file; do
     normalize_generated_file "$generated_file"

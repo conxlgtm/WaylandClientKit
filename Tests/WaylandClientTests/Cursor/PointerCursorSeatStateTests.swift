@@ -135,10 +135,14 @@ struct PointerCursorSeatStateTests {
 
         let state = DesiredPointerCursorState(
             cursor: .hidden,
-            resolved: ResolvedPointerCursorImage(cursor: .text, image: image)
+            resolved: ResolvedPointerCursorImage(
+                cursor: .text,
+                size: .default,
+                image: image
+            )
         )
 
-        #expect(state.cursor == .hidden)
+        #expect(state.cursor == PointerCursor.hidden)
         #expect(state.resolvedImage == nil)
     }
 
@@ -156,6 +160,10 @@ struct PointerCursorSeatStateTests {
 
 private final class ReducerCursorSurface: CursorManagerSurface {
     let objectID: RawObjectID? = 0xC00
+
+    func setBufferScale(_: Int32) {
+        // Reducer tests only need object identity.
+    }
 
     func attach(_: CursorImage) {
         // Reducer tests only need object identity.

@@ -66,6 +66,83 @@ struct PointerInputRouterTests {
     }
 
     @Test
+    func relativePointerMotionRoutesToFocusedPointerSurface() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 32)
+        let windowID = WindowID(rawValue: 320)
+        router.register(windowID: windowID, surfaceID: 3_200)
+
+        _ = router.route(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 3_200))
+        let routed = router.route(rawRelativePointerMotion(sequence: 2, seatID: seatID))
+
+        #expect(routed.first?.windowID == windowID)
+        #expect(
+            routed.first?.kind
+                == .pointer(
+                    .relativeMotion(
+                        RelativePointerMotionEvent(
+                            time: WaylandTimestampMicroseconds(rawValue: 4_294_967_298),
+                            delta: PointerDelta(dx: 1.0, dy: -2.0),
+                            unacceleratedDelta: PointerDelta(dx: 0.5, dy: -1.0)
+                        )
+                    )
+                )
+        )
+    }
+
+    @Test
+    func pointerConstraintEventsRouteToConstraintSurface() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 33)
+        let windowID = WindowID(rawValue: 330)
+        let identity = RawPointerConstraintIdentity(
+            objectID: RawObjectID(77),
+            kind: .locked
+        )
+        router.register(windowID: windowID, surfaceID: 3_300)
+
+        let rawEvent = rawPointerConstraintEvent(
+            sequence: 1,
+            seatID: seatID,
+            event: .locked(identity, surfaceID: 3_300)
+        )
+        let accepted = router.acceptRawInputEvent(rawEvent)
+        let id = PointerConstraintID(rawValue: 77, kind: .locked)
+        let routed =
+            accepted.map { acceptedEvent in
+                router.route(acceptedEvent, pointerConstraintLifecycleEvent: .activated(id))
+            } ?? []
+
+        #expect(routed.first?.windowID == windowID)
+        #expect(
+            routed.first?.kind
+                == .pointer(
+                    .constraintLifecycle(.activated(id))
+                )
+        )
+    }
+
+    @Test
+    func pointerConstraintRawEventsWithoutLifecycleTransitionAreNotPublished() {
+        let router = InputRouter()
+        let identity = RawPointerConstraintIdentity(
+            objectID: RawObjectID(78),
+            kind: .locked
+        )
+        router.register(windowID: WindowID(rawValue: 331), surfaceID: 3_301)
+
+        let routed = router.route(
+            rawPointerConstraintEvent(
+                sequence: 1,
+                seatID: RawSeatID(rawValue: 34),
+                event: .unlocked(identity, surfaceID: 3_301)
+            )
+        )
+
+        #expect(routed.isEmpty)
+    }
+
+    @Test
     func unregisterClearsPointerFocusForSurface() {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 15)

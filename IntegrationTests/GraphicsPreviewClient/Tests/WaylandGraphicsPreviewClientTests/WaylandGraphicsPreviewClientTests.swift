@@ -17,11 +17,16 @@ struct WaylandGraphicsPreviewClientTests {
             presentationTime: .available(version: 1),
             fractionalScale: .unavailable,
             cursorShape: .unavailable,
+            xdgActivation: .unavailable,
+            relativePointer: .unavailable,
+            pointerConstraints: .unavailable,
             textInput: .unavailable,
             linuxDmabuf: .unavailable
         )
 
         #expect(clientCapabilities.xdgActivation == .unavailable)
+        #expect(clientCapabilities.relativePointer == .unavailable)
+        #expect(clientCapabilities.pointerConstraints == .unavailable)
 
         let capabilities = WaylandGraphicsSurfaceCapabilities(
             capabilities: clientCapabilities
@@ -162,6 +167,9 @@ private func externalClientSoftwareRuntimePath() -> WaylandGraphicsRuntimePath {
                 presentationTime: .unavailable,
                 fractionalScale: .unavailable,
                 cursorShape: .unavailable,
+                xdgActivation: .unavailable,
+                relativePointer: .unavailable,
+                pointerConstraints: .unavailable,
                 textInput: .unavailable,
                 linuxDmabuf: .unavailable
             )

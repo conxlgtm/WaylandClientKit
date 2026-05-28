@@ -34,6 +34,9 @@ enum ShimSmokeCheck {
         _ = unsafe swl_registry_bind_wp_presentation
         _ = unsafe swl_registry_bind_wp_fractional_scale_manager_v1
         _ = unsafe swl_registry_bind_wp_cursor_shape_manager_v1
+        _ = unsafe swl_registry_bind_xdg_activation_v1
+        _ = unsafe swl_registry_bind_zwp_relative_pointer_manager_v1
+        _ = unsafe swl_registry_bind_zwp_pointer_constraints_v1
         _ = unsafe swl_registry_bind_wp_linux_drm_syncobj_manager_v1
         _ = unsafe swl_registry_bind_wp_fifo_manager_v1
         _ = unsafe swl_registry_bind_wp_commit_timing_manager_v1
@@ -89,8 +92,30 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_fractional_scale_manager_v1_get_fractional_scale
         _ = unsafe swl_wp_cursor_shape_manager_v1_get_pointer
         _ = unsafe swl_wp_cursor_shape_device_v1_set_shape
+        verifyActivationShims()
+        verifyPointerCaptureShims()
         verifySubmitAndMetadataShims()
         verifyTextInputAndDmabufShims()
+    }
+
+    private static func verifyActivationShims() {
+        _ = unsafe swl_xdg_activation_v1_get_activation_token
+        _ = unsafe swl_xdg_activation_v1_activate
+        _ = unsafe swl_xdg_activation_token_v1_set_serial
+        _ = unsafe swl_xdg_activation_token_v1_set_app_id
+        _ = unsafe swl_xdg_activation_token_v1_set_surface
+        _ = unsafe swl_xdg_activation_token_v1_commit
+    }
+
+    private static func verifyPointerCaptureShims() {
+        _ = unsafe swl_zwp_relative_pointer_manager_v1_get_relative_pointer
+        _ = unsafe swl_zwp_pointer_constraints_v1_lock_pointer
+        _ = unsafe swl_zwp_pointer_constraints_v1_confine_pointer
+        _ = unsafe swl_zwp_locked_pointer_v1_set_cursor_position_hint
+        _ = unsafe swl_zwp_locked_pointer_v1_set_region
+        _ = unsafe swl_zwp_confined_pointer_v1_set_region
+        _ = unsafe swl_compositor_create_region
+        _ = unsafe swl_region_add
     }
 
     private static func verifySubmitAndMetadataShims() {
@@ -141,6 +166,7 @@ enum ShimSmokeCheck {
         _ = unsafe swl_zwp_linux_buffer_params_v1_create
     }
 
+    // swiftlint:disable:next function_body_length
     private static func verifyDestroyShims() {
         _ = unsafe swl_registry_destroy
         _ = unsafe swl_callback_destroy
@@ -169,6 +195,14 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_fractional_scale_manager_v1_destroy
         _ = unsafe swl_wp_cursor_shape_device_v1_destroy
         _ = unsafe swl_wp_cursor_shape_manager_v1_destroy
+        _ = unsafe swl_xdg_activation_v1_destroy
+        _ = unsafe swl_xdg_activation_token_v1_destroy
+        _ = unsafe swl_zwp_relative_pointer_manager_v1_destroy
+        _ = unsafe swl_zwp_relative_pointer_v1_destroy
+        _ = unsafe swl_zwp_pointer_constraints_v1_destroy
+        _ = unsafe swl_zwp_locked_pointer_v1_destroy
+        _ = unsafe swl_zwp_confined_pointer_v1_destroy
+        _ = unsafe swl_region_destroy
         _ = unsafe swl_wp_linux_drm_syncobj_surface_v1_destroy
         _ = unsafe swl_wp_linux_drm_syncobj_timeline_v1_destroy
         _ = unsafe swl_wp_linux_drm_syncobj_manager_v1_destroy
@@ -213,6 +247,10 @@ enum ShimSmokeCheck {
         _ = unsafe swl_wp_fractional_scale_v1_add_listener
         _ = unsafe swl_wp_presentation_add_listener
         _ = unsafe swl_wp_presentation_feedback_add_listener
+        _ = unsafe swl_xdg_activation_token_v1_add_listener
+        _ = unsafe swl_zwp_relative_pointer_v1_add_listener
+        _ = unsafe swl_zwp_locked_pointer_v1_add_listener
+        _ = unsafe swl_zwp_confined_pointer_v1_add_listener
         _ = unsafe swl_zwp_linux_dmabuf_feedback_v1_add_listener
         _ = unsafe swl_zwp_linux_buffer_params_v1_add_listener
         _ = unsafe swl_text_input_v3_add_listener
