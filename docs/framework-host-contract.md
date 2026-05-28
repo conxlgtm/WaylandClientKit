@@ -52,6 +52,11 @@ Call `display.close()` only when the framework is deliberately ending the
 session early. Closing finishes event streams and makes later display/window
 operations fail with typed closed-display errors.
 
+Resource stale-handle behavior is summarized in
+[`resource-lifecycle-matrix.md`](resource-lifecycle-matrix.md). Framework code
+should treat stale, expired, foreign, and closed handles as normal lifecycle
+states, not crashes.
+
 A framework should treat the display actor as the Wayland owner. It should not
 try to drive the raw display fd, dispatch queue, or flush/read sequence itself.
 

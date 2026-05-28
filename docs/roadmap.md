@@ -68,6 +68,9 @@ The checkpoint bar is:
   renderer API
 - the strict memory-safety audit covers current fd, proxy, callback, surface,
   GBM, EGL, dmabuf, text-input, cursor, and drag-icon ownership rules
+- resource lifecycle semantics for stale, foreign, closed, destroyed, and late
+  callback cases are tracked in
+  [`resource-lifecycle-matrix.md`](resource-lifecycle-matrix.md)
 
 This checkpoint is not a foundation release candidate. Public raw GPU handles,
 renderer-owned swapchains, color-management image descriptions, and
