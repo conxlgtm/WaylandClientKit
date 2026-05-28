@@ -76,6 +76,14 @@ public struct Window: Sendable, Hashable {
         try await display.requestPresentationFeedback(id)
     }
 
+    public func setInputRegion(_ region: SurfaceRegion?) async throws {
+        try await display.setWindowInputRegion(id, region)
+    }
+
+    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {
+        try await display.setWindowOpaqueRegion(id, region)
+    }
+
     public func requestActivationToken(
         appID: String? = nil,
         serialContext: ActivationSerialContext? = nil,
