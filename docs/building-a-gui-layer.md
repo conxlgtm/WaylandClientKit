@@ -49,6 +49,9 @@ Start software-first:
 
 Keep the render adapter platform-shaped. A useful adapter knows about windows,
 geometry, redraw, and frame submission. It should not know about widgets.
+Use SwiftWayland's concrete public identities as described in
+[`identity-model.md`](identity-model.md); do not invent raw-pointer routing or a
+single framework-wide ID type.
 
 ## Framework-Facing Examples
 

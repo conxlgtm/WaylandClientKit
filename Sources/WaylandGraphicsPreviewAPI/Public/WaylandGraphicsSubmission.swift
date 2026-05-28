@@ -289,6 +289,10 @@ public struct WaylandGraphicsWindowBacking: Sendable {
         }
     }
 
+    public var id: WindowID {
+        window.id
+    }
+
     public func nextFrame() async throws -> WaylandGraphicsFrameLease {
         try await storage.nextFrame()
     }
@@ -304,15 +308,17 @@ public struct WaylandGraphicsWindowBacking: Sendable {
     }
 }
 
+extension WaylandGraphicsWindowBacking: Identifiable {}
+
 public struct WaylandGraphicsFrameLease: Sendable {
     public let size: PositivePixelSize
     public let runtimePath: WaylandGraphicsRuntimePath
 
     private let storage: WaylandGraphicsWindowBackingStorage
-    private let id: UInt64
+    private let id: WaylandGraphicsFrameLeaseID
 
     init(
-        id leaseID: UInt64,
+        id leaseID: WaylandGraphicsFrameLeaseID,
         size frameSize: PositivePixelSize,
         runtimePath frameRuntimePath: WaylandGraphicsRuntimePath,
         storage backingStorage: WaylandGraphicsWindowBackingStorage

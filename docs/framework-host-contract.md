@@ -35,6 +35,10 @@ Start with these public APIs:
 Do not depend on `WaylandRaw`, `WaylandRuntime`, `WaylandGraphicsCore`,
 `WaylandGPUPreview`, package-only symbols, or `@testable` imports.
 
+SwiftWayland's identity taxonomy and raw-value policy are documented in
+[`identity-model.md`](identity-model.md). Frameworks should route with concrete
+public identities, not raw Wayland proxies or generic ID constraints.
+
 For requests that depend on input serials, see
 [`serial-sensitive-interactions.md`](serial-sensitive-interactions.md).
 

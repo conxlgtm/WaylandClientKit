@@ -62,7 +62,7 @@ struct WaylandDisplayPrimarySelectionTests {
             harness.handler.clearRequests
                 == [
                     PrimarySelectionClearRequest(
-                        sourceID: source.id,
+                        sourceID: source.sourceID,
                         seatID: seatID,
                         serial: serial
                     )

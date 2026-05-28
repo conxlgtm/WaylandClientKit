@@ -2,8 +2,9 @@ import WaylandRaw
 
 package final class PointerCaptureManager {
     private let connection: RawDisplayConnection
-    private var nextRelativePointerSubscriptionID: UInt64 = 1
-    private var nextPointerConstraintID: UInt64 = 1
+    private var relativePointerSubscriptionIDs =
+        IDGenerator<RelativePointerSubscriptionID>()
+    private var pointerConstraintIDs = IDGenerator<PointerConstraintID>()
     private var relativePointers:
         [RelativePointerSubscriptionID: (seatID: SeatID, pointer: RawRelativePointer)] = [:]
     private var relativePointerRegistry = RelativePointerSubscriptionRegistry()
@@ -241,8 +242,10 @@ package final class PointerCaptureManager {
     }
 
     private func allocatePointerConstraintID(kind: PointerConstraintKind) -> PointerConstraintID {
-        defer { nextPointerConstraintID += 1 }
-        return PointerConstraintID(rawValue: nextPointerConstraintID, kind: kind)
+        PointerConstraintID(
+            rawValue: pointerConstraintIDs.nextRawValueForCompositeID(),
+            kind: kind
+        )
     }
 
     private func requireSeat(_ seatID: SeatID, globals: BoundGlobals) throws -> RawSeat {
@@ -272,8 +275,7 @@ package final class PointerCaptureManager {
     }
 
     private func allocateRelativePointerSubscriptionID() -> RelativePointerSubscriptionID {
-        defer { nextRelativePointerSubscriptionID += 1 }
-        return RelativePointerSubscriptionID(rawValue: nextRelativePointerSubscriptionID)
+        relativePointerSubscriptionIDs.next()
     }
 
     package static func requirePointerDevice(on seat: RawSeat, seatID: SeatID) throws {
