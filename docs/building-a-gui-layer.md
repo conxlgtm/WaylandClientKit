@@ -107,10 +107,12 @@ Use `Window.show` for the first frame and `Window.redraw` after
 pixels.
 
 `show(damage:_:)` and `redraw(damage:_:)` accept logical
-`SurfaceDamageRegion` values. SwiftWayland maps those rectangles to buffer
-damage for the current scale and viewport path and clips partial overhang to
-the surface bounds. Passing no damage uses full-frame damage. An empty damage
-region is invalid because it would make the commit intent ambiguous.
+`SurfaceDamageRegion` values. SwiftWayland validates damage passed to `show`,
+but the first buffer-backed commit is still sent as full-frame damage because no
+previous buffer contents exist. Later redraws map those rectangles to buffer
+damage for the current scale and viewport path and clip partial overhang to the
+surface bounds. Passing no damage uses full-frame damage. An empty damage region
+is invalid because it would make the commit intent ambiguous.
 
 For framework experiments that want one graphics-facing boundary, use
 `WaylandGraphicsPreview`:

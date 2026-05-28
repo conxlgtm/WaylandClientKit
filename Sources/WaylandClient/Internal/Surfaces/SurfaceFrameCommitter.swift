@@ -12,6 +12,15 @@ package enum SurfaceCommitPayload {
             false
         }
     }
+
+    var committedPayload: SurfaceCommittedPayload {
+        switch self {
+        case .buffer:
+            .buffer
+        case .metadataOnly:
+            .metadataOnly
+        }
+    }
 }
 
 struct SurfaceFrameCommitRequest {
@@ -78,7 +87,14 @@ enum SurfaceFrameCommitter {
     ) throws -> PreparedSurfaceFrameCommit {
         let damageMode: DamageCoordinateMode =
             request.surface.usesBufferDamage ? .buffer : .logical
-        let damage = request.generation == 1 ? nil : request.damage
+        try request.damage?.validate(within: request.geometry)
+        let shouldForceFullDamage =
+            request.payload.attachesBuffer
+            && !runtime.transactionSnapshot.hasCommittedBufferContent
+        let damage =
+            request.payload.attachesBuffer && !shouldForceFullDamage
+            ? request.damage
+            : nil
         let plan = try request.scaleInstallation.commitPlan(
             geometry: request.geometry,
             damageMode: damageMode,
@@ -123,7 +139,8 @@ enum SurfaceFrameCommitter {
         preparedCommit.surface.commit()
         try runtime.prepareCommittedFrame(
             generation: preparedCommit.generation,
-            plan: preparedCommit.plan
+            plan: preparedCommit.plan,
+            payload: preparedCommit.payload.committedPayload
         )
         runtime.markSubmitConstraintsCommitted()
         return preparedCommit.plan

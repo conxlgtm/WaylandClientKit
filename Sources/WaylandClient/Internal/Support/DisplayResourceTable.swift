@@ -2,13 +2,6 @@ package enum DisplayResourceTableError<ID: Hashable & Sendable>: Error, Equatabl
     case duplicateID(ID)
 }
 
-package enum ResourceLookupResult<Resource> {
-    case found(Resource)
-    case unknown
-    case closed
-    case foreign
-}
-
 package struct DisplayResourceTable<ID: Hashable & Sendable, Resource> {
     private var resourcesByID: [ID: Resource]
 
@@ -38,17 +31,6 @@ package struct DisplayResourceTable<ID: Hashable & Sendable, Resource> {
 
     package func get(_ id: ID) -> Resource? {
         resourcesByID[id]
-    }
-
-    package func lookup(_ id: ID, closed: Bool = false) -> ResourceLookupResult<Resource> {
-        if closed {
-            return .closed
-        }
-        guard let resource = resourcesByID[id] else {
-            return .unknown
-        }
-
-        return .found(resource)
     }
 
     package mutating func remove(_ id: ID) -> Resource? {

@@ -41,25 +41,4 @@ struct DisplayResourceTableTests {
         #expect(removed == ["first", "second"])
         #expect(table.isEmpty)
     }
-
-    @Test
-    func lookupVocabularyDistinguishesFoundUnknownAndClosed() throws {
-        var table = DisplayResourceTable<WindowID, String>()
-        let id = WindowID(rawValue: 5)
-
-        try table.insert("window", id: id)
-
-        guard case .found("window") = table.lookup(id) else {
-            Issue.record("expected found lookup result")
-            return
-        }
-        guard case .unknown = table.lookup(WindowID(rawValue: 6)) else {
-            Issue.record("expected unknown lookup result")
-            return
-        }
-        guard case .closed = table.lookup(id, closed: true) else {
-            Issue.record("expected closed lookup result")
-            return
-        }
-    }
 }
