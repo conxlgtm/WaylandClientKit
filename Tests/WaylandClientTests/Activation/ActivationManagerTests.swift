@@ -59,9 +59,7 @@ struct ActivationManagerTests {
         let token = try await WaylandDisplay.waitForActivationToken(
             pending,
             timeoutMilliseconds: 0
-        ) {
-            // Already completed requests return before timeout cancellation runs.
-        }
+        )
 
         #expect(token == ActivationToken(unchecked: "ready-token"))
     }
@@ -74,9 +72,7 @@ struct ActivationManagerTests {
             _ = try await WaylandDisplay.waitForActivationToken(
                 pending,
                 timeoutMilliseconds: 0
-            ) {
-                pending.complete(.failure(.tokenRequestTimedOut))
-            }
+            )
         }
 
         #expect(error == .tokenRequestTimedOut)
@@ -100,9 +96,7 @@ struct ActivationManagerTests {
             _ = try await WaylandDisplay.waitForActivationToken(
                 pending,
                 timeoutMilliseconds: 1
-            ) {
-                pending.complete(.failure(.tokenRequestTimedOut))
-            }
+            )
         }
 
         #expect(error == .tokenRequestTimedOut)
@@ -176,9 +170,7 @@ struct ActivationManagerTests {
             try await WaylandDisplay.waitForActivationToken(
                 pending,
                 timeoutMilliseconds: -1
-            ) {
-                Issue.record("timeout should not run for cancellation test")
-            }
+            )
         }
 
         task.cancel()

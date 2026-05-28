@@ -18,12 +18,7 @@ extension WaylandDisplay {
             return try await Self.waitForActivationToken(
                 pending,
                 timeoutMilliseconds: timeoutMilliseconds
-            ) { [self] in
-                await cancelActivationTokenRequest(
-                    pending.id,
-                    error: .tokenRequestTimedOut
-                )
-            }
+            )
         } catch let error as ActivationError {
             cancelActivationTokenRequest(pending.id, error: error)
             throw error
@@ -68,8 +63,7 @@ extension WaylandDisplay {
 
     package static func waitForActivationToken(
         _ pending: PendingActivationTokenRequest,
-        timeoutMilliseconds: Int32,
-        onTimeout: @Sendable @escaping () async -> Void
+        timeoutMilliseconds: Int32
     ) async throws -> ActivationToken {
         try await withTaskCancellationHandler {
             if let result = pending.completedResult() {
@@ -77,8 +71,7 @@ extension WaylandDisplay {
             }
 
             guard timeoutMilliseconds != 0 else {
-                await onTimeout()
-                throw ActivationError.tokenRequestTimedOut
+                return try completeActivationTokenTimeout(pending)
             }
 
             return try await withThrowingTaskGroup(of: ActivationToken.self) { group in
@@ -89,8 +82,7 @@ extension WaylandDisplay {
                 if timeoutMilliseconds >= 0 {
                     group.addTask {
                         try await Task.sleep(for: .milliseconds(Int(timeoutMilliseconds)))
-                        await onTimeout()
-                        throw ActivationError.tokenRequestTimedOut
+                        return try completeActivationTokenTimeout(pending)
                     }
                 }
 
@@ -105,5 +97,23 @@ extension WaylandDisplay {
         } onCancel: {
             pending.complete(.failure(.cancelled))
         }
+    }
+
+    private static func completeActivationTokenTimeout(
+        _ pending: PendingActivationTokenRequest
+    ) throws -> ActivationToken {
+        if let result = pending.completedResult() {
+            return try result.get()
+        }
+
+        guard pending.complete(.failure(.tokenRequestTimedOut)) else {
+            guard let result = pending.completedResult() else {
+                throw ActivationError.tokenRequestTimedOut
+            }
+
+            return try result.get()
+        }
+
+        throw ActivationError.tokenRequestTimedOut
     }
 }
