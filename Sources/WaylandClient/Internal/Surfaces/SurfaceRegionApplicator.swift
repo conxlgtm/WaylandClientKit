@@ -33,7 +33,21 @@ package enum SurfaceRegionApplicator {
         compositor: RawCompositor,
         setRegion: (RawRegion?) -> Void
     ) throws {
-        let rawRegion = try makeRawRegion(region, compositor: compositor)
+        try apply(
+            region,
+            createRegion: {
+                try compositor.createRegion()
+            },
+            setRegion: setRegion
+        )
+    }
+
+    package static func apply(
+        _ region: SurfaceRegion?,
+        createRegion: () throws -> RawRegion,
+        setRegion: (RawRegion?) -> Void
+    ) throws {
+        let rawRegion = try makeRawRegion(region, createRegion: createRegion)
         defer { rawRegion?.destroy() }
 
         setRegion(rawRegion)
