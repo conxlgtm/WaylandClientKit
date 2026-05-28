@@ -64,11 +64,12 @@ timeout/error behavior. It should not own prompt UI or autosave policy.
 
 ## Relationship To Activation
 
-`xdg_activation_v1` is the first desktop-integration groundwork in this branch.
-It is capability-reported through `WaylandCapabilities.xdgActivation` and has a
-live smoke that prints availability. Activation tokens and session restore
-tokens should stay separate types even if an app framework uses both during app
-launch and focus transfer.
+`xdg_activation_v1` is the first desktop-integration API. It is
+capability-reported through `WaylandCapabilities.xdgActivation`, has public
+opaque `ActivationToken` request and activate calls, and has a live smoke that
+prints capability, token, and activate-request behavior. Activation tokens and
+session restore tokens should stay separate types even if an app framework uses
+both during app launch and focus transfer.
 
 ## Compatibility Risk
 

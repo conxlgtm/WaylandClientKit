@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import WaylandRaw
 
 @safe
@@ -204,6 +206,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     private func installEventCallbacks(for window: TopLevelWindow) {
         let windowID = window.id
+        let surfaceID = window.surfaceID
         window.onCloseRequested = { [weak core = self] in
             core?.handleWindowCloseRequested(windowID)
         }
@@ -214,8 +217,9 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             core?.publishWindowRedrawRequested(windowID)
         }
         window.onOutputMembershipChanged = { [weak core = self] outputs in
-            core?.publishWindowOutputsChanged(
+            core?.handleWindowOutputsChanged(
                 windowID: windowID,
+                surfaceID: surfaceID,
                 outputs: outputs
             )
         }
@@ -228,6 +232,23 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     private func publishWindowRedrawRequested(_ windowID: WindowID) {
         guard surfaceGraphAcceptsLifecycleCallback() else { return }
         eventHub.publish(.redrawRequested(windowID))
+    }
+
+    private func handleWindowOutputsChanged(
+        windowID: WindowID,
+        surfaceID: RawObjectID,
+        outputs: [OutputID]
+    ) {
+        guard surfaceGraphAcceptsLifecycleCallback() else { return }
+        do {
+            try activeSession?.updateCursorOutputScalesOnOwnerThread(
+                surfaceID: surfaceID,
+                outputIDs: outputs
+            )
+        } catch {
+            markSurfaceStoreInvariantFailed(error)
+        }
+        publishWindowOutputsChanged(windowID: windowID, outputs: outputs)
     }
 
     private func publishWindowOutputsChanged(

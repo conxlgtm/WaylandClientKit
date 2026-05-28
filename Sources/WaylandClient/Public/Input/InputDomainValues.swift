@@ -34,6 +34,24 @@ public struct WaylandTimestampMilliseconds: RawRepresentable, Equatable, Hashabl
     }
 }
 
+public struct WaylandTimestampMicroseconds: RawRepresentable, Equatable, Hashable,
+    Sendable, CustomStringConvertible, ExpressibleByIntegerLiteral
+{
+    public let rawValue: UInt64
+
+    public init(rawValue timestampRawValue: UInt64) {
+        rawValue = timestampRawValue
+    }
+
+    public init(integerLiteral value: UInt64) {
+        rawValue = value
+    }
+
+    public var description: String {
+        String(rawValue)
+    }
+}
+
 public struct PointerButtonCode: RawRepresentable, Equatable, Hashable, Sendable,
     CustomStringConvertible, ExpressibleByIntegerLiteral
 {

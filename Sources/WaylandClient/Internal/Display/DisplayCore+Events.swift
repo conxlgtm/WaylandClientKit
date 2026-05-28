@@ -29,6 +29,7 @@ extension DisplayCore {
         // focus then precedes text-input transactions, and data-transfer effects
         // publish last because they may be triggered by the same input pump.
         let outputEvents = activeSession.drainOutputEventsOnOwnerThread()
+        updateCursorScalesIfOutputsChanged(outputEvents, activeSession: activeSession)
         publishOutputEvents(outputEvents)
         publishWindowOutputMembershipEvents(after: outputEvents)
         publishInputEvents(activeSession.drainInputEventsOnOwnerThread())
@@ -36,6 +37,19 @@ extension DisplayCore {
         let dataTransfer = activeSession.drainDataTransferEventsAndDiagnosticsOnOwnerThread()
         publishDataTransferDiagnostics(dataTransfer.diagnostics)
         publishDataTransferEvents(dataTransfer.events)
+    }
+
+    private func updateCursorScalesIfOutputsChanged(
+        _ outputEvents: [DisplayEvent],
+        activeSession: DisplaySession
+    ) {
+        guard outputEvents.contains(where: isOutputChange) else { return }
+
+        do {
+            try activeSession.updateAvailableCursorOutputScalesOnOwnerThread()
+        } catch {
+            markSurfaceStoreInvariantFailed(error)
+        }
     }
 
     private func publishWindowOutputMembershipEvents(after outputEvents: [DisplayEvent]) {
@@ -46,5 +60,22 @@ extension DisplayCore {
                 surfaces.window(windowID)?.removeOutputMembershipOnOwnerThread(outputID)
             }
         }
+    }
+}
+
+private func isOutputChange(_ event: DisplayEvent) -> Bool {
+    switch event {
+    case .outputChanged, .outputRemoved:
+        true
+    case .input,
+        .diagnostic,
+        .windowCloseRequested,
+        .windowClosed,
+        .popupDismissed,
+        .popupClosed,
+        .redrawRequested,
+        .popupRedrawRequested,
+        .windowOutputsChanged:
+        false
     }
 }

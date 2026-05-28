@@ -53,18 +53,24 @@ extension CursorManager {
             return try applyAutomaticShapeCursor(to: seatID, serial: explicitSerial, shape: shape)
         }
 
-        let resolved = try automaticResolvedCursor()
+        let cursorResolution = try automaticCursorResolution(for: seatID)
+        let resolved = try automaticResolvedCursor(size: cursorResolution.size)
         let surface = try automaticCursorSurface(for: seatID)
 
-        surface.attach(resolved.image)
-        surface.commit()
+        attachCursorImage(resolved.image, to: surface, bufferScale: cursorResolution.bufferScale)
 
         let rawResult = backend.setPointerCursor(
             seatID: seatID,
             serial: explicitSerial,
             surface: surface,
-            hotspotX: resolved.image.hotspotX,
-            hotspotY: resolved.image.hotspotY
+            hotspotX: cursorHotspot(
+                resolved.image.hotspotX,
+                bufferScale: cursorResolution.bufferScale
+            ),
+            hotspotY: cursorHotspot(
+                resolved.image.hotspotY,
+                bufferScale: cursorResolution.bufferScale
+            )
         )
 
         switch rawResult {
@@ -126,9 +132,19 @@ extension CursorManager {
         }
     }
 
-    private func automaticResolvedCursor() throws -> ResolvedPointerCursorImage {
+    private func automaticCursorResolution(for seatID: RawSeatID) throws
+        -> CursorScaleResolution
+    {
         do {
-            return try cachedResolvedDesiredCursor()
+            return try cursorResolution(for: seatID)
+        } catch {
+            throw AutomaticPointerEnterFailure.cursorImageResolution(String(describing: error))
+        }
+    }
+
+    private func automaticResolvedCursor(size: CursorSize) throws -> ResolvedPointerCursorImage {
+        do {
+            return try cachedResolvedDesiredCursor(size: size)
         } catch CursorError.missingCursor(let name) {
             throw CursorError.missingCursor(name)
         } catch {

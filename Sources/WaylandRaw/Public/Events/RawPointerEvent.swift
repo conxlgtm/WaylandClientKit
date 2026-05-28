@@ -4,6 +4,8 @@ package enum RawPointerEvent: Equatable, Sendable {
     case motion(RawPointerMotion)
     case button(RawPointerButton)
     case axis(RawPointerAxisEvent)
+    case relativeMotion(RawRelativePointerMotion)
+    case constraint(RawPointerConstraintEvent)
 }
 
 package struct RawPointerEnter: Equatable, Sendable {
@@ -43,6 +45,52 @@ package struct RawPointerMotion: Equatable, Sendable {
         x = eventX
         y = eventY
     }
+}
+
+package struct RawRelativePointerMotion: Equatable, Sendable {
+    package let timestampMicroseconds: UInt64
+    package let dx: WaylandFixed
+    package let dy: WaylandFixed
+    package let dxUnaccelerated: WaylandFixed
+    package let dyUnaccelerated: WaylandFixed
+
+    package init(
+        timestampMicroseconds eventTimestampMicroseconds: UInt64,
+        dx eventDX: WaylandFixed,
+        dy eventDY: WaylandFixed,
+        dxUnaccelerated eventDXUnaccelerated: WaylandFixed,
+        dyUnaccelerated eventDYUnaccelerated: WaylandFixed
+    ) {
+        timestampMicroseconds = eventTimestampMicroseconds
+        dx = eventDX
+        dy = eventDY
+        dxUnaccelerated = eventDXUnaccelerated
+        dyUnaccelerated = eventDYUnaccelerated
+    }
+}
+
+package enum RawPointerConstraintKind: Equatable, Sendable {
+    case locked
+    case confined
+}
+
+package struct RawPointerConstraintIdentity: Equatable, Hashable, Sendable {
+    package let objectID: RawObjectID
+    package let kind: RawPointerConstraintKind
+
+    package init(
+        objectID constraintObjectID: RawObjectID, kind constraintKind: RawPointerConstraintKind
+    ) {
+        objectID = constraintObjectID
+        kind = constraintKind
+    }
+}
+
+package enum RawPointerConstraintEvent: Equatable, Sendable {
+    case locked(RawPointerConstraintIdentity, surfaceID: RawObjectID)
+    case unlocked(RawPointerConstraintIdentity, surfaceID: RawObjectID)
+    case confined(RawPointerConstraintIdentity, surfaceID: RawObjectID)
+    case unconfined(RawPointerConstraintIdentity, surfaceID: RawObjectID)
 }
 
 package struct RawPointerButton: Equatable, Sendable {

@@ -1,0 +1,119 @@
+extension WaylandDisplay {
+    // swiftlint:disable:next identifier_name
+    public static let defaultActivationTokenTimeoutMilliseconds: Int32 = 1_000
+
+    public func requestActivationToken(
+        _ request: ActivationTokenRequest = .init(),
+        timeoutMilliseconds: Int32 = defaultActivationTokenTimeoutMilliseconds
+    ) async throws -> ActivationToken {
+        if let window = request.window, !window.isOwned(by: self) {
+            throw ActivationError.foreignWindow(window.id)
+        }
+
+        let pending = try activationCore().beginActivationTokenRequest(
+            ActivationTokenRequestPlan(request)
+        )
+
+        do {
+            return try await Self.waitForActivationToken(
+                pending,
+                timeoutMilliseconds: timeoutMilliseconds
+            )
+        } catch let error as ActivationError {
+            cancelActivationTokenRequest(pending.id, error: error)
+            throw error
+        } catch is CancellationError {
+            cancelActivationTokenRequest(pending.id, error: .cancelled)
+            throw ActivationError.cancelled
+        } catch {
+            cancelActivationTokenRequest(pending.id, error: .displayClosed)
+            throw error
+        }
+    }
+
+    public func activate(window: Window, token: ActivationToken) throws {
+        guard window.isOwned(by: self) else {
+            throw ActivationError.foreignWindow(window.id)
+        }
+
+        try activationCore().activateWindow(window.id, token: token)
+    }
+
+    private func activationCore() throws -> DisplayCore {
+        do {
+            return try requireCore()
+        } catch ClientError.display(.closed) {
+            throw ActivationError.displayClosed
+        }
+    }
+
+    private func cancelActivationTokenRequest(
+        _ requestID: ActivationRequestID,
+        error: ActivationError
+    ) {
+        let core: DisplayCore
+        do {
+            core = try requireCore()
+        } catch {
+            return
+        }
+
+        core.cancelActivationTokenRequest(requestID, error: error)
+    }
+
+    package static func waitForActivationToken(
+        _ pending: PendingActivationTokenRequest,
+        timeoutMilliseconds: Int32
+    ) async throws -> ActivationToken {
+        try await withTaskCancellationHandler {
+            if let result = pending.completedResult() {
+                return try result.get()
+            }
+
+            guard timeoutMilliseconds != 0 else {
+                return try completeActivationTokenTimeout(pending)
+            }
+
+            return try await withThrowingTaskGroup(of: ActivationToken.self) { group in
+                group.addTask {
+                    try await pending.value()
+                }
+
+                if timeoutMilliseconds >= 0 {
+                    group.addTask {
+                        try await Task.sleep(for: .milliseconds(Int(timeoutMilliseconds)))
+                        return try completeActivationTokenTimeout(pending)
+                    }
+                }
+
+                guard let token = try await group.next() else {
+                    pending.complete(.failure(.displayClosed))
+                    throw ActivationError.displayClosed
+                }
+
+                group.cancelAll()
+                return token
+            }
+        } onCancel: {
+            pending.complete(.failure(.cancelled))
+        }
+    }
+
+    private static func completeActivationTokenTimeout(
+        _ pending: PendingActivationTokenRequest
+    ) throws -> ActivationToken {
+        if let result = pending.completedResult() {
+            return try result.get()
+        }
+
+        guard pending.complete(.failure(.tokenRequestTimedOut)) else {
+            guard let result = pending.completedResult() else {
+                throw ActivationError.tokenRequestTimedOut
+            }
+
+            return try result.get()
+        }
+
+        throw ActivationError.tokenRequestTimedOut
+    }
+}

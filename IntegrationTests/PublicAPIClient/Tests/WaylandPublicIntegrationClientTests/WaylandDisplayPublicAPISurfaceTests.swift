@@ -58,6 +58,9 @@ struct WaylandDisplayPublicAPISurfaceTests {
             presentationTime: .unavailable,
             fractionalScale: .unavailable,
             cursorShape: .available(version: 1),
+            xdgActivation: .unavailable,
+            relativePointer: .available(version: 1),
+            pointerConstraints: .available(version: 1),
             textInput: .unavailable,
             linuxDmabuf: .available(version: 5)
         )
@@ -72,6 +75,8 @@ struct WaylandDisplayPublicAPISurfaceTests {
         #expect(capabilities.presentationTime == .unavailable)
         #expect(capabilities.cursorShape == .available(version: 1))
         #expect(capabilities.xdgActivation == .unavailable)
+        #expect(capabilities.relativePointer == .available(version: 1))
+        #expect(capabilities.pointerConstraints == .available(version: 1))
         #expect(capabilities.textInput == .unavailable)
         #expect(capabilities.linuxDmabuf == .available(version: 5))
 

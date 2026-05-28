@@ -9,6 +9,8 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     package let connection: RawDisplayConnection
     private let inputCoordinator: SessionInputCoordinator
     package let dataTransferGlobalProvider: any DataTransferGlobalProviding
+    package let activationManager: ActivationManager
+    package let pointerCaptureManager: PointerCaptureManager
     package let dataTransferManager: DataTransferManager
     package let primarySelectionController: PrimarySelectionController
     package let textInputManager: TextInputManager
@@ -47,6 +49,8 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         connection = rawConnection
         self.inputCoordinator = inputCoordinator
         dataTransferGlobalProvider = rawConnection
+        activationManager = ActivationManager(connection: rawConnection)
+        pointerCaptureManager = PointerCaptureManager(connection: rawConnection)
         dataTransferManager = DataTransferManager(
             connection: rawConnection,
             eventQueue: dataTransferEventQueue
@@ -77,6 +81,8 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         primarySelectionController.shutdown()
         dataTransferManager.shutdown()
         textInputManager.shutdown()
+        activationManager.shutdown()
+        pointerCaptureManager.shutdown()
         dataTransferSourceWriter.shutdown()
     }
 
@@ -246,6 +252,8 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         "wp_fractional_scale_manager_v1",
         "wp_cursor_shape_manager_v1",
         "xdg_activation_v1",
+        "zwp_relative_pointer_manager_v1",
+        "zwp_pointer_constraints_v1",
         "zwp_text_input_manager_v3",
         "zwp_linux_dmabuf_v1",
     ]
@@ -307,6 +315,29 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         return try inputCoordinator.setPointerCursor(cursor)
     }
 
+    package func updateCursorOutputScalesOnOwnerThread(
+        surfaceID: RawObjectID,
+        outputIDs: [OutputID]
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        guard let outputRegistry = connection.boundGlobals?.outputRegistry else { return }
+
+        try inputCoordinator.updateCursorOutputScales(
+            surfaceID: surfaceID,
+            focusedOutputs: outputScales(for: outputIDs, outputRegistry: outputRegistry),
+            availableOutputs: outputRegistry.snapshots.map(CursorOutputScale.init)
+        )
+    }
+
+    package func updateAvailableCursorOutputScalesOnOwnerThread() throws {
+        connection.preconditionIsOwnerThread()
+        guard let outputRegistry = connection.boundGlobals?.outputRegistry else { return }
+
+        try inputCoordinator.updateAvailableCursorOutputScales(
+            availableOutputs: outputRegistry.snapshots.map(CursorOutputScale.init)
+        )
+    }
+
     package func drainInputEventsOnOwnerThread() -> [InputEvent] {
         connection.preconditionIsOwnerThread()
         processPendingSessionInputEvents()
@@ -351,7 +382,8 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         let surfaceID = window.surfaceID
 
         inputCoordinator.registerWindow(windowID: windowID, surfaceID: surfaceID)
-        window.onClose = { [inputCoordinator] in
+        window.onClose = { [inputCoordinator, pointerCaptureManager] in
+            pointerCaptureManager.removeSurface(surfaceID)
             inputCoordinator.unregisterSurface(surfaceID)
         }
 
@@ -376,10 +408,31 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     }
 
     private func processPendingSessionInputEvents() {
+        let rawEvents = connection.drainInputEvents()
+
         inputCoordinator.processPendingSessionInputEvents(
-            from: connection.drainInputEvents()
-        ) { [textInputManager] seatID in
-            textInputManager.removeSeat(seatID)
+            from: rawEvents,
+            pointerConstraintLifecycleEvent: { [pointerCaptureManager] event in
+                pointerCaptureManager.processRawInputEvent(event)
+            },
+            onSeatRemoved: { [textInputManager, pointerCaptureManager] seatID in
+                textInputManager.removeSeat(seatID)
+                pointerCaptureManager.removeSeat(seatID)
+            },
+            onPointerCapabilityLost: { [pointerCaptureManager] seatID in
+                pointerCaptureManager.removePointerCapability(seatID)
+            }
+        )
+    }
+
+    private func outputScales(
+        for outputIDs: [OutputID],
+        outputRegistry: OutputRegistry
+    ) -> [CursorOutputScale] {
+        outputIDs.compactMap { outputID in
+            outputRegistry.output(for: RawOutputID(outputID))
+                .map(\.snapshot)
+                .map(CursorOutputScale.init)
         }
     }
 }
@@ -403,7 +456,12 @@ extension DisplaySession {
             parentSurfaceID: parentWindow.surfaceID,
             surfaceID: popupSurfaceID
         )
-        popup.onClose = { [inputCoordinator] in
+        try updateCursorOutputScalesOnOwnerThread(
+            surfaceID: popupSurfaceID,
+            outputIDs: parentWindow.currentOutputIDsOnOwnerThread()
+        )
+        popup.onClose = { [inputCoordinator, pointerCaptureManager] in
+            pointerCaptureManager.removeSurface(popupSurfaceID)
             inputCoordinator.unregisterSurface(popupSurfaceID)
         }
 

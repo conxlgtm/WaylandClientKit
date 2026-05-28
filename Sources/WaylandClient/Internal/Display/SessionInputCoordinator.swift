@@ -2,6 +2,8 @@ import WaylandCursor
 import WaylandKeyboard
 import WaylandRaw
 
+typealias PointerConstraintLifecycleResolver = (RawInputEvent) -> PointerConstraintLifecycleEvent?
+
 final class SessionInputCoordinator {
     private let inputRouter: InputRouter
     private let keyboardInterpreter: KeyboardInterpreter
@@ -57,6 +59,24 @@ final class SessionInputCoordinator {
         cursorManager.unregister(surfaceID: surfaceID)
     }
 
+    func updateCursorOutputScales(
+        surfaceID: RawObjectID,
+        focusedOutputs: [CursorOutputScale],
+        availableOutputs: [CursorOutputScale]
+    ) throws {
+        try cursorManager.updateOutputScales(
+            for: surfaceID,
+            focusedOutputs: focusedOutputs,
+            availableOutputs: availableOutputs
+        )
+    }
+
+    func updateAvailableCursorOutputScales(
+        availableOutputs: [CursorOutputScale]
+    ) throws {
+        try cursorManager.updateAvailableOutputScales(availableOutputs)
+    }
+
     func shutdown() {
         cursorManager.shutdown()
     }
@@ -67,7 +87,9 @@ final class SessionInputCoordinator {
 
     func processPendingSessionInputEvents(
         from rawEvents: [RawInputEvent],
-        onSeatRemoved: (SeatID) -> Void
+        pointerConstraintLifecycleEvent: PointerConstraintLifecycleResolver = { _ in nil },
+        onSeatRemoved: (SeatID) -> Void,
+        onPointerCapabilityLost: (SeatID) -> Void
     ) {
         guard !pendingInputState.hasFailed else { return }
 
@@ -75,12 +97,19 @@ final class SessionInputCoordinator {
             from: rawEvents,
             inputRouter: inputRouter,
             keyboardInterpreter: keyboardInterpreter,
-            rawInputObserver: cursorManager
+            rawInputObserver: cursorManager,
+            pointerConstraintLifecycleEvent: pointerConstraintLifecycleEvent
         )
 
         for inputEvent in routedEvents {
-            guard case .seat(.removed) = inputEvent.kind else { continue }
-            onSeatRemoved(inputEvent.seatID)
+            switch inputEvent.kind {
+            case .seat(.removed):
+                onSeatRemoved(inputEvent.seatID)
+            case .seat(.changed(let snapshot)) where !snapshot.activeCapabilities.hasPointer:
+                onPointerCapabilityLost(inputEvent.seatID)
+            default:
+                continue
+            }
         }
 
         appendPendingInputEvents(routedEvents)
@@ -208,13 +237,21 @@ func routeSessionInputEvents(
     from rawEvents: [RawInputEvent],
     inputRouter: InputRouter,
     keyboardInterpreter: KeyboardInterpreter,
-    rawInputObserver: RawInputEventObserving? = nil
+    rawInputObserver: RawInputEventObserving? = nil,
+    pointerConstraintLifecycleEvent: PointerConstraintLifecycleResolver = { _ in nil }
 ) -> [InputEvent] {
     var inputEvents: [InputEvent] = []
     for rawEvent in rawEvents {
         if let acceptedEvent = inputRouter.acceptRawInputEvent(rawEvent) {
             inputEvents.append(contentsOf: rawInputObserver?.observe(acceptedEvent.raw) ?? [])
-            inputEvents.append(contentsOf: inputRouter.route(acceptedEvent))
+            inputEvents.append(
+                contentsOf: inputRouter.route(
+                    acceptedEvent,
+                    pointerConstraintLifecycleEvent: pointerConstraintLifecycleEvent(
+                        acceptedEvent.raw
+                    )
+                )
+            )
 
             for interpretedEvent in keyboardInterpreter.consume(acceptedEvent.raw) {
                 inputEvents.append(contentsOf: inputRouter.route(interpretedEvent))

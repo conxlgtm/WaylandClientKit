@@ -8,6 +8,11 @@ package struct CursorOutputScale: Equatable, Sendable {
         outputID = cursorOutputID
         scale = cursorOutputScale
     }
+
+    package init(_ snapshot: RawOutputSnapshot) {
+        outputID = OutputID(snapshot.id)
+        scale = PositiveInt32(unchecked: snapshot.scale)
+    }
 }
 
 package struct CursorScaleContext: Equatable, Sendable {
@@ -32,36 +37,58 @@ package struct CursorScaleContext: Equatable, Sendable {
     }
 }
 
+package struct CursorScaleResolution: Equatable, Sendable {
+    package let size: CursorSize
+    package let bufferScale: PositiveInt32
+
+    package init(size cursorSize: CursorSize, bufferScale cursorBufferScale: PositiveInt32) {
+        size = cursorSize
+        bufferScale = cursorBufferScale
+    }
+}
+
 package enum CursorScalePolicy: Equatable, Sendable {
-    case fixed(CursorSize)
+    case fixed
     case matchFocusedSurface
     case maximumOutputScale
 
-    package func cursorSize(
+    package func cursorResolution(
         in context: CursorScaleContext
-    ) throws(CursorScalePolicyError) -> CursorSize {
+    ) throws(CursorScalePolicyError) -> CursorScaleResolution {
         switch self {
-        case .fixed(let size):
-            size
+        case .fixed:
+            CursorScaleResolution(
+                size: context.baseSize,
+                bufferScale: PositiveInt32(unchecked: 1)
+            )
         case .matchFocusedSurface:
-            try scaledSize(
+            try scaledResolution(
                 baseSize: context.baseSize,
                 outputs: context.focusedOutputs
             )
         case .maximumOutputScale:
-            try scaledSize(
+            try scaledResolution(
                 baseSize: context.baseSize,
                 outputs: context.availableOutputs
             )
         }
     }
 
-    private func scaledSize(
+    package func cursorSize(
+        in context: CursorScaleContext
+    ) throws(CursorScalePolicyError) -> CursorSize {
+        try cursorResolution(in: context).size
+    }
+
+    private func scaledResolution(
         baseSize: CursorSize,
         outputs: [CursorOutputScale]
-    ) throws(CursorScalePolicyError) -> CursorSize {
+    ) throws(CursorScalePolicyError) -> CursorScaleResolution {
         guard let maximumScale = outputs.map(\.scale.rawValue).max() else {
-            return baseSize
+            return CursorScaleResolution(
+                size: baseSize,
+                bufferScale: PositiveInt32(unchecked: 1)
+            )
         }
 
         let scaledValue = Int64(baseSize.rawValue) * Int64(maximumScale)
@@ -72,7 +99,10 @@ package enum CursorScalePolicy: Equatable, Sendable {
             )
         }
 
-        return CursorSize(unchecked: Int32(scaledValue))
+        return CursorScaleResolution(
+            size: CursorSize(unchecked: Int32(scaledValue)),
+            bufferScale: PositiveInt32(unchecked: maximumScale)
+        )
     }
 }
 

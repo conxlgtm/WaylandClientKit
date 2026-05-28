@@ -23,6 +23,15 @@ package enum PointerFocusState: Equatable, Sendable {
         }
     }
 
+    var surfaceID: RawObjectID? {
+        switch self {
+        case .unfocused:
+            nil
+        case .focused(let surfaceID, _, _):
+            surfaceID
+        }
+    }
+
     var isFocused: Bool {
         enterSerial != nil
     }

@@ -59,3 +59,14 @@ extension PointerAxisRelativeDirection {
         self.init(rawValue: raw.rawValue)
     }
 }
+
+extension PointerConstraintKind {
+    package init(_ raw: RawPointerConstraintKind) {
+        switch raw {
+        case .locked:
+            self = .locked
+        case .confined:
+            self = .confined
+        }
+    }
+}

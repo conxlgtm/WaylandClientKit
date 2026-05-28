@@ -51,43 +51,75 @@ extension RawDisplayConnection {
                                                             try bindXDGActivationIfPresent(
                                                                 registry: reg
                                                             )
-                                                        return OptionalGlobals(
-                                                            xdgDecorationManager:
-                                                                decorationManager,
-                                                            xdgOutputManager:
-                                                                xdgOutputManager,
-                                                            viewporter: viewporter,
-                                                            presentation: presentation,
-                                                            fractionalScaleManager:
-                                                                fractionalScaleManager,
-                                                            cursorShapeManager:
-                                                                cursorShapeManager,
-                                                            xdgActivation: xdgActivation,
-                                                            linuxDrmSyncobjManager:
-                                                                submitGlobals
-                                                                .linuxDrmSyncobjManager,
-                                                            fifoManager: submitGlobals.fifoManager,
-                                                            commitTimingManager:
-                                                                submitGlobals.commitTimingManager,
-                                                            contentTypeManager:
-                                                                metadataGlobals.contentTypeManager,
-                                                            alphaModifierManager:
-                                                                metadataGlobals
-                                                                .alphaModifierManager,
-                                                            tearingControlManager:
-                                                                metadataGlobals
-                                                                .tearingControlManager,
-                                                            colorRepresentationManager:
-                                                                metadataGlobals
-                                                                .colorRepresentationManager,
-                                                            colorManager:
-                                                                metadataGlobals.colorManager,
-                                                            dataDeviceManager: dataDeviceManager,
-                                                            primarySelectionDeviceManager:
-                                                                primarySelectionDeviceManager,
-                                                            textInputManager: textInputManager,
-                                                            linuxDmabuf: linuxDmabuf
-                                                        )
+                                                        do {
+                                                            let relativePointerManager =
+                                                                try
+                                                                bindRelativePointerManagerIfPresent(
+                                                                    registry: reg
+                                                                )
+                                                            do {
+                                                                let pointerConstraints =
+                                                                    try
+                                                                    bindPointerConstraintsIfPresent(
+                                                                        registry: reg
+                                                                    )
+                                                                // swiftlint:disable line_length
+                                                                return OptionalGlobals(
+                                                                    xdgDecorationManager:
+                                                                        decorationManager,
+                                                                    xdgOutputManager:
+                                                                        xdgOutputManager,
+                                                                    viewporter: viewporter,
+                                                                    presentation: presentation,
+                                                                    fractionalScaleManager:
+                                                                        fractionalScaleManager,
+                                                                    cursorShapeManager:
+                                                                        cursorShapeManager,
+                                                                    xdgActivation: xdgActivation,
+                                                                    relativePointerManager:
+                                                                        relativePointerManager,
+                                                                    pointerConstraints:
+                                                                        pointerConstraints,
+                                                                    linuxDrmSyncobjManager:
+                                                                        submitGlobals
+                                                                        .linuxDrmSyncobjManager,
+                                                                    fifoManager:
+                                                                        submitGlobals.fifoManager,
+                                                                    commitTimingManager:
+                                                                        submitGlobals
+                                                                        .commitTimingManager,
+                                                                    contentTypeManager:
+                                                                        metadataGlobals
+                                                                        .contentTypeManager,
+                                                                    alphaModifierManager:
+                                                                        metadataGlobals
+                                                                        .alphaModifierManager,
+                                                                    tearingControlManager:
+                                                                        metadataGlobals
+                                                                        .tearingControlManager,
+                                                                    colorRepresentationManager:
+                                                                        metadataGlobals
+                                                                        .colorRepresentationManager,
+                                                                    colorManager:
+                                                                        metadataGlobals
+                                                                        .colorManager,
+                                                                    dataDeviceManager:
+                                                                        dataDeviceManager,
+                                                                    primarySelectionDeviceManager:
+                                                                        primarySelectionDeviceManager,
+                                                                    textInputManager:
+                                                                        textInputManager,
+                                                                    linuxDmabuf: linuxDmabuf
+                                                                )
+                                                                // swiftlint:enable line_length
+                                                            } catch {
+                                                                relativePointerManager.destroy()
+                                                                throw error
+                                                            }
+                                                        } catch {
+                                                            xdgActivation.destroy()
+                                                            throw error
+                                                        }
                                                     } catch {
                                                         metadataGlobals.destroy()
                                                         throw error
@@ -400,6 +432,66 @@ extension RawDisplayConnection {
             proxyAdoption: proxyAdoption
         )
         return .bound(wrappedActivation)
+    }
+
+    @safe
+    private func bindRelativePointerManagerIfPresent(
+        registry reg: OpaquePointer
+    ) throws -> OptionalRelativePointerManager {
+        guard let global = optionalGlobal(named: "zwp_relative_pointer_manager_v1") else {
+            return .missing
+        }
+
+        let version = global.negotiatedVersion(
+            supportedByClient: SupportedVersions.zwpRelativePointerManagerV1
+        )
+
+        guard
+            let manager = unsafe swl_registry_bind_zwp_relative_pointer_manager_v1(
+                reg,
+                global.name,
+                version.value
+            )
+        else {
+            throw RuntimeError.bindFailed("zwp_relative_pointer_manager_v1")
+        }
+
+        let wrappedManager = try RawRelativePointerManager(
+            pointer: manager,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
+        return .bound(wrappedManager)
+    }
+
+    @safe
+    private func bindPointerConstraintsIfPresent(
+        registry reg: OpaquePointer
+    ) throws -> OptionalPointerConstraints {
+        guard let global = optionalGlobal(named: "zwp_pointer_constraints_v1") else {
+            return .missing
+        }
+
+        let version = global.negotiatedVersion(
+            supportedByClient: SupportedVersions.zwpPointerConstraintsV1
+        )
+
+        guard
+            let constraints = unsafe swl_registry_bind_zwp_pointer_constraints_v1(
+                reg,
+                global.name,
+                version.value
+            )
+        else {
+            throw RuntimeError.bindFailed("zwp_pointer_constraints_v1")
+        }
+
+        let wrappedConstraints = try RawPointerConstraints(
+            pointer: constraints,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
+        return .bound(wrappedConstraints)
     }
 
     @safe

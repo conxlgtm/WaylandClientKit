@@ -60,9 +60,21 @@ extension DisplayCore {
         parentWindowID: WindowID
     ) {
         let callbacks = popupEventCallbacks(popupID: popup.id, parentWindowID: parentWindowID)
+        let popupSurfaceID = popup.surfaceID
         popup.onDismissed = callbacks.onDismissed
         popup.onClosed = callbacks.onClosed
         popup.onRedrawRequested = callbacks.onRedrawRequested
+        popup.onOutputMembershipChanged = { [weak core = self] outputs in
+            guard let core, core.surfaceGraphAcceptsLifecycleCallback() else { return }
+            do {
+                try core.activeSession?.updateCursorOutputScalesOnOwnerThread(
+                    surfaceID: popupSurfaceID,
+                    outputIDs: outputs
+                )
+            } catch {
+                core.markSurfaceStoreInvariantFailed(error)
+            }
+        }
     }
 
     func showPopup(

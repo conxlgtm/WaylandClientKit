@@ -86,6 +86,26 @@ The framework owns gesture recognition, MIME selection, drag icon policy, and
 source cancellation. SwiftWayland exposes the serial-sensitive request and the
 typed drag-source lifecycle events.
 
+## XDG Activation
+
+Activation token requests can include the same seat and serial context when they
+are triggered by user input:
+
+```swift
+let token = try await window.requestActivationToken(
+    appID: "org.example.App",
+    serialContext: ActivationSerialContext(
+        seatID: event.seatID,
+        serial: button.serial
+    )
+)
+try await window.activate(using: token)
+```
+
+The token is opaque and compositor policy may still decline or ignore the later
+activate request. SwiftWayland preserves the serial, surface, and app ID facts;
+the framework owns launch, command routing, and user-facing focus policy.
+
 ## Multi-Window Routing
 
 In a multi-window host, route surface-targeted pointer presses by public identity
