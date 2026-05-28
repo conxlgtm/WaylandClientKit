@@ -184,11 +184,13 @@ package enum SurfaceScaleInstallation {
 
     package func commitPlan(
         geometry: SurfaceGeometry,
-        damageMode: DamageCoordinateMode
-    ) -> SurfaceCommitPlan {
-        state.commitPlan(
+        damageMode: DamageCoordinateMode,
+        damage: SurfaceDamageRegion? = nil
+    ) throws -> SurfaceCommitPlan {
+        try state.commitPlan(
             geometry: geometry,
-            damageMode: damageMode
+            damageMode: damageMode,
+            damage: damage
         )
     }
 

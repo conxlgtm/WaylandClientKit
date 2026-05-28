@@ -22,6 +22,7 @@ struct SurfaceFrameCommitRequest {
     let submitConstraints: SurfaceSubmitConstraints
     let metadata: SurfaceCommitMetadata
     let payload: SurfaceCommitPayload
+    let damage: SurfaceDamageRegion?
 
     init(
         surface commitSurface: RawSurface,
@@ -30,7 +31,8 @@ struct SurfaceFrameCommitRequest {
         geometry commitGeometry: SurfaceGeometry,
         payload commitPayload: SurfaceCommitPayload,
         submitConstraints commitSubmitConstraints: SurfaceSubmitConstraints = .default,
-        metadata commitMetadata: SurfaceCommitMetadata = .default
+        metadata commitMetadata: SurfaceCommitMetadata = .default,
+        damage commitDamage: SurfaceDamageRegion? = nil
     ) {
         surface = commitSurface
         scaleInstallation = commitScaleInstallation
@@ -39,6 +41,7 @@ struct SurfaceFrameCommitRequest {
         payload = commitPayload
         submitConstraints = commitSubmitConstraints
         metadata = commitMetadata
+        damage = commitDamage
     }
 }
 
@@ -75,9 +78,10 @@ enum SurfaceFrameCommitter {
     ) throws -> PreparedSurfaceFrameCommit {
         let damageMode: DamageCoordinateMode =
             request.surface.usesBufferDamage ? .buffer : .logical
-        let plan = request.scaleInstallation.commitPlan(
+        let plan = try request.scaleInstallation.commitPlan(
             geometry: request.geometry,
-            damageMode: damageMode
+            damageMode: damageMode,
+            damage: request.damage
         )
 
         try runtime.validateCommittedFrameCandidate(generation: request.generation)
@@ -126,10 +130,24 @@ enum SurfaceFrameCommitter {
 
     private static func apply(_ damage: SurfaceDamageExtent, to surface: RawSurface) {
         switch damage {
-        case .buffer(let width, let height):
-            surface.damageFullBuffer(width: width, height: height)
-        case .logical(let width, let height):
-            surface.damageFullLogical(width: width, height: height)
+        case .buffer(let rectangles):
+            for rectangle in rectangles {
+                surface.damageBuffer(
+                    x: rectangle.x,
+                    y: rectangle.y,
+                    width: rectangle.width,
+                    height: rectangle.height
+                )
+            }
+        case .logical(let rectangles):
+            for rectangle in rectangles {
+                surface.damageLogical(
+                    x: rectangle.origin.x,
+                    y: rectangle.origin.y,
+                    width: rectangle.size.width.rawValue,
+                    height: rectangle.size.height.rawValue
+                )
+            }
         }
     }
 }

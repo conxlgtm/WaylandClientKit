@@ -156,7 +156,7 @@ struct SurfaceGeometryTests {
 
         #expect(try scaleState.updatePreferredBufferScale(2, logicalSize: logicalSize))
         let geometry = try scaleState.geometry(logicalSize: logicalSize)
-        let plan = scaleState.commitPlan(
+        let plan = try scaleState.commitPlan(
             geometry: geometry,
             damageMode: .buffer
         )
@@ -167,7 +167,10 @@ struct SurfaceGeometryTests {
         #expect(plan.viewportMode == .omitDestination)
         #expect(plan.viewportDestination == nil)
         #expect(plan.damageMode == .buffer)
-        #expect(plan.damage == .buffer(width: 160, height: 120))
+        #expect(
+            plan.damage
+                == .buffer([BufferDamageRectangle(x: 0, y: 0, width: 160, height: 120)])
+        )
     }
 
     @Test
@@ -177,7 +180,7 @@ struct SurfaceGeometryTests {
 
         #expect(try scaleState.updatePreferredFractionalScale(180, logicalSize: logicalSize))
         let geometry = try scaleState.geometry(logicalSize: logicalSize)
-        let plan = scaleState.commitPlan(
+        let plan = try scaleState.commitPlan(
             geometry: geometry,
             damageMode: .buffer
         )
@@ -188,7 +191,10 @@ struct SurfaceGeometryTests {
         #expect(plan.viewportMode == .useLogicalSizeAsDestination)
         #expect(plan.viewportDestination == logicalSize)
         #expect(plan.damageMode == .buffer)
-        #expect(plan.damage == .buffer(width: 152, height: 77))
+        #expect(
+            plan.damage
+                == .buffer([BufferDamageRectangle(x: 0, y: 0, width: 152, height: 77)])
+        )
     }
 
     @Test
@@ -198,7 +204,7 @@ struct SurfaceGeometryTests {
             logicalSize: logicalSize,
             scale: SurfaceScale(numerator: 2, denominator: 1)
         )
-        let plan = SurfaceCommitPlan(
+        let plan = try SurfaceCommitPlan(
             geometry: geometry,
             bufferScale: 2,
             viewportMode: .omitDestination,
@@ -207,7 +213,59 @@ struct SurfaceGeometryTests {
 
         #expect(plan.geometry == geometry)
         #expect(plan.damageMode == .logical)
-        #expect(plan.damage == .logical(width: 80, height: 60))
+        #expect(
+            plan.damage
+                == .logical([
+                    LogicalRect(origin: .zero, size: logicalSize)
+                ])
+        )
+    }
+
+    @Test
+    func explicitDamageMapsLogicalRectanglesToBufferRectangles() throws {
+        let logicalSize = try PositiveLogicalSize(width: 100, height: 50)
+        let geometry = try SurfaceGeometry(
+            logicalSize: logicalSize,
+            scale: SurfaceScale(numerator: 3, denominator: 2)
+        )
+        let damage = try SurfaceDamageRegion([
+            LogicalRect(
+                origin: LogicalOffset(x: 1, y: 2),
+                size: try PositiveLogicalSize(width: 10, height: 6)
+            )
+        ])
+        let plan = try SurfaceCommitPlan(
+            geometry: geometry,
+            bufferScale: 1,
+            viewportMode: .useLogicalSizeAsDestination,
+            damageMode: .buffer,
+            damage: damage
+        )
+
+        #expect(
+            plan.damage
+                == .buffer([BufferDamageRectangle(x: 1, y: 3, width: 16, height: 9)])
+        )
+    }
+
+    @Test
+    func explicitDamageOutsideSurfaceBoundsIsRejected() throws {
+        let geometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 80, height: 60),
+            scale: .one
+        )
+        let damageRect = try LogicalRect(x: 70, y: 0, width: 11, height: 10)
+        let damage = try SurfaceDamageRegion([damageRect])
+
+        #expect(throws: SurfaceRegionError.damageRectangleOutOfBounds(damageRect)) {
+            try SurfaceCommitPlan(
+                geometry: geometry,
+                bufferScale: 1,
+                viewportMode: .omitDestination,
+                damageMode: .buffer,
+                damage: damage
+            )
+        }
     }
 
     @Test

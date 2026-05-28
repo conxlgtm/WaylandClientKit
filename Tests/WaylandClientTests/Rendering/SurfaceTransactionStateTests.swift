@@ -210,7 +210,7 @@ struct SurfaceTransactionStateTests {
             logicalSize: PositiveLogicalSize(width: 80, height: 60),
             scale: .one
         )
-        return SurfaceCommitPlan(
+        return try SurfaceCommitPlan(
             geometry: geometry,
             bufferScale: 1,
             viewportMode: .omitDestination,
