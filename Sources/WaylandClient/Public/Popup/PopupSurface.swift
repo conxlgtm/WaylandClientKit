@@ -39,6 +39,14 @@ public struct PopupSurface: Sendable, Hashable, Identifiable {
         try await display.requestPopupRedraw(popupID)
     }
 
+    public func setInputRegion(_ region: SurfaceRegion?) async throws {
+        try await display.setPopupInputRegion(popupID, region)
+    }
+
+    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {
+        try await display.setPopupOpaqueRegion(popupID, region)
+    }
+
     public func close() async {
         await display.closePopup(popupID)
     }

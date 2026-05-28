@@ -98,6 +98,24 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
     }
 
+    func setWindowInputRegion(_ windowID: WindowID, _ region: SurfaceRegion?) throws {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID).setInputRegionOnOwnerThread(region)
+            guard !isClosed else {
+                throw ClientError.display(.closed)
+            }
+        }
+    }
+
+    func setWindowOpaqueRegion(_ windowID: WindowID, _ region: SurfaceRegion?) throws {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID).setOpaqueRegionOnOwnerThread(region)
+            guard !isClosed else {
+                throw ClientError.display(.closed)
+            }
+        }
+    }
+
     func windowIsClosed(_ windowID: WindowID) throws -> Bool {
         try withFatalFailureFinalization {
             try requireOpenWindow(windowID).isClosedOnOwnerThread

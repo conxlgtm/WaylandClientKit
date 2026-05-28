@@ -241,6 +241,20 @@ package final class PopupRoleSurface {
         try markNeedsRedraw(bufferAvailability: try redrawBufferAvailability())
     }
 
+    package func setInputRegionOnOwnerThread(_ region: SurfaceRegion?) throws {
+        connection.preconditionIsOwnerThread()
+        try applySurfaceRegion(region) { surface, rawRegion in
+            surface.setInputRegion(rawRegion)
+        }
+    }
+
+    package func setOpaqueRegionOnOwnerThread(_ region: SurfaceRegion?) throws {
+        connection.preconditionIsOwnerThread()
+        try applySurfaceRegion(region) { surface, rawRegion in
+            surface.setOpaqueRegion(rawRegion)
+        }
+    }
+
     package func closeOnOwnerThread() {
         connection.preconditionIsOwnerThread()
         close()
@@ -268,6 +282,24 @@ extension PopupRoleSurface {
 
     package var surface: RawSurface {
         liveRoleResources.surface
+    }
+
+    private func applySurfaceRegion(
+        _ region: SurfaceRegion?,
+        setRegion: (RawSurface, RawRegion?) -> Void
+    ) throws {
+        guard !model.isClosed else { return }
+        guard let globals = connection.boundGlobals else {
+            throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
+        }
+
+        try SurfaceRegionApplicator.apply(
+            region,
+            compositor: globals.compositor
+        ) { rawRegion in
+            setRegion(surface, rawRegion)
+        }
+        surface.commit()
     }
 
     package var xdgSurface: RawXDGSurface {

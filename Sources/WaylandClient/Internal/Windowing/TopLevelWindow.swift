@@ -395,6 +395,24 @@ package final class TopLevelWindow {
         )
     }
 
+    private func applySurfaceRegion(
+        _ region: SurfaceRegion?,
+        setRegion: (RawSurface, RawRegion?) -> Void
+    ) throws {
+        guard !model.isClosed else { return }
+        guard let globals = connection.boundGlobals else {
+            throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
+        }
+
+        try SurfaceRegionApplicator.apply(
+            region,
+            compositor: globals.compositor
+        ) { rawRegion in
+            setRegion(surface, rawRegion)
+        }
+        surface.commit()
+    }
+
     private func performSoftwarePresent(
         _ request: PresentationRequest,
         metadata: SurfaceCommitMetadata,
@@ -1449,6 +1467,20 @@ extension TopLevelWindow {
             presentationFeedback: presentationFeedback,
             draw
         )
+    }
+
+    package func setInputRegionOnOwnerThread(_ region: SurfaceRegion?) throws {
+        connection.preconditionIsOwnerThread()
+        try applySurfaceRegion(region) { surface, rawRegion in
+            surface.setInputRegion(rawRegion)
+        }
+    }
+
+    package func setOpaqueRegionOnOwnerThread(_ region: SurfaceRegion?) throws {
+        connection.preconditionIsOwnerThread()
+        try applySurfaceRegion(region) { surface, rawRegion in
+            surface.setOpaqueRegion(rawRegion)
+        }
     }
 
     package func redrawOnOwnerThread(
