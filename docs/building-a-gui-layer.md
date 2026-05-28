@@ -10,6 +10,7 @@ still owns the user-interface model.
 - `WaylandDisplay.withConnection` for connection lifetime and shutdown
 - typed windows, popups, output snapshots, geometry, scale, and state snapshots
 - software frame presentation through `Window.show` and `Window.redraw`
+- logical input regions, opaque regions, and damage-aware software redraws
 - redraw requests and `needsRedraw`
 - display, input, text-input, data-transfer, presentation, and diagnostic streams
 - pointer, keyboard, touch, text-input, clipboard, drag-and-drop, and cursor facts
@@ -44,8 +45,9 @@ Start software-first:
    `InputEvent.popup`.
 5. Convert framework invalidations into `Window.requestRedraw()`.
 6. On `DisplayEvent.redrawRequested`, produce a frame from your retained tree.
-7. Draw into `SoftwareFrame` or submit through `WaylandGraphicsPreview`.
-8. Close windows and cancel event tasks when `windowClosed` arrives.
+7. Convert dirty rectangles into `SurfaceDamageRegion` when partial redraw is useful.
+8. Draw into `SoftwareFrame` or submit through `WaylandGraphicsPreview`.
+9. Close windows and cancel event tasks when `windowClosed` arrives.
 
 Keep the render adapter platform-shaped. A useful adapter knows about windows,
 geometry, redraw, and frame submission. It should not know about widgets.
@@ -76,6 +78,10 @@ Use these examples as references before adding framework policy:
   source cancellation.
 - `PresentationFeedbackAnimation`: redraw-driven animation and optional
   presentation feedback.
+- `SurfaceRegionSmoke`: input and opaque region behavior with compositor
+  defaults reset.
+- `DamageRegionSmoke`: small animated logical damage regions mapped by
+  SwiftWayland before commit.
 - `FrameworkHostSmoke`: the smallest app-host loop that imports only public
   SwiftWayland products.
 - `GPUPreviewSmokeClient`: preview graphics capability and software-submission
@@ -99,6 +105,12 @@ Use `Window.show` for the first frame and `Window.redraw` after
 `redrawRequested`. `SoftwareFrame.width` and `height` are buffer-pixel values.
 `SoftwareFrame.geometry` maps between logical surface coordinates and buffer
 pixels.
+
+`show(damage:_:)` and `redraw(damage:_:)` accept logical
+`SurfaceDamageRegion` values. SwiftWayland maps those rectangles to buffer
+damage for the current scale and viewport path and clips partial overhang to
+the surface bounds. Passing no damage uses full-frame damage. An empty damage
+region is invalid because it would make the commit intent ambiguous.
 
 For framework experiments that want one graphics-facing boundary, use
 `WaylandGraphicsPreview`:
@@ -180,8 +192,6 @@ framework's widget layer. Keep data transfer at the app-host boundary.
 ## Known Gaps
 
 - Public managed GPU submission is not implemented.
-- Partial damage is represented in `WaylandGraphicsDamageRegion`, but managed
-  preview submission currently reports unsupported partial damage.
 - Color-management image descriptions remain internal.
 - Public cursor animation and custom software cursor image APIs are not available.
 - Output-management APIs are out of scope.

@@ -16,9 +16,9 @@ checkpoint. Do not expose raw GPU handles and do not promote the preview product
 to stable API. The compositor matrix still needs broader graphics-preview rows
 before public managed GPU submission is worth shaping.
 
-Near-term work should improve examples and matrix evidence around frame results,
-fallback reasons, presentation feedback, and damage validation. Public GBM, EGL,
-DRM, dmabuf, or syncobj handles remain out of scope.
+Near-term work should improve matrix evidence around frame results, fallback
+reasons, presentation feedback, and compositor behavior under partial damage.
+Public GBM, EGL, DRM, dmabuf, or syncobj handles remain out of scope.
 
 `GPUPreviewSmokeClient` is the live evidence tool for this product. Its output
 uses one line per runtime-path fact so a compositor run can be pasted into
@@ -109,11 +109,12 @@ presentation hint values plus `WaylandGraphicsDamageRegion`. Content type and
 presentation hint map to the package-internal surface commit metadata when the
 compositor advertises the relevant protocols. Public color-management image
 descriptions remain internal. Full-frame damage is the default. Partial damage
-is represented for future renderer use, but the current managed preview path
-reports `WaylandGraphicsError.unsupportedDamage` after validating that the
-region is inside the logical geometry. Unsupported frame metadata is validated
-before the lease is consumed, so callers can cancel or retry the active lease
-deterministically.
+is converted to `SurfaceDamageRegion` for managed software submissions and then
+mapped from logical surface coordinates to the active buffer damage coordinates.
+Partial overhang is clipped to the surface bounds; damage with no intersection
+is rejected as `WaylandGraphicsError.invalidDamageRegion`. Unsupported frame
+metadata is validated before the lease is consumed, so callers can cancel or
+retry the active lease deterministically.
 
 ## External Compile Contract
 

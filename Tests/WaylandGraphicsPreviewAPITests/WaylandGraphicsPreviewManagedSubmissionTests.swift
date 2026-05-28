@@ -124,7 +124,7 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
     @Test
     func outOfBoundsDamageIsRejectedBeforeUnsupportedPartialDamage() throws {
         let damage = WaylandGraphicsDamageRegion(
-            rects: [try LogicalRect(x: 90, y: 0, width: 20, height: 10)]
+            rects: [try LogicalRect(x: 101, y: 0, width: 20, height: 10)]
         )
         let metadata = WaylandGraphicsFrameMetadata(damage: damage)
 

@@ -49,26 +49,46 @@ package struct BufferDamageRectangle: Equatable, Sendable {
 
 extension SurfaceDamageRegion {
     package func validate(within geometry: SurfaceGeometry) throws {
+        _ = try clippedRectangles(within: geometry)
+    }
+
+    package func clippedRectangles(within geometry: SurfaceGeometry) throws -> [LogicalRect] {
         let width = Int64(geometry.logicalSize.width.rawValue)
         let height = Int64(geometry.logicalSize.height.rawValue)
+        var clippedRectangles: [LogicalRect] = []
 
         for rectangle in rectangles {
             let x = Int64(rectangle.origin.x)
             let y = Int64(rectangle.origin.y)
             let rectWidth = Int64(rectangle.size.width.rawValue)
             let rectHeight = Int64(rectangle.size.height.rawValue)
-            guard x >= 0, y >= 0, x + rectWidth <= width, y + rectHeight <= height else {
+            let clippedX = max(x, 0)
+            let clippedY = max(y, 0)
+            let clippedRight = min(x + rectWidth, width)
+            let clippedBottom = min(y + rectHeight, height)
+
+            guard clippedX < clippedRight, clippedY < clippedBottom else {
                 throw SurfaceRegionError.damageRectangleOutOfBounds(rectangle)
             }
+
+            clippedRectangles.append(
+                LogicalRect(
+                    origin: LogicalOffset(x: Int32(clippedX), y: Int32(clippedY)),
+                    size: try PositiveLogicalSize(
+                        width: Int32(clippedRight - clippedX),
+                        height: Int32(clippedBottom - clippedY)
+                    )
+                )
+            )
         }
+
+        return clippedRectangles
     }
 
     package func bufferRectangles(for geometry: SurfaceGeometry) throws
         -> [BufferDamageRectangle]
     {
-        try validate(within: geometry)
-
-        return rectangles.map { rectangle in
+        try clippedRectangles(within: geometry).map { rectangle in
             let x = Self.floorScaledCoordinate(
                 Int64(rectangle.origin.x),
                 logicalDimension: Int64(geometry.logicalSize.width.rawValue),

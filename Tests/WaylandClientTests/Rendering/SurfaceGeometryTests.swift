@@ -249,12 +249,55 @@ struct SurfaceGeometryTests {
     }
 
     @Test
-    func explicitDamageOutsideSurfaceBoundsIsRejected() throws {
+    func explicitDamagePartiallyOutsideSurfaceBoundsIsClipped() throws {
         let geometry = try SurfaceGeometry(
             logicalSize: PositiveLogicalSize(width: 80, height: 60),
             scale: .one
         )
         let damageRect = try LogicalRect(x: 70, y: 0, width: 11, height: 10)
+        let damage = try SurfaceDamageRegion([damageRect])
+        let plan = try SurfaceCommitPlan(
+            geometry: geometry,
+            bufferScale: 1,
+            viewportMode: .omitDestination,
+            damageMode: .buffer,
+            damage: damage
+        )
+
+        #expect(plan.damage == .buffer([BufferDamageRectangle(x: 70, y: 0, width: 10, height: 10)]))
+    }
+
+    @Test
+    func explicitLogicalDamagePartiallyOutsideSurfaceBoundsIsClipped() throws {
+        let geometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 80, height: 60),
+            scale: .one
+        )
+        let damageRect = try LogicalRect(x: -5, y: 55, width: 20, height: 10)
+        let damage = try SurfaceDamageRegion([damageRect])
+        let plan = try SurfaceCommitPlan(
+            geometry: geometry,
+            bufferScale: 1,
+            viewportMode: .omitDestination,
+            damageMode: .logical,
+            damage: damage
+        )
+
+        #expect(
+            plan.damage
+                == .logical([
+                    try LogicalRect(x: 0, y: 55, width: 15, height: 5)
+                ])
+        )
+    }
+
+    @Test
+    func explicitDamageOutsideSurfaceBoundsIsRejected() throws {
+        let geometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 80, height: 60),
+            scale: .one
+        )
+        let damageRect = try LogicalRect(x: 81, y: 0, width: 1, height: 10)
         let damage = try SurfaceDamageRegion([damageRect])
 
         #expect(throws: SurfaceRegionError.damageRectangleOutOfBounds(damageRect)) {

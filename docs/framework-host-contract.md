@@ -18,6 +18,8 @@ Start with these public APIs:
 - `WaylandDisplay.events`, `inputEvents`, `textInputEvents`, and `dataTransferEvents`
 - `WaylandDisplay.createTopLevelWindow(configuration:)`
 - `Window.show`, `redraw`, `requestRedraw`, `needsRedraw`, `geometry`, and `stateSnapshot`
+- `Window.setInputRegion(_:)`, `setOpaqueRegion(_:)`, and
+  `SurfaceDamageRegion` for surface input, opacity, and redraw damage facts
 - `Window.presentationEvents` and `requestPresentationFeedback()`
 - `Window.createPopup(configuration:)`
 - `ActivationToken`, `ActivationTokenRequest`, and
@@ -74,6 +76,12 @@ should use `requestRedraw()` when state changes and wait for
 Use `needsRedraw` as a guard when coalescing invalidations. Use `geometry` and
 `stateSnapshot` after configure/redraw events to update layout inputs. Geometry
 is reported as logical size, buffer-pixel size, and rational scale.
+
+Input and opaque regions are surface facts, not framework hit testing.
+`setInputRegion(_:)` tells the compositor which logical surface rectangles
+should receive input; `nil` resets the compositor default. `setOpaqueRegion(_:)`
+marks fully opaque logical rectangles as a compositor optimization. Frameworks
+still own widget hit testing, clipping, and dirty-region calculation.
 
 ## Event Stream Ownership
 
@@ -155,6 +163,13 @@ Keep scene state, layout, widget invalidation, and renderer command generation
 outside SwiftWayland. `Examples/FrameworkHostSmoke` includes an example-only
 adapter. It is not public API yet because a real framework should prove the
 shared shape first.
+
+When a framework already has dirty rectangles, pass them as logical
+`SurfaceDamageRegion` values to `show(damage:_:)` or `redraw(damage:_:)`.
+SwiftWayland maps logical damage to buffer damage using the current surface
+geometry and clips partial overhang to the surface bounds. No damage argument
+means full-frame damage. Damage remains a performance hint; it is not a retained
+UI invalidation system.
 
 ## Minimal Software Host Sketch
 

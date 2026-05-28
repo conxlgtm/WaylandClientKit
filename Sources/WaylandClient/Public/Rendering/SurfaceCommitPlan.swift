@@ -40,8 +40,7 @@ package enum DamageCoordinateMode: Equatable, Sendable {
             ])
         case .logical:
             if let damage {
-                try damage.validate(within: geometry)
-                return .logical(damage.rectangles)
+                return try .logical(damage.clippedRectangles(within: geometry))
             }
             return .logical([
                 LogicalRect(

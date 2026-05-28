@@ -35,6 +35,8 @@ targets. They are not public `WaylandClient` API.
 - ``SoftwareFrame``
 - ``SurfaceGeometry``
 - ``SurfaceScale``
+- ``SurfaceRegion``
+- ``SurfaceDamageRegion``
 - ``PositivePixelSize``
 
 ### Input
