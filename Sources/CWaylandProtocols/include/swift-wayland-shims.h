@@ -193,6 +193,10 @@ void swl_surface_damage_buffer(
 // for older wl_surface versions
 void swl_surface_damage(struct wl_surface *surface, int32_t xd, int32_t y, int32_t width, int32_t height);
 void swl_surface_set_buffer_scale(struct wl_surface *surface, int32_t scale);
+void swl_surface_set_opaque_region(
+    struct wl_surface *surface, struct wl_region *region);
+void swl_surface_set_input_region(
+    struct wl_surface *surface, struct wl_region *region);
 
 uint32_t swl_shm_format_xrgb8888(void);
 uint32_t swl_shm_format_argb8888(void);
@@ -348,6 +352,12 @@ void swl_zwp_confined_pointer_v1_destroy(
 
 struct wl_region *swl_compositor_create_region(struct wl_compositor *compositor);
 void swl_region_add(
+    struct wl_region *region,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height);
+void swl_region_subtract(
     struct wl_region *region,
     int32_t x,
     int32_t y,
@@ -1574,6 +1584,8 @@ enum swl_test_core_request_kind {
     SWL_TEST_CORE_SURFACE_DESTROY = 8,
     SWL_TEST_CORE_SHM_POOL_DESTROY = 9,
     SWL_TEST_CORE_SHM_DESTROY = 10,
+    SWL_TEST_CORE_SURFACE_SET_OPAQUE_REGION = 11,
+    SWL_TEST_CORE_SURFACE_SET_INPUT_REGION = 12,
 };
 
 enum swl_test_metadata_request_kind {
@@ -1617,6 +1629,7 @@ struct swl_test_core_request_record {
     enum swl_test_core_request_kind kind;
     void                           *object;
     struct wl_buffer               *buffer;
+    struct wl_region               *region;
     int32_t                         fd;
     int32_t                         size;
     int32_t                         offset;
@@ -1633,6 +1646,8 @@ struct swl_test_core_request_record {
     uint32_t                        buffer_destroy_sequence;
     uint32_t                        surface_destroy_sequence;
     uint32_t                        shm_pool_destroy_sequence;
+    uint32_t                        opaque_region_sequence;
+    uint32_t                        input_region_sequence;
 };
 
 struct swl_test_metadata_request_record {
@@ -1993,6 +2008,7 @@ enum swl_test_pointer_capture_request_kind {
     SWL_TEST_POINTER_CAPTURE_LOCK_SET_REGION = 5,
     SWL_TEST_POINTER_CAPTURE_CONFINE_SET_REGION = 6,
     SWL_TEST_POINTER_CAPTURE_REGION_ADD = 7,
+    SWL_TEST_POINTER_CAPTURE_REGION_SUBTRACT = 8,
 };
 
 struct swl_test_pointer_capture_request_record {

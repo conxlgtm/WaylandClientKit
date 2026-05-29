@@ -9,6 +9,7 @@ extension WaylandDisplay {
             timeoutMilliseconds: timeoutMilliseconds,
             metadata: .default,
             requestPresentationFeedback: false,
+            damage: nil,
             draw
         )
     }
@@ -18,6 +19,7 @@ extension WaylandDisplay {
         timeoutMilliseconds: Int32,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
+        damage: SurfaceDamageRegion? = nil,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try requireCore().showWindow(
@@ -25,6 +27,7 @@ extension WaylandDisplay {
             timeoutMilliseconds: timeoutMilliseconds,
             metadata: metadata,
             requestPresentationFeedback: requestPresentationFeedback,
+            damage: damage,
             draw
         )
     }
@@ -37,6 +40,7 @@ extension WaylandDisplay {
             windowID,
             metadata: .default,
             requestPresentationFeedback: false,
+            damage: nil,
             draw
         )
     }
@@ -45,12 +49,14 @@ extension WaylandDisplay {
         _ windowID: WindowID,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
+        damage: SurfaceDamageRegion? = nil,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try requireCore().redraw(
             windowID,
             metadata: metadata,
             requestPresentationFeedback: requestPresentationFeedback,
+            damage: damage,
             draw
         )
     }

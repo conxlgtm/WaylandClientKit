@@ -107,6 +107,16 @@ static void swl_region_add_default(
     wl_region_add(region, x, y, width, height);
 }
 
+static void swl_region_subtract_default(
+    struct wl_region *region,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height)
+{
+    wl_region_subtract(region, x, y, width, height);
+}
+
 static void swl_region_destroy_default(struct wl_region *region)
 {
     wl_region_destroy(region);
@@ -168,6 +178,13 @@ static void (*swl_region_add_impl)(
     int32_t width,
     int32_t height) =
         swl_region_add_default;
+static void (*swl_region_subtract_impl)(
+    struct wl_region *region,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height) =
+        swl_region_subtract_default;
 static void (*swl_region_destroy_impl)(struct wl_region *region) =
     swl_region_destroy_default;
 
@@ -273,6 +290,21 @@ static void swl_test_region_add_record(
     swl_test_pointer_capture_request_latest.height = height;
 }
 
+static void swl_test_region_subtract_record(
+    struct wl_region *region,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height)
+{
+    swl_test_record_pointer_capture_request(
+        SWL_TEST_POINTER_CAPTURE_REGION_SUBTRACT, region);
+    swl_test_pointer_capture_request_latest.x = x;
+    swl_test_pointer_capture_request_latest.y = y;
+    swl_test_pointer_capture_request_latest.width = width;
+    swl_test_pointer_capture_request_latest.height = height;
+}
+
 static void swl_test_record_pointer_capture_destroy(
     enum swl_test_pointer_capture_destroy_kind kind,
     void *object)
@@ -341,6 +373,7 @@ static void swl_test_region_destroy_record(struct wl_region *region)
 #define swl_confined_pointer_destroy_impl zwp_confined_pointer_v1_destroy
 #define swl_compositor_create_region_impl wl_compositor_create_region
 #define swl_region_add_impl wl_region_add
+#define swl_region_subtract_impl wl_region_subtract
 #define swl_region_destroy_impl wl_region_destroy
 #endif
 
@@ -444,6 +477,16 @@ void swl_region_add(
     swl_region_add_impl(region, x, y, width, height);
 }
 
+void swl_region_subtract(
+    struct wl_region *region,
+    int32_t x,
+    int32_t y,
+    int32_t width,
+    int32_t height)
+{
+    swl_region_subtract_impl(region, x, y, width, height);
+}
+
 void swl_region_destroy(struct wl_region *region)
 {
     swl_region_destroy_impl(region);
@@ -475,6 +518,7 @@ void swl_test_pointer_capture_request_recording_begin(void)
     swl_confined_pointer_destroy_impl = swl_test_confined_pointer_destroy_record;
     swl_compositor_create_region_impl = swl_test_compositor_create_region_record;
     swl_region_add_impl = swl_test_region_add_record;
+    swl_region_subtract_impl = swl_test_region_subtract_record;
     swl_region_destroy_impl = swl_test_region_destroy_record;
 }
 
@@ -497,6 +541,7 @@ void swl_test_pointer_capture_request_recording_end(void)
     swl_confined_pointer_destroy_impl = swl_confined_pointer_destroy_default;
     swl_compositor_create_region_impl = swl_compositor_create_region_default;
     swl_region_add_impl = swl_region_add_default;
+    swl_region_subtract_impl = swl_region_subtract_default;
     swl_region_destroy_impl = swl_region_destroy_default;
 }
 

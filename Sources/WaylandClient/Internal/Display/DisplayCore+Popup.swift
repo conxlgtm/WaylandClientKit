@@ -102,6 +102,24 @@ extension DisplayCore {
         }
     }
 
+    func setPopupInputRegion(_ popupID: PopupID, _ region: SurfaceRegion?) throws {
+        try withFatalFailureFinalization {
+            try requireOpenPopup(popupID).setInputRegionOnOwnerThread(region)
+            guard !isClosed else {
+                throw ClientError.display(.closed)
+            }
+        }
+    }
+
+    func setPopupOpaqueRegion(_ popupID: PopupID, _ region: SurfaceRegion?) throws {
+        try withFatalFailureFinalization {
+            try requireOpenPopup(popupID).setOpaqueRegionOnOwnerThread(region)
+            guard !isClosed else {
+                throw ClientError.display(.closed)
+            }
+        }
+    }
+
     func popupIsClosed(_ popupID: PopupID) throws -> Bool {
         try withFatalFailureFinalization {
             guard !isClosed else {

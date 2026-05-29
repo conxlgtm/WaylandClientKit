@@ -18,6 +18,8 @@ Start with these public APIs:
 - `WaylandDisplay.events`, `inputEvents`, `textInputEvents`, and `dataTransferEvents`
 - `WaylandDisplay.createTopLevelWindow(configuration:)`
 - `Window.show`, `redraw`, `requestRedraw`, `needsRedraw`, `geometry`, and `stateSnapshot`
+- `Window.setInputRegion(_:)`, `setOpaqueRegion(_:)`, and
+  `SurfaceDamageRegion` for surface input, opacity, and redraw damage facts
 - `Window.presentationEvents` and `requestPresentationFeedback()`
 - `Window.createPopup(configuration:)`
 - `ActivationToken`, `ActivationTokenRequest`, and
@@ -35,6 +37,10 @@ Start with these public APIs:
 Do not depend on `WaylandRaw`, `WaylandRuntime`, `WaylandGraphicsCore`,
 `WaylandGPUPreview`, package-only symbols, or `@testable` imports.
 
+SwiftWayland's identity taxonomy and raw-value policy are documented in
+[`identity-model.md`](identity-model.md). Frameworks should route with concrete
+public identities, not raw Wayland proxies or generic ID constraints.
+
 For requests that depend on input serials, see
 [`serial-sensitive-interactions.md`](serial-sensitive-interactions.md).
 
@@ -47,6 +53,11 @@ closes the display on normal return or thrown error.
 Call `display.close()` only when the framework is deliberately ending the
 session early. Closing finishes event streams and makes later display/window
 operations fail with typed closed-display errors.
+
+Resource stale-handle behavior is summarized in
+[`resource-lifecycle-matrix.md`](resource-lifecycle-matrix.md). Framework code
+should treat stale, expired, foreign, and closed handles as normal lifecycle
+states, not crashes.
 
 A framework should treat the display actor as the Wayland owner. It should not
 try to drive the raw display fd, dispatch queue, or flush/read sequence itself.
@@ -65,6 +76,12 @@ should use `requestRedraw()` when state changes and wait for
 Use `needsRedraw` as a guard when coalescing invalidations. Use `geometry` and
 `stateSnapshot` after configure/redraw events to update layout inputs. Geometry
 is reported as logical size, buffer-pixel size, and rational scale.
+
+Input and opaque regions are surface facts, not framework hit testing.
+`setInputRegion(_:)` tells the compositor which logical surface rectangles
+should receive input; `nil` resets the compositor default. `setOpaqueRegion(_:)`
+marks fully opaque logical rectangles as a compositor optimization. Frameworks
+still own widget hit testing, clipping, and dirty-region calculation.
 
 ## Event Stream Ownership
 
@@ -146,6 +163,15 @@ Keep scene state, layout, widget invalidation, and renderer command generation
 outside SwiftWayland. `Examples/FrameworkHostSmoke` includes an example-only
 adapter. It is not public API yet because a real framework should prove the
 shared shape first.
+
+When a framework already has dirty rectangles, pass them as logical
+`SurfaceDamageRegion` values to `show(damage:_:)` or `redraw(damage:_:)`.
+SwiftWayland validates damage supplied to the initial `show`, but sends
+full-frame damage for the first buffer-backed commit because there are no
+previous surface contents. Later redraw damage is mapped to buffer damage using
+the current surface geometry and clipped to the surface bounds. No damage
+argument means full-frame damage. Damage remains a performance hint; it is not a
+retained UI invalidation system.
 
 ## Minimal Software Host Sketch
 

@@ -1,5 +1,28 @@
 import WaylandClient
 
+package struct WaylandGraphicsFrameLeaseID:
+    Equatable,
+    Hashable,
+    Sendable,
+    ExpressibleByIntegerLiteral,
+    CustomStringConvertible,
+    UInt64WaylandEntityID
+{
+    package let rawValue: UInt64
+
+    package init(rawValue leaseRawValue: UInt64) {
+        rawValue = leaseRawValue
+    }
+
+    package init(integerLiteral value: UInt64) {
+        self.init(rawValue: value)
+    }
+
+    package var description: String {
+        "graphics-frame-lease-\(rawValue)"
+    }
+}
+
 package enum WaylandGraphicsErrorMapper {
     package static func callerDrawError(from error: any Error) -> (any Error)? {
         guard let drawFailure = error as? WindowSoftwareDrawFailure else {
@@ -114,27 +137,40 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
 
     package struct OpenState: Equatable, Sendable {
         package var hasSubmittedFrame: Bool
-        package var activeLeaseID: UInt64?
-        package var nextLeaseID: UInt64
+        package var activeLeaseID: WaylandGraphicsFrameLeaseID?
+        package var leaseIDGenerator: IDGenerator<WaylandGraphicsFrameLeaseID>
 
         package init(
             hasSubmittedFrame submitted: Bool = false,
-            activeLeaseID leaseID: UInt64? = nil,
+            activeLeaseID leaseID: WaylandGraphicsFrameLeaseID? = nil,
             nextLeaseID nextID: UInt64 = 1
         ) {
             hasSubmittedFrame = submitted
             activeLeaseID = leaseID
-            nextLeaseID = nextID
+            leaseIDGenerator = IDGenerator(startingAt: nextID)
+        }
+
+        package init(
+            hasSubmittedFrame submitted: Bool,
+            activeLeaseID leaseID: WaylandGraphicsFrameLeaseID?,
+            leaseIDGenerator nextLeaseIDGenerator: IDGenerator<WaylandGraphicsFrameLeaseID>
+        ) {
+            hasSubmittedFrame = submitted
+            activeLeaseID = leaseID
+            leaseIDGenerator = nextLeaseIDGenerator
         }
     }
 
     package struct SubmissionState: Equatable, Sendable {
         package var hasSubmittedFrame: Bool
-        package var nextLeaseID: UInt64
+        package var leaseIDGenerator: IDGenerator<WaylandGraphicsFrameLeaseID>
 
-        package init(hasSubmittedFrame submitted: Bool, nextLeaseID nextID: UInt64) {
+        package init(
+            hasSubmittedFrame submitted: Bool,
+            leaseIDGenerator nextLeaseIDGenerator: IDGenerator<WaylandGraphicsFrameLeaseID>
+        ) {
             hasSubmittedFrame = submitted
-            nextLeaseID = nextID
+            leaseIDGenerator = nextLeaseIDGenerator
         }
     }
 
@@ -153,7 +189,7 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
         }
     }
 
-    package var activeLeaseID: UInt64? {
+    package var activeLeaseID: WaylandGraphicsFrameLeaseID? {
         guard case .open(let openState) = state else {
             return nil
         }
@@ -167,7 +203,7 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
         }
     }
 
-    package mutating func issueLease() throws -> UInt64 {
+    package mutating func issueLease() throws -> WaylandGraphicsFrameLeaseID {
         switch state {
         case .closed:
             throw WaylandGraphicsError.backingClosed
@@ -178,8 +214,7 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
                 throw WaylandGraphicsError.frameLeaseActive
             }
 
-            let leaseID = openState.nextLeaseID
-            openState.nextLeaseID += 1
+            let leaseID = openState.leaseIDGenerator.next()
             openState.activeLeaseID = leaseID
             state = .open(openState)
             return leaseID
@@ -187,7 +222,7 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
     }
 
     package mutating func prepareSubmission(
-        leaseID: UInt64
+        leaseID: WaylandGraphicsFrameLeaseID
     ) throws -> WaylandGraphicsFrameSubmissionOperation {
         switch state {
         case .closed:
@@ -209,14 +244,14 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
             state = .submitting(
                 SubmissionState(
                     hasSubmittedFrame: openState.hasSubmittedFrame,
-                    nextLeaseID: openState.nextLeaseID
+                    leaseIDGenerator: openState.leaseIDGenerator
                 )
             )
             return operation
         }
     }
 
-    package func requireSubmittable(leaseID: UInt64) throws {
+    package func requireSubmittable(leaseID: WaylandGraphicsFrameLeaseID) throws {
         switch state {
         case .closed:
             throw WaylandGraphicsError.backingClosed
@@ -240,7 +275,7 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
                 OpenState(
                     hasSubmittedFrame: true,
                     activeLeaseID: nil,
-                    nextLeaseID: submissionState.nextLeaseID
+                    leaseIDGenerator: submissionState.leaseIDGenerator
                 )
             )
         }
@@ -255,12 +290,12 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
             OpenState(
                 hasSubmittedFrame: submissionState.hasSubmittedFrame,
                 activeLeaseID: nil,
-                nextLeaseID: submissionState.nextLeaseID
+                leaseIDGenerator: submissionState.leaseIDGenerator
             )
         )
     }
 
-    package mutating func cancel(leaseID: UInt64) {
+    package mutating func cancel(leaseID: WaylandGraphicsFrameLeaseID) {
         guard case .open(var openState) = state,
             openState.activeLeaseID == leaseID
         else {

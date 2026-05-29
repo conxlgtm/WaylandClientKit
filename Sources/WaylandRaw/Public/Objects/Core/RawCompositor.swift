@@ -73,6 +73,10 @@ package final class RawRegion {
         unsafe swl_region_add(pointer, x, y, width, height)
     }
 
+    package func subtract(x: Int32, y: Int32, width: Int32, height: Int32) {
+        unsafe swl_region_subtract(pointer, x, y, width, height)
+    }
+
     package func destroy() {
         proxy.destroy()
     }

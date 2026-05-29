@@ -1158,7 +1158,7 @@ private func surfaceCommitPlan() throws -> SurfaceCommitPlan {
         scale: .one
     )
 
-    return SurfaceCommitPlan(
+    return try SurfaceCommitPlan(
         geometry: geometry,
         bufferScale: 1,
         viewportMode: .omitDestination,

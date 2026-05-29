@@ -199,6 +199,7 @@
                 ),
                 geometry: geometry,
                 metadata: .default,
+                damage: nil,
                 presentationFeedback: nil
             )
         }

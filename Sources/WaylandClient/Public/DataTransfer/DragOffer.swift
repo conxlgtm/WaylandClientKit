@@ -1,9 +1,10 @@
 import Foundation
 
-public struct DragOffer: Sendable, Hashable {
+public struct DragOffer: Sendable, Hashable, Identifiable {
     public static let defaultReadTimeout: Duration = .seconds(5)
 
-    package let id: DataOfferID
+    package let offerID: DataOfferID
+    public let id: DragOfferIdentity
     public let seatID: SeatID
     public let mimeTypes: [MIMEType]
     public let sourceActions: DragActionSet
@@ -18,7 +19,8 @@ public struct DragOffer: Sendable, Hashable {
             "DragOffer requires a drag-and-drop data offer snapshot"
         )
 
-        id = snapshot.id
+        offerID = snapshot.id
+        id = snapshot.id.dragIdentity
         seatID = snapshot.role.seatID
         mimeTypes = snapshot.mimeTypes
         sourceActions = snapshot.dragAndDrop?.sourceActions ?? []
@@ -28,11 +30,11 @@ public struct DragOffer: Sendable, Hashable {
     }
 
     public var identity: DragOfferIdentity {
-        id.dragIdentity
+        id
     }
 
     public func accept(_ mimeType: MIMEType?) async throws {
-        try await display.acceptDragOffer(id: id, mimeType: mimeType)
+        try await display.acceptDragOffer(id: offerID, mimeType: mimeType)
     }
 
     public func setActions(
@@ -40,14 +42,14 @@ public struct DragOffer: Sendable, Hashable {
         preferredAction: DragAction
     ) async throws {
         try await display.setDragOfferActions(
-            id: id,
+            id: offerID,
             actions: actions,
             preferredAction: preferredAction
         )
     }
 
     public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {
-        try await display.receiveDragOffer(id: id, mimeType: mimeType)
+        try await display.receiveDragOffer(id: offerID, mimeType: mimeType)
     }
 
     public func read(
@@ -63,11 +65,11 @@ public struct DragOffer: Sendable, Hashable {
     }
 
     public func finish() async throws {
-        try await display.finishDragOffer(id: id)
+        try await display.finishDragOffer(id: offerID)
     }
 
     public func cancel() async throws {
-        try await display.cancelDragOffer(id: id)
+        try await display.cancelDragOffer(id: offerID)
     }
 
     public static func == (lhs: DragOffer, rhs: DragOffer) -> Bool {

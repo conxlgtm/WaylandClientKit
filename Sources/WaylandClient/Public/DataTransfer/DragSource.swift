@@ -127,8 +127,9 @@ public struct DragSourceConfiguration: Equatable, Sendable {
     }
 }
 
-public struct DragSource: Sendable, Hashable {
-    package let id: DataSourceID
+public struct DragSource: Sendable, Hashable, Identifiable {
+    package let sourceID: DataSourceID
+    public let id: DragSourceIdentity
     public let seatID: SeatID
     public let mimeTypes: [MIMEType]
     public let actions: DragActionSet
@@ -142,7 +143,8 @@ public struct DragSource: Sendable, Hashable {
             "DragSource requires a drag-and-drop data source snapshot"
         )
 
-        id = snapshot.id
+        sourceID = snapshot.id
+        id = snapshot.id.dragIdentity
         seatID = snapshot.seatID
         mimeTypes = snapshot.mimeTypes
         actions = snapshot.role.dragActions ?? []
@@ -151,12 +153,12 @@ public struct DragSource: Sendable, Hashable {
     }
 
     public var identity: DragSourceIdentity {
-        id.dragIdentity
+        id
     }
 
     /// Cancels this source-side drag operation by destroying the underlying data source.
     public func cancel() async throws {
-        try await display.cancelDragSource(id: id)
+        try await display.cancelDragSource(id: sourceID)
     }
 
     public static func == (lhs: DragSource, rhs: DragSource) -> Bool {
