@@ -225,6 +225,14 @@ public actor WaylandDisplay {
         core.closePopup(popupID)
     }
 
+    package func closeSubsurface(_ subsurfaceID: SubsurfaceID) {
+        guard case .active(let core, _) = lifecycle else {
+            return
+        }
+
+        core.closeSubsurface(subsurfaceID)
+    }
+
     public func close() {
         switch lifecycle {
         case .active(let activeCore, let activeEventSource):

@@ -80,6 +80,8 @@ extern "C" {
 
 struct wl_compositor *swl_registry_bind_wl_compositor(
     struct wl_registry *registry, uint32_t name, uint32_t version);
+struct wl_subcompositor *swl_registry_bind_wl_subcompositor(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wl_shm *swl_registry_bind_wl_shm(
     struct wl_registry *registry, uint32_t name, uint32_t version);

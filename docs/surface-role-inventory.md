@@ -15,7 +15,7 @@ surfaces.
 | `CursorRoleSurface` | `SurfaceRuntime<CursorRoleResources>` | full cursor buffer damage only | unsupported | unsupported | unsupported | unsupported |
 | `DragIconRoleSurface` | `SurfaceRuntime<DragIconRoleResources>` | full icon buffer damage only | unsupported | unsupported | unsupported | unsupported |
 | graphics preview backing | managed window `SurfaceRuntime` path | forwarded software damage | window-owned | window-owned | preview metadata bridge | preview policy bridge |
-| future `SubsurfaceRoleSurface` | planned `SurfaceRuntime<SubsurfaceRoleResources>` | planned software damage | planned | planned | planned internal metadata | planned internal submit constraints |
+| `SubsurfaceRoleSurface` | `SurfaceRuntime<SubsurfaceRoleResources>` | public software `show` and `redraw` | public | public | internal commit metadata | internal submit constraints |
 
 `SurfaceRoleReadinessSnapshot` mirrors this table in package-internal state and
 tests. The snapshot is not a public capability API; it is a guardrail for
@@ -98,9 +98,27 @@ public preview paths. It forwards `WaylandGraphicsDamageRegion` to
 validation, clipping, first-buffer full damage, and logical-to-buffer mapping.
 Raw GBM/EGL/DRM handles remain package-internal.
 
-## Future subsurfaces
+## Subsurfaces
 
-Subsurfaces are graph-shaped managed surfaces. They should use
+Subsurfaces are graph-shaped managed surfaces. They use
 `SurfaceRuntime<SubsurfaceRoleResources>` for scale, transaction, metadata, and
-software damage behavior, but their parent/child lifecycle belongs in the
-surface graph instead of `DisplayResourceTable`.
+software damage behavior. Their parent/child lifecycle is window-owned and stays
+out of `DisplayResourceTable`.
+
+- Raw `wl_surface` owner: `SubsurfaceRoleSurface`.
+- Role object: `wl_subsurface` created through an internal one-shot
+  `wl_subcompositor` bind.
+- Scale behavior: same `SurfaceRuntime` scale substrate as windows and popups.
+- Output membership behavior: tracked internally through surface scale callbacks.
+- Damage behavior: public logical damage follows the shared software commit path.
+- Input and opaque regions: public `Subsurface` region APIs use one-shot
+  `wl_region` objects and commit.
+- Metadata behavior: available through the shared commit path when used
+  internally.
+- Submit constraints: available through the shared commit path when used
+  internally.
+- Destroy order: parent windows close managed subsurfaces before the parent role
+  surface is destroyed; subsurface role resources are destroyed before the child
+  raw surface.
+- Late callback policy: pending frame state is cancelled during close and stale
+  handles report typed display errors.

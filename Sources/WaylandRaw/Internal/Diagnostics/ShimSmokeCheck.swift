@@ -25,6 +25,7 @@ enum ShimSmokeCheck {
 
     private static func verifyRegistryShims() {
         _ = unsafe swl_registry_bind_wl_compositor
+        _ = unsafe swl_registry_bind_wl_subcompositor
         _ = unsafe swl_registry_bind_wl_shm
         _ = unsafe swl_registry_bind_wl_output
         _ = unsafe swl_registry_bind_xdg_wm_base
@@ -52,6 +53,7 @@ enum ShimSmokeCheck {
 
     private static func verifyCoreObjectShims() {
         _ = unsafe swl_compositor_create_surface
+        _ = unsafe swl_subcompositor_get_subsurface
         _ = unsafe swl_shm_create_pool
         _ = unsafe swl_shm_pool_create_buffer
         _ = unsafe swl_surface_frame
@@ -62,6 +64,11 @@ enum ShimSmokeCheck {
         _ = unsafe swl_surface_commit
         _ = unsafe swl_surface_damage_buffer
         _ = unsafe swl_surface_set_buffer_scale
+        _ = unsafe swl_subsurface_set_position
+        _ = unsafe swl_subsurface_place_above
+        _ = unsafe swl_subsurface_place_below
+        _ = unsafe swl_subsurface_set_sync
+        _ = unsafe swl_subsurface_set_desync
     }
 
     private static func verifyXDGShims() {
@@ -171,11 +178,13 @@ enum ShimSmokeCheck {
         _ = unsafe swl_registry_destroy
         _ = unsafe swl_callback_destroy
         _ = unsafe swl_compositor_destroy
+        _ = unsafe swl_subcompositor_destroy
         _ = unsafe swl_shm_destroy
         _ = unsafe swl_output_destroy
         _ = unsafe swl_output_release
         _ = unsafe swl_buffer_destroy
         _ = unsafe swl_surface_destroy
+        _ = unsafe swl_subsurface_destroy
         _ = unsafe swl_shm_pool_destroy
         _ = unsafe swl_pointer_release
         _ = unsafe swl_keyboard_release
