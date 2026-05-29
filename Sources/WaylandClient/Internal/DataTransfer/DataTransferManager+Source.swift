@@ -484,7 +484,6 @@ extension DataTransferManager {
     }
 
     private func allocateSourceID() -> DataSourceID {
-        defer { nextSourceID += 1 }
-        return DataSourceID(rawValue: nextSourceID)
+        sourceIDs.next()
     }
 }

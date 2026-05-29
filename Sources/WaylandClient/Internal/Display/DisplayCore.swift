@@ -54,6 +54,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         timeoutMilliseconds: Int32,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
+        damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try withFatalFailureFinalization {
@@ -66,6 +67,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             try window.showOnOwnerThread(
                 timeoutMilliseconds: timeoutMilliseconds,
                 metadata: metadata,
+                damage: damage,
                 presentationFeedback: presentationFeedback,
                 draw
             )
@@ -78,6 +80,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         _ windowID: WindowID,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
+        damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try withFatalFailureFinalization {
@@ -89,9 +92,28 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             )
             try window.redrawOnOwnerThread(
                 metadata: metadata,
+                damage: damage,
                 presentationFeedback: presentationFeedback,
                 draw
             )
+            guard !isClosed else {
+                throw ClientError.display(.closed)
+            }
+        }
+    }
+
+    func setWindowInputRegion(_ windowID: WindowID, _ region: SurfaceRegion?) throws {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID).setInputRegionOnOwnerThread(region)
+            guard !isClosed else {
+                throw ClientError.display(.closed)
+            }
+        }
+    }
+
+    func setWindowOpaqueRegion(_ windowID: WindowID, _ region: SurfaceRegion?) throws {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID).setOpaqueRegionOnOwnerThread(region)
             guard !isClosed else {
                 throw ClientError.display(.closed)
             }

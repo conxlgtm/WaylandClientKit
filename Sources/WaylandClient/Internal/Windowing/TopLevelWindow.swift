@@ -41,7 +41,7 @@ package final class TopLevelWindow {
     private var model: WindowModel
     private var surfaceRuntime: SurfaceRuntime<TopLevelWindowRoleResources>
     private var pendingFrameRegistration: FrameCallbackRegistration?
-    private var nextPresentationFeedbackID: UInt64 = 1
+    private var presentationFeedbackIDs = IDGenerator<SurfacePresentationIdentity>()
     private var pendingPresentationFeedbacks:
         [SurfacePresentationIdentity: RawPresentationFeedback] = [:]
 
@@ -379,6 +379,7 @@ package final class TopLevelWindow {
 
     private func drawAndPresent(
         metadata: SurfaceCommitMetadata = .default,
+        damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
@@ -390,14 +391,34 @@ package final class TopLevelWindow {
         return try interpretPresentationEffects(
             effects,
             metadata: metadata,
+            damage: damage,
             presentationFeedback: presentationFeedback,
             draw
         )
     }
 
+    private func applySurfaceRegion(
+        _ region: SurfaceRegion?,
+        setRegion: (RawSurface, RawRegion?) -> Void
+    ) throws {
+        guard !model.isClosed else { return }
+        guard let globals = connection.boundGlobals else {
+            throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
+        }
+
+        try SurfaceRegionApplicator.apply(
+            region,
+            compositor: globals.compositor
+        ) { rawRegion in
+            setRegion(surface, rawRegion)
+        }
+        surface.commit()
+    }
+
     private func performSoftwarePresent(
         _ request: PresentationRequest,
         metadata: SurfaceCommitMetadata,
+        damage: SurfaceDamageRegion?,
         presentationFeedback: WindowPresentationFeedbackCommitRequest?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
@@ -432,6 +453,7 @@ package final class TopLevelWindow {
                     request: request,
                     geometry: geometry,
                     metadata: metadata,
+                    damage: damage,
                     presentationFeedback: presentationFeedback
                 ),
                 draw: draw,
@@ -867,6 +889,7 @@ extension TopLevelWindow {
     private func interpretPresentationEffects(
         _ effects: [WindowEffect],
         metadata: SurfaceCommitMetadata,
+        damage: SurfaceDamageRegion?,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws -> RedrawOutcome {
@@ -878,6 +901,7 @@ extension TopLevelWindow {
                 outcome = try performSoftwarePresent(
                     request,
                     metadata: metadata,
+                    damage: damage,
                     presentationFeedback: presentationFeedback,
                     draw
                 )
@@ -1435,6 +1459,7 @@ extension TopLevelWindow {
     package func showOnOwnerThread(
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
         metadata: SurfaceCommitMetadata = .default,
+        damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
@@ -1446,13 +1471,29 @@ extension TopLevelWindow {
 
         _ = try drawAndPresent(
             metadata: metadata,
+            damage: damage,
             presentationFeedback: presentationFeedback,
             draw
         )
     }
 
+    package func setInputRegionOnOwnerThread(_ region: SurfaceRegion?) throws {
+        connection.preconditionIsOwnerThread()
+        try applySurfaceRegion(region) { surface, rawRegion in
+            surface.setInputRegion(rawRegion)
+        }
+    }
+
+    package func setOpaqueRegionOnOwnerThread(_ region: SurfaceRegion?) throws {
+        connection.preconditionIsOwnerThread()
+        try applySurfaceRegion(region) { surface, rawRegion in
+            surface.setOpaqueRegion(rawRegion)
+        }
+    }
+
     package func redrawOnOwnerThread(
         metadata: SurfaceCommitMetadata = .default,
+        damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
@@ -1463,6 +1504,7 @@ extension TopLevelWindow {
         _ = try consumeLatestConfigureIfAvailable()
         _ = try drawAndPresent(
             metadata: metadata,
+            damage: damage,
             presentationFeedback: presentationFeedback,
             draw
         )
@@ -1506,12 +1548,14 @@ extension TopLevelWindow {
     package func show(
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
         metadata: SurfaceCommitMetadata = .default,
+        damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try showOnOwnerThread(
             timeoutMilliseconds: timeoutMilliseconds,
             metadata: metadata,
+            damage: damage,
             presentationFeedback: presentationFeedback,
             draw
         )
@@ -1524,11 +1568,13 @@ extension TopLevelWindow {
     )
     package func redraw(
         metadata: SurfaceCommitMetadata = .default,
+        damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try redrawOnOwnerThread(
             metadata: metadata,
+            damage: damage,
             presentationFeedback: presentationFeedback,
             draw
         )
@@ -1546,8 +1592,7 @@ extension TopLevelWindow {
 
 extension TopLevelWindow {
     private func allocatePresentationFeedbackIdentity() -> SurfacePresentationIdentity {
-        defer { nextPresentationFeedbackID += 1 }
-        return SurfacePresentationIdentity(rawValue: nextPresentationFeedbackID)
+        presentationFeedbackIDs.next()
     }
 
     private func handlePresentationFeedback(

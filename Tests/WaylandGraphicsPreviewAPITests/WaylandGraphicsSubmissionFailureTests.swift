@@ -208,6 +208,49 @@ struct WaylandGraphicsSubmissionFailureTests {
     }
 
     @Test
+    func submitSoftwarePassesPartialDamageToManagedWindow() async throws {
+        let window = try FakeManagedGraphicsWindow(showDrawFailures: 0)
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .softwareFallback(
+                capabilities: softwareOnlySurfaceCapabilities(),
+                reason: .forcedSoftware
+            )
+        )
+        let rect = try LogicalRect(x: 0, y: 0, width: 10, height: 10)
+        let metadata = WaylandGraphicsFrameMetadata(
+            damage: WaylandGraphicsDamageRegion(rects: [rect])
+        )
+        let lease = try await storage.nextFrame()
+
+        _ = try await lease.submitSoftware(metadata: metadata) { _ in
+            _ = ()
+        }
+
+        #expect(await window.damages() == [try SurfaceDamageRegion([rect])])
+    }
+
+    @Test
+    func fullFrameGraphicsDamageSubmitsNilSurfaceDamage() async throws {
+        let window = try FakeManagedGraphicsWindow(showDrawFailures: 0)
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .softwareFallback(
+                capabilities: softwareOnlySurfaceCapabilities(),
+                reason: .forcedSoftware
+            )
+        )
+        let metadata = WaylandGraphicsFrameMetadata(damage: .fullFrame)
+        let lease = try await storage.nextFrame()
+
+        _ = try await lease.submitSoftware(metadata: metadata) { _ in
+            _ = ()
+        }
+
+        #expect(await window.damages() == [nil])
+    }
+
+    @Test
     func windowLifecycleAndWindowSubmissionFailuresAreDistinct() {
         let windowID = WindowID(rawValue: 45)
 
@@ -257,6 +300,7 @@ private actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
     private let geometryValue: SurfaceGeometry
     private var remainingShowDrawFailures: Int
     private var recordedOperations: [WaylandGraphicsSubmissionOperation] = []
+    private var recordedDamages: [SurfaceDamageRegion?] = []
 
     init(showDrawFailures: Int) throws {
         geometryValue = try testGraphicsSurfaceGeometry()
@@ -279,10 +323,12 @@ private actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
         timeoutMilliseconds _: Int32,
         metadata _: SurfaceCommitMetadata,
         requestPresentationFeedback _: Bool,
+        damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws {
         _ = draw
         recordedOperations.append(.show)
+        recordedDamages.append(damage)
         if remainingShowDrawFailures > 0 {
             remainingShowDrawFailures -= 1
             throw WindowSoftwareDrawFailure(underlying: InjectedDrawFailure())
@@ -292,10 +338,12 @@ private actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
     func redraw(
         metadata _: SurfaceCommitMetadata,
         requestPresentationFeedback _: Bool,
+        damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws {
         _ = draw
         recordedOperations.append(.redraw)
+        recordedDamages.append(damage)
     }
 
     func close() async {
@@ -304,6 +352,10 @@ private actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
 
     func operations() -> [WaylandGraphicsSubmissionOperation] {
         recordedOperations
+    }
+
+    func damages() -> [SurfaceDamageRegion?] {
+        recordedDamages
     }
 }
 

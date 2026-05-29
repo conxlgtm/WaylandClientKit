@@ -75,8 +75,8 @@ package final class DataTransferManager {
     let eventQueue: DataTransferEventQueue
     let surfaceTargetResolver: (RawObjectID?) -> InputEventTarget
     var store = DataTransferStore()
-    private var nextOfferID: UInt64 = 1
-    package var nextSourceID: UInt64 = 1
+    private var offerIDs = IDGenerator<DataOfferID>()
+    package var sourceIDs = IDGenerator<DataSourceID>()
     var isShutdown = false
 
     package init(
@@ -322,8 +322,7 @@ package final class DataTransferManager {
     }
 
     private func allocateOfferID() -> DataOfferID {
-        defer { nextOfferID += 1 }
-        return DataOfferID(rawValue: nextOfferID)
+        offerIDs.next()
     }
 }
 

@@ -12,8 +12,8 @@ package final class PrimarySelectionController {
     private var sourcesByID: [DataSourceID: RuntimePrimarySelectionSource] = [:]
     var pendingSourceSendRequests: [DataTransferSourceSendRequest] = []
     private var pendingCallbackFailures: [DataTransferCallbackFailure] = []
-    private var nextOfferID: UInt64 = 1
-    private var nextSourceID: UInt64 = 1
+    private var offerIDs = IDGenerator<DataOfferID>()
+    private var sourceIDs = IDGenerator<DataSourceID>()
 
     package init(
         connection rawConnection: RawDisplayConnection,
@@ -499,12 +499,10 @@ extension PrimarySelectionController {
     }
 
     private func allocateOfferID() -> DataOfferID {
-        defer { nextOfferID += 1 }
-        return DataOfferID(rawValue: nextOfferID)
+        offerIDs.next()
     }
 
     private func allocateSourceID() -> DataSourceID {
-        defer { nextSourceID += 1 }
-        return DataSourceID(rawValue: nextSourceID)
+        sourceIDs.next()
     }
 }

@@ -1,6 +1,6 @@
 package enum SurfaceDamageExtent: Equatable, Sendable {
-    case buffer(width: Int32, height: Int32)
-    case logical(width: Int32, height: Int32)
+    case buffer([BufferDamageRectangle])
+    case logical([LogicalRect])
 }
 
 package enum ViewportCommitMode: Equatable, Sendable {
@@ -21,18 +21,33 @@ package enum DamageCoordinateMode: Equatable, Sendable {
     case buffer
     case logical
 
-    package func extent(for geometry: SurfaceGeometry) -> SurfaceDamageExtent {
+    package func extent(
+        for geometry: SurfaceGeometry,
+        damage: SurfaceDamageRegion?
+    ) throws -> SurfaceDamageExtent {
         switch self {
         case .buffer:
-            .buffer(
-                width: geometry.bufferSize.width.rawValue,
-                height: geometry.bufferSize.height.rawValue
-            )
+            if let damage {
+                return try SurfaceDamageExtent.buffer(damage.bufferRectangles(for: geometry))
+            }
+            return .buffer([
+                BufferDamageRectangle(
+                    x: 0,
+                    y: 0,
+                    width: geometry.bufferSize.width.rawValue,
+                    height: geometry.bufferSize.height.rawValue
+                )
+            ])
         case .logical:
-            .logical(
-                width: geometry.logicalSize.width.rawValue,
-                height: geometry.logicalSize.height.rawValue
-            )
+            if let damage {
+                return try .logical(damage.clippedRectangles(within: geometry))
+            }
+            return .logical([
+                LogicalRect(
+                    origin: .zero,
+                    size: geometry.logicalSize
+                )
+            ])
         }
     }
 }
@@ -49,13 +64,14 @@ package struct SurfaceCommitPlan: Equatable, Sendable {
         geometry surfaceGeometry: SurfaceGeometry,
         bufferScale planBufferScale: Int32,
         viewportMode: ViewportCommitMode,
-        damageMode: DamageCoordinateMode
-    ) {
+        damageMode: DamageCoordinateMode,
+        damage explicitDamage: SurfaceDamageRegion? = nil
+    ) throws {
         geometry = surfaceGeometry
         bufferScale = planBufferScale
         self.viewportMode = viewportMode
         viewportDestination = viewportMode.destination(for: surfaceGeometry)
         self.damageMode = damageMode
-        damage = damageMode.extent(for: surfaceGeometry)
+        damage = try damageMode.extent(for: surfaceGeometry, damage: explicitDamage)
     }
 }

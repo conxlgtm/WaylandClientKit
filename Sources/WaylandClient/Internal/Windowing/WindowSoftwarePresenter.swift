@@ -78,6 +78,7 @@ struct WindowSoftwarePresentationContext {
     let request: PresentationRequest
     let geometry: SurfaceGeometry
     let metadata: SurfaceCommitMetadata
+    let damage: SurfaceDamageRegion?
     let presentationFeedback: WindowPresentationFeedbackCommitRequest?
 }
 
@@ -130,6 +131,7 @@ struct WindowSoftwarePresenter {
             request: context.request,
             geometry: context.geometry,
             metadata: context.metadata,
+            damage: context.damage,
             runtime: &runtime,
             drawingBuffer: &drawingBuffer
         )
@@ -216,6 +218,7 @@ struct WindowSoftwarePresenter {
         request: PresentationRequest,
         geometry: SurfaceGeometry,
         metadata: SurfaceCommitMetadata,
+        damage: SurfaceDamageRegion?,
         runtime: inout SurfaceRuntime<RoleResources>,
         drawingBuffer: inout RawBuffer.DrawingBuffer
     ) throws -> PreparedSurfaceFrameCommit {
@@ -227,7 +230,8 @@ struct WindowSoftwarePresenter {
                     generation: request.generation,
                     geometry: geometry,
                     payload: .buffer(drawingBuffer.surfaceBuffer),
-                    metadata: metadata
+                    metadata: metadata,
+                    damage: damage
                 ),
                 runtime: &runtime,
             )

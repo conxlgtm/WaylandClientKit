@@ -65,6 +65,20 @@ static void swl_surface_damage_buffer_default(
     wl_surface_damage_buffer(surface, x, y, width, height);
 }
 
+static void swl_surface_set_opaque_region_default(
+    struct wl_surface *surface,
+    struct wl_region *region)
+{
+    wl_surface_set_opaque_region(surface, region);
+}
+
+static void swl_surface_set_input_region_default(
+    struct wl_surface *surface,
+    struct wl_region *region)
+{
+    wl_surface_set_input_region(surface, region);
+}
+
 static void swl_buffer_destroy_default(struct wl_buffer *buffer)
 {
     wl_buffer_destroy(buffer);
@@ -130,6 +144,12 @@ static void (*swl_surface_damage_buffer_impl)(
     int32_t y,
     int32_t width,
     int32_t height) = swl_surface_damage_buffer_default;
+static void (*swl_surface_set_opaque_region_impl)(
+    struct wl_surface *surface,
+    struct wl_region *region) = swl_surface_set_opaque_region_default;
+static void (*swl_surface_set_input_region_impl)(
+    struct wl_surface *surface,
+    struct wl_region *region) = swl_surface_set_input_region_default;
 static void (*swl_buffer_destroy_impl)(struct wl_buffer *buffer) =
     swl_buffer_destroy_default;
 static void (*swl_surface_destroy_impl)(struct wl_surface *surface) =
@@ -249,6 +269,38 @@ static void swl_test_surface_damage_buffer_record(
         SWL_TEST_CORE_SURFACE_DAMAGE_BUFFER, surface, x, y, width, height);
 }
 
+static void swl_test_surface_set_region_record(
+    enum swl_test_core_request_kind kind,
+    struct wl_surface *surface,
+    struct wl_region *region)
+{
+    swl_test_record_core_request(kind, surface);
+    swl_test_core_request_latest.region = region;
+    if (kind == SWL_TEST_CORE_SURFACE_SET_OPAQUE_REGION) {
+        swl_test_core_request_latest.opaque_region_sequence =
+            swl_test_core_request_latest.latest_sequence;
+    } else {
+        swl_test_core_request_latest.input_region_sequence =
+            swl_test_core_request_latest.latest_sequence;
+    }
+}
+
+static void swl_test_surface_set_opaque_region_record(
+    struct wl_surface *surface,
+    struct wl_region *region)
+{
+    swl_test_surface_set_region_record(
+        SWL_TEST_CORE_SURFACE_SET_OPAQUE_REGION, surface, region);
+}
+
+static void swl_test_surface_set_input_region_record(
+    struct wl_surface *surface,
+    struct wl_region *region)
+{
+    swl_test_surface_set_region_record(
+        SWL_TEST_CORE_SURFACE_SET_INPUT_REGION, surface, region);
+}
+
 static void swl_test_buffer_destroy_record(struct wl_buffer *buffer)
 {
     swl_test_record_core_request(SWL_TEST_CORE_BUFFER_DESTROY, buffer);
@@ -293,6 +345,8 @@ static uint32_t swl_test_proxy_get_id(void *proxy)
 #define swl_surface_commit_impl wl_surface_commit
 #define swl_surface_damage_impl wl_surface_damage
 #define swl_surface_damage_buffer_impl wl_surface_damage_buffer
+#define swl_surface_set_opaque_region_impl wl_surface_set_opaque_region
+#define swl_surface_set_input_region_impl wl_surface_set_input_region
 #define swl_buffer_destroy_impl wl_buffer_destroy
 #define swl_surface_destroy_impl wl_surface_destroy
 #define swl_shm_pool_destroy_impl wl_shm_pool_destroy
@@ -360,6 +414,20 @@ void swl_surface_damage_buffer(
 void swl_surface_set_buffer_scale(struct wl_surface *surface, int32_t scale)
 {
     wl_surface_set_buffer_scale(surface, scale);
+}
+
+void swl_surface_set_opaque_region(
+    struct wl_surface *surface,
+    struct wl_region *region)
+{
+    swl_surface_set_opaque_region_impl(surface, region);
+}
+
+void swl_surface_set_input_region(
+    struct wl_surface *surface,
+    struct wl_region *region)
+{
+    swl_surface_set_input_region_impl(surface, region);
 }
 
 struct wl_pointer *swl_seat_get_pointer(struct wl_seat *seat)
@@ -494,6 +562,8 @@ void swl_test_core_request_recording_begin(void)
     swl_surface_commit_impl = swl_test_surface_commit_record;
     swl_surface_damage_impl = swl_test_surface_damage_legacy_record;
     swl_surface_damage_buffer_impl = swl_test_surface_damage_buffer_record;
+    swl_surface_set_opaque_region_impl = swl_test_surface_set_opaque_region_record;
+    swl_surface_set_input_region_impl = swl_test_surface_set_input_region_record;
     swl_buffer_destroy_impl = swl_test_buffer_destroy_record;
     swl_surface_destroy_impl = swl_test_surface_destroy_record;
     swl_shm_pool_destroy_impl = swl_test_shm_pool_destroy_record;
@@ -510,6 +580,8 @@ void swl_test_core_request_recording_end(void)
     swl_surface_commit_impl = swl_surface_commit_default;
     swl_surface_damage_impl = swl_surface_damage_default;
     swl_surface_damage_buffer_impl = swl_surface_damage_buffer_default;
+    swl_surface_set_opaque_region_impl = swl_surface_set_opaque_region_default;
+    swl_surface_set_input_region_impl = swl_surface_set_input_region_default;
     swl_buffer_destroy_impl = swl_buffer_destroy_default;
     swl_surface_destroy_impl = swl_surface_destroy_default;
     swl_shm_pool_destroy_impl = swl_shm_pool_destroy_default;

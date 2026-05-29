@@ -20,10 +20,26 @@ public struct Window: Sendable, Hashable {
         try await display.showWindow(id, timeoutMilliseconds: timeoutMilliseconds, draw)
     }
 
+    public func show(
+        damage: SurfaceDamageRegion?,
+        timeoutMilliseconds: Int32 = WaylandDisplay.defaultConfigureTimeoutMilliseconds,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws {
+        try await display.showWindow(
+            id,
+            timeoutMilliseconds: timeoutMilliseconds,
+            metadata: .default,
+            requestPresentationFeedback: false,
+            damage: damage,
+            draw
+        )
+    }
+
     package func show(
         timeoutMilliseconds: Int32,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
+        damage: SurfaceDamageRegion? = nil,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws {
         try await display.showWindow(
@@ -31,6 +47,7 @@ public struct Window: Sendable, Hashable {
             timeoutMilliseconds: timeoutMilliseconds,
             metadata: metadata,
             requestPresentationFeedback: requestPresentationFeedback,
+            damage: damage,
             draw
         )
     }
@@ -41,15 +58,30 @@ public struct Window: Sendable, Hashable {
         try await display.redraw(id, draw)
     }
 
+    public func redraw(
+        damage: SurfaceDamageRegion?,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws {
+        try await display.redraw(
+            id,
+            metadata: .default,
+            requestPresentationFeedback: false,
+            damage: damage,
+            draw
+        )
+    }
+
     package func redraw(
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
+        damage: SurfaceDamageRegion? = nil,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws {
         try await display.redraw(
             id,
             metadata: metadata,
             requestPresentationFeedback: requestPresentationFeedback,
+            damage: damage,
             draw
         )
     }
@@ -74,6 +106,14 @@ public struct Window: Sendable, Hashable {
 
     public func requestPresentationFeedback() async throws {
         try await display.requestPresentationFeedback(id)
+    }
+
+    public func setInputRegion(_ region: SurfaceRegion?) async throws {
+        try await display.setWindowInputRegion(id, region)
+    }
+
+    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {
+        try await display.setWindowOpaqueRegion(id, region)
     }
 
     public func requestActivationToken(

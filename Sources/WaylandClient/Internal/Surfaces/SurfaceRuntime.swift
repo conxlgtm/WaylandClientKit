@@ -458,12 +458,14 @@ extension SurfaceRuntime {
 
     mutating func recordCommittedFrame(
         generation: UInt64,
-        plan: SurfaceCommitPlan
+        plan: SurfaceCommitPlan,
+        payload: SurfaceCommittedPayload = .buffer
     ) throws {
         try updateSurfaceObjects { objects in
             try objects.transactionState.recordCommittedFrame(
                 generation: generation,
-                plan: plan
+                plan: plan,
+                payload: payload
             )
         }
     }
@@ -487,9 +489,10 @@ extension SurfaceRuntime {
 
     mutating func prepareCommittedFrame(
         generation: UInt64,
-        plan: SurfaceCommitPlan
+        plan: SurfaceCommitPlan,
+        payload: SurfaceCommittedPayload = .buffer
     ) throws {
-        try recordCommittedFrame(generation: generation, plan: plan)
+        try recordCommittedFrame(generation: generation, plan: plan, payload: payload)
     }
 
     mutating func resetTransientTransactionState() {

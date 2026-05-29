@@ -9,6 +9,10 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 ## WaylandClient Public Declarations
 
+### `Sources/WaylandClient/Internal/Support/IdentityConformances.swift`
+
+- L53: `    public var id: SeatID {`
+
 ### `Sources/WaylandClient/Public/Activation/ActivationDomainTypes.swift`
 
 - L1: `public struct ActivationToken: Equatable, Hashable, Sendable, CustomStringConvertible {`
@@ -45,15 +49,16 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 ### `Sources/WaylandClient/Public/Clipboard/ClipboardOffer.swift`
 
-- L3: `public struct ClipboardOffer: Sendable, Hashable {`
+- L3: `public struct ClipboardOffer: Sendable, Hashable, Identifiable {`
 - L4: `    public static let defaultReadTimeout: Duration = .seconds(5)`
-- L7: `    public let seatID: SeatID`
-- L8: `    public let mimeTypes: [MIMEType]`
-- L21: `    public var identity: ClipboardOfferIdentity {`
-- L25: `    public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {`
-- L29: `    public func read(`
-- L41: `    public static func == (lhs: ClipboardOffer, rhs: ClipboardOffer) -> Bool {`
-- L45: `    public func hash(into hasher: inout Hasher) {`
+- L7: `    public let id: ClipboardOfferIdentity`
+- L8: `    public let seatID: SeatID`
+- L9: `    public let mimeTypes: [MIMEType]`
+- L23: `    public var identity: ClipboardOfferIdentity {`
+- L27: `    public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {`
+- L31: `    public func read(`
+- L43: `    public static func == (lhs: ClipboardOffer, rhs: ClipboardOffer) -> Bool {`
+- L47: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Clipboard/ClipboardSource.swift`
 
@@ -61,13 +66,14 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L4: `    public let payloads: [DataTransferSourcePayload]`
 - L7: `    public init(payloads sourcePayloads: [DataTransferSourcePayload]) throws {`
 - L13: `    public static func data(`
-- L27: `public struct ClipboardSource: Sendable, Hashable {`
-- L29: `    public let seatID: SeatID`
-- L30: `    public let mimeTypes: [MIMEType]`
-- L43: `    public var identity: ClipboardSourceIdentity {`
-- L50: `    public func requestClear(serial: InputSerial) async throws {`
-- L54: `    public static func == (lhs: ClipboardSource, rhs: ClipboardSource) -> Bool {`
-- L58: `    public func hash(into hasher: inout Hasher) {`
+- L27: `public struct ClipboardSource: Sendable, Hashable, Identifiable {`
+- L29: `    public let id: ClipboardSourceIdentity`
+- L30: `    public let seatID: SeatID`
+- L31: `    public let mimeTypes: [MIMEType]`
+- L45: `    public var identity: ClipboardSourceIdentity {`
+- L52: `    public func requestClear(serial: InputSerial) async throws {`
+- L56: `    public static func == (lhs: ClipboardSource, rhs: ClipboardSource) -> Bool {`
+- L60: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Configuration/ConfigurationDomainTypes.swift`
 
@@ -431,21 +437,22 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 ### `Sources/WaylandClient/Public/DataTransfer/DragOffer.swift`
 
-- L3: `public struct DragOffer: Sendable, Hashable {`
+- L3: `public struct DragOffer: Sendable, Hashable, Identifiable {`
 - L4: `    public static let defaultReadTimeout: Duration = .seconds(5)`
-- L7: `    public let seatID: SeatID`
-- L8: `    public let mimeTypes: [MIMEType]`
-- L9: `    public let sourceActions: DragActionSet`
-- L10: `    public let selectedAction: DragAction?`
-- L30: `    public var identity: DragOfferIdentity {`
-- L34: `    public func accept(_ mimeType: MIMEType?) async throws {`
-- L38: `    public func setActions(`
-- L49: `    public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {`
-- L53: `    public func read(`
-- L65: `    public func finish() async throws {`
-- L69: `    public func cancel() async throws {`
-- L73: `    public static func == (lhs: DragOffer, rhs: DragOffer) -> Bool {`
-- L77: `    public func hash(into hasher: inout Hasher) {`
+- L7: `    public let id: DragOfferIdentity`
+- L8: `    public let seatID: SeatID`
+- L9: `    public let mimeTypes: [MIMEType]`
+- L10: `    public let sourceActions: DragActionSet`
+- L11: `    public let selectedAction: DragAction?`
+- L32: `    public var identity: DragOfferIdentity {`
+- L36: `    public func accept(_ mimeType: MIMEType?) async throws {`
+- L40: `    public func setActions(`
+- L51: `    public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {`
+- L55: `    public func read(`
+- L67: `    public func finish() async throws {`
+- L71: `    public func cancel() async throws {`
+- L75: `    public static func == (lhs: DragOffer, rhs: DragOffer) -> Bool {`
+- L79: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/DataTransfer/DragSource.swift`
 
@@ -464,28 +471,29 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L97: `    public let actions: DragActionSet`
 - L100: `    public init(`
 - L114: `    public static func data(`
-- L130: `public struct DragSource: Sendable, Hashable {`
-- L132: `    public let seatID: SeatID`
-- L133: `    public let mimeTypes: [MIMEType]`
-- L134: `    public let actions: DragActionSet`
-- L153: `    public var identity: DragSourceIdentity {`
-- L158: `    public func cancel() async throws {`
-- L162: `    public static func == (lhs: DragSource, rhs: DragSource) -> Bool {`
-- L166: `    public func hash(into hasher: inout Hasher) {`
-- L171: `public struct DragSourceTargetEvent: Equatable, Sendable {`
-- L172: `    public let source: DragSourceIdentity`
-- L173: `    public let mimeType: MIMEType?`
-- L181: `public struct DragSourceActionEvent: Equatable, Sendable {`
-- L182: `    public let source: DragSourceIdentity`
-- L183: `    public let action: DragAction`
-- L191: `public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {`
-- L192: `    case copy`
-- L193: `    case move`
-- L194: `    case unknown(rawValue: UInt32)`
-- L209: `    public var description: String {`
-- L221: `public struct DragSourceFinishedEvent: Equatable, Sendable {`
-- L222: `    public let source: DragSourceIdentity`
-- L223: `    public let finalAction: DragSourceFinalAction`
+- L130: `public struct DragSource: Sendable, Hashable, Identifiable {`
+- L132: `    public let id: DragSourceIdentity`
+- L133: `    public let seatID: SeatID`
+- L134: `    public let mimeTypes: [MIMEType]`
+- L135: `    public let actions: DragActionSet`
+- L155: `    public var identity: DragSourceIdentity {`
+- L160: `    public func cancel() async throws {`
+- L164: `    public static func == (lhs: DragSource, rhs: DragSource) -> Bool {`
+- L168: `    public func hash(into hasher: inout Hasher) {`
+- L173: `public struct DragSourceTargetEvent: Equatable, Sendable {`
+- L174: `    public let source: DragSourceIdentity`
+- L175: `    public let mimeType: MIMEType?`
+- L183: `public struct DragSourceActionEvent: Equatable, Sendable {`
+- L184: `    public let source: DragSourceIdentity`
+- L185: `    public let action: DragAction`
+- L193: `public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {`
+- L194: `    case copy`
+- L195: `    case move`
+- L196: `    case unknown(rawValue: UInt32)`
+- L211: `    public var description: String {`
+- L223: `public struct DragSourceFinishedEvent: Equatable, Sendable {`
+- L224: `    public let source: DragSourceIdentity`
+- L225: `    public let finalAction: DragSourceFinalAction`
 
 ### `Sources/WaylandClient/Public/DataTransfer/OwnedFileDescriptor.swift`
 
@@ -1694,19 +1702,22 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 ### `Sources/WaylandClient/Public/Popup/PopupSurface.swift`
 
-- L1: `public struct PopupSurface: Sendable, Hashable {`
-- L3: `    public let parentWindowID: WindowID`
-- L19: `    public var identity: PopupSurfaceIdentity {`
-- L23: `    public func show(`
-- L30: `    public func redraw(`
-- L36: `    public func requestRedraw() async throws {`
-- L40: `    public func close() async {`
-- L44: `    public var isClosed: Bool {`
-- L50: `    public var needsRedraw: Bool {`
-- L56: `    public var geometry: SurfaceGeometry {`
-- L62: `    public var placement: PopupPlacement {`
-- L68: `    public static func == (lhs: PopupSurface, rhs: PopupSurface) -> Bool {`
-- L72: `    public func hash(into hasher: inout Hasher) {`
+- L1: `public struct PopupSurface: Sendable, Hashable, Identifiable {`
+- L3: `    public let id: PopupSurfaceIdentity`
+- L4: `    public let parentWindowID: WindowID`
+- L21: `    public var identity: PopupSurfaceIdentity {`
+- L25: `    public func show(`
+- L32: `    public func redraw(`
+- L38: `    public func requestRedraw() async throws {`
+- L42: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
+- L46: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
+- L50: `    public func close() async {`
+- L54: `    public var isClosed: Bool {`
+- L60: `    public var needsRedraw: Bool {`
+- L66: `    public var geometry: SurfaceGeometry {`
+- L72: `    public var placement: PopupPlacement {`
+- L78: `    public static func == (lhs: PopupSurface, rhs: PopupSurface) -> Bool {`
+- L82: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Presentation/PresentationFeedback.swift`
 
@@ -1752,15 +1763,16 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 ### `Sources/WaylandClient/Public/PrimarySelection/PrimarySelectionOffer.swift`
 
-- L3: `public struct PrimarySelectionOffer: Sendable, Hashable {`
+- L3: `public struct PrimarySelectionOffer: Sendable, Hashable, Identifiable {`
 - L4: `    public static let defaultReadTimeout: Duration = .seconds(5)`
-- L7: `    public let seatID: SeatID`
-- L8: `    public let mimeTypes: [MIMEType]`
-- L21: `    public var identity: PrimarySelectionOfferIdentity {`
-- L25: `    public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {`
-- L29: `    public func read(`
-- L41: `    public static func == (lhs: PrimarySelectionOffer, rhs: PrimarySelectionOffer) -> Bool {`
-- L45: `    public func hash(into hasher: inout Hasher) {`
+- L7: `    public let id: PrimarySelectionOfferIdentity`
+- L8: `    public let seatID: SeatID`
+- L9: `    public let mimeTypes: [MIMEType]`
+- L23: `    public var identity: PrimarySelectionOfferIdentity {`
+- L27: `    public func receive(_ mimeType: MIMEType) async throws -> OwnedFileDescriptor {`
+- L31: `    public func read(`
+- L43: `    public static func == (lhs: PrimarySelectionOffer, rhs: PrimarySelectionOffer) -> Bool {`
+- L47: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/PrimarySelection/PrimarySelectionSource.swift`
 
@@ -1768,13 +1780,14 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L4: `    public let payloads: [DataTransferSourcePayload]`
 - L7: `    public init(payloads sourcePayloads: [DataTransferSourcePayload]) throws {`
 - L13: `    public static func data(`
-- L27: `public struct PrimarySelectionSource: Sendable, Hashable {`
-- L29: `    public let seatID: SeatID`
-- L30: `    public let mimeTypes: [MIMEType]`
-- L43: `    public var identity: PrimarySelectionSourceIdentity {`
-- L50: `    public func requestClear(serial: InputSerial) async throws {`
-- L54: `    public static func == (lhs: PrimarySelectionSource, rhs: PrimarySelectionSource) -> Bool {`
-- L58: `    public func hash(into hasher: inout Hasher) {`
+- L27: `public struct PrimarySelectionSource: Sendable, Hashable, Identifiable {`
+- L29: `    public let id: PrimarySelectionSourceIdentity`
+- L30: `    public let seatID: SeatID`
+- L31: `    public let mimeTypes: [MIMEType]`
+- L45: `    public var identity: PrimarySelectionSourceIdentity {`
+- L52: `    public func requestClear(serial: InputSerial) async throws {`
+- L60: `    public static func == (lhs: PrimarySelectionSource, rhs: PrimarySelectionSource) -> Bool {`
+- L64: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Rendering/SoftwareFrame.swift`
 
@@ -1792,6 +1805,21 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L8: `    public let y: Int`
 - L10: `    public init(x pointX: Int, y pointY: Int) {`
 - L17: `    public func bufferPixelPoint(logicalX: Double, logicalY: Double) -> BufferPixelPoint {`
+
+### `Sources/WaylandClient/Public/Rendering/SurfaceRegion.swift`
+
+- L1: `public enum SurfaceRegionError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L2: `    case emptyDamageRegion`
+- L3: `    case damageRectangleOutOfBounds(LogicalRect)`
+- L5: `    public var description: String {`
+- L15: `public struct SurfaceRegion: Equatable, Sendable {`
+- L16: `    public let rectangles: [LogicalRect]`
+- L18: `    public init(rectangles regionRectangles: [LogicalRect]) {`
+- L22: `    public init(_ regionRectangles: [LogicalRect]) {`
+- L27: `public struct SurfaceDamageRegion: Equatable, Sendable {`
+- L28: `    public let rectangles: [LogicalRect]`
+- L30: `    public init(rectangles damageRectangles: [LogicalRect]) throws {`
+- L38: `    public init(_ damageRectangles: [LogicalRect]) throws {`
 
 ### `Sources/WaylandClient/Public/TextInput/TextInputDomainTypes.swift`
 
@@ -1959,39 +1987,43 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L1: `public struct Window: Sendable, Hashable {`
 - L2: `    public let id: WindowID`
 - L16: `    public func show(`
-- L38: `    public func redraw(`
-- L57: `    public func close() async {`
-- L61: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
-- L67: `    public func requestRedraw() async throws {`
-- L71: `    public var presentationEvents: WindowPresentationEvents {`
-- L75: `    public func requestPresentationFeedback() async throws {`
-- L79: `    public func requestActivationToken(`
-- L94: `    public func activate(using token: ActivationToken) async throws {`
-- L98: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
-- L102: `    public func lockPointer(`
-- L117: `    public func confinePointer(`
-- L130: `    public func setTitle(_ title: WaylandString) async throws {`
-- L134: `    public func setTitle(_ title: String) async throws {`
-- L138: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
-- L142: `    public func setAppID(_ appID: String) async throws {`
-- L146: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
-- L150: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
-- L154: `    public func requestMaximize() async throws {`
-- L158: `    public func requestUnmaximize() async throws {`
-- L162: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
-- L166: `    public func requestExitFullscreen() async throws {`
-- L170: `    public func requestMinimize() async throws {`
-- L174: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
-- L178: `    public func requestInteractiveResize(`
-- L191: `    public func requestWindowMenu(`
-- L204: `    public func startDrag(`
-- L219: `    public var isClosed: Bool {`
-- L225: `    public var needsRedraw: Bool {`
-- L231: `    public var decorationMode: WindowDecorationMode {`
-- L237: `    public var geometry: SurfaceGeometry {`
-- L243: `    public var stateSnapshot: WindowStateSnapshot {`
-- L249: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L253: `    public func hash(into hasher: inout Hasher) {`
+- L23: `    public func show(`
+- L55: `    public func redraw(`
+- L61: `    public func redraw(`
+- L89: `    public func close() async {`
+- L93: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
+- L99: `    public func requestRedraw() async throws {`
+- L103: `    public var presentationEvents: WindowPresentationEvents {`
+- L107: `    public func requestPresentationFeedback() async throws {`
+- L111: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
+- L115: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
+- L119: `    public func requestActivationToken(`
+- L134: `    public func activate(using token: ActivationToken) async throws {`
+- L138: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
+- L142: `    public func lockPointer(`
+- L157: `    public func confinePointer(`
+- L170: `    public func setTitle(_ title: WaylandString) async throws {`
+- L174: `    public func setTitle(_ title: String) async throws {`
+- L178: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L182: `    public func setAppID(_ appID: String) async throws {`
+- L186: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L190: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L194: `    public func requestMaximize() async throws {`
+- L198: `    public func requestUnmaximize() async throws {`
+- L202: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L206: `    public func requestExitFullscreen() async throws {`
+- L210: `    public func requestMinimize() async throws {`
+- L214: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L218: `    public func requestInteractiveResize(`
+- L231: `    public func requestWindowMenu(`
+- L244: `    public func startDrag(`
+- L259: `    public var isClosed: Bool {`
+- L265: `    public var needsRedraw: Bool {`
+- L271: `    public var decorationMode: WindowDecorationMode {`
+- L277: `    public var geometry: SurfaceGeometry {`
+- L283: `    public var stateSnapshot: WindowStateSnapshot {`
+- L289: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L293: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 
@@ -2321,19 +2353,19 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L265: `    case frameLeaseActive`
 - L266: `    case frameLeaseConsumed`
 - L267: `    case unsupportedMetadata`
-- L268: `    case unsupportedDamage`
-- L269: `    case invalidDamageRegion`
-- L270: `    case unsupportedPacing`
-- L271: `    case submissionFailed(WaylandGraphicsSubmissionFailure)`
-- L274: `public struct WaylandGraphicsWindowBacking: Sendable {`
-- L275: `    public let window: Window`
-- L286: `    public var runtimePath: WaylandGraphicsRuntimePath {`
-- L292: `    public func nextFrame() async throws -> WaylandGraphicsFrameLease {`
-- L302: `    public func close() async throws {`
-- L307: `public struct WaylandGraphicsFrameLease: Sendable {`
-- L308: `    public let size: PositivePixelSize`
-- L309: `    public let runtimePath: WaylandGraphicsRuntimePath`
-- L327: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws`
-- L334: `    public func submitSoftware(`
-- L371: `    public func cancel() async {`
+- L268: `    case invalidDamageRegion`
+- L269: `    case unsupportedPacing`
+- L270: `    case submissionFailed(WaylandGraphicsSubmissionFailure)`
+- L273: `public struct WaylandGraphicsWindowBacking: Sendable {`
+- L274: `    public let window: Window`
+- L285: `    public var runtimePath: WaylandGraphicsRuntimePath {`
+- L291: `    public var id: WindowID {`
+- L295: `    public func nextFrame() async throws -> WaylandGraphicsFrameLease {`
+- L305: `    public func close() async throws {`
+- L312: `public struct WaylandGraphicsFrameLease: Sendable {`
+- L313: `    public let size: PositivePixelSize`
+- L314: `    public let runtimePath: WaylandGraphicsRuntimePath`
+- L332: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws`
+- L339: `    public func submitSoftware(`
+- L376: `    public func cancel() async {`
 

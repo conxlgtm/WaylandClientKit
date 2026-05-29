@@ -9,12 +9,14 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
         timeoutMilliseconds: Int32,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
+        damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws
 
     func redraw(
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
+        damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws
 
@@ -73,7 +75,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     func submit(
-        leaseID: UInt64,
+        leaseID: WaylandGraphicsFrameLeaseID,
         frame: WaylandGraphicsSubmittedFrame
     ) async throws -> WaylandGraphicsFrameResult {
         try await submit(
@@ -85,7 +87,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     func submit(
-        leaseID: UInt64,
+        leaseID: WaylandGraphicsFrameLeaseID,
         frame: WaylandGraphicsSubmittedFrame,
         beforeSubmissionEffect: @Sendable () async throws -> Void,
         afterSubmissionEffect: @Sendable () async throws -> Void
@@ -120,7 +122,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     func submitSoftware(
-        leaseID: UInt64,
+        leaseID: WaylandGraphicsFrameLeaseID,
         metadata frameMetadata: WaylandGraphicsFrameMetadata,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws -> WaylandGraphicsFrameResult {
@@ -158,7 +160,9 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
     }
 
-    private func submissionGeometry(for leaseID: UInt64) async throws -> SurfaceGeometry {
+    private func submissionGeometry(
+        for leaseID: WaylandGraphicsFrameLeaseID
+    ) async throws -> SurfaceGeometry {
         do {
             let geometry = try await window.geometry
             try leaseState.requireSubmittable(leaseID: leaseID)
@@ -199,7 +203,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         )
     }
 
-    func cancel(leaseID: UInt64) {
+    func cancel(leaseID: WaylandGraphicsFrameLeaseID) {
         leaseState.cancel(leaseID: leaseID)
     }
 
@@ -228,19 +232,22 @@ package actor WaylandGraphicsWindowBackingStorage {
     ) async throws {
         let color = frame.color.xrgb8888
         let metadata = try frame.metadata.surfaceCommitMetadata()
+        let damage = try frame.metadata.surfaceDamageRegion()
         switch operation {
         case .show:
             try await window.show(
                 timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds,
                 metadata: metadata,
-                requestPresentationFeedback: shouldRequestPresentationFeedback
+                requestPresentationFeedback: shouldRequestPresentationFeedback,
+                damage: damage
             ) { softwareFrame in
                 Self.clear(softwareFrame, color: color)
             }
         case .redraw:
             try await window.redraw(
                 metadata: metadata,
-                requestPresentationFeedback: shouldRequestPresentationFeedback
+                requestPresentationFeedback: shouldRequestPresentationFeedback,
+                damage: damage
             ) { softwareFrame in
                 Self.clear(softwareFrame, color: color)
             }
@@ -253,18 +260,21 @@ package actor WaylandGraphicsWindowBackingStorage {
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws {
         let metadata = try frameMetadata.surfaceCommitMetadata()
+        let damage = try frameMetadata.surfaceDamageRegion()
         switch operation {
         case .show:
             try await window.show(
                 timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds,
                 metadata: metadata,
                 requestPresentationFeedback: shouldRequestPresentationFeedback,
+                damage: damage,
                 draw
             )
         case .redraw:
             try await window.redraw(
                 metadata: metadata,
                 requestPresentationFeedback: shouldRequestPresentationFeedback,
+                damage: damage,
                 draw
             )
         }
