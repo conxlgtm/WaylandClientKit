@@ -253,6 +253,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "CustomCursorSmoke",
+            dependencies: ["WaylandClient"],
+            path: "Examples/CustomCursorSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "SurfaceRegionSmoke",
             dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/SurfaceRegionSmoke",

@@ -83,62 +83,64 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L4: `    case invalidSize(Int32)`
 - L5: `    case cursorNameContainsInteriorNUL`
 - L6: `    case emptyCursorName`
-- L8: `    public var description: String {`
-- L24: `public struct CursorThemeName: Equatable, Sendable, CustomStringConvertible {`
-- L25: `    public let value: String`
-- L27: `    public init(_ name: String) throws {`
-- L45: `    public var description: String {`
-- L50: `public struct CursorSize: Equatable, Hashable, Comparable, Sendable, CustomStringConvertible {`
-- L51: `    public let rawValue: Int32`
-- L53: `    public static let `default` = CursorSize(unchecked: 24)`
-- L55: `    public init(_ value: Int32) throws {`
-- L68: `    public var description: String {`
-- L72: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L77: `public enum DisplayConfigurationField: Equatable, Sendable, CustomStringConvertible {`
-- L78: `    case displayEventCapacity`
-- L79: `    case inputEventCapacity`
-- L80: `    case textInputEventCapacity`
-- L81: `    case dataTransferEventCapacity`
-- L82: `    case presentationEventCapacity`
-- L83: `    case rawInputQueueCapacity`
-- L84: `    case pendingInputEventCapacity`
-- L85: `    case diagnosticsCapacity`
-- L87: `    public var description: String {`
-- L109: `public enum DisplayConfigurationError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L110: `    case nonPositiveCapacity(field: DisplayConfigurationField, value: Int)`
-- L112: `    public var description: String {`
-- L120: `public enum EventStreamCapacityField: Equatable, Sendable {`
-- L121: `    case displayEventCapacity`
-- L122: `    case inputEventCapacity`
-- L123: `    case textInputEventCapacity`
-- L124: `    case dataTransferEventCapacity`
-- L125: `    case presentationEventCapacity`
-- L143: `public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L144: `    public let rawValue: Int`
-- L146: `    public static let defaultDisplayEvents = EventStreamCapacity(unchecked: 256)`
-- L147: `    public static let defaultInputEvents = EventStreamCapacity(unchecked: 1_024)`
-- L148: `    public static let defaultTextInputEvents = EventStreamCapacity(unchecked: 512)`
-- L149: `    public static let defaultDataTransferEvents = EventStreamCapacity(unchecked: 256)`
-- L150: `    public static let defaultPresentationEvents = EventStreamCapacity(unchecked: 256)`
-- L152: `    public init(`
-- L171: `    public var description: String {`
-- L175: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L180: `public enum InputQueueCapacityField: Equatable, Sendable {`
-- L181: `    case rawInputQueueCapacity`
-- L182: `    case pendingInputEventCapacity`
-- L194: `public struct InputQueueCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L195: `    public let rawValue: Int`
-- L197: `    public static let defaultRawInput = InputQueueCapacity(unchecked: 4_096)`
-- L198: `    public static let defaultPendingInput = InputQueueCapacity(unchecked: 2_048)`
-- L200: `    public init(`
-- L219: `    public var description: String {`
-- L223: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L228: `public struct DiagnosticsCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L229: `    public let rawValue: Int`
-- L231: `    public static let `default` = DiagnosticsCapacity(unchecked: 128)`
-- L233: `    public init(_ value: Int) throws {`
-- L249: `    public var description: String {`
-- L253: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L7: `    case invalidCursorImagePixelCount(expected: Int, actual: Int)`
+- L8: `    case cursorImageHotspotOutsideBounds(x: Int32, y: Int32, width: Int32, height: Int32)`
+- L10: `    public var description: String {`
+- L30: `public struct CursorThemeName: Equatable, Sendable, CustomStringConvertible {`
+- L31: `    public let value: String`
+- L33: `    public init(_ name: String) throws {`
+- L51: `    public var description: String {`
+- L56: `public struct CursorSize: Equatable, Hashable, Comparable, Sendable, CustomStringConvertible {`
+- L57: `    public let rawValue: Int32`
+- L59: `    public static let `default` = CursorSize(unchecked: 24)`
+- L61: `    public init(_ value: Int32) throws {`
+- L74: `    public var description: String {`
+- L78: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L83: `public enum DisplayConfigurationField: Equatable, Sendable, CustomStringConvertible {`
+- L84: `    case displayEventCapacity`
+- L85: `    case inputEventCapacity`
+- L86: `    case textInputEventCapacity`
+- L87: `    case dataTransferEventCapacity`
+- L88: `    case presentationEventCapacity`
+- L89: `    case rawInputQueueCapacity`
+- L90: `    case pendingInputEventCapacity`
+- L91: `    case diagnosticsCapacity`
+- L93: `    public var description: String {`
+- L115: `public enum DisplayConfigurationError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L116: `    case nonPositiveCapacity(field: DisplayConfigurationField, value: Int)`
+- L118: `    public var description: String {`
+- L126: `public enum EventStreamCapacityField: Equatable, Sendable {`
+- L127: `    case displayEventCapacity`
+- L128: `    case inputEventCapacity`
+- L129: `    case textInputEventCapacity`
+- L130: `    case dataTransferEventCapacity`
+- L131: `    case presentationEventCapacity`
+- L149: `public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L150: `    public let rawValue: Int`
+- L152: `    public static let defaultDisplayEvents = EventStreamCapacity(unchecked: 256)`
+- L153: `    public static let defaultInputEvents = EventStreamCapacity(unchecked: 1_024)`
+- L154: `    public static let defaultTextInputEvents = EventStreamCapacity(unchecked: 512)`
+- L155: `    public static let defaultDataTransferEvents = EventStreamCapacity(unchecked: 256)`
+- L156: `    public static let defaultPresentationEvents = EventStreamCapacity(unchecked: 256)`
+- L158: `    public init(`
+- L177: `    public var description: String {`
+- L181: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L186: `public enum InputQueueCapacityField: Equatable, Sendable {`
+- L187: `    case rawInputQueueCapacity`
+- L188: `    case pendingInputEventCapacity`
+- L200: `public struct InputQueueCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L201: `    public let rawValue: Int`
+- L203: `    public static let defaultRawInput = InputQueueCapacity(unchecked: 4_096)`
+- L204: `    public static let defaultPendingInput = InputQueueCapacity(unchecked: 2_048)`
+- L206: `    public init(`
+- L225: `    public var description: String {`
+- L229: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L234: `public struct DiagnosticsCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L235: `    public let rawValue: Int`
+- L237: `    public static let `default` = DiagnosticsCapacity(unchecked: 128)`
+- L239: `    public init(_ value: Int) throws {`
+- L255: `    public var description: String {`
+- L259: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
 
 ### `Sources/WaylandClient/Public/Configuration/DisplayConfiguration.swift`
 
@@ -223,16 +225,25 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 ### `Sources/WaylandClient/Public/Cursor/PointerCursor.swift`
 
-- L1: `public struct PointerCursor: Equatable, Sendable {`
-- L9: `    public var name: String? {`
-- L14: `    public init(name cursorName: String) throws {`
-- L36: `    public static let defaultArrow = Self(validatedName: "left_ptr")`
-- L37: `    public static let text = Self(validatedName: "text")`
-- L38: `    public static let pointer = Self(validatedName: "hand2")`
-- L39: `    public static let crosshair = Self(validatedName: "crosshair")`
-- L40: `    public static let resizeLeftRight = Self(validatedName: "sb_h_double_arrow")`
-- L41: `    public static let resizeUpDown = Self(validatedName: "sb_v_double_arrow")`
-- L42: `    public static let hidden = Self(kind: .hidden)`
+- L1: `public struct PointerCursorImage: Equatable, Sendable {`
+- L2: `    public let size: PositivePixelSize`
+- L3: `    public let hotspotX: Int32`
+- L4: `    public let hotspotY: Int32`
+- L5: `    public let pixels: [UInt32]`
+- L7: `    public init(`
+- L31: `    public static func solid(`
+- L108: `public struct PointerCursor: Equatable, Sendable {`
+- L117: `    public var name: String? {`
+- L122: `    public var image: PointerCursorImage? {`
+- L127: `    public init(name cursorName: String) throws {`
+- L149: `    public static func image(_ image: PointerCursorImage) -> PointerCursor {`
+- L153: `    public static let defaultArrow = Self(validatedName: "left_ptr")`
+- L154: `    public static let text = Self(validatedName: "text")`
+- L155: `    public static let pointer = Self(validatedName: "hand2")`
+- L156: `    public static let crosshair = Self(validatedName: "crosshair")`
+- L157: `    public static let resizeLeftRight = Self(validatedName: "sb_h_double_arrow")`
+- L158: `    public static let resizeUpDown = Self(validatedName: "sb_v_double_arrow")`
+- L159: `    public static let hidden = Self(kind: .hidden)`
 
 ### `Sources/WaylandClient/Public/DataTransfer/ByteCount.swift`
 
@@ -932,8 +943,8 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L102: `    public func outputs() throws -> [OutputSnapshot] {`
 - L107: `    public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {`
 - L112: `    public func createTopLevelWindow(`
-- L228: `    public func close() {`
-- L287: `    public var isClosed: Bool {`
+- L236: `    public func close() {`
+- L295: `    public var isClosed: Bool {`
 
 ### `Sources/WaylandClient/Public/Errors/ClientError.swift`
 
@@ -972,24 +983,27 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L2: `    case closed`
 - L3: `    case unknownWindow(WindowID)`
 - L4: `    case unknownPopup`
-- L5: `    case closedPopup`
-- L6: `    case foreignWindow(WindowID)`
-- L7: `    case presentationTimeUnavailable`
-- L9: `    public var description: String {`
-- L27: `public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {`
-- L28: `    case skippedUnknownSeat`
-- L29: `    case skippedNoPointer`
-- L31: `    public var description: String {`
-- L41: `public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConvertible {`
-- L42: `    public let seatID: SeatID`
-- L43: `    public let requestedCursor: PointerCursor`
-- L44: `    public let backendResult: PointerCursorBackendResult`
-- L46: `    public init(`
-- L56: `    public var description: String {`
-- L70: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L71: `    case invalidConfiguration(CursorConfigurationError)`
-- L72: `    case requestFailed(PointerCursorRequestFailure)`
-- L74: `    public var description: String {`
+- L5: `    case unknownSubsurface(SubsurfaceIdentity)`
+- L6: `    case closedPopup`
+- L7: `    case closedSubsurface`
+- L8: `    case foreignWindow(WindowID)`
+- L9: `    case foreignSubsurface(SubsurfaceIdentity)`
+- L10: `    case presentationTimeUnavailable`
+- L12: `    public var description: String {`
+- L36: `public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {`
+- L37: `    case skippedUnknownSeat`
+- L38: `    case skippedNoPointer`
+- L40: `    public var description: String {`
+- L50: `public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConvertible {`
+- L51: `    public let seatID: SeatID`
+- L52: `    public let requestedCursor: PointerCursor`
+- L53: `    public let backendResult: PointerCursorBackendResult`
+- L55: `    public init(`
+- L65: `    public var description: String {`
+- L81: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L82: `    case invalidConfiguration(CursorConfigurationError)`
+- L83: `    case requestFailed(PointerCursorRequestFailure)`
+- L85: `    public var description: String {`
 
 ### `Sources/WaylandClient/Public/Errors/DisplayError.swift`
 
@@ -1821,6 +1835,46 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L30: `    public init(rectangles damageRectangles: [LogicalRect]) throws {`
 - L38: `    public init(_ damageRectangles: [LogicalRect]) throws {`
 
+### `Sources/WaylandClient/Public/Subsurface/Subsurface.swift`
+
+- L1: `public struct Subsurface: Sendable, Hashable, Identifiable {`
+- L3: `    public let id: SubsurfaceIdentity`
+- L4: `    public let parentWindowID: WindowID`
+- L21: `    public var identity: SubsurfaceIdentity {`
+- L29: `    public func show(`
+- L35: `    public func show(`
+- L42: `    public func redraw(`
+- L48: `    public func redraw(`
+- L55: `    public func requestRedraw() async throws {`
+- L59: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
+- L63: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
+- L67: `    public func setPosition(_ position: LogicalOffset) async throws {`
+- L71: `    public func placeAbove(_ sibling: Subsurface) async throws {`
+- L79: `    public func placeBelow(_ sibling: Subsurface) async throws {`
+- L87: `    public func setSynchronized() async throws {`
+- L91: `    public func setDesynchronized() async throws {`
+- L95: `    public func close() async {`
+- L99: `    public var isClosed: Bool {`
+- L105: `    public var needsRedraw: Bool {`
+- L111: `    public var geometry: SurfaceGeometry {`
+- L117: `    public static func == (lhs: Subsurface, rhs: Subsurface) -> Bool {`
+- L121: `    public func hash(into hasher: inout Hasher) {`
+
+### `Sources/WaylandClient/Public/Subsurface/SubsurfaceDomainTypes.swift`
+
+- L1: `public struct SubsurfaceIdentity: Hashable, Sendable, CustomStringConvertible {`
+- L8: `    public var description: String {`
+- L30: `public enum SubsurfaceSynchronizationMode: Equatable, Sendable {`
+- L31: `    case synchronized`
+- L32: `    case desynchronized`
+- L35: `public struct SubsurfaceConfiguration: Equatable, Sendable {`
+- L36: `    public static let defaultBufferCount = PositiveInt(unchecked: 3)`
+- L38: `    public let position: LogicalOffset`
+- L39: `    public let size: PositiveLogicalSize`
+- L40: `    public let bufferCount: PositiveInt`
+- L41: `    public let synchronizationMode: SubsurfaceSynchronizationMode`
+- L43: `    public init(`
+
 ### `Sources/WaylandClient/Public/TextInput/TextInputDomainTypes.swift`
 
 - L1: `public enum TextInputError: Error, Equatable, Sendable, CustomStringConvertible {`
@@ -1992,38 +2046,39 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L61: `    public func redraw(`
 - L89: `    public func close() async {`
 - L93: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
-- L99: `    public func requestRedraw() async throws {`
-- L103: `    public var presentationEvents: WindowPresentationEvents {`
-- L107: `    public func requestPresentationFeedback() async throws {`
-- L111: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
-- L115: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
-- L119: `    public func requestActivationToken(`
-- L134: `    public func activate(using token: ActivationToken) async throws {`
-- L138: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
-- L142: `    public func lockPointer(`
-- L157: `    public func confinePointer(`
-- L170: `    public func setTitle(_ title: WaylandString) async throws {`
-- L174: `    public func setTitle(_ title: String) async throws {`
-- L178: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
-- L182: `    public func setAppID(_ appID: String) async throws {`
-- L186: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
-- L190: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
-- L194: `    public func requestMaximize() async throws {`
-- L198: `    public func requestUnmaximize() async throws {`
-- L202: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
-- L206: `    public func requestExitFullscreen() async throws {`
-- L210: `    public func requestMinimize() async throws {`
-- L214: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
-- L218: `    public func requestInteractiveResize(`
-- L231: `    public func requestWindowMenu(`
-- L244: `    public func startDrag(`
-- L259: `    public var isClosed: Bool {`
-- L265: `    public var needsRedraw: Bool {`
-- L271: `    public var decorationMode: WindowDecorationMode {`
-- L277: `    public var geometry: SurfaceGeometry {`
-- L283: `    public var stateSnapshot: WindowStateSnapshot {`
-- L289: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L293: `    public func hash(into hasher: inout Hasher) {`
+- L99: `    public func createSubsurface(`
+- L108: `    public func requestRedraw() async throws {`
+- L112: `    public var presentationEvents: WindowPresentationEvents {`
+- L116: `    public func requestPresentationFeedback() async throws {`
+- L120: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
+- L124: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
+- L128: `    public func requestActivationToken(`
+- L143: `    public func activate(using token: ActivationToken) async throws {`
+- L147: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
+- L151: `    public func lockPointer(`
+- L166: `    public func confinePointer(`
+- L179: `    public func setTitle(_ title: WaylandString) async throws {`
+- L183: `    public func setTitle(_ title: String) async throws {`
+- L187: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L191: `    public func setAppID(_ appID: String) async throws {`
+- L195: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L199: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L203: `    public func requestMaximize() async throws {`
+- L207: `    public func requestUnmaximize() async throws {`
+- L211: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L215: `    public func requestExitFullscreen() async throws {`
+- L219: `    public func requestMinimize() async throws {`
+- L223: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L227: `    public func requestInteractiveResize(`
+- L240: `    public func requestWindowMenu(`
+- L253: `    public func startDrag(`
+- L268: `    public var isClosed: Bool {`
+- L274: `    public var needsRedraw: Bool {`
+- L280: `    public var decorationMode: WindowDecorationMode {`
+- L286: `    public var geometry: SurfaceGeometry {`
+- L292: `    public var stateSnapshot: WindowStateSnapshot {`
+- L298: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L302: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 

@@ -277,8 +277,10 @@ Diagonal resize cursor presets are not public yet because the portable names
 are not proven across compositor/theme families. Use `PointerCursor(name:)` with
 fallbacks for theme-specific policy.
 
-Custom software cursor images are deferred until SwiftWayland has a public
-buffer-lifetime design that keeps raw Wayland buffers and SHM pools private.
+Use `PointerCursorImage` when the framework needs a static software cursor
+image. The framework owns the image pixels and cursor policy; SwiftWayland owns
+SHM allocation, raw cursor-surface attachment, hotspot forwarding, and cleanup.
+Public cursor animation is still deferred.
 
 ## Boundaries SwiftWayland Does Not Own
 
