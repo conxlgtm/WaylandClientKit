@@ -372,6 +372,114 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
+    func customImageCursorAttachesImageAndUsesHotspot() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+        let customImage = try PointerCursorImage.solid(
+            size: PositivePixelSize(width: 4, height: 3),
+            hotspotX: 2,
+            hotspotY: 1,
+            color: 0x00FF_0000
+        )
+        let customCursor = PointerCursor.image(customImage)
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        backend.customCursorImages.removeAll()
+        backend.setCursorRequests.removeAll()
+        let surface = try #require(backend.surface(for: seatID))
+        surface.operationLog.removeAll()
+
+        try manager.setPointerCursor(customCursor)
+
+        #expect(backend.customCursorImages == [customImage])
+        #expect(surface.operationLog == [.setBufferScale(1), .attach, .commit])
+        #expect(
+            backend.setCursorRequests == [
+                SetCursorRequest(
+                    seatID: seatID,
+                    serial: 55,
+                    surfaceID: surface.objectID,
+                    hotspotX: 2,
+                    hotspotY: 1
+                )
+            ])
+    }
+
+    @Test
+    func customImageCursorSwitchesToHiddenAndDetachesSurface() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+        let customCursor = try PointerCursor.image(
+            .solid(size: PositivePixelSize(width: 2, height: 2), color: 0x0000_FF00)
+        )
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        try manager.setPointerCursor(customCursor)
+        let surface = try #require(backend.surface(for: seatID))
+        surface.operationLog.removeAll()
+        backend.setCursorRequests.removeAll()
+
+        try manager.setPointerCursor(.hidden)
+
+        #expect(surface.operationLog == [.detach, .commit])
+        #expect(
+            backend.setCursorRequests == [
+                SetCursorRequest(
+                    seatID: seatID,
+                    serial: 55,
+                    surfaceID: nil,
+                    hotspotX: 0,
+                    hotspotY: 0
+                )
+            ])
+    }
+
+    @Test
+    func customImageCursorSwitchesToNamedCursor() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+        let customCursor = try PointerCursor.image(
+            .solid(size: PositivePixelSize(width: 2, height: 2), color: 0x0000_00FF)
+        )
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        try manager.setPointerCursor(customCursor)
+        let surface = try #require(backend.surface(for: seatID))
+        surface.operationLog.removeAll()
+        backend.resolvedCursorNames.removeAll()
+
+        try manager.setPointerCursor(.text)
+
+        #expect(backend.resolvedCursorNames == ["text"])
+        #expect(surface.operationLog == [.setBufferScale(1), .attach, .commit])
+    }
+
+    @Test
+    func shutdownCleansUpCustomCursorSurface() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+        let customCursor = try PointerCursor.image(
+            .solid(size: PositivePixelSize(width: 2, height: 2), color: 0x0000_00FF)
+        )
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        try manager.setPointerCursor(customCursor)
+        let surface = try #require(backend.surface(for: seatID))
+
+        manager.shutdown()
+
+        #expect(Array(surface.operationLog.suffix(3)) == [.detach, .commit, .destroy])
+    }
+
+    @Test
     func seatRemovalDestroysOnlyThatSeatCursorSurface() throws {
         let backend = try RecordingCursorBackend()
         let manager = try CursorManager(backend: backend, configuration: .init())
@@ -685,6 +793,7 @@ final class RecordingCursorBackend: CursorManagerBackend {
     var createdSurfaces: [RecordingCursorSurface] = []
     var setCursorRequests: [SetCursorRequest] = []
     var setCursorShapeRequests: [SetCursorShapeRequest] = []
+    var customCursorImages: [PointerCursorImage] = []
     var missingCursorNames: Set<String> = []
     var setCursorResultOverride: RawPointerCursorResult?
     var cursorSurfaceCreationError: (any Error)?
@@ -718,6 +827,16 @@ final class RecordingCursorBackend: CursorManagerBackend {
         }
 
         return cursorImagesBySize[size] ?? image
+    }
+
+    func cursorImage(from customImage: PointerCursorImage) throws -> CursorImage {
+        customCursorImages.append(customImage)
+        return try makeCursorImage(
+            width: UInt32(customImage.size.width.rawValue),
+            height: UInt32(customImage.size.height.rawValue),
+            hotspotX: UInt32(customImage.hotspotX),
+            hotspotY: UInt32(customImage.hotspotY)
+        )
     }
 
     func createCursorSurface(for seatID: RawSeatID) throws -> CursorManagerSurface {
@@ -806,7 +925,7 @@ final class RecordingCursorSurface: CursorManagerSurface {
     private(set) var commitCount = 0
     private(set) var destroyCount = 0
     private(set) var bufferScaleRequests: [Int32] = []
-    private(set) var operationLog: [CursorSurfaceOperation] = []
+    var operationLog: [CursorSurfaceOperation] = []
 
     init(objectID cursorSurfaceID: RawObjectID) {
         objectID = cursorSurfaceID

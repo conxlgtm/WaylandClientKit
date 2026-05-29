@@ -3,7 +3,7 @@ import WaylandRaw
 extension PointerCursor {
     package var cursorShapeName: RawCursorShapeName? {
         switch kind {
-        case .hidden:
+        case .hidden, .customImage:
             nil
         case .named(let name):
             switch name {

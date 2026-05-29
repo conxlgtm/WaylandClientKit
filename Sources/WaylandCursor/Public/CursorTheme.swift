@@ -91,7 +91,7 @@ package final class CursorImage {
     package let hotspotY: Int32
     package let delay: UInt32
     package let buffer: RawBorrowedBuffer
-    private let owner: CursorTheme?
+    private let owner: AnyObject?
 
     package init(
         width imageWidth: UInt32,
@@ -100,7 +100,7 @@ package final class CursorImage {
         hotspotY imageHotspotY: UInt32,
         delay imageDelay: UInt32,
         buffer imageBuffer: RawBorrowedBuffer,
-        owner imageOwner: CursorTheme? = nil
+        owner imageOwner: AnyObject? = nil
     ) throws {
         width = try Self.int32(imageWidth)
         height = try Self.int32(imageHeight)
@@ -108,6 +108,31 @@ package final class CursorImage {
         hotspotY = try Self.int32(imageHotspotY)
         delay = imageDelay
         buffer = imageBuffer
+        owner = imageOwner
+    }
+
+    package init(
+        width imageWidth: Int32,
+        height imageHeight: Int32,
+        hotspotX imageHotspotX: Int32,
+        hotspotY imageHotspotY: Int32,
+        delay imageDelay: UInt32,
+        buffer imageBuffer: RawBuffer,
+        owner imageOwner: AnyObject
+    ) throws {
+        guard imageWidth > 0 else {
+            throw CursorError.invalidImageDimension(0)
+        }
+        guard imageHeight > 0 else {
+            throw CursorError.invalidImageDimension(0)
+        }
+
+        width = imageWidth
+        height = imageHeight
+        hotspotX = imageHotspotX
+        hotspotY = imageHotspotY
+        delay = imageDelay
+        buffer = RawBorrowedBuffer(pointer: imageBuffer.surfaceBuffer.pointer)
         owner = imageOwner
     }
 

@@ -211,7 +211,7 @@ framework's widget layer. Keep data transfer at the app-host boundary.
 
 - Public managed GPU submission is not implemented.
 - Color-management image descriptions remain internal.
-- Public cursor animation and custom software cursor image APIs are not available.
+- Static custom cursor images are available; public cursor animation is not.
 - Output-management APIs are out of scope.
 - `WaylandGraphicsPreview` remains source-breaking preview API.
 

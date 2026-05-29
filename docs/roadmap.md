@@ -166,7 +166,7 @@ Known foundation gaps:
   beyond public managed-GPU software fallback evidence
 - broader live compositor coverage for explicit sync, FIFO, commit timing, and
   metadata protocols beyond local unit and smoke reporting
-- public cursor animation and custom cursor image API
+- public cursor animation
 - tablet and pointer-warp protocols
 - xdg-session-management design and session integration where needed by app
   launch and restoration workflows
@@ -944,13 +944,13 @@ Required behavior:
 - support compositor-managed cursor shape protocol when advertised
 - treat cursor surfaces as tests of the shared surface role, scale, commit, and
   destruction model
-- keep custom cursor drawing out until a public buffer lifetime design keeps raw
-  Wayland buffers private
+- keep custom cursor drawing private so public callers never receive raw Wayland
+  buffers or SHM pools
 
 Resource semantics:
 
 - cursor surface lifetime is tied to seat/focus state
-- borrowed cursor buffers cannot outlive their theme
+- borrowed cursor buffers cannot outlive their theme or custom image storage
 - animation ticks cannot commit stale buffers after focus or scale changes
 
 Exit criteria:

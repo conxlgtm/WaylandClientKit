@@ -72,6 +72,8 @@ public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConv
             "set hidden cursor"
         case .named:
             "set named cursor"
+        case .customImage:
+            "set custom cursor image"
         }
     }
 }

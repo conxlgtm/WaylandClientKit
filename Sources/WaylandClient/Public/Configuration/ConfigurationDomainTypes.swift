@@ -4,6 +4,8 @@ public enum CursorConfigurationError: Error, Equatable, Sendable, CustomStringCo
     case invalidSize(Int32)
     case cursorNameContainsInteriorNUL
     case emptyCursorName
+    case invalidCursorImagePixelCount(expected: Int, actual: Int)
+    case cursorImageHotspotOutsideBounds(x: Int32, y: Int32, width: Int32, height: Int32)
 
     public var description: String {
         switch self {
@@ -17,6 +19,10 @@ public enum CursorConfigurationError: Error, Equatable, Sendable, CustomStringCo
             "pointer cursor names must not contain embedded NUL bytes"
         case .emptyCursorName:
             "pointer cursor names must not be empty"
+        case .invalidCursorImagePixelCount(let expected, let actual):
+            "pointer cursor image expected \(expected) pixels, got \(actual)"
+        case .cursorImageHotspotOutsideBounds(let x, let y, let width, let height):
+            "pointer cursor hotspot \(x),\(y) must be inside \(width)x\(height)"
         }
     }
 }
