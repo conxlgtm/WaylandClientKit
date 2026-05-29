@@ -118,6 +118,8 @@ Remaining unsafe constructs:
   surface and routes commits through `SurfaceRuntime`.
 - `DragIconRoleSurface` owns a `wl_surface` and SHM buffer used as a source-side
   drag icon surface.
+- `SurfaceRoleReadinessSnapshot` records which managed roles accept shared
+  surface operations, making cursor and drag icon exclusions explicit in tests.
 
 Audit invariant:
 
