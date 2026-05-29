@@ -2353,20 +2353,19 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L265: `    case frameLeaseActive`
 - L266: `    case frameLeaseConsumed`
 - L267: `    case unsupportedMetadata`
-- L268: `    case unsupportedDamage`
-- L269: `    case invalidDamageRegion`
-- L270: `    case unsupportedPacing`
-- L271: `    case submissionFailed(WaylandGraphicsSubmissionFailure)`
-- L274: `public struct WaylandGraphicsWindowBacking: Sendable {`
-- L275: `    public let window: Window`
-- L286: `    public var runtimePath: WaylandGraphicsRuntimePath {`
-- L292: `    public var id: WindowID {`
-- L296: `    public func nextFrame() async throws -> WaylandGraphicsFrameLease {`
-- L306: `    public func close() async throws {`
-- L313: `public struct WaylandGraphicsFrameLease: Sendable {`
-- L314: `    public let size: PositivePixelSize`
-- L315: `    public let runtimePath: WaylandGraphicsRuntimePath`
-- L333: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws`
-- L340: `    public func submitSoftware(`
-- L377: `    public func cancel() async {`
+- L268: `    case invalidDamageRegion`
+- L269: `    case unsupportedPacing`
+- L270: `    case submissionFailed(WaylandGraphicsSubmissionFailure)`
+- L273: `public struct WaylandGraphicsWindowBacking: Sendable {`
+- L274: `    public let window: Window`
+- L285: `    public var runtimePath: WaylandGraphicsRuntimePath {`
+- L291: `    public var id: WindowID {`
+- L295: `    public func nextFrame() async throws -> WaylandGraphicsFrameLease {`
+- L305: `    public func close() async throws {`
+- L312: `public struct WaylandGraphicsFrameLease: Sendable {`
+- L313: `    public let size: PositivePixelSize`
+- L314: `    public let runtimePath: WaylandGraphicsRuntimePath`
+- L332: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws`
+- L339: `    public func submitSoftware(`
+- L376: `    public func cancel() async {`
 

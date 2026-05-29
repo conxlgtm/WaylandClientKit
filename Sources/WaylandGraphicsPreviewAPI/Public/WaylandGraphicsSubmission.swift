@@ -265,7 +265,6 @@ public enum WaylandGraphicsError: Error, Equatable, Sendable {
     case frameLeaseActive
     case frameLeaseConsumed
     case unsupportedMetadata
-    case unsupportedDamage
     case invalidDamageRegion
     case unsupportedPacing
     case submissionFailed(WaylandGraphicsSubmissionFailure)

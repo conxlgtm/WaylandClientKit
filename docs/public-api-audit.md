@@ -253,8 +253,11 @@ Current preview contract:
   image descriptions.
 - Public frame metadata is intentionally narrow. Content type and presentation
   hint map to safe surface commit metadata when their protocols are available.
-  Full-frame damage is the supported default. Partial damage is represented but
-  currently reports a typed unsupported-damage error after geometry validation.
+  Full-frame damage is the supported default. Partial damage is accepted for
+  managed software submissions, converted to `SurfaceDamageRegion`, mapped from
+  logical surface coordinates to active buffer damage coordinates, and rejected
+  as `WaylandGraphicsError.invalidDamageRegion` when it has no surface
+  intersection.
 - Presentation feedback policy can request feedback when available or require
   it before creating a managed backing. Feedback observations still arrive on
   `WindowPresentationEvents`; frame submission results only report whether
