@@ -64,6 +64,55 @@
         }
 
         @Test
+        func emptySurfaceRegionCreatesRawRegionWithoutRectanglesAndDoesNotResetToNil()
+            async throws
+        {
+            try await CoreRequestRecordingGate.withExclusiveRecording {
+                swl_test_core_request_recording_begin()
+                defer { swl_test_core_request_recording_end() }
+                swl_test_pointer_capture_request_recording_begin()
+                defer { swl_test_pointer_capture_request_recording_end() }
+
+                let surface = try testSurface(pointer: 0xE301)
+                defer { surface.destroy() }
+                let regionPointer = try unsafe testPointer(0xE302)
+                let region = SurfaceRegion([])
+                var setRegionPointer: OpaquePointer?
+
+                try SurfaceRegionApplicator.apply(
+                    region,
+                    createRegion: {
+                        RawRegion(pointer: regionPointer)
+                    }
+                ) { rawRegion in
+                    unsafe setRegionPointer = rawRegion?.pointer
+                    surface.setInputRegion(rawRegion)
+                }
+
+                let addRecord = unsafe swl_test_pointer_capture_request_record()
+                #expect(unsafe addRecord.call_count == 0)
+
+                let destroyRecord = unsafe swl_test_pointer_capture_destroy_record()
+                #expect(unsafe destroyRecord.call_count == 1)
+                #expect(
+                    unsafe destroyRecord.kind
+                        == SWL_TEST_POINTER_CAPTURE_DESTROY_REGION
+                )
+                #expect(unsafe destroyRecord.object == UnsafeMutableRawPointer(regionPointer))
+
+                surface.commit()
+
+                let coreRecord = unsafe swl_test_core_request_record()
+                #expect(unsafe coreRecord.kind == SWL_TEST_CORE_SURFACE_COMMIT)
+                #expect(unsafe coreRecord.region == setRegionPointer)
+                #expect(unsafe coreRecord.region == regionPointer)
+                #expect(unsafe coreRecord.region != nil)
+                #expect(unsafe coreRecord.input_region_sequence > 0)
+                #expect(unsafe coreRecord.input_region_sequence < coreRecord.commit_sequence)
+            }
+        }
+
+        @Test
         func applicatorNilRegionCommitsNullResetWithoutCreatingRegion() async throws {
             try await CoreRequestRecordingGate.withExclusiveRecording {
                 swl_test_core_request_recording_begin()

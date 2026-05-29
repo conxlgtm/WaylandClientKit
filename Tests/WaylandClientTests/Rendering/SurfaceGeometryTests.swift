@@ -312,6 +312,13 @@ struct SurfaceGeometryTests {
     }
 
     @Test
+    func emptyDamageRegionIsRejected() throws {
+        #expect(throws: SurfaceRegionError.emptyDamageRegion) {
+            _ = try SurfaceDamageRegion([])
+        }
+    }
+
+    @Test
     func surfaceScaleStateRejectsInvalidPreferredScales() throws {
         var scaleState = SurfaceScaleState(capability: .fractional)
         let logicalSize = try PositiveLogicalSize(width: 80, height: 60)

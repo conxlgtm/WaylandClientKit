@@ -231,6 +231,26 @@ struct WaylandGraphicsSubmissionFailureTests {
     }
 
     @Test
+    func fullFrameGraphicsDamageSubmitsNilSurfaceDamage() async throws {
+        let window = try FakeManagedGraphicsWindow(showDrawFailures: 0)
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .softwareFallback(
+                capabilities: softwareOnlySurfaceCapabilities(),
+                reason: .forcedSoftware
+            )
+        )
+        let metadata = WaylandGraphicsFrameMetadata(damage: .fullFrame)
+        let lease = try await storage.nextFrame()
+
+        _ = try await lease.submitSoftware(metadata: metadata) { _ in
+            _ = ()
+        }
+
+        #expect(await window.damages() == [nil])
+    }
+
+    @Test
     func windowLifecycleAndWindowSubmissionFailuresAreDistinct() {
         let windowID = WindowID(rawValue: 45)
 
