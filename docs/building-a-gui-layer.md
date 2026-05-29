@@ -82,6 +82,8 @@ Use these examples as references before adding framework policy:
   defaults reset.
 - `DamageRegionSmoke`: small animated logical damage regions mapped by
   SwiftWayland before commit.
+- `surface-role-inventory.md`: internal role support matrix for windows,
+  popups, cursor surfaces, drag icons, graphics preview, and subsurfaces.
 - `FrameworkHostSmoke`: the smallest app-host loop that imports only public
   SwiftWayland products.
 - `GPUPreviewSmokeClient`: preview graphics capability and software-submission
@@ -113,6 +115,12 @@ previous buffer contents exist. Later redraws map those rectangles to buffer
 damage for the current scale and viewport path and clip partial overhang to the
 surface bounds. Passing no damage uses full-frame damage. An empty damage region
 is invalid because it would make the commit intent ambiguous.
+
+Cursor and drag icon surfaces are managed visual surfaces, but they do not
+accept public region, metadata, or partial-damage operations. They use full
+buffer commits owned by their role-specific managers. See
+[`surface-role-inventory.md`](surface-role-inventory.md) for the internal role
+matrix.
 
 For framework experiments that want one graphics-facing boundary, use
 `WaylandGraphicsPreview`:

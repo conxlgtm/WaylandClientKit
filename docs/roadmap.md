@@ -136,6 +136,9 @@ The current baseline already has meaningful substrate pieces:
 - public input and opaque surface regions for managed windows and popups
 - damage-aware software redraw and managed graphics-preview software submission
   using logical damage mapped to buffer coordinates
+- package-internal surface role readiness snapshots and
+  [`surface-role-inventory.md`](surface-role-inventory.md) document which roles
+  accept damage, regions, metadata, and submit constraints
 - xdg-activation protocol XML, raw manager/token binding, public capability
   reporting, public token request and activate APIs, and `XDGActivationSmoke`
 - relative pointer and pointer-constraint protocol XML, raw wrappers, public
@@ -153,8 +156,8 @@ The current baseline already has meaningful substrate pieces:
 
 Known foundation gaps:
 
-- extending the shared surface transaction model to cursor, drag icon, and future
-  subsurface use
+- extending the shared surface transaction model from documented role readiness
+  into managed subsurface presentation
 - live compositor coverage for input-region, opaque-region, and partial-damage
   behavior beyond unit and smoke coverage
 - live compositor coverage for the package-internal GPU window presentation path

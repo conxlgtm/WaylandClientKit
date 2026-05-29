@@ -25,6 +25,18 @@ package enum SurfaceRuntimeRole: Equatable, Sendable {
     case popup
     case cursor
     case dragIcon
+    case subsurface
+}
+
+package struct SurfaceRoleReadinessSnapshot: Equatable, Sendable {
+    package let role: SurfaceRuntimeRole
+    package let hasRuntime: Bool
+    package let hasRoleResources: Bool
+    package let acceptsDamage: Bool
+    package let acceptsInputRegion: Bool
+    package let acceptsOpaqueRegion: Bool
+    package let acceptsMetadata: Bool
+    package let acceptsSubmitConstraints: Bool
 }
 
 package enum SurfaceCapabilityStatus: Equatable, Sendable {
@@ -270,6 +282,36 @@ extension SurfaceRuntime {
 
     var surfaceRole: SurfaceRuntimeRole {
         role
+    }
+
+    var roleReadinessSnapshot: SurfaceRoleReadinessSnapshot {
+        let hasRuntime: Bool
+        let hasRoleResources: Bool
+        switch phase {
+        case .unassigned:
+            hasRuntime = true
+            hasRoleResources = false
+        case .live:
+            hasRuntime = true
+            hasRoleResources = true
+        case .roleDestroyed:
+            hasRuntime = true
+            hasRoleResources = false
+        case .surfaceDestroyed:
+            hasRuntime = false
+            hasRoleResources = false
+        }
+
+        return SurfaceRoleReadinessSnapshot(
+            role: role,
+            hasRuntime: hasRuntime,
+            hasRoleResources: hasRoleResources,
+            acceptsDamage: role.acceptsManagedDamage,
+            acceptsInputRegion: role.acceptsSurfaceRegions,
+            acceptsOpaqueRegion: role.acceptsSurfaceRegions,
+            acceptsMetadata: role.acceptsCommitMetadata,
+            acceptsSubmitConstraints: role.acceptsSubmitConstraints
+        )
     }
 
     mutating func setPresentationFeedbackCapability(
@@ -638,5 +680,32 @@ extension SurfaceRuntime {
         case .surfaceDestroyed:
             return defaultResult
         }
+    }
+}
+
+extension SurfaceRuntimeRole {
+    private var isManagedPresentableSurface: Bool {
+        switch self {
+        case .toplevelWindow, .popup, .subsurface:
+            true
+        case .cursor, .dragIcon:
+            false
+        }
+    }
+
+    fileprivate var acceptsManagedDamage: Bool {
+        isManagedPresentableSurface
+    }
+
+    fileprivate var acceptsSurfaceRegions: Bool {
+        isManagedPresentableSurface
+    }
+
+    fileprivate var acceptsCommitMetadata: Bool {
+        isManagedPresentableSurface
+    }
+
+    fileprivate var acceptsSubmitConstraints: Bool {
+        isManagedPresentableSurface
     }
 }
