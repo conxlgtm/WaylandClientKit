@@ -82,6 +82,8 @@ Use these examples as references before adding framework policy:
   defaults reset.
 - `DamageRegionSmoke`: small animated logical damage regions mapped by
   SwiftWayland before commit.
+- `SubsurfaceSmoke`: managed child surface creation, software presentation,
+  movement, and parent-owned cleanup.
 - `surface-role-inventory.md`: internal role support matrix for windows,
   popups, cursor surfaces, drag icons, graphics preview, and subsurfaces.
 - `FrameworkHostSmoke`: the smallest app-host loop that imports only public
@@ -121,6 +123,12 @@ accept public region, metadata, or partial-damage operations. They use full
 buffer commits owned by their role-specific managers. See
 [`surface-role-inventory.md`](surface-role-inventory.md) for the internal role
 matrix.
+
+Subsurfaces are platform child surfaces, not widgets. Use
+`Window.createSubsurface(configuration:)` when a framework needs a compositor
+visible child surface for embedded content, video, plugin-like surfaces, or
+renderer layering. The framework owns layout and z-order policy; SwiftWayland
+owns protocol lifetime, software commits, and parent close cleanup.
 
 For framework experiments that want one graphics-facing boundary, use
 `WaylandGraphicsPreview`:

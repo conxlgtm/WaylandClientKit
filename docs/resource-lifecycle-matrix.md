@@ -15,6 +15,7 @@ public errors.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `Window` | typed foreign-window error | typed unknown-window error | `displayClosed` | close is terminal | n/a | close destroys role/surface | safe typed no-op or unknown | ignored if compositor-close duplicate |
 | `PopupSurface` | typed foreign-popup error | typed unknown-popup error | `displayClosed` | parent close destroys popup subtree | n/a | close destroys popup role | safe typed no-op or unknown | ignored if popup already removed |
+| `Subsurface` | typed foreign-subsurface error | typed unknown-subsurface error | `displayClosed` | parent close destroys child surface | n/a | close destroys subsurface role | close is idempotent or typed closed | pending frame callback is cancelled and ignored |
 | `TextInputSession` | typed foreign-session error | typed unknown-session error | `displayClosed` | focused surface loss sends leave | `unknownSeat` or unavailable | disabled session is stale | deterministic typed error | ignored after disabled/remove-seat |
 | `ClipboardOffer` | typed foreign-offer error | `unknownOfferIdentity` | `displayClosed` | n/a | offer expires if seat-owned path disappears | expired offer error | n/a | ignored after offer expiration |
 | `PrimarySelectionOffer` | typed foreign-offer error | `unknownOfferIdentity` | `displayClosed` | n/a | offer expires if seat-owned path disappears | expired offer error | n/a | ignored after offer expiration |

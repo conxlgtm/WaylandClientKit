@@ -265,6 +265,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "SubsurfaceSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/SubsurfaceSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "SwiftWaylandSmoke",
             dependencies: ["WaylandSmokeSupport"],
             swiftSettings: executableSwiftSettings

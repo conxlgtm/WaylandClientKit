@@ -22,6 +22,8 @@ Start with these public APIs:
   `SurfaceDamageRegion` for surface input, opacity, and redraw damage facts
 - `Window.presentationEvents` and `requestPresentationFeedback()`
 - `Window.createPopup(configuration:)`
+- `Window.createSubsurface(configuration:)` when the framework needs a
+  compositor-visible child surface rather than a widget abstraction
 - `ActivationToken`, `ActivationTokenRequest`, and
   `Window.requestActivationToken(...)` for compositor-mediated focus handoff
 - relative pointer and pointer constraint APIs through
@@ -85,6 +87,12 @@ still own widget hit testing, clipping, and dirty-region calculation.
 Unsupported visual-only roles, such as cursor and drag icon surfaces, keep
 region and damage behavior internal instead of accepting framework-level
 surface operations.
+
+Subsurfaces are platform hierarchy. Frameworks may use them for embedded
+canvases, video, plugin-like surfaces, or renderer layering, but layout and
+z-order policy remain framework responsibilities. SwiftWayland owns the
+`wl_subsurface` lifetime, position requests, sync/desync requests, software
+commits, and parent-window cleanup.
 
 ## Event Stream Ownership
 

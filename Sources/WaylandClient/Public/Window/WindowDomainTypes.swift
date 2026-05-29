@@ -396,6 +396,22 @@ package struct ResolvedWindowConfiguration: Equatable, Sendable {
     let wmCapabilities: [WindowManagerCapability]
     let decorationMode: WindowDecorationMode?
 
+    package init(
+        serial configureSerial: UInt32,
+        size configuredSize: PositiveLogicalSize,
+        states configuredStates: [WindowStateToken],
+        bounds configuredBounds: PositiveLogicalSize?,
+        wmCapabilities configuredWMCapabilities: [WindowManagerCapability],
+        decorationMode configuredDecorationMode: WindowDecorationMode?
+    ) {
+        serial = configureSerial
+        size = configuredSize
+        states = configuredStates
+        bounds = configuredBounds
+        wmCapabilities = configuredWMCapabilities
+        decorationMode = configuredDecorationMode
+    }
+
     init(
         sequence: XDGConfigureSequence,
         previousSize: PositiveLogicalSize?,

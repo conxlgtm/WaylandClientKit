@@ -29,6 +29,13 @@ struct wl_compositor *swl_registry_bind_wl_compositor(
         registry, name, &wl_compositor_interface, version);
 }
 
+struct wl_subcompositor *swl_registry_bind_wl_subcompositor(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wl_subcompositor *)wl_registry_bind(
+        registry, name, &wl_subcompositor_interface, version);
+}
+
 struct wl_shm *swl_registry_bind_wl_shm(
     struct wl_registry *registry, uint32_t name, uint32_t version)
 {

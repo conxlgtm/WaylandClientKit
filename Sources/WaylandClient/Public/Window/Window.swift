@@ -96,6 +96,15 @@ public struct Window: Sendable, Hashable {
         try await display.createPopup(parent: self, configuration: popupConfiguration)
     }
 
+    public func createSubsurface(
+        configuration subsurfaceConfiguration: SubsurfaceConfiguration = .init()
+    ) async throws -> Subsurface {
+        try await display.createSubsurface(
+            parent: self,
+            configuration: subsurfaceConfiguration
+        )
+    }
+
     public func requestRedraw() async throws {
         try await display.requestRedraw(id)
     }
