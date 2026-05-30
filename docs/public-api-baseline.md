@@ -517,6 +517,32 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L140: `    public mutating func close() throws {`
 - L154: `    public mutating func releaseRawValue() -> Int32 {`
 
+### `Sources/WaylandClient/Public/DesktopIntegration/DesktopIntegrationDomainTypes.swift`
+
+- L1: `public struct WindowIconName: Equatable, Hashable, Sendable, CustomStringConvertible {`
+- L2: `    public let value: String`
+- L4: `    public init(_ iconName: String) throws {`
+- L15: `    public var description: String {`
+- L20: `public struct WindowIconImage: Equatable, Sendable {`
+- L21: `    public let size: PositivePixelSize`
+- L22: `    public let scale: PositiveInt32`
+- L23: `    public let pixels: [UInt32]`
+- L25: `    public init(`
+- L36: `    public init(`
+- L69: `    public static func solid(`
+- L80: `    public static func solid(`
+- L113: `public enum WindowIcon: Equatable, Sendable {`
+- L114: `    case none`
+- L115: `    case named(WindowIconName)`
+- L116: `    case xrgb8888(WindowIconImage)`
+- L119: `public struct IdleInhibitorID:`
+- L133: `    public var description: String {`
+- L138: `public struct IdleInhibitor: Sendable, Hashable, Identifiable {`
+- L139: `    public let id: IdleInhibitorID`
+- L154: `    public func destroy() async throws {`
+- L162: `    public static func == (lhs: IdleInhibitor, rhs: IdleInhibitor) -> Bool {`
+- L166: `    public func hash(into hasher: inout Hasher) {`
+
 ### `Sources/WaylandClient/Public/Diagnostics/InputDiagnostic.swift`
 
 - L1: `public struct InputDiagnostic: Equatable, Sendable {`
@@ -889,13 +915,16 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L56: `    public let fractionalScale: ProtocolAvailability`
 - L59: `    public let cursorShape: ProtocolAvailability`
 - L62: `    public let xdgActivation: ProtocolAvailability`
-- L65: `    public let relativePointer: ProtocolAvailability`
-- L68: `    public let pointerConstraints: ProtocolAvailability`
-- L71: `    public let textInput: ProtocolAvailability`
-- L74: `    public let linuxDmabuf: ProtocolAvailability`
-- L76: `    public init(`
-- L110: `    public init(`
-- L144: `    public init(`
+- L65: `    public let xdgToplevelIcon: ProtocolAvailability`
+- L68: `    public let idleInhibit: ProtocolAvailability`
+- L71: `    public let systemBell: ProtocolAvailability`
+- L74: `    public let relativePointer: ProtocolAvailability`
+- L77: `    public let pointerConstraints: ProtocolAvailability`
+- L80: `    public let textInput: ProtocolAvailability`
+- L83: `    public let linuxDmabuf: ProtocolAvailability`
+- L85: `    public init(`
+- L125: `    public init(`
+- L162: `    public init(`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+Activation.swift`
 
@@ -912,6 +941,10 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L115: `    public func primarySelectionOffer(for seatID: SeatID) throws -> PrimarySelectionOffer? {`
 - L125: `    public func requestPrimarySelection(`
 - L141: `    public func requestClearPrimarySelection(seatID: SeatID, serial: InputSerial) throws {`
+
+### `Sources/WaylandClient/Public/Display/WaylandDisplay+DesktopIntegration.swift`
+
+- L19: `    public func ringSystemBell() throws {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+PointerCapture.swift`
 
@@ -991,21 +1024,30 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L10: `    case invalidSubsurfaceStacking(SubsurfaceStackingError)`
 - L11: `    case subsurfacePresentationFailed(SubsurfacePresentationFailure)`
 - L12: `    case presentationTimeUnavailable`
-- L14: `    public var description: String {`
-- L42: `public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {`
-- L43: `    case skippedUnknownSeat`
-- L44: `    case skippedNoPointer`
-- L46: `    public var description: String {`
-- L56: `public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConvertible {`
-- L57: `    public let seatID: SeatID`
-- L58: `    public let requestedCursor: PointerCursor`
-- L59: `    public let backendResult: PointerCursorBackendResult`
-- L61: `    public init(`
-- L71: `    public var description: String {`
-- L87: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L88: `    case invalidConfiguration(CursorConfigurationError)`
-- L89: `    case requestFailed(PointerCursorRequestFailure)`
-- L91: `    public var description: String {`
+- L13: `    case xdgToplevelIconUnavailable`
+- L14: `    case idleInhibitUnavailable`
+- L15: `    case systemBellUnavailable`
+- L16: `    case unknownIdleInhibitor(IdleInhibitorID)`
+- L17: `    case foreignIdleInhibitor(IdleInhibitorID)`
+- L18: `    case emptyWindowIconName`
+- L19: `    case windowIconNameContainsNUL`
+- L20: `    case nonSquareWindowIconImage(width: Int32, height: Int32)`
+- L21: `    case invalidWindowIconImagePixelCount(expected: Int, actual: Int)`
+- L23: `    public var description: String {`
+- L69: `public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {`
+- L70: `    case skippedUnknownSeat`
+- L71: `    case skippedNoPointer`
+- L73: `    public var description: String {`
+- L83: `public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConvertible {`
+- L84: `    public let seatID: SeatID`
+- L85: `    public let requestedCursor: PointerCursor`
+- L86: `    public let backendResult: PointerCursorBackendResult`
+- L88: `    public init(`
+- L98: `    public var description: String {`
+- L114: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L115: `    case invalidConfiguration(CursorConfigurationError)`
+- L116: `    case requestFailed(PointerCursorRequestFailure)`
+- L118: `    public var description: String {`
 
 ### `Sources/WaylandClient/Public/Errors/DisplayError.swift`
 
@@ -2068,33 +2110,36 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L117: `    public func requestPresentationFeedback() async throws {`
 - L121: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
 - L125: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
-- L129: `    public func requestActivationToken(`
-- L144: `    public func activate(using token: ActivationToken) async throws {`
-- L148: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
-- L152: `    public func lockPointer(`
-- L167: `    public func confinePointer(`
-- L180: `    public func setTitle(_ title: WaylandString) async throws {`
-- L184: `    public func setTitle(_ title: String) async throws {`
-- L188: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
-- L192: `    public func setAppID(_ appID: String) async throws {`
-- L196: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
-- L200: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
-- L204: `    public func requestMaximize() async throws {`
-- L208: `    public func requestUnmaximize() async throws {`
-- L212: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
-- L216: `    public func requestExitFullscreen() async throws {`
-- L220: `    public func requestMinimize() async throws {`
-- L224: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
-- L228: `    public func requestInteractiveResize(`
-- L241: `    public func requestWindowMenu(`
-- L254: `    public func startDrag(`
-- L269: `    public var isClosed: Bool {`
-- L275: `    public var needsRedraw: Bool {`
-- L281: `    public var decorationMode: WindowDecorationMode {`
-- L287: `    public var geometry: SurfaceGeometry {`
-- L293: `    public var stateSnapshot: WindowStateSnapshot {`
-- L299: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L303: `    public func hash(into hasher: inout Hasher) {`
+- L129: `    public func setIcon(_ icon: WindowIcon) async throws {`
+- L133: `    public func inhibitIdle() async throws -> IdleInhibitor {`
+- L137: `    public func ringSystemBell() async throws {`
+- L141: `    public func requestActivationToken(`
+- L156: `    public func activate(using token: ActivationToken) async throws {`
+- L160: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
+- L164: `    public func lockPointer(`
+- L179: `    public func confinePointer(`
+- L192: `    public func setTitle(_ title: WaylandString) async throws {`
+- L196: `    public func setTitle(_ title: String) async throws {`
+- L200: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L204: `    public func setAppID(_ appID: String) async throws {`
+- L208: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L212: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L216: `    public func requestMaximize() async throws {`
+- L220: `    public func requestUnmaximize() async throws {`
+- L224: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L228: `    public func requestExitFullscreen() async throws {`
+- L232: `    public func requestMinimize() async throws {`
+- L236: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L240: `    public func requestInteractiveResize(`
+- L253: `    public func requestWindowMenu(`
+- L266: `    public func startDrag(`
+- L281: `    public var isClosed: Bool {`
+- L287: `    public var needsRedraw: Bool {`
+- L293: `    public var decorationMode: WindowDecorationMode {`
+- L299: `    public var geometry: SurfaceGeometry {`
+- L305: `    public var stateSnapshot: WindowStateSnapshot {`
+- L311: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L315: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 

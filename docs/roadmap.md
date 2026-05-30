@@ -139,6 +139,10 @@ The current baseline already has meaningful substrate pieces:
 - managed window-owned subsurfaces with software presentation, regions,
   position updates, sync/desync requests, parent-applied state commits, and
   parent close cleanup
+- public static custom cursor images
+- xdg-toplevel-icon, idle-inhibit, and xdg-system-bell protocol XML, raw
+  wrappers, public capability reporting, managed window/display APIs, and smoke
+  examples
 - package-internal surface role readiness snapshots and
   [`surface-role-inventory.md`](surface-role-inventory.md) document which roles
   accept damage, regions, metadata, and submit constraints
@@ -165,6 +169,8 @@ Known foundation gaps:
   behavior beyond unit and smoke coverage
 - live compositor coverage for the package-internal GPU window presentation path
   beyond public managed-GPU software fallback evidence
+- live compositor evidence for toplevel icons, idle inhibition, system bell,
+  custom cursor images, and the expanded example build gate
 - broader live compositor coverage for explicit sync, FIFO, commit timing, and
   metadata protocols beyond local unit and smoke reporting
 - public cursor animation
