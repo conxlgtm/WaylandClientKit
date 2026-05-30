@@ -374,6 +374,9 @@
         }
     }
 
+    // SAFETY: Live request tests install this probe as a display-owner callback and
+    // read it from the test task after awaited operations. The suite is serialized,
+    // and the probe stores only a monotonic test counter.
     private final class ParentCommitProbe: @unchecked Sendable {
         private var countStorage = 0
 
