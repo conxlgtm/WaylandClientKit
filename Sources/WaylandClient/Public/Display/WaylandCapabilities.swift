@@ -94,13 +94,13 @@ public struct WaylandCapabilities: Equatable, Sendable {
         fractionalScale: ProtocolAvailability,
         cursorShape: ProtocolAvailability,
         xdgActivation: ProtocolAvailability,
-        xdgToplevelIcon: ProtocolAvailability = .unavailable,
-        idleInhibit: ProtocolAvailability = .unavailable,
-        systemBell: ProtocolAvailability = .unavailable,
         relativePointer: ProtocolAvailability,
         pointerConstraints: ProtocolAvailability,
         textInput: ProtocolAvailability,
-        linuxDmabuf: ProtocolAvailability
+        linuxDmabuf: ProtocolAvailability,
+        xdgToplevelIcon: ProtocolAvailability = .unavailable,
+        idleInhibit: ProtocolAvailability = .unavailable,
+        systemBell: ProtocolAvailability = .unavailable
     ) {
         self.clipboard = clipboard
         self.dragAndDrop = dragAndDrop
@@ -149,13 +149,13 @@ public struct WaylandCapabilities: Equatable, Sendable {
             fractionalScale: fractionalScale,
             cursorShape: cursorShape,
             xdgActivation: xdgActivation,
-            xdgToplevelIcon: .unavailable,
-            idleInhibit: .unavailable,
-            systemBell: .unavailable,
             relativePointer: .unavailable,
             pointerConstraints: .unavailable,
             textInput: textInput,
-            linuxDmabuf: linuxDmabuf
+            linuxDmabuf: linuxDmabuf,
+            xdgToplevelIcon: .unavailable,
+            idleInhibit: .unavailable,
+            systemBell: .unavailable
         )
     }
 
@@ -185,13 +185,13 @@ public struct WaylandCapabilities: Equatable, Sendable {
             fractionalScale: fractionalScale,
             cursorShape: cursorShape,
             xdgActivation: .unavailable,
-            xdgToplevelIcon: .unavailable,
-            idleInhibit: .unavailable,
-            systemBell: .unavailable,
             relativePointer: .unavailable,
             pointerConstraints: .unavailable,
             textInput: textInput,
-            linuxDmabuf: linuxDmabuf
+            linuxDmabuf: linuxDmabuf,
+            xdgToplevelIcon: .unavailable,
+            idleInhibit: .unavailable,
+            systemBell: .unavailable
         )
     }
 }
@@ -258,18 +258,6 @@ extension WaylandCapabilities {
                 protocols.bestAdvertisedProtocol(named: "xdg_activation_v1"),
                 supportedByClient: SupportedVersions.xdgActivationV1
             ),
-            xdgToplevelIcon: ProtocolAvailability(
-                protocols.bestAdvertisedProtocol(named: "xdg_toplevel_icon_manager_v1"),
-                supportedByClient: SupportedVersions.xdgToplevelIconManagerV1
-            ),
-            idleInhibit: ProtocolAvailability(
-                protocols.bestAdvertisedProtocol(named: "zwp_idle_inhibit_manager_v1"),
-                supportedByClient: SupportedVersions.zwpIdleInhibitManagerV1
-            ),
-            systemBell: ProtocolAvailability(
-                protocols.bestAdvertisedProtocol(named: "xdg_system_bell_v1"),
-                supportedByClient: SupportedVersions.xdgSystemBellV1
-            ),
             relativePointer: ProtocolAvailability(
                 protocols.bestAdvertisedProtocol(named: "zwp_relative_pointer_manager_v1"),
                 supportedByClient: SupportedVersions.zwpRelativePointerManagerV1
@@ -285,6 +273,18 @@ extension WaylandCapabilities {
             linuxDmabuf: ProtocolAvailability(
                 protocols.bestAdvertisedProtocol(named: "zwp_linux_dmabuf_v1"),
                 supportedByClient: SupportedVersions.zwpLinuxDmabufV1
+            ),
+            xdgToplevelIcon: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "xdg_toplevel_icon_manager_v1"),
+                supportedByClient: SupportedVersions.xdgToplevelIconManagerV1
+            ),
+            idleInhibit: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "zwp_idle_inhibit_manager_v1"),
+                supportedByClient: SupportedVersions.zwpIdleInhibitManagerV1
+            ),
+            systemBell: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "xdg_system_bell_v1"),
+                supportedByClient: SupportedVersions.xdgSystemBellV1
             )
         )
     }

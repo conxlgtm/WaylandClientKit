@@ -54,6 +54,7 @@ package final class TopLevelWindow {
     package var onClosed: (() -> Void)?
     package var onRedrawRequested: (() -> Void)?
     package var onOutputMembershipChanged: (([OutputID]) -> Void)?
+
     #if DEBUG
         package var onSubsurfaceParentCommitForTesting: (() -> Void)?
     #endif
