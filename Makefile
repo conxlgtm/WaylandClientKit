@@ -4,7 +4,7 @@ SWIFT := ./scripts/dev/swift.sh
 CLANG_FILTER := $(CURDIR)/scripts/dev/clang-filter-index-store.sh
 TSAN_SUPPRESSIONS := $(CURDIR)/scripts/safety/tsan-suppressions.txt
 
-.PHONY: format lint verify-generated verify-protocol-manifest verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-release test-tsan test-asan test-public-api-client test-graphics-preview-client test-framework-host-client test-tiny-ui-prototype check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless wayland-request-headless wayland-request-headless-tsan wayland-request-headless-asan gpu-preview-wayland gpu-preview-headless wayland-headless swiftbuild-smoke release-check install-pre-commit
+.PHONY: format lint verify-generated verify-protocol-manifest verify-shims verify-release-shim-symbols verify-docs verify-docc docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-release test-tsan test-asan test-public-api-client test-graphics-preview-client test-framework-host-client test-tiny-ui-prototype cheap-effective-ci check-base check check-wayland-smoke-if-available smoke-wayland smoke-wayland-headless integration-wayland integration-wayland-headless wayland-request-headless wayland-request-headless-tsan wayland-request-headless-asan gpu-preview-wayland gpu-preview-headless wayland-headless swiftbuild-smoke release-check install-pre-commit
 
 format:
 	@$(SWIFT_FORMAT) format --configuration .swift-format --in-place Package.swift
@@ -78,6 +78,8 @@ test-framework-host-client:
 
 test-tiny-ui-prototype:
 	@./scripts/ci/test-tiny-ui-prototype.sh
+
+cheap-effective-ci: lint verify-generated verify-protocol-manifest verify-shims verify-public-api-audit verify-target-imports verify-unsafe-allowlist
 
 check-base: lint verify-generated verify-protocol-manifest verify-shims verify-docs verify-docc verify-public-api-audit verify-target-imports verify-unsafe-allowlist strict-concurrency test test-public-api-client test-graphics-preview-client test-framework-host-client test-tiny-ui-prototype
 

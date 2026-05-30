@@ -34,6 +34,9 @@ Current experimental baseline:
 - compositor cursor-shape requests through `wp_cursor_shape_manager_v1`
 - explicit compositor presentation feedback through `wp_presentation`
 - linux-dmabuf capability discovery and package-internal GBM/EGL preview pieces
+- managed subsurfaces, surface input/opaque regions, and damage-aware software redraw
+- static custom cursor images
+- desktop integration hooks for toplevel icons, idle inhibition, and system bell
 - compose and dead-key text results for interpreted keyboard events
 - display, input, data-transfer, text-input, and diagnostic event streams
 - framework-host guidance and external consumer checks for packages building above `WaylandClient`
@@ -44,7 +47,7 @@ Current experimental baseline:
 Not implemented yet:
 
 - protocol coverage beyond the listed current support matrix
-- public cursor animation or custom cursor drawing APIs
+- public cursor animation
 - output-management APIs
 - public GPU rendering APIs in `WaylandClient`
 - high-level gesture recognizers or widgets
@@ -100,6 +103,11 @@ Supported in the current experimental baseline:
 - `wp_cursor_shape_manager_v1`
 - `wp_cursor_shape_device_v1`
 - `xdg_activation_v1`
+- `xdg_toplevel_icon_manager_v1`
+- `xdg_toplevel_icon_v1`
+- `zwp_idle_inhibit_manager_v1`
+- `zwp_idle_inhibitor_v1`
+- `xdg_system_bell_v1`
 - `zwp_text_input_manager_v3`
 - `zwp_text_input_v3`
 - `zwp_linux_dmabuf_v1`
@@ -149,8 +157,20 @@ Pointer cursors:
 - session-level `PointerCursor` values
 - compositor-managed cursor-shape requests when advertised and mapped
 - static cursor surfaces from installed cursor themes through `wayland-cursor`
+- custom XRGB8888 cursor image values through `PointerCursor.image(_:)`
 - diagonal resize cursor convenience presets are deferred until portable cursor
   theme names are verified across common compositors
+
+Desktop integration:
+
+- `Window.setIcon(_:)` supports named and XRGB8888 toplevel icons when
+  `xdg_toplevel_icon_manager_v1` is advertised
+- `Window.inhibitIdle()` creates a surface-scoped idle inhibitor when
+  `zwp_idle_inhibit_manager_v1` is advertised
+- `WaylandDisplay.ringSystemBell()` and `Window.ringSystemBell()` request a
+  compositor-mediated bell when `xdg_system_bell_v1` is advertised
+- all three paths are capability-gated and may be ignored or unavailable by
+  compositor policy
 
 Clipboard and data transfer:
 

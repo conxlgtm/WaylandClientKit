@@ -19,6 +19,9 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.fractionalScale == .unavailable)
         #expect(capabilities.cursorShape == .unavailable)
         #expect(capabilities.xdgActivation == .unavailable)
+        #expect(capabilities.xdgToplevelIcon == .unavailable)
+        #expect(capabilities.idleInhibit == .unavailable)
+        #expect(capabilities.systemBell == .unavailable)
         #expect(capabilities.relativePointer == .unavailable)
         #expect(capabilities.pointerConstraints == .unavailable)
         #expect(capabilities.textInput == .unavailable)
@@ -40,6 +43,9 @@ struct WaylandCapabilitiesTests {
             .init(interfaceName: "wp_fractional_scale_manager_v1", advertisedVersion: 3),
             .init(interfaceName: "wp_cursor_shape_manager_v1", advertisedVersion: 9),
             .init(interfaceName: "xdg_activation_v1", advertisedVersion: 3),
+            .init(interfaceName: "xdg_toplevel_icon_manager_v1", advertisedVersion: 3),
+            .init(interfaceName: "zwp_idle_inhibit_manager_v1", advertisedVersion: 3),
+            .init(interfaceName: "xdg_system_bell_v1", advertisedVersion: 3),
             .init(interfaceName: "zwp_relative_pointer_manager_v1", advertisedVersion: 4),
             .init(interfaceName: "zwp_pointer_constraints_v1", advertisedVersion: 4),
             .init(interfaceName: "zwp_text_input_manager_v3", advertisedVersion: 9),
@@ -57,6 +63,9 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.fractionalScale == .available(version: 1))
         #expect(capabilities.cursorShape == .available(version: 2))
         #expect(capabilities.xdgActivation == .available(version: 1))
+        #expect(capabilities.xdgToplevelIcon == .available(version: 1))
+        #expect(capabilities.idleInhibit == .available(version: 1))
+        #expect(capabilities.systemBell == .available(version: 1))
         #expect(capabilities.relativePointer == .available(version: 1))
         #expect(capabilities.pointerConstraints == .available(version: 1))
         #expect(capabilities.textInput == .available(version: 2))
@@ -71,6 +80,9 @@ struct WaylandCapabilitiesTests {
             guard
                 [
                     "xdg_activation_v1",
+                    "xdg_toplevel_icon_manager_v1",
+                    "zwp_idle_inhibit_manager_v1",
+                    "xdg_system_bell_v1",
                     "zwp_relative_pointer_manager_v1",
                     "zwp_pointer_constraints_v1",
                 ].contains(interfaceName)
@@ -87,6 +99,17 @@ struct WaylandCapabilitiesTests {
         #expect(DisplaySession.capabilityProtocolInterfaceNames.contains("xdg_activation_v1"))
         #expect(
             DisplaySession.capabilityProtocolInterfaceNames.contains(
+                "xdg_toplevel_icon_manager_v1"
+            )
+        )
+        #expect(
+            DisplaySession.capabilityProtocolInterfaceNames.contains(
+                "zwp_idle_inhibit_manager_v1"
+            )
+        )
+        #expect(DisplaySession.capabilityProtocolInterfaceNames.contains("xdg_system_bell_v1"))
+        #expect(
+            DisplaySession.capabilityProtocolInterfaceNames.contains(
                 "zwp_relative_pointer_manager_v1"
             )
         )
@@ -97,6 +120,9 @@ struct WaylandCapabilitiesTests {
         )
         #expect(requestedInterfaces == DisplaySession.capabilityProtocolInterfaceNames)
         #expect(capabilities.xdgActivation == .available(version: 1))
+        #expect(capabilities.xdgToplevelIcon == .available(version: 1))
+        #expect(capabilities.idleInhibit == .available(version: 1))
+        #expect(capabilities.systemBell == .available(version: 1))
         #expect(capabilities.relativePointer == .available(version: 1))
         #expect(capabilities.pointerConstraints == .available(version: 1))
     }
@@ -116,6 +142,9 @@ struct WaylandCapabilitiesTests {
             .init(interfaceName: "wp_fractional_scale_manager_v1", advertisedVersion: 1),
             .init(interfaceName: "wp_cursor_shape_manager_v1", advertisedVersion: 2),
             .init(interfaceName: "xdg_activation_v1", advertisedVersion: 1),
+            .init(interfaceName: "xdg_toplevel_icon_manager_v1", advertisedVersion: 1),
+            .init(interfaceName: "zwp_idle_inhibit_manager_v1", advertisedVersion: 1),
+            .init(interfaceName: "xdg_system_bell_v1", advertisedVersion: 1),
             .init(interfaceName: "zwp_relative_pointer_manager_v1", advertisedVersion: 1),
             .init(interfaceName: "zwp_pointer_constraints_v1", advertisedVersion: 1),
             .init(interfaceName: "zwp_text_input_manager_v3", advertisedVersion: 2),
@@ -133,6 +162,9 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.fractionalScale == .available(version: 1))
         #expect(capabilities.cursorShape == .available(version: 2))
         #expect(capabilities.xdgActivation == .available(version: 1))
+        #expect(capabilities.xdgToplevelIcon == .available(version: 1))
+        #expect(capabilities.idleInhibit == .available(version: 1))
+        #expect(capabilities.systemBell == .available(version: 1))
         #expect(capabilities.relativePointer == .available(version: 1))
         #expect(capabilities.pointerConstraints == .available(version: 1))
         #expect(capabilities.textInput == .available(version: 2))

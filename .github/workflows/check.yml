@@ -6,6 +6,17 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      ci_mode:
+        description: CI depth to run
+        required: true
+        default: cheap
+        type: choice
+        options:
+          - cheap
+          - full
+  schedule:
+    - cron: '17 8 * * 1'
 
 jobs:
   check:
@@ -48,6 +59,7 @@ jobs:
           command -v wayland-scanner
           swiftlint version
       - name: Dogfood bootstrap script
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
         run: |
           expect_bootstrap_failure() {
             expected_message="$1"
@@ -96,9 +108,17 @@ jobs:
             "Nix support is shell-based" \
             ./scripts/dev/bootstrap-linux.sh --install --package-manager nix
       - name: Check
-        run: make check
+        env:
+          FULL_CI: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
+        run: |
+          if [[ "$FULL_CI" == "true" ]]; then
+            make check
+          else
+            make cheap-effective-ci
+          fi
 
   generated-freshness:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
       image: swift:6.3.2-noble
@@ -120,6 +140,7 @@ jobs:
         run: ./scripts/protocols/verify-generated.sh
 
   release-build:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
       image: swift:6.3.2-noble
@@ -152,6 +173,7 @@ jobs:
           ./scripts/shims/verify-release-shim-symbols.sh
 
   sanitizer-tsan:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
       image: swift:6.3.2-noble
@@ -177,6 +199,7 @@ jobs:
         run: make test-tsan
 
   sanitizer-asan:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
       image: swift:6.3.2-noble
@@ -204,6 +227,7 @@ jobs:
         run: make test-asan
 
   wayland-smoke:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
       image: swift:6.3.2-noble
@@ -230,6 +254,7 @@ jobs:
         run: make wayland-headless
 
   headless-wayland-request-tests:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
       image: swift:6.3.2-noble
@@ -256,6 +281,7 @@ jobs:
         run: make wayland-request-headless
 
   headless-wayland-tsan-request-tests:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
       image: swift:6.3.2-noble
@@ -282,6 +308,7 @@ jobs:
         run: make wayland-request-headless-tsan
 
   headless-wayland-asan-request-tests:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
     runs-on: ubuntu-latest
     container:
       image: swift:6.3.2-noble

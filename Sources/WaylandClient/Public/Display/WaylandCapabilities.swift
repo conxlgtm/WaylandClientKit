@@ -61,6 +61,15 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Desktop activation token support through `xdg_activation_v1`.
     public let xdgActivation: ProtocolAvailability
 
+    /// Per-toplevel icon support through `xdg_toplevel_icon_manager_v1`.
+    public let xdgToplevelIcon: ProtocolAvailability
+
+    /// Surface-scoped idle inhibition support through `zwp_idle_inhibit_manager_v1`.
+    public let idleInhibit: ProtocolAvailability
+
+    /// Compositor-mediated system bell support through `xdg_system_bell_v1`.
+    public let systemBell: ProtocolAvailability
+
     /// Relative pointer motion support through `zwp_relative_pointer_manager_v1`.
     public let relativePointer: ProtocolAvailability
 
@@ -88,7 +97,10 @@ public struct WaylandCapabilities: Equatable, Sendable {
         relativePointer: ProtocolAvailability,
         pointerConstraints: ProtocolAvailability,
         textInput: ProtocolAvailability,
-        linuxDmabuf: ProtocolAvailability
+        linuxDmabuf: ProtocolAvailability,
+        xdgToplevelIcon: ProtocolAvailability = .unavailable,
+        idleInhibit: ProtocolAvailability = .unavailable,
+        systemBell: ProtocolAvailability = .unavailable
     ) {
         self.clipboard = clipboard
         self.dragAndDrop = dragAndDrop
@@ -101,6 +113,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.fractionalScale = fractionalScale
         self.cursorShape = cursorShape
         self.xdgActivation = xdgActivation
+        self.xdgToplevelIcon = xdgToplevelIcon
+        self.idleInhibit = idleInhibit
+        self.systemBell = systemBell
         self.relativePointer = relativePointer
         self.pointerConstraints = pointerConstraints
         self.textInput = textInput
@@ -137,7 +152,10 @@ public struct WaylandCapabilities: Equatable, Sendable {
             relativePointer: .unavailable,
             pointerConstraints: .unavailable,
             textInput: textInput,
-            linuxDmabuf: linuxDmabuf
+            linuxDmabuf: linuxDmabuf,
+            xdgToplevelIcon: .unavailable,
+            idleInhibit: .unavailable,
+            systemBell: .unavailable
         )
     }
 
@@ -170,7 +188,10 @@ public struct WaylandCapabilities: Equatable, Sendable {
             relativePointer: .unavailable,
             pointerConstraints: .unavailable,
             textInput: textInput,
-            linuxDmabuf: linuxDmabuf
+            linuxDmabuf: linuxDmabuf,
+            xdgToplevelIcon: .unavailable,
+            idleInhibit: .unavailable,
+            systemBell: .unavailable
         )
     }
 }
@@ -252,6 +273,18 @@ extension WaylandCapabilities {
             linuxDmabuf: ProtocolAvailability(
                 protocols.bestAdvertisedProtocol(named: "zwp_linux_dmabuf_v1"),
                 supportedByClient: SupportedVersions.zwpLinuxDmabufV1
+            ),
+            xdgToplevelIcon: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "xdg_toplevel_icon_manager_v1"),
+                supportedByClient: SupportedVersions.xdgToplevelIconManagerV1
+            ),
+            idleInhibit: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "zwp_idle_inhibit_manager_v1"),
+                supportedByClient: SupportedVersions.zwpIdleInhibitManagerV1
+            ),
+            systemBell: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "xdg_system_bell_v1"),
+                supportedByClient: SupportedVersions.xdgSystemBellV1
             )
         )
     }

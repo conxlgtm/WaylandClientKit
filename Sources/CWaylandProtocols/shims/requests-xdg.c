@@ -100,6 +100,12 @@ static void swl_xdg_toplevel_set_minimized_default(
     xdg_toplevel_set_minimized(xdg_toplevel);
 }
 
+static void swl_xdg_toplevel_destroy_default(
+    struct xdg_toplevel *xdg_toplevel)
+{
+    xdg_toplevel_destroy(xdg_toplevel);
+}
+
 static void swl_xdg_positioner_set_size_default(
     struct xdg_positioner *positioner,
     int32_t width,
@@ -241,6 +247,9 @@ static void (*swl_xdg_toplevel_unset_fullscreen_impl)(
 static void (*swl_xdg_toplevel_set_minimized_impl)(
     struct xdg_toplevel *xdg_toplevel) =
         swl_xdg_toplevel_set_minimized_default;
+static void (*swl_xdg_toplevel_destroy_impl)(
+    struct xdg_toplevel *xdg_toplevel) =
+        swl_xdg_toplevel_destroy_default;
 
 static void swl_test_record_toplevel_request(
     struct xdg_toplevel *xdg_toplevel,
@@ -505,6 +514,14 @@ static void swl_test_xdg_popup_destroy_record(struct xdg_popup *popup)
     swl_test_xdg_destroy_latest.kind = SWL_TEST_XDG_DESTROY_POPUP;
     swl_test_xdg_destroy_latest.object = popup;
 }
+
+static void swl_test_xdg_toplevel_destroy_record(
+    struct xdg_toplevel *xdg_toplevel)
+{
+    swl_test_xdg_destroy_latest.call_count += 1;
+    swl_test_xdg_destroy_latest.kind = SWL_TEST_XDG_DESTROY_TOPLEVEL;
+    swl_test_xdg_destroy_latest.object = xdg_toplevel;
+}
 #else
 #define swl_xdg_positioner_set_size_impl xdg_positioner_set_size
 #define swl_xdg_positioner_set_anchor_rect_impl xdg_positioner_set_anchor_rect
@@ -528,6 +545,7 @@ static void swl_test_xdg_popup_destroy_record(struct xdg_popup *popup)
 #define swl_xdg_toplevel_set_fullscreen_impl xdg_toplevel_set_fullscreen
 #define swl_xdg_toplevel_unset_fullscreen_impl xdg_toplevel_unset_fullscreen
 #define swl_xdg_toplevel_set_minimized_impl xdg_toplevel_set_minimized
+#define swl_xdg_toplevel_destroy_impl xdg_toplevel_destroy
 #endif
 
 struct xdg_surface *swl_xdg_wm_base_get_xdg_surface(
@@ -692,7 +710,7 @@ void swl_xdg_surface_destroy(struct xdg_surface *xdg_surface)
 
 void swl_xdg_toplevel_destroy(struct xdg_toplevel *xdg_toplevel)
 {
-    xdg_toplevel_destroy(xdg_toplevel);
+    swl_xdg_toplevel_destroy_impl(xdg_toplevel);
 }
 
 void swl_xdg_positioner_destroy(struct xdg_positioner *positioner)
@@ -809,6 +827,8 @@ void swl_test_xdg_request_recording_begin(void)
         swl_test_xdg_toplevel_unset_fullscreen_record;
     swl_xdg_toplevel_set_minimized_impl =
         swl_test_xdg_toplevel_set_minimized_record;
+    swl_xdg_toplevel_destroy_impl =
+        swl_test_xdg_toplevel_destroy_record;
 }
 
 void swl_test_xdg_request_recording_end(void)
@@ -852,6 +872,8 @@ void swl_test_xdg_request_recording_end(void)
         swl_xdg_toplevel_unset_fullscreen_default;
     swl_xdg_toplevel_set_minimized_impl =
         swl_xdg_toplevel_set_minimized_default;
+    swl_xdg_toplevel_destroy_impl =
+        swl_xdg_toplevel_destroy_default;
 }
 
 struct swl_test_xdg_positioner_request_record

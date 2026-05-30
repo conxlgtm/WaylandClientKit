@@ -54,6 +54,7 @@ package final class TopLevelWindow {
     package var onClosed: (() -> Void)?
     package var onRedrawRequested: (() -> Void)?
     package var onOutputMembershipChanged: (([OutputID]) -> Void)?
+
     #if DEBUG
         package var onSubsurfaceParentCommitForTesting: (() -> Void)?
     #endif
@@ -416,6 +417,76 @@ package final class TopLevelWindow {
             setRegion(surface, rawRegion)
         }
         surface.commit()
+    }
+
+    package func setIconOnOwnerThread(_ icon: WindowIcon) throws {
+        connection.preconditionIsOwnerThread()
+        guard !model.isClosed else { return }
+        let globals = try connection.bindRequiredGlobals()
+        guard case .bound(let manager) = globals.extensions.xdgToplevelIconManager else {
+            throw ClientError.display(.xdgToplevelIconUnavailable)
+        }
+
+        let topLevel = try activeTopLevel(for: "setIcon")
+        switch icon {
+        case .none:
+            manager.setIcon(nil, on: topLevel)
+        case .named(let name):
+            let iconObject = try manager.createIcon()
+            defer { iconObject.destroy() }
+
+            try iconObject.setName(name.value)
+            manager.setIcon(iconObject, on: topLevel)
+        case .xrgb8888(let image):
+            try setPixelIcon(image, manager: manager, topLevel: topLevel)
+        }
+
+        surface.commit()
+    }
+
+    private func setPixelIcon(
+        _ image: WindowIconImage,
+        manager: RawXDGToplevelIconManager,
+        topLevel: RawXDGTopLevel
+    ) throws {
+        let globals = try connection.bindRequiredGlobals()
+        let pool = try globals.sharedMemory.createPool(
+            width: image.size.width.rawValue,
+            height: image.size.height.rawValue,
+            bufferCount: 1
+        )
+        defer { pool.destroy() }
+
+        guard var drawingBuffer = pool.acquireDrawingBuffer() else {
+            throw ClientError.invalidWindowState(.message("window icon buffer unavailable"))
+        }
+
+        do {
+            try unsafe drawingBuffer.withUnsafeMutableBytes { destinationBytes in
+                try unsafe image.pixels.withUnsafeBytes { sourceBytes in
+                    guard sourceBytes.count <= destinationBytes.count else {
+                        throw ClientError.display(
+                            .invalidWindowIconImagePixelCount(
+                                expected: image.pixels.count,
+                                actual: destinationBytes.count / MemoryLayout<UInt32>.stride
+                            )
+                        )
+                    }
+
+                    unsafe destinationBytes.copyMemory(from: sourceBytes)
+                }
+            }
+
+            let buffer = drawingBuffer.markBusy(commitGeneration: 0)
+            let iconObject = try manager.createIcon()
+            defer { iconObject.destroy() }
+
+            try iconObject.addBuffer(buffer, scale: image.scale.rawValue)
+            manager.setIcon(iconObject, on: topLevel)
+        } catch {
+            drawingBuffer.discard()
+            throw error
+        }
     }
 
     private func performSoftwarePresent(

@@ -47,6 +47,7 @@ extension RawViewporter: RawDestroyableObject {}
 extension RawPresentation: RawDestroyableObject {}
 extension RawFractionalScaleManager: RawDestroyableObject {}
 extension RawCursorShapeManager: RawDestroyableObject {}
+extension RawXDGToplevelIconManager: RawDestroyableObject {}
 extension RawXDGActivation: RawDestroyableObject {}
 extension RawRelativePointerManager: RawDestroyableObject {}
 extension RawPointerConstraints: RawDestroyableObject {}
@@ -69,6 +70,7 @@ package typealias OptionalViewporter = OptionalGlobal<RawViewporter>
 package typealias OptionalPresentation = OptionalGlobal<RawPresentation>
 package typealias OptionalFractionalScaleManager = OptionalGlobal<RawFractionalScaleManager>
 package typealias OptionalCursorShapeManager = OptionalGlobal<RawCursorShapeManager>
+package typealias OptionalXDGToplevelIconManager = OptionalGlobal<RawXDGToplevelIconManager>
 package typealias OptionalXDGActivation = OptionalGlobal<RawXDGActivation>
 package typealias OptionalRelativePointerManager = OptionalGlobal<RawRelativePointerManager>
 package typealias OptionalPointerConstraints = OptionalGlobal<RawPointerConstraints>

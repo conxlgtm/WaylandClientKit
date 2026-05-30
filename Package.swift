@@ -259,6 +259,24 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "WindowIconSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/WindowIconSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "IdleInhibitSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/IdleInhibitSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "SystemBellSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/SystemBellSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "SurfaceRegionSmoke",
             dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/SurfaceRegionSmoke",

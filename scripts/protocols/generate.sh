@@ -62,6 +62,16 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
+[[ -f "$PROTO_DIR/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml"
+    exit 1
+}
+
+[[ -f "$PROTO_DIR/staging/xdg-system-bell/xdg-system-bell-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/staging/xdg-system-bell/xdg-system-bell-v1.xml"
+    exit 1
+}
+
 [[ -f "$PROTO_DIR/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml" ]] || {
     echo "Missing vendored protocol: $PROTO_DIR/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml"
     exit 1
@@ -108,6 +118,11 @@ command -v wayland-scanner >/dev/null 2>&1 || {
     exit 1
 }
 
+[[ -f "$PROTO_DIR/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1.xml" ]] || {
+    echo "Missing vendored protocol: $PROTO_DIR/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1.xml"
+    exit 1
+}
+
 [[ -f "$PROTO_DIR/legacy-unstable/text-input/text-input-unstable-v3.xml" ]] || {
     echo "Missing vendored protocol: $PROTO_DIR/legacy-unstable/text-input/text-input-unstable-v3.xml"
     exit 1
@@ -138,6 +153,8 @@ mkdir -p \
     "$GEN_INC/staging/fractional-scale" \
     "$GEN_INC/staging/cursor-shape" \
     "$GEN_INC/staging/xdg-activation" \
+    "$GEN_INC/staging/xdg-toplevel-icon" \
+    "$GEN_INC/staging/xdg-system-bell" \
     "$GEN_INC/staging/linux-drm-syncobj" \
     "$GEN_INC/staging/fifo" \
     "$GEN_INC/staging/commit-timing" \
@@ -149,6 +166,7 @@ mkdir -p \
     "$GEN_INC/legacy-unstable/xdg-decoration" \
     "$GEN_INC/legacy-unstable/xdg-output" \
     "$GEN_INC/legacy-unstable/primary-selection" \
+    "$GEN_INC/legacy-unstable/idle-inhibit" \
     "$GEN_INC/legacy-unstable/text-input" \
     "$GEN_INC/legacy-unstable/linux-dmabuf" \
     "$GEN_INC/legacy-unstable/relative-pointer" \
@@ -161,6 +179,8 @@ mkdir -p \
     "$GEN_SRC/staging/fractional-scale" \
     "$GEN_SRC/staging/cursor-shape" \
     "$GEN_SRC/staging/xdg-activation" \
+    "$GEN_SRC/staging/xdg-toplevel-icon" \
+    "$GEN_SRC/staging/xdg-system-bell" \
     "$GEN_SRC/staging/linux-drm-syncobj" \
     "$GEN_SRC/staging/fifo" \
     "$GEN_SRC/staging/commit-timing" \
@@ -172,6 +192,7 @@ mkdir -p \
     "$GEN_SRC/legacy-unstable/xdg-decoration" \
     "$GEN_SRC/legacy-unstable/xdg-output" \
     "$GEN_SRC/legacy-unstable/primary-selection" \
+    "$GEN_SRC/legacy-unstable/idle-inhibit" \
     "$GEN_SRC/legacy-unstable/text-input" \
     "$GEN_SRC/legacy-unstable/linux-dmabuf" \
     "$GEN_SRC/legacy-unstable/relative-pointer" \
@@ -284,6 +305,22 @@ wayland-scanner private-code \
     "$GEN_SRC/staging/xdg-activation/xdg-activation-v1-protocol.c"
 
 wayland-scanner client-header \
+    "$PROTO_DIR/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml" \
+    "$GEN_INC/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml" \
+    "$GEN_SRC/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/staging/xdg-system-bell/xdg-system-bell-v1.xml" \
+    "$GEN_INC/staging/xdg-system-bell/xdg-system-bell-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/staging/xdg-system-bell/xdg-system-bell-v1.xml" \
+    "$GEN_SRC/staging/xdg-system-bell/xdg-system-bell-v1-protocol.c"
+
+wayland-scanner client-header \
     "$PROTO_DIR/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml" \
     "$GEN_INC/staging/linux-drm-syncobj/linux-drm-syncobj-v1-client-protocol.h"
 
@@ -354,6 +391,14 @@ wayland-scanner client-header \
 wayland-scanner private-code \
     "$PROTO_DIR/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml" \
     "$GEN_SRC/legacy-unstable/primary-selection/primary-selection-unstable-v1-protocol.c"
+
+wayland-scanner client-header \
+    "$PROTO_DIR/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1.xml" \
+    "$GEN_INC/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1-client-protocol.h"
+
+wayland-scanner private-code \
+    "$PROTO_DIR/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1.xml" \
+    "$GEN_SRC/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1-protocol.c"
 
 wayland-scanner client-header \
     "$PROTO_DIR/legacy-unstable/text-input/text-input-unstable-v3.xml" \

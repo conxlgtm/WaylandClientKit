@@ -16,8 +16,11 @@ package enum SupportedVersions {
     package static let wpFractionalScaleManagerV1: RawVersion = 1
     package static let wpCursorShapeManagerV1: RawVersion = 2
     package static let xdgActivationV1: RawVersion = 1
+    package static let xdgToplevelIconManagerV1: RawVersion = 1
+    package static let xdgSystemBellV1: RawVersion = 1
     package static let zwpRelativePointerManagerV1: RawVersion = 1
     package static let zwpPointerConstraintsV1: RawVersion = 1
+    package static let zwpIdleInhibitManagerV1: RawVersion = 1
     package static let wpLinuxDrmSyncobjManagerV1: RawVersion = 1
     package static let wpFifoManagerV1: RawVersion = 1
     package static let wpCommitTimingManagerV1: RawVersion = 1
@@ -50,6 +53,7 @@ package struct OptionalGlobals {
     package let presentation: OptionalPresentation
     package let fractionalScaleManager: OptionalFractionalScaleManager
     package let cursorShapeManager: OptionalCursorShapeManager
+    package let xdgToplevelIconManager: OptionalXDGToplevelIconManager
     package let xdgActivation: OptionalXDGActivation
     package let relativePointerManager: OptionalRelativePointerManager
     package let pointerConstraints: OptionalPointerConstraints
@@ -74,6 +78,8 @@ package struct OptionalGlobals {
         fractionalScaleManager boundFractionalScaleManager: OptionalFractionalScaleManager =
             .missing,
         cursorShapeManager boundCursorShapeManager: OptionalCursorShapeManager = .missing,
+        xdgToplevelIconManager boundXDGToplevelIconManager:
+            OptionalXDGToplevelIconManager = .missing,
         xdgActivation boundXDGActivation: OptionalXDGActivation = .missing,
         relativePointerManager boundRelativePointerManager: OptionalRelativePointerManager =
             .missing,
@@ -102,6 +108,7 @@ package struct OptionalGlobals {
         presentation = boundPresentation
         fractionalScaleManager = boundFractionalScaleManager
         cursorShapeManager = boundCursorShapeManager
+        xdgToplevelIconManager = boundXDGToplevelIconManager
         xdgActivation = boundXDGActivation
         relativePointerManager = boundRelativePointerManager
         pointerConstraints = boundPointerConstraints
@@ -132,6 +139,7 @@ package struct OptionalGlobals {
         pointerConstraints.destroy()
         relativePointerManager.destroy()
         xdgActivation.destroy()
+        xdgToplevelIconManager.destroy()
         textInputManager.destroy()
         primarySelectionDeviceManager.destroy()
         dataDeviceManager.destroy()
