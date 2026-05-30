@@ -468,6 +468,12 @@ extension SurfaceRuntime {
         }
     }
 
+    mutating func markConfigureIndependentRoleReady() {
+        updateSurfaceObjects { objects in
+            objects.transactionState.markConfigureIndependentRoleReady()
+        }
+    }
+
     mutating func requestFrameCallback(generation: UInt64) throws {
         try updateSurfaceObjects { objects in
             try objects.transactionState.requestFrameCallback(generation: generation)

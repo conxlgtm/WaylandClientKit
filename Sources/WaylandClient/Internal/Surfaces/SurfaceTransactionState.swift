@@ -100,6 +100,11 @@ package struct SurfaceTransactionState: Equatable, Sendable {
         acknowledgedConfigureSerial = serial
     }
 
+    package mutating func markConfigureIndependentRoleReady() {
+        pendingConfigureSerial = nil
+        acknowledgedConfigureSerial = 0
+    }
+
     package mutating func requestFrameCallback(generation: UInt64) throws {
         guard let pendingGeneration = pendingFrameCallbackGeneration else {
             pendingFrameCallbackGeneration = generation

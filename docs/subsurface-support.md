@@ -18,8 +18,8 @@ The first managed API is intentionally conservative:
 
 Wayland applies subsurface creation, position, and stacking state through the
 parent surface commit. SwiftWayland models that boundary explicitly: managed
-creation, movement, stacking, synchronization-mode changes, and synchronized
-child surface updates issue the required parent commit after the child-side
+creation, movement, stacking, and synchronized child surface updates issue the
+required parent commit after the child-side
 request or child commit. `setSynchronized` and `setDesynchronized` are effective
 immediately and do not require a parent commit. `setDesynchronized` affects later
 child content commits, but creation and position remain parent-applied protocol
