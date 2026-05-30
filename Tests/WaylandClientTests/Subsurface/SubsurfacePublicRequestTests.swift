@@ -78,6 +78,102 @@
         }
 
         @Test
+        func placeAboveCommitsParentForValidSibling() async throws {
+            try await withSubsurfaceConnection { display, window in
+                let subsurface = try await window.createSubsurface(
+                    configuration: subsurfaceConfiguration()
+                )
+                let sibling = try await window.createSubsurface(
+                    configuration: subsurfaceConfiguration()
+                )
+                let probe = try await installParentCommitProbe(in: display, for: window)
+                probe.reset()
+
+                try await subsurface.placeAbove(sibling)
+
+                #expect(probe.count == 1)
+            }
+        }
+
+        @Test
+        func placeBelowCommitsParentForValidSibling() async throws {
+            try await withSubsurfaceConnection { display, window in
+                let subsurface = try await window.createSubsurface(
+                    configuration: subsurfaceConfiguration()
+                )
+                let sibling = try await window.createSubsurface(
+                    configuration: subsurfaceConfiguration()
+                )
+                let probe = try await installParentCommitProbe(in: display, for: window)
+                probe.reset()
+
+                try await subsurface.placeBelow(sibling)
+
+                #expect(probe.count == 1)
+            }
+        }
+
+        @Test
+        func setInputRegionCommitsParentWhenSynchronized() async throws {
+            try await withSubsurfaceConnection { display, window in
+                let subsurface = try await window.createSubsurface(
+                    configuration: subsurfaceConfiguration(synchronizationMode: .synchronized)
+                )
+                let probe = try await installParentCommitProbe(in: display, for: window)
+                probe.reset()
+
+                try await subsurface.setInputRegion(testRegion())
+
+                #expect(probe.count == 1)
+            }
+        }
+
+        @Test
+        func setOpaqueRegionCommitsParentWhenSynchronized() async throws {
+            try await withSubsurfaceConnection { display, window in
+                let subsurface = try await window.createSubsurface(
+                    configuration: subsurfaceConfiguration(synchronizationMode: .synchronized)
+                )
+                let probe = try await installParentCommitProbe(in: display, for: window)
+                probe.reset()
+
+                try await subsurface.setOpaqueRegion(testRegion())
+
+                #expect(probe.count == 1)
+            }
+        }
+
+        @Test
+        func setSynchronizedDoesNotCommitParent() async throws {
+            try await withSubsurfaceConnection { display, window in
+                let subsurface = try await window.createSubsurface(
+                    configuration: subsurfaceConfiguration(synchronizationMode: .desynchronized)
+                )
+                let probe = try await installParentCommitProbe(in: display, for: window)
+                probe.reset()
+
+                try await subsurface.setSynchronized()
+
+                #expect(probe.count == 0)
+            }
+        }
+
+        @Test
+        func setDesynchronizedDoesNotCommitParent() async throws {
+            try await withSubsurfaceConnection { display, window in
+                let subsurface = try await window.createSubsurface(
+                    configuration: subsurfaceConfiguration(synchronizationMode: .synchronized)
+                )
+                let probe = try await installParentCommitProbe(in: display, for: window)
+                probe.reset()
+
+                try await subsurface.setDesynchronized()
+
+                #expect(probe.count == 0)
+            }
+        }
+
+        @Test
         func placeAboveRejectsSelfBeforeRawRequest() async throws {
             try await withSubsurfaceConnection { _, window in
                 let subsurface = try await window.createSubsurface(
@@ -197,6 +293,10 @@
             size: try PositiveLogicalSize(width: 48, height: 48),
             synchronizationMode: synchronizationMode
         )
+    }
+
+    private func testRegion() throws -> SurfaceRegion {
+        SurfaceRegion([try LogicalRect(x: 2, y: 3, width: 24, height: 18)])
     }
 
     private func installParentCommitProbe(
