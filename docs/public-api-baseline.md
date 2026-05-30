@@ -988,22 +988,24 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L7: `    case closedSubsurface`
 - L8: `    case foreignWindow(WindowID)`
 - L9: `    case foreignSubsurface(SubsurfaceIdentity)`
-- L10: `    case presentationTimeUnavailable`
-- L12: `    public var description: String {`
-- L36: `public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {`
-- L37: `    case skippedUnknownSeat`
-- L38: `    case skippedNoPointer`
-- L40: `    public var description: String {`
-- L50: `public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConvertible {`
-- L51: `    public let seatID: SeatID`
-- L52: `    public let requestedCursor: PointerCursor`
-- L53: `    public let backendResult: PointerCursorBackendResult`
-- L55: `    public init(`
-- L65: `    public var description: String {`
-- L81: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L82: `    case invalidConfiguration(CursorConfigurationError)`
-- L83: `    case requestFailed(PointerCursorRequestFailure)`
-- L85: `    public var description: String {`
+- L10: `    case invalidSubsurfaceStacking(SubsurfaceStackingError)`
+- L11: `    case subsurfacePresentationFailed(SubsurfacePresentationFailure)`
+- L12: `    case presentationTimeUnavailable`
+- L14: `    public var description: String {`
+- L42: `public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {`
+- L43: `    case skippedUnknownSeat`
+- L44: `    case skippedNoPointer`
+- L46: `    public var description: String {`
+- L56: `public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConvertible {`
+- L57: `    public let seatID: SeatID`
+- L58: `    public let requestedCursor: PointerCursor`
+- L59: `    public let backendResult: PointerCursorBackendResult`
+- L61: `    public init(`
+- L71: `    public var description: String {`
+- L87: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L88: `    case invalidConfiguration(CursorConfigurationError)`
+- L89: `    case requestFailed(PointerCursorRequestFailure)`
+- L91: `    public var description: String {`
 
 ### `Sources/WaylandClient/Public/Errors/DisplayError.swift`
 
@@ -1864,16 +1866,25 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 - L1: `public struct SubsurfaceIdentity: Hashable, Sendable, CustomStringConvertible {`
 - L8: `    public var description: String {`
-- L30: `public enum SubsurfaceSynchronizationMode: Equatable, Sendable {`
-- L31: `    case synchronized`
-- L32: `    case desynchronized`
-- L35: `public struct SubsurfaceConfiguration: Equatable, Sendable {`
-- L36: `    public static let defaultBufferCount = PositiveInt(unchecked: 3)`
-- L38: `    public let position: LogicalOffset`
-- L39: `    public let size: PositiveLogicalSize`
-- L40: `    public let bufferCount: PositiveInt`
-- L41: `    public let synchronizationMode: SubsurfaceSynchronizationMode`
-- L43: `    public init(`
+- L13: `public enum SubsurfaceStackingError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L14: `    case selfReference(SubsurfaceIdentity)`
+- L15: `    case differentParent(subsurface: SubsurfaceIdentity, sibling: SubsurfaceIdentity)`
+- L17: `    public var description: String {`
+- L28: `public struct SubsurfacePresentationFailure: Error, Equatable, Sendable,`
+- L31: `    public let subsurfaceID: SubsurfaceIdentity`
+- L32: `    public let reason: String`
+- L34: `    public init(subsurfaceID failedSubsurfaceID: SubsurfaceIdentity, reason failureReason: String) {`
+- L39: `    public var description: String {`
+- L61: `public enum SubsurfaceSynchronizationMode: Equatable, Sendable {`
+- L62: `    case synchronized`
+- L63: `    case desynchronized`
+- L90: `public struct SubsurfaceConfiguration: Equatable, Sendable {`
+- L91: `    public static let defaultBufferCount = PositiveInt(unchecked: 3)`
+- L93: `    public let position: LogicalOffset`
+- L94: `    public let size: PositiveLogicalSize`
+- L95: `    public let bufferCount: PositiveInt`
+- L96: `    public let synchronizationMode: SubsurfaceSynchronizationMode`
+- L98: `    public init(`
 
 ### `Sources/WaylandClient/Public/TextInput/TextInputDomainTypes.swift`
 

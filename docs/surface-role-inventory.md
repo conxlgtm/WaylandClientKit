@@ -112,11 +112,14 @@ out of `DisplayResourceTable`.
 - Output membership behavior: tracked internally through surface scale callbacks.
 - Damage behavior: public logical damage follows the shared software commit path.
 - Input and opaque regions: public `Subsurface` region APIs use one-shot
-  `wl_region` objects and commit.
+  `wl_region` objects and commit. Synchronized region state is followed by a
+  parent commit because it is applied with the parent surface state.
 - Metadata behavior: available through the shared commit path when used
   internally.
 - Submit constraints: available through the shared commit path when used
   internally.
+- Parent-applied state: creation, position, stacking, synchronization mode, and
+  synchronized child surface commits are followed by a parent surface commit.
 - Destroy order: parent windows close managed subsurfaces before the parent role
   surface is destroyed; subsurface role resources are destroyed before the child
   raw surface.

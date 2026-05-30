@@ -18,6 +18,7 @@ package final class SubsurfaceRoleSurface {
     private let bufferCount: PositiveInt
     private var position: LogicalOffset
     private var size: PositiveLogicalSize
+    private var synchronizationMode: SubsurfaceSynchronizationMode
     private var isClosed = false
     private var needsRedrawStorage = true
     private var surfaceRuntime: SurfaceRuntime<SubsurfaceRoleResources>
@@ -36,6 +37,7 @@ package final class SubsurfaceRoleSurface {
         bufferCount = subsurfaceConfiguration.bufferCount
         position = subsurfaceConfiguration.position
         size = subsurfaceConfiguration.size
+        synchronizationMode = subsurfaceConfiguration.synchronizationMode
 
         let globals = try rawConnection.bindRequiredGlobals()
         let rawObjects = try rawConnection.createManagedSubsurface(
@@ -97,17 +99,17 @@ package final class SubsurfaceRoleSurface {
     package func showOnOwnerThread(
         damage: SurfaceDamageRegion?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws {
+    ) throws -> SubsurfaceParentCommitRequirement? {
         connection.preconditionIsOwnerThread()
-        try present(damage: damage, draw)
+        return try present(damage: damage, draw)
     }
 
     package func redrawOnOwnerThread(
         damage: SurfaceDamageRegion?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws {
+    ) throws -> SubsurfaceParentCommitRequirement? {
         connection.preconditionIsOwnerThread()
-        try present(damage: damage, draw)
+        return try present(damage: damage, draw)
     }
 
     package func requestRedrawOnOwnerThread() {
@@ -116,53 +118,70 @@ package final class SubsurfaceRoleSurface {
         needsRedrawStorage = true
     }
 
-    package func setInputRegionOnOwnerThread(_ region: SurfaceRegion?) throws {
+    package func setInputRegionOnOwnerThread(_ region: SurfaceRegion?) throws
+        -> SubsurfaceParentCommitRequirement?
+    {
         connection.preconditionIsOwnerThread()
-        try applySurfaceRegion(region) { surface, rawRegion in
+        return try applySurfaceRegion(region) { surface, rawRegion in
             surface.setInputRegion(rawRegion)
         }
     }
 
-    package func setOpaqueRegionOnOwnerThread(_ region: SurfaceRegion?) throws {
+    package func setOpaqueRegionOnOwnerThread(_ region: SurfaceRegion?) throws
+        -> SubsurfaceParentCommitRequirement?
+    {
         connection.preconditionIsOwnerThread()
-        try applySurfaceRegion(region) { surface, rawRegion in
+        return try applySurfaceRegion(region) { surface, rawRegion in
             surface.setOpaqueRegion(rawRegion)
         }
     }
 
-    package func setPositionOnOwnerThread(_ newPosition: LogicalOffset) {
+    package func setPositionOnOwnerThread(_ newPosition: LogicalOffset)
+        -> SubsurfaceParentCommitRequirement?
+    {
         connection.preconditionIsOwnerThread()
-        guard !isClosed else { return }
+        guard !isClosed else { return nil }
         position = newPosition
         subsurface.setPosition(x: newPosition.x, y: newPosition.y)
+        return parentCommitRequirement(reason: .positionChanged)
     }
 
-    package func placeAboveOnOwnerThread(_ sibling: SubsurfaceRoleSurface) throws {
+    package func placeAboveOnOwnerThread(_ sibling: SubsurfaceRoleSurface) throws
+        -> SubsurfaceParentCommitRequirement?
+    {
         connection.preconditionIsOwnerThread()
-        try requireSameParent(as: sibling)
+        try requireValidStackingSibling(sibling)
         guard !isClosed else { throw ClientError.display(.closedSubsurface) }
         guard !sibling.isClosed else { throw ClientError.display(.closedSubsurface) }
         subsurface.placeAbove(sibling.surface)
+        return parentCommitRequirement(reason: .stackingChanged)
     }
 
-    package func placeBelowOnOwnerThread(_ sibling: SubsurfaceRoleSurface) throws {
+    package func placeBelowOnOwnerThread(_ sibling: SubsurfaceRoleSurface) throws
+        -> SubsurfaceParentCommitRequirement?
+    {
         connection.preconditionIsOwnerThread()
-        try requireSameParent(as: sibling)
+        try requireValidStackingSibling(sibling)
         guard !isClosed else { throw ClientError.display(.closedSubsurface) }
         guard !sibling.isClosed else { throw ClientError.display(.closedSubsurface) }
         subsurface.placeBelow(sibling.surface)
+        return parentCommitRequirement(reason: .stackingChanged)
     }
 
-    package func setSynchronizedOnOwnerThread() {
+    package func setSynchronizedOnOwnerThread() -> SubsurfaceParentCommitRequirement? {
         connection.preconditionIsOwnerThread()
-        guard !isClosed else { return }
+        guard !isClosed else { return nil }
+        synchronizationMode = .synchronized
         subsurface.setSynchronized()
+        return parentCommitRequirement(reason: .synchronizationModeChanged)
     }
 
-    package func setDesynchronizedOnOwnerThread() {
+    package func setDesynchronizedOnOwnerThread() -> SubsurfaceParentCommitRequirement? {
         connection.preconditionIsOwnerThread()
-        guard !isClosed else { return }
+        guard !isClosed else { return nil }
+        synchronizationMode = .desynchronized
         subsurface.setDesynchronized()
+        return parentCommitRequirement(reason: .synchronizationModeChanged)
     }
 
     package func closeOnOwnerThread() {
@@ -243,6 +262,7 @@ extension SubsurfaceRoleSurface {
     }
 
     private func applySynchronizationMode(_ mode: SubsurfaceSynchronizationMode) {
+        synchronizationMode = mode
         switch mode {
         case .synchronized:
             subsurface.setSynchronized()
@@ -254,8 +274,8 @@ extension SubsurfaceRoleSurface {
     private func applySurfaceRegion(
         _ region: SurfaceRegion?,
         setRegion: (RawSurface, RawRegion?) -> Void
-    ) throws {
-        guard !isClosed else { return }
+    ) throws -> SubsurfaceParentCommitRequirement? {
+        guard !isClosed else { return nil }
         guard let globals = connection.boundGlobals else {
             throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
         }
@@ -267,13 +287,14 @@ extension SubsurfaceRoleSurface {
             setRegion(surface, rawRegion)
         }
         surface.commit()
+        return synchronizedStateCommitRequirement()
     }
 
     private func present(
         damage: SurfaceDamageRegion?,
         _ draw: (borrowing SoftwareFrame) throws -> Void
-    ) throws {
-        guard !isClosed else { return }
+    ) throws -> SubsurfaceParentCommitRequirement? {
+        guard !isClosed else { return nil }
 
         let generation = surfaceRuntime.nextCommitGeneration
         let request = PresentationRequest(
@@ -312,26 +333,33 @@ extension SubsurfaceRoleSurface {
             runtime: &surfaceRuntime,
             pendingFrameRegistration: &pendingFrameRegistration
         )
-        try handlePresentationFollowUp(result.followUp)
+        return try handlePresentationFollowUp(result.followUp)
     }
 
     private func handlePresentationFollowUp(
         _ followUp: WindowSoftwarePresentationFollowUp?
-    ) throws {
-        guard let followUp else { return }
+    ) throws -> SubsurfaceParentCommitRequirement? {
+        guard let followUp else { return nil }
 
         switch followUp {
         case .succeeded:
             needsRedrawStorage = false
+            return synchronizedStateCommitRequirement()
         case .blockedByBuffer:
             needsRedrawStorage = true
+            return nil
         case .resetTransientState:
             surfaceRuntime.resetTransientTransactionState()
             needsRedrawStorage = true
+            return nil
         case .fail(_, let error):
-            throw ClientError.invalidWindowState(
-                .message("subsurface presentation failed: \(error.description)")
-            )
+            throw ClientError.display(
+                .subsurfacePresentationFailed(
+                    SubsurfacePresentationFailure(
+                        subsurfaceID: SubsurfaceIdentity(id),
+                        reason: error.description
+                    )
+                ))
         }
     }
 
@@ -436,12 +464,38 @@ extension SubsurfaceRoleSurface {
         return surfaceRuntime.currentOutputIDs { outputRegistry.output(for: $0) != nil }
     }
 
-    private func requireSameParent(as sibling: SubsurfaceRoleSurface) throws {
-        guard parentWindowID == sibling.parentWindowID else {
-            throw ClientError.invalidWindowState(
-                .message("subsurface sibling belongs to another parent window")
-            )
+    private func requireValidStackingSibling(_ sibling: SubsurfaceRoleSurface) throws {
+        guard id != sibling.id else {
+            throw ClientError.display(
+                .invalidSubsurfaceStacking(
+                    .selfReference(SubsurfaceIdentity(id))
+                ))
         }
+
+        guard parentWindowID == sibling.parentWindowID else {
+            throw ClientError.display(
+                .invalidSubsurfaceStacking(
+                    .differentParent(
+                        subsurface: SubsurfaceIdentity(id),
+                        sibling: SubsurfaceIdentity(sibling.id)
+                    )
+                ))
+        }
+    }
+
+    private func synchronizedStateCommitRequirement() -> SubsurfaceParentCommitRequirement? {
+        guard synchronizationMode == .synchronized else { return nil }
+        return parentCommitRequirement(reason: .synchronizedSurfaceState)
+    }
+
+    private func parentCommitRequirement(
+        reason: SubsurfaceParentCommitReason
+    ) -> SubsurfaceParentCommitRequirement {
+        SubsurfaceParentCommitRequirement(
+            parentWindowID: parentWindowID,
+            subsurfaceID: id,
+            reason: reason
+        )
     }
 
     private func close() {

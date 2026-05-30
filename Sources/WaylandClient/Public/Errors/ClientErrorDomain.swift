@@ -7,6 +7,8 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
     case closedSubsurface
     case foreignWindow(WindowID)
     case foreignSubsurface(SubsurfaceIdentity)
+    case invalidSubsurfaceStacking(SubsurfaceStackingError)
+    case subsurfacePresentationFailed(SubsurfacePresentationFailure)
     case presentationTimeUnavailable
 
     public var description: String {
@@ -27,6 +29,10 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "window belongs to another display: \(windowID)"
         case .foreignSubsurface(let subsurfaceID):
             "subsurface belongs to another display: \(subsurfaceID)"
+        case .invalidSubsurfaceStacking(let error):
+            error.description
+        case .subsurfacePresentationFailed(let failure):
+            failure.description
         case .presentationTimeUnavailable:
             "presentation-time protocol is unavailable"
         }

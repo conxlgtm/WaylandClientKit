@@ -94,6 +94,12 @@ z-order policy remain framework responsibilities. SwiftWayland owns the
 `wl_subsurface` lifetime, position requests, sync/desync requests, software
 commits, and parent-window cleanup.
 
+Subsurface creation, position, and stacking are parent-applied Wayland state.
+SwiftWayland commits the parent surface after managed creation, movement,
+stacking, synchronization-mode changes, and synchronized child surface updates so
+framework code does not need to schedule an unrelated parent redraw just to make
+subsurface protocol state visible.
+
 ## Event Stream Ownership
 
 SwiftWayland intentionally keeps event families separate:
