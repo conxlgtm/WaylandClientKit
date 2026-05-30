@@ -23,6 +23,7 @@ Then run the relevant checks:
 make smoke-wayland
 make integration-wayland
 make gpu-preview-wayland
+./scripts/ci/test-examples-build.sh
 ```
 
 For headless Weston:
@@ -42,6 +43,42 @@ the noninteractive smoke executable:
 `make gpu-preview-wayland` prints a `SwiftWayland GPU Preview Runtime Path`
 block. Paste that block into the Graphics Preview Evidence table before
 summarizing the result in the main matrix.
+
+For an interactive checklist grouped by feature, run:
+
+```bash
+./scripts/manual/compositor-evidence-pass.sh --duration-seconds 5 --auto-close --print-summary
+```
+
+Smoke examples should print matrix-friendly lines such as `feature`,
+`capability`, `operation`, `cleanup`, and `notes` where the feature is bounded
+enough to summarize.
+
+## Feature Categories
+
+Record these feature categories for each compositor row when the relevant
+example or manual probe has been run:
+
+| Category | Evidence target |
+| --- | --- |
+| input region | `SurfaceRegionSmoke` pointer events inside/outside region |
+| opaque region | `SurfaceRegionSmoke` set/reset logs |
+| partial damage | `DamageRegionSmoke` logical and mapped damage logs |
+| subsurface creation | `SubsurfaceSmoke` child creation and cleanup |
+| subsurface positioning | `SubsurfaceSmoke` movement logs |
+| subsurface sync/desync | `SubsurfaceSmoke` mode logs |
+| custom cursor image | `CustomCursorSmoke` custom/hidden/theme transitions |
+| cursor scale policy | `CursorPolicySmoke` focused-output cursor scale logs |
+| window icon | `WindowIconSmoke` named, pixel, and reset operations |
+| idle inhibit | `IdleInhibitSmoke` create and destroy operations |
+| system bell | `SystemBellSmoke` display/window ring operations |
+| activation | `XDGActivationSmoke` token request and activate request |
+| pointer lock/confine | `PointerCaptureSmoke` lock/confine lifecycle |
+| relative pointer | `PointerCaptureSmoke` relative motion events |
+| text input | `TextInputSmoke` capability and commit summary |
+| data transfer | `DataTransferSmoke` clipboard/primary/drag summary |
+| presentation feedback | `PresentationFeedbackAnimation` feedback summary |
+| graphics preview fallback/GPU path | `GPUPreviewSmokeClient` runtime-path report |
 
 ## Matrix
 
@@ -149,6 +186,9 @@ fails, record that as a failure for that protocol rather than as a skip.
 - `wp_fractional_scale_manager_v1`
 - `wp_presentation`
 - `xdg_activation_v1`
+- `xdg_toplevel_icon_manager_v1`
+- `zwp_idle_inhibit_manager_v1`
+- `xdg_system_bell_v1`
 - `zwp_linux_dmabuf_v1`
 - `wp_linux_drm_syncobj_manager_v1`
 - `wp_fifo_manager_v1`
