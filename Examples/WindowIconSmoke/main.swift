@@ -38,18 +38,14 @@ enum WindowIconSmoke {
             )
             try await window.show(drawFrame)
 
-            do {
-                try await window.setIcon(.named(try WindowIconName("applications-graphics")))
-                log("operation: set-named-icon pass")
+            try await window.setIcon(.named(try WindowIconName("applications-graphics")))
+            log("operation: set-named-icon pass")
 
-                try await window.setIcon(.xrgb8888(try makePixelIcon()))
-                log("operation: set-pixel-icon pass")
+            try await window.setIcon(.xrgb8888(try makePixelIcon()))
+            log("operation: set-pixel-icon pass")
 
-                try await window.setIcon(.none)
-                log("operation: reset-icon pass")
-            } catch {
-                log("operation: window-icon fail error=\(error)")
-            }
+            try await window.setIcon(.none)
+            log("operation: reset-icon pass")
 
             if let autoCloseSeconds = options.autoCloseSeconds {
                 try await Task.sleep(for: .seconds(autoCloseSeconds))
