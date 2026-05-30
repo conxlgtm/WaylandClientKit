@@ -140,6 +140,34 @@
       "notes": "Optional desktop-integration protocol for activation tokens and surface activation."
     },
     {
+      "name": "xdg-toplevel-icon-v1",
+      "localPath": "protocols/upstream/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.1.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml",
+      "sha256": "791dbfed89280c1b8031689955a03e9b2da55601be3c5854a6198e38cea4978f",
+      "stability": "staging",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "public",
+      "testStrategy": "unit-and-live-when-advertised",
+      "notes": "Optional desktop-integration protocol for per-toplevel window icons."
+    },
+    {
+      "name": "xdg-system-bell-v1",
+      "localPath": "protocols/upstream/staging/xdg-system-bell/xdg-system-bell-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.1.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/staging/xdg-system-bell/xdg-system-bell-v1.xml",
+      "sha256": "863c5efcb1a19961c019d23b9875ab84a158da802f5622f5ecc30522c6019330",
+      "stability": "staging",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "public",
+      "testStrategy": "unit-and-live-when-advertised",
+      "notes": "Optional desktop-integration protocol for compositor-mediated system bell requests."
+    },
+    {
       "name": "linux-drm-syncobj-v1",
       "localPath": "protocols/upstream/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml",
       "upstreamProject": "wayland-protocols",
@@ -264,6 +292,20 @@
       "apiExposure": "public",
       "testStrategy": "unit-and-live-when-advertised",
       "notes": "Optional extension for X-style primary selection transfer."
+    },
+    {
+      "name": "idle-inhibit-unstable-v1",
+      "localPath": "protocols/upstream/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1.xml",
+      "upstreamProject": "wayland-protocols",
+      "upstreamVersion": "1.48",
+      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.1.noarch",
+      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/idle-inhibit/idle-inhibit-unstable-v1.xml",
+      "sha256": "c2ac9f002c6669ca6c02eb9b587b8e9108e3ce6deab4a2de58b576f4f864ca38",
+      "stability": "unstable",
+      "swiftWaylandTier": "optionalFoundation",
+      "apiExposure": "public",
+      "testStrategy": "unit-and-live-when-advertised",
+      "notes": "Optional desktop-integration protocol for surface-scoped idle inhibition."
     },
     {
       "name": "text-input-unstable-v3",
