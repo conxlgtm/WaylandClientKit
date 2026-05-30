@@ -421,10 +421,10 @@ package final class TopLevelWindow {
     package func setIconOnOwnerThread(_ icon: WindowIcon) throws {
         connection.preconditionIsOwnerThread()
         guard !model.isClosed else { return }
-        guard let manager = try connection.bindToplevelIconManagerOneShot() else {
+        let globals = try connection.bindRequiredGlobals()
+        guard case .bound(let manager) = globals.extensions.xdgToplevelIconManager else {
             throw ClientError.display(.xdgToplevelIconUnavailable)
         }
-        defer { manager.destroy() }
 
         let topLevel = try activeTopLevel(for: "setIcon")
         switch icon {

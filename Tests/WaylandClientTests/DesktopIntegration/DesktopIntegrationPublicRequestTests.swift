@@ -1,4 +1,5 @@
 #if SWL_ENABLE_TESTING
+    // swiftlint:disable file_length closure_body_length
     import CWaylandProtocols
     import Foundation
     import Testing
@@ -40,10 +41,10 @@
                 #expect(record.desktop.topLevelAddress == topLevelPointer)
                 #expect(record.desktop.iconAddress != nil)
                 #expect(record.core.kind == SWL_TEST_CORE_SURFACE_COMMIT)
-                #expect(record.desktopDestroy.callCount == 2)
+                #expect(record.desktopDestroy.callCount == 1)
                 #expect(
                     record.desktopDestroy.kind
-                        == SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_ICON_MANAGER
+                        == SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_ICON
                 )
             }
         }
@@ -78,10 +79,10 @@
                 #expect(record.desktop.bufferAddress != nil)
                 #expect(record.desktop.scale == 2)
                 #expect(record.core.kind == SWL_TEST_CORE_SURFACE_COMMIT)
-                #expect(record.desktopDestroy.callCount == 2)
+                #expect(record.desktopDestroy.callCount == 1)
                 #expect(
                     record.desktopDestroy.kind
-                        == SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_ICON_MANAGER
+                        == SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_ICON
                 )
             }
         }
@@ -107,11 +108,7 @@
                 #expect(record.desktop.topLevelAddress == topLevelPointer)
                 #expect(record.desktop.iconAddress == nil)
                 #expect(record.core.kind == SWL_TEST_CORE_SURFACE_COMMIT)
-                #expect(record.desktopDestroy.callCount == 1)
-                #expect(
-                    record.desktopDestroy.kind
-                        == SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_ICON_MANAGER
-                )
+                #expect(record.desktopDestroy.callCount == 0)
             }
         }
 

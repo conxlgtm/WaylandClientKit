@@ -5,6 +5,7 @@ package final class RawXDGToplevelIconManager {
     package let version: RawVersion
 
     private let proxyAdoption: RawProxyAdoptionContext
+    private var listenerInstallState = ListenerInstallState.idle
     private var proxy: RawOwnedProxy
 
     @safe package var pointer: OpaquePointer { proxy.pointer }
@@ -13,7 +14,8 @@ package final class RawXDGToplevelIconManager {
     init(
         pointer managerPointer: OpaquePointer,
         version managerVersion: RawVersion,
-        proxyAdoption adoptionContext: RawProxyAdoptionContext
+        proxyAdoption adoptionContext: RawProxyAdoptionContext,
+        installListener shouldInstallListener: Bool = true
     ) throws(RuntimeError) {
         version = managerVersion
         proxyAdoption = adoptionContext
@@ -23,6 +25,17 @@ package final class RawXDGToplevelIconManager {
             proxyAdoption: adoptionContext,
             destroy: unsafe swl_xdg_toplevel_icon_manager_v1_destroy
         )
+
+        if shouldInstallListener {
+            do {
+                try listenerInstallState.install(interface: "xdg_toplevel_icon_manager_v1") {
+                    unsafe swl_xdg_toplevel_icon_manager_v1_add_listener(managerPointer, nil)
+                }
+            } catch {
+                proxy.destroy()
+                throw error
+            }
+        }
     }
 
     package func createIcon() throws -> RawXDGToplevelIcon {

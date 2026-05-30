@@ -99,6 +99,7 @@ enum ShimSmokeCheck {  // swiftlint:disable:this type_body_length
         _ = unsafe swl_wp_fractional_scale_manager_v1_get_fractional_scale
         _ = unsafe swl_wp_cursor_shape_manager_v1_get_pointer
         _ = unsafe swl_wp_cursor_shape_device_v1_set_shape
+        _ = unsafe swl_xdg_toplevel_icon_manager_v1_add_listener
         verifyActivationShims()
         verifyPointerCaptureShims()
         verifySubmitAndMetadataShims()

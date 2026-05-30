@@ -1409,6 +1409,20 @@ struct swl_wp_image_description_v1_listener_callbacks {
     void                                 *data;
 };
 
+typedef void (*swl_xdg_toplevel_icon_manager_v1_icon_size_fn)(
+    void *data,
+    struct xdg_toplevel_icon_manager_v1 *manager,
+    int32_t size);
+typedef void (*swl_xdg_toplevel_icon_manager_v1_done_fn)(
+    void *data,
+    struct xdg_toplevel_icon_manager_v1 *manager);
+
+struct swl_xdg_toplevel_icon_manager_v1_listener_callbacks {
+    swl_xdg_toplevel_icon_manager_v1_icon_size_fn icon_size;
+    swl_xdg_toplevel_icon_manager_v1_done_fn      done;
+    void                                         *data;
+};
+
 struct swl_xdg_activation_token_v1_listener_callbacks {
     swl_xdg_activation_token_v1_done_fn done;
     void                              *data;
@@ -1509,6 +1523,10 @@ int swl_surface_add_listener(
 int swl_output_add_listener(
     struct wl_output *output,
     const struct swl_output_listener_callbacks *callbacks);
+
+int swl_xdg_toplevel_icon_manager_v1_add_listener(
+    struct xdg_toplevel_icon_manager_v1 *manager,
+    const struct swl_xdg_toplevel_icon_manager_v1_listener_callbacks *callbacks);
 
 int swl_data_offer_add_listener(
     struct wl_data_offer *offer,

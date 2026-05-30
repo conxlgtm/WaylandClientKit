@@ -221,7 +221,8 @@
             try unsafe RawXDGToplevelIconManager(
                 pointer: testPointer(rawPointer),
                 version: 1,
-                proxyAdoption: try testAdoptionContext()
+                proxyAdoption: try testAdoptionContext(),
+                installListener: false
             )
         }
 

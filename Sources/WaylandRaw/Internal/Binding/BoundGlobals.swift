@@ -53,6 +53,7 @@ package struct OptionalGlobals {
     package let presentation: OptionalPresentation
     package let fractionalScaleManager: OptionalFractionalScaleManager
     package let cursorShapeManager: OptionalCursorShapeManager
+    package let xdgToplevelIconManager: OptionalXDGToplevelIconManager
     package let xdgActivation: OptionalXDGActivation
     package let relativePointerManager: OptionalRelativePointerManager
     package let pointerConstraints: OptionalPointerConstraints
@@ -77,6 +78,8 @@ package struct OptionalGlobals {
         fractionalScaleManager boundFractionalScaleManager: OptionalFractionalScaleManager =
             .missing,
         cursorShapeManager boundCursorShapeManager: OptionalCursorShapeManager = .missing,
+        xdgToplevelIconManager boundXDGToplevelIconManager:
+            OptionalXDGToplevelIconManager = .missing,
         xdgActivation boundXDGActivation: OptionalXDGActivation = .missing,
         relativePointerManager boundRelativePointerManager: OptionalRelativePointerManager =
             .missing,
@@ -105,6 +108,7 @@ package struct OptionalGlobals {
         presentation = boundPresentation
         fractionalScaleManager = boundFractionalScaleManager
         cursorShapeManager = boundCursorShapeManager
+        xdgToplevelIconManager = boundXDGToplevelIconManager
         xdgActivation = boundXDGActivation
         relativePointerManager = boundRelativePointerManager
         pointerConstraints = boundPointerConstraints
@@ -135,6 +139,7 @@ package struct OptionalGlobals {
         pointerConstraints.destroy()
         relativePointerManager.destroy()
         xdgActivation.destroy()
+        xdgToplevelIconManager.destroy()
         textInputManager.destroy()
         primarySelectionDeviceManager.destroy()
         dataDeviceManager.destroy()
