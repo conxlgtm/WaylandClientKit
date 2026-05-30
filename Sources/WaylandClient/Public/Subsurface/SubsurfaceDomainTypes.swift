@@ -71,6 +71,14 @@ package enum SubsurfaceParentCommitReason: Equatable, Sendable {
     case synchronizationModeChanged
 }
 
+package enum SubsurfaceParentCommitEvent: Equatable, Sendable {
+    case created
+    case positionChanged
+    case stackingChanged
+    case surfaceStateCommitted(SubsurfaceSynchronizationMode)
+    case synchronizationModeChanged
+}
+
 package struct SubsurfaceParentCommitRequirement: Equatable, Sendable {
     package let parentWindowID: WindowID
     package let subsurfaceID: SubsurfaceID
@@ -84,6 +92,61 @@ package struct SubsurfaceParentCommitRequirement: Equatable, Sendable {
         parentWindowID = subsurfaceParentWindowID
         subsurfaceID = managedSubsurfaceID
         reason = commitReason
+    }
+}
+
+package enum SubsurfaceParentCommitPolicy {
+    package static func requirement(
+        parentWindowID: WindowID,
+        subsurfaceID: SubsurfaceID,
+        event: SubsurfaceParentCommitEvent
+    ) -> SubsurfaceParentCommitRequirement? {
+        switch event {
+        case .created:
+            requirement(
+                parentWindowID: parentWindowID,
+                subsurfaceID: subsurfaceID,
+                reason: .created
+            )
+        case .positionChanged:
+            requirement(
+                parentWindowID: parentWindowID,
+                subsurfaceID: subsurfaceID,
+                reason: .positionChanged
+            )
+        case .stackingChanged:
+            requirement(
+                parentWindowID: parentWindowID,
+                subsurfaceID: subsurfaceID,
+                reason: .stackingChanged
+            )
+        case .surfaceStateCommitted(.synchronized):
+            requirement(
+                parentWindowID: parentWindowID,
+                subsurfaceID: subsurfaceID,
+                reason: .synchronizedSurfaceState
+            )
+        case .surfaceStateCommitted(.desynchronized):
+            nil
+        case .synchronizationModeChanged:
+            requirement(
+                parentWindowID: parentWindowID,
+                subsurfaceID: subsurfaceID,
+                reason: .synchronizationModeChanged
+            )
+        }
+    }
+
+    private static func requirement(
+        parentWindowID: WindowID,
+        subsurfaceID: SubsurfaceID,
+        reason: SubsurfaceParentCommitReason
+    ) -> SubsurfaceParentCommitRequirement {
+        SubsurfaceParentCommitRequirement(
+            parentWindowID: parentWindowID,
+            subsurfaceID: subsurfaceID,
+            reason: reason
+        )
     }
 }
 

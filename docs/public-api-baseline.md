@@ -1878,13 +1878,13 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L61: `public enum SubsurfaceSynchronizationMode: Equatable, Sendable {`
 - L62: `    case synchronized`
 - L63: `    case desynchronized`
-- L90: `public struct SubsurfaceConfiguration: Equatable, Sendable {`
-- L91: `    public static let defaultBufferCount = PositiveInt(unchecked: 3)`
-- L93: `    public let position: LogicalOffset`
-- L94: `    public let size: PositiveLogicalSize`
-- L95: `    public let bufferCount: PositiveInt`
-- L96: `    public let synchronizationMode: SubsurfaceSynchronizationMode`
-- L98: `    public init(`
+- L153: `public struct SubsurfaceConfiguration: Equatable, Sendable {`
+- L154: `    public static let defaultBufferCount = PositiveInt(unchecked: 3)`
+- L156: `    public let position: LogicalOffset`
+- L157: `    public let size: PositiveLogicalSize`
+- L158: `    public let bufferCount: PositiveInt`
+- L159: `    public let synchronizationMode: SubsurfaceSynchronizationMode`
+- L161: `    public init(`
 
 ### `Sources/WaylandClient/Public/TextInput/TextInputDomainTypes.swift`
 

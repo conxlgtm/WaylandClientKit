@@ -484,18 +484,36 @@ extension SubsurfaceRoleSurface {
     }
 
     private func synchronizedStateCommitRequirement() -> SubsurfaceParentCommitRequirement? {
-        guard synchronizationMode == .synchronized else { return nil }
-        return parentCommitRequirement(reason: .synchronizedSurfaceState)
+        SubsurfaceParentCommitPolicy.requirement(
+            parentWindowID: parentWindowID,
+            subsurfaceID: id,
+            event: .surfaceStateCommitted(synchronizationMode)
+        )
     }
 
     private func parentCommitRequirement(
         reason: SubsurfaceParentCommitReason
     ) -> SubsurfaceParentCommitRequirement {
-        SubsurfaceParentCommitRequirement(
+        SubsurfaceParentCommitPolicy.requirement(
             parentWindowID: parentWindowID,
             subsurfaceID: id,
-            reason: reason
-        )
+            event: event(for: reason)
+        )!
+    }
+
+    private func event(for reason: SubsurfaceParentCommitReason) -> SubsurfaceParentCommitEvent {
+        switch reason {
+        case .created:
+            .created
+        case .positionChanged:
+            .positionChanged
+        case .stackingChanged:
+            .stackingChanged
+        case .synchronizedSurfaceState:
+            .surfaceStateCommitted(.synchronized)
+        case .synchronizationModeChanged:
+            .synchronizationModeChanged
+        }
     }
 
     private func close() {
