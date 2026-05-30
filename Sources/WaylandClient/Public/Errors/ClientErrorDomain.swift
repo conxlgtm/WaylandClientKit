@@ -10,6 +10,15 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
     case invalidSubsurfaceStacking(SubsurfaceStackingError)
     case subsurfacePresentationFailed(SubsurfacePresentationFailure)
     case presentationTimeUnavailable
+    case xdgToplevelIconUnavailable
+    case idleInhibitUnavailable
+    case systemBellUnavailable
+    case unknownIdleInhibitor(IdleInhibitorID)
+    case foreignIdleInhibitor(IdleInhibitorID)
+    case emptyWindowIconName
+    case windowIconNameContainsNUL
+    case nonSquareWindowIconImage(width: Int32, height: Int32)
+    case invalidWindowIconImagePixelCount(expected: Int, actual: Int)
 
     public var description: String {
         switch self {
@@ -35,6 +44,24 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             failure.description
         case .presentationTimeUnavailable:
             "presentation-time protocol is unavailable"
+        case .xdgToplevelIconUnavailable:
+            "xdg-toplevel-icon protocol is unavailable"
+        case .idleInhibitUnavailable:
+            "idle-inhibit protocol is unavailable"
+        case .systemBellUnavailable:
+            "xdg-system-bell protocol is unavailable"
+        case .unknownIdleInhibitor(let inhibitorID):
+            "unknown idle inhibitor: \(inhibitorID)"
+        case .foreignIdleInhibitor(let inhibitorID):
+            "idle inhibitor belongs to another display: \(inhibitorID)"
+        case .emptyWindowIconName:
+            "window icon name must not be empty"
+        case .windowIconNameContainsNUL:
+            "window icon name must not contain NUL bytes"
+        case .nonSquareWindowIconImage(let width, let height):
+            "window icon image must be square, got \(width)x\(height)"
+        case .invalidWindowIconImagePixelCount(let expected, let actual):
+            "window icon image expected \(expected) pixels, got \(actual)"
         }
     }
 }

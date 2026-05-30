@@ -16,8 +16,11 @@ package enum SupportedVersions {
     package static let wpFractionalScaleManagerV1: RawVersion = 1
     package static let wpCursorShapeManagerV1: RawVersion = 2
     package static let xdgActivationV1: RawVersion = 1
+    package static let xdgToplevelIconManagerV1: RawVersion = 1
+    package static let xdgSystemBellV1: RawVersion = 1
     package static let zwpRelativePointerManagerV1: RawVersion = 1
     package static let zwpPointerConstraintsV1: RawVersion = 1
+    package static let zwpIdleInhibitManagerV1: RawVersion = 1
     package static let wpLinuxDrmSyncobjManagerV1: RawVersion = 1
     package static let wpFifoManagerV1: RawVersion = 1
     package static let wpCommitTimingManagerV1: RawVersion = 1

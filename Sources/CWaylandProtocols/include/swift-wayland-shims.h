@@ -28,11 +28,16 @@ struct wp_cursor_shape_manager_v1;
 struct wp_cursor_shape_device_v1;
 struct xdg_activation_v1;
 struct xdg_activation_token_v1;
+struct xdg_toplevel_icon_manager_v1;
+struct xdg_toplevel_icon_v1;
+struct xdg_system_bell_v1;
 struct zwp_relative_pointer_manager_v1;
 struct zwp_relative_pointer_v1;
 struct zwp_pointer_constraints_v1;
 struct zwp_locked_pointer_v1;
 struct zwp_confined_pointer_v1;
+struct zwp_idle_inhibit_manager_v1;
+struct zwp_idle_inhibitor_v1;
 struct wp_linux_drm_syncobj_manager_v1;
 struct wp_linux_drm_syncobj_surface_v1;
 struct wp_linux_drm_syncobj_timeline_v1;
@@ -113,12 +118,23 @@ struct wp_cursor_shape_manager_v1 *swl_registry_bind_wp_cursor_shape_manager_v1(
 struct xdg_activation_v1 *swl_registry_bind_xdg_activation_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
+struct xdg_toplevel_icon_manager_v1 *
+swl_registry_bind_xdg_toplevel_icon_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct xdg_system_bell_v1 *swl_registry_bind_xdg_system_bell_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
 struct zwp_relative_pointer_manager_v1 *
 swl_registry_bind_zwp_relative_pointer_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct zwp_pointer_constraints_v1 *
 swl_registry_bind_zwp_pointer_constraints_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct zwp_idle_inhibit_manager_v1 *
+swl_registry_bind_zwp_idle_inhibit_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wp_linux_drm_syncobj_manager_v1 *
@@ -325,6 +341,32 @@ void swl_xdg_activation_token_v1_set_surface(
     struct wl_surface *surface);
 void swl_xdg_activation_token_v1_commit(
     struct xdg_activation_token_v1 *token);
+
+/* ------------------------------------------------------------------ */
+/*  Desktop integration request wrappers                              */
+/* ------------------------------------------------------------------ */
+
+struct xdg_toplevel_icon_v1 *
+swl_xdg_toplevel_icon_manager_v1_create_icon(
+    struct xdg_toplevel_icon_manager_v1 *manager);
+void swl_xdg_toplevel_icon_manager_v1_set_icon(
+    struct xdg_toplevel_icon_manager_v1 *manager,
+    struct xdg_toplevel *toplevel,
+    struct xdg_toplevel_icon_v1 *icon);
+void swl_xdg_toplevel_icon_v1_set_name(
+    struct xdg_toplevel_icon_v1 *icon,
+    const char *name);
+void swl_xdg_toplevel_icon_v1_add_buffer(
+    struct xdg_toplevel_icon_v1 *icon,
+    struct wl_buffer *buffer,
+    int32_t scale);
+struct zwp_idle_inhibitor_v1 *
+swl_zwp_idle_inhibit_manager_v1_create_inhibitor(
+    struct zwp_idle_inhibit_manager_v1 *manager,
+    struct wl_surface *surface);
+void swl_xdg_system_bell_v1_ring(
+    struct xdg_system_bell_v1 *bell,
+    struct wl_surface *surface);
 
 /* ------------------------------------------------------------------ */
 /*  Pointer capture request wrappers                                  */
@@ -708,6 +750,15 @@ void swl_wp_cursor_shape_manager_v1_destroy(
 void swl_xdg_activation_v1_destroy(struct xdg_activation_v1 *activation);
 void swl_xdg_activation_token_v1_destroy(
     struct xdg_activation_token_v1 *token);
+void swl_xdg_toplevel_icon_manager_v1_destroy(
+    struct xdg_toplevel_icon_manager_v1 *manager);
+void swl_xdg_toplevel_icon_v1_destroy(
+    struct xdg_toplevel_icon_v1 *icon);
+void swl_zwp_idle_inhibit_manager_v1_destroy(
+    struct zwp_idle_inhibit_manager_v1 *manager);
+void swl_zwp_idle_inhibitor_v1_destroy(
+    struct zwp_idle_inhibitor_v1 *inhibitor);
+void swl_xdg_system_bell_v1_destroy(struct xdg_system_bell_v1 *bell);
 void swl_wp_linux_drm_syncobj_surface_v1_destroy(
     struct wp_linux_drm_syncobj_surface_v1 *syncobj_surface);
 void swl_wp_linux_drm_syncobj_timeline_v1_destroy(
@@ -2033,6 +2084,44 @@ struct swl_test_activation_listener_record {
     const char                            *text;
 };
 
+enum swl_test_desktop_request_kind {
+    SWL_TEST_DESKTOP_REQUEST_NONE = 0,
+    SWL_TEST_DESKTOP_TOPLEVEL_ICON_CREATE_ICON = 1,
+    SWL_TEST_DESKTOP_TOPLEVEL_ICON_SET_ICON = 2,
+    SWL_TEST_DESKTOP_TOPLEVEL_ICON_SET_NAME = 3,
+    SWL_TEST_DESKTOP_TOPLEVEL_ICON_ADD_BUFFER = 4,
+    SWL_TEST_DESKTOP_IDLE_INHIBIT_CREATE_INHIBITOR = 5,
+    SWL_TEST_DESKTOP_SYSTEM_BELL_RING = 6,
+};
+
+struct swl_test_desktop_request_record {
+    int32_t                            call_count;
+    enum swl_test_desktop_request_kind kind;
+    void                              *object;
+    struct xdg_toplevel               *toplevel;
+    struct xdg_toplevel_icon_v1       *icon;
+    struct wl_buffer                  *buffer;
+    struct wl_surface                 *surface;
+    struct zwp_idle_inhibitor_v1      *inhibitor;
+    int32_t                            scale;
+    const char                        *text;
+};
+
+enum swl_test_desktop_destroy_kind {
+    SWL_TEST_DESKTOP_DESTROY_NONE = 0,
+    SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_ICON_MANAGER = 1,
+    SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_ICON = 2,
+    SWL_TEST_DESKTOP_DESTROY_IDLE_INHIBIT_MANAGER = 3,
+    SWL_TEST_DESKTOP_DESTROY_IDLE_INHIBITOR = 4,
+    SWL_TEST_DESKTOP_DESTROY_SYSTEM_BELL = 5,
+};
+
+struct swl_test_desktop_destroy_record {
+    int32_t                            call_count;
+    enum swl_test_desktop_destroy_kind kind;
+    void                              *object;
+};
+
 enum swl_test_pointer_capture_request_kind {
     SWL_TEST_POINTER_CAPTURE_REQUEST_NONE = 0,
     SWL_TEST_POINTER_CAPTURE_GET_RELATIVE_POINTER = 1,
@@ -2330,6 +2419,7 @@ enum swl_test_xdg_destroy_kind {
     SWL_TEST_XDG_DESTROY_NONE = 0,
     SWL_TEST_XDG_DESTROY_POSITIONER = 1,
     SWL_TEST_XDG_DESTROY_POPUP = 2,
+    SWL_TEST_XDG_DESTROY_TOPLEVEL = 3,
 };
 
 struct swl_test_xdg_destroy_record {
@@ -2551,6 +2641,11 @@ void swl_test_activation_listener_emit_done(
     struct xdg_activation_token_v1 *token,
     const char *token_value,
     struct swl_test_activation_listener_record *record);
+
+void swl_test_desktop_request_recording_begin(void);
+void swl_test_desktop_request_recording_end(void);
+struct swl_test_desktop_request_record swl_test_desktop_request_record(void);
+struct swl_test_desktop_destroy_record swl_test_desktop_destroy_record(void);
 
 void swl_test_pointer_capture_request_recording_begin(void);
 void swl_test_pointer_capture_request_recording_end(void);
