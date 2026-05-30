@@ -1,5 +1,6 @@
 #if SWL_ENABLE_TESTING
     import CWaylandProtocols
+    import Foundation
     import Testing
     import WaylandTestSupport
 
@@ -174,6 +175,27 @@
             }
         }
 
+        @Test
+        func desktopRequestRecordingGateSerializesConcurrentBodies() async throws {
+            let probe = GateConcurrencyProbe()
+
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                for index in 0..<8 {
+                    group.addTask {
+                        try await DesktopRequestRecordingGate.withExclusiveRecording {
+                            await probe.enter(index)
+                            try await Task.sleep(for: .milliseconds(5))
+                            await probe.leave(index)
+                        }
+                    }
+                }
+
+                try await group.waitForAll()
+            }
+
+            #expect(await probe.maximumActiveCount == 1)
+        }
+
         private func recordDesktopRequests(
             _ request: @Sendable () async throws -> Void
         ) async throws {
@@ -254,6 +276,26 @@
 
         private func testPointer(_ rawPointer: UInt) throws -> OpaquePointer {
             try unsafe #require(OpaquePointer(bitPattern: rawPointer))
+        }
+    }
+
+    private actor GateConcurrencyProbe {
+        private var activeCount = 0
+        private var maximumActiveCountStorage = 0
+
+        var maximumActiveCount: Int {
+            maximumActiveCountStorage
+        }
+
+        func enter(_ index: Int) {
+            activeCount += 1
+            maximumActiveCountStorage = max(maximumActiveCountStorage, activeCount)
+            _ = index
+        }
+
+        func leave(_ index: Int) {
+            activeCount -= 1
+            _ = index
         }
     }
 #endif
