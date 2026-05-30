@@ -4,7 +4,7 @@ import WaylandRaw
 @testable import WaylandClient
 
 @Suite
-struct SurfaceRuntimeTests {
+struct SurfaceRuntimeTests {  // swiftlint:disable:this type_body_length
     private struct RoleToken: Equatable {
         let rawValue: Int
     }

@@ -231,19 +231,19 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L4: `    public let hotspotY: Int32`
 - L5: `    public let pixels: [UInt32]`
 - L7: `    public init(`
-- L31: `    public static func solid(`
-- L108: `public struct PointerCursor: Equatable, Sendable {`
-- L117: `    public var name: String? {`
-- L122: `    public var image: PointerCursorImage? {`
-- L127: `    public init(name cursorName: String) throws {`
-- L149: `    public static func image(_ image: PointerCursorImage) -> PointerCursor {`
-- L153: `    public static let defaultArrow = Self(validatedName: "left_ptr")`
-- L154: `    public static let text = Self(validatedName: "text")`
-- L155: `    public static let pointer = Self(validatedName: "hand2")`
-- L156: `    public static let crosshair = Self(validatedName: "crosshair")`
-- L157: `    public static let resizeLeftRight = Self(validatedName: "sb_h_double_arrow")`
-- L158: `    public static let resizeUpDown = Self(validatedName: "sb_v_double_arrow")`
-- L159: `    public static let hidden = Self(kind: .hidden)`
+- L32: `    public static func solid(`
+- L110: `public struct PointerCursor: Equatable, Sendable {`
+- L119: `    public var name: String? {`
+- L124: `    public var image: PointerCursorImage? {`
+- L129: `    public init(name cursorName: String) throws {`
+- L151: `    public static func image(_ image: PointerCursorImage) -> PointerCursor {`
+- L155: `    public static let defaultArrow = Self(validatedName: "left_ptr")`
+- L156: `    public static let text = Self(validatedName: "text")`
+- L157: `    public static let pointer = Self(validatedName: "hand2")`
+- L158: `    public static let crosshair = Self(validatedName: "crosshair")`
+- L159: `    public static let resizeLeftRight = Self(validatedName: "sb_h_double_arrow")`
+- L160: `    public static let resizeUpDown = Self(validatedName: "sb_v_double_arrow")`
+- L161: `    public static let hidden = Self(kind: .hidden)`
 
 ### `Sources/WaylandClient/Public/DataTransfer/ByteCount.swift`
 
@@ -1870,21 +1870,26 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L14: `    case selfReference(SubsurfaceIdentity)`
 - L15: `    case differentParent(subsurface: SubsurfaceIdentity, sibling: SubsurfaceIdentity)`
 - L17: `    public var description: String {`
-- L28: `public struct SubsurfacePresentationFailure: Error, Equatable, Sendable,`
-- L31: `    public let subsurfaceID: SubsurfaceIdentity`
-- L32: `    public let reason: String`
-- L34: `    public init(subsurfaceID failedSubsurfaceID: SubsurfaceIdentity, reason failureReason: String) {`
-- L39: `    public var description: String {`
-- L61: `public enum SubsurfaceSynchronizationMode: Equatable, Sendable {`
-- L62: `    case synchronized`
-- L63: `    case desynchronized`
-- L153: `public struct SubsurfaceConfiguration: Equatable, Sendable {`
-- L154: `    public static let defaultBufferCount = PositiveInt(unchecked: 3)`
-- L156: `    public let position: LogicalOffset`
-- L157: `    public let size: PositiveLogicalSize`
-- L158: `    public let bufferCount: PositiveInt`
-- L159: `    public let synchronizationMode: SubsurfaceSynchronizationMode`
-- L161: `    public init(`
+- L28: `public enum SubsurfacePresentationFailureCause: Error, Equatable, Sendable,`
+- L31: `    case presentation(PresentationError)`
+- L32: `    case draw(String)`
+- L33: `    case operation(String)`
+- L35: `    public var description: String {`
+- L47: `public struct SubsurfacePresentationFailure: Error, Equatable, Sendable,`
+- L50: `    public let subsurfaceID: SubsurfaceIdentity`
+- L51: `    public let cause: SubsurfacePresentationFailureCause`
+- L53: `    public init(`
+- L61: `    public var description: String {`
+- L83: `public enum SubsurfaceSynchronizationMode: Equatable, Sendable {`
+- L84: `    case synchronized`
+- L85: `    case desynchronized`
+- L170: `public struct SubsurfaceConfiguration: Equatable, Sendable {`
+- L171: `    public static let defaultBufferCount = PositiveInt(unchecked: 3)`
+- L173: `    public let position: LogicalOffset`
+- L174: `    public let size: PositiveLogicalSize`
+- L175: `    public let bufferCount: PositiveInt`
+- L176: `    public let synchronizationMode: SubsurfaceSynchronizationMode`
+- L178: `    public init(`
 
 ### `Sources/WaylandClient/Public/TextInput/TextInputDomainTypes.swift`
 
@@ -2049,47 +2054,47 @@ updating `docs/public-api-audit.md` for the API contract change.
 
 ### `Sources/WaylandClient/Public/Window/Window.swift`
 
-- L1: `public struct Window: Sendable, Hashable {`
-- L2: `    public let id: WindowID`
-- L16: `    public func show(`
-- L23: `    public func show(`
-- L55: `    public func redraw(`
-- L61: `    public func redraw(`
-- L89: `    public func close() async {`
-- L93: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
-- L99: `    public func createSubsurface(`
-- L108: `    public func requestRedraw() async throws {`
-- L112: `    public var presentationEvents: WindowPresentationEvents {`
-- L116: `    public func requestPresentationFeedback() async throws {`
-- L120: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
-- L124: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
-- L128: `    public func requestActivationToken(`
-- L143: `    public func activate(using token: ActivationToken) async throws {`
-- L147: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
-- L151: `    public func lockPointer(`
-- L166: `    public func confinePointer(`
-- L179: `    public func setTitle(_ title: WaylandString) async throws {`
-- L183: `    public func setTitle(_ title: String) async throws {`
-- L187: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
-- L191: `    public func setAppID(_ appID: String) async throws {`
-- L195: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
-- L199: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
-- L203: `    public func requestMaximize() async throws {`
-- L207: `    public func requestUnmaximize() async throws {`
-- L211: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
-- L215: `    public func requestExitFullscreen() async throws {`
-- L219: `    public func requestMinimize() async throws {`
-- L223: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
-- L227: `    public func requestInteractiveResize(`
-- L240: `    public func requestWindowMenu(`
-- L253: `    public func startDrag(`
-- L268: `    public var isClosed: Bool {`
-- L274: `    public var needsRedraw: Bool {`
-- L280: `    public var decorationMode: WindowDecorationMode {`
-- L286: `    public var geometry: SurfaceGeometry {`
-- L292: `    public var stateSnapshot: WindowStateSnapshot {`
-- L298: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L302: `    public func hash(into hasher: inout Hasher) {`
+- L2: `public struct Window: Sendable, Hashable {`
+- L3: `    public let id: WindowID`
+- L17: `    public func show(`
+- L24: `    public func show(`
+- L56: `    public func redraw(`
+- L62: `    public func redraw(`
+- L90: `    public func close() async {`
+- L94: `    public func createPopup(configuration popupConfiguration: PopupConfiguration) async throws`
+- L100: `    public func createSubsurface(`
+- L109: `    public func requestRedraw() async throws {`
+- L113: `    public var presentationEvents: WindowPresentationEvents {`
+- L117: `    public func requestPresentationFeedback() async throws {`
+- L121: `    public func setInputRegion(_ region: SurfaceRegion?) async throws {`
+- L125: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
+- L129: `    public func requestActivationToken(`
+- L144: `    public func activate(using token: ActivationToken) async throws {`
+- L148: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
+- L152: `    public func lockPointer(`
+- L167: `    public func confinePointer(`
+- L180: `    public func setTitle(_ title: WaylandString) async throws {`
+- L184: `    public func setTitle(_ title: String) async throws {`
+- L188: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L192: `    public func setAppID(_ appID: String) async throws {`
+- L196: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L200: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L204: `    public func requestMaximize() async throws {`
+- L208: `    public func requestUnmaximize() async throws {`
+- L212: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L216: `    public func requestExitFullscreen() async throws {`
+- L220: `    public func requestMinimize() async throws {`
+- L224: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L228: `    public func requestInteractiveResize(`
+- L241: `    public func requestWindowMenu(`
+- L254: `    public func startDrag(`
+- L269: `    public var isClosed: Bool {`
+- L275: `    public var needsRedraw: Bool {`
+- L281: `    public var decorationMode: WindowDecorationMode {`
+- L287: `    public var geometry: SurfaceGeometry {`
+- L293: `    public var stateSnapshot: WindowStateSnapshot {`
+- L299: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L303: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 

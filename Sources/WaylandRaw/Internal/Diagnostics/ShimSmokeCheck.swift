@@ -1,6 +1,6 @@
 import CWaylandProtocols
 
-enum ShimSmokeCheck {
+enum ShimSmokeCheck {  // swiftlint:disable:this type_body_length
     static func verify() {
         verifyDisplayShims()
         verifyRegistryShims()

@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+
 import WaylandRaw
 
 private struct SubsurfaceRoleResources {
@@ -173,7 +175,7 @@ package final class SubsurfaceRoleSurface {
         guard !isClosed else { return nil }
         synchronizationMode = .synchronized
         subsurface.setSynchronized()
-        return parentCommitRequirement(reason: .synchronizationModeChanged)
+        return nil
     }
 
     package func setDesynchronizedOnOwnerThread() -> SubsurfaceParentCommitRequirement? {
@@ -181,7 +183,7 @@ package final class SubsurfaceRoleSurface {
         guard !isClosed else { return nil }
         synchronizationMode = .desynchronized
         subsurface.setDesynchronized()
-        return parentCommitRequirement(reason: .synchronizationModeChanged)
+        return nil
     }
 
     package func closeOnOwnerThread() {
@@ -301,38 +303,43 @@ extension SubsurfaceRoleSurface {
             generation: generation,
             configuration: resolvedConfiguration()
         )
-        let result = try WindowSoftwarePresenter(
-            surface: surface,
-            scaleInstallation: scaleInstallation,
-            createSharedMemoryPool: { [self] bufferSize in
-                guard let globals = connection.boundGlobals else {
-                    throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
-                }
+        let result: WindowSoftwarePresentationResult
+        do {
+            result = try WindowSoftwarePresenter(
+                surface: surface,
+                scaleInstallation: scaleInstallation,
+                createSharedMemoryPool: { [self] bufferSize in
+                    guard let globals = connection.boundGlobals else {
+                        throw ClientError.windowCreationFailed(.requiredGlobalsNotBound)
+                    }
 
-                return try globals.sharedMemory.createPool(
-                    width: bufferSize.width.rawValue,
-                    height: bufferSize.height.rawValue,
-                    bufferCount: bufferCount.rawValue
-                ) { [weak self] in
-                    self?.handleBufferReleased()
+                    return try globals.sharedMemory.createPool(
+                        width: bufferSize.width.rawValue,
+                        height: bufferSize.height.rawValue,
+                        bufferCount: bufferCount.rawValue
+                    ) { [weak self] in
+                        self?.handleBufferReleased()
+                    }
+                },
+                isWindowClosed: { [self] in isClosed },
+                onFrame: { [weak self] in
+                    self?.handleFrameDone()
                 }
-            },
-            isWindowClosed: { [self] in isClosed },
-            onFrame: { [weak self] in
-                self?.handleFrameDone()
-            }
-        ).present(
-            context: WindowSoftwarePresentationContext(
-                request: request,
-                geometry: try currentGeometry(),
-                metadata: .default,
-                damage: damage,
-                presentationFeedback: nil
-            ),
-            draw: draw,
-            runtime: &surfaceRuntime,
-            pendingFrameRegistration: &pendingFrameRegistration
-        )
+            ).present(
+                context: WindowSoftwarePresentationContext(
+                    request: request,
+                    geometry: try currentGeometry(),
+                    metadata: .default,
+                    damage: damage,
+                    presentationFeedback: nil
+                ),
+                draw: draw,
+                runtime: &surfaceRuntime,
+                pendingFrameRegistration: &pendingFrameRegistration
+            )
+        } catch {
+            throw mapPresentationFailure(error)
+        }
         return try handlePresentationFollowUp(result.followUp)
     }
 
@@ -357,10 +364,29 @@ extension SubsurfaceRoleSurface {
                 .subsurfacePresentationFailed(
                     SubsurfacePresentationFailure(
                         subsurfaceID: SubsurfaceIdentity(id),
-                        reason: error.description
+                        cause: .presentation(error)
                     )
                 ))
         }
+    }
+
+    private func mapPresentationFailure(_ error: any Error) -> ClientError {
+        let cause: SubsurfacePresentationFailureCause
+        if let failure = error as? WindowSoftwarePresentationFailure {
+            cause = .presentation(failure.presentationError)
+        } else if let failure = error as? WindowSoftwareDrawFailure {
+            cause = .draw(String(describing: failure.underlying))
+        } else {
+            cause = .operation(String(describing: error))
+        }
+
+        return ClientError.display(
+            .subsurfacePresentationFailed(
+                SubsurfacePresentationFailure(
+                    subsurfaceID: SubsurfaceIdentity(id),
+                    cause: cause
+                )
+            ))
     }
 
     private func currentGeometry() throws -> SurfaceGeometry {
@@ -494,26 +520,11 @@ extension SubsurfaceRoleSurface {
     private func parentCommitRequirement(
         reason: SubsurfaceParentCommitReason
     ) -> SubsurfaceParentCommitRequirement {
-        SubsurfaceParentCommitPolicy.requirement(
+        SubsurfaceParentCommitRequirement(
             parentWindowID: parentWindowID,
             subsurfaceID: id,
-            event: event(for: reason)
-        )!
-    }
-
-    private func event(for reason: SubsurfaceParentCommitReason) -> SubsurfaceParentCommitEvent {
-        switch reason {
-        case .created:
-            .created
-        case .positionChanged:
-            .positionChanged
-        case .stackingChanged:
-            .stackingChanged
-        case .synchronizedSurfaceState:
-            .surfaceStateCommitted(.synchronized)
-        case .synchronizationModeChanged:
-            .synchronizationModeChanged
-        }
+            reason: reason
+        )
     }
 
     private func close() {
@@ -526,6 +537,10 @@ extension SubsurfaceRoleSurface {
         surfaceRuntime.destroyScaleInstallation()
         let removedRoleResources = surfaceRuntime.removeRoleResources()
         removedRoleResources?.destroy()
-        try? surfaceRuntime.markSurfaceDestroyed()
+        do {
+            try surfaceRuntime.markSurfaceDestroyed()
+        } catch {
+            assertionFailure("subsurface surface runtime destroy failed: \(error)")
+        }
     }
 }

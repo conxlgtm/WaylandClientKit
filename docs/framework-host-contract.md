@@ -96,9 +96,10 @@ commits, and parent-window cleanup.
 
 Subsurface creation, position, and stacking are parent-applied Wayland state.
 SwiftWayland commits the parent surface after managed creation, movement,
-stacking, synchronization-mode changes, and synchronized child surface updates so
-framework code does not need to schedule an unrelated parent redraw just to make
-subsurface protocol state visible.
+stacking, and synchronized child surface updates so framework code does not need
+to schedule an unrelated parent redraw just to make subsurface protocol state
+visible. `setSynchronized` and `setDesynchronized` are immediate protocol
+requests and do not commit the parent surface.
 
 ## Event Stream Ownership
 

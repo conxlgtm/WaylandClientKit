@@ -28,6 +28,7 @@ public struct PointerCursorImage: Equatable, Sendable {
         pixels = xrgb8888Pixels
     }
 
+    // swiftlint:disable function_default_parameter_at_end
     public static func solid(
         size imageSize: PositivePixelSize,
         hotspotX imageHotspotX: Int32 = 0,
@@ -46,6 +47,7 @@ public struct PointerCursorImage: Equatable, Sendable {
             pixels: Array(repeating: xrgb8888Color, count: expectedCount)
         )
     }
+    // swiftlint:enable function_default_parameter_at_end
 
     @discardableResult
     package static func validatePixelCount(

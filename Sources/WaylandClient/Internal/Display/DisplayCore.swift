@@ -53,6 +53,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
     }
 
+    // swiftlint:disable:next function_parameter_count
     func showWindow(
         _ windowID: WindowID,
         timeoutMilliseconds: Int32,

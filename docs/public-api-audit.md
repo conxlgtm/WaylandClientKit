@@ -326,9 +326,10 @@ Notes:
   software show/redraw, regions, position, stacking, sync/desync, close,
   redraw-state, and geometry without exposing raw `wl_surface` or
   `wl_subsurface` objects. Parent-applied state is committed by SwiftWayland
-  after managed creation, movement, stacking, synchronization-mode changes, and
-  synchronized child surface updates. Self-stacking and cross-parent stacking are
-  typed display errors.
+  after managed creation, movement, stacking, and synchronized child surface
+  updates. Sync/desync mode changes are immediate protocol requests and do not
+  commit the parent. Self-stacking and cross-parent stacking are typed display
+  errors.
 - Relative pointer requests reject duplicate active subscriptions for the same
   seat with `PointerCaptureError.relativePointerAlreadySubscribed` before
   sending protocol requests. Pointer lock/confine requests reject duplicate

@@ -20,8 +20,10 @@ Wayland applies subsurface creation, position, and stacking state through the
 parent surface commit. SwiftWayland models that boundary explicitly: managed
 creation, movement, stacking, synchronization-mode changes, and synchronized
 child surface updates issue the required parent commit after the child-side
-request or child commit. `setDesynchronized` affects later child content commits,
-but creation and position remain parent-applied protocol state.
+request or child commit. `setSynchronized` and `setDesynchronized` are effective
+immediately and do not require a parent commit. `setDesynchronized` affects later
+child content commits, but creation and position remain parent-applied protocol
+state.
 
 Self-stacking is rejected before any raw request because using a subsurface as
 its own sibling is a Wayland protocol error. Cross-parent stacking also reports a
