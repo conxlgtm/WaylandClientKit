@@ -1,5 +1,5 @@
 #if SWL_ENABLE_TESTING
-    // swiftlint:disable file_length closure_body_length
+    // swiftlint:disable file_length
     import CWaylandProtocols
     import Foundation
     import Testing
@@ -114,6 +114,7 @@
 
         @Test
         func unavailableDesktopProtocolsThrowTypedErrorsThroughPublicAPIs() async throws {
+            // swiftlint:disable:next closure_body_length
             try await withDesktopConnection { display, window in
                 let capabilities = try await display.capabilities()
                 guard
