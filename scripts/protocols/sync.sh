@@ -13,7 +13,10 @@ viewporter_candidates=()
 presentation_time_candidates=()
 fractional_scale_candidates=()
 xdg_activation_candidates=()
+xdg_toplevel_icon_candidates=()
+xdg_system_bell_candidates=()
 primary_selection_candidates=()
+idle_inhibit_candidates=()
 linux_dmabuf_candidates=()
 relative_pointer_candidates=()
 pointer_constraints_candidates=()
@@ -34,7 +37,10 @@ mapfile -t viewporter_candidates < <(protocol_sources_viewporter_candidates)
 mapfile -t presentation_time_candidates < <(protocol_sources_presentation_time_candidates)
 mapfile -t fractional_scale_candidates < <(protocol_sources_fractional_scale_candidates)
 mapfile -t xdg_activation_candidates < <(protocol_sources_xdg_activation_candidates)
+mapfile -t xdg_toplevel_icon_candidates < <(protocol_sources_xdg_toplevel_icon_candidates)
+mapfile -t xdg_system_bell_candidates < <(protocol_sources_xdg_system_bell_candidates)
 mapfile -t primary_selection_candidates < <(protocol_sources_primary_selection_candidates)
+mapfile -t idle_inhibit_candidates < <(protocol_sources_idle_inhibit_candidates)
 mapfile -t linux_dmabuf_candidates < <(protocol_sources_linux_dmabuf_candidates)
 mapfile -t relative_pointer_candidates < <(protocol_sources_relative_pointer_candidates)
 mapfile -t pointer_constraints_candidates < <(protocol_sources_pointer_constraints_candidates)
@@ -63,8 +69,17 @@ FRACTIONAL_SCALE_XML_SOURCE="$(
 XDG_ACTIVATION_XML_SOURCE="$(
     protocol_sources_first_existing_file "${xdg_activation_candidates[@]}" || true
 )"
+XDG_TOPLEVEL_ICON_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${xdg_toplevel_icon_candidates[@]}" || true
+)"
+XDG_SYSTEM_BELL_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${xdg_system_bell_candidates[@]}" || true
+)"
 PRIMARY_SELECTION_XML_SOURCE="$(
     protocol_sources_first_existing_file "${primary_selection_candidates[@]}" || true
+)"
+IDLE_INHIBIT_XML_SOURCE="$(
+    protocol_sources_first_existing_file "${idle_inhibit_candidates[@]}" || true
 )"
 LINUX_DMABUF_XML_SOURCE="$(
     protocol_sources_first_existing_file "${linux_dmabuf_candidates[@]}" || true
@@ -146,9 +161,27 @@ COLOR_MANAGEMENT_XML_SOURCE="$(
     exit 1
 }
 
+[[ -f "$XDG_TOPLEVEL_ICON_XML_SOURCE" ]] || {
+    echo "Missing xdg-toplevel-icon XML. Checked:"
+    printf '  %s\n' "${xdg_toplevel_icon_candidates[@]}"
+    exit 1
+}
+
+[[ -f "$XDG_SYSTEM_BELL_XML_SOURCE" ]] || {
+    echo "Missing xdg-system-bell XML. Checked:"
+    printf '  %s\n' "${xdg_system_bell_candidates[@]}"
+    exit 1
+}
+
 [[ -f "$PRIMARY_SELECTION_XML_SOURCE" ]] || {
     echo "Missing primary-selection XML. Checked:"
     printf '  %s\n' "${primary_selection_candidates[@]}"
+    exit 1
+}
+
+[[ -f "$IDLE_INHIBIT_XML_SOURCE" ]] || {
+    echo "Missing idle-inhibit XML. Checked:"
+    printf '  %s\n' "${idle_inhibit_candidates[@]}"
     exit 1
 }
 
@@ -227,6 +260,8 @@ mkdir -p \
     "$ROOT/protocols/upstream/stable/presentation-time" \
     "$ROOT/protocols/upstream/staging/fractional-scale" \
     "$ROOT/protocols/upstream/staging/xdg-activation" \
+    "$ROOT/protocols/upstream/staging/xdg-toplevel-icon" \
+    "$ROOT/protocols/upstream/staging/xdg-system-bell" \
     "$ROOT/protocols/upstream/staging/linux-drm-syncobj" \
     "$ROOT/protocols/upstream/staging/fifo" \
     "$ROOT/protocols/upstream/staging/commit-timing" \
@@ -236,6 +271,7 @@ mkdir -p \
     "$ROOT/protocols/upstream/staging/color-representation" \
     "$ROOT/protocols/upstream/staging/color-management" \
     "$ROOT/protocols/upstream/legacy-unstable/primary-selection" \
+    "$ROOT/protocols/upstream/legacy-unstable/idle-inhibit" \
     "$ROOT/protocols/upstream/legacy-unstable/linux-dmabuf" \
     "$ROOT/protocols/upstream/legacy-unstable/relative-pointer" \
     "$ROOT/protocols/upstream/legacy-unstable/pointer-constraints"
@@ -253,8 +289,14 @@ cp "$FRACTIONAL_SCALE_XML_SOURCE" \
     "$ROOT/protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml"
 cp "$XDG_ACTIVATION_XML_SOURCE" \
     "$ROOT/protocols/upstream/staging/xdg-activation/xdg-activation-v1.xml"
+cp "$XDG_TOPLEVEL_ICON_XML_SOURCE" \
+    "$ROOT/protocols/upstream/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml"
+cp "$XDG_SYSTEM_BELL_XML_SOURCE" \
+    "$ROOT/protocols/upstream/staging/xdg-system-bell/xdg-system-bell-v1.xml"
 cp "$PRIMARY_SELECTION_XML_SOURCE" \
     "$ROOT/protocols/upstream/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml"
+cp "$IDLE_INHIBIT_XML_SOURCE" \
+    "$ROOT/protocols/upstream/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1.xml"
 cp "$LINUX_DMABUF_XML_SOURCE" \
     "$ROOT/protocols/upstream/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
 cp "$RELATIVE_POINTER_XML_SOURCE" \

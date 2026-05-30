@@ -20,6 +20,8 @@ Start with these public APIs:
 - `Window.show`, `redraw`, `requestRedraw`, `needsRedraw`, `geometry`, and `stateSnapshot`
 - `Window.setInputRegion(_:)`, `setOpaqueRegion(_:)`, and
   `SurfaceDamageRegion` for surface input, opacity, and redraw damage facts
+- `Window.setIcon(_:)`, `Window.inhibitIdle()`, and `Window.ringSystemBell()`
+  for capability-gated desktop integration requests
 - `Window.presentationEvents` and `requestPresentationFeedback()`
 - `Window.createPopup(configuration:)`
 - `Window.createSubsurface(configuration:)` when the framework needs a
@@ -100,6 +102,14 @@ stacking, and synchronized child surface updates so framework code does not need
 to schedule an unrelated parent redraw just to make subsurface protocol state
 visible. `setSynchronized` and `setDesynchronized` are immediate protocol
 requests and do not commit the parent surface.
+
+Toplevel icons, idle inhibition, and system bell are desktop-integration facts,
+not UI policy. Frameworks should choose when an app needs an icon, when visible
+content should inhibit idle, and when a bell/attention request is appropriate.
+SwiftWayland owns the protocol object lifetime and capability-gated typed
+errors. Compositors can ignore idle inhibition when a surface is not visually
+relevant, and system bell requests can be ignored by compositor or user
+preference.
 
 ## Event Stream Ownership
 

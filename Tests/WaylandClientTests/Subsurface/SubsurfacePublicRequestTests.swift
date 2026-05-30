@@ -56,7 +56,7 @@
 
                 try await subsurface.show(drawSolid)
 
-                #expect(probe.count == 0)
+                #expect(probe.isEmpty)
                 await subsurface.close()
             }
         }
@@ -154,7 +154,7 @@
 
                 try await subsurface.setSynchronized()
 
-                #expect(probe.count == 0)
+                #expect(probe.isEmpty)
             }
         }
 
@@ -169,7 +169,7 @@
 
                 try await subsurface.setDesynchronized()
 
-                #expect(probe.count == 0)
+                #expect(probe.isEmpty)
             }
         }
 
@@ -315,7 +315,9 @@
 
     private func recordCoreRequest(
         _ request: () async throws -> Void,
-        cleanup: () async -> Void = {}
+        cleanup: () async -> Void = {
+            // Default cleanup is intentionally empty.
+        }
     ) async throws -> RecordedCoreRequest {
         try await CoreRequestRecordingGate.withExclusiveRecording {
             swl_test_core_request_recording_begin()
@@ -374,6 +376,9 @@
         }
     }
 
+    // SAFETY: Live request tests install this probe as a display-owner callback and
+    // read it from the test task after awaited operations. The suite is serialized,
+    // and the probe stores only a monotonic test counter.
     private final class ParentCommitProbe: @unchecked Sendable {
         private var countStorage = 0
 

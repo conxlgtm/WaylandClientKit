@@ -13,6 +13,10 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     var subsurfaceParentWindowIDs: [SubsurfaceID: WindowID] = [:]
     var subsurfaceIDsByParentWindow: [WindowID: [SubsurfaceID]] = [:]
     var closedSubsurfaceIDs: Set<SubsurfaceID> = []
+    var idleInhibitorIDs = IDGenerator<IdleInhibitorID>()
+    var idleInhibitorsByID: [IdleInhibitorID: DisplayIdleInhibitorRecord] = [:]
+    var idleInhibitorIDsByWindowID: [WindowID: [IdleInhibitorID]] = [:]
+    var closedIdleInhibitorIDs: Set<IdleInhibitorID> = []
     var isClosed: Bool { lifecycle.isClosed }
     var activeSession: DisplaySession? { lifecycle.activeSession }
     var hasPendingFatalFailure: Bool { lifecycle.hasPendingFatalFailure }
@@ -172,6 +176,9 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             // Fatal raw invariants already finished streams and deferred graph cleanup;
             // avoid publishing orderly window lifecycle events on that explicit path.
             guard !hasPendingFatalFailure else { return }
+            for inhibitorID in idleInhibitorIDsByWindowID[windowID] ?? [] {
+                closeIdleInhibitor(inhibitorID)
+            }
             for subsurfaceID in subsurfaceIDsTopDown(parentedBy: windowID) {
                 closeSubsurface(subsurfaceID)
             }
@@ -231,6 +238,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
         var discardedSurfaces = DisplaySurfaceStore<TopLevelWindow, PopupRoleSurface>()
         swap(&surfaces, &discardedSurfaces)
+        removeAllIdleInhibitors()
         removeAllSubsurfaces()
         discardedSurfaces.removeAll()
     }

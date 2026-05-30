@@ -30,3 +30,16 @@ Use this default structure:
 ```
 
 For very small changes, combine Summary and Why into a short paragraph if that is clearer.
+
+## Codex Reviews
+
+When addressing Codex review feedback marked P1, P2, or P3:
+
+- Fix the issue.
+- Commit and push the fix.
+- Request a fresh Codex review by commenting exactly:
+
+  `@codex review`
+
+- Do this before reporting the PR as updated or ready.
+- If the review cannot be requested, state the reason explicitly.

@@ -142,6 +142,38 @@ protocol_sources_xdg_activation_candidates() {
         /usr/local/share/wayland-protocols/staging/xdg-activation/xdg-activation-v1.xml
 }
 
+protocol_sources_xdg_toplevel_icon_candidates() {
+    local protocols_dir
+
+    if [[ -n "${XDG_TOPLEVEL_ICON_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$XDG_TOPLEVEL_ICON_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml}" \
+        /usr/share/wayland-protocols/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml \
+        /usr/local/share/wayland-protocols/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml
+}
+
+protocol_sources_xdg_system_bell_candidates() {
+    local protocols_dir
+
+    if [[ -n "${XDG_SYSTEM_BELL_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$XDG_SYSTEM_BELL_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/staging/xdg-system-bell/xdg-system-bell-v1.xml}" \
+        /usr/share/wayland-protocols/staging/xdg-system-bell/xdg-system-bell-v1.xml \
+        /usr/local/share/wayland-protocols/staging/xdg-system-bell/xdg-system-bell-v1.xml
+}
+
 protocol_sources_primary_selection_candidates() {
     local protocols_dir
 
@@ -156,6 +188,22 @@ protocol_sources_primary_selection_candidates() {
         "${protocols_dir:+$protocols_dir/unstable/primary-selection/primary-selection-unstable-v1.xml}" \
         /usr/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml \
         /usr/local/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml
+}
+
+protocol_sources_idle_inhibit_candidates() {
+    local protocols_dir
+
+    if [[ -n "${IDLE_INHIBIT_XML_SOURCE:-}" ]]; then
+        printf '%s\n' "$IDLE_INHIBIT_XML_SOURCE"
+        return 0
+    fi
+
+    protocols_dir="$(protocol_sources_pkg_config_variable wayland-protocols pkgdatadir)"
+
+    printf '%s\n' \
+        "${protocols_dir:+$protocols_dir/unstable/idle-inhibit/idle-inhibit-unstable-v1.xml}" \
+        /usr/share/wayland-protocols/unstable/idle-inhibit/idle-inhibit-unstable-v1.xml \
+        /usr/local/share/wayland-protocols/unstable/idle-inhibit/idle-inhibit-unstable-v1.xml
 }
 
 protocol_sources_linux_dmabuf_candidates() {
