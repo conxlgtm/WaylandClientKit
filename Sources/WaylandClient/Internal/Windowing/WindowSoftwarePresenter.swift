@@ -214,6 +214,7 @@ struct WindowSoftwarePresenter {
         }
     }
 
+    // swiftlint:disable:next function_parameter_count
     private func prepareCommit<RoleResources>(
         request: PresentationRequest,
         geometry: SurfaceGeometry,

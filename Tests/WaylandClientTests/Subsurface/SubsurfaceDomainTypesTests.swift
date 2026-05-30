@@ -46,13 +46,16 @@ struct SubsurfaceDomainTypesTests {
         #expect(
             ClientError.display(
                 .subsurfacePresentationFailed(
-                    SubsurfacePresentationFailure(subsurfaceID: identity, reason: "buffer busy")
+                    SubsurfacePresentationFailure(
+                        subsurfaceID: identity,
+                        cause: .operation("buffer busy")
+                    )
                 )
             ).description.contains("buffer busy"))
     }
 
     @Test
-    func parentCommitPolicyRequiresParentCommitForParentAppliedState() throws {
+    func parentCommitPolicyRequiresParentCommitForManagedParentAppliedOperations() throws {
         let windowID = WindowID(rawValue: 10)
         let subsurfaceID = SubsurfaceID(rawValue: 11)
         let cases: [(SubsurfaceParentCommitEvent, SubsurfaceParentCommitReason)] = [
@@ -60,7 +63,6 @@ struct SubsurfaceDomainTypesTests {
             (.positionChanged, .positionChanged),
             (.stackingChanged, .stackingChanged),
             (.surfaceStateCommitted(.synchronized), .synchronizedSurfaceState),
-            (.synchronizationModeChanged, .synchronizationModeChanged),
         ]
 
         for (event, reason) in cases {
@@ -80,12 +82,39 @@ struct SubsurfaceDomainTypesTests {
 
     @Test
     func parentCommitPolicyDoesNotRequireParentCommitForDesynchronizedSurfaceState() {
-        let requirement = SubsurfaceParentCommitPolicy.requirement(
-            parentWindowID: WindowID(rawValue: 10),
-            subsurfaceID: SubsurfaceID(rawValue: 11),
-            event: .surfaceStateCommitted(.desynchronized)
+        #expect(parentCommitRequirement(for: .surfaceStateCommitted(.desynchronized)) == nil)
+    }
+
+    @Test
+    func syncModeChangeDoesNotRequireParentCommit() {
+        #expect(parentCommitRequirement(for: .synchronizationModeChanged) == nil)
+    }
+
+    @Test
+    func subsurfacePresentationFailurePreservesTypedCause() {
+        let identity = SubsurfaceIdentity(SubsurfaceID(rawValue: 11))
+        let presentationFailure = SubsurfacePresentationFailure(
+            subsurfaceID: identity,
+            cause: .presentation(.frameCallbackRequest("callback unavailable"))
+        )
+        let drawFailure = SubsurfacePresentationFailure(
+            subsurfaceID: identity,
+            cause: .draw("DrawingError")
         )
 
-        #expect(requirement == nil)
+        #expect(
+            presentationFailure.cause
+                == .presentation(.frameCallbackRequest("callback unavailable")))
+        #expect(drawFailure.cause == .draw("DrawingError"))
+    }
+
+    private func parentCommitRequirement(
+        for event: SubsurfaceParentCommitEvent
+    ) -> SubsurfaceParentCommitRequirement? {
+        SubsurfaceParentCommitPolicy.requirement(
+            parentWindowID: WindowID(rawValue: 10),
+            subsurfaceID: SubsurfaceID(rawValue: 11),
+            event: event
+        )
     }
 }

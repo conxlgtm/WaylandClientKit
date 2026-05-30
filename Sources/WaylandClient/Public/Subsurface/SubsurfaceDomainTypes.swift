@@ -25,19 +25,41 @@ public enum SubsurfaceStackingError: Error, Equatable, Sendable, CustomStringCon
     }
 }
 
+public enum SubsurfacePresentationFailureCause: Error, Equatable, Sendable,
+    CustomStringConvertible
+{
+    case presentation(PresentationError)
+    case draw(String)
+    case operation(String)
+
+    public var description: String {
+        switch self {
+        case .presentation(let error):
+            error.description
+        case .draw(let reason):
+            "draw failed: \(reason)"
+        case .operation(let reason):
+            "operation failed: \(reason)"
+        }
+    }
+}
+
 public struct SubsurfacePresentationFailure: Error, Equatable, Sendable,
     CustomStringConvertible
 {
     public let subsurfaceID: SubsurfaceIdentity
-    public let reason: String
+    public let cause: SubsurfacePresentationFailureCause
 
-    public init(subsurfaceID failedSubsurfaceID: SubsurfaceIdentity, reason failureReason: String) {
+    public init(
+        subsurfaceID failedSubsurfaceID: SubsurfaceIdentity,
+        cause failureCause: SubsurfacePresentationFailureCause
+    ) {
         subsurfaceID = failedSubsurfaceID
-        reason = failureReason
+        cause = failureCause
     }
 
     public var description: String {
-        "subsurface \(subsurfaceID) presentation failed: \(reason)"
+        "subsurface \(subsurfaceID) presentation failed: \(cause.description)"
     }
 }
 
@@ -68,7 +90,6 @@ package enum SubsurfaceParentCommitReason: Equatable, Sendable {
     case positionChanged
     case stackingChanged
     case synchronizedSurfaceState
-    case synchronizationModeChanged
 }
 
 package enum SubsurfaceParentCommitEvent: Equatable, Sendable {
@@ -129,11 +150,7 @@ package enum SubsurfaceParentCommitPolicy {
         case .surfaceStateCommitted(.desynchronized):
             nil
         case .synchronizationModeChanged:
-            requirement(
-                parentWindowID: parentWindowID,
-                subsurfaceID: subsurfaceID,
-                reason: .synchronizationModeChanged
-            )
+            nil
         }
     }
 

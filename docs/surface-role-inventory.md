@@ -118,8 +118,9 @@ out of `DisplayResourceTable`.
   internally.
 - Submit constraints: available through the shared commit path when used
   internally.
-- Parent-applied state: creation, position, stacking, synchronization mode, and
-  synchronized child surface commits are followed by a parent surface commit.
+- Parent-applied state: creation, position, stacking, and synchronized child
+  surface commits are followed by a parent surface commit. `set_sync` and
+  `set_desync` are immediate protocol requests and do not commit the parent.
 - Destroy order: parent windows close managed subsurfaces before the parent role
   surface is destroyed; subsurface role resources are destroyed before the child
   raw surface.

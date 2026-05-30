@@ -1,3 +1,4 @@
+// swiftlint:disable:next type_body_length
 public struct Window: Sendable, Hashable {
     public let id: WindowID
     private let display: WaylandDisplay

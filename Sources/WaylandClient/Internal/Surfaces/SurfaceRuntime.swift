@@ -693,19 +693,19 @@ extension SurfaceRuntimeRole {
         }
     }
 
-    fileprivate var acceptsManagedDamage: Bool {
+    var acceptsManagedDamage: Bool {
         isManagedPresentableSurface
     }
 
-    fileprivate var acceptsSurfaceRegions: Bool {
+    var acceptsSurfaceRegions: Bool {
         isManagedPresentableSurface
     }
 
-    fileprivate var acceptsCommitMetadata: Bool {
+    var acceptsCommitMetadata: Bool {
         isManagedPresentableSurface
     }
 
-    fileprivate var acceptsSubmitConstraints: Bool {
+    var acceptsSubmitConstraints: Bool {
         isManagedPresentableSurface
     }
 }

@@ -3,7 +3,7 @@ import Testing
 @testable import WaylandClient
 
 @Suite
-struct SurfaceGeometryTests {
+struct SurfaceGeometryTests {  // swiftlint:disable:this type_body_length
     @Test
     func surfaceScaleComputesBufferSizeWithHalfAwayFromZeroRounding() throws {
         let cases: [(PositiveLogicalSize, SurfaceScale, PositivePixelSize)] = [
