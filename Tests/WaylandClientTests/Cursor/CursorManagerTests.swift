@@ -461,6 +461,85 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
+    func automaticPointerEnterAppliesCustomImageCursor() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+        let customImage = try PointerCursorImage.solid(
+            size: PositivePixelSize(width: 4, height: 3),
+            hotspotX: 2,
+            hotspotY: 1,
+            color: 0x00FF_0000
+        )
+        let customCursor = PointerCursor.image(customImage)
+
+        try manager.setPointerCursor(customCursor)
+        manager.register(surfaceID: 100)
+        let diagnostics = manager.observe(
+            rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        let surface = try #require(backend.surface(for: seatID))
+
+        #expect(diagnostics.isEmpty)
+        #expect(backend.customCursorImages == [customImage])
+        #expect(surface.operationLog == [.setBufferScale(1), .attach, .commit])
+        #expect(
+            backend.setCursorRequests == [
+                SetCursorRequest(
+                    seatID: seatID,
+                    serial: 55,
+                    surfaceID: surface.objectID,
+                    hotspotX: 2,
+                    hotspotY: 1
+                )
+            ])
+    }
+
+    @Test
+    func automaticPointerEnterCustomImageFailurePublishesDiagnostic() throws {
+        let backend = try RecordingCursorBackend()
+        backend.customCursorImageError = CursorManagerTestError.customImageUnavailable
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+        let customCursor = try PointerCursor.image(
+            .solid(size: PositivePixelSize(width: 2, height: 2), color: 0x00FF_0000)
+        )
+
+        try manager.setPointerCursor(customCursor)
+        manager.register(surfaceID: 100)
+        let diagnostics = manager.observe(
+            rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+
+        #expect(backend.setCursorRequests.isEmpty)
+        guard case .cursorImageResolution(let detail) = automaticCursorFailure(diagnostics) else {
+            Issue.record("expected cursor image resolution diagnostic")
+            return
+        }
+        #expect(detail.contains("customImageUnavailable"))
+    }
+
+    @Test
+    func automaticHiddenCursorDetachesPreviousCustomImageSurface() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+        let customCursor = try PointerCursor.image(
+            .solid(size: PositivePixelSize(width: 2, height: 2), color: 0x00FF_0000)
+        )
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        try manager.setPointerCursor(customCursor)
+        let surface = try #require(backend.surface(for: seatID))
+        manager.observe(rawPointerLeave(sequence: 2, seatID: seatID, surfaceID: 100))
+        surface.operationLog.removeAll()
+        try manager.setPointerCursor(.hidden)
+        manager.observe(rawPointerEnter(sequence: 3, seatID: seatID, surfaceID: 100, serial: 77))
+
+        #expect(surface.operationLog == [.detach, .commit])
+        #expect(backend.setCursorRequests.last?.surfaceID == nil)
+    }
+
+    @Test
     func shutdownCleansUpCustomCursorSurface() throws {
         let backend = try RecordingCursorBackend()
         let manager = try CursorManager(backend: backend, configuration: .init())
@@ -797,6 +876,7 @@ final class RecordingCursorBackend: CursorManagerBackend {
     var missingCursorNames: Set<String> = []
     var setCursorResultOverride: RawPointerCursorResult?
     var cursorSurfaceCreationError: (any Error)?
+    var customCursorImageError: (any Error)?
 
     private let image: CursorImage
     private var nextSurfaceID = UInt32(0xC00)
@@ -831,6 +911,10 @@ final class RecordingCursorBackend: CursorManagerBackend {
 
     func cursorImage(from customImage: PointerCursorImage) throws -> CursorImage {
         customCursorImages.append(customImage)
+        if let error = customCursorImageError {
+            customCursorImageError = nil
+            throw error
+        }
         return try makeCursorImage(
             width: UInt32(customImage.size.width.rawValue),
             height: UInt32(customImage.size.height.rawValue),
@@ -916,6 +1000,21 @@ final class RecordingCursorBackend: CursorManagerBackend {
 
         return createdSurfaces[index]
     }
+}
+
+private func automaticCursorFailure(_ events: [InputEvent]) -> AutomaticPointerEnterFailure? {
+    guard let firstEvent = events.first,
+        case .diagnostic(let diagnostic) = firstEvent.kind,
+        case .cursor(.automaticPointerEnterFailed(let failure)) = diagnostic.payload
+    else {
+        return nil
+    }
+
+    return failure
+}
+
+private enum CursorManagerTestError: Error {
+    case customImageUnavailable
 }
 
 final class RecordingCursorSurface: CursorManagerSurface {

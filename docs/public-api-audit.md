@@ -322,6 +322,13 @@ Notes:
   Diagonal resize convenience presets are deferred until cursor theme names are
   verified across KDE, GNOME, Sway/wlroots, and Weston; frameworks may use
   custom names such as `nw-resize`, `ne-resize`, `sw-resize`, and `se-resize`.
+- Subsurface management is window-owned. Public handles expose creation,
+  software show/redraw, regions, position, stacking, sync/desync, close,
+  redraw-state, and geometry without exposing raw `wl_surface` or
+  `wl_subsurface` objects. Parent-applied state is committed by SwiftWayland
+  after managed creation, movement, stacking, synchronization-mode changes, and
+  synchronized child surface updates. Self-stacking and cross-parent stacking are
+  typed display errors.
 - Relative pointer requests reject duplicate active subscriptions for the same
   seat with `PointerCaptureError.relativePointerAlreadySubscribed` before
   sending protocol requests. Pointer lock/confine requests reject duplicate

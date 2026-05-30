@@ -137,7 +137,8 @@ The current baseline already has meaningful substrate pieces:
 - damage-aware software redraw and managed graphics-preview software submission
   using logical damage mapped to buffer coordinates
 - managed window-owned subsurfaces with software presentation, regions,
-  position updates, sync/desync requests, and parent close cleanup
+  position updates, sync/desync requests, parent-applied state commits, and
+  parent close cleanup
 - package-internal surface role readiness snapshots and
   [`surface-role-inventory.md`](surface-role-inventory.md) document which roles
   accept damage, regions, metadata, and submit constraints

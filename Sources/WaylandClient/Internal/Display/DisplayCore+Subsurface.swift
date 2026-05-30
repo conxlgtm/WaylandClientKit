@@ -14,6 +14,7 @@ extension DisplayCore {
                 throw ClientError.display(.closed)
             }
             registerSubsurface(subsurface)
+            parentWindow.commitSubsurfaceParentStateOnOwnerThread()
             return subsurface.id
         }
     }
@@ -24,10 +25,11 @@ extension DisplayCore {
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try withFatalFailureFinalization {
-            try requireOpenSubsurface(subsurfaceID).showOnOwnerThread(
+            let requirement = try requireOpenSubsurface(subsurfaceID).showOnOwnerThread(
                 damage: damage,
                 draw
             )
+            try commitSubsurfaceParentStateIfNeeded(requirement)
             guard !isClosed, let activeSession else { return }
             publishSessionEvents(activeSession)
         }
@@ -39,10 +41,11 @@ extension DisplayCore {
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try withFatalFailureFinalization {
-            try requireOpenSubsurface(subsurfaceID).redrawOnOwnerThread(
+            let requirement = try requireOpenSubsurface(subsurfaceID).redrawOnOwnerThread(
                 damage: damage,
                 draw
             )
+            try commitSubsurfaceParentStateIfNeeded(requirement)
             guard !isClosed else {
                 throw ClientError.display(.closed)
             }
@@ -60,7 +63,9 @@ extension DisplayCore {
         _ region: SurfaceRegion?
     ) throws {
         try withFatalFailureFinalization {
-            try requireOpenSubsurface(subsurfaceID).setInputRegionOnOwnerThread(region)
+            let requirement = try requireOpenSubsurface(subsurfaceID)
+                .setInputRegionOnOwnerThread(region)
+            try commitSubsurfaceParentStateIfNeeded(requirement)
         }
     }
 
@@ -69,7 +74,9 @@ extension DisplayCore {
         _ region: SurfaceRegion?
     ) throws {
         try withFatalFailureFinalization {
-            try requireOpenSubsurface(subsurfaceID).setOpaqueRegionOnOwnerThread(region)
+            let requirement = try requireOpenSubsurface(subsurfaceID)
+                .setOpaqueRegionOnOwnerThread(region)
+            try commitSubsurfaceParentStateIfNeeded(requirement)
         }
     }
 
@@ -78,7 +85,9 @@ extension DisplayCore {
         _ position: LogicalOffset
     ) throws {
         try withFatalFailureFinalization {
-            try requireOpenSubsurface(subsurfaceID).setPositionOnOwnerThread(position)
+            let requirement = try requireOpenSubsurface(subsurfaceID)
+                .setPositionOnOwnerThread(position)
+            try commitSubsurfaceParentStateIfNeeded(requirement)
         }
     }
 
@@ -89,7 +98,8 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let subsurface = try requireOpenSubsurface(subsurfaceID)
             let sibling = try requireOpenSubsurface(siblingID)
-            try subsurface.placeAboveOnOwnerThread(sibling)
+            let requirement = try subsurface.placeAboveOnOwnerThread(sibling)
+            try commitSubsurfaceParentStateIfNeeded(requirement)
         }
     }
 
@@ -100,19 +110,24 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let subsurface = try requireOpenSubsurface(subsurfaceID)
             let sibling = try requireOpenSubsurface(siblingID)
-            try subsurface.placeBelowOnOwnerThread(sibling)
+            let requirement = try subsurface.placeBelowOnOwnerThread(sibling)
+            try commitSubsurfaceParentStateIfNeeded(requirement)
         }
     }
 
     func setSubsurfaceSynchronized(_ subsurfaceID: SubsurfaceID) throws {
         try withFatalFailureFinalization {
-            try requireOpenSubsurface(subsurfaceID).setSynchronizedOnOwnerThread()
+            let requirement = try requireOpenSubsurface(subsurfaceID)
+                .setSynchronizedOnOwnerThread()
+            try commitSubsurfaceParentStateIfNeeded(requirement)
         }
     }
 
     func setSubsurfaceDesynchronized(_ subsurfaceID: SubsurfaceID) throws {
         try withFatalFailureFinalization {
-            try requireOpenSubsurface(subsurfaceID).setDesynchronizedOnOwnerThread()
+            let requirement = try requireOpenSubsurface(subsurfaceID)
+                .setDesynchronizedOnOwnerThread()
+            try commitSubsurfaceParentStateIfNeeded(requirement)
         }
     }
 
@@ -179,6 +194,14 @@ extension DisplayCore {
         subsurfaceIDsByParentWindow[subsurface.parentWindowID, default: []]
             .append(subsurface.id)
         closedSubsurfaceIDs.remove(subsurface.id)
+    }
+
+    private func commitSubsurfaceParentStateIfNeeded(
+        _ requirement: SubsurfaceParentCommitRequirement?
+    ) throws {
+        guard let requirement else { return }
+        try requireOpenWindow(requirement.parentWindowID)
+            .commitSubsurfaceParentStateOnOwnerThread()
     }
 
     private func requireSubsurface(_ subsurfaceID: SubsurfaceID) throws

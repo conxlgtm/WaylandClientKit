@@ -1491,6 +1491,12 @@ extension TopLevelWindow {
         }
     }
 
+    package func commitSubsurfaceParentStateOnOwnerThread() {
+        connection.preconditionIsOwnerThread()
+        guard !model.isClosed else { return }
+        surface.commit()
+    }
+
     package func redrawOnOwnerThread(
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
