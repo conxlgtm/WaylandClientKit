@@ -14,7 +14,12 @@ extension DisplayCore {
                 throw ClientError.display(.closed)
             }
             registerSubsurface(subsurface)
-            parentWindow.commitSubsurfaceParentStateOnOwnerThread()
+            try commitSubsurfaceParentStateIfNeeded(
+                SubsurfaceParentCommitPolicy.requirement(
+                    parentWindowID: parentWindow.id,
+                    subsurfaceID: subsurface.id,
+                    event: .created
+                ))
             return subsurface.id
         }
     }

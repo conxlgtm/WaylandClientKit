@@ -52,18 +52,40 @@ struct SubsurfaceDomainTypesTests {
     }
 
     @Test
-    func parentCommitRequirementRecordsExplicitProtocolBoundary() {
+    func parentCommitPolicyRequiresParentCommitForParentAppliedState() throws {
         let windowID = WindowID(rawValue: 10)
         let subsurfaceID = SubsurfaceID(rawValue: 11)
+        let cases: [(SubsurfaceParentCommitEvent, SubsurfaceParentCommitReason)] = [
+            (.created, .created),
+            (.positionChanged, .positionChanged),
+            (.stackingChanged, .stackingChanged),
+            (.surfaceStateCommitted(.synchronized), .synchronizedSurfaceState),
+            (.synchronizationModeChanged, .synchronizationModeChanged),
+        ]
 
-        let requirement = SubsurfaceParentCommitRequirement(
-            parentWindowID: windowID,
-            subsurfaceID: subsurfaceID,
-            reason: .positionChanged
+        for (event, reason) in cases {
+            let requirement = try #require(
+                SubsurfaceParentCommitPolicy.requirement(
+                    parentWindowID: windowID,
+                    subsurfaceID: subsurfaceID,
+                    event: event
+                )
+            )
+
+            #expect(requirement.parentWindowID == windowID)
+            #expect(requirement.subsurfaceID == subsurfaceID)
+            #expect(requirement.reason == reason)
+        }
+    }
+
+    @Test
+    func parentCommitPolicyDoesNotRequireParentCommitForDesynchronizedSurfaceState() {
+        let requirement = SubsurfaceParentCommitPolicy.requirement(
+            parentWindowID: WindowID(rawValue: 10),
+            subsurfaceID: SubsurfaceID(rawValue: 11),
+            event: .surfaceStateCommitted(.desynchronized)
         )
 
-        #expect(requirement.parentWindowID == windowID)
-        #expect(requirement.subsurfaceID == subsurfaceID)
-        #expect(requirement.reason == .positionChanged)
+        #expect(requirement == nil)
     }
 }
