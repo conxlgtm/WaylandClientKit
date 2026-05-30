@@ -47,77 +47,90 @@ extension RawDisplayConnection {
                                                             registry: reg
                                                         )
                                                     do {
-                                                        let xdgActivation =
-                                                            try bindXDGActivationIfPresent(
+                                                        let xdgToplevelIconManager =
+                                                            try bindXDGToplevelIconManagerIfPresent(
                                                                 registry: reg
                                                             )
                                                         do {
-                                                            let relativePointerManager =
-                                                                try
-                                                                bindRelativePointerManagerIfPresent(
+                                                            let xdgActivation =
+                                                                try bindXDGActivationIfPresent(
                                                                     registry: reg
                                                                 )
                                                             do {
-                                                                let pointerConstraints =
+                                                                let relativePointerManager =
                                                                     try
-                                                                    bindPointerConstraintsIfPresent(
+                                                                    bindRelativePointerManagerIfPresent(
                                                                         registry: reg
                                                                     )
-                                                                // swiftlint:disable line_length
-                                                                return OptionalGlobals(
-                                                                    xdgDecorationManager:
-                                                                        decorationManager,
-                                                                    xdgOutputManager:
-                                                                        xdgOutputManager,
-                                                                    viewporter: viewporter,
-                                                                    presentation: presentation,
-                                                                    fractionalScaleManager:
-                                                                        fractionalScaleManager,
-                                                                    cursorShapeManager:
-                                                                        cursorShapeManager,
-                                                                    xdgActivation: xdgActivation,
-                                                                    relativePointerManager:
-                                                                        relativePointerManager,
-                                                                    pointerConstraints:
-                                                                        pointerConstraints,
-                                                                    linuxDrmSyncobjManager:
-                                                                        submitGlobals
-                                                                        .linuxDrmSyncobjManager,
-                                                                    fifoManager:
-                                                                        submitGlobals.fifoManager,
-                                                                    commitTimingManager:
-                                                                        submitGlobals
-                                                                        .commitTimingManager,
-                                                                    contentTypeManager:
-                                                                        metadataGlobals
-                                                                        .contentTypeManager,
-                                                                    alphaModifierManager:
-                                                                        metadataGlobals
-                                                                        .alphaModifierManager,
-                                                                    tearingControlManager:
-                                                                        metadataGlobals
-                                                                        .tearingControlManager,
-                                                                    colorRepresentationManager:
-                                                                        metadataGlobals
-                                                                        .colorRepresentationManager,
-                                                                    colorManager:
-                                                                        metadataGlobals
-                                                                        .colorManager,
-                                                                    dataDeviceManager:
-                                                                        dataDeviceManager,
-                                                                    primarySelectionDeviceManager:
-                                                                        primarySelectionDeviceManager,
-                                                                    textInputManager:
-                                                                        textInputManager,
-                                                                    linuxDmabuf: linuxDmabuf
-                                                                )
-                                                                // swiftlint:enable line_length
+                                                                do {
+                                                                    let pointerConstraints =
+                                                                        try
+                                                                        bindPointerConstraintsIfPresent(
+                                                                            registry: reg
+                                                                        )
+                                                                    // swiftlint:disable line_length
+                                                                    return OptionalGlobals(
+                                                                        xdgDecorationManager:
+                                                                            decorationManager,
+                                                                        xdgOutputManager:
+                                                                            xdgOutputManager,
+                                                                        viewporter: viewporter,
+                                                                        presentation: presentation,
+                                                                        fractionalScaleManager:
+                                                                            fractionalScaleManager,
+                                                                        cursorShapeManager:
+                                                                            cursorShapeManager,
+                                                                        xdgToplevelIconManager:
+                                                                            xdgToplevelIconManager,
+                                                                        xdgActivation:
+                                                                            xdgActivation,
+                                                                        relativePointerManager:
+                                                                            relativePointerManager,
+                                                                        pointerConstraints:
+                                                                            pointerConstraints,
+                                                                        linuxDrmSyncobjManager:
+                                                                            submitGlobals
+                                                                            .linuxDrmSyncobjManager,
+                                                                        fifoManager:
+                                                                            submitGlobals
+                                                                            .fifoManager,
+                                                                        commitTimingManager:
+                                                                            submitGlobals
+                                                                            .commitTimingManager,
+                                                                        contentTypeManager:
+                                                                            metadataGlobals
+                                                                            .contentTypeManager,
+                                                                        alphaModifierManager:
+                                                                            metadataGlobals
+                                                                            .alphaModifierManager,
+                                                                        tearingControlManager:
+                                                                            metadataGlobals
+                                                                            .tearingControlManager,
+                                                                        colorRepresentationManager:
+                                                                            metadataGlobals
+                                                                            .colorRepresentationManager,
+                                                                        colorManager:
+                                                                            metadataGlobals
+                                                                            .colorManager,
+                                                                        dataDeviceManager:
+                                                                            dataDeviceManager,
+                                                                        primarySelectionDeviceManager:
+                                                                            primarySelectionDeviceManager,
+                                                                        textInputManager:
+                                                                            textInputManager,
+                                                                        linuxDmabuf: linuxDmabuf
+                                                                    )
+                                                                    // swiftlint:enable line_length
+                                                                } catch {
+                                                                    relativePointerManager.destroy()
+                                                                    throw error
+                                                                }
                                                             } catch {
-                                                                relativePointerManager.destroy()
+                                                                xdgActivation.destroy()
                                                                 throw error
                                                             }
                                                         } catch {
-                                                            xdgActivation.destroy()
+                                                            xdgToplevelIconManager.destroy()
                                                             throw error
                                                         }
                                                     } catch {
@@ -202,6 +215,36 @@ extension RawDisplayConnection {
             )
             return .bound(wrappedManager)
         }
+    }
+
+    @safe
+    private func bindXDGToplevelIconManagerIfPresent(
+        registry reg: OpaquePointer
+    ) throws -> OptionalXDGToplevelIconManager {
+        guard let global = optionalGlobal(named: "xdg_toplevel_icon_manager_v1") else {
+            return .missing
+        }
+
+        let version = global.negotiatedVersion(
+            supportedByClient: SupportedVersions.xdgToplevelIconManagerV1
+        )
+        guard
+            let manager = unsafe swl_registry_bind_xdg_toplevel_icon_manager_v1(
+                reg,
+                global.name,
+                version.value
+            )
+        else {
+            throw RuntimeError.bindFailed("xdg_toplevel_icon_manager_v1")
+        }
+
+        return .bound(
+            try RawXDGToplevelIconManager(
+                pointer: manager,
+                version: version,
+                proxyAdoption: proxyAdoption
+            )
+        )
     }
 
     package static func shouldBindXDGDecorationManager(
