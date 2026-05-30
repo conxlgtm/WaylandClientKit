@@ -61,6 +61,15 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Desktop activation token support through `xdg_activation_v1`.
     public let xdgActivation: ProtocolAvailability
 
+    /// Per-toplevel icon support through `xdg_toplevel_icon_manager_v1`.
+    public let xdgToplevelIcon: ProtocolAvailability
+
+    /// Surface-scoped idle inhibition support through `zwp_idle_inhibit_manager_v1`.
+    public let idleInhibit: ProtocolAvailability
+
+    /// Compositor-mediated system bell support through `xdg_system_bell_v1`.
+    public let systemBell: ProtocolAvailability
+
     /// Relative pointer motion support through `zwp_relative_pointer_manager_v1`.
     public let relativePointer: ProtocolAvailability
 
@@ -85,6 +94,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
         fractionalScale: ProtocolAvailability,
         cursorShape: ProtocolAvailability,
         xdgActivation: ProtocolAvailability,
+        xdgToplevelIcon: ProtocolAvailability = .unavailable,
+        idleInhibit: ProtocolAvailability = .unavailable,
+        systemBell: ProtocolAvailability = .unavailable,
         relativePointer: ProtocolAvailability,
         pointerConstraints: ProtocolAvailability,
         textInput: ProtocolAvailability,
@@ -101,6 +113,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.fractionalScale = fractionalScale
         self.cursorShape = cursorShape
         self.xdgActivation = xdgActivation
+        self.xdgToplevelIcon = xdgToplevelIcon
+        self.idleInhibit = idleInhibit
+        self.systemBell = systemBell
         self.relativePointer = relativePointer
         self.pointerConstraints = pointerConstraints
         self.textInput = textInput
@@ -134,6 +149,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
             fractionalScale: fractionalScale,
             cursorShape: cursorShape,
             xdgActivation: xdgActivation,
+            xdgToplevelIcon: .unavailable,
+            idleInhibit: .unavailable,
+            systemBell: .unavailable,
             relativePointer: .unavailable,
             pointerConstraints: .unavailable,
             textInput: textInput,
@@ -167,6 +185,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
             fractionalScale: fractionalScale,
             cursorShape: cursorShape,
             xdgActivation: .unavailable,
+            xdgToplevelIcon: .unavailable,
+            idleInhibit: .unavailable,
+            systemBell: .unavailable,
             relativePointer: .unavailable,
             pointerConstraints: .unavailable,
             textInput: textInput,
@@ -236,6 +257,18 @@ extension WaylandCapabilities {
             xdgActivation: ProtocolAvailability(
                 protocols.bestAdvertisedProtocol(named: "xdg_activation_v1"),
                 supportedByClient: SupportedVersions.xdgActivationV1
+            ),
+            xdgToplevelIcon: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "xdg_toplevel_icon_manager_v1"),
+                supportedByClient: SupportedVersions.xdgToplevelIconManagerV1
+            ),
+            idleInhibit: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "zwp_idle_inhibit_manager_v1"),
+                supportedByClient: SupportedVersions.zwpIdleInhibitManagerV1
+            ),
+            systemBell: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "xdg_system_bell_v1"),
+                supportedByClient: SupportedVersions.xdgSystemBellV1
             ),
             relativePointer: ProtocolAvailability(
                 protocols.bestAdvertisedProtocol(named: "zwp_relative_pointer_manager_v1"),

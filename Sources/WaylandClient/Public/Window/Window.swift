@@ -126,6 +126,18 @@ public struct Window: Sendable, Hashable {
         try await display.setWindowOpaqueRegion(id, region)
     }
 
+    public func setIcon(_ icon: WindowIcon) async throws {
+        try await display.setWindowIcon(id, icon)
+    }
+
+    public func inhibitIdle() async throws -> IdleInhibitor {
+        try await display.inhibitIdle(window: self)
+    }
+
+    public func ringSystemBell() async throws {
+        try await display.ringSystemBell(window: self)
+    }
+
     public func requestActivationToken(
         appID: String? = nil,
         serialContext: ActivationSerialContext? = nil,
