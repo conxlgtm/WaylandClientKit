@@ -57,6 +57,7 @@ extension RawDisplayConnection {
                                                                     registry: reg
                                                                 )
                                                             do {
+                                                                // swiftlint:disable line_length
                                                                 let relativePointerManager =
                                                                     try
                                                                     bindRelativePointerManagerIfPresent(
@@ -68,7 +69,6 @@ extension RawDisplayConnection {
                                                                         bindPointerConstraintsIfPresent(
                                                                             registry: reg
                                                                         )
-                                                                    // swiftlint:disable line_length
                                                                     return OptionalGlobals(
                                                                         xdgDecorationManager:
                                                                             decorationManager,
