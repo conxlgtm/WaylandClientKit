@@ -54,6 +54,9 @@ package final class TopLevelWindow {
     package var onClosed: (() -> Void)?
     package var onRedrawRequested: (() -> Void)?
     package var onOutputMembershipChanged: (([OutputID]) -> Void)?
+    #if DEBUG
+        package var onSubsurfaceParentCommitForTesting: (() -> Void)?
+    #endif
 
     package init(
         id windowID: WindowID,
@@ -1495,6 +1498,9 @@ extension TopLevelWindow {
         connection.preconditionIsOwnerThread()
         guard !model.isClosed else { return }
         surface.commit()
+        #if DEBUG
+            onSubsurfaceParentCommitForTesting?()
+        #endif
     }
 
     package func redrawOnOwnerThread(

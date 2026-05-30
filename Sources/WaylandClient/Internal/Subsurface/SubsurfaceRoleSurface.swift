@@ -49,6 +49,7 @@ package final class SubsurfaceRoleSurface {
             role: .subsurface,
             surfaceID: rawObjects.surface.objectID
         )
+        surfaceRuntime.markConfigureIndependentRoleReady()
 
         do {
             installCapabilities(globals: globals)
