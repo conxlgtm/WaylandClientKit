@@ -14,6 +14,13 @@ extension CursorManager {
                 to: seatID,
                 serial: explicitSerial
             )
+        case .customImage(let image):
+            return try applyAutomaticCustomImageCursor(
+                cursor,
+                image: image,
+                to: seatID,
+                serial: explicitSerial
+            )
         case .named:
             return try applyAutomaticNamedCursor(to: seatID, serial: explicitSerial)
         }
@@ -41,8 +48,56 @@ extension CursorManager {
             )
         }
 
+        detachCursorSurfaceIfPresent(for: seatID)
         markCursorApplied(.hidden(serial: explicitSerial), for: seatID)
         return .hidden(seatID: publicSeatID(seatID), serial: explicitSerial)
+    }
+
+    private func applyAutomaticCustomImageCursor(
+        _ cursor: PointerCursor,
+        image: PointerCursorImage,
+        to seatID: RawSeatID,
+        serial explicitSerial: UInt32
+    ) throws -> CursorRequestResult {
+        let surface = try automaticCursorSurface(for: seatID)
+        let cursorImage: CursorImage
+        do {
+            cursorImage = try backend.cursorImage(from: image)
+        } catch {
+            throw AutomaticPointerEnterFailure.cursorImageResolution(String(describing: error))
+        }
+
+        let bufferScale = PositiveInt32(unchecked: 1)
+        attachCursorImage(cursorImage, to: surface, bufferScale: bufferScale)
+
+        let rawResult = backend.setPointerCursor(
+            seatID: seatID,
+            serial: explicitSerial,
+            surface: surface,
+            hotspotX: cursorHotspot(cursorImage.hotspotX, bufferScale: bufferScale),
+            hotspotY: cursorHotspot(cursorImage.hotspotY, bufferScale: bufferScale)
+        )
+
+        switch rawResult {
+        case .set:
+            markCursorApplied(
+                .customImage(cursor: cursor, serial: explicitSerial, surfaceID: surface.objectID),
+                for: seatID
+            )
+            return .set(
+                seatID: publicSeatID(seatID),
+                serial: explicitSerial,
+                cursor: cursor
+            )
+        case .skippedNoPointer, .skippedUnknownSeat:
+            throw AutomaticPointerEnterFailure.cursorRequest(
+                pointerCursorRequestFailure(
+                    seatID: seatID,
+                    cursor: cursor,
+                    rawResult: rawResult
+                )
+            )
+        }
     }
 
     private func applyAutomaticNamedCursor(

@@ -22,6 +22,8 @@ Start with these public APIs:
   `SurfaceDamageRegion` for surface input, opacity, and redraw damage facts
 - `Window.presentationEvents` and `requestPresentationFeedback()`
 - `Window.createPopup(configuration:)`
+- `Window.createSubsurface(configuration:)` when the framework needs a
+  compositor-visible child surface rather than a widget abstraction
 - `ActivationToken`, `ActivationTokenRequest`, and
   `Window.requestActivationToken(...)` for compositor-mediated focus handoff
 - relative pointer and pointer constraint APIs through
@@ -82,6 +84,22 @@ Input and opaque regions are surface facts, not framework hit testing.
 should receive input; `nil` resets the compositor default. `setOpaqueRegion(_:)`
 marks fully opaque logical rectangles as a compositor optimization. Frameworks
 still own widget hit testing, clipping, and dirty-region calculation.
+Unsupported visual-only roles, such as cursor and drag icon surfaces, keep
+region and damage behavior internal instead of accepting framework-level
+surface operations.
+
+Subsurfaces are platform hierarchy. Frameworks may use them for embedded
+canvases, video, plugin-like surfaces, or renderer layering, but layout and
+z-order policy remain framework responsibilities. SwiftWayland owns the
+`wl_subsurface` lifetime, position requests, sync/desync requests, software
+commits, and parent-window cleanup.
+
+Subsurface creation, position, and stacking are parent-applied Wayland state.
+SwiftWayland commits the parent surface after managed creation, movement,
+stacking, and synchronized child surface updates so framework code does not need
+to schedule an unrelated parent redraw just to make subsurface protocol state
+visible. `setSynchronized` and `setDesynchronized` are immediate protocol
+requests and do not commit the parent surface.
 
 ## Event Stream Ownership
 
@@ -266,8 +284,10 @@ Diagonal resize cursor presets are not public yet because the portable names
 are not proven across compositor/theme families. Use `PointerCursor(name:)` with
 fallbacks for theme-specific policy.
 
-Custom software cursor images are deferred until SwiftWayland has a public
-buffer-lifetime design that keeps raw Wayland buffers and SHM pools private.
+Use `PointerCursorImage` when the framework needs a static software cursor
+image. The framework owns the image pixels and cursor policy; SwiftWayland owns
+SHM allocation, raw cursor-surface attachment, hotspot forwarding, and cleanup.
+Public cursor animation is still deferred.
 
 ## Boundaries SwiftWayland Does Not Own
 

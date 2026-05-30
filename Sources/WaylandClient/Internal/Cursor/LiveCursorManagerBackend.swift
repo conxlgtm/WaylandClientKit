@@ -28,6 +28,49 @@ final class LiveCursorManagerBackend: CursorManagerBackend {
         try cursorTheme(size: size).cursorImage(named: name)
     }
 
+    func cursorImage(from image: PointerCursorImage) throws -> CursorImage {
+        let pool = try connection.cursorSharedMemory().createPool(
+            width: image.size.width.rawValue,
+            height: image.size.height.rawValue,
+            bufferCount: 1
+        )
+        guard var drawingBuffer = pool.acquireDrawingBuffer() else {
+            throw CursorError.missingBuffer("custom cursor image")
+        }
+
+        do {
+            try unsafe drawingBuffer.withUnsafeMutableBytes { bytes in
+                try unsafe image.pixels.withUnsafeBytes { sourceBytes in
+                    guard sourceBytes.count <= bytes.count else {
+                        throw ClientError.cursor(
+                            .invalidConfiguration(
+                                .invalidCursorImagePixelCount(
+                                    expected: image.pixels.count,
+                                    actual: bytes.count / MemoryLayout<UInt32>.stride
+                                )
+                            ))
+                    }
+
+                    unsafe bytes.copyMemory(from: sourceBytes)
+                }
+            }
+
+            let buffer = drawingBuffer.markBusy(commitGeneration: 0)
+            return try CursorImage(
+                width: image.size.width.rawValue,
+                height: image.size.height.rawValue,
+                hotspotX: image.hotspotX,
+                hotspotY: image.hotspotY,
+                delay: 0,
+                buffer: buffer,
+                owner: pool
+            )
+        } catch {
+            drawingBuffer.discard()
+            throw error
+        }
+    }
+
     func createCursorSurface(for _: RawSeatID) throws -> CursorManagerSurface {
         try CursorRoleSurface(surface: connection.createRawSurface())
     }

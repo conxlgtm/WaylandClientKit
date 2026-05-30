@@ -22,6 +22,11 @@ Diagonal resize cursors are intentionally not built in yet because portable
 theme-name behavior still needs evidence across KDE, GNOME, Sway/wlroots, and
 Weston.
 
+Static software cursor images are supported through ``PointerCursorImage`` and
+``PointerCursor/image(_:)``. Images use one XRGB8888 pixel array, a declared
+pixel size, and a pixel-space hotspot that must be inside the image. SwiftWayland
+keeps the SHM buffer and raw cursor surface private.
+
 Frameworks implementing client-side resize chrome can use custom cursor names
 when they have theme-specific policy:
 
@@ -37,7 +42,6 @@ fall back to an existing built-in such as ``PointerCursor/crosshair`` or keep th
 current cursor until the framework has compositor/theme evidence for a better
 choice.
 
-Custom software cursor images are intentionally deferred. SwiftWayland currently
-supports compositor cursor-shape requests, named theme cursors, hidden cursors,
-and output-aware theme scale policy. A public image cursor API still needs a
-buffer lifetime design that does not expose raw Wayland buffers or SHM pools.
+Animated cursor scheduling is intentionally deferred. SwiftWayland has internal
+animation state primitives, but no public owner-thread scheduler contract yet.
+Use explicit cursor replacement for now.

@@ -3,6 +3,7 @@ import CWaylandProtocols
 
 package enum SupportedVersions {
     package static let wlCompositor: RawVersion = 6
+    package static let wlSubcompositor: RawVersion = 1
     package static let wlShm: RawVersion = 1
     package static let wlOutput: RawVersion = 4
     package static let xdgWmBase: RawVersion = 7

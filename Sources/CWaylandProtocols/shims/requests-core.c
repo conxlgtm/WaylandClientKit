@@ -99,6 +99,57 @@ static void swl_shm_destroy_default(struct wl_shm *shm)
     wl_shm_destroy(shm);
 }
 
+static void swl_subcompositor_destroy_default(
+    struct wl_subcompositor *subcompositor)
+{
+    wl_subcompositor_destroy(subcompositor);
+}
+
+static struct wl_subsurface *swl_subcompositor_get_subsurface_default(
+    struct wl_subcompositor *subcompositor,
+    struct wl_surface *surface,
+    struct wl_surface *parent)
+{
+    return wl_subcompositor_get_subsurface(subcompositor, surface, parent);
+}
+
+static void swl_subsurface_destroy_default(struct wl_subsurface *subsurface)
+{
+    wl_subsurface_destroy(subsurface);
+}
+
+static void swl_subsurface_set_position_default(
+    struct wl_subsurface *subsurface,
+    int32_t x,
+    int32_t y)
+{
+    wl_subsurface_set_position(subsurface, x, y);
+}
+
+static void swl_subsurface_place_above_default(
+    struct wl_subsurface *subsurface,
+    struct wl_surface *sibling)
+{
+    wl_subsurface_place_above(subsurface, sibling);
+}
+
+static void swl_subsurface_place_below_default(
+    struct wl_subsurface *subsurface,
+    struct wl_surface *sibling)
+{
+    wl_subsurface_place_below(subsurface, sibling);
+}
+
+static void swl_subsurface_set_sync_default(struct wl_subsurface *subsurface)
+{
+    wl_subsurface_set_sync(subsurface);
+}
+
+static void swl_subsurface_set_desync_default(struct wl_subsurface *subsurface)
+{
+    wl_subsurface_set_desync(subsurface);
+}
+
 static struct wl_event_queue *swl_proxy_get_queue_raw_default(void *proxy)
 {
 #if SWL_HAS_WL_PROXY_GET_QUEUE
@@ -158,6 +209,28 @@ static void (*swl_shm_pool_destroy_impl)(struct wl_shm_pool *pool) =
     swl_shm_pool_destroy_default;
 static void (*swl_shm_destroy_impl)(struct wl_shm *shm) =
     swl_shm_destroy_default;
+static void (*swl_subcompositor_destroy_impl)(
+    struct wl_subcompositor *subcompositor) = swl_subcompositor_destroy_default;
+static struct wl_subsurface *(*swl_subcompositor_get_subsurface_impl)(
+    struct wl_subcompositor *subcompositor,
+    struct wl_surface *surface,
+    struct wl_surface *parent) = swl_subcompositor_get_subsurface_default;
+static void (*swl_subsurface_destroy_impl)(struct wl_subsurface *subsurface) =
+    swl_subsurface_destroy_default;
+static void (*swl_subsurface_set_position_impl)(
+    struct wl_subsurface *subsurface,
+    int32_t x,
+    int32_t y) = swl_subsurface_set_position_default;
+static void (*swl_subsurface_place_above_impl)(
+    struct wl_subsurface *subsurface,
+    struct wl_surface *sibling) = swl_subsurface_place_above_default;
+static void (*swl_subsurface_place_below_impl)(
+    struct wl_subsurface *subsurface,
+    struct wl_surface *sibling) = swl_subsurface_place_below_default;
+static void (*swl_subsurface_set_sync_impl)(struct wl_subsurface *subsurface) =
+    swl_subsurface_set_sync_default;
+static void (*swl_subsurface_set_desync_impl)(struct wl_subsurface *subsurface) =
+    swl_subsurface_set_desync_default;
 static struct wl_event_queue *(*swl_proxy_get_queue_raw_impl)(void *proxy) =
     swl_proxy_get_queue_raw_default;
 static uint32_t (*swl_proxy_get_id_impl)(void *proxy) =
@@ -327,6 +400,90 @@ static void swl_test_shm_destroy_record(struct wl_shm *shm)
     swl_test_record_core_request(SWL_TEST_CORE_SHM_DESTROY, shm);
 }
 
+static void swl_test_subcompositor_destroy_record(
+    struct wl_subcompositor *subcompositor)
+{
+    swl_test_record_core_request(
+        SWL_TEST_CORE_SUBCOMPOSITOR_DESTROY, subcompositor);
+}
+
+static struct wl_subsurface *swl_test_subcompositor_get_subsurface_record(
+    struct wl_subcompositor *subcompositor,
+    struct wl_surface *surface,
+    struct wl_surface *parent)
+{
+    swl_test_record_core_request(
+        SWL_TEST_CORE_SUBCOMPOSITOR_GET_SUBSURFACE, subcompositor);
+    swl_test_core_request_latest.surface = surface;
+    swl_test_core_request_latest.parent = parent;
+    swl_test_core_request_latest.subsurface = (struct wl_subsurface *)0x5303;
+    return swl_test_core_request_latest.subsurface;
+}
+
+static void swl_test_subsurface_destroy_record(struct wl_subsurface *subsurface)
+{
+    swl_test_record_core_request(SWL_TEST_CORE_SUBSURFACE_DESTROY, subsurface);
+    swl_test_core_request_latest.subsurface = subsurface;
+}
+
+static void swl_test_subsurface_set_position_record(
+    struct wl_subsurface *subsurface,
+    int32_t x,
+    int32_t y)
+{
+    swl_test_record_core_request(
+        SWL_TEST_CORE_SUBSURFACE_SET_POSITION, subsurface);
+    swl_test_core_request_latest.subsurface = subsurface;
+    swl_test_core_request_latest.x = x;
+    swl_test_core_request_latest.y = y;
+}
+
+static void swl_test_subsurface_place_record(
+    enum swl_test_core_request_kind kind,
+    struct wl_subsurface *subsurface,
+    struct wl_surface *sibling)
+{
+    swl_test_record_core_request(kind, subsurface);
+    swl_test_core_request_latest.subsurface = subsurface;
+    swl_test_core_request_latest.sibling = sibling;
+}
+
+static void swl_test_subsurface_place_above_record(
+    struct wl_subsurface *subsurface,
+    struct wl_surface *sibling)
+{
+    swl_test_subsurface_place_record(
+        SWL_TEST_CORE_SUBSURFACE_PLACE_ABOVE, subsurface, sibling);
+}
+
+static void swl_test_subsurface_place_below_record(
+    struct wl_subsurface *subsurface,
+    struct wl_surface *sibling)
+{
+    swl_test_subsurface_place_record(
+        SWL_TEST_CORE_SUBSURFACE_PLACE_BELOW, subsurface, sibling);
+}
+
+static void swl_test_subsurface_sync_record(
+    enum swl_test_core_request_kind kind,
+    struct wl_subsurface *subsurface)
+{
+    swl_test_record_core_request(kind, subsurface);
+    swl_test_core_request_latest.subsurface = subsurface;
+}
+
+static void swl_test_subsurface_set_sync_record(struct wl_subsurface *subsurface)
+{
+    swl_test_subsurface_sync_record(SWL_TEST_CORE_SUBSURFACE_SET_SYNC, subsurface);
+}
+
+static void swl_test_subsurface_set_desync_record(
+    struct wl_subsurface *subsurface)
+{
+    swl_test_subsurface_sync_record(
+        SWL_TEST_CORE_SUBSURFACE_SET_DESYNC, subsurface);
+}
+
 static struct wl_event_queue *swl_test_proxy_get_queue_raw(void *proxy)
 {
     (void)proxy;
@@ -351,6 +508,14 @@ static uint32_t swl_test_proxy_get_id(void *proxy)
 #define swl_surface_destroy_impl wl_surface_destroy
 #define swl_shm_pool_destroy_impl wl_shm_pool_destroy
 #define swl_shm_destroy_impl wl_shm_destroy
+#define swl_subcompositor_destroy_impl wl_subcompositor_destroy
+#define swl_subcompositor_get_subsurface_impl wl_subcompositor_get_subsurface
+#define swl_subsurface_destroy_impl wl_subsurface_destroy
+#define swl_subsurface_set_position_impl wl_subsurface_set_position
+#define swl_subsurface_place_above_impl wl_subsurface_place_above
+#define swl_subsurface_place_below_impl wl_subsurface_place_below
+#define swl_subsurface_set_sync_impl wl_subsurface_set_sync
+#define swl_subsurface_set_desync_impl wl_subsurface_set_desync
 #endif
 
 struct wl_surface *swl_compositor_create_surface(struct wl_compositor *compositor)
@@ -501,6 +666,56 @@ void swl_shm_destroy(struct wl_shm *shm)
     swl_shm_destroy_impl(shm);
 }
 
+void swl_subcompositor_destroy(struct wl_subcompositor *subcompositor)
+{
+    swl_subcompositor_destroy_impl(subcompositor);
+}
+
+struct wl_subsurface *swl_subcompositor_get_subsurface(
+    struct wl_subcompositor *subcompositor,
+    struct wl_surface *surface,
+    struct wl_surface *parent)
+{
+    return swl_subcompositor_get_subsurface_impl(subcompositor, surface, parent);
+}
+
+void swl_subsurface_destroy(struct wl_subsurface *subsurface)
+{
+    swl_subsurface_destroy_impl(subsurface);
+}
+
+void swl_subsurface_set_position(
+    struct wl_subsurface *subsurface,
+    int32_t x,
+    int32_t y)
+{
+    swl_subsurface_set_position_impl(subsurface, x, y);
+}
+
+void swl_subsurface_place_above(
+    struct wl_subsurface *subsurface,
+    struct wl_surface *sibling)
+{
+    swl_subsurface_place_above_impl(subsurface, sibling);
+}
+
+void swl_subsurface_place_below(
+    struct wl_subsurface *subsurface,
+    struct wl_surface *sibling)
+{
+    swl_subsurface_place_below_impl(subsurface, sibling);
+}
+
+void swl_subsurface_set_sync(struct wl_subsurface *subsurface)
+{
+    swl_subsurface_set_sync_impl(subsurface);
+}
+
+void swl_subsurface_set_desync(struct wl_subsurface *subsurface)
+{
+    swl_subsurface_set_desync_impl(subsurface);
+}
+
 void swl_output_destroy(struct wl_output *output)
 {
     wl_output_destroy(output);
@@ -568,6 +783,15 @@ void swl_test_core_request_recording_begin(void)
     swl_surface_destroy_impl = swl_test_surface_destroy_record;
     swl_shm_pool_destroy_impl = swl_test_shm_pool_destroy_record;
     swl_shm_destroy_impl = swl_test_shm_destroy_record;
+    swl_subcompositor_destroy_impl = swl_test_subcompositor_destroy_record;
+    swl_subcompositor_get_subsurface_impl =
+        swl_test_subcompositor_get_subsurface_record;
+    swl_subsurface_destroy_impl = swl_test_subsurface_destroy_record;
+    swl_subsurface_set_position_impl = swl_test_subsurface_set_position_record;
+    swl_subsurface_place_above_impl = swl_test_subsurface_place_above_record;
+    swl_subsurface_place_below_impl = swl_test_subsurface_place_below_record;
+    swl_subsurface_set_sync_impl = swl_test_subsurface_set_sync_record;
+    swl_subsurface_set_desync_impl = swl_test_subsurface_set_desync_record;
     swl_proxy_get_queue_raw_impl = swl_test_proxy_get_queue_raw;
     swl_proxy_get_id_impl = swl_test_proxy_get_id;
 }
@@ -586,6 +810,15 @@ void swl_test_core_request_recording_end(void)
     swl_surface_destroy_impl = swl_surface_destroy_default;
     swl_shm_pool_destroy_impl = swl_shm_pool_destroy_default;
     swl_shm_destroy_impl = swl_shm_destroy_default;
+    swl_subcompositor_destroy_impl = swl_subcompositor_destroy_default;
+    swl_subcompositor_get_subsurface_impl =
+        swl_subcompositor_get_subsurface_default;
+    swl_subsurface_destroy_impl = swl_subsurface_destroy_default;
+    swl_subsurface_set_position_impl = swl_subsurface_set_position_default;
+    swl_subsurface_place_above_impl = swl_subsurface_place_above_default;
+    swl_subsurface_place_below_impl = swl_subsurface_place_below_default;
+    swl_subsurface_set_sync_impl = swl_subsurface_set_sync_default;
+    swl_subsurface_set_desync_impl = swl_subsurface_set_desync_default;
     swl_proxy_get_queue_raw_impl = swl_proxy_get_queue_raw_default;
     swl_proxy_get_id_impl = swl_proxy_get_id_default;
 }

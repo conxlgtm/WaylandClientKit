@@ -1,4 +1,6 @@
 #if SWL_ENABLE_TESTING
+    // swiftlint:disable closure_body_length multiple_closures_with_trailing_closure
+
     import CWaylandProtocols
     import Testing
     import WaylandTestSupport
@@ -166,4 +168,6 @@
             try unsafe #require(OpaquePointer(bitPattern: rawPointer))
         }
     }
+
+// swiftlint:enable closure_body_length multiple_closures_with_trailing_closure
 #endif

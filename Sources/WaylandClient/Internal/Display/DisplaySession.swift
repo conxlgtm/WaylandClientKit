@@ -19,6 +19,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     package var pendingDataTransferDiagnostics: [DataTransferDiagnostic] = []
     private var windowIDs = IDGenerator<WindowID>()
     private var popupIDs = IDGenerator<PopupID>()
+    var subsurfaceIDs = IDGenerator<SubsurfaceID>()
 
     package init(
         connection rawConnection: RawDisplayConnection,

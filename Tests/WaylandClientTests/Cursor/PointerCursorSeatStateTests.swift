@@ -147,6 +147,21 @@ struct PointerCursorSeatStateTests {
     }
 
     @Test
+    func desiredPointerCursorStateKeepsCustomImageUnresolved() throws {
+        let customImage = try PointerCursorImage.solid(
+            size: PositivePixelSize(width: 2, height: 2),
+            color: 0x0000_FFFF
+        )
+        let cursor = PointerCursor.image(customImage)
+
+        let state = DesiredPointerCursorState(cursor: cursor)
+
+        #expect(state.cursor == cursor)
+        #expect(state.resolvedImage == nil)
+        #expect(state.unavailableDiagnostic == nil)
+    }
+
+    @Test
     func desiredPointerCursorStateCachesUnavailableResolution() {
         var state = DesiredPointerCursorState(cursor: .defaultArrow)
 

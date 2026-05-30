@@ -23,6 +23,7 @@ package protocol CursorManagerBackend: AnyObject {
 
     func preconditionIsOwnerThread()
     func cursorImage(named name: String, size: CursorSize) throws -> CursorImage
+    func cursorImage(from image: PointerCursorImage) throws -> CursorImage
     func createCursorSurface(for seatID: RawSeatID) throws -> CursorManagerSurface
     func setPointerCursor(
         seatID: RawSeatID,
@@ -210,7 +211,6 @@ package final class CursorManager: RawInputEventObserving {
         }
 
         let cursor = desiredCursor.cursor
-        let resolution = try cursorResolution(for: seatID)
         switch cursor.kind {
         case .hidden:
             let rawResult = backend.setPointerCursor(
@@ -228,8 +228,16 @@ package final class CursorManager: RawInputEventObserving {
                 )
             }
 
+            detachCursorSurfaceIfPresent(for: seatID)
             markCursorApplied(.hidden(serial: serial), for: seatID)
             return .hidden(seatID: publicSeatID(seatID), serial: serial)
+        case .customImage(let image):
+            return try applyCustomImageCursor(
+                to: seatID,
+                serial: serial,
+                cursor: cursor,
+                image: image
+            )
         case .named:
             if backend.supportsCursorShape, let shape = cursor.cursorShapeName {
                 return try applyShapeCursor(
@@ -240,12 +248,49 @@ package final class CursorManager: RawInputEventObserving {
                 )
             }
 
+            let resolution = try cursorResolution(for: seatID)
             let resolved = try cachedResolvedDesiredCursor(size: resolution.size)
             return try applyNamedCursor(
                 to: seatID,
                 serial: serial,
                 resolvedCursor: resolved,
                 bufferScale: resolution.bufferScale
+            )
+        }
+    }
+
+    private func applyCustomImageCursor(
+        to seatID: RawSeatID,
+        serial: UInt32,
+        cursor: PointerCursor,
+        image: PointerCursorImage
+    ) throws -> CursorRequestResult {
+        let surface = try cursorSurface(for: seatID)
+        let cursorImage = try backend.cursorImage(from: image)
+        let bufferScale = PositiveInt32(unchecked: 1)
+
+        attachCursorImage(cursorImage, to: surface, bufferScale: bufferScale)
+
+        let rawResult = backend.setPointerCursor(
+            seatID: seatID,
+            serial: serial,
+            surface: surface,
+            hotspotX: cursorHotspot(cursorImage.hotspotX, bufferScale: bufferScale),
+            hotspotY: cursorHotspot(cursorImage.hotspotY, bufferScale: bufferScale)
+        )
+
+        switch rawResult {
+        case .set:
+            markCursorApplied(
+                .customImage(cursor: cursor, serial: serial, surfaceID: surface.objectID),
+                for: seatID
+            )
+            return .set(seatID: publicSeatID(seatID), serial: serial, cursor: cursor)
+        case .skippedNoPointer, .skippedUnknownSeat:
+            throw cursorRequestFailure(
+                seatID: seatID,
+                cursor: cursor,
+                rawResult: rawResult
             )
         }
     }
@@ -418,6 +463,15 @@ package final class CursorManager: RawInputEventObserving {
         surface.detach()
         surface.commit()
         surface.destroy()
+    }
+
+    package func detachCursorSurfaceIfPresent(for seatID: RawSeatID) {
+        guard let surface = cursorStateBySeat[seatID]?.cursorSurface else {
+            return
+        }
+
+        surface.detach()
+        surface.commit()
     }
 
     package func attachCursorImage(

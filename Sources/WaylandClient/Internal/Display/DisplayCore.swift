@@ -9,6 +9,10 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     private var lifecycle: DisplayCoreLifecycle
     private var isDiscardingSurfaceGraph = false
     var surfaces = DisplaySurfaceStore<TopLevelWindow, PopupRoleSurface>()
+    var subsurfacesByID: [SubsurfaceID: SubsurfaceRoleSurface] = [:]
+    var subsurfaceParentWindowIDs: [SubsurfaceID: WindowID] = [:]
+    var subsurfaceIDsByParentWindow: [WindowID: [SubsurfaceID]] = [:]
+    var closedSubsurfaceIDs: Set<SubsurfaceID> = []
     var isClosed: Bool { lifecycle.isClosed }
     var activeSession: DisplaySession? { lifecycle.activeSession }
     var hasPendingFatalFailure: Bool { lifecycle.hasPendingFatalFailure }
@@ -49,6 +53,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
     }
 
+    // swiftlint:disable:next function_parameter_count
     func showWindow(
         _ windowID: WindowID,
         timeoutMilliseconds: Int32,
@@ -167,6 +172,9 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             // Fatal raw invariants already finished streams and deferred graph cleanup;
             // avoid publishing orderly window lifecycle events on that explicit path.
             guard !hasPendingFatalFailure else { return }
+            for subsurfaceID in subsurfaceIDsTopDown(parentedBy: windowID) {
+                closeSubsurface(subsurfaceID)
+            }
             for popupID in popupIDsTopDown(parentedBy: windowID) {
                 closePopup(popupID)
             }
@@ -223,6 +231,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
         var discardedSurfaces = DisplaySurfaceStore<TopLevelWindow, PopupRoleSurface>()
         swap(&surfaces, &discardedSurfaces)
+        removeAllSubsurfaces()
         discardedSurfaces.removeAll()
     }
 
@@ -321,6 +330,9 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     private func handleWindowClosed(_ windowID: WindowID) {
         guard surfaceGraphAcceptsLifecycleCallback() else { return }
+        for subsurfaceID in subsurfaceIDsTopDown(parentedBy: windowID) {
+            closeSubsurface(subsurfaceID)
+        }
         for popupID in popupIDsTopDown(parentedBy: windowID) {
             closePopup(popupID)
         }

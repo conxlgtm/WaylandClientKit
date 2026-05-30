@@ -1,4 +1,6 @@
 #if SWL_ENABLE_TESTING
+    // swiftlint:disable file_length closure_body_length
+
     import CWaylandProtocols
     import Testing
     import WaylandRaw
@@ -9,7 +11,7 @@
     private struct RoleToken: Equatable {}
 
     @Suite(.serialized)
-    struct SurfaceRuntimeSubmitTests {
+    struct SurfaceRuntimeSubmitTests {  // swiftlint:disable:this type_body_length
         @Test
         func submitCapabilitySnapshotPublishesSynchronizationAndPacingFacts() {
             var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
@@ -551,4 +553,5 @@
         }
     }
 
+// swiftlint:enable closure_body_length
 #endif
