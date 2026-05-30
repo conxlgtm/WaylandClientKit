@@ -32,6 +32,16 @@ struct SurfaceTransactionStateTests {
     }
 
     @Test
+    func configureIndependentRoleReadinessAllowsInitialCommitCandidate() throws {
+        var runtime = SurfaceRuntime<Void>(role: .subsurface)
+
+        runtime.markConfigureIndependentRoleReady()
+
+        try runtime.validateCommittedFrameCandidate(generation: 1)
+        #expect(runtime.transactionSnapshot.acknowledgedConfigureSerial == 0)
+    }
+
+    @Test
     func ackRejectsUnexpectedSerial() {
         var state = SurfaceTransactionState()
 

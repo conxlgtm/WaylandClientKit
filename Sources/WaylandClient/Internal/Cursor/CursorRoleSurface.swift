@@ -28,6 +28,8 @@ package struct CursorRoleRuntime {
 package final class CursorRoleSurface: CursorManagerSurface {
     let rawSurface: RawSurface
     private var runtime: CursorRoleRuntime
+    private var attachedImage: CursorImage?
+    private var imagesPendingReleaseAfterCommit: [CursorImage] = []
     private var isDestroyed = false
 
     init(surface: RawSurface) throws {
@@ -48,16 +50,25 @@ package final class CursorRoleSurface: CursorManagerSurface {
     }
 
     package func attach(_ image: CursorImage) {
+        if let attachedImage {
+            imagesPendingReleaseAfterCommit.append(attachedImage)
+        }
+        attachedImage = image
         rawSurface.attachBorrowedBuffer(image.buffer)
         rawSurface.damageFullBuffer(width: image.width, height: image.height)
     }
 
     package func detach() {
+        if let attachedImage {
+            imagesPendingReleaseAfterCommit.append(attachedImage)
+        }
+        attachedImage = nil
         rawSurface.attachBorrowedBuffer(nil)
     }
 
     package func commit() {
         rawSurface.commit()
+        imagesPendingReleaseAfterCommit.removeAll(keepingCapacity: true)
     }
 
     package func destroy() {
@@ -70,5 +81,7 @@ package final class CursorRoleSurface: CursorManagerSurface {
             assertionFailure("cursor surface runtime destroy failed: \(error)")
         }
         rawSurface.destroy()
+        attachedImage = nil
+        imagesPendingReleaseAfterCommit.removeAll(keepingCapacity: false)
     }
 }

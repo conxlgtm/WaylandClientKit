@@ -68,9 +68,10 @@ example, a manual example run, or an external framework harness.
 ## Diagonal Cursor Policy
 
 Decision for this checkpoint: do not add public diagonal `PointerCursor` presets
-yet. Keep custom cursor names in examples and docs, with a known fallback such
-as `.crosshair`, until the same names are verified across GNOME/Mutter, KDE/KWin,
-Sway/wlroots, and Weston.
+yet. Keep theme-specific cursor names in examples and docs, with a known
+fallback such as `.crosshair`, until the same names are verified across
+GNOME/Mutter, KDE/KWin, Sway/wlroots, and Weston. Static custom cursor images
+are available when an app or framework owns the pixels and hotspot.
 
 Names to test:
 

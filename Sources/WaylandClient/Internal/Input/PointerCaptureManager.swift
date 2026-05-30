@@ -5,7 +5,7 @@ private struct ManagedRelativePointerSubscription {
     let pointer: RawRelativePointer
 }
 
-package final class PointerCaptureManager {
+package final class PointerCaptureManager {  // swiftlint:disable:this type_body_length
     private let connection: RawDisplayConnection
     private var relativePointerSubscriptionIDs =
         IDGenerator<RelativePointerSubscriptionID>()

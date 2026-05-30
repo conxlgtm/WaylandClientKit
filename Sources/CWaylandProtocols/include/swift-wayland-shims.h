@@ -61,6 +61,8 @@ struct wl_data_device_manager;
 struct wl_data_device;
 struct wl_data_offer;
 struct wl_data_source;
+struct wl_subcompositor;
+struct wl_subsurface;
 struct zwp_primary_selection_device_manager_v1;
 struct zwp_primary_selection_device_v1;
 struct zwp_primary_selection_offer_v1;
@@ -77,6 +79,8 @@ extern "C" {
 /* ------------------------------------------------------------------ */
 
 struct wl_compositor *swl_registry_bind_wl_compositor(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+struct wl_subcompositor *swl_registry_bind_wl_subcompositor(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wl_shm *swl_registry_bind_wl_shm(
@@ -165,6 +169,10 @@ struct zwp_linux_dmabuf_v1 *swl_registry_bind_zwp_linux_dmabuf_v1(
 /* ------------------------------------------------------------------ */
 
 struct wl_surface *swl_compositor_create_surface(struct wl_compositor *compositor);
+struct wl_subsurface *swl_subcompositor_get_subsurface(
+    struct wl_subcompositor *subcompositor,
+    struct wl_surface *surface,
+    struct wl_surface *parent);
 
 struct wl_shm_pool *swl_shm_create_pool(struct wl_shm *shm, int32_t fd, int32_t size);
 
@@ -197,6 +205,18 @@ void swl_surface_set_opaque_region(
     struct wl_surface *surface, struct wl_region *region);
 void swl_surface_set_input_region(
     struct wl_surface *surface, struct wl_region *region);
+void swl_subsurface_set_position(
+    struct wl_subsurface *subsurface,
+    int32_t x,
+    int32_t y);
+void swl_subsurface_place_above(
+    struct wl_subsurface *subsurface,
+    struct wl_surface *sibling);
+void swl_subsurface_place_below(
+    struct wl_subsurface *subsurface,
+    struct wl_surface *sibling);
+void swl_subsurface_set_sync(struct wl_subsurface *subsurface);
+void swl_subsurface_set_desync(struct wl_subsurface *subsurface);
 
 uint32_t swl_shm_format_xrgb8888(void);
 uint32_t swl_shm_format_argb8888(void);
@@ -635,11 +655,13 @@ void swl_zwp_linux_buffer_params_v1_create(
 void swl_registry_destroy(struct wl_registry *registry);
 void swl_callback_destroy(struct wl_callback *callback);
 void swl_compositor_destroy(struct wl_compositor *compositor);
+void swl_subcompositor_destroy(struct wl_subcompositor *subcompositor);
 void swl_shm_destroy(struct wl_shm *shm);
 void swl_output_destroy(struct wl_output *output);
 void swl_output_release(struct wl_output *output);
 void swl_buffer_destroy(struct wl_buffer *buffer);
 void swl_surface_destroy(struct wl_surface *surface);
+void swl_subsurface_destroy(struct wl_subsurface *subsurface);
 void swl_shm_pool_destroy(struct wl_shm_pool *pool);
 void swl_pointer_release(struct wl_pointer *pointer);
 void swl_keyboard_release(struct wl_keyboard *keyboard);
@@ -1586,6 +1608,14 @@ enum swl_test_core_request_kind {
     SWL_TEST_CORE_SHM_DESTROY = 10,
     SWL_TEST_CORE_SURFACE_SET_OPAQUE_REGION = 11,
     SWL_TEST_CORE_SURFACE_SET_INPUT_REGION = 12,
+    SWL_TEST_CORE_SUBCOMPOSITOR_GET_SUBSURFACE = 13,
+    SWL_TEST_CORE_SUBCOMPOSITOR_DESTROY = 14,
+    SWL_TEST_CORE_SUBSURFACE_SET_POSITION = 15,
+    SWL_TEST_CORE_SUBSURFACE_PLACE_ABOVE = 16,
+    SWL_TEST_CORE_SUBSURFACE_PLACE_BELOW = 17,
+    SWL_TEST_CORE_SUBSURFACE_SET_SYNC = 18,
+    SWL_TEST_CORE_SUBSURFACE_SET_DESYNC = 19,
+    SWL_TEST_CORE_SUBSURFACE_DESTROY = 20,
 };
 
 enum swl_test_metadata_request_kind {
@@ -1630,6 +1660,10 @@ struct swl_test_core_request_record {
     void                           *object;
     struct wl_buffer               *buffer;
     struct wl_region               *region;
+    struct wl_surface              *surface;
+    struct wl_surface              *parent;
+    struct wl_surface              *sibling;
+    struct wl_subsurface           *subsurface;
     int32_t                         fd;
     int32_t                         size;
     int32_t                         offset;

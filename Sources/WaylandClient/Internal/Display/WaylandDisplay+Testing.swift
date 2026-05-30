@@ -14,6 +14,17 @@
             try requireCore().surfaces.window(windowID)?.surfacePointerAddressForTesting
         }
 
+        package func installSubsurfaceParentCommitObserverForTesting(
+            windowID: WindowID,
+            _ observer: @escaping () -> Void
+        ) throws {
+            guard let window = try requireCore().surfaces.window(windowID) else {
+                throw ClientError.display(.unknownWindow(windowID))
+            }
+
+            window.onSubsurfaceParentCommitForTesting = observer
+        }
+
         package func firstRawOutputForTesting() throws -> (
             id: OutputID,
             pointerAddress: UInt

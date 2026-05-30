@@ -2,8 +2,13 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
     case closed
     case unknownWindow(WindowID)
     case unknownPopup
+    case unknownSubsurface(SubsurfaceIdentity)
     case closedPopup
+    case closedSubsurface
     case foreignWindow(WindowID)
+    case foreignSubsurface(SubsurfaceIdentity)
+    case invalidSubsurfaceStacking(SubsurfaceStackingError)
+    case subsurfacePresentationFailed(SubsurfacePresentationFailure)
     case presentationTimeUnavailable
 
     public var description: String {
@@ -14,10 +19,20 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "unknown window: \(windowID)"
         case .unknownPopup:
             "unknown popup"
+        case .unknownSubsurface(let subsurfaceID):
+            "unknown subsurface: \(subsurfaceID)"
         case .closedPopup:
             "popup is closed"
+        case .closedSubsurface:
+            "subsurface is closed"
         case .foreignWindow(let windowID):
             "window belongs to another display: \(windowID)"
+        case .foreignSubsurface(let subsurfaceID):
+            "subsurface belongs to another display: \(subsurfaceID)"
+        case .invalidSubsurfaceStacking(let error):
+            error.description
+        case .subsurfacePresentationFailed(let failure):
+            failure.description
         case .presentationTimeUnavailable:
             "presentation-time protocol is unavailable"
         }
@@ -63,6 +78,8 @@ public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConv
             "set hidden cursor"
         case .named:
             "set named cursor"
+        case .customImage:
+            "set custom cursor image"
         }
     }
 }

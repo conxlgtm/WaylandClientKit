@@ -83,7 +83,9 @@ enum DamageRegionSmoke {
             try await window.redraw(damage: frame.damage) { softwareFrame in
                 draw(softwareFrame, phase: frame.phase)
             }
-            log("submitted damage \(frame.damage.rectangles)")
+            log(
+                "submitted logical damage \(frame.damage.rectangles); mapped buffer estimate \(bufferDamageDescription(frame.damage, geometry: geometry))"
+            )
         }
     }
 
@@ -100,6 +102,47 @@ enum DamageRegionSmoke {
                 unsafe pixels[unchecked: x] = inBox ? 0x00E0_8030 : 0x0018_1820 | (base << 8)
             }
         }
+    }
+
+    nonisolated private static func bufferDamageDescription(
+        _ damage: SurfaceDamageRegion,
+        geometry: SurfaceGeometry
+    ) -> String {
+        let scaleNumerator = Int64(geometry.scale.numerator)
+        let scaleDenominator = Int64(geometry.scale.denominator)
+        let mapped = damage.rectangles.map { rectangle in
+            let x = floorScaled(rectangle.origin.x, scaleNumerator, scaleDenominator)
+            let y = floorScaled(rectangle.origin.y, scaleNumerator, scaleDenominator)
+            let right = ceilScaled(
+                rectangle.origin.x + rectangle.size.width.rawValue,
+                scaleNumerator,
+                scaleDenominator
+            )
+            let bottom = ceilScaled(
+                rectangle.origin.y + rectangle.size.height.rawValue,
+                scaleNumerator,
+                scaleDenominator
+            )
+            return "x=\(x) y=\(y) w=\(max(right - x, 1)) h=\(max(bottom - y, 1))"
+        }
+        return "[\(mapped.joined(separator: "; "))]"
+    }
+
+    nonisolated private static func floorScaled(
+        _ value: Int32,
+        _ numerator: Int64,
+        _ denominator: Int64
+    ) -> Int64 {
+        Int64(value) * numerator / denominator
+    }
+
+    nonisolated private static func ceilScaled(
+        _ value: Int32,
+        _ numerator: Int64,
+        _ denominator: Int64
+    ) -> Int64 {
+        let scaled = Int64(value) * numerator
+        return (scaled + denominator - 1) / denominator
     }
 
     nonisolated private static func log(_ message: String) {

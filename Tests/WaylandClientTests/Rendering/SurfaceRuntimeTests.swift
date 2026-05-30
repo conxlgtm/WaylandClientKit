@@ -4,7 +4,7 @@ import WaylandRaw
 @testable import WaylandClient
 
 @Suite
-struct SurfaceRuntimeTests {
+struct SurfaceRuntimeTests {  // swiftlint:disable:this type_body_length
     private struct RoleToken: Equatable {
         let rawValue: Int
     }
@@ -108,6 +108,7 @@ struct SurfaceRuntimeTests {
         .popup,
         .cursor,
         .dragIcon,
+        .subsurface,
     ])
     func everyRoleRemovesResourcesBeforeSurfaceDestruction(
         role: SurfaceRuntimeRole
@@ -120,6 +121,80 @@ struct SurfaceRuntimeTests {
         try runtime.markSurfaceDestroyed()
         #expect(runtime.roleResources == nil)
         #expect(runtime.capabilitySnapshot().role == role)
+    }
+
+    @Test(arguments: [
+        SurfaceRuntimeRole.toplevelWindow,
+        .popup,
+        .subsurface,
+    ])
+    func presentableRolesAcceptSharedSurfaceOperations(role: SurfaceRuntimeRole) throws {
+        var runtime = SurfaceRuntime<RoleToken>(role: role)
+
+        try runtime.installRoleResources(RoleToken(rawValue: 1))
+
+        #expect(
+            runtime.roleReadinessSnapshot
+                == SurfaceRoleReadinessSnapshot(
+                    role: role,
+                    hasRuntime: true,
+                    hasRoleResources: true,
+                    acceptsDamage: true,
+                    acceptsInputRegion: true,
+                    acceptsOpaqueRegion: true,
+                    acceptsMetadata: true,
+                    acceptsSubmitConstraints: true
+                )
+        )
+    }
+
+    @Test(arguments: [
+        SurfaceRuntimeRole.cursor,
+        .dragIcon,
+    ])
+    func visualOnlyRolesDoNotAcceptManagedSurfaceOperations(
+        role: SurfaceRuntimeRole
+    ) throws {
+        var runtime = SurfaceRuntime<RoleToken>(role: role)
+
+        try runtime.installRoleResources(RoleToken(rawValue: 1))
+
+        #expect(
+            runtime.roleReadinessSnapshot
+                == SurfaceRoleReadinessSnapshot(
+                    role: role,
+                    hasRuntime: true,
+                    hasRoleResources: true,
+                    acceptsDamage: false,
+                    acceptsInputRegion: false,
+                    acceptsOpaqueRegion: false,
+                    acceptsMetadata: false,
+                    acceptsSubmitConstraints: false
+                )
+        )
+    }
+
+    @Test
+    func destroyedSurfaceReadinessDropsRuntimeAndRoleResources() throws {
+        var runtime = SurfaceRuntime<RoleToken>(role: .cursor)
+
+        try runtime.installRoleResources(RoleToken(rawValue: 1))
+        _ = runtime.removeRoleResources()
+        try runtime.markSurfaceDestroyed()
+
+        #expect(
+            runtime.roleReadinessSnapshot
+                == SurfaceRoleReadinessSnapshot(
+                    role: .cursor,
+                    hasRuntime: false,
+                    hasRoleResources: false,
+                    acceptsDamage: false,
+                    acceptsInputRegion: false,
+                    acceptsOpaqueRegion: false,
+                    acceptsMetadata: false,
+                    acceptsSubmitConstraints: false
+                )
+        )
     }
 
     @Test

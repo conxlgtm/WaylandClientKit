@@ -187,9 +187,9 @@ Current user-facing contract:
   lock/confine lifecycle events, and window-scoped lock/confine requests without
   deciding application pointer-capture policy.
 - Cursor requests cover compositor cursor-shape requests, named theme cursors,
-  hidden cursors, and output-aware theme scale policy. Custom software cursor
-  images remain deferred until a public buffer-lifetime design keeps raw
-  Wayland buffers and SHM pools private.
+  hidden cursors, static XRGB8888 custom cursor images, and output-aware theme
+  scale policy. Cursor animation remains deferred until an owner-thread
+  scheduling contract exists.
 - Presentation feedback means `wp_presentation` feedback for managed surfaces.
   Frame callbacks, presentation feedback, future FIFO or commit-timing controls,
   and explicit sync remain separate concepts.
@@ -316,10 +316,20 @@ Notes:
   `WaylandDisplay.setPointerCursor(_:)` applies the desired cursor to focused seats.
   Explicit cursor changes throw when the cursor stack cannot fulfill the request.
   Cursor-shape is used when advertised and the requested cursor maps to a known
-  compositor shape; otherwise the theme cursor path remains the fallback.
+  compositor shape; otherwise the theme cursor path remains the fallback. Static
+  custom cursor images use validated XRGB8888 pixels and private SHM-backed
+  cursor surfaces.
   Diagonal resize convenience presets are deferred until cursor theme names are
   verified across KDE, GNOME, Sway/wlroots, and Weston; frameworks may use
   custom names such as `nw-resize`, `ne-resize`, `sw-resize`, and `se-resize`.
+- Subsurface management is window-owned. Public handles expose creation,
+  software show/redraw, regions, position, stacking, sync/desync, close,
+  redraw-state, and geometry without exposing raw `wl_surface` or
+  `wl_subsurface` objects. Parent-applied state is committed by SwiftWayland
+  after managed creation, movement, stacking, and synchronized child surface
+  updates. Sync/desync mode changes are immediate protocol requests and do not
+  commit the parent. Self-stacking and cross-parent stacking are typed display
+  errors.
 - Relative pointer requests reject duplicate active subscriptions for the same
   seat with `PointerCaptureError.relativePointerAlreadySubscribed` before
   sending protocol requests. Pointer lock/confine requests reject duplicate

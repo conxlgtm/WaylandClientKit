@@ -136,6 +136,12 @@ The current baseline already has meaningful substrate pieces:
 - public input and opaque surface regions for managed windows and popups
 - damage-aware software redraw and managed graphics-preview software submission
   using logical damage mapped to buffer coordinates
+- managed window-owned subsurfaces with software presentation, regions,
+  position updates, sync/desync requests, parent-applied state commits, and
+  parent close cleanup
+- package-internal surface role readiness snapshots and
+  [`surface-role-inventory.md`](surface-role-inventory.md) document which roles
+  accept damage, regions, metadata, and submit constraints
 - xdg-activation protocol XML, raw manager/token binding, public capability
   reporting, public token request and activate APIs, and `XDGActivationSmoke`
 - relative pointer and pointer-constraint protocol XML, raw wrappers, public
@@ -153,15 +159,15 @@ The current baseline already has meaningful substrate pieces:
 
 Known foundation gaps:
 
-- extending the shared surface transaction model to cursor, drag icon, and future
-  subsurface use
+- live compositor evidence for managed subsurface movement, sync/desync behavior,
+  and nested cleanup beyond smoke build coverage
 - live compositor coverage for input-region, opaque-region, and partial-damage
   behavior beyond unit and smoke coverage
 - live compositor coverage for the package-internal GPU window presentation path
   beyond public managed-GPU software fallback evidence
 - broader live compositor coverage for explicit sync, FIFO, commit timing, and
   metadata protocols beyond local unit and smoke reporting
-- public cursor animation and custom cursor image API
+- public cursor animation
 - tablet and pointer-warp protocols
 - xdg-session-management design and session integration where needed by app
   launch and restoration workflows
@@ -939,13 +945,13 @@ Required behavior:
 - support compositor-managed cursor shape protocol when advertised
 - treat cursor surfaces as tests of the shared surface role, scale, commit, and
   destruction model
-- keep custom cursor drawing out until a public buffer lifetime design keeps raw
-  Wayland buffers private
+- keep custom cursor drawing private so public callers never receive raw Wayland
+  buffers or SHM pools
 
 Resource semantics:
 
 - cursor surface lifetime is tied to seat/focus state
-- borrowed cursor buffers cannot outlive their theme
+- borrowed cursor buffers cannot outlive their theme or custom image storage
 - animation ticks cannot commit stale buffers after focus or scale changes
 
 Exit criteria:

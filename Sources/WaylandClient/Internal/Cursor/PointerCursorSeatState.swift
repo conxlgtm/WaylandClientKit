@@ -4,6 +4,7 @@ package enum PointerCursorApplicationState: Equatable, Sendable {
     case unapplied
     case hidden(serial: UInt32)
     case named(cursor: PointerCursor, serial: UInt32, surfaceID: RawObjectID?)
+    case customImage(cursor: PointerCursor, serial: UInt32, surfaceID: RawObjectID?)
 }
 
 package enum PointerFocusState: Equatable, Sendable {

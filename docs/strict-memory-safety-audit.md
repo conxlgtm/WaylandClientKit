@@ -118,6 +118,8 @@ Remaining unsafe constructs:
   surface and routes commits through `SurfaceRuntime`.
 - `DragIconRoleSurface` owns a `wl_surface` and SHM buffer used as a source-side
   drag icon surface.
+- `SurfaceRoleReadinessSnapshot` records which managed roles accept shared
+  surface operations, making cursor and drag icon exclusions explicit in tests.
 
 Audit invariant:
 
@@ -125,12 +127,14 @@ Audit invariant:
   manager backend.
 - A cursor request uses compositor cursor-shape only when the requested
   `PointerCursor` maps to a known protocol shape; otherwise the theme-surface
-  path remains the fallback.
+  path remains the fallback. Static custom cursor images allocate private SHM
+  buffers and retain the image owner through the cursor surface until a
+  replacement, detach, or destroy commit has been issued.
 - Cursor surfaces and drag icon surfaces have explicit surface-runtime roles and
   are destroyed through role-specific owners.
 - `CursorManager.shutdown()` is an explicit display-session teardown step. It
-  detaches and commits cursor surfaces before destroying them so theme-owned SHM
-  buffers are no longer attached when cursor theme resources are released.
+  detaches and commits cursor surfaces before destroying them so theme-owned and
+  custom SHM buffers are no longer attached when cursor resources are released.
 - Fatal display cleanup swaps the live surface graph to an empty store before
   releasing the discarded graph, and the discard flag suppresses window and popup
   lifecycle callbacks while that release is in progress.
@@ -142,8 +146,8 @@ Audit invariant:
 Tests:
 
 - `CursorManagerTests` covers cursor-shape selection, cursor surface creation,
-  theme fallback, cursor surface destruction requests, and idempotent shutdown
-  ordering.
+  theme fallback, custom image attachment, cursor surface destruction requests,
+  and idempotent shutdown ordering.
 - `CursorScalePolicyTests` and `CursorAnimationStateTests` cover internal cursor
   scale and animation state models.
 - `DataTransferManagerDragSourceTests` covers drag icon preparation and source

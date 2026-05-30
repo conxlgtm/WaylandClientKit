@@ -37,6 +37,7 @@ enum SurfaceRegionSmoke {
             log(
                 "clicks outside the marked center should miss this window if the compositor honors input regions"
             )
+            log("clicks inside the center region should still emit pointer/button events below")
 
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask { try await consumeDisplayEvents(display.events, window: window) }
@@ -91,6 +92,8 @@ enum SurfaceRegionSmoke {
                 log("pointer entered serial=\(serial) location=\(location.x),\(location.y)")
             case .pointer(.button(let button)):
                 log("button \(button.button.rawValue) \(button.state)")
+            case .pointer(.moved(let location, let time)):
+                log("pointer moved inside input region \(location.x),\(location.y) time=\(time)")
             default:
                 break
             }
@@ -107,6 +110,7 @@ enum SurfaceRegionSmoke {
             draw(frame, restricted: false)
         }
         log("input and opaque regions reset to compositor defaults")
+        log("outside-region pointer events should be visible again after reset")
     }
 
     nonisolated private static func centerRegion(for geometry: SurfaceGeometry) throws
