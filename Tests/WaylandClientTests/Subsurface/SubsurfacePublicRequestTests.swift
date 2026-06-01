@@ -386,6 +386,10 @@
             countStorage
         }
 
+        var isEmpty: Bool {
+            countStorage == 0
+        }
+
         func record() {
             countStorage += 1
         }
