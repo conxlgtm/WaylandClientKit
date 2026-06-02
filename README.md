@@ -1,6 +1,8 @@
 # SwiftWayland
 
-SwiftWayland is a Swift package for Wayland clients on Linux.
+SwiftWayland is an experimental SwiftPM package for Wayland clients on Linux.
+It currently vends the `WaylandClient` library, the source-breaking preview
+`WaylandGraphicsPreview` library, and a noninteractive Wayland smoke executable.
 
 ## Scope
 
@@ -21,6 +23,7 @@ Current experimental baseline:
 - viewporter and fractional-scale protocol integration for scaled SHM buffers
 - frame callback pacing
 - seat, pointer, keyboard, and touch event capture
+- relative pointer events plus pointer lock/confine requests
 - popup surfaces with placement, redraw, dismissal, and input target identity
 - package-internal `DisplaySession` input draining with seat/window identity
 - high-level async `WaylandDisplay.withConnection` API backed by a dedicated Wayland owner
@@ -32,9 +35,12 @@ Current experimental baseline:
 - primary selection offers and sources through `zwp_primary_selection_device_manager_v1`
 - compositor/IME text entry through `zwp_text_input_manager_v3`
 - compositor cursor-shape requests through `wp_cursor_shape_manager_v1`
+- xdg activation token and activation requests through `xdg_activation_v1`
 - explicit compositor presentation feedback through `wp_presentation`
-- linux-dmabuf capability discovery and package-internal GBM/EGL preview pieces
-- managed subsurfaces, surface input/opaque regions, and damage-aware software redraw
+- linux-dmabuf capability discovery, graphics runtime-path reporting, and
+  package-internal GBM/EGL preview pieces
+- managed subsurfaces, surface input/opaque regions, and damage-aware software
+  redraw
 - static custom cursor images
 - desktop integration hooks for toplevel icons, idle inhibition, and system bell
 - compose and dead-key text results for interpreted keyboard events
@@ -50,6 +56,7 @@ Not implemented yet:
 - public cursor animation
 - output-management APIs
 - public GPU rendering APIs in `WaylandClient`
+- raw public GBM, EGL, DRM, dmabuf, or syncobj handles
 - high-level gesture recognizers or widgets
 
 For packages building a GUI layer on top of SwiftWayland, see
@@ -102,6 +109,11 @@ Supported in the current experimental baseline:
 - `wp_fractional_scale_v1`
 - `wp_cursor_shape_manager_v1`
 - `wp_cursor_shape_device_v1`
+- `zwp_relative_pointer_manager_v1`
+- `zwp_relative_pointer_v1`
+- `zwp_pointer_constraints_v1`
+- `zwp_locked_pointer_v1`
+- `zwp_confined_pointer_v1`
 - `xdg_activation_v1`
 - `xdg_toplevel_icon_manager_v1`
 - `xdg_toplevel_icon_v1`
@@ -219,7 +231,7 @@ Popups:
 
 Not supported in the current experimental baseline:
 
-- public cursor animation or custom software cursor image APIs
+- public cursor animation
 - output management or control APIs
 - public `WaylandClient` GPU rendering APIs
 - public explicit synchronization or frame-pacing APIs
@@ -309,8 +321,17 @@ WaylandRaw
 WaylandGraphicsCore
     package-internal GBM/EGL/DRM substrate for GPU preview work
 
+WaylandGPUPreview
+    package-internal managed GPU backing state and presenter work
+
 WaylandRuntime
     owner-thread executor and audited unsafe Swift runtime machinery
+
+CGBMShims
+    C accessors and test seams for GBM allocation and export
+
+CEGLShims
+    C accessors and test seams for EGL rendering
 
 CWaylandRuntimeShims
     C accessors for Linux primitives used by unsafe Swift runtime machinery
@@ -320,6 +341,18 @@ CWaylandCursorShims
 
 CWaylandCursorSystem
     system-library bridge to installed wayland-cursor headers
+
+CDRMSystem
+    system-library bridge to installed libdrm headers
+
+CGBMSystem
+    system-library bridge to installed GBM headers
+
+CEGLSystem
+    system-library bridge to installed EGL headers
+
+CGLESv2System
+    system-library bridge to installed OpenGL ES 2 headers
 
 CWaylandProtocols
     generated protocol C + C shims
@@ -417,6 +450,13 @@ Run framework-facing examples as needed:
 ./scripts/dev/swift.sh run XDGActivationSmoke
 ./scripts/dev/swift.sh run PointerCaptureSmoke
 ./scripts/dev/swift.sh run CursorPolicySmoke
+./scripts/dev/swift.sh run CustomCursorSmoke
+./scripts/dev/swift.sh run WindowIconSmoke
+./scripts/dev/swift.sh run IdleInhibitSmoke
+./scripts/dev/swift.sh run SystemBellSmoke
+./scripts/dev/swift.sh run SurfaceRegionSmoke
+./scripts/dev/swift.sh run DamageRegionSmoke
+./scripts/dev/swift.sh run SubsurfaceSmoke
 ```
 
 `ClientSideResizeChrome` demonstrates edge hit testing, resize cursors, and
@@ -432,7 +472,10 @@ capabilities, then lets left, right, and middle clicks request lock, confine,
 and relative-motion paths. Constraint logs distinguish one-shot defunct and
 persistent inactive lifecycle transitions. `CursorPolicySmoke` runs with
 focused-output cursor scale policy and logs named, hidden, and resize cursor
-requests.
+requests. `CustomCursorSmoke`, `WindowIconSmoke`, `IdleInhibitSmoke`, and
+`SystemBellSmoke` exercise optional desktop-integration paths.
+`SurfaceRegionSmoke`, `DamageRegionSmoke`, and `SubsurfaceSmoke` cover region,
+damage, and child-surface behavior for compositor evidence.
 
 Use [Manual Testing](docs/manual-testing.md) as the checklist for compositor
 QA and record new live evidence in [Compositor Matrix](docs/compositor-matrix.md).
@@ -482,6 +525,13 @@ Or run the executable through the repository Swift wrapper:
 - [Protocol Generation](docs/generation.md)
 - [Public API Audit](docs/public-api-audit.md)
 - [Graphics Preview API](docs/graphics-preview-api.md)
+- [Advanced Graphics Notes](docs/advanced-graphics.md)
+- [Managed Subsurface Support](docs/subsurface-support.md)
+- [Framework Host Contract](docs/framework-host-contract.md)
+- [Building a GUI Layer](docs/building-a-gui-layer.md)
+- [Manual Testing](docs/manual-testing.md)
+- [Compositor Matrix](docs/compositor-matrix.md)
+- [Error Taxonomy](docs/error-taxonomy.md)
 - [WaylandClient DocC Catalog](Sources/WaylandClient/WaylandClient.docc/WaylandClient.md)
 - [Development Checkpoint Checklist](docs/release.md)
 - [Contributing](CONTRIBUTING.md)
