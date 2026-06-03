@@ -1,5 +1,4 @@
 import Foundation
-import WaylandCursor
 import WaylandKeyboard
 import WaylandRaw
 
