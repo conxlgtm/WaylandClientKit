@@ -16,10 +16,6 @@ package protocol UInt32WaylandEntityID: WaylandEntityID where RawValue == UInt32
     init(rawValue: UInt32)
 }
 
-package protocol PrefixedIdentityDescription {
-    static var descriptionPrefix: String { get }
-}
-
 package struct IDGenerator<ID>: Sendable, Equatable {
     private var nextRawValue: UInt64
 
