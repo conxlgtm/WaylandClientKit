@@ -12,33 +12,31 @@ GNOME.
 ## Commands
 
 ```bash
-make smoke-wayland
-make integration-wayland
-make gpu-preview-wayland
-make wayland-headless
-make wayland-request-headless
-make wayland-request-headless-tsan
-make wayland-request-headless-asan
-make gpu-preview-headless
-make check
-make release-check
-make test-graphics-preview-client
-make swiftbuild-smoke
-./scripts/ci/repeat-test.sh --count 20 --filter WaylandThreadExecutorConcurrencyTests
+swift run swl smoke live
+swift run swl smoke integration
+swift run swl smoke gpu-preview
+swift run swl smoke headless -- swl smoke live
+swift run swl smoke headless -- swl smoke integration
+swift run swl smoke headless -- swl smoke gpu-preview
+swift run swl ci check
+swift run swl ci release
+swift run swl test integration-graphics-preview
+swift build
+swift test --filter WaylandThreadExecutorConcurrencyTests --no-parallel
 ```
 
-`make smoke-wayland` runs the `swift-wayland-smoke` executable against the
+`swift run swl smoke live` runs the `swift-wayland-smoke` executable against the
 current compositor. It requires `WAYLAND_DISPLAY`.
 
-`make integration-wayland` runs the external public API integration package
+`swift run swl smoke integration` runs the external public API integration package
 against the current compositor. It requires `WAYLAND_DISPLAY` and sets
 `SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=1`.
 
-`make test-graphics-preview-client` runs an external compile/test package for
+`swift run swl test integration-graphics-preview` runs an external compile/test package for
 the `WaylandGraphicsPreview` product. It does not require a live compositor or a
 GPU-capable session.
 
-`make gpu-preview-wayland` runs package-internal GPU preview checks against the
+`swift run swl smoke gpu-preview` runs package-internal GPU preview checks against the
 current compositor. It requires `WAYLAND_DISPLAY`, sets
 `SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1`, and enables the GBM/EGL smoke path
 with `SWL_RUN_GPU_SMOKE=1`. The current test path proves the linux-dmabuf
@@ -48,50 +46,41 @@ render node is present. It also runs `GPUPreviewSmokeClient`, which prints a
 pasteable `SwiftWayland GPU Preview Runtime Path` block for
 [compositor-matrix.md](compositor-matrix.md).
 
-The command runs `./scripts/smoke/gpu-preview-wayland.sh`.
+The command runs `swift run swl smoke gpu-preview`.
 
-`make wayland-headless` starts headless Weston through
-`scripts/smoke/with-headless-weston.sh`, then runs both smoke and public
-integration tests against that private compositor.
+`swift run swl smoke headless -- swl smoke live` starts headless Weston, then
+runs the noninteractive smoke executable against that private compositor.
 
-`make wayland-request-headless` starts headless Weston and runs the env-gated
+`swift run swl smoke headless -- swl smoke integration` starts headless Weston and runs the env-gated
 window-control and source-side drag request-path tests against that private
 compositor. It sets `SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1` and
 `SWIFT_WAYLAND_ENABLE_DND_SOURCE_REQUEST_TESTS=1`.
 
-`make wayland-request-headless-tsan` runs the same focused request-path tests
-under ThreadSanitizer. `make wayland-request-headless-asan` runs them under
-AddressSanitizer with LeakSanitizer disabled by default. These jobs are focused
-on request wrapper ordering and descriptor/request lifecycles; GPU hardware
-paths remain separate. The request runner invokes the window-control and
-drag-source suites as separate test processes because both use package-wide C
-request-recording hooks. The request-path runner defaults to a 600 second
-timeout because sanitizer builds can spend several minutes compiling before
-tests start. Override it with
-`SWIFT_WAYLAND_REQUEST_PROCESS_TIMEOUT_SECONDS`.
+`swift run swl test tsan` and `swift run swl test asan` run the sanitizer test
+gates. GPU hardware paths remain separate from sanitizer jobs.
 
-`make gpu-preview-headless` starts headless Weston, then runs the GPU preview
+`swift run swl smoke headless -- swl smoke gpu-preview` starts headless Weston, then runs the GPU preview
 capability, graphics fact projection, pasteable runtime-path report, and
 GBM/EGL smoke path against that private compositor. The render-node-dependent
 portion reports a skip/fact when the private CI environment has no accessible
 DRM render node.
 
-`make check` runs the normal local check set. It runs the live Wayland smoke
+`swift run swl ci check` runs the normal local check set. It runs the live Wayland smoke
 check only when `WAYLAND_DISPLAY` is already set.
 
-`make release-check` runs the base check set first. After that, it uses the
+`swift run swl ci release` runs the base check set first. After that, it uses the
 current compositor when `WAYLAND_DISPLAY` is set, uses headless Weston when
 `weston` is installed, and fails in CI or when `REQUIRE_WAYLAND_SMOKE=1` if no
 live Wayland path is available.
 
-`make swiftbuild-smoke` runs an informational Swift Build preview check. Native
+`swift build` runs an informational Swift Build preview check. Native
 SwiftPM remains the supported build system; the smoke reports unsupported
 toolchains and Swiftly layout issues without treating those as package
 correctness failures.
 
-`scripts/ci/repeat-test.sh` repeats one filtered test suite for local stress
-validation. Use it for concurrency-sensitive suites before promoting a
-scheduler, event-loop, or descriptor-lifecycle change.
+Use repeated `swift test --filter ... --no-parallel` runs for local stress
+validation before promoting a scheduler, event-loop, or descriptor-lifecycle
+change.
 
 ## Headless Weston
 
@@ -119,9 +108,9 @@ Ubuntu/Debian:
 
 ```bash
 sudo apt-get install \
-  clang git make ripgrep pkg-config \
+  clang git ripgrep pkg-config \
   libdrm-dev libegl-dev libgbm-dev libgles-dev \
-  libwayland-dev libxkbcommon-dev \
+  libwayland-bin libwayland-dev libxkbcommon-dev \
   wayland-protocols \
   weston
 ```
@@ -130,7 +119,7 @@ Fedora/RHEL-like:
 
 ```bash
 sudo dnf install \
-  clang git make ripgrep \
+  clang git ripgrep \
   pkgconf-pkg-config \
   libdrm-devel mesa-libEGL-devel mesa-libgbm-devel mesa-libGLES-devel \
   wayland-devel wayland-protocols-devel \
@@ -142,7 +131,7 @@ openSUSE:
 
 ```bash
 sudo zypper --non-interactive install \
-  clang git make ripgrep \
+  clang git ripgrep \
   pkgconf-pkg-config \
   libdrm-devel Mesa-libEGL-devel libgbm-devel Mesa-libGLESv2-devel \
   wayland-devel wayland-protocols-devel \
@@ -151,13 +140,9 @@ sudo zypper --non-interactive install \
 ```
 
 Swift 6.3.2 SwiftPM may also need a compatibility `libxml2.so.2` on
-openSUSE. The project Swift wrappers load `$SWIFT_COMPAT_LIBS` when present,
-defaulting to `$HOME/.local/share/swift-compat-libs`; direct toolchain calls
-must expose that directory through `LD_LIBRARY_PATH` or another runtime loader
-path. The wrapper suppresses the known Swiftly/openSUSE
-`libxml2.so.2: no version information available` loader warning so test logs
-stay readable; set `SWIFT_WAYLAND_SHOW_COMPAT_WARNINGS=1` to inspect raw Swift
-toolchain stderr.
+openSUSE. The Swift tool resolver honors `$SWIFT_COMPAT_LIBS`, defaulting to
+`$HOME/.local/share/swift-compat-libs`; direct toolchain calls must expose that
+directory through `LD_LIBRARY_PATH` or another runtime loader path.
 
 The support contract is SwiftPM plus system libraries resolved through
 `pkg-config`. Distro package files are not part of the current repository.
