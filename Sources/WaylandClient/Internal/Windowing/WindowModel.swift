@@ -95,14 +95,9 @@ package struct WindowModel: Equatable, Sendable {
         case .compositorCloseRequested(let policy):
             return try reduceCompositorCloseRequested(policy: policy)
         case .explicitClose:
-            return try beginClosing(reason: .explicitClose, publishRequest: false)
-        case .initialConfigureTimedOut(let milliseconds):
-            return try beginClosing(
-                reason: .initializationFailed(
-                    .initialConfigureTimedOut(milliseconds: milliseconds)
-                ),
-                publishRequest: false
-            )
+            return try beginClosing(publishRequest: false)
+        case .initialConfigureTimedOut:
+            return try beginClosing(publishRequest: false)
         case .transientStateReset:
             guard !isClosed else { return [] }
             return updateActiveWindowStateIfPresent { activeState in

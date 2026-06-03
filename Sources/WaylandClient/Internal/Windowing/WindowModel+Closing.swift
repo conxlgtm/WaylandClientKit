@@ -11,7 +11,7 @@ extension WindowModel {
             return reduceRequestOnlyCompositorCloseRequested()
         case .autoClose:
             guard case .active(var activeState) = lifecycle else {
-                return try beginClosing(reason: .compositorRequest, publishRequest: true)
+                return try beginClosing(publishRequest: true)
             }
 
             guard activeState.closeRequest == .none else {
@@ -21,7 +21,7 @@ extension WindowModel {
             activeState.closeRequest = .requested
             lifecycle = .active(activeState)
 
-            return try beginClosing(reason: .compositorRequest, publishRequest: true)
+            return try beginClosing(publishRequest: true)
         }
     }
 
@@ -47,10 +47,7 @@ extension WindowModel {
         return closeRequestEffects()
     }
 
-    mutating func beginClosing(
-        reason: ClosingReason,
-        publishRequest: Bool
-    ) throws -> [WindowEffect] {
+    mutating func beginClosing(publishRequest: Bool) throws -> [WindowEffect] {
         switch lifecycle {
         case .destroyed:
             return []
@@ -60,11 +57,7 @@ extension WindowModel {
             break
         }
 
-        lifecycle = .closing(
-            ClosingWindowState(
-                reason: reason
-            )
-        )
+        lifecycle = .closing(ClosingWindowState())
 
         var effects: [WindowEffect] = []
         if publishRequest {

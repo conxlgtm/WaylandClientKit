@@ -163,13 +163,4 @@ package enum WindowPublicationState: Equatable, Sendable {
     case closedPublished(WindowID)
 }
 
-package enum ClosingReason: Equatable, Sendable {
-    case explicitClose
-    case compositorRequest
-    case initializationFailed(WindowError)
-    case displayClosing
-}
-
-package struct ClosingWindowState: Equatable, Sendable {
-    var reason: ClosingReason
-}
+package struct ClosingWindowState: Equatable, Sendable {}
