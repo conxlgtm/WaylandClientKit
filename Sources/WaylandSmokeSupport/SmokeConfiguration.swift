@@ -216,23 +216,6 @@ package struct SmokeRuntimeFacts: Equatable, Sendable, CustomStringConvertible {
     package var colorRepresentation: SmokePathStatus
     package var colorManagement: SmokePathStatus
 
-    package static let unavailable = Self(
-        syncobj: .unavailable,
-        fifo: .unavailable,
-        commitTiming: .unavailable,
-        dmabuf: .unavailable,
-        gbm: .unavailable,
-        egl: .unavailable,
-        presentationFeedback: .unavailable,
-        contentType: .unavailable,
-        alphaModifier: .unavailable,
-        tearingControl: .unavailable,
-        colorRepresentation: .unavailable,
-        colorManagement: .unavailable,
-        surface: .unknown,
-        backing: .unavailable
-    )
-
     package init(
         syncobj: SmokePathStatus,
         fifo: SmokePathStatus,
