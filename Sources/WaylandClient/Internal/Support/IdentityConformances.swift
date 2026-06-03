@@ -1,49 +1,26 @@
-extension SeatID: UInt32WaylandEntityID, PrefixedIdentityDescription {
-    package static let descriptionPrefix = "seat"
-}
+extension SeatID: UInt32WaylandEntityID {}
 
-extension InputSerial: UInt32WaylandEntityID, PrefixedIdentityDescription {
-    package static let descriptionPrefix = "serial"
-}
+extension InputSerial: UInt32WaylandEntityID {}
 
-extension WindowID: UInt64WaylandEntityID, PrefixedIdentityDescription {
-    package static let descriptionPrefix = "window"
-}
+extension WindowID: UInt64WaylandEntityID {}
 
-extension PopupID: UInt64WaylandEntityID, PrefixedIdentityDescription {
-    package static let descriptionPrefix = "popup"
-}
+extension PopupID: UInt64WaylandEntityID {}
 
-extension DataOfferID: UInt64WaylandEntityID, PrefixedIdentityDescription {
-    package static let descriptionPrefix = "data-offer"
-}
+extension DataOfferID: UInt64WaylandEntityID {}
 
-extension DataSourceID: UInt64WaylandEntityID, PrefixedIdentityDescription {
-    package static let descriptionPrefix = "data-source"
-}
+extension DataSourceID: UInt64WaylandEntityID {}
 
-extension RelativePointerSubscriptionID: UInt64WaylandEntityID,
-    PrefixedIdentityDescription
-{
-    package static let descriptionPrefix = "relative-pointer"
-}
+extension RelativePointerSubscriptionID: UInt64WaylandEntityID {}
 
 extension ActivationRequestID: UInt64WaylandEntityID,
-    PrefixedIdentityDescription,
     CustomStringConvertible
 {
-    package static let descriptionPrefix = "activation-request"
-
     package var description: String {
-        "\(Self.descriptionPrefix)-\(rawValue)"
+        "activation-request-\(rawValue)"
     }
 }
 
-extension SurfacePresentationIdentity: UInt64WaylandEntityID,
-    PrefixedIdentityDescription
-{
-    package static let descriptionPrefix = "presentation"
-}
+extension SurfacePresentationIdentity: UInt64WaylandEntityID {}
 
 extension Window: Identifiable {}
 extension RelativePointerSubscription: Identifiable {}

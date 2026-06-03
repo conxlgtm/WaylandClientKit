@@ -120,10 +120,8 @@ public struct IdleInhibitorID:
     Hashable,
     Sendable,
     CustomStringConvertible,
-    UInt64WaylandEntityID,
-    PrefixedIdentityDescription
+    UInt64WaylandEntityID
 {
-    package static let descriptionPrefix = "idle-inhibitor"
     package let rawValue: UInt64
 
     package init(rawValue inhibitorRawValue: UInt64) {
@@ -131,7 +129,7 @@ public struct IdleInhibitorID:
     }
 
     public var description: String {
-        "\(Self.descriptionPrefix)-\(rawValue)"
+        "idle-inhibitor-\(rawValue)"
     }
 }
 
