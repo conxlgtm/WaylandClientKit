@@ -16,21 +16,15 @@ package struct CursorOutputScale: Equatable, Sendable {
 }
 
 package struct CursorScaleContext: Equatable, Sendable {
-    package let seatID: SeatID
-    package let focusedSurfaceID: RawObjectID
     package let focusedOutputs: [CursorOutputScale]
     package let availableOutputs: [CursorOutputScale]
     package let baseSize: CursorSize
 
     package init(
-        seatID cursorSeatID: SeatID,
-        focusedSurfaceID cursorFocusedSurfaceID: RawObjectID,
         focusedOutputs cursorFocusedOutputs: [CursorOutputScale],
         availableOutputs cursorAvailableOutputs: [CursorOutputScale],
         baseSize cursorBaseSize: CursorSize
     ) {
-        seatID = cursorSeatID
-        focusedSurfaceID = cursorFocusedSurfaceID
         focusedOutputs = cursorFocusedOutputs
         availableOutputs = cursorAvailableOutputs
         baseSize = cursorBaseSize
