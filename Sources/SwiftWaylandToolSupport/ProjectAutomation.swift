@@ -288,10 +288,11 @@ public struct VerificationChecks {
                 let text = try context.fileSystem.readText(file)
                 let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
                 for (index, line) in lines.enumerated() {
-                    let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)
-                    for match in regex.matches(in: line, range: nsRange) {
-                        guard let range = Range(match.range, in: line) else { continue }
-                        let token = String(line[range])
+                    let searchableLine = line.removingSwiftStringLiterals()
+                    let nsRange = NSRange(searchableLine.startIndex..<searchableLine.endIndex, in: searchableLine)
+                    for match in regex.matches(in: searchableLine, range: nsRange) {
+                        guard let range = Range(match.range, in: searchableLine) else { continue }
+                        let token = String(searchableLine[range])
                         let relative = context.repository.relativePath(file)
                         guard allowlist.allows(path: relative, token: token) else {
                             failures.append("\(relative):\(index + 1): unsafe token \(token) is not allowlisted")
@@ -389,7 +390,7 @@ private struct UnsafeAllowlist {
 
     func allows(path: String, token: String) -> Bool {
         entries.contains { entry in
-            glob(entry.pattern, matches: path) && entry.token == token
+            glob(entry.pattern, matches: path) && glob(entry.token, matches: token)
         }
     }
 
@@ -397,6 +398,34 @@ private struct UnsafeAllowlist {
         let escaped = NSRegularExpression.escapedPattern(for: pattern)
             .replacingOccurrences(of: "\\*", with: ".*")
         return value.range(of: "^\(escaped)$", options: .regularExpression) != nil
+    }
+}
+
+private extension String {
+    func removingSwiftStringLiterals() -> String {
+        var result = ""
+        var inString = false
+        var escaped = false
+        for character in self {
+            if inString {
+                if escaped {
+                    escaped = false
+                } else if character == "\\" {
+                    escaped = true
+                } else if character == "\"" {
+                    inString = false
+                    result.append(character)
+                    continue
+                }
+                result.append(" ")
+            } else {
+                result.append(character)
+                if character == "\"" {
+                    inString = true
+                }
+            }
+        }
+        return result
     }
 }
 

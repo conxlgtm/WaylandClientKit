@@ -133,6 +133,7 @@ public struct ProcessRunner: Sendable {
     }
 }
 
+// SAFETY: storage is private and every read/write is serialized by lock.
 private final class ProcessOutputBuffer: @unchecked Sendable {
     private let lock = NSLock()
     private var storage = Data()
