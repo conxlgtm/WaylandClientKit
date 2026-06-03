@@ -4,15 +4,17 @@
 
 Vendored XML files:
 
-- `protocols/upstream/core/wayland.xml`
-- `protocols/upstream/stable/xdg-shell/xdg-shell.xml`
-- `protocols/upstream/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
-- `protocols/upstream/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml`
-- `protocols/upstream/stable/viewporter/viewporter.xml`
-- `protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml`
+- `protocols/upstream/core/`
+- `protocols/upstream/stable/`
+- `protocols/upstream/staging/`
+- `protocols/upstream/legacy-unstable/`
 - `protocols/manifest.json`
 
-These files are committed.
+These files are committed. `protocols/manifest.json` is the source of truth for
+the protocol inventory, source-resolution strategy, override environment
+variable, pkg-config package and variable, source candidates, generated header
+and C output paths, scanner modes, checksum, tier, exposure, and test strategy.
+Run `swift run swl protocols list` to print the tracked inventory.
 
 Do not edit generated files directly. Change the vendored XML or protocol manifest metadata, regenerate, and review the generated diff.
 
@@ -20,23 +22,14 @@ Do not edit generated files directly. Change the vendored XML or protocol manife
 
 Generated headers:
 
-- `Sources/CWaylandProtocols/include/generated/core/wayland-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/stable/xdg-shell/xdg-shell-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/legacy-unstable/primary-selection/primary-selection-unstable-v1-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/stable/viewporter/viewporter-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h`
+- `Sources/CWaylandProtocols/include/generated/`
 
 Generated C files:
 
-- `Sources/CWaylandProtocols/generated/core/wayland-protocol.c`
-- `Sources/CWaylandProtocols/generated/stable/xdg-shell/xdg-shell-protocol.c`
-- `Sources/CWaylandProtocols/generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-protocol.c`
-- `Sources/CWaylandProtocols/generated/legacy-unstable/primary-selection/primary-selection-unstable-v1-protocol.c`
-- `Sources/CWaylandProtocols/generated/stable/viewporter/viewporter-protocol.c`
-- `Sources/CWaylandProtocols/generated/staging/fractional-scale/fractional-scale-v1-protocol.c`
+- `Sources/CWaylandProtocols/generated/`
 
-These files are committed.
+These files are committed. The exact file set comes from `generatedHeaderPath`
+and `generatedCodePath` in `protocols/manifest.json`.
 
 ## Shim Files
 
@@ -48,7 +41,6 @@ These files are not generated:
 ## Tools
 
 - `wayland-scanner`
-- `git`
 - `ripgrep`
 - `pkg-config`
 
@@ -104,52 +96,14 @@ swift run swl docc verify-symbol-links
 
 Copies protocol XML from the local system.
 
-Default source resolution matches `swift run swl bootstrap maintainer-check`.
-The command first checks `pkg-config` package data directories, then standard
-system paths, then the checked-in vendored XML.
+Default source resolution matches `protocols/manifest.json`. The command checks
+the manifest override environment variable, pkg-config package data directory
+plus relative candidates, absolute fallback candidates, and finally the
+checked-in vendored XML. The selected source must match the manifest checksum
+before it is copied.
 
-Core Wayland XML candidates:
-
-- `$(pkg-config --variable=pkgdatadir wayland-client)/wayland.xml`
-- `$(pkg-config --variable=pkgdatadir wayland-scanner)/wayland.xml`
-- `/usr/share/wayland/wayland.xml`
-- `/usr/local/share/wayland/wayland.xml`
-
-Stable xdg-shell XML candidates:
-
-- `$(pkg-config --variable=pkgdatadir wayland-protocols)/stable/xdg-shell/xdg-shell.xml`
-- `/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml`
-- `/usr/local/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml`
-- `/usr/share/qt6/wayland/protocols/xdg-shell/xdg-shell.xml`
-
-Unstable xdg-decoration XML candidates:
-
-- `$(pkg-config --variable=pkgdatadir wayland-protocols)/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
-- `/usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
-- `/usr/local/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
-
-Unstable primary-selection XML candidates:
-
-- `$(pkg-config --variable=pkgdatadir wayland-protocols)/unstable/primary-selection/primary-selection-unstable-v1.xml`
-- `/usr/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml`
-- `/usr/local/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml`
-
-Stable viewporter XML candidates:
-
-- `$(pkg-config --variable=pkgdatadir wayland-protocols)/stable/viewporter/viewporter.xml`
-- `/usr/share/wayland-protocols/stable/viewporter/viewporter.xml`
-- `/usr/local/share/wayland-protocols/stable/viewporter/viewporter.xml`
-
-Staging fractional-scale XML candidates:
-
-- `$(pkg-config --variable=pkgdatadir wayland-protocols)/staging/fractional-scale/fractional-scale-v1.xml`
-- `/usr/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml`
-- `/usr/local/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml`
-
-Set `WAYLAND_CORE_XML_SOURCE`, `XDG_SHELL_XML_SOURCE`,
-`XDG_DECORATION_XML_SOURCE`, `PRIMARY_SELECTION_XML_SOURCE`,
-`VIEWPORTER_XML_SOURCE`, or `FRACTIONAL_SCALE_XML_SOURCE` to force a specific
-source path.
+Run `swift run swl protocols sources` to print the selected source for every
+manifest entry without copying files.
 
 Run `swift run swl bootstrap maintainer-check` first to verify the scanner,
 `wayland-protocols` pkg-config module, and protocol XML inputs.
@@ -174,11 +128,12 @@ Does not write:
 
 Checks diffs for:
 
-- `protocols/`
 - `Sources/CWaylandProtocols/include/generated/`
 - `Sources/CWaylandProtocols/generated/`
 
-Does not check shim files as generated output.
+It validates vendored XML checksums, regenerates into a temporary output tree,
+and compares that tree against the committed generated outputs. It does not
+write to the checkout and does not check shim files as generated output.
 
 ### `swift run swl shims verify`
 

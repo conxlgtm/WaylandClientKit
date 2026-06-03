@@ -319,7 +319,7 @@
       "notes" : "Optional desktop-integration protocol for per-toplevel window icons.",
       "scannerCodeMode" : "private-code",
       "scannerHeaderMode" : "client-header",
-      "sha256" : "791dbfed89280c1b8031689955a03e9b2da55601be3c5854a6198e38cea4978f",
+      "sha256" : "5e57a72fa9ccf1666c56d49cc86408f068c21e5e6a09ddd468ee65d08478f882",
       "sourceResolution" : {
         "absoluteFallbackCandidates" : [
           "/usr/share/wayland-protocols/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml",

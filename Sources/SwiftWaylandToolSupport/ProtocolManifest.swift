@@ -1,7 +1,7 @@
 import Foundation
 
 // The manifest model and validator stay together so protocol metadata has one owner.
-// swiftlint:disable cyclomatic_complexity function_body_length type_body_length
+// swiftlint:disable cyclomatic_complexity file_length function_body_length type_body_length
 
 public struct ProtocolManifest: Codable, Sendable {
     public var protocols: [ProtocolEntry]
@@ -198,6 +198,7 @@ public struct ProtocolTooling {
         let scannerModes = Set(["client-header", "private-code"])
 
         for entry in manifest.protocols {
+            diagnostics.verbose("validating protocol manifest entry: \(entry.name)")
             if !seen.insert(entry.name).inserted {
                 failures.append("Duplicate protocol manifest entry: \(entry.name)")
             }
@@ -211,12 +212,26 @@ public struct ProtocolTooling {
             if !strategies.contains(entry.testStrategy) {
                 failures.append("\(entry.name) has invalid testStrategy: \(entry.testStrategy)")
             }
-            let localURL = repository.url(entry.localPath)
-            if !fileSystem.exists(localURL) {
+            let localURL = validateRepositoryPath(
+                entry.localPath,
+                field: "localPath",
+                protocolName: entry.name,
+                requiredRoot: "protocols/upstream",
+                failures: &failures
+            )
+            if let localURL, !fileSystem.exists(localURL) {
                 failures.append("\(entry.name) localPath does not exist: \(entry.localPath)")
             }
-            if !entry.localPath.hasPrefix("protocols/upstream/") {
-                failures.append("\(entry.name) localPath must be under protocols/upstream")
+            if let localURL, fileSystem.exists(localURL) {
+                validateSHA256(
+                    entry.sha256,
+                    for: localURL,
+                    protocolName: entry.name,
+                    label: "vendored XML",
+                    failures: &failures)
+            }
+            if !isValidSHA256(entry.sha256) {
+                failures.append("\(entry.name) sha256 must be a 64-character lowercase hex digest")
             }
             if entry.sourceResolution == nil {
                 failures.append("\(entry.name) is missing sourceResolution")
@@ -233,16 +248,20 @@ public struct ProtocolTooling {
             if entry.scannerCodeMode == nil {
                 failures.append("\(entry.name) is missing scannerCodeMode")
             }
-            if !entry.effectiveGeneratedHeaderPath.hasPrefix(
-                "Sources/CWaylandProtocols/include/generated/")
-            {
-                failures.append(
-                    "\(entry.name) generated header path is outside generated include directory")
-            }
-            if !entry.effectiveGeneratedCodePath.hasPrefix("Sources/CWaylandProtocols/generated/") {
-                failures.append(
-                    "\(entry.name) generated code path is outside generated source directory")
-            }
+            _ = validateRepositoryPath(
+                entry.effectiveGeneratedHeaderPath,
+                field: "generatedHeaderPath",
+                protocolName: entry.name,
+                requiredRoot: "Sources/CWaylandProtocols/include/generated",
+                failures: &failures
+            )
+            _ = validateRepositoryPath(
+                entry.effectiveGeneratedCodePath,
+                field: "generatedCodePath",
+                protocolName: entry.name,
+                requiredRoot: "Sources/CWaylandProtocols/generated",
+                failures: &failures
+            )
             if !scannerModes.contains(entry.effectiveHeaderMode) {
                 failures.append(
                     "\(entry.name) has invalid scanner header mode: \(entry.effectiveHeaderMode)")
@@ -264,6 +283,20 @@ public struct ProtocolTooling {
                 source.environmentOverride == nil
             {
                 failures.append("\(entry.name) has no source candidates")
+            }
+            for candidate in source.relativeSourceCandidates {
+                validateRelativeCandidate(
+                    candidate,
+                    field: "relativeSourceCandidates",
+                    protocolName: entry.name,
+                    failures: &failures)
+            }
+            for candidate in source.absoluteFallbackCandidates {
+                validateAbsoluteCandidate(
+                    candidate,
+                    field: "absoluteFallbackCandidates",
+                    protocolName: entry.name,
+                    failures: &failures)
             }
         }
 
@@ -342,11 +375,13 @@ public struct ProtocolTooling {
     }
 
     public func syncProtocols() throws {
+        try validateManifest()
         for (entry, source) in try resolvedSources() {
             guard let source else {
                 throw ToolError(
                     "missing XML source for \(entry.name)", exitCode: ToolExitCode.environment)
             }
+            try validateSourceHash(entry: entry, source: source)
             let destination = repository.url(entry.localPath)
             if source.standardizedFileURL != destination.standardizedFileURL {
                 try fileSystem.copyItem(at: source, to: destination)
@@ -356,10 +391,18 @@ public struct ProtocolTooling {
     }
 
     public func generateProtocols() throws {
+        try generateProtocols(outputRoot: repository.root, validateFirst: true)
+    }
+
+    private func generateProtocols(outputRoot: URL, validateFirst: Bool) throws {
+        if validateFirst {
+            try validateManifest()
+        }
         let manifest = try loadManifest()
         let scanner = try runner.executableURL(for: "wayland-scanner").path
-        let includeRoot = repository.url("Sources/CWaylandProtocols/include/generated")
-        let sourceRoot = repository.url("Sources/CWaylandProtocols/generated")
+        let includeRoot = outputRoot.appendingPathComponent(
+            "Sources/CWaylandProtocols/include/generated")
+        let sourceRoot = outputRoot.appendingPathComponent("Sources/CWaylandProtocols/generated")
         try fileSystem.removeItem(includeRoot)
         try fileSystem.removeItem(sourceRoot)
 
@@ -370,8 +413,8 @@ public struct ProtocolTooling {
                     "missing vendored protocol XML: \(entry.localPath)", exitCode: ToolExitCode.data
                 )
             }
-            let header = repository.url(entry.effectiveGeneratedHeaderPath)
-            let code = repository.url(entry.effectiveGeneratedCodePath)
+            let header = outputRoot.appendingPathComponent(entry.effectiveGeneratedHeaderPath)
+            let code = outputRoot.appendingPathComponent(entry.effectiveGeneratedCodePath)
             try fileSystem.createDirectory(header.deletingLastPathComponent())
             try fileSystem.createDirectory(code.deletingLastPathComponent())
             try runner.run(
@@ -388,29 +431,25 @@ public struct ProtocolTooling {
     }
 
     public func verifyGenerated() throws {
-        let snapshot = try fileSystem.createTemporaryDirectory(prefix: "swiftwayland-generated")
-        defer { try? fileSystem.removeItem(snapshot) }
+        try validateManifest()
 
+        let generated = try fileSystem.createTemporaryDirectory(prefix: "swiftwayland-generated")
+        defer { try? fileSystem.removeItem(generated) }
+
+        try generateProtocols(outputRoot: generated, validateFirst: false)
+
+        var failures: [String] = []
         let paths = [
-            "protocols",
             "Sources/CWaylandProtocols/include/generated",
             "Sources/CWaylandProtocols/generated",
         ]
         for path in paths {
-            let source = repository.url(path)
-            guard fileSystem.exists(source) else {
+            let expected = generated.appendingPathComponent(path)
+            let actual = repository.url(path)
+            guard fileSystem.exists(actual) else {
                 throw ToolError(
                     "missing generated verification path: \(path)", exitCode: ToolExitCode.data)
             }
-            try fileSystem.copyItem(at: source, to: snapshot.appendingPathComponent(path))
-        }
-
-        try generateProtocols()
-
-        var failures: [String] = []
-        for path in paths {
-            let expected = snapshot.appendingPathComponent(path)
-            let actual = repository.url(path)
             failures.append(
                 contentsOf: try directoryDifferences(
                     expected: expected, actual: actual, label: path))
@@ -425,6 +464,144 @@ public struct ProtocolTooling {
         }
 
         diagnostics.success("generated artifacts are up to date")
+    }
+
+    private func validateRepositoryPath(
+        _ path: String,
+        field: String,
+        protocolName: String,
+        requiredRoot: String,
+        failures: inout [String]
+    ) -> URL? {
+        guard
+            validateRelativePathComponents(
+                path,
+                field: field,
+                protocolName: protocolName,
+                failures: &failures
+            )
+        else {
+            return nil
+        }
+
+        let root = repository.url(requiredRoot).standardizedFileURL
+        let resolved = repository.url(path).standardizedFileURL
+        guard isContained(resolved, in: root) else {
+            failures.append(
+                "\(protocolName) \(field) escapes \(requiredRoot): \(path)")
+            return nil
+        }
+        return resolved
+    }
+
+    private func validateRelativeCandidate(
+        _ path: String,
+        field: String,
+        protocolName: String,
+        failures: inout [String]
+    ) {
+        _ = validateRelativePathComponents(
+            path,
+            field: field,
+            protocolName: protocolName,
+            failures: &failures)
+    }
+
+    private func validateAbsoluteCandidate(
+        _ path: String,
+        field: String,
+        protocolName: String,
+        failures: inout [String]
+    ) {
+        guard !path.isEmpty else {
+            failures.append("\(protocolName) \(field) must not be empty")
+            return
+        }
+        guard path.hasPrefix("/") else {
+            failures.append("\(protocolName) \(field) must be absolute: \(path)")
+            return
+        }
+        if pathComponents(for: path).contains("..") {
+            failures.append("\(protocolName) \(field) must not contain '..': \(path)")
+        }
+    }
+
+    private func validateRelativePathComponents(
+        _ path: String,
+        field: String,
+        protocolName: String,
+        failures: inout [String]
+    ) -> Bool {
+        guard !path.isEmpty else {
+            failures.append("\(protocolName) \(field) must not be empty")
+            return false
+        }
+        guard !path.hasPrefix("/") else {
+            failures.append("\(protocolName) \(field) must be relative: \(path)")
+            return false
+        }
+
+        let components = pathComponents(for: path)
+        if components.contains("") {
+            failures.append(
+                "\(protocolName) \(field) must not contain empty path components: "
+                    + path)
+            return false
+        }
+        if components.contains(".") || components.contains("..") {
+            failures.append("\(protocolName) \(field) must not contain '.' or '..': \(path)")
+            return false
+        }
+        return true
+    }
+
+    private func pathComponents(for path: String) -> [String] {
+        path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+    }
+
+    private func isContained(_ url: URL, in root: URL) -> Bool {
+        let rootPath = root.path
+        let path = url.path
+        return path == rootPath || path.hasPrefix(rootPath + "/")
+    }
+
+    private func isValidSHA256(_ value: String) -> Bool {
+        SHA256Checksum.isValid(value)
+    }
+
+    private func validateSHA256(
+        _ expected: String,
+        for url: URL,
+        protocolName: String,
+        label: String,
+        failures: inout [String]
+    ) {
+        guard isValidSHA256(expected) else { return }
+        do {
+            let actual = try sha256(of: url)
+            if actual != expected {
+                failures.append(
+                    "\(protocolName) \(label) checksum mismatch: expected \(expected), "
+                        + "got \(actual)"
+                )
+            }
+        } catch {
+            failures.append("\(protocolName) \(label) checksum could not be read: \(error)")
+        }
+    }
+
+    private func validateSourceHash(entry: ProtocolEntry, source: URL) throws {
+        let actual = try sha256(of: source)
+        guard actual == entry.sha256 else {
+            throw ToolError(
+                "\(entry.name) XML source checksum mismatch: expected \(entry.sha256), "
+                    + "got \(actual)",
+                exitCode: ToolExitCode.data)
+        }
+    }
+
+    private func sha256(of url: URL) throws -> String {
+        try SHA256Checksum.compute(of: url, fileSystem: fileSystem)
     }
 
     private func normalizeGeneratedFile(_ url: URL) throws {
@@ -489,4 +666,4 @@ public struct ProtocolTooling {
     }
 }
 
-// swiftlint:enable cyclomatic_complexity function_body_length type_body_length
+// swiftlint:enable cyclomatic_complexity file_length function_body_length type_body_length
