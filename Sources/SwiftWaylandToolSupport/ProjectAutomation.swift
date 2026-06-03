@@ -262,6 +262,7 @@ public struct SwiftCommandResolver {
             "IntegrationTests/TinyUIPrototype/Package.swift",
         ]
         let recursive = [
+            "Plugins",
             "Sources",
             "Tests",
             "Examples",
@@ -367,7 +368,9 @@ public struct VerificationChecks {
         let allowlist = try UnsafeAllowlist.parse(context.fileSystem.readText(allowlistURL))
         let regex = try NSRegularExpression(pattern: unsafeTokenPattern)
         var failures: [String] = []
-        let roots = ["Sources", "Tests", "Package.swift"].map { context.repository.url($0) }
+        let roots = ["Plugins", "Sources", "Tests", "Package.swift"].map { path in
+            context.repository.url(path)
+        }
         for root in roots {
             let files: [URL]
             if context.fileSystem.isDirectory(root) {

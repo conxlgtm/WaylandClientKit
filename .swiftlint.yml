@@ -3,6 +3,7 @@
 
 included:
   - Package.swift
+  - Plugins
   - Sources
   - Tests
   - IntegrationTests/PublicAPIClient/Package.swift
