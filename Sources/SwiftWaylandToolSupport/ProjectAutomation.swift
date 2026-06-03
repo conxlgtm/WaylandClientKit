@@ -1,7 +1,11 @@
 import Foundation
 
+#if os(Linux)
+    import Glibc
+#endif
+
 // This file coordinates repository-wide checks; each checker is still typed and testable.
-// swiftlint:disable file_length
+// swiftlint:disable file_length function_body_length
 
 private let unsafeTokenPattern = [
     #"@unchecked\s+Sendable"#,
@@ -752,6 +756,7 @@ public struct HeadlessWestonRunner {
         let socket = "swiftwayland-\(UUID().uuidString)"
         let westonLog = runtime.appendingPathComponent("weston.log")
         let westonProcessLog = runtime.appendingPathComponent("weston-process.log")
+        let childLog = runtime.appendingPathComponent("child.log")
         let weston = Process()
         weston.executableURL = try context.runner.executableURL(for: "weston")
         weston.arguments = [
@@ -767,22 +772,37 @@ public struct HeadlessWestonRunner {
         env.removeValue(forKey: "WAYLAND_SOCKET")
         weston.environment = env
         let westonOutput = Pipe()
+        let westonOutputBuffer = HeadlessOutputBuffer()
         weston.standardOutput = westonOutput
         weston.standardError = westonOutput
+        westonOutput.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            if data.isEmpty {
+                handle.readabilityHandler = nil
+            } else {
+                westonOutputBuffer.append(data)
+            }
+        }
+        defer {
+            westonOutput.fileHandleForReading.readabilityHandler = nil
+        }
         try weston.run()
 
         do {
             try waitForSocket(runtime.appendingPathComponent(socket), process: weston)
-            try runChild(command: command, environment: env, timeoutSeconds: timeoutSeconds)
-            weston.terminate()
-            weston.waitUntilExit()
+            try runChild(
+                command: command,
+                environment: env,
+                timeoutSeconds: timeoutSeconds,
+                logURL: childLog)
+            stopProcess(weston, killAfter: 5)
         } catch {
-            weston.terminate()
-            weston.waitUntilExit()
-            let processData = westonOutput.fileHandleForReading.readDataToEndOfFile()
-            try? context.fileSystem.writeData(processData, to: westonProcessLog)
+            stopProcess(weston, killAfter: 5)
+            westonOutputBuffer.append(westonOutput.fileHandleForReading.readDataToEndOfFile())
+            try? context.fileSystem.writeData(westonOutputBuffer.data, to: westonProcessLog)
             printFailureLog(westonLog, label: "weston.log")
             printFailureLog(westonProcessLog, label: "weston process output")
+            printFailureLog(childLog, label: "headless child output")
             throw error
         }
     }
@@ -802,24 +822,47 @@ public struct HeadlessWestonRunner {
     }
 
     private func runChild(
-        command: [String], environment: [String: String], timeoutSeconds: TimeInterval
+        command: [String],
+        environment: [String: String],
+        timeoutSeconds: TimeInterval,
+        logURL: URL
     ) throws {
         let process = Process()
         process.executableURL = try context.runner.executableURL(for: command[0])
         process.arguments = Array(command.dropFirst())
         process.environment = environment
         process.currentDirectoryURL = context.repository.root
+        let output = Pipe()
+        let outputBuffer = HeadlessOutputBuffer()
+        process.standardOutput = output
+        process.standardError = output
+        output.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            if data.isEmpty {
+                handle.readabilityHandler = nil
+            } else {
+                outputBuffer.append(data)
+            }
+        }
+        defer {
+            output.fileHandleForReading.readabilityHandler = nil
+        }
         try process.run()
         let deadline = Date().addingTimeInterval(timeoutSeconds)
         while process.isRunning, Date() < deadline {
             Thread.sleep(forTimeInterval: 0.1)
         }
         if process.isRunning {
-            process.terminate()
+            stopProcess(process, killAfter: 5)
+            outputBuffer.append(output.fileHandleForReading.readDataToEndOfFile())
+            try? context.fileSystem.writeData(outputBuffer.data, to: logURL)
             throw ToolError(
                 "headless command timed out: \(command.joined(separator: " "))",
-                exitCode: ToolExitCode.process)
+                exitCode: process.terminationStatus == 0
+                    ? ToolExitCode.process : process.terminationStatus)
         }
+        outputBuffer.append(output.fileHandleForReading.readDataToEndOfFile())
+        try? context.fileSystem.writeData(outputBuffer.data, to: logURL)
         guard process.terminationStatus == 0 else {
             let commandText = command.joined(separator: " ")
             let message =
@@ -827,9 +870,29 @@ public struct HeadlessWestonRunner {
                 + "\(process.terminationStatus): \(commandText)"
             throw ToolError(
                 message,
-                exitCode: ToolExitCode.process
+                exitCode: process.terminationStatus
             )
         }
+    }
+
+    private func stopProcess(_ process: Process, killAfter: TimeInterval) {
+        guard process.isRunning else { return }
+        process.terminate()
+        guard !waitForExit(process, timeoutSeconds: killAfter) else { return }
+        #if os(Linux)
+            kill(process.processIdentifier, SIGKILL)
+        #else
+            process.terminate()
+        #endif
+        process.waitUntilExit()
+    }
+
+    private func waitForExit(_ process: Process, timeoutSeconds: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeoutSeconds)
+        while process.isRunning, Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        return !process.isRunning
     }
 
     private func printFailureLog(_ url: URL, label: String) {
@@ -838,4 +901,21 @@ public struct HeadlessWestonRunner {
     }
 }
 
-// swiftlint:enable file_length
+// SAFETY: storage is private and every read/write is serialized by lock.
+private final class HeadlessOutputBuffer: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage = Data()
+
+    var data: Data {
+        lock.withLock { storage }
+    }
+
+    func append(_ data: Data) {
+        guard !data.isEmpty else { return }
+        lock.withLock {
+            storage.append(data)
+        }
+    }
+}
+
+// swiftlint:enable file_length function_body_length
