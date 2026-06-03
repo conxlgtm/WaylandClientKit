@@ -407,13 +407,19 @@ let package = Package(
         .plugin(
             name: "SwlReleaseCheckPlugin",
             capability: .command(
-                intent: .custom(verb: "swl-release-check", description: "Run SwiftWayland release checks")
+                intent: .custom(
+                    verb: "swl-release-check",
+                    description: "Run SwiftWayland release checks"
+                )
             )
         ),
         .plugin(
             name: "SwlGenerateProtocolsPlugin",
             capability: .command(
-                intent: .custom(verb: "swl-generate-protocols", description: "Generate Wayland protocols"),
+                intent: .custom(
+                    verb: "swl-generate-protocols",
+                    description: "Generate Wayland protocols"
+                ),
                 permissions: [
                     .writeToPackageDirectory(reason: "Generate protocol artifacts")
                 ]
@@ -422,13 +428,19 @@ let package = Package(
         .plugin(
             name: "SwlVerifyGeneratedPlugin",
             capability: .command(
-                intent: .custom(verb: "swl-verify-generated", description: "Verify generated protocols")
+                intent: .custom(
+                    verb: "swl-verify-generated",
+                    description: "Verify generated protocols"
+                )
             )
         ),
         .plugin(
             name: "SwlBootstrapCheckPlugin",
             capability: .command(
-                intent: .custom(verb: "swl-bootstrap-check", description: "Verify bootstrap dependencies")
+                intent: .custom(
+                    verb: "swl-bootstrap-check",
+                    description: "Verify bootstrap dependencies"
+                )
             )
         ),
     ],

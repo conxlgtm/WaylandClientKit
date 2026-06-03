@@ -1,5 +1,8 @@
 import Foundation
 
+// The manifest model and validator stay together so protocol metadata has one owner.
+// swiftlint:disable cyclomatic_complexity function_body_length type_body_length
+
 public struct ProtocolManifest: Codable, Sendable {
     public var protocols: [ProtocolEntry]
 }
@@ -36,11 +39,13 @@ public struct ProtocolEntry: Codable, Sendable, Equatable {
     }
 
     public var defaultGeneratedHeaderPath: String {
-        "Sources/CWaylandProtocols/include/generated/\(generatedRelativeDirectory)/\(generatedBaseName)-client-protocol.h"
+        "Sources/CWaylandProtocols/include/generated/"
+            + "\(generatedRelativeDirectory)/\(generatedBaseName)-client-protocol.h"
     }
 
     public var defaultGeneratedCodePath: String {
-        "Sources/CWaylandProtocols/generated/\(generatedRelativeDirectory)/\(generatedBaseName)-protocol.c"
+        "Sources/CWaylandProtocols/generated/"
+            + "\(generatedRelativeDirectory)/\(generatedBaseName)-protocol.c"
     }
 
     public var effectiveHeaderMode: String {
@@ -53,7 +58,8 @@ public struct ProtocolEntry: Codable, Sendable, Equatable {
 
     public var generatedRelativeDirectory: String {
         let prefix = "protocols/upstream/"
-        let path = localPath.hasPrefix(prefix) ? String(localPath.dropFirst(prefix.count)) : localPath
+        let path =
+            localPath.hasPrefix(prefix) ? String(localPath.dropFirst(prefix.count)) : localPath
         return path.split(separator: "/").dropLast().joined(separator: "/")
     }
 
@@ -107,13 +113,16 @@ public enum ProtocolSourceDefaults {
         let local = entry.localPath
         let protocolRelative: String
         if local.contains("/stable/") {
-            protocolRelative = localComponent(after: "stable/", in: local)
+            protocolRelative =
+                localComponent(after: "stable/", in: local)
                 .map { "stable/\($0)" } ?? URL(fileURLWithPath: local).lastPathComponent
         } else if local.contains("/staging/") {
-            protocolRelative = localComponent(after: "staging/", in: local)
+            protocolRelative =
+                localComponent(after: "staging/", in: local)
                 .map { "staging/\($0)" } ?? URL(fileURLWithPath: local).lastPathComponent
         } else if local.contains("/legacy-unstable/") {
-            protocolRelative = localComponent(after: "legacy-unstable/", in: local)
+            protocolRelative =
+                localComponent(after: "legacy-unstable/", in: local)
                 .map { "unstable/\($0)" } ?? URL(fileURLWithPath: local).lastPathComponent
         } else {
             protocolRelative = URL(fileURLWithPath: local).lastPathComponent
@@ -136,7 +145,8 @@ public enum ProtocolSourceDefaults {
     }
 
     private static func environmentOverrideName(for name: String) -> String {
-        let trimmed = name
+        let trimmed =
+            name
             .replacingOccurrences(of: "-unstable-v1", with: "")
             .replacingOccurrences(of: "-v1", with: "")
             .replacingOccurrences(of: "-", with: "_")
@@ -169,7 +179,8 @@ public struct ProtocolTooling {
     }
 
     public func loadManifest() throws -> ProtocolManifest {
-        try JSONHelpers.decode(ProtocolManifest.self, from: repository.url("protocols/manifest.json"))
+        try JSONHelpers.decode(
+            ProtocolManifest.self, from: repository.url("protocols/manifest.json"))
     }
 
     public func validateManifest() throws {
@@ -177,7 +188,10 @@ public struct ProtocolTooling {
         var failures: [String] = []
         var seen: Set<String> = []
 
-        let tiers = Set(["required", "optionalFoundation", "previewFoundation", "privateGenerationDependency", "outOfScope"])
+        let tiers = Set([
+            "required", "optionalFoundation", "previewFoundation", "privateGenerationDependency",
+            "outOfScope",
+        ])
         let exposures = Set(["public", "publicCapability", "preview", "internal", "none"])
         let strategies = Set(["unit-and-live", "unit-and-live-when-advertised", "generation-only"])
         let sourceStrategies = Set(["pkg-config-with-fallbacks", "vendored-only"])
@@ -188,7 +202,8 @@ public struct ProtocolTooling {
                 failures.append("Duplicate protocol manifest entry: \(entry.name)")
             }
             if !tiers.contains(entry.swiftWaylandTier) {
-                failures.append("\(entry.name) has invalid swiftWaylandTier: \(entry.swiftWaylandTier)")
+                failures.append(
+                    "\(entry.name) has invalid swiftWaylandTier: \(entry.swiftWaylandTier)")
             }
             if !exposures.contains(entry.apiExposure) {
                 failures.append("\(entry.name) has invalid apiExposure: \(entry.apiExposure)")
@@ -218,26 +233,36 @@ public struct ProtocolTooling {
             if entry.scannerCodeMode == nil {
                 failures.append("\(entry.name) is missing scannerCodeMode")
             }
-            if !entry.effectiveGeneratedHeaderPath.hasPrefix("Sources/CWaylandProtocols/include/generated/") {
-                failures.append("\(entry.name) generated header path is outside generated include directory")
+            if !entry.effectiveGeneratedHeaderPath.hasPrefix(
+                "Sources/CWaylandProtocols/include/generated/")
+            {
+                failures.append(
+                    "\(entry.name) generated header path is outside generated include directory")
             }
             if !entry.effectiveGeneratedCodePath.hasPrefix("Sources/CWaylandProtocols/generated/") {
-                failures.append("\(entry.name) generated code path is outside generated source directory")
+                failures.append(
+                    "\(entry.name) generated code path is outside generated source directory")
             }
             if !scannerModes.contains(entry.effectiveHeaderMode) {
-                failures.append("\(entry.name) has invalid scanner header mode: \(entry.effectiveHeaderMode)")
+                failures.append(
+                    "\(entry.name) has invalid scanner header mode: \(entry.effectiveHeaderMode)")
             }
             if !scannerModes.contains(entry.effectiveCodeMode) {
-                failures.append("\(entry.name) has invalid scanner code mode: \(entry.effectiveCodeMode)")
+                failures.append(
+                    "\(entry.name) has invalid scanner code mode: \(entry.effectiveCodeMode)")
             }
             let source = entry.effectiveSourceResolution
             if !sourceStrategies.contains(source.strategy) {
-                failures.append("\(entry.name) has invalid source-resolution strategy: \(source.strategy)")
+                failures.append(
+                    "\(entry.name) has invalid source-resolution strategy: \(source.strategy)")
             }
-            if source.pkgConfigPackage != nil && source.pkgConfigVariable == nil {
+            if source.pkgConfigPackage != nil, source.pkgConfigVariable == nil {
                 failures.append("\(entry.name) pkg-config source requires a variable")
             }
-            if source.relativeSourceCandidates.isEmpty && source.absoluteFallbackCandidates.isEmpty && source.environmentOverride == nil {
+            if source.relativeSourceCandidates.isEmpty,
+                source.absoluteFallbackCandidates.isEmpty,
+                source.environmentOverride == nil
+            {
                 failures.append("\(entry.name) has no source candidates")
             }
         }
@@ -264,7 +289,12 @@ public struct ProtocolTooling {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         let data = try encoder.encode(manifest)
-        let text = String(decoding: data, as: UTF8.self) + "\n"
+        guard let manifestText = String(data: data, encoding: .utf8) else {
+            throw ToolError(
+                "failed to encode protocol manifest as UTF-8",
+                exitCode: ToolExitCode.data)
+        }
+        let text = manifestText + "\n"
         try fileSystem.writeText(text, to: repository.url("protocols/manifest.json"))
         diagnostics.success("protocol manifest metadata normalized")
     }
@@ -298,13 +328,15 @@ public struct ProtocolTooling {
             let base = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
             if !base.isEmpty {
                 let normalizedBase = base.hasPrefix("//") ? String(base.dropFirst()) : base
-                candidates.append(contentsOf: source.relativeSourceCandidates.map {
-                    URL(fileURLWithPath: normalizedBase).appendingPathComponent($0)
-                })
+                candidates.append(
+                    contentsOf: source.relativeSourceCandidates.map { candidate in
+                        URL(fileURLWithPath: normalizedBase).appendingPathComponent(candidate)
+                    })
             }
         }
 
-        candidates.append(contentsOf: source.absoluteFallbackCandidates.map { URL(fileURLWithPath: $0) })
+        candidates.append(
+            contentsOf: source.absoluteFallbackCandidates.map { URL(fileURLWithPath: $0) })
         candidates.append(repository.url(entry.localPath))
         return candidates.first { fileSystem.exists($0) }
     }
@@ -312,7 +344,8 @@ public struct ProtocolTooling {
     public func syncProtocols() throws {
         for (entry, source) in try resolvedSources() {
             guard let source else {
-                throw ToolError("missing XML source for \(entry.name)", exitCode: ToolExitCode.environment)
+                throw ToolError(
+                    "missing XML source for \(entry.name)", exitCode: ToolExitCode.environment)
             }
             let destination = repository.url(entry.localPath)
             if source.standardizedFileURL != destination.standardizedFileURL {
@@ -333,14 +366,20 @@ public struct ProtocolTooling {
         for entry in manifest.protocols {
             let xml = repository.url(entry.localPath)
             guard fileSystem.exists(xml) else {
-                throw ToolError("missing vendored protocol XML: \(entry.localPath)", exitCode: ToolExitCode.data)
+                throw ToolError(
+                    "missing vendored protocol XML: \(entry.localPath)", exitCode: ToolExitCode.data
+                )
             }
             let header = repository.url(entry.effectiveGeneratedHeaderPath)
             let code = repository.url(entry.effectiveGeneratedCodePath)
             try fileSystem.createDirectory(header.deletingLastPathComponent())
             try fileSystem.createDirectory(code.deletingLastPathComponent())
-            try runner.run(scanner, [entry.effectiveHeaderMode, xml.path, header.path], workingDirectory: repository.root)
-            try runner.run(scanner, [entry.effectiveCodeMode, xml.path, code.path], workingDirectory: repository.root)
+            try runner.run(
+                scanner, [entry.effectiveHeaderMode, xml.path, header.path],
+                workingDirectory: repository.root)
+            try runner.run(
+                scanner, [entry.effectiveCodeMode, xml.path, code.path],
+                workingDirectory: repository.root)
             try normalizeGeneratedFile(header)
             try normalizeGeneratedFile(code)
         }
@@ -360,7 +399,8 @@ public struct ProtocolTooling {
         for path in paths {
             let source = repository.url(path)
             guard fileSystem.exists(source) else {
-                throw ToolError("missing generated verification path: \(path)", exitCode: ToolExitCode.data)
+                throw ToolError(
+                    "missing generated verification path: \(path)", exitCode: ToolExitCode.data)
             }
             try fileSystem.copyItem(at: source, to: snapshot.appendingPathComponent(path))
         }
@@ -371,12 +411,15 @@ public struct ProtocolTooling {
         for path in paths {
             let expected = snapshot.appendingPathComponent(path)
             let actual = repository.url(path)
-            failures.append(contentsOf: try directoryDifferences(expected: expected, actual: actual, label: path))
+            failures.append(
+                contentsOf: try directoryDifferences(
+                    expected: expected, actual: actual, label: path))
         }
 
         guard failures.isEmpty else {
             throw ToolError(
-                "generated protocol artifacts are not up to date\n" + failures.joined(separator: "\n"),
+                "generated protocol artifacts are not up to date\n"
+                    + failures.joined(separator: "\n"),
                 exitCode: ToolExitCode.data
             )
         }
@@ -399,19 +442,23 @@ public struct ProtocolTooling {
             if value == "#include <stdbool.h>" {
                 return nil
             }
-            if value.range(of: #"^\s+\* @deprecated Deprecated since version [0-9]+$"#, options: .regularExpression) != nil {
+            if value.range(
+                of: #"^\s+\* @deprecated Deprecated since version [0-9]+$"#,
+                options: .regularExpression) != nil
+            {
                 return nil
             }
             return value
         }.compactMap { $0 }
 
-        while normalized.last == "" {
+        while normalized.last?.isEmpty == true {
             normalized.removeLast()
         }
         try fileSystem.writeText(normalized.joined(separator: "\n") + "\n", to: url)
     }
 
-    private func directoryDifferences(expected: URL, actual: URL, label: String) throws -> [String] {
+    private func directoryDifferences(expected: URL, actual: URL, label: String) throws -> [String]
+    {
         let expectedFiles = try relativeFiles(root: expected)
         let actualFiles = try relativeFiles(root: actual)
         var failures: [String] = []
@@ -433,10 +480,13 @@ public struct ProtocolTooling {
     }
 
     private func relativeFiles(root: URL) throws -> Set<String> {
-        Set(try fileSystem.walk(root, includingDirectories: false).map { url in
-            let path = url.path
-            let rootPath = root.path
-            return String(path.dropFirst(rootPath.count + 1))
-        })
+        Set(
+            try fileSystem.walk(root, includingDirectories: false).map { url in
+                let path = url.path
+                let rootPath = root.path
+                return String(path.dropFirst(rootPath.count + 1))
+            })
     }
 }
+
+// swiftlint:enable cyclomatic_complexity function_body_length type_body_length

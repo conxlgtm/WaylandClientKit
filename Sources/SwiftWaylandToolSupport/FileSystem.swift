@@ -19,7 +19,9 @@ public protocol FileSystem: Sendable {
 public struct LocalFileSystem: FileSystem {
     private let manager = FileManager.default
 
-    public init() {}
+    public init() {
+        // FileManager.default is the complete local filesystem state.
+    }
 
     public func exists(_ url: URL) -> Bool {
         manager.fileExists(atPath: url.path)
@@ -79,18 +81,20 @@ public struct LocalFileSystem: FileSystem {
 
     public func walk(_ root: URL, includingDirectories: Bool = false) throws -> [URL] {
         guard exists(root) else { return [] }
-        guard let enumerator = manager.enumerator(
-            at: root,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        ) else {
+        guard
+            let enumerator = manager.enumerator(
+                at: root,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            )
+        else {
             return []
         }
 
         var urls: [URL] = []
         for case let url as URL in enumerator {
             let values = try url.resourceValues(forKeys: [.isDirectoryKey])
-            if values.isDirectory == true && !includingDirectories {
+            if values.isDirectory == true, !includingDirectories {
                 continue
             }
             urls.append(url)
@@ -102,4 +106,3 @@ public struct LocalFileSystem: FileSystem {
         try readData(lhs) == readData(rhs)
     }
 }
-

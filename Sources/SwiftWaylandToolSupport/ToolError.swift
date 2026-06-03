@@ -22,4 +22,3 @@ public enum ToolExitCode {
     public static let environment: Int32 = 4
     public static let process: Int32 = 5
 }
-

@@ -2,6 +2,9 @@ import ArgumentParser
 import Foundation
 import SwiftWaylandToolSupport
 
+// ArgumentParser command definitions are property-wrapper dense by design.
+// swiftlint:disable attributes file_length let_var_whitespace type_name
+
 @main
 struct Swl: ParsableCommand {
     static let configuration = CommandConfiguration(
@@ -86,24 +89,32 @@ struct Tools: ParsableCommand {
             case "aarch64", "arm64":
                 archiveArchitecture = "arm64"
             default:
-                throw ToolError("unsupported SwiftLint architecture: \(architecture)", exitCode: ToolExitCode.environment)
+                throw ToolError(
+                    "unsupported SwiftLint architecture: \(architecture)",
+                    exitCode: ToolExitCode.environment)
             }
 
             let temporary = try context.fileSystem.createTemporaryDirectory(prefix: "swiftlint")
             defer { try? context.fileSystem.removeItem(temporary) }
             let archive = temporary.appendingPathComponent("swiftlint.zip")
-            let url = "https://github.com/realm/SwiftLint/releases/download/\(version)/swiftlint_linux_\(archiveArchitecture).zip"
-            try context.runner.run("curl", ["--fail", "--location", "--silent", "--show-error", url, "--output", archive.path])
+            let url =
+                "https://github.com/realm/SwiftLint/releases/download/\(version)/swiftlint_linux_\(archiveArchitecture).zip"
+            try context.runner.run(
+                "curl",
+                ["--fail", "--location", "--silent", "--show-error", url, "--output", archive.path])
             try context.runner.run("unzip", ["-q", archive.path, "-d", temporary.path])
             let candidate = ["swiftlint", "swiftlint-static"]
                 .map { temporary.appendingPathComponent($0) }
                 .first { context.fileSystem.isExecutable($0) || context.fileSystem.exists($0) }
             guard let candidate else {
-                throw ToolError("SwiftLint binary not found in downloaded archive", exitCode: ToolExitCode.data)
+                throw ToolError(
+                    "SwiftLint binary not found in downloaded archive", exitCode: ToolExitCode.data)
             }
-            let destinationURL = URL(fileURLWithPath: destination).appendingPathComponent("swiftlint")
+            let destinationURL = URL(fileURLWithPath: destination).appendingPathComponent(
+                "swiftlint")
             try context.fileSystem.copyItem(at: candidate, to: destinationURL)
-            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: destinationURL.path)
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o755], ofItemAtPath: destinationURL.path)
             let installed = try context.runner.run(destinationURL.path, ["version"]).stdout
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             context.diagnostics.success("swiftlint \(installed): \(destinationURL.path)")
@@ -132,7 +143,15 @@ struct Protocols: ParsableCommand {
             let context = try context()
             let manifest = try ProtocolTooling(repository: context.repository).loadManifest()
             for entry in manifest.protocols {
-                context.diagnostics.info("\(entry.name)\t\(entry.swiftWaylandTier)\t\(entry.apiExposure)\t\(entry.localPath)")
+                let summary = [
+                    entry.name,
+                    entry.swiftWaylandTier,
+                    entry.apiExposure,
+                    entry.localPath,
+                ].joined(separator: "\t")
+                context.diagnostics.info(
+                    summary
+                )
             }
         }
     }
@@ -211,7 +230,8 @@ struct Protocols: ParsableCommand {
     }
 
     struct NormalizeManifest: ToolCommand {
-        static let configuration = CommandConfiguration(commandName: "normalize-manifest", shouldDisplay: false)
+        static let configuration = CommandConfiguration(
+            commandName: "normalize-manifest", shouldDisplay: false)
         @Flag(name: .long) var verbose = false
         func run() throws {
             let context = try context()
@@ -235,14 +255,7 @@ struct Docc: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "verify")
         @Flag(name: .long) var verbose = false
         func run() throws {
-            let context = try context()
-            try DocCVerifier(repository: context.repository, diagnostics: context.diagnostics).verifyCatalogExists()
-            _ = try context.swift.runSwift(
-                ["package", "dump-symbol-graph", "--minimum-access-level", "public", "--skip-synthesized-members"],
-                repository: context.repository,
-                requireSuccess: false
-            )
-            try DocCVerifier(repository: context.repository, diagnostics: context.diagnostics).verifySymbolLinks()
+            try runDoccVerify(context: context())
         }
     }
 
@@ -250,14 +263,14 @@ struct Docc: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "verify-symbol-links")
         @Flag(name: .long) var verbose = false
         func run() throws {
-            let context = try context()
-            try DocCVerifier(repository: context.repository, diagnostics: context.diagnostics).verifySymbolLinks()
+            try runDoccSymbolLinks(context: context())
         }
     }
 }
 
 struct Coverage: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "coverage", subcommands: [Summarize.self])
+    static let configuration = CommandConfiguration(
+        commandName: "coverage", subcommands: [Summarize.self])
 
     struct Summarize: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "summarize")
@@ -265,7 +278,9 @@ struct Coverage: ParsableCommand {
         @Flag(name: .long) var verbose = false
         func run() throws {
             let context = try context()
-            context.diagnostics.info(try CoverageSummarizer(repository: context.repository).summarize(explicitPath: coverageJSON))
+            context.diagnostics.info(
+                try CoverageSummarizer(repository: context.repository).summarize(
+                    explicitPath: coverageJSON))
         }
     }
 }
@@ -298,7 +313,9 @@ struct Bootstrap: ParsableCommand {
         @Flag(name: .long) var verbose = false
         func run() throws {
             let context = try context()
-            context.diagnostics.info(try BootstrapChecker(context: context).installCommand(packageManager: packageManager))
+            context.diagnostics.info(
+                try BootstrapChecker(context: context).installCommand(
+                    packageManager: packageManager))
         }
     }
 }
@@ -307,7 +324,7 @@ struct Format: ToolCommand {
     static let configuration = CommandConfiguration(commandName: "format")
     @Flag(name: .long) var verbose = false
     func run() throws {
-        try SwiftCommandResolver(context: context()).runFormat(mode: "format")
+        try runFormat(context: context())
     }
 }
 
@@ -315,10 +332,7 @@ struct Lint: ToolCommand {
     static let configuration = CommandConfiguration(commandName: "lint")
     @Flag(name: .long) var verbose = false
     func run() throws {
-        let context = try context()
-        let resolver = SwiftCommandResolver(context: context)
-        try resolver.runFormat(mode: "lint")
-        try resolver.runSwiftLint()
+        try runLint(context: context())
     }
 }
 
@@ -329,34 +343,14 @@ struct Docs: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "verify")
         @Flag(name: .long) var verbose = false
         func run() throws {
-            let context = try context()
-            let required = [
-                "README.md",
-                "CONTRIBUTING.md",
-                "Sources/WaylandClient/WaylandClient.docc/WaylandClient.md",
-                "docs/architecture.md",
-                "docs/compositor-matrix.md",
-                "docs/generation.md",
-                "docs/live-wayland-testing.md",
-                "docs/public-api-audit.md",
-                "docs/public-api-baseline.md",
-                "docs/release.md",
-                "docs/strict-memory-safety-audit.md",
-            ]
-            var failures: [String] = []
-            for path in required where !context.fileSystem.exists(context.repository.url(path)) {
-                failures.append("Missing documentation file: \(path)")
-            }
-            guard failures.isEmpty else {
-                throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)
-            }
-            context.diagnostics.success("documentation files are present")
+            try runDocsVerify(context: context())
         }
     }
 }
 
 struct API: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "api", subcommands: [Dump.self, Verify.self])
+    static let configuration = CommandConfiguration(
+        commandName: "api", subcommands: [Dump.self, Verify.self])
 
     struct Dump: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "dump")
@@ -378,7 +372,8 @@ struct API: ParsableCommand {
 }
 
 struct Imports: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "imports", subcommands: [Verify.self])
+    static let configuration = CommandConfiguration(
+        commandName: "imports", subcommands: [Verify.self])
 
     struct Verify: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify")
@@ -390,7 +385,8 @@ struct Imports: ParsableCommand {
 }
 
 struct Shims: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "shims", subcommands: [Verify.self, VerifyReleaseSymbols.self])
+    static let configuration = CommandConfiguration(
+        commandName: "shims", subcommands: [Verify.self, VerifyReleaseSymbols.self])
 
     struct Verify: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify")
@@ -410,7 +406,8 @@ struct Shims: ParsableCommand {
 }
 
 struct Safety: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "safety", subcommands: [VerifyUnsafeAllowlist.self])
+    static let configuration = CommandConfiguration(
+        commandName: "safety", subcommands: [VerifyUnsafeAllowlist.self])
 
     struct VerifyUnsafeAllowlist: ToolCommand {
         static let configuration = CommandConfiguration(commandName: "verify-unsafe-allowlist")
@@ -440,8 +437,7 @@ struct Test: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "unit")
         @Flag(name: .long) var verbose = false
         func run() throws {
-            let context = try context()
-            try context.swift.runSwift(["test", "--no-parallel", "-Xswiftc", "-warnings-as-errors"], repository: context.repository)
+            try runUnitTests(context: context())
         }
     }
 
@@ -449,8 +445,7 @@ struct Test: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "release")
         @Flag(name: .long) var verbose = false
         func run() throws {
-            let context = try context()
-            try context.swift.runSwift(["test", "-c", "release", "--no-parallel"], repository: context.repository)
+            try runReleaseTests(context: context())
         }
     }
 
@@ -462,7 +457,9 @@ struct Test: ParsableCommand {
             let suppressions = context.repository.url("safety/tsan-suppressions.txt")
             var env: [String: String] = [:]
             env["TSAN_OPTIONS"] = "detect_deadlocks=0:suppressions=\(suppressions.path)"
-            try context.swift.runSwift(["test", "--sanitize=thread", "--no-parallel"], repository: context.repository, environment: env)
+            try context.swift.runSwift(
+                ["test", "--sanitize=thread", "--no-parallel"], repository: context.repository,
+                environment: env)
         }
     }
 
@@ -471,7 +468,9 @@ struct Test: ParsableCommand {
         @Flag(name: .long) var verbose = false
         func run() throws {
             let context = try context()
-            try context.swift.runSwift(["test", "--sanitize=address", "--no-parallel"], repository: context.repository, environment: ["ASAN_OPTIONS": "detect_leaks=0"])
+            try context.swift.runSwift(
+                ["test", "--sanitize=address", "--no-parallel"], repository: context.repository,
+                environment: ["ASAN_OPTIONS": "detect_leaks=0"])
         }
     }
 
@@ -506,13 +505,7 @@ private protocol IntegrationCommand: ToolCommand {
 
 extension IntegrationCommand {
     func run() throws {
-        let context = try context()
-        let scratch = try context.fileSystem.createTemporaryDirectory(prefix: "swiftwayland-integration")
-        defer { try? context.fileSystem.removeItem(scratch) }
-        try context.swift.runSwift(
-            ["test", "--package-path", context.repository.url(Self.packagePath).path, "--scratch-path", scratch.path],
-            repository: context.repository
-        )
+        try runIntegrationPackage(context: context(), packagePath: Self.packagePath)
     }
 }
 
@@ -526,14 +519,7 @@ struct Smoke: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "live")
         @Flag(name: .long) var verbose = false
         func run() throws {
-            let context = try context()
-            guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
-                throw ToolError("WAYLAND_DISPLAY is not set; run this under a Wayland session.", exitCode: ToolExitCode.environment)
-            }
-            try context.swift.runSwift(
-                ["run", "--disable-index-store", "swift-wayland-smoke", "--timeout-milliseconds", "5000"],
-                repository: context.repository
-            )
+            try runSmokeLive(context: context())
         }
     }
 
@@ -541,21 +527,7 @@ struct Smoke: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "integration")
         @Flag(name: .long) var verbose = false
         func run() throws {
-            let context = try context()
-            guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
-                throw ToolError("WAYLAND_DISPLAY is not set. Run public integration tests under a Wayland session.", exitCode: ToolExitCode.environment)
-            }
-            try Test.IntegrationPublicAPI(verbose: verbose).run()
-            try context.swift.runSwift(
-                ["test", "--filter", "WindowControlPublicRequestTests"],
-                repository: context.repository,
-                environment: requestTestEnvironment()
-            )
-            try context.swift.runSwift(
-                ["test", "--filter", "WindowDragSourcePublicRequestTests"],
-                repository: context.repository,
-                environment: requestTestEnvironment()
-            )
+            try runSmokeIntegration(context: context())
         }
     }
 
@@ -565,14 +537,23 @@ struct Smoke: ParsableCommand {
         func run() throws {
             let context = try context()
             guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
-                throw ToolError("WAYLAND_DISPLAY is not set. Run GPU preview tests under a Wayland session.", exitCode: ToolExitCode.environment)
+                throw ToolError(
+                    "WAYLAND_DISPLAY is not set. Run GPU preview tests under a Wayland session.",
+                    exitCode: ToolExitCode.environment)
             }
             try context.swift.runSwift(
-                ["test", "--filter", "GPUPreviewLiveCapability|gpuSmokeDrawsDeterministicPixelWhenEnabled"],
+                [
+                    "test", "--filter",
+                    "GPUPreviewLiveCapability|gpuSmokeDrawsDeterministicPixelWhenEnabled",
+                ],
                 repository: context.repository,
-                environment: ["SWL_RUN_GPU_SMOKE": "1", "SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS": "1"]
+                environment: [
+                    "SWL_RUN_GPU_SMOKE": "1", "SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS": "1",
+                ]
             )
-            try context.swift.runSwift(["run", "--disable-index-store", "GPUPreviewSmokeClient"], repository: context.repository)
+            try context.swift.runSwift(
+                ["run", "--disable-index-store", "GPUPreviewSmokeClient"],
+                repository: context.repository)
         }
     }
 
@@ -610,13 +591,7 @@ struct CI: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "cheap")
         @Flag(name: .long) var verbose = false
         func run() throws {
-            let context = try context()
-            try ProtocolTooling(repository: context.repository, runner: context.runner, diagnostics: context.diagnostics).verifyGenerated()
-            try ProtocolTooling(repository: context.repository, diagnostics: context.diagnostics).validateManifest()
-            try VerificationChecks(context: context).verifyShims()
-            try PublicAPIAuditor(context: context).verify(update: false)
-            try VerificationChecks(context: context).verifyTargetImports()
-            try VerificationChecks(context: context).verifyUnsafeAllowlist()
+            try runCheap(context: context())
         }
     }
 
@@ -624,17 +599,7 @@ struct CI: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "check-base")
         @Flag(name: .long) var verbose = false
         func run() throws {
-            let context = try context()
-            try Lint(verbose: verbose).run()
-            try CI.Cheap(verbose: verbose).run()
-            try Docs.Verify(verbose: verbose).run()
-            try Docc.Verify(verbose: verbose).run()
-            try context.swift.runSwift(["build", "--disable-index-store", "-Xswiftc", "-strict-concurrency=complete", "-Xswiftc", "-warn-concurrency"], repository: context.repository)
-            try Test.Unit(verbose: verbose).run()
-            try Test.IntegrationPublicAPI(verbose: verbose).run()
-            try Test.IntegrationGraphicsPreview(verbose: verbose).run()
-            try Test.IntegrationFrameworkHost(verbose: verbose).run()
-            try Test.IntegrationTinyUI(verbose: verbose).run()
+            try runCheckBase(context: context())
         }
     }
 
@@ -642,13 +607,7 @@ struct CI: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "check")
         @Flag(name: .long) var verbose = false
         func run() throws {
-            let context = try context()
-            try CI.CheckBase(verbose: verbose).run()
-            if context.runner.environment["WAYLAND_DISPLAY"] != nil {
-                try Smoke.Live(verbose: verbose).run()
-            } else {
-                context.diagnostics.warning("Skipping live Wayland smoke check because WAYLAND_DISPLAY is not set.")
-            }
+            try runCheck(context: context())
         }
     }
 
@@ -656,28 +615,199 @@ struct CI: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "release")
         @Flag(name: .long) var verbose = false
         func run() throws {
-            let context = try context()
-            try CI.CheckBase(verbose: verbose).run()
-            try context.swift.runSwift(["build", "--disable-index-store", "-c", "release"], repository: context.repository)
-            for target in ["SwiftWaylandDemo", "GPUPreviewSmokeClient", "GraphicsPreviewManagedGPUClear", "PointerCaptureSmoke", "CursorPolicySmoke"] {
-                try context.swift.runSwift(["build", "--disable-index-store", "-c", "release", "--target", target], repository: context.repository)
-            }
-            try context.swift.runSwift(["build", "--disable-index-store", "-c", "release", "--product", "swift-wayland-smoke"], repository: context.repository)
-            try Test.Release(verbose: verbose).run()
-            try VerificationChecks(context: context).verifyReleaseShimSymbols()
-            if context.runner.environment["WAYLAND_DISPLAY"] != nil {
-                try Smoke.Live(verbose: verbose).run()
-                try Smoke.Integration(verbose: verbose).run()
-            } else if context.runner.canFind("weston") {
-                let swiftPath = try context.runner.executableURL(for: "swift").path
-                try HeadlessWestonRunner(context: context).run(command: [swiftPath, "run", "swl", "smoke", "live"])
-                try HeadlessWestonRunner(context: context).run(command: [swiftPath, "run", "swl", "smoke", "integration"])
-            } else if context.runner.environment["CI"] == "true" || context.runner.environment["REQUIRE_WAYLAND_SMOKE"] == "1" {
-                throw ToolError("Wayland checks are required, but WAYLAND_DISPLAY and weston are unavailable.", exitCode: ToolExitCode.environment)
-            } else {
-                context.diagnostics.warning("Skipping Wayland checks because WAYLAND_DISPLAY is not set and weston is unavailable.")
-            }
+            try runRelease(context: context())
         }
+    }
+}
+
+private func runFormat(context: ToolContext) throws {
+    try SwiftCommandResolver(context: context).runFormat(mode: "format")
+}
+
+private func runLint(context: ToolContext) throws {
+    let resolver = SwiftCommandResolver(context: context)
+    try resolver.runFormat(mode: "lint")
+    try resolver.runSwiftLint()
+}
+
+private func runDocsVerify(context: ToolContext) throws {
+    let required = [
+        "README.md",
+        "CONTRIBUTING.md",
+        "Sources/WaylandClient/WaylandClient.docc/WaylandClient.md",
+        "docs/architecture.md",
+        "docs/compositor-matrix.md",
+        "docs/generation.md",
+        "docs/live-wayland-testing.md",
+        "docs/public-api-audit.md",
+        "docs/public-api-baseline.md",
+        "docs/release.md",
+        "docs/strict-memory-safety-audit.md",
+    ]
+    var failures: [String] = []
+    for path in required where !context.fileSystem.exists(context.repository.url(path)) {
+        failures.append("Missing documentation file: \(path)")
+    }
+    guard failures.isEmpty else {
+        throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)
+    }
+    context.diagnostics.success("documentation files are present")
+}
+
+private func runDoccVerify(context: ToolContext) throws {
+    try DocCVerifier(repository: context.repository, diagnostics: context.diagnostics)
+        .verifyCatalogExists()
+    _ = try context.swift.runSwift(
+        [
+            "package", "dump-symbol-graph", "--minimum-access-level", "public",
+            "--skip-synthesized-members",
+        ],
+        repository: context.repository,
+        requireSuccess: false
+    )
+    try runDoccSymbolLinks(context: context)
+}
+
+private func runDoccSymbolLinks(context: ToolContext) throws {
+    try DocCVerifier(repository: context.repository, diagnostics: context.diagnostics)
+        .verifySymbolLinks()
+}
+
+private func runUnitTests(context: ToolContext) throws {
+    try context.swift.runSwift(
+        ["test", "--no-parallel", "-Xswiftc", "-warnings-as-errors"], repository: context.repository
+    )
+}
+
+private func runReleaseTests(context: ToolContext) throws {
+    try context.swift.runSwift(
+        ["test", "-c", "release", "--no-parallel"], repository: context.repository)
+}
+
+private func runIntegrationPackage(context: ToolContext, packagePath: String) throws {
+    let scratch = try context.fileSystem.createTemporaryDirectory(
+        prefix: "swiftwayland-integration")
+    defer { try? context.fileSystem.removeItem(scratch) }
+    try context.swift.runSwift(
+        [
+            "test", "--package-path", context.repository.url(packagePath).path, "--scratch-path",
+            scratch.path,
+        ],
+        repository: context.repository
+    )
+}
+
+private func runSmokeLive(context: ToolContext) throws {
+    guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
+        throw ToolError(
+            "WAYLAND_DISPLAY is not set; run this under a Wayland session.",
+            exitCode: ToolExitCode.environment)
+    }
+    try context.swift.runSwift(
+        ["run", "--disable-index-store", "swift-wayland-smoke", "--timeout-milliseconds", "5000"],
+        repository: context.repository
+    )
+}
+
+private func runSmokeIntegration(context: ToolContext) throws {
+    guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
+        throw ToolError(
+            "WAYLAND_DISPLAY is not set. Run public integration tests under a Wayland session.",
+            exitCode: ToolExitCode.environment)
+    }
+    try runIntegrationPackage(context: context, packagePath: Test.IntegrationPublicAPI.packagePath)
+    try context.swift.runSwift(
+        ["test", "--filter", "WindowControlPublicRequestTests"],
+        repository: context.repository,
+        environment: requestTestEnvironment()
+    )
+    try context.swift.runSwift(
+        ["test", "--filter", "WindowDragSourcePublicRequestTests"],
+        repository: context.repository,
+        environment: requestTestEnvironment()
+    )
+}
+
+private func runCheap(context: ToolContext) throws {
+    try ProtocolTooling(
+        repository: context.repository, runner: context.runner, diagnostics: context.diagnostics
+    ).verifyGenerated()
+    try ProtocolTooling(repository: context.repository, diagnostics: context.diagnostics)
+        .validateManifest()
+    try VerificationChecks(context: context).verifyShims()
+    try PublicAPIAuditor(context: context).verify(update: false)
+    try VerificationChecks(context: context).verifyTargetImports()
+    try VerificationChecks(context: context).verifyUnsafeAllowlist()
+}
+
+private func runCheckBase(context: ToolContext) throws {
+    try runLint(context: context)
+    try runCheap(context: context)
+    try runDocsVerify(context: context)
+    try runDoccVerify(context: context)
+    try context.swift.runSwift(
+        [
+            "build", "--disable-index-store", "-Xswiftc", "-strict-concurrency=complete",
+            "-Xswiftc", "-warn-concurrency",
+        ],
+        repository: context.repository
+    )
+    try runUnitTests(context: context)
+    try runIntegrationPackage(context: context, packagePath: Test.IntegrationPublicAPI.packagePath)
+    try runIntegrationPackage(
+        context: context, packagePath: Test.IntegrationGraphicsPreview.packagePath)
+    try runIntegrationPackage(
+        context: context, packagePath: Test.IntegrationFrameworkHost.packagePath)
+    try runIntegrationPackage(context: context, packagePath: Test.IntegrationTinyUI.packagePath)
+}
+
+private func runCheck(context: ToolContext) throws {
+    try runCheckBase(context: context)
+    if context.runner.environment["WAYLAND_DISPLAY"] != nil {
+        try runSmokeLive(context: context)
+    } else {
+        context.diagnostics.warning(
+            "Skipping live Wayland smoke check because WAYLAND_DISPLAY is not set.")
+    }
+}
+
+private func runRelease(context: ToolContext) throws {
+    try runCheckBase(context: context)
+    try context.swift.runSwift(
+        ["build", "--disable-index-store", "-c", "release"], repository: context.repository)
+    for target in [
+        "SwiftWaylandDemo", "GPUPreviewSmokeClient", "GraphicsPreviewManagedGPUClear",
+        "PointerCaptureSmoke", "CursorPolicySmoke",
+    ] {
+        try context.swift.runSwift(
+            ["build", "--disable-index-store", "-c", "release", "--target", target],
+            repository: context.repository)
+    }
+    try context.swift.runSwift(
+        ["build", "--disable-index-store", "-c", "release", "--product", "swift-wayland-smoke"],
+        repository: context.repository)
+    try runReleaseTests(context: context)
+    try VerificationChecks(context: context).verifyReleaseShimSymbols()
+    if context.runner.environment["WAYLAND_DISPLAY"] != nil {
+        try runSmokeLive(context: context)
+        try runSmokeIntegration(context: context)
+    } else if context.runner.canFind("weston") {
+        let swiftPath = try context.runner.executableURL(for: "swift").path
+        try HeadlessWestonRunner(context: context).run(command: [
+            swiftPath, "run", "swl", "smoke", "live",
+        ])
+        try HeadlessWestonRunner(context: context).run(command: [
+            swiftPath, "run", "swl", "smoke", "integration",
+        ])
+    } else if context.runner.environment["CI"] == "true"
+        || context.runner.environment["REQUIRE_WAYLAND_SMOKE"] == "1"
+    {
+        throw ToolError(
+            "Wayland checks are required, but WAYLAND_DISPLAY and weston are unavailable.",
+            exitCode: ToolExitCode.environment)
+    } else {
+        context.diagnostics.warning(
+            "Skipping Wayland checks because WAYLAND_DISPLAY is not set and weston is unavailable.")
     }
 }
 
@@ -687,3 +817,5 @@ private func requestTestEnvironment() -> [String: String] {
         "SWIFT_WAYLAND_ENABLE_DND_SOURCE_REQUEST_TESTS": "1",
     ]
 }
+
+// swiftlint:enable attributes file_length let_var_whitespace type_name

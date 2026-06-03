@@ -12,7 +12,8 @@ public struct CoverageSummarizer {
     public func summarize(explicitPath: String?) throws -> String {
         let coverageURL: URL
         if let explicitPath, !explicitPath.isEmpty {
-            coverageURL = URL(fileURLWithPath: explicitPath, relativeTo: repository.root).standardizedFileURL
+            coverageURL =
+                URL(fileURLWithPath: explicitPath, relativeTo: repository.root).standardizedFileURL
         } else {
             guard let discovered = try latestCoverageJSON() else {
                 throw ToolError(
@@ -24,7 +25,8 @@ public struct CoverageSummarizer {
         }
 
         guard fileSystem.exists(coverageURL) else {
-            throw ToolError("Coverage JSON was not found: \(coverageURL.path)", exitCode: ToolExitCode.data)
+            throw ToolError(
+                "Coverage JSON was not found: \(coverageURL.path)", exitCode: ToolExitCode.data)
         }
 
         let object = try JSONHelpers.loadObject(from: coverageURL)
@@ -44,7 +46,9 @@ public struct CoverageSummarizer {
                     continue
                 }
                 let relative = String(filename.dropFirst(sourcesRoot.count + 1))
-                guard let module = relative.split(separator: "/").first.map(String.init) else { continue }
+                guard let module = relative.split(separator: "/").first.map(String.init) else {
+                    continue
+                }
                 guard
                     let summary = file["summary"] as? [String: Any],
                     let lines = summary["lines"] as? [String: Any],
@@ -69,8 +73,12 @@ public struct CoverageSummarizer {
         let candidates = try fileSystem.walk(build, includingDirectories: false)
             .filter { $0.path.hasSuffix("/debug/codecov/SwiftWayland.json") }
             .sorted { lhs, rhs in
-                let lhsDate = (try? lhs.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-                let rhsDate = (try? rhs.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+                let lhsDate =
+                    (try? lhs.resourceValues(forKeys: [.contentModificationDateKey])
+                        .contentModificationDate) ?? .distantPast
+                let rhsDate =
+                    (try? rhs.resourceValues(forKeys: [.contentModificationDateKey])
+                        .contentModificationDate) ?? .distantPast
                 return lhsDate > rhsDate
             }
         return candidates.first
@@ -85,9 +93,17 @@ public struct CoverageSummarizer {
         for module in modules.keys.sorted() {
             guard let aggregate = modules[module] else { continue }
             total += aggregate
-            lines.append("| `\(module)` | \(percent(aggregate.linesCovered, aggregate.linesCount))% | \(percent(aggregate.functionsCovered, aggregate.functionsCount))% |")
+            let linePercent = percent(aggregate.linesCovered, aggregate.linesCount)
+            let functionPercent = percent(aggregate.functionsCovered, aggregate.functionsCount)
+            lines.append(
+                "| `\(module)` | \(linePercent)% | \(functionPercent)% |"
+            )
         }
-        lines.append("| **Source total** | \(percent(total.linesCovered, total.linesCount))% | \(percent(total.functionsCovered, total.functionsCount))% |")
+        let totalLinePercent = percent(total.linesCovered, total.linesCount)
+        let totalFunctionPercent = percent(total.functionsCovered, total.functionsCount)
+        lines.append(
+            "| **Source total** | \(totalLinePercent)% | \(totalFunctionPercent)% |"
+        )
         return lines.joined(separator: "\n")
     }
 
@@ -117,4 +133,3 @@ private struct CoverageAggregate {
         lhs.functionsCovered += rhs.functionsCovered
     }
 }
-

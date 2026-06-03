@@ -22,4 +22,3 @@ public enum JSONHelpers {
         return object
     }
 }
-

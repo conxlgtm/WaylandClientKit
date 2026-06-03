@@ -82,7 +82,7 @@ public struct ProcessRunner: Sendable {
             stderr: String(data: stderrBuffer.data, encoding: .utf8) ?? ""
         )
 
-        if requireSuccess && result.exitCode != 0 {
+        if requireSuccess, result.exitCode != 0 {
             throw ToolError(
                 """
                 command failed with exit code \(result.exitCode): \(result.commandLine)
@@ -101,7 +101,8 @@ public struct ProcessRunner: Sendable {
             if FileManager.default.isExecutableFile(atPath: url.path) {
                 return url
             }
-            throw ToolError("executable is not runnable: \(executable)", exitCode: ToolExitCode.environment)
+            throw ToolError(
+                "executable is not runnable: \(executable)", exitCode: ToolExitCode.environment)
         }
 
         for directory in pathDirectories() {
@@ -111,7 +112,8 @@ public struct ProcessRunner: Sendable {
             }
         }
 
-        throw ToolError("executable not found on PATH: \(executable)", exitCode: ToolExitCode.environment)
+        throw ToolError(
+            "executable not found on PATH: \(executable)", exitCode: ToolExitCode.environment)
     }
 
     public func canFind(_ executable: String) -> Bool {

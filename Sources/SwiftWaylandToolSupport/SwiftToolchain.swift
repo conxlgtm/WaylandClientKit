@@ -7,18 +7,22 @@ public struct SwiftToolchain: Sendable {
         self.runner = runner
     }
 
-    public func swiftExecutable(environment: [String: String] = ProcessInfo.processInfo.environment) throws -> String {
+    public func swiftExecutable(environment: [String: String] = ProcessInfo.processInfo.environment)
+        throws -> String
+    {
         if let override = environment["SWIFT_BIN"], !override.isEmpty {
             return override
         }
 
-        let swiftlyHome = environment["SWIFTLY_HOME"]
+        let swiftlyHome =
+            environment["SWIFTLY_HOME"]
             ?? URL(fileURLWithPath: NSHomeDirectory())
-                .appendingPathComponent(".local/share/swiftly")
-                .path
+            .appendingPathComponent(".local/share/swiftly")
+            .path
         let toolchains = URL(fileURLWithPath: swiftlyHome).appendingPathComponent("toolchains")
         if let candidates = try? LocalFileSystem().walk(toolchains, includingDirectories: false) {
-            let swiftCandidates = candidates
+            let swiftCandidates =
+                candidates
                 .filter { $0.path.hasSuffix("/usr/bin/swift") }
                 .map(\.path)
                 .sorted()
@@ -48,10 +52,11 @@ public struct SwiftToolchain: Sendable {
 
     public func swiftRuntimeEnvironment(_ overrides: [String: String] = [:]) -> [String: String] {
         var env = overrides
-        let compat = runner.environment["SWIFT_COMPAT_LIBS"]
+        let compat =
+            runner.environment["SWIFT_COMPAT_LIBS"]
             ?? URL(fileURLWithPath: NSHomeDirectory())
-                .appendingPathComponent(".local/share/swift-compat-libs")
-                .path
+            .appendingPathComponent(".local/share/swift-compat-libs")
+            .path
         if FileManager.default.fileExists(atPath: compat) {
             let existing = runner.environment["LD_LIBRARY_PATH"] ?? ""
             env["LD_LIBRARY_PATH"] = existing.isEmpty ? compat : "\(compat):\(existing)"
@@ -64,4 +69,3 @@ public struct SwiftToolchain: Sendable {
         return result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
-
