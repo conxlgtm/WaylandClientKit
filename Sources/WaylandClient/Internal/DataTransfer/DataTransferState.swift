@@ -587,18 +587,6 @@ extension DataTransferState {
 
     private mutating func appendSourceCleanup(
         _ sourceID: DataSourceID?,
-        seatID: SeatID,
-        to effects: inout [DataTransferEffect]
-    ) {
-        guard let sourceID, sources[sourceID]?.seatID == seatID else {
-            return
-        }
-
-        appendSourceCleanup(sourceID, to: &effects)
-    }
-
-    private mutating func appendSourceCleanup(
-        _ sourceID: DataSourceID?,
         to effects: inout [DataTransferEffect]
     ) {
         guard let sourceID, let source = sources.removeValue(forKey: sourceID) else {
