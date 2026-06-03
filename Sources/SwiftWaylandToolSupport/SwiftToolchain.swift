@@ -41,11 +41,12 @@ public struct SwiftToolchain: Sendable {
         environment overrides: [String: String] = [:],
         requireSuccess: Bool = true
     ) throws -> ProcessResult {
-        try runner.run(
+        let environment = swiftRuntimeEnvironment(overrides)
+        return try runner.run(
             swiftExecutable(environment: runner.environment),
-            arguments,
+            swiftPMArguments(arguments, environment: environment),
             workingDirectory: repository.root,
-            environment: swiftRuntimeEnvironment(overrides),
+            environment: environment,
             requireSuccess: requireSuccess
         )
     }
@@ -67,5 +68,23 @@ public struct SwiftToolchain: Sendable {
     public func version(repository: Repository) throws -> String {
         let result = try runSwift(["--version"], repository: repository)
         return result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func swiftPMArguments(_ arguments: [String], environment: [String: String]) -> [String]
+    {
+        guard
+            let scratchPath =
+                environment["SWIFT_WAYLAND_SWIFTPM_SCRATCH"]
+                ?? runner.environment["SWIFT_WAYLAND_SWIFTPM_SCRATCH"],
+            !scratchPath.isEmpty,
+            !arguments.contains("--scratch-path"),
+            let command = arguments.first,
+            ["build", "package", "run", "test"].contains(command)
+        else {
+            return arguments
+        }
+        var scratchArguments = arguments
+        scratchArguments.insert(contentsOf: ["--scratch-path", scratchPath], at: 1)
+        return scratchArguments
     }
 }
