@@ -339,25 +339,6 @@
         }
     }
 
-    private func recordCoreRequest<Result>(
-        _ request: () async throws -> Result,
-        cleanup: (Result) async -> Void
-    ) async throws -> (Result, RecordedCoreRequest) {
-        try await CoreRequestRecordingGate.withExclusiveRecording {
-            swl_test_core_request_recording_begin()
-            swl_test_buffer_listener_recording_begin()
-            defer {
-                swl_test_buffer_listener_recording_end()
-                swl_test_core_request_recording_end()
-            }
-
-            let result = try await request()
-            let record = unsafe RecordedCoreRequest(swl_test_core_request_record())
-            await cleanup(result)
-            return (result, record)
-        }
-    }
-
     private func drawSolid(_ frame: borrowing SoftwareFrame) {
         frame.withXRGB8888Rows { _, pixels in
             for x in 0..<Int(frame.width) {

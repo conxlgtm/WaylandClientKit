@@ -16,10 +16,6 @@
         private let condition = NSCondition()
         private var state = State()
 
-        var startedValues: Set<String> {
-            withState { Set($0.starts) }
-        }
-
         var values: Set<String> {
             withState { Set($0.completions) }
         }
