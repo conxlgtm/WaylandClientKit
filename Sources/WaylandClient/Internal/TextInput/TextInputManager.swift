@@ -1,8 +1,6 @@
 import WaylandRaw
 
 package protocol TextInputBinding: AnyObject {
-    var seatID: SeatID { get }
-
     func enable()
     func disable()
     func setSurroundingText(_ text: String, cursor: Int32, anchor: Int32)

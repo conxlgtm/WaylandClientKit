@@ -292,10 +292,6 @@ package struct DataTransferSourceState: Equatable, Sendable {
         storage.role
     }
 
-    package var mimeTypes: [MIMEType] {
-        storage.mimeTypes
-    }
-
     package var snapshot: DataSourceSnapshot {
         storage
     }
