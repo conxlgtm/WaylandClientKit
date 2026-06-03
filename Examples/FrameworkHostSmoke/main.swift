@@ -75,7 +75,7 @@ enum FrameworkHostSmoke {
             case .windowClosed(let windowID) where windowID == window.id:
                 return
             case .windowOutputsChanged(let event) where event.windowID == window.id:
-                await state.recordOutputs(event.outputs.count)
+                await state.recordOutputs()
                 if await state.consumeNeedsRedraw() {
                     try await window.requestRedraw()
                 }
@@ -138,7 +138,7 @@ struct FrameworkWindowLoop: Sendable {
     let state: FrameworkHostState
 
     nonisolated func showInitialFrame() async throws {
-        let snapshot = await state.snapshot(geometry: nil)
+        let snapshot = await state.snapshot()
         try await window.show { frame in
             draw(frame, snapshot: snapshot)
         }
@@ -147,9 +147,7 @@ struct FrameworkWindowLoop: Sendable {
     nonisolated func redrawIfNeeded() async throws {
         guard try await !window.isClosed else { return }
         guard try await window.needsRedraw else { return }
-        let geometry = try await window.geometry
-        await state.recordGeometry(geometry)
-        let snapshot = await state.snapshot(geometry: geometry)
+        let snapshot = await state.snapshot()
         try await window.redraw { frame in
             draw(frame, snapshot: snapshot)
         }
@@ -207,8 +205,7 @@ actor FrameworkHostState {
         case .pointer(.left):
             current.pointer = nil
             redrawNeeded = true
-        case .keyboard(.interpreted(.key(let key))):
-            current.lastKey = key.keyText ?? key.keysymName
+        case .keyboard(.interpreted(.key)):
             current.counter += 1
             redrawNeeded = true
         case .seat, .diagnostic, .pointer, .keyboard, .touch:
@@ -218,28 +215,19 @@ actor FrameworkHostState {
 
     func recordTextInput(_ event: TextInputEvent) {
         switch event {
-        case .entered(let focus):
-            current.textInputFocus = focus.target
-        case .left:
-            current.textInputFocus = nil
-        case .committed(let commit):
-            current.lastCommittedText = commit.text
+        case .entered, .left:
+            break
+        case .committed:
             current.counter += 1
             redrawNeeded = true
-        case .preedit(let preedit):
-            current.lastCommittedText = preedit.text
+        case .preedit:
             redrawNeeded = true
         case .deleteSurroundingText, .action, .language, .done, .diagnostic:
             break
         }
     }
 
-    func recordGeometry(_ geometry: SurfaceGeometry) {
-        current.geometry = geometry
-    }
-
-    func recordOutputs(_ count: Int) {
-        current.outputCount = count
+    func recordOutputs() {
         redrawNeeded = true
     }
 
@@ -248,10 +236,7 @@ actor FrameworkHostState {
         return redrawNeeded
     }
 
-    func snapshot(geometry: SurfaceGeometry?) -> FrameworkHostSnapshot {
-        if let geometry {
-            current.geometry = geometry
-        }
+    func snapshot() -> FrameworkHostSnapshot {
         return current
     }
 
@@ -268,9 +253,4 @@ actor FrameworkHostState {
 struct FrameworkHostSnapshot: Sendable {
     var counter = 0
     var pointer: PointerLocation?
-    var lastKey: String?
-    var lastCommittedText: String?
-    var textInputFocus: InputEventTarget?
-    var geometry: SurfaceGeometry?
-    var outputCount = 0
 }
