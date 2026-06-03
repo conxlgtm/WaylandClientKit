@@ -1,5 +1,3 @@
-import WaylandRaw
-
 struct ReportedUnknownWindowProtocolValue: Hashable, Sendable {
     let field: UnknownWindowProtocolValueField
     let rawValue: UInt32

@@ -1,7 +1,6 @@
 import CEGLShims
 import CGBMShims
 import Glibc
-import WaylandRaw
 
 package struct EGLVersion: Equatable, Sendable {
     package let major: Int32
