@@ -386,11 +386,6 @@ extension WindowModel {
     }
 
     @discardableResult
-    private func requireActivePresentation(in activeState: ActiveWindowState) throws -> UInt64 {
-        try Self.requireActivePresentation(in: activeState, windowID: id)
-    }
-
-    @discardableResult
     private static func requireActivePresentation(
         in activeState: ActiveWindowState,
         windowID: WindowID
@@ -403,17 +398,6 @@ extension WindowModel {
         }
 
         return generation
-    }
-
-    private func requireActivePresentation(
-        generation actualGeneration: UInt64,
-        in activeState: ActiveWindowState
-    ) throws {
-        try Self.requireActivePresentation(
-            generation: actualGeneration,
-            in: activeState,
-            windowID: id
-        )
     }
 
     private static func requireActivePresentation(
