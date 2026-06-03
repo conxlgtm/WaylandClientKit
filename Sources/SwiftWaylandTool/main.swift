@@ -3,7 +3,7 @@ import Foundation
 import SwiftWaylandToolSupport
 
 // ArgumentParser command definitions are property-wrapper dense by design.
-// swiftlint:disable attributes file_length let_var_whitespace type_name
+// swiftlint:disable attributes file_length function_body_length let_var_whitespace type_name
 
 @main
 struct Swl: ParsableCommand {
@@ -33,6 +33,31 @@ struct Swl: ParsableCommand {
 private protocol ToolCommand: ParsableCommand {
     var verbose: Bool { get }
 }
+
+private let swiftLintArchiveChecksums = [
+    "0.61.0": [
+        "amd64": "02f4f580bbb27fb618dbfa24ce2f14c926461c85c26941289f58340151b63ae4",
+        "arm64": "8436629d8088142a52d38a4da6b8a37e53d1428acb4601767cb9dd5b516d0a5d",
+    ]
+]
+
+private let frameworkHandoffExampleTargets = [
+    "ClientSideResizeChrome",
+    "TextInputSmoke",
+    "DataTransferSmoke",
+    "TwoWindowFrameworkHost",
+    "PresentationFeedbackAnimation",
+    "SerialActionsProbe",
+    "TwoWindowOrderStress",
+    "XDGActivationSmoke",
+    "PointerCaptureSmoke",
+    "CursorPolicySmoke",
+    "SurfaceRegionSmoke",
+    "DamageRegionSmoke",
+    "FrameworkHostSmoke",
+    "GPUPreviewSmokeClient",
+    "GraphicsPreviewManagedGPUClear",
+]
 
 extension ToolCommand {
     func context() throws -> ToolContext {
@@ -75,6 +100,9 @@ struct Tools: ParsableCommand {
         @Option
         var version = "0.61.0"
 
+        @Option
+        var checksum: String?
+
         @Flag(name: .long)
         var verbose = false
 
@@ -102,6 +130,31 @@ struct Tools: ParsableCommand {
             try context.runner.run(
                 "curl",
                 ["--fail", "--location", "--silent", "--show-error", url, "--output", archive.path])
+            let expectedChecksum: String
+            if let checksum {
+                expectedChecksum = checksum.lowercased()
+            } else if let pinned = swiftLintArchiveChecksums[version]?[archiveArchitecture] {
+                expectedChecksum = pinned
+            } else {
+                throw ToolError(
+                    "unsupported SwiftLint artifact: \(version) \(archiveArchitecture). "
+                        + "Pass --checksum with the expected SHA-256 digest.",
+                    exitCode: ToolExitCode.data)
+            }
+            guard SHA256Checksum.isValid(expectedChecksum) else {
+                throw ToolError(
+                    "SwiftLint checksum must be a 64-character lowercase hex digest",
+                    exitCode: ToolExitCode.data)
+            }
+            let actualChecksum = try SHA256Checksum.compute(
+                of: archive,
+                fileSystem: context.fileSystem)
+            guard actualChecksum == expectedChecksum else {
+                throw ToolError(
+                    "SwiftLint archive checksum mismatch: expected \(expectedChecksum), "
+                        + "got \(actualChecksum)",
+                    exitCode: ToolExitCode.data)
+            }
             try context.runner.run("unzip", ["-q", archive.path, "-d", temporary.path])
             let candidate = ["swiftlint", "swiftlint-static"]
                 .map { temporary.appendingPathComponent($0) }
@@ -426,6 +479,9 @@ struct Test: ParsableCommand {
             Release.self,
             TSan.self,
             ASan.self,
+            RequestPaths.self,
+            RequestPathsTSan.self,
+            RequestPathsASan.self,
             IntegrationPublicAPI.self,
             IntegrationGraphicsPreview.self,
             IntegrationFrameworkHost.self,
@@ -471,6 +527,30 @@ struct Test: ParsableCommand {
             try context.swift.runSwift(
                 ["test", "--sanitize=address", "--no-parallel"], repository: context.repository,
                 environment: ["ASAN_OPTIONS": "detect_leaks=0"])
+        }
+    }
+
+    struct RequestPaths: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "request-paths")
+        @Flag(name: .long) var verbose = false
+        func run() throws {
+            try runRequestPathTests(context: context(), sanitizer: .none)
+        }
+    }
+
+    struct RequestPathsTSan: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "request-paths-tsan")
+        @Flag(name: .long) var verbose = false
+        func run() throws {
+            try runRequestPathTests(context: context(), sanitizer: .thread)
+        }
+    }
+
+    struct RequestPathsASan: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "request-paths-asan")
+        @Flag(name: .long) var verbose = false
+        func run() throws {
+            try runRequestPathTests(context: context(), sanitizer: .address)
         }
     }
 
@@ -573,7 +653,8 @@ struct Smoke: ParsableCommand {
                 child.removeFirst()
             }
             if child.first == "swl" {
-                child[0] = try context.runner.executableURL(for: "swift").path
+                child[0] = try context.swift.swiftExecutable(
+                    environment: context.runner.environment)
                 child.insert(contentsOf: ["run", "swl"], at: 1)
             }
             try HeadlessWestonRunner(context: context).run(command: child)
@@ -716,16 +797,86 @@ private func runSmokeIntegration(context: ToolContext) throws {
             exitCode: ToolExitCode.environment)
     }
     try runIntegrationPackage(context: context, packagePath: Test.IntegrationPublicAPI.packagePath)
-    try context.swift.runSwift(
-        ["test", "--filter", "WindowControlPublicRequestTests"],
-        repository: context.repository,
-        environment: requestTestEnvironment()
-    )
-    try context.swift.runSwift(
-        ["test", "--filter", "WindowDragSourcePublicRequestTests"],
-        repository: context.repository,
-        environment: requestTestEnvironment()
-    )
+    try runRequestPathTests(context: context, sanitizer: .none)
+}
+
+private enum RequestPathSanitizer {
+    case none
+    case thread
+    case address
+}
+
+private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSanitizer) throws {
+    guard context.runner.environment["WAYLAND_DISPLAY"] != nil else {
+        throw ToolError(
+            "WAYLAND_DISPLAY is not set. Run request-path tests under a Wayland session.",
+            exitCode: ToolExitCode.environment)
+    }
+
+    var arguments = ["test"]
+    var environment = requestTestEnvironment()
+    switch sanitizer {
+    case .none:
+        break
+    case .thread:
+        let suppressions = context.repository.url("safety/tsan-suppressions.txt")
+        arguments.append(contentsOf: ["--sanitize=thread", "--no-parallel"])
+        environment["TSAN_OPTIONS"] = "detect_deadlocks=0:suppressions=\(suppressions.path)"
+    case .address:
+        arguments.append(contentsOf: ["--sanitize=address", "--no-parallel"])
+        environment["ASAN_OPTIONS"] = "detect_leaks=0"
+    }
+
+    for filter in ["WindowControlPublicRequestTests", "WindowDragSourcePublicRequestTests"] {
+        try context.swift.runSwift(
+            arguments + ["--filter", filter],
+            repository: context.repository,
+            environment: environment
+        )
+    }
+}
+
+private func runFrameworkHandoffExampleBuildMatrix(context: ToolContext) throws {
+    let buildRoot = try context.fileSystem.createTemporaryDirectory(
+        prefix: "swiftwayland-framework-handoff-examples")
+    defer { try? context.fileSystem.removeItem(buildRoot) }
+
+    for configuration in ["debug", "release"] {
+        for target in frameworkHandoffExampleTargets {
+            try context.swift.runSwift(
+                [
+                    "build",
+                    "--disable-index-store",
+                    "--build-path",
+                    buildRoot.appendingPathComponent(configuration).path,
+                    "-c",
+                    configuration,
+                    "--target",
+                    target,
+                ],
+                repository: context.repository)
+        }
+    }
+}
+
+private func runHeadlessSwl(context: ToolContext, arguments: [String]) throws {
+    let swiftPath = try context.swift.swiftExecutable(environment: context.runner.environment)
+    try HeadlessWestonRunner(context: context).run(command: [swiftPath, "run", "swl"] + arguments)
+}
+
+private func runHeadlessWaylandReleaseChecks(context: ToolContext) throws {
+    try runHeadlessSwl(context: context, arguments: ["smoke", "live"])
+    try runHeadlessSwl(context: context, arguments: ["smoke", "integration"])
+    try runHeadlessSwl(context: context, arguments: ["test", "request-paths"])
+    try runHeadlessSwl(context: context, arguments: ["test", "request-paths-tsan"])
+    try runHeadlessSwl(context: context, arguments: ["test", "request-paths-asan"])
+}
+
+private func runLiveWaylandReleaseChecks(context: ToolContext) throws {
+    try runSmokeLive(context: context)
+    try runSmokeIntegration(context: context)
+    try runRequestPathTests(context: context, sanitizer: .thread)
+    try runRequestPathTests(context: context, sanitizer: .address)
 }
 
 private func runCheap(context: ToolContext) throws {
@@ -775,30 +926,19 @@ private func runRelease(context: ToolContext) throws {
     try runCheckBase(context: context)
     try context.swift.runSwift(
         ["build", "--disable-index-store", "-c", "release"], repository: context.repository)
-    for target in [
-        "SwiftWaylandDemo", "GPUPreviewSmokeClient", "GraphicsPreviewManagedGPUClear",
-        "PointerCaptureSmoke", "CursorPolicySmoke",
-    ] {
-        try context.swift.runSwift(
-            ["build", "--disable-index-store", "-c", "release", "--target", target],
-            repository: context.repository)
-    }
+    try context.swift.runSwift(
+        ["build", "--disable-index-store", "-c", "release", "--target", "SwiftWaylandDemo"],
+        repository: context.repository)
+    try runFrameworkHandoffExampleBuildMatrix(context: context)
     try context.swift.runSwift(
         ["build", "--disable-index-store", "-c", "release", "--product", "swift-wayland-smoke"],
         repository: context.repository)
     try runReleaseTests(context: context)
     try VerificationChecks(context: context).verifyReleaseShimSymbols()
     if context.runner.environment["WAYLAND_DISPLAY"] != nil {
-        try runSmokeLive(context: context)
-        try runSmokeIntegration(context: context)
+        try runLiveWaylandReleaseChecks(context: context)
     } else if context.runner.canFind("weston") {
-        let swiftPath = try context.runner.executableURL(for: "swift").path
-        try HeadlessWestonRunner(context: context).run(command: [
-            swiftPath, "run", "swl", "smoke", "live",
-        ])
-        try HeadlessWestonRunner(context: context).run(command: [
-            swiftPath, "run", "swl", "smoke", "integration",
-        ])
+        try runHeadlessWaylandReleaseChecks(context: context)
     } else if context.runner.environment["CI"] == "true"
         || context.runner.environment["REQUIRE_WAYLAND_SMOKE"] == "1"
     {
@@ -818,4 +958,4 @@ private func requestTestEnvironment() -> [String: String] {
     ]
 }
 
-// swiftlint:enable attributes file_length let_var_whitespace type_name
+// swiftlint:enable attributes file_length function_body_length let_var_whitespace type_name
