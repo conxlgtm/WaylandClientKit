@@ -40,6 +40,10 @@ let package = Package(
         .library(name: "WaylandClient", targets: ["WaylandClient"]),
         .library(name: "WaylandGraphicsPreview", targets: ["WaylandGraphicsPreview"]),
         .executable(name: "swift-wayland-smoke", targets: ["SwiftWaylandSmoke"]),
+        .executable(name: "swl", targets: ["SwiftWaylandTool"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.6.0")
     ],
     targets: [
         .systemLibrary(
@@ -167,6 +171,18 @@ let package = Package(
         .target(
             name: "WaylandExampleSupport",
             swiftSettings: strictMemorySafetySwiftSettings
+        ),
+        .target(
+            name: "SwiftWaylandToolSupport",
+            swiftSettings: librarySwiftSettings
+        ),
+        .executableTarget(
+            name: "SwiftWaylandTool",
+            dependencies: [
+                "SwiftWaylandToolSupport",
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ],
+            swiftSettings: librarySwiftSettings
         ),
         .executableTarget(
             name: "SwiftWaylandDemo",
@@ -376,6 +392,44 @@ let package = Package(
             name: "WaylandExampleSupportTests",
             dependencies: ["WaylandExampleSupport"],
             swiftSettings: strictMemorySafetySwiftSettings
+        ),
+        .testTarget(
+            name: "SwiftWaylandToolTests",
+            dependencies: ["SwiftWaylandToolSupport"],
+            swiftSettings: librarySwiftSettings
+        ),
+        .plugin(
+            name: "SwlCheckPlugin",
+            capability: .command(
+                intent: .custom(verb: "swl-check", description: "Run SwiftWayland checks")
+            )
+        ),
+        .plugin(
+            name: "SwlReleaseCheckPlugin",
+            capability: .command(
+                intent: .custom(verb: "swl-release-check", description: "Run SwiftWayland release checks")
+            )
+        ),
+        .plugin(
+            name: "SwlGenerateProtocolsPlugin",
+            capability: .command(
+                intent: .custom(verb: "swl-generate-protocols", description: "Generate Wayland protocols"),
+                permissions: [
+                    .writeToPackageDirectory(reason: "Generate protocol artifacts")
+                ]
+            )
+        ),
+        .plugin(
+            name: "SwlVerifyGeneratedPlugin",
+            capability: .command(
+                intent: .custom(verb: "swl-verify-generated", description: "Verify generated protocols")
+            )
+        ),
+        .plugin(
+            name: "SwlBootstrapCheckPlugin",
+            capability: .command(
+                intent: .custom(verb: "swl-bootstrap-check", description: "Verify bootstrap dependencies")
+            )
         ),
     ],
     cLanguageStandard: .c17
