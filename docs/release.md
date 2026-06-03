@@ -34,6 +34,9 @@ Where the environment supports Swift sanitizers, also run:
 ```bash
 swift run swl test tsan
 swift run swl test asan
+swift run swl smoke headless -- swl test request-paths
+swift run swl smoke headless -- swl test request-paths-tsan
+swift run swl smoke headless -- swl test request-paths-asan
 swift run swl smoke headless -- swl smoke integration
 swift build
 swift test --filter WaylandThreadExecutorConcurrencyTests --no-parallel

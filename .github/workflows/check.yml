@@ -18,13 +18,16 @@ on:
   schedule:
     - cron: '17 8 * * 1'
 
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
     container:
       image: swift:6.3.2-noble
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install system dependencies
         run: |
           apt-get update
@@ -81,7 +84,7 @@ jobs:
     container:
       image: swift:6.3.2-noble
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install generation dependencies
         run: |
           apt-get update
@@ -100,7 +103,7 @@ jobs:
     container:
       image: swift:6.3.2-noble
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install build dependencies
         run: |
           apt-get update
@@ -131,24 +134,29 @@ jobs:
     container:
       image: swift:6.3.2-noble
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install sanitizer dependencies
         run: |
           apt-get update
           apt-get install -y \
             clang \
+            coreutils \
             git \
             libdrm-dev \
             libegl-dev \
             libgbm-dev \
             libgles-dev \
+            libwayland-bin \
             libwayland-dev \
             libxkbcommon-dev \
             pkg-config \
             ripgrep \
-            wayland-protocols
+            wayland-protocols \
+            weston
       - name: ThreadSanitizer tests
         run: swift run swl test tsan
+      - name: Headless request-path ThreadSanitizer tests
+        run: swift run swl smoke headless -- swl test request-paths-tsan
 
   sanitizer-asan:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
@@ -156,24 +164,29 @@ jobs:
     container:
       image: swift:6.3.2-noble
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install sanitizer dependencies
         run: |
           apt-get update
           apt-get install -y \
             clang \
+            coreutils \
             git \
             libdrm-dev \
             libegl-dev \
             libgbm-dev \
             libgles-dev \
+            libwayland-bin \
             libwayland-dev \
             libxkbcommon-dev \
             pkg-config \
             ripgrep \
-            wayland-protocols
+            wayland-protocols \
+            weston
       - name: AddressSanitizer tests
         run: swift run swl test asan
+      - name: Headless request-path AddressSanitizer tests
+        run: swift run swl smoke headless -- swl test request-paths-asan
 
   wayland-smoke:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
@@ -181,7 +194,7 @@ jobs:
     container:
       image: swift:6.3.2-noble
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install smoke dependencies
         run: |
           apt-get update
@@ -202,3 +215,5 @@ jobs:
         run: swift run swl smoke headless -- swl smoke live
       - name: Run headless integration checks
         run: swift run swl smoke headless -- swl smoke integration
+      - name: Run headless request-path checks
+        run: swift run swl smoke headless -- swl test request-paths
