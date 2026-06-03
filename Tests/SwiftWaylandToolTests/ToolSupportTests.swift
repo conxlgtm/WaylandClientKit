@@ -46,7 +46,8 @@ struct ToolSupportTests {
         }
         """.write(to: coverage, atomically: true, encoding: .utf8)
 
-        let summary = try CoverageSummarizer(repository: Repository(root: root)).summarize(explicitPath: nil)
+        let summary = try CoverageSummarizer(repository: Repository(root: root)).summarize(
+            explicitPath: nil)
         #expect(summary.contains("| `WaylandClient` | 80.00% | 50.00% |"))
     }
 
@@ -102,12 +103,16 @@ struct ToolSupportTests {
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("swiftwayland-tool-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        try "".write(to: root.appendingPathComponent("Package.swift"), atomically: true, encoding: .utf8)
-        try FileManager.default.createDirectory(at: root.appendingPathComponent("Sources"), withIntermediateDirectories: true)
-        try FileManager.default.createDirectory(at: root.appendingPathComponent("Tests"), withIntermediateDirectories: true)
-        try FileManager.default.createDirectory(at: root.appendingPathComponent("Examples"), withIntermediateDirectories: true)
-        try FileManager.default.createDirectory(at: root.appendingPathComponent("protocols"), withIntermediateDirectories: true)
+        try "".write(
+            to: root.appendingPathComponent("Package.swift"), atomically: true, encoding: .utf8)
+        try FileManager.default.createDirectory(
+            at: root.appendingPathComponent("Sources"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: root.appendingPathComponent("Tests"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: root.appendingPathComponent("Examples"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: root.appendingPathComponent("protocols"), withIntermediateDirectories: true)
         return root
     }
 }
-

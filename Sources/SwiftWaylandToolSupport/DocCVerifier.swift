@@ -23,7 +23,8 @@ public struct DocCVerifier {
             failures.append("Missing DocC catalog: Sources/WaylandClient/WaylandClient.docc")
         }
         if !fileSystem.exists(article) {
-            failures.append("Missing DocC article: Sources/WaylandClient/WaylandClient.docc/WaylandClient.md")
+            failures.append(
+                "Missing DocC article: Sources/WaylandClient/WaylandClient.docc/WaylandClient.md")
         }
         guard failures.isEmpty else {
             throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)
@@ -47,7 +48,8 @@ public struct DocCVerifier {
 
         for file in markdownFiles {
             let text = try fileSystem.readText(file)
-            let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+            let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(
+                String.init)
             for (index, line) in lines.enumerated() {
                 let range = NSRange(line.startIndex..<line.endIndex, in: line)
                 for match in regex.matches(in: line, range: range) {
@@ -56,7 +58,8 @@ public struct DocCVerifier {
                     let name = link.split(separator: "/").last.map(String.init) ?? link
                     if !symbols.contains(name) {
                         failures.append(
-                            "\(repository.relativePath(file)):\(index + 1): unresolved DocC symbol link: \(link)"
+                            "\(repository.relativePath(file)):\(index + 1): "
+                                + "unresolved DocC symbol link: \(link)"
                         )
                     }
                 }
@@ -95,4 +98,3 @@ public struct DocCVerifier {
         return titles
     }
 }
-

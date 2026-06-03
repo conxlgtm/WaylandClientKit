@@ -46,7 +46,7 @@ final class LivePrimarySelectionControllerBackend: PrimarySelectionControllerBac
 
     func adoptPrimarySelectionOffer(
         handle: RawPrimarySelectionOfferHandle,
-        id: DataOfferID,
+        id _: DataOfferID,
         onEvent: @escaping (RawPrimarySelectionOfferEvent) -> Void
     ) throws -> any PrimarySelectionOfferBinding {
         let globals = try connection.bindRequiredGlobals()

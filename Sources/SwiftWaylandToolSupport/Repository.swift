@@ -66,4 +66,3 @@ public struct Repository: Sendable {
             && fileSystem.exists(url.appendingPathComponent("protocols"))
     }
 }
-
