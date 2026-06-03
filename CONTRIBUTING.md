@@ -62,6 +62,16 @@ For a private headless Weston compositor, run:
 swift run swl smoke headless -- swl smoke integration
 ```
 
+SwiftPM command plugins wrap the same checks:
+
+```bash
+swift package swl-check
+swift package swl-release-check
+swift package swl-generate-protocols
+swift package swl-verify-generated
+swift package swl-bootstrap-check
+```
+
 See [Linux live Wayland testing](docs/live-wayland-testing.md) for the live
 test contract, package commands, and optional protocol skip policy.
 
