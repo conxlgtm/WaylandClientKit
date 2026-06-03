@@ -44,18 +44,42 @@ public struct ProcessRunner: Sendable {
 
         let stdout = Pipe()
         let stderr = Pipe()
+        let stdoutBuffer = ProcessOutputBuffer()
+        let stderrBuffer = ProcessOutputBuffer()
         process.standardOutput = stdout
         process.standardError = stderr
+        stdout.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            if data.isEmpty {
+                handle.readabilityHandler = nil
+            } else {
+                stdoutBuffer.append(data)
+            }
+        }
+        stderr.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            if data.isEmpty {
+                handle.readabilityHandler = nil
+            } else {
+                stderrBuffer.append(data)
+            }
+        }
+        defer {
+            stdout.fileHandleForReading.readabilityHandler = nil
+            stderr.fileHandleForReading.readabilityHandler = nil
+        }
 
         try process.run()
         process.waitUntilExit()
+        stdoutBuffer.append(stdout.fileHandleForReading.readDataToEndOfFile())
+        stderrBuffer.append(stderr.fileHandleForReading.readDataToEndOfFile())
 
         let result = ProcessResult(
             executable: executable,
             arguments: arguments,
             exitCode: process.terminationStatus,
-            stdout: String(data: stdout.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "",
-            stderr: String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            stdout: String(data: stdoutBuffer.data, encoding: .utf8) ?? "",
+            stderr: String(data: stderrBuffer.data, encoding: .utf8) ?? ""
         )
 
         if requireSuccess && result.exitCode != 0 {
@@ -109,3 +133,18 @@ public struct ProcessRunner: Sendable {
     }
 }
 
+private final class ProcessOutputBuffer: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage = Data()
+
+    var data: Data {
+        lock.withLock { storage }
+    }
+
+    func append(_ data: Data) {
+        guard !data.isEmpty else { return }
+        lock.withLock {
+            storage.append(data)
+        }
+    }
+}
