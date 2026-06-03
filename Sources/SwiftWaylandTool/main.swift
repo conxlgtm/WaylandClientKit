@@ -121,6 +121,7 @@ struct Protocols: ParsableCommand {
             Generate.self,
             VerifyGenerated.self,
             VerifyManifest.self,
+            NormalizeManifest.self,
         ]
     )
 
@@ -206,6 +207,20 @@ struct Protocols: ParsableCommand {
                 runner: context.runner,
                 diagnostics: context.diagnostics
             ).validateManifest()
+        }
+    }
+
+    struct NormalizeManifest: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "normalize-manifest", shouldDisplay: false)
+        @Flag(name: .long) var verbose = false
+        func run() throws {
+            let context = try context()
+            try ProtocolTooling(
+                repository: context.repository,
+                fileSystem: context.fileSystem,
+                runner: context.runner,
+                diagnostics: context.diagnostics
+            ).normalizeManifestMetadata()
         }
     }
 }

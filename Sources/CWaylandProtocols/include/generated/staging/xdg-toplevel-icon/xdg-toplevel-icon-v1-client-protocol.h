@@ -357,7 +357,7 @@ xdg_toplevel_icon_v1_destroy(struct xdg_toplevel_icon_v1 *xdg_toplevel_icon_v1)
  * fall back to using pixel buffer data instead.
  *
  * If this request is made after the icon has been assigned to a toplevel
- * via 'set_icon', a 'immutable' error must be raised.
+ * via 'set_icon', an 'immutable' error must be raised.
  *
  * [1]: https://specifications.freedesktop.org/icon-theme-spec/icon-theme-spec-latest.html
  */
@@ -394,7 +394,7 @@ xdg_toplevel_icon_v1_set_name(struct xdg_toplevel_icon_v1 *xdg_toplevel_icon_v1,
  * request is sent. The wl_buffer.release event is unused.
  *
  * If this request is made after the icon has been assigned to a toplevel
- * via 'set_icon', a 'immutable' error must be raised.
+ * via 'set_icon', an 'immutable' error must be raised.
  */
 static inline void
 xdg_toplevel_icon_v1_add_buffer(struct xdg_toplevel_icon_v1 *xdg_toplevel_icon_v1, struct wl_buffer *buffer, int32_t scale)

@@ -1,10 +1,10 @@
 import Foundation
 
-public struct ProtocolManifest: Decodable, Sendable {
+public struct ProtocolManifest: Codable, Sendable {
     public var protocols: [ProtocolEntry]
 }
 
-public struct ProtocolEntry: Decodable, Sendable, Equatable {
+public struct ProtocolEntry: Codable, Sendable, Equatable {
     public var name: String
     public var localPath: String
     public var upstreamProject: String
@@ -28,11 +28,19 @@ public struct ProtocolEntry: Decodable, Sendable, Equatable {
     }
 
     public var effectiveGeneratedHeaderPath: String {
-        generatedHeaderPath ?? "Sources/CWaylandProtocols/include/generated/\(generatedRelativeDirectory)/\(generatedBaseName)-client-protocol.h"
+        generatedHeaderPath ?? defaultGeneratedHeaderPath
     }
 
     public var effectiveGeneratedCodePath: String {
-        generatedCodePath ?? "Sources/CWaylandProtocols/generated/\(generatedRelativeDirectory)/\(generatedBaseName)-protocol.c"
+        generatedCodePath ?? defaultGeneratedCodePath
+    }
+
+    public var defaultGeneratedHeaderPath: String {
+        "Sources/CWaylandProtocols/include/generated/\(generatedRelativeDirectory)/\(generatedBaseName)-client-protocol.h"
+    }
+
+    public var defaultGeneratedCodePath: String {
+        "Sources/CWaylandProtocols/generated/\(generatedRelativeDirectory)/\(generatedBaseName)-protocol.c"
     }
 
     public var effectiveHeaderMode: String {
@@ -46,7 +54,7 @@ public struct ProtocolEntry: Decodable, Sendable, Equatable {
     public var generatedRelativeDirectory: String {
         let prefix = "protocols/upstream/"
         let path = localPath.hasPrefix(prefix) ? String(localPath.dropFirst(prefix.count)) : localPath
-        return URL(fileURLWithPath: path).deletingLastPathComponent().path
+        return path.split(separator: "/").dropLast().joined(separator: "/")
     }
 
     public var generatedBaseName: String {
@@ -54,7 +62,7 @@ public struct ProtocolEntry: Decodable, Sendable, Equatable {
     }
 }
 
-public struct SourceResolution: Decodable, Sendable, Equatable {
+public struct SourceResolution: Codable, Sendable, Equatable {
     public var strategy: String
     public var environmentOverride: String?
     public var pkgConfigPackage: String?
@@ -195,6 +203,21 @@ public struct ProtocolTooling {
             if !entry.localPath.hasPrefix("protocols/upstream/") {
                 failures.append("\(entry.name) localPath must be under protocols/upstream")
             }
+            if entry.sourceResolution == nil {
+                failures.append("\(entry.name) is missing sourceResolution")
+            }
+            if entry.generatedHeaderPath == nil {
+                failures.append("\(entry.name) is missing generatedHeaderPath")
+            }
+            if entry.generatedCodePath == nil {
+                failures.append("\(entry.name) is missing generatedCodePath")
+            }
+            if entry.scannerHeaderMode == nil {
+                failures.append("\(entry.name) is missing scannerHeaderMode")
+            }
+            if entry.scannerCodeMode == nil {
+                failures.append("\(entry.name) is missing scannerCodeMode")
+            }
             if !entry.effectiveGeneratedHeaderPath.hasPrefix("Sources/CWaylandProtocols/include/generated/") {
                 failures.append("\(entry.name) generated header path is outside generated include directory")
             }
@@ -226,6 +249,26 @@ public struct ProtocolTooling {
         diagnostics.success("protocol manifest metadata is complete")
     }
 
+    public func normalizeManifestMetadata() throws {
+        var manifest = try loadManifest()
+        manifest.protocols = manifest.protocols.map { entry in
+            var normalized = entry
+            normalized.sourceResolution = entry.effectiveSourceResolution
+            normalized.generatedHeaderPath = entry.defaultGeneratedHeaderPath
+            normalized.generatedCodePath = entry.defaultGeneratedCodePath
+            normalized.scannerHeaderMode = entry.effectiveHeaderMode
+            normalized.scannerCodeMode = entry.effectiveCodeMode
+            return normalized
+        }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        let data = try encoder.encode(manifest)
+        let text = String(decoding: data, as: UTF8.self) + "\n"
+        try fileSystem.writeText(text, to: repository.url("protocols/manifest.json"))
+        diagnostics.success("protocol manifest metadata normalized")
+    }
+
     public func resolvedSources() throws -> [(ProtocolEntry, URL?)] {
         try loadManifest().protocols.map { entry in
             (entry, try resolveSource(for: entry))
@@ -254,13 +297,15 @@ public struct ProtocolTooling {
             )
             let base = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
             if !base.isEmpty {
+                let normalizedBase = base.hasPrefix("//") ? String(base.dropFirst()) : base
                 candidates.append(contentsOf: source.relativeSourceCandidates.map {
-                    URL(fileURLWithPath: base).appendingPathComponent($0)
+                    URL(fileURLWithPath: normalizedBase).appendingPathComponent($0)
                 })
             }
         }
 
         candidates.append(contentsOf: source.absoluteFallbackCandidates.map { URL(fileURLWithPath: $0) })
+        candidates.append(repository.url(entry.localPath))
         return candidates.first { fileSystem.exists($0) }
     }
 
@@ -270,7 +315,9 @@ public struct ProtocolTooling {
                 throw ToolError("missing XML source for \(entry.name)", exitCode: ToolExitCode.environment)
             }
             let destination = repository.url(entry.localPath)
-            try fileSystem.copyItem(at: source, to: destination)
+            if source.standardizedFileURL != destination.standardizedFileURL {
+                try fileSystem.copyItem(at: source, to: destination)
+            }
             diagnostics.success("\(entry.name): \(source.path)")
         }
     }
@@ -393,4 +440,3 @@ public struct ProtocolTooling {
         })
     }
 }
-
