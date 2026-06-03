@@ -29,17 +29,6 @@ final class CallbackBox<Owner: AnyObject> {
         return try body(owner)
     }
 
-    func requireOwner(
-        _ message: @autoclosure () -> String =
-            "Wayland listener fired after Swift owner was released"
-    ) -> Owner {
-        guard let owner = storedOwner else {
-            preconditionFailure(message())
-        }
-
-        return owner
-    }
-
     /// Returns an unretained opaque pointer to this callback box.
     ///
     /// The caller must ensure this `CallbackBox` remains alive for the

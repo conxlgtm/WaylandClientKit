@@ -134,11 +134,6 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
         sourceDescriptorRecorder.descriptorIO
     }
 
-    @safe
-    func writeFileDescriptor(_ descriptor: Int32, bytes: UnsafeRawBufferPointer) throws -> Int {
-        try sourceDescriptorRecorder.writeFileDescriptor(descriptor, bytes: bytes)
-    }
-
     func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult {
         sourceDescriptorRecorder.closeFileDescriptor(descriptor)
     }
