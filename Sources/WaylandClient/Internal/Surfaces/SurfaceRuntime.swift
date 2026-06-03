@@ -271,10 +271,6 @@ extension SurfaceRuntime {
         }
     }
 
-    var surfaceRole: SurfaceRuntimeRole {
-        role
-    }
-
     var roleReadinessSnapshot: SurfaceRoleReadinessSnapshot {
         let hasRuntime: Bool
         let hasRoleResources: Bool
