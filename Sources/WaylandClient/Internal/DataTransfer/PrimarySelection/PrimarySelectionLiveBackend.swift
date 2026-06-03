@@ -67,7 +67,7 @@ final class LivePrimarySelectionControllerBackend: PrimarySelectionControllerBac
             throw error
         }
 
-        return LivePrimarySelectionOfferBinding(id: id, offer: offer, owner: owner)
+        return LivePrimarySelectionOfferBinding(offer: offer, owner: owner)
     }
 
     func createPrimarySelectionSource(
@@ -147,18 +147,14 @@ private final class LivePrimarySelectionDeviceBinding: PrimarySelectionDeviceBin
 }
 
 private final class LivePrimarySelectionOfferBinding: PrimarySelectionOfferBinding {
-    let id: DataOfferID
-
     private let offer: RawPrimarySelectionOffer
     private let owner: RawPrimarySelectionOfferOwner
     private var isDestroyed = false
 
     init(
-        id offerID: DataOfferID,
         offer rawOffer: RawPrimarySelectionOffer,
         owner listenerOwner: RawPrimarySelectionOfferOwner
     ) {
-        id = offerID
         offer = rawOffer
         owner = listenerOwner
     }

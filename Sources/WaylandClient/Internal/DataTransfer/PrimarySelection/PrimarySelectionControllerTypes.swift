@@ -6,8 +6,6 @@ package protocol PrimarySelectionDeviceBinding: AnyObject {
 }
 
 package protocol PrimarySelectionOfferBinding: AnyObject, DataTransferReceiveBinding {
-    var id: DataOfferID { get }
-
     func receive(mimeType: MIMEType, fd: Int32)
     func destroy()
 }
@@ -144,7 +142,6 @@ enum RuntimePrimarySelectionOffer {
 }
 
 struct RuntimePrimarySelectionSource {
-    let id: DataSourceID
     let binding: any PrimarySelectionSourceBinding
     let payloads: DataTransferSourcePayloadSet
     let snapshot: DataSourceSnapshot
@@ -162,7 +159,6 @@ struct RuntimePrimarySelectionSource {
             )
         }
 
-        id = sourceID
         binding = sourceBinding
         payloads = sourcePayloads
         snapshot = try DataSourceSnapshot(
