@@ -97,16 +97,6 @@ extension RawDisplayConnection: DataTransferGlobalProviding {
 }
 
 extension DisplaySession {
-    package func drainDataTransferDiagnosticsOnOwnerThread() -> [DataTransferDiagnostic] {
-        connection.preconditionIsOwnerThread()
-        collectDataTransferSourceWriteResults()
-        return pendingDataTransferDiagnostics.drain()
-    }
-
-    package func cancelSourceWrites(for events: [DataTransferEvent]) {
-        Self.cancelSourceWrites(for: events, using: dataTransferSourceWriter)
-    }
-
     package static func cancelSourceWrites(
         for events: [DataTransferEvent],
         using writer: ThreadedDataTransferSourceWriter

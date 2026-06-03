@@ -119,25 +119,6 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     @available(
         *,
         noasync,
-        message: "Read cursor state from the owner-thread Wayland loop."
-    )
-    package var pointerCursor: PointerCursor {
-        pointerCursorOnOwnerThread
-    }
-
-    @discardableResult
-    @available(
-        *,
-        noasync,
-        message: "Mutate cursor state from the owner-thread Wayland loop."
-    )
-    package func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {
-        try setPointerCursorOnOwnerThread(cursor)
-    }
-
-    @available(
-        *,
-        noasync,
         message: "Drain input from the owner-thread Wayland loop."
     )
     package func drainInputEvents() -> [InputEvent] {
@@ -162,20 +143,6 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     package func pumpEventsOnOwnerThread(timeoutMilliseconds: Int32 = -1) throws {
         connection.preconditionIsOwnerThread()
         try connection.pumpEvents(timeoutMilliseconds: timeoutMilliseconds)
-        try processPendingRawInputEvents()
-    }
-
-    package func pumpEventsOnOwnerThread(
-        timeoutMilliseconds: Int32,
-        wakeFileDescriptor: CInt,
-        drainWakeFileDescriptor: @escaping () -> Void
-    ) throws {
-        connection.preconditionIsOwnerThread()
-        try connection.pumpEvents(
-            timeoutMilliseconds: timeoutMilliseconds,
-            wakeFileDescriptor: wakeFileDescriptor,
-            drainWakeFileDescriptor: drainWakeFileDescriptor
-        )
         try processPendingRawInputEvents()
     }
 
@@ -346,13 +313,6 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         processPendingSessionInputEvents()
 
         return inputCoordinator.drainInputEvents()
-    }
-
-    package func drainDataTransferEventsOnOwnerThread() -> [DataTransferEvent] {
-        connection.preconditionIsOwnerThread()
-        let events = dataTransferEventQueue.drain()
-        cancelSourceWrites(for: events)
-        return events
     }
 
     package func drainDataTransferEventsAndDiagnosticsOnOwnerThread() -> DataTransferDrain {
