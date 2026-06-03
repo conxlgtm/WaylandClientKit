@@ -5,10 +5,9 @@ SwiftWayland is an experimental Linux Wayland client package. Keep changes small
 ## Environment
 
 Swift 6.3.2 or newer must already be installed.
-The bootstrap script verifies Swift and Linux system dependencies by default.
+`swift run swl bootstrap check` verifies Swift and Linux system dependencies.
 It does not install or switch Swift toolchains.
-It uses `scripts/dev/swift.sh` by default.
-Set `SWIFT_COMMAND=/path/to/swift` for custom toolchain resolution.
+Set `SWIFT_BIN=/path/to/swift` for custom toolchain resolution.
 
 CI currently validates dynamic glibc Linux on Ubuntu Noble with shared
 Wayland, XKB, and cursor libraries resolved through `pkg-config`. Package-manager
@@ -30,15 +29,14 @@ Core build requirements:
 - `wayland-cursor`
 - `xkbcommon`
 
-Install distro packages explicitly, or run the bootstrap installer mode for Debian/Ubuntu, Fedora/RHEL-like, Arch/Manjaro, openSUSE, Alpine, or Gentoo systems.
-For Nix/NixOS, use dry-run mode to print shell inputs and add them to a `nix shell`, flake, or `shell.nix`.
-Bootstrap install mode does not mutate Nix profiles or NixOS system configuration.
+Install distro packages explicitly, or print the package-manager command for Debian/Ubuntu, Fedora/RHEL-like, Arch/Manjaro, openSUSE, Alpine, or Gentoo systems.
+For Nix/NixOS, use `nix develop`.
+Bootstrap commands print installation guidance only; they do not mutate the machine.
 
 ```bash
-./scripts/dev/bootstrap-linux.sh --check
-./scripts/dev/bootstrap-linux.sh --dry-run
-./scripts/dev/bootstrap-linux.sh --dry-run --package-manager nix
-./scripts/dev/bootstrap-linux.sh --install
+swift run swl bootstrap check
+swift run swl bootstrap install-command --package-manager dnf
+swift run swl bootstrap install-command --package-manager nix
 ```
 
 ## Local Checks
@@ -46,22 +44,22 @@ Bootstrap install mode does not mutate Nix profiles or NixOS system configuratio
 Before opening a pull request, run:
 
 ```bash
-make check
+swift run swl ci check
 swift build -c release
 ```
 
 Under a real Wayland session, also run:
 
 ```bash
-./scripts/smoke/smoke-wayland.sh
-./scripts/smoke/integration-wayland.sh
+swift run swl smoke live
+swift run swl smoke integration
 swift run SwiftWaylandDemo
 ```
 
 For a private headless Weston compositor, run:
 
 ```bash
-make wayland-headless
+swift run swl smoke headless -- swl smoke integration
 ```
 
 See [Linux live Wayland testing](docs/live-wayland-testing.md) for the live
@@ -74,14 +72,14 @@ Protocol XML lives under `protocols/`. Generated C and header artifacts live und
 Regenerate only through:
 
 ```bash
-./scripts/dev/bootstrap-linux.sh --maintainer
-./scripts/protocols/generate.sh
+swift run swl bootstrap maintainer-check
+swift run swl protocols generate
 ```
 
 Verify generated outputs with:
 
 ```bash
-./scripts/protocols/verify-generated.sh
+swift run swl protocols verify-generated
 ```
 
 Do not edit generated files directly.
@@ -96,7 +94,7 @@ Protocol additions must update these together:
 - raw Swift wrappers,
 - public overlay docs when the protocol is surfaced publicly,
 - tests,
-- and generated/shim verification scripts.
+- and generated/shim verification checks.
 
 If a protocol cannot be covered end to end in one change, keep it out of the experimental baseline and add it to `docs/roadmap.md`.
 
@@ -106,7 +104,7 @@ Swift should call project-owned C shims, not generated inline protocol helpers d
 
 - `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
 - `Sources/CWaylandProtocols/shims/`
-- `scripts/shims/verify-shims.sh`
+- `swift run swl shims verify`
 - listener smoke tests where applicable.
 
 ## Public API

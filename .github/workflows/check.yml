@@ -36,17 +36,15 @@ jobs:
             libegl-dev \
             libgbm-dev \
             libgles-dev \
+            libwayland-bin \
             libwayland-dev \
             libxkbcommon-dev \
-            make \
             pkg-config \
             ripgrep \
             unzip \
             wayland-protocols
       - name: Install SwiftLint
-        run: |
-          ./scripts/dev/install-swiftlint.sh "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        run: swift run swl tools install-swiftlint --destination /usr/local/bin
       - name: Tool versions
         run: |
           swift --version
@@ -58,64 +56,24 @@ jobs:
           pkg-config --modversion xkbcommon
           command -v wayland-scanner
           swiftlint version
-      - name: Dogfood bootstrap script
+      - name: Bootstrap checks
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
         run: |
-          expect_bootstrap_failure() {
-            expected_message="$1"
-            shift
-
-            output="$("$@" 2>&1)" && {
-              echo "expected command to fail: $*"
-              exit 1
-            }
-
-            if ! printf '%s\n' "$output" | grep -F --quiet -- "$expected_message"; then
-              echo "expected error message: $expected_message"
-              echo "$output"
-              exit 1
-            fi
-          }
-
-          ./scripts/dev/bootstrap-linux.sh --check
-          ./scripts/dev/bootstrap-linux.sh --maintainer
-          ./scripts/dev/bootstrap-linux.sh --dry-run
-          ./scripts/dev/bootstrap-linux.sh --dry-run --package-manager emerge
-          ./scripts/dev/bootstrap-linux.sh --dry-run --package-manager nix
-
-          expect_bootstrap_failure \
-            "choose only one mode: --check, --install, or --dry-run" \
-            ./scripts/dev/bootstrap-linux.sh --install --dry-run
-          expect_bootstrap_failure \
-            "choose only one mode: --check, --install, or --dry-run" \
-            ./scripts/dev/bootstrap-linux.sh --check --install
-          expect_bootstrap_failure \
-            "--dry-run cannot be combined with --build" \
-            ./scripts/dev/bootstrap-linux.sh --dry-run --build
-          expect_bootstrap_failure \
-            "--dry-run cannot be combined with --maintainer" \
-            ./scripts/dev/bootstrap-linux.sh --dry-run --maintainer
-          expect_bootstrap_failure \
-            "STRICT_SWIFT must be 0 or 1" \
-            env STRICT_SWIFT=false ./scripts/dev/bootstrap-linux.sh --check
-          expect_bootstrap_failure \
-            "STRICT_SWIFT must be 0 or 1" \
-            env STRICT_SWIFT=2 ./scripts/dev/bootstrap-linux.sh --check
-          expect_bootstrap_failure \
-            "unsupported package manager: brew" \
-            ./scripts/dev/bootstrap-linux.sh --dry-run --package-manager brew
-          expect_bootstrap_failure \
-            "Nix support is shell-based" \
-            ./scripts/dev/bootstrap-linux.sh --install --package-manager nix
-      - name: Check
-        env:
-          FULL_CI: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
-        run: |
-          if [[ "$FULL_CI" == "true" ]]; then
-            make check
-          else
-            make cheap-effective-ci
-          fi
+          swift run swl bootstrap check
+          swift run swl bootstrap maintainer-check
+          swift run swl bootstrap install-command --package-manager apt-get
+          swift run swl bootstrap install-command --package-manager dnf
+          swift run swl bootstrap install-command --package-manager pacman
+          swift run swl bootstrap install-command --package-manager zypper
+          swift run swl bootstrap install-command --package-manager apk
+          swift run swl bootstrap install-command --package-manager emerge
+          swift run swl bootstrap install-command --package-manager nix
+      - name: Cheap check
+        if: ${{ github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || github.event.inputs.ci_mode != 'full') }}
+        run: swift run swl ci cheap
+      - name: Full check
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
+        run: swift run swl ci check
 
   generated-freshness:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
@@ -129,15 +87,12 @@ jobs:
           apt-get update
           apt-get install -y \
             git \
-            libdrm-dev \
-            libegl-dev \
-            libgbm-dev \
-            libgles-dev \
+            libwayland-bin \
             libwayland-dev \
             pkg-config \
             wayland-protocols
       - name: Verify generated artifacts
-        run: ./scripts/protocols/verify-generated.sh
+        run: swift run swl protocols verify-generated
 
   release-build:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
@@ -151,26 +106,24 @@ jobs:
           apt-get update
           apt-get install -y \
             clang \
+            curl \
             git \
             libdrm-dev \
             libegl-dev \
             libgbm-dev \
             libgles-dev \
+            libwayland-bin \
             libwayland-dev \
             libxkbcommon-dev \
-            make \
             pkg-config \
             ripgrep \
-            wayland-protocols
-      - name: Release build
-        run: |
-          ./scripts/dev/swift.sh build --disable-index-store -c release
-          ./scripts/dev/swift.sh build --disable-index-store -c release --target SwiftWaylandDemo
-          ./scripts/dev/swift.sh build --disable-index-store -c release --target GPUPreviewSmokeClient
-          ./scripts/dev/swift.sh build --disable-index-store -c release --product swift-wayland-smoke
-          ./scripts/ci/test-framework-handoff-examples.sh
-          make test-release
-          ./scripts/shims/verify-release-shim-symbols.sh
+            unzip \
+            wayland-protocols \
+            weston
+      - name: Install SwiftLint
+        run: swift run swl tools install-swiftlint --destination /usr/local/bin
+      - name: Release check
+        run: swift run swl ci release
 
   sanitizer-tsan:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
@@ -191,12 +144,11 @@ jobs:
             libgles-dev \
             libwayland-dev \
             libxkbcommon-dev \
-            make \
             pkg-config \
             ripgrep \
             wayland-protocols
       - name: ThreadSanitizer tests
-        run: make test-tsan
+        run: swift run swl test tsan
 
   sanitizer-asan:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
@@ -217,14 +169,11 @@ jobs:
             libgles-dev \
             libwayland-dev \
             libxkbcommon-dev \
-            make \
             pkg-config \
             ripgrep \
             wayland-protocols
       - name: AddressSanitizer tests
-        env:
-          ASAN_OPTIONS: detect_leaks=0
-        run: make test-asan
+        run: swift run swl test asan
 
   wayland-smoke:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
@@ -246,92 +195,10 @@ jobs:
             libgles-dev \
             libwayland-dev \
             libxkbcommon-dev \
-            make \
             pkg-config \
             wayland-protocols \
             weston
-      - name: Run headless Wayland checks
-        run: make wayland-headless
-
-  headless-wayland-request-tests:
-    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
-    runs-on: ubuntu-latest
-    container:
-      image: swift:6.3.2-noble
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install headless Wayland dependencies
-        run: |
-          apt-get update
-          apt-get install -y \
-            clang \
-            coreutils \
-            git \
-            libdrm-dev \
-            libegl-dev \
-            libgbm-dev \
-            libgles-dev \
-            libwayland-dev \
-            libxkbcommon-dev \
-            make \
-            pkg-config \
-            wayland-protocols \
-            weston
-      - name: Run headless request-path tests
-        run: make wayland-request-headless
-
-  headless-wayland-tsan-request-tests:
-    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
-    runs-on: ubuntu-latest
-    container:
-      image: swift:6.3.2-noble
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install headless Wayland dependencies
-        run: |
-          apt-get update
-          apt-get install -y \
-            clang \
-            coreutils \
-            git \
-            libdrm-dev \
-            libegl-dev \
-            libgbm-dev \
-            libgles-dev \
-            libwayland-dev \
-            libxkbcommon-dev \
-            make \
-            pkg-config \
-            wayland-protocols \
-            weston
-      - name: Run headless request-path tests under ThreadSanitizer
-        run: make wayland-request-headless-tsan
-
-  headless-wayland-asan-request-tests:
-    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
-    runs-on: ubuntu-latest
-    container:
-      image: swift:6.3.2-noble
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install headless Wayland dependencies
-        run: |
-          apt-get update
-          apt-get install -y \
-            clang \
-            coreutils \
-            git \
-            libdrm-dev \
-            libegl-dev \
-            libgbm-dev \
-            libgles-dev \
-            libwayland-dev \
-            libxkbcommon-dev \
-            make \
-            pkg-config \
-            wayland-protocols \
-            weston
-      - name: Run headless request-path tests under AddressSanitizer
-        env:
-          ASAN_OPTIONS: detect_leaks=0
-        run: make wayland-request-headless-asan
+      - name: Run headless smoke checks
+        run: swift run swl smoke headless -- swl smoke live
+      - name: Run headless integration checks
+        run: swift run swl smoke headless -- swl smoke integration

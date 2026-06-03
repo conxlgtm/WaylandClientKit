@@ -14,7 +14,7 @@ Vendored XML files:
 
 These files are committed.
 
-Do not edit generated files directly. Change the vendored XML or generation scripts, regenerate, and review the generated diff.
+Do not edit generated files directly. Change the vendored XML or protocol manifest metadata, regenerate, and review the generated diff.
 
 ## Generated Outputs
 
@@ -57,56 +57,56 @@ These files are not generated:
 Sync XML from the local system:
 
 ```bash
-./scripts/dev/bootstrap-linux.sh --maintainer
-./scripts/protocols/sync.sh
+swift run swl bootstrap maintainer-check
+swift run swl protocols sync
 ```
 
 Generate protocol artifacts from vendored XML:
 
 ```bash
-./scripts/protocols/generate.sh
+swift run swl protocols generate
 ```
 
 Verify that vendored XML and generated outputs are in sync:
 
 ```bash
-./scripts/protocols/verify-generated.sh
+swift run swl protocols verify-generated
 ```
 
 Verify that every manifest entry records tier, exposure, and test policy:
 
 ```bash
-./scripts/protocols/verify-manifest.py
+swift run swl protocols verify-manifest
 ```
 
 Run the full local gate:
 
 ```bash
-make check
+swift run swl ci check
 ```
 
 Verify the hand-written C shim declarations and implementations cover the
 currently-supported Swift surface:
 
 ```bash
-make verify-shims
+swift run swl shims verify
 ```
 
 Verify DocC symbol references:
 
 ```bash
-./scripts/ci/verify-docc-symbol-links.py
+swift run swl docc verify-symbol-links
 ```
 
-## Script Responsibilities
+## Command Responsibilities
 
-### `scripts/protocols/sync.sh`
+### `swift run swl protocols sync`
 
 Copies protocol XML from the local system.
 
-Default source resolution matches `scripts/dev/bootstrap-linux.sh --maintainer`.
-The scripts first check `pkg-config` package data directories, then standard
-system paths.
+Default source resolution matches `swift run swl bootstrap maintainer-check`.
+The command first checks `pkg-config` package data directories, then standard
+system paths, then the checked-in vendored XML.
 
 Core Wayland XML candidates:
 
@@ -151,10 +151,10 @@ Set `WAYLAND_CORE_XML_SOURCE`, `XDG_SHELL_XML_SOURCE`,
 `VIEWPORTER_XML_SOURCE`, or `FRACTIONAL_SCALE_XML_SOURCE` to force a specific
 source path.
 
-Run `scripts/dev/bootstrap-linux.sh --maintainer` first to verify the scanner,
+Run `swift run swl bootstrap maintainer-check` first to verify the scanner,
 `wayland-protocols` pkg-config module, and protocol XML inputs.
 
-### `scripts/protocols/generate.sh`
+### `swift run swl protocols generate`
 
 Reads:
 
@@ -170,7 +170,7 @@ Does not write:
 - `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
 - `Sources/CWaylandProtocols/shims/`
 
-### `scripts/protocols/verify-generated.sh`
+### `swift run swl protocols verify-generated`
 
 Checks diffs for:
 
@@ -180,9 +180,9 @@ Checks diffs for:
 
 Does not check shim files as generated output.
 
-### `scripts/shims/verify-shims.sh`
+### `swift run swl shims verify`
 
-Run with `./scripts/shims/verify-shims.sh`.
+Run with `swift run swl shims verify`.
 
 Checks the hand-written protocol and cursor shim headers and C files for the
 required exported symbols used by Swift. This is intentionally separate from
@@ -199,10 +199,10 @@ Shim files define the exported C surface imported by Swift.
 
 1. Add the protocol XML under `protocols/upstream/`.
 2. Update `protocols/manifest.json` if the protocol should be tracked there.
-3. Extend `scripts/protocols/generate.sh` to write the generated header and C file.
-4. Run `./scripts/protocols/generate.sh`.
+3. Update `protocols/manifest.json` with the generated header and C file paths.
+4. Run `swift run swl protocols generate`.
 5. Add project-owned shim declarations and implementations for the Swift-facing surface.
-6. Update `scripts/shims/verify-shims.sh` for required new shim symbols.
+6. Update `swift run swl shims verify` expectations for required new shim symbols.
 7. Add raw Swift wrappers and tests.
 8. Surface public overlay APIs only when the behavior is tested and documented.
-9. Run `make check`.
+9. Run `swift run swl ci check`.

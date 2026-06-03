@@ -240,9 +240,9 @@ Not supported in the current experimental baseline:
 ## Linux Dependencies
 
 Swift 6.3.2 or newer must already be installed.
-The bootstrap script verifies Swift through `scripts/dev/swift.sh` by default.
+`swift run swl bootstrap check` verifies Swift and Linux system dependencies.
 It does not install or switch toolchains.
-Set `SWIFT_COMMAND=/path/to/swift` for custom toolchain resolution.
+Set `SWIFT_BIN=/path/to/swift` for custom toolchain resolution.
 
 Current CI validates dynamic glibc Linux on Ubuntu Noble with shared libraries
 resolved through `pkg-config`. Musl, static Linux SDK builds, and static linking
@@ -272,17 +272,17 @@ Supported package-manager mappings:
 
 | Family | Packages |
 | --- | --- |
-| Debian/Ubuntu | `clang git libdrm-dev libegl-dev libgbm-dev libgles-dev libwayland-dev libxkbcommon-dev make pkg-config ripgrep wayland-protocols` |
-| Fedora/RHEL-like | `clang git libdrm-devel mesa-libEGL-devel mesa-libgbm-devel mesa-libGLES-devel wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
-| Arch/Manjaro | `clang git libdrm mesa wayland wayland-protocols libxkbcommon make pkgconf ripgrep` |
-| openSUSE | `clang git libdrm-devel Mesa-libEGL-devel libgbm-devel Mesa-libGLESv2-devel wayland-devel wayland-protocols-devel libxkbcommon-devel make pkgconf-pkg-config ripgrep` |
-| Alpine | `clang git libdrm-dev mesa-dev wayland-dev wayland-protocols libxkbcommon-dev make pkgconf ripgrep` |
-| Gentoo | `sys-devel/clang dev-vcs/git x11-libs/libdrm media-libs/mesa dev-libs/wayland dev-libs/wayland-protocols dev-util/wayland-scanner x11-libs/libxkbcommon dev-build/make virtual/pkgconfig sys-apps/ripgrep` |
-| Nix/NixOS | `nixpkgs#clang nixpkgs#git nixpkgs#libdrm nixpkgs#mesa nixpkgs#wayland nixpkgs#wayland-protocols nixpkgs#libxkbcommon nixpkgs#gnumake nixpkgs#pkg-config nixpkgs#ripgrep` |
+| Debian/Ubuntu | `clang git libdrm-dev libegl-dev libgbm-dev libgles-dev libwayland-bin libwayland-dev libxkbcommon-dev pkg-config ripgrep wayland-protocols` |
+| Fedora/RHEL-like | `clang git libdrm-devel mesa-libEGL-devel mesa-libgbm-devel mesa-libGLES-devel wayland-devel wayland-protocols-devel libxkbcommon-devel pkgconf-pkg-config ripgrep` |
+| Arch/Manjaro | `clang git libdrm mesa wayland wayland-protocols libxkbcommon pkgconf ripgrep` |
+| openSUSE | `clang git libdrm-devel Mesa-libEGL-devel libgbm-devel Mesa-libGLESv2-devel wayland-devel wayland-protocols-devel libxkbcommon-devel pkgconf-pkg-config ripgrep` |
+| Alpine | `clang git libdrm-dev mesa-dev wayland-dev wayland-protocols libxkbcommon-dev pkgconf ripgrep` |
+| Gentoo | `sys-devel/clang dev-vcs/git x11-libs/libdrm media-libs/mesa dev-libs/wayland dev-libs/wayland-protocols dev-util/wayland-scanner x11-libs/libxkbcommon virtual/pkgconfig sys-apps/ripgrep` |
+| Nix/NixOS | `nix develop` |
 
 Alpine package installation is mapped for Wayland dependencies, but Swift toolchain availability may require separate setup.
 The Alpine row is a dependency lookup aid, not a Musl support claim.
-Nix/NixOS support is shell/declarative: `./scripts/dev/bootstrap-linux.sh --dry-run --package-manager nix` prints a `nix shell` command, and `--install` intentionally does not mutate a Nix profile or NixOS system configuration.
+Nix/NixOS support is declarative through `flake.nix`; use `nix develop` for the project development shell.
 On openSUSE, Swift 6.3.2 SwiftPM may require a compatibility `libxml2.so.2`
 that the distro `libxml2-16` package does not provide. Project Swift wrappers
 load `$SWIFT_COMPAT_LIBS` when present, defaulting to
@@ -369,17 +369,16 @@ CWaylandClientSystem
 Verify or bootstrap a Linux environment:
 
 ```bash
-./scripts/dev/bootstrap-linux.sh --check
-./scripts/dev/bootstrap-linux.sh --dry-run
-./scripts/dev/bootstrap-linux.sh --dry-run --package-manager nix
-./scripts/dev/bootstrap-linux.sh --install
-./scripts/dev/bootstrap-linux.sh --build
+swift run swl bootstrap check
+swift run swl bootstrap install-command --package-manager dnf
+swift run swl bootstrap install-command --package-manager nix
+swift build
 ```
 
 Maintainers regenerating protocol artifacts should also run:
 
 ```bash
-./scripts/dev/bootstrap-linux.sh --maintainer
+swift run swl bootstrap maintainer-check
 ```
 
 Live Wayland smoke and public API integration checks are documented in
@@ -388,49 +387,49 @@ Live Wayland smoke and public API integration checks are documented in
 Run the headless Weston path with:
 
 ```bash
-make wayland-headless
+swift run swl smoke headless -- swl smoke integration
 ```
 
 Sync protocol XML into the repository:
 
 ```bash
-./scripts/protocols/sync.sh
+swift run swl protocols sync
 ```
 
 Regenerate protocol artifacts:
 
 ```bash
-./scripts/protocols/generate.sh
+swift run swl protocols generate
 ```
 
 Run local checks:
 
 ```bash
-make check
+swift run swl ci check
 ```
 
 Run the strict Swift concurrency build only:
 
 ```bash
-make strict-concurrency
+swift run swl ci check-base
 ```
 
 Generate a public API report before publishing checkpoint notes:
 
 ```bash
-./scripts/ci/dump-public-api.sh
+swift run swl api dump
 ```
 
 Run the unsafe-token allowlist check:
 
 ```bash
-make verify-unsafe-allowlist
+swift run swl safety verify-unsafe-allowlist
 ```
 
 Run the demo target:
 
 ```bash
-./scripts/dev/swift.sh run SwiftWaylandDemo
+swift run SwiftWaylandDemo
 ```
 
 The demo draws a small marker for pointer motion and prints basic pointer/keyboard/touch/seat events, including interpreted keyboard events when keymap interpretation is available.
@@ -440,23 +439,23 @@ It sets a normal pointer cursor when pointer focus enters the demo window.
 Run framework-facing examples as needed:
 
 ```bash
-./scripts/dev/swift.sh run ClientSideResizeChrome
-./scripts/dev/swift.sh run SerialActionsProbe
-./scripts/dev/swift.sh run TwoWindowFrameworkHost -- --auto-close --print-summary
-./scripts/dev/swift.sh run TwoWindowOrderStress -- --duration-seconds 3 --print-summary
-./scripts/dev/swift.sh run TextInputSmoke -- --auto-close --print-summary
-./scripts/dev/swift.sh run DataTransferSmoke -- --auto-close --print-summary
-./scripts/dev/swift.sh run PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
-./scripts/dev/swift.sh run XDGActivationSmoke
-./scripts/dev/swift.sh run PointerCaptureSmoke
-./scripts/dev/swift.sh run CursorPolicySmoke
-./scripts/dev/swift.sh run CustomCursorSmoke
-./scripts/dev/swift.sh run WindowIconSmoke
-./scripts/dev/swift.sh run IdleInhibitSmoke
-./scripts/dev/swift.sh run SystemBellSmoke
-./scripts/dev/swift.sh run SurfaceRegionSmoke
-./scripts/dev/swift.sh run DamageRegionSmoke
-./scripts/dev/swift.sh run SubsurfaceSmoke
+swift run ClientSideResizeChrome
+swift run SerialActionsProbe
+swift run TwoWindowFrameworkHost -- --auto-close --print-summary
+swift run TwoWindowOrderStress -- --duration-seconds 3 --print-summary
+swift run TextInputSmoke -- --auto-close --print-summary
+swift run DataTransferSmoke -- --auto-close --print-summary
+swift run PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
+swift run XDGActivationSmoke
+swift run PointerCaptureSmoke
+swift run CursorPolicySmoke
+swift run CustomCursorSmoke
+swift run WindowIconSmoke
+swift run IdleInhibitSmoke
+swift run SystemBellSmoke
+swift run SurfaceRegionSmoke
+swift run DamageRegionSmoke
+swift run SubsurfaceSmoke
 ```
 
 `ClientSideResizeChrome` demonstrates edge hit testing, resize cursors, and
@@ -483,7 +482,7 @@ QA and record new live evidence in [Compositor Matrix](docs/compositor-matrix.md
 Run the graphics preview smoke client:
 
 ```bash
-./scripts/dev/swift.sh run GPUPreviewSmokeClient
+swift run GPUPreviewSmokeClient
 ```
 
 The graphics preview client prints a pasteable runtime-path report, creates a
@@ -495,7 +494,7 @@ managed GPU submission is unavailable.
 Run the managed GPU clear preview example:
 
 ```bash
-./scripts/dev/swift.sh run GraphicsPreviewManagedGPUClear
+swift run GraphicsPreviewManagedGPUClear
 ```
 
 This example requests managed GPU backing with software fallback allowed,
@@ -504,19 +503,19 @@ submits one clear frame, prints the selected runtime path, and closes cleanly.
 Run the noninteractive Wayland smoke check under a real Wayland session:
 
 ```bash
-./scripts/smoke/smoke-wayland.sh
+swift run swl smoke live
 ```
 
 Run public API integration tests under a real Wayland session:
 
 ```bash
-./scripts/smoke/integration-wayland.sh
+swift run swl smoke integration
 ```
 
 Or run the executable through the repository Swift wrapper:
 
 ```bash
-./scripts/dev/swift.sh run swift-wayland-smoke
+swift run swift-wayland-smoke
 ```
 
 ## Documents

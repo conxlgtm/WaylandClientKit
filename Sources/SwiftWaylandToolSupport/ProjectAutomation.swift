@@ -270,9 +270,7 @@ public struct VerificationChecks {
 
     public func verifyUnsafeAllowlist() throws {
         let allowlistURL = context.repository.url("safety/unsafe-token-allowlist.tsv")
-        let fallbackAllowlistURL = context.repository.url("scripts/safety/unsafe-token-allowlist.tsv")
-        let activeAllowlist = context.fileSystem.exists(allowlistURL) ? allowlistURL : fallbackAllowlistURL
-        let allowlist = try UnsafeAllowlist.parse(context.fileSystem.readText(activeAllowlist))
+        let allowlist = try UnsafeAllowlist.parse(context.fileSystem.readText(allowlistURL))
         let pattern = #"@unchecked\s+Sendable|UnsafeMutableRawBufferPointer|UnsafeMutableBufferPointer|UnsafeRawBufferPointer|UnsafeBufferPointer|UnsafeMutableRawPointer|UnsafeMutablePointer|UnsafeRawPointer|UnsafePointer|OpaquePointer|Unmanaged|unsafeBitCast|withUnsafeCurrentTask|nonisolated\(unsafe\)|unowned\(unsafe\)|pthread_[A-Za-z0-9_]+|eventfd|ppoll\(|poll\(|\bwl_display_dispatch\b|\bwl_display_dispatch_pending\b|\bwl_display_prepare_read\b|wl_proxy_add_listener|\bwl_proxy_get_queue\b|\bwl_proxy_set_queue\b|\bwl_proxy_create_wrapper\b|\bwl_proxy_wrapper_destroy\b|swl_proxy_get_queue_raw|UnsafeDefaultQueueEventLoop|EventLoop\.pumpOnce\(display:"#
         let regex = try NSRegularExpression(pattern: pattern)
         var failures: [String] = []
@@ -659,4 +657,3 @@ public struct HeadlessWestonRunner {
         context.diagnostics.error("----- \(label) -----\n\(text)\n---------------------")
     }
 }
-
