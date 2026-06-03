@@ -13,10 +13,6 @@ package struct DisplayResourceTable<ID: Hashable & Sendable, Resource> {
         Array(resourcesByID.keys)
     }
 
-    package var values: [Resource] {
-        Array(resourcesByID.values)
-    }
-
     package var isEmpty: Bool {
         resourcesByID.isEmpty
     }
