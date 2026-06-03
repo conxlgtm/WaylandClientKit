@@ -1,5 +1,5 @@
 # SwiftLint 0.61+.
-# Keep this strict: `make lint` runs SwiftLint with `--strict`, so warnings fail.
+# Keep this strict: `swift run swl lint` runs SwiftLint with `--strict`, so warnings fail.
 
 included:
   - Package.swift
