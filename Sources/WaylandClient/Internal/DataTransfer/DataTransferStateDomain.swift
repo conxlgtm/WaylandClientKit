@@ -78,10 +78,6 @@ package enum DragSelectedAction: Equatable, Sendable {
         return action
     }
 
-    package var wasReceived: Bool {
-        action != nil
-    }
-
     package func isFinishable(finalPreferredAction: DragAction?) -> Bool {
         switch self {
         case .notReceived:
@@ -193,17 +189,7 @@ package struct DataSourceSnapshot: Equatable, Sendable {
     }
 }
 
-package struct NonEmptyMIMETypeList: Equatable, Sendable {
-    package let values: [MIMEType]
-
-    package init(
-        _ mimeTypes: [MIMEType],
-        emptyError: DataTransferError
-    ) throws {
-        try Self.validate(mimeTypes, emptyError: emptyError)
-        values = mimeTypes
-    }
-
+package enum NonEmptyMIMETypeList {
     package static func validate(
         _ mimeTypes: [MIMEType],
         emptyError: DataTransferError

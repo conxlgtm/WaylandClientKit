@@ -44,7 +44,6 @@ final class RecordingPrimarySelectionBackend: PrimarySelectionControllerBackend 
     ) throws -> any PrimarySelectionDeviceBinding {
         boundSeatIDs.append(seatID)
         let binding = RecordingPrimarySelectionDeviceBinding(
-            seatID: seatID,
             onEvent: onEvent
         )
         bindings[seatID] = binding
@@ -118,17 +117,14 @@ final class RecordingPrimarySelectionDeviceBinding: PrimarySelectionDeviceBindin
         let serial: InputSerial
     }
 
-    let seatID: SeatID
     var releaseCount = 0
     var selections: [Selection] = []
 
     private let onEvent: (RawPrimarySelectionDeviceEvent) -> Void
 
     init(
-        seatID bindingSeatID: SeatID,
         onEvent eventHandler: @escaping (RawPrimarySelectionDeviceEvent) -> Void
     ) {
-        seatID = bindingSeatID
         onEvent = eventHandler
     }
 

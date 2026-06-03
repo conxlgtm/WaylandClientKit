@@ -1,8 +1,6 @@
 import WaylandRaw
 
 package protocol PrimarySelectionDeviceBinding: AnyObject {
-    var seatID: SeatID { get }
-
     func setSelection(source: (any PrimarySelectionSourceBinding)?, serial: InputSerial)
     func release()
 }

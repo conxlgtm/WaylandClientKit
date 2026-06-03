@@ -1,7 +1,6 @@
 import WaylandRaw
 
 package protocol DataTransferDeviceBinding: AnyObject {
-    var seatID: SeatID { get }
     var protocolVersion: RawVersion { get }
 
     func setSelection(source: (any DataTransferSourceBinding)?, serial: InputSerial)
