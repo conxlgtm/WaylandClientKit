@@ -749,6 +749,7 @@ public struct HeadlessWestonRunner {
         guard command.isEmpty == false else {
             throw ToolError("headless smoke requires a child command", exitCode: ToolExitCode.usage)
         }
+        let childCommand = try swiftPMCommandIfNeeded(command)
         _ = try context.runner.executableURL(for: "weston")
         let runtime = try context.fileSystem.createTemporaryDirectory(
             prefix: "swlrt")
@@ -796,7 +797,7 @@ public struct HeadlessWestonRunner {
         do {
             try waitForSocket(runtime.appendingPathComponent(socket), process: weston)
             try runChild(
-                command: command,
+                command: childCommand,
                 environment: env,
                 timeoutSeconds: timeoutSeconds,
                 logURL: childLog)
@@ -810,6 +811,14 @@ public struct HeadlessWestonRunner {
             printFailureLog(childLog, label: "headless child output")
             throw error
         }
+    }
+
+    private func swiftPMCommandIfNeeded(_ command: [String]) throws -> [String] {
+        guard command.first == "swl" else {
+            return command
+        }
+        let swift = try context.swift.swiftExecutable(environment: context.runner.environment)
+        return [swift, "run", "swl"] + Array(command.dropFirst())
     }
 
     private func waitForSocket(_ socket: URL, process: Process) throws {

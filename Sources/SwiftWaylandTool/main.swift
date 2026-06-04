@@ -652,11 +652,6 @@ struct Smoke: ParsableCommand {
             if child.first == "--" {
                 child.removeFirst()
             }
-            if child.first == "swl" {
-                child[0] = try context.swift.swiftExecutable(
-                    environment: context.runner.environment)
-                child.insert(contentsOf: ["run", "swl"], at: 1)
-            }
             try HeadlessWestonRunner(context: context).run(command: child)
         }
     }
@@ -740,7 +735,24 @@ private func runDocsVerify(context: ToolContext) throws {
     guard failures.isEmpty else {
         throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)
     }
-    context.diagnostics.success("documentation files are present")
+    let documentationFiles = try markdownDocumentationFiles(context: context)
+    try DocumentationLinkVerifier(
+        repository: context.repository,
+        fileSystem: context.fileSystem
+    ).verify(files: documentationFiles)
+    context.diagnostics.success("documentation files and local links are valid")
+}
+
+private func markdownDocumentationFiles(context: ToolContext) throws -> [URL] {
+    let roots = [
+        context.repository.url("README.md"),
+        context.repository.url("CONTRIBUTING.md"),
+    ]
+    let docs = try context.fileSystem.walk(
+        context.repository.url("docs"),
+        includingDirectories: false
+    ).filter { $0.pathExtension == "md" }
+    return (roots + docs).sorted { $0.path < $1.path }
 }
 
 private func runDoccVerify(context: ToolContext) throws {
