@@ -51,6 +51,12 @@ public struct Repository: Sendable {
         return path
     }
 
+    public func contains(_ url: URL) -> Bool {
+        let rootPath = root.path
+        let path = url.standardizedFileURL.path
+        return path == rootPath || path.hasPrefix(rootPath + "/")
+    }
+
     private static func validateRoot(_ root: URL, fileSystem: FileSystem) throws {
         guard isRoot(root, fileSystem: fileSystem) else {
             throw ToolError(
