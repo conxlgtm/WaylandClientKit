@@ -59,6 +59,28 @@ struct ToolSupportTests {
     }
 
     @Test
+    func swiftToolchainBuildRootUsesConfiguredScratchPath() throws {
+        let root = try temporaryRepository()
+        let scratch = root.appendingPathComponent(".scratch")
+        let toolchain = SwiftToolchain(
+            runner: ProcessRunner(
+                environment: ["SWIFT_WAYLAND_SWIFTPM_SCRATCH": scratch.path]))
+
+        #expect(toolchain.swiftPMBuildRoot(repository: Repository(root: root)).path == scratch.path)
+    }
+
+    @Test
+    func processRunnerRestoresCurrentDirectoryAfterWorkingDirectoryRun() throws {
+        let root = try temporaryRepository()
+        let originalDirectory = FileManager.default.currentDirectoryPath
+
+        let result = try ProcessRunner().run("/bin/pwd", [], workingDirectory: root)
+
+        #expect(result.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == root.path)
+        #expect(FileManager.default.currentDirectoryPath == originalDirectory)
+    }
+
+    @Test
     func protocolManifestValidationRejectsDuplicateNames() throws {
         let root = try temporaryRepository()
         let manifest = root.appendingPathComponent("protocols/manifest.json")

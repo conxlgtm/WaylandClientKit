@@ -460,8 +460,9 @@ public struct VerificationChecks {
             ["build", "--disable-index-store", "-c", "release", "--target", "CGBMShims"],
             repository: context.repository)
         _ = try context.runner.executableURL(for: "nm")
+        let buildRoot = context.swift.swiftPMBuildRoot(repository: context.repository)
         let objects = try context.fileSystem.walk(
-            context.repository.url(".build"), includingDirectories: false
+            buildRoot, includingDirectories: false
         )
         .filter { url in
             url.pathExtension == "o"
