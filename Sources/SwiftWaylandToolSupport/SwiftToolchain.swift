@@ -70,13 +70,21 @@ public struct SwiftToolchain: Sendable {
         return result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    public func swiftPMBuildRoot(
+        repository: Repository,
+        environment overrides: [String: String] = [:]
+    ) -> URL {
+        let environment = swiftRuntimeEnvironment(overrides)
+        guard let scratchPath = swiftPMScratchPath(environment: environment) else {
+            return repository.url(".build")
+        }
+        return URL(fileURLWithPath: scratchPath)
+    }
+
     private func swiftPMArguments(_ arguments: [String], environment: [String: String]) -> [String]
     {
         guard
-            let scratchPath =
-                environment["SWIFT_WAYLAND_SWIFTPM_SCRATCH"]
-                ?? runner.environment["SWIFT_WAYLAND_SWIFTPM_SCRATCH"],
-            !scratchPath.isEmpty,
+            let scratchPath = swiftPMScratchPath(environment: environment),
             !arguments.contains("--scratch-path"),
             let command = arguments.first,
             ["build", "package", "run", "test"].contains(command)
@@ -86,5 +94,15 @@ public struct SwiftToolchain: Sendable {
         var scratchArguments = arguments
         scratchArguments.insert(contentsOf: ["--scratch-path", scratchPath], at: 1)
         return scratchArguments
+    }
+
+    private func swiftPMScratchPath(environment: [String: String]) -> String? {
+        let scratchPath =
+            environment["SWIFT_WAYLAND_SWIFTPM_SCRATCH"]
+            ?? runner.environment["SWIFT_WAYLAND_SWIFTPM_SCRATCH"]
+        guard let scratchPath, !scratchPath.isEmpty else {
+            return nil
+        }
+        return scratchPath
     }
 }

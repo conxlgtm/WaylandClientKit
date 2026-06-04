@@ -880,6 +880,7 @@ private func runLiveWaylandReleaseChecks(context: ToolContext) throws {
 }
 
 private func runCheap(context: ToolContext) throws {
+    try runLint(context: context)
     try ProtocolTooling(
         repository: context.repository, runner: context.runner, diagnostics: context.diagnostics
     ).verifyGenerated()
@@ -892,7 +893,6 @@ private func runCheap(context: ToolContext) throws {
 }
 
 private func runCheckBase(context: ToolContext) throws {
-    try runLint(context: context)
     try runCheap(context: context)
     try runDocsVerify(context: context)
     try runDoccVerify(context: context)

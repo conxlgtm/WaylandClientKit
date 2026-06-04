@@ -5,7 +5,7 @@ import Foundation
 #endif
 
 // POSIX spawn setup is necessarily dense because argv/envp lifetime and fd actions stay together.
-// swiftlint:disable function_body_length
+// swiftlint:disable function_body_length type_body_length
 
 public struct ProcessResult: Sendable, Equatable {
     public let executable: String
@@ -22,6 +22,10 @@ public struct ProcessResult: Sendable, Equatable {
 public struct ProcessRunner: Sendable {
     public var environment: [String: String]
     public var diagnostics: Diagnostics
+
+    #if os(Linux)
+        private static let currentDirectorySpawnLock = NSLock()
+    #endif
 
     public init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
@@ -174,29 +178,43 @@ public struct ProcessRunner: Sendable {
             posix_spawn_file_actions_adddup2(&actions, stdoutFD, STDOUT_FILENO)
             posix_spawn_file_actions_adddup2(&actions, stderrFD, STDERR_FILENO)
 
-            let originalDirectory = FileManager.default.currentDirectoryPath
-            if let workingDirectory {
-                guard FileManager.default.changeCurrentDirectoryPath(workingDirectory.path) else {
-                    throw ToolError(
-                        "failed to change directory to \(workingDirectory.path)",
-                        exitCode: ToolExitCode.environment)
-                }
-            }
-            defer {
-                if workingDirectory != nil {
-                    _ = FileManager.default.changeCurrentDirectoryPath(originalDirectory)
-                }
-            }
-
-            let merged = mergedEnvironment(overrides)
-            let environmentStrings = merged.map { "\($0.key)=\($0.value)" }.sorted()
+            let spawnStatus: Int32
             var processID = pid_t()
-            let spawnStatus = try withCStringArray([executablePath] + arguments) { argv in
-                try withCStringArray(environmentStrings) { environment in
-                    executablePath.withCString { path in
-                        posix_spawn(&processID, path, &actions, nil, argv, environment)
+            Self.currentDirectorySpawnLock.lock()
+            let originalDirectory = FileManager.default.currentDirectoryPath
+            var changedDirectory = false
+            do {
+                if let workingDirectory {
+                    guard FileManager.default.changeCurrentDirectoryPath(workingDirectory.path)
+                    else {
+                        throw ToolError(
+                            "failed to change directory to \(workingDirectory.path)",
+                            exitCode: ToolExitCode.environment)
+                    }
+                    changedDirectory = true
+                }
+
+                let merged = mergedEnvironment(overrides)
+                let environmentStrings = merged.map { "\($0.key)=\($0.value)" }.sorted()
+                spawnStatus = try withCStringArray([executablePath] + arguments) { argv in
+                    try withCStringArray(environmentStrings) { environment in
+                        executablePath.withCString { path in
+                            posix_spawn(&processID, path, &actions, nil, argv, environment)
+                        }
                     }
                 }
+
+                if changedDirectory {
+                    _ = FileManager.default.changeCurrentDirectoryPath(originalDirectory)
+                    changedDirectory = false
+                }
+                Self.currentDirectorySpawnLock.unlock()
+            } catch {
+                if changedDirectory {
+                    _ = FileManager.default.changeCurrentDirectoryPath(originalDirectory)
+                }
+                Self.currentDirectorySpawnLock.unlock()
+                throw error
             }
             guard spawnStatus == 0 else {
                 throw ToolError(
@@ -289,4 +307,4 @@ public struct ProcessRunner: Sendable {
     #endif
 }
 
-// swiftlint:enable function_body_length
+// swiftlint:enable function_body_length type_body_length
