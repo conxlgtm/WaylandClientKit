@@ -632,7 +632,7 @@ public struct ProtocolTooling {
                 return nil
             }
             return value
-        }.compactMap { $0 }
+        }.compactMap(\.self)
 
         while normalized.last?.isEmpty == true {
             normalized.removeLast()
