@@ -123,7 +123,7 @@ struct Tools: ParsableCommand {
             }
 
             let temporary = try context.fileSystem.createTemporaryDirectory(prefix: "swiftlint")
-            defer { try? context.fileSystem.removeItem(temporary) }
+            defer { ignoreCleanupError { try context.fileSystem.removeItem(temporary) } }
             let archive = temporary.appendingPathComponent("swiftlint.zip")
             let url =
                 "https://github.com/realm/SwiftLint/releases/download/\(version)/swiftlint_linux_\(archiveArchitecture).zip"
@@ -711,6 +711,14 @@ private func runLint(context: ToolContext) throws {
     try resolver.runSwiftLint()
 }
 
+private func ignoreCleanupError(_ operation: () throws -> Void) {
+    do {
+        try operation()
+    } catch {
+        // Cleanup best-effort only.
+    }
+}
+
 private func runDocsVerify(context: ToolContext) throws {
     let required = [
         "README.md",
@@ -765,16 +773,21 @@ private func runReleaseTests(context: ToolContext) throws {
         ["test", "-c", "release", "--no-parallel"], repository: context.repository)
 }
 
-private func runIntegrationPackage(context: ToolContext, packagePath: String) throws {
+private func runIntegrationPackage(
+    context: ToolContext,
+    packagePath: String,
+    environment: [String: String] = [:]
+) throws {
     let scratch = try context.fileSystem.createTemporaryDirectory(
         prefix: "swiftwayland-integration")
-    defer { try? context.fileSystem.removeItem(scratch) }
+    defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
     try context.swift.runSwift(
         [
             "test", "--package-path", context.repository.url(packagePath).path, "--scratch-path",
             scratch.path,
         ],
-        repository: context.repository
+        repository: context.repository,
+        environment: environment
     )
 }
 
@@ -796,7 +809,10 @@ private func runSmokeIntegration(context: ToolContext) throws {
             "WAYLAND_DISPLAY is not set. Run public integration tests under a Wayland session.",
             exitCode: ToolExitCode.environment)
     }
-    try runIntegrationPackage(context: context, packagePath: Test.IntegrationPublicAPI.packagePath)
+    try runIntegrationPackage(
+        context: context,
+        packagePath: Test.IntegrationPublicAPI.packagePath,
+        environment: ["SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS": "1"])
     try runRequestPathTests(context: context, sanitizer: .none)
 }
 
@@ -839,7 +855,7 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
 private func runFrameworkHandoffExampleBuildMatrix(context: ToolContext) throws {
     let buildRoot = try context.fileSystem.createTemporaryDirectory(
         prefix: "swiftwayland-framework-handoff-examples")
-    defer { try? context.fileSystem.removeItem(buildRoot) }
+    defer { ignoreCleanupError { try context.fileSystem.removeItem(buildRoot) } }
 
     for configuration in ["debug", "release"] {
         for target in frameworkHandoffExampleTargets {

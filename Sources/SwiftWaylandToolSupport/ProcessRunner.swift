@@ -62,7 +62,7 @@ public struct ProcessRunner: Sendable {
             process.environment = mergedEnvironment(overrides)
 
             let outputDirectory = try temporaryOutputDirectory()
-            defer { try? FileManager.default.removeItem(at: outputDirectory) }
+            defer { ignoreCleanupError { try FileManager.default.removeItem(at: outputDirectory) } }
             let stdoutURL = outputDirectory.appendingPathComponent("stdout")
             let stderrURL = outputDirectory.appendingPathComponent("stderr")
             _ = FileManager.default.createFile(atPath: stdoutURL.path, contents: nil)
@@ -70,8 +70,8 @@ public struct ProcessRunner: Sendable {
             let stdout = try FileHandle(forWritingTo: stdoutURL)
             let stderr = try FileHandle(forWritingTo: stderrURL)
             defer {
-                try? stdout.close()
-                try? stderr.close()
+                ignoreCleanupError { try stdout.close() }
+                ignoreCleanupError { try stderr.close() }
             }
             process.standardOutput = stdout
             process.standardError = stderr
@@ -127,7 +127,12 @@ public struct ProcessRunner: Sendable {
     }
 
     public func canFind(_ executable: String) -> Bool {
-        (try? executableURL(for: executable)) != nil
+        do {
+            _ = try executableURL(for: executable)
+            return true
+        } catch {
+            return false
+        }
     }
 
     private func mergedEnvironment(_ overrides: [String: String]) -> [String: String] {
@@ -161,7 +166,7 @@ public struct ProcessRunner: Sendable {
         ) throws -> ProcessResult {
             let executablePath = try executableURL(for: executable).path
             let outputDirectory = try temporaryOutputDirectory()
-            defer { try? FileManager.default.removeItem(at: outputDirectory) }
+            defer { ignoreCleanupError { try FileManager.default.removeItem(at: outputDirectory) } }
 
             let stdoutURL = outputDirectory.appendingPathComponent("stdout")
             let stderrURL = outputDirectory.appendingPathComponent("stderr")
@@ -305,6 +310,14 @@ public struct ProcessRunner: Sendable {
             }
         }
     #endif
+
+    private func ignoreCleanupError(_ operation: () throws -> Void) {
+        do {
+            try operation()
+        } catch {
+            // Cleanup best-effort only.
+        }
+    }
 }
 
 // swiftlint:enable function_body_length type_body_length

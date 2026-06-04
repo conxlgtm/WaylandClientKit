@@ -73,15 +73,18 @@ public struct CoverageSummarizer {
         let candidates = try fileSystem.walk(build, includingDirectories: false)
             .filter { $0.path.hasSuffix("/debug/codecov/SwiftWayland.json") }
             .sorted { lhs, rhs in
-                let lhsDate =
-                    (try? lhs.resourceValues(forKeys: [.contentModificationDateKey])
-                        .contentModificationDate) ?? .distantPast
-                let rhsDate =
-                    (try? rhs.resourceValues(forKeys: [.contentModificationDateKey])
-                        .contentModificationDate) ?? .distantPast
-                return lhsDate > rhsDate
+                modificationDate(lhs) > modificationDate(rhs)
             }
         return candidates.first
+    }
+
+    private func modificationDate(_ url: URL) -> Date {
+        do {
+            return try url.resourceValues(forKeys: [.contentModificationDateKey])
+                .contentModificationDate ?? .distantPast
+        } catch {
+            return .distantPast
+        }
     }
 
     private func markdown(for modules: [String: CoverageAggregate]) -> String {
