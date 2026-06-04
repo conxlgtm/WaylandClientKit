@@ -33,12 +33,7 @@ public struct DocCVerifier {
 
     public func verifySymbolLinks() throws {
         try verifyCatalogExists()
-        guard let graph = try findSymbolGraph() else {
-            throw ToolError(
-                "Missing WaylandClient symbol graph under .build/*/symbolgraph",
-                exitCode: ToolExitCode.data
-            )
-        }
+        let graph = try requireWaylandClientSymbolGraph()
         let symbols = try symbolTitles(from: graph)
         let catalog = repository.url("Sources/WaylandClient/WaylandClient.docc")
         let markdownFiles = try fileSystem.walk(catalog, includingDirectories: false)
@@ -73,10 +68,26 @@ public struct DocCVerifier {
         diagnostics.success("DocC symbol links resolve against the public symbol graph")
     }
 
-    private func findSymbolGraph() throws -> URL? {
+    public func removeWaylandClientSymbolGraphs() throws {
+        for graph in try findWaylandClientSymbolGraphs() {
+            try fileSystem.removeItem(graph)
+        }
+    }
+
+    public func requireWaylandClientSymbolGraph() throws -> URL {
+        guard let graph = try findWaylandClientSymbolGraphs().first else {
+            throw ToolError(
+                "Missing WaylandClient symbol graph under .build/*/symbolgraph",
+                exitCode: ToolExitCode.data
+            )
+        }
+        return graph
+    }
+
+    private func findWaylandClientSymbolGraphs() throws -> [URL] {
         let build = repository.url(".build")
         return try fileSystem.walk(build, includingDirectories: false)
-            .first { $0.path.hasSuffix("/symbolgraph/WaylandClient.symbols.json") }
+            .filter { $0.path.hasSuffix("/symbolgraph/WaylandClient.symbols.json") }
     }
 
     private func symbolTitles(from url: URL) throws -> Set<String> {

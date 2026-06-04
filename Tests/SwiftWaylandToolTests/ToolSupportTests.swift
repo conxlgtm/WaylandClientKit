@@ -81,6 +81,24 @@ struct ToolSupportTests {
     }
 
     @Test
+    func doccVerifierRemovesStaleWaylandClientSymbolGraphs() throws {
+        let root = try temporaryRepository()
+        let symbolGraph = root.appendingPathComponent(
+            ".build/debug/symbolgraph/WaylandClient.symbols.json")
+        try FileManager.default.createDirectory(
+            at: symbolGraph.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try #"{"symbols":[]}"#.write(to: symbolGraph, atomically: true, encoding: .utf8)
+
+        let verifier = DocCVerifier(repository: Repository(root: root))
+        _ = try verifier.requireWaylandClientSymbolGraph()
+        try verifier.removeWaylandClientSymbolGraphs()
+
+        #expect(!FileManager.default.fileExists(atPath: symbolGraph.path))
+    }
+
+    @Test
     func protocolManifestValidationRejectsDuplicateNames() throws {
         let root = try temporaryRepository()
         let manifest = root.appendingPathComponent("protocols/manifest.json")
