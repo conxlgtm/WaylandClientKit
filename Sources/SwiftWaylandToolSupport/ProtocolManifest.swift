@@ -434,7 +434,13 @@ public struct ProtocolTooling {
         try validateManifest()
 
         let generated = try fileSystem.createTemporaryDirectory(prefix: "swiftwayland-generated")
-        defer { try? fileSystem.removeItem(generated) }
+        defer {
+            do {
+                try fileSystem.removeItem(generated)
+            } catch {
+                // Cleanup best-effort only.
+            }
+        }
 
         try generateProtocols(outputRoot: generated, validateFirst: false)
 

@@ -203,9 +203,13 @@ public struct BootstrapChecker {
         if context.runner.canFind("swift-format") {
             return true
         }
-        let result = try? context.runner.run(
-            "swift", ["format", "--version"], requireSuccess: false)
-        return result?.exitCode == 0
+        do {
+            let result = try context.runner.run(
+                "swift", ["format", "--version"], requireSuccess: false)
+            return result.exitCode == 0
+        } catch {
+            return false
+        }
     }
 }
 
@@ -747,14 +751,14 @@ public struct HeadlessWestonRunner {
         }
         _ = try context.runner.executableURL(for: "weston")
         let runtime = try context.fileSystem.createTemporaryDirectory(
-            prefix: "swiftwayland-runtime")
-        defer { try? context.fileSystem.removeItem(runtime) }
+            prefix: "swlrt")
+        defer { ignoreCleanupError { try context.fileSystem.removeItem(runtime) } }
         let config = runtime.appendingPathComponent("config")
         try context.fileSystem.createDirectory(config)
         try FileManager.default.setAttributes(
             [.posixPermissions: 0o700], ofItemAtPath: runtime.path)
 
-        let socket = "swiftwayland-\(UUID().uuidString)"
+        let socket = "w\(UUID().uuidString.prefix(8))"
         let westonLog = runtime.appendingPathComponent("weston.log")
         let westonProcessLog = runtime.appendingPathComponent("weston-process.log")
         let childLog = runtime.appendingPathComponent("child.log")
@@ -800,7 +804,7 @@ public struct HeadlessWestonRunner {
         } catch {
             stopProcess(weston, killAfter: 5)
             westonOutputBuffer.append(westonOutput.fileHandleForReading.readDataToEndOfFile())
-            try? context.fileSystem.writeData(westonOutputBuffer.data, to: westonProcessLog)
+            writeLogData(westonOutputBuffer.data, to: westonProcessLog)
             printFailureLog(westonLog, label: "weston.log")
             printFailureLog(westonProcessLog, label: "weston process output")
             printFailureLog(childLog, label: "headless child output")
@@ -856,14 +860,14 @@ public struct HeadlessWestonRunner {
         if process.isRunning {
             stopProcess(process, killAfter: 5)
             outputBuffer.append(output.fileHandleForReading.readDataToEndOfFile())
-            try? context.fileSystem.writeData(outputBuffer.data, to: logURL)
+            writeLogData(outputBuffer.data, to: logURL)
             throw ToolError(
                 "headless command timed out: \(command.joined(separator: " "))",
                 exitCode: process.terminationStatus == 0
                     ? ToolExitCode.process : process.terminationStatus)
         }
         outputBuffer.append(output.fileHandleForReading.readDataToEndOfFile())
-        try? context.fileSystem.writeData(outputBuffer.data, to: logURL)
+        writeLogData(outputBuffer.data, to: logURL)
         guard process.terminationStatus == 0 else {
             let commandText = command.joined(separator: " ")
             let message =
@@ -897,8 +901,30 @@ public struct HeadlessWestonRunner {
     }
 
     private func printFailureLog(_ url: URL, label: String) {
-        guard let text = try? context.fileSystem.readText(url), !text.isEmpty else { return }
+        let text: String
+        do {
+            text = try context.fileSystem.readText(url)
+        } catch {
+            return
+        }
+        guard !text.isEmpty else { return }
         context.diagnostics.error("----- \(label) -----\n\(text)\n---------------------")
+    }
+
+    private func writeLogData(_ data: Data, to url: URL) {
+        do {
+            try context.fileSystem.writeData(data, to: url)
+        } catch {
+            // Failure logs are diagnostic only.
+        }
+    }
+
+    private func ignoreCleanupError(_ operation: () throws -> Void) {
+        do {
+            try operation()
+        } catch {
+            // Cleanup best-effort only.
+        }
     }
 }
 

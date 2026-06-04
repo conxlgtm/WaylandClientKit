@@ -7,7 +7,7 @@ public struct Diagnostics: Sendable {
 
     public init(
         isVerbose: Bool = false,
-        output: @escaping @Sendable (String) -> Void = { print($0) },
+        output: @escaping @Sendable (String) -> Void = Diagnostics.standardOutput,
         errorOutput: @escaping @Sendable (String) -> Void = { line in
             guard let data = (line + "\n").data(using: .utf8) else { return }
             FileHandle.standardError.write(data)
@@ -37,5 +37,11 @@ public struct Diagnostics: Sendable {
     public func verbose(_ message: String) {
         guard isVerbose else { return }
         output("verbose: \(message)")
+    }
+
+    @usableFromInline
+    static func standardOutput(_ line: String) {
+        guard let data = (line + "\n").data(using: .utf8) else { return }
+        FileHandle.standardOutput.write(data)
     }
 }

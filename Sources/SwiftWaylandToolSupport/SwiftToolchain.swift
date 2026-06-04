@@ -20,7 +20,8 @@ public struct SwiftToolchain: Sendable {
             .appendingPathComponent(".local/share/swiftly")
             .path
         let toolchains = URL(fileURLWithPath: swiftlyHome).appendingPathComponent("toolchains")
-        if let candidates = try? LocalFileSystem().walk(toolchains, includingDirectories: false) {
+        do {
+            let candidates = try LocalFileSystem().walk(toolchains, includingDirectories: false)
             let swiftCandidates =
                 candidates
                 .filter { $0.path.hasSuffix("/usr/bin/swift") }
@@ -29,6 +30,8 @@ public struct SwiftToolchain: Sendable {
             if let latest = swiftCandidates.last {
                 return latest
             }
+        } catch {
+            // Swiftly is optional; fall back to normal PATH lookup.
         }
 
         return "swift"
