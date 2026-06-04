@@ -184,19 +184,17 @@ struct ActivationManagerTests {
     @Test
     func taskCancellationCompletesPendingRequestAsCancelled() async throws {
         let pending = PendingActivationTokenRequest(id: ActivationRequestID(rawValue: 2))
-        // This test owns and cancels the task to verify the public cancellation path.
-        // swiftlint:disable:next no_unstructured_task
-        let task = Task {
-            try await WaylandDisplay.waitForActivationToken(
-                pending,
-                timeoutMilliseconds: -1
-            )
-        }
-
-        task.cancel()
-
         let error = await activationError {
-            _ = try await task.value
+            try await withThrowingTaskGroup(of: ActivationToken.self) { group in
+                group.addTask {
+                    try await WaylandDisplay.waitForActivationToken(
+                        pending,
+                        timeoutMilliseconds: -1
+                    )
+                }
+                group.cancelAll()
+                _ = try await group.next()
+            }
         }
         #expect(error == .cancelled)
         let completedError = await activationError {

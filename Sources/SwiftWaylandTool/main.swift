@@ -744,9 +744,10 @@ private func runDocsVerify(context: ToolContext) throws {
 }
 
 private func runDoccVerify(context: ToolContext) throws {
-    try DocCVerifier(repository: context.repository, diagnostics: context.diagnostics)
-        .verifyCatalogExists()
-    _ = try context.swift.runSwift(
+    let verifier = DocCVerifier(repository: context.repository, diagnostics: context.diagnostics)
+    try verifier.verifyCatalogExists()
+    try verifier.removeWaylandClientSymbolGraphs()
+    let result = try context.swift.runSwift(
         [
             "package", "dump-symbol-graph", "--minimum-access-level", "public",
             "--skip-synthesized-members",
@@ -754,7 +755,37 @@ private func runDoccVerify(context: ToolContext) throws {
         repository: context.repository,
         requireSuccess: false
     )
+    let graph: URL
+    do {
+        graph = try verifier.requireWaylandClientSymbolGraph()
+    } catch {
+        if result.exitCode != 0 {
+            throw symbolGraphDumpError(
+                result,
+                detail: "No fresh WaylandClient symbol graph was emitted.")
+        }
+        throw error
+    }
+    if result.exitCode != 0 {
+        throw symbolGraphDumpError(
+            result,
+            detail:
+                "Fresh WaylandClient symbol graph was emitted at \(graph.path), "
+                + "but the dump failed."
+        )
+    }
     try runDoccSymbolLinks(context: context)
+}
+
+private func symbolGraphDumpError(_ result: ProcessResult, detail: String) -> ToolError {
+    ToolError(
+        """
+        command failed with exit code \(result.exitCode): \(result.commandLine)
+        \(result.stderr.isEmpty ? result.stdout : result.stderr)
+        \(detail)
+        """,
+        exitCode: ToolExitCode.process
+    )
 }
 
 private func runDoccSymbolLinks(context: ToolContext) throws {
