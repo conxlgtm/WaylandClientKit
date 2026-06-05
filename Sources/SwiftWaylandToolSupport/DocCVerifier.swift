@@ -2,15 +2,18 @@ import Foundation
 
 public struct DocCVerifier {
     public let repository: Repository
+    public let buildRoot: URL
     public let fileSystem: FileSystem
     public let diagnostics: Diagnostics
 
     public init(
         repository: Repository,
+        buildRoot: URL? = nil,
         fileSystem: FileSystem = LocalFileSystem(),
         diagnostics: Diagnostics = Diagnostics()
     ) {
         self.repository = repository
+        self.buildRoot = (buildRoot ?? repository.url(".build")).standardizedFileURL
         self.fileSystem = fileSystem
         self.diagnostics = diagnostics
     }
@@ -77,7 +80,7 @@ public struct DocCVerifier {
     public func requireWaylandClientSymbolGraph() throws -> URL {
         guard let graph = try findWaylandClientSymbolGraphs().first else {
             throw ToolError(
-                "Missing WaylandClient symbol graph under .build/*/symbolgraph",
+                "Missing WaylandClient symbol graph under \(buildRoot.path)/*/symbolgraph",
                 exitCode: ToolExitCode.data
             )
         }
@@ -85,8 +88,7 @@ public struct DocCVerifier {
     }
 
     private func findWaylandClientSymbolGraphs() throws -> [URL] {
-        let build = repository.url(".build")
-        return try fileSystem.walk(build, includingDirectories: false)
+        try fileSystem.walk(buildRoot, includingDirectories: false)
             .filter { $0.path.hasSuffix("/symbolgraph/WaylandClient.symbols.json") }
     }
 

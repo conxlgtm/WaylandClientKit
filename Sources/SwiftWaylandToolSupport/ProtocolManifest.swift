@@ -223,6 +223,12 @@ public struct ProtocolTooling {
                 failures.append("\(entry.name) localPath does not exist: \(entry.localPath)")
             }
             if let localURL, fileSystem.exists(localURL) {
+                validateRepositoryFileIsNotSymlink(
+                    localURL,
+                    field: "localPath",
+                    protocolName: entry.name,
+                    path: entry.localPath,
+                    failures: &failures)
                 validateSHA256(
                     entry.sha256,
                     for: localURL,
@@ -384,9 +390,9 @@ public struct ProtocolTooling {
             try validateSourceHash(entry: entry, source: source)
             let destination = repository.url(entry.localPath)
             if source.standardizedFileURL != destination.standardizedFileURL {
-                let sourceForCopy = source.resolvingSymlinksInPath()
+                let data = try fileSystem.readData(source)
                 try fileSystem.removeItem(destination)
-                try fileSystem.copyItem(at: sourceForCopy, to: destination)
+                try fileSystem.writeData(data, to: destination)
             }
             diagnostics.success("\(entry.name): \(source.path)")
         }
@@ -531,6 +537,22 @@ public struct ProtocolTooling {
         }
         if pathComponents(for: path).contains("..") {
             failures.append("\(protocolName) \(field) must not contain '..': \(path)")
+        }
+    }
+
+    private func validateRepositoryFileIsNotSymlink(
+        _ url: URL,
+        field: String,
+        protocolName: String,
+        path: String,
+        failures: inout [String]
+    ) {
+        do {
+            if try fileSystem.isSymbolicLink(url) {
+                failures.append("\(protocolName) \(field) must not be a symlink: \(path)")
+            }
+        } catch {
+            failures.append("\(protocolName) \(field) symlink status could not be read: \(error)")
         }
     }
 

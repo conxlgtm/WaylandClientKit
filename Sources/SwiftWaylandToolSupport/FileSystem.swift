@@ -4,6 +4,7 @@ public protocol FileSystem: Sendable {
     func exists(_ url: URL) -> Bool
     func isDirectory(_ url: URL) -> Bool
     func isExecutable(_ url: URL) -> Bool
+    func isSymbolicLink(_ url: URL) throws -> Bool
     func readText(_ url: URL) throws -> String
     func readData(_ url: URL) throws -> Data
     func writeText(_ text: String, to url: URL) throws
@@ -35,6 +36,10 @@ public struct LocalFileSystem: FileSystem {
 
     public func isExecutable(_ url: URL) -> Bool {
         manager.isExecutableFile(atPath: url.path)
+    }
+
+    public func isSymbolicLink(_ url: URL) throws -> Bool {
+        try url.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink == true
     }
 
     public func readText(_ url: URL) throws -> String {
