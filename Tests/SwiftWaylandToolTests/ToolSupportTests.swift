@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import SwiftWaylandToolSupport
 import Testing
 
@@ -181,6 +182,82 @@ struct ToolSupportTests {
         }
     }
 
+    @Test
+    func protocolSyncRemovesExistingVendoredXMLAndCopiesResolvedSource() throws {
+        let root = try temporaryRepository()
+        try writeProtocolXML(in: root)
+        try writeProtocolManifest(in: root)
+        let actualSource = root.appendingPathComponent("system-protocols/store/wayland.xml")
+        let source = root.appendingPathComponent("system-protocols/share/wayland.xml")
+        try FileManager.default.createDirectory(
+            at: actualSource.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: source.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try "<protocol name=\"wayland\"/>".write(
+            to: actualSource,
+            atomically: true,
+            encoding: .utf8
+        )
+        try FileManager.default.createSymbolicLink(at: source, withDestinationURL: actualSource)
+
+        let fileSystem = CopyRequiresMissingDestinationFileSystem()
+        try ProtocolTooling(
+            repository: Repository(root: root),
+            fileSystem: fileSystem,
+            runner: ProcessRunner(environment: ["WAYLAND_CORE_XML_SOURCE": source.path])
+        ).syncProtocols()
+
+        let destination = root.appendingPathComponent("protocols/upstream/core/wayland.xml")
+            .standardizedFileURL
+        #expect(fileSystem.removedPaths.contains(destination.path))
+        #expect(fileSystem.copiedDestinations.contains(destination.path))
+        #expect(fileSystem.copiedSources.contains(actualSource.resolvingSymlinksInPath().path))
+    }
+
+    @Test
+    func unsafeAllowlistScansCAndHeaderFilesUnderSources() throws {
+        let root = try temporaryRepository()
+        let allowlist = root.appendingPathComponent("safety/unsafe-token-allowlist.tsv")
+        try FileManager.default.createDirectory(
+            at: allowlist.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try "".write(to: allowlist, atomically: true, encoding: .utf8)
+
+        let cShim = root.appendingPathComponent("Sources/CExample/shim.c")
+        let header = root.appendingPathComponent("Sources/CExample/include/shim.h")
+        try FileManager.default.createDirectory(
+            at: cShim.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(
+            at: header.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try "int fd = eventfd(0, 0);\n".write(to: cShim, atomically: true, encoding: .utf8)
+        try "void *wl_proxy_get_queue(void *proxy);\n".write(
+            to: header,
+            atomically: true,
+            encoding: .utf8
+        )
+
+        do {
+            try VerificationChecks(
+                context: ToolContext(repository: Repository(root: root))
+            ).verifyUnsafeAllowlist()
+            Issue.record("expected unsafe allowlist verification to reject C/header tokens")
+        } catch let error as ToolError {
+            #expect(error.message.contains("Sources/CExample/shim.c:1"))
+            #expect(error.message.contains("eventfd"))
+            #expect(error.message.contains("Sources/CExample/include/shim.h:1"))
+            #expect(error.message.contains("wl_proxy_get_queue"))
+        }
+    }
+
     private func temporaryRepository() throws -> URL {
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("swiftwayland-tool-tests-\(UUID().uuidString)")
@@ -248,5 +325,85 @@ struct ToolSupportTests {
           ]
         }
         """.write(to: manifest, atomically: true, encoding: .utf8)
+    }
+
+    private final class CopyRequiresMissingDestinationFileSystem: FileSystem {
+        private let local = LocalFileSystem()
+        private let removedPathStorage = Mutex<[String]>([])
+        private let copiedSourceStorage = Mutex<[String]>([])
+        private let copiedDestinationStorage = Mutex<[String]>([])
+
+        var removedPaths: [String] {
+            removedPathStorage.withLock { $0 }
+        }
+
+        var copiedSources: [String] {
+            copiedSourceStorage.withLock { $0 }
+        }
+
+        var copiedDestinations: [String] {
+            copiedDestinationStorage.withLock { $0 }
+        }
+
+        func exists(_ url: URL) -> Bool {
+            local.exists(url)
+        }
+
+        func isDirectory(_ url: URL) -> Bool {
+            local.isDirectory(url)
+        }
+
+        func isExecutable(_ url: URL) -> Bool {
+            local.isExecutable(url)
+        }
+
+        func readText(_ url: URL) throws -> String {
+            try local.readText(url)
+        }
+
+        func readData(_ url: URL) throws -> Data {
+            try local.readData(url)
+        }
+
+        func writeText(_ text: String, to url: URL) throws {
+            try local.writeText(text, to: url)
+        }
+
+        func writeData(_ data: Data, to url: URL) throws {
+            try local.writeData(data, to: url)
+        }
+
+        func createDirectory(_ url: URL) throws {
+            try local.createDirectory(url)
+        }
+
+        func createTemporaryDirectory(prefix: String) throws -> URL {
+            try local.createTemporaryDirectory(prefix: prefix)
+        }
+
+        func copyItem(at source: URL, to destination: URL) throws {
+            if exists(destination) {
+                throw ToolError(
+                    "destination was not removed before copy: \(destination.path)",
+                    exitCode: ToolExitCode.data
+                )
+            }
+            copiedSourceStorage.withLock { $0.append(source.standardizedFileURL.path) }
+            copiedDestinationStorage.withLock { $0.append(destination.standardizedFileURL.path) }
+            try local.copyItem(at: source, to: destination)
+        }
+
+        func removeItem(_ url: URL) throws {
+            removedPathStorage.withLock { $0.append(url.standardizedFileURL.path) }
+            try local.removeItem(url)
+        }
+
+        func walk(_ root: URL, includingDirectories: Bool) throws -> [URL] {
+            try local.walk(root, includingDirectories: includingDirectories)
+        }
+
+        func filesEqual(_ lhs: URL, _ rhs: URL) throws -> Bool {
+            try local.filesEqual(lhs, rhs)
+        }
     }
 }

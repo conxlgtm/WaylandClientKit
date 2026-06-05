@@ -388,8 +388,11 @@ public struct VerificationChecks {
             } else {
                 files = []
             }
-            for file in files
-            where file.pathExtension == "swift" || file.lastPathComponent == "Package.swift" {
+            for file in files {
+                let relative = context.repository.relativePath(file)
+                guard shouldScanForUnsafeTokens(file: file, relativePath: relative) else {
+                    continue
+                }
                 let text = try context.fileSystem.readText(file)
                 let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(
                     String.init)
@@ -400,7 +403,6 @@ public struct VerificationChecks {
                     for match in regex.matches(in: searchableLine, range: nsRange) {
                         guard let range = Range(match.range, in: searchableLine) else { continue }
                         let token = String(searchableLine[range])
-                        let relative = context.repository.relativePath(file)
                         guard allowlist.allows(path: relative, token: token) else {
                             failures.append(
                                 "\(relative):\(index + 1): unsafe token \(token) is not allowlisted"
@@ -494,6 +496,17 @@ public struct VerificationChecks {
         let start = max(0, lineIndex - 5)
         let end = min(lines.count - 1, lineIndex + 2)
         return lines[start...end].contains { $0.contains("SAFETY:") }
+    }
+
+    private func shouldScanForUnsafeTokens(file: URL, relativePath: String) -> Bool {
+        if file.lastPathComponent == "Package.swift" {
+            return true
+        }
+        if file.pathExtension == "swift" {
+            return true
+        }
+        return relativePath.hasPrefix("Sources/")
+            && ["c", "h"].contains(file.pathExtension)
     }
 }
 
