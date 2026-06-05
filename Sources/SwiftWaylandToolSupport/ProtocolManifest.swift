@@ -384,7 +384,9 @@ public struct ProtocolTooling {
             try validateSourceHash(entry: entry, source: source)
             let destination = repository.url(entry.localPath)
             if source.standardizedFileURL != destination.standardizedFileURL {
-                try fileSystem.copyItem(at: source, to: destination)
+                let sourceForCopy = source.resolvingSymlinksInPath()
+                try fileSystem.removeItem(destination)
+                try fileSystem.copyItem(at: sourceForCopy, to: destination)
             }
             diagnostics.success("\(entry.name): \(source.path)")
         }
