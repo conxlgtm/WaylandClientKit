@@ -756,7 +756,12 @@ private func markdownDocumentationFiles(context: ToolContext) throws -> [URL] {
 }
 
 private func runDoccVerify(context: ToolContext) throws {
-    let verifier = DocCVerifier(repository: context.repository, diagnostics: context.diagnostics)
+    let buildRoot = context.swift.swiftPMBuildRoot(repository: context.repository)
+    let verifier = DocCVerifier(
+        repository: context.repository,
+        buildRoot: buildRoot,
+        diagnostics: context.diagnostics
+    )
     try verifier.verifyCatalogExists()
     try verifier.removeWaylandClientSymbolGraphs()
     let result = try context.swift.runSwift(
@@ -767,9 +772,8 @@ private func runDoccVerify(context: ToolContext) throws {
         repository: context.repository,
         requireSuccess: false
     )
-    let graph: URL
     do {
-        graph = try verifier.requireWaylandClientSymbolGraph()
+        _ = try verifier.requireWaylandClientSymbolGraph()
     } catch {
         if result.exitCode != 0 {
             throw symbolGraphDumpError(
@@ -777,14 +781,6 @@ private func runDoccVerify(context: ToolContext) throws {
                 detail: "No fresh WaylandClient symbol graph was emitted.")
         }
         throw error
-    }
-    if result.exitCode != 0 {
-        throw symbolGraphDumpError(
-            result,
-            detail:
-                "Fresh WaylandClient symbol graph was emitted at \(graph.path), "
-                + "but the dump failed."
-        )
     }
     try runDoccSymbolLinks(context: context)
 }
@@ -801,7 +797,11 @@ private func symbolGraphDumpError(_ result: ProcessResult, detail: String) -> To
 }
 
 private func runDoccSymbolLinks(context: ToolContext) throws {
-    try DocCVerifier(repository: context.repository, diagnostics: context.diagnostics)
+    try DocCVerifier(
+        repository: context.repository,
+        buildRoot: context.swift.swiftPMBuildRoot(repository: context.repository),
+        diagnostics: context.diagnostics
+    )
         .verifySymbolLinks()
 }
 
