@@ -824,13 +824,20 @@ private func runIntegrationPackage(
     let scratch = try context.fileSystem.createTemporaryDirectory(
         prefix: "swiftwayland-integration")
     defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
+    let compilerWrapper = try CCompilerFilterWrapper.install(
+        in: scratch,
+        fileSystem: context.fileSystem)
+    let testEnvironment = CCompilerFilterWrapper.integrationTestEnvironment(
+        wrapper: compilerWrapper,
+        base: environment,
+        inherited: context.runner.environment)
     try context.swift.runSwift(
         [
             "test", "--package-path", context.repository.url(packagePath).path, "--scratch-path",
             scratch.path,
         ],
         repository: context.repository,
-        environment: environment
+        environment: testEnvironment
     )
 }
 
