@@ -17,6 +17,9 @@ and C output paths, scanner modes, checksum, tier, exposure, and test strategy.
 Run `swift run swl protocols list` to print the tracked inventory.
 
 Do not edit generated files directly. Change the vendored XML or protocol manifest metadata, regenerate, and review the generated diff.
+Tool ownership is described in [Tooling Ownership](tooling.md). New protocol
+checks should be implemented in `SwiftWaylandToolSupport` and exposed through
+`swl`.
 
 ## Generated Outputs
 

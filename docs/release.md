@@ -8,15 +8,10 @@ Do not tag while docs, public API audit, support lists, and checks disagree.
 Run these from a clean working tree:
 
 ```bash
-swift --version
-pkg-config --modversion egl
-pkg-config --modversion gbm
-pkg-config --modversion glesv2
-pkg-config --modversion libdrm
-pkg-config --modversion wayland-client
-pkg-config --modversion xkbcommon
-command -v wayland-scanner
+swift run swl tools toolchain-smoke
 swift run swl ci release
+swift run swl examples build
+swift run swl compositor evidence-summary
 swift run swl api dump
 ```
 
@@ -38,7 +33,6 @@ swift run swl smoke headless -- swl test request-paths
 swift run swl smoke headless -- swl test request-paths-tsan
 swift run swl smoke headless -- swl test request-paths-asan
 swift run swl smoke headless -- swl smoke integration
-swift build
 swift test --filter WaylandThreadExecutorConcurrencyTests --no-parallel
 ```
 
@@ -83,11 +77,11 @@ pasteable `SwiftWayland GPU Preview Runtime Path` block from
 available, exact missing optional interface names, and any advertised-but-broken
 optional path failures.
 
-`swift build` is informational. Native SwiftPM remains the supported
-build system; the Swift Build preview can report `unsupported`,
-`failed-toolchain-layout`, or `failed-package` depending on the active Swift
-toolchain. Do not block a release on Swift Build preview unless the failure is a
-confirmed package regression.
+`swift run swl tools toolchain-smoke` prints the active Swift wrapper version,
+the `Package.swift` tools version, the Swift 6.3.2 stable baseline, optional
+`SWIFT_NEXT_BIN` status, and the allowed-failure Swift Build preview status.
+Native SwiftPM remains the supported build system; do not block a release on the
+Swift Build preview unless the failure is a confirmed package regression.
 
 Use repeated `swift test --filter ... --no-parallel` runs for local stress
 validation of concurrency-sensitive suites. Repetition intentionally stays out
@@ -111,24 +105,25 @@ Record results in [compositor-matrix.md](compositor-matrix.md).
 ## Tag Checklist
 
 1. Confirm the working tree is clean.
-2. Confirm Swift 6.3.2 is active.
+2. Run `swift run swl tools toolchain-smoke` and confirm Swift 6.3.2 or newer is active.
 3. Confirm dynamic glibc Linux bootstrap dependencies are installed or CI uses equivalent packages.
 4. Run `swift run swl ci check`.
-5. Run optimized builds for the package, demo, GPU preview clients, and smoke executable.
+5. Run `swift run swl examples build` and the optimized release gate.
 6. Run `swift run swl smoke live` under a Wayland session.
 7. Run `swift run swl smoke integration` under a Wayland session.
 8. Run `swift run swl smoke gpu-preview` under a Wayland session.
 9. Manually run `swift run SwiftWaylandDemo` on at least one non-Weston desktop
    before treating compositor compatibility as proven.
 10. Update `docs/compositor-matrix.md` with the compositor facts and check results.
-11. Regenerate protocols and confirm no diff.
-12. Generate and review the public API report.
-13. Run `swift run swl api verify`.
-14. Run `swift run swl docc verify`.
-15. Review `docs/public-api-audit.md`.
-16. Update README support and unsupported lists if behavior changed.
-17. Tag the checkpoint.
-18. If publishing GitHub checkpoint notes, copy the supported and unsupported scope from README.
+11. Run `swift run swl compositor evidence-summary` and review missing evidence.
+12. Regenerate protocols and confirm no diff.
+13. Generate and review the public API report.
+14. Run `swift run swl api verify`.
+15. Run `swift run swl docc verify`.
+16. Review `docs/public-api-audit.md`.
+17. Update README support and unsupported lists if behavior changed.
+18. Tag the checkpoint.
+19. If publishing GitHub checkpoint notes, copy the supported and unsupported scope from README.
 
 ## Stop Conditions
 
@@ -179,7 +174,7 @@ Supported:
 
 Not supported:
 - Widgets.
-- Public cursor animation or custom software cursor image APIs.
+- Public cursor animation.
 - Client-side decorations.
 - Full output-management API.
 - Public `WaylandClient` GPU rendering APIs.
@@ -187,8 +182,8 @@ Not supported:
 - Server-side Wayland or compositor APIs.
 
 Verification:
-- swift run swl ci check
-- swift build --disable-index-store -c release
+- swift run swl ci release
+- swift run swl examples build
 - swift run swift-wayland-smoke
 - swift run swl smoke integration
 - swift run swl smoke gpu-preview
