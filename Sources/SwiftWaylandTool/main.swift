@@ -553,7 +553,7 @@ struct Test: ParsableCommand {
             env["TSAN_OPTIONS"] = "detect_deadlocks=0:suppressions=\(suppressions.path)"
             try context.swift.runSwift(
                 ["test", "--sanitize=thread", "--no-parallel"], repository: context.repository,
-                environment: env)
+                environment: try compilerFilterEnvironment(context: context, base: env))
         }
     }
 
@@ -564,7 +564,9 @@ struct Test: ParsableCommand {
             let context = try context()
             try context.swift.runSwift(
                 ["test", "--sanitize=address", "--no-parallel"], repository: context.repository,
-                environment: ["ASAN_OPTIONS": "detect_leaks=0"])
+                environment: try compilerFilterEnvironment(
+                    context: context,
+                    base: ["ASAN_OPTIONS": "detect_leaks=0"]))
         }
     }
 
