@@ -369,10 +369,10 @@ CWaylandClientSystem
 Verify or bootstrap a Linux environment:
 
 ```bash
+swift run swl tools toolchain-smoke
 swift run swl bootstrap check
 swift run swl bootstrap install-command --package-manager dnf
 swift run swl bootstrap install-command --package-manager nix
-swift build
 ```
 
 Maintainers regenerating protocol artifacts should also run:
@@ -406,6 +406,18 @@ Run local checks:
 
 ```bash
 swift run swl ci check
+```
+
+Build all example targets in debug and release:
+
+```bash
+swift run swl examples build
+```
+
+Summarize recorded compositor evidence:
+
+```bash
+swift run swl compositor evidence-summary
 ```
 
 Run the strict Swift concurrency build only:
@@ -522,6 +534,7 @@ swift run swift-wayland-smoke
 
 - [Architecture](docs/architecture.md)
 - [Protocol Generation](docs/generation.md)
+- [Tooling Ownership](docs/tooling.md)
 - [Public API Audit](docs/public-api-audit.md)
 - [Graphics Preview API](docs/graphics-preview-api.md)
 - [Advanced Graphics Notes](docs/advanced-graphics.md)

@@ -4,7 +4,11 @@ Manual compositor checks should use `swift run` from the repository root or
 `nix develop -c swift run ...` when using the Nix development shell.
 
 Record live compositor facts in `docs/compositor-matrix.md`. Keep unit-test
-results separate from compositor evidence.
+results separate from compositor evidence. After updating the matrix, run:
+
+```bash
+swift run swl compositor evidence-summary
+```
 
 ## Baseline
 

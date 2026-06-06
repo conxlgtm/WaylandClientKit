@@ -7,6 +7,15 @@ cheap:
 release:
     swift run swl ci release
 
+examples:
+    swift run swl examples build
+
+toolchain:
+    swift run swl tools toolchain-smoke
+
+evidence:
+    swift run swl compositor evidence-summary
+
 generate-protocols:
     swift run swl protocols generate
 
