@@ -48,17 +48,8 @@ jobs:
             wayland-protocols
       - name: Install SwiftLint
         run: swift run swl tools install-swiftlint --destination /usr/local/bin
-      - name: Tool versions
-        run: |
-          swift --version
-          pkg-config --modversion egl
-          pkg-config --modversion gbm
-          pkg-config --modversion glesv2
-          pkg-config --modversion libdrm
-          pkg-config --modversion wayland-client
-          pkg-config --modversion xkbcommon
-          command -v wayland-scanner
-          swiftlint version
+      - name: Toolchain smoke
+        run: swift run swl tools toolchain-smoke
       - name: Bootstrap checks
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.ci_mode == 'full') }}
         run: |

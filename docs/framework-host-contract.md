@@ -86,9 +86,9 @@ Input and opaque regions are surface facts, not framework hit testing.
 should receive input; `nil` resets the compositor default. `setOpaqueRegion(_:)`
 marks fully opaque logical rectangles as a compositor optimization. Frameworks
 still own widget hit testing, clipping, and dirty-region calculation.
-Unsupported visual-only roles, such as cursor and drag icon surfaces, keep
-region and damage behavior internal instead of accepting framework-level
-surface operations.
+Visual-only roles, such as cursor and drag icon surfaces, keep region and
+damage behavior internal instead of accepting framework-level surface
+operations.
 
 Subsurfaces are platform hierarchy. Frameworks may use them for embedded
 canvases, video, plugin-like surfaces, or renderer layering, but layout and

@@ -1,7 +1,5 @@
 # Roadmap
 
-Status: active planning document  
-Date: 2026-05-12  
 Scope: SwiftWayland as a Swift-native Linux Wayland platform foundation
 
 This roadmap defines the path from the current experimental substrate to a
@@ -904,7 +902,7 @@ Work packages:
 Required behavior:
 
 - keep regular clipboard and primary selection behavior intact
-- support managed drag icon surfaces
+- preserve managed drag icon surfaces and broaden compositor evidence
 - keep icon lifetime tied to drag source lifetime
 - support action negotiation, cancellation, finish, and failure paths
 - keep fd closure and timeout behavior explicit
@@ -1185,37 +1183,3 @@ A foundation release candidate requires all of the following:
 
 Anything below this bar can be a development checkpoint, but not the foundation
 target this roadmap is describing.
-
-## Active Sprint Adjustment
-
-Keep the current presentation-time sprint as the active first milestone:
-
-- `docs-dnd-presentation-state`
-- `presentation-protocol-generation`
-- `presentation-raw-layer`
-- `presentation-client-state`
-- `presentation-public-api`
-- `presentation-live-smoke`
-
-Move the current cursor/DnD visual sprint behind the GPU foundation work unless
-there is parallel capacity that does not slow the GPU path:
-
-- `cursor-config-scale-policy`
-- `cursor-theme-frames`
-- `cursor-output-scale-selection`
-- `cursor-animation-scheduler`
-- `cursor-diagnostics`
-- `dnd-drag-icons`
-
-The replacement second milestone should be GPU substrate:
-
-- `surface-transaction-model`
-- `dmabuf-protocol-generation`
-- `dmabuf-raw-layer`
-- `dmabuf-feedback-model`
-- `gbm-system-target`
-- `egl-system-target`
-- `gpu-device-selection`
-- `gpu-buffer-lifecycle`
-- `gpu-window-backing`
-- `gpu-live-smoke`

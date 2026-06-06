@@ -18,10 +18,11 @@ swift run swl smoke gpu-preview
 swift run swl smoke headless -- swl smoke live
 swift run swl smoke headless -- swl smoke integration
 swift run swl smoke headless -- swl smoke gpu-preview
+swift run swl compositor evidence-summary
 swift run swl ci check
 swift run swl ci release
 swift run swl test integration-graphics-preview
-swift build
+swift run swl tools toolchain-smoke
 swift test --filter WaylandThreadExecutorConcurrencyTests --no-parallel
 ```
 
@@ -73,10 +74,14 @@ current compositor when `WAYLAND_DISPLAY` is set, uses headless Weston when
 `weston` is installed, and fails in CI or when `REQUIRE_WAYLAND_SMOKE=1` if no
 live Wayland path is available.
 
-`swift build` runs an informational Swift Build preview check. Native
-SwiftPM remains the supported build system; the smoke reports unsupported
-toolchains and Swiftly layout issues without treating those as package
-correctness failures.
+`swift run swl tools toolchain-smoke` reports the active Swift wrapper,
+`Package.swift` tools version, optional `SWIFT_NEXT_BIN` status, and the
+allowed-failure Swift Build preview status. Native SwiftPM remains the supported
+build system.
+
+`swift run swl compositor evidence-summary` summarizes the current
+`docs/compositor-matrix.md` rows so missing evidence is visible before release
+notes or checkpoint notes are written.
 
 Use repeated `swift test --filter ... --no-parallel` runs for local stress
 validation before promoting a scheduler, event-loop, or descriptor-lifecycle

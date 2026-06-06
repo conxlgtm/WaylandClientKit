@@ -17,7 +17,7 @@ Run these under the compositor being tested:
 swift run swl smoke live
 swift run swl smoke integration
 swift run swl smoke gpu-preview
-swift build
+swift run swl compositor evidence-summary
 ```
 
 For headless Weston:
