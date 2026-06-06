@@ -81,54 +81,52 @@ struct ToolSupportTests {
     }
 
     @Test
-    func cCompilerFilterWrapperStripsSwiftPMIndexStoreFlags() throws {
-        let root = try temporaryRepository()
-        let fakeCompiler = root.appendingPathComponent("fake-cc")
-        let capturedArguments = root.appendingPathComponent("cc-args.txt")
-        try """
-        #!/usr/bin/env bash
-        printf '%s\\n' "$@" > "$SWIFTWAYLAND_FAKE_CC_ARGS"
-        """.write(to: fakeCompiler, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes(
-            [.posixPermissions: 0o755],
-            ofItemAtPath: fakeCompiler.path
-        )
-        let wrapper = try CCompilerFilterWrapper.install(in: root, fileSystem: LocalFileSystem())
-        let runner = ProcessRunner(environment: [
-            "PATH": ProcessInfo.processInfo.environment["PATH", default: ""],
-            "SWIFTWAYLAND_REAL_CC": fakeCompiler.path,
-            "SWIFTWAYLAND_FAKE_CC_ARGS": capturedArguments.path,
+    func cCompilerFilterStripsSwiftPMIndexStoreFlags() {
+        let arguments = CCompilerFilter.filteredArguments([
+            "-DVALUE=1",
+            "-index-store-path",
+            "/tmp/index-store",
+            "-index-unit-output-path=/tmp/unit-output",
+            "shim.c",
         ])
 
-        try runner.run(
-            wrapper.path,
-            [
-                "-DVALUE=1",
-                "-index-store-path",
-                root.appendingPathComponent("index").path,
-                "-index-unit-output-path=\(root.appendingPathComponent("unit").path)",
-                "shim.c",
-            ]
-        )
-
-        let arguments = try String(contentsOf: capturedArguments, encoding: .utf8)
-            .split(separator: "\n")
-            .map(String.init)
         #expect(arguments == ["-DVALUE=1", "shim.c"])
     }
 
     @Test
-    func cCompilerFilterWrapperEnvironmentSetsCCAndPreservesOverrides() throws {
-        let wrapper = URL(fileURLWithPath: "/tmp/swiftwayland-cc-wrapper")
+    func cCompilerFilterInvokesRealCompilerWithFilteredArguments() throws {
+        let truePath = try ProcessRunner().executableURL(for: "true").path
 
-        let environment = CCompilerFilterWrapper.integrationTestEnvironment(
-            wrapper: wrapper,
+        let result = try CCompilerFilter.run(
+            arguments: [
+                "-DVALUE=1",
+                "-index-store-path",
+                "/tmp/index-store",
+                "-index-unit-output-path=/tmp/unit-output",
+                "shim.c",
+            ],
+            environment: [
+                "PATH": ProcessInfo.processInfo.environment["PATH", default: ""],
+                CCompilerFilter.realCompilerEnvironmentKey: truePath,
+            ])
+
+        #expect(result.executable == truePath)
+        #expect(result.arguments == ["-DVALUE=1", "shim.c"])
+    }
+
+    @Test
+    func cCompilerFilterEnvironmentSetsCCAndPreservesOverrides() throws {
+        let filter = URL(fileURLWithPath: "/tmp/swl")
+
+        let environment = CCompilerFilter.compilerEnvironment(
+            filterExecutable: filter,
             base: ["SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS": "1"],
             inherited: ["CC": "/usr/bin/clang"]
         )
 
-        #expect(environment["CC"] == wrapper.path)
-        #expect(environment["SWIFTWAYLAND_REAL_CC"] == "/usr/bin/clang")
+        #expect(environment["CC"] == filter.path)
+        #expect(environment[CCompilerFilter.modeEnvironmentKey] == "1")
+        #expect(environment[CCompilerFilter.realCompilerEnvironmentKey] == "/usr/bin/clang")
         #expect(environment["SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS"] == "1")
     }
 
@@ -415,5 +413,4 @@ struct ToolSupportTests {
         }
         """.write(to: manifest, atomically: true, encoding: .utf8)
     }
-
 }

@@ -2,10 +2,48 @@ import ArgumentParser
 import Foundation
 import SwiftWaylandToolSupport
 
+#if os(Linux)
+    import Glibc
+#else
+    import Darwin
+#endif
+
 // ArgumentParser command definitions are property-wrapper dense by design.
 // swiftlint:disable attributes file_length function_body_length let_var_whitespace type_name
 
 @main
+enum SwiftWaylandToolMain {
+    static func main() {
+        let environment = ProcessInfo.processInfo.environment
+        if CCompilerFilter.isEnabled(environment: environment) {
+            runCCompilerFilter(environment: environment)
+        }
+        Swl.main()
+    }
+
+    private static func runCCompilerFilter(environment: [String: String]) -> Never {
+        do {
+            let result = try CCompilerFilter.run(
+                arguments: Array(CommandLine.arguments.dropFirst()),
+                environment: environment)
+            write(result.stdout, to: FileHandle.standardOutput)
+            write(result.stderr, to: FileHandle.standardError)
+            exit(result.exitCode)
+        } catch let error as ToolError {
+            write("Error: \(error.message)\n", to: FileHandle.standardError)
+            exit(error.exitCode)
+        } catch {
+            write("Error: \(error)\n", to: FileHandle.standardError)
+            exit(ToolExitCode.failure)
+        }
+    }
+
+    private static func write(_ text: String, to handle: FileHandle) {
+        guard !text.isEmpty, let data = text.data(using: .utf8) else { return }
+        handle.write(data)
+    }
+}
+
 struct Swl: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "swl",
@@ -797,23 +835,27 @@ private func symbolGraphDumpError(_ result: ProcessResult, detail: String) -> To
 }
 
 private func runDoccSymbolLinks(context: ToolContext) throws {
-    try DocCVerifier(
+    let verifier = DocCVerifier(
         repository: context.repository,
         buildRoot: context.swift.swiftPMBuildRoot(repository: context.repository),
         diagnostics: context.diagnostics
     )
-        .verifySymbolLinks()
+    try verifier.verifySymbolLinks()
 }
 
 private func runUnitTests(context: ToolContext) throws {
     try context.swift.runSwift(
-        ["test", "--no-parallel", "-Xswiftc", "-warnings-as-errors"], repository: context.repository
+        ["test", "--no-parallel", "-Xswiftc", "-warnings-as-errors"],
+        repository: context.repository,
+        environment: try compilerFilterEnvironment(context: context)
     )
 }
 
 private func runReleaseTests(context: ToolContext) throws {
     try context.swift.runSwift(
-        ["test", "-c", "release", "--no-parallel"], repository: context.repository)
+        ["test", "-c", "release", "--no-parallel"],
+        repository: context.repository,
+        environment: try compilerFilterEnvironment(context: context))
 }
 
 private func runIntegrationPackage(
@@ -824,21 +866,36 @@ private func runIntegrationPackage(
     let scratch = try context.fileSystem.createTemporaryDirectory(
         prefix: "swiftwayland-integration")
     defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
-    let compilerWrapper = try CCompilerFilterWrapper.install(
-        in: scratch,
-        fileSystem: context.fileSystem)
-    let testEnvironment = CCompilerFilterWrapper.integrationTestEnvironment(
-        wrapper: compilerWrapper,
-        base: environment,
-        inherited: context.runner.environment)
     try context.swift.runSwift(
         [
             "test", "--package-path", context.repository.url(packagePath).path, "--scratch-path",
             scratch.path,
         ],
         repository: context.repository,
-        environment: testEnvironment
+        environment: try compilerFilterEnvironment(context: context, base: environment)
     )
+}
+
+private func compilerFilterEnvironment(
+    context: ToolContext,
+    base: [String: String] = [:]
+) throws -> [String: String] {
+    try CCompilerFilter.compilerEnvironment(
+        filterExecutable: currentExecutableURL(),
+        base: base,
+        inherited: context.runner.environment)
+}
+
+private func currentExecutableURL() throws -> URL {
+    guard let path = CommandLine.arguments.first, !path.isEmpty else {
+        throw ToolError("cannot resolve swl executable path", exitCode: ToolExitCode.environment)
+    }
+    if path.hasPrefix("/") {
+        return URL(fileURLWithPath: path).standardizedFileURL
+    }
+    return URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        .appendingPathComponent(path)
+        .standardizedFileURL
 }
 
 private func runSmokeLive(context: ToolContext) throws {
@@ -897,7 +954,7 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
         try context.swift.runSwift(
             arguments + ["--filter", filter],
             repository: context.repository,
-            environment: environment
+            environment: try compilerFilterEnvironment(context: context, base: environment)
         )
     }
 }
