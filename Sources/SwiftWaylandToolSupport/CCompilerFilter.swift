@@ -37,6 +37,25 @@ public enum CCompilerFilter {
             requireSuccess: false)
     }
 
+    public static func filterExecutableURL(
+        commandPath: String,
+        workingDirectory: URL,
+        runner: ProcessRunner
+    ) throws -> URL {
+        guard !commandPath.isEmpty else {
+            throw ToolError(
+                "cannot resolve swl executable path",
+                exitCode: ToolExitCode.environment)
+        }
+        if commandPath.hasPrefix("/") {
+            return URL(fileURLWithPath: commandPath).standardizedFileURL
+        }
+        if commandPath.contains("/") {
+            return workingDirectory.appendingPathComponent(commandPath).standardizedFileURL
+        }
+        return try runner.executableURL(for: commandPath).standardizedFileURL
+    }
+
     public static func filteredArguments(_ arguments: [String]) -> [String] {
         var filtered: [String] = []
         var skipNext = false
@@ -84,8 +103,7 @@ public enum CCompilerFilter {
         if let clang = try? fileSystem.walk(toolchains, includingDirectories: false)
             .filter({ $0.path.hasSuffix("/usr/bin/clang") && fileSystem.isExecutable($0) })
             .map(\.path)
-            .sorted()
-            .last
+            .max()
         {
             return clang
         }

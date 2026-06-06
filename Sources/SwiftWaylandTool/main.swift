@@ -861,21 +861,19 @@ private func compilerFilterEnvironment(
     base: [String: String] = [:]
 ) throws -> [String: String] {
     try CCompilerFilter.compilerEnvironment(
-        filterExecutable: currentExecutableURL(),
+        filterExecutable: currentExecutableURL(context: context),
         base: base,
         inherited: context.runner.environment)
 }
 
-private func currentExecutableURL() throws -> URL {
+private func currentExecutableURL(context: ToolContext) throws -> URL {
     guard let path = CommandLine.arguments.first, !path.isEmpty else {
         throw ToolError("cannot resolve swl executable path", exitCode: ToolExitCode.environment)
     }
-    if path.hasPrefix("/") {
-        return URL(fileURLWithPath: path).standardizedFileURL
-    }
-    return URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        .appendingPathComponent(path)
-        .standardizedFileURL
+    return try CCompilerFilter.filterExecutableURL(
+        commandPath: path,
+        workingDirectory: URL(fileURLWithPath: FileManager.default.currentDirectoryPath),
+        runner: context.runner)
 }
 
 private func runSmokeLive(context: ToolContext) throws {
@@ -970,7 +968,6 @@ private func runHeadlessSwl(context: ToolContext, arguments: [String]) throws {
 private func runHeadlessWaylandReleaseChecks(context: ToolContext) throws {
     try runHeadlessSwl(context: context, arguments: ["smoke", "live"])
     try runHeadlessSwl(context: context, arguments: ["smoke", "integration"])
-    try runHeadlessSwl(context: context, arguments: ["test", "request-paths"])
     try runHeadlessSwl(context: context, arguments: ["test", "request-paths-tsan"])
     try runHeadlessSwl(context: context, arguments: ["test", "request-paths-asan"])
 }

@@ -2,6 +2,8 @@ import Foundation
 
 #if os(Linux)
     import Glibc
+#else
+    import Darwin
 #endif
 
 // This file coordinates repository-wide checks; each checker is still typed and testable.
@@ -376,47 +378,31 @@ public struct VerificationChecks {
         let allowlist = try UnsafeAllowlist.parse(context.fileSystem.readText(allowlistURL))
         let regex = try NSRegularExpression(pattern: unsafeTokenPattern)
         var failures: [String] = []
-        let roots = ["Plugins", "Sources", "Tests", "Package.swift"].map { path in
-            context.repository.url(path)
-        }
-        for root in roots {
-            let files: [URL]
-            if context.fileSystem.isDirectory(root) {
-                files = try context.fileSystem.walk(root, includingDirectories: false)
-            } else if context.fileSystem.exists(root) {
-                files = [root]
-            } else {
-                files = []
-            }
-            for file in files {
-                let relative = context.repository.relativePath(file)
-                guard shouldScanForUnsafeTokens(file: file, relativePath: relative) else {
-                    continue
-                }
-                let text = try context.fileSystem.readText(file)
-                let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(
-                    String.init)
-                for (index, line) in lines.enumerated() {
-                    let searchableLine = removingSwiftStringLiterals(from: line)
-                    let nsRange = NSRange(
-                        searchableLine.startIndex..<searchableLine.endIndex, in: searchableLine)
-                    for match in regex.matches(in: searchableLine, range: nsRange) {
-                        guard let range = Range(match.range, in: searchableLine) else { continue }
-                        let token = String(searchableLine[range])
-                        guard allowlist.allows(path: relative, token: token) else {
-                            failures.append(
-                                "\(relative):\(index + 1): unsafe token \(token) is not allowlisted"
-                            )
-                            continue
-                        }
-                        if token.hasPrefix("@unchecked"),
-                            !hasSafetyComment(lines: lines, lineIndex: index)
-                        {
-                            failures.append(
-                                "\(relative):\(index + 1): @unchecked Sendable allowlist entry "
-                                    + "requires a nearby SAFETY comment"
-                            )
-                        }
+        for file in try unsafeAllowlistScanFiles() {
+            let relative = context.repository.relativePath(file)
+            let text = try context.fileSystem.readText(file)
+            let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(
+                String.init)
+            for (index, line) in lines.enumerated() {
+                let searchableLine = removingSwiftStringLiterals(from: line)
+                let nsRange = NSRange(
+                    searchableLine.startIndex..<searchableLine.endIndex, in: searchableLine)
+                for match in regex.matches(in: searchableLine, range: nsRange) {
+                    guard let range = Range(match.range, in: searchableLine) else { continue }
+                    let token = String(searchableLine[range])
+                    guard allowlist.allows(path: relative, token: token) else {
+                        failures.append(
+                            "\(relative):\(index + 1): unsafe token \(token) is not allowlisted"
+                        )
+                        continue
+                    }
+                    if token.hasPrefix("@unchecked"),
+                        !hasSafetyComment(lines: lines, lineIndex: index)
+                    {
+                        failures.append(
+                            "\(relative):\(index + 1): @unchecked Sendable allowlist entry "
+                                + "requires a nearby SAFETY comment"
+                        )
                     }
                 }
             }
@@ -425,6 +411,28 @@ public struct VerificationChecks {
             throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)
         }
         context.diagnostics.success("unsafe token allowlist is valid")
+    }
+
+    private func unsafeAllowlistScanFiles() throws -> [URL] {
+        let roots = ["Plugins", "Sources", "Tests", "Package.swift"].map { path in
+            context.repository.url(path)
+        }
+        var files: [URL] = []
+        for root in roots {
+            if context.fileSystem.isDirectory(root) {
+                files.append(
+                    contentsOf: try context.fileSystem.walk(
+                        root,
+                        includingDirectories: false))
+            } else if context.fileSystem.exists(root) {
+                files.append(root)
+            }
+        }
+        return files.filter { file in
+            shouldScanForUnsafeTokens(
+                file: file,
+                relativePath: context.repository.relativePath(file))
+        }
     }
 
     public func verifyShims() throws {
@@ -836,7 +844,7 @@ public struct HeadlessWestonRunner {
 
     private func waitForSocket(_ socket: URL, process: Process) throws {
         for _ in 0..<100 {
-            if FileManager.default.fileExists(atPath: socket.path) {
+            if Self.isUnixSocket(socket) {
                 return
             }
             if !process.isRunning {
@@ -846,6 +854,12 @@ public struct HeadlessWestonRunner {
             Thread.sleep(forTimeInterval: 0.05)
         }
         throw ToolError("weston did not create \(socket.path)", exitCode: ToolExitCode.process)
+    }
+
+    public static func isUnixSocket(_ url: URL) -> Bool {
+        var status = stat()
+        guard lstat(url.path, &status) == 0 else { return false }
+        return (status.st_mode & S_IFMT) == S_IFSOCK
     }
 
     private func runChild(
