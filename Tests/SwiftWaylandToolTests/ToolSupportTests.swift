@@ -131,6 +131,31 @@ struct ToolSupportTests {
     }
 
     @Test
+    func threadSanitizerOptionsIncludeRequiredDefaults() {
+        let suppressions = URL(fileURLWithPath: "/tmp/tsan-suppressions.txt")
+
+        let options = SanitizerOptions.threadSanitizerOptions(
+            suppressions: suppressions,
+            inherited: [:])
+
+        #expect(options == "detect_deadlocks=0:suppressions=/tmp/tsan-suppressions.txt")
+    }
+
+    @Test
+    func threadSanitizerOptionsPreserveInheritedOptions() {
+        let suppressions = URL(fileURLWithPath: "/tmp/tsan-suppressions.txt")
+
+        let options = SanitizerOptions.threadSanitizerOptions(
+            suppressions: suppressions,
+            inherited: ["TSAN_OPTIONS": "log_path=/tmp/tsan:history_size=7"])
+
+        #expect(
+            options
+                == "log_path=/tmp/tsan:history_size=7:"
+                + "detect_deadlocks=0:suppressions=/tmp/tsan-suppressions.txt")
+    }
+
+    @Test
     func doccVerifierUsesConfiguredBuildRootForSymbolGraphs() throws {
         let root = try temporaryRepository()
         let staleBuildGraph = root.appendingPathComponent(
