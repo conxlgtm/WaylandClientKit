@@ -15,13 +15,6 @@ package struct DataTransferSeatState: Equatable, Sendable {
         device = snapshot.device
     }
 
-    package var snapshot: DataTransferSeatSnapshot {
-        DataTransferSeatSnapshot(
-            seatID: seatID,
-            device: device
-        )
-    }
-
     package var hasDataDevice: Bool {
         device.hasDataDevice
     }
@@ -36,10 +29,6 @@ package struct DataTransferSeatState: Equatable, Sendable {
         }
 
         device = .bound(selection: .none)
-    }
-
-    package mutating func unbindDataDevice() {
-        device = .unbound
     }
 
     package mutating func setSelection(_ selection: ClipboardSelectionState) throws {
@@ -273,18 +262,6 @@ package struct DataTransferSourceState: Equatable, Sendable {
 
     package init(
         id sourceID: DataSourceID,
-        seatID sourceSeatID: SeatID,
-        mimeTypes sourceTypes: [MIMEType]
-    ) throws {
-        try self.init(
-            id: sourceID,
-            role: .selection(seatID: sourceSeatID),
-            mimeTypes: sourceTypes
-        )
-    }
-
-    package init(
-        id sourceID: DataSourceID,
         role sourceRole: DataSourceRole,
         mimeTypes sourceTypes: [MIMEType]
     ) throws {
@@ -313,10 +290,6 @@ package struct DataTransferSourceState: Equatable, Sendable {
 
     package var role: DataSourceRole {
         storage.role
-    }
-
-    package var mimeTypes: [MIMEType] {
-        storage.mimeTypes
     }
 
     package var snapshot: DataSourceSnapshot {

@@ -96,15 +96,6 @@ package enum SurfaceColorRepresentationCapability: Equatable, Sendable {
         version: RawVersion,
         support: SurfaceColorRepresentationSupport
     )
-
-    package var isAvailable: Bool {
-        switch self {
-        case .unavailable, .pending:
-            false
-        case .available:
-            true
-        }
-    }
 }
 
 package enum SurfaceColorCapability: Equatable, Sendable {
@@ -278,10 +269,6 @@ extension SurfaceRuntime {
                 objects.scaleInstallation = newValue
             }
         }
-    }
-
-    var surfaceRole: SurfaceRuntimeRole {
-        role
     }
 
     var roleReadinessSnapshot: SurfaceRoleReadinessSnapshot {

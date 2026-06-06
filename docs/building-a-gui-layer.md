@@ -99,9 +99,8 @@ The examples that can run unattended accept common flags:
 --print-summary
 ```
 
-`scripts/ci/test-framework-handoff-examples.sh` builds the framework-facing
-example set in debug and release so these references do not drift out of build
-coverage.
+`swift run swl test integration-framework-host` and `swift run swl ci release`
+keep framework-facing handoff examples in build coverage.
 
 ## Software Rendering Path
 

@@ -310,10 +310,6 @@ extension PopupRoleSurface {
         liveRoleResources.popup
     }
 
-    package var positioner: RawXDGPositioner {
-        liveRoleResources.positioner
-    }
-
     package var popupOwner: XDGPopupOwner? {
         get { roleResources?.popupOwner }
         set { roleResources?.popupOwner = newValue }

@@ -8,7 +8,7 @@ Do not tag while docs, public API audit, support lists, and checks disagree.
 Run these from a clean working tree:
 
 ```bash
-./scripts/dev/swift.sh --version
+swift --version
 pkg-config --modversion egl
 pkg-config --modversion gbm
 pkg-config --modversion glesv2
@@ -16,32 +16,15 @@ pkg-config --modversion libdrm
 pkg-config --modversion wayland-client
 pkg-config --modversion xkbcommon
 command -v wayland-scanner
-make check
-./scripts/dev/swift.sh build --disable-index-store -c release
-./scripts/dev/swift.sh build --disable-index-store -c release --target SwiftWaylandDemo
-./scripts/dev/swift.sh build --disable-index-store -c release --target GPUPreviewSmokeClient
-./scripts/dev/swift.sh build --disable-index-store -c release --target GraphicsPreviewManagedGPUClear
-./scripts/dev/swift.sh build --disable-index-store -c release --target PointerCaptureSmoke
-./scripts/dev/swift.sh build --disable-index-store -c release --target CursorPolicySmoke
-./scripts/dev/swift.sh build --disable-index-store -c release --product swift-wayland-smoke
-./scripts/ci/test-framework-handoff-examples.sh
-make test-release
-./scripts/ci/dump-public-api.sh > /tmp/swiftwayland-public-api.md
-./scripts/ci/verify-public-api-audit.sh
-./scripts/ci/verify-target-imports.sh
-./scripts/ci/verify-docc.sh
-bash ./scripts/safety/verify-unsafe-allowlist.sh
+swift run swl ci release
+swift run swl api dump
 ```
 
-Prefer `make release-check` for the release build path. Direct `swift`
-commands require equivalent runtime library configuration; the wrapper sources
-`scripts/dev/swift-runtime-env.sh` before invoking Swift. On openSUSE-style
-toolchains that use a compatibility `libxml2.so.2`, the wrapper filters the
-known loader warning about missing version information; set
-`SWIFT_WAYLAND_SHOW_COMPAT_WARNINGS=1` when raw Swift toolchain stderr is
-needed.
+`swift run swl ci release` covers the release build path, release tests, shim
+checks, generated protocol freshness, DocC verification, public API audit
+verification, and Wayland checks when a compositor or Weston is available.
 
-`make test-release` runs the release-compatible test subset. Shim-contract and
+`swift run swl test release` runs the release-compatible test subset. Shim-contract and
 instrumentation tests that depend on debug-only C or Swift test hooks are
 compile-gated out of release test binaries so production release products do
 not expose those symbols.
@@ -49,13 +32,14 @@ not expose those symbols.
 Where the environment supports Swift sanitizers, also run:
 
 ```bash
-make test-tsan
-ASAN_OPTIONS=detect_leaks=0 make test-asan
-make wayland-request-headless
-make wayland-request-headless-tsan
-make wayland-request-headless-asan
-make swiftbuild-smoke
-./scripts/ci/repeat-test.sh --count 20 --filter WaylandThreadExecutorConcurrencyTests
+swift run swl test tsan
+ASAN_OPTIONS=detect_leaks=0 swift run swl test asan
+swift run swl smoke headless -- swl test request-paths
+swift run swl smoke headless -- swl test request-paths-tsan
+swift run swl smoke headless -- swl test request-paths-asan
+swift run swl smoke headless -- swl smoke integration
+swift build
+swift test --filter WaylandThreadExecutorConcurrencyTests --no-parallel
 ```
 
 ThreadSanitizer is the primary concurrency lifecycle check. AddressSanitizer
@@ -63,9 +47,9 @@ with `detect_leaks=0` is the required ASan gate. LeakSanitizer remains a
 separate informational check because it can exit with a ptrace-related fatal
 error even after the Swift test process reports passing tests; record that as
 an environment limitation rather than a test failure. To attempt the
-LeakSanitizer path explicitly, run `make test-asan` without overriding
-`ASAN_OPTIONS`. The TSan target uses
-`scripts/safety/tsan-suppressions.txt` only for known Swift runtime
+LeakSanitizer path explicitly, run `swift run swl test asan` without setting
+`ASAN_OPTIONS=detect_leaks=0`. The TSan target uses
+`safety/tsan-suppressions.txt` only for known Swift runtime
 metadata-cache and Swift Testing event graph reports. It also disables TSan's
 deadlock detector because Swift runtime metadata initialization currently
 produces lock-order false positives. The target runs Swift Testing with
@@ -95,29 +79,29 @@ promote graphics preview readiness unless
 headless Weston, one wlroots compositor such as Sway, and one desktop
 compositor such as Mutter or KWin when available. Each row should include the
 pasteable `SwiftWayland GPU Preview Runtime Path` block from
-`make gpu-preview-wayland`, the `GraphicsPreviewManagedGPUClear` result when
+`swift run swl smoke gpu-preview`, the `GraphicsPreviewManagedGPUClear` result when
 available, exact missing optional interface names, and any advertised-but-broken
 optional path failures.
 
-`make swiftbuild-smoke` is informational. Native SwiftPM remains the supported
+`swift build` is informational. Native SwiftPM remains the supported
 build system; the Swift Build preview can report `unsupported`,
 `failed-toolchain-layout`, or `failed-package` depending on the active Swift
 toolchain. Do not block a release on Swift Build preview unless the failure is a
 confirmed package regression.
 
-Use `scripts/ci/repeat-test.sh` for local stress validation of
-concurrency-sensitive suites. It intentionally stays out of the default release
-gate because useful counts are environment- and time-dependent.
+Use repeated `swift test --filter ... --no-parallel` runs for local stress
+validation of concurrency-sensitive suites. Repetition intentionally stays out
+of the default release gate because useful counts are environment- and
+time-dependent.
 
 Under a real Wayland session:
 
 ```bash
-./scripts/smoke/collect-compositor-facts.sh
-./scripts/smoke/smoke-wayland.sh
-./scripts/smoke/integration-wayland.sh
-make gpu-preview-wayland
-./scripts/dev/swift.sh run GraphicsPreviewManagedGPUClear
-./scripts/dev/swift.sh run SwiftWaylandDemo
+swift run swl smoke live
+swift run swl smoke integration
+swift run swl smoke gpu-preview
+swift run GraphicsPreviewManagedGPUClear
+swift run SwiftWaylandDemo
 ```
 
 Compositor targets are Weston, GNOME/Mutter, KDE/KWin, and Sway/wlroots. A checkpoint
@@ -129,18 +113,18 @@ Record results in [compositor-matrix.md](compositor-matrix.md).
 1. Confirm the working tree is clean.
 2. Confirm Swift 6.3.2 is active.
 3. Confirm dynamic glibc Linux bootstrap dependencies are installed or CI uses equivalent packages.
-4. Run `make check`.
+4. Run `swift run swl ci check`.
 5. Run optimized builds for the package, demo, GPU preview clients, and smoke executable.
-6. Run `./scripts/smoke/smoke-wayland.sh` under a Wayland session.
-7. Run `./scripts/smoke/integration-wayland.sh` under a Wayland session.
-8. Run `make gpu-preview-wayland` under a Wayland session.
-9. Manually run `./scripts/dev/swift.sh run SwiftWaylandDemo` on at least one non-Weston desktop
+6. Run `swift run swl smoke live` under a Wayland session.
+7. Run `swift run swl smoke integration` under a Wayland session.
+8. Run `swift run swl smoke gpu-preview` under a Wayland session.
+9. Manually run `swift run SwiftWaylandDemo` on at least one non-Weston desktop
    before treating compositor compatibility as proven.
 10. Update `docs/compositor-matrix.md` with the compositor facts and check results.
 11. Regenerate protocols and confirm no diff.
 12. Generate and review the public API report.
-13. Run `./scripts/ci/verify-public-api-audit.sh`.
-14. Run `./scripts/ci/verify-docc.sh`.
+13. Run `swift run swl api verify`.
+14. Run `swift run swl docc verify`.
 15. Review `docs/public-api-audit.md`.
 16. Update README support and unsupported lists if behavior changed.
 17. Tag the checkpoint.
@@ -203,10 +187,10 @@ Not supported:
 - Server-side Wayland or compositor APIs.
 
 Verification:
-- make check
-- ./scripts/dev/swift.sh build --disable-index-store -c release
-- ./scripts/dev/swift.sh run swift-wayland-smoke
-- ./scripts/smoke/integration-wayland.sh
-- make gpu-preview-wayland
+- swift run swl ci check
+- swift build --disable-index-store -c release
+- swift run swift-wayland-smoke
+- swift run swl smoke integration
+- swift run swl smoke gpu-preview
 - manual demo smoke test
 ```

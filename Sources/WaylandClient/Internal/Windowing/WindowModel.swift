@@ -1,5 +1,3 @@
-import WaylandRaw
-
 struct ReportedUnknownWindowProtocolValue: Hashable, Sendable {
     let field: UnknownWindowProtocolValueField
     let rawValue: UInt32
@@ -97,14 +95,9 @@ package struct WindowModel: Equatable, Sendable {
         case .compositorCloseRequested(let policy):
             return try reduceCompositorCloseRequested(policy: policy)
         case .explicitClose:
-            return try beginClosing(reason: .explicitClose, publishRequest: false)
-        case .initialConfigureTimedOut(let milliseconds):
-            return try beginClosing(
-                reason: .initializationFailed(
-                    .initialConfigureTimedOut(milliseconds: milliseconds)
-                ),
-                publishRequest: false
-            )
+            return try beginClosing(publishRequest: false)
+        case .initialConfigureTimedOut:
+            return try beginClosing(publishRequest: false)
         case .transientStateReset:
             guard !isClosed else { return [] }
             return updateActiveWindowStateIfPresent { activeState in
@@ -386,11 +379,6 @@ extension WindowModel {
     }
 
     @discardableResult
-    private func requireActivePresentation(in activeState: ActiveWindowState) throws -> UInt64 {
-        try Self.requireActivePresentation(in: activeState, windowID: id)
-    }
-
-    @discardableResult
     private static func requireActivePresentation(
         in activeState: ActiveWindowState,
         windowID: WindowID
@@ -403,17 +391,6 @@ extension WindowModel {
         }
 
         return generation
-    }
-
-    private func requireActivePresentation(
-        generation actualGeneration: UInt64,
-        in activeState: ActiveWindowState
-    ) throws {
-        try Self.requireActivePresentation(
-            generation: actualGeneration,
-            in: activeState,
-            windowID: id
-        )
     }
 
     private static func requireActivePresentation(

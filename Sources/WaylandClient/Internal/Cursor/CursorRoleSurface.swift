@@ -41,10 +41,6 @@ package final class CursorRoleSurface: CursorManagerSurface {
         rawSurface.objectID
     }
 
-    package var capabilitySnapshot: SurfaceCapabilitySnapshot {
-        runtime.capabilitySnapshot
-    }
-
     package func setBufferScale(_ scale: Int32) {
         rawSurface.setBufferScale(scale)
     }

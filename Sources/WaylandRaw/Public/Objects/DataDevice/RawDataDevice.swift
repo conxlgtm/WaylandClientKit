@@ -230,16 +230,6 @@ package final class RawDataDevice {
         proxy.destroy()
     }
 
-    @safe
-    private static func releaseDataDevice(_ pointer: OpaquePointer?) {
-        unsafe swl_data_device_release(pointer)
-    }
-
-    @safe
-    private static func destroyDataDevice(_ pointer: OpaquePointer?) {
-        unsafe swl_data_device_destroy(pointer)
-    }
-
     deinit {
         release()
     }

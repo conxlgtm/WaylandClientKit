@@ -4,7 +4,6 @@ import Testing
 @testable import WaylandRaw
 
 private let requestSeatID = SeatID(rawValue: 1)
-private let requestOfferID = DataOfferID(rawValue: 1)
 private let requestOfferHandle = RawDataOfferHandle(uncheckedRawValue: 0xDADA_1001)
 
 @Suite

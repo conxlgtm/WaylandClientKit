@@ -1,8 +1,7 @@
 # Manual Testing
 
-Manual compositor checks should use the repository Swift wrapper so the runtime
-library path matches the local build environment. Direct `swift run` commands
-need equivalent runtime library configuration.
+Manual compositor checks should use `swift run` from the repository root or
+`nix develop -c swift run ...` when using the Nix development shell.
 
 Record live compositor facts in `docs/compositor-matrix.md`. Keep unit-test
 results separate from compositor evidence.
@@ -12,17 +11,16 @@ results separate from compositor evidence.
 Run the noninteractive checks first:
 
 ```bash
-./scripts/smoke/collect-compositor-facts.sh
-make smoke-wayland
-make integration-wayland
-make gpu-preview-wayland
+swift run swl smoke live
+swift run swl smoke integration
+swift run swl smoke gpu-preview
 ```
 
 For headless Weston:
 
 ```bash
-make wayland-headless
-make gpu-preview-headless
+swift run swl smoke headless -- swl smoke integration
+swift run swl smoke headless -- swl smoke gpu-preview
 ```
 
 ## Framework-Facing Examples
@@ -30,23 +28,23 @@ make gpu-preview-headless
 Run the manual interaction probes:
 
 ```bash
-./scripts/dev/swift.sh run ClientSideResizeChrome
-./scripts/dev/swift.sh run SerialActionsProbe
-./scripts/dev/swift.sh run XDGActivationSmoke
-./scripts/dev/swift.sh run PointerCaptureSmoke
-./scripts/dev/swift.sh run CursorPolicySmoke
+swift run ClientSideResizeChrome
+swift run SerialActionsProbe
+swift run XDGActivationSmoke
+swift run PointerCaptureSmoke
+swift run CursorPolicySmoke
 ```
 
 Run bounded examples when a compositor session is available:
 
 ```bash
-./scripts/dev/swift.sh run TwoWindowFrameworkHost -- --auto-close --print-summary
-./scripts/dev/swift.sh run TwoWindowOrderStress -- --duration-seconds 3 --print-summary
-./scripts/dev/swift.sh run TextInputSmoke -- --auto-close --print-summary
-./scripts/dev/swift.sh run DataTransferSmoke -- --auto-close --print-summary
-./scripts/dev/swift.sh run PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
-./scripts/dev/swift.sh run GPUPreviewSmokeClient
-./scripts/dev/swift.sh run GraphicsPreviewManagedGPUClear
+swift run TwoWindowFrameworkHost -- --auto-close --print-summary
+swift run TwoWindowOrderStress -- --duration-seconds 3 --print-summary
+swift run TextInputSmoke -- --auto-close --print-summary
+swift run DataTransferSmoke -- --auto-close --print-summary
+swift run PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
+swift run GPUPreviewSmokeClient
+swift run GraphicsPreviewManagedGPUClear
 ```
 
 ## Notes To Capture

@@ -1,5 +1,4 @@
 import Testing
-import WaylandRaw
 
 @testable import WaylandClient
 
@@ -127,8 +126,6 @@ private func cursorScaleContext(
     baseSize: CursorSize = CursorSize(unchecked: 24)
 ) throws -> CursorScaleContext {
     CursorScaleContext(
-        seatID: SeatID(rawValue: 1),
-        focusedSurfaceID: RawObjectID(0xC00),
         focusedOutputs: focusedOutputs,
         availableOutputs: availableOutputs,
         baseSize: baseSize

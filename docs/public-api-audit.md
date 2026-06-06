@@ -406,7 +406,7 @@ These targets are package-internal architecture units:
 They may contain `public` declarations for cross-target compilation mechanics, but they are
 not vended as package library products.
 
-Run `./scripts/ci/dump-public-api.sh` during public API review and compare the
+Run `swift run swl api dump` during public API review and compare the
 output against this audit. Any new public declaration in `WaylandClient` should
 be classified as product API, raw-preserving API, diagnostic/error API, or
 temporary API to remove before a public compatibility policy exists.
@@ -460,7 +460,7 @@ The public API may break while SwiftWayland is experimental.
 
 Before treating a public declaration as intentional:
 
-1. Run `./scripts/ci/dump-public-api.sh`.
+1. Run `swift run swl api dump`.
 2. Review all new `WaylandClient` public declarations.
 3. Confirm non-product public declarations are still outside the manifest's
    library products.

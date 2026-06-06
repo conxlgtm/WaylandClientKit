@@ -1,12 +1,18 @@
 * @conxlgtm
 
 /Package.swift @conxlgtm
+/Plugins/ @conxlgtm
 /Examples/ @conxlgtm
 /docs/ @conxlgtm
-/scripts/ @conxlgtm
+/justfile @conxlgtm
+/flake.nix @conxlgtm
+/flake.lock @conxlgtm
+/safety/ @conxlgtm
 
 /Sources/CWaylandProtocols/ @conxlgtm
 /Sources/CWaylandRuntimeShims/ @conxlgtm
+/Sources/SwiftWaylandTool/ @conxlgtm
+/Sources/SwiftWaylandToolSupport/ @conxlgtm
 /Sources/WaylandRaw/ @conxlgtm
 /Sources/WaylandRuntime/ @conxlgtm
 
@@ -19,5 +25,6 @@
 /Tests/WaylandClientTests/ @conxlgtm
 /Tests/WaylandCursorTests/ @conxlgtm
 /Tests/WaylandKeyboardTests/ @conxlgtm
+/Tests/SwiftWaylandToolTests/ @conxlgtm
 
 /.github/workflows/ @conxlgtm

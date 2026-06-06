@@ -39,7 +39,6 @@ final class LivePrimarySelectionControllerBackend: PrimarySelectionControllerBac
         }
 
         return LivePrimarySelectionDeviceBinding(
-            seatID: seatID,
             device: device,
             owner: owner
         )
@@ -47,7 +46,7 @@ final class LivePrimarySelectionControllerBackend: PrimarySelectionControllerBac
 
     func adoptPrimarySelectionOffer(
         handle: RawPrimarySelectionOfferHandle,
-        id: DataOfferID,
+        id _: DataOfferID,
         onEvent: @escaping (RawPrimarySelectionOfferEvent) -> Void
     ) throws -> any PrimarySelectionOfferBinding {
         let globals = try connection.bindRequiredGlobals()
@@ -68,7 +67,7 @@ final class LivePrimarySelectionControllerBackend: PrimarySelectionControllerBac
             throw error
         }
 
-        return LivePrimarySelectionOfferBinding(id: id, offer: offer, owner: owner)
+        return LivePrimarySelectionOfferBinding(offer: offer, owner: owner)
     }
 
     func createPrimarySelectionSource(
@@ -114,18 +113,14 @@ final class LivePrimarySelectionControllerBackend: PrimarySelectionControllerBac
 }
 
 private final class LivePrimarySelectionDeviceBinding: PrimarySelectionDeviceBinding {
-    let seatID: SeatID
-
     private let device: RawPrimarySelectionDevice
     private let owner: RawPrimarySelectionDeviceOwner
     private var isReleased = false
 
     init(
-        seatID bindingSeatID: SeatID,
         device rawDevice: RawPrimarySelectionDevice,
         owner listenerOwner: RawPrimarySelectionDeviceOwner
     ) {
-        seatID = bindingSeatID
         device = rawDevice
         owner = listenerOwner
     }
@@ -152,18 +147,14 @@ private final class LivePrimarySelectionDeviceBinding: PrimarySelectionDeviceBin
 }
 
 private final class LivePrimarySelectionOfferBinding: PrimarySelectionOfferBinding {
-    let id: DataOfferID
-
     private let offer: RawPrimarySelectionOffer
     private let owner: RawPrimarySelectionOfferOwner
     private var isDestroyed = false
 
     init(
-        id offerID: DataOfferID,
         offer rawOffer: RawPrimarySelectionOffer,
         owner listenerOwner: RawPrimarySelectionOfferOwner
     ) {
-        id = offerID
         offer = rawOffer
         owner = listenerOwner
     }

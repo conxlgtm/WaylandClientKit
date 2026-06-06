@@ -39,7 +39,6 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
         }
 
         return LiveDataTransferDeviceBinding(
-            seatID: seatID,
             device: device,
             owner: owner
         )
@@ -127,7 +126,6 @@ final class LiveDataTransferManagerBackend: DataTransferManagerBackend {
 }
 
 private final class LiveDataTransferDeviceBinding: DataTransferDeviceBinding {
-    let seatID: SeatID
     var protocolVersion: RawVersion { device.version }
 
     private let device: RawDataDevice
@@ -135,11 +133,9 @@ private final class LiveDataTransferDeviceBinding: DataTransferDeviceBinding {
     private var isReleased = false
 
     init(
-        seatID bindingSeatID: SeatID,
         device rawDevice: RawDataDevice,
         owner listenerOwner: RawDataDeviceOwner
     ) {
-        seatID = bindingSeatID
         device = rawDevice
         owner = listenerOwner
     }

@@ -65,7 +65,6 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
         }
 
         let binding = RecordingDataTransferDeviceBinding(
-            seatID: seatID,
             onEvent: onEvent
         )
         bindings[seatID] = binding
@@ -133,11 +132,6 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
 
     var sourceDescriptorIO: DataTransferSourceDescriptorIO {
         sourceDescriptorRecorder.descriptorIO
-    }
-
-    @safe
-    func writeFileDescriptor(_ descriptor: Int32, bytes: UnsafeRawBufferPointer) throws -> Int {
-        try sourceDescriptorRecorder.writeFileDescriptor(descriptor, bytes: bytes)
     }
 
     func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult {
@@ -309,7 +303,6 @@ final class RecordingDataTransferDeviceBinding: DataTransferDeviceBinding {
         let serial: InputSerial
     }
 
-    let seatID: SeatID
     var protocolVersion: RawVersion
     var releaseCount = 0
     var selections: [Selection] = []
@@ -318,11 +311,9 @@ final class RecordingDataTransferDeviceBinding: DataTransferDeviceBinding {
     private let onEvent: (RawDataDeviceEvent) -> Void
 
     init(
-        seatID bindingSeatID: SeatID,
         protocolVersion bindingProtocolVersion: RawVersion = 3,
         onEvent eventHandler: @escaping (RawDataDeviceEvent) -> Void
     ) {
-        seatID = bindingSeatID
         protocolVersion = bindingProtocolVersion
         onEvent = eventHandler
     }
