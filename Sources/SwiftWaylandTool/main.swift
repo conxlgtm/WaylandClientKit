@@ -550,7 +550,9 @@ struct Test: ParsableCommand {
             let context = try context()
             let suppressions = context.repository.url("safety/tsan-suppressions.txt")
             var env: [String: String] = [:]
-            env["TSAN_OPTIONS"] = "detect_deadlocks=0:suppressions=\(suppressions.path)"
+            env["TSAN_OPTIONS"] = SanitizerOptions.threadSanitizerOptions(
+                suppressions: suppressions,
+                inherited: context.runner.environment)
             try context.swift.runSwift(
                 ["test", "--sanitize=thread", "--no-parallel"], repository: context.repository,
                 environment: try compilerFilterEnvironment(context: context, base: env))
@@ -922,7 +924,9 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
     case .thread:
         let suppressions = context.repository.url("safety/tsan-suppressions.txt")
         arguments.append(contentsOf: ["--sanitize=thread", "--no-parallel"])
-        environment["TSAN_OPTIONS"] = "detect_deadlocks=0:suppressions=\(suppressions.path)"
+        environment["TSAN_OPTIONS"] = SanitizerOptions.threadSanitizerOptions(
+            suppressions: suppressions,
+            inherited: context.runner.environment)
     case .address:
         arguments.append(contentsOf: ["--sanitize=address", "--no-parallel"])
         environment["ASAN_OPTIONS"] = "detect_leaks=0"
