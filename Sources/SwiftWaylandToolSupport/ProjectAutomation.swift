@@ -42,6 +42,161 @@ private let unsafeTokenPattern = [
     #"EventLoop\.pumpOnce\(display:"#,
 ].joined(separator: "|")
 
+private func symbolList(_ symbols: String) -> [String] {
+    symbols.split(whereSeparator: \.isNewline)
+        .map { String($0).trimmingCharacters(in: .whitespaces) }
+        .filter { !$0.isEmpty }
+}
+
+private let protocolShimSymbols = symbolList(
+    """
+    swl_display_get_registry
+    swl_display_sync
+    swl_display_create_event_queue
+    swl_event_queue_destroy
+    swl_display_create_wrapper
+    swl_display_wrapper_set_queue
+    swl_display_wrapper_destroy
+    swl_display_dispatch_event_queue_pending
+    swl_display_prepare_read_event_queue
+    swl_display_get_protocol_error_details
+    swl_registry_bind_wl_compositor
+    swl_registry_bind_wl_shm
+    swl_registry_bind_xdg_wm_base
+    swl_registry_bind_zxdg_decoration_manager_v1
+    swl_registry_bind_zxdg_output_manager_v1
+    swl_registry_bind_wp_viewporter
+    swl_registry_bind_wp_presentation
+    swl_registry_bind_wp_fractional_scale_manager_v1
+    swl_registry_bind_wl_seat
+    swl_registry_bind_zwp_linux_dmabuf_v1
+    swl_registry_bind_zwp_primary_selection_device_manager_v1
+    swl_registry_add_listener
+    swl_callback_add_listener
+    swl_buffer_add_listener
+    swl_surface_add_listener
+    swl_xdg_wm_base_add_listener
+    swl_xdg_surface_add_listener
+    swl_xdg_toplevel_add_listener
+    swl_zxdg_toplevel_decoration_v1_add_listener
+    swl_wp_fractional_scale_v1_add_listener
+    swl_seat_add_listener
+    swl_pointer_add_listener
+    swl_keyboard_add_listener
+    swl_touch_add_listener
+    swl_primary_selection_offer_add_listener
+    swl_primary_selection_source_add_listener
+    swl_primary_selection_device_add_listener
+    swl_pointer_set_cursor
+    swl_primary_selection_device_manager_create_source
+    swl_primary_selection_device_manager_get_device
+    swl_primary_selection_source_offer
+    swl_primary_selection_offer_receive
+    swl_primary_selection_device_set_selection
+    swl_primary_selection_offer_destroy
+    swl_primary_selection_source_destroy
+    swl_primary_selection_device_destroy
+    swl_primary_selection_device_manager_destroy
+    swl_shm_format_xrgb8888
+    swl_shm_format_argb8888
+    swl_proxy_get_version
+    swl_proxy_get_id
+    swl_proxy_get_queue_raw
+    swl_zxdg_decoration_manager_v1_get_toplevel_decoration
+    swl_zxdg_output_manager_v1_get_xdg_output
+    swl_zxdg_toplevel_decoration_v1_set_mode
+    swl_zxdg_toplevel_decoration_v1_unset_mode
+    swl_zxdg_toplevel_decoration_v1_mode_client_side
+    swl_zxdg_toplevel_decoration_v1_mode_server_side
+    swl_zxdg_toplevel_decoration_v1_destroy
+    swl_zxdg_decoration_manager_v1_destroy
+    swl_zxdg_output_v1_destroy
+    swl_zxdg_output_manager_v1_destroy
+    swl_zxdg_output_v1_add_listener
+    swl_wp_viewporter_get_viewport
+    swl_wp_viewport_set_destination
+    swl_wp_viewport_destroy
+    swl_wp_viewporter_destroy
+    swl_wp_presentation_feedback
+    swl_wp_presentation_destroy
+    swl_wp_presentation_feedback_destroy
+    swl_wp_presentation_add_listener
+    swl_wp_presentation_feedback_add_listener
+    swl_zwp_linux_dmabuf_v1_destroy
+    swl_zwp_linux_dmabuf_v1_get_default_feedback
+    swl_zwp_linux_dmabuf_v1_get_surface_feedback
+    swl_zwp_linux_dmabuf_v1_create_params
+    swl_zwp_linux_buffer_params_v1_add
+    swl_zwp_linux_buffer_params_v1_create
+    swl_zwp_linux_buffer_params_v1_destroy
+    swl_zwp_linux_buffer_params_v1_add_listener
+    swl_zwp_linux_dmabuf_feedback_v1_destroy
+    swl_zwp_linux_dmabuf_feedback_v1_add_listener
+    swl_wp_fractional_scale_manager_v1_get_fractional_scale
+    swl_wp_fractional_scale_v1_destroy
+    swl_wp_fractional_scale_manager_v1_destroy
+    swl_surface_set_buffer_scale
+    """
+)
+
+private let cursorShimSymbols = symbolList(
+    """
+    swl_cursor_theme_load
+    swl_cursor_theme_destroy
+    swl_cursor_theme_get_cursor
+    swl_cursor_image_count
+    swl_cursor_image_at
+    swl_cursor_image_width
+    swl_cursor_image_height
+    swl_cursor_image_hotspot_x
+    swl_cursor_image_hotspot_y
+    swl_cursor_image_delay
+    swl_cursor_image_get_buffer
+    """
+)
+
+private let runtimeShimSymbols = symbolList(
+    """
+    swl_eventfd
+    swl_efd_cloexec
+    swl_efd_nonblock
+    swl_memfd_create
+    swl_mfd_cloexec
+    swl_pipe_cloexec
+    swl_write_no_sigpipe
+    """
+)
+
+private struct ShimVerificationRule {
+    let label: String
+    let headerPath: String
+    let implementationPath: String
+    let symbols: [String]
+}
+
+private let shimVerificationRules = [
+    ShimVerificationRule(
+        label: "protocol",
+        headerPath: "Sources/CWaylandProtocols/include/swift-wayland-shims.h",
+        implementationPath: "Sources/CWaylandProtocols/shims",
+        symbols: protocolShimSymbols),
+    ShimVerificationRule(
+        label: "runtime",
+        headerPath: "Sources/CWaylandRuntimeShims/include/swift-wayland-runtime-shims.h",
+        implementationPath: "Sources/CWaylandRuntimeShims",
+        symbols: runtimeShimSymbols),
+    ShimVerificationRule(
+        label: "cursor",
+        headerPath: "Sources/CWaylandCursorShims/include/swift-wayland-cursor-shims.h",
+        implementationPath: "Sources/CWaylandCursorShims",
+        symbols: cursorShimSymbols),
+]
+
+private let shimTestingGateHeaderPaths = [
+    "Sources/CWaylandProtocols/include/swift-wayland-shims.h",
+    "Sources/CGBMShims/include/swift-wayland-gbm-shims.h",
+]
+
 public struct ToolContext {
     public let repository: Repository
     public let fileSystem: FileSystem
@@ -436,34 +591,74 @@ public struct VerificationChecks {
     }
 
     public func verifyShims() throws {
-        let required = [
-            "Sources/CWaylandProtocols/include/swift-wayland-shims.h": [
-                "swl_display_get_registry", "swl_display_sync", "swl_registry_bind_wl_compositor",
-                "swl_registry_bind_wl_shm", "swl_pointer_set_cursor", "swl_proxy_get_version",
-            ],
-            "Sources/CWaylandRuntimeShims/include/swift-wayland-runtime-shims.h": [
-                "swl_eventfd", "swl_memfd_create", "swl_pipe_cloexec", "swl_write_no_sigpipe",
-            ],
-            "Sources/CWaylandCursorShims/include/swift-wayland-cursor-shims.h": [
-                "swl_cursor_theme_load", "swl_cursor_theme_destroy", "swl_cursor_image_get_buffer",
-            ],
-        ]
         var failures: [String] = []
-        for (headerPath, symbols) in required {
+        for headerPath in shimTestingGateHeaderPaths {
             let header = context.repository.url(headerPath)
-            guard context.fileSystem.exists(header) else {
-                failures.append("Missing shim header: \(headerPath)")
+            guard context.fileSystem.exists(header) else { continue }
+            let text = try context.fileSystem.readText(header)
+            if text.range(
+                of: #"\bNDEBUG\b|#define\s+SWL_ENABLE_TESTING\b"#,
+                options: .regularExpression) != nil
+            {
+                failures.append(
+                    "Testing shims must be gated by Package.swift, not header defaults: "
+                        + headerPath
+                )
+            }
+        }
+        for rule in shimVerificationRules {
+            let headerPath = context.repository.url(rule.headerPath)
+            let implementationPath = context.repository.url(rule.implementationPath)
+            guard context.fileSystem.exists(headerPath) else {
+                failures.append("Missing \(rule.label) shim header: \(rule.headerPath)")
                 continue
             }
-            let text = try context.fileSystem.readText(header)
-            for symbol in symbols where !text.contains(symbol) {
-                failures.append("Missing shim declaration: \(symbol)")
+            guard context.fileSystem.isDirectory(implementationPath) else {
+                failures.append(
+                    "Missing \(rule.label) shim implementation directory: "
+                        + rule.implementationPath
+                )
+                continue
+            }
+            let headerText = try context.fileSystem.readText(headerPath)
+            let implementationText = try shimImplementationText(
+                under: implementationPath,
+                relativePath: rule.implementationPath,
+                failures: &failures)
+            for symbol in rule.symbols {
+                if !containsIdentifier(symbol, in: headerText) {
+                    failures.append("Missing shim declaration: \(symbol)")
+                }
+                if !containsIdentifier(symbol, in: implementationText) {
+                    failures.append("Missing shim implementation: \(symbol)")
+                }
             }
         }
         guard failures.isEmpty else {
             throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)
         }
-        context.diagnostics.success("shim declarations are valid")
+        context.diagnostics.success("shim declarations and implementations are valid")
+    }
+
+    private func shimImplementationText(
+        under directory: URL,
+        relativePath: String,
+        failures: inout [String]
+    ) throws -> String {
+        let files = try context.fileSystem.walk(directory, includingDirectories: false)
+            .filter { $0.pathExtension == "c" }
+            .sorted { $0.path < $1.path }
+        if files.isEmpty {
+            failures.append("Missing shim implementation sources: \(relativePath)")
+        }
+        return try files.map { try context.fileSystem.readText($0) }.joined(separator: "\n")
+    }
+
+    private func containsIdentifier(_ identifier: String, in text: String) -> Bool {
+        let escaped = NSRegularExpression.escapedPattern(for: identifier)
+        return text.range(
+            of: #"(?<![A-Za-z0-9_])\#(escaped)(?![A-Za-z0-9_])"#,
+            options: .regularExpression) != nil
     }
 
     public func verifyReleaseShimSymbols() throws {
