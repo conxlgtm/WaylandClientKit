@@ -44,8 +44,8 @@ swift run swl bootstrap install-command --package-manager nix
 Before opening a pull request, run:
 
 ```bash
+swift run swl tools toolchain-smoke
 swift run swl ci check
-swift build -c release
 ```
 
 Under a real Wayland session, also run:
@@ -74,6 +74,8 @@ swift package swl-bootstrap-check
 
 See [Linux live Wayland testing](docs/live-wayland-testing.md) for the live
 test contract, package commands, and optional protocol skip policy.
+See [Tooling Ownership](docs/tooling.md) for the command ownership model,
+dependency policy, and wrapper rules.
 
 ## Protocol Generation
 
@@ -141,9 +143,20 @@ Any new unsafe surface must explain the ownership invariant that makes it valid.
 If the unsafe-token allowlist changes, describe why in the pull request.
 Prefer scoped borrowed values, validated domain values, and package-internal C shims over raw pointer exposure.
 
+## Dependency Policy
+
+Runtime and library products should avoid external SwiftPM dependencies unless
+they are deliberately approved for the public product graph. Tooling targets may
+use external dependencies when they materially improve maintainability.
+`Package.resolved` is committed intentionally, and dependency updates require
+the relevant `swift run swl ci ...` validation. `swift run swl ci cheap` checks
+that tool-only dependencies do not leak into `WaylandClient` or
+`WaylandGraphicsPreview`.
+
 ## Scope Rule
 
 Cut breadth before correctness.
 
-Do not add GPU rendering, cursor animation, output management, primary selection, drag and drop, text input, IME, widgets, or multi-threaded queues as incidental side work.
-Those belong in dedicated roadmap stories.
+Do not expand GPU rendering, cursor animation, output management, data transfer,
+text input, IME/input-method behavior, widgets, or multi-threaded queues as
+incidental side work. Those belong in dedicated roadmap stories.
