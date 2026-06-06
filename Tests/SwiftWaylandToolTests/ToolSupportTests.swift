@@ -81,6 +81,58 @@ struct ToolSupportTests {
     }
 
     @Test
+    func cCompilerFilterWrapperStripsSwiftPMIndexStoreFlags() throws {
+        let root = try temporaryRepository()
+        let fakeCompiler = root.appendingPathComponent("fake-cc")
+        let capturedArguments = root.appendingPathComponent("cc-args.txt")
+        try """
+        #!/usr/bin/env bash
+        printf '%s\\n' "$@" > "$SWIFTWAYLAND_FAKE_CC_ARGS"
+        """.write(to: fakeCompiler, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: fakeCompiler.path
+        )
+        let wrapper = try CCompilerFilterWrapper.install(in: root, fileSystem: LocalFileSystem())
+        let runner = ProcessRunner(environment: [
+            "PATH": ProcessInfo.processInfo.environment["PATH", default: ""],
+            "SWIFTWAYLAND_REAL_CC": fakeCompiler.path,
+            "SWIFTWAYLAND_FAKE_CC_ARGS": capturedArguments.path,
+        ])
+
+        try runner.run(
+            wrapper.path,
+            [
+                "-DVALUE=1",
+                "-index-store-path",
+                root.appendingPathComponent("index").path,
+                "-index-unit-output-path=\(root.appendingPathComponent("unit").path)",
+                "shim.c",
+            ]
+        )
+
+        let arguments = try String(contentsOf: capturedArguments, encoding: .utf8)
+            .split(separator: "\n")
+            .map(String.init)
+        #expect(arguments == ["-DVALUE=1", "shim.c"])
+    }
+
+    @Test
+    func cCompilerFilterWrapperEnvironmentSetsCCAndPreservesOverrides() throws {
+        let wrapper = URL(fileURLWithPath: "/tmp/swiftwayland-cc-wrapper")
+
+        let environment = CCompilerFilterWrapper.integrationTestEnvironment(
+            wrapper: wrapper,
+            base: ["SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS": "1"],
+            inherited: ["CC": "/usr/bin/clang"]
+        )
+
+        #expect(environment["CC"] == wrapper.path)
+        #expect(environment["SWIFTWAYLAND_REAL_CC"] == "/usr/bin/clang")
+        #expect(environment["SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS"] == "1")
+    }
+
+    @Test
     func doccVerifierUsesConfiguredBuildRootForSymbolGraphs() throws {
         let root = try temporaryRepository()
         let staleBuildGraph = root.appendingPathComponent(
