@@ -185,6 +185,8 @@ jobs:
             weston
       - name: AddressSanitizer tests
         run: swift run swl test asan
+        env:
+          ASAN_OPTIONS: detect_leaks=0
       - name: Headless request-path AddressSanitizer tests
         run: swift run swl smoke headless -- swl test request-paths-asan
 

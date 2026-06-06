@@ -955,15 +955,26 @@ public struct PublicAPIAuditor {
 }
 
 public struct HeadlessWestonRunner {
+    public static let requestProcessTimeoutEnvironmentKey =
+        "SWIFT_WAYLAND_REQUEST_PROCESS_TIMEOUT_SECONDS"
+    public static let defaultRequestProcessTimeoutSeconds: TimeInterval = 600
+
     public let context: ToolContext
 
     public init(context: ToolContext) {
         self.context = context
     }
 
-    public func run(command: [String], timeoutSeconds: TimeInterval = 600) throws {
+    public func run(command: [String], timeoutSeconds: TimeInterval? = nil) throws {
         guard command.isEmpty == false else {
             throw ToolError("headless smoke requires a child command", exitCode: ToolExitCode.usage)
+        }
+        let childTimeoutSeconds: TimeInterval
+        if let timeoutSeconds {
+            childTimeoutSeconds = timeoutSeconds
+        } else {
+            childTimeoutSeconds = try Self.requestProcessTimeoutSeconds(
+                environment: context.runner.environment)
         }
         let childCommand = try swiftPMCommandIfNeeded(command)
         _ = try context.runner.executableURL(for: "weston")
@@ -1015,7 +1026,7 @@ public struct HeadlessWestonRunner {
             try runChild(
                 command: childCommand,
                 environment: env,
-                timeoutSeconds: timeoutSeconds,
+                timeoutSeconds: childTimeoutSeconds,
                 logURL: childLog)
             stopProcess(weston, killAfter: 5)
         } catch {
@@ -1027,6 +1038,24 @@ public struct HeadlessWestonRunner {
             printFailureLog(childLog, label: "headless child output")
             throw error
         }
+    }
+
+    public static func requestProcessTimeoutSeconds(environment: [String: String]) throws
+        -> TimeInterval
+    {
+        guard
+            let rawValue = environment[requestProcessTimeoutEnvironmentKey]?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+            !rawValue.isEmpty
+        else {
+            return defaultRequestProcessTimeoutSeconds
+        }
+        guard let value = TimeInterval(rawValue), value.isFinite, value > 0 else {
+            throw ToolError(
+                "invalid \(requestProcessTimeoutEnvironmentKey): expected positive seconds",
+                exitCode: ToolExitCode.environment)
+        }
+        return value
     }
 
     private func swiftPMCommandIfNeeded(_ command: [String]) throws -> [String] {
