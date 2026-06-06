@@ -33,7 +33,7 @@ Where the environment supports Swift sanitizers, also run:
 
 ```bash
 swift run swl test tsan
-swift run swl test asan
+ASAN_OPTIONS=detect_leaks=0 swift run swl test asan
 swift run swl smoke headless -- swl test request-paths
 swift run swl smoke headless -- swl test request-paths-tsan
 swift run swl smoke headless -- swl test request-paths-asan
@@ -47,8 +47,8 @@ with `detect_leaks=0` is the required ASan gate. LeakSanitizer remains a
 separate informational check because it can exit with a ptrace-related fatal
 error even after the Swift test process reports passing tests; record that as
 an environment limitation rather than a test failure. To attempt the
-LeakSanitizer path explicitly, run `swift run swl test asan` without overriding
-`ASAN_OPTIONS`. The TSan target uses
+LeakSanitizer path explicitly, run `swift run swl test asan` without setting
+`ASAN_OPTIONS=detect_leaks=0`. The TSan target uses
 `safety/tsan-suppressions.txt` only for known Swift runtime
 metadata-cache and Swift Testing event graph reports. It also disables TSan's
 deadlock detector because Swift runtime metadata initialization currently
