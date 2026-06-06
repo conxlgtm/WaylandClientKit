@@ -162,6 +162,36 @@ struct ToolSupportTests {
     }
 
     @Test
+    func doccVerifierRejectsFailedDumpEvenWhenSymbolGraphExists() throws {
+        let root = try temporaryRepository()
+        let scratch = root.appendingPathComponent(".scratch")
+        let symbolGraph = scratch.appendingPathComponent(
+            "debug/symbolgraph/WaylandClient.symbols.json")
+        try FileManager.default.createDirectory(
+            at: symbolGraph.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try #"{"symbols":[]}"#.write(to: symbolGraph, atomically: true, encoding: .utf8)
+
+        let result = ProcessResult(
+            executable: "swift",
+            arguments: ["package", "dump-symbol-graph"],
+            exitCode: 1,
+            stdout: "",
+            stderr: "failed target")
+        let verifier = DocCVerifier(repository: Repository(root: root), buildRoot: scratch)
+
+        do {
+            _ = try verifier.requireWaylandClientSymbolGraph(afterDump: result)
+            Issue.record("expected DocC verifier to reject failed symbol graph dump")
+        } catch let error as ToolError {
+            #expect(error.message.contains("command failed with exit code 1"))
+            #expect(error.message.contains("failed target"))
+            #expect(error.message.contains("symbol graph was emitted"))
+        }
+    }
+
+    @Test
     func protocolManifestValidationRejectsDuplicateNames() throws {
         let root = try temporaryRepository()
         let manifest = root.appendingPathComponent("protocols/manifest.json")

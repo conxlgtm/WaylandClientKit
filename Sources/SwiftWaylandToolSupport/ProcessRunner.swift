@@ -14,6 +14,20 @@ public struct ProcessResult: Sendable, Equatable {
     public let stdout: String
     public let stderr: String
 
+    public init(
+        executable: String,
+        arguments: [String],
+        exitCode: Int32,
+        stdout: String,
+        stderr: String
+    ) {
+        self.executable = executable
+        self.arguments = arguments
+        self.exitCode = exitCode
+        self.stdout = stdout
+        self.stderr = stderr
+    }
+
     public var commandLine: String {
         ([executable] + arguments).joined(separator: " ")
     }

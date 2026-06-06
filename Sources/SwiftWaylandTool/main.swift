@@ -810,28 +810,8 @@ private func runDoccVerify(context: ToolContext) throws {
         repository: context.repository,
         requireSuccess: false
     )
-    do {
-        _ = try verifier.requireWaylandClientSymbolGraph()
-    } catch {
-        if result.exitCode != 0 {
-            throw symbolGraphDumpError(
-                result,
-                detail: "No fresh WaylandClient symbol graph was emitted.")
-        }
-        throw error
-    }
+    _ = try verifier.requireWaylandClientSymbolGraph(afterDump: result)
     try runDoccSymbolLinks(context: context)
-}
-
-private func symbolGraphDumpError(_ result: ProcessResult, detail: String) -> ToolError {
-    ToolError(
-        """
-        command failed with exit code \(result.exitCode): \(result.commandLine)
-        \(result.stderr.isEmpty ? result.stdout : result.stderr)
-        \(detail)
-        """,
-        exitCode: ToolExitCode.process
-    )
 }
 
 private func runDoccSymbolLinks(context: ToolContext) throws {

@@ -87,9 +87,41 @@ public struct DocCVerifier {
         return graph
     }
 
+    public func requireWaylandClientSymbolGraph(afterDump result: ProcessResult) throws -> URL {
+        let graph: URL
+        do {
+            graph = try requireWaylandClientSymbolGraph()
+        } catch {
+            if result.exitCode != 0 {
+                throw Self.symbolGraphDumpError(
+                    result,
+                    detail: "No fresh WaylandClient symbol graph was emitted.")
+            }
+            throw error
+        }
+
+        if result.exitCode != 0 {
+            throw Self.symbolGraphDumpError(
+                result,
+                detail: "WaylandClient symbol graph was emitted, but dump-symbol-graph failed.")
+        }
+        return graph
+    }
+
     private func findWaylandClientSymbolGraphs() throws -> [URL] {
         try fileSystem.walk(buildRoot, includingDirectories: false)
             .filter { $0.path.hasSuffix("/symbolgraph/WaylandClient.symbols.json") }
+    }
+
+    private static func symbolGraphDumpError(_ result: ProcessResult, detail: String) -> ToolError {
+        ToolError(
+            """
+            command failed with exit code \(result.exitCode): \(result.commandLine)
+            \(result.stderr.isEmpty ? result.stdout : result.stderr)
+            \(detail)
+            """,
+            exitCode: ToolExitCode.process
+        )
     }
 
     private func symbolTitles(from url: URL) throws -> Set<String> {
