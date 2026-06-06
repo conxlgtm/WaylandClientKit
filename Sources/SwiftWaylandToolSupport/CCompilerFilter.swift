@@ -100,12 +100,14 @@ public enum CCompilerFilter {
             .appendingPathComponent(".local/share/swiftly")
             .path
         let toolchains = URL(fileURLWithPath: swiftlyHome).appendingPathComponent("toolchains")
-        if let clang = try? fileSystem.walk(toolchains, includingDirectories: false)
-            .filter({ $0.path.hasSuffix("/usr/bin/clang") && fileSystem.isExecutable($0) })
-            .map(\.path)
-            .max()
-        {
-            return clang
+        if fileSystem.exists(toolchains) {
+            let clang = try fileSystem.walk(toolchains, includingDirectories: false)
+                .filter { $0.path.hasSuffix("/usr/bin/clang") && fileSystem.isExecutable($0) }
+                .map(\.path)
+                .max()
+            if let clang {
+                return clang
+            }
         }
 
         let runner = ProcessRunner(environment: environment)
