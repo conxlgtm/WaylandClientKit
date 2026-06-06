@@ -391,14 +391,14 @@ Swift code:
 
 ## Current Checks
 
-- `make lint`
-- `make verify-generated`
-- `make verify-shims`
-- `make strict-concurrency`
-- `make test`
-- `make test-public-api-client`
-- `make integration-wayland`
-- `make check`
+- `swift run swl lint`
+- `swift run swl protocols verify-generated`
+- `swift run swl shims verify`
+- `swift run swl ci check-base`
+- `swift run swl test unit`
+- `swift run swl test integration-public-api`
+- `swift run swl smoke integration`
+- `swift run swl ci check`
 
 Every Swift target builds with strict memory safety as errors through the package
 manifest. Raw wrappers, runtime executor code, keyboard interpretation, cursor loading,

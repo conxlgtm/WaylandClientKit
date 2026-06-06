@@ -5,7 +5,6 @@ import Glibc
 @safe
 package final class WaylandThreadExecutor: SerialExecutor {
     private static let jobBudget = 64
-    package static let pollFailureEvents = Int16(POLLERR) | Int16(POLLHUP) | Int16(POLLNVAL)
 
     // SAFETY: The executor owns these pthread-backed fields for its lifetime.
     // `state` is read or mutated while `mutex` is held, except for owner-thread

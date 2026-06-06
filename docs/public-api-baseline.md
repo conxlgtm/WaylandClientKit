@@ -4,14 +4,14 @@ This baseline records the public declarations exported by vended library
 products. Preview products are included so source-breaking preview API drift is
 visible and reviewed.
 
-Run `./scripts/ci/verify-public-api-audit.sh --update` only after reviewing and
-updating `docs/public-api-audit.md` for the API contract change.
+Run `swift run swl api verify --update` only after reviewing and updating
+`docs/public-api-audit.md` for the API contract change.
 
 ## WaylandClient Public Declarations
 
 ### `Sources/WaylandClient/Internal/Support/IdentityConformances.swift`
 
-- L53: `    public var id: SeatID {`
+- L30: `    public var id: SeatID {`
 
 ### `Sources/WaylandClient/Public/Activation/ActivationDomainTypes.swift`
 
@@ -536,12 +536,12 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L115: `    case named(WindowIconName)`
 - L116: `    case xrgb8888(WindowIconImage)`
 - L119: `public struct IdleInhibitorID:`
-- L133: `    public var description: String {`
-- L138: `public struct IdleInhibitor: Sendable, Hashable, Identifiable {`
-- L139: `    public let id: IdleInhibitorID`
-- L154: `    public func destroy() async throws {`
-- L162: `    public static func == (lhs: IdleInhibitor, rhs: IdleInhibitor) -> Bool {`
-- L166: `    public func hash(into hasher: inout Hasher) {`
+- L131: `    public var description: String {`
+- L136: `public struct IdleInhibitor: Sendable, Hashable, Identifiable {`
+- L137: `    public let id: IdleInhibitorID`
+- L152: `    public func destroy() async throws {`
+- L160: `    public static func == (lhs: IdleInhibitor, rhs: IdleInhibitor) -> Bool {`
+- L164: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Diagnostics/InputDiagnostic.swift`
 
@@ -938,9 +938,9 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L8: `    public func dragOffer(for seatID: SeatID) throws -> DragOffer? {`
 - L18: `    public func requestClipboardSelection(`
 - L34: `    public func requestClearClipboard(seatID: SeatID, serial: InputSerial) throws {`
-- L115: `    public func primarySelectionOffer(for seatID: SeatID) throws -> PrimarySelectionOffer? {`
-- L125: `    public func requestPrimarySelection(`
-- L141: `    public func requestClearPrimarySelection(seatID: SeatID, serial: InputSerial) throws {`
+- L111: `    public func primarySelectionOffer(for seatID: SeatID) throws -> PrimarySelectionOffer? {`
+- L121: `    public func requestPrimarySelection(`
+- L137: `    public func requestClearPrimarySelection(seatID: SeatID, serial: InputSerial) throws {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+DesktopIntegration.swift`
 
@@ -2484,4 +2484,3 @@ updating `docs/public-api-audit.md` for the API contract change.
 - L332: `    public func submit(_ frame: WaylandGraphicsSubmittedFrame) async throws`
 - L339: `    public func submitSoftware(`
 - L376: `    public func cancel() async {`
-

@@ -1,5 +1,4 @@
 import Foundation
-import Glibc
 import Synchronization
 import WaylandRaw
 
@@ -15,10 +14,6 @@ final class RecordingPrimarySelectionBackend: PrimarySelectionControllerBackend 
     var pipeDescriptors = DataTransferPipeDescriptors(readEnd: 100, writeEnd: 101)
     var failingDescriptorAdoptions: Set<Int32> = []
     var sourceBindingIDOverride: DataSourceID?
-    var failingCloseDescriptors: [Int32: Int32] {
-        get { sourceDescriptorRecorder.failingCloseDescriptors }
-        set { sourceDescriptorRecorder.failingCloseDescriptors = newValue }
-    }
     var descriptorWrites: [DescriptorWrite] {
         sourceDescriptorRecorder.descriptorWrites
     }
@@ -44,7 +39,6 @@ final class RecordingPrimarySelectionBackend: PrimarySelectionControllerBackend 
     ) throws -> any PrimarySelectionDeviceBinding {
         boundSeatIDs.append(seatID)
         let binding = RecordingPrimarySelectionDeviceBinding(
-            seatID: seatID,
             onEvent: onEvent
         )
         bindings[seatID] = binding
@@ -118,17 +112,14 @@ final class RecordingPrimarySelectionDeviceBinding: PrimarySelectionDeviceBindin
         let serial: InputSerial
     }
 
-    let seatID: SeatID
     var releaseCount = 0
     var selections: [Selection] = []
 
     private let onEvent: (RawPrimarySelectionDeviceEvent) -> Void
 
     init(
-        seatID bindingSeatID: SeatID,
         onEvent eventHandler: @escaping (RawPrimarySelectionDeviceEvent) -> Void
     ) {
-        seatID = bindingSeatID
         onEvent = eventHandler
     }
 
@@ -238,11 +229,6 @@ private final class RecordingPrimarySelectionSourceDescriptorIO: Sendable {
         )
     }
 
-    var failingCloseDescriptors: [Int32: Int32] {
-        get { storage.withLock(\.failingCloseDescriptors) }
-        set { storage.withLock { $0.failingCloseDescriptors = newValue } }
-    }
-
     var descriptorWrites: [RecordingPrimarySelectionBackend.DescriptorWrite] {
         storage.withLock(\.descriptorWrites)
     }
@@ -262,16 +248,11 @@ private final class RecordingPrimarySelectionSourceDescriptorIO: Sendable {
 
     func closeFileDescriptor(_ descriptor: Int32) -> FileDescriptorCloseResult {
         closeRecorder.record(descriptor)
-        guard let closeErrno = storage.withLock(\.failingCloseDescriptors)[descriptor] else {
-            return .closed
-        }
-
-        return .failed(WaylandSystemErrno(unchecked: closeErrno > 0 ? closeErrno : EIO))
+        return .closed
     }
 }
 
 private struct PrimarySelectionDescriptorIOState: Sendable {
-    var failingCloseDescriptors: [Int32: Int32] = [:]
     var descriptorWrites: [RecordingPrimarySelectionBackend.DescriptorWrite] = []
 }
 

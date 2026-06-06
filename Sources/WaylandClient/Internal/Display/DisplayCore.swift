@@ -488,24 +488,6 @@ extension DisplayCore {
         }
     }
 
-    func pumpOnce(
-        timeoutMilliseconds: Int32,
-        wakeFileDescriptor: CInt,
-        drainWakeFileDescriptor: @escaping () -> Void
-    ) throws {
-        try withFatalFailureFinalization {
-            guard !isClosed else { return }
-            let activeSession = try requireSession()
-            try activeSession.pumpEventsOnOwnerThread(
-                timeoutMilliseconds: timeoutMilliseconds,
-                wakeFileDescriptor: wakeFileDescriptor,
-                drainWakeFileDescriptor: drainWakeFileDescriptor
-            )
-            guard !isClosed else { return }
-            publishSessionEvents(activeSession)
-        }
-    }
-
     func fileDescriptor() throws -> CInt {
         try requireSession().eventLoopFileDescriptorOnOwnerThread
     }

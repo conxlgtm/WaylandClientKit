@@ -2,11 +2,9 @@ import WaylandCursor
 
 package struct AnimatedCursorFrame {
     package let image: CursorImage
-    package let delay: Duration
 
     package init(image frameImage: CursorImage) {
         image = frameImage
-        delay = .milliseconds(Int64(frameImage.delay))
     }
 }
 

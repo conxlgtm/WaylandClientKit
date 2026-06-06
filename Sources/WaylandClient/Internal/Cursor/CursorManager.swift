@@ -401,16 +401,10 @@ package final class CursorManager: RawInputEventObserving {
         let focusedOutputs = focusedSurfaceID.flatMap { outputScalesBySurfaceID[$0] } ?? []
         return try configuration.scalePolicy.internalPolicy.cursorResolution(
             in: CursorScaleContext(
-                seatID: publicSeatID(seatID),
-                focusedSurfaceID: focusedSurfaceID ?? RawObjectID(0),
                 focusedOutputs: focusedOutputs,
                 availableOutputs: availableOutputScales,
                 baseSize: configuration.size
             ))
-    }
-
-    package func cursorSize(for seatID: RawSeatID) throws -> CursorSize {
-        try cursorResolution(for: seatID).size
     }
 
     package func cursorSurface(for seatID: RawSeatID) throws -> CursorManagerSurface {

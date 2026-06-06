@@ -37,23 +37,19 @@ final class LiveTextInputManagerBackend: TextInputManagerBackend {
             throw error
         }
 
-        return LiveTextInputBinding(seatID: seatID, textInput: textInput, owner: owner)
+        return LiveTextInputBinding(textInput: textInput, owner: owner)
     }
 }
 
 private final class LiveTextInputBinding: TextInputBinding {
-    let seatID: SeatID
-
     private let textInput: RawTextInput
     private let owner: RawTextInputOwner
     private var isDestroyed = false
 
     init(
-        seatID bindingSeatID: SeatID,
         textInput rawTextInput: RawTextInput,
         owner listenerOwner: RawTextInputOwner
     ) {
-        seatID = bindingSeatID
         textInput = rawTextInput
         owner = listenerOwner
     }

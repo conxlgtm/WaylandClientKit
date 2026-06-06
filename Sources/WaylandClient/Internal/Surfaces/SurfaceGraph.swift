@@ -220,14 +220,6 @@ package struct SurfaceGraph: Equatable, Sendable {
             .compactMap { surfaceID in nodes[surfaceID]?.popupID }
     }
 
-    package func children(of surfaceID: SurfaceID) -> [SurfaceID] {
-        nodes[surfaceID]?.children ?? []
-    }
-
-    package func topmostPopupSurfaceID(rootedAt surfaceID: SurfaceID) -> SurfaceID? {
-        popupStacksByRoot[surfaceID]?.topmost
-    }
-
     package func contains(_ surfaceID: SurfaceID) -> Bool {
         nodes[surfaceID] != nil
     }

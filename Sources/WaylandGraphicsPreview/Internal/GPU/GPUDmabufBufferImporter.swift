@@ -1,4 +1,3 @@
-import Glibc
 import WaylandRaw
 
 package struct GPUDmabufBufferImportDescriptor: Equatable, Sendable {
@@ -40,11 +39,6 @@ package enum GPUDmabufBufferImportState: Equatable, Sendable {
 package enum GPUDmabufBufferImportError: Error, Equatable, Sendable, CustomStringConvertible {
     case emptyPlaneSet
     case dimensionsExceedInt32(width: UInt32, height: UInt32)
-    case planeCountExceedsUInt32(Int)
-    case planeLayoutFailed(index: Int, GBMAllocationError)
-    case planeFileDescriptorFailed(index: Int, GBMAllocationError)
-    case addPlaneFailed(index: Int, RuntimeError)
-    case createRequestFailed(RuntimeError)
     case compositorImportFailed
     case useAfterTerminalState(GPUDmabufBufferImportState)
 
@@ -54,16 +48,6 @@ package enum GPUDmabufBufferImportError: Error, Equatable, Sendable, CustomStrin
             "GPU dmabuf import requires at least one plane"
         case .dimensionsExceedInt32(let width, let height):
             "GPU dmabuf dimensions \(width)x\(height) exceed Int32"
-        case .planeCountExceedsUInt32(let planeCount):
-            "GPU dmabuf plane count \(planeCount) exceeds UInt32"
-        case .planeLayoutFailed(let index, let error):
-            "GPU dmabuf plane \(index) layout failed: \(error.description)"
-        case .planeFileDescriptorFailed(let index, let error):
-            "GPU dmabuf plane \(index) fd transfer failed: \(error.description)"
-        case .addPlaneFailed(let index, let error):
-            "GPU dmabuf plane \(index) add request failed: \(error.description)"
-        case .createRequestFailed(let error):
-            "GPU dmabuf create request failed: \(error.description)"
         case .compositorImportFailed:
             "GPU dmabuf import failed in compositor"
         case .useAfterTerminalState(let state):
@@ -88,16 +72,6 @@ package final class GPUDmabufBufferImport {
         importedBuffer
     }
 
-    private init(
-        params bufferParams: RawLinuxDmabufBufferParams,
-        onCreated handleCreated: @escaping (RawLinuxDmabufBuffer) -> Void,
-        onFailure handleFailure: @escaping (GPUDmabufBufferImportError) -> Void
-    ) {
-        params = bufferParams
-        onCreated = handleCreated
-        onFailure = handleFailure
-    }
-
     package init(
         testingInitialState initialState: GPUDmabufBufferImportState,
         onCreated handleCreated: @escaping (RawLinuxDmabufBuffer) -> Void,
@@ -109,101 +83,11 @@ package final class GPUDmabufBufferImport {
         onFailure = handleFailure
     }
 
-    package static func requestImport(
-        export: GBMDmabufExport,
-        linuxDmabuf: RawLinuxDmabuf,
-        flags: RawLinuxDmabufBufferParamsFlags = [],
-        onCreated handleCreated: @escaping (RawLinuxDmabufBuffer) -> Void,
-        onFailure handleFailure: @escaping (GPUDmabufBufferImportError) -> Void
-    ) throws(GPUDmabufBufferImportError) -> GPUDmabufBufferImport {
-        let descriptor = try importDescriptor(for: export)
-
-        let requestBox = GPUDmabufBufferImportBox()
-        let params: RawLinuxDmabufBufferParams
-        do {
-            params = try linuxDmabuf.createBufferParams { event in
-                requestBox.importRequest?.handle(event)
-            } onFailure: { error in
-                requestBox.importRequest?.handleFailure(.createRequestFailed(error))
-            }
-        } catch {
-            throw GPUDmabufBufferImportError.createRequestFailed(runtimeError(from: error))
-        }
-
-        let importRequest = GPUDmabufBufferImport(
-            params: params,
-            onCreated: handleCreated,
-            onFailure: handleFailure
-        )
-        requestBox.importRequest = importRequest
-
-        try addPlanes(from: export, descriptor: descriptor, to: params)
-
-        do {
-            try params.create(
-                width: descriptor.width,
-                height: descriptor.height,
-                format: descriptor.format,
-                flags: flags
-            )
-        } catch {
-            throw GPUDmabufBufferImportError.createRequestFailed(runtimeError(from: error))
-        }
-
-        return importRequest
-    }
-
-    private static func addPlanes(
-        from export: GBMDmabufExport,
-        descriptor: GPUDmabufBufferImportDescriptor,
-        to params: RawLinuxDmabufBufferParams
-    ) throws(GPUDmabufBufferImportError) {
-        for index in descriptor.planeIndices {
-            var plane: GBMDmabufPlaneExport
-            do {
-                plane = try export.takePlaneExport(at: index)
-            } catch {
-                throw planeExportError(error, index: index)
-            }
-
-            do {
-                try params.addPlane(
-                    fileDescriptor: &plane.descriptor,
-                    planeIndex: UInt32(index),
-                    offset: plane.layout.offset,
-                    stride: plane.layout.stride,
-                    modifier: export.modifier
-                )
-            } catch {
-                plane.descriptor.close()
-                throw GPUDmabufBufferImportError.addPlaneFailed(
-                    index: index,
-                    runtimeError(from: error)
-                )
-            }
-        }
-    }
-
-    private static func planeExportError(
-        _ error: GBMAllocationError,
-        index: Int
-    ) -> GPUDmabufBufferImportError {
-        switch error {
-        case .planeFileDescriptorAlreadyTaken:
-            .planeFileDescriptorFailed(index: index, error)
-        default:
-            .planeLayoutFailed(index: index, error)
-        }
-    }
-
     package static func importDescriptor(
         for export: GBMDmabufExport
     ) throws(GPUDmabufBufferImportError) -> GPUDmabufBufferImportDescriptor {
         guard export.planeCount > 0 else {
             throw GPUDmabufBufferImportError.emptyPlaneSet
-        }
-        guard export.planeCount <= Int(UInt32.max) else {
-            throw GPUDmabufBufferImportError.planeCountExceedsUInt32(export.planeCount)
         }
         guard
             export.width <= UInt32(Int32.max),
@@ -267,13 +151,4 @@ package final class GPUDmabufBufferImport {
         }
         onFailure?(error)
     }
-
-    private static func runtimeError(from error: any Error) -> RuntimeError {
-        RuntimeError.fromRuntimeOrInvalidArgument(error)
-    }
-}
-
-@safe
-private final class GPUDmabufBufferImportBox {
-    weak var importRequest: GPUDmabufBufferImport?
 }

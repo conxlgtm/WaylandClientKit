@@ -197,14 +197,6 @@ struct DataTransferStore {
         state = nextState
     }
 
-    var offerBindingsByID: [DataOfferID: any DataTransferOfferBinding] {
-        var bindings: [DataOfferID: any DataTransferOfferBinding] = [:]
-        for (offerID, runtimeOffer) in runtimeOffersByID {
-            bindings[offerID] = runtimeOffer.binding
-        }
-        return bindings
-    }
-
     var offersByIDForInvariantChecks: [DataOfferID: RuntimeDataOffer] {
         runtimeOffersByID
     }
@@ -341,10 +333,6 @@ struct DataTransferStore {
         )
     }
 
-    func sourceBinding(for sourceID: DataSourceID) -> (any DataTransferSourceBinding)? {
-        sourceRecords[sourceID]?.binding
-    }
-
     func sourcePayloadData(sourceID: DataSourceID, mimeType: MIMEType) -> Data? {
         sourceRecords[sourceID]?.payloads.data(for: mimeType)
     }
@@ -384,11 +372,6 @@ struct DataTransferStore {
         }
         pruneDetachedSourceSendIDs()
         return removedRequests
-    }
-
-    mutating func replaceSourceSendRequests(_ requests: [DataTransferSourceSendRequest]) {
-        pendingSourceSendRequests = requests
-        pruneDetachedSourceSendIDs()
     }
 
     func pendingSourceSendRequestsForInvariantChecks() -> [DataTransferSourceSendRequest] {

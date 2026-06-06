@@ -18,7 +18,6 @@ package final class SubsurfaceRoleSurface {
 
     private let connection: RawDisplayConnection
     private let bufferCount: PositiveInt
-    private var position: LogicalOffset
     private var size: PositiveLogicalSize
     private var synchronizationMode: SubsurfaceSynchronizationMode
     private var isClosed = false
@@ -37,7 +36,6 @@ package final class SubsurfaceRoleSurface {
         parentWindowID = parentWindow.id
         connection = rawConnection
         bufferCount = subsurfaceConfiguration.bufferCount
-        position = subsurfaceConfiguration.position
         size = subsurfaceConfiguration.size
         synchronizationMode = subsurfaceConfiguration.synchronizationMode
 
@@ -144,7 +142,6 @@ package final class SubsurfaceRoleSurface {
     {
         connection.preconditionIsOwnerThread()
         guard !isClosed else { return nil }
-        position = newPosition
         subsurface.setPosition(x: newPosition.x, y: newPosition.y)
         return parentCommitRequirement(reason: .positionChanged)
     }

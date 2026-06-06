@@ -11,43 +11,33 @@ as failures.
 
 ## Collection
 
-Run this under the compositor being tested:
+Run these under the compositor being tested:
 
 ```bash
-./scripts/smoke/collect-compositor-facts.sh
-```
-
-Then run the relevant checks:
-
-```bash
-make smoke-wayland
-make integration-wayland
-make gpu-preview-wayland
-./scripts/ci/test-examples-build.sh
+swift run swl smoke live
+swift run swl smoke integration
+swift run swl smoke gpu-preview
+swift build
 ```
 
 For headless Weston:
 
 ```bash
-make wayland-headless
-make gpu-preview-headless
+swift run swl smoke headless -- swl smoke integration
+swift run swl smoke headless -- swl smoke gpu-preview
 ```
 
-Use `--include-smoke` when collecting facts if you also want the script to run
-the noninteractive smoke executable:
-
-```bash
-./scripts/smoke/collect-compositor-facts.sh --include-smoke
-```
-
-`make gpu-preview-wayland` prints a `SwiftWayland GPU Preview Runtime Path`
+`swift run swl smoke gpu-preview` prints a `SwiftWayland GPU Preview Runtime Path`
 block. Paste that block into the Graphics Preview Evidence table before
 summarizing the result in the main matrix.
 
 For an interactive checklist grouped by feature, run:
 
 ```bash
-./scripts/manual/compositor-evidence-pass.sh --duration-seconds 5 --auto-close --print-summary
+swift run ClientSideResizeChrome
+swift run SerialActionsProbe
+swift run TwoWindowFrameworkHost -- --auto-close --print-summary
+swift run GPUPreviewSmokeClient
 ```
 
 Smoke examples should print matrix-friendly lines such as `feature`,

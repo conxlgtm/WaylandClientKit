@@ -1,367 +1,810 @@
 {
-  "protocols": [
+  "protocols" : [
     {
-      "name": "wayland-core",
-      "localPath": "protocols/upstream/core/wayland.xml",
-      "upstreamProject": "wayland",
-      "upstreamVersion": "1.24.0",
-      "vendoredFromPackage": "wayland-devel-1.24.0-3.fc44.x86_64",
-      "vendoredFromPath": "/usr/share/wayland/wayland.xml",
-      "sha256": "60abb5864546288a660f3d8af0c838fc87c85bb386582da23e52cb8476e9adbf",
-      "swiftWaylandTier": "required",
-      "apiExposure": "internal",
-      "testStrategy": "unit-and-live",
-      "notes": "Canonical core Wayland protocol used for reproducible generation."
+      "apiExposure" : "internal",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/core/wayland-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/core/wayland-client-protocol.h",
+      "localPath" : "protocols/upstream/core/wayland.xml",
+      "name" : "wayland-core",
+      "notes" : "Canonical core Wayland protocol used for reproducible generation.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "60abb5864546288a660f3d8af0c838fc87c85bb386582da23e52cb8476e9adbf",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland/wayland.xml",
+          "/usr/local/share/wayland/wayland.xml"
+        ],
+        "environmentOverride" : "WAYLAND_CORE_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-client",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "wayland.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "swiftWaylandTier" : "required",
+      "testStrategy" : "unit-and-live",
+      "upstreamProject" : "wayland",
+      "upstreamVersion" : "1.24.0",
+      "vendoredFromPackage" : "wayland-devel-1.24.0-3.fc44.x86_64",
+      "vendoredFromPath" : "/usr/share/wayland/wayland.xml"
     },
     {
-      "name": "xdg-shell",
-      "localPath": "protocols/upstream/stable/xdg-shell/xdg-shell.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.47",
-      "vendoredFromPackage": "wayland-protocols-devel-1.47-2.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml",
-      "sha256": "5084e76386f6c3959bee957a784c57de204be0de3f57533ce07b4be0617b171a",
-      "stability": "stable",
-      "swiftWaylandTier": "required",
-      "apiExposure": "internal",
-      "testStrategy": "unit-and-live",
-      "notes": "Required for modern toplevel windows. Vendored from the canonical Fedora wayland-protocols package path."
+      "apiExposure" : "internal",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/stable/xdg-shell/xdg-shell-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/stable/xdg-shell/xdg-shell-client-protocol.h",
+      "localPath" : "protocols/upstream/stable/xdg-shell/xdg-shell.xml",
+      "name" : "xdg-shell",
+      "notes" : "Required for modern toplevel windows. Vendored from the canonical Fedora wayland-protocols package path.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "5084e76386f6c3959bee957a784c57de204be0de3f57533ce07b4be0617b171a",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml",
+          "/usr/local/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml",
+          "/usr/share/qt6/wayland/protocols/xdg-shell/xdg-shell.xml"
+        ],
+        "environmentOverride" : "XDG_SHELL_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "stable/xdg-shell/xdg-shell.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "stable",
+      "swiftWaylandTier" : "required",
+      "testStrategy" : "unit-and-live",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.47",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.47-2.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml"
     },
     {
-      "name": "xdg-decoration-unstable-v1",
-      "localPath": "protocols/upstream/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml",
-      "sha256": "68753c4a85a28659e3aa1fe0f138329a8bf3dff0b4789f4663a2c7fedbfecf2f",
-      "stability": "unstable",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "publicCapability",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional extension for compositor-managed toplevel decorations."
+      "apiExposure" : "publicCapability",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml",
+      "name" : "xdg-decoration-unstable-v1",
+      "notes" : "Optional extension for compositor-managed toplevel decorations.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "68753c4a85a28659e3aa1fe0f138329a8bf3dff0b4789f4663a2c7fedbfecf2f",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml",
+          "/usr/local/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
+        ],
+        "environmentOverride" : "XDG_DECORATION_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "unstable",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml"
     },
     {
-      "name": "xdg-output-unstable-v1",
-      "localPath": "protocols/upstream/legacy-unstable/xdg-output/xdg-output-unstable-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/xdg-output/xdg-output-unstable-v1.xml",
-      "sha256": "363d547c3eefe8959160cac903ff90b311d4b183005557d73640d9df2cfd7f79",
-      "stability": "unstable",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "publicCapability",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional extension for desktop logical output geometry."
+      "apiExposure" : "publicCapability",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/legacy-unstable/xdg-output/xdg-output-unstable-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/legacy-unstable/xdg-output/xdg-output-unstable-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/legacy-unstable/xdg-output/xdg-output-unstable-v1.xml",
+      "name" : "xdg-output-unstable-v1",
+      "notes" : "Optional extension for desktop logical output geometry.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "363d547c3eefe8959160cac903ff90b311d4b183005557d73640d9df2cfd7f79",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/unstable/xdg-output/xdg-output-unstable-v1.xml",
+          "/usr/local/share/wayland-protocols/unstable/xdg-output/xdg-output-unstable-v1.xml"
+        ],
+        "environmentOverride" : "XDG_OUTPUT_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "unstable/xdg-output/xdg-output-unstable-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "unstable",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/unstable/xdg-output/xdg-output-unstable-v1.xml"
     },
     {
-      "name": "viewporter",
-      "localPath": "protocols/upstream/stable/viewporter/viewporter.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/stable/viewporter/viewporter.xml",
-      "sha256": "dcb12279a03746301fe490aaed4b38a403485a925abfce2ccfceb644e104fe71",
-      "stability": "stable",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "internal",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional extension for surface destination sizing used by fractional scaling."
+      "apiExposure" : "internal",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/stable/viewporter/viewporter-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/stable/viewporter/viewporter-client-protocol.h",
+      "localPath" : "protocols/upstream/stable/viewporter/viewporter.xml",
+      "name" : "viewporter",
+      "notes" : "Optional extension for surface destination sizing used by fractional scaling.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "dcb12279a03746301fe490aaed4b38a403485a925abfce2ccfceb644e104fe71",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/stable/viewporter/viewporter.xml",
+          "/usr/local/share/wayland-protocols/stable/viewporter/viewporter.xml"
+        ],
+        "environmentOverride" : "VIEWPORTER_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "stable/viewporter/viewporter.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "stable",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/stable/viewporter/viewporter.xml"
     },
     {
-      "name": "presentation-time",
-      "localPath": "protocols/upstream/stable/presentation-time/presentation-time.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/stable/presentation-time/presentation-time.xml",
-      "sha256": "dffac93bcb2bb1d8c385e72b8a8c2c0d4d79a336866322f3ba886dce2b27b1e2",
-      "stability": "stable",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "public",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional extension for compositor presentation feedback on committed surfaces."
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/stable/presentation-time/presentation-time-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/stable/presentation-time/presentation-time-client-protocol.h",
+      "localPath" : "protocols/upstream/stable/presentation-time/presentation-time.xml",
+      "name" : "presentation-time",
+      "notes" : "Optional extension for compositor presentation feedback on committed surfaces.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "dffac93bcb2bb1d8c385e72b8a8c2c0d4d79a336866322f3ba886dce2b27b1e2",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/stable/presentation-time/presentation-time.xml",
+          "/usr/local/share/wayland-protocols/stable/presentation-time/presentation-time.xml"
+        ],
+        "environmentOverride" : "PRESENTATION_TIME_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "stable/presentation-time/presentation-time.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "stable",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/stable/presentation-time/presentation-time.xml"
     },
     {
-      "name": "tablet-v2",
-      "localPath": "protocols/upstream/stable/tablet/tablet-v2.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/stable/tablet/tablet-v2.xml",
-      "sha256": "ac1128b26c779cf90b9ed71182ba5e34a7262826789adae206d825a4d45908b4",
-      "stability": "stable",
-      "swiftWaylandTier": "privateGenerationDependency",
-      "apiExposure": "none",
-      "testStrategy": "generation-only",
-      "notes": "Private generation dependency for cursor-shape tablet-tool request interfaces; SwiftWayland does not expose tablet APIs yet."
+      "apiExposure" : "none",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/stable/tablet/tablet-v2-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/stable/tablet/tablet-v2-client-protocol.h",
+      "localPath" : "protocols/upstream/stable/tablet/tablet-v2.xml",
+      "name" : "tablet-v2",
+      "notes" : "Private generation dependency for cursor-shape tablet-tool request interfaces; SwiftWayland does not expose tablet APIs yet.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "ac1128b26c779cf90b9ed71182ba5e34a7262826789adae206d825a4d45908b4",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/stable/tablet/tablet-v2.xml",
+          "/usr/local/share/wayland-protocols/stable/tablet/tablet-v2.xml"
+        ],
+        "environmentOverride" : "TABLET_V2_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "stable/tablet/tablet-v2.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "stable",
+      "swiftWaylandTier" : "privateGenerationDependency",
+      "testStrategy" : "generation-only",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/stable/tablet/tablet-v2.xml"
     },
     {
-      "name": "fractional-scale-v1",
-      "localPath": "protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml",
-      "sha256": "5941de5d28f427ecdadddc8623a6f6af0a30b0ab4726847236ba7a7652b81316",
-      "stability": "staging",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "publicCapability",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional extension for compositor-preferred fractional surface scales."
+      "apiExposure" : "publicCapability",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/fractional-scale/fractional-scale-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml",
+      "name" : "fractional-scale-v1",
+      "notes" : "Optional extension for compositor-preferred fractional surface scales.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "5941de5d28f427ecdadddc8623a6f6af0a30b0ab4726847236ba7a7652b81316",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml"
+        ],
+        "environmentOverride" : "FRACTIONAL_SCALE_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/fractional-scale/fractional-scale-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml"
     },
     {
-      "name": "cursor-shape-v1",
-      "localPath": "protocols/upstream/staging/cursor-shape/cursor-shape-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/staging/cursor-shape/cursor-shape-v1.xml",
-      "sha256": "bb57d91e53a79dadab7c612dab87c233393cee73673feefa7442cfbfdd9aed2f",
-      "stability": "staging",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "public",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional extension for compositor-managed pointer cursor shapes."
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/cursor-shape/cursor-shape-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/cursor-shape/cursor-shape-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/cursor-shape/cursor-shape-v1.xml",
+      "name" : "cursor-shape-v1",
+      "notes" : "Optional extension for compositor-managed pointer cursor shapes.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "bb57d91e53a79dadab7c612dab87c233393cee73673feefa7442cfbfdd9aed2f",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/cursor-shape/cursor-shape-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/cursor-shape/cursor-shape-v1.xml"
+        ],
+        "environmentOverride" : "CURSOR_SHAPE_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/cursor-shape/cursor-shape-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/cursor-shape/cursor-shape-v1.xml"
     },
     {
-      "name": "xdg-activation-v1",
-      "localPath": "protocols/upstream/staging/xdg-activation/xdg-activation-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.47",
-      "vendoredFromPackage": "wayland-protocols 1.47",
-      "vendoredFromPath": "/usr/share/wayland-protocols/staging/xdg-activation/xdg-activation-v1.xml",
-      "sha256": "d8418be2d5738d50aff788bef1c7574f33f26659aa045447ff2ef9b78c58fe01",
-      "stability": "staging",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "public",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional desktop-integration protocol for activation tokens and surface activation."
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/xdg-activation/xdg-activation-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/xdg-activation/xdg-activation-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/xdg-activation/xdg-activation-v1.xml",
+      "name" : "xdg-activation-v1",
+      "notes" : "Optional desktop-integration protocol for activation tokens and surface activation.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "d8418be2d5738d50aff788bef1c7574f33f26659aa045447ff2ef9b78c58fe01",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/xdg-activation/xdg-activation-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/xdg-activation/xdg-activation-v1.xml"
+        ],
+        "environmentOverride" : "XDG_ACTIVATION_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/xdg-activation/xdg-activation-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.47",
+      "vendoredFromPackage" : "wayland-protocols 1.47",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/xdg-activation/xdg-activation-v1.xml"
     },
     {
-      "name": "xdg-toplevel-icon-v1",
-      "localPath": "protocols/upstream/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.1.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml",
-      "sha256": "791dbfed89280c1b8031689955a03e9b2da55601be3c5854a6198e38cea4978f",
-      "stability": "staging",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "public",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional desktop-integration protocol for per-toplevel window icons."
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml",
+      "name" : "xdg-toplevel-icon-v1",
+      "notes" : "Optional desktop-integration protocol for per-toplevel window icons.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "5e57a72fa9ccf1666c56d49cc86408f068c21e5e6a09ddd468ee65d08478f882",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml"
+        ],
+        "environmentOverride" : "XDG_TOPLEVEL_ICON_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.1.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml"
     },
     {
-      "name": "xdg-system-bell-v1",
-      "localPath": "protocols/upstream/staging/xdg-system-bell/xdg-system-bell-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.1.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/staging/xdg-system-bell/xdg-system-bell-v1.xml",
-      "sha256": "863c5efcb1a19961c019d23b9875ab84a158da802f5622f5ecc30522c6019330",
-      "stability": "staging",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "public",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional desktop-integration protocol for compositor-mediated system bell requests."
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/xdg-system-bell/xdg-system-bell-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/xdg-system-bell/xdg-system-bell-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/xdg-system-bell/xdg-system-bell-v1.xml",
+      "name" : "xdg-system-bell-v1",
+      "notes" : "Optional desktop-integration protocol for compositor-mediated system bell requests.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "863c5efcb1a19961c019d23b9875ab84a158da802f5622f5ecc30522c6019330",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/xdg-system-bell/xdg-system-bell-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/xdg-system-bell/xdg-system-bell-v1.xml"
+        ],
+        "environmentOverride" : "XDG_SYSTEM_BELL_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/xdg-system-bell/xdg-system-bell-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.1.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/xdg-system-bell/xdg-system-bell-v1.xml"
     },
     {
-      "name": "linux-drm-syncobj-v1",
-      "localPath": "protocols/upstream/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml",
-      "sha256": "5ede41a56eced6aa635caa7ab2996066bff9fd211620dbf9f73aafab740bec71",
-      "stability": "staging",
-      "swiftWaylandTier": "previewFoundation",
-      "apiExposure": "internal",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Package-internal explicit synchronization substrate for dmabuf submit readiness and release points."
+      "apiExposure" : "internal",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/linux-drm-syncobj/linux-drm-syncobj-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/linux-drm-syncobj/linux-drm-syncobj-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml",
+      "name" : "linux-drm-syncobj-v1",
+      "notes" : "Package-internal explicit synchronization substrate for dmabuf submit readiness and release points.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "5ede41a56eced6aa635caa7ab2996066bff9fd211620dbf9f73aafab740bec71",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml"
+        ],
+        "environmentOverride" : "LINUX_DRM_SYNCOBJ_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "swiftWaylandTier" : "previewFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml"
     },
     {
-      "name": "fifo-v1",
-      "localPath": "protocols/upstream/staging/fifo/fifo-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/staging/fifo/fifo-v1.xml",
-      "sha256": "0b6c31dfe6bca19b712745c9de7a4a398558cfa1087b1938e96fd3b10ffc1069",
-      "stability": "staging",
-      "swiftWaylandTier": "previewFoundation",
-      "apiExposure": "internal",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Package-internal display-refresh readiness constraint substrate."
+      "apiExposure" : "internal",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/fifo/fifo-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/fifo/fifo-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/fifo/fifo-v1.xml",
+      "name" : "fifo-v1",
+      "notes" : "Package-internal display-refresh readiness constraint substrate.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "0b6c31dfe6bca19b712745c9de7a4a398558cfa1087b1938e96fd3b10ffc1069",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/fifo/fifo-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/fifo/fifo-v1.xml"
+        ],
+        "environmentOverride" : "FIFO_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/fifo/fifo-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "swiftWaylandTier" : "previewFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/fifo/fifo-v1.xml"
     },
     {
-      "name": "commit-timing-v1",
-      "localPath": "protocols/upstream/staging/commit-timing/commit-timing-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/staging/commit-timing/commit-timing-v1.xml",
-      "sha256": "ff3fcf31d13d44bad756a50fda663a43008bacbbd2bf8cba3a1bf5ffe7f54172",
-      "stability": "staging",
-      "swiftWaylandTier": "previewFoundation",
-      "apiExposure": "internal",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Package-internal target latch time substrate."
+      "apiExposure" : "internal",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/commit-timing/commit-timing-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/commit-timing/commit-timing-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/commit-timing/commit-timing-v1.xml",
+      "name" : "commit-timing-v1",
+      "notes" : "Package-internal target latch time substrate.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "ff3fcf31d13d44bad756a50fda663a43008bacbbd2bf8cba3a1bf5ffe7f54172",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/commit-timing/commit-timing-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/commit-timing/commit-timing-v1.xml"
+        ],
+        "environmentOverride" : "COMMIT_TIMING_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/commit-timing/commit-timing-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "swiftWaylandTier" : "previewFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/commit-timing/commit-timing-v1.xml"
     },
     {
-      "name": "content-type-v1",
-      "localPath": "protocols/upstream/staging/content-type/content-type-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.1.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/staging/content-type/content-type-v1.xml",
-      "sha256": "203d17a26baa2ab4a8c2c9cb737c953fa3263c73a0a8aa6e552a41b3eac2196d",
-      "stability": "staging",
-      "swiftWaylandTier": "previewFoundation",
-      "apiExposure": "internal",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Package-internal surface content hint substrate for commit metadata."
+      "apiExposure" : "internal",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/content-type/content-type-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/content-type/content-type-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/content-type/content-type-v1.xml",
+      "name" : "content-type-v1",
+      "notes" : "Package-internal surface content hint substrate for commit metadata.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "203d17a26baa2ab4a8c2c9cb737c953fa3263c73a0a8aa6e552a41b3eac2196d",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/content-type/content-type-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/content-type/content-type-v1.xml"
+        ],
+        "environmentOverride" : "CONTENT_TYPE_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/content-type/content-type-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "swiftWaylandTier" : "previewFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.1.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/content-type/content-type-v1.xml"
     },
     {
-      "name": "alpha-modifier-v1",
-      "localPath": "protocols/upstream/staging/alpha-modifier/alpha-modifier-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.1.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/staging/alpha-modifier/alpha-modifier-v1.xml",
-      "sha256": "f0b4a43b9e48783fafdb46319fa72b34a41afd932f8613d7cadaf7203f2ffa35",
-      "stability": "staging",
-      "swiftWaylandTier": "previewFoundation",
-      "apiExposure": "internal",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Package-internal surface alpha multiplier substrate for commit metadata."
+      "apiExposure" : "internal",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/alpha-modifier/alpha-modifier-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/alpha-modifier/alpha-modifier-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/alpha-modifier/alpha-modifier-v1.xml",
+      "name" : "alpha-modifier-v1",
+      "notes" : "Package-internal surface alpha multiplier substrate for commit metadata.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "f0b4a43b9e48783fafdb46319fa72b34a41afd932f8613d7cadaf7203f2ffa35",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/alpha-modifier/alpha-modifier-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/alpha-modifier/alpha-modifier-v1.xml"
+        ],
+        "environmentOverride" : "ALPHA_MODIFIER_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/alpha-modifier/alpha-modifier-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "swiftWaylandTier" : "previewFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.1.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/alpha-modifier/alpha-modifier-v1.xml"
     },
     {
-      "name": "tearing-control-v1",
-      "localPath": "protocols/upstream/staging/tearing-control/tearing-control-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.1.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/staging/tearing-control/tearing-control-v1.xml",
-      "sha256": "846895b4a90ba1ddd75673cefc596480beef318f1694ec7dbca0fec54bb27043",
-      "stability": "staging",
-      "swiftWaylandTier": "previewFoundation",
-      "apiExposure": "internal",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Package-internal async presentation hint substrate for commit metadata."
+      "apiExposure" : "internal",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/tearing-control/tearing-control-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/tearing-control/tearing-control-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/tearing-control/tearing-control-v1.xml",
+      "name" : "tearing-control-v1",
+      "notes" : "Package-internal async presentation hint substrate for commit metadata.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "846895b4a90ba1ddd75673cefc596480beef318f1694ec7dbca0fec54bb27043",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/tearing-control/tearing-control-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/tearing-control/tearing-control-v1.xml"
+        ],
+        "environmentOverride" : "TEARING_CONTROL_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/tearing-control/tearing-control-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "swiftWaylandTier" : "previewFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.1.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/tearing-control/tearing-control-v1.xml"
     },
     {
-      "name": "color-representation-v1",
-      "localPath": "protocols/upstream/staging/color-representation/color-representation-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.1.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/staging/color-representation/color-representation-v1.xml",
-      "sha256": "b824688e0e5c1d01e12afe1d3f82503092ec7599affcd6471fda6d296d4f7e3b",
-      "stability": "staging",
-      "swiftWaylandTier": "previewFoundation",
-      "apiExposure": "internal",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Package-internal surface color representation substrate for commit metadata."
+      "apiExposure" : "internal",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/color-representation/color-representation-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/color-representation/color-representation-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/color-representation/color-representation-v1.xml",
+      "name" : "color-representation-v1",
+      "notes" : "Package-internal surface color representation substrate for commit metadata.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "b824688e0e5c1d01e12afe1d3f82503092ec7599affcd6471fda6d296d4f7e3b",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/color-representation/color-representation-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/color-representation/color-representation-v1.xml"
+        ],
+        "environmentOverride" : "COLOR_REPRESENTATION_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/color-representation/color-representation-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "swiftWaylandTier" : "previewFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.1.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/color-representation/color-representation-v1.xml"
     },
     {
-      "name": "color-management-v1",
-      "localPath": "protocols/upstream/staging/color-management/color-management-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.1.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/staging/color-management/color-management-v1.xml",
-      "sha256": "b05c15a021d467cff446ab88d8a41d3a908a66cdb5ae104611a410007a01979b",
-      "stability": "staging",
-      "swiftWaylandTier": "previewFoundation",
-      "apiExposure": "internal",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Package-internal surface color description substrate for commit metadata."
+      "apiExposure" : "internal",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/color-management/color-management-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/color-management/color-management-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/color-management/color-management-v1.xml",
+      "name" : "color-management-v1",
+      "notes" : "Package-internal surface color description substrate for commit metadata.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "b05c15a021d467cff446ab88d8a41d3a908a66cdb5ae104611a410007a01979b",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/color-management/color-management-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/color-management/color-management-v1.xml"
+        ],
+        "environmentOverride" : "COLOR_MANAGEMENT_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/color-management/color-management-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "swiftWaylandTier" : "previewFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.1.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/color-management/color-management-v1.xml"
     },
     {
-      "name": "primary-selection-unstable-v1",
-      "localPath": "protocols/upstream/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml",
-      "sha256": "d568482ba84df6e531698b1f531810860995ca24d69495427fe43aee6017f52c",
-      "stability": "unstable",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "public",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional extension for X-style primary selection transfer."
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/legacy-unstable/primary-selection/primary-selection-unstable-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/legacy-unstable/primary-selection/primary-selection-unstable-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml",
+      "name" : "primary-selection-unstable-v1",
+      "notes" : "Optional extension for X-style primary selection transfer.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "d568482ba84df6e531698b1f531810860995ca24d69495427fe43aee6017f52c",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml",
+          "/usr/local/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml"
+        ],
+        "environmentOverride" : "PRIMARY_SELECTION_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "unstable/primary-selection/primary-selection-unstable-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "unstable",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml"
     },
     {
-      "name": "idle-inhibit-unstable-v1",
-      "localPath": "protocols/upstream/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.1.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/idle-inhibit/idle-inhibit-unstable-v1.xml",
-      "sha256": "c2ac9f002c6669ca6c02eb9b587b8e9108e3ce6deab4a2de58b576f4f864ca38",
-      "stability": "unstable",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "public",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional desktop-integration protocol for surface-scoped idle inhibition."
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1.xml",
+      "name" : "idle-inhibit-unstable-v1",
+      "notes" : "Optional desktop-integration protocol for surface-scoped idle inhibition.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "c2ac9f002c6669ca6c02eb9b587b8e9108e3ce6deab4a2de58b576f4f864ca38",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/unstable/idle-inhibit/idle-inhibit-unstable-v1.xml",
+          "/usr/local/share/wayland-protocols/unstable/idle-inhibit/idle-inhibit-unstable-v1.xml"
+        ],
+        "environmentOverride" : "IDLE_INHIBIT_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "unstable/idle-inhibit/idle-inhibit-unstable-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "unstable",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.1.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/unstable/idle-inhibit/idle-inhibit-unstable-v1.xml"
     },
     {
-      "name": "text-input-unstable-v3",
-      "localPath": "protocols/upstream/legacy-unstable/text-input/text-input-unstable-v3.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/text-input/text-input-unstable-v3.xml",
-      "sha256": "160815cda13c285a30df1971d8f0a5b3aac07071537df59916d2f748b18e4f59",
-      "stability": "unstable",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "public",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional foundation protocol for compositor/IME text input."
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/legacy-unstable/text-input/text-input-unstable-v3-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/legacy-unstable/text-input/text-input-unstable-v3-client-protocol.h",
+      "localPath" : "protocols/upstream/legacy-unstable/text-input/text-input-unstable-v3.xml",
+      "name" : "text-input-unstable-v3",
+      "notes" : "Optional foundation protocol for compositor/IME text input.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "160815cda13c285a30df1971d8f0a5b3aac07071537df59916d2f748b18e4f59",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/unstable/text-input/text-input-unstable-v3.xml",
+          "/usr/local/share/wayland-protocols/unstable/text-input/text-input-unstable-v3.xml"
+        ],
+        "environmentOverride" : "TEXT_INPUT_UNSTABLE_V3_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "unstable/text-input/text-input-unstable-v3.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "unstable",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/unstable/text-input/text-input-unstable-v3.xml"
     },
     {
-      "name": "linux-dmabuf-unstable-v1",
-      "localPath": "protocols/upstream/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml",
-      "sha256": "0681c01199393662229b0d9f71a4bd502350ea8f782a7049fa30e392b50fb2c8",
-      "stability": "unstable",
-      "swiftWaylandTier": "previewFoundation",
-      "apiExposure": "preview",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional foundation protocol for dmabuf-backed wl_buffer creation and default/per-surface feedback."
+      "apiExposure" : "preview",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/legacy-unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml",
+      "name" : "linux-dmabuf-unstable-v1",
+      "notes" : "Optional foundation protocol for dmabuf-backed wl_buffer creation and default/per-surface feedback.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "0681c01199393662229b0d9f71a4bd502350ea8f782a7049fa30e392b50fb2c8",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml",
+          "/usr/local/share/wayland-protocols/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
+        ],
+        "environmentOverride" : "LINUX_DMABUF_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "unstable",
+      "swiftWaylandTier" : "previewFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
     },
     {
-      "name": "relative-pointer-unstable-v1",
-      "localPath": "protocols/upstream/legacy-unstable/relative-pointer/relative-pointer-unstable-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/relative-pointer/relative-pointer-unstable-v1.xml",
-      "sha256": "ab4930dd3084f732b6fdd12ee6dbd0a112a758ed8a57b170366391dbeb1a22ff",
-      "stability": "unstable",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "public",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional foundation protocol for relative pointer motion on wl_pointer seats."
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/legacy-unstable/relative-pointer/relative-pointer-unstable-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/legacy-unstable/relative-pointer/relative-pointer-unstable-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/legacy-unstable/relative-pointer/relative-pointer-unstable-v1.xml",
+      "name" : "relative-pointer-unstable-v1",
+      "notes" : "Optional foundation protocol for relative pointer motion on wl_pointer seats.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "ab4930dd3084f732b6fdd12ee6dbd0a112a758ed8a57b170366391dbeb1a22ff",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/unstable/relative-pointer/relative-pointer-unstable-v1.xml",
+          "/usr/local/share/wayland-protocols/unstable/relative-pointer/relative-pointer-unstable-v1.xml"
+        ],
+        "environmentOverride" : "RELATIVE_POINTER_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "unstable/relative-pointer/relative-pointer-unstable-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "unstable",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/unstable/relative-pointer/relative-pointer-unstable-v1.xml"
     },
     {
-      "name": "pointer-constraints-unstable-v1",
-      "localPath": "protocols/upstream/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1.xml",
-      "upstreamProject": "wayland-protocols",
-      "upstreamVersion": "1.48",
-      "vendoredFromPackage": "wayland-protocols-devel-1.48-1.fc44.noarch",
-      "vendoredFromPath": "/usr/share/wayland-protocols/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml",
-      "sha256": "f980fac900ba1dcfbbe97f588fc17b893926bd2b57624563653a1bfe4d035948",
-      "stability": "unstable",
-      "swiftWaylandTier": "optionalFoundation",
-      "apiExposure": "public",
-      "testStrategy": "unit-and-live-when-advertised",
-      "notes": "Optional foundation protocol for pointer lock and confinement requests."
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1.xml",
+      "name" : "pointer-constraints-unstable-v1",
+      "notes" : "Optional foundation protocol for pointer lock and confinement requests.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "f980fac900ba1dcfbbe97f588fc17b893926bd2b57624563653a1bfe4d035948",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml",
+          "/usr/local/share/wayland-protocols/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml"
+        ],
+        "environmentOverride" : "POINTER_CONSTRAINTS_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "unstable/pointer-constraints/pointer-constraints-unstable-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "unstable",
+      "swiftWaylandTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml"
     }
   ]
 }

@@ -36,7 +36,6 @@ enum TextInputSmoke {
                 group.addTask {
                     try await consumeDisplayEvents(
                         display.events,
-                        display: display,
                         window: window,
                         state: state
                     )
@@ -79,7 +78,6 @@ enum TextInputSmoke {
 
     nonisolated private static func consumeDisplayEvents(
         _ events: DisplayEvents,
-        display: WaylandDisplay,
         window: Window,
         state: TextInputSmokeState
     ) async throws {

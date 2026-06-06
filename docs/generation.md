@@ -4,39 +4,32 @@
 
 Vendored XML files:
 
-- `protocols/upstream/core/wayland.xml`
-- `protocols/upstream/stable/xdg-shell/xdg-shell.xml`
-- `protocols/upstream/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
-- `protocols/upstream/legacy-unstable/primary-selection/primary-selection-unstable-v1.xml`
-- `protocols/upstream/stable/viewporter/viewporter.xml`
-- `protocols/upstream/staging/fractional-scale/fractional-scale-v1.xml`
+- `protocols/upstream/core/`
+- `protocols/upstream/stable/`
+- `protocols/upstream/staging/`
+- `protocols/upstream/legacy-unstable/`
 - `protocols/manifest.json`
 
-These files are committed.
+These files are committed. `protocols/manifest.json` is the source of truth for
+the protocol inventory, source-resolution strategy, override environment
+variable, pkg-config package and variable, source candidates, generated header
+and C output paths, scanner modes, checksum, tier, exposure, and test strategy.
+Run `swift run swl protocols list` to print the tracked inventory.
 
-Do not edit generated files directly. Change the vendored XML or generation scripts, regenerate, and review the generated diff.
+Do not edit generated files directly. Change the vendored XML or protocol manifest metadata, regenerate, and review the generated diff.
 
 ## Generated Outputs
 
 Generated headers:
 
-- `Sources/CWaylandProtocols/include/generated/core/wayland-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/stable/xdg-shell/xdg-shell-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/legacy-unstable/primary-selection/primary-selection-unstable-v1-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/stable/viewporter/viewporter-client-protocol.h`
-- `Sources/CWaylandProtocols/include/generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h`
+- `Sources/CWaylandProtocols/include/generated/`
 
 Generated C files:
 
-- `Sources/CWaylandProtocols/generated/core/wayland-protocol.c`
-- `Sources/CWaylandProtocols/generated/stable/xdg-shell/xdg-shell-protocol.c`
-- `Sources/CWaylandProtocols/generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-protocol.c`
-- `Sources/CWaylandProtocols/generated/legacy-unstable/primary-selection/primary-selection-unstable-v1-protocol.c`
-- `Sources/CWaylandProtocols/generated/stable/viewporter/viewporter-protocol.c`
-- `Sources/CWaylandProtocols/generated/staging/fractional-scale/fractional-scale-v1-protocol.c`
+- `Sources/CWaylandProtocols/generated/`
 
-These files are committed.
+These files are committed. The exact file set comes from `generatedHeaderPath`
+and `generatedCodePath` in `protocols/manifest.json`.
 
 ## Shim Files
 
@@ -48,7 +41,6 @@ These files are not generated:
 ## Tools
 
 - `wayland-scanner`
-- `git`
 - `ripgrep`
 - `pkg-config`
 
@@ -57,104 +49,66 @@ These files are not generated:
 Sync XML from the local system:
 
 ```bash
-./scripts/dev/bootstrap-linux.sh --maintainer
-./scripts/protocols/sync.sh
+swift run swl bootstrap maintainer-check
+swift run swl protocols sync
 ```
 
 Generate protocol artifacts from vendored XML:
 
 ```bash
-./scripts/protocols/generate.sh
+swift run swl protocols generate
 ```
 
 Verify that vendored XML and generated outputs are in sync:
 
 ```bash
-./scripts/protocols/verify-generated.sh
+swift run swl protocols verify-generated
 ```
 
 Verify that every manifest entry records tier, exposure, and test policy:
 
 ```bash
-./scripts/protocols/verify-manifest.py
+swift run swl protocols verify-manifest
 ```
 
 Run the full local gate:
 
 ```bash
-make check
+swift run swl ci check
 ```
 
 Verify the hand-written C shim declarations and implementations cover the
 currently-supported Swift surface:
 
 ```bash
-make verify-shims
+swift run swl shims verify
 ```
 
 Verify DocC symbol references:
 
 ```bash
-./scripts/ci/verify-docc-symbol-links.py
+swift run swl docc verify-symbol-links
 ```
 
-## Script Responsibilities
+## Command Responsibilities
 
-### `scripts/protocols/sync.sh`
+### `swift run swl protocols sync`
 
 Copies protocol XML from the local system.
 
-Default source resolution matches `scripts/dev/bootstrap-linux.sh --maintainer`.
-The scripts first check `pkg-config` package data directories, then standard
-system paths.
+Default source resolution matches `protocols/manifest.json`. The command checks
+the manifest override environment variable, pkg-config package data directory
+plus relative candidates, absolute fallback candidates, and finally the
+checked-in vendored XML. The selected source must match the manifest checksum
+before it is copied.
 
-Core Wayland XML candidates:
+Run `swift run swl protocols sources` to print the selected source for every
+manifest entry without copying files.
 
-- `$(pkg-config --variable=pkgdatadir wayland-client)/wayland.xml`
-- `$(pkg-config --variable=pkgdatadir wayland-scanner)/wayland.xml`
-- `/usr/share/wayland/wayland.xml`
-- `/usr/local/share/wayland/wayland.xml`
-
-Stable xdg-shell XML candidates:
-
-- `$(pkg-config --variable=pkgdatadir wayland-protocols)/stable/xdg-shell/xdg-shell.xml`
-- `/usr/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml`
-- `/usr/local/share/wayland-protocols/stable/xdg-shell/xdg-shell.xml`
-- `/usr/share/qt6/wayland/protocols/xdg-shell/xdg-shell.xml`
-
-Unstable xdg-decoration XML candidates:
-
-- `$(pkg-config --variable=pkgdatadir wayland-protocols)/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
-- `/usr/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
-- `/usr/local/share/wayland-protocols/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml`
-
-Unstable primary-selection XML candidates:
-
-- `$(pkg-config --variable=pkgdatadir wayland-protocols)/unstable/primary-selection/primary-selection-unstable-v1.xml`
-- `/usr/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml`
-- `/usr/local/share/wayland-protocols/unstable/primary-selection/primary-selection-unstable-v1.xml`
-
-Stable viewporter XML candidates:
-
-- `$(pkg-config --variable=pkgdatadir wayland-protocols)/stable/viewporter/viewporter.xml`
-- `/usr/share/wayland-protocols/stable/viewporter/viewporter.xml`
-- `/usr/local/share/wayland-protocols/stable/viewporter/viewporter.xml`
-
-Staging fractional-scale XML candidates:
-
-- `$(pkg-config --variable=pkgdatadir wayland-protocols)/staging/fractional-scale/fractional-scale-v1.xml`
-- `/usr/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml`
-- `/usr/local/share/wayland-protocols/staging/fractional-scale/fractional-scale-v1.xml`
-
-Set `WAYLAND_CORE_XML_SOURCE`, `XDG_SHELL_XML_SOURCE`,
-`XDG_DECORATION_XML_SOURCE`, `PRIMARY_SELECTION_XML_SOURCE`,
-`VIEWPORTER_XML_SOURCE`, or `FRACTIONAL_SCALE_XML_SOURCE` to force a specific
-source path.
-
-Run `scripts/dev/bootstrap-linux.sh --maintainer` first to verify the scanner,
+Run `swift run swl bootstrap maintainer-check` first to verify the scanner,
 `wayland-protocols` pkg-config module, and protocol XML inputs.
 
-### `scripts/protocols/generate.sh`
+### `swift run swl protocols generate`
 
 Reads:
 
@@ -170,19 +124,20 @@ Does not write:
 - `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
 - `Sources/CWaylandProtocols/shims/`
 
-### `scripts/protocols/verify-generated.sh`
+### `swift run swl protocols verify-generated`
 
 Checks diffs for:
 
-- `protocols/`
 - `Sources/CWaylandProtocols/include/generated/`
 - `Sources/CWaylandProtocols/generated/`
 
-Does not check shim files as generated output.
+It validates vendored XML checksums, regenerates into a temporary output tree,
+and compares that tree against the committed generated outputs. It does not
+write to the checkout and does not check shim files as generated output.
 
-### `scripts/shims/verify-shims.sh`
+### `swift run swl shims verify`
 
-Run with `./scripts/shims/verify-shims.sh`.
+Run with `swift run swl shims verify`.
 
 Checks the hand-written protocol and cursor shim headers and C files for the
 required exported symbols used by Swift. This is intentionally separate from
@@ -199,10 +154,10 @@ Shim files define the exported C surface imported by Swift.
 
 1. Add the protocol XML under `protocols/upstream/`.
 2. Update `protocols/manifest.json` if the protocol should be tracked there.
-3. Extend `scripts/protocols/generate.sh` to write the generated header and C file.
-4. Run `./scripts/protocols/generate.sh`.
+3. Update `protocols/manifest.json` with the generated header and C file paths.
+4. Run `swift run swl protocols generate`.
 5. Add project-owned shim declarations and implementations for the Swift-facing surface.
-6. Update `scripts/shims/verify-shims.sh` for required new shim symbols.
+6. Update `swift run swl shims verify` expectations for required new shim symbols.
 7. Add raw Swift wrappers and tests.
 8. Surface public overlay APIs only when the behavior is tested and documented.
-9. Run `make check`.
+9. Run `swift run swl ci check`.

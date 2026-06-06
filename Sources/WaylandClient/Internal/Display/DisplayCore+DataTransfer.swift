@@ -17,15 +17,6 @@ extension DisplayCore {
         }
     }
 
-    func dragOffer(id offerID: DataOfferID) throws -> DataOfferSnapshot {
-        try withFatalFailureFinalization {
-            let activeSession = try requireSession()
-            let offer = try activeSession.dragOfferOnOwnerThread(id: offerID)
-            publishDrainedDataTransfer(from: activeSession)
-            return offer
-        }
-    }
-
     func receiveClipboardOffer(
         id offerID: DataOfferID,
         mimeType: MIMEType

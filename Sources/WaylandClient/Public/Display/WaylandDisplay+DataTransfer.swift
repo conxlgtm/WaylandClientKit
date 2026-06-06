@@ -75,10 +75,6 @@ extension WaylandDisplay {
         try requireCore().receiveClipboardOffer(id: offerID, mimeType: mimeType)
     }
 
-    package func dragOffer(id offerID: DataOfferID) throws -> DragOffer {
-        try DragOffer(snapshot: requireCore().dragOffer(id: offerID), display: self)
-    }
-
     package func receiveDragOffer(
         id offerID: DataOfferID,
         mimeType: MIMEType

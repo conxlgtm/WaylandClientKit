@@ -91,7 +91,7 @@ enum TwoWindowFrameworkHost {
         )
         return WindowController(
             window: window,
-            state: WindowState(label: title, colorSeed: colorSeed)
+            state: WindowState(colorSeed: colorSeed)
         )
     }
 
@@ -119,7 +119,7 @@ enum TwoWindowFrameworkHost {
                 }
             case .windowOutputsChanged(let event):
                 if let controller = await registry.controller(for: event.windowID) {
-                    await controller.state.recordOutputs(event.outputs.count)
+                    await controller.state.recordOutputs()
                     try await controller.window.requestRedraw()
                 }
             case .diagnostic(let diagnostic):
@@ -233,41 +233,32 @@ private actor WindowControllerRegistry {
 private actor WindowState {
     private var current: WindowSnapshot
 
-    init(label: String, colorSeed: UInt32) {
-        current = WindowSnapshot(label: label, colorSeed: colorSeed)
+    init(colorSeed: UInt32) {
+        current = WindowSnapshot(colorSeed: colorSeed)
     }
 
     func recordInput(_ event: InputEvent) {
         switch event.kind {
-        case .pointer(.entered(let location, _)), .pointer(.moved(let location, _)):
-            current.pointerFocus = event.windowID
-            current.pointer = location
+        case .pointer(.entered), .pointer(.moved):
             current.counter += 1
         case .pointer(.left):
-            current.pointerFocus = nil
-            current.pointer = nil
             current.counter += 1
         case .keyboard(.raw(.entered)):
-            current.keyboardFocus = event.windowID
             current.counter += 1
         case .keyboard(.raw(.left)):
-            current.keyboardFocus = nil
             current.counter += 1
-        case .keyboard(.interpreted(.key(let key))):
-            current.lastKey = key.keyText ?? key.keysymName
+        case .keyboard(.interpreted(.key)):
             current.counter += 1
         case .seat, .diagnostic, .pointer, .keyboard, .touch:
             break
         }
     }
 
-    func recordTextInput(_ event: TextInputEvent) {
-        current.textInputFocus = event.windowID
+    func recordTextInput(_: TextInputEvent) {
         current.counter += 1
     }
 
-    func recordOutputs(_ count: Int) {
-        current.outputCount = count
+    func recordOutputs() {
         current.counter += 1
     }
 
@@ -277,15 +268,8 @@ private actor WindowState {
 }
 
 private struct WindowSnapshot: Sendable {
-    var label: String
     var colorSeed: UInt32
     var counter = 0
-    var outputCount = 0
-    var pointer: PointerLocation?
-    var pointerFocus: WindowID?
-    var keyboardFocus: WindowID?
-    var textInputFocus: WindowID?
-    var lastKey: String?
 }
 
 extension TextInputEvent {

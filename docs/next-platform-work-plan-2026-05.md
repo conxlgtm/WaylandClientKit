@@ -40,18 +40,18 @@ Before merging:
 - Commit the planning docs with the subject:
   - `Document platform foundation roadmap`
 - Run:
-  - `make check`
+  - `swift run swl ci check`
 - Run when Weston is available or required for the checkpoint:
-  - `make wayland-headless`
+  - `swift run swl smoke headless -- swl smoke integration`
 - Optionally generate a public API dump for review:
-  - `./scripts/ci/dump-public-api.sh > /tmp/swiftwayland-public-api.md`
+  - `swift run swl api dump > /tmp/swiftwayland-public-api.md`
 
 Merge steps:
 
 ```bash
 git switch main
 git merge --ff-only presentation-time-substrate
-make check
+swift run swl ci check
 ```
 
 Stop conditions:
@@ -92,8 +92,8 @@ Required results:
 
 Acceptance checks:
 
-- `make check`
-- `make wayland-headless` when Weston is available
+- `swift run swl ci check`
+- `swift run swl smoke headless -- swl smoke integration` when Weston is available
 - public API dump reviewed for new presentation symbols
 
 ## Workstream 2: Surface Transaction Model
@@ -256,19 +256,19 @@ ordering, and destruction behavior.
 Run before merging each workstream:
 
 ```bash
-make check
+swift run swl ci check
 ```
 
 Run when the workstream touches live Wayland behavior:
 
 ```bash
-make wayland-headless
+swift run swl smoke headless -- swl smoke integration
 ```
 
 Run before checkpoint notes or release notes:
 
 ```bash
-./scripts/ci/dump-public-api.sh > /tmp/swiftwayland-public-api.md
+swift run swl api dump > /tmp/swiftwayland-public-api.md
 ```
 
 A workstream is not ready if:

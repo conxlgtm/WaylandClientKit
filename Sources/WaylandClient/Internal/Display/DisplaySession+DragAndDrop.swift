@@ -5,12 +5,6 @@ extension DisplaySession {
         return try dataTransferManager.dragOffer(for: seatID)
     }
 
-    package func dragOfferOnOwnerThread(id offerID: DataOfferID) throws -> DataOfferSnapshot {
-        connection.preconditionIsOwnerThread()
-        try processClipboardDataTransferState()
-        return try dataTransferManager.dragOffer(id: offerID)
-    }
-
     package func receiveDragOfferOnOwnerThread(
         id offerID: DataOfferID,
         mimeType: MIMEType
