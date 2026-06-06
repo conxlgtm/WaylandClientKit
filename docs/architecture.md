@@ -16,6 +16,8 @@ WaylandClient also depends on WaylandCursor.
 WaylandCursor depends on WaylandRaw and CWaylandCursorShims.
 CWaylandCursorShims depends on CWaylandCursorSystem.
 WaylandKeyboard also depends on CXKBCommonSystem.
+WaylandGraphicsPreview is a source-breaking preview product layered above
+WaylandClient. Its GBM/EGL internals stay in package-internal targets.
 
 SwiftWaylandSmoke
     executable consumer of WaylandClient through WaylandSmokeSupport
@@ -239,6 +241,16 @@ Current state:
 - session-owned `CursorManager` that sets cursor surfaces when pointer focus enters registered windows
 - seat-scoped regular clipboard selection state and data-transfer event publishing
 - seat-scoped primary selection state through the primary-selection protocol
+- receive-side and source-side drag-and-drop state through data-device
+- managed XRGB8888 drag icon surfaces for source-side drags
+- seat-scoped text-input sessions and text-input event streams
+- public output snapshots and output membership events
+- presentation feedback requests and event streams
+- input regions, opaque regions, damage-aware software redraw, and managed
+  subsurfaces
+- desktop integration requests for toplevel icons, idle inhibition, system bell,
+  and activation
+- pointer capture and relative-pointer request/event support
 
 ### `WaylandSmokeSupport`
 
@@ -343,22 +355,31 @@ Supported:
 - compose and dead-key text results for interpreted keyboard events
 - session-level raw and interpreted keyboard events
 - static pointer cursor surfaces through wayland-cursor
+- static custom cursor images through `PointerCursor.image(_:)`
+- compositor cursor-shape requests where advertised
 - regular clipboard selection offers and sources through data-device
 - primary selection offers and sources through primary-selection
-- receive-side and source-side drag and drop through data-device
+- receive-side and source-side drag and drop through data-device, including
+  managed XRGB8888 drag icon surfaces
+- seat-scoped text-input sessions and text-input event streams through
+  text-input-v3
 - public output snapshots and display events through `wl_output`
 - optional logical output geometry through `zxdg_output_manager_v1`
 - explicit window presentation feedback through presentation-time
+- public input regions, opaque regions, damage-aware software redraw, and
+  managed subsurfaces
+- desktop integration for toplevel icons, idle inhibition, system bell, and
+  activation
+- relative pointer and pointer lock/confine request paths
 - package-internal graphics core work through linux-dmabuf, GBM, EGL, and GLES
 - preview `WaylandGraphicsPreview` capability and fallback value API
 
 Not supported:
 
-- cursor animation or custom software cursor images
+- public cursor animation
 - client-side decoration rendering
-- drag icon surfaces
 - output management or control APIs
-- text input or IME
+- full IME/input-method protocol coverage beyond text-input-v3 client sessions
 - public `WaylandClient` GPU rendering APIs
 - widgets or retained UI
 
@@ -394,6 +415,8 @@ Swift code:
 - `swift run swl lint`
 - `swift run swl protocols verify-generated`
 - `swift run swl shims verify`
+- `swift run swl examples build`
+- `swift run swl compositor evidence-summary`
 - `swift run swl ci check-base`
 - `swift run swl test unit`
 - `swift run swl test integration-public-api`

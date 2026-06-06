@@ -1,8 +1,12 @@
 # Next Platform Work Plan
 
-Status: active near-term plan
+Status: historical plan, superseded by [Roadmap](roadmap.md)
 Date: 2026-05-12
 Planning horizon: the next two working weeks after the presentation-time merge
+
+This document is retained as a record of the May 2026 planning state. It is not
+the current work queue. Use [roadmap.md](roadmap.md), [tooling.md](tooling.md),
+and the current issue or pull request context for active priorities.
 
 This document turns the updated platform roadmap into immediate work. The goal
 is to land the presentation-time branch, then move directly into the shared
