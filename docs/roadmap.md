@@ -904,7 +904,7 @@ Work packages:
 Required behavior:
 
 - keep regular clipboard and primary selection behavior intact
-- support managed drag icon surfaces
+- preserve managed drag icon surfaces and broaden compositor evidence
 - keep icon lifetime tied to drag source lifetime
 - support action negotiation, cancellation, finish, and failure paths
 - keep fd closure and timeout behavior explicit
