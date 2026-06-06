@@ -53,6 +53,8 @@ struct Swl: ParsableCommand {
             Protocols.self,
             Docc.self,
             Coverage.self,
+            Examples.self,
+            Compositor.self,
             Bootstrap.self,
             Format.self,
             Lint.self,
@@ -79,24 +81,6 @@ private let swiftLintArchiveChecksums = [
     ]
 ]
 
-private let frameworkHandoffExampleTargets = [
-    "ClientSideResizeChrome",
-    "TextInputSmoke",
-    "DataTransferSmoke",
-    "TwoWindowFrameworkHost",
-    "PresentationFeedbackAnimation",
-    "SerialActionsProbe",
-    "TwoWindowOrderStress",
-    "XDGActivationSmoke",
-    "PointerCaptureSmoke",
-    "CursorPolicySmoke",
-    "SurfaceRegionSmoke",
-    "DamageRegionSmoke",
-    "FrameworkHostSmoke",
-    "GPUPreviewSmokeClient",
-    "GraphicsPreviewManagedGPUClear",
-]
-
 extension ToolCommand {
     func context() throws -> ToolContext {
         try ToolContext.live(verbose: verbose)
@@ -106,7 +90,7 @@ extension ToolCommand {
 struct Tools: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "tools",
-        subcommands: [Doctor.self, InstallSwiftLint.self]
+        subcommands: [Doctor.self, ToolchainSmokeCommand.self, InstallSwiftLint.self]
     )
 
     struct Doctor: ToolCommand {
@@ -209,6 +193,23 @@ struct Tools: ParsableCommand {
             let installed = try context.runner.run(destinationURL.path, ["version"]).stdout
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             context.diagnostics.success("swiftlint \(installed): \(destinationURL.path)")
+        }
+    }
+
+    struct ToolchainSmokeCommand: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "toolchain-smoke")
+
+        @Flag(help: "Skip the allowed-failure Swift Build preview probe.")
+        var skipSwiftBuildPreview = false
+
+        @Flag(name: .long)
+        var verbose = false
+
+        func run() throws {
+            let context = try context()
+            context.diagnostics.info(
+                try ToolchainSmoke(context: context).report(
+                    runSwiftBuildPreview: !skipSwiftBuildPreview))
         }
     }
 }
@@ -372,6 +373,38 @@ struct Coverage: ParsableCommand {
             context.diagnostics.info(
                 try CoverageSummarizer(repository: context.repository).summarize(
                     explicitPath: coverageJSON))
+        }
+    }
+}
+
+struct Examples: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "examples", subcommands: [Build.self])
+
+    struct Build: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "build")
+        @Flag(name: .long) var verbose = false
+
+        func run() throws {
+            try ExampleBuilder(context: context()).buildAll()
+        }
+    }
+}
+
+struct Compositor: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "compositor", subcommands: [EvidenceSummary.self])
+
+    struct EvidenceSummary: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "evidence-summary")
+        @Flag(name: .long) var verbose = false
+
+        func run() throws {
+            let context = try context()
+            let markdown = try context.fileSystem.readText(
+                context.repository.url("docs/compositor-matrix.md"))
+            context.diagnostics.info(
+                try CompositorEvidenceSummarizer().summarize(markdown: markdown))
         }
     }
 }
@@ -767,6 +800,7 @@ private func runDocsVerify(context: ToolContext) throws {
         "docs/public-api-baseline.md",
         "docs/release.md",
         "docs/strict-memory-safety-audit.md",
+        "docs/tooling.md",
     ]
     var failures: [String] = []
     for path in required where !context.fileSystem.exists(context.repository.url(path)) {
@@ -941,29 +975,6 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
     }
 }
 
-private func runFrameworkHandoffExampleBuildMatrix(context: ToolContext) throws {
-    let buildRoot = try context.fileSystem.createTemporaryDirectory(
-        prefix: "swiftwayland-framework-handoff-examples")
-    defer { ignoreCleanupError { try context.fileSystem.removeItem(buildRoot) } }
-
-    for configuration in ["debug", "release"] {
-        for target in frameworkHandoffExampleTargets {
-            try context.swift.runSwift(
-                [
-                    "build",
-                    "--disable-index-store",
-                    "--build-path",
-                    buildRoot.appendingPathComponent(configuration).path,
-                    "-c",
-                    configuration,
-                    "--target",
-                    target,
-                ],
-                repository: context.repository)
-        }
-    }
-}
-
 private func runHeadlessSwl(context: ToolContext, arguments: [String]) throws {
     let swiftPath = try context.swift.swiftExecutable(environment: context.runner.environment)
     try HeadlessWestonRunner(context: context).run(command: [swiftPath, "run", "swl"] + arguments)
@@ -993,6 +1004,7 @@ private func runCheap(context: ToolContext) throws {
     try VerificationChecks(context: context).verifyShims()
     try PublicAPIAuditor(context: context).verify(update: false)
     try VerificationChecks(context: context).verifyTargetImports()
+    try VerificationChecks(context: context).verifyToolDependencyBoundaries()
     try VerificationChecks(context: context).verifyUnsafeAllowlist()
 }
 
@@ -1030,10 +1042,7 @@ private func runRelease(context: ToolContext) throws {
     try runCheckBase(context: context)
     try context.swift.runSwift(
         ["build", "--disable-index-store", "-c", "release"], repository: context.repository)
-    try context.swift.runSwift(
-        ["build", "--disable-index-store", "-c", "release", "--target", "SwiftWaylandDemo"],
-        repository: context.repository)
-    try runFrameworkHandoffExampleBuildMatrix(context: context)
+    try ExampleBuilder(context: context).buildAll()
     try context.swift.runSwift(
         ["build", "--disable-index-store", "-c", "release", "--product", "swift-wayland-smoke"],
         repository: context.repository)

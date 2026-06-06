@@ -528,6 +528,14 @@ public struct VerificationChecks {
         context.diagnostics.success("target import boundaries are valid")
     }
 
+    public func verifyToolDependencyBoundaries() throws {
+        let dump = try context.swift.runSwift(
+            ["package", "dump-package"], repository: context.repository
+        ).stdout
+        try PackageDependencyBoundaryVerifier().verify(packageDump: dump)
+        context.diagnostics.success("tool dependencies are isolated")
+    }
+
     public func verifyUnsafeAllowlist() throws {
         let allowlistURL = context.repository.url("safety/unsafe-token-allowlist.tsv")
         let allowlist = try UnsafeAllowlist.parse(context.fileSystem.readText(allowlistURL))
