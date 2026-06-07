@@ -1,5 +1,9 @@
 @safe
-package struct RawSurfaceBuffer {
+// SAFETY: RawSurfaceBuffer is a borrowed wl_buffer wrapper passed only through
+// package-internal owner-thread commit helpers; ownership stays with the typed
+// buffer object that created it.
+// swiftlint:disable:next attributes
+package struct RawSurfaceBuffer: @unchecked Sendable {
     @safe package let pointer: OpaquePointer
 
     @safe

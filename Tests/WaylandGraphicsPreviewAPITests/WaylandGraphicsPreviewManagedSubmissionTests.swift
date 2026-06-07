@@ -238,29 +238,26 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
     }
 
     @Test
-    func managedPreviewDoesNotReportGbmUnavailableWithoutGbmProbe() throws {
+    func managedPreviewDoesNotReportGbmActiveWithoutGbmProbe() throws {
         let path = try WaylandDisplay.managedPreviewRuntimePath(
             capabilities: gpuCapableSurfaceCapabilities(),
             configuration: .default
         )
 
-        #expect(path.backing == .fallback(.managedGPUSubmissionUnavailable))
+        #expect(path.backing == .advertised)
         #expect(path.dmabuf == .advertised)
-        #expect(path.gbm == .fallback(.managedGPUSubmissionUnavailable))
-        #expect(path.egl == .fallback(.managedGPUSubmissionUnavailable))
+        #expect(path.gbm == .unavailable)
+        #expect(path.egl == .unavailable)
     }
 
     @Test
-    func requireGPUFailsWithManagedGpuSubmissionUnavailableWhenGpuPathIsNotPublic() {
-        #expect(
-            throws: WaylandGraphicsError.unavailable(
-                .managedGPUSubmissionUnavailable
-            )
-        ) {
-            _ = try WaylandDisplay.managedPreviewRuntimePath(
-                capabilities: gpuCapableSurfaceCapabilities(),
-                configuration: WaylandGraphicsConfiguration(fallbackPolicy: .requireGPU)
-            )
-        }
+    func requireGPUProjectsAdvertisedPathBeforeSubmission() throws {
+        let path = try WaylandDisplay.managedPreviewRuntimePath(
+            capabilities: gpuCapableSurfaceCapabilities(),
+            configuration: WaylandGraphicsConfiguration(fallbackPolicy: .requireGPU)
+        )
+
+        #expect(path.backing == .advertised)
+        #expect(path.dmabuf == .advertised)
     }
 }

@@ -116,6 +116,8 @@ struct WaylandGraphicsPreviewClientTests {
         #expect(configuration.backingPreference == .managedGPU)
         #expect(configuration.synchronizationPolicy == .preferExplicit)
         #expect(configuration.presentationFeedbackPolicy == .requestWhenAvailable)
+        #expect(WaylandGraphicsFallbackReason.surfaceFeedbackUnavailable != .dmabufUnavailable)
+        #expect(WaylandGraphicsUnavailableReason.gbmAllocationFailed != .gbmUnavailable)
         #expect(metadata.contentType == .video)
         #expect(metadata.damage == .fullFrame)
         #expect(frame == expectedFrame)

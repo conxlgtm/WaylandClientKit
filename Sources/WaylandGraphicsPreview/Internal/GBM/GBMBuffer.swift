@@ -13,7 +13,11 @@ package struct GBMDmabufPlaneExport: ~Copyable {
 }
 
 @safe
-package final class GBMDmabufExport {
+// SAFETY: GBMDmabufExport owns plane fds until they are transferred into
+// RawLinuxDmabufPlaneFileDescriptor values during one package-internal import
+// setup path; untaken descriptors are closed on destroy.
+// swiftlint:disable:next attributes
+package final class GBMDmabufExport: @unchecked Sendable {
     private var rawExport: swl_gbm_bo_export
 
     package let width: UInt32

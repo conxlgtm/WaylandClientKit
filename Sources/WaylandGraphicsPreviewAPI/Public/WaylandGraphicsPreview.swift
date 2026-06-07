@@ -211,6 +211,8 @@ public enum WaylandGraphicsFallbackReason: Equatable, Sendable {
     case metadataRequiredButUnavailable
     case presentationFeedbackUnavailable
     case compositorRejectedBuffer
+    case surfaceFeedbackUnavailable
+    case gbmAllocationFailed
 }
 
 /// Reasons GPU backing can be unavailable.
@@ -225,6 +227,8 @@ public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {
     case metadataRequiredButUnavailable
     case presentationFeedbackUnavailable
     case compositorRejectedBuffer
+    case surfaceFeedbackUnavailable
+    case gbmAllocationFailed
 }
 
 /// Renderer-neutral backing decision for a graphics-capable surface.
@@ -301,7 +305,7 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
         return reason
     }
 
-    private init(
+    package init(
         capabilities: WaylandGraphicsSurfaceCapabilities,
         backing: WaylandGraphicsRuntimeStatus,
         dmabuf: WaylandGraphicsRuntimeStatus,

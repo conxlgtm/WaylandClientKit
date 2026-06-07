@@ -141,6 +141,8 @@ extension GPURuntimePathSnapshot {
         switch failure {
         case .dmabufUnavailable:
             snapshot.dmabuf = .failed(runtimeReason)
+        case .surfaceFeedbackUnavailable:
+            snapshot.dmabuf = snapshot.dmabuf.failed(runtimeReason)
         case .compositorRejectedBuffer:
             snapshot.dmabuf = snapshot.dmabuf.failed(runtimeReason)
         case .noCompatibleFormat, .noRenderNode, .gbmUnavailable,
@@ -198,10 +200,21 @@ extension RuntimePathStatus {
 }
 
 extension GPURuntimePathReason {
+    // swiftlint:disable:next cyclomatic_complexity
     package init(_ fallbackReason: GPUFallbackReason) {
         switch fallbackReason {
         case .policyForcedSHM:
             self = .policyForcedSHM
+        case .dmabufUnavailable:
+            self = .dmabufUnavailable
+        case .surfaceFeedbackUnavailable:
+            self = .surfaceFeedbackUnavailable
+        case .noCompatibleFormat:
+            self = .noCompatibleFormat
+        case .noRenderNode:
+            self = .noRenderNode
+        case .gbmAllocationFailed:
+            self = .gbmAllocationFailed
         case .explicitSyncRequiredButUnavailable:
             self = .explicitSynchronizationUnavailable
         case .fifoRequiredButUnavailable:
@@ -210,19 +223,28 @@ extension GPURuntimePathReason {
             self = .commitTimingUnavailable
         case .metadataRequiredButUnavailable(let error):
             self = GPURuntimePathReason(error)
-        case .gbmUnavailable, .noCompatibleFormat, .noRenderNode:
+        case .gbmUnavailable:
             self = .gbmUnavailable
         case .eglUnavailable:
             self = .eglUnavailable
         case .compositorRejectedBuffer:
             self = .compositorRejectedBuffer
-        default:
-            self = .dmabufUnavailable
         }
     }
 
+    // swiftlint:disable:next cyclomatic_complexity
     package init(_ failure: GPUBackingFailure) {
         switch failure {
+        case .dmabufUnavailable:
+            self = .dmabufUnavailable
+        case .surfaceFeedbackUnavailable:
+            self = .surfaceFeedbackUnavailable
+        case .noCompatibleFormat:
+            self = .noCompatibleFormat
+        case .noRenderNode:
+            self = .noRenderNode
+        case .gbmAllocationFailed:
+            self = .gbmAllocationFailed
         case .explicitSyncRequiredButUnavailable, .submitConstraintRejected:
             self = .explicitSynchronizationUnavailable
         case .fifoRequiredButUnavailable:
@@ -234,8 +256,7 @@ extension GPURuntimePathReason {
                 : .commitTimingUnavailable
         case .metadataRequiredButUnavailable(let error):
             self = GPURuntimePathReason(error)
-        case .gbmUnavailable, .gbmAllocationFailed, .noCompatibleFormat,
-            .noRenderNode:
+        case .gbmUnavailable:
             self = .gbmUnavailable
         case .eglUnavailable:
             self = .eglUnavailable
@@ -245,8 +266,6 @@ extension GPURuntimePathReason {
             self = .commitFailed
         case .presentationTrackingFailed:
             self = .presentationTrackingFailed
-        default:
-            self = .dmabufUnavailable
         }
     }
 

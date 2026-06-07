@@ -287,8 +287,8 @@ struct GPUWindowRuntimePathSnapshotTests {
             failure: .eglUnavailable
         )
 
-        #expect(fallback.gbm == .fallback(.gbmUnavailable))
-        #expect(fallback.egl == .fallback(.gbmUnavailable))
+        #expect(fallback.gbm == .fallback(.noCompatibleFormat))
+        #expect(fallback.egl == .fallback(.noCompatibleFormat))
         #expect(failure.egl == .failed(.eglUnavailable))
     }
 
@@ -509,7 +509,7 @@ struct GPUWindowRuntimePathFailureTests {
             failure: .gbmAllocationFailed
         )
 
-        #expect(snapshot.gbm == .failed(.gbmUnavailable))
+        #expect(snapshot.gbm == .failed(.gbmAllocationFailed))
         #expect(snapshot.egl == .unavailable)
     }
 
@@ -520,7 +520,7 @@ struct GPUWindowRuntimePathFailureTests {
             failure: .noRenderNode
         )
 
-        #expect(snapshot.gbm == .failed(.gbmUnavailable))
+        #expect(snapshot.gbm == .failed(.noRenderNode))
         #expect(snapshot.dmabuf == .advertised)
     }
 

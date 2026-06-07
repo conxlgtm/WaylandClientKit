@@ -1,4 +1,7 @@
 import WaylandClient
+import WaylandGPUPreview
+
+// swiftlint:disable file_length
 
 public struct WaylandGraphicsConfiguration: Equatable, Sendable {
     public var fallbackPolicy: WaylandGraphicsFallbackPolicy
@@ -64,6 +67,20 @@ extension WaylandGraphicsConfiguration {
                     .presentationFeedbackUnavailable
                 )
             }
+        }
+    }
+
+    package var gpuSynchronization: GPUBufferSubmissionSynchronization {
+        switch synchronizationPolicy {
+        case .implicitOnly, .preferExplicit, .requireExplicit:
+            .implicit
+        }
+    }
+
+    package var gpuPacing: SurfacePacingConstraint {
+        switch pacingPolicy {
+        case .none, .preferFIFO, .preferCommitTiming:
+            .none
         }
     }
 }
@@ -151,6 +168,15 @@ public struct WaylandGraphicsXRGBColor: Equatable, Sendable {
 
     package var xrgb8888: UInt32 {
         (UInt32(red) << 16) | (UInt32(green) << 8) | UInt32(blue)
+    }
+
+    package var gpuClearColor: GPUClearColor {
+        GPUClearColor(
+            red: Float(red) / 255,
+            green: Float(green) / 255,
+            blue: Float(blue) / 255,
+            alpha: 1
+        )
     }
 }
 
