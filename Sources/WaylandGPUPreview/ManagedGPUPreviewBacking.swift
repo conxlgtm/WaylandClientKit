@@ -122,6 +122,7 @@ package final class ManagedGPUPreviewBacking {
     private let presenter = GPUWindowPresenter()
     private var device: GBMDevice?
     private var renderTarget: EGLGBMRenderTarget?
+    private var configuredGeometry: SurfaceGeometry?
     private var capabilities: SurfaceCapabilitySnapshot?
     private var runtimePath = GPURuntimePathSnapshot.empty
     private var nextSlotRawValue = 0
@@ -144,6 +145,7 @@ package final class ManagedGPUPreviewBacking {
         presenter.retireAll(reason: .windowClosed)
         renderTarget?.destroy()
         renderTarget = nil
+        configuredGeometry = nil
         device?.destroy()
         device = nil
         capabilities = nil
@@ -161,8 +163,14 @@ package final class ManagedGPUPreviewBacking {
         guard !isClosed else {
             throw .closed
         }
-        guard renderTarget == nil else {
+        if Self.canReuseRenderTarget(
+            configuredGeometry: configuredGeometry,
+            requestedGeometry: geometry
+        ) {
             return
+        }
+        if renderTarget != nil {
+            try prepareForGeometryReconfiguration()
         }
 
         let surfaceCapabilities: SurfaceCapabilitySnapshot
@@ -192,6 +200,7 @@ package final class ManagedGPUPreviewBacking {
             geometry: geometry
         )
         renderTarget = target
+        configuredGeometry = geometry
         runtimePath = .afterEGLTargetSetup(capabilities: surfaceCapabilities)
     }
 
@@ -239,6 +248,7 @@ package final class ManagedGPUPreviewBacking {
         do {
             return try await presentImportedBuffer(
                 imported,
+                renderTarget: renderTarget,
                 metadata: metadata,
                 synchronization: synchronization,
                 pacing: pacing
@@ -293,19 +303,25 @@ package final class ManagedGPUPreviewBacking {
 
     private func presentImportedBuffer(
         _ imported: (buffer: RawLinuxDmabufBuffer, lockedBuffer: GBMLockedSurfaceBuffer),
+        renderTarget: EGLGBMRenderTarget,
         metadata: SurfaceCommitMetadata,
         synchronization: GPUBufferSubmissionSynchronization,
         pacing: SurfacePacingConstraint
     ) async throws(ManagedGPUPreviewBackingError) -> GPUWindowPresentedFrame {
         do {
-            let slotID = try nextSlotID()
-            try presenter.installBuffer(
-                ManagedGPUPreviewBuffer(
-                    buffer: imported.buffer,
-                    lockedBuffer: imported.lockedBuffer
-                ),
-                slotID: slotID
+            let slotID: GBMBufferPoolSlotID
+            let previewBuffer = ManagedGPUPreviewBuffer(
+                buffer: imported.buffer,
+                lockedBuffer: imported.lockedBuffer,
+                renderTarget: renderTarget
             )
+            if let reusableSlotID = presenter.availableSlotIDs.first {
+                slotID = reusableSlotID
+                try presenter.replaceAvailableBuffer(previewBuffer, slotID: reusableSlotID)
+            } else {
+                slotID = try nextSlotID()
+                try presenter.installBuffer(previewBuffer, slotID: slotID)
+            }
             return try await presenter.presentSlot(
                 slotID,
                 submit: { [window] buffer, submitConstraints, commitMetadata in
@@ -328,6 +344,24 @@ package final class ManagedGPUPreviewBacking {
         } catch {
             throw .setup(.commitFailed)
         }
+    }
+
+    package static func canReuseRenderTarget(
+        configuredGeometry: SurfaceGeometry?,
+        requestedGeometry: SurfaceGeometry
+    ) -> Bool {
+        configuredGeometry == requestedGeometry
+    }
+
+    private func prepareForGeometryReconfiguration() throws(ManagedGPUPreviewBackingError) {
+        do {
+            try presenter.retireAvailableBuffers()
+        } catch {
+            throw .presentation(error)
+        }
+        renderTarget = nil
+        configuredGeometry = nil
+        device = nil
     }
 
     private func surfaceFeedback(
@@ -447,47 +481,5 @@ package struct GPUClearColor: Equatable, Sendable {
         green = colorGreen
         blue = colorBlue
         alpha = colorAlpha
-    }
-}
-
-private final class ManagedGPUPreviewBuffer: GPUWindowPresenterBuffer {
-    private let buffer: RawLinuxDmabufBuffer
-    private var lockedBuffer: GBMLockedSurfaceBuffer?
-    private var releaseObserver: (() -> Void)?
-
-    init(
-        buffer importedBuffer: RawLinuxDmabufBuffer,
-        lockedBuffer importedLockedBuffer: GBMLockedSurfaceBuffer
-    ) {
-        buffer = importedBuffer
-        lockedBuffer = importedLockedBuffer
-    }
-
-    var surfaceBuffer: RawSurfaceBuffer {
-        buffer.surfaceBuffer
-    }
-
-    func setReleaseObserver(_ observer: @escaping () -> Void) {
-        releaseObserver = observer
-        buffer.setReleaseObserver { [weak self] in
-            self?.handleRelease()
-        }
-    }
-
-    func destroy() {
-        releaseObserver = nil
-        lockedBuffer?.release()
-        lockedBuffer = nil
-        buffer.destroy()
-    }
-
-    deinit {
-        destroy()
-    }
-
-    private func handleRelease() {
-        lockedBuffer?.release()
-        lockedBuffer = nil
-        releaseObserver?()
     }
 }

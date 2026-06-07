@@ -116,6 +116,14 @@ package struct GBMBufferPoolState: Equatable, Sendable {
         slots[slotID] = .available
     }
 
+    package mutating func removeAvailableSlots() -> [GBMBufferPoolSlotID] {
+        let removedSlotIDs = availableSlotIDs
+        for slotID in removedSlotIDs {
+            slots[slotID] = nil
+        }
+        return removedSlotIDs
+    }
+
     package mutating func leaseNextAvailableSlot()
         throws(GBMBufferPoolStateError) -> GBMBufferPoolSlotID
     {

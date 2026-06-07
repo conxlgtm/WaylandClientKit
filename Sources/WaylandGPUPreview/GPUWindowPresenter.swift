@@ -150,6 +150,17 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
         }
     }
 
+    package func ensureAvailableSlot(
+        _ slotID: GBMBufferPoolSlotID
+    ) throws(GPUWindowPresenterStateError) {
+        let lifecycle = try lifecycle(for: slotID)
+        guard lifecycle.isAvailable else {
+            throw GPUWindowPresenterStateError.pool(
+                .slotNotAvailable(slotID, actual: lifecycle)
+            )
+        }
+    }
+
     package func submissionState(
         for slotID: GBMBufferPoolSlotID
     ) throws(GPUWindowPresenterStateError) -> GPUBufferSubmissionState {
@@ -294,6 +305,13 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
         poolState = GBMBufferPoolState()
     }
 
+    package mutating func retireAvailableSlots()
+        throws(GPUWindowPresenterStateError) -> [GBMBufferPoolSlotID]
+    {
+        try ensureLive()
+        return poolState.removeAvailableSlots()
+    }
+
     private func ensureLive() throws(GPUWindowPresenterStateError) {
         if let retireReason {
             throw .retired(retireReason)
@@ -334,6 +352,10 @@ package final class GPUWindowPresenter {
         state.outstandingSubmittedSlotIDs
     }
 
+    package var availableSlotIDs: [GBMBufferPoolSlotID] {
+        state.availableSlotIDs
+    }
+
     package var releaseFailuresSnapshot: [GPUWindowPresenterStateError] {
         releaseFailures
     }
@@ -371,13 +393,43 @@ extension GPUWindowPresenter {
         }
 
         buffers[slotID] = buffer
-        if backingState.lifecycle == .unconfigured {
-            backingState.lifecycle = .configuring
+        configureInstalledBuffer(buffer, slotID: slotID)
+    }
+
+    package func replaceAvailableBuffer(
+        _ buffer: any GPUWindowPresenterBuffer,
+        slotID: GBMBufferPoolSlotID
+    ) throws(GPUWindowPresenterError) {
+        do {
+            try state.ensureAvailableSlot(slotID)
+        } catch {
+            throw GPUWindowPresenterError.state(error)
+        }
+
+        guard let retiredBuffer = buffers[slotID] else {
+            throw GPUWindowPresenterError.missingBuffer(slotID)
+        }
+
+        retiredBuffer.destroy()
+        buffers[slotID] = buffer
+        configureInstalledBuffer(buffer, slotID: slotID)
+    }
+
+    @discardableResult
+    package func retireAvailableBuffers() throws(GPUWindowPresenterError) -> [GBMBufferPoolSlotID] {
+        let retiredSlotIDs: [GBMBufferPoolSlotID]
+        do {
+            retiredSlotIDs = try state.retireAvailableSlots()
+        } catch {
+            throw GPUWindowPresenterError.state(error)
+        }
+
+        for slotID in retiredSlotIDs {
+            buffers.removeValue(forKey: slotID)?.destroy()
+            presentationCorrelation.remove(slotID: slotID)
         }
         backingState.bufferPool = state.bufferPoolReadiness
-        buffer.setReleaseObserver { [weak self] in
-            self?.recordRelease(slotID)
-        }
+        return retiredSlotIDs
     }
 
     package func presentNext(
@@ -630,6 +682,19 @@ extension GPUWindowPresenter {
         runtimePath = .empty
         state.retireAll(reason: reason)
         backingState.markRetired()
+    }
+
+    private func configureInstalledBuffer(
+        _ buffer: any GPUWindowPresenterBuffer,
+        slotID: GBMBufferPoolSlotID
+    ) {
+        if backingState.lifecycle == .unconfigured {
+            backingState.lifecycle = .configuring
+        }
+        backingState.bufferPool = state.bufferPoolReadiness
+        buffer.setReleaseObserver { [weak self] in
+            self?.recordRelease(slotID)
+        }
     }
 }
 
