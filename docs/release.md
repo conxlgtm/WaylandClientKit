@@ -4,6 +4,8 @@ Tags are reproducible development checkpoints. They do not imply API stability.
 Do not tag while docs, public API audit, support lists, and checks disagree.
 Review [foundation-candidate-status.md](foundation-candidate-status.md) before
 claiming managed GPU or foundation-candidate readiness.
+Review [compatibility-policy.md](compatibility-policy.md) before tagging any
+checkpoint with public API changes.
 
 ## Required Checks
 
@@ -12,6 +14,7 @@ Run these from a clean working tree:
 ```bash
 swift run swl tools toolchain-smoke
 swift run swl ci release
+swift run swl ci foundation-check
 swift run swl examples build
 swift run swl compositor evidence-summary
 swift run swl api dump
@@ -20,6 +23,11 @@ swift run swl api dump
 `swift run swl ci release` covers the release build path, release tests, shim
 checks, generated protocol freshness, DocC verification, public API audit
 verification, and Wayland checks when a compositor or Weston is available.
+
+`swift run swl ci foundation-check` runs the non-live readiness gates and
+summarizes compositor evidence. It fails when the compositor matrix still
+contains pending, not-tested, or not-run evidence, so missing live evidence
+cannot be mistaken for foundation readiness.
 
 `swift run swl test release` runs the release-compatible test subset. Shim-contract and
 instrumentation tests that depend on debug-only C or Swift test hooks are
