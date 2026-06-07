@@ -1182,6 +1182,112 @@ struct GPUWindowPresenterLifecycleTests {
 }
 
 @Suite
+struct GPUWindowPresenterBufferReuseTests {
+    @Test
+    func presenterRetireAvailableBuffersLeavesSubmittedBuffers() async throws {
+        let presenter = GPUWindowPresenter()
+        let submittedSlotID = try GBMBufferPoolSlotID(0)
+        let availableSlotID = try GBMBufferPoolSlotID(1)
+        let submittedBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let availableBuffer = try FakePresenterBuffer(pointer: 0x1002)
+
+        try presenter.installBuffer(submittedBuffer, slotID: submittedSlotID)
+        try presenter.installBuffer(availableBuffer, slotID: availableSlotID)
+        _ = try await presenter.presentSlot(
+            submittedSlotID,
+            submit: { _, _, _ in
+                try previewPresentationResult(generation: 50)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        let retiredSlotIDs = try presenter.retireAvailableBuffers()
+
+        #expect(retiredSlotIDs == [availableSlotID])
+        #expect(submittedBuffer.destroyCallCount == 0)
+        #expect(availableBuffer.destroyCallCount == 1)
+        #expect(presenter.installedSlotIDs == [submittedSlotID])
+        #expect(presenter.outstandingSubmittedSlotIDs == [submittedSlotID])
+    }
+
+    @Test
+    func presenterReplacesReleasedBufferInSameSlot() async throws {
+        let presenter = GPUWindowPresenter()
+        let recorder = SubmittedPointerRecorder()
+        let slotID = try GBMBufferPoolSlotID(0)
+        let firstBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let replacementBuffer = try FakePresenterBuffer(pointer: 0x1002)
+
+        try presenter.installBuffer(firstBuffer, slotID: slotID)
+        _ = try await presenter.presentSlot(
+            slotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 60)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+        firstBuffer.triggerRelease()
+
+        try presenter.replaceAvailableBuffer(replacementBuffer, slotID: slotID)
+        let replacementFrame = try await presenter.presentSlot(
+            slotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 61)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(replacementFrame.slotID == slotID)
+        #expect(firstBuffer.destroyCallCount == 1)
+        #expect(replacementBuffer.destroyCallCount == 0)
+        #expect(replacementBuffer.hasReleaseObserver)
+        #expect(presenter.installedSlotIDs == [slotID])
+        #expect(presenter.outstandingSubmittedSlotIDs == [slotID])
+        #expect(
+            await recorder.snapshot()
+                == [firstBuffer.pointerValue, replacementBuffer.pointerValue]
+        )
+    }
+
+    @Test
+    func presenterRejectsReplacingSubmittedBuffer() async throws {
+        let presenter = GPUWindowPresenter()
+        let slotID = try GBMBufferPoolSlotID(0)
+        let submittedBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let replacementBuffer = try FakePresenterBuffer(pointer: 0x1002)
+
+        try presenter.installBuffer(submittedBuffer, slotID: slotID)
+        _ = try await presenter.presentSlot(
+            slotID,
+            submit: { _, _, _ in
+                try previewPresentationResult(generation: 70)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        do {
+            try presenter.replaceAvailableBuffer(replacementBuffer, slotID: slotID)
+            Issue.record("Expected submitted slot replacement to fail")
+        } catch GPUWindowPresenterError.state(
+            .pool(.slotNotAvailable(let failedSlotID, actual: .submitted(70)))
+        ) {
+            #expect(failedSlotID == slotID)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(submittedBuffer.destroyCallCount == 0)
+        #expect(replacementBuffer.destroyCallCount == 0)
+    }
+}
+
+@Suite
 struct GPUWindowPresenterSlotSelectionTests {
     @Test
     func presenterSubmitsRequestedFreshSlotAfterLowerSlotRelease() async throws {
@@ -1219,6 +1325,50 @@ struct GPUWindowPresenterSlotSelectionTests {
         #expect(
             await recorder.snapshot() == [releasedBuffer.pointerValue, freshBuffer.pointerValue])
         #expect(presenter.outstandingSubmittedSlotIDs == [freshSlotID])
+    }
+}
+
+@Suite
+struct ManagedGPUPreviewBackingConfigurationTests {
+    @Test
+    func renderTargetReuseRequiresMatchingSurfaceGeometry() throws {
+        let geometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 4, height: 3),
+            scale: .one
+        )
+        let resizedGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 5, height: 3),
+            scale: .one
+        )
+        let scaledGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 4, height: 3),
+            scale: SurfaceScale(integerScale: 2)
+        )
+
+        #expect(
+            !ManagedGPUPreviewBacking.canReuseRenderTarget(
+                configuredGeometry: nil,
+                requestedGeometry: geometry
+            )
+        )
+        #expect(
+            ManagedGPUPreviewBacking.canReuseRenderTarget(
+                configuredGeometry: geometry,
+                requestedGeometry: geometry
+            )
+        )
+        #expect(
+            !ManagedGPUPreviewBacking.canReuseRenderTarget(
+                configuredGeometry: geometry,
+                requestedGeometry: resizedGeometry
+            )
+        )
+        #expect(
+            !ManagedGPUPreviewBacking.canReuseRenderTarget(
+                configuredGeometry: geometry,
+                requestedGeometry: scaledGeometry
+            )
+        )
     }
 }
 
