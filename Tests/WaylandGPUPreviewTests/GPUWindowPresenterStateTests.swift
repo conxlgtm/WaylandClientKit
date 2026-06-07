@@ -1,9 +1,11 @@
 // swiftlint:disable file_length
+import Synchronization
 import Testing
 
 @testable import WaylandClient
 @testable import WaylandGPUPreview
 @testable import WaylandGraphicsCore
+@testable import WaylandGraphicsPreview
 @testable import WaylandRaw
 
 @Suite
@@ -287,8 +289,8 @@ struct GPUWindowRuntimePathSnapshotTests {
             failure: .eglUnavailable
         )
 
-        #expect(fallback.gbm == .fallback(.gbmUnavailable))
-        #expect(fallback.egl == .fallback(.gbmUnavailable))
+        #expect(fallback.gbm == .fallback(.noCompatibleFormat))
+        #expect(fallback.egl == .fallback(.noCompatibleFormat))
         #expect(failure.egl == .failed(.eglUnavailable))
     }
 
@@ -450,6 +452,29 @@ struct GPUWindowRuntimePathSnapshotTests {
     }
 
     @Test
+    func runtimePathFailurePreservesCompletedSetupStages() {
+        let capabilities = capabilitySnapshot()
+        let snapshot =
+            GPURuntimePathSnapshot
+            .afterEGLTargetSetup(capabilities: capabilities)
+            .markingFailure(.compositorRejectedBuffer)
+        let fallbackPath = WaylandGraphicsRuntimePath(
+            gpuSnapshot: snapshot,
+            capabilities: capabilities,
+            backing: .fallback(.compositorRejectedBuffer)
+        )
+
+        #expect(snapshot.renderNode == .active)
+        #expect(snapshot.gbm == .configured)
+        #expect(snapshot.egl == .configured)
+        #expect(snapshot.dmabufImport == .failed(.compositorRejectedBuffer))
+        #expect(fallbackPath.backing == .fallback(.compositorRejectedBuffer))
+        #expect(fallbackPath.gbm == .configured)
+        #expect(fallbackPath.egl == .configured)
+        #expect(fallbackPath.dmabufImport == .failed(.compositorRejectedBuffer))
+    }
+
+    @Test
     func runtimePathReportsCommitFailure() {
         let snapshot = GPURuntimePathSnapshot.afterFailure(
             capabilities: capabilitySnapshot(),
@@ -509,7 +534,7 @@ struct GPUWindowRuntimePathFailureTests {
             failure: .gbmAllocationFailed
         )
 
-        #expect(snapshot.gbm == .failed(.gbmUnavailable))
+        #expect(snapshot.gbm == .failed(.gbmAllocationFailed))
         #expect(snapshot.egl == .unavailable)
     }
 
@@ -520,7 +545,8 @@ struct GPUWindowRuntimePathFailureTests {
             failure: .noRenderNode
         )
 
-        #expect(snapshot.gbm == .failed(.gbmUnavailable))
+        #expect(snapshot.renderNode == .failed(.noRenderNode))
+        #expect(snapshot.gbm == .failed(.noRenderNode))
         #expect(snapshot.dmabuf == .advertised)
     }
 
@@ -534,6 +560,63 @@ struct GPUWindowRuntimePathFailureTests {
         #expect(snapshot.egl == .failed(.eglUnavailable))
         #expect(snapshot.gbm == .unavailable)
         #expect(snapshot.dmabuf == .advertised)
+    }
+
+    @Test
+    func publicRuntimePathPreservesSpecificGPUFailureStages() {
+        let capabilities = capabilitySnapshot()
+        let importFailure = WaylandGraphicsRuntimePath(
+            gpuSnapshot: .afterFailure(
+                capabilities: capabilities,
+                failure: .compositorRejectedBuffer
+            ),
+            capabilities: capabilities,
+            backing: .failed(.compositorRejectedBuffer)
+        )
+        let commitTimingFailure = WaylandGraphicsRuntimePath(
+            gpuSnapshot: .afterFailure(
+                capabilities: capabilities,
+                failure: .commitTimingRejected
+            ),
+            capabilities: capabilities,
+            backing: .failed(.commitTimingRejected)
+        )
+        let commitFailure = WaylandGraphicsRuntimePath(
+            gpuSnapshot: .afterFailure(
+                capabilities: capabilities,
+                failure: .commitFailed
+            ),
+            capabilities: capabilities,
+            backing: .failed(.commitFailed)
+        )
+
+        #expect(importFailure.dmabufImport == .failed(.compositorRejectedBuffer))
+        #expect(importFailure.backing == .failed(.compositorRejectedBuffer))
+        #expect(commitTimingFailure.pacing.commitTiming == .failed(.commitTimingRejected))
+        #expect(commitTimingFailure.backing == .failed(.commitTimingRejected))
+        #expect(commitFailure.bufferLifecycle == .failed(.commitFailed))
+        #expect(commitFailure.backing == .failed(.commitFailed))
+    }
+
+    @Test
+    func managedBackingFallbackReasonPreservesCommitFailures() {
+        #expect(
+            ManagedGPUPreviewBackingError.setup(.commitTimingRejected)
+                .fallbackReason == .commitTimingRejected
+        )
+        #expect(
+            ManagedGPUPreviewBackingError.setup(.commitFailed)
+                .fallbackReason == .commitFailed
+        )
+        #expect(
+            ManagedGPUPreviewBackingError.setup(.presentationTrackingFailed)
+                .fallbackReason == .presentationTrackingFailed
+        )
+        #expect(
+            WaylandGraphicsFallbackReason(
+                ManagedGPUPreviewBackingError.setup(.commitFailed).fallbackReason
+            ) == .commitFailed
+        )
     }
 }
 
@@ -1120,6 +1203,290 @@ struct GPUWindowPresenterLifecycleTests {
     }
 }
 
+@Suite
+struct GPUWindowPresenterBufferReuseTests {
+    @Test
+    func presenterRetireAvailableBuffersLeavesSubmittedBuffers() async throws {
+        let presenter = GPUWindowPresenter()
+        let submittedSlotID = try GBMBufferPoolSlotID(0)
+        let availableSlotID = try GBMBufferPoolSlotID(1)
+        let submittedBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let availableBuffer = try FakePresenterBuffer(pointer: 0x1002)
+
+        try presenter.installBuffer(submittedBuffer, slotID: submittedSlotID)
+        try presenter.installBuffer(availableBuffer, slotID: availableSlotID)
+        _ = try await presenter.presentSlot(
+            submittedSlotID,
+            submit: { _, _, _ in
+                try previewPresentationResult(generation: 50)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        let retiredSlotIDs = try presenter.retireAvailableBuffers()
+
+        #expect(retiredSlotIDs == [availableSlotID])
+        #expect(submittedBuffer.destroyCallCount == 0)
+        #expect(availableBuffer.destroyCallCount == 1)
+        #expect(presenter.installedSlotIDs == [submittedSlotID])
+        #expect(presenter.outstandingSubmittedSlotIDs == [submittedSlotID])
+    }
+
+    @Test
+    func presenterReplacesReleasedBufferInSameSlot() async throws {
+        let presenter = GPUWindowPresenter()
+        let recorder = SubmittedPointerRecorder()
+        let slotID = try GBMBufferPoolSlotID(0)
+        let firstBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let replacementBuffer = try FakePresenterBuffer(pointer: 0x1002)
+
+        try presenter.installBuffer(firstBuffer, slotID: slotID)
+        _ = try await presenter.presentSlot(
+            slotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 60)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+        firstBuffer.triggerRelease()
+
+        try presenter.replaceAvailableBuffer(replacementBuffer, slotID: slotID)
+        let replacementFrame = try await presenter.presentSlot(
+            slotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 61)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(replacementFrame.slotID == slotID)
+        #expect(firstBuffer.destroyCallCount == 1)
+        #expect(replacementBuffer.destroyCallCount == 0)
+        #expect(replacementBuffer.hasReleaseObserver)
+        #expect(presenter.installedSlotIDs == [slotID])
+        #expect(presenter.outstandingSubmittedSlotIDs == [slotID])
+        #expect(
+            await recorder.snapshot()
+                == [firstBuffer.pointerValue, replacementBuffer.pointerValue]
+        )
+    }
+
+    @Test
+    func presenterRejectsReplacingSubmittedBuffer() async throws {
+        let presenter = GPUWindowPresenter()
+        let slotID = try GBMBufferPoolSlotID(0)
+        let submittedBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let replacementBuffer = try FakePresenterBuffer(pointer: 0x1002)
+
+        try presenter.installBuffer(submittedBuffer, slotID: slotID)
+        _ = try await presenter.presentSlot(
+            slotID,
+            submit: { _, _, _ in
+                try previewPresentationResult(generation: 70)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        do {
+            try presenter.replaceAvailableBuffer(replacementBuffer, slotID: slotID)
+            Issue.record("Expected submitted slot replacement to fail")
+        } catch GPUWindowPresenterError.state(
+            .pool(.slotNotAvailable(let failedSlotID, actual: .submitted(70)))
+        ) {
+            #expect(failedSlotID == slotID)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(submittedBuffer.destroyCallCount == 0)
+        #expect(replacementBuffer.destroyCallCount == 0)
+    }
+
+    @Test
+    func reconfigureRetiresAvailableBuffersThenLateReleaseAllowsNextSubmit()
+        async throws
+    {
+        let presenter = GPUWindowPresenter()
+        let recorder = SubmittedPointerRecorder()
+        let oldSubmittedSlotID = try GBMBufferPoolSlotID(0)
+        let oldAvailableSlotID = try GBMBufferPoolSlotID(1)
+        let newSlotID = try GBMBufferPoolSlotID(2)
+        let oldSubmittedBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let oldAvailableBuffer = try FakePresenterBuffer(pointer: 0x1002)
+        let newBuffer = try FakePresenterBuffer(pointer: 0x1003)
+
+        try presenter.installBuffer(oldSubmittedBuffer, slotID: oldSubmittedSlotID)
+        try presenter.installBuffer(oldAvailableBuffer, slotID: oldAvailableSlotID)
+        _ = try await presenter.presentSlot(
+            oldSubmittedSlotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 80)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(
+            try presenter.retireAvailableBuffers() == [oldAvailableSlotID]
+        )
+        #expect(oldSubmittedBuffer.destroyCallCount == 0)
+        #expect(oldAvailableBuffer.destroyCallCount == 1)
+
+        oldSubmittedBuffer.triggerRelease()
+        try presenter.replaceAvailableBuffer(newBuffer, slotID: oldSubmittedSlotID)
+        try presenter.installBuffer(try FakePresenterBuffer(pointer: 0x1004), slotID: newSlotID)
+
+        let frame = try await presenter.presentSlot(
+            oldSubmittedSlotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 81)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(frame.slotID == oldSubmittedSlotID)
+        #expect(oldSubmittedBuffer.destroyCallCount == 1)
+        #expect(newBuffer.destroyCallCount == 0)
+        #expect(presenter.installedSlotIDs == [oldSubmittedSlotID, newSlotID])
+        #expect(presenter.outstandingSubmittedSlotIDs == [oldSubmittedSlotID])
+        #expect(
+            await recorder.snapshot()
+                == [oldSubmittedBuffer.pointerValue, newBuffer.pointerValue]
+        )
+    }
+}
+
+@Suite
+struct GPUWindowPresenterSlotSelectionTests {
+    @Test
+    func presenterSubmitsRequestedFreshSlotAfterLowerSlotRelease() async throws {
+        let presenter = GPUWindowPresenter()
+        let recorder = SubmittedPointerRecorder()
+        let releasedSlotID = try GBMBufferPoolSlotID(0)
+        let freshSlotID = try GBMBufferPoolSlotID(2)
+        let releasedBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let freshBuffer = try FakePresenterBuffer(pointer: 0x1002)
+
+        try presenter.installBuffer(releasedBuffer, slotID: releasedSlotID)
+        _ = try await presenter.presentSlot(
+            releasedSlotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 40)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+        releasedBuffer.triggerRelease()
+        try presenter.installBuffer(freshBuffer, slotID: freshSlotID)
+
+        let frame = try await presenter.presentSlot(
+            freshSlotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 41)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(frame.slotID == freshSlotID)
+        #expect(
+            await recorder.snapshot() == [releasedBuffer.pointerValue, freshBuffer.pointerValue])
+        #expect(presenter.outstandingSubmittedSlotIDs == [freshSlotID])
+    }
+}
+
+@Suite
+struct ManagedGPUPreviewBackingConfigurationTests {
+    @Test
+    func renderTargetReuseRequiresMatchingSurfaceGeometry() throws {
+        let geometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 4, height: 3),
+            scale: .one
+        )
+        let resizedGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 5, height: 3),
+            scale: .one
+        )
+        let scaledGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 4, height: 3),
+            scale: SurfaceScale(integerScale: 2)
+        )
+
+        #expect(
+            !ManagedGPUPreviewBacking.canReuseRenderTarget(
+                configuredGeometry: nil,
+                requestedGeometry: geometry
+            )
+        )
+        #expect(
+            ManagedGPUPreviewBacking.canReuseRenderTarget(
+                configuredGeometry: geometry,
+                requestedGeometry: geometry
+            )
+        )
+        #expect(
+            !ManagedGPUPreviewBacking.canReuseRenderTarget(
+                configuredGeometry: geometry,
+                requestedGeometry: resizedGeometry
+            )
+        )
+        #expect(
+            !ManagedGPUPreviewBacking.canReuseRenderTarget(
+                configuredGeometry: geometry,
+                requestedGeometry: scaledGeometry
+            )
+        )
+    }
+}
+
+@Suite
+struct ManagedGPUPreviewStoragePreparationTests {
+    @Test
+    func firstManagedGPUClearWaitsForInitialConfigureBeforeSubmit() async throws {
+        let initialGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 4, height: 3),
+            scale: .one
+        )
+        let configuredGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 8, height: 6),
+            scale: .one
+        )
+        let window = FakeGraphicsPreviewWindow(
+            initialGeometry: initialGeometry,
+            configuredGeometry: configuredGeometry
+        )
+        let backing = FakeManagedGPUBacking()
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .projected(capabilities: gpuPreviewCapabilities()),
+            configuration: .default,
+            managedGPUBacking: backing
+        )
+
+        _ = try await storage.nextFrame()
+        await window.clearEvents()
+        let result = try await storage.submit(
+            leaseID: 1,
+            frame: .clearColor(.black)
+        )
+
+        #expect(await window.eventSnapshot() == [.preparePresentation, .geometry])
+        #expect(backing.submittedGeometries == [configuredGeometry])
+        #expect(result.size == configuredGeometry.bufferSize)
+    }
+}
+
 private func syncPoint(timeline: UInt64, point: UInt64) -> GPUSyncPoint {
     GPUSyncPoint(
         timeline: GPUSyncTimeline(timeline),
@@ -1138,6 +1505,16 @@ private func presentedFrame(
         synchronization: .implicit,
         pacing: .none,
         metadata: .default
+    )
+}
+
+private func gpuPreviewCapabilities() -> WaylandGraphicsSurfaceCapabilities {
+    WaylandGraphicsSurfaceCapabilities(
+        dmabuf: .available(version: 4),
+        explicitSync: .unavailable,
+        framePacing: .unavailable,
+        colorMetadata: .unavailable,
+        presentationFeedback: .unavailable
     )
 }
 
@@ -1221,7 +1598,114 @@ private func invalidationReasons(
     ).map(\.reason)
 }
 
+private enum FakeGraphicsPreviewWindowEvent: Equatable {
+    case geometry
+    case preparePresentation
+}
+
+private actor FakeGraphicsPreviewWindow: WaylandGraphicsManagedWindow {
+    nonisolated let id = WindowID(rawValue: 710)
+    private let initialGeometry: SurfaceGeometry
+    private let configuredGeometry: SurfaceGeometry
+    private var events: [FakeGraphicsPreviewWindowEvent] = []
+    private var didPreparePresentation = false
+
+    init(initialGeometry: SurfaceGeometry, configuredGeometry: SurfaceGeometry) {
+        self.initialGeometry = initialGeometry
+        self.configuredGeometry = configuredGeometry
+    }
+
+    var geometry: SurfaceGeometry {
+        get async throws {
+            events.append(.geometry)
+            return didPreparePresentation ? configuredGeometry : initialGeometry
+        }
+    }
+
+    var isClosed: Bool {
+        get async throws { false }
+    }
+
+    func prepareGraphicsPreviewPresentation(
+        timeoutMilliseconds _: Int32
+    ) async throws -> SurfaceGeometry {
+        events.append(.preparePresentation)
+        didPreparePresentation = true
+        return configuredGeometry
+    }
+
+    func show(
+        timeoutMilliseconds _: Int32,
+        metadata _: SurfaceCommitMetadata,
+        requestPresentationFeedback _: Bool,
+        damage _: SurfaceDamageRegion?,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws {
+        _ = draw
+    }
+
+    func redraw(
+        metadata _: SurfaceCommitMetadata,
+        requestPresentationFeedback _: Bool,
+        damage _: SurfaceDamageRegion?,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws {
+        _ = draw
+    }
+
+    func close() async {
+        _ = ()
+    }
+
+    func clearEvents() {
+        events.removeAll()
+    }
+
+    func eventSnapshot() -> [FakeGraphicsPreviewWindowEvent] {
+        events
+    }
+}
+
+private final class FakeManagedGPUBacking: WaylandGraphicsManagedGPUBacking, Sendable {
+    private let submittedGeometryState = Mutex<[SurfaceGeometry]>([])
+
+    var runtimePathSnapshot: GPURuntimePathSnapshot {
+        .afterDmabufImportSetup(capabilities: capabilitySnapshot())
+    }
+
+    var surfaceCapabilities: SurfaceCapabilitySnapshot? {
+        capabilitySnapshot()
+    }
+
+    var submittedGeometries: [SurfaceGeometry] {
+        submittedGeometryState.withLock { $0 }
+    }
+
+    func close() {
+        _ = ()
+    }
+
+    func submitClearFrame(
+        _ submission: WaylandGraphicsManagedGPUClearFrameSubmission
+    ) async throws(ManagedGPUPreviewBackingError) -> GPUWindowPresentedFrame {
+        submittedGeometryState.withLock { $0.append(submission.geometry) }
+        do {
+            return try GPUWindowPresentedFrame(
+                slotID: GBMBufferPoolSlotID(0),
+                generation: 1,
+                commitPlan: surfaceCommitPlan(),
+                synchronization: submission.synchronization,
+                pacing: submission.pacing,
+                metadata: submission.metadata
+            )
+        } catch {
+            throw .setup(.gbmAllocationFailed)
+        }
+    }
+}
+
 private final class FakePresenterBuffer: GPUWindowPresenterBuffer {
+    let pointerValue: UInt
     let surfaceBuffer: RawSurfaceBuffer
     private(set) var destroyCallCount = 0
     private var releaseObserver: (() -> Void)?
@@ -1229,6 +1713,7 @@ private final class FakePresenterBuffer: GPUWindowPresenterBuffer {
     init(pointer rawPointer: UInt) throws {
         let pointer = try unsafe #require(OpaquePointer(bitPattern: rawPointer))
 
+        pointerValue = rawPointer
         surfaceBuffer = RawSurfaceBuffer(pointer: pointer)
     }
 
@@ -1247,5 +1732,17 @@ private final class FakePresenterBuffer: GPUWindowPresenterBuffer {
 
     func triggerRelease() {
         releaseObserver?()
+    }
+}
+
+private actor SubmittedPointerRecorder {
+    private var values: [UInt] = []
+
+    func record(_ buffer: RawSurfaceBuffer) {
+        values.append(UInt(bitPattern: buffer.pointer))
+    }
+
+    func snapshot() -> [UInt] {
+        values
     }
 }

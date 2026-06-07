@@ -469,7 +469,7 @@ extension DataTransferManager {
         DataTransferSourceSendLifecycle.discardRequests(
             store.drainSourceSendRequests()
         ) { _, _ in
-            // Discard-all runs during teardown; pending close failures cannot be routed.
+            // Discard-all runs during teardown, so pending close failures cannot be routed.
         }
     }
 

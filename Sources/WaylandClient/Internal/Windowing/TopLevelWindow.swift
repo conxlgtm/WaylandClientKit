@@ -7,11 +7,15 @@ private struct TopLevelWindowRoleResources {
     let xdgSurface: RawXDGSurface
     let topLevel: RawXDGTopLevel
     var decoration: RawXDGToplevelDecoration?
+    var dmabufFeedback: RawLinuxDmabufFeedback?
     let xdgSurfaceOwner: XDGSurfaceOwner
     let topLevelOwner: XDGTopLevelOwner
     var decorationOwner: XDGDecorationOwner?
 
     mutating func destroy() {
+        dmabufFeedback?.cancel()
+        dmabufFeedback = nil
+
         topLevelOwner.cancel()
         decorationOwner?.cancel()
         decoration?.destroy()
@@ -169,6 +173,7 @@ package final class TopLevelWindow {
                 xdgSurface: newXDGSurface,
                 topLevel: newTopLevel,
                 decoration: decorationObjects?.decoration,
+                dmabufFeedback: nil,
                 xdgSurfaceOwner: newXDGSurfaceOwner,
                 topLevelOwner: newTopLevelOwner,
                 decorationOwner: decorationObjects?.owner
@@ -646,6 +651,88 @@ package final class TopLevelWindow {
 }
 
 extension TopLevelWindow {
+    package func graphicsPreviewSurfaceCapabilitySnapshotOnOwnerThread()
+        throws -> SurfaceCapabilitySnapshot
+    {
+        connection.preconditionIsOwnerThread()
+        guard !model.isClosed else {
+            throw ClientError.window(id, .invalidLifecycleTransition(.presentAfterDestroyed))
+        }
+
+        return surfaceRuntime.capabilitySnapshot()
+    }
+
+    package func requestGraphicsPreviewSurfaceFeedbackOnOwnerThread(
+        timeoutMilliseconds: Int32
+    ) throws -> SurfaceCapabilitySnapshot {
+        connection.preconditionIsOwnerThread()
+        guard !model.isClosed else {
+            throw ClientError.window(id, .invalidLifecycleTransition(.presentAfterDestroyed))
+        }
+
+        switch surfaceRuntime.capabilitySnapshot().dmabuf {
+        case .surfaceFeedback:
+            return surfaceRuntime.capabilitySnapshot()
+        case .advertised(_, .available):
+            break
+        case .advertised, .unavailable:
+            throw GraphicsPreviewSurfaceFeedbackError.surfaceFeedbackUnavailable
+        }
+
+        let globals = try connection.bindRequiredGlobals()
+        guard case .bound(let linuxDmabuf) = globals.extensions.linuxDmabuf else {
+            throw GraphicsPreviewSurfaceFeedbackError.linuxDmabufUnavailable
+        }
+
+        var latestSnapshot: RawLinuxDmabufFeedbackSnapshot?
+        var latestFailure: RuntimeError?
+        let feedback = try linuxDmabuf.requestSurfaceFeedback(
+            for: rawSurfaceOnOwnerThread
+        ) { [weak self] snapshot in
+            latestSnapshot = snapshot
+            do {
+                try self?.installGraphicsPreviewSurfaceFeedbackSnapshot(snapshot)
+            } catch {
+                latestFailure = RuntimeError.fromRuntimeOrInvalidArgument(error)
+            }
+        } onFailure: { error in
+            latestFailure = error
+        }
+
+        replaceGraphicsPreviewSurfaceFeedback(feedback)
+        do {
+            try connection.completeInitialDiscovery(timeoutMilliseconds: timeoutMilliseconds)
+        } catch let error as RuntimeError {
+            throw GraphicsPreviewSurfaceFeedbackError.runtime(error)
+        }
+
+        if let latestFailure {
+            throw GraphicsPreviewSurfaceFeedbackError.runtime(latestFailure)
+        }
+        guard latestSnapshot != nil else {
+            throw GraphicsPreviewSurfaceFeedbackError.surfaceFeedbackUnavailable
+        }
+
+        return surfaceRuntime.capabilitySnapshot()
+    }
+
+    private func replaceGraphicsPreviewSurfaceFeedback(
+        _ feedback: RawLinuxDmabufFeedback
+    ) {
+        var resources = roleResources
+        resources?.dmabufFeedback?.cancel()
+        resources?.dmabufFeedback = feedback
+        roleResources = resources
+    }
+
+    private func installGraphicsPreviewSurfaceFeedbackSnapshot(
+        _ snapshot: RawLinuxDmabufFeedbackSnapshot
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        guard !model.isClosed else { return }
+        try surfaceRuntime.setSurfaceDmabufFeedback(snapshot)
+    }
+
     private var roleResources: TopLevelWindowRoleResources? {
         get { surfaceRuntime.roleResources }
         set { surfaceRuntime.roleResources = newValue }
@@ -1037,6 +1124,18 @@ extension TopLevelWindow {
         }
     }
 
+    package func prepareGraphicsPreviewPresentationOnOwnerThread(
+        timeoutMilliseconds: Int32
+    ) throws -> SurfaceGeometry {
+        connection.preconditionIsOwnerThread()
+
+        if model.currentConfiguration == nil {
+            _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
+        }
+
+        return try currentSurfaceGeometry()
+    }
+
     package var stateSnapshotOnOwnerThread: WindowStateSnapshot {
         get throws {
             connection.preconditionIsOwnerThread()
@@ -1075,14 +1174,16 @@ extension TopLevelWindow {
         try presentPreviewBufferOnOwnerThread(
             buffer,
             submitConstraints: .default,
-            metadata: .default
+            metadata: .default,
+            presentationFeedback: nil
         )
     }
 
     package func presentPreviewBufferOnOwnerThread(
         _ buffer: RawSurfaceBuffer,
         submitConstraints: SurfaceSubmitConstraints,
-        metadata: SurfaceCommitMetadata = .default
+        metadata: SurfaceCommitMetadata = .default,
+        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil
     ) throws -> PreviewBufferPresentationResult {
         connection.preconditionIsOwnerThread()
 
@@ -1115,7 +1216,8 @@ extension TopLevelWindow {
             generation: generation,
             geometry: try currentSurfaceGeometry(),
             submitConstraints: submitConstraints,
-            metadata: metadata
+            metadata: metadata,
+            presentationFeedback: presentationFeedback
         ) { [weak self] in
             self?.handleFrameDone()
         }

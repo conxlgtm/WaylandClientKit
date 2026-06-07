@@ -7,6 +7,9 @@ Sources/WaylandKeyboard/Internal/XKB/KeyboardLayoutState.swift	@unchecked Sendab
 Sources/WaylandKeyboard/**	UnsafeMutablePointer	xkbcommon keymap/state pointer storage.
 Sources/WaylandKeyboard/Internal/XKB/KeyboardLayoutState.swift	UnsafePointer	xkbcommon borrowed keysym array from xkb_state_key_get_syms.
 Sources/WaylandRaw/**	OpaquePointer	Raw Wayland ownership wrappers and typed proxy shims.
+Sources/WaylandRaw/Public/Objects/Core/RawSurfaceBuffer.swift	@unchecked Sendable	Raw wl_buffer wrapper crosses the package-internal graphics preview owner-thread bridge while ownership remains behind release/destroy methods.
+Sources/WaylandRaw/Public/Objects/LinuxDmabuf/RawLinuxDmabuf.swift	@unchecked Sendable	Display-owned linux-dmabuf manager is borrowed only through owner-thread graphics preview helpers.
+Sources/WaylandRaw/Public/Objects/LinuxDmabuf/RawLinuxDmabufBufferParams.swift	@unchecked Sendable	Imported dmabuf buffer wrapper crosses from import setup to presenter lifetime tracking without exposing raw handles publicly.
 Sources/WaylandRaw/**	UnsafeMutablePointer	Raw listener/proxy/storage boundary.
 Sources/WaylandRaw/**	UnsafeMutableBufferPointer	Raw event-loop and memory-layout bridge.
 Sources/WaylandRaw/Public/Types/RawFileDescriptor.swift	UnsafeBufferPointer	Raw fd write bridge passes borrowed immutable bytes to the no-SIGPIPE C shim.
@@ -21,6 +24,7 @@ Sources/WaylandRaw/Internal/EventLoop/QueueEventLoop.swift	poll(	Queue-specific 
 Sources/WaylandRaw/Internal/Ownership/RawProxyAdoption.swift	swl_proxy_get_queue_raw	Centralized runtime queue assertion for proxy adoption.
 Sources/WaylandRaw/Internal/Support/ThreadAffinity.swift	pthread_*	Raw owner-thread affinity token.
 Sources/WaylandGraphicsPreview/Internal/GBM/**	OpaquePointer	GBM preview device and buffer object lifetime wrappers.
+Sources/WaylandGraphicsPreview/Internal/GBM/GBMBuffer.swift	@unchecked Sendable	Dmabuf export owns plane fds for transfer into Wayland buffer params during package-internal managed GPU setup.
 Sources/WaylandGraphicsPreview/Internal/GBM/DRMRenderNodeSelection.swift	UnsafeBufferPointer	Borrow dmabuf device bytes and C string storage for libdrm render-node lookup.
 Sources/WaylandGraphicsPreview/Internal/GBM/DRMRenderNodeSelection.swift	UnsafeMutableBufferPointer	Borrow render-node path storage for libdrm render-node lookup.
 Sources/WaylandGraphicsPreview/Internal/EGL/**	UnsafeMutableRawPointer	EGL preview display, context, and surface lifetime wrappers.

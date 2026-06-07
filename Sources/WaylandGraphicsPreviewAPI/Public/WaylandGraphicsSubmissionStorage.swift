@@ -1,9 +1,14 @@
 import WaylandClient
+import WaylandGPUPreview
 
 package protocol WaylandGraphicsManagedWindow: Sendable {
     var id: WindowID { get }
     var geometry: SurfaceGeometry { get async throws }
     var isClosed: Bool { get async throws }
+
+    func prepareGraphicsPreviewPresentation(
+        timeoutMilliseconds: Int32
+    ) async throws -> SurfaceGeometry
 
     func show(
         timeoutMilliseconds: Int32,
@@ -23,21 +28,68 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
     func close() async
 }
 
+extension WaylandGraphicsManagedWindow {
+    package func prepareGraphicsPreviewPresentation(
+        timeoutMilliseconds _: Int32
+    ) async throws -> SurfaceGeometry {
+        try await geometry
+    }
+}
+
 extension Window: WaylandGraphicsManagedWindow {}
 
+package struct WaylandGraphicsManagedGPUClearFrameSubmission: Sendable {
+    let color: GPUClearColor
+    let metadata: SurfaceCommitMetadata
+    let geometry: SurfaceGeometry
+    let synchronization: GPUBufferSubmissionSynchronization
+    let pacing: SurfacePacingConstraint
+    let requestPresentationFeedback: Bool
+}
+
+package protocol WaylandGraphicsManagedGPUBacking: AnyObject {
+    var runtimePathSnapshot: GPURuntimePathSnapshot { get }
+    var surfaceCapabilities: SurfaceCapabilitySnapshot? { get }
+
+    func close()
+
+    func submitClearFrame(
+        _ submission: WaylandGraphicsManagedGPUClearFrameSubmission
+    ) async throws(ManagedGPUPreviewBackingError) -> GPUWindowPresentedFrame
+}
+
+extension ManagedGPUPreviewBacking: WaylandGraphicsManagedGPUBacking {
+    package func submitClearFrame(
+        _ submission: WaylandGraphicsManagedGPUClearFrameSubmission
+    ) async throws(ManagedGPUPreviewBackingError) -> GPUWindowPresentedFrame {
+        try await submitClearFrame(
+            color: submission.color,
+            metadata: submission.metadata,
+            geometry: submission.geometry,
+            synchronization: submission.synchronization,
+            pacing: submission.pacing,
+            requestPresentationFeedback: submission.requestPresentationFeedback
+        )
+    }
+}
+
+// swiftlint:disable:next type_body_length
 package actor WaylandGraphicsWindowBackingStorage {
     let window: any WaylandGraphicsManagedWindow
     private let configuration: WaylandGraphicsConfiguration
+    private let managedGPUBacking: (any WaylandGraphicsManagedGPUBacking)?
     private var backingRuntimePath: WaylandGraphicsRuntimePath
     private var leaseState = WaylandGraphicsFrameLeaseState()
 
     package init(
         window backingWindow: any WaylandGraphicsManagedWindow,
         runtimePath initialRuntimePath: WaylandGraphicsRuntimePath,
-        configuration backingConfiguration: WaylandGraphicsConfiguration = .default
+        configuration backingConfiguration: WaylandGraphicsConfiguration = .default,
+        managedGPUBacking gpuBacking: (any WaylandGraphicsManagedGPUBacking)? = nil
     ) {
         window = backingWindow
         configuration = backingConfiguration
+        managedGPUBacking = gpuBacking
         backingRuntimePath = initialRuntimePath
     }
 
@@ -94,6 +146,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     ) async throws -> WaylandGraphicsFrameResult {
         try leaseState.requireNotClosed()
         try await ensureWindowOpen()
+        try await prepareManagedGPUInitialConfigureIfNeeded(leaseID: leaseID)
 
         let geometry = try await submissionGeometry(for: leaseID)
         try frame.validateManagedPreviewSupport(
@@ -106,7 +159,11 @@ package actor WaylandGraphicsWindowBackingStorage {
         do {
             try await beforeSubmissionEffect()
             stage = .frameSubmission
-            try await submitFrame(frame, operation: operation)
+            try await submitFrame(
+                frame,
+                operation: operation,
+                geometry: geometry
+            )
             stage = .submissionCompletion
             try await afterSubmissionEffect()
             try leaseState.finishSubmission()
@@ -172,6 +229,24 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
     }
 
+    private func prepareManagedGPUInitialConfigureIfNeeded(
+        leaseID: WaylandGraphicsFrameLeaseID
+    ) async throws {
+        guard shouldAttemptManagedGPU else { return }
+
+        let operation = try leaseState.submissionOperation(leaseID: leaseID)
+        guard operation == .show else { return }
+
+        do {
+            _ = try await window.prepareGraphicsPreviewPresentation(
+                timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds
+            )
+            try leaseState.requireSubmittable(leaseID: leaseID)
+        } catch {
+            throw graphicsError(for: error, stage: .frameGeometry)
+        }
+    }
+
     private func ensureWindowOpen() async throws {
         do {
             let windowIsClosed = try await window.isClosed
@@ -213,26 +288,52 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
 
         leaseState.close()
+        managedGPUBacking?.close()
         await window.close()
     }
 
     private func submitFrame(
         _ frame: WaylandGraphicsSubmittedFrame,
-        operation: WaylandGraphicsFrameSubmissionOperation
+        operation: WaylandGraphicsFrameSubmissionOperation,
+        geometry: SurfaceGeometry
     ) async throws {
         switch frame {
         case .clearColor(let clearFrame):
-            try await submitClearFrame(clearFrame, operation: operation)
+            try await submitClearFrame(
+                clearFrame,
+                operation: operation,
+                geometry: geometry
+            )
         }
     }
 
     private func submitClearFrame(
         _ frame: WaylandGraphicsClearFrame,
-        operation: WaylandGraphicsFrameSubmissionOperation
+        operation: WaylandGraphicsFrameSubmissionOperation,
+        geometry: SurfaceGeometry
     ) async throws {
         let color = frame.color.xrgb8888
         let metadata = try frame.metadata.surfaceCommitMetadata()
         let damage = try frame.metadata.surfaceDamageRegion()
+        if shouldAttemptManagedGPU {
+            do {
+                _ = try await managedGPUBacking?.submitClearFrame(
+                    WaylandGraphicsManagedGPUClearFrameSubmission(
+                        color: frame.color.gpuClearColor,
+                        metadata: metadata,
+                        geometry: geometry,
+                        synchronization: configuration.gpuSynchronization,
+                        pacing: configuration.gpuPacing,
+                        requestPresentationFeedback: shouldRequestPresentationFeedback
+                    )
+                )
+                refreshRuntimePathFromManagedGPU(backing: .active)
+                return
+            } catch {
+                try handleManagedGPUFailure(error)
+            }
+        }
+
         switch operation {
         case .show:
             try await window.show(
@@ -310,6 +411,69 @@ extension WaylandGraphicsWindowBackingStorage {
             configuration: configuration,
             capabilities: backingRuntimePath.capabilities
         )
+    }
+
+    private var shouldAttemptManagedGPU: Bool {
+        guard managedGPUBacking != nil else {
+            return false
+        }
+        guard configuration.backingPreference == .managedGPU,
+            configuration.fallbackPolicy != .forceSoftware
+        else {
+            return false
+        }
+        guard case .fallback = backingRuntimePath.backing else {
+            return true
+        }
+
+        return false
+    }
+
+    private func handleManagedGPUFailure(
+        _ error: ManagedGPUPreviewBackingError
+    ) throws {
+        switch configuration.fallbackPolicy {
+        case .preferGPUFallbackToSoftware:
+            let reason = WaylandGraphicsFallbackReason(error.fallbackReason)
+            if !refreshRuntimePathFromManagedGPU(backing: .fallback(reason)) {
+                backingRuntimePath = .softwareFallback(
+                    capabilities: backingRuntimePath.capabilities,
+                    reason: reason
+                )
+            }
+        case .requireGPU:
+            let reason = WaylandGraphicsUnavailableReason(error.failure)
+            if !refreshRuntimePathFromManagedGPU(backing: .failed(reason)) {
+                backingRuntimePath = .unavailable(
+                    capabilities: backingRuntimePath.capabilities,
+                    reason: reason
+                )
+            }
+            throw WaylandGraphicsError.unavailable(reason)
+        case .forceSoftware:
+            backingRuntimePath = .softwareFallback(
+                capabilities: backingRuntimePath.capabilities,
+                reason: .forcedSoftware
+            )
+        }
+    }
+
+    @discardableResult
+    private func refreshRuntimePathFromManagedGPU(
+        backing: WaylandGraphicsRuntimeStatus
+    ) -> Bool {
+        guard let managedGPUBacking,
+            let capabilities = managedGPUBacking.surfaceCapabilities
+        else {
+            return false
+        }
+
+        backingRuntimePath = WaylandGraphicsRuntimePath(
+            gpuSnapshot: managedGPUBacking.runtimePathSnapshot,
+            capabilities: capabilities,
+            backing: backing
+        )
+        return true
     }
 
     private func frameResult(

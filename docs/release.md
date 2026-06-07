@@ -2,6 +2,8 @@
 
 Tags are reproducible development checkpoints. They do not imply API stability.
 Do not tag while docs, public API audit, support lists, and checks disagree.
+Review [foundation-candidate-status.md](foundation-candidate-status.md) before
+claiming managed GPU or foundation-candidate readiness.
 
 ## Required Checks
 

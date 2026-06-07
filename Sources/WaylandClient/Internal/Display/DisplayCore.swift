@@ -173,7 +173,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     func closeWindow(_ windowID: WindowID) {
         withFatalFailureFinalization {
-            // Fatal raw invariants already finished streams and deferred graph cleanup;
+            // Fatal raw invariants already finished streams and deferred graph cleanup, so
             // avoid publishing orderly window lifecycle events on that explicit path.
             guard !hasPendingFatalFailure else { return }
             for inhibitorID in idleInhibitorIDsByWindowID[windowID] ?? [] {

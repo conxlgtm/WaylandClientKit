@@ -1,5 +1,11 @@
 import WaylandRaw
 
+package enum GraphicsPreviewSurfaceFeedbackError: Error, Equatable, Sendable {
+    case linuxDmabufUnavailable
+    case surfaceFeedbackUnavailable
+    case runtime(RuntimeError)
+}
+
 package enum GraphicsPreviewProtocolCapability: Equatable, Sendable {
     case unavailable
     case pending(version: UInt32)
@@ -163,12 +169,154 @@ extension WaylandDisplay {
             snapshot: requireCore().graphicsPreviewSurfaceCapabilitySnapshot()
         )
     }
+
+    package func graphicsPreviewSurfaceCapabilitySnapshot(
+        for windowID: WindowID
+    ) throws -> SurfaceCapabilitySnapshot {
+        try requireCore().graphicsPreviewSurfaceCapabilitySnapshot(for: windowID)
+    }
+
+    package func requestGraphicsPreviewSurfaceFeedback(
+        for windowID: WindowID,
+        timeoutMilliseconds: Int32
+    ) throws -> SurfaceCapabilitySnapshot {
+        try requireCore().requestGraphicsPreviewSurfaceFeedback(
+            for: windowID,
+            timeoutMilliseconds: timeoutMilliseconds
+        )
+    }
+
+    package func prepareGraphicsPreviewPresentation(
+        for windowID: WindowID,
+        timeoutMilliseconds: Int32
+    ) throws -> SurfaceGeometry {
+        try requireCore().prepareGraphicsPreviewPresentation(
+            for: windowID,
+            timeoutMilliseconds: timeoutMilliseconds
+        )
+    }
+
+    package func presentGraphicsPreviewBuffer(
+        _ buffer: RawSurfaceBuffer,
+        on windowID: WindowID,
+        submitConstraints: SurfaceSubmitConstraints,
+        metadata: SurfaceCommitMetadata,
+        requestPresentationFeedback: Bool
+    ) throws -> PreviewBufferPresentationResult {
+        try requireCore().presentGraphicsPreviewBuffer(
+            buffer,
+            on: windowID,
+            submitConstraints: submitConstraints,
+            metadata: metadata,
+            requestPresentationFeedback: requestPresentationFeedback
+        )
+    }
+
+    package func withGraphicsPreviewLinuxDmabuf<Result: Sendable>(
+        _ body:
+            @Sendable (
+                RawLinuxDmabuf,
+                _ syncDisplay: (Int32) throws -> Void
+            ) throws -> Result
+    ) throws -> Result {
+        try requireCore().withGraphicsPreviewLinuxDmabuf(body)
+    }
 }
 
 extension DisplayCore {
     func graphicsPreviewSurfaceCapabilitySnapshot() throws -> SurfaceCapabilitySnapshot {
         try withFatalFailureFinalization {
             try requireSession().graphicsPreviewSurfaceCapabilitySnapshotOnOwnerThread()
+        }
+    }
+
+    func graphicsPreviewSurfaceCapabilitySnapshot(
+        for windowID: WindowID
+    ) throws -> SurfaceCapabilitySnapshot {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID)
+                .graphicsPreviewSurfaceCapabilitySnapshotOnOwnerThread()
+        }
+    }
+
+    func requestGraphicsPreviewSurfaceFeedback(
+        for windowID: WindowID,
+        timeoutMilliseconds: Int32
+    ) throws -> SurfaceCapabilitySnapshot {
+        try withFatalFailureFinalization {
+            let snapshot = try requireOpenWindow(windowID)
+                .requestGraphicsPreviewSurfaceFeedbackOnOwnerThread(
+                    timeoutMilliseconds: timeoutMilliseconds
+                )
+            guard !isClosed else {
+                throw ClientError.display(.closed)
+            }
+            return snapshot
+        }
+    }
+
+    func prepareGraphicsPreviewPresentation(
+        for windowID: WindowID,
+        timeoutMilliseconds: Int32
+    ) throws -> SurfaceGeometry {
+        try withFatalFailureFinalization {
+            let geometry = try requireOpenWindow(windowID)
+                .prepareGraphicsPreviewPresentationOnOwnerThread(
+                    timeoutMilliseconds: timeoutMilliseconds
+                )
+            guard !isClosed else {
+                throw ClientError.display(.closed)
+            }
+            return geometry
+        }
+    }
+
+    func presentGraphicsPreviewBuffer(
+        _ buffer: RawSurfaceBuffer,
+        on windowID: WindowID,
+        submitConstraints: SurfaceSubmitConstraints,
+        metadata: SurfaceCommitMetadata,
+        requestPresentationFeedback: Bool
+    ) throws -> PreviewBufferPresentationResult {
+        try withFatalFailureFinalization {
+            let window = try requireOpenWindow(windowID)
+            let presentationFeedback = try presentationFeedbackCommitRequest(
+                for: window,
+                windowID: windowID,
+                isRequested: requestPresentationFeedback
+            )
+            let presentation = try window.presentPreviewBufferOnOwnerThread(
+                buffer,
+                submitConstraints: submitConstraints,
+                metadata: metadata,
+                presentationFeedback: presentationFeedback
+            )
+            guard !isClosed else {
+                throw ClientError.display(.closed)
+            }
+            return presentation
+        }
+    }
+
+    func withGraphicsPreviewLinuxDmabuf<Result: Sendable>(
+        _ body:
+            @Sendable (
+                RawLinuxDmabuf,
+                _ syncDisplay: (Int32) throws -> Void
+            ) throws -> Result
+    ) throws -> Result {
+        try withFatalFailureFinalization {
+            let session = try requireSession()
+            let globals = try session.connection.bindRequiredGlobals()
+            guard case .bound(let linuxDmabuf) = globals.extensions.linuxDmabuf else {
+                throw GraphicsPreviewSurfaceFeedbackError.linuxDmabufUnavailable
+            }
+
+            return try body(linuxDmabuf) { timeoutMilliseconds in
+                try session.connection.completeInitialDiscovery(
+                    timeoutMilliseconds: timeoutMilliseconds
+                )
+            }
         }
     }
 }

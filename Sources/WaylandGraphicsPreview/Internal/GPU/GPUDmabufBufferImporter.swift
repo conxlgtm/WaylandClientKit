@@ -83,6 +83,69 @@ package final class GPUDmabufBufferImport {
         onFailure = handleFailure
     }
 
+    package convenience init(
+        onCreated handleCreated: @escaping (RawLinuxDmabufBuffer) -> Void,
+        onFailure handleFailure: @escaping (GPUDmabufBufferImportError) -> Void
+    ) {
+        self.init(
+            testingInitialState: .createRequested,
+            onCreated: handleCreated,
+            onFailure: handleFailure
+        )
+    }
+
+    package static func importBuffer(
+        from export: GBMDmabufExport,
+        using linuxDmabuf: RawLinuxDmabuf,
+        timeoutMilliseconds: Int32,
+        syncDisplay: (Int32) throws -> Void
+    ) throws -> RawLinuxDmabufBuffer {
+        let descriptor = try importDescriptor(for: export)
+        var runtimeFailure: RuntimeError?
+        var importFailure: GPUDmabufBufferImportError?
+        let importRequest = GPUDmabufBufferImport { _ in
+            // The created buffer is read from importRequest after the sync point.
+        } onFailure: { error in
+            importFailure = error
+        }
+
+        let params = try linuxDmabuf.createBufferParams { event in
+            importRequest.testingHandle(event)
+        } onFailure: { error in
+            runtimeFailure = error
+        }
+        importRequest.params = params
+
+        for planeIndex in descriptor.planeIndices {
+            var plane = try export.takePlaneExport(at: planeIndex)
+            try params.addPlane(
+                fileDescriptor: &plane.descriptor,
+                planeIndex: UInt32(planeIndex),
+                offset: plane.layout.offset,
+                stride: plane.layout.stride,
+                modifier: descriptor.modifier
+            )
+        }
+        try params.create(
+            width: descriptor.width,
+            height: descriptor.height,
+            format: descriptor.format
+        )
+        try syncDisplay(timeoutMilliseconds)
+
+        if let runtimeFailure {
+            throw runtimeFailure
+        }
+        if let importFailure {
+            throw importFailure
+        }
+        guard let buffer = importRequest.buffer else {
+            throw GPUDmabufBufferImportError.compositorImportFailed
+        }
+
+        return buffer
+    }
+
     package static func importDescriptor(
         for export: GBMDmabufExport
     ) throws(GPUDmabufBufferImportError) -> GPUDmabufBufferImportDescriptor {

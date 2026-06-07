@@ -46,6 +46,7 @@ package enum GBMBufferPoolStateError: Error, Equatable, Sendable, CustomStringCo
     case duplicateSlot(GBMBufferPoolSlotID)
     case unknownSlot(GBMBufferPoolSlotID)
     case noAvailableSlots
+    case slotNotAvailable(GBMBufferPoolSlotID, actual: GBMBufferPoolSlotLifecycle)
     case slotNotLeased(GBMBufferPoolSlotID, actual: GBMBufferPoolSlotLifecycle)
     case slotNotSubmitted(GBMBufferPoolSlotID, actual: GBMBufferPoolSlotLifecycle)
     case invalidCommitGeneration(UInt64)
@@ -60,6 +61,8 @@ package enum GBMBufferPoolStateError: Error, Equatable, Sendable, CustomStringCo
             "unknown GBM buffer pool slot \(slotID.rawValue)"
         case .noAvailableSlots:
             "no GBM buffer pool slots are available"
+        case .slotNotAvailable(let slotID, let actual):
+            "GBM buffer pool slot \(slotID.rawValue) is \(actual), not available"
         case .slotNotLeased(let slotID, let actual):
             "GBM buffer pool slot \(slotID.rawValue) is \(actual), not leased"
         case .slotNotSubmitted(let slotID, let actual):
@@ -113,11 +116,31 @@ package struct GBMBufferPoolState: Equatable, Sendable {
         slots[slotID] = .available
     }
 
+    package mutating func removeAvailableSlots() -> [GBMBufferPoolSlotID] {
+        let removedSlotIDs = availableSlotIDs
+        for slotID in removedSlotIDs {
+            slots[slotID] = nil
+        }
+        return removedSlotIDs
+    }
+
     package mutating func leaseNextAvailableSlot()
         throws(GBMBufferPoolStateError) -> GBMBufferPoolSlotID
     {
         guard let slotID = availableSlotIDs.first else {
             throw GBMBufferPoolStateError.noAvailableSlots
+        }
+
+        slots[slotID] = .leased
+        return slotID
+    }
+
+    package mutating func leaseAvailableSlot(
+        _ slotID: GBMBufferPoolSlotID
+    ) throws(GBMBufferPoolStateError) -> GBMBufferPoolSlotID {
+        let lifecycle = try lifecycle(for: slotID)
+        guard lifecycle.isAvailable else {
+            throw GBMBufferPoolStateError.slotNotAvailable(slotID, actual: lifecycle)
         }
 
         slots[slotID] = .leased

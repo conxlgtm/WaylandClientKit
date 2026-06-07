@@ -6,8 +6,12 @@ extension GPURuntimePathSnapshot {
     ) -> Self {
         Self(
             dmabuf: dmabufStatus(capabilities.dmabuf),
+            surfaceFeedback: surfaceFeedbackStatus(capabilities.dmabuf),
+            renderNode: .unavailable,
             gbm: .unavailable,
             egl: .unavailable,
+            dmabufImport: .unavailable,
+            bufferLifecycle: .unavailable,
             synchronization: synchronizationStatus(
                 .implicit,
                 capability: capabilities.synchronization
@@ -42,6 +46,7 @@ extension GPURuntimePathSnapshot {
         capabilities: SurfaceCapabilitySnapshot
     ) -> Self {
         var snapshot = afterCapabilityDiscovery(capabilities: capabilities)
+        snapshot.renderNode = .active
         snapshot.gbm = .configured
         return snapshot
     }
@@ -59,6 +64,8 @@ extension GPURuntimePathSnapshot {
     ) -> Self {
         var snapshot = afterEGLTargetSetup(capabilities: capabilities)
         snapshot.dmabuf = dmabufStatus(capabilities.dmabuf).activated
+        snapshot.dmabufImport = .active
+        snapshot.bufferLifecycle = .configured
         return snapshot
     }
 
@@ -115,8 +122,12 @@ extension GPURuntimePathSnapshot {
         var snapshot = afterCapabilityDiscovery(capabilities: capabilities)
         let runtimeReason = GPURuntimePathReason(reason)
         snapshot.dmabuf = snapshot.dmabuf.fallback(runtimeReason)
+        snapshot.surfaceFeedback = snapshot.surfaceFeedback.fallback(runtimeReason)
+        snapshot.renderNode = snapshot.renderNode.fallback(runtimeReason)
         snapshot.gbm = .fallback(runtimeReason)
         snapshot.egl = .fallback(runtimeReason)
+        snapshot.dmabufImport = snapshot.dmabufImport.fallback(runtimeReason)
+        snapshot.bufferLifecycle = snapshot.bufferLifecycle.fallback(runtimeReason)
         if reason == .explicitSyncRequiredButUnavailable {
             snapshot.synchronization = .explicitFallback(runtimeReason)
         }
@@ -137,28 +148,45 @@ extension GPURuntimePathSnapshot {
         failure: GPUBackingFailure
     ) -> Self {
         var snapshot = afterCapabilityDiscovery(capabilities: capabilities)
+        snapshot.markFailure(failure)
+        return snapshot
+    }
+
+    package func markingFailure(_ failure: GPUBackingFailure) -> Self {
+        var snapshot = self
+        snapshot.markFailure(failure)
+        return snapshot
+    }
+
+    package mutating func markFailure(_ failure: GPUBackingFailure) {
         let runtimeReason = GPURuntimePathReason(failure)
         switch failure {
         case .dmabufUnavailable:
-            snapshot.dmabuf = .failed(runtimeReason)
+            dmabuf = .failed(runtimeReason)
+        case .surfaceFeedbackUnavailable:
+            surfaceFeedback = surfaceFeedback.failed(runtimeReason)
+            dmabuf = dmabuf.failed(runtimeReason)
         case .compositorRejectedBuffer:
-            snapshot.dmabuf = snapshot.dmabuf.failed(runtimeReason)
-        case .noCompatibleFormat, .noRenderNode, .gbmUnavailable,
-            .gbmAllocationFailed:
-            snapshot.gbm = .failed(runtimeReason)
+            dmabufImport = dmabufImport.failed(runtimeReason)
+            dmabuf = dmabuf.failed(runtimeReason)
+        case .noRenderNode:
+            renderNode = .failed(runtimeReason)
+            gbm = .failed(runtimeReason)
+        case .noCompatibleFormat, .gbmUnavailable, .gbmAllocationFailed:
+            gbm = .failed(runtimeReason)
         case .eglUnavailable:
-            snapshot.egl = .failed(runtimeReason)
+            egl = .failed(runtimeReason)
         case .explicitSyncRequiredButUnavailable, .submitConstraintRejected:
-            snapshot.synchronization = .explicitFailed(runtimeReason)
+            synchronization = .explicitFailed(runtimeReason)
         case .fifoRequiredButUnavailable, .commitTimingRequiredButUnavailable,
             .commitTimingRejected:
-            snapshot.pacing = .failed(runtimeReason)
+            pacing = .failed(runtimeReason)
         case .metadataRequiredButUnavailable(let error):
-            markMetadataRequirementFailure(error, in: &snapshot)
+            markMetadataRequirementFailure(error, in: &self)
         case .commitFailed, .presentationTrackingFailed:
-            snapshot.dmabuf = snapshot.dmabuf.failed(runtimeReason)
+            bufferLifecycle = bufferLifecycle.failed(runtimeReason)
+            dmabuf = dmabuf.failed(runtimeReason)
         }
-        return snapshot
     }
 }
 
@@ -198,10 +226,21 @@ extension RuntimePathStatus {
 }
 
 extension GPURuntimePathReason {
+    // swiftlint:disable:next cyclomatic_complexity
     package init(_ fallbackReason: GPUFallbackReason) {
         switch fallbackReason {
         case .policyForcedSHM:
             self = .policyForcedSHM
+        case .dmabufUnavailable:
+            self = .dmabufUnavailable
+        case .surfaceFeedbackUnavailable:
+            self = .surfaceFeedbackUnavailable
+        case .noCompatibleFormat:
+            self = .noCompatibleFormat
+        case .noRenderNode:
+            self = .noRenderNode
+        case .gbmAllocationFailed:
+            self = .gbmAllocationFailed
         case .explicitSyncRequiredButUnavailable:
             self = .explicitSynchronizationUnavailable
         case .fifoRequiredButUnavailable:
@@ -210,19 +249,34 @@ extension GPURuntimePathReason {
             self = .commitTimingUnavailable
         case .metadataRequiredButUnavailable(let error):
             self = GPURuntimePathReason(error)
-        case .gbmUnavailable, .noCompatibleFormat, .noRenderNode:
+        case .gbmUnavailable:
             self = .gbmUnavailable
         case .eglUnavailable:
             self = .eglUnavailable
         case .compositorRejectedBuffer:
             self = .compositorRejectedBuffer
-        default:
-            self = .dmabufUnavailable
+        case .commitTimingRejected:
+            self = .commitTimingRejected
+        case .commitFailed:
+            self = .commitFailed
+        case .presentationTrackingFailed:
+            self = .presentationTrackingFailed
         }
     }
 
+    // swiftlint:disable:next cyclomatic_complexity
     package init(_ failure: GPUBackingFailure) {
         switch failure {
+        case .dmabufUnavailable:
+            self = .dmabufUnavailable
+        case .surfaceFeedbackUnavailable:
+            self = .surfaceFeedbackUnavailable
+        case .noCompatibleFormat:
+            self = .noCompatibleFormat
+        case .noRenderNode:
+            self = .noRenderNode
+        case .gbmAllocationFailed:
+            self = .gbmAllocationFailed
         case .explicitSyncRequiredButUnavailable, .submitConstraintRejected:
             self = .explicitSynchronizationUnavailable
         case .fifoRequiredButUnavailable:
@@ -234,8 +288,7 @@ extension GPURuntimePathReason {
                 : .commitTimingUnavailable
         case .metadataRequiredButUnavailable(let error):
             self = GPURuntimePathReason(error)
-        case .gbmUnavailable, .gbmAllocationFailed, .noCompatibleFormat,
-            .noRenderNode:
+        case .gbmUnavailable:
             self = .gbmUnavailable
         case .eglUnavailable:
             self = .eglUnavailable
@@ -245,8 +298,6 @@ extension GPURuntimePathReason {
             self = .commitFailed
         case .presentationTrackingFailed:
             self = .presentationTrackingFailed
-        default:
-            self = .dmabufUnavailable
         }
     }
 
