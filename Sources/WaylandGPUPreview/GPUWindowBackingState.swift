@@ -182,6 +182,9 @@ package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
     case commitTimingRequiredButUnavailable
     case metadataRequiredButUnavailable(SurfaceCommitMetadataError)
     case compositorRejectedBuffer
+    case commitTimingRejected
+    case commitFailed
+    case presentationTrackingFailed
 
     package var description: String {
         switch self {
@@ -211,6 +214,12 @@ package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
             "required surface metadata was unavailable: \(error.description)"
         case .compositorRejectedBuffer:
             "the compositor rejected the GPU buffer"
+        case .commitTimingRejected:
+            "commit timing constraints were rejected"
+        case .commitFailed:
+            "surface commit failed"
+        case .presentationTrackingFailed:
+            "presentation tracking failed"
         }
     }
 }
@@ -321,6 +330,12 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
         switch fallbackReason {
         case .compositorRejectedBuffer:
             .compositorRejectedBuffer
+        case .commitTimingRejected:
+            .commitTimingRejected
+        case .commitFailed:
+            .commitFailed
+        case .presentationTrackingFailed:
+            .presentationTrackingFailed
         default:
             nil
         }

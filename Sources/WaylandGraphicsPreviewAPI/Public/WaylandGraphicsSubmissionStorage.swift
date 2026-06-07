@@ -247,7 +247,8 @@ package actor WaylandGraphicsWindowBackingStorage {
                     metadata: metadata,
                     geometry: geometry,
                     synchronization: configuration.gpuSynchronization,
-                    pacing: configuration.gpuPacing
+                    pacing: configuration.gpuPacing,
+                    requestPresentationFeedback: shouldRequestPresentationFeedback
                 )
                 refreshRuntimePathFromManagedGPU(backing: .active)
                 return

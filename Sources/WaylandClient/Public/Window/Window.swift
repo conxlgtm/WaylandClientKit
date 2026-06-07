@@ -107,13 +107,13 @@ public struct Window: Sendable, Hashable {
     package func presentGraphicsPreviewBuffer(
         _ buffer: RawSurfaceBuffer,
         submitConstraints: SurfaceSubmitConstraints,
-        metadata: SurfaceCommitMetadata
+        metadata: SurfaceCommitMetadata, requestPresentationFeedback: Bool
     ) async throws -> PreviewBufferPresentationResult {
         try await display.presentGraphicsPreviewBuffer(
             buffer,
             on: id,
             submitConstraints: submitConstraints,
-            metadata: metadata
+            metadata: metadata, requestPresentationFeedback: requestPresentationFeedback
         )
     }
 

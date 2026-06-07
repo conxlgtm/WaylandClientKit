@@ -56,8 +56,12 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             .metadataRequiredButUnavailable(error)
         case .compositorRejectedBuffer, .submitConstraintRejected:
             .compositorRejectedBuffer
-        case .commitTimingRejected, .commitFailed, .presentationTrackingFailed:
-            .compositorRejectedBuffer
+        case .commitTimingRejected:
+            .commitTimingRejected
+        case .commitFailed:
+            .commitFailed
+        case .presentationTrackingFailed:
+            .presentationTrackingFailed
         }
     }
 
@@ -114,6 +118,13 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             .commitFailed
         }
     }
+}
+
+private struct ManagedGPUPreviewPresentationOptions {
+    let metadata: SurfaceCommitMetadata
+    let synchronization: GPUBufferSubmissionSynchronization
+    let pacing: SurfacePacingConstraint
+    let requestPresentationFeedback: Bool
 }
 
 // swiftlint:disable:next type_body_length
@@ -210,7 +221,8 @@ package final class ManagedGPUPreviewBacking {
         metadata: SurfaceCommitMetadata,
         geometry: SurfaceGeometry,
         synchronization: GPUBufferSubmissionSynchronization = .implicit,
-        pacing: SurfacePacingConstraint = .none
+        pacing: SurfacePacingConstraint = .none,
+        requestPresentationFeedback: Bool = false
     ) async throws(ManagedGPUPreviewBackingError) -> GPUWindowPresentedFrame {
         do {
             try await ensureConfigured(geometry: geometry)
@@ -249,9 +261,12 @@ package final class ManagedGPUPreviewBacking {
             return try await presentImportedBuffer(
                 imported,
                 renderTarget: renderTarget,
-                metadata: metadata,
-                synchronization: synchronization,
-                pacing: pacing
+                options: ManagedGPUPreviewPresentationOptions(
+                    metadata: metadata,
+                    synchronization: synchronization,
+                    pacing: pacing,
+                    requestPresentationFeedback: requestPresentationFeedback
+                )
             )
         } catch let error {
             recordFailure(error)
@@ -304,9 +319,7 @@ package final class ManagedGPUPreviewBacking {
     private func presentImportedBuffer(
         _ imported: (buffer: RawLinuxDmabufBuffer, lockedBuffer: GBMLockedSurfaceBuffer),
         renderTarget: EGLGBMRenderTarget,
-        metadata: SurfaceCommitMetadata,
-        synchronization: GPUBufferSubmissionSynchronization,
-        pacing: SurfacePacingConstraint
+        options: ManagedGPUPreviewPresentationOptions
     ) async throws(ManagedGPUPreviewBackingError) -> GPUWindowPresentedFrame {
         do {
             let slotID: GBMBufferPoolSlotID
@@ -328,12 +341,13 @@ package final class ManagedGPUPreviewBacking {
                     try await window.presentGraphicsPreviewBuffer(
                         buffer,
                         submitConstraints: submitConstraints,
-                        metadata: commitMetadata
+                        metadata: commitMetadata,
+                        requestPresentationFeedback: options.requestPresentationFeedback
                     )
                 },
-                synchronization: synchronization,
-                pacing: pacing,
-                metadata: metadata
+                synchronization: options.synchronization,
+                pacing: options.pacing,
+                metadata: options.metadata
             )
         } catch let error as GBMAllocationError {
             throw .allocation(error)

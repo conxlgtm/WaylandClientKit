@@ -1162,14 +1162,16 @@ extension TopLevelWindow {
         try presentPreviewBufferOnOwnerThread(
             buffer,
             submitConstraints: .default,
-            metadata: .default
+            metadata: .default,
+            presentationFeedback: nil
         )
     }
 
     package func presentPreviewBufferOnOwnerThread(
         _ buffer: RawSurfaceBuffer,
         submitConstraints: SurfaceSubmitConstraints,
-        metadata: SurfaceCommitMetadata = .default
+        metadata: SurfaceCommitMetadata = .default,
+        presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil
     ) throws -> PreviewBufferPresentationResult {
         connection.preconditionIsOwnerThread()
 
@@ -1202,7 +1204,8 @@ extension TopLevelWindow {
             generation: generation,
             geometry: try currentSurfaceGeometry(),
             submitConstraints: submitConstraints,
-            metadata: metadata
+            metadata: metadata,
+            presentationFeedback: presentationFeedback
         ) { [weak self] in
             self?.handleFrameDone()
         }
