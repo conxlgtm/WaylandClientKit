@@ -543,6 +543,7 @@ swift run swift-wayland-smoke
 - [Building a GUI Layer](docs/building-a-gui-layer.md)
 - [Manual Testing](docs/manual-testing.md)
 - [Compositor Matrix](docs/compositor-matrix.md)
+- [Foundation Candidate Status](docs/foundation-candidate-status.md)
 - [Error Taxonomy](docs/error-taxonomy.md)
 - [WaylandClient DocC Catalog](Sources/WaylandClient/WaylandClient.docc/WaylandClient.md)
 - [Development Checkpoint Checklist](docs/release.md)

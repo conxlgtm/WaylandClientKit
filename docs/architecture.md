@@ -17,7 +17,19 @@ WaylandCursor depends on WaylandRaw and CWaylandCursorShims.
 CWaylandCursorShims depends on CWaylandCursorSystem.
 WaylandKeyboard also depends on CXKBCommonSystem.
 WaylandGraphicsPreview is a source-breaking preview product layered above
-WaylandClient. Its GBM/EGL internals stay in package-internal targets.
+WaylandClient and package-internal GPU backing code. Its GBM/EGL internals stay
+in package-internal targets:
+
+```text
+WaylandGraphicsPreview
+    -> WaylandClient
+    -> WaylandGPUPreview
+        -> WaylandGraphicsCore
+        -> WaylandRaw
+```
+
+`WaylandGPUPreview` does not import `WaylandGraphicsPreview`, and neither
+`WaylandGPUPreview` nor `WaylandGraphicsCore` is a vended library product.
 
 SwiftWaylandSmoke
     executable consumer of WaylandClient through WaylandSmokeSupport
@@ -251,6 +263,62 @@ Current state:
 - desktop integration requests for toplevel icons, idle inhibition, system bell,
   and activation
 - pointer capture and relative-pointer request/event support
+- package-only graphics-preview helpers for surface capability snapshots,
+  per-surface dmabuf feedback, dmabuf import, and owner-thread buffer commits
+
+### `WaylandGraphicsCore`
+
+Purpose:
+
+- package-internal GBM, DRM, EGL, and GLES substrate for graphics-preview
+  backing experiments
+
+Current state:
+
+- selects compositor-compatible GBM format/modifier pairs from dmabuf feedback
+- selects and opens render nodes without using primary-node fallback
+- owns GBM devices, surfaces, locked front buffers, and dmabuf exports
+- owns EGL display/context/surface state for deterministic clear-frame probes
+- exposes typed setup/allocation/rendering errors to higher internal targets
+- does not define a public renderer, swapchain, drawable, scene graph, or
+  shader API
+
+### `WaylandGPUPreview`
+
+Purpose:
+
+- package-internal managed GPU window backing and presentation path used by the
+  preview graphics product
+
+Current state:
+
+- requests per-surface dmabuf feedback through the managed window owner-thread
+  bridge
+- selects a compatible format/modifier, creates GBM/EGL resources, renders a
+  clear frame, imports the rendered dmabuf as a Wayland buffer, and commits it
+  through the existing surface machinery
+- tracks buffer slots, `wl_buffer.release`, presentation correlation, fallback
+  reasons, and runtime-path facts
+- keeps raw Wayland, GBM, EGL, DRM, dmabuf, fd, and sync objects package-internal
+- reports active GPU backing only after a GPU-rendered buffer is imported and
+  committed
+
+### `WaylandGraphicsPreview`
+
+Purpose:
+
+- source-breaking preview product for renderer-neutral graphics backing
+  selection and frame submission experiments
+
+Current state:
+
+- exposes capability snapshots, runtime-path facts, fallback policy, managed
+  window backing, frame leases, clear-frame submission, and software submission
+- can select software backing directly
+- can request managed GPU backing and either use the package-internal GPU path,
+  fall back to software with a typed reason, or fail with a typed unavailable
+  reason under `requireGPU`
+- does not expose raw platform handles or a renderer abstraction
 
 ### `WaylandSmokeSupport`
 
@@ -372,7 +440,11 @@ Supported:
   activation
 - relative pointer and pointer lock/confine request paths
 - package-internal graphics core work through linux-dmabuf, GBM, EGL, and GLES
-- preview `WaylandGraphicsPreview` capability and fallback value API
+- preview `WaylandGraphicsPreview` capability, runtime-path, fallback, and
+  managed frame submission API
+- managed software backing and package-internal managed GPU clear-frame backing
+  in `WaylandGraphicsPreview` for framework-facing preview experiments without
+  raw platform handles
 
 Not supported:
 
@@ -381,6 +453,8 @@ Not supported:
 - output management or control APIs
 - full IME/input-method protocol coverage beyond text-input-v3 client sessions
 - public `WaylandClient` GPU rendering APIs
+- public raw Wayland, GBM, EGL, DRM, dmabuf, syncobj, fd, swapchain, renderer,
+  layout, scene graph, styling, or accessibility tree APIs
 - widgets or retained UI
 
 ## Source Categories

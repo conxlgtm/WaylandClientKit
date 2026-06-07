@@ -128,9 +128,11 @@ The current baseline already has meaningful substrate pieces:
 - package-internal GPU window presentation bridge through `WaylandGPUPreview`
 - preview graphics product `WaylandGraphicsPreview` for renderer-neutral
   capability, runtime-path, and fallback facts
-- managed software submission and managed-GPU backing preference in
+- managed software backing and managed-GPU clear-frame submission in
   `WaylandGraphicsPreview` for framework-facing preview experiments without raw
-  platform handles
+  platform handles; `.managedGPU` now attempts surface feedback, GBM/EGL
+  rendering, dmabuf import, and owner-thread presentation before falling back or
+  failing with a typed reason
 - public input and opaque surface regions for managed windows and popups
 - damage-aware software redraw and managed graphics-preview software submission
   using logical damage mapped to buffer coordinates
@@ -165,8 +167,8 @@ Known foundation gaps:
   and nested cleanup beyond smoke build coverage
 - live compositor coverage for input-region, opaque-region, and partial-damage
   behavior beyond unit and smoke coverage
-- live compositor coverage for the package-internal GPU window presentation path
-  beyond public managed-GPU software fallback evidence
+- live compositor coverage proving the package-internal GPU window presentation
+  path active on real compositors beyond unit tests and local capability probes
 - live compositor evidence for toplevel icons, idle inhibition, system bell,
   custom cursor images, and the expanded example build gate
 - broader live compositor coverage for explicit sync, FIFO, commit timing, and
@@ -676,6 +678,16 @@ Goal:
 
 - Present GPU-rendered buffers through managed Wayland windows.
 
+Current checkpoint status:
+
+- The preview product has a package-internal managed GPU clear-frame path that
+  requests per-surface feedback, renders through GBM/EGL, imports the rendered
+  buffer through linux-dmabuf, commits it through the managed window
+  owner-thread path, and reports typed runtime-path facts.
+- Remaining milestone work is live compositor evidence, resize/reconfiguration
+  breadth, explicit sync activation, pacing activation, and broader GPU
+  submission scenarios beyond clear-frame proof.
+
 Work packages:
 
 - `gpu-window-backing`
@@ -1019,7 +1031,7 @@ Required behavior:
 
 - expose xdg activation as a typed app-client API
 - expose session-management tokens/restoration facts without owning document
-  lifecycle; see [session-management-plan.md](session-management-plan.md)
+  lifecycle
 - expose toplevel icon and dialog metadata only as protocol-shaped desktop
   integration facts
 - distinguish output observation from output control
