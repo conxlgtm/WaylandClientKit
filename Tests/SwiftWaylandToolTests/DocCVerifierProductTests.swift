@@ -55,6 +55,41 @@ struct DocCVerifierProductTests {
         }
     }
 
+    @Test
+    func doccVerifierRemovesAllPublicProductSymbolGraphsBeforeDump() throws {
+        let root = try temporaryRepository()
+        let scratch = root.appendingPathComponent(".scratch")
+        let symbolGraphRoot = scratch.appendingPathComponent("debug/symbolgraph")
+        try FileManager.default.createDirectory(
+            at: symbolGraphRoot,
+            withIntermediateDirectories: true
+        )
+        let clientGraph = symbolGraphRoot.appendingPathComponent(
+            "WaylandClient.symbols.json")
+        let previewGraph = symbolGraphRoot.appendingPathComponent(
+            "WaylandGraphicsPreview.symbols.json")
+        let unrelatedGraph = symbolGraphRoot.appendingPathComponent(
+            "WaylandInternal.symbols.json")
+        try #"{"symbols":[{"names":{"title":"StaleClient"}}]}"#.write(
+            to: clientGraph,
+            atomically: true,
+            encoding: .utf8
+        )
+        try #"{"symbols":[{"names":{"title":"StalePreview"}}]}"#.write(
+            to: previewGraph,
+            atomically: true,
+            encoding: .utf8
+        )
+        try #"{"symbols":[]}"#.write(to: unrelatedGraph, atomically: true, encoding: .utf8)
+
+        let verifier = DocCVerifier(repository: Repository(root: root), buildRoot: scratch)
+        try verifier.removePublicProductSymbolGraphs()
+
+        #expect(!FileManager.default.fileExists(atPath: clientGraph.path))
+        #expect(!FileManager.default.fileExists(atPath: previewGraph.path))
+        #expect(FileManager.default.fileExists(atPath: unrelatedGraph.path))
+    }
+
     private func temporaryRepository() throws -> URL {
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("swiftwayland-docc-product-tests-\(UUID().uuidString)")
