@@ -31,7 +31,7 @@ public struct SwiftToolchain: Sendable {
                 return latest
             }
         } catch {
-            // Swiftly is optional; fall back to normal PATH lookup.
+            // Swiftly is optional, so fall back to normal PATH lookup.
         }
 
         return "swift"
