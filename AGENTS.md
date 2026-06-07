@@ -43,3 +43,18 @@ When addressing Codex review feedback marked P1, P2, or P3:
 
 - Do this before reporting the PR as updated or ready.
 - If the review cannot be requested, state the reason explicitly.
+
+## Public API And Foundation Reviews
+
+When reviewing public API, documentation, managed GPU, or foundation readiness
+work:
+
+- Apply `docs/compatibility-policy.md` tiers.
+- Require docs and public API audit/baseline updates for public API changes.
+- Treat `WaylandGraphicsPreview` as preview, but still baseline/audit tracked.
+- Reject active managed GPU claims without runtime-path evidence from a live
+  compositor.
+- Reject public raw Wayland, GBM, EGL, DRM, dmabuf, syncobj, file descriptor,
+  or unsafe implementation handles.
+- Check that user-facing docs explain new public behavior before release notes
+  or status docs claim it.

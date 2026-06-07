@@ -1,6 +1,33 @@
 import Foundation
 
 public struct DocCVerifier {
+    public struct Product: Sendable {
+        public let moduleName: String
+        public let catalogPath: String
+        public let rootArticlePath: String
+
+        public init(moduleName: String, catalogPath: String, rootArticlePath: String) {
+            self.moduleName = moduleName
+            self.catalogPath = catalogPath
+            self.rootArticlePath = rootArticlePath
+        }
+    }
+
+    public static let publicProducts = [
+        Product(
+            moduleName: "WaylandClient",
+            catalogPath: "Sources/WaylandClient/WaylandClient.docc",
+            rootArticlePath: "Sources/WaylandClient/WaylandClient.docc/WaylandClient.md"
+        ),
+        Product(
+            moduleName: "WaylandGraphicsPreview",
+            catalogPath: "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc",
+            rootArticlePath:
+                "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/"
+                + "WaylandGraphicsPreview.md"
+        ),
+    ]
+
     public let repository: Repository
     public let buildRoot: URL
     public let fileSystem: FileSystem
@@ -19,15 +46,20 @@ public struct DocCVerifier {
     }
 
     public func verifyCatalogExists() throws {
-        let catalog = repository.url("Sources/WaylandClient/WaylandClient.docc")
-        let article = catalog.appendingPathComponent("WaylandClient.md")
         var failures: [String] = []
-        if !fileSystem.isDirectory(catalog) {
-            failures.append("Missing DocC catalog: Sources/WaylandClient/WaylandClient.docc")
-        }
-        if !fileSystem.exists(article) {
-            failures.append(
-                "Missing DocC article: Sources/WaylandClient/WaylandClient.docc/WaylandClient.md")
+        for product in Self.publicProducts {
+            let catalog = repository.url(product.catalogPath)
+            let article = repository.url(product.rootArticlePath)
+            if !fileSystem.isDirectory(catalog) {
+                failures.append(
+                    "Missing \(product.moduleName) DocC catalog: \(product.catalogPath)"
+                )
+            }
+            if !fileSystem.exists(article) {
+                failures.append(
+                    "Missing \(product.moduleName) DocC article: \(product.rootArticlePath)"
+                )
+            }
         }
         guard failures.isEmpty else {
             throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)
@@ -36,9 +68,31 @@ public struct DocCVerifier {
 
     public func verifySymbolLinks() throws {
         try verifyCatalogExists()
-        let graph = try requireWaylandClientSymbolGraph()
-        let symbols = try symbolTitles(from: graph)
-        let catalog = repository.url("Sources/WaylandClient/WaylandClient.docc")
+        var failures: [String] = []
+        for product in Self.publicProducts {
+            let graph = try requireSymbolGraph(for: product)
+            let symbols = try symbolTitles(from: graph, moduleName: product.moduleName)
+            let catalog = repository.url(product.catalogPath)
+            failures.append(
+                contentsOf: try symbolLinkFailures(
+                    in: catalog,
+                    symbols: symbols,
+                    product: product)
+            )
+        }
+
+        guard failures.isEmpty else {
+            throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)
+        }
+
+        diagnostics.success("DocC symbol links resolve for public products")
+    }
+
+    private func symbolLinkFailures(
+        in catalog: URL,
+        symbols: Set<String>,
+        product: Product
+    ) throws -> [String] {
         let markdownFiles = try fileSystem.walk(catalog, includingDirectories: false)
             .filter { $0.pathExtension == "md" }
         let regex = try NSRegularExpression(pattern: #"``([^`\n]+)``"#)
@@ -57,6 +111,7 @@ public struct DocCVerifier {
                     if !symbols.contains(name) {
                         failures.append(
                             "\(repository.relativePath(file)):\(index + 1): "
+                                + "\(product.moduleName) "
                                 + "unresolved DocC symbol link: \(link)"
                         )
                     }
@@ -64,23 +119,41 @@ public struct DocCVerifier {
             }
         }
 
-        guard failures.isEmpty else {
-            throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)
-        }
+        return failures
+    }
 
-        diagnostics.success("DocC symbol links resolve against the public symbol graph")
+    public func removePublicProductSymbolGraphs() throws {
+        for product in Self.publicProducts {
+            for graph in try findSymbolGraphs(for: product.moduleName) {
+                try fileSystem.removeItem(graph)
+            }
+        }
     }
 
     public func removeWaylandClientSymbolGraphs() throws {
-        for graph in try findWaylandClientSymbolGraphs() {
+        for graph in try findSymbolGraphs(for: "WaylandClient") {
             try fileSystem.removeItem(graph)
         }
     }
 
     public func requireWaylandClientSymbolGraph() throws -> URL {
-        guard let graph = try findWaylandClientSymbolGraphs().first else {
+        try requireSymbolGraph(for: "WaylandClient")
+    }
+
+    public func requirePublicProductSymbolGraphs(afterDump result: ProcessResult) throws {
+        for product in Self.publicProducts {
+            _ = try requireSymbolGraph(for: product, afterDump: result)
+        }
+    }
+
+    private func requireSymbolGraph(for product: Product) throws -> URL {
+        try requireSymbolGraph(for: product.moduleName)
+    }
+
+    private func requireSymbolGraph(for moduleName: String) throws -> URL {
+        guard let graph = try findSymbolGraphs(for: moduleName).first else {
             throw ToolError(
-                "Missing WaylandClient symbol graph under \(buildRoot.path)/*/symbolgraph",
+                "Missing \(moduleName) symbol graph under \(buildRoot.path)/*/symbolgraph",
                 exitCode: ToolExitCode.data
             )
         }
@@ -88,14 +161,24 @@ public struct DocCVerifier {
     }
 
     public func requireWaylandClientSymbolGraph(afterDump result: ProcessResult) throws -> URL {
+        try requireSymbolGraph(
+            for: Self.publicProducts[0],
+            afterDump: result
+        )
+    }
+
+    private func requireSymbolGraph(
+        for product: Product,
+        afterDump result: ProcessResult
+    ) throws -> URL {
         let graph: URL
         do {
-            graph = try requireWaylandClientSymbolGraph()
+            graph = try requireSymbolGraph(for: product)
         } catch {
             if result.exitCode != 0 {
                 throw Self.symbolGraphDumpError(
                     result,
-                    detail: "No fresh WaylandClient symbol graph was emitted.")
+                    detail: "No fresh \(product.moduleName) symbol graph was emitted.")
             }
             throw error
         }
@@ -103,14 +186,16 @@ public struct DocCVerifier {
         if result.exitCode != 0 {
             throw Self.symbolGraphDumpError(
                 result,
-                detail: "WaylandClient symbol graph was emitted, but dump-symbol-graph failed.")
+                detail:
+                    "\(product.moduleName) symbol graph was emitted, "
+                    + "but dump-symbol-graph failed.")
         }
         return graph
     }
 
-    private func findWaylandClientSymbolGraphs() throws -> [URL] {
+    private func findSymbolGraphs(for moduleName: String) throws -> [URL] {
         try fileSystem.walk(buildRoot, includingDirectories: false)
-            .filter { $0.path.hasSuffix("/symbolgraph/WaylandClient.symbols.json") }
+            .filter { $0.path.hasSuffix("/symbolgraph/\(moduleName).symbols.json") }
     }
 
     private static func symbolGraphDumpError(_ result: ProcessResult, detail: String) -> ToolError {
@@ -124,9 +209,9 @@ public struct DocCVerifier {
         )
     }
 
-    private func symbolTitles(from url: URL) throws -> Set<String> {
+    private func symbolTitles(from url: URL, moduleName: String) throws -> Set<String> {
         let object = try JSONHelpers.loadObject(from: url)
-        var titles: Set<String> = ["WaylandClient"]
+        var titles: Set<String> = [moduleName]
         guard let symbols = object["symbols"] as? [[String: Any]] else { return titles }
         for symbol in symbols {
             guard

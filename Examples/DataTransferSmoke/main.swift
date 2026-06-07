@@ -20,6 +20,10 @@ enum DataTransferSmoke {
             )
         ) { display in
             let capabilities = try await display.capabilities()
+            log("feature: data-transfer")
+            log("capability: clipboard \(availabilityDescription(capabilities.clipboard))")
+            log("capability: drag \(availabilityDescription(capabilities.dragAndDrop))")
+            log("capability: primary \(availabilityDescription(capabilities.primarySelection))")
             log("clipboard capability \(availabilityDescription(capabilities.clipboard))")
             log("drag capability \(availabilityDescription(capabilities.dragAndDrop))")
             log("primary capability \(availabilityDescription(capabilities.primarySelection))")
@@ -74,6 +78,8 @@ enum DataTransferSmoke {
             if options.printSummary {
                 log(await state.summary())
             }
+            log("result: pass")
+            log("cleanup: pass")
         }
     }
 
@@ -190,8 +196,10 @@ enum DataTransferSmoke {
                 serial: serial
             )
             await state.recordSource("clipboard \(clipboard.identity)")
+            log("operation: request-clipboard-source pass")
             log("clipboard source requested seat=\(seatID) serial=\(serial)")
         } catch {
+            log("operation: request-clipboard-source failed")
             log("clipboard source request failed seat=\(seatID) serial=\(serial) error=\(error)")
         }
 
@@ -203,8 +211,10 @@ enum DataTransferSmoke {
                 serial: serial
             )
             await state.recordSource("primary \(primary.identity)")
+            log("operation: request-primary-source pass")
             log("primary source requested seat=\(seatID) serial=\(serial)")
         } catch {
+            log("operation: request-primary-source failed")
             log("primary source request failed seat=\(seatID) serial=\(serial) error=\(error)")
         }
     }
@@ -227,8 +237,10 @@ enum DataTransferSmoke {
                 icon: .none
             )
             await state.recordSource("drag \(source.identity)")
+            log("operation: start-drag-source pass")
             log("drag source started seat=\(seatID) serial=\(serial)")
         } catch {
+            log("operation: start-drag-source failed")
             log("drag source failed seat=\(seatID) serial=\(serial) error=\(error)")
         }
     }

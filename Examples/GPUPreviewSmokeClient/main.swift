@@ -63,6 +63,12 @@ private struct GPUPreviewSmokeReportFormatter {
         guard let runtimePath = report.runtimePath else {
             return [
                 "SwiftWayland GPU Preview Runtime Path",
+                "feature: managed-gpu-preview",
+                "capability: runtime path unavailable",
+                "operation: clear-frame \(report.submittedFrame)",
+                "result: \(report.failure == nil ? "pass" : "failed")",
+                "cleanup: \(report.failure == nil ? "pass" : "not observed")",
+                "notes: no runtime path was produced",
                 "display: \(displayName())",
                 "compositor: \(compositorName())",
                 "window creation: \(report.windowCreation)",
@@ -74,6 +80,12 @@ private struct GPUPreviewSmokeReportFormatter {
         let capabilities = runtimePath.capabilities
         return [
             "SwiftWayland GPU Preview Runtime Path",
+            "feature: managed-gpu-preview",
+            "capability: dmabuf \(availability(capabilities.dmabuf))",
+            "operation: clear-frame \(report.submittedFrame)",
+            "result: \(backing(runtimePath))",
+            "cleanup: \(report.failure == nil ? "pass" : "not observed")",
+            "notes: active GPU requires backing active and submitted frame success",
             "display: \(displayName())",
             "compositor: \(compositorName())",
             "window creation: \(report.windowCreation)",

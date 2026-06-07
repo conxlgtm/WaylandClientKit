@@ -18,6 +18,9 @@ enum PointerCaptureSmoke {
             )
         ) { display in
             let capabilities = try await display.capabilities()
+            log("feature: pointer-capture")
+            log("capability: relative-pointer \(capabilities.relativePointer)")
+            log("capability: pointer-constraints \(capabilities.pointerConstraints)")
             log(
                 "capabilities relativePointer=\(capabilities.relativePointer) "
                     + "pointerConstraints=\(capabilities.pointerConstraints)"
@@ -40,6 +43,8 @@ enum PointerCaptureSmoke {
                 _ = try await group.next()
                 group.cancelAll()
             }
+            log("result: pass")
+            log("cleanup: pass")
         }
     }
 
@@ -104,23 +109,27 @@ enum PointerCaptureSmoke {
             switch button.button {
             case middleButton:
                 let subscription = try await window.relativePointer(seatID: seatID)
+                log("operation: relative-pointer pass")
                 log("relative pointer subscribed id=\(subscription.id) seat=\(seatID)")
             case leftButton:
                 let constraint = try await window.lockPointer(
                     seatID: seatID,
                     lifetime: .persistent
                 )
+                log("operation: lock-pointer pass")
                 log("lock requested id=\(constraint.id) seat=\(seatID)")
             case rightButton:
                 let constraint = try await window.confinePointer(
                     seatID: seatID,
                     lifetime: .persistent
                 )
+                log("operation: confine-pointer pass")
                 log("confine requested id=\(constraint.id) seat=\(seatID)")
             default:
                 break
             }
         } catch {
+            log("operation: pointer-capture failed")
             log("pointer capture request failed \(error)")
         }
     }

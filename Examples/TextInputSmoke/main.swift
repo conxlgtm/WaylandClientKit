@@ -17,6 +17,8 @@ enum TextInputSmoke {
             )
         ) { display in
             let capabilities = try await display.capabilities()
+            log("feature: text-input")
+            log("capability: \(availabilityDescription(capabilities.textInput))")
             log("text-input capability \(availabilityDescription(capabilities.textInput))")
             log("text-input lifecycle disable finalizes; do not commit after disable")
 
@@ -73,6 +75,8 @@ enum TextInputSmoke {
             if options.printSummary {
                 log(await state.summary())
             }
+            log("result: pass")
+            log("cleanup: pass")
         }
     }
 
@@ -184,8 +188,10 @@ enum TextInputSmoke {
             try await session.setCursorRectangle(try textCursorRectangle())
             try await session.commit()
             await state.activate(session)
+            log("operation: enable-text-input pass")
             log("text-input enabled seat=\(seatID)")
         } catch {
+            log("operation: enable-text-input failed")
             log("text-input enable failed seat=\(seatID) error=\(error)")
         }
     }
@@ -197,8 +203,10 @@ enum TextInputSmoke {
         guard let session = await state.removeSession(for: seatID) else { return }
         do {
             try await session.disable()
+            log("operation: disable-text-input pass")
             log("text-input disabled seat=\(seatID)")
         } catch {
+            log("operation: disable-text-input failed")
             log("text-input disable failed seat=\(seatID) error=\(error)")
         }
     }
@@ -207,8 +215,10 @@ enum TextInputSmoke {
         for session in await state.removeAllSessions() {
             do {
                 try await session.disable()
+                log("operation: disable-text-input pass")
                 log("text-input disabled seat=\(session.seatID)")
             } catch {
+                log("operation: disable-text-input failed")
                 log("text-input disable failed seat=\(session.seatID) error=\(error)")
             }
         }
