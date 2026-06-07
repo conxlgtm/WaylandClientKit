@@ -4,8 +4,8 @@ Status: not a foundation release candidate.
 
 SwiftWayland has a credible public substrate shape, but foundation status still
 depends on documentation coverage, compatibility policy discipline, release
-gates, and live compositor evidence. Managed GPU code presence is not enough;
-active GPU must be proven by public runtime-path output.
+gates, and broader live compositor evidence. Managed GPU code presence is not
+enough; active GPU claims must be backed by public runtime-path output.
 
 ## Status Labels
 
@@ -27,8 +27,8 @@ active GPU must be proven by public runtime-path output.
 | DocC coverage | partial | `WaylandClient` and `WaylandGraphicsPreview` catalogs exist. | Run `swift run swl docc verify` after public API/doc changes. |
 | User learning path | done | [getting-started.md](getting-started.md), [which-api-should-i-use.md](which-api-should-i-use.md), [documentation-map.md](documentation-map.md) | Keep README as portal, not full manual. |
 | Managed GPU setup code path | done | Managed GPU attempts surface feedback, render-node, GBM/EGL, dmabuf import, owner-thread commit, and typed fallback. | Keep runtime-path truth tests current. |
-| Managed GPU active proof | blocked-by-compositor-evidence | Current matrix records fallback/failure evidence, not active GPU on a live compositor. | Run `swift run GPUPreviewSmokeClient` and `swift run GraphicsPreviewManagedGPUClear` under GPU-capable sessions. |
-| Compositor matrix minimum | blocked-by-compositor-evidence | [compositor-matrix.md](compositor-matrix.md) separates protocol advertisement from active runtime facts. | Record headless Weston plus at least one desktop compositor row. |
+| Managed GPU active proof | partial | [compositor-matrix.md](compositor-matrix.md) records active managed GPU clear-frame submission on KDE/KWin and `dmabufUnavailable` fallback under headless Weston. | Add at least one more desktop or wlroots active/fallback/failure row before foundation-candidate claims. |
+| Compositor matrix minimum | done | [compositor-matrix.md](compositor-matrix.md) records headless Weston plus KDE/KWin rows and separates protocol advertisement from active runtime facts. | Keep GNOME/Mutter and Sway/wlroots rows current when those sessions are available. |
 | External consumer evidence | partial | Public and graphics preview integration clients are part of `swl ci check`. | Keep external clients hardware-independent. |
 | Release checks | partial | `swift run swl ci release`, `swift run swl examples build`, release docs. | Add/keep foundation check summary and compositor evidence review. |
 | Sanitizer checks | partial | TSan/ASan commands documented in [release.md](release.md). | Run where environment supports them and record skips. |
@@ -52,10 +52,12 @@ Implemented:
   and unavailable states. Active GPU is reported only after a GPU-rendered buffer
   is imported and committed.
 
-Not yet proven:
+Still needs broader evidence:
 
-- Active managed GPU backing on a live desktop compositor.
-- Active managed GPU backing under headless Weston.
+- Active managed GPU backing beyond the current KDE/KWin run.
+- Managed GPU behavior on GNOME/Mutter and Sway/wlroots.
+- Active managed GPU backing under headless Weston is not expected while dmabuf
+  is unavailable there; keep the typed fallback row current.
 - Explicit sync, FIFO, and commit-timing activation on real compositors.
 - Broad live resize/reconfiguration behavior for GPU buffers.
 
