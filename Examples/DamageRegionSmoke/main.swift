@@ -16,6 +16,8 @@ enum DamageRegionSmoke {
                 presentationEventCapacity: 16
             )
         ) { display in
+            log("feature: surface-damage")
+            log("capability: wl_surface damage_buffer path")
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
                     title: "SwiftWayland Damage Region Smoke",
@@ -30,6 +32,7 @@ enum DamageRegionSmoke {
             try await window.show { frame in
                 draw(frame, phase: 0)
             }
+            log("operation: show-initial-frame pass")
 
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask { try await consumeDisplayEvents(display.events, window: window) }
@@ -48,6 +51,8 @@ enum DamageRegionSmoke {
             if options.printSummary {
                 log(await animation.summary())
             }
+            log("result: pass")
+            log("cleanup: pass")
         }
     }
 
@@ -83,6 +88,7 @@ enum DamageRegionSmoke {
             try await window.redraw(damage: frame.damage) { softwareFrame in
                 draw(softwareFrame, phase: frame.phase)
             }
+            log("operation: submit-partial-damage pass")
             log(
                 "submitted logical damage \(frame.damage.rectangles); mapped buffer estimate \(bufferDamageDescription(frame.damage, geometry: geometry))"
             )

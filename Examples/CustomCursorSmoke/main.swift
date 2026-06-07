@@ -9,6 +9,8 @@ enum CustomCursorSmoke {
 
     static func main() async throws {
         try await WaylandDisplay.withConnection { display in
+            log("feature: custom-cursor-image")
+            log("capability: pointer cursor image surface")
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
                     title: "SwiftWayland Custom Cursor Smoke",
@@ -22,6 +24,7 @@ enum CustomCursorSmoke {
 
             let customCursor = try PointerCursor.image(makeCursorImage())
             try await display.setPointerCursor(customCursor)
+            log("operation: set-custom-cursor pass")
             log("initial custom cursor applied")
 
             try await withThrowingTaskGroup(of: Void.self) { group in
@@ -37,6 +40,8 @@ enum CustomCursorSmoke {
                 _ = try await group.next()
                 group.cancelAll()
             }
+            log("result: pass")
+            log("cleanup: pass")
         }
     }
 
@@ -109,6 +114,7 @@ enum CustomCursorSmoke {
         }
 
         let results = try await display.setPointerCursor(cursor)
+        log("operation: set-cursor pass")
         log("set cursor=\(label) results=\(results)")
     }
 

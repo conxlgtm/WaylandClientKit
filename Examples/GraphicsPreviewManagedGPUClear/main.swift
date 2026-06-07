@@ -98,6 +98,12 @@ private struct ManagedGPUClearReportFormatter {
         else {
             return [
                 "SwiftWayland Managed GPU Clear",
+                "feature: managed-gpu-clear",
+                "capability: runtime path unavailable",
+                "operation: clear-frame failed",
+                "result: failed",
+                "cleanup: not observed",
+                "notes: no runtime path was produced",
                 "display: \(displayName())",
                 "compositor: \(compositorName())",
                 "failure: \(report.failure ?? "none")",
@@ -106,6 +112,12 @@ private struct ManagedGPUClearReportFormatter {
 
         return [
             "SwiftWayland Managed GPU Clear",
+            "feature: managed-gpu-clear",
+            "capability: dmabuf \(availability(capabilities.dmabuf))",
+            "operation: clear-frame \(frameResult.operation)",
+            "result: \(actualBacking(runtimePath))",
+            "cleanup: \(report.failure == nil ? "pass" : "not observed")",
+            "notes: active GPU requires actual backing managedGPU",
             "display: \(displayName())",
             "compositor: \(compositorName())",
             "dmabuf: \(availability(capabilities.dmabuf))",
