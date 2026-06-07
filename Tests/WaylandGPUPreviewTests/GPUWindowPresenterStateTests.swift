@@ -451,6 +451,29 @@ struct GPUWindowRuntimePathSnapshotTests {
     }
 
     @Test
+    func runtimePathFailurePreservesCompletedSetupStages() {
+        let capabilities = capabilitySnapshot()
+        let snapshot =
+            GPURuntimePathSnapshot
+            .afterEGLTargetSetup(capabilities: capabilities)
+            .markingFailure(.compositorRejectedBuffer)
+        let fallbackPath = WaylandGraphicsRuntimePath(
+            gpuSnapshot: snapshot,
+            capabilities: capabilities,
+            backing: .fallback(.compositorRejectedBuffer)
+        )
+
+        #expect(snapshot.renderNode == .active)
+        #expect(snapshot.gbm == .configured)
+        #expect(snapshot.egl == .configured)
+        #expect(snapshot.dmabufImport == .failed(.compositorRejectedBuffer))
+        #expect(fallbackPath.backing == .fallback(.compositorRejectedBuffer))
+        #expect(fallbackPath.gbm == .configured)
+        #expect(fallbackPath.egl == .configured)
+        #expect(fallbackPath.dmabufImport == .failed(.compositorRejectedBuffer))
+    }
+
+    @Test
     func runtimePathReportsCommitFailure() {
         let snapshot = GPURuntimePathSnapshot.afterFailure(
             capabilities: capabilitySnapshot(),

@@ -203,7 +203,12 @@ package final class ManagedGPUPreviewBacking {
         synchronization: GPUBufferSubmissionSynchronization = .implicit,
         pacing: SurfacePacingConstraint = .none
     ) async throws(ManagedGPUPreviewBackingError) -> GPUWindowPresentedFrame {
-        try await ensureConfigured(geometry: geometry)
+        do {
+            try await ensureConfigured(geometry: geometry)
+        } catch let error {
+            recordFailure(error)
+            throw error
+        }
         guard let renderTarget, let capabilities else {
             throw .closed
         }
@@ -215,20 +220,33 @@ package final class ManagedGPUPreviewBacking {
                 metadata: metadata
             ).validate(capabilities: capabilities)
         } catch {
-            throw .setup(GPUBackingFailure(error))
+            let failure = GPUBackingFailure(error)
+            recordFailure(failure)
+            throw .setup(failure)
         }
 
-        let imported = try await renderAndImportBuffer(
-            renderTarget: renderTarget,
-            color: color
-        )
+        let imported: (buffer: RawLinuxDmabufBuffer, lockedBuffer: GBMLockedSurfaceBuffer)
+        do {
+            imported = try await renderAndImportBuffer(
+                renderTarget: renderTarget,
+                color: color
+            )
+        } catch let error {
+            recordFailure(error)
+            throw error
+        }
         runtimePath = .afterDmabufImportSetup(capabilities: capabilities)
-        return try await presentImportedBuffer(
-            imported,
-            metadata: metadata,
-            synchronization: synchronization,
-            pacing: pacing
-        )
+        do {
+            return try await presentImportedBuffer(
+                imported,
+                metadata: metadata,
+                synchronization: synchronization,
+                pacing: pacing
+            )
+        } catch let error {
+            recordFailure(error)
+            throw error
+        }
     }
 
     private func renderAndImportBuffer(
@@ -387,6 +405,18 @@ package final class ManagedGPUPreviewBacking {
             return slotID
         } catch {
             throw .allocation(.invalidBufferDimensions(width: 0, height: 0))
+        }
+    }
+
+    private func recordFailure(_ error: ManagedGPUPreviewBackingError) {
+        recordFailure(error.failure)
+    }
+
+    private func recordFailure(_ failure: GPUBackingFailure) {
+        if runtimePath == .empty, let capabilities {
+            runtimePath = .afterFailure(capabilities: capabilities, failure: failure)
+        } else {
+            runtimePath = runtimePath.markingFailure(failure)
         }
     }
 

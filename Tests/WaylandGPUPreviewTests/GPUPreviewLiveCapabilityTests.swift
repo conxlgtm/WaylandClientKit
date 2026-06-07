@@ -37,9 +37,14 @@ struct GPUPreviewLiveCapabilityTests {
             discoveryTimeoutMilliseconds: 5_000
         ) { display in
             let capabilities = try await display.graphicsSurfaceCapabilities()
-            let runtimePath = try await display.graphicsRuntimePath()
-            let decision = try await display.graphicsBackingDecision()
-            let forcedSoftwarePath = try await display.graphicsRuntimePath(
+            let runtimePath = WaylandGraphicsRuntimePath.projected(
+                capabilities: capabilities
+            )
+            let decision = WaylandGraphicsFallbackPolicy
+                .preferGPUFallbackToSoftware
+                .decide(capabilities: capabilities)
+            let forcedSoftwarePath = WaylandGraphicsRuntimePath.projected(
+                capabilities: capabilities,
                 policy: .forceSoftware
             )
 
