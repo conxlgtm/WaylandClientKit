@@ -75,8 +75,8 @@ example or manual probe has been run:
 | Compositor | Version | Protocol facts | Smoke | Public integration | GPU preview | Notes |
 | ---------- | ------- | -------------- | ----- | ------------------ | ----------- | ----- |
 | Weston headless | pending | pending | pending | pending | pending | CI and local repeatability target. |
-| GNOME / Mutter | Ubuntu/GNOME session, 2026-05-24 | facts script ran; globals unavailable because `wayland-info`/`weston-info` is not installed | bounded framework-facing examples ran | public import checks passed in framework handoff | pending | Real desktop target. |
-| KDE / KWin | openSUSE Tumbleweed KDE/KWin, 2026-05-23 handoff | pending | framework handoff ran live probes | public import checks passed in framework handoff | software submission usable in handoff | Re-run data-transfer cleanup after the shutdown fixes. |
+| GNOME / Mutter | Ubuntu/GNOME session, 2026-05-24 | facts script ran; globals unavailable because `wayland-info`/`weston-info` is not installed | bounded framework-facing examples ran | public import checks passed in framework handoff | pending current managed-GPU run | Real desktop target. |
+| KDE / KWin | openSUSE Tumbleweed KDE/KWin, 2026-05-23 handoff | pending | framework handoff ran live probes | public import checks passed in framework handoff | pending current managed-GPU run | Re-run data-transfer cleanup after the shutdown fixes. |
 | Sway / wlroots | pending | pending | pending | pending | pending | wlroots target. |
 
 ## Framework Host Evidence
@@ -125,7 +125,7 @@ registry advertisement separate from resource setup and frame submission.
 | Compositor | Display | Globals | dmabuf | surface feedback | GBM | EGL | explicit sync | FIFO | commit timing | metadata | presentation feedback | submitted frame | release/reuse | backing | failure/fallback |
 | ---------- | ------- | ------- | ------ | ---------------- | --- | --- | ------------- | ---- | ------------- | -------- | --------------------- | --------------- | ------------- | ------- | ---------------- |
 | Weston headless | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested |
-| GNOME / Mutter | wayland-0, ubuntu:GNOME / ubuntu, 2026-05-25 | dmabuf v5, explicit sync v1, FIFO, commit timing, presentation feedback v1, color management advertised, color representation pending | advertised | not configured | fallback(managedGPUSubmissionUnavailable) | fallback(managedGPUSubmissionUnavailable) | advertised | advertised | advertised | content type/alpha/tearing unavailable; color representation pending; color management advertised | advertised | success show, 96x96 | not observed, software fallback | software fallback(managedGPUSubmissionUnavailable) | none; `GraphicsPreviewManagedGPUClear` also closed cleanly with fallback(managedGPUSubmissionUnavailable) |
+| GNOME / Mutter | current managed-GPU run pending | previous session advertised dmabuf v5, explicit sync v1, FIFO, commit timing, presentation feedback v1, color management, and pending color representation; rerun required for current managed GPU path | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | stale pre-managed-GPU evidence intentionally not carried forward |
 | KDE / KWin | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested |
 | Sway / wlroots | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested | not tested |
 

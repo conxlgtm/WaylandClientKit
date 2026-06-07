@@ -193,8 +193,9 @@ Current user-facing contract:
 - Presentation feedback means `wp_presentation` feedback for managed surfaces.
   Frame callbacks, presentation feedback, future FIFO or commit-timing controls,
   and explicit sync remain separate concepts.
-- GPU and GBM/EGL/dmabuf work remains package-internal preview. There is no
-  public renderer, swapchain, drawable, or GPU buffer API in `WaylandClient`.
+- GPU and GBM/EGL/dmabuf work remains package-internal and is surfaced only
+  through the separate preview product. There is no public renderer, swapchain,
+  drawable, or GPU buffer API in `WaylandClient`.
 
 ### `WaylandGraphicsPreview`
 
@@ -239,15 +240,18 @@ Intentionally public:
 
 Current preview contract:
 
-- The product reports renderer-neutral graphics capabilities, projected
-  runtime-path facts, software fallback decisions, and required-GPU
+- The product reports renderer-neutral graphics capabilities, projected and
+  observed runtime-path facts, software fallback decisions, and required-GPU
   unavailability.
 - `WaylandGraphicsBackingKind` lets callers request software backing or
   managed GPU backing without exposing raw buffer, device, EGL, or sync handles.
 - The managed preview submission path can create a window backing, lease a
-  frame, submit a deterministic clear frame, submit arbitrary software drawing,
-  return a typed frame result, and cancel or close resources without exposing
-  raw graphics handles.
+  frame, attempt a package-internal GPU clear-frame path, fall back to software
+  when policy allows, submit arbitrary software drawing, return a typed frame
+  result, and cancel or close resources without exposing raw graphics handles.
+- Managed GPU failures preserve public typed reasons including missing
+  per-surface dmabuf feedback and GBM allocation failure; display-level dmabuf
+  advertisement alone is not reported as active GPU backing.
 - It does not expose raw Wayland proxies, EGL/GBM/DRM handles, syncobj fds,
   SHM pools, scene rendering, swapchains, drawables, or public color-management
   image descriptions.
@@ -301,7 +305,9 @@ Notes:
 - The runtime is single-thread-affine. Thread-affine session/window entry points are
   package implementation details. Downstream users should go through `WaylandDisplay`
   and `Window`.
-- `TopLevelWindow` is currently tied to SHM software drawing and is not public API.
+- `TopLevelWindow` owns managed toplevel surface presentation for SHM software
+  drawing and package-internal graphics-preview buffer commits; it is not
+  public API.
 - `SoftwareFrame` is noncopyable and borrowed by drawing callbacks. User code can draw
   through row spans during the callback, but cannot copy the frame out and mutate the
   SHM storage after presentation.
