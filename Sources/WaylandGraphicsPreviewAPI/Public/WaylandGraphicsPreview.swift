@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 import WaylandClient
 
 /// Protocol availability as seen by the graphics preview API.
@@ -213,6 +214,11 @@ public enum WaylandGraphicsFallbackReason: Equatable, Sendable {
     case compositorRejectedBuffer
     case surfaceFeedbackUnavailable
     case gbmAllocationFailed
+    case fifoUnavailable
+    case commitTimingUnavailable
+    case commitTimingRejected
+    case commitFailed
+    case presentationTrackingFailed
 }
 
 /// Reasons GPU backing can be unavailable.
@@ -229,6 +235,11 @@ public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {
     case compositorRejectedBuffer
     case surfaceFeedbackUnavailable
     case gbmAllocationFailed
+    case fifoUnavailable
+    case commitTimingUnavailable
+    case commitTimingRejected
+    case commitFailed
+    case presentationTrackingFailed
 }
 
 /// Renderer-neutral backing decision for a graphics-capable surface.
@@ -291,8 +302,12 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
     public let capabilities: WaylandGraphicsSurfaceCapabilities
     public let backing: WaylandGraphicsRuntimeStatus
     public let dmabuf: WaylandGraphicsRuntimeStatus
+    public let surfaceFeedback: WaylandGraphicsRuntimeStatus
+    public let renderNode: WaylandGraphicsRuntimeStatus
     public let gbm: WaylandGraphicsRuntimeStatus
     public let egl: WaylandGraphicsRuntimeStatus
+    public let dmabufImport: WaylandGraphicsRuntimeStatus
+    public let bufferLifecycle: WaylandGraphicsRuntimeStatus
     public let explicitSync: WaylandGraphicsRuntimeStatus
     public let pacing: WaylandGraphicsPacingStatus
     public let metadata: WaylandGraphicsMetadataStatus
@@ -309,8 +324,12 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
         capabilities: WaylandGraphicsSurfaceCapabilities,
         backing: WaylandGraphicsRuntimeStatus,
         dmabuf: WaylandGraphicsRuntimeStatus,
+        surfaceFeedback: WaylandGraphicsRuntimeStatus,
+        renderNode: WaylandGraphicsRuntimeStatus,
         gbm: WaylandGraphicsRuntimeStatus,
         egl: WaylandGraphicsRuntimeStatus,
+        dmabufImport: WaylandGraphicsRuntimeStatus,
+        bufferLifecycle: WaylandGraphicsRuntimeStatus,
         explicitSync: WaylandGraphicsRuntimeStatus,
         pacing: WaylandGraphicsPacingStatus,
         metadata: WaylandGraphicsMetadataStatus,
@@ -319,8 +338,12 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
         self.capabilities = capabilities
         self.backing = backing
         self.dmabuf = dmabuf
+        self.surfaceFeedback = surfaceFeedback
+        self.renderNode = renderNode
         self.gbm = gbm
         self.egl = egl
+        self.dmabufImport = dmabufImport
+        self.bufferLifecycle = bufferLifecycle
         self.explicitSync = explicitSync
         self.pacing = pacing
         self.metadata = metadata
@@ -357,8 +380,16 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
                 fallback: fallback,
                 unavailable: unavailable
             ),
+            surfaceFeedback: protocolStatus(
+                capabilities.dmabuf,
+                fallback: fallback,
+                unavailable: unavailable
+            ),
+            renderNode: .unavailable,
             gbm: .unavailable,
             egl: .unavailable,
+            dmabufImport: .unavailable,
+            bufferLifecycle: .unavailable,
             explicitSync: protocolStatus(capabilities.explicitSync),
             pacing: WaylandGraphicsPacingStatus(
                 fifo: protocolStatus(capabilities.framePacing.fifo),
@@ -387,8 +418,14 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
             dmabuf: capabilities.dmabuf.isAvailable
                 ? protocolStatus(capabilities.dmabuf)
                 : .fallback(reason),
+            surfaceFeedback: capabilities.dmabuf.isAvailable
+                ? protocolStatus(capabilities.dmabuf)
+                : .fallback(reason),
+            renderNode: .fallback(reason),
             gbm: .fallback(reason),
             egl: .fallback(reason),
+            dmabufImport: .fallback(reason),
+            bufferLifecycle: .fallback(reason),
             explicitSync: protocolStatus(capabilities.explicitSync),
             pacing: WaylandGraphicsPacingStatus(
                 fifo: protocolStatus(capabilities.framePacing.fifo),
@@ -417,8 +454,14 @@ public struct WaylandGraphicsRuntimePath: Equatable, Sendable {
             dmabuf: capabilities.dmabuf.isAvailable
                 ? protocolStatus(capabilities.dmabuf)
                 : .failed(reason),
+            surfaceFeedback: capabilities.dmabuf.isAvailable
+                ? protocolStatus(capabilities.dmabuf)
+                : .failed(reason),
+            renderNode: .failed(reason),
             gbm: .failed(reason),
             egl: .failed(reason),
+            dmabufImport: .failed(reason),
+            bufferLifecycle: .failed(reason),
             explicitSync: protocolStatus(capabilities.explicitSync),
             pacing: WaylandGraphicsPacingStatus(
                 fifo: protocolStatus(capabilities.framePacing.fifo),

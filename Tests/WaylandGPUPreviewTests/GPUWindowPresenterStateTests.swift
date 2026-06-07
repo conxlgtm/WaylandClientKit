@@ -4,6 +4,7 @@ import Testing
 @testable import WaylandClient
 @testable import WaylandGPUPreview
 @testable import WaylandGraphicsCore
+@testable import WaylandGraphicsPreview
 @testable import WaylandRaw
 
 @Suite
@@ -520,6 +521,7 @@ struct GPUWindowRuntimePathFailureTests {
             failure: .noRenderNode
         )
 
+        #expect(snapshot.renderNode == .failed(.noRenderNode))
         #expect(snapshot.gbm == .failed(.noRenderNode))
         #expect(snapshot.dmabuf == .advertised)
     }
@@ -534,6 +536,42 @@ struct GPUWindowRuntimePathFailureTests {
         #expect(snapshot.egl == .failed(.eglUnavailable))
         #expect(snapshot.gbm == .unavailable)
         #expect(snapshot.dmabuf == .advertised)
+    }
+
+    @Test
+    func publicRuntimePathPreservesSpecificGPUFailureStages() {
+        let capabilities = capabilitySnapshot()
+        let importFailure = WaylandGraphicsRuntimePath(
+            gpuSnapshot: .afterFailure(
+                capabilities: capabilities,
+                failure: .compositorRejectedBuffer
+            ),
+            capabilities: capabilities,
+            backing: .failed(.compositorRejectedBuffer)
+        )
+        let commitTimingFailure = WaylandGraphicsRuntimePath(
+            gpuSnapshot: .afterFailure(
+                capabilities: capabilities,
+                failure: .commitTimingRejected
+            ),
+            capabilities: capabilities,
+            backing: .failed(.commitTimingRejected)
+        )
+        let commitFailure = WaylandGraphicsRuntimePath(
+            gpuSnapshot: .afterFailure(
+                capabilities: capabilities,
+                failure: .commitFailed
+            ),
+            capabilities: capabilities,
+            backing: .failed(.commitFailed)
+        )
+
+        #expect(importFailure.dmabufImport == .failed(.compositorRejectedBuffer))
+        #expect(importFailure.backing == .failed(.compositorRejectedBuffer))
+        #expect(commitTimingFailure.pacing.commitTiming == .failed(.commitTimingRejected))
+        #expect(commitTimingFailure.backing == .failed(.commitTimingRejected))
+        #expect(commitFailure.bufferLifecycle == .failed(.commitFailed))
+        #expect(commitFailure.backing == .failed(.commitFailed))
     }
 }
 
@@ -971,44 +1009,6 @@ struct GPUWindowPresenterLifecycleTests {
     }
 
     @Test
-    func presenterSubmitsRequestedFreshSlotAfterLowerSlotRelease() async throws {
-        let presenter = GPUWindowPresenter()
-        let recorder = SubmittedPointerRecorder()
-        let releasedSlotID = try GBMBufferPoolSlotID(0)
-        let freshSlotID = try GBMBufferPoolSlotID(2)
-        let releasedBuffer = try FakePresenterBuffer(pointer: 0x1001)
-        let freshBuffer = try FakePresenterBuffer(pointer: 0x1002)
-
-        try presenter.installBuffer(releasedBuffer, slotID: releasedSlotID)
-        _ = try await presenter.presentSlot(
-            releasedSlotID,
-            submit: { buffer, _, _ in
-                await recorder.record(buffer)
-                return try previewPresentationResult(generation: 40)
-            },
-            synchronization: .implicit,
-            pacing: .none
-        )
-        releasedBuffer.triggerRelease()
-        try presenter.installBuffer(freshBuffer, slotID: freshSlotID)
-
-        let frame = try await presenter.presentSlot(
-            freshSlotID,
-            submit: { buffer, _, _ in
-                await recorder.record(buffer)
-                return try previewPresentationResult(generation: 41)
-            },
-            synchronization: .implicit,
-            pacing: .none
-        )
-
-        #expect(frame.slotID == freshSlotID)
-        #expect(
-            await recorder.snapshot() == [releasedBuffer.pointerValue, freshBuffer.pointerValue])
-        #expect(presenter.outstandingSubmittedSlotIDs == [freshSlotID])
-    }
-
-    @Test
     func presenterRejectsInstallAfterRetire() throws {
         let presenter = GPUWindowPresenter()
         let slotID = try GBMBufferPoolSlotID(0)
@@ -1155,6 +1155,47 @@ struct GPUWindowPresenterLifecycleTests {
 
         #expect(buffer.destroyCallCount == 1)
         #expect(!buffer.hasReleaseObserver)
+    }
+}
+
+@Suite
+struct GPUWindowPresenterSlotSelectionTests {
+    @Test
+    func presenterSubmitsRequestedFreshSlotAfterLowerSlotRelease() async throws {
+        let presenter = GPUWindowPresenter()
+        let recorder = SubmittedPointerRecorder()
+        let releasedSlotID = try GBMBufferPoolSlotID(0)
+        let freshSlotID = try GBMBufferPoolSlotID(2)
+        let releasedBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let freshBuffer = try FakePresenterBuffer(pointer: 0x1002)
+
+        try presenter.installBuffer(releasedBuffer, slotID: releasedSlotID)
+        _ = try await presenter.presentSlot(
+            releasedSlotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 40)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+        releasedBuffer.triggerRelease()
+        try presenter.installBuffer(freshBuffer, slotID: freshSlotID)
+
+        let frame = try await presenter.presentSlot(
+            freshSlotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 41)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(frame.slotID == freshSlotID)
+        #expect(
+            await recorder.snapshot() == [releasedBuffer.pointerValue, freshBuffer.pointerValue])
+        #expect(presenter.outstandingSubmittedSlotIDs == [freshSlotID])
     }
 }
 

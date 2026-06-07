@@ -6,8 +6,12 @@ extension GPURuntimePathSnapshot {
     ) -> Self {
         Self(
             dmabuf: dmabufStatus(capabilities.dmabuf),
+            surfaceFeedback: surfaceFeedbackStatus(capabilities.dmabuf),
+            renderNode: .unavailable,
             gbm: .unavailable,
             egl: .unavailable,
+            dmabufImport: .unavailable,
+            bufferLifecycle: .unavailable,
             synchronization: synchronizationStatus(
                 .implicit,
                 capability: capabilities.synchronization
@@ -42,6 +46,7 @@ extension GPURuntimePathSnapshot {
         capabilities: SurfaceCapabilitySnapshot
     ) -> Self {
         var snapshot = afterCapabilityDiscovery(capabilities: capabilities)
+        snapshot.renderNode = .active
         snapshot.gbm = .configured
         return snapshot
     }
@@ -59,6 +64,8 @@ extension GPURuntimePathSnapshot {
     ) -> Self {
         var snapshot = afterEGLTargetSetup(capabilities: capabilities)
         snapshot.dmabuf = dmabufStatus(capabilities.dmabuf).activated
+        snapshot.dmabufImport = .active
+        snapshot.bufferLifecycle = .configured
         return snapshot
     }
 
@@ -115,8 +122,12 @@ extension GPURuntimePathSnapshot {
         var snapshot = afterCapabilityDiscovery(capabilities: capabilities)
         let runtimeReason = GPURuntimePathReason(reason)
         snapshot.dmabuf = snapshot.dmabuf.fallback(runtimeReason)
+        snapshot.surfaceFeedback = snapshot.surfaceFeedback.fallback(runtimeReason)
+        snapshot.renderNode = snapshot.renderNode.fallback(runtimeReason)
         snapshot.gbm = .fallback(runtimeReason)
         snapshot.egl = .fallback(runtimeReason)
+        snapshot.dmabufImport = snapshot.dmabufImport.fallback(runtimeReason)
+        snapshot.bufferLifecycle = snapshot.bufferLifecycle.fallback(runtimeReason)
         if reason == .explicitSyncRequiredButUnavailable {
             snapshot.synchronization = .explicitFallback(runtimeReason)
         }
@@ -142,11 +153,15 @@ extension GPURuntimePathSnapshot {
         case .dmabufUnavailable:
             snapshot.dmabuf = .failed(runtimeReason)
         case .surfaceFeedbackUnavailable:
+            snapshot.surfaceFeedback = snapshot.surfaceFeedback.failed(runtimeReason)
             snapshot.dmabuf = snapshot.dmabuf.failed(runtimeReason)
         case .compositorRejectedBuffer:
+            snapshot.dmabufImport = snapshot.dmabufImport.failed(runtimeReason)
             snapshot.dmabuf = snapshot.dmabuf.failed(runtimeReason)
-        case .noCompatibleFormat, .noRenderNode, .gbmUnavailable,
-            .gbmAllocationFailed:
+        case .noRenderNode:
+            snapshot.renderNode = .failed(runtimeReason)
+            snapshot.gbm = .failed(runtimeReason)
+        case .noCompatibleFormat, .gbmUnavailable, .gbmAllocationFailed:
             snapshot.gbm = .failed(runtimeReason)
         case .eglUnavailable:
             snapshot.egl = .failed(runtimeReason)
@@ -158,6 +173,7 @@ extension GPURuntimePathSnapshot {
         case .metadataRequiredButUnavailable(let error):
             markMetadataRequirementFailure(error, in: &snapshot)
         case .commitFailed, .presentationTrackingFailed:
+            snapshot.bufferLifecycle = snapshot.bufferLifecycle.failed(runtimeReason)
             snapshot.dmabuf = snapshot.dmabuf.failed(runtimeReason)
         }
         return snapshot

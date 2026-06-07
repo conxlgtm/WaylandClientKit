@@ -246,8 +246,12 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
 
         #expect(path.backing == .advertised)
         #expect(path.dmabuf == .advertised)
+        #expect(path.surfaceFeedback == .advertised)
+        #expect(path.renderNode == .unavailable)
         #expect(path.gbm == .unavailable)
         #expect(path.egl == .unavailable)
+        #expect(path.dmabufImport == .unavailable)
+        #expect(path.bufferLifecycle == .unavailable)
     }
 
     @Test
