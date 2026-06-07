@@ -41,7 +41,7 @@ package struct QueueEventLoopEngine {
     private static let pollFailureEvents = Int16(POLLERR) | Int16(POLLHUP) | Int16(POLLNVAL)
 
     package init() {
-        // Stateless engine; instances only make call sites explicit.
+        // Stateless engine. Instances only make call sites explicit.
     }
 
     package func step<Source: QueueEventLoopSource>(

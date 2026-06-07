@@ -146,7 +146,7 @@ package enum RawLinuxDmabufBufferParamsEvent {
 }
 
 @safe
-// SAFETY: RawLinuxDmabufBuffer owns its wl_buffer proxy and release listener;
+// SAFETY: RawLinuxDmabufBuffer owns its wl_buffer proxy and release listener.
 // managed GPU presentation moves it into a presenter buffer that serializes
 // destroy/release handling before exposing only typed frame results.
 // swiftlint:disable:next attributes
