@@ -14,7 +14,6 @@ Run these from a clean working tree:
 ```bash
 swift run swl tools toolchain-smoke
 swift run swl ci release
-swift run swl ci foundation-check
 swift run swl examples build
 swift run swl compositor evidence-summary
 swift run swl api dump
@@ -24,10 +23,14 @@ swift run swl api dump
 checks, generated protocol freshness, DocC verification, public API audit
 verification, and Wayland checks when a compositor or Weston is available.
 
-`swift run swl ci foundation-check` runs the non-live readiness gates and
-summarizes compositor evidence. It fails when the compositor matrix still
-contains pending, not-tested, or not-run evidence, so missing live evidence
-cannot be mistaken for foundation readiness.
+`swift run swl compositor evidence-summary` summarizes the current compositor
+matrix so missing live evidence stays visible during checkpoint review. It is a
+release review aid, not proof of foundation readiness.
+
+`swift run swl ci foundation-check` is intentionally stricter than the ordinary
+release gate. Run it only when evaluating a foundation-candidate claim. It fails
+when the compositor matrix still contains pending, not-tested, or not-run
+evidence, so missing live evidence cannot be mistaken for foundation readiness.
 
 `swift run swl test release` runs the release-compatible test subset. Shim-contract and
 instrumentation tests that depend on debug-only C or Swift test hooks are
