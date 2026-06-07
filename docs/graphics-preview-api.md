@@ -82,6 +82,10 @@ failure, dmabuf import rejection, metadata failure, and presentation failure are
 reported through typed public fallback or unavailable reasons. The public result
 only reports `.active` GPU backing after a GPU-rendered buffer has been imported
 and committed; display-level dmabuf advertisement alone remains `.advertised`.
+`WaylandGraphicsRuntimePath` separates dmabuf advertisement, per-surface
+feedback, render-node selection, GBM, EGL, dmabuf import, buffer lifecycle,
+synchronization, pacing, metadata, and presentation-feedback status so callers
+can tell which managed GPU stage configured, became active, failed, or fell back.
 
 ## Managed Submission Boundary
 

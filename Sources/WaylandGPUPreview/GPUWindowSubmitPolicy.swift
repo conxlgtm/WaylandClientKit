@@ -204,8 +204,12 @@ package enum GPUFramePacingRuntimeStatus: Equatable, Sendable {
 
 package struct GPURuntimePathSnapshot: Equatable, Sendable {
     package var dmabuf: RuntimePathStatus
+    package var surfaceFeedback: RuntimePathStatus
+    package var renderNode: RuntimePathStatus
     package var gbm: RuntimePathStatus
     package var egl: RuntimePathStatus
+    package var dmabufImport: RuntimePathStatus
+    package var bufferLifecycle: RuntimePathStatus
     package var synchronization: GPUSynchronizationRuntimeStatus
     package var pacing: GPUFramePacingRuntimeStatus
     package var presentationFeedback: SurfaceCapabilityStatus
@@ -218,8 +222,12 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
 
     package static let empty = Self(
         dmabuf: .unavailable,
+        surfaceFeedback: .unavailable,
+        renderNode: .unavailable,
         gbm: .unavailable,
         egl: .unavailable,
+        dmabufImport: .unavailable,
+        bufferLifecycle: .unavailable,
         synchronization: .implicit,
         pacing: .none,
         presentationFeedback: .unavailable,
@@ -239,8 +247,12 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
     ) -> Self {
         Self(
             dmabuf: dmabufStatus(capabilities.dmabuf),
+            surfaceFeedback: surfaceFeedbackStatus(capabilities.dmabuf),
+            renderNode: .active,
             gbm: .active,
             egl: .configured,
+            dmabufImport: .active,
+            bufferLifecycle: .active,
             synchronization: synchronizationStatus(
                 synchronization,
                 capability: capabilities.synchronization
@@ -282,6 +294,23 @@ package struct GPURuntimePathSnapshot: Equatable, Sendable {
             .unavailable
         case .advertised:
             .advertised
+        case .surfaceFeedback:
+            .active
+        }
+    }
+
+    package static func surfaceFeedbackStatus(
+        _ capability: SurfaceDmabufCapability
+    ) -> RuntimePathStatus {
+        switch capability {
+        case .unavailable:
+            .unavailable
+        case .advertised(_, let canRequestSurfaceFeedback):
+            capabilityStatus(
+                canRequestSurfaceFeedback,
+                requested: false,
+                missingReason: .surfaceFeedbackUnavailable
+            )
         case .surfaceFeedback:
             .active
         }

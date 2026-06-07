@@ -15,8 +15,12 @@ extension WaylandGraphicsRuntimePath {
             capabilities: publicCapabilities,
             backing: backing,
             dmabuf: Self.status(from: gpuSnapshot.dmabuf),
+            surfaceFeedback: Self.status(from: gpuSnapshot.surfaceFeedback),
+            renderNode: Self.status(from: gpuSnapshot.renderNode),
             gbm: Self.status(from: gpuSnapshot.gbm),
             egl: Self.status(from: gpuSnapshot.egl),
+            dmabufImport: Self.status(from: gpuSnapshot.dmabufImport),
+            bufferLifecycle: Self.status(from: gpuSnapshot.bufferLifecycle),
             explicitSync: Self.status(
                 from: gpuSnapshot.synchronization,
                 capabilities: publicCapabilities
@@ -191,13 +195,18 @@ extension WaylandGraphicsFallbackReason {
             .colorManagementUnavailable,
             .presentationHintUnavailable:
             self = .metadataRequiredButUnavailable
-        case .compositorRejectedBuffer,
-            .commitFailed,
-            .presentationTrackingFailed,
-            .fifoUnavailable,
-            .commitTimingUnavailable,
-            .commitTimingRejected:
-            self = .managedGPUSubmissionUnavailable
+        case .compositorRejectedBuffer:
+            self = .compositorRejectedBuffer
+        case .fifoUnavailable:
+            self = .fifoUnavailable
+        case .commitTimingUnavailable:
+            self = .commitTimingUnavailable
+        case .commitTimingRejected:
+            self = .commitTimingRejected
+        case .commitFailed:
+            self = .commitFailed
+        case .presentationTrackingFailed:
+            self = .presentationTrackingFailed
         }
     }
 }
@@ -236,13 +245,18 @@ extension WaylandGraphicsUnavailableReason {
             .colorManagementUnavailable,
             .presentationHintUnavailable:
             self = .metadataRequiredButUnavailable
-        case .compositorRejectedBuffer,
-            .commitFailed,
-            .presentationTrackingFailed,
-            .fifoUnavailable,
-            .commitTimingUnavailable,
-            .commitTimingRejected:
-            self = .managedGPUSubmissionUnavailable
+        case .compositorRejectedBuffer:
+            self = .compositorRejectedBuffer
+        case .fifoUnavailable:
+            self = .fifoUnavailable
+        case .commitTimingUnavailable:
+            self = .commitTimingUnavailable
+        case .commitTimingRejected:
+            self = .commitTimingRejected
+        case .commitFailed:
+            self = .commitFailed
+        case .presentationTrackingFailed:
+            self = .presentationTrackingFailed
         }
     }
 }

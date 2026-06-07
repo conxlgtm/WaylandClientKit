@@ -196,6 +196,9 @@ Current user-facing contract:
 - GPU and GBM/EGL/dmabuf work remains package-internal and is surfaced only
   through the separate preview product. There is no public renderer, swapchain,
   drawable, or GPU buffer API in `WaylandClient`.
+- `WaylandGraphicsRuntimePath` exposes renderer-neutral stage facts for
+  surface feedback, render-node selection, dmabuf import, and buffer lifecycle.
+  These are status values only and do not expose GBM/EGL/DRM/dmabuf handles.
 
 ### `WaylandGraphicsPreview`
 
