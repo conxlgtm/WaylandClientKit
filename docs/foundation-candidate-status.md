@@ -30,7 +30,8 @@ enough; active GPU claims must be backed by public runtime-path output.
 | Managed GPU active proof | partial | [compositor-matrix.md](compositor-matrix.md) records active managed GPU clear-frame submission on KDE/KWin and `dmabufUnavailable` fallback under headless Weston. | Add at least one more desktop or wlroots active/fallback/failure row before foundation-candidate claims. |
 | Compositor matrix minimum | done | [compositor-matrix.md](compositor-matrix.md) records headless Weston plus KDE/KWin rows and separates protocol advertisement from active runtime facts. | Keep GNOME/Mutter and Sway/wlroots rows current when those sessions are available. |
 | External consumer evidence | partial | Public and graphics preview integration clients are part of `swl ci check`. | Keep external clients hardware-independent. |
-| Release checks | partial | `swift run swl ci release`, `swift run swl examples build`, release docs. | Add/keep foundation check summary and compositor evidence review. |
+| Release checks | partial | `swift run swl ci release`, `swift run swl examples build`, release docs. | Keep release gates runnable while evidence remains incomplete. |
+| Foundation-candidate gate | partial | `swift run swl ci foundation-check` fails while the compositor matrix has pending, not-tested, or not-run cells. | Complete or explicitly skip remaining compositor evidence before claiming foundation readiness. |
 | Sanitizer checks | partial | TSan/ASan commands documented in [release.md](release.md). | Run where environment supports them and record skips. |
 | Toolchain baseline | done | `swift run swl tools toolchain-smoke`; Swift 6.3.2 required baseline. | Keep 6.4/main snapshots optional and allowed-failure. |
 | Known non-goals | done | README, DocC, compatibility policy. | Keep widgets, layout, renderer abstraction, scene graph, styling, and accessibility semantic tree out of scope. |
@@ -79,6 +80,12 @@ swift run swl shims verify-release-symbols
 swift run swl safety verify-unsafe-allowlist
 swift run swl protocols verify-generated
 swift run swl compositor evidence-summary
+```
+
+Foundation-candidate readiness:
+
+```bash
+swift run swl ci foundation-check
 ```
 
 Live evidence:
