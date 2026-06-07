@@ -1,4 +1,5 @@
 // swiftlint:disable file_length
+import Synchronization
 import Testing
 
 @testable import WaylandClient
@@ -1449,6 +1450,43 @@ struct ManagedGPUPreviewBackingConfigurationTests {
     }
 }
 
+@Suite
+struct ManagedGPUPreviewStoragePreparationTests {
+    @Test
+    func firstManagedGPUClearWaitsForInitialConfigureBeforeSubmit() async throws {
+        let initialGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 4, height: 3),
+            scale: .one
+        )
+        let configuredGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 8, height: 6),
+            scale: .one
+        )
+        let window = FakeGraphicsPreviewWindow(
+            initialGeometry: initialGeometry,
+            configuredGeometry: configuredGeometry
+        )
+        let backing = FakeManagedGPUBacking()
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .projected(capabilities: gpuPreviewCapabilities()),
+            configuration: .default,
+            managedGPUBacking: backing
+        )
+
+        _ = try await storage.nextFrame()
+        await window.clearEvents()
+        let result = try await storage.submit(
+            leaseID: 1,
+            frame: .clearColor(.black)
+        )
+
+        #expect(await window.eventSnapshot() == [.preparePresentation, .geometry])
+        #expect(backing.submittedGeometries == [configuredGeometry])
+        #expect(result.size == configuredGeometry.bufferSize)
+    }
+}
+
 private func syncPoint(timeline: UInt64, point: UInt64) -> GPUSyncPoint {
     GPUSyncPoint(
         timeline: GPUSyncTimeline(timeline),
@@ -1467,6 +1505,16 @@ private func presentedFrame(
         synchronization: .implicit,
         pacing: .none,
         metadata: .default
+    )
+}
+
+private func gpuPreviewCapabilities() -> WaylandGraphicsSurfaceCapabilities {
+    WaylandGraphicsSurfaceCapabilities(
+        dmabuf: .available(version: 4),
+        explicitSync: .unavailable,
+        framePacing: .unavailable,
+        colorMetadata: .unavailable,
+        presentationFeedback: .unavailable
     )
 }
 
@@ -1548,6 +1596,112 @@ private func invalidationReasons(
         oldMetadata: oldMetadata,
         newMetadata: newMetadata
     ).map(\.reason)
+}
+
+private enum FakeGraphicsPreviewWindowEvent: Equatable {
+    case geometry
+    case preparePresentation
+}
+
+private actor FakeGraphicsPreviewWindow: WaylandGraphicsManagedWindow {
+    nonisolated let id = WindowID(rawValue: 710)
+    private let initialGeometry: SurfaceGeometry
+    private let configuredGeometry: SurfaceGeometry
+    private var events: [FakeGraphicsPreviewWindowEvent] = []
+    private var didPreparePresentation = false
+
+    init(initialGeometry: SurfaceGeometry, configuredGeometry: SurfaceGeometry) {
+        self.initialGeometry = initialGeometry
+        self.configuredGeometry = configuredGeometry
+    }
+
+    var geometry: SurfaceGeometry {
+        get async throws {
+            events.append(.geometry)
+            return didPreparePresentation ? configuredGeometry : initialGeometry
+        }
+    }
+
+    var isClosed: Bool {
+        get async throws { false }
+    }
+
+    func prepareGraphicsPreviewPresentation(
+        timeoutMilliseconds _: Int32
+    ) async throws -> SurfaceGeometry {
+        events.append(.preparePresentation)
+        didPreparePresentation = true
+        return configuredGeometry
+    }
+
+    func show(
+        timeoutMilliseconds _: Int32,
+        metadata _: SurfaceCommitMetadata,
+        requestPresentationFeedback _: Bool,
+        damage _: SurfaceDamageRegion?,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws {
+        _ = draw
+    }
+
+    func redraw(
+        metadata _: SurfaceCommitMetadata,
+        requestPresentationFeedback _: Bool,
+        damage _: SurfaceDamageRegion?,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws {
+        _ = draw
+    }
+
+    func close() async {
+        _ = ()
+    }
+
+    func clearEvents() {
+        events.removeAll()
+    }
+
+    func eventSnapshot() -> [FakeGraphicsPreviewWindowEvent] {
+        events
+    }
+}
+
+private final class FakeManagedGPUBacking: WaylandGraphicsManagedGPUBacking, Sendable {
+    private let submittedGeometryState = Mutex<[SurfaceGeometry]>([])
+
+    var runtimePathSnapshot: GPURuntimePathSnapshot {
+        .afterDmabufImportSetup(capabilities: capabilitySnapshot())
+    }
+
+    var surfaceCapabilities: SurfaceCapabilitySnapshot? {
+        capabilitySnapshot()
+    }
+
+    var submittedGeometries: [SurfaceGeometry] {
+        submittedGeometryState.withLock { $0 }
+    }
+
+    func close() {
+        _ = ()
+    }
+
+    func submitClearFrame(
+        _ submission: WaylandGraphicsManagedGPUClearFrameSubmission
+    ) async throws(ManagedGPUPreviewBackingError) -> GPUWindowPresentedFrame {
+        submittedGeometryState.withLock { $0.append(submission.geometry) }
+        do {
+            return try GPUWindowPresentedFrame(
+                slotID: GBMBufferPoolSlotID(0),
+                generation: 1,
+                commitPlan: surfaceCommitPlan(),
+                synchronization: submission.synchronization,
+                pacing: submission.pacing,
+                metadata: submission.metadata
+            )
+        } catch {
+            throw .setup(.gbmAllocationFailed)
+        }
+    }
 }
 
 private final class FakePresenterBuffer: GPUWindowPresenterBuffer {

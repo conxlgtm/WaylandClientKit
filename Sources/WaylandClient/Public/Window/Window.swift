@@ -355,4 +355,13 @@ public struct Window: Sendable, Hashable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(ownership)
     }
+
+    package func prepareGraphicsPreviewPresentation(
+        timeoutMilliseconds: Int32
+    ) async throws -> SurfaceGeometry {
+        try await display.prepareGraphicsPreviewPresentation(
+            for: id,
+            timeoutMilliseconds: timeoutMilliseconds
+        )
+    }
 }
