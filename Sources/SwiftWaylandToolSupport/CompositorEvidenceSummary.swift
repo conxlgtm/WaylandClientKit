@@ -6,8 +6,8 @@ public struct CompositorEvidenceSummarizer {
     }
 
     public func summarize(markdown: String) throws -> String {
-        let mainRows = try markdownTableRows(afterHeading: "## Matrix", in: markdown)
-        let graphicsRows = try markdownTableRows(
+        let mainRows = try MarkdownTable.rows(afterHeading: "## Matrix", in: markdown)
+        let graphicsRows = try MarkdownTable.rows(
             afterHeading: "## Graphics Preview Evidence",
             in: markdown)
 
@@ -34,59 +34,6 @@ public struct CompositorEvidenceSummarizer {
         }
 
         return lines.joined(separator: "\n")
-    }
-
-    private func markdownTableRows(afterHeading heading: String, in markdown: String) throws
-        -> [MarkdownTableRow]
-    {
-        let lines = markdown.split(separator: "\n", omittingEmptySubsequences: false).map(
-            String.init)
-        guard
-            let headingIndex = lines.firstIndex(where: { line in
-                line.trimmingCharacters(in: .whitespaces) == heading
-            })
-        else {
-            throw ToolError(
-                "compositor matrix heading not found: \(heading)", exitCode: ToolExitCode.data)
-        }
-
-        guard let headerIndex = lines[(headingIndex + 1)...].firstIndex(where: isTableRow),
-            headerIndex + 1 < lines.count,
-            isSeparatorRow(lines[headerIndex + 1])
-        else {
-            return []
-        }
-
-        var rows: [MarkdownTableRow] = []
-        for line in lines[(headerIndex + 2)...] {
-            guard isTableRow(line) else { break }
-            let cells = parseTableCells(line)
-            guard !cells.isEmpty else { continue }
-            rows.append(MarkdownTableRow(cells: cells))
-        }
-        return rows
-    }
-
-    private func isTableRow(_ line: String) -> Bool {
-        line.trimmingCharacters(in: .whitespaces).hasPrefix("|")
-    }
-
-    private func isSeparatorRow(_ line: String) -> Bool {
-        let allowed = CharacterSet(charactersIn: "|:- ")
-        return line.unicodeScalars.allSatisfy { allowed.contains($0) }
-            && line.contains("---")
-    }
-
-    private func parseTableCells(_ line: String) -> [String] {
-        var trimmed = line.trimmingCharacters(in: .whitespaces)
-        if trimmed.hasPrefix("|") {
-            trimmed.removeFirst()
-        }
-        if trimmed.hasSuffix("|") {
-            trimmed.removeLast()
-        }
-        return trimmed.split(separator: "|", omittingEmptySubsequences: false)
-            .map { String($0).trimmingCharacters(in: .whitespaces) }
     }
 
     private func statusSummary(for cells: ArraySlice<String>) -> String {
@@ -124,6 +71,68 @@ public struct CompositorEvidenceSummarizer {
     }
 }
 
+public struct CompositorEvidenceCompletenessVerifier {
+    public init() {
+        // Stateless verifier.
+    }
+
+    public func verify(markdown: String) throws {
+        let findings = incompleteEvidenceCells(markdown: markdown)
+        guard findings.isEmpty else {
+            let listedFindings = findings.prefix(12).map { "- \($0.description)" }
+            let remainingCount = findings.count - listedFindings.count
+            let remainingSuffix =
+                remainingCount > 0 ? "\n- \(remainingCount) more incomplete evidence cells" : ""
+            throw ToolError(
+                """
+                foundation evidence is incomplete; update docs/compositor-matrix.md
+                or record exact environment skips before claiming foundation readiness
+
+                Incomplete evidence cells:
+                \(listedFindings.joined(separator: "\n"))\(remainingSuffix)
+                """,
+                exitCode: ToolExitCode.data
+            )
+        }
+    }
+
+    public func incompleteEvidenceCells(markdown: String) -> [IncompleteEvidenceCell] {
+        MarkdownTable.allTables(in: markdown).flatMap { table in
+            table.rows.flatMap { row in
+                row.cells.enumerated().compactMap { index, value in
+                    guard let marker = Self.incompleteMarker(in: value) else { return nil }
+                    return IncompleteEvidenceCell(
+                        section: table.section,
+                        row: row.firstCell,
+                        column: table.columnName(at: index),
+                        value: value,
+                        marker: marker)
+                }
+            }
+        }
+    }
+
+    public struct IncompleteEvidenceCell: CustomStringConvertible, Equatable {
+        public let section: String
+        public let row: String
+        public let column: String
+        public let value: String
+        public let marker: String
+
+        public var description: String {
+            "\(section): \(row) / \(column) contains \(marker): \(value)"
+        }
+    }
+
+    private static func incompleteMarker(in value: String) -> String? {
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        for marker in ["pending", "not tested", "not run"] where normalized.contains(marker) {
+            return marker
+        }
+        return nil
+    }
+}
+
 private struct MarkdownTableRow {
     let cells: [String]
 
@@ -141,5 +150,112 @@ private struct MarkdownTableRow {
             return nil
         }
         return cells[index]
+    }
+}
+
+private struct MarkdownTable {
+    let section: String
+    let columns: [String]
+    let rows: [MarkdownTableRow]
+
+    static func rows(afterHeading heading: String, in markdown: String) throws -> [MarkdownTableRow]
+    {
+        let lines = markdown.split(separator: "\n", omittingEmptySubsequences: false).map(
+            String.init)
+        guard
+            let headingIndex = lines.firstIndex(where: { line in
+                line.trimmingCharacters(in: .whitespaces) == heading
+            })
+        else {
+            throw ToolError(
+                "compositor matrix heading not found: \(heading)", exitCode: ToolExitCode.data)
+        }
+
+        guard let headerIndex = lines[(headingIndex + 1)...].firstIndex(where: isTableRow),
+            headerIndex + 1 < lines.count,
+            isSeparatorRow(lines[headerIndex + 1])
+        else {
+            return []
+        }
+
+        return tableRows(startingAt: headerIndex + 2, lines: lines)
+    }
+
+    static func allTables(in markdown: String) -> [MarkdownTable] {
+        let lines = markdown.split(separator: "\n", omittingEmptySubsequences: false).map(
+            String.init)
+        var tables: [MarkdownTable] = []
+        var section = "Document"
+        var index = 0
+        var inCodeFence = false
+
+        while index < lines.count {
+            let line = lines[index]
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("```") {
+                inCodeFence.toggle()
+                index += 1
+                continue
+            }
+            if !inCodeFence, trimmed.hasPrefix("#") {
+                section = trimmed.trimmingCharacters(in: .whitespaces)
+                index += 1
+                continue
+            }
+            guard !inCodeFence, isTableRow(line), index + 1 < lines.count,
+                isSeparatorRow(lines[index + 1])
+            else {
+                index += 1
+                continue
+            }
+
+            let columns = parseTableCells(line)
+            let rows = tableRows(startingAt: index + 2, lines: lines)
+            tables.append(MarkdownTable(section: section, columns: columns, rows: rows))
+            index += rows.count + 2
+        }
+
+        return tables
+    }
+
+    func columnName(at index: Int) -> String {
+        guard index < columns.count else { return "column \(index + 1)" }
+        return columns[index]
+    }
+
+    private static func tableRows(startingAt startIndex: Int, lines: [String])
+        -> [MarkdownTableRow]
+    {
+        var rows: [MarkdownTableRow] = []
+        for line in lines[startIndex...] {
+            guard isTableRow(line) else { break }
+            guard !isSeparatorRow(line) else { continue }
+            let cells = parseTableCells(line)
+            guard !cells.isEmpty else { continue }
+            rows.append(MarkdownTableRow(cells: cells))
+        }
+        return rows
+    }
+
+    private static func isTableRow(_ line: String) -> Bool {
+        line.trimmingCharacters(in: .whitespaces).hasPrefix("|")
+    }
+
+    private static func isSeparatorRow(_ line: String) -> Bool {
+        let allowed = CharacterSet(charactersIn: "|:- ")
+        return line.unicodeScalars.allSatisfy { allowed.contains($0) }
+            && line.contains("---")
+    }
+
+    private static func parseTableCells(_ line: String) -> [String] {
+        var trimmed = line.trimmingCharacters(in: .whitespaces)
+        if trimmed.hasPrefix("|") {
+            trimmed.removeFirst()
+        }
+        if trimmed.hasSuffix("|") {
+            trimmed.removeLast()
+        }
+        return trimmed.split(separator: "|", omittingEmptySubsequences: false)
+            .map { String($0).trimmingCharacters(in: .whitespaces) }
     }
 }

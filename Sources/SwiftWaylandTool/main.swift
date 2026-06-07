@@ -1069,18 +1069,7 @@ private func runFoundationCheck(context: ToolContext) throws {
     let markdown = try context.fileSystem.readText(matrixURL)
     let summary = try CompositorEvidenceSummarizer().summarize(markdown: markdown)
     context.diagnostics.info(summary)
-
-    let incompleteMarkers = ["pending", "not tested", "not run"]
-    let normalizedSummary = summary.lowercased()
-    if incompleteMarkers.contains(where: normalizedSummary.contains) {
-        throw ToolError(
-            """
-            foundation evidence is incomplete; update docs/compositor-matrix.md
-            or record exact environment skips before claiming foundation readiness
-            """,
-            exitCode: ToolExitCode.data
-        )
-    }
+    try CompositorEvidenceCompletenessVerifier().verify(markdown: markdown)
 }
 
 private func requestTestEnvironment() -> [String: String] {
