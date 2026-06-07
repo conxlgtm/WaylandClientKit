@@ -123,8 +123,10 @@ public struct DocCVerifier {
     }
 
     public func removePublicProductSymbolGraphs() throws {
-        for graph in try findPublicProductSymbolGraphs() {
-            try fileSystem.removeItem(graph)
+        for product in Self.publicProducts {
+            for graph in try findSymbolGraphs(for: product.moduleName) {
+                try fileSystem.removeItem(graph)
+            }
         }
     }
 
@@ -189,16 +191,6 @@ public struct DocCVerifier {
                     + "but dump-symbol-graph failed.")
         }
         return graph
-    }
-
-    private func findPublicProductSymbolGraphs() throws -> [URL] {
-        let moduleNames = Set(Self.publicProducts.map(\.moduleName))
-        return try fileSystem.walk(buildRoot, includingDirectories: false)
-            .filter { url in
-                guard url.path.hasSuffix(".symbols.json") else { return false }
-                let filename = url.deletingPathExtension().lastPathComponent
-                return moduleNames.contains(filename)
-            }
     }
 
     private func findSymbolGraphs(for moduleName: String) throws -> [URL] {
