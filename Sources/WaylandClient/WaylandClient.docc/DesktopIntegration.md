@@ -41,4 +41,3 @@ attention policy.
 ## Examples
 
 See `WindowIconSmoke`, `IdleInhibitSmoke`, and `SystemBellSmoke` in `Examples/`.
-

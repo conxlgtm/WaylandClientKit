@@ -37,4 +37,3 @@ backing.
 
 `GPUPreviewSmokeClient` prints a matrix-friendly runtime-path report for the
 current compositor.
-

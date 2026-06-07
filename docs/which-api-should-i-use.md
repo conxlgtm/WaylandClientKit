@@ -50,4 +50,3 @@ Your app or framework owns:
   renderer choice.
 - Higher-level clipboard/drag MIME policy and text editing model.
 - Retry policy when optional compositor features are missing or rejected.
-

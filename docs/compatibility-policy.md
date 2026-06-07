@@ -46,4 +46,3 @@ Release or checkpoint notes should mention:
 - New or removed example commands.
 - New required system dependencies.
 - Runtime evidence changes for managed GPU preview.
-
