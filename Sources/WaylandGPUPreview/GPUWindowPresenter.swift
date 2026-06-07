@@ -183,6 +183,16 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
         return GPUWindowPresentationLease(slotID: slotID)
     }
 
+    package mutating func leaseSlot(
+        _ slotID: GBMBufferPoolSlotID
+    ) throws(GPUWindowPresenterStateError) -> GPUWindowPresentationLease {
+        try ensureLive()
+        let leasedSlotID = try mapPoolError {
+            try poolState.leaseAvailableSlot(slotID)
+        }
+        return GPUWindowPresentationLease(slotID: leasedSlotID)
+    }
+
     package mutating func markSubmitted(
         _ lease: GPUWindowPresentationLease,
         generation: UInt64
@@ -439,7 +449,46 @@ package final class GPUWindowPresenter {
         }
 
         let (lease, buffer) = try leaseBufferForPresentation()
+        return try await present(
+            lease: lease,
+            buffer: buffer,
+            submit: submit,
+            synchronization: synchronization,
+            pacing: pacing,
+            metadata: metadata
+        )
+    }
 
+    package func presentSlot(
+        _ slotID: GBMBufferPoolSlotID,
+        submit: GPUWindowBufferPresentationSubmitter,
+        synchronization: GPUBufferSubmissionSynchronization,
+        pacing: SurfacePacingConstraint,
+        metadata: SurfaceCommitMetadata = .default
+    ) async throws(GPUWindowPresenterError) -> GPUWindowPresentedFrame {
+        if let releaseFailure = releaseFailures.first {
+            throw GPUWindowPresenterError.releaseFailure(releaseFailure)
+        }
+
+        let (lease, buffer) = try leaseBufferForPresentation(slotID: slotID)
+        return try await present(
+            lease: lease,
+            buffer: buffer,
+            submit: submit,
+            synchronization: synchronization,
+            pacing: pacing,
+            metadata: metadata
+        )
+    }
+
+    private func present(
+        lease: GPUWindowPresentationLease,
+        buffer: any GPUWindowPresenterBuffer,
+        submit: GPUWindowBufferPresentationSubmitter,
+        synchronization: GPUBufferSubmissionSynchronization,
+        pacing: SurfacePacingConstraint,
+        metadata: SurfaceCommitMetadata
+    ) async throws(GPUWindowPresenterError) -> GPUWindowPresentedFrame {
         let presentation: PreviewBufferPresentationResult
         do {
             let submitConstraints = SurfaceSubmitConstraints(
@@ -492,6 +541,26 @@ package final class GPUWindowPresenter {
             pacing: pacing,
             metadata: metadata
         )
+    }
+
+    private func leaseBufferForPresentation(
+        slotID: GBMBufferPoolSlotID
+    ) throws(GPUWindowPresenterError) -> (
+        GPUWindowPresentationLease, any GPUWindowPresenterBuffer
+    ) {
+        let lease: GPUWindowPresentationLease
+        do {
+            lease = try state.leaseSlot(slotID)
+        } catch {
+            throw GPUWindowPresenterError.state(error)
+        }
+
+        guard let buffer = buffers[lease.slotID] else {
+            try cancelLeaseAfterFailedPresentation(lease)
+            throw GPUWindowPresenterError.missingBuffer(lease.slotID)
+        }
+
+        return (lease, buffer)
     }
 
     private func leaseBufferForPresentation()

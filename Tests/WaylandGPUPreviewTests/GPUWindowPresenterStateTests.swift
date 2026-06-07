@@ -971,6 +971,44 @@ struct GPUWindowPresenterLifecycleTests {
     }
 
     @Test
+    func presenterSubmitsRequestedFreshSlotAfterLowerSlotRelease() async throws {
+        let presenter = GPUWindowPresenter()
+        let recorder = SubmittedPointerRecorder()
+        let releasedSlotID = try GBMBufferPoolSlotID(0)
+        let freshSlotID = try GBMBufferPoolSlotID(2)
+        let releasedBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let freshBuffer = try FakePresenterBuffer(pointer: 0x1002)
+
+        try presenter.installBuffer(releasedBuffer, slotID: releasedSlotID)
+        _ = try await presenter.presentSlot(
+            releasedSlotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 40)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+        releasedBuffer.triggerRelease()
+        try presenter.installBuffer(freshBuffer, slotID: freshSlotID)
+
+        let frame = try await presenter.presentSlot(
+            freshSlotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 41)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(frame.slotID == freshSlotID)
+        #expect(
+            await recorder.snapshot() == [releasedBuffer.pointerValue, freshBuffer.pointerValue])
+        #expect(presenter.outstandingSubmittedSlotIDs == [freshSlotID])
+    }
+
+    @Test
     func presenterRejectsInstallAfterRetire() throws {
         let presenter = GPUWindowPresenter()
         let slotID = try GBMBufferPoolSlotID(0)
@@ -1222,6 +1260,7 @@ private func invalidationReasons(
 }
 
 private final class FakePresenterBuffer: GPUWindowPresenterBuffer {
+    let pointerValue: UInt
     let surfaceBuffer: RawSurfaceBuffer
     private(set) var destroyCallCount = 0
     private var releaseObserver: (() -> Void)?
@@ -1229,6 +1268,7 @@ private final class FakePresenterBuffer: GPUWindowPresenterBuffer {
     init(pointer rawPointer: UInt) throws {
         let pointer = try unsafe #require(OpaquePointer(bitPattern: rawPointer))
 
+        pointerValue = rawPointer
         surfaceBuffer = RawSurfaceBuffer(pointer: pointer)
     }
 
@@ -1247,5 +1287,17 @@ private final class FakePresenterBuffer: GPUWindowPresenterBuffer {
 
     func triggerRelease() {
         releaseObserver?()
+    }
+}
+
+private actor SubmittedPointerRecorder {
+    private var values: [UInt] = []
+
+    func record(_ buffer: RawSurfaceBuffer) {
+        values.append(UInt(bitPattern: buffer.pointer))
+    }
+
+    func snapshot() -> [UInt] {
+        values
     }
 }

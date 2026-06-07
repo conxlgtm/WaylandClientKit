@@ -288,7 +288,8 @@ package final class ManagedGPUPreviewBacking {
                 ),
                 slotID: slotID
             )
-            return try await presenter.presentNext(
+            return try await presenter.presentSlot(
+                slotID,
                 submit: { [window] buffer, submitConstraints, commitMetadata in
                     try await window.presentGraphicsPreviewBuffer(
                         buffer,
