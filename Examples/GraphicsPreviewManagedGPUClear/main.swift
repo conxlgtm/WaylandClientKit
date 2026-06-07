@@ -109,9 +109,12 @@ private struct ManagedGPUClearReportFormatter {
             "display: \(displayName())",
             "compositor: \(compositorName())",
             "dmabuf: \(availability(capabilities.dmabuf))",
-            "surface feedback: \(surfaceFeedbackStatus(runtimePath))",
+            "surface feedback: \(surfaceFeedbackStatus(runtimePath.surfaceFeedback))",
+            "render node: \(status(runtimePath.renderNode))",
             "gbm: \(status(runtimePath.gbm))",
             "egl: \(status(runtimePath.egl))",
+            "dmabuf import: \(status(runtimePath.dmabufImport))",
+            "buffer lifecycle: \(status(runtimePath.bufferLifecycle))",
             "explicit sync: \(availability(capabilities.explicitSync)), runtime \(status(runtimePath.explicitSync))",
             "fifo: \(status(runtimePath.pacing.fifo))",
             "commit timing: \(status(runtimePath.pacing.commitTiming))",
@@ -187,8 +190,8 @@ private struct ManagedGPUClearReportFormatter {
         }
     }
 
-    private func surfaceFeedbackStatus(_ path: WaylandGraphicsRuntimePath) -> String {
-        switch path.dmabuf {
+    private func surfaceFeedbackStatus(_ status: WaylandGraphicsRuntimeStatus) -> String {
+        switch status {
         case .configured, .active:
             "usable"
         case .advertised:
@@ -224,7 +227,7 @@ private struct ManagedGPUClearReportFormatter {
     }
 
     private func releaseReuseStatus(_ path: WaylandGraphicsRuntimePath) -> String {
-        switch path.backing {
+        switch path.bufferLifecycle {
         case .active, .configured:
             "managed by GPU buffer lifecycle"
         case .fallback:

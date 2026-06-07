@@ -356,16 +356,21 @@ extension WaylandGraphicsWindowBackingStorage {
     ) throws {
         switch configuration.fallbackPolicy {
         case .preferGPUFallbackToSoftware:
-            backingRuntimePath = .softwareFallback(
-                capabilities: backingRuntimePath.capabilities,
-                reason: WaylandGraphicsFallbackReason(error.fallbackReason)
-            )
+            let reason = WaylandGraphicsFallbackReason(error.fallbackReason)
+            if !refreshRuntimePathFromManagedGPU(backing: .fallback(reason)) {
+                backingRuntimePath = .softwareFallback(
+                    capabilities: backingRuntimePath.capabilities,
+                    reason: reason
+                )
+            }
         case .requireGPU:
             let reason = WaylandGraphicsUnavailableReason(error.failure)
-            backingRuntimePath = .unavailable(
-                capabilities: backingRuntimePath.capabilities,
-                reason: reason
-            )
+            if !refreshRuntimePathFromManagedGPU(backing: .failed(reason)) {
+                backingRuntimePath = .unavailable(
+                    capabilities: backingRuntimePath.capabilities,
+                    reason: reason
+                )
+            }
             throw WaylandGraphicsError.unavailable(reason)
         case .forceSoftware:
             backingRuntimePath = .softwareFallback(
@@ -375,13 +380,14 @@ extension WaylandGraphicsWindowBackingStorage {
         }
     }
 
+    @discardableResult
     private func refreshRuntimePathFromManagedGPU(
         backing: WaylandGraphicsRuntimeStatus
-    ) {
+    ) -> Bool {
         guard let managedGPUBacking,
             let capabilities = managedGPUBacking.surfaceCapabilities
         else {
-            return
+            return false
         }
 
         backingRuntimePath = WaylandGraphicsRuntimePath(
@@ -389,6 +395,7 @@ extension WaylandGraphicsWindowBackingStorage {
             capabilities: capabilities,
             backing: backing
         )
+        return true
     }
 
     private func frameResult(

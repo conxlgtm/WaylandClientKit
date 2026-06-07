@@ -148,35 +148,45 @@ extension GPURuntimePathSnapshot {
         failure: GPUBackingFailure
     ) -> Self {
         var snapshot = afterCapabilityDiscovery(capabilities: capabilities)
+        snapshot.markFailure(failure)
+        return snapshot
+    }
+
+    package func markingFailure(_ failure: GPUBackingFailure) -> Self {
+        var snapshot = self
+        snapshot.markFailure(failure)
+        return snapshot
+    }
+
+    package mutating func markFailure(_ failure: GPUBackingFailure) {
         let runtimeReason = GPURuntimePathReason(failure)
         switch failure {
         case .dmabufUnavailable:
-            snapshot.dmabuf = .failed(runtimeReason)
+            dmabuf = .failed(runtimeReason)
         case .surfaceFeedbackUnavailable:
-            snapshot.surfaceFeedback = snapshot.surfaceFeedback.failed(runtimeReason)
-            snapshot.dmabuf = snapshot.dmabuf.failed(runtimeReason)
+            surfaceFeedback = surfaceFeedback.failed(runtimeReason)
+            dmabuf = dmabuf.failed(runtimeReason)
         case .compositorRejectedBuffer:
-            snapshot.dmabufImport = snapshot.dmabufImport.failed(runtimeReason)
-            snapshot.dmabuf = snapshot.dmabuf.failed(runtimeReason)
+            dmabufImport = dmabufImport.failed(runtimeReason)
+            dmabuf = dmabuf.failed(runtimeReason)
         case .noRenderNode:
-            snapshot.renderNode = .failed(runtimeReason)
-            snapshot.gbm = .failed(runtimeReason)
+            renderNode = .failed(runtimeReason)
+            gbm = .failed(runtimeReason)
         case .noCompatibleFormat, .gbmUnavailable, .gbmAllocationFailed:
-            snapshot.gbm = .failed(runtimeReason)
+            gbm = .failed(runtimeReason)
         case .eglUnavailable:
-            snapshot.egl = .failed(runtimeReason)
+            egl = .failed(runtimeReason)
         case .explicitSyncRequiredButUnavailable, .submitConstraintRejected:
-            snapshot.synchronization = .explicitFailed(runtimeReason)
+            synchronization = .explicitFailed(runtimeReason)
         case .fifoRequiredButUnavailable, .commitTimingRequiredButUnavailable,
             .commitTimingRejected:
-            snapshot.pacing = .failed(runtimeReason)
+            pacing = .failed(runtimeReason)
         case .metadataRequiredButUnavailable(let error):
-            markMetadataRequirementFailure(error, in: &snapshot)
+            markMetadataRequirementFailure(error, in: &self)
         case .commitFailed, .presentationTrackingFailed:
-            snapshot.bufferLifecycle = snapshot.bufferLifecycle.failed(runtimeReason)
-            snapshot.dmabuf = snapshot.dmabuf.failed(runtimeReason)
+            bufferLifecycle = bufferLifecycle.failed(runtimeReason)
+            dmabuf = dmabuf.failed(runtimeReason)
         }
-        return snapshot
     }
 }
 
