@@ -25,10 +25,14 @@ targets. They are not public `WaylandClient` API.
 ### Windows And Popups
 
 - <doc:WindowDrawing>
+- <doc:SurfaceRegionsAndDamage>
+- <doc:Subsurfaces>
 - ``Window``
 - ``WindowConfiguration``
 - ``PopupSurface``
 - ``PopupConfiguration``
+- ``Subsurface``
+- ``SubsurfaceConfiguration``
 
 ### Rendering
 
@@ -67,7 +71,7 @@ targets. They are not public `WaylandClient` API.
 
 ### Text Input
 
-- <doc:InputAndTextInput>
+- <doc:TextInputLifecycle>
 - ``TextInputSession``
 - ``TextInputEvents``
 - ``TextInputEvent``
@@ -78,9 +82,12 @@ targets. They are not public `WaylandClient` API.
 ### Activation
 
 - <doc:ActivationAndFocusHandoff>
+- <doc:DesktopIntegration>
 - ``ActivationToken``
 - ``ActivationTokenRequest``
 - ``ActivationError``
+- ``WindowIcon``
+- ``IdleInhibitor``
 
 ### Capabilities
 

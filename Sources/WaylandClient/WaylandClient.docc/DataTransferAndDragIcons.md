@@ -17,3 +17,31 @@ Offers are external compositor state and can become stale between advertisement
 and receive or read. SwiftWayland reports stale or unknown offers as typed
 failures or diagnostics so clients can log the compositor behavior, ignore
 unsupported private MIME types, and keep cleanup paths crash-free.
+
+## Capability Gates
+
+Regular clipboard and drag-and-drop use `wl_data_device_manager`. Primary
+selection uses `zwp_primary_selection_device_manager_v1` and is focus-sensitive
+selection state, not a second regular clipboard.
+
+## Public APIs
+
+- ``ClipboardOffer``
+- ``ClipboardSource``
+- ``PrimarySelectionOffer``
+- ``PrimarySelectionSource``
+- ``DragOffer``
+- ``DragSource``
+- ``DragIcon``
+- ``DragIconImage``
+- ``DataTransferEvents``
+
+## Errors And Policy
+
+SwiftWayland owns offer/source lifetime, descriptor cleanup, stale-offer
+diagnostics, and typed callback failures. Frameworks own MIME negotiation,
+application clipboard policy, drag visuals, and which drop actions are useful.
+
+## Example
+
+See `DataTransferSmoke` in `Examples/DataTransferSmoke`.

@@ -33,3 +33,16 @@ let constraint = try await window.lockPointer(
 try await subscription.destroy()
 try await constraint.destroy()
 ```
+
+## Public APIs
+
+- ``Window/relativePointer(seatID:)``
+- ``Window/lockPointer(seatID:cursorHint:region:lifetime:)``
+- ``Window/confinePointer(seatID:region:lifetime:)``
+- ``RelativePointerSubscription``
+- ``PointerConstraint``
+- ``PointerConstraintLifecycleEvent``
+
+## Example
+
+See `PointerCaptureSmoke` in `Examples/PointerCaptureSmoke`.
