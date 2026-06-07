@@ -5,6 +5,9 @@ product and the source-breaking preview `WaylandGraphicsPreview` product. There
 is no compatibility promise yet, but public declarations in vended products
 should still be treated as intentional user-facing API.
 
+Compatibility tiers and required review process are defined in
+[Compatibility Policy](compatibility-policy.md).
+
 The minimal DocC catalog for this boundary lives in
 `Sources/WaylandClient/WaylandClient.docc/WaylandClient.md`.
 Identity taxonomy, raw-value visibility, and display-owned handle semantics are
