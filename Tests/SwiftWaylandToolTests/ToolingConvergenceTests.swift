@@ -136,11 +136,76 @@ struct ToolingConvergenceTests {
     }
 
     @Test
+    func documentationCoverageReportsMissingRequiredArticle() throws {
+        let root = try temporaryRepository()
+        try writeRequiredDocumentation(root: root, missing: "docs/getting-started.md")
+
+        do {
+            try DocumentationCoverageVerifier(repository: Repository(root: root)).verify()
+            Issue.record("expected documentation coverage to fail")
+        } catch let error as ToolError {
+            #expect(
+                error.message.contains(
+                    "Missing required documentation file: docs/getting-started.md"))
+        }
+    }
+
+    @Test
+    func documentationCoverageRequiresKeyPortalAndPreviewLanguage() throws {
+        let root = try temporaryRepository()
+        try writeRequiredDocumentation(
+            root: root,
+            omittedPhrase: "docs/which-api-should-i-use.md")
+
+        do {
+            try DocumentationCoverageVerifier(repository: Repository(root: root)).verify()
+            Issue.record("expected documentation coverage to require README API chooser link")
+        } catch let error as ToolError {
+            #expect(error.message.contains("README.md"))
+            #expect(error.message.contains("docs/which-api-should-i-use.md"))
+        }
+    }
+
+    @Test
     func exampleBuilderTracksEveryExampleExecutable() {
         #expect(ExampleBuilder.targets.contains("CustomCursorSmoke"))
         #expect(ExampleBuilder.targets.contains("SubsurfaceSmoke"))
         #expect(ExampleBuilder.targets.contains("SwiftWaylandDemo"))
         #expect(ExampleBuilder.targets.count == 21)
+    }
+
+    @Test
+    func exampleBuilderDiscoversExampleTargetsFromPackageManifest() throws {
+        let root = try temporaryRepository()
+        try """
+        // swift-tools-version: 6.3.2
+        import PackageDescription
+        let package = Package(
+            name: "Probe",
+            targets: [
+                .executableTarget(
+                    name: "NamedSmoke",
+                    dependencies: [],
+                    path: "Examples/CustomPath"
+                ),
+                .executableTarget(
+                    dependencies: [],
+                    path: "Examples/PathNamedSmoke"
+                ),
+                .executableTarget(
+                    name: "NotAnExample",
+                    path: "Sources/NotAnExample"
+                ),
+            ]
+        )
+        """.write(
+            to: root.appendingPathComponent("Package.swift"),
+            atomically: true,
+            encoding: .utf8)
+
+        let targets = try ExampleBuilder.packageExampleTargets(repository: Repository(root: root))
+
+        #expect(targets == ["NamedSmoke", "PathNamedSmoke"])
     }
 
     private func packageDump(targets: String) -> String {
@@ -158,5 +223,26 @@ struct ToolingConvergenceTests {
             .appendingPathComponent("swiftwayland-tooling-convergence-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         return root
+    }
+
+    private func writeRequiredDocumentation(
+        root: URL,
+        missing missingPath: String? = nil,
+        omittedPhrase: String? = nil
+    ) throws {
+        let phraseMap = Dictionary(
+            grouping: DocumentationCoverageVerifier.requiredPhrases,
+            by: \.path)
+        for path in DocumentationCoverageVerifier.requiredFiles where path != missingPath {
+            let url = root.appendingPathComponent(path)
+            try FileManager.default.createDirectory(
+                at: url.deletingLastPathComponent(),
+                withIntermediateDirectories: true)
+            let phrases = phraseMap[path, default: []]
+                .map(\.phrase)
+                .filter { $0 != omittedPhrase }
+                .joined(separator: "\n")
+            try "# Test\n\(phrases)\n".write(to: url, atomically: true, encoding: .utf8)
+        }
     }
 }

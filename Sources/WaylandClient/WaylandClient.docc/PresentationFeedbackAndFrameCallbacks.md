@@ -19,3 +19,28 @@ The `WaylandGraphicsPreview` product can project renderer-neutral graphics path
 facts from public display capabilities, including presentation-feedback
 advertisement and software fallback decisions. It does not change how frame
 callbacks or presentation feedback are requested for ordinary `Window` redraws.
+
+## Capability Gate
+
+Presentation feedback requires `wp_presentation`. Missing presentation-time
+support is reported as unavailable; frame callbacks are not treated as fake
+presentation feedback.
+
+## Public APIs
+
+- ``Window/requestPresentationFeedback()``
+- ``Window/presentationEvents``
+- ``WindowPresentationEvents``
+- ``PresentationFeedback``
+- ``PresentationFeedbackFlags``
+
+## Errors And Policy
+
+SwiftWayland owns the frame callback and presentation-feedback protocol
+requests, event correlation, and stream termination. Frameworks own animation
+timelines, frame budgeting, and whether a missing feedback protocol should fall
+back to frame callbacks or wall-clock scheduling.
+
+## Example
+
+See `PresentationFeedbackAnimation` in `Examples/PresentationFeedbackAnimation`.

@@ -16,6 +16,8 @@ enum SubsurfaceSmoke {
                 presentationEventCapacity: 16
             )
         ) { display in
+            log("feature: subsurface")
+            log("capability: wl_subcompositor required")
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
                     title: "SwiftWayland Subsurface Smoke",
@@ -26,6 +28,7 @@ enum SubsurfaceSmoke {
                 )
             )
             try await window.show(drawParent)
+            log("operation: show-parent pass")
 
             let child = try await window.createSubsurface(
                 configuration: try SubsurfaceConfiguration(
@@ -35,6 +38,7 @@ enum SubsurfaceSmoke {
                 )
             )
             try await child.show(drawChild)
+            log("operation: create-subsurface pass mode=desynchronized")
             log("created \(child.identity) at \(try await child.geometry)")
 
             try await withThrowingTaskGroup(of: Void.self) { group in
@@ -50,6 +54,8 @@ enum SubsurfaceSmoke {
                 _ = try await group.next()
                 group.cancelAll()
             }
+            log("result: pass")
+            log("cleanup: pass")
         }
     }
 
@@ -82,6 +88,7 @@ enum SubsurfaceSmoke {
             let y = Int32(56 + ((phase / 6) % 3) * 18)
             try await child.setPosition(LogicalOffset(x: x, y: y))
             try await child.redraw(drawChild)
+            log("operation: move-and-redraw pass")
             log("moved \(child.identity) to x=\(x) y=\(y)")
             phase += 1
         }

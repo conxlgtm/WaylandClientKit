@@ -733,7 +733,7 @@ struct Smoke: ParsableCommand {
 struct CI: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "ci",
-        subcommands: [Cheap.self, CheckBase.self, Check.self, Release.self]
+        subcommands: [Cheap.self, CheckBase.self, Check.self, Release.self, FoundationCheck.self]
     )
 
     struct Cheap: ToolCommand {
@@ -767,6 +767,14 @@ struct CI: ParsableCommand {
             try runRelease(context: context())
         }
     }
+
+    struct FoundationCheck: ToolCommand {
+        static let configuration = CommandConfiguration(commandName: "foundation-check")
+        @Flag(name: .long) var verbose = false
+        func run() throws {
+            try runFoundationCheck(context: context())
+        }
+    }
 }
 
 private func runFormat(context: ToolContext) throws {
@@ -788,27 +796,10 @@ private func ignoreCleanupError(_ operation: () throws -> Void) {
 }
 
 private func runDocsVerify(context: ToolContext) throws {
-    let required = [
-        "README.md",
-        "CONTRIBUTING.md",
-        "Sources/WaylandClient/WaylandClient.docc/WaylandClient.md",
-        "docs/architecture.md",
-        "docs/compositor-matrix.md",
-        "docs/generation.md",
-        "docs/live-wayland-testing.md",
-        "docs/public-api-audit.md",
-        "docs/public-api-baseline.md",
-        "docs/release.md",
-        "docs/strict-memory-safety-audit.md",
-        "docs/tooling.md",
-    ]
-    var failures: [String] = []
-    for path in required where !context.fileSystem.exists(context.repository.url(path)) {
-        failures.append("Missing documentation file: \(path)")
-    }
-    guard failures.isEmpty else {
-        throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)
-    }
+    try DocumentationCoverageVerifier(
+        repository: context.repository,
+        fileSystem: context.fileSystem
+    ).verify()
     let documentationFiles = try markdownDocumentationFiles(context: context)
     try DocumentationLinkVerifier(
         repository: context.repository,
@@ -837,7 +828,7 @@ private func runDoccVerify(context: ToolContext) throws {
         diagnostics: context.diagnostics
     )
     try verifier.verifyCatalogExists()
-    try verifier.removeWaylandClientSymbolGraphs()
+    try verifier.removePublicProductSymbolGraphs()
     let result = try context.swift.runSwift(
         [
             "package", "dump-symbol-graph", "--minimum-access-level", "public",
@@ -846,7 +837,7 @@ private func runDoccVerify(context: ToolContext) throws {
         repository: context.repository,
         requireSuccess: false
     )
-    _ = try verifier.requireWaylandClientSymbolGraph(afterDump: result)
+    try verifier.requirePublicProductSymbolGraphs(afterDump: result)
     try runDoccSymbolLinks(context: context)
 }
 
@@ -1062,6 +1053,23 @@ private func runRelease(context: ToolContext) throws {
         context.diagnostics.warning(
             "Skipping Wayland checks because WAYLAND_DISPLAY is not set and weston is unavailable.")
     }
+}
+
+private func runFoundationCheck(context: ToolContext) throws {
+    context.diagnostics.info(
+        try ToolchainSmoke(context: context).report(runSwiftBuildPreview: true))
+    try runCheckBase(context: context)
+    try context.swift.runSwift(
+        ["build", "--disable-index-store", "-c", "release"],
+        repository: context.repository)
+    try ExampleBuilder(context: context).buildAll()
+    try VerificationChecks(context: context).verifyReleaseShimSymbols()
+
+    let matrixURL = context.repository.url("docs/compositor-matrix.md")
+    let markdown = try context.fileSystem.readText(matrixURL)
+    let summary = try CompositorEvidenceSummarizer().summarize(markdown: markdown)
+    context.diagnostics.info(summary)
+    try CompositorEvidenceCompletenessVerifier().verify(markdown: markdown)
 }
 
 private func requestTestEnvironment() -> [String: String] {

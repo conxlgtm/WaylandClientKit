@@ -4,6 +4,45 @@ SwiftWayland is an experimental SwiftPM package for Wayland clients on Linux.
 It currently vends the `WaylandClient` library, the source-breaking preview
 `WaylandGraphicsPreview` library, and a noninteractive Wayland smoke executable.
 
+## Quick Start
+
+```bash
+nix develop
+swift run swl tools toolchain-smoke
+swift run swl bootstrap check
+swift build --disable-index-store
+swift run swift-wayland-smoke
+```
+
+If you are not using Nix, install the packages listed in
+[Linux Dependencies](#linux-dependencies), then run the same `swl` checks.
+SwiftWayland requires Swift 6.3.2 or newer.
+
+Start with [Getting Started](docs/getting-started.md) for a tiny client that
+opens a display, creates a window, draws a software frame, requests redraw, reads
+input events, and closes cleanly.
+
+## Documentation
+
+- [Documentation Map](docs/documentation-map.md): what belongs in README, DocC,
+  maintainer docs, and examples.
+- [Getting Started](docs/getting-started.md): a linear first-client path.
+- [Which API Should I Use?](docs/which-api-should-i-use.md): task-to-API guide
+  for common app and framework needs.
+- [WaylandClient DocC](Sources/WaylandClient/WaylandClient.docc/WaylandClient.md):
+  public app-substrate concepts and API reference.
+- [WaylandGraphicsPreview DocC](Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md):
+  preview graphics concepts, runtime path reporting, and fallback behavior.
+- [Framework Host Contract](docs/framework-host-contract.md) and
+  [Building A GUI Layer](docs/building-a-gui-layer.md): guidance for packages
+  building widgets, layout, styling, accessibility semantics, or renderer policy
+  above SwiftWayland.
+
+`WaylandClient` is the main public product. It is pre-foundation but
+baseline/audit tracked. `WaylandGraphicsPreview` is source-breaking preview API:
+it is renderer-neutral, does not expose raw GPU or Wayland handles, and reports
+software fallback or failure through typed runtime path values.
+
 ## Scope
 
 Current experimental baseline:
