@@ -36,4 +36,3 @@ software frame.
 ## Example
 
 See `SubsurfaceSmoke` in `Examples/SubsurfaceSmoke`.
-

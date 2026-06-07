@@ -39,4 +39,3 @@ widgets or scene nodes caused a dirty region.
 
 See `SurfaceRegionSmoke` in `Examples/SurfaceRegionSmoke` and
 `DamageRegionSmoke` in `Examples/DamageRegionSmoke`.
-

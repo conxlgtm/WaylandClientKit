@@ -34,4 +34,3 @@ Managed GPU support is compositor-sensitive. Use
 `swift run GPUPreviewSmokeClient` or `swift run GraphicsPreviewManagedGPUClear`
 under a real compositor and record the printed runtime path in
 `docs/compositor-matrix.md`.
-
