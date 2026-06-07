@@ -13,3 +13,24 @@ diagnostic payloads and operations instead.
 
 SwiftWayland's repository error taxonomy records which conditions use
 feature-specific public errors, display errors, or diagnostics.
+
+## Public APIs
+
+- ``DisplayDiagnostics``
+- ``DisplayDiagnostic``
+- ``DisplayDiagnosticPayload``
+- ``WindowDiagnostic``
+- ``InputDiagnostic``
+- ``WaylandDisplay/diagnostics``
+
+## Errors And Policy
+
+SwiftWayland owns diagnostic publication, typed payloads, and stream finishing.
+Applications and frameworks own logging policy, user-facing recovery decisions,
+and whether a diagnostic should be escalated into app-specific control flow.
+
+## Example
+
+`SwiftWaylandDemo` in `Examples/SwiftWaylandDemo` prints basic input and display
+state. Smoke examples publish feature-specific diagnostics when optional
+protocols are unavailable or rejected.

@@ -45,3 +45,30 @@ choice.
 Animated cursor scheduling is intentionally deferred. SwiftWayland has internal
 animation state primitives, but no public owner-thread scheduler contract yet.
 Use explicit cursor replacement for now.
+
+## Capability Gate
+
+Compositor cursor shapes require `wp_cursor_shape_manager_v1`.
+Theme-backed and custom image cursors use managed cursor surfaces and
+`wayland-cursor` support. Requests can still fail or fall back when a seat has
+no pointer focus, a theme name cannot be resolved, or compositor policy rejects
+the cursor path.
+
+## Public APIs
+
+- ``PointerCursor``
+- ``PointerCursorImage``
+- ``WaylandDisplay/setPointerCursor(_:)``
+- ``CursorConfiguration``
+- ``CursorRequestResult``
+
+## Errors And Policy
+
+SwiftWayland owns cursor request routing, fallback attempts, and diagnostics.
+Frameworks own cursor policy, hit testing, resize affordances, and deciding
+which cursor to request for a given interaction.
+
+## Examples
+
+See `CursorPolicySmoke` in `Examples/CursorPolicySmoke` and
+`CustomCursorSmoke` in `Examples/CustomCursorSmoke`.
