@@ -1,6 +1,8 @@
 import WaylandClient
 import WaylandGraphicsCore
 
+// swiftlint:disable file_length
+
 package struct GPUWindowBackingState: Equatable, Sendable {
     package var lifecycle: GPUWindowBackingLifecycle
     package var runtimePath: GPURuntimePathSnapshot
@@ -115,6 +117,9 @@ package enum GPUFallbackPolicy: Equatable, Sendable {
         if case .unavailable = capabilities.dmabuf {
             return unavailableOrFallback(.dmabufUnavailable)
         }
+        if case .advertised(_, .unavailable) = capabilities.dmabuf {
+            return unavailableOrFallback(.surfaceFeedbackUnavailable)
+        }
 
         do {
             try requirements.validate(capabilities: capabilities)
@@ -166,9 +171,11 @@ package enum GPUBackingDecision: Equatable, Sendable {
 package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
     case policyForcedSHM
     case dmabufUnavailable
+    case surfaceFeedbackUnavailable
     case noCompatibleFormat
     case noRenderNode
     case gbmUnavailable
+    case gbmAllocationFailed
     case eglUnavailable
     case explicitSyncRequiredButUnavailable
     case fifoRequiredButUnavailable
@@ -182,12 +189,16 @@ package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
             "SHM was forced by policy"
         case .dmabufUnavailable:
             "linux-dmabuf is unavailable"
+        case .surfaceFeedbackUnavailable:
+            "surface-specific linux-dmabuf feedback is unavailable"
         case .noCompatibleFormat:
             "no compatible dmabuf format was found"
         case .noRenderNode:
             "no DRM render node was found"
         case .gbmUnavailable:
             "GBM is unavailable"
+        case .gbmAllocationFailed:
+            "GBM allocation failed"
         case .eglUnavailable:
             "EGL is unavailable"
         case .explicitSyncRequiredButUnavailable:
@@ -206,6 +217,7 @@ package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
 
 package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
     case dmabufUnavailable
+    case surfaceFeedbackUnavailable
     case noCompatibleFormat
     case noRenderNode
     case gbmUnavailable
@@ -250,18 +262,35 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
         }
     }
 
+    package init(_ requirementError: GPUBackingRequirementError) {
+        switch requirementError {
+        case .explicitSyncUnavailable:
+            self = .explicitSyncRequiredButUnavailable
+        case .fifoUnavailable:
+            self = .fifoRequiredButUnavailable
+        case .commitTimingUnavailable:
+            self = .commitTimingRequiredButUnavailable
+        case .metadataUnavailable(let error):
+            self = .metadataRequiredButUnavailable(error)
+        }
+    }
+
     private static func platformFailure(
         for fallbackReason: GPUFallbackReason
     ) -> Self? {
         switch fallbackReason {
         case .dmabufUnavailable:
             .dmabufUnavailable
+        case .surfaceFeedbackUnavailable:
+            .surfaceFeedbackUnavailable
         case .noCompatibleFormat:
             .noCompatibleFormat
         case .noRenderNode:
             .noRenderNode
         case .gbmUnavailable:
             .gbmUnavailable
+        case .gbmAllocationFailed:
+            .gbmAllocationFailed
         case .eglUnavailable:
             .eglUnavailable
         default:
@@ -301,6 +330,8 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
         switch self {
         case .dmabufUnavailable:
             "linux-dmabuf is unavailable"
+        case .surfaceFeedbackUnavailable:
+            "surface-specific linux-dmabuf feedback is unavailable"
         case .noCompatibleFormat:
             "no compatible dmabuf format was found"
         case .noRenderNode:

@@ -269,8 +269,14 @@ Remaining unsafe constructs:
   descriptors.
 - `RawLinuxDmabufBufferParams` sends plane descriptors and creates dmabuf
   buffers.
+- `RawLinuxDmabuf` and `RawLinuxDmabufBuffer` are `@unchecked Sendable` so the
+  package-internal managed GPU preview path can borrow the display-owned
+  dmabuf manager and move an imported buffer into presenter lifetime tracking.
 - `RawLinuxDmabufPlaneFileDescriptor` owns a plane descriptor before it is
   transferred to `zwp_linux_buffer_params_v1.add`.
+- `RawSurfaceBuffer` is `@unchecked Sendable` because the managed GPU preview
+  presenter passes an imported `wl_buffer` wrapper through the async
+  owner-thread commit bridge without exposing the proxy to public API.
 - linux-dmabuf listener callbacks recover Swift owners from C listener `data`
   pointers.
 
@@ -289,6 +295,10 @@ Audit invariant:
   supports protocol version 4.
 - Plane descriptors are released only for the `add` request path; rejected
   planes remain locally owned and are closed by their wrapper.
+- The display-owned linux-dmabuf manager is accessed only through package-only
+  `Window`/`WaylandDisplay` helpers that execute on the display owner thread.
+- Imported dmabuf buffers are destroyed by the GPU presenter buffer wrapper and
+  are retained until compositor release or explicit backing retirement.
 
 Tests:
 
@@ -400,7 +410,9 @@ Remaining unsafe constructs:
 - `GBMBuffer`, `GBMSurface`, and `GBMLockedSurfaceBuffer` wrap GBM pointers with
   explicit live-pointer checks.
 - `GBMDmabufExport` owns exported plane fds until each plane descriptor is
-  transferred or the export object is destroyed.
+  transferred or the export object is destroyed. It is `@unchecked Sendable`
+  only for the package-internal setup handoff from GBM export to Wayland dmabuf
+  import.
 - CGBM shims call libgbm/libdrm functions and expose test-recording hooks only
   in explicit testing builds.
 
@@ -418,6 +430,10 @@ Audit invariant:
   export destruction.
 - Locked GBM surface buffers cannot be exported or released after their surface
   has been destroyed.
+- Managed GPU preview keeps the locked front buffer alive behind the imported
+  Wayland buffer and releases it only after `wl_buffer.release`, backing close,
+  or presenter retirement. Buffer slots are not made available for reuse before
+  the release path records completion.
 
 Tests:
 

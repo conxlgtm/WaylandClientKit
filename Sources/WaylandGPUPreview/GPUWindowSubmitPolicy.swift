@@ -159,7 +159,11 @@ package enum RuntimePathStatus: Equatable, Sendable {
 package enum GPURuntimePathReason: Equatable, Sendable {
     case policyForcedSHM
     case dmabufUnavailable
+    case surfaceFeedbackUnavailable
+    case noCompatibleFormat
+    case noRenderNode
     case gbmUnavailable
+    case gbmAllocationFailed
     case eglUnavailable
     case explicitSynchronizationUnavailable
     case explicitSynchronizationNotConfigured

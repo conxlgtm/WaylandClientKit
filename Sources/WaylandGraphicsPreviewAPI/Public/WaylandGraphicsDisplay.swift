@@ -1,4 +1,5 @@
 import WaylandClient
+import WaylandGPUPreview
 
 extension WaylandDisplay {
     /// Returns renderer-neutral graphics preview capabilities discovered so far.
@@ -38,7 +39,11 @@ extension WaylandDisplay {
         let storage = WaylandGraphicsWindowBackingStorage(
             window: window,
             runtimePath: runtimePath,
-            configuration: graphicsConfiguration
+            configuration: graphicsConfiguration,
+            managedGPUBacking: Self.shouldCreateManagedGPUBacking(
+                runtimePath: runtimePath,
+                configuration: graphicsConfiguration
+            ) ? ManagedGPUPreviewBacking(window: window) : nil
         )
         return WaylandGraphicsWindowBacking(window: window, storage: storage)
     }
@@ -64,12 +69,22 @@ extension WaylandDisplay {
         case .requireGPU where !capabilities.dmabuf.isAvailable:
             throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
         case .preferGPUFallbackToSoftware:
-            return .softwareFallback(
-                capabilities: capabilities,
-                reason: .managedGPUSubmissionUnavailable
-            )
+            return .projected(capabilities: capabilities, policy: .preferGPUFallbackToSoftware)
         case .requireGPU:
-            throw WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
+            return .projected(capabilities: capabilities, policy: .requireGPU)
         }
+    }
+
+    private static func shouldCreateManagedGPUBacking(
+        runtimePath: WaylandGraphicsRuntimePath,
+        configuration: WaylandGraphicsConfiguration
+    ) -> Bool {
+        guard configuration.backingPreference == .managedGPU,
+            configuration.fallbackPolicy != .forceSoftware
+        else {
+            return false
+        }
+
+        return runtimePath.backing == .advertised
     }
 }

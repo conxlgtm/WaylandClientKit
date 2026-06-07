@@ -1,3 +1,5 @@
+import WaylandRaw
+
 // swiftlint:disable:next type_body_length
 public struct Window: Sendable, Hashable {
     public let id: WindowID
@@ -85,6 +87,44 @@ public struct Window: Sendable, Hashable {
             damage: damage,
             draw
         )
+    }
+
+    package func graphicsPreviewSurfaceCapabilitySnapshot() async throws
+        -> SurfaceCapabilitySnapshot
+    {
+        try await display.graphicsPreviewSurfaceCapabilitySnapshot(for: id)
+    }
+
+    package func requestGraphicsPreviewSurfaceFeedback(
+        timeoutMilliseconds: Int32 = WaylandDisplay.defaultDiscoveryTimeoutMilliseconds
+    ) async throws -> SurfaceCapabilitySnapshot {
+        try await display.requestGraphicsPreviewSurfaceFeedback(
+            for: id,
+            timeoutMilliseconds: timeoutMilliseconds
+        )
+    }
+
+    package func presentGraphicsPreviewBuffer(
+        _ buffer: RawSurfaceBuffer,
+        submitConstraints: SurfaceSubmitConstraints,
+        metadata: SurfaceCommitMetadata
+    ) async throws -> PreviewBufferPresentationResult {
+        try await display.presentGraphicsPreviewBuffer(
+            buffer,
+            on: id,
+            submitConstraints: submitConstraints,
+            metadata: metadata
+        )
+    }
+
+    package func withGraphicsPreviewLinuxDmabuf<Result: Sendable>(
+        _ body:
+            @Sendable (
+                RawLinuxDmabuf,
+                _ syncDisplay: (Int32) throws -> Void
+            ) throws -> Result
+    ) async throws -> Result {
+        try await display.withGraphicsPreviewLinuxDmabuf(body)
     }
 
     public func close() async {
