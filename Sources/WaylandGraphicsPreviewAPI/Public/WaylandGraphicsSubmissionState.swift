@@ -251,6 +251,23 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
         }
     }
 
+    package func submissionOperation(
+        leaseID: WaylandGraphicsFrameLeaseID
+    ) throws -> WaylandGraphicsFrameSubmissionOperation {
+        switch state {
+        case .closed:
+            throw WaylandGraphicsError.backingClosed
+        case .submitting:
+            throw WaylandGraphicsError.frameLeaseConsumed
+        case .open(let openState):
+            guard openState.activeLeaseID == leaseID else {
+                throw WaylandGraphicsError.frameLeaseConsumed
+            }
+
+            return openState.hasSubmittedFrame ? .redraw : .show
+        }
+    }
+
     package func requireSubmittable(leaseID: WaylandGraphicsFrameLeaseID) throws {
         switch state {
         case .closed:

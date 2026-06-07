@@ -1,7 +1,11 @@
 import CWaylandProtocols
 
 @safe
-package final class RawLinuxDmabuf {
+// SAFETY: RawLinuxDmabuf is display-owned and borrowed only through
+// owner-thread graphics preview helpers. Callers do not retain or destroy the proxy
+// outside DisplayCore.
+// swiftlint:disable:next attributes
+package final class RawLinuxDmabuf: @unchecked Sendable {
     package static let createParamsMinimumVersion = RawVersion(1)
     package static let feedbackRequestMinimumVersion = RawVersion(4)
 

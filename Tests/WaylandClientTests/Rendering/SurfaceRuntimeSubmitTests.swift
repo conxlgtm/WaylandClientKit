@@ -134,6 +134,67 @@
         }
 
         @Test
+        func externalBufferCommitSequenceRequestsPresentationFeedbackBeforeCommit()
+            throws
+        {
+            var events: [ExternalBufferPresentationEvent] = []
+            let identity = SurfacePresentationIdentity(rawValue: 31)
+            let expectedPlan = try testSurfaceCommitPlan()
+
+            let plan = try WindowExternalBufferPresenter.performCommitSequence {
+                events.append(.frameCallback)
+            } requestPresentationFeedback: {
+                events.append(.presentationFeedback)
+                return identity
+            } commit: {
+                events.append(.commit)
+                return expectedPlan
+            } cancelFrameCallback: {
+                events.append(.cancelFrameCallback)
+            } cancelPresentationFeedback: { cancelledIdentity in
+                events.append(.cancelPresentationFeedback(cancelledIdentity))
+            }
+
+            #expect(plan == expectedPlan)
+            #expect(
+                events == [
+                    .frameCallback,
+                    .presentationFeedback,
+                    .commit,
+                ]
+            )
+        }
+
+        @Test
+        func externalBufferFeedbackFailureDoesNotCommit() throws {
+            var events: [ExternalBufferPresentationEvent] = []
+
+            #expect(throws: InjectedExternalFeedbackFailure.self) {
+                _ = try WindowExternalBufferPresenter.performCommitSequence {
+                    events.append(.frameCallback)
+                } requestPresentationFeedback: {
+                    events.append(.presentationFeedback)
+                    throw InjectedExternalFeedbackFailure()
+                } commit: {
+                    events.append(.commit)
+                    return try testSurfaceCommitPlan()
+                } cancelFrameCallback: {
+                    events.append(.cancelFrameCallback)
+                } cancelPresentationFeedback: { cancelledIdentity in
+                    events.append(.cancelPresentationFeedback(cancelledIdentity))
+                }
+            }
+
+            #expect(
+                events == [
+                    .frameCallback,
+                    .presentationFeedback,
+                    .cancelFrameCallback,
+                ]
+            )
+        }
+
+        @Test
         func frameCommitterDoesNotRecordFrameWhenSubmitConstraintsFail() async throws {
             try await CoreRequestRecordingGate.withExclusiveRecording {
                 swl_test_core_request_recording_begin()
@@ -467,10 +528,15 @@
     }
 
     private func configuredRuntime() throws -> SurfaceRuntime<RoleToken> {
+        var runtime = try configuredRuntimeWithoutPendingFrame()
+        try runtime.requestFrameCallback(generation: 1)
+        return runtime
+    }
+
+    private func configuredRuntimeWithoutPendingFrame() throws -> SurfaceRuntime<RoleToken> {
         var runtime = SurfaceRuntime<RoleToken>(role: .toplevelWindow)
         runtime.recordConfigureReceived(serial: 7)
         try runtime.acknowledgeConfigure(serial: 7)
-        try runtime.requestFrameCallback(generation: 1)
         return runtime
     }
 
@@ -521,6 +587,15 @@
         )
     }
 
+    private func testSurfaceCommitPlan() throws -> SurfaceCommitPlan {
+        try SurfaceCommitPlan(
+            geometry: try testSurfaceGeometry(),
+            bufferScale: 1,
+            viewportMode: .omitDestination,
+            damageMode: .buffer
+        )
+    }
+
     private func testSurface(pointer rawPointer: UInt, version: RawVersion = 2) throws
         -> RawSurface
     {
@@ -552,6 +627,16 @@
             }
         }
     }
+
+    private enum ExternalBufferPresentationEvent: Equatable {
+        case frameCallback
+        case presentationFeedback
+        case commit
+        case cancelFrameCallback
+        case cancelPresentationFeedback(SurfacePresentationIdentity)
+    }
+
+    private struct InjectedExternalFeedbackFailure: Error {}
 
 // swiftlint:enable closure_body_length
 #endif

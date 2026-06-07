@@ -6,7 +6,7 @@ import Foundation
     import Darwin
 #endif
 
-// This file coordinates repository-wide checks; each checker is still typed and testable.
+// This file coordinates repository-wide checks. Each checker is still typed and testable.
 // swiftlint:disable file_length function_body_length
 
 private let unsafeTokenPattern = [

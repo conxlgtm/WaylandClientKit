@@ -79,13 +79,15 @@ private struct GPUPreviewSmokeReportFormatter {
             "window creation: \(report.windowCreation)",
             "dmabuf advertised version: \(availability(capabilities.dmabuf))",
             "surface dmabuf feedback: \(surfaceFeedbackStatus(runtimePath))",
+            "render node: \(status(runtimePath.renderNode))",
             "selected device: \(selectedDevice(runtimePath))",
             "selected format/modifier: \(selectedFormat(runtimePath))",
             "gbm device: \(status(runtimePath.gbm))",
             "gbm buffer allocation: \(bufferAllocation(runtimePath))",
             "egl display/context: \(status(runtimePath.egl))",
             "egl clear/render: \(renderStatus(runtimePath))",
-            "dmabuf import: \(status(runtimePath.dmabuf))",
+            "dmabuf import: \(status(runtimePath.dmabufImport))",
+            "buffer lifecycle: \(status(runtimePath.bufferLifecycle))",
             "explicit sync: \(explicitSyncStatus(runtimePath))",
             "fifo: \(status(runtimePath.pacing.fifo))",
             "commit timing: \(status(runtimePath.pacing.commitTiming))",
@@ -144,7 +146,7 @@ private struct GPUPreviewSmokeReportFormatter {
     private func surfaceFeedbackStatus(
         _ path: WaylandGraphicsRuntimePath
     ) -> String {
-        switch path.dmabuf {
+        switch path.surfaceFeedback {
         case .active, .configured:
             "usable"
         case .advertised:
@@ -163,7 +165,7 @@ private struct GPUPreviewSmokeReportFormatter {
     private func selectedDevice(
         _ path: WaylandGraphicsRuntimePath
     ) -> String {
-        switch path.gbm {
+        switch path.renderNode {
         case .active, .configured:
             "selected by managed GPU path"
         case .fallback(let reason):
@@ -173,14 +175,14 @@ private struct GPUPreviewSmokeReportFormatter {
         case .unavailable:
             "not selected"
         case .advertised, .pending:
-            status(path.gbm)
+            status(path.renderNode)
         }
     }
 
     private func selectedFormat(
         _ path: WaylandGraphicsRuntimePath
     ) -> String {
-        switch path.backing {
+        switch path.gbm {
         case .active, .configured:
             "selected by managed GPU path"
         case .fallback(let reason):
@@ -305,7 +307,7 @@ private struct GPUPreviewSmokeReport {
     nonisolated static func releaseReuseStatus(
         _ path: WaylandGraphicsRuntimePath
     ) -> String {
-        switch path.backing {
+        switch path.bufferLifecycle {
         case .active, .configured:
             "managed by GPU buffer lifecycle"
         case .fallback:

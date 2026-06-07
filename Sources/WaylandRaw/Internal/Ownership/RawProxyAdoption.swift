@@ -51,8 +51,8 @@ extension RawEventQueue {
         guard
             let actualQueue = unsafe swl_proxy_get_queue_raw(rawProxy)
         else {
-            // Older libwayland headers do not expose runtime queue inspection;
-            // in that case queue ownership is enforced by the wrapper creation path.
+            // Older libwayland headers do not expose runtime queue inspection.
+            // In that case, queue ownership is enforced by the wrapper creation path.
             return
         }
 

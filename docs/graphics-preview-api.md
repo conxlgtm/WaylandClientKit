@@ -11,14 +11,16 @@ may change before a foundation candidate.
 
 ## Current Decision
 
-Keep `WaylandGraphicsPreview` at software submission plus runtime facts for this
-checkpoint. Do not expose raw GPU handles and do not promote the preview product
-to stable API. The compositor matrix still needs broader graphics-preview rows
-before public managed GPU submission is worth shaping.
+`WaylandGraphicsPreview` now has two managed backing paths: software backing and
+package-internal managed GPU backing. `.managedGPU` attempts real surface
+dmabuf feedback, format/modifier selection, render-node selection, GBM device
+creation, EGL/GLES clear rendering, dmabuf import, and owner-thread surface
+presentation. It still does not expose raw GPU handles and it is not promoted to
+stable API.
 
-Near-term work should improve matrix evidence around frame results, fallback
-reasons, presentation feedback, and compositor behavior under partial damage.
-Public GBM, EGL, DRM, dmabuf, or syncobj handles remain out of scope.
+The compositor matrix still needs broader graphics-preview rows before this
+preview path can support foundation-candidate claims. Public GBM, EGL, DRM,
+dmabuf, or syncobj handles remain out of scope.
 
 `GPUPreviewSmokeClient` is the live evidence tool for this product. Its output
 uses one line per runtime-path fact so a compositor run can be pasted into
@@ -26,7 +28,8 @@ uses one line per runtime-path fact so a compositor run can be pasted into
 configured, active, failed, or selected as software fallback.
 `GraphicsPreviewManagedGPUClear` is the small managed submission example: it
 requests managed GPU backing with software fallback allowed, submits one clear
-frame, prints the actual runtime path, and closes.
+frame, prints the actual runtime path, fallback or failure reason, and
+release/reuse status, and closes.
 
 ## Current Scope
 
@@ -70,12 +73,19 @@ The public preview projection can report that a protocol is advertised and can
 explain why a software fallback would be chosen. The managed preview submission
 API can create a window backing, lease a frame, cancel a lease, submit a
 deterministic clear frame, and submit arbitrary software drawing through a
-borrowed `SoftwareFrame`. The first managed submission path remains software
-backed. When dmabuf is advertised but public managed GPU submission is not
-implemented, it reports `managedGPUSubmissionUnavailable` rather than treating
-the unprobed GBM/EGL path as failed. GBM/EGL allocation and compositor dmabuf
-import remain package-internal while the backing state machine and compositor
-matrix mature.
+borrowed `SoftwareFrame`.
+
+For `.managedGPU`, clear-frame submission attempts the package-internal GPU
+path. Missing dmabuf, missing per-surface feedback, missing compatible
+format/modifier, render-node lookup failure, GBM allocation failure, EGL
+failure, dmabuf import rejection, metadata failure, and presentation failure are
+reported through typed public fallback or unavailable reasons. The public result
+only reports `.active` GPU backing after a GPU-rendered buffer has been imported
+and committed; display-level dmabuf advertisement alone remains `.advertised`.
+`WaylandGraphicsRuntimePath` separates dmabuf advertisement, per-surface
+feedback, render-node selection, GBM, EGL, dmabuf import, buffer lifecycle,
+synchronization, pacing, metadata, and presentation-feedback status so callers
+can tell which managed GPU stage configured, became active, failed, or fell back.
 
 ## Managed Submission Boundary
 
@@ -86,7 +96,7 @@ implicit synchronization is used, pacing is not requested, metadata is opt-in,
 and presentation feedback is not requested. `backingPreference: .software`
 selects software backing directly. `backingPreference: .managedGPU` attempts
 the managed GPU path and then follows the fallback policy when that path is not
-available.
+available. `.software` and `.forceSoftware` never attempt GPU setup.
 `requireExplicit` fails with a typed unavailable reason until managed
 explicit-sync GPU submission exists, and pacing policies are rejected with
 `WaylandGraphicsError.unsupportedPacing` until managed pacing is implemented.
@@ -96,7 +106,9 @@ protocol is advertised; `require` fails when it is unavailable.
 `WaylandGraphicsWindowBacking` owns a managed `Window` and exposes the current
 runtime path. `nextFrame()` returns a single-use `WaylandGraphicsFrameLease`.
 Callers submit a `WaylandGraphicsSubmittedFrame.clearColor`, submit arbitrary
-software drawing with `submitSoftware`, or cancel the lease. Submission returns
+software drawing with `submitSoftware`, or cancel the lease. `clearColor` uses
+the active managed GPU path when setup and submission succeed; it falls back to
+the software path only when the fallback policy allows that. Submission returns
 `WaylandGraphicsFrameResult`, which reports runtime path, submitted operation,
 buffer size, metadata, synchronization policy, pacing policy, backing status,
 and whether presentation feedback was requested. The result does not imply
@@ -113,8 +125,8 @@ is converted to `SurfaceDamageRegion` for managed software submissions and then
 mapped from logical surface coordinates to the active buffer damage coordinates.
 Partial overhang is clipped to the surface bounds; damage with no intersection
 is rejected as `WaylandGraphicsError.invalidDamageRegion`. Unsupported frame
-metadata is validated before the lease is consumed, so callers can cancel or
-retry the active lease deterministically.
+metadata and invalid damage are validated before the lease is consumed, so
+callers can cancel or retry the active lease deterministically.
 
 ## External Compile Contract
 

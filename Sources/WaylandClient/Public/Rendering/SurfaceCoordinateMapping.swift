@@ -1,8 +1,8 @@
 /// A point in buffer-pixel coordinate space.
 ///
 /// Values describe positions in the scaled buffer plane. Edge coordinates such as
-/// `x == bufferSize.width` or `y == bufferSize.height` can result from geometry conversion;
-/// callers that index pixels must clamp or reject those edge values first.
+/// `x == bufferSize.width` or `y == bufferSize.height` can result from geometry conversion.
+/// Callers that index pixels must clamp or reject those edge values first.
 public struct BufferPixelPoint: Equatable, Sendable {
     public let x: Int
     public let y: Int

@@ -105,6 +105,20 @@ struct GBMBufferPoolStateTests {
     }
 
     @Test
+    func leaseSpecificAvailableSlotDoesNotPickLowerSlot() throws {
+        var state = GBMBufferPoolState()
+        let lowerSlotID = try GBMBufferPoolSlotID(0)
+        let requestedSlotID = try GBMBufferPoolSlotID(2)
+
+        try state.insertAvailableSlot(lowerSlotID)
+        try state.insertAvailableSlot(requestedSlotID)
+
+        #expect(try state.leaseAvailableSlot(requestedSlotID) == requestedSlotID)
+        #expect(try state.lifecycle(for: lowerSlotID) == .available)
+        #expect(try state.lifecycle(for: requestedSlotID) == .leased)
+    }
+
+    @Test
     func submitRequiresLeasedSlotAndPositiveGeneration() throws {
         var state = GBMBufferPoolState()
         let slotID = try GBMBufferPoolSlotID(1)

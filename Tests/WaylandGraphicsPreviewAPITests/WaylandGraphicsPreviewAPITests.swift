@@ -85,8 +85,12 @@ struct WaylandGraphicsPreviewAPITests {
 
         #expect(path.backing == .advertised)
         #expect(path.dmabuf == .advertised)
+        #expect(path.surfaceFeedback == .advertised)
+        #expect(path.renderNode == .unavailable)
         #expect(path.gbm == .unavailable)
         #expect(path.egl == .unavailable)
+        #expect(path.dmabufImport == .unavailable)
+        #expect(path.bufferLifecycle == .unavailable)
         #expect(path.explicitSync == .advertised)
         #expect(path.pacing.fifo == .advertised)
         #expect(path.pacing.commitTiming == .unavailable)
@@ -139,6 +143,7 @@ struct WaylandGraphicsPreviewAPITests {
 
         #expect(path.backing == .fallback(.dmabufUnavailable))
         #expect(path.dmabuf == .fallback(.dmabufUnavailable))
+        #expect(path.surfaceFeedback == .fallback(.dmabufUnavailable))
         #expect(path.fallback == .dmabufUnavailable)
     }
 
@@ -151,6 +156,10 @@ struct WaylandGraphicsPreviewAPITests {
 
         #expect(path.backing == .fallback(.forcedSoftware))
         #expect(path.dmabuf == .fallback(.forcedSoftware))
+        #expect(path.surfaceFeedback == .fallback(.forcedSoftware))
+        #expect(path.renderNode == .unavailable)
+        #expect(path.dmabufImport == .unavailable)
+        #expect(path.bufferLifecycle == .unavailable)
         #expect(path.fallback == .forcedSoftware)
     }
 
@@ -180,8 +189,12 @@ struct WaylandGraphicsPreviewAPITests {
 
         #expect(path.backing == .fallback(.managedGPUSubmissionUnavailable))
         #expect(path.dmabuf == .advertised)
+        #expect(path.surfaceFeedback == .advertised)
+        #expect(path.renderNode == .fallback(.managedGPUSubmissionUnavailable))
         #expect(path.gbm == .fallback(.managedGPUSubmissionUnavailable))
         #expect(path.egl == .fallback(.managedGPUSubmissionUnavailable))
+        #expect(path.dmabufImport == .fallback(.managedGPUSubmissionUnavailable))
+        #expect(path.bufferLifecycle == .fallback(.managedGPUSubmissionUnavailable))
     }
 
     @Test

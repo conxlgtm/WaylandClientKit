@@ -154,7 +154,7 @@ let package = Package(
         ),
         .target(
             name: "WaylandGraphicsPreview",
-            dependencies: ["WaylandClient"],
+            dependencies: ["WaylandClient", "WaylandGPUPreview"],
             path: "Sources/WaylandGraphicsPreviewAPI",
             swiftSettings: strictMemorySafetySwiftSettings
         ),

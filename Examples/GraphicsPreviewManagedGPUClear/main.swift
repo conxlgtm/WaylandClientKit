@@ -109,15 +109,28 @@ private struct ManagedGPUClearReportFormatter {
             "display: \(displayName())",
             "compositor: \(compositorName())",
             "dmabuf: \(availability(capabilities.dmabuf))",
-            "presentation feedback: \(availability(capabilities.presentationFeedback))",
+            "surface feedback: \(surfaceFeedbackStatus(runtimePath.surfaceFeedback))",
+            "render node: \(status(runtimePath.renderNode))",
+            "gbm: \(status(runtimePath.gbm))",
+            "egl: \(status(runtimePath.egl))",
+            "dmabuf import: \(status(runtimePath.dmabufImport))",
+            "buffer lifecycle: \(status(runtimePath.bufferLifecycle))",
+            "explicit sync: \(availability(capabilities.explicitSync)), runtime \(status(runtimePath.explicitSync))",
+            "fifo: \(status(runtimePath.pacing.fifo))",
+            "commit timing: \(status(runtimePath.pacing.commitTiming))",
+            "metadata content type: \(status(runtimePath.metadata.contentType))",
+            "metadata alpha modifier: \(status(runtimePath.metadata.alphaModifier))",
+            "metadata tearing control: \(status(runtimePath.metadata.tearingControl))",
+            "metadata color representation: \(status(runtimePath.metadata.colorRepresentation))",
+            "metadata color management: \(status(runtimePath.metadata.colorManagement))",
+            "presentation feedback: \(availability(capabilities.presentationFeedback)), runtime \(status(runtimePath.presentationFeedback))",
             "requested backing: managedGPU",
-            "runtime backing: \(status(runtimePath.backing))",
+            "actual backing: \(actualBacking(runtimePath))",
             "runtime dmabuf: \(status(runtimePath.dmabuf))",
-            "runtime gbm: \(status(runtimePath.gbm))",
-            "runtime egl: \(status(runtimePath.egl))",
             "frame operation: \(frameResult.operation)",
             "frame size: \(frameResult.size.width)x\(frameResult.size.height)",
-            "frame backing: \(status(frameResult.backing))",
+            "submitted frame result: \(status(frameResult.backing))",
+            "release/reuse: \(releaseReuseStatus(runtimePath))",
             "presentation feedback requested: \(frameResult.presentationFeedbackRequested)",
             "fallback reason: \(runtimePath.fallback.map(String.init(describing:)) ?? "none")",
             "failure: \(report.failure ?? "none")",
@@ -174,6 +187,59 @@ private struct ManagedGPUClearReportFormatter {
             "failed(\(reason))"
         case .fallback(let reason):
             "fallback(\(reason))"
+        }
+    }
+
+    private func surfaceFeedbackStatus(_ status: WaylandGraphicsRuntimeStatus) -> String {
+        switch status {
+        case .configured, .active:
+            "usable"
+        case .advertised:
+            "advertised, not configured"
+        case .fallback(let reason):
+            "fallback(\(reason))"
+        case .failed(let reason):
+            "failed(\(reason))"
+        case .pending:
+            "pending"
+        case .unavailable:
+            "unavailable"
+        }
+    }
+
+    private func actualBacking(_ path: WaylandGraphicsRuntimePath) -> String {
+        switch path.backing {
+        case .active:
+            "managedGPU"
+        case .configured:
+            "managedGPU configured"
+        case .fallback(let reason):
+            "software fallback(\(reason))"
+        case .failed(let reason):
+            "failed(\(reason))"
+        case .advertised:
+            "managedGPU advertised"
+        case .pending:
+            "pending"
+        case .unavailable:
+            "unavailable"
+        }
+    }
+
+    private func releaseReuseStatus(_ path: WaylandGraphicsRuntimePath) -> String {
+        switch path.bufferLifecycle {
+        case .active, .configured:
+            "managed by GPU buffer lifecycle"
+        case .fallback:
+            "not observed, software fallback"
+        case .failed(let reason):
+            "not observed, failed(\(reason))"
+        case .advertised:
+            "not observed"
+        case .pending:
+            "pending"
+        case .unavailable:
+            "unavailable"
         }
     }
 }
