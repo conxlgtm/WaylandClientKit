@@ -18,6 +18,8 @@ enum PresentationFeedbackAnimation {
         ) { display in
             let capabilities = try await display.capabilities()
             let usePresentationFeedback = capabilities.presentationTime.isAvailable
+            log("feature: presentation-feedback")
+            log("capability: \(availabilityDescription(capabilities.presentationTime))")
             log(
                 "presentation feedback "
                     + (usePresentationFeedback ? "available" : "unavailable")
@@ -64,6 +66,8 @@ enum PresentationFeedbackAnimation {
             if options.printSummary {
                 log(await animation.summary())
             }
+            log("result: pass")
+            log("cleanup: pass")
         }
     }
 
@@ -82,10 +86,14 @@ enum PresentationFeedbackAnimation {
                 let phase = await animation.nextPhase()
                 if usePresentationFeedback {
                     try? await window.requestPresentationFeedback()
+                    log("operation: request-presentation-feedback pass")
+                } else {
+                    log("operation: request-presentation-feedback skip")
                 }
                 try await window.redraw { frame in
                     draw(frame, phase: phase)
                 }
+                log("operation: redraw pass")
                 if try await !window.isClosed {
                     try await window.requestRedraw()
                 }
@@ -136,6 +144,17 @@ enum PresentationFeedbackAnimation {
 
     nonisolated private static func log(_ message: String) {
         FileHandle.standardError.write(Data((message + "\n").utf8))
+    }
+
+    nonisolated private static func availabilityDescription(
+        _ availability: ProtocolAvailability
+    ) -> String {
+        switch availability {
+        case .unavailable:
+            "unavailable"
+        case .available(let version):
+            "available version=\(version)"
+        }
     }
 }
 

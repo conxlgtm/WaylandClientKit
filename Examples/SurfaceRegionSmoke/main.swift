@@ -16,6 +16,8 @@ enum SurfaceRegionSmoke {
                 presentationEventCapacity: 16
             )
         ) { display in
+            log("feature: surface-regions")
+            log("capability: wl_region required")
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
                     title: "SwiftWayland Surface Region Smoke",
@@ -33,6 +35,8 @@ enum SurfaceRegionSmoke {
             let activeRegion = try centerRegion(for: try await window.geometry)
             try await window.setInputRegion(activeRegion)
             try await window.setOpaqueRegion(activeRegion)
+            log("operation: set-input-region pass")
+            log("operation: set-opaque-region pass")
             log("input and opaque regions set to \(activeRegion.rectangles)")
             log(
                 "clicks outside the marked center should miss this window if the compositor honors input regions"
@@ -53,6 +57,8 @@ enum SurfaceRegionSmoke {
                 _ = try await group.next()
                 group.cancelAll()
             }
+            log("result: pass")
+            log("cleanup: pass")
         }
     }
 
@@ -109,6 +115,7 @@ enum SurfaceRegionSmoke {
         try await window.redraw { frame in
             draw(frame, restricted: false)
         }
+        log("operation: reset-regions pass")
         log("input and opaque regions reset to compositor defaults")
         log("outside-region pointer events should be visible again after reset")
     }

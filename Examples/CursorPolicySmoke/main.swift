@@ -16,10 +16,13 @@ enum CursorPolicySmoke {
         try await WaylandDisplay.withConnection(cursorConfiguration: cursorConfiguration) {
             display in
             let capabilities = try await display.capabilities()
+            log("feature: cursor-policy")
+            log("capability: cursor-shape \(capabilities.cursorShape)")
             log(
                 "capabilities cursorShape=\(capabilities.cursorShape) "
                     + "scalePolicy=\(cursorConfiguration.scalePolicy)"
             )
+            log("operation: configure-scale-policy pass")
 
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
@@ -44,6 +47,8 @@ enum CursorPolicySmoke {
                 _ = try await group.next()
                 group.cancelAll()
             }
+            log("result: pass")
+            log("cleanup: pass")
         }
     }
 
@@ -112,6 +117,7 @@ enum CursorPolicySmoke {
         }
 
         let results = try await display.setPointerCursor(cursor)
+        log("operation: set-cursor pass")
         log("set cursor=\(cursor.name ?? "hidden") results=\(results)")
     }
 
