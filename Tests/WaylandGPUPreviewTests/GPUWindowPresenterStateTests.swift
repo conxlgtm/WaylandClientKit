@@ -596,6 +596,27 @@ struct GPUWindowRuntimePathFailureTests {
         #expect(commitFailure.bufferLifecycle == .failed(.commitFailed))
         #expect(commitFailure.backing == .failed(.commitFailed))
     }
+
+    @Test
+    func managedBackingFallbackReasonPreservesCommitFailures() {
+        #expect(
+            ManagedGPUPreviewBackingError.setup(.commitTimingRejected)
+                .fallbackReason == .commitTimingRejected
+        )
+        #expect(
+            ManagedGPUPreviewBackingError.setup(.commitFailed)
+                .fallbackReason == .commitFailed
+        )
+        #expect(
+            ManagedGPUPreviewBackingError.setup(.presentationTrackingFailed)
+                .fallbackReason == .presentationTrackingFailed
+        )
+        #expect(
+            WaylandGraphicsFallbackReason(
+                ManagedGPUPreviewBackingError.setup(.commitFailed).fallbackReason
+            ) == .commitFailed
+        )
+    }
 }
 
 @Suite
@@ -1284,6 +1305,62 @@ struct GPUWindowPresenterBufferReuseTests {
 
         #expect(submittedBuffer.destroyCallCount == 0)
         #expect(replacementBuffer.destroyCallCount == 0)
+    }
+
+    @Test
+    func reconfigureRetiresAvailableBuffersThenLateReleaseAllowsNextSubmit()
+        async throws
+    {
+        let presenter = GPUWindowPresenter()
+        let recorder = SubmittedPointerRecorder()
+        let oldSubmittedSlotID = try GBMBufferPoolSlotID(0)
+        let oldAvailableSlotID = try GBMBufferPoolSlotID(1)
+        let newSlotID = try GBMBufferPoolSlotID(2)
+        let oldSubmittedBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let oldAvailableBuffer = try FakePresenterBuffer(pointer: 0x1002)
+        let newBuffer = try FakePresenterBuffer(pointer: 0x1003)
+
+        try presenter.installBuffer(oldSubmittedBuffer, slotID: oldSubmittedSlotID)
+        try presenter.installBuffer(oldAvailableBuffer, slotID: oldAvailableSlotID)
+        _ = try await presenter.presentSlot(
+            oldSubmittedSlotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 80)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(
+            try presenter.retireAvailableBuffers() == [oldAvailableSlotID]
+        )
+        #expect(oldSubmittedBuffer.destroyCallCount == 0)
+        #expect(oldAvailableBuffer.destroyCallCount == 1)
+
+        oldSubmittedBuffer.triggerRelease()
+        try presenter.replaceAvailableBuffer(newBuffer, slotID: oldSubmittedSlotID)
+        try presenter.installBuffer(try FakePresenterBuffer(pointer: 0x1004), slotID: newSlotID)
+
+        let frame = try await presenter.presentSlot(
+            oldSubmittedSlotID,
+            submit: { buffer, _, _ in
+                await recorder.record(buffer)
+                return try previewPresentationResult(generation: 81)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(frame.slotID == oldSubmittedSlotID)
+        #expect(oldSubmittedBuffer.destroyCallCount == 1)
+        #expect(newBuffer.destroyCallCount == 0)
+        #expect(presenter.installedSlotIDs == [oldSubmittedSlotID, newSlotID])
+        #expect(presenter.outstandingSubmittedSlotIDs == [oldSubmittedSlotID])
+        #expect(
+            await recorder.snapshot()
+                == [oldSubmittedBuffer.pointerValue, newBuffer.pointerValue]
+        )
     }
 }
 

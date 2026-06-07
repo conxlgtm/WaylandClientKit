@@ -255,6 +255,12 @@ extension GPURuntimePathReason {
             self = .eglUnavailable
         case .compositorRejectedBuffer:
             self = .compositorRejectedBuffer
+        case .commitTimingRejected:
+            self = .commitTimingRejected
+        case .commitFailed:
+            self = .commitFailed
+        case .presentationTrackingFailed:
+            self = .presentationTrackingFailed
         }
     }
 

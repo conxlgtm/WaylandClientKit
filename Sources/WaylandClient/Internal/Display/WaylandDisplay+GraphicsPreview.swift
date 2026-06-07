@@ -190,13 +190,15 @@ extension WaylandDisplay {
         _ buffer: RawSurfaceBuffer,
         on windowID: WindowID,
         submitConstraints: SurfaceSubmitConstraints,
-        metadata: SurfaceCommitMetadata
+        metadata: SurfaceCommitMetadata,
+        requestPresentationFeedback: Bool
     ) throws -> PreviewBufferPresentationResult {
         try requireCore().presentGraphicsPreviewBuffer(
             buffer,
             on: windowID,
             submitConstraints: submitConstraints,
-            metadata: metadata
+            metadata: metadata,
+            requestPresentationFeedback: requestPresentationFeedback
         )
     }
 
@@ -247,15 +249,22 @@ extension DisplayCore {
         _ buffer: RawSurfaceBuffer,
         on windowID: WindowID,
         submitConstraints: SurfaceSubmitConstraints,
-        metadata: SurfaceCommitMetadata
+        metadata: SurfaceCommitMetadata,
+        requestPresentationFeedback: Bool
     ) throws -> PreviewBufferPresentationResult {
         try withFatalFailureFinalization {
-            let presentation = try requireOpenWindow(windowID)
-                .presentPreviewBufferOnOwnerThread(
-                    buffer,
-                    submitConstraints: submitConstraints,
-                    metadata: metadata
-                )
+            let window = try requireOpenWindow(windowID)
+            let presentationFeedback = try presentationFeedbackCommitRequest(
+                for: window,
+                windowID: windowID,
+                isRequested: requestPresentationFeedback
+            )
+            let presentation = try window.presentPreviewBufferOnOwnerThread(
+                buffer,
+                submitConstraints: submitConstraints,
+                metadata: metadata,
+                presentationFeedback: presentationFeedback
+            )
             guard !isClosed else {
                 throw ClientError.display(.closed)
             }
