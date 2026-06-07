@@ -186,6 +186,16 @@ extension WaylandDisplay {
         )
     }
 
+    package func prepareGraphicsPreviewPresentation(
+        for windowID: WindowID,
+        timeoutMilliseconds: Int32
+    ) throws -> SurfaceGeometry {
+        try requireCore().prepareGraphicsPreviewPresentation(
+            for: windowID,
+            timeoutMilliseconds: timeoutMilliseconds
+        )
+    }
+
     package func presentGraphicsPreviewBuffer(
         _ buffer: RawSurfaceBuffer,
         on windowID: WindowID,
@@ -242,6 +252,22 @@ extension DisplayCore {
                 throw ClientError.display(.closed)
             }
             return snapshot
+        }
+    }
+
+    func prepareGraphicsPreviewPresentation(
+        for windowID: WindowID,
+        timeoutMilliseconds: Int32
+    ) throws -> SurfaceGeometry {
+        try withFatalFailureFinalization {
+            let geometry = try requireOpenWindow(windowID)
+                .prepareGraphicsPreviewPresentationOnOwnerThread(
+                    timeoutMilliseconds: timeoutMilliseconds
+                )
+            guard !isClosed else {
+                throw ClientError.display(.closed)
+            }
+            return geometry
         }
     }
 

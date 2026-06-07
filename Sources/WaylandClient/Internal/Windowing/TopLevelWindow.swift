@@ -1124,6 +1124,18 @@ extension TopLevelWindow {
         }
     }
 
+    package func prepareGraphicsPreviewPresentationOnOwnerThread(
+        timeoutMilliseconds: Int32
+    ) throws -> SurfaceGeometry {
+        connection.preconditionIsOwnerThread()
+
+        if model.currentConfiguration == nil {
+            _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
+        }
+
+        return try currentSurfaceGeometry()
+    }
+
     package var stateSnapshotOnOwnerThread: WindowStateSnapshot {
         get throws {
             connection.preconditionIsOwnerThread()
