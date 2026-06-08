@@ -64,6 +64,7 @@ enum ClientSideResizeChrome {
                 group.addTask {
                     try await Task.sleep(for: .seconds(seconds))
                     await registry.closeAll()
+                    try await waitForCancellation()
                 }
             }
 
@@ -72,6 +73,12 @@ enum ClientSideResizeChrome {
         }
         if options.printSummary {
             log(await registry.summary())
+        }
+    }
+
+    nonisolated private static func waitForCancellation() async throws {
+        while !Task.isCancelled {
+            try await Task.sleep(for: .seconds(60))
         }
     }
 
