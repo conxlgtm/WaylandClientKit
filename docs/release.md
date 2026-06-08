@@ -29,8 +29,9 @@ release review aid, not proof of foundation readiness.
 
 `swift run swl ci foundation-check` is intentionally stricter than the ordinary
 release gate. Run it only when evaluating a foundation-candidate claim. It fails
-when the compositor matrix still contains pending, not-tested, or not-run
-evidence, so missing live evidence cannot be mistaken for foundation readiness.
+when the compositor matrix still contains incomplete cells, explicit
+environment skips, or manual-interaction gaps, so missing live evidence cannot
+be mistaken for foundation readiness.
 
 `swift run swl test release` runs the release-compatible test subset. Shim-contract and
 instrumentation tests that depend on debug-only C or Swift test hooks are
