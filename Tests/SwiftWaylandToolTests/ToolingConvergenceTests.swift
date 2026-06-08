@@ -84,6 +84,14 @@ struct ToolingConvergenceTests {
             | ---------- | ------- | -------------- | ----- |
             | Weston headless | pending | pending | pass |
             | GNOME / Mutter | 46 | facts recorded | pass |
+            | KDE / KWin | 6 | manual interaction required(pointer capture) | pass |
+            | Sway / wlroots | environment skip(sway) | environment skip(sway) | pass |
+
+            ## Framework Host Evidence
+
+            | Compositor | Pointer capture |
+            | ---------- | --------------- |
+            | KDE / KWin | manual interaction required(lock/confine motion) |
 
             ## Graphics Preview Evidence
 
@@ -95,7 +103,11 @@ struct ToolingConvergenceTests {
         let summary = try CompositorEvidenceSummarizer().summarize(markdown: markdown)
 
         #expect(summary.contains("Weston headless: 1 recorded, 2 pending"))
+        #expect(summary.contains("KDE / KWin: 2 recorded, 1 manual interaction gap"))
+        #expect(summary.contains("Sway / wlroots: 1 recorded, 2 environment skips"))
         #expect(summary.contains("GNOME / Mutter: submitted frame=success"))
+        #expect(summary.contains("3 pending, 2 environment skips, 2 manual interaction gaps"))
+        #expect(summary.contains("## Framework Host Evidence: KDE / KWin / Pointer capture"))
     }
 
     @Test
