@@ -126,7 +126,13 @@ public struct CompositorEvidenceCompletenessVerifier {
 
     private static func incompleteMarker(in value: String) -> String? {
         let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        for marker in ["pending", "not tested", "not run"] where normalized.contains(marker) {
+        for marker in [
+            "pending",
+            "not tested",
+            "not run",
+            "environment skip",
+            "manual interaction required",
+        ] where normalized.contains(marker) {
             return marker
         }
         return nil

@@ -55,6 +55,29 @@ struct CompositorEvidenceCompletenessTests {
         #expect(findings.isEmpty)
     }
 
+    @Test
+    func flagsExplicitEnvironmentSkipsAndManualEvidenceGaps() throws {
+        let markdown = """
+            # Compositor Matrix
+
+            ## Framework Host Evidence
+
+            | Compositor | Pointer capture | Text input |
+            | ---------- | --------------- | ---------- |
+            | GNOME / Mutter | environment skip(GNOME session unavailable) | pass |
+            | KDE / KWin | manual interaction required(lock/confine motion) | pass |
+            """
+
+        let findings = CompositorEvidenceCompletenessVerifier()
+            .incompleteEvidenceCells(markdown: markdown)
+
+        #expect(findings.count == 2)
+        #expect(findings[0].marker == "environment skip")
+        #expect(findings[0].row == "GNOME / Mutter")
+        #expect(findings[1].marker == "manual interaction required")
+        #expect(findings[1].row == "KDE / KWin")
+    }
+
     private var graphicsColumns: [String] {
         [
             "Compositor", "Display", "Globals", "dmabuf", "surface feedback", "GBM", "EGL",
