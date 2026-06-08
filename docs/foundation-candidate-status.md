@@ -28,10 +28,10 @@ enough; active GPU claims must be backed by public runtime-path output.
 | User learning path | done | [getting-started.md](getting-started.md), [which-api-should-i-use.md](which-api-should-i-use.md), [documentation-map.md](documentation-map.md) | Keep README as portal, not full manual. |
 | Managed GPU setup code path | done | Managed GPU attempts surface feedback, render-node, GBM/EGL, dmabuf import, owner-thread commit, and typed fallback. | Keep runtime-path truth tests current. |
 | Managed GPU active proof | partial | [compositor-matrix.md](compositor-matrix.md) records active managed GPU clear-frame submission on KDE/KWin and `dmabufUnavailable` fallback under headless Weston. | Add at least one more desktop or wlroots active/fallback/failure row before foundation-candidate claims. |
-| Compositor matrix minimum | done | [compositor-matrix.md](compositor-matrix.md) records headless Weston plus KDE/KWin rows and separates protocol advertisement from active runtime facts. | Keep GNOME/Mutter and Sway/wlroots rows current when those sessions are available. |
+| Compositor matrix minimum | partial | [compositor-matrix.md](compositor-matrix.md) records fresh headless Weston plus KDE/KWin rows and separates protocol advertisement from active runtime facts. | Replace GNOME/Mutter and Sway/wlroots environment skips with current runs when those sessions are available. |
 | External consumer evidence | partial | Public and graphics preview integration clients are part of `swl ci check`. | Keep external clients hardware-independent. |
 | Release checks | partial | `swift run swl ci release`, `swift run swl examples build`, release docs. | Keep release gates runnable while evidence remains incomplete. |
-| Foundation-candidate gate | partial | `swift run swl ci foundation-check` fails while the compositor matrix has pending, not-tested, or not-run cells. | Complete or explicitly skip remaining compositor evidence before claiming foundation readiness. |
+| Foundation-candidate gate | partial | `swift run swl ci foundation-check` fails while the compositor matrix has incomplete cells, explicit environment skips, or manual-interaction gaps. | Complete remaining compositor and interaction evidence before claiming foundation readiness. |
 | Sanitizer checks | partial | TSan/ASan commands documented in [release.md](release.md). | Run where environment supports them and record skips. |
 | Toolchain baseline | done | `swift run swl tools toolchain-smoke`; Swift 6.3.2 required baseline. | Keep 6.4/main snapshots optional and allowed-failure. |
 | Known non-goals | done | README, DocC, compatibility policy. | Keep widgets, layout, renderer abstraction, scene graph, styling, and accessibility semantic tree out of scope. |
@@ -61,6 +61,25 @@ Still needs broader evidence:
   is unavailable there; keep the typed fallback row current.
 - Explicit sync, FIFO, and commit-timing activation on real compositors.
 - Broad live resize/reconfiguration behavior for GPU buffers.
+
+## 2026-06-08 Evidence Pass
+
+Ran under Nix with Swift 6.3.2. KDE/KWin on `wayland-0` advertised dmabuf v5,
+linux-drm-syncobj v1, FIFO v1, presentation v2, text-input v3 v1,
+cursor-shape v2, pointer constraints v1, relative pointer v1, top-level icon
+v1, idle inhibit v1, system bell v1, xdg activation v1, and color metadata.
+Commit timing was unavailable.
+
+KDE/KWin passed `swl smoke live`, `swl smoke integration`, `swl smoke
+gpu-preview`, the graphics preview examples, and the bounded feature smoke
+targets listed in [compositor-matrix.md](compositor-matrix.md). Managed GPU
+clear-frame submission reported active.
+
+Headless Weston passed live, integration, GPU preview, and the bounded feature
+loop. Managed GPU correctly fell back with `dmabufUnavailable`.
+
+GNOME/Mutter and Sway/wlroots were not available on this host. Those rows are
+recorded as explicit environment skips rather than completed evidence.
 
 ## Required Commands
 

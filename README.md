@@ -583,6 +583,7 @@ swift run swift-wayland-smoke
 - [Manual Testing](docs/manual-testing.md)
 - [Compositor Matrix](docs/compositor-matrix.md)
 - [Foundation Candidate Status](docs/foundation-candidate-status.md)
+- [Foundation Evidence Report](docs/foundation-evidence-report.md)
 - [Error Taxonomy](docs/error-taxonomy.md)
 - [WaylandClient DocC Catalog](Sources/WaylandClient/WaylandClient.docc/WaylandClient.md)
 - [Development Checkpoint Checklist](docs/release.md)

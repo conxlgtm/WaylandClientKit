@@ -372,9 +372,8 @@ enum DataTransferSmoke {
         }
 
         let data = try await read(mimeType, try ByteCount.kilobytes(64), .seconds(2))
-        let preview = String(decoding: data.prefix(120), as: UTF8.self)
         await state.recordRead(label: label, mimeType: mimeType, byteCount: data.count)
-        log("\(label) read \(data.count) bytes as \(mimeType): \(preview)")
+        log("\(label) read \(data.count) bytes as \(mimeType) payload=redacted")
     }
 
     nonisolated private static func transferPayloads(

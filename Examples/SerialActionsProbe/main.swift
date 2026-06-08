@@ -1,6 +1,8 @@
 import Foundation
 import WaylandClient
+import WaylandExampleSupport
 
+// swiftlint:disable type_body_length
 @main
 enum SerialActionsProbe {
     nonisolated private static let leftButton = PointerButtonCode(rawValue: 0x110)
@@ -8,6 +10,7 @@ enum SerialActionsProbe {
     nonisolated private static let middleButton = PointerButtonCode(rawValue: 0x112)
 
     static func main() async throws {
+        let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
         try await WaylandDisplay.withConnection(
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
@@ -17,44 +20,60 @@ enum SerialActionsProbe {
                 presentationEventCapacity: 16
             )
         ) { display in
-            let capabilities = try await display.capabilities()
-            log("display capabilities \(capabilitiesDescription(capabilities))")
+            try await run(display: display, options: options)
+        }
+    }
 
-            let window = try await display.createTopLevelWindow(
-                configuration: try WindowConfiguration(
-                    title: "SwiftWayland Serial Actions Probe",
-                    appID: "swift-wayland-serial-actions-probe",
-                    initialWidth: 360,
-                    initialHeight: 220,
-                    closeRequestPolicy: .requestOnly,
-                    decorationPreference: .preferClientSide
-                )
+    nonisolated private static func run(
+        display: WaylandDisplay,
+        options: ExampleRunOptions
+    ) async throws {
+        let capabilities = try await display.capabilities()
+        log("display capabilities \(capabilitiesDescription(capabilities))")
+
+        let window = try await display.createTopLevelWindow(
+            configuration: try WindowConfiguration(
+                title: "SwiftWayland Serial Actions Probe",
+                appID: "swift-wayland-serial-actions-probe",
+                initialWidth: 360,
+                initialHeight: 220,
+                closeRequestPolicy: .requestOnly,
+                decorationPreference: .preferClientSide
             )
-            let state = SerialProbeState()
-            try await showInitialFrame(window: window, state: state)
+        )
+        let state = SerialProbeState()
+        try await showInitialFrame(window: window, state: state)
 
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                group.addTask {
-                    try await consumeDisplayEvents(
-                        display.events,
-                        window: window,
-                        state: state
-                    )
-                }
-                group.addTask {
-                    try await consumeInputEvents(
-                        display.inputEvents,
-                        window: window,
-                        state: state
-                    )
-                }
-                group.addTask {
-                    try await consumeDiagnostics(display.diagnostics)
-                }
-
-                _ = try await group.next()
-                group.cancelAll()
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await consumeDisplayEvents(
+                    display.events,
+                    window: window,
+                    state: state
+                )
             }
+            group.addTask {
+                try await consumeInputEvents(
+                    display.inputEvents,
+                    window: window,
+                    state: state
+                )
+            }
+            group.addTask {
+                try await consumeDiagnostics(display.diagnostics)
+            }
+            if let seconds = options.autoCloseSeconds {
+                group.addTask {
+                    try await Task.sleep(for: .seconds(seconds))
+                    await window.close()
+                }
+            }
+
+            _ = try await group.next()
+            group.cancelAll()
+        }
+        if options.printSummary {
+            log(await state.summary())
         }
     }
 
@@ -282,6 +301,7 @@ enum SerialActionsProbe {
         FileHandle.standardError.write(Data((message + "\n").utf8))
     }
 }
+// swiftlint:enable type_body_length
 
 private actor SerialProbeState {
     private var current = SerialProbeSnapshot()
@@ -302,6 +322,10 @@ private actor SerialProbeState {
 
     func snapshot() -> SerialProbeSnapshot {
         current
+    }
+
+    func summary() -> String {
+        "serial-actions summary events=\(current.eventCount) buttonPresses=\(current.pressCount)"
     }
 }
 

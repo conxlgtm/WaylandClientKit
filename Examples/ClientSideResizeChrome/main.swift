@@ -1,9 +1,12 @@
 import Foundation
 import WaylandClient
+import WaylandExampleSupport
 
+// swiftlint:disable cyclomatic_complexity function_body_length type_body_length
 @main
 enum ClientSideResizeChrome {
     static func main() async throws {
+        let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
         try await WaylandDisplay.withConnection(
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 128,
@@ -13,46 +16,69 @@ enum ClientSideResizeChrome {
                 presentationEventCapacity: 16
             )
         ) { display in
-            let controllers = [
-                try await makeController(
+            try await run(display: display, options: options)
+        }
+    }
+
+    nonisolated private static func run(
+        display: WaylandDisplay,
+        options: ExampleRunOptions
+    ) async throws {
+        let controllers = [
+            try await makeController(
+                display: display,
+                title: "Resize Chrome A",
+                appID: "swift-wayland-resize-chrome-a",
+                colorSeed: 0x20
+            ),
+            try await makeController(
+                display: display,
+                title: "Resize Chrome B",
+                appID: "swift-wayland-resize-chrome-b",
+                colorSeed: 0x80
+            ),
+        ]
+        let registry = ResizeWindowRegistry(controllers)
+
+        log("client-side chrome policy lives above SwiftWayland")
+        for controller in controllers {
+            log("registered resize window=\(controller.window.id)")
+        }
+        for controller in controllers {
+            try await controller.showInitialFrame()
+            log("first show resize window=\(controller.window.id)")
+        }
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await consumeDisplayEvents(display.events, registry: registry)
+            }
+            group.addTask {
+                try await consumeInputEvents(
+                    display.inputEvents,
                     display: display,
-                    title: "Resize Chrome A",
-                    appID: "swift-wayland-resize-chrome-a",
-                    colorSeed: 0x20
-                ),
-                try await makeController(
-                    display: display,
-                    title: "Resize Chrome B",
-                    appID: "swift-wayland-resize-chrome-b",
-                    colorSeed: 0x80
-                ),
-            ]
-            let registry = ResizeWindowRegistry(controllers)
-
-            log("client-side chrome policy lives above SwiftWayland")
-            for controller in controllers {
-                log("registered resize window=\(controller.window.id)")
+                    registry: registry
+                )
             }
-            for controller in controllers {
-                try await controller.showInitialFrame()
-                log("first show resize window=\(controller.window.id)")
-            }
-
-            try await withThrowingTaskGroup(of: Void.self) { group in
+            if let seconds = options.autoCloseSeconds {
                 group.addTask {
-                    try await consumeDisplayEvents(display.events, registry: registry)
+                    try await Task.sleep(for: .seconds(seconds))
+                    await registry.closeAll()
+                    try await waitForCancellation()
                 }
-                group.addTask {
-                    try await consumeInputEvents(
-                        display.inputEvents,
-                        display: display,
-                        registry: registry
-                    )
-                }
-
-                _ = try await group.next()
-                group.cancelAll()
             }
+
+            _ = try await group.next()
+            group.cancelAll()
+        }
+        if options.printSummary {
+            log(await registry.summary())
+        }
+    }
+
+    nonisolated private static func waitForCancellation() async throws {
+        while !Task.isCancelled {
+            try await Task.sleep(for: .seconds(60))
         }
     }
 
@@ -130,10 +156,8 @@ enum ClientSideResizeChrome {
                 do {
                     let results = try await display.setPointerCursor(cursor)
                     if changed {
-                        log(
-                            "cursor window=\(windowID) edge=\(edgeDescription(edge)) "
-                                + "cursor=\(cursorDescription(cursor)) results=\(cursorResultsDescription(results))"
-                        )
+                        logCursorChange(
+                            windowID: windowID, edge: edge, cursor: cursor, results: results)
                     }
                 } catch {
                     log(
@@ -155,7 +179,10 @@ enum ClientSideResizeChrome {
                             + "results=\(cursorResultsDescription(results))"
                     )
                 } catch {
-                    log("cursor failed window=\(windowID) edge=none cursor=left_ptr error=\(error)")
+                    log(
+                        "cursor failed window=\(windowID) edge=none "
+                            + "cursor=left_ptr error=\(error)"
+                    )
                 }
                 try await controller.window.requestRedraw()
             case .pointer(.button(let button)) where button.state == .pressed:
@@ -165,7 +192,8 @@ enum ClientSideResizeChrome {
                 log(
                     "resize request window=\(windowID) seat=\(event.seatID) "
                         + "serial=\(button.serial) edge=\(edgeDescription(edge)) "
-                        + "geometry=\(geometryDescription(geometry)) location=\(location.x),\(location.y)"
+                        + "geometry=\(geometryDescription(geometry)) "
+                        + "location=\(location.x),\(location.y)"
                 )
                 do {
                     try await controller.window.requestInteractiveResize(
@@ -181,6 +209,19 @@ enum ClientSideResizeChrome {
                 break
             }
         }
+    }
+
+    nonisolated private static func logCursorChange(
+        windowID: WindowID,
+        edge: WindowResizeEdge?,
+        cursor: PointerCursor,
+        results: [CursorRequestResult]
+    ) {
+        log(
+            "cursor window=\(windowID) edge=\(edgeDescription(edge)) "
+                + "cursor=\(cursorDescription(cursor)) "
+                + "results=\(cursorResultsDescription(results))"
+        )
     }
 
     nonisolated private static func resizeEdge(
@@ -290,6 +331,7 @@ enum ClientSideResizeChrome {
         FileHandle.standardError.write(Data((message + "\n").utf8))
     }
 }
+// swiftlint:enable cyclomatic_complexity function_body_length type_body_length
 
 private struct ResizeWindowController: Sendable {
     let window: Window
@@ -339,6 +381,16 @@ private actor ResizeWindowRegistry {
     func remove(_ windowID: WindowID) -> Bool {
         controllersByWindowID.removeValue(forKey: windowID)
         return controllersByWindowID.isEmpty
+    }
+
+    func closeAll() async {
+        for controller in controllersByWindowID.values {
+            await controller.window.close()
+        }
+    }
+
+    func summary() -> String {
+        "client-side resize summary remainingWindows=\(controllersByWindowID.count)"
     }
 }
 
