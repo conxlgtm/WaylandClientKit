@@ -1,5 +1,6 @@
 import Foundation
 import WaylandClient
+import WaylandExampleSupport
 
 @main
 enum PointerCaptureSmoke {
@@ -8,6 +9,7 @@ enum PointerCaptureSmoke {
     nonisolated private static let middleButton = PointerButtonCode(rawValue: 0x112)
 
     static func main() async throws {
+        let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
         try await WaylandDisplay.withConnection(
             eventStreamConfiguration: try EventStreamConfiguration(
                 displayEventCapacity: 64,
@@ -17,35 +19,55 @@ enum PointerCaptureSmoke {
                 presentationEventCapacity: 16
             )
         ) { display in
-            let capabilities = try await display.capabilities()
-            log("feature: pointer-capture")
-            log("capability: relative-pointer \(capabilities.relativePointer)")
-            log("capability: pointer-constraints \(capabilities.pointerConstraints)")
-            log(
-                "capabilities relativePointer=\(capabilities.relativePointer) "
-                    + "pointerConstraints=\(capabilities.pointerConstraints)"
-            )
-
-            let window = try await display.createTopLevelWindow(
-                configuration: try WindowConfiguration(
-                    title: "SwiftWayland Pointer Capture Smoke",
-                    appID: "swift-wayland-pointer-capture-smoke",
-                    initialWidth: 420,
-                    initialHeight: 240,
-                    closeRequestPolicy: .requestOnly
-                )
-            )
-            try await show(window)
-
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                group.addTask { try await consumeDisplayEvents(display.events, window: window) }
-                group.addTask { try await consumeInputEvents(display.inputEvents, window: window) }
-                _ = try await group.next()
-                group.cancelAll()
-            }
-            log("result: pass")
-            log("cleanup: pass")
+            try await run(display: display, options: options)
         }
+    }
+
+    nonisolated private static func run(
+        display: WaylandDisplay,
+        options: ExampleRunOptions
+    ) async throws {
+        let capabilities = try await display.capabilities()
+        log("feature: pointer-capture")
+        log("capability: relative-pointer \(capabilities.relativePointer)")
+        log("capability: pointer-constraints \(capabilities.pointerConstraints)")
+        log(
+            "capabilities relativePointer=\(capabilities.relativePointer) "
+                + "pointerConstraints=\(capabilities.pointerConstraints)"
+        )
+
+        let window = try await display.createTopLevelWindow(
+            configuration: try WindowConfiguration(
+                title: "SwiftWayland Pointer Capture Smoke",
+                appID: "swift-wayland-pointer-capture-smoke",
+                initialWidth: 420,
+                initialHeight: 240,
+                closeRequestPolicy: .requestOnly
+            )
+        )
+        try await show(window)
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask { try await consumeDisplayEvents(display.events, window: window) }
+            group.addTask { try await consumeInputEvents(display.inputEvents, window: window) }
+            if let seconds = options.autoCloseSeconds {
+                group.addTask {
+                    try await Task.sleep(for: .seconds(seconds))
+                    await window.close()
+                }
+            }
+            _ = try await group.next()
+            group.cancelAll()
+        }
+        if options.printSummary {
+            log(
+                "pointer-capture summary relativePointer=\(capabilities.relativePointer) "
+                    + "pointerConstraints=\(capabilities.pointerConstraints) "
+                    + "interactions=manual"
+            )
+        }
+        log("result: pass")
+        log("cleanup: pass")
     }
 
     nonisolated private static func consumeDisplayEvents(

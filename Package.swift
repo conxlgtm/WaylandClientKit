@@ -222,7 +222,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "ClientSideResizeChrome",
-            dependencies: ["WaylandClient"],
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/ClientSideResizeChrome",
             swiftSettings: executableSwiftSettings
         ),
@@ -246,7 +246,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "SerialActionsProbe",
-            dependencies: ["WaylandClient"],
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/SerialActionsProbe",
             swiftSettings: executableSwiftSettings
         ),
@@ -258,19 +258,19 @@ let package = Package(
         ),
         .executableTarget(
             name: "PointerCaptureSmoke",
-            dependencies: ["WaylandClient"],
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/PointerCaptureSmoke",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
             name: "CursorPolicySmoke",
-            dependencies: ["WaylandClient"],
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/CursorPolicySmoke",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
             name: "CustomCursorSmoke",
-            dependencies: ["WaylandClient"],
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/CustomCursorSmoke",
             swiftSettings: executableSwiftSettings
         ),

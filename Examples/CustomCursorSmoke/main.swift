@@ -1,5 +1,6 @@
 import Foundation
 import WaylandClient
+import WaylandExampleSupport
 
 @main
 enum CustomCursorSmoke {
@@ -8,41 +9,58 @@ enum CustomCursorSmoke {
     nonisolated private static let middleButton = PointerButtonCode(rawValue: 0x112)
 
     static func main() async throws {
+        let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
         try await WaylandDisplay.withConnection { display in
-            log("feature: custom-cursor-image")
-            log("capability: pointer cursor image surface")
-            let window = try await display.createTopLevelWindow(
-                configuration: try WindowConfiguration(
-                    title: "SwiftWayland Custom Cursor Smoke",
-                    appID: "swift-wayland-custom-cursor-smoke",
-                    initialWidth: 360,
-                    initialHeight: 220,
-                    closeRequestPolicy: .requestOnly
-                )
-            )
-            try await show(window)
-
-            let customCursor = try PointerCursor.image(makeCursorImage())
-            try await display.setPointerCursor(customCursor)
-            log("operation: set-custom-cursor pass")
-            log("initial custom cursor applied")
-
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                group.addTask { try await consumeDisplayEvents(display.events, window: window) }
-                group.addTask {
-                    try await consumeInputEvents(
-                        display.inputEvents,
-                        window: window,
-                        display: display,
-                        customCursor: customCursor
-                    )
-                }
-                _ = try await group.next()
-                group.cancelAll()
-            }
-            log("result: pass")
-            log("cleanup: pass")
+            try await run(display: display, options: options)
         }
+    }
+
+    nonisolated private static func run(
+        display: WaylandDisplay,
+        options: ExampleRunOptions
+    ) async throws {
+        log("feature: custom-cursor-image")
+        log("capability: pointer cursor image surface")
+        let window = try await display.createTopLevelWindow(
+            configuration: try WindowConfiguration(
+                title: "SwiftWayland Custom Cursor Smoke",
+                appID: "swift-wayland-custom-cursor-smoke",
+                initialWidth: 360,
+                initialHeight: 220,
+                closeRequestPolicy: .requestOnly
+            )
+        )
+        try await show(window)
+
+        let customCursor = try PointerCursor.image(makeCursorImage())
+        try await display.setPointerCursor(customCursor)
+        log("operation: set-custom-cursor pass")
+        log("initial custom cursor applied")
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask { try await consumeDisplayEvents(display.events, window: window) }
+            group.addTask {
+                try await consumeInputEvents(
+                    display.inputEvents,
+                    window: window,
+                    display: display,
+                    customCursor: customCursor
+                )
+            }
+            if let seconds = options.autoCloseSeconds {
+                group.addTask {
+                    try await Task.sleep(for: .seconds(seconds))
+                    await window.close()
+                }
+            }
+            _ = try await group.next()
+            group.cancelAll()
+        }
+        if options.printSummary {
+            log("custom-cursor summary customImage=set hidden=manual themeDefault=manual")
+        }
+        log("result: pass")
+        log("cleanup: pass")
     }
 
     nonisolated private static func consumeDisplayEvents(
@@ -124,9 +142,11 @@ enum CustomCursorSmoke {
         for y in 0..<32 {
             for x in 0..<32 {
                 let index = (y * 32) + x
-                if x == y || x == 0 || y == 0 {
+                if x == y {
                     pixels[index] = 0x00FF_FFFF
-                } else if x < 16 && y < 16 {
+                } else if x == 0 || y == 0 {
+                    pixels[index] = 0x00FF_FFFF
+                } else if x < 16, y < 16 {
                     pixels[index] = 0x0000_99FF
                 }
             }
