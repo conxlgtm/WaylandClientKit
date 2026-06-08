@@ -33,6 +33,12 @@ public struct CompositorEvidenceSummarizer {
             }
         }
 
+        let incompleteCells = CompositorEvidenceCompletenessVerifier()
+            .incompleteEvidenceCells(markdown: markdown)
+        lines.append("")
+        lines.append("Incomplete evidence:")
+        lines.append(contentsOf: incompleteEvidenceSummary(incompleteCells))
+
         return lines.joined(separator: "\n")
     }
 
@@ -40,8 +46,10 @@ public struct CompositorEvidenceSummarizer {
         let values = cells.map(normalize)
         let pending = values.filter { $0 == "pending" }.count
         let notTested = values.filter { $0 == "not tested" || $0 == "not run" }.count
+        let environmentSkips = values.filter { $0.contains("environment skip") }.count
+        let manualGaps = values.filter { $0.contains("manual interaction required") }.count
         let failed = values.filter { $0.hasPrefix("fail") || $0.contains("failed") }.count
-        let available = values.count - pending - notTested - failed
+        let available = values.count - pending - notTested - environmentSkips - manualGaps - failed
 
         var parts: [String] = []
         if available > 0 {
@@ -53,10 +61,62 @@ public struct CompositorEvidenceSummarizer {
         if notTested > 0 {
             parts.append("\(notTested) not tested")
         }
+        if environmentSkips > 0 {
+            let label = summaryLabel(marker: "environment skip", count: environmentSkips)
+            parts.append("\(environmentSkips) \(label)")
+        }
+        if manualGaps > 0 {
+            let label = summaryLabel(marker: "manual interaction required", count: manualGaps)
+            parts.append("\(manualGaps) \(label)")
+        }
         if failed > 0 {
             parts.append("\(failed) failed")
         }
         return parts.isEmpty ? "no cells" : parts.joined(separator: ", ")
+    }
+
+    private func incompleteEvidenceSummary(
+        _ cells: [CompositorEvidenceCompletenessVerifier.IncompleteEvidenceCell]
+    ) -> [String] {
+        guard !cells.isEmpty else {
+            return ["- none"]
+        }
+
+        let markerOrder = [
+            "pending",
+            "not tested",
+            "not run",
+            "environment skip",
+            "manual interaction required",
+        ]
+        let counts = Dictionary(grouping: cells, by: \.marker).mapValues(\.count)
+        let countParts = markerOrder.compactMap { marker -> String? in
+            guard let count = counts[marker], count > 0 else { return nil }
+            return "\(count) \(summaryLabel(marker: marker, count: count))"
+        }
+
+        var lines = ["- \(countParts.joined(separator: ", "))"]
+        lines.append(contentsOf: cells.prefix(8).map { "- \($0.description)" })
+        let remainingCount = cells.count - min(cells.count, 8)
+        if remainingCount > 0 {
+            lines.append("- \(remainingCount) more incomplete evidence cells")
+        }
+        return lines
+    }
+
+    private func summaryLabel(marker: String, count: Int) -> String {
+        switch marker {
+        case "environment skip":
+            count == 1 ? "environment skip" : "environment skips"
+        case "manual interaction required":
+            count == 1 ? "manual interaction gap" : "manual interaction gaps"
+        case "not tested":
+            "not tested"
+        case "not run":
+            "not run"
+        default:
+            marker
+        }
     }
 
     private func graphicsStatusSummary(row: MarkdownTableRow) -> String {
@@ -126,7 +186,13 @@ public struct CompositorEvidenceCompletenessVerifier {
 
     private static func incompleteMarker(in value: String) -> String? {
         let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        for marker in ["pending", "not tested", "not run"] where normalized.contains(marker) {
+        for marker in [
+            "pending",
+            "not tested",
+            "not run",
+            "environment skip",
+            "manual interaction required",
+        ] where normalized.contains(marker) {
             return marker
         }
         return nil

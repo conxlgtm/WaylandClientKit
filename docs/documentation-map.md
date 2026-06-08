@@ -36,6 +36,7 @@ The [docs](.) directory contains project operation and design records:
 - [Architecture](architecture.md)
 - [Compatibility policy](compatibility-policy.md)
 - [Foundation candidate status](foundation-candidate-status.md)
+- [Foundation evidence report](foundation-evidence-report.md)
 - [Release process](release.md)
 - [Tooling](tooling.md)
 - [Public API audit](public-api-audit.md)
