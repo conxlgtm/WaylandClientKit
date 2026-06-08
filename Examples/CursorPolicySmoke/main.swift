@@ -1,5 +1,6 @@
 import Foundation
 import WaylandClient
+import WaylandExampleSupport
 
 @main
 enum CursorPolicySmoke {
@@ -8,48 +9,68 @@ enum CursorPolicySmoke {
     nonisolated private static let middleButton = PointerButtonCode(rawValue: 0x112)
 
     static func main() async throws {
+        let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
         let cursorConfiguration = CursorConfiguration(
             scalePolicy: .matchFocusedOutput,
             fallbackCursor: .defaultArrow
         )
 
-        try await WaylandDisplay.withConnection(cursorConfiguration: cursorConfiguration) {
-            display in
-            let capabilities = try await display.capabilities()
-            log("feature: cursor-policy")
-            log("capability: cursor-shape \(capabilities.cursorShape)")
-            log(
-                "capabilities cursorShape=\(capabilities.cursorShape) "
-                    + "scalePolicy=\(cursorConfiguration.scalePolicy)"
-            )
-            log("operation: configure-scale-policy pass")
-
-            let window = try await display.createTopLevelWindow(
-                configuration: try WindowConfiguration(
-                    title: "SwiftWayland Cursor Policy Smoke",
-                    appID: "swift-wayland-cursor-policy-smoke",
-                    initialWidth: 360,
-                    initialHeight: 220,
-                    closeRequestPolicy: .requestOnly
-                )
-            )
-            try await show(window)
-
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                group.addTask { try await consumeDisplayEvents(display.events, window: window) }
-                group.addTask {
-                    try await consumeInputEvents(
-                        display.inputEvents,
-                        window: window,
-                        display: display
-                    )
-                }
-                _ = try await group.next()
-                group.cancelAll()
-            }
-            log("result: pass")
-            log("cleanup: pass")
+        try await WaylandDisplay.withConnection(
+            cursorConfiguration: cursorConfiguration
+        ) { display in
+            try await run(
+                display: display, options: options, cursorConfiguration: cursorConfiguration)
         }
+    }
+
+    nonisolated private static func run(
+        display: WaylandDisplay,
+        options: ExampleRunOptions,
+        cursorConfiguration: CursorConfiguration
+    ) async throws {
+        let capabilities = try await display.capabilities()
+        log("feature: cursor-policy")
+        log("capability: cursor-shape \(capabilities.cursorShape)")
+        log(
+            "capabilities cursorShape=\(capabilities.cursorShape) "
+                + "scalePolicy=\(cursorConfiguration.scalePolicy)"
+        )
+        log("operation: configure-scale-policy pass")
+
+        let window = try await display.createTopLevelWindow(
+            configuration: try WindowConfiguration(
+                title: "SwiftWayland Cursor Policy Smoke",
+                appID: "swift-wayland-cursor-policy-smoke",
+                initialWidth: 360,
+                initialHeight: 220,
+                closeRequestPolicy: .requestOnly
+            )
+        )
+        try await show(window)
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask { try await consumeDisplayEvents(display.events, window: window) }
+            group.addTask {
+                try await consumeInputEvents(
+                    display.inputEvents,
+                    window: window,
+                    display: display
+                )
+            }
+            if let seconds = options.autoCloseSeconds {
+                group.addTask {
+                    try await Task.sleep(for: .seconds(seconds))
+                    await window.close()
+                }
+            }
+            _ = try await group.next()
+            group.cancelAll()
+        }
+        if options.printSummary {
+            log("cursor-policy summary scalePolicy=matchFocusedOutput interactions=manual")
+        }
+        log("result: pass")
+        log("cleanup: pass")
     }
 
     nonisolated private static func consumeDisplayEvents(
