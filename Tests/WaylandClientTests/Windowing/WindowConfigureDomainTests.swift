@@ -88,16 +88,57 @@ struct WindowConfigureDomainTests {
 
         let snapshot = WindowStateSnapshot(
             configuration,
-            outputIDs: [OutputID(rawValue: 2), OutputID(rawValue: 1)]
+            outputIDs: [OutputID(rawValue: 2), OutputID(rawValue: 1)],
+            title: "Session Window",
+            appID: "dev.swiftwayland.session"
         )
         let expectedSize = try PositiveLogicalSize(width: 640, height: 480)
 
+        #expect(snapshot.title == "Session Window")
+        #expect(snapshot.appID == "dev.swiftwayland.session")
         #expect(snapshot.configureSerial == 42)
         #expect(snapshot.size == expectedSize)
         #expect(snapshot.states == [.activated])
         #expect(snapshot.managerCapabilities == [.maximize])
         #expect(snapshot.decorationMode == .serverSide)
         #expect(snapshot.outputs == [OutputID(rawValue: 2), OutputID(rawValue: 1)])
+    }
+
+    @Test
+    func restorationSnapshotCopiesWindowFacts() throws {
+        let state = WindowStateSnapshot(
+            configureSerial: 42,
+            size: try PositiveLogicalSize(width: 640, height: 480),
+            states: [.activated],
+            bounds: nil,
+            managerCapabilities: [.maximize],
+            decorationMode: .serverSide,
+            outputs: [OutputID(rawValue: 7)],
+            title: "Restored Window",
+            appID: "dev.swiftwayland.restored"
+        )
+        let geometry = try SurfaceGeometry(
+            logicalSize: try PositiveLogicalSize(width: 640, height: 480),
+            scale: .one
+        )
+
+        let snapshot = WindowRestorationSnapshot(
+            windowID: WindowID(rawValue: 3),
+            title: state.title,
+            appID: state.appID,
+            geometry: geometry,
+            state: state,
+            decorationMode: .serverSide,
+            outputs: state.outputs
+        )
+
+        #expect(snapshot.windowID == WindowID(rawValue: 3))
+        #expect(snapshot.title == "Restored Window")
+        #expect(snapshot.appID == "dev.swiftwayland.restored")
+        #expect(snapshot.geometry == geometry)
+        #expect(snapshot.state == state)
+        #expect(snapshot.decorationMode == .serverSide)
+        #expect(snapshot.outputs == [OutputID(rawValue: 7)])
     }
 
     @Test

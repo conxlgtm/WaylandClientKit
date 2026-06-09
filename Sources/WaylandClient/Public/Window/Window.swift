@@ -348,6 +348,12 @@ public struct Window: Sendable, Hashable {
         }
     }
 
+    public var restorationSnapshot: WindowRestorationSnapshot {
+        get async throws {
+            try await display.windowRestorationSnapshot(id)
+        }
+    }
+
     public static func == (lhs: Window, rhs: Window) -> Bool {
         lhs.ownership == rhs.ownership
     }

@@ -14,6 +14,7 @@ public struct ExampleBuilder {
         "PointerCaptureSmoke",
         "PresentationFeedbackAnimation",
         "SerialActionsProbe",
+        "SessionStateSmoke",
         "SubsurfaceSmoke",
         "SurfaceRegionSmoke",
         "SwiftWaylandDemo",

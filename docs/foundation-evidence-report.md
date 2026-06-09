@@ -60,6 +60,7 @@ KDE/KWin protocol facts from `wayland-info`:
 Feature smoke examples were run under KDE/KWin with `--auto-close
 --print-summary --duration-seconds 1` where supported:
 
+- `SessionStateSmoke`
 - `SurfaceRegionSmoke`
 - `DamageRegionSmoke`
 - `SubsurfaceSmoke`
@@ -127,6 +128,11 @@ KDE/KWin passed bounded smoke for:
 
 Remaining live interaction gaps:
 
+- Local session readiness is covered by public restoration snapshots and
+  `SessionStateSmoke`. The save and restore passes both ran on KDE/KWin with
+  `/tmp/swiftwayland-session-state-smoke` as the state-root override. Compositor
+  session-management protocol API remains
+  deferred until protocol and framework evidence are stronger.
 - Pointer lock and confine need manual motion proof beyond unattended
   capability and lifecycle smoke.
 - Serial-sensitive move, resize, menu, and drag-source request paths need manual

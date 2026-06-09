@@ -12,6 +12,8 @@ layout.
   dependency checks to a small window that draws pixels.
 - [Which API Should I Use?](which-api-should-i-use.md): task-oriented guide
   that maps common app/framework needs to public SwiftWayland APIs.
+- [Session Readiness](session-readiness.md): app/window restoration boundary for
+  future framework authors.
 
 ## Public API Reference And Concepts
 
@@ -59,6 +61,7 @@ Canonical examples by feature:
 | --- | --- |
 | Basic software window and input | [SwiftWaylandDemo](../Examples/SwiftWaylandDemo/main.swift) |
 | Framework host loop | [FrameworkHostSmoke](../Examples/FrameworkHostSmoke/main.swift) |
+| Session state and restoration facts | [SessionStateSmoke](../Examples/SessionStateSmoke/main.swift) |
 | Presentation timing | [PresentationFeedbackAnimation](../Examples/PresentationFeedbackAnimation/main.swift) |
 | Text input | [TextInputSmoke](../Examples/TextInputSmoke/main.swift) |
 | Data transfer and drag icons | [DataTransferSmoke](../Examples/DataTransferSmoke/main.swift) |
@@ -88,6 +91,7 @@ Every public feature family should have one conceptual home:
 | Presentation feedback and animation | [Presentation Feedback And Frame Callbacks](../Sources/WaylandClient/WaylandClient.docc/PresentationFeedbackAndFrameCallbacks.md) |
 | Diagnostics and event overflow | [Diagnostics And Display Failures](../Sources/WaylandClient/WaylandClient.docc/DiagnosticsAndDisplayFailures.md), [Event Streams And Overflow](../Sources/WaylandClient/WaylandClient.docc/EventStreamsAndOverflow.md) |
 | Graphics preview | [Graphics Preview Overview](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/GraphicsPreviewOverview.md) |
+| App/window restoration facts | [Session Readiness](../Sources/WaylandClient/WaylandClient.docc/SessionReadiness.md) |
 
 If a new public API family is added, add or update its canonical conceptual doc
 first, then link examples and maintainer evidence from that doc.

@@ -148,6 +148,8 @@ The current baseline already has meaningful substrate pieces:
   accept damage, regions, metadata, and submit constraints
 - xdg-activation protocol XML, raw manager/token binding, public capability
   reporting, public token request and activate APIs, and `XDGActivationSmoke`
+- public window restoration snapshots and `SessionStateSmoke` for local
+  framework-owned session state without compositor session-management API
 - relative pointer and pointer-constraint protocol XML, raw wrappers, public
   capability reporting, typed input events, managed lock/confine requests, and
   `PointerCaptureSmoke`
@@ -175,8 +177,8 @@ Known foundation gaps:
   metadata protocols beyond local unit and smoke reporting
 - public cursor animation
 - tablet and pointer-warp protocols
-- xdg-session-management design and session integration where needed by app
-  launch and restoration workflows
+- compositor session-management protocol design and evidence where needed by
+  app launch and restoration workflows
 - compositor matrix coverage beyond headless Weston
 - public DocC reference documentation
 - compatibility and release policy for stable client APIs and preview graphics
@@ -290,7 +292,7 @@ support tier. These are related facts, not the same fact.
 | `zwp_text_input_manager_v3` | legacy unstable, active minor updates | optional foundation | public typed text-input API | live IME path where feasible | version-gated additions; preserve unknown values |
 | `wp_cursor_shape_manager_v1` | staging | optional foundation | public cursor capability and requests | unit plus live where advertised | allow version-gated additions |
 | `xdg_activation_v1` | staging | optional desktop integration | public capability, token request, and activate APIs | unit and live where advertised | staging protocol, product API review required |
-| `xx_session_manager_v1` or promoted successor | experimental/staging as upstream evolves | preview | typed optional API only behind preview policy | smoke where available | expected to change |
+| `xx_session_manager_v1` or promoted successor | experimental/staging as upstream evolves | deferred preview | no public API until XML, compositor evidence, and framework usage shape are clear | protocol-watch matrix first, smoke when available | expected to change |
 | `wp_pointer_warp_v1` | staging | preview/advanced input | capability-gated only | use-case gated tests | allow source/API change while preview |
 
 Every protocol entry should be updated when vendored or generated. The manifest
@@ -1030,8 +1032,9 @@ Protocol candidates:
 Required behavior:
 
 - expose xdg activation as a typed app-client API
-- expose session-management tokens/restoration facts without owning document
-  lifecycle
+- expose local restoration facts without owning document lifecycle
+- defer compositor session-management tokens until protocol evidence and
+  framework usage shape are clear
 - expose toplevel icon and dialog metadata only as protocol-shaped desktop
   integration facts
 - distinguish output observation from output control

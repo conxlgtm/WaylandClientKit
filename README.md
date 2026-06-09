@@ -29,6 +29,8 @@ input events, and closes cleanly.
 - [Getting Started](docs/getting-started.md): a linear first-client path.
 - [Which API Should I Use?](docs/which-api-should-i-use.md): task-to-API guide
   for common app and framework needs.
+- [Session Readiness](docs/session-readiness.md): local app/window restoration
+  facts for future framework authors without compositor session-management API.
 - [WaylandClient DocC](Sources/WaylandClient/WaylandClient.docc/WaylandClient.md):
   public app-substrate concepts and API reference.
 - [WaylandGraphicsPreview DocC](Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md):
@@ -84,6 +86,7 @@ Current experimental baseline:
 - desktop integration hooks for toplevel icons, idle inhibition, and system bell
 - compose and dead-key text results for interpreted keyboard events
 - display, input, data-transfer, text-input, and diagnostic event streams
+- window restoration snapshots for framework-owned local session state
 - framework-host guidance and external consumer checks for packages building above `WaylandClient`
 - minimal DocC catalog and public API baseline checks
 - noninteractive Wayland smoke executable
@@ -104,7 +107,8 @@ For packages building a GUI layer on top of SwiftWayland, see
 widgets, layout, or a scene graph.
 The framework-facing examples cover multi-window hosting, client-side resize
 chrome, serial-sensitive window actions, text input, data transfer, and
-presentation-feedback animation.
+presentation-feedback animation. `Examples/SessionStateSmoke` demonstrates
+app-owned state storage and public window restoration facts.
 
 ## Support Matrix
 
