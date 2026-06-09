@@ -79,6 +79,23 @@ example or manual probe has been run:
 | KDE / KWin | KDE / plasma session, 2026-06-08 | `wayland-info`: dmabuf v5, linux-drm-syncobj v1, FIFO v1, presentation v2, text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1, top-level icon v1, idle inhibit v1, system bell v1, xdg activation v1, color metadata advertised, commit timing unavailable | `swift run swl smoke live`, `swift run swl smoke integration`, and `swift run swl smoke gpu-preview` passed | live integration smoke passed | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported active managed GPU submission | Active GPU presentation proven for clear-frame submission on this run. |
 | Sway / wlroots | environment skip(sway unavailable in Nix/dev shell on 2026-06-08 host) | environment skip(sway unavailable) | environment skip(sway unavailable) | environment skip(sway unavailable) | environment skip(sway unavailable) | wlroots target still needed for foundation readiness. |
 
+## Session Management Protocol Watch
+
+SwiftWayland supports local framework-owned state through public restoration
+snapshots and `SessionStateSmoke`. Compositor session-management protocol API is
+deferred until protocol evidence is strong enough to keep the public boundary
+honest.
+
+KDE/KWin live session evidence on 2026-06-08: `SessionStateSmoke --auto-close
+--print-summary --duration-seconds 1 --state-root /tmp/swiftwayland-session-state-smoke`
+and the same command with `--restore` both passed. The run captured title, app
+ID, logical geometry, scale, and output membership, then closed with
+`remainingWindows=0`.
+
+| Protocol | Upstream phase | Vendored XML | Public API | Evidence needed before API |
+| -------- | -------------- | ------------ | ---------- | -------------------------- |
+| `xx_session_manager_v1` or promoted successor | experimental or staging as upstream evolves | not vendored | deferred | compositor advertisement rows, smoke behavior, and a framework usage shape that does not confuse compositor session events with local scene restoration |
+
 ## Framework Host Evidence
 
 Use this table for framework-facing behavior that is not captured by generic
