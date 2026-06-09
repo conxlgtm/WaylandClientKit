@@ -61,7 +61,9 @@ print(snapshot.geometry.logicalSize)
 ```
 
 Persist framework-owned state under `XDG_STATE_HOME` or the platform state root
-your app chooses. SwiftWayland does not encode scene or document state.
+your app chooses. Ignore relative `XDG_STATE_HOME` values and fall back to the
+platform state root, because XDG base-directory environment paths must be
+absolute. SwiftWayland does not encode scene or document state.
 
 ## Expected Errors
 

@@ -39,10 +39,10 @@ framework to make those decisions.
 ## App-Owned State Location
 
 Use `XDG_STATE_HOME` for user-specific state that should persist across
-application restarts but is not portable user data. If `XDG_STATE_HOME` is unset
-or empty, use `$HOME/.local/state`. The XDG Base Directory specification defines
-this state directory for persistent local state such as view and layout state,
-logs, history, and similar restart facts:
+application restarts but is not portable user data. If `XDG_STATE_HOME` is unset,
+empty, or relative, ignore it and use `$HOME/.local/state`. The XDG Base
+Directory specification defines this state directory for persistent local state
+such as view and layout state, logs, history, and similar restart facts:
 <https://specifications.freedesktop.org/basedir-spec/0.8/>
 
 A framework can store state under a stable app directory such as:
@@ -52,7 +52,9 @@ $XDG_STATE_HOME/org.example.App/session.json
 ```
 
 SwiftWayland examples use an override for tests and smoke runs. Real frameworks
-should let apps choose their own state schema and migration policy.
+should let apps choose their own state schema and migration policy. The
+`SessionStateSmoke --state-root` override requires an absolute path so smoke
+runs cannot accidentally write restore data relative to the current directory.
 
 ## Public Facts To Persist
 
