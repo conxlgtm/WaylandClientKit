@@ -25,6 +25,8 @@ baseline.
   syncobj, file descriptor, or unsafe implementation handles.
 - `WaylandGraphicsPreview` must remain renderer-neutral and raw-handle-free.
 - Public docs must explain new public behavior before release notes claim it.
+- Restoration and session-readiness APIs are platform facts. They must not
+  promise scene, document, or compositor session-management policy.
 
 ## External Client Rules
 

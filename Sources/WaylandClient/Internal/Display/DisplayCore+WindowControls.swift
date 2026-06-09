@@ -5,6 +5,12 @@ extension DisplayCore {
         }
     }
 
+    func windowRestorationSnapshot(_ windowID: WindowID) throws -> WindowRestorationSnapshot {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID).restorationSnapshotOnOwnerThread
+        }
+    }
+
     func setWindowTitle(_ windowID: WindowID, _ title: WaylandString) throws {
         try withFatalFailureFinalization {
             try requireOpenWindow(windowID).setTitleOnOwnerThread(title)

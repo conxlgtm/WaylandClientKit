@@ -181,9 +181,10 @@ struct ToolingConvergenceTests {
     @Test
     func exampleBuilderTracksEveryExampleExecutable() {
         #expect(ExampleBuilder.targets.contains("CustomCursorSmoke"))
+        #expect(ExampleBuilder.targets.contains("SessionStateSmoke"))
         #expect(ExampleBuilder.targets.contains("SubsurfaceSmoke"))
         #expect(ExampleBuilder.targets.contains("SwiftWaylandDemo"))
-        #expect(ExampleBuilder.targets.count == 21)
+        #expect(ExampleBuilder.targets.count == 22)
     }
 
     @Test

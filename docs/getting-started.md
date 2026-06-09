@@ -133,6 +133,8 @@ runtime facts, not as proof that the client has become unusable.
   drawing and input loop.
 - [FrameworkHostSmoke](../Examples/FrameworkHostSmoke/main.swift) for a small
   framework-host style loop above `WaylandClient`.
+- [SessionStateSmoke](../Examples/SessionStateSmoke/main.swift) for saving and
+  restoring app-owned window facts with `XDG_STATE_HOME`.
 - [PresentationFeedbackAnimation](../Examples/PresentationFeedbackAnimation/main.swift)
   for frame callbacks and presentation feedback.
 - [TextInputSmoke](../Examples/TextInputSmoke/main.swift) for compositor IME

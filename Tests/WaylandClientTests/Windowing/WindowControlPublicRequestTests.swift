@@ -226,6 +226,23 @@
         }
 
         @Test
+        func windowRestorationSnapshotThrowsBeforeInitialConfigure() async throws {
+            try await withWindowControlConnection { _, window in
+                do {
+                    _ = try await window.restorationSnapshot
+                    Issue.record("Expected restoration snapshot before initial configure to throw.")
+                } catch ClientError.window(
+                    window.id,
+                    .invalidLifecycleTransition(.mapBeforeInitialConfigure)
+                ) {
+                    // Expected before the first compositor configure.
+                } catch {
+                    Issue.record("Expected map-before-configure error, got \(error).")
+                }
+            }
+        }
+
+        @Test
         func requestInteractiveMoveUsesSeatAndSerial() async throws {
             try await withWindowControlConnection { display, window in
                 try await withSeatForRecordedRequest(in: display, windowID: window.id) { seat in

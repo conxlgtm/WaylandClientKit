@@ -29,6 +29,7 @@ public struct DocumentationCoverageVerifier {
         "docs/public-api-audit.md",
         "docs/public-api-baseline.md",
         "docs/release.md",
+        "docs/session-readiness.md",
         "docs/strict-memory-safety-audit.md",
         "docs/tooling.md",
         "docs/which-api-should-i-use.md",
@@ -43,6 +44,7 @@ public struct DocumentationCoverageVerifier {
         "Sources/WaylandClient/WaylandClient.docc/InputAndTextInput.md",
         "Sources/WaylandClient/WaylandClient.docc/PointerCapture.md",
         "Sources/WaylandClient/WaylandClient.docc/PresentationFeedbackAndFrameCallbacks.md",
+        "Sources/WaylandClient/WaylandClient.docc/SessionReadiness.md",
         "Sources/WaylandClient/WaylandClient.docc/Subsurfaces.md",
         "Sources/WaylandClient/WaylandClient.docc/SurfaceRegionsAndDamage.md",
         "Sources/WaylandClient/WaylandClient.docc/TextInputLifecycle.md",
@@ -72,8 +74,20 @@ public struct DocumentationCoverageVerifier {
             description: "README links to framework host contract"),
         RequiredPhrase(
             path: "README.md",
+            phrase: "docs/session-readiness.md",
+            description: "README links to session readiness"),
+        RequiredPhrase(
+            path: "README.md",
             phrase: "docs/building-a-gui-layer.md",
             description: "README links to GUI layer guidance"),
+        RequiredPhrase(
+            path: "docs/session-readiness.md",
+            phrase: "XDG_STATE_HOME",
+            description: "session readiness documents app-owned state root"),
+        RequiredPhrase(
+            path: "docs/session-readiness.md",
+            phrase: "Activation tokens are compositor-mediated focus or raise requests",
+            description: "session readiness separates activation from restoration"),
         RequiredPhrase(
             path: "Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/"
                 + "WaylandGraphicsPreview.md",
