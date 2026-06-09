@@ -28,12 +28,12 @@ enough; active GPU claims must be backed by public runtime-path output.
 | User learning path | done | [getting-started.md](getting-started.md), [which-api-should-i-use.md](which-api-should-i-use.md), [documentation-map.md](documentation-map.md) | Keep README as portal, not full manual. |
 | Session readiness | done | [session-readiness.md](session-readiness.md), `SessionStateSmoke`, `WindowRestorationSnapshot` | Keep compositor session-management protocol API deferred until protocol evidence and framework usage shape are clear. |
 | Managed GPU setup code path | done | Managed GPU attempts surface feedback, render-node, GBM/EGL, dmabuf import, owner-thread commit, and typed fallback. | Keep runtime-path truth tests current. |
-| Managed GPU active proof | partial | [compositor-matrix.md](compositor-matrix.md) records active managed GPU clear-frame submission on KDE/KWin and `dmabufUnavailable` fallback under headless Weston. | Add at least one more desktop or wlroots active/fallback/failure row before foundation-candidate claims. |
-| Compositor matrix minimum | partial | [compositor-matrix.md](compositor-matrix.md) records fresh headless Weston plus KDE/KWin rows and separates protocol advertisement from active runtime facts. | Replace GNOME/Mutter and Sway/wlroots environment skips with current runs when those sessions are available. |
+| Managed GPU active proof | partial | [compositor-matrix.md](compositor-matrix.md) records active managed GPU clear-frame submission on KDE/KWin and nested Sway/wlroots, plus `dmabufUnavailable` fallback under headless Weston. | Add GNOME/Mutter active/fallback/failure evidence and managed GPU resize/reconfigure stress before foundation-candidate claims. |
+| Compositor matrix minimum | partial | [compositor-matrix.md](compositor-matrix.md) records fresh headless Weston, KDE/KWin, and nested Sway/wlroots rows and separates protocol advertisement from active runtime facts. | Replace the GNOME/Mutter environment skip with a current run and complete manual interaction rows. |
 | External consumer evidence | partial | Public and graphics preview integration clients are part of `swl ci check`. | Keep external clients hardware-independent. |
 | Release checks | partial | `swift run swl ci release`, `swift run swl examples build`, release docs. | Keep release gates runnable while evidence remains incomplete. |
 | Foundation-candidate gate | partial | `swift run swl ci foundation-check` fails while the compositor matrix has incomplete cells, explicit environment skips, or manual-interaction gaps. | Complete remaining compositor and interaction evidence before claiming foundation readiness. |
-| Sanitizer checks | partial | TSan/ASan commands documented in [release.md](release.md). | Run where environment supports them and record skips. |
+| Sanitizer checks | partial | 2026-06-09 pass recorded TSan and ASan `detect_leaks=0` passes; LSan was unusable in this environment during SwiftPM test discovery. | Keep TSan/ASan current and rerun LSan in an environment where LeakSanitizer works. |
 | Toolchain baseline | done | `swift run swl tools toolchain-smoke`; Swift 6.3.2 required baseline. | Keep 6.4/main snapshots optional and allowed-failure. |
 | Known non-goals | done | README, DocC, compatibility policy. | Keep widgets, layout, renderer abstraction, scene graph, styling, and accessibility semantic tree out of scope. |
 
@@ -56,31 +56,46 @@ Implemented:
 
 Still needs broader evidence:
 
-- Active managed GPU backing beyond the current KDE/KWin run.
-- Managed GPU behavior on GNOME/Mutter and Sway/wlroots.
+- Managed GPU behavior on GNOME/Mutter.
 - Active managed GPU backing under headless Weston is not expected while dmabuf
   is unavailable there; keep the typed fallback row current.
 - Explicit sync, FIFO, and commit-timing activation on real compositors.
 - Broad live resize/reconfiguration behavior for GPU buffers.
 
-## 2026-06-08 Evidence Pass
+## 2026-06-09 Evidence Pass
 
-Ran under Nix with Swift 6.3.2. KDE/KWin on `wayland-0` advertised dmabuf v5,
+Ran under Swift 6.3.2. KDE/KWin on `wayland-0` advertised dmabuf v5,
 linux-drm-syncobj v1, FIFO v1, presentation v2, text-input v3 v1,
 cursor-shape v2, pointer constraints v1, relative pointer v1, top-level icon
 v1, idle inhibit v1, system bell v1, xdg activation v1, and color metadata.
-Commit timing was unavailable.
+Commit timing was unavailable. Nested Sway/wlroots on `wayland-1` advertised
+dmabuf v4, linux-drm-syncobj v1, presentation v2, text-input v3 v1,
+cursor-shape v1, pointer constraints v1, relative pointer v1, idle inhibit v1,
+xdg activation v1, and content type, alpha, and tearing metadata.
 
 KDE/KWin passed `swl smoke live`, `swl smoke integration`, `swl smoke
-gpu-preview`, the graphics preview examples, and the bounded feature smoke
-targets listed in [compositor-matrix.md](compositor-matrix.md). Managed GPU
-clear-frame submission reported active.
+gpu-preview`, `swl examples build`, the graphics preview examples, and the
+bounded auto-close feature smoke targets listed in
+[compositor-matrix.md](compositor-matrix.md). Managed GPU clear-frame
+submission reported active. `swift run swl ci check` was attempted on KDE/KWin
+but hung after building `swl` with no child process and no further output.
+
+Nested Sway/wlroots passed `swl smoke live`, `swl smoke integration`, `swl smoke
+gpu-preview`, and both graphics preview examples. Managed GPU clear-frame
+submission reported active in the nested session.
 
 Headless Weston passed live, integration, GPU preview, and the bounded feature
 loop. Managed GPU correctly fell back with `dmabufUnavailable`.
 
-GNOME/Mutter and Sway/wlroots were not available on this host. Those rows are
-recorded as explicit environment skips rather than completed evidence.
+GNOME/Mutter was not available on this host. That row is recorded as an explicit
+environment skip rather than completed evidence.
+
+TSan and ASan with leak detection disabled passed. LSan was unusable in this
+environment because SwiftPM test discovery terminated with a LeakSanitizer fatal
+error during `--dump-tests-json`.
+
+Manual serial-sensitive actions, pointer lock/confine motion, data-transfer
+drag-source/drop/cancel, and managed GPU resize/reconfigure remain unproven.
 
 ## Required Commands
 
