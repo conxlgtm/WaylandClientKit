@@ -2138,8 +2138,9 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L333: `    public var decorationMode: WindowDecorationMode {`
 - L339: `    public var geometry: SurfaceGeometry {`
 - L345: `    public var stateSnapshot: WindowStateSnapshot {`
-- L351: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L355: `    public func hash(into hasher: inout Hasher) {`
+- L351: `    public var restorationSnapshot: WindowRestorationSnapshot {`
+- L357: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L361: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 
@@ -2223,17 +2224,31 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L322: `    public var description: String {`
 - L326: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
 
+### `Sources/WaylandClient/Public/Window/WindowRestorationSnapshot.swift`
+
+- L1: `public struct WindowRestorationSnapshot: Equatable, Sendable {`
+- L2: `    public let windowID: WindowID`
+- L3: `    public let title: String?`
+- L4: `    public let appID: String?`
+- L5: `    public let geometry: SurfaceGeometry`
+- L6: `    public let state: WindowStateSnapshot`
+- L7: `    public let decorationMode: WindowDecorationMode`
+- L8: `    public let outputs: [OutputID]`
+- L10: `    public init(`
+
 ### `Sources/WaylandClient/Public/Window/WindowStateSnapshot.swift`
 
 - L1: `public struct WindowStateSnapshot: Equatable, Sendable {`
-- L2: `    public let configureSerial: UInt32`
-- L3: `    public let size: PositiveLogicalSize`
-- L4: `    public let states: [WindowStateToken]`
-- L5: `    public let bounds: PositiveLogicalSize?`
-- L6: `    public let managerCapabilities: [WindowManagerCapability]`
-- L7: `    public let decorationMode: WindowDecorationMode?`
-- L8: `    public let outputs: [OutputID]`
-- L10: `    public init(`
+- L2: `    public let title: String?`
+- L3: `    public let appID: String?`
+- L4: `    public let configureSerial: UInt32`
+- L5: `    public let size: PositiveLogicalSize`
+- L6: `    public let states: [WindowStateToken]`
+- L7: `    public let bounds: PositiveLogicalSize?`
+- L8: `    public let managerCapabilities: [WindowManagerCapability]`
+- L9: `    public let decorationMode: WindowDecorationMode?`
+- L10: `    public let outputs: [OutputID]`
+- L12: `    public init(`
 
 ### `Sources/WaylandClient/Public/Window/WindowStateToken.swift`
 

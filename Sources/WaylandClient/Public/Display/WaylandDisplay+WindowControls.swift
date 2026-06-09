@@ -3,6 +3,12 @@ extension WaylandDisplay {
         try requireCore().windowStateSnapshot(windowID)
     }
 
+    package func windowRestorationSnapshot(_ windowID: WindowID) throws
+        -> WindowRestorationSnapshot
+    {
+        try requireCore().windowRestorationSnapshot(windowID)
+    }
+
     package func setWindowTitle(_ windowID: WindowID, _ title: WaylandString) throws {
         try requireCore().setWindowTitle(windowID, title)
     }

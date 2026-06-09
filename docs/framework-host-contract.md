@@ -17,7 +17,8 @@ Start with these public APIs:
 - `WaylandDisplay.capabilities()`, `outputs()`, and `diagnostics`
 - `WaylandDisplay.events`, `inputEvents`, `textInputEvents`, and `dataTransferEvents`
 - `WaylandDisplay.createTopLevelWindow(configuration:)`
-- `Window.show`, `redraw`, `requestRedraw`, `needsRedraw`, `geometry`, and `stateSnapshot`
+- `Window.show`, `redraw`, `requestRedraw`, `needsRedraw`, `geometry`,
+  `stateSnapshot`, and `restorationSnapshot`
 - `Window.setInputRegion(_:)`, `setOpaqueRegion(_:)`, and
   `SurfaceDamageRegion` for surface input, opacity, and redraw damage facts
 - `Window.setIcon(_:)`, `Window.inhibitIdle()`, and `Window.ringSystemBell()`
@@ -80,6 +81,12 @@ should use `requestRedraw()` when state changes and wait for
 Use `needsRedraw` as a guard when coalescing invalidations. Use `geometry` and
 `stateSnapshot` after configure/redraw events to update layout inputs. Geometry
 is reported as logical size, buffer-pixel size, and rational scale.
+
+Use `restorationSnapshot` after the initial configure when the framework wants
+to persist app-owned restart facts. The snapshot contains the current title, app
+ID, geometry, decoration mode, output membership, and toplevel state facts.
+Persist framework scene/document state separately under the app state root. See
+[`session-readiness.md`](session-readiness.md).
 
 Input and opaque regions are surface facts, not framework hit testing.
 `setInputRegion(_:)` tells the compositor which logical surface rectangles

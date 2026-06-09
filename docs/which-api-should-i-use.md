@@ -23,6 +23,7 @@ selection, build that in your framework above SwiftWayland.
 | Capture relative pointer or lock/confine | `Window.relativePointer`, `Window.lockPointer`, `Window.confinePointer` | `zwp_relative_pointer_manager_v1`, `zwp_pointer_constraints_v1` | [PointerCaptureSmoke](../Examples/PointerCaptureSmoke/main.swift) |
 | Use clipboard or drag-and-drop | `ClipboardOffer`, `ClipboardSource`, `DragOffer`, `DragSource`, `DragIcon` | `wl_data_device_manager`; primary selection has its own optional gate | [DataTransferSmoke](../Examples/DataTransferSmoke/main.swift) |
 | Request activation/focus handoff | `Window.requestActivationToken`, `Window.activate(using:)` | `xdg_activation_v1` and compositor policy | [XDGActivationSmoke](../Examples/XDGActivationSmoke/main.swift) |
+| Save framework-owned window restore facts | `Window.restorationSnapshot`, `WindowStateSnapshot`, `WindowRestorationSnapshot` | initial window configure must have happened | [SessionStateSmoke](../Examples/SessionStateSmoke/main.swift) |
 | Time animation to real presentation | `Window.requestPresentationFeedback`, `Window.presentationEvents` | `wp_presentation` | [PresentationFeedbackAnimation](../Examples/PresentationFeedbackAnimation/main.swift) |
 | Inspect optional protocol support | `WaylandDisplay.capabilities()` | registry discovery | [Capabilities DocC](../Sources/WaylandClient/WaylandClient.docc/CapabilitiesAndOptionalProtocols.md) |
 | Try renderer-neutral GPU preview | `WaylandGraphicsPreview` values, `WaylandGraphicsWindowBacking`, frame leases | `zwp_linux_dmabuf_v1` plus surface-specific runtime setup | [Graphics preview docs](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md) |
@@ -49,4 +50,5 @@ Your app or framework owns:
 - Layout, widgets, styling, semantic accessibility, retained scene state, and
   renderer choice.
 - Higher-level clipboard/drag MIME policy and text editing model.
+- Scene identity, document identity, state serialization, and restore policy.
 - Retry policy when optional compositor features are missing or rejected.
