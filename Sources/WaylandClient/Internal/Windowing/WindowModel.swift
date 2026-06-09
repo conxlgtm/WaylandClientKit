@@ -6,14 +6,24 @@ struct ReportedUnknownWindowProtocolValue: Hashable, Sendable {
 package struct WindowModel: Equatable, Sendable {
     let id: WindowID
     let fallbackSize: PositiveLogicalSize
+    var title: WaylandString
+    var appID: NonEmptyWaylandString
     var decoration = DecorationState.unavailable(reason: nil)
     var lifecycle = XDGWindowLifecycle.created(.none)
     var publication = WindowPublicationState.notPublished
     var reportedUnknownProtocolValues: Set<ReportedUnknownWindowProtocolValue> = []
 
-    init(id windowID: WindowID, fallbackSize initialSize: PositiveLogicalSize) {
+    init(
+        id windowID: WindowID,
+        fallbackSize initialSize: PositiveLogicalSize,
+        title windowTitle: WaylandString = WaylandString(unchecked: "SwiftWayland Demo"),
+        appID applicationID: NonEmptyWaylandString =
+            NonEmptyWaylandString(unchecked: "swift-wayland-demo")
+    ) {
         id = windowID
         fallbackSize = initialSize
+        title = windowTitle
+        appID = applicationID
     }
 
     var isClosed: Bool {

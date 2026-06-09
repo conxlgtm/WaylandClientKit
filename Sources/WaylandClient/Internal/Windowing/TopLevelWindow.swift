@@ -88,7 +88,9 @@ package final class TopLevelWindow {
         )
         model = WindowModel(
             id: windowID,
-            fallbackSize: windowConfiguration.initialSize
+            fallbackSize: windowConfiguration.initialSize,
+            title: windowConfiguration.title,
+            appID: windowConfiguration.appID
         )
 
         configureState.setSurfaceConfigureHandler { [weak self] in
@@ -1146,7 +1148,28 @@ extension TopLevelWindow {
                 )
             }
 
-            return WindowStateSnapshot(configuration, outputIDs: outputIDsOnOwnerThread)
+            return WindowStateSnapshot(
+                configuration,
+                outputIDs: outputIDsOnOwnerThread,
+                title: model.title.value,
+                appID: model.appID.value
+            )
+        }
+    }
+
+    package var restorationSnapshotOnOwnerThread: WindowRestorationSnapshot {
+        get throws {
+            connection.preconditionIsOwnerThread()
+            let state = try stateSnapshotOnOwnerThread
+            return WindowRestorationSnapshot(
+                windowID: id,
+                title: state.title,
+                appID: state.appID,
+                geometry: try currentSurfaceGeometry(),
+                state: state,
+                decorationMode: model.decorationMode,
+                outputs: outputIDsOnOwnerThread
+            )
         }
     }
 
@@ -1499,11 +1522,13 @@ extension TopLevelWindow {
     package func setTitleOnOwnerThread(_ title: WaylandString) throws {
         connection.preconditionIsOwnerThread()
         try activeTopLevel(for: "setTitle").setTitle(title.value)
+        model.title = title
     }
 
     package func setAppIDOnOwnerThread(_ appID: NonEmptyWaylandString) throws {
         connection.preconditionIsOwnerThread()
         try activeTopLevel(for: "setAppID").setAppID(appID.value)
+        model.appID = appID
     }
 
     package func setMinimumSizeOnOwnerThread(_ size: PositiveLogicalSize?) throws {

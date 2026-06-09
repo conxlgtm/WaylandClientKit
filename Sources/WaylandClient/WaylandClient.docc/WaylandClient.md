@@ -27,8 +27,10 @@ targets. They are not public `WaylandClient` API.
 - <doc:WindowDrawing>
 - <doc:SurfaceRegionsAndDamage>
 - <doc:Subsurfaces>
+- <doc:SessionReadiness>
 - ``Window``
 - ``WindowConfiguration``
+- ``WindowRestorationSnapshot``
 - ``PopupSurface``
 - ``PopupConfiguration``
 - ``Subsurface``

@@ -251,6 +251,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "SessionStateSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/SessionStateSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "XDGActivationSmoke",
             dependencies: ["WaylandClient"],
             path: "Examples/XDGActivationSmoke",

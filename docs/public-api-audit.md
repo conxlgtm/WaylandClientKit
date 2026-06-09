@@ -27,6 +27,8 @@ Intentionally public:
 - `Window`
 - `PopupSurface`
 - `WindowConfiguration`
+- `WindowStateSnapshot`
+- `WindowRestorationSnapshot`
 - `WindowDecorationPreference`
 - `WindowDecorationMode`
 - `PopupConfiguration`
@@ -146,11 +148,12 @@ Current user-facing contract:
 - Display connection, window creation and close, request-redraw, software
   XRGB8888 drawing, basic pointer/keyboard/touch events, interpreted keyboard
   payloads, server-side decoration negotiation, scale-aware window geometry,
-  popup surfaces, presentation feedback, regular clipboard selection, primary
-  selection, receive-side and source-side drag-and-drop data transfer, drag icon
-  surfaces, xdg activation, relative pointer, pointer lock/confine, cursor
-  requests, text-input sessions and events, diagnostics, and terminal display
-  errors are the current product surface.
+  popup surfaces, restoration snapshots, presentation feedback, regular
+  clipboard selection, primary selection, receive-side and source-side
+  drag-and-drop data transfer, drag icon surfaces, xdg activation, relative
+  pointer, pointer lock/confine, cursor requests, text-input sessions and
+  events, diagnostics, and terminal display errors are the current product
+  surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
   are derived display text, not control-flow payloads.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
@@ -388,6 +391,10 @@ Notes:
   reports `ActivationError.displayClosed`.
   The previous `WaylandCapabilities` initializer remains available and defaults
   `xdgActivation` to unavailable for source compatibility.
+- `WindowRestorationSnapshot` is a platform-fact bundle for framework-owned
+  local restoration. It includes window identity, title, app ID, geometry,
+  state, decoration mode, and output membership without defining scene,
+  document, placement, or restore policy.
 - Primary selection offers are seat-scoped and expire when the compositor sends
   a null selection or focus changes. `PrimarySelectionOffer.read` uses the same
   bounded transfer rules as clipboard reads, and `PrimarySelectionSourceConfiguration`
