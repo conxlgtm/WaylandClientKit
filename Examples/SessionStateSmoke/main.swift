@@ -6,6 +6,7 @@ import WaylandExampleSupport
 enum SessionStateSmoke {
     nonisolated fileprivate static let defaultAppID = "org.swiftwayland.SessionStateSmoke"
     nonisolated fileprivate static let defaultTitle = "SwiftWayland Session State Smoke"
+    nonisolated private static let closeObservationGrace: Duration = .seconds(2)
 
     static func main() async throws {
         let options = try SessionStateOptions.parse(CommandLine.arguments.dropFirst())
@@ -38,22 +39,17 @@ enum SessionStateSmoke {
             }
 
             let snapshot = try await window.restorationSnapshot
-            let nextState = SavedSessionState(snapshot: snapshot, restored: savedState != nil)
-            try save(nextState, to: stateFile)
 
-            log("operation: capture-restoration-snapshot pass")
-            log("window: \(snapshot.windowID)")
-            log("title: \(snapshot.title ?? "unknown")")
-            log("app-id: \(snapshot.appID ?? "unknown")")
-            log("geometry: \(snapshot.geometry)")
-            log("outputs: \(snapshot.outputs.map(\.description).joined(separator: ","))")
+            log("operation: capture-initial-restoration-snapshot pass")
+            logSnapshot(snapshot)
             log("state-file: \(stateFile.path)")
 
             try await runUntilClosed(
                 display: display,
                 window: window,
                 options: options.runOptions,
-                stateFile: stateFile
+                stateFile: stateFile,
+                restored: savedState != nil
             )
         }
     }
@@ -74,25 +70,47 @@ enum SessionStateSmoke {
         display: WaylandDisplay,
         window: Window,
         options: ExampleRunOptions,
-        stateFile: URL
+        stateFile: URL,
+        restored: Bool
     ) async throws {
-        try await withThrowingTaskGroup(of: Void.self) { group in
+        var observedClose = false
+        try await withThrowingTaskGroup(of: Bool.self) { group in
             group.addTask {
-                try await consumeDisplayEvents(display.events, window: window)
+                try await consumeDisplayEvents(
+                    display.events,
+                    window: window,
+                    stateFile: stateFile,
+                    restored: restored
+                )
             }
             if let autoCloseSeconds = options.autoCloseSeconds {
                 group.addTask {
                     try await Task.sleep(for: .seconds(autoCloseSeconds))
+                    try await captureAndSaveFinalSnapshot(
+                        window: window,
+                        stateFile: stateFile,
+                        restored: restored
+                    )
                     await window.close()
+                    try await Task.sleep(for: closeObservationGrace)
+                    return false
                 }
             }
 
-            _ = try await group.next()
-            group.cancelAll()
+            while let didObserveClose = try await group.next() {
+                if didObserveClose {
+                    observedClose = true
+                    group.cancelAll()
+                    break
+                }
+                group.cancelAll()
+                break
+            }
         }
 
         if options.printSummary {
-            log("summary: remainingWindows=0 stateFile=\(stateFile.path)")
+            let remainingWindows = observedClose ? 0 : 1
+            log("summary: remainingWindows=\(remainingWindows) stateFile=\(stateFile.path)")
         }
         log("result: pass")
         log("cleanup: pass")
@@ -100,8 +118,10 @@ enum SessionStateSmoke {
 
     nonisolated private static func consumeDisplayEvents(
         _ events: DisplayEvents,
-        window: Window
-    ) async throws {
+        window: Window,
+        stateFile: URL,
+        restored: Bool
+    ) async throws -> Bool {
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             switch event {
@@ -110,15 +130,21 @@ enum SessionStateSmoke {
                     draw(frame, restored: true)
                 }
             case .windowCloseRequested(let windowID) where windowID == window.id:
+                try await captureAndSaveFinalSnapshot(
+                    window: window,
+                    stateFile: stateFile,
+                    restored: restored
+                )
                 await window.close()
             case .windowClosed(let windowID) where windowID == window.id:
-                return
+                return true
             case .diagnostic(let diagnostic):
                 log("diagnostic: \(diagnostic)")
             default:
                 break
             }
         }
+        return false
     }
 
     nonisolated private static func loadState(from url: URL) throws -> SavedSessionState? {
@@ -142,6 +168,26 @@ enum SessionStateSmoke {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(state).write(to: url, options: .atomic)
         log("operation: write-session-state pass")
+    }
+
+    nonisolated private static func captureAndSaveFinalSnapshot(
+        window: Window,
+        stateFile: URL,
+        restored: Bool
+    ) async throws {
+        let snapshot = try await window.restorationSnapshot
+        let nextState = SavedSessionState(snapshot: snapshot, restored: restored)
+        try save(nextState, to: stateFile)
+        log("operation: capture-final-restoration-snapshot pass")
+        logSnapshot(snapshot)
+    }
+
+    nonisolated private static func logSnapshot(_ snapshot: WindowRestorationSnapshot) {
+        log("window: \(snapshot.windowID)")
+        log("title: \(snapshot.title ?? "unknown")")
+        log("app-id: \(snapshot.appID ?? "unknown")")
+        log("geometry: \(snapshot.geometry)")
+        log("outputs: \(snapshot.outputs.map(\.description).joined(separator: ","))")
     }
 
     nonisolated private static func availabilityDescription(
@@ -179,28 +225,29 @@ private struct SessionStateOptions: Equatable, Sendable {
     let stateRoot: String?
 
     static func parse(_ arguments: ArraySlice<String>) throws -> SessionStateOptions {
+        let normalizedArguments = normalizedSwiftRunArguments(arguments)
         var restore = false
         var stateRoot: String?
         var exampleArguments: [String] = []
-        var index = arguments.startIndex
+        var index = normalizedArguments.startIndex
 
-        while index < arguments.endIndex {
-            let argument = arguments[index]
+        while index < normalizedArguments.endIndex {
+            let argument = normalizedArguments[index]
             switch argument {
             case "--restore":
                 restore = true
             case "--state-root":
-                let valueIndex = arguments.index(after: index)
-                guard valueIndex < arguments.endIndex else {
+                let valueIndex = normalizedArguments.index(after: index)
+                guard valueIndex < normalizedArguments.endIndex else {
                     throw ExampleRunOptionError.missingValue(argument)
                 }
-                stateRoot = arguments[valueIndex]
+                stateRoot = normalizedArguments[valueIndex]
                 index = valueIndex
             default:
                 exampleArguments.append(argument)
             }
 
-            arguments.formIndex(after: &index)
+            normalizedArguments.formIndex(after: &index)
         }
 
         return SessionStateOptions(
@@ -208,6 +255,14 @@ private struct SessionStateOptions: Equatable, Sendable {
             restore: restore,
             stateRoot: stateRoot
         )
+    }
+
+    private static func normalizedSwiftRunArguments(_ arguments: ArraySlice<String>) -> [String] {
+        var normalizedArguments = Array(arguments)
+        if normalizedArguments.first == "--" {
+            normalizedArguments.removeFirst()
+        }
+        return normalizedArguments
     }
 
     func stateFile() throws -> URL {
@@ -219,22 +274,10 @@ private struct SessionStateOptions: Equatable, Sendable {
     }
 
     private func stateRootURL() throws -> URL {
-        if let stateRoot, !stateRoot.isEmpty {
-            return URL(fileURLWithPath: stateRoot)
-        }
-
-        let environment = ProcessInfo.processInfo.environment
-        if let xdgStateHome = environment["XDG_STATE_HOME"], !xdgStateHome.isEmpty {
-            return URL(fileURLWithPath: xdgStateHome)
-        }
-
-        guard let home = environment["HOME"], !home.isEmpty else {
-            throw SessionStateSmokeError.missingStateRoot
-        }
-
-        return URL(fileURLWithPath: home)
-            .appendingPathComponent(".local", isDirectory: true)
-            .appendingPathComponent("state", isDirectory: true)
+        try ExampleStateRootResolver(
+            appID: SessionStateSmoke.defaultAppID,
+            explicitRoot: stateRoot
+        ).stateRootURL()
     }
 }
 
@@ -257,16 +300,5 @@ private struct SavedSessionState: nonisolated Codable, Equatable, Sendable {
         scaleDenominator = snapshot.geometry.scale.denominator
         outputs = snapshot.outputs.map(\.description)
         restored = wasRestored
-    }
-}
-
-private enum SessionStateSmokeError: Error, CustomStringConvertible {
-    case missingStateRoot
-
-    var description: String {
-        switch self {
-        case .missingStateRoot:
-            "XDG_STATE_HOME and HOME are unset. Pass --state-root."
-        }
     }
 }
