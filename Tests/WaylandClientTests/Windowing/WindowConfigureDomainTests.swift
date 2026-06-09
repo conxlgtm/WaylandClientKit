@@ -107,15 +107,15 @@ struct WindowConfigureDomainTests {
     @Test
     func restorationSnapshotCopiesWindowFacts() throws {
         let state = WindowStateSnapshot(
-            title: "Restored Window",
-            appID: "dev.swiftwayland.restored",
             configureSerial: 42,
             size: try PositiveLogicalSize(width: 640, height: 480),
             states: [.activated],
             bounds: nil,
             managerCapabilities: [.maximize],
             decorationMode: .serverSide,
-            outputs: [OutputID(rawValue: 7)]
+            outputs: [OutputID(rawValue: 7)],
+            title: "Restored Window",
+            appID: "dev.swiftwayland.restored"
         )
         let geometry = try SurfaceGeometry(
             logicalSize: try PositiveLogicalSize(width: 640, height: 480),

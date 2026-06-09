@@ -10,15 +10,15 @@ public struct WindowStateSnapshot: Equatable, Sendable {
     public let outputs: [OutputID]
 
     public init(
-        title snapshotTitle: String? = nil,
-        appID snapshotAppID: String? = nil,
         configureSerial snapshotConfigureSerial: UInt32,
         size snapshotSize: PositiveLogicalSize,
         states snapshotStates: [WindowStateToken],
         bounds snapshotBounds: PositiveLogicalSize?,
         managerCapabilities snapshotManagerCapabilities: [WindowManagerCapability],
         decorationMode snapshotDecorationMode: WindowDecorationMode?,
-        outputs snapshotOutputs: [OutputID] = []
+        outputs snapshotOutputs: [OutputID] = [],
+        title snapshotTitle: String? = nil,
+        appID snapshotAppID: String? = nil
     ) {
         title = snapshotTitle
         appID = snapshotAppID
@@ -38,15 +38,15 @@ public struct WindowStateSnapshot: Equatable, Sendable {
         appID snapshotAppID: String? = nil
     ) {
         self.init(
-            title: snapshotTitle,
-            appID: snapshotAppID,
             configureSerial: configuration.serial,
             size: configuration.size,
             states: configuration.states,
             bounds: configuration.bounds,
             managerCapabilities: configuration.wmCapabilities,
             decorationMode: configuration.decorationMode,
-            outputs: snapshotOutputs
+            outputs: snapshotOutputs,
+            title: snapshotTitle,
+            appID: snapshotAppID
         )
     }
 }
