@@ -2,7 +2,8 @@
 
 SwiftWayland is an experimental SwiftPM package for Wayland clients on Linux.
 It currently vends the `WaylandClient` library, the source-breaking preview
-`WaylandGraphicsPreview` library, and a noninteractive Wayland smoke executable.
+`WaylandGraphicsPreview` library, the `swl` maintainer CLI, and a
+noninteractive Wayland smoke executable.
 
 ## Quick Start
 
@@ -335,9 +336,11 @@ compatibility library available in the toolchain runtime path.
 
 ## Targets
 
-The package currently vends `WaylandClient` and the preview
-`WaylandGraphicsPreview` library product. Other Swift targets are
-implementation modules used by those products and by tests.
+The package currently vends the `WaylandClient` and preview
+`WaylandGraphicsPreview` library products plus the `swl` and
+`swift-wayland-smoke` executable products. The list below summarizes public
+products and reusable support modules; runnable examples are listed in
+[Commands](#commands).
 
 ```text
 WaylandClient
@@ -349,8 +352,17 @@ WaylandGraphicsPreview
 WaylandSmokeSupport
     command parsing and runtime helper for smoke checks
 
+WaylandExampleSupport
+    shared example option parsing and bounded-run helpers
+
 SwiftWaylandSmoke
     noninteractive Wayland smoke executable
+
+SwiftWaylandTool
+    canonical maintainer CLI executable product exposed as swl
+
+SwiftWaylandToolSupport
+    maintainer command implementation shared by swl and tests
 
 WaylandKeyboard
     xkbcommon-backed keymap and key event interpretation
