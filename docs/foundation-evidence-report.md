@@ -10,19 +10,30 @@ Status: SwiftWayland is not yet a foundation release candidate.
 Decision after this pass: B. SwiftWayland needs one more hardening and evidence
 sprint before framework work.
 
-## Evidence Pass
+## Final Evidence Pass: 2026-06-09
 
-Date: 2026-06-08
+Raw command output for this pass was collected locally under
+`evidence/2026-06-09/`. The raw logs are not committed; each matrix row should
+be traceable to one of those command logs.
 
-Host evidence:
+### Environments
 
-- Nix development shell used Swift 6.3.2.
-- KDE/KWin was available as a live desktop Wayland session on `wayland-0`.
-- Headless Weston 15.0.0 was available through `swl smoke headless`.
-- GNOME/Mutter was unavailable on this host.
-- Sway/wlroots was unavailable in the Nix/dev shell on this host.
+- KDE/KWin: current desktop Wayland session on `wayland-0`; pass for live
+  smoke, integration smoke, GPU preview smoke, examples build, managed GPU
+  active submission, and bounded auto-close feature examples.
+- Weston headless: repeatable headless Weston 15.0.0 path through `swl smoke
+  headless`; pass for live, integration, and GPU preview smoke. This is not a
+  desktop compatibility claim.
+- Sway/wlroots: nested Sway session under KDE/Plasma on `wayland-1`; pass for
+  live smoke, integration smoke, GPU preview smoke, and both graphics preview
+  examples. Feature-specific manual/auto examples were not run inside nested
+  Sway.
+- GNOME/Mutter: environment skip(GNOME/Mutter Wayland session or VM unavailable
+  in this pass).
 
-KDE/KWin protocol facts from `wayland-info`:
+### KDE/KWin Protocol Facts
+
+`wayland-info` reported:
 
 - `zwp_linux_dmabuf_v1` v5
 - `wp_linux_drm_syncobj_manager_v1` v1
@@ -39,47 +50,82 @@ KDE/KWin protocol facts from `wayland-info`:
 - color metadata protocols advertised
 - commit timing unavailable
 
+### Sway/wlroots Protocol Facts
+
+Nested Sway/wlroots reported:
+
+- `zwp_linux_dmabuf_v1` v4
+- `wp_linux_drm_syncobj_manager_v1` v1
+- `wp_presentation` v2
+- `zwp_text_input_manager_v3` v1
+- `wp_cursor_shape_manager_v1` v1
+- `zwp_pointer_constraints_v1` v1
+- `zwp_relative_pointer_manager_v1` v1
+- `zwp_idle_inhibit_manager_v1` v1
+- `xdg_activation_v1` v1
+- content type, alpha modifier, and tearing control advertised
+- FIFO, color representation, color management, top-level icon, and system bell
+  unavailable in this nested session
+
 ## Commands Run
 
-- `swift --version`
-- `nix develop -c swift --version`
-- `nix develop -c swift run swl tools toolchain-smoke`
-- `nix develop -c swift run swl ci check`
-- `nix develop -c swift run swl ci release`
-- `nix develop -c swift run swl examples build`
-- `nix develop -c swift run swl smoke live`
-- `nix develop -c swift run swl smoke integration`
-- `nix develop -c swift run swl smoke gpu-preview`
-- `nix develop -c swift run GPUPreviewSmokeClient`
-- `nix develop -c swift run GraphicsPreviewManagedGPUClear`
-- `wayland-info`
+Headless Weston:
+
 - `nix develop -c swift run swl smoke headless -- swl smoke live`
 - `nix develop -c swift run swl smoke headless -- swl smoke integration`
 - `nix develop -c swift run swl smoke headless -- swl smoke gpu-preview`
 
-Feature smoke examples were run under KDE/KWin with `--auto-close
---print-summary --duration-seconds 1` where supported:
+KDE/KWin:
 
-- `SessionStateSmoke`
-- `SurfaceRegionSmoke`
-- `DamageRegionSmoke`
-- `SubsurfaceSmoke`
-- `CustomCursorSmoke`
-- `CursorPolicySmoke`
-- `WindowIconSmoke`
-- `IdleInhibitSmoke`
-- `SystemBellSmoke`
-- `XDGActivationSmoke`
-- `PointerCaptureSmoke`
-- `TextInputSmoke`
-- `DataTransferSmoke`
-- `PresentationFeedbackAnimation`
-- `ClientSideResizeChrome`
-- `SerialActionsProbe`
+- `wayland-info`
+- `swift run swl tools toolchain-smoke`
+- `swift run swl examples build`
+- `swift run swl smoke live`
+- `swift run swl smoke integration`
+- `swift run swl smoke gpu-preview`
+- `swift run GPUPreviewSmokeClient`
+- `swift run GraphicsPreviewManagedGPUClear`
+- `swift run swl ci check`
 
-The same feature target list passed through headless Weston. The headless
-runner suppresses child output on success, so the matrix records the headless
-loop as exit-status evidence rather than detailed per-target logs.
+`swift run swl ci check` was attempted on KDE/KWin, but the process remained
+active after building `swl` with no child process and no further output for
+several minutes. The evidence pass continued with the individual commands above.
+
+Nested Sway/wlroots:
+
+- `WLR_BACKENDS=wayland WLR_LIBINPUT_NO_DEVICES=1 sway -c /tmp/swiftwayland-sway/config`
+- `wayland-info`
+- `swift run swl smoke live`
+- `swift run swl smoke integration`
+- `swift run swl smoke gpu-preview`
+- `swift run GPUPreviewSmokeClient`
+- `swift run GraphicsPreviewManagedGPUClear`
+
+KDE/KWin bounded feature examples:
+
+- `swift run SessionStateSmoke --auto-close --print-summary --duration-seconds 3`
+- `swift run SurfaceRegionSmoke --auto-close --print-summary --duration-seconds 3`
+- `swift run DamageRegionSmoke --auto-close --print-summary --duration-seconds 3`
+- `swift run SubsurfaceSmoke --auto-close --print-summary --duration-seconds 3`
+- `swift run CustomCursorSmoke --auto-close --print-summary --duration-seconds 3`
+- `swift run CursorPolicySmoke --auto-close --print-summary --duration-seconds 3`
+- `swift run WindowIconSmoke --auto-close --print-summary --duration-seconds 3`
+- `swift run IdleInhibitSmoke --auto-close --print-summary --duration-seconds 3`
+- `swift run SystemBellSmoke --auto-close --print-summary --duration-seconds 3`
+- `swift run XDGActivationSmoke --auto-close --print-summary --duration-seconds 3`
+- `swift run PointerCaptureSmoke --auto-close --print-summary --duration-seconds 3`
+- `swift run TextInputSmoke --auto-close --print-summary --duration-seconds 3`
+- `swift run DataTransferSmoke --auto-close --print-summary --duration-seconds 3`
+- `swift run PresentationFeedbackAnimation --auto-close --print-summary --duration-seconds 3`
+- `swift run ClientSideResizeChrome --auto-close --print-summary --duration-seconds 3`
+- `swift run SerialActionsProbe --auto-close --print-summary --duration-seconds 3`
+
+Sanitizers:
+
+- `swift run swl test tsan`
+- `ASAN_OPTIONS=detect_leaks=0 swift run swl test asan`
+- `ASAN_OPTIONS=detect_leaks=1 swift run swl test asan`
+- `ASAN_OPTIONS=detect_leaks=1 swift test --sanitize=address --no-parallel --filter WaylandExampleSupportTests`
 
 ## GPU Evidence
 
@@ -93,7 +139,23 @@ KDE/KWin:
 - GBM: active.
 - EGL: configured.
 - dmabuf import: active.
+- Presentation feedback: advertised v1, runtime advertised, requested true.
 - Submitted frame: success show, 192x192.
+- Fallback reason: none.
+- Failure: none.
+
+Nested Sway/wlroots:
+
+- Requested backing: managed GPU.
+- Actual backing: managed GPU.
+- dmabuf: advertised v4 and runtime active.
+- Surface feedback: usable.
+- Render node: active.
+- GBM: active.
+- EGL: configured.
+- dmabuf import: active.
+- Presentation feedback: advertised v1, runtime advertised, requested true.
+- Submitted frame: success show, 96x96.
 - Fallback reason: none.
 - Failure: none.
 
@@ -104,54 +166,52 @@ Headless Weston:
 - Fallback reason: `dmabufUnavailable`.
 - Active GPU is not expected in this environment because dmabuf is unavailable.
 
-GNOME/Mutter and Sway/wlroots:
+GNOME/Mutter:
 
-- Environment skips in this pass. They remain foundation-readiness blockers.
+- environment skip(GNOME/Mutter Wayland session unavailable).
 
-## Runtime And Surface Evidence
+## Manual Interaction Status
 
-KDE/KWin passed bounded smoke for:
+- Serial-sensitive actions: auto-close pass on KDE/KWin with
+  `buttonPresses=0`; manual interaction still not run. A human must click edge,
+  titlebar/chrome, content, and drag-source areas so the example can prove live
+  button serial handling.
+- Pointer lock/confine: auto-close pass on KDE/KWin with relative pointer v1 and
+  pointer constraints v1 available; manual motion, lock, unlock, confine, and
+  close-while-constrained still not run.
+- Data-transfer drag source: auto-close pass on KDE/KWin with clipboard v3,
+  drag v3, and primary v1 available; manual drag source/drop/cancel path still
+  not run.
+- Managed GPU resize: active managed GPU clear-frame submission passed on
+  KDE/KWin and nested Sway; manual resize/reconfigure stress still not run.
+- Surface role stress: `SubsurfaceSmoke` initially crashed on KDE/KWin with
+  a frame-callback-not-ready error. The example was fixed to classify that
+  typed condition as `blocked(frameCallbackOutstanding)`, request redraw, and exit
+  cleanly. The rerun passed.
 
-- surface input and opaque regions
-- partial damage
-- subsurface creation, positioning, and desynchronized mode
-- custom cursor image, hidden cursor, and theme cursor transitions
-- window icon set, pixel icon set, and reset
-- idle inhibit create and destroy
-- system bell display and window requests
-- xdg activation token and activation request
-- text-input enable and disable
-- data-transfer clipboard, drag, and primary-selection capability paths
-- presentation feedback with observed presented frames
-- client-side resize chrome auto-close cleanup
-- serial-sensitive action probe event collection
+## Sanitizer Status
 
-Remaining live interaction gaps:
+- TSan: pass, `swift run swl test tsan`.
+- ASan with `detect_leaks=0`: pass, `ASAN_OPTIONS=detect_leaks=0 swift run swl
+  test asan`.
+- LSan: unusable(environment). With `ASAN_OPTIONS=detect_leaks=1`, SwiftPM test
+  discovery terminated during `--dump-tests-json` and LeakSanitizer reported a
+  fatal error with the hint that LeakSanitizer does not work under ptrace.
 
-- Local session readiness is covered by public restoration snapshots and
-  `SessionStateSmoke`. The save and restore passes both ran on KDE/KWin with
-  `/tmp/swiftwayland-session-state-smoke` as the state-root override. Compositor
-  session-management protocol API remains
-  deferred until protocol and framework evidence are stronger.
-- Pointer lock and confine need manual motion proof beyond unattended
-  capability and lifecycle smoke.
-- Serial-sensitive move, resize, menu, and drag-source request paths need manual
-  input proof under KDE/KWin.
-- GNOME/Mutter and Sway/wlroots need current evidence rows.
-- GPU resize and reconfiguration need broader live compositor stress evidence,
-  even though the unit coverage protects geometry-sensitive buffer reuse.
+## Remaining Blockers
 
-## Current Blockers
-
-- Broader compositor coverage is incomplete: GNOME/Mutter and Sway/wlroots were
-  unavailable in this pass.
-- Several serial-sensitive or pointer-capture paths still require manual input
-  evidence under a desktop compositor.
-- Sanitizer evidence remains environment-dependent and should be recorded when
-  available.
+- GNOME/Mutter evidence is still missing.
+- Manual serial-sensitive actions need real button press evidence.
+- Manual pointer lock/confine needs real pointer motion evidence.
+- Manual data-transfer drag-source/drop/cancel needs real interaction evidence.
+- Managed GPU resize/reconfigure needs a manual or automated stress pass.
+- `swift run swl ci check` needs investigation on the KDE host because it hung
+  after building `swl`.
 
 ## Next Step
 
-Stay on SwiftWayland for one more hardening and evidence sprint. Do not start
-framework work until the compositor matrix replaces environment skips and manual
-interaction gaps with current pass, skip, or fail rows.
+Stay on SwiftWayland for one more hardening and evidence sprint. The next
+maintainer pass should run the manual interaction checklist on KDE/KWin, add a
+GNOME/Mutter row from a real GNOME Wayland session or VM, stress managed GPU
+resize/reconfigure, and investigate the `swl ci check` hang observed during this
+evidence pass.
