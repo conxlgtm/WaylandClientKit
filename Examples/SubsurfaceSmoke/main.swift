@@ -87,11 +87,28 @@ enum SubsurfaceSmoke {
             let x = Int32(48 + (phase % 6) * 24)
             let y = Int32(56 + ((phase / 6) % 3) * 18)
             try await child.setPosition(LogicalOffset(x: x, y: y))
-            try await child.redraw(drawChild)
-            log("operation: move-and-redraw pass")
+            do {
+                try await child.redraw(drawChild)
+                log("operation: move-and-redraw pass")
+            } catch let error as ClientError where isFrameCallbackPending(error) {
+                try await child.requestRedraw()
+                log("operation: move-and-redraw blocked(frameCallbackOutstanding)")
+            }
             log("moved \(child.identity) to x=\(x) y=\(y)")
             phase += 1
         }
+    }
+
+    nonisolated private static func isFrameCallbackPending(_ error: ClientError) -> Bool {
+        guard case .display(.subsurfacePresentationFailed(let failure)) = error else {
+            return false
+        }
+
+        guard case .presentation(.frameCallbackRequest(let detail)) = failure.cause else {
+            return false
+        }
+
+        return detail.contains("frame callback")
     }
 
     nonisolated private static func drawParent(_ frame: borrowing SoftwareFrame) {
