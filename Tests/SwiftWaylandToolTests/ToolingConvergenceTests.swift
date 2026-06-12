@@ -235,7 +235,9 @@ struct ToolingConvergenceTests {
 
         #expect(targets == ["NamedSmoke", "PathNamedSmoke"])
     }
+}
 
+extension ToolingConvergenceTests {
     private func packageDump(targets: String) -> String {
         """
         {
