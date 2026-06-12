@@ -875,8 +875,8 @@ private func runIntegrationPackage(
     defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
     try context.swift.runSwift(
         [
-            "test", "--package-path", context.repository.url(packagePath).path, "--scratch-path",
-            scratch.path,
+            "test", "--disable-index-store", "--package-path",
+            context.repository.url(packagePath).path, "--scratch-path", scratch.path,
         ],
         repository: context.repository,
         environment: try compilerFilterEnvironment(context: context, base: environment)

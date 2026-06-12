@@ -188,6 +188,19 @@ struct ToolingConvergenceTests {
     }
 
     @Test
+    func integrationPackageTestsDisableIndexStore() throws {
+        let source = try String(
+            contentsOf: repositoryRoot()
+                .appendingPathComponent("Sources/SwiftWaylandTool/main.swift"),
+            encoding: .utf8)
+        let start = try #require(source.range(of: "private func runIntegrationPackage"))
+        let end = try #require(source.range(of: "private func compilerFilterEnvironment"))
+        let functionBody = String(source[start.lowerBound..<end.lowerBound])
+
+        #expect(functionBody.contains("\"--disable-index-store\""))
+    }
+
+    @Test
     func exampleBuilderDiscoversExampleTargetsFromPackageManifest() throws {
         let root = try temporaryRepository()
         try """
@@ -236,6 +249,14 @@ struct ToolingConvergenceTests {
             .appendingPathComponent("swiftwayland-tooling-convergence-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         return root
+    }
+
+    private func repositoryRoot() -> URL {
+        var url = URL(fileURLWithPath: #filePath)
+        for _ in 0..<3 {
+            url.deleteLastPathComponent()
+        }
+        return url
     }
 
     private func writeRequiredDocumentation(
