@@ -420,10 +420,10 @@ nonisolated private final class ManagedGPUClearInputActionState: @unchecked Send
     ) {
         let requestDescription =
             "resize request seat=\(event.seatID) "
-                + "serial=\(button.serial) "
-                + "edge=\(edgeDescription) "
-                + "geometry=\(GraphicsPreviewManagedGPUClear.geometryDescription(snapshot.geometry)) "
-                + "location=\(snapshot.location.x),\(snapshot.location.y)"
+            + "serial=\(button.serial) "
+            + "edge=\(edgeDescription) "
+            + "geometry=\(GraphicsPreviewManagedGPUClear.geometryDescription(snapshot.geometry)) "
+            + "location=\(snapshot.location.x),\(snapshot.location.y)"
         do {
             try context.requestInteractiveResize(
                 windowID,
@@ -451,9 +451,9 @@ nonisolated private final class ManagedGPUClearInputActionState: @unchecked Send
     ) {
         let requestDescription =
             "move request seat=\(event.seatID) "
-                + "serial=\(button.serial) "
-                + "geometry=\(GraphicsPreviewManagedGPUClear.geometryDescription(snapshot.geometry)) "
-                + "location=\(snapshot.location.x),\(snapshot.location.y)"
+            + "serial=\(button.serial) "
+            + "geometry=\(GraphicsPreviewManagedGPUClear.geometryDescription(snapshot.geometry)) "
+            + "location=\(snapshot.location.x),\(snapshot.location.y)"
         do {
             try context.requestInteractiveMove(
                 windowID,
