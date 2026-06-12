@@ -216,12 +216,17 @@ GNOME/Mutter:
 ## Manual Interaction Status
 
 - Serial-sensitive actions: auto-close pass on KDE/KWin with
-  `buttonPresses=0`; manual interaction still not run. A human must click edge,
-  titlebar/chrome, content, and drag-source areas so the example can prove live
-  button serial handling.
+  `buttonPresses=0`. A 2026-06-11 manual run logged live `seat=seat-10`
+  button serials, pointer locations, configure snapshots, 94 `move` attempts,
+  6 `window-menu` attempts, and `threw=false` request results. Resize and
+  drag-source serial paths were not observed and remain open.
 - Pointer lock/confine: auto-close pass on KDE/KWin with relative pointer v1 and
-  pointer constraints v1 available; manual motion, lock, unlock, confine, and
-  close-while-constrained still not run.
+  pointer constraints v1 available. A 2026-06-11 manual run logged
+  `relative pointer auto-subscribed`, `lock requested id=locked-pointer-1`,
+  `activated(locked-pointer-1)`, sustained `relative motion` events while the
+  visible cursor was pinned, `inactivePersistent(locked-pointer-1)`, `result:
+  pass`, and `cleanup: pass`. Right-click confine was not exercised and remains
+  open.
 - Data-transfer drag source: auto-close pass on KDE/KWin with clipboard v3,
   drag v3, and primary v1 available; manual drag source/drop/cancel path still
   not run.
