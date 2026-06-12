@@ -65,8 +65,13 @@ struct RawKeyboardKeymapReaderTests {
         let bytes = [UInt8(1), UInt8(0)]
         let descriptor = try makeTemporaryFileDescriptor(bytes: bytes)
         var closedDescriptors: [Int32] = []
-        do {
-            _ = try RawKeyboardKeymapReader.readKeymap(
+        #expect(
+            throws: RawKeyboardKeymapReadError.fdTooSmall(
+                size: 4,
+                actualSize: Int64(bytes.count)
+            )
+        ) {
+            try RawKeyboardKeymapReader.readKeymap(
                 id: keymapID(),
                 format: .xkbV1,
                 fd: descriptor,
@@ -76,10 +81,6 @@ struct RawKeyboardKeymapReaderTests {
                 closedDescriptors.append(descriptor)
                 close(descriptor)
             }
-            Issue.record("Expected keymap fd size error")
-        } catch RawKeyboardKeymapReadError.fdTooSmall(let size, let actualSize) {
-            #expect(size == 4)
-            #expect(actualSize == Int64(bytes.count))
         }
         #expect(closedDescriptors == [descriptor])
     }
