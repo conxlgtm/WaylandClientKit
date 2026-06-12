@@ -136,7 +136,7 @@ Live evidence:
 swift run swl smoke live
 swift run swl smoke integration
 swift run GPUPreviewSmokeClient
-swift run GraphicsPreviewManagedGPUClear
+swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
 ```
 
 Environment skips must name the missing compositor, GPU, render node, protocol,

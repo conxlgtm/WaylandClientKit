@@ -27,9 +27,11 @@ uses one line per runtime-path fact so a compositor run can be pasted into
 `docs/compositor-matrix.md` without inferring whether a protocol was advertised,
 configured, active, failed, or selected as software fallback.
 `GraphicsPreviewManagedGPUClear` is the small managed submission example: it
-requests managed GPU backing with software fallback allowed, submits one clear
-frame, prints the actual runtime path, fallback or failure reason, and
-release/reuse status, and closes.
+requests managed GPU backing with software fallback allowed, keeps an
+interactive clear-frame window open by default, logs each show/redraw frame
+size, prints the actual runtime path, fallback or failure reason, release/reuse
+status, and whether a resize was observed, then closes when the compositor
+requests close. Use `--auto-close --print-summary` for bounded evidence runs.
 
 ## Current Scope
 
