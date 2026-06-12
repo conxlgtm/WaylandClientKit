@@ -17,6 +17,8 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     var idleInhibitorsByID: [IdleInhibitorID: DisplayIdleInhibitorRecord] = [:]
     var idleInhibitorIDsByWindowID: [WindowID: [IdleInhibitorID]] = [:]
     var closedIdleInhibitorIDs: Set<IdleInhibitorID> = []
+    private var inputSerialActionIDs = IDGenerator<InputSerialActionID>()
+    private var inputSerialActionHandlers: [InputSerialActionID: InputSerialActionHandler] = [:]
     var isClosed: Bool { lifecycle.isClosed }
     var activeSession: DisplaySession? { lifecycle.activeSession }
     var hasPendingFatalFailure: Bool { lifecycle.hasPendingFatalFailure }
@@ -156,6 +158,28 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     func requestRedraw(_ windowID: WindowID) throws {
         try withFatalFailureFinalization {
             try requireOpenWindow(windowID).requestRedrawOnOwnerThread()
+        }
+    }
+
+    func installInputSerialAction(
+        _ handler: @escaping InputSerialActionHandler
+    ) -> InputSerialActionID {
+        let actionID = inputSerialActionIDs.next()
+        inputSerialActionHandlers[actionID] = handler
+        return actionID
+    }
+
+    func removeInputSerialAction(_ actionID: InputSerialActionID) {
+        inputSerialActionHandlers.removeValue(forKey: actionID)
+    }
+
+    func performInputSerialActions(for event: InputEvent) {
+        guard !inputSerialActionHandlers.isEmpty else { return }
+
+        let context = InputSerialActionContext(core: self)
+        for actionID in inputSerialActionHandlers.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+            guard let handler = inputSerialActionHandlers[actionID] else { continue }
+            handler(event, context)
         }
     }
 

@@ -175,7 +175,7 @@ struct WaylandCapabilitiesTests {
     func versionGatedCapabilitiesRejectTooOldAdvertisements() {
         let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
             .init(interfaceName: "wl_data_device_manager", advertisedVersion: 2),
-            .init(interfaceName: "zxdg_decoration_manager_v1", advertisedVersion: 1),
+            .init(interfaceName: "zxdg_decoration_manager_v1", advertisedVersion: 0),
             .init(interfaceName: "zxdg_output_manager_v1", advertisedVersion: 1),
         ])
 
@@ -209,12 +209,12 @@ struct WaylandCapabilitiesTests {
     }
 
     @Test
-    func xdgDecorationBelowMinimumIsUnavailable() {
+    func xdgDecorationVersionOneIsAvailable() {
         let capabilities = WaylandCapabilities.fromAdvertisedProtocols([
             .init(interfaceName: "zxdg_decoration_manager_v1", advertisedVersion: 1)
         ])
 
-        #expect(capabilities.xdgDecoration == .unavailable)
+        #expect(capabilities.xdgDecoration == .available(version: 1))
     }
 
     @Test

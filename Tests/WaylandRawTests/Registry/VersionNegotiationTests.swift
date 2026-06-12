@@ -53,7 +53,7 @@ struct VersionNegotiationTests {
         #expect(SupportedVersions.wlCompositor == RawVersion(6))
         #expect(SupportedVersions.wlShm == RawVersion(1))
         #expect(SupportedVersions.xdgWmBase == RawVersion(7))
-        #expect(SupportedVersions.zxdgDecorationManagerV1Minimum == RawVersion(2))
+        #expect(SupportedVersions.zxdgDecorationManagerV1Minimum == RawVersion(1))
         #expect(SupportedVersions.zxdgDecorationManagerV1 == RawVersion(2))
         #expect(SupportedVersions.zxdgOutputManagerV1Minimum == RawVersion(2))
         #expect(SupportedVersions.zxdgOutputManagerV1 == RawVersion(3))
@@ -63,7 +63,7 @@ struct VersionNegotiationTests {
         #expect(SupportedVersions.wlSeat == RawVersion(10))
     }
     @Test
-    func xdgDecorationManagerV1IsNotBoundUntilFirstConfigureGatingExists() throws {
+    func xdgDecorationManagerV1IsBoundForPreInitialConfigureCreation() throws {
         let v1Global = try #require(
             RawGlobalAdvertisement(
                 name: 1,
@@ -85,15 +85,12 @@ struct VersionNegotiationTests {
                 advertisedVersion: 3
             )
         )
-        #expect(!RawDisplayConnection.shouldBindXDGDecorationManager(v1Global))
+        #expect(RawDisplayConnection.shouldBindXDGDecorationManager(v1Global))
         #expect(RawDisplayConnection.shouldBindXDGDecorationManager(v2Global))
         #expect(RawDisplayConnection.shouldBindXDGDecorationManager(v3Global))
         #expect(
             RawDisplayConnection.xdgDecorationManagerBindingDecision(v1Global)
-                == .unsupportedVersion(
-                    advertised: RawVersion(1),
-                    minimum: RawVersion(2)
-                )
+                == .bind(version: RawVersion(1))
         )
         #expect(
             RawDisplayConnection.xdgDecorationManagerBindingDecision(v2Global)

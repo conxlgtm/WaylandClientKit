@@ -7,7 +7,7 @@ package enum SupportedVersions {
     package static let wlShm: RawVersion = 1
     package static let wlOutput: RawVersion = 4
     package static let xdgWmBase: RawVersion = 7
-    package static let zxdgDecorationManagerV1Minimum: RawVersion = 2
+    package static let zxdgDecorationManagerV1Minimum: RawVersion = 1
     package static let zxdgDecorationManagerV1: RawVersion = 2
     package static let zxdgOutputManagerV1Minimum: RawVersion = 2
     package static let zxdgOutputManagerV1: RawVersion = 3
