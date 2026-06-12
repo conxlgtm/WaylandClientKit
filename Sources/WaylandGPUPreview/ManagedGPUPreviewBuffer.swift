@@ -1,7 +1,9 @@
+import Foundation
 import WaylandGraphicsCore
 import WaylandRaw
 
 package final class ManagedGPUPreviewBuffer: GPUWindowPresenterBuffer {
+    private let lock = NSLock()
     private let buffer: RawLinuxDmabufBuffer
     private var lockedBuffer: GBMLockedSurfaceBuffer?
     private var renderTarget: EGLGBMRenderTarget?
@@ -22,17 +24,16 @@ package final class ManagedGPUPreviewBuffer: GPUWindowPresenterBuffer {
     }
 
     package func setReleaseObserver(_ observer: @escaping () -> Void) {
+        lock.lock()
         releaseObserver = observer
+        lock.unlock()
         buffer.setReleaseObserver { [weak self] in
             self?.handleRelease()
         }
     }
 
     package func destroy() {
-        releaseObserver = nil
-        lockedBuffer?.release()
-        lockedBuffer = nil
-        renderTarget = nil
+        _ = releaseResources(clearObserver: true)
         buffer.destroy()
     }
 
@@ -41,9 +42,21 @@ package final class ManagedGPUPreviewBuffer: GPUWindowPresenterBuffer {
     }
 
     private func handleRelease() {
+        let observer = releaseResources(clearObserver: false)
+        observer?()
+    }
+
+    private func releaseResources(clearObserver: Bool) -> (() -> Void)? {
+        lock.lock()
+        defer { lock.unlock() }
+
+        let observer = releaseObserver
+        if clearObserver {
+            releaseObserver = nil
+        }
         lockedBuffer?.release()
         lockedBuffer = nil
         renderTarget = nil
-        releaseObserver?()
+        return observer
     }
 }
