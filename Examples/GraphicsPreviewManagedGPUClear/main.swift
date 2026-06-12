@@ -6,6 +6,9 @@ import WaylandGraphicsPreview
 
 @main
 enum GraphicsPreviewManagedGPUClear {
+    nonisolated private static let leftButton = PointerButtonCode(rawValue: 0x110)
+    nonisolated private static let resizeHandleBand = 36.0
+
     static func main() async {
         let result: ManagedGPUClearReport
         let exitCode: Int32
@@ -58,12 +61,23 @@ enum GraphicsPreviewManagedGPUClear {
         )
         let state = ManagedGPUClearRunState()
 
-        log("instructions: resize the window larger and smaller, then close it")
+        log(
+            "instructions: drag from inside the content edge/corner to resize, "
+                + "then close the window"
+        )
         _ = try await submitClearFrame(backing: backing, state: state)
 
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
                 try await consumeDisplayEvents(display.events, backing: backing, state: state)
+            }
+            group.addTask {
+                try await consumeInputEvents(
+                    display.inputEvents,
+                    display: display,
+                    backing: backing,
+                    state: state
+                )
             }
             if let seconds = options.autoCloseSeconds {
                 group.addTask {
@@ -106,6 +120,78 @@ enum GraphicsPreviewManagedGPUClear {
         }
     }
 
+    nonisolated private static func consumeInputEvents(
+        _ events: InputEvents,
+        display: WaylandDisplay,
+        backing: WaylandGraphicsWindowBacking,
+        state: ManagedGPUClearRunState
+    ) async throws {
+        var iterator = events.makeAsyncIterator()
+        while !Task.isCancelled, let event = try await iterator.next() {
+            guard event.windowID == backing.id else { continue }
+
+            switch event.kind {
+            case .pointer(.entered(let location, _)), .pointer(.moved(let location, _)):
+                let geometry = try await backing.window.geometry
+                let edge = resizeEdge(at: location, in: geometry)
+                let cursor = cursor(for: edge)
+                let changed = await state.recordPointer(location, edge: edge)
+                do {
+                    let results = try await display.setPointerCursor(cursor)
+                    if changed {
+                        log(
+                            "resize handle edge=\(edgeDescription(edge)) "
+                                + "cursor=\(cursorDescription(cursor)) "
+                                + "geometry=\(geometryDescription(geometry)) "
+                                + "location=\(location.x),\(location.y) "
+                                + "results=\(cursorResultsDescription(results))"
+                        )
+                    }
+                } catch {
+                    log(
+                        "resize handle cursor failed edge=\(edgeDescription(edge)) "
+                            + "cursor=\(cursorDescription(cursor)) error=\(error)"
+                    )
+                }
+            case .pointer(.left):
+                _ = await state.recordPointer(nil, edge: nil)
+                do {
+                    let results = try await display.setPointerCursor(.defaultArrow)
+                    log(
+                        "resize handle edge=none cursor=left_ptr "
+                            + "results=\(cursorResultsDescription(results))"
+                    )
+                } catch {
+                    log("resize handle cursor failed edge=none cursor=left_ptr error=\(error)")
+                }
+            case .pointer(.button(let button))
+            where button.state == .pressed && button.button == leftButton:
+                guard let location = await state.pointerLocation else { continue }
+                let geometry = try await backing.window.geometry
+                guard let edge = resizeEdge(at: location, in: geometry) else { continue }
+                await state.recordResizeRequest()
+                log(
+                    "resize request seat=\(event.seatID) serial=\(button.serial) "
+                        + "edge=\(edgeDescription(edge)) "
+                        + "geometry=\(geometryDescription(geometry)) "
+                        + "location=\(location.x),\(location.y)"
+                )
+                do {
+                    try await backing.window.requestInteractiveResize(
+                        seatID: event.seatID,
+                        serial: button.serial,
+                        edge: edge
+                    )
+                    log("resize request result threw=false")
+                } catch {
+                    log("resize request result threw=true error=\(error)")
+                }
+            default:
+                break
+            }
+        }
+    }
+
     nonisolated private static func submitClearFrame(
         backing: WaylandGraphicsWindowBacking,
         state: ManagedGPUClearRunState
@@ -118,13 +204,116 @@ enum GraphicsPreviewManagedGPUClear {
                 )
             )
         )
-        await state.record(result)
-        log(
-            "gpu frame operation=\(result.operation) "
-                + "size=\(result.size.width)x\(result.size.height) "
-                + "backing=\(actualBacking(result.runtimePath))"
-        )
+        if await state.record(result) {
+            log(
+                "gpu frame operation=\(result.operation) "
+                    + "size=\(result.size.width)x\(result.size.height) "
+                    + "backing=\(actualBacking(result.runtimePath))"
+            )
+        }
         return result
+    }
+
+    nonisolated private static func resizeEdge(
+        at location: PointerLocation,
+        in geometry: SurfaceGeometry
+    ) -> WindowResizeEdge? {
+        let width = Double(geometry.logicalSize.width.rawValue)
+        let height = Double(geometry.logicalSize.height.rawValue)
+        let top = location.y <= resizeHandleBand
+        let bottom = location.y >= height - resizeHandleBand
+        let left = location.x <= resizeHandleBand
+        let right = location.x >= width - resizeHandleBand
+
+        switch (top, bottom, left, right) {
+        case (true, _, true, _):
+            return .topLeft
+        case (true, _, _, true):
+            return .topRight
+        case (_, true, true, _):
+            return .bottomLeft
+        case (_, true, _, true):
+            return .bottomRight
+        case (true, _, _, _):
+            return .top
+        case (_, true, _, _):
+            return .bottom
+        case (_, _, true, _):
+            return .left
+        case (_, _, _, true):
+            return .right
+        default:
+            return nil
+        }
+    }
+
+    nonisolated private static func cursor(for edge: WindowResizeEdge?) -> PointerCursor {
+        guard let edge else { return .defaultArrow }
+        switch edge {
+        case .left, .right:
+            return .resizeLeftRight
+        case .top, .bottom:
+            return .resizeUpDown
+        case .topLeft:
+            return (try? PointerCursor(name: "nw-resize")) ?? .crosshair
+        case .topRight:
+            return (try? PointerCursor(name: "ne-resize")) ?? .crosshair
+        case .bottomLeft:
+            return (try? PointerCursor(name: "sw-resize")) ?? .crosshair
+        case .bottomRight:
+            return (try? PointerCursor(name: "se-resize")) ?? .crosshair
+        }
+    }
+
+    nonisolated private static func edgeDescription(_ edge: WindowResizeEdge?) -> String {
+        guard let edge else { return "none" }
+        switch edge {
+        case .top:
+            return "top"
+        case .bottom:
+            return "bottom"
+        case .left:
+            return "left"
+        case .right:
+            return "right"
+        case .topLeft:
+            return "topLeft"
+        case .topRight:
+            return "topRight"
+        case .bottomLeft:
+            return "bottomLeft"
+        case .bottomRight:
+            return "bottomRight"
+        }
+    }
+
+    nonisolated private static func cursorDescription(_ cursor: PointerCursor) -> String {
+        cursor.name ?? "hidden"
+    }
+
+    nonisolated private static func cursorResultsDescription(
+        _ results: [CursorRequestResult]
+    ) -> String {
+        if results.isEmpty { return "none" }
+        return results.map(cursorResultDescription).joined(separator: ",")
+    }
+
+    nonisolated private static func cursorResultDescription(
+        _ result: CursorRequestResult
+    ) -> String {
+        switch result {
+        case .set(let seatID, let serial, let cursor):
+            return "set(seat=\(seatID),serial=\(serial),cursor=\(cursorDescription(cursor)))"
+        case .hidden(let seatID, let serial):
+            return "hidden(seat=\(seatID),serial=\(serial))"
+        case .skippedNoPointerFocus(let seatID):
+            return "skippedNoPointerFocus(seat=\(seatID))"
+        }
+    }
+
+    nonisolated private static func geometryDescription(_ geometry: SurfaceGeometry) -> String {
+        let size = geometry.logicalSize
+        return "\(size.width.rawValue)x\(size.height.rawValue)"
     }
 
     nonisolated private static func actualBacking(
@@ -156,15 +345,18 @@ enum GraphicsPreviewManagedGPUClear {
 private struct ManagedGPUClearReport: Sendable {
     var capabilities: WaylandGraphicsSurfaceCapabilities?
     var frameResults: [WaylandGraphicsFrameResult]
+    var resizeRequestCount: Int
     var failure: String?
 
     nonisolated init(
         capabilities reportedCapabilities: WaylandGraphicsSurfaceCapabilities? = nil,
         frameResults reportedFrameResults: [WaylandGraphicsFrameResult] = [],
+        resizeRequestCount reportedResizeRequestCount: Int = 0,
         failure reportedFailure: String? = nil
     ) {
         capabilities = reportedCapabilities
         frameResults = reportedFrameResults
+        resizeRequestCount = reportedResizeRequestCount
         failure = reportedFailure
     }
 
@@ -175,21 +367,41 @@ private struct ManagedGPUClearReport: Sendable {
 
 private actor ManagedGPUClearRunState {
     private var frameResults: [WaylandGraphicsFrameResult] = []
+    private var resizeRequests = 0
+    private(set) var pointerLocation: PointerLocation?
+    private var pointerEdge: WindowResizeEdge?
 
-    func record(_ result: WaylandGraphicsFrameResult) {
+    func record(_ result: WaylandGraphicsFrameResult) -> Bool {
+        let previousSizes = orderedFrameSizes(frameResults)
         frameResults.append(result)
+        let size = "\(result.size.width)x\(result.size.height)"
+        return frameResults.count == 1 || !previousSizes.contains(size)
+    }
+
+    func recordPointer(_ location: PointerLocation?, edge: WindowResizeEdge?) -> Bool {
+        defer {
+            pointerLocation = location
+            pointerEdge = edge
+        }
+        return pointerLocation != location || pointerEdge != edge
+    }
+
+    func recordResizeRequest() {
+        resizeRequests += 1
     }
 
     func report(capabilities: WaylandGraphicsSurfaceCapabilities) -> ManagedGPUClearReport {
         ManagedGPUClearReport(
             capabilities: capabilities,
-            frameResults: frameResults
+            frameResults: frameResults,
+            resizeRequestCount: resizeRequests
         )
     }
 
     func summary() -> String {
         "managed-gpu-clear summary frames=\(frameResults.count) "
             + "resized=\(resizeObserved(frameResults)) "
+            + "resizeRequests=\(resizeRequests) "
             + "sizes=\(frameSizesDescription(frameResults))"
     }
 }
@@ -254,6 +466,7 @@ private struct ManagedGPUClearReportFormatter {
             "frame size: \(frameResult.size.width)x\(frameResult.size.height)",
             "frames submitted: \(report.frameResults.count)",
             "frame sizes: \(frameSizesDescription(report.frameResults))",
+            "resize requests: \(report.resizeRequestCount)",
             "resize observed: \(resizeObserved(report.frameResults))",
             "submitted frame result: \(status(frameResult.backing))",
             "release/reuse: \(releaseReuseStatus(runtimePath))",
