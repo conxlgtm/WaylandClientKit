@@ -31,7 +31,9 @@ requests managed GPU backing with software fallback allowed, keeps an
 interactive clear-frame window open by default, logs each show/redraw frame
 size, prints the actual runtime path, fallback or failure reason, release/reuse
 status, and whether a resize was observed, then closes when the compositor
-requests close. Use `--auto-close --print-summary` for bounded evidence runs.
+requests close. The manual resize path uses an in-content edge/corner handle,
+so drag from inside the clear window edge instead of relying on compositor
+decorations. Use `--auto-close --print-summary` for bounded evidence runs.
 
 ## Current Scope
 
