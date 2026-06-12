@@ -906,6 +906,16 @@ private func prepareIntegrationIndexStoreDirectory(context: ToolContext, scratch
         .appendingPathComponent("index")
         .appendingPathComponent("store")
     try context.fileSystem.createDirectory(indexStore)
+    try context.fileSystem.createDirectory(
+        indexStore
+            .appendingPathComponent("v5")
+            .appendingPathComponent("units")
+    )
+    try context.fileSystem.createDirectory(
+        indexStore
+            .appendingPathComponent("v5")
+            .appendingPathComponent("records")
+    )
 }
 
 private func compilerFilterEnvironment(
