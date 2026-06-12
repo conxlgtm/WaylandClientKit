@@ -472,8 +472,119 @@ public struct SwiftCommandResolver {
         ]
         if let override = context.runner.environment["SWIFTLINT_BIN"], !override.isEmpty {
             try context.runner.run(override, args, workingDirectory: context.repository.root)
-        } else {
+            return
+        }
+
+        if canRunNixSwiftLint() {
+            try runNixSwiftLint(args)
+            return
+        }
+
+        if canRunSwiftLint("swiftlint") {
             try context.runner.run("swiftlint", args, workingDirectory: context.repository.root)
+            return
+        }
+
+        try context.runner.run("swiftlint", args, workingDirectory: context.repository.root)
+    }
+
+    private func canRunSwiftLint(_ executable: String) -> Bool {
+        guard context.runner.canFind(executable) else {
+            return false
+        }
+
+        do {
+            let result = try context.runner.run(executable, ["version"], requireSuccess: false)
+            return result.exitCode == 0
+        } catch {
+            return false
+        }
+    }
+
+    private func canRunNixSwiftLint() -> Bool {
+        guard context.fileSystem.exists(context.repository.url("flake.nix")),
+            let nixExecutable = nixExecutable()
+        else {
+            return false
+        }
+
+        do {
+            let result = try context.runner.run(
+                nixExecutable,
+                nixSwiftLintArguments(["version"]),
+                workingDirectory: context.repository.root,
+                environment: nixSwiftEnvironment(),
+                requireSuccess: false
+            )
+            if result.exitCode != 0 {
+                context.diagnostics.verbose(
+                    "flake SwiftLint probe failed: "
+                        + (result.stderr.isEmpty ? result.stdout : result.stderr))
+            }
+            return result.exitCode == 0
+        } catch {
+            context.diagnostics.verbose("flake SwiftLint probe failed: \(error)")
+            return false
+        }
+    }
+
+    private func runNixSwiftLint(_ arguments: [String]) throws {
+        guard let nixExecutable = nixExecutable() else {
+            try context.runner.run(
+                "nix",
+                nixSwiftLintArguments(arguments),
+                workingDirectory: context.repository.root,
+                environment: nixSwiftEnvironment()
+            )
+            return
+        }
+
+        try context.runner.run(
+            nixExecutable,
+            nixSwiftLintArguments(arguments),
+            workingDirectory: context.repository.root,
+            environment: nixSwiftEnvironment()
+        )
+    }
+
+    private func nixSwiftLintArguments(_ arguments: [String]) -> [String] {
+        [
+            "--option", "warn-dirty", "false", "develop", context.repository.root.path,
+            "--command", "swiftlint",
+        ] + arguments
+    }
+
+    private func nixExecutable() -> String? {
+        if let override = context.runner.environment["SWL_NIX_BIN"], !override.isEmpty {
+            return override
+        }
+
+        if context.runner.canFind("nix") {
+            return "nix"
+        }
+
+        let nixOSPath = URL(fileURLWithPath: "/run/current-system/sw/bin/nix")
+        if context.fileSystem.isExecutable(nixOSPath) {
+            return nixOSPath.path
+        }
+
+        return nil
+    }
+
+    private func nixSwiftEnvironment() -> [String: String] {
+        if let override = context.runner.environment["SWIFT_BIN"], !override.isEmpty {
+            return ["SWIFT_BIN": override]
+        }
+
+        let nixOSSwift = URL(fileURLWithPath: "/run/current-system/sw/bin/swift")
+        if context.fileSystem.isExecutable(nixOSSwift) {
+            return ["SWIFT_BIN": nixOSSwift.path]
+        }
+
+        do {
+            return ["SWIFT_BIN": try context.runner.executableURL(for: "swift").path]
+        } catch {
+            return [:]
         }
     }
 }
