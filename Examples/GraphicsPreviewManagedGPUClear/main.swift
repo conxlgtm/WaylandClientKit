@@ -164,11 +164,19 @@ enum GraphicsPreviewManagedGPUClear {
                 } catch {
                     log("resize handle cursor failed edge=none cursor=left_ptr error=\(error)")
                 }
-            case .pointer(.button(let button))
-            where button.state == .pressed && button.button == leftButton:
+            case .pointer(.button(let button)) where button.state == .pressed:
                 guard let location = await state.pointerLocation else { continue }
                 let geometry = try await backing.window.geometry
                 guard let edge = resizeEdge(at: location, in: geometry) else { continue }
+                guard button.button == leftButton else {
+                    log(
+                        "resize request ignored button=\(button.button) expected=left "
+                            + "edge=\(edgeDescription(edge)) "
+                            + "geometry=\(geometryDescription(geometry)) "
+                            + "location=\(location.x),\(location.y)"
+                    )
+                    continue
+                }
                 await state.recordResizeRequest()
                 log(
                     "resize request seat=\(event.seatID) serial=\(button.serial) "
@@ -383,7 +391,7 @@ private actor ManagedGPUClearRunState {
             pointerLocation = location
             pointerEdge = edge
         }
-        return pointerLocation != location || pointerEdge != edge
+        return pointerEdge != edge
     }
 
     func recordResizeRequest() {

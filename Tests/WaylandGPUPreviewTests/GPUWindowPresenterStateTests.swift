@@ -1363,6 +1363,43 @@ struct GPUWindowPresenterBufferReuseTests {
                 == [oldSubmittedBuffer.pointerValue, newBuffer.pointerValue]
         )
     }
+
+    @Test
+    func releaseCallbackDuringInFlightPresentationKeepsPoolConsistent()
+        async throws
+    {
+        let presenter = GPUWindowPresenter()
+        let oldSubmittedSlotID = try GBMBufferPoolSlotID(0)
+        let freshSlotID = try GBMBufferPoolSlotID(1)
+        let oldSubmittedBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let freshBuffer = try FakePresenterBuffer(pointer: 0x1002)
+
+        try presenter.installBuffer(oldSubmittedBuffer, slotID: oldSubmittedSlotID)
+        try presenter.installBuffer(freshBuffer, slotID: freshSlotID)
+        _ = try await presenter.presentSlot(
+            oldSubmittedSlotID,
+            submit: { _, _, _ in
+                try previewPresentationResult(generation: 90)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        let frame = try await presenter.presentSlot(
+            freshSlotID,
+            submit: { _, _, _ in
+                oldSubmittedBuffer.triggerRelease()
+                return try previewPresentationResult(generation: 91)
+            },
+            synchronization: .implicit,
+            pacing: .none
+        )
+
+        #expect(frame.slotID == freshSlotID)
+        #expect(presenter.availableSlotIDs == [oldSubmittedSlotID])
+        #expect(presenter.outstandingSubmittedSlotIDs == [freshSlotID])
+        #expect(presenter.releaseFailuresSnapshot.isEmpty)
+    }
 }
 
 @Suite

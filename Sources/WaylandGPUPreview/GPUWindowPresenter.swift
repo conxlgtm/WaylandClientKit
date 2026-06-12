@@ -1,4 +1,5 @@
 // swiftlint:disable file_length
+import Foundation
 import WaylandClient
 import WaylandGraphicsCore
 import WaylandRaw
@@ -333,6 +334,7 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
 
 @safe
 package final class GPUWindowPresenter {
+    private let lock = NSLock()
     private var state = GPUWindowPresenterState()
     private var buffers: [GBMBufferPoolSlotID: any GPUWindowPresenterBuffer] = [:]
     private var releaseFailures: [GPUWindowPresenterStateError] = []
@@ -345,39 +347,69 @@ package final class GPUWindowPresenter {
     }
 
     package var installedSlotIDs: [GBMBufferPoolSlotID] {
-        buffers.keys.sorted()
+        withLock {
+            buffers.keys.sorted()
+        }
     }
 
     package var outstandingSubmittedSlotIDs: [GBMBufferPoolSlotID] {
-        state.outstandingSubmittedSlotIDs
+        withLock {
+            state.outstandingSubmittedSlotIDs
+        }
     }
 
     package var availableSlotIDs: [GBMBufferPoolSlotID] {
-        state.availableSlotIDs
+        withLock {
+            state.availableSlotIDs
+        }
     }
 
     package var releaseFailuresSnapshot: [GPUWindowPresenterStateError] {
-        releaseFailures
+        withLock {
+            releaseFailures
+        }
     }
 
     package var runtimePathSnapshot: GPURuntimePathSnapshot {
-        runtimePath
+        withLock {
+            runtimePath
+        }
     }
 
     package var backingStateSnapshot: GPUWindowBackingState {
-        var snapshot = backingState
-        snapshot.bufferPool = state.bufferPoolReadiness
-        return snapshot
+        withLock {
+            var snapshot = backingState
+            snapshot.bufferPool = state.bufferPoolReadiness
+            return snapshot
+        }
     }
 
     package func correlatedSlotID(
         forPresentationGeneration generation: UInt64
     ) -> GBMBufferPoolSlotID? {
-        presentationCorrelation.takeSlotID(for: generation)
+        withLock {
+            presentationCorrelation.takeSlotID(for: generation)
+        }
     }
 
     deinit {
         retireAll(reason: .windowClosed)
+    }
+
+    private func withLock<Result>(
+        _ body: () -> Result
+    ) -> Result {
+        lock.lock()
+        defer { lock.unlock() }
+        return body()
+    }
+
+    private func withPresenterLock<Result>(
+        _ body: () throws(GPUWindowPresenterError) -> Result
+    ) throws(GPUWindowPresenterError) -> Result {
+        lock.lock()
+        defer { lock.unlock() }
+        return try body()
     }
 }
 
@@ -386,50 +418,76 @@ extension GPUWindowPresenter {
         _ buffer: any GPUWindowPresenterBuffer,
         slotID: GBMBufferPoolSlotID
     ) throws(GPUWindowPresenterError) {
-        do {
-            try state.installSlot(slotID)
-        } catch {
-            throw GPUWindowPresenterError.state(error)
-        }
+        try withPresenterLock { () throws(GPUWindowPresenterError) in
+            do {
+                try state.installSlot(slotID)
+            } catch let error as GPUWindowPresenterStateError {
+                throw GPUWindowPresenterError.state(error)
+            } catch {
+                preconditionFailure("Unexpected GPU presenter state error: \(error)")
+            }
 
-        buffers[slotID] = buffer
-        configureInstalledBuffer(buffer, slotID: slotID)
+            buffers[slotID] = buffer
+            configureInstalledBuffer(buffer, slotID: slotID)
+        }
     }
 
     package func replaceAvailableBuffer(
         _ buffer: any GPUWindowPresenterBuffer,
         slotID: GBMBufferPoolSlotID
     ) throws(GPUWindowPresenterError) {
-        do {
-            try state.ensureAvailableSlot(slotID)
-        } catch {
-            throw GPUWindowPresenterError.state(error)
-        }
+        let retiredBuffer: any GPUWindowPresenterBuffer = try withPresenterLock {
+            () throws(GPUWindowPresenterError) in
+            do {
+                try state.ensureAvailableSlot(slotID)
+            } catch let error as GPUWindowPresenterStateError {
+                throw GPUWindowPresenterError.state(error)
+            } catch {
+                preconditionFailure("Unexpected GPU presenter state error: \(error)")
+            }
 
-        guard let retiredBuffer = buffers[slotID] else {
-            throw GPUWindowPresenterError.missingBuffer(slotID)
-        }
+            guard let retiredBuffer = buffers[slotID] else {
+                throw GPUWindowPresenterError.missingBuffer(slotID)
+            }
 
+            buffers[slotID] = buffer
+            configureInstalledBuffer(buffer, slotID: slotID)
+            return retiredBuffer
+        }
         retiredBuffer.destroy()
-        buffers[slotID] = buffer
-        configureInstalledBuffer(buffer, slotID: slotID)
     }
 
     @discardableResult
     package func retireAvailableBuffers() throws(GPUWindowPresenterError) -> [GBMBufferPoolSlotID] {
-        let retiredSlotIDs: [GBMBufferPoolSlotID]
-        do {
-            retiredSlotIDs = try state.retireAvailableSlots()
-        } catch {
-            throw GPUWindowPresenterError.state(error)
-        }
+        let retired:
+            (
+                slotIDs: [GBMBufferPoolSlotID],
+                buffers: [any GPUWindowPresenterBuffer]
+            ) = try withPresenterLock { () throws(GPUWindowPresenterError) in
+                let retiredSlotIDs: [GBMBufferPoolSlotID]
+                do {
+                    retiredSlotIDs = try state.retireAvailableSlots()
+                } catch let error as GPUWindowPresenterStateError {
+                    throw GPUWindowPresenterError.state(error)
+                } catch {
+                    preconditionFailure("Unexpected GPU presenter state error: \(error)")
+                }
 
-        for slotID in retiredSlotIDs {
-            buffers.removeValue(forKey: slotID)?.destroy()
-            presentationCorrelation.remove(slotID: slotID)
+                var retiredBuffers: [any GPUWindowPresenterBuffer] = []
+                for slotID in retiredSlotIDs {
+                    if let buffer = buffers.removeValue(forKey: slotID) {
+                        retiredBuffers.append(buffer)
+                    }
+                    presentationCorrelation.remove(slotID: slotID)
+                }
+                backingState.bufferPool = state.bufferPoolReadiness
+                return (retiredSlotIDs, retiredBuffers)
+            }
+
+        for buffer in retired.buffers {
+            buffer.destroy()
         }
-        backingState.bufferPool = state.bufferPoolReadiness
-        return retiredSlotIDs
+        return retired.slotIDs
     }
 
     package func presentNext(
@@ -449,16 +507,14 @@ extension GPUWindowPresenter {
         pacing: SurfacePacingConstraint,
         metadata: SurfaceCommitMetadata = .default
     ) throws(GPUWindowPresenterError) -> GPUWindowPresentedFrame {
-        if let releaseFailure = releaseFailures.first {
-            throw GPUWindowPresenterError.releaseFailure(releaseFailure)
-        }
-
         let options = GPUWindowPresentationOptions(
             synchronization: synchronization,
             pacing: pacing,
             metadata: metadata
         )
-        let (lease, buffer) = try leaseBufferForPresentation()
+        let (lease, buffer) = try withPresenterLock { () throws(GPUWindowPresenterError) in
+            try leaseBufferForPresentation()
+        }
 
         let presentation: PreviewBufferPresentationResult
         do {
@@ -468,44 +524,49 @@ extension GPUWindowPresenter {
                 metadata: options.metadata
             )
         } catch let error as GBMBufferPoolStateError {
-            try cancelLeaseAfterFailedPresentation(lease)
-            recordBackingFailure(
+            try cancelLeaseAndRecordBackingFailure(
+                lease,
                 .gbmAllocationFailed,
                 operation: .gbmAllocation
             )
             throw GPUWindowPresenterError.state(.pool(error))
         } catch let error as GPUWindowPresenterStateError {
-            try cancelLeaseAfterFailedPresentation(lease)
-            recordBackingFailure(
+            try cancelLeaseAndRecordBackingFailure(
+                lease,
                 .submitConstraintRejected,
                 operation: .submitConstraintApplication
             )
             throw GPUWindowPresenterError.state(error)
         } catch let error as SurfaceSubmitConstraintError {
-            try cancelLeaseAfterFailedPresentation(lease)
-            recordBackingFailure(
+            try cancelLeaseAndRecordBackingFailure(
+                lease,
                 GPUBackingFailure(error),
                 operation: .submitConstraintApplication
             )
             throw GPUWindowPresenterError.submitConstraints(error)
         } catch let error as SurfaceCommitMetadataError {
-            try cancelLeaseAfterFailedPresentation(lease)
-            recordBackingFailure(
+            try cancelLeaseAndRecordBackingFailure(
+                lease,
                 .metadataRequiredButUnavailable(error),
                 operation: .metadataSetup
             )
             throw GPUWindowPresenterError.metadata(error)
         } catch {
-            try cancelLeaseAfterFailedPresentation(lease)
-            recordBackingFailure(.commitFailed, operation: .surfaceCommit)
+            try cancelLeaseAndRecordBackingFailure(
+                lease,
+                .commitFailed,
+                operation: .surfaceCommit
+            )
             throw GPUWindowPresenterError.window(error)
         }
 
-        return try recordPresentedFrameAfterCommit(
-            presentation,
-            lease: lease,
-            options: options
-        )
+        return try withPresenterLock { () throws(GPUWindowPresenterError) in
+            try recordPresentedFrameAfterCommit(
+                presentation,
+                lease: lease,
+                options: options
+            )
+        }
     }
 
     package func presentNext(
@@ -514,11 +575,9 @@ extension GPUWindowPresenter {
         pacing: SurfacePacingConstraint,
         metadata: SurfaceCommitMetadata = .default
     ) async throws(GPUWindowPresenterError) -> GPUWindowPresentedFrame {
-        if let releaseFailure = releaseFailures.first {
-            throw GPUWindowPresenterError.releaseFailure(releaseFailure)
+        let (lease, buffer) = try withPresenterLock { () throws(GPUWindowPresenterError) in
+            try leaseBufferForPresentation()
         }
-
-        let (lease, buffer) = try leaseBufferForPresentation()
         return try await present(
             lease: lease,
             buffer: buffer,
@@ -538,11 +597,9 @@ extension GPUWindowPresenter {
         pacing: SurfacePacingConstraint,
         metadata: SurfaceCommitMetadata = .default
     ) async throws(GPUWindowPresenterError) -> GPUWindowPresentedFrame {
-        if let releaseFailure = releaseFailures.first {
-            throw GPUWindowPresenterError.releaseFailure(releaseFailure)
+        let (lease, buffer) = try withPresenterLock { () throws(GPUWindowPresenterError) in
+            try leaseBufferForPresentation(slotID: slotID)
         }
-
-        let (lease, buffer) = try leaseBufferForPresentation(slotID: slotID)
         return try await present(
             lease: lease,
             buffer: buffer,
@@ -569,44 +626,49 @@ extension GPUWindowPresenter {
                 options.metadata
             )
         } catch let error as GBMBufferPoolStateError {
-            try cancelLeaseAfterFailedPresentation(lease)
-            recordBackingFailure(
+            try cancelLeaseAndRecordBackingFailure(
+                lease,
                 .gbmAllocationFailed,
                 operation: .gbmAllocation
             )
             throw GPUWindowPresenterError.state(.pool(error))
         } catch let error as GPUWindowPresenterStateError {
-            try cancelLeaseAfterFailedPresentation(lease)
-            recordBackingFailure(
+            try cancelLeaseAndRecordBackingFailure(
+                lease,
                 .submitConstraintRejected,
                 operation: .submitConstraintApplication
             )
             throw GPUWindowPresenterError.state(error)
         } catch let error as SurfaceSubmitConstraintError {
-            try cancelLeaseAfterFailedPresentation(lease)
-            recordBackingFailure(
+            try cancelLeaseAndRecordBackingFailure(
+                lease,
                 GPUBackingFailure(error),
                 operation: .submitConstraintApplication
             )
             throw GPUWindowPresenterError.submitConstraints(error)
         } catch let error as SurfaceCommitMetadataError {
-            try cancelLeaseAfterFailedPresentation(lease)
-            recordBackingFailure(
+            try cancelLeaseAndRecordBackingFailure(
+                lease,
                 .metadataRequiredButUnavailable(error),
                 operation: .metadataSetup
             )
             throw GPUWindowPresenterError.metadata(error)
         } catch {
-            try cancelLeaseAfterFailedPresentation(lease)
-            recordBackingFailure(.commitFailed, operation: .surfaceCommit)
+            try cancelLeaseAndRecordBackingFailure(
+                lease,
+                .commitFailed,
+                operation: .surfaceCommit
+            )
             throw GPUWindowPresenterError.window(error)
         }
 
-        return try recordPresentedFrameAfterCommit(
-            presentation,
-            lease: lease,
-            options: options
-        )
+        return try withPresenterLock { () throws(GPUWindowPresenterError) in
+            try recordPresentedFrameAfterCommit(
+                presentation,
+                lease: lease,
+                options: options
+            )
+        }
     }
 
     private func leaseBufferForPresentation(
@@ -614,6 +676,7 @@ extension GPUWindowPresenter {
     ) throws(GPUWindowPresenterError) -> (
         GPUWindowPresentationLease, any GPUWindowPresenterBuffer
     ) {
+        try throwPendingReleaseFailureIfNeeded()
         let lease: GPUWindowPresentationLease
         do {
             lease = try state.leaseSlot(slotID)
@@ -634,6 +697,7 @@ extension GPUWindowPresenter {
             GPUWindowPresentationLease, any GPUWindowPresenterBuffer
         )
     {
+        try throwPendingReleaseFailureIfNeeded()
         let lease: GPUWindowPresentationLease
         do {
             lease = try state.leaseNext()
@@ -659,29 +723,54 @@ extension GPUWindowPresenter {
         }
     }
 
+    private func throwPendingReleaseFailureIfNeeded() throws(GPUWindowPresenterError) {
+        if let releaseFailure = releaseFailures.first {
+            throw GPUWindowPresenterError.releaseFailure(releaseFailure)
+        }
+    }
+
+    private func cancelLeaseAndRecordBackingFailure(
+        _ lease: GPUWindowPresentationLease,
+        _ failure: GPUBackingFailure,
+        operation: GPUBackingOperation
+    ) throws(GPUWindowPresenterError) {
+        try withPresenterLock { () throws(GPUWindowPresenterError) in
+            try cancelLeaseAfterFailedPresentation(lease)
+            recordBackingFailure(failure, operation: operation)
+        }
+    }
+
     package func recordExplicitReleaseSignal(
         slotID: GBMBufferPoolSlotID
     ) throws(GPUWindowPresenterError) {
-        do {
-            if try state.markExplicitReleaseSignaled(slotID) {
-                presentationCorrelation.remove(slotID: slotID)
+        try withPresenterLock { () throws(GPUWindowPresenterError) in
+            do {
+                if try state.markExplicitReleaseSignaled(slotID) {
+                    presentationCorrelation.remove(slotID: slotID)
+                }
+            } catch let error as GPUWindowPresenterStateError {
+                throw GPUWindowPresenterError.state(error)
+            } catch {
+                preconditionFailure("Unexpected GPU presenter state error: \(error)")
             }
-        } catch {
-            throw .state(error)
         }
     }
 
     package func retireAll(reason: GPUWindowPresenterRetireReason) {
-        for buffer in buffers.values {
-            buffer.destroy()
+        let retiredBuffers = withLock {
+            let retiredBuffers = Array(buffers.values)
+            buffers.removeAll()
+            releaseFailures.removeAll()
+            presentationCorrelation.removeAll()
+            runtimePath = .empty
+            state.retireAll(reason: reason)
+            backingState.markRetired()
+            return retiredBuffers
         }
 
-        buffers.removeAll()
-        releaseFailures.removeAll()
-        presentationCorrelation.removeAll()
-        runtimePath = .empty
-        state.retireAll(reason: reason)
-        backingState.markRetired()
+        for buffer in retiredBuffers {
+            buffer.destroy()
+        }
     }
 
     private func configureInstalledBuffer(
@@ -773,12 +862,16 @@ extension GPUWindowPresenter {
     }
 
     private func recordRelease(_ slotID: GBMBufferPoolSlotID) {
-        do {
-            if try state.markReleased(slotID) {
-                presentationCorrelation.remove(slotID: slotID)
+        withLock {
+            do {
+                if try state.markReleased(slotID) {
+                    presentationCorrelation.remove(slotID: slotID)
+                }
+            } catch let error as GPUWindowPresenterStateError {
+                releaseFailures.append(error)
+            } catch {
+                preconditionFailure("Unexpected GPU presenter release error: \(error)")
             }
-        } catch {
-            releaseFailures.append(error)
         }
     }
 }
@@ -787,14 +880,18 @@ extension GPUWindowPresenter {
     package func leaseNextForTesting()
         throws(GPUWindowPresenterError) -> GPUWindowPresentationLease
     {
-        let (lease, _) = try leaseBufferForPresentation()
-        return lease
+        try withPresenterLock { () throws(GPUWindowPresenterError) in
+            let (lease, _) = try leaseBufferForPresentation()
+            return lease
+        }
     }
 
     package func cancelLeaseForTesting(
         _ lease: GPUWindowPresentationLease
     ) throws(GPUWindowPresenterError) {
-        try cancelLeaseAfterFailedPresentation(lease)
+        try withPresenterLock { () throws(GPUWindowPresenterError) in
+            try cancelLeaseAfterFailedPresentation(lease)
+        }
     }
 
     package func recordPresentedFrameForTesting(
@@ -804,15 +901,17 @@ extension GPUWindowPresenter {
         pacing: SurfacePacingConstraint = .none,
         metadata: SurfaceCommitMetadata = .default
     ) throws(GPUWindowPresenterError) -> GPUWindowPresentedFrame {
-        try recordPresentedFrameAfterCommit(
-            presentation,
-            lease: lease,
-            options: GPUWindowPresentationOptions(
-                synchronization: synchronization,
-                pacing: pacing,
-                metadata: metadata
+        try withPresenterLock { () throws(GPUWindowPresenterError) in
+            try recordPresentedFrameAfterCommit(
+                presentation,
+                lease: lease,
+                options: GPUWindowPresentationOptions(
+                    synchronization: synchronization,
+                    pacing: pacing,
+                    metadata: metadata
+                )
             )
-        )
+        }
     }
 
     package func markReadyForTesting(
@@ -821,24 +920,28 @@ extension GPUWindowPresenter {
         pacing: SurfacePacingConstraint = .none,
         metadata: SurfaceCommitMetadata = .default
     ) {
-        runtimePath = .afterPresentation(
-            capabilities: capabilities,
-            synchronization: synchronization,
-            pacing: pacing,
-            metadata: metadata
-        )
-        backingState.markReady(
-            runtimePath: runtimePath,
-            capabilities: capabilities,
-            bufferPool: state.bufferPoolReadiness,
-            frame: nil
-        )
+        withLock {
+            runtimePath = .afterPresentation(
+                capabilities: capabilities,
+                synchronization: synchronization,
+                pacing: pacing,
+                metadata: metadata
+            )
+            backingState.markReady(
+                runtimePath: runtimePath,
+                capabilities: capabilities,
+                bufferPool: state.bufferPoolReadiness,
+                frame: nil
+            )
+        }
     }
 
     package func markFailureForTesting(
         _ failure: GPUBackingFailure,
         operation: GPUBackingOperation
     ) {
-        recordBackingFailure(failure, operation: operation)
+        withLock {
+            recordBackingFailure(failure, operation: operation)
+        }
     }
 }
