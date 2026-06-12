@@ -11,7 +11,7 @@ Run `swift run swl api verify --update` only after reviewing and updating
 
 ### `Sources/WaylandClient/Internal/Support/IdentityConformances.swift`
 
-- L30: `    public var id: SeatID {`
+- L32: `    public var id: SeatID {`
 
 ### `Sources/WaylandClient/Public/Activation/ActivationDomainTypes.swift`
 

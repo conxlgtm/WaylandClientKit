@@ -407,7 +407,12 @@ public struct ProtocolTooling {
             try validateManifest()
         }
         let manifest = try loadManifest()
-        let scanner = try runner.executableURL(for: "wayland-scanner").path
+        let scanner = try RepositoryNixTools(
+            repository: repository,
+            fileSystem: fileSystem,
+            runner: runner,
+            diagnostics: diagnostics
+        ).executablePath(for: "wayland-scanner", probeArguments: ["--version"])
         let includeRoot = outputRoot.appendingPathComponent(
             "Sources/CWaylandProtocols/include/generated")
         let sourceRoot = outputRoot.appendingPathComponent("Sources/CWaylandProtocols/generated")

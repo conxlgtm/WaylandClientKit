@@ -67,6 +67,7 @@ Tests/WaylandRuntimeTests/Executor/WaylandThreadExecutorConcurrencyTests.swift	@
 Tests/WaylandRuntimeTests/Executor/WaylandThreadExecutorTests.swift	@unchecked Sendable	Private condition-protected owner-thread test gate shared with executor thread.
 Tests/WaylandClientTests/Events/EventBrokerCancellationTests.swift	@unchecked Sendable	Private condition-protected event broker cancellation gate shared with a child task.
 Tests/WaylandClientTests/DataTransfer/ClipboardOfferReadTests.swift	@unchecked Sendable	Private condition-protected read cancellation probe shared with a child task.
+Tests/WaylandClientTests/Input/InputSerialActionTests.swift	@unchecked Sendable	Private NSLock-protected test recorder shared by input serial action callbacks.
 Tests/WaylandClientTests/Subsurface/SubsurfacePublicRequestTests.swift	@unchecked Sendable	Private live-test parent commit probe shared across display-owner callbacks.
 Tests/WaylandRuntimeTests/Executor/WaylandThreadExecutorTestSupport.swift	poll(	Test-only pipe wait used to observe executor-thread progress without racing shared Swift state.
 Tests/**	OpaquePointer	Test doubles for raw C object wrappers.

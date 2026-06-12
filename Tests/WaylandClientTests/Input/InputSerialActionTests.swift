@@ -44,6 +44,7 @@ struct InputSerialActionTests {
     }
 }
 
+// SAFETY: Recorder state is private and every access is protected by NSLock.
 private final class InputSerialActionRecorder: @unchecked Sendable {
     private let lock = NSLock()
     private var storage: [String] = []
