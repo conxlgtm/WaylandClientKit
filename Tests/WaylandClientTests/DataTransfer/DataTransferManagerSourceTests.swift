@@ -182,7 +182,7 @@ struct DataTransferManagerSourceTests {
     }
 
     @Test
-    func sourceSendWithInvalidMimeClosesDescriptorAndReportsMimeValidationError() throws {
+    func sourceSendWithNilMIMEClosesDescriptorWithoutCallbackFailure() throws {
         let backend = RecordingDataTransferBackend()
         let manager = DataTransferManager(backend: backend)
         try manager.synchronizeSeats([seat1])
@@ -197,21 +197,28 @@ struct DataTransferManagerSourceTests {
         sourceBinding.emit(.send(mimeType: nil, fd: 202))
 
         #expect(backend.closedDescriptors == [202])
-        #expect(
-            manager.pendingCallbackError
-                == DataTransferCallbackFailure(
-                    context: .dataSource(ClipboardSourceIdentity(source.id)),
-                    error: .invalidMIMEType("")
-                )
+        #expect(manager.pendingCallbackError == nil)
+        try manager.throwPendingCallbackErrorIfAny()
+    }
+
+    @Test
+    func sourceSendWithEmptyMIMEClosesDescriptorWithoutCallbackFailure() throws {
+        let backend = RecordingDataTransferBackend()
+        let manager = DataTransferManager(backend: backend)
+        try manager.synchronizeSeats([seat1])
+
+        let source = try manager.setSelectionSource(
+            seatID: seat1,
+            mimeTypes: [.plainText],
+            serial: InputSerial(rawValue: 77)
         )
-        #expect(
-            throws: DataTransferCallbackFailure(
-                context: .dataSource(ClipboardSourceIdentity(source.id)),
-                error: .invalidMIMEType("")
-            )
-        ) {
-            try manager.throwPendingCallbackErrorIfAny()
-        }
+        let sourceBinding = try #require(backend.sourceBinding(for: source.id))
+
+        sourceBinding.emit(.send(mimeType: "", fd: 202))
+
+        #expect(backend.closedDescriptors == [202])
+        #expect(manager.pendingCallbackError == nil)
+        try manager.throwPendingCallbackErrorIfAny()
     }
 
     @Test
