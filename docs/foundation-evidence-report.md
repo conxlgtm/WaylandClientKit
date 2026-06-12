@@ -225,8 +225,11 @@ GNOME/Mutter:
   `relative pointer auto-subscribed`, `lock requested id=locked-pointer-1`,
   `activated(locked-pointer-1)`, sustained `relative motion` events while the
   visible cursor was pinned, `inactivePersistent(locked-pointer-1)`, `result:
-  pass`, and `cleanup: pass`. Right-click confine was not exercised and remains
-  open.
+  pass`, and `cleanup: pass`. A second 2026-06-11 manual run logged
+  `operation: confine-pointer pass`, `confine requested id=confined-pointer-1`,
+  `activated(confined-pointer-1)`, 3108 `relative motion` events, a typed
+  duplicate-request failure while a constraint was already active,
+  `inactivePersistent(confined-pointer-1)`, `result: pass`, and `cleanup: pass`.
 - Data-transfer drag source: auto-close pass on KDE/KWin with clipboard v3,
   drag v3, and primary v1 available; manual drag source/drop/cancel path still
   not run.
@@ -251,7 +254,8 @@ GNOME/Mutter:
 - Active managed GPU on GNOME/Mutter is still missing; the current VM evidence
   records typed fallback `surfaceFeedbackUnavailable`.
 - Manual serial-sensitive actions need real button press evidence.
-- Manual pointer lock/confine needs real pointer motion evidence.
+- Manual pointer lock/confine has KDE/KWin evidence; broaden to another
+  desktop compositor if practical.
 - Manual data-transfer drag-source/drop/cancel needs real interaction evidence.
 - Managed GPU resize/reconfigure needs a manual or automated stress pass.
 - `swift run swl ci check` needs investigation on the KDE host because it hung
