@@ -202,6 +202,9 @@ struct ToolingConvergenceTests {
         #expect(functionBody.contains("\"-print-target-info\""))
         #expect(functionBody.contains(".appendingPathComponent(\"index\")"))
         #expect(functionBody.contains(".appendingPathComponent(\"store\")"))
+        #expect(functionBody.contains(".appendingPathComponent(\"v5\")"))
+        #expect(functionBody.contains(".appendingPathComponent(\"units\")"))
+        #expect(functionBody.contains(".appendingPathComponent(\"records\")"))
     }
 
     @Test
