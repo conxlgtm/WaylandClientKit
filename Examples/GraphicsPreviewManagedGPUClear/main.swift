@@ -6,8 +6,8 @@ import WaylandGraphicsPreview
 
 @main
 enum GraphicsPreviewManagedGPUClear {
-    nonisolated private static let leftButton = PointerButtonCode(rawValue: 0x110)
-    nonisolated private static let resizeHandleBand = 36.0
+    nonisolated fileprivate static let leftButton = PointerButtonCode(rawValue: 0x110)
+    nonisolated fileprivate static let resizeHandleBand = 12.0
 
     static func main() async {
         let result: ManagedGPUClearReport
@@ -45,56 +45,74 @@ enum GraphicsPreviewManagedGPUClear {
         on display: WaylandDisplay,
         options: ExampleRunOptions
     ) async throws -> ManagedGPUClearReport {
+        let backingPreference = requestedBackingPreference()
         let capabilities = try await display.graphicsSurfaceCapabilities()
+        let displayCapabilities = try await display.capabilities()
         let backing = try await display.createGraphicsWindowBacking(
             windowConfiguration: WindowConfiguration(
                 title: "SwiftWayland Managed GPU Clear",
                 appID: "swift-wayland-managed-gpu-clear",
                 initialWidth: 360,
                 initialHeight: 240,
-                bufferCount: 2
+                bufferCount: 2,
+                decorationPreference: .preferClientSide
             ),
             graphicsConfiguration: WaylandGraphicsConfiguration(
-                backingPreference: .managedGPU,
+                backingPreference: backingPreference,
                 presentationFeedbackPolicy: .requestWhenAvailable
             )
         )
         let state = ManagedGPUClearRunState()
 
         log(
-            "instructions: drag from inside the content edge/corner to resize, "
-                + "then close the window"
+            "instructions: drag from inside the content edge/corner to resize; "
+                + "drag from the interior to move; then close the window"
         )
+        log(
+            "display capability xdgDecoration="
+                + "\(displayAvailability(displayCapabilities.xdgDecoration))"
+        )
+        log("requested backing preference=\(backingDescription(backingPreference))")
+        try await backing.window.setMinimumSize(PositiveLogicalSize(width: 1, height: 1))
+        try await backing.window.setMaximumSize(nil)
+        log("resize constraints minimum=1x1 maximum=unset")
         _ = try await submitClearFrame(backing: backing, state: state)
-
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask {
-                try await consumeDisplayEvents(display.events, backing: backing, state: state)
-            }
-            group.addTask {
-                try await consumeInputEvents(
-                    display.inputEvents,
-                    display: display,
-                    backing: backing,
-                    state: state
-                )
-            }
-            if let seconds = options.autoCloseSeconds {
-                group.addTask {
-                    try await Task.sleep(for: .seconds(seconds))
-                    try await backing.close()
-                }
-            }
-
-            _ = try await group.next()
-            group.cancelAll()
+        log("initial window \(await windowSnapshotDescription(backing.window))")
+        let inputActionState = ManagedGPUClearInputActionState(windowID: backing.id)
+        let inputActionID = try await display.installInputSerialAction { event, context in
+            inputActionState.handle(event, context: context)
         }
+
+        do {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    try await consumeDisplayEvents(display.events, backing: backing, state: state)
+                }
+                if let seconds = options.autoCloseSeconds {
+                    group.addTask {
+                        try await Task.sleep(for: .seconds(seconds))
+                        try await backing.close()
+                    }
+                }
+
+                _ = try await group.next()
+                group.cancelAll()
+            }
+        } catch {
+            await display.removeInputSerialAction(inputActionID)
+            throw error
+        }
+        await display.removeInputSerialAction(inputActionID)
 
         if options.printSummary {
-            log(await state.summary())
+            log(await state.summary(resizeRequestCount: inputActionState.resizeRequestCount))
         }
 
-        return await state.report(capabilities: capabilities)
+        return await state.report(
+            capabilities: capabilities,
+            requestedBackingPreference: backingPreference,
+            resizeRequestCount: inputActionState.resizeRequestCount
+        )
     }
 
     nonisolated private static func consumeDisplayEvents(
@@ -120,86 +138,6 @@ enum GraphicsPreviewManagedGPUClear {
         }
     }
 
-    nonisolated private static func consumeInputEvents(
-        _ events: InputEvents,
-        display: WaylandDisplay,
-        backing: WaylandGraphicsWindowBacking,
-        state: ManagedGPUClearRunState
-    ) async throws {
-        var iterator = events.makeAsyncIterator()
-        while !Task.isCancelled, let event = try await iterator.next() {
-            guard event.windowID == backing.id else { continue }
-
-            switch event.kind {
-            case .pointer(.entered(let location, _)), .pointer(.moved(let location, _)):
-                let geometry = try await backing.window.geometry
-                let edge = resizeEdge(at: location, in: geometry)
-                let cursor = cursor(for: edge)
-                let changed = await state.recordPointer(location, edge: edge)
-                do {
-                    let results = try await display.setPointerCursor(cursor)
-                    if changed {
-                        log(
-                            "resize handle edge=\(edgeDescription(edge)) "
-                                + "cursor=\(cursorDescription(cursor)) "
-                                + "geometry=\(geometryDescription(geometry)) "
-                                + "location=\(location.x),\(location.y) "
-                                + "results=\(cursorResultsDescription(results))"
-                        )
-                    }
-                } catch {
-                    log(
-                        "resize handle cursor failed edge=\(edgeDescription(edge)) "
-                            + "cursor=\(cursorDescription(cursor)) error=\(error)"
-                    )
-                }
-            case .pointer(.left):
-                _ = await state.recordPointer(nil, edge: nil)
-                do {
-                    let results = try await display.setPointerCursor(.defaultArrow)
-                    log(
-                        "resize handle edge=none cursor=left_ptr "
-                            + "results=\(cursorResultsDescription(results))"
-                    )
-                } catch {
-                    log("resize handle cursor failed edge=none cursor=left_ptr error=\(error)")
-                }
-            case .pointer(.button(let button)) where button.state == .pressed:
-                guard let location = await state.pointerLocation else { continue }
-                let geometry = try await backing.window.geometry
-                guard let edge = resizeEdge(at: location, in: geometry) else { continue }
-                guard button.button == leftButton else {
-                    log(
-                        "resize request ignored button=\(button.button) expected=left "
-                            + "edge=\(edgeDescription(edge)) "
-                            + "geometry=\(geometryDescription(geometry)) "
-                            + "location=\(location.x),\(location.y)"
-                    )
-                    continue
-                }
-                await state.recordResizeRequest()
-                log(
-                    "resize request seat=\(event.seatID) serial=\(button.serial) "
-                        + "edge=\(edgeDescription(edge)) "
-                        + "geometry=\(geometryDescription(geometry)) "
-                        + "location=\(location.x),\(location.y)"
-                )
-                do {
-                    try await backing.window.requestInteractiveResize(
-                        seatID: event.seatID,
-                        serial: button.serial,
-                        edge: edge
-                    )
-                    log("resize request result threw=false")
-                } catch {
-                    log("resize request result threw=true error=\(error)")
-                }
-            default:
-                break
-            }
-        }
-    }
-
     nonisolated private static func submitClearFrame(
         backing: WaylandGraphicsWindowBacking,
         state: ManagedGPUClearRunState
@@ -212,9 +150,10 @@ enum GraphicsPreviewManagedGPUClear {
                 )
             )
         )
-        if await state.record(result) {
+        let observation = await state.record(result)
+        if observation.shouldLog {
             log(
-                "gpu frame operation=\(result.operation) "
+                "gpu frame \(observation.description) operation=\(result.operation) "
                     + "size=\(result.size.width)x\(result.size.height) "
                     + "backing=\(actualBacking(result.runtimePath))"
             )
@@ -222,7 +161,7 @@ enum GraphicsPreviewManagedGPUClear {
         return result
     }
 
-    nonisolated private static func resizeEdge(
+    nonisolated fileprivate static func resizeEdge(
         at location: PointerLocation,
         in geometry: SurfaceGeometry
     ) -> WindowResizeEdge? {
@@ -255,7 +194,7 @@ enum GraphicsPreviewManagedGPUClear {
         }
     }
 
-    nonisolated private static func cursor(for edge: WindowResizeEdge?) -> PointerCursor {
+    nonisolated fileprivate static func cursor(for edge: WindowResizeEdge?) -> PointerCursor {
         guard let edge else { return .defaultArrow }
         switch edge {
         case .left, .right:
@@ -273,7 +212,7 @@ enum GraphicsPreviewManagedGPUClear {
         }
     }
 
-    nonisolated private static func edgeDescription(_ edge: WindowResizeEdge?) -> String {
+    nonisolated fileprivate static func edgeDescription(_ edge: WindowResizeEdge?) -> String {
         guard let edge else { return "none" }
         switch edge {
         case .top:
@@ -295,33 +234,44 @@ enum GraphicsPreviewManagedGPUClear {
         }
     }
 
-    nonisolated private static func cursorDescription(_ cursor: PointerCursor) -> String {
-        cursor.name ?? "hidden"
+    nonisolated fileprivate static func geometryDescription(_ geometry: SurfaceGeometry) -> String {
+        let size = geometry.logicalSize
+        return "\(size.width.rawValue)x\(size.height.rawValue)"
     }
 
-    nonisolated private static func cursorResultsDescription(
-        _ results: [CursorRequestResult]
+    nonisolated fileprivate static func snapshotDescription(
+        _ snapshot: WindowStateSnapshot,
+        effectiveDecorationMode: WindowDecorationMode
     ) -> String {
-        if results.isEmpty { return "none" }
-        return results.map(cursorResultDescription).joined(separator: ",")
+        "size=\(snapshot.size.width.rawValue)x\(snapshot.size.height.rawValue) "
+            + "states=\(snapshot.states) "
+            + "capabilities=\(snapshot.managerCapabilities) "
+            + "configureDecoration=\(String(describing: snapshot.decorationMode)) "
+            + "effectiveDecoration=\(effectiveDecorationMode)"
     }
 
-    nonisolated private static func cursorResultDescription(
-        _ result: CursorRequestResult
-    ) -> String {
-        switch result {
-        case .set(let seatID, let serial, let cursor):
-            return "set(seat=\(seatID),serial=\(serial),cursor=\(cursorDescription(cursor)))"
-        case .hidden(let seatID, let serial):
-            return "hidden(seat=\(seatID),serial=\(serial))"
-        case .skippedNoPointerFocus(let seatID):
-            return "skippedNoPointerFocus(seat=\(seatID))"
+    nonisolated private static func windowSnapshotDescription(_ window: Window) async -> String {
+        do {
+            let snapshot = try await window.stateSnapshot
+            let effectiveDecorationMode = try await window.decorationMode
+            return snapshotDescription(
+                snapshot,
+                effectiveDecorationMode: effectiveDecorationMode
+            )
+        } catch {
+            return "snapshotError=\(error)"
         }
     }
 
-    nonisolated private static func geometryDescription(_ geometry: SurfaceGeometry) -> String {
-        let size = geometry.logicalSize
-        return "\(size.width.rawValue)x\(size.height.rawValue)"
+    nonisolated private static func displayAvailability(
+        _ availability: ProtocolAvailability
+    ) -> String {
+        switch availability {
+        case .unavailable:
+            "unavailable"
+        case .available(let version):
+            "available v\(version)"
+        }
     }
 
     nonisolated private static func actualBacking(
@@ -345,25 +295,251 @@ enum GraphicsPreviewManagedGPUClear {
         }
     }
 
-    nonisolated private static func log(_ message: String) {
+    nonisolated private static func requestedBackingPreference() -> WaylandGraphicsBackingKind {
+        switch ProcessInfo.processInfo.environment["SWL_GRAPHICS_PREVIEW_BACKING"]?.lowercased() {
+        case "software", "shm":
+            .software
+        default:
+            .managedGPU
+        }
+    }
+
+    nonisolated fileprivate static func backingDescription(
+        _ backing: WaylandGraphicsBackingKind
+    ) -> String {
+        switch backing {
+        case .managedGPU:
+            "managedGPU"
+        case .software:
+            "software"
+        }
+    }
+
+    nonisolated fileprivate static func log(_ message: String) {
         FileHandle.standardError.write(Data((message + "\n").utf8))
+    }
+}
+
+nonisolated private final class ManagedGPUClearInputActionState: @unchecked Sendable {
+    private let lock = NSLock()
+    private let windowID: WindowID
+    private var pointerLocation: PointerLocation?
+    private var pointerEdge: WindowResizeEdge?
+    private var pointerGeometry: SurfaceGeometry?
+    private var resizeRequests = 0
+
+    init(windowID managedWindowID: WindowID) {
+        windowID = managedWindowID
+    }
+
+    var resizeRequestCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return resizeRequests
+    }
+
+    func handle(_ event: InputEvent, context: InputSerialActionContext) {
+        guard event.windowID == windowID else { return }
+
+        switch event.kind {
+        case .pointer(.entered(let location, _)),
+            .pointer(.moved(let location, _)):
+            handlePointerLocation(location, context: context)
+        case .pointer(.left):
+            handlePointerLeft(context: context)
+        case .pointer(.button(let button)) where button.state == .pressed:
+            handleButtonPress(button, event: event, context: context)
+        default:
+            break
+        }
+    }
+
+    private func handlePointerLocation(
+        _ location: PointerLocation,
+        context: InputSerialActionContext
+    ) {
+        do {
+            let geometry = try context.windowGeometry(windowID)
+            let edge = GraphicsPreviewManagedGPUClear.resizeEdge(at: location, in: geometry)
+            let cursor = GraphicsPreviewManagedGPUClear.cursor(for: edge)
+            recordPointer(location, edge: edge, geometry: geometry)
+            _ = try context.setPointerCursor(cursor)
+            try context.requestRedraw(windowID)
+        } catch {
+            GraphicsPreviewManagedGPUClear.log("resize handle cursor failed \(error)")
+        }
+    }
+
+    private func handlePointerLeft(context: InputSerialActionContext) {
+        recordPointer(nil, edge: nil, geometry: nil)
+        do {
+            _ = try context.setPointerCursor(.defaultArrow)
+            try context.requestRedraw(windowID)
+        } catch {
+            GraphicsPreviewManagedGPUClear.log("resize handle cursor failed \(error)")
+        }
+    }
+
+    private func handleButtonPress(
+        _ button: PointerButtonEvent,
+        event: InputEvent,
+        context: InputSerialActionContext
+    ) {
+        guard let snapshot = pointerSnapshot() else { return }
+        let edgeDescription = GraphicsPreviewManagedGPUClear.edgeDescription(snapshot.edge)
+        guard button.button == GraphicsPreviewManagedGPUClear.leftButton else {
+            return
+        }
+
+        if let edge = snapshot.edge {
+            handleResizeRequest(
+                edge,
+                snapshot: snapshot,
+                edgeDescription: edgeDescription,
+                button: button,
+                event: event,
+                context: context
+            )
+        } else {
+            handleMoveRequest(
+                snapshot: snapshot,
+                button: button,
+                event: event,
+                context: context
+            )
+        }
+    }
+
+    private func handleResizeRequest(
+        _ edge: WindowResizeEdge,
+        snapshot: (location: PointerLocation, edge: WindowResizeEdge?, geometry: SurfaceGeometry),
+        edgeDescription: String,
+        button: PointerButtonEvent,
+        event: InputEvent,
+        context: InputSerialActionContext
+    ) {
+        let requestDescription =
+            "resize request seat=\(event.seatID) "
+                + "serial=\(button.serial) "
+                + "edge=\(edgeDescription) "
+                + "geometry=\(GraphicsPreviewManagedGPUClear.geometryDescription(snapshot.geometry)) "
+                + "location=\(snapshot.location.x),\(snapshot.location.y)"
+        do {
+            try context.requestInteractiveResize(
+                windowID,
+                seatID: event.seatID,
+                serial: button.serial,
+                edge: edge
+            )
+            recordResizeRequest()
+            try context.requestRedraw(windowID)
+            GraphicsPreviewManagedGPUClear.log(
+                "resize request result=pass " + requestDescription
+            )
+        } catch {
+            GraphicsPreviewManagedGPUClear.log(
+                "resize request result=fail " + requestDescription + " error=\(error)"
+            )
+        }
+    }
+
+    private func handleMoveRequest(
+        snapshot: (location: PointerLocation, edge: WindowResizeEdge?, geometry: SurfaceGeometry),
+        button: PointerButtonEvent,
+        event: InputEvent,
+        context: InputSerialActionContext
+    ) {
+        let requestDescription =
+            "move request seat=\(event.seatID) "
+                + "serial=\(button.serial) "
+                + "geometry=\(GraphicsPreviewManagedGPUClear.geometryDescription(snapshot.geometry)) "
+                + "location=\(snapshot.location.x),\(snapshot.location.y)"
+        do {
+            try context.requestInteractiveMove(
+                windowID,
+                seatID: event.seatID,
+                serial: button.serial
+            )
+            GraphicsPreviewManagedGPUClear.log("move request result=pass " + requestDescription)
+        } catch {
+            GraphicsPreviewManagedGPUClear.log(
+                "move request result=fail " + requestDescription + " error=\(error)"
+            )
+        }
+    }
+
+    private func recordPointer(
+        _ location: PointerLocation?,
+        edge: WindowResizeEdge?,
+        geometry: SurfaceGeometry?
+    ) {
+        lock.lock()
+        defer { lock.unlock() }
+        pointerLocation = location
+        pointerEdge = edge
+        pointerGeometry = geometry
+    }
+
+    private func pointerSnapshot()
+        -> (location: PointerLocation, edge: WindowResizeEdge?, geometry: SurfaceGeometry)?
+    {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let pointerLocation, let pointerGeometry else { return nil }
+        return (pointerLocation, pointerEdge, pointerGeometry)
+    }
+
+    private func recordResizeRequest() {
+        lock.lock()
+        defer { lock.unlock() }
+        resizeRequests += 1
+    }
+}
+
+private enum ManagedGPUClearFrameObservation: CustomStringConvertible, Sendable {
+    case none
+    case initial
+    case resizeObserved
+
+    nonisolated var shouldLog: Bool {
+        switch self {
+        case .initial, .resizeObserved:
+            true
+        case .none:
+            false
+        }
+    }
+
+    nonisolated var description: String {
+        switch self {
+        case .initial:
+            "initial"
+        case .resizeObserved:
+            "resize-observed"
+        case .none:
+            "unchanged"
+        }
     }
 }
 
 private struct ManagedGPUClearReport: Sendable {
     var capabilities: WaylandGraphicsSurfaceCapabilities?
     var frameResults: [WaylandGraphicsFrameResult]
+    var requestedBackingPreference: WaylandGraphicsBackingKind
     var resizeRequestCount: Int
     var failure: String?
 
     nonisolated init(
         capabilities reportedCapabilities: WaylandGraphicsSurfaceCapabilities? = nil,
         frameResults reportedFrameResults: [WaylandGraphicsFrameResult] = [],
+        requestedBackingPreference reportedBackingPreference: WaylandGraphicsBackingKind =
+            .managedGPU,
         resizeRequestCount reportedResizeRequestCount: Int = 0,
         failure reportedFailure: String? = nil
     ) {
         capabilities = reportedCapabilities
         frameResults = reportedFrameResults
+        requestedBackingPreference = reportedBackingPreference
         resizeRequestCount = reportedResizeRequestCount
         failure = reportedFailure
     }
@@ -375,41 +551,36 @@ private struct ManagedGPUClearReport: Sendable {
 
 private actor ManagedGPUClearRunState {
     private var frameResults: [WaylandGraphicsFrameResult] = []
-    private var resizeRequests = 0
-    private(set) var pointerLocation: PointerLocation?
-    private var pointerEdge: WindowResizeEdge?
 
-    func record(_ result: WaylandGraphicsFrameResult) -> Bool {
-        let previousSizes = orderedFrameSizes(frameResults)
+    func record(_ result: WaylandGraphicsFrameResult) -> ManagedGPUClearFrameObservation {
+        let hadResize = resizeObserved(frameResults)
         frameResults.append(result)
-        let size = "\(result.size.width)x\(result.size.height)"
-        return frameResults.count == 1 || !previousSizes.contains(size)
-    }
-
-    func recordPointer(_ location: PointerLocation?, edge: WindowResizeEdge?) -> Bool {
-        defer {
-            pointerLocation = location
-            pointerEdge = edge
+        if frameResults.count == 1 {
+            return .initial
         }
-        return pointerEdge != edge
+        if !hadResize, resizeObserved(frameResults) {
+            return .resizeObserved
+        }
+        return .none
     }
 
-    func recordResizeRequest() {
-        resizeRequests += 1
-    }
-
-    func report(capabilities: WaylandGraphicsSurfaceCapabilities) -> ManagedGPUClearReport {
+    func report(
+        capabilities: WaylandGraphicsSurfaceCapabilities,
+        requestedBackingPreference: WaylandGraphicsBackingKind,
+        resizeRequestCount: Int
+    ) -> ManagedGPUClearReport {
         ManagedGPUClearReport(
             capabilities: capabilities,
             frameResults: frameResults,
-            resizeRequestCount: resizeRequests
+            requestedBackingPreference: requestedBackingPreference,
+            resizeRequestCount: resizeRequestCount
         )
     }
 
-    func summary() -> String {
+    func summary(resizeRequestCount: Int) -> String {
         "managed-gpu-clear summary frames=\(frameResults.count) "
             + "resized=\(resizeObserved(frameResults)) "
-            + "resizeRequests=\(resizeRequests) "
+            + "resizeRequests=\(resizeRequestCount) "
             + "sizes=\(frameSizesDescription(frameResults))"
     }
 }
@@ -467,7 +638,7 @@ private struct ManagedGPUClearReportFormatter {
             "metadata color representation: \(status(runtimePath.metadata.colorRepresentation))",
             "metadata color management: \(status(runtimePath.metadata.colorManagement))",
             "presentation feedback: \(availability(capabilities.presentationFeedback)), runtime \(status(runtimePath.presentationFeedback))",
-            "requested backing: managedGPU",
+            "requested backing: \(GraphicsPreviewManagedGPUClear.backingDescription(report.requestedBackingPreference))",
             "actual backing: \(actualBacking(runtimePath))",
             "runtime dmabuf: \(status(runtimePath.dmabuf))",
             "frame operation: \(frameResult.operation)",
@@ -595,7 +766,13 @@ nonisolated private func frameSizesDescription(
     _ results: [WaylandGraphicsFrameResult]
 ) -> String {
     let sizes = orderedFrameSizes(results)
-    return sizes.isEmpty ? "none" : sizes.joined(separator: ",")
+    guard !sizes.isEmpty else { return "none" }
+    guard sizes.count > 12 else { return sizes.joined(separator: ",") }
+
+    let first = sizes.first ?? "unknown"
+    let last = sizes.last ?? "unknown"
+    let sample = (Array(sizes.prefix(4)) + Array(sizes.suffix(4))).joined(separator: ",")
+    return "\(sizes.count) unique, first=\(first), last=\(last), sample=\(sample)"
 }
 
 nonisolated private func resizeObserved(_ results: [WaylandGraphicsFrameResult]) -> Bool {

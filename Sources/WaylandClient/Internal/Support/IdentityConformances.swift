@@ -12,6 +12,8 @@ extension DataSourceID: UInt64WaylandEntityID {}
 
 extension RelativePointerSubscriptionID: UInt64WaylandEntityID {}
 
+extension InputSerialActionID: UInt64WaylandEntityID {}
+
 extension ActivationRequestID: UInt64WaylandEntityID,
     CustomStringConvertible
 {

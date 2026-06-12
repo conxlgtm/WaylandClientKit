@@ -1522,6 +1522,55 @@ struct ManagedGPUPreviewStoragePreparationTests {
         #expect(backing.submittedGeometries == [configuredGeometry])
         #expect(result.size == configuredGeometry.bufferSize)
     }
+
+    @Test
+    func managedGPURedrawRefreshesGeometryBeforeLeaseAndSubmit() async throws {
+        let initialGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 4, height: 3),
+            scale: .one
+        )
+        let firstGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 8, height: 6),
+            scale: .one
+        )
+        let leaseGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 10, height: 7),
+            scale: .one
+        )
+        let submitGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 12, height: 9),
+            scale: .one
+        )
+        let window = FakeGraphicsPreviewWindow(
+            initialGeometry: initialGeometry,
+            configuredGeometry: firstGeometry
+        )
+        let backing = FakeManagedGPUBacking()
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .projected(capabilities: gpuPreviewCapabilities()),
+            configuration: .default,
+            managedGPUBacking: backing
+        )
+
+        _ = try await storage.nextFrame()
+        _ = try await storage.submit(leaseID: 1, frame: .clearColor(.black))
+
+        await window.setConfiguredGeometry(leaseGeometry)
+        await window.clearEvents()
+        let lease = try await storage.nextFrame()
+
+        #expect(await window.eventSnapshot() == [.preparePresentation])
+        #expect(lease.size == leaseGeometry.bufferSize)
+
+        await window.setConfiguredGeometry(submitGeometry)
+        await window.clearEvents()
+        let result = try await lease.submit(.clearColor(.black))
+
+        #expect(await window.eventSnapshot() == [.preparePresentation])
+        #expect(backing.submittedGeometries == [firstGeometry, submitGeometry])
+        #expect(result.size == submitGeometry.bufferSize)
+    }
 }
 
 private func syncPoint(timeline: UInt64, point: UInt64) -> GPUSyncPoint {
@@ -1643,7 +1692,7 @@ private enum FakeGraphicsPreviewWindowEvent: Equatable {
 private actor FakeGraphicsPreviewWindow: WaylandGraphicsManagedWindow {
     nonisolated let id = WindowID(rawValue: 710)
     private let initialGeometry: SurfaceGeometry
-    private let configuredGeometry: SurfaceGeometry
+    private var configuredGeometry: SurfaceGeometry
     private var events: [FakeGraphicsPreviewWindowEvent] = []
     private var didPreparePresentation = false
 
@@ -1696,6 +1745,10 @@ private actor FakeGraphicsPreviewWindow: WaylandGraphicsManagedWindow {
 
     func clearEvents() {
         events.removeAll()
+    }
+
+    func setConfiguredGeometry(_ geometry: SurfaceGeometry) {
+        configuredGeometry = geometry
     }
 
     func eventSnapshot() -> [FakeGraphicsPreviewWindowEvent] {

@@ -1133,6 +1133,8 @@ extension TopLevelWindow {
 
         if model.currentConfiguration == nil {
             _ = try waitForInitialConfigure(timeoutMilliseconds: timeoutMilliseconds)
+        } else {
+            _ = try consumeLatestConfigureIfAvailable()
         }
 
         return try currentSurfaceGeometry()
@@ -1538,6 +1540,7 @@ extension TopLevelWindow {
             width: size?.width.rawValue ?? 0,
             height: size?.height.rawValue ?? 0
         )
+        _ = try connection.flushForExternalEventLoop()
     }
 
     package func setMaximumSizeOnOwnerThread(_ size: PositiveLogicalSize?) throws {
@@ -1547,6 +1550,7 @@ extension TopLevelWindow {
             width: size?.width.rawValue ?? 0,
             height: size?.height.rawValue ?? 0
         )
+        _ = try connection.flushForExternalEventLoop()
     }
 
     package func requestMaximizeOnOwnerThread() throws {
@@ -1583,6 +1587,7 @@ extension TopLevelWindow {
         let topLevel = try activeTopLevel(for: "requestInteractiveMove")
         let seat = try interactionSeat(for: seatID)
         topLevel.move(seat: seat, serial: serial.rawValue)
+        _ = try connection.flushForExternalEventLoop()
     }
 
     package func requestInteractiveResizeOnOwnerThread(
@@ -1594,6 +1599,7 @@ extension TopLevelWindow {
         let topLevel = try activeTopLevel(for: "requestInteractiveResize")
         let seat = try interactionSeat(for: seatID)
         topLevel.resize(seat: seat, serial: serial.rawValue, edge: edge.rawXDGResizeEdge)
+        _ = try connection.flushForExternalEventLoop()
     }
 
     package func requestWindowMenuOnOwnerThread(
@@ -1610,6 +1616,7 @@ extension TopLevelWindow {
             x: position.x,
             y: position.y
         )
+        _ = try connection.flushForExternalEventLoop()
     }
 
     package func dataTransferDragOriginOnOwnerThread() throws -> any DataTransferDragOriginBinding {

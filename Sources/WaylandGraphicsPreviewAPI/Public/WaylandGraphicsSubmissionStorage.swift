@@ -112,7 +112,7 @@ package actor WaylandGraphicsWindowBackingStorage {
 
         let geometry: SurfaceGeometry
         do {
-            geometry = try await window.geometry
+            geometry = try await frameLeaseGeometry()
             try leaseState.requireNotClosed()
         } catch {
             throw graphicsError(for: error, stage: .frameGeometry)
@@ -221,12 +221,31 @@ package actor WaylandGraphicsWindowBackingStorage {
         for leaseID: WaylandGraphicsFrameLeaseID
     ) async throws -> SurfaceGeometry {
         do {
-            let geometry = try await window.geometry
+            let operation = try leaseState.submissionOperation(leaseID: leaseID)
+            let geometry = try await submissionGeometry(for: operation)
             try leaseState.requireSubmittable(leaseID: leaseID)
             return geometry
         } catch {
             throw graphicsError(for: error, stage: .frameGeometry)
         }
+    }
+
+    private func frameLeaseGeometry() async throws -> SurfaceGeometry {
+        guard shouldAttemptManagedGPU, hasSubmittedFrame else {
+            return try await window.geometry
+        }
+
+        return try await window.prepareGraphicsPreviewPresentation(timeoutMilliseconds: 0)
+    }
+
+    private func submissionGeometry(
+        for operation: WaylandGraphicsFrameSubmissionOperation
+    ) async throws -> SurfaceGeometry {
+        guard shouldAttemptManagedGPU, operation == .redraw else {
+            return try await window.geometry
+        }
+
+        return try await window.prepareGraphicsPreviewPresentation(timeoutMilliseconds: 0)
     }
 
     private func prepareManagedGPUInitialConfigureIfNeeded(
@@ -427,6 +446,17 @@ extension WaylandGraphicsWindowBackingStorage {
         }
 
         return false
+    }
+
+    private var hasSubmittedFrame: Bool {
+        switch leaseState.state {
+        case .open(let state):
+            state.hasSubmittedFrame
+        case .submitting(let state):
+            state.hasSubmittedFrame
+        case .closed:
+            false
+        }
     }
 
     private func handleManagedGPUFailure(

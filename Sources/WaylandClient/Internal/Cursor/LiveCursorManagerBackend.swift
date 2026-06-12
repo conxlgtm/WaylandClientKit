@@ -113,6 +113,12 @@ final class LiveCursorManagerBackend: CursorManagerBackend {
         )
     }
 
+    func shutdown() {
+        connection.preconditionIsOwnerThread()
+        themesBySize.removeAll(keepingCapacity: false)
+        _ = try? connection.flushForExternalEventLoop()
+    }
+
     private func cursorTheme(size: CursorSize) throws -> CursorTheme {
         if let theme = themesBySize[size] {
             return theme

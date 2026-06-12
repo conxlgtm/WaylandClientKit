@@ -1,6 +1,7 @@
 extension DisplayCore {
     func publishInputEvents(_ inputEvents: [InputEvent]) {
         for inputEvent in inputEvents {
+            performInputSerialActions(for: inputEvent)
             eventHub.publishInput(inputEvent)
         }
     }

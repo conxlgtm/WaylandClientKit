@@ -238,7 +238,11 @@ GNOME/Mutter:
   a 51-byte text/plain;charset=utf-8 read, `drag source drop performed`, `drag
   source finished ... action=copy`, `result: pass`, and `cleanup: pass`.
 - Managed GPU resize: active managed GPU clear-frame submission passed on
-  KDE/KWin and nested Sway; manual resize/reconfigure stress still not run.
+  KDE/KWin and nested Sway. The 2026-06-11 KDE/KWin
+  `GraphicsPreviewManagedGPUClear-resize-managed-refresh.log` rerun reported
+  active managed GPU resize/reconfigure with `resize observed: true`,
+  `submitted frame result: active`, `fallback reason: none`, and `failure:
+  none`.
 - Surface role stress: `SubsurfaceSmoke` initially crashed on KDE/KWin with
   a frame-callback-not-ready error. The example was fixed to classify that
   typed condition as `blocked(frameCallbackOutstanding)`, request redraw, and exit
@@ -262,14 +266,14 @@ GNOME/Mutter:
   desktop compositor if practical.
 - Manual data-transfer drag-source/drop now has KDE/KWin evidence; broaden to
   another desktop compositor if practical.
-- Managed GPU resize/reconfigure needs a manual or automated stress pass.
+- Managed GPU resize/reconfigure has KDE/KWin manual evidence; broaden this to
+  another desktop compositor when active managed GPU is available.
 - `swift run swl ci check` needs investigation on the KDE host because it hung
   after building `swl`.
 
 ## Next Step
 
 Stay on SwiftWayland for one more hardening and evidence sprint. The next
-maintainer pass should run the manual interaction checklist on KDE/KWin and
-GNOME/Mutter where practical, stress managed GPU resize/reconfigure, broaden
-active/fallback/failure GPU evidence, and investigate the `swl ci check` hang
-observed during this evidence pass.
+maintainer pass should run the remaining manual interaction checklist on
+GNOME/Mutter where practical, broaden active/fallback/failure GPU evidence,
+and investigate the `swl ci check` hang observed during this evidence pass.

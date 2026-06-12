@@ -37,6 +37,13 @@ package protocol CursorManagerBackend: AnyObject {
         serial: UInt32,
         shape: RawCursorShapeName
     ) throws -> RawPointerCursorResult
+    func shutdown()
+}
+
+extension CursorManagerBackend {
+    func shutdown() {
+        // Test and stateless backends have no owner resources to release.
+    }
 }
 
 // swiftlint:disable:next type_body_length
@@ -451,6 +458,7 @@ package final class CursorManager: RawInputEventObserving {
             surface.commit()
             surface.destroy()
         }
+        backend.shutdown()
     }
 
     private func destroyCursorSurface(_ surface: CursorManagerSurface) {
