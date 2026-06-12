@@ -873,7 +873,13 @@ private func runIntegrationPackage(
     let scratch = try context.fileSystem.createTemporaryDirectory(
         prefix: "swiftwayland-integration")
     defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
-    try prepareIntegrationIndexStoreDirectory(context: context, scratch: scratch)
+    let indexStoreDirectories = try integrationIndexStoreDirectories(
+        context: context, scratch: scratch)
+    let directoryKeeper = IntegrationIndexStoreDirectoryKeeper(
+        fileSystem: context.fileSystem,
+        directories: indexStoreDirectories)
+    directoryKeeper.start()
+    defer { directoryKeeper.stop() }
     try context.swift.runSwift(
         [
             "test", "--disable-index-store", "--package-path",
@@ -884,7 +890,7 @@ private func runIntegrationPackage(
     )
 }
 
-private func prepareIntegrationIndexStoreDirectory(context: ToolContext, scratch: URL) throws {
+private func integrationIndexStoreDirectories(context: ToolContext, scratch: URL) throws -> [URL] {
     let result = try context.swift.runSwift(
         ["-print-target-info"],
         repository: context.repository
@@ -896,7 +902,7 @@ private func prepareIntegrationIndexStoreDirectory(context: ToolContext, scratch
         let triple = target["triple"] as? String,
         !triple.isEmpty
     else {
-        return
+        return []
     }
 
     let indexStore =
@@ -905,17 +911,64 @@ private func prepareIntegrationIndexStoreDirectory(context: ToolContext, scratch
         .appendingPathComponent("debug")
         .appendingPathComponent("index")
         .appendingPathComponent("store")
-    try context.fileSystem.createDirectory(indexStore)
-    try context.fileSystem.createDirectory(
+    return [
+        indexStore,
+        indexStore.appendingPathComponent("v5"),
         indexStore
             .appendingPathComponent("v5")
-            .appendingPathComponent("units")
-    )
-    try context.fileSystem.createDirectory(
+            .appendingPathComponent("units"),
         indexStore
             .appendingPathComponent("v5")
-            .appendingPathComponent("records")
-    )
+            .appendingPathComponent("records"),
+    ]
+}
+
+private struct IntegrationIndexStoreDirectoryKeeper: Sendable {
+    private let fileSystem: FileSystem
+    private let directories: [URL]
+    private let stopSignal: URL
+
+    init(fileSystem: FileSystem, directories: [URL]) {
+        self.fileSystem = fileSystem
+        self.directories = directories
+        self.stopSignal = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("swiftwayland-index-store-keeper.\(UUID().uuidString).stop")
+    }
+
+    func start() {
+        ignoreCleanupError {
+            try fileSystem.removeItem(stopSignal)
+        }
+        createDirectories()
+        guard !directories.isEmpty else { return }
+        let keeperFileSystem = fileSystem
+        let keeperDirectories = directories
+        let keeperStopSignal = stopSignal
+        Thread.detachNewThread {
+            while !keeperFileSystem.exists(keeperStopSignal) {
+                for directory in keeperDirectories {
+                    ignoreCleanupError {
+                        try keeperFileSystem.createDirectory(directory)
+                    }
+                }
+                Thread.sleep(forTimeInterval: 0.01)
+            }
+        }
+    }
+
+    func stop() {
+        ignoreCleanupError {
+            try fileSystem.writeText("stop\n", to: stopSignal)
+        }
+    }
+
+    private func createDirectories() {
+        for directory in directories {
+            ignoreCleanupError {
+                try fileSystem.createDirectory(directory)
+            }
+        }
+    }
 }
 
 private func compilerFilterEnvironment(
