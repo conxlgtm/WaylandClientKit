@@ -231,8 +231,12 @@ GNOME/Mutter:
   duplicate-request failure while a constraint was already active,
   `inactivePersistent(confined-pointer-1)`, `result: pass`, and `cleanup: pass`.
 - Data-transfer drag source: auto-close pass on KDE/KWin with clipboard v3,
-  drag v3, and primary v1 available; manual drag source/drop/cancel path still
-  not run.
+  drag v3, and primary v1 available. A 2026-06-11 manual rerun after the empty
+  MIME callback fix logged clipboard/primary offer reads, private KDE MIME
+  filtering, `operation: start-drag-source pass`, target/action negotiation to
+  `text/plain;charset=utf-8` and `copy`, 165 drag-motion events, `drag dropped`,
+  a 51-byte text/plain;charset=utf-8 read, `drag source drop performed`, `drag
+  source finished ... action=copy`, `result: pass`, and `cleanup: pass`.
 - Managed GPU resize: active managed GPU clear-frame submission passed on
   KDE/KWin and nested Sway; manual resize/reconfigure stress still not run.
 - Surface role stress: `SubsurfaceSmoke` initially crashed on KDE/KWin with
@@ -256,7 +260,8 @@ GNOME/Mutter:
 - Manual serial-sensitive actions need real button press evidence.
 - Manual pointer lock/confine has KDE/KWin evidence; broaden to another
   desktop compositor if practical.
-- Manual data-transfer drag-source/drop/cancel needs real interaction evidence.
+- Manual data-transfer drag-source/drop now has KDE/KWin evidence; broaden to
+  another desktop compositor if practical.
 - Managed GPU resize/reconfigure needs a manual or automated stress pass.
 - `swift run swl ci check` needs investigation on the KDE host because it hung
   after building `swl`.
