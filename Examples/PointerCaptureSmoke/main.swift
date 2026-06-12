@@ -35,6 +35,14 @@ enum PointerCaptureSmoke {
             "capabilities relativePointer=\(capabilities.relativePointer) "
                 + "pointerConstraints=\(capabilities.pointerConstraints)"
         )
+        log(
+            "instructions: the visible cursor may pin inside the window after lock; "
+                + "keep moving the mouse to prove relative motion"
+        )
+        log(
+            "instructions: left-click locks, right-click confines, middle-click retries "
+                + "relative-motion subscription, close or Alt-Tab releases compositor focus"
+        )
 
         let window = try await display.createTopLevelWindow(
             configuration: try WindowConfiguration(
@@ -95,6 +103,7 @@ enum PointerCaptureSmoke {
         _ events: InputEvents,
         window: Window
     ) async throws {
+        var relativePointerAttemptedSeats = Set<SeatID>()
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             guard event.windowID == window.id else { continue }
@@ -105,6 +114,13 @@ enum PointerCaptureSmoke {
                     "pointer entered seat=\(event.seatID) serial=\(serial) "
                         + "location=\(location.x),\(location.y)"
                 )
+                if relativePointerAttemptedSeats.insert(event.seatID).inserted {
+                    await subscribeRelativePointer(
+                        seatID: event.seatID,
+                        window: window,
+                        mode: "auto"
+                    )
+                }
             case .pointer(.button(let button)) where button.state == .pressed:
                 try await handleButton(button, seatID: event.seatID, window: window)
             case .pointer(.relativeMotion(let motion)):
@@ -130,9 +146,7 @@ enum PointerCaptureSmoke {
         do {
             switch button.button {
             case middleButton:
-                let subscription = try await window.relativePointer(seatID: seatID)
-                log("operation: relative-pointer pass")
-                log("relative pointer subscribed id=\(subscription.id) seat=\(seatID)")
+                await subscribeRelativePointer(seatID: seatID, window: window, mode: "manual")
             case leftButton:
                 let constraint = try await window.lockPointer(
                     seatID: seatID,
@@ -153,6 +167,21 @@ enum PointerCaptureSmoke {
         } catch {
             log("operation: pointer-capture failed")
             log("pointer capture request failed \(error)")
+        }
+    }
+
+    nonisolated private static func subscribeRelativePointer(
+        seatID: SeatID,
+        window: Window,
+        mode: String
+    ) async {
+        do {
+            let subscription = try await window.relativePointer(seatID: seatID)
+            log("operation: relative-pointer pass")
+            log("relative pointer \(mode)-subscribed id=\(subscription.id) seat=\(seatID)")
+        } catch {
+            log("operation: relative-pointer failed")
+            log("relative pointer \(mode)-subscribe failed \(error)")
         }
     }
 
