@@ -1,6 +1,7 @@
 import Foundation
 import Glibc
 import WaylandClient
+import WaylandExampleSupport
 import WaylandGraphicsPreview
 
 @main
@@ -9,7 +10,8 @@ enum GraphicsPreviewManagedGPUClear {
         let result: ManagedGPUClearReport
         let exitCode: Int32
         do {
-            result = try await run()
+            let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
+            result = try await run(options: options)
             exitCode = EXIT_SUCCESS
         } catch {
             result = ManagedGPUClearReport(failure: "\(error)")
@@ -22,22 +24,31 @@ enum GraphicsPreviewManagedGPUClear {
         }
     }
 
-    private static func run() async throws -> ManagedGPUClearReport {
-        try await WaylandDisplay.withConnection { display in
-            try await managedClearReport(on: display)
+    private static func run(options: ExampleRunOptions) async throws -> ManagedGPUClearReport {
+        try await WaylandDisplay.withConnection(
+            eventStreamConfiguration: try EventStreamConfiguration(
+                displayEventCapacity: 64,
+                inputEventCapacity: 16,
+                textInputEventCapacity: 16,
+                dataTransferEventCapacity: 16,
+                presentationEventCapacity: 64
+            )
+        ) { display in
+            try await managedClearReport(on: display, options: options)
         }
     }
 
     nonisolated private static func managedClearReport(
-        on display: WaylandDisplay
+        on display: WaylandDisplay,
+        options: ExampleRunOptions
     ) async throws -> ManagedGPUClearReport {
         let capabilities = try await display.graphicsSurfaceCapabilities()
         let backing = try await display.createGraphicsWindowBacking(
             windowConfiguration: WindowConfiguration(
                 title: "SwiftWayland Managed GPU Clear",
                 appID: "swift-wayland-managed-gpu-clear",
-                initialWidth: 96,
-                initialHeight: 96,
+                initialWidth: 360,
+                initialHeight: 240,
                 bufferCount: 2
             ),
             graphicsConfiguration: WaylandGraphicsConfiguration(
@@ -45,41 +56,141 @@ enum GraphicsPreviewManagedGPUClear {
                 presentationFeedbackPolicy: .requestWhenAvailable
             )
         )
+        let state = ManagedGPUClearRunState()
 
+        log("instructions: resize the window larger and smaller, then close it")
+        _ = try await submitClearFrame(backing: backing, state: state)
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await consumeDisplayEvents(display.events, backing: backing, state: state)
+            }
+            if let seconds = options.autoCloseSeconds {
+                group.addTask {
+                    try await Task.sleep(for: .seconds(seconds))
+                    try await backing.close()
+                }
+            }
+
+            _ = try await group.next()
+            group.cancelAll()
+        }
+
+        if options.printSummary {
+            log(await state.summary())
+        }
+
+        return await state.report(capabilities: capabilities)
+    }
+
+    nonisolated private static func consumeDisplayEvents(
+        _ events: DisplayEvents,
+        backing: WaylandGraphicsWindowBacking,
+        state: ManagedGPUClearRunState
+    ) async throws {
+        var iterator = events.makeAsyncIterator()
+        while !Task.isCancelled, let event = try await iterator.next() {
+            switch event {
+            case .redrawRequested(let windowID) where windowID == backing.id:
+                _ = try await submitClearFrame(backing: backing, state: state)
+            case .windowCloseRequested(let windowID) where windowID == backing.id:
+                try await backing.close()
+                return
+            case .windowClosed(let windowID) where windowID == backing.id:
+                return
+            case .diagnostic(let diagnostic):
+                log("display diagnostic \(diagnostic)")
+            default:
+                break
+            }
+        }
+    }
+
+    nonisolated private static func submitClearFrame(
+        backing: WaylandGraphicsWindowBacking,
+        state: ManagedGPUClearRunState
+    ) async throws -> WaylandGraphicsFrameResult {
         let lease = try await backing.nextFrame()
-        let frameResult = try await lease.submit(
+        let result = try await lease.submit(
             .clearColor(
                 WaylandGraphicsClearFrame(
                     color: WaylandGraphicsXRGBColor(red: 0x18, green: 0xB8, blue: 0x92)
                 )
             )
         )
-        try await backing.close()
-
-        return ManagedGPUClearReport(
-            capabilities: capabilities,
-            runtimePath: frameResult.runtimePath,
-            frameResult: frameResult
+        await state.record(result)
+        log(
+            "gpu frame operation=\(result.operation) "
+                + "size=\(result.size.width)x\(result.size.height) "
+                + "backing=\(actualBacking(result.runtimePath))"
         )
+        return result
+    }
+
+    nonisolated private static func actualBacking(
+        _ path: WaylandGraphicsRuntimePath
+    ) -> String {
+        switch path.backing {
+        case .active:
+            "managedGPU"
+        case .configured:
+            "managedGPU configured"
+        case .fallback(let reason):
+            "software fallback(\(reason))"
+        case .failed(let reason):
+            "failed(\(reason))"
+        case .advertised:
+            "managedGPU advertised"
+        case .pending:
+            "pending"
+        case .unavailable:
+            "unavailable"
+        }
+    }
+
+    nonisolated private static func log(_ message: String) {
+        FileHandle.standardError.write(Data((message + "\n").utf8))
     }
 }
 
 private struct ManagedGPUClearReport: Sendable {
     var capabilities: WaylandGraphicsSurfaceCapabilities?
-    var runtimePath: WaylandGraphicsRuntimePath?
-    var frameResult: WaylandGraphicsFrameResult?
+    var frameResults: [WaylandGraphicsFrameResult]
     var failure: String?
 
     nonisolated init(
         capabilities reportedCapabilities: WaylandGraphicsSurfaceCapabilities? = nil,
-        runtimePath reportedRuntimePath: WaylandGraphicsRuntimePath? = nil,
-        frameResult reportedFrameResult: WaylandGraphicsFrameResult? = nil,
+        frameResults reportedFrameResults: [WaylandGraphicsFrameResult] = [],
         failure reportedFailure: String? = nil
     ) {
         capabilities = reportedCapabilities
-        runtimePath = reportedRuntimePath
-        frameResult = reportedFrameResult
+        frameResults = reportedFrameResults
         failure = reportedFailure
+    }
+
+    var frameResult: WaylandGraphicsFrameResult? {
+        frameResults.last
+    }
+}
+
+private actor ManagedGPUClearRunState {
+    private var frameResults: [WaylandGraphicsFrameResult] = []
+
+    func record(_ result: WaylandGraphicsFrameResult) {
+        frameResults.append(result)
+    }
+
+    func report(capabilities: WaylandGraphicsSurfaceCapabilities) -> ManagedGPUClearReport {
+        ManagedGPUClearReport(
+            capabilities: capabilities,
+            frameResults: frameResults
+        )
+    }
+
+    func summary() -> String {
+        "managed-gpu-clear summary frames=\(frameResults.count) "
+            + "resized=\(resizeObserved(frameResults)) "
+            + "sizes=\(frameSizesDescription(frameResults))"
     }
 }
 
@@ -93,7 +204,6 @@ private struct ManagedGPUClearReportFormatter {
 
     private func lines() -> [String] {
         guard let capabilities = report.capabilities,
-            let runtimePath = report.runtimePath,
             let frameResult = report.frameResult
         else {
             return [
@@ -109,6 +219,7 @@ private struct ManagedGPUClearReportFormatter {
                 "failure: \(report.failure ?? "none")",
             ]
         }
+        let runtimePath = frameResult.runtimePath
 
         return [
             "SwiftWayland Managed GPU Clear",
@@ -141,6 +252,9 @@ private struct ManagedGPUClearReportFormatter {
             "runtime dmabuf: \(status(runtimePath.dmabuf))",
             "frame operation: \(frameResult.operation)",
             "frame size: \(frameResult.size.width)x\(frameResult.size.height)",
+            "frames submitted: \(report.frameResults.count)",
+            "frame sizes: \(frameSizesDescription(report.frameResults))",
+            "resize observed: \(resizeObserved(report.frameResults))",
             "submitted frame result: \(status(frameResult.backing))",
             "release/reuse: \(releaseReuseStatus(runtimePath))",
             "presentation feedback requested: \(frameResult.presentationFeedbackRequested)",
@@ -254,4 +368,29 @@ private struct ManagedGPUClearReportFormatter {
             "unavailable"
         }
     }
+}
+
+nonisolated private func frameSizesDescription(
+    _ results: [WaylandGraphicsFrameResult]
+) -> String {
+    let sizes = orderedFrameSizes(results)
+    return sizes.isEmpty ? "none" : sizes.joined(separator: ",")
+}
+
+nonisolated private func resizeObserved(_ results: [WaylandGraphicsFrameResult]) -> Bool {
+    orderedFrameSizes(results).count > 1
+}
+
+nonisolated private func orderedFrameSizes(
+    _ results: [WaylandGraphicsFrameResult]
+) -> [String] {
+    var seen = Set<String>()
+    var sizes: [String] = []
+    for result in results {
+        let size = "\(result.size.width)x\(result.size.height)"
+        if seen.insert(size).inserted {
+            sizes.append(size)
+        }
+    }
+    return sizes
 }

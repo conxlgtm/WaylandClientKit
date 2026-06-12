@@ -198,7 +198,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "GraphicsPreviewManagedGPUClear",
-            dependencies: ["WaylandClient", "WaylandGraphicsPreview"],
+            dependencies: ["WaylandClient", "WaylandExampleSupport", "WaylandGraphicsPreview"],
             path: "Examples/GraphicsPreviewManagedGPUClear",
             swiftSettings: executableSwiftSettings
         ),

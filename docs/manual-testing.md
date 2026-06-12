@@ -37,6 +37,7 @@ swift run SerialActionsProbe
 swift run XDGActivationSmoke
 swift run PointerCaptureSmoke
 swift run CursorPolicySmoke
+swift run GraphicsPreviewManagedGPUClear
 ```
 
 Run bounded examples when a compositor session is available:
@@ -48,7 +49,7 @@ swift run TextInputSmoke -- --auto-close --print-summary
 swift run DataTransferSmoke -- --auto-close --print-summary
 swift run PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
 swift run GPUPreviewSmokeClient
-swift run GraphicsPreviewManagedGPUClear
+swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
 ```
 
 ## Notes To Capture
@@ -63,4 +64,5 @@ swift run GraphicsPreviewManagedGPUClear
 - text-input capability, IME commits, and interpreted keyboard fallback
 - clipboard, primary-selection, drag/drop, private MIME, and stale-offer behavior
 - popup lifecycle and shutdown behavior
-- presentation feedback and graphics-preview fallback behavior
+- presentation feedback, graphics-preview fallback behavior, and managed GPU
+  resize/redraw frame sizes

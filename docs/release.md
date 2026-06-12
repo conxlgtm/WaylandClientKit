@@ -108,7 +108,7 @@ Under a real Wayland session:
 swift run swl smoke live
 swift run swl smoke integration
 swift run swl smoke gpu-preview
-swift run GraphicsPreviewManagedGPUClear
+swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
 swift run SwiftWaylandDemo
 ```
 
