@@ -198,15 +198,13 @@ struct ToolingConvergenceTests {
         let functionBody = String(source[start.lowerBound..<end.lowerBound])
 
         #expect(functionBody.contains("\"--disable-index-store\""))
-        #expect(functionBody.contains("integrationIndexStoreDirectories"))
-        #expect(functionBody.contains("IntegrationIndexStoreDirectoryKeeper"))
-        #expect(functionBody.contains("\"-print-target-info\""))
-        #expect(functionBody.contains(".appendingPathComponent(\"index\")"))
+        #expect(functionBody.contains("createIntegrationIndexStore"))
+        #expect(functionBody.contains("\"-Xswiftc\""))
+        #expect(functionBody.contains("\"-index-store-path\""))
         #expect(functionBody.contains(".appendingPathComponent(\"store\")"))
         #expect(functionBody.contains(".appendingPathComponent(\"v5\")"))
         #expect(functionBody.contains(".appendingPathComponent(\"units\")"))
         #expect(functionBody.contains(".appendingPathComponent(\"records\")"))
-        #expect(functionBody.contains("Thread.sleep(forTimeInterval: 0.01)"))
     }
 
     @Test
