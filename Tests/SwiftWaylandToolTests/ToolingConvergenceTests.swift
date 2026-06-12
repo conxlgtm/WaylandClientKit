@@ -188,7 +188,7 @@ struct ToolingConvergenceTests {
     }
 
     @Test
-    func integrationPackageTestsDisableIndexStore() throws {
+    func integrationPackageTestsEnableIndexStoreBehindCompilerFilter() throws {
         let source = try String(
             contentsOf: repositoryRoot()
                 .appendingPathComponent("Sources/SwiftWaylandTool/main.swift"),
@@ -197,14 +197,9 @@ struct ToolingConvergenceTests {
         let end = try #require(source.range(of: "private func compilerFilterEnvironment"))
         let functionBody = String(source[start.lowerBound..<end.lowerBound])
 
-        #expect(functionBody.contains("\"--disable-index-store\""))
-        #expect(functionBody.contains("createIntegrationIndexStore"))
-        #expect(functionBody.contains("\"-Xswiftc\""))
-        #expect(functionBody.contains("\"-index-store-path\""))
-        #expect(functionBody.contains(".appendingPathComponent(\"store\")"))
-        #expect(functionBody.contains(".appendingPathComponent(\"v5\")"))
-        #expect(functionBody.contains(".appendingPathComponent(\"units\")"))
-        #expect(functionBody.contains(".appendingPathComponent(\"records\")"))
+        #expect(functionBody.contains("\"--enable-index-store\""))
+        #expect(functionBody.contains("compilerFilterEnvironment"))
+        #expect(!functionBody.contains("\"--disable-index-store\""))
     }
 
     @Test
