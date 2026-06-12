@@ -873,32 +873,14 @@ private func runIntegrationPackage(
     let scratch = try context.fileSystem.createTemporaryDirectory(
         prefix: "swiftwayland-integration")
     defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
-    let indexStore = try createIntegrationIndexStore(context: context)
-    defer { ignoreCleanupError { try context.fileSystem.removeItem(indexStore.root) } }
     try context.swift.runSwift(
         [
-            "test", "--disable-index-store", "--package-path",
-            context.repository.url(packagePath).path, "--scratch-path", scratch.path, "-Xswiftc",
-            "-index-store-path", "-Xswiftc", indexStore.store.path,
+            "test", "--enable-index-store", "--package-path",
+            context.repository.url(packagePath).path, "--scratch-path", scratch.path,
         ],
         repository: context.repository,
         environment: try compilerFilterEnvironment(context: context, base: environment)
     )
-}
-
-private func createIntegrationIndexStore(context: ToolContext) throws -> (root: URL, store: URL) {
-    let root = try context.fileSystem.createTemporaryDirectory(
-        prefix: "swiftwayland-integration-index")
-    let store = root.appendingPathComponent("store")
-    try context.fileSystem.createDirectory(
-        store
-            .appendingPathComponent("v5")
-            .appendingPathComponent("units"))
-    try context.fileSystem.createDirectory(
-        store
-            .appendingPathComponent("v5")
-            .appendingPathComponent("records"))
-    return (root, store)
 }
 
 private func compilerFilterEnvironment(
