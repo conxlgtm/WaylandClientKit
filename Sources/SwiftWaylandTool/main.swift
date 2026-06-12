@@ -873,102 +873,32 @@ private func runIntegrationPackage(
     let scratch = try context.fileSystem.createTemporaryDirectory(
         prefix: "swiftwayland-integration")
     defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
-    let indexStoreDirectories = try integrationIndexStoreDirectories(
-        context: context, scratch: scratch)
-    let directoryKeeper = IntegrationIndexStoreDirectoryKeeper(
-        fileSystem: context.fileSystem,
-        directories: indexStoreDirectories)
-    directoryKeeper.start()
-    defer { directoryKeeper.stop() }
+    let indexStore = try createIntegrationIndexStore(context: context)
+    defer { ignoreCleanupError { try context.fileSystem.removeItem(indexStore.root) } }
     try context.swift.runSwift(
         [
             "test", "--disable-index-store", "--package-path",
-            context.repository.url(packagePath).path, "--scratch-path", scratch.path,
+            context.repository.url(packagePath).path, "--scratch-path", scratch.path, "-Xswiftc",
+            "-index-store-path", "-Xswiftc", indexStore.store.path,
         ],
         repository: context.repository,
         environment: try compilerFilterEnvironment(context: context, base: environment)
     )
 }
 
-private func integrationIndexStoreDirectories(context: ToolContext, scratch: URL) throws -> [URL] {
-    let result = try context.swift.runSwift(
-        ["-print-target-info"],
-        repository: context.repository
-    )
-    let data = Data(result.stdout.utf8)
-    guard
-        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-        let target = object["target"] as? [String: Any],
-        let triple = target["triple"] as? String,
-        !triple.isEmpty
-    else {
-        return []
-    }
-
-    let indexStore =
-        scratch
-        .appendingPathComponent(triple)
-        .appendingPathComponent("debug")
-        .appendingPathComponent("index")
-        .appendingPathComponent("store")
-    return [
-        indexStore,
-        indexStore.appendingPathComponent("v5"),
-        indexStore
+private func createIntegrationIndexStore(context: ToolContext) throws -> (root: URL, store: URL) {
+    let root = try context.fileSystem.createTemporaryDirectory(
+        prefix: "swiftwayland-integration-index")
+    let store = root.appendingPathComponent("store")
+    try context.fileSystem.createDirectory(
+        store
             .appendingPathComponent("v5")
-            .appendingPathComponent("units"),
-        indexStore
+            .appendingPathComponent("units"))
+    try context.fileSystem.createDirectory(
+        store
             .appendingPathComponent("v5")
-            .appendingPathComponent("records"),
-    ]
-}
-
-private struct IntegrationIndexStoreDirectoryKeeper: Sendable {
-    private let fileSystem: FileSystem
-    private let directories: [URL]
-    private let stopSignal: URL
-
-    init(fileSystem: FileSystem, directories: [URL]) {
-        self.fileSystem = fileSystem
-        self.directories = directories
-        self.stopSignal = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("swiftwayland-index-store-keeper.\(UUID().uuidString).stop")
-    }
-
-    func start() {
-        ignoreCleanupError {
-            try fileSystem.removeItem(stopSignal)
-        }
-        createDirectories()
-        guard !directories.isEmpty else { return }
-        let keeperFileSystem = fileSystem
-        let keeperDirectories = directories
-        let keeperStopSignal = stopSignal
-        Thread.detachNewThread {
-            while !keeperFileSystem.exists(keeperStopSignal) {
-                for directory in keeperDirectories {
-                    ignoreCleanupError {
-                        try keeperFileSystem.createDirectory(directory)
-                    }
-                }
-                Thread.sleep(forTimeInterval: 0.01)
-            }
-        }
-    }
-
-    func stop() {
-        ignoreCleanupError {
-            try fileSystem.writeText("stop\n", to: stopSignal)
-        }
-    }
-
-    private func createDirectories() {
-        for directory in directories {
-            ignoreCleanupError {
-                try fileSystem.createDirectory(directory)
-            }
-        }
-    }
+            .appendingPathComponent("records"))
+    return (root, store)
 }
 
 private func compilerFilterEnvironment(
