@@ -401,7 +401,7 @@ extension DataTransferManager {
         mimeType rawMimeType: String?,
         sourceID: DataSourceID
     ) throws {
-        let mimeType = try rawMimeType.map { try MIMEType($0) }
+        let mimeType = try normalizedCallbackMIMEType(rawMimeType)
         if let mimeType {
             guard store.sourceSnapshot(sourceID)?.mimeTypes.contains(mimeType) == true else {
                 throw DataTransferError.mimeTypeUnavailable(mimeType)
@@ -416,11 +416,15 @@ extension DataTransferManager {
         sourceID: DataSourceID,
         callbackIdentity: DataSourceCallbackIdentity
     ) throws {
+        guard let mimeType = try normalizedCallbackMIMEType(rawMimeType) else {
+            try closeSourceSendDescriptor(descriptor)
+            return
+        }
+
         do {
             guard let source = store.sourceSnapshot(sourceID) else {
                 throw callbackIdentity.unknownSourceError
             }
-            let mimeType = try MIMEType(rawMimeType ?? "")
             guard source.mimeTypes.contains(mimeType) else {
                 throw DataTransferError.mimeTypeUnavailable(mimeType)
             }
@@ -449,6 +453,13 @@ extension DataTransferManager {
             try closeSourceSendDescriptor(descriptor)
             throw error
         }
+    }
+
+    private func normalizedCallbackMIMEType(_ rawMimeType: String?) throws -> MIMEType? {
+        guard let rawMimeType, !rawMimeType.isEmpty else {
+            return nil
+        }
+        return try MIMEType(rawMimeType)
     }
 
     private func closeSourceSendDescriptor(_ descriptor: Int32) throws {

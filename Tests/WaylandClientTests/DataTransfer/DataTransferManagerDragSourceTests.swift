@@ -319,6 +319,24 @@ struct DataTransferManagerDragSourceCallbackTests {  // swiftlint:disable:this t
     }
 
     @Test
+    func dragSourceTargetEmptyPublishesNoAcceptedMIME() throws {
+        let (manager, backend, source) = try managerWithStartedDragSource()
+        let binding = try #require(backend.sourceBinding(for: source.id))
+
+        binding.emit(.target(""))
+
+        #expect(
+            manager.drainDataTransferEvents()
+                == [
+                    .dragSourceTargetChanged(
+                        DragSourceTargetEvent(sourceID: source.id, mimeType: nil)
+                    )
+                ]
+        )
+        try manager.throwPendingCallbackErrorIfAny()
+    }
+
+    @Test
     func dragSourceTargetRejectsMalformedMIMEWithDragSourceContext() throws {
         let (manager, backend, source) = try managerWithStartedDragSource()
         let binding = try #require(backend.sourceBinding(for: source.id))
