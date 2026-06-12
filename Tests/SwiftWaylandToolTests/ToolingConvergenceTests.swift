@@ -198,6 +198,10 @@ struct ToolingConvergenceTests {
         let functionBody = String(source[start.lowerBound..<end.lowerBound])
 
         #expect(functionBody.contains("\"--disable-index-store\""))
+        #expect(functionBody.contains("prepareIntegrationIndexStoreDirectory"))
+        #expect(functionBody.contains("\"-print-target-info\""))
+        #expect(functionBody.contains(".appendingPathComponent(\"index\")"))
+        #expect(functionBody.contains(".appendingPathComponent(\"store\")"))
     }
 
     @Test

@@ -873,6 +873,7 @@ private func runIntegrationPackage(
     let scratch = try context.fileSystem.createTemporaryDirectory(
         prefix: "swiftwayland-integration")
     defer { ignoreCleanupError { try context.fileSystem.removeItem(scratch) } }
+    try prepareIntegrationIndexStoreDirectory(context: context, scratch: scratch)
     try context.swift.runSwift(
         [
             "test", "--disable-index-store", "--package-path",
@@ -881,6 +882,30 @@ private func runIntegrationPackage(
         repository: context.repository,
         environment: try compilerFilterEnvironment(context: context, base: environment)
     )
+}
+
+private func prepareIntegrationIndexStoreDirectory(context: ToolContext, scratch: URL) throws {
+    let result = try context.swift.runSwift(
+        ["-print-target-info"],
+        repository: context.repository
+    )
+    let data = Data(result.stdout.utf8)
+    guard
+        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+        let target = object["target"] as? [String: Any],
+        let triple = target["triple"] as? String,
+        !triple.isEmpty
+    else {
+        return
+    }
+
+    let indexStore =
+        scratch
+        .appendingPathComponent(triple)
+        .appendingPathComponent("debug")
+        .appendingPathComponent("index")
+        .appendingPathComponent("store")
+    try context.fileSystem.createDirectory(indexStore)
 }
 
 private func compilerFilterEnvironment(
