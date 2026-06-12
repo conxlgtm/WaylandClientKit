@@ -28,8 +28,8 @@ enough; active GPU claims must be backed by public runtime-path output.
 | User learning path | done | [getting-started.md](getting-started.md), [which-api-should-i-use.md](which-api-should-i-use.md), [documentation-map.md](documentation-map.md) | Keep README as portal, not full manual. |
 | Session readiness | done | [session-readiness.md](session-readiness.md), `SessionStateSmoke`, `WindowRestorationSnapshot` | Keep compositor session-management protocol API deferred until protocol evidence and framework usage shape are clear. |
 | Managed GPU setup code path | done | Managed GPU attempts surface feedback, render-node, GBM/EGL, dmabuf import, owner-thread commit, and typed fallback. | Keep runtime-path truth tests current. |
-| Managed GPU active proof | partial | [compositor-matrix.md](compositor-matrix.md) records active managed GPU clear-frame submission on KDE/KWin and nested Sway/wlroots, plus `dmabufUnavailable` fallback under headless Weston. | Add GNOME/Mutter active/fallback/failure evidence and managed GPU resize/reconfigure stress before foundation-candidate claims. |
-| Compositor matrix minimum | partial | [compositor-matrix.md](compositor-matrix.md) records fresh headless Weston, KDE/KWin, and nested Sway/wlroots rows and separates protocol advertisement from active runtime facts. | Replace the GNOME/Mutter environment skip with a current run and complete manual interaction rows. |
+| Managed GPU active proof | partial | [compositor-matrix.md](compositor-matrix.md) records active managed GPU clear-frame submission on KDE/KWin and nested Sway/wlroots, `surfaceFeedbackUnavailable` fallback on GNOME/Mutter, and `dmabufUnavailable` fallback under headless Weston. | Add managed GPU resize/reconfigure stress and broader active/fallback/failure evidence before foundation-candidate claims. |
+| Compositor matrix minimum | partial | [compositor-matrix.md](compositor-matrix.md) records fresh headless Weston, KDE/KWin, nested Sway/wlroots, and GNOME/Mutter VM rows and separates protocol advertisement from active runtime facts. | Complete manual interaction rows. |
 | External consumer evidence | partial | Public and graphics preview integration clients are part of `swl ci check`. | Keep external clients hardware-independent. |
 | Release checks | partial | `swift run swl ci release`, `swift run swl examples build`, release docs. | Keep release gates runnable while evidence remains incomplete. |
 | Foundation-candidate gate | partial | `swift run swl ci foundation-check` fails while the compositor matrix has incomplete cells, explicit environment skips, or manual-interaction gaps. | Complete remaining compositor and interaction evidence before claiming foundation readiness. |
@@ -56,7 +56,8 @@ Implemented:
 
 Still needs broader evidence:
 
-- Managed GPU behavior on GNOME/Mutter.
+- Active managed GPU on GNOME/Mutter was not proven; the current GNOME VM row
+  records typed software fallback `surfaceFeedbackUnavailable`.
 - Active managed GPU backing under headless Weston is not expected while dmabuf
   is unavailable there; keep the typed fallback row current.
 - Explicit sync, FIFO, and commit-timing activation on real compositors.
@@ -87,8 +88,14 @@ submission reported active in the nested session.
 Headless Weston passed live, integration, GPU preview, and the bounded feature
 loop. Managed GPU correctly fell back with `dmabufUnavailable`.
 
-GNOME/Mutter was not available on this host. That row is recorded as an explicit
-environment skip rather than completed evidence.
+GNOME/Mutter evidence was added from a Fedora GNOME Wayland VM on 2026-06-11.
+The VM passed `swl smoke live`, `swl smoke integration`, `swl smoke
+gpu-preview`, `GPUPreviewSmokeClient`, and `GraphicsPreviewManagedGPUClear`.
+GNOME advertised dmabuf v3, presentation v2, FIFO v1, commit timing v1,
+text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1,
+idle inhibit v1, system bell v1, xdg activation v1, color management v2, and
+color representation v1. The managed GPU examples reported software fallback
+`surfaceFeedbackUnavailable`; active GPU was not proven on GNOME.
 
 TSan and ASan with leak detection disabled passed. LSan was unusable in this
 environment because SwiftPM test discovery terminated with a LeakSanitizer fatal

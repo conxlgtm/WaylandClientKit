@@ -10,11 +10,12 @@ Status: SwiftWayland is not yet a foundation release candidate.
 Decision after this pass: B. SwiftWayland needs one more hardening and evidence
 sprint before framework work.
 
-## Final Evidence Pass: 2026-06-09
+## Final Evidence Pass: 2026-06-09, GNOME Addendum: 2026-06-11
 
 Raw command output for this pass was collected locally under
-`evidence/2026-06-09/`. The raw logs are not committed; each matrix row should
-be traceable to one of those command logs.
+`evidence/2026-06-09/`. The GNOME VM addendum was collected under
+`evidence/2026-06-11/gnome/`. The raw logs are not committed; each matrix row
+should be traceable to one of those command logs.
 
 ### Environments
 
@@ -28,8 +29,10 @@ be traceable to one of those command logs.
   live smoke, integration smoke, GPU preview smoke, and both graphics preview
   examples. Feature-specific manual/auto examples were not run inside nested
   Sway.
-- GNOME/Mutter: environment skip(GNOME/Mutter Wayland session or VM unavailable
-  in this pass).
+- GNOME/Mutter: Fedora GNOME Wayland VM on `wayland-0`; pass for live smoke,
+  integration smoke, GPU preview smoke, `GPUPreviewSmokeClient`, and
+  `GraphicsPreviewManagedGPUClear`. Managed GPU reported typed software
+  fallback `surfaceFeedbackUnavailable`.
 
 ### KDE/KWin Protocol Facts
 
@@ -67,6 +70,27 @@ Nested Sway/wlroots reported:
 - FIFO, color representation, color management, top-level icon, and system bell
   unavailable in this nested session
 
+### GNOME/Mutter Protocol Facts
+
+Fedora GNOME VM `wayland-info` reported:
+
+- `zwp_linux_dmabuf_v1` v3
+- `wp_presentation` v2
+- `wp_fifo_manager_v1` v1
+- `wp_commit_timing_manager_v1` v1
+- `zwp_text_input_manager_v3` v1
+- `wp_cursor_shape_manager_v1` v2
+- `zwp_pointer_constraints_v1` v1
+- `zwp_relative_pointer_manager_v1` v1
+- `zwp_idle_inhibit_manager_v1` v1
+- `xdg_system_bell_v1` v1
+- `xdg_activation_v1` v1
+- `wp_color_manager_v1` v2
+- `wp_color_representation_manager_v1` v1
+- `xdg_toplevel_drag_manager_v1` v1
+- linux-drm-syncobj unavailable
+- top-level icon unavailable
+
 ## Commands Run
 
 Headless Weston:
@@ -94,6 +118,15 @@ several minutes. The evidence pass continued with the individual commands above.
 Nested Sway/wlroots:
 
 - `WLR_BACKENDS=wayland WLR_LIBINPUT_NO_DEVICES=1 sway -c /tmp/swiftwayland-sway/config`
+- `wayland-info`
+- `swift run swl smoke live`
+- `swift run swl smoke integration`
+- `swift run swl smoke gpu-preview`
+- `swift run GPUPreviewSmokeClient`
+- `swift run GraphicsPreviewManagedGPUClear`
+
+GNOME/Mutter:
+
 - `wayland-info`
 - `swift run swl smoke live`
 - `swift run swl smoke integration`
@@ -168,7 +201,17 @@ Headless Weston:
 
 GNOME/Mutter:
 
-- environment skip(GNOME/Mutter Wayland session unavailable).
+- Requested backing: managed GPU.
+- Actual backing: software fallback.
+- Fallback reason: `surfaceFeedbackUnavailable`.
+- `GPUPreviewSmokeClient` reported `dmabuf advertised v3`, surface dmabuf
+  feedback not configured, render node/GBM/EGL/dmabuf import/buffer lifecycle
+  fallback `surfaceFeedbackUnavailable`, submitted frame `success show`, frame
+  size `96x96`, release/reuse not observed, and failure `none`.
+- `GraphicsPreviewManagedGPUClear` reported `dmabuf advertised v3`, surface
+  feedback advertised but not configured, presentation feedback advertised v1,
+  submitted frame result `fallback(surfaceFeedbackUnavailable)`, presentation
+  feedback requested, and failure `none`.
 
 ## Manual Interaction Status
 
@@ -200,7 +243,8 @@ GNOME/Mutter:
 
 ## Remaining Blockers
 
-- GNOME/Mutter evidence is still missing.
+- Active managed GPU on GNOME/Mutter is still missing; the current VM evidence
+  records typed fallback `surfaceFeedbackUnavailable`.
 - Manual serial-sensitive actions need real button press evidence.
 - Manual pointer lock/confine needs real pointer motion evidence.
 - Manual data-transfer drag-source/drop/cancel needs real interaction evidence.
@@ -211,7 +255,7 @@ GNOME/Mutter:
 ## Next Step
 
 Stay on SwiftWayland for one more hardening and evidence sprint. The next
-maintainer pass should run the manual interaction checklist on KDE/KWin, add a
-GNOME/Mutter row from a real GNOME Wayland session or VM, stress managed GPU
-resize/reconfigure, and investigate the `swl ci check` hang observed during this
-evidence pass.
+maintainer pass should run the manual interaction checklist on KDE/KWin and
+GNOME/Mutter where practical, stress managed GPU resize/reconfigure, broaden
+active/fallback/failure GPU evidence, and investigate the `swl ci check` hang
+observed during this evidence pass.
