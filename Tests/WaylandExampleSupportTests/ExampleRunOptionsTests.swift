@@ -48,4 +48,23 @@ struct ExampleRunOptionsTests {
         #expect(options.contentType == "game")
         #expect(options.presentationHint == "async")
     }
+
+    @Test
+    func leadingSwiftPMSeparatorIsIgnored() throws {
+        let options = try ExampleRunOptions.parse(
+            [
+                "--",
+                "--sync",
+                "prefer-explicit",
+                "--pacing",
+                "fifo",
+                "--metadata",
+                "prefer",
+            ][...]
+        )
+
+        #expect(options.synchronization == "prefer-explicit")
+        #expect(options.pacing == "fifo")
+        #expect(options.metadata == "prefer")
+    }
 }
