@@ -77,6 +77,7 @@ private struct ExampleRunOptionParser {
     }
 
     mutating func parse() throws -> ExampleRunOptions {
+        skipLeadingSwiftPMSeparator()
         while index < arguments.endIndex {
             let shouldContinue = try consume(arguments[index])
             if !shouldContinue {
@@ -113,6 +114,15 @@ private struct ExampleRunOptionParser {
         }
 
         return true
+    }
+
+    private mutating func skipLeadingSwiftPMSeparator() {
+        guard index == arguments.startIndex, index < arguments.endIndex else {
+            return
+        }
+        if arguments[index] == "--" {
+            arguments.formIndex(after: &index)
+        }
     }
 
     private mutating func durationValue(for argument: String) throws -> Int {
