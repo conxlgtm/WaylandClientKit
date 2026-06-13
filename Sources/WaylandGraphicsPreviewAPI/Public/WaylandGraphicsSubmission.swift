@@ -46,6 +46,16 @@ extension WaylandGraphicsConfiguration {
                     .explicitSyncRequiredButUnavailable
                 )
             }
+            guard backingPreference == .managedGPU,
+                fallbackPolicy != .forceSoftware
+            else {
+                throw WaylandGraphicsError.unavailable(
+                    .managedGPUSubmissionUnavailable
+                )
+            }
+            guard capabilities.dmabuf.isAvailable else {
+                throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
+            }
         }
 
         switch pacingPolicy {

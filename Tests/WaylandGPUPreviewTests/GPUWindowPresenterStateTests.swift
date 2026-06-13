@@ -1850,6 +1850,51 @@ struct ManagedGPUPreviewStoragePreparationTests {
         #expect(retryResult.operation == .redraw)
         #expect(backing.submittedGeometries == [configuredGeometry, configuredGeometry])
     }
+
+    @Test
+    func requireExplicitGPUFailureDoesNotFallbackToSoftware() async throws {
+        let initialGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 4, height: 3),
+            scale: .one
+        )
+        let configuredGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 8, height: 6),
+            scale: .one
+        )
+        let window = FakeGraphicsPreviewWindow(
+            initialGeometry: initialGeometry,
+            configuredGeometry: configuredGeometry
+        )
+        let backing = FakeManagedGPUBacking(
+            setupFailures: [.explicitSyncSetupFailed]
+        )
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .projected(capabilities: explicitSyncGPUPreviewCapabilities()),
+            configuration: WaylandGraphicsConfiguration(
+                synchronizationPolicy: .requireExplicit
+            ),
+            managedGPUBacking: backing
+        )
+
+        let lease = try await storage.nextFrame()
+        await window.clearEvents()
+        do {
+            _ = try await lease.submit(.clearColor(.black))
+            Issue.record("expected explicit sync setup failure")
+        } catch WaylandGraphicsError.unavailable(.explicitSyncSetupFailed) {
+            #expect(
+                await window.eventSnapshot() == [.preparePresentation, .geometry]
+            )
+            #expect(backing.submittedGeometries == [configuredGeometry])
+            #expect(
+                try await storage.runtimePath().backing
+                    == .failed(.explicitSyncSetupFailed)
+            )
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
 }
 
 private func syncPoint(timeline: UInt64, point: UInt64) -> GPUSyncPoint {
@@ -1877,6 +1922,16 @@ private func gpuPreviewCapabilities() -> WaylandGraphicsSurfaceCapabilities {
     WaylandGraphicsSurfaceCapabilities(
         dmabuf: .available(version: 4),
         explicitSync: .unavailable,
+        framePacing: .unavailable,
+        colorMetadata: .unavailable,
+        presentationFeedback: .unavailable
+    )
+}
+
+private func explicitSyncGPUPreviewCapabilities() -> WaylandGraphicsSurfaceCapabilities {
+    WaylandGraphicsSurfaceCapabilities(
+        dmabuf: .available(version: 4),
+        explicitSync: .available(version: 1),
         framePacing: .unavailable,
         colorMetadata: .unavailable,
         presentationFeedback: .unavailable
@@ -2041,14 +2096,17 @@ private actor FakeGraphicsPreviewWindow: WaylandGraphicsManagedWindow {
 
 private final class FakeManagedGPUBacking: WaylandGraphicsManagedGPUBacking, Sendable {
     private let submittedGeometryState = Mutex<[SurfaceGeometry]>([])
+    private let setupFailureState: Mutex<[GPUBackingFailure]>
     private let committedFrameFailureState: Mutex<[GPUBackingFailure]>
     private let runtimePathSnapshotValue: GPURuntimePathSnapshot
 
     init(
+        setupFailures: [GPUBackingFailure] = [],
         committedFrameFailures: [GPUBackingFailure] = [],
         runtimePathSnapshot: GPURuntimePathSnapshot =
             .afterDmabufImportSetup(capabilities: capabilitySnapshot())
     ) {
+        setupFailureState = Mutex(setupFailures)
         committedFrameFailureState = Mutex(committedFrameFailures)
         runtimePathSnapshotValue = runtimePathSnapshot
     }
@@ -2073,6 +2131,11 @@ private final class FakeManagedGPUBacking: WaylandGraphicsManagedGPUBacking, Sen
         _ submission: WaylandGraphicsManagedGPUClearFrameSubmission
     ) async throws(ManagedGPUPreviewBackingError) -> GPUWindowPresentedFrame {
         submittedGeometryState.withLock { $0.append(submission.geometry) }
+        if let failure = setupFailureState.withLock({ failures in
+            failures.isEmpty ? nil : failures.removeFirst()
+        }) {
+            throw .setup(failure)
+        }
         if let failure = committedFrameFailureState.withLock({ failures in
             failures.isEmpty ? nil : failures.removeFirst()
         }) {

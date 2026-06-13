@@ -116,7 +116,9 @@ attempts linux-drm-syncobj when the compositor advertises it and the managed
 GPU path can import a sync timeline; otherwise it falls back to implicit sync
 with an explicit runtime fallback reason. `requireExplicit` never silently
 falls back: it succeeds only when explicit sync is configured for the submitted
-frame, and otherwise fails with a typed unavailable reason.
+managed GPU frame. Software backing preferences, forced software fallback, and
+managed GPU setup/submission/release failures fail with typed unavailable
+reasons instead of committing implicit software frames.
 `preferFIFO` and `preferCommitTiming` apply the matching submit constraint when
 the protocol is available. Missing FIFO or commit-timing support is reported as
 a pacing fallback reason. Commit-timing timestamp rejection is reported as a

@@ -117,6 +117,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     ) async throws -> WaylandGraphicsFrameResult {
         try leaseState.requireNotClosed()
         try await ensureWindowOpen()
+        try rejectSoftwareSubmissionWhenExplicitRequired()
 
         let geometry = try await submissionGeometry(for: leaseID)
         try frameMetadata.validateManagedPreviewSupport(
@@ -295,6 +296,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             }
         }
 
+        try rejectSoftwareSubmissionWhenExplicitRequired()
         switch operation {
         case .show:
             try await window.show(
@@ -303,7 +305,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                 requestPresentationFeedback: shouldRequestPresentationFeedback,
                 damage: damage
             ) { softwareFrame in
-                Self.clear(softwareFrame, color: color)
+                clearSoftwareFrame(softwareFrame, color: color)
             }
         case .redraw:
             try await window.redraw(
@@ -311,7 +313,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                 requestPresentationFeedback: shouldRequestPresentationFeedback,
                 damage: damage
             ) { softwareFrame in
-                Self.clear(softwareFrame, color: color)
+                clearSoftwareFrame(softwareFrame, color: color)
             }
         }
         applyMetadataFallbacks(resolvedMetadata.fallbacks)
@@ -349,32 +351,9 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
         applyMetadataFallbacks(resolvedMetadata.fallbacks)
     }
-
-    nonisolated private static func clear(
-        _ frame: borrowing SoftwareFrame,
-        color: UInt32
-    ) {
-        frame.withXRGB8888Rows { _, pixels in
-            for index in 0..<pixels.count {
-                unsafe pixels[unchecked: index] = color
-            }
-        }
-    }
 }
 
 extension WaylandGraphicsWindowBackingStorage {
-    package static func shouldRequestPresentationFeedback(
-        configuration: WaylandGraphicsConfiguration,
-        capabilities: WaylandGraphicsSurfaceCapabilities
-    ) -> Bool {
-        switch configuration.presentationFeedbackPolicy {
-        case .none:
-            false
-        case .requestWhenAvailable, .require:
-            capabilities.presentationFeedback.isAvailable
-        }
-    }
-
     private var shouldRequestPresentationFeedback: Bool {
         Self.shouldRequestPresentationFeedback(
             configuration: configuration,
@@ -423,6 +402,17 @@ extension WaylandGraphicsWindowBackingStorage {
             throw CommittedManagedGPUFrameFailure(error)
         }
 
+        guard configuration.synchronizationPolicy != .requireExplicit else {
+            let reason = WaylandGraphicsUnavailableReason(error.failure)
+            if !refreshRuntimePathFromManagedGPU(backing: .failed(reason)) {
+                backingRuntimePath = .unavailable(
+                    capabilities: backingRuntimePath.capabilities,
+                    reason: reason
+                )
+            }
+            throw WaylandGraphicsError.unavailable(reason)
+        }
+
         switch configuration.fallbackPolicy {
         case .preferGPUFallbackToSoftware:
             let reason = WaylandGraphicsFallbackReason(error.fallbackReason)
@@ -455,6 +445,17 @@ extension WaylandGraphicsWindowBackingStorage {
 
     private func finishCommittedSubmissionFailure() {
         do { try leaseState.finishSubmission() } catch { leaseState.failSubmission() }
+    }
+
+    private func rejectSoftwareSubmissionWhenExplicitRequired() throws {
+        guard configuration.synchronizationPolicy != .requireExplicit else {
+            let reason = WaylandGraphicsUnavailableReason.managedGPUSubmissionUnavailable
+            backingRuntimePath = .unavailable(
+                capabilities: backingRuntimePath.capabilities,
+                reason: reason
+            )
+            throw WaylandGraphicsError.unavailable(reason)
+        }
     }
 
     private func applyMetadataFallbacks(_ fallbacks: WaylandGraphicsMetadataFallbacks) {

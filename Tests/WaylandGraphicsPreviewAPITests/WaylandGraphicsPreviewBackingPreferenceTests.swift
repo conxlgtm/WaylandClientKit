@@ -29,6 +29,40 @@ struct WaylandGraphicsPreviewBackingPreferenceTests {
     }
 
     @Test
+    func requireExplicitRejectsSoftwareBackingPreference() {
+        #expect(
+            throws: WaylandGraphicsError.unavailable(
+                .managedGPUSubmissionUnavailable
+            )
+        ) {
+            _ = try WaylandDisplay.managedPreviewRuntimePath(
+                capabilities: gpuCapableSurfaceCapabilities(),
+                configuration: WaylandGraphicsConfiguration(
+                    backingPreference: .software,
+                    synchronizationPolicy: .requireExplicit
+                )
+            )
+        }
+    }
+
+    @Test
+    func requireExplicitRejectsForcedSoftwareFallback() {
+        #expect(
+            throws: WaylandGraphicsError.unavailable(
+                .managedGPUSubmissionUnavailable
+            )
+        ) {
+            _ = try WaylandDisplay.managedPreviewRuntimePath(
+                capabilities: gpuCapableSurfaceCapabilities(),
+                configuration: WaylandGraphicsConfiguration(
+                    fallbackPolicy: .forceSoftware,
+                    synchronizationPolicy: .requireExplicit
+                )
+            )
+        }
+    }
+
+    @Test
     func managedGPUPreferenceProjectsAdvertisedPathBeforeSetup() throws {
         let path = try WaylandDisplay.managedPreviewRuntimePath(
             capabilities: gpuCapableSurfaceCapabilities(),
