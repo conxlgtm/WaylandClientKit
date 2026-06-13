@@ -69,6 +69,5 @@ swift run GraphicsPreviewManagedGPUClear -- --sync prefer-explicit --pacing fifo
 
 Do not record explicit synchronization or commit timing as active unless the
 runtime-path output itself reports `active` for that component on a submitted
-frame. Current KDE/KWin evidence records explicit sync as
-`failed(explicitSyncReleaseFailed)` and commit timing as
-`fallback(commitTimingUnavailable)`.
+frame. Current KDE/KWin evidence records explicit sync as `active` and commit
+timing as `fallback(commitTimingUnavailable)`.

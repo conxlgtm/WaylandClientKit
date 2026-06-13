@@ -1,4 +1,5 @@
 // swiftlint:disable file_length
+import Glibc
 import Synchronization
 import Testing
 
@@ -79,25 +80,25 @@ struct GPUWindowPresenterStateTests {
         var state = GPUWindowPresenterState()
         let slotID = try GBMBufferPoolSlotID(0)
         let releasePoint = syncPoint(timeline: 5, point: 8)
+        let submittedState = GPUSubmittedBufferSyncState(
+            slotID: slotID,
+            acquirePoint: syncPoint(timeline: 5, point: 6),
+            releasePoint: releasePoint
+        )
         try state.installSlot(slotID)
 
         let lease = try state.leaseNext()
         try state.markSubmitted(
             lease,
             generation: 42,
-            synchronization: .explicit(
-                GPUSubmittedBufferSyncState(
-                    slotID: slotID,
-                    acquirePoint: syncPoint(timeline: 5, point: 6),
-                    releasePoint: releasePoint
-                )
-            )
+            synchronization: .explicit(submittedState)
         )
 
         #expect(
             try state.submissionState(for: slotID)
                 == .submittedExplicit(commitGeneration: 42, releasePoint: releasePoint)
         )
+        #expect(state.explicitSubmissionStates == [submittedState])
 
         #expect(try state.markReleased(slotID) == false)
 
@@ -105,10 +106,12 @@ struct GPUWindowPresenterStateTests {
             try state.submissionState(for: slotID)
                 == .submittedExplicit(commitGeneration: 42, releasePoint: releasePoint)
         )
+        #expect(state.explicitSubmissionStates == [submittedState])
 
         #expect(try state.markReleased(slotID) == false)
         #expect(try state.markExplicitReleaseSignaled(slotID))
         #expect(try state.submissionState(for: slotID) == .available)
+        #expect(state.explicitSubmissionStates.isEmpty)
         #expect(try state.markReleased(slotID) == false)
         #expect(try state.markExplicitReleaseSignaled(slotID) == false)
     }
@@ -577,6 +580,22 @@ struct GPUWindowRuntimePathExplicitSyncFailureTests {
             ManagedGPUPreviewBackingError.backingFailure(
                 for: .syncobjTimelineWaitFailed(point: 5, errno: 6)
             ) == .explicitSyncReleaseFailed
+        )
+        #expect(
+            GBMAllocationError.syncobjTimelineWaitFailed(point: 5, errno: ETIME)
+                .isSyncobjTimelineWaitTimeout
+        )
+        #expect(
+            GBMAllocationError.syncobjTimelineWaitFailed(point: 5, errno: ETIMEDOUT)
+                .isSyncobjTimelineWaitTimeout
+        )
+        #expect(
+            GBMAllocationError.syncobjTimelineWaitFailed(point: 5, errno: EAGAIN)
+                .isSyncobjTimelineWaitTimeout
+        )
+        #expect(
+            GBMAllocationError.syncobjTimelineWaitFailed(point: 5, errno: EINVAL)
+                .isSyncobjTimelineWaitTimeout == false
         )
     }
 
@@ -1599,6 +1618,11 @@ struct GPUWindowPresenterBufferReuseTests {
         let slotID = try GBMBufferPoolSlotID(0)
         let buffer = try FakePresenterBuffer(pointer: 0x1001)
         let releasePoint = syncPoint(timeline: 5, point: 8)
+        let submittedState = GPUSubmittedBufferSyncState(
+            slotID: slotID,
+            acquirePoint: syncPoint(timeline: 5, point: 6),
+            releasePoint: releasePoint
+        )
 
         try presenter.installBuffer(buffer, slotID: slotID)
         _ = try await presenter.presentSlot(
@@ -1606,26 +1630,23 @@ struct GPUWindowPresenterBufferReuseTests {
             submit: { _, _, _ in
                 try previewPresentationResult(generation: 90)
             },
-            synchronization: .explicit(
-                GPUSubmittedBufferSyncState(
-                    slotID: slotID,
-                    acquirePoint: syncPoint(timeline: 5, point: 6),
-                    releasePoint: releasePoint
-                )
-            ),
+            synchronization: .explicit(submittedState),
             pacing: .none
         )
 
+        #expect(presenter.explicitSubmissionStates == [submittedState])
         buffer.triggerRelease()
 
         #expect(presenter.availableSlotIDs.isEmpty)
         #expect(presenter.outstandingSubmittedSlotIDs == [slotID])
+        #expect(presenter.explicitSubmissionStates == [submittedState])
         #expect(presenter.releaseFailuresSnapshot.isEmpty)
 
         try presenter.recordExplicitReleaseSignal(slotID: slotID)
 
         #expect(presenter.availableSlotIDs == [slotID])
         #expect(presenter.outstandingSubmittedSlotIDs.isEmpty)
+        #expect(presenter.explicitSubmissionStates.isEmpty)
     }
 }
 
