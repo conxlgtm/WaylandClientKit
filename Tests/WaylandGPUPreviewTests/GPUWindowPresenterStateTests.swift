@@ -191,7 +191,7 @@ struct GPUWindowPresenterStateTests {
             GPUFramePacingPolicy.preferFIFO.selectConstraint(
                 capability: .fifo(version: 1),
                 commitTimingTarget: targetTime
-            ) == GPUFramePacingPolicySelection(constraint: .fifo(.setBarrier))
+            ) == GPUFramePacingPolicySelection(constraint: .fifo(.waitBarrier))
         )
         let fifoFallback = GPUFramePacingPolicy.preferFIFO.selectConstraint(
             capability: .commitTiming(version: 1),
