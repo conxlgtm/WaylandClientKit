@@ -20,34 +20,33 @@ GPU.
 
 ## Policy
 
-``WaylandGraphicsSynchronizationPolicy`` controls explicit-sync requirements.
-``WaylandGraphicsPacingPolicy`` controls preview frame-pacing requirements.
-``WaylandGraphicsMetadataPolicy`` controls whether surface metadata is allowed.
-``WaylandGraphicsPresentationFeedbackPolicy`` controls whether presentation
+`WaylandGraphicsSynchronizationPolicy` controls explicit-sync requirements.
+`WaylandGraphicsPacingPolicy` controls preview frame-pacing requirements.
+`WaylandGraphicsMetadataPolicy` controls whether surface metadata is allowed.
+`WaylandGraphicsPresentationFeedbackPolicy` controls whether presentation
 feedback is requested or required.
 
-``WaylandGraphicsSynchronizationPolicy/implicitOnly`` never creates explicit
-sync objects. ``WaylandGraphicsSynchronizationPolicy/preferExplicit`` attempts
-explicit sync and falls back to implicit synchronization with a runtime fallback
-reason when the compositor or setup path cannot provide it.
-``WaylandGraphicsSynchronizationPolicy/requireExplicit`` never silently falls
-back.
+`WaylandGraphicsSynchronizationPolicy.implicitOnly` never creates explicit sync
+objects. `WaylandGraphicsSynchronizationPolicy.preferExplicit` attempts explicit
+sync and falls back to implicit synchronization with a runtime fallback reason
+when the compositor or setup path cannot provide it.
+`WaylandGraphicsSynchronizationPolicy.requireExplicit` never silently falls back.
 
-``WaylandGraphicsPacingPolicy/preferFIFO`` and
-``WaylandGraphicsPacingPolicy/preferCommitTiming`` apply submit constraints
+`WaylandGraphicsPacingPolicy.preferFIFO` and
+`WaylandGraphicsPacingPolicy.preferCommitTiming` apply submit constraints
 when their protocols are available. Missing protocols become pacing fallback
 facts; rejected commit-timing timestamps become typed failures. The preview
 commit-timing path uses an internal target time until a public scheduling API is
 designed.
 
-``WaylandGraphicsMetadataPolicy/preferAvailable`` allows public content type
+`WaylandGraphicsMetadataPolicy.preferAvailable` allows public content type
 and presentation-hint metadata to be applied when the compositor supports the
 matching protocols. Color representation, color-management, and alpha facts
 remain package-internal runtime facts rather than renderer policy.
 
 Unsupported or unavailable requirements are reported as typed
-``WaylandGraphicsError`` values or fallback reasons according to
-``WaylandGraphicsFallbackPolicy``.
+`WaylandGraphicsError` values or fallback reasons according to
+`WaylandGraphicsFallbackPolicy`.
 
 ## Evidence
 
