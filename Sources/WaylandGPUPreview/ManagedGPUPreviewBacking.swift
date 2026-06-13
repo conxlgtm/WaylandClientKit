@@ -185,7 +185,7 @@ private final class ManagedGPUExplicitSynchronization {
 
     var placeholderSubmissionState: GPUSubmittedBufferSyncState {
         GPUSubmittedBufferSyncState(
-            slotID: try! GBMBufferPoolSlotID(0),
+            slotID: placeholderSlotID(),
             acquirePoint: GPUSyncPoint(
                 timeline: identity,
                 point: RawSyncobjTimelinePoint(1)
@@ -195,6 +195,14 @@ private final class ManagedGPUExplicitSynchronization {
                 point: RawSyncobjTimelinePoint(2)
             )
         )
+    }
+
+    private func placeholderSlotID() -> GBMBufferPoolSlotID {
+        do {
+            return try GBMBufferPoolSlotID(0)
+        } catch {
+            preconditionFailure("Zero is always a valid GPU buffer slot ID")
+        }
     }
 
     func submissionState(
