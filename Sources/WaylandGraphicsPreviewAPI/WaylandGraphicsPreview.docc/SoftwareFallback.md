@@ -3,6 +3,9 @@
 Software fallback is an explicit runtime result, not a hidden success path.
 When fallback is allowed, managed GPU setup can fail with a typed reason and the
 same public frame submission can present through software.
+If explicit synchronization has already been configured or activated on the
+surface, implicit software fallback is not safe and the submission fails with a
+typed unavailable reason instead.
 
 ## Policies
 

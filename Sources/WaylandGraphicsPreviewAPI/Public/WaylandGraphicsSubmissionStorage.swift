@@ -87,11 +87,7 @@ package actor WaylandGraphicsWindowBackingStorage {
         do {
             try await beforeSubmissionEffect()
             stage = .frameSubmission
-            try await submitFrame(
-                frame,
-                operation: operation,
-                geometry: geometry
-            )
+            try await submitFrame(frame, operation: operation, geometry: geometry)
             stage = .submissionCompletion
             try await afterSubmissionEffect()
             try leaseState.finishSubmission()
@@ -439,21 +435,24 @@ extension WaylandGraphicsWindowBackingStorage {
         }
     }
 
-    private static func isCommittedManagedGPUFrameFailure(_ error: any Error) -> Bool {
-        error is CommittedManagedGPUFrameFailure
-    }
-
     private func finishCommittedSubmissionFailure() {
         do { try leaseState.finishSubmission() } catch { leaseState.failSubmission() }
     }
 
     private func rejectSoftwareSubmissionWhenExplicitRequired() throws {
-        guard configuration.synchronizationPolicy != .requireExplicit else {
+        let shouldReject =
+            switch configuration.synchronizationPolicy {
+            case .implicitOnly: false
+            case .preferExplicit:
+                Self.explicitSyncBlocksSoftwareFallback(
+                    backingRuntimePath.explicitSync
+                )
+            case .requireExplicit: true
+            }
+
+        guard !shouldReject else {
             let reason = WaylandGraphicsUnavailableReason.managedGPUSubmissionUnavailable
-            backingRuntimePath = .unavailable(
-                capabilities: backingRuntimePath.capabilities,
-                reason: reason
-            )
+            backingRuntimePath = Self.runtimePath(backingRuntimePath, backingUnavailable: reason)
             throw WaylandGraphicsError.unavailable(reason)
         }
     }
