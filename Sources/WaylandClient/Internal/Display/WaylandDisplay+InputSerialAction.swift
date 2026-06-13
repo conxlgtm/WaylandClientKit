@@ -6,6 +6,10 @@ extension WaylandDisplay {
     }
 
     package func removeInputSerialAction(_ actionID: InputSerialActionID) {
-        try? requireCore().removeInputSerialAction(actionID)
+        do {
+            try requireCore().removeInputSerialAction(actionID)
+        } catch {
+            return
+        }
     }
 }
