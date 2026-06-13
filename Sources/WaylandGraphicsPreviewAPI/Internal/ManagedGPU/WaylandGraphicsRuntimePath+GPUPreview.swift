@@ -231,13 +231,24 @@ extension WaylandGraphicsFallbackReason {
         case .explicitSynchronizationUnavailable,
             .explicitSynchronizationNotConfigured:
             self = .explicitSyncRequiredButUnavailable
-        case .contentTypeUnavailable,
-            .alphaModifierUnavailable,
-            .colorRepresentationUnavailable,
-            .colorRepresentationSupportPending,
-            .colorManagementUnavailable,
-            .presentationHintUnavailable:
-            self = .metadataRequiredButUnavailable
+        case .explicitSynchronizationSetupFailed:
+            self = .explicitSyncSetupFailed
+        case .explicitSynchronizationSubmissionFailed:
+            self = .explicitSyncSubmissionFailed
+        case .explicitSynchronizationReleaseFailed:
+            self = .explicitSyncReleaseFailed
+        case .contentTypeUnavailable:
+            self = .contentTypeUnavailable
+        case .alphaModifierUnavailable:
+            self = .alphaModifierUnavailable
+        case .colorRepresentationUnavailable:
+            self = .colorRepresentationUnavailable
+        case .colorRepresentationSupportPending:
+            self = .colorRepresentationSupportPending
+        case .colorManagementUnavailable:
+            self = .colorManagementUnavailable
+        case .presentationHintUnavailable:
+            self = .presentationHintUnavailable
         case .compositorRejectedBuffer:
             self = .compositorRejectedBuffer
         case .fifoUnavailable:
@@ -281,13 +292,24 @@ extension WaylandGraphicsUnavailableReason {
         case .explicitSynchronizationUnavailable,
             .explicitSynchronizationNotConfigured:
             self = .explicitSyncRequiredButUnavailable
-        case .contentTypeUnavailable,
-            .alphaModifierUnavailable,
-            .colorRepresentationUnavailable,
-            .colorRepresentationSupportPending,
-            .colorManagementUnavailable,
-            .presentationHintUnavailable:
-            self = .metadataRequiredButUnavailable
+        case .explicitSynchronizationSetupFailed:
+            self = .explicitSyncSetupFailed
+        case .explicitSynchronizationSubmissionFailed:
+            self = .explicitSyncSubmissionFailed
+        case .explicitSynchronizationReleaseFailed:
+            self = .explicitSyncReleaseFailed
+        case .contentTypeUnavailable:
+            self = .contentTypeUnavailable
+        case .alphaModifierUnavailable:
+            self = .alphaModifierUnavailable
+        case .colorRepresentationUnavailable:
+            self = .colorRepresentationUnavailable
+        case .colorRepresentationSupportPending:
+            self = .colorRepresentationSupportPending
+        case .colorManagementUnavailable:
+            self = .colorManagementUnavailable
+        case .presentationHintUnavailable:
+            self = .presentationHintUnavailable
         case .compositorRejectedBuffer:
             self = .compositorRejectedBuffer
         case .fifoUnavailable:

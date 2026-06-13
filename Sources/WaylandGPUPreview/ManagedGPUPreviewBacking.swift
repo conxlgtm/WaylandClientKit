@@ -60,6 +60,12 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             .eglUnavailable
         case .explicitSyncRequiredButUnavailable:
             .explicitSyncRequiredButUnavailable
+        case .explicitSyncSetupFailed:
+            .explicitSyncSetupFailed
+        case .explicitSyncSubmissionFailed:
+            .explicitSyncSubmissionFailed
+        case .explicitSyncReleaseFailed:
+            .explicitSyncReleaseFailed
         case .fifoRequiredButUnavailable:
             .fifoRequiredButUnavailable
         case .commitTimingRequiredButUnavailable:
@@ -114,13 +120,15 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             .surfaceDestroyed,
             .surfaceFrontBufferLockFailed,
             .exportFailed,
-            .syncobjCreationFailed,
-            .syncobjFileDescriptorExportFailed,
-            .syncobjTimelineSignalFailed,
-            .syncobjTimelineWaitFailed,
             .invalidPlaneIndex,
             .planeFileDescriptorAlreadyTaken:
             .gbmAllocationFailed
+        case .syncobjCreationFailed, .syncobjFileDescriptorExportFailed:
+            .explicitSyncSetupFailed
+        case .syncobjTimelineSignalFailed:
+            .explicitSyncSubmissionFailed
+        case .syncobjTimelineWaitFailed:
+            .explicitSyncReleaseFailed
         }
     }
 

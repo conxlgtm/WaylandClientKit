@@ -2338,76 +2338,94 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L209: `    case gbmUnavailable`
 - L210: `    case eglUnavailable`
 - L211: `    case explicitSyncRequiredButUnavailable`
-- L212: `    case metadataRequiredButUnavailable`
-- L213: `    case presentationFeedbackUnavailable`
-- L214: `    case compositorRejectedBuffer`
-- L215: `    case surfaceFeedbackUnavailable`
-- L216: `    case gbmAllocationFailed`
-- L217: `    case fifoUnavailable`
-- L218: `    case commitTimingUnavailable`
-- L219: `    case commitTimingRejected`
-- L220: `    case commitFailed`
-- L221: `    case presentationTrackingFailed`
-- L225: `public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {`
-- L226: `    case dmabufUnavailable`
-- L227: `    case managedGPUSubmissionUnavailable`
-- L228: `    case noCompatibleFormat`
-- L229: `    case noRenderNode`
-- L230: `    case gbmUnavailable`
-- L231: `    case eglUnavailable`
-- L232: `    case explicitSyncRequiredButUnavailable`
-- L233: `    case metadataRequiredButUnavailable`
-- L234: `    case presentationFeedbackUnavailable`
-- L235: `    case compositorRejectedBuffer`
-- L236: `    case surfaceFeedbackUnavailable`
-- L237: `    case gbmAllocationFailed`
-- L238: `    case fifoUnavailable`
-- L239: `    case commitTimingUnavailable`
-- L240: `    case commitTimingRejected`
-- L241: `    case commitFailed`
-- L242: `    case presentationTrackingFailed`
-- L246: `public enum WaylandGraphicsBackingDecision: Equatable, Sendable {`
-- L247: `    case gpu(WaylandGraphicsRuntimePath)`
-- L248: `    case software(WaylandGraphicsFallbackReason)`
-- L249: `    case unavailable(WaylandGraphicsUnavailableReason)`
-- L253: `public enum WaylandGraphicsRuntimeStatus: Equatable, Sendable {`
-- L254: `    case unavailable`
-- L255: `    case pending`
-- L256: `    case advertised`
-- L257: `    case configured`
-- L258: `    case active`
-- L259: `    case failed(WaylandGraphicsUnavailableReason)`
-- L260: `    case fallback(WaylandGraphicsFallbackReason)`
-- L264: `public struct WaylandGraphicsPacingStatus: Equatable, Sendable {`
-- L265: `    public let fifo: WaylandGraphicsRuntimeStatus`
-- L266: `    public let commitTiming: WaylandGraphicsRuntimeStatus`
-- L268: `    public init(`
-- L278: `public struct WaylandGraphicsMetadataStatus: Equatable, Sendable {`
-- L279: `    public let contentType: WaylandGraphicsRuntimeStatus`
-- L280: `    public let alphaModifier: WaylandGraphicsRuntimeStatus`
-- L281: `    public let tearingControl: WaylandGraphicsRuntimeStatus`
-- L282: `    public let colorRepresentation: WaylandGraphicsRuntimeStatus`
-- L283: `    public let colorManagement: WaylandGraphicsRuntimeStatus`
-- L285: `    public init(`
-- L301: `public struct WaylandGraphicsRuntimePath: Equatable, Sendable {`
-- L302: `    public let capabilities: WaylandGraphicsSurfaceCapabilities`
-- L303: `    public let backing: WaylandGraphicsRuntimeStatus`
-- L304: `    public let dmabuf: WaylandGraphicsRuntimeStatus`
-- L305: `    public let surfaceFeedback: WaylandGraphicsRuntimeStatus`
-- L306: `    public let renderNode: WaylandGraphicsRuntimeStatus`
-- L307: `    public let gbm: WaylandGraphicsRuntimeStatus`
-- L308: `    public let egl: WaylandGraphicsRuntimeStatus`
-- L309: `    public let dmabufImport: WaylandGraphicsRuntimeStatus`
-- L310: `    public let bufferLifecycle: WaylandGraphicsRuntimeStatus`
-- L311: `    public let explicitSync: WaylandGraphicsRuntimeStatus`
-- L312: `    public let pacing: WaylandGraphicsPacingStatus`
-- L313: `    public let metadata: WaylandGraphicsMetadataStatus`
-- L314: `    public let presentationFeedback: WaylandGraphicsRuntimeStatus`
-- L315: `    public var fallback: WaylandGraphicsFallbackReason? {`
-- L353: `    public static func projected(`
-- L363: `    public static func projected(`
-- L411: `    public static func softwareFallback(`
-- L447: `    public static func unavailable(`
+- L212: `    case explicitSyncSetupFailed`
+- L213: `    case explicitSyncSubmissionFailed`
+- L214: `    case explicitSyncReleaseFailed`
+- L215: `    case metadataRequiredButUnavailable`
+- L216: `    case contentTypeUnavailable`
+- L217: `    case alphaModifierUnavailable`
+- L218: `    case colorRepresentationUnavailable`
+- L219: `    case colorRepresentationSupportPending`
+- L220: `    case colorManagementUnavailable`
+- L221: `    case presentationHintUnavailable`
+- L222: `    case presentationFeedbackUnavailable`
+- L223: `    case compositorRejectedBuffer`
+- L224: `    case surfaceFeedbackUnavailable`
+- L225: `    case gbmAllocationFailed`
+- L226: `    case fifoUnavailable`
+- L227: `    case commitTimingUnavailable`
+- L228: `    case commitTimingRejected`
+- L229: `    case commitFailed`
+- L230: `    case presentationTrackingFailed`
+- L234: `public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {`
+- L235: `    case dmabufUnavailable`
+- L236: `    case managedGPUSubmissionUnavailable`
+- L237: `    case noCompatibleFormat`
+- L238: `    case noRenderNode`
+- L239: `    case gbmUnavailable`
+- L240: `    case eglUnavailable`
+- L241: `    case explicitSyncRequiredButUnavailable`
+- L242: `    case explicitSyncSetupFailed`
+- L243: `    case explicitSyncSubmissionFailed`
+- L244: `    case explicitSyncReleaseFailed`
+- L245: `    case metadataRequiredButUnavailable`
+- L246: `    case contentTypeUnavailable`
+- L247: `    case alphaModifierUnavailable`
+- L248: `    case colorRepresentationUnavailable`
+- L249: `    case colorRepresentationSupportPending`
+- L250: `    case colorManagementUnavailable`
+- L251: `    case presentationHintUnavailable`
+- L252: `    case presentationFeedbackUnavailable`
+- L253: `    case compositorRejectedBuffer`
+- L254: `    case surfaceFeedbackUnavailable`
+- L255: `    case gbmAllocationFailed`
+- L256: `    case fifoUnavailable`
+- L257: `    case commitTimingUnavailable`
+- L258: `    case commitTimingRejected`
+- L259: `    case commitFailed`
+- L260: `    case presentationTrackingFailed`
+- L264: `public enum WaylandGraphicsBackingDecision: Equatable, Sendable {`
+- L265: `    case gpu(WaylandGraphicsRuntimePath)`
+- L266: `    case software(WaylandGraphicsFallbackReason)`
+- L267: `    case unavailable(WaylandGraphicsUnavailableReason)`
+- L271: `public enum WaylandGraphicsRuntimeStatus: Equatable, Sendable {`
+- L272: `    case unavailable`
+- L273: `    case pending`
+- L274: `    case advertised`
+- L275: `    case configured`
+- L276: `    case active`
+- L277: `    case failed(WaylandGraphicsUnavailableReason)`
+- L278: `    case fallback(WaylandGraphicsFallbackReason)`
+- L282: `public struct WaylandGraphicsPacingStatus: Equatable, Sendable {`
+- L283: `    public let fifo: WaylandGraphicsRuntimeStatus`
+- L284: `    public let commitTiming: WaylandGraphicsRuntimeStatus`
+- L286: `    public init(`
+- L296: `public struct WaylandGraphicsMetadataStatus: Equatable, Sendable {`
+- L297: `    public let contentType: WaylandGraphicsRuntimeStatus`
+- L298: `    public let alphaModifier: WaylandGraphicsRuntimeStatus`
+- L299: `    public let tearingControl: WaylandGraphicsRuntimeStatus`
+- L300: `    public let colorRepresentation: WaylandGraphicsRuntimeStatus`
+- L301: `    public let colorManagement: WaylandGraphicsRuntimeStatus`
+- L303: `    public init(`
+- L319: `public struct WaylandGraphicsRuntimePath: Equatable, Sendable {`
+- L320: `    public let capabilities: WaylandGraphicsSurfaceCapabilities`
+- L321: `    public let backing: WaylandGraphicsRuntimeStatus`
+- L322: `    public let dmabuf: WaylandGraphicsRuntimeStatus`
+- L323: `    public let surfaceFeedback: WaylandGraphicsRuntimeStatus`
+- L324: `    public let renderNode: WaylandGraphicsRuntimeStatus`
+- L325: `    public let gbm: WaylandGraphicsRuntimeStatus`
+- L326: `    public let egl: WaylandGraphicsRuntimeStatus`
+- L327: `    public let dmabufImport: WaylandGraphicsRuntimeStatus`
+- L328: `    public let bufferLifecycle: WaylandGraphicsRuntimeStatus`
+- L329: `    public let explicitSync: WaylandGraphicsRuntimeStatus`
+- L330: `    public let pacing: WaylandGraphicsPacingStatus`
+- L331: `    public let metadata: WaylandGraphicsMetadataStatus`
+- L332: `    public let presentationFeedback: WaylandGraphicsRuntimeStatus`
+- L333: `    public var fallback: WaylandGraphicsFallbackReason? {`
+- L371: `    public static func projected(`
+- L381: `    public static func projected(`
+- L429: `    public static func softwareFallback(`
+- L465: `    public static func unavailable(`
 
 ### `Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsSubmission.swift`
 

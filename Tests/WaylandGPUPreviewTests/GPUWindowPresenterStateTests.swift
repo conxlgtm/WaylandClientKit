@@ -555,6 +555,66 @@ struct GPUWindowRuntimePathSnapshotTests {
 }
 
 @Suite
+struct GPUWindowRuntimePathExplicitSyncFailureTests {
+    @Test
+    func syncobjErrorsMapToExplicitSyncFailures() {
+        #expect(
+            ManagedGPUPreviewBackingError.backingFailure(
+                for: .syncobjCreationFailed(errno: 1)
+            ) == .explicitSyncSetupFailed
+        )
+        #expect(
+            ManagedGPUPreviewBackingError.backingFailure(
+                for: .syncobjFileDescriptorExportFailed(errno: 2)
+            ) == .explicitSyncSetupFailed
+        )
+        #expect(
+            ManagedGPUPreviewBackingError.backingFailure(
+                for: .syncobjTimelineSignalFailed(point: 3, errno: 4)
+            ) == .explicitSyncSubmissionFailed
+        )
+        #expect(
+            ManagedGPUPreviewBackingError.backingFailure(
+                for: .syncobjTimelineWaitFailed(point: 5, errno: 6)
+            ) == .explicitSyncReleaseFailed
+        )
+    }
+
+    @Test
+    func runtimePathReportsExplicitSyncFailuresOnExplicitSyncComponent() {
+        let capabilities = capabilitySnapshot(synchronization: .explicitAvailable(version: 1))
+        let setupFallback = WaylandGraphicsRuntimePath(
+            gpuSnapshot:
+                GPURuntimePathSnapshot
+                .afterPresentation(
+                    capabilities: capabilities,
+                    synchronization: .implicit,
+                    pacing: .none
+                )
+                .markingSynchronizationFallback(.explicitSynchronizationSetupFailed),
+            capabilities: capabilities,
+            backing: .active
+        )
+        let releaseFailure = WaylandGraphicsRuntimePath(
+            gpuSnapshot: .afterFailure(
+                capabilities: capabilities,
+                failure: .explicitSyncReleaseFailed
+            ),
+            capabilities: capabilities,
+            backing: .failed(.explicitSyncReleaseFailed)
+        )
+
+        #expect(
+            setupFallback.explicitSync == .fallback(.explicitSyncSetupFailed)
+        )
+        #expect(
+            releaseFailure.explicitSync == .failed(.explicitSyncReleaseFailed)
+        )
+        #expect(releaseFailure.gbm == .unavailable)
+    }
+}
+
+@Suite
 struct GPUWindowRuntimePathMetadataFailureTests {
     @Test
     func runtimePathReportsCompositorRejectedBuffer() {
@@ -605,8 +665,14 @@ struct GPUWindowRuntimePathMetadataFailureTests {
             capabilities: capabilitySnapshot(contentType: .unavailable),
             failure: .metadataRequiredButUnavailable(.contentTypeUnavailable)
         )
+        let runtimePath = WaylandGraphicsRuntimePath(
+            gpuSnapshot: snapshot,
+            capabilities: capabilitySnapshot(contentType: .unavailable),
+            backing: .failed(.contentTypeUnavailable)
+        )
 
         #expect(snapshot.contentType == .failed(.contentTypeUnavailable))
+        #expect(runtimePath.metadata.contentType == .failed(.contentTypeUnavailable))
     }
 
     @Test
@@ -625,8 +691,17 @@ struct GPUWindowRuntimePathMetadataFailureTests {
             capabilities: capabilitySnapshot(tearingControl: .unavailable),
             failure: .metadataRequiredButUnavailable(.tearingControlUnavailable)
         )
+        let runtimePath = WaylandGraphicsRuntimePath(
+            gpuSnapshot: snapshot,
+            capabilities: capabilitySnapshot(tearingControl: .unavailable),
+            backing: .failed(.presentationHintUnavailable)
+        )
 
         #expect(snapshot.tearingControl == .failed(.presentationHintUnavailable))
+        #expect(
+            runtimePath.metadata.tearingControl
+                == .failed(.presentationHintUnavailable)
+        )
     }
 
     @Test

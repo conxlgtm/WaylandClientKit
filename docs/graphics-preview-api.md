@@ -137,13 +137,15 @@ pools, GBM buffers, EGL surfaces, DRM nodes, or syncobj handles.
 presentation hint values plus `WaylandGraphicsDamageRegion`. With
 `metadataPolicy: .preferAvailable`, content type and presentation hint map to
 the package-internal surface commit metadata when the compositor advertises the
-relevant protocols. Missing metadata protocols produce typed unavailable
-errors before the frame lease is consumed; `metadataPolicy: .none` rejects
-non-default metadata. Public color-management image descriptions, color
-representation details, and alpha metadata remain internal, but runtime path
-facts still report whether those compositor capabilities are advertised,
-configured, active, unavailable, failed, or selected for fallback. WaylandClientKit
-applies protocol metadata; it does not own renderer color conversion, tone
+relevant protocols. Missing preferred metadata protocols are omitted from the
+commit and reported in the runtime path with typed fallback reasons such as
+`contentTypeUnavailable` or `presentationHintUnavailable`;
+`metadataPolicy: .none` rejects non-default metadata. Public color-management
+image descriptions, color representation details, and alpha metadata remain
+internal, but runtime path facts still report whether those compositor
+capabilities are advertised, configured, active, unavailable, failed, or
+selected for fallback. WaylandClientKit applies protocol metadata; it does not
+own renderer color conversion, tone
 mapping, asset color policy, or scene/rendering policy.
 
 Full-frame damage is the default. Partial damage is converted to

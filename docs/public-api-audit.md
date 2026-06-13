@@ -259,8 +259,9 @@ Current preview contract:
   when policy allows, submit arbitrary software drawing, return a typed frame
   result, and cancel or close resources without exposing raw graphics handles.
 - Managed GPU failures preserve public typed reasons including missing
-  per-surface dmabuf feedback and GBM allocation failure; display-level dmabuf
-  advertisement alone is not reported as active GPU backing.
+  per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
+  submission, or release failure; display-level dmabuf advertisement alone is
+  not reported as active GPU backing.
 - Synchronization and pacing policies are active runtime requests for managed
   GPU submission. `implicitOnly` avoids explicit sync objects; `preferExplicit`
   falls back to implicit sync with a runtime reason; `requireExplicit` fails
@@ -272,9 +273,11 @@ Current preview contract:
   image descriptions.
 - Public frame metadata is intentionally narrow. Content type and presentation
   hint map to safe surface commit metadata when their protocols are available
-  and `metadataPolicy` permits metadata. Alpha, color representation, and color
-  management remain package-internal runtime facts rather than public renderer
-  policy. Full-frame damage is the supported default. Partial damage is
+  and `metadataPolicy` permits metadata. Preferred-but-unavailable metadata is
+  omitted from the commit and reported with protocol-specific public fallback
+  reasons. Alpha, color representation, and color management remain
+  package-internal runtime facts rather than public renderer policy. Full-frame
+  damage is the supported default. Partial damage is
   accepted for managed software submissions, converted to `SurfaceDamageRegion`,
   mapped from logical surface coordinates to active buffer damage coordinates,
   and rejected as `WaylandGraphicsError.invalidDamageRegion` when it has no

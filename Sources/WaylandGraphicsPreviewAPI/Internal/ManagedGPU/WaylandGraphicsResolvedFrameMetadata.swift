@@ -23,14 +23,13 @@ package struct WaylandGraphicsMetadataFallbacks: Equatable, Sendable {
     package func applying(to path: WaylandGraphicsRuntimePath)
         -> WaylandGraphicsRuntimePath
     {
-        let fallback = WaylandGraphicsRuntimeStatus.fallback(
-            .metadataRequiredButUnavailable
-        )
         let metadata = WaylandGraphicsMetadataStatus(
-            contentType: contentType ? fallback : path.metadata.contentType,
+            contentType: contentType
+                ? .fallback(.contentTypeUnavailable)
+                : path.metadata.contentType,
             alphaModifier: path.metadata.alphaModifier,
             tearingControl: presentationHint
-                ? fallback
+                ? .fallback(.presentationHintUnavailable)
                 : path.metadata.tearingControl,
             colorRepresentation: path.metadata.colorRepresentation,
             colorManagement: path.metadata.colorManagement

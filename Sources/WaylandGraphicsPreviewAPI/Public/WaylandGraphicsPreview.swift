@@ -209,7 +209,16 @@ public enum WaylandGraphicsFallbackReason: Equatable, Sendable {
     case gbmUnavailable
     case eglUnavailable
     case explicitSyncRequiredButUnavailable
+    case explicitSyncSetupFailed
+    case explicitSyncSubmissionFailed
+    case explicitSyncReleaseFailed
     case metadataRequiredButUnavailable
+    case contentTypeUnavailable
+    case alphaModifierUnavailable
+    case colorRepresentationUnavailable
+    case colorRepresentationSupportPending
+    case colorManagementUnavailable
+    case presentationHintUnavailable
     case presentationFeedbackUnavailable
     case compositorRejectedBuffer
     case surfaceFeedbackUnavailable
@@ -230,7 +239,16 @@ public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {
     case gbmUnavailable
     case eglUnavailable
     case explicitSyncRequiredButUnavailable
+    case explicitSyncSetupFailed
+    case explicitSyncSubmissionFailed
+    case explicitSyncReleaseFailed
     case metadataRequiredButUnavailable
+    case contentTypeUnavailable
+    case alphaModifierUnavailable
+    case colorRepresentationUnavailable
+    case colorRepresentationSupportPending
+    case colorManagementUnavailable
+    case presentationHintUnavailable
     case presentationFeedbackUnavailable
     case compositorRejectedBuffer
     case surfaceFeedbackUnavailable

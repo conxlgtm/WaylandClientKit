@@ -218,8 +218,10 @@ extension ManagedGPUPreviewBacking {
             }
             do {
                 return .explicit(try await ensureExplicitSynchronizationConfigured())
-            } catch {
-                return .implicit(fallbackReason: .explicitSynchronizationNotConfigured)
+            } catch let error {
+                return .implicit(
+                    fallbackReason: explicitSynchronizationFallbackReason(for: error)
+                )
             }
         case .requireExplicit:
             guard capabilities.synchronization.supportsExplicit else {
@@ -227,8 +229,8 @@ extension ManagedGPUPreviewBacking {
             }
             do {
                 return .explicit(try await ensureExplicitSynchronizationConfigured())
-            } catch {
-                throw .setup(.explicitSyncRequiredButUnavailable)
+            } catch let error {
+                throw .setup(explicitSynchronizationFailure(for: error))
             }
         }
     }
@@ -266,6 +268,35 @@ extension ManagedGPUPreviewBacking {
             throw .runtime(error)
         } catch {
             throw .setup(.explicitSyncRequiredButUnavailable)
+        }
+    }
+
+    func explicitSynchronizationFallbackReason(
+        for error: ManagedGPUPreviewBackingError
+    ) -> GPURuntimePathReason {
+        switch error.failure {
+        case .explicitSyncSetupFailed:
+            .explicitSynchronizationSetupFailed
+        case .explicitSyncSubmissionFailed:
+            .explicitSynchronizationSubmissionFailed
+        case .explicitSyncReleaseFailed:
+            .explicitSynchronizationReleaseFailed
+        case .explicitSyncRequiredButUnavailable:
+            .explicitSynchronizationUnavailable
+        default:
+            .explicitSynchronizationNotConfigured
+        }
+    }
+
+    func explicitSynchronizationFailure(
+        for error: ManagedGPUPreviewBackingError
+    ) -> GPUBackingFailure {
+        switch error.failure {
+        case .explicitSyncSetupFailed, .explicitSyncSubmissionFailed,
+            .explicitSyncReleaseFailed, .explicitSyncRequiredButUnavailable:
+            error.failure
+        default:
+            .explicitSyncRequiredButUnavailable
         }
     }
 

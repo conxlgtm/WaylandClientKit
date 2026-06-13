@@ -20,6 +20,9 @@ package enum GPURuntimePathReason: Equatable, Sendable {
     case eglUnavailable
     case explicitSynchronizationUnavailable
     case explicitSynchronizationNotConfigured
+    case explicitSynchronizationSetupFailed
+    case explicitSynchronizationSubmissionFailed
+    case explicitSynchronizationReleaseFailed
     case fifoUnavailable
     case commitTimingUnavailable
     case commitTimingRejected
