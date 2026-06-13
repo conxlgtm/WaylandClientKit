@@ -9,6 +9,7 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
     case dmabufImport(GPUDmabufBufferImportError)
     case runtime(RuntimeError)
     case presentation(GPUWindowPresenterError)
+    case committedFrame(GPUBackingFailure)
     case closed
 
     package var failure: GPUBackingFailure {
@@ -25,8 +26,19 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             .commitFailed
         case .presentation(let error):
             Self.backingFailure(for: error)
+        case .committedFrame(let failure):
+            failure
         case .closed:
             .commitFailed
+        }
+    }
+
+    package var committedFrameWasPresented: Bool {
+        switch self {
+        case .committedFrame:
+            true
+        case .setup, .render, .allocation, .dmabufImport, .runtime, .presentation, .closed:
+            false
         }
     }
 
@@ -79,6 +91,8 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             error.description
         case .presentation(let error):
             error.description
+        case .committedFrame(let failure):
+            "managed GPU frame committed before \(failure.description)"
         case .closed:
             "managed GPU backing is closed"
         }

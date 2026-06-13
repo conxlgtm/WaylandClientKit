@@ -72,20 +72,28 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
     }
 
     @Test
-    func metadataPolicyPreferAvailableStillRequiresProtocols() throws {
-        let metadata = WaylandGraphicsFrameMetadata(contentType: .game)
+    func metadataPolicyPreferAvailableOmitsUnavailableMetadata() throws {
+        let metadata = WaylandGraphicsFrameMetadata(
+            contentType: .game,
+            presentationHint: .async
+        )
 
+        let resolvedMetadata = try metadata.resolveManagedPreviewMetadata(
+            configuration: WaylandGraphicsConfiguration(
+                metadataPolicy: .preferAvailable
+            ),
+            capabilities: softwareOnlySurfaceCapabilities(),
+            geometry: testGraphicsSurfaceGeometry()
+        )
+
+        #expect(resolvedMetadata.commitMetadata == .default)
+        #expect(resolvedMetadata.fallbacks.contentType)
+        #expect(resolvedMetadata.fallbacks.presentationHint)
         #expect(
-            throws: WaylandGraphicsError.unavailable(.metadataRequiredButUnavailable)
-        ) {
-            try metadata.validateManagedPreviewSupport(
-                configuration: WaylandGraphicsConfiguration(
-                    metadataPolicy: .preferAvailable
-                ),
-                capabilities: softwareOnlySurfaceCapabilities(),
-                geometry: testGraphicsSurfaceGeometry()
-            )
-        }
+            resolvedMetadata.fallbacks.applying(
+                to: .projected(capabilities: softwareOnlySurfaceCapabilities())
+            ).metadata.contentType == .fallback(.metadataRequiredButUnavailable)
+        )
     }
 
     @Test

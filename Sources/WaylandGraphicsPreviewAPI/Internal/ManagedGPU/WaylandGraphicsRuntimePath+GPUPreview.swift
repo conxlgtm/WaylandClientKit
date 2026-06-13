@@ -121,17 +121,60 @@ extension WaylandGraphicsRuntimePath {
         case .fifoAndCommitTimingActive:
             return WaylandGraphicsPacingStatus(fifo: .active, commitTiming: .active)
         case .fallback(let reason):
-            let fallback = WaylandGraphicsRuntimeStatus.fallback(
-                WaylandGraphicsFallbackReason(reason)
-            )
-            return WaylandGraphicsPacingStatus(
-                fifo: fallback,
-                commitTiming: fallback
+            return pacingFallbackStatus(
+                reason,
+                capabilities: capabilities
             )
         case .failed(let reason):
-            let failed = WaylandGraphicsRuntimeStatus.failed(
-                WaylandGraphicsUnavailableReason(reason)
+            return pacingFailureStatus(
+                reason,
+                capabilities: capabilities
             )
+        }
+    }
+
+    private static func pacingFallbackStatus(
+        _ reason: GPURuntimePathReason,
+        capabilities: WaylandGraphicsSurfaceCapabilities
+    ) -> WaylandGraphicsPacingStatus {
+        let fallback = WaylandGraphicsRuntimeStatus.fallback(
+            WaylandGraphicsFallbackReason(reason)
+        )
+        switch reason {
+        case .fifoUnavailable:
+            return WaylandGraphicsPacingStatus(
+                fifo: fallback,
+                commitTiming: protocolStatus(capabilities.framePacing.commitTiming)
+            )
+        case .commitTimingUnavailable, .commitTimingRejected:
+            return WaylandGraphicsPacingStatus(
+                fifo: protocolStatus(capabilities.framePacing.fifo),
+                commitTiming: fallback
+            )
+        default:
+            return WaylandGraphicsPacingStatus(fifo: fallback, commitTiming: fallback)
+        }
+    }
+
+    private static func pacingFailureStatus(
+        _ reason: GPURuntimePathReason,
+        capabilities: WaylandGraphicsSurfaceCapabilities
+    ) -> WaylandGraphicsPacingStatus {
+        let failed = WaylandGraphicsRuntimeStatus.failed(
+            WaylandGraphicsUnavailableReason(reason)
+        )
+        switch reason {
+        case .fifoUnavailable:
+            return WaylandGraphicsPacingStatus(
+                fifo: failed,
+                commitTiming: protocolStatus(capabilities.framePacing.commitTiming)
+            )
+        case .commitTimingUnavailable, .commitTimingRejected:
+            return WaylandGraphicsPacingStatus(
+                fifo: protocolStatus(capabilities.framePacing.fifo),
+                commitTiming: failed
+            )
+        default:
             return WaylandGraphicsPacingStatus(fifo: failed, commitTiming: failed)
         }
     }
