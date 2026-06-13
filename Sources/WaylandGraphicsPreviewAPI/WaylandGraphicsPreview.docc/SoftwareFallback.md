@@ -6,6 +6,10 @@ same public frame submission can present through software.
 If explicit synchronization has already been configured or activated on the
 surface, implicit software fallback is not safe and the submission fails with a
 typed unavailable reason instead.
+When FIFO or commit-timing pacing is requested, software fallback applies the
+same pacing submit constraint when the compositor supports it. Missing pacing
+protocols are reported as typed runtime fallback facts instead of being silently
+ignored.
 
 ## Policies
 

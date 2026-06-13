@@ -122,13 +122,14 @@ only when explicit sync is configured for the submitted managed GPU frame.
 Software backing preferences, forced software fallback, and managed GPU
 setup/submission/release failures fail with typed unavailable reasons instead
 of committing implicit software frames.
-`preferFIFO` and `preferCommitTiming` apply the matching submit constraint when
-the protocol is available. Missing FIFO or commit-timing support is reported as
-a pacing fallback reason. Commit-timing timestamp rejection is reported as a
-typed failure. The preview commit-timing policy currently uses an internal
-near-future monotonic target for each frame; no public target-time scheduling
-API is exposed yet. Current live compositor evidence proves FIFO active and
-commit-timing fallback, but not commit-timing active.
+`preferFIFO` and `preferCommitTiming` apply the matching submit constraint to
+managed GPU commits, direct software commits, and allowed software fallback
+commits when the protocol is available. Missing FIFO or commit-timing support is
+reported as a pacing fallback reason. Commit-timing timestamp rejection is
+reported as a typed failure. The preview commit-timing policy currently uses an
+internal near-future monotonic target for each frame; no public target-time
+scheduling API is exposed yet. Current live compositor evidence proves FIFO
+active and commit-timing fallback, but not commit-timing active.
 `requestWhenAvailable` presentation feedback requests feedback only when the
 protocol is advertised; `require` fails when it is unavailable.
 

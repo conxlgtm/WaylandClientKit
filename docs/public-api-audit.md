@@ -262,16 +262,17 @@ Current preview contract:
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
   submission, or release failure; display-level dmabuf advertisement alone is
   not reported as active GPU backing.
-- Synchronization and pacing policies are active runtime requests for managed
-  GPU submission. `implicitOnly` avoids explicit sync objects; `preferExplicit`
+- Synchronization and pacing policies are active runtime requests for graphics
+  preview submissions. `implicitOnly` avoids explicit sync objects; `preferExplicit`
   falls back to implicit sync with a runtime reason only before explicit sync
   is installed or active on the surface; `requireExplicit` fails instead of
   silently falling back, including configurations that request software backing
   or forced software fallback. `preferFIFO` and `preferCommitTiming` apply
-  submit constraints when advertised and otherwise report pacing fallback or
-  typed failure facts. Live compositor evidence currently proves FIFO and
-  explicit sync active; commit timing remains an implementation path with typed
-  fallback/failure evidence, not active live proof.
+  submit constraints on managed GPU and software/fallback commits when
+  advertised and otherwise report pacing fallback or typed failure facts. Live
+  compositor evidence currently proves FIFO and explicit sync active; commit
+  timing remains an implementation path with typed fallback/failure evidence,
+  not active live proof.
 - It does not expose raw Wayland proxies, EGL/GBM/DRM handles, syncobj fds,
   SHM pools, scene rendering, swapchains, drawables, or public color-management
   image descriptions.

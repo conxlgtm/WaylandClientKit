@@ -1,4 +1,7 @@
+import Glibc
 import WaylandClient
+import WaylandGPUPreview
+import WaylandRaw
 
 extension WaylandGraphicsWindowBackingStorage {
     package static func isCommittedManagedGPUFrameFailure(_ error: any Error) -> Bool {
@@ -34,9 +37,16 @@ extension WaylandGraphicsWindowBackingStorage {
         _ runtimePath: WaylandGraphicsRuntimePath,
         backingUnavailable reason: WaylandGraphicsUnavailableReason
     ) -> WaylandGraphicsRuntimePath {
+        Self.runtimePath(runtimePath, backing: .failed(reason))
+    }
+
+    package static func runtimePath(
+        _ runtimePath: WaylandGraphicsRuntimePath,
+        backing: WaylandGraphicsRuntimeStatus
+    ) -> WaylandGraphicsRuntimePath {
         WaylandGraphicsRuntimePath(
             capabilities: runtimePath.capabilities,
-            backing: .failed(reason),
+            backing: backing,
             dmabuf: runtimePath.dmabuf,
             surfaceFeedback: runtimePath.surfaceFeedback,
             renderNode: runtimePath.renderNode,
@@ -49,6 +59,119 @@ extension WaylandGraphicsWindowBackingStorage {
             metadata: runtimePath.metadata,
             presentationFeedback: runtimePath.presentationFeedback
         )
+    }
+
+    package static func softwarePacingSelection(
+        policy: GPUFramePacingPolicy,
+        capabilities: WaylandGraphicsSurfaceCapabilities
+    ) throws -> GPUFramePacingPolicySelection {
+        policy.selectConstraint(
+            capability: SurfacePacingCapability(capabilities.framePacing),
+            commitTimingTarget: try nextCommitTimingTarget()
+        )
+    }
+
+    package static func runtimePath(
+        _ runtimePath: WaylandGraphicsRuntimePath,
+        pacingSelection: GPUFramePacingPolicySelection
+    ) -> WaylandGraphicsRuntimePath {
+        let pacing = WaylandGraphicsPacingStatus(
+            fifo: Self.pacingStatus(
+                runtimePath.pacing.fifo,
+                selection: pacingSelection,
+                fallbackReason: .fifoUnavailable,
+                activeConstraint: pacingSelection.constraint.usesFIFO
+            ),
+            commitTiming: Self.pacingStatus(
+                runtimePath.pacing.commitTiming,
+                selection: pacingSelection,
+                fallbackReason: .commitTimingUnavailable,
+                activeConstraint: pacingSelection.constraint.usesCommitTiming
+            )
+        )
+        return WaylandGraphicsRuntimePath(
+            capabilities: runtimePath.capabilities,
+            backing: runtimePath.backing,
+            dmabuf: runtimePath.dmabuf,
+            surfaceFeedback: runtimePath.surfaceFeedback,
+            renderNode: runtimePath.renderNode,
+            gbm: runtimePath.gbm,
+            egl: runtimePath.egl,
+            dmabufImport: runtimePath.dmabufImport,
+            bufferLifecycle: runtimePath.bufferLifecycle,
+            explicitSync: runtimePath.explicitSync,
+            pacing: pacing,
+            metadata: runtimePath.metadata,
+            presentationFeedback: runtimePath.presentationFeedback
+        )
+    }
+
+    private static func pacingStatus(
+        _ current: WaylandGraphicsRuntimeStatus,
+        selection: GPUFramePacingPolicySelection,
+        fallbackReason: GPURuntimePathReason,
+        activeConstraint: Bool
+    ) -> WaylandGraphicsRuntimeStatus {
+        if selection.fallbackReason == fallbackReason {
+            return .fallback(WaylandGraphicsFallbackReason(fallbackReason))
+        }
+        return activeConstraint ? .active : current
+    }
+
+    private static func nextCommitTimingTarget()
+        throws(SurfaceSubmitConstraintError) -> SurfaceCommitTargetTime
+    {
+        var timestamp = timespec()
+        guard unsafe clock_gettime(CLOCK_MONOTONIC, &timestamp) == 0 else {
+            return try SurfaceCommitTargetTime(seconds: 0, nanoseconds: 0)
+        }
+
+        var seconds = UInt64(timestamp.tv_sec)
+        var nanoseconds = UInt32(timestamp.tv_nsec) + 16_666_667
+        if nanoseconds > SurfaceCommitTargetTime.maximumNanosecondValue {
+            seconds += 1
+            nanoseconds -= SurfaceCommitTargetTime.maximumNanosecondValue + 1
+        }
+
+        return try SurfaceCommitTargetTime(seconds: seconds, nanoseconds: nanoseconds)
+    }
+}
+
+extension SurfacePacingCapability {
+    init(_ availability: WaylandGraphicsFramePacingAvailability) {
+        switch (availability.fifo.version, availability.commitTiming.version) {
+        case (.some(let fifo), .some(let commitTiming)):
+            self = .fifoAndCommitTiming(
+                fifo: RawVersion(fifo),
+                commitTiming: RawVersion(commitTiming)
+            )
+        case (.some(let fifo), .none):
+            self = .fifo(version: RawVersion(fifo))
+        case (.none, .some(let commitTiming)):
+            self = .commitTiming(version: RawVersion(commitTiming))
+        case (.none, .none):
+            self = .unavailable
+        }
+    }
+}
+
+extension SurfacePacingConstraint {
+    var usesFIFO: Bool {
+        switch self {
+        case .fifo, .fifoAndTargetTime:
+            true
+        case .none, .targetTime:
+            false
+        }
+    }
+
+    var usesCommitTiming: Bool {
+        switch self {
+        case .targetTime, .fifoAndTargetTime:
+            true
+        case .none, .fifo:
+            false
+        }
     }
 }
 

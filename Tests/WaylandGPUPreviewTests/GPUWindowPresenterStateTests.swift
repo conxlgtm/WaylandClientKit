@@ -2072,6 +2072,54 @@ struct ManagedGPUPreviewExplicitFallbackTests {
     }
 }
 
+@Suite
+struct ManagedGPUPreviewSoftwareFallbackPacingTests {
+    @Test
+    func managedGPUFallbackAppliesFIFOPacingToSoftwareCommit() async throws {
+        let initialGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 4, height: 3),
+            scale: .one
+        )
+        let configuredGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 8, height: 6),
+            scale: .one
+        )
+        let capabilities = capabilitySnapshot(pacing: .fifo(version: 1))
+        let window = FakeGraphicsPreviewWindow(
+            initialGeometry: initialGeometry,
+            configuredGeometry: configuredGeometry
+        )
+        let backing = FakeManagedGPUBacking(
+            setupFailures: [.gbmAllocationFailed],
+            surfaceCapabilities: capabilities,
+            runtimePathSnapshot: .afterDmabufImportSetup(capabilities: capabilities)
+        )
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: WaylandGraphicsRuntimePath(
+                gpuSnapshot: .afterCapabilityDiscovery(capabilities: capabilities),
+                capabilities: capabilities,
+                backing: .active
+            ),
+            configuration: WaylandGraphicsConfiguration(pacingPolicy: .preferFIFO),
+            managedGPUBacking: backing
+        )
+
+        let lease = try await storage.nextFrame()
+        await window.clearEvents()
+        let result = try await lease.submit(.clearColor(.black))
+
+        #expect(
+            await window.eventSnapshot() == [.preparePresentation, .geometry, .show]
+        )
+        #expect(
+            await window.submitConstraintsSnapshot().map(\.pacing) == [.fifo(.waitBarrier)]
+        )
+        #expect(result.runtimePath.backing == .fallback(.gbmAllocationFailed))
+        #expect(result.runtimePath.pacing.fifo == .active)
+    }
+}
+
 private func syncPoint(timeline: UInt64, point: UInt64) -> GPUSyncPoint {
     GPUSyncPoint(
         timeline: GPUSyncTimeline(timeline),
@@ -2205,6 +2253,7 @@ private actor FakeGraphicsPreviewWindow: WaylandGraphicsManagedWindow {
     private let initialGeometry: SurfaceGeometry
     private var configuredGeometry: SurfaceGeometry
     private var events: [FakeGraphicsPreviewWindowEvent] = []
+    private var recordedSubmitConstraints: [SurfaceSubmitConstraints] = []
     private var didPreparePresentation = false
 
     init(initialGeometry: SurfaceGeometry, configuredGeometry: SurfaceGeometry) {
@@ -2231,24 +2280,29 @@ private actor FakeGraphicsPreviewWindow: WaylandGraphicsManagedWindow {
         return configuredGeometry
     }
 
+    // swiftlint:disable:next function_parameter_count
     func show(
         timeoutMilliseconds _: Int32,
+        submitConstraints: SurfaceSubmitConstraints,
         metadata _: SurfaceCommitMetadata,
         requestPresentationFeedback _: Bool,
         damage _: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws {
         _ = draw
+        recordedSubmitConstraints.append(submitConstraints)
         events.append(.show)
     }
 
     func redraw(
+        submitConstraints: SurfaceSubmitConstraints,
         metadata _: SurfaceCommitMetadata,
         requestPresentationFeedback _: Bool,
         damage _: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws {
         _ = draw
+        recordedSubmitConstraints.append(submitConstraints)
         events.append(.redraw)
     }
 
@@ -2267,6 +2321,10 @@ private actor FakeGraphicsPreviewWindow: WaylandGraphicsManagedWindow {
     func eventSnapshot() -> [FakeGraphicsPreviewWindowEvent] {
         events
     }
+
+    func submitConstraintsSnapshot() -> [SurfaceSubmitConstraints] {
+        recordedSubmitConstraints
+    }
 }
 
 private final class FakeManagedGPUBacking: WaylandGraphicsManagedGPUBacking, Sendable {
@@ -2274,16 +2332,19 @@ private final class FakeManagedGPUBacking: WaylandGraphicsManagedGPUBacking, Sen
     private let setupFailureState: Mutex<[GPUBackingFailure]>
     private let committedFrameFailureState: Mutex<[GPUBackingFailure]>
     private let runtimePathSnapshotValue: GPURuntimePathSnapshot
+    private let surfaceCapabilitiesValue: SurfaceCapabilitySnapshot
 
     init(
         setupFailures: [GPUBackingFailure] = [],
         committedFrameFailures: [GPUBackingFailure] = [],
+        surfaceCapabilities: SurfaceCapabilitySnapshot = capabilitySnapshot(),
         runtimePathSnapshot: GPURuntimePathSnapshot =
             .afterDmabufImportSetup(capabilities: capabilitySnapshot())
     ) {
         setupFailureState = Mutex(setupFailures)
         committedFrameFailureState = Mutex(committedFrameFailures)
         runtimePathSnapshotValue = runtimePathSnapshot
+        surfaceCapabilitiesValue = surfaceCapabilities
     }
 
     var runtimePathSnapshot: GPURuntimePathSnapshot {
@@ -2291,7 +2352,7 @@ private final class FakeManagedGPUBacking: WaylandGraphicsManagedGPUBacking, Sen
     }
 
     var surfaceCapabilities: SurfaceCapabilitySnapshot? {
-        capabilitySnapshot()
+        surfaceCapabilitiesValue
     }
 
     var submittedGeometries: [SurfaceGeometry] {

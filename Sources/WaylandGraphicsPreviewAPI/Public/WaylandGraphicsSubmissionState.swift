@@ -189,6 +189,17 @@ package struct WaylandGraphicsFrameLeaseState: Equatable, Sendable {
         }
     }
 
+    package var hasSubmittedFrame: Bool {
+        switch state {
+        case .open(let openState):
+            openState.hasSubmittedFrame
+        case .submitting(let submissionState):
+            submissionState.hasSubmittedFrame
+        case .closed:
+            false
+        }
+    }
+
     package var activeLeaseID: WaylandGraphicsFrameLeaseID? {
         guard case .open(let openState) = state else {
             return nil

@@ -63,6 +63,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     func showWindow(
         _ windowID: WindowID,
         timeoutMilliseconds: Int32,
+        submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
         damage: SurfaceDamageRegion?,
@@ -77,6 +78,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             )
             try window.showOnOwnerThread(
                 timeoutMilliseconds: timeoutMilliseconds,
+                submitConstraints: submitConstraints,
                 metadata: metadata,
                 damage: damage,
                 presentationFeedback: presentationFeedback,
@@ -87,8 +89,10 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         }
     }
 
+    // swiftlint:disable:next function_parameter_count
     func redraw(
         _ windowID: WindowID,
+        submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
         damage: SurfaceDamageRegion?,
@@ -102,6 +106,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
                 isRequested: requestPresentationFeedback
             )
             try window.redrawOnOwnerThread(
+                submitConstraints: submitConstraints,
                 metadata: metadata,
                 damage: damage,
                 presentationFeedback: presentationFeedback,

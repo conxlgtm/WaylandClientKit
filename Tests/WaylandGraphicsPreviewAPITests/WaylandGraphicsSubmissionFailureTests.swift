@@ -288,6 +288,53 @@ struct WaylandGraphicsSubmissionFailureTests {
     }
 }
 
+@Suite
+struct WaylandGraphicsSoftwarePacingSubmissionTests {
+    @Test
+    func softwareClearFrameAppliesFIFOPacingConstraint() async throws {
+        let window = try FakeManagedGraphicsWindow(showDrawFailures: 0)
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .softwareFallback(
+                capabilities: gpuCapableSurfaceCapabilities(),
+                reason: .forcedSoftware
+            ),
+            configuration: WaylandGraphicsConfiguration(
+                backingPreference: .software,
+                pacingPolicy: .preferFIFO
+            )
+        )
+        let lease = try await storage.nextFrame()
+
+        let result = try await lease.submit(.clearColor(.black))
+
+        #expect(await window.submitConstraints().map(\.pacing) == [.fifo(.waitBarrier)])
+        #expect(result.runtimePath.pacing.fifo == .active)
+    }
+
+    @Test
+    func softwareClearFrameReportsPacingFallbackWhenProtocolUnavailable() async throws {
+        let window = try FakeManagedGraphicsWindow(showDrawFailures: 0)
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .softwareFallback(
+                capabilities: softwareOnlySurfaceCapabilities(),
+                reason: .forcedSoftware
+            ),
+            configuration: WaylandGraphicsConfiguration(
+                backingPreference: .software,
+                pacingPolicy: .preferFIFO
+            )
+        )
+        let lease = try await storage.nextFrame()
+
+        let result = try await lease.submit(.clearColor(.black))
+
+        #expect(await window.submitConstraints().map(\.pacing) == [.none])
+        #expect(result.runtimePath.pacing.fifo == .fallback(.fifoUnavailable))
+    }
+}
+
 private struct InjectedUnexpectedSubmissionError: Error, CustomStringConvertible {
     var description: String {
         "injected graphics submission failure"
@@ -301,6 +348,7 @@ private actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
     private var remainingShowDrawFailures: Int
     private var recordedOperations: [WaylandGraphicsSubmissionOperation] = []
     private var recordedDamages: [SurfaceDamageRegion?] = []
+    private var recordedSubmitConstraints: [SurfaceSubmitConstraints] = []
 
     init(showDrawFailures: Int) throws {
         geometryValue = try testGraphicsSurfaceGeometry()
@@ -319,8 +367,10 @@ private actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
         }
     }
 
+    // swiftlint:disable:next function_parameter_count
     func show(
         timeoutMilliseconds _: Int32,
+        submitConstraints: SurfaceSubmitConstraints,
         metadata _: SurfaceCommitMetadata,
         requestPresentationFeedback _: Bool,
         damage: SurfaceDamageRegion?,
@@ -329,6 +379,7 @@ private actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
         _ = draw
         recordedOperations.append(.show)
         recordedDamages.append(damage)
+        recordedSubmitConstraints.append(submitConstraints)
         if remainingShowDrawFailures > 0 {
             remainingShowDrawFailures -= 1
             throw WindowSoftwareDrawFailure(underlying: InjectedDrawFailure())
@@ -336,6 +387,7 @@ private actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
     }
 
     func redraw(
+        submitConstraints: SurfaceSubmitConstraints,
         metadata _: SurfaceCommitMetadata,
         requestPresentationFeedback _: Bool,
         damage: SurfaceDamageRegion?,
@@ -344,6 +396,7 @@ private actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
         _ = draw
         recordedOperations.append(.redraw)
         recordedDamages.append(damage)
+        recordedSubmitConstraints.append(submitConstraints)
     }
 
     func close() async {
@@ -356,6 +409,10 @@ private actor FakeManagedGraphicsWindow: WaylandGraphicsManagedWindow {
 
     func damages() -> [SurfaceDamageRegion?] {
         recordedDamages
+    }
+
+    func submitConstraints() -> [SurfaceSubmitConstraints] {
+        recordedSubmitConstraints
     }
 }
 
