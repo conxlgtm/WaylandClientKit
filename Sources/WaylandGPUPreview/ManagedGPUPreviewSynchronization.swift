@@ -131,7 +131,8 @@ final class ManagedGPUExplicitSynchronization {
     ) throws(GBMAllocationError) {
         try timeline.wait(
             state.releasePoint.point,
-            timeoutNanoseconds: Self.releaseWaitTimeoutNanoseconds
+            timeoutNanoseconds: Self.releaseWaitTimeoutNanoseconds,
+            waitForSubmit: true
         )
     }
 
