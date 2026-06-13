@@ -48,9 +48,24 @@ enum ManagedGPUPreviewSynchronizationSelection {
             try .explicit(explicitSynchronization.submissionState(for: slotID))
         }
     }
+
+    func waitForExplicitRelease(
+        _ synchronization: GPUBufferSubmissionSynchronization
+    ) throws(GBMAllocationError) {
+        guard
+            case .explicit(let explicitSynchronization) = self,
+            case .explicit(let submittedState) = synchronization
+        else {
+            return
+        }
+
+        try explicitSynchronization.waitForRelease(submittedState)
+    }
 }
 
 final class ManagedGPUExplicitSynchronization {
+    private static let releaseWaitTimeoutNanoseconds: Int64 = 1_000_000_000
+
     private let timeline: DRMSyncobjTimeline
     private let identity: GPUSyncTimeline
     private var nextPoint: UInt64 = 1
@@ -108,6 +123,15 @@ final class ManagedGPUExplicitSynchronization {
                 timeline: identity,
                 point: releasePoint
             )
+        )
+    }
+
+    func waitForRelease(
+        _ state: GPUSubmittedBufferSyncState
+    ) throws(GBMAllocationError) {
+        try timeline.wait(
+            state.releasePoint.point,
+            timeoutNanoseconds: Self.releaseWaitTimeoutNanoseconds
         )
     }
 
