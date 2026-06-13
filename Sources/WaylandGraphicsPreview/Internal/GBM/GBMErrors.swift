@@ -25,6 +25,7 @@ package enum GBMAllocationError: Error, Equatable, Sendable, CustomStringConvert
     case syncobjCreationFailed(errno: Int32)
     case syncobjFileDescriptorExportFailed(errno: Int32)
     case syncobjTimelineSignalFailed(point: UInt64, errno: Int32)
+    case syncobjTimelineWaitFailed(point: UInt64, errno: Int32)
     case invalidPlaneIndex(Int)
     case planeFileDescriptorAlreadyTaken(Int)
 
@@ -64,6 +65,8 @@ package enum GBMAllocationError: Error, Equatable, Sendable, CustomStringConvert
             "DRM syncobj timeline fd export failed with errno \(errorNumber)"
         case .syncobjTimelineSignalFailed(let point, let errorNumber):
             "DRM syncobj timeline signal for point \(point) failed with errno \(errorNumber)"
+        case .syncobjTimelineWaitFailed(let point, let errorNumber):
+            "DRM syncobj timeline wait for point \(point) failed with errno \(errorNumber)"
         case .invalidPlaneIndex(let index):
             "invalid GBM dmabuf plane index \(index)"
         case .planeFileDescriptorAlreadyTaken(let index):
