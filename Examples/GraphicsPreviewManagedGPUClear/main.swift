@@ -15,7 +15,7 @@ enum GraphicsPreviewManagedGPUClear {
         do {
             let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
             result = try await run(options: options)
-            exitCode = EXIT_SUCCESS
+            exitCode = result.failure == nil ? EXIT_SUCCESS : EXIT_FAILURE
         } catch {
             result = ManagedGPUClearReport(failure: "\(error)")
             exitCode = EXIT_FAILURE
@@ -91,7 +91,22 @@ enum GraphicsPreviewManagedGPUClear {
         try await backing.window.setMinimumSize(PositiveLogicalSize(width: 1, height: 1))
         try await backing.window.setMaximumSize(nil)
         log("resize constraints minimum=1x1 maximum=unset")
-        _ = try await submitClearFrame(backing: backing, state: state, metadata: frameMetadata)
+        do {
+            _ = try await submitClearFrame(backing: backing, state: state, metadata: frameMetadata)
+        } catch {
+            let runtimePath = try? await backing.runtimePath
+            try? await backing.close()
+            return ManagedGPUClearReport(
+                capabilities: capabilities,
+                runtimePath: runtimePath,
+                requestedBackingPreference: backingPreference,
+                synchronizationPolicy: synchronizationPolicy,
+                pacingPolicy: pacingPolicy,
+                metadataPolicy: metadataPolicy,
+                metadata: frameMetadata,
+                failure: "\(error)"
+            )
+        }
         log("initial window \(await windowSnapshotDescription(backing.window))")
         let inputActionState = ManagedGPUClearInputActionState(windowID: backing.id)
         let inputActionID = try await display.installInputSerialAction { event, context in
@@ -710,6 +725,7 @@ private enum ManagedGPUClearFrameObservation: CustomStringConvertible, Sendable 
 
 private struct ManagedGPUClearReport: Sendable {
     var capabilities: WaylandGraphicsSurfaceCapabilities?
+    var runtimePath: WaylandGraphicsRuntimePath?
     var frameResults: [WaylandGraphicsFrameResult]
     var requestedBackingPreference: WaylandGraphicsBackingKind
     var synchronizationPolicy: WaylandGraphicsSynchronizationPolicy
@@ -721,6 +737,7 @@ private struct ManagedGPUClearReport: Sendable {
 
     nonisolated init(
         capabilities reportedCapabilities: WaylandGraphicsSurfaceCapabilities? = nil,
+        runtimePath reportedRuntimePath: WaylandGraphicsRuntimePath? = nil,
         frameResults reportedFrameResults: [WaylandGraphicsFrameResult] = [],
         requestedBackingPreference reportedBackingPreference: WaylandGraphicsBackingKind =
             .managedGPU,
@@ -733,6 +750,7 @@ private struct ManagedGPUClearReport: Sendable {
         failure reportedFailure: String? = nil
     ) {
         capabilities = reportedCapabilities
+        runtimePath = reportedRuntimePath
         frameResults = reportedFrameResults
         requestedBackingPreference = reportedBackingPreference
         synchronizationPolicy = reportedSynchronizationPolicy
@@ -745,6 +763,10 @@ private struct ManagedGPUClearReport: Sendable {
 
     var frameResult: WaylandGraphicsFrameResult? {
         frameResults.last
+    }
+
+    var observedRuntimePath: WaylandGraphicsRuntimePath? {
+        frameResult?.runtimePath ?? runtimePath
     }
 }
 
@@ -802,7 +824,7 @@ private struct ManagedGPUClearReportFormatter {
 
     private func lines() -> [String] {
         guard let capabilities = report.capabilities,
-            let frameResult = report.frameResult
+            let runtimePath = report.observedRuntimePath
         else {
             return [
                 "WaylandClientKit Managed GPU Clear",
@@ -817,13 +839,17 @@ private struct ManagedGPUClearReportFormatter {
                 "failure: \(report.failure ?? "none")",
             ]
         }
-        let runtimePath = frameResult.runtimePath
+        let frameResult = report.frameResult
+        let frameOperation = frameResult.map { String(describing: $0.operation) } ?? "none"
+        let frameSize = frameResult.map { "\($0.size.width)x\($0.size.height)" } ?? "unknown"
+        let submittedFrameStatus =
+            frameResult.map { status($0.backing) } ?? status(runtimePath.backing)
 
         return [
             "WaylandClientKit Managed GPU Clear",
             "feature: managed-gpu-clear",
             "capability: dmabuf \(availability(capabilities.dmabuf))",
-            "operation: clear-frame \(frameResult.operation)",
+            "operation: clear-frame \(frameResult.map { String(describing: $0.operation) } ?? "failed")",
             "result: \(actualBacking(runtimePath))",
             "cleanup: \(report.failure == nil ? "pass" : "not observed")",
             "notes: active GPU requires actual backing managedGPU",
@@ -853,15 +879,15 @@ private struct ManagedGPUClearReportFormatter {
             "requested backing: \(GraphicsPreviewManagedGPUClear.backingDescription(report.requestedBackingPreference))",
             "actual backing: \(actualBacking(runtimePath))",
             "runtime dmabuf: \(status(runtimePath.dmabuf))",
-            "frame operation: \(frameResult.operation)",
-            "frame size: \(frameResult.size.width)x\(frameResult.size.height)",
+            "frame operation: \(frameOperation)",
+            "frame size: \(frameSize)",
             "frames submitted: \(report.frameResults.count)",
             "frame sizes: \(frameSizesDescription(report.frameResults))",
             "resize requests: \(report.resizeRequestCount)",
             "resize observed: \(resizeObserved(report.frameResults))",
-            "submitted frame result: \(status(frameResult.backing))",
+            "submitted frame result: \(submittedFrameStatus)",
             "release/reuse: \(releaseReuseStatus(runtimePath))",
-            "presentation feedback requested: \(frameResult.presentationFeedbackRequested)",
+            "presentation feedback requested: \(frameResult?.presentationFeedbackRequested ?? false)",
             "fallback reason: \(runtimePath.fallback.map(String.init(describing:)) ?? "none")",
             "failure: \(report.failure ?? "none")",
         ]
