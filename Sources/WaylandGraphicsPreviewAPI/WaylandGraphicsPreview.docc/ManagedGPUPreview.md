@@ -7,7 +7,7 @@ Wayland proxies.
 
 ## Setup Path
 
-For managed GPU backing, SwiftWayland attempts surface-specific dmabuf feedback,
+For managed GPU backing, WaylandClientKit attempts surface-specific dmabuf feedback,
 format/modifier selection, render-node selection, GBM device and render target
 creation, EGL clear rendering, dmabuf import, owner-thread surface commit, and
 buffer release/reuse tracking. When requested and available, the commit path

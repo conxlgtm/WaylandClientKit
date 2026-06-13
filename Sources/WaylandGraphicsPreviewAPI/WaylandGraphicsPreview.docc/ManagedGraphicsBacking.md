@@ -23,7 +23,7 @@ let backing = try await display.createGraphicsWindowBacking(
 
 ## What The Backing Owns
 
-SwiftWayland owns the frame lease state, software frame presentation, internal
+WaylandClientKit owns the frame lease state, software frame presentation, internal
 managed GPU setup, presentation-feedback request plumbing, and runtime-path
 updates. Frameworks own renderer policy, scene state, animation scheduling, and
 whether fallback is acceptable for a given view.

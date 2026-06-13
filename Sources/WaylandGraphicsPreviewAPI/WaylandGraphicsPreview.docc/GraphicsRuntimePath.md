@@ -11,7 +11,7 @@ from active submission.
 - `unavailable`: no public or runtime support exists for this component.
 - `pending`: discovery has not completed.
 - `advertised`: a compositor advertised a relevant global or capability.
-- `configured`: SwiftWayland configured the component for this surface.
+- `configured`: WaylandClientKit configured the component for this surface.
 - `active`: a submitted frame actually used this component.
 - `failed`: require-GPU or require-feature policy failed with a typed reason.
 - `fallback`: the frame used software fallback with a typed reason.

@@ -6,7 +6,7 @@ struct WaylandDisplayPublicInputAPITests {
     @Test
     func activationTypesAndMethodsCompileForExternalClients() throws {
         let token = try ActivationToken("opaque-token")
-        let appID = try ActivationAppID("org.swiftwayland.Client")
+        let appID = try ActivationAppID("org.waylandclientkit.Client")
         let serialContext = ActivationSerialContext(
             seatID: SeatID(rawValue: 1),
             serial: InputSerial(rawValue: 2)
@@ -17,7 +17,7 @@ struct WaylandDisplayPublicInputAPITests {
         )
 
         #expect(token.value == "opaque-token")
-        #expect(appID.value == "org.swiftwayland.Client")
+        #expect(appID.value == "org.waylandclientkit.Client")
         #expect(request.appID == appID)
         #expect(request.serialContext == serialContext)
         #expect(ActivationError.invalidToken.description.contains("activation token"))
@@ -30,7 +30,7 @@ struct WaylandDisplayPublicInputAPITests {
             try await display.activate(window: window, token: displayToken)
 
             let windowToken = try await window.requestActivationToken(
-                appID: "org.swiftwayland.Client",
+                appID: "org.waylandclientkit.Client",
                 timeoutMilliseconds: 1
             )
             try await window.activate(using: windowToken)

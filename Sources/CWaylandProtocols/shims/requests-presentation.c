@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/stable/presentation-time/presentation-time-client-protocol.h"
 
 #ifdef SWL_ENABLE_TESTING

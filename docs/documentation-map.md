@@ -1,6 +1,6 @@
 # Documentation Map
 
-SwiftWayland documentation has five layers. Each layer has one job so users,
+WaylandClientKit documentation has five layers. Each layer has one job so users,
 framework authors, and maintainers do not have to reverse-engineer the package
 layout.
 
@@ -11,7 +11,7 @@ layout.
 - [Getting Started](getting-started.md): linear first-client path from
   dependency checks to a small window that draws pixels.
 - [Which API Should I Use?](which-api-should-i-use.md): task-oriented guide
-  that maps common app/framework needs to public SwiftWayland APIs.
+  that maps common app/framework needs to public WaylandClientKit APIs.
 - [Session Readiness](session-readiness.md): app/window restoration boundary for
   future framework authors.
 
@@ -59,7 +59,7 @@ Canonical examples by feature:
 
 | Feature | Example |
 | --- | --- |
-| Basic software window and input | [SwiftWaylandDemo](../Examples/SwiftWaylandDemo/main.swift) |
+| Basic software window and input | [WaylandClientKitDemo](../Examples/WaylandClientKitDemo/main.swift) |
 | Framework host loop | [FrameworkHostSmoke](../Examples/FrameworkHostSmoke/main.swift) |
 | Session state and restoration facts | [SessionStateSmoke](../Examples/SessionStateSmoke/main.swift) |
 | Presentation timing | [PresentationFeedbackAnimation](../Examples/PresentationFeedbackAnimation/main.swift) |

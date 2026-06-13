@@ -11,7 +11,7 @@
     @Suite(
         .enabled(
             if: DesktopIntegrationRequestTestEnvironment.isEnabled,
-            "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_DESKTOP_REQUEST_TESTS=1"
+            "Set WAYLAND_DISPLAY and WAYLAND_CLIENT_KIT_ENABLE_DESKTOP_REQUEST_TESTS=1"
         ),
         .timeLimit(.minutes(1)),
         .tags(.linux, .integration, .liveWayland, .publicAPI),
@@ -33,7 +33,11 @@
                 )
 
                 let record = try await recordDesktopAndCoreRequests {
-                    try await window.setIcon(.named(try WindowIconName("org.swiftwayland.Test")))
+                    try await window.setIcon(
+                        .named(
+                            try WindowIconName("org.waylandclientkit.Test")
+                        )
+                    )
                 }
 
                 #expect(record.desktop.callCount == 3)
@@ -282,7 +286,7 @@
                 ) { secondDisplay in
                     let foreignWindow = try await createTestWindow(
                         in: secondDisplay,
-                        title: "SwiftWayland Desktop Foreign Window"
+                        title: "WaylandClientKit Desktop Foreign Window"
                     )
 
                     do {
@@ -317,7 +321,7 @@
         ) { display in
             let window = try await createTestWindow(
                 in: display,
-                title: "SwiftWayland Desktop Integration Request Test"
+                title: "WaylandClientKit Desktop Integration Request Test"
             )
 
             try await body(display, window)
@@ -331,7 +335,7 @@
         try await display.createTopLevelWindow(
             configuration: try WindowConfiguration(
                 title: title,
-                appID: "swift-wayland-desktop-request-test",
+                appID: "wayland-client-kit-desktop-request-test",
                 initialWidth: 160,
                 initialHeight: 120,
                 closeRequestPolicy: .requestOnly,
@@ -506,7 +510,7 @@
             let environment = ProcessInfo.processInfo.environment
 
             return environment["WAYLAND_DISPLAY"]?.isEmpty == false
-                && environment["SWIFT_WAYLAND_ENABLE_DESKTOP_REQUEST_TESTS"] == "1"
+                && environment["WAYLAND_CLIENT_KIT_ENABLE_DESKTOP_REQUEST_TESTS"] == "1"
         }
     }
 #endif

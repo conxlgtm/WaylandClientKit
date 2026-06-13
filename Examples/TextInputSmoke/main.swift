@@ -24,8 +24,8 @@ enum TextInputSmoke {
 
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
-                    title: "SwiftWayland Text Input Smoke",
-                    appID: "swift-wayland-text-input-smoke",
+                    title: "WaylandClientKit Text Input Smoke",
+                    appID: "wayland-client-kit-text-input-smoke",
                     initialWidth: 360,
                     initialHeight: 200,
                     closeRequestPolicy: .requestOnly

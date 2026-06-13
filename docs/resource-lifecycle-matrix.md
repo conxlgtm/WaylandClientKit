@@ -1,6 +1,6 @@
 # Resource lifecycle matrix
 
-SwiftWayland handles are display-owned unless explicitly documented otherwise.
+WaylandClientKit handles are display-owned unless explicitly documented otherwise.
 The public error type remains domain-specific, but the lookup vocabulary should
 be consistent internally: found, unknown, closed, or foreign.
 

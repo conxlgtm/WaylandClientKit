@@ -20,8 +20,8 @@ enum SurfaceRegionSmoke {
             log("capability: wl_region required")
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
-                    title: "SwiftWayland Surface Region Smoke",
-                    appID: "swift-wayland-surface-region-smoke",
+                    title: "WaylandClientKit Surface Region Smoke",
+                    appID: "wayland-client-kit-surface-region-smoke",
                     initialWidth: 420,
                     initialHeight: 260,
                     closeRequestPolicy: .requestOnly

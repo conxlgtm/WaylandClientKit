@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/legacy-unstable/text-input/text-input-unstable-v3-client-protocol.h"
 
 static void swl_text_input_v3_handle_enter(

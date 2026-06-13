@@ -1,6 +1,6 @@
 # Error Taxonomy
 
-SwiftWayland separates recoverable feature absence, invalid user input,
+WaylandClientKit separates recoverable feature absence, invalid user input,
 nonterminal runtime diagnostics, and fatal display failure.
 
 ## Public Error Rules

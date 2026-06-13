@@ -1,9 +1,9 @@
 # Session Readiness
 
-Use SwiftWayland for platform facts that a framework can use to build local app
-and window restoration. Keep scene, document, and UI policy above SwiftWayland.
+Use WaylandClientKit for platform facts that a framework can use to build local app
+and window restoration. Keep scene, document, and UI policy above WaylandClientKit.
 
-SwiftWayland currently exposes restoration-relevant facts through
+WaylandClientKit currently exposes restoration-relevant facts through
 ``Window/restorationSnapshot``. It does not expose public compositor
 session-management protocol API.
 
@@ -63,7 +63,7 @@ print(snapshot.geometry.logicalSize)
 Persist framework-owned state under `XDG_STATE_HOME` or the platform state root
 your app chooses. Ignore relative `XDG_STATE_HOME` values and fall back to the
 platform state root, because XDG base-directory environment paths must be
-absolute. SwiftWayland does not encode scene or document state.
+absolute. WaylandClientKit does not encode scene or document state.
 
 ## Expected Errors
 
@@ -75,7 +75,7 @@ request times out, or compositor policy rejects the focus transfer.
 
 ## Framework Policy
 
-SwiftWayland owns:
+WaylandClientKit owns:
 
 - public window identity facts
 - lifecycle and close events

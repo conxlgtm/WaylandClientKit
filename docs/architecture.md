@@ -31,7 +31,7 @@ WaylandGraphicsPreview
 `WaylandGPUPreview` does not import `WaylandGraphicsPreview`, and neither
 `WaylandGPUPreview` nor `WaylandGraphicsCore` is a vended library product.
 
-SwiftWaylandSmoke
+WaylandClientKitSmoke
     executable consumer of WaylandClient through WaylandSmokeSupport
 ```
 
@@ -332,7 +332,7 @@ Current state:
 - commits one SHM frame
 - exits without requiring pointer or keyboard input
 
-### `SwiftWaylandSmoke`
+### `WaylandClientKitSmoke`
 
 Purpose:
 
@@ -470,7 +470,7 @@ Generated outputs:
 
 Shim files:
 
-- `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
+- `Sources/CWaylandProtocols/include/wayland-client-kit-shims.h`
 - `Sources/CWaylandProtocols/shims/`
 - `Sources/CWaylandRuntimeShims/`
 
@@ -481,8 +481,8 @@ Swift code:
 - `Sources/WaylandClient/`
 - `Sources/WaylandKeyboard/`
 - `Sources/WaylandSmokeSupport/`
-- `Examples/SwiftWaylandDemo/`
-- `Sources/SwiftWaylandSmoke/`
+- `Examples/WaylandClientKitDemo/`
+- `Sources/WaylandClientKitSmoke/`
 
 ## Current Checks
 

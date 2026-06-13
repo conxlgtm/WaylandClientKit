@@ -22,14 +22,14 @@
                 #expect(unsafe serialRecord.seat == UnsafeMutableRawPointer(seat))
                 #expect(unsafe serialRecord.serial == 77)
 
-                unsafe "org.swiftwayland.Test".withCString { appID in
+                unsafe "org.waylandclientkit.Test".withCString { appID in
                     unsafe swl_xdg_activation_token_v1_set_app_id(token, appID)
                 }
                 let appIDRecord = unsafe swl_test_activation_request_record()
                 let appIDText = unsafe appIDRecord.text.map { unsafe String(cString: $0) }
                 #expect(unsafe appIDRecord.call_count == 2)
                 #expect(unsafe appIDRecord.kind == SWL_TEST_ACTIVATION_TOKEN_SET_APP_ID)
-                #expect(appIDText == "org.swiftwayland.Test")
+                #expect(appIDText == "org.waylandclientkit.Test")
 
                 unsafe swl_xdg_activation_token_v1_set_surface(token, surface)
                 let surfaceRecord = unsafe swl_test_activation_request_record()

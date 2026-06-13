@@ -1,4 +1,4 @@
-# SwiftWayland Public API Baseline
+# WaylandClientKit Public API Baseline
 
 This baseline records the public declarations exported by vended library
 products. Preview products are included so source-breaking preview API drift is

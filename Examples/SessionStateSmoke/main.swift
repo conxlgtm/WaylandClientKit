@@ -4,8 +4,8 @@ import WaylandExampleSupport
 
 @main
 enum SessionStateSmoke {
-    nonisolated fileprivate static let defaultAppID = "org.swiftwayland.SessionStateSmoke"
-    nonisolated fileprivate static let defaultTitle = "SwiftWayland Session State Smoke"
+    nonisolated fileprivate static let defaultAppID = "org.waylandclientkit.SessionStateSmoke"
+    nonisolated fileprivate static let defaultTitle = "WaylandClientKit Session State Smoke"
     nonisolated private static let closeObservationGrace: Duration = .seconds(2)
 
     static func main() async throws {

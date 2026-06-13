@@ -90,12 +90,12 @@ struct WindowConfigureDomainTests {
             configuration,
             outputIDs: [OutputID(rawValue: 2), OutputID(rawValue: 1)],
             title: "Session Window",
-            appID: "dev.swiftwayland.session"
+            appID: "dev.waylandclientkit.session"
         )
         let expectedSize = try PositiveLogicalSize(width: 640, height: 480)
 
         #expect(snapshot.title == "Session Window")
-        #expect(snapshot.appID == "dev.swiftwayland.session")
+        #expect(snapshot.appID == "dev.waylandclientkit.session")
         #expect(snapshot.configureSerial == 42)
         #expect(snapshot.size == expectedSize)
         #expect(snapshot.states == [.activated])
@@ -115,7 +115,7 @@ struct WindowConfigureDomainTests {
             decorationMode: .serverSide,
             outputs: [OutputID(rawValue: 7)],
             title: "Restored Window",
-            appID: "dev.swiftwayland.restored"
+            appID: "dev.waylandclientkit.restored"
         )
         let geometry = try SurfaceGeometry(
             logicalSize: try PositiveLogicalSize(width: 640, height: 480),
@@ -134,7 +134,7 @@ struct WindowConfigureDomainTests {
 
         #expect(snapshot.windowID == WindowID(rawValue: 3))
         #expect(snapshot.title == "Restored Window")
-        #expect(snapshot.appID == "dev.swiftwayland.restored")
+        #expect(snapshot.appID == "dev.waylandclientkit.restored")
         #expect(snapshot.geometry == geometry)
         #expect(snapshot.state == state)
         #expect(snapshot.decorationMode == .serverSide)

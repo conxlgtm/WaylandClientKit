@@ -1,6 +1,6 @@
 # Linux Live Wayland Testing
 
-SwiftWayland has two live Wayland test paths:
+WaylandClientKit has two live Wayland test paths:
 
 - real compositor testing, where tests connect to the caller's current `WAYLAND_DISPLAY`
 - headless Weston testing, where the test command starts a private compositor
@@ -26,12 +26,12 @@ swift run swl tools toolchain-smoke
 swift test --filter WaylandThreadExecutorConcurrencyTests --no-parallel
 ```
 
-`swift run swl smoke live` runs the `swift-wayland-smoke` executable against the
+`swift run swl smoke live` runs the `wayland-client-kit-smoke` executable against the
 current compositor. It requires `WAYLAND_DISPLAY`.
 
 `swift run swl smoke integration` runs the external public API integration package
 against the current compositor. It requires `WAYLAND_DISPLAY` and sets
-`SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=1`.
+`WAYLAND_CLIENT_KIT_ENABLE_PUBLIC_INTEGRATION_TESTS=1`.
 
 `swift run swl test integration-graphics-preview` runs an external compile/test package for
 the `WaylandGraphicsPreview` product. It does not require a live compositor or a
@@ -39,12 +39,12 @@ GPU-capable session.
 
 `swift run swl smoke gpu-preview` runs package-internal GPU preview checks against the
 current compositor. It requires `WAYLAND_DISPLAY`, sets
-`SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1`, and enables the GBM/EGL smoke path
+`WAYLAND_CLIENT_KIT_ENABLE_GPU_PREVIEW_TESTS=1`, and enables the GBM/EGL smoke path
 with `SWL_RUN_GPU_SMOKE=1`. The current test path proves the linux-dmabuf
 capability gate, public graphics fact projection, explicit software fallback
 projection, and a local GBM/EGL clear plus dmabuf export when an accessible DRM
 render node is present. It also runs `GPUPreviewSmokeClient`, which prints a
-pasteable `SwiftWayland GPU Preview Runtime Path` block for
+pasteable `WaylandClientKit GPU Preview Runtime Path` block for
 [compositor-matrix.md](compositor-matrix.md).
 
 The command runs `swift run swl smoke gpu-preview`.
@@ -54,8 +54,8 @@ runs the noninteractive smoke executable against that private compositor.
 
 `swift run swl smoke headless -- swl smoke integration` starts headless Weston and runs the env-gated
 window-control and source-side drag request-path tests against that private
-compositor. It sets `SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1` and
-`SWIFT_WAYLAND_ENABLE_DND_SOURCE_REQUEST_TESTS=1`.
+compositor. It sets `WAYLAND_CLIENT_KIT_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1` and
+`WAYLAND_CLIENT_KIT_ENABLE_DND_SOURCE_REQUEST_TESTS=1`.
 
 `swift run swl test tsan` and `swift run swl test asan` run the sanitizer test
 gates. GPU hardware paths remain separate from sanitizer jobs.

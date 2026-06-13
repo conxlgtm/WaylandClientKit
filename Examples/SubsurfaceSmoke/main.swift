@@ -20,8 +20,8 @@ enum SubsurfaceSmoke {
             log("capability: wl_subcompositor required")
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
-                    title: "SwiftWayland Subsurface Smoke",
-                    appID: "swift-wayland-subsurface-smoke",
+                    title: "WaylandClientKit Subsurface Smoke",
+                    appID: "wayland-client-kit-subsurface-smoke",
                     initialWidth: 360,
                     initialHeight: 240,
                     closeRequestPolicy: .requestOnly

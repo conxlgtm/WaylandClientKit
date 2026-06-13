@@ -8,7 +8,7 @@
 #endif
 #include <stdint.h>
 
-#include "swift-wayland-egl-shims.h"
+#include "wayland-client-kit-egl-shims.h"
 
 #ifndef EGL_PLATFORM_GBM_KHR
 #define EGL_PLATFORM_GBM_KHR 0x31D7

@@ -19,8 +19,8 @@ enum GPUPreviewSmokeClient {
                 report.pacingPolicy = pacingPolicy
                 let backing = try await display.createGraphicsWindowBacking(
                     windowConfiguration: WindowConfiguration(
-                        title: "SwiftWayland Graphics Preview",
-                        appID: "swift-wayland-graphics-preview",
+                        title: "WaylandClientKit Graphics Preview",
+                        appID: "wayland-client-kit-graphics-preview",
                         initialWidth: 96,
                         initialHeight: 96,
                         bufferCount: 2
@@ -106,7 +106,7 @@ private struct GPUPreviewSmokeReportFormatter {
     private func lines() -> [String] {
         guard let runtimePath = report.runtimePath else {
             return [
-                "SwiftWayland GPU Preview Runtime Path",
+                "WaylandClientKit GPU Preview Runtime Path",
                 "feature: managed-gpu-preview",
                 "capability: runtime path unavailable",
                 "operation: clear-frame \(report.submittedFrame)",
@@ -123,7 +123,7 @@ private struct GPUPreviewSmokeReportFormatter {
 
         let capabilities = runtimePath.capabilities
         return [
-            "SwiftWayland GPU Preview Runtime Path",
+            "WaylandClientKit GPU Preview Runtime Path",
             "feature: managed-gpu-preview",
             "capability: dmabuf \(availability(capabilities.dmabuf))",
             "operation: clear-frame \(report.submittedFrame)",

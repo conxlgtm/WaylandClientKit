@@ -28,8 +28,8 @@ enum IdleInhibitSmoke {
 
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
-                    title: "SwiftWayland Idle Inhibit Smoke",
-                    appID: "swift-wayland-idle-inhibit-smoke",
+                    title: "WaylandClientKit Idle Inhibit Smoke",
+                    appID: "wayland-client-kit-idle-inhibit-smoke",
                     initialWidth: 280,
                     initialHeight: 180,
                     closeRequestPolicy: .requestOnly

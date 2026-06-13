@@ -189,7 +189,7 @@ Current user-facing contract:
   grouped by the protocol's `done` transaction event.
 - Relative pointer and pointer constraints mean
   `zwp_relative_pointer_manager_v1` and `zwp_pointer_constraints_v1`.
-  SwiftWayland exposes capability facts, relative motion events, typed
+  WaylandClientKit exposes capability facts, relative motion events, typed
   lock/confine lifecycle events, and window-scoped lock/confine requests without
   deciding application pointer-capture policy.
 - Cursor requests cover compositor cursor-shape requests, named theme cursors,
@@ -348,7 +348,7 @@ Notes:
 - Subsurface management is window-owned. Public handles expose creation,
   software show/redraw, regions, position, stacking, sync/desync, close,
   redraw-state, and geometry without exposing raw `wl_surface` or
-  `wl_subsurface` objects. Parent-applied state is committed by SwiftWayland
+  `wl_subsurface` objects. Parent-applied state is committed by WaylandClientKit
   after managed creation, movement, stacking, and synchronized child surface
   updates. Sync/desync mode changes are immediate protocol requests and do not
   commit the parent. Self-stacking and cross-parent stacking are typed display
@@ -407,7 +407,7 @@ Notes:
   a null selection or focus changes. `PrimarySelectionOffer.read` uses the same
   bounded transfer rules as clipboard reads, and `PrimarySelectionSourceConfiguration`
   represents local primary-selection payloads.
-- `WindowDecorationPreference.preferServerSide` is the default because SwiftWayland
+- `WindowDecorationPreference.preferServerSide` is the default because WaylandClientKit
   does not draw client-side titlebars. `preferClientSide` requests no server-side
   decorations. Applications remain responsible for any custom chrome they want.
 - `WaylandDisplay.withConnection` does not eagerly require a cursor theme to load.
@@ -483,7 +483,7 @@ Do not add `@unchecked Sendable` without a documented exception and review. Curr
 
 ## Development Contract
 
-The public API may break while SwiftWayland is experimental.
+The public API may break while WaylandClientKit is experimental.
 
 Before treating a public declaration as intentional:
 

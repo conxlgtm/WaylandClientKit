@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/staging/color-representation/color-representation-v1-client-protocol.h"
 #include "generated/staging/color-management/color-management-v1-client-protocol.h"
 

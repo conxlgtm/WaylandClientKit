@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/core/wayland-client-protocol.h"
 
 struct wl_registry *swl_display_get_registry(struct wl_display *display)

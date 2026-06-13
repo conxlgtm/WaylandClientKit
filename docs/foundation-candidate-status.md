@@ -2,7 +2,7 @@
 
 Status: not a foundation release candidate.
 
-SwiftWayland has a credible public substrate shape, but foundation status still
+WaylandClientKit has a credible public substrate shape, but foundation status still
 depends on documentation coverage, compatibility policy discipline, release
 gates, and broader live compositor evidence. Managed GPU code presence is not
 enough; active GPU claims must be backed by public runtime-path output.

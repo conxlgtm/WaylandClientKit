@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/staging/xdg-activation/xdg-activation-v1-client-protocol.h"
 
 static void swl_xdg_activation_token_v1_handle_done(

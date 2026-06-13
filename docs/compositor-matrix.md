@@ -1,6 +1,6 @@
 # Compositor Matrix
 
-SwiftWayland checkpoint notes should record compositor evidence separately from
+WaylandClientKit checkpoint notes should record compositor evidence separately from
 unit tests. Headless Weston is the repeatable path, but it is not enough by
 itself to claim desktop compatibility.
 
@@ -27,7 +27,7 @@ swift run swl smoke headless -- swl smoke integration
 swift run swl smoke headless -- swl smoke gpu-preview
 ```
 
-`swift run swl smoke gpu-preview` prints a `SwiftWayland GPU Preview Runtime Path`
+`swift run swl smoke gpu-preview` prints a `WaylandClientKit GPU Preview Runtime Path`
 block. Paste that block into the Graphics Preview Evidence table before
 summarizing the result in the main matrix.
 
@@ -103,7 +103,7 @@ but later manual runs covered serial resize in `GraphicsPreviewManagedGPUClear`
 and drag-source serials in `DataTransferSmoke`.
 
 `swift run DataTransferSmoke` passed the manual drag-source/drop path after
-SwiftWayland was fixed to tolerate empty data-source MIME callbacks from KDE.
+WaylandClientKit was fixed to tolerate empty data-source MIME callbacks from KDE.
 The rerun logged `operation: start-drag-source pass`, `drag source started`,
 target `mime=none`, negotiated `text/plain;charset=utf-8`, `action=copy`, 165
 drag-motion events, `drag dropped`, a 51-byte text/plain;charset=utf-8 read,
@@ -118,7 +118,7 @@ rerun reported `requested backing: managedGPU`, `actual backing: managedGPU`,
 
 ## Session Management Protocol Watch
 
-SwiftWayland supports local framework-owned state through public restoration
+WaylandClientKit supports local framework-owned state through public restoration
 snapshots and `SessionStateSmoke`. Compositor session-management protocol API is
 deferred until protocol evidence is strong enough to keep the public boundary
 honest.
@@ -136,7 +136,7 @@ before exit, and closed with `remainingWindows=0`.
 ## Framework Host Evidence
 
 Use this table for framework-facing behavior that is not captured by generic
-smoke tests. Record whether the evidence came from a bounded SwiftWayland
+smoke tests. Record whether the evidence came from a bounded WaylandClientKit
 example, a manual example run, or an external framework harness.
 
 | Compositor | Client-side resize chrome | Serial-sensitive resize/move/menu/drag | Pointer capture | Text input | Interpreted keyboard fallback | Clipboard/private MIME behavior | Drag-source behavior | Popup lifecycle | Presentation feedback | Cursor theme behavior | Graphics preview software fallback | Fatal cleanup/shutdown |
@@ -187,7 +187,7 @@ resource setup and frame submission.
 Record graphics facts in this form:
 
 ```text
-SwiftWayland GPU Preview Runtime Path
+WaylandClientKit GPU Preview Runtime Path
 display: <WAYLAND_DISPLAY>
 compositor: <name/version or unknown>
 window creation: <success/failure>
@@ -293,7 +293,7 @@ live smoke and GPU-preview checks can prove configured or active GPU resources.
   human interaction path still needs proof.
 - `manual not run(<reason>)`: the manual path was not exercised in this pass.
 - `manual pass(<details>)`: a human interaction path ran and stayed healthy.
-- `manual caveat(<details>)`: SwiftWayland made the request from live input and
+- `manual caveat(<details>)`: WaylandClientKit made the request from live input and
   stayed healthy, but visible compositor behavior was absent or compositor-specific.
 - `manual fail(<details>)`: the human interaction path crashed, disconnected, used
   stale input, or produced an untyped failure.

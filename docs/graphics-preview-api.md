@@ -142,7 +142,7 @@ errors before the frame lease is consumed; `metadataPolicy: .none` rejects
 non-default metadata. Public color-management image descriptions, color
 representation details, and alpha metadata remain internal, but runtime path
 facts still report whether those compositor capabilities are advertised,
-configured, active, unavailable, failed, or selected for fallback. SwiftWayland
+configured, active, unavailable, failed, or selected for fallback. WaylandClientKit
 applies protocol metadata; it does not own renderer color conversion, tone
 mapping, asset color policy, or scene/rendering policy.
 

@@ -1,6 +1,6 @@
 # Presentation Time
 
-SwiftWayland exposes compositor presentation feedback through the optional
+WaylandClientKit exposes compositor presentation feedback through the optional
 `wp_presentation` protocol.
 
 Frame callbacks and presentation feedback answer different questions:
@@ -42,12 +42,12 @@ for try await event in window.presentationEvents {
 
 Presentation feedback includes:
 
-- a SwiftWayland feedback identity
+- a WaylandClientKit feedback identity
 - presentation timestamp
 - optional refresh estimate
 - presentation sequence
 - raw-preserving presentation flags
-- synchronized output identity when the compositor reports one and SwiftWayland
+- synchronized output identity when the compositor reports one and WaylandClientKit
   can map it to a known output
 
 ## Test Policy

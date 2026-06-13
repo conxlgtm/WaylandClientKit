@@ -11,8 +11,8 @@
 
 /Sources/CWaylandProtocols/ @conxlgtm
 /Sources/CWaylandRuntimeShims/ @conxlgtm
-/Sources/SwiftWaylandTool/ @conxlgtm
-/Sources/SwiftWaylandToolSupport/ @conxlgtm
+/Sources/WaylandClientKitTool/ @conxlgtm
+/Sources/WaylandClientKitToolSupport/ @conxlgtm
 /Sources/WaylandRaw/ @conxlgtm
 /Sources/WaylandRuntime/ @conxlgtm
 
@@ -25,6 +25,6 @@
 /Tests/WaylandClientTests/ @conxlgtm
 /Tests/WaylandCursorTests/ @conxlgtm
 /Tests/WaylandKeyboardTests/ @conxlgtm
-/Tests/SwiftWaylandToolTests/ @conxlgtm
+/Tests/WaylandClientKitToolTests/ @conxlgtm
 
 /.github/workflows/ @conxlgtm

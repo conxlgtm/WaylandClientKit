@@ -15,7 +15,7 @@ its surface.
 ## Capability Gate
 
 Regions use `wl_compositor` region objects and the managed surface path. Damage
-does not require an optional protocol, but SwiftWayland validates damage against
+does not require an optional protocol, but WaylandClientKit validates damage against
 the current ``SurfaceGeometry`` and maps logical rectangles to buffer
 coordinates for the active scale.
 
@@ -31,7 +31,7 @@ coordinates for the active scale.
 ## Errors And Policy
 
 Invalid rectangles and out-of-bounds damage are reported as typed client errors.
-SwiftWayland owns coordinate conversion, clipping, and the first-frame full
+WaylandClientKit owns coordinate conversion, clipping, and the first-frame full
 damage rule. Frameworks own hit testing, occlusion policy, and deciding which
 widgets or scene nodes caused a dirty region.
 

@@ -1,6 +1,6 @@
 # Compatibility Policy
 
-SwiftWayland is pre-foundation. That means public API can still change, but
+WaylandClientKit is pre-foundation. That means public API can still change, but
 changes must be deliberate, reviewed, documented, and covered by the public API
 baseline.
 

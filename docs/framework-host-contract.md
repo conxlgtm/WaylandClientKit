@@ -1,7 +1,7 @@
 # Framework Host Contract
 
-This document describes the public SwiftWayland surface a future GUI framework
-should build on. It is written for a downstream framework author. SwiftWayland
+This document describes the public WaylandClientKit surface a future GUI framework
+should build on. It is written for a downstream framework author. WaylandClientKit
 is the Wayland substrate: it owns display connection, protocol lifetime,
 typed events, software frame presentation, capability reporting, diagnostics,
 and preview graphics facts. It does not own retained view trees, layout,
@@ -42,7 +42,7 @@ Start with these public APIs:
 Do not depend on `WaylandRaw`, `WaylandRuntime`, `WaylandGraphicsCore`,
 `WaylandGPUPreview`, package-only symbols, or `@testable` imports.
 
-SwiftWayland's identity taxonomy and raw-value policy are documented in
+WaylandClientKit's identity taxonomy and raw-value policy are documented in
 [`identity-model.md`](identity-model.md). Frameworks should route with concrete
 public identities, not raw Wayland proxies or generic ID constraints.
 
@@ -99,12 +99,12 @@ operations.
 
 Subsurfaces are platform hierarchy. Frameworks may use them for embedded
 canvases, video, plugin-like surfaces, or renderer layering, but layout and
-z-order policy remain framework responsibilities. SwiftWayland owns the
+z-order policy remain framework responsibilities. WaylandClientKit owns the
 `wl_subsurface` lifetime, position requests, sync/desync requests, software
 commits, and parent-window cleanup.
 
 Subsurface creation, position, and stacking are parent-applied Wayland state.
-SwiftWayland commits the parent surface after managed creation, movement,
+WaylandClientKit commits the parent surface after managed creation, movement,
 stacking, and synchronized child surface updates so framework code does not need
 to schedule an unrelated parent redraw just to make subsurface protocol state
 visible. `setSynchronized` and `setDesynchronized` are immediate protocol
@@ -113,14 +113,14 @@ requests and do not commit the parent surface.
 Toplevel icons, idle inhibition, and system bell are desktop-integration facts,
 not UI policy. Frameworks should choose when an app needs an icon, when visible
 content should inhibit idle, and when a bell/attention request is appropriate.
-SwiftWayland owns the protocol object lifetime and capability-gated typed
+WaylandClientKit owns the protocol object lifetime and capability-gated typed
 errors. Compositors can ignore idle inhibition when a surface is not visually
 relevant, and system bell requests can be ignored by compositor or user
 preference.
 
 ## Event Stream Ownership
 
-SwiftWayland intentionally keeps event families separate:
+WaylandClientKit intentionally keeps event families separate:
 
 - `DisplayEvents` for lifecycle, redraw, output, and aggregate input/diagnostic events
 - `InputEvents` for seat-scoped pointer, keyboard, and touch payloads
@@ -152,7 +152,7 @@ Build the framework focus model above these facts:
 - text-input focus comes from `TextInputEvent.entered` and `.left`
 - popups preserve popup identity and parent window identity
 
-SwiftWayland preserves the target facts. The framework owns policy such as
+WaylandClientKit preserves the target facts. The framework owns policy such as
 "focused scene", tab focus, gesture capture, menu focus, and accessibility focus.
 
 XDG activation tokens are opaque compositor-mediated focus facts. A framework
@@ -162,7 +162,7 @@ guaranteed focus change.
 
 Pointer capture is optional compositor functionality. Use
 `WaylandCapabilities.relativePointer` and `.pointerConstraints` before exposing
-capture-dependent modes. SwiftWayland manages relative-pointer and
+capture-dependent modes. WaylandClientKit manages relative-pointer and
 lock/confine proxy lifetime, but the framework owns game mode, capture consent,
 escape/unlock UI, camera mapping, gesture mapping, and cursor policy.
 
@@ -195,13 +195,13 @@ struct FrameworkWindowLoop {
 ```
 
 Keep scene state, layout, widget invalidation, and renderer command generation
-outside SwiftWayland. `Examples/FrameworkHostSmoke` includes an example-only
+outside WaylandClientKit. `Examples/FrameworkHostSmoke` includes an example-only
 adapter. It is not public API yet because a real framework should prove the
 shared shape first.
 
 When a framework already has dirty rectangles, pass them as logical
 `SurfaceDamageRegion` values to `show(damage:_:)` or `redraw(damage:_:)`.
-SwiftWayland validates damage supplied to the initial `show`, but sends
+WaylandClientKit validates damage supplied to the initial `show`, but sends
 full-frame damage for the first buffer-backed commit because there are no
 previous surface contents. Later redraw damage is mapped to buffer damage using
 the current surface geometry and clipped to the surface bounds. No damage
@@ -293,7 +293,7 @@ Wayland, SHM pool, GBM, EGL, DRM, dmabuf, or sync handles.
 
 Use `CursorConfiguration.scalePolicy` to choose how named theme cursors scale:
 fixed base size, focused-output scale, or maximum known output scale.
-SwiftWayland applies that policy when resolving theme cursor images. Frameworks
+WaylandClientKit applies that policy when resolving theme cursor images. Frameworks
 still own which cursor to show for a widget, drag, resize edge, text field, or
 pointer-capture mode.
 
@@ -302,11 +302,11 @@ are not proven across compositor/theme families. Use `PointerCursor(name:)` with
 fallbacks for theme-specific policy.
 
 Use `PointerCursorImage` when the framework needs a static software cursor
-image. The framework owns the image pixels and cursor policy; SwiftWayland owns
+image. The framework owns the image pixels and cursor policy; WaylandClientKit owns
 SHM allocation, raw cursor-surface attachment, hotspot forwarding, and cleanup.
 Public cursor animation is still deferred.
 
-## Boundaries SwiftWayland Does Not Own
+## Boundaries WaylandClientKit Does Not Own
 
 A downstream framework owns:
 
@@ -323,5 +323,5 @@ A downstream framework owns:
 - damage calculation policy beyond the public damage values
 - diagonal resize cursor fallback until portable cursor theme names are proven
 
-SwiftWayland should continue exposing typed platform facts and narrow commit
+WaylandClientKit should continue exposing typed platform facts and narrow commit
 operations, not framework policy.

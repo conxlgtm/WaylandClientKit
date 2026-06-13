@@ -39,7 +39,7 @@ request.
 
 ## Errors And Policy
 
-SwiftWayland owns request ordering, seat identity, event publication, and typed
+WaylandClientKit owns request ordering, seat identity, event publication, and typed
 unavailable errors. Frameworks own focus policy, editable field state,
 surrounding text model, preedit rendering, and when to enable or disable a
 session.

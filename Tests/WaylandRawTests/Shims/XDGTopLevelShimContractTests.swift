@@ -12,16 +12,16 @@
             try await assertTopLevelRequest(
                 expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_TITLE,
                 topLevel: topLevel,
-                text: "SwiftWayland"
+                text: "WaylandClientKit"
             ) {
-                unsafe swl_xdg_toplevel_set_title(topLevel, "SwiftWayland")
+                unsafe swl_xdg_toplevel_set_title(topLevel, "WaylandClientKit")
             }
             try await assertTopLevelRequest(
                 expectedKind: SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_APP_ID,
                 topLevel: topLevel,
-                text: "dev.swiftwayland.tests"
+                text: "dev.waylandclientkit.tests"
             ) {
-                unsafe swl_xdg_toplevel_set_app_id(topLevel, "dev.swiftwayland.tests")
+                unsafe swl_xdg_toplevel_set_app_id(topLevel, "dev.waylandclientkit.tests")
             }
         }
 

@@ -1,7 +1,7 @@
 # Tooling Ownership
 
 `swl` is the canonical maintainer CLI. Checks that define project truth should
-live in `SwiftWaylandToolSupport`, be exposed through `swift run swl ...`, and
+live in `WaylandClientKitToolSupport`, be exposed through `swift run swl ...`, and
 then be wrapped only where that improves ergonomics.
 
 ## Roles
@@ -51,7 +51,7 @@ same `swift run swl ...` commands that contributors are told to run locally.
 
 ## Rule For New Checks
 
-New checks should be implemented in `SwiftWaylandToolSupport` first, exposed
+New checks should be implemented in `WaylandClientKitToolSupport` first, exposed
 through `swl`, and then optionally wrapped by SwiftPM plugins, `just`, Nix, or
 external automation.
 
@@ -61,7 +61,7 @@ Runtime and library products should avoid external SwiftPM dependencies unless
 they are deliberately approved for the public product graph.
 
 Tooling targets may use external dependencies when they materially improve
-maintainability. `swift-argument-parser` is allowed for `SwiftWaylandTool`
+maintainability. `swift-argument-parser` is allowed for `WaylandClientKitTool`
 because it owns the maintainer CLI, not the runtime libraries.
 
 `Package.resolved` is committed intentionally. Dependency updates require the

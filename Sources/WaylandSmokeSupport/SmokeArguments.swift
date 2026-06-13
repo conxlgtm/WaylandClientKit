@@ -13,14 +13,14 @@ package enum SmokeArgumentError: Error, Equatable, Sendable, CustomStringConvert
         case .invalidValue(let argument, let value):
             "invalid value for \(argument): \(value)"
         case .unsupportedEndOfOptionsMarker:
-            "-- is not supported because swift-wayland-smoke has no positional arguments"
+            "-- is not supported because wayland-client-kit-smoke has no positional arguments"
         }
     }
 }
 
 package enum SmokeArguments {
     package static let usage = """
-        Usage: swift-wayland-smoke [options]
+        Usage: wayland-client-kit-smoke [options]
 
         Options:
           --timeout-milliseconds <value>      Configure wait timeout. Default: 5000.
