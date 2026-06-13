@@ -18,15 +18,15 @@ typed error.
 
 ``WaylandGraphicsSubmittedFrame/clearColor(_:)`` submits a renderer-neutral clear
 frame. On active managed GPU backing, the clear is rendered through internal
-GPU preview code. On software backing or fallback, SwiftWayland fills a
+GPU preview code. On software backing or fallback, WaylandClientKit fills a
 `SoftwareFrame`.
 
 Use ``WaylandGraphicsFrameMetadata`` and ``WaylandGraphicsDamageRegion`` to
-describe optional metadata and logical damage. SwiftWayland validates metadata
+describe optional metadata and logical damage. WaylandClientKit validates metadata
 and damage before consuming the lease for commit work.
 
 ## Errors And Policy
 
-SwiftWayland owns lease state, retry behavior after pre-commit failures,
+WaylandClientKit owns lease state, retry behavior after pre-commit failures,
 post-commit terminal state, and buffer release/reuse. Frameworks own frame
 scheduling and whether a failure should retry, fall back, or close the view.

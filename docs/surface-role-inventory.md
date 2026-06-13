@@ -1,6 +1,6 @@
 # Surface Role Inventory
 
-SwiftWayland has one internal surface substrate, `SurfaceRuntime`, and several
+WaylandClientKit has one internal surface substrate, `SurfaceRuntime`, and several
 Wayland surface roles that use only the parts of that substrate that are valid
 for the role. This document records the current role boundaries so future
 features do not accidentally apply window-only operations to cursor or drag icon

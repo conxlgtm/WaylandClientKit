@@ -8,7 +8,7 @@ outside the core drawing path: window icons, idle inhibition, and system bell.
 Use a window icon when the compositor or shell can display app identity. Use
 idle inhibition while visible activity such as media playback should keep the
 screen awake. Use system bell for compositor-mediated attention feedback rather
-than playing sound directly from SwiftWayland.
+than playing sound directly from WaylandClientKit.
 
 ## Capability Gates
 
@@ -34,7 +34,7 @@ or ignore a request.
 
 ## Errors And Policy
 
-SwiftWayland owns protocol request validation and typed unavailable errors.
+WaylandClientKit owns protocol request validation and typed unavailable errors.
 Frameworks own app identity, icon asset selection, idle policy, and user-visible
 attention policy.
 

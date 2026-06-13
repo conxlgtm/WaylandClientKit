@@ -25,8 +25,8 @@ public struct WindowConfiguration: Equatable, Sendable {
     public var decorationPreference: WindowDecorationPreference
 
     public static let `default` = WindowConfiguration(
-        title: WaylandString(unchecked: "SwiftWayland Demo"),
-        appID: NonEmptyWaylandString(unchecked: "swift-wayland-demo"),
+        title: WaylandString(unchecked: "WaylandClientKit Demo"),
+        appID: NonEmptyWaylandString(unchecked: "wayland-client-kit-demo"),
         initialSize: .default,
         bufferCount: PositiveInt(unchecked: 3),
         closeRequestPolicy: .requestOnly,
@@ -50,8 +50,8 @@ public struct WindowConfiguration: Equatable, Sendable {
     }
 
     public init(
-        title windowTitle: String = "SwiftWayland Demo",
-        appID applicationID: String = "swift-wayland-demo",
+        title windowTitle: String = "WaylandClientKit Demo",
+        appID applicationID: String = "wayland-client-kit-demo",
         initialWidth width: Int32 = 640,
         initialHeight height: Int32 = 480,
         bufferCount count: Int = 3,

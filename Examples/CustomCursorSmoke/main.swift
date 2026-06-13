@@ -23,8 +23,8 @@ enum CustomCursorSmoke {
         log("capability: pointer cursor image surface")
         let window = try await display.createTopLevelWindow(
             configuration: try WindowConfiguration(
-                title: "SwiftWayland Custom Cursor Smoke",
-                appID: "swift-wayland-custom-cursor-smoke",
+                title: "WaylandClientKit Custom Cursor Smoke",
+                appID: "wayland-client-kit-custom-cursor-smoke",
                 initialWidth: 360,
                 initialHeight: 220,
                 closeRequestPolicy: .requestOnly

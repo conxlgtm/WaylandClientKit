@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1-client-protocol.h"
 #include "generated/staging/xdg-system-bell/xdg-system-bell-v1-client-protocol.h"
 #include "generated/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1-client-protocol.h"

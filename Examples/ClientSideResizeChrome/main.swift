@@ -28,19 +28,19 @@ enum ClientSideResizeChrome {
             try await makeController(
                 display: display,
                 title: "Resize Chrome A",
-                appID: "swift-wayland-resize-chrome-a",
+                appID: "wayland-client-kit-resize-chrome-a",
                 colorSeed: 0x20
             ),
             try await makeController(
                 display: display,
                 title: "Resize Chrome B",
-                appID: "swift-wayland-resize-chrome-b",
+                appID: "wayland-client-kit-resize-chrome-b",
                 colorSeed: 0x80
             ),
         ]
         let registry = ResizeWindowRegistry(controllers)
 
-        log("client-side chrome policy lives above SwiftWayland")
+        log("client-side chrome policy lives above WaylandClientKit")
         for controller in controllers {
             log("registered resize window=\(controller.window.id)")
         }

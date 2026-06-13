@@ -10,13 +10,13 @@ let swiftSettings: [SwiftSetting] = [
 let package = Package(
     name: "WaylandPublicIntegrationClient",
     dependencies: [
-        .package(name: "SwiftWayland", path: "../..")
+        .package(name: "WaylandClientKit", path: "../..")
     ],
     targets: [
         .testTarget(
             name: "WaylandPublicIntegrationClientTests",
             dependencies: [
-                .product(name: "WaylandClient", package: "SwiftWayland")
+                .product(name: "WaylandClient", package: "WaylandClientKit")
             ],
             swiftSettings: swiftSettings
         )

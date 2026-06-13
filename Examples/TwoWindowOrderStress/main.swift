@@ -72,7 +72,7 @@ enum TwoWindowOrderStress {
         let window = try await display.createTopLevelWindow(
             configuration: try WindowConfiguration(
                 title: "Order Stress \(descriptor.name)",
-                appID: "swift-wayland-order-stress-\(descriptor.name.lowercased())",
+                appID: "wayland-client-kit-order-stress-\(descriptor.name.lowercased())",
                 initialWidth: 320,
                 initialHeight: 220,
                 closeRequestPolicy: .requestOnly,

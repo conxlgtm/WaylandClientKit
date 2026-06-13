@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h"
 #include "generated/stable/viewporter/viewporter-client-protocol.h"
 

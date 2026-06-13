@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h"
 
 static void swl_wp_fractional_scale_v1_handle_preferred_scale(

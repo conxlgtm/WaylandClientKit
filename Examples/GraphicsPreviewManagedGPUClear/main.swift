@@ -54,8 +54,8 @@ enum GraphicsPreviewManagedGPUClear {
         let displayCapabilities = try await display.capabilities()
         let backing = try await display.createGraphicsWindowBacking(
             windowConfiguration: WindowConfiguration(
-                title: "SwiftWayland Managed GPU Clear",
-                appID: "swift-wayland-managed-gpu-clear",
+                title: "WaylandClientKit Managed GPU Clear",
+                appID: "wayland-client-kit-managed-gpu-clear",
                 initialWidth: 360,
                 initialHeight: 240,
                 bufferCount: 2,
@@ -805,7 +805,7 @@ private struct ManagedGPUClearReportFormatter {
             let frameResult = report.frameResult
         else {
             return [
-                "SwiftWayland Managed GPU Clear",
+                "WaylandClientKit Managed GPU Clear",
                 "feature: managed-gpu-clear",
                 "capability: runtime path unavailable",
                 "operation: clear-frame failed",
@@ -820,7 +820,7 @@ private struct ManagedGPUClearReportFormatter {
         let runtimePath = frameResult.runtimePath
 
         return [
-            "SwiftWayland Managed GPU Clear",
+            "WaylandClientKit Managed GPU Clear",
             "feature: managed-gpu-clear",
             "capability: dmabuf \(availability(capabilities.dmabuf))",
             "operation: clear-frame \(frameResult.operation)",

@@ -29,8 +29,8 @@ enum WindowIconSmoke {
 
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
-                    title: "SwiftWayland Window Icon Smoke",
-                    appID: "swift-wayland-window-icon-smoke",
+                    title: "WaylandClientKit Window Icon Smoke",
+                    appID: "wayland-client-kit-window-icon-smoke",
                     initialWidth: 280,
                     initialHeight: 180,
                     closeRequestPolicy: .requestOnly

@@ -9,7 +9,7 @@ let publicIntegrationWaitTimeoutNanoseconds: UInt64 = 5_000_000_000
     "WaylandDisplay public integration",
     .enabled(
         if: PublicIntegrationEnvironment.isEnabled,
-        "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS=1"
+        "Set WAYLAND_DISPLAY and WAYLAND_CLIENT_KIT_ENABLE_PUBLIC_INTEGRATION_TESTS=1"
     ),
     .timeLimit(.minutes(1)),
     .serialized
@@ -139,8 +139,8 @@ func withPublicConnection(
 
 func testWindowConfiguration() throws -> WindowConfiguration {
     try WindowConfiguration(
-        title: "SwiftWayland Public Integration",
-        appID: "swift-wayland-public-integration",
+        title: "WaylandClientKit Public Integration",
+        appID: "wayland-client-kit-public-integration",
         initialWidth: 160,
         initialHeight: 120,
         bufferCount: 3,
@@ -386,7 +386,7 @@ private func isPopupLifecycleEvent(
 
 enum PublicIntegrationEnvironment {
     static var isEnabled: Bool {
-        environmentValue("SWIFT_WAYLAND_ENABLE_PUBLIC_INTEGRATION_TESTS") == "1"
+        environmentValue("WAYLAND_CLIENT_KIT_ENABLE_PUBLIC_INTEGRATION_TESTS") == "1"
             && environmentValue("WAYLAND_DISPLAY") != nil
     }
 

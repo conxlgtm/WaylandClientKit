@@ -154,7 +154,7 @@ struct RawKeyboardKeymapReaderTests {
     }
     private func makeTemporaryFileDescriptor(bytes: [UInt8]) throws -> Int32 {
         try WaylandTestSupport.makeTemporaryFileDescriptor(
-            prefix: "swift-wayland-keymap",
+            prefix: "wayland-client-kit-keymap",
             bytes: bytes
         )
     }

@@ -4,7 +4,7 @@
 the compositor advertises it and the requested cursor maps to a protocol shape.
 
 When cursor-shape is unavailable or a cursor name has no protocol mapping,
-SwiftWayland falls back to the configured wayland-cursor theme through
+WaylandClientKit falls back to the configured wayland-cursor theme through
 ``CursorConfiguration``. Hidden cursors still use the Wayland nil-surface cursor
 request.
 
@@ -16,7 +16,7 @@ Cursor diagnostics are reported through the input diagnostic path.
 focused surface's outputs. `PointerCursorScalePolicy.maximumOutputScale` uses
 the largest known output scale.
 
-SwiftWayland currently provides built-in presets for default arrow, text,
+WaylandClientKit currently provides built-in presets for default arrow, text,
 pointer, crosshair, horizontal resize, vertical resize, and hidden cursors.
 Diagonal resize cursors are intentionally not built in yet because portable
 theme-name behavior still needs evidence across KDE, GNOME, Sway/wlroots, and
@@ -24,7 +24,7 @@ Weston.
 
 Static software cursor images are supported through ``PointerCursorImage`` and
 ``PointerCursor/image(_:)``. Images use one XRGB8888 pixel array, a declared
-pixel size, and a pixel-space hotspot that must be inside the image. SwiftWayland
+pixel size, and a pixel-space hotspot that must be inside the image. WaylandClientKit
 keeps the SHM buffer and raw cursor surface private.
 
 Frameworks implementing client-side resize chrome can use custom cursor names
@@ -42,7 +42,7 @@ fall back to an existing built-in such as ``PointerCursor/crosshair`` or keep th
 current cursor until the framework has compositor/theme evidence for a better
 choice.
 
-Animated cursor scheduling is intentionally deferred. SwiftWayland has internal
+Animated cursor scheduling is intentionally deferred. WaylandClientKit has internal
 animation state primitives, but no public owner-thread scheduler contract yet.
 Use explicit cursor replacement for now.
 
@@ -64,7 +64,7 @@ the cursor path.
 
 ## Errors And Policy
 
-SwiftWayland owns cursor request routing, fallback attempts, and diagnostics.
+WaylandClientKit owns cursor request routing, fallback attempts, and diagnostics.
 Frameworks own cursor policy, hit testing, resize affordances, and deciding
 which cursor to request for a given interaction.
 

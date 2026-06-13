@@ -1,5 +1,5 @@
 {
-  description = "SwiftWayland development environment";
+  description = "WaylandClientKit development environment";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -49,7 +49,7 @@
             ] ++ swiftTooling ++ nativeLibraries;
 
             LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath nativeLibraries;
-            SWIFT_WAYLAND_MINIMUM_SWIFT = minimumSwiftVersion;
+            WAYLAND_CLIENT_KIT_MINIMUM_SWIFT = minimumSwiftVersion;
 
             shellHook = ''
               swl_check_version() {
@@ -63,8 +63,8 @@
                   return 1
                 fi
                 if [ "$major" -lt 6 ] || { [ "$major" -eq 6 ] && [ "$minor" -lt 3 ]; } || [ "$major" -ge 100 ]; then
-                  echo "error: $tool_name $version is too old; SwiftWayland requires $SWIFT_WAYLAND_MINIMUM_SWIFT or newer" >&2
-                  echo "hint: install Swift $SWIFT_WAYLAND_MINIMUM_SWIFT with Swiftly or set SWIFT_BIN to the desired toolchain" >&2
+                  echo "error: $tool_name $version is too old; WaylandClientKit requires $WAYLAND_CLIENT_KIT_MINIMUM_SWIFT or newer" >&2
+                  echo "hint: install Swift $WAYLAND_CLIENT_KIT_MINIMUM_SWIFT with Swiftly or set SWIFT_BIN to the desired toolchain" >&2
                   return 1
                 fi
               }
@@ -74,8 +74,8 @@
                 export SWIFT_BIN
               fi
               if [ -z "$SWIFT_BIN" ] || [ ! -x "$SWIFT_BIN" ]; then
-                echo "error: SwiftWayland requires Swift $SWIFT_WAYLAND_MINIMUM_SWIFT or newer, but swift was not found" >&2
-                echo "hint: install Swift $SWIFT_WAYLAND_MINIMUM_SWIFT with Swiftly or set SWIFT_BIN to the desired toolchain" >&2
+                echo "error: WaylandClientKit requires Swift $WAYLAND_CLIENT_KIT_MINIMUM_SWIFT or newer, but swift was not found" >&2
+                echo "hint: install Swift $WAYLAND_CLIENT_KIT_MINIMUM_SWIFT with Swiftly or set SWIFT_BIN to the desired toolchain" >&2
                 exit 1
               fi
               swift_line="$("$SWIFT_BIN" --version)"
@@ -89,8 +89,8 @@
                 export SWIFT_FORMAT_BIN
               fi
               if [ -z "$SWIFT_FORMAT_BIN" ] || [ ! -x "$SWIFT_FORMAT_BIN" ]; then
-                echo "error: SwiftWayland requires swift-format $SWIFT_WAYLAND_MINIMUM_SWIFT or newer, but swift-format was not found" >&2
-                echo "hint: install Swift $SWIFT_WAYLAND_MINIMUM_SWIFT with Swiftly or set SWIFT_FORMAT_BIN to the desired swift-format" >&2
+                echo "error: WaylandClientKit requires swift-format $WAYLAND_CLIENT_KIT_MINIMUM_SWIFT or newer, but swift-format was not found" >&2
+                echo "hint: install Swift $WAYLAND_CLIENT_KIT_MINIMUM_SWIFT with Swiftly or set SWIFT_FORMAT_BIN to the desired swift-format" >&2
                 exit 1
               fi
               swift_format_version="$("$SWIFT_FORMAT_BIN" --version)"

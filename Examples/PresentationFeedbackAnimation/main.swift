@@ -43,8 +43,8 @@ enum PresentationFeedbackAnimation {
             )
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
-                    title: "SwiftWayland Presentation Animation",
-                    appID: "swift-wayland-presentation-animation",
+                    title: "WaylandClientKit Presentation Animation",
+                    appID: "wayland-client-kit-presentation-animation",
                     initialWidth: 360,
                     initialHeight: 240,
                     closeRequestPolicy: .requestOnly

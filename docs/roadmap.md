@@ -1,12 +1,12 @@
 # Roadmap
 
-Scope: SwiftWayland as a Swift-native Linux Wayland platform foundation
+Scope: WaylandClientKit as a Swift-native Linux Wayland platform foundation
 
 This roadmap defines the path from the current experimental substrate to a
 foundation that a higher Swift GUI framework can rely on for serious Linux
 desktop applications. It intentionally does not estimate dates.
 
-SwiftWayland should remain the platform substrate. It should not become the
+WaylandClientKit should remain the platform substrate. It should not become the
 SwiftUI-like layer, a retained widget toolkit, a renderer, a scene graph, or an
 application framework.
 
@@ -76,7 +76,7 @@ output-management work remain later milestones.
 
 ## Non-Goals
 
-These belong above SwiftWayland:
+These belong above WaylandClientKit:
 
 - declarative view trees
 - layout systems
@@ -90,10 +90,10 @@ These belong above SwiftWayland:
 - render graphs, shaders, and drawing commands
 - tone mapping, color conversion, and asset color policy
 
-SwiftWayland may expose facts these systems need. It should not own their
+WaylandClientKit may expose facts these systems need. It should not own their
 policy.
 
-SwiftWayland should preserve low-level platform facts that later accessibility
+WaylandClientKit should preserve low-level platform facts that later accessibility
 or application-framework layers may need, such as toplevel identity, focus
 state, text-input state, output and scale facts, activation/session facts, and
 system-bell capability. It should not own accessibility semantics.
@@ -273,10 +273,10 @@ These sources shape the roadmap:
 
 ## Protocol Phase And Support Tiers
 
-SwiftWayland should track upstream protocol phase separately from product
+WaylandClientKit should track upstream protocol phase separately from product
 support tier. These are related facts, not the same fact.
 
-| Protocol | Upstream phase | SwiftWayland tier | API exposure | Test strategy | Breakage policy |
+| Protocol | Upstream phase | WaylandClientKit tier | API exposure | Test strategy | Breakage policy |
 | --- | --- | --- | --- | --- | --- |
 | `wl_compositor`, `wl_surface`, `wl_shm`, `wl_seat` | core | required | public through `WaylandClient` concepts | always tested | no intentional break after foundation candidate |
 | `xdg-shell` | stable | required | public windows/popups | always tested | no intentional break after foundation candidate |
@@ -296,7 +296,7 @@ support tier. These are related facts, not the same fact.
 | `wp_pointer_warp_v1` | staging | preview/advanced input | capability-gated only | use-case gated tests | allow source/API change while preview |
 
 Every protocol entry should be updated when vendored or generated. The manifest
-should record upstream path, phase, version, checksum, and SwiftWayland tier.
+should record upstream path, phase, version, checksum, and WaylandClientKit tier.
 
 ## Capability Scope Model
 
@@ -338,7 +338,7 @@ Do not land a protocol path that only models the happy path.
 
 Goal:
 
-- Define what SwiftWayland must provide before a higher GUI framework can treat
+- Define what WaylandClientKit must provide before a higher GUI framework can treat
   it as a foundation.
 
 Work:
@@ -627,7 +627,7 @@ Exit criteria:
 Goal:
 
 - Provide the minimum EGL path needed to prove that GPU buffers can be rendered
-  into and presented, without making SwiftWayland a renderer.
+  into and presented, without making WaylandClientKit a renderer.
 
 Work packages:
 
@@ -655,7 +655,7 @@ Required behavior:
 
 Boundary:
 
-- SwiftWayland owns presentation, buffer lifetime, protocol negotiation,
+- WaylandClientKit owns presentation, buffer lifetime, protocol negotiation,
   compositor-compatible buffer constraints, synchronization, and typed
   capability/failure reporting.
 - A renderer owns drawing commands, render graphs, shaders, scene composition,
@@ -781,7 +781,7 @@ Exit criteria:
 Goal:
 
 - Expose color and content metadata facts needed by renderers without making
-  SwiftWayland a color pipeline.
+  WaylandClientKit a color pipeline.
 
 Work packages:
 
@@ -803,7 +803,7 @@ Required behavior:
 - model protocol version differences, including new minor versions
 - avoid assuming all future graphics paths are 8-bit sRGB-only
 - keep tone mapping, gamut mapping, color conversion, and asset policy out of
-  SwiftWayland
+  WaylandClientKit
 
 Resource semantics:
 
@@ -824,7 +824,7 @@ Exit criteria:
 Goal:
 
 - Expose GPU capability and presentation primitives without turning
-  SwiftWayland into a renderer.
+  WaylandClientKit into a renderer.
 
 Work:
 
@@ -1000,7 +1000,7 @@ Required behavior:
 - provide public event payloads that preserve raw protocol values where useful
 - keep pointer warp out of the foundation release bar unless a concrete
   app-client use case requires it
-- avoid gesture policy in SwiftWayland
+- avoid gesture policy in WaylandClientKit
 
 Resource semantics:
 

@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/staging/fifo/fifo-v1-client-protocol.h"
 
 #ifdef SWL_ENABLE_TESTING

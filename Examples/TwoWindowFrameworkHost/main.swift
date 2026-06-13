@@ -18,20 +18,20 @@ enum TwoWindowFrameworkHost {
         ) { display in
             let first = try await makeController(
                 display: display,
-                title: "SwiftWayland Window A",
-                appID: "swift-wayland-two-window-a",
+                title: "WaylandClientKit Window A",
+                appID: "wayland-client-kit-two-window-a",
                 colorSeed: 0x30
             )
             let second = try await makeController(
                 display: display,
-                title: "SwiftWayland Window B",
-                appID: "swift-wayland-two-window-b",
+                title: "WaylandClientKit Window B",
+                appID: "wayland-client-kit-two-window-b",
                 colorSeed: 0x90
             )
             let registry = WindowControllerRegistry([first, second])
 
-            log("registered window id=\(first.window.id) label=SwiftWayland Window A")
-            log("registered window id=\(second.window.id) label=SwiftWayland Window B")
+            log("registered window id=\(first.window.id) label=WaylandClientKit Window A")
+            log("registered window id=\(second.window.id) label=WaylandClientKit Window B")
             try await first.showInitialFrame()
             log("first show window=\(first.window.id)")
             try await second.showInitialFrame()

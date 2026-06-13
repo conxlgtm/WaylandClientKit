@@ -23,7 +23,7 @@
         ],
         "strategy" : "pkg-config-with-fallbacks"
       },
-      "swiftWaylandTier" : "required",
+      "waylandClientKitTier" : "required",
       "testStrategy" : "unit-and-live",
       "upstreamProject" : "wayland",
       "upstreamVersion" : "1.24.0",
@@ -55,7 +55,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "stable",
-      "swiftWaylandTier" : "required",
+      "waylandClientKitTier" : "required",
       "testStrategy" : "unit-and-live",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.47",
@@ -86,7 +86,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "unstable",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -117,7 +117,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "unstable",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -148,7 +148,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "stable",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -179,7 +179,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "stable",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -192,7 +192,7 @@
       "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/stable/tablet/tablet-v2-client-protocol.h",
       "localPath" : "protocols/upstream/stable/tablet/tablet-v2.xml",
       "name" : "tablet-v2",
-      "notes" : "Private generation dependency for cursor-shape tablet-tool request interfaces; SwiftWayland does not expose tablet APIs yet.",
+      "notes" : "Private generation dependency for cursor-shape tablet-tool request interfaces; WaylandClientKit does not expose tablet APIs yet.",
       "scannerCodeMode" : "private-code",
       "scannerHeaderMode" : "client-header",
       "sha256" : "ac1128b26c779cf90b9ed71182ba5e34a7262826789adae206d825a4d45908b4",
@@ -210,7 +210,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "stable",
-      "swiftWaylandTier" : "privateGenerationDependency",
+      "waylandClientKitTier" : "privateGenerationDependency",
       "testStrategy" : "generation-only",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -241,7 +241,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "staging",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -272,7 +272,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "staging",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -303,7 +303,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "staging",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.47",
@@ -334,7 +334,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "staging",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -365,7 +365,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "staging",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -396,7 +396,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "staging",
-      "swiftWaylandTier" : "previewFoundation",
+      "waylandClientKitTier" : "previewFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -427,7 +427,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "staging",
-      "swiftWaylandTier" : "previewFoundation",
+      "waylandClientKitTier" : "previewFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -458,7 +458,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "staging",
-      "swiftWaylandTier" : "previewFoundation",
+      "waylandClientKitTier" : "previewFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -489,7 +489,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "staging",
-      "swiftWaylandTier" : "previewFoundation",
+      "waylandClientKitTier" : "previewFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -520,7 +520,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "staging",
-      "swiftWaylandTier" : "previewFoundation",
+      "waylandClientKitTier" : "previewFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -551,7 +551,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "staging",
-      "swiftWaylandTier" : "previewFoundation",
+      "waylandClientKitTier" : "previewFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -582,7 +582,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "staging",
-      "swiftWaylandTier" : "previewFoundation",
+      "waylandClientKitTier" : "previewFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -613,7 +613,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "staging",
-      "swiftWaylandTier" : "previewFoundation",
+      "waylandClientKitTier" : "previewFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -644,7 +644,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "unstable",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -675,7 +675,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "unstable",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -706,7 +706,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "unstable",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -737,7 +737,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "unstable",
-      "swiftWaylandTier" : "previewFoundation",
+      "waylandClientKitTier" : "previewFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -768,7 +768,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "unstable",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
@@ -799,7 +799,7 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "unstable",
-      "swiftWaylandTier" : "optionalFoundation",
+      "waylandClientKitTier" : "optionalFoundation",
       "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",

@@ -22,8 +22,8 @@ enum XDGActivationSmoke {
 
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
-                    title: "SwiftWayland XDG Activation Smoke",
-                    appID: "swift-wayland-xdg-activation-smoke",
+                    title: "WaylandClientKit XDG Activation Smoke",
+                    appID: "wayland-client-kit-xdg-activation-smoke",
                     initialWidth: 240,
                     initialHeight: 160
                 )
@@ -33,7 +33,7 @@ enum XDGActivationSmoke {
             do {
                 log("requesting activation token")
                 let token = try await window.requestActivationToken(
-                    appID: "swift-wayland-xdg-activation-smoke"
+                    appID: "wayland-client-kit-xdg-activation-smoke"
                 )
                 log("activation token received length=\(token.value.count)")
                 try await window.activate(using: token)

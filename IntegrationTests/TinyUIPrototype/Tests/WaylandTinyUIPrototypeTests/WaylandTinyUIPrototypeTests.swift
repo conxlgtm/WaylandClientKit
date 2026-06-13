@@ -9,7 +9,7 @@ struct WaylandTinyUIPrototypeTests {
     func tinyRetainedTreeCanLayoutAndDrawThroughPublicSoftwareFrame() throws {
         let view = TinyView.vstack([
             .colorRect(ColorRect(color: 0x0024_3448)),
-            .label(LabelPlaceholder(text: "SwiftWayland")),
+            .label(LabelPlaceholder(text: "WaylandClientKit")),
             .colorRect(ColorRect(color: 0x0050_3020)),
         ])
         let layout = try TinyLayout().layout(
