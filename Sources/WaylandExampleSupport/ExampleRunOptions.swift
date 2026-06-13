@@ -54,74 +54,87 @@ public struct ExampleRunOptions: Equatable, Sendable {
     }
 
     public static func parse(_ arguments: ArraySlice<String>) throws -> ExampleRunOptions {
-        var durationSeconds: Int?
-        var autoClose = false
-        var printSummary = false
-        var synchronization: String?
-        var pacing: String?
-        var metadata: String?
-        var contentType: String?
-        var presentationHint: String?
-        var index = arguments.startIndex
+        var parser = ExampleRunOptionParser(arguments: arguments)
+        return try parser.parse()
+    }
+}
 
-        parseLoop: while index < arguments.endIndex {
-            let argument = arguments[index]
-            switch argument {
-            case "--duration-seconds":
-                let valueIndex = arguments.index(after: index)
-                guard valueIndex < arguments.endIndex else {
-                    throw ExampleRunOptionError.missingValue(argument)
-                }
-                let rawValue = arguments[valueIndex]
-                guard let value = Int(rawValue), value > 0 else {
-                    throw ExampleRunOptionError.invalidDuration(rawValue)
-                }
-                durationSeconds = value
-                index = valueIndex
-            case "--auto-close":
-                autoClose = true
-            case "--print-summary":
-                printSummary = true
-            case "--sync", "--synchronization":
-                (synchronization, index) = try optionValue(
-                    after: index,
-                    argument: argument,
-                    arguments: arguments
-                )
-            case "--pacing":
-                (pacing, index) = try optionValue(
-                    after: index,
-                    argument: argument,
-                    arguments: arguments
-                )
-            case "--metadata":
-                (metadata, index) = try optionValue(
-                    after: index,
-                    argument: argument,
-                    arguments: arguments
-                )
-            case "--content-type":
-                (contentType, index) = try optionValue(
-                    after: index,
-                    argument: argument,
-                    arguments: arguments
-                )
-            case "--presentation-hint":
-                (presentationHint, index) = try optionValue(
-                    after: index,
-                    argument: argument,
-                    arguments: arguments
-                )
-            case "--":
-                break parseLoop
-            default:
-                throw ExampleRunOptionError.unknownArgument(argument)
+private struct ExampleRunOptionParser {
+    private let arguments: ArraySlice<String>
+    private var index: ArraySlice<String>.Index
+    private var durationSeconds: Int?
+    private var autoClose = false
+    private var printSummary = false
+    private var synchronization: String?
+    private var pacing: String?
+    private var metadata: String?
+    private var contentType: String?
+    private var presentationHint: String?
+
+    init(arguments parserArguments: ArraySlice<String>) {
+        arguments = parserArguments
+        index = parserArguments.startIndex
+    }
+
+    mutating func parse() throws -> ExampleRunOptions {
+        while index < arguments.endIndex {
+            let shouldContinue = try consume(arguments[index])
+            if !shouldContinue {
+                break
             }
-
             arguments.formIndex(after: &index)
         }
 
-        return ExampleRunOptions(
+        return options()
+    }
+
+    private mutating func consume(_ argument: String) throws -> Bool {
+        switch argument {
+        case "--duration-seconds":
+            durationSeconds = try durationValue(for: argument)
+        case "--auto-close":
+            autoClose = true
+        case "--print-summary":
+            printSummary = true
+        case "--sync", "--synchronization":
+            synchronization = try optionValue(for: argument)
+        case "--pacing":
+            pacing = try optionValue(for: argument)
+        case "--metadata":
+            metadata = try optionValue(for: argument)
+        case "--content-type":
+            contentType = try optionValue(for: argument)
+        case "--presentation-hint":
+            presentationHint = try optionValue(for: argument)
+        case "--":
+            return false
+        default:
+            throw ExampleRunOptionError.unknownArgument(argument)
+        }
+
+        return true
+    }
+
+    private mutating func durationValue(for argument: String) throws -> Int {
+        let rawValue = try optionValue(for: argument)
+        guard let value = Int(rawValue), value > 0 else {
+            throw ExampleRunOptionError.invalidDuration(rawValue)
+        }
+
+        return value
+    }
+
+    private mutating func optionValue(for argument: String) throws -> String {
+        let valueIndex = arguments.index(after: index)
+        guard valueIndex < arguments.endIndex else {
+            throw ExampleRunOptionError.missingValue(argument)
+        }
+        index = valueIndex
+        return arguments[valueIndex]
+    }
+
+    private func options() -> ExampleRunOptions {
+        ExampleRunOptions(
             durationSeconds: durationSeconds,
             autoClose: autoClose,
             printSummary: printSummary,
@@ -131,18 +144,5 @@ public struct ExampleRunOptions: Equatable, Sendable {
             contentType: contentType,
             presentationHint: presentationHint
         )
-    }
-
-    private static func optionValue(
-        after index: ArraySlice<String>.Index,
-        argument: String,
-        arguments: ArraySlice<String>
-    ) throws -> (String, ArraySlice<String>.Index) {
-        let valueIndex = arguments.index(after: index)
-        guard valueIndex < arguments.endIndex else {
-            throw ExampleRunOptionError.missingValue(argument)
-        }
-
-        return (arguments[valueIndex], valueIndex)
     }
 }

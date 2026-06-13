@@ -513,7 +513,10 @@ struct GPUWindowRuntimePathSnapshotTests {
         #expect(snapshot.pacing == .failed(.commitTimingRejected))
         #expect(snapshot.synchronization != .explicitFailed(.commitTimingRejected))
     }
+}
 
+@Suite
+struct GPUWindowRuntimePathMetadataFailureTests {
     @Test
     func runtimePathReportsCompositorRejectedBuffer() {
         let snapshot = GPURuntimePathSnapshot.afterFailure(
