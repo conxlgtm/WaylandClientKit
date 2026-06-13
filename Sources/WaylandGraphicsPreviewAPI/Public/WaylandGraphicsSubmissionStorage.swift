@@ -161,7 +161,7 @@ package actor WaylandGraphicsWindowBackingStorage {
     }
 
     private func frameLeaseGeometry() async throws -> SurfaceGeometry {
-        guard shouldAttemptManagedGPU, hasSubmittedFrame else {
+        guard shouldAttemptManagedGPU, leaseState.hasSubmittedFrame else {
             return try await window.geometry
         }
 
@@ -293,10 +293,19 @@ package actor WaylandGraphicsWindowBackingStorage {
         }
 
         try rejectSoftwareSubmissionWhenExplicitRequired()
+        let pacingSelection = try Self.softwarePacingSelection(
+            policy: configuration.gpuPacingPolicy,
+            capabilities: backingRuntimePath.capabilities
+        )
+        let submitConstraints = SurfaceSubmitConstraints(
+            synchronization: .implicit,
+            pacing: pacingSelection.constraint
+        )
         switch operation {
         case .show:
             try await window.show(
                 timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds,
+                submitConstraints: submitConstraints,
                 metadata: metadata,
                 requestPresentationFeedback: shouldRequestPresentationFeedback,
                 damage: damage
@@ -305,6 +314,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             }
         case .redraw:
             try await window.redraw(
+                submitConstraints: submitConstraints,
                 metadata: metadata,
                 requestPresentationFeedback: shouldRequestPresentationFeedback,
                 damage: damage
@@ -312,6 +322,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                 clearSoftwareFrame(softwareFrame, color: color)
             }
         }
+        applyPacingSelection(pacingSelection)
         applyMetadataFallbacks(resolvedMetadata.fallbacks)
     }
 
@@ -328,10 +339,19 @@ package actor WaylandGraphicsWindowBackingStorage {
         )
         let metadata = resolvedMetadata.commitMetadata
         let damage = try frameMetadata.surfaceDamageRegion()
+        let pacingSelection = try Self.softwarePacingSelection(
+            policy: configuration.gpuPacingPolicy,
+            capabilities: backingRuntimePath.capabilities
+        )
+        let submitConstraints = SurfaceSubmitConstraints(
+            synchronization: .implicit,
+            pacing: pacingSelection.constraint
+        )
         switch operation {
         case .show:
             try await window.show(
                 timeoutMilliseconds: WaylandDisplay.defaultConfigureTimeoutMilliseconds,
+                submitConstraints: submitConstraints,
                 metadata: metadata,
                 requestPresentationFeedback: shouldRequestPresentationFeedback,
                 damage: damage,
@@ -339,12 +359,14 @@ package actor WaylandGraphicsWindowBackingStorage {
             )
         case .redraw:
             try await window.redraw(
+                submitConstraints: submitConstraints,
                 metadata: metadata,
                 requestPresentationFeedback: shouldRequestPresentationFeedback,
                 damage: damage,
                 draw
             )
         }
+        applyPacingSelection(pacingSelection)
         applyMetadataFallbacks(resolvedMetadata.fallbacks)
     }
 }
@@ -373,66 +395,37 @@ extension WaylandGraphicsWindowBackingStorage {
         return false
     }
 
-    private var hasSubmittedFrame: Bool {
-        switch leaseState.state {
-        case .open(let state):
-            state.hasSubmittedFrame
-        case .submitting(let state):
-            state.hasSubmittedFrame
-        case .closed:
-            false
-        }
-    }
-
     private func handleManagedGPUFailure(
         _ error: ManagedGPUPreviewBackingError
     ) throws {
         if error.committedFrameWasPresented {
             let reason = WaylandGraphicsUnavailableReason(error.failure)
-            if !refreshRuntimePathFromManagedGPU(backing: .failed(reason)) {
-                backingRuntimePath = .unavailable(
-                    capabilities: backingRuntimePath.capabilities,
-                    reason: reason
-                )
-            }
+            updateBackingRuntimeStatus(.failed(reason))
             throw CommittedManagedGPUFrameFailure(error)
         }
 
         guard configuration.synchronizationPolicy != .requireExplicit else {
             let reason = WaylandGraphicsUnavailableReason(error.failure)
-            if !refreshRuntimePathFromManagedGPU(backing: .failed(reason)) {
-                backingRuntimePath = .unavailable(
-                    capabilities: backingRuntimePath.capabilities,
-                    reason: reason
-                )
-            }
+            updateBackingRuntimeStatus(.failed(reason))
             throw WaylandGraphicsError.unavailable(reason)
         }
 
         switch configuration.fallbackPolicy {
         case .preferGPUFallbackToSoftware:
             let reason = WaylandGraphicsFallbackReason(error.fallbackReason)
-            if !refreshRuntimePathFromManagedGPU(backing: .fallback(reason)) {
-                backingRuntimePath = .softwareFallback(
-                    capabilities: backingRuntimePath.capabilities,
-                    reason: reason
-                )
-            }
+            updateBackingRuntimeStatus(.fallback(reason))
         case .requireGPU:
             let reason = WaylandGraphicsUnavailableReason(error.failure)
-            if !refreshRuntimePathFromManagedGPU(backing: .failed(reason)) {
-                backingRuntimePath = .unavailable(
-                    capabilities: backingRuntimePath.capabilities,
-                    reason: reason
-                )
-            }
+            updateBackingRuntimeStatus(.failed(reason))
             throw WaylandGraphicsError.unavailable(reason)
         case .forceSoftware:
-            backingRuntimePath = .softwareFallback(
-                capabilities: backingRuntimePath.capabilities,
-                reason: .forcedSoftware
-            )
+            updateBackingRuntimeStatus(.fallback(.forcedSoftware))
         }
+    }
+
+    private func updateBackingRuntimeStatus(_ status: WaylandGraphicsRuntimeStatus) {
+        guard !refreshRuntimePathFromManagedGPU(backing: status) else { return }
+        backingRuntimePath = Self.runtimePath(backingRuntimePath, backing: status)
     }
 
     private func finishCommittedSubmissionFailure() {
@@ -459,6 +452,10 @@ extension WaylandGraphicsWindowBackingStorage {
 
     private func applyMetadataFallbacks(_ fallbacks: WaylandGraphicsMetadataFallbacks) {
         if !fallbacks.isEmpty { backingRuntimePath = fallbacks.applying(to: backingRuntimePath) }
+    }
+
+    private func applyPacingSelection(_ selection: GPUFramePacingPolicySelection) {
+        backingRuntimePath = Self.runtimePath(backingRuntimePath, pacingSelection: selection)
     }
 
     @discardableResult

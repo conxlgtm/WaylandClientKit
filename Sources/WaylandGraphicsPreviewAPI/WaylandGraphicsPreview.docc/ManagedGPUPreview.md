@@ -42,10 +42,11 @@ reason.
 
 `WaylandGraphicsPacingPolicy.preferFIFO` and
 `WaylandGraphicsPacingPolicy.preferCommitTiming` apply submit constraints
-when their protocols are available. Missing protocols become pacing fallback
-facts; rejected commit-timing timestamps become typed failures. The preview
-commit-timing path uses an internal target time until a public scheduling API is
-designed.
+when their protocols are available. The same pacing policy is carried into
+direct software commits and allowed software fallback commits. Missing protocols
+become pacing fallback facts; rejected commit-timing timestamps become typed
+failures. The preview commit-timing path uses an internal target time until a
+public scheduling API is designed.
 
 `WaylandGraphicsMetadataPolicy.preferAvailable` allows public content type
 and presentation-hint metadata to be applied when the compositor supports the

@@ -73,8 +73,10 @@ private actor ExplicitPolicyFakeManagedWindow: WaylandGraphicsManagedWindow {
         }
     }
 
+    // swiftlint:disable:next function_parameter_count
     func show(
         timeoutMilliseconds _: Int32,
+        submitConstraints _: SurfaceSubmitConstraints,
         metadata _: SurfaceCommitMetadata,
         requestPresentationFeedback _: Bool,
         damage _: SurfaceDamageRegion?,
@@ -85,6 +87,7 @@ private actor ExplicitPolicyFakeManagedWindow: WaylandGraphicsManagedWindow {
     }
 
     func redraw(
+        submitConstraints _: SurfaceSubmitConstraints,
         metadata _: SurfaceCommitMetadata,
         requestPresentationFeedback _: Bool,
         damage _: SurfaceDamageRegion?,

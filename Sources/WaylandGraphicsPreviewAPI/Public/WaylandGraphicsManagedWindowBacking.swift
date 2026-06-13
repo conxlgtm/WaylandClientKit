@@ -11,8 +11,10 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
         timeoutMilliseconds: Int32
     ) async throws -> SurfaceGeometry
 
+    // swiftlint:disable:next function_parameter_count
     func show(
         timeoutMilliseconds: Int32,
+        submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
         damage: SurfaceDamageRegion?,
@@ -20,6 +22,7 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
     ) async throws
 
     func redraw(
+        submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
         damage: SurfaceDamageRegion?,

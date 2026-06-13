@@ -77,6 +77,7 @@ package enum WindowSoftwarePresentationCommitSequence {
 struct WindowSoftwarePresentationContext {
     let request: PresentationRequest
     let geometry: SurfaceGeometry
+    let submitConstraints: SurfaceSubmitConstraints
     let metadata: SurfaceCommitMetadata
     let damage: SurfaceDamageRegion?
     let presentationFeedback: WindowPresentationFeedbackCommitRequest?
@@ -130,6 +131,7 @@ struct WindowSoftwarePresenter {
         let preparedCommit = try prepareCommit(
             request: context.request,
             geometry: context.geometry,
+            submitConstraints: context.submitConstraints,
             metadata: context.metadata,
             damage: context.damage,
             runtime: &runtime,
@@ -218,6 +220,7 @@ struct WindowSoftwarePresenter {
     private func prepareCommit<RoleResources>(
         request: PresentationRequest,
         geometry: SurfaceGeometry,
+        submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         damage: SurfaceDamageRegion?,
         runtime: inout SurfaceRuntime<RoleResources>,
@@ -231,6 +234,7 @@ struct WindowSoftwarePresenter {
                     generation: request.generation,
                     geometry: geometry,
                     payload: .buffer(drawingBuffer.surfaceBuffer),
+                    submitConstraints: submitConstraints,
                     metadata: metadata,
                     damage: damage
                 ),
