@@ -471,7 +471,8 @@ struct GPUWindowRuntimePathSnapshotTests {
             pacing: .fifoAndCommitTiming(fifo: 1, commitTiming: 1)
         )
         let fifoFallback = WaylandGraphicsRuntimePath(
-            gpuSnapshot: GPURuntimePathSnapshot
+            gpuSnapshot:
+                GPURuntimePathSnapshot
                 .afterPresentation(
                     capabilities: capabilities,
                     synchronization: .implicit,
@@ -482,7 +483,8 @@ struct GPUWindowRuntimePathSnapshotTests {
             backing: .active
         )
         let commitTimingFallback = WaylandGraphicsRuntimePath(
-            gpuSnapshot: GPURuntimePathSnapshot
+            gpuSnapshot:
+                GPURuntimePathSnapshot
                 .afterPresentation(
                     capabilities: capabilities,
                     synchronization: .implicit,
