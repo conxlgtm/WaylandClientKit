@@ -32,24 +32,39 @@ enum GPUPreviewSmokeClient {
                 )
                 report.windowCreation = "success"
 
-                let lease = try await backing.nextFrame()
-                let result = try await lease.submit(
-                    .clearColor(
-                        WaylandGraphicsXRGBColor(red: 0x3F, green: 0x80, blue: 0xFF)
+                do {
+                    let lease = try await backing.nextFrame()
+                    let result = try await lease.submit(
+                        .clearColor(
+                            WaylandGraphicsXRGBColor(
+                                red: 0x3F,
+                                green: 0x80,
+                                blue: 0xFF
+                            )
+                        )
                     )
-                )
-                let operation = GPUPreviewSmokeReport.operation(result.operation)
-                report.submittedFrame = "success \(operation)"
-                report.frameSize = "\(result.size.width)x\(result.size.height)"
-                report.runtimePath = result.runtimePath
-                report.releaseReuse = GPUPreviewSmokeReport.releaseReuseStatus(
-                    result.runtimePath
-                )
+                    let operation = GPUPreviewSmokeReport.operation(result.operation)
+                    report.submittedFrame = "success \(operation)"
+                    report.frameSize = "\(result.size.width)x\(result.size.height)"
+                    report.runtimePath = result.runtimePath
+                    report.releaseReuse = GPUPreviewSmokeReport.releaseReuseStatus(
+                        result.runtimePath
+                    )
+                } catch {
+                    report.failure = "\(error)"
+                    report.submittedFrame = "failed"
+                    report.runtimePath = try? await backing.runtimePath
+                    if let runtimePath = report.runtimePath {
+                        report.releaseReuse = GPUPreviewSmokeReport.releaseReuseStatus(
+                            runtimePath
+                        )
+                    }
+                }
 
                 try await backing.close()
                 return report
             }
-            exitCode = EXIT_SUCCESS
+            exitCode = report.failure == nil ? EXIT_SUCCESS : EXIT_FAILURE
         } catch {
             report = GPUPreviewSmokeReport(failure: "\(error)")
             exitCode = EXIT_FAILURE
