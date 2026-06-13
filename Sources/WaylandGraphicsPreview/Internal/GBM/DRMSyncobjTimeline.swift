@@ -48,12 +48,14 @@ package final class DRMSyncobjTimeline {
 
         var timelineHandle = handle
         var timelinePoint = point.rawValue
-        guard unsafe drmSyncobjTimelineSignal(
-            deviceFileDescriptor,
-            &timelineHandle,
-            &timelinePoint,
-            1
-        ) == 0 else {
+        guard
+            unsafe drmSyncobjTimelineSignal(
+                deviceFileDescriptor,
+                &timelineHandle,
+                &timelinePoint,
+                1
+            ) == 0
+        else {
             throw GBMAllocationError.syncobjTimelineSignalFailed(
                 point: point.rawValue,
                 errno: GBMAllocationError.capturedCurrentErrno()

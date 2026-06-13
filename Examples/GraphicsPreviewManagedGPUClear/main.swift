@@ -84,7 +84,10 @@ enum GraphicsPreviewManagedGPUClear {
         log("pacing requested=\(pacingDescription(pacingPolicy))")
         log("metadata policy requested=\(metadataPolicyDescription(metadataPolicy))")
         log("content type requested=\(contentTypeDescription(frameMetadata.contentType))")
-        log("presentation hint requested=\(presentationHintDescription(frameMetadata.presentationHint))")
+        log(
+            "presentation hint requested="
+                + presentationHintDescription(frameMetadata.presentationHint)
+        )
         try await backing.window.setMinimumSize(PositiveLogicalSize(width: 1, height: 1))
         try await backing.window.setMaximumSize(nil)
         log("resize constraints minimum=1x1 maximum=unset")

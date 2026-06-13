@@ -193,32 +193,34 @@ struct GPUWindowPresenterStateTests {
                 commitTimingTarget: targetTime
             ) == GPUFramePacingPolicySelection(constraint: .fifo(.setBarrier))
         )
-        #expect(
-            GPUFramePacingPolicy.preferFIFO.selectConstraint(
+        let fifoFallback = GPUFramePacingPolicy.preferFIFO.selectConstraint(
+            capability: .commitTiming(version: 1),
+            commitTimingTarget: targetTime
+        )
+        let expectedFifoFallback = GPUFramePacingPolicySelection(
+            constraint: .none,
+            fallbackReason: .fifoUnavailable
+        )
+        #expect(fifoFallback == expectedFifoFallback)
+        let commitTimingActive = GPUFramePacingPolicy.preferCommitTiming
+            .selectConstraint(
                 capability: .commitTiming(version: 1),
                 commitTimingTarget: targetTime
-            ) == GPUFramePacingPolicySelection(
-                constraint: .none,
-                fallbackReason: .fifoUnavailable
             )
+        let expectedCommitTimingActive = GPUFramePacingPolicySelection(
+            constraint: .targetTime(targetTime)
         )
-        #expect(
-            GPUFramePacingPolicy.preferCommitTiming.selectConstraint(
-                capability: .commitTiming(version: 1),
-                commitTimingTarget: targetTime
-            ) == GPUFramePacingPolicySelection(
-                constraint: .targetTime(targetTime)
-            )
-        )
-        #expect(
-            GPUFramePacingPolicy.preferCommitTiming.selectConstraint(
+        #expect(commitTimingActive == expectedCommitTimingActive)
+        let commitTimingFallback = GPUFramePacingPolicy.preferCommitTiming
+            .selectConstraint(
                 capability: .fifo(version: 1),
                 commitTimingTarget: targetTime
-            ) == GPUFramePacingPolicySelection(
-                constraint: .none,
-                fallbackReason: .commitTimingUnavailable
             )
+        let expectedCommitTimingFallback = GPUFramePacingPolicySelection(
+            constraint: .none,
+            fallbackReason: .commitTimingUnavailable
         )
+        #expect(commitTimingFallback == expectedCommitTimingFallback)
     }
 
     @Test
