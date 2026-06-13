@@ -65,23 +65,29 @@ package final class DRMSyncobjTimeline {
 
     package func wait(
         _ point: RawSyncobjTimelinePoint,
-        timeoutNanoseconds: Int64
+        timeoutNanoseconds: Int64,
+        waitForSubmit: Bool = false
     ) throws(GBMAllocationError) {
         guard let handle else {
             throw GBMAllocationError.deviceDestroyed
         }
 
+        let deadlineNanoseconds = try Self.monotonicDeadlineNanoseconds(
+            after: timeoutNanoseconds,
+            point: point
+        )
         var timelineHandle = handle
         var timelinePoint = point.rawValue
         var firstSignaled: UInt32 = 0
+        let flags = waitForSubmit ? Self.waitForSubmitFlag : 0
         guard
             unsafe drmSyncobjTimelineWait(
                 deviceFileDescriptor,
                 &timelineHandle,
                 &timelinePoint,
                 1,
-                timeoutNanoseconds,
-                0,
+                deadlineNanoseconds,
+                flags,
                 &firstSignaled
             ) == 0
         else {
@@ -90,6 +96,53 @@ package final class DRMSyncobjTimeline {
                 errno: GBMAllocationError.capturedCurrentErrno()
             )
         }
+    }
+
+    package static let waitForSubmitFlag = UInt32(DRM_SYNCOBJ_WAIT_FLAGS_WAIT_FOR_SUBMIT)
+
+    package static func absoluteDeadlineNanoseconds(
+        currentSeconds: Int64,
+        currentNanoseconds: Int64,
+        timeoutNanoseconds: Int64
+    ) -> Int64 {
+        let (secondsNanoseconds, secondsOverflow) =
+            currentSeconds.multipliedReportingOverflow(by: 1_000_000_000)
+        guard !secondsOverflow else {
+            return currentSeconds >= 0 ? Int64.max : Int64.min
+        }
+
+        let (currentTimeNanoseconds, currentOverflow) =
+            secondsNanoseconds.addingReportingOverflow(currentNanoseconds)
+        guard !currentOverflow else {
+            return currentNanoseconds >= 0 ? Int64.max : Int64.min
+        }
+
+        let (deadlineNanoseconds, deadlineOverflow) =
+            currentTimeNanoseconds.addingReportingOverflow(timeoutNanoseconds)
+        guard !deadlineOverflow else {
+            return timeoutNanoseconds >= 0 ? Int64.max : Int64.min
+        }
+
+        return deadlineNanoseconds
+    }
+
+    private static func monotonicDeadlineNanoseconds(
+        after timeoutNanoseconds: Int64,
+        point: RawSyncobjTimelinePoint
+    ) throws(GBMAllocationError) -> Int64 {
+        var timestamp = timespec()
+        guard unsafe clock_gettime(CLOCK_MONOTONIC, &timestamp) == 0 else {
+            throw GBMAllocationError.syncobjTimelineWaitFailed(
+                point: point.rawValue,
+                errno: GBMAllocationError.capturedCurrentErrno()
+            )
+        }
+
+        return absoluteDeadlineNanoseconds(
+            currentSeconds: Int64(timestamp.tv_sec),
+            currentNanoseconds: Int64(timestamp.tv_nsec),
+            timeoutNanoseconds: timeoutNanoseconds
+        )
     }
 
     package func destroy() {
