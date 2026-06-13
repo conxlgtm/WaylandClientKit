@@ -38,6 +38,8 @@ swift run ClientSideResizeChrome
 swift run SerialActionsProbe
 swift run TwoWindowFrameworkHost -- --auto-close --print-summary
 swift run GPUPreviewSmokeClient
+swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
+swift run GraphicsPreviewManagedGPUClear -- --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
 ```
 
 Smoke examples should print matrix-friendly lines such as `feature`,
@@ -199,11 +201,16 @@ egl display/context: <status>
 egl clear/render: <status>
 dmabuf import: <status>
 buffer lifecycle: <status>
+synchronization policy requested: <implicitOnly/preferExplicit/requireExplicit>
 explicit sync: <advertised vN/unavailable>, runtime <status>
+pacing requested: <none/preferFIFO/preferCommitTiming>
 fifo: <status>
 commit timing: <status>
+metadata policy requested: <none/preferAvailable>
+content type requested: <not requested/none/photo/video/game>
 metadata content type: <status>
 metadata alpha modifier: <status>
+presentation hint requested: <not requested/vsync/async>
 metadata tearing control: <status>
 metadata color representation: <status>
 metadata color management: <status>
@@ -219,6 +226,9 @@ failure: <error/none>
 The `Globals` column should include exact interface names for missing optional
 protocols. If a protocol is advertised but object creation or request use
 fails, record that as a failure for that protocol rather than as a skip.
+Only record explicit sync, FIFO, commit timing, or metadata as `active` when
+the smoke output shows the requested policy/metadata and a submitted frame with
+an active runtime status. Protocol advertisement alone remains `advertised`.
 
 ## Protocols To Record
 

@@ -34,6 +34,10 @@ status, and whether a resize was observed, then closes when the compositor
 requests close. The manual resize path uses an in-content edge/corner handle,
 so drag from inside the clear window edge instead of relying on compositor
 decorations. Use `--auto-close --print-summary` for bounded evidence runs.
+Both GPU smoke tools accept `--sync implicit-only|prefer-explicit|require-explicit`
+and `--pacing none|fifo|commit-timing`. `GraphicsPreviewManagedGPUClear` also
+accepts `--metadata none|prefer`, `--content-type none|photo|video|game`, and
+`--presentation-hint vsync|async`.
 
 ## Current Scope
 
@@ -101,9 +105,18 @@ and presentation feedback is not requested. `backingPreference: .software`
 selects software backing directly. `backingPreference: .managedGPU` attempts
 the managed GPU path and then follows the fallback policy when that path is not
 available. `.software` and `.forceSoftware` never attempt GPU setup.
-`requireExplicit` fails with a typed unavailable reason until managed
-explicit-sync GPU submission exists, and pacing policies are rejected with
-`WaylandGraphicsError.unsupportedPacing` until managed pacing is implemented.
+`implicitOnly` never requests explicit synchronization. `preferExplicit`
+attempts linux-drm-syncobj when the compositor advertises it and the managed
+GPU path can import a sync timeline; otherwise it falls back to implicit sync
+with an explicit runtime fallback reason. `requireExplicit` never silently
+falls back: it succeeds only when explicit sync is configured for the submitted
+frame, and otherwise fails with a typed unavailable reason.
+`preferFIFO` and `preferCommitTiming` apply the matching submit constraint when
+the protocol is available. Missing FIFO or commit-timing support is reported as
+a pacing fallback reason. Commit-timing timestamp rejection is reported as a
+typed failure. The preview commit-timing policy currently uses an internal
+near-future monotonic target for each frame; no public target-time scheduling
+API is exposed yet.
 `requestWhenAvailable` presentation feedback requests feedback only when the
 protocol is advertised; `require` fails when it is unavailable.
 
@@ -121,14 +134,23 @@ presentation feedback was observed; feedback still arrives through
 pools, GBM buffers, EGL surfaces, DRM nodes, or syncobj handles.
 
 `WaylandGraphicsFrameMetadata` currently exposes only content type and
-presentation hint values plus `WaylandGraphicsDamageRegion`. Content type and
-presentation hint map to the package-internal surface commit metadata when the
-compositor advertises the relevant protocols. Public color-management image
-descriptions remain internal. Full-frame damage is the default. Partial damage
-is converted to `SurfaceDamageRegion` for managed software submissions and then
-mapped from logical surface coordinates to the active buffer damage coordinates.
-Partial overhang is clipped to the surface bounds; damage with no intersection
-is rejected as `WaylandGraphicsError.invalidDamageRegion`. Unsupported frame
+presentation hint values plus `WaylandGraphicsDamageRegion`. With
+`metadataPolicy: .preferAvailable`, content type and presentation hint map to
+the package-internal surface commit metadata when the compositor advertises the
+relevant protocols. Missing metadata protocols produce typed unavailable
+errors before the frame lease is consumed; `metadataPolicy: .none` rejects
+non-default metadata. Public color-management image descriptions, color
+representation details, and alpha metadata remain internal, but runtime path
+facts still report whether those compositor capabilities are advertised,
+configured, active, unavailable, failed, or selected for fallback. SwiftWayland
+applies protocol metadata; it does not own renderer color conversion, tone
+mapping, asset color policy, or scene/rendering policy.
+
+Full-frame damage is the default. Partial damage is converted to
+`SurfaceDamageRegion` for managed software submissions and then mapped from
+logical surface coordinates to the active buffer damage coordinates. Partial
+overhang is clipped to the surface bounds; damage with no intersection is
+rejected as `WaylandGraphicsError.invalidDamageRegion`. Unsupported frame
 metadata and invalid damage are validated before the lease is consumed, so
 callers can cancel or retry the active lease deterministically.
 
