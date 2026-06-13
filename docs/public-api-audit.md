@@ -261,16 +261,24 @@ Current preview contract:
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback and GBM allocation failure; display-level dmabuf
   advertisement alone is not reported as active GPU backing.
+- Synchronization and pacing policies are active runtime requests for managed
+  GPU submission. `implicitOnly` avoids explicit sync objects; `preferExplicit`
+  falls back to implicit sync with a runtime reason; `requireExplicit` fails
+  instead of silently falling back. `preferFIFO` and `preferCommitTiming` apply
+  submit constraints when advertised and otherwise report pacing fallback or
+  typed failure facts.
 - It does not expose raw Wayland proxies, EGL/GBM/DRM handles, syncobj fds,
   SHM pools, scene rendering, swapchains, drawables, or public color-management
   image descriptions.
 - Public frame metadata is intentionally narrow. Content type and presentation
-  hint map to safe surface commit metadata when their protocols are available.
-  Full-frame damage is the supported default. Partial damage is accepted for
-  managed software submissions, converted to `SurfaceDamageRegion`, mapped from
-  logical surface coordinates to active buffer damage coordinates, and rejected
-  as `WaylandGraphicsError.invalidDamageRegion` when it has no surface
-  intersection.
+  hint map to safe surface commit metadata when their protocols are available
+  and `metadataPolicy` permits metadata. Alpha, color representation, and color
+  management remain package-internal runtime facts rather than public renderer
+  policy. Full-frame damage is the supported default. Partial damage is
+  accepted for managed software submissions, converted to `SurfaceDamageRegion`,
+  mapped from logical surface coordinates to active buffer damage coordinates,
+  and rejected as `WaylandGraphicsError.invalidDamageRegion` when it has no
+  surface intersection.
 - Presentation feedback policy can request feedback when available or require
   it before creating a managed backing. Feedback observations still arrive on
   `WindowPresentationEvents`; frame submission results only report whether
