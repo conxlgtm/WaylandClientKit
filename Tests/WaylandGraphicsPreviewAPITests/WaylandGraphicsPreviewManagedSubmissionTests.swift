@@ -92,7 +92,12 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
         #expect(
             resolvedMetadata.fallbacks.applying(
                 to: .projected(capabilities: softwareOnlySurfaceCapabilities())
-            ).metadata.contentType == .fallback(.metadataRequiredButUnavailable)
+            ).metadata.contentType == .fallback(.contentTypeUnavailable)
+        )
+        #expect(
+            resolvedMetadata.fallbacks.applying(
+                to: .projected(capabilities: softwareOnlySurfaceCapabilities())
+            ).metadata.tearingControl == .fallback(.presentationHintUnavailable)
         )
     }
 
@@ -114,7 +119,10 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
             geometry: testGraphicsSurfaceGeometry()
         )
     }
+}
 
+@Suite
+struct WaylandGraphicsPreviewRuntimeTests {
     @Test
     func partialDamageIsAcceptedWhenWithinSurfaceBounds() throws {
         let damage = WaylandGraphicsDamageRegion(
