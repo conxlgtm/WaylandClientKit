@@ -22,6 +22,12 @@ The compositor matrix still needs broader graphics-preview rows before this
 preview path can support foundation-candidate claims. Public GBM, EGL, DRM,
 dmabuf, or syncobj handles remain out of scope.
 
+Current live evidence proves active managed GPU clear-frame submission, FIFO
+pacing, content-type metadata, and presentation-hint/tearing metadata on
+KDE/KWin. Explicit synchronization and commit timing are implemented as
+runtime-path requests with typed fallback/failure reporting, but they are not
+yet live-proven active in the compositor matrix.
+
 `GPUPreviewSmokeClient` is the live evidence tool for this product. Its output
 uses one line per runtime-path fact so a compositor run can be pasted into
 `docs/compositor-matrix.md` without inferring whether a protocol was advertised,
@@ -116,7 +122,8 @@ the protocol is available. Missing FIFO or commit-timing support is reported as
 a pacing fallback reason. Commit-timing timestamp rejection is reported as a
 typed failure. The preview commit-timing policy currently uses an internal
 near-future monotonic target for each frame; no public target-time scheduling
-API is exposed yet.
+API is exposed yet. Current live compositor evidence proves FIFO active and
+commit-timing fallback, but not commit-timing active.
 `requestWhenAvailable` presentation feedback requests feedback only when the
 protocol is advertised; `require` fails when it is unavailable.
 

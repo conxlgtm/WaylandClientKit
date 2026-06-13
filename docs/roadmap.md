@@ -687,8 +687,10 @@ Current checkpoint status:
   buffer through linux-dmabuf, commits it through the managed window
   owner-thread path, and reports typed runtime-path facts.
 - Remaining milestone work is live compositor evidence, resize/reconfiguration
-  breadth, explicit sync activation, pacing activation, and broader GPU
-  submission scenarios beyond clear-frame proof.
+  breadth, explicit-sync active evidence, commit-timing active evidence, and
+  broader GPU submission scenarios beyond clear-frame proof. FIFO and metadata
+  have active KDE/KWin evidence; explicit sync and commit timing currently have
+  truthful failure/fallback evidence.
 
 Work packages:
 
@@ -770,7 +772,8 @@ Resource semantics:
 
 Exit criteria:
 
-- explicit sync can be enabled for GPU-backed windows when advertised
+- explicit sync can be enabled for GPU-backed windows when advertised and
+  proven active on at least one live compositor
 - release timeline signaling controls buffer reuse in tests
 - implicit-sync fallback remains available and clearly marked
 - compositor behavior is validated under at least one wlroots and one
