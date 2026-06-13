@@ -1,6 +1,7 @@
 import Foundation
 import Glibc
 import WaylandClient
+import WaylandExampleSupport
 import WaylandGraphicsPreview
 
 @main
@@ -9,8 +10,13 @@ enum GPUPreviewSmokeClient {
         let report: GPUPreviewSmokeReport
         let exitCode: Int32
         do {
+            let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
+            let synchronizationPolicy = try requestedSynchronizationPolicy(options.synchronization)
+            let pacingPolicy = try requestedPacingPolicy(options.pacing)
             report = try await WaylandDisplay.withConnection { display in
                 var report = GPUPreviewSmokeReport()
+                report.synchronizationPolicy = synchronizationPolicy
+                report.pacingPolicy = pacingPolicy
                 let backing = try await display.createGraphicsWindowBacking(
                     windowConfiguration: WindowConfiguration(
                         title: "SwiftWayland Graphics Preview",
@@ -18,6 +24,10 @@ enum GPUPreviewSmokeClient {
                         initialWidth: 96,
                         initialHeight: 96,
                         bufferCount: 2
+                    ),
+                    graphicsConfiguration: WaylandGraphicsConfiguration(
+                        synchronizationPolicy: synchronizationPolicy,
+                        pacingPolicy: pacingPolicy
                     )
                 )
                 report.windowCreation = "success"
@@ -50,6 +60,40 @@ enum GPUPreviewSmokeClient {
             exit(exitCode)
         }
     }
+}
+
+private func requestedSynchronizationPolicy(
+    _ rawValue: String?
+) throws -> WaylandGraphicsSynchronizationPolicy {
+    switch normalized(rawValue) {
+    case nil, "implicit", "implicit-only":
+        .implicitOnly
+    case "prefer-explicit", "explicit":
+        .preferExplicit
+    case "require-explicit":
+        .requireExplicit
+    case .some(let value):
+        throw ExampleRunOptionError.unknownArgument("--sync \(value)")
+    }
+}
+
+private func requestedPacingPolicy(
+    _ rawValue: String?
+) throws -> WaylandGraphicsPacingPolicy {
+    switch normalized(rawValue) {
+    case nil, "none":
+        .none
+    case "fifo":
+        .preferFIFO
+    case "commit-timing":
+        .preferCommitTiming
+    case .some(let value):
+        throw ExampleRunOptionError.unknownArgument("--pacing \(value)")
+    }
+}
+
+private func normalized(_ value: String?) -> String? {
+    value?.lowercased().replacingOccurrences(of: "_", with: "-")
 }
 
 private struct GPUPreviewSmokeReportFormatter {
@@ -100,7 +144,9 @@ private struct GPUPreviewSmokeReportFormatter {
             "egl clear/render: \(renderStatus(runtimePath))",
             "dmabuf import: \(status(runtimePath.dmabufImport))",
             "buffer lifecycle: \(status(runtimePath.bufferLifecycle))",
+            "synchronization policy requested: \(synchronizationDescription(report.synchronizationPolicy))",
             "explicit sync: \(explicitSyncStatus(runtimePath))",
+            "pacing requested: \(pacingDescription(report.pacingPolicy))",
             "fifo: \(status(runtimePath.pacing.fifo))",
             "commit timing: \(status(runtimePath.pacing.commitTiming))",
             "metadata content type: \(status(runtimePath.metadata.contentType))",
@@ -295,10 +341,38 @@ private struct GPUPreviewSmokeReportFormatter {
     ) -> String {
         path.fallback.map(String.init(describing:)) ?? "none"
     }
+
+    private func synchronizationDescription(
+        _ policy: WaylandGraphicsSynchronizationPolicy
+    ) -> String {
+        switch policy {
+        case .implicitOnly:
+            "implicitOnly"
+        case .preferExplicit:
+            "preferExplicit"
+        case .requireExplicit:
+            "requireExplicit"
+        }
+    }
+
+    private func pacingDescription(
+        _ policy: WaylandGraphicsPacingPolicy
+    ) -> String {
+        switch policy {
+        case .none:
+            "none"
+        case .preferFIFO:
+            "preferFIFO"
+        case .preferCommitTiming:
+            "preferCommitTiming"
+        }
+    }
 }
 
 private struct GPUPreviewSmokeReport {
     var runtimePath: WaylandGraphicsRuntimePath?
+    var synchronizationPolicy: WaylandGraphicsSynchronizationPolicy = .implicitOnly
+    var pacingPolicy: WaylandGraphicsPacingPolicy = .none
     var windowCreation = "not attempted"
     var submittedFrame = "not attempted"
     var frameSize = "unknown"
