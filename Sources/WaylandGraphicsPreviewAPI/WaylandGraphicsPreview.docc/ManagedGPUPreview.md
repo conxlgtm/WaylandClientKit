@@ -18,6 +18,11 @@ Display-level dmabuf advertisement is only a prerequisite. Surface feedback and
 successful submission are required before public runtime facts report active
 GPU.
 
+The current compositor matrix proves active managed GPU clear-frame submission,
+FIFO pacing, content-type metadata, and presentation-hint/tearing metadata.
+Explicit synchronization and commit timing are implemented and report typed
+fallback/failure states, but they are not yet live-proven active.
+
 ## Policy
 
 `WaylandGraphicsSynchronizationPolicy` controls explicit-sync requirements.
@@ -61,3 +66,9 @@ Examples:
 swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
 swift run GraphicsPreviewManagedGPUClear -- --sync prefer-explicit --pacing fifo --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
 ```
+
+Do not record explicit synchronization or commit timing as active unless the
+runtime-path output itself reports `active` for that component on a submitted
+frame. Current KDE/KWin evidence records explicit sync as
+`failed(explicitSyncReleaseFailed)` and commit timing as
+`fallback(commitTimingUnavailable)`.
