@@ -118,6 +118,10 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
         poolState.submittedSlotIDs
     }
 
+    package var explicitSubmissionStates: [GPUSubmittedBufferSyncState] {
+        explicitSubmissions.values.sorted { $0.slotID < $1.slotID }
+    }
+
     package var availableSlotIDs: [GBMBufferPoolSlotID] {
         poolState.availableSlotIDs
     }
@@ -355,6 +359,12 @@ package final class GPUWindowPresenter {
     package var outstandingSubmittedSlotIDs: [GBMBufferPoolSlotID] {
         withLock {
             state.outstandingSubmittedSlotIDs
+        }
+    }
+
+    package var explicitSubmissionStates: [GPUSubmittedBufferSyncState] {
+        withLock {
+            state.explicitSubmissionStates
         }
     }
 

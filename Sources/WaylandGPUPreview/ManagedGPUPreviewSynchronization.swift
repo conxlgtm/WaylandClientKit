@@ -65,6 +65,7 @@ enum ManagedGPUPreviewSynchronizationSelection {
 
 final class ManagedGPUExplicitSynchronization {
     private static let releaseWaitTimeoutNanoseconds: Int64 = 1_000_000_000
+    private static let releasePollTimeoutNanoseconds: Int64 = 0
 
     private let timeline: DRMSyncobjTimeline
     private let identity: GPUSyncTimeline
@@ -134,6 +135,24 @@ final class ManagedGPUExplicitSynchronization {
             timeoutNanoseconds: Self.releaseWaitTimeoutNanoseconds,
             waitForSubmit: true
         )
+    }
+
+    func releasePointIsSignaled(
+        _ state: GPUSubmittedBufferSyncState
+    ) throws(GBMAllocationError) -> Bool {
+        do {
+            try timeline.wait(
+                state.releasePoint.point,
+                timeoutNanoseconds: Self.releasePollTimeoutNanoseconds,
+                waitForSubmit: true
+            )
+            return true
+        } catch {
+            if error.isSyncobjTimelineWaitTimeout {
+                return false
+            }
+            throw error
+        }
     }
 
     func destroy() {

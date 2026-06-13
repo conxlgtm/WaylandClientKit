@@ -107,6 +107,7 @@ extension ManagedGPUPreviewBacking {
                 lockedBuffer: imported.lockedBuffer,
                 renderTarget: renderTarget
             )
+            try reapExplicitReleaseSignalsIfAvailable()
             if let reusableSlotID = presenter.availableSlotIDs.first {
                 slotID = reusableSlotID
                 try presenter.replaceAvailableBuffer(previewBuffer, slotID: reusableSlotID)
@@ -132,10 +133,6 @@ extension ManagedGPUPreviewBacking {
                 pacing: options.pacing,
                 metadata: options.metadata
             )
-            try waitForExplicitReleaseIfNeeded(
-                frame.synchronization,
-                options: options
-            )
             updateRuntimePathAfterPresentation(options: options)
             return frame
         } catch let error as ManagedGPUPreviewBackingError {
@@ -148,29 +145,6 @@ extension ManagedGPUPreviewBacking {
             throw .runtime(error)
         } catch {
             throw .setup(.commitFailed)
-        }
-    }
-
-    func waitForExplicitReleaseIfNeeded(
-        _ synchronization: GPUBufferSubmissionSynchronization,
-        options: ManagedGPUPreviewPresentationOptions
-    ) throws(ManagedGPUPreviewBackingError) {
-        do {
-            try options.synchronization.waitForExplicitRelease(synchronization)
-            if case .explicit(let state) = synchronization {
-                try presenter.recordExplicitReleaseSignal(slotID: state.slotID)
-            }
-        } catch let error as GBMAllocationError {
-            let failure = ManagedGPUPreviewBackingError.backingFailure(for: error)
-            runtimePath = presenter.runtimePathSnapshot.markingFailure(failure)
-            throw .committedFrame(failure)
-        } catch let error as GPUWindowPresenterError {
-            let failure = ManagedGPUPreviewBackingError.backingFailure(for: error)
-            runtimePath = presenter.runtimePathSnapshot.markingFailure(failure)
-            throw .committedFrame(failure)
-        } catch {
-            runtimePath = presenter.runtimePathSnapshot.markingFailure(.commitFailed)
-            throw .committedFrame(.commitFailed)
         }
     }
 
@@ -188,6 +162,30 @@ extension ManagedGPUPreviewBacking {
             ).validate(capabilities: capabilities)
         } catch {
             throw .setup(GPUBackingFailure(error))
+        }
+    }
+
+    func reapExplicitReleaseSignalsIfAvailable() throws(ManagedGPUPreviewBackingError) {
+        guard let explicitSynchronization else { return }
+
+        for state in presenter.explicitSubmissionStates {
+            do {
+                guard try explicitSynchronization.releasePointIsSignaled(state) else {
+                    continue
+                }
+                try presenter.recordExplicitReleaseSignal(slotID: state.slotID)
+            } catch let error as GBMAllocationError {
+                let failure = ManagedGPUPreviewBackingError.backingFailure(for: error)
+                runtimePath = presenter.runtimePathSnapshot.markingFailure(failure)
+                throw .setup(failure)
+            } catch let error as GPUWindowPresenterError {
+                let failure = ManagedGPUPreviewBackingError.backingFailure(for: error)
+                runtimePath = presenter.runtimePathSnapshot.markingFailure(failure)
+                throw .setup(failure)
+            } catch {
+                runtimePath = presenter.runtimePathSnapshot.markingFailure(.commitFailed)
+                throw .setup(.commitFailed)
+            }
         }
     }
 

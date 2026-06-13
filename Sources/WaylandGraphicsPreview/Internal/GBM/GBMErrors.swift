@@ -1,3 +1,5 @@
+import Glibc
+
 package enum GBMAllocationError: Error, Equatable, Sendable, CustomStringConvertible {
     case invalidRenderNodeFileDescriptor(Int32)
     case invalidDeviceIDByteCount(expected: Int, actual: Int)
@@ -72,5 +74,17 @@ package enum GBMAllocationError: Error, Equatable, Sendable, CustomStringConvert
         case .planeFileDescriptorAlreadyTaken(let index):
             "GBM dmabuf plane file descriptor was already taken at index \(index)"
         }
+    }
+}
+
+extension GBMAllocationError {
+    package var isSyncobjTimelineWaitTimeout: Bool {
+        guard case .syncobjTimelineWaitFailed(_, let errorNumber) = self else {
+            return false
+        }
+
+        return errorNumber == ETIME
+            || errorNumber == ETIMEDOUT
+            || errorNumber == EAGAIN
     }
 }

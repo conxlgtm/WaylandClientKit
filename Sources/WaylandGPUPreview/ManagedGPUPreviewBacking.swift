@@ -253,6 +253,7 @@ package final class ManagedGPUPreviewBacking {
             pacingPolicy: pacingPolicy,
             requestPresentationFeedback: requestPresentationFeedback
         )
+        try reapExplicitReleaseSignalsIfAvailable()
 
         let imported: (buffer: RawLinuxDmabufBuffer, lockedBuffer: GBMLockedSurfaceBuffer)
         do {
