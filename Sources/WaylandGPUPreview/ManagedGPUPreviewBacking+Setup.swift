@@ -16,11 +16,55 @@ extension ManagedGPUPreviewBacking {
         } catch {
             throw .presentation(error)
         }
-        explicitSynchronization?.destroy()
-        explicitSynchronization = nil
+        retainExplicitSynchronizationForOutstandingSubmissions()
         renderTarget = nil
         configuredGeometry = nil
-        device = nil
+        destroyUnusedRetainedExplicitSynchronizations()
+    }
+
+    func retainExplicitSynchronizationForOutstandingSubmissions() {
+        guard let synchronization = explicitSynchronization else {
+            device?.destroy()
+            device = nil
+            return
+        }
+
+        explicitSynchronization = nil
+        let timeline = synchronization.timelineIdentity
+        if presenter.explicitSubmissionStates.contains(where: { state in
+            state.releasePoint.timeline == timeline
+        }) {
+            retainedExplicitSynchronizations[timeline] = RetainedExplicitSynchronization(
+                synchronization: synchronization,
+                device: device
+            )
+            device = nil
+        } else {
+            synchronization.destroy()
+            device?.destroy()
+            device = nil
+        }
+    }
+
+    func destroyUnusedRetainedExplicitSynchronizations() {
+        let liveTimelines = Set(
+            presenter.explicitSubmissionStates.map(\.releasePoint.timeline)
+        )
+        let unusedTimelines = retainedExplicitSynchronizations.keys.filter { timeline in
+            !liveTimelines.contains(timeline)
+        }
+
+        for timeline in unusedTimelines {
+            retainedExplicitSynchronizations[timeline]?.synchronization.destroy()
+            retainedExplicitSynchronizations[timeline] = nil
+        }
+    }
+
+    func destroyRetainedExplicitSynchronizations() {
+        for retained in retainedExplicitSynchronizations.values {
+            retained.synchronization.destroy()
+        }
+        retainedExplicitSynchronizations.removeAll()
     }
 
     func surfaceFeedback(

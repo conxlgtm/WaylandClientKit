@@ -83,6 +83,10 @@ final class ManagedGPUExplicitSynchronization {
         GPUExplicitSynchronization(acquireTimeline: identity, releaseTimeline: identity)
     }
 
+    var timelineIdentity: GPUSyncTimeline {
+        identity
+    }
+
     var placeholderSubmissionState: GPUSubmittedBufferSyncState {
         GPUSubmittedBufferSyncState(
             slotID: placeholderSlotID(),
