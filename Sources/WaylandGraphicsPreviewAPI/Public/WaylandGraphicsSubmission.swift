@@ -46,16 +46,11 @@ extension WaylandGraphicsConfiguration {
                     .explicitSyncRequiredButUnavailable
                 )
             }
-            throw WaylandGraphicsError.unavailable(
-                .managedGPUSubmissionUnavailable
-            )
         }
 
         switch pacingPolicy {
-        case .none:
+        case .none, .preferFIFO, .preferCommitTiming:
             break
-        case .preferFIFO, .preferCommitTiming:
-            throw WaylandGraphicsError.unsupportedPacing
         }
 
         switch presentationFeedbackPolicy {
@@ -70,17 +65,25 @@ extension WaylandGraphicsConfiguration {
         }
     }
 
-    package var gpuSynchronization: GPUBufferSubmissionSynchronization {
+    package var gpuSynchronizationPolicy: GPUSynchronizationPolicy {
         switch synchronizationPolicy {
-        case .implicitOnly, .preferExplicit, .requireExplicit:
-            .implicit
+        case .implicitOnly:
+            .implicitOnly
+        case .preferExplicit:
+            .preferExplicitFallbackToImplicit
+        case .requireExplicit:
+            .requireExplicit
         }
     }
 
-    package var gpuPacing: SurfacePacingConstraint {
+    package var gpuPacingPolicy: GPUFramePacingPolicy {
         switch pacingPolicy {
-        case .none, .preferFIFO, .preferCommitTiming:
+        case .none:
             .none
+        case .preferFIFO:
+            .preferFIFO
+        case .preferCommitTiming:
+            .preferCommitTiming
         }
     }
 }

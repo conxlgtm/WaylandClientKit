@@ -75,7 +75,7 @@ struct GPUWindowPresenterStateTests {
     }
 
     @Test
-    func explicitSubmissionIgnoresBufferReleaseUntilReleasePointSignals() throws {
+    func explicitSubmissionCanReuseSlotAfterCompositorReleaseOrReleasePointSignal() throws {
         var state = GPUWindowPresenterState()
         let slotID = try GBMBufferPoolSlotID(0)
         let releasePoint = syncPoint(timeline: 5, point: 8)
@@ -99,14 +99,7 @@ struct GPUWindowPresenterStateTests {
                 == .submittedExplicit(commitGeneration: 42, releasePoint: releasePoint)
         )
 
-        #expect(try state.markReleased(slotID) == false)
-
-        #expect(
-            try state.submissionState(for: slotID)
-                == .submittedExplicit(commitGeneration: 42, releasePoint: releasePoint)
-        )
-
-        #expect(try state.markExplicitReleaseSignaled(slotID))
+        #expect(try state.markReleased(slotID))
 
         #expect(try state.submissionState(for: slotID) == .available)
 
@@ -120,6 +113,23 @@ struct GPUWindowPresenterStateTests {
         #expect(try state.markReleased(slotID) == false)
         #expect(try state.markExplicitReleaseSignaled(slotID) == false)
         #expect(try state.submissionState(for: slotID) == .leased)
+
+        try state.cancelLease(GPUWindowPresentationLease(slotID: slotID))
+        let secondLease = try state.leaseNext()
+        try state.markSubmitted(
+            secondLease,
+            generation: 43,
+            synchronization: .explicit(
+                GPUSubmittedBufferSyncState(
+                    slotID: slotID,
+                    acquirePoint: syncPoint(timeline: 5, point: 10),
+                    releasePoint: releasePoint
+                )
+            )
+        )
+
+        #expect(try state.markExplicitReleaseSignaled(slotID))
+        #expect(try state.submissionState(for: slotID) == .available)
     }
 
     @Test
@@ -165,6 +175,50 @@ struct GPUWindowPresenterStateTests {
                 explicitSynchronization: nil
             )
         }
+    }
+
+    @Test
+    func framePacingPolicySelectsConfiguredConstraintOrFallback() throws {
+        let targetTime = try SurfaceCommitTargetTime(seconds: 1, nanoseconds: 2)
+
+        #expect(
+            GPUFramePacingPolicy.none.selectConstraint(
+                capability: .fifoAndCommitTiming(fifo: 1, commitTiming: 1),
+                commitTimingTarget: targetTime
+            ) == GPUFramePacingPolicySelection(constraint: .none)
+        )
+        #expect(
+            GPUFramePacingPolicy.preferFIFO.selectConstraint(
+                capability: .fifo(version: 1),
+                commitTimingTarget: targetTime
+            ) == GPUFramePacingPolicySelection(constraint: .fifo(.setBarrier))
+        )
+        #expect(
+            GPUFramePacingPolicy.preferFIFO.selectConstraint(
+                capability: .commitTiming(version: 1),
+                commitTimingTarget: targetTime
+            ) == GPUFramePacingPolicySelection(
+                constraint: .none,
+                fallbackReason: .fifoUnavailable
+            )
+        )
+        #expect(
+            GPUFramePacingPolicy.preferCommitTiming.selectConstraint(
+                capability: .commitTiming(version: 1),
+                commitTimingTarget: targetTime
+            ) == GPUFramePacingPolicySelection(
+                constraint: .targetTime(targetTime)
+            )
+        )
+        #expect(
+            GPUFramePacingPolicy.preferCommitTiming.selectConstraint(
+                capability: .fifo(version: 1),
+                commitTimingTarget: targetTime
+            ) == GPUFramePacingPolicySelection(
+                constraint: .none,
+                fallbackReason: .commitTimingUnavailable
+            )
+        )
     }
 
     @Test
@@ -385,11 +439,11 @@ struct GPUWindowRuntimePathSnapshotTests {
             metadata: metadata
         )
 
-        #expect(snapshot.contentType == .configured)
-        #expect(snapshot.alpha == .configured)
-        #expect(snapshot.tearingControl == .configured)
-        #expect(snapshot.colorRepresentation == .configured)
-        #expect(snapshot.colorManagement == .configured)
+        #expect(snapshot.contentType == .active)
+        #expect(snapshot.alpha == .active)
+        #expect(snapshot.tearingControl == .active)
+        #expect(snapshot.colorRepresentation == .active)
+        #expect(snapshot.colorManagement == .active)
         #expect(snapshot.presentationHint == .async)
     }
 
@@ -409,6 +463,23 @@ struct GPUWindowRuntimePathSnapshotTests {
             GPUFramePacingRuntimeStatus.fallback(.fifoUnavailable)
                 == .fallback(.fifoUnavailable)
         )
+
+        let fallbackSnapshot = GPURuntimePathSnapshot.afterPresentation(
+            capabilities: capabilitySnapshot(
+                synchronization: .explicitAvailable(version: 1),
+                pacing: .fifo(version: 1)
+            ),
+            synchronization: .implicit,
+            pacing: .none
+        )
+        .markingSynchronizationFallback(.explicitSynchronizationNotConfigured)
+        .markingPacingFallback(.commitTimingUnavailable)
+
+        #expect(
+            fallbackSnapshot.synchronization
+                == .explicitFallback(.explicitSynchronizationNotConfigured)
+        )
+        #expect(fallbackSnapshot.pacing == .fallback(.commitTimingUnavailable))
     }
 
     @Test
@@ -1784,8 +1855,8 @@ private final class FakeManagedGPUBacking: WaylandGraphicsManagedGPUBacking, Sen
                 slotID: GBMBufferPoolSlotID(0),
                 generation: 1,
                 commitPlan: surfaceCommitPlan(),
-                synchronization: submission.synchronization,
-                pacing: submission.pacing,
+                synchronization: .implicit,
+                pacing: .none,
                 metadata: submission.metadata
             )
         } catch {

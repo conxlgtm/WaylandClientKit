@@ -269,8 +269,8 @@ package actor WaylandGraphicsWindowBackingStorage {
                         color: frame.color.gpuClearColor,
                         metadata: metadata,
                         geometry: geometry,
-                        synchronization: configuration.gpuSynchronization,
-                        pacing: configuration.gpuPacing,
+                        synchronizationPolicy: configuration.gpuSynchronizationPolicy,
+                        pacingPolicy: configuration.gpuPacingPolicy,
                         requestPresentationFeedback: shouldRequestPresentationFeedback
                     )
                 )
