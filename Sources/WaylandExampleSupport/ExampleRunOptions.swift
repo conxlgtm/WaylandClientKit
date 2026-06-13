@@ -19,15 +19,30 @@ public struct ExampleRunOptions: Equatable, Sendable {
     public let durationSeconds: Int?
     public let autoClose: Bool
     public let printSummary: Bool
+    public let synchronization: String?
+    public let pacing: String?
+    public let metadata: String?
+    public let contentType: String?
+    public let presentationHint: String?
 
     public init(
         durationSeconds runDurationSeconds: Int? = nil,
         autoClose runAutoClose: Bool = false,
-        printSummary runPrintSummary: Bool = false
+        printSummary runPrintSummary: Bool = false,
+        synchronization runSynchronization: String? = nil,
+        pacing runPacing: String? = nil,
+        metadata runMetadata: String? = nil,
+        contentType runContentType: String? = nil,
+        presentationHint runPresentationHint: String? = nil
     ) {
         durationSeconds = runDurationSeconds
         autoClose = runAutoClose
         printSummary = runPrintSummary
+        synchronization = runSynchronization
+        pacing = runPacing
+        metadata = runMetadata
+        contentType = runContentType
+        presentationHint = runPresentationHint
     }
 
     public var autoCloseSeconds: Int? {
@@ -42,6 +57,11 @@ public struct ExampleRunOptions: Equatable, Sendable {
         var durationSeconds: Int?
         var autoClose = false
         var printSummary = false
+        var synchronization: String?
+        var pacing: String?
+        var metadata: String?
+        var contentType: String?
+        var presentationHint: String?
         var index = arguments.startIndex
 
         parseLoop: while index < arguments.endIndex {
@@ -62,6 +82,36 @@ public struct ExampleRunOptions: Equatable, Sendable {
                 autoClose = true
             case "--print-summary":
                 printSummary = true
+            case "--sync", "--synchronization":
+                (synchronization, index) = try optionValue(
+                    after: index,
+                    argument: argument,
+                    arguments: arguments
+                )
+            case "--pacing":
+                (pacing, index) = try optionValue(
+                    after: index,
+                    argument: argument,
+                    arguments: arguments
+                )
+            case "--metadata":
+                (metadata, index) = try optionValue(
+                    after: index,
+                    argument: argument,
+                    arguments: arguments
+                )
+            case "--content-type":
+                (contentType, index) = try optionValue(
+                    after: index,
+                    argument: argument,
+                    arguments: arguments
+                )
+            case "--presentation-hint":
+                (presentationHint, index) = try optionValue(
+                    after: index,
+                    argument: argument,
+                    arguments: arguments
+                )
             case "--":
                 break parseLoop
             default:
@@ -74,7 +124,25 @@ public struct ExampleRunOptions: Equatable, Sendable {
         return ExampleRunOptions(
             durationSeconds: durationSeconds,
             autoClose: autoClose,
-            printSummary: printSummary
+            printSummary: printSummary,
+            synchronization: synchronization,
+            pacing: pacing,
+            metadata: metadata,
+            contentType: contentType,
+            presentationHint: presentationHint
         )
+    }
+
+    private static func optionValue(
+        after index: ArraySlice<String>.Index,
+        argument: String,
+        arguments: ArraySlice<String>
+    ) throws -> (String, ArraySlice<String>.Index) {
+        let valueIndex = arguments.index(after: index)
+        guard valueIndex < arguments.endIndex else {
+            throw ExampleRunOptionError.missingValue(argument)
+        }
+
+        return (arguments[valueIndex], valueIndex)
     }
 }

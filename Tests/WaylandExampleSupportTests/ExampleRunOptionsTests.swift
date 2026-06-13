@@ -24,4 +24,28 @@ struct ExampleRunOptionsTests {
             try ExampleRunOptions.parse(["--unknown", "--"][...])
         }
     }
+
+    @Test
+    func graphicsPreviewOptionsAreParsed() throws {
+        let options = try ExampleRunOptions.parse(
+            [
+                "--sync",
+                "prefer-explicit",
+                "--pacing",
+                "fifo",
+                "--metadata",
+                "prefer",
+                "--content-type",
+                "game",
+                "--presentation-hint",
+                "async",
+            ][...]
+        )
+
+        #expect(options.synchronization == "prefer-explicit")
+        #expect(options.pacing == "fifo")
+        #expect(options.metadata == "prefer")
+        #expect(options.contentType == "game")
+        #expect(options.presentationHint == "async")
+    }
 }
