@@ -132,14 +132,38 @@ extension ManagedGPUPreviewBacking {
                 pacing: options.pacing,
                 metadata: options.metadata
             )
+            try waitForExplicitReleaseIfNeeded(
+                frame.synchronization,
+                options: options
+            )
             updateRuntimePathAfterPresentation(options: options)
             return frame
+        } catch let error as ManagedGPUPreviewBackingError {
+            throw error
         } catch let error as GBMAllocationError {
             throw .allocation(error)
         } catch let error as GPUWindowPresenterError {
             throw .presentation(error)
         } catch let error as RuntimeError {
             throw .runtime(error)
+        } catch {
+            throw .setup(.commitFailed)
+        }
+    }
+
+    func waitForExplicitReleaseIfNeeded(
+        _ synchronization: GPUBufferSubmissionSynchronization,
+        options: ManagedGPUPreviewPresentationOptions
+    ) throws(ManagedGPUPreviewBackingError) {
+        do {
+            try options.synchronization.waitForExplicitRelease(synchronization)
+            if case .explicit(let state) = synchronization {
+                try presenter.recordExplicitReleaseSignal(slotID: state.slotID)
+            }
+        } catch let error as GBMAllocationError {
+            throw .allocation(error)
+        } catch let error as GPUWindowPresenterError {
+            throw .presentation(error)
         } catch {
             throw .setup(.commitFailed)
         }
