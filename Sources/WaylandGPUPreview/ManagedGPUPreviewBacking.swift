@@ -103,6 +103,7 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             .syncobjCreationFailed,
             .syncobjFileDescriptorExportFailed,
             .syncobjTimelineSignalFailed,
+            .syncobjTimelineWaitFailed,
             .invalidPlaneIndex,
             .planeFileDescriptorAlreadyTaken:
             .gbmAllocationFailed
