@@ -265,11 +265,13 @@ Current preview contract:
 - Synchronization and pacing policies are active runtime requests for managed
   GPU submission. `implicitOnly` avoids explicit sync objects; `preferExplicit`
   falls back to implicit sync with a runtime reason; `requireExplicit` fails
-  instead of silently falling back. `preferFIFO` and `preferCommitTiming` apply
-  submit constraints when advertised and otherwise report pacing fallback or
-  typed failure facts. Live compositor evidence currently proves FIFO active;
-  explicit sync and commit timing remain implementation paths with typed
-  fallback/failure evidence, not active live proof.
+  instead of silently falling back, including configurations that request
+  software backing or forced software fallback. `preferFIFO` and
+  `preferCommitTiming` apply submit constraints when advertised and otherwise
+  report pacing fallback or typed failure facts. Live compositor evidence
+  currently proves FIFO active; explicit sync and commit timing remain
+  implementation paths with typed fallback/failure evidence, not active live
+  proof.
 - It does not expose raw Wayland proxies, EGL/GBM/DRM handles, syncobj fds,
   SHM pools, scene rendering, swapchains, drawables, or public color-management
   image descriptions.
