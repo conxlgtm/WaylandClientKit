@@ -161,11 +161,16 @@ extension ManagedGPUPreviewBacking {
                 try presenter.recordExplicitReleaseSignal(slotID: state.slotID)
             }
         } catch let error as GBMAllocationError {
-            throw .allocation(error)
+            let failure = ManagedGPUPreviewBackingError.backingFailure(for: error)
+            runtimePath = presenter.runtimePathSnapshot.markingFailure(failure)
+            throw .committedFrame(failure)
         } catch let error as GPUWindowPresenterError {
-            throw .presentation(error)
+            let failure = ManagedGPUPreviewBackingError.backingFailure(for: error)
+            runtimePath = presenter.runtimePathSnapshot.markingFailure(failure)
+            throw .committedFrame(failure)
         } catch {
-            throw .setup(.commitFailed)
+            runtimePath = presenter.runtimePathSnapshot.markingFailure(.commitFailed)
+            throw .committedFrame(.commitFailed)
         }
     }
 

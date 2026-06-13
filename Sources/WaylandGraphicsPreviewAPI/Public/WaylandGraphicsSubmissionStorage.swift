@@ -101,7 +101,11 @@ package actor WaylandGraphicsWindowBackingStorage {
                 metadata: frame.metadata
             )
         } catch {
-            leaseState.failSubmission()
+            if Self.isCommittedManagedGPUFrameFailure(error) {
+                finishCommittedSubmissionFailure()
+            } else {
+                leaseState.failSubmission()
+            }
             throw graphicsError(for: error, stage: stage, operation: operation)
         }
     }
@@ -127,6 +131,7 @@ package actor WaylandGraphicsWindowBackingStorage {
             try await submitSoftwareFrame(
                 metadata: frameMetadata,
                 operation: operation,
+                geometry: geometry,
                 draw
             )
             stage = .submissionCompletion
@@ -214,6 +219,9 @@ package actor WaylandGraphicsWindowBackingStorage {
         if leaseState.isClosed {
             return .backingClosed
         }
+        if let committedFailure = error as? CommittedManagedGPUFrameFailure {
+            return .unavailable(WaylandGraphicsUnavailableReason(committedFailure.failure))
+        }
         if let graphicsError = error as? WaylandGraphicsError {
             return graphicsError
         }
@@ -260,7 +268,12 @@ package actor WaylandGraphicsWindowBackingStorage {
         geometry: SurfaceGeometry
     ) async throws {
         let color = frame.color.xrgb8888
-        let metadata = try frame.metadata.surfaceCommitMetadata()
+        let resolvedMetadata = try frame.metadata.resolveManagedPreviewMetadata(
+            configuration: configuration,
+            capabilities: backingRuntimePath.capabilities,
+            geometry: geometry
+        )
+        let metadata = resolvedMetadata.commitMetadata
         let damage = try frame.metadata.surfaceDamageRegion()
         if shouldAttemptManagedGPU {
             do {
@@ -275,6 +288,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                     )
                 )
                 refreshRuntimePathFromManagedGPU(backing: .active)
+                applyMetadataFallbacks(resolvedMetadata.fallbacks)
                 return
             } catch {
                 try handleManagedGPUFailure(error)
@@ -300,14 +314,21 @@ package actor WaylandGraphicsWindowBackingStorage {
                 Self.clear(softwareFrame, color: color)
             }
         }
+        applyMetadataFallbacks(resolvedMetadata.fallbacks)
     }
 
     private func submitSoftwareFrame(
         metadata frameMetadata: WaylandGraphicsFrameMetadata,
         operation: WaylandGraphicsFrameSubmissionOperation,
+        geometry: SurfaceGeometry,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
     ) async throws {
-        let metadata = try frameMetadata.surfaceCommitMetadata()
+        let resolvedMetadata = try frameMetadata.resolveManagedPreviewMetadata(
+            configuration: configuration,
+            capabilities: backingRuntimePath.capabilities,
+            geometry: geometry
+        )
+        let metadata = resolvedMetadata.commitMetadata
         let damage = try frameMetadata.surfaceDamageRegion()
         switch operation {
         case .show:
@@ -326,6 +347,7 @@ package actor WaylandGraphicsWindowBackingStorage {
                 draw
             )
         }
+        applyMetadataFallbacks(resolvedMetadata.fallbacks)
     }
 
     nonisolated private static func clear(
@@ -390,6 +412,17 @@ extension WaylandGraphicsWindowBackingStorage {
     private func handleManagedGPUFailure(
         _ error: ManagedGPUPreviewBackingError
     ) throws {
+        if error.committedFrameWasPresented {
+            let reason = WaylandGraphicsUnavailableReason(error.failure)
+            if !refreshRuntimePathFromManagedGPU(backing: .failed(reason)) {
+                backingRuntimePath = .unavailable(
+                    capabilities: backingRuntimePath.capabilities,
+                    reason: reason
+                )
+            }
+            throw CommittedManagedGPUFrameFailure(error)
+        }
+
         switch configuration.fallbackPolicy {
         case .preferGPUFallbackToSoftware:
             let reason = WaylandGraphicsFallbackReason(error.fallbackReason)
@@ -414,6 +447,18 @@ extension WaylandGraphicsWindowBackingStorage {
                 reason: .forcedSoftware
             )
         }
+    }
+
+    private static func isCommittedManagedGPUFrameFailure(_ error: any Error) -> Bool {
+        error is CommittedManagedGPUFrameFailure
+    }
+
+    private func finishCommittedSubmissionFailure() {
+        do { try leaseState.finishSubmission() } catch { leaseState.failSubmission() }
+    }
+
+    private func applyMetadataFallbacks(_ fallbacks: WaylandGraphicsMetadataFallbacks) {
+        if !fallbacks.isEmpty { backingRuntimePath = fallbacks.applying(to: backingRuntimePath) }
     }
 
     @discardableResult
