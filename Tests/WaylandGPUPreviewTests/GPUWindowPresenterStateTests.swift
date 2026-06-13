@@ -2010,6 +2010,68 @@ struct ManagedGPUPreviewStoragePreparationTests {
     }
 }
 
+@Suite
+struct ManagedGPUPreviewExplicitFallbackTests {
+    @Test
+    func preferExplicitActiveGPUFailureDoesNotFallbackToImplicitSoftware() async throws {
+        let initialGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 4, height: 3),
+            scale: .one
+        )
+        let configuredGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 8, height: 6),
+            scale: .one
+        )
+        let capabilities = capabilitySnapshot(
+            synchronization: .explicitAvailable(version: 1)
+        )
+        let syncState = GPUSubmittedBufferSyncState(
+            slotID: try GBMBufferPoolSlotID(0),
+            acquirePoint: nil,
+            releasePoint: syncPoint(timeline: 1, point: 2)
+        )
+        let window = FakeGraphicsPreviewWindow(
+            initialGeometry: initialGeometry,
+            configuredGeometry: configuredGeometry
+        )
+        let backing = FakeManagedGPUBacking(
+            setupFailures: [.gbmAllocationFailed],
+            runtimePathSnapshot: .afterPresentation(
+                capabilities: capabilities,
+                synchronization: .explicit(syncState),
+                pacing: .none
+            )
+        )
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .projected(capabilities: explicitSyncGPUPreviewCapabilities()),
+            configuration: WaylandGraphicsConfiguration(
+                synchronizationPolicy: .preferExplicit
+            ),
+            managedGPUBacking: backing
+        )
+
+        let lease = try await storage.nextFrame()
+        await window.clearEvents()
+        do {
+            _ = try await lease.submit(.clearColor(.black))
+            Issue.record("expected explicit-active fallback rejection")
+        } catch WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable) {
+            #expect(
+                await window.eventSnapshot() == [.preparePresentation, .geometry]
+            )
+            #expect(backing.submittedGeometries == [configuredGeometry])
+            #expect(
+                try await storage.runtimePath().backing
+                    == .failed(.managedGPUSubmissionUnavailable)
+            )
+            #expect(try await storage.runtimePath().explicitSync == .active)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+}
+
 private func syncPoint(timeline: UInt64, point: UInt64) -> GPUSyncPoint {
     GPUSyncPoint(
         timeline: GPUSyncTimeline(timeline),

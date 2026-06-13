@@ -114,11 +114,14 @@ available. `.software` and `.forceSoftware` never attempt GPU setup.
 `implicitOnly` never requests explicit synchronization. `preferExplicit`
 attempts linux-drm-syncobj when the compositor advertises it and the managed
 GPU path can import a sync timeline; otherwise it falls back to implicit sync
-with an explicit runtime fallback reason. `requireExplicit` never silently
-falls back: it succeeds only when explicit sync is configured for the submitted
-managed GPU frame. Software backing preferences, forced software fallback, and
-managed GPU setup/submission/release failures fail with typed unavailable
-reasons instead of committing implicit software frames.
+with an explicit runtime fallback reason before explicit synchronization has
+been installed on the surface. After explicit synchronization is configured or
+active on the surface, implicit software fallback is rejected with a typed
+unavailable reason. `requireExplicit` never silently falls back: it succeeds
+only when explicit sync is configured for the submitted managed GPU frame.
+Software backing preferences, forced software fallback, and managed GPU
+setup/submission/release failures fail with typed unavailable reasons instead
+of committing implicit software frames.
 `preferFIFO` and `preferCommitTiming` apply the matching submit constraint when
 the protocol is available. Missing FIFO or commit-timing support is reported as
 a pacing fallback reason. Commit-timing timestamp rejection is reported as a
@@ -134,7 +137,8 @@ runtime path. `nextFrame()` returns a single-use `WaylandGraphicsFrameLease`.
 Callers submit a `WaylandGraphicsSubmittedFrame.clearColor`, submit arbitrary
 software drawing with `submitSoftware`, or cancel the lease. `clearColor` uses
 the active managed GPU path when setup and submission succeed; it falls back to
-the software path only when the fallback policy allows that. Submission returns
+the software path only when the fallback policy and surface synchronization
+state allow an implicit software commit. Submission returns
 `WaylandGraphicsFrameResult`, which reports runtime path, submitted operation,
 buffer size, metadata, synchronization policy, pacing policy, backing status,
 and whether presentation feedback was requested. The result does not imply

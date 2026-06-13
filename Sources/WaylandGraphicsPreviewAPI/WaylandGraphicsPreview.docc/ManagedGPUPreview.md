@@ -34,7 +34,10 @@ feedback is requested or required.
 `WaylandGraphicsSynchronizationPolicy.implicitOnly` never creates explicit sync
 objects. `WaylandGraphicsSynchronizationPolicy.preferExplicit` attempts explicit
 sync and falls back to implicit synchronization with a runtime fallback reason
-when the compositor or setup path cannot provide it.
+when the compositor or setup path cannot provide it before explicit
+synchronization is installed on the surface. Once the surface is explicitly
+synchronized, implicit software fallback is rejected with a typed unavailable
+reason.
 `WaylandGraphicsSynchronizationPolicy.requireExplicit` never silently falls back.
 
 `WaylandGraphicsPacingPolicy.preferFIFO` and
