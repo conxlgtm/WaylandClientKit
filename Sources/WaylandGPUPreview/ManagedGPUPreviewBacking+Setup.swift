@@ -16,15 +16,14 @@ extension ManagedGPUPreviewBacking {
         } catch {
             throw .presentation(error)
         }
-        retainExplicitSynchronizationForOutstandingSubmissions()
         renderTarget = nil
         configuredGeometry = nil
+        retainExplicitSynchronizationForOutstandingSubmissions()
         destroyUnusedRetainedExplicitSynchronizations()
     }
 
     func retainExplicitSynchronizationForOutstandingSubmissions() {
         guard let synchronization = explicitSynchronization else {
-            device?.destroy()
             device = nil
             return
         }
@@ -41,7 +40,6 @@ extension ManagedGPUPreviewBacking {
             device = nil
         } else {
             synchronization.destroy()
-            device?.destroy()
             device = nil
         }
     }
