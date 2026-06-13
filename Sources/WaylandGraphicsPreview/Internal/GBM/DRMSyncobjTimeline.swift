@@ -63,6 +63,35 @@ package final class DRMSyncobjTimeline {
         }
     }
 
+    package func wait(
+        _ point: RawSyncobjTimelinePoint,
+        timeoutNanoseconds: Int64
+    ) throws(GBMAllocationError) {
+        guard let handle else {
+            throw GBMAllocationError.deviceDestroyed
+        }
+
+        var timelineHandle = handle
+        var timelinePoint = point.rawValue
+        var firstSignaled: UInt32 = 0
+        guard
+            unsafe drmSyncobjTimelineWait(
+                deviceFileDescriptor,
+                &timelineHandle,
+                &timelinePoint,
+                1,
+                timeoutNanoseconds,
+                0,
+                &firstSignaled
+            ) == 0
+        else {
+            throw GBMAllocationError.syncobjTimelineWaitFailed(
+                point: point.rawValue,
+                errno: GBMAllocationError.capturedCurrentErrno()
+            )
+        }
+    }
+
     package func destroy() {
         guard let timelineHandle = handle else { return }
 
