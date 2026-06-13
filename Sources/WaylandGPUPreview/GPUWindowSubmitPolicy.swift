@@ -125,7 +125,7 @@ package enum GPUFramePacingPolicy: Equatable, Sendable {
                 )
             }
 
-            return GPUFramePacingPolicySelection(constraint: .fifo(.setBarrier))
+            return GPUFramePacingPolicySelection(constraint: .fifo(.waitBarrier))
         case .preferCommitTiming:
             guard capability.supportsCommitTiming else {
                 return GPUFramePacingPolicySelection(
