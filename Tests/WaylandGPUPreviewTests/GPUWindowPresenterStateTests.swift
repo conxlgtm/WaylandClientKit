@@ -75,7 +75,7 @@ struct GPUWindowPresenterStateTests {
     }
 
     @Test
-    func explicitSubmissionCanReuseSlotAfterCompositorReleaseOrReleasePointSignal() throws {
+    func explicitSubmissionReusesSlotOnlyAfterReleasePointSignal() throws {
         var state = GPUWindowPresenterState()
         let slotID = try GBMBufferPoolSlotID(0)
         let releasePoint = syncPoint(timeline: 5, point: 8)
@@ -99,37 +99,18 @@ struct GPUWindowPresenterStateTests {
                 == .submittedExplicit(commitGeneration: 42, releasePoint: releasePoint)
         )
 
-        #expect(try state.markReleased(slotID))
-
-        #expect(try state.submissionState(for: slotID) == .available)
-
         #expect(try state.markReleased(slotID) == false)
-        #expect(try state.markExplicitReleaseSignaled(slotID) == false)
 
-        #expect(try state.submissionState(for: slotID) == .available)
-
-        _ = try state.leaseNext()
-
-        #expect(try state.markReleased(slotID) == false)
-        #expect(try state.markExplicitReleaseSignaled(slotID) == false)
-        #expect(try state.submissionState(for: slotID) == .leased)
-
-        try state.cancelLease(GPUWindowPresentationLease(slotID: slotID))
-        let secondLease = try state.leaseNext()
-        try state.markSubmitted(
-            secondLease,
-            generation: 43,
-            synchronization: .explicit(
-                GPUSubmittedBufferSyncState(
-                    slotID: slotID,
-                    acquirePoint: syncPoint(timeline: 5, point: 10),
-                    releasePoint: releasePoint
-                )
-            )
+        #expect(
+            try state.submissionState(for: slotID)
+                == .submittedExplicit(commitGeneration: 42, releasePoint: releasePoint)
         )
 
+        #expect(try state.markReleased(slotID) == false)
         #expect(try state.markExplicitReleaseSignaled(slotID))
         #expect(try state.submissionState(for: slotID) == .available)
+        #expect(try state.markReleased(slotID) == false)
+        #expect(try state.markExplicitReleaseSignaled(slotID) == false)
     }
 
     @Test
@@ -1475,6 +1456,43 @@ struct GPUWindowPresenterBufferReuseTests {
         #expect(presenter.availableSlotIDs == [oldSubmittedSlotID])
         #expect(presenter.outstandingSubmittedSlotIDs == [freshSlotID])
         #expect(presenter.releaseFailuresSnapshot.isEmpty)
+    }
+
+    @Test
+    func explicitSubmissionIgnoresBufferReleaseUntilReleasePointSignal()
+        async throws
+    {
+        let presenter = GPUWindowPresenter()
+        let slotID = try GBMBufferPoolSlotID(0)
+        let buffer = try FakePresenterBuffer(pointer: 0x1001)
+        let releasePoint = syncPoint(timeline: 5, point: 8)
+
+        try presenter.installBuffer(buffer, slotID: slotID)
+        _ = try await presenter.presentSlot(
+            slotID,
+            submit: { _, _, _ in
+                try previewPresentationResult(generation: 90)
+            },
+            synchronization: .explicit(
+                GPUSubmittedBufferSyncState(
+                    slotID: slotID,
+                    acquirePoint: syncPoint(timeline: 5, point: 6),
+                    releasePoint: releasePoint
+                )
+            ),
+            pacing: .none
+        )
+
+        buffer.triggerRelease()
+
+        #expect(presenter.availableSlotIDs.isEmpty)
+        #expect(presenter.outstandingSubmittedSlotIDs == [slotID])
+        #expect(presenter.releaseFailuresSnapshot.isEmpty)
+
+        try presenter.recordExplicitReleaseSignal(slotID: slotID)
+
+        #expect(presenter.availableSlotIDs == [slotID])
+        #expect(presenter.outstandingSubmittedSlotIDs.isEmpty)
     }
 }
 
