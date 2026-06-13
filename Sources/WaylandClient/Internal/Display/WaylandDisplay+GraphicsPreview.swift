@@ -212,6 +212,18 @@ extension WaylandDisplay {
         )
     }
 
+    package func importGraphicsPreviewSynchronizationTimeline(
+        _ fileDescriptor: inout RawDrmSyncobjTimelineFD,
+        identity: SurfaceSyncTimelineIdentity,
+        for windowID: WindowID
+    ) throws {
+        try requireCore().importGraphicsPreviewSynchronizationTimeline(
+            &fileDescriptor,
+            identity: identity,
+            for: windowID
+        )
+    }
+
     package func withGraphicsPreviewLinuxDmabuf<Result: Sendable>(
         _ body:
             @Sendable (
@@ -295,6 +307,23 @@ extension DisplayCore {
                 throw ClientError.display(.closed)
             }
             return presentation
+        }
+    }
+
+    func importGraphicsPreviewSynchronizationTimeline(
+        _ fileDescriptor: inout RawDrmSyncobjTimelineFD,
+        identity: SurfaceSyncTimelineIdentity,
+        for windowID: WindowID
+    ) throws {
+        try withFatalFailureFinalization {
+            try requireOpenWindow(windowID)
+                .importPreviewSynchronizationTimelineOnOwnerThread(
+                    &fileDescriptor,
+                    identity: identity
+                )
+            guard !isClosed else {
+                throw ClientError.display(.closed)
+            }
         }
     }
 

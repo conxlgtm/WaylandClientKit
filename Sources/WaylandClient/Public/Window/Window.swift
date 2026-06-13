@@ -117,6 +117,17 @@ public struct Window: Sendable, Hashable {
         )
     }
 
+    package func importGraphicsPreviewSynchronizationTimeline(
+        _ fileDescriptor: inout RawDrmSyncobjTimelineFD,
+        identity: SurfaceSyncTimelineIdentity
+    ) async throws {
+        try await display.importGraphicsPreviewSynchronizationTimeline(
+            &fileDescriptor,
+            identity: identity,
+            for: id
+        )
+    }
+
     package func withGraphicsPreviewLinuxDmabuf<Result: Sendable>(
         _ body:
             @Sendable (

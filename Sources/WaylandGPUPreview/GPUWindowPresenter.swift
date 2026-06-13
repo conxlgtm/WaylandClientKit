@@ -277,7 +277,7 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
         guard !isRetired else { return false }
         let lifecycle = try lifecycle(for: slotID)
         guard lifecycle.isInCompositorUse else { return false }
-        guard explicitSubmissions[slotID] == nil else { return false }
+        explicitSubmissions.removeValue(forKey: slotID)
 
         try mapPoolError {
             try poolState.markReleased(slotID)

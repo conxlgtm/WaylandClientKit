@@ -158,6 +158,18 @@ extension GPURuntimePathSnapshot {
         return snapshot
     }
 
+    package func markingSynchronizationFallback(_ reason: GPURuntimePathReason) -> Self {
+        var snapshot = self
+        snapshot.synchronization = .explicitFallback(reason)
+        return snapshot
+    }
+
+    package func markingPacingFallback(_ reason: GPURuntimePathReason) -> Self {
+        var snapshot = self
+        snapshot.pacing = .fallback(reason)
+        return snapshot
+    }
+
     package mutating func markFailure(_ failure: GPUBackingFailure) {
         let runtimeReason = GPURuntimePathReason(failure)
         switch failure {

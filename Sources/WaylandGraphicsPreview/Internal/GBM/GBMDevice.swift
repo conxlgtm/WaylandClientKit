@@ -116,6 +116,16 @@ package final class GBMDevice {
         return unsafe String(cString: name)
     }
 
+    package var drmFileDescriptor: Int32 {
+        get throws(GBMAllocationError) {
+            guard let renderNodeFileDescriptor else {
+                throw GBMAllocationError.deviceDestroyed
+            }
+
+            return renderNodeFileDescriptor
+        }
+    }
+
     @safe
     package func withUnsafeDevicePointer<Result>(
         _ body: (OpaquePointer) throws(GBMAllocationError) -> Result

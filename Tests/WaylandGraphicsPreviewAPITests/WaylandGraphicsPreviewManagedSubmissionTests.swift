@@ -155,24 +155,18 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
     }
 
     @Test
-    func requireExplicitFailsWithManagedGpuUnavailableWhenExplicitSyncExists() {
+    func requireExplicitValidatesWhenExplicitSyncExists() throws {
         let configuration = WaylandGraphicsConfiguration(
             synchronizationPolicy: .requireExplicit
         )
 
-        #expect(
-            throws: WaylandGraphicsError.unavailable(
-                .managedGPUSubmissionUnavailable
-            )
-        ) {
-            try configuration.validateManagedPreviewSupport(
-                capabilities: gpuCapableSurfaceCapabilities()
-            )
-        }
+        try configuration.validateManagedPreviewSupport(
+            capabilities: gpuCapableSurfaceCapabilities()
+        )
     }
 
     @Test
-    func pacingPolicyIsRejectedUntilManagedPacingExists() {
+    func preferPacingPoliciesValidateForRuntimeFallbackOrActivation() throws {
         let fifoConfiguration = WaylandGraphicsConfiguration(
             pacingPolicy: .preferFIFO
         )
@@ -180,16 +174,36 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
             pacingPolicy: .preferCommitTiming
         )
 
-        #expect(throws: WaylandGraphicsError.unsupportedPacing) {
-            try fifoConfiguration.validateManagedPreviewSupport(
-                capabilities: gpuCapableSurfaceCapabilities()
-            )
-        }
-        #expect(throws: WaylandGraphicsError.unsupportedPacing) {
-            try commitTimingConfiguration.validateManagedPreviewSupport(
-                capabilities: gpuCapableSurfaceCapabilities()
-            )
-        }
+        try fifoConfiguration.validateManagedPreviewSupport(
+            capabilities: gpuCapableSurfaceCapabilities()
+        )
+        try commitTimingConfiguration.validateManagedPreviewSupport(
+            capabilities: gpuCapableSurfaceCapabilities()
+        )
+    }
+
+    @Test
+    func publicPoliciesMapToManagedGPUActivationPolicies() {
+        let explicitConfiguration = WaylandGraphicsConfiguration(
+            synchronizationPolicy: .preferExplicit
+        )
+        let requiredExplicitConfiguration = WaylandGraphicsConfiguration(
+            synchronizationPolicy: .requireExplicit
+        )
+        let fifoConfiguration = WaylandGraphicsConfiguration(
+            pacingPolicy: .preferFIFO
+        )
+        let commitTimingConfiguration = WaylandGraphicsConfiguration(
+            pacingPolicy: .preferCommitTiming
+        )
+
+        #expect(
+            explicitConfiguration.gpuSynchronizationPolicy
+                == .preferExplicitFallbackToImplicit
+        )
+        #expect(requiredExplicitConfiguration.gpuSynchronizationPolicy == .requireExplicit)
+        #expect(fifoConfiguration.gpuPacingPolicy == .preferFIFO)
+        #expect(commitTimingConfiguration.gpuPacingPolicy == .preferCommitTiming)
     }
 
     @Test

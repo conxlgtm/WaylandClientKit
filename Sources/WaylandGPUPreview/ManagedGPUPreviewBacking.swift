@@ -1,3 +1,4 @@
+import Glibc
 import WaylandClient
 import WaylandGraphicsCore
 import WaylandRaw
@@ -100,6 +101,9 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             .surfaceDestroyed,
             .surfaceFrontBufferLockFailed,
             .exportFailed,
+            .syncobjCreationFailed,
+            .syncobjFileDescriptorExportFailed,
+            .syncobjTimelineSignalFailed,
             .invalidPlaneIndex,
             .planeFileDescriptorAlreadyTaken:
             .gbmAllocationFailed
@@ -122,9 +126,102 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
 
 private struct ManagedGPUPreviewPresentationOptions {
     let metadata: SurfaceCommitMetadata
-    let synchronization: GPUBufferSubmissionSynchronization
+    let synchronization: ManagedGPUPreviewSynchronizationSelection
     let pacing: SurfacePacingConstraint
+    let pacingFallbackReason: GPURuntimePathReason?
     let requestPresentationFeedback: Bool
+}
+
+private enum ManagedGPUPreviewSynchronizationSelection {
+    case implicit(fallbackReason: GPURuntimePathReason? = nil)
+    case explicit(ManagedGPUExplicitSynchronization)
+
+    var fallbackReason: GPURuntimePathReason? {
+        switch self {
+        case .implicit(let fallbackReason):
+            fallbackReason
+        case .explicit:
+            nil
+        }
+    }
+
+    var requirementSynchronization: GPUBufferSubmissionSynchronization {
+        switch self {
+        case .implicit:
+            .implicit
+        case .explicit(let explicitSynchronization):
+            .explicit(explicitSynchronization.placeholderSubmissionState)
+        }
+    }
+
+    func submissionSynchronization(
+        for slotID: GBMBufferPoolSlotID
+    ) throws(GBMAllocationError) -> GPUBufferSubmissionSynchronization {
+        switch self {
+        case .implicit:
+            .implicit
+        case .explicit(let explicitSynchronization):
+            try .explicit(explicitSynchronization.submissionState(for: slotID))
+        }
+    }
+}
+
+private final class ManagedGPUExplicitSynchronization {
+    private let timeline: DRMSyncobjTimeline
+    private let identity: GPUSyncTimeline
+    private var nextPoint: UInt64 = 1
+
+    init(
+        timeline syncTimeline: DRMSyncobjTimeline,
+        identity timelineIdentity: GPUSyncTimeline
+    ) {
+        timeline = syncTimeline
+        identity = timelineIdentity
+    }
+
+    var explicitSynchronization: GPUExplicitSynchronization {
+        GPUExplicitSynchronization(acquireTimeline: identity, releaseTimeline: identity)
+    }
+
+    var placeholderSubmissionState: GPUSubmittedBufferSyncState {
+        GPUSubmittedBufferSyncState(
+            slotID: try! GBMBufferPoolSlotID(0),
+            acquirePoint: GPUSyncPoint(
+                timeline: identity,
+                point: RawSyncobjTimelinePoint(1)
+            ),
+            releasePoint: GPUSyncPoint(
+                timeline: identity,
+                point: RawSyncobjTimelinePoint(2)
+            )
+        )
+    }
+
+    func submissionState(
+        for slotID: GBMBufferPoolSlotID
+    ) throws(GBMAllocationError) -> GPUSubmittedBufferSyncState {
+        let acquirePoint = RawSyncobjTimelinePoint(nextPoint)
+        let releasePoint = RawSyncobjTimelinePoint(nextPoint + 1)
+        nextPoint += 2
+
+        try timeline.signal(acquirePoint)
+
+        return GPUSubmittedBufferSyncState(
+            slotID: slotID,
+            acquirePoint: GPUSyncPoint(
+                timeline: identity,
+                point: acquirePoint
+            ),
+            releasePoint: GPUSyncPoint(
+                timeline: identity,
+                point: releasePoint
+            )
+        )
+    }
+
+    func destroy() {
+        timeline.destroy()
+    }
 }
 
 // swiftlint:disable:next type_body_length
@@ -133,10 +230,12 @@ package final class ManagedGPUPreviewBacking {
     private let presenter = GPUWindowPresenter()
     private var device: GBMDevice?
     private var renderTarget: EGLGBMRenderTarget?
+    private var explicitSynchronization: ManagedGPUExplicitSynchronization?
     private var configuredGeometry: SurfaceGeometry?
     private var capabilities: SurfaceCapabilitySnapshot?
     private var runtimePath = GPURuntimePathSnapshot.empty
     private var nextSlotRawValue = 0
+    private var nextSyncTimelineRawValue: UInt64 = 1
     private var isClosed = false
 
     package init(window backingWindow: Window) {
@@ -144,7 +243,7 @@ package final class ManagedGPUPreviewBacking {
     }
 
     package var runtimePathSnapshot: GPURuntimePathSnapshot {
-        presenter.runtimePathSnapshot == .empty ? runtimePath : presenter.runtimePathSnapshot
+        runtimePath == .empty ? presenter.runtimePathSnapshot : runtimePath
     }
 
     package var surfaceCapabilities: SurfaceCapabilitySnapshot? {
@@ -154,6 +253,8 @@ package final class ManagedGPUPreviewBacking {
     package func close() {
         isClosed = true
         presenter.retireAll(reason: .windowClosed)
+        explicitSynchronization?.destroy()
+        explicitSynchronization = nil
         renderTarget?.destroy()
         renderTarget = nil
         configuredGeometry = nil
@@ -220,8 +321,8 @@ package final class ManagedGPUPreviewBacking {
         color: GPUClearColor,
         metadata: SurfaceCommitMetadata,
         geometry: SurfaceGeometry,
-        synchronization: GPUBufferSubmissionSynchronization = .implicit,
-        pacing: SurfacePacingConstraint = .none,
+        synchronizationPolicy: GPUSynchronizationPolicy = .implicitOnly,
+        pacingPolicy: GPUFramePacingPolicy = .none,
         requestPresentationFeedback: Bool = false
     ) async throws(ManagedGPUPreviewBackingError) -> GPUWindowPresentedFrame {
         do {
@@ -234,10 +335,32 @@ package final class ManagedGPUPreviewBacking {
             throw .closed
         }
 
+        let synchronization: ManagedGPUPreviewSynchronizationSelection
+        do {
+            synchronization = try await resolveSynchronization(
+                policy: synchronizationPolicy,
+                capabilities: capabilities
+            )
+        } catch let error {
+            recordFailure(error)
+            throw error
+        }
+
+        let pacingSelection: GPUFramePacingPolicySelection
+        do {
+            pacingSelection = try resolvePacing(
+                policy: pacingPolicy,
+                capabilities: capabilities
+            )
+        } catch let error {
+            recordFailure(error)
+            throw error
+        }
+
         do {
             try GPUBackingRequirements(
-                synchronization: synchronization,
-                pacing: pacing,
+                synchronization: synchronization.requirementSynchronization,
+                pacing: pacingSelection.constraint,
                 metadata: metadata
             ).validate(capabilities: capabilities)
         } catch {
@@ -264,7 +387,8 @@ package final class ManagedGPUPreviewBacking {
                 options: ManagedGPUPreviewPresentationOptions(
                     metadata: metadata,
                     synchronization: synchronization,
-                    pacing: pacing,
+                    pacing: pacingSelection.constraint,
+                    pacingFallbackReason: pacingSelection.fallbackReason,
                     requestPresentationFeedback: requestPresentationFeedback
                 )
             )
@@ -335,7 +459,10 @@ package final class ManagedGPUPreviewBacking {
                 slotID = try nextSlotID()
                 try presenter.installBuffer(previewBuffer, slotID: slotID)
             }
-            return try await presenter.presentSlot(
+            let synchronization = try options.synchronization.submissionSynchronization(
+                for: slotID
+            )
+            let frame = try await presenter.presentSlot(
                 slotID,
                 submit: { [window] buffer, submitConstraints, commitMetadata in
                     try await window.presentGraphicsPreviewBuffer(
@@ -345,10 +472,22 @@ package final class ManagedGPUPreviewBacking {
                         requestPresentationFeedback: options.requestPresentationFeedback
                     )
                 },
-                synchronization: options.synchronization,
+                synchronization: synchronization,
                 pacing: options.pacing,
                 metadata: options.metadata
             )
+            var snapshot = presenter.runtimePathSnapshot
+            if let fallbackReason = options.synchronization.fallbackReason {
+                snapshot = snapshot.markingSynchronizationFallback(fallbackReason)
+            }
+            if let fallbackReason = options.pacingFallbackReason {
+                snapshot = snapshot.markingPacingFallback(fallbackReason)
+            }
+            runtimePath = snapshot
+            if let surfaceCapabilities = presenter.backingStateSnapshot.surfaceCapabilities {
+                capabilities = surfaceCapabilities
+            }
+            return frame
         } catch let error as GBMAllocationError {
             throw .allocation(error)
         } catch let error as GPUWindowPresenterError {
@@ -358,6 +497,106 @@ package final class ManagedGPUPreviewBacking {
         } catch {
             throw .setup(.commitFailed)
         }
+    }
+
+    private func resolveSynchronization(
+        policy: GPUSynchronizationPolicy,
+        capabilities: SurfaceCapabilitySnapshot
+    ) async throws(ManagedGPUPreviewBackingError) -> ManagedGPUPreviewSynchronizationSelection {
+        switch policy {
+        case .implicitOnly:
+            return .implicit()
+        case .preferExplicitFallbackToImplicit:
+            guard capabilities.synchronization.supportsExplicit else {
+                return .implicit(fallbackReason: .explicitSynchronizationUnavailable)
+            }
+            do {
+                return .explicit(
+                    try await ensureExplicitSynchronizationConfigured()
+                )
+            } catch {
+                return .implicit(fallbackReason: .explicitSynchronizationNotConfigured)
+            }
+        case .requireExplicit:
+            guard capabilities.synchronization.supportsExplicit else {
+                throw .setup(.explicitSyncRequiredButUnavailable)
+            }
+            do {
+                return .explicit(
+                    try await ensureExplicitSynchronizationConfigured()
+                )
+            } catch {
+                throw .setup(.explicitSyncRequiredButUnavailable)
+            }
+        }
+    }
+
+    private func ensureExplicitSynchronizationConfigured()
+        async throws(ManagedGPUPreviewBackingError) -> ManagedGPUExplicitSynchronization
+    {
+        if let explicitSynchronization {
+            return explicitSynchronization
+        }
+        guard let device else {
+            throw .setup(.explicitSyncRequiredButUnavailable)
+        }
+
+        do {
+            let timelineIdentity = GPUSyncTimeline(nextSyncTimelineRawValue)
+            nextSyncTimelineRawValue += 1
+            let timeline = try DRMSyncobjTimeline(
+                deviceFileDescriptor: try device.drmFileDescriptor
+            )
+            var timelineFileDescriptor = try timeline.exportFileDescriptor()
+            try await window.importGraphicsPreviewSynchronizationTimeline(
+                &timelineFileDescriptor,
+                identity: SurfaceSyncTimelineIdentity(timelineIdentity.rawValue)
+            )
+            let synchronization = ManagedGPUExplicitSynchronization(
+                timeline: timeline,
+                identity: timelineIdentity
+            )
+            explicitSynchronization = synchronization
+            return synchronization
+        } catch let error as GBMAllocationError {
+            throw .allocation(error)
+        } catch let error as RuntimeError {
+            throw .runtime(error)
+        } catch {
+            throw .setup(.explicitSyncRequiredButUnavailable)
+        }
+    }
+
+    private func resolvePacing(
+        policy: GPUFramePacingPolicy,
+        capabilities: SurfaceCapabilitySnapshot
+    ) throws(ManagedGPUPreviewBackingError) -> GPUFramePacingPolicySelection {
+        do {
+            return policy.selectConstraint(
+                capability: capabilities.pacing,
+                commitTimingTarget: try nextCommitTimingTarget()
+            )
+        } catch {
+            throw .setup(.commitTimingRequiredButUnavailable)
+        }
+    }
+
+    private func nextCommitTimingTarget()
+        throws(SurfaceSubmitConstraintError) -> SurfaceCommitTargetTime
+    {
+        var timestamp = timespec()
+        guard unsafe clock_gettime(CLOCK_MONOTONIC, &timestamp) == 0 else {
+            return try SurfaceCommitTargetTime(seconds: 0, nanoseconds: 0)
+        }
+
+        var seconds = UInt64(timestamp.tv_sec)
+        var nanoseconds = UInt32(timestamp.tv_nsec) + 16_666_667
+        if nanoseconds > SurfaceCommitTargetTime.maximumNanosecondValue {
+            seconds += 1
+            nanoseconds -= SurfaceCommitTargetTime.maximumNanosecondValue + 1
+        }
+
+        return try SurfaceCommitTargetTime(seconds: seconds, nanoseconds: nanoseconds)
     }
 
     package static func canReuseRenderTarget(
@@ -373,6 +612,8 @@ package final class ManagedGPUPreviewBacking {
         } catch {
             throw .presentation(error)
         }
+        explicitSynchronization?.destroy()
+        explicitSynchronization = nil
         renderTarget = nil
         configuredGeometry = nil
         device = nil
