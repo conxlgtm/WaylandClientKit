@@ -826,6 +826,11 @@ struct GPUWindowRuntimePathFailureTests {
                 ManagedGPUPreviewBackingError.setup(.commitFailed).fallbackReason
             ) == .commitFailed
         )
+        #expect(
+            ManagedGPUPreviewBackingError.backingFailure(
+                for: .committedFrame(.presentationTrackingFailed)
+            ) == .presentationTrackingFailed
+        )
     }
 }
 
@@ -1329,10 +1334,7 @@ struct GPUWindowPresenterLifecycleTests {
                 lease: lease
             )
             Issue.record("Expected invalid generation to fail presentation recording")
-        } catch GPUWindowPresenterError.state(
-            .pool(.slotNotLeased(let failedSlotID, actual: .available))
-        ) {
-            #expect(failedSlotID == slotID)
+        } catch GPUWindowPresenterError.committedFrame(.presentationTrackingFailed) {
             // Expected.
         } catch {
             Issue.record("Unexpected error: \(error)")
@@ -1439,6 +1441,41 @@ struct GPUWindowPresenterBufferReuseTests {
         #expect(submittedBuffer.destroyCallCount == 0)
         #expect(availableBuffer.destroyCallCount == 1)
         #expect(presenter.installedSlotIDs == [submittedSlotID])
+        #expect(presenter.outstandingSubmittedSlotIDs == [submittedSlotID])
+    }
+
+    @Test
+    func presenterRetireAvailableBuffersKeepsExplicitSubmissionState()
+        async throws
+    {
+        let presenter = GPUWindowPresenter()
+        let submittedSlotID = try GBMBufferPoolSlotID(0)
+        let availableSlotID = try GBMBufferPoolSlotID(1)
+        let submittedBuffer = try FakePresenterBuffer(pointer: 0x1001)
+        let availableBuffer = try FakePresenterBuffer(pointer: 0x1002)
+        let submittedState = GPUSubmittedBufferSyncState(
+            slotID: submittedSlotID,
+            acquirePoint: syncPoint(timeline: 5, point: 6),
+            releasePoint: syncPoint(timeline: 5, point: 8)
+        )
+
+        try presenter.installBuffer(submittedBuffer, slotID: submittedSlotID)
+        try presenter.installBuffer(availableBuffer, slotID: availableSlotID)
+        _ = try await presenter.presentSlot(
+            submittedSlotID,
+            submit: { _, _, _ in
+                try previewPresentationResult(generation: 51)
+            },
+            synchronization: .explicit(submittedState),
+            pacing: .none
+        )
+
+        let retiredSlotIDs = try presenter.retireAvailableBuffers()
+
+        #expect(retiredSlotIDs == [availableSlotID])
+        #expect(submittedBuffer.destroyCallCount == 0)
+        #expect(availableBuffer.destroyCallCount == 1)
+        #expect(presenter.explicitSubmissionStates == [submittedState])
         #expect(presenter.outstandingSubmittedSlotIDs == [submittedSlotID])
     }
 
@@ -1861,6 +1898,61 @@ struct ManagedGPUPreviewStoragePreparationTests {
                 await window.eventSnapshot() == [.preparePresentation, .geometry]
             )
             #expect(try await storage.runtimePath().backing == .failed(.gbmAllocationFailed))
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        let retryLease = try await storage.nextFrame()
+        let retryResult = try await retryLease.submit(.clearColor(.black))
+
+        #expect(retryResult.operation == .redraw)
+        #expect(backing.submittedGeometries == [configuredGeometry, configuredGeometry])
+    }
+
+    @Test
+    func committedPresentationTrackingFailureFinishesLease() async throws {
+        let initialGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 4, height: 3),
+            scale: .one
+        )
+        let configuredGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 8, height: 6),
+            scale: .one
+        )
+        let failureSnapshot = GPURuntimePathSnapshot.afterPresentation(
+            capabilities: capabilitySnapshot(),
+            synchronization: .implicit,
+            pacing: .none
+        )
+        .markingFailure(.presentationTrackingFailed)
+        let window = FakeGraphicsPreviewWindow(
+            initialGeometry: initialGeometry,
+            configuredGeometry: configuredGeometry
+        )
+        let backing = FakeManagedGPUBacking(
+            committedFrameFailures: [.presentationTrackingFailed],
+            runtimePathSnapshot: failureSnapshot
+        )
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .projected(capabilities: gpuPreviewCapabilities()),
+            configuration: .default,
+            managedGPUBacking: backing
+        )
+
+        let lease = try await storage.nextFrame()
+        await window.clearEvents()
+        do {
+            _ = try await lease.submit(.clearColor(.black))
+            Issue.record("expected committed presentation tracking failure")
+        } catch WaylandGraphicsError.unavailable(.presentationTrackingFailed) {
+            #expect(
+                await window.eventSnapshot() == [.preparePresentation, .geometry]
+            )
+            #expect(
+                try await storage.runtimePath().backing
+                    == .failed(.presentationTrackingFailed)
+            )
         } catch {
             Issue.record("unexpected error: \(error)")
         }

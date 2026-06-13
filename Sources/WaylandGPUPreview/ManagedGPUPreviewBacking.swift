@@ -138,6 +138,8 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             .submitConstraintRejected
         case .metadata(let metadataError):
             .metadataRequiredButUnavailable(metadataError)
+        case .committedFrame(let failure):
+            failure
         case .missingBuffer, .state, .releaseFailure:
             .gbmAllocationFailed
         case .window:
@@ -152,6 +154,7 @@ package final class ManagedGPUPreviewBacking {
     var device: GBMDevice?
     var renderTarget: EGLGBMRenderTarget?
     var explicitSynchronization: ManagedGPUExplicitSynchronization?
+    var retainedExplicitSynchronizations: [GPUSyncTimeline: RetainedExplicitSynchronization] = [:]
     var configuredGeometry: SurfaceGeometry?
     var capabilities: SurfaceCapabilitySnapshot?
     var runtimePath = GPURuntimePathSnapshot.empty
@@ -176,6 +179,7 @@ package final class ManagedGPUPreviewBacking {
         presenter.retireAll(reason: .windowClosed)
         explicitSynchronization?.destroy()
         explicitSynchronization = nil
+        destroyRetainedExplicitSynchronizations()
         renderTarget?.destroy()
         renderTarget = nil
         configuredGeometry = nil
@@ -277,6 +281,12 @@ package final class ManagedGPUPreviewBacking {
             throw error
         }
     }
+}
+
+struct RetainedExplicitSynchronization {
+    let synchronization: ManagedGPUExplicitSynchronization
+    // Keep the DRM file descriptor backing the syncobj timeline alive.
+    let device: GBMDevice?
 }
 
 package struct GPUClearColor: Equatable, Sendable {

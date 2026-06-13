@@ -140,6 +140,9 @@ extension ManagedGPUPreviewBacking {
         } catch let error as GBMAllocationError {
             throw .allocation(error)
         } catch let error as GPUWindowPresenterError {
+            if let failure = error.committedFrameFailure {
+                throw .committedFrame(failure)
+            }
             throw .presentation(error)
         } catch let error as RuntimeError {
             throw .runtime(error)
@@ -166,11 +169,26 @@ extension ManagedGPUPreviewBacking {
     }
 
     func reapExplicitReleaseSignalsIfAvailable() throws(ManagedGPUPreviewBackingError) {
-        guard let explicitSynchronization else { return }
+        let explicitSubmissionStates = presenter.explicitSubmissionStates
+        guard !explicitSubmissionStates.isEmpty else {
+            destroyUnusedRetainedExplicitSynchronizations()
+            return
+        }
 
-        for state in presenter.explicitSubmissionStates {
+        for state in explicitSubmissionStates {
+            guard
+                let synchronization = explicitSynchronizationTimeline(
+                    for: state.releasePoint.timeline
+                )
+            else {
+                runtimePath = presenter.runtimePathSnapshot.markingFailure(
+                    .explicitSyncReleaseFailed
+                )
+                throw .setup(.explicitSyncReleaseFailed)
+            }
+
             do {
-                guard try explicitSynchronization.releasePointIsSignaled(state) else {
+                guard try synchronization.releasePointIsSignaled(state) else {
                     continue
                 }
                 try presenter.recordExplicitReleaseSignal(slotID: state.slotID)
@@ -187,6 +205,17 @@ extension ManagedGPUPreviewBacking {
                 throw .setup(.commitFailed)
             }
         }
+        destroyUnusedRetainedExplicitSynchronizations()
+    }
+
+    func explicitSynchronizationTimeline(
+        for timeline: GPUSyncTimeline
+    ) -> ManagedGPUExplicitSynchronization? {
+        if explicitSynchronization?.timelineIdentity == timeline {
+            return explicitSynchronization
+        }
+
+        return retainedExplicitSynchronizations[timeline]?.synchronization
     }
 
     func updateRuntimePathAfterPresentation(options: ManagedGPUPreviewPresentationOptions) {
