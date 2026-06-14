@@ -67,7 +67,11 @@ extension WaylandGraphicsManagedWindow {
         _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor
     ) async throws -> RawLinuxDmabufBuffer {
         var descriptor = descriptor
-        try? descriptor.closeFileDescriptors()
+        do {
+            try descriptor.closeFileDescriptors()
+        } catch {
+            _ = error
+        }
         throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
     }
 

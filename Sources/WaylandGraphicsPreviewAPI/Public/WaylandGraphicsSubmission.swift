@@ -325,7 +325,11 @@ public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
     ) throws {
         guard planeIndexValue >= 0, planeStride > 0 else {
             var descriptor = planeFileDescriptor
-            try? descriptor.close()
+            do {
+                try descriptor.close()
+            } catch {
+                _ = error
+            }
             throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
         }
 
