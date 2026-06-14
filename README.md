@@ -85,6 +85,7 @@ Current experimental baseline:
 - explicit compositor presentation feedback through `wp_presentation`
 - linux-dmabuf capability discovery, graphics runtime-path reporting, and
   package-internal GBM/EGL preview pieces
+- preview graphics frame scheduling and external dmabuf descriptor submission
 - managed subsurfaces, surface input/opaque regions, and damage-aware software
   redraw
 - static and animated custom cursor images
@@ -100,7 +101,7 @@ Current experimental baseline:
 Not implemented yet:
 
 - protocol coverage beyond the listed current support matrix
-- output-management APIs
+- output-management control APIs
 - public GPU rendering APIs in `WaylandClient`
 - raw public GBM, EGL, DRM, dmabuf, or syncobj handles
 - high-level gesture recognizers or widgets
@@ -279,9 +280,10 @@ Popups:
 
 Not supported in the current experimental baseline:
 
-- output management or control APIs
+- output management control APIs
 - public `WaylandClient` GPU rendering APIs
-- public explicit synchronization or frame-pacing APIs
+- stable explicit synchronization or frame-pacing APIs outside
+  `WaylandGraphicsPreview`
 - widgets or retained UI
 
 ## Linux Dependencies

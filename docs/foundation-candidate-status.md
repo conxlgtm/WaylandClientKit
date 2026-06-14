@@ -29,6 +29,9 @@ enough; active GPU claims must be backed by public runtime-path output.
 | Session readiness | done | [session-readiness.md](session-readiness.md), [session-management-plan.md](session-management-plan.md), `SessionStateSmoke`, `CompositorSessionSmoke`, `WindowRestorationSnapshot` | Keep compositor session-management public API capability-only until lifecycle evidence and framework usage shape are clear. |
 | Managed GPU setup code path | done | Managed GPU attempts surface feedback, render-node, GBM/EGL, dmabuf import, owner-thread commit, and typed fallback. | Keep runtime-path truth tests current. |
 | Managed GPU active proof | partial | [compositor-matrix.md](compositor-matrix.md) records active managed GPU clear-frame submission and resize/reconfigure on KDE/KWin, active managed GPU clear-frame submission on nested Sway/wlroots, `surfaceFeedbackUnavailable` fallback on GNOME/Mutter, and `dmabufUnavailable` fallback under headless Weston. | Broaden active/fallback/failure evidence before foundation-candidate claims, especially another desktop compositor when active managed GPU is available. |
+| External GPU buffer preview | partial | Public descriptor/preflight API, tests, and `GraphicsPreviewExternalBufferSmoke` exist. | Collect live renderer-produced dmabuf import/commit/release evidence before claiming active external-buffer support. |
+| Public graphics scheduling | partial | `WaylandGraphicsFrameSchedule` exposes sync, FIFO, commit-timing default target, and presentation-feedback requests with runtime-path result facts. | Keep commit-timing active evidence pending until a compositor run reports it active. |
+| Output and color facts | partial | `OutputTopologySmoke`, `ColorManagementSmoke`, and color metadata preview API exist. | Collect compositor rows for output topology and color metadata advertised/active/fallback behavior. |
 | Compositor matrix minimum | partial | [compositor-matrix.md](compositor-matrix.md) records fresh headless Weston, KDE/KWin, nested Sway/wlroots, and GNOME/Mutter VM rows and separates protocol advertisement from active runtime facts. KDE/KWin now has manual proof for pointer lock/confine with relative motion, data-transfer drag-source/drop/read/finish, serial move/window-menu/resize/drag-source, managed GPU resize/reconfigure, explicit sync active, FIFO active, and metadata active. | Complete remaining GNOME/Mutter manual rows, popup-specific manual probes, broader explicit-sync compositor evidence beyond KDE/KWin, and commit-timing active evidence where practical. |
 | External consumer evidence | partial | Public and graphics preview integration clients are part of `wck ci check`. | Keep external clients hardware-independent. |
 | Release checks | partial | `swift run wck ci release`, `swift run wck examples build`, release docs. | Keep release gates runnable while evidence remains incomplete. |
@@ -53,6 +56,13 @@ Implemented:
 - Runtime paths distinguish advertised, configured, active, fallback, failed,
   and unavailable states. Active GPU is reported only after a GPU-rendered buffer
   is imported and committed.
+- External-buffer submission accepts renderer-produced dmabuf descriptors as
+  preview API and keeps Wayland import/commit/release lifetime inside
+  WaylandClientKit. It still needs live renderer-buffer evidence before
+  foundation-candidate claims.
+- Public frame schedules let callers request explicit sync, FIFO, commit timing,
+  and presentation feedback per frame. Runtime path and frame result facts
+  report requested versus actual compositor behavior.
 
 Still needs broader evidence:
 
@@ -64,6 +74,9 @@ Still needs broader evidence:
   evidence on real compositors. FIFO and explicit sync have active KDE/KWin
   evidence; commit timing reports typed fallback where unavailable and still
   needs active compositor evidence.
+- Live external-buffer import/commit/release evidence using a real renderer
+  dmabuf.
+- Live output topology and color metadata smoke rows beyond code/build checks.
 - Broad live resize/reconfiguration behavior for GPU buffers.
 
 ## 2026-06-09 Evidence Pass
@@ -147,6 +160,10 @@ swift run wck smoke live
 swift run wck smoke integration
 swift run GPUPreviewSmokeClient
 swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
+swift run GraphicsPreviewExternalBufferSmoke -- --probe
+swift run OutputTopologySmoke -- --auto-close --print-summary
+swift run ColorManagementSmoke
+swift run GraphicsPreviewColorMetadataSmoke -- --content-type game --presentation-hint async
 ```
 
 Environment skips must name the missing compositor, GPU, render node, protocol,

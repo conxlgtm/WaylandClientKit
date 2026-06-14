@@ -42,9 +42,13 @@ swift run PointerWarpSmoke -- --auto-close --print-summary
 swift run TabletInputSmoke -- --auto-close --print-summary
 swift run CompositorSessionSmoke -- --auto-close --print-summary
 swift run TextInputSmoke -- --auto-close --print-summary
+swift run OutputTopologySmoke -- --auto-close --print-summary
 swift run GPUPreviewSmokeClient
 swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
 swift run GraphicsPreviewManagedGPUClear -- --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
+swift run GraphicsPreviewExternalBufferSmoke -- --probe
+swift run GraphicsPreviewColorMetadataSmoke -- --content-type game --presentation-hint async
+swift run ColorManagementSmoke
 ```
 
 Smoke examples should print matrix-friendly lines such as `feature`,
@@ -79,10 +83,15 @@ example or manual probe has been run:
 | compositor session management | `CompositorSessionSmoke` capability and event summary |
 | data transfer | `DataTransferSmoke` clipboard/primary/drag summary |
 | presentation feedback | `PresentationFeedbackAnimation` feedback summary |
+| output topology | `OutputTopologySmoke` output snapshot and window output membership report |
 | graphics preview fallback/GPU path | `GPUPreviewSmokeClient` runtime-path report |
+| external graphics buffer | `GraphicsPreviewExternalBufferSmoke` probe or import attempt |
+| graphics frame scheduling | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` requested/actual sync and pacing lines |
+| color metadata | `ColorManagementSmoke` and `GraphicsPreviewColorMetadataSmoke` capability/runtime report |
 
-Cursor animation, pointer warp, tablet input, and compositor session management
-are new capability-gated surfaces. Matrix rows should record the exact command,
+Cursor animation, pointer warp, tablet input, compositor session management,
+external graphics buffers, output topology, scheduling, and color metadata are
+capability-gated surfaces. Matrix rows should record the exact command,
 protocol availability, and result before claiming live compositor support. A
 clean typed skip is evidence for absence, not evidence that the feature is
 active.

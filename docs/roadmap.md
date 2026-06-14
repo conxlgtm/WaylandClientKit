@@ -33,10 +33,14 @@ The completion target is:
   them
 - external framework-consumer checks prove a future GUI package can import only
   public products and still exercise host lifecycle, events, windows, popups,
-  and preview graphics software submission
+  preview graphics software submission, and preview external-buffer submission
+  preflight
 
 This target is not met until a GPU buffer path exists. A software-only SHM
 client is useful, but it is not a complete foundation for a modern GUI stack.
+The preview external-buffer path is the first public descriptor-based shape for
+renderer-produced GPU buffers, but it remains source-breaking preview API until
+live renderer integration evidence is broader.
 
 ## Foundation Checkpoint 1
 
@@ -128,11 +132,18 @@ The current baseline already has meaningful substrate pieces:
 - package-internal GPU window presentation bridge through `WaylandGPUPreview`
 - preview graphics product `WaylandGraphicsPreview` for renderer-neutral
   capability, runtime-path, and fallback facts
-- managed software backing and managed-GPU clear-frame submission in
+- managed software backing, managed-GPU clear-frame submission, and preview
+  external dmabuf descriptor submission in
   `WaylandGraphicsPreview` for framework-facing preview experiments without raw
   platform handles; `.managedGPU` now attempts surface feedback, GBM/EGL
   rendering, dmabuf import, and owner-thread presentation before falling back or
   failing with a typed reason
+- public graphics frame scheduling requests for explicit sync, FIFO,
+  commit-timing default targets, and presentation feedback, with runtime-path
+  results distinguishing advertised, configured, active, fallback, and failed
+  states
+- public output topology snapshots that report current outputs and
+  connection-local output identities without monitor-configuration policy
 - public input and opaque surface regions for managed windows and popups
 - damage-aware software redraw and managed graphics-preview software submission
   using logical damage mapped to buffer coordinates
@@ -158,8 +169,9 @@ The current baseline already has meaningful substrate pieces:
   exercise public host-loop and tiny UI prototype shapes
 - package-internal submit-constraint model for linux-drm-syncobj, FIFO, and
   commit-timing capability facts
-- package-internal surface commit metadata model for content type, alpha,
-  tearing-control hints, color representation, and color-management references
+- package-internal and preview-public surface commit metadata model for content
+  type, alpha, tearing-control hints, color representation, and opaque
+  color-management references
 - live/headless Wayland smoke paths
 - strict Swift memory-safety diagnostics as errors
 
@@ -172,13 +184,13 @@ Known foundation gaps:
 - live compositor coverage proving the package-internal GPU window presentation
   path active on real compositors beyond unit tests and local capability probes
 - live compositor evidence for toplevel icons, idle inhibition, system bell,
-  custom cursor images, and the expanded example build gate
-- broader live compositor coverage for explicit sync, FIFO, commit timing, and
-  metadata protocols beyond local unit and smoke reporting
-- public cursor animation
-- tablet and pointer-warp protocols
-- compositor session-management protocol design and evidence where needed by
-  app launch and restoration workflows
+  custom cursor images, external graphics buffers, output topology, color
+  metadata, and the expanded example build gate
+- broader live compositor coverage for explicit sync, FIFO, commit timing,
+  external buffer import, output topology, and metadata protocols beyond local
+  unit and smoke reporting
+- compositor session-management protocol evidence where needed by app launch
+  and restoration workflows
 - compositor matrix coverage beyond headless Weston
 - public DocC reference documentation
 - compatibility and release policy for stable client APIs and preview graphics
@@ -290,10 +302,10 @@ support tier. These are related facts, not the same fact.
 | `zwp_linux_dmabuf_v1` | legacy unstable but widely deployed | optional foundation | capability and managed buffer path; raw internal | fixture plus compositor matrix | raw internals may change; public capability semantics reviewed |
 | `wp_linux_drm_syncobj_v1` | staging | optional/preview foundation | capability-gated; public facts only after proven | compositor path where advertised | allow source/API change while preview |
 | `wp_fractional_scale_v1` | staging | optional but important | public capability and surface scale facts | unit and compositor matrix | allow version-gated additions |
-| `wp_content_type_v1`, `wp_alpha_modifier_v1`, `wp_tearing_control_v1` | staging | optional/preview metadata | internal commit metadata first; no public renderer API yet | unit and compositor matrix where available | allow source/API change while preview |
-| `wp_color_manager_v1` | staging | optional/preview metadata | internal capability facts and image-description references first | unit and compositor matrix where available | allow source/API change while preview |
-| `wp_color_representation_v1` | staging | optional/preview metadata | internal commit metadata first; no public color pipeline API yet | unit and compositor matrix where available | allow source/API change while preview |
-| `wp_fifo_v1`, `wp_commit_timing_v1` | staging | optional/preview pacing | capability facts before public scheduling API | compositor path where advertised | allow source/API change while preview |
+| `wp_content_type_v1`, `wp_alpha_modifier_v1`, `wp_tearing_control_v1` | staging | optional/preview metadata | public preview metadata facts; no renderer policy | unit and compositor matrix where available | allow source/API change while preview |
+| `wp_color_manager_v1` | staging | optional/preview metadata | public preview capability facts and opaque image-description references | unit and compositor matrix where available | allow source/API change while preview |
+| `wp_color_representation_v1` | staging | optional/preview metadata | public preview metadata facts; no color pipeline API | unit and compositor matrix where available | allow source/API change while preview |
+| `wp_fifo_v1`, `wp_commit_timing_v1` | staging | optional/preview pacing | public preview scheduling requests and runtime facts | compositor path where advertised | allow source/API change while preview |
 | `zwp_text_input_manager_v3` | legacy unstable, active minor updates | optional foundation | public typed text-input API | live IME path where feasible | version-gated additions; preserve unknown values |
 | `wp_cursor_shape_manager_v1` | staging | optional foundation | public cursor capability and requests | unit plus live where advertised | allow version-gated additions |
 | `xdg_activation_v1` | staging | optional desktop integration | public capability, token request, and activate APIs | unit and live where advertised | staging protocol, product API review required |

@@ -28,6 +28,9 @@ presentation-hint/tearing metadata on KDE/KWin. Commit timing is implemented as
 a runtime-path request with typed fallback/failure reporting, but it is not yet
 live-proven active in the compositor matrix because the current KDE/KWin
 session does not advertise it.
+External buffer submission and public frame scheduling are preview APIs. Active
+runtime status means the requested behavior was applied to a submitted frame;
+advertised status means only that the compositor exposed the protocol.
 
 `GPUPreviewSmokeClient` is the live evidence tool for this product. Its output
 uses one line per runtime-path fact so a compositor run can be pasted into
@@ -44,7 +47,10 @@ decorations. Use `--auto-close --print-summary` for bounded evidence runs.
 Both GPU smoke tools accept `--sync implicit-only|prefer-explicit|require-explicit`
 and `--pacing none|fifo|commit-timing`. `GraphicsPreviewManagedGPUClear` also
 accepts `--metadata none|prefer`, `--content-type none|photo|video|game`, and
-`--presentation-hint vsync|async`.
+`--presentation-hint vsync|async`. `GraphicsPreviewExternalBufferSmoke`,
+`GraphicsPreviewColorMetadataSmoke`, `ColorManagementSmoke`, and
+`OutputTopologySmoke` provide bounded probes for external buffers, color
+metadata, color capability facts, and output topology.
 
 ## Current Scope
 
@@ -65,6 +71,22 @@ The preview product exposes:
 - `WaylandGraphicsDamageRegion`
 - `WaylandGraphicsFrameResult`
 - `WaylandGraphicsPresentationFeedbackPolicy`
+- `WaylandGraphicsFrameSchedule`
+- `WaylandGraphicsFramePacingRequest`
+- `WaylandGraphicsCommitTimingRequest`
+- `WaylandGraphicsPresentationTarget`
+- `WaylandGraphicsAlphaModifier`
+- `WaylandGraphicsColorRepresentation`
+- `WaylandGraphicsColorAlphaMode`
+- `WaylandGraphicsColorDescriptionID`
+- `WaylandGraphicsColorDescription`
+- `WaylandGraphicsDRMFormat`
+- `WaylandGraphicsDRMFormatModifier`
+- `WaylandGraphicsExternalBufferPlane`
+- `WaylandGraphicsExternalBufferPlanes`
+- `WaylandGraphicsExternalBufferDescriptor`
+- `WaylandGraphicsExternalSynchronization`
+- `WaylandGraphicsExternalAcquireSync`
 - `WaylandGraphicsError`
 - small status and reason enums used by those values
 - `WaylandDisplay.graphicsSurfaceCapabilities()`
@@ -73,7 +95,7 @@ The preview product exposes:
 - `WaylandDisplay.createGraphicsWindowBacking(windowConfiguration:graphicsConfiguration:)`
 
 These APIs are renderer-neutral. They do not define a swapchain, drawable,
-scene graph, shader model, or color-management API.
+scene graph, shader model, tone-mapping path, or renderer color pipeline.
 
 ## Fallback Policy
 
@@ -91,12 +113,17 @@ deterministic clear frame, and submit arbitrary software drawing through a
 borrowed `SoftwareFrame`.
 
 For `.managedGPU`, clear-frame submission attempts the package-internal GPU
-path. Missing dmabuf, missing per-surface feedback, missing compatible
-format/modifier, render-node lookup failure, GBM allocation failure, EGL
-failure, dmabuf import rejection, metadata failure, and presentation failure are
-reported through typed public fallback or unavailable reasons. The public result
-only reports `.active` GPU backing after a GPU-rendered buffer has been imported
-and committed; display-level dmabuf advertisement alone remains `.advertised`.
+path. External-buffer submission imports a caller-rendered dmabuf descriptor and
+commits it through the same owner-thread surface path. The renderer owns
+rendering and buffer production; WaylandClientKit owns Wayland buffer import,
+commit, release tracking, and late-release cleanup. Missing dmabuf, missing
+per-surface feedback, missing compatible format/modifier, render-node lookup
+failure, GBM allocation failure, EGL failure, dmabuf import rejection, external
+buffer import failure, metadata failure, and presentation failure are reported
+through typed public fallback or unavailable reasons. The public result only
+reports `.active` GPU backing after a GPU-rendered or imported external buffer
+has been committed; display-level dmabuf advertisement alone remains
+`.advertised`.
 `WaylandGraphicsRuntimePath` separates dmabuf advertisement, per-surface
 feedback, render-node selection, GBM, EGL, dmabuf import, buffer lifecycle,
 synchronization, pacing, metadata, and presentation-feedback status so callers
@@ -123,14 +150,21 @@ only when explicit sync is configured for the submitted managed GPU frame.
 Software backing preferences, forced software fallback, and managed GPU
 setup/submission/release failures fail with typed unavailable reasons instead
 of committing implicit software frames.
+`WaylandGraphicsFrameSchedule` lets callers override synchronization, pacing,
+and presentation-feedback policy per submitted frame. `WaylandGraphicsFrameResult`
+records the effective schedule and post-submission runtime path, so callers can
+compare requested synchronization, FIFO, commit timing, and feedback policy with
+the compositor-mediated result. Public scheduling does not expose syncobj
+timelines, raw fences, or protocol objects. Frameworks own animation policy;
+WaylandClientKit exposes timing facts and commit requests.
 `preferFIFO` and `preferCommitTiming` apply the matching submit constraint to
 managed GPU commits, direct software commits, and allowed software fallback
 commits when the protocol is available. Missing FIFO or commit-timing support is
 reported as a pacing fallback reason. Commit-timing timestamp rejection is
-reported as a typed failure. The preview commit-timing policy currently uses an
-internal near-future monotonic target for each frame; no public target-time
-scheduling API is exposed yet. Current live compositor evidence proves FIFO
-active and commit-timing fallback, but not commit-timing active.
+reported as a typed failure. Public commit timing currently accepts
+`WaylandGraphicsPresentationTarget.default`, which uses WaylandClientKit's
+preview default target for the next frame. Current live compositor evidence
+proves FIFO active and commit-timing fallback, but not commit-timing active.
 FIFO pacing primes the surface with `set_barrier` on the first successful
 FIFO-paced commit, then waits on the previous barrier and sets the next barrier
 on later FIFO-paced commits.
@@ -139,32 +173,38 @@ protocol is advertised; `require` fails when it is unavailable.
 
 `WaylandGraphicsWindowBacking` owns a managed `Window` and exposes the current
 runtime path. `nextFrame()` returns a single-use `WaylandGraphicsFrameLease`.
-Callers submit a `WaylandGraphicsSubmittedFrame.clearColor`, submit arbitrary
-software drawing with `submitSoftware`, or cancel the lease. `clearColor` uses
-the active managed GPU path when setup and submission succeed; it falls back to
-the software path only when the fallback policy and surface synchronization
-state allow an implicit software commit. Submission returns
+Callers submit a `WaylandGraphicsSubmittedFrame.clearColor`, submit an external
+dmabuf descriptor with `submitExternalBuffer`, submit arbitrary software drawing
+with `submitSoftware`, or cancel the lease. `clearColor` uses the active managed
+GPU path when setup and submission succeed; it falls back to the software path
+only when the fallback policy and surface synchronization state allow an
+implicit software commit. External-buffer submission never claims software
+fallback as an external-buffer success. `requireGPU` fails if the external
+import/commit path cannot be used. Submission returns
 `WaylandGraphicsFrameResult`, which reports runtime path, submitted operation,
-buffer size, metadata, synchronization policy, pacing policy, backing status,
-and whether presentation feedback was requested. The result does not imply
-presentation feedback was observed; feedback still arrives through
-`WindowPresentationEvents`. The lease does not expose Wayland proxies, fds, SHM
-pools, GBM buffers, EGL surfaces, DRM nodes, or syncobj handles.
+buffer size, metadata, schedule, synchronization policy, pacing policy, backing
+status, and whether presentation feedback was requested. The result does not
+imply presentation feedback was observed; feedback still arrives through
+`WindowPresentationEvents`. The lease does not expose Wayland proxies, SHM
+pools, GBM buffers, EGL surfaces, DRM nodes, or syncobj handles. External
+buffer descriptors expose only owned Linux plane descriptors and format/modifier
+facts needed to integrate a renderer-owned dmabuf; descriptor validation covers
+size, format, modifier, plane count, consecutive plane indices, stride, offset,
+and ownership transfer.
 
-`WaylandGraphicsFrameMetadata` currently exposes only content type and
-presentation hint values plus `WaylandGraphicsDamageRegion`. With
-`metadataPolicy: .preferAvailable`, content type and presentation hint map to
-the package-internal surface commit metadata when the compositor advertises the
-relevant protocols. Missing preferred metadata protocols are omitted from the
-commit and reported in the runtime path with typed fallback reasons such as
-`contentTypeUnavailable` or `presentationHintUnavailable`;
-`metadataPolicy: .none` rejects non-default metadata. Public color-management
-image descriptions, color representation details, and alpha metadata remain
-internal, but runtime path facts still report whether those compositor
-capabilities are advertised, configured, active, unavailable, failed, or
-selected for fallback. WaylandClientKit applies protocol metadata; it does not
-own renderer color conversion, tone
-mapping, asset color policy, or scene/rendering policy.
+`WaylandGraphicsFrameMetadata` exposes content type, presentation hint, alpha
+modifier, color representation, color-description reference, and
+`WaylandGraphicsDamageRegion`. With `metadataPolicy: .preferAvailable`,
+supported metadata maps to package-internal surface commit metadata when the
+compositor advertises the relevant protocols. Missing preferred metadata
+protocols are omitted from the commit and reported in the runtime path with
+typed fallback reasons such as `contentTypeUnavailable`,
+`presentationHintUnavailable`, `alphaModifierUnavailable`,
+`colorRepresentationUnavailable`, or `colorManagementUnavailable`;
+`metadataPolicy: .none` rejects non-default metadata. Image descriptions remain
+opaque identifiers. WaylandClientKit applies protocol metadata; it does not own
+renderer color conversion, tone mapping, asset color policy, or scene/rendering
+policy.
 
 Full-frame damage is the default. Partial damage is converted to
 `SurfaceDamageRegion` for managed software submissions and then mapped from
@@ -179,8 +219,9 @@ callers can cancel or retry the active lease deterministically.
 `IntegrationTests/GraphicsPreviewClient` imports both `WaylandClient` and
 `WaylandGraphicsPreview`. It verifies that external packages can compile the
 preview value model, `WaylandDisplay` extension methods, managed backing,
-frame lease, cancel/submit surface, software submission closure, frame result,
-and clear-frame types without requiring a GPU-capable compositor.
+frame lease, cancel/submit surface, software submission closure, external
+buffer descriptors, schedule values, frame result, and clear-frame types
+without requiring a GPU-capable compositor.
 
 ## Breakage Policy
 

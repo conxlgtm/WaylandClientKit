@@ -169,11 +169,14 @@ observed. Presentation feedback remains a separate event stream.
 - `WaylandGraphicsFrameResult`
 - `WaylandGraphicsFrameMetadata`
 - `WaylandGraphicsDamageRegion`
+- `WaylandGraphicsFrameSchedule`
+- external dmabuf descriptor values
 
-Managed public GPU submission is not implemented yet. The current backing
-supports software fallback and arbitrary software drawing through a single-use
-lease. The API is shaped so a framework can later switch a backing policy
-without exposing raw handles.
+Managed public GPU submission is preview API. Current leases support
+clear-frame submission, arbitrary software drawing, per-frame scheduling
+requests, and external dmabuf descriptor submission. This is still not a
+renderer, swapchain, drawable, or scene graph API, and it does not expose raw
+Wayland, GBM, EGL, DRM, or syncobj handles.
 
 ## Event Stream Handling
 
@@ -216,11 +219,13 @@ framework's widget layer. Keep data transfer at the app-host boundary.
 
 ## Known Gaps
 
-- Public managed GPU submission is not implemented.
-- Color-management image descriptions remain internal.
+- External-buffer submission needs broader live renderer-produced dmabuf
+  evidence.
+- Color-management image descriptions are opaque preview identifiers; color
+  conversion and tone mapping remain renderer/framework policy.
 - Static and animated custom cursor images are available. Animation frames use
   the same XRGB8888 format and hotspot validation as static cursor images.
-- Output-management APIs are out of scope.
+- Output-management control APIs are out of scope.
 - `WaylandGraphicsPreview` remains source-breaking preview API.
 
 ## Friction Detectors
