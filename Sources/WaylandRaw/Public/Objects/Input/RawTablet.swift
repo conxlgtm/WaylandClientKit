@@ -110,6 +110,26 @@ package final class RawTabletSeat {
         try unsafe listenerOwner.install(on: tabletSeat)
     }
 
+    @safe
+    package init(
+        uncheckedPointer tabletSeat: OpaquePointer,
+        version tabletVersion: RawVersion,
+        seatID tabletSeatID: RawSeatID,
+        eventSink tabletEventSink: RawInputEventSink,
+        proxyAdoption adoptionContext: RawProxyAdoptionContext,
+        destroy destroyProxy: @escaping (OpaquePointer) -> Void
+    ) {
+        version = tabletVersion
+        seatID = tabletSeatID
+        eventSink = tabletEventSink
+        proxyAdoption = adoptionContext
+        proxy = RawOwnedProxy(pointer: tabletSeat, destroy: destroyProxy)
+        listenerOwner = RawTabletSeatOwner(
+            seatID: tabletSeatID,
+            invariantFailureSink: adoptionContext.invariantFailureSink
+        )
+    }
+
     package func destroy() {
         listenerOwner.cancel()
 
@@ -132,17 +152,22 @@ package final class RawTabletSeat {
     @safe
     private func handleTabletAdded(_ tabletPointer: OpaquePointer) {
         do {
+            let adoptedTabletPointer = try unsafe proxyAdoption.adoptOrDestroy(
+                tabletPointer,
+                interface: "zwp_tablet_v2",
+                destroy: unsafe swl_zwp_tablet_v2_destroy
+            )
             let tablet = try RawTablet(
-                pointer: unsafe proxyAdoption.adoptOrDestroy(
-                    tabletPointer,
-                    interface: "zwp_tablet_v2",
-                    destroy: unsafe swl_zwp_tablet_v2_destroy
-                ),
+                pointer: adoptedTabletPointer,
                 version: version,
                 seatID: seatID,
                 eventSink: eventSink,
-                proxyAdoption: proxyAdoption
-            )
+                proxyAdoption: proxyAdoption,
+                destroy: unsafe swl_zwp_tablet_v2_destroy,
+                identity: RawTabletIdentity(objectID: unsafe objectID(of: adoptedTabletPointer))
+            ) { [weak self] identity in
+                self?.handleTabletRemoved(identity)
+            }
             tablets[tablet.identity.objectID] = tablet
             append(.tabletAdded(tablet.identity))
         } catch {
@@ -153,17 +178,22 @@ package final class RawTabletSeat {
     @safe
     private func handleToolAdded(_ toolPointer: OpaquePointer) {
         do {
+            let adoptedToolPointer = try unsafe proxyAdoption.adoptOrDestroy(
+                toolPointer,
+                interface: "zwp_tablet_tool_v2",
+                destroy: unsafe swl_zwp_tablet_tool_v2_destroy
+            )
             let tool = try RawTabletTool(
-                pointer: unsafe proxyAdoption.adoptOrDestroy(
-                    toolPointer,
-                    interface: "zwp_tablet_tool_v2",
-                    destroy: unsafe swl_zwp_tablet_tool_v2_destroy
-                ),
+                pointer: adoptedToolPointer,
                 version: version,
                 seatID: seatID,
                 eventSink: eventSink,
-                proxyAdoption: proxyAdoption
-            )
+                proxyAdoption: proxyAdoption,
+                destroy: unsafe swl_zwp_tablet_tool_v2_destroy,
+                identity: RawTabletToolIdentity(objectID: unsafe objectID(of: adoptedToolPointer))
+            ) { [weak self] identity in
+                self?.handleToolRemoved(identity)
+            }
             tools[tool.identity.objectID] = tool
             append(.toolAdded(tool.identity))
         } catch {
@@ -174,22 +204,46 @@ package final class RawTabletSeat {
     @safe
     private func handlePadAdded(_ padPointer: OpaquePointer) {
         do {
+            let adoptedPadPointer = try unsafe proxyAdoption.adoptOrDestroy(
+                padPointer,
+                interface: "zwp_tablet_pad_v2",
+                destroy: unsafe swl_zwp_tablet_pad_v2_destroy
+            )
             let pad = try RawTabletPad(
-                pointer: unsafe proxyAdoption.adoptOrDestroy(
-                    padPointer,
-                    interface: "zwp_tablet_pad_v2",
-                    destroy: unsafe swl_zwp_tablet_pad_v2_destroy
-                ),
+                pointer: adoptedPadPointer,
                 version: version,
                 seatID: seatID,
                 eventSink: eventSink,
-                proxyAdoption: proxyAdoption
-            )
+                proxyAdoption: proxyAdoption,
+                destroy: unsafe swl_zwp_tablet_pad_v2_destroy,
+                groupDestroy: unsafe swl_zwp_tablet_pad_group_v2_destroy,
+                identity: RawTabletPadIdentity(objectID: unsafe objectID(of: adoptedPadPointer))
+            ) { [weak self] identity in
+                self?.handlePadRemoved(identity)
+            }
             pads[pad.identity.objectID] = pad
             append(.padAdded(pad.identity))
         } catch {
             appendListenerDiagnostic(listener: "zwp_tablet_pad_v2", error: error)
         }
+    }
+
+    @safe
+    private func handleTabletRemoved(_ identity: RawTabletIdentity) {
+        guard let tablet = tablets.removeValue(forKey: identity.objectID) else { return }
+        tablet.destroy()
+    }
+
+    @safe
+    private func handleToolRemoved(_ identity: RawTabletToolIdentity) {
+        guard let tool = tools.removeValue(forKey: identity.objectID) else { return }
+        tool.destroy()
+    }
+
+    @safe
+    private func handlePadRemoved(_ identity: RawTabletPadIdentity) {
+        guard let pad = pads.removeValue(forKey: identity.objectID) else { return }
+        pad.destroy()
     }
 
     private func append(_ event: RawTabletEvent) {
@@ -217,6 +271,42 @@ package final class RawTabletSeat {
         )
     }
 
+    @safe package var trackedTabletCountForTesting: Int { tablets.count }
+
+    @safe package var trackedToolCountForTesting: Int { tools.count }
+
+    @safe package var trackedPadCountForTesting: Int { pads.count }
+
+    @safe
+    package func trackTabletForTesting(_ tablet: RawTablet) {
+        tablets[tablet.identity.objectID] = tablet
+    }
+
+    @safe
+    package func trackToolForTesting(_ tool: RawTabletTool) {
+        tools[tool.identity.objectID] = tool
+    }
+
+    @safe
+    package func trackPadForTesting(_ pad: RawTabletPad) {
+        pads[pad.identity.objectID] = pad
+    }
+
+    @safe
+    package func handleTabletRemovedForTesting(_ identity: RawTabletIdentity) {
+        handleTabletRemoved(identity)
+    }
+
+    @safe
+    package func handleToolRemovedForTesting(_ identity: RawTabletToolIdentity) {
+        handleToolRemoved(identity)
+    }
+
+    @safe
+    package func handlePadRemovedForTesting(_ identity: RawTabletPadIdentity) {
+        handlePadRemoved(identity)
+    }
+
     deinit {
         destroy()
     }
@@ -236,23 +326,34 @@ package final class RawTablet {
         version tabletVersion: RawVersion,
         seatID tabletSeatID: RawSeatID,
         eventSink tabletEventSink: RawInputEventSink,
-        proxyAdoption adoptionContext: RawProxyAdoptionContext
+        proxyAdoption adoptionContext: RawProxyAdoptionContext,
+        destroy destroyProxy: @escaping (OpaquePointer) -> Void,
+        identity tabletIdentity: RawTabletIdentity,
+        installListener shouldInstallListener: Bool = true,
+        onRemoved removedHandler: ((RawTabletIdentity) -> Void)? = nil
     ) throws(RuntimeError) {
         version = tabletVersion
-        identity = RawTabletIdentity(objectID: unsafe objectID(of: tabletPointer))
-        proxy = RawOwnedProxy(pointer: tabletPointer, destroy: unsafe swl_zwp_tablet_v2_destroy)
+        identity = tabletIdentity
+        proxy = RawOwnedProxy(pointer: tabletPointer, destroy: destroyProxy)
         listenerOwner = RawTabletOwner(
             identity: identity,
             seatID: tabletSeatID,
             eventSink: tabletEventSink,
-            invariantFailureSink: adoptionContext.invariantFailureSink
+            invariantFailureSink: adoptionContext.invariantFailureSink,
+            onRemoved: removedHandler
         )
-        try unsafe listenerOwner.install(on: tabletPointer)
+        if shouldInstallListener {
+            try unsafe listenerOwner.install(on: tabletPointer)
+        }
     }
 
     package func destroy() {
         listenerOwner.cancel()
         proxy.destroy()
+    }
+
+    package func emitRemovedForTesting() {
+        listenerOwner.emitRemovedForTesting()
     }
 
     deinit {
@@ -274,23 +375,34 @@ package final class RawTabletTool {
         version toolVersion: RawVersion,
         seatID toolSeatID: RawSeatID,
         eventSink toolEventSink: RawInputEventSink,
-        proxyAdoption adoptionContext: RawProxyAdoptionContext
+        proxyAdoption adoptionContext: RawProxyAdoptionContext,
+        destroy destroyProxy: @escaping (OpaquePointer) -> Void,
+        identity toolIdentity: RawTabletToolIdentity,
+        installListener shouldInstallListener: Bool = true,
+        onRemoved removedHandler: ((RawTabletToolIdentity) -> Void)? = nil
     ) throws(RuntimeError) {
         version = toolVersion
-        identity = RawTabletToolIdentity(objectID: unsafe objectID(of: toolPointer))
-        proxy = RawOwnedProxy(pointer: toolPointer, destroy: unsafe swl_zwp_tablet_tool_v2_destroy)
+        identity = toolIdentity
+        proxy = RawOwnedProxy(pointer: toolPointer, destroy: destroyProxy)
         listenerOwner = RawTabletToolOwner(
             identity: identity,
             seatID: toolSeatID,
             eventSink: toolEventSink,
-            invariantFailureSink: adoptionContext.invariantFailureSink
+            invariantFailureSink: adoptionContext.invariantFailureSink,
+            onRemoved: removedHandler
         )
-        try unsafe listenerOwner.install(on: toolPointer)
+        if shouldInstallListener {
+            try unsafe listenerOwner.install(on: toolPointer)
+        }
     }
 
     package func destroy() {
         listenerOwner.cancel()
         proxy.destroy()
+    }
+
+    package func emitRemovedForTesting() {
+        listenerOwner.emitRemovedForTesting()
     }
 
     deinit {
@@ -306,6 +418,7 @@ package final class RawTabletPad {
     private let listenerOwner: RawTabletPadOwner
     private var proxy: RawOwnedProxy
     private var groups: [RawTabletPadGroup] = []
+    @safe private let groupDestroy: (OpaquePointer) -> Void
 
     @safe
     init(
@@ -313,21 +426,30 @@ package final class RawTabletPad {
         version padVersion: RawVersion,
         seatID padSeatID: RawSeatID,
         eventSink padEventSink: RawInputEventSink,
-        proxyAdoption adoptionContext: RawProxyAdoptionContext
+        proxyAdoption adoptionContext: RawProxyAdoptionContext,
+        destroy destroyProxy: @escaping (OpaquePointer) -> Void,
+        groupDestroy destroyGroupProxy: @escaping (OpaquePointer) -> Void,
+        identity padIdentity: RawTabletPadIdentity,
+        installListener shouldInstallListener: Bool = true,
+        onRemoved removedHandler: ((RawTabletPadIdentity) -> Void)? = nil
     ) throws(RuntimeError) {
         version = padVersion
-        identity = RawTabletPadIdentity(objectID: unsafe objectID(of: padPointer))
-        proxy = RawOwnedProxy(pointer: padPointer, destroy: unsafe swl_zwp_tablet_pad_v2_destroy)
+        identity = padIdentity
+        proxy = RawOwnedProxy(pointer: padPointer, destroy: destroyProxy)
+        unsafe groupDestroy = destroyGroupProxy
         listenerOwner = RawTabletPadOwner(
             identity: identity,
             seatID: padSeatID,
             eventSink: padEventSink,
-            proxyAdoption: adoptionContext
+            proxyAdoption: adoptionContext,
+            onRemoved: removedHandler
         )
         unsafe listenerOwner.onGroupAdded = { [weak self] groupPointer in
             self?.adoptGroup(groupPointer)
         }
-        try unsafe listenerOwner.install(on: padPointer)
+        if shouldInstallListener {
+            try unsafe listenerOwner.install(on: padPointer)
+        }
     }
 
     package func destroy() {
@@ -344,13 +466,25 @@ package final class RawTabletPad {
         do {
             let group = try unsafe RawTabletPadGroup(
                 pointer: groupPointer,
-                proxyAdoption: listenerOwner.proxyAdoption
+                proxyAdoption: listenerOwner.proxyAdoption,
+                destroy: groupDestroy
             )
             groups.append(group)
         } catch {
             listenerOwner.appendListenerDiagnostic(
                 listener: "zwp_tablet_pad_group_v2", error: error)
         }
+    }
+
+    package var trackedGroupCountForTesting: Int { groups.count }
+
+    package func trackGroupForTesting(_ groupPointer: OpaquePointer) {
+        unsafe groups.append(
+            RawTabletPadGroup(uncheckedPointer: groupPointer, destroy: groupDestroy))
+    }
+
+    package func emitRemovedForTesting() {
+        listenerOwner.emitRemovedForTesting()
     }
 
     deinit {
@@ -372,14 +506,22 @@ private final class RawTabletPadGroup {
 
     init(
         pointer groupPointer: OpaquePointer,
-        proxyAdoption adoptionContext: RawProxyAdoptionContext
+        proxyAdoption adoptionContext: RawProxyAdoptionContext,
+        destroy destroyProxy: @escaping (OpaquePointer) -> Void
     ) throws(RuntimeError) {
         proxy = try RawOwnedProxy(
             adopting: groupPointer,
             interface: "zwp_tablet_pad_group_v2",
             proxyAdoption: adoptionContext,
-            destroy: unsafe swl_zwp_tablet_pad_group_v2_destroy
+            destroy: destroyProxy
         )
+    }
+
+    init(
+        uncheckedPointer groupPointer: OpaquePointer,
+        destroy destroyProxy: @escaping (OpaquePointer) -> Void
+    ) {
+        proxy = RawOwnedProxy(pointer: groupPointer, destroy: destroyProxy)
     }
 
     func destroy() {
@@ -467,6 +609,7 @@ private final class RawTabletOwner {
     private let seatID: RawSeatID
     private let eventSink: RawInputEventSink
     private let invariantFailureSink: RawInvariantFailureSink?
+    private let onRemoved: ((RawTabletIdentity) -> Void)?
     private var isCanceled = false
     @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
@@ -482,12 +625,14 @@ private final class RawTabletOwner {
         identity tabletIdentity: RawTabletIdentity,
         seatID tabletSeatID: RawSeatID,
         eventSink tabletEventSink: RawInputEventSink,
-        invariantFailureSink failureSink: RawInvariantFailureSink?
+        invariantFailureSink failureSink: RawInvariantFailureSink?,
+        onRemoved removedHandler: ((RawTabletIdentity) -> Void)?
     ) {
         identity = tabletIdentity
         seatID = tabletSeatID
         eventSink = tabletEventSink
         invariantFailureSink = failureSink
+        onRemoved = removedHandler
 
         unsafe callbacks.pointee.name = { data, _, name in
             RawTabletOwner.withOwner(data, message: "tablet name without Swift state") { owner in
@@ -514,6 +659,7 @@ private final class RawTabletOwner {
         unsafe callbacks.pointee.removed = { data, _ in
             RawTabletOwner.withOwner(data, message: "tablet removed without Swift state") { owner in
                 owner.append(.tablet(.removed(owner.identity)))
+                owner.onRemoved?(owner.identity)
             }
         }
         unsafe callbacks.pointee.bustype = { data, _, busType in
@@ -534,6 +680,11 @@ private final class RawTabletOwner {
     func cancel() {
         isCanceled = true
         listenerStorage.invalidate()
+    }
+
+    func emitRemovedForTesting() {
+        append(.tablet(.removed(identity)))
+        onRemoved?(identity)
     }
 
     func append(_ event: RawTabletEvent) {
@@ -563,6 +714,7 @@ private final class RawTabletToolOwner {
     private let seatID: RawSeatID
     private let eventSink: RawInputEventSink
     private let invariantFailureSink: RawInvariantFailureSink?
+    private let onRemoved: ((RawTabletToolIdentity) -> Void)?
     private var isCanceled = false
     @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
@@ -579,12 +731,14 @@ private final class RawTabletToolOwner {
         identity toolIdentity: RawTabletToolIdentity,
         seatID toolSeatID: RawSeatID,
         eventSink toolEventSink: RawInputEventSink,
-        invariantFailureSink failureSink: RawInvariantFailureSink?
+        invariantFailureSink failureSink: RawInvariantFailureSink?,
+        onRemoved removedHandler: ((RawTabletToolIdentity) -> Void)?
     ) {
         identity = toolIdentity
         seatID = toolSeatID
         eventSink = toolEventSink
         invariantFailureSink = failureSink
+        onRemoved = removedHandler
 
         unsafe callbacks.pointee.type = { data, _, type in
             RawTabletToolOwner.withOwner(data, message: "tablet tool type without Swift state") {
@@ -633,6 +787,7 @@ private final class RawTabletToolOwner {
             RawTabletToolOwner.withOwner(data, message: "tablet tool removed without Swift state") {
                 owner in
                 owner.append(.tool(.removed(owner.identity)))
+                owner.onRemoved?(owner.identity)
             }
         }
         unsafe callbacks.pointee.proximity_in = { data, _, serial, tablet, surface in
@@ -780,6 +935,11 @@ private final class RawTabletToolOwner {
         listenerStorage.invalidate()
     }
 
+    func emitRemovedForTesting() {
+        append(.tool(.removed(identity)))
+        onRemoved?(identity)
+    }
+
     func append(_ event: RawTabletEvent) {
         guard !isCanceled else { return }
         eventSink.append(
@@ -810,6 +970,7 @@ private final class RawTabletPadOwner {
     private let identity: RawTabletPadIdentity
     private let seatID: RawSeatID
     private let eventSink: RawInputEventSink
+    private let onRemoved: ((RawTabletPadIdentity) -> Void)?
     private var isCanceled = false
     @safe private lazy var listenerStorage = CListenerStorage(
         owner: self,
@@ -826,12 +987,14 @@ private final class RawTabletPadOwner {
         identity padIdentity: RawTabletPadIdentity,
         seatID padSeatID: RawSeatID,
         eventSink padEventSink: RawInputEventSink,
-        proxyAdoption adoptionContext: RawProxyAdoptionContext
+        proxyAdoption adoptionContext: RawProxyAdoptionContext,
+        onRemoved removedHandler: ((RawTabletPadIdentity) -> Void)?
     ) {
         identity = padIdentity
         seatID = padSeatID
         eventSink = padEventSink
         proxyAdoption = adoptionContext
+        onRemoved = removedHandler
 
         unsafe callbacks.pointee.group = { data, _, group in
             RawTabletPadOwner.withOwner(data, message: "tablet pad group without Swift state") {
@@ -915,6 +1078,7 @@ private final class RawTabletPadOwner {
             RawTabletPadOwner.withOwner(data, message: "tablet pad removed without Swift state") {
                 owner in
                 owner.append(.pad(.removed(owner.identity)))
+                owner.onRemoved?(owner.identity)
             }
         }
     }
@@ -930,6 +1094,11 @@ private final class RawTabletPadOwner {
     func cancel() {
         isCanceled = true
         listenerStorage.invalidate()
+    }
+
+    func emitRemovedForTesting() {
+        append(.pad(.removed(identity)))
+        onRemoved?(identity)
     }
 
     func append(_ event: RawTabletEvent) {

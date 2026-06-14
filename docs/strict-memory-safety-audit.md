@@ -150,8 +150,10 @@ Audit invariant:
   display session shuts down.
 - Listener storage remains reachable while the raw tablet proxy can emit events
   and is invalidated before destroy.
-- Unknown tablet tool, pad, ring, strip, and button facts are preserved as raw
-  values where needed instead of trapping.
+- Unknown tablet tool capabilities, tool types, bus types, and pad button facts
+  are preserved as raw values where needed instead of trapping. Tablet pad
+  group proxies are tracked for deterministic teardown; public ring, strip, and
+  dial child-control events are deferred until their event surface is designed.
 - Public tablet events expose only typed input facts and target identities, not
   raw protocol objects, queues, pointers, or device handles.
 
@@ -160,6 +162,8 @@ Tests:
 - `InputRouterTabletTests` covers target routing, seat removal, surface cleanup,
   unknown capability preservation, and device/tool/pad event projection from
   raw tablet event facts.
+- `RawTabletLifecycleTests` covers compositor removal events destroying tracked
+  tablet, tool, pad, and pad-group protocol objects exactly once.
 - Shim verification covers the Swift-facing tablet listener and destroy helper
   declarations against their C implementations.
 

@@ -204,11 +204,13 @@ Current user-facing contract:
   foreign-window, closed-window, unknown-seat, pointer-unavailable, invalid-position,
   and request-failed errors without exposing raw warp, pointer, surface, or queue
   objects. Compositor policy may still ignore or reject a request.
-- Tablet input means `zwp_tablet_manager_v2` device, tool, pad, proximity,
-  motion, pressure, tilt, rotation, slider, wheel, distance, button, and frame
-  facts. Events are seat-scoped and target-resolved where the protocol provides
-  a surface. WaylandClientKit does not define drawing, gesture, brush, stroke,
-  eraser behavior, or canvas policy.
+- Tablet input means `zwp_tablet_manager_v2` device, tool, and pad facts,
+  including proximity, motion, pressure, tilt, rotation, slider, wheel,
+  distance, tool buttons, pad buttons, frame boundaries, and pad group-added
+  notifications. Events are seat-scoped and target-resolved where the protocol
+  provides a surface. Public pad ring, strip, and dial child-control events are
+  intentionally deferred. WaylandClientKit does not define drawing, gesture,
+  brush, stroke, eraser behavior, or canvas policy.
 - Cursor requests cover compositor cursor-shape requests, named theme cursors,
   hidden cursors, static XRGB8888 custom cursor images, and output-aware theme
   scale policy. Animated custom cursors are public value types built from
