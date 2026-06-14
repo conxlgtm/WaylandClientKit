@@ -992,7 +992,7 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L109: `    public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {`
 - L116: `    public func createTopLevelWindow(`
 - L240: `    public func close() {`
-- L345: `    public var isClosed: Bool {`
+- L303: `    public var isClosed: Bool {`
 
 ### `Sources/WaylandClient/Public/Errors/ClientError.swift`
 
