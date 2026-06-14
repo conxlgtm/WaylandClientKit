@@ -308,7 +308,7 @@ extension WaylandDisplay {
 
         guard cursorAnimationTask == nil else { return }
 
-        cursorAnimationTask = Task { [weak self] in
+        cursorAnimationTask = Task { [weak self] in  // swiftlint:disable:this no_unstructured_task
             await self?.runCursorAnimationLoop()
         }
     }
