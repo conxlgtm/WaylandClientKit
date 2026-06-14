@@ -51,12 +51,12 @@ accepts `--metadata none|prefer`, `--content-type none|photo|video|game`, and
 `GraphicsPreviewColorMetadataSmoke`, `ColorManagementSmoke`, and
 `OutputTopologySmoke` provide bounded probes for external buffers, color
 metadata, color capability facts, and output topology.
-`GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer` creates a small
-GBM/EGL-rendered dmabuf, submits it through the public external-buffer API, and
-prints import, submit, release, fallback, and cleanup facts.
 `GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer` intentionally
 uses a pipe descriptor rather than a real dmabuf, so it is a negative
-import-failure cleanup probe.
+import-failure cleanup probe. The public example imports only `WaylandClient`
+and `WaylandGraphicsPreview`; the maintainer-only
+`GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer`
+creates a small GBM/EGL-rendered dmabuf for live matrix evidence.
 
 ## Current Scope
 

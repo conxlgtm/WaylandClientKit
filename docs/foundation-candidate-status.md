@@ -58,7 +58,8 @@ Implemented:
   is imported and committed.
 - External-buffer submission accepts renderer-produced dmabuf descriptors as
   preview API and keeps Wayland import/commit/release lifetime inside
-  WaylandClientKit. It still needs live renderer-buffer evidence before
+  WaylandClientKit. KDE/KWin has live renderer-dmabuf import/commit/release
+  evidence; broader compositor coverage is still needed before
   foundation-candidate claims.
 - Public frame schedules let callers request explicit sync, FIFO, commit timing,
   and presentation feedback per frame. Runtime path and frame result facts
@@ -74,8 +75,8 @@ Still needs broader evidence:
   evidence on real compositors. FIFO and explicit sync have active KDE/KWin
   evidence; commit timing reports typed fallback where unavailable and still
   needs active compositor evidence.
-- Live external-buffer import/commit/release evidence using a real renderer
-  dmabuf.
+- Broader external-buffer import/commit/release evidence beyond the KDE/KWin
+  renderer-dmabuf row.
 - Live output topology and color metadata smoke rows beyond code/build checks.
 - Broad live resize/reconfiguration behavior for GPU buffers.
 
@@ -161,7 +162,7 @@ swift run wck smoke integration
 swift run GPUPreviewSmokeClient
 swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
 swift run GraphicsPreviewExternalBufferSmoke -- --probe
-swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer
+swift run GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer
 swift run GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer
 swift run OutputTopologySmoke -- --auto-close --print-summary
 swift run ColorManagementSmoke

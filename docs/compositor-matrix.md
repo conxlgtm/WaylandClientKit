@@ -85,7 +85,7 @@ example or manual probe has been run:
 | presentation feedback | `PresentationFeedbackAnimation` feedback summary |
 | output topology | `OutputTopologySmoke` output snapshot and window output membership report |
 | graphics preview fallback/GPU path | `GPUPreviewSmokeClient` runtime-path report |
-| external graphics buffer | `GraphicsPreviewExternalBufferSmoke -- --probe`, `--internal-test-buffer` renderer dmabuf import/submit/release run, or `--negative-test-buffer` import-cleanup probe |
+| external graphics buffer | `GraphicsPreviewExternalBufferSmoke -- --probe`, `GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer` renderer dmabuf import/submit/release run, or `GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer` import-cleanup probe |
 | graphics frame scheduling | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` requested/actual sync and pacing lines |
 | color metadata | `ColorManagementSmoke` and `GraphicsPreviewColorMetadataSmoke` capability/runtime report |
 
@@ -229,7 +229,7 @@ KDE/KWin graphics preview addendum on 2026-06-13:
 
 KDE/KWin external-buffer addendum on 2026-06-14:
 
-- `swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer`
+- `swift run GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer`
   produced `mode: renderer-dmabuf`, `renderer: active`,
   `import: active`, `submit: active`, `release: active`,
   `release/reuse: tracked-by-wayland-client-kit`, `fallback reason: none`,
