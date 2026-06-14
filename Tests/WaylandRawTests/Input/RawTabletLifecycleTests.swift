@@ -84,18 +84,30 @@ struct RawTabletLifecycleTests {
             proxyAdoption: fixture.proxyAdoption,
             destroy: unsafe fixture.recorder.destroy("pad"),
             groupDestroy: unsafe fixture.recorder.destroy("group"),
+            ringDestroy: unsafe fixture.recorder.destroy("ring"),
+            stripDestroy: unsafe fixture.recorder.destroy("strip"),
+            dialDestroy: unsafe fixture.recorder.destroy("dial"),
             identity: padID,
             installListener: false
         ) { identity in
             fixture.seat.handlePadRemovedForTesting(identity)
         }
         unsafe pad.trackGroupForTesting(unsafe fakePointer(0xB02))
+        unsafe pad.emitGroupRingForTesting(unsafe fakePointer(0xB03))
+        unsafe pad.emitGroupStripForTesting(unsafe fakePointer(0xB04))
+        unsafe pad.emitGroupDialForTesting(unsafe fakePointer(0xB05))
         fixture.seat.trackPadForTesting(pad)
 
         pad.emitRemovedForTesting()
 
         #expect(fixture.seat.trackedPadCountForTesting == 0)
         #expect(pad.trackedGroupCountForTesting == 0)
+        #expect(pad.trackedRingCountForTesting == 0)
+        #expect(pad.trackedStripCountForTesting == 0)
+        #expect(pad.trackedDialCountForTesting == 0)
+        #expect(fixture.recorder.destroyed(named: "ring") == [0xB03])
+        #expect(fixture.recorder.destroyed(named: "strip") == [0xB04])
+        #expect(fixture.recorder.destroyed(named: "dial") == [0xB05])
         #expect(fixture.recorder.destroyed(named: "group") == [0xB02])
         #expect(fixture.recorder.destroyed(named: "pad") == [0xB01])
         #expect(
@@ -107,6 +119,9 @@ struct RawTabletLifecycleTests {
         fixture.seat.destroy()
 
         #expect(fixture.queue.drain().isEmpty)
+        #expect(fixture.recorder.destroyed(named: "ring") == [0xB03])
+        #expect(fixture.recorder.destroyed(named: "strip") == [0xB04])
+        #expect(fixture.recorder.destroyed(named: "dial") == [0xB05])
         #expect(fixture.recorder.destroyed(named: "group") == [0xB02])
         #expect(fixture.recorder.destroyed(named: "pad") == [0xB01])
     }

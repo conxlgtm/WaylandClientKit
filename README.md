@@ -514,12 +514,16 @@ swift run SerialActionsProbe
 swift run TwoWindowFrameworkHost -- --auto-close --print-summary
 swift run TwoWindowOrderStress -- --duration-seconds 3 --print-summary
 swift run TextInputSmoke -- --auto-close --print-summary
+swift run TabletInputSmoke -- --auto-close --print-summary
+swift run CompositorSessionSmoke -- --auto-close --print-summary
 swift run DataTransferSmoke -- --auto-close --print-summary
 swift run PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
 swift run XDGActivationSmoke
 swift run PointerCaptureSmoke
+swift run PointerWarpSmoke -- --auto-close --print-summary
 swift run CursorPolicySmoke
 swift run CustomCursorSmoke
+swift run CursorAnimationSmoke -- --auto-close --print-summary
 swift run WindowIconSmoke
 swift run IdleInhibitSmoke
 swift run SystemBellSmoke

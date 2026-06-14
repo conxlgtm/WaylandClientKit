@@ -422,3 +422,90 @@ int swl_zwp_tablet_pad_v2_add_listener(
     return zwp_tablet_pad_v2_add_listener(
         pad, &swl_tablet_pad_listener_impl, (void *)callbacks);
 }
+
+static void swl_pad_group_handle_buttons(
+    void *data,
+    struct zwp_tablet_pad_group_v2 *group,
+    struct wl_array *buttons)
+{
+    const struct swl_zwp_tablet_pad_group_v2_listener_callbacks *cb = data;
+    if (cb && cb->buttons)
+        cb->buttons(cb->data, group, buttons);
+}
+
+static void swl_pad_group_handle_ring(
+    void *data,
+    struct zwp_tablet_pad_group_v2 *group,
+    struct zwp_tablet_pad_ring_v2 *ring)
+{
+    const struct swl_zwp_tablet_pad_group_v2_listener_callbacks *cb = data;
+    if (cb && cb->ring)
+        cb->ring(cb->data, group, ring);
+}
+
+static void swl_pad_group_handle_strip(
+    void *data,
+    struct zwp_tablet_pad_group_v2 *group,
+    struct zwp_tablet_pad_strip_v2 *strip)
+{
+    const struct swl_zwp_tablet_pad_group_v2_listener_callbacks *cb = data;
+    if (cb && cb->strip)
+        cb->strip(cb->data, group, strip);
+}
+
+static void swl_pad_group_handle_modes(
+    void *data,
+    struct zwp_tablet_pad_group_v2 *group,
+    uint32_t modes)
+{
+    const struct swl_zwp_tablet_pad_group_v2_listener_callbacks *cb = data;
+    if (cb && cb->modes)
+        cb->modes(cb->data, group, modes);
+}
+
+static void swl_pad_group_handle_done(void *data, struct zwp_tablet_pad_group_v2 *group)
+{
+    const struct swl_zwp_tablet_pad_group_v2_listener_callbacks *cb = data;
+    if (cb && cb->done)
+        cb->done(cb->data, group);
+}
+
+static void swl_pad_group_handle_mode_switch(
+    void *data,
+    struct zwp_tablet_pad_group_v2 *group,
+    uint32_t time,
+    uint32_t serial,
+    uint32_t mode)
+{
+    const struct swl_zwp_tablet_pad_group_v2_listener_callbacks *cb = data;
+    if (cb && cb->mode_switch)
+        cb->mode_switch(cb->data, group, time, serial, mode);
+}
+
+static void swl_pad_group_handle_dial(
+    void *data,
+    struct zwp_tablet_pad_group_v2 *group,
+    struct zwp_tablet_pad_dial_v2 *dial)
+{
+    const struct swl_zwp_tablet_pad_group_v2_listener_callbacks *cb = data;
+    if (cb && cb->dial)
+        cb->dial(cb->data, group, dial);
+}
+
+static const struct zwp_tablet_pad_group_v2_listener swl_tablet_pad_group_listener_impl = {
+    .buttons     = swl_pad_group_handle_buttons,
+    .ring        = swl_pad_group_handle_ring,
+    .strip       = swl_pad_group_handle_strip,
+    .modes       = swl_pad_group_handle_modes,
+    .done        = swl_pad_group_handle_done,
+    .mode_switch = swl_pad_group_handle_mode_switch,
+    .dial        = swl_pad_group_handle_dial,
+};
+
+int swl_zwp_tablet_pad_group_v2_add_listener(
+    struct zwp_tablet_pad_group_v2 *group,
+    const struct swl_zwp_tablet_pad_group_v2_listener_callbacks *callbacks)
+{
+    return zwp_tablet_pad_group_v2_add_listener(
+        group, &swl_tablet_pad_group_listener_impl, (void *)callbacks);
+}
