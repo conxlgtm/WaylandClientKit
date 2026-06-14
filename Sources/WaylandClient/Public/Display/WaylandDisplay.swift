@@ -288,6 +288,16 @@ public actor WaylandDisplay {
         try runtime.installEventSource(source)
     }
 
+    func requireCore() throws -> DisplayCore {
+        guard case .active(let core, _) = lifecycle else {
+            throw ClientError.display(.closed)
+        }
+
+        return core
+    }
+}
+
+extension WaylandDisplay {
     private func updateCursorAnimationTask(for cursor: PointerCursor) {
         guard cursor.animation != nil else {
             cursorAnimationTask?.cancel()
@@ -327,14 +337,6 @@ public actor WaylandDisplay {
                 return
             }
         }
-    }
-
-    func requireCore() throws -> DisplayCore {
-        guard case .active(let core, _) = lifecycle else {
-            throw ClientError.display(.closed)
-        }
-
-        return core
     }
 }
 
@@ -384,152 +386,5 @@ extension WaylandDisplay {
         case .initializing, .closed, .abandoned:
             throw ClientError.display(.closed)
         }
-    }
-}
-
-enum WaylandDisplayLifecycle {
-    case initializing
-    case active(core: DisplayCore, eventSource: DisplayEventSource)
-    case primarySelectionTestHarness(any WaylandDisplayPrimarySelectionHandling)
-    case closed
-    case abandoned
-
-    var isInitializing: Bool {
-        switch self {
-        case .initializing:
-            true
-        case .active, .primarySelectionTestHarness, .closed, .abandoned:
-            false
-        }
-    }
-}
-
-@safe
-final class WaylandDisplayRuntime: Sendable {
-    let executor: WaylandThreadExecutor
-    let eventHub: DisplayEventHub
-
-    init(configuration displayConfiguration: DisplayConfiguration) throws {
-        eventHub = DisplayEventHub(
-            configuration: displayConfiguration.eventStreams,
-            diagnosticsConfiguration: displayConfiguration.diagnostics
-        )
-        executor = try WaylandThreadExecutor()
-    }
-
-    deinit {
-        executor.shutdown()
-    }
-
-    var events: DisplayEvents {
-        eventHub.displayEvents()
-    }
-
-    var inputEvents: InputEvents {
-        eventHub.inputEvents()
-    }
-
-    var dataTransferEvents: DataTransferEvents {
-        eventHub.dataTransferEvents()
-    }
-
-    func windowPresentationEvents(for windowID: WindowID) -> WindowPresentationEvents {
-        eventHub.windowPresentationEvents(windowID: windowID)
-    }
-
-    var diagnostics: DisplayDiagnostics {
-        eventHub.diagnostics()
-    }
-
-    func installEventSource(_ source: any WaylandThreadEventSource) throws {
-        try executor.installEventSource(source)
-    }
-
-    func clearEventSource(_ source: (any WaylandThreadEventSource)?) {
-        executor.clearEventSource(source)
-    }
-
-    func actorDidDeinitialize(lifecycle: inout WaylandDisplayLifecycle) {
-        switch lifecycle {
-        case .closed, .abandoned:
-            executor.requestStopAfterCurrentJob()
-            return
-        case .initializing, .primarySelectionTestHarness:
-            eventHub.finish(throwing: .closed)
-            lifecycle = .closed
-            executor.requestStopAfterCurrentJob()
-            return
-        case .active(let leakedCore, _):
-            #if DEBUG
-                assertionFailure("WaylandDisplay leaked; call close() or use withConnection(_:)")
-            #endif
-
-            eventHub.finish(throwing: .closed)
-            executor.abandonWaylandEventSourceWithoutDestroyingRawResources()
-
-            // A missed close can deinitialize from an arbitrary thread. Normal
-            // Wayland teardown is ordered owner-thread work, so release builds
-            // abandon the raw graph instead of faking cleanup from deinit.
-            unsafe intentionallyLeakObjectForWrongThreadResourceFallback(leakedCore)
-            lifecycle = .abandoned
-            executor.requestStopAfterCurrentJob(.abandonWaylandSources)
-        }
-    }
-}
-
-@safe
-final class DisplayEventSource: WaylandThreadEventSource {
-    private let core: DisplayCore
-
-    init(core displayCore: DisplayCore) {
-        core = displayCore
-    }
-
-    var isClosed: Bool {
-        core.isClosed
-    }
-
-    func fileDescriptor() throws -> CInt {
-        try core.fileDescriptor()
-    }
-
-    func dispatchPending() throws -> Int32 {
-        try core.dispatchPending()
-    }
-
-    func prepareRead() throws -> Bool {
-        try core.prepareRead()
-    }
-
-    func flush() throws -> Bool {
-        try core.flush()
-    }
-
-    func readEvents() throws {
-        try core.readEvents()
-    }
-
-    func cancelRead() {
-        core.cancelRead()
-    }
-
-    func handleEventLoopError(_ error: any Error) {
-        core.fail(displayError(for: error))
-    }
-
-    private func displayError(for error: any Error) -> WaylandDisplayError {
-        if let displayError = error as? WaylandDisplayError {
-            return displayError
-        }
-
-        if let runtimeError = error as? RuntimeError {
-            return WaylandDisplayError(runtimeError)
-        }
-
-        if let executorError = error as? WaylandThreadExecutorError {
-            return WaylandDisplayError(executorError)
-        }
-
-        return .internalInvariantViolation(.message(String(describing: error)))
     }
 }
