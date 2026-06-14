@@ -1334,6 +1334,34 @@ typedef void (*swl_zwp_tablet_pad_v2_leave_fn)(
     struct wl_surface *surface);
 typedef void (*swl_zwp_tablet_pad_v2_removed_fn)(
     void *data, struct zwp_tablet_pad_v2 *pad);
+typedef void (*swl_zwp_tablet_pad_group_v2_buttons_fn)(
+    void *data,
+    struct zwp_tablet_pad_group_v2 *group,
+    struct wl_array *buttons);
+typedef void (*swl_zwp_tablet_pad_group_v2_ring_fn)(
+    void *data,
+    struct zwp_tablet_pad_group_v2 *group,
+    struct zwp_tablet_pad_ring_v2 *ring);
+typedef void (*swl_zwp_tablet_pad_group_v2_strip_fn)(
+    void *data,
+    struct zwp_tablet_pad_group_v2 *group,
+    struct zwp_tablet_pad_strip_v2 *strip);
+typedef void (*swl_zwp_tablet_pad_group_v2_modes_fn)(
+    void *data,
+    struct zwp_tablet_pad_group_v2 *group,
+    uint32_t modes);
+typedef void (*swl_zwp_tablet_pad_group_v2_done_fn)(
+    void *data, struct zwp_tablet_pad_group_v2 *group);
+typedef void (*swl_zwp_tablet_pad_group_v2_mode_switch_fn)(
+    void *data,
+    struct zwp_tablet_pad_group_v2 *group,
+    uint32_t time,
+    uint32_t serial,
+    uint32_t mode);
+typedef void (*swl_zwp_tablet_pad_group_v2_dial_fn)(
+    void *data,
+    struct zwp_tablet_pad_group_v2 *group,
+    struct zwp_tablet_pad_dial_v2 *dial);
 
 /* Text input */
 typedef void (*swl_text_input_v3_enter_fn)(
@@ -1720,6 +1748,17 @@ struct swl_zwp_tablet_pad_v2_listener_callbacks {
     void                            *data;
 };
 
+struct swl_zwp_tablet_pad_group_v2_listener_callbacks {
+    swl_zwp_tablet_pad_group_v2_buttons_fn     buttons;
+    swl_zwp_tablet_pad_group_v2_ring_fn        ring;
+    swl_zwp_tablet_pad_group_v2_strip_fn       strip;
+    swl_zwp_tablet_pad_group_v2_modes_fn       modes;
+    swl_zwp_tablet_pad_group_v2_done_fn        done;
+    swl_zwp_tablet_pad_group_v2_mode_switch_fn mode_switch;
+    swl_zwp_tablet_pad_group_v2_dial_fn        dial;
+    void                                      *data;
+};
+
 struct swl_text_input_v3_listener_callbacks {
     swl_text_input_v3_enter_fn                   enter;
     swl_text_input_v3_leave_fn                   leave;
@@ -1922,6 +1961,10 @@ int swl_zwp_tablet_tool_v2_add_listener(
 int swl_zwp_tablet_pad_v2_add_listener(
     struct zwp_tablet_pad_v2 *pad,
     const struct swl_zwp_tablet_pad_v2_listener_callbacks *callbacks);
+
+int swl_zwp_tablet_pad_group_v2_add_listener(
+    struct zwp_tablet_pad_group_v2 *group,
+    const struct swl_zwp_tablet_pad_group_v2_listener_callbacks *callbacks);
 
 int swl_text_input_v3_add_listener(
     struct zwp_text_input_v3 *text_input,

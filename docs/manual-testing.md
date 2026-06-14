@@ -36,7 +36,9 @@ swift run ClientSideResizeChrome
 swift run SerialActionsProbe
 swift run XDGActivationSmoke
 swift run PointerCaptureSmoke
+swift run PointerWarpSmoke -- --auto-close --print-summary
 swift run CursorPolicySmoke
+swift run CursorAnimationSmoke -- --auto-close --print-summary
 swift run GraphicsPreviewManagedGPUClear
 ```
 
@@ -46,6 +48,8 @@ Run bounded examples when a compositor session is available:
 swift run TwoWindowFrameworkHost -- --auto-close --print-summary
 swift run TwoWindowOrderStress -- --duration-seconds 3 --print-summary
 swift run TextInputSmoke -- --auto-close --print-summary
+swift run TabletInputSmoke -- --auto-close --print-summary
+swift run CompositorSessionSmoke -- --auto-close --print-summary
 swift run DataTransferSmoke -- --auto-close --print-summary
 swift run PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
 swift run GPUPreviewSmokeClient
@@ -61,6 +65,7 @@ swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
 - xdg activation capability, token request result, and activate request result
 - relative pointer and pointer lock/confine capability and request result
 - cursor shape, theme fallback, focused-output scale policy, and close result
+- pointer warp and tablet capability, request/event result, and skip reason
 - text-input capability, IME commits, and interpreted keyboard fallback
 - clipboard, primary-selection, drag/drop, private MIME, and stale-offer behavior
 - popup lifecycle and shutdown behavior

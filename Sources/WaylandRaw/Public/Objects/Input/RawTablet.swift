@@ -217,6 +217,9 @@ package final class RawTabletSeat {
                 proxyAdoption: proxyAdoption,
                 destroy: unsafe swl_zwp_tablet_pad_v2_destroy,
                 groupDestroy: unsafe swl_zwp_tablet_pad_group_v2_destroy,
+                ringDestroy: unsafe swl_zwp_tablet_pad_ring_v2_destroy,
+                stripDestroy: unsafe swl_zwp_tablet_pad_strip_v2_destroy,
+                dialDestroy: unsafe swl_zwp_tablet_pad_dial_v2_destroy,
                 identity: RawTabletPadIdentity(objectID: unsafe objectID(of: adoptedPadPointer))
             ) { [weak self] identity in
                 self?.handlePadRemoved(identity)
@@ -419,6 +422,9 @@ package final class RawTabletPad {
     private var proxy: RawOwnedProxy
     private var groups: [RawTabletPadGroup] = []
     @safe private let groupDestroy: (OpaquePointer) -> Void
+    @safe private let ringDestroy: (OpaquePointer) -> Void
+    @safe private let stripDestroy: (OpaquePointer) -> Void
+    @safe private let dialDestroy: (OpaquePointer) -> Void
 
     @safe
     init(
@@ -429,6 +435,9 @@ package final class RawTabletPad {
         proxyAdoption adoptionContext: RawProxyAdoptionContext,
         destroy destroyProxy: @escaping (OpaquePointer) -> Void,
         groupDestroy destroyGroupProxy: @escaping (OpaquePointer) -> Void,
+        ringDestroy destroyRingProxy: @escaping (OpaquePointer) -> Void,
+        stripDestroy destroyStripProxy: @escaping (OpaquePointer) -> Void,
+        dialDestroy destroyDialProxy: @escaping (OpaquePointer) -> Void,
         identity padIdentity: RawTabletPadIdentity,
         installListener shouldInstallListener: Bool = true,
         onRemoved removedHandler: ((RawTabletPadIdentity) -> Void)? = nil
@@ -437,6 +446,9 @@ package final class RawTabletPad {
         identity = padIdentity
         proxy = RawOwnedProxy(pointer: padPointer, destroy: destroyProxy)
         unsafe groupDestroy = destroyGroupProxy
+        unsafe ringDestroy = destroyRingProxy
+        unsafe stripDestroy = destroyStripProxy
+        unsafe dialDestroy = destroyDialProxy
         listenerOwner = RawTabletPadOwner(
             identity: identity,
             seatID: padSeatID,
@@ -467,8 +479,13 @@ package final class RawTabletPad {
             let group = try unsafe RawTabletPadGroup(
                 pointer: groupPointer,
                 proxyAdoption: listenerOwner.proxyAdoption,
-                destroy: groupDestroy
-            )
+                groupDestroy: groupDestroy,
+                ringDestroy: ringDestroy,
+                stripDestroy: stripDestroy,
+                dialDestroy: dialDestroy
+            ) { [weak self] listener, error in
+                self?.listenerOwner.appendListenerDiagnostic(listener: listener, error: error)
+            }
             groups.append(group)
         } catch {
             listenerOwner.appendListenerDiagnostic(
@@ -478,9 +495,52 @@ package final class RawTabletPad {
 
     package var trackedGroupCountForTesting: Int { groups.count }
 
+    package var trackedRingCountForTesting: Int {
+        groups.reduce(0) { count, group in count + group.trackedRingCountForTesting }
+    }
+
+    package var trackedStripCountForTesting: Int {
+        groups.reduce(0) { count, group in count + group.trackedStripCountForTesting }
+    }
+
+    package var trackedDialCountForTesting: Int {
+        groups.reduce(0) { count, group in count + group.trackedDialCountForTesting }
+    }
+
     package func trackGroupForTesting(_ groupPointer: OpaquePointer) {
         unsafe groups.append(
-            RawTabletPadGroup(uncheckedPointer: groupPointer, destroy: groupDestroy))
+            RawTabletPadGroup(
+                uncheckedPointer: groupPointer,
+                groupDestroy: groupDestroy,
+                ringDestroy: ringDestroy,
+                stripDestroy: stripDestroy,
+                dialDestroy: dialDestroy
+            )
+        )
+    }
+
+    package func trackRingForTesting(_ ringPointer: OpaquePointer) {
+        unsafe groups.last?.trackRingForTesting(ringPointer)
+    }
+
+    package func trackStripForTesting(_ stripPointer: OpaquePointer) {
+        unsafe groups.last?.trackStripForTesting(stripPointer)
+    }
+
+    package func trackDialForTesting(_ dialPointer: OpaquePointer) {
+        unsafe groups.last?.trackDialForTesting(dialPointer)
+    }
+
+    package func emitGroupRingForTesting(_ ringPointer: OpaquePointer) {
+        unsafe groups.last?.emitRingForTesting(ringPointer)
+    }
+
+    package func emitGroupStripForTesting(_ stripPointer: OpaquePointer) {
+        unsafe groups.last?.emitStripForTesting(stripPointer)
+    }
+
+    package func emitGroupDialForTesting(_ dialPointer: OpaquePointer) {
+        unsafe groups.last?.emitDialForTesting(dialPointer)
     }
 
     package func emitRemovedForTesting() {
@@ -503,25 +563,204 @@ private func combineHighLow(_ high: UInt32, _ low: UInt32) -> UInt64 {
 @safe
 private final class RawTabletPadGroup {
     private var proxy: RawOwnedProxy
+    private let proxyAdoption: RawProxyAdoptionContext?
+    private var listenerOwner: RawTabletPadGroupOwner?
+    private var rings: [RawTabletPadChildProxy] = []
+    private var strips: [RawTabletPadChildProxy] = []
+    private var dials: [RawTabletPadChildProxy] = []
+    @safe private let ringDestroy: (OpaquePointer) -> Void
+    @safe private let stripDestroy: (OpaquePointer) -> Void
+    @safe private let dialDestroy: (OpaquePointer) -> Void
+    private let appendListenerDiagnostic: (String, any Error) -> Void
 
     init(
         pointer groupPointer: OpaquePointer,
         proxyAdoption adoptionContext: RawProxyAdoptionContext,
-        destroy destroyProxy: @escaping (OpaquePointer) -> Void
+        groupDestroy destroyProxy: @escaping (OpaquePointer) -> Void,
+        ringDestroy destroyRingProxy: @escaping (OpaquePointer) -> Void,
+        stripDestroy destroyStripProxy: @escaping (OpaquePointer) -> Void,
+        dialDestroy destroyDialProxy: @escaping (OpaquePointer) -> Void,
+        appendListenerDiagnostic diagnosticHandler: @escaping (String, any Error) -> Void
     ) throws(RuntimeError) {
+        proxyAdoption = adoptionContext
+        unsafe ringDestroy = destroyRingProxy
+        unsafe stripDestroy = destroyStripProxy
+        unsafe dialDestroy = destroyDialProxy
+        appendListenerDiagnostic = diagnosticHandler
         proxy = try RawOwnedProxy(
             adopting: groupPointer,
             interface: "zwp_tablet_pad_group_v2",
             proxyAdoption: adoptionContext,
             destroy: destroyProxy
         )
+        let groupOwner = makeListenerOwner(
+            invariantFailureSink: adoptionContext.invariantFailureSink
+        )
+        try unsafe groupOwner.install(on: groupPointer)
     }
 
     init(
         uncheckedPointer groupPointer: OpaquePointer,
+        groupDestroy destroyProxy: @escaping (OpaquePointer) -> Void,
+        ringDestroy destroyRingProxy: @escaping (OpaquePointer) -> Void,
+        stripDestroy destroyStripProxy: @escaping (OpaquePointer) -> Void,
+        dialDestroy destroyDialProxy: @escaping (OpaquePointer) -> Void
+    ) {
+        proxyAdoption = nil
+        unsafe ringDestroy = destroyRingProxy
+        unsafe stripDestroy = destroyStripProxy
+        unsafe dialDestroy = destroyDialProxy
+        appendListenerDiagnostic = { _, _ in
+            // Unchecked test groups never install listeners.
+        }
+        proxy = RawOwnedProxy(pointer: groupPointer, destroy: destroyProxy)
+        _ = makeListenerOwner(invariantFailureSink: nil)
+    }
+
+    func destroy() {
+        listenerOwner?.cancel()
+        for dial in dials {
+            dial.destroy()
+        }
+        dials.removeAll()
+        for strip in strips {
+            strip.destroy()
+        }
+        strips.removeAll()
+        for ring in rings {
+            ring.destroy()
+        }
+        rings.removeAll()
+        proxy.destroy()
+        listenerOwner = nil
+    }
+
+    private func adoptChild(
+        _ childPointer: OpaquePointer,
+        interface: StaticString,
+        destroy destroyProxy: @escaping (OpaquePointer) -> Void,
+        store: (RawTabletPadChildProxy) -> Void
+    ) {
+        do {
+            let child: RawTabletPadChildProxy
+            if let proxyAdoption {
+                child = try unsafe RawTabletPadChildProxy(
+                    pointer: childPointer,
+                    interface: interface,
+                    proxyAdoption: proxyAdoption,
+                    destroy: destroyProxy
+                )
+            } else {
+                child = unsafe RawTabletPadChildProxy(
+                    uncheckedPointer: childPointer,
+                    destroy: destroyProxy
+                )
+            }
+            store(child)
+        } catch {
+            appendListenerDiagnostic(String(describing: interface), error)
+        }
+    }
+
+    private func makeListenerOwner(
+        invariantFailureSink failureSink: RawInvariantFailureSink?
+    ) -> RawTabletPadGroupOwner {
+        let groupOwner = RawTabletPadGroupOwner(invariantFailureSink: failureSink)
+        unsafe groupOwner.onRingAdded = { [weak self] ringPointer in
+            guard let self else { return }
+            unsafe self.adoptChild(
+                ringPointer,
+                interface: "zwp_tablet_pad_ring_v2",
+                destroy: self.ringDestroy
+            ) { child in
+                self.rings.append(child)
+            }
+        }
+        unsafe groupOwner.onStripAdded = { [weak self] stripPointer in
+            guard let self else { return }
+            unsafe self.adoptChild(
+                stripPointer,
+                interface: "zwp_tablet_pad_strip_v2",
+                destroy: self.stripDestroy
+            ) { child in
+                self.strips.append(child)
+            }
+        }
+        unsafe groupOwner.onDialAdded = { [weak self] dialPointer in
+            guard let self else { return }
+            unsafe self.adoptChild(
+                dialPointer,
+                interface: "zwp_tablet_pad_dial_v2",
+                destroy: self.dialDestroy
+            ) { child in
+                self.dials.append(child)
+            }
+        }
+        listenerOwner = groupOwner
+        return groupOwner
+    }
+
+    var trackedRingCountForTesting: Int { rings.count }
+
+    var trackedStripCountForTesting: Int { strips.count }
+
+    var trackedDialCountForTesting: Int { dials.count }
+
+    func trackRingForTesting(_ ringPointer: OpaquePointer) {
+        unsafe rings.append(
+            RawTabletPadChildProxy(uncheckedPointer: ringPointer, destroy: ringDestroy))
+    }
+
+    func trackStripForTesting(_ stripPointer: OpaquePointer) {
+        unsafe strips.append(
+            RawTabletPadChildProxy(uncheckedPointer: stripPointer, destroy: stripDestroy))
+    }
+
+    func trackDialForTesting(_ dialPointer: OpaquePointer) {
+        unsafe dials.append(
+            RawTabletPadChildProxy(uncheckedPointer: dialPointer, destroy: dialDestroy))
+    }
+
+    func emitRingForTesting(_ ringPointer: OpaquePointer) {
+        unsafe listenerOwner?.emitRingForTesting(ringPointer)
+    }
+
+    func emitStripForTesting(_ stripPointer: OpaquePointer) {
+        unsafe listenerOwner?.emitStripForTesting(stripPointer)
+    }
+
+    func emitDialForTesting(_ dialPointer: OpaquePointer) {
+        unsafe listenerOwner?.emitDialForTesting(dialPointer)
+    }
+
+    deinit {
+        destroy()
+    }
+}
+
+@safe
+private final class RawTabletPadChildProxy {
+    private var proxy: RawOwnedProxy
+
+    init(
+        pointer childPointer: OpaquePointer,
+        interface childInterface: StaticString,
+        proxyAdoption adoptionContext: RawProxyAdoptionContext,
+        destroy destroyProxy: @escaping (OpaquePointer) -> Void
+    ) throws(RuntimeError) {
+        proxy = try RawOwnedProxy(
+            adopting: childPointer,
+            interface: childInterface,
+            proxyAdoption: adoptionContext,
+            destroy: destroyProxy
+        )
+    }
+
+    init(
+        uncheckedPointer childPointer: OpaquePointer,
         destroy destroyProxy: @escaping (OpaquePointer) -> Void
     ) {
-        proxy = RawOwnedProxy(pointer: groupPointer, destroy: destroyProxy)
+        proxy = RawOwnedProxy(pointer: childPointer, destroy: destroyProxy)
     }
 
     func destroy() {
@@ -530,6 +769,97 @@ private final class RawTabletPadGroup {
 
     deinit {
         destroy()
+    }
+}
+
+@safe
+private final class RawTabletPadGroupOwner {
+    var onRingAdded: ((OpaquePointer) -> Void)?
+    var onStripAdded: ((OpaquePointer) -> Void)?
+    var onDialAdded: ((OpaquePointer) -> Void)?
+
+    private let invariantFailureSink: RawInvariantFailureSink?
+    private var isCanceled = false
+    @safe private lazy var listenerStorage = CListenerStorage(
+        owner: self,
+        initialValue: unsafe swl_zwp_tablet_pad_group_v2_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
+    )
+
+    @safe private var callbacks:
+        UnsafeMutablePointer<swl_zwp_tablet_pad_group_v2_listener_callbacks>
+    {
+        listenerStorage.callbacks
+    }
+
+    init(invariantFailureSink failureSink: RawInvariantFailureSink?) {
+        invariantFailureSink = failureSink
+
+        unsafe callbacks.pointee.ring = { data, _, ring in
+            RawTabletPadGroupOwner.withOwner(
+                data,
+                message: "tablet pad group ring without Swift state"
+            ) { owner in
+                guard !owner.isCanceled, let ring = unsafe ring else { return }
+                unsafe owner.onRingAdded?(ring)
+            }
+        }
+        unsafe callbacks.pointee.strip = { data, _, strip in
+            RawTabletPadGroupOwner.withOwner(
+                data,
+                message: "tablet pad group strip without Swift state"
+            ) { owner in
+                guard !owner.isCanceled, let strip = unsafe strip else { return }
+                unsafe owner.onStripAdded?(strip)
+            }
+        }
+        unsafe callbacks.pointee.dial = { data, _, dial in
+            RawTabletPadGroupOwner.withOwner(
+                data,
+                message: "tablet pad group dial without Swift state"
+            ) { owner in
+                guard !owner.isCanceled, let dial = unsafe dial else { return }
+                unsafe owner.onDialAdded?(dial)
+            }
+        }
+    }
+
+    func install(on group: OpaquePointer) throws(RuntimeError) {
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        let result = unsafe swl_zwp_tablet_pad_group_v2_add_listener(group, callbacks)
+        guard result == 0 else {
+            throw RuntimeError.listenerInstallFailed("zwp_tablet_pad_group_v2")
+        }
+    }
+
+    func cancel() {
+        isCanceled = true
+        listenerStorage.invalidate()
+    }
+
+    func emitRingForTesting(_ ringPointer: OpaquePointer) {
+        unsafe onRingAdded?(ringPointer)
+    }
+
+    func emitStripForTesting(_ stripPointer: OpaquePointer) {
+        unsafe onStripAdded?(stripPointer)
+    }
+
+    func emitDialForTesting(_ dialPointer: OpaquePointer) {
+        unsafe onDialAdded?(dialPointer)
+    }
+
+    @safe
+    private static func withOwner(
+        _ data: UnsafeMutableRawPointer?,
+        message: @autoclosure () -> String,
+        _ body: (RawTabletPadGroupOwner) -> Void
+    ) {
+        CListenerStorage<
+            RawTabletPadGroupOwner,
+            swl_zwp_tablet_pad_group_v2_listener_callbacks
+        >
+        .withOwner(from: data, message: message(), body)
     }
 }
 
