@@ -15,6 +15,8 @@ extension WaylandRaw.SeatCapabilities {
             hasKeyboard
         case .touch:
             hasTouch
+        case .tablet:
+            false
         }
     }
 }

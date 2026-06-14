@@ -73,6 +73,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Pointer warp request support through `wp_pointer_warp_v1`.
     public let pointerWarp: ProtocolAvailability
 
+    /// Graphics tablet input support through `zwp_tablet_manager_v2`.
+    public let tablet: ProtocolAvailability
+
     /// Relative pointer motion support through `zwp_relative_pointer_manager_v1`.
     public let relativePointer: ProtocolAvailability
 
@@ -104,7 +107,8 @@ public struct WaylandCapabilities: Equatable, Sendable {
         xdgToplevelIcon: ProtocolAvailability = .unavailable,
         idleInhibit: ProtocolAvailability = .unavailable,
         systemBell: ProtocolAvailability = .unavailable,
-        pointerWarp: ProtocolAvailability = .unavailable
+        pointerWarp: ProtocolAvailability = .unavailable,
+        tablet: ProtocolAvailability = .unavailable
     ) {
         self.clipboard = clipboard
         self.dragAndDrop = dragAndDrop
@@ -121,6 +125,7 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.idleInhibit = idleInhibit
         self.systemBell = systemBell
         self.pointerWarp = pointerWarp
+        self.tablet = tablet
         self.relativePointer = relativePointer
         self.pointerConstraints = pointerConstraints
         self.textInput = textInput
@@ -161,7 +166,8 @@ public struct WaylandCapabilities: Equatable, Sendable {
             xdgToplevelIcon: .unavailable,
             idleInhibit: .unavailable,
             systemBell: .unavailable,
-            pointerWarp: .unavailable
+            pointerWarp: .unavailable,
+            tablet: .unavailable
         )
     }
 
@@ -198,7 +204,8 @@ public struct WaylandCapabilities: Equatable, Sendable {
             xdgToplevelIcon: .unavailable,
             idleInhibit: .unavailable,
             systemBell: .unavailable,
-            pointerWarp: .unavailable
+            pointerWarp: .unavailable,
+            tablet: .unavailable
         )
     }
 }
@@ -296,6 +303,10 @@ extension WaylandCapabilities {
             pointerWarp: ProtocolAvailability(
                 protocols.bestAdvertisedProtocol(named: "wp_pointer_warp_v1"),
                 supportedByClient: SupportedVersions.wpPointerWarpV1
+            ),
+            tablet: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "zwp_tablet_manager_v2"),
+                supportedByClient: SupportedVersions.zwpTabletManagerV2
             )
         )
     }

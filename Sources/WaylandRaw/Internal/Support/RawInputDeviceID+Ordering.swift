@@ -7,6 +7,8 @@ extension RawInputDeviceID.Kind {
             1
         case .touch:
             2
+        case .tablet:
+            3
         }
     }
 }

@@ -32,6 +32,15 @@ struct xdg_toplevel_icon_manager_v1;
 struct xdg_toplevel_icon_v1;
 struct xdg_system_bell_v1;
 struct wp_pointer_warp_v1;
+struct zwp_tablet_manager_v2;
+struct zwp_tablet_seat_v2;
+struct zwp_tablet_v2;
+struct zwp_tablet_tool_v2;
+struct zwp_tablet_pad_v2;
+struct zwp_tablet_pad_group_v2;
+struct zwp_tablet_pad_ring_v2;
+struct zwp_tablet_pad_strip_v2;
+struct zwp_tablet_pad_dial_v2;
 struct zwp_relative_pointer_manager_v1;
 struct zwp_relative_pointer_v1;
 struct zwp_pointer_constraints_v1;
@@ -127,6 +136,9 @@ struct xdg_system_bell_v1 *swl_registry_bind_xdg_system_bell_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct wp_pointer_warp_v1 *swl_registry_bind_wp_pointer_warp_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct zwp_tablet_manager_v2 *swl_registry_bind_zwp_tablet_manager_v2(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct zwp_relative_pointer_manager_v1 *
@@ -385,6 +397,28 @@ void swl_wp_pointer_warp_v1_warp_pointer(
     uint32_t serial);
 void swl_wp_pointer_warp_v1_destroy(
     struct wp_pointer_warp_v1 *warp);
+
+struct zwp_tablet_seat_v2 *swl_zwp_tablet_manager_v2_get_tablet_seat(
+    struct zwp_tablet_manager_v2 *manager,
+    struct wl_seat *seat);
+void swl_zwp_tablet_manager_v2_destroy(
+    struct zwp_tablet_manager_v2 *manager);
+void swl_zwp_tablet_seat_v2_destroy(
+    struct zwp_tablet_seat_v2 *tablet_seat);
+void swl_zwp_tablet_v2_destroy(
+    struct zwp_tablet_v2 *tablet);
+void swl_zwp_tablet_tool_v2_destroy(
+    struct zwp_tablet_tool_v2 *tool);
+void swl_zwp_tablet_pad_v2_destroy(
+    struct zwp_tablet_pad_v2 *pad);
+void swl_zwp_tablet_pad_group_v2_destroy(
+    struct zwp_tablet_pad_group_v2 *group);
+void swl_zwp_tablet_pad_ring_v2_destroy(
+    struct zwp_tablet_pad_ring_v2 *ring);
+void swl_zwp_tablet_pad_strip_v2_destroy(
+    struct zwp_tablet_pad_strip_v2 *strip);
+void swl_zwp_tablet_pad_dial_v2_destroy(
+    struct zwp_tablet_pad_dial_v2 *dial);
 
 struct zwp_relative_pointer_v1 *
 swl_zwp_relative_pointer_manager_v1_get_relative_pointer(
@@ -1138,6 +1172,113 @@ typedef void (*swl_zwp_confined_pointer_v1_unconfined_fn)(
     void *data,
     struct zwp_confined_pointer_v1 *confined_pointer);
 
+/* Tablet */
+typedef void (*swl_zwp_tablet_seat_v2_tablet_added_fn)(
+    void *data,
+    struct zwp_tablet_seat_v2 *tablet_seat,
+    struct zwp_tablet_v2 *tablet);
+typedef void (*swl_zwp_tablet_seat_v2_tool_added_fn)(
+    void *data,
+    struct zwp_tablet_seat_v2 *tablet_seat,
+    struct zwp_tablet_tool_v2 *tool);
+typedef void (*swl_zwp_tablet_seat_v2_pad_added_fn)(
+    void *data,
+    struct zwp_tablet_seat_v2 *tablet_seat,
+    struct zwp_tablet_pad_v2 *pad);
+typedef void (*swl_zwp_tablet_v2_name_fn)(
+    void *data, struct zwp_tablet_v2 *tablet, const char *name);
+typedef void (*swl_zwp_tablet_v2_id_fn)(
+    void *data, struct zwp_tablet_v2 *tablet, uint32_t vid, uint32_t pid);
+typedef void (*swl_zwp_tablet_v2_path_fn)(
+    void *data, struct zwp_tablet_v2 *tablet, const char *path);
+typedef void (*swl_zwp_tablet_v2_done_fn)(
+    void *data, struct zwp_tablet_v2 *tablet);
+typedef void (*swl_zwp_tablet_v2_removed_fn)(
+    void *data, struct zwp_tablet_v2 *tablet);
+typedef void (*swl_zwp_tablet_v2_bustype_fn)(
+    void *data, struct zwp_tablet_v2 *tablet, uint32_t bustype);
+typedef void (*swl_zwp_tablet_tool_v2_type_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool, uint32_t tool_type);
+typedef void (*swl_zwp_tablet_tool_v2_hardware_serial_fn)(
+    void *data,
+    struct zwp_tablet_tool_v2 *tool,
+    uint32_t serial_hi,
+    uint32_t serial_lo);
+typedef void (*swl_zwp_tablet_tool_v2_hardware_id_wacom_fn)(
+    void *data,
+    struct zwp_tablet_tool_v2 *tool,
+    uint32_t hardware_id_hi,
+    uint32_t hardware_id_lo);
+typedef void (*swl_zwp_tablet_tool_v2_capability_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool, uint32_t capability);
+typedef void (*swl_zwp_tablet_tool_v2_done_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool);
+typedef void (*swl_zwp_tablet_tool_v2_removed_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool);
+typedef void (*swl_zwp_tablet_tool_v2_proximity_in_fn)(
+    void *data,
+    struct zwp_tablet_tool_v2 *tool,
+    uint32_t serial,
+    struct zwp_tablet_v2 *tablet,
+    struct wl_surface *surface);
+typedef void (*swl_zwp_tablet_tool_v2_proximity_out_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool);
+typedef void (*swl_zwp_tablet_tool_v2_down_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool, uint32_t serial);
+typedef void (*swl_zwp_tablet_tool_v2_up_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool);
+typedef void (*swl_zwp_tablet_tool_v2_motion_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool, wl_fixed_t x, wl_fixed_t y);
+typedef void (*swl_zwp_tablet_tool_v2_pressure_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool, uint32_t pressure);
+typedef void (*swl_zwp_tablet_tool_v2_distance_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool, uint32_t distance);
+typedef void (*swl_zwp_tablet_tool_v2_tilt_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool, wl_fixed_t x, wl_fixed_t y);
+typedef void (*swl_zwp_tablet_tool_v2_rotation_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool, wl_fixed_t degrees);
+typedef void (*swl_zwp_tablet_tool_v2_slider_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool, int32_t position);
+typedef void (*swl_zwp_tablet_tool_v2_wheel_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool, wl_fixed_t degrees, int32_t clicks);
+typedef void (*swl_zwp_tablet_tool_v2_button_fn)(
+    void *data,
+    struct zwp_tablet_tool_v2 *tool,
+    uint32_t serial,
+    uint32_t button,
+    uint32_t state);
+typedef void (*swl_zwp_tablet_tool_v2_frame_fn)(
+    void *data, struct zwp_tablet_tool_v2 *tool, uint32_t time);
+typedef void (*swl_zwp_tablet_pad_v2_group_fn)(
+    void *data,
+    struct zwp_tablet_pad_v2 *pad,
+    struct zwp_tablet_pad_group_v2 *group);
+typedef void (*swl_zwp_tablet_pad_v2_path_fn)(
+    void *data, struct zwp_tablet_pad_v2 *pad, const char *path);
+typedef void (*swl_zwp_tablet_pad_v2_buttons_fn)(
+    void *data, struct zwp_tablet_pad_v2 *pad, uint32_t buttons);
+typedef void (*swl_zwp_tablet_pad_v2_done_fn)(
+    void *data, struct zwp_tablet_pad_v2 *pad);
+typedef void (*swl_zwp_tablet_pad_v2_button_fn)(
+    void *data,
+    struct zwp_tablet_pad_v2 *pad,
+    uint32_t time,
+    uint32_t button,
+    uint32_t state);
+typedef void (*swl_zwp_tablet_pad_v2_enter_fn)(
+    void *data,
+    struct zwp_tablet_pad_v2 *pad,
+    uint32_t serial,
+    struct zwp_tablet_v2 *tablet,
+    struct wl_surface *surface);
+typedef void (*swl_zwp_tablet_pad_v2_leave_fn)(
+    void *data,
+    struct zwp_tablet_pad_v2 *pad,
+    uint32_t serial,
+    struct wl_surface *surface);
+typedef void (*swl_zwp_tablet_pad_v2_removed_fn)(
+    void *data, struct zwp_tablet_pad_v2 *pad);
+
 /* Text input */
 typedef void (*swl_text_input_v3_enter_fn)(
     void *data, struct zwp_text_input_v3 *text_input, struct wl_surface *surface);
@@ -1459,6 +1600,58 @@ struct swl_zwp_confined_pointer_v1_listener_callbacks {
     void                                     *data;
 };
 
+struct swl_zwp_tablet_seat_v2_listener_callbacks {
+    swl_zwp_tablet_seat_v2_tablet_added_fn tablet_added;
+    swl_zwp_tablet_seat_v2_tool_added_fn   tool_added;
+    swl_zwp_tablet_seat_v2_pad_added_fn    pad_added;
+    void                                  *data;
+};
+
+struct swl_zwp_tablet_v2_listener_callbacks {
+    swl_zwp_tablet_v2_name_fn    name;
+    swl_zwp_tablet_v2_id_fn      id;
+    swl_zwp_tablet_v2_path_fn    path;
+    swl_zwp_tablet_v2_done_fn    done;
+    swl_zwp_tablet_v2_removed_fn removed;
+    swl_zwp_tablet_v2_bustype_fn bustype;
+    void                        *data;
+};
+
+struct swl_zwp_tablet_tool_v2_listener_callbacks {
+    swl_zwp_tablet_tool_v2_type_fn              type;
+    swl_zwp_tablet_tool_v2_hardware_serial_fn   hardware_serial;
+    swl_zwp_tablet_tool_v2_hardware_id_wacom_fn hardware_id_wacom;
+    swl_zwp_tablet_tool_v2_capability_fn        capability;
+    swl_zwp_tablet_tool_v2_done_fn              done;
+    swl_zwp_tablet_tool_v2_removed_fn           removed;
+    swl_zwp_tablet_tool_v2_proximity_in_fn      proximity_in;
+    swl_zwp_tablet_tool_v2_proximity_out_fn     proximity_out;
+    swl_zwp_tablet_tool_v2_down_fn              down;
+    swl_zwp_tablet_tool_v2_up_fn                up;
+    swl_zwp_tablet_tool_v2_motion_fn            motion;
+    swl_zwp_tablet_tool_v2_pressure_fn          pressure;
+    swl_zwp_tablet_tool_v2_distance_fn          distance;
+    swl_zwp_tablet_tool_v2_tilt_fn              tilt;
+    swl_zwp_tablet_tool_v2_rotation_fn          rotation;
+    swl_zwp_tablet_tool_v2_slider_fn            slider;
+    swl_zwp_tablet_tool_v2_wheel_fn             wheel;
+    swl_zwp_tablet_tool_v2_button_fn            button;
+    swl_zwp_tablet_tool_v2_frame_fn             frame;
+    void                                       *data;
+};
+
+struct swl_zwp_tablet_pad_v2_listener_callbacks {
+    swl_zwp_tablet_pad_v2_group_fn   group;
+    swl_zwp_tablet_pad_v2_path_fn    path;
+    swl_zwp_tablet_pad_v2_buttons_fn buttons;
+    swl_zwp_tablet_pad_v2_done_fn    done;
+    swl_zwp_tablet_pad_v2_button_fn  button;
+    swl_zwp_tablet_pad_v2_enter_fn   enter;
+    swl_zwp_tablet_pad_v2_leave_fn   leave;
+    swl_zwp_tablet_pad_v2_removed_fn removed;
+    void                            *data;
+};
+
 struct swl_text_input_v3_listener_callbacks {
     swl_text_input_v3_enter_fn                   enter;
     swl_text_input_v3_leave_fn                   leave;
@@ -1637,6 +1830,22 @@ int swl_zwp_locked_pointer_v1_add_listener(
 int swl_zwp_confined_pointer_v1_add_listener(
     struct zwp_confined_pointer_v1 *confined_pointer,
     const struct swl_zwp_confined_pointer_v1_listener_callbacks *callbacks);
+
+int swl_zwp_tablet_seat_v2_add_listener(
+    struct zwp_tablet_seat_v2 *tablet_seat,
+    const struct swl_zwp_tablet_seat_v2_listener_callbacks *callbacks);
+
+int swl_zwp_tablet_v2_add_listener(
+    struct zwp_tablet_v2 *tablet,
+    const struct swl_zwp_tablet_v2_listener_callbacks *callbacks);
+
+int swl_zwp_tablet_tool_v2_add_listener(
+    struct zwp_tablet_tool_v2 *tool,
+    const struct swl_zwp_tablet_tool_v2_listener_callbacks *callbacks);
+
+int swl_zwp_tablet_pad_v2_add_listener(
+    struct zwp_tablet_pad_v2 *pad,
+    const struct swl_zwp_tablet_pad_v2_listener_callbacks *callbacks);
 
 int swl_text_input_v3_add_listener(
     struct zwp_text_input_v3 *text_input,
