@@ -128,6 +128,9 @@ Audit invariant:
 
 Tests:
 
+- `RawCompositorSessionLifecycleTests` covers manager, session, and toplevel
+  session destroy idempotency, listener event mapping, listener cancellation,
+  late events after destroy, and child toplevel cleanup.
 - `WaylandCapabilitiesTests` covers `xdg_session_manager_v1` advertisement and
   negotiated-version reporting.
 - C shim verification covers the request/listener declarations compiled into
