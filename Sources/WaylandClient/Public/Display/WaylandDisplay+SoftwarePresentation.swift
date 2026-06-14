@@ -7,6 +7,7 @@ extension WaylandDisplay {
         try showWindow(
             windowID,
             timeoutMilliseconds: timeoutMilliseconds,
+            submitConstraints: .default,
             metadata: .default,
             requestPresentationFeedback: false,
             damage: nil,
@@ -14,9 +15,11 @@ extension WaylandDisplay {
         )
     }
 
+    // swiftlint:disable:next function_parameter_count
     package func showWindow(
         _ windowID: WindowID,
         timeoutMilliseconds: Int32,
+        submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
         damage: SurfaceDamageRegion? = nil,
@@ -25,6 +28,7 @@ extension WaylandDisplay {
         try requireCore().showWindow(
             windowID,
             timeoutMilliseconds: timeoutMilliseconds,
+            submitConstraints: submitConstraints,
             metadata: metadata,
             requestPresentationFeedback: requestPresentationFeedback,
             damage: damage,
@@ -38,6 +42,7 @@ extension WaylandDisplay {
     ) throws {
         try redraw(
             windowID,
+            submitConstraints: .default,
             metadata: .default,
             requestPresentationFeedback: false,
             damage: nil,
@@ -47,6 +52,7 @@ extension WaylandDisplay {
 
     package func redraw(
         _ windowID: WindowID,
+        submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
         damage: SurfaceDamageRegion? = nil,
@@ -54,6 +60,7 @@ extension WaylandDisplay {
     ) throws {
         try requireCore().redraw(
             windowID,
+            submitConstraints: submitConstraints,
             metadata: metadata,
             requestPresentationFeedback: requestPresentationFeedback,
             damage: damage,

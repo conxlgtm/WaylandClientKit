@@ -1,6 +1,6 @@
 # Data Transfer And Drag Icons
 
-SwiftWayland exposes clipboard, primary selection, and drag-and-drop transfer
+WaylandClientKit exposes clipboard, primary selection, and drag-and-drop transfer
 through ``ClipboardOffer``, ``ClipboardSource``, ``PrimarySelectionOffer``,
 ``PrimarySelectionSource``, ``DragOffer``, and ``DragSource``.
 
@@ -14,7 +14,7 @@ pixels.
 Data-transfer events use their own stream so clipboard, primary selection, and
 drag lifecycles can be observed independently from pointer and keyboard input.
 Offers are external compositor state and can become stale between advertisement
-and receive or read. SwiftWayland reports stale or unknown offers as typed
+and receive or read. WaylandClientKit reports stale or unknown offers as typed
 failures or diagnostics so clients can log the compositor behavior, ignore
 unsupported private MIME types, and keep cleanup paths crash-free.
 
@@ -38,7 +38,7 @@ selection state, not a second regular clipboard.
 
 ## Errors And Policy
 
-SwiftWayland owns offer/source lifetime, descriptor cleanup, stale-offer
+WaylandClientKit owns offer/source lifetime, descriptor cleanup, stale-offer
 diagnostics, and typed callback failures. Frameworks own MIME negotiation,
 application clipboard policy, drag visuals, and which drop actions are useful.
 

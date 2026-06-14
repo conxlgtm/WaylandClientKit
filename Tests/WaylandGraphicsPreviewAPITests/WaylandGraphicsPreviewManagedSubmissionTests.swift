@@ -72,20 +72,33 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
     }
 
     @Test
-    func metadataPolicyPreferAvailableStillRequiresProtocols() throws {
-        let metadata = WaylandGraphicsFrameMetadata(contentType: .game)
+    func metadataPolicyPreferAvailableOmitsUnavailableMetadata() throws {
+        let metadata = WaylandGraphicsFrameMetadata(
+            contentType: .game,
+            presentationHint: .async
+        )
 
+        let resolvedMetadata = try metadata.resolveManagedPreviewMetadata(
+            configuration: WaylandGraphicsConfiguration(
+                metadataPolicy: .preferAvailable
+            ),
+            capabilities: softwareOnlySurfaceCapabilities(),
+            geometry: testGraphicsSurfaceGeometry()
+        )
+
+        #expect(resolvedMetadata.commitMetadata == .default)
+        #expect(resolvedMetadata.fallbacks.contentType)
+        #expect(resolvedMetadata.fallbacks.presentationHint)
         #expect(
-            throws: WaylandGraphicsError.unavailable(.metadataRequiredButUnavailable)
-        ) {
-            try metadata.validateManagedPreviewSupport(
-                configuration: WaylandGraphicsConfiguration(
-                    metadataPolicy: .preferAvailable
-                ),
-                capabilities: softwareOnlySurfaceCapabilities(),
-                geometry: testGraphicsSurfaceGeometry()
-            )
-        }
+            resolvedMetadata.fallbacks.applying(
+                to: .projected(capabilities: softwareOnlySurfaceCapabilities())
+            ).metadata.contentType == .fallback(.contentTypeUnavailable)
+        )
+        #expect(
+            resolvedMetadata.fallbacks.applying(
+                to: .projected(capabilities: softwareOnlySurfaceCapabilities())
+            ).metadata.tearingControl == .fallback(.presentationHintUnavailable)
+        )
     }
 
     @Test
@@ -106,7 +119,10 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
             geometry: testGraphicsSurfaceGeometry()
         )
     }
+}
 
+@Suite
+struct WaylandGraphicsPreviewRuntimeTests {
     @Test
     func partialDamageIsAcceptedWhenWithinSurfaceBounds() throws {
         let damage = WaylandGraphicsDamageRegion(
@@ -155,24 +171,18 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
     }
 
     @Test
-    func requireExplicitFailsWithManagedGpuUnavailableWhenExplicitSyncExists() {
+    func requireExplicitValidatesWhenExplicitSyncExists() throws {
         let configuration = WaylandGraphicsConfiguration(
             synchronizationPolicy: .requireExplicit
         )
 
-        #expect(
-            throws: WaylandGraphicsError.unavailable(
-                .managedGPUSubmissionUnavailable
-            )
-        ) {
-            try configuration.validateManagedPreviewSupport(
-                capabilities: gpuCapableSurfaceCapabilities()
-            )
-        }
+        try configuration.validateManagedPreviewSupport(
+            capabilities: gpuCapableSurfaceCapabilities()
+        )
     }
 
     @Test
-    func pacingPolicyIsRejectedUntilManagedPacingExists() {
+    func preferPacingPoliciesValidateForRuntimeFallbackOrActivation() throws {
         let fifoConfiguration = WaylandGraphicsConfiguration(
             pacingPolicy: .preferFIFO
         )
@@ -180,16 +190,36 @@ struct WaylandGraphicsPreviewManagedSubmissionTests {
             pacingPolicy: .preferCommitTiming
         )
 
-        #expect(throws: WaylandGraphicsError.unsupportedPacing) {
-            try fifoConfiguration.validateManagedPreviewSupport(
-                capabilities: gpuCapableSurfaceCapabilities()
-            )
-        }
-        #expect(throws: WaylandGraphicsError.unsupportedPacing) {
-            try commitTimingConfiguration.validateManagedPreviewSupport(
-                capabilities: gpuCapableSurfaceCapabilities()
-            )
-        }
+        try fifoConfiguration.validateManagedPreviewSupport(
+            capabilities: gpuCapableSurfaceCapabilities()
+        )
+        try commitTimingConfiguration.validateManagedPreviewSupport(
+            capabilities: gpuCapableSurfaceCapabilities()
+        )
+    }
+
+    @Test
+    func publicPoliciesMapToManagedGPUActivationPolicies() {
+        let explicitConfiguration = WaylandGraphicsConfiguration(
+            synchronizationPolicy: .preferExplicit
+        )
+        let requiredExplicitConfiguration = WaylandGraphicsConfiguration(
+            synchronizationPolicy: .requireExplicit
+        )
+        let fifoConfiguration = WaylandGraphicsConfiguration(
+            pacingPolicy: .preferFIFO
+        )
+        let commitTimingConfiguration = WaylandGraphicsConfiguration(
+            pacingPolicy: .preferCommitTiming
+        )
+
+        #expect(
+            explicitConfiguration.gpuSynchronizationPolicy
+                == .preferExplicitFallbackToImplicit
+        )
+        #expect(requiredExplicitConfiguration.gpuSynchronizationPolicy == .requireExplicit)
+        #expect(fifoConfiguration.gpuPacingPolicy == .preferFIFO)
+        #expect(commitTimingConfiguration.gpuPacingPolicy == .preferCommitTiming)
     }
 
     @Test

@@ -28,7 +28,7 @@ mode requests are still subject to parent/child lifetime and compositor rules.
 
 ## Errors And Policy
 
-SwiftWayland validates parent ownership, child lifecycle, stacking targets, and
+WaylandClientKit validates parent ownership, child lifecycle, stacking targets, and
 presentation state. Frameworks own layout, z-order policy, and deciding whether
 a feature should be a subsurface, popup, or content drawn into the parent
 software frame.

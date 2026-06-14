@@ -1,11 +1,11 @@
-# Building A GUI Layer On SwiftWayland
+# Building A GUI Layer On WaylandClientKit
 
-SwiftWayland is ready to act as the low-level host for an experimental GUI
+WaylandClientKit is ready to act as the low-level host for an experimental GUI
 framework. It gives the framework Wayland lifecycle, typed events, managed
 windows, software frames, diagnostics, and preview graphics facts. The framework
 still owns the user-interface model.
 
-## What SwiftWayland Gives You
+## What WaylandClientKit Gives You
 
 - `WaylandDisplay.withConnection` for connection lifetime and shutdown
 - typed windows, popups, output snapshots, geometry, scale, and state snapshots
@@ -31,7 +31,7 @@ still owns the user-interface model.
 - accessibility semantics
 - renderer selection and fallback policy
 
-Do not move those layers into SwiftWayland.
+Do not move those layers into WaylandClientKit.
 
 ## Recommended First Architecture
 
@@ -51,7 +51,7 @@ Start software-first:
 
 Keep the render adapter platform-shaped. A useful adapter knows about windows,
 geometry, redraw, and frame submission. It should not know about widgets.
-Use SwiftWayland's concrete public identities as described in
+Use WaylandClientKit's concrete public identities as described in
 [`identity-model.md`](identity-model.md); do not invent raw-pointer routing or a
 single framework-wide ID type.
 
@@ -81,13 +81,13 @@ Use these examples as references before adding framework policy:
 - `SurfaceRegionSmoke`: input and opaque region behavior with compositor
   defaults reset.
 - `DamageRegionSmoke`: small animated logical damage regions mapped by
-  SwiftWayland before commit.
+  WaylandClientKit before commit.
 - `SubsurfaceSmoke`: managed child surface creation, software presentation,
   movement, and parent-owned cleanup.
 - `surface-role-inventory.md`: internal role support matrix for windows,
   popups, cursor surfaces, drag icons, graphics preview, and subsurfaces.
 - `FrameworkHostSmoke`: the smallest app-host loop that imports only public
-  SwiftWayland products.
+  WaylandClientKit products.
 - `GPUPreviewSmokeClient`: preview graphics capability and software-submission
   facts without exposing raw GPU handles.
 
@@ -110,7 +110,7 @@ Use `Window.show` for the first frame and `Window.redraw` after
 pixels.
 
 `show(damage:_:)` and `redraw(damage:_:)` accept logical
-`SurfaceDamageRegion` values. SwiftWayland validates damage passed to `show`,
+`SurfaceDamageRegion` values. WaylandClientKit validates damage passed to `show`,
 but the first buffer-backed commit is still sent as full-frame damage because no
 previous buffer contents exist. Later redraws map those rectangles to buffer
 damage for the current scale and viewport path and clip partial overhang to the
@@ -126,7 +126,7 @@ matrix.
 Subsurfaces are platform child surfaces, not widgets. Use
 `Window.createSubsurface(configuration:)` when a framework needs a compositor
 visible child surface for embedded content, video, plugin-like surfaces, or
-renderer layering. The framework owns layout and z-order policy; SwiftWayland
+renderer layering. The framework owns layout and z-order policy; WaylandClientKit
 owns protocol lifetime, software commits, and parent close cleanup.
 
 For framework experiments that want one graphics-facing boundary, use
@@ -184,7 +184,7 @@ as framework feedback, not ignored.
 
 ## Focus And Text Input
 
-SwiftWayland preserves protocol identity. A framework should build its focus
+WaylandClientKit preserves protocol identity. A framework should build its focus
 model from:
 
 - pointer enter/leave target identity

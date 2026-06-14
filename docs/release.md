@@ -73,11 +73,11 @@ The headless request-path sanitizer targets run the window-control and
 source-side drag request tests under a private Weston compositor. They are the
 release gate for live request wrappers under sanitizers. GPU preview sanitizer
 smoke remains optional and compositor/hardware dependent; use
-`SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1` under a known GPU-capable session
+`WAYLAND_CLIENT_KIT_ENABLE_GPU_PREVIEW_TESTS=1` under a known GPU-capable session
 when collecting compositor matrix facts. The request-path targets default to a
 600 second timeout because sanitizer builds can spend several minutes compiling
 before tests start; override it with
-`SWIFT_WAYLAND_REQUEST_PROCESS_TIMEOUT_SECONDS`. The request runner invokes
+`WAYLAND_CLIENT_KIT_REQUEST_PROCESS_TIMEOUT_SECONDS`. The request runner invokes
 the window-control and drag-source suites as separate test processes because
 both use package-wide C request-recording hooks.
 
@@ -86,7 +86,7 @@ promote graphics preview readiness unless
 [compositor-matrix.md](compositor-matrix.md) contains graphics-preview rows for
 headless Weston, one wlroots compositor such as Sway, and one desktop
 compositor such as Mutter or KWin when available. Each row should include the
-pasteable `SwiftWayland GPU Preview Runtime Path` block from
+pasteable `WaylandClientKit GPU Preview Runtime Path` block from
 `swift run swl smoke gpu-preview`, the `GraphicsPreviewManagedGPUClear` result when
 available, exact missing optional interface names, and any advertised-but-broken
 optional path failures.
@@ -109,7 +109,7 @@ swift run swl smoke live
 swift run swl smoke integration
 swift run swl smoke gpu-preview
 swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
-swift run SwiftWaylandDemo
+swift run WaylandClientKitDemo
 ```
 
 Compositor targets are Weston, GNOME/Mutter, KDE/KWin, and Sway/wlroots. A checkpoint
@@ -126,7 +126,7 @@ Record results in [compositor-matrix.md](compositor-matrix.md).
 6. Run `swift run swl smoke live` under a Wayland session.
 7. Run `swift run swl smoke integration` under a Wayland session.
 8. Run `swift run swl smoke gpu-preview` under a Wayland session.
-9. Manually run `swift run SwiftWaylandDemo` on at least one non-Weston desktop
+9. Manually run `swift run WaylandClientKitDemo` on at least one non-Weston desktop
    before treating compositor compatibility as proven.
 10. Update `docs/compositor-matrix.md` with the compositor facts and check results.
 11. Run `swift run swl compositor evidence-summary` and review missing evidence.
@@ -158,7 +158,7 @@ Do not tag if any of these fail:
 Use factual scope text:
 
 ```markdown
-SwiftWayland is a development checkpoint for Linux Wayland client work.
+WaylandClientKit is a development checkpoint for Linux Wayland client work.
 
 Supported:
 - Swift 6.3.2 package build.
@@ -198,7 +198,7 @@ Not supported:
 Verification:
 - swift run swl ci release
 - swift run swl examples build
-- swift run swift-wayland-smoke
+- swift run wayland-client-kit-smoke
 - swift run swl smoke integration
 - swift run swl smoke gpu-preview
 - manual demo smoke test

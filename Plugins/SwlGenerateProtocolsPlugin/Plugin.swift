@@ -19,7 +19,7 @@ func run(context: PluginContext, _ arguments: String...) throws {
     process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
     process.arguments = ["swift", "run", "--scratch-path", scratchPath, "swl"] + arguments
     var environment = ProcessInfo.processInfo.environment
-    environment["SWIFT_WAYLAND_SWIFTPM_SCRATCH"] = nestedScratchPath
+    environment["WAYLAND_CLIENT_KIT_SWIFTPM_SCRATCH"] = nestedScratchPath
     process.environment = environment
     try process.run()
     process.waitUntilExit()

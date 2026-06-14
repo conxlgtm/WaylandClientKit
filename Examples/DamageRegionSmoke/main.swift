@@ -20,8 +20,8 @@ enum DamageRegionSmoke {
             log("capability: wl_surface damage_buffer path")
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
-                    title: "SwiftWayland Damage Region Smoke",
-                    appID: "swift-wayland-damage-region-smoke",
+                    title: "WaylandClientKit Damage Region Smoke",
+                    appID: "wayland-client-kit-damage-region-smoke",
                     initialWidth: 360,
                     initialHeight: 220,
                     closeRequestPolicy: .requestOnly

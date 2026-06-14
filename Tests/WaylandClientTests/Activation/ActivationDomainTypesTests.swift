@@ -36,7 +36,7 @@ struct ActivationDomainTypesTests {
 
     @Test
     func activationRequestStoresValidatedAppIDAndSerialContext() throws {
-        let appID = try ActivationAppID("org.swiftwayland.Test")
+        let appID = try ActivationAppID("org.waylandclientkit.Test")
         let serialContext = ActivationSerialContext(
             seatID: SeatID(rawValue: 1),
             serial: InputSerial(rawValue: 2)

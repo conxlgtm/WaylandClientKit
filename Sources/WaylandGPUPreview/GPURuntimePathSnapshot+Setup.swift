@@ -128,8 +128,12 @@ extension GPURuntimePathSnapshot {
         snapshot.egl = .fallback(runtimeReason)
         snapshot.dmabufImport = snapshot.dmabufImport.fallback(runtimeReason)
         snapshot.bufferLifecycle = snapshot.bufferLifecycle.fallback(runtimeReason)
-        if reason == .explicitSyncRequiredButUnavailable {
+        switch reason {
+        case .explicitSyncRequiredButUnavailable, .explicitSyncSetupFailed,
+            .explicitSyncSubmissionFailed, .explicitSyncReleaseFailed:
             snapshot.synchronization = .explicitFallback(runtimeReason)
+        default:
+            break
         }
         if case .fifoRequiredButUnavailable = reason {
             snapshot.pacing = .fallback(runtimeReason)
@@ -158,6 +162,18 @@ extension GPURuntimePathSnapshot {
         return snapshot
     }
 
+    package func markingSynchronizationFallback(_ reason: GPURuntimePathReason) -> Self {
+        var snapshot = self
+        snapshot.synchronization = .explicitFallback(reason)
+        return snapshot
+    }
+
+    package func markingPacingFallback(_ reason: GPURuntimePathReason) -> Self {
+        var snapshot = self
+        snapshot.pacing = .fallback(reason)
+        return snapshot
+    }
+
     package mutating func markFailure(_ failure: GPUBackingFailure) {
         let runtimeReason = GPURuntimePathReason(failure)
         switch failure {
@@ -176,7 +192,9 @@ extension GPURuntimePathSnapshot {
             gbm = .failed(runtimeReason)
         case .eglUnavailable:
             egl = .failed(runtimeReason)
-        case .explicitSyncRequiredButUnavailable, .submitConstraintRejected:
+        case .explicitSyncRequiredButUnavailable, .explicitSyncSetupFailed,
+            .explicitSyncSubmissionFailed, .explicitSyncReleaseFailed,
+            .submitConstraintRejected:
             synchronization = .explicitFailed(runtimeReason)
         case .fifoRequiredButUnavailable, .commitTimingRequiredButUnavailable,
             .commitTimingRejected:
@@ -243,6 +261,12 @@ extension GPURuntimePathReason {
             self = .gbmAllocationFailed
         case .explicitSyncRequiredButUnavailable:
             self = .explicitSynchronizationUnavailable
+        case .explicitSyncSetupFailed:
+            self = .explicitSynchronizationSetupFailed
+        case .explicitSyncSubmissionFailed:
+            self = .explicitSynchronizationSubmissionFailed
+        case .explicitSyncReleaseFailed:
+            self = .explicitSynchronizationReleaseFailed
         case .fifoRequiredButUnavailable:
             self = .fifoUnavailable
         case .commitTimingRequiredButUnavailable:
@@ -279,6 +303,12 @@ extension GPURuntimePathReason {
             self = .gbmAllocationFailed
         case .explicitSyncRequiredButUnavailable, .submitConstraintRejected:
             self = .explicitSynchronizationUnavailable
+        case .explicitSyncSetupFailed:
+            self = .explicitSynchronizationSetupFailed
+        case .explicitSyncSubmissionFailed:
+            self = .explicitSynchronizationSubmissionFailed
+        case .explicitSyncReleaseFailed:
+            self = .explicitSynchronizationReleaseFailed
         case .fifoRequiredButUnavailable:
             self = .fifoUnavailable
         case .commitTimingRequiredButUnavailable, .commitTimingRejected:

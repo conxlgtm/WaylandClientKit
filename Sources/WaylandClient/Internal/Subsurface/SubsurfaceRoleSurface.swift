@@ -327,6 +327,7 @@ extension SubsurfaceRoleSurface {
                 context: WindowSoftwarePresentationContext(
                     request: request,
                     geometry: try currentGeometry(),
+                    submitConstraints: .default,
                     metadata: .default,
                     damage: damage,
                     presentationFeedback: nil

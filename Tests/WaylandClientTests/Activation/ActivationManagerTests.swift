@@ -11,7 +11,7 @@ struct ActivationManagerTests {
         let manager = ActivationManager(backend: backend)
 
         let pending = try manager.beginTokenRequest(
-            appID: try ActivationAppID("org.swiftwayland.Test"),
+            appID: try ActivationAppID("org.waylandclientkit.Test"),
             surface: nil,
             seat: nil,
             serial: nil
@@ -23,7 +23,7 @@ struct ActivationManagerTests {
         #expect(token == ActivationToken(unchecked: "opaque-token"))
         #expect(
             backend.latestBinding?.operations == [
-                .setAppID("org.swiftwayland.Test"),
+                .setAppID("org.waylandclientkit.Test"),
                 .commit,
                 .destroy,
             ]
@@ -58,7 +58,7 @@ struct ActivationManagerTests {
         let manager = ActivationManager(backend: backend)
 
         let pending = try manager.beginTokenRequest(
-            appID: try ActivationAppID("org.swiftwayland.Test"),
+            appID: try ActivationAppID("org.waylandclientkit.Test"),
             surface: nil,
             seat: nil,
             serial: nil

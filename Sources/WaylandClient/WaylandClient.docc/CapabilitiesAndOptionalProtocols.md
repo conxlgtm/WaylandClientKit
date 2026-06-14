@@ -1,7 +1,7 @@
 # Capabilities And Optional Protocols
 
 ``WaylandCapabilities`` is a registry-discovery snapshot. It reports whether the
-compositor advertised optional protocols and which version SwiftWayland will use.
+compositor advertised optional protocols and which version WaylandClientKit will use.
 
 Registry advertisement is not always the same as runtime usability. For example,
 linux-dmabuf may be advertised while a specific surface, device, or modifier set

@@ -1,6 +1,6 @@
 # Strict Memory Safety Audit
 
-SwiftWayland treats raw Wayland objects and shared-memory mappings as explicit unsafe islands. Public client-facing APIs should not expose raw C pointers or mmap lifetimes directly.
+WaylandClientKit treats raw Wayland objects and shared-memory mappings as explicit unsafe islands. Public client-facing APIs should not expose raw C pointers or mmap lifetimes directly.
 
 ## Shared Memory and Borrowed Buffers
 
@@ -16,7 +16,7 @@ Audit invariant:
 - A `RawSharedMemoryPool` owns its mmap for at least as long as any `RawBuffer` created from that mapping.
 - `RawBuffer.withUnsafeMutableBytes` is the only normal way for client code to borrow buffer memory.
 - `SoftwareFrame` validates dimensions, stride, and byte count before exposing row spans to redraw code.
-- Borrowed cursor buffers are never written by SwiftWayland. They are only attached to cursor surfaces.
+- Borrowed cursor buffers are never written by WaylandClientKit. They are only attached to cursor surfaces.
 
 Tests:
 

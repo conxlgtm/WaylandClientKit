@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/legacy-unstable/primary-selection/primary-selection-unstable-v1-client-protocol.h"
 
 /*

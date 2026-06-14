@@ -1,6 +1,6 @@
 # Managed subsurface support
 
-Subsurfaces are platform surface hierarchy, not widgets. SwiftWayland owns the
+Subsurfaces are platform surface hierarchy, not widgets. WaylandClientKit owns the
 Wayland object lifetime, parent/child cleanup, surface scale installation, and
 software frame commits. Frameworks still own layout, hit testing, z-order policy,
 and dirty-region calculation.
@@ -17,7 +17,7 @@ The first managed API is intentionally conservative:
   framework layout policy.
 
 Wayland applies subsurface creation, position, and stacking state through the
-parent surface commit. SwiftWayland models that boundary explicitly: managed
+parent surface commit. WaylandClientKit models that boundary explicitly: managed
 creation, movement, stacking, and synchronized child surface updates issue the
 required parent commit after the child-side
 request or child commit. `setSynchronized` and `setDesynchronized` are effective

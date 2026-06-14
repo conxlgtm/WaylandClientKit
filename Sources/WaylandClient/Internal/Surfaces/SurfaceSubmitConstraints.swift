@@ -29,6 +29,7 @@ package enum SurfaceSynchronizationConstraint: Equatable, Sendable {
 package enum FifoMode: Equatable, Sendable {
     case setBarrier
     case waitBarrier
+    case waitAndSetBarrier
 }
 
 package struct SurfaceCommitTargetTime: Equatable, Sendable {

@@ -198,6 +198,7 @@
                     configuration: configure.configuration
                 ),
                 geometry: geometry,
+                submitConstraints: .default,
                 metadata: .default,
                 damage: nil,
                 presentationFeedback: nil

@@ -1,6 +1,6 @@
 # Contributing
 
-SwiftWayland is an experimental Linux Wayland client package. Keep changes small, protocol-shaped, and easy to verify.
+WaylandClientKit is an experimental Linux Wayland client package. Keep changes small, protocol-shaped, and easy to verify.
 
 ## Environment
 
@@ -53,7 +53,7 @@ Under a real Wayland session, also run:
 ```bash
 swift run swl smoke live
 swift run swl smoke integration
-swift run SwiftWaylandDemo
+swift run WaylandClientKitDemo
 ```
 
 For a private headless Weston compositor, run:
@@ -114,7 +114,7 @@ If a protocol cannot be covered end to end in one change, keep it out of the exp
 
 Swift should call project-owned C shims, not generated inline protocol helpers directly. When adding or removing a Swift-facing shim, update:
 
-- `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
+- `Sources/CWaylandProtocols/include/wayland-client-kit-shims.h`
 - `Sources/CWaylandProtocols/shims/`
 - `swift run swl shims verify`
 - listener smoke tests where applicable.

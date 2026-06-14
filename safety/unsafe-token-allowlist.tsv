@@ -43,8 +43,8 @@ Sources/WaylandRuntime/EventLoop/UnsafeDefaultQueueEventLoop.swift	wl_display_di
 Sources/WaylandRuntime/EventLoop/UnsafeDefaultQueueEventLoop.swift	wl_display_prepare_read	Quarantined unsafe default-queue event-loop escape hatch.
 Sources/CEGLShims/egl-shims.c	pthread_*	Testing-only EGL shim recording lock used to serialize hook globals under ThreadSanitizer.
 Sources/CGBMShims/gbm-shims.c	pthread_*	Testing-only GBM shim recording lock used to serialize hook globals under ThreadSanitizer.
-Sources/CWaylandProtocols/include/swift-wayland-shims.h	wl_proxy_get_queue	Queue assertion shim declaration.
-Sources/CWaylandProtocols/include/swift-wayland-shims.h	swl_proxy_get_queue_raw	Queue assertion shim declaration.
+Sources/CWaylandProtocols/include/wayland-client-kit-shims.h	wl_proxy_get_queue	Queue assertion shim declaration.
+Sources/CWaylandProtocols/include/wayland-client-kit-shims.h	swl_proxy_get_queue_raw	Queue assertion shim declaration.
 Sources/CWaylandProtocols/shims/display-core.c	wl_proxy_create_wrapper	Queue-at-creation wrapper shim.
 Sources/CWaylandProtocols/shims/display-core.c	wl_proxy_set_queue	Queue-at-creation wrapper shim.
 Sources/CWaylandProtocols/shims/display-core.c	wl_proxy_wrapper_destroy	Queue-at-creation wrapper shim.
@@ -58,11 +58,11 @@ Sources/WaylandClient/Internal/DataTransfer/DataTransferSourceWriteTypes.swift	U
 Sources/WaylandClient/Internal/DataTransfer/DataTransferSourceWriter.swift	UnsafeRawBufferPointer	Descriptor write injection accepts borrowed data-transfer write buffers.
 Sources/WaylandClient/Public/DataTransfer/OwnedFileDescriptor.swift	UnsafeRawBufferPointer	Scoped borrowed public file-descriptor write buffer.
 Sources/WaylandClient/Internal/DataTransfer/DataTransferSourceWriter.swift	@unchecked Sendable	Private condition-protected data-transfer writer state shared with one worker thread.
-Sources/SwiftWaylandToolSupport/ProcessRunner.swift	UnsafeMutablePointer	Transient POSIX argv/env pointer arrays passed directly to posix_spawn.
-Sources/SwiftWaylandToolSupport/ProcessRunner.swift	UnsafeMutableBufferPointer	Transient POSIX argv/env pointer arrays passed directly to posix_spawn.
-Sources/SwiftWaylandToolSupport/ProjectAutomation.swift	@unchecked Sendable	Private lock-protected headless process output buffer shared by pipe readability callbacks.
-Sources/SwiftWaylandToolSupport/ProjectAutomation.swift	eventfd	Shim verifier inventory for required runtime wake fd shim.
-Sources/SwiftWaylandToolSupport/ProjectAutomation.swift	swl_proxy_get_queue_raw	Shim verifier inventory for required queue assertion shim.
+Sources/WaylandClientKitToolSupport/ProcessRunner.swift	UnsafeMutablePointer	Transient POSIX argv/env pointer arrays passed directly to posix_spawn.
+Sources/WaylandClientKitToolSupport/ProcessRunner.swift	UnsafeMutableBufferPointer	Transient POSIX argv/env pointer arrays passed directly to posix_spawn.
+Sources/WaylandClientKitToolSupport/ProjectAutomation.swift	@unchecked Sendable	Private lock-protected headless process output buffer shared by pipe readability callbacks.
+Sources/WaylandClientKitToolSupport/ProjectAutomation.swift	eventfd	Shim verifier inventory for required runtime wake fd shim.
+Sources/WaylandClientKitToolSupport/ProjectAutomation.swift	swl_proxy_get_queue_raw	Shim verifier inventory for required queue assertion shim.
 Tests/WaylandRuntimeTests/Executor/WaylandThreadExecutorConcurrencyTests.swift	@unchecked Sendable	Private condition-protected test recorder and gate state shared by detached shutdown caller threads.
 Tests/WaylandRuntimeTests/Executor/WaylandThreadExecutorTests.swift	@unchecked Sendable	Private condition-protected owner-thread test gate shared with executor thread.
 Tests/WaylandClientTests/Events/EventBrokerCancellationTests.swift	@unchecked Sendable	Private condition-protected event broker cancellation gate shared with a child task.

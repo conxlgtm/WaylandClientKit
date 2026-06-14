@@ -15,8 +15,8 @@ enum FrameworkHostSmoke {
         ) { display in
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
-                    title: "SwiftWayland Framework Host Smoke",
-                    appID: "swift-wayland-framework-host-smoke",
+                    title: "WaylandClientKit Framework Host Smoke",
+                    appID: "wayland-client-kit-framework-host-smoke",
                     initialWidth: 240,
                     initialHeight: 160,
                     closeRequestPolicy: .requestOnly

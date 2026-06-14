@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <xf86drm.h>
 
-#include "swift-wayland-gbm-shims.h"
+#include "wayland-client-kit-gbm-shims.h"
 
 static void swl_gbm_bo_export_init(struct swl_gbm_bo_export *out_export)
 {

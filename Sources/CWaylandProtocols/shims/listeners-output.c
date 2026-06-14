@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/legacy-unstable/xdg-output/xdg-output-unstable-v1-client-protocol.h"
 
 static void swl_zxdg_output_v1_handle_logical_position(

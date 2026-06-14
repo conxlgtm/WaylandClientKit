@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/staging/content-type/content-type-v1-client-protocol.h"
 #include "generated/staging/alpha-modifier/alpha-modifier-v1-client-protocol.h"
 #include "generated/staging/tearing-control/tearing-control-v1-client-protocol.h"

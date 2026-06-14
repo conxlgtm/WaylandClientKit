@@ -453,6 +453,34 @@
                 #expect(unsafe record.object == UnsafeMutableRawPointer(fifoPointer))
             }
         }
+
+        @Test
+        func fifoWaitAndSetAppliesBothRequestsForNextCommitCycle() async throws {
+            let fifoPointer = try unsafe #require(OpaquePointer(bitPattern: 0x5E02))
+            let fifo = RawFifo(pointer: fifoPointer) { pointer in
+                unsafe _ = pointer
+            }
+            var objects = SurfaceSubmitConstraintObjects()
+
+            objects.installFifo(fifo)
+
+            try await FifoRequestRecordingGate.withExclusiveRecording {
+                swl_test_fifo_request_recording_begin()
+                defer { swl_test_fifo_request_recording_end() }
+
+                try objects.apply(
+                    SurfaceSubmitConstraints(
+                        synchronization: .implicit,
+                        pacing: .fifo(.waitAndSetBarrier)
+                    )
+                )
+
+                let record = unsafe swl_test_fifo_request_record()
+                #expect(unsafe record.call_count == 2)
+                #expect(unsafe record.kind == SWL_TEST_FIFO_SET_BARRIER)
+                #expect(unsafe record.object == UnsafeMutableRawPointer(fifoPointer))
+            }
+        }
     }
 
     private func syncPoint(timeline: UInt64, point: UInt64) -> SurfaceSyncPoint {

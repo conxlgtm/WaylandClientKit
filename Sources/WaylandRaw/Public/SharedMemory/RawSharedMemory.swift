@@ -307,7 +307,7 @@ package final class RawSharedMemoryPool {
             layout: bufferLayout,
             bufferCount: bufferCount
         )
-        var fileDescriptor = try RawFileDescriptor.memfd(name: "swift-wayland-buffer-pool")
+        var fileDescriptor = try RawFileDescriptor.memfd(name: "wayland-client-kit-buffer-pool")
         try fileDescriptor.resize(byteCount: totalBytes)
 
         let memoryMapping = try SharedMemoryMapping(

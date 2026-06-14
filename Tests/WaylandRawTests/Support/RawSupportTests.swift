@@ -83,7 +83,7 @@ struct RawSupportTests {
                 )
             )
         ) {
-            _ = try RawFileDescriptor.memfd(name: "swift-wayland\0buffer")
+            _ = try RawFileDescriptor.memfd(name: "wayland-client-kit\0buffer")
         }
     }
 

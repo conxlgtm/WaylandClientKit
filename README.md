@@ -1,9 +1,13 @@
-# SwiftWayland
+# WaylandClientKit
 
-SwiftWayland is an experimental SwiftPM package for Wayland clients on Linux.
-It currently vends the `WaylandClient` library, the source-breaking preview
-`WaylandGraphicsPreview` library, the `swl` maintainer CLI, and a
-noninteractive Wayland smoke executable.
+WaylandClientKit is a Swift package for building Wayland client-side GUI
+substrate code on Linux. It vends `WaylandClient` for display connections,
+windows, popups, software frames, input, data transfer, text input,
+presentation feedback, diagnostics, and compositor capability reporting.
+
+It also includes the source-breaking preview `WaylandGraphicsPreview` library,
+the `swl` maintainer CLI, and noninteractive smoke executables. It does not
+provide widgets, layout, styling, a scene graph, or renderer policy.
 
 ## Quick Start
 
@@ -12,12 +16,12 @@ nix develop
 swift run swl tools toolchain-smoke
 swift run swl bootstrap check
 swift build --disable-index-store
-swift run swift-wayland-smoke
+swift run wayland-client-kit-smoke
 ```
 
 If you are not using Nix, install the packages listed in
 [Linux Dependencies](#linux-dependencies), then run the same `swl` checks.
-SwiftWayland requires Swift 6.3.2 or newer.
+WaylandClientKit requires Swift 6.3.2 or newer.
 
 Start with [Getting Started](docs/getting-started.md) for a tiny client that
 opens a display, creates a window, draws a software frame, requests redraw, reads
@@ -39,7 +43,7 @@ input events, and closes cleanly.
 - [Framework Host Contract](docs/framework-host-contract.md) and
   [Building A GUI Layer](docs/building-a-gui-layer.md): guidance for packages
   building widgets, layout, styling, accessibility semantics, or renderer policy
-  above SwiftWayland.
+  above WaylandClientKit.
 
 `WaylandClient` is the main public product. It is pre-foundation but
 baseline/audit tracked. `WaylandGraphicsPreview` is source-breaking preview API:
@@ -102,7 +106,7 @@ Not implemented yet:
 - raw public GBM, EGL, DRM, dmabuf, or syncobj handles
 - high-level gesture recognizers or widgets
 
-For packages building a GUI layer on top of SwiftWayland, see
+For packages building a GUI layer on top of WaylandClientKit, see
 `docs/framework-host-contract.md` and `docs/building-a-gui-layer.md`.
 `Examples/FrameworkHostSmoke` shows a small app-host loop without defining
 widgets, layout, or a scene graph.
@@ -338,7 +342,7 @@ compatibility library available in the toolchain runtime path.
 
 The package currently vends the `WaylandClient` and preview
 `WaylandGraphicsPreview` library products plus the `swl` and
-`swift-wayland-smoke` executable products. The list below summarizes public
+`wayland-client-kit-smoke` executable products. The list below summarizes public
 products and reusable support modules; runnable examples are listed in
 [Commands](#commands).
 
@@ -355,13 +359,13 @@ WaylandSmokeSupport
 WaylandExampleSupport
     shared example option parsing and bounded-run helpers
 
-SwiftWaylandSmoke
+WaylandClientKitSmoke
     noninteractive Wayland smoke executable
 
-SwiftWaylandTool
+WaylandClientKitTool
     canonical maintainer CLI executable product exposed as swl
 
-SwiftWaylandToolSupport
+WaylandClientKitToolSupport
     maintainer command implementation shared by swl and tests
 
 WaylandKeyboard
@@ -496,7 +500,7 @@ swift run swl safety verify-unsafe-allowlist
 Run the demo target:
 
 ```bash
-swift run SwiftWaylandDemo
+swift run WaylandClientKitDemo
 ```
 
 The demo draws a small marker for pointer motion and prints basic pointer/keyboard/touch/seat events, including interpreted keyboard events when keymap interpretation is available.
@@ -582,7 +586,7 @@ swift run swl smoke integration
 Or run the executable through the repository Swift wrapper:
 
 ```bash
-swift run swift-wayland-smoke
+swift run wayland-client-kit-smoke
 ```
 
 ## Documents

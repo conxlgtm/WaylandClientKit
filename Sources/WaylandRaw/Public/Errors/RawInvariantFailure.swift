@@ -40,6 +40,6 @@ package final class RawInvariantFailureSink {
     package static func trapForUnroutedFatalRawInvariantFailure(
         _ failure: RawInvariantFailure
     ) -> Never {
-        preconditionFailure("SwiftWayland fatal raw invariant: \(failure.description)")
+        preconditionFailure("WaylandClientKit fatal raw invariant: \(failure.description)")
     }
 }

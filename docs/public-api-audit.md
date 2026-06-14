@@ -189,7 +189,7 @@ Current user-facing contract:
   grouped by the protocol's `done` transaction event.
 - Relative pointer and pointer constraints mean
   `zwp_relative_pointer_manager_v1` and `zwp_pointer_constraints_v1`.
-  SwiftWayland exposes capability facts, relative motion events, typed
+  WaylandClientKit exposes capability facts, relative motion events, typed
   lock/confine lifecycle events, and window-scoped lock/confine requests without
   deciding application pointer-capture policy.
 - Cursor requests cover compositor cursor-shape requests, named theme cursors,
@@ -259,18 +259,35 @@ Current preview contract:
   when policy allows, submit arbitrary software drawing, return a typed frame
   result, and cancel or close resources without exposing raw graphics handles.
 - Managed GPU failures preserve public typed reasons including missing
-  per-surface dmabuf feedback and GBM allocation failure; display-level dmabuf
-  advertisement alone is not reported as active GPU backing.
+  per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
+  submission, or release failure; display-level dmabuf advertisement alone is
+  not reported as active GPU backing.
+- Synchronization and pacing policies are active runtime requests for graphics
+  preview submissions. `implicitOnly` avoids explicit sync objects; `preferExplicit`
+  falls back to implicit sync with a runtime reason only before explicit sync
+  is installed or active on the surface; `requireExplicit` fails instead of
+  silently falling back, including configurations that request software backing
+  or forced software fallback. `preferFIFO` and `preferCommitTiming` apply
+  submit constraints on managed GPU and software/fallback commits when
+  advertised; FIFO commits prime with `set_barrier` before later commits wait
+  and re-prime. Missing pacing protocols report fallback or typed failure facts.
+  Live compositor evidence currently proves FIFO active. Explicit sync and
+  commit timing remain implementation paths with typed fallback/failure
+  evidence, not active live proof.
 - It does not expose raw Wayland proxies, EGL/GBM/DRM handles, syncobj fds,
   SHM pools, scene rendering, swapchains, drawables, or public color-management
   image descriptions.
 - Public frame metadata is intentionally narrow. Content type and presentation
-  hint map to safe surface commit metadata when their protocols are available.
-  Full-frame damage is the supported default. Partial damage is accepted for
-  managed software submissions, converted to `SurfaceDamageRegion`, mapped from
-  logical surface coordinates to active buffer damage coordinates, and rejected
-  as `WaylandGraphicsError.invalidDamageRegion` when it has no surface
-  intersection.
+  hint map to safe surface commit metadata when their protocols are available
+  and `metadataPolicy` permits metadata. Preferred-but-unavailable metadata is
+  omitted from the commit and reported with protocol-specific public fallback
+  reasons. Alpha, color representation, and color management remain
+  package-internal runtime facts rather than public renderer policy. Full-frame
+  damage is the supported default. Partial damage is
+  accepted for managed software submissions, converted to `SurfaceDamageRegion`,
+  mapped from logical surface coordinates to active buffer damage coordinates,
+  and rejected as `WaylandGraphicsError.invalidDamageRegion` when it has no
+  surface intersection.
 - Presentation feedback policy can request feedback when available or require
   it before creating a managed backing. Feedback observations still arrive on
   `WindowPresentationEvents`; frame submission results only report whether
@@ -340,7 +357,7 @@ Notes:
 - Subsurface management is window-owned. Public handles expose creation,
   software show/redraw, regions, position, stacking, sync/desync, close,
   redraw-state, and geometry without exposing raw `wl_surface` or
-  `wl_subsurface` objects. Parent-applied state is committed by SwiftWayland
+  `wl_subsurface` objects. Parent-applied state is committed by WaylandClientKit
   after managed creation, movement, stacking, and synchronized child surface
   updates. Sync/desync mode changes are immediate protocol requests and do not
   commit the parent. Self-stacking and cross-parent stacking are typed display
@@ -399,7 +416,7 @@ Notes:
   a null selection or focus changes. `PrimarySelectionOffer.read` uses the same
   bounded transfer rules as clipboard reads, and `PrimarySelectionSourceConfiguration`
   represents local primary-selection payloads.
-- `WindowDecorationPreference.preferServerSide` is the default because SwiftWayland
+- `WindowDecorationPreference.preferServerSide` is the default because WaylandClientKit
   does not draw client-side titlebars. `preferClientSide` requests no server-side
   decorations. Applications remain responsible for any custom chrome they want.
 - `WaylandDisplay.withConnection` does not eagerly require a cursor theme to load.
@@ -475,7 +492,7 @@ Do not add `@unchecked Sendable` without a documented exception and review. Curr
 
 ## Development Contract
 
-The public API may break while SwiftWayland is experimental.
+The public API may break while WaylandClientKit is experimental.
 
 Before treating a public declaration as intentional:
 

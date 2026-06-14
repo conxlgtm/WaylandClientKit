@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h"
 #include "generated/staging/cursor-shape/cursor-shape-v1-client-protocol.h"
 #include "generated/staging/xdg-activation/xdg-activation-v1-client-protocol.h"

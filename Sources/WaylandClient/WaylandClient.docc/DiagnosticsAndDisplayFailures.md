@@ -11,7 +11,7 @@ errors as control-flow termination for the affected stream.
 No public control flow requires parsing diagnostic message strings; use typed
 diagnostic payloads and operations instead.
 
-SwiftWayland's repository error taxonomy records which conditions use
+WaylandClientKit's repository error taxonomy records which conditions use
 feature-specific public errors, display errors, or diagnostics.
 
 ## Public APIs
@@ -25,12 +25,12 @@ feature-specific public errors, display errors, or diagnostics.
 
 ## Errors And Policy
 
-SwiftWayland owns diagnostic publication, typed payloads, and stream finishing.
+WaylandClientKit owns diagnostic publication, typed payloads, and stream finishing.
 Applications and frameworks own logging policy, user-facing recovery decisions,
 and whether a diagnostic should be escalated into app-specific control flow.
 
 ## Example
 
-`SwiftWaylandDemo` in `Examples/SwiftWaylandDemo` prints basic input and display
+`WaylandClientKitDemo` in `Examples/WaylandClientKitDemo` prints basic input and display
 state. Smoke examples publish feature-specific diagnostics when optional
 protocols are unavailable or rejected.

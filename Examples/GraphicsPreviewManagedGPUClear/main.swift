@@ -15,7 +15,7 @@ enum GraphicsPreviewManagedGPUClear {
         do {
             let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
             result = try await run(options: options)
-            exitCode = EXIT_SUCCESS
+            exitCode = result.failure == nil ? EXIT_SUCCESS : EXIT_FAILURE
         } catch {
             result = ManagedGPUClearReport(failure: "\(error)")
             exitCode = EXIT_FAILURE
@@ -46,12 +46,16 @@ enum GraphicsPreviewManagedGPUClear {
         options: ExampleRunOptions
     ) async throws -> ManagedGPUClearReport {
         let backingPreference = requestedBackingPreference()
+        let synchronizationPolicy = try requestedSynchronizationPolicy(options.synchronization)
+        let pacingPolicy = try requestedPacingPolicy(options.pacing)
+        let metadataPolicy = try requestedMetadataPolicy(options.metadata)
+        let frameMetadata = try requestedFrameMetadata(options)
         let capabilities = try await display.graphicsSurfaceCapabilities()
         let displayCapabilities = try await display.capabilities()
         let backing = try await display.createGraphicsWindowBacking(
             windowConfiguration: WindowConfiguration(
-                title: "SwiftWayland Managed GPU Clear",
-                appID: "swift-wayland-managed-gpu-clear",
+                title: "WaylandClientKit Managed GPU Clear",
+                appID: "wayland-client-kit-managed-gpu-clear",
                 initialWidth: 360,
                 initialHeight: 240,
                 bufferCount: 2,
@@ -59,6 +63,9 @@ enum GraphicsPreviewManagedGPUClear {
             ),
             graphicsConfiguration: WaylandGraphicsConfiguration(
                 backingPreference: backingPreference,
+                synchronizationPolicy: synchronizationPolicy,
+                pacingPolicy: pacingPolicy,
+                metadataPolicy: metadataPolicy,
                 presentationFeedbackPolicy: .requestWhenAvailable
             )
         )
@@ -73,10 +80,33 @@ enum GraphicsPreviewManagedGPUClear {
                 + "\(displayAvailability(displayCapabilities.xdgDecoration))"
         )
         log("requested backing preference=\(backingDescription(backingPreference))")
+        log("synchronization policy requested=\(synchronizationDescription(synchronizationPolicy))")
+        log("pacing requested=\(pacingDescription(pacingPolicy))")
+        log("metadata policy requested=\(metadataPolicyDescription(metadataPolicy))")
+        log("content type requested=\(contentTypeDescription(frameMetadata.contentType))")
+        log(
+            "presentation hint requested="
+                + presentationHintDescription(frameMetadata.presentationHint)
+        )
         try await backing.window.setMinimumSize(PositiveLogicalSize(width: 1, height: 1))
         try await backing.window.setMaximumSize(nil)
         log("resize constraints minimum=1x1 maximum=unset")
-        _ = try await submitClearFrame(backing: backing, state: state)
+        do {
+            _ = try await submitClearFrame(backing: backing, state: state, metadata: frameMetadata)
+        } catch {
+            let runtimePath = try? await backing.runtimePath
+            try? await backing.close()
+            return ManagedGPUClearReport(
+                capabilities: capabilities,
+                runtimePath: runtimePath,
+                requestedBackingPreference: backingPreference,
+                synchronizationPolicy: synchronizationPolicy,
+                pacingPolicy: pacingPolicy,
+                metadataPolicy: metadataPolicy,
+                metadata: frameMetadata,
+                failure: "\(error)"
+            )
+        }
         log("initial window \(await windowSnapshotDescription(backing.window))")
         let inputActionState = ManagedGPUClearInputActionState(windowID: backing.id)
         let inputActionID = try await display.installInputSerialAction { event, context in
@@ -86,7 +116,12 @@ enum GraphicsPreviewManagedGPUClear {
         do {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
-                    try await consumeDisplayEvents(display.events, backing: backing, state: state)
+                    try await consumeDisplayEvents(
+                        display.events,
+                        backing: backing,
+                        state: state,
+                        metadata: frameMetadata
+                    )
                 }
                 if let seconds = options.autoCloseSeconds {
                     group.addTask {
@@ -111,6 +146,10 @@ enum GraphicsPreviewManagedGPUClear {
         return await state.report(
             capabilities: capabilities,
             requestedBackingPreference: backingPreference,
+            synchronizationPolicy: synchronizationPolicy,
+            pacingPolicy: pacingPolicy,
+            metadataPolicy: metadataPolicy,
+            metadata: frameMetadata,
             resizeRequestCount: inputActionState.resizeRequestCount
         )
     }
@@ -118,13 +157,18 @@ enum GraphicsPreviewManagedGPUClear {
     nonisolated private static func consumeDisplayEvents(
         _ events: DisplayEvents,
         backing: WaylandGraphicsWindowBacking,
-        state: ManagedGPUClearRunState
+        state: ManagedGPUClearRunState,
+        metadata: WaylandGraphicsFrameMetadata
     ) async throws {
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             switch event {
             case .redrawRequested(let windowID) where windowID == backing.id:
-                _ = try await submitClearFrame(backing: backing, state: state)
+                _ = try await submitClearFrame(
+                    backing: backing,
+                    state: state,
+                    metadata: metadata
+                )
             case .windowCloseRequested(let windowID) where windowID == backing.id:
                 try await backing.close()
                 return
@@ -140,13 +184,15 @@ enum GraphicsPreviewManagedGPUClear {
 
     nonisolated private static func submitClearFrame(
         backing: WaylandGraphicsWindowBacking,
-        state: ManagedGPUClearRunState
+        state: ManagedGPUClearRunState,
+        metadata: WaylandGraphicsFrameMetadata
     ) async throws -> WaylandGraphicsFrameResult {
         let lease = try await backing.nextFrame()
         let result = try await lease.submit(
             .clearColor(
                 WaylandGraphicsClearFrame(
-                    color: WaylandGraphicsXRGBColor(red: 0x18, green: 0xB8, blue: 0x92)
+                    color: WaylandGraphicsXRGBColor(red: 0x18, green: 0xB8, blue: 0x92),
+                    metadata: metadata
                 )
             )
         )
@@ -304,6 +350,96 @@ enum GraphicsPreviewManagedGPUClear {
         }
     }
 
+    nonisolated private static func requestedSynchronizationPolicy(
+        _ rawValue: String?
+    ) throws -> WaylandGraphicsSynchronizationPolicy {
+        switch normalized(rawValue) {
+        case nil, "implicit", "implicit-only":
+            .implicitOnly
+        case "prefer-explicit", "explicit":
+            .preferExplicit
+        case "require-explicit":
+            .requireExplicit
+        case .some(let value):
+            throw ExampleRunOptionError.unknownArgument("--sync \(value)")
+        }
+    }
+
+    nonisolated private static func requestedPacingPolicy(
+        _ rawValue: String?
+    ) throws -> WaylandGraphicsPacingPolicy {
+        switch normalized(rawValue) {
+        case nil, "none":
+            .none
+        case "fifo":
+            .preferFIFO
+        case "commit-timing":
+            .preferCommitTiming
+        case .some(let value):
+            throw ExampleRunOptionError.unknownArgument("--pacing \(value)")
+        }
+    }
+
+    nonisolated private static func requestedMetadataPolicy(
+        _ rawValue: String?
+    ) throws -> WaylandGraphicsMetadataPolicy {
+        switch normalized(rawValue) {
+        case nil, "none":
+            .none
+        case "prefer", "prefer-available":
+            .preferAvailable
+        case .some(let value):
+            throw ExampleRunOptionError.unknownArgument("--metadata \(value)")
+        }
+    }
+
+    nonisolated private static func requestedFrameMetadata(
+        _ options: ExampleRunOptions
+    ) throws -> WaylandGraphicsFrameMetadata {
+        try WaylandGraphicsFrameMetadata(
+            contentType: requestedContentType(options.contentType),
+            presentationHint: requestedPresentationHint(options.presentationHint)
+        )
+    }
+
+    nonisolated private static func requestedContentType(
+        _ rawValue: String?
+    ) throws -> WaylandGraphicsContentType? {
+        switch normalized(rawValue) {
+        case nil:
+            nil
+        case "none":
+            WaylandGraphicsContentType.none
+        case "photo":
+            .photo
+        case "video":
+            .video
+        case "game":
+            .game
+        case .some(let value):
+            throw ExampleRunOptionError.unknownArgument("--content-type \(value)")
+        }
+    }
+
+    nonisolated private static func requestedPresentationHint(
+        _ rawValue: String?
+    ) throws -> WaylandGraphicsPresentationHint? {
+        switch normalized(rawValue) {
+        case nil:
+            nil
+        case "vsync":
+            .vsync
+        case "async":
+            .async
+        case .some(let value):
+            throw ExampleRunOptionError.unknownArgument("--presentation-hint \(value)")
+        }
+    }
+
+    nonisolated private static func normalized(_ value: String?) -> String? {
+        value?.lowercased().replacingOccurrences(of: "_", with: "-")
+    }
+
     nonisolated fileprivate static func backingDescription(
         _ backing: WaylandGraphicsBackingKind
     ) -> String {
@@ -312,6 +448,71 @@ enum GraphicsPreviewManagedGPUClear {
             "managedGPU"
         case .software:
             "software"
+        }
+    }
+
+    nonisolated fileprivate static func synchronizationDescription(
+        _ policy: WaylandGraphicsSynchronizationPolicy
+    ) -> String {
+        switch policy {
+        case .implicitOnly:
+            "implicitOnly"
+        case .preferExplicit:
+            "preferExplicit"
+        case .requireExplicit:
+            "requireExplicit"
+        }
+    }
+
+    nonisolated fileprivate static func pacingDescription(
+        _ policy: WaylandGraphicsPacingPolicy
+    ) -> String {
+        switch policy {
+        case .none:
+            "none"
+        case .preferFIFO:
+            "preferFIFO"
+        case .preferCommitTiming:
+            "preferCommitTiming"
+        }
+    }
+
+    nonisolated fileprivate static func metadataPolicyDescription(
+        _ policy: WaylandGraphicsMetadataPolicy
+    ) -> String {
+        switch policy {
+        case .none:
+            "none"
+        case .preferAvailable:
+            "preferAvailable"
+        }
+    }
+
+    nonisolated fileprivate static func contentTypeDescription(
+        _ contentType: WaylandGraphicsContentType?
+    ) -> String {
+        guard let contentType else { return "not requested" }
+        switch contentType {
+        case .none:
+            return "none"
+        case .photo:
+            return "photo"
+        case .video:
+            return "video"
+        case .game:
+            return "game"
+        }
+    }
+
+    nonisolated fileprivate static func presentationHintDescription(
+        _ hint: WaylandGraphicsPresentationHint?
+    ) -> String {
+        guard let hint else { return "not requested" }
+        switch hint {
+        case .vsync:
+            return "vsync"
+        case .async:
+            return "async"
         }
     }
 
@@ -524,28 +725,48 @@ private enum ManagedGPUClearFrameObservation: CustomStringConvertible, Sendable 
 
 private struct ManagedGPUClearReport: Sendable {
     var capabilities: WaylandGraphicsSurfaceCapabilities?
+    var runtimePath: WaylandGraphicsRuntimePath?
     var frameResults: [WaylandGraphicsFrameResult]
     var requestedBackingPreference: WaylandGraphicsBackingKind
+    var synchronizationPolicy: WaylandGraphicsSynchronizationPolicy
+    var pacingPolicy: WaylandGraphicsPacingPolicy
+    var metadataPolicy: WaylandGraphicsMetadataPolicy
+    var metadata: WaylandGraphicsFrameMetadata
     var resizeRequestCount: Int
     var failure: String?
 
     nonisolated init(
         capabilities reportedCapabilities: WaylandGraphicsSurfaceCapabilities? = nil,
+        runtimePath reportedRuntimePath: WaylandGraphicsRuntimePath? = nil,
         frameResults reportedFrameResults: [WaylandGraphicsFrameResult] = [],
         requestedBackingPreference reportedBackingPreference: WaylandGraphicsBackingKind =
             .managedGPU,
+        synchronizationPolicy reportedSynchronizationPolicy:
+            WaylandGraphicsSynchronizationPolicy = .implicitOnly,
+        pacingPolicy reportedPacingPolicy: WaylandGraphicsPacingPolicy = .none,
+        metadataPolicy reportedMetadataPolicy: WaylandGraphicsMetadataPolicy = .none,
+        metadata reportedMetadata: WaylandGraphicsFrameMetadata = .default,
         resizeRequestCount reportedResizeRequestCount: Int = 0,
         failure reportedFailure: String? = nil
     ) {
         capabilities = reportedCapabilities
+        runtimePath = reportedRuntimePath
         frameResults = reportedFrameResults
         requestedBackingPreference = reportedBackingPreference
+        synchronizationPolicy = reportedSynchronizationPolicy
+        pacingPolicy = reportedPacingPolicy
+        metadataPolicy = reportedMetadataPolicy
+        metadata = reportedMetadata
         resizeRequestCount = reportedResizeRequestCount
         failure = reportedFailure
     }
 
     var frameResult: WaylandGraphicsFrameResult? {
         frameResults.last
+    }
+
+    var observedRuntimePath: WaylandGraphicsRuntimePath? {
+        frameResult?.runtimePath ?? runtimePath
     }
 }
 
@@ -567,12 +788,20 @@ private actor ManagedGPUClearRunState {
     func report(
         capabilities: WaylandGraphicsSurfaceCapabilities,
         requestedBackingPreference: WaylandGraphicsBackingKind,
+        synchronizationPolicy: WaylandGraphicsSynchronizationPolicy,
+        pacingPolicy: WaylandGraphicsPacingPolicy,
+        metadataPolicy: WaylandGraphicsMetadataPolicy,
+        metadata: WaylandGraphicsFrameMetadata,
         resizeRequestCount: Int
     ) -> ManagedGPUClearReport {
         ManagedGPUClearReport(
             capabilities: capabilities,
             frameResults: frameResults,
             requestedBackingPreference: requestedBackingPreference,
+            synchronizationPolicy: synchronizationPolicy,
+            pacingPolicy: pacingPolicy,
+            metadataPolicy: metadataPolicy,
+            metadata: metadata,
             resizeRequestCount: resizeRequestCount
         )
     }
@@ -595,10 +824,10 @@ private struct ManagedGPUClearReportFormatter {
 
     private func lines() -> [String] {
         guard let capabilities = report.capabilities,
-            let frameResult = report.frameResult
+            let runtimePath = report.observedRuntimePath
         else {
             return [
-                "SwiftWayland Managed GPU Clear",
+                "WaylandClientKit Managed GPU Clear",
                 "feature: managed-gpu-clear",
                 "capability: runtime path unavailable",
                 "operation: clear-frame failed",
@@ -610,13 +839,17 @@ private struct ManagedGPUClearReportFormatter {
                 "failure: \(report.failure ?? "none")",
             ]
         }
-        let runtimePath = frameResult.runtimePath
+        let frameResult = report.frameResult
+        let frameOperation = frameResult.map { String(describing: $0.operation) } ?? "none"
+        let frameSize = frameResult.map { "\($0.size.width)x\($0.size.height)" } ?? "unknown"
+        let submittedFrameStatus =
+            frameResult.map { status($0.backing) } ?? status(runtimePath.backing)
 
         return [
-            "SwiftWayland Managed GPU Clear",
+            "WaylandClientKit Managed GPU Clear",
             "feature: managed-gpu-clear",
             "capability: dmabuf \(availability(capabilities.dmabuf))",
-            "operation: clear-frame \(frameResult.operation)",
+            "operation: clear-frame \(frameResult.map { String(describing: $0.operation) } ?? "failed")",
             "result: \(actualBacking(runtimePath))",
             "cleanup: \(report.failure == nil ? "pass" : "not observed")",
             "notes: active GPU requires actual backing managedGPU",
@@ -629,11 +862,16 @@ private struct ManagedGPUClearReportFormatter {
             "egl: \(status(runtimePath.egl))",
             "dmabuf import: \(status(runtimePath.dmabufImport))",
             "buffer lifecycle: \(status(runtimePath.bufferLifecycle))",
+            "synchronization policy requested: \(GraphicsPreviewManagedGPUClear.synchronizationDescription(report.synchronizationPolicy))",
             "explicit sync: \(availability(capabilities.explicitSync)), runtime \(status(runtimePath.explicitSync))",
+            "pacing requested: \(GraphicsPreviewManagedGPUClear.pacingDescription(report.pacingPolicy))",
             "fifo: \(status(runtimePath.pacing.fifo))",
             "commit timing: \(status(runtimePath.pacing.commitTiming))",
+            "metadata policy requested: \(GraphicsPreviewManagedGPUClear.metadataPolicyDescription(report.metadataPolicy))",
+            "content type requested: \(GraphicsPreviewManagedGPUClear.contentTypeDescription(report.metadata.contentType))",
             "metadata content type: \(status(runtimePath.metadata.contentType))",
             "metadata alpha modifier: \(status(runtimePath.metadata.alphaModifier))",
+            "presentation hint requested: \(GraphicsPreviewManagedGPUClear.presentationHintDescription(report.metadata.presentationHint))",
             "metadata tearing control: \(status(runtimePath.metadata.tearingControl))",
             "metadata color representation: \(status(runtimePath.metadata.colorRepresentation))",
             "metadata color management: \(status(runtimePath.metadata.colorManagement))",
@@ -641,15 +879,15 @@ private struct ManagedGPUClearReportFormatter {
             "requested backing: \(GraphicsPreviewManagedGPUClear.backingDescription(report.requestedBackingPreference))",
             "actual backing: \(actualBacking(runtimePath))",
             "runtime dmabuf: \(status(runtimePath.dmabuf))",
-            "frame operation: \(frameResult.operation)",
-            "frame size: \(frameResult.size.width)x\(frameResult.size.height)",
+            "frame operation: \(frameOperation)",
+            "frame size: \(frameSize)",
             "frames submitted: \(report.frameResults.count)",
             "frame sizes: \(frameSizesDescription(report.frameResults))",
             "resize requests: \(report.resizeRequestCount)",
             "resize observed: \(resizeObserved(report.frameResults))",
-            "submitted frame result: \(status(frameResult.backing))",
+            "submitted frame result: \(submittedFrameStatus)",
             "release/reuse: \(releaseReuseStatus(runtimePath))",
-            "presentation feedback requested: \(frameResult.presentationFeedbackRequested)",
+            "presentation feedback requested: \(frameResult?.presentationFeedbackRequested ?? false)",
             "fallback reason: \(runtimePath.fallback.map(String.init(describing:)) ?? "none")",
             "failure: \(report.failure ?? "none")",
         ]

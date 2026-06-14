@@ -5,9 +5,9 @@ rows live in [compositor-matrix.md](compositor-matrix.md), and the readiness
 checklist lives in
 [foundation-candidate-status.md](foundation-candidate-status.md).
 
-Status: SwiftWayland is not yet a foundation release candidate.
+Status: WaylandClientKit is not yet a foundation release candidate.
 
-Decision after this pass: B. SwiftWayland needs one more hardening and evidence
+Decision after this pass: B. WaylandClientKit needs one more hardening and evidence
 sprint before framework work.
 
 ## Final Evidence Pass: 2026-06-09, GNOME Addendum: 2026-06-11
@@ -117,7 +117,7 @@ several minutes. The evidence pass continued with the individual commands above.
 
 Nested Sway/wlroots:
 
-- `WLR_BACKENDS=wayland WLR_LIBINPUT_NO_DEVICES=1 sway -c /tmp/swiftwayland-sway/config`
+- `WLR_BACKENDS=wayland WLR_LIBINPUT_NO_DEVICES=1 sway -c /tmp/waylandclientkit-sway/config`
 - `wayland-info`
 - `swift run swl smoke live`
 - `swift run swl smoke integration`
@@ -273,7 +273,7 @@ GNOME/Mutter:
 
 ## Next Step
 
-Stay on SwiftWayland for one more hardening and evidence sprint. The next
+Stay on WaylandClientKit for one more hardening and evidence sprint. The next
 maintainer pass should run the remaining manual interaction checklist on
 GNOME/Mutter where practical, broaden active/fallback/failure GPU evidence,
 and investigate the `swl ci check` hang observed during this evidence pass.

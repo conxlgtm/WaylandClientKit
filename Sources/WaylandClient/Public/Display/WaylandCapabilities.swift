@@ -1,6 +1,6 @@
 import WaylandRaw
 
-/// Whether SwiftWayland can use a compositor protocol feature.
+/// Whether WaylandClientKit can use a compositor protocol feature.
 public enum ProtocolAvailability: Equatable, Sendable {
     case unavailable
     case available(version: UInt32)
@@ -15,7 +15,7 @@ public enum ProtocolAvailability: Equatable, Sendable {
         }
     }
 
-    /// The negotiated protocol version SwiftWayland will use, when available.
+    /// The negotiated protocol version WaylandClientKit will use, when available.
     public var version: UInt32? {
         switch self {
         case .unavailable:

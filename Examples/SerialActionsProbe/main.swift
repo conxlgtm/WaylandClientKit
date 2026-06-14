@@ -33,8 +33,8 @@ enum SerialActionsProbe {
 
         let window = try await display.createTopLevelWindow(
             configuration: try WindowConfiguration(
-                title: "SwiftWayland Serial Actions Probe",
-                appID: "swift-wayland-serial-actions-probe",
+                title: "WaylandClientKit Serial Actions Probe",
+                appID: "wayland-client-kit-serial-actions-probe",
                 initialWidth: 360,
                 initialHeight: 220,
                 closeRequestPolicy: .requestOnly,

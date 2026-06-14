@@ -20,7 +20,7 @@
                 defer { topLevel.destroy() }
 
                 let icon = try manager.createIcon()
-                try icon.setName("org.swiftwayland.Test")
+                try icon.setName("org.waylandclientkit.Test")
                 manager.setIcon(icon, on: topLevel)
 
                 let record = unsafe swl_test_desktop_request_record()
@@ -45,7 +45,7 @@
                 let icon = try testIcon(pointer: 0xF201)
                 defer { icon.destroy() }
 
-                try icon.setName("org.swiftwayland.NamedIcon")
+                try icon.setName("org.waylandclientkit.NamedIcon")
 
                 let record = unsafe swl_test_desktop_request_record()
                 #expect(unsafe record.call_count == 1)
@@ -54,7 +54,7 @@
                         == SWL_TEST_DESKTOP_TOPLEVEL_ICON_SET_NAME
                 )
                 #expect(unsafe record.object == UnsafeMutableRawPointer(icon.pointer))
-                #expect(unsafe String(cString: record.text) == "org.swiftwayland.NamedIcon")
+                #expect(unsafe String(cString: record.text) == "org.waylandclientkit.NamedIcon")
             }
         }
 
@@ -73,7 +73,7 @@
                 manager.setIcon(icon, on: topLevel)
 
                 #expect(throws: RuntimeError.invalidArgument("immutable xdg_toplevel_icon_v1")) {
-                    try icon.setName("org.swiftwayland.LateMutation")
+                    try icon.setName("org.waylandclientkit.LateMutation")
                 }
             }
         }

@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/legacy-unstable/xdg-output/xdg-output-unstable-v1-client-protocol.h"
 
 struct zxdg_output_v1 *swl_zxdg_output_manager_v1_get_xdg_output(

@@ -46,16 +46,21 @@ extension WaylandGraphicsConfiguration {
                     .explicitSyncRequiredButUnavailable
                 )
             }
-            throw WaylandGraphicsError.unavailable(
-                .managedGPUSubmissionUnavailable
-            )
+            guard backingPreference == .managedGPU,
+                fallbackPolicy != .forceSoftware
+            else {
+                throw WaylandGraphicsError.unavailable(
+                    .managedGPUSubmissionUnavailable
+                )
+            }
+            guard capabilities.dmabuf.isAvailable else {
+                throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
+            }
         }
 
         switch pacingPolicy {
-        case .none:
+        case .none, .preferFIFO, .preferCommitTiming:
             break
-        case .preferFIFO, .preferCommitTiming:
-            throw WaylandGraphicsError.unsupportedPacing
         }
 
         switch presentationFeedbackPolicy {
@@ -70,17 +75,25 @@ extension WaylandGraphicsConfiguration {
         }
     }
 
-    package var gpuSynchronization: GPUBufferSubmissionSynchronization {
+    package var gpuSynchronizationPolicy: GPUSynchronizationPolicy {
         switch synchronizationPolicy {
-        case .implicitOnly, .preferExplicit, .requireExplicit:
-            .implicit
+        case .implicitOnly:
+            .implicitOnly
+        case .preferExplicit:
+            .preferExplicitFallbackToImplicit
+        case .requireExplicit:
+            .requireExplicit
         }
     }
 
-    package var gpuPacing: SurfacePacingConstraint {
+    package var gpuPacingPolicy: GPUFramePacingPolicy {
         switch pacingPolicy {
-        case .none, .preferFIFO, .preferCommitTiming:
+        case .none:
             .none
+        case .preferFIFO:
+            .preferFIFO
+        case .preferCommitTiming:
+            .preferCommitTiming
         }
     }
 }
@@ -427,16 +440,45 @@ extension WaylandGraphicsFrameMetadata {
         capabilities: WaylandGraphicsSurfaceCapabilities,
         geometry: SurfaceGeometry
     ) throws {
+        _ = capabilities
         try damage?.validateManagedPreviewSupport(geometry: geometry)
         if hasCommitMetadata, configuration.metadataPolicy == .none {
             throw WaylandGraphicsError.unsupportedMetadata
         }
-        if contentType != nil, !capabilities.colorMetadata.contentType.isAvailable {
-            throw WaylandGraphicsError.unavailable(.metadataRequiredButUnavailable)
+    }
+
+    package func resolveManagedPreviewMetadata(
+        configuration: WaylandGraphicsConfiguration,
+        capabilities: WaylandGraphicsSurfaceCapabilities,
+        geometry: SurfaceGeometry
+    ) throws -> WaylandGraphicsResolvedFrameMetadata {
+        try validateManagedPreviewSupport(
+            configuration: configuration,
+            capabilities: capabilities,
+            geometry: geometry
+        )
+
+        var commitMetadata = SurfaceCommitMetadata.default
+        var fallbacks = WaylandGraphicsMetadataFallbacks.none
+        if let contentType {
+            if capabilities.colorMetadata.contentType.isAvailable {
+                commitMetadata.contentType = contentType.surfaceContentType
+            } else {
+                fallbacks.contentType = true
+            }
         }
-        if presentationHint != nil, !capabilities.colorMetadata.tearingControl.isAvailable {
-            throw WaylandGraphicsError.unavailable(.metadataRequiredButUnavailable)
+        if let presentationHint {
+            if capabilities.colorMetadata.tearingControl.isAvailable {
+                commitMetadata.presentationHint = presentationHint.surfacePresentationHint
+            } else {
+                fallbacks.presentationHint = true
+            }
         }
+
+        return WaylandGraphicsResolvedFrameMetadata(
+            commitMetadata: commitMetadata,
+            fallbacks: fallbacks
+        )
     }
 
     package func surfaceCommitMetadata() throws -> SurfaceCommitMetadata {
