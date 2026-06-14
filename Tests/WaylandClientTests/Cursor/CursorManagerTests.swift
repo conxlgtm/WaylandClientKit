@@ -528,6 +528,29 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
+    func animatedFallbackCursorAppliesFirstFrameAndAdvances() throws {
+        let backend = try RecordingCursorBackend()
+        let seatID = RawSeatID(rawValue: 2)
+        let first = try pointerFrame(color: 0x0000_00FF, duration: .milliseconds(10))
+        let second = try pointerFrame(color: 0x0000_FF00, duration: .milliseconds(20))
+        let animation = try AnimatedPointerCursor(frames: [first, second])
+        let cursor = try PointerCursor.animated(animation)
+        let manager = try CursorManager(
+            backend: backend,
+            configuration: CursorConfiguration(fallbackCursor: cursor)
+        )
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        let firstDelay = manager.nextCursorAnimationDelay()
+        let nextDelay = try manager.advanceCursorAnimations()
+
+        #expect(firstDelay == .milliseconds(10))
+        #expect(nextDelay == .milliseconds(20))
+        #expect(backend.customCursorImages == [first.image, second.image])
+    }
+
+    @Test
     func singleFrameAnimatedCursorDoesNotScheduleTicks() throws {
         let backend = try RecordingCursorBackend()
         let manager = try CursorManager(backend: backend, configuration: .init())
