@@ -543,7 +543,7 @@ package final class CursorManager: RawInputEventObserving {
         }
 
         let activeDurations = cursorStateBySeat.values.compactMap { state in
-            state.animation?.currentFrameDuration
+            state.animation?.remainingFrameDuration
         }
 
         return activeDurations.min() ?? desiredAnimation.frames.first?.duration
@@ -557,6 +557,10 @@ package final class CursorManager: RawInputEventObserving {
             return nil
         }
 
+        guard let elapsedDuration = nextCursorAnimationDelay() else {
+            return nil
+        }
+
         for seatID in focusedPointerSeatIDs() {
             guard var seatState = cursorStateBySeat[seatID],
                 var animation = seatState.animation,
@@ -566,7 +570,11 @@ package final class CursorManager: RawInputEventObserving {
                 continue
             }
 
-            let advance = animation.advance()
+            guard let advance = animation.advanceIfDue(after: elapsedDuration) else {
+                seatState.animation = animation
+                cursorStateBySeat[seatID] = seatState
+                continue
+            }
             let bufferScale = PositiveInt32(unchecked: 1)
             attachCursorImage(advance.frame.image, to: surface, bufferScale: bufferScale)
             guard let serial = seatState.focus.enterSerial else { continue }

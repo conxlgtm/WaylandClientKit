@@ -49,6 +49,25 @@ struct CursorAnimationStateTests {
     }
 
     @Test
+    func advanceIfDuePreservesRemainingFrameDuration() throws {
+        let first = try animatedFrame(delay: 100)
+        let second = try animatedFrame(delay: 200)
+        var state = try CursorAnimationState(frames: [first, second])
+
+        let earlyAdvance = state.advanceIfDue(after: .milliseconds(40))
+
+        #expect(earlyAdvance == nil)
+        #expect(state.currentFrameIndex == 0)
+        #expect(state.remainingFrameDuration == .milliseconds(60))
+
+        let dueAdvance = state.advanceIfDue(after: .milliseconds(60))
+
+        #expect(dueAdvance?.frame.image === second.image)
+        #expect(dueAdvance?.frameIndex == 1)
+        #expect(state.remainingFrameDuration == .milliseconds(200))
+    }
+
+    @Test
     func replacingFramesInvalidatesScheduledTicks() throws {
         let original = try animatedFrame(delay: 100)
         let replacement = try animatedFrame(delay: 50)
