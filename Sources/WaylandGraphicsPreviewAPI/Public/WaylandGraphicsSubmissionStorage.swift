@@ -96,7 +96,10 @@ package actor WaylandGraphicsWindowBackingStorage {
         let effectiveConfiguration = configuration.applying(schedule: frameSchedule)
         try leaseState.requireNotClosed()
         try await ensureWindowOpen()
-        try await prepareManagedGPUInitialConfigureIfNeeded(leaseID: leaseID)
+        try await prepareInitialConfigure(
+            leaseID: leaseID,
+            shouldPrepare: shouldAttemptManagedGPU
+        )
 
         let geometry = try await submissionGeometry(for: leaseID)
         try effectiveConfiguration.validateManagedPreviewSupport(
@@ -219,21 +222,18 @@ package actor WaylandGraphicsWindowBackingStorage {
         do {
             try leaseState.requireNotClosed()
             try await ensureWindowOpen()
-            geometry = try await submissionGeometry(for: leaseID)
-            try effectiveConfiguration.validateManagedPreviewSupport(
-                capabilities: backingRuntimePath.capabilities
+            try await prepareInitialConfigure(
+                leaseID: leaseID,
+                shouldPrepare: shouldAttemptExternalBufferPresentation
             )
-            try validateExternalBufferDescriptor(
+            geometry = try await submissionGeometry(for: leaseID)
+            operation = try prepareExternalBufferSubmission(
                 descriptor,
+                leaseID: leaseID,
+                metadata: frameMetadata,
                 geometry: geometry,
                 configuration: effectiveConfiguration
             )
-            try frameMetadata.validateManagedPreviewSupport(
-                configuration: effectiveConfiguration,
-                capabilities: backingRuntimePath.capabilities,
-                geometry: geometry
-            )
-            operation = try leaseState.prepareSubmission(leaseID: leaseID)
         } catch {
             closeExternalDescriptor(&descriptor)
             throw error
@@ -353,10 +353,11 @@ package actor WaylandGraphicsWindowBackingStorage {
         return try await window.prepareGraphicsPreviewPresentation(timeoutMilliseconds: 0)
     }
 
-    private func prepareManagedGPUInitialConfigureIfNeeded(
-        leaseID: WaylandGraphicsFrameLeaseID
+    private func prepareInitialConfigure(
+        leaseID: WaylandGraphicsFrameLeaseID,
+        shouldPrepare: Bool
     ) async throws {
-        guard shouldAttemptManagedGPU else { return }
+        guard shouldPrepare else { return }
 
         let operation = try leaseState.submissionOperation(leaseID: leaseID)
         guard operation == .show else { return }
@@ -609,6 +610,11 @@ extension WaylandGraphicsWindowBackingStorage {
         return false
     }
 
+    private var shouldAttemptExternalBufferPresentation: Bool {
+        configuration.backingPreference == .managedGPU
+            && configuration.fallbackPolicy != .forceSoftware
+    }
+
     private func handleManagedGPUFailure(
         _ error: ManagedGPUPreviewBackingError,
         configuration effectiveConfiguration: WaylandGraphicsConfiguration
@@ -679,6 +685,29 @@ extension WaylandGraphicsWindowBackingStorage {
         guard descriptor.size == geometry.bufferSize else {
             throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
         }
+    }
+
+    private func prepareExternalBufferSubmission(
+        _ descriptor: borrowing WaylandGraphicsExternalBufferDescriptor,
+        leaseID: WaylandGraphicsFrameLeaseID,
+        metadata frameMetadata: WaylandGraphicsFrameMetadata,
+        geometry: SurfaceGeometry,
+        configuration effectiveConfiguration: WaylandGraphicsConfiguration
+    ) throws -> WaylandGraphicsFrameSubmissionOperation {
+        try effectiveConfiguration.validateManagedPreviewSupport(
+            capabilities: backingRuntimePath.capabilities
+        )
+        try validateExternalBufferDescriptor(
+            descriptor,
+            geometry: geometry,
+            configuration: effectiveConfiguration
+        )
+        try frameMetadata.validateManagedPreviewSupport(
+            configuration: effectiveConfiguration,
+            capabilities: backingRuntimePath.capabilities,
+            geometry: geometry
+        )
+        return try leaseState.prepareSubmission(leaseID: leaseID)
     }
 
     private func presentExternalBuffer(

@@ -9,11 +9,12 @@ authors should expect source changes while managed GPU behavior is proven across
 compositors.
 
 The preview product does not expose raw Wayland, GBM, EGL, DRM, dmabuf,
-syncobj, renderer, swapchain, scene graph, widget, or layout handles. External
-buffer descriptors are the narrow exception for Linux plane descriptors: they
-use noncopyable `OwnedFileDescriptor` values with explicit transfer semantics.
-raw GPU handles stay internal. Runtime results report active, fallback, failed,
-unavailable, advertised, and configured states through public value types.
+syncobj, file-descriptor, renderer, swapchain, scene graph, widget, or layout
+handles; raw GPU handles stay internal. External-buffer descriptor construction
+and renderer-dmabuf evidence are currently package-internal maintainer preview
+plumbing until a raw-handle-free public renderer handoff is designed. Runtime
+results report active, fallback, failed, unavailable, advertised, and configured
+states through public value types.
 
 ## Topics
 

@@ -337,9 +337,11 @@ Remaining unsafe constructs:
 - `RawLinuxDmabufPlaneFileDescriptor` owns a plane descriptor before it is
   transferred to `zwp_linux_buffer_params_v1.add`.
 - `WaylandGraphicsExternalBufferDescriptor` and
-  `WaylandGraphicsExternalBufferPlane` are public preview move-only values that
-  transfer renderer-owned plane descriptors into the package-internal dmabuf
-  import path without exposing raw Wayland, GBM, EGL, or DRM objects.
+  `WaylandGraphicsExternalBufferPlane` are public preview move-only values, but
+  FD-bearing plane construction remains package-internal maintainer plumbing.
+  The package-internal import path transfers renderer-owned plane descriptors
+  without exposing raw Wayland, GBM, EGL, DRM, or file-descriptor handles through
+  `WaylandGraphicsPreview` public API.
 - `RawSurfaceBuffer` is `@unchecked Sendable` because the managed GPU preview
   presenter passes an imported `wl_buffer` wrapper through the async
   owner-thread commit bridge without exposing the proxy to public API.

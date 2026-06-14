@@ -38,9 +38,10 @@ The completion target is:
 
 This target is not met until a GPU buffer path exists. A software-only SHM
 client is useful, but it is not a complete foundation for a modern GUI stack.
-The preview external-buffer path is the first public descriptor-based shape for
-renderer-produced GPU buffers, but it remains source-breaking preview API until
-live renderer integration evidence is broader.
+The preview external-buffer path proves renderer-produced GPU buffer
+import/commit/release lifetime in package-internal maintainer evidence, but a
+raw-handle-free public renderer handoff remains future source-breaking preview
+API work.
 
 ## Foundation Checkpoint 1
 

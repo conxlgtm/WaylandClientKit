@@ -195,6 +195,20 @@ struct WaylandGraphicsExternalBufferPreflightTests {
 @Suite
 struct WaylandGraphicsExternalBufferLifecycleTests {
     @Test
+    func firstExternalBufferShowPreparesInitialConfigureBeforeImport() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+
+        _ = try await lease.submitExternalBuffer(try testExternalDescriptor())
+
+        #expect(await window.preparePresentationRequests == 1)
+        #expect(await window.importRequests == 1)
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
     func successfulExternalBufferWaitsForReleaseBeforeReusingSlot() async throws {
         let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
         let storage = externalBufferStorage(window: window)
@@ -382,6 +396,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     private var submitConstraints: [SurfaceSubmitConstraints] = []
     private var submittedMetadata: [SurfaceCommitMetadata] = []
     private var presentationFeedbackRequests: [Bool] = []
+    private(set) var preparePresentationRequests = 0
 
     init(
         importBehavior requestedImportBehavior: ImportBehavior = .fail,
@@ -398,6 +413,13 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
 
     var isClosed: Bool {
         get async throws { isWindowClosed }
+    }
+
+    func prepareGraphicsPreviewPresentation(
+        timeoutMilliseconds _: Int32
+    ) async throws -> SurfaceGeometry {
+        preparePresentationRequests += 1
+        return geometryValue
     }
 
     func importGraphicsPreviewExternalBuffer(

@@ -301,12 +301,13 @@ Current preview contract:
   when policy allows, submit arbitrary software drawing, return a typed frame
   result, and cancel or close resources without exposing raw graphics handles.
 - The external-buffer submission path accepts a move-only external dmabuf
-  descriptor made from owned plane descriptors, format/modifier facts, and a
-  positive buffer size. It imports, commits, tracks compositor release, and
+  descriptor value, imports it, commits it, tracks compositor release, and
   cleans up late releases without exposing `wl_buffer`,
-  `zwp_linux_buffer_params_v1`, GBM, EGL, DRM, syncobj, or `OpaquePointer`
-  objects. The renderer owns rendering and buffer production; WaylandClientKit
-  owns Wayland import/commit/release lifetime.
+  `zwp_linux_buffer_params_v1`, GBM, EGL, DRM, syncobj, file descriptors, or
+  `OpaquePointer` objects. FD-bearing descriptor construction remains
+  package-internal maintainer preview plumbing until a raw-handle-free public
+  renderer handoff is designed. The renderer owns rendering and buffer
+  production; WaylandClientKit owns Wayland import/commit/release lifetime.
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
   submission, or release failure; display-level dmabuf advertisement alone is
@@ -326,10 +327,10 @@ Current preview contract:
   implementation path with typed fallback/failure evidence, not active live
   proof.
 - It does not expose raw Wayland proxies, EGL/GBM/DRM objects, syncobj handles,
-  SHM pools, scene rendering, swapchains, drawables, or raw
+  file descriptors, SHM pools, scene rendering, swapchains, drawables, or raw
   color-management/image-description protocol objects. `OwnedFileDescriptor`
-  appears in the external-buffer preview descriptor only as an explicit
-  noncopyable Linux plane descriptor ownership transfer.
+  remains part of the stable data-transfer APIs, but is not exposed by the
+  `WaylandGraphicsPreview` external-buffer public surface.
 - Public frame metadata is intentionally narrow. Content type and presentation
   hint map to safe surface commit metadata when their protocols are available
   and `metadataPolicy` permits metadata. Preferred-but-unavailable metadata is

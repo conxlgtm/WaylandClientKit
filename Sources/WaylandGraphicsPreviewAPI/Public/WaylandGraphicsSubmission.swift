@@ -312,12 +312,12 @@ public struct WaylandGraphicsDRMFormatModifier: Equatable, Hashable, Sendable {
 }
 
 public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
-    public var fd: OwnedFileDescriptor
+    package var fileDescriptor: OwnedFileDescriptor
     public let offset: UInt32
     public let stride: UInt32
     public let planeIndex: Int
 
-    public init(
+    package init(
         fd planeFileDescriptor: consuming OwnedFileDescriptor,
         offset planeOffset: UInt32,
         stride planeStride: UInt32,
@@ -333,7 +333,7 @@ public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
             throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
         }
 
-        fd = planeFileDescriptor
+        fileDescriptor = planeFileDescriptor
         offset = planeOffset
         stride = planeStride
         planeIndex = planeIndexValue
@@ -657,7 +657,7 @@ extension WaylandGraphicsExternalBufferDescriptor {
             try planes.withMutablePlanes { plane in
                 importPlanes.append(
                     WaylandGraphicsExternalBufferImportPlane(
-                        fd: plane.fd.releaseRawValue(),
+                        fd: plane.fileDescriptor.releaseRawValue(),
                         offset: plane.offset,
                         stride: plane.stride,
                         planeIndex: plane.planeIndex
@@ -681,7 +681,7 @@ extension WaylandGraphicsExternalBufferDescriptor {
 
     package mutating func closeFileDescriptors() throws {
         try planes.withMutablePlanes { plane in
-            try plane.fd.close()
+            try plane.fileDescriptor.close()
         }
     }
 }

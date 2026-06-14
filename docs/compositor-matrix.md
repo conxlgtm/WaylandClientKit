@@ -85,7 +85,7 @@ example or manual probe has been run:
 | presentation feedback | `PresentationFeedbackAnimation` feedback summary |
 | output topology | `OutputTopologySmoke` output snapshot and window output membership report |
 | graphics preview fallback/GPU path | `GPUPreviewSmokeClient` runtime-path report |
-| external graphics buffer | `GraphicsPreviewExternalBufferSmoke -- --probe`, `GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer` renderer dmabuf import/submit/release run, or `GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer` import-cleanup probe |
+| external graphics buffer | `GraphicsPreviewExternalBufferSmoke -- --probe`, `GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer` renderer dmabuf import/submit/release run, or `GraphicsPreviewExternalBufferMaintainerSmoke -- --negative-test-buffer` import-cleanup probe |
 | graphics frame scheduling | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` requested/actual sync and pacing lines |
 | color metadata | `ColorManagementSmoke` and `GraphicsPreviewColorMetadataSmoke` capability/runtime report |
 
@@ -234,7 +234,7 @@ KDE/KWin external-buffer addendum on 2026-06-14:
   `import: active`, `submit: active`, `release: active`,
   `release/reuse: tracked-by-wayland-client-kit`, `fallback reason: none`,
   `failure: none`, and `cleanup: pass` on `wayland-0`.
-- `swift run GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer`
+- `swift run GraphicsPreviewExternalBufferMaintainerSmoke -- --negative-test-buffer`
   produced the expected pipe-descriptor import failure
   `externalBufferImportFailed` with `cleanup: pass`.
 
