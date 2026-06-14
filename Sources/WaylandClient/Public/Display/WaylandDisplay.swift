@@ -7,7 +7,7 @@ public actor WaylandDisplay {
 
     nonisolated let runtime: WaylandDisplayRuntime
     private var lifecycle = WaylandDisplayLifecycle.initializing
-    private var cursorAnimationTask: Task<Void, Never>?
+    private var cursorAnimationTask: Task<Void, Never>?, cursorAnimationTaskGeneration: UInt64 = 0
 
     nonisolated public var unownedExecutor: UnownedSerialExecutor {
         unsafe runtime.executor.asUnownedSerialExecutor()
@@ -238,6 +238,7 @@ public actor WaylandDisplay {
     }
 
     public func close() {
+        cursorAnimationTaskGeneration += 1
         cursorAnimationTask?.cancel()
         cursorAnimationTask = nil
         switch lifecycle {
@@ -299,49 +300,6 @@ public actor WaylandDisplay {
 }
 
 extension WaylandDisplay {
-    private func updateCursorAnimationTask(for cursor: PointerCursor) {
-        guard cursor.animation != nil else {
-            cursorAnimationTask?.cancel()
-            cursorAnimationTask = nil
-            return
-        }
-
-        guard cursorAnimationTask == nil else { return }
-
-        cursorAnimationTask = Task { [weak self] in  // swiftlint:disable:this no_unstructured_task
-            await self?.runCursorAnimationLoop()
-        }
-    }
-
-    private func runCursorAnimationLoop() async {
-        defer { cursorAnimationTask = nil }
-
-        while !Task.isCancelled {
-            let delay: Duration?
-            do {
-                delay = try requireCore().nextCursorAnimationDelay()
-            } catch {
-                return
-            }
-
-            guard let delay else { return }
-
-            do {
-                try await Task.sleep(for: delay)
-            } catch {
-                return
-            }
-
-            do {
-                _ = try requireCore().advanceCursorAnimations()
-            } catch {
-                return
-            }
-        }
-    }
-}
-
-extension WaylandDisplay {
     public var isClosed: Bool {
         switch lifecycle {
         case .active(let core, _):
@@ -386,6 +344,57 @@ extension WaylandDisplay {
             return handler
         case .initializing, .closed, .abandoned:
             throw ClientError.display(.closed)
+        }
+    }
+}
+
+extension WaylandDisplay {
+    private func updateCursorAnimationTask(for cursor: PointerCursor) {
+        cursorAnimationTaskGeneration += 1
+        guard cursor.animation != nil else {
+            cursorAnimationTask?.cancel()
+            cursorAnimationTask = nil
+            return
+        }
+
+        cursorAnimationTask?.cancel()
+        let generation = cursorAnimationTaskGeneration
+
+        cursorAnimationTask = Task { [weak self] in  // swiftlint:disable:this no_unstructured_task
+            await self?.runCursorAnimationLoop(generation: generation)
+        }
+    }
+
+    private func runCursorAnimationLoop(generation: UInt64) async {
+        defer {
+            if cursorAnimationTaskGeneration == generation {
+                cursorAnimationTask = nil
+            }
+        }
+
+        while !Task.isCancelled, cursorAnimationTaskGeneration == generation {
+            let delay: Duration?
+            do {
+                delay = try requireCore().nextCursorAnimationDelay()
+            } catch {
+                return
+            }
+
+            guard let delay else { return }
+
+            do {
+                try await Task.sleep(for: delay)
+            } catch {
+                return
+            }
+
+            guard cursorAnimationTaskGeneration == generation else { return }
+
+            do {
+                _ = try requireCore().advanceCursorAnimations()
+            } catch {
+                return
+            }
         }
     }
 }
