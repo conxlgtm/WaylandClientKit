@@ -180,52 +180,6 @@ struct GPUWindowPresenterStateTests {
     }
 
     @Test
-    func framePacingPolicySelectsConfiguredConstraintOrFallback() throws {
-        let targetTime = try SurfaceCommitTargetTime(seconds: 1, nanoseconds: 2)
-
-        #expect(
-            GPUFramePacingPolicy.none.selectConstraint(
-                capability: .fifoAndCommitTiming(fifo: 1, commitTiming: 1),
-                commitTimingTarget: targetTime
-            ) == GPUFramePacingPolicySelection(constraint: .none)
-        )
-        #expect(
-            GPUFramePacingPolicy.preferFIFO.selectConstraint(
-                capability: .fifo(version: 1),
-                commitTimingTarget: targetTime
-            ) == GPUFramePacingPolicySelection(constraint: .fifo(.waitBarrier))
-        )
-        let fifoFallback = GPUFramePacingPolicy.preferFIFO.selectConstraint(
-            capability: .commitTiming(version: 1),
-            commitTimingTarget: targetTime
-        )
-        let expectedFifoFallback = GPUFramePacingPolicySelection(
-            constraint: .none,
-            fallbackReason: .fifoUnavailable
-        )
-        #expect(fifoFallback == expectedFifoFallback)
-        let commitTimingActive = GPUFramePacingPolicy.preferCommitTiming
-            .selectConstraint(
-                capability: .commitTiming(version: 1),
-                commitTimingTarget: targetTime
-            )
-        let expectedCommitTimingActive = GPUFramePacingPolicySelection(
-            constraint: .targetTime(targetTime)
-        )
-        #expect(commitTimingActive == expectedCommitTimingActive)
-        let commitTimingFallback = GPUFramePacingPolicy.preferCommitTiming
-            .selectConstraint(
-                capability: .fifo(version: 1),
-                commitTimingTarget: targetTime
-            )
-        let expectedCommitTimingFallback = GPUFramePacingPolicySelection(
-            constraint: .none,
-            fallbackReason: .commitTimingUnavailable
-        )
-        #expect(commitTimingFallback == expectedCommitTimingFallback)
-    }
-
-    @Test
     func presentationCorrelationMapsGenerationToSlot() throws {
         var correlation = GPUWindowPresentationCorrelation()
         let slotID = try GBMBufferPoolSlotID(0)
@@ -295,6 +249,67 @@ struct GPUWindowPresenterStateTests {
 
         #expect(correlation.isEmpty)
         #expect(correlation.takeSlotID(for: 51) == nil)
+    }
+}
+
+@Suite
+struct GPUWindowSubmitPolicyTests {
+    @Test
+    func framePacingPolicySelectsConfiguredConstraintOrFallback() throws {
+        let targetTime = try SurfaceCommitTargetTime(seconds: 1, nanoseconds: 2)
+
+        #expect(
+            GPUFramePacingPolicy.none.selectConstraint(
+                capability: .fifoAndCommitTiming(fifo: 1, commitTiming: 1),
+                commitTimingTarget: targetTime,
+                fifoBarrierPrimed: false
+            ) == GPUFramePacingPolicySelection(constraint: .none)
+        )
+        #expect(
+            GPUFramePacingPolicy.preferFIFO.selectConstraint(
+                capability: .fifo(version: 1),
+                commitTimingTarget: targetTime,
+                fifoBarrierPrimed: false
+            ) == GPUFramePacingPolicySelection(constraint: .fifo(.setBarrier))
+        )
+        #expect(
+            GPUFramePacingPolicy.preferFIFO.selectConstraint(
+                capability: .fifo(version: 1),
+                commitTimingTarget: targetTime,
+                fifoBarrierPrimed: true
+            ) == GPUFramePacingPolicySelection(constraint: .fifo(.waitAndSetBarrier))
+        )
+        let fifoFallback = GPUFramePacingPolicy.preferFIFO.selectConstraint(
+            capability: .commitTiming(version: 1),
+            commitTimingTarget: targetTime,
+            fifoBarrierPrimed: false
+        )
+        let expectedFifoFallback = GPUFramePacingPolicySelection(
+            constraint: .none,
+            fallbackReason: .fifoUnavailable
+        )
+        #expect(fifoFallback == expectedFifoFallback)
+        let commitTimingActive = GPUFramePacingPolicy.preferCommitTiming
+            .selectConstraint(
+                capability: .commitTiming(version: 1),
+                commitTimingTarget: targetTime,
+                fifoBarrierPrimed: false
+            )
+        let expectedCommitTimingActive = GPUFramePacingPolicySelection(
+            constraint: .targetTime(targetTime)
+        )
+        #expect(commitTimingActive == expectedCommitTimingActive)
+        let commitTimingFallback = GPUFramePacingPolicy.preferCommitTiming
+            .selectConstraint(
+                capability: .fifo(version: 1),
+                commitTimingTarget: targetTime,
+                fifoBarrierPrimed: false
+            )
+        let expectedCommitTimingFallback = GPUFramePacingPolicySelection(
+            constraint: .none,
+            fallbackReason: .commitTimingUnavailable
+        )
+        #expect(commitTimingFallback == expectedCommitTimingFallback)
     }
 }
 
@@ -2131,7 +2146,7 @@ struct ManagedGPUPreviewSoftwareFallbackPacingTests {
             await window.eventSnapshot() == [.preparePresentation, .geometry, .show]
         )
         #expect(
-            await window.submitConstraintsSnapshot().map(\.pacing) == [.fifo(.waitBarrier)]
+            await window.submitConstraintsSnapshot().map(\.pacing) == [.fifo(.setBarrier)]
         )
         #expect(result.runtimePath.backing == .fallback(.gbmAllocationFailed))
         #expect(result.runtimePath.pacing.fifo == .active)

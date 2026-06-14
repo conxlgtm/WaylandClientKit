@@ -388,7 +388,8 @@ extension ManagedGPUPreviewBacking {
         do {
             return policy.selectConstraint(
                 capability: capabilities.pacing,
-                commitTimingTarget: try nextCommitTimingTarget()
+                commitTimingTarget: try nextCommitTimingTarget(),
+                fifoBarrierPrimed: presenter.backingStateSnapshot.lastSubmittedFrame != nil
             )
         } catch {
             throw .setup(.commitTimingRequiredButUnavailable)

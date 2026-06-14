@@ -295,7 +295,8 @@ package actor WaylandGraphicsWindowBackingStorage {
         try rejectSoftwareSubmissionWhenExplicitRequired()
         let pacingSelection = try Self.softwarePacingSelection(
             policy: configuration.gpuPacingPolicy,
-            capabilities: backingRuntimePath.capabilities
+            capabilities: backingRuntimePath.capabilities,
+            fifoBarrierPrimed: leaseState.hasSubmittedFrame
         )
         let submitConstraints = SurfaceSubmitConstraints(
             synchronization: .implicit,
@@ -341,7 +342,8 @@ package actor WaylandGraphicsWindowBackingStorage {
         let damage = try frameMetadata.surfaceDamageRegion()
         let pacingSelection = try Self.softwarePacingSelection(
             policy: configuration.gpuPacingPolicy,
-            capabilities: backingRuntimePath.capabilities
+            capabilities: backingRuntimePath.capabilities,
+            fifoBarrierPrimed: leaseState.hasSubmittedFrame
         )
         let submitConstraints = SurfaceSubmitConstraints(
             synchronization: .implicit,

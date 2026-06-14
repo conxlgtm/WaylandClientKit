@@ -308,7 +308,36 @@ struct WaylandGraphicsSoftwarePacingSubmissionTests {
 
         let result = try await lease.submit(.clearColor(.black))
 
-        #expect(await window.submitConstraints().map(\.pacing) == [.fifo(.waitBarrier)])
+        #expect(await window.submitConstraints().map(\.pacing) == [.fifo(.setBarrier)])
+        #expect(result.runtimePath.pacing.fifo == .active)
+    }
+
+    @Test
+    func softwareClearFrameSequencesFIFOPacingConstraints() async throws {
+        let window = try FakeManagedGraphicsWindow(showDrawFailures: 0)
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .softwareFallback(
+                capabilities: gpuCapableSurfaceCapabilities(),
+                reason: .forcedSoftware
+            ),
+            configuration: WaylandGraphicsConfiguration(
+                backingPreference: .software,
+                pacingPolicy: .preferFIFO
+            )
+        )
+        let firstLease = try await storage.nextFrame()
+        _ = try await firstLease.submit(.clearColor(.black))
+        let secondLease = try await storage.nextFrame()
+
+        let result = try await secondLease.submit(.clearColor(.black))
+
+        #expect(
+            await window.submitConstraints().map(\.pacing) == [
+                .fifo(.setBarrier),
+                .fifo(.waitAndSetBarrier),
+            ]
+        )
         #expect(result.runtimePath.pacing.fifo == .active)
     }
 

@@ -63,11 +63,13 @@ extension WaylandGraphicsWindowBackingStorage {
 
     package static func softwarePacingSelection(
         policy: GPUFramePacingPolicy,
-        capabilities: WaylandGraphicsSurfaceCapabilities
+        capabilities: WaylandGraphicsSurfaceCapabilities,
+        fifoBarrierPrimed: Bool
     ) throws -> GPUFramePacingPolicySelection {
         policy.selectConstraint(
             capability: SurfacePacingCapability(capabilities.framePacing),
-            commitTimingTarget: try nextCommitTimingTarget()
+            commitTimingTarget: try nextCommitTimingTarget(),
+            fifoBarrierPrimed: fifoBarrierPrimed
         )
     }
 
