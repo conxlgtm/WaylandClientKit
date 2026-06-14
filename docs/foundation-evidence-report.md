@@ -10,18 +10,21 @@ Status: WaylandClientKit is not yet a foundation release candidate.
 Decision after this pass: B. WaylandClientKit needs one more hardening and evidence
 sprint before framework work.
 
-## Final Evidence Pass: 2026-06-09, GNOME Addendum: 2026-06-11
+## Final Evidence Pass: 2026-06-09, Addenda: 2026-06-11 And 2026-06-13
 
-Raw command output for this pass was collected locally under
+Raw command output for the main pass was collected locally under
 `evidence/2026-06-09/`. The GNOME VM addendum was collected under
-`evidence/2026-06-11/gnome/`. The raw logs are not committed; each matrix row
-should be traceable to one of those command logs.
+`evidence/2026-06-11/gnome/`. The KDE/KWin graphics preview addendum was
+collected under `evidence/2026-06-13/kde/graphics-preview/`. The raw logs are
+not committed; each matrix row should be traceable to one of those command
+logs.
 
 ### Environments
 
 - KDE/KWin: current desktop Wayland session on `wayland-0`; pass for live
   smoke, integration smoke, GPU preview smoke, examples build, managed GPU
-  active submission, and bounded auto-close feature examples.
+  active submission, bounded auto-close feature examples, and the 2026-06-13
+  explicit-sync/FIFO/metadata graphics preview addendum.
 - Weston headless: repeatable headless Weston 15.0.0 path through `swl smoke
   headless`; pass for live, integration, and GPU preview smoke. This is not a
   desktop compatibility claim.
@@ -115,6 +118,15 @@ KDE/KWin:
 active after building `swl` with no child process and no further output for
 several minutes. The evidence pass continued with the individual commands above.
 
+KDE/KWin graphics preview addendum, 2026-06-13:
+
+- `wayland-info | rg -i "commit_timing|commit timing|dmabuf|syncobj|fifo|presentation|tearing|content|color"`
+- `swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo`
+- `swift run GPUPreviewSmokeClient -- --sync require-explicit`
+- `swift run GPUPreviewSmokeClient -- --pacing commit-timing`
+- `swift run GraphicsPreviewManagedGPUClear -- --sync prefer-explicit --pacing fifo --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary`
+- `swift run GraphicsPreviewManagedGPUClear -- --pacing commit-timing --auto-close --print-summary`
+
 Nested Sway/wlroots:
 
 - `WLR_BACKENDS=wayland WLR_LIBINPUT_NO_DEVICES=1 sway -c /tmp/waylandclientkit-sway/config`
@@ -172,10 +184,24 @@ KDE/KWin:
 - GBM: active.
 - EGL: configured.
 - dmabuf import: active.
+- Explicit sync: advertised v1 and runtime active for both preferExplicit and
+  requireExplicit.
+- FIFO: active when requested.
+- Commit timing: fallback(commitTimingUnavailable); the compositor did not
+  advertise commit timing.
+- Metadata: content type active and tearing control active when requested;
+  color representation and color management advertised.
 - Presentation feedback: advertised v1, runtime advertised, requested true.
 - Submitted frame: success show, 192x192.
 - Fallback reason: none.
 - Failure: none.
+
+The 2026-06-13 graphics preview addendum is the source for the explicit-sync,
+FIFO, commit-timing fallback, and metadata bullets above. The addendum logs
+record `preferExplicit` and `requireExplicit` as explicit-sync active, FIFO
+active when requested, content type and tearing-control metadata active when
+requested, and commit timing as `fallback(commitTimingUnavailable)` because
+`wp_commit_timing_manager_v1` was not advertised.
 
 Nested Sway/wlroots:
 
