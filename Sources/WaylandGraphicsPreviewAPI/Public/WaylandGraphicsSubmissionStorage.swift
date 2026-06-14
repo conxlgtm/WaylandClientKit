@@ -214,11 +214,12 @@ package actor WaylandGraphicsWindowBackingStorage {
             )
         }
 
-        try leaseState.requireNotClosed()
-        try await ensureWindowOpen()
-
-        let geometry = try await submissionGeometry(for: leaseID)
+        let geometry: SurfaceGeometry
+        let operation: WaylandGraphicsFrameSubmissionOperation
         do {
+            try leaseState.requireNotClosed()
+            try await ensureWindowOpen()
+            geometry = try await submissionGeometry(for: leaseID)
             try effectiveConfiguration.validateManagedPreviewSupport(
                 capabilities: backingRuntimePath.capabilities
             )
@@ -232,12 +233,12 @@ package actor WaylandGraphicsWindowBackingStorage {
                 capabilities: backingRuntimePath.capabilities,
                 geometry: geometry
             )
+            operation = try leaseState.prepareSubmission(leaseID: leaseID)
         } catch {
             closeExternalDescriptor(&descriptor)
             throw error
         }
 
-        let operation = try leaseState.prepareSubmission(leaseID: leaseID)
         var stage = WaylandGraphicsSubmissionStage.submissionPreparation
         do {
             stage = .frameSubmission
@@ -853,3 +854,19 @@ extension WaylandGraphicsWindowBackingStorage {
         )
     }
 }
+
+#if DEBUG
+    extension WaylandGraphicsWindowBackingStorage {
+        package func closeForTesting() async throws {
+            try await close()
+        }
+
+        package func externalBufferSubmittedSlotRawValuesForTesting() -> [Int] {
+            externalBufferPresenter.outstandingSubmittedSlotIDs.map(\.rawValue)
+        }
+
+        package func externalBufferAvailableSlotRawValuesForTesting() -> [Int] {
+            externalBufferPresenter.availableSlotIDs.map(\.rawValue)
+        }
+    }
+#endif

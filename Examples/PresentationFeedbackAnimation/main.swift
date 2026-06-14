@@ -36,9 +36,6 @@ enum PresentationFeedbackAnimation {
             let usePresentationFeedback = capabilities.presentationTime.isAvailable
             log("feature: presentation-feedback")
             log("capability: \(availabilityDescription(capabilities.presentationTime))")
-            log("pacing requested: \(options.pacing ?? "none")")
-            log("FIFO actual: \(fifoActualDescription(options.pacing))")
-            log("commit timing actual: \(commitTimingActualDescription(options.pacing))")
             log(
                 "presentation feedback "
                     + (usePresentationFeedback ? "available" : "unavailable")
@@ -180,28 +177,6 @@ enum PresentationFeedbackAnimation {
         case .available(let version):
             "available version=\(version)"
         }
-    }
-
-    nonisolated private static func fifoActualDescription(_ pacing: String?) -> String {
-        switch normalized(pacing) {
-        case "fifo":
-            "not applied(software-presentation-example)"
-        default:
-            "not requested"
-        }
-    }
-
-    nonisolated private static func commitTimingActualDescription(_ pacing: String?) -> String {
-        switch normalized(pacing) {
-        case "commit-timing":
-            "not applied(software-presentation-example)"
-        default:
-            "not requested"
-        }
-    }
-
-    nonisolated private static func normalized(_ value: String?) -> String? {
-        value?.lowercased().replacingOccurrences(of: "_", with: "-")
     }
 }
 
