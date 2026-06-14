@@ -178,6 +178,7 @@ package final class BoundGlobals {
     package let xdgWMBase: RawXDGWMBase
     package let extensions: OptionalGlobals
     package let seatRegistry: SeatRegistry
+    package let tabletSeatRegistry: TabletSeatRegistry?
     package let outputRegistry: OutputRegistry
 
     private var isDestroyed = false
@@ -187,6 +188,7 @@ package final class BoundGlobals {
         sharedMemory boundSharedMemory: RawSharedMemory,
         xdgWMBase boundXDGWMBase: RawXDGWMBase,
         seatRegistry boundSeatRegistry: SeatRegistry,
+        tabletSeatRegistry boundTabletSeatRegistry: TabletSeatRegistry? = nil,
         outputRegistry boundOutputRegistry: OutputRegistry,
         extensions boundExtensions: OptionalGlobals = OptionalGlobals()
     ) {
@@ -194,6 +196,7 @@ package final class BoundGlobals {
         sharedMemory = boundSharedMemory
         xdgWMBase = boundXDGWMBase
         seatRegistry = boundSeatRegistry
+        tabletSeatRegistry = boundTabletSeatRegistry
         outputRegistry = boundOutputRegistry
         extensions = boundExtensions
     }
@@ -203,6 +206,7 @@ package final class BoundGlobals {
 
         isDestroyed = true
         outputRegistry.destroy()
+        tabletSeatRegistry?.destroy()
         seatRegistry.destroy()
         extensions.destroy()
         xdgWMBase.destroy()

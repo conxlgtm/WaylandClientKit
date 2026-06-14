@@ -20,6 +20,7 @@ selection, build that in your framework above WaylandClientKit.
 | Stop screen idle for a window | `Window.inhibitIdle()` | `zwp_idle_inhibit_manager_v1` | [IdleInhibitSmoke](../Examples/IdleInhibitSmoke/main.swift) |
 | Ring the system bell | `WaylandDisplay.ringSystemBell()` or `Window.ringSystemBell()` | `xdg_system_bell_v1` | [SystemBellSmoke](../Examples/SystemBellSmoke/main.swift) |
 | Receive local keyboard text and shortcuts | `InputEvent`, interpreted keyboard events | `wl_keyboard` plus keymap support | [WaylandClientKitDemo](../Examples/WaylandClientKitDemo/main.swift) |
+| Receive graphics tablet facts | `InputEventKind.tablet` and `WaylandDisplay.capabilities().tablet` | `zwp_tablet_manager_v2` plus tablet hardware/events | [TabletInputSmoke](../Examples/TabletInputSmoke/main.swift) |
 | Receive compositor IME text | `TextInputSession` and `display.textInputEvents` | `zwp_text_input_manager_v3` | [TextInputSmoke](../Examples/TextInputSmoke/main.swift) |
 | Capture relative pointer or lock/confine | `Window.relativePointer`, `Window.lockPointer`, `Window.confinePointer` | `zwp_relative_pointer_manager_v1`, `zwp_pointer_constraints_v1` | [PointerCaptureSmoke](../Examples/PointerCaptureSmoke/main.swift) |
 | Request pointer warp | `Window.requestPointerWarp(seatID:position:serial:)` | `wp_pointer_warp_v1` plus a seat pointer and input serial | [PointerWarpSmoke](../Examples/PointerWarpSmoke/main.swift) |

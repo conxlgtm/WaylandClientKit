@@ -187,12 +187,12 @@
       "vendoredFromPath" : "/usr/share/wayland-protocols/stable/presentation-time/presentation-time.xml"
     },
     {
-      "apiExposure" : "none",
+      "apiExposure" : "public",
       "generatedCodePath" : "Sources/CWaylandProtocols/generated/stable/tablet/tablet-v2-protocol.c",
       "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/stable/tablet/tablet-v2-client-protocol.h",
       "localPath" : "protocols/upstream/stable/tablet/tablet-v2.xml",
       "name" : "tablet-v2",
-      "notes" : "Private generation dependency for cursor-shape tablet-tool request interfaces; WaylandClientKit does not expose tablet APIs yet.",
+      "notes" : "Stable tablet input protocol. WaylandClientKit exposes capability facts and typed tablet device/tool/pad events without drawing, gesture, brush, or canvas policy.",
       "scannerCodeMode" : "private-code",
       "scannerHeaderMode" : "client-header",
       "sha256" : "ac1128b26c779cf90b9ed71182ba5e34a7262826789adae206d825a4d45908b4",
@@ -210,8 +210,8 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "stable",
-      "waylandClientKitTier" : "privateGenerationDependency",
-      "testStrategy" : "generation-only",
+      "waylandClientKitTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
       "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
