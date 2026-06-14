@@ -130,6 +130,9 @@ reported as a typed failure. The preview commit-timing policy currently uses an
 internal near-future monotonic target for each frame; no public target-time
 scheduling API is exposed yet. Current live compositor evidence proves FIFO
 active and commit-timing fallback, but not commit-timing active.
+FIFO pacing primes the surface with `set_barrier` on the first successful
+FIFO-paced commit, then waits on the previous barrier and sets the next barrier
+on later FIFO-paced commits.
 `requestWhenAvailable` presentation feedback requests feedback only when the
 protocol is advertised; `require` fails when it is unavailable.
 

@@ -112,7 +112,8 @@ package enum GPUFramePacingPolicy: Equatable, Sendable {
 
     package func selectConstraint(
         capability: SurfacePacingCapability,
-        commitTimingTarget: SurfaceCommitTargetTime
+        commitTimingTarget: SurfaceCommitTargetTime,
+        fifoBarrierPrimed: Bool
     ) -> GPUFramePacingPolicySelection {
         switch self {
         case .none:
@@ -125,7 +126,8 @@ package enum GPUFramePacingPolicy: Equatable, Sendable {
                 )
             }
 
-            return GPUFramePacingPolicySelection(constraint: .fifo(.waitBarrier))
+            let mode: FifoMode = fifoBarrierPrimed ? .waitAndSetBarrier : .setBarrier
+            return GPUFramePacingPolicySelection(constraint: .fifo(mode))
         case .preferCommitTiming:
             guard capability.supportsCommitTiming else {
                 return GPUFramePacingPolicySelection(

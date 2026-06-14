@@ -10,6 +10,9 @@ When FIFO or commit-timing pacing is requested, software fallback applies the
 same pacing submit constraint when the compositor supports it. Missing pacing
 protocols are reported as typed runtime fallback facts instead of being silently
 ignored.
+FIFO pacing still uses barrier sequencing on software commits: the first
+FIFO-paced software frame primes the barrier, and later FIFO-paced frames wait
+and set the next barrier.
 
 ## Policies
 

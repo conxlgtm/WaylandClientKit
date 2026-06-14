@@ -47,6 +47,9 @@ direct software commits and allowed software fallback commits. Missing protocols
 become pacing fallback facts; rejected commit-timing timestamps become typed
 failures. The preview commit-timing path uses an internal target time until a
 public scheduling API is designed.
+FIFO pacing uses a priming commit before waits: the first FIFO-paced frame sets
+a barrier, and later FIFO-paced frames wait on the previous barrier while
+setting the next one.
 
 `WaylandGraphicsMetadataPolicy.preferAvailable` allows public content type
 and presentation-hint metadata to be applied when the compositor supports the
