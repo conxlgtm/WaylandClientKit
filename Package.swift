@@ -40,7 +40,7 @@ let package = Package(
         .library(name: "WaylandClient", targets: ["WaylandClient"]),
         .library(name: "WaylandGraphicsPreview", targets: ["WaylandGraphicsPreview"]),
         .executable(name: "wayland-client-kit-smoke", targets: ["WaylandClientKitSmoke"]),
-        .executable(name: "swl", targets: ["WaylandClientKitTool"]),
+        .executable(name: "wck", targets: ["WaylandClientKitTool"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.6.0")
@@ -429,25 +429,25 @@ let package = Package(
             swiftSettings: librarySwiftSettings
         ),
         .plugin(
-            name: "SwlCheckPlugin",
+            name: "WckCheckPlugin",
             capability: .command(
-                intent: .custom(verb: "swl-check", description: "Run WaylandClientKit checks")
+                intent: .custom(verb: "wck-check", description: "Run WaylandClientKit checks")
             )
         ),
         .plugin(
-            name: "SwlReleaseCheckPlugin",
+            name: "WckReleaseCheckPlugin",
             capability: .command(
                 intent: .custom(
-                    verb: "swl-release-check",
+                    verb: "wck-release-check",
                     description: "Run WaylandClientKit release checks"
                 )
             )
         ),
         .plugin(
-            name: "SwlGenerateProtocolsPlugin",
+            name: "WckGenerateProtocolsPlugin",
             capability: .command(
                 intent: .custom(
-                    verb: "swl-generate-protocols",
+                    verb: "wck-generate-protocols",
                     description: "Generate Wayland protocols"
                 ),
                 permissions: [
@@ -456,19 +456,19 @@ let package = Package(
             )
         ),
         .plugin(
-            name: "SwlVerifyGeneratedPlugin",
+            name: "WckVerifyGeneratedPlugin",
             capability: .command(
                 intent: .custom(
-                    verb: "swl-verify-generated",
+                    verb: "wck-verify-generated",
                     description: "Verify generated protocols"
                 )
             )
         ),
         .plugin(
-            name: "SwlBootstrapCheckPlugin",
+            name: "WckBootstrapCheckPlugin",
             capability: .command(
                 intent: .custom(
-                    verb: "swl-bootstrap-check",
+                    verb: "wck-bootstrap-check",
                     description: "Verify bootstrap dependencies"
                 )
             )

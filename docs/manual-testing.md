@@ -7,7 +7,7 @@ Record live compositor facts in `docs/compositor-matrix.md`. Keep unit-test
 results separate from compositor evidence. After updating the matrix, run:
 
 ```bash
-swift run swl compositor evidence-summary
+swift run wck compositor evidence-summary
 ```
 
 ## Baseline
@@ -15,16 +15,16 @@ swift run swl compositor evidence-summary
 Run the noninteractive checks first:
 
 ```bash
-swift run swl smoke live
-swift run swl smoke integration
-swift run swl smoke gpu-preview
+swift run wck smoke live
+swift run wck smoke integration
+swift run wck smoke gpu-preview
 ```
 
 For headless Weston:
 
 ```bash
-swift run swl smoke headless -- swl smoke integration
-swift run swl smoke headless -- swl smoke gpu-preview
+swift run wck smoke headless -- wck smoke integration
+swift run wck smoke headless -- wck smoke gpu-preview
 ```
 
 ## Framework-Facing Examples

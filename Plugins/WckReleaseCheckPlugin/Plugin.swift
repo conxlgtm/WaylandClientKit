@@ -2,9 +2,9 @@ import Foundation
 import PackagePlugin
 
 @main
-struct SwlBootstrapCheckPlugin: CommandPlugin {
+struct WckReleaseCheckPlugin: CommandPlugin {
     func performCommand(context: PluginContext, arguments _: [String]) async throws {
-        try run(context: context, "bootstrap", "check")
+        try run(context: context, "ci", "release")
     }
 }
 
@@ -17,7 +17,7 @@ func run(context: PluginContext, _ arguments: String...) throws {
         .path
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-    process.arguments = ["swift", "run", "--scratch-path", scratchPath, "swl"] + arguments
+    process.arguments = ["swift", "run", "--scratch-path", scratchPath, "wck"] + arguments
     var environment = ProcessInfo.processInfo.environment
     environment["WAYLAND_CLIENT_KIT_SWIFTPM_SCRATCH"] = nestedScratchPath
     process.environment = environment

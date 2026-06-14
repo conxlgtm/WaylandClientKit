@@ -101,7 +101,7 @@ struct RepositoryNixTools {
     }
 
     private var nixExecutable: String? {
-        if let override = runner.environment["SWL_NIX_BIN"], !override.isEmpty {
+        if let override = runner.environment["WCK_NIX_BIN"], !override.isEmpty {
             return override
         }
 

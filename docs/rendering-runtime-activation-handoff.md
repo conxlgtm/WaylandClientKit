@@ -155,12 +155,12 @@ Remaining evidence work:
   presentation, tearing, content type, color representation, and color
   management globals.
 - `git diff --check`
-- `swift run swl docs verify`
-- `swift run swl docc verify`
-- `swift run swl compositor evidence-summary`
-- `swift run swl ci cheap`
-- `swift run swl ci check`
-- `swift run swl examples build`
+- `swift run wck docs verify`
+- `swift run wck docc verify`
+- `swift run wck compositor evidence-summary`
+- `swift run wck ci cheap`
+- `swift run wck ci check`
+- `swift run wck examples build`
 
 ## Merge Notes
 

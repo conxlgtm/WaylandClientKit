@@ -5,7 +5,7 @@ WaylandClientKit is an experimental Linux Wayland client package. Keep changes s
 ## Environment
 
 Swift 6.3.2 or newer must already be installed.
-`swift run swl bootstrap check` verifies Swift and Linux system dependencies.
+`swift run wck bootstrap check` verifies Swift and Linux system dependencies.
 It does not install or switch Swift toolchains.
 Set `SWIFT_BIN=/path/to/swift` for custom toolchain resolution.
 
@@ -34,9 +34,9 @@ For Nix/NixOS, use `nix develop`.
 Bootstrap commands print installation guidance only; they do not mutate the machine.
 
 ```bash
-swift run swl bootstrap check
-swift run swl bootstrap install-command --package-manager dnf
-swift run swl bootstrap install-command --package-manager nix
+swift run wck bootstrap check
+swift run wck bootstrap install-command --package-manager dnf
+swift run wck bootstrap install-command --package-manager nix
 ```
 
 ## Local Checks
@@ -44,32 +44,32 @@ swift run swl bootstrap install-command --package-manager nix
 Before opening a pull request, run:
 
 ```bash
-swift run swl tools toolchain-smoke
-swift run swl ci check
+swift run wck tools toolchain-smoke
+swift run wck ci check
 ```
 
 Under a real Wayland session, also run:
 
 ```bash
-swift run swl smoke live
-swift run swl smoke integration
+swift run wck smoke live
+swift run wck smoke integration
 swift run WaylandClientKitDemo
 ```
 
 For a private headless Weston compositor, run:
 
 ```bash
-swift run swl smoke headless -- swl smoke integration
+swift run wck smoke headless -- wck smoke integration
 ```
 
 SwiftPM command plugins wrap the same checks:
 
 ```bash
-swift package swl-check
-swift package swl-release-check
-swift package swl-generate-protocols
-swift package swl-verify-generated
-swift package swl-bootstrap-check
+swift package wck-check
+swift package wck-release-check
+swift package wck-generate-protocols
+swift package wck-verify-generated
+swift package wck-bootstrap-check
 ```
 
 See [Linux live Wayland testing](docs/live-wayland-testing.md) for the live
@@ -84,14 +84,14 @@ Protocol XML lives under `protocols/`. Generated C and header artifacts live und
 Regenerate only through:
 
 ```bash
-swift run swl bootstrap maintainer-check
-swift run swl protocols generate
+swift run wck bootstrap maintainer-check
+swift run wck protocols generate
 ```
 
 Verify generated outputs with:
 
 ```bash
-swift run swl protocols verify-generated
+swift run wck protocols verify-generated
 ```
 
 Do not edit generated files directly.
@@ -116,7 +116,7 @@ Swift should call project-owned C shims, not generated inline protocol helpers d
 
 - `Sources/CWaylandProtocols/include/wayland-client-kit-shims.h`
 - `Sources/CWaylandProtocols/shims/`
-- `swift run swl shims verify`
+- `swift run wck shims verify`
 - listener smoke tests where applicable.
 
 ## Public API
@@ -149,7 +149,7 @@ Runtime and library products should avoid external SwiftPM dependencies unless
 they are deliberately approved for the public product graph. Tooling targets may
 use external dependencies when they materially improve maintainability.
 `Package.resolved` is committed intentionally, and dependency updates require
-the relevant `swift run swl ci ...` validation. `swift run swl ci cheap` checks
+the relevant `swift run wck ci ...` validation. `swift run wck ci cheap` checks
 that tool-only dependencies do not leak into `WaylandClient` or
 `WaylandGraphicsPreview`.
 

@@ -4,7 +4,7 @@ This baseline records the public declarations exported by vended library
 products. Preview products are included so source-breaking preview API drift is
 visible and reviewed.
 
-Run `swift run swl api verify --update` only after reviewing and updating
+Run `swift run wck api verify --update` only after reviewing and updating
 `docs/public-api-audit.md` for the API contract change.
 
 ## WaylandClient Public Declarations

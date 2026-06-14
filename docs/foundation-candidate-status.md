@@ -20,21 +20,21 @@ enough; active GPU claims must be backed by public runtime-path output.
 
 | Area | Status | Evidence | Next action |
 | --- | --- | --- | --- |
-| Public API audit and baseline | done | [public-api-audit.md](public-api-audit.md), [public-api-baseline.md](public-api-baseline.md), `swift run swl api verify` | Keep both updated for every public drift. |
+| Public API audit and baseline | done | [public-api-audit.md](public-api-audit.md), [public-api-baseline.md](public-api-baseline.md), `swift run wck api verify` | Keep both updated for every public drift. |
 | Compatibility policy | done | [compatibility-policy.md](compatibility-policy.md) | Apply tiers during PR review. |
 | WaylandClient compatibility tier | partial | Main public product is documented as stable-ish but pre-foundation. | Keep source-breaking changes audited and documented. |
 | WaylandGraphicsPreview preview tier | partial | Preview policy documented in [compatibility-policy.md](compatibility-policy.md) and DocC. | Keep preview drift baseline/audit tracked. |
-| DocC coverage | partial | `WaylandClient` and `WaylandGraphicsPreview` catalogs exist. | Run `swift run swl docc verify` after public API/doc changes. |
+| DocC coverage | partial | `WaylandClient` and `WaylandGraphicsPreview` catalogs exist. | Run `swift run wck docc verify` after public API/doc changes. |
 | User learning path | done | [getting-started.md](getting-started.md), [which-api-should-i-use.md](which-api-should-i-use.md), [documentation-map.md](documentation-map.md) | Keep README as portal, not full manual. |
 | Session readiness | done | [session-readiness.md](session-readiness.md), [session-management-plan.md](session-management-plan.md), `SessionStateSmoke`, `CompositorSessionSmoke`, `WindowRestorationSnapshot` | Keep compositor session-management public API capability-only until lifecycle evidence and framework usage shape are clear. |
 | Managed GPU setup code path | done | Managed GPU attempts surface feedback, render-node, GBM/EGL, dmabuf import, owner-thread commit, and typed fallback. | Keep runtime-path truth tests current. |
 | Managed GPU active proof | partial | [compositor-matrix.md](compositor-matrix.md) records active managed GPU clear-frame submission and resize/reconfigure on KDE/KWin, active managed GPU clear-frame submission on nested Sway/wlroots, `surfaceFeedbackUnavailable` fallback on GNOME/Mutter, and `dmabufUnavailable` fallback under headless Weston. | Broaden active/fallback/failure evidence before foundation-candidate claims, especially another desktop compositor when active managed GPU is available. |
 | Compositor matrix minimum | partial | [compositor-matrix.md](compositor-matrix.md) records fresh headless Weston, KDE/KWin, nested Sway/wlroots, and GNOME/Mutter VM rows and separates protocol advertisement from active runtime facts. KDE/KWin now has manual proof for pointer lock/confine with relative motion, data-transfer drag-source/drop/read/finish, serial move/window-menu/resize/drag-source, managed GPU resize/reconfigure, explicit sync active, FIFO active, and metadata active. | Complete remaining GNOME/Mutter manual rows, popup-specific manual probes, broader explicit-sync compositor evidence beyond KDE/KWin, and commit-timing active evidence where practical. |
-| External consumer evidence | partial | Public and graphics preview integration clients are part of `swl ci check`. | Keep external clients hardware-independent. |
-| Release checks | partial | `swift run swl ci release`, `swift run swl examples build`, release docs. | Keep release gates runnable while evidence remains incomplete. |
-| Foundation-candidate gate | partial | `swift run swl ci foundation-check` fails while the compositor matrix has incomplete cells, explicit environment skips, or manual-interaction gaps. | Complete remaining compositor and interaction evidence before claiming foundation readiness. |
+| External consumer evidence | partial | Public and graphics preview integration clients are part of `wck ci check`. | Keep external clients hardware-independent. |
+| Release checks | partial | `swift run wck ci release`, `swift run wck examples build`, release docs. | Keep release gates runnable while evidence remains incomplete. |
+| Foundation-candidate gate | partial | `swift run wck ci foundation-check` fails while the compositor matrix has incomplete cells, explicit environment skips, or manual-interaction gaps. | Complete remaining compositor and interaction evidence before claiming foundation readiness. |
 | Sanitizer checks | partial | 2026-06-09 pass recorded TSan and ASan `detect_leaks=0` passes; LSan was unusable in this environment during SwiftPM test discovery. | Keep TSan/ASan current and rerun LSan in an environment where LeakSanitizer works. |
-| Toolchain baseline | done | `swift run swl tools toolchain-smoke`; Swift 6.3.2 required baseline. | Keep 6.4/main snapshots optional and allowed-failure. |
+| Toolchain baseline | done | `swift run wck tools toolchain-smoke`; Swift 6.3.2 required baseline. | Keep 6.4/main snapshots optional and allowed-failure. |
 | Known non-goals | done | README, DocC, compatibility policy. | Keep widgets, layout, renderer abstraction, scene graph, styling, and accessibility semantic tree out of scope. |
 
 ## Managed GPU Status
@@ -77,12 +77,12 @@ dmabuf v4, linux-drm-syncobj v1, presentation v2, text-input v3 v1,
 cursor-shape v1, pointer constraints v1, relative pointer v1, idle inhibit v1,
 xdg activation v1, and content type, alpha, and tearing metadata.
 
-KDE/KWin passed `swl smoke live`, `swl smoke integration`, `swl smoke
-gpu-preview`, `swl examples build`, the graphics preview examples, and the
+KDE/KWin passed `wck smoke live`, `wck smoke integration`, `wck smoke
+gpu-preview`, `wck examples build`, the graphics preview examples, and the
 bounded auto-close feature smoke targets listed in
 [compositor-matrix.md](compositor-matrix.md). Managed GPU clear-frame
-submission reported active. `swift run swl ci check` was attempted on KDE/KWin
-but hung after building `swl` with no child process and no further output.
+submission reported active. `swift run wck ci check` was attempted on KDE/KWin
+but hung after building `wck` with no child process and no further output.
 
 A 2026-06-13 graphics preview refresh on the same KDE/KWin session reported
 `preferExplicit` and `requireExplicit` as explicit-sync active with GPU backing
@@ -91,7 +91,7 @@ active when requested, and commit timing
 `fallback(commitTimingUnavailable)` because the compositor did not advertise the
 commit-timing protocol.
 
-Nested Sway/wlroots passed `swl smoke live`, `swl smoke integration`, `swl smoke
+Nested Sway/wlroots passed `wck smoke live`, `wck smoke integration`, `wck smoke
 gpu-preview`, and both graphics preview examples. Managed GPU clear-frame
 submission reported active in the nested session.
 
@@ -99,7 +99,7 @@ Headless Weston passed live, integration, GPU preview, and the bounded feature
 loop. Managed GPU correctly fell back with `dmabufUnavailable`.
 
 GNOME/Mutter evidence was added from a Fedora GNOME Wayland VM on 2026-06-11.
-The VM passed `swl smoke live`, `swl smoke integration`, `swl smoke
+The VM passed `wck smoke live`, `wck smoke integration`, `wck smoke
 gpu-preview`, `GPUPreviewSmokeClient`, and `GraphicsPreviewManagedGPUClear`.
 GNOME advertised dmabuf v3, presentation v2, FIFO v1, commit timing v1,
 text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1,
@@ -119,32 +119,32 @@ resize/reconfigure remain unproven.
 Normal readiness:
 
 ```bash
-swift run swl tools toolchain-smoke
-swift run swl ci check
-swift run swl ci release
-swift run swl examples build
-swift run swl api verify
-swift run swl docs verify
-swift run swl docc verify
-swift run swl imports verify
-swift run swl shims verify
-swift run swl shims verify-release-symbols
-swift run swl safety verify-unsafe-allowlist
-swift run swl protocols verify-generated
-swift run swl compositor evidence-summary
+swift run wck tools toolchain-smoke
+swift run wck ci check
+swift run wck ci release
+swift run wck examples build
+swift run wck api verify
+swift run wck docs verify
+swift run wck docc verify
+swift run wck imports verify
+swift run wck shims verify
+swift run wck shims verify-release-symbols
+swift run wck safety verify-unsafe-allowlist
+swift run wck protocols verify-generated
+swift run wck compositor evidence-summary
 ```
 
 Foundation-candidate readiness:
 
 ```bash
-swift run swl ci foundation-check
+swift run wck ci foundation-check
 ```
 
 Live evidence:
 
 ```bash
-swift run swl smoke live
-swift run swl smoke integration
+swift run wck smoke live
+swift run wck smoke integration
 swift run GPUPreviewSmokeClient
 swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
 ```

@@ -850,7 +850,7 @@ public struct PublicAPIAuditor {
             products. Preview products are included so source-breaking preview API drift is
             visible and reviewed.
 
-            Run `swift run swl api verify --update` only after reviewing and updating
+            Run `swift run wck api verify --update` only after reviewing and updating
             `docs/public-api-audit.md` for the API contract change.
 
             \(extracted)
@@ -1092,11 +1092,11 @@ public struct HeadlessWestonRunner {
     }
 
     private func swiftPMCommandIfNeeded(_ command: [String]) throws -> [String] {
-        guard command.first == "swl" else {
+        guard command.first == "wck" else {
             return command
         }
         let swift = try context.swift.swiftExecutable(environment: context.runner.environment)
-        return [swift, "run", "swl"] + Array(command.dropFirst())
+        return [swift, "run", "wck"] + Array(command.dropFirst())
     }
 
     private func waitForSocket(_ socket: URL, process: Process) throws {

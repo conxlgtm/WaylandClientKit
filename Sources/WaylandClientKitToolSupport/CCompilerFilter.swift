@@ -44,7 +44,7 @@ public enum CCompilerFilter {
     ) throws -> URL {
         guard !commandPath.isEmpty else {
             throw ToolError(
-                "cannot resolve swl executable path",
+                "cannot resolve wck executable path",
                 exitCode: ToolExitCode.environment)
         }
         if commandPath.hasPrefix("/") {

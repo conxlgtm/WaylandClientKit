@@ -25,7 +25,7 @@ logs.
   smoke, integration smoke, GPU preview smoke, examples build, managed GPU
   active submission, bounded auto-close feature examples, and the 2026-06-13
   explicit-sync/FIFO/metadata graphics preview addendum.
-- Weston headless: repeatable headless Weston 15.0.0 path through `swl smoke
+- Weston headless: repeatable headless Weston 15.0.0 path through `wck smoke
   headless`; pass for live, integration, and GPU preview smoke. This is not a
   desktop compatibility claim.
 - Sway/wlroots: nested Sway session under KDE/Plasma on `wayland-1`; pass for
@@ -98,24 +98,24 @@ Fedora GNOME VM `wayland-info` reported:
 
 Headless Weston:
 
-- `nix develop -c swift run swl smoke headless -- swl smoke live`
-- `nix develop -c swift run swl smoke headless -- swl smoke integration`
-- `nix develop -c swift run swl smoke headless -- swl smoke gpu-preview`
+- `nix develop -c swift run wck smoke headless -- wck smoke live`
+- `nix develop -c swift run wck smoke headless -- wck smoke integration`
+- `nix develop -c swift run wck smoke headless -- wck smoke gpu-preview`
 
 KDE/KWin:
 
 - `wayland-info`
-- `swift run swl tools toolchain-smoke`
-- `swift run swl examples build`
-- `swift run swl smoke live`
-- `swift run swl smoke integration`
-- `swift run swl smoke gpu-preview`
+- `swift run wck tools toolchain-smoke`
+- `swift run wck examples build`
+- `swift run wck smoke live`
+- `swift run wck smoke integration`
+- `swift run wck smoke gpu-preview`
 - `swift run GPUPreviewSmokeClient`
 - `swift run GraphicsPreviewManagedGPUClear`
-- `swift run swl ci check`
+- `swift run wck ci check`
 
-`swift run swl ci check` was attempted on KDE/KWin, but the process remained
-active after building `swl` with no child process and no further output for
+`swift run wck ci check` was attempted on KDE/KWin, but the process remained
+active after building `wck` with no child process and no further output for
 several minutes. The evidence pass continued with the individual commands above.
 
 KDE/KWin graphics preview addendum, 2026-06-13:
@@ -131,18 +131,18 @@ Nested Sway/wlroots:
 
 - `WLR_BACKENDS=wayland WLR_LIBINPUT_NO_DEVICES=1 sway -c /tmp/waylandclientkit-sway/config`
 - `wayland-info`
-- `swift run swl smoke live`
-- `swift run swl smoke integration`
-- `swift run swl smoke gpu-preview`
+- `swift run wck smoke live`
+- `swift run wck smoke integration`
+- `swift run wck smoke gpu-preview`
 - `swift run GPUPreviewSmokeClient`
 - `swift run GraphicsPreviewManagedGPUClear`
 
 GNOME/Mutter:
 
 - `wayland-info`
-- `swift run swl smoke live`
-- `swift run swl smoke integration`
-- `swift run swl smoke gpu-preview`
+- `swift run wck smoke live`
+- `swift run wck smoke integration`
+- `swift run wck smoke gpu-preview`
 - `swift run GPUPreviewSmokeClient`
 - `swift run GraphicsPreviewManagedGPUClear`
 
@@ -167,9 +167,9 @@ KDE/KWin bounded feature examples:
 
 Sanitizers:
 
-- `swift run swl test tsan`
-- `ASAN_OPTIONS=detect_leaks=0 swift run swl test asan`
-- `ASAN_OPTIONS=detect_leaks=1 swift run swl test asan`
+- `swift run wck test tsan`
+- `ASAN_OPTIONS=detect_leaks=0 swift run wck test asan`
+- `ASAN_OPTIONS=detect_leaks=1 swift run wck test asan`
 - `ASAN_OPTIONS=detect_leaks=1 swift test --sanitize=address --no-parallel --filter WaylandExampleSupportTests`
 
 ## GPU Evidence
@@ -276,8 +276,8 @@ GNOME/Mutter:
 
 ## Sanitizer Status
 
-- TSan: pass, `swift run swl test tsan`.
-- ASan with `detect_leaks=0`: pass, `ASAN_OPTIONS=detect_leaks=0 swift run swl
+- TSan: pass, `swift run wck test tsan`.
+- ASan with `detect_leaks=0`: pass, `ASAN_OPTIONS=detect_leaks=0 swift run wck
   test asan`.
 - LSan: unusable(environment). With `ASAN_OPTIONS=detect_leaks=1`, SwiftPM test
   discovery terminated during `--dump-tests-json` and LeakSanitizer reported a
@@ -294,12 +294,12 @@ GNOME/Mutter:
   another desktop compositor if practical.
 - Managed GPU resize/reconfigure has KDE/KWin manual evidence; broaden this to
   another desktop compositor when active managed GPU is available.
-- `swift run swl ci check` needs investigation on the KDE host because it hung
-  after building `swl`.
+- `swift run wck ci check` needs investigation on the KDE host because it hung
+  after building `wck`.
 
 ## Next Step
 
 Stay on WaylandClientKit for one more hardening and evidence sprint. The next
 maintainer pass should run the remaining manual interaction checklist on
 GNOME/Mutter where practical, broaden active/fallback/failure GPU evidence,
-and investigate the `swl ci check` hang observed during this evidence pass.
+and investigate the `wck ci check` hang observed during this evidence pass.

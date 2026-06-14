@@ -18,8 +18,8 @@ On other Linux distributions, install the packages listed in
 environment:
 
 ```bash
-swift run swl tools toolchain-smoke
-swift run swl bootstrap check
+swift run wck tools toolchain-smoke
+swift run wck bootstrap check
 ```
 
 WaylandClientKit currently requires Swift 6.3.2 or newer.
@@ -33,7 +33,7 @@ swift build --disable-index-store
 Maintainers can run the same normal branch gate that CI uses:
 
 ```bash
-swift run swl ci check
+swift run wck ci check
 ```
 
 ## 3. Run The Smoke Executable
@@ -47,13 +47,13 @@ swift run wayland-client-kit-smoke
 For the broader live smoke path:
 
 ```bash
-swift run swl smoke live
+swift run wck smoke live
 ```
 
 If no desktop compositor is available but Weston is installed, run:
 
 ```bash
-swift run swl smoke headless -- swl smoke integration
+swift run wck smoke headless -- wck smoke integration
 ```
 
 ## 4. Create A Tiny Client

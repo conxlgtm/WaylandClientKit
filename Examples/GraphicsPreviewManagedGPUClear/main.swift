@@ -342,7 +342,7 @@ enum GraphicsPreviewManagedGPUClear {
     }
 
     nonisolated private static func requestedBackingPreference() -> WaylandGraphicsBackingKind {
-        switch ProcessInfo.processInfo.environment["SWL_GRAPHICS_PREVIEW_BACKING"]?.lowercased() {
+        switch ProcessInfo.processInfo.environment["WCK_GRAPHICS_PREVIEW_BACKING"]?.lowercased() {
         case "software", "shm":
             .software
         default:

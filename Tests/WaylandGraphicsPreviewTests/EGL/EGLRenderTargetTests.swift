@@ -39,10 +39,10 @@
         @Test
         func gpuSmokeDrawsDeterministicPixelWhenEnabled() throws {
             guard
-                let smokeFlag = unsafe Glibc.getenv("SWL_RUN_GPU_SMOKE"),
+                let smokeFlag = unsafe Glibc.getenv("WCK_RUN_GPU_SMOKE"),
                 unsafe String(cString: smokeFlag) == "1"
             else {
-                try Test.cancel("Set SWL_RUN_GPU_SMOKE=1 to run the GPU smoke test.")
+                try Test.cancel("Set WCK_RUN_GPU_SMOKE=1 to run the GPU smoke test.")
             }
             guard let path = firstRenderNodePath() else {
                 try Test.cancel("No accessible DRM render node.")

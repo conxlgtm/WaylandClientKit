@@ -34,7 +34,7 @@ struct SwiftLintResolverTests {
             to: bin.appendingPathComponent("nix")
         )
         let runner = ProcessRunner(
-            environment: ["PATH": bin.path, "SWL_NIX_BIN": bin.appendingPathComponent("nix").path])
+            environment: ["PATH": bin.path, "WCK_NIX_BIN": bin.appendingPathComponent("nix").path])
         let context = ToolContext(repository: Repository(root: root), runner: runner)
 
         try SwiftCommandResolver(context: context).runSwiftLint()
@@ -80,7 +80,7 @@ struct SwiftLintResolverTests {
             to: bin.appendingPathComponent("nix")
         )
         let runner = ProcessRunner(
-            environment: ["PATH": bin.path, "SWL_NIX_BIN": bin.appendingPathComponent("nix").path])
+            environment: ["PATH": bin.path, "WCK_NIX_BIN": bin.appendingPathComponent("nix").path])
         let context = ToolContext(repository: Repository(root: root), runner: runner)
 
         try SwiftCommandResolver(context: context).runSwiftLint()
@@ -125,7 +125,7 @@ struct SwiftLintResolverTests {
             to: bin.appendingPathComponent("nix")
         )
         let runner = ProcessRunner(
-            environment: ["PATH": bin.path, "SWL_NIX_BIN": bin.appendingPathComponent("nix").path])
+            environment: ["PATH": bin.path, "WCK_NIX_BIN": bin.appendingPathComponent("nix").path])
         let context = ToolContext(repository: Repository(root: root), runner: runner)
 
         try SwiftCommandResolver(context: context).runSwiftLint()

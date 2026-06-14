@@ -8,12 +8,12 @@ baseline.
 
 | Tier | Promise | Breaking change process | Required checks |
 | --- | --- | --- | --- |
-| `WaylandClient` public API | Main stable-ish app-substrate product. Source changes are allowed before foundation, but must be intentional. | Update public API baseline, public API audit, DocC/user docs, tests, and release notes when user-visible. | `swift run swl api verify`, `swift run swl docc verify`, public integration client. |
-| `WaylandGraphicsPreview` public API | Source-breaking preview product. Preview drift is allowed, but not invisible. | Update baseline/audit/docs/tests. Say why preview source breakage is acceptable. Keep raw handles internal. | `swift run swl api verify`, graphics preview integration client, examples build. |
-| Executable products and examples | Examples may change, but should remain runnable, useful, and matrix-friendly. | Update docs and example checklist when adding, renaming, or changing expected output. | `swift run swl examples build`, relevant smoke command. |
+| `WaylandClient` public API | Main stable-ish app-substrate product. Source changes are allowed before foundation, but must be intentional. | Update public API baseline, public API audit, DocC/user docs, tests, and release notes when user-visible. | `swift run wck api verify`, `swift run wck docc verify`, public integration client. |
+| `WaylandGraphicsPreview` public API | Source-breaking preview product. Preview drift is allowed, but not invisible. | Update baseline/audit/docs/tests. Say why preview source breakage is acceptable. Keep raw handles internal. | `swift run wck api verify`, graphics preview integration client, examples build. |
+| Executable products and examples | Examples may change, but should remain runnable, useful, and matrix-friendly. | Update docs and example checklist when adding, renaming, or changing expected output. | `swift run wck examples build`, relevant smoke command. |
 | Package-internal targets | May change without source compatibility promises. Resource, unsafe, and owner-thread invariants must stay tested. | Update strict memory-safety audit when unsafe or unchecked sendability changes. Add tests for lifetime/resource rules. | unsafe allowlist, focused unit tests, strict concurrency build. |
-| Generated/raw protocol wrappers | Not user-facing product API. Generated shape follows vendored protocol XML and shim contracts. | Regenerate with `swl`, update manifests/checksums, and verify shims. | protocol generation verification, shim verification. |
-| Tooling commands | Contributor command behavior should be stable enough for docs and CI. | Update `docs/tooling.md`, release docs, CI/plugin/just wrappers, and tests when command names or behavior change. | `swift run swl ci check`, tool tests. |
+| Generated/raw protocol wrappers | Not user-facing product API. Generated shape follows vendored protocol XML and shim contracts. | Regenerate with `wck`, update manifests/checksums, and verify shims. | protocol generation verification, shim verification. |
+| Tooling commands | Contributor command behavior should be stable enough for docs and CI. | Update `docs/tooling.md`, release docs, CI/plugin/just wrappers, and tests when command names or behavior change. | `swift run wck ci check`, tool tests. |
 
 ## Baseline And Audit Rules
 
