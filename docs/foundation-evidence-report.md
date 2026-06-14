@@ -172,6 +172,13 @@ KDE/KWin:
 - GBM: active.
 - EGL: configured.
 - dmabuf import: active.
+- Explicit sync: advertised v1 and runtime active for both preferExplicit and
+  requireExplicit.
+- FIFO: active when requested.
+- Commit timing: fallback(commitTimingUnavailable); the compositor did not
+  advertise commit timing.
+- Metadata: content type active and tearing control active when requested;
+  color representation and color management advertised.
 - Presentation feedback: advertised v1, runtime advertised, requested true.
 - Submitted frame: success show, 192x192.
 - Fallback reason: none.

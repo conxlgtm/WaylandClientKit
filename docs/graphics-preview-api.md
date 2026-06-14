@@ -22,11 +22,12 @@ The compositor matrix still needs broader graphics-preview rows before this
 preview path can support foundation-candidate claims. Public GBM, EGL, DRM,
 dmabuf, or syncobj handles remain out of scope.
 
-Current live evidence proves active managed GPU clear-frame submission, FIFO
-pacing, content-type metadata, and presentation-hint/tearing metadata on
-KDE/KWin. Explicit synchronization and commit timing are implemented as
-runtime-path requests with typed fallback/failure reporting, but they are not
-yet live-proven active in the compositor matrix.
+Current live evidence proves active managed GPU clear-frame submission,
+explicit synchronization, FIFO pacing, content-type metadata, and
+presentation-hint/tearing metadata on KDE/KWin. Commit timing is implemented as
+a runtime-path request with typed fallback/failure reporting, but it is not yet
+live-proven active in the compositor matrix because the current KDE/KWin
+session does not advertise it.
 
 `GPUPreviewSmokeClient` is the live evidence tool for this product. Its output
 uses one line per runtime-path fact so a compositor run can be pasted into
