@@ -246,6 +246,19 @@ public struct Window: Sendable, Hashable {
         )
     }
 
+    public func requestPointerWarp(
+        seatID: SeatID,
+        position: LogicalOffset,
+        serial: InputSerial
+    ) async throws {
+        try await display.requestPointerWarp(
+            window: self,
+            seatID: seatID,
+            position: position,
+            serial: serial
+        )
+    }
+
     public func setTitle(_ title: WaylandString) async throws {
         try await display.setWindowTitle(id, title)
     }

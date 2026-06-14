@@ -63,6 +63,18 @@ static void swl_text_input_v3_commit_default(struct zwp_text_input_v3 *text_inpu
     zwp_text_input_v3_commit(text_input);
 }
 
+static void swl_text_input_v3_show_input_panel_default(
+    struct zwp_text_input_v3 *text_input)
+{
+    zwp_text_input_v3_show_input_panel(text_input);
+}
+
+static void swl_text_input_v3_hide_input_panel_default(
+    struct zwp_text_input_v3 *text_input)
+{
+    zwp_text_input_v3_hide_input_panel(text_input);
+}
+
 static void swl_text_input_v3_destroy_default(struct zwp_text_input_v3 *text_input)
 {
     zwp_text_input_v3_destroy(text_input);
@@ -104,6 +116,12 @@ static void (*swl_text_input_v3_set_cursor_rectangle_impl)(
 static void (*swl_text_input_v3_commit_impl)(
     struct zwp_text_input_v3 *text_input) =
         swl_text_input_v3_commit_default;
+static void (*swl_text_input_v3_show_input_panel_impl)(
+    struct zwp_text_input_v3 *text_input) =
+        swl_text_input_v3_show_input_panel_default;
+static void (*swl_text_input_v3_hide_input_panel_impl)(
+    struct zwp_text_input_v3 *text_input) =
+        swl_text_input_v3_hide_input_panel_default;
 static void (*swl_text_input_v3_destroy_impl)(
     struct zwp_text_input_v3 *text_input) =
         swl_text_input_v3_destroy_default;
@@ -218,6 +236,20 @@ static void swl_test_text_input_commit_record(
         SWL_TEST_TEXT_INPUT_COMMIT, text_input);
 }
 
+static void swl_test_text_input_show_input_panel_record(
+    struct zwp_text_input_v3 *text_input)
+{
+    swl_test_record_text_input_request(
+        SWL_TEST_TEXT_INPUT_SHOW_INPUT_PANEL, text_input);
+}
+
+static void swl_test_text_input_hide_input_panel_record(
+    struct zwp_text_input_v3 *text_input)
+{
+    swl_test_record_text_input_request(
+        SWL_TEST_TEXT_INPUT_HIDE_INPUT_PANEL, text_input);
+}
+
 static void swl_test_record_text_input_destroy(
     enum swl_test_text_input_destroy_kind kind,
     void *object)
@@ -254,6 +286,10 @@ static void swl_test_text_input_manager_destroy_record(
 #define swl_text_input_v3_set_cursor_rectangle_impl \
     zwp_text_input_v3_set_cursor_rectangle
 #define swl_text_input_v3_commit_impl zwp_text_input_v3_commit
+#define swl_text_input_v3_show_input_panel_impl \
+    zwp_text_input_v3_show_input_panel
+#define swl_text_input_v3_hide_input_panel_impl \
+    zwp_text_input_v3_hide_input_panel
 #define swl_text_input_v3_destroy_impl zwp_text_input_v3_destroy
 #define swl_text_input_manager_v3_destroy_impl \
     zwp_text_input_manager_v3_destroy
@@ -317,6 +353,16 @@ void swl_text_input_v3_commit(struct zwp_text_input_v3 *text_input)
     swl_text_input_v3_commit_impl(text_input);
 }
 
+void swl_text_input_v3_show_input_panel(struct zwp_text_input_v3 *text_input)
+{
+    swl_text_input_v3_show_input_panel_impl(text_input);
+}
+
+void swl_text_input_v3_hide_input_panel(struct zwp_text_input_v3 *text_input)
+{
+    swl_text_input_v3_hide_input_panel_impl(text_input);
+}
+
 void swl_text_input_v3_destroy(struct zwp_text_input_v3 *text_input)
 {
     swl_text_input_v3_destroy_impl(text_input);
@@ -349,6 +395,10 @@ void swl_test_text_input_request_recording_begin(void)
     swl_text_input_v3_set_cursor_rectangle_impl =
         swl_test_text_input_set_cursor_rectangle_record;
     swl_text_input_v3_commit_impl = swl_test_text_input_commit_record;
+    swl_text_input_v3_show_input_panel_impl =
+        swl_test_text_input_show_input_panel_record;
+    swl_text_input_v3_hide_input_panel_impl =
+        swl_test_text_input_hide_input_panel_record;
     swl_text_input_v3_destroy_impl = swl_test_text_input_destroy_proxy_record;
     swl_text_input_manager_v3_destroy_impl =
         swl_test_text_input_manager_destroy_record;
@@ -369,6 +419,10 @@ void swl_test_text_input_request_recording_end(void)
     swl_text_input_v3_set_cursor_rectangle_impl =
         swl_text_input_v3_set_cursor_rectangle_default;
     swl_text_input_v3_commit_impl = swl_text_input_v3_commit_default;
+    swl_text_input_v3_show_input_panel_impl =
+        swl_text_input_v3_show_input_panel_default;
+    swl_text_input_v3_hide_input_panel_impl =
+        swl_text_input_v3_hide_input_panel_default;
     swl_text_input_v3_destroy_impl = swl_text_input_v3_destroy_default;
     swl_text_input_manager_v3_destroy_impl =
         swl_text_input_manager_v3_destroy_default;

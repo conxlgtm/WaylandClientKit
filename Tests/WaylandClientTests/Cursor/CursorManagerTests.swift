@@ -495,6 +495,236 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
+    func animatedCursorAppliesFirstFrameAndAdvances() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+        let first = try pointerFrame(color: 0x0000_00FF, duration: .milliseconds(10))
+        let second = try pointerFrame(
+            color: 0x0000_FF00,
+            duration: .milliseconds(20),
+            hotspotX: 1,
+            hotspotY: 1
+        )
+        let animation = try AnimatedPointerCursor(frames: [first, second])
+        let cursor = try PointerCursor.animated(animation)
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        backend.customCursorImages.removeAll()
+        backend.setCursorRequests.removeAll()
+        let surface = try #require(backend.surface(for: seatID))
+        surface.operationLog.removeAll()
+
+        try manager.setPointerCursor(cursor)
+        let nextDelay = try manager.advanceCursorAnimations()
+
+        #expect(backend.customCursorImages == [first.image, second.image])
+        #expect(nextDelay == .milliseconds(20))
+        #expect(
+            backend.setCursorRequests == [
+                SetCursorRequest(
+                    seatID: seatID,
+                    serial: 55,
+                    surfaceID: surface.objectID,
+                    hotspotX: 0,
+                    hotspotY: 0
+                ),
+                SetCursorRequest(
+                    seatID: seatID,
+                    serial: 55,
+                    surfaceID: surface.objectID,
+                    hotspotX: 1,
+                    hotspotY: 1
+                ),
+            ])
+        #expect(
+            surface.operationLog == [
+                .setBufferScale(1),
+                .attach,
+                .commit,
+                .setBufferScale(1),
+                .attach,
+                .commit,
+            ])
+    }
+
+    @Test
+    func animatedFallbackCursorAppliesFirstFrameAndAdvances() throws {
+        let backend = try RecordingCursorBackend()
+        let seatID = RawSeatID(rawValue: 2)
+        let first = try pointerFrame(color: 0x0000_00FF, duration: .milliseconds(10))
+        let second = try pointerFrame(color: 0x0000_FF00, duration: .milliseconds(20))
+        let animation = try AnimatedPointerCursor(frames: [first, second])
+        let cursor = try PointerCursor.animated(animation)
+        let manager = try CursorManager(
+            backend: backend,
+            configuration: CursorConfiguration(fallbackCursor: cursor)
+        )
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        let firstDelay = manager.nextCursorAnimationDelay()
+        let nextDelay = try manager.advanceCursorAnimations()
+
+        #expect(firstDelay == .milliseconds(10))
+        #expect(nextDelay == .milliseconds(20))
+        #expect(backend.customCursorImages == [first.image, second.image])
+    }
+
+    @Test
+    func animatedCursorAdvancesOnlySeatsWhoseFrameDurationExpired() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatA = RawSeatID(rawValue: 2)
+        let seatB = RawSeatID(rawValue: 3)
+        let first = try pointerFrame(color: 0x0000_00FF, duration: .milliseconds(10))
+        let second = try pointerFrame(color: 0x0000_FF00, duration: .milliseconds(20))
+        let cursor = try PointerCursor.animated(
+            try AnimatedPointerCursor(frames: [first, second])
+        )
+
+        manager.register(surfaceID: 100)
+        manager.register(surfaceID: 200)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatA, surfaceID: 100, serial: 11))
+        try manager.setPointerCursor(cursor)
+        _ = try manager.advanceCursorAnimations()
+        manager.observe(rawPointerEnter(sequence: 2, seatID: seatB, surfaceID: 200, serial: 22))
+        backend.customCursorImages.removeAll()
+        backend.setCursorRequests.removeAll()
+
+        #expect(manager.nextCursorAnimationDelay() == .milliseconds(10))
+
+        let firstTickDelay = try manager.advanceCursorAnimations()
+
+        #expect(firstTickDelay == .milliseconds(10))
+        #expect(
+            backend.setCursorRequests == [
+                SetCursorRequest(
+                    seatID: seatB,
+                    serial: 22,
+                    surfaceID: backend.surface(for: seatB)?.objectID,
+                    hotspotX: 0,
+                    hotspotY: 0
+                )
+            ])
+
+        backend.customCursorImages.removeAll()
+        backend.setCursorRequests.removeAll()
+        let secondTickDelay = try manager.advanceCursorAnimations()
+
+        #expect(secondTickDelay == .milliseconds(10))
+        #expect(
+            backend.setCursorRequests == [
+                SetCursorRequest(
+                    seatID: seatA,
+                    serial: 11,
+                    surfaceID: backend.surface(for: seatA)?.objectID,
+                    hotspotX: 0,
+                    hotspotY: 0
+                )
+            ])
+    }
+
+    @Test
+    func singleFrameAnimatedCursorDoesNotScheduleTicks() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+        let frame = try pointerFrame(color: 0x0000_00FF, duration: .milliseconds(10))
+        let cursor = try PointerCursor.animated(try AnimatedPointerCursor(frames: [frame]))
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        try manager.setPointerCursor(cursor)
+
+        #expect(manager.nextCursorAnimationDelay() == nil)
+    }
+
+    @Test
+    func replacingAnimatedCursorWithThemeStopsAnimation() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+        let cursor = try animatedTestCursor()
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        try manager.setPointerCursor(cursor)
+        try manager.setPointerCursor(.text)
+
+        #expect(manager.nextCursorAnimationDelay() == nil)
+        #expect(try manager.advanceCursorAnimations() == nil)
+    }
+
+    @Test
+    func replacingAnimatedCursorWithHiddenStopsAnimation() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        try manager.setPointerCursor(try animatedTestCursor())
+        try manager.setPointerCursor(.hidden)
+
+        #expect(manager.nextCursorAnimationDelay() == nil)
+    }
+
+    @Test
+    func replacingAnimatedCursorWithStaticCustomStopsAnimation() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+        let staticCursor = try PointerCursor.image(
+            .solid(size: PositivePixelSize(width: 2, height: 2), color: 0x00FF_0000)
+        )
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        try manager.setPointerCursor(try animatedTestCursor())
+        try manager.setPointerCursor(staticCursor)
+
+        #expect(manager.nextCursorAnimationDelay() == nil)
+    }
+
+    @Test
+    func seatRemovalStopsAnimatedCursorAndDestroysSurface() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        try manager.setPointerCursor(try animatedTestCursor())
+        let surface = try #require(backend.surface(for: seatID))
+
+        manager.observe(rawSeatRemoved(sequence: 2, seatID: seatID))
+        let operationCountAfterRemoval = surface.operationLog.count
+        _ = try manager.advanceCursorAnimations()
+
+        #expect(surface.destroyCount == 1)
+        #expect(surface.operationLog.count == operationCountAfterRemoval)
+    }
+
+    @Test
+    func shutdownStopsAnimatedCursorAndDestroysSurface() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatID = RawSeatID(rawValue: 2)
+
+        manager.register(surfaceID: 100)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatID, surfaceID: 100, serial: 55))
+        try manager.setPointerCursor(try animatedTestCursor())
+        let surface = try #require(backend.surface(for: seatID))
+
+        manager.shutdown()
+
+        #expect(surface.destroyCount == 1)
+        #expect(manager.nextCursorAnimationDelay() == nil)
+    }
+
+    @Test
     func automaticPointerEnterCustomImageFailurePublishesDiagnostic() throws {
         let backend = try RecordingCursorBackend()
         backend.customCursorImageError = CursorManagerTestError.customImageUnavailable
@@ -1085,6 +1315,33 @@ private func makeCursorImage(
         delay: 0,
         buffer: RawBorrowedBuffer(
             pointer: try unsafe #require(OpaquePointer(bitPattern: 0xB00)))
+    )
+}
+
+private func pointerFrame(
+    color: UInt32,
+    duration: Duration,
+    hotspotX: Int32 = 0,
+    hotspotY: Int32 = 0
+) throws -> PointerCursorFrame {
+    try PointerCursorFrame(
+        image: .solid(
+            size: PositivePixelSize(width: 2, height: 2),
+            hotspotX: hotspotX,
+            hotspotY: hotspotY,
+            color: color
+        ),
+        duration: duration
+    )
+}
+
+private func animatedTestCursor() throws -> PointerCursor {
+    try PointerCursor.animated(
+        AnimatedPointerCursor(
+            frames: [
+                try pointerFrame(color: 0x0000_00FF, duration: .milliseconds(10)),
+                try pointerFrame(color: 0x0000_FF00, duration: .milliseconds(20)),
+            ])
     )
 }
 

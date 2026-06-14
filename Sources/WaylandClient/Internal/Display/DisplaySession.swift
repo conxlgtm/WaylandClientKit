@@ -219,9 +219,12 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         "wp_fractional_scale_manager_v1",
         "wp_cursor_shape_manager_v1",
         "xdg_activation_v1",
+        "xdg_session_manager_v1",
         "xdg_toplevel_icon_manager_v1",
         "zwp_idle_inhibit_manager_v1",
         "xdg_system_bell_v1",
+        "wp_pointer_warp_v1",
+        "zwp_tablet_manager_v2",
         "zwp_relative_pointer_manager_v1",
         "zwp_pointer_constraints_v1",
         "zwp_text_input_manager_v3",
@@ -283,6 +286,16 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     ) throws -> [CursorRequestResult] {
         connection.preconditionIsOwnerThread()
         return try inputCoordinator.setPointerCursor(cursor)
+    }
+
+    package func nextCursorAnimationDelayOnOwnerThread() -> Duration? {
+        connection.preconditionIsOwnerThread()
+        return inputCoordinator.nextCursorAnimationDelay()
+    }
+
+    package func advanceCursorAnimationsOnOwnerThread() throws -> Duration? {
+        connection.preconditionIsOwnerThread()
+        return try inputCoordinator.advanceCursorAnimations()
     }
 
     package func updateCursorOutputScalesOnOwnerThread(

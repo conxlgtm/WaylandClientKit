@@ -3,6 +3,11 @@ public enum TextInputError: Error, Equatable, Sendable, CustomStringConvertible 
     case unknownSeat(SeatID)
     case foreignWindow(WindowID)
     case inactiveSession(seatID: SeatID, operation: TextInputRequestOperation)
+    case unsupportedVersion(
+        operation: TextInputRequestOperation,
+        required: UInt32,
+        available: UInt32
+    )
     case surroundingTextContainsNUL
     case surroundingTextTooLarge(byteCount: Int, limit: Int)
     case surroundingTextOffsetOutOfBounds(offset: Int, byteCount: Int)
@@ -20,6 +25,9 @@ public enum TextInputError: Error, Equatable, Sendable, CustomStringConvertible 
             "window belongs to another display: \(windowID)"
         case .inactiveSession(let seatID, let operation):
             "text-input \(operation.description) requires an enabled session for seat \(seatID)"
+        case .unsupportedVersion(let operation, let required, let available):
+            "text-input \(operation.description) requires protocol v\(required), "
+                + "available v\(available)"
         case .surroundingTextContainsNUL:
             "surrounding text must not contain a NUL byte"
         case .surroundingTextTooLarge(let byteCount, let limit):
@@ -44,6 +52,8 @@ public enum TextInputRequestOperation: Equatable, Sendable, CustomStringConverti
     case setContentType
     case setCursorRectangle
     case commit
+    case showInputPanel
+    case hideInputPanel
 
     public var description: String {
         switch self {
@@ -61,6 +71,10 @@ public enum TextInputRequestOperation: Equatable, Sendable, CustomStringConverti
             "set_cursor_rectangle"
         case .commit:
             "commit"
+        case .showInputPanel:
+            "show_input_panel"
+        case .hideInputPanel:
+            "hide_input_panel"
         }
     }
 }

@@ -175,6 +175,7 @@ Supported:
 - Basic xkb_v1 keyboard interpretation through xkbcommon.
 - Compose and dead-key text results for interpreted keyboard events.
 - Static pointer cursor surfaces through wayland-cursor.
+- Public cursor animation over validated custom image frames.
 - Cursor-shape requests where `wp_cursor_shape_manager_v1` is advertised.
 - Server-side decoration negotiation through xdg-decoration.
 - Popup surfaces with placement, redraw, dismissal, and target identity.
@@ -188,7 +189,6 @@ Supported:
 
 Not supported:
 - Widgets.
-- Public cursor animation.
 - Client-side decorations.
 - Full output-management API.
 - Public `WaylandClient` GPU rendering APIs.

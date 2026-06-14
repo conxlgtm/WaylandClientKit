@@ -4,8 +4,9 @@ Use WaylandClientKit for platform facts that a framework can use to build local 
 and window restoration. Keep scene, document, and UI policy above WaylandClientKit.
 
 WaylandClientKit currently exposes restoration-relevant facts through
-``Window/restorationSnapshot``. It does not expose public compositor
-session-management protocol API.
+``Window/restorationSnapshot`` and compositor session-management advertisement
+through ``WaylandCapabilities/compositorSessionManagement``. It does not expose
+public compositor session objects or event streams yet.
 
 ## When To Use This
 
@@ -34,6 +35,11 @@ protocol. It does depend on normal window lifecycle:
 Activation is optional and capability-gated by
 ``WaylandCapabilities/xdgActivation``. Activation tokens can help request focus
 for a restored window, but they are not restore tokens.
+
+Compositor session management is optional and capability-gated by
+``WaylandCapabilities/compositorSessionManagement``. WaylandClientKit currently
+uses that as a registry fact only. Local app restoration remains
+framework-owned.
 
 ## Public APIs
 

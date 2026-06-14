@@ -4,11 +4,14 @@ WaylandClientKit should give a future GUI framework enough platform facts to bui
 local app and window restoration without making WaylandClientKit own app session
 policy. This document describes that boundary.
 
-WaylandClientKit does not currently expose a public compositor session-management
-protocol API. The protocol is tracked as deferred because its upstream phase,
-compositor coverage, and framework-facing shape still need evidence. Frameworks
-can still build useful local session restoration today with app-owned state and
-public WaylandClientKit facts.
+WaylandClientKit reports compositor session-management advertisement through
+`WaylandCapabilities.compositorSessionManagement`. The upstream protocol is
+`xdg_session_manager_v1` from the staging XDG Session Management protocol, and
+WaylandClientKit keeps generated/raw preview plumbing package-internal for now.
+There is not yet a public compositor session object or event stream because
+compositor coverage and the framework-facing lifecycle shape still need
+evidence. Frameworks can build useful local session restoration today with
+app-owned state and public WaylandClientKit facts.
 
 ## Ownership Boundary
 
@@ -20,7 +23,7 @@ WaylandClientKit owns:
 - current surface geometry, scale, output membership, and decoration mode facts
 - activation token requests and activation requests through `xdg_activation_v1`
 - typed capability reporting for optional compositor protocols
-- future compositor session-management protocol plumbing, when it is ready
+- compositor session-management capability reporting
 
 Frameworks own:
 
@@ -109,11 +112,18 @@ separate.
 
 ## Protocol Watch
 
-WaylandClientKit tracks compositor session-management protocol support as future
-work. The public API should remain deferred until the project has:
+WaylandClientKit tracks compositor session-management protocol support as
+capability-only preview plumbing. The current implementation has:
 
 - protocol XML vendored and generated
 - upstream phase and naming understood
+- public capability reporting through `WaylandCapabilities`
+- package-internal raw wrappers for lifecycle experiments
+- `CompositorSessionSmoke`, which prints capability and skips public session
+  binding while the API is deferred
+
+The public compositor session API should remain deferred until the project has:
+
 - compositor advertisement evidence in `docs/compositor-matrix.md`
 - at least one smoke or example path proving lifecycle behavior
 - a framework usage shape that does not confuse local scene restoration with

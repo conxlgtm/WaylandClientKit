@@ -44,6 +44,7 @@ The [docs](.) directory contains project operation and design records:
 - [Public API audit](public-api-audit.md)
 - [Strict memory-safety audit](strict-memory-safety-audit.md)
 - [Compositor matrix](compositor-matrix.md)
+- [Session management plan](session-management-plan.md)
 
 Maintainer docs may describe internal targets and release gates. User docs
 should link here only when the reader needs project policy, evidence, or release
@@ -61,12 +62,13 @@ Canonical examples by feature:
 | --- | --- |
 | Basic software window and input | [WaylandClientKitDemo](../Examples/WaylandClientKitDemo/main.swift) |
 | Framework host loop | [FrameworkHostSmoke](../Examples/FrameworkHostSmoke/main.swift) |
-| Session state and restoration facts | [SessionStateSmoke](../Examples/SessionStateSmoke/main.swift) |
+| Session state and restoration facts | [SessionStateSmoke](../Examples/SessionStateSmoke/main.swift), [CompositorSessionSmoke](../Examples/CompositorSessionSmoke/main.swift) |
 | Presentation timing | [PresentationFeedbackAnimation](../Examples/PresentationFeedbackAnimation/main.swift) |
 | Text input | [TextInputSmoke](../Examples/TextInputSmoke/main.swift) |
 | Data transfer and drag icons | [DataTransferSmoke](../Examples/DataTransferSmoke/main.swift) |
-| Pointer capture | [PointerCaptureSmoke](../Examples/PointerCaptureSmoke/main.swift) |
-| Cursor policy and custom cursor images | [CursorPolicySmoke](../Examples/CursorPolicySmoke/main.swift), [CustomCursorSmoke](../Examples/CustomCursorSmoke/main.swift) |
+| Tablet input | [TabletInputSmoke](../Examples/TabletInputSmoke/main.swift) |
+| Pointer capture and warp | [PointerCaptureSmoke](../Examples/PointerCaptureSmoke/main.swift), [PointerWarpSmoke](../Examples/PointerWarpSmoke/main.swift) |
+| Cursor policy and custom cursor images | [CursorPolicySmoke](../Examples/CursorPolicySmoke/main.swift), [CustomCursorSmoke](../Examples/CustomCursorSmoke/main.swift), [CursorAnimationSmoke](../Examples/CursorAnimationSmoke/main.swift) |
 | Desktop integration | [WindowIconSmoke](../Examples/WindowIconSmoke/main.swift), [IdleInhibitSmoke](../Examples/IdleInhibitSmoke/main.swift), [SystemBellSmoke](../Examples/SystemBellSmoke/main.swift) |
 | Surface regions and damage | [SurfaceRegionSmoke](../Examples/SurfaceRegionSmoke/main.swift), [DamageRegionSmoke](../Examples/DamageRegionSmoke/main.swift) |
 | Subsurfaces | [SubsurfaceSmoke](../Examples/SubsurfaceSmoke/main.swift) |
@@ -85,7 +87,8 @@ Every public feature family should have one conceptual home:
 | Cursor shape, theme fallback, and custom images | [Cursor Shape And Theme Fallback](../Sources/WaylandClient/WaylandClient.docc/CursorShapeAndThemeFallback.md) |
 | Desktop icons, idle inhibit, and system bell | [Desktop Integration](../Sources/WaylandClient/WaylandClient.docc/DesktopIntegration.md) |
 | Activation and focus handoff | [Activation And Focus Handoff](../Sources/WaylandClient/WaylandClient.docc/ActivationAndFocusHandoff.md) |
-| Pointer capture and relative pointer | [Pointer Capture](../Sources/WaylandClient/WaylandClient.docc/PointerCapture.md) |
+| Pointer capture, relative pointer, and pointer warp | [Pointer Capture](../Sources/WaylandClient/WaylandClient.docc/PointerCapture.md) |
+| Tablet input | [Tablet Input](../Sources/WaylandClient/WaylandClient.docc/TabletInput.md) |
 | Data transfer and drag icons | [Data Transfer And Drag Icons](../Sources/WaylandClient/WaylandClient.docc/DataTransferAndDragIcons.md) |
 | Text input lifecycle | [Text Input Lifecycle](../Sources/WaylandClient/WaylandClient.docc/TextInputLifecycle.md) |
 | Presentation feedback and animation | [Presentation Feedback And Frame Callbacks](../Sources/WaylandClient/WaylandClient.docc/PresentationFeedbackAndFrameCallbacks.md) |

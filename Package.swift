@@ -233,6 +233,18 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "TabletInputSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/TabletInputSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "CompositorSessionSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/CompositorSessionSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "DataTransferSmoke",
             dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/DataTransferSmoke",
@@ -266,6 +278,18 @@ let package = Package(
             name: "PointerCaptureSmoke",
             dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/PointerCaptureSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "PointerWarpSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/PointerWarpSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "CursorAnimationSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/CursorAnimationSmoke",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(

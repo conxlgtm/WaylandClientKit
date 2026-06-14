@@ -138,6 +138,9 @@ package final class CursorManager: RawInputEventObserving {
         backend.preconditionIsOwnerThread()
         guard !isShutdown else { return [] }
         let resolvedCursor = try resolvedCursorIfNeeded(cursor, size: configuration.size)
+        if cursor.animation == nil {
+            stopAllCursorAnimations()
+        }
         desiredCursor = DesiredPointerCursorState(cursor: cursor, resolved: resolvedCursor)
 
         var results: [CursorRequestResult] = []
@@ -236,6 +239,7 @@ package final class CursorManager: RawInputEventObserving {
             }
 
             detachCursorSurfaceIfPresent(for: seatID)
+            clearCursorAnimation(for: seatID)
             markCursorApplied(.hidden(serial: serial), for: seatID)
             return .hidden(seatID: publicSeatID(seatID), serial: serial)
         case .customImage(let image):
@@ -244,6 +248,13 @@ package final class CursorManager: RawInputEventObserving {
                 serial: serial,
                 cursor: cursor,
                 image: image
+            )
+        case .animated(let animation):
+            return try applyAnimatedCursor(
+                to: seatID,
+                serial: serial,
+                cursor: cursor,
+                animation: animation
             )
         case .named:
             if backend.supportsCursorShape, let shape = cursor.cursorShapeName {
@@ -288,8 +299,56 @@ package final class CursorManager: RawInputEventObserving {
 
         switch rawResult {
         case .set:
+            clearCursorAnimation(for: seatID)
             markCursorApplied(
                 .customImage(cursor: cursor, serial: serial, surfaceID: surface.objectID),
+                for: seatID
+            )
+            return .set(seatID: publicSeatID(seatID), serial: serial, cursor: cursor)
+        case .skippedNoPointer, .skippedUnknownSeat:
+            throw cursorRequestFailure(
+                seatID: seatID,
+                cursor: cursor,
+                rawResult: rawResult
+            )
+        }
+    }
+
+    private func applyAnimatedCursor(
+        to seatID: RawSeatID,
+        serial: UInt32,
+        cursor: PointerCursor,
+        animation: AnimatedPointerCursor
+    ) throws -> CursorRequestResult {
+        let surface = try cursorSurface(for: seatID)
+        let frames = try resolvedAnimatedFrames(animation)
+        var state = try CursorAnimationState(frames: frames)
+        let bufferScale = PositiveInt32(unchecked: 1)
+        let currentFrame = state.currentFrame
+
+        attachCursorImage(currentFrame.image, to: surface, bufferScale: bufferScale)
+
+        let rawResult = backend.setPointerCursor(
+            seatID: seatID,
+            serial: serial,
+            surface: surface,
+            hotspotX: cursorHotspot(currentFrame.image.hotspotX, bufferScale: bufferScale),
+            hotspotY: cursorHotspot(currentFrame.image.hotspotY, bufferScale: bufferScale)
+        )
+
+        switch rawResult {
+        case .set:
+            if !state.isAnimated {
+                state.invalidate()
+            }
+            markCursorAnimationState(state.isAnimated ? state : nil, for: seatID)
+            markCursorApplied(
+                .animated(
+                    cursor: cursor,
+                    serial: serial,
+                    surfaceID: surface.objectID,
+                    frameIndex: state.currentFrameIndex
+                ),
                 for: seatID
             )
             return .set(seatID: publicSeatID(seatID), serial: serial, cursor: cursor)
@@ -316,6 +375,7 @@ package final class CursorManager: RawInputEventObserving {
 
         switch rawResult {
         case .set:
+            clearCursorAnimation(for: seatID)
             markCursorApplied(.named(cursor: cursor, serial: serial, surfaceID: nil), for: seatID)
             return .set(seatID: publicSeatID(seatID), serial: serial, cursor: cursor)
         case .skippedNoPointer, .skippedUnknownSeat:
@@ -349,6 +409,7 @@ package final class CursorManager: RawInputEventObserving {
 
         switch rawResult {
         case .set:
+            clearCursorAnimation(for: seatID)
             markCursorApplied(
                 .named(cursor: resolved.cursor, serial: serial, surfaceID: surface.objectID),
                 for: seatID
@@ -359,6 +420,17 @@ package final class CursorManager: RawInputEventObserving {
                 seatID: seatID,
                 cursor: desiredCursor.cursor,
                 rawResult: rawResult
+            )
+        }
+    }
+
+    package func resolvedAnimatedFrames(
+        _ animation: AnimatedPointerCursor
+    ) throws -> [AnimatedCursorFrame] {
+        try animation.frames.map { frame in
+            try AnimatedCursorFrame(
+                image: backend.cursorImage(from: frame.image),
+                duration: frame.duration
             )
         }
     }
@@ -459,6 +531,80 @@ package final class CursorManager: RawInputEventObserving {
             surface.destroy()
         }
         backend.shutdown()
+    }
+
+    package func nextCursorAnimationDelay() -> Duration? {
+        backend.preconditionIsOwnerThread()
+        guard !isShutdown,
+            let desiredAnimation = desiredCursor.cursor.animation,
+            desiredAnimation.frames.count > 1
+        else {
+            return nil
+        }
+
+        let activeDurations = cursorStateBySeat.values.compactMap { state in
+            state.animation?.remainingFrameDuration
+        }
+
+        return activeDurations.min() ?? desiredAnimation.frames.first?.duration
+    }
+
+    @discardableResult
+    package func advanceCursorAnimations() throws -> Duration? {
+        backend.preconditionIsOwnerThread()
+        guard !isShutdown, desiredCursor.cursor.animation != nil else {
+            stopAllCursorAnimations()
+            return nil
+        }
+
+        guard let elapsedDuration = nextCursorAnimationDelay() else {
+            return nil
+        }
+
+        for seatID in focusedPointerSeatIDs() {
+            guard var seatState = cursorStateBySeat[seatID],
+                var animation = seatState.animation,
+                animation.isAnimated,
+                let surface = seatState.cursorSurface
+            else {
+                continue
+            }
+
+            guard let advance = animation.advanceIfDue(after: elapsedDuration) else {
+                seatState.animation = animation
+                cursorStateBySeat[seatID] = seatState
+                continue
+            }
+            let bufferScale = PositiveInt32(unchecked: 1)
+            attachCursorImage(advance.frame.image, to: surface, bufferScale: bufferScale)
+            guard let serial = seatState.focus.enterSerial else { continue }
+            let rawResult = backend.setPointerCursor(
+                seatID: seatID,
+                serial: serial,
+                surface: surface,
+                hotspotX: cursorHotspot(advance.frame.image.hotspotX, bufferScale: bufferScale),
+                hotspotY: cursorHotspot(advance.frame.image.hotspotY, bufferScale: bufferScale)
+            )
+            guard case .set = rawResult else {
+                throw cursorRequestFailure(
+                    seatID: seatID,
+                    cursor: desiredCursor.cursor,
+                    rawResult: rawResult
+                )
+            }
+            seatState.animation = animation
+            seatState.markApplied(
+                .animated(
+                    cursor: desiredCursor.cursor,
+                    serial: serial,
+                    surfaceID: surface.objectID,
+                    frameIndex: advance.frameIndex
+                )
+            )
+            cursorStateBySeat[seatID] = seatState
+        }
+
+        return nextCursorAnimationDelay()
     }
 
     private func destroyCursorSurface(_ surface: CursorManagerSurface) {
@@ -579,6 +725,33 @@ extension CursorManager {
 
         state.markApplied(application)
         cursorStateBySeat[seatID] = state
+    }
+
+    package func markCursorAnimationState(
+        _ animation: CursorAnimationState?,
+        for seatID: RawSeatID
+    ) {
+        guard var state = cursorStateBySeat[seatID] else {
+            return
+        }
+
+        state.animation = animation
+        cursorStateBySeat[seatID] = state
+    }
+
+    package func clearCursorAnimation(for seatID: RawSeatID) {
+        guard var state = cursorStateBySeat[seatID] else {
+            return
+        }
+
+        state.animation = nil
+        cursorStateBySeat[seatID] = state
+    }
+
+    package func stopAllCursorAnimations() {
+        for seatID in Array(cursorStateBySeat.keys) {
+            clearCursorAnimation(for: seatID)
+        }
     }
 
     @discardableResult

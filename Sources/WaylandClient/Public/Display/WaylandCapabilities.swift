@@ -61,6 +61,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Desktop activation token support through `xdg_activation_v1`.
     public let xdgActivation: ProtocolAvailability
 
+    /// Compositor session-management support through `xdg_session_manager_v1`.
+    public let compositorSessionManagement: ProtocolAvailability
+
     /// Per-toplevel icon support through `xdg_toplevel_icon_manager_v1`.
     public let xdgToplevelIcon: ProtocolAvailability
 
@@ -69,6 +72,12 @@ public struct WaylandCapabilities: Equatable, Sendable {
 
     /// Compositor-mediated system bell support through `xdg_system_bell_v1`.
     public let systemBell: ProtocolAvailability
+
+    /// Pointer warp request support through `wp_pointer_warp_v1`.
+    public let pointerWarp: ProtocolAvailability
+
+    /// Graphics tablet input support through `zwp_tablet_manager_v2`.
+    public let tablet: ProtocolAvailability
 
     /// Relative pointer motion support through `zwp_relative_pointer_manager_v1`.
     public let relativePointer: ProtocolAvailability
@@ -100,7 +109,10 @@ public struct WaylandCapabilities: Equatable, Sendable {
         linuxDmabuf: ProtocolAvailability,
         xdgToplevelIcon: ProtocolAvailability = .unavailable,
         idleInhibit: ProtocolAvailability = .unavailable,
-        systemBell: ProtocolAvailability = .unavailable
+        systemBell: ProtocolAvailability = .unavailable,
+        pointerWarp: ProtocolAvailability = .unavailable,
+        tablet: ProtocolAvailability = .unavailable,
+        compositorSessionManagement: ProtocolAvailability = .unavailable
     ) {
         self.clipboard = clipboard
         self.dragAndDrop = dragAndDrop
@@ -113,9 +125,12 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.fractionalScale = fractionalScale
         self.cursorShape = cursorShape
         self.xdgActivation = xdgActivation
+        self.compositorSessionManagement = compositorSessionManagement
         self.xdgToplevelIcon = xdgToplevelIcon
         self.idleInhibit = idleInhibit
         self.systemBell = systemBell
+        self.pointerWarp = pointerWarp
+        self.tablet = tablet
         self.relativePointer = relativePointer
         self.pointerConstraints = pointerConstraints
         self.textInput = textInput
@@ -155,7 +170,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
             linuxDmabuf: linuxDmabuf,
             xdgToplevelIcon: .unavailable,
             idleInhibit: .unavailable,
-            systemBell: .unavailable
+            systemBell: .unavailable,
+            pointerWarp: .unavailable,
+            tablet: .unavailable
         )
     }
 
@@ -191,7 +208,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
             linuxDmabuf: linuxDmabuf,
             xdgToplevelIcon: .unavailable,
             idleInhibit: .unavailable,
-            systemBell: .unavailable
+            systemBell: .unavailable,
+            pointerWarp: .unavailable,
+            tablet: .unavailable
         )
     }
 }
@@ -285,6 +304,18 @@ extension WaylandCapabilities {
             systemBell: ProtocolAvailability(
                 protocols.bestAdvertisedProtocol(named: "xdg_system_bell_v1"),
                 supportedByClient: SupportedVersions.xdgSystemBellV1
+            ),
+            pointerWarp: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "wp_pointer_warp_v1"),
+                supportedByClient: SupportedVersions.wpPointerWarpV1
+            ),
+            tablet: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "zwp_tablet_manager_v2"),
+                supportedByClient: SupportedVersions.zwpTabletManagerV2
+            ),
+            compositorSessionManagement: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "xdg_session_manager_v1"),
+                supportedByClient: SupportedVersions.xdgSessionManagerV1
             )
         )
     }

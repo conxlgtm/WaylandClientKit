@@ -12,7 +12,7 @@ extension InputRouter {
                 unknownKeyboardKeyStateValues(key.state)
             case .seat(let snapshot):
                 unknownSeatCapabilityValues(snapshot.advertisedCapabilities)
-            case .pointer, .keyboard, .touch, .seatRemoved, .diagnostic:
+            case .pointer, .keyboard, .touch, .tablet, .seatRemoved, .diagnostic:
                 []
             }
 

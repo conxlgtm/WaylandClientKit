@@ -74,7 +74,7 @@ package final class KeyboardInterpreter {
         case .diagnostic(let diagnostic):
             consume(diagnostic, from: event)
             return []
-        case .pointer, .touch:
+        case .pointer, .touch, .tablet:
             return []
         }
     }

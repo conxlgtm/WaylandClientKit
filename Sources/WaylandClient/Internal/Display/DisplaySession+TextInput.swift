@@ -59,6 +59,16 @@ extension DisplaySession {
         try textInputManager.commit(seatID: seatID)
     }
 
+    package func showTextInputPanelOnOwnerThread(seatID: SeatID) throws {
+        connection.preconditionIsOwnerThread()
+        try textInputManager.showInputPanel(seatID: seatID)
+    }
+
+    package func hideTextInputPanelOnOwnerThread(seatID: SeatID) throws {
+        connection.preconditionIsOwnerThread()
+        try textInputManager.hideInputPanel(seatID: seatID)
+    }
+
     package func drainTextInputEventsOnOwnerThread() -> [TextInputEvent] {
         connection.preconditionIsOwnerThread()
         return textInputManager.drainEvents()

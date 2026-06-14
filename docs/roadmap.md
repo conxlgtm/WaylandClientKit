@@ -257,6 +257,11 @@ These sources shape the roadmap:
   such as input panel requests, preedit hints, language hints, and on-screen
   input hints:
   <https://www.mail-archive.com/wayland-devel%40lists.freedesktop.org/msg44067.html>
+- `xdg-session-management-v1` defines compositor-managed application session
+  identity and toplevel session membership. WaylandClientKit reports the
+  capability and keeps raw preview plumbing internal until lifecycle evidence
+  and framework boundaries are stronger:
+  <https://cgit.freedesktop.org/wayland/wayland-protocols/tree/staging/xdg-session-management/xdg-session-management-v1.xml>
 - `cursor-shape-v1` is the compositor-managed cursor shape protocol:
   <https://wayland.app/protocols/cursor-shape-v1>
 - relative pointer, pointer constraints, tablet, and pointer warp protocols
@@ -292,7 +297,7 @@ support tier. These are related facts, not the same fact.
 | `zwp_text_input_manager_v3` | legacy unstable, active minor updates | optional foundation | public typed text-input API | live IME path where feasible | version-gated additions; preserve unknown values |
 | `wp_cursor_shape_manager_v1` | staging | optional foundation | public cursor capability and requests | unit plus live where advertised | allow version-gated additions |
 | `xdg_activation_v1` | staging | optional desktop integration | public capability, token request, and activate APIs | unit and live where advertised | staging protocol, product API review required |
-| `xx_session_manager_v1` or promoted successor | experimental/staging as upstream evolves | deferred preview | no public API until XML, compositor evidence, and framework usage shape are clear | protocol-watch matrix first, smoke when available | expected to change |
+| `xdg_session_manager_v1` | staging | preview foundation | public capability only; raw wrappers package-internal | generated/shim tests and compositor matrix when advertised | allow source/API change while preview |
 | `wp_pointer_warp_v1` | staging | preview/advanced input | capability-gated only | use-case gated tests | allow source/API change while preview |
 
 Every protocol entry should be updated when vendored or generated. The manifest
@@ -1036,8 +1041,9 @@ Required behavior:
 
 - expose xdg activation as a typed app-client API
 - expose local restoration facts without owning document lifecycle
-- defer compositor session-management tokens until protocol evidence and
-  framework usage shape are clear
+- report compositor session-management advertisement while deferring public
+  session objects/events until lifecycle evidence and framework usage shape are
+  clear
 - expose toplevel icon and dialog metadata only as protocol-shaped desktop
   integration facts
 - distinguish output observation from output control

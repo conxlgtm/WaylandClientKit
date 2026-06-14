@@ -69,7 +69,7 @@ Current experimental baseline:
 - viewporter and fractional-scale protocol integration for scaled SHM buffers
 - frame callback pacing
 - seat, pointer, keyboard, and touch event capture
-- relative pointer events plus pointer lock/confine requests
+- relative pointer events plus pointer lock/confine and pointer-warp requests
 - popup surfaces with placement, redraw, dismissal, and input target identity
 - package-internal `DisplaySession` input draining with seat/window identity
 - high-level async `WaylandDisplay.withConnection` API backed by a dedicated Wayland owner
@@ -87,7 +87,7 @@ Current experimental baseline:
   package-internal GBM/EGL preview pieces
 - managed subsurfaces, surface input/opaque regions, and damage-aware software
   redraw
-- static custom cursor images
+- static and animated custom cursor images
 - desktop integration hooks for toplevel icons, idle inhibition, and system bell
 - compose and dead-key text results for interpreted keyboard events
 - display, input, data-transfer, text-input, and diagnostic event streams
@@ -100,7 +100,6 @@ Current experimental baseline:
 Not implemented yet:
 
 - protocol coverage beyond the listed current support matrix
-- public cursor animation
 - output-management APIs
 - public GPU rendering APIs in `WaylandClient`
 - raw public GBM, EGL, DRM, dmabuf, or syncobj handles
@@ -157,6 +156,7 @@ Supported in the current experimental baseline:
 - `wp_fractional_scale_v1`
 - `wp_cursor_shape_manager_v1`
 - `wp_cursor_shape_device_v1`
+- `wp_pointer_warp_v1`
 - `zwp_relative_pointer_manager_v1`
 - `zwp_relative_pointer_v1`
 - `zwp_pointer_constraints_v1`
@@ -279,7 +279,6 @@ Popups:
 
 Not supported in the current experimental baseline:
 
-- public cursor animation
 - output management or control APIs
 - public `WaylandClient` GPU rendering APIs
 - public explicit synchronization or frame-pacing APIs
@@ -515,12 +514,16 @@ swift run SerialActionsProbe
 swift run TwoWindowFrameworkHost -- --auto-close --print-summary
 swift run TwoWindowOrderStress -- --duration-seconds 3 --print-summary
 swift run TextInputSmoke -- --auto-close --print-summary
+swift run TabletInputSmoke -- --auto-close --print-summary
+swift run CompositorSessionSmoke -- --auto-close --print-summary
 swift run DataTransferSmoke -- --auto-close --print-summary
 swift run PresentationFeedbackAnimation -- --duration-seconds 3 --print-summary
 swift run XDGActivationSmoke
 swift run PointerCaptureSmoke
+swift run PointerWarpSmoke -- --auto-close --print-summary
 swift run CursorPolicySmoke
 swift run CustomCursorSmoke
+swift run CursorAnimationSmoke -- --auto-close --print-summary
 swift run WindowIconSmoke
 swift run IdleInhibitSmoke
 swift run SystemBellSmoke

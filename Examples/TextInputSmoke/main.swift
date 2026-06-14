@@ -187,6 +187,7 @@ enum TextInputSmoke {
             try await session.setSurroundingText(surroundingText)
             try await session.setCursorRectangle(try textCursorRectangle())
             try await session.commit()
+            await showInputPanelIfAvailable(session)
             await state.activate(session)
             log("operation: enable-text-input pass")
             log("text-input enabled seat=\(seatID)")
@@ -202,6 +203,7 @@ enum TextInputSmoke {
     ) async {
         guard let session = await state.removeSession(for: seatID) else { return }
         do {
+            await hideInputPanelIfAvailable(session)
             try await session.disable()
             log("operation: disable-text-input pass")
             log("text-input disabled seat=\(seatID)")
@@ -214,6 +216,7 @@ enum TextInputSmoke {
     nonisolated private static func disableAllSessions(state: TextInputSmokeState) async {
         for session in await state.removeAllSessions() {
             do {
+                await hideInputPanelIfAvailable(session)
                 try await session.disable()
                 log("operation: disable-text-input pass")
                 log("text-input disabled seat=\(session.seatID)")
@@ -222,6 +225,50 @@ enum TextInputSmoke {
                 log("text-input disable failed seat=\(session.seatID) error=\(error)")
             }
         }
+    }
+
+    nonisolated private static func showInputPanelIfAvailable(
+        _ session: TextInputSession
+    ) async {
+        do {
+            try await session.showInputPanel()
+            log("operation: show-input-panel pass")
+        } catch {
+            if isUnsupportedTextInputVersion(error) {
+                log("operation: show-input-panel skip(unsupported-version)")
+                return
+            }
+            log("operation: show-input-panel failed")
+            log("text-input show input panel failed seat=\(session.seatID) error=\(error)")
+        }
+    }
+
+    nonisolated private static func hideInputPanelIfAvailable(
+        _ session: TextInputSession
+    ) async {
+        do {
+            try await session.hideInputPanel()
+            log("operation: hide-input-panel pass")
+        } catch {
+            if isUnsupportedTextInputVersion(error) {
+                log("operation: hide-input-panel skip(unsupported-version)")
+                return
+            }
+            log("operation: hide-input-panel failed")
+            log("text-input hide input panel failed seat=\(session.seatID) error=\(error)")
+        }
+    }
+
+    nonisolated private static func isUnsupportedTextInputVersion(_ error: any Error) -> Bool {
+        guard let textInputError = error as? TextInputError else {
+            return false
+        }
+
+        if case .unsupportedVersion = textInputError {
+            return true
+        }
+
+        return false
     }
 
     nonisolated private static func refreshActiveTextInputSessions(

@@ -44,9 +44,9 @@ Remaining unsafe constructs:
   to itself in each listener `data` field.
 - `CallbackBoxStorage` keeps the Swift owner reachable while the listener is
   valid.
-- Seat, pointer, keyboard, touch, data-device, XDG, buffer-release, frame
-  callback, scale-extension, cursor-shape, and text-input listeners recover
-  Swift owners from C callback payloads.
+- Seat, pointer, keyboard, touch, data-device, XDG, session-management,
+  buffer-release, frame callback, scale-extension, cursor-shape, and text-input
+  listeners recover Swift owners from C callback payloads.
 - `RawInputChildProxy` keeps pointer, keyboard, and touch listener owners alive
   until the child proxy is destroyed.
 
@@ -107,6 +107,68 @@ Tests:
 - `TextInputManagerTests` covers request forwarding, unavailable errors,
   target resolution, binding destruction, and late callback behavior.
 - `DisplayEventHubTextInputTests` covers delivery on the text-input stream.
+
+## Compositor Session-Management Boundary
+
+Remaining unsafe constructs:
+
+- `RawCompositorSessionManager`, `RawCompositorSession`, and
+  `RawCompositorToplevelSession` wrap staging `xdg_session_manager_v1`,
+  `xdg_session_v1`, and `xdg_toplevel_session_v1` proxies returned by C shims.
+- Session listener owners bridge compositor-created, restored, and replaced
+  callbacks into package-internal raw events.
+
+Audit invariant:
+
+- Session-management wrappers remain package-internal preview plumbing.
+- Listener storage is cancelled before the corresponding raw session proxy is
+  destroyed.
+- Public API exposes only registry capability facts until session lifecycle
+  evidence and framework policy boundaries are stronger.
+
+Tests:
+
+- `RawCompositorSessionLifecycleTests` covers manager, session, and toplevel
+  session destroy idempotency, listener event mapping, listener cancellation,
+  late events after destroy, and child toplevel cleanup.
+- `WaylandCapabilitiesTests` covers `xdg_session_manager_v1` advertisement and
+  negotiated-version reporting.
+- C shim verification covers the request/listener declarations compiled into
+  the package.
+
+## Tablet Input Boundary
+
+Remaining unsafe constructs:
+
+- `RawTabletManager`, `RawTabletSeat`, `RawTablet`, `RawTabletTool`, and tablet
+  pad child wrappers own `zwp_tablet_manager_v2`, `zwp_tablet_seat_v2`,
+  `zwp_tablet_v2`, `zwp_tablet_tool_v2`, and pad protocol proxies returned by
+  generated C helpers.
+- Tablet listener owners recover Swift state from C callback payloads and
+  forward typed raw tablet events into the public input router.
+
+Audit invariant:
+
+- Tablet objects are seat-scoped and destroyed when the seat disappears or the
+  display session shuts down.
+- Listener storage remains reachable while the raw tablet proxy can emit events
+  and is invalidated before destroy.
+- Unknown tablet tool capabilities, tool types, bus types, and pad button facts
+  are preserved as raw values where needed instead of trapping. Tablet pad
+  group proxies are tracked for deterministic teardown; public ring, strip, and
+  dial child-control events are deferred until their event surface is designed.
+- Public tablet events expose only typed input facts and target identities, not
+  raw protocol objects, queues, pointers, or device handles.
+
+Tests:
+
+- `InputRouterTabletTests` covers target routing, seat removal, surface cleanup,
+  unknown capability preservation, and device/tool/pad event projection from
+  raw tablet event facts.
+- `RawTabletLifecycleTests` covers compositor removal events destroying tracked
+  tablet, tool, pad, and pad-group protocol objects exactly once.
+- Shim verification covers the Swift-facing tablet listener and destroy helper
+  declarations against their C implementations.
 
 ## Cursor And Drag Visual Surfaces
 

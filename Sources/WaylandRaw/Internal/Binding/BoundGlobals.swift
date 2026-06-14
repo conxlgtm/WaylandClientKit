@@ -16,8 +16,11 @@ package enum SupportedVersions {
     package static let wpFractionalScaleManagerV1: RawVersion = 1
     package static let wpCursorShapeManagerV1: RawVersion = 2
     package static let xdgActivationV1: RawVersion = 1
+    package static let xdgSessionManagerV1: RawVersion = 1
     package static let xdgToplevelIconManagerV1: RawVersion = 1
     package static let xdgSystemBellV1: RawVersion = 1
+    package static let wpPointerWarpV1: RawVersion = 1
+    package static let zwpTabletManagerV2: RawVersion = 2
     package static let zwpRelativePointerManagerV1: RawVersion = 1
     package static let zwpPointerConstraintsV1: RawVersion = 1
     package static let zwpIdleInhibitManagerV1: RawVersion = 1
@@ -55,6 +58,9 @@ package struct OptionalGlobals {
     package let cursorShapeManager: OptionalCursorShapeManager
     package let xdgToplevelIconManager: OptionalXDGToplevelIconManager
     package let xdgActivation: OptionalXDGActivation
+    package let compositorSessionManager: OptionalCompositorSessionManager
+    package let pointerWarp: OptionalPointerWarp
+    package let tabletManager: OptionalTabletManager
     package let relativePointerManager: OptionalRelativePointerManager
     package let pointerConstraints: OptionalPointerConstraints
     package let linuxDrmSyncobjManager: OptionalLinuxDrmSyncobjManager
@@ -81,6 +87,10 @@ package struct OptionalGlobals {
         xdgToplevelIconManager boundXDGToplevelIconManager:
             OptionalXDGToplevelIconManager = .missing,
         xdgActivation boundXDGActivation: OptionalXDGActivation = .missing,
+        compositorSessionManager boundCompositorSessionManager:
+            OptionalCompositorSessionManager = .missing,
+        pointerWarp boundPointerWarp: OptionalPointerWarp = .missing,
+        tabletManager boundTabletManager: OptionalTabletManager = .missing,
         relativePointerManager boundRelativePointerManager: OptionalRelativePointerManager =
             .missing,
         pointerConstraints boundPointerConstraints: OptionalPointerConstraints = .missing,
@@ -110,6 +120,9 @@ package struct OptionalGlobals {
         cursorShapeManager = boundCursorShapeManager
         xdgToplevelIconManager = boundXDGToplevelIconManager
         xdgActivation = boundXDGActivation
+        compositorSessionManager = boundCompositorSessionManager
+        pointerWarp = boundPointerWarp
+        tabletManager = boundTabletManager
         relativePointerManager = boundRelativePointerManager
         pointerConstraints = boundPointerConstraints
         linuxDrmSyncobjManager = boundLinuxDrmSyncobjManager
@@ -138,6 +151,9 @@ package struct OptionalGlobals {
         linuxDrmSyncobjManager.destroy()
         pointerConstraints.destroy()
         relativePointerManager.destroy()
+        tabletManager.destroy()
+        pointerWarp.destroy()
+        compositorSessionManager.destroy()
         xdgActivation.destroy()
         xdgToplevelIconManager.destroy()
         textInputManager.destroy()
@@ -168,6 +184,7 @@ package final class BoundGlobals {
     package let xdgWMBase: RawXDGWMBase
     package let extensions: OptionalGlobals
     package let seatRegistry: SeatRegistry
+    package let tabletSeatRegistry: TabletSeatRegistry?
     package let outputRegistry: OutputRegistry
 
     private var isDestroyed = false
@@ -178,12 +195,14 @@ package final class BoundGlobals {
         xdgWMBase boundXDGWMBase: RawXDGWMBase,
         seatRegistry boundSeatRegistry: SeatRegistry,
         outputRegistry boundOutputRegistry: OutputRegistry,
-        extensions boundExtensions: OptionalGlobals = OptionalGlobals()
+        extensions boundExtensions: OptionalGlobals = OptionalGlobals(),
+        tabletSeatRegistry boundTabletSeatRegistry: TabletSeatRegistry? = nil
     ) {
         compositor = boundCompositor
         sharedMemory = boundSharedMemory
         xdgWMBase = boundXDGWMBase
         seatRegistry = boundSeatRegistry
+        tabletSeatRegistry = boundTabletSeatRegistry
         outputRegistry = boundOutputRegistry
         extensions = boundExtensions
     }
@@ -193,6 +212,7 @@ package final class BoundGlobals {
 
         isDestroyed = true
         outputRegistry.destroy()
+        tabletSeatRegistry?.destroy()
         seatRegistry.destroy()
         extensions.destroy()
         xdgWMBase.destroy()

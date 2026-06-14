@@ -31,6 +31,15 @@ final class SessionInputCoordinator {
         try cursorManager.setPointerCursor(cursor)
     }
 
+    func nextCursorAnimationDelay() -> Duration? {
+        cursorManager.nextCursorAnimationDelay()
+    }
+
+    @discardableResult
+    func advanceCursorAnimations() throws -> Duration? {
+        try cursorManager.advanceCursorAnimations()
+    }
+
     func target(for rawObjectID: RawObjectID?) -> InputEventTarget {
         inputRouter.target(for: rawObjectID)
     }

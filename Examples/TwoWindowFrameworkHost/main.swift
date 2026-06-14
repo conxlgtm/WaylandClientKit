@@ -249,7 +249,7 @@ private actor WindowState {
             current.counter += 1
         case .keyboard(.interpreted(.key)):
             current.counter += 1
-        case .seat, .diagnostic, .pointer, .keyboard, .touch:
+        case .seat, .diagnostic, .pointer, .keyboard, .touch, .tablet:
             break
         }
     }

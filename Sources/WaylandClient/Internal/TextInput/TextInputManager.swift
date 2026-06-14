@@ -1,6 +1,8 @@
 import WaylandRaw
 
 package protocol TextInputBinding: AnyObject {
+    var protocolVersion: UInt32 { get }
+
     func enable()
     func disable()
     func setSurroundingText(_ text: String, cursor: Int32, anchor: Int32)
@@ -8,6 +10,8 @@ package protocol TextInputBinding: AnyObject {
     func setContentType(hints: TextInputContentHints, purpose: TextInputContentPurpose)
     func setCursorRectangle(_ rect: LogicalRect)
     func commit()
+    func showInputPanel()
+    func hideInputPanel()
     func destroy()
 }
 
@@ -115,6 +119,30 @@ package final class TextInputManager {
         try existingBinding(for: seatID).commit()
     }
 
+    package func showInputPanel(seatID: SeatID) throws {
+        backend.preconditionIsOwnerThread()
+        try requireRequestMutation(seatID: seatID, operation: .showInputPanel)
+        let binding = try existingBinding(for: seatID)
+        try requireProtocolVersion(
+            binding.protocolVersion,
+            minimum: 2,
+            operation: .showInputPanel
+        )
+        binding.showInputPanel()
+    }
+
+    package func hideInputPanel(seatID: SeatID) throws {
+        backend.preconditionIsOwnerThread()
+        try requireRequestMutation(seatID: seatID, operation: .hideInputPanel)
+        let binding = try existingBinding(for: seatID)
+        try requireProtocolVersion(
+            binding.protocolVersion,
+            minimum: 2,
+            operation: .hideInputPanel
+        )
+        binding.hideInputPanel()
+    }
+
     package func drainEvents() -> [TextInputEvent] {
         backend.preconditionIsOwnerThread()
         return eventQueue.drain()
@@ -197,6 +225,20 @@ package final class TextInputManager {
             throw TextInputError.inactiveSession(
                 seatID: seatID,
                 operation: operation
+            )
+        }
+    }
+
+    private func requireProtocolVersion(
+        _ available: UInt32,
+        minimum required: UInt32,
+        operation: TextInputRequestOperation
+    ) throws {
+        guard available >= required else {
+            throw TextInputError.unsupportedVersion(
+                operation: operation,
+                required: required,
+                available: available
             )
         }
     }

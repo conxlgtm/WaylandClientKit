@@ -82,6 +82,18 @@
             ) {
                 unsafe swl_text_input_v3_commit(textInput)
             }
+            try await assertTextInputRequest(
+                expectedKind: SWL_TEST_TEXT_INPUT_SHOW_INPUT_PANEL,
+                object: textInput
+            ) {
+                unsafe swl_text_input_v3_show_input_panel(textInput)
+            }
+            try await assertTextInputRequest(
+                expectedKind: SWL_TEST_TEXT_INPUT_HIDE_INPUT_PANEL,
+                object: textInput
+            ) {
+                unsafe swl_text_input_v3_hide_input_panel(textInput)
+            }
         }
 
         @Test

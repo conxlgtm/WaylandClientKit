@@ -428,6 +428,8 @@ package final class RawSeat {
             keyboardDevice?.id == deviceID
         case .touch:
             touchDevice?.id == deviceID
+        case .tablet:
+            false
         }
     }
 
