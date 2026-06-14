@@ -110,9 +110,17 @@ extension ManagedGPUPreviewBacking {
             try reapExplicitReleaseSignalsIfAvailable()
             if let reusableSlotID = presenter.availableSlotIDs.first {
                 slotID = reusableSlotID
+                try await ensureExplicitReleaseTimelineConfiguredIfNeeded(
+                    for: slotID,
+                    synchronization: options.synchronization
+                )
                 try presenter.replaceAvailableBuffer(previewBuffer, slotID: reusableSlotID)
             } else {
                 slotID = try nextSlotID()
+                try await ensureExplicitReleaseTimelineConfiguredIfNeeded(
+                    for: slotID,
+                    synchronization: options.synchronization
+                )
                 try presenter.installBuffer(previewBuffer, slotID: slotID)
             }
 
@@ -211,11 +219,57 @@ extension ManagedGPUPreviewBacking {
     func explicitSynchronizationTimeline(
         for timeline: GPUSyncTimeline
     ) -> ManagedGPUExplicitSynchronization? {
-        if explicitSynchronization?.timelineIdentity == timeline {
+        if explicitSynchronization?.ownsReleaseTimeline(timeline) == true {
             return explicitSynchronization
         }
 
-        return retainedExplicitSynchronizations[timeline]?.synchronization
+        return retainedExplicitSynchronizations.first { retained in
+            retained.synchronization.ownsReleaseTimeline(timeline)
+        }?.synchronization
+    }
+
+    func ensureExplicitReleaseTimelineConfiguredIfNeeded(
+        for slotID: GBMBufferPoolSlotID,
+        synchronization selection: ManagedGPUPreviewSynchronizationSelection
+    ) async throws(ManagedGPUPreviewBackingError) {
+        guard case .explicit(let synchronization) = selection else {
+            return
+        }
+        guard !synchronization.hasReleaseTimeline(for: slotID) else {
+            return
+        }
+        guard let device else {
+            throw .setup(.explicitSyncRequiredButUnavailable)
+        }
+
+        do {
+            let timelineIdentity = GPUSyncTimeline(nextSyncTimelineRawValue)
+            nextSyncTimelineRawValue += 1
+            let releaseTimeline = try DRMSyncobjTimeline(
+                deviceFileDescriptor: try device.drmFileDescriptor
+            )
+            do {
+                var timelineFileDescriptor = try releaseTimeline.exportFileDescriptor()
+                try await window.importGraphicsPreviewSynchronizationTimeline(
+                    &timelineFileDescriptor,
+                    identity: SurfaceSyncTimelineIdentity(timelineIdentity.rawValue)
+                )
+                synchronization.installReleaseTimeline(
+                    releaseTimeline,
+                    identity: timelineIdentity,
+                    for: slotID
+                )
+            } catch {
+                releaseTimeline.destroy()
+                throw error
+            }
+        } catch let error as GBMAllocationError {
+            throw .allocation(error)
+        } catch let error as RuntimeError {
+            throw .runtime(error)
+        } catch {
+            throw .setup(.explicitSyncSetupFailed)
+        }
     }
 
     func updateRuntimePathAfterPresentation(options: ManagedGPUPreviewPresentationOptions) {
@@ -284,7 +338,7 @@ extension ManagedGPUPreviewBacking {
                 identity: SurfaceSyncTimelineIdentity(timelineIdentity.rawValue)
             )
             let synchronization = ManagedGPUExplicitSynchronization(
-                timeline: timeline,
+                acquireTimeline: timeline,
                 identity: timelineIdentity
             )
             explicitSynchronization = synchronization

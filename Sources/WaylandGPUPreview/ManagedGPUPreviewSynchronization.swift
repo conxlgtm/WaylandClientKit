@@ -1,3 +1,4 @@
+import Glibc
 import WaylandClient
 import WaylandGraphicsCore
 import WaylandRaw
@@ -67,35 +68,29 @@ final class ManagedGPUExplicitSynchronization {
     private static let releaseWaitTimeoutNanoseconds: Int64 = 1_000_000_000
     private static let releasePollTimeoutNanoseconds: Int64 = 0
 
-    private let timeline: DRMSyncobjTimeline
-    private let identity: GPUSyncTimeline
-    private var nextPoint: UInt64 = 1
+    private var releaseTimelinesBySlot: [GBMBufferPoolSlotID: ManagedGPUExplicitReleaseTimeline] =
+        [:]
+    private let acquireTimeline: DRMSyncobjTimeline
+    private let acquireIdentity: GPUSyncTimeline
+    private var nextAcquirePoint: UInt64 = 1
 
     init(
-        timeline syncTimeline: DRMSyncobjTimeline,
+        acquireTimeline syncAcquireTimeline: DRMSyncobjTimeline,
         identity timelineIdentity: GPUSyncTimeline
     ) {
-        timeline = syncTimeline
-        identity = timelineIdentity
-    }
-
-    var explicitSynchronization: GPUExplicitSynchronization {
-        GPUExplicitSynchronization(acquireTimeline: identity, releaseTimeline: identity)
-    }
-
-    var timelineIdentity: GPUSyncTimeline {
-        identity
+        acquireTimeline = syncAcquireTimeline
+        acquireIdentity = timelineIdentity
     }
 
     var placeholderSubmissionState: GPUSubmittedBufferSyncState {
         GPUSubmittedBufferSyncState(
             slotID: placeholderSlotID(),
             acquirePoint: GPUSyncPoint(
-                timeline: identity,
+                timeline: acquireIdentity,
                 point: RawSyncobjTimelinePoint(1)
             ),
             releasePoint: GPUSyncPoint(
-                timeline: identity,
+                timeline: acquireIdentity,
                 point: RawSyncobjTimelinePoint(2)
             )
         )
@@ -112,29 +107,71 @@ final class ManagedGPUExplicitSynchronization {
     func submissionState(
         for slotID: GBMBufferPoolSlotID
     ) throws(GBMAllocationError) -> GPUSubmittedBufferSyncState {
-        let acquirePoint = RawSyncobjTimelinePoint(nextPoint)
-        let releasePoint = RawSyncobjTimelinePoint(nextPoint + 1)
-        nextPoint += 2
+        guard var releaseTimeline = releaseTimelinesBySlot[slotID] else {
+            throw GBMAllocationError.syncobjCreationFailed(errno: EINVAL)
+        }
 
-        try timeline.signal(acquirePoint)
+        let acquirePoint = RawSyncobjTimelinePoint(nextAcquirePoint)
+        let releasePoint = RawSyncobjTimelinePoint(releaseTimeline.nextPoint)
+        nextAcquirePoint += 1
+        releaseTimeline.nextPoint += 1
+        releaseTimelinesBySlot[slotID] = releaseTimeline
+
+        try acquireTimeline.signal(acquirePoint)
 
         return GPUSubmittedBufferSyncState(
             slotID: slotID,
             acquirePoint: GPUSyncPoint(
-                timeline: identity,
+                timeline: acquireIdentity,
                 point: acquirePoint
             ),
             releasePoint: GPUSyncPoint(
-                timeline: identity,
+                timeline: releaseTimeline.identity,
                 point: releasePoint
             )
         )
     }
 
+    func hasReleaseTimeline(for slotID: GBMBufferPoolSlotID) -> Bool {
+        releaseTimelinesBySlot[slotID] != nil
+    }
+
+    func installReleaseTimeline(
+        _ timeline: DRMSyncobjTimeline,
+        identity timelineIdentity: GPUSyncTimeline,
+        for slotID: GBMBufferPoolSlotID
+    ) {
+        releaseTimelinesBySlot[slotID] = ManagedGPUExplicitReleaseTimeline(
+            timeline: timeline,
+            identity: timelineIdentity
+        )
+    }
+
+    func ownsReleaseTimeline(_ timeline: GPUSyncTimeline) -> Bool {
+        releaseTimelinesBySlot.values.contains { releaseTimeline in
+            releaseTimeline.identity == timeline
+        }
+    }
+
+    func hasOutstandingReleaseTimeline(
+        in states: [GPUSubmittedBufferSyncState]
+    ) -> Bool {
+        states.contains { state in
+            ownsReleaseTimeline(state.releasePoint.timeline)
+        }
+    }
+
     func waitForRelease(
         _ state: GPUSubmittedBufferSyncState
     ) throws(GBMAllocationError) {
-        try timeline.wait(
+        guard let releaseTimeline = releaseTimeline(for: state.releasePoint.timeline) else {
+            throw GBMAllocationError.syncobjTimelineWaitFailed(
+                point: state.releasePoint.point.rawValue,
+                errno: EINVAL
+            )
+        }
+
+        try releaseTimeline.timeline.wait(
             state.releasePoint.point,
             timeoutNanoseconds: Self.releaseWaitTimeoutNanoseconds,
             waitForSubmit: true
@@ -144,8 +181,15 @@ final class ManagedGPUExplicitSynchronization {
     func releasePointIsSignaled(
         _ state: GPUSubmittedBufferSyncState
     ) throws(GBMAllocationError) -> Bool {
+        guard let releaseTimeline = releaseTimeline(for: state.releasePoint.timeline) else {
+            throw GBMAllocationError.syncobjTimelineWaitFailed(
+                point: state.releasePoint.point.rawValue,
+                errno: EINVAL
+            )
+        }
+
         do {
-            try timeline.wait(
+            try releaseTimeline.timeline.wait(
                 state.releasePoint.point,
                 timeoutNanoseconds: Self.releasePollTimeoutNanoseconds,
                 waitForSubmit: true
@@ -159,7 +203,25 @@ final class ManagedGPUExplicitSynchronization {
         }
     }
 
-    func destroy() {
-        timeline.destroy()
+    private func releaseTimeline(
+        for timeline: GPUSyncTimeline
+    ) -> ManagedGPUExplicitReleaseTimeline? {
+        releaseTimelinesBySlot.values.first { releaseTimeline in
+            releaseTimeline.identity == timeline
+        }
     }
+
+    func destroy() {
+        acquireTimeline.destroy()
+        for releaseTimeline in releaseTimelinesBySlot.values {
+            releaseTimeline.timeline.destroy()
+        }
+        releaseTimelinesBySlot.removeAll()
+    }
+}
+
+private struct ManagedGPUExplicitReleaseTimeline {
+    let timeline: DRMSyncobjTimeline
+    let identity: GPUSyncTimeline
+    var nextPoint: UInt64 = 1
 }

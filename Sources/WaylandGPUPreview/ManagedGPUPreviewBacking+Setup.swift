@@ -29,13 +29,13 @@ extension ManagedGPUPreviewBacking {
         }
 
         explicitSynchronization = nil
-        let timeline = synchronization.timelineIdentity
-        if presenter.explicitSubmissionStates.contains(where: { state in
-            state.releasePoint.timeline == timeline
-        }) {
-            retainedExplicitSynchronizations[timeline] = RetainedExplicitSynchronization(
-                synchronization: synchronization,
-                device: device
+        let explicitSubmissionStates = presenter.explicitSubmissionStates
+        if synchronization.hasOutstandingReleaseTimeline(in: explicitSubmissionStates) {
+            retainedExplicitSynchronizations.append(
+                RetainedExplicitSynchronization(
+                    synchronization: synchronization,
+                    device: device
+                )
             )
             device = nil
         } else {
@@ -45,21 +45,28 @@ extension ManagedGPUPreviewBacking {
     }
 
     func destroyUnusedRetainedExplicitSynchronizations() {
-        let liveTimelines = Set(
-            presenter.explicitSubmissionStates.map(\.releasePoint.timeline)
-        )
-        let unusedTimelines = retainedExplicitSynchronizations.keys.filter { timeline in
-            !liveTimelines.contains(timeline)
+        let explicitSubmissionStates = presenter.explicitSubmissionStates
+        var retainedSynchronizations: [RetainedExplicitSynchronization] = []
+
+        for retained in retainedExplicitSynchronizations {
+            if retained.synchronization.hasOutstandingReleaseTimeline(in: explicitSubmissionStates)
+            {
+                retainedSynchronizations.append(
+                    RetainedExplicitSynchronization(
+                        synchronization: retained.synchronization,
+                        device: retained.device
+                    )
+                )
+            } else {
+                retained.synchronization.destroy()
+            }
         }
 
-        for timeline in unusedTimelines {
-            retainedExplicitSynchronizations[timeline]?.synchronization.destroy()
-            retainedExplicitSynchronizations[timeline] = nil
-        }
+        retainedExplicitSynchronizations = retainedSynchronizations
     }
 
     func destroyRetainedExplicitSynchronizations() {
-        for retained in retainedExplicitSynchronizations.values {
+        for retained in retainedExplicitSynchronizations {
             retained.synchronization.destroy()
         }
         retainedExplicitSynchronizations.removeAll()
@@ -92,7 +99,6 @@ extension ManagedGPUPreviewBacking {
             throw .setup(.noCompatibleFormat)
         }
     }
-
     func createDevice(
         for selection: GBMFormatModifierSelection
     ) throws(ManagedGPUPreviewBackingError) -> GBMDevice {
