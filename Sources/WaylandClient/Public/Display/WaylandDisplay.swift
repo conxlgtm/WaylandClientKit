@@ -7,6 +7,7 @@ public actor WaylandDisplay {
 
     nonisolated let runtime: WaylandDisplayRuntime
     private var lifecycle = WaylandDisplayLifecycle.initializing
+    private var cursorAnimationTask: Task<Void, Never>?
 
     nonisolated public var unownedExecutor: UnownedSerialExecutor {
         unsafe runtime.executor.asUnownedSerialExecutor()
@@ -33,6 +34,7 @@ public actor WaylandDisplay {
     }
 
     isolated deinit {
+        cursorAnimationTask?.cancel()
         runtime.actorDidDeinitialize(lifecycle: &lifecycle)
     }
 
@@ -105,7 +107,9 @@ public actor WaylandDisplay {
 
     @discardableResult
     public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {
-        try requireCore().setPointerCursor(cursor)
+        let results = try requireCore().setPointerCursor(cursor)
+        updateCursorAnimationTask(for: cursor)
+        return results
     }
 
     @discardableResult
@@ -234,6 +238,8 @@ public actor WaylandDisplay {
     }
 
     public func close() {
+        cursorAnimationTask?.cancel()
+        cursorAnimationTask = nil
         switch lifecycle {
         case .active(let activeCore, let activeEventSource):
             runtime.clearEventSource(activeEventSource)
@@ -280,6 +286,47 @@ public actor WaylandDisplay {
         let source = DisplayEventSource(core: displayCore)
         lifecycle = .active(core: displayCore, eventSource: source)
         try runtime.installEventSource(source)
+    }
+
+    private func updateCursorAnimationTask(for cursor: PointerCursor) {
+        guard cursor.animation != nil else {
+            cursorAnimationTask?.cancel()
+            cursorAnimationTask = nil
+            return
+        }
+
+        guard cursorAnimationTask == nil else { return }
+
+        cursorAnimationTask = Task { [weak self] in
+            await self?.runCursorAnimationLoop()
+        }
+    }
+
+    private func runCursorAnimationLoop() async {
+        defer { cursorAnimationTask = nil }
+
+        while !Task.isCancelled {
+            let delay: Duration?
+            do {
+                delay = try requireCore().nextCursorAnimationDelay()
+            } catch {
+                return
+            }
+
+            guard let delay else { return }
+
+            do {
+                try await Task.sleep(for: delay)
+            } catch {
+                return
+            }
+
+            do {
+                _ = try requireCore().advanceCursorAnimations()
+            } catch {
+                return
+            }
+        }
     }
 
     func requireCore() throws -> DisplayCore {

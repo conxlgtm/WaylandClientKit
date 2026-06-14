@@ -107,6 +107,8 @@ public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConv
             "set named cursor"
         case .customImage:
             "set custom cursor image"
+        case .animated:
+            "set animated cursor"
         }
     }
 }

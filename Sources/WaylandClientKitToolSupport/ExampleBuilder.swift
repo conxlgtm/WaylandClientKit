@@ -3,6 +3,7 @@ import Foundation
 public struct ExampleBuilder {
     public static let targets = [
         "ClientSideResizeChrome",
+        "CursorAnimationSmoke",
         "CursorPolicySmoke",
         "CustomCursorSmoke",
         "DamageRegionSmoke",

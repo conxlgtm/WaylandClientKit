@@ -39,6 +39,7 @@ package enum PointerCursorResolutionState {
 package enum DesiredPointerCursorState {
     case hidden
     case customImage(PointerCursor)
+    case animated(PointerCursor)
     case named(requested: PointerCursor, resolution: PointerCursorResolutionState)
 
     init(cursor: PointerCursor, resolved: ResolvedPointerCursorImage? = nil) {
@@ -47,6 +48,8 @@ package enum DesiredPointerCursorState {
             self = .hidden
         case .customImage:
             self = .customImage(cursor)
+        case .animated:
+            self = .animated(cursor)
         case .named:
             self = .named(
                 requested: cursor,
@@ -61,6 +64,8 @@ package enum DesiredPointerCursorState {
             .hidden
         case .customImage(let cursor):
             cursor
+        case .animated(let cursor):
+            cursor
         case .named(let requested, _):
             requested
         }
@@ -68,7 +73,7 @@ package enum DesiredPointerCursorState {
 
     var resolvedImage: ResolvedPointerCursorImage? {
         switch self {
-        case .hidden, .customImage:
+        case .hidden, .customImage, .animated:
             nil
         case .named(_, let resolution):
             resolution.resolvedImage
@@ -77,7 +82,7 @@ package enum DesiredPointerCursorState {
 
     func resolvedImage(size: CursorSize) -> ResolvedPointerCursorImage? {
         switch self {
-        case .hidden, .customImage:
+        case .hidden, .customImage, .animated:
             nil
         case .named(_, let resolution):
             resolution.resolvedImage(size: size)
@@ -86,7 +91,7 @@ package enum DesiredPointerCursorState {
 
     var unavailableDiagnostic: CursorDiagnostic? {
         switch self {
-        case .hidden, .customImage:
+        case .hidden, .customImage, .animated:
             nil
         case .named(_, let resolution):
             resolution.unavailableDiagnostic
@@ -95,7 +100,7 @@ package enum DesiredPointerCursorState {
 
     mutating func cache(_ resolved: ResolvedPointerCursorImage) {
         switch self {
-        case .hidden, .customImage:
+        case .hidden, .customImage, .animated:
             preconditionFailure("only named cursors can cache a cursor image")
         case .named(let requested, _):
             self = .named(requested: requested, resolution: .resolved(resolved))
@@ -104,7 +109,7 @@ package enum DesiredPointerCursorState {
 
     mutating func cacheUnavailable(_ diagnostic: CursorDiagnostic) {
         switch self {
-        case .hidden, .customImage:
+        case .hidden, .customImage, .animated:
             preconditionFailure("only named cursors can cache a cursor failure")
         case .named(let requested, _):
             self = .named(requested: requested, resolution: .unavailable(diagnostic))

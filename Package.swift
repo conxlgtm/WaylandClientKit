@@ -269,6 +269,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "CursorAnimationSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/CursorAnimationSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "CursorPolicySmoke",
             dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/CursorPolicySmoke",

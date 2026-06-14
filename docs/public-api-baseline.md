@@ -85,62 +85,64 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L6: `    case emptyCursorName`
 - L7: `    case invalidCursorImagePixelCount(expected: Int, actual: Int)`
 - L8: `    case cursorImageHotspotOutsideBounds(x: Int32, y: Int32, width: Int32, height: Int32)`
-- L10: `    public var description: String {`
-- L30: `public struct CursorThemeName: Equatable, Sendable, CustomStringConvertible {`
-- L31: `    public let value: String`
-- L33: `    public init(_ name: String) throws {`
-- L51: `    public var description: String {`
-- L56: `public struct CursorSize: Equatable, Hashable, Comparable, Sendable, CustomStringConvertible {`
-- L57: `    public let rawValue: Int32`
-- L59: `    public static let `default` = CursorSize(unchecked: 24)`
-- L61: `    public init(_ value: Int32) throws {`
-- L74: `    public var description: String {`
-- L78: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L83: `public enum DisplayConfigurationField: Equatable, Sendable, CustomStringConvertible {`
-- L84: `    case displayEventCapacity`
-- L85: `    case inputEventCapacity`
-- L86: `    case textInputEventCapacity`
-- L87: `    case dataTransferEventCapacity`
-- L88: `    case presentationEventCapacity`
-- L89: `    case rawInputQueueCapacity`
-- L90: `    case pendingInputEventCapacity`
-- L91: `    case diagnosticsCapacity`
-- L93: `    public var description: String {`
-- L115: `public enum DisplayConfigurationError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L116: `    case nonPositiveCapacity(field: DisplayConfigurationField, value: Int)`
-- L118: `    public var description: String {`
-- L126: `public enum EventStreamCapacityField: Equatable, Sendable {`
-- L127: `    case displayEventCapacity`
-- L128: `    case inputEventCapacity`
-- L129: `    case textInputEventCapacity`
-- L130: `    case dataTransferEventCapacity`
-- L131: `    case presentationEventCapacity`
-- L149: `public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L150: `    public let rawValue: Int`
-- L152: `    public static let defaultDisplayEvents = EventStreamCapacity(unchecked: 256)`
-- L153: `    public static let defaultInputEvents = EventStreamCapacity(unchecked: 1_024)`
-- L154: `    public static let defaultTextInputEvents = EventStreamCapacity(unchecked: 512)`
-- L155: `    public static let defaultDataTransferEvents = EventStreamCapacity(unchecked: 256)`
-- L156: `    public static let defaultPresentationEvents = EventStreamCapacity(unchecked: 256)`
-- L158: `    public init(`
-- L177: `    public var description: String {`
-- L181: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L186: `public enum InputQueueCapacityField: Equatable, Sendable {`
-- L187: `    case rawInputQueueCapacity`
-- L188: `    case pendingInputEventCapacity`
-- L200: `public struct InputQueueCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L201: `    public let rawValue: Int`
-- L203: `    public static let defaultRawInput = InputQueueCapacity(unchecked: 4_096)`
-- L204: `    public static let defaultPendingInput = InputQueueCapacity(unchecked: 2_048)`
-- L206: `    public init(`
-- L225: `    public var description: String {`
-- L229: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L234: `public struct DiagnosticsCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L235: `    public let rawValue: Int`
-- L237: `    public static let `default` = DiagnosticsCapacity(unchecked: 128)`
-- L239: `    public init(_ value: Int) throws {`
-- L255: `    public var description: String {`
-- L259: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L9: `    case emptyCursorAnimation`
+- L10: `    case nonPositiveCursorFrameDuration(Duration)`
+- L12: `    public var description: String {`
+- L36: `public struct CursorThemeName: Equatable, Sendable, CustomStringConvertible {`
+- L37: `    public let value: String`
+- L39: `    public init(_ name: String) throws {`
+- L57: `    public var description: String {`
+- L62: `public struct CursorSize: Equatable, Hashable, Comparable, Sendable, CustomStringConvertible {`
+- L63: `    public let rawValue: Int32`
+- L65: `    public static let `default` = CursorSize(unchecked: 24)`
+- L67: `    public init(_ value: Int32) throws {`
+- L80: `    public var description: String {`
+- L84: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L89: `public enum DisplayConfigurationField: Equatable, Sendable, CustomStringConvertible {`
+- L90: `    case displayEventCapacity`
+- L91: `    case inputEventCapacity`
+- L92: `    case textInputEventCapacity`
+- L93: `    case dataTransferEventCapacity`
+- L94: `    case presentationEventCapacity`
+- L95: `    case rawInputQueueCapacity`
+- L96: `    case pendingInputEventCapacity`
+- L97: `    case diagnosticsCapacity`
+- L99: `    public var description: String {`
+- L121: `public enum DisplayConfigurationError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L122: `    case nonPositiveCapacity(field: DisplayConfigurationField, value: Int)`
+- L124: `    public var description: String {`
+- L132: `public enum EventStreamCapacityField: Equatable, Sendable {`
+- L133: `    case displayEventCapacity`
+- L134: `    case inputEventCapacity`
+- L135: `    case textInputEventCapacity`
+- L136: `    case dataTransferEventCapacity`
+- L137: `    case presentationEventCapacity`
+- L155: `public struct EventStreamCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L156: `    public let rawValue: Int`
+- L158: `    public static let defaultDisplayEvents = EventStreamCapacity(unchecked: 256)`
+- L159: `    public static let defaultInputEvents = EventStreamCapacity(unchecked: 1_024)`
+- L160: `    public static let defaultTextInputEvents = EventStreamCapacity(unchecked: 512)`
+- L161: `    public static let defaultDataTransferEvents = EventStreamCapacity(unchecked: 256)`
+- L162: `    public static let defaultPresentationEvents = EventStreamCapacity(unchecked: 256)`
+- L164: `    public init(`
+- L183: `    public var description: String {`
+- L187: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L192: `public enum InputQueueCapacityField: Equatable, Sendable {`
+- L193: `    case rawInputQueueCapacity`
+- L194: `    case pendingInputEventCapacity`
+- L206: `public struct InputQueueCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L207: `    public let rawValue: Int`
+- L209: `    public static let defaultRawInput = InputQueueCapacity(unchecked: 4_096)`
+- L210: `    public static let defaultPendingInput = InputQueueCapacity(unchecked: 2_048)`
+- L212: `    public init(`
+- L231: `    public var description: String {`
+- L235: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L240: `public struct DiagnosticsCapacity: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L241: `    public let rawValue: Int`
+- L243: `    public static let `default` = DiagnosticsCapacity(unchecked: 128)`
+- L245: `    public init(_ value: Int) throws {`
+- L261: `    public var description: String {`
+- L265: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
 
 ### `Sources/WaylandClient/Public/Configuration/DisplayConfiguration.swift`
 
@@ -232,18 +234,27 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L5: `    public let pixels: [UInt32]`
 - L7: `    public init(`
 - L32: `    public static func solid(`
-- L110: `public struct PointerCursor: Equatable, Sendable {`
-- L119: `    public var name: String? {`
-- L124: `    public var image: PointerCursorImage? {`
-- L129: `    public init(name cursorName: String) throws {`
-- L151: `    public static func image(_ image: PointerCursorImage) -> PointerCursor {`
-- L155: `    public static let defaultArrow = Self(validatedName: "left_ptr")`
-- L156: `    public static let text = Self(validatedName: "text")`
-- L157: `    public static let pointer = Self(validatedName: "hand2")`
-- L158: `    public static let crosshair = Self(validatedName: "crosshair")`
-- L159: `    public static let resizeLeftRight = Self(validatedName: "sb_h_double_arrow")`
-- L160: `    public static let resizeUpDown = Self(validatedName: "sb_v_double_arrow")`
-- L161: `    public static let hidden = Self(kind: .hidden)`
+- L114: `public struct PointerCursorFrame: Equatable, Sendable {`
+- L115: `    public let image: PointerCursorImage`
+- L116: `    public let duration: Duration`
+- L118: `    public init(image frameImage: PointerCursorImage, duration frameDuration: Duration) throws {`
+- L135: `public struct AnimatedPointerCursor: Equatable, Sendable {`
+- L136: `    public let frames: [PointerCursorFrame]`
+- L138: `    public init(frames animationFrames: [PointerCursorFrame]) throws {`
+- L147: `public struct PointerCursor: Equatable, Sendable {`
+- L157: `    public var name: String? {`
+- L162: `    public var image: PointerCursorImage? {`
+- L167: `    public var animation: AnimatedPointerCursor? {`
+- L172: `    public init(name cursorName: String) throws {`
+- L194: `    public static func image(_ image: PointerCursorImage) -> PointerCursor {`
+- L198: `    public static func animated(_ cursor: AnimatedPointerCursor) throws -> PointerCursor {`
+- L206: `    public static let defaultArrow = Self(validatedName: "left_ptr")`
+- L207: `    public static let text = Self(validatedName: "text")`
+- L208: `    public static let pointer = Self(validatedName: "hand2")`
+- L209: `    public static let crosshair = Self(validatedName: "crosshair")`
+- L210: `    public static let resizeLeftRight = Self(validatedName: "sb_h_double_arrow")`
+- L211: `    public static let resizeUpDown = Self(validatedName: "sb_v_double_arrow")`
+- L212: `    public static let hidden = Self(kind: .hidden)`
 
 ### `Sources/WaylandClient/Public/DataTransfer/ByteCount.swift`
 
@@ -964,20 +975,20 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L4: `public actor WaylandDisplay {`
 - L5: `    public static let defaultDiscoveryTimeoutMilliseconds: Int32 = 1_000`
 - L6: `    public static let defaultConfigureTimeoutMilliseconds: Int32 = 1_000`
-- L11: `    nonisolated public var unownedExecutor: UnownedSerialExecutor {`
-- L15: `    nonisolated public var events: DisplayEvents {`
-- L19: `    nonisolated public var inputEvents: InputEvents {`
-- L23: `    nonisolated public var dataTransferEvents: DataTransferEvents {`
-- L27: `    nonisolated public var diagnostics: DisplayDiagnostics {`
-- L54: `    public static func withConnection<ResultValue: Sendable>(`
-- L76: `    public static func withConnection<ResultValue: Sendable>(`
-- L90: `    public func currentPointerCursor() throws -> PointerCursor {`
-- L98: `    public func capabilities() throws -> WaylandCapabilities {`
-- L102: `    public func outputs() throws -> [OutputSnapshot] {`
-- L107: `    public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {`
-- L112: `    public func createTopLevelWindow(`
-- L236: `    public func close() {`
-- L295: `    public var isClosed: Bool {`
+- L12: `    nonisolated public var unownedExecutor: UnownedSerialExecutor {`
+- L16: `    nonisolated public var events: DisplayEvents {`
+- L20: `    nonisolated public var inputEvents: InputEvents {`
+- L24: `    nonisolated public var dataTransferEvents: DataTransferEvents {`
+- L28: `    nonisolated public var diagnostics: DisplayDiagnostics {`
+- L56: `    public static func withConnection<ResultValue: Sendable>(`
+- L78: `    public static func withConnection<ResultValue: Sendable>(`
+- L92: `    public func currentPointerCursor() throws -> PointerCursor {`
+- L100: `    public func capabilities() throws -> WaylandCapabilities {`
+- L104: `    public func outputs() throws -> [OutputSnapshot] {`
+- L109: `    public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {`
+- L116: `    public func createTopLevelWindow(`
+- L240: `    public func close() {`
+- L342: `    public var isClosed: Bool {`
 
 ### `Sources/WaylandClient/Public/Errors/ClientError.swift`
 
@@ -1044,10 +1055,10 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L86: `    public let backendResult: PointerCursorBackendResult`
 - L88: `    public init(`
 - L98: `    public var description: String {`
-- L114: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L115: `    case invalidConfiguration(CursorConfigurationError)`
-- L116: `    case requestFailed(PointerCursorRequestFailure)`
-- L118: `    public var description: String {`
+- L116: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L117: `    case invalidConfiguration(CursorConfigurationError)`
+- L118: `    case requestFailed(PointerCursorRequestFailure)`
+- L120: `    public var description: String {`
 
 ### `Sources/WaylandClient/Public/Errors/DisplayError.swift`
 

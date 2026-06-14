@@ -21,6 +21,13 @@ extension CursorManager {
                 to: seatID,
                 serial: explicitSerial
             )
+        case .animated(let animation):
+            return try applyAutomaticAnimatedCursor(
+                cursor,
+                animation: animation,
+                to: seatID,
+                serial: explicitSerial
+            )
         case .named:
             return try applyAutomaticNamedCursor(to: seatID, serial: explicitSerial)
         }
@@ -49,6 +56,7 @@ extension CursorManager {
         }
 
         detachCursorSurfaceIfPresent(for: seatID)
+        clearCursorAnimation(for: seatID)
         markCursorApplied(.hidden(serial: explicitSerial), for: seatID)
         return .hidden(seatID: publicSeatID(seatID), serial: explicitSerial)
     }
@@ -80,8 +88,73 @@ extension CursorManager {
 
         switch rawResult {
         case .set:
+            clearCursorAnimation(for: seatID)
             markCursorApplied(
                 .customImage(cursor: cursor, serial: explicitSerial, surfaceID: surface.objectID),
+                for: seatID
+            )
+            return .set(
+                seatID: publicSeatID(seatID),
+                serial: explicitSerial,
+                cursor: cursor
+            )
+        case .skippedNoPointer, .skippedUnknownSeat:
+            throw AutomaticPointerEnterFailure.cursorRequest(
+                pointerCursorRequestFailure(
+                    seatID: seatID,
+                    cursor: cursor,
+                    rawResult: rawResult
+                )
+            )
+        }
+    }
+
+    private func applyAutomaticAnimatedCursor(
+        _ cursor: PointerCursor,
+        animation: AnimatedPointerCursor,
+        to seatID: RawSeatID,
+        serial explicitSerial: UInt32
+    ) throws -> CursorRequestResult {
+        let surface = try automaticCursorSurface(for: seatID)
+        let frames: [AnimatedCursorFrame]
+        do {
+            frames = try resolvedAnimatedFrames(animation)
+        } catch {
+            throw AutomaticPointerEnterFailure.cursorImageResolution(String(describing: error))
+        }
+
+        var animationState: CursorAnimationState
+        do {
+            animationState = try CursorAnimationState(frames: frames)
+        } catch {
+            throw AutomaticPointerEnterFailure.cursorImageResolution(String(describing: error))
+        }
+
+        let bufferScale = PositiveInt32(unchecked: 1)
+        let currentFrame = animationState.currentFrame
+        attachCursorImage(currentFrame.image, to: surface, bufferScale: bufferScale)
+
+        let rawResult = backend.setPointerCursor(
+            seatID: seatID,
+            serial: explicitSerial,
+            surface: surface,
+            hotspotX: cursorHotspot(currentFrame.image.hotspotX, bufferScale: bufferScale),
+            hotspotY: cursorHotspot(currentFrame.image.hotspotY, bufferScale: bufferScale)
+        )
+
+        switch rawResult {
+        case .set:
+            markCursorAnimationState(
+                animationState.isAnimated ? animationState : nil,
+                for: seatID
+            )
+            markCursorApplied(
+                .animated(
+                    cursor: cursor,
+                    serial: explicitSerial,
+                    surfaceID: surface.objectID,
+                    frameIndex: animationState.currentFrameIndex
+                ),
                 for: seatID
             )
             return .set(
@@ -130,6 +203,7 @@ extension CursorManager {
 
         switch rawResult {
         case .set:
+            clearCursorAnimation(for: seatID)
             markCursorApplied(
                 .named(
                     cursor: resolved.cursor,
@@ -167,6 +241,7 @@ extension CursorManager {
 
         switch rawResult {
         case .set:
+            clearCursorAnimation(for: seatID)
             markCursorApplied(
                 .named(cursor: desiredCursor.cursor, serial: explicitSerial, surfaceID: nil),
                 for: seatID

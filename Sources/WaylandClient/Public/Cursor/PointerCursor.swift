@@ -107,10 +107,48 @@ public struct PointerCursorImage: Equatable, Sendable {
     }
 }
 
+/// One frame in an animated pointer cursor.
+///
+/// The frame image uses the same XRGB8888 pixel format as
+/// ``PointerCursorImage`` for static custom cursor images.
+public struct PointerCursorFrame: Equatable, Sendable {
+    public let image: PointerCursorImage
+    public let duration: Duration
+
+    public init(image frameImage: PointerCursorImage, duration frameDuration: Duration) throws {
+        guard frameDuration > .zero else {
+            throw ClientError.cursor(
+                .invalidConfiguration(.nonPositiveCursorFrameDuration(frameDuration))
+            )
+        }
+
+        image = frameImage
+        duration = frameDuration
+    }
+}
+
+/// A validated custom animated pointer cursor.
+///
+/// WaylandClientKit treats each frame as a normal custom cursor image. The
+/// public value does not expose cursor surfaces, buffers, timers, queues, or SHM
+/// pools.
+public struct AnimatedPointerCursor: Equatable, Sendable {
+    public let frames: [PointerCursorFrame]
+
+    public init(frames animationFrames: [PointerCursorFrame]) throws {
+        guard !animationFrames.isEmpty else {
+            throw ClientError.cursor(.invalidConfiguration(.emptyCursorAnimation))
+        }
+
+        frames = animationFrames
+    }
+}
+
 public struct PointerCursor: Equatable, Sendable {
     package enum Kind: Equatable, Sendable {
         case named(String)
         case customImage(PointerCursorImage)
+        case animated(AnimatedPointerCursor)
         case hidden
     }
 
@@ -124,6 +162,11 @@ public struct PointerCursor: Equatable, Sendable {
     public var image: PointerCursorImage? {
         guard case .customImage(let image) = kind else { return nil }
         return image
+    }
+
+    public var animation: AnimatedPointerCursor? {
+        guard case .animated(let animation) = kind else { return nil }
+        return animation
     }
 
     public init(name cursorName: String) throws {
@@ -150,6 +193,14 @@ public struct PointerCursor: Equatable, Sendable {
 
     public static func image(_ image: PointerCursorImage) -> PointerCursor {
         Self(kind: .customImage(image))
+    }
+
+    public static func animated(_ cursor: AnimatedPointerCursor) throws -> PointerCursor {
+        guard !cursor.frames.isEmpty else {
+            throw ClientError.cursor(.invalidConfiguration(.emptyCursorAnimation))
+        }
+
+        return Self(kind: .animated(cursor))
     }
 
     public static let defaultArrow = Self(validatedName: "left_ptr")
