@@ -20,12 +20,12 @@ package struct IDGenerator<ID>: Sendable, Equatable {
     private var nextRawValue: UInt64
 
     package init(startingAt value: UInt64 = 1) {
-        precondition(value != 0, "generated SwiftWayland IDs reserve zero")
+        precondition(value != 0, "generated WaylandClientKit IDs reserve zero")
         nextRawValue = value
     }
 
     package mutating func nextRawValueForCompositeID() -> UInt64 {
-        precondition(nextRawValue != UInt64.max, "SwiftWayland ID domain exhausted")
+        precondition(nextRawValue != UInt64.max, "WaylandClientKit ID domain exhausted")
         defer { nextRawValue += 1 }
         return nextRawValue
     }

@@ -10,7 +10,7 @@
     @Suite(
         .enabled(
             if: WindowControlRequestTestEnvironment.isEnabled,
-            "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1"
+            "Set WAYLAND_DISPLAY and WAYLAND_CLIENT_KIT_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1"
         ),
         .timeLimit(.minutes(1)),
         .tags(.linux, .integration, .liveWayland, .publicAPI),
@@ -23,12 +23,12 @@
                 let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
 
                 let record = try await recordTopLevelRequest {
-                    try await window.setTitle("Updated SwiftWayland Title")
+                    try await window.setTitle("Updated WaylandClientKit Title")
                 }
 
                 #expect(record.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_TITLE)
                 #expect(record.topLevelAddress == topLevelPointer)
-                #expect(record.text == "Updated SwiftWayland Title")
+                #expect(record.text == "Updated WaylandClientKit Title")
             }
         }
 
@@ -38,12 +38,12 @@
                 let topLevelPointer = try await requireTopLevelPointer(in: display, for: window)
 
                 let record = try await recordTopLevelRequest {
-                    try await window.setAppID("dev.swiftwayland.updated")
+                    try await window.setAppID("dev.waylandclientkit.updated")
                 }
 
                 #expect(record.kind == SWL_TEST_XDG_TOPLEVEL_REQUEST_SET_APP_ID)
                 #expect(record.topLevelAddress == topLevelPointer)
-                #expect(record.text == "dev.swiftwayland.updated")
+                #expect(record.text == "dev.waylandclientkit.updated")
             }
         }
 
@@ -358,8 +358,8 @@
         ) { display in
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
-                    title: "SwiftWayland Window Control Test",
-                    appID: "swift-wayland-window-control-test",
+                    title: "WaylandClientKit Window Control Test",
+                    appID: "wayland-client-kit-window-control-test",
                     initialWidth: 160,
                     initialHeight: 120,
                     closeRequestPolicy: .requestOnly,
@@ -446,7 +446,7 @@
             let environment = ProcessInfo.processInfo.environment
 
             return environment["WAYLAND_DISPLAY"]?.isEmpty == false
-                && environment["SWIFT_WAYLAND_ENABLE_WINDOW_CONTROL_REQUEST_TESTS"] == "1"
+                && environment["WAYLAND_CLIENT_KIT_ENABLE_WINDOW_CONTROL_REQUEST_TESTS"] == "1"
         }
     }
 

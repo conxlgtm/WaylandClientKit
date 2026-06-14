@@ -19,8 +19,8 @@ package enum SmokeRunner {
 
         let window = try session.createTopLevelWindow(
             configuration: WindowConfiguration(
-                title: "SwiftWayland Smoke",
-                appID: "swift-wayland-smoke",
+                title: "WaylandClientKit Smoke",
+                appID: "wayland-client-kit-smoke",
                 initialWidth: 64,
                 initialHeight: 64,
                 bufferCount: 2

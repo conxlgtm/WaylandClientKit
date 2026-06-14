@@ -239,6 +239,9 @@ struct ResolvedSurfacePacing {
             fifo.object.apply(.setBarrier)
         case .waitBarrier:
             fifo.object.apply(.waitBarrier)
+        case .waitAndSetBarrier:
+            fifo.object.apply(.waitBarrier)
+            fifo.object.apply(.setBarrier)
         }
     }
 }

@@ -117,7 +117,7 @@ struct WaylandFrameworkHostClientTests {
     @Test(
         .enabled(
             if: FrameworkHostEnvironment.liveWaylandEnabled,
-            "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_FRAMEWORK_HOST_TESTS=1"
+            "Set WAYLAND_DISPLAY and WAYLAND_CLIENT_KIT_ENABLE_FRAMEWORK_HOST_TESTS=1"
         ),
         .timeLimit(.minutes(1))
     )
@@ -171,7 +171,7 @@ enum FrameworkHostEnvironment {
     static var liveWaylandEnabled: Bool {
         ProcessInfo.processInfo.environment["WAYLAND_DISPLAY"]?.isEmpty == false
             && ProcessInfo.processInfo.environment[
-                "SWIFT_WAYLAND_ENABLE_FRAMEWORK_HOST_TESTS"
+                "WAYLAND_CLIENT_KIT_ENABLE_FRAMEWORK_HOST_TESTS"
             ] == "1"
     }
 }

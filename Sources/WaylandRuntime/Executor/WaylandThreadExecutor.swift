@@ -18,7 +18,7 @@ package final class WaylandThreadExecutor: SerialExecutor {
     nonisolated(unsafe) private var synchronizationPrimitivesAreLive = false
     nonisolated(unsafe) private var state = WaylandThreadExecutorState()
 
-    package init(name _: String = "swift-wayland") throws {
+    package init(name _: String = "wayland-client-kit") throws {
         try initialize(forcedThreadCreationFailureForTesting: nil)
     }
 

@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1-client-protocol.h"
 
 static void swl_xdg_toplevel_icon_manager_v1_handle_icon_size(

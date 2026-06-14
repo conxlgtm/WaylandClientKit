@@ -867,7 +867,7 @@ private func hex(_ pointer: OpaquePointer?) -> String {
 }
 private func makeTemporaryFileDescriptor(bytes: [UInt8]) throws -> Int32 {
     try WaylandTestSupport.makeTemporaryFileDescriptor(
-        prefix: "swift-wayland-seat-keymap",
+        prefix: "wayland-client-kit-seat-keymap",
         bytes: bytes
     )
 }

@@ -25,6 +25,6 @@ Feature-specific diagnostics may also appear on their feature stream.
 
 ## Errors And Policy
 
-SwiftWayland owns bounded stream buffering and typed overflow diagnostics.
+WaylandClientKit owns bounded stream buffering and typed overflow diagnostics.
 Frameworks own subscriber lifetime, backpressure policy, and deciding whether to
 drop, coalesce, or surface high-volume event traffic.

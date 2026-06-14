@@ -1,10 +1,26 @@
 import Foundation
+import Glibc
 import WaylandClient
 import WaylandExampleSupport
 
 @main
 enum PresentationFeedbackAnimation {
-    static func main() async throws {
+    static func main() async {
+        let exitCode: Int32
+        do {
+            try await run()
+            exitCode = EXIT_SUCCESS
+        } catch {
+            log("failure: \(error)")
+            exitCode = EXIT_FAILURE
+        }
+
+        guard exitCode == EXIT_SUCCESS else {
+            exit(exitCode)
+        }
+    }
+
+    private static func run() async throws {
         let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
 
         try await WaylandDisplay.withConnection(
@@ -20,14 +36,15 @@ enum PresentationFeedbackAnimation {
             let usePresentationFeedback = capabilities.presentationTime.isAvailable
             log("feature: presentation-feedback")
             log("capability: \(availabilityDescription(capabilities.presentationTime))")
+            log("pacing requested: \(options.pacing ?? "none")")
             log(
                 "presentation feedback "
                     + (usePresentationFeedback ? "available" : "unavailable")
             )
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
-                    title: "SwiftWayland Presentation Animation",
-                    appID: "swift-wayland-presentation-animation",
+                    title: "WaylandClientKit Presentation Animation",
+                    appID: "wayland-client-kit-presentation-animation",
                     initialWidth: 360,
                     initialHeight: 240,
                     closeRequestPolicy: .requestOnly

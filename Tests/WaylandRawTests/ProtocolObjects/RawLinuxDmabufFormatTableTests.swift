@@ -18,7 +18,7 @@ struct RawLinuxDmabufFormatTableTests {
             ),
         ]
         let bytes = formatTableBytes(entries)
-        var descriptor = try RawFileDescriptor.memfd(name: "swift-wayland-dmabuf-table")
+        var descriptor = try RawFileDescriptor.memfd(name: "wayland-client-kit-dmabuf-table")
         defer {
             descriptor.close()
         }
@@ -42,7 +42,7 @@ struct RawLinuxDmabufFormatTableTests {
     @Test
     func rejectsPartialEntries() throws {
         let bytes = [UInt8](repeating: 0xAA, count: RawLinuxDmabufFormatTable.entryByteCount - 1)
-        var descriptor = try RawFileDescriptor.memfd(name: "swift-wayland-dmabuf-table-bad")
+        var descriptor = try RawFileDescriptor.memfd(name: "wayland-client-kit-dmabuf-table-bad")
         defer {
             descriptor.close()
         }
@@ -71,7 +71,7 @@ struct RawLinuxDmabufFormatTableTests {
 
     @Test
     func formatTableSizeLargerThanFdReportsMalformedSizeWithoutSignal() throws {
-        var descriptor = try RawFileDescriptor.memfd(name: "swift-wayland-dmabuf-table-short")
+        var descriptor = try RawFileDescriptor.memfd(name: "wayland-client-kit-dmabuf-table-short")
         defer {
             descriptor.close()
         }

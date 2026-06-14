@@ -1,4 +1,4 @@
-#include "swift-wayland-shims.h"
+#include "wayland-client-kit-shims.h"
 #include "generated/legacy-unstable/xdg-decoration/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/stable/xdg-shell/xdg-shell-client-protocol.h"
 #include <stddef.h>

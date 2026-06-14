@@ -31,6 +31,7 @@ public struct Window: Sendable, Hashable {
         try await display.showWindow(
             id,
             timeoutMilliseconds: timeoutMilliseconds,
+            submitConstraints: .default,
             metadata: .default,
             requestPresentationFeedback: false,
             damage: damage,
@@ -40,6 +41,7 @@ public struct Window: Sendable, Hashable {
 
     package func show(
         timeoutMilliseconds: Int32,
+        submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
         damage: SurfaceDamageRegion? = nil,
@@ -48,6 +50,7 @@ public struct Window: Sendable, Hashable {
         try await display.showWindow(
             id,
             timeoutMilliseconds: timeoutMilliseconds,
+            submitConstraints: submitConstraints,
             metadata: metadata,
             requestPresentationFeedback: requestPresentationFeedback,
             damage: damage,
@@ -67,6 +70,7 @@ public struct Window: Sendable, Hashable {
     ) async throws {
         try await display.redraw(
             id,
+            submitConstraints: .default,
             metadata: .default,
             requestPresentationFeedback: false,
             damage: damage,
@@ -75,6 +79,7 @@ public struct Window: Sendable, Hashable {
     }
 
     package func redraw(
+        submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
         damage: SurfaceDamageRegion? = nil,
@@ -82,6 +87,7 @@ public struct Window: Sendable, Hashable {
     ) async throws {
         try await display.redraw(
             id,
+            submitConstraints: submitConstraints,
             metadata: metadata,
             requestPresentationFeedback: requestPresentationFeedback,
             damage: damage,
@@ -114,6 +120,17 @@ public struct Window: Sendable, Hashable {
             on: id,
             submitConstraints: submitConstraints,
             metadata: metadata, requestPresentationFeedback: requestPresentationFeedback
+        )
+    }
+
+    package func importGraphicsPreviewSynchronizationTimeline(
+        _ fileDescriptor: inout RawDrmSyncobjTimelineFD,
+        identity: SurfaceSyncTimelineIdentity
+    ) async throws {
+        try await display.importGraphicsPreviewSynchronizationTimeline(
+            &fileDescriptor,
+            identity: identity,
+            for: id
         )
     }
 

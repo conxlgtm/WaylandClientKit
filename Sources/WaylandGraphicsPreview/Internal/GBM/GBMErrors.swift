@@ -1,3 +1,5 @@
+import Glibc
+
 package enum GBMAllocationError: Error, Equatable, Sendable, CustomStringConvertible {
     case invalidRenderNodeFileDescriptor(Int32)
     case invalidDeviceIDByteCount(expected: Int, actual: Int)
@@ -22,6 +24,10 @@ package enum GBMAllocationError: Error, Equatable, Sendable, CustomStringConvert
     case surfaceDestroyed
     case surfaceFrontBufferLockFailed(errno: Int32)
     case exportFailed(errno: Int32)
+    case syncobjCreationFailed(errno: Int32)
+    case syncobjFileDescriptorExportFailed(errno: Int32)
+    case syncobjTimelineSignalFailed(point: UInt64, errno: Int32)
+    case syncobjTimelineWaitFailed(point: UInt64, errno: Int32)
     case invalidPlaneIndex(Int)
     case planeFileDescriptorAlreadyTaken(Int)
 
@@ -55,10 +61,30 @@ package enum GBMAllocationError: Error, Equatable, Sendable, CustomStringConvert
             "GBM surface front-buffer lock failed with errno \(errorNumber)"
         case .exportFailed(let errorNumber):
             "GBM dmabuf export failed with errno \(errorNumber)"
+        case .syncobjCreationFailed(let errorNumber):
+            "DRM syncobj timeline creation failed with errno \(errorNumber)"
+        case .syncobjFileDescriptorExportFailed(let errorNumber):
+            "DRM syncobj timeline fd export failed with errno \(errorNumber)"
+        case .syncobjTimelineSignalFailed(let point, let errorNumber):
+            "DRM syncobj timeline signal for point \(point) failed with errno \(errorNumber)"
+        case .syncobjTimelineWaitFailed(let point, let errorNumber):
+            "DRM syncobj timeline wait for point \(point) failed with errno \(errorNumber)"
         case .invalidPlaneIndex(let index):
             "invalid GBM dmabuf plane index \(index)"
         case .planeFileDescriptorAlreadyTaken(let index):
             "GBM dmabuf plane file descriptor was already taken at index \(index)"
         }
+    }
+}
+
+extension GBMAllocationError {
+    package var isSyncobjTimelineWaitTimeout: Bool {
+        guard case .syncobjTimelineWaitFailed(_, let errorNumber) = self else {
+            return false
+        }
+
+        return errorNumber == ETIME
+            || errorNumber == ETIMEDOUT
+            || errorNumber == EAGAIN
     }
 }

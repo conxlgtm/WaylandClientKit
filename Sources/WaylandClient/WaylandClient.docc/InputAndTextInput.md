@@ -15,7 +15,7 @@ Requests made before enable or after a disabled/inactive transition throw a
 typed ``TextInputError`` and may publish a ``TextInputDiagnostic``.
 
 Commit enabled request state before disabling the session. ``TextInputSession/disable()``
-finalizes the disable request in SwiftWayland, so callers should not call
+finalizes the disable request in WaylandClientKit, so callers should not call
 ``TextInputSession/commit()`` after disable:
 
 ```swift

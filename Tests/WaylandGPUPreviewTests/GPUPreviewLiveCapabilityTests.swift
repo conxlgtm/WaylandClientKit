@@ -8,7 +8,7 @@ import WaylandGraphicsPreview
     "GPU preview live capability",
     .enabled(
         if: GPUPreviewLiveEnvironment.isEnabled,
-        "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS=1"
+        "Set WAYLAND_DISPLAY and WAYLAND_CLIENT_KIT_ENABLE_GPU_PREVIEW_TESTS=1"
     ),
     .timeLimit(.minutes(1)),
     .serialized
@@ -234,8 +234,8 @@ struct GPUPreviewLiveCapabilityTests {
 
 private func graphicsPreviewTestWindowConfiguration() throws -> WindowConfiguration {
     try WindowConfiguration(
-        title: "SwiftWayland Graphics Preview Test",
-        appID: "swift-wayland-graphics-preview-test",
+        title: "WaylandClientKit Graphics Preview Test",
+        appID: "wayland-client-kit-graphics-preview-test",
         initialWidth: 32,
         initialHeight: 32
     )
@@ -265,7 +265,7 @@ private func closeBackingForTesting(_ backing: WaylandGraphicsWindowBacking) asy
 
 private enum GPUPreviewLiveEnvironment {
     static var isEnabled: Bool {
-        environmentValue("SWIFT_WAYLAND_ENABLE_GPU_PREVIEW_TESTS") == "1"
+        environmentValue("WAYLAND_CLIENT_KIT_ENABLE_GPU_PREVIEW_TESTS") == "1"
             && environmentValue("WAYLAND_DISPLAY") != nil
     }
 

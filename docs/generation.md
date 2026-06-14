@@ -18,7 +18,7 @@ Run `swift run swl protocols list` to print the tracked inventory.
 
 Do not edit generated files directly. Change the vendored XML or protocol manifest metadata, regenerate, and review the generated diff.
 Tool ownership is described in [Tooling Ownership](tooling.md). New protocol
-checks should be implemented in `SwiftWaylandToolSupport` and exposed through
+checks should be implemented in `WaylandClientKitToolSupport` and exposed through
 `swl`.
 
 ## Generated Outputs
@@ -38,7 +38,7 @@ and `generatedCodePath` in `protocols/manifest.json`.
 
 These files are not generated:
 
-- `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
+- `Sources/CWaylandProtocols/include/wayland-client-kit-shims.h`
 - `Sources/CWaylandProtocols/shims/*.c`
 
 ## Tools
@@ -124,7 +124,7 @@ Writes:
 
 Does not write:
 
-- `Sources/CWaylandProtocols/include/swift-wayland-shims.h`
+- `Sources/CWaylandProtocols/include/wayland-client-kit-shims.h`
 - `Sources/CWaylandProtocols/shims/`
 
 ### `swift run swl protocols verify-generated`

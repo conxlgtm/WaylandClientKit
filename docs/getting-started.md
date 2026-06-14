@@ -1,7 +1,7 @@
 # Getting Started
 
 This path builds one tiny client and points you at the next examples to read.
-SwiftWayland is a Wayland platform substrate. It gives Swift code a typed client
+WaylandClientKit is a Wayland platform substrate. It gives Swift code a typed client
 surface, but it does not provide widgets, layout, styling, accessibility
 semantics, a scene graph, or a renderer.
 
@@ -22,9 +22,9 @@ swift run swl tools toolchain-smoke
 swift run swl bootstrap check
 ```
 
-SwiftWayland currently requires Swift 6.3.2 or newer.
+WaylandClientKit currently requires Swift 6.3.2 or newer.
 
-## 2. Build SwiftWayland
+## 2. Build WaylandClientKit
 
 ```bash
 swift build --disable-index-store
@@ -41,7 +41,7 @@ swift run swl ci check
 Under a Wayland session:
 
 ```bash
-swift run swift-wayland-smoke
+swift run wayland-client-kit-smoke
 ```
 
 For the broader live smoke path:
@@ -58,7 +58,7 @@ swift run swl smoke headless -- swl smoke integration
 
 ## 4. Create A Tiny Client
 
-Create a new Swift executable package that depends on SwiftWayland, or add this
+Create a new Swift executable package that depends on WaylandClientKit, or add this
 shape to an existing package target:
 
 ```swift
@@ -115,9 +115,9 @@ constraint lifecycle events. Use `display.events` for display/window/output
 lifecycle, `display.dataTransferEvents` for clipboard and drag lifecycles, and
 `display.diagnostics` for nonfatal diagnostics such as event overflow.
 
-Frameworks built above SwiftWayland should decide routing, focus model,
+Frameworks built above WaylandClientKit should decide routing, focus model,
 shortcut policy, widget semantics, and accessibility semantics themselves.
-SwiftWayland preserves Wayland identities and typed events so that higher layer
+WaylandClientKit preserves Wayland identities and typed events so that higher layer
 can make those decisions.
 
 ## 6. Close Cleanly
@@ -129,7 +129,7 @@ runtime facts, not as proof that the client has become unusable.
 
 ## Next Examples
 
-- [SwiftWaylandDemo](../Examples/SwiftWaylandDemo/main.swift) for a simple
+- [WaylandClientKitDemo](../Examples/WaylandClientKitDemo/main.swift) for a simple
   drawing and input loop.
 - [FrameworkHostSmoke](../Examples/FrameworkHostSmoke/main.swift) for a small
   framework-host style loop above `WaylandClient`.

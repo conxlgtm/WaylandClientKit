@@ -32,7 +32,7 @@ struct DataTransferDomainTypesTests {
     @Test(
         "Valid MIME types preserve their exact string",
         arguments: [
-            "application/x-swiftwayland-test",
+            "application/x-waylandclientkit-test",
             "text/plain;charset=utf-8",
             "image/png",
             "text/uri-list",
@@ -47,11 +47,11 @@ struct DataTransferDomainTypesTests {
 
     @Test
     func mimeTypePreservesExactValidOfferedStringAndConstants() throws {
-        let mimeType = try MIMEType("application/x-swiftwayland-test")
+        let mimeType = try MIMEType("application/x-waylandclientkit-test")
         let parameterized = try MIMEType("text/plain;charset=utf-8")
 
-        #expect(mimeType.rawValue == "application/x-swiftwayland-test")
-        #expect(mimeType.description == "application/x-swiftwayland-test")
+        #expect(mimeType.rawValue == "application/x-waylandclientkit-test")
+        #expect(mimeType.description == "application/x-waylandclientkit-test")
         #expect(parameterized.rawValue == "text/plain;charset=utf-8")
         #expect(MIMEType.plainText.rawValue == "text/plain")
         #expect(MIMEType.plainTextUTF8.rawValue == "text/plain;charset=utf-8")

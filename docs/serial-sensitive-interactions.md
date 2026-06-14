@@ -34,7 +34,7 @@ try await window.requestInteractiveResize(
 )
 ```
 
-`WindowResizeEdge` is the protocol request value. SwiftWayland does not decide
+`WindowResizeEdge` is the protocol request value. WaylandClientKit does not decide
 which pixels count as resize chrome, which cursor to show, or which windows are
 eligible for client-side resizing.
 
@@ -83,7 +83,7 @@ let source = try await window.startDrag(
 ```
 
 The framework owns gesture recognition, MIME selection, drag icon policy, and
-source cancellation. SwiftWayland exposes the serial-sensitive request and the
+source cancellation. WaylandClientKit exposes the serial-sensitive request and the
 typed drag-source lifecycle events.
 
 ## XDG Activation
@@ -103,7 +103,7 @@ try await window.activate(using: token)
 ```
 
 The token is opaque and compositor policy may still decline or ignore the later
-activate request. SwiftWayland preserves the serial, surface, and app ID facts;
+activate request. WaylandClientKit preserves the serial, surface, and app ID facts;
 the framework owns launch, command routing, and user-facing focus policy.
 
 ## Multi-Window Routing

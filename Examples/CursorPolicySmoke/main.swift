@@ -39,8 +39,8 @@ enum CursorPolicySmoke {
 
         let window = try await display.createTopLevelWindow(
             configuration: try WindowConfiguration(
-                title: "SwiftWayland Cursor Policy Smoke",
-                appID: "swift-wayland-cursor-policy-smoke",
+                title: "WaylandClientKit Cursor Policy Smoke",
+                appID: "wayland-client-kit-cursor-policy-smoke",
                 initialWidth: 360,
                 initialHeight: 220,
                 closeRequestPolicy: .requestOnly

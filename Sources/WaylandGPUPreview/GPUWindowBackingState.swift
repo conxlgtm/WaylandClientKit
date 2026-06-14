@@ -178,6 +178,9 @@ package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
     case gbmAllocationFailed
     case eglUnavailable
     case explicitSyncRequiredButUnavailable
+    case explicitSyncSetupFailed
+    case explicitSyncSubmissionFailed
+    case explicitSyncReleaseFailed
     case fifoRequiredButUnavailable
     case commitTimingRequiredButUnavailable
     case metadataRequiredButUnavailable(SurfaceCommitMetadataError)
@@ -206,6 +209,12 @@ package enum GPUFallbackReason: Equatable, Sendable, CustomStringConvertible {
             "EGL is unavailable"
         case .explicitSyncRequiredButUnavailable:
             "explicit synchronization was required but unavailable"
+        case .explicitSyncSetupFailed:
+            "explicit synchronization setup failed"
+        case .explicitSyncSubmissionFailed:
+            "explicit synchronization submission failed"
+        case .explicitSyncReleaseFailed:
+            "explicit synchronization release wait failed"
         case .fifoRequiredButUnavailable:
             "FIFO pacing was required but unavailable"
         case .commitTimingRequiredButUnavailable:
@@ -233,6 +242,9 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
     case gbmAllocationFailed
     case eglUnavailable
     case explicitSyncRequiredButUnavailable
+    case explicitSyncSetupFailed
+    case explicitSyncSubmissionFailed
+    case explicitSyncReleaseFailed
     case fifoRequiredButUnavailable
     case commitTimingRequiredButUnavailable
     case commitTimingRejected
@@ -313,6 +325,12 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
         switch fallbackReason {
         case .explicitSyncRequiredButUnavailable:
             .explicitSyncRequiredButUnavailable
+        case .explicitSyncSetupFailed:
+            .explicitSyncSetupFailed
+        case .explicitSyncSubmissionFailed:
+            .explicitSyncSubmissionFailed
+        case .explicitSyncReleaseFailed:
+            .explicitSyncReleaseFailed
         case .fifoRequiredButUnavailable:
             .fifoRequiredButUnavailable
         case .commitTimingRequiredButUnavailable:
@@ -359,6 +377,12 @@ package enum GPUBackingFailure: Equatable, Sendable, CustomStringConvertible {
             "EGL is unavailable"
         case .explicitSyncRequiredButUnavailable:
             "explicit synchronization was required but unavailable"
+        case .explicitSyncSetupFailed:
+            "explicit synchronization setup failed"
+        case .explicitSyncSubmissionFailed:
+            "explicit synchronization submission failed"
+        case .explicitSyncReleaseFailed:
+            "explicit synchronization release wait failed"
         case .fifoRequiredButUnavailable:
             "FIFO pacing was required but unavailable"
         case .commitTimingRequiredButUnavailable:

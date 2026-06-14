@@ -28,8 +28,8 @@ enum SystemBellSmoke {
 
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
-                    title: "SwiftWayland System Bell Smoke",
-                    appID: "swift-wayland-system-bell-smoke",
+                    title: "WaylandClientKit System Bell Smoke",
+                    appID: "wayland-client-kit-system-bell-smoke",
                     initialWidth: 280,
                     initialHeight: 180,
                     closeRequestPolicy: .requestOnly

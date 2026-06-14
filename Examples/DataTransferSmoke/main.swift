@@ -31,8 +31,8 @@ enum DataTransferSmoke {
 
             let window = try await display.createTopLevelWindow(
                 configuration: try WindowConfiguration(
-                    title: "SwiftWayland Data Transfer Smoke",
-                    appID: "swift-wayland-data-transfer-smoke",
+                    title: "WaylandClientKit Data Transfer Smoke",
+                    appID: "wayland-client-kit-data-transfer-smoke",
                     initialWidth: 360,
                     initialHeight: 220,
                     closeRequestPolicy: .requestOnly
@@ -380,7 +380,7 @@ enum DataTransferSmoke {
         label: String,
         serial: InputSerial
     ) -> [DataTransferSourcePayload] {
-        let text = "SwiftWayland data-transfer smoke \(label) \(serial)\n"
+        let text = "WaylandClientKit data-transfer smoke \(label) \(serial)\n"
         let data = Data(text.utf8)
         return [
             DataTransferSourcePayload(mimeType: .plainTextUTF8, data: data),

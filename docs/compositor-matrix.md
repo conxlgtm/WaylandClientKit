@@ -1,6 +1,6 @@
 # Compositor Matrix
 
-SwiftWayland checkpoint notes should record compositor evidence separately from
+WaylandClientKit checkpoint notes should record compositor evidence separately from
 unit tests. Headless Weston is the repeatable path, but it is not enough by
 itself to claim desktop compatibility.
 
@@ -27,7 +27,7 @@ swift run swl smoke headless -- swl smoke integration
 swift run swl smoke headless -- swl smoke gpu-preview
 ```
 
-`swift run swl smoke gpu-preview` prints a `SwiftWayland GPU Preview Runtime Path`
+`swift run swl smoke gpu-preview` prints a `WaylandClientKit GPU Preview Runtime Path`
 block. Paste that block into the Graphics Preview Evidence table before
 summarizing the result in the main matrix.
 
@@ -38,6 +38,8 @@ swift run ClientSideResizeChrome
 swift run SerialActionsProbe
 swift run TwoWindowFrameworkHost -- --auto-close --print-summary
 swift run GPUPreviewSmokeClient
+swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
+swift run GraphicsPreviewManagedGPUClear -- --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
 ```
 
 Smoke examples should print matrix-friendly lines such as `feature`,
@@ -101,7 +103,7 @@ but later manual runs covered serial resize in `GraphicsPreviewManagedGPUClear`
 and drag-source serials in `DataTransferSmoke`.
 
 `swift run DataTransferSmoke` passed the manual drag-source/drop path after
-SwiftWayland was fixed to tolerate empty data-source MIME callbacks from KDE.
+WaylandClientKit was fixed to tolerate empty data-source MIME callbacks from KDE.
 The rerun logged `operation: start-drag-source pass`, `drag source started`,
 target `mime=none`, negotiated `text/plain;charset=utf-8`, `action=copy`, 165
 drag-motion events, `drag dropped`, a 51-byte text/plain;charset=utf-8 read,
@@ -116,7 +118,7 @@ rerun reported `requested backing: managedGPU`, `actual backing: managedGPU`,
 
 ## Session Management Protocol Watch
 
-SwiftWayland supports local framework-owned state through public restoration
+WaylandClientKit supports local framework-owned state through public restoration
 snapshots and `SessionStateSmoke`. Compositor session-management protocol API is
 deferred until protocol evidence is strong enough to keep the public boundary
 honest.
@@ -134,7 +136,7 @@ before exit, and closed with `remainingWindows=0`.
 ## Framework Host Evidence
 
 Use this table for framework-facing behavior that is not captured by generic
-smoke tests. Record whether the evidence came from a bounded SwiftWayland
+smoke tests. Record whether the evidence came from a bounded WaylandClientKit
 example, a manual example run, or an external framework harness.
 
 | Compositor | Client-side resize chrome | Serial-sensitive resize/move/menu/drag | Pointer capture | Text input | Interpreted keyboard fallback | Clipboard/private MIME behavior | Drag-source behavior | Popup lifecycle | Presentation feedback | Cursor theme behavior | Graphics preview software fallback | Fatal cleanup/shutdown |
@@ -180,12 +182,24 @@ resource setup and frame submission.
 | Weston headless | headless socket, Weston 15.0.0, 2026-06-09 | dmabuf unavailable, explicit sync unavailable, FIFO and presentation feedback advertised, content type and color metadata unavailable | unavailable(zwp_linux_dmabuf_v1) | fallback(dmabufUnavailable) | fallback(dmabufUnavailable) | fallback(dmabufUnavailable) | unavailable(wp_linux_drm_syncobj_manager_v1) | advertised | advertised | mixed unavailable/advertised | advertised | success show | software fallback | software fallback(dmabufUnavailable) | failure none, fallback dmabufUnavailable, active GPU not expected |
 | GNOME / Mutter | wayland-0, Fedora GNOME Wayland VM, 2026-06-11 | dmabuf v3, presentation v2, FIFO v1, commit timing v1, text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1, idle inhibit v1, system bell v1, xdg activation v1, color management v2, color representation v1, linux-drm-syncobj unavailable | advertised v3 | fallback(surfaceFeedbackUnavailable) | fallback(surfaceFeedbackUnavailable) | fallback(surfaceFeedbackUnavailable) | unavailable(wp_linux_drm_syncobj_manager_v1) | advertised | advertised | mixed unavailable/advertised | advertised v1, runtime advertised | success show, 96x96 | not observed, software fallback | software fallback(surfaceFeedbackUnavailable) | failure none, fallback surfaceFeedbackUnavailable, active GPU not proven |
 | KDE / KWin | wayland-0, KDE / plasma, 2026-06-09 | dmabuf v5, linux-drm-syncobj v1, FIFO v1, presentation v2, content type, alpha, tearing, color representation, color management advertised, commit timing unavailable | advertised v5, runtime active | usable | active | configured | advertised v1, runtime advertised | advertised | unavailable | advertised | advertised v1, runtime advertised | success show, 192x192 | managed by GPU buffer lifecycle | gpu active / managedGPU | failure none, fallback none, active GPU proven |
+| KDE / KWin | wayland-0, KDE / plasma, 2026-06-13 | dmabuf v5, linux-drm-syncobj v1, FIFO v1, presentation v2, content type, alpha, tearing, color representation, color management advertised, commit timing unavailable | advertised v5, runtime active | usable | active | configured | advertised v1, active proof pending refreshed runtime output | preferFIFO active | preferCommitTiming fallback(commitTimingUnavailable) | content type active and tearing control active for prefer metadata game/async; alpha/color advertised | advertised v1, runtime advertised | FIFO, commit-timing fallback, and metadata runs success show; explicit sync proof pending refresh | managed by GPU buffer lifecycle | gpu active / managedGPU | failure none except explicit sync pending refresh; fallback commitTimingUnavailable when requested |
 | Sway / wlroots | wayland-1, nested Sway/wlroots under KDE/Plasma, 2026-06-09 | dmabuf v4, linux-drm-syncobj v1, presentation v2, content type, alpha, tearing advertised, FIFO unavailable, color representation unavailable, color management unavailable | advertised v4, runtime active | usable | active | configured | advertised v1, runtime advertised | unavailable | unavailable | mixed advertised/unavailable | advertised v1, runtime advertised | success show, 96x96 | managed by GPU buffer lifecycle | gpu active / managedGPU | failure none, fallback none, active GPU proven in nested session |
+
+KDE/KWin graphics preview addendum on 2026-06-13:
+
+- Explicit-sync active evidence needs a refreshed run after the latest
+  synchronization lifetime changes. Keep the row at advertised/pending until
+  `GPUPreviewSmokeClient` reports explicit sync `active` on a submitted frame.
+- `swift run GPUPreviewSmokeClient -- --pacing commit-timing` produced
+  `commit timing: fallback(commitTimingUnavailable)` with active GPU backing.
+- `swift run GraphicsPreviewManagedGPUClear -- --pacing fifo --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary`
+  produced a runtime path with FIFO, content type, and tearing control active,
+  with no fallback or failure.
 
 Record graphics facts in this form:
 
 ```text
-SwiftWayland GPU Preview Runtime Path
+WaylandClientKit GPU Preview Runtime Path
 display: <WAYLAND_DISPLAY>
 compositor: <name/version or unknown>
 window creation: <success/failure>
@@ -199,11 +213,16 @@ egl display/context: <status>
 egl clear/render: <status>
 dmabuf import: <status>
 buffer lifecycle: <status>
+synchronization policy requested: <implicitOnly/preferExplicit/requireExplicit>
 explicit sync: <advertised vN/unavailable>, runtime <status>
+pacing requested: <none/preferFIFO/preferCommitTiming>
 fifo: <status>
 commit timing: <status>
+metadata policy requested: <none/preferAvailable>
+content type requested: <not requested/none/photo/video/game>
 metadata content type: <status>
 metadata alpha modifier: <status>
+presentation hint requested: <not requested/vsync/async>
 metadata tearing control: <status>
 metadata color representation: <status>
 metadata color management: <status>
@@ -219,6 +238,9 @@ failure: <error/none>
 The `Globals` column should include exact interface names for missing optional
 protocols. If a protocol is advertised but object creation or request use
 fails, record that as a failure for that protocol rather than as a skip.
+Only record explicit sync, FIFO, commit timing, or metadata as `active` when
+the smoke output shows the requested policy/metadata and a submitted frame with
+an active runtime status. Protocol advertisement alone remains `advertised`.
 
 ## Protocols To Record
 
@@ -283,7 +305,7 @@ live smoke and GPU-preview checks can prove configured or active GPU resources.
   human interaction path still needs proof.
 - `manual not run(<reason>)`: the manual path was not exercised in this pass.
 - `manual pass(<details>)`: a human interaction path ran and stayed healthy.
-- `manual caveat(<details>)`: SwiftWayland made the request from live input and
+- `manual caveat(<details>)`: WaylandClientKit made the request from live input and
   stayed healthy, but visible compositor behavior was absent or compositor-specific.
 - `manual fail(<details>)`: the human interaction path crashed, disconnected, used
   stale input, or produced an untyped failure.

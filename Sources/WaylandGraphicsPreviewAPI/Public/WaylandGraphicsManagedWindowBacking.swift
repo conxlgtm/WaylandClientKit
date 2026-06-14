@@ -1,5 +1,6 @@
 import WaylandClient
 import WaylandGPUPreview
+import WaylandRaw
 
 package protocol WaylandGraphicsManagedWindow: Sendable {
     var id: WindowID { get }
@@ -10,8 +11,10 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
         timeoutMilliseconds: Int32
     ) async throws -> SurfaceGeometry
 
+    // swiftlint:disable:next function_parameter_count
     func show(
         timeoutMilliseconds: Int32,
+        submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
         damage: SurfaceDamageRegion?,
@@ -19,10 +22,16 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
     ) async throws
 
     func redraw(
+        submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         requestPresentationFeedback: Bool,
         damage: SurfaceDamageRegion?,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws
+
+    func importGraphicsPreviewSynchronizationTimeline(
+        _ fileDescriptor: inout RawDrmSyncobjTimelineFD,
+        identity: SurfaceSyncTimelineIdentity
     ) async throws
 
     func close() async
@@ -34,6 +43,14 @@ extension WaylandGraphicsManagedWindow {
     ) async throws -> SurfaceGeometry {
         try await geometry
     }
+
+    package func importGraphicsPreviewSynchronizationTimeline(
+        _ fileDescriptor: inout RawDrmSyncobjTimelineFD,
+        identity _: SurfaceSyncTimelineIdentity
+    ) async throws {
+        fileDescriptor.close()
+        throw SurfaceSubmitConstraintError.explicitSyncUnavailable
+    }
 }
 
 extension Window: WaylandGraphicsManagedWindow {}
@@ -42,8 +59,8 @@ package struct WaylandGraphicsManagedGPUClearFrameSubmission: Sendable {
     let color: GPUClearColor
     let metadata: SurfaceCommitMetadata
     let geometry: SurfaceGeometry
-    let synchronization: GPUBufferSubmissionSynchronization
-    let pacing: SurfacePacingConstraint
+    let synchronizationPolicy: GPUSynchronizationPolicy
+    let pacingPolicy: GPUFramePacingPolicy
     let requestPresentationFeedback: Bool
 }
 
@@ -66,8 +83,8 @@ extension ManagedGPUPreviewBacking: WaylandGraphicsManagedGPUBacking {
             color: submission.color,
             metadata: submission.metadata,
             geometry: submission.geometry,
-            synchronization: submission.synchronization,
-            pacing: submission.pacing,
+            synchronizationPolicy: submission.synchronizationPolicy,
+            pacingPolicy: submission.pacingPolicy,
             requestPresentationFeedback: submission.requestPresentationFeedback
         )
     }

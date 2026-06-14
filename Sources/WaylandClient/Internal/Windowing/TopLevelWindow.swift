@@ -389,6 +389,7 @@ package final class TopLevelWindow {
     }
 
     private func drawAndPresent(
+        submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
@@ -401,6 +402,7 @@ package final class TopLevelWindow {
         )
         return try interpretPresentationEffects(
             effects,
+            submitConstraints: submitConstraints,
             metadata: metadata,
             damage: damage,
             presentationFeedback: presentationFeedback,
@@ -496,8 +498,10 @@ package final class TopLevelWindow {
         }
     }
 
+    // swiftlint:disable:next function_parameter_count
     private func performSoftwarePresent(
         _ request: PresentationRequest,
+        submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         damage: SurfaceDamageRegion?,
         presentationFeedback: WindowPresentationFeedbackCommitRequest?,
@@ -533,6 +537,7 @@ package final class TopLevelWindow {
                 context: WindowSoftwarePresentationContext(
                     request: request,
                     geometry: geometry,
+                    submitConstraints: submitConstraints,
                     metadata: metadata,
                     damage: damage,
                     presentationFeedback: presentationFeedback
@@ -1051,6 +1056,7 @@ extension TopLevelWindow {
 
     private func interpretPresentationEffects(
         _ effects: [WindowEffect],
+        submitConstraints: SurfaceSubmitConstraints,
         metadata: SurfaceCommitMetadata,
         damage: SurfaceDamageRegion?,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
@@ -1063,6 +1069,7 @@ extension TopLevelWindow {
             case .performSoftwarePresent(let request):
                 outcome = try performSoftwarePresent(
                     request,
+                    submitConstraints: submitConstraints,
                     metadata: metadata,
                     damage: damage,
                     presentationFeedback: presentationFeedback,
@@ -1666,6 +1673,7 @@ extension TopLevelWindow {
 
     package func showOnOwnerThread(
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
+        submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
@@ -1678,6 +1686,7 @@ extension TopLevelWindow {
         }
 
         _ = try drawAndPresent(
+            submitConstraints: submitConstraints,
             metadata: metadata,
             damage: damage,
             presentationFeedback: presentationFeedback,
@@ -1709,6 +1718,7 @@ extension TopLevelWindow {
     }
 
     package func redrawOnOwnerThread(
+        submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
@@ -1720,6 +1730,7 @@ extension TopLevelWindow {
 
         _ = try consumeLatestConfigureIfAvailable()
         _ = try drawAndPresent(
+            submitConstraints: submitConstraints,
             metadata: metadata,
             damage: damage,
             presentationFeedback: presentationFeedback,
@@ -1764,6 +1775,7 @@ extension TopLevelWindow {
     )
     package func show(
         timeoutMilliseconds: Int32 = defaultConfigureTimeoutMS,
+        submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
@@ -1771,6 +1783,7 @@ extension TopLevelWindow {
     ) throws {
         try showOnOwnerThread(
             timeoutMilliseconds: timeoutMilliseconds,
+            submitConstraints: submitConstraints,
             metadata: metadata,
             damage: damage,
             presentationFeedback: presentationFeedback,
@@ -1784,12 +1797,14 @@ extension TopLevelWindow {
         message: "Redraw windows from the owner-thread Wayland loop."
     )
     package func redraw(
+        submitConstraints: SurfaceSubmitConstraints = .default,
         metadata: SurfaceCommitMetadata = .default,
         damage: SurfaceDamageRegion? = nil,
         presentationFeedback: WindowPresentationFeedbackCommitRequest? = nil,
         _ draw: (borrowing SoftwareFrame) throws -> Void
     ) throws {
         try redrawOnOwnerThread(
+            submitConstraints: submitConstraints,
             metadata: metadata,
             damage: damage,
             presentationFeedback: presentationFeedback,

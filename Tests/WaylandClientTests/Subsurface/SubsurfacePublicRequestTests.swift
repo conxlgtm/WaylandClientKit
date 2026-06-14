@@ -9,7 +9,7 @@
     @Suite(
         .enabled(
             if: SubsurfaceRequestTestEnvironment.isEnabled,
-            "Set WAYLAND_DISPLAY and SWIFT_WAYLAND_ENABLE_SUBSURFACE_REQUEST_TESTS=1"
+            "Set WAYLAND_DISPLAY and WAYLAND_CLIENT_KIT_ENABLE_SUBSURFACE_REQUEST_TESTS=1"
         ),
         .timeLimit(.minutes(1)),
         .tags(.linux, .integration, .liveWayland, .publicAPI),
@@ -202,7 +202,7 @@
             try await withSubsurfaceConnection { display, window in
                 let otherWindow = try await createTestWindow(
                     in: display,
-                    title: "SwiftWayland Subsurface Other Parent"
+                    title: "WaylandClientKit Subsurface Other Parent"
                 )
                 let subsurface = try await window.createSubsurface(
                     configuration: subsurfaceConfiguration()
@@ -262,7 +262,7 @@
         ) { display in
             let window = try await createTestWindow(
                 in: display,
-                title: "SwiftWayland Subsurface Request Test"
+                title: "WaylandClientKit Subsurface Request Test"
             )
 
             try await body(display, window)
@@ -276,7 +276,7 @@
         try await display.createTopLevelWindow(
             configuration: try WindowConfiguration(
                 title: title,
-                appID: "swift-wayland-subsurface-request-test",
+                appID: "wayland-client-kit-subsurface-request-test",
                 initialWidth: 160,
                 initialHeight: 120,
                 closeRequestPolicy: .requestOnly,
@@ -385,7 +385,7 @@
             let environment = ProcessInfo.processInfo.environment
 
             return environment["WAYLAND_DISPLAY"]?.isEmpty == false
-                && environment["SWIFT_WAYLAND_ENABLE_SUBSURFACE_REQUEST_TESTS"] == "1"
+                && environment["WAYLAND_CLIENT_KIT_ENABLE_SUBSURFACE_REQUEST_TESTS"] == "1"
         }
     }
 

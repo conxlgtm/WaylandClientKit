@@ -9,6 +9,7 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
     case dmabufImport(GPUDmabufBufferImportError)
     case runtime(RuntimeError)
     case presentation(GPUWindowPresenterError)
+    case committedFrame(GPUBackingFailure)
     case closed
 
     package var failure: GPUBackingFailure {
@@ -25,8 +26,19 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             .commitFailed
         case .presentation(let error):
             Self.backingFailure(for: error)
+        case .committedFrame(let failure):
+            failure
         case .closed:
             .commitFailed
+        }
+    }
+
+    package var committedFrameWasPresented: Bool {
+        switch self {
+        case .committedFrame:
+            true
+        case .setup, .render, .allocation, .dmabufImport, .runtime, .presentation, .closed:
+            false
         }
     }
 
@@ -48,6 +60,12 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             .eglUnavailable
         case .explicitSyncRequiredButUnavailable:
             .explicitSyncRequiredButUnavailable
+        case .explicitSyncSetupFailed:
+            .explicitSyncSetupFailed
+        case .explicitSyncSubmissionFailed:
+            .explicitSyncSubmissionFailed
+        case .explicitSyncReleaseFailed:
+            .explicitSyncReleaseFailed
         case .fifoRequiredButUnavailable:
             .fifoRequiredButUnavailable
         case .commitTimingRequiredButUnavailable:
@@ -79,6 +97,8 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             error.description
         case .presentation(let error):
             error.description
+        case .committedFrame(let failure):
+            "managed GPU frame committed before \(failure.description)"
         case .closed:
             "managed GPU backing is closed"
         }
@@ -103,6 +123,12 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             .invalidPlaneIndex,
             .planeFileDescriptorAlreadyTaken:
             .gbmAllocationFailed
+        case .syncobjCreationFailed, .syncobjFileDescriptorExportFailed:
+            .explicitSyncSetupFailed
+        case .syncobjTimelineSignalFailed:
+            .explicitSyncSubmissionFailed
+        case .syncobjTimelineWaitFailed:
+            .explicitSyncReleaseFailed
         }
     }
 
@@ -112,6 +138,8 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
             .submitConstraintRejected
         case .metadata(let metadataError):
             .metadataRequiredButUnavailable(metadataError)
+        case .committedFrame(let failure):
+            failure
         case .missingBuffer, .state, .releaseFailure:
             .gbmAllocationFailed
         case .window:
@@ -120,31 +148,26 @@ package enum ManagedGPUPreviewBackingError: Error, CustomStringConvertible {
     }
 }
 
-private struct ManagedGPUPreviewPresentationOptions {
-    let metadata: SurfaceCommitMetadata
-    let synchronization: GPUBufferSubmissionSynchronization
-    let pacing: SurfacePacingConstraint
-    let requestPresentationFeedback: Bool
-}
-
-// swiftlint:disable:next type_body_length
 package final class ManagedGPUPreviewBacking {
-    private let window: Window
-    private let presenter = GPUWindowPresenter()
-    private var device: GBMDevice?
-    private var renderTarget: EGLGBMRenderTarget?
-    private var configuredGeometry: SurfaceGeometry?
-    private var capabilities: SurfaceCapabilitySnapshot?
-    private var runtimePath = GPURuntimePathSnapshot.empty
-    private var nextSlotRawValue = 0
-    private var isClosed = false
+    let window: Window
+    let presenter = GPUWindowPresenter()
+    var device: GBMDevice?
+    var renderTarget: EGLGBMRenderTarget?
+    var explicitSynchronization: ManagedGPUExplicitSynchronization?
+    var retainedExplicitSynchronizations: [RetainedExplicitSynchronization] = []
+    var configuredGeometry: SurfaceGeometry?
+    var capabilities: SurfaceCapabilitySnapshot?
+    var runtimePath = GPURuntimePathSnapshot.empty
+    var nextSlotRawValue = 0
+    var nextSyncTimelineRawValue: UInt64 = 1
+    var isClosed = false
 
     package init(window backingWindow: Window) {
         window = backingWindow
     }
 
     package var runtimePathSnapshot: GPURuntimePathSnapshot {
-        presenter.runtimePathSnapshot == .empty ? runtimePath : presenter.runtimePathSnapshot
+        runtimePath == .empty ? presenter.runtimePathSnapshot : runtimePath
     }
 
     package var surfaceCapabilities: SurfaceCapabilitySnapshot? {
@@ -154,6 +177,9 @@ package final class ManagedGPUPreviewBacking {
     package func close() {
         isClosed = true
         presenter.retireAll(reason: .windowClosed)
+        explicitSynchronization?.destroy()
+        explicitSynchronization = nil
+        destroyRetainedExplicitSynchronizations()
         renderTarget?.destroy()
         renderTarget = nil
         configuredGeometry = nil
@@ -220,266 +246,47 @@ package final class ManagedGPUPreviewBacking {
         color: GPUClearColor,
         metadata: SurfaceCommitMetadata,
         geometry: SurfaceGeometry,
-        synchronization: GPUBufferSubmissionSynchronization = .implicit,
-        pacing: SurfacePacingConstraint = .none,
+        synchronizationPolicy: GPUSynchronizationPolicy = .implicitOnly,
+        pacingPolicy: GPUFramePacingPolicy = .none,
         requestPresentationFeedback: Bool = false
     ) async throws(ManagedGPUPreviewBackingError) -> GPUWindowPresentedFrame {
-        do {
-            try await ensureConfigured(geometry: geometry)
-        } catch let error {
-            recordFailure(error)
-            throw error
-        }
-        guard let renderTarget, let capabilities else {
-            throw .closed
-        }
-
-        do {
-            try GPUBackingRequirements(
-                synchronization: synchronization,
-                pacing: pacing,
-                metadata: metadata
-            ).validate(capabilities: capabilities)
-        } catch {
-            let failure = GPUBackingFailure(error)
-            recordFailure(failure)
-            throw .setup(failure)
-        }
+        let context = try await prepareClearFrameSubmission(
+            metadata: metadata,
+            geometry: geometry,
+            synchronizationPolicy: synchronizationPolicy,
+            pacingPolicy: pacingPolicy,
+            requestPresentationFeedback: requestPresentationFeedback
+        )
+        try reapExplicitReleaseSignalsIfAvailable()
 
         let imported: (buffer: RawLinuxDmabufBuffer, lockedBuffer: GBMLockedSurfaceBuffer)
         do {
             imported = try await renderAndImportBuffer(
-                renderTarget: renderTarget,
+                renderTarget: context.renderTarget,
                 color: color
             )
         } catch let error {
             recordFailure(error)
             throw error
         }
-        runtimePath = .afterDmabufImportSetup(capabilities: capabilities)
+        runtimePath = .afterDmabufImportSetup(capabilities: context.capabilities)
         do {
             return try await presentImportedBuffer(
                 imported,
-                renderTarget: renderTarget,
-                options: ManagedGPUPreviewPresentationOptions(
-                    metadata: metadata,
-                    synchronization: synchronization,
-                    pacing: pacing,
-                    requestPresentationFeedback: requestPresentationFeedback
-                )
+                renderTarget: context.renderTarget,
+                options: context.options
             )
         } catch let error {
             recordFailure(error)
             throw error
         }
     }
+}
 
-    private func renderAndImportBuffer(
-        renderTarget: EGLGBMRenderTarget,
-        color: GPUClearColor
-    ) async throws(ManagedGPUPreviewBackingError) -> (
-        buffer: RawLinuxDmabufBuffer,
-        lockedBuffer: GBMLockedSurfaceBuffer
-    ) {
-        do {
-            _ = try renderTarget.drawClear(
-                red: color.red,
-                green: color.green,
-                blue: color.blue,
-                alpha: color.alpha
-            )
-            let lockedBuffer = try renderTarget.lockFrontBuffer()
-            let export = try lockedBuffer.exportDmabuf()
-            // swiftlint:disable closure_parameter_position
-            let importedBuffer = try await window.withGraphicsPreviewLinuxDmabuf {
-                linuxDmabuf, syncDisplay in
-                try GPUDmabufBufferImport.importBuffer(
-                    from: export,
-                    using: linuxDmabuf,
-                    timeoutMilliseconds: WaylandDisplay.defaultDiscoveryTimeoutMilliseconds,
-                    syncDisplay: syncDisplay
-                )
-            }
-            // swiftlint:enable closure_parameter_position
-
-            return (importedBuffer, lockedBuffer)
-        } catch let error as EGLRenderError {
-            throw .render(error)
-        } catch let error as GBMAllocationError {
-            throw .allocation(error)
-        } catch let error as GPUDmabufBufferImportError {
-            throw .dmabufImport(error)
-        } catch let error as RuntimeError {
-            throw .runtime(error)
-        } catch {
-            throw .setup(.commitFailed)
-        }
-    }
-
-    private func presentImportedBuffer(
-        _ imported: (buffer: RawLinuxDmabufBuffer, lockedBuffer: GBMLockedSurfaceBuffer),
-        renderTarget: EGLGBMRenderTarget,
-        options: ManagedGPUPreviewPresentationOptions
-    ) async throws(ManagedGPUPreviewBackingError) -> GPUWindowPresentedFrame {
-        do {
-            let slotID: GBMBufferPoolSlotID
-            let previewBuffer = ManagedGPUPreviewBuffer(
-                buffer: imported.buffer,
-                lockedBuffer: imported.lockedBuffer,
-                renderTarget: renderTarget
-            )
-            if let reusableSlotID = presenter.availableSlotIDs.first {
-                slotID = reusableSlotID
-                try presenter.replaceAvailableBuffer(previewBuffer, slotID: reusableSlotID)
-            } else {
-                slotID = try nextSlotID()
-                try presenter.installBuffer(previewBuffer, slotID: slotID)
-            }
-            return try await presenter.presentSlot(
-                slotID,
-                submit: { [window] buffer, submitConstraints, commitMetadata in
-                    try await window.presentGraphicsPreviewBuffer(
-                        buffer,
-                        submitConstraints: submitConstraints,
-                        metadata: commitMetadata,
-                        requestPresentationFeedback: options.requestPresentationFeedback
-                    )
-                },
-                synchronization: options.synchronization,
-                pacing: options.pacing,
-                metadata: options.metadata
-            )
-        } catch let error as GBMAllocationError {
-            throw .allocation(error)
-        } catch let error as GPUWindowPresenterError {
-            throw .presentation(error)
-        } catch let error as RuntimeError {
-            throw .runtime(error)
-        } catch {
-            throw .setup(.commitFailed)
-        }
-    }
-
-    package static func canReuseRenderTarget(
-        configuredGeometry: SurfaceGeometry?,
-        requestedGeometry: SurfaceGeometry
-    ) -> Bool {
-        configuredGeometry == requestedGeometry
-    }
-
-    private func prepareForGeometryReconfiguration() throws(ManagedGPUPreviewBackingError) {
-        do {
-            try presenter.retireAvailableBuffers()
-        } catch {
-            throw .presentation(error)
-        }
-        renderTarget = nil
-        configuredGeometry = nil
-        device = nil
-    }
-
-    private func surfaceFeedback(
-        from capabilities: SurfaceCapabilitySnapshot
-    ) throws(ManagedGPUPreviewBackingError) -> RawLinuxDmabufFeedbackSnapshot {
-        guard case .surfaceFeedback(_, let feedback) = capabilities.dmabuf else {
-            throw .setup(.surfaceFeedbackUnavailable)
-        }
-
-        return feedback.snapshot
-    }
-
-    private func selectFormat(
-        from feedback: RawLinuxDmabufFeedbackSnapshot
-    ) throws(ManagedGPUPreviewBackingError) -> GBMFormatModifierSelection {
-        do {
-            return try GBMFormatSelector.selectFormatModifier(
-                from: feedback,
-                policy: try GBMFormatSelectionPolicy(
-                    preferredFormats: [
-                        GBMDRMFormat.xrgb8888,
-                        GBMDRMFormat.argb8888,
-                    ]
-                )
-            )
-        } catch {
-            throw .setup(.noCompatibleFormat)
-        }
-    }
-
-    private func createDevice(
-        for selection: GBMFormatModifierSelection
-    ) throws(ManagedGPUPreviewBackingError) -> GBMDevice {
-        do {
-            return try GBMDevice(
-                adoptingRenderNodeFileDescriptor: DRMRenderNodeSelector.openRenderNode(
-                    for: selection.targetDevice
-                )
-            )
-        } catch {
-            throw .setup(ManagedGPUPreviewBackingError.backingFailure(for: error))
-        }
-    }
-
-    private func createRenderTarget(
-        device: GBMDevice,
-        formatModifier: RawLinuxDmabufFormatModifier,
-        geometry: SurfaceGeometry
-    ) throws(ManagedGPUPreviewBackingError) -> EGLGBMRenderTarget {
-        do {
-            let size = try GBMBufferSize(
-                width: UInt32(geometry.bufferSize.width.rawValue),
-                height: UInt32(geometry.bufferSize.height.rawValue)
-            )
-            return try EGLGBMRenderTarget(
-                device: device,
-                surfaceDescriptor: GBMSurfaceDescriptor(
-                    size: size,
-                    formatModifier: formatModifier
-                )
-            )
-        } catch let error as EGLRenderError {
-            throw .render(error)
-        } catch let error as GBMAllocationError {
-            throw .allocation(error)
-        } catch {
-            throw .setup(.eglUnavailable)
-        }
-    }
-
-    private func nextSlotID() throws(ManagedGPUPreviewBackingError) -> GBMBufferPoolSlotID {
-        do {
-            let slotID = try GBMBufferPoolSlotID(nextSlotRawValue)
-            nextSlotRawValue += 1
-            return slotID
-        } catch {
-            throw .allocation(.invalidBufferDimensions(width: 0, height: 0))
-        }
-    }
-
-    private func recordFailure(_ error: ManagedGPUPreviewBackingError) {
-        recordFailure(error.failure)
-    }
-
-    private func recordFailure(_ failure: GPUBackingFailure) {
-        if runtimePath == .empty, let capabilities {
-            runtimePath = .afterFailure(capabilities: capabilities, failure: failure)
-        } else {
-            runtimePath = runtimePath.markingFailure(failure)
-        }
-    }
-
-    private static func failure(
-        for error: GraphicsPreviewSurfaceFeedbackError
-    ) -> GPUBackingFailure {
-        switch error {
-        case .linuxDmabufUnavailable:
-            .dmabufUnavailable
-        case .surfaceFeedbackUnavailable:
-            .surfaceFeedbackUnavailable
-        case .runtime:
-            .surfaceFeedbackUnavailable
-        }
-    }
+struct RetainedExplicitSynchronization {
+    let synchronization: ManagedGPUExplicitSynchronization
+    // Keep the DRM file descriptor backing the syncobj timeline alive.
+    let device: GBMDevice?
 }
 
 package struct GPUClearColor: Equatable, Sendable {

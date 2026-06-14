@@ -35,12 +35,12 @@ let runtimeTestingSwiftSettings: [SwiftSetting] =
     ]
 
 let package = Package(
-    name: "SwiftWayland",
+    name: "WaylandClientKit",
     products: [
         .library(name: "WaylandClient", targets: ["WaylandClient"]),
         .library(name: "WaylandGraphicsPreview", targets: ["WaylandGraphicsPreview"]),
-        .executable(name: "swift-wayland-smoke", targets: ["SwiftWaylandSmoke"]),
-        .executable(name: "swl", targets: ["SwiftWaylandTool"]),
+        .executable(name: "wayland-client-kit-smoke", targets: ["WaylandClientKitSmoke"]),
+        .executable(name: "swl", targets: ["WaylandClientKitTool"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.6.0")
@@ -148,13 +148,13 @@ let package = Package(
         ),
         .target(
             name: "WaylandGraphicsCore",
-            dependencies: ["WaylandRaw", "CGBMShims", "CEGLShims"],
+            dependencies: ["WaylandRaw", "CGBMShims", "CEGLShims", "CDRMSystem"],
             path: "Sources/WaylandGraphicsPreview",
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
             name: "WaylandGraphicsPreview",
-            dependencies: ["WaylandClient", "WaylandGPUPreview"],
+            dependencies: ["WaylandClient", "WaylandGPUPreview", "WaylandRaw"],
             path: "Sources/WaylandGraphicsPreviewAPI",
             swiftSettings: strictMemorySafetySwiftSettings
         ),
@@ -173,26 +173,26 @@ let package = Package(
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .target(
-            name: "SwiftWaylandToolSupport",
+            name: "WaylandClientKitToolSupport",
             swiftSettings: librarySwiftSettings
         ),
         .executableTarget(
-            name: "SwiftWaylandTool",
+            name: "WaylandClientKitTool",
             dependencies: [
-                "SwiftWaylandToolSupport",
+                "WaylandClientKitToolSupport",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             swiftSettings: librarySwiftSettings
         ),
         .executableTarget(
-            name: "SwiftWaylandDemo",
+            name: "WaylandClientKitDemo",
             dependencies: ["WaylandClient"],
-            path: "Examples/SwiftWaylandDemo",
+            path: "Examples/WaylandClientKitDemo",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
             name: "GPUPreviewSmokeClient",
-            dependencies: ["WaylandClient", "WaylandGraphicsPreview"],
+            dependencies: ["WaylandClient", "WaylandExampleSupport", "WaylandGraphicsPreview"],
             path: "Examples/GPUPreviewSmokeClient",
             swiftSettings: executableSwiftSettings
         ),
@@ -317,7 +317,7 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
-            name: "SwiftWaylandSmoke",
+            name: "WaylandClientKitSmoke",
             dependencies: ["WaylandSmokeSupport"],
             swiftSettings: executableSwiftSettings
         ),
@@ -400,14 +400,14 @@ let package = Package(
             swiftSettings: strictMemorySafetySwiftSettings
         ),
         .testTarget(
-            name: "SwiftWaylandToolTests",
-            dependencies: ["SwiftWaylandToolSupport"],
+            name: "WaylandClientKitToolTests",
+            dependencies: ["WaylandClientKitToolSupport"],
             swiftSettings: librarySwiftSettings
         ),
         .plugin(
             name: "SwlCheckPlugin",
             capability: .command(
-                intent: .custom(verb: "swl-check", description: "Run SwiftWayland checks")
+                intent: .custom(verb: "swl-check", description: "Run WaylandClientKit checks")
             )
         ),
         .plugin(
@@ -415,7 +415,7 @@ let package = Package(
             capability: .command(
                 intent: .custom(
                     verb: "swl-release-check",
-                    description: "Run SwiftWayland release checks"
+                    description: "Run WaylandClientKit release checks"
                 )
             )
         ),

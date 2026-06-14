@@ -27,7 +27,7 @@ let token = try await window.requestActivationToken(
 try await window.activate(using: token)
 ```
 
-SwiftWayland validates that activation requests target managed windows on the
+WaylandClientKit validates that activation requests target managed windows on the
 owning display and keeps raw `xdg_activation_v1` proxies out of public API.
 Frameworks remain responsible for app launch, command routing, and any visible
 focus or attention policy.

@@ -57,6 +57,7 @@ package enum GPUWindowPresenterError: Error, CustomStringConvertible {
     case releaseFailure(GPUWindowPresenterStateError)
     case submitConstraints(SurfaceSubmitConstraintError)
     case metadata(SurfaceCommitMetadataError)
+    case committedFrame(GPUBackingFailure)
     case window(any Error)
 
     package var description: String {
@@ -71,9 +72,19 @@ package enum GPUWindowPresenterError: Error, CustomStringConvertible {
             "GPU submit constraints failed: \(String(describing: error))"
         case .metadata(let error):
             "GPU metadata failed: \(error.description)"
+        case .committedFrame(let failure):
+            "GPU frame committed before \(failure.description)"
         case .window(let error):
             "GPU window presentation failed: \(String(describing: error))"
         }
+    }
+
+    package var committedFrameFailure: GPUBackingFailure? {
+        guard case .committedFrame(let failure) = self else {
+            return nil
+        }
+
+        return failure
     }
 }
 
@@ -116,6 +127,10 @@ package struct GPUWindowPresenterState: Equatable, Sendable {
 
     package var outstandingSubmittedSlotIDs: [GBMBufferPoolSlotID] {
         poolState.submittedSlotIDs
+    }
+
+    package var explicitSubmissionStates: [GPUSubmittedBufferSyncState] {
+        explicitSubmissions.values.sorted { $0.slotID < $1.slotID }
     }
 
     package var availableSlotIDs: [GBMBufferPoolSlotID] {
@@ -355,6 +370,12 @@ package final class GPUWindowPresenter {
     package var outstandingSubmittedSlotIDs: [GBMBufferPoolSlotID] {
         withLock {
             state.outstandingSubmittedSlotIDs
+        }
+    }
+
+    package var explicitSubmissionStates: [GPUSubmittedBufferSyncState] {
+        withLock {
+            state.explicitSubmissionStates
         }
     }
 
@@ -839,7 +860,7 @@ extension GPUWindowPresenter {
                 .presentationTrackingFailed,
                 operation: .presentationTracking
             )
-            throw GPUWindowPresenterError.state(error)
+            throw GPUWindowPresenterError.committedFrame(.presentationTrackingFailed)
         }
     }
 

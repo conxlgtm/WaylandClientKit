@@ -20,10 +20,10 @@ struct WindowIconDomainTypesTests {
 
     @Test
     func windowIconNameDescriptionUsesValue() throws {
-        let name = try WindowIconName("org.swiftwayland.Smoke")
+        let name = try WindowIconName("org.waylandclientkit.Smoke")
 
-        #expect(name.value == "org.swiftwayland.Smoke")
-        #expect(name.description == "org.swiftwayland.Smoke")
+        #expect(name.value == "org.waylandclientkit.Smoke")
+        #expect(name.description == "org.waylandclientkit.Smoke")
     }
 
     @Test

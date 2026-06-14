@@ -3,7 +3,7 @@
 Connect to a Wayland compositor from Swift and build client-side Linux GUI
 substrate code without taking on a widget toolkit, scene graph, or renderer.
 
-SwiftWayland's public `WaylandClient` API covers display connection lifetime,
+WaylandClientKit's public `WaylandClient` API covers display connection lifetime,
 window and popup surfaces, software rendering through shared memory, input
 events, keyboard interpretation, relative pointer and pointer constraints,
 cursor requests, data transfer, text-input sessions, XDG activation,

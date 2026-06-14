@@ -1,7 +1,7 @@
 // Minimal deterministic fixture derived from a US-style q/Q layout.
 // It is checked in so tests do not depend on the host keyboard layout.
 xkb_keymap {
-    xkb_keycodes "swiftwayland" {
+    xkb_keycodes "waylandclientkit" {
         minimum = 8;
         maximum = 255;
         <AE01> = 10;
@@ -10,7 +10,7 @@ xkb_keymap {
         <AC01> = 38;
         <AB05> = 56;
     };
-    xkb_types "swiftwayland" {
+    xkb_types "waylandclientkit" {
         type "ONE_LEVEL" {
             modifiers = none;
             map[None] = Level1;
@@ -23,13 +23,13 @@ xkb_keymap {
             level_name[Level2] = "Shift";
         };
     };
-    xkb_compatibility "swiftwayland" {
+    xkb_compatibility "waylandclientkit" {
         interpret Shift_L+Any {
             repeat= False;
             action= SetMods(modifiers=Shift);
         };
     };
-    xkb_symbols "swiftwayland" {
+    xkb_symbols "waylandclientkit" {
         key <AE01> { [ dead_acute ] };
         key <LFSH> { [ Shift_L ] };
         modifier_map Shift { <LFSH> };

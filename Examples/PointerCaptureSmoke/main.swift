@@ -46,8 +46,8 @@ enum PointerCaptureSmoke {
 
         let window = try await display.createTopLevelWindow(
             configuration: try WindowConfiguration(
-                title: "SwiftWayland Pointer Capture Smoke",
-                appID: "swift-wayland-pointer-capture-smoke",
+                title: "WaylandClientKit Pointer Capture Smoke",
+                appID: "wayland-client-kit-pointer-capture-smoke",
                 initialWidth: 420,
                 initialHeight: 240,
                 closeRequestPolicy: .requestOnly
