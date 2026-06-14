@@ -686,11 +686,11 @@ Current checkpoint status:
   requests per-surface feedback, renders through GBM/EGL, imports the rendered
   buffer through linux-dmabuf, commits it through the managed window
   owner-thread path, and reports typed runtime-path facts.
-- Remaining milestone work is live compositor evidence, resize/reconfiguration
-  breadth, explicit-sync active evidence, commit-timing active evidence, and
-  broader GPU submission scenarios beyond clear-frame proof. FIFO and metadata
-  have active KDE/KWin evidence; explicit sync and commit timing currently have
-  truthful failure/fallback evidence.
+- Remaining milestone work is broader live compositor evidence,
+  resize/reconfiguration breadth, commit-timing active evidence, and broader
+  GPU submission scenarios beyond clear-frame proof. Explicit sync, FIFO, and
+  metadata have active KDE/KWin evidence; commit timing currently has truthful
+  fallback evidence on a compositor where it is unavailable.
 
 Work packages:
 

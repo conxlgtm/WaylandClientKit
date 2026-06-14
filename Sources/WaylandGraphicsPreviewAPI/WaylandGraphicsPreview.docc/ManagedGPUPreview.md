@@ -19,9 +19,9 @@ successful submission are required before public runtime facts report active
 GPU.
 
 The current compositor matrix proves active managed GPU clear-frame submission,
-FIFO pacing, content-type metadata, and presentation-hint/tearing metadata.
-Explicit synchronization and commit timing are implemented and report typed
-fallback/failure states, but they are not yet live-proven active.
+explicit synchronization, FIFO pacing, content-type metadata, and
+presentation-hint/tearing metadata. Commit timing is implemented and reports
+typed fallback/failure states, but it is not yet live-proven active.
 
 ## Policy
 
@@ -74,7 +74,8 @@ swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
 swift run GraphicsPreviewManagedGPUClear -- --sync prefer-explicit --pacing fifo --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
 ```
 
-Do not record explicit synchronization or commit timing as active unless the
-runtime-path output itself reports `active` for that component on a submitted
-frame. Current KDE/KWin evidence records FIFO and metadata as active; explicit
-sync and commit timing still need refreshed active runtime-path evidence.
+Do not record explicit synchronization, FIFO, commit timing, or metadata as
+active unless the runtime-path output itself reports `active` for that
+component on a submitted frame. Current KDE/KWin evidence records explicit
+sync, FIFO, and metadata as active; commit timing still needs active
+runtime-path evidence on a compositor that advertises it.
