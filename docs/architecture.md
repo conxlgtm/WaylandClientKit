@@ -424,6 +424,7 @@ Supported:
 - session-level raw and interpreted keyboard events
 - static pointer cursor surfaces through wayland-cursor
 - static custom cursor images through `PointerCursor.image(_:)`
+- animated custom cursor images through `AnimatedPointerCursor`
 - compositor cursor-shape requests where advertised
 - regular clipboard selection offers and sources through data-device
 - primary selection offers and sources through primary-selection
@@ -448,7 +449,8 @@ Supported:
 
 Not supported:
 
-- public cursor animation
+- compositor-specific cursor animation evidence beyond the managed custom-image
+  scheduler
 - client-side decoration rendering
 - output management or control APIs
 - full IME/input-method protocol coverage beyond text-input-v3 client sessions

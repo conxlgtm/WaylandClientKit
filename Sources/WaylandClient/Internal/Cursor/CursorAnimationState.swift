@@ -2,9 +2,11 @@ import WaylandCursor
 
 package struct AnimatedCursorFrame {
     package let image: CursorImage
+    package let duration: Duration
 
-    package init(image frameImage: CursorImage) {
+    package init(image frameImage: CursorImage, duration frameDuration: Duration) {
         image = frameImage
+        duration = frameDuration
     }
 }
 
@@ -18,6 +20,7 @@ package struct CursorAnimationState {
     private var frames: [AnimatedCursorFrame]
     package private(set) var currentFrameIndex: Int
     package private(set) var generation: UInt64
+    package private(set) var remainingFrameDuration: Duration
 
     package init(
         frames animationFrames: [AnimatedCursorFrame],
@@ -30,10 +33,15 @@ package struct CursorAnimationState {
         frames = animationFrames
         currentFrameIndex = 0
         generation = initialGeneration
+        remainingFrameDuration = animationFrames[0].duration
     }
 
     package var currentFrame: AnimatedCursorFrame {
         frames[currentFrameIndex]
+    }
+
+    package var currentFrameDuration: Duration {
+        currentFrame.duration
     }
 
     package var isAnimated: Bool {
@@ -49,11 +57,13 @@ package struct CursorAnimationState {
 
         frames = nextFrames
         currentFrameIndex = 0
+        remainingFrameDuration = nextFrames[0].duration
         generation += 1
     }
 
     package mutating func advance() -> CursorAnimationAdvance {
         currentFrameIndex = (currentFrameIndex + 1) % frames.count
+        remainingFrameDuration = currentFrame.duration
         generation += 1
 
         return CursorAnimationAdvance(
@@ -61,6 +71,28 @@ package struct CursorAnimationState {
             frameIndex: currentFrameIndex,
             generation: generation
         )
+    }
+
+    package mutating func advanceIfDue(after elapsedDuration: Duration) -> CursorAnimationAdvance? {
+        guard isAnimated else { return nil }
+
+        if elapsedDuration < remainingFrameDuration {
+            remainingFrameDuration -= elapsedDuration
+            return nil
+        }
+
+        var elapsed = elapsedDuration
+        var advanceResult: CursorAnimationAdvance?
+        while elapsed >= remainingFrameDuration {
+            elapsed -= remainingFrameDuration
+            advanceResult = advance()
+        }
+
+        if elapsed > .zero {
+            remainingFrameDuration -= elapsed
+        }
+
+        return advanceResult
     }
 
     package func acceptsScheduledTick(generation scheduledGeneration: UInt64) -> Bool {

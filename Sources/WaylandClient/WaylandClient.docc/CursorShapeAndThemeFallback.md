@@ -27,6 +27,19 @@ Static software cursor images are supported through ``PointerCursorImage`` and
 pixel size, and a pixel-space hotspot that must be inside the image. WaylandClientKit
 keeps the SHM buffer and raw cursor surface private.
 
+Animated software cursor images are supported through ``PointerCursorFrame``,
+``AnimatedPointerCursor``, and ``PointerCursor/animated(_:)``. Each frame uses
+the same XRGB8888 image format and hotspot validation as a static custom cursor
+image. Frame durations must be positive, and empty animations are rejected before
+any cursor request is sent.
+
+Animation starts only after the animated cursor is the current desired cursor.
+Replacing it with a theme cursor, hidden cursor, static custom cursor, or another
+cursor stops the previous animation. Pointer leave pauses frame attachment for
+that seat until pointer focus returns. Seat removal and display close stop
+animation and release cursor frame buffers through the normal cursor-surface
+cleanup path.
+
 Frameworks implementing client-side resize chrome can use custom cursor names
 when they have theme-specific policy:
 
@@ -42,10 +55,6 @@ fall back to an existing built-in such as ``PointerCursor/crosshair`` or keep th
 current cursor until the framework has compositor/theme evidence for a better
 choice.
 
-Animated cursor scheduling is intentionally deferred. WaylandClientKit has internal
-animation state primitives, but no public owner-thread scheduler contract yet.
-Use explicit cursor replacement for now.
-
 ## Capability Gate
 
 Compositor cursor shapes require `wp_cursor_shape_manager_v1`.
@@ -58,6 +67,8 @@ the cursor path.
 
 - ``PointerCursor``
 - ``PointerCursorImage``
+- ``PointerCursorFrame``
+- ``AnimatedPointerCursor``
 - ``WaylandDisplay/setPointerCursor(_:)``
 - ``CursorConfiguration``
 - ``CursorRequestResult``
@@ -70,5 +81,6 @@ which cursor to request for a given interaction.
 
 ## Examples
 
-See `CursorPolicySmoke` in `Examples/CursorPolicySmoke` and
-`CustomCursorSmoke` in `Examples/CustomCursorSmoke`.
+See `CursorPolicySmoke` in `Examples/CursorPolicySmoke`,
+`CustomCursorSmoke` in `Examples/CustomCursorSmoke`, and
+`CursorAnimationSmoke` in `Examples/CursorAnimationSmoke`.

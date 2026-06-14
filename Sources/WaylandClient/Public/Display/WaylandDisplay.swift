@@ -7,6 +7,7 @@ public actor WaylandDisplay {
 
     nonisolated let runtime: WaylandDisplayRuntime
     private var lifecycle = WaylandDisplayLifecycle.initializing
+    private var cursorAnimationTask: Task<Void, Never>?, cursorAnimationTaskGeneration: UInt64 = 0
 
     nonisolated public var unownedExecutor: UnownedSerialExecutor {
         unsafe runtime.executor.asUnownedSerialExecutor()
@@ -33,6 +34,7 @@ public actor WaylandDisplay {
     }
 
     isolated deinit {
+        cursorAnimationTask?.cancel()
         runtime.actorDidDeinitialize(lifecycle: &lifecycle)
     }
 
@@ -105,7 +107,9 @@ public actor WaylandDisplay {
 
     @discardableResult
     public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {
-        try requireCore().setPointerCursor(cursor)
+        let results = try requireCore().setPointerCursor(cursor)
+        updateCursorAnimationTask(for: cursor)
+        return results
     }
 
     @discardableResult
@@ -234,6 +238,9 @@ public actor WaylandDisplay {
     }
 
     public func close() {
+        cursorAnimationTaskGeneration += 1
+        cursorAnimationTask?.cancel()
+        cursorAnimationTask = nil
         switch lifecycle {
         case .active(let activeCore, let activeEventSource):
             runtime.clearEventSource(activeEventSource)
@@ -280,6 +287,7 @@ public actor WaylandDisplay {
         let source = DisplayEventSource(core: displayCore)
         lifecycle = .active(core: displayCore, eventSource: source)
         try runtime.installEventSource(source)
+        updateCursorAnimationTask(for: cursorConfiguration.fallbackCursor)
     }
 
     func requireCore() throws -> DisplayCore {
@@ -340,149 +348,53 @@ extension WaylandDisplay {
     }
 }
 
-enum WaylandDisplayLifecycle {
-    case initializing
-    case active(core: DisplayCore, eventSource: DisplayEventSource)
-    case primarySelectionTestHarness(any WaylandDisplayPrimarySelectionHandling)
-    case closed
-    case abandoned
-
-    var isInitializing: Bool {
-        switch self {
-        case .initializing:
-            true
-        case .active, .primarySelectionTestHarness, .closed, .abandoned:
-            false
-        }
-    }
-}
-
-@safe
-final class WaylandDisplayRuntime: Sendable {
-    let executor: WaylandThreadExecutor
-    let eventHub: DisplayEventHub
-
-    init(configuration displayConfiguration: DisplayConfiguration) throws {
-        eventHub = DisplayEventHub(
-            configuration: displayConfiguration.eventStreams,
-            diagnosticsConfiguration: displayConfiguration.diagnostics
-        )
-        executor = try WaylandThreadExecutor()
-    }
-
-    deinit {
-        executor.shutdown()
-    }
-
-    var events: DisplayEvents {
-        eventHub.displayEvents()
-    }
-
-    var inputEvents: InputEvents {
-        eventHub.inputEvents()
-    }
-
-    var dataTransferEvents: DataTransferEvents {
-        eventHub.dataTransferEvents()
-    }
-
-    func windowPresentationEvents(for windowID: WindowID) -> WindowPresentationEvents {
-        eventHub.windowPresentationEvents(windowID: windowID)
-    }
-
-    var diagnostics: DisplayDiagnostics {
-        eventHub.diagnostics()
-    }
-
-    func installEventSource(_ source: any WaylandThreadEventSource) throws {
-        try executor.installEventSource(source)
-    }
-
-    func clearEventSource(_ source: (any WaylandThreadEventSource)?) {
-        executor.clearEventSource(source)
-    }
-
-    func actorDidDeinitialize(lifecycle: inout WaylandDisplayLifecycle) {
-        switch lifecycle {
-        case .closed, .abandoned:
-            executor.requestStopAfterCurrentJob()
+extension WaylandDisplay {
+    private func updateCursorAnimationTask(for cursor: PointerCursor) {
+        cursorAnimationTaskGeneration += 1
+        guard cursor.animation != nil else {
+            cursorAnimationTask?.cancel()
+            cursorAnimationTask = nil
             return
-        case .initializing, .primarySelectionTestHarness:
-            eventHub.finish(throwing: .closed)
-            lifecycle = .closed
-            executor.requestStopAfterCurrentJob()
-            return
-        case .active(let leakedCore, _):
-            #if DEBUG
-                assertionFailure("WaylandDisplay leaked; call close() or use withConnection(_:)")
-            #endif
-
-            eventHub.finish(throwing: .closed)
-            executor.abandonWaylandEventSourceWithoutDestroyingRawResources()
-
-            // A missed close can deinitialize from an arbitrary thread. Normal
-            // Wayland teardown is ordered owner-thread work, so release builds
-            // abandon the raw graph instead of faking cleanup from deinit.
-            unsafe intentionallyLeakObjectForWrongThreadResourceFallback(leakedCore)
-            lifecycle = .abandoned
-            executor.requestStopAfterCurrentJob(.abandonWaylandSources)
-        }
-    }
-}
-
-@safe
-final class DisplayEventSource: WaylandThreadEventSource {
-    private let core: DisplayCore
-
-    init(core displayCore: DisplayCore) {
-        core = displayCore
-    }
-
-    var isClosed: Bool {
-        core.isClosed
-    }
-
-    func fileDescriptor() throws -> CInt {
-        try core.fileDescriptor()
-    }
-
-    func dispatchPending() throws -> Int32 {
-        try core.dispatchPending()
-    }
-
-    func prepareRead() throws -> Bool {
-        try core.prepareRead()
-    }
-
-    func flush() throws -> Bool {
-        try core.flush()
-    }
-
-    func readEvents() throws {
-        try core.readEvents()
-    }
-
-    func cancelRead() {
-        core.cancelRead()
-    }
-
-    func handleEventLoopError(_ error: any Error) {
-        core.fail(displayError(for: error))
-    }
-
-    private func displayError(for error: any Error) -> WaylandDisplayError {
-        if let displayError = error as? WaylandDisplayError {
-            return displayError
         }
 
-        if let runtimeError = error as? RuntimeError {
-            return WaylandDisplayError(runtimeError)
+        cursorAnimationTask?.cancel()
+        let generation = cursorAnimationTaskGeneration
+
+        cursorAnimationTask = Task { [weak self] in  // swiftlint:disable:this no_unstructured_task
+            await self?.runCursorAnimationLoop(generation: generation)
+        }
+    }
+
+    private func runCursorAnimationLoop(generation: UInt64) async {
+        defer {
+            if cursorAnimationTaskGeneration == generation {
+                cursorAnimationTask = nil
+            }
         }
 
-        if let executorError = error as? WaylandThreadExecutorError {
-            return WaylandDisplayError(executorError)
-        }
+        while !Task.isCancelled, cursorAnimationTaskGeneration == generation {
+            let delay: Duration?
+            do {
+                delay = try requireCore().nextCursorAnimationDelay()
+            } catch {
+                return
+            }
 
-        return .internalInvariantViolation(.message(String(describing: error)))
+            guard let delay else { return }
+
+            do {
+                try await Task.sleep(for: delay)
+            } catch {
+                return
+            }
+
+            guard cursorAnimationTaskGeneration == generation else { return }
+
+            do {
+                _ = try requireCore().advanceCursorAnimations()
+            } catch {
+                return
+            }
+        }
     }
 }

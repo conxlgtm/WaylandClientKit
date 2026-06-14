@@ -1,13 +1,16 @@
 # Pointer Capture
 
-WaylandClientKit exposes relative pointer and pointer-constraint protocols as typed
-input substrate. Applications can subscribe to relative motion for a seat and
-request compositor-mediated lock or confine constraints for a managed window.
+WaylandClientKit exposes relative pointer, pointer-constraint, and pointer-warp
+protocols as typed input substrate. Applications can subscribe to relative
+motion for a seat, request compositor-mediated lock or confine constraints for a
+managed window, and request a serial-scoped pointer warp within a managed
+window.
 
 Check ``WaylandCapabilities/relativePointer`` and
 ``WaylandCapabilities/pointerConstraints`` before offering capture-dependent UI.
-If a compositor does not advertise a protocol, the request fails with
-`PointerCaptureError.unavailable`.
+Check ``WaylandCapabilities/pointerWarp`` before offering direct pointer-position
+controls. If a compositor does not advertise a protocol, the request fails with
+`PointerCaptureError.unavailable` or `PointerWarpError.unavailable`.
 
 Relative motion events arrive through ``InputEvents`` as
 `PointerEvent.relativeMotion`. Constraint lifecycle transitions arrive through
@@ -23,6 +26,11 @@ game mode starts, how the user exits pointer lock, what cursor is shown, or how
 motion maps to a camera or gesture. It exposes the protocol facts and manages
 proxy lifetime for windows, seats, and display shutdown.
 
+Pointer warp is also compositor policy. The request requires an input serial and
+is scoped to the caller's managed window, seat pointer, and logical surface
+position. A successful request means the protocol request was sent; it does not
+guarantee the compositor will visibly move the pointer.
+
 ```swift
 let subscription = try await window.relativePointer(seatID: event.seatID)
 let constraint = try await window.lockPointer(
@@ -32,6 +40,12 @@ let constraint = try await window.lockPointer(
 
 try await subscription.destroy()
 try await constraint.destroy()
+
+try await window.requestPointerWarp(
+    seatID: event.seatID,
+    position: LogicalOffset(x: 32, y: 32),
+    serial: eventSerial
+)
 ```
 
 ## Public APIs
@@ -39,10 +53,13 @@ try await constraint.destroy()
 - ``Window/relativePointer(seatID:)``
 - ``Window/lockPointer(seatID:cursorHint:region:lifetime:)``
 - ``Window/confinePointer(seatID:region:lifetime:)``
+- ``Window/requestPointerWarp(seatID:position:serial:)``
 - ``RelativePointerSubscription``
 - ``PointerConstraint``
 - ``PointerConstraintLifecycleEvent``
+- ``PointerWarpError``
 
 ## Example
 
-See `PointerCaptureSmoke` in `Examples/PointerCaptureSmoke`.
+See `PointerCaptureSmoke` in `Examples/PointerCaptureSmoke` and
+`PointerWarpSmoke` in `Examples/PointerWarpSmoke`.

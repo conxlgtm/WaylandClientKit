@@ -3,6 +3,7 @@ import WaylandRaw
 
 @testable import WaylandClient
 
+// swiftlint:disable type_body_length
 @Suite
 struct TextInputManagerTests {
     @Test
@@ -41,6 +42,8 @@ struct TextInputManagerTests {
             seatID: seatID
         )
         try manager.setCursorRectangle(rect, seatID: seatID)
+        try manager.showInputPanel(seatID: seatID)
+        try manager.hideInputPanel(seatID: seatID)
         try manager.commit(seatID: seatID)
         try manager.disable(seatID: seatID)
 
@@ -51,10 +54,42 @@ struct TextInputManagerTests {
                 .setTextChangeCause(.other),
                 .setContentType(hints: [.completion, .spellcheck], purpose: .email),
                 .setCursorRectangle(rect),
+                .showInputPanel,
+                .hideInputPanel,
                 .commit,
                 .disable,
             ]
         )
+    }
+
+    @Test
+    func inputPanelRequestsRequireVersionTwo() throws {
+        let backend = RecordingTextInputBackend()
+        let manager = TextInputManager(backend: backend)
+        let seatID = SeatID(rawValue: 19)
+
+        try manager.enable(seatID: seatID, windowID: WindowID(rawValue: 36))
+        backend.binding(for: seatID)?.protocolVersion = 1
+
+        #expect(
+            throws: TextInputError.unsupportedVersion(
+                operation: .showInputPanel,
+                required: 2,
+                available: 1
+            )
+        ) {
+            try manager.showInputPanel(seatID: seatID)
+        }
+        #expect(
+            throws: TextInputError.unsupportedVersion(
+                operation: .hideInputPanel,
+                required: 2,
+                available: 1
+            )
+        ) {
+            try manager.hideInputPanel(seatID: seatID)
+        }
+        #expect(backend.binding(for: seatID)?.operations == [.enable])
     }
 
     @Test
@@ -279,6 +314,7 @@ struct TextInputManagerTests {
         }
     }
 }
+// swiftlint:enable type_body_length
 
 private final class RecordingTextInputBackend: TextInputManagerBackend {
     var boundSeatIDs: [SeatID] = []
@@ -324,11 +360,14 @@ private final class RecordingTextInputBinding: TextInputBinding {
         case setTextChangeCause(TextInputChangeCause)
         case setContentType(hints: TextInputContentHints, purpose: TextInputContentPurpose)
         case setCursorRectangle(LogicalRect)
+        case showInputPanel
+        case hideInputPanel
         case commit
         case destroy
     }
 
     let seatID: SeatID
+    var protocolVersion: UInt32 = 2
     private(set) var operations: [Operation] = []
 
     init(seatID bindingSeatID: SeatID) {
@@ -366,6 +405,14 @@ private final class RecordingTextInputBinding: TextInputBinding {
 
     func commit() {
         operations.append(.commit)
+    }
+
+    func showInputPanel() {
+        operations.append(.showInputPanel)
+    }
+
+    func hideInputPanel() {
+        operations.append(.hideInputPanel)
     }
 
     func destroy() {

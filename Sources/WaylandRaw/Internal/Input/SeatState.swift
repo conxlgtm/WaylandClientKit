@@ -258,6 +258,8 @@ private func currentGeneration(_ state: SeatState, kind: RawInputDeviceID.Kind) 
             state.keyboardGeneration
         case .touch:
             state.touchGeneration
+        case .tablet:
+            UInt64(1)
         }
 
     return nextGeneration > 1 ? nextGeneration - 1 : 1

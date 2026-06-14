@@ -36,6 +36,7 @@ enum ShimSmokeCheck {  // swiftlint:disable:this type_body_length
         _ = unsafe swl_registry_bind_wp_fractional_scale_manager_v1
         _ = unsafe swl_registry_bind_wp_cursor_shape_manager_v1
         _ = unsafe swl_registry_bind_xdg_activation_v1
+        _ = unsafe swl_registry_bind_wp_pointer_warp_v1
         _ = unsafe swl_registry_bind_zwp_relative_pointer_manager_v1
         _ = unsafe swl_registry_bind_zwp_pointer_constraints_v1
         _ = unsafe swl_registry_bind_wp_linux_drm_syncobj_manager_v1
@@ -101,6 +102,7 @@ enum ShimSmokeCheck {  // swiftlint:disable:this type_body_length
         _ = unsafe swl_wp_cursor_shape_device_v1_set_shape
         _ = unsafe swl_xdg_toplevel_icon_manager_v1_add_listener
         verifyActivationShims()
+        verifyPointerWarpShims()
         verifyPointerCaptureShims()
         verifySubmitAndMetadataShims()
         verifyTextInputAndDmabufShims()
@@ -113,6 +115,11 @@ enum ShimSmokeCheck {  // swiftlint:disable:this type_body_length
         _ = unsafe swl_xdg_activation_token_v1_set_app_id
         _ = unsafe swl_xdg_activation_token_v1_set_surface
         _ = unsafe swl_xdg_activation_token_v1_commit
+    }
+
+    private static func verifyPointerWarpShims() {
+        _ = unsafe swl_wp_pointer_warp_v1_warp_pointer
+        _ = unsafe swl_wp_pointer_warp_v1_destroy
     }
 
     private static func verifyPointerCaptureShims() {
@@ -167,6 +174,8 @@ enum ShimSmokeCheck {  // swiftlint:disable:this type_body_length
         _ = unsafe swl_text_input_v3_set_content_type
         _ = unsafe swl_text_input_v3_set_cursor_rectangle
         _ = unsafe swl_text_input_v3_commit
+        _ = unsafe swl_text_input_v3_show_input_panel
+        _ = unsafe swl_text_input_v3_hide_input_panel
         _ = unsafe swl_zwp_linux_dmabuf_v1_get_default_feedback
         _ = unsafe swl_zwp_linux_dmabuf_v1_get_surface_feedback
         _ = unsafe swl_zwp_linux_dmabuf_v1_create_params

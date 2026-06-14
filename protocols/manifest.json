@@ -187,12 +187,12 @@
       "vendoredFromPath" : "/usr/share/wayland-protocols/stable/presentation-time/presentation-time.xml"
     },
     {
-      "apiExposure" : "none",
+      "apiExposure" : "public",
       "generatedCodePath" : "Sources/CWaylandProtocols/generated/stable/tablet/tablet-v2-protocol.c",
       "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/stable/tablet/tablet-v2-client-protocol.h",
       "localPath" : "protocols/upstream/stable/tablet/tablet-v2.xml",
       "name" : "tablet-v2",
-      "notes" : "Private generation dependency for cursor-shape tablet-tool request interfaces; WaylandClientKit does not expose tablet APIs yet.",
+      "notes" : "Stable tablet input protocol. WaylandClientKit exposes capability facts and typed tablet device/tool/pad events without drawing, gesture, brush, or canvas policy. Public pad ring, strip, and dial child-control events are deferred.",
       "scannerCodeMode" : "private-code",
       "scannerHeaderMode" : "client-header",
       "sha256" : "ac1128b26c779cf90b9ed71182ba5e34a7262826789adae206d825a4d45908b4",
@@ -210,8 +210,8 @@
         "strategy" : "pkg-config-with-fallbacks"
       },
       "stability" : "stable",
-      "waylandClientKitTier" : "privateGenerationDependency",
-      "testStrategy" : "generation-only",
+      "waylandClientKitTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
       "upstreamProject" : "wayland-protocols",
       "upstreamVersion" : "1.48",
       "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
@@ -278,6 +278,68 @@
       "upstreamVersion" : "1.48",
       "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
       "vendoredFromPath" : "/usr/share/wayland-protocols/staging/cursor-shape/cursor-shape-v1.xml"
+    },
+    {
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/pointer-warp/pointer-warp-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/pointer-warp/pointer-warp-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/pointer-warp/pointer-warp-v1.xml",
+      "name" : "pointer-warp-v1",
+      "notes" : "Optional extension for window-scoped pointer warp requests. The compositor may reject or ignore individual requests.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "1389e89c68c6f6d231fd2dcda57fa9c75c5230d0ac1deffa8d80a7648e197e66",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/pointer-warp/pointer-warp-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/pointer-warp/pointer-warp-v1.xml"
+        ],
+        "environmentOverride" : "POINTER_WARP_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/pointer-warp/pointer-warp-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "waylandClientKitTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/pointer-warp/pointer-warp-v1.xml"
+    },
+    {
+      "apiExposure" : "publicCapability",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/xdg-session-management/xdg-session-management-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/xdg-session-management/xdg-session-management-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/xdg-session-management/xdg-session-management-v1.xml",
+      "name" : "xdg-session-management-v1",
+      "notes" : "Staging compositor session-management protocol. WaylandClientKit reports capability and keeps raw preview plumbing package-internal until compositor evidence and framework usage shape are stronger.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "698bef9f4cf8f7be98c86d18444481e6896d0ea3287be4edd1c73cdf17b8f776",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/xdg-session-management/xdg-session-management-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/xdg-session-management/xdg-session-management-v1.xml"
+        ],
+        "environmentOverride" : "XDG_SESSION_MANAGEMENT_V1_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/xdg-session-management/xdg-session-management-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "waylandClientKitTier" : "previewFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "nix wayland-protocols-1.48",
+      "vendoredFromPath" : "/nix/store/fgq3g4mnlwdll7gmhd5gcgyx10103zxx-wayland-protocols-1.48/share/wayland-protocols/staging/xdg-session-management/xdg-session-management-v1.xml"
     },
     {
       "apiExposure" : "public",

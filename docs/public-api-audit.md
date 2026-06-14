@@ -76,6 +76,7 @@ Intentionally public:
 - `PointerConstraintRegion`
 - `PointerConstraintLifetime`
 - `PointerCaptureError`
+- `PointerWarpError`
 - public raw and interpreted keyboard event payloads
 - `PointerCursor`
 - `PointerCursorScalePolicy`
@@ -151,9 +152,9 @@ Current user-facing contract:
   popup surfaces, restoration snapshots, presentation feedback, regular
   clipboard selection, primary selection, receive-side and source-side
   drag-and-drop data transfer, drag icon surfaces, xdg activation, relative
-  pointer, pointer lock/confine, cursor requests, text-input sessions and
-  events, diagnostics, and terminal display errors are the current product
-  surface.
+  pointer, pointer lock/confine, pointer warp, tablet input facts, cursor
+  requests, text-input sessions and events, diagnostics, and terminal display
+  errors are the current product surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
   are derived display text, not control-flow payloads.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
@@ -175,7 +176,8 @@ Current user-facing contract:
   for regular clipboard, drag-and-drop, drag action negotiation, primary
   selection, server-side decorations, xdg-output, viewporter, presentation time,
   fractional scaling, cursor-shape, xdg activation, relative pointer, pointer
-  constraints, text-input, and linux-dmabuf without binding new protocol objects.
+  constraints, pointer warp, tablet input, compositor session management,
+  text-input, and linux-dmabuf without binding new protocol objects.
 - Primary selection means `zwp_primary_selection_device_manager_v1` offers and
   sources. It is selection-driven, focus-sensitive, and serial-scoped.
 - Drag-and-drop means `wl_data_device_manager` target offers and local sources,
@@ -185,17 +187,35 @@ Current user-facing contract:
   local source-side drag request.
 - Text input means `zwp_text_input_manager_v3` seat-scoped sessions and
   `zwp_text_input_v3` events. Surrounding text offsets are UTF-8 byte offsets at
-  the protocol boundary. Preedit, delete, commit, action, and done events are
-  grouped by the protocol's `done` transaction event.
+  the protocol boundary. Input-panel show/hide requests are version-gated v2
+  hints that compositors may ignore. Preedit, delete, commit, action, language,
+  preedit-hint, and done events are typed public facts.
+- Compositor session management means `xdg_session_manager_v1` advertisement
+  reporting through `WaylandCapabilities.compositorSessionManagement`.
+  Compositor session objects and event streams remain package-internal preview
+  plumbing until lifecycle evidence and framework policy boundaries are clearer.
 - Relative pointer and pointer constraints mean
   `zwp_relative_pointer_manager_v1` and `zwp_pointer_constraints_v1`.
   WaylandClientKit exposes capability facts, relative motion events, typed
   lock/confine lifecycle events, and window-scoped lock/confine requests without
   deciding application pointer-capture policy.
+- Pointer warp means `wp_pointer_warp_v1`. Public requests are managed-window,
+  seat, serial, and logical-position scoped. They report typed unavailable,
+  foreign-window, closed-window, unknown-seat, pointer-unavailable, invalid-position,
+  and request-failed errors without exposing raw warp, pointer, surface, or queue
+  objects. Compositor policy may still ignore or reject a request.
+- Tablet input means `zwp_tablet_manager_v2` device, tool, and pad facts,
+  including proximity, motion, pressure, tilt, rotation, slider, wheel,
+  distance, tool buttons, pad buttons, frame boundaries, and pad group-added
+  notifications. Events are seat-scoped and target-resolved where the protocol
+  provides a surface. Public pad ring, strip, and dial child-control events are
+  intentionally deferred. WaylandClientKit does not define drawing, gesture,
+  brush, stroke, eraser behavior, or canvas policy.
 - Cursor requests cover compositor cursor-shape requests, named theme cursors,
   hidden cursors, static XRGB8888 custom cursor images, and output-aware theme
-  scale policy. Cursor animation remains deferred until an owner-thread
-  scheduling contract exists.
+  scale policy. Animated custom cursors are public value types built from
+  validated cursor images and positive frame durations; WaylandClientKit keeps
+  frame scheduling, SHM buffers, and cursor surfaces private.
 - Presentation feedback means `wp_presentation` feedback for managed surfaces.
   Frame callbacks, presentation feedback, future FIFO or commit-timing controls,
   and explicit sync remain separate concepts.
@@ -350,7 +370,8 @@ Notes:
   Cursor-shape is used when advertised and the requested cursor maps to a known
   compositor shape; otherwise the theme cursor path remains the fallback. Static
   custom cursor images use validated XRGB8888 pixels and private SHM-backed
-  cursor surfaces.
+  cursor surfaces. Animated custom cursor values reuse that image validation and
+  expose no raw cursor surface, SHM pool, buffer, timer, or queue handles.
   Diagonal resize convenience presets are deferred until cursor theme names are
   verified across KDE, GNOME, Sway/wlroots, and Weston; frameworks may use
   custom names such as `nw-resize`, `ne-resize`, `sw-resize`, and `se-resize`.
@@ -392,6 +413,8 @@ Notes:
   protocol UTF-8 byte offsets and Swift `String.Index` construction. `disable()`
   finalizes the disable request; callers should commit pending enabled-state
   changes before disabling and should not call `commit()` after `disable()`.
+  Input-panel show/hide requests are v2 hints and can be ignored by the
+  compositor.
   `WaylandDisplay.textInputEvents` is separate from `inputEvents`, and
   text-input diagnostics can publish on both text-input and display diagnostic
   streams.

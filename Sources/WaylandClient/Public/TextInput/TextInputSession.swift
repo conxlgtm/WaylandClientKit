@@ -54,6 +54,14 @@ public struct TextInputSession: Sendable, Hashable {
         try await display.commitTextInput(seatID: seatID)
     }
 
+    public func showInputPanel() async throws {
+        try await display.showTextInputPanel(seatID: seatID)
+    }
+
+    public func hideInputPanel() async throws {
+        try await display.hideTextInputPanel(seatID: seatID)
+    }
+
     public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.ownership == rhs.ownership
     }

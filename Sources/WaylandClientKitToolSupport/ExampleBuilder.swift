@@ -3,6 +3,8 @@ import Foundation
 public struct ExampleBuilder {
     public static let targets = [
         "ClientSideResizeChrome",
+        "CompositorSessionSmoke",
+        "CursorAnimationSmoke",
         "CursorPolicySmoke",
         "CustomCursorSmoke",
         "DamageRegionSmoke",
@@ -12,11 +14,13 @@ public struct ExampleBuilder {
         "GraphicsPreviewManagedGPUClear",
         "IdleInhibitSmoke",
         "PointerCaptureSmoke",
+        "PointerWarpSmoke",
         "PresentationFeedbackAnimation",
         "SerialActionsProbe",
         "SessionStateSmoke",
         "SubsurfaceSmoke",
         "SurfaceRegionSmoke",
+        "TabletInputSmoke",
         "WaylandClientKitDemo",
         "SystemBellSmoke",
         "TextInputSmoke",

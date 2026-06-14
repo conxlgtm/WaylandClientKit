@@ -140,6 +140,52 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
         )
     }
 
+    package func requestPointerWarp(
+        surface: RawSurface,
+        windowSize: PositiveLogicalSize,
+        seatID: SeatID,
+        position: LogicalOffset,
+        serial: InputSerial
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        guard !isShutDown else {
+            throw PointerWarpError.displayClosed
+        }
+
+        let fixedPosition = try FixedPointerWarpPosition(
+            position: position,
+            windowSize: windowSize
+        )
+        let globals = try connection.bindRequiredGlobals()
+        let warp = globals.extensions.pointerWarp.boundObject
+        let seat = globals.seatRegistry.seat(for: RawSeatID(seatID))
+        try Self.validatePointerWarpRequest(
+            isShutDown: isShutDown,
+            hasPointerWarp: warp != nil,
+            hasSeat: seat != nil,
+            seatHasPointerDevice: seat?.hasPointerDevice ?? false,
+            seatID: seatID
+        )
+        guard let warp else {
+            throw PointerWarpError.unavailable
+        }
+        guard let seat else {
+            throw PointerWarpError.unknownSeat(seatID)
+        }
+
+        do {
+            try warp.warpPointer(
+                surface: surface,
+                seat: seat,
+                x: fixedPosition.x,
+                y: fixedPosition.y,
+                serial: serial.rawValue
+            )
+        } catch {
+            throw Self.mapPointerWarpRequestError(error, seatID: seatID)
+        }
+    }
+
     package func destroyRelativePointerSubscription(
         _ id: RelativePointerSubscriptionID
     ) throws {
@@ -273,6 +319,17 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
         return seat
     }
 
+    private func requirePointerWarpSeat(
+        _ seatID: SeatID,
+        globals: BoundGlobals
+    ) throws -> RawSeat {
+        guard let seat = globals.seatRegistry.seat(for: RawSeatID(seatID)) else {
+            throw PointerWarpError.unknownSeat(seatID)
+        }
+
+        return seat
+    }
+
     private func makeRegion(
         _ region: PointerConstraintRegion?,
         globals: BoundGlobals
@@ -299,5 +356,37 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
         guard seat.hasPointerDevice else {
             throw PointerCaptureError.pointerUnavailable(seatID)
         }
+    }
+
+    package static func validatePointerWarpRequest(
+        isShutDown: Bool,
+        hasPointerWarp: Bool,
+        hasSeat: Bool,
+        seatHasPointerDevice: Bool,
+        seatID: SeatID
+    ) throws {
+        guard !isShutDown else {
+            throw PointerWarpError.displayClosed
+        }
+        guard hasPointerWarp else {
+            throw PointerWarpError.unavailable
+        }
+        guard hasSeat else {
+            throw PointerWarpError.unknownSeat(seatID)
+        }
+        guard seatHasPointerDevice else {
+            throw PointerWarpError.pointerUnavailable(seatID)
+        }
+    }
+
+    package static func mapPointerWarpRequestError(
+        _ error: any Error,
+        seatID: SeatID
+    ) -> PointerWarpError {
+        if case RuntimeError.bindFailed("wl_pointer") = error {
+            return .pointerUnavailable(seatID)
+        }
+
+        return .requestFailed(String(describing: error))
     }
 }

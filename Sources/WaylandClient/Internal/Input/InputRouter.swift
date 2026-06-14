@@ -25,6 +25,10 @@ struct ReportedUnknownInputProtocolValue: Hashable {
 final class InputRouter {
     var deviceGraph = InputDeviceGraph()
     private var surfaces: [RawObjectID: InputSurfaceBinding] = [:]
+    var tabletToolFocusByObjectID: [RawObjectID: RawObjectID] = [:]
+    var tabletPadFocusByObjectID: [RawObjectID: RawObjectID] = [:]
+    var tabletToolSeatByObjectID: [RawObjectID: RawSeatID] = [:]
+    var tabletPadSeatByObjectID: [RawObjectID: RawSeatID] = [:]
     var reportedUnknownProtocolValues: Set<ReportedUnknownInputProtocolValue> = []
 
     func register(windowID: WindowID, surfaceID: RawObjectID) {
@@ -51,6 +55,7 @@ final class InputRouter {
     func unregister(surfaceID: RawObjectID) {
         surfaces.removeValue(forKey: surfaceID)
         removeSurfaceFromDeviceGraph(surfaceID)
+        removeTabletFocuses(matching: surfaceID)
     }
 
     func route(_ event: RawInputEvent) -> [InputEvent] {
@@ -70,6 +75,8 @@ final class InputRouter {
             isAccepted = acceptKeyboardDeviceEvent(event)
         case .touch:
             isAccepted = acceptTouchDeviceEvent(event)
+        case .tablet:
+            isAccepted = true
         case .seat, .seatRemoved, .diagnostic:
             isAccepted = true
         }
@@ -111,6 +118,7 @@ final class InputRouter {
             )
         case .seatRemoved:
             deviceGraph.removeSeat(event.seatID)
+            clearTabletFocuses(for: event.seatID)
             return routedEvent(event, target: .display, kind: .seat(.removed))
         case .diagnostic(let diagnostic):
             return routedEvent(
@@ -128,6 +136,8 @@ final class InputRouter {
             return routeKeyboard(event, keyboardEvent)
         case .touch(let touchEvent):
             return routeTouch(event, touchEvent)
+        case .tablet(let tabletEvent):
+            return routeTablet(event, tabletEvent)
         }
     }
 
