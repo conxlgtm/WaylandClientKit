@@ -219,8 +219,8 @@ framework's widget layer. Keep data transfer at the app-host boundary.
 
 ## Known Gaps
 
-- External-buffer submission needs broader live renderer-produced dmabuf
-  evidence.
+- External-buffer submission has KDE/KWin renderer-dmabuf evidence and still
+  needs broader compositor coverage.
 - Color-management image descriptions are opaque preview identifiers; color
   conversion and tone mapping remain renderer/framework policy.
 - Static and animated custom cursor images are available. Animation frames use

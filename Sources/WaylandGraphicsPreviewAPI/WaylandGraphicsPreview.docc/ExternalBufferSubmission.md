@@ -27,6 +27,9 @@ unavailable external synchronization produce typed public errors or runtime
 fallback/failure facts. Software fallback never reports that an external buffer
 was submitted.
 
-Use `GraphicsPreviewExternalBufferSmoke -- --probe` for a bounded capability
-report, `--internal-test-buffer` for a bounded renderer-dmabuf import attempt,
-and `--negative-test-buffer` for a pipe-descriptor cleanup failure probe.
+Use `GraphicsPreviewExternalBufferSmoke -- --probe` for a bounded public
+capability report and `--negative-test-buffer` for a pipe-descriptor cleanup
+failure probe. The public smoke imports only `WaylandClient` and
+`WaylandGraphicsPreview`; the `GraphicsPreviewExternalBufferMaintainerSmoke`
+command with `--internal-test-buffer` is maintainer evidence for a
+renderer-dmabuf import run.

@@ -12,6 +12,7 @@ public struct ExampleBuilder {
         "FrameworkHostSmoke",
         "GPUPreviewSmokeClient",
         "GraphicsPreviewColorMetadataSmoke",
+        "GraphicsPreviewExternalBufferMaintainerSmoke",
         "GraphicsPreviewExternalBufferSmoke",
         "GraphicsPreviewManagedGPUClear",
         "IdleInhibitSmoke",
@@ -42,6 +43,7 @@ public struct ExampleBuilder {
 
     public func buildAll(configurations: [String] = ["debug", "release"]) throws {
         try verifyTargetChecklistMatchesPackage()
+        try verifyPublicExampleImportBoundaries()
         context.diagnostics.info(
             "example live execution is skipped by this build gate; examples are build-checked only")
         for configuration in configurations {
@@ -60,6 +62,45 @@ public struct ExampleBuilder {
         }
         context.diagnostics.success(
             "example targets build in \(configurations.joined(separator: "/"))")
+    }
+
+    private func verifyPublicExampleImportBoundaries() throws {
+        // This target is a maintainer evidence probe that manufactures a dmabuf
+        // with package-internal GBM/EGL helpers; user-facing examples must stay
+        // on public products.
+        let allowlistedInternalImportTargets: Set<String> = [
+            "GraphicsPreviewExternalBufferMaintainerSmoke"
+        ]
+        let forbiddenModules = [
+            "WaylandGraphicsCore",
+            "WaylandGPUPreview",
+            "WaylandRaw",
+        ]
+        var failures: [String] = []
+        for target in Self.targets where !allowlistedInternalImportTargets.contains(target) {
+            let root = context.repository.url("Examples/\(target)")
+            guard context.fileSystem.exists(root) else { continue }
+            let files = try context.fileSystem.walk(root, includingDirectories: false)
+            for file in files where file.pathExtension == "swift" {
+                let text = try context.fileSystem.readText(file)
+                for (index, line) in text.split(separator: "\n", omittingEmptySubsequences: false)
+                    .enumerated()
+                {
+                    for module in forbiddenModules
+                    where line.range(
+                        of: #"^\s*import\s+\#(module)\b"#,
+                        options: .regularExpression) != nil
+                    {
+                        let location = "\(context.repository.relativePath(file)):\(index + 1)"
+                        failures.append("\(location): public examples must not import \(module)")
+                    }
+                }
+            }
+        }
+
+        guard failures.isEmpty else {
+            throw ToolError(failures.joined(separator: "\n"), exitCode: ToolExitCode.data)
+        }
     }
 
     public static func packageExampleTargets(
