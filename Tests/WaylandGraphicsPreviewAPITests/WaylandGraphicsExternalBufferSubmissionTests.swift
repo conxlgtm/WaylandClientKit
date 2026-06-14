@@ -1,6 +1,7 @@
 // swiftlint:disable file_length
 
 import Glibc
+import Synchronization
 import Testing
 import WaylandClient
 import WaylandGraphicsPreview
@@ -133,6 +134,32 @@ struct WaylandGraphicsExternalBufferPreflightTests {
             Issue.record("expected managed GPU unavailable failure")
         } catch WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable) {
             #expect(await window.importRequests == 0)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func modifierAndOffsetEdgesFailAtImportAndCloseDescriptor() async throws {
+        let window = try ExternalBufferFakeManagedWindow()
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+        let closedDescriptors = Mutex<[Int32]>([])
+        let descriptor = try testExternalDescriptor(
+            modifier: UInt64.max,
+            offset: UInt32.max,
+            fd: OwnedFileDescriptor(adopting: 777) { descriptor in
+                closedDescriptors.withLock { $0.append(descriptor) }
+                return 0
+            }
+        )
+
+        do {
+            _ = try await lease.submitExternalBuffer(descriptor)
+            Issue.record("expected import failure for unsupported descriptor facts")
+        } catch WaylandGraphicsError.unavailable(.externalBufferImportFailed) {
+            #expect(await window.importRequests == 1)
+            #expect(closedDescriptors.withLock { $0 } == [777])
         } catch {
             Issue.record("unexpected error: \(error)")
         }
@@ -518,18 +545,38 @@ private func testPreviewBufferPresentationResult(
 }
 
 private func testExternalDescriptor() throws -> WaylandGraphicsExternalBufferDescriptor {
+    try testExternalDescriptor(
+        modifier: 0,
+        offset: 0,
+        fd: testOwnedFileDescriptor()
+    )
+}
+
+private func testExternalDescriptor(
+    modifier: UInt64,
+    offset: UInt32,
+    fd: consuming OwnedFileDescriptor
+) throws -> WaylandGraphicsExternalBufferDescriptor {
     try WaylandGraphicsExternalBufferDescriptor(
         size: testGraphicsSurfaceGeometry().bufferSize,
         format: WaylandGraphicsDRMFormat(rawValue: 875_713_112),
-        modifier: WaylandGraphicsDRMFormatModifier(rawValue: 0),
-        planes: .one(try testExternalPlane(index: 0))
+        modifier: WaylandGraphicsDRMFormatModifier(rawValue: modifier),
+        planes: .one(try testExternalPlane(index: 0, offset: offset, fd: fd))
     )
 }
 
 private func testExternalPlane(index: Int) throws -> WaylandGraphicsExternalBufferPlane {
+    try testExternalPlane(index: index, offset: 0, fd: testOwnedFileDescriptor())
+}
+
+private func testExternalPlane(
+    index: Int,
+    offset: UInt32,
+    fd: consuming OwnedFileDescriptor
+) throws -> WaylandGraphicsExternalBufferPlane {
     try WaylandGraphicsExternalBufferPlane(
-        fd: testOwnedFileDescriptor(),
-        offset: 0,
+        fd: fd,
+        offset: offset,
         stride: 16,
         planeIndex: index
     )
