@@ -1,5 +1,7 @@
+import Glibc
 import WaylandClient
 import WaylandGPUPreview
+import WaylandRaw
 
 // swiftlint:disable file_length
 
@@ -126,6 +128,47 @@ public enum WaylandGraphicsPresentationFeedbackPolicy: Equatable, Sendable {
     case require
 }
 
+public enum WaylandGraphicsFramePacingRequest: Equatable, Sendable {
+    case none
+    case fifo
+    case commitTiming(WaylandGraphicsCommitTimingRequest)
+}
+
+public struct WaylandGraphicsCommitTimingRequest: Equatable, Sendable {
+    public let target: WaylandGraphicsPresentationTarget
+
+    public static let `default` = WaylandGraphicsCommitTimingRequest(target: .default)
+
+    public init(target presentationTarget: WaylandGraphicsPresentationTarget = .default) {
+        target = presentationTarget
+    }
+}
+
+public enum WaylandGraphicsPresentationTarget: Equatable, Sendable {
+    /// Use WaylandClientKit's preview default target for the next frame.
+    case `default`
+}
+
+public struct WaylandGraphicsFrameSchedule: Equatable, Sendable {
+    public var synchronization: WaylandGraphicsSynchronizationPolicy
+    public var pacing: WaylandGraphicsFramePacingRequest
+    public var presentationFeedback: WaylandGraphicsPresentationFeedbackPolicy
+
+    public static let `default` = WaylandGraphicsFrameSchedule()
+
+    public init(
+        synchronization frameSynchronization: WaylandGraphicsSynchronizationPolicy =
+            .implicitOnly,
+        pacing framePacing: WaylandGraphicsFramePacingRequest = .none,
+        presentationFeedback framePresentationFeedback:
+            WaylandGraphicsPresentationFeedbackPolicy = .none
+    ) {
+        synchronization = frameSynchronization
+        pacing = framePacing
+        presentationFeedback = framePresentationFeedback
+    }
+}
+
 public struct WaylandGraphicsDamageRegion: Equatable, Sendable {
     public let rects: [LogicalRect]
 
@@ -139,6 +182,9 @@ public struct WaylandGraphicsDamageRegion: Equatable, Sendable {
 public struct WaylandGraphicsFrameMetadata: Equatable, Sendable {
     public var contentType: WaylandGraphicsContentType?
     public var presentationHint: WaylandGraphicsPresentationHint?
+    public var alpha: WaylandGraphicsAlphaModifier?
+    public var colorRepresentation: WaylandGraphicsColorRepresentation?
+    public var colorDescription: WaylandGraphicsColorDescription?
     public var damage: WaylandGraphicsDamageRegion?
 
     public static let `default` = WaylandGraphicsFrameMetadata()
@@ -146,10 +192,17 @@ public struct WaylandGraphicsFrameMetadata: Equatable, Sendable {
     public init(
         contentType frameContentType: WaylandGraphicsContentType? = nil,
         presentationHint framePresentationHint: WaylandGraphicsPresentationHint? = nil,
+        alpha frameAlpha: WaylandGraphicsAlphaModifier? = nil,
+        colorRepresentation frameColorRepresentation:
+            WaylandGraphicsColorRepresentation? = nil,
+        colorDescription frameColorDescription: WaylandGraphicsColorDescription? = nil,
         damage frameDamage: WaylandGraphicsDamageRegion? = nil
     ) {
         contentType = frameContentType
         presentationHint = framePresentationHint
+        alpha = frameAlpha
+        colorRepresentation = frameColorRepresentation
+        colorDescription = frameColorDescription
         damage = frameDamage
     }
 }
@@ -164,6 +217,51 @@ public enum WaylandGraphicsContentType: Equatable, Sendable {
 public enum WaylandGraphicsPresentationHint: Equatable, Sendable {
     case vsync
     case async
+}
+
+public struct WaylandGraphicsAlphaModifier: Equatable, Sendable {
+    public let rawValue: UInt32
+
+    public static let opaque = Self(rawValue: UInt32.max)
+    public static let transparent = Self(rawValue: 0)
+
+    public init(rawValue alphaMultiplierRawValue: UInt32) {
+        rawValue = alphaMultiplierRawValue
+    }
+}
+
+public enum WaylandGraphicsColorAlphaMode: Equatable, Sendable {
+    case premultipliedElectrical
+    case premultipliedOptical
+    case straight
+}
+
+public struct WaylandGraphicsColorRepresentation: Equatable, Sendable {
+    public var alphaMode: WaylandGraphicsColorAlphaMode?
+
+    public init(alphaMode colorAlphaMode: WaylandGraphicsColorAlphaMode? = nil) {
+        alphaMode = colorAlphaMode
+    }
+}
+
+public struct WaylandGraphicsColorDescriptionID: Equatable, Hashable, Sendable {
+    public let rawValue: UInt64
+
+    public init(rawValue colorDescriptionRawValue: UInt64) throws {
+        guard colorDescriptionRawValue != 0 else {
+            throw WaylandGraphicsError.unavailable(.invalidColorDescription)
+        }
+
+        rawValue = colorDescriptionRawValue
+    }
+}
+
+public struct WaylandGraphicsColorDescription: Equatable, Hashable, Sendable {
+    public let id: WaylandGraphicsColorDescriptionID
+
+    public init(id colorDescriptionID: WaylandGraphicsColorDescriptionID) {
+        id = colorDescriptionID
+    }
 }
 
 public struct WaylandGraphicsXRGBColor: Equatable, Sendable {
@@ -190,6 +288,397 @@ public struct WaylandGraphicsXRGBColor: Equatable, Sendable {
             blue: Float(blue) / 255,
             alpha: 1
         )
+    }
+}
+
+public struct WaylandGraphicsDRMFormat: Equatable, Hashable, Sendable {
+    public let rawValue: UInt32
+
+    public init(rawValue formatRawValue: UInt32) throws {
+        guard formatRawValue != 0 else {
+            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+        }
+
+        rawValue = formatRawValue
+    }
+}
+
+public struct WaylandGraphicsDRMFormatModifier: Equatable, Hashable, Sendable {
+    public let rawValue: UInt64
+
+    public init(rawValue modifierRawValue: UInt64) {
+        rawValue = modifierRawValue
+    }
+}
+
+public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
+    public var fd: OwnedFileDescriptor
+    public let offset: UInt32
+    public let stride: UInt32
+    public let planeIndex: Int
+
+    public init(
+        fd planeFileDescriptor: consuming OwnedFileDescriptor,
+        offset planeOffset: UInt32,
+        stride planeStride: UInt32,
+        planeIndex planeIndexValue: Int
+    ) throws {
+        guard planeIndexValue >= 0, planeStride > 0 else {
+            var descriptor = planeFileDescriptor
+            try? descriptor.close()
+            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+        }
+
+        fd = planeFileDescriptor
+        offset = planeOffset
+        stride = planeStride
+        planeIndex = planeIndexValue
+    }
+}
+
+public enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
+    case one(WaylandGraphicsExternalBufferPlane)
+    case two(WaylandGraphicsExternalBufferPlane, WaylandGraphicsExternalBufferPlane)
+    case three(
+        WaylandGraphicsExternalBufferPlane,
+        WaylandGraphicsExternalBufferPlane,
+        WaylandGraphicsExternalBufferPlane
+    )
+    case four(
+        WaylandGraphicsExternalBufferPlane,
+        WaylandGraphicsExternalBufferPlane,
+        WaylandGraphicsExternalBufferPlane,
+        WaylandGraphicsExternalBufferPlane
+    )
+
+    public var count: Int {
+        switch self {
+        case .one:
+            1
+        case .two:
+            2
+        case .three:
+            3
+        case .four:
+            4
+        }
+    }
+
+    package mutating func withMutablePlanes(
+        _ body: (inout WaylandGraphicsExternalBufferPlane) throws -> Void
+    ) throws {
+        var capturedError: (any Error)?
+        switch self {
+        case .one(var first):
+            do {
+                try body(&first)
+            } catch {
+                capturedError = error
+            }
+            self = .one(first)
+        case .two(var first, var second):
+            do {
+                try body(&first)
+                try body(&second)
+            } catch {
+                capturedError = error
+            }
+            self = .two(first, second)
+        case .three(var first, var second, var third):
+            do {
+                try body(&first)
+                try body(&second)
+                try body(&third)
+            } catch {
+                capturedError = error
+            }
+            self = .three(first, second, third)
+        case .four(var first, var second, var third, var fourth):
+            do {
+                try body(&first)
+                try body(&second)
+                try body(&third)
+                try body(&fourth)
+            } catch {
+                capturedError = error
+            }
+            self = .four(first, second, third, fourth)
+        }
+        if let capturedError {
+            throw capturedError
+        }
+    }
+
+    package mutating func planeIndices() throws -> [Int] {
+        var indices: [Int] = []
+        try withMutablePlanes { plane in
+            indices.append(plane.planeIndex)
+        }
+        return indices
+    }
+}
+
+public struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
+    public let size: PositivePixelSize
+    public let format: WaylandGraphicsDRMFormat
+    public let modifier: WaylandGraphicsDRMFormatModifier
+    public var planes: WaylandGraphicsExternalBufferPlanes
+
+    public init(
+        size bufferSize: PositivePixelSize,
+        format bufferFormat: WaylandGraphicsDRMFormat,
+        modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
+        planes bufferPlanes: consuming WaylandGraphicsExternalBufferPlanes
+    ) throws {
+        var planesForValidation = bufferPlanes
+        try Self.validate(planes: &planesForValidation)
+
+        size = bufferSize
+        format = bufferFormat
+        modifier = bufferModifier
+        planes = planesForValidation
+    }
+
+    package static func validate(
+        planes: inout WaylandGraphicsExternalBufferPlanes
+    ) throws {
+        let indices = try planes.planeIndices()
+        guard indices.count == Set(indices).count else {
+            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+        }
+        guard indices == Array(0..<indices.count) else {
+            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+        }
+    }
+}
+
+package struct WaylandGraphicsExternalBufferImportPlane: Sendable {
+    package var fd: Int32?
+    package let offset: UInt32
+    package let stride: UInt32
+    package let planeIndex: Int
+
+    package init(
+        fd planeFD: Int32,
+        offset planeOffset: UInt32,
+        stride planeStride: UInt32,
+        planeIndex planeIndexValue: Int
+    ) {
+        fd = planeFD
+        offset = planeOffset
+        stride = planeStride
+        planeIndex = planeIndexValue
+    }
+
+    package mutating func takeFD() throws -> Int32 {
+        guard let currentFD = fd else {
+            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+        }
+
+        fd = nil
+        return currentFD
+    }
+
+    package mutating func closeIfNeeded() {
+        guard let currentFD = fd else { return }
+
+        fd = nil
+        Glibc.close(currentFD)
+    }
+}
+
+// SAFETY: the import plan owns plane descriptors during the package-internal
+// handoff into the owner-thread dmabuf import path. Descriptor transfer and
+// cleanup are synchronized by the storage submit path, and public API never
+// exposes this mutable box.
+package final class WaylandGraphicsExternalBufferImportPlan: @unchecked Sendable {
+    private let size: PositivePixelSize
+    private let format: WaylandGraphicsDRMFormat
+    private let modifier: WaylandGraphicsDRMFormatModifier
+    private var planes: [WaylandGraphicsExternalBufferImportPlane]
+
+    package init(
+        size bufferSize: PositivePixelSize,
+        format bufferFormat: WaylandGraphicsDRMFormat,
+        modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
+        planes bufferPlanes: [WaylandGraphicsExternalBufferImportPlane]
+    ) {
+        size = bufferSize
+        format = bufferFormat
+        modifier = bufferModifier
+        planes = bufferPlanes
+    }
+
+    package func importBuffer(
+        using linuxDmabuf: RawLinuxDmabuf,
+        timeoutMilliseconds: Int32,
+        syncDisplay: (Int32) throws -> Void
+    ) throws -> RawLinuxDmabufBuffer {
+        var runtimeFailure: RuntimeError?
+        var importedBuffer: RawLinuxDmabufBuffer?
+        var compositorRejectedBuffer = false
+
+        let params = try linuxDmabuf.createBufferParams { event in
+            switch event {
+            case .created(let buffer):
+                importedBuffer = buffer
+            case .failed:
+                compositorRejectedBuffer = true
+            }
+        } onFailure: { error in
+            runtimeFailure = error
+        }
+
+        do {
+            for planeIndex in planes.indices {
+                let rawDescriptor = try planes[planeIndex].takeFD()
+                var rawPlane = try RawLinuxDmabufPlaneFileDescriptor(
+                    adopting: rawDescriptor
+                )
+                try params.addPlane(
+                    fileDescriptor: &rawPlane,
+                    planeIndex: UInt32(planes[planeIndex].planeIndex),
+                    offset: planes[planeIndex].offset,
+                    stride: planes[planeIndex].stride,
+                    modifier: modifier.rawValue
+                )
+            }
+            try params.create(
+                width: size.width.rawValue,
+                height: size.height.rawValue,
+                format: format.rawValue
+            )
+            try syncDisplay(timeoutMilliseconds)
+        } catch {
+            params.destroy()
+            throw error
+        }
+
+        if let runtimeFailure {
+            throw runtimeFailure
+        }
+        if compositorRejectedBuffer {
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        }
+        guard let importedBuffer else {
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        }
+
+        return importedBuffer
+    }
+
+    deinit {
+        for index in planes.indices {
+            planes[index].closeIfNeeded()
+        }
+    }
+}
+
+public struct WaylandGraphicsExternalSynchronization: Equatable, Sendable {
+    public let acquire: WaylandGraphicsExternalAcquireSync?
+
+    public static let `default` = WaylandGraphicsExternalSynchronization()
+
+    public init(acquire acquireSynchronization: WaylandGraphicsExternalAcquireSync? = nil) {
+        acquire = acquireSynchronization
+    }
+}
+
+public enum WaylandGraphicsExternalAcquireSync: Equatable, Sendable {
+    case unsupportedPreview
+}
+
+extension WaylandGraphicsFrameSchedule {
+    package init(configuration: WaylandGraphicsConfiguration) {
+        self.init(
+            synchronization: configuration.synchronizationPolicy,
+            pacing: WaylandGraphicsFramePacingRequest(configuration.pacingPolicy),
+            presentationFeedback: configuration.presentationFeedbackPolicy
+        )
+    }
+
+    package var configurationOverride: WaylandGraphicsConfiguration {
+        WaylandGraphicsConfiguration(
+            synchronizationPolicy: synchronization,
+            pacingPolicy: pacing.policy,
+            presentationFeedbackPolicy: presentationFeedback
+        )
+    }
+}
+
+extension WaylandGraphicsFramePacingRequest {
+    package init(_ policy: WaylandGraphicsPacingPolicy) {
+        switch policy {
+        case .none:
+            self = .none
+        case .preferFIFO:
+            self = .fifo
+        case .preferCommitTiming:
+            self = .commitTiming(.default)
+        }
+    }
+
+    package var policy: WaylandGraphicsPacingPolicy {
+        switch self {
+        case .none:
+            .none
+        case .fifo:
+            .preferFIFO
+        case .commitTiming:
+            .preferCommitTiming
+        }
+    }
+}
+
+extension WaylandGraphicsConfiguration {
+    package func applying(
+        schedule: WaylandGraphicsFrameSchedule?
+    ) -> WaylandGraphicsConfiguration {
+        guard let schedule else { return self }
+
+        var copy = self
+        copy.synchronizationPolicy = schedule.synchronization
+        copy.pacingPolicy = schedule.pacing.policy
+        copy.presentationFeedbackPolicy = schedule.presentationFeedback
+        return copy
+    }
+}
+
+extension WaylandGraphicsExternalBufferDescriptor {
+    package mutating func makeImportPlan()
+        throws -> WaylandGraphicsExternalBufferImportPlan
+    {
+        var importPlanes: [WaylandGraphicsExternalBufferImportPlane] = []
+        do {
+            try planes.withMutablePlanes { plane in
+                importPlanes.append(
+                    WaylandGraphicsExternalBufferImportPlane(
+                        fd: plane.fd.releaseRawValue(),
+                        offset: plane.offset,
+                        stride: plane.stride,
+                        planeIndex: plane.planeIndex
+                    )
+                )
+            }
+        } catch {
+            for index in importPlanes.indices {
+                importPlanes[index].closeIfNeeded()
+            }
+            throw error
+        }
+
+        return WaylandGraphicsExternalBufferImportPlan(
+            size: size,
+            format: format,
+            modifier: modifier,
+            planes: importPlanes
+        )
+    }
+
+    package mutating func closeFileDescriptors() throws {
+        try planes.withMutablePlanes { plane in
+            try plane.fd.close()
+        }
     }
 }
 
@@ -231,6 +720,7 @@ public struct WaylandGraphicsFrameResult: Equatable, Sendable {
     public let operation: WaylandGraphicsSubmissionOperation
     public let size: PositivePixelSize
     public let metadata: WaylandGraphicsFrameMetadata
+    public let schedule: WaylandGraphicsFrameSchedule
     public let presentationFeedbackRequested: Bool
     public let synchronizationPolicy: WaylandGraphicsSynchronizationPolicy
     public let pacingPolicy: WaylandGraphicsPacingPolicy
@@ -243,6 +733,7 @@ public struct WaylandGraphicsFrameResult: Equatable, Sendable {
         operation frameOperation: WaylandGraphicsSubmissionOperation,
         size frameSize: PositivePixelSize,
         metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+        schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil,
         presentationFeedbackRequested framePresentationFeedbackRequested: Bool = false,
         synchronizationPolicy frameSynchronizationPolicy:
             WaylandGraphicsSynchronizationPolicy = .implicitOnly,
@@ -252,6 +743,15 @@ public struct WaylandGraphicsFrameResult: Equatable, Sendable {
         operation = frameOperation
         size = frameSize
         metadata = frameMetadata
+        schedule =
+            frameSchedule
+            ?? WaylandGraphicsFrameSchedule(
+                synchronization: frameSynchronizationPolicy,
+                pacing: WaylandGraphicsFramePacingRequest(framePacingPolicy),
+                presentationFeedback: framePresentationFeedbackRequested
+                    ? .requestWhenAvailable
+                    : .none
+            )
         presentationFeedbackRequested = framePresentationFeedbackRequested
         synchronizationPolicy = frameSynchronizationPolicy
         pacingPolicy = framePacingPolicy
@@ -375,6 +875,35 @@ public struct WaylandGraphicsFrameLease: Sendable {
     }
 
     @discardableResult
+    public func submit(
+        _ frame: WaylandGraphicsSubmittedFrame,
+        schedule frameSchedule: WaylandGraphicsFrameSchedule
+    ) async throws -> WaylandGraphicsFrameResult {
+        try await storage.submit(
+            leaseID: id,
+            frame: frame,
+            schedule: frameSchedule
+        )
+    }
+
+    @discardableResult
+    public func submitExternalBuffer(
+        _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor,
+        metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+        synchronization externalSynchronization:
+            WaylandGraphicsExternalSynchronization = .default,
+        schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
+    ) async throws -> WaylandGraphicsFrameResult {
+        try await storage.submitExternalBuffer(
+            leaseID: id,
+            descriptor: descriptor,
+            metadata: frameMetadata,
+            synchronization: externalSynchronization,
+            schedule: frameSchedule
+        )
+    }
+
+    @discardableResult
     public func submitSoftware(
         metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
         _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
@@ -382,6 +911,20 @@ public struct WaylandGraphicsFrameLease: Sendable {
         try await storage.submitSoftware(
             leaseID: id,
             metadata: frameMetadata,
+            draw
+        )
+    }
+
+    @discardableResult
+    public func submitSoftware(
+        schedule frameSchedule: WaylandGraphicsFrameSchedule,
+        metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
+        _ draw: sending @Sendable (borrowing SoftwareFrame) throws -> Void
+    ) async throws -> WaylandGraphicsFrameResult {
+        try await storage.submitSoftware(
+            leaseID: id,
+            metadata: frameMetadata,
+            schedule: frameSchedule,
             draw
         )
     }
@@ -447,6 +990,7 @@ extension WaylandGraphicsFrameMetadata {
         }
     }
 
+    // swiftlint:disable:next cyclomatic_complexity
     package func resolveManagedPreviewMetadata(
         configuration: WaylandGraphicsConfiguration,
         capabilities: WaylandGraphicsSurfaceCapabilities,
@@ -474,6 +1018,32 @@ extension WaylandGraphicsFrameMetadata {
                 fallbacks.presentationHint = true
             }
         }
+        if let alpha {
+            if capabilities.colorMetadata.alphaModifier.isAvailable {
+                commitMetadata.alpha = alpha.surfaceAlphaMetadata
+            } else {
+                fallbacks.alpha = true
+            }
+        }
+        if let colorRepresentation {
+            switch capabilities.colorMetadata.colorRepresentation {
+            case .available:
+                commitMetadata.colorRepresentation =
+                    colorRepresentation.surfaceColorRepresentation
+            case .pending:
+                fallbacks.colorRepresentationPending = true
+            case .unavailable:
+                fallbacks.colorRepresentation = true
+            }
+        }
+        if let colorDescription {
+            if capabilities.colorMetadata.colorManagement.isAvailable {
+                commitMetadata.colorDescription =
+                    try colorDescription.surfaceColorDescriptionReference
+            } else {
+                fallbacks.colorDescription = true
+            }
+        }
 
         return WaylandGraphicsResolvedFrameMetadata(
             commitMetadata: commitMetadata,
@@ -484,6 +1054,9 @@ extension WaylandGraphicsFrameMetadata {
     package func surfaceCommitMetadata() throws -> SurfaceCommitMetadata {
         SurfaceCommitMetadata(
             contentType: contentType?.surfaceContentType,
+            alpha: alpha?.surfaceAlphaMetadata,
+            colorRepresentation: colorRepresentation?.surfaceColorRepresentation,
+            colorDescription: try colorDescription?.surfaceColorDescriptionReference,
             presentationHint: presentationHint?.surfacePresentationHint
         )
     }
@@ -493,7 +1066,11 @@ extension WaylandGraphicsFrameMetadata {
     }
 
     private var hasCommitMetadata: Bool {
-        contentType != nil || presentationHint != nil
+        contentType != nil
+            || presentationHint != nil
+            || alpha != nil
+            || colorRepresentation != nil
+            || colorDescription != nil
     }
 }
 
@@ -540,6 +1117,41 @@ extension WaylandGraphicsPresentationHint {
             .vsync
         case .async:
             .async
+        }
+    }
+}
+
+extension WaylandGraphicsAlphaModifier {
+    package var surfaceAlphaMetadata: SurfaceAlphaMetadata {
+        SurfaceAlphaMetadata(
+            multiplier: SurfaceAlphaMultiplier(rawValue: rawValue)
+        )
+    }
+}
+
+extension WaylandGraphicsColorAlphaMode {
+    package var surfaceAlphaMode: SurfaceAlphaMode {
+        switch self {
+        case .premultipliedElectrical:
+            .premultipliedElectrical
+        case .premultipliedOptical:
+            .premultipliedOptical
+        case .straight:
+            .straight
+        }
+    }
+}
+
+extension WaylandGraphicsColorRepresentation {
+    package var surfaceColorRepresentation: SurfaceColorRepresentation {
+        SurfaceColorRepresentation(alphaMode: alphaMode?.surfaceAlphaMode)
+    }
+}
+
+extension WaylandGraphicsColorDescription {
+    package var surfaceColorDescriptionReference: SurfaceColorDescriptionReference {
+        get throws {
+            try SurfaceColorDescriptionReference(identity: id.rawValue)
         }
     }
 }

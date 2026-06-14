@@ -1,3 +1,4 @@
+import Glibc
 import Testing
 import WaylandClient
 import WaylandGraphicsPreview
@@ -88,7 +89,16 @@ struct WaylandGraphicsPreviewClientTests {
         let metadata = WaylandGraphicsFrameMetadata(
             contentType: .video,
             presentationHint: .async,
+            alpha: .opaque,
+            colorRepresentation: WaylandGraphicsColorRepresentation(
+                alphaMode: .premultipliedElectrical
+            ),
             damage: .fullFrame
+        )
+        let schedule = WaylandGraphicsFrameSchedule(
+            synchronization: .preferExplicit,
+            pacing: .fifo,
+            presentationFeedback: .requestWhenAvailable
         )
         let frame = WaylandGraphicsSubmittedFrame.clearColor(
             WaylandGraphicsXRGBColor(red: 1, green: 2, blue: 3)
@@ -108,6 +118,7 @@ struct WaylandGraphicsPreviewClientTests {
             operation: .show,
             size: try PositivePixelSize(width: 1, height: 1),
             metadata: metadata,
+            schedule: schedule,
             presentationFeedbackRequested: true,
             synchronizationPolicy: .preferExplicit,
             pacingPolicy: .preferFIFO
@@ -119,11 +130,13 @@ struct WaylandGraphicsPreviewClientTests {
         #expect(WaylandGraphicsFallbackReason.surfaceFeedbackUnavailable != .dmabufUnavailable)
         #expect(WaylandGraphicsUnavailableReason.gbmAllocationFailed != .gbmUnavailable)
         #expect(metadata.contentType == .video)
+        #expect(metadata.alpha == .opaque)
         #expect(metadata.damage == .fullFrame)
         #expect(frame == expectedFrame)
         #expect(result.operation == .show)
         #expect(result.backing == .fallback(.forcedSoftware))
         #expect(result.metadata == metadata)
+        #expect(result.schedule == schedule)
         #expect(result.presentationFeedbackRequested)
         #expect(result.synchronizationPolicy == .preferExplicit)
         #expect(result.pacingPolicy == .preferFIFO)
@@ -153,6 +166,57 @@ struct WaylandGraphicsPreviewClientTests {
 
         _ = submitSoftwareFrame
     }
+
+    @Test
+    func externalBufferSubmissionTypesCompileForExternalClients() async throws {
+        func submitExternalBuffer(lease: WaylandGraphicsFrameLease) async throws {
+            let result = try await lease.submitExternalBuffer(
+                try externalClientBufferDescriptor(),
+                metadata: WaylandGraphicsFrameMetadata(
+                    contentType: .game,
+                    alpha: .opaque
+                ),
+                synchronization: .default,
+                schedule: WaylandGraphicsFrameSchedule(
+                    pacing: .commitTiming(.default),
+                    presentationFeedback: .requestWhenAvailable
+                )
+            )
+            _ = result.runtimePath
+        }
+
+        _ = submitExternalBuffer
+    }
+}
+
+private func externalClientBufferDescriptor() throws
+    -> WaylandGraphicsExternalBufferDescriptor
+{
+    let plane = try WaylandGraphicsExternalBufferPlane(
+        fd: try externalClientOwnedDescriptor(),
+        offset: 0,
+        stride: 4,
+        planeIndex: 0
+    )
+    return try WaylandGraphicsExternalBufferDescriptor(
+        size: PositivePixelSize(width: 1, height: 1),
+        format: WaylandGraphicsDRMFormat(rawValue: 875_713_112),
+        modifier: WaylandGraphicsDRMFormatModifier(rawValue: 0),
+        planes: .one(plane)
+    )
+}
+
+private func externalClientOwnedDescriptor() throws -> OwnedFileDescriptor {
+    var descriptors = [Int32](repeating: -1, count: 2)
+    let result = unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
+        unsafe Glibc.pipe(buffer.baseAddress)
+    }
+    guard result == 0 else {
+        throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+    }
+
+    Glibc.close(descriptors[1])
+    return try OwnedFileDescriptor(adopting: descriptors[0])
 }
 
 private func externalClientSoftwareRuntimePath() -> WaylandGraphicsRuntimePath {

@@ -203,6 +203,9 @@ public enum WaylandGraphicsFallbackPolicy: Equatable, Sendable {
 public enum WaylandGraphicsFallbackReason: Equatable, Sendable {
     case forcedSoftware
     case dmabufUnavailable
+    case invalidExternalBufferDescriptor
+    case externalBufferImportFailed
+    case externalSynchronizationUnavailable
     case managedGPUSubmissionUnavailable
     case noCompatibleFormat
     case noRenderNode
@@ -218,6 +221,7 @@ public enum WaylandGraphicsFallbackReason: Equatable, Sendable {
     case colorRepresentationUnavailable
     case colorRepresentationSupportPending
     case colorManagementUnavailable
+    case invalidColorDescription
     case presentationHintUnavailable
     case presentationFeedbackUnavailable
     case compositorRejectedBuffer
@@ -233,6 +237,9 @@ public enum WaylandGraphicsFallbackReason: Equatable, Sendable {
 /// Reasons GPU backing can be unavailable.
 public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {
     case dmabufUnavailable
+    case invalidExternalBufferDescriptor
+    case externalBufferImportFailed
+    case externalSynchronizationUnavailable
     case managedGPUSubmissionUnavailable
     case noCompatibleFormat
     case noRenderNode
@@ -248,6 +255,7 @@ public enum WaylandGraphicsUnavailableReason: Equatable, Sendable {
     case colorRepresentationUnavailable
     case colorRepresentationSupportPending
     case colorManagementUnavailable
+    case invalidColorDescription
     case presentationHintUnavailable
     case presentationFeedbackUnavailable
     case compositorRejectedBuffer

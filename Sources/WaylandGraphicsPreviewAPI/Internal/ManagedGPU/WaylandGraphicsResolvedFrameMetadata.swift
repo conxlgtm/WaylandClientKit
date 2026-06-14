@@ -12,12 +12,28 @@ package struct WaylandGraphicsResolvedFrameMetadata: Equatable, Sendable {
 
 package struct WaylandGraphicsMetadataFallbacks: Equatable, Sendable {
     package var contentType: Bool
+    package var alpha: Bool
+    package var colorRepresentation: Bool
+    package var colorRepresentationPending: Bool
+    package var colorDescription: Bool
     package var presentationHint: Bool
 
-    package static let none = Self(contentType: false, presentationHint: false)
+    package static let none = Self(
+        contentType: false,
+        alpha: false,
+        colorRepresentation: false,
+        colorRepresentationPending: false,
+        colorDescription: false,
+        presentationHint: false
+    )
 
     package var isEmpty: Bool {
-        !contentType && !presentationHint
+        !contentType
+            && !alpha
+            && !colorRepresentation
+            && !colorRepresentationPending
+            && !colorDescription
+            && !presentationHint
     }
 
     package func applying(to path: WaylandGraphicsRuntimePath)
@@ -27,12 +43,20 @@ package struct WaylandGraphicsMetadataFallbacks: Equatable, Sendable {
             contentType: contentType
                 ? .fallback(.contentTypeUnavailable)
                 : path.metadata.contentType,
-            alphaModifier: path.metadata.alphaModifier,
+            alphaModifier: alpha
+                ? .fallback(.alphaModifierUnavailable)
+                : path.metadata.alphaModifier,
             tearingControl: presentationHint
                 ? .fallback(.presentationHintUnavailable)
                 : path.metadata.tearingControl,
-            colorRepresentation: path.metadata.colorRepresentation,
-            colorManagement: path.metadata.colorManagement
+            colorRepresentation: colorRepresentationPending
+                ? .fallback(.colorRepresentationSupportPending)
+                : colorRepresentation
+                    ? .fallback(.colorRepresentationUnavailable)
+                    : path.metadata.colorRepresentation,
+            colorManagement: colorDescription
+                ? .fallback(.colorManagementUnavailable)
+                : path.metadata.colorManagement
         )
 
         return WaylandGraphicsRuntimePath(

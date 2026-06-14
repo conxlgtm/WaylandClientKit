@@ -8,6 +8,11 @@ extension WaylandGraphicsWindowBackingStorage {
         error is CommittedManagedGPUFrameFailure
     }
 
+    package static func isCommittedExternalBufferFrameFailure(_ error: any Error) -> Bool {
+        guard let presenterError = error as? GPUWindowPresenterError else { return false }
+        return presenterError.committedFrameFailure != nil
+    }
+
     package static func shouldRequestPresentationFeedback(
         configuration: WaylandGraphicsConfiguration,
         capabilities: WaylandGraphicsSurfaceCapabilities
@@ -75,6 +80,48 @@ extension WaylandGraphicsWindowBackingStorage {
             dmabufImport: runtimePath.dmabufImport,
             bufferLifecycle: runtimePath.bufferLifecycle,
             explicitSync: explicitSync,
+            pacing: runtimePath.pacing,
+            metadata: runtimePath.metadata,
+            presentationFeedback: runtimePath.presentationFeedback
+        )
+    }
+
+    package static func runtimePath(
+        _ runtimePath: WaylandGraphicsRuntimePath,
+        externalBufferBacking backing: WaylandGraphicsRuntimeStatus
+    ) -> WaylandGraphicsRuntimePath {
+        WaylandGraphicsRuntimePath(
+            capabilities: runtimePath.capabilities,
+            backing: backing,
+            dmabuf: .active,
+            surfaceFeedback: runtimePath.surfaceFeedback,
+            renderNode: .unavailable,
+            gbm: .unavailable,
+            egl: .unavailable,
+            dmabufImport: .active,
+            bufferLifecycle: .active,
+            explicitSync: runtimePath.explicitSync,
+            pacing: runtimePath.pacing,
+            metadata: runtimePath.metadata,
+            presentationFeedback: runtimePath.presentationFeedback
+        )
+    }
+
+    package static func runtimePath(
+        _ runtimePath: WaylandGraphicsRuntimePath,
+        externalBufferFailure reason: WaylandGraphicsUnavailableReason
+    ) -> WaylandGraphicsRuntimePath {
+        WaylandGraphicsRuntimePath(
+            capabilities: runtimePath.capabilities,
+            backing: .failed(reason),
+            dmabuf: runtimePath.dmabuf,
+            surfaceFeedback: runtimePath.surfaceFeedback,
+            renderNode: runtimePath.renderNode,
+            gbm: runtimePath.gbm,
+            egl: runtimePath.egl,
+            dmabufImport: .failed(reason),
+            bufferLifecycle: .failed(reason),
+            explicitSync: runtimePath.explicitSync,
             pacing: runtimePath.pacing,
             metadata: runtimePath.metadata,
             presentationFeedback: runtimePath.presentationFeedback

@@ -257,6 +257,16 @@ public struct OutputSnapshot: Equatable, Sendable {
     }
 }
 
+public struct OutputTopologySnapshot: Equatable, Sendable {
+    public let outputs: [OutputSnapshot]
+
+    public init(outputs topologyOutputs: [OutputSnapshot]) {
+        outputs = topologyOutputs.sorted { lhs, rhs in
+            lhs.id.rawValue < rhs.id.rawValue
+        }
+    }
+}
+
 extension OutputGeometry {
     package init(_ raw: RawOutputGeometry) {
         self.init(

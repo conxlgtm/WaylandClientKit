@@ -105,6 +105,10 @@ public actor WaylandDisplay {
         try requireCore().outputs()
     }
 
+    public func outputTopology() throws -> OutputTopologySnapshot {
+        try OutputTopologySnapshot(outputs: outputs())
+    }
+
     @discardableResult
     public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {
         let results = try requireCore().setPointerCursor(cursor)
