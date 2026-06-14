@@ -1,13 +1,10 @@
 import Foundation
-import Glibc
 import WaylandClient
 import WaylandExampleSupport
 import WaylandGraphicsPreview
 
 @main
 enum GraphicsPreviewExternalBufferSmoke {
-    private static let drmFormatXRGB8888: UInt32 = 875_713_112
-
     static func main() async {
         let exitCode: Int32
         do {
@@ -61,7 +58,12 @@ enum GraphicsPreviewExternalBufferSmoke {
                 )
                 log("failure: none")
             case .negativeTestBuffer:
-                try await submitNegativeTestBuffer(backing: backing)
+                log("mode: maintainer-negative-only")
+                log("import: skipped(use GraphicsPreviewExternalBufferMaintainerSmoke)")
+                log("submit: skipped(maintainer-only)")
+                log("release: not observed")
+                log("fallback reason: none")
+                log("failure: none")
             case .maintainerTestBufferRedirect:
                 log("mode: maintainer-only")
                 log("import: skipped(use GraphicsPreviewExternalBufferMaintainerSmoke)")
@@ -74,61 +76,6 @@ enum GraphicsPreviewExternalBufferSmoke {
             try await backing.close()
             log("cleanup: pass")
         }
-    }
-
-    private static func submitNegativeTestBuffer(
-        backing: WaylandGraphicsWindowBacking
-    ) async throws {
-        log("mode: negative-cleanup")
-        log("test buffer: pipe-fd-not-dmabuf")
-        let lease = try await backing.nextFrame()
-        do {
-            _ = try await lease.submitExternalBuffer(
-                try pipeBackedExternalDescriptor(size: lease.size)
-            )
-            log("import: active(unexpected)")
-            log("submit: active(unexpected)")
-            log("release: active(unexpected)")
-            log("fallback reason: none")
-            log("failure: unexpected-pipe-fd-import-success")
-        } catch {
-            log("import: failed(expected-cleanup: \(error))")
-            log("submit: skipped(import-failed)")
-            log("release: not observed")
-            log("fallback reason: none")
-            log("failure: expected-negative-test(\(error))")
-        }
-    }
-
-    private static func pipeBackedExternalDescriptor(
-        size: PositivePixelSize
-    ) throws -> WaylandGraphicsExternalBufferDescriptor {
-        let stride = UInt32(size.width.rawValue) * 4
-        let plane = try WaylandGraphicsExternalBufferPlane(
-            fd: try pipeReadDescriptor(),
-            offset: 0,
-            stride: stride,
-            planeIndex: 0
-        )
-        return try WaylandGraphicsExternalBufferDescriptor(
-            size: size,
-            format: WaylandGraphicsDRMFormat(rawValue: drmFormatXRGB8888),
-            modifier: WaylandGraphicsDRMFormatModifier(rawValue: 0),
-            planes: .one(plane)
-        )
-    }
-
-    private static func pipeReadDescriptor() throws -> OwnedFileDescriptor {
-        var descriptors = [Int32](repeating: -1, count: 2)
-        let result = unsafe descriptors.withUnsafeMutableBufferPointer { buffer in
-            unsafe Glibc.pipe(buffer.baseAddress)
-        }
-        guard result == 0 else {
-            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
-        }
-
-        Glibc.close(descriptors[1])
-        return try OwnedFileDescriptor(adopting: descriptors[0])
     }
 
     nonisolated private static func status(_ status: WaylandGraphicsRuntimeStatus) -> String {

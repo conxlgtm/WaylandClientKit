@@ -51,12 +51,14 @@ accepts `--metadata none|prefer`, `--content-type none|photo|video|game`, and
 `GraphicsPreviewColorMetadataSmoke`, `ColorManagementSmoke`, and
 `OutputTopologySmoke` provide bounded probes for external buffers, color
 metadata, color capability facts, and output topology.
-`GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer` intentionally
-uses a pipe descriptor rather than a real dmabuf, so it is a negative
-import-failure cleanup probe. The public example imports only `WaylandClient`
-and `WaylandGraphicsPreview`; the maintainer-only
+`GraphicsPreviewExternalBufferSmoke` imports only `WaylandClient` and
+`WaylandGraphicsPreview`; its `--internal-test-buffer` and
+`--negative-test-buffer` modes redirect to maintainer-only evidence commands.
 `GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer`
-creates a small GBM/EGL-rendered dmabuf for live matrix evidence.
+creates a small GBM/EGL-rendered dmabuf for live matrix evidence, and
+`GraphicsPreviewExternalBufferMaintainerSmoke -- --negative-test-buffer`
+intentionally uses a pipe descriptor rather than a real dmabuf as a negative
+import-failure cleanup probe.
 
 ## Current Scope
 
@@ -192,12 +194,14 @@ buffer size, metadata, schedule, synchronization policy, pacing policy, backing
 status, and whether presentation feedback was requested. The result does not
 imply presentation feedback was observed; feedback still arrives through
 `WindowPresentationEvents`. The lease does not expose Wayland proxies, SHM
-pools, GBM buffers, EGL surfaces, DRM nodes, or syncobj handles. External
-buffer descriptors expose only owned Linux plane descriptors plus format,
-modifier, offset, stride, and plane-index facts needed to integrate a
-renderer-owned dmabuf. Local descriptor validation covers size, nonzero format,
-plane count, consecutive plane indices, nonnegative plane indices, positive
-stride, and ownership transfer. Modifier and offset support are compositor
+pools, GBM buffers, EGL surfaces, DRM nodes, syncobj handles, or file
+descriptors. The current FD-bearing external-buffer descriptor construction is
+package-internal maintainer preview plumbing used to prove import/commit/release
+lifetime. Public renderer-owned buffer submission remains source-breaking
+preview API until a raw-handle-free renderer handoff is designed. Local
+descriptor validation covers size, nonzero format, plane count, consecutive
+plane indices, nonnegative plane indices, positive stride, and ownership
+transfer in package-internal tests. Modifier and offset support are compositor
 import facts; unsupported values are reported as typed import failure.
 
 `WaylandGraphicsFrameMetadata` exposes content type, presentation hint, alpha
