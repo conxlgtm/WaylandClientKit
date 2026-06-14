@@ -966,8 +966,8 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L9: `    public func lockPointer(`
 - L30: `    public func confinePointer(`
 - L49: `    public func requestPointerWarp(`
-- L67: `    public func destroyRelativePointerSubscription(`
-- L77: `    public func destroyPointerConstraint(_ constraint: PointerConstraint) throws {`
+- L68: `    public func destroyRelativePointerSubscription(`
+- L78: `    public func destroyPointerConstraint(_ constraint: PointerConstraint) throws {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+TextInput.swift`
 
@@ -992,7 +992,7 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L109: `    public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {`
 - L116: `    public func createTopLevelWindow(`
 - L240: `    public func close() {`
-- L344: `    public var isClosed: Bool {`
+- L345: `    public var isClosed: Bool {`
 
 ### `Sources/WaylandClient/Public/Errors/ClientError.swift`
 

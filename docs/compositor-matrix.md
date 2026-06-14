@@ -37,6 +37,11 @@ For an interactive checklist grouped by feature, run:
 swift run ClientSideResizeChrome
 swift run SerialActionsProbe
 swift run TwoWindowFrameworkHost -- --auto-close --print-summary
+swift run CursorAnimationSmoke -- --auto-close --print-summary
+swift run PointerWarpSmoke -- --auto-close --print-summary
+swift run TabletInputSmoke -- --auto-close --print-summary
+swift run CompositorSessionSmoke -- --auto-close --print-summary
+swift run TextInputSmoke -- --auto-close --print-summary
 swift run GPUPreviewSmokeClient
 swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
 swift run GraphicsPreviewManagedGPUClear -- --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
@@ -60,6 +65,7 @@ example or manual probe has been run:
 | subsurface positioning | `SubsurfaceSmoke` movement logs |
 | subsurface sync/desync | `SubsurfaceSmoke` mode logs |
 | custom cursor image | `CustomCursorSmoke` custom/hidden/theme transitions |
+| cursor animation | `CursorAnimationSmoke` animated/theme/hidden/static/default transitions |
 | cursor scale policy | `CursorPolicySmoke` focused-output cursor scale logs |
 | window icon | `WindowIconSmoke` named, pixel, and reset operations |
 | idle inhibit | `IdleInhibitSmoke` create and destroy operations |
@@ -67,10 +73,19 @@ example or manual probe has been run:
 | activation | `XDGActivationSmoke` token request and activate request |
 | pointer lock/confine | `PointerCaptureSmoke` lock/confine lifecycle |
 | relative pointer | `PointerCaptureSmoke` relative motion events |
+| pointer warp | `PointerWarpSmoke` capability and request result |
+| tablet input | `TabletInputSmoke` capability, bind-seat, and tablet event summary |
 | text input | `TextInputSmoke` capability and commit summary |
+| compositor session management | `CompositorSessionSmoke` capability and event summary |
 | data transfer | `DataTransferSmoke` clipboard/primary/drag summary |
 | presentation feedback | `PresentationFeedbackAnimation` feedback summary |
 | graphics preview fallback/GPU path | `GPUPreviewSmokeClient` runtime-path report |
+
+Cursor animation, pointer warp, tablet input, and compositor session management
+are new capability-gated surfaces. Matrix rows should record the exact command,
+protocol availability, and result before claiming live compositor support. A
+clean typed skip is evidence for absence, not evidence that the feature is
+active.
 
 ## Matrix
 
