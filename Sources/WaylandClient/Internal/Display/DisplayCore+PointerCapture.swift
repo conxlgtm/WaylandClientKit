@@ -56,14 +56,15 @@ extension DisplayCore {
         serial: InputSerial
     ) throws {
         try withFatalFailureFinalization {
-            guard !isClosed else {
-                throw PointerWarpError.displayClosed
-            }
-            guard let window = surfaces.window(windowID) else {
+            let window = surfaces.window(windowID)
+            try Self.validatePointerWarpWindowState(
+                isDisplayClosed: isClosed,
+                windowID: windowID,
+                windowExists: window != nil,
+                windowIsClosed: window?.isClosedOnOwnerThread ?? false
+            )
+            guard let window else {
                 throw PointerWarpError.unknownWindow(windowID)
-            }
-            guard !window.isClosedOnOwnerThread else {
-                throw PointerWarpError.closedWindow(windowID)
             }
 
             let geometry: SurfaceGeometry
@@ -80,6 +81,23 @@ extension DisplayCore {
                 position: position,
                 serial: serial
             )
+        }
+    }
+
+    package static func validatePointerWarpWindowState(
+        isDisplayClosed: Bool,
+        windowID: WindowID,
+        windowExists: Bool,
+        windowIsClosed: Bool
+    ) throws {
+        guard !isDisplayClosed else {
+            throw PointerWarpError.displayClosed
+        }
+        guard windowExists else {
+            throw PointerWarpError.unknownWindow(windowID)
+        }
+        guard !windowIsClosed else {
+            throw PointerWarpError.closedWindow(windowID)
         }
     }
 
