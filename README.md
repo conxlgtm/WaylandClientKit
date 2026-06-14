@@ -87,7 +87,7 @@ Current experimental baseline:
   package-internal GBM/EGL preview pieces
 - managed subsurfaces, surface input/opaque regions, and damage-aware software
   redraw
-- static custom cursor images
+- static and animated custom cursor images
 - desktop integration hooks for toplevel icons, idle inhibition, and system bell
 - compose and dead-key text results for interpreted keyboard events
 - display, input, data-transfer, text-input, and diagnostic event streams
@@ -100,7 +100,6 @@ Current experimental baseline:
 Not implemented yet:
 
 - protocol coverage beyond the listed current support matrix
-- public cursor animation
 - output-management APIs
 - public GPU rendering APIs in `WaylandClient`
 - raw public GBM, EGL, DRM, dmabuf, or syncobj handles
@@ -279,7 +278,6 @@ Popups:
 
 Not supported in the current experimental baseline:
 
-- public cursor animation
 - output management or control APIs
 - public `WaylandClient` GPU rendering APIs
 - public explicit synchronization or frame-pacing APIs

@@ -285,6 +285,16 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         return try inputCoordinator.setPointerCursor(cursor)
     }
 
+    package func nextCursorAnimationDelayOnOwnerThread() -> Duration? {
+        connection.preconditionIsOwnerThread()
+        return inputCoordinator.nextCursorAnimationDelay()
+    }
+
+    package func advanceCursorAnimationsOnOwnerThread() throws -> Duration? {
+        connection.preconditionIsOwnerThread()
+        return try inputCoordinator.advanceCursorAnimations()
+    }
+
     package func updateCursorOutputScalesOnOwnerThread(
         surfaceID: RawObjectID,
         outputIDs: [OutputID]

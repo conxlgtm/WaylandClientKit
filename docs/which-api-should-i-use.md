@@ -14,6 +14,7 @@ selection, build that in your framework above WaylandClientKit.
 | Shape input or opaque regions | `Window.setInputRegion`, `Window.setOpaqueRegion`, `SurfaceRegion` | `wl_compositor` regions | [SurfaceRegionSmoke](../Examples/SurfaceRegionSmoke/main.swift) |
 | Create a child surface | `Window.createSubsurface`, `Subsurface` | `wl_subcompositor` | [SubsurfaceSmoke](../Examples/SubsurfaceSmoke/main.swift) |
 | Use a custom cursor image | `PointerCursor.image(_:)`, `WaylandDisplay.setPointerCursor(_:)` | cursor surface support and pointer focus | [CustomCursorSmoke](../Examples/CustomCursorSmoke/main.swift) |
+| Use an animated custom cursor | `PointerCursorFrame`, `AnimatedPointerCursor`, `PointerCursor.animated(_:)` | cursor surface support and pointer focus | [CursorAnimationSmoke](../Examples/CursorAnimationSmoke/main.swift) |
 | Request compositor cursor shapes | `PointerCursor.shape(_:)` through `WaylandDisplay.setPointerCursor(_:)` | `wp_cursor_shape_manager_v1` | [CursorPolicySmoke](../Examples/CursorPolicySmoke/main.swift) |
 | Set a window icon | `Window.setIcon(_:)` | `xdg_toplevel_icon_manager_v1` | [WindowIconSmoke](../Examples/WindowIconSmoke/main.swift) |
 | Stop screen idle for a window | `Window.inhibitIdle()` | `zwp_idle_inhibit_manager_v1` | [IdleInhibitSmoke](../Examples/IdleInhibitSmoke/main.swift) |

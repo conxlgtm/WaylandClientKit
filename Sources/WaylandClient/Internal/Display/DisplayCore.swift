@@ -517,6 +517,18 @@ extension DisplayCore {
         }
     }
 
+    func nextCursorAnimationDelay() throws -> Duration? {
+        try withFatalFailureFinalization {
+            try requireSession().nextCursorAnimationDelayOnOwnerThread()
+        }
+    }
+
+    func advanceCursorAnimations() throws -> Duration? {
+        try withFatalFailureFinalization {
+            try requireSession().advanceCursorAnimationsOnOwnerThread()
+        }
+    }
+
     func fileDescriptor() throws -> CInt {
         try requireSession().eventLoopFileDescriptorOnOwnerThread
     }

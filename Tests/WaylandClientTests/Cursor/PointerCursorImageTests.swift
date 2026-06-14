@@ -72,4 +72,46 @@ struct PointerCursorImageTests {
         #expect(image.hotspotX == 1)
         #expect(image.hotspotY == 1)
     }
+
+    @Test
+    func pointerCursorFrameRejectsNonPositiveDuration() throws {
+        let image = try PointerCursorImage.solid(
+            size: PositivePixelSize(width: 2, height: 2),
+            color: 0x0000_0000
+        )
+
+        #expect(
+            throws: ClientError.cursor(
+                .invalidConfiguration(.nonPositiveCursorFrameDuration(.zero))
+            )
+        ) {
+            _ = try PointerCursorFrame(image: image, duration: .zero)
+        }
+    }
+
+    @Test
+    func animatedPointerCursorRejectsEmptyFrameSet() {
+        #expect(
+            throws: ClientError.cursor(.invalidConfiguration(.emptyCursorAnimation))
+        ) {
+            _ = try AnimatedPointerCursor(frames: [])
+        }
+    }
+
+    @Test
+    func animatedPointerCursorStoresValidatedFrames() throws {
+        let image = try PointerCursorImage.solid(
+            size: PositivePixelSize(width: 2, height: 2),
+            hotspotX: 1,
+            hotspotY: 1,
+            color: 0x00FF_0000
+        )
+        let frame = try PointerCursorFrame(image: image, duration: .milliseconds(50))
+        let animation = try AnimatedPointerCursor(frames: [frame])
+        let cursor = try PointerCursor.animated(animation)
+
+        #expect(animation.frames == [frame])
+        #expect(cursor.animation == animation)
+        #expect(cursor.image == nil)
+    }
 }

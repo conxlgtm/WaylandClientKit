@@ -194,8 +194,9 @@ Current user-facing contract:
   deciding application pointer-capture policy.
 - Cursor requests cover compositor cursor-shape requests, named theme cursors,
   hidden cursors, static XRGB8888 custom cursor images, and output-aware theme
-  scale policy. Cursor animation remains deferred until an owner-thread
-  scheduling contract exists.
+  scale policy. Animated custom cursors are public value types built from
+  validated cursor images and positive frame durations; WaylandClientKit keeps
+  frame scheduling, SHM buffers, and cursor surfaces private.
 - Presentation feedback means `wp_presentation` feedback for managed surfaces.
   Frame callbacks, presentation feedback, future FIFO or commit-timing controls,
   and explicit sync remain separate concepts.
@@ -350,7 +351,8 @@ Notes:
   Cursor-shape is used when advertised and the requested cursor maps to a known
   compositor shape; otherwise the theme cursor path remains the fallback. Static
   custom cursor images use validated XRGB8888 pixels and private SHM-backed
-  cursor surfaces.
+  cursor surfaces. Animated custom cursor values reuse that image validation and
+  expose no raw cursor surface, SHM pool, buffer, timer, or queue handles.
   Diagonal resize convenience presets are deferred until cursor theme names are
   verified across KDE, GNOME, Sway/wlroots, and Weston; frameworks may use
   custom names such as `nw-resize`, `ne-resize`, `sw-resize`, and `se-resize`.

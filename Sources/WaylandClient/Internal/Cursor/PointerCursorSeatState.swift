@@ -5,6 +5,7 @@ package enum PointerCursorApplicationState: Equatable, Sendable {
     case hidden(serial: UInt32)
     case named(cursor: PointerCursor, serial: UInt32, surfaceID: RawObjectID?)
     case customImage(cursor: PointerCursor, serial: UInt32, surfaceID: RawObjectID?)
+    case animated(cursor: PointerCursor, serial: UInt32, surfaceID: RawObjectID?, frameIndex: Int)
 }
 
 package enum PointerFocusState: Equatable, Sendable {
@@ -83,6 +84,7 @@ package enum PointerCursorSeatEffect {
 package struct PointerCursorSeatState {
     var focus: PointerFocusState = .unfocused
     var cursorSurface: CursorManagerSurface?
+    var animation: CursorAnimationState?
 
     var application: PointerCursorApplicationState {
         focus.application
@@ -103,19 +105,23 @@ package struct PointerCursorSeatState {
             return [.applyCursor(serial: serial, sourceEvent: sourceEvent)]
         case .unmanagedPointerEntered:
             focus = .unfocused
+            animation = nil
             return []
         case .pointerLeft(let surfaceID):
             if focus.isFocused(on: surfaceID) {
                 focus = .unfocused
+                animation = nil
             }
             return []
         case .registeredSurfaceRemoved(let surfaceID):
             if focus.isFocused(on: surfaceID) {
                 focus = .unfocused
+                animation = nil
             }
             return []
         case .pointerUnavailable:
             focus = .unfocused
+            animation = nil
             guard let surface = cursorSurface else {
                 return []
             }

@@ -2,9 +2,11 @@ import WaylandCursor
 
 package struct AnimatedCursorFrame {
     package let image: CursorImage
+    package let duration: Duration
 
-    package init(image frameImage: CursorImage) {
+    package init(image frameImage: CursorImage, duration frameDuration: Duration) {
         image = frameImage
+        duration = frameDuration
     }
 }
 
@@ -34,6 +36,10 @@ package struct CursorAnimationState {
 
     package var currentFrame: AnimatedCursorFrame {
         frames[currentFrameIndex]
+    }
+
+    package var currentFrameDuration: Duration {
+        currentFrame.duration
     }
 
     package var isAnimated: Bool {

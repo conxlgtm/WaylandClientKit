@@ -66,7 +66,7 @@ Canonical examples by feature:
 | Text input | [TextInputSmoke](../Examples/TextInputSmoke/main.swift) |
 | Data transfer and drag icons | [DataTransferSmoke](../Examples/DataTransferSmoke/main.swift) |
 | Pointer capture | [PointerCaptureSmoke](../Examples/PointerCaptureSmoke/main.swift) |
-| Cursor policy and custom cursor images | [CursorPolicySmoke](../Examples/CursorPolicySmoke/main.swift), [CustomCursorSmoke](../Examples/CustomCursorSmoke/main.swift) |
+| Cursor policy and custom cursor images | [CursorPolicySmoke](../Examples/CursorPolicySmoke/main.swift), [CustomCursorSmoke](../Examples/CustomCursorSmoke/main.swift), [CursorAnimationSmoke](../Examples/CursorAnimationSmoke/main.swift) |
 | Desktop integration | [WindowIconSmoke](../Examples/WindowIconSmoke/main.swift), [IdleInhibitSmoke](../Examples/IdleInhibitSmoke/main.swift), [SystemBellSmoke](../Examples/SystemBellSmoke/main.swift) |
 | Surface regions and damage | [SurfaceRegionSmoke](../Examples/SurfaceRegionSmoke/main.swift), [DamageRegionSmoke](../Examples/DamageRegionSmoke/main.swift) |
 | Subsurfaces | [SubsurfaceSmoke](../Examples/SubsurfaceSmoke/main.swift) |

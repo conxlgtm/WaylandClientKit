@@ -304,7 +304,12 @@ fallbacks for theme-specific policy.
 Use `PointerCursorImage` when the framework needs a static software cursor
 image. The framework owns the image pixels and cursor policy; WaylandClientKit owns
 SHM allocation, raw cursor-surface attachment, hotspot forwarding, and cleanup.
-Public cursor animation is still deferred.
+Use `AnimatedPointerCursor` when a framework needs a software animated cursor.
+WaylandClientKit validates frame images and positive frame durations, schedules
+the current cursor animation on the display owner thread, pauses frame attachment
+when pointer focus leaves, and stops animation on cursor replacement, seat
+removal, or display close. The framework still owns which animation to choose
+for a given interaction.
 
 ## Boundaries WaylandClientKit Does Not Own
 

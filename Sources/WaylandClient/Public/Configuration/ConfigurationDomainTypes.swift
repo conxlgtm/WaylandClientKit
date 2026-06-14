@@ -6,6 +6,8 @@ public enum CursorConfigurationError: Error, Equatable, Sendable, CustomStringCo
     case emptyCursorName
     case invalidCursorImagePixelCount(expected: Int, actual: Int)
     case cursorImageHotspotOutsideBounds(x: Int32, y: Int32, width: Int32, height: Int32)
+    case emptyCursorAnimation
+    case nonPositiveCursorFrameDuration(Duration)
 
     public var description: String {
         switch self {
@@ -23,6 +25,10 @@ public enum CursorConfigurationError: Error, Equatable, Sendable, CustomStringCo
             "pointer cursor image expected \(expected) pixels, got \(actual)"
         case .cursorImageHotspotOutsideBounds(let x, let y, let width, let height):
             "pointer cursor hotspot \(x),\(y) must be inside \(width)x\(height)"
+        case .emptyCursorAnimation:
+            "animated pointer cursors must contain at least one frame"
+        case .nonPositiveCursorFrameDuration(let duration):
+            "animated pointer cursor frame duration must be positive, got \(duration)"
         }
     }
 }

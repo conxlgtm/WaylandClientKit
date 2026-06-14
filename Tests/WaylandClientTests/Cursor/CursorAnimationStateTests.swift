@@ -89,6 +89,7 @@ private func animatedFrame(delay: UInt32) throws -> AnimatedCursorFrame {
             buffer: RawBorrowedBuffer(
                 pointer: try unsafe #require(OpaquePointer(bitPattern: Int(delay) + 0xB00))
             )
-        )
+        ),
+        duration: .milliseconds(Int(delay))
     )
 }
