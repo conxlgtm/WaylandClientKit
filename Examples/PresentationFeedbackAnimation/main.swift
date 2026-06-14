@@ -37,6 +37,8 @@ enum PresentationFeedbackAnimation {
             log("feature: presentation-feedback")
             log("capability: \(availabilityDescription(capabilities.presentationTime))")
             log("pacing requested: \(options.pacing ?? "none")")
+            log("FIFO actual: \(fifoActualDescription(options.pacing))")
+            log("commit timing actual: \(commitTimingActualDescription(options.pacing))")
             log(
                 "presentation feedback "
                     + (usePresentationFeedback ? "available" : "unavailable")
@@ -83,6 +85,8 @@ enum PresentationFeedbackAnimation {
             if options.printSummary {
                 log(await animation.summary())
             }
+            log("fallback: none")
+            log("failure: none")
             log("result: pass")
             log("cleanup: pass")
         }
@@ -102,8 +106,12 @@ enum PresentationFeedbackAnimation {
             case .redrawRequested(let windowID) where windowID == window.id:
                 let phase = await animation.nextPhase()
                 if usePresentationFeedback {
-                    try? await window.requestPresentationFeedback()
-                    log("operation: request-presentation-feedback pass")
+                    do {
+                        try await window.requestPresentationFeedback()
+                        log("operation: request-presentation-feedback pass")
+                    } catch {
+                        log("operation: request-presentation-feedback failed(\(error))")
+                    }
                 } else {
                     log("operation: request-presentation-feedback skip")
                 }
@@ -172,6 +180,28 @@ enum PresentationFeedbackAnimation {
         case .available(let version):
             "available version=\(version)"
         }
+    }
+
+    nonisolated private static func fifoActualDescription(_ pacing: String?) -> String {
+        switch normalized(pacing) {
+        case "fifo":
+            "not applied(software-presentation-example)"
+        default:
+            "not requested"
+        }
+    }
+
+    nonisolated private static func commitTimingActualDescription(_ pacing: String?) -> String {
+        switch normalized(pacing) {
+        case "commit-timing":
+            "not applied(software-presentation-example)"
+        default:
+            "not requested"
+        }
+    }
+
+    nonisolated private static func normalized(_ value: String?) -> String? {
+        value?.lowercased().replacingOccurrences(of: "_", with: "-")
     }
 }
 

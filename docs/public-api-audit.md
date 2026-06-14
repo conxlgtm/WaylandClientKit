@@ -217,8 +217,14 @@ Current user-facing contract:
   validated cursor images and positive frame durations; WaylandClientKit keeps
   frame scheduling, SHM buffers, and cursor surfaces private.
 - Presentation feedback means `wp_presentation` feedback for managed surfaces.
-  Frame callbacks, presentation feedback, future FIFO or commit-timing controls,
+  Frame callbacks, presentation feedback, graphics-preview scheduling requests,
   and explicit sync remain separate concepts.
+- Output topology means `WaylandDisplay.outputs()` and
+  `WaylandDisplay.outputTopology()` expose current output snapshots, stable
+  connection-local output identities, logical geometry, scale, transform,
+  physical size, names, descriptions, and surface output membership facts.
+  WaylandClientKit reports output facts; it does not apply monitor settings or
+  own display-configuration policy.
 - GPU and GBM/EGL/dmabuf work remains package-internal and is surfaced only
   through the separate preview product. There is no public renderer, swapchain,
   drawable, or GPU buffer API in `WaylandClient`.
@@ -249,12 +255,28 @@ Intentionally public:
 - `WaylandGraphicsBackingKind`
 - `WaylandGraphicsSynchronizationPolicy`
 - `WaylandGraphicsPacingPolicy`
+- `WaylandGraphicsFrameSchedule`
+- `WaylandGraphicsFramePacingRequest`
+- `WaylandGraphicsCommitTimingRequest`
+- `WaylandGraphicsPresentationTarget`
 - `WaylandGraphicsMetadataPolicy`
 - `WaylandGraphicsPresentationFeedbackPolicy`
 - `WaylandGraphicsDamageRegion`
 - `WaylandGraphicsFrameMetadata`
 - `WaylandGraphicsContentType`
 - `WaylandGraphicsPresentationHint`
+- `WaylandGraphicsAlphaModifier`
+- `WaylandGraphicsColorAlphaMode`
+- `WaylandGraphicsColorRepresentation`
+- `WaylandGraphicsColorDescriptionID`
+- `WaylandGraphicsColorDescription`
+- `WaylandGraphicsDRMFormat`
+- `WaylandGraphicsDRMFormatModifier`
+- `WaylandGraphicsExternalBufferPlane`
+- `WaylandGraphicsExternalBufferPlanes`
+- `WaylandGraphicsExternalBufferDescriptor`
+- `WaylandGraphicsExternalSynchronization`
+- `WaylandGraphicsExternalAcquireSync`
 - `WaylandGraphicsXRGBColor`
 - `WaylandGraphicsClearFrame`
 - `WaylandGraphicsSubmittedFrame`
@@ -278,32 +300,43 @@ Current preview contract:
   frame, attempt a package-internal GPU clear-frame path, fall back to software
   when policy allows, submit arbitrary software drawing, return a typed frame
   result, and cancel or close resources without exposing raw graphics handles.
+- The external-buffer submission path accepts a move-only external dmabuf
+  descriptor made from owned plane descriptors, format/modifier facts, and a
+  positive buffer size. It imports, commits, tracks compositor release, and
+  cleans up late releases without exposing `wl_buffer`,
+  `zwp_linux_buffer_params_v1`, GBM, EGL, DRM, syncobj, or `OpaquePointer`
+  objects. The renderer owns rendering and buffer production; WaylandClientKit
+  owns Wayland import/commit/release lifetime.
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
   submission, or release failure; display-level dmabuf advertisement alone is
   not reported as active GPU backing.
 - Synchronization and pacing policies are active runtime requests for graphics
-  preview submissions. `implicitOnly` avoids explicit sync objects; `preferExplicit`
-  falls back to implicit sync with a runtime reason only before explicit sync
-  is installed or active on the surface; `requireExplicit` fails instead of
-  silently falling back, including configurations that request software backing
-  or forced software fallback. `preferFIFO` and `preferCommitTiming` apply
-  submit constraints on managed GPU and software/fallback commits when
-  advertised; FIFO commits prime with `set_barrier` before later commits wait
-  and re-prime. Missing pacing protocols report fallback or typed failure facts.
-  Live compositor evidence currently proves explicit sync and FIFO active.
-  Commit timing remains an implementation path with typed fallback/failure
-  evidence, not active live proof.
-- It does not expose raw Wayland proxies, EGL/GBM/DRM handles, syncobj fds,
-  SHM pools, scene rendering, swapchains, drawables, or public color-management
-  image descriptions.
+  preview submissions, and `WaylandGraphicsFrameSchedule` makes them
+  per-frame caller-visible preview scheduling inputs. `implicitOnly` avoids
+  explicit sync objects; `preferExplicit` falls back to implicit sync with a
+  runtime reason only before explicit sync is installed or active on the
+  surface; `requireExplicit` fails instead of silently falling back, including
+  configurations that request software backing or forced software fallback.
+  `fifo` and `commitTiming(.default)` apply submit constraints on managed GPU
+  and software/fallback commits when advertised; FIFO commits prime with
+  `set_barrier` before later commits wait and re-prime. Missing pacing
+  protocols report fallback or typed failure facts. Live compositor evidence
+  currently proves explicit sync and FIFO active. Commit timing remains an
+  implementation path with typed fallback/failure evidence, not active live
+  proof.
+- It does not expose raw Wayland proxies, EGL/GBM/DRM objects, syncobj handles,
+  SHM pools, scene rendering, swapchains, drawables, or raw
+  color-management/image-description protocol objects. `OwnedFileDescriptor`
+  appears in the external-buffer preview descriptor only as an explicit
+  noncopyable Linux plane descriptor ownership transfer.
 - Public frame metadata is intentionally narrow. Content type and presentation
   hint map to safe surface commit metadata when their protocols are available
   and `metadataPolicy` permits metadata. Preferred-but-unavailable metadata is
   omitted from the commit and reported with protocol-specific public fallback
-  reasons. Alpha, color representation, and color management remain
-  package-internal runtime facts rather than public renderer policy. Full-frame
-  damage is the supported default. Partial damage is
+  reasons. Alpha, color representation, and opaque color-description references
+  are preview protocol facts rather than renderer policy. Full-frame damage is
+  the supported default. Partial damage is
   accepted for managed software submissions, converted to `SurfaceDamageRegion`,
   mapped from logical surface coordinates to active buffer damage coordinates,
   and rejected as `WaylandGraphicsError.invalidDamageRegion` when it has no
