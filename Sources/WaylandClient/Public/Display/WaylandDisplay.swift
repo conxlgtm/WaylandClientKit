@@ -286,6 +286,7 @@ public actor WaylandDisplay {
         let source = DisplayEventSource(core: displayCore)
         lifecycle = .active(core: displayCore, eventSource: source)
         try runtime.installEventSource(source)
+        updateCursorAnimationTask(for: cursorConfiguration.fallbackCursor)
     }
 
     func requireCore() throws -> DisplayCore {
