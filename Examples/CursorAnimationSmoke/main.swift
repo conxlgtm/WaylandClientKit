@@ -90,7 +90,8 @@ enum CursorAnimationSmoke {
         try await pause(options)
         try await setCursor(.defaultArrow, display: display, operation: "replace-with-default")
         try await pause(options)
-        try await setCursor(animatedCursor, display: display, operation: "set-animated-before-close")
+        try await setCursor(
+            animatedCursor, display: display, operation: "set-animated-before-close")
         await window.close()
     }
 
