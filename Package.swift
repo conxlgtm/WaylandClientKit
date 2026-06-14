@@ -269,6 +269,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "PointerWarpSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/PointerWarpSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "CursorAnimationSmoke",
             dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/CursorAnimationSmoke",

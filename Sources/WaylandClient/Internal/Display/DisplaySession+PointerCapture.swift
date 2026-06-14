@@ -40,6 +40,23 @@ extension DisplaySession {
         )
     }
 
+    package func requestPointerWarpOnOwnerThread(
+        surface: RawSurface,
+        windowSize: PositiveLogicalSize,
+        seatID: SeatID,
+        position: LogicalOffset,
+        serial: InputSerial
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        try pointerCaptureManager.requestPointerWarp(
+            surface: surface,
+            windowSize: windowSize,
+            seatID: seatID,
+            position: position,
+            serial: serial
+        )
+    }
+
     package func destroyRelativePointerSubscriptionOnOwnerThread(
         _ id: RelativePointerSubscriptionID
     ) throws {

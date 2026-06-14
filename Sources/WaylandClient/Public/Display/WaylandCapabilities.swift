@@ -70,6 +70,9 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Compositor-mediated system bell support through `xdg_system_bell_v1`.
     public let systemBell: ProtocolAvailability
 
+    /// Pointer warp request support through `wp_pointer_warp_v1`.
+    public let pointerWarp: ProtocolAvailability
+
     /// Relative pointer motion support through `zwp_relative_pointer_manager_v1`.
     public let relativePointer: ProtocolAvailability
 
@@ -100,7 +103,8 @@ public struct WaylandCapabilities: Equatable, Sendable {
         linuxDmabuf: ProtocolAvailability,
         xdgToplevelIcon: ProtocolAvailability = .unavailable,
         idleInhibit: ProtocolAvailability = .unavailable,
-        systemBell: ProtocolAvailability = .unavailable
+        systemBell: ProtocolAvailability = .unavailable,
+        pointerWarp: ProtocolAvailability = .unavailable
     ) {
         self.clipboard = clipboard
         self.dragAndDrop = dragAndDrop
@@ -116,6 +120,7 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.xdgToplevelIcon = xdgToplevelIcon
         self.idleInhibit = idleInhibit
         self.systemBell = systemBell
+        self.pointerWarp = pointerWarp
         self.relativePointer = relativePointer
         self.pointerConstraints = pointerConstraints
         self.textInput = textInput
@@ -155,7 +160,8 @@ public struct WaylandCapabilities: Equatable, Sendable {
             linuxDmabuf: linuxDmabuf,
             xdgToplevelIcon: .unavailable,
             idleInhibit: .unavailable,
-            systemBell: .unavailable
+            systemBell: .unavailable,
+            pointerWarp: .unavailable
         )
     }
 
@@ -191,7 +197,8 @@ public struct WaylandCapabilities: Equatable, Sendable {
             linuxDmabuf: linuxDmabuf,
             xdgToplevelIcon: .unavailable,
             idleInhibit: .unavailable,
-            systemBell: .unavailable
+            systemBell: .unavailable,
+            pointerWarp: .unavailable
         )
     }
 }
@@ -285,6 +292,10 @@ extension WaylandCapabilities {
             systemBell: ProtocolAvailability(
                 protocols.bestAdvertisedProtocol(named: "xdg_system_bell_v1"),
                 supportedByClient: SupportedVersions.xdgSystemBellV1
+            ),
+            pointerWarp: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "wp_pointer_warp_v1"),
+                supportedByClient: SupportedVersions.wpPointerWarpV1
             )
         )
     }

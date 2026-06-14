@@ -281,6 +281,37 @@
     },
     {
       "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/pointer-warp/pointer-warp-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/pointer-warp/pointer-warp-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/pointer-warp/pointer-warp-v1.xml",
+      "name" : "pointer-warp-v1",
+      "notes" : "Optional extension for window-scoped pointer warp requests. The compositor may reject or ignore individual requests.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "1389e89c68c6f6d231fd2dcda57fa9c75c5230d0ac1deffa8d80a7648e197e66",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/pointer-warp/pointer-warp-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/pointer-warp/pointer-warp-v1.xml"
+        ],
+        "environmentOverride" : "POINTER_WARP_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/pointer-warp/pointer-warp-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "waylandClientKitTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
+      "vendoredFromPath" : "/usr/share/wayland-protocols/staging/pointer-warp/pointer-warp-v1.xml"
+    },
+    {
+      "apiExposure" : "public",
       "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/xdg-activation/xdg-activation-v1-protocol.c",
       "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/xdg-activation/xdg-activation-v1-client-protocol.h",
       "localPath" : "protocols/upstream/staging/xdg-activation/xdg-activation-v1.xml",

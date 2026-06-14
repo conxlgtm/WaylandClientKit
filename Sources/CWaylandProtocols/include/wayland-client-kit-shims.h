@@ -31,6 +31,7 @@ struct xdg_activation_token_v1;
 struct xdg_toplevel_icon_manager_v1;
 struct xdg_toplevel_icon_v1;
 struct xdg_system_bell_v1;
+struct wp_pointer_warp_v1;
 struct zwp_relative_pointer_manager_v1;
 struct zwp_relative_pointer_v1;
 struct zwp_pointer_constraints_v1;
@@ -123,6 +124,9 @@ swl_registry_bind_xdg_toplevel_icon_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct xdg_system_bell_v1 *swl_registry_bind_xdg_system_bell_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct wp_pointer_warp_v1 *swl_registry_bind_wp_pointer_warp_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct zwp_relative_pointer_manager_v1 *
@@ -371,6 +375,16 @@ void swl_xdg_system_bell_v1_ring(
 /* ------------------------------------------------------------------ */
 /*  Pointer capture request wrappers                                  */
 /* ------------------------------------------------------------------ */
+
+void swl_wp_pointer_warp_v1_warp_pointer(
+    struct wp_pointer_warp_v1 *warp,
+    struct wl_surface *surface,
+    struct wl_pointer *pointer,
+    int32_t x,
+    int32_t y,
+    uint32_t serial);
+void swl_wp_pointer_warp_v1_destroy(
+    struct wp_pointer_warp_v1 *warp);
 
 struct zwp_relative_pointer_v1 *
 swl_zwp_relative_pointer_manager_v1_get_relative_pointer(
@@ -2150,6 +2164,7 @@ enum swl_test_pointer_capture_request_kind {
     SWL_TEST_POINTER_CAPTURE_CONFINE_SET_REGION = 6,
     SWL_TEST_POINTER_CAPTURE_REGION_ADD = 7,
     SWL_TEST_POINTER_CAPTURE_REGION_SUBTRACT = 8,
+    SWL_TEST_POINTER_CAPTURE_WARP_POINTER = 9,
 };
 
 struct swl_test_pointer_capture_request_record {
@@ -2164,6 +2179,7 @@ struct swl_test_pointer_capture_request_record {
     int32_t                                      y;
     int32_t                                      width;
     int32_t                                      height;
+    uint32_t                                     serial;
 };
 
 enum swl_test_pointer_capture_destroy_kind {
@@ -2174,6 +2190,7 @@ enum swl_test_pointer_capture_destroy_kind {
     SWL_TEST_POINTER_CAPTURE_DESTROY_LOCKED_POINTER = 4,
     SWL_TEST_POINTER_CAPTURE_DESTROY_CONFINED_POINTER = 5,
     SWL_TEST_POINTER_CAPTURE_DESTROY_REGION = 6,
+    SWL_TEST_POINTER_CAPTURE_DESTROY_POINTER_WARP = 7,
 };
 
 struct swl_test_pointer_capture_destroy_record {

@@ -929,13 +929,14 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L65: `    public let xdgToplevelIcon: ProtocolAvailability`
 - L68: `    public let idleInhibit: ProtocolAvailability`
 - L71: `    public let systemBell: ProtocolAvailability`
-- L74: `    public let relativePointer: ProtocolAvailability`
-- L77: `    public let pointerConstraints: ProtocolAvailability`
-- L80: `    public let textInput: ProtocolAvailability`
-- L83: `    public let linuxDmabuf: ProtocolAvailability`
-- L85: `    public init(`
-- L125: `    public init(`
-- L162: `    public init(`
+- L74: `    public let pointerWarp: ProtocolAvailability`
+- L77: `    public let relativePointer: ProtocolAvailability`
+- L80: `    public let pointerConstraints: ProtocolAvailability`
+- L83: `    public let textInput: ProtocolAvailability`
+- L86: `    public let linuxDmabuf: ProtocolAvailability`
+- L88: `    public init(`
+- L130: `    public init(`
+- L168: `    public init(`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+Activation.swift`
 
@@ -962,8 +963,9 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L2: `    public func relativePointer(`
 - L9: `    public func lockPointer(`
 - L30: `    public func confinePointer(`
-- L49: `    public func destroyRelativePointerSubscription(`
-- L59: `    public func destroyPointerConstraint(_ constraint: PointerConstraint) throws {`
+- L49: `    public func requestPointerWarp(`
+- L67: `    public func destroyRelativePointerSubscription(`
+- L77: `    public func destroyPointerConstraint(_ constraint: PointerConstraint) throws {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+TextInput.swift`
 
@@ -988,7 +990,7 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L109: `    public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {`
 - L116: `    public func createTopLevelWindow(`
 - L240: `    public func close() {`
-- L342: `    public var isClosed: Bool {`
+- L344: `    public var isClosed: Bool {`
 
 ### `Sources/WaylandClient/Public/Errors/ClientError.swift`
 
@@ -1668,6 +1670,20 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L154: `    public func hash(into hasher: inout Hasher) {`
 - L158: `    public func destroy() async throws {`
 
+### `Sources/WaylandClient/Public/Input/PointerWarpDomainTypes.swift`
+
+- L1: `public enum PointerWarpError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L2: `    case unavailable`
+- L3: `    case displayClosed`
+- L4: `    case foreignWindow(WindowID)`
+- L5: `    case unknownWindow(WindowID)`
+- L6: `    case closedWindow(WindowID)`
+- L7: `    case unknownSeat(SeatID)`
+- L8: `    case pointerUnavailable(SeatID)`
+- L9: `    case invalidPosition(position: LogicalOffset, windowSize: PositiveLogicalSize)`
+- L10: `    case requestFailed(String)`
+- L12: `    public var description: String {`
+
 ### `Sources/WaylandClient/Public/Input/SeatCapabilities.swift`
 
 - L1: `public struct SeatCapabilities: OptionSet, Sendable, Equatable, CustomStringConvertible {`
@@ -2129,29 +2145,30 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L217: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
 - L221: `    public func lockPointer(`
 - L236: `    public func confinePointer(`
-- L249: `    public func setTitle(_ title: WaylandString) async throws {`
-- L253: `    public func setTitle(_ title: String) async throws {`
-- L257: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
-- L261: `    public func setAppID(_ appID: String) async throws {`
-- L265: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
-- L269: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
-- L273: `    public func requestMaximize() async throws {`
-- L277: `    public func requestUnmaximize() async throws {`
-- L281: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
-- L285: `    public func requestExitFullscreen() async throws {`
-- L289: `    public func requestMinimize() async throws {`
-- L293: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
-- L297: `    public func requestInteractiveResize(`
-- L310: `    public func requestWindowMenu(`
-- L323: `    public func startDrag(`
-- L338: `    public var isClosed: Bool {`
-- L344: `    public var needsRedraw: Bool {`
-- L350: `    public var decorationMode: WindowDecorationMode {`
-- L356: `    public var geometry: SurfaceGeometry {`
-- L362: `    public var stateSnapshot: WindowStateSnapshot {`
-- L368: `    public var restorationSnapshot: WindowRestorationSnapshot {`
-- L374: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L378: `    public func hash(into hasher: inout Hasher) {`
+- L249: `    public func requestPointerWarp(`
+- L262: `    public func setTitle(_ title: WaylandString) async throws {`
+- L266: `    public func setTitle(_ title: String) async throws {`
+- L270: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L274: `    public func setAppID(_ appID: String) async throws {`
+- L278: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L282: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L286: `    public func requestMaximize() async throws {`
+- L290: `    public func requestUnmaximize() async throws {`
+- L294: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L298: `    public func requestExitFullscreen() async throws {`
+- L302: `    public func requestMinimize() async throws {`
+- L306: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L310: `    public func requestInteractiveResize(`
+- L323: `    public func requestWindowMenu(`
+- L336: `    public func startDrag(`
+- L351: `    public var isClosed: Bool {`
+- L357: `    public var needsRedraw: Bool {`
+- L363: `    public var decorationMode: WindowDecorationMode {`
+- L369: `    public var geometry: SurfaceGeometry {`
+- L375: `    public var stateSnapshot: WindowStateSnapshot {`
+- L381: `    public var restorationSnapshot: WindowRestorationSnapshot {`
+- L387: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L391: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 

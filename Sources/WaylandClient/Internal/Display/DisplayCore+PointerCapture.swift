@@ -49,6 +49,40 @@ extension DisplayCore {
         }
     }
 
+    func requestPointerWarp(
+        windowID: WindowID,
+        seatID: SeatID,
+        position: LogicalOffset,
+        serial: InputSerial
+    ) throws {
+        try withFatalFailureFinalization {
+            guard !isClosed else {
+                throw PointerWarpError.displayClosed
+            }
+            guard let window = surfaces.window(windowID) else {
+                throw PointerWarpError.unknownWindow(windowID)
+            }
+            guard !window.isClosedOnOwnerThread else {
+                throw PointerWarpError.closedWindow(windowID)
+            }
+
+            let geometry: SurfaceGeometry
+            do {
+                geometry = try window.geometryOnOwnerThread
+            } catch {
+                throw PointerWarpError.requestFailed(String(describing: error))
+            }
+
+            try requireSession().requestPointerWarpOnOwnerThread(
+                surface: window.rawSurfaceOnOwnerThread,
+                windowSize: geometry.logicalSize,
+                seatID: seatID,
+                position: position,
+                serial: serial
+            )
+        }
+    }
+
     func destroyRelativePointerSubscription(_ id: RelativePointerSubscriptionID) throws {
         try withFatalFailureFinalization {
             guard !isClosed else {

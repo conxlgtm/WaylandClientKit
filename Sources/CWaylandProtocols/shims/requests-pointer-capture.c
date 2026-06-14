@@ -1,5 +1,6 @@
 #include "wayland-client-kit-shims.h"
 #include "generated/core/wayland-client-protocol.h"
+#include "generated/staging/pointer-warp/pointer-warp-v1-client-protocol.h"
 #include "generated/legacy-unstable/relative-pointer/relative-pointer-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1-client-protocol.h"
 
@@ -14,6 +15,22 @@ static struct zwp_relative_pointer_v1 *swl_relative_pointer_get_default(
     struct wl_pointer *pointer)
 {
     return zwp_relative_pointer_manager_v1_get_relative_pointer(manager, pointer);
+}
+
+static void swl_pointer_warp_pointer_default(
+    struct wp_pointer_warp_v1 *warp,
+    struct wl_surface *surface,
+    struct wl_pointer *pointer,
+    int32_t x,
+    int32_t y,
+    uint32_t serial)
+{
+    wp_pointer_warp_v1_warp_pointer(warp, surface, pointer, x, y, serial);
+}
+
+static void swl_pointer_warp_destroy_default(struct wp_pointer_warp_v1 *warp)
+{
+    wp_pointer_warp_v1_destroy(warp);
 }
 
 static void swl_relative_pointer_manager_destroy_default(
@@ -126,6 +143,16 @@ static struct zwp_relative_pointer_v1 *(*swl_relative_pointer_get_impl)(
     struct zwp_relative_pointer_manager_v1 *manager,
     struct wl_pointer *pointer) =
         swl_relative_pointer_get_default;
+static void (*swl_pointer_warp_pointer_impl)(
+    struct wp_pointer_warp_v1 *warp,
+    struct wl_surface *surface,
+    struct wl_pointer *pointer,
+    int32_t x,
+    int32_t y,
+    uint32_t serial) =
+        swl_pointer_warp_pointer_default;
+static void (*swl_pointer_warp_destroy_impl)(struct wp_pointer_warp_v1 *warp) =
+    swl_pointer_warp_destroy_default;
 static void (*swl_relative_pointer_manager_destroy_impl)(
     struct zwp_relative_pointer_manager_v1 *manager) =
         swl_relative_pointer_manager_destroy_default;
@@ -205,6 +232,23 @@ static struct zwp_relative_pointer_v1 *swl_test_relative_pointer_get_record(
         SWL_TEST_POINTER_CAPTURE_GET_RELATIVE_POINTER, manager);
     swl_test_pointer_capture_request_latest.pointer = pointer;
     return (struct zwp_relative_pointer_v1 *)0xB001;
+}
+
+static void swl_test_pointer_warp_record(
+    struct wp_pointer_warp_v1 *warp,
+    struct wl_surface *surface,
+    struct wl_pointer *pointer,
+    int32_t x,
+    int32_t y,
+    uint32_t serial)
+{
+    swl_test_record_pointer_capture_request(
+        SWL_TEST_POINTER_CAPTURE_WARP_POINTER, warp);
+    swl_test_pointer_capture_request_latest.surface = surface;
+    swl_test_pointer_capture_request_latest.pointer = pointer;
+    swl_test_pointer_capture_request_latest.x = x;
+    swl_test_pointer_capture_request_latest.y = y;
+    swl_test_pointer_capture_request_latest.serial = serial;
 }
 
 static struct zwp_locked_pointer_v1 *swl_test_pointer_constraints_lock_record(
@@ -335,6 +379,12 @@ static void swl_test_pointer_constraints_destroy_record(
         SWL_TEST_POINTER_CAPTURE_DESTROY_CONSTRAINTS, constraints);
 }
 
+static void swl_test_pointer_warp_destroy_record(struct wp_pointer_warp_v1 *warp)
+{
+    swl_test_record_pointer_capture_destroy(
+        SWL_TEST_POINTER_CAPTURE_DESTROY_POINTER_WARP, warp);
+}
+
 static void swl_test_locked_pointer_destroy_record(
     struct zwp_locked_pointer_v1 *locked_pointer)
 {
@@ -357,6 +407,8 @@ static void swl_test_region_destroy_record(struct wl_region *region)
 #else
 #define swl_relative_pointer_get_impl \
     zwp_relative_pointer_manager_v1_get_relative_pointer
+#define swl_pointer_warp_pointer_impl wp_pointer_warp_v1_warp_pointer
+#define swl_pointer_warp_destroy_impl wp_pointer_warp_v1_destroy
 #define swl_relative_pointer_manager_destroy_impl \
     zwp_relative_pointer_manager_v1_destroy
 #define swl_relative_pointer_destroy_impl zwp_relative_pointer_v1_destroy
@@ -376,6 +428,22 @@ static void swl_test_region_destroy_record(struct wl_region *region)
 #define swl_region_subtract_impl wl_region_subtract
 #define swl_region_destroy_impl wl_region_destroy
 #endif
+
+void swl_wp_pointer_warp_v1_warp_pointer(
+    struct wp_pointer_warp_v1 *warp,
+    struct wl_surface *surface,
+    struct wl_pointer *pointer,
+    int32_t x,
+    int32_t y,
+    uint32_t serial)
+{
+    swl_pointer_warp_pointer_impl(warp, surface, pointer, x, y, serial);
+}
+
+void swl_wp_pointer_warp_v1_destroy(struct wp_pointer_warp_v1 *warp)
+{
+    swl_pointer_warp_destroy_impl(warp);
+}
 
 struct zwp_relative_pointer_v1 *
 swl_zwp_relative_pointer_manager_v1_get_relative_pointer(
@@ -499,6 +567,8 @@ void swl_test_pointer_capture_request_recording_begin(void)
         (struct swl_test_pointer_capture_request_record){0};
     swl_test_pointer_capture_destroy_latest =
         (struct swl_test_pointer_capture_destroy_record){0};
+    swl_pointer_warp_pointer_impl = swl_test_pointer_warp_record;
+    swl_pointer_warp_destroy_impl = swl_test_pointer_warp_destroy_record;
     swl_relative_pointer_get_impl = swl_test_relative_pointer_get_record;
     swl_relative_pointer_manager_destroy_impl =
         swl_test_relative_pointer_manager_destroy_record;
@@ -524,6 +594,8 @@ void swl_test_pointer_capture_request_recording_begin(void)
 
 void swl_test_pointer_capture_request_recording_end(void)
 {
+    swl_pointer_warp_pointer_impl = swl_pointer_warp_pointer_default;
+    swl_pointer_warp_destroy_impl = swl_pointer_warp_destroy_default;
     swl_relative_pointer_get_impl = swl_relative_pointer_get_default;
     swl_relative_pointer_manager_destroy_impl =
         swl_relative_pointer_manager_destroy_default;
