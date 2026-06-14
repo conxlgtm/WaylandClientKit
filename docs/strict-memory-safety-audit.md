@@ -108,6 +108,36 @@ Tests:
   target resolution, binding destruction, and late callback behavior.
 - `DisplayEventHubTextInputTests` covers delivery on the text-input stream.
 
+## Tablet Input Boundary
+
+Remaining unsafe constructs:
+
+- `RawTabletManager`, `RawTabletSeat`, `RawTablet`, `RawTabletTool`, and tablet
+  pad child wrappers own `zwp_tablet_manager_v2`, `zwp_tablet_seat_v2`,
+  `zwp_tablet_v2`, `zwp_tablet_tool_v2`, and pad protocol proxies returned by
+  generated C helpers.
+- Tablet listener owners recover Swift state from C callback payloads and
+  forward typed raw tablet events into the public input router.
+
+Audit invariant:
+
+- Tablet objects are seat-scoped and destroyed when the seat disappears or the
+  display session shuts down.
+- Listener storage remains reachable while the raw tablet proxy can emit events
+  and is invalidated before destroy.
+- Unknown tablet tool, pad, ring, strip, and button facts are preserved as raw
+  values where needed instead of trapping.
+- Public tablet events expose only typed input facts and target identities, not
+  raw protocol objects, queues, pointers, or device handles.
+
+Tests:
+
+- `InputRouterTabletTests` covers target routing, seat removal, surface cleanup,
+  unknown capability preservation, and device/tool/pad event projection from
+  raw tablet event facts.
+- Shim verification covers the Swift-facing tablet listener and destroy helper
+  declarations against their C implementations.
+
 ## Cursor And Drag Visual Surfaces
 
 Remaining unsafe constructs:

@@ -13,7 +13,8 @@ still owns the user-interface model.
 - logical input regions, opaque regions, and damage-aware software redraws
 - redraw requests and `needsRedraw`
 - display, input, text-input, data-transfer, presentation, and diagnostic streams
-- pointer, keyboard, touch, text-input, clipboard, drag-and-drop, and cursor facts
+- pointer, keyboard, touch, tablet, text-input, clipboard, drag-and-drop, and
+  cursor facts
 - `WaylandGraphicsPreview` capability, runtime-path, fallback, and managed
   software-submission APIs
 - external integration tests that compile as separate packages
@@ -73,6 +74,9 @@ Use these examples as references before adding framework policy:
 - `TextInputSmoke`: text-input capability, enable/disable lifecycle, IME
   commits, and interpreted keyboard fallback. `disable()` finalizes the
   session; do not call `commit()` after disabling.
+- `TabletInputSmoke`: tablet protocol capability and typed device/tool/pad
+  event facts. It skips cleanly when no compositor tablet protocol or hardware
+  events are available.
 - `DataTransferSmoke`: clipboard, primary-selection, drag/drop source and offer
   behavior, private MIME filtering, stale-offer handling, bounded reads, and
   source cancellation.

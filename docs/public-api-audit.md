@@ -152,9 +152,9 @@ Current user-facing contract:
   popup surfaces, restoration snapshots, presentation feedback, regular
   clipboard selection, primary selection, receive-side and source-side
   drag-and-drop data transfer, drag icon surfaces, xdg activation, relative
-  pointer, pointer lock/confine, pointer warp, cursor requests, text-input sessions and
-  events, diagnostics, and terminal display errors are the current product
-  surface.
+  pointer, pointer lock/confine, pointer warp, tablet input facts, cursor
+  requests, text-input sessions and events, diagnostics, and terminal display
+  errors are the current product surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
   are derived display text, not control-flow payloads.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
@@ -176,8 +176,8 @@ Current user-facing contract:
   for regular clipboard, drag-and-drop, drag action negotiation, primary
   selection, server-side decorations, xdg-output, viewporter, presentation time,
   fractional scaling, cursor-shape, xdg activation, relative pointer, pointer
-  constraints, pointer warp, text-input, and linux-dmabuf without binding new protocol
-  objects.
+  constraints, pointer warp, tablet input, text-input, and linux-dmabuf without
+  binding new protocol objects.
 - Primary selection means `zwp_primary_selection_device_manager_v1` offers and
   sources. It is selection-driven, focus-sensitive, and serial-scoped.
 - Drag-and-drop means `wl_data_device_manager` target offers and local sources,
@@ -199,6 +199,11 @@ Current user-facing contract:
   foreign-window, closed-window, unknown-seat, pointer-unavailable, invalid-position,
   and request-failed errors without exposing raw warp, pointer, surface, or queue
   objects. Compositor policy may still ignore or reject a request.
+- Tablet input means `zwp_tablet_manager_v2` device, tool, pad, proximity,
+  motion, pressure, tilt, rotation, slider, wheel, distance, button, and frame
+  facts. Events are seat-scoped and target-resolved where the protocol provides
+  a surface. WaylandClientKit does not define drawing, gesture, brush, stroke,
+  eraser behavior, or canvas policy.
 - Cursor requests cover compositor cursor-shape requests, named theme cursors,
   hidden cursors, static XRGB8888 custom cursor images, and output-aware theme
   scale policy. Animated custom cursors are public value types built from

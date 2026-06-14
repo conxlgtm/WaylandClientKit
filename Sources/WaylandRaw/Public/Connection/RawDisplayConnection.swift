@@ -55,6 +55,14 @@ package final class RawDisplayConnection {
             guard let connection, let boundGlobals = connection.boundGlobals else { return }
 
             do {
+                if global.interfaceName == "wl_seat",
+                    let seat = try boundGlobals.seatRegistry.bindSeat(
+                        globalName: global.name,
+                        advertisedVersion: global.advertisedVersion
+                    )
+                {
+                    boundGlobals.tabletSeatRegistry?.bindTabletSeat(for: seat)
+                }
                 try boundGlobals.outputRegistry.bindAdvertisedOutput(global)
             } catch {
                 connection.invariantFailureSink.reportFatalRawInvariantFailure(
@@ -67,6 +75,7 @@ package final class RawDisplayConnection {
             }
         }
         registryListenerOwner.onGlobalRemoved = { [weak connection = self] name in
+            connection?.boundGlobals?.tabletSeatRegistry?.removeSeat(globalName: name)
             connection?.boundGlobals?.seatRegistry.removeSeat(globalName: name)
             connection?.boundGlobals?.outputRegistry.removeOutput(globalName: name)
         }
@@ -298,6 +307,7 @@ extension RawDisplayConnection {
     private struct OptionalGlobalBindingSet {
         let extensions: OptionalGlobals
         let outputRegistry: OutputRegistry
+        let tabletSeatRegistry: TabletSeatRegistry?
     }
 
     @discardableResult
@@ -352,6 +362,7 @@ extension RawDisplayConnection {
             sharedMemory: shm,
             xdgWMBase: xdgWmBase,
             seatRegistry: seatRegistry,
+            tabletSeatRegistry: optionalBindingSet.tabletSeatRegistry,
             outputRegistry: optionalBindingSet.outputRegistry,
             extensions: optionalBindingSet.extensions
         )
@@ -378,16 +389,23 @@ extension RawDisplayConnection {
             throw error
         }
 
+        var tabletSeatRegistry: TabletSeatRegistry?
         do {
+            tabletSeatRegistry = bindTabletSeatRegistryIfPresent(
+                extensions: extensions,
+                seatRegistry: seatRegistry
+            )
             let outputRegistry = try bindOutputRegistry(
                 registry: reg,
                 extensions: extensions
             )
             return OptionalGlobalBindingSet(
                 extensions: extensions,
-                outputRegistry: outputRegistry
+                outputRegistry: outputRegistry,
+                tabletSeatRegistry: tabletSeatRegistry
             )
         } catch {
+            tabletSeatRegistry?.destroy()
             extensions.destroy()
             seatRegistry.destroy()
             xdgWMBase.destroy()
@@ -551,5 +569,21 @@ extension RawDisplayConnection {
             outputRegistry.destroy()
             throw error
         }
+    }
+
+    private func bindTabletSeatRegistryIfPresent(
+        extensions: OptionalGlobals,
+        seatRegistry: SeatRegistry
+    ) -> TabletSeatRegistry? {
+        guard let tabletManager = extensions.tabletManager.boundObject else {
+            return nil
+        }
+
+        let tabletSeatRegistry = TabletSeatRegistry(
+            manager: tabletManager,
+            eventSink: inputEventQueue
+        )
+        tabletSeatRegistry.bindTabletSeats(from: seatRegistry.seats)
+        return tabletSeatRegistry
     }
 }

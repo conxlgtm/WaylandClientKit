@@ -233,6 +233,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "TabletInputSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/TabletInputSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "DataTransferSmoke",
             dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/DataTransferSmoke",
