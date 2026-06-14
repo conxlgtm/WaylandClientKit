@@ -55,6 +55,18 @@ package final class RawCompositorSessionManager {
         )
     }
 
+    @safe
+    package init(
+        uncheckedPointer managerPointer: OpaquePointer,
+        version managerVersion: RawVersion,
+        proxyAdoption adoptionContext: RawProxyAdoptionContext,
+        destroy destroyProxy: @escaping (OpaquePointer) -> Void
+    ) {
+        version = managerVersion
+        proxyAdoption = adoptionContext
+        proxy = RawOwnedProxy(pointer: managerPointer, destroy: destroyProxy)
+    }
+
     package func getSession(
         reason: RawCompositorSessionReason,
         existingID: RawCompositorSessionID? = nil,
@@ -124,6 +136,7 @@ package final class RawCompositorSession {
     private let listenerOwner: RawCompositorSessionOwner
     private var proxy: RawOwnedProxy
     private var toplevelSessions: [RawCompositorToplevelSession] = []
+    @safe private let toplevelDestroy: (OpaquePointer) -> Void
 
     @safe private var pointer: OpaquePointer { proxy.pointer }
 
@@ -132,19 +145,23 @@ package final class RawCompositorSession {
         pointer sessionPointer: OpaquePointer,
         version sessionVersion: RawVersion,
         proxyAdoption adoptionContext: RawProxyAdoptionContext,
+        destroy destroyProxy: @escaping (OpaquePointer) -> Void = unsafe swl_xdg_session_v1_destroy,
+        toplevelDestroy destroyToplevelProxy: @escaping (OpaquePointer) -> Void =
+            unsafe swl_xdg_toplevel_session_v1_destroy,
+        installListener shouldInstallListener: Bool = true,
         onEvent: @escaping (RawCompositorSessionEvent) -> Void
     ) throws(RuntimeError) {
         version = sessionVersion
         proxyAdoption = adoptionContext
-        proxy = RawOwnedProxy(
-            pointer: sessionPointer,
-            destroy: unsafe swl_xdg_session_v1_destroy
-        )
+        unsafe toplevelDestroy = destroyToplevelProxy
+        proxy = RawOwnedProxy(pointer: sessionPointer, destroy: destroyProxy)
         listenerOwner = RawCompositorSessionOwner(
             invariantFailureSink: adoptionContext.invariantFailureSink,
             onEvent: onEvent
         )
-        try unsafe listenerOwner.install(on: sessionPointer)
+        if shouldInstallListener {
+            try unsafe listenerOwner.install(on: sessionPointer)
+        }
     }
 
     package func addToplevel(
@@ -213,6 +230,7 @@ package final class RawCompositorSession {
         let toplevelSession = try RawCompositorToplevelSession(
             pointer: adoptedToplevelSessionPointer,
             invariantFailureSink: proxyAdoption.invariantFailureSink,
+            destroy: toplevelDestroy,
             onEvent: onEvent
         )
         toplevelSessions.append(toplevelSession)
@@ -224,6 +242,29 @@ package final class RawCompositorSession {
             toplevelSession.destroy()
         }
         toplevelSessions.removeAll(keepingCapacity: false)
+    }
+
+    @safe package var trackedToplevelSessionCountForTesting: Int {
+        toplevelSessions.count
+    }
+
+    @safe
+    package func trackToplevelSessionForTesting(
+        _ toplevelSession: RawCompositorToplevelSession
+    ) {
+        toplevelSessions.append(toplevelSession)
+    }
+
+    package func emitCreatedForTesting(_ sessionID: String) {
+        listenerOwner.emitCreatedForTesting(sessionID)
+    }
+
+    package func emitRestoredForTesting() {
+        listenerOwner.emitRestoredForTesting()
+    }
+
+    package func emitReplacedForTesting() {
+        listenerOwner.emitReplacedForTesting()
     }
 
     deinit {
@@ -242,17 +283,19 @@ package final class RawCompositorToplevelSession {
     init(
         pointer toplevelSessionPointer: OpaquePointer,
         invariantFailureSink failureSink: RawInvariantFailureSink?,
+        destroy destroyProxy: @escaping (OpaquePointer) -> Void =
+            unsafe swl_xdg_toplevel_session_v1_destroy,
+        installListener shouldInstallListener: Bool = true,
         onEvent: @escaping (RawCompositorToplevelSessionEvent) -> Void
     ) throws(RuntimeError) {
-        proxy = RawOwnedProxy(
-            pointer: toplevelSessionPointer,
-            destroy: unsafe swl_xdg_toplevel_session_v1_destroy
-        )
+        proxy = RawOwnedProxy(pointer: toplevelSessionPointer, destroy: destroyProxy)
         listenerOwner = RawCompositorToplevelSessionOwner(
             invariantFailureSink: failureSink,
             onEvent: onEvent
         )
-        try unsafe listenerOwner.install(on: toplevelSessionPointer)
+        if shouldInstallListener {
+            try unsafe listenerOwner.install(on: toplevelSessionPointer)
+        }
     }
 
     package func rename(_ name: String) {
@@ -264,6 +307,10 @@ package final class RawCompositorToplevelSession {
     package func destroy() {
         listenerOwner.cancel()
         proxy.destroy()
+    }
+
+    package func emitRestoredForTesting() {
+        listenerOwner.emitRestoredForTesting()
     }
 
     deinit {
@@ -336,6 +383,21 @@ private final class RawCompositorSessionOwner {
         listenerStorage.invalidate()
     }
 
+    func emitCreatedForTesting(_ sessionID: String) {
+        guard !isCanceled else { return }
+        onEvent(.created(RawCompositorSessionID(sessionID)))
+    }
+
+    func emitRestoredForTesting() {
+        guard !isCanceled else { return }
+        onEvent(.restored)
+    }
+
+    func emitReplacedForTesting() {
+        guard !isCanceled else { return }
+        onEvent(.replaced)
+    }
+
     @safe
     private static func withOwner(
         _ data: UnsafeMutableRawPointer?,
@@ -396,6 +458,11 @@ private final class RawCompositorToplevelSessionOwner {
     func cancel() {
         isCanceled = true
         listenerStorage.invalidate()
+    }
+
+    func emitRestoredForTesting() {
+        guard !isCanceled else { return }
+        onEvent(.restored)
     }
 
     @safe

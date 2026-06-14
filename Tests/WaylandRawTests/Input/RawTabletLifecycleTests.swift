@@ -9,7 +9,7 @@ struct RawTabletLifecycleTests {
         let fixture = try RawTabletLifecycleFixture()
         let tabletID = RawTabletIdentity(objectID: RawObjectID(0x901))
         let tablet = try RawTablet(
-            pointer: unsafe fakePointer(0x901),
+            pointer: try unsafe fakePointer(0x901),
             version: 2,
             seatID: fixture.seat.seatID,
             eventSink: fixture.queue,
@@ -43,7 +43,7 @@ struct RawTabletLifecycleTests {
         let fixture = try RawTabletLifecycleFixture()
         let toolID = RawTabletToolIdentity(objectID: RawObjectID(0xA01))
         let tool = try RawTabletTool(
-            pointer: unsafe fakePointer(0xA01),
+            pointer: try unsafe fakePointer(0xA01),
             version: 2,
             seatID: fixture.seat.seatID,
             eventSink: fixture.queue,
@@ -77,7 +77,7 @@ struct RawTabletLifecycleTests {
         let fixture = try RawTabletLifecycleFixture()
         let padID = RawTabletPadIdentity(objectID: RawObjectID(0xB01))
         let pad = try RawTabletPad(
-            pointer: unsafe fakePointer(0xB01),
+            pointer: try unsafe fakePointer(0xB01),
             version: 2,
             seatID: fixture.seat.seatID,
             eventSink: fixture.queue,
@@ -92,10 +92,10 @@ struct RawTabletLifecycleTests {
         ) { identity in
             fixture.seat.handlePadRemovedForTesting(identity)
         }
-        unsafe pad.trackGroupForTesting(unsafe fakePointer(0xB02))
-        unsafe pad.emitGroupRingForTesting(unsafe fakePointer(0xB03))
-        unsafe pad.emitGroupStripForTesting(unsafe fakePointer(0xB04))
-        unsafe pad.emitGroupDialForTesting(unsafe fakePointer(0xB05))
+        try unsafe pad.trackGroupForTesting(fakePointer(0xB02))
+        try unsafe pad.emitGroupRingForTesting(fakePointer(0xB03))
+        try unsafe pad.emitGroupStripForTesting(fakePointer(0xB04))
+        try unsafe pad.emitGroupDialForTesting(fakePointer(0xB05))
         fixture.seat.trackPadForTesting(pad)
 
         pad.emitRemovedForTesting()
@@ -136,11 +136,11 @@ private final class RawTabletLifecycleFixture {
     init() throws {
         proxyAdoption = RawProxyAdoptionContext(
             eventQueue: RawEventQueue.testingQueueWithoutDestroy(
-                opaquePointer: unsafe fakePointer(0xE00)
+                opaquePointer: try unsafe fakePointer(0xE00)
             )
         )
         seat = RawTabletSeat(
-            uncheckedPointer: unsafe fakePointer(0xE01),
+            uncheckedPointer: try unsafe fakePointer(0xE01),
             version: 2,
             seatID: RawSeatID(rawValue: 42),
             eventSink: queue,
@@ -166,9 +166,13 @@ private final class DestroyRecorder {
     }
 }
 
-private func fakePointer(_ bitPattern: UInt) -> OpaquePointer {
+private enum FakePointerError: Error {
+    case invalid(UInt)
+}
+
+private func fakePointer(_ bitPattern: UInt) throws -> OpaquePointer {
     guard let pointer = unsafe OpaquePointer(bitPattern: bitPattern) else {
-        fatalError("invalid test pointer bit pattern: \(bitPattern)")
+        throw FakePointerError.invalid(bitPattern)
     }
     return unsafe pointer
 }
