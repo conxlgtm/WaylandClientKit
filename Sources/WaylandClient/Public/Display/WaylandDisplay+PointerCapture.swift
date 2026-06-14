@@ -52,9 +52,10 @@ extension WaylandDisplay {
         position: LogicalOffset,
         serial: InputSerial
     ) throws {
-        guard window.isOwned(by: self) else {
-            throw PointerWarpError.foreignWindow(window.id)
-        }
+        try Self.validatePointerWarpWindowOwnership(
+            windowID: window.id,
+            isOwned: window.isOwned(by: self)
+        )
 
         try pointerWarpCore().requestPointerWarp(
             windowID: window.id,
@@ -95,6 +96,15 @@ extension WaylandDisplay {
             return try requireCore()
         } catch ClientError.display(.closed) {
             throw PointerWarpError.displayClosed
+        }
+    }
+
+    package static func validatePointerWarpWindowOwnership(
+        windowID: WindowID,
+        isOwned: Bool
+    ) throws {
+        guard isOwned else {
+            throw PointerWarpError.foreignWindow(windowID)
         }
     }
 }

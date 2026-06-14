@@ -157,12 +157,20 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
             windowSize: windowSize
         )
         let globals = try connection.bindRequiredGlobals()
-        guard case .bound(let warp) = globals.extensions.pointerWarp else {
+        let warp = globals.extensions.pointerWarp.boundObject
+        let seat = globals.seatRegistry.seat(for: RawSeatID(seatID))
+        try Self.validatePointerWarpRequest(
+            isShutDown: isShutDown,
+            hasPointerWarp: warp != nil,
+            hasSeat: seat != nil,
+            seatHasPointerDevice: seat?.hasPointerDevice ?? false,
+            seatID: seatID
+        )
+        guard let warp else {
             throw PointerWarpError.unavailable
         }
-        let seat = try requirePointerWarpSeat(seatID, globals: globals)
-        guard seat.hasPointerDevice else {
-            throw PointerWarpError.pointerUnavailable(seatID)
+        guard let seat else {
+            throw PointerWarpError.unknownSeat(seatID)
         }
 
         do {
@@ -173,10 +181,8 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
                 y: fixedPosition.y,
                 serial: serial.rawValue
             )
-        } catch RuntimeError.bindFailed("wl_pointer") {
-            throw PointerWarpError.pointerUnavailable(seatID)
         } catch {
-            throw PointerWarpError.requestFailed(String(describing: error))
+            throw Self.mapPointerWarpRequestError(error, seatID: seatID)
         }
     }
 
@@ -350,5 +356,37 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
         guard seat.hasPointerDevice else {
             throw PointerCaptureError.pointerUnavailable(seatID)
         }
+    }
+
+    package static func validatePointerWarpRequest(
+        isShutDown: Bool,
+        hasPointerWarp: Bool,
+        hasSeat: Bool,
+        seatHasPointerDevice: Bool,
+        seatID: SeatID
+    ) throws {
+        guard !isShutDown else {
+            throw PointerWarpError.displayClosed
+        }
+        guard hasPointerWarp else {
+            throw PointerWarpError.unavailable
+        }
+        guard hasSeat else {
+            throw PointerWarpError.unknownSeat(seatID)
+        }
+        guard seatHasPointerDevice else {
+            throw PointerWarpError.pointerUnavailable(seatID)
+        }
+    }
+
+    package static func mapPointerWarpRequestError(
+        _ error: any Error,
+        seatID: SeatID
+    ) -> PointerWarpError {
+        if case RuntimeError.bindFailed("wl_pointer") = error {
+            return .pointerUnavailable(seatID)
+        }
+
+        return .requestFailed(String(describing: error))
     }
 }
