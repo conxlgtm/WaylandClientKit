@@ -18,7 +18,7 @@ enum WaylandClientKitToolMain {
         if CCompilerFilter.isEnabled(environment: environment) {
             runCCompilerFilter(environment: environment)
         }
-        Swl.main()
+        Wck.main()
     }
 
     private static func runCCompilerFilter(environment: [String: String]) -> Never {
@@ -44,9 +44,9 @@ enum WaylandClientKitToolMain {
     }
 }
 
-struct Swl: ParsableCommand {
+struct Wck: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "swl",
+        commandName: "wck",
         abstract: "WaylandClientKit repository tooling",
         subcommands: [
             Tools.self,
@@ -701,7 +701,7 @@ struct Smoke: ParsableCommand {
                 ],
                 repository: context.repository,
                 environment: [
-                    "SWL_RUN_GPU_SMOKE": "1", "WAYLAND_CLIENT_KIT_ENABLE_GPU_PREVIEW_TESTS": "1",
+                    "WCK_RUN_GPU_SMOKE": "1", "WAYLAND_CLIENT_KIT_ENABLE_GPU_PREVIEW_TESTS": "1",
                 ]
             )
             try context.swift.runSwift(
@@ -898,7 +898,7 @@ private func compilerFilterEnvironment(
 
 private func currentExecutableURL(context: ToolContext) throws -> URL {
     guard let path = CommandLine.arguments.first, !path.isEmpty else {
-        throw ToolError("cannot resolve swl executable path", exitCode: ToolExitCode.environment)
+        throw ToolError("cannot resolve wck executable path", exitCode: ToolExitCode.environment)
     }
     return try CCompilerFilter.filterExecutableURL(
         commandPath: path,
@@ -975,16 +975,16 @@ private func runRequestPathTests(context: ToolContext, sanitizer: RequestPathSan
     }
 }
 
-private func runHeadlessSwl(context: ToolContext, arguments: [String]) throws {
+private func runHeadlessWck(context: ToolContext, arguments: [String]) throws {
     let swiftPath = try context.swift.swiftExecutable(environment: context.runner.environment)
-    try HeadlessWestonRunner(context: context).run(command: [swiftPath, "run", "swl"] + arguments)
+    try HeadlessWestonRunner(context: context).run(command: [swiftPath, "run", "wck"] + arguments)
 }
 
 private func runHeadlessWaylandReleaseChecks(context: ToolContext) throws {
-    try runHeadlessSwl(context: context, arguments: ["smoke", "live"])
-    try runHeadlessSwl(context: context, arguments: ["smoke", "integration"])
-    try runHeadlessSwl(context: context, arguments: ["test", "request-paths-tsan"])
-    try runHeadlessSwl(context: context, arguments: ["test", "request-paths-asan"])
+    try runHeadlessWck(context: context, arguments: ["smoke", "live"])
+    try runHeadlessWck(context: context, arguments: ["smoke", "integration"])
+    try runHeadlessWck(context: context, arguments: ["test", "request-paths-tsan"])
+    try runHeadlessWck(context: context, arguments: ["test", "request-paths-asan"])
 }
 
 private func runLiveWaylandReleaseChecks(context: ToolContext) throws {

@@ -1,35 +1,35 @@
 check:
-    swift run swl ci check
+    swift run wck ci check
 
 cheap:
-    swift run swl ci cheap
+    swift run wck ci cheap
 
 release:
-    swift run swl ci release
+    swift run wck ci release
 
 examples:
-    swift run swl examples build
+    swift run wck examples build
 
 toolchain:
-    swift run swl tools toolchain-smoke
+    swift run wck tools toolchain-smoke
 
 evidence:
-    swift run swl compositor evidence-summary
+    swift run wck compositor evidence-summary
 
 generate-protocols:
-    swift run swl protocols generate
+    swift run wck protocols generate
 
 verify-protocols:
-    swift run swl protocols verify-generated
+    swift run wck protocols verify-generated
 
 doctor:
-    swift run swl tools doctor
+    swift run wck tools doctor
 
 bootstrap:
-    swift run swl bootstrap check
+    swift run wck bootstrap check
 
 nix-check:
-    nix develop -c swift run swl ci check
+    nix develop -c swift run wck ci check
 
 nix-cheap:
-    nix develop -c swift run swl ci cheap
+    nix develop -c swift run wck ci cheap

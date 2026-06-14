@@ -12,74 +12,74 @@ GNOME.
 ## Commands
 
 ```bash
-swift run swl smoke live
-swift run swl smoke integration
-swift run swl smoke gpu-preview
-swift run swl smoke headless -- swl smoke live
-swift run swl smoke headless -- swl smoke integration
-swift run swl smoke headless -- swl smoke gpu-preview
-swift run swl compositor evidence-summary
-swift run swl ci check
-swift run swl ci release
-swift run swl test integration-graphics-preview
-swift run swl tools toolchain-smoke
+swift run wck smoke live
+swift run wck smoke integration
+swift run wck smoke gpu-preview
+swift run wck smoke headless -- wck smoke live
+swift run wck smoke headless -- wck smoke integration
+swift run wck smoke headless -- wck smoke gpu-preview
+swift run wck compositor evidence-summary
+swift run wck ci check
+swift run wck ci release
+swift run wck test integration-graphics-preview
+swift run wck tools toolchain-smoke
 swift test --filter WaylandThreadExecutorConcurrencyTests --no-parallel
 ```
 
-`swift run swl smoke live` runs the `wayland-client-kit-smoke` executable against the
+`swift run wck smoke live` runs the `wayland-client-kit-smoke` executable against the
 current compositor. It requires `WAYLAND_DISPLAY`.
 
-`swift run swl smoke integration` runs the external public API integration package
+`swift run wck smoke integration` runs the external public API integration package
 against the current compositor. It requires `WAYLAND_DISPLAY` and sets
 `WAYLAND_CLIENT_KIT_ENABLE_PUBLIC_INTEGRATION_TESTS=1`.
 
-`swift run swl test integration-graphics-preview` runs an external compile/test package for
+`swift run wck test integration-graphics-preview` runs an external compile/test package for
 the `WaylandGraphicsPreview` product. It does not require a live compositor or a
 GPU-capable session.
 
-`swift run swl smoke gpu-preview` runs package-internal GPU preview checks against the
+`swift run wck smoke gpu-preview` runs package-internal GPU preview checks against the
 current compositor. It requires `WAYLAND_DISPLAY`, sets
 `WAYLAND_CLIENT_KIT_ENABLE_GPU_PREVIEW_TESTS=1`, and enables the GBM/EGL smoke path
-with `SWL_RUN_GPU_SMOKE=1`. The current test path proves the linux-dmabuf
+with `WCK_RUN_GPU_SMOKE=1`. The current test path proves the linux-dmabuf
 capability gate, public graphics fact projection, explicit software fallback
 projection, and a local GBM/EGL clear plus dmabuf export when an accessible DRM
 render node is present. It also runs `GPUPreviewSmokeClient`, which prints a
 pasteable `WaylandClientKit GPU Preview Runtime Path` block for
 [compositor-matrix.md](compositor-matrix.md).
 
-The command runs `swift run swl smoke gpu-preview`.
+The command runs `swift run wck smoke gpu-preview`.
 
-`swift run swl smoke headless -- swl smoke live` starts headless Weston, then
+`swift run wck smoke headless -- wck smoke live` starts headless Weston, then
 runs the noninteractive smoke executable against that private compositor.
 
-`swift run swl smoke headless -- swl smoke integration` starts headless Weston and runs the env-gated
+`swift run wck smoke headless -- wck smoke integration` starts headless Weston and runs the env-gated
 window-control and source-side drag request-path tests against that private
 compositor. It sets `WAYLAND_CLIENT_KIT_ENABLE_WINDOW_CONTROL_REQUEST_TESTS=1` and
 `WAYLAND_CLIENT_KIT_ENABLE_DND_SOURCE_REQUEST_TESTS=1`.
 
-`swift run swl test tsan` and `swift run swl test asan` run the sanitizer test
+`swift run wck test tsan` and `swift run wck test asan` run the sanitizer test
 gates. GPU hardware paths remain separate from sanitizer jobs.
 
-`swift run swl smoke headless -- swl smoke gpu-preview` starts headless Weston, then runs the GPU preview
+`swift run wck smoke headless -- wck smoke gpu-preview` starts headless Weston, then runs the GPU preview
 capability, graphics fact projection, pasteable runtime-path report, and
 GBM/EGL smoke path against that private compositor. The render-node-dependent
 portion reports a skip/fact when the private CI environment has no accessible
 DRM render node.
 
-`swift run swl ci check` runs the normal local check set. It runs the live Wayland smoke
+`swift run wck ci check` runs the normal local check set. It runs the live Wayland smoke
 check only when `WAYLAND_DISPLAY` is already set.
 
-`swift run swl ci release` runs the base check set first. After that, it uses the
+`swift run wck ci release` runs the base check set first. After that, it uses the
 current compositor when `WAYLAND_DISPLAY` is set, uses headless Weston when
 `weston` is installed, and fails in CI or when `REQUIRE_WAYLAND_SMOKE=1` if no
 live Wayland path is available.
 
-`swift run swl tools toolchain-smoke` reports the active Swift wrapper,
+`swift run wck tools toolchain-smoke` reports the active Swift wrapper,
 `Package.swift` tools version, optional `SWIFT_NEXT_BIN` status, and the
 allowed-failure Swift Build preview status. Native SwiftPM remains the supported
 build system.
 
-`swift run swl compositor evidence-summary` summarizes the current
+`swift run wck compositor evidence-summary` summarizes the current
 `docs/compositor-matrix.md` rows so missing evidence is visible before release
 notes or checkpoint notes are written.
 

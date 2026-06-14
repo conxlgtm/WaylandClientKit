@@ -6,21 +6,21 @@ windows, popups, software frames, input, data transfer, text input,
 presentation feedback, diagnostics, and compositor capability reporting.
 
 It also includes the source-breaking preview `WaylandGraphicsPreview` library,
-the `swl` maintainer CLI, and noninteractive smoke executables. It does not
+the `wck` maintainer CLI, and noninteractive smoke executables. It does not
 provide widgets, layout, styling, a scene graph, or renderer policy.
 
 ## Quick Start
 
 ```bash
 nix develop
-swift run swl tools toolchain-smoke
-swift run swl bootstrap check
+swift run wck tools toolchain-smoke
+swift run wck bootstrap check
 swift build --disable-index-store
 swift run wayland-client-kit-smoke
 ```
 
 If you are not using Nix, install the packages listed in
-[Linux Dependencies](#linux-dependencies), then run the same `swl` checks.
+[Linux Dependencies](#linux-dependencies), then run the same `wck` checks.
 WaylandClientKit requires Swift 6.3.2 or newer.
 
 Start with [Getting Started](docs/getting-started.md) for a tiny client that
@@ -287,7 +287,7 @@ Not supported in the current experimental baseline:
 ## Linux Dependencies
 
 Swift 6.3.2 or newer must already be installed.
-`swift run swl bootstrap check` verifies Swift and Linux system dependencies.
+`swift run wck bootstrap check` verifies Swift and Linux system dependencies.
 It does not install or switch toolchains.
 Set `SWIFT_BIN=/path/to/swift` for custom toolchain resolution.
 
@@ -340,7 +340,7 @@ compatibility library available in the toolchain runtime path.
 ## Targets
 
 The package currently vends the `WaylandClient` and preview
-`WaylandGraphicsPreview` library products plus the `swl` and
+`WaylandGraphicsPreview` library products plus the `wck` and
 `wayland-client-kit-smoke` executable products. The list below summarizes public
 products and reusable support modules; runnable examples are listed in
 [Commands](#commands).
@@ -362,10 +362,10 @@ WaylandClientKitSmoke
     noninteractive Wayland smoke executable
 
 WaylandClientKitTool
-    canonical maintainer CLI executable product exposed as swl
+    canonical maintainer CLI executable product exposed as wck
 
 WaylandClientKitToolSupport
-    maintainer command implementation shared by swl and tests
+    maintainer command implementation shared by wck and tests
 
 WaylandKeyboard
     xkbcommon-backed keymap and key event interpretation
@@ -427,16 +427,16 @@ CWaylandClientSystem
 Verify or bootstrap a Linux environment:
 
 ```bash
-swift run swl tools toolchain-smoke
-swift run swl bootstrap check
-swift run swl bootstrap install-command --package-manager dnf
-swift run swl bootstrap install-command --package-manager nix
+swift run wck tools toolchain-smoke
+swift run wck bootstrap check
+swift run wck bootstrap install-command --package-manager dnf
+swift run wck bootstrap install-command --package-manager nix
 ```
 
 Maintainers regenerating protocol artifacts should also run:
 
 ```bash
-swift run swl bootstrap maintainer-check
+swift run wck bootstrap maintainer-check
 ```
 
 Live Wayland smoke and public API integration checks are documented in
@@ -445,55 +445,55 @@ Live Wayland smoke and public API integration checks are documented in
 Run the headless Weston path with:
 
 ```bash
-swift run swl smoke headless -- swl smoke integration
+swift run wck smoke headless -- wck smoke integration
 ```
 
 Sync protocol XML into the repository:
 
 ```bash
-swift run swl protocols sync
+swift run wck protocols sync
 ```
 
 Regenerate protocol artifacts:
 
 ```bash
-swift run swl protocols generate
+swift run wck protocols generate
 ```
 
 Run local checks:
 
 ```bash
-swift run swl ci check
+swift run wck ci check
 ```
 
 Build all example targets in debug and release:
 
 ```bash
-swift run swl examples build
+swift run wck examples build
 ```
 
 Summarize recorded compositor evidence:
 
 ```bash
-swift run swl compositor evidence-summary
+swift run wck compositor evidence-summary
 ```
 
 Run the strict Swift concurrency build only:
 
 ```bash
-swift run swl ci check-base
+swift run wck ci check-base
 ```
 
 Generate a public API report before publishing checkpoint notes:
 
 ```bash
-swift run swl api dump
+swift run wck api dump
 ```
 
 Run the unsafe-token allowlist check:
 
 ```bash
-swift run swl safety verify-unsafe-allowlist
+swift run wck safety verify-unsafe-allowlist
 ```
 
 Run the demo target:
@@ -577,13 +577,13 @@ submits one clear frame, prints the selected runtime path, and closes cleanly.
 Run the noninteractive Wayland smoke check under a real Wayland session:
 
 ```bash
-swift run swl smoke live
+swift run wck smoke live
 ```
 
 Run public API integration tests under a real Wayland session:
 
 ```bash
-swift run swl smoke integration
+swift run wck smoke integration
 ```
 
 Or run the executable through the repository Swift wrapper:

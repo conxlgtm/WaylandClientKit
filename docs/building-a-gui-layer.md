@@ -107,7 +107,7 @@ The examples that can run unattended accept common flags:
 --print-summary
 ```
 
-`swift run swl test integration-framework-host` and `swift run swl ci release`
+`swift run wck test integration-framework-host` and `swift run wck ci release`
 keep framework-facing handoff examples in build coverage.
 
 ## Software Rendering Path

@@ -14,20 +14,20 @@ as failures.
 Run these under the compositor being tested:
 
 ```bash
-swift run swl smoke live
-swift run swl smoke integration
-swift run swl smoke gpu-preview
-swift run swl compositor evidence-summary
+swift run wck smoke live
+swift run wck smoke integration
+swift run wck smoke gpu-preview
+swift run wck compositor evidence-summary
 ```
 
 For headless Weston:
 
 ```bash
-swift run swl smoke headless -- swl smoke integration
-swift run swl smoke headless -- swl smoke gpu-preview
+swift run wck smoke headless -- wck smoke integration
+swift run wck smoke headless -- wck smoke gpu-preview
 ```
 
-`swift run swl smoke gpu-preview` prints a `WaylandClientKit GPU Preview Runtime Path`
+`swift run wck smoke gpu-preview` prints a `WaylandClientKit GPU Preview Runtime Path`
 block. Paste that block into the Graphics Preview Evidence table before
 summarizing the result in the main matrix.
 
@@ -91,10 +91,10 @@ active.
 
 | Compositor | Version | Protocol facts | Smoke | Public integration | GPU preview | Notes |
 | ---------- | ------- | -------------- | ----- | ------------------ | ----------- | ----- |
-| Weston headless | Weston 15.0.0 headless backend, 2026-06-09 | dmabuf unavailable, explicit sync unavailable, FIFO and presentation feedback advertised, content type and color metadata unavailable | `swift run swl smoke headless -- swl smoke live`, `swl smoke integration`, and `swl smoke gpu-preview` passed | Headless integration smoke passed | GPU preview smoke passed with software fallback `dmabufUnavailable` | Repeatable headless evidence target. This is not full desktop compatibility and active GPU is not expected without dmabuf. |
-| GNOME / Mutter | Fedora GNOME Wayland VM on `wayland-0`, 2026-06-11 | `wayland-info`: dmabuf v3, presentation v2, FIFO v1, commit timing v1, text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1, idle inhibit v1, system bell v1, xdg activation v1, color management v2, color representation v1, linux-drm-syncobj unavailable, top-level icon unavailable | `swift run swl smoke live`, `swift run swl smoke integration`, and `swift run swl smoke gpu-preview` passed | GNOME VM integration smoke passed after Fedora Swift index-store/toolchain fixes | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported software fallback `surfaceFeedbackUnavailable` | Real GNOME/Mutter desktop-family evidence. Active GPU was not proven because surface dmabuf feedback was unavailable to the managed GPU path. |
-| KDE / KWin | KDE / plasma session, 2026-06-09 plus manual pointer/serial/data-transfer/managed-GPU-resize addendum on 2026-06-11 | `wayland-info`: dmabuf v5, linux-drm-syncobj v1, FIFO v1, presentation v2, text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1, top-level icon v1, idle inhibit v1, system bell v1, xdg activation v1, color metadata advertised, commit timing unavailable | `swift run swl smoke live`, `swift run swl smoke integration`, `swift run swl smoke gpu-preview`, and individual auto-close feature examples passed | live integration smoke passed; `swift run swl ci check` was attempted but hung after building `swl` with no child process/output | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported active managed GPU submission | Active GPU presentation and managed GPU resize/reconfigure are proven for clear-frame submission on this run. Manual pointer lock/confine with relative motion is proven. Manual data-transfer drag-source/drop/read/finish is proven. Manual serial move/window-menu requests are proven; serial resize is proven through the managed GPU resize run and drag-source serial is proven through `DataTransferSmoke`. |
-| Sway / wlroots | nested Sway/wlroots under KDE/Plasma, 2026-06-09 | `wayland-info`: dmabuf v4, linux-drm-syncobj v1, presentation v2, text-input v3 v1, cursor-shape v1, pointer constraints v1, relative pointer v1, idle inhibit v1, xdg activation v1, content type/alpha/tearing metadata advertised, FIFO/color management/color representation/top-level icon/system bell unavailable | `swift run swl smoke live`, `swift run swl smoke integration`, and `swift run swl smoke gpu-preview` passed inside nested Sway | nested integration smoke passed | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported active managed GPU submission | Nested wlroots evidence. Active GPU clear-frame submission was proven at 96x96; full bare-metal Sway evidence is still desirable. |
+| Weston headless | Weston 15.0.0 headless backend, 2026-06-09 | dmabuf unavailable, explicit sync unavailable, FIFO and presentation feedback advertised, content type and color metadata unavailable | `swift run wck smoke headless -- wck smoke live`, `wck smoke integration`, and `wck smoke gpu-preview` passed | Headless integration smoke passed | GPU preview smoke passed with software fallback `dmabufUnavailable` | Repeatable headless evidence target. This is not full desktop compatibility and active GPU is not expected without dmabuf. |
+| GNOME / Mutter | Fedora GNOME Wayland VM on `wayland-0`, 2026-06-11 | `wayland-info`: dmabuf v3, presentation v2, FIFO v1, commit timing v1, text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1, idle inhibit v1, system bell v1, xdg activation v1, color management v2, color representation v1, linux-drm-syncobj unavailable, top-level icon unavailable | `swift run wck smoke live`, `swift run wck smoke integration`, and `swift run wck smoke gpu-preview` passed | GNOME VM integration smoke passed after Fedora Swift index-store/toolchain fixes | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported software fallback `surfaceFeedbackUnavailable` | Real GNOME/Mutter desktop-family evidence. Active GPU was not proven because surface dmabuf feedback was unavailable to the managed GPU path. |
+| KDE / KWin | KDE / plasma session, 2026-06-09 plus manual pointer/serial/data-transfer/managed-GPU-resize addendum on 2026-06-11 | `wayland-info`: dmabuf v5, linux-drm-syncobj v1, FIFO v1, presentation v2, text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1, top-level icon v1, idle inhibit v1, system bell v1, xdg activation v1, color metadata advertised, commit timing unavailable | `swift run wck smoke live`, `swift run wck smoke integration`, `swift run wck smoke gpu-preview`, and individual auto-close feature examples passed | live integration smoke passed; `swift run wck ci check` was attempted but hung after building `wck` with no child process/output | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported active managed GPU submission | Active GPU presentation and managed GPU resize/reconfigure are proven for clear-frame submission on this run. Manual pointer lock/confine with relative motion is proven. Manual data-transfer drag-source/drop/read/finish is proven. Manual serial move/window-menu requests are proven; serial resize is proven through the managed GPU resize run and drag-source serial is proven through `DataTransferSmoke`. |
+| Sway / wlroots | nested Sway/wlroots under KDE/Plasma, 2026-06-09 | `wayland-info`: dmabuf v4, linux-drm-syncobj v1, presentation v2, text-input v3 v1, cursor-shape v1, pointer constraints v1, relative pointer v1, idle inhibit v1, xdg activation v1, content type/alpha/tearing metadata advertised, FIFO/color management/color representation/top-level icon/system bell unavailable | `swift run wck smoke live`, `swift run wck smoke integration`, and `swift run wck smoke gpu-preview` passed inside nested Sway | nested integration smoke passed | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` reported active managed GPU submission | Nested wlroots evidence. Active GPU clear-frame submission was proven at 96x96; full bare-metal Sway evidence is still desirable. |
 
 KDE/KWin manual interaction addendum on 2026-06-11:
 `swift run PointerCaptureSmoke` passed manual pointer-lock, pointer-confine, and

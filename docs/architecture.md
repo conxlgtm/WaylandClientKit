@@ -488,16 +488,16 @@ Swift code:
 
 ## Current Checks
 
-- `swift run swl lint`
-- `swift run swl protocols verify-generated`
-- `swift run swl shims verify`
-- `swift run swl examples build`
-- `swift run swl compositor evidence-summary`
-- `swift run swl ci check-base`
-- `swift run swl test unit`
-- `swift run swl test integration-public-api`
-- `swift run swl smoke integration`
-- `swift run swl ci check`
+- `swift run wck lint`
+- `swift run wck protocols verify-generated`
+- `swift run wck shims verify`
+- `swift run wck examples build`
+- `swift run wck compositor evidence-summary`
+- `swift run wck ci check-base`
+- `swift run wck test unit`
+- `swift run wck test integration-public-api`
+- `swift run wck smoke integration`
+- `swift run wck ci check`
 
 Every Swift target builds with strict memory safety as errors through the package
 manifest. Raw wrappers, runtime executor code, keyboard interpretation, cursor loading,

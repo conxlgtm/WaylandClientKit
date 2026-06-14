@@ -116,7 +116,7 @@ struct ToolSupportTests {
 
     @Test
     func cCompilerFilterEnvironmentSetsCCAndPreservesOverrides() throws {
-        let filter = URL(fileURLWithPath: "/tmp/swl")
+        let filter = URL(fileURLWithPath: "/tmp/wck")
 
         let environment = CCompilerFilter.compilerEnvironment(
             filterExecutable: filter,

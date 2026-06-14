@@ -186,7 +186,7 @@ struct ProtocolToolingTests {
         let runner = ProcessRunner(
             environment: [
                 "PATH": "",
-                "SWL_NIX_BIN": bin.appendingPathComponent("nix").path,
+                "WCK_NIX_BIN": bin.appendingPathComponent("nix").path,
             ])
 
         try ProtocolTooling(repository: Repository(root: root), runner: runner).generateProtocols()
