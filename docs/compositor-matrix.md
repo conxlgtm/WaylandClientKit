@@ -85,7 +85,7 @@ example or manual probe has been run:
 | presentation feedback | `PresentationFeedbackAnimation` feedback summary |
 | output topology | `OutputTopologySmoke` output snapshot and window output membership report |
 | graphics preview fallback/GPU path | `GPUPreviewSmokeClient` runtime-path report |
-| external graphics buffer | `GraphicsPreviewExternalBufferSmoke` probe or negative import-cleanup attempt; active evidence requires a renderer-produced dmabuf import/submit/release run |
+| external graphics buffer | `GraphicsPreviewExternalBufferSmoke -- --probe`, `--internal-test-buffer` renderer dmabuf import/submit/release run, or `--negative-test-buffer` import-cleanup probe |
 | graphics frame scheduling | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` requested/actual sync and pacing lines |
 | color metadata | `ColorManagementSmoke` and `GraphicsPreviewColorMetadataSmoke` capability/runtime report |
 
@@ -226,6 +226,17 @@ KDE/KWin graphics preview addendum on 2026-06-13:
 - `swift run GraphicsPreviewManagedGPUClear -- --sync prefer-explicit --pacing fifo --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary`
   produced five submitted frames with explicit sync, FIFO, content type, and
   tearing control active, with no fallback or failure.
+
+KDE/KWin external-buffer addendum on 2026-06-14:
+
+- `swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer`
+  produced `mode: renderer-dmabuf`, `renderer: active`,
+  `import: active`, `submit: active`, `release: active`,
+  `release/reuse: tracked-by-wayland-client-kit`, `fallback reason: none`,
+  `failure: none`, and `cleanup: pass` on `wayland-0`.
+- `swift run GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer`
+  produced the expected pipe-descriptor import failure
+  `externalBufferImportFailed` with `cleanup: pass`.
 
 Record graphics facts in this form:
 

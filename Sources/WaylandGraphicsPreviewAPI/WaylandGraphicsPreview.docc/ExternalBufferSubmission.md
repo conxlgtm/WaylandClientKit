@@ -28,4 +28,5 @@ fallback/failure facts. Software fallback never reports that an external buffer
 was submitted.
 
 Use `GraphicsPreviewExternalBufferSmoke -- --probe` for a bounded capability
-report and `--internal-test-buffer` for a bounded import attempt.
+report, `--internal-test-buffer` for a bounded renderer-dmabuf import attempt,
+and `--negative-test-buffer` for a pipe-descriptor cleanup failure probe.

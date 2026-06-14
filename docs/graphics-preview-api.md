@@ -51,10 +51,12 @@ accepts `--metadata none|prefer`, `--content-type none|photo|video|game`, and
 `GraphicsPreviewColorMetadataSmoke`, `ColorManagementSmoke`, and
 `OutputTopologySmoke` provide bounded probes for external buffers, color
 metadata, color capability facts, and output topology.
-`GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer` intentionally
+`GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer` creates a small
+GBM/EGL-rendered dmabuf, submits it through the public external-buffer API, and
+prints import, submit, release, fallback, and cleanup facts.
+`GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer` intentionally
 uses a pipe descriptor rather than a real dmabuf, so it is a negative
-import-failure cleanup probe. Active external-buffer evidence still requires a
-renderer-produced dmabuf run that imports, commits, releases, and cleans up.
+import-failure cleanup probe.
 
 ## Current Scope
 
@@ -191,10 +193,12 @@ status, and whether presentation feedback was requested. The result does not
 imply presentation feedback was observed; feedback still arrives through
 `WindowPresentationEvents`. The lease does not expose Wayland proxies, SHM
 pools, GBM buffers, EGL surfaces, DRM nodes, or syncobj handles. External
-buffer descriptors expose only owned Linux plane descriptors and format/modifier
-facts needed to integrate a renderer-owned dmabuf; descriptor validation covers
-size, format, modifier, plane count, consecutive plane indices, stride, offset,
-and ownership transfer.
+buffer descriptors expose only owned Linux plane descriptors plus format,
+modifier, offset, stride, and plane-index facts needed to integrate a
+renderer-owned dmabuf. Local descriptor validation covers size, nonzero format,
+plane count, consecutive plane indices, nonnegative plane indices, positive
+stride, and ownership transfer. Modifier and offset support are compositor
+import facts; unsupported values are reported as typed import failure.
 
 `WaylandGraphicsFrameMetadata` exposes content type, presentation hint, alpha
 modifier, color representation, color-description reference, and
