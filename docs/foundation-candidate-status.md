@@ -29,7 +29,7 @@ enough; active GPU claims must be backed by public runtime-path output.
 | Session readiness | done | [session-readiness.md](session-readiness.md), `SessionStateSmoke`, `WindowRestorationSnapshot` | Keep compositor session-management protocol API deferred until protocol evidence and framework usage shape are clear. |
 | Managed GPU setup code path | done | Managed GPU attempts surface feedback, render-node, GBM/EGL, dmabuf import, owner-thread commit, and typed fallback. | Keep runtime-path truth tests current. |
 | Managed GPU active proof | partial | [compositor-matrix.md](compositor-matrix.md) records active managed GPU clear-frame submission and resize/reconfigure on KDE/KWin, active managed GPU clear-frame submission on nested Sway/wlroots, `surfaceFeedbackUnavailable` fallback on GNOME/Mutter, and `dmabufUnavailable` fallback under headless Weston. | Broaden active/fallback/failure evidence before foundation-candidate claims, especially another desktop compositor when active managed GPU is available. |
-| Compositor matrix minimum | partial | [compositor-matrix.md](compositor-matrix.md) records fresh headless Weston, KDE/KWin, nested Sway/wlroots, and GNOME/Mutter VM rows and separates protocol advertisement from active runtime facts. KDE/KWin now has manual proof for pointer lock/confine with relative motion, data-transfer drag-source/drop/read/finish, serial move/window-menu/resize/drag-source, managed GPU resize/reconfigure, explicit sync active, FIFO active, and metadata active. | Complete remaining GNOME/Mutter manual rows, popup-specific manual probes, broader explicit-sync compositor evidence, and commit-timing active evidence where practical. |
+| Compositor matrix minimum | partial | [compositor-matrix.md](compositor-matrix.md) records fresh headless Weston, KDE/KWin, nested Sway/wlroots, and GNOME/Mutter VM rows and separates protocol advertisement from active runtime facts. KDE/KWin now has manual proof for pointer lock/confine with relative motion, data-transfer drag-source/drop/read/finish, serial move/window-menu/resize/drag-source, managed GPU resize/reconfigure, FIFO active, and metadata active. | Complete remaining GNOME/Mutter manual rows, popup-specific manual probes, broader explicit-sync compositor evidence, and commit-timing active evidence where practical. |
 | External consumer evidence | partial | Public and graphics preview integration clients are part of `swl ci check`. | Keep external clients hardware-independent. |
 | Release checks | partial | `swift run swl ci release`, `swift run swl examples build`, release docs. | Keep release gates runnable while evidence remains incomplete. |
 | Foundation-candidate gate | partial | `swift run swl ci foundation-check` fails while the compositor matrix has incomplete cells, explicit environment skips, or manual-interaction gaps. | Complete remaining compositor and interaction evidence before claiming foundation readiness. |
@@ -61,9 +61,8 @@ Still needs broader evidence:
 - Active managed GPU backing under headless Weston is not expected while dmabuf
   is unavailable there; keep the typed fallback row current.
 - Broader explicit-sync evidence and commit-timing active evidence on real
-  compositors. FIFO and explicit sync have active KDE/KWin evidence; commit
-  timing reports typed fallback where unavailable and still needs active
-  compositor evidence.
+  compositors. FIFO has active KDE/KWin evidence; explicit sync and commit
+  timing report typed runtime facts but still need active compositor evidence.
 - Broad live resize/reconfiguration behavior for GPU buffers.
 
 ## 2026-06-09 Evidence Pass

@@ -271,8 +271,8 @@ Current preview contract:
   submit constraints on managed GPU and software/fallback commits when
   advertised; FIFO commits prime with `set_barrier` before later commits wait
   and re-prime. Missing pacing protocols report fallback or typed failure facts.
-  Live compositor evidence currently proves FIFO and explicit sync active;
-  commit timing remains an implementation path with typed fallback/failure
+  Live compositor evidence currently proves FIFO active. Explicit sync and
+  commit timing remain implementation paths with typed fallback/failure
   evidence, not active live proof.
 - It does not expose raw Wayland proxies, EGL/GBM/DRM handles, syncobj fds,
   SHM pools, scene rendering, swapchains, drawables, or public color-management

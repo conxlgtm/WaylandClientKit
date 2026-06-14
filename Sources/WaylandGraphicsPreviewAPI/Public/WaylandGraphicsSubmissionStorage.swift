@@ -416,6 +416,10 @@ extension WaylandGraphicsWindowBackingStorage {
         case .preferGPUFallbackToSoftware:
             let reason = WaylandGraphicsFallbackReason(error.fallbackReason)
             updateBackingRuntimeStatus(.fallback(reason))
+            backingRuntimePath = Self.runtimePath(
+                backingRuntimePath,
+                fallbackExplicitSyncIfNeeded: reason
+            )
         case .requireGPU:
             let reason = WaylandGraphicsUnavailableReason(error.failure)
             updateBackingRuntimeStatus(.failed(reason))

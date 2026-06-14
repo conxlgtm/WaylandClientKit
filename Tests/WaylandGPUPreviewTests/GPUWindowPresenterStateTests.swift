@@ -2045,6 +2045,60 @@ struct ManagedGPUPreviewStoragePreparationTests {
 
 @Suite
 struct ManagedGPUPreviewExplicitFallbackTests {
+    @Test(arguments: [
+        GPUBackingFailure.explicitSyncSetupFailed,
+        GPUBackingFailure.explicitSyncSubmissionFailed,
+    ])
+    func preferExplicitPreActivationFailureFallsBackToSoftware(
+        failure: GPUBackingFailure
+    ) async throws {
+        let initialGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 4, height: 3),
+            scale: .one
+        )
+        let configuredGeometry = try SurfaceGeometry(
+            logicalSize: PositiveLogicalSize(width: 8, height: 6),
+            scale: .one
+        )
+        let window = FakeGraphicsPreviewWindow(
+            initialGeometry: initialGeometry,
+            configuredGeometry: configuredGeometry
+        )
+        let backing = FakeManagedGPUBacking(
+            setupFailures: [failure],
+            surfaceCapabilities: capabilitySnapshot(
+                synchronization: .explicitAvailable(version: 1)
+            ),
+            runtimePathSnapshot: .afterDmabufImportSetup(
+                capabilities: capabilitySnapshot(
+                    synchronization: .explicitAvailable(version: 1)
+                )
+            )
+        )
+        let storage = WaylandGraphicsWindowBackingStorage(
+            window: window,
+            runtimePath: .projected(capabilities: explicitSyncGPUPreviewCapabilities()),
+            configuration: WaylandGraphicsConfiguration(
+                synchronizationPolicy: .preferExplicit
+            ),
+            managedGPUBacking: backing
+        )
+
+        let lease = try await storage.nextFrame()
+        await window.clearEvents()
+
+        let result = try await lease.submit(.clearColor(.black))
+
+        #expect(
+            await window.eventSnapshot() == [.preparePresentation, .geometry, .show]
+        )
+        #expect(backing.submittedGeometries == [configuredGeometry])
+        let fallbackReason = explicitSyncFallbackReason(for: failure)
+        #expect(result.runtimePath.backing == .fallback(fallbackReason))
+        #expect(result.runtimePath.explicitSync == .fallback(fallbackReason))
+        #expect(result.operation == .show)
+    }
+
     @Test
     func preferExplicitActiveGPUFailureDoesNotFallbackToImplicitSoftware() async throws {
         let initialGeometry = try SurfaceGeometry(
@@ -2102,6 +2156,19 @@ struct ManagedGPUPreviewExplicitFallbackTests {
         } catch {
             Issue.record("unexpected error: \(error)")
         }
+    }
+}
+
+private func explicitSyncFallbackReason(
+    for failure: GPUBackingFailure
+) -> WaylandGraphicsFallbackReason {
+    switch failure {
+    case .explicitSyncSetupFailed:
+        .explicitSyncSetupFailed
+    case .explicitSyncSubmissionFailed:
+        .explicitSyncSubmissionFailed
+    default:
+        .managedGPUSubmissionUnavailable
     }
 }
 
