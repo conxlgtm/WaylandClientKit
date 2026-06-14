@@ -192,7 +192,7 @@
       "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/stable/tablet/tablet-v2-client-protocol.h",
       "localPath" : "protocols/upstream/stable/tablet/tablet-v2.xml",
       "name" : "tablet-v2",
-      "notes" : "Stable tablet input protocol. WaylandClientKit exposes capability facts and typed tablet device/tool/pad events without drawing, gesture, brush, or canvas policy.",
+      "notes" : "Stable tablet input protocol. WaylandClientKit exposes capability facts and typed tablet device/tool/pad events without drawing, gesture, brush, or canvas policy. Public pad ring, strip, and dial child-control events are deferred.",
       "scannerCodeMode" : "private-code",
       "scannerHeaderMode" : "client-header",
       "sha256" : "ac1128b26c779cf90b9ed71182ba5e34a7262826789adae206d825a4d45908b4",
