@@ -79,7 +79,7 @@ struct GPUWindowPresenterStateTests {
     func explicitSubmissionReusesSlotOnlyAfterReleasePointSignal() throws {
         var state = GPUWindowPresenterState()
         let slotID = try GBMBufferPoolSlotID(0)
-        let releasePoint = syncPoint(timeline: 5, point: 8)
+        let releasePoint = syncPoint(timeline: 6, point: 1)
         let submittedState = GPUSubmittedBufferSyncState(
             slotID: slotID,
             acquirePoint: syncPoint(timeline: 5, point: 6),
@@ -114,6 +114,24 @@ struct GPUWindowPresenterStateTests {
         #expect(state.explicitSubmissionStates.isEmpty)
         #expect(try state.markReleased(slotID) == false)
         #expect(try state.markExplicitReleaseSignaled(slotID) == false)
+    }
+
+    @Test
+    func explicitSubmissionConstraintPreservesSeparateReleaseTimeline() throws {
+        let state = GPUSubmittedBufferSyncState(
+            slotID: try GBMBufferPoolSlotID(0),
+            acquirePoint: syncPoint(timeline: 5, point: 6),
+            releasePoint: syncPoint(timeline: 6, point: 1)
+        )
+        let constraint = GPUBufferSubmissionSynchronization.explicit(state).submitConstraint
+
+        #expect(
+            constraint
+                == .explicit(
+                    acquire: syncPoint(timeline: 5, point: 6).surfaceSyncPoint,
+                    release: syncPoint(timeline: 6, point: 1).surfaceSyncPoint
+                )
+        )
     }
 
     @Test

@@ -154,7 +154,7 @@ package final class ManagedGPUPreviewBacking {
     var device: GBMDevice?
     var renderTarget: EGLGBMRenderTarget?
     var explicitSynchronization: ManagedGPUExplicitSynchronization?
-    var retainedExplicitSynchronizations: [GPUSyncTimeline: RetainedExplicitSynchronization] = [:]
+    var retainedExplicitSynchronizations: [RetainedExplicitSynchronization] = []
     var configuredGeometry: SurfaceGeometry?
     var capabilities: SurfaceCapabilitySnapshot?
     var runtimePath = GPURuntimePathSnapshot.empty
