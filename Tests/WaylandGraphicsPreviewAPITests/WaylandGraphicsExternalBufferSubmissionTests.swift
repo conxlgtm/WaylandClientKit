@@ -1,8 +1,11 @@
+// swiftlint:disable file_length
+
 import Glibc
 import Testing
 import WaylandClient
 import WaylandGraphicsPreview
-import WaylandRaw
+
+@testable import WaylandRaw
 
 @Suite
 struct WaylandGraphicsExternalBufferDescriptorTests {
@@ -162,13 +165,204 @@ struct WaylandGraphicsExternalBufferPreflightTests {
     }
 }
 
+@Suite
+struct WaylandGraphicsExternalBufferLifecycleTests {
+    @Test
+    func successfulExternalBufferWaitsForReleaseBeforeReusingSlot() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+
+        let firstLease = try await storage.nextFrame()
+        let firstResult = try await firstLease.submitExternalBuffer(
+            try testExternalDescriptor()
+        )
+
+        #expect(firstResult.runtimePath.backing == .active)
+        #expect(firstResult.runtimePath.dmabufImport == .active)
+        #expect(await window.importRequests == 1)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
+
+        let secondLease = try await storage.nextFrame()
+        _ = try await secondLease.submitExternalBuffer(try testExternalDescriptor())
+
+        #expect(await window.importRequests == 2)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0, 1])
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
+
+        await window.emitImportedBufferRelease(at: 0)
+
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [1])
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting() == [0])
+
+        let thirdLease = try await storage.nextFrame()
+        _ = try await thirdLease.submitExternalBuffer(try testExternalDescriptor())
+
+        #expect(await window.importRequests == 3)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0, 1])
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
+    func commitFailureLeavesImportedExternalBufferTrackedForRecovery() async throws {
+        let window = try ExternalBufferFakeManagedWindow(
+            importBehavior: .succeed,
+            presentationFailuresBeforeSuccess: 1
+        )
+        let storage = externalBufferStorage(window: window)
+
+        let failingLease = try await storage.nextFrame()
+        do {
+            _ = try await failingLease.submitExternalBuffer(try testExternalDescriptor())
+            Issue.record("expected external buffer commit failure")
+        } catch WaylandGraphicsError.unavailable(.commitFailed) {
+            #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
+            #expect(await storage.externalBufferAvailableSlotRawValuesForTesting() == [0])
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+
+        let recoveryLease = try await storage.nextFrame()
+        let result = try await recoveryLease.submitExternalBuffer(
+            try testExternalDescriptor()
+        )
+
+        #expect(result.runtimePath.backing == .active)
+        #expect(await window.importRequests == 2)
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
+
+        try await storage.closeForTesting()
+    }
+
+    @Test
+    func closeWhileExternalBufferSubmittedRetiresStateAndIgnoresLateRelease() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+
+        _ = try await lease.submitExternalBuffer(try testExternalDescriptor())
+
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting() == [0])
+
+        try await storage.closeForTesting()
+        await window.emitImportedBufferRelease(at: 0)
+
+        #expect(await storage.externalBufferSubmittedSlotRawValuesForTesting().isEmpty)
+        #expect(await storage.externalBufferAvailableSlotRawValuesForTesting().isEmpty)
+    }
+
+    @Test
+    func submitAfterLeaseCancelDoesNotImportExternalBuffer() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+
+        await lease.cancel()
+
+        do {
+            _ = try await lease.submitExternalBuffer(try testExternalDescriptor())
+            Issue.record("expected consumed lease failure")
+        } catch WaylandGraphicsError.frameLeaseConsumed {
+            #expect(await window.importRequests == 0)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func submitAfterBackingCloseDoesNotImportExternalBuffer() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(window: window)
+        let lease = try await storage.nextFrame()
+
+        try await storage.closeForTesting()
+
+        do {
+            _ = try await lease.submitExternalBuffer(try testExternalDescriptor())
+            Issue.record("expected backing closed failure")
+        } catch WaylandGraphicsError.backingClosed {
+            #expect(await window.importRequests == 0)
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func externalBufferSubmitsMetadataScheduleAndFeedbackRequest() async throws {
+        let window = try ExternalBufferFakeManagedWindow(importBehavior: .succeed)
+        let storage = externalBufferStorage(
+            window: window,
+            configuration: WaylandGraphicsConfiguration(
+                fallbackPolicy: .requireGPU,
+                backingPreference: .managedGPU,
+                metadataPolicy: .preferAvailable
+            )
+        )
+        let lease = try await storage.nextFrame()
+        let metadata = WaylandGraphicsFrameMetadata(
+            contentType: .game,
+            presentationHint: .async,
+            alpha: .opaque,
+            colorRepresentation: WaylandGraphicsColorRepresentation(alphaMode: .straight)
+        )
+        let schedule = WaylandGraphicsFrameSchedule(
+            pacing: .fifo,
+            presentationFeedback: .requestWhenAvailable
+        )
+
+        let result = try await lease.submitExternalBuffer(
+            try testExternalDescriptor(),
+            metadata: metadata,
+            schedule: schedule
+        )
+
+        #expect(result.metadata == metadata)
+        #expect(result.schedule == schedule)
+        #expect(result.presentationFeedbackRequested)
+        #expect(await window.submitConstraintsSnapshot().map(\.pacing) == [.fifo(.setBarrier)])
+        #expect(await window.presentationFeedbackRequestSnapshot() == [true])
+        #expect(await window.metadataSnapshot().compactMap(\.contentType) == [.game])
+        #expect(await window.metadataSnapshot().compactMap(\.presentationHint) == [.async])
+        #expect(
+            await window.metadataSnapshot().compactMap(\.alpha)
+                == [SurfaceAlphaMetadata(multiplier: .opaque)]
+        )
+        #expect(
+            await window.metadataSnapshot().compactMap(\.colorRepresentation?.alphaMode)
+                == [.straight]
+        )
+
+        try await storage.closeForTesting()
+    }
+}
+
 private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
+    enum ImportBehavior: Sendable {
+        case fail
+        case succeed
+    }
+
     nonisolated let id = WindowID(rawValue: 910)
     private let geometryValue: SurfaceGeometry
+    private let importBehavior: ImportBehavior
+    private var presentationFailuresBeforeSuccess: Int
+    private var nextGeneration: UInt64 = 1
     private(set) var importRequests = 0
+    private var isWindowClosed = false
+    private var importedBuffers: [RawLinuxDmabufBuffer] = []
+    private var submitConstraints: [SurfaceSubmitConstraints] = []
+    private var submittedMetadata: [SurfaceCommitMetadata] = []
+    private var presentationFeedbackRequests: [Bool] = []
 
-    init() throws {
+    init(
+        importBehavior requestedImportBehavior: ImportBehavior = .fail,
+        presentationFailuresBeforeSuccess requestedPresentationFailures: Int = 0
+    ) throws {
         geometryValue = try testGraphicsSurfaceGeometry()
+        importBehavior = requestedImportBehavior
+        presentationFailuresBeforeSuccess = requestedPresentationFailures
     }
 
     var geometry: SurfaceGeometry {
@@ -176,7 +370,7 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     }
 
     var isClosed: Bool {
-        get async throws { false }
+        get async throws { isWindowClosed }
     }
 
     func importGraphicsPreviewExternalBuffer(
@@ -189,7 +383,58 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
         } catch {
             _ = error
         }
-        throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        switch importBehavior {
+        case .fail:
+            throw WaylandGraphicsError.unavailable(.externalBufferImportFailed)
+        case .succeed:
+            let buffer = try testRawLinuxDmabufBuffer(
+                pointer: UInt(0xE0_000 + importRequests)
+            )
+            importedBuffers.append(buffer)
+            return buffer
+        }
+    }
+
+    func presentGraphicsPreviewBuffer(
+        _ buffer: RawSurfaceBuffer,
+        submitConstraints submittedConstraints: SurfaceSubmitConstraints,
+        metadata submittedFrameMetadata: SurfaceCommitMetadata,
+        requestPresentationFeedback: Bool
+    ) async throws -> PreviewBufferPresentationResult {
+        _ = buffer
+        guard !isWindowClosed else {
+            throw WaylandGraphicsError.windowClosed
+        }
+
+        submitConstraints.append(submittedConstraints)
+        submittedMetadata.append(submittedFrameMetadata)
+        presentationFeedbackRequests.append(requestPresentationFeedback)
+
+        guard presentationFailuresBeforeSuccess == 0 else {
+            presentationFailuresBeforeSuccess -= 1
+            throw WaylandGraphicsError.unavailable(.commitFailed)
+        }
+
+        defer { nextGeneration += 1 }
+        return try testPreviewBufferPresentationResult(generation: nextGeneration)
+    }
+
+    func submitConstraintsSnapshot() -> [SurfaceSubmitConstraints] {
+        submitConstraints
+    }
+
+    func metadataSnapshot() -> [SurfaceCommitMetadata] {
+        submittedMetadata
+    }
+
+    func presentationFeedbackRequestSnapshot() -> [Bool] {
+        presentationFeedbackRequests
+    }
+
+    func emitImportedBufferRelease(at index: Int) {
+        guard importedBuffers.indices.contains(index) else { return }
+
+        importedBuffers[index].emitReleaseForTesting()
     }
 
     // swiftlint:disable:next function_parameter_count
@@ -215,8 +460,61 @@ private actor ExternalBufferFakeManagedWindow: WaylandGraphicsManagedWindow {
     }
 
     func close() async {
-        _ = ()
+        isWindowClosed = true
     }
+}
+
+private func externalBufferStorage(
+    window: ExternalBufferFakeManagedWindow,
+    configuration: WaylandGraphicsConfiguration = WaylandGraphicsConfiguration(
+        fallbackPolicy: .requireGPU,
+        backingPreference: .managedGPU
+    )
+) -> WaylandGraphicsWindowBackingStorage {
+    WaylandGraphicsWindowBackingStorage(
+        window: window,
+        runtimePath: .projected(capabilities: gpuCapableSurfaceCapabilities()),
+        configuration: configuration
+    )
+}
+
+private func testRawLinuxDmabufBuffer(pointer rawPointer: UInt) throws -> RawLinuxDmabufBuffer {
+    let pointer = try unsafe #require(OpaquePointer(bitPattern: rawPointer))
+    return unsafe RawLinuxDmabufBuffer(testingPointer: pointer)
+}
+
+private func testPreviewBufferPresentationResult(
+    generation: UInt64
+) throws -> PreviewBufferPresentationResult {
+    try PreviewBufferPresentationResult(
+        generation: generation,
+        commitPlan: try SurfaceCommitPlan(
+            geometry: try testGraphicsSurfaceGeometry(),
+            bufferScale: 1,
+            viewportMode: .omitDestination,
+            damageMode: .buffer
+        ),
+        capabilities: SurfaceCapabilitySnapshot(
+            role: .toplevelWindow,
+            outputIDs: [],
+            fractionalScale: .integerOnly,
+            presentationFeedback: .available,
+            dmabuf: .advertised(
+                version: 4,
+                canRequestSurfaceFeedback: .available
+            ),
+            synchronization: .implicitOnly,
+            pacing: .fifoAndCommitTiming(fifo: 1, commitTiming: 1),
+            contentType: .available,
+            alphaModifier: .available,
+            tearingControl: .available,
+            colorRepresentation: .available(
+                version: 1,
+                support: SurfaceColorRepresentationSupport(alphaModes: [.straight])
+            ),
+            color: .available(version: 1)
+        )
+    )
 }
 
 private func testExternalDescriptor() throws -> WaylandGraphicsExternalBufferDescriptor {

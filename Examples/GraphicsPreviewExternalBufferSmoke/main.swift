@@ -52,6 +52,7 @@ enum GraphicsPreviewExternalBufferSmoke {
 
             switch options.mode {
             case .probe:
+                log("mode: probe")
                 log("import: skipped(probe)")
                 log("submit: skipped(probe)")
                 log("release: not observed")
@@ -71,6 +72,8 @@ enum GraphicsPreviewExternalBufferSmoke {
     private static func submitInternalTestBuffer(
         backing: WaylandGraphicsWindowBacking
     ) async throws {
+        log("mode: negative-cleanup")
+        log("test buffer: pipe-fd-not-dmabuf")
         let lease = try await backing.nextFrame()
         do {
             let result = try await lease.submitExternalBuffer(
@@ -84,11 +87,11 @@ enum GraphicsPreviewExternalBufferSmoke {
             )
             log("failure: none")
         } catch {
-            log("import: failed(\(error))")
-            log("submit: failed")
+            log("import: failed(expected-cleanup: \(error))")
+            log("submit: skipped(import-failed)")
             log("release: not observed")
             log("fallback reason: none")
-            log("failure: \(error)")
+            log("failure: expected-negative-test(\(error))")
         }
     }
 
