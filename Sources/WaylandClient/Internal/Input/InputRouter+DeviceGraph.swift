@@ -28,6 +28,8 @@ struct InputDeviceGraph: Equatable {
                     identity: .identified(deviceID),
                     focusedSurfaceByTouchID: [:]
                 )
+            case .tablet:
+                break
             }
         }
 
@@ -39,6 +41,8 @@ struct InputDeviceGraph: Equatable {
                 keyboard.isPresent
             case .touch:
                 touch.isPresent
+            case .tablet:
+                false
             }
         }
 
@@ -50,6 +54,8 @@ struct InputDeviceGraph: Equatable {
                 keyboard.currentID
             case .touch:
                 touch.currentID
+            case .tablet:
+                nil
             }
         }
 
@@ -63,6 +69,8 @@ struct InputDeviceGraph: Equatable {
                 keyboard = .absent
             case .touch:
                 touch = .absent
+            case .tablet:
+                break
             }
 
             return currentID

@@ -208,7 +208,7 @@ actor FrameworkHostState {
         case .keyboard(.interpreted(.key)):
             current.counter += 1
             redrawNeeded = true
-        case .seat, .diagnostic, .pointer, .keyboard, .touch:
+        case .seat, .diagnostic, .pointer, .keyboard, .touch, .tablet:
             break
         }
     }

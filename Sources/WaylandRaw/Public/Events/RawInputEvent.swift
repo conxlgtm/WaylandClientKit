@@ -40,6 +40,7 @@ package enum RawInputEventKind: Equatable, Sendable {
     case pointer(RawPointerEvent)
     case keyboard(RawKeyboardEvent)
     case touch(RawTouchEvent)
+    case tablet(RawTabletEvent)
 }
 
 package struct RawInputDiagnostic: Equatable, Sendable {

@@ -19,6 +19,7 @@ package enum SupportedVersions {
     package static let xdgToplevelIconManagerV1: RawVersion = 1
     package static let xdgSystemBellV1: RawVersion = 1
     package static let wpPointerWarpV1: RawVersion = 1
+    package static let zwpTabletManagerV2: RawVersion = 2
     package static let zwpRelativePointerManagerV1: RawVersion = 1
     package static let zwpPointerConstraintsV1: RawVersion = 1
     package static let zwpIdleInhibitManagerV1: RawVersion = 1
@@ -57,6 +58,7 @@ package struct OptionalGlobals {
     package let xdgToplevelIconManager: OptionalXDGToplevelIconManager
     package let xdgActivation: OptionalXDGActivation
     package let pointerWarp: OptionalPointerWarp
+    package let tabletManager: OptionalTabletManager
     package let relativePointerManager: OptionalRelativePointerManager
     package let pointerConstraints: OptionalPointerConstraints
     package let linuxDrmSyncobjManager: OptionalLinuxDrmSyncobjManager
@@ -84,6 +86,7 @@ package struct OptionalGlobals {
             OptionalXDGToplevelIconManager = .missing,
         xdgActivation boundXDGActivation: OptionalXDGActivation = .missing,
         pointerWarp boundPointerWarp: OptionalPointerWarp = .missing,
+        tabletManager boundTabletManager: OptionalTabletManager = .missing,
         relativePointerManager boundRelativePointerManager: OptionalRelativePointerManager =
             .missing,
         pointerConstraints boundPointerConstraints: OptionalPointerConstraints = .missing,
@@ -114,6 +117,7 @@ package struct OptionalGlobals {
         xdgToplevelIconManager = boundXDGToplevelIconManager
         xdgActivation = boundXDGActivation
         pointerWarp = boundPointerWarp
+        tabletManager = boundTabletManager
         relativePointerManager = boundRelativePointerManager
         pointerConstraints = boundPointerConstraints
         linuxDrmSyncobjManager = boundLinuxDrmSyncobjManager
@@ -142,6 +146,7 @@ package struct OptionalGlobals {
         linuxDrmSyncobjManager.destroy()
         pointerConstraints.destroy()
         relativePointerManager.destroy()
+        tabletManager.destroy()
         pointerWarp.destroy()
         xdgActivation.destroy()
         xdgToplevelIconManager.destroy()

@@ -23,6 +23,7 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.idleInhibit == .unavailable)
         #expect(capabilities.systemBell == .unavailable)
         #expect(capabilities.pointerWarp == .unavailable)
+        #expect(capabilities.tablet == .unavailable)
         #expect(capabilities.relativePointer == .unavailable)
         #expect(capabilities.pointerConstraints == .unavailable)
         #expect(capabilities.textInput == .unavailable)
@@ -48,6 +49,7 @@ struct WaylandCapabilitiesTests {
             .init(interfaceName: "zwp_idle_inhibit_manager_v1", advertisedVersion: 3),
             .init(interfaceName: "xdg_system_bell_v1", advertisedVersion: 3),
             .init(interfaceName: "wp_pointer_warp_v1", advertisedVersion: 4),
+            .init(interfaceName: "zwp_tablet_manager_v2", advertisedVersion: 9),
             .init(interfaceName: "zwp_relative_pointer_manager_v1", advertisedVersion: 4),
             .init(interfaceName: "zwp_pointer_constraints_v1", advertisedVersion: 4),
             .init(interfaceName: "zwp_text_input_manager_v3", advertisedVersion: 9),
@@ -69,6 +71,7 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.idleInhibit == .available(version: 1))
         #expect(capabilities.systemBell == .available(version: 1))
         #expect(capabilities.pointerWarp == .available(version: 1))
+        #expect(capabilities.tablet == .available(version: 2))
         #expect(capabilities.relativePointer == .available(version: 1))
         #expect(capabilities.pointerConstraints == .available(version: 1))
         #expect(capabilities.textInput == .available(version: 2))
@@ -87,6 +90,7 @@ struct WaylandCapabilitiesTests {
                     "zwp_idle_inhibit_manager_v1",
                     "xdg_system_bell_v1",
                     "wp_pointer_warp_v1",
+                    "zwp_tablet_manager_v2",
                     "zwp_relative_pointer_manager_v1",
                     "zwp_pointer_constraints_v1",
                 ].contains(interfaceName)
@@ -113,6 +117,7 @@ struct WaylandCapabilitiesTests {
         )
         #expect(DisplaySession.capabilityProtocolInterfaceNames.contains("xdg_system_bell_v1"))
         #expect(DisplaySession.capabilityProtocolInterfaceNames.contains("wp_pointer_warp_v1"))
+        #expect(DisplaySession.capabilityProtocolInterfaceNames.contains("zwp_tablet_manager_v2"))
         #expect(
             DisplaySession.capabilityProtocolInterfaceNames.contains(
                 "zwp_relative_pointer_manager_v1"
@@ -129,6 +134,7 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.idleInhibit == .available(version: 1))
         #expect(capabilities.systemBell == .available(version: 1))
         #expect(capabilities.pointerWarp == .available(version: 1))
+        #expect(capabilities.tablet == .available(version: 1))
         #expect(capabilities.relativePointer == .available(version: 1))
         #expect(capabilities.pointerConstraints == .available(version: 1))
     }
@@ -152,6 +158,7 @@ struct WaylandCapabilitiesTests {
             .init(interfaceName: "zwp_idle_inhibit_manager_v1", advertisedVersion: 1),
             .init(interfaceName: "xdg_system_bell_v1", advertisedVersion: 1),
             .init(interfaceName: "wp_pointer_warp_v1", advertisedVersion: 1),
+            .init(interfaceName: "zwp_tablet_manager_v2", advertisedVersion: 2),
             .init(interfaceName: "zwp_relative_pointer_manager_v1", advertisedVersion: 1),
             .init(interfaceName: "zwp_pointer_constraints_v1", advertisedVersion: 1),
             .init(interfaceName: "zwp_text_input_manager_v3", advertisedVersion: 2),
@@ -173,6 +180,7 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.idleInhibit == .available(version: 1))
         #expect(capabilities.systemBell == .available(version: 1))
         #expect(capabilities.pointerWarp == .available(version: 1))
+        #expect(capabilities.tablet == .available(version: 2))
         #expect(capabilities.relativePointer == .available(version: 1))
         #expect(capabilities.pointerConstraints == .available(version: 1))
         #expect(capabilities.textInput == .available(version: 2))

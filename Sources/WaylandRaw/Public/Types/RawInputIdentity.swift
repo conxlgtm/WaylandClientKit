@@ -15,6 +15,7 @@ package struct RawInputDeviceID: Hashable, Sendable, CustomStringConvertible {
         case pointer
         case keyboard
         case touch
+        case tablet
 
         package var description: String {
             switch self {
@@ -24,6 +25,8 @@ package struct RawInputDeviceID: Hashable, Sendable, CustomStringConvertible {
                 "keyboard"
             case .touch:
                 "touch"
+            case .tablet:
+                "tablet"
             }
         }
     }

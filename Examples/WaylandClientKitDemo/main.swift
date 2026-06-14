@@ -140,6 +140,8 @@ private struct DemoState {
         case .touch(let touch):
             guard acceptsWindowOrDisplayTarget(event.target, focusedWindowID) else { return }
             handleTouch(touch, seatID: event.seatID)
+        case .tablet:
+            break
         }
     }
 

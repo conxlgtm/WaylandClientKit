@@ -115,7 +115,7 @@ final class DisplayEventHub: Sendable {
                 )
                 return
             }
-        case .seat, .pointer, .keyboard, .touch:
+        case .seat, .pointer, .keyboard, .touch, .tablet:
             guard !inputBroker.isTerminal else { return }
             displayBroker.publish(.input(inputEvent))
         }

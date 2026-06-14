@@ -41,6 +41,7 @@ public enum InputEventKind: Equatable, Sendable {
     case pointer(PointerEvent)
     case keyboard(KeyboardEvent)
     case touch(TouchEvent)
+    case tablet(TabletEvent)
 }
 
 public enum SeatEvent: Equatable, Sendable {

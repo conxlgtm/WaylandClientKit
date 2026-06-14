@@ -1,6 +1,7 @@
 #include "wayland-client-kit-shims.h"
 #include "generated/core/wayland-client-protocol.h"
 #include "generated/staging/pointer-warp/pointer-warp-v1-client-protocol.h"
+#include "generated/stable/tablet/tablet-v2-client-protocol.h"
 #include "generated/legacy-unstable/relative-pointer/relative-pointer-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1-client-protocol.h"
 
@@ -443,6 +444,58 @@ void swl_wp_pointer_warp_v1_warp_pointer(
 void swl_wp_pointer_warp_v1_destroy(struct wp_pointer_warp_v1 *warp)
 {
     swl_pointer_warp_destroy_impl(warp);
+}
+
+struct zwp_tablet_seat_v2 *swl_zwp_tablet_manager_v2_get_tablet_seat(
+    struct zwp_tablet_manager_v2 *manager,
+    struct wl_seat *seat)
+{
+    return zwp_tablet_manager_v2_get_tablet_seat(manager, seat);
+}
+
+void swl_zwp_tablet_manager_v2_destroy(struct zwp_tablet_manager_v2 *manager)
+{
+    zwp_tablet_manager_v2_destroy(manager);
+}
+
+void swl_zwp_tablet_seat_v2_destroy(struct zwp_tablet_seat_v2 *tablet_seat)
+{
+    zwp_tablet_seat_v2_destroy(tablet_seat);
+}
+
+void swl_zwp_tablet_v2_destroy(struct zwp_tablet_v2 *tablet)
+{
+    zwp_tablet_v2_destroy(tablet);
+}
+
+void swl_zwp_tablet_tool_v2_destroy(struct zwp_tablet_tool_v2 *tool)
+{
+    zwp_tablet_tool_v2_destroy(tool);
+}
+
+void swl_zwp_tablet_pad_v2_destroy(struct zwp_tablet_pad_v2 *pad)
+{
+    zwp_tablet_pad_v2_destroy(pad);
+}
+
+void swl_zwp_tablet_pad_group_v2_destroy(struct zwp_tablet_pad_group_v2 *group)
+{
+    zwp_tablet_pad_group_v2_destroy(group);
+}
+
+void swl_zwp_tablet_pad_ring_v2_destroy(struct zwp_tablet_pad_ring_v2 *ring)
+{
+    zwp_tablet_pad_ring_v2_destroy(ring);
+}
+
+void swl_zwp_tablet_pad_strip_v2_destroy(struct zwp_tablet_pad_strip_v2 *strip)
+{
+    zwp_tablet_pad_strip_v2_destroy(strip);
+}
+
+void swl_zwp_tablet_pad_dial_v2_destroy(struct zwp_tablet_pad_dial_v2 *dial)
+{
+    zwp_tablet_pad_dial_v2_destroy(dial);
 }
 
 struct zwp_relative_pointer_v1 *
