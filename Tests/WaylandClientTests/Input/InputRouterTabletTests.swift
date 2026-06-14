@@ -3,6 +3,7 @@ import WaylandRaw
 
 @testable import WaylandClient
 
+// swiftlint:disable type_body_length function_body_length
 @Suite
 struct TabletInputRouterTests {
     @Test
@@ -310,6 +311,7 @@ struct TabletInputRouterTests {
         )
     }
 }
+// swiftlint:enable type_body_length function_body_length
 
 private func rawTabletEvent(
     sequence: UInt64,

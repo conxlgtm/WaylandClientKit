@@ -13,7 +13,7 @@ private struct RegistryResources {
 }
 
 @safe
-package final class RawDisplayConnection {
+package final class RawDisplayConnection {  // swiftlint:disable:this type_body_length
     package static let defaultDiscoveryTimeoutMS: Int32 = 1_000
 
     let display: RawDisplay
@@ -362,9 +362,9 @@ extension RawDisplayConnection {
             sharedMemory: shm,
             xdgWMBase: xdgWmBase,
             seatRegistry: seatRegistry,
-            tabletSeatRegistry: optionalBindingSet.tabletSeatRegistry,
             outputRegistry: optionalBindingSet.outputRegistry,
-            extensions: optionalBindingSet.extensions
+            extensions: optionalBindingSet.extensions,
+            tabletSeatRegistry: optionalBindingSet.tabletSeatRegistry
         )
 
         boundGlobals = bound

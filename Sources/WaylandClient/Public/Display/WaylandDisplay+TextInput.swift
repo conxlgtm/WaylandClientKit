@@ -51,6 +51,14 @@ extension WaylandDisplay {
     package func commitTextInput(seatID: SeatID) throws {
         try requireCore().commitTextInput(seatID: seatID)
     }
+
+    package func showTextInputPanel(seatID: SeatID) throws {
+        try requireCore().showTextInputPanel(seatID: seatID)
+    }
+
+    package func hideTextInputPanel(seatID: SeatID) throws {
+        try requireCore().hideTextInputPanel(seatID: seatID)
+    }
 }
 
 extension WaylandDisplayRuntime {

@@ -5,7 +5,9 @@ package final class TabletSeatRegistry {
     private var tabletSeatsBySeatID: [RawSeatID: RawTabletSeat] = [:]
     private var isDestroyed = false
 
-    package init(manager tabletManager: RawTabletManager, eventSink tabletEventSink: RawInputEventSink) {
+    package init(
+        manager tabletManager: RawTabletManager, eventSink tabletEventSink: RawInputEventSink
+    ) {
         manager = tabletManager
         eventSink = tabletEventSink
     }
@@ -36,7 +38,8 @@ package final class TabletSeatRegistry {
         guard !isDestroyed else { return }
 
         isDestroyed = true
-        let tabletSeats = tabletSeatsBySeatID
+        let tabletSeats =
+            tabletSeatsBySeatID
             .sorted { $0.key.rawValue < $1.key.rawValue }
             .map(\.value)
         tabletSeatsBySeatID.removeAll()

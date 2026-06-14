@@ -311,6 +311,37 @@
       "vendoredFromPath" : "/usr/share/wayland-protocols/staging/pointer-warp/pointer-warp-v1.xml"
     },
     {
+      "apiExposure" : "publicCapability",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/xdg-session-management/xdg-session-management-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/xdg-session-management/xdg-session-management-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/xdg-session-management/xdg-session-management-v1.xml",
+      "name" : "xdg-session-management-v1",
+      "notes" : "Staging compositor session-management protocol. WaylandClientKit reports capability and keeps raw preview plumbing package-internal until compositor evidence and framework usage shape are stronger.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "698bef9f4cf8f7be98c86d18444481e6896d0ea3287be4edd1c73cdf17b8f776",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/xdg-session-management/xdg-session-management-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/xdg-session-management/xdg-session-management-v1.xml"
+        ],
+        "environmentOverride" : "XDG_SESSION_MANAGEMENT_V1_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/xdg-session-management/xdg-session-management-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "waylandClientKitTier" : "previewFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "nix wayland-protocols-1.48",
+      "vendoredFromPath" : "/nix/store/fgq3g4mnlwdll7gmhd5gcgyx10103zxx-wayland-protocols-1.48/share/wayland-protocols/staging/xdg-session-management/xdg-session-management-v1.xml"
+    },
+    {
       "apiExposure" : "public",
       "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/xdg-activation/xdg-activation-v1-protocol.c",
       "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/xdg-activation/xdg-activation-v1-client-protocol.h",

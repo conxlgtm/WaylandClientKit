@@ -174,6 +174,8 @@ enum ShimSmokeCheck {  // swiftlint:disable:this type_body_length
         _ = unsafe swl_text_input_v3_set_content_type
         _ = unsafe swl_text_input_v3_set_cursor_rectangle
         _ = unsafe swl_text_input_v3_commit
+        _ = unsafe swl_text_input_v3_show_input_panel
+        _ = unsafe swl_text_input_v3_hide_input_panel
         _ = unsafe swl_zwp_linux_dmabuf_v1_get_default_feedback
         _ = unsafe swl_zwp_linux_dmabuf_v1_get_surface_feedback
         _ = unsafe swl_zwp_linux_dmabuf_v1_create_params

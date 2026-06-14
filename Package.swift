@@ -239,6 +239,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "CompositorSessionSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/CompositorSessionSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "DataTransferSmoke",
             dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/DataTransferSmoke",

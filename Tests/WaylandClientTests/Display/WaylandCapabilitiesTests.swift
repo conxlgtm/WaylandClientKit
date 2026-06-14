@@ -19,6 +19,7 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.fractionalScale == .unavailable)
         #expect(capabilities.cursorShape == .unavailable)
         #expect(capabilities.xdgActivation == .unavailable)
+        #expect(capabilities.compositorSessionManagement == .unavailable)
         #expect(capabilities.xdgToplevelIcon == .unavailable)
         #expect(capabilities.idleInhibit == .unavailable)
         #expect(capabilities.systemBell == .unavailable)
@@ -45,6 +46,7 @@ struct WaylandCapabilitiesTests {
             .init(interfaceName: "wp_fractional_scale_manager_v1", advertisedVersion: 3),
             .init(interfaceName: "wp_cursor_shape_manager_v1", advertisedVersion: 9),
             .init(interfaceName: "xdg_activation_v1", advertisedVersion: 3),
+            .init(interfaceName: "xdg_session_manager_v1", advertisedVersion: 4),
             .init(interfaceName: "xdg_toplevel_icon_manager_v1", advertisedVersion: 3),
             .init(interfaceName: "zwp_idle_inhibit_manager_v1", advertisedVersion: 3),
             .init(interfaceName: "xdg_system_bell_v1", advertisedVersion: 3),
@@ -67,6 +69,7 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.fractionalScale == .available(version: 1))
         #expect(capabilities.cursorShape == .available(version: 2))
         #expect(capabilities.xdgActivation == .available(version: 1))
+        #expect(capabilities.compositorSessionManagement == .available(version: 1))
         #expect(capabilities.xdgToplevelIcon == .available(version: 1))
         #expect(capabilities.idleInhibit == .available(version: 1))
         #expect(capabilities.systemBell == .available(version: 1))
@@ -86,6 +89,7 @@ struct WaylandCapabilitiesTests {
             guard
                 [
                     "xdg_activation_v1",
+                    "xdg_session_manager_v1",
                     "xdg_toplevel_icon_manager_v1",
                     "zwp_idle_inhibit_manager_v1",
                     "xdg_system_bell_v1",
@@ -130,6 +134,7 @@ struct WaylandCapabilitiesTests {
         )
         #expect(requestedInterfaces == DisplaySession.capabilityProtocolInterfaceNames)
         #expect(capabilities.xdgActivation == .available(version: 1))
+        #expect(capabilities.compositorSessionManagement == .available(version: 1))
         #expect(capabilities.xdgToplevelIcon == .available(version: 1))
         #expect(capabilities.idleInhibit == .available(version: 1))
         #expect(capabilities.systemBell == .available(version: 1))
@@ -154,6 +159,7 @@ struct WaylandCapabilitiesTests {
             .init(interfaceName: "wp_fractional_scale_manager_v1", advertisedVersion: 1),
             .init(interfaceName: "wp_cursor_shape_manager_v1", advertisedVersion: 2),
             .init(interfaceName: "xdg_activation_v1", advertisedVersion: 1),
+            .init(interfaceName: "xdg_session_manager_v1", advertisedVersion: 1),
             .init(interfaceName: "xdg_toplevel_icon_manager_v1", advertisedVersion: 1),
             .init(interfaceName: "zwp_idle_inhibit_manager_v1", advertisedVersion: 1),
             .init(interfaceName: "xdg_system_bell_v1", advertisedVersion: 1),
@@ -176,6 +182,7 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.fractionalScale == .available(version: 1))
         #expect(capabilities.cursorShape == .available(version: 2))
         #expect(capabilities.xdgActivation == .available(version: 1))
+        #expect(capabilities.compositorSessionManagement == .available(version: 1))
         #expect(capabilities.xdgToplevelIcon == .available(version: 1))
         #expect(capabilities.idleInhibit == .available(version: 1))
         #expect(capabilities.systemBell == .available(version: 1))

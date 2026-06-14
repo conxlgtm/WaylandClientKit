@@ -17,6 +17,10 @@ Text input requires `zwp_text_input_manager_v3`. Create a seat-scoped session
 with ``WaylandDisplay/textInputSession(for:)`` and read committed compositor
 events from ``WaylandDisplay/textInputEvents``.
 
+Input-panel show/hide requests require text-input protocol v2. WaylandClientKit
+reports a typed unavailable-version error when the negotiated protocol version
+does not support the request.
+
 ## Public APIs
 
 - ``TextInputSession``
@@ -36,6 +40,14 @@ seeing stale enabled text state after focus changes.
 
 In plain protocol-ordering terms, disable() finalizes the text-input disable
 request.
+
+## Input Panel Hints
+
+Use ``TextInputSession/showInputPanel()`` and
+``TextInputSession/hideInputPanel()`` when a focused text field wants to hint
+that an on-screen input panel should be shown or hidden. These requests are
+compositor hints, not guarantees. Compositors can ignore them based on device,
+keyboard, accessibility, shell, or policy state.
 
 ## Errors And Policy
 

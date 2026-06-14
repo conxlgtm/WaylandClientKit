@@ -926,18 +926,19 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L56: `    public let fractionalScale: ProtocolAvailability`
 - L59: `    public let cursorShape: ProtocolAvailability`
 - L62: `    public let xdgActivation: ProtocolAvailability`
-- L65: `    public let xdgToplevelIcon: ProtocolAvailability`
-- L68: `    public let idleInhibit: ProtocolAvailability`
-- L71: `    public let systemBell: ProtocolAvailability`
-- L74: `    public let pointerWarp: ProtocolAvailability`
-- L77: `    public let tablet: ProtocolAvailability`
-- L80: `    public let relativePointer: ProtocolAvailability`
-- L83: `    public let pointerConstraints: ProtocolAvailability`
-- L86: `    public let textInput: ProtocolAvailability`
-- L89: `    public let linuxDmabuf: ProtocolAvailability`
-- L91: `    public init(`
-- L135: `    public init(`
-- L174: `    public init(`
+- L65: `    public let compositorSessionManagement: ProtocolAvailability`
+- L68: `    public let xdgToplevelIcon: ProtocolAvailability`
+- L71: `    public let idleInhibit: ProtocolAvailability`
+- L74: `    public let systemBell: ProtocolAvailability`
+- L77: `    public let pointerWarp: ProtocolAvailability`
+- L80: `    public let tablet: ProtocolAvailability`
+- L83: `    public let relativePointer: ProtocolAvailability`
+- L86: `    public let pointerConstraints: ProtocolAvailability`
+- L89: `    public let textInput: ProtocolAvailability`
+- L92: `    public let linuxDmabuf: ProtocolAvailability`
+- L94: `    public init(`
+- L140: `    public init(`
+- L179: `    public init(`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+Activation.swift`
 
@@ -1795,37 +1796,37 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L227: `    public let tool: TabletToolID`
 - L228: `    public let serial: InputSerial`
 - L229: `    public let tablet: TabletID`
-- L231: `    public init(tool toolID: TabletToolID, serial eventSerial: InputSerial, tablet tabletID: TabletID) {`
-- L238: `public struct TabletToolButton: Equatable, Sendable {`
-- L239: `    public let tool: TabletToolID`
-- L240: `    public let serial: InputSerial`
-- L241: `    public let button: PointerButtonCode`
-- L242: `    public let state: ButtonState`
-- L244: `    public init(`
-- L257: `public enum TabletPadEvent: Equatable, Sendable {`
-- L258: `    case path(TabletPadID, String)`
-- L259: `    case buttons(TabletPadID, UInt32)`
-- L260: `    case done(TabletPadID)`
-- L261: `    case button(TabletPadButton)`
-- L262: `    case enter(TabletPadEnter)`
-- L263: `    case leave(TabletPadLeave)`
-- L264: `    case removed(TabletPadID)`
-- L265: `    case groupAdded(TabletPadID)`
-- L268: `public struct TabletPadButton: Equatable, Sendable {`
-- L269: `    public let pad: TabletPadID`
-- L270: `    public let time: WaylandTimestampMilliseconds`
-- L271: `    public let button: PointerButtonCode`
-- L272: `    public let state: ButtonState`
-- L274: `    public init(`
-- L287: `public struct TabletPadEnter: Equatable, Sendable {`
-- L288: `    public let pad: TabletPadID`
-- L289: `    public let serial: InputSerial`
-- L290: `    public let tablet: TabletID`
-- L292: `    public init(pad padID: TabletPadID, serial eventSerial: InputSerial, tablet tabletID: TabletID) {`
-- L299: `public struct TabletPadLeave: Equatable, Sendable {`
-- L300: `    public let pad: TabletPadID`
-- L301: `    public let serial: InputSerial`
-- L303: `    public init(pad padID: TabletPadID, serial eventSerial: InputSerial) {`
+- L231: `    public init(`
+- L240: `public struct TabletToolButton: Equatable, Sendable {`
+- L241: `    public let tool: TabletToolID`
+- L242: `    public let serial: InputSerial`
+- L243: `    public let button: PointerButtonCode`
+- L244: `    public let state: ButtonState`
+- L246: `    public init(`
+- L259: `public enum TabletPadEvent: Equatable, Sendable {`
+- L260: `    case path(TabletPadID, String)`
+- L261: `    case buttons(TabletPadID, UInt32)`
+- L262: `    case done(TabletPadID)`
+- L263: `    case button(TabletPadButton)`
+- L264: `    case enter(TabletPadEnter)`
+- L265: `    case leave(TabletPadLeave)`
+- L266: `    case removed(TabletPadID)`
+- L267: `    case groupAdded(TabletPadID)`
+- L270: `public struct TabletPadButton: Equatable, Sendable {`
+- L271: `    public let pad: TabletPadID`
+- L272: `    public let time: WaylandTimestampMilliseconds`
+- L273: `    public let button: PointerButtonCode`
+- L274: `    public let state: ButtonState`
+- L276: `    public init(`
+- L289: `public struct TabletPadEnter: Equatable, Sendable {`
+- L290: `    public let pad: TabletPadID`
+- L291: `    public let serial: InputSerial`
+- L292: `    public let tablet: TabletID`
+- L294: `    public init(pad padID: TabletPadID, serial eventSerial: InputSerial, tablet tabletID: TabletID)`
+- L302: `public struct TabletPadLeave: Equatable, Sendable {`
+- L303: `    public let pad: TabletPadID`
+- L304: `    public let serial: InputSerial`
+- L306: `    public init(pad padID: TabletPadID, serial eventSerial: InputSerial) {`
 
 ### `Sources/WaylandClient/Public/Input/TouchID.swift`
 
@@ -2084,145 +2085,148 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L3: `    case unknownSeat(SeatID)`
 - L4: `    case foreignWindow(WindowID)`
 - L5: `    case inactiveSession(seatID: SeatID, operation: TextInputRequestOperation)`
-- L6: `    case surroundingTextContainsNUL`
-- L7: `    case surroundingTextTooLarge(byteCount: Int, limit: Int)`
-- L8: `    case surroundingTextOffsetOutOfBounds(offset: Int, byteCount: Int)`
-- L9: `    case surroundingTextOffsetInsideCodePoint(offset: Int)`
-- L10: `    case surroundingTextOffsetOverflow(byteCount: Int)`
-- L11: `    case surroundingTextIndexOutOfBounds`
-- L13: `    public var description: String {`
-- L39: `public enum TextInputRequestOperation: Equatable, Sendable, CustomStringConvertible {`
-- L40: `    case enable`
-- L41: `    case disable`
-- L42: `    case setSurroundingText`
-- L43: `    case setTextChangeCause`
-- L44: `    case setContentType`
-- L45: `    case setCursorRectangle`
-- L46: `    case commit`
-- L48: `    public var description: String {`
-- L68: `public struct TextInputSurroundingText: Equatable, Sendable {`
-- L71: `    public let text: String`
-- L72: `    public let cursorUTF8Offset: Int`
-- L73: `    public let anchorUTF8Offset: Int`
-- L75: `    public init(`
-- L108: `    public init(`
-- L122: `    public static func insertionPoint(`
-- L182: `public struct TextInputContentHints: OptionSet, Equatable, Sendable {`
-- L183: `    public let rawValue: UInt32`
-- L185: `    public init(rawValue hintsRawValue: UInt32) {`
-- L189: `    public static let completion = Self(rawValue: 0x1)`
-- L190: `    public static let spellcheck = Self(rawValue: 0x2)`
-- L191: `    public static let autoCapitalization = Self(rawValue: 0x4)`
-- L192: `    public static let lowercase = Self(rawValue: 0x8)`
-- L193: `    public static let uppercase = Self(rawValue: 0x10)`
-- L194: `    public static let titlecase = Self(rawValue: 0x20)`
-- L195: `    public static let hiddenText = Self(rawValue: 0x40)`
-- L196: `    public static let sensitiveData = Self(rawValue: 0x80)`
-- L197: `    public static let latin = Self(rawValue: 0x100)`
-- L198: `    public static let multiline = Self(rawValue: 0x200)`
-- L199: `    public static let onScreenInputProvided = Self(rawValue: 0x400)`
-- L200: `    public static let noEmoji = Self(rawValue: 0x800)`
-- L201: `    public static let preeditShown = Self(rawValue: 0x1000)`
-- L204: `public struct TextInputContentPurpose: Equatable, Sendable {`
-- L205: `    public let rawValue: UInt32`
-- L207: `    public init(rawValue purposeRawValue: UInt32) {`
-- L211: `    public static let normal = Self(rawValue: 0)`
-- L212: `    public static let alpha = Self(rawValue: 1)`
-- L213: `    public static let digits = Self(rawValue: 2)`
-- L214: `    public static let number = Self(rawValue: 3)`
-- L215: `    public static let phone = Self(rawValue: 4)`
-- L216: `    public static let url = Self(rawValue: 5)`
-- L217: `    public static let email = Self(rawValue: 6)`
-- L218: `    public static let name = Self(rawValue: 7)`
-- L219: `    public static let password = Self(rawValue: 8)`
-- L220: `    public static let pin = Self(rawValue: 9)`
-- L221: `    public static let date = Self(rawValue: 10)`
-- L222: `    public static let time = Self(rawValue: 11)`
-- L223: `    public static let datetime = Self(rawValue: 12)`
-- L224: `    public static let terminal = Self(rawValue: 13)`
-- L227: `public struct TextInputChangeCause: Equatable, Sendable {`
-- L228: `    public let rawValue: UInt32`
-- L230: `    public init(rawValue causeRawValue: UInt32) {`
-- L234: `    public static let inputMethod = Self(rawValue: 0)`
-- L235: `    public static let other = Self(rawValue: 1)`
-- L238: `public struct TextInputAction: Equatable, Sendable {`
-- L239: `    public let rawValue: UInt32`
-- L241: `    public init(rawValue actionRawValue: UInt32) {`
-- L245: `    public static let none = Self(rawValue: 0)`
-- L246: `    public static let submit = Self(rawValue: 1)`
-- L249: `public struct TextInputPreeditHintKind: Equatable, Sendable {`
-- L250: `    public let rawValue: UInt32`
-- L252: `    public init(rawValue hintRawValue: UInt32) {`
-- L256: `    public static let whole = Self(rawValue: 1)`
-- L257: `    public static let selection = Self(rawValue: 2)`
-- L258: `    public static let prediction = Self(rawValue: 3)`
-- L259: `    public static let prefix = Self(rawValue: 4)`
-- L260: `    public static let suffix = Self(rawValue: 5)`
-- L261: `    public static let spellingError = Self(rawValue: 6)`
-- L262: `    public static let composeError = Self(rawValue: 7)`
-- L265: `public struct TextInputPreeditHint: Equatable, Sendable {`
-- L266: `    public let start: UInt32`
-- L267: `    public let end: UInt32`
-- L268: `    public let kind: TextInputPreeditHintKind`
-- L270: `    public init(`
-- L281: `public struct TextInputFocusEvent: Equatable, Sendable {`
-- L282: `    public let seatID: SeatID`
-- L283: `    public let target: InputEventTarget`
-- L285: `    public init(seatID eventSeatID: SeatID, target eventTarget: InputEventTarget) {`
-- L291: `public struct TextInputPreeditEvent: Equatable, Sendable {`
-- L292: `    public let seatID: SeatID`
-- L293: `    public let text: String`
-- L294: `    public let cursorBegin: Int32`
-- L295: `    public let cursorEnd: Int32`
-- L296: `    public let hints: [TextInputPreeditHint]`
-- L298: `    public init(`
-- L313: `public struct TextInputCommitEvent: Equatable, Sendable {`
-- L314: `    public let seatID: SeatID`
-- L315: `    public let text: String`
-- L317: `    public init(seatID eventSeatID: SeatID, text eventText: String) {`
-- L323: `public struct TextInputDeleteSurroundingTextEvent: Equatable, Sendable {`
-- L324: `    public let seatID: SeatID`
-- L325: `    public let beforeLength: UInt32`
-- L326: `    public let afterLength: UInt32`
-- L328: `    public init(`
-- L339: `public struct TextInputActionEvent: Equatable, Sendable {`
-- L340: `    public let seatID: SeatID`
-- L341: `    public let action: TextInputAction`
-- L342: `    public let serial: UInt32`
-- L344: `    public init(`
-- L355: `public enum TextInputLanguage: Equatable, Sendable {`
-- L356: `    case unknown`
-- L357: `    case tag(String)`
-- L360: `public struct TextInputLanguageEvent: Equatable, Sendable {`
-- L361: `    public let seatID: SeatID`
-- L362: `    public let language: TextInputLanguage`
-- L364: `    public init(seatID eventSeatID: SeatID, language eventLanguage: TextInputLanguage) {`
-- L370: `public struct TextInputDoneEvent: Equatable, Sendable {`
-- L371: `    public let seatID: SeatID`
-- L372: `    public let serial: UInt32`
-- L374: `    public init(seatID eventSeatID: SeatID, serial eventSerial: UInt32) {`
-- L380: `public struct TextInputDiagnostic: Equatable, Sendable {`
-- L381: `    public let seatID: SeatID?`
-- L382: `    public let operation: TextInputDiagnosticOperation`
-- L383: `    public let message: String`
-- L385: `    public init(`
-- L396: `public enum TextInputDiagnosticOperation: Equatable, Sendable {`
-- L397: `    case unavailable`
-- L398: `    case listener`
-- L399: `    case invalidEventOrder`
-- L400: `    case invalidRequest(TextInputRequestOperation)`
-- L401: `    case unknownProtocolValue`
-- L402: `    case seatRemoved`
-- L405: `public enum TextInputEvent: Equatable, Sendable {`
-- L406: `    case entered(TextInputFocusEvent)`
-- L407: `    case left(TextInputFocusEvent)`
-- L408: `    case preedit(TextInputPreeditEvent)`
-- L409: `    case committed(TextInputCommitEvent)`
-- L410: `    case deleteSurroundingText(TextInputDeleteSurroundingTextEvent)`
-- L411: `    case action(TextInputActionEvent)`
-- L412: `    case language(TextInputLanguageEvent)`
-- L413: `    case done(TextInputDoneEvent)`
-- L414: `    case diagnostic(TextInputDiagnostic)`
+- L6: `    case unsupportedVersion(`
+- L11: `    case surroundingTextContainsNUL`
+- L12: `    case surroundingTextTooLarge(byteCount: Int, limit: Int)`
+- L13: `    case surroundingTextOffsetOutOfBounds(offset: Int, byteCount: Int)`
+- L14: `    case surroundingTextOffsetInsideCodePoint(offset: Int)`
+- L15: `    case surroundingTextOffsetOverflow(byteCount: Int)`
+- L16: `    case surroundingTextIndexOutOfBounds`
+- L18: `    public var description: String {`
+- L47: `public enum TextInputRequestOperation: Equatable, Sendable, CustomStringConvertible {`
+- L48: `    case enable`
+- L49: `    case disable`
+- L50: `    case setSurroundingText`
+- L51: `    case setTextChangeCause`
+- L52: `    case setContentType`
+- L53: `    case setCursorRectangle`
+- L54: `    case commit`
+- L55: `    case showInputPanel`
+- L56: `    case hideInputPanel`
+- L58: `    public var description: String {`
+- L82: `public struct TextInputSurroundingText: Equatable, Sendable {`
+- L85: `    public let text: String`
+- L86: `    public let cursorUTF8Offset: Int`
+- L87: `    public let anchorUTF8Offset: Int`
+- L89: `    public init(`
+- L122: `    public init(`
+- L136: `    public static func insertionPoint(`
+- L196: `public struct TextInputContentHints: OptionSet, Equatable, Sendable {`
+- L197: `    public let rawValue: UInt32`
+- L199: `    public init(rawValue hintsRawValue: UInt32) {`
+- L203: `    public static let completion = Self(rawValue: 0x1)`
+- L204: `    public static let spellcheck = Self(rawValue: 0x2)`
+- L205: `    public static let autoCapitalization = Self(rawValue: 0x4)`
+- L206: `    public static let lowercase = Self(rawValue: 0x8)`
+- L207: `    public static let uppercase = Self(rawValue: 0x10)`
+- L208: `    public static let titlecase = Self(rawValue: 0x20)`
+- L209: `    public static let hiddenText = Self(rawValue: 0x40)`
+- L210: `    public static let sensitiveData = Self(rawValue: 0x80)`
+- L211: `    public static let latin = Self(rawValue: 0x100)`
+- L212: `    public static let multiline = Self(rawValue: 0x200)`
+- L213: `    public static let onScreenInputProvided = Self(rawValue: 0x400)`
+- L214: `    public static let noEmoji = Self(rawValue: 0x800)`
+- L215: `    public static let preeditShown = Self(rawValue: 0x1000)`
+- L218: `public struct TextInputContentPurpose: Equatable, Sendable {`
+- L219: `    public let rawValue: UInt32`
+- L221: `    public init(rawValue purposeRawValue: UInt32) {`
+- L225: `    public static let normal = Self(rawValue: 0)`
+- L226: `    public static let alpha = Self(rawValue: 1)`
+- L227: `    public static let digits = Self(rawValue: 2)`
+- L228: `    public static let number = Self(rawValue: 3)`
+- L229: `    public static let phone = Self(rawValue: 4)`
+- L230: `    public static let url = Self(rawValue: 5)`
+- L231: `    public static let email = Self(rawValue: 6)`
+- L232: `    public static let name = Self(rawValue: 7)`
+- L233: `    public static let password = Self(rawValue: 8)`
+- L234: `    public static let pin = Self(rawValue: 9)`
+- L235: `    public static let date = Self(rawValue: 10)`
+- L236: `    public static let time = Self(rawValue: 11)`
+- L237: `    public static let datetime = Self(rawValue: 12)`
+- L238: `    public static let terminal = Self(rawValue: 13)`
+- L241: `public struct TextInputChangeCause: Equatable, Sendable {`
+- L242: `    public let rawValue: UInt32`
+- L244: `    public init(rawValue causeRawValue: UInt32) {`
+- L248: `    public static let inputMethod = Self(rawValue: 0)`
+- L249: `    public static let other = Self(rawValue: 1)`
+- L252: `public struct TextInputAction: Equatable, Sendable {`
+- L253: `    public let rawValue: UInt32`
+- L255: `    public init(rawValue actionRawValue: UInt32) {`
+- L259: `    public static let none = Self(rawValue: 0)`
+- L260: `    public static let submit = Self(rawValue: 1)`
+- L263: `public struct TextInputPreeditHintKind: Equatable, Sendable {`
+- L264: `    public let rawValue: UInt32`
+- L266: `    public init(rawValue hintRawValue: UInt32) {`
+- L270: `    public static let whole = Self(rawValue: 1)`
+- L271: `    public static let selection = Self(rawValue: 2)`
+- L272: `    public static let prediction = Self(rawValue: 3)`
+- L273: `    public static let prefix = Self(rawValue: 4)`
+- L274: `    public static let suffix = Self(rawValue: 5)`
+- L275: `    public static let spellingError = Self(rawValue: 6)`
+- L276: `    public static let composeError = Self(rawValue: 7)`
+- L279: `public struct TextInputPreeditHint: Equatable, Sendable {`
+- L280: `    public let start: UInt32`
+- L281: `    public let end: UInt32`
+- L282: `    public let kind: TextInputPreeditHintKind`
+- L284: `    public init(`
+- L295: `public struct TextInputFocusEvent: Equatable, Sendable {`
+- L296: `    public let seatID: SeatID`
+- L297: `    public let target: InputEventTarget`
+- L299: `    public init(seatID eventSeatID: SeatID, target eventTarget: InputEventTarget) {`
+- L305: `public struct TextInputPreeditEvent: Equatable, Sendable {`
+- L306: `    public let seatID: SeatID`
+- L307: `    public let text: String`
+- L308: `    public let cursorBegin: Int32`
+- L309: `    public let cursorEnd: Int32`
+- L310: `    public let hints: [TextInputPreeditHint]`
+- L312: `    public init(`
+- L327: `public struct TextInputCommitEvent: Equatable, Sendable {`
+- L328: `    public let seatID: SeatID`
+- L329: `    public let text: String`
+- L331: `    public init(seatID eventSeatID: SeatID, text eventText: String) {`
+- L337: `public struct TextInputDeleteSurroundingTextEvent: Equatable, Sendable {`
+- L338: `    public let seatID: SeatID`
+- L339: `    public let beforeLength: UInt32`
+- L340: `    public let afterLength: UInt32`
+- L342: `    public init(`
+- L353: `public struct TextInputActionEvent: Equatable, Sendable {`
+- L354: `    public let seatID: SeatID`
+- L355: `    public let action: TextInputAction`
+- L356: `    public let serial: UInt32`
+- L358: `    public init(`
+- L369: `public enum TextInputLanguage: Equatable, Sendable {`
+- L370: `    case unknown`
+- L371: `    case tag(String)`
+- L374: `public struct TextInputLanguageEvent: Equatable, Sendable {`
+- L375: `    public let seatID: SeatID`
+- L376: `    public let language: TextInputLanguage`
+- L378: `    public init(seatID eventSeatID: SeatID, language eventLanguage: TextInputLanguage) {`
+- L384: `public struct TextInputDoneEvent: Equatable, Sendable {`
+- L385: `    public let seatID: SeatID`
+- L386: `    public let serial: UInt32`
+- L388: `    public init(seatID eventSeatID: SeatID, serial eventSerial: UInt32) {`
+- L394: `public struct TextInputDiagnostic: Equatable, Sendable {`
+- L395: `    public let seatID: SeatID?`
+- L396: `    public let operation: TextInputDiagnosticOperation`
+- L397: `    public let message: String`
+- L399: `    public init(`
+- L410: `public enum TextInputDiagnosticOperation: Equatable, Sendable {`
+- L411: `    case unavailable`
+- L412: `    case listener`
+- L413: `    case invalidEventOrder`
+- L414: `    case invalidRequest(TextInputRequestOperation)`
+- L415: `    case unknownProtocolValue`
+- L416: `    case seatRemoved`
+- L419: `public enum TextInputEvent: Equatable, Sendable {`
+- L420: `    case entered(TextInputFocusEvent)`
+- L421: `    case left(TextInputFocusEvent)`
+- L422: `    case preedit(TextInputPreeditEvent)`
+- L423: `    case committed(TextInputCommitEvent)`
+- L424: `    case deleteSurroundingText(TextInputDeleteSurroundingTextEvent)`
+- L425: `    case action(TextInputActionEvent)`
+- L426: `    case language(TextInputLanguageEvent)`
+- L427: `    case done(TextInputDoneEvent)`
+- L428: `    case diagnostic(TextInputDiagnostic)`
 
 ### `Sources/WaylandClient/Public/TextInput/TextInputSession.swift`
 
@@ -2235,8 +2239,10 @@ Run `swift run swl api verify --update` only after reviewing and updating
 - L38: `    public func setContentType(`
 - L49: `    public func setCursorRectangle(_ rect: LogicalRect) async throws {`
 - L53: `    public func commit() async throws {`
-- L57: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
-- L61: `    public func hash(into hasher: inout Hasher) {`
+- L57: `    public func showInputPanel() async throws {`
+- L61: `    public func hideInputPanel() async throws {`
+- L65: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
+- L69: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/Window.swift`
 

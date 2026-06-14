@@ -233,6 +233,14 @@ package final class RawTextInput {
         unsafe swl_text_input_v3_commit(pointer)
     }
 
+    package func showInputPanel() {
+        unsafe swl_text_input_v3_show_input_panel(pointer)
+    }
+
+    package func hideInputPanel() {
+        unsafe swl_text_input_v3_hide_input_panel(pointer)
+    }
+
     package func destroy() {
         proxy.destroy()
     }

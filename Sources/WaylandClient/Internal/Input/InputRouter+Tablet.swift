@@ -1,7 +1,6 @@
 import WaylandRaw
 
 extension InputRouter {
-    // swiftlint:disable:next function_body_length
     func routeTablet(_ rawEvent: RawInputEvent, _ tabletEvent: RawTabletEvent) -> InputEvent {
         switch tabletEvent {
         case .tabletAdded(let tablet):
@@ -49,11 +48,14 @@ extension InputRouter {
     ) -> InputEvent {
         switch event {
         case .type(let tool, let type):
-            return routedTabletToolEvent(rawEvent, tool, .type(TabletToolID(tool), TabletToolType(type)))
+            return routedTabletToolEvent(
+                rawEvent, tool, .type(TabletToolID(tool), TabletToolType(type)))
         case .hardwareSerial(let tool, let serial):
-            return routedTabletToolEvent(rawEvent, tool, .hardwareSerial(TabletToolID(tool), serial))
+            return routedTabletToolEvent(
+                rawEvent, tool, .hardwareSerial(TabletToolID(tool), serial))
         case .hardwareIDWacom(let tool, let hardwareID):
-            return routedTabletToolEvent(rawEvent, tool, .hardwareIDWacom(TabletToolID(tool), hardwareID))
+            return routedTabletToolEvent(
+                rawEvent, tool, .hardwareIDWacom(TabletToolID(tool), hardwareID))
         case .capability(let tool, let capability):
             return routedTabletToolEvent(
                 rawEvent,
@@ -121,7 +123,8 @@ extension InputRouter {
                 .rotation(TabletToolID(tool), degrees: degrees.doubleValue)
             )
         case .slider(let tool, let position):
-            return routedTabletToolEvent(rawEvent, tool, .slider(TabletToolID(tool), position: position))
+            return routedTabletToolEvent(
+                rawEvent, tool, .slider(TabletToolID(tool), position: position))
         case .wheel(let tool, let degrees, let clicks):
             return routedTabletToolEvent(
                 rawEvent,
