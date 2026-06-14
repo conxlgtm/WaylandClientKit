@@ -69,7 +69,7 @@ Current experimental baseline:
 - viewporter and fractional-scale protocol integration for scaled SHM buffers
 - frame callback pacing
 - seat, pointer, keyboard, and touch event capture
-- relative pointer events plus pointer lock/confine requests
+- relative pointer events plus pointer lock/confine and pointer-warp requests
 - popup surfaces with placement, redraw, dismissal, and input target identity
 - package-internal `DisplaySession` input draining with seat/window identity
 - high-level async `WaylandDisplay.withConnection` API backed by a dedicated Wayland owner
@@ -156,6 +156,7 @@ Supported in the current experimental baseline:
 - `wp_fractional_scale_v1`
 - `wp_cursor_shape_manager_v1`
 - `wp_cursor_shape_device_v1`
+- `wp_pointer_warp_v1`
 - `zwp_relative_pointer_manager_v1`
 - `zwp_relative_pointer_v1`
 - `zwp_pointer_constraints_v1`

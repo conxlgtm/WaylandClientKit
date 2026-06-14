@@ -13,6 +13,7 @@ public struct ExampleBuilder {
         "GraphicsPreviewManagedGPUClear",
         "IdleInhibitSmoke",
         "PointerCaptureSmoke",
+        "PointerWarpSmoke",
         "PresentationFeedbackAnimation",
         "SerialActionsProbe",
         "SessionStateSmoke",

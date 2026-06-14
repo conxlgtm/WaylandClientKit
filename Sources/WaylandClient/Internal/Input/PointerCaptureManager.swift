@@ -140,6 +140,46 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
         )
     }
 
+    package func requestPointerWarp(
+        surface: RawSurface,
+        windowSize: PositiveLogicalSize,
+        seatID: SeatID,
+        position: LogicalOffset,
+        serial: InputSerial
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        guard !isShutDown else {
+            throw PointerWarpError.displayClosed
+        }
+
+        let fixedPosition = try FixedPointerWarpPosition(
+            position: position,
+            windowSize: windowSize
+        )
+        let globals = try connection.bindRequiredGlobals()
+        guard case .bound(let warp) = globals.extensions.pointerWarp else {
+            throw PointerWarpError.unavailable
+        }
+        let seat = try requirePointerWarpSeat(seatID, globals: globals)
+        guard seat.hasPointerDevice else {
+            throw PointerWarpError.pointerUnavailable(seatID)
+        }
+
+        do {
+            try warp.warpPointer(
+                surface: surface,
+                seat: seat,
+                x: fixedPosition.x,
+                y: fixedPosition.y,
+                serial: serial.rawValue
+            )
+        } catch RuntimeError.bindFailed("wl_pointer") {
+            throw PointerWarpError.pointerUnavailable(seatID)
+        } catch {
+            throw PointerWarpError.requestFailed(String(describing: error))
+        }
+    }
+
     package func destroyRelativePointerSubscription(
         _ id: RelativePointerSubscriptionID
     ) throws {
@@ -268,6 +308,17 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
     private func requireSeat(_ seatID: SeatID, globals: BoundGlobals) throws -> RawSeat {
         guard let seat = globals.seatRegistry.seat(for: RawSeatID(seatID)) else {
             throw PointerCaptureError.unknownSeat(seatID)
+        }
+
+        return seat
+    }
+
+    private func requirePointerWarpSeat(
+        _ seatID: SeatID,
+        globals: BoundGlobals
+    ) throws -> RawSeat {
+        guard let seat = globals.seatRegistry.seat(for: RawSeatID(seatID)) else {
+            throw PointerWarpError.unknownSeat(seatID)
         }
 
         return seat

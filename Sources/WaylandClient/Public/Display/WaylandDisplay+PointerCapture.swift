@@ -46,6 +46,24 @@ extension WaylandDisplay {
         return PointerConstraint(id: id, display: self)
     }
 
+    public func requestPointerWarp(
+        window: Window,
+        seatID: SeatID,
+        position: LogicalOffset,
+        serial: InputSerial
+    ) throws {
+        guard window.isOwned(by: self) else {
+            throw PointerWarpError.foreignWindow(window.id)
+        }
+
+        try pointerWarpCore().requestPointerWarp(
+            windowID: window.id,
+            seatID: seatID,
+            position: position,
+            serial: serial
+        )
+    }
+
     public func destroyRelativePointerSubscription(
         _ subscription: RelativePointerSubscription
     ) throws {
@@ -69,6 +87,14 @@ extension WaylandDisplay {
             return try requireCore()
         } catch ClientError.display(.closed) {
             throw PointerCaptureError.displayClosed
+        }
+    }
+
+    private func pointerWarpCore() throws -> DisplayCore {
+        do {
+            return try requireCore()
+        } catch ClientError.display(.closed) {
+            throw PointerWarpError.displayClosed
         }
     }
 }

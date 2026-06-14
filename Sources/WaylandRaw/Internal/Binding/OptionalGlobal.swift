@@ -49,6 +49,7 @@ extension RawFractionalScaleManager: RawDestroyableObject {}
 extension RawCursorShapeManager: RawDestroyableObject {}
 extension RawXDGToplevelIconManager: RawDestroyableObject {}
 extension RawXDGActivation: RawDestroyableObject {}
+extension RawPointerWarp: RawDestroyableObject {}
 extension RawRelativePointerManager: RawDestroyableObject {}
 extension RawPointerConstraints: RawDestroyableObject {}
 extension RawLinuxDrmSyncobjManager: RawDestroyableObject {}
@@ -72,6 +73,7 @@ package typealias OptionalFractionalScaleManager = OptionalGlobal<RawFractionalS
 package typealias OptionalCursorShapeManager = OptionalGlobal<RawCursorShapeManager>
 package typealias OptionalXDGToplevelIconManager = OptionalGlobal<RawXDGToplevelIconManager>
 package typealias OptionalXDGActivation = OptionalGlobal<RawXDGActivation>
+package typealias OptionalPointerWarp = OptionalGlobal<RawPointerWarp>
 package typealias OptionalRelativePointerManager = OptionalGlobal<RawRelativePointerManager>
 package typealias OptionalPointerConstraints = OptionalGlobal<RawPointerConstraints>
 package typealias OptionalLinuxDrmSyncobjManager = OptionalGlobal<RawLinuxDrmSyncobjManager>

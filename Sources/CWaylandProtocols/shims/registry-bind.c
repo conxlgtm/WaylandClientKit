@@ -1,6 +1,7 @@
 #include "wayland-client-kit-shims.h"
 #include "generated/staging/fractional-scale/fractional-scale-v1-client-protocol.h"
 #include "generated/staging/cursor-shape/cursor-shape-v1-client-protocol.h"
+#include "generated/staging/pointer-warp/pointer-warp-v1-client-protocol.h"
 #include "generated/staging/xdg-activation/xdg-activation-v1-client-protocol.h"
 #include "generated/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1-client-protocol.h"
 #include "generated/staging/xdg-system-bell/xdg-system-bell-v1-client-protocol.h"
@@ -122,6 +123,13 @@ struct xdg_system_bell_v1 *swl_registry_bind_xdg_system_bell_v1(
 {
     return (struct xdg_system_bell_v1 *)wl_registry_bind(
         registry, name, &xdg_system_bell_v1_interface, version);
+}
+
+struct wp_pointer_warp_v1 *swl_registry_bind_wp_pointer_warp_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct wp_pointer_warp_v1 *)wl_registry_bind(
+        registry, name, &wp_pointer_warp_v1_interface, version);
 }
 
 struct zwp_relative_pointer_manager_v1 *

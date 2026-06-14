@@ -76,6 +76,7 @@ Intentionally public:
 - `PointerConstraintRegion`
 - `PointerConstraintLifetime`
 - `PointerCaptureError`
+- `PointerWarpError`
 - public raw and interpreted keyboard event payloads
 - `PointerCursor`
 - `PointerCursorScalePolicy`
@@ -151,7 +152,7 @@ Current user-facing contract:
   popup surfaces, restoration snapshots, presentation feedback, regular
   clipboard selection, primary selection, receive-side and source-side
   drag-and-drop data transfer, drag icon surfaces, xdg activation, relative
-  pointer, pointer lock/confine, cursor requests, text-input sessions and
+  pointer, pointer lock/confine, pointer warp, cursor requests, text-input sessions and
   events, diagnostics, and terminal display errors are the current product
   surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
@@ -175,7 +176,8 @@ Current user-facing contract:
   for regular clipboard, drag-and-drop, drag action negotiation, primary
   selection, server-side decorations, xdg-output, viewporter, presentation time,
   fractional scaling, cursor-shape, xdg activation, relative pointer, pointer
-  constraints, text-input, and linux-dmabuf without binding new protocol objects.
+  constraints, pointer warp, text-input, and linux-dmabuf without binding new protocol
+  objects.
 - Primary selection means `zwp_primary_selection_device_manager_v1` offers and
   sources. It is selection-driven, focus-sensitive, and serial-scoped.
 - Drag-and-drop means `wl_data_device_manager` target offers and local sources,
@@ -192,6 +194,11 @@ Current user-facing contract:
   WaylandClientKit exposes capability facts, relative motion events, typed
   lock/confine lifecycle events, and window-scoped lock/confine requests without
   deciding application pointer-capture policy.
+- Pointer warp means `wp_pointer_warp_v1`. Public requests are managed-window,
+  seat, serial, and logical-position scoped. They report typed unavailable,
+  foreign-window, closed-window, unknown-seat, pointer-unavailable, invalid-position,
+  and request-failed errors without exposing raw warp, pointer, surface, or queue
+  objects. Compositor policy may still ignore or reject a request.
 - Cursor requests cover compositor cursor-shape requests, named theme cursors,
   hidden cursors, static XRGB8888 custom cursor images, and output-aware theme
   scale policy. Animated custom cursors are public value types built from

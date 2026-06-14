@@ -14,6 +14,7 @@ features with typed public errors. For example,
 declines a later activation request according to focus policy.
 
 ``WaylandCapabilities/relativePointer`` and
-``WaylandCapabilities/pointerConstraints`` report advanced pointer protocols.
-Applications should treat these as optional input features and keep a fallback
-for compositors that do not support pointer capture.
+``WaylandCapabilities/pointerConstraints`` report pointer capture protocols.
+``WaylandCapabilities/pointerWarp`` reports the staging pointer-warp request
+protocol. Applications should treat these as optional input features and keep a
+fallback for compositors that do not support them or decline a later request.
