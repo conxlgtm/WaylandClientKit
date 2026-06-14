@@ -25,7 +25,6 @@ extension WaylandGraphicsWindowBackingStorage {
     ) -> Bool {
         switch status {
         case .configured, .active, .failed(.explicitSyncRequiredButUnavailable),
-            .failed(.explicitSyncSetupFailed), .failed(.explicitSyncSubmissionFailed),
             .failed(.explicitSyncReleaseFailed):
             true
         case .unavailable, .pending, .advertised, .fallback, .failed:
@@ -59,6 +58,39 @@ extension WaylandGraphicsWindowBackingStorage {
             metadata: runtimePath.metadata,
             presentationFeedback: runtimePath.presentationFeedback
         )
+    }
+
+    package static func runtimePath(
+        _ runtimePath: WaylandGraphicsRuntimePath,
+        explicitSync: WaylandGraphicsRuntimeStatus
+    ) -> WaylandGraphicsRuntimePath {
+        WaylandGraphicsRuntimePath(
+            capabilities: runtimePath.capabilities,
+            backing: runtimePath.backing,
+            dmabuf: runtimePath.dmabuf,
+            surfaceFeedback: runtimePath.surfaceFeedback,
+            renderNode: runtimePath.renderNode,
+            gbm: runtimePath.gbm,
+            egl: runtimePath.egl,
+            dmabufImport: runtimePath.dmabufImport,
+            bufferLifecycle: runtimePath.bufferLifecycle,
+            explicitSync: explicitSync,
+            pacing: runtimePath.pacing,
+            metadata: runtimePath.metadata,
+            presentationFeedback: runtimePath.presentationFeedback
+        )
+    }
+
+    package static func runtimePath(
+        _ runtimePath: WaylandGraphicsRuntimePath,
+        fallbackExplicitSyncIfNeeded reason: WaylandGraphicsFallbackReason
+    ) -> WaylandGraphicsRuntimePath {
+        switch reason {
+        case .explicitSyncSetupFailed, .explicitSyncSubmissionFailed:
+            Self.runtimePath(runtimePath, explicitSync: .fallback(reason))
+        default:
+            runtimePath
+        }
     }
 
     package static func softwarePacingSelection(

@@ -182,22 +182,19 @@ resource setup and frame submission.
 | Weston headless | headless socket, Weston 15.0.0, 2026-06-09 | dmabuf unavailable, explicit sync unavailable, FIFO and presentation feedback advertised, content type and color metadata unavailable | unavailable(zwp_linux_dmabuf_v1) | fallback(dmabufUnavailable) | fallback(dmabufUnavailable) | fallback(dmabufUnavailable) | unavailable(wp_linux_drm_syncobj_manager_v1) | advertised | advertised | mixed unavailable/advertised | advertised | success show | software fallback | software fallback(dmabufUnavailable) | failure none, fallback dmabufUnavailable, active GPU not expected |
 | GNOME / Mutter | wayland-0, Fedora GNOME Wayland VM, 2026-06-11 | dmabuf v3, presentation v2, FIFO v1, commit timing v1, text-input v3 v1, cursor-shape v2, pointer constraints v1, relative pointer v1, idle inhibit v1, system bell v1, xdg activation v1, color management v2, color representation v1, linux-drm-syncobj unavailable | advertised v3 | fallback(surfaceFeedbackUnavailable) | fallback(surfaceFeedbackUnavailable) | fallback(surfaceFeedbackUnavailable) | unavailable(wp_linux_drm_syncobj_manager_v1) | advertised | advertised | mixed unavailable/advertised | advertised v1, runtime advertised | success show, 96x96 | not observed, software fallback | software fallback(surfaceFeedbackUnavailable) | failure none, fallback surfaceFeedbackUnavailable, active GPU not proven |
 | KDE / KWin | wayland-0, KDE / plasma, 2026-06-09 | dmabuf v5, linux-drm-syncobj v1, FIFO v1, presentation v2, content type, alpha, tearing, color representation, color management advertised, commit timing unavailable | advertised v5, runtime active | usable | active | configured | advertised v1, runtime advertised | advertised | unavailable | advertised | advertised v1, runtime advertised | success show, 192x192 | managed by GPU buffer lifecycle | gpu active / managedGPU | failure none, fallback none, active GPU proven |
-| KDE / KWin | wayland-0, KDE / plasma, 2026-06-13 | dmabuf v5, linux-drm-syncobj v1, FIFO v1, presentation v2, content type, alpha, tearing, color representation, color management advertised, commit timing unavailable | advertised v5, runtime active | usable | active | configured | advertised v1; preferExplicit active; requireExplicit active | preferFIFO active | preferCommitTiming fallback(commitTimingUnavailable) | content type active and tearing control active for prefer metadata game/async; alpha/color advertised | advertised v1, runtime advertised | preferExplicit/FIFO, requireExplicit, commit-timing fallback, and metadata runs success show | managed by GPU buffer lifecycle | gpu active / managedGPU | failure none; fallback none except commitTimingUnavailable when requested |
+| KDE / KWin | wayland-0, KDE / plasma, 2026-06-13 | dmabuf v5, linux-drm-syncobj v1, FIFO v1, presentation v2, content type, alpha, tearing, color representation, color management advertised, commit timing unavailable | advertised v5, runtime active | usable | active | configured | advertised v1, active proof pending refreshed runtime output | preferFIFO active | preferCommitTiming fallback(commitTimingUnavailable) | content type active and tearing control active for prefer metadata game/async; alpha/color advertised | advertised v1, runtime advertised | FIFO, commit-timing fallback, and metadata runs success show; explicit sync proof pending refresh | managed by GPU buffer lifecycle | gpu active / managedGPU | failure none except explicit sync pending refresh; fallback commitTimingUnavailable when requested |
 | Sway / wlroots | wayland-1, nested Sway/wlroots under KDE/Plasma, 2026-06-09 | dmabuf v4, linux-drm-syncobj v1, presentation v2, content type, alpha, tearing advertised, FIFO unavailable, color representation unavailable, color management unavailable | advertised v4, runtime active | usable | active | configured | advertised v1, runtime advertised | unavailable | unavailable | mixed advertised/unavailable | advertised v1, runtime advertised | success show, 96x96 | managed by GPU buffer lifecycle | gpu active / managedGPU | failure none, fallback none, active GPU proven in nested session |
 
 KDE/KWin graphics preview addendum on 2026-06-13:
 
-- `swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo`
-  produced `explicit sync: advertised v1, runtime active`, `fifo: active`,
-  `backing: gpu active`, and `failure: none`.
-- `swift run GPUPreviewSmokeClient -- --sync require-explicit` produced
-  `explicit sync: advertised v1, runtime active`, `backing: gpu active`, and
-  `failure: none`.
+- Explicit-sync active evidence needs a refreshed run after the latest
+  synchronization lifetime changes. Keep the row at advertised/pending until
+  `GPUPreviewSmokeClient` reports explicit sync `active` on a submitted frame.
 - `swift run GPUPreviewSmokeClient -- --pacing commit-timing` produced
   `commit timing: fallback(commitTimingUnavailable)` with active GPU backing.
-- `swift run GraphicsPreviewManagedGPUClear -- --sync prefer-explicit --pacing fifo --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary`
-  produced a runtime path with explicit sync, FIFO, content type, and tearing
-  control active, with no fallback or failure.
+- `swift run GraphicsPreviewManagedGPUClear -- --pacing fifo --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary`
+  produced a runtime path with FIFO, content type, and tearing control active,
+  with no fallback or failure.
 
 Record graphics facts in this form:
 
