@@ -3,7 +3,7 @@
 import CWaylandProtocols
 
 extension RawDisplayConnection {
-    // swiftlint:disable cyclomatic_complexity function_body_length
+    // swiftlint:disable cyclomatic_complexity function_body_length line_length
     @safe
     package func bindOptionalGlobals(registry reg: OpaquePointer) throws -> OptionalGlobals {
         let decorationManager = try bindXDGDecorationManagerIfPresent(registry: reg)
@@ -57,97 +57,111 @@ extension RawDisplayConnection {
                                                                     registry: reg
                                                                 )
                                                             do {
-                                                                let pointerWarp =
-                                                                    try bindPointerWarpIfPresent(
+                                                                let compositorSessionManager =
+                                                                    try
+                                                                    bindCompositorSessionManagerIfPresent(
                                                                         registry: reg
                                                                     )
                                                                 do {
-                                                                    let tabletManager =
-                                                                        try
-                                                                        bindTabletManagerIfPresent(
+                                                                    let pointerWarp =
+                                                                        try bindPointerWarpIfPresent(
                                                                             registry: reg
                                                                         )
                                                                     do {
-                                                                        // swiftlint:disable line_length
-                                                                        let relativePointerManager =
+                                                                        let tabletManager =
                                                                             try
-                                                                            bindRelativePointerManagerIfPresent(
+                                                                            bindTabletManagerIfPresent(
                                                                                 registry: reg
                                                                             )
                                                                         do {
-                                                                            let pointerConstraints =
+                                                                            let relativePointerManager =
                                                                                 try
-                                                                                bindPointerConstraintsIfPresent(
+                                                                                bindRelativePointerManagerIfPresent(
                                                                                     registry: reg
                                                                                 )
-                                                                            return OptionalGlobals(
-                                                                                xdgDecorationManager:
-                                                                                    decorationManager,
-                                                                                xdgOutputManager:
-                                                                                    xdgOutputManager,
-                                                                                viewporter: viewporter,
-                                                                                presentation:
-                                                                                    presentation,
-                                                                                fractionalScaleManager:
-                                                                                    fractionalScaleManager,
-                                                                                cursorShapeManager:
-                                                                                    cursorShapeManager,
-                                                                                xdgToplevelIconManager:
-                                                                                    xdgToplevelIconManager,
-                                                                                xdgActivation:
-                                                                                    xdgActivation,
-                                                                                pointerWarp:
-                                                                                    pointerWarp,
-                                                                                tabletManager:
-                                                                                    tabletManager,
-                                                                                relativePointerManager:
-                                                                                    relativePointerManager,
-                                                                                pointerConstraints:
-                                                                                    pointerConstraints,
-                                                                                linuxDrmSyncobjManager:
-                                                                                    submitGlobals
-                                                                                    .linuxDrmSyncobjManager,
-                                                                                fifoManager:
-                                                                                    submitGlobals
-                                                                                    .fifoManager,
-                                                                                commitTimingManager:
-                                                                                    submitGlobals
-                                                                                    .commitTimingManager,
-                                                                                contentTypeManager:
-                                                                                    metadataGlobals
-                                                                                    .contentTypeManager,
-                                                                                alphaModifierManager:
-                                                                                    metadataGlobals
-                                                                                    .alphaModifierManager,
-                                                                                tearingControlManager:
-                                                                                    metadataGlobals
-                                                                                    .tearingControlManager,
-                                                                                colorRepresentationManager:
-                                                                                    metadataGlobals
-                                                                                    .colorRepresentationManager,
-                                                                                colorManager:
-                                                                                    metadataGlobals
-                                                                                    .colorManager,
-                                                                                dataDeviceManager:
-                                                                                    dataDeviceManager,
-                                                                                primarySelectionDeviceManager:
-                                                                                    primarySelectionDeviceManager,
-                                                                                textInputManager:
-                                                                                    textInputManager,
-                                                                                linuxDmabuf: linuxDmabuf
-                                                                            )
-                                                                            // swiftlint:enable line_length
+                                                                            do {
+                                                                                let pointerConstraints =
+                                                                                    try
+                                                                                    bindPointerConstraintsIfPresent(
+                                                                                        registry:
+                                                                                            reg
+                                                                                    )
+                                                                                return
+                                                                                    OptionalGlobals(
+                                                                                        xdgDecorationManager:
+                                                                                            decorationManager,
+                                                                                        xdgOutputManager:
+                                                                                            xdgOutputManager,
+                                                                                        viewporter:
+                                                                                            viewporter,
+                                                                                        presentation:
+                                                                                            presentation,
+                                                                                        fractionalScaleManager:
+                                                                                            fractionalScaleManager,
+                                                                                        cursorShapeManager:
+                                                                                            cursorShapeManager,
+                                                                                        xdgToplevelIconManager:
+                                                                                            xdgToplevelIconManager,
+                                                                                        xdgActivation:
+                                                                                            xdgActivation,
+                                                                                        compositorSessionManager:
+                                                                                            compositorSessionManager,
+                                                                                        pointerWarp:
+                                                                                            pointerWarp,
+                                                                                        tabletManager:
+                                                                                            tabletManager,
+                                                                                        relativePointerManager:
+                                                                                            relativePointerManager,
+                                                                                        pointerConstraints:
+                                                                                            pointerConstraints,
+                                                                                        linuxDrmSyncobjManager:
+                                                                                            submitGlobals
+                                                                                            .linuxDrmSyncobjManager,
+                                                                                        fifoManager:
+                                                                                            submitGlobals
+                                                                                            .fifoManager,
+                                                                                        commitTimingManager:
+                                                                                            submitGlobals
+                                                                                            .commitTimingManager,
+                                                                                        contentTypeManager:
+                                                                                            metadataGlobals
+                                                                                            .contentTypeManager,
+                                                                                        alphaModifierManager:
+                                                                                            metadataGlobals
+                                                                                            .alphaModifierManager,
+                                                                                        tearingControlManager:
+                                                                                            metadataGlobals
+                                                                                            .tearingControlManager,
+                                                                                        colorRepresentationManager:
+                                                                                            metadataGlobals
+                                                                                            .colorRepresentationManager,
+                                                                                        colorManager:
+                                                                                            metadataGlobals
+                                                                                            .colorManager,
+                                                                                        dataDeviceManager:
+                                                                                            dataDeviceManager,
+                                                                                        primarySelectionDeviceManager:
+                                                                                            primarySelectionDeviceManager,
+                                                                                        textInputManager:
+                                                                                            textInputManager,
+                                                                                        linuxDmabuf:
+                                                                                            linuxDmabuf
+                                                                                    )
+                                                                            } catch {
+                                                                                relativePointerManager
+                                                                                    .destroy()
+                                                                                throw error
+                                                                            }
                                                                         } catch {
-                                                                            relativePointerManager
-                                                                                .destroy()
+                                                                            tabletManager.destroy()
                                                                             throw error
                                                                         }
                                                                     } catch {
-                                                                        tabletManager.destroy()
+                                                                        pointerWarp.destroy()
                                                                         throw error
                                                                     }
                                                                 } catch {
-                                                                    pointerWarp.destroy()
+                                                                    compositorSessionManager.destroy()
                                                                     throw error
                                                                 }
                                                             } catch {
@@ -209,7 +223,7 @@ extension RawDisplayConnection {
             throw error
         }
     }
-    // swiftlint:enable cyclomatic_complexity function_body_length
+    // swiftlint:enable cyclomatic_complexity function_body_length line_length
 
     @safe
     private func bindXDGDecorationManagerIfPresent(
@@ -500,6 +514,36 @@ extension RawDisplayConnection {
             proxyAdoption: proxyAdoption
         )
         return .bound(wrappedActivation)
+    }
+
+    @safe
+    private func bindCompositorSessionManagerIfPresent(
+        registry reg: OpaquePointer
+    ) throws -> OptionalCompositorSessionManager {
+        guard let global = optionalGlobal(named: "xdg_session_manager_v1") else {
+            return .missing
+        }
+
+        let version = global.negotiatedVersion(
+            supportedByClient: SupportedVersions.xdgSessionManagerV1
+        )
+
+        guard
+            let manager = unsafe swl_registry_bind_xdg_session_manager_v1(
+                reg,
+                global.name,
+                version.value
+            )
+        else {
+            throw RuntimeError.bindFailed("xdg_session_manager_v1")
+        }
+
+        let wrappedManager = try RawCompositorSessionManager(
+            pointer: manager,
+            version: version,
+            proxyAdoption: proxyAdoption
+        )
+        return .bound(wrappedManager)
     }
 
     @safe

@@ -219,6 +219,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         "wp_fractional_scale_manager_v1",
         "wp_cursor_shape_manager_v1",
         "xdg_activation_v1",
+        "xdg_session_manager_v1",
         "xdg_toplevel_icon_manager_v1",
         "zwp_idle_inhibit_manager_v1",
         "xdg_system_bell_v1",

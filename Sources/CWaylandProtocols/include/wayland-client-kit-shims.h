@@ -28,6 +28,9 @@ struct wp_cursor_shape_manager_v1;
 struct wp_cursor_shape_device_v1;
 struct xdg_activation_v1;
 struct xdg_activation_token_v1;
+struct xdg_session_manager_v1;
+struct xdg_session_v1;
+struct xdg_toplevel_session_v1;
 struct xdg_toplevel_icon_manager_v1;
 struct xdg_toplevel_icon_v1;
 struct xdg_system_bell_v1;
@@ -126,6 +129,9 @@ struct wp_cursor_shape_manager_v1 *swl_registry_bind_wp_cursor_shape_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct xdg_activation_v1 *swl_registry_bind_xdg_activation_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct xdg_session_manager_v1 *swl_registry_bind_xdg_session_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct xdg_toplevel_icon_manager_v1 *
@@ -334,6 +340,8 @@ void swl_text_input_v3_set_cursor_rectangle(
     int32_t width,
     int32_t height);
 void swl_text_input_v3_commit(struct zwp_text_input_v3 *text_input);
+void swl_text_input_v3_show_input_panel(struct zwp_text_input_v3 *text_input);
+void swl_text_input_v3_hide_input_panel(struct zwp_text_input_v3 *text_input);
 
 /* ------------------------------------------------------------------ */
 /*  XDG activation request wrappers                                   */
@@ -357,6 +365,39 @@ void swl_xdg_activation_token_v1_set_surface(
     struct wl_surface *surface);
 void swl_xdg_activation_token_v1_commit(
     struct xdg_activation_token_v1 *token);
+
+/* ------------------------------------------------------------------ */
+/*  Session-management request wrappers                               */
+/* ------------------------------------------------------------------ */
+
+struct xdg_session_v1 *swl_xdg_session_manager_v1_get_session(
+    struct xdg_session_manager_v1 *manager,
+    uint32_t reason,
+    const char *session_id);
+void swl_xdg_session_manager_v1_destroy(
+    struct xdg_session_manager_v1 *manager);
+
+struct xdg_toplevel_session_v1 *swl_xdg_session_v1_add_toplevel(
+    struct xdg_session_v1 *session,
+    struct xdg_toplevel *toplevel,
+    const char *name);
+struct xdg_toplevel_session_v1 *swl_xdg_session_v1_restore_toplevel(
+    struct xdg_session_v1 *session,
+    struct xdg_toplevel *toplevel,
+    const char *name);
+void swl_xdg_session_v1_remove_toplevel(
+    struct xdg_session_v1 *session,
+    const char *name);
+void swl_xdg_session_v1_destroy(
+    struct xdg_session_v1 *session);
+void swl_xdg_session_v1_remove(
+    struct xdg_session_v1 *session);
+
+void swl_xdg_toplevel_session_v1_rename(
+    struct xdg_toplevel_session_v1 *toplevel_session,
+    const char *name);
+void swl_xdg_toplevel_session_v1_destroy(
+    struct xdg_toplevel_session_v1 *toplevel_session);
 
 /* ------------------------------------------------------------------ */
 /*  Desktop integration request wrappers                              */
@@ -1149,6 +1190,21 @@ typedef void (*swl_xdg_activation_token_v1_done_fn)(
     struct xdg_activation_token_v1 *token,
     const char *token_value);
 
+/* Session management */
+typedef void (*swl_xdg_session_v1_created_fn)(
+    void *data,
+    struct xdg_session_v1 *session,
+    const char *session_id);
+typedef void (*swl_xdg_session_v1_restored_fn)(
+    void *data,
+    struct xdg_session_v1 *session);
+typedef void (*swl_xdg_session_v1_replaced_fn)(
+    void *data,
+    struct xdg_session_v1 *session);
+typedef void (*swl_xdg_toplevel_session_v1_restored_fn)(
+    void *data,
+    struct xdg_toplevel_session_v1 *toplevel_session);
+
 /* Pointer capture */
 typedef void (*swl_zwp_relative_pointer_v1_relative_motion_fn)(
     void *data,
@@ -1583,6 +1639,18 @@ struct swl_xdg_activation_token_v1_listener_callbacks {
     void                              *data;
 };
 
+struct swl_xdg_session_v1_listener_callbacks {
+    swl_xdg_session_v1_created_fn  created;
+    swl_xdg_session_v1_restored_fn restored;
+    swl_xdg_session_v1_replaced_fn replaced;
+    void                          *data;
+};
+
+struct swl_xdg_toplevel_session_v1_listener_callbacks {
+    swl_xdg_toplevel_session_v1_restored_fn restored;
+    void                                   *data;
+};
+
 struct swl_zwp_relative_pointer_v1_listener_callbacks {
     swl_zwp_relative_pointer_v1_relative_motion_fn relative_motion;
     void                                          *data;
@@ -1818,6 +1886,14 @@ int swl_wp_image_description_v1_add_listener(
 int swl_xdg_activation_token_v1_add_listener(
     struct xdg_activation_token_v1 *token,
     const struct swl_xdg_activation_token_v1_listener_callbacks *callbacks);
+
+int swl_xdg_session_v1_add_listener(
+    struct xdg_session_v1 *session,
+    const struct swl_xdg_session_v1_listener_callbacks *callbacks);
+
+int swl_xdg_toplevel_session_v1_add_listener(
+    struct xdg_toplevel_session_v1 *toplevel_session,
+    const struct swl_xdg_toplevel_session_v1_listener_callbacks *callbacks);
 
 int swl_zwp_relative_pointer_v1_add_listener(
     struct zwp_relative_pointer_v1 *relative_pointer,
@@ -2191,6 +2267,8 @@ enum swl_test_text_input_request_kind {
     SWL_TEST_TEXT_INPUT_SET_CONTENT_TYPE = 6,
     SWL_TEST_TEXT_INPUT_SET_CURSOR_RECTANGLE = 7,
     SWL_TEST_TEXT_INPUT_COMMIT = 8,
+    SWL_TEST_TEXT_INPUT_SHOW_INPUT_PANEL = 9,
+    SWL_TEST_TEXT_INPUT_HIDE_INPUT_PANEL = 10,
 };
 
 struct swl_test_text_input_request_record {

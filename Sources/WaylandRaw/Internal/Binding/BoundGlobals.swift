@@ -16,6 +16,7 @@ package enum SupportedVersions {
     package static let wpFractionalScaleManagerV1: RawVersion = 1
     package static let wpCursorShapeManagerV1: RawVersion = 2
     package static let xdgActivationV1: RawVersion = 1
+    package static let xdgSessionManagerV1: RawVersion = 1
     package static let xdgToplevelIconManagerV1: RawVersion = 1
     package static let xdgSystemBellV1: RawVersion = 1
     package static let wpPointerWarpV1: RawVersion = 1
@@ -57,6 +58,7 @@ package struct OptionalGlobals {
     package let cursorShapeManager: OptionalCursorShapeManager
     package let xdgToplevelIconManager: OptionalXDGToplevelIconManager
     package let xdgActivation: OptionalXDGActivation
+    package let compositorSessionManager: OptionalCompositorSessionManager
     package let pointerWarp: OptionalPointerWarp
     package let tabletManager: OptionalTabletManager
     package let relativePointerManager: OptionalRelativePointerManager
@@ -85,6 +87,8 @@ package struct OptionalGlobals {
         xdgToplevelIconManager boundXDGToplevelIconManager:
             OptionalXDGToplevelIconManager = .missing,
         xdgActivation boundXDGActivation: OptionalXDGActivation = .missing,
+        compositorSessionManager boundCompositorSessionManager:
+            OptionalCompositorSessionManager = .missing,
         pointerWarp boundPointerWarp: OptionalPointerWarp = .missing,
         tabletManager boundTabletManager: OptionalTabletManager = .missing,
         relativePointerManager boundRelativePointerManager: OptionalRelativePointerManager =
@@ -116,6 +120,7 @@ package struct OptionalGlobals {
         cursorShapeManager = boundCursorShapeManager
         xdgToplevelIconManager = boundXDGToplevelIconManager
         xdgActivation = boundXDGActivation
+        compositorSessionManager = boundCompositorSessionManager
         pointerWarp = boundPointerWarp
         tabletManager = boundTabletManager
         relativePointerManager = boundRelativePointerManager
@@ -148,6 +153,7 @@ package struct OptionalGlobals {
         relativePointerManager.destroy()
         tabletManager.destroy()
         pointerWarp.destroy()
+        compositorSessionManager.destroy()
         xdgActivation.destroy()
         xdgToplevelIconManager.destroy()
         textInputManager.destroy()
@@ -188,9 +194,9 @@ package final class BoundGlobals {
         sharedMemory boundSharedMemory: RawSharedMemory,
         xdgWMBase boundXDGWMBase: RawXDGWMBase,
         seatRegistry boundSeatRegistry: SeatRegistry,
-        tabletSeatRegistry boundTabletSeatRegistry: TabletSeatRegistry? = nil,
         outputRegistry boundOutputRegistry: OutputRegistry,
-        extensions boundExtensions: OptionalGlobals = OptionalGlobals()
+        extensions boundExtensions: OptionalGlobals = OptionalGlobals(),
+        tabletSeatRegistry boundTabletSeatRegistry: TabletSeatRegistry? = nil
     ) {
         compositor = boundCompositor
         sharedMemory = boundSharedMemory

@@ -228,7 +228,9 @@ public struct TabletToolProximityIn: Equatable, Sendable {
     public let serial: InputSerial
     public let tablet: TabletID
 
-    public init(tool toolID: TabletToolID, serial eventSerial: InputSerial, tablet tabletID: TabletID) {
+    public init(
+        tool toolID: TabletToolID, serial eventSerial: InputSerial, tablet tabletID: TabletID
+    ) {
         tool = toolID
         serial = eventSerial
         tablet = tabletID
@@ -289,7 +291,8 @@ public struct TabletPadEnter: Equatable, Sendable {
     public let serial: InputSerial
     public let tablet: TabletID
 
-    public init(pad padID: TabletPadID, serial eventSerial: InputSerial, tablet tabletID: TabletID) {
+    public init(pad padID: TabletPadID, serial eventSerial: InputSerial, tablet tabletID: TabletID)
+    {
         pad = padID
         serial = eventSerial
         tablet = tabletID

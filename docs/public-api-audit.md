@@ -176,8 +176,8 @@ Current user-facing contract:
   for regular clipboard, drag-and-drop, drag action negotiation, primary
   selection, server-side decorations, xdg-output, viewporter, presentation time,
   fractional scaling, cursor-shape, xdg activation, relative pointer, pointer
-  constraints, pointer warp, tablet input, text-input, and linux-dmabuf without
-  binding new protocol objects.
+  constraints, pointer warp, tablet input, compositor session management,
+  text-input, and linux-dmabuf without binding new protocol objects.
 - Primary selection means `zwp_primary_selection_device_manager_v1` offers and
   sources. It is selection-driven, focus-sensitive, and serial-scoped.
 - Drag-and-drop means `wl_data_device_manager` target offers and local sources,
@@ -187,8 +187,13 @@ Current user-facing contract:
   local source-side drag request.
 - Text input means `zwp_text_input_manager_v3` seat-scoped sessions and
   `zwp_text_input_v3` events. Surrounding text offsets are UTF-8 byte offsets at
-  the protocol boundary. Preedit, delete, commit, action, and done events are
-  grouped by the protocol's `done` transaction event.
+  the protocol boundary. Input-panel show/hide requests are version-gated v2
+  hints that compositors may ignore. Preedit, delete, commit, action, language,
+  preedit-hint, and done events are typed public facts.
+- Compositor session management means `xdg_session_manager_v1` advertisement
+  reporting through `WaylandCapabilities.compositorSessionManagement`.
+  Compositor session objects and event streams remain package-internal preview
+  plumbing until lifecycle evidence and framework policy boundaries are clearer.
 - Relative pointer and pointer constraints mean
   `zwp_relative_pointer_manager_v1` and `zwp_pointer_constraints_v1`.
   WaylandClientKit exposes capability facts, relative motion events, typed
@@ -406,6 +411,8 @@ Notes:
   protocol UTF-8 byte offsets and Swift `String.Index` construction. `disable()`
   finalizes the disable request; callers should commit pending enabled-state
   changes before disabling and should not call `commit()` after `disable()`.
+  Input-panel show/hide requests are v2 hints and can be ignored by the
+  compositor.
   `WaylandDisplay.textInputEvents` is separate from `inputEvents`, and
   text-input diagnostics can publish on both text-input and display diagnostic
   streams.

@@ -160,6 +160,11 @@ can request a token with app ID, window, seat ID, and serial hints, then send
 `Window.activate(using:)`. It should not treat a sent activate request as a
 guaranteed focus change.
 
+Compositor session-management advertisement is reported as a capability fact.
+Frameworks should still own scene/document identity, restore schemas, and local
+state migration. WaylandClientKit does not expose public compositor session
+objects or events until the staging protocol has stronger lifecycle evidence.
+
 Pointer capture is optional compositor functionality. Use
 `WaylandCapabilities.relativePointer` and `.pointerConstraints` before exposing
 capture-dependent modes. WaylandClientKit manages relative-pointer and
@@ -169,6 +174,8 @@ escape/unlock UI, camera mapping, gesture mapping, and cursor policy.
 For text fields, commit enabled request state before disabling the session.
 `TextInputSession.disable()` finalizes the disable request; a later
 `TextInputSession.commit()` is an invalid request and may produce a diagnostic.
+`TextInputSession.showInputPanel()` and `.hideInputPanel()` are version-gated
+input-panel hints. A compositor may ignore either request.
 
 ## Rendering Loop
 

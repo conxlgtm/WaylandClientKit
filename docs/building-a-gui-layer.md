@@ -72,11 +72,15 @@ Use these examples as references before adding framework policy:
 - `TwoWindowOrderStress`: high-volume two-window input routing with a larger
   input queue and controlled overflow diagnostics.
 - `TextInputSmoke`: text-input capability, enable/disable lifecycle, IME
-  commits, and interpreted keyboard fallback. `disable()` finalizes the
-  session; do not call `commit()` after disabling.
+  commits, input-panel hints when protocol v2 is available, and interpreted
+  keyboard fallback. `disable()` finalizes the session; do not call `commit()`
+  after disabling.
 - `TabletInputSmoke`: tablet protocol capability and typed device/tool/pad
   event facts. It skips cleanly when no compositor tablet protocol or hardware
   events are available.
+- `CompositorSessionSmoke`: staging compositor session-management capability
+  reporting. It skips public session binding while the protocol remains
+  capability-only preview plumbing.
 - `DataTransferSmoke`: clipboard, primary-selection, drag/drop source and offer
   behavior, private MIME filtering, stale-offer handling, bounded reads, and
   source cancellation.

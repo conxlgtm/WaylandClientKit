@@ -44,6 +44,7 @@ The [docs](.) directory contains project operation and design records:
 - [Public API audit](public-api-audit.md)
 - [Strict memory-safety audit](strict-memory-safety-audit.md)
 - [Compositor matrix](compositor-matrix.md)
+- [Session management plan](session-management-plan.md)
 
 Maintainer docs may describe internal targets and release gates. User docs
 should link here only when the reader needs project policy, evidence, or release
@@ -61,7 +62,7 @@ Canonical examples by feature:
 | --- | --- |
 | Basic software window and input | [WaylandClientKitDemo](../Examples/WaylandClientKitDemo/main.swift) |
 | Framework host loop | [FrameworkHostSmoke](../Examples/FrameworkHostSmoke/main.swift) |
-| Session state and restoration facts | [SessionStateSmoke](../Examples/SessionStateSmoke/main.swift) |
+| Session state and restoration facts | [SessionStateSmoke](../Examples/SessionStateSmoke/main.swift), [CompositorSessionSmoke](../Examples/CompositorSessionSmoke/main.swift) |
 | Presentation timing | [PresentationFeedbackAnimation](../Examples/PresentationFeedbackAnimation/main.swift) |
 | Text input | [TextInputSmoke](../Examples/TextInputSmoke/main.swift) |
 | Data transfer and drag icons | [DataTransferSmoke](../Examples/DataTransferSmoke/main.swift) |

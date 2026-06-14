@@ -119,9 +119,11 @@ rerun reported `requested backing: managedGPU`, `actual backing: managedGPU`,
 ## Session Management Protocol Watch
 
 WaylandClientKit supports local framework-owned state through public restoration
-snapshots and `SessionStateSmoke`. Compositor session-management protocol API is
-deferred until protocol evidence is strong enough to keep the public boundary
-honest.
+snapshots and `SessionStateSmoke`. It also reports staging
+`xdg_session_manager_v1` advertisement through
+`WaylandCapabilities.compositorSessionManagement`. Compositor session objects
+and event streams remain deferred until protocol evidence is strong enough to
+keep the public boundary honest.
 
 KDE/KWin live session evidence on 2026-06-09:
 `SessionStateSmoke --auto-close --print-summary --duration-seconds 3` passed.
@@ -129,9 +131,9 @@ The run captured title, app ID, logical geometry, scale, and output membership,
 wrote state under `$XDG_STATE_HOME`, captured a final restoration snapshot
 before exit, and closed with `remainingWindows=0`.
 
-| Protocol | Upstream phase | Vendored XML | Public API | Evidence needed before API |
+| Protocol | Upstream phase | Vendored XML | Public API | Evidence needed before broader API |
 | -------- | -------------- | ------------ | ---------- | -------------------------- |
-| `xx_session_manager_v1` or promoted successor | experimental or staging as upstream evolves | not vendored | deferred | compositor advertisement rows, smoke behavior, and a framework usage shape that does not confuse compositor session events with local scene restoration |
+| `xdg_session_manager_v1` | staging | vendored/generated from wayland-protocols 1.48 | capability only through `WaylandCapabilities.compositorSessionManagement`; raw preview plumbing package-internal | compositor advertisement rows, real lifecycle smoke behavior, and a framework usage shape that does not confuse compositor session events with local scene restoration |
 
 ## Framework Host Evidence
 

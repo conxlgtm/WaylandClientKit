@@ -71,6 +71,18 @@ extension DisplayCore {
         }
     }
 
+    func showTextInputPanel(seatID: SeatID) throws {
+        try withFatalFailureFinalization {
+            try requireSession().showTextInputPanelOnOwnerThread(seatID: seatID)
+        }
+    }
+
+    func hideTextInputPanel(seatID: SeatID) throws {
+        try withFatalFailureFinalization {
+            try requireSession().hideTextInputPanelOnOwnerThread(seatID: seatID)
+        }
+    }
+
     func publishTextInputEvents(_ events: [TextInputEvent]) {
         for event in events {
             eventHub.publishTextInput(event)

@@ -46,6 +46,10 @@ private final class LiveTextInputBinding: TextInputBinding {
     private let owner: RawTextInputOwner
     private var isDestroyed = false
 
+    var protocolVersion: UInt32 {
+        textInput.version.value
+    }
+
     init(
         textInput rawTextInput: RawTextInput,
         owner listenerOwner: RawTextInputOwner
@@ -95,6 +99,16 @@ private final class LiveTextInputBinding: TextInputBinding {
     func commit() {
         precondition(!isDestroyed, "text-input binding was already destroyed")
         textInput.commit()
+    }
+
+    func showInputPanel() {
+        precondition(!isDestroyed, "text-input binding was already destroyed")
+        textInput.showInputPanel()
+    }
+
+    func hideInputPanel() {
+        precondition(!isDestroyed, "text-input binding was already destroyed")
+        textInput.hideInputPanel()
     }
 
     func destroy() {

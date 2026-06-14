@@ -44,9 +44,9 @@ Remaining unsafe constructs:
   to itself in each listener `data` field.
 - `CallbackBoxStorage` keeps the Swift owner reachable while the listener is
   valid.
-- Seat, pointer, keyboard, touch, data-device, XDG, buffer-release, frame
-  callback, scale-extension, cursor-shape, and text-input listeners recover
-  Swift owners from C callback payloads.
+- Seat, pointer, keyboard, touch, data-device, XDG, session-management,
+  buffer-release, frame callback, scale-extension, cursor-shape, and text-input
+  listeners recover Swift owners from C callback payloads.
 - `RawInputChildProxy` keeps pointer, keyboard, and touch listener owners alive
   until the child proxy is destroyed.
 
@@ -107,6 +107,31 @@ Tests:
 - `TextInputManagerTests` covers request forwarding, unavailable errors,
   target resolution, binding destruction, and late callback behavior.
 - `DisplayEventHubTextInputTests` covers delivery on the text-input stream.
+
+## Compositor Session-Management Boundary
+
+Remaining unsafe constructs:
+
+- `RawCompositorSessionManager`, `RawCompositorSession`, and
+  `RawCompositorToplevelSession` wrap staging `xdg_session_manager_v1`,
+  `xdg_session_v1`, and `xdg_toplevel_session_v1` proxies returned by C shims.
+- Session listener owners bridge compositor-created, restored, and replaced
+  callbacks into package-internal raw events.
+
+Audit invariant:
+
+- Session-management wrappers remain package-internal preview plumbing.
+- Listener storage is cancelled before the corresponding raw session proxy is
+  destroyed.
+- Public API exposes only registry capability facts until session lifecycle
+  evidence and framework policy boundaries are stronger.
+
+Tests:
+
+- `WaylandCapabilitiesTests` covers `xdg_session_manager_v1` advertisement and
+  negotiated-version reporting.
+- C shim verification covers the request/listener declarations compiled into
+  the package.
 
 ## Tablet Input Boundary
 

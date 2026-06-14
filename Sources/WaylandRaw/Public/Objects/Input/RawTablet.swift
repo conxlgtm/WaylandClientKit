@@ -1,6 +1,6 @@
 import CWaylandProtocols
 
-// swiftlint:disable file_length type_body_length
+// swiftlint:disable file_length
 @safe
 package final class RawTabletManager {
     package let version: RawVersion
@@ -348,7 +348,8 @@ package final class RawTabletPad {
             )
             groups.append(group)
         } catch {
-            listenerOwner.appendListenerDiagnostic(listener: "zwp_tablet_pad_group_v2", error: error)
+            listenerOwner.appendListenerDiagnostic(
+                listener: "zwp_tablet_pad_group_v2", error: error)
         }
     }
 
@@ -390,6 +391,7 @@ private final class RawTabletPadGroup {
     }
 }
 
+// swiftlint:disable closure_parameter_position
 @safe
 private final class RawTabletSeatOwner {
     let seatID: RawSeatID
@@ -405,13 +407,12 @@ private final class RawTabletSeatOwner {
         invariantFailureSink: invariantFailureSink
     )
 
-    @safe private var callbacks:
-        UnsafeMutablePointer<swl_zwp_tablet_seat_v2_listener_callbacks>
-    {
+    @safe private var callbacks: UnsafeMutablePointer<swl_zwp_tablet_seat_v2_listener_callbacks> {
         listenerStorage.callbacks
     }
 
-    init(seatID ownerSeatID: RawSeatID, invariantFailureSink failureSink: RawInvariantFailureSink?) {
+    init(seatID ownerSeatID: RawSeatID, invariantFailureSink failureSink: RawInvariantFailureSink?)
+    {
         seatID = ownerSeatID
         invariantFailureSink = failureSink
 
@@ -423,15 +424,13 @@ private final class RawTabletSeatOwner {
             }
         }
         unsafe callbacks.pointee.tool_added = { data, _, tool in
-            RawTabletSeatOwner.withOwner(data, message: "tool_added without Swift state") {
-                owner in
+            RawTabletSeatOwner.withOwner(data, message: "tool_added without Swift state") { owner in
                 guard !owner.isCanceled, let tool = unsafe tool else { return }
                 unsafe owner.onToolAdded?(tool)
             }
         }
         unsafe callbacks.pointee.pad_added = { data, _, pad in
-            RawTabletSeatOwner.withOwner(data, message: "pad_added without Swift state") {
-                owner in
+            RawTabletSeatOwner.withOwner(data, message: "pad_added without Swift state") { owner in
                 guard !owner.isCanceled, let pad = unsafe pad else { return }
                 unsafe owner.onPadAdded?(pad)
             }
@@ -518,8 +517,7 @@ private final class RawTabletOwner {
             }
         }
         unsafe callbacks.pointee.bustype = { data, _, busType in
-            RawTabletOwner.withOwner(data, message: "tablet bustype without Swift state") {
-                owner in
+            RawTabletOwner.withOwner(data, message: "tablet bustype without Swift state") { owner in
                 owner.append(.tablet(.busType(owner.identity, RawTabletBusType(rawValue: busType))))
             }
         }
@@ -559,7 +557,6 @@ private final class RawTabletOwner {
             .withOwner(from: data, message: message(), body)
     }
 }
-
 @safe
 private final class RawTabletToolOwner {
     private let identity: RawTabletToolIdentity
@@ -573,9 +570,7 @@ private final class RawTabletToolOwner {
         invariantFailureSink: invariantFailureSink
     )
 
-    @safe private var callbacks:
-        UnsafeMutablePointer<swl_zwp_tablet_tool_v2_listener_callbacks>
-    {
+    @safe private var callbacks: UnsafeMutablePointer<swl_zwp_tablet_tool_v2_listener_callbacks> {
         listenerStorage.callbacks
     }
 
@@ -695,14 +690,14 @@ private final class RawTabletToolOwner {
             }
         }
         unsafe callbacks.pointee.pressure = { data, _, pressure in
-            RawTabletToolOwner.withOwner(data, message: "tablet tool pressure without Swift state") {
-                owner in
+            RawTabletToolOwner.withOwner(data, message: "tablet tool pressure without Swift state")
+            { owner in
                 owner.append(.tool(.pressure(owner.identity, pressure)))
             }
         }
         unsafe callbacks.pointee.distance = { data, _, distance in
-            RawTabletToolOwner.withOwner(data, message: "tablet tool distance without Swift state") {
-                owner in
+            RawTabletToolOwner.withOwner(data, message: "tablet tool distance without Swift state")
+            { owner in
                 owner.append(.tool(.distance(owner.identity, distance)))
             }
         }
@@ -721,9 +716,10 @@ private final class RawTabletToolOwner {
             }
         }
         unsafe callbacks.pointee.rotation = { data, _, degrees in
-            RawTabletToolOwner.withOwner(data, message: "tablet tool rotation without Swift state") {
-                owner in
-                owner.append(.tool(.rotation(owner.identity, degrees: WaylandFixed(rawValue: degrees))))
+            RawTabletToolOwner.withOwner(data, message: "tablet tool rotation without Swift state")
+            { owner in
+                owner.append(
+                    .tool(.rotation(owner.identity, degrees: WaylandFixed(rawValue: degrees))))
             }
         }
         unsafe callbacks.pointee.slider = { data, _, position in
@@ -973,3 +969,5 @@ private final class RawTabletPadOwner {
             .withOwner(from: data, message: message(), body)
     }
 }
+
+// swiftlint:enable closure_parameter_position
