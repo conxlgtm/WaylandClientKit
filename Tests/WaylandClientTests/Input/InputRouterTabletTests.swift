@@ -286,9 +286,136 @@ struct TabletInputRouterTests {
     }
 
     @Test
+    func seatRemovalPreservesTabletFocusForOtherSeats() {
+        let router = InputRouter()
+        let removedSeatID = RawSeatID(rawValue: 75)
+        let retainedSeatID = RawSeatID(rawValue: 76)
+        let removedSurfaceID: RawObjectID = 7_500
+        let retainedSurfaceID: RawObjectID = 7_600
+        let retainedWindowID = WindowID(rawValue: 760)
+        let removedTool = RawTabletToolIdentity(objectID: RawObjectID(9_501))
+        let retainedTool = RawTabletToolIdentity(objectID: RawObjectID(9_601))
+        let removedPad = RawTabletPadIdentity(objectID: RawObjectID(9_502))
+        let retainedPad = RawTabletPadIdentity(objectID: RawObjectID(9_602))
+        let tablet = RawTabletIdentity(objectID: RawObjectID(9_700))
+        router.register(windowID: WindowID(rawValue: 750), surfaceID: removedSurfaceID)
+        router.register(windowID: retainedWindowID, surfaceID: retainedSurfaceID)
+
+        _ = router.route(
+            rawTabletEvent(
+                sequence: 1,
+                seatID: removedSeatID,
+                .tool(
+                    .proximityIn(
+                        RawTabletToolProximityIn(
+                            tool: removedTool,
+                            serial: 1,
+                            tablet: tablet,
+                            surfaceID: removedSurfaceID
+                        )
+                    )
+                )
+            )
+        )
+        _ = router.route(
+            rawTabletEvent(
+                sequence: 2,
+                seatID: retainedSeatID,
+                .tool(
+                    .proximityIn(
+                        RawTabletToolProximityIn(
+                            tool: retainedTool,
+                            serial: 2,
+                            tablet: tablet,
+                            surfaceID: retainedSurfaceID
+                        )
+                    )
+                )
+            )
+        )
+        _ = router.route(
+            rawTabletEvent(
+                sequence: 3,
+                seatID: removedSeatID,
+                .pad(
+                    .enter(
+                        RawTabletPadEnter(
+                            pad: removedPad,
+                            serial: 3,
+                            tablet: tablet,
+                            surfaceID: removedSurfaceID
+                        )
+                    )
+                )
+            )
+        )
+        _ = router.route(
+            rawTabletEvent(
+                sequence: 4,
+                seatID: retainedSeatID,
+                .pad(
+                    .enter(
+                        RawTabletPadEnter(
+                            pad: retainedPad,
+                            serial: 4,
+                            tablet: tablet,
+                            surfaceID: retainedSurfaceID
+                        )
+                    )
+                )
+            )
+        )
+
+        _ = router.route(rawEvent(sequence: 5, seatID: removedSeatID, kind: .seatRemoved))
+        let removedSeatToolEvent = router.route(
+            rawTabletEvent(sequence: 6, seatID: removedSeatID, .tool(.pressure(removedTool, 1)))
+        )
+        let retainedSeatToolEvent = router.route(
+            rawTabletEvent(sequence: 7, seatID: retainedSeatID, .tool(.pressure(retainedTool, 2)))
+        )
+        let removedSeatPadEvent = router.route(
+            rawTabletEvent(
+                sequence: 8,
+                seatID: removedSeatID,
+                .pad(
+                    .button(
+                        RawTabletPadButton(
+                            pad: removedPad,
+                            time: 10,
+                            button: 1,
+                            state: .pressed
+                        )
+                    )
+                )
+            )
+        )
+        let retainedSeatPadEvent = router.route(
+            rawTabletEvent(
+                sequence: 9,
+                seatID: retainedSeatID,
+                .pad(
+                    .button(
+                        RawTabletPadButton(
+                            pad: retainedPad,
+                            time: 11,
+                            button: 2,
+                            state: .released
+                        )
+                    )
+                )
+            )
+        )
+
+        #expect(removedSeatToolEvent.first?.target == .focusless)
+        #expect(removedSeatPadEvent.first?.target == .focusless)
+        #expect(retainedSeatToolEvent.first?.windowID == retainedWindowID)
+        #expect(retainedSeatPadEvent.first?.windowID == retainedWindowID)
+    }
+
+    @Test
     func deviceFactsRouteAsDisplayEventsAndPreserveUnknownBus() {
         let router = InputRouter()
-        let seatID = RawSeatID(rawValue: 75)
+        let seatID = RawSeatID(rawValue: 77)
         let tablet = RawTabletIdentity(objectID: RawObjectID(9_401))
 
         let added = router.route(

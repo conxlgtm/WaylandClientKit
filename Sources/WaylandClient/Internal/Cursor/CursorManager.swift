@@ -569,11 +569,26 @@ package final class CursorManager: RawInputEventObserving {
             let advance = animation.advance()
             let bufferScale = PositiveInt32(unchecked: 1)
             attachCursorImage(advance.frame.image, to: surface, bufferScale: bufferScale)
+            guard let serial = seatState.focus.enterSerial else { continue }
+            let rawResult = backend.setPointerCursor(
+                seatID: seatID,
+                serial: serial,
+                surface: surface,
+                hotspotX: cursorHotspot(advance.frame.image.hotspotX, bufferScale: bufferScale),
+                hotspotY: cursorHotspot(advance.frame.image.hotspotY, bufferScale: bufferScale)
+            )
+            guard case .set = rawResult else {
+                throw cursorRequestFailure(
+                    seatID: seatID,
+                    cursor: desiredCursor.cursor,
+                    rawResult: rawResult
+                )
+            }
             seatState.animation = animation
             seatState.markApplied(
                 .animated(
                     cursor: desiredCursor.cursor,
-                    serial: seatState.focus.enterSerial ?? 0,
+                    serial: serial,
                     surfaceID: surface.objectID,
                     frameIndex: advance.frameIndex
                 )

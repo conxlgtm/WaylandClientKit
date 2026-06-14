@@ -27,6 +27,8 @@ final class InputRouter {
     private var surfaces: [RawObjectID: InputSurfaceBinding] = [:]
     var tabletToolFocusByObjectID: [RawObjectID: RawObjectID] = [:]
     var tabletPadFocusByObjectID: [RawObjectID: RawObjectID] = [:]
+    var tabletToolSeatByObjectID: [RawObjectID: RawSeatID] = [:]
+    var tabletPadSeatByObjectID: [RawObjectID: RawSeatID] = [:]
     var reportedUnknownProtocolValues: Set<ReportedUnknownInputProtocolValue> = []
 
     func register(windowID: WindowID, surfaceID: RawObjectID) {
@@ -116,7 +118,7 @@ final class InputRouter {
             )
         case .seatRemoved:
             deviceGraph.removeSeat(event.seatID)
-            clearTabletFocuses()
+            clearTabletFocuses(for: event.seatID)
             return routedEvent(event, target: .display, kind: .seat(.removed))
         case .diagnostic(let diagnostic):
             return routedEvent(

@@ -500,7 +500,12 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
         let manager = try CursorManager(backend: backend, configuration: .init())
         let seatID = RawSeatID(rawValue: 2)
         let first = try pointerFrame(color: 0x0000_00FF, duration: .milliseconds(10))
-        let second = try pointerFrame(color: 0x0000_FF00, duration: .milliseconds(20))
+        let second = try pointerFrame(
+            color: 0x0000_FF00,
+            duration: .milliseconds(20),
+            hotspotX: 1,
+            hotspotY: 1
+        )
         let animation = try AnimatedPointerCursor(frames: [first, second])
         let cursor = try PointerCursor.animated(animation)
 
@@ -516,6 +521,23 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
 
         #expect(backend.customCursorImages == [first.image, second.image])
         #expect(nextDelay == .milliseconds(20))
+        #expect(
+            backend.setCursorRequests == [
+                SetCursorRequest(
+                    seatID: seatID,
+                    serial: 55,
+                    surfaceID: surface.objectID,
+                    hotspotX: 0,
+                    hotspotY: 0
+                ),
+                SetCursorRequest(
+                    seatID: seatID,
+                    serial: 55,
+                    surfaceID: surface.objectID,
+                    hotspotX: 1,
+                    hotspotY: 1
+                ),
+            ])
         #expect(
             surface.operationLog == [
                 .setBufferScale(1),
@@ -1242,9 +1264,19 @@ private func makeCursorImage(
     )
 }
 
-private func pointerFrame(color: UInt32, duration: Duration) throws -> PointerCursorFrame {
+private func pointerFrame(
+    color: UInt32,
+    duration: Duration,
+    hotspotX: Int32 = 0,
+    hotspotY: Int32 = 0
+) throws -> PointerCursorFrame {
     try PointerCursorFrame(
-        image: .solid(size: PositivePixelSize(width: 2, height: 2), color: color),
+        image: .solid(
+            size: PositivePixelSize(width: 2, height: 2),
+            hotspotX: hotspotX,
+            hotspotY: hotspotY,
+            color: color
+        ),
         duration: duration
     )
 }

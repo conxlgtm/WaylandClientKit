@@ -6,8 +6,10 @@ extension InputRouter {
         case .tabletAdded(let tablet):
             return routedTabletEvent(rawEvent, target: .display, .tabletAdded(TabletID(tablet)))
         case .toolAdded(let tool):
+            tabletToolSeatByObjectID[tool.objectID] = rawEvent.seatID
             return routedTabletEvent(rawEvent, target: .display, .toolAdded(TabletToolID(tool)))
         case .padAdded(let pad):
+            tabletPadSeatByObjectID[pad.objectID] = rawEvent.seatID
             return routedTabletEvent(rawEvent, target: .display, .padAdded(TabletPadID(pad)))
         case .tablet(let event):
             return routeTabletDeviceEvent(rawEvent, event)
@@ -66,8 +68,10 @@ extension InputRouter {
             return routedTabletToolEvent(rawEvent, tool, .done(TabletToolID(tool)))
         case .removed(let tool):
             tabletToolFocusByObjectID[tool.objectID] = nil
+            tabletToolSeatByObjectID[tool.objectID] = nil
             return routedTabletToolEvent(rawEvent, tool, .removed(TabletToolID(tool)))
         case .proximityIn(let proximity):
+            tabletToolSeatByObjectID[proximity.tool.objectID] = rawEvent.seatID
             if let surfaceID = proximity.surfaceID {
                 tabletToolFocusByObjectID[proximity.tool.objectID] = surfaceID
             }
@@ -175,6 +179,7 @@ extension InputRouter {
                 )
             )
         case .enter(let enter):
+            tabletPadSeatByObjectID[enter.pad.objectID] = rawEvent.seatID
             if let surfaceID = enter.surfaceID {
                 tabletPadFocusByObjectID[enter.pad.objectID] = surfaceID
             }
@@ -208,6 +213,7 @@ extension InputRouter {
             )
         case .removed(let pad):
             tabletPadFocusByObjectID[pad.objectID] = nil
+            tabletPadSeatByObjectID[pad.objectID] = nil
             return routedTabletPadEvent(rawEvent, pad, .removed(TabletPadID(pad)))
         case .groupAdded(let pad):
             return routedTabletPadEvent(rawEvent, pad, .groupAdded(TabletPadID(pad)))
@@ -246,9 +252,19 @@ extension InputRouter {
         routedEvent(rawEvent, target: target, kind: .tablet(event))
     }
 
-    func clearTabletFocuses() {
-        tabletToolFocusByObjectID.removeAll()
-        tabletPadFocusByObjectID.removeAll()
+    func clearTabletFocuses(for seatID: RawSeatID) {
+        tabletToolFocusByObjectID = tabletToolFocusByObjectID.filter { toolID, _ in
+            tabletToolSeatByObjectID[toolID] != seatID
+        }
+        tabletPadFocusByObjectID = tabletPadFocusByObjectID.filter { padID, _ in
+            tabletPadSeatByObjectID[padID] != seatID
+        }
+        tabletToolSeatByObjectID = tabletToolSeatByObjectID.filter { _, ownerSeatID in
+            ownerSeatID != seatID
+        }
+        tabletPadSeatByObjectID = tabletPadSeatByObjectID.filter { _, ownerSeatID in
+            ownerSeatID != seatID
+        }
     }
 
     func removeTabletFocuses(matching surfaceID: RawObjectID) {
