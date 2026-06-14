@@ -573,6 +573,60 @@ struct CursorManagerTests {  // swiftlint:disable:this type_body_length
     }
 
     @Test
+    func animatedCursorAdvancesOnlySeatsWhoseFrameDurationExpired() throws {
+        let backend = try RecordingCursorBackend()
+        let manager = try CursorManager(backend: backend, configuration: .init())
+        let seatA = RawSeatID(rawValue: 2)
+        let seatB = RawSeatID(rawValue: 3)
+        let first = try pointerFrame(color: 0x0000_00FF, duration: .milliseconds(10))
+        let second = try pointerFrame(color: 0x0000_FF00, duration: .milliseconds(20))
+        let cursor = try PointerCursor.animated(
+            try AnimatedPointerCursor(frames: [first, second])
+        )
+
+        manager.register(surfaceID: 100)
+        manager.register(surfaceID: 200)
+        manager.observe(rawPointerEnter(sequence: 1, seatID: seatA, surfaceID: 100, serial: 11))
+        try manager.setPointerCursor(cursor)
+        _ = try manager.advanceCursorAnimations()
+        manager.observe(rawPointerEnter(sequence: 2, seatID: seatB, surfaceID: 200, serial: 22))
+        backend.customCursorImages.removeAll()
+        backend.setCursorRequests.removeAll()
+
+        #expect(manager.nextCursorAnimationDelay() == .milliseconds(10))
+
+        let firstTickDelay = try manager.advanceCursorAnimations()
+
+        #expect(firstTickDelay == .milliseconds(10))
+        #expect(
+            backend.setCursorRequests == [
+                SetCursorRequest(
+                    seatID: seatB,
+                    serial: 22,
+                    surfaceID: backend.surface(for: seatB)?.objectID,
+                    hotspotX: 0,
+                    hotspotY: 0
+                )
+            ])
+
+        backend.customCursorImages.removeAll()
+        backend.setCursorRequests.removeAll()
+        let secondTickDelay = try manager.advanceCursorAnimations()
+
+        #expect(secondTickDelay == .milliseconds(10))
+        #expect(
+            backend.setCursorRequests == [
+                SetCursorRequest(
+                    seatID: seatA,
+                    serial: 11,
+                    surfaceID: backend.surface(for: seatA)?.objectID,
+                    hotspotX: 0,
+                    hotspotY: 0
+                )
+            ])
+    }
+
+    @Test
     func singleFrameAnimatedCursorDoesNotScheduleTicks() throws {
         let backend = try RecordingCursorBackend()
         let manager = try CursorManager(backend: backend, configuration: .init())
