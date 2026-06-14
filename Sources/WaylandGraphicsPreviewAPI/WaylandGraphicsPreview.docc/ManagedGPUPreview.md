@@ -27,6 +27,8 @@ typed fallback/failure states, but it is not yet live-proven active.
 
 `WaylandGraphicsSynchronizationPolicy` controls explicit-sync requirements.
 `WaylandGraphicsPacingPolicy` controls preview frame-pacing requirements.
+``WaylandGraphicsFrameSchedule`` can override synchronization, pacing, and
+presentation-feedback policy for one submitted frame.
 `WaylandGraphicsMetadataPolicy` controls whether surface metadata is allowed.
 `WaylandGraphicsPresentationFeedbackPolicy` controls whether presentation
 feedback is requested or required.
@@ -45,16 +47,16 @@ reason.
 when their protocols are available. The same pacing policy is carried into
 direct software commits and allowed software fallback commits. Missing protocols
 become pacing fallback facts; rejected commit-timing timestamps become typed
-failures. The preview commit-timing path uses an internal target time until a
-public scheduling API is designed.
+failures. Public commit timing currently uses
+``WaylandGraphicsPresentationTarget/default`` as the preview target request.
 FIFO pacing uses a priming commit before waits: the first FIFO-paced frame sets
 a barrier, and later FIFO-paced frames wait on the previous barrier while
 setting the next one.
 
 `WaylandGraphicsMetadataPolicy.preferAvailable` allows public content type
-and presentation-hint metadata to be applied when the compositor supports the
-matching protocols. Color representation, color-management, and alpha facts
-remain package-internal runtime facts rather than renderer policy.
+presentation-hint, alpha, color representation, and opaque color-description
+metadata to be applied when the compositor supports the matching protocols.
+These remain protocol metadata facts rather than renderer color policy.
 
 Unsupported or unavailable requirements are reported as typed
 `WaylandGraphicsError` values or fallback reasons according to

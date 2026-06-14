@@ -10,6 +10,7 @@ selection, build that in your framework above WaylandClientKit.
 | Open a display connection | `WaylandDisplay.withConnection` | Wayland display availability | [WaylandClientKitDemo](../Examples/WaylandClientKitDemo/main.swift) |
 | Create a window | `WaylandDisplay.createTopLevelWindow` | `xdg_wm_base` | [WaylandClientKitDemo](../Examples/WaylandClientKitDemo/main.swift) |
 | Draw pixels | `Window.show`, `Window.redraw`, `SoftwareFrame` | `wl_shm` and xdg configure | [WaylandClientKitDemo](../Examples/WaylandClientKitDemo/main.swift) |
+| Inspect outputs and window output membership | `WaylandDisplay.outputTopology()`, `Window.stateSnapshot.outputs` | `wl_output`, optional `zxdg_output_manager_v1` | [OutputTopologySmoke](../Examples/OutputTopologySmoke/main.swift) |
 | Redraw part of a window | `SurfaceDamageRegion` with `Window.redraw(damage:_:)` | surface size and scale must validate | [DamageRegionSmoke](../Examples/DamageRegionSmoke/main.swift) |
 | Shape input or opaque regions | `Window.setInputRegion`, `Window.setOpaqueRegion`, `SurfaceRegion` | `wl_compositor` regions | [SurfaceRegionSmoke](../Examples/SurfaceRegionSmoke/main.swift) |
 | Create a child surface | `Window.createSubsurface`, `Subsurface` | `wl_subcompositor` | [SubsurfaceSmoke](../Examples/SubsurfaceSmoke/main.swift) |
@@ -31,6 +32,9 @@ selection, build that in your framework above WaylandClientKit.
 | Time animation to real presentation | `Window.requestPresentationFeedback`, `Window.presentationEvents` | `wp_presentation` | [PresentationFeedbackAnimation](../Examples/PresentationFeedbackAnimation/main.swift) |
 | Inspect optional protocol support | `WaylandDisplay.capabilities()` | registry discovery | [Capabilities DocC](../Sources/WaylandClient/WaylandClient.docc/CapabilitiesAndOptionalProtocols.md) |
 | Try renderer-neutral GPU preview | `WaylandGraphicsPreview` values, `WaylandGraphicsWindowBacking`, frame leases | `zwp_linux_dmabuf_v1` plus surface-specific runtime setup | [Graphics preview docs](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md) |
+| Submit a renderer-owned GPU buffer | `WaylandGraphicsFrameLease.submitExternalBuffer` with an external descriptor | `zwp_linux_dmabuf_v1` plus valid dmabuf planes | [GraphicsPreviewExternalBufferSmoke](../Examples/GraphicsPreviewExternalBufferSmoke/main.swift) |
+| Request preview frame scheduling | `WaylandGraphicsFrameSchedule` | explicit sync, FIFO, commit timing, or presentation protocols as requested | [GraphicsPreviewManagedGPUClear](../Examples/GraphicsPreviewManagedGPUClear/main.swift) |
+| Report color metadata facts | `WaylandGraphicsFrameMetadata`, color runtime path facts | color metadata protocols where advertised | [ColorManagementSmoke](../Examples/ColorManagementSmoke/main.swift) |
 | Build real widgets, layout, styling, or accessibility semantics | Your framework above WaylandClientKit | framework policy | [Building A GUI Layer](building-a-gui-layer.md) |
 
 Capability checks are advisory. Wayland globals can disappear or compositor
@@ -47,6 +51,8 @@ WaylandClientKit owns:
 - Software buffer presentation, damage validation, and capability-gated request
   plumbing.
 - Renderer-neutral graphics preview facts and fallback results.
+- Output topology and color metadata facts without monitor settings or renderer
+  color policy.
 
 Your app or framework owns:
 
