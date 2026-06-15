@@ -422,6 +422,10 @@ extension DisplayCore {
         }
     }
 
+    func detachToplevelDrags(forClosingWindow windowID: WindowID) {
+        toplevelDragIDsByWindowID.removeValue(forKey: windowID)
+    }
+
     func closeToplevelDrag(_ dragID: ToplevelDragID) {
         guard let record = toplevelDragsByID.removeValue(forKey: dragID) else {
             return

@@ -22,7 +22,9 @@ package final class RawPointerGestures {
             adopting: gesturesPointer,
             interface: "zwp_pointer_gestures_v1",
             proxyAdoption: adoptionContext,
-            destroy: unsafe swl_zwp_pointer_gestures_v1_destroy
+            destroy: gesturesVersion >= RawVersion(2)
+                ? unsafe swl_zwp_pointer_gestures_v1_release
+                : unsafe swl_zwp_pointer_gestures_v1_destroy
         )
     }
 

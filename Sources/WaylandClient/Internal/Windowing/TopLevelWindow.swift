@@ -1635,12 +1635,22 @@ extension TopLevelWindow {
         let topLevel = try activeTopLevel(for: "createDialog")
         let parentTopLevel = try parent.activeTopLevel(for: "createDialogParent")
         topLevel.setParent(parentTopLevel)
-        let dialog = try manager.createDialog(for: topLevel)
-        if modal {
-            dialog.setModal()
+        var dialog: RawXDGDialog?
+        do {
+            let createdDialog = try manager.createDialog(for: topLevel)
+            dialog = createdDialog
+            if modal {
+                createdDialog.setModal()
+            }
+            _ = try connection.flushForExternalEventLoop()
+            dialog = nil
+            return createdDialog
+        } catch {
+            dialog?.destroy()
+            topLevel.setParent(nil)
+            _ = try connection.flushForExternalEventLoop()
+            throw error
         }
-        _ = try connection.flushForExternalEventLoop()
-        return dialog
     }
 
     package func clearDialogParentOnOwnerThread() throws {

@@ -4,7 +4,7 @@
     import WaylandTestSupport
 
     @testable import WaylandClient
-    @testable import WaylandRaw
+    import WaylandRaw
 
     @Suite(.serialized)
     struct ToplevelDragCleanupTests {
@@ -15,18 +15,14 @@
                 let sourceID = DataSourceID(rawValue: 41)
                 let dragID = ToplevelDragID(rawValue: 42)
                 let windowID = WindowID(rawValue: 43)
-                let dragPointer = try unsafe testPointer(0xC801)
-                let rawDrag = RawXDGToplevelDrag(pointer: dragPointer)
-
-                core.toplevelDragsByID[dragID] = DisplayToplevelDragRecord(
-                    id: dragID,
+                let dragPointer = UInt(0xC801)
+                try installToplevelDrag(
+                    in: core,
+                    sourceID: sourceID,
+                    dragID: dragID,
                     windowID: windowID,
-                    source: sourceID.dragIdentity,
-                    seatID: SeatID(rawValue: 44),
-                    serial: InputSerial(rawValue: 45),
-                    rawDrag: rawDrag
+                    pointer: 0xC801
                 )
-                core.toplevelDragIDsByWindowID[windowID] = [dragID]
 
                 core.publishDataTransferEvents([
                     .dragSourceCancelled(sourceID.dragIdentity)
@@ -36,10 +32,47 @@
                 #expect(unsafe record.call_count == 1)
                 #expect(unsafe record.kind == SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_DRAG)
                 #expect(
-                    unsafe record.object == UnsafeMutableRawPointer(dragPointer)
+                    unsafe record.object == UnsafeMutableRawPointer(bitPattern: dragPointer)
                 )
                 #expect(core.toplevelDragsByID[dragID] == nil)
                 #expect(core.toplevelDragIDsByWindowID[windowID] == nil)
+            }
+        }
+
+        @Test
+        func windowCloseKeepsActiveToplevelDragUntilTerminalEvent() async throws {
+            try await recordDesktopRequests {
+                let core = DisplayCore(eventHub: DisplayEventHub())
+                let sourceID = DataSourceID(rawValue: 51)
+                let dragID = ToplevelDragID(rawValue: 52)
+                let windowID = WindowID(rawValue: 53)
+                let dragPointer = UInt(0xC802)
+                try installToplevelDrag(
+                    in: core,
+                    sourceID: sourceID,
+                    dragID: dragID,
+                    windowID: windowID,
+                    pointer: 0xC802
+                )
+
+                core.detachToplevelDrags(forClosingWindow: windowID)
+
+                let record = unsafe swl_test_desktop_destroy_record()
+                #expect(unsafe record.call_count == 0)
+                #expect(core.toplevelDragsByID[dragID] != nil)
+                #expect(core.toplevelDragIDsByWindowID[windowID] == nil)
+
+                core.publishDataTransferEvents([
+                    .dragSourceCancelled(sourceID.dragIdentity)
+                ])
+
+                let terminalRecord = unsafe swl_test_desktop_destroy_record()
+                #expect(unsafe terminalRecord.call_count == 1)
+                #expect(unsafe terminalRecord.kind == SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_DRAG)
+                #expect(
+                    unsafe terminalRecord.object == UnsafeMutableRawPointer(bitPattern: dragPointer)
+                )
+                #expect(core.toplevelDragsByID[dragID] == nil)
             }
         }
 
@@ -62,6 +95,28 @@
                     }
                 }
             }
+        }
+
+        private func installToplevelDrag(
+            in core: DisplayCore,
+            sourceID: DataSourceID,
+            dragID: ToplevelDragID,
+            windowID: WindowID,
+            pointer: UInt
+        ) throws {
+            let dragPointer = try unsafe testPointer(pointer)
+            let rawDrag = RawXDGToplevelDrag.testingToplevelDrag(
+                pointer: dragPointer
+            )
+            core.toplevelDragsByID[dragID] = DisplayToplevelDragRecord(
+                id: dragID,
+                windowID: windowID,
+                source: sourceID.dragIdentity,
+                seatID: SeatID(rawValue: 99),
+                serial: InputSerial(rawValue: 100),
+                rawDrag: rawDrag
+            )
+            core.toplevelDragIDsByWindowID[windowID] = [dragID]
         }
 
         private func testPointer(_ rawPointer: UInt) throws -> OpaquePointer {
