@@ -167,6 +167,15 @@ package final class RawXDGToplevelDrag {
     }
 }
 
+extension RawXDGToplevelDrag {
+    @safe
+    package static func testingToplevelDrag(
+        pointer dragPointer: OpaquePointer
+    ) -> RawXDGToplevelDrag {
+        RawXDGToplevelDrag(pointer: dragPointer)
+    }
+}
+
 @safe
 package final class RawForeignToplevelList {
     package let version: RawVersion

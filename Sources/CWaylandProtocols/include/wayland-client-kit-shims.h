@@ -578,6 +578,8 @@ swl_zwp_pointer_gestures_v1_get_hold_gesture(
     struct wl_pointer *pointer);
 void swl_zwp_pointer_gestures_v1_destroy(
     struct zwp_pointer_gestures_v1 *gestures);
+void swl_zwp_pointer_gestures_v1_release(
+    struct zwp_pointer_gestures_v1 *gestures);
 void swl_zwp_pointer_gesture_swipe_v1_destroy(
     struct zwp_pointer_gesture_swipe_v1 *gesture);
 void swl_zwp_pointer_gesture_pinch_v1_destroy(
@@ -2805,6 +2807,7 @@ enum swl_test_pointer_capture_destroy_kind {
     SWL_TEST_POINTER_CAPTURE_DESTROY_HOLD_GESTURE = 11,
     SWL_TEST_POINTER_CAPTURE_DESTROY_SHORTCUTS_MANAGER = 12,
     SWL_TEST_POINTER_CAPTURE_DESTROY_SHORTCUTS_INHIBITOR = 13,
+    SWL_TEST_POINTER_CAPTURE_RELEASE_GESTURES = 14,
 };
 
 struct swl_test_pointer_capture_destroy_record {

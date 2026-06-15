@@ -224,9 +224,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
                 closeIdleInhibitor(inhibitorID)
             }
             closeWindowDialogs(forClosingWindow: windowID)
-            for dragID in toplevelDragIDsByWindowID[windowID] ?? [] {
-                closeToplevelDrag(dragID)
-            }
+            detachToplevelDrags(forClosingWindow: windowID)
             for inhibitorID in keyboardShortcutsInhibitorIDsByWindowID[windowID] ?? [] {
                 closeKeyboardShortcutsInhibitor(inhibitorID)
             }
@@ -393,9 +391,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     private func handleWindowClosed(_ windowID: WindowID) {
         guard surfaceGraphAcceptsLifecycleCallback() else { return }
         closeWindowDialogs(forClosingWindow: windowID)
-        for dragID in toplevelDragIDsByWindowID[windowID] ?? [] {
-            closeToplevelDrag(dragID)
-        }
+        detachToplevelDrags(forClosingWindow: windowID)
         for inhibitorID in keyboardShortcutsInhibitorIDsByWindowID[windowID] ?? [] {
             closeKeyboardShortcutsInhibitor(inhibitorID)
         }

@@ -104,6 +104,11 @@
                 destroy: unsafe swl_zwp_pointer_gestures_v1_destroy
             )
             assertDestroyRequest(
+                object: gestures,
+                expectedKind: SWL_TEST_POINTER_CAPTURE_RELEASE_GESTURES,
+                destroy: unsafe swl_zwp_pointer_gestures_v1_release
+            )
+            assertDestroyRequest(
                 object: swipe,
                 expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_SWIPE_GESTURE,
                 destroy: unsafe swl_zwp_pointer_gesture_swipe_v1_destroy
