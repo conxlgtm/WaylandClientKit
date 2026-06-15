@@ -154,9 +154,11 @@ extension DisplayCore {
             defer { manager.destroy() }
 
             let inhibitorID = keyboardShortcutsInhibitorIDs.next()
-            let inhibitor = try manager.inhibitShortcuts(
-                surface: window.rawSurfaceOnOwnerThread,
-                seat: seat
+            let inhibitor = try createRawKeyboardShortcutsInhibitor(
+                manager: manager,
+                window: window,
+                seat: seat,
+                inhibitorID: inhibitorID
             )
             let record = DisplayKeyboardShortcutsInhibitorRecord(
                 id: inhibitorID,
@@ -170,6 +172,23 @@ extension DisplayCore {
             keyboardShortcutsInhibitorIDsBySeatID[seatID, default: []].append(inhibitorID)
             closedKeyboardShortcutsInhibitorIDs.remove(inhibitorID)
             return inhibitorID
+        }
+    }
+
+    private func createRawKeyboardShortcutsInhibitor(
+        manager: RawKeyboardShortcutsInhibitManager,
+        window: TopLevelWindow,
+        seat: RawSeat,
+        inhibitorID: KeyboardShortcutsInhibitorID
+    ) throws -> RawKeyboardShortcutsInhibitor {
+        try manager.inhibitShortcuts(
+            surface: window.rawSurfaceOnOwnerThread,
+            seat: seat
+        ) { [weak self] event in
+            self?.publishKeyboardShortcutsInhibitorEvent(
+                event,
+                inhibitorID: inhibitorID
+            )
         }
     }
 
@@ -305,6 +324,35 @@ extension DisplayCore {
             }
         }
         closedKeyboardShortcutsInhibitorIDs.insert(inhibitorID)
+    }
+
+    @discardableResult
+    func publishKeyboardShortcutsInhibitorEvent(
+        _ rawEvent: RawKeyboardShortcutsInhibitorEvent,
+        inhibitorID: KeyboardShortcutsInhibitorID
+    ) -> Bool {
+        guard let record = keyboardShortcutsInhibitorsByID[inhibitorID] else {
+            return false
+        }
+
+        let activity: KeyboardShortcutsInhibitorActivity =
+            switch rawEvent {
+            case .active:
+                .active
+            case .inactive:
+                .inactive
+            }
+        eventHub.publish(
+            .keyboardShortcutsInhibitorChanged(
+                KeyboardShortcutsInhibitorEvent(
+                    inhibitorID: inhibitorID,
+                    windowID: record.windowID,
+                    seatID: record.seatID,
+                    activity: activity
+                )
+            )
+        )
+        return true
     }
 
     func removeAllIdleInhibitors() {

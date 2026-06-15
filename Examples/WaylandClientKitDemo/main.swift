@@ -61,7 +61,7 @@ enum WaylandClientKitDemo {
         case .windowClosed(let windowID):
             return windowID == window.id
         case .popupDismissed, .popupClosed, .outputChanged, .outputRemoved,
-            .windowOutputsChanged:
+            .windowOutputsChanged, .keyboardShortcutsInhibitorChanged:
             break
         }
 

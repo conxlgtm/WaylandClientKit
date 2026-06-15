@@ -264,7 +264,9 @@ package final class RawKeyboardShortcutsInhibitManager {
 
     package func inhibitShortcuts(
         surface: RawSurface,
-        seat: RawSeat
+        seat: RawSeat,
+        onEvent: @escaping (RawKeyboardShortcutsInhibitorEvent) -> Void =
+            RawKeyboardShortcutsInhibitManager.ignoreKeyboardShortcutsInhibitorEvent
     ) throws -> RawKeyboardShortcutsInhibitor {
         guard
             let inhibitor = unsafe swl_zwp_keyboard_shortcuts_inhibit_manager_v1_inhibit_shortcuts(
@@ -281,11 +283,25 @@ package final class RawKeyboardShortcutsInhibitManager {
             interface: "zwp_keyboard_shortcuts_inhibitor_v1",
             destroy: unsafe swl_zwp_keyboard_shortcuts_inhibitor_v1_destroy
         )
-        return RawKeyboardShortcutsInhibitor(pointer: adoptedInhibitor)
+        let owner = RawKeyboardShortcutsInhibitorOwner(
+            onEvent: onEvent,
+            invariantFailureSink: proxyAdoption.invariantFailureSink
+        )
+        try unsafe owner.install(on: adoptedInhibitor)
+        return RawKeyboardShortcutsInhibitor(
+            pointer: adoptedInhibitor,
+            listenerOwner: owner
+        )
     }
 
     package func destroy() {
         proxy.destroy()
+    }
+
+    private static func ignoreKeyboardShortcutsInhibitorEvent(
+        _ event: RawKeyboardShortcutsInhibitorEvent
+    ) {
+        _ = event
     }
 
     deinit {
@@ -295,17 +311,25 @@ package final class RawKeyboardShortcutsInhibitManager {
 
 @safe
 package final class RawKeyboardShortcutsInhibitor {
+    private let listenerOwner: RawKeyboardShortcutsInhibitorOwner?
     private var proxy: RawOwnedProxy
 
     @safe
-    init(pointer inhibitorPointer: OpaquePointer) {
+    package init(
+        pointer inhibitorPointer: OpaquePointer,
+        listenerOwner owner: RawKeyboardShortcutsInhibitorOwner?,
+        destroy destroyProxy: @escaping (OpaquePointer) -> Void =
+            unsafe swl_zwp_keyboard_shortcuts_inhibitor_v1_destroy
+    ) {
+        listenerOwner = owner
         proxy = RawOwnedProxy(
             pointer: inhibitorPointer,
-            destroy: unsafe swl_zwp_keyboard_shortcuts_inhibitor_v1_destroy
+            destroy: destroyProxy
         )
     }
 
     package func destroy() {
+        listenerOwner?.cancel()
         proxy.destroy()
     }
 

@@ -302,3 +302,27 @@ public struct KeyboardShortcutsInhibitor: Sendable, Hashable, Identifiable {
         hasher.combine(ownership)
     }
 }
+
+public enum KeyboardShortcutsInhibitorActivity: Equatable, Sendable {
+    case active
+    case inactive
+}
+
+public struct KeyboardShortcutsInhibitorEvent: Equatable, Sendable {
+    public let inhibitorID: KeyboardShortcutsInhibitorID
+    public let windowID: WindowID
+    public let seatID: SeatID
+    public let activity: KeyboardShortcutsInhibitorActivity
+
+    public init(
+        inhibitorID eventInhibitorID: KeyboardShortcutsInhibitorID,
+        windowID eventWindowID: WindowID,
+        seatID eventSeatID: SeatID,
+        activity eventActivity: KeyboardShortcutsInhibitorActivity
+    ) {
+        inhibitorID = eventInhibitorID
+        windowID = eventWindowID
+        seatID = eventSeatID
+        activity = eventActivity
+    }
+}

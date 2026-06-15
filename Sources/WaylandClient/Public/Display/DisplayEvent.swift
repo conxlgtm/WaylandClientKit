@@ -10,6 +10,7 @@ public enum DisplayEvent: Equatable, Sendable {
     case outputChanged(OutputSnapshot)
     case outputRemoved(OutputID)
     case windowOutputsChanged(WindowOutputMembershipEvent)
+    case keyboardShortcutsInhibitorChanged(KeyboardShortcutsInhibitorEvent)
 }
 
 public struct PopupLifecycleEvent: Equatable, Sendable {

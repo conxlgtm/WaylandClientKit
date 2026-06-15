@@ -587,6 +587,15 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L286: `    public func destroy() async throws {`
 - L294: `    public static func == (`
 - L301: `    public func hash(into hasher: inout Hasher) {`
+- L306: `public enum KeyboardShortcutsInhibitorActivity: Equatable, Sendable {`
+- L307: `    case active`
+- L308: `    case inactive`
+- L311: `public struct KeyboardShortcutsInhibitorEvent: Equatable, Sendable {`
+- L312: `    public let inhibitorID: KeyboardShortcutsInhibitorID`
+- L313: `    public let windowID: WindowID`
+- L314: `    public let seatID: SeatID`
+- L315: `    public let activity: KeyboardShortcutsInhibitorActivity`
+- L317: `    public init(`
 
 ### `Sources/WaylandClient/Public/Diagnostics/InputDiagnostic.swift`
 
@@ -793,84 +802,85 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L10: `    case outputChanged(OutputSnapshot)`
 - L11: `    case outputRemoved(OutputID)`
 - L12: `    case windowOutputsChanged(WindowOutputMembershipEvent)`
-- L15: `public struct PopupLifecycleEvent: Equatable, Sendable {`
-- L16: `    public let popup: PopupSurfaceIdentity`
-- L17: `    public let parentWindowID: WindowID`
-- L25: `public struct WindowOutputMembershipEvent: Equatable, Sendable {`
-- L26: `    public let windowID: WindowID`
-- L27: `    public let outputs: [OutputID]`
-- L29: `    public init(windowID eventWindowID: WindowID, outputs eventOutputs: [OutputID]) {`
-- L35: `public enum DiagnosticSeverity: Equatable, Sendable {`
-- L36: `    case warning`
-- L37: `    case degraded`
-- L38: `    case error`
-- L41: `public struct DiagnosticID: Equatable, Hashable, Sendable {`
-- L42: `    public let rawValue: UInt64`
-- L44: `    public init(rawValue diagnosticRawValue: UInt64) {`
-- L49: `public struct DisplayDiagnostic: Equatable, Sendable {`
-- L50: `    public let id: DiagnosticID`
-- L51: `    public let severity: DiagnosticSeverity`
-- L52: `    public let payload: DisplayDiagnosticPayload`
-- L54: `    public init(`
-- L65: `public enum DisplayDiagnosticPayload: Equatable, Sendable {`
-- L66: `    case input(InputDiagnostic)`
-- L67: `    case window(WindowDiagnostic)`
-- L68: `    case dataTransfer(DataTransferDiagnostic)`
-- L69: `    case textInput(TextInputDiagnostic)`
-- L70: `    case diagnosticsDropped(count: Int)`
-- L73: `public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {`
-- L74: `    case displayEvents`
-- L75: `    case inputEvents`
-- L76: `    case dataTransferEvents`
-- L77: `    case textInputEvents`
-- L78: `    case presentationEvents`
-- L79: `    case diagnostics`
-- L81: `    public var description: String {`
-- L143: `public struct DisplayEvents: AsyncSequence, Sendable {`
-- L144: `    public typealias Element = DisplayEvent`
-- L145: `    public typealias Failure = WaylandDisplayError`
-- L153: `    public func makeAsyncIterator() -> DisplayEventsIterator {`
-- L159: `public struct DisplayEventsIterator: AsyncIteratorProtocol {`
-- L160: `    public typealias Element = DisplayEvent`
-- L161: `    public typealias Failure = WaylandDisplayError`
-- L169: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayEvent? {`
-- L173: `    public mutating func next(`
-- L181: `public struct InputEvents: AsyncSequence, Sendable {`
-- L182: `    public typealias Element = InputEvent`
-- L183: `    public typealias Failure = WaylandDisplayError`
-- L191: `    public func makeAsyncIterator() -> InputEventsIterator {`
-- L197: `public struct InputEventsIterator: AsyncIteratorProtocol {`
-- L198: `    public typealias Element = InputEvent`
-- L199: `    public typealias Failure = WaylandDisplayError`
-- L207: `    public mutating func next() async throws(WaylandDisplayError) -> InputEvent? {`
-- L211: `    public mutating func next(`
-- L219: `public struct DataTransferEvents: AsyncSequence, Sendable {`
-- L220: `    public typealias Element = DataTransferEvent`
-- L221: `    public typealias Failure = WaylandDisplayError`
-- L229: `    public func makeAsyncIterator() -> DataTransferEventsIterator {`
-- L235: `public struct DataTransferEventsIterator: AsyncIteratorProtocol {`
-- L236: `    public typealias Element = DataTransferEvent`
-- L237: `    public typealias Failure = WaylandDisplayError`
-- L245: `    public mutating func next() async throws(WaylandDisplayError) -> DataTransferEvent? {`
-- L249: `    public mutating func next(`
-- L257: `public struct TextInputEvents: AsyncSequence, Sendable {`
-- L258: `    public typealias Element = TextInputEvent`
-- L259: `    public typealias Failure = WaylandDisplayError`
-- L267: `    public func makeAsyncIterator() -> TextInputEventsIterator {`
-- L273: `public struct TextInputEventsIterator: AsyncIteratorProtocol {`
-- L274: `    public typealias Element = TextInputEvent`
-- L275: `    public typealias Failure = WaylandDisplayError`
-- L283: `    public mutating func next() async throws(WaylandDisplayError) -> TextInputEvent? {`
-- L287: `    public mutating func next(`
-- L295: `public struct DisplayDiagnostics: AsyncSequence, Sendable {`
-- L296: `    public typealias Element = DisplayDiagnostic`
-- L297: `    public typealias Failure = WaylandDisplayError`
-- L305: `    public func makeAsyncIterator() -> DisplayDiagnosticsIterator {`
-- L311: `public struct DisplayDiagnosticsIterator: AsyncIteratorProtocol {`
-- L312: `    public typealias Element = DisplayDiagnostic`
-- L313: `    public typealias Failure = WaylandDisplayError`
-- L321: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayDiagnostic? {`
-- L325: `    public mutating func next(`
+- L13: `    case keyboardShortcutsInhibitorChanged(KeyboardShortcutsInhibitorEvent)`
+- L16: `public struct PopupLifecycleEvent: Equatable, Sendable {`
+- L17: `    public let popup: PopupSurfaceIdentity`
+- L18: `    public let parentWindowID: WindowID`
+- L26: `public struct WindowOutputMembershipEvent: Equatable, Sendable {`
+- L27: `    public let windowID: WindowID`
+- L28: `    public let outputs: [OutputID]`
+- L30: `    public init(windowID eventWindowID: WindowID, outputs eventOutputs: [OutputID]) {`
+- L36: `public enum DiagnosticSeverity: Equatable, Sendable {`
+- L37: `    case warning`
+- L38: `    case degraded`
+- L39: `    case error`
+- L42: `public struct DiagnosticID: Equatable, Hashable, Sendable {`
+- L43: `    public let rawValue: UInt64`
+- L45: `    public init(rawValue diagnosticRawValue: UInt64) {`
+- L50: `public struct DisplayDiagnostic: Equatable, Sendable {`
+- L51: `    public let id: DiagnosticID`
+- L52: `    public let severity: DiagnosticSeverity`
+- L53: `    public let payload: DisplayDiagnosticPayload`
+- L55: `    public init(`
+- L66: `public enum DisplayDiagnosticPayload: Equatable, Sendable {`
+- L67: `    case input(InputDiagnostic)`
+- L68: `    case window(WindowDiagnostic)`
+- L69: `    case dataTransfer(DataTransferDiagnostic)`
+- L70: `    case textInput(TextInputDiagnostic)`
+- L71: `    case diagnosticsDropped(count: Int)`
+- L74: `public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {`
+- L75: `    case displayEvents`
+- L76: `    case inputEvents`
+- L77: `    case dataTransferEvents`
+- L78: `    case textInputEvents`
+- L79: `    case presentationEvents`
+- L80: `    case diagnostics`
+- L82: `    public var description: String {`
+- L144: `public struct DisplayEvents: AsyncSequence, Sendable {`
+- L145: `    public typealias Element = DisplayEvent`
+- L146: `    public typealias Failure = WaylandDisplayError`
+- L154: `    public func makeAsyncIterator() -> DisplayEventsIterator {`
+- L160: `public struct DisplayEventsIterator: AsyncIteratorProtocol {`
+- L161: `    public typealias Element = DisplayEvent`
+- L162: `    public typealias Failure = WaylandDisplayError`
+- L170: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayEvent? {`
+- L174: `    public mutating func next(`
+- L182: `public struct InputEvents: AsyncSequence, Sendable {`
+- L183: `    public typealias Element = InputEvent`
+- L184: `    public typealias Failure = WaylandDisplayError`
+- L192: `    public func makeAsyncIterator() -> InputEventsIterator {`
+- L198: `public struct InputEventsIterator: AsyncIteratorProtocol {`
+- L199: `    public typealias Element = InputEvent`
+- L200: `    public typealias Failure = WaylandDisplayError`
+- L208: `    public mutating func next() async throws(WaylandDisplayError) -> InputEvent? {`
+- L212: `    public mutating func next(`
+- L220: `public struct DataTransferEvents: AsyncSequence, Sendable {`
+- L221: `    public typealias Element = DataTransferEvent`
+- L222: `    public typealias Failure = WaylandDisplayError`
+- L230: `    public func makeAsyncIterator() -> DataTransferEventsIterator {`
+- L236: `public struct DataTransferEventsIterator: AsyncIteratorProtocol {`
+- L237: `    public typealias Element = DataTransferEvent`
+- L238: `    public typealias Failure = WaylandDisplayError`
+- L246: `    public mutating func next() async throws(WaylandDisplayError) -> DataTransferEvent? {`
+- L250: `    public mutating func next(`
+- L258: `public struct TextInputEvents: AsyncSequence, Sendable {`
+- L259: `    public typealias Element = TextInputEvent`
+- L260: `    public typealias Failure = WaylandDisplayError`
+- L268: `    public func makeAsyncIterator() -> TextInputEventsIterator {`
+- L274: `public struct TextInputEventsIterator: AsyncIteratorProtocol {`
+- L275: `    public typealias Element = TextInputEvent`
+- L276: `    public typealias Failure = WaylandDisplayError`
+- L284: `    public mutating func next() async throws(WaylandDisplayError) -> TextInputEvent? {`
+- L288: `    public mutating func next(`
+- L296: `public struct DisplayDiagnostics: AsyncSequence, Sendable {`
+- L297: `    public typealias Element = DisplayDiagnostic`
+- L298: `    public typealias Failure = WaylandDisplayError`
+- L306: `    public func makeAsyncIterator() -> DisplayDiagnosticsIterator {`
+- L312: `public struct DisplayDiagnosticsIterator: AsyncIteratorProtocol {`
+- L313: `    public typealias Element = DisplayDiagnostic`
+- L314: `    public typealias Failure = WaylandDisplayError`
+- L322: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayDiagnostic? {`
+- L326: `    public mutating func next(`
 
 ### `Sources/WaylandClient/Public/Display/Output.swift`
 

@@ -477,6 +477,8 @@ Notes:
   protocol-shaped desktop relationship requests only. WaylandClientKit does not
   implement modal event filtering, sheet/alert behavior, shortcut policy, or
   drag/drop policy.
+- `KeyboardShortcutsInhibitorEvent` reports compositor active/inactive facts.
+  Requesting inhibition is not treated as proof that shortcuts are inhibited.
 - Foreign toplevel list and output-management capabilities are reported, but
   public fact/control APIs are deferred until event-backed protocol state is
   modeled.

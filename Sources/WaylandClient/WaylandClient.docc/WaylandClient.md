@@ -8,7 +8,7 @@ window and popup surfaces, software rendering through shared memory, input
 events, keyboard interpretation, relative pointer and pointer constraints,
 pointer gestures, pointer warp requests, tablet input, cursor requests, data
 transfer, text-input sessions, XDG activation, desktop relationship hints,
-presentation feedback, output topology and output-management preview facts,
+presentation feedback, output topology, output-management capability reporting,
 diagnostics, and capability
 reporting.
 

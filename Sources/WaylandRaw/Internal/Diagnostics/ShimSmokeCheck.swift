@@ -129,6 +129,7 @@ enum ShimSmokeCheck {  // swiftlint:disable:this type_body_length
         _ = unsafe swl_zwp_locked_pointer_v1_set_cursor_position_hint
         _ = unsafe swl_zwp_locked_pointer_v1_set_region
         _ = unsafe swl_zwp_confined_pointer_v1_set_region
+        _ = unsafe swl_zwp_keyboard_shortcuts_inhibitor_v1_add_listener
         _ = unsafe swl_compositor_create_region
         _ = unsafe swl_region_add
     }

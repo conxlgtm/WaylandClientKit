@@ -67,6 +67,12 @@ enum KeyboardShortcutsInhibitSmoke {
                 await window.close()
             case .windowClosed(let windowID) where windowID == window.id:
                 return
+            case .keyboardShortcutsInhibitorChanged(let event)
+            where event.windowID == window.id:
+                log(
+                    "event: inhibitor \(event.activity) id=\(event.inhibitorID) "
+                        + "seat=\(event.seatID)"
+                )
             case .diagnostic(let diagnostic):
                 log("diagnostic \(diagnostic)")
             default:
@@ -95,6 +101,7 @@ enum KeyboardShortcutsInhibitSmoke {
         do {
             let inhibitor = try await window.inhibitKeyboardShortcuts(seatID: seatID)
             log("operation: inhibit pass id=\(inhibitor.id) seat=\(seatID)")
+            try await Task.sleep(for: .milliseconds(300))
             try await inhibitor.destroy()
             log("operation: destroy pass")
         } catch {
