@@ -3324,6 +3324,7 @@ void swl_test_keyboard_shortcuts_inhibitor_listener_emit_inactive(
     void *data,
     struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor,
     struct swl_test_pointer_capture_listener_record *record);
+void swl_test_keyboard_shortcuts_inhibitor_listener_set_add_result(int result);
 
 void swl_test_syncobj_request_recording_begin(void);
 void swl_test_syncobj_request_recording_end(void);
