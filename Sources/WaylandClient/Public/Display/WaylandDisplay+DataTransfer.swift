@@ -56,6 +56,47 @@ extension WaylandDisplay {
         try requireCore().cancelDragSource(id: sourceID)
     }
 
+    package func attachToToplevelDrag(
+        window: Window,
+        source: DragSource,
+        seatID: SeatID,
+        serial: InputSerial,
+        offset: LogicalOffset
+    ) throws -> ToplevelDrag {
+        guard window.isOwned(by: self) else {
+            throw ClientError.display(.foreignWindow(window.id))
+        }
+        guard source.isOwned(by: self) else {
+            throw ClientError.display(.foreignDragSource(source.id))
+        }
+        guard source.seatID == seatID else {
+            throw ClientError.display(
+                .dragSourceSeatMismatch(source.id, expected: seatID, actual: source.seatID)
+            )
+        }
+
+        let dragID = try requireCore().createToplevelDrag(
+            windowID: window.id,
+            sourceID: source.sourceID,
+            sourceIdentity: source.id,
+            seatID: seatID,
+            serial: serial,
+            offset: offset
+        )
+        return ToplevelDrag(
+            id: dragID,
+            windowID: window.id,
+            source: source.id,
+            seatID: seatID,
+            serial: serial,
+            display: self
+        )
+    }
+
+    package func destroyToplevelDrag(_ dragID: ToplevelDragID) throws {
+        try requireCore().destroyToplevelDrag(dragID)
+    }
+
     package func requestClearClipboard(
         sourceID: DataSourceID,
         seatID: SeatID,

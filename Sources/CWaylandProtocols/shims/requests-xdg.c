@@ -593,6 +593,13 @@ void swl_xdg_toplevel_set_app_id(struct xdg_toplevel *xdg_toplevel, const char *
     swl_xdg_toplevel_set_app_id_impl(xdg_toplevel, app_id);
 }
 
+void swl_xdg_toplevel_set_parent(
+    struct xdg_toplevel *xdg_toplevel,
+    struct xdg_toplevel *parent)
+{
+    xdg_toplevel_set_parent(xdg_toplevel, parent);
+}
+
 void swl_xdg_toplevel_show_window_menu(
     struct xdg_toplevel *xdg_toplevel,
     struct wl_seat *seat,

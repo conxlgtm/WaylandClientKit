@@ -36,6 +36,7 @@ package protocol DataTransferSourceBinding: AnyObject {
 
     func offer(mimeType: MIMEType)
     func setDragActions(_ actions: DragActionSet)
+    func createToplevelDrag(manager: RawXDGToplevelDragManager) throws -> RawXDGToplevelDrag
     func attachDragIcon(_ icon: (any DataTransferDragIconBinding)?)
     func destroy()
 }
@@ -344,6 +345,24 @@ extension DataTransferManager {
 
     package var sourceSnapshots: [DataSourceSnapshot] {
         store.sourceSnapshots
+    }
+
+    package func createToplevelDrag(
+        sourceID: DataSourceID,
+        manager: RawXDGToplevelDragManager
+    ) throws -> RawXDGToplevelDrag {
+        backend.preconditionIsOwnerThread()
+        try throwPendingCallbackErrorIfAny()
+        guard let source = store.sourceSnapshot(sourceID),
+            case .dragAndDrop = source.role
+        else {
+            throw DataTransferError.unknownDragSourceIdentity(sourceID.dragIdentity)
+        }
+        guard let runtimeSource = store.sourcesByIDForInvariantChecks[sourceID] else {
+            throw DataTransferError.unknownDragSourceIdentity(sourceID.dragIdentity)
+        }
+
+        return try runtimeSource.binding.createToplevelDrag(manager: manager)
     }
 
     package var pendingCallbackError: DataTransferCallbackFailure? {

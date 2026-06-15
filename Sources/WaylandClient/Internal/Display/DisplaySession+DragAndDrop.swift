@@ -1,3 +1,5 @@
+import WaylandRaw
+
 extension DisplaySession {
     package func dragOfferOnOwnerThread(for seatID: SeatID) throws -> DataOfferSnapshot? {
         connection.preconditionIsOwnerThread()
@@ -74,5 +76,14 @@ extension DisplaySession {
         connection.preconditionIsOwnerThread()
         try processClipboardDataTransferState()
         try dataTransferManager.cancelDragSource(id: sourceID)
+    }
+
+    package func createToplevelDragOnOwnerThread(
+        sourceID: DataSourceID,
+        manager: RawXDGToplevelDragManager
+    ) throws -> RawXDGToplevelDrag {
+        connection.preconditionIsOwnerThread()
+        try processClipboardDataTransferState()
+        return try dataTransferManager.createToplevelDrag(sourceID: sourceID, manager: manager)
     }
 }

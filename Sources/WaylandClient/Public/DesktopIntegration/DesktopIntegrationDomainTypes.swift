@@ -116,6 +116,81 @@ public enum WindowIcon: Equatable, Sendable {
     case xrgb8888(WindowIconImage)
 }
 
+public struct WindowDialogID:
+    Hashable,
+    Sendable,
+    CustomStringConvertible,
+    UInt64WaylandEntityID
+{
+    package let rawValue: UInt64
+
+    package init(rawValue dialogRawValue: UInt64) {
+        rawValue = dialogRawValue
+    }
+
+    public var description: String {
+        "window-dialog-\(rawValue)"
+    }
+}
+
+public struct WindowDialog: Sendable, Hashable, Identifiable {
+    public let id: WindowDialogID
+    public let childWindowID: WindowID
+    public let parentWindowID: WindowID
+
+    private let display: WaylandDisplay
+    private let ownership: DisplayOwnedIdentity<WindowDialogID>
+
+    package init(
+        id dialogID: WindowDialogID,
+        childWindowID dialogChildWindowID: WindowID,
+        parentWindowID dialogParentWindowID: WindowID,
+        display owningDisplay: WaylandDisplay
+    ) {
+        id = dialogID
+        childWindowID = dialogChildWindowID
+        parentWindowID = dialogParentWindowID
+        display = owningDisplay
+        ownership = DisplayOwnedIdentity(id: dialogID, display: owningDisplay)
+    }
+
+    package func isOwned(by owningDisplay: WaylandDisplay) -> Bool {
+        ownership.isOwned(by: owningDisplay)
+    }
+
+    public func setModal() async throws {
+        guard isOwned(by: display) else {
+            throw ClientError.display(.foreignWindowDialog(id))
+        }
+
+        try await display.setWindowDialogModal(id, modal: true)
+    }
+
+    public func unsetModal() async throws {
+        guard isOwned(by: display) else {
+            throw ClientError.display(.foreignWindowDialog(id))
+        }
+
+        try await display.setWindowDialogModal(id, modal: false)
+    }
+
+    public func destroy() async throws {
+        guard isOwned(by: display) else {
+            throw ClientError.display(.foreignWindowDialog(id))
+        }
+
+        try await display.destroyWindowDialog(id)
+    }
+
+    public static func == (lhs: WindowDialog, rhs: WindowDialog) -> Bool {
+        lhs.ownership == rhs.ownership
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(ownership)
+    }
+}
+
 public struct IdleInhibitorID:
     Hashable,
     Sendable,
@@ -158,6 +233,73 @@ public struct IdleInhibitor: Sendable, Hashable, Identifiable {
     }
 
     public static func == (lhs: IdleInhibitor, rhs: IdleInhibitor) -> Bool {
+        lhs.ownership == rhs.ownership
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(ownership)
+    }
+}
+
+public struct KeyboardShortcutsInhibitorID:
+    Hashable,
+    Sendable,
+    CustomStringConvertible,
+    UInt64WaylandEntityID
+{
+    package let rawValue: UInt64
+
+    package init(rawValue inhibitorRawValue: UInt64) {
+        rawValue = inhibitorRawValue
+    }
+
+    public var description: String {
+        "keyboard-shortcuts-inhibitor-\(rawValue)"
+    }
+}
+
+public enum KeyboardShortcutsInhibitorEvent: Equatable, Sendable {
+    case active(KeyboardShortcutsInhibitorID)
+    case inactive(KeyboardShortcutsInhibitorID)
+}
+
+public struct KeyboardShortcutsInhibitor: Sendable, Hashable, Identifiable {
+    public let id: KeyboardShortcutsInhibitorID
+    public let windowID: WindowID
+    public let seatID: SeatID
+
+    private let display: WaylandDisplay
+    private let ownership: DisplayOwnedIdentity<KeyboardShortcutsInhibitorID>
+
+    package init(
+        id inhibitorID: KeyboardShortcutsInhibitorID,
+        windowID inhibitedWindowID: WindowID,
+        seatID inhibitedSeatID: SeatID,
+        display owningDisplay: WaylandDisplay
+    ) {
+        id = inhibitorID
+        windowID = inhibitedWindowID
+        seatID = inhibitedSeatID
+        display = owningDisplay
+        ownership = DisplayOwnedIdentity(id: inhibitorID, display: owningDisplay)
+    }
+
+    package func isOwned(by owningDisplay: WaylandDisplay) -> Bool {
+        ownership.isOwned(by: owningDisplay)
+    }
+
+    public func destroy() async throws {
+        guard isOwned(by: display) else {
+            throw ClientError.display(.foreignKeyboardShortcutsInhibitor(id))
+        }
+
+        try await display.destroyKeyboardShortcutsInhibitor(id)
+    }
+
+    public static func == (
+        lhs: KeyboardShortcutsInhibitor,
+        rhs: KeyboardShortcutsInhibitor
+    ) -> Bool {
         lhs.ownership == rhs.ownership
     }
 
