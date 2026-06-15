@@ -86,8 +86,6 @@ The preview product exposes:
 - `WaylandGraphicsAlphaModifier`
 - `WaylandGraphicsColorRepresentation`
 - `WaylandGraphicsColorAlphaMode`
-- `WaylandGraphicsColorDescriptionID`
-- `WaylandGraphicsColorDescription`
 - `WaylandGraphicsDRMFormat`
 - `WaylandGraphicsDRMFormatModifier`
 - `WaylandGraphicsExternalBufferPlane`
@@ -194,19 +192,18 @@ buffer size, metadata, schedule, synchronization policy, pacing policy, backing
 status, and whether presentation feedback was requested. The result does not
 imply presentation feedback was observed; feedback still arrives through
 `WindowPresentationEvents`. The lease does not expose Wayland proxies, SHM
-pools, GBM buffers, EGL surfaces, DRM nodes, syncobj handles, or file
-descriptors. The current FD-bearing external-buffer descriptor construction is
-package-internal maintainer preview plumbing used to prove import/commit/release
-lifetime. Public renderer-owned buffer submission remains source-breaking
-preview API until a raw-handle-free renderer handoff is designed. Local
-descriptor validation covers size, nonzero format, plane count, consecutive
-plane indices, nonnegative plane indices, positive stride, and ownership
-transfer in package-internal tests. Modifier and offset support are compositor
-import facts; unsupported values are reported as typed import failure.
+pools, GBM buffers, EGL surfaces, DRM nodes, or syncobj handles. External-buffer
+planes consume `OwnedFileDescriptor` values during construction and do not
+expose the descriptor as public stored state after transfer. Local descriptor
+validation covers size, nonzero format, plane count, consecutive plane indices,
+nonnegative plane indices, positive stride, and ownership transfer. Modifier
+and offset support are compositor import facts; unsupported values are reported
+as typed import failure.
 
 `WaylandGraphicsFrameMetadata` exposes content type, presentation hint, alpha
-modifier, color representation, color-description reference, and
-`WaylandGraphicsDamageRegion`. With `metadataPolicy: .preferAvailable`,
+modifier, color representation, and `WaylandGraphicsDamageRegion`. Public
+color-description references are deferred until a managed image-description
+producer is available. With `metadataPolicy: .preferAvailable`,
 supported metadata maps to package-internal surface commit metadata when the
 compositor advertises the relevant protocols. Missing preferred metadata
 protocols are omitted from the commit and reported in the runtime path with

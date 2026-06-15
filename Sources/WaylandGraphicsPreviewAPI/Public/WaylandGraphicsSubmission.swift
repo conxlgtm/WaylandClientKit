@@ -184,12 +184,28 @@ public struct WaylandGraphicsFrameMetadata: Equatable, Sendable {
     public var presentationHint: WaylandGraphicsPresentationHint?
     public var alpha: WaylandGraphicsAlphaModifier?
     public var colorRepresentation: WaylandGraphicsColorRepresentation?
-    public var colorDescription: WaylandGraphicsColorDescription?
+    package var colorDescription: WaylandGraphicsColorDescription?
     public var damage: WaylandGraphicsDamageRegion?
 
     public static let `default` = WaylandGraphicsFrameMetadata()
 
     public init(
+        contentType frameContentType: WaylandGraphicsContentType? = nil,
+        presentationHint framePresentationHint: WaylandGraphicsPresentationHint? = nil,
+        alpha frameAlpha: WaylandGraphicsAlphaModifier? = nil,
+        colorRepresentation frameColorRepresentation:
+            WaylandGraphicsColorRepresentation? = nil,
+        damage frameDamage: WaylandGraphicsDamageRegion? = nil
+    ) {
+        contentType = frameContentType
+        presentationHint = framePresentationHint
+        alpha = frameAlpha
+        colorRepresentation = frameColorRepresentation
+        colorDescription = nil
+        damage = frameDamage
+    }
+
+    package init(
         contentType frameContentType: WaylandGraphicsContentType? = nil,
         presentationHint framePresentationHint: WaylandGraphicsPresentationHint? = nil,
         alpha frameAlpha: WaylandGraphicsAlphaModifier? = nil,
@@ -244,10 +260,10 @@ public struct WaylandGraphicsColorRepresentation: Equatable, Sendable {
     }
 }
 
-public struct WaylandGraphicsColorDescriptionID: Equatable, Hashable, Sendable {
-    public let rawValue: UInt64
+package struct WaylandGraphicsColorDescriptionID: Equatable, Hashable, Sendable {
+    package let rawValue: UInt64
 
-    public init(rawValue colorDescriptionRawValue: UInt64) throws {
+    package init(rawValue colorDescriptionRawValue: UInt64) throws {
         guard colorDescriptionRawValue != 0 else {
             throw WaylandGraphicsError.unavailable(.invalidColorDescription)
         }
@@ -256,10 +272,10 @@ public struct WaylandGraphicsColorDescriptionID: Equatable, Hashable, Sendable {
     }
 }
 
-public struct WaylandGraphicsColorDescription: Equatable, Hashable, Sendable {
-    public let id: WaylandGraphicsColorDescriptionID
+package struct WaylandGraphicsColorDescription: Equatable, Hashable, Sendable {
+    package let id: WaylandGraphicsColorDescriptionID
 
-    public init(id colorDescriptionID: WaylandGraphicsColorDescriptionID) {
+    package init(id colorDescriptionID: WaylandGraphicsColorDescriptionID) {
         id = colorDescriptionID
     }
 }
@@ -317,7 +333,7 @@ public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
     public let stride: UInt32
     public let planeIndex: Int
 
-    package init(
+    public init(
         fd planeFileDescriptor: consuming OwnedFileDescriptor,
         offset planeOffset: UInt32,
         stride planeStride: UInt32,

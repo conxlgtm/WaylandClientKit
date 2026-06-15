@@ -53,10 +53,11 @@ FIFO pacing uses a priming commit before waits: the first FIFO-paced frame sets
 a barrier, and later FIFO-paced frames wait on the previous barrier while
 setting the next one.
 
-`WaylandGraphicsMetadataPolicy.preferAvailable` allows public content type
-presentation-hint, alpha, color representation, and opaque color-description
-metadata to be applied when the compositor supports the matching protocols.
-These remain protocol metadata facts rather than renderer color policy.
+`WaylandGraphicsMetadataPolicy.preferAvailable` allows public content type,
+presentation-hint, alpha, and color representation metadata to be applied when
+the compositor supports the matching protocols. Public color-description
+attachment is deferred until a managed image-description producer exists. These
+remain protocol metadata facts rather than renderer color policy.
 
 Unsupported or unavailable requirements are reported as typed
 `WaylandGraphicsError` values or fallback reasons according to

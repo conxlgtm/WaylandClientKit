@@ -11,16 +11,16 @@ cleanup for the submitted buffer.
 
 ``WaylandGraphicsExternalBufferDescriptor`` carries a positive pixel size,
 ``WaylandGraphicsDRMFormat``, ``WaylandGraphicsDRMFormatModifier``, and one to
-four ``WaylandGraphicsExternalBufferPlane`` values. The FD-bearing plane
-construction is package-internal maintainer preview plumbing; public clients
-should treat external descriptors as opaque preview values until
-WaylandClientKit grows a raw-handle-free renderer handoff.
+four ``WaylandGraphicsExternalBufferPlane`` values. Each plane consumes an
+`OwnedFileDescriptor`, offset, stride, and plane index during construction. The
+owned descriptor is transferred into the preview import path and is not exposed
+as a readable or mutable public property afterward.
 
 The public API does not expose `wl_buffer`, `zwp_linux_buffer_params_v1`, GBM,
-EGL, DRM nodes, syncobj handles, file descriptors, or raw pointers. External
-synchronization is represented by ``WaylandGraphicsExternalSynchronization``;
-explicit public fence or syncobj passing is intentionally deferred until a
-narrow ownership type is designed.
+EGL, DRM nodes, syncobj handles, or raw pointers. External synchronization is
+represented by ``WaylandGraphicsExternalSynchronization``; explicit public
+fence or syncobj passing is intentionally deferred until a narrow ownership
+type is designed.
 
 ## Runtime Truth
 
