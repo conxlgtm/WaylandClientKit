@@ -29,7 +29,7 @@ enough; active GPU claims must be backed by public runtime-path output.
 | Session readiness | done | [session-readiness.md](session-readiness.md), [session-management-plan.md](session-management-plan.md), `SessionStateSmoke`, `CompositorSessionSmoke`, `WindowRestorationSnapshot` | Keep compositor session-management public API capability-only until lifecycle evidence and framework usage shape are clear. |
 | Managed GPU setup code path | done | Managed GPU attempts surface feedback, render-node, GBM/EGL, dmabuf import, owner-thread commit, and typed fallback. | Keep runtime-path truth tests current. |
 | Managed GPU active proof | partial | [compositor-matrix.md](compositor-matrix.md) records active managed GPU clear-frame submission and resize/reconfigure on KDE/KWin, active managed GPU clear-frame submission on nested Sway/wlroots, `surfaceFeedbackUnavailable` fallback on GNOME/Mutter, and `dmabufUnavailable` fallback under headless Weston. | Broaden active/fallback/failure evidence before foundation-candidate claims, especially another desktop compositor when active managed GPU is available. |
-| External GPU buffer preview | partial | Public submission/result facts and package-internal maintainer descriptor/import plumbing exist. KDE/KWin 2026-06-14 renderer-dmabuf smoke imported, submitted, released, and cleaned up through the external-buffer path. | Design a raw-handle-free public renderer handoff and record broader compositor rows before claiming external-buffer support beyond preview. |
+| External GPU buffer preview | partial | Public descriptor/submission/result facts exist. KDE/KWin 2026-06-14 renderer-dmabuf smoke imported, submitted, released, and cleaned up through the external-buffer path. | Record broader compositor rows before claiming external-buffer support beyond preview. |
 | Public graphics scheduling | partial | `WaylandGraphicsFrameSchedule` exposes sync, FIFO, commit-timing default target, and presentation-feedback requests with runtime-path result facts. | Keep commit-timing active evidence pending until a compositor run reports it active. |
 | Output and color facts | partial | `OutputTopologySmoke`, `ColorManagementSmoke`, and color metadata preview API exist. | Collect compositor rows for output topology and color metadata advertised/active/fallback behavior. |
 | Compositor matrix minimum | partial | [compositor-matrix.md](compositor-matrix.md) records fresh headless Weston, KDE/KWin, nested Sway/wlroots, and GNOME/Mutter VM rows and separates protocol advertisement from active runtime facts. KDE/KWin now has manual proof for pointer lock/confine with relative motion, data-transfer drag-source/drop/read/finish, serial move/window-menu/resize/drag-source, managed GPU resize/reconfigure, explicit sync active, FIFO active, and metadata active. | Complete remaining GNOME/Mutter manual rows, popup-specific manual probes, broader explicit-sync compositor evidence beyond KDE/KWin, and commit-timing active evidence where practical. |
@@ -57,11 +57,10 @@ Implemented:
   and unavailable states. Active GPU is reported only after a GPU-rendered buffer
   is imported and committed.
 - External-buffer submission keeps Wayland import/commit/release lifetime inside
-  WaylandClientKit. FD-bearing descriptor construction is package-internal
-  maintainer preview plumbing until a raw-handle-free public renderer handoff is
-  designed. KDE/KWin has live renderer-dmabuf import/commit/release evidence;
-  broader compositor coverage is still needed before foundation-candidate
-  claims.
+  WaylandClientKit. Plane construction consumes owned descriptors without
+  exposing raw Wayland, GBM, EGL, DRM, or syncobj handles. KDE/KWin has live
+  renderer-dmabuf import/commit/release evidence; broader compositor coverage
+  is still needed before foundation-candidate claims.
 - Public frame schedules let callers request explicit sync, FIFO, commit timing,
   and presentation feedback per frame. Runtime path and frame result facts
   report requested versus actual compositor behavior.

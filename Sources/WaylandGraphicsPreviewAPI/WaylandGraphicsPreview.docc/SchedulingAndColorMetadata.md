@@ -21,7 +21,8 @@ and commit requests.
 ## Color Metadata
 
 ``WaylandGraphicsFrameMetadata`` can carry content type, presentation hint,
-alpha modifier, color representation, and an opaque color-description reference.
+alpha modifier, and color representation. Public color-description attachment is
+deferred until WaylandClientKit exposes a managed image-description producer.
 WaylandClientKit applies supported protocol metadata before commit and reports
 missing support as runtime fallback facts. It does not perform tone mapping,
 gamut conversion, ICC parsing, asset color policy, or renderer color-pipeline

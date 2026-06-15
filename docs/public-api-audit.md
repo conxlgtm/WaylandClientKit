@@ -268,8 +268,6 @@ Intentionally public:
 - `WaylandGraphicsAlphaModifier`
 - `WaylandGraphicsColorAlphaMode`
 - `WaylandGraphicsColorRepresentation`
-- `WaylandGraphicsColorDescriptionID`
-- `WaylandGraphicsColorDescription`
 - `WaylandGraphicsDRMFormat`
 - `WaylandGraphicsDRMFormatModifier`
 - `WaylandGraphicsExternalBufferPlane`
@@ -303,11 +301,11 @@ Current preview contract:
 - The external-buffer submission path accepts a move-only external dmabuf
   descriptor value, imports it, commits it, tracks compositor release, and
   cleans up late releases without exposing `wl_buffer`,
-  `zwp_linux_buffer_params_v1`, GBM, EGL, DRM, syncobj, file descriptors, or
-  `OpaquePointer` objects. FD-bearing descriptor construction remains
-  package-internal maintainer preview plumbing until a raw-handle-free public
-  renderer handoff is designed. The renderer owns rendering and buffer
-  production; WaylandClientKit owns Wayland import/commit/release lifetime.
+  `zwp_linux_buffer_params_v1`, GBM, EGL, DRM, syncobj, or `OpaquePointer`
+  objects. Plane construction consumes an `OwnedFileDescriptor`, offset, stride,
+  and plane index, then hides the descriptor from public stored state. The
+  renderer owns rendering and buffer production; WaylandClientKit owns Wayland
+  import/commit/release lifetime.
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
   submission, or release failure; display-level dmabuf advertisement alone is
@@ -327,17 +325,19 @@ Current preview contract:
   implementation path with typed fallback/failure evidence, not active live
   proof.
 - It does not expose raw Wayland proxies, EGL/GBM/DRM objects, syncobj handles,
-  file descriptors, SHM pools, scene rendering, swapchains, drawables, or raw
+  SHM pools, scene rendering, swapchains, drawables, or raw
   color-management/image-description protocol objects. `OwnedFileDescriptor`
-  remains part of the stable data-transfer APIs, but is not exposed by the
-  `WaylandGraphicsPreview` external-buffer public surface.
+  remains part of the stable data-transfer APIs and is consumed by
+  `WaylandGraphicsPreview` external-buffer plane construction, but is not
+  exposed as a readable or mutable stored property.
 - Public frame metadata is intentionally narrow. Content type and presentation
   hint map to safe surface commit metadata when their protocols are available
   and `metadataPolicy` permits metadata. Preferred-but-unavailable metadata is
   omitted from the commit and reported with protocol-specific public fallback
-  reasons. Alpha, color representation, and opaque color-description references
-  are preview protocol facts rather than renderer policy. Full-frame damage is
-  the supported default. Partial damage is
+  reasons. Alpha and color representation are preview protocol facts rather
+  than renderer policy. Public color-description metadata is deferred until a
+  managed image-description producer exists. Full-frame damage is the supported
+  default. Partial damage is
   accepted for managed software submissions, converted to `SurfaceDamageRegion`,
   mapped from logical surface coordinates to active buffer damage coordinates,
   and rejected as `WaylandGraphicsError.invalidDamageRegion` when it has no
