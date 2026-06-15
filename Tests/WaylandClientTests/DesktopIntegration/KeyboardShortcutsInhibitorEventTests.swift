@@ -67,6 +67,69 @@
                 )
             )
         }
+
+        @Test
+        func seatRemovalClosesShortcutInhibitorsForSeat() throws {
+            let core = DisplayCore(eventHub: DisplayEventHub())
+            let removedSeatID = SeatID(rawValue: 33)
+            let keptSeatID = SeatID(rawValue: 44)
+            let firstID = KeyboardShortcutsInhibitorID(rawValue: 1)
+            let secondID = KeyboardShortcutsInhibitorID(rawValue: 2)
+            let keptID = KeyboardShortcutsInhibitorID(rawValue: 3)
+            let firstWindowID = WindowID(rawValue: 10)
+            let secondWindowID = WindowID(rawValue: 11)
+            let keptWindowID = WindowID(rawValue: 12)
+
+            try installKeyboardShortcutInhibitorForTesting(
+                firstID,
+                windowID: firstWindowID,
+                seatID: removedSeatID,
+                in: core
+            )
+            try installKeyboardShortcutInhibitorForTesting(
+                secondID,
+                windowID: secondWindowID,
+                seatID: removedSeatID,
+                in: core
+            )
+            try installKeyboardShortcutInhibitorForTesting(
+                keptID,
+                windowID: keptWindowID,
+                seatID: keptSeatID,
+                in: core
+            )
+
+            core.closeKeyboardShortcutsInhibitors(forSeat: removedSeatID)
+
+            #expect(core.keyboardShortcutsInhibitorsByID[firstID] == nil)
+            #expect(core.keyboardShortcutsInhibitorsByID[secondID] == nil)
+            #expect(core.keyboardShortcutsInhibitorIDsBySeatID[removedSeatID] == nil)
+            #expect(core.keyboardShortcutsInhibitorIDsByWindowID[firstWindowID] == nil)
+            #expect(core.keyboardShortcutsInhibitorIDsByWindowID[secondWindowID] == nil)
+            #expect(core.closedKeyboardShortcutsInhibitorIDs.contains(firstID))
+            #expect(core.closedKeyboardShortcutsInhibitorIDs.contains(secondID))
+            #expect(core.keyboardShortcutsInhibitorsByID[keptID] != nil)
+            #expect(core.keyboardShortcutsInhibitorIDsBySeatID[keptSeatID] == [keptID])
+            #expect(core.keyboardShortcutsInhibitorIDsByWindowID[keptWindowID] == [keptID])
+        }
+    }
+
+    private func installKeyboardShortcutInhibitorForTesting(
+        _ inhibitorID: KeyboardShortcutsInhibitorID,
+        windowID: WindowID,
+        seatID: SeatID,
+        in core: DisplayCore
+    ) throws {
+        core.keyboardShortcutsInhibitorsByID[inhibitorID] =
+            DisplayKeyboardShortcutsInhibitorRecord(
+                id: inhibitorID,
+                windowID: windowID,
+                seatID: seatID,
+                rawInhibitor: try rawKeyboardShortcutsInhibitorForTesting()
+            )
+        core.keyboardShortcutsInhibitorIDsByWindowID[windowID, default: []]
+            .append(inhibitorID)
+        core.keyboardShortcutsInhibitorIDsBySeatID[seatID, default: []].append(inhibitorID)
     }
 
     private func rawKeyboardShortcutsInhibitorForTesting() throws

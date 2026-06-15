@@ -330,6 +330,12 @@ extension DisplayCore {
         closedKeyboardShortcutsInhibitorIDs.insert(inhibitorID)
     }
 
+    func closeKeyboardShortcutsInhibitors(forSeat seatID: SeatID) {
+        for inhibitorID in keyboardShortcutsInhibitorIDsBySeatID[seatID] ?? [] {
+            closeKeyboardShortcutsInhibitor(inhibitorID)
+        }
+    }
+
     @discardableResult
     func publishKeyboardShortcutsInhibitorEvent(
         _ rawEvent: RawKeyboardShortcutsInhibitorEvent,
