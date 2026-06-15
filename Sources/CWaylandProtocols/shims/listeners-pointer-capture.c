@@ -102,6 +102,7 @@ static const struct zwp_confined_pointer_v1_listener
 #ifdef SWL_ENABLE_TESTING
 static struct swl_test_pointer_capture_listener_record
     swl_test_pointer_capture_listener_latest;
+static int swl_test_keyboard_shortcuts_inhibitor_listener_add_result;
 
 static void swl_test_record_relative_motion(
     void *data,
@@ -327,6 +328,10 @@ int swl_zwp_keyboard_shortcuts_inhibitor_v1_add_listener(
     const struct
         swl_zwp_keyboard_shortcuts_inhibitor_v1_listener_callbacks *callbacks)
 {
+#ifdef SWL_ENABLE_TESTING
+    if (swl_test_keyboard_shortcuts_inhibitor_listener_add_result)
+        return swl_test_keyboard_shortcuts_inhibitor_listener_add_result;
+#endif
     return zwp_keyboard_shortcuts_inhibitor_v1_add_listener(
         inhibitor,
         &swl_zwp_keyboard_shortcuts_inhibitor_v1_listener_impl,
@@ -397,5 +402,10 @@ void swl_test_keyboard_shortcuts_inhibitor_listener_emit_inactive(
         inhibitor);
     if (record)
         *record = swl_test_pointer_capture_listener_latest;
+}
+
+void swl_test_keyboard_shortcuts_inhibitor_listener_set_add_result(int result)
+{
+    swl_test_keyboard_shortcuts_inhibitor_listener_add_result = result;
 }
 #endif

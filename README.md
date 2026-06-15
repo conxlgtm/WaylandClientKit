@@ -212,9 +212,9 @@ Supported in the current experimental baseline:
 - `wp_color_management_output_v1` (package-internal preview)
 - `wp_image_description_v1` (package-internal preview)
 - `wp_image_description_reference_v1` (package-internal preview)
-- `zwlr_output_manager_v1` (public preview snapshots)
-- `zwlr_output_head_v1` (public preview snapshots)
-- `zwlr_output_mode_v1` (public preview snapshots)
+- `zwlr_output_manager_v1` (capability/raw preview plumbing)
+- `zwlr_output_head_v1` (capability/raw preview plumbing)
+- `zwlr_output_mode_v1` (capability/raw preview plumbing)
 - `zwlr_output_configuration_v1` (raw wrapper only)
 - `zwlr_output_configuration_head_v1` (raw wrapper only)
 

@@ -287,7 +287,13 @@ package final class RawKeyboardShortcutsInhibitManager {
             onEvent: onEvent,
             invariantFailureSink: proxyAdoption.invariantFailureSink
         )
-        try unsafe owner.install(on: adoptedInhibitor)
+        do {
+            try unsafe owner.install(on: adoptedInhibitor)
+        } catch {
+            owner.cancel()
+            unsafe swl_zwp_keyboard_shortcuts_inhibitor_v1_destroy(adoptedInhibitor)
+            throw error
+        }
         return RawKeyboardShortcutsInhibitor(
             pointer: adoptedInhibitor,
             listenerOwner: owner
