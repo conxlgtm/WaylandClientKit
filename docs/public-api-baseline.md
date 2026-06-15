@@ -513,20 +513,23 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L225: `    public func destroy() async throws {`
 - L233: `    public static func == (lhs: ToplevelDrag, rhs: ToplevelDrag) -> Bool {`
 - L237: `    public func hash(into hasher: inout Hasher) {`
-- L242: `public struct DragSourceTargetEvent: Equatable, Sendable {`
-- L243: `    public let source: DragSourceIdentity`
-- L244: `    public let mimeType: MIMEType?`
-- L252: `public struct DragSourceActionEvent: Equatable, Sendable {`
+- L242: `public struct StartedToplevelDrag: Sendable, Hashable {`
+- L243: `    public let source: DragSource`
+- L244: `    public let drag: ToplevelDrag`
+- L252: `public struct DragSourceTargetEvent: Equatable, Sendable {`
 - L253: `    public let source: DragSourceIdentity`
-- L254: `    public let action: DragAction`
-- L262: `public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {`
-- L263: `    case copy`
-- L264: `    case move`
-- L265: `    case unknown(rawValue: UInt32)`
-- L280: `    public var description: String {`
-- L292: `public struct DragSourceFinishedEvent: Equatable, Sendable {`
-- L293: `    public let source: DragSourceIdentity`
-- L294: `    public let finalAction: DragSourceFinalAction`
+- L254: `    public let mimeType: MIMEType?`
+- L262: `public struct DragSourceActionEvent: Equatable, Sendable {`
+- L263: `    public let source: DragSourceIdentity`
+- L264: `    public let action: DragAction`
+- L272: `public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {`
+- L273: `    case copy`
+- L274: `    case move`
+- L275: `    case unknown(rawValue: UInt32)`
+- L290: `    public var description: String {`
+- L302: `public struct DragSourceFinishedEvent: Equatable, Sendable {`
+- L303: `    public let source: DragSourceIdentity`
+- L304: `    public let finalAction: DragSourceFinalAction`
 
 ### `Sources/WaylandClient/Public/DataTransfer/OwnedFileDescriptor.swift`
 
@@ -577,37 +580,13 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L239: `    public func hash(into hasher: inout Hasher) {`
 - L244: `public struct KeyboardShortcutsInhibitorID:`
 - L256: `    public var description: String {`
-- L261: `public enum KeyboardShortcutsInhibitorEvent: Equatable, Sendable {`
-- L262: `    case active(KeyboardShortcutsInhibitorID)`
-- L263: `    case inactive(KeyboardShortcutsInhibitorID)`
-- L266: `public struct KeyboardShortcutsInhibitor: Sendable, Hashable, Identifiable {`
-- L267: `    public let id: KeyboardShortcutsInhibitorID`
-- L268: `    public let windowID: WindowID`
-- L269: `    public let seatID: SeatID`
-- L291: `    public func destroy() async throws {`
-- L299: `    public static func == (`
-- L306: `    public func hash(into hasher: inout Hasher) {`
-
-### `Sources/WaylandClient/Public/DesktopIntegration/ForeignToplevelList.swift`
-
-- L1: `public struct ForeignToplevelID: Hashable, Sendable, CustomStringConvertible {`
-- L2: `    public let rawValue: String`
-- L4: `    public init(_ identifier: String) {`
-- L8: `    public var description: String {`
-- L13: `public struct ForeignToplevelFacts: Equatable, Sendable, Identifiable {`
-- L14: `    public let id: ForeignToplevelID?`
-- L15: `    public let title: String?`
-- L16: `    public let appID: String?`
-- L18: `    public init(id toplevelID: ForeignToplevelID?, title toplevelTitle: String?, appID app: String?) {`
-- L25: `public enum ForeignToplevelListEvent: Equatable, Sendable {`
-- L26: `    case created(ForeignToplevelFacts)`
-- L27: `    case updated(ForeignToplevelFacts)`
-- L28: `    case closed(ForeignToplevelID?)`
-- L29: `    case finished`
-- L32: `public struct ForeignToplevelListSnapshot: Equatable, Sendable {`
-- L33: `    public let toplevels: [ForeignToplevelFacts]`
-- L35: `    public init(toplevels listedToplevels: [ForeignToplevelFacts]) {`
-- L41: `    public func foreignToplevelListSnapshot() throws -> ForeignToplevelListSnapshot {`
+- L261: `public struct KeyboardShortcutsInhibitor: Sendable, Hashable, Identifiable {`
+- L262: `    public let id: KeyboardShortcutsInhibitorID`
+- L263: `    public let windowID: WindowID`
+- L264: `    public let seatID: SeatID`
+- L286: `    public func destroy() async throws {`
+- L294: `    public static func == (`
+- L301: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Diagnostics/InputDiagnostic.swift`
 
@@ -962,35 +941,6 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L224: `    public let description: String?`
 - L226: `    public init(`
 
-### `Sources/WaylandClient/Public/Display/OutputManagement.swift`
-
-- L1: `public enum OutputManagementProtocolFamily: Equatable, Sendable {`
-- L2: `    case wlrootsUnstableV1`
-- L5: `public struct OutputHeadID: Hashable, Sendable, CustomStringConvertible {`
-- L6: `    public let rawValue: UInt32`
-- L8: `    public init(rawValue headRawValue: UInt32) {`
-- L16: `    public var description: String {`
-- L21: `public struct OutputHead: Equatable, Sendable, Identifiable {`
-- L22: `    public let id: OutputHeadID`
-- L23: `    public let name: String?`
-- L24: `    public let description: String?`
-- L25: `    public let modes: [OutputMode]`
-- L26: `    public let enabled: Bool`
-- L27: `    public let position: LogicalOffset?`
-- L28: `    public let scale: SurfaceScale?`
-- L29: `    public let transform: OutputTransform?`
-- L31: `    public init(`
-- L65: `public struct OutputManagementSnapshot: Equatable, Sendable {`
-- L66: `    public let protocolFamily: OutputManagementProtocolFamily`
-- L67: `    public let heads: [OutputHead]`
-- L69: `    public init(`
-- L78: `public struct OutputConfigurationProposal: Equatable, Sendable {`
-- L79: `    public let snapshot: OutputManagementSnapshot`
-- L81: `    public init(current snapshot: OutputManagementSnapshot) {`
-- L87: `    public func outputManagementSnapshot() throws -> OutputManagementSnapshot {`
-- L98: `    public func testOutputConfiguration(`
-- L109: `    public func applyOutputConfiguration(`
-
 ### `Sources/WaylandClient/Public/Display/WaylandCapabilities.swift`
 
 - L4: `public enum ProtocolAvailability: Equatable, Sendable {`
@@ -1038,13 +988,13 @@ Run `swift run wck api verify --update` only after reviewing and updating
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+DataTransfer.swift`
 
-- L2: `    public func clipboardOffer(for seatID: SeatID) throws -> ClipboardOffer? {`
-- L8: `    public func dragOffer(for seatID: SeatID) throws -> DragOffer? {`
-- L18: `    public func requestClipboardSelection(`
-- L34: `    public func requestClearClipboard(seatID: SeatID, serial: InputSerial) throws {`
-- L152: `    public func primarySelectionOffer(for seatID: SeatID) throws -> PrimarySelectionOffer? {`
-- L162: `    public func requestPrimarySelection(`
-- L178: `    public func requestClearPrimarySelection(seatID: SeatID, serial: InputSerial) throws {`
+- L27: `    public func clipboardOffer(for seatID: SeatID) throws -> ClipboardOffer? {`
+- L33: `    public func dragOffer(for seatID: SeatID) throws -> DragOffer? {`
+- L43: `    public func requestClipboardSelection(`
+- L59: `    public func requestClearClipboard(seatID: SeatID, serial: InputSerial) throws {`
+- L169: `    public func primarySelectionOffer(for seatID: SeatID) throws -> PrimarySelectionOffer? {`
+- L179: `    public func requestPrimarySelection(`
+- L195: `    public func requestClearPrimarySelection(seatID: SeatID, serial: InputSerial) throws {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+DesktopIntegration.swift`
 
@@ -1141,17 +1091,17 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L19: `    case dragSourceSeatMismatch(DragSourceIdentity, expected: SeatID, actual: SeatID)`
 - L20: `    case unknownToplevelDrag(ToplevelDragID)`
 - L21: `    case foreignToplevelDrag(ToplevelDragID)`
-- L22: `    case idleInhibitUnavailable`
-- L23: `    case keyboardShortcutsInhibitUnavailable`
-- L24: `    case systemBellUnavailable`
-- L25: `    case outputManagementUnavailable`
-- L26: `    case staleOutputConfiguration`
-- L27: `    case unsupportedOutputConfigurationOperation(String)`
-- L28: `    case unknownIdleInhibitor(IdleInhibitorID)`
-- L29: `    case foreignIdleInhibitor(IdleInhibitorID)`
-- L30: `    case dialogAlreadyExists(WindowID)`
-- L31: `    case unknownWindowDialog(WindowDialogID)`
-- L32: `    case foreignWindowDialog(WindowDialogID)`
+- L22: `    case toplevelDragStillActive(ToplevelDragID)`
+- L23: `    case idleInhibitUnavailable`
+- L24: `    case keyboardShortcutsInhibitUnavailable`
+- L25: `    case systemBellUnavailable`
+- L26: `    case unknownIdleInhibitor(IdleInhibitorID)`
+- L27: `    case foreignIdleInhibitor(IdleInhibitorID)`
+- L28: `    case invalidDialogParent(child: WindowID, parent: WindowID)`
+- L29: `    case dialogAlreadyExists(WindowID)`
+- L30: `    case unknownWindowDialog(WindowDialogID)`
+- L31: `    case foreignWindowDialog(WindowDialogID)`
+- L32: `    case keyboardShortcutsAlreadyInhibited(window: WindowID, seat: SeatID)`
 - L33: `    case unknownKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)`
 - L34: `    case foreignKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)`
 - L35: `    case emptyWindowIconName`
@@ -2430,15 +2380,15 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L323: `    public func requestInteractiveResize(`
 - L336: `    public func requestWindowMenu(`
 - L349: `    public func startDrag(`
-- L364: `    public func attachToToplevelDrag(`
-- L379: `    public var isClosed: Bool {`
-- L385: `    public var needsRedraw: Bool {`
-- L391: `    public var decorationMode: WindowDecorationMode {`
-- L397: `    public var geometry: SurfaceGeometry {`
-- L403: `    public var stateSnapshot: WindowStateSnapshot {`
-- L409: `    public var restorationSnapshot: WindowRestorationSnapshot {`
-- L415: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L419: `    public func hash(into hasher: inout Hasher) {`
+- L364: `    public func startToplevelDrag(`
+- L383: `    public var isClosed: Bool {`
+- L389: `    public var needsRedraw: Bool {`
+- L395: `    public var decorationMode: WindowDecorationMode {`
+- L401: `    public var geometry: SurfaceGeometry {`
+- L407: `    public var stateSnapshot: WindowStateSnapshot {`
+- L413: `    public var restorationSnapshot: WindowRestorationSnapshot {`
+- L419: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L423: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 

@@ -183,14 +183,30 @@ package enum RawPointerSwipeGestureEvent: Equatable, Sendable {
 
 package enum RawPointerPinchGestureEvent: Equatable, Sendable {
     case begin(serial: UInt32, time: UInt32, surfaceID: RawObjectID?, fingers: UInt32)
-    case update(
-        time: UInt32,
-        dx: WaylandFixed,
-        dy: WaylandFixed,
-        scale: WaylandFixed,
-        rotation: WaylandFixed
-    )
+    case update(RawPointerPinchGestureUpdate)
     case end(serial: UInt32, time: UInt32, cancelled: Bool)
+}
+
+package struct RawPointerPinchGestureUpdate: Equatable, Sendable {
+    package let time: UInt32
+    package let dx: WaylandFixed
+    package let dy: WaylandFixed
+    package let scale: WaylandFixed
+    package let rotation: WaylandFixed
+
+    package init(
+        time updateTime: UInt32,
+        dx updateDX: WaylandFixed,
+        dy updateDY: WaylandFixed,
+        scale updateScale: WaylandFixed,
+        rotation updateRotation: WaylandFixed
+    ) {
+        time = updateTime
+        dx = updateDX
+        dy = updateDY
+        scale = updateScale
+        rotation = updateRotation
+    }
 }
 
 package enum RawPointerHoldGestureEvent: Equatable, Sendable {

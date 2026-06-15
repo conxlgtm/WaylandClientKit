@@ -19,17 +19,17 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
     case dragSourceSeatMismatch(DragSourceIdentity, expected: SeatID, actual: SeatID)
     case unknownToplevelDrag(ToplevelDragID)
     case foreignToplevelDrag(ToplevelDragID)
+    case toplevelDragStillActive(ToplevelDragID)
     case idleInhibitUnavailable
     case keyboardShortcutsInhibitUnavailable
     case systemBellUnavailable
-    case outputManagementUnavailable
-    case staleOutputConfiguration
-    case unsupportedOutputConfigurationOperation(String)
     case unknownIdleInhibitor(IdleInhibitorID)
     case foreignIdleInhibitor(IdleInhibitorID)
+    case invalidDialogParent(child: WindowID, parent: WindowID)
     case dialogAlreadyExists(WindowID)
     case unknownWindowDialog(WindowDialogID)
     case foreignWindowDialog(WindowDialogID)
+    case keyboardShortcutsAlreadyInhibited(window: WindowID, seat: SeatID)
     case unknownKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)
     case foreignKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)
     case emptyWindowIconName
@@ -79,28 +79,28 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "unknown toplevel drag: \(dragID)"
         case .foreignToplevelDrag(let dragID):
             "toplevel drag belongs to another display: \(dragID)"
+        case .toplevelDragStillActive(let dragID):
+            "toplevel drag is still active: \(dragID)"
         case .idleInhibitUnavailable:
             "idle-inhibit protocol is unavailable"
         case .keyboardShortcutsInhibitUnavailable:
             "keyboard-shortcuts-inhibit protocol is unavailable"
         case .systemBellUnavailable:
             "xdg-system-bell protocol is unavailable"
-        case .outputManagementUnavailable:
-            "output-management protocol is unavailable"
-        case .staleOutputConfiguration:
-            "output configuration is stale"
-        case .unsupportedOutputConfigurationOperation(let operation):
-            "output configuration operation is unsupported: \(operation)"
         case .unknownIdleInhibitor(let inhibitorID):
             "unknown idle inhibitor: \(inhibitorID)"
         case .foreignIdleInhibitor(let inhibitorID):
             "idle inhibitor belongs to another display: \(inhibitorID)"
+        case .invalidDialogParent(let child, let parent):
+            "window \(child) cannot use \(parent) as its dialog parent"
         case .dialogAlreadyExists(let windowID):
             "window already has an xdg-dialog object: \(windowID)"
         case .unknownWindowDialog(let dialogID):
             "unknown window dialog: \(dialogID)"
         case .foreignWindowDialog(let dialogID):
             "window dialog belongs to another display: \(dialogID)"
+        case .keyboardShortcutsAlreadyInhibited(let windowID, let seatID):
+            "keyboard shortcuts are already inhibited for window \(windowID) on seat \(seatID)"
         case .unknownKeyboardShortcutsInhibitor(let inhibitorID):
             "unknown keyboard shortcuts inhibitor: \(inhibitorID)"
         case .foreignKeyboardShortcutsInhibitor(let inhibitorID):

@@ -25,12 +25,8 @@ enum ForeignToplevelListSmoke {
                 return
             }
 
-            let snapshot = try await display.foreignToplevelListSnapshot()
-            log("toplevels: \(snapshot.toplevels.count)")
-            for fact in snapshot.toplevels {
-                log("toplevel id=\(fact.id?.description ?? "unknown") title=\(fact.title ?? "private") appID=\(fact.appID ?? "private")")
-            }
-            log("events: typed read-only surface; live stream unavailable in preview")
+            log("operation: list deferred")
+            log("events: deferred until ext-foreign-toplevel-list event state is implemented")
             log("cleanup: pass")
         }
     }

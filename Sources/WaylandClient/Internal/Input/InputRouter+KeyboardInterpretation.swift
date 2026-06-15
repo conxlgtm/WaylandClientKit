@@ -2,6 +2,26 @@ import WaylandKeyboard
 import WaylandRaw
 
 extension InputRouter {
+    func routeKeyboard(
+        _ rawEvent: RawInputEvent,
+        _ keyboardEvent: WaylandRaw.RawKeyboardEvent
+    ) -> InputEvent {
+        switch keyboardEvent {
+        case .keymap(let keymap):
+            return routeKeyboardKeymap(rawEvent, keymap)
+        case .enter(let enter):
+            return routeKeyboardEnter(rawEvent, enter)
+        case .leave(let leave):
+            return routeKeyboardLeave(rawEvent, leave)
+        case .key(let key):
+            return routeKeyboardKey(rawEvent, key)
+        case .modifiers(let modifiers):
+            return routeKeyboardModifiers(rawEvent, modifiers)
+        case .repeatInfo(let repeatInfo):
+            return routeKeyboardRepeatInfo(rawEvent, repeatInfo)
+        }
+    }
+
     func route(_ event: WaylandKeyboard.InterpretedKeyboardEvent) -> [InputEvent] {
         let routed = InputEvent(
             sequence: event.sequence,

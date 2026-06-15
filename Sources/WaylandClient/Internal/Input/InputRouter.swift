@@ -29,6 +29,7 @@ final class InputRouter {
     var tabletPadFocusByObjectID: [RawObjectID: RawObjectID] = [:]
     var tabletToolSeatByObjectID: [RawObjectID: RawSeatID] = [:]
     var tabletPadSeatByObjectID: [RawObjectID: RawSeatID] = [:]
+    var activePointerGestureRoutes: [ActivePointerGestureKey: ActivePointerGestureRoute] = [:]
     var reportedUnknownProtocolValues: Set<ReportedUnknownInputProtocolValue> = []
 
     func register(windowID: WindowID, surfaceID: RawObjectID) {
@@ -56,6 +57,9 @@ final class InputRouter {
         surfaces.removeValue(forKey: surfaceID)
         removeSurfaceFromDeviceGraph(surfaceID)
         removeTabletFocuses(matching: surfaceID)
+        activePointerGestureRoutes = activePointerGestureRoutes.filter { route in
+            route.value.surfaceID != surfaceID
+        }
     }
 
     func route(_ event: RawInputEvent) -> [InputEvent] {
@@ -119,6 +123,9 @@ final class InputRouter {
         case .seatRemoved:
             deviceGraph.removeSeat(event.seatID)
             clearTabletFocuses(for: event.seatID)
+            activePointerGestureRoutes = activePointerGestureRoutes.filter { route in
+                route.key.seatID != event.seatID
+            }
             return routedEvent(event, target: .display, kind: .seat(.removed))
         case .diagnostic(let diagnostic):
             return routedEvent(
@@ -235,28 +242,6 @@ final class InputRouter {
         }
     }
 
-    private func routePointerGesture(
-        _ rawEvent: RawInputEvent,
-        _ gesture: RawPointerGestureEvent
-    ) -> InputEvent {
-        routedEvent(
-            rawEvent,
-            target: gestureTarget(rawEvent, gesture),
-            kind: .pointer(.gesture(PointerGestureEvent(gesture)))
-        )
-    }
-
-    private func gestureTarget(
-        _ rawEvent: RawInputEvent,
-        _ gesture: RawPointerGestureEvent
-    ) -> InputEventTarget {
-        if let surfaceID = gesture.beginSurfaceID {
-            return target(for: surfaceID)
-        }
-
-        return target(forFocusedSurface: focusedPointerSurface(for: rawEvent.seatID))
-    }
-
     private func routePointerConstraint(
         _ rawEvent: RawInputEvent,
         _ constraint: RawPointerConstraintEvent,
@@ -267,49 +252,6 @@ final class InputRouter {
             constraint,
             lifecycleEvent: lifecycleEvent
         )
-    }
-
-    private func routeKeyboard(
-        _ rawEvent: RawInputEvent,
-        _ keyboardEvent: WaylandRaw.RawKeyboardEvent
-    ) -> InputEvent {
-        switch keyboardEvent {
-        case .keymap(let keymap):
-            return routeKeyboardKeymap(rawEvent, keymap)
-        case .enter(let enter):
-            return routeKeyboardEnter(rawEvent, enter)
-        case .leave(let leave):
-            return routeKeyboardLeave(rawEvent, leave)
-        case .key(let key):
-            return routeKeyboardKey(rawEvent, key)
-        case .modifiers(let modifiers):
-            return routeKeyboardModifiers(rawEvent, modifiers)
-        case .repeatInfo(let repeatInfo):
-            return routeKeyboardRepeatInfo(rawEvent, repeatInfo)
-        }
-    }
-
-    private func routeTouch(
-        _ rawEvent: RawInputEvent,
-        _ touchEvent: RawTouchEvent
-    ) -> InputEvent {
-        switch touchEvent {
-        case .down(let down):
-            return routeTouchDown(rawEvent, down)
-        case .up(let up):
-            return routeTouchUp(rawEvent, up)
-        case .motion(let motion):
-            return routeTouchMotion(rawEvent, motion)
-        case .frame:
-            return routedEvent(rawEvent, target: .display, kind: .touch(.frame))
-        case .cancel:
-            clearTouchFocuses(seatID: rawEvent.seatID)
-            return routedEvent(rawEvent, target: .display, kind: .touch(.cancel))
-        case .shape(let shape):
-            return routeTouchShape(rawEvent, shape)
-        case .orientation(let orientation):
-            return routeTouchOrientation(rawEvent, orientation)
-        }
     }
 }
 

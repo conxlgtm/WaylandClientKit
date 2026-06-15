@@ -239,6 +239,16 @@ public struct ToplevelDrag: Sendable, Hashable, Identifiable {
     }
 }
 
+public struct StartedToplevelDrag: Sendable, Hashable {
+    public let source: DragSource
+    public let drag: ToplevelDrag
+
+    package init(source dragSource: DragSource, drag toplevelDrag: ToplevelDrag) {
+        source = dragSource
+        drag = toplevelDrag
+    }
+}
+
 public struct DragSourceTargetEvent: Equatable, Sendable {
     public let source: DragSourceIdentity
     public let mimeType: MIMEType?

@@ -29,59 +29,21 @@ enum OutputManagementSmoke {
                 return
             }
 
-            let snapshot = try await display.outputManagementSnapshot()
-            log("heads: \(snapshot.heads.count)")
-            for head in snapshot.heads {
-                log(headDescription(head))
-            }
-            log("operation: list pass")
-
-            let proposal = OutputConfigurationProposal(current: snapshot)
+            log("heads: deferred")
+            log("operation: list deferred")
             if flags.contains("--test-only") || flags.contains("--apply") {
-                do {
-                    try await display.testOutputConfiguration(proposal)
-                    log("operation: test-current pass")
-                } catch {
-                    log("operation: test-current skip error=\(error)")
-                }
+                log("operation: test-current deferred")
             } else {
                 log("operation: test-current skip")
             }
 
             if flags.contains("--apply") {
-                do {
-                    try await display.applyOutputConfiguration(proposal)
-                    log("operation: apply-current pass")
-                } catch {
-                    log("operation: apply-current skip error=\(error)")
-                }
+                log("operation: apply-current deferred")
             } else {
                 log("operation: apply-current skipped-by-default")
             }
             log("cleanup: pass")
         }
-    }
-
-    nonisolated private static func headDescription(_ head: OutputHead) -> String {
-        let position = head.position.map { "\($0.x),\($0.y)" } ?? "unknown"
-        let scale = head.scale.map(\.description) ?? "unknown"
-        let transform = head.transform.map { "\($0)" } ?? "unknown"
-        let modes = head.modes.map(modeDescription).joined(separator: ",")
-        return "head id=\(head.id) name=\(head.name ?? "unknown") "
-            + "description=\(head.description ?? "unknown") enabled=\(head.enabled) "
-            + "position=\(position) scale=\(scale) transform=\(transform) modes=[\(modes)]"
-    }
-
-    nonisolated private static func modeDescription(_ mode: OutputMode) -> String {
-        let refresh: String
-        switch mode.refresh {
-        case .unspecified:
-            refresh = "unspecified"
-        case .milliHertz(let value):
-            refresh = "\(value.rawValue)mHz"
-        }
-
-        return "\(mode.width.rawValue)x\(mode.height.rawValue)@\(refresh)"
     }
 
     nonisolated private static func availability(_ availability: ProtocolAvailability) -> String {

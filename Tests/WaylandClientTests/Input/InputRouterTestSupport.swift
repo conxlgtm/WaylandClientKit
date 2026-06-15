@@ -94,6 +94,62 @@ func rawRelativePointerMotion(
     )
 }
 
+func rawPointerSwipeGestureBegin(
+    sequence: UInt64,
+    seatID: RawSeatID,
+    surfaceID: RawObjectID?,
+    deviceID: RawInputDeviceID? = nil
+) -> RawInputEvent {
+    rawEvent(
+        sequence: sequence,
+        seatID: seatID,
+        kind: .pointer(
+            .gesture(
+                .swipe(.begin(serial: 1, time: 2, surfaceID: surfaceID, fingers: 3))
+            )
+        ),
+        deviceID: deviceID
+    )
+}
+
+func rawPointerSwipeGestureUpdate(
+    sequence: UInt64,
+    seatID: RawSeatID,
+    deviceID: RawInputDeviceID? = nil
+) -> RawInputEvent {
+    rawEvent(
+        sequence: sequence,
+        seatID: seatID,
+        kind: .pointer(
+            .gesture(
+                .swipe(
+                    .update(
+                        time: 3,
+                        dx: WaylandFixed(rawValue: 256),
+                        dy: WaylandFixed(rawValue: -512)
+                    )
+                )
+            )
+        ),
+        deviceID: deviceID
+    )
+}
+
+func rawPointerSwipeGestureEnd(
+    sequence: UInt64,
+    seatID: RawSeatID,
+    deviceID: RawInputDeviceID? = nil
+) -> RawInputEvent {
+    rawEvent(
+        sequence: sequence,
+        seatID: seatID,
+        kind: .pointer(
+            .gesture(.swipe(.end(serial: 4, time: 5, cancelled: false)))
+        ),
+        deviceID: deviceID
+    )
+}
+
 func rawPointerConstraintEvent(
     sequence: UInt64,
     seatID: RawSeatID,

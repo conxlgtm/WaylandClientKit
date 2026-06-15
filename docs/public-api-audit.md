@@ -106,6 +106,7 @@ Intentionally public:
 - `DragSource`
 - `ToplevelDrag`
 - `ToplevelDragID`
+- `StartedToplevelDrag`
 - `DragIcon`
 - `DragIconImage`
 - `DragOfferIdentity`
@@ -476,14 +477,9 @@ Notes:
   protocol-shaped desktop relationship requests only. WaylandClientKit does not
   implement modal event filtering, sheet/alert behavior, shortcut policy, or
   drag/drop policy.
-- `ForeignToplevelFacts` and `ForeignToplevelListEvent` are read-only and
-  privacy-sensitive. Titles and app IDs are optional observations and no
-  close/minimize/focus/control API is public.
-- `OutputManagementSnapshot`, `OutputHead`, and `OutputConfigurationProposal`
-  are preview output-management API. The current public surface lists
-  wlroots-family output facts and rejects test/apply with typed unsupported
-  operation errors until manager serial and transaction lifecycle support is
-  implemented.
+- Foreign toplevel list and output-management capabilities are reported, but
+  public fact/control APIs are deferred until event-backed protocol state is
+  modeled.
 - `WaylandDisplay.withConnection` does not eagerly require a cursor theme to load.
   Cursor theme loading is deferred until a visible cursor image is first needed.
 - `WaylandDisplay.withConnection`, `Window.show`, and `PopupSurface.show` use finite
