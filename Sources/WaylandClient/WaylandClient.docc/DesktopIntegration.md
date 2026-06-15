@@ -63,4 +63,6 @@ policy, and user-visible attention policy.
 
 ## Examples
 
-See `WindowIconSmoke`, `IdleInhibitSmoke`, and `SystemBellSmoke` in `Examples/`.
+See `WindowIconSmoke`, `IdleInhibitSmoke`, `DialogSmoke`,
+`KeyboardShortcutsInhibitSmoke`, `ToplevelDragSmoke`, and `SystemBellSmoke` in
+`Examples/`.

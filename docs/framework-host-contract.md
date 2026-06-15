@@ -23,6 +23,9 @@ Start with these public APIs:
   `SurfaceDamageRegion` for surface input, opacity, and redraw damage facts
 - `Window.setIcon(_:)`, `Window.inhibitIdle()`, and `Window.ringSystemBell()`
   for capability-gated desktop integration requests
+- `Window.createDialog(parent:modal:)`, `Window.startToplevelDrag(...)`, and
+  `Window.inhibitKeyboardShortcuts(seatID:)` for dialog, detachable-drag, and
+  shortcut-inhibition protocol facts
 - `Window.presentationEvents` and `requestPresentationFeedback()`
 - `Window.createPopup(configuration:)`
 - `Window.createSubsurface(configuration:)` when the framework needs a
@@ -32,6 +35,7 @@ Start with these public APIs:
 - relative pointer and pointer constraint APIs through
   `Window.relativePointer(seatID:)`, `Window.lockPointer(...)`, and
   `Window.confinePointer(...)`
+- `WaylandDisplay.pointerGestures(seatID:)` for raw touchpad gesture facts
 - `TextInputSession` and `WaylandDisplay.textInputSession(for:)`
 - clipboard, primary-selection, and drag-and-drop source and offer APIs
 - cursor APIs through `PointerCursor`, `CursorConfiguration`,
@@ -118,6 +122,10 @@ errors. Compositors can ignore idle inhibition when a surface is not visually
 relevant, and system bell requests can be ignored by compositor or user
 preference.
 
+Dialog relationships, keyboard shortcut inhibition, and toplevel-drag are also
+protocol facts. Frameworks own modal event filtering, UI disabling, shortcut
+command policy, detachable-view behavior, and drop policy.
+
 ## Event Stream Ownership
 
 WaylandClientKit intentionally keeps event families separate:
@@ -170,6 +178,8 @@ Pointer capture is optional compositor functionality. Use
 capture-dependent modes. WaylandClientKit manages relative-pointer and
 lock/confine proxy lifetime, but the framework owns game mode, capture consent,
 escape/unlock UI, camera mapping, gesture mapping, and cursor policy.
+Pointer gestures are raw seat/window facts; the framework owns recognizers such
+as swipe navigation, magnification, and rotation.
 
 For text fields, commit enabled request state before disabling the session.
 `TextInputSession.disable()` finalizes the disable request; a later

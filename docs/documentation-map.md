@@ -68,9 +68,10 @@ Canonical examples by feature:
 | Text input | [TextInputSmoke](../Examples/TextInputSmoke/main.swift) |
 | Data transfer and drag icons | [DataTransferSmoke](../Examples/DataTransferSmoke/main.swift) |
 | Tablet input | [TabletInputSmoke](../Examples/TabletInputSmoke/main.swift) |
-| Pointer capture and warp | [PointerCaptureSmoke](../Examples/PointerCaptureSmoke/main.swift), [PointerWarpSmoke](../Examples/PointerWarpSmoke/main.swift) |
+| Pointer capture, warp, and gestures | [PointerCaptureSmoke](../Examples/PointerCaptureSmoke/main.swift), [PointerWarpSmoke](../Examples/PointerWarpSmoke/main.swift), [PointerGesturesSmoke](../Examples/PointerGesturesSmoke/main.swift) |
 | Cursor policy and custom cursor images | [CursorPolicySmoke](../Examples/CursorPolicySmoke/main.swift), [CustomCursorSmoke](../Examples/CustomCursorSmoke/main.swift), [CursorAnimationSmoke](../Examples/CursorAnimationSmoke/main.swift) |
-| Desktop integration | [WindowIconSmoke](../Examples/WindowIconSmoke/main.swift), [IdleInhibitSmoke](../Examples/IdleInhibitSmoke/main.swift), [SystemBellSmoke](../Examples/SystemBellSmoke/main.swift) |
+| Desktop integration | [WindowIconSmoke](../Examples/WindowIconSmoke/main.swift), [IdleInhibitSmoke](../Examples/IdleInhibitSmoke/main.swift), [DialogSmoke](../Examples/DialogSmoke/main.swift), [KeyboardShortcutsInhibitSmoke](../Examples/KeyboardShortcutsInhibitSmoke/main.swift), [ToplevelDragSmoke](../Examples/ToplevelDragSmoke/main.swift), [SystemBellSmoke](../Examples/SystemBellSmoke/main.swift) |
+| Deferred desktop/output plumbing | [ForeignToplevelListSmoke](../Examples/ForeignToplevelListSmoke/main.swift), [OutputManagementSmoke](../Examples/OutputManagementSmoke/main.swift) |
 | Surface regions and damage | [SurfaceRegionSmoke](../Examples/SurfaceRegionSmoke/main.swift), [DamageRegionSmoke](../Examples/DamageRegionSmoke/main.swift) |
 | Subsurfaces | [SubsurfaceSmoke](../Examples/SubsurfaceSmoke/main.swift) |
 | Graphics preview | [GPUPreviewSmokeClient](../Examples/GPUPreviewSmokeClient/main.swift), [GraphicsPreviewManagedGPUClear](../Examples/GraphicsPreviewManagedGPUClear/main.swift), [GraphicsPreviewExternalBufferMaintainerSmoke](../Examples/GraphicsPreviewExternalBufferMaintainerSmoke/main.swift), [GraphicsPreviewColorMetadataSmoke](../Examples/GraphicsPreviewColorMetadataSmoke/main.swift), [ColorManagementSmoke](../Examples/ColorManagementSmoke/main.swift) |
@@ -87,9 +88,9 @@ Every public feature family should have one conceptual home:
 | Surface regions and partial damage | [Surface Regions And Damage](../Sources/WaylandClient/WaylandClient.docc/SurfaceRegionsAndDamage.md) |
 | Subsurfaces | [Subsurfaces](../Sources/WaylandClient/WaylandClient.docc/Subsurfaces.md) |
 | Cursor shape, theme fallback, and custom images | [Cursor Shape And Theme Fallback](../Sources/WaylandClient/WaylandClient.docc/CursorShapeAndThemeFallback.md) |
-| Desktop icons, idle inhibit, and system bell | [Desktop Integration](../Sources/WaylandClient/WaylandClient.docc/DesktopIntegration.md) |
+| Desktop icons, dialog hints, shortcut inhibition, toplevel drag, and system bell | [Desktop Integration](../Sources/WaylandClient/WaylandClient.docc/DesktopIntegration.md) |
 | Activation and focus handoff | [Activation And Focus Handoff](../Sources/WaylandClient/WaylandClient.docc/ActivationAndFocusHandoff.md) |
-| Pointer capture, relative pointer, and pointer warp | [Pointer Capture](../Sources/WaylandClient/WaylandClient.docc/PointerCapture.md) |
+| Pointer capture, relative pointer, pointer warp, and gestures | [Pointer Capture](../Sources/WaylandClient/WaylandClient.docc/PointerCapture.md) |
 | Tablet input | [Tablet Input](../Sources/WaylandClient/WaylandClient.docc/TabletInput.md) |
 | Data transfer and drag icons | [Data Transfer And Drag Icons](../Sources/WaylandClient/WaylandClient.docc/DataTransferAndDragIcons.md) |
 | Text input lifecycle | [Text Input Lifecycle](../Sources/WaylandClient/WaylandClient.docc/TextInputLifecycle.md) |
