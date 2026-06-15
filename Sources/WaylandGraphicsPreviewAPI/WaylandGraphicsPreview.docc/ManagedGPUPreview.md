@@ -48,7 +48,7 @@ when their protocols are available. The same pacing policy is carried into
 direct software commits and allowed software fallback commits. Missing protocols
 become pacing fallback facts; rejected commit-timing timestamps become typed
 failures. Public commit timing currently uses
-``WaylandGraphicsPresentationTarget/default`` as the preview target request.
+the preview default target request.
 FIFO pacing uses a priming commit before waits: the first FIFO-paced frame sets
 a barrier, and later FIFO-paced frames wait on the previous barrier while
 setting the next one.

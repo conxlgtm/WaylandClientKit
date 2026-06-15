@@ -22,8 +22,8 @@ enum OutputTopologySmoke {
             log("feature: output-topology")
             log("capability: wl_output required")
             log("capability: xdg_output \(availability(capabilities.xdgOutput))")
-            log("outputs: \(topology.outputs.count)")
-            for output in topology.outputs {
+            log("outputs: \(topology.count)")
+            for output in topology {
                 log(outputDescription(output))
             }
 

@@ -106,7 +106,7 @@ enum GraphicsPreviewColorMetadataSmoke {
         case "fifo":
             .fifo
         case "commit-timing":
-            .commitTiming(.default)
+            .commitTiming
         case .some(let value):
             throw ExampleRunOptionError.unknownArgument("--pacing \(value)")
         }

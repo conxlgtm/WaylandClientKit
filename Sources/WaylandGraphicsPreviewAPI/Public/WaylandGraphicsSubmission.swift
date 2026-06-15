@@ -131,22 +131,7 @@ public enum WaylandGraphicsPresentationFeedbackPolicy: Equatable, Sendable {
 public enum WaylandGraphicsFramePacingRequest: Equatable, Sendable {
     case none
     case fifo
-    case commitTiming(WaylandGraphicsCommitTimingRequest)
-}
-
-public struct WaylandGraphicsCommitTimingRequest: Equatable, Sendable {
-    public let target: WaylandGraphicsPresentationTarget
-
-    public static let `default` = WaylandGraphicsCommitTimingRequest(target: .default)
-
-    public init(target presentationTarget: WaylandGraphicsPresentationTarget = .default) {
-        target = presentationTarget
-    }
-}
-
-public enum WaylandGraphicsPresentationTarget: Equatable, Sendable {
-    /// Use WaylandClientKit's preview default target for the next frame.
-    case `default`
+    case commitTiming
 }
 
 public struct WaylandGraphicsFrameSchedule: Equatable, Sendable {
@@ -374,19 +359,6 @@ package enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
         WaylandGraphicsExternalBufferPlane
     )
 
-    package var count: Int {
-        switch self {
-        case .one:
-            1
-        case .two:
-            2
-        case .three:
-            3
-        case .four:
-            4
-        }
-    }
-
     package mutating func withMutablePlanes(
         _ body: (inout WaylandGraphicsExternalBufferPlane) throws -> Void
     ) throws {
@@ -600,34 +572,12 @@ package final class WaylandGraphicsExternalBufferImportPlan: @unchecked Sendable
     }
 }
 
-package struct WaylandGraphicsExternalSynchronization: Equatable, Sendable {
-    package let acquire: WaylandGraphicsExternalAcquireSync?
-
-    package static let `default` = WaylandGraphicsExternalSynchronization()
-
-    package init(acquire acquireSynchronization: WaylandGraphicsExternalAcquireSync? = nil) {
-        acquire = acquireSynchronization
-    }
-}
-
-package enum WaylandGraphicsExternalAcquireSync: Equatable, Sendable {
-    case unsupportedPreview
-}
-
 extension WaylandGraphicsFrameSchedule {
     package init(configuration: WaylandGraphicsConfiguration) {
         self.init(
             synchronization: configuration.synchronizationPolicy,
             pacing: WaylandGraphicsFramePacingRequest(configuration.pacingPolicy),
             presentationFeedback: configuration.presentationFeedbackPolicy
-        )
-    }
-
-    package var configurationOverride: WaylandGraphicsConfiguration {
-        WaylandGraphicsConfiguration(
-            synchronizationPolicy: synchronization,
-            pacingPolicy: pacing.policy,
-            presentationFeedbackPolicy: presentationFeedback
         )
     }
 }
@@ -640,7 +590,7 @@ extension WaylandGraphicsFramePacingRequest {
         case .preferFIFO:
             self = .fifo
         case .preferCommitTiming:
-            self = .commitTiming(.default)
+            self = .commitTiming
         }
     }
 
@@ -916,15 +866,12 @@ public struct WaylandGraphicsFrameLease: Sendable {
     package func submitExternalBuffer(
         _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor,
         metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
-        synchronization externalSynchronization:
-            WaylandGraphicsExternalSynchronization = .default,
         schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil
     ) async throws -> WaylandGraphicsFrameResult {
         try await storage.submitExternalBuffer(
             leaseID: id,
             descriptor: descriptor,
             metadata: frameMetadata,
-            synchronization: externalSynchronization,
             schedule: frameSchedule
         )
     }

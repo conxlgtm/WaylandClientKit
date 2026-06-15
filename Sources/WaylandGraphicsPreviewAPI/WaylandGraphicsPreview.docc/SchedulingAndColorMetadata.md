@@ -12,7 +12,7 @@ protocol or capability was discovered.
 Use ``WaylandGraphicsFrameSchedule/synchronization`` for implicit, preferred
 explicit, or required explicit synchronization policy. Use
 ``WaylandGraphicsFrameSchedule/pacing`` to request no pacing, FIFO, or
-commit-timing with ``WaylandGraphicsPresentationTarget/default``.
+commit-timing with WaylandClientKit's preview default target.
 
 The public schedule does not expose syncobj timelines, fences, or raw protocol
 objects. Frameworks own animation policy; WaylandClientKit exposes timing facts

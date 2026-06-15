@@ -47,13 +47,10 @@ decorations. Use `--auto-close --print-summary` for bounded evidence runs.
 Both GPU smoke tools accept `--sync implicit-only|prefer-explicit|require-explicit`
 and `--pacing none|fifo|commit-timing`. `GraphicsPreviewManagedGPUClear` also
 accepts `--metadata none|prefer`, `--content-type none|photo|video|game`, and
-`--presentation-hint vsync|async`. `GraphicsPreviewExternalBufferSmoke`,
+`--presentation-hint vsync|async`. `GraphicsPreviewExternalBufferMaintainerSmoke`,
 `GraphicsPreviewColorMetadataSmoke`, `ColorManagementSmoke`, and
 `OutputTopologySmoke` provide bounded probes for external buffers, color
 metadata, color capability facts, and output topology.
-`GraphicsPreviewExternalBufferSmoke` imports only `WaylandClient` and
-`WaylandGraphicsPreview`; its `--internal-test-buffer` and
-`--negative-test-buffer` modes redirect to maintainer-only evidence commands.
 `GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer`
 creates a small GBM/EGL-rendered dmabuf for live matrix evidence, and
 `GraphicsPreviewExternalBufferMaintainerSmoke -- --negative-test-buffer`
@@ -81,8 +78,6 @@ The preview product exposes:
 - `WaylandGraphicsPresentationFeedbackPolicy`
 - `WaylandGraphicsFrameSchedule`
 - `WaylandGraphicsFramePacingRequest`
-- `WaylandGraphicsCommitTimingRequest`
-- `WaylandGraphicsPresentationTarget`
 - `WaylandGraphicsAlphaModifier`
 - `WaylandGraphicsColorRepresentation`
 - `WaylandGraphicsColorAlphaMode`
@@ -159,10 +154,10 @@ WaylandClientKit exposes timing facts and commit requests.
 managed GPU commits, direct software commits, and allowed software fallback
 commits when the protocol is available. Missing FIFO or commit-timing support is
 reported as a pacing fallback reason. Commit-timing timestamp rejection is
-reported as a typed failure. Public commit timing currently accepts
-`WaylandGraphicsPresentationTarget.default`, which uses WaylandClientKit's
-preview default target for the next frame. Current live compositor evidence
-proves FIFO active and commit-timing fallback, but not commit-timing active.
+reported as a typed failure. Public commit timing currently uses
+WaylandClientKit's preview default target for the next frame. Current live
+compositor evidence proves FIFO active and commit-timing fallback, but not
+commit-timing active.
 FIFO pacing primes the surface with `set_barrier` on the first successful
 FIFO-paced commit, then waits on the previous barrier and sets the next barrier
 on later FIFO-paced commits.

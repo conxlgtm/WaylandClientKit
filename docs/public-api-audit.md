@@ -223,6 +223,7 @@ Current user-facing contract:
   `WaylandDisplay.outputTopology()` expose current output snapshots, stable
   connection-local output identities, logical geometry, scale, transform,
   physical size, names, descriptions, and surface output membership facts.
+  `outputTopology()` returns the same output snapshot array sorted by identity.
   WaylandClientKit reports output facts; it does not apply monitor settings or
   own display-configuration policy.
 - GPU and GBM/EGL/dmabuf work remains package-internal and is surfaced only
@@ -257,8 +258,6 @@ Intentionally public:
 - `WaylandGraphicsPacingPolicy`
 - `WaylandGraphicsFrameSchedule`
 - `WaylandGraphicsFramePacingRequest`
-- `WaylandGraphicsCommitTimingRequest`
-- `WaylandGraphicsPresentationTarget`
 - `WaylandGraphicsMetadataPolicy`
 - `WaylandGraphicsPresentationFeedbackPolicy`
 - `WaylandGraphicsDamageRegion`
@@ -308,7 +307,7 @@ Current preview contract:
   runtime reason only before explicit sync is installed or active on the
   surface; `requireExplicit` fails instead of silently falling back, including
   configurations that request software backing or forced software fallback.
-  `fifo` and `commitTiming(.default)` apply submit constraints on managed GPU
+  `fifo` and `commitTiming` apply submit constraints on managed GPU
   and software/fallback commits when advertised; FIFO commits prime with
   `set_barrier` before later commits wait and re-prime. Missing pacing
   protocols report fallback or typed failure facts. Live compositor evidence

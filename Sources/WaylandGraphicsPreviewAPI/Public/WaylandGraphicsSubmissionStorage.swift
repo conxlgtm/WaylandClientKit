@@ -205,16 +205,13 @@ package actor WaylandGraphicsWindowBackingStorage {
         leaseID: WaylandGraphicsFrameLeaseID,
         descriptor externalDescriptor: consuming WaylandGraphicsExternalBufferDescriptor,
         metadata frameMetadata: WaylandGraphicsFrameMetadata,
-        synchronization externalSynchronization: WaylandGraphicsExternalSynchronization,
         schedule frameSchedule: WaylandGraphicsFrameSchedule?
     ) async throws -> WaylandGraphicsFrameResult {
         var descriptor = externalDescriptor
         let effectiveConfiguration = configuration.applying(schedule: frameSchedule)
         try closeDescriptorOnFailure(&descriptor) {
-            try validateExternalSynchronization(
-                externalSynchronization,
-                configuration: effectiveConfiguration
-            )
+            try rejectExternalBufferExplicitSyncIfRequired(
+                configuration: effectiveConfiguration)
         }
 
         let geometry: SurfaceGeometry
@@ -653,20 +650,19 @@ extension WaylandGraphicsWindowBackingStorage {
         backingRuntimePath = Self.runtimePath(backingRuntimePath, backing: status)
     }
 
-    private func validateExternalSynchronization(
-        _ synchronization: WaylandGraphicsExternalSynchronization,
+    private func rejectExternalBufferExplicitSyncIfRequired(
         configuration effectiveConfiguration: WaylandGraphicsConfiguration
     ) throws {
-        guard synchronization.acquire == nil,
-            effectiveConfiguration.synchronizationPolicy != .requireExplicit
-        else {
-            let reason = WaylandGraphicsUnavailableReason.externalSynchronizationUnavailable
-            backingRuntimePath = Self.runtimePath(
-                backingRuntimePath,
-                externalBufferFailure: reason
-            )
-            throw WaylandGraphicsError.unavailable(reason)
+        guard effectiveConfiguration.synchronizationPolicy == .requireExplicit else {
+            return
         }
+
+        let reason = WaylandGraphicsUnavailableReason.externalSynchronizationUnavailable
+        backingRuntimePath = Self.runtimePath(
+            backingRuntimePath,
+            externalBufferFailure: reason
+        )
+        throw WaylandGraphicsError.unavailable(reason)
     }
 
     private func validateExternalBufferDescriptor(

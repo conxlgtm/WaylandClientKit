@@ -6,34 +6,6 @@ import WaylandRaw
 @Suite
 struct OutputSnapshotTests {
     @Test
-    func outputTopologySnapshotSortsByStableOutputID() {
-        let first = OutputSnapshot(
-            id: OutputID(rawValue: 2),
-            version: 4,
-            geometry: nil,
-            logicalGeometry: nil,
-            currentMode: nil,
-            scale: PositiveInt32(unchecked: 1),
-            name: "second",
-            description: nil
-        )
-        let second = OutputSnapshot(
-            id: OutputID(rawValue: 1),
-            version: 4,
-            geometry: nil,
-            logicalGeometry: nil,
-            currentMode: nil,
-            scale: PositiveInt32(unchecked: 1),
-            name: "first",
-            description: nil
-        )
-
-        let topology = OutputTopologySnapshot(outputs: [first, second])
-
-        #expect(topology.outputs.map(\.id) == [OutputID(rawValue: 1), OutputID(rawValue: 2)])
-    }
-
-    @Test
     func publicSnapshotCopiesRawOutputMetadata() {
         let raw = RawOutputSnapshot(
             id: RawOutputID(rawValue: 7),
