@@ -255,6 +255,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         for windowID in surfaces.allWindowIDs {
             closeWindow(windowID)
         }
+        removeAllToplevelDrags()
         session?.releaseWaylandResourcesOnOwnerThread()
         lifecycle = .closed
         eventHub.finish()
