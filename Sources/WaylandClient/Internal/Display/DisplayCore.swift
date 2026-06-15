@@ -41,6 +41,9 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     init(session activeSession: DisplaySession, eventHub displayEventHub: DisplayEventHub) {
         lifecycle = .active(activeSession)
         eventHub = displayEventHub
+        activeSession.dataTransferManager.sourceWillCancel = { [weak self] sourceID in
+            self?.closeToplevelDrags(for: sourceID.dragIdentity)
+        }
     }
 
     init(eventHub displayEventHub: DisplayEventHub) {
