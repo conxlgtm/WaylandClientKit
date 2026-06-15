@@ -68,8 +68,9 @@ Current experimental baseline:
 - xdg-decoration server-side decoration negotiation
 - viewporter and fractional-scale protocol integration for scaled SHM buffers
 - frame callback pacing
-- seat, pointer, keyboard, and touch event capture
-- relative pointer events plus pointer lock/confine and pointer-warp requests
+- seat, pointer, keyboard, touch, and raw touchpad gesture event capture
+- relative pointer events plus pointer lock/confine, pointer-gesture
+  subscriptions, and pointer-warp requests
 - popup surfaces with placement, redraw, dismissal, and input target identity
 - package-internal `DisplaySession` input draining with seat/window identity
 - high-level async `WaylandDisplay.withConnection` API backed by a dedicated Wayland owner
@@ -90,7 +91,11 @@ Current experimental baseline:
 - managed subsurfaces, surface input/opaque regions, and damage-aware software
   redraw
 - static and animated custom cursor images
-- desktop integration hooks for toplevel icons, idle inhibition, and system bell
+- desktop integration hooks for toplevel icons, idle inhibition, system bell,
+  xdg-dialog hints, keyboard-shortcut inhibition, toplevel drag attach, and
+  read-only foreign toplevel facts
+- wlroots output-management preview snapshots with mutation/test requests
+  rejected until the manager serial lifecycle is modeled
 - compose and dead-key text results for interpreted keyboard events
 - display, input, data-transfer, text-input, and diagnostic event streams
 - window restoration snapshots for framework-owned local session state
@@ -102,7 +107,7 @@ Current experimental baseline:
 Not implemented yet:
 
 - protocol coverage beyond the listed current support matrix
-- output-management control APIs
+- output-management mutation APIs
 - public GPU rendering APIs in `WaylandClient`
 - raw public GBM, EGL, DRM, dmabuf, or syncobj handles
 - high-level gesture recognizers or widgets
@@ -164,11 +169,23 @@ Supported in the current experimental baseline:
 - `zwp_pointer_constraints_v1`
 - `zwp_locked_pointer_v1`
 - `zwp_confined_pointer_v1`
+- `zwp_pointer_gestures_v1`
+- `zwp_pointer_gesture_swipe_v1`
+- `zwp_pointer_gesture_pinch_v1`
+- `zwp_pointer_gesture_hold_v1`
 - `xdg_activation_v1`
 - `xdg_toplevel_icon_manager_v1`
 - `xdg_toplevel_icon_v1`
+- `xdg_wm_dialog_v1`
+- `xdg_dialog_v1`
+- `xdg_toplevel_drag_manager_v1`
+- `xdg_toplevel_drag_v1`
+- `ext_foreign_toplevel_list_v1` (read-only facts)
+- `ext_foreign_toplevel_handle_v1` (read-only facts)
 - `zwp_idle_inhibit_manager_v1`
 - `zwp_idle_inhibitor_v1`
+- `zwp_keyboard_shortcuts_inhibit_manager_v1`
+- `zwp_keyboard_shortcuts_inhibitor_v1`
 - `xdg_system_bell_v1`
 - `zwp_text_input_manager_v3`
 - `zwp_text_input_v3`
@@ -196,6 +213,11 @@ Supported in the current experimental baseline:
 - `wp_color_management_output_v1` (package-internal preview)
 - `wp_image_description_v1` (package-internal preview)
 - `wp_image_description_reference_v1` (package-internal preview)
+- `zwlr_output_manager_v1` (public preview snapshots)
+- `zwlr_output_head_v1` (public preview snapshots)
+- `zwlr_output_mode_v1` (public preview snapshots)
+- `zwlr_output_configuration_v1` (raw wrapper only)
+- `zwlr_output_configuration_head_v1` (raw wrapper only)
 
 Window geometry:
 
@@ -281,7 +303,7 @@ Popups:
 
 Not supported in the current experimental baseline:
 
-- output management control APIs
+- output management mutation APIs
 - public `WaylandClient` GPU rendering APIs
 - stable explicit synchronization or frame-pacing APIs outside
   `WaylandGraphicsPreview`
