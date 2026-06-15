@@ -84,7 +84,7 @@ enum PointerGesturesSmoke {
         while !Task.isCancelled, let event = try await iterator.next() {
             guard event.windowID == window.id else { continue }
             if subscribedSeats.insert(event.seatID).inserted {
-                subscribe(display: display, seatID: event.seatID)
+                await subscribe(display: display, seatID: event.seatID)
             }
 
             if case .pointer(.gesture(let gesture)) = event.kind {
@@ -93,9 +93,9 @@ enum PointerGesturesSmoke {
         }
     }
 
-    nonisolated private static func subscribe(display: WaylandDisplay, seatID: SeatID) {
+    nonisolated private static func subscribe(display: WaylandDisplay, seatID: SeatID) async {
         do {
-            let subscription = try display.pointerGestures(seatID: seatID)
+            let subscription = try await display.pointerGestures(seatID: seatID)
             log(
                 "operation: subscribe pass id=\(subscription.id) "
                     + "seat=\(seatID) version=\(subscription.version)"

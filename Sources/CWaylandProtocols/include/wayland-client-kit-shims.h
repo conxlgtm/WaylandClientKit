@@ -2679,6 +2679,12 @@ enum swl_test_desktop_request_kind {
     SWL_TEST_DESKTOP_TOPLEVEL_ICON_ADD_BUFFER = 4,
     SWL_TEST_DESKTOP_IDLE_INHIBIT_CREATE_INHIBITOR = 5,
     SWL_TEST_DESKTOP_SYSTEM_BELL_RING = 6,
+    SWL_TEST_DESKTOP_DIALOG_GET = 7,
+    SWL_TEST_DESKTOP_DIALOG_SET_MODAL = 8,
+    SWL_TEST_DESKTOP_DIALOG_UNSET_MODAL = 9,
+    SWL_TEST_DESKTOP_TOPLEVEL_DRAG_GET = 10,
+    SWL_TEST_DESKTOP_TOPLEVEL_DRAG_ATTACH = 11,
+    SWL_TEST_DESKTOP_FOREIGN_TOPLEVEL_LIST_STOP = 12,
 };
 
 struct swl_test_desktop_request_record {
@@ -2689,7 +2695,12 @@ struct swl_test_desktop_request_record {
     struct xdg_toplevel_icon_v1       *icon;
     struct wl_buffer                  *buffer;
     struct wl_surface                 *surface;
+    struct xdg_dialog_v1              *dialog;
+    struct xdg_toplevel_drag_v1       *drag;
+    struct wl_data_source             *data_source;
     struct zwp_idle_inhibitor_v1      *inhibitor;
+    int32_t                            x;
+    int32_t                            y;
     int32_t                            scale;
     const char                        *text;
 };
@@ -2701,6 +2712,12 @@ enum swl_test_desktop_destroy_kind {
     SWL_TEST_DESKTOP_DESTROY_IDLE_INHIBIT_MANAGER = 3,
     SWL_TEST_DESKTOP_DESTROY_IDLE_INHIBITOR = 4,
     SWL_TEST_DESKTOP_DESTROY_SYSTEM_BELL = 5,
+    SWL_TEST_DESKTOP_DESTROY_DIALOG_MANAGER = 6,
+    SWL_TEST_DESKTOP_DESTROY_DIALOG = 7,
+    SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_DRAG_MANAGER = 8,
+    SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_DRAG = 9,
+    SWL_TEST_DESKTOP_DESTROY_FOREIGN_TOPLEVEL_LIST = 10,
+    SWL_TEST_DESKTOP_DESTROY_FOREIGN_TOPLEVEL_HANDLE = 11,
 };
 
 struct swl_test_desktop_destroy_record {
@@ -2720,6 +2737,10 @@ enum swl_test_pointer_capture_request_kind {
     SWL_TEST_POINTER_CAPTURE_REGION_ADD = 7,
     SWL_TEST_POINTER_CAPTURE_REGION_SUBTRACT = 8,
     SWL_TEST_POINTER_CAPTURE_WARP_POINTER = 9,
+    SWL_TEST_POINTER_CAPTURE_GET_SWIPE_GESTURE = 10,
+    SWL_TEST_POINTER_CAPTURE_GET_PINCH_GESTURE = 11,
+    SWL_TEST_POINTER_CAPTURE_GET_HOLD_GESTURE = 12,
+    SWL_TEST_POINTER_CAPTURE_INHIBIT_SHORTCUTS = 13,
 };
 
 struct swl_test_pointer_capture_request_record {
@@ -2728,6 +2749,7 @@ struct swl_test_pointer_capture_request_record {
     void                                        *object;
     void                                        *surface;
     void                                        *pointer;
+    void                                        *seat;
     void                                        *region;
     uint32_t                                     lifetime;
     int32_t                                      x;
@@ -2746,6 +2768,12 @@ enum swl_test_pointer_capture_destroy_kind {
     SWL_TEST_POINTER_CAPTURE_DESTROY_CONFINED_POINTER = 5,
     SWL_TEST_POINTER_CAPTURE_DESTROY_REGION = 6,
     SWL_TEST_POINTER_CAPTURE_DESTROY_POINTER_WARP = 7,
+    SWL_TEST_POINTER_CAPTURE_DESTROY_GESTURES = 8,
+    SWL_TEST_POINTER_CAPTURE_DESTROY_SWIPE_GESTURE = 9,
+    SWL_TEST_POINTER_CAPTURE_DESTROY_PINCH_GESTURE = 10,
+    SWL_TEST_POINTER_CAPTURE_DESTROY_HOLD_GESTURE = 11,
+    SWL_TEST_POINTER_CAPTURE_DESTROY_SHORTCUTS_MANAGER = 12,
+    SWL_TEST_POINTER_CAPTURE_DESTROY_SHORTCUTS_INHIBITOR = 13,
 };
 
 struct swl_test_pointer_capture_destroy_record {

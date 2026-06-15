@@ -21,12 +21,18 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.xdgActivation == .unavailable)
         #expect(capabilities.compositorSessionManagement == .unavailable)
         #expect(capabilities.xdgToplevelIcon == .unavailable)
+        #expect(capabilities.xdgDialog == .unavailable)
+        #expect(capabilities.xdgToplevelDrag == .unavailable)
+        #expect(capabilities.foreignToplevelList == .unavailable)
         #expect(capabilities.idleInhibit == .unavailable)
         #expect(capabilities.systemBell == .unavailable)
         #expect(capabilities.pointerWarp == .unavailable)
         #expect(capabilities.tablet == .unavailable)
         #expect(capabilities.relativePointer == .unavailable)
         #expect(capabilities.pointerConstraints == .unavailable)
+        #expect(capabilities.pointerGestures == .unavailable)
+        #expect(capabilities.keyboardShortcutsInhibit == .unavailable)
+        #expect(capabilities.outputManagement == .unavailable)
         #expect(capabilities.textInput == .unavailable)
         #expect(capabilities.linuxDmabuf == .unavailable)
     }
@@ -48,12 +54,21 @@ struct WaylandCapabilitiesTests {
             .init(interfaceName: "xdg_activation_v1", advertisedVersion: 3),
             .init(interfaceName: "xdg_session_manager_v1", advertisedVersion: 4),
             .init(interfaceName: "xdg_toplevel_icon_manager_v1", advertisedVersion: 3),
+            .init(interfaceName: "xdg_wm_dialog_v1", advertisedVersion: 3),
+            .init(interfaceName: "xdg_toplevel_drag_manager_v1", advertisedVersion: 3),
+            .init(interfaceName: "ext_foreign_toplevel_list_v1", advertisedVersion: 3),
             .init(interfaceName: "zwp_idle_inhibit_manager_v1", advertisedVersion: 3),
             .init(interfaceName: "xdg_system_bell_v1", advertisedVersion: 3),
             .init(interfaceName: "wp_pointer_warp_v1", advertisedVersion: 4),
             .init(interfaceName: "zwp_tablet_manager_v2", advertisedVersion: 9),
             .init(interfaceName: "zwp_relative_pointer_manager_v1", advertisedVersion: 4),
             .init(interfaceName: "zwp_pointer_constraints_v1", advertisedVersion: 4),
+            .init(interfaceName: "zwp_pointer_gestures_v1", advertisedVersion: 9),
+            .init(
+                interfaceName: "zwp_keyboard_shortcuts_inhibit_manager_v1",
+                advertisedVersion: 3
+            ),
+            .init(interfaceName: "zwlr_output_manager_v1", advertisedVersion: 9),
             .init(interfaceName: "zwp_text_input_manager_v3", advertisedVersion: 9),
             .init(interfaceName: "zwp_linux_dmabuf_v1", advertisedVersion: 7),
         ])
@@ -71,12 +86,18 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.xdgActivation == .available(version: 1))
         #expect(capabilities.compositorSessionManagement == .available(version: 1))
         #expect(capabilities.xdgToplevelIcon == .available(version: 1))
+        #expect(capabilities.xdgDialog == .available(version: 1))
+        #expect(capabilities.xdgToplevelDrag == .available(version: 1))
+        #expect(capabilities.foreignToplevelList == .available(version: 1))
         #expect(capabilities.idleInhibit == .available(version: 1))
         #expect(capabilities.systemBell == .available(version: 1))
         #expect(capabilities.pointerWarp == .available(version: 1))
         #expect(capabilities.tablet == .available(version: 2))
         #expect(capabilities.relativePointer == .available(version: 1))
         #expect(capabilities.pointerConstraints == .available(version: 1))
+        #expect(capabilities.pointerGestures == .available(version: 3))
+        #expect(capabilities.keyboardShortcutsInhibit == .available(version: 1))
+        #expect(capabilities.outputManagement == .available(version: 4))
         #expect(capabilities.textInput == .available(version: 2))
         #expect(capabilities.linuxDmabuf == .available(version: 5))
     }
@@ -91,12 +112,18 @@ struct WaylandCapabilitiesTests {
                     "xdg_activation_v1",
                     "xdg_session_manager_v1",
                     "xdg_toplevel_icon_manager_v1",
+                    "xdg_wm_dialog_v1",
+                    "xdg_toplevel_drag_manager_v1",
+                    "ext_foreign_toplevel_list_v1",
                     "zwp_idle_inhibit_manager_v1",
                     "xdg_system_bell_v1",
                     "wp_pointer_warp_v1",
                     "zwp_tablet_manager_v2",
                     "zwp_relative_pointer_manager_v1",
                     "zwp_pointer_constraints_v1",
+                    "zwp_pointer_gestures_v1",
+                    "zwp_keyboard_shortcuts_inhibit_manager_v1",
+                    "zwlr_output_manager_v1",
                 ].contains(interfaceName)
             else {
                 return nil
@@ -136,12 +163,18 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.xdgActivation == .available(version: 1))
         #expect(capabilities.compositorSessionManagement == .available(version: 1))
         #expect(capabilities.xdgToplevelIcon == .available(version: 1))
+        #expect(capabilities.xdgDialog == .available(version: 1))
+        #expect(capabilities.xdgToplevelDrag == .available(version: 1))
+        #expect(capabilities.foreignToplevelList == .available(version: 1))
         #expect(capabilities.idleInhibit == .available(version: 1))
         #expect(capabilities.systemBell == .available(version: 1))
         #expect(capabilities.pointerWarp == .available(version: 1))
         #expect(capabilities.tablet == .available(version: 1))
         #expect(capabilities.relativePointer == .available(version: 1))
         #expect(capabilities.pointerConstraints == .available(version: 1))
+        #expect(capabilities.pointerGestures == .available(version: 1))
+        #expect(capabilities.keyboardShortcutsInhibit == .available(version: 1))
+        #expect(capabilities.outputManagement == .available(version: 1))
     }
 
     @Test
@@ -161,12 +194,21 @@ struct WaylandCapabilitiesTests {
             .init(interfaceName: "xdg_activation_v1", advertisedVersion: 1),
             .init(interfaceName: "xdg_session_manager_v1", advertisedVersion: 1),
             .init(interfaceName: "xdg_toplevel_icon_manager_v1", advertisedVersion: 1),
+            .init(interfaceName: "xdg_wm_dialog_v1", advertisedVersion: 1),
+            .init(interfaceName: "xdg_toplevel_drag_manager_v1", advertisedVersion: 1),
+            .init(interfaceName: "ext_foreign_toplevel_list_v1", advertisedVersion: 1),
             .init(interfaceName: "zwp_idle_inhibit_manager_v1", advertisedVersion: 1),
             .init(interfaceName: "xdg_system_bell_v1", advertisedVersion: 1),
             .init(interfaceName: "wp_pointer_warp_v1", advertisedVersion: 1),
             .init(interfaceName: "zwp_tablet_manager_v2", advertisedVersion: 2),
             .init(interfaceName: "zwp_relative_pointer_manager_v1", advertisedVersion: 1),
             .init(interfaceName: "zwp_pointer_constraints_v1", advertisedVersion: 1),
+            .init(interfaceName: "zwp_pointer_gestures_v1", advertisedVersion: 3),
+            .init(
+                interfaceName: "zwp_keyboard_shortcuts_inhibit_manager_v1",
+                advertisedVersion: 1
+            ),
+            .init(interfaceName: "zwlr_output_manager_v1", advertisedVersion: 4),
             .init(interfaceName: "zwp_text_input_manager_v3", advertisedVersion: 2),
             .init(interfaceName: "zwp_linux_dmabuf_v1", advertisedVersion: 5),
         ])
@@ -184,12 +226,18 @@ struct WaylandCapabilitiesTests {
         #expect(capabilities.xdgActivation == .available(version: 1))
         #expect(capabilities.compositorSessionManagement == .available(version: 1))
         #expect(capabilities.xdgToplevelIcon == .available(version: 1))
+        #expect(capabilities.xdgDialog == .available(version: 1))
+        #expect(capabilities.xdgToplevelDrag == .available(version: 1))
+        #expect(capabilities.foreignToplevelList == .available(version: 1))
         #expect(capabilities.idleInhibit == .available(version: 1))
         #expect(capabilities.systemBell == .available(version: 1))
         #expect(capabilities.pointerWarp == .available(version: 1))
         #expect(capabilities.tablet == .available(version: 2))
         #expect(capabilities.relativePointer == .available(version: 1))
         #expect(capabilities.pointerConstraints == .available(version: 1))
+        #expect(capabilities.pointerGestures == .available(version: 3))
+        #expect(capabilities.keyboardShortcutsInhibit == .available(version: 1))
+        #expect(capabilities.outputManagement == .available(version: 4))
         #expect(capabilities.textInput == .available(version: 2))
         #expect(capabilities.linuxDmabuf == .available(version: 5))
     }
