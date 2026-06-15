@@ -64,6 +64,15 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Compositor session-management support through `xdg_session_manager_v1`.
     public let compositorSessionManagement: ProtocolAvailability
 
+    /// Dialog hint support through `xdg_wm_dialog_v1`.
+    public let xdgDialog: ProtocolAvailability
+
+    /// Toplevel drag attachment support through `xdg_toplevel_drag_manager_v1`.
+    public let xdgToplevelDrag: ProtocolAvailability
+
+    /// Read-only foreign toplevel list support through `ext_foreign_toplevel_list_v1`.
+    public let foreignToplevelList: ProtocolAvailability
+
     /// Per-toplevel icon support through `xdg_toplevel_icon_manager_v1`.
     public let xdgToplevelIcon: ProtocolAvailability
 
@@ -85,11 +94,20 @@ public struct WaylandCapabilities: Equatable, Sendable {
     /// Pointer lock/confinement support through `zwp_pointer_constraints_v1`.
     public let pointerConstraints: ProtocolAvailability
 
+    /// Pointer gesture event support through `zwp_pointer_gestures_v1`.
+    public let pointerGestures: ProtocolAvailability
+
+    /// Keyboard shortcut inhibition support through `zwp_keyboard_shortcuts_inhibit_manager_v1`.
+    public let keyboardShortcutsInhibit: ProtocolAvailability
+
     /// Compositor/IME text entry support through `zwp_text_input_manager_v3`.
     public let textInput: ProtocolAvailability
 
     /// Dmabuf buffer sharing support through `zwp_linux_dmabuf_v1`.
     public let linuxDmabuf: ProtocolAvailability
+
+    /// Preview wlroots output-management support through `zwlr_output_manager_v1`.
+    public let outputManagement: ProtocolAvailability
 
     public init(
         clipboard: ProtocolAvailability,
@@ -112,7 +130,13 @@ public struct WaylandCapabilities: Equatable, Sendable {
         systemBell: ProtocolAvailability = .unavailable,
         pointerWarp: ProtocolAvailability = .unavailable,
         tablet: ProtocolAvailability = .unavailable,
-        compositorSessionManagement: ProtocolAvailability = .unavailable
+        compositorSessionManagement: ProtocolAvailability = .unavailable,
+        xdgDialog: ProtocolAvailability = .unavailable,
+        xdgToplevelDrag: ProtocolAvailability = .unavailable,
+        foreignToplevelList: ProtocolAvailability = .unavailable,
+        pointerGestures: ProtocolAvailability = .unavailable,
+        keyboardShortcutsInhibit: ProtocolAvailability = .unavailable,
+        outputManagement: ProtocolAvailability = .unavailable
     ) {
         self.clipboard = clipboard
         self.dragAndDrop = dragAndDrop
@@ -131,10 +155,16 @@ public struct WaylandCapabilities: Equatable, Sendable {
         self.systemBell = systemBell
         self.pointerWarp = pointerWarp
         self.tablet = tablet
+        self.xdgDialog = xdgDialog
+        self.xdgToplevelDrag = xdgToplevelDrag
+        self.foreignToplevelList = foreignToplevelList
         self.relativePointer = relativePointer
         self.pointerConstraints = pointerConstraints
+        self.pointerGestures = pointerGestures
+        self.keyboardShortcutsInhibit = keyboardShortcutsInhibit
         self.textInput = textInput
         self.linuxDmabuf = linuxDmabuf
+        self.outputManagement = outputManagement
     }
 
     public init(
@@ -172,7 +202,13 @@ public struct WaylandCapabilities: Equatable, Sendable {
             idleInhibit: .unavailable,
             systemBell: .unavailable,
             pointerWarp: .unavailable,
-            tablet: .unavailable
+            tablet: .unavailable,
+            xdgDialog: .unavailable,
+            xdgToplevelDrag: .unavailable,
+            foreignToplevelList: .unavailable,
+            pointerGestures: .unavailable,
+            keyboardShortcutsInhibit: .unavailable,
+            outputManagement: .unavailable
         )
     }
 
@@ -210,7 +246,13 @@ public struct WaylandCapabilities: Equatable, Sendable {
             idleInhibit: .unavailable,
             systemBell: .unavailable,
             pointerWarp: .unavailable,
-            tablet: .unavailable
+            tablet: .unavailable,
+            xdgDialog: .unavailable,
+            xdgToplevelDrag: .unavailable,
+            foreignToplevelList: .unavailable,
+            pointerGestures: .unavailable,
+            keyboardShortcutsInhibit: .unavailable,
+            outputManagement: .unavailable
         )
     }
 }
@@ -316,6 +358,32 @@ extension WaylandCapabilities {
             compositorSessionManagement: ProtocolAvailability(
                 protocols.bestAdvertisedProtocol(named: "xdg_session_manager_v1"),
                 supportedByClient: SupportedVersions.xdgSessionManagerV1
+            ),
+            xdgDialog: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "xdg_wm_dialog_v1"),
+                supportedByClient: SupportedVersions.xdgWmDialogV1
+            ),
+            xdgToplevelDrag: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "xdg_toplevel_drag_manager_v1"),
+                supportedByClient: SupportedVersions.xdgToplevelDragManagerV1
+            ),
+            foreignToplevelList: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "ext_foreign_toplevel_list_v1"),
+                supportedByClient: SupportedVersions.extForeignToplevelListV1
+            ),
+            pointerGestures: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "zwp_pointer_gestures_v1"),
+                supportedByClient: SupportedVersions.zwpPointerGesturesV1
+            ),
+            keyboardShortcutsInhibit: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(
+                    named: "zwp_keyboard_shortcuts_inhibit_manager_v1"
+                ),
+                supportedByClient: SupportedVersions.zwpKeyboardShortcutsInhibitManagerV1
+            ),
+            outputManagement: ProtocolAvailability(
+                protocols.bestAdvertisedProtocol(named: "zwlr_output_manager_v1"),
+                supportedByClient: SupportedVersions.zwlrOutputManagerV1
             )
         )
     }

@@ -1,6 +1,9 @@
 #include "wayland-client-kit-shims.h"
 #include "generated/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1-client-protocol.h"
 #include "generated/staging/xdg-system-bell/xdg-system-bell-v1-client-protocol.h"
+#include "generated/staging/xdg-dialog/xdg-dialog-v1-client-protocol.h"
+#include "generated/staging/xdg-toplevel-drag/xdg-toplevel-drag-v1-client-protocol.h"
+#include "generated/staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1-client-protocol.h"
 #include "generated/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1-client-protocol.h"
 #include <stddef.h>
 
@@ -307,6 +310,78 @@ void swl_xdg_system_bell_v1_ring(
     struct wl_surface *surface)
 {
     swl_xdg_system_bell_v1_ring_impl(bell, surface);
+}
+
+void swl_xdg_wm_dialog_v1_destroy(struct xdg_wm_dialog_v1 *manager)
+{
+    xdg_wm_dialog_v1_destroy(manager);
+}
+
+struct xdg_dialog_v1 *swl_xdg_wm_dialog_v1_get_xdg_dialog(
+    struct xdg_wm_dialog_v1 *manager,
+    struct xdg_toplevel *toplevel)
+{
+    return xdg_wm_dialog_v1_get_xdg_dialog(manager, toplevel);
+}
+
+void swl_xdg_dialog_v1_destroy(struct xdg_dialog_v1 *dialog)
+{
+    xdg_dialog_v1_destroy(dialog);
+}
+
+void swl_xdg_dialog_v1_set_modal(struct xdg_dialog_v1 *dialog)
+{
+    xdg_dialog_v1_set_modal(dialog);
+}
+
+void swl_xdg_dialog_v1_unset_modal(struct xdg_dialog_v1 *dialog)
+{
+    xdg_dialog_v1_unset_modal(dialog);
+}
+
+void swl_xdg_toplevel_drag_manager_v1_destroy(
+    struct xdg_toplevel_drag_manager_v1 *manager)
+{
+    xdg_toplevel_drag_manager_v1_destroy(manager);
+}
+
+struct xdg_toplevel_drag_v1 *swl_xdg_toplevel_drag_manager_v1_get_xdg_toplevel_drag(
+    struct xdg_toplevel_drag_manager_v1 *manager,
+    struct wl_data_source *source)
+{
+    return xdg_toplevel_drag_manager_v1_get_xdg_toplevel_drag(manager, source);
+}
+
+void swl_xdg_toplevel_drag_v1_destroy(struct xdg_toplevel_drag_v1 *drag)
+{
+    xdg_toplevel_drag_v1_destroy(drag);
+}
+
+void swl_xdg_toplevel_drag_v1_attach(
+    struct xdg_toplevel_drag_v1 *drag,
+    struct xdg_toplevel *toplevel,
+    int32_t x_offset,
+    int32_t y_offset)
+{
+    xdg_toplevel_drag_v1_attach(drag, toplevel, x_offset, y_offset);
+}
+
+void swl_ext_foreign_toplevel_list_v1_stop(
+    struct ext_foreign_toplevel_list_v1 *list)
+{
+    ext_foreign_toplevel_list_v1_stop(list);
+}
+
+void swl_ext_foreign_toplevel_list_v1_destroy(
+    struct ext_foreign_toplevel_list_v1 *list)
+{
+    ext_foreign_toplevel_list_v1_destroy(list);
+}
+
+void swl_ext_foreign_toplevel_handle_v1_destroy(
+    struct ext_foreign_toplevel_handle_v1 *handle)
+{
+    ext_foreign_toplevel_handle_v1_destroy(handle);
 }
 
 void swl_xdg_toplevel_icon_manager_v1_destroy(
