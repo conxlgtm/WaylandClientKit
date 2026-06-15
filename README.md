@@ -550,6 +550,12 @@ swift run CustomCursorSmoke
 swift run CursorAnimationSmoke -- --auto-close --print-summary
 swift run WindowIconSmoke
 swift run IdleInhibitSmoke
+swift run DialogSmoke -- --auto-close --print-summary
+swift run KeyboardShortcutsInhibitSmoke -- --auto-close --print-summary
+swift run ToplevelDragSmoke -- --auto-close --print-summary
+swift run PointerGesturesSmoke -- --auto-close --print-summary
+swift run ForeignToplevelListSmoke -- --auto-close --print-summary
+swift run OutputManagementSmoke -- --auto-close --print-summary
 swift run SystemBellSmoke
 swift run SurfaceRegionSmoke
 swift run DamageRegionSmoke
@@ -570,7 +576,12 @@ and relative-motion paths. Constraint logs distinguish one-shot defunct and
 persistent inactive lifecycle transitions. `CursorPolicySmoke` runs with
 focused-output cursor scale policy and logs named, hidden, and resize cursor
 requests. `CustomCursorSmoke`, `WindowIconSmoke`, `IdleInhibitSmoke`, and
-`SystemBellSmoke` exercise optional desktop-integration paths.
+`SystemBellSmoke` exercise optional desktop-integration paths. `DialogSmoke`,
+`KeyboardShortcutsInhibitSmoke`, `ToplevelDragSmoke`, and
+`PointerGesturesSmoke` cover dialog hints, shortcut inhibition, detachable
+toplevel drag, and gesture facts. `ForeignToplevelListSmoke` and
+`OutputManagementSmoke` remain capability/raw preview plumbing and do not claim
+event-backed public facts or monitor mutation.
 `SurfaceRegionSmoke`, `DamageRegionSmoke`, and `SubsurfaceSmoke` cover region,
 damage, and child-surface behavior for compositor evidence.
 

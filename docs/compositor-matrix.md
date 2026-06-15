@@ -73,6 +73,12 @@ example or manual probe has been run:
 | cursor scale policy | `CursorPolicySmoke` focused-output cursor scale logs |
 | window icon | `WindowIconSmoke` named, pixel, and reset operations |
 | idle inhibit | `IdleInhibitSmoke` create and destroy operations |
+| dialog hints | `DialogSmoke` create, modal, unmodal, and cleanup operations |
+| keyboard shortcut inhibition | `KeyboardShortcutsInhibitSmoke` request, active/inactive, and destroy operations |
+| toplevel drag | `ToplevelDragSmoke` capability and live button-serial attach/start result |
+| pointer gestures | `PointerGesturesSmoke` subscription and typed gesture events when hardware provides them |
+| foreign toplevel list | `ForeignToplevelListSmoke` capability and deferred/skip behavior |
+| output-management preview plumbing | `OutputManagementSmoke` capability and deferred/skip behavior; no monitor mutation by default |
 | system bell | `SystemBellSmoke` display/window ring operations |
 | activation | `XDGActivationSmoke` token request and activate request |
 | pointer lock/confine | `PointerCaptureSmoke` lock/confine lifecycle |
@@ -171,6 +177,22 @@ example, a manual example run, or an external framework harness.
 | KDE / KWin | auto pass(`ClientSideResizeChrome --auto-close --print-summary --duration-seconds 3`, `remainingWindows=0`); manual resize covered by managed GPU example | auto pass(`SerialActionsProbe --auto-close --print-summary --duration-seconds 3`, `buttonPresses=0`); manual pass(2026-06-11 live `seat=seat-10` button serials selected `move` and `window-menu`, logged locations/snapshots/results, and all request results were `threw=false`; resize covered by `GraphicsPreviewManagedGPUClear`; drag-source covered by `DataTransferSmoke`) | auto pass(`PointerCaptureSmoke --auto-close --print-summary --duration-seconds 3`, relative pointer v1 and constraints v1 available); manual pass(2026-06-11 auto-subscribed relative pointer, lock request activated `locked-pointer-1`, confine request activated `confined-pointer-1`, sustained relative motion logged, duplicate constraint request returned typed failure while active, inactive persistent cleanup, result pass) | auto pass(`TextInputSmoke --auto-close --print-summary --duration-seconds 3`, text-input v1 available, enable/disable clean, commits=0) | auto pass(keyboard fallback path present, no typed text entered) | auto pass(`DataTransferSmoke --auto-close --print-summary --duration-seconds 3`, clipboard v3, drag v3, primary v1, events=0, sources=0); manual pass(2026-06-11 clipboard/primary offers read text/plain;charset=utf-8, private KDE MIME filtered, drag source/drop/read/finish completed) | manual pass(2026-06-11 trusted right-click serial started drag source, target/action negotiated copy, 165 motion events, drop read 51 bytes, drop performed and finished action copy, cleanup pass) | Bounded examples closed without lifecycle callback crashes; popup-specific manual probe still not run | auto pass(`PresentationFeedbackAnimation --auto-close --print-summary --duration-seconds 3`, capability v2, frames=0, presented=0, discarded=0) | auto pass(`CursorPolicySmoke` cursor-shape v2 and `CustomCursorSmoke` custom image set); hidden/theme/manual pointer transitions still need visual confirmation | Active managed GPU clear-frame submission in both graphics preview examples; manual managed GPU resize/reconfigure pass(`GraphicsPreviewManagedGPUClear-resize-managed-refresh.log`, resize observed true, fallback none) | Auto-close feature examples exited cleanly after the subsurface example was fixed to report `blocked(frameCallbackOutstanding)` instead of crashing; 2026-06-11 pointer-lock/confine, data-transfer, and managed GPU resize manual closes cleaned up. |
 | Weston headless | Headless live/integration/gpu-preview smoke exited 0 | Headless smoke exited 0; manual interaction not possible in headless compositor | Headless smoke exited 0; manual lock/confine motion not possible in headless compositor | Headless smoke exited 0 | Headless smoke exited 0 where generated input is available | Headless smoke exited 0 | Headless smoke exited 0; drag-source/drop path needs desktop interaction | Headless smoke and integration closed cleanly | Headless smoke exited 0 | Headless smoke exited 0 | GPU preview fallback `dmabufUnavailable` | Headless live, integration, and GPU preview exited 0. |
 | Sway / wlroots | not run(feature-specific manual/auto examples not run inside nested Sway) | not run(feature-specific manual/auto examples not run inside nested Sway) | not run(feature-specific manual/auto examples not run inside nested Sway) | not run(feature-specific manual/auto examples not run inside nested Sway) | not run(feature-specific manual/auto examples not run inside nested Sway) | not run(feature-specific manual/auto examples not run inside nested Sway) | not run(feature-specific manual/auto examples not run inside nested Sway) | nested smoke and integration exited 0 | not run(feature-specific manual/auto examples not run inside nested Sway) | not run(feature-specific manual/auto examples not run inside nested Sway) | Active managed GPU clear-frame submission in both graphics preview examples inside nested Sway | Nested Sway launched with `WLR_BACKENDS=wayland`; smoke live/integration/gpu-preview and GPU examples exited 0. |
+
+KDE/KWin optional desktop/input addendum on 2026-06-15:
+`DialogSmoke --auto-close --print-summary --duration-seconds 3` passed with
+`xdg_wm_dialog_v1` v1, dialog creation, modal, unmodal, child close, parent
+close, and cleanup. `KeyboardShortcutsInhibitSmoke --auto-close --print-summary
+--duration-seconds 3` passed with shortcut-inhibit v1, `seat-10`, active event,
+destroy, and cleanup. `PointerGesturesSmoke --auto-close --print-summary
+--duration-seconds 3` passed subscription with pointer-gestures v3 on `seat-10`;
+no physical gesture event was generated during the bounded run.
+`ForeignToplevelListSmoke --auto-close --print-summary --duration-seconds 3`
+and `OutputManagementSmoke --auto-close --print-summary --duration-seconds 3`
+skipped cleanly because their capabilities were unavailable in this session.
+`ToplevelDragSmoke --auto-close --print-summary --duration-seconds 3` reported
+`xdg_toplevel_drag_manager_v1` v1 and waited for a live button serial;
+attach/start remains unproven until a manual press logs `start-toplevel-drag
+pass`.
 
 ## Diagonal Cursor Policy
 
