@@ -42,6 +42,9 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         lifecycle = .active(activeSession)
         eventHub = displayEventHub
         installToplevelDragCancellationHook(on: activeSession.dataTransferManager)
+        activeSession.onSeatRemoved = { [weak self] seatID in
+            self?.closeKeyboardShortcutsInhibitors(forSeat: seatID)
+        }
     }
 
     init(eventHub displayEventHub: DisplayEventHub) {

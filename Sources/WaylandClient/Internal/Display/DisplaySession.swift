@@ -16,6 +16,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
     package let dataTransferSourceWriter: ThreadedDataTransferSourceWriter
     private let dataTransferEventQueue = DataTransferEventQueue()
     package var pendingDataTransferDiagnostics: [DataTransferDiagnostic] = []
+    package var onSeatRemoved: (SeatID) -> Void = { _ in () }
     private var windowIDs = IDGenerator<WindowID>()
     private var popupIDs = IDGenerator<PopupID>()
     var subsurfaceIDs = IDGenerator<SubsurfaceID>()
@@ -389,6 +390,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
 
     private func processPendingSessionInputEvents() {
         let rawEvents = connection.drainInputEvents()
+        let handleSeatRemoved = onSeatRemoved
 
         inputCoordinator.processPendingSessionInputEvents(
             from: rawEvents,
@@ -398,6 +400,7 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
             onSeatRemoved: { [textInputManager, pointerCaptureManager] seatID in
                 textInputManager.removeSeat(seatID)
                 pointerCaptureManager.removeSeat(seatID)
+                handleSeatRemoved(seatID)
             },
             onPointerCapabilityLost: { [pointerCaptureManager] seatID in
                 pointerCaptureManager.removePointerCapability(seatID)
