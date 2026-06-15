@@ -268,13 +268,6 @@ Intentionally public:
 - `WaylandGraphicsAlphaModifier`
 - `WaylandGraphicsColorAlphaMode`
 - `WaylandGraphicsColorRepresentation`
-- `WaylandGraphicsDRMFormat`
-- `WaylandGraphicsDRMFormatModifier`
-- `WaylandGraphicsExternalBufferPlane`
-- `WaylandGraphicsExternalBufferPlanes`
-- `WaylandGraphicsExternalBufferDescriptor`
-- `WaylandGraphicsExternalSynchronization`
-- `WaylandGraphicsExternalAcquireSync`
 - `WaylandGraphicsXRGBColor`
 - `WaylandGraphicsClearFrame`
 - `WaylandGraphicsSubmittedFrame`
@@ -298,14 +291,12 @@ Current preview contract:
   frame, attempt a package-internal GPU clear-frame path, fall back to software
   when policy allows, submit arbitrary software drawing, return a typed frame
   result, and cancel or close resources without exposing raw graphics handles.
-- The external-buffer submission path accepts a move-only external dmabuf
-  descriptor value, imports it, commits it, tracks compositor release, and
-  cleans up late releases without exposing `wl_buffer`,
-  `zwp_linux_buffer_params_v1`, GBM, EGL, DRM, syncobj, or `OpaquePointer`
-  objects. Plane construction consumes an `OwnedFileDescriptor`, offset, stride,
-  and plane index, then hides the descriptor from public stored state. The
-  renderer owns rendering and buffer production; WaylandClientKit owns Wayland
-  import/commit/release lifetime.
+- The external-buffer import path is package-internal maintainer preview
+  plumbing. It can import a renderer-produced dmabuf descriptor, commit it,
+  track compositor release, and clean up late releases, but it is not public API
+  because the descriptor boundary carries DRM, dmabuf, and file-descriptor
+  facts. Public renderer-produced buffer submission is deferred until an opaque
+  preview-buffer or renderer-neutral descriptor boundary exists.
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
   submission, or release failure; display-level dmabuf advertisement alone is
@@ -324,12 +315,10 @@ Current preview contract:
   currently proves explicit sync and FIFO active. Commit timing remains an
   implementation path with typed fallback/failure evidence, not active live
   proof.
-- It does not expose raw Wayland proxies, EGL/GBM/DRM objects, syncobj handles,
-  SHM pools, scene rendering, swapchains, drawables, or raw
-  color-management/image-description protocol objects. `OwnedFileDescriptor`
-  remains part of the stable data-transfer APIs and is consumed by
-  `WaylandGraphicsPreview` external-buffer plane construction, but is not
-  exposed as a readable or mutable stored property.
+- It does not expose raw Wayland proxies, EGL/GBM/DRM objects, dmabuf
+  descriptors, syncobj handles, SHM pools, scene rendering, swapchains,
+  drawables, or raw color-management/image-description protocol objects.
+  `OwnedFileDescriptor` remains part of the stable data-transfer APIs.
 - Public frame metadata is intentionally narrow. Content type and presentation
   hint map to safe surface commit metadata when their protocols are available
   and `metadataPolicy` permits metadata. Preferred-but-unavailable metadata is
