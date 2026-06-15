@@ -1,30 +1,5 @@
 import WaylandRaw
 
-package struct DataTransferStartDragRequest {
-    package let seatID: SeatID
-    package let payloads: DataTransferSourcePayloadSet
-    package let actions: DragActionSet
-    package let serial: InputSerial
-    package let origin: any DataTransferDragOriginBinding
-    package let icon: DragIcon
-
-    package init(
-        seatID requestSeatID: SeatID,
-        payloads requestPayloads: DataTransferSourcePayloadSet,
-        actions requestActions: DragActionSet,
-        serial requestSerial: InputSerial,
-        origin requestOrigin: any DataTransferDragOriginBinding,
-        icon requestIcon: DragIcon
-    ) {
-        seatID = requestSeatID
-        payloads = requestPayloads
-        actions = requestActions
-        serial = requestSerial
-        origin = requestOrigin
-        icon = requestIcon
-    }
-}
-
 extension DataTransferManager {
     private enum DataSourceCallbackIdentity {
         case selection(ClipboardSourceIdentity)
@@ -127,6 +102,7 @@ extension DataTransferManager {
                 sourceBinding.offer(mimeType: mimeType)
             }
             sourceBinding.setDragActions(request.actions)
+            try request.beforeStartDrag?(sourceBinding)
             try store.insertSource(
                 binding: sourceBinding,
                 payloads: request.payloads,

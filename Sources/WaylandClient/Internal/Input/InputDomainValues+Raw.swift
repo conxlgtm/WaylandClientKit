@@ -153,12 +153,12 @@ extension PointerPinchGestureEvent {
                 time: WaylandTimestampMilliseconds(rawValue: time),
                 fingers: fingers
             )
-        case .update(let time, let dx, let dy, let scale, let rotation):
+        case .update(let update):
             self = .update(
-                time: WaylandTimestampMilliseconds(rawValue: time),
-                delta: PointerDelta(dx: dx.doubleValue, dy: dy.doubleValue),
-                scale: scale.doubleValue,
-                rotation: rotation.doubleValue
+                time: WaylandTimestampMilliseconds(rawValue: update.time),
+                delta: PointerDelta(dx: update.dx.doubleValue, dy: update.dy.doubleValue),
+                scale: update.scale.doubleValue,
+                rotation: update.rotation.doubleValue
             )
         case .end(let serial, let time, false):
             self = .end(

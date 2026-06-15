@@ -38,7 +38,10 @@ enum PointerGesturesSmoke {
 
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask { try await consumeDisplayEvents(display.events, window: window) }
-                group.addTask { try await consumeInputEvents(display.inputEvents, display: display, window: window) }
+                group.addTask {
+                    try await consumeInputEvents(
+                        display.inputEvents, display: display, window: window)
+                }
                 if let seconds = options.autoCloseSeconds {
                     group.addTask {
                         try await Task.sleep(for: .seconds(seconds))

@@ -13,6 +13,35 @@ struct DisplayToplevelDragRecord {
     }
 }
 
+struct DisplayToplevelDragStartRequest {
+    let windowID: WindowID
+    let configuration: DragSourceConfiguration
+    let seatID: SeatID
+    let serial: InputSerial
+    let icon: DragIcon
+    let offset: LogicalOffset
+
+    var dragStartRequest: DisplayStartDragRequest {
+        DisplayStartDragRequest(
+            windowID: windowID,
+            configuration: configuration,
+            seatID: seatID,
+            serial: serial,
+            icon: icon,
+            toplevelDragOffset: offset
+        )
+    }
+}
+
+struct DisplayStartDragRequest {
+    let windowID: WindowID
+    let configuration: DragSourceConfiguration
+    let seatID: SeatID
+    let serial: InputSerial
+    let icon: DragIcon
+    let toplevelDragOffset: LogicalOffset?
+}
+
 extension DisplayCore {
     func clipboardOffer(for seatID: SeatID) throws -> DataOfferSnapshot? {
         try withFatalFailureFinalization {
@@ -156,20 +185,134 @@ extension DisplayCore {
         serial: InputSerial,
         icon: DragIcon
     ) throws -> DataSourceSnapshot {
-        try withFatalFailureFinalization {
-            let activeSession = try requireSession()
-            let window = try requireOpenWindow(windowID)
-            let origin = try window.dataTransferDragOriginOnOwnerThread()
-            let source = try activeSession.startDragOnOwnerThread(
-                configuration,
+        try startDrag(
+            DisplayStartDragRequest(
+                windowID: windowID,
+                configuration: configuration,
                 seatID: seatID,
                 serial: serial,
+                icon: icon,
+                toplevelDragOffset: nil
+            )
+        ).source
+    }
+
+    func startToplevelDrag(
+        _ request: DisplayToplevelDragStartRequest
+    ) throws -> (source: DataSourceSnapshot, dragID: ToplevelDragID) {
+        let result = try startDrag(request.dragStartRequest)
+        guard let dragID = result.dragID else {
+            throw ClientError.display(.xdgToplevelDragUnavailable)
+        }
+
+        return (result.source, dragID)
+    }
+
+    private func startDrag(
+        _ request: DisplayStartDragRequest
+    ) throws -> (source: DataSourceSnapshot, dragID: ToplevelDragID?) {
+        try withFatalFailureFinalization {
+            let activeSession = try requireSession()
+            let window = try requireOpenWindow(request.windowID)
+            return try startDragOnOwnerThread(
+                request,
+                activeSession: activeSession,
+                window: window
+            )
+        }
+    }
+
+    private func startDragOnOwnerThread(
+        _ request: DisplayStartDragRequest,
+        activeSession: DisplaySession,
+        window: TopLevelWindow
+    ) throws -> (source: DataSourceSnapshot, dragID: ToplevelDragID?) {
+        let origin = try window.dataTransferDragOriginOnOwnerThread()
+        let manager = try bindToplevelDragManagerIfNeeded(
+            offset: request.toplevelDragOffset,
+            session: activeSession
+        )
+        defer { manager?.destroy() }
+
+        var rawDrag: RawXDGToplevelDrag?
+        let beforeStartDrag = toplevelDragSetupHook(
+            manager: manager,
+            window: window,
+            offset: request.toplevelDragOffset
+        ) { rawDrag = $0 }
+
+        do {
+            let source = try activeSession.startDragOnOwnerThread(
+                request.configuration,
+                seatID: request.seatID,
+                serial: request.serial,
                 origin: origin,
-                icon: icon
+                icon: request.icon,
+                beforeStartDrag: beforeStartDrag
+            )
+            let dragID = recordToplevelDragIfNeeded(
+                rawDrag: rawDrag,
+                request: request,
+                source: source
             )
             publishDrainedDataTransfer(from: activeSession)
-            return source
+            return (source, dragID)
+        } catch {
+            rawDrag?.destroy()
+            throw error
         }
+    }
+
+    private func bindToplevelDragManagerIfNeeded(
+        offset: LogicalOffset?,
+        session: DisplaySession
+    ) throws -> RawXDGToplevelDragManager? {
+        guard offset != nil else { return nil }
+        guard let manager = try session.connection.bindXDGToplevelDragManagerOneShot() else {
+            throw ClientError.display(.xdgToplevelDragUnavailable)
+        }
+        return manager
+    }
+
+    private func toplevelDragSetupHook(
+        manager: RawXDGToplevelDragManager?,
+        window: TopLevelWindow,
+        offset: LogicalOffset?,
+        recordRawDrag: @escaping (RawXDGToplevelDrag) -> Void
+    ) -> ((any DataTransferSourceBinding) throws -> Void)? {
+        guard let manager, let offset else { return nil }
+        return { sourceBinding in
+            let drag = try sourceBinding.createToplevelDrag(manager: manager)
+            do {
+                try window.attachToplevelDragOnOwnerThread(drag, offset: offset)
+                recordRawDrag(drag)
+            } catch {
+                drag.destroy()
+                throw error
+            }
+        }
+    }
+
+    private func recordToplevelDragIfNeeded(
+        rawDrag: RawXDGToplevelDrag?,
+        request: DisplayStartDragRequest,
+        source: DataSourceSnapshot
+    ) -> ToplevelDragID? {
+        guard let rawDrag else { return nil }
+
+        let dragID = toplevelDragIDs.next()
+        let record = DisplayToplevelDragRecord(
+            id: dragID,
+            windowID: request.windowID,
+            source: source.id.dragIdentity,
+            seatID: request.seatID,
+            serial: request.serial,
+            rawDrag: rawDrag
+        )
+        toplevelDragsByID[dragID] = record
+        toplevelDragIDsByWindowID[request.windowID, default: []].append(dragID)
+        closedToplevelDragIDs.remove(dragID)
+        return dragID
     }
 
     func cancelDragSource(id sourceID: DataSourceID) throws {
@@ -177,50 +320,6 @@ extension DisplayCore {
             let activeSession = try requireSession()
             try activeSession.cancelDragSourceOnOwnerThread(id: sourceID)
             publishDrainedDataTransfer(from: activeSession)
-        }
-    }
-
-    func createToplevelDrag(
-        windowID: WindowID,
-        sourceID: DataSourceID,
-        sourceIdentity: DragSourceIdentity,
-        seatID: SeatID,
-        serial: InputSerial,
-        offset: LogicalOffset
-    ) throws -> ToplevelDragID {
-        try withFatalFailureFinalization {
-            let window = try requireOpenWindow(windowID)
-            let session = try requireSession()
-            guard let manager = try session.connection.bindXDGToplevelDragManagerOneShot()
-            else {
-                throw ClientError.display(.xdgToplevelDragUnavailable)
-            }
-            defer { manager.destroy() }
-
-            let rawDrag = try session.createToplevelDragOnOwnerThread(
-                sourceID: sourceID,
-                manager: manager
-            )
-            do {
-                try window.attachToplevelDragOnOwnerThread(rawDrag, offset: offset)
-            } catch {
-                rawDrag.destroy()
-                throw error
-            }
-
-            let dragID = toplevelDragIDs.next()
-            let record = DisplayToplevelDragRecord(
-                id: dragID,
-                windowID: windowID,
-                source: sourceIdentity,
-                seatID: seatID,
-                serial: serial,
-                rawDrag: rawDrag
-            )
-            toplevelDragsByID[dragID] = record
-            toplevelDragIDsByWindowID[windowID, default: []].append(dragID)
-            closedToplevelDragIDs.remove(dragID)
-            return dragID
         }
     }
 
@@ -237,7 +336,7 @@ extension DisplayCore {
                 throw ClientError.display(.unknownToplevelDrag(dragID))
             }
 
-            closeToplevelDrag(dragID)
+            throw ClientError.display(.toplevelDragStillActive(dragID))
         }
     }
 

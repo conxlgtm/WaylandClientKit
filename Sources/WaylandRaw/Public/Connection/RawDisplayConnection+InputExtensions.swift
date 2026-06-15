@@ -33,9 +33,11 @@ extension RawDisplayConnection {
         -> RawKeyboardShortcutsInhibitManager?
     {
         preconditionIsOwnerThread()
-        guard let global = optionalGlobal(
-            named: "zwp_keyboard_shortcuts_inhibit_manager_v1"
-        ) else {
+        guard
+            let global = optionalGlobal(
+                named: "zwp_keyboard_shortcuts_inhibit_manager_v1"
+            )
+        else {
             return nil
         }
 

@@ -20,6 +20,7 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
     var failingDragIcon: DragIcon?
     var sourceBindingIDOverride: DataSourceID?
     var sourceBindingProtocolVersion: RawVersion = 3
+    var onStartDrag: (() -> Void)?
     var failingWriteDescriptors: [Int32: DataTransferError] {
         get { sourceDescriptorRecorder.failingWriteDescriptors }
         set { sourceDescriptorRecorder.failingWriteDescriptors = newValue }
@@ -65,6 +66,7 @@ final class RecordingDataTransferBackend: DataTransferManagerBackend {
         }
 
         let binding = RecordingDataTransferDeviceBinding(
+            onStartDrag: onStartDrag,
             onEvent: onEvent
         )
         bindings[seatID] = binding
@@ -308,13 +310,16 @@ final class RecordingDataTransferDeviceBinding: DataTransferDeviceBinding {
     var selections: [Selection] = []
     var dragStarts: [DragStart] = []
 
+    private let onStartDrag: (() -> Void)?
     private let onEvent: (RawDataDeviceEvent) -> Void
 
     init(
         protocolVersion bindingProtocolVersion: RawVersion = 3,
+        onStartDrag startDragHandler: (() -> Void)? = nil,
         onEvent eventHandler: @escaping (RawDataDeviceEvent) -> Void
     ) {
         protocolVersion = bindingProtocolVersion
+        onStartDrag = startDragHandler
         onEvent = eventHandler
     }
 
@@ -336,6 +341,7 @@ final class RecordingDataTransferDeviceBinding: DataTransferDeviceBinding {
         guard let recordingOrigin else {
             preconditionFailure("test drag origin is missing")
         }
+        onStartDrag?()
         let recordingIcon = icon as? RecordingDataTransferDragIconBinding
         dragStarts.append(
             DragStart(

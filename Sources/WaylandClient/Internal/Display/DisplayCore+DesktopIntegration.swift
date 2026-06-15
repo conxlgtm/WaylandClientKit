@@ -73,6 +73,7 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let child = try requireOpenWindow(childWindowID)
             let parent = try requireOpenWindow(parentWindowID)
+            try validateDialogParent(childWindowID: childWindowID, parentWindowID: parentWindowID)
             guard windowDialogIDByChildWindowID[childWindowID] == nil else {
                 throw ClientError.display(.dialogAlreadyExists(childWindowID))
             }
@@ -144,13 +145,14 @@ extension DisplayCore {
         try withFatalFailureFinalization {
             let window = try requireOpenWindow(windowID)
             let session = try requireSession()
+            try validateKeyboardShortcutsInhibitorIsNew(windowID: windowID, seatID: seatID)
+            let seat = try session.rawSeatOnOwnerThread(seatID: seatID)
             guard let manager = try session.connection.bindKeyboardShortcutsInhibitManagerOneShot()
             else {
                 throw ClientError.display(.keyboardShortcutsInhibitUnavailable)
             }
             defer { manager.destroy() }
 
-            let seat = try session.rawSeatOnOwnerThread(seatID: seatID)
             let inhibitorID = keyboardShortcutsInhibitorIDs.next()
             let inhibitor = try manager.inhibitShortcuts(
                 surface: window.rawSurfaceOnOwnerThread,
@@ -334,6 +336,49 @@ extension DisplayCore {
         closedKeyboardShortcutsInhibitorIDs.formUnion(records.map(\.id))
         for record in records {
             record.destroy()
+        }
+    }
+
+    private func validateDialogParent(
+        childWindowID: WindowID,
+        parentWindowID: WindowID
+    ) throws {
+        guard childWindowID != parentWindowID,
+            !dialogWindow(parentWindowID, isDescendantOf: childWindowID)
+        else {
+            throw ClientError.display(
+                .invalidDialogParent(child: childWindowID, parent: parentWindowID)
+            )
+        }
+    }
+
+    private func dialogWindow(_ windowID: WindowID, isDescendantOf ancestorID: WindowID) -> Bool {
+        var currentID = windowID
+        var visited: Set<WindowID> = []
+        while visited.insert(currentID).inserted,
+            let dialogID = windowDialogIDByChildWindowID[currentID],
+            let record = windowDialogsByID[dialogID]
+        {
+            if record.parentWindowID == ancestorID {
+                return true
+            }
+            currentID = record.parentWindowID
+        }
+
+        return false
+    }
+
+    private func validateKeyboardShortcutsInhibitorIsNew(
+        windowID: WindowID,
+        seatID: SeatID
+    ) throws {
+        let duplicate = keyboardShortcutsInhibitorsByID.values.contains { record in
+            record.windowID == windowID && record.seatID == seatID
+        }
+        guard !duplicate else {
+            throw ClientError.display(
+                .keyboardShortcutsAlreadyInhibited(window: windowID, seat: seatID)
+            )
         }
     }
 }

@@ -84,6 +84,7 @@ targets. They are not public `WaylandClient` API.
 - ``DragSource``
 - ``DragIcon``
 - ``ToplevelDrag``
+- ``StartedToplevelDrag``
 
 ### Text Input
 
@@ -106,13 +107,6 @@ targets. They are not public `WaylandClient` API.
 - ``IdleInhibitor``
 - ``WindowDialog``
 - ``KeyboardShortcutsInhibitor``
-- ``ForeignToplevelFacts``
-
-### Output Management Preview
-
-- ``OutputManagementSnapshot``
-- ``OutputHead``
-- ``OutputConfigurationProposal``
 
 ### Capabilities
 

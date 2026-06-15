@@ -26,10 +26,12 @@ package final class RawXDGDialogManager {
     }
 
     package func createDialog(for topLevel: RawXDGTopLevel) throws -> RawXDGDialog {
-        guard let dialogPointer = unsafe swl_xdg_wm_dialog_v1_get_xdg_dialog(
-            pointer,
-            topLevel.pointer
-        ) else {
+        guard
+            let dialogPointer = unsafe swl_xdg_wm_dialog_v1_get_xdg_dialog(
+                pointer,
+                topLevel.pointer
+            )
+        else {
             throw RuntimeError.bindFailed("xdg_dialog_v1")
         }
 
@@ -107,10 +109,12 @@ package final class RawXDGToplevelDragManager {
     }
 
     package func createToplevelDrag(source: RawDataSource) throws -> RawXDGToplevelDrag {
-        guard let dragPointer = unsafe swl_xdg_toplevel_drag_manager_v1_get_xdg_toplevel_drag(
-            pointer,
-            source.pointer
-        ) else {
+        guard
+            let dragPointer = unsafe swl_xdg_toplevel_drag_manager_v1_get_xdg_toplevel_drag(
+                pointer,
+                source.pointer
+            )
+        else {
             throw RuntimeError.bindFailed("xdg_toplevel_drag_v1")
         }
 

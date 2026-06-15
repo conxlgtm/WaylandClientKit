@@ -361,18 +361,22 @@ public struct Window: Sendable, Hashable {
         )
     }
 
-    public func attachToToplevelDrag(
-        source: DragSource,
+    public func startToplevelDrag(
+        source configuration: DragSourceConfiguration,
         seatID: SeatID,
         serial: InputSerial,
+        icon: DragIcon = .none,
         offset: LogicalOffset = .zero
-    ) async throws -> ToplevelDrag {
-        try await display.attachToToplevelDrag(
-            window: self,
-            source: source,
-            seatID: seatID,
-            serial: serial,
-            offset: offset
+    ) async throws -> StartedToplevelDrag {
+        try await display.startToplevelDrag(
+            WindowToplevelDragStartRequest(
+                window: self,
+                configuration: configuration,
+                seatID: seatID,
+                serial: serial,
+                icon: icon,
+                offset: offset
+            )
         )
     }
 

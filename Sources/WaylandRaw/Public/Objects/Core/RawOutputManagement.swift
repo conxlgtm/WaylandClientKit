@@ -26,10 +26,12 @@ package final class RawWlrOutputManager {
     }
 
     package func createConfiguration(serial: UInt32) throws -> RawWlrOutputConfiguration {
-        guard let configuration = unsafe swl_zwlr_output_manager_v1_create_configuration(
-            pointer,
-            serial
-        ) else {
+        guard
+            let configuration = unsafe swl_zwlr_output_manager_v1_create_configuration(
+                pointer,
+                serial
+            )
+        else {
             throw RuntimeError.bindFailed("zwlr_output_configuration_v1")
         }
 
@@ -115,10 +117,12 @@ package final class RawWlrOutputConfiguration {
     }
 
     package func enable(head: RawWlrOutputHead) throws -> RawWlrOutputConfigurationHead {
-        guard let configurationHead = unsafe swl_zwlr_output_configuration_v1_enable_head(
-            pointer,
-            head.pointer
-        ) else {
+        guard
+            let configurationHead = unsafe swl_zwlr_output_configuration_v1_enable_head(
+                pointer,
+                head.pointer
+            )
+        else {
             throw RuntimeError.bindFailed("zwlr_output_configuration_head_v1")
         }
 

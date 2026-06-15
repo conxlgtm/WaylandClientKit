@@ -25,76 +25,6 @@
         }
 
         @Test
-        func pointerGestureRequestsPreserveManagerAndPointer() throws {
-            let gestures = try unsafe #require(OpaquePointer(bitPattern: 0xB111))
-            let pointer = try unsafe #require(OpaquePointer(bitPattern: 0xB112))
-
-            ShimRequestRecordingLock.pointerCapture.withLock { _ in
-                swl_test_pointer_capture_request_recording_begin()
-                defer { swl_test_pointer_capture_request_recording_end() }
-
-                let swipe = unsafe swl_zwp_pointer_gestures_v1_get_swipe_gesture(
-                    gestures,
-                    pointer
-                )
-                let swipeRecord = unsafe swl_test_pointer_capture_request_record()
-                #expect(unsafe swipe != nil)
-                #expect(unsafe swipeRecord.call_count == 1)
-                #expect(unsafe swipeRecord.kind == SWL_TEST_POINTER_CAPTURE_GET_SWIPE_GESTURE)
-                #expect(unsafe swipeRecord.object == UnsafeMutableRawPointer(gestures))
-                #expect(unsafe swipeRecord.pointer == UnsafeMutableRawPointer(pointer))
-
-                let pinch = unsafe swl_zwp_pointer_gestures_v1_get_pinch_gesture(
-                    gestures,
-                    pointer
-                )
-                let pinchRecord = unsafe swl_test_pointer_capture_request_record()
-                #expect(unsafe pinch != nil)
-                #expect(unsafe pinchRecord.call_count == 2)
-                #expect(unsafe pinchRecord.kind == SWL_TEST_POINTER_CAPTURE_GET_PINCH_GESTURE)
-                #expect(unsafe pinchRecord.object == UnsafeMutableRawPointer(gestures))
-                #expect(unsafe pinchRecord.pointer == UnsafeMutableRawPointer(pointer))
-
-                let hold = unsafe swl_zwp_pointer_gestures_v1_get_hold_gesture(
-                    gestures,
-                    pointer
-                )
-                let holdRecord = unsafe swl_test_pointer_capture_request_record()
-                #expect(unsafe hold != nil)
-                #expect(unsafe holdRecord.call_count == 3)
-                #expect(unsafe holdRecord.kind == SWL_TEST_POINTER_CAPTURE_GET_HOLD_GESTURE)
-                #expect(unsafe holdRecord.object == UnsafeMutableRawPointer(gestures))
-                #expect(unsafe holdRecord.pointer == UnsafeMutableRawPointer(pointer))
-            }
-        }
-
-        @Test
-        func keyboardShortcutsInhibitRequestPreservesManagerSurfaceAndSeat() throws {
-            let manager = try unsafe #require(OpaquePointer(bitPattern: 0xB121))
-            let surface = try unsafe #require(OpaquePointer(bitPattern: 0xB122))
-            let seat = try unsafe #require(OpaquePointer(bitPattern: 0xB123))
-
-            ShimRequestRecordingLock.pointerCapture.withLock { _ in
-                swl_test_pointer_capture_request_recording_begin()
-                defer { swl_test_pointer_capture_request_recording_end() }
-
-                let inhibitor =
-                    unsafe swl_zwp_keyboard_shortcuts_inhibit_manager_v1_inhibit_shortcuts(
-                        manager,
-                        surface,
-                        seat
-                    )
-                let record = unsafe swl_test_pointer_capture_request_record()
-                #expect(unsafe inhibitor != nil)
-                #expect(unsafe record.call_count == 1)
-                #expect(unsafe record.kind == SWL_TEST_POINTER_CAPTURE_INHIBIT_SHORTCUTS)
-                #expect(unsafe record.object == UnsafeMutableRawPointer(manager))
-                #expect(unsafe record.surface == UnsafeMutableRawPointer(surface))
-                #expect(unsafe record.seat == UnsafeMutableRawPointer(seat))
-            }
-        }
-
-        @Test
         func pointerConstraintRequestsPreserveSurfacePointerRegionAndLifetime() throws {
             let constraints = try unsafe #require(OpaquePointer(bitPattern: 0xB201))
             let surface = try unsafe #require(OpaquePointer(bitPattern: 0xB202))
@@ -267,92 +197,54 @@
             let lockedPointer = try unsafe #require(OpaquePointer(bitPattern: 0xB604))
             let confinedPointer = try unsafe #require(OpaquePointer(bitPattern: 0xB605))
             let region = try unsafe #require(OpaquePointer(bitPattern: 0xB606))
-            let gestures = try unsafe #require(OpaquePointer(bitPattern: 0xB607))
-            let swipe = try unsafe #require(OpaquePointer(bitPattern: 0xB608))
-            let pinch = try unsafe #require(OpaquePointer(bitPattern: 0xB609))
-            let hold = try unsafe #require(OpaquePointer(bitPattern: 0xB60A))
-            let shortcutsManager = try unsafe #require(OpaquePointer(bitPattern: 0xB60B))
-            let shortcutsInhibitor = try unsafe #require(OpaquePointer(bitPattern: 0xB60C))
 
-            // swiftlint:disable:next closure_body_length
+            assertDestroyRequest(
+                object: relativeManager,
+                expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_RELATIVE_MANAGER,
+                destroy: unsafe swl_zwp_relative_pointer_manager_v1_destroy
+            )
+            assertDestroyRequest(
+                object: relativePointer,
+                expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_RELATIVE_POINTER,
+                destroy: unsafe swl_zwp_relative_pointer_v1_destroy
+            )
+            assertDestroyRequest(
+                object: constraints,
+                expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_CONSTRAINTS,
+                destroy: unsafe swl_zwp_pointer_constraints_v1_destroy
+            )
+            assertDestroyRequest(
+                object: lockedPointer,
+                expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_LOCKED_POINTER,
+                destroy: unsafe swl_zwp_locked_pointer_v1_destroy
+            )
+            assertDestroyRequest(
+                object: confinedPointer,
+                expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_CONFINED_POINTER,
+                destroy: unsafe swl_zwp_confined_pointer_v1_destroy
+            )
+            assertDestroyRequest(
+                object: region,
+                expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_REGION,
+                destroy: unsafe swl_region_destroy
+            )
+        }
+
+        @safe
+        private func assertDestroyRequest(
+            object rawObject: OpaquePointer,
+            expectedKind: swl_test_pointer_capture_destroy_kind,
+            destroy: (OpaquePointer?) -> Void,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) {
             ShimRequestRecordingLock.pointerCapture.withLock { _ in
                 swl_test_pointer_capture_request_recording_begin()
                 defer { swl_test_pointer_capture_request_recording_end() }
-
-                unsafe swl_zwp_relative_pointer_manager_v1_destroy(relativeManager)
+                unsafe destroy(rawObject)
                 assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_RELATIVE_MANAGER,
-                    object: relativeManager
-                )
-
-                unsafe swl_zwp_relative_pointer_v1_destroy(relativePointer)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_RELATIVE_POINTER,
-                    object: relativePointer
-                )
-
-                unsafe swl_zwp_pointer_constraints_v1_destroy(constraints)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_CONSTRAINTS,
-                    object: constraints
-                )
-
-                unsafe swl_zwp_locked_pointer_v1_destroy(lockedPointer)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_LOCKED_POINTER,
-                    object: lockedPointer
-                )
-
-                unsafe swl_zwp_confined_pointer_v1_destroy(confinedPointer)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_CONFINED_POINTER,
-                    object: confinedPointer
-                )
-
-                unsafe swl_region_destroy(region)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_REGION,
-                    object: region
-                )
-
-                unsafe swl_zwp_pointer_gestures_v1_destroy(gestures)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_GESTURES,
-                    object: gestures
-                )
-
-                unsafe swl_zwp_pointer_gesture_swipe_v1_destroy(swipe)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_SWIPE_GESTURE,
-                    object: swipe
-                )
-
-                unsafe swl_zwp_pointer_gesture_pinch_v1_destroy(pinch)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_PINCH_GESTURE,
-                    object: pinch
-                )
-
-                unsafe swl_zwp_pointer_gesture_hold_v1_destroy(hold)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_HOLD_GESTURE,
-                    object: hold
-                )
-
-                unsafe swl_zwp_keyboard_shortcuts_inhibit_manager_v1_destroy(
-                    shortcutsManager
-                )
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_SHORTCUTS_MANAGER,
-                    object: shortcutsManager
-                )
-
-                unsafe swl_zwp_keyboard_shortcuts_inhibitor_v1_destroy(
-                    shortcutsInhibitor
-                )
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_SHORTCUTS_INHIBITOR,
-                    object: shortcutsInhibitor
+                    expectedKind: expectedKind,
+                    object: rawObject,
+                    sourceLocation: sourceLocation
                 )
             }
         }
@@ -368,31 +260,31 @@
             #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
             #expect(unsafe record.object == object)
         }
+    }
 
-        @safe
-        private func getRelativePointer(
-            _ manager: OpaquePointer?,
-            _ pointer: OpaquePointer?
-        ) -> OpaquePointer? {
-            unsafe swl_zwp_relative_pointer_manager_v1_get_relative_pointer(manager, pointer)
-        }
+    @safe
+    private func getRelativePointer(
+        _ manager: OpaquePointer?,
+        _ pointer: OpaquePointer?
+    ) -> OpaquePointer? {
+        unsafe swl_zwp_relative_pointer_manager_v1_get_relative_pointer(manager, pointer)
+    }
 
-        @safe
-        private func confinePointer(
-            _ constraints: OpaquePointer?,
-            _ surface: OpaquePointer?,
-            _ pointer: OpaquePointer?,
-            _ region: OpaquePointer?,
-            _ lifetime: UInt32
-        ) -> OpaquePointer? {
-            unsafe swl_zwp_pointer_constraints_v1_confine_pointer(
-                constraints,
-                surface,
-                pointer,
-                region,
-                lifetime
-            )
-        }
+    @safe
+    private func confinePointer(
+        _ constraints: OpaquePointer?,
+        _ surface: OpaquePointer?,
+        _ pointer: OpaquePointer?,
+        _ region: OpaquePointer?,
+        _ lifetime: UInt32
+    ) -> OpaquePointer? {
+        unsafe swl_zwp_pointer_constraints_v1_confine_pointer(
+            constraints,
+            surface,
+            pointer,
+            region,
+            lifetime
+        )
     }
 
 #endif

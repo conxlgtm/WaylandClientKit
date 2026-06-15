@@ -95,7 +95,6 @@ enum KeyboardShortcutsInhibitSmoke {
         do {
             let inhibitor = try await window.inhibitKeyboardShortcuts(seatID: seatID)
             log("operation: inhibit pass id=\(inhibitor.id) seat=\(seatID)")
-            log("events: active/inactive callbacks unavailable in preview")
             try await inhibitor.destroy()
             log("operation: destroy pass")
         } catch {

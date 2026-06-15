@@ -92,7 +92,7 @@ Current experimental baseline:
   redraw
 - static and animated custom cursor images
 - desktop integration hooks for toplevel icons, idle inhibition, system bell,
-  xdg-dialog hints, keyboard-shortcut inhibition, toplevel drag attach, and
+  xdg-dialog hints, keyboard-shortcut inhibition, toplevel drag start, and
   read-only foreign toplevel facts
 - wlroots output-management preview snapshots with mutation/test requests
   rejected until the manager serial lifecycle is modeled

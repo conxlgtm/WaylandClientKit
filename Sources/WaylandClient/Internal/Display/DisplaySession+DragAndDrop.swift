@@ -56,7 +56,8 @@ extension DisplaySession {
         seatID: SeatID,
         serial: InputSerial,
         origin: any DataTransferDragOriginBinding,
-        icon: DragIcon
+        icon: DragIcon,
+        beforeStartDrag: ((any DataTransferSourceBinding) throws -> Void)? = nil
     ) throws -> DataSourceSnapshot {
         connection.preconditionIsOwnerThread()
         try processClipboardDataTransferState()
@@ -67,7 +68,8 @@ extension DisplaySession {
                 actions: configuration.actions,
                 serial: serial,
                 origin: origin,
-                icon: icon
+                icon: icon,
+                beforeStartDrag: beforeStartDrag
             )
         )
     }
@@ -76,14 +78,5 @@ extension DisplaySession {
         connection.preconditionIsOwnerThread()
         try processClipboardDataTransferState()
         try dataTransferManager.cancelDragSource(id: sourceID)
-    }
-
-    package func createToplevelDragOnOwnerThread(
-        sourceID: DataSourceID,
-        manager: RawXDGToplevelDragManager
-    ) throws -> RawXDGToplevelDrag {
-        connection.preconditionIsOwnerThread()
-        try processClipboardDataTransferState()
-        return try dataTransferManager.createToplevelDrag(sourceID: sourceID, manager: manager)
     }
 }

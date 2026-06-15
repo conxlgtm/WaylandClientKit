@@ -29,10 +29,8 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     var keyboardShortcutsInhibitorIDs = IDGenerator<KeyboardShortcutsInhibitorID>()
     var keyboardShortcutsInhibitorsByID:
         [KeyboardShortcutsInhibitorID: DisplayKeyboardShortcutsInhibitorRecord] = [:]
-    var keyboardShortcutsInhibitorIDsByWindowID:
-        [WindowID: [KeyboardShortcutsInhibitorID]] = [:]
-    var keyboardShortcutsInhibitorIDsBySeatID:
-        [SeatID: [KeyboardShortcutsInhibitorID]] = [:]
+    var keyboardShortcutsInhibitorIDsByWindowID: [WindowID: [KeyboardShortcutsInhibitorID]] = [:]
+    var keyboardShortcutsInhibitorIDsBySeatID: [SeatID: [KeyboardShortcutsInhibitorID]] = [:]
     var closedKeyboardShortcutsInhibitorIDs: Set<KeyboardShortcutsInhibitorID> = []
     private var inputSerialActionIDs = IDGenerator<InputSerialActionID>()
     private var inputSerialActionHandlers: [InputSerialActionID: InputSerialActionHandler] = [:]

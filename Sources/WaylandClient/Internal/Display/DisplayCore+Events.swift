@@ -65,8 +65,8 @@ extension DisplayCore {
     }
 }
 
-private extension DisplayCore {
-    func cleanupToplevelDrags(after event: DataTransferEvent) {
+extension DisplayCore {
+    private func cleanupToplevelDrags(after event: DataTransferEvent) {
         switch event {
         case .dragSourceCancelled(let source),
             .dragSourceDropPerformed(let source):

@@ -42,7 +42,9 @@ enum ToplevelDragSmoke {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask { try await consumeDisplayEvents(display.events, window: window) }
                 group.addTask { try await consumeInputEvents(display.inputEvents, window: window) }
-                group.addTask { try await consumeDataTransferEvents(display.dataTransferEvents) }
+                group.addTask {
+                    try await consumeDataTransferEvents(display.dataTransferEvents, window: window)
+                }
                 if let seconds = options.autoCloseSeconds {
                     group.addTask {
                         try await Task.sleep(for: .seconds(seconds))
@@ -89,11 +91,9 @@ enum ToplevelDragSmoke {
 
             switch event.kind {
             case .pointer(.button(let button))
-                where !attempted && button.state == .pressed && button.button == leftButton:
+            where !attempted && button.state == .pressed && button.button == leftButton:
                 attempted = true
                 await startToplevelDrag(window: window, seatID: event.seatID, serial: button.serial)
-                await window.close()
-                return
             default:
                 break
             }
@@ -101,11 +101,16 @@ enum ToplevelDragSmoke {
     }
 
     nonisolated private static func consumeDataTransferEvents(
-        _ events: DataTransferEvents
+        _ events: DataTransferEvents,
+        window: Window
     ) async throws {
         var iterator = events.makeAsyncIterator()
         while !Task.isCancelled, let event = try await iterator.next() {
             log("data-transfer event \(event)")
+            if event.isSourceDragTerminal {
+                await window.close()
+                return
+            }
         }
     }
 
@@ -115,7 +120,7 @@ enum ToplevelDragSmoke {
         serial: InputSerial
     ) async {
         do {
-            let source = try await window.startDrag(
+            let started = try await window.startToplevelDrag(
                 source: try DragSourceConfiguration.data(
                     mimeType: .plainText,
                     Data("WaylandClientKit toplevel drag smoke".utf8),
@@ -125,17 +130,11 @@ enum ToplevelDragSmoke {
                 serial: serial,
                 icon: .none
             )
-            log("operation: start-drag-source pass source=\(source.identity)")
-            let drag = try await window.attachToToplevelDrag(
-                source: source,
-                seatID: seatID,
-                serial: serial
+            log(
+                "operation: start-toplevel-drag pass source=\(started.source.identity) id=\(started.drag.id) seat=\(seatID) serial=\(serial)"
             )
-            log("operation: attach pass id=\(drag.id) seat=\(seatID) serial=\(serial)")
-            try await drag.destroy()
-            log("operation: destroy-drag pass")
         } catch {
-            log("operation: attach failed error=\(error)")
+            log("operation: start-toplevel-drag failed error=\(error)")
         }
     }
 
@@ -160,5 +159,18 @@ enum ToplevelDragSmoke {
 
     nonisolated private static func log(_ message: String) {
         print("[ToplevelDragSmoke] \(message)")
+    }
+}
+
+extension DataTransferEvent {
+    nonisolated fileprivate var isSourceDragTerminal: Bool {
+        switch self {
+        case .dragSourceCancelled,
+            .dragSourceDropPerformed,
+            .dragSourceFinished:
+            true
+        default:
+            false
+        }
     }
 }

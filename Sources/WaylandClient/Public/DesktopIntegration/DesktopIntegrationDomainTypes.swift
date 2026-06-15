@@ -258,11 +258,6 @@ public struct KeyboardShortcutsInhibitorID:
     }
 }
 
-public enum KeyboardShortcutsInhibitorEvent: Equatable, Sendable {
-    case active(KeyboardShortcutsInhibitorID)
-    case inactive(KeyboardShortcutsInhibitorID)
-}
-
 public struct KeyboardShortcutsInhibitor: Sendable, Hashable, Identifiable {
     public let id: KeyboardShortcutsInhibitorID
     public let windowID: WindowID
