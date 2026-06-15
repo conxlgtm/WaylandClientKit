@@ -6,9 +6,10 @@ substrate code without taking on a widget toolkit, scene graph, or renderer.
 WaylandClientKit's public `WaylandClient` API covers display connection lifetime,
 window and popup surfaces, software rendering through shared memory, input
 events, keyboard interpretation, relative pointer and pointer constraints,
-pointer warp requests, tablet input, cursor requests, data transfer,
-text-input sessions, XDG activation,
-presentation feedback, output topology facts, diagnostics, and capability
+pointer gestures, pointer warp requests, tablet input, cursor requests, data
+transfer, text-input sessions, XDG activation, desktop relationship hints,
+presentation feedback, output topology and output-management preview facts,
+diagnostics, and capability
 reporting.
 
 GPU allocation and presentation experiments live in package-internal preview
@@ -61,6 +62,8 @@ targets. They are not public `WaylandClient` API.
 - ``PointerEvent``
 - ``RelativePointerMotionEvent``
 - ``RelativePointerSubscription``
+- ``PointerGestureSubscription``
+- ``PointerGestureEvent``
 - ``PointerConstraint``
 - ``PointerConstraintLifecycleEvent``
 - ``PointerCaptureError``
@@ -80,6 +83,7 @@ targets. They are not public `WaylandClient` API.
 - ``DragOffer``
 - ``DragSource``
 - ``DragIcon``
+- ``ToplevelDrag``
 
 ### Text Input
 
@@ -100,6 +104,15 @@ targets. They are not public `WaylandClient` API.
 - ``ActivationError``
 - ``WindowIcon``
 - ``IdleInhibitor``
+- ``WindowDialog``
+- ``KeyboardShortcutsInhibitor``
+- ``ForeignToplevelFacts``
+
+### Output Management Preview
+
+- ``OutputManagementSnapshot``
+- ``OutputHead``
+- ``OutputConfigurationProposal``
 
 ### Capabilities
 

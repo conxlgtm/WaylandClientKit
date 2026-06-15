@@ -71,6 +71,12 @@ Intentionally public:
 - public relative pointer and pointer constraint payloads
 - `RelativePointerSubscription`
 - `RelativePointerSubscriptionID`
+- `PointerGestureSubscription`
+- `PointerGestureSubscriptionID`
+- `PointerGestureEvent`
+- `PointerSwipeGestureEvent`
+- `PointerPinchGestureEvent`
+- `PointerHoldGestureEvent`
 - `PointerConstraint`
 - `PointerConstraintID`
 - `PointerConstraintRegion`
@@ -98,6 +104,8 @@ Intentionally public:
 - `PrimarySelectionEvent`
 - `DragOffer`
 - `DragSource`
+- `ToplevelDrag`
+- `ToplevelDragID`
 - `DragIcon`
 - `DragIconImage`
 - `DragOfferIdentity`
@@ -464,6 +472,18 @@ Notes:
 - `WindowDecorationPreference.preferServerSide` is the default because WaylandClientKit
   does not draw client-side titlebars. `preferClientSide` requests no server-side
   decorations. Applications remain responsible for any custom chrome they want.
+- `WindowDialog`, `KeyboardShortcutsInhibitor`, and `ToplevelDrag` expose
+  protocol-shaped desktop relationship requests only. WaylandClientKit does not
+  implement modal event filtering, sheet/alert behavior, shortcut policy, or
+  drag/drop policy.
+- `ForeignToplevelFacts` and `ForeignToplevelListEvent` are read-only and
+  privacy-sensitive. Titles and app IDs are optional observations and no
+  close/minimize/focus/control API is public.
+- `OutputManagementSnapshot`, `OutputHead`, and `OutputConfigurationProposal`
+  are preview output-management API. The current public surface lists
+  wlroots-family output facts and rejects test/apply with typed unsupported
+  operation errors until manager serial and transaction lifecycle support is
+  implemented.
 - `WaylandDisplay.withConnection` does not eagerly require a cursor theme to load.
   Cursor theme loading is deferred until a visible cursor image is first needed.
 - `WaylandDisplay.withConnection`, `Window.show`, and `PopupSurface.show` use finite
