@@ -285,6 +285,11 @@ private final class LiveDataTransferSourceBinding: DataTransferSourceBinding {
         source.setActions(actions.rawDataDeviceDNDAction)
     }
 
+    func createToplevelDrag(manager: RawXDGToplevelDragManager) throws -> RawXDGToplevelDrag {
+        precondition(!isDestroyed, "data transfer source binding was already destroyed")
+        return try manager.createToplevelDrag(source: source)
+    }
+
     func attachDragIcon(_ icon: (any DataTransferDragIconBinding)?) {
         precondition(!isDestroyed, "data transfer source binding was already destroyed")
         dragIcon = icon

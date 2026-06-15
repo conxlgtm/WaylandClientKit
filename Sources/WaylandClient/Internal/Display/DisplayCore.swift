@@ -17,6 +17,23 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     var idleInhibitorsByID: [IdleInhibitorID: DisplayIdleInhibitorRecord] = [:]
     var idleInhibitorIDsByWindowID: [WindowID: [IdleInhibitorID]] = [:]
     var closedIdleInhibitorIDs: Set<IdleInhibitorID> = []
+    var windowDialogIDs = IDGenerator<WindowDialogID>()
+    var windowDialogsByID: [WindowDialogID: DisplayWindowDialogRecord] = [:]
+    var windowDialogIDByChildWindowID: [WindowID: WindowDialogID] = [:]
+    var windowDialogIDsByParentWindowID: [WindowID: [WindowDialogID]] = [:]
+    var closedWindowDialogIDs: Set<WindowDialogID> = []
+    var toplevelDragIDs = IDGenerator<ToplevelDragID>()
+    var toplevelDragsByID: [ToplevelDragID: DisplayToplevelDragRecord] = [:]
+    var toplevelDragIDsByWindowID: [WindowID: [ToplevelDragID]] = [:]
+    var closedToplevelDragIDs: Set<ToplevelDragID> = []
+    var keyboardShortcutsInhibitorIDs = IDGenerator<KeyboardShortcutsInhibitorID>()
+    var keyboardShortcutsInhibitorsByID:
+        [KeyboardShortcutsInhibitorID: DisplayKeyboardShortcutsInhibitorRecord] = [:]
+    var keyboardShortcutsInhibitorIDsByWindowID:
+        [WindowID: [KeyboardShortcutsInhibitorID]] = [:]
+    var keyboardShortcutsInhibitorIDsBySeatID:
+        [SeatID: [KeyboardShortcutsInhibitorID]] = [:]
+    var closedKeyboardShortcutsInhibitorIDs: Set<KeyboardShortcutsInhibitorID> = []
     private var inputSerialActionIDs = IDGenerator<InputSerialActionID>()
     private var inputSerialActionHandlers: [InputSerialActionID: InputSerialActionHandler] = [:]
     var isClosed: Bool { lifecycle.isClosed }
@@ -208,6 +225,13 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             for inhibitorID in idleInhibitorIDsByWindowID[windowID] ?? [] {
                 closeIdleInhibitor(inhibitorID)
             }
+            closeWindowDialogs(forClosingWindow: windowID)
+            for dragID in toplevelDragIDsByWindowID[windowID] ?? [] {
+                closeToplevelDrag(dragID)
+            }
+            for inhibitorID in keyboardShortcutsInhibitorIDsByWindowID[windowID] ?? [] {
+                closeKeyboardShortcutsInhibitor(inhibitorID)
+            }
             for subsurfaceID in subsurfaceIDsTopDown(parentedBy: windowID) {
                 closeSubsurface(subsurfaceID)
             }
@@ -267,6 +291,9 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
         var discardedSurfaces = DisplaySurfaceStore<TopLevelWindow, PopupRoleSurface>()
         swap(&surfaces, &discardedSurfaces)
+        removeAllWindowDialogs()
+        removeAllToplevelDrags()
+        removeAllKeyboardShortcutsInhibitors()
         removeAllIdleInhibitors()
         removeAllSubsurfaces()
         discardedSurfaces.removeAll()
@@ -367,6 +394,13 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     private func handleWindowClosed(_ windowID: WindowID) {
         guard surfaceGraphAcceptsLifecycleCallback() else { return }
+        closeWindowDialogs(forClosingWindow: windowID)
+        for dragID in toplevelDragIDsByWindowID[windowID] ?? [] {
+            closeToplevelDrag(dragID)
+        }
+        for inhibitorID in keyboardShortcutsInhibitorIDsByWindowID[windowID] ?? [] {
+            closeKeyboardShortcutsInhibitor(inhibitorID)
+        }
         for subsurfaceID in subsurfaceIDsTopDown(parentedBy: windowID) {
             closeSubsurface(subsurfaceID)
         }

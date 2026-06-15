@@ -466,6 +466,10 @@ final class RecordingDataTransferSourceBinding: DataTransferSourceBinding {
         actionRequests.append(actions)
     }
 
+    func createToplevelDrag(manager _: RawXDGToplevelDragManager) throws -> RawXDGToplevelDrag {
+        throw DataTransferError.unavailable
+    }
+
     func attachDragIcon(_ icon: (any DataTransferDragIconBinding)?) {
         dragIcon = icon
     }

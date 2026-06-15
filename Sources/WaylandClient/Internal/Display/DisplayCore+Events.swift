@@ -8,6 +8,7 @@ extension DisplayCore {
 
     func publishDataTransferEvents(_ events: [DataTransferEvent]) {
         for event in events {
+            cleanupToplevelDrags(after: event)
             eventHub.publishDataTransfer(event)
         }
     }
@@ -60,6 +61,30 @@ extension DisplayCore {
             for windowID in surfaces.allWindowIDs {
                 surfaces.window(windowID)?.removeOutputMembershipOnOwnerThread(outputID)
             }
+        }
+    }
+}
+
+private extension DisplayCore {
+    func cleanupToplevelDrags(after event: DataTransferEvent) {
+        switch event {
+        case .dragSourceCancelled(let source),
+            .dragSourceDropPerformed(let source):
+            closeToplevelDrags(for: source)
+        case .dragSourceFinished(let finished):
+            closeToplevelDrags(for: finished.source)
+        case .clipboardSelectionChanged,
+            .primarySelectionChanged,
+            .clipboardSourceCancelled,
+            .primarySelectionSourceCancelled,
+            .dragSourceTargetChanged,
+            .dragSourceActionChanged,
+            .dragEntered,
+            .dragMotion,
+            .dragLeft,
+            .dragDropped,
+            .dragOfferChanged:
+            break
         }
     }
 }

@@ -1626,10 +1626,43 @@ extension TopLevelWindow {
         _ = try connection.flushForExternalEventLoop()
     }
 
+    package func createDialogOnOwnerThread(
+        parent: TopLevelWindow,
+        manager: RawXDGDialogManager,
+        modal: Bool
+    ) throws -> RawXDGDialog {
+        connection.preconditionIsOwnerThread()
+        let topLevel = try activeTopLevel(for: "createDialog")
+        let parentTopLevel = try parent.activeTopLevel(for: "createDialogParent")
+        topLevel.setParent(parentTopLevel)
+        let dialog = try manager.createDialog(for: topLevel)
+        if modal {
+            dialog.setModal()
+        }
+        _ = try connection.flushForExternalEventLoop()
+        return dialog
+    }
+
+    package func clearDialogParentOnOwnerThread() throws {
+        connection.preconditionIsOwnerThread()
+        try activeTopLevel(for: "destroyDialog").setParent(nil)
+        _ = try connection.flushForExternalEventLoop()
+    }
+
     package func dataTransferDragOriginOnOwnerThread() throws -> any DataTransferDragOriginBinding {
         connection.preconditionIsOwnerThread()
         _ = try activeTopLevel(for: "startDrag")
         return LiveDataTransferDragOriginBinding(surface: surface)
+    }
+
+    package func attachToplevelDragOnOwnerThread(
+        _ drag: RawXDGToplevelDrag,
+        offset: LogicalOffset
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        let topLevel = try activeTopLevel(for: "attachToplevelDrag")
+        drag.attach(topLevel: topLevel, xOffset: offset.x, yOffset: offset.y)
+        _ = try connection.flushForExternalEventLoop()
     }
 
     package func createPopupOnOwnerThread(
