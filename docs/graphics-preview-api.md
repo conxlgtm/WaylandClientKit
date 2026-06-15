@@ -86,13 +86,6 @@ The preview product exposes:
 - `WaylandGraphicsAlphaModifier`
 - `WaylandGraphicsColorRepresentation`
 - `WaylandGraphicsColorAlphaMode`
-- `WaylandGraphicsDRMFormat`
-- `WaylandGraphicsDRMFormatModifier`
-- `WaylandGraphicsExternalBufferPlane`
-- `WaylandGraphicsExternalBufferPlanes`
-- `WaylandGraphicsExternalBufferDescriptor`
-- `WaylandGraphicsExternalSynchronization`
-- `WaylandGraphicsExternalAcquireSync`
 - `WaylandGraphicsError`
 - small status and reason enums used by those values
 - `WaylandDisplay.graphicsSurfaceCapabilities()`
@@ -119,17 +112,16 @@ deterministic clear frame, and submit arbitrary software drawing through a
 borrowed `SoftwareFrame`.
 
 For `.managedGPU`, clear-frame submission attempts the package-internal GPU
-path. External-buffer submission imports a caller-rendered dmabuf descriptor and
-commits it through the same owner-thread surface path. The renderer owns
-rendering and buffer production; WaylandClientKit owns Wayland buffer import,
-commit, release tracking, and late-release cleanup. Missing dmabuf, missing
-per-surface feedback, missing compatible format/modifier, render-node lookup
-failure, GBM allocation failure, EGL failure, dmabuf import rejection, external
-buffer import failure, metadata failure, and presentation failure are reported
-through typed public fallback or unavailable reasons. The public result only
-reports `.active` GPU backing after a GPU-rendered or imported external buffer
-has been committed; display-level dmabuf advertisement alone remains
-`.advertised`.
+path. Package-internal maintainer external-buffer submission can import a
+renderer-produced dmabuf descriptor and commit it through the same owner-thread
+surface path, but that descriptor boundary is not public because it carries DRM,
+dmabuf, and file-descriptor facts. Missing dmabuf, missing per-surface feedback,
+missing compatible format/modifier, render-node lookup failure, GBM allocation
+failure, EGL failure, dmabuf import rejection, external buffer import failure,
+metadata failure, and presentation failure are reported through typed public
+fallback or unavailable reasons. Public results report `.active` GPU backing
+only after a managed GPU frame has been committed; display-level dmabuf
+advertisement alone remains `.advertised`.
 `WaylandGraphicsRuntimePath` separates dmabuf advertisement, per-surface
 feedback, render-node selection, GBM, EGL, dmabuf import, buffer lifecycle,
 synchronization, pacing, metadata, and presentation-feedback status so callers
@@ -179,26 +171,22 @@ protocol is advertised; `require` fails when it is unavailable.
 
 `WaylandGraphicsWindowBacking` owns a managed `Window` and exposes the current
 runtime path. `nextFrame()` returns a single-use `WaylandGraphicsFrameLease`.
-Callers submit a `WaylandGraphicsSubmittedFrame.clearColor`, submit an external
-dmabuf descriptor with `submitExternalBuffer`, submit arbitrary software drawing
-with `submitSoftware`, or cancel the lease. `clearColor` uses the active managed
-GPU path when setup and submission succeed; it falls back to the software path
-only when the fallback policy and surface synchronization state allow an
-implicit software commit. External-buffer submission never claims software
-fallback as an external-buffer success. `requireGPU` fails if the external
-import/commit path cannot be used. Submission returns
+Callers submit a `WaylandGraphicsSubmittedFrame.clearColor`, submit arbitrary
+software drawing with `submitSoftware`, or cancel the lease. `clearColor` uses
+the active managed GPU path when setup and submission succeed; it falls back to
+the software path only when the fallback policy and surface synchronization
+state allow an implicit software commit. Package-internal maintainer
+external-buffer submission never claims software fallback as an external-buffer
+success. `requireGPU` fails if the managed GPU path cannot be used. Submission
+returns
 `WaylandGraphicsFrameResult`, which reports runtime path, submitted operation,
 buffer size, metadata, schedule, synchronization policy, pacing policy, backing
 status, and whether presentation feedback was requested. The result does not
 imply presentation feedback was observed; feedback still arrives through
 `WindowPresentationEvents`. The lease does not expose Wayland proxies, SHM
-pools, GBM buffers, EGL surfaces, DRM nodes, or syncobj handles. External-buffer
-planes consume `OwnedFileDescriptor` values during construction and do not
-expose the descriptor as public stored state after transfer. Local descriptor
-validation covers size, nonzero format, plane count, consecutive plane indices,
-nonnegative plane indices, positive stride, and ownership transfer. Modifier
-and offset support are compositor import facts; unsupported values are reported
-as typed import failure.
+pools, GBM buffers, EGL surfaces, DRM nodes, dmabuf descriptors, file
+descriptors, or syncobj handles. Public external-buffer submission is deferred
+until there is an opaque preview-buffer or renderer-neutral descriptor boundary.
 
 `WaylandGraphicsFrameMetadata` exposes content type, presentation hint, alpha
 modifier, color representation, and `WaylandGraphicsDamageRegion`. Public

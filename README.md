@@ -85,7 +85,8 @@ Current experimental baseline:
 - explicit compositor presentation feedback through `wp_presentation`
 - linux-dmabuf capability discovery, graphics runtime-path reporting, and
   package-internal GBM/EGL preview pieces
-- preview graphics frame scheduling and external dmabuf descriptor submission
+- preview graphics frame scheduling and package-internal external dmabuf
+  maintainer evidence
 - managed subsurfaces, surface input/opaque regions, and damage-aware software
   redraw
 - static and animated custom cursor images

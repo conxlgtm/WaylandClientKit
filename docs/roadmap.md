@@ -33,13 +33,14 @@ The completion target is:
   them
 - external framework-consumer checks prove a future GUI package can import only
   public products and still exercise host lifecycle, events, windows, popups,
-  preview graphics software submission, and preview external-buffer submission
-  preflight
+  preview graphics software submission, and preview scheduling preflight
 
 This target is not met until a GPU buffer path exists. A software-only SHM
 client is useful, but it is not a complete foundation for a modern GUI stack.
-The preview external-buffer path is the first source-breaking public shape for
-renderer-produced GPU buffer import/commit/release lifetime. It remains preview
+The package-internal preview external-buffer path proves renderer-produced GPU
+buffer import/commit/release lifetime for maintainer evidence. A public shape
+still needs an opaque preview-buffer or renderer-neutral descriptor boundary
+before external renderers can call it. It remains preview
 API until live renderer integration evidence is broader.
 
 ## Foundation Checkpoint 1
@@ -132,10 +133,11 @@ The current baseline already has meaningful substrate pieces:
 - package-internal GPU window presentation bridge through `WaylandGPUPreview`
 - preview graphics product `WaylandGraphicsPreview` for renderer-neutral
   capability, runtime-path, and fallback facts
-- managed software backing, managed-GPU clear-frame submission, and preview
-  external dmabuf descriptor submission in
+- managed software backing and managed-GPU clear-frame submission in
   `WaylandGraphicsPreview` for framework-facing preview experiments without raw
-  platform handles; `.managedGPU` now attempts surface feedback, GBM/EGL
+  platform handles; package-internal maintainer external-buffer import remains
+  evidence plumbing until a raw-handle-free public boundary exists; `.managedGPU`
+  now attempts surface feedback, GBM/EGL
   rendering, dmabuf import, and owner-thread presentation before falling back or
   failing with a typed reason
 - public graphics frame scheduling requests for explicit sync, FIFO,

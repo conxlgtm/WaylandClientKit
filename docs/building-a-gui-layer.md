@@ -170,13 +170,15 @@ observed. Presentation feedback remains a separate event stream.
 - `WaylandGraphicsFrameMetadata`
 - `WaylandGraphicsDamageRegion`
 - `WaylandGraphicsFrameSchedule`
-- external dmabuf descriptor values
 
 Managed public GPU submission is preview API. Current leases support
 clear-frame submission, arbitrary software drawing, per-frame scheduling
-requests, and external dmabuf descriptor submission. This is still not a
-renderer, swapchain, drawable, or scene graph API, and it does not expose raw
-Wayland, GBM, EGL, DRM, or syncobj handles.
+requests, and runtime-path reporting. Package-internal maintainer tooling can
+exercise external dmabuf import for evidence, but public renderer-produced GPU
+buffer submission is deferred until a raw-handle-free preview boundary exists.
+This is still not a renderer, swapchain, drawable, or scene graph API, and it
+does not expose raw Wayland, GBM, EGL, DRM, dmabuf, file-descriptor, or syncobj
+handles.
 
 ## Event Stream Handling
 

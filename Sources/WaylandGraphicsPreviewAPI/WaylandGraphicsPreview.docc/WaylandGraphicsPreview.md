@@ -10,10 +10,10 @@ compositors.
 
 The preview product does not expose raw Wayland, GBM, EGL, DRM, dmabuf,
 syncobj, renderer, swapchain, scene graph, widget, or layout handles; raw GPU
-handles stay internal. External-buffer planes consume owned Linux file
-descriptors during construction, but the descriptor is not exposed as public
-stored state after transfer. Runtime results report active, fallback, failed,
-unavailable, advertised, and configured states through public value types.
+handles stay internal. External-buffer descriptor import is package-internal
+maintainer preview plumbing until a renderer-neutral public buffer boundary is
+designed. Runtime results report active, fallback, failed, unavailable,
+advertised, and configured states through public value types.
 
 ## Topics
 
@@ -58,16 +58,6 @@ unavailable, advertised, and configured states through public value types.
 - ``WaylandGraphicsAlphaModifier``
 - ``WaylandGraphicsColorRepresentation``
 - ``WaylandGraphicsColorAlphaMode``
-
-### External Buffers
-
-- ``WaylandGraphicsDRMFormat``
-- ``WaylandGraphicsDRMFormatModifier``
-- ``WaylandGraphicsExternalBufferDescriptor``
-- ``WaylandGraphicsExternalBufferPlane``
-- ``WaylandGraphicsExternalBufferPlanes``
-- ``WaylandGraphicsExternalSynchronization``
-- ``WaylandGraphicsExternalAcquireSync``
 
 ### Runtime Path Values
 

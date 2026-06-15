@@ -37,6 +37,29 @@ struct WaylandGraphicsExternalBufferDescriptorTests {
     }
 
     @Test
+    func planeIndexAboveUInt32RangeIsRejected() throws {
+        let closedDescriptors = Mutex<[Int32]>([])
+        let descriptor = try OwnedFileDescriptor(adopting: 778) { descriptor in
+            closedDescriptors.withLock { $0.append(descriptor) }
+            return 0
+        }
+
+        do {
+            _ = try WaylandGraphicsExternalBufferPlane(
+                fd: descriptor,
+                offset: 0,
+                stride: 16,
+                planeIndex: Int(UInt32.max) + 1
+            )
+            Issue.record("expected invalid external buffer plane")
+        } catch WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor) {
+            #expect(closedDescriptors.withLock { $0 } == [778])
+        } catch {
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
+    @Test
     func duplicatePlaneIndexIsRejected() throws {
         let size = try PositivePixelSize(width: 4, height: 4)
         let format = try WaylandGraphicsDRMFormat(rawValue: 875_713_112)

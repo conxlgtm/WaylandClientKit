@@ -307,10 +307,10 @@ public struct WaylandGraphicsXRGBColor: Equatable, Sendable {
     }
 }
 
-public struct WaylandGraphicsDRMFormat: Equatable, Hashable, Sendable {
-    public let rawValue: UInt32
+package struct WaylandGraphicsDRMFormat: Equatable, Hashable, Sendable {
+    package let rawValue: UInt32
 
-    public init(rawValue formatRawValue: UInt32) throws {
+    package init(rawValue formatRawValue: UInt32) throws {
         guard formatRawValue != 0 else {
             throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
         }
@@ -319,27 +319,30 @@ public struct WaylandGraphicsDRMFormat: Equatable, Hashable, Sendable {
     }
 }
 
-public struct WaylandGraphicsDRMFormatModifier: Equatable, Hashable, Sendable {
-    public let rawValue: UInt64
+package struct WaylandGraphicsDRMFormatModifier: Equatable, Hashable, Sendable {
+    package let rawValue: UInt64
 
-    public init(rawValue modifierRawValue: UInt64) {
+    package init(rawValue modifierRawValue: UInt64) {
         rawValue = modifierRawValue
     }
 }
 
-public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
+package struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
     package var fileDescriptor: OwnedFileDescriptor
-    public let offset: UInt32
-    public let stride: UInt32
-    public let planeIndex: Int
+    package let offset: UInt32
+    package let stride: UInt32
+    package let planeIndex: Int
 
-    public init(
+    package init(
         fd planeFileDescriptor: consuming OwnedFileDescriptor,
         offset planeOffset: UInt32,
         stride planeStride: UInt32,
         planeIndex planeIndexValue: Int
     ) throws {
-        guard planeIndexValue >= 0, planeStride > 0 else {
+        guard planeIndexValue >= 0,
+            planeIndexValue <= Int(UInt32.max),
+            planeStride > 0
+        else {
             var descriptor = planeFileDescriptor
             do {
                 try descriptor.close()
@@ -356,7 +359,7 @@ public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
     }
 }
 
-public enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
+package enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
     case one(WaylandGraphicsExternalBufferPlane)
     case two(WaylandGraphicsExternalBufferPlane, WaylandGraphicsExternalBufferPlane)
     case three(
@@ -371,7 +374,7 @@ public enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
         WaylandGraphicsExternalBufferPlane
     )
 
-    public var count: Int {
+    package var count: Int {
         switch self {
         case .one:
             1
@@ -438,13 +441,13 @@ public enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
     }
 }
 
-public struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
-    public let size: PositivePixelSize
-    public let format: WaylandGraphicsDRMFormat
-    public let modifier: WaylandGraphicsDRMFormatModifier
-    public var planes: WaylandGraphicsExternalBufferPlanes
+package struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
+    package let size: PositivePixelSize
+    private let format: WaylandGraphicsDRMFormat
+    private let modifier: WaylandGraphicsDRMFormatModifier
+    private var planes: WaylandGraphicsExternalBufferPlanes
 
-    public init(
+    package init(
         size bufferSize: PositivePixelSize,
         format bufferFormat: WaylandGraphicsDRMFormat,
         modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
@@ -464,6 +467,9 @@ public struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
     ) throws {
         let indices = try planes.planeIndices()
         guard indices.count == Set(indices).count else {
+            throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
+        }
+        guard indices.allSatisfy({ $0 >= 0 && $0 <= Int(UInt32.max) }) else {
             throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
         }
         guard indices == Array(0..<indices.count) else {
@@ -594,17 +600,17 @@ package final class WaylandGraphicsExternalBufferImportPlan: @unchecked Sendable
     }
 }
 
-public struct WaylandGraphicsExternalSynchronization: Equatable, Sendable {
-    public let acquire: WaylandGraphicsExternalAcquireSync?
+package struct WaylandGraphicsExternalSynchronization: Equatable, Sendable {
+    package let acquire: WaylandGraphicsExternalAcquireSync?
 
-    public static let `default` = WaylandGraphicsExternalSynchronization()
+    package static let `default` = WaylandGraphicsExternalSynchronization()
 
-    public init(acquire acquireSynchronization: WaylandGraphicsExternalAcquireSync? = nil) {
+    package init(acquire acquireSynchronization: WaylandGraphicsExternalAcquireSync? = nil) {
         acquire = acquireSynchronization
     }
 }
 
-public enum WaylandGraphicsExternalAcquireSync: Equatable, Sendable {
+package enum WaylandGraphicsExternalAcquireSync: Equatable, Sendable {
     case unsupportedPreview
 }
 
@@ -907,7 +913,7 @@ public struct WaylandGraphicsFrameLease: Sendable {
     }
 
     @discardableResult
-    public func submitExternalBuffer(
+    package func submitExternalBuffer(
         _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor,
         metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
         synchronization externalSynchronization:
