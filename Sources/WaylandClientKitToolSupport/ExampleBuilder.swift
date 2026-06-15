@@ -13,7 +13,6 @@ public struct ExampleBuilder {
         "GPUPreviewSmokeClient",
         "GraphicsPreviewColorMetadataSmoke",
         "GraphicsPreviewExternalBufferMaintainerSmoke",
-        "GraphicsPreviewExternalBufferSmoke",
         "GraphicsPreviewManagedGPUClear",
         "IdleInhibitSmoke",
         "ColorManagementSmoke",

@@ -141,7 +141,7 @@ The current baseline already has meaningful substrate pieces:
   rendering, dmabuf import, and owner-thread presentation before falling back or
   failing with a typed reason
 - public graphics frame scheduling requests for explicit sync, FIFO,
-  commit-timing default targets, and presentation feedback, with runtime-path
+  commit-timing, and presentation feedback, with runtime-path
   results distinguishing advertised, configured, active, fallback, and failed
   states
 - public output topology snapshots that report current outputs and

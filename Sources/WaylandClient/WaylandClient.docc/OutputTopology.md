@@ -4,7 +4,7 @@ WaylandClientKit exposes output facts as public snapshots. It does not own
 monitor settings policy.
 
 Use ``WaylandDisplay/outputs()`` for the current output list and
-``WaylandDisplay/outputTopology()`` when a stable, sorted snapshot is more
+``WaylandDisplay/outputTopology()`` when a stable, sorted output array is more
 convenient. Output identities are stable within a display connection and are
 reported as ``OutputID`` values. ``WindowStateSnapshot/outputs`` reports the
 outputs currently associated with a managed window when the compositor sends

@@ -42,8 +42,6 @@ advertised, and configured states through public value types.
 - ``WaylandGraphicsPresentationFeedbackPolicy``
 - ``WaylandGraphicsFrameSchedule``
 - ``WaylandGraphicsFramePacingRequest``
-- ``WaylandGraphicsCommitTimingRequest``
-- ``WaylandGraphicsPresentationTarget``
 
 ### Backing And Frames
 

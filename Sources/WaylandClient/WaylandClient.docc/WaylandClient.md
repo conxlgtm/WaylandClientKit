@@ -45,7 +45,6 @@ targets. They are not public `WaylandClient` API.
 - ``SurfaceGeometry``
 - ``SurfaceScale``
 - ``OutputSnapshot``
-- ``OutputTopologySnapshot``
 - ``OutputID``
 - ``SurfaceRegion``
 - ``SurfaceDamageRegion``

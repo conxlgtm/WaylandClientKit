@@ -380,25 +380,12 @@ private struct ExternalBufferSmokeOptions: Equatable, Sendable {
     let mode: Mode
 
     static func parse(_ arguments: ArraySlice<String>) throws -> Self {
-        var parser = ExternalBufferSmokeOptionParser(arguments: arguments)
-        return try parser.parse()
-    }
-}
+        var mode = Mode.probe
+        let optionArguments =
+            arguments.first == "--" ? arguments.dropFirst() : arguments
 
-private struct ExternalBufferSmokeOptionParser {
-    private let arguments: ArraySlice<String>
-    private var index: ArraySlice<String>.Index
-    private var mode = ExternalBufferSmokeOptions.Mode.probe
-
-    init(arguments parserArguments: ArraySlice<String>) {
-        arguments = parserArguments
-        index = parserArguments.startIndex
-    }
-
-    mutating func parse() throws -> ExternalBufferSmokeOptions {
-        skipLeadingSwiftPMSeparator()
-        while index < arguments.endIndex {
-            switch arguments[index] {
+        for argument in optionArguments {
+            switch argument {
             case "--probe":
                 mode = .probe
             case "--internal-test-buffer":
@@ -406,22 +393,12 @@ private struct ExternalBufferSmokeOptionParser {
             case "--negative-test-buffer":
                 mode = .negativeTestBuffer
             case "--":
-                return ExternalBufferSmokeOptions(mode: mode)
+                return Self(mode: mode)
             default:
-                throw ExampleRunOptionError.unknownArgument(arguments[index])
+                throw ExampleRunOptionError.unknownArgument(argument)
             }
-            arguments.formIndex(after: &index)
         }
 
-        return ExternalBufferSmokeOptions(mode: mode)
-    }
-
-    private mutating func skipLeadingSwiftPMSeparator() {
-        guard index == arguments.startIndex, index < arguments.endIndex else {
-            return
-        }
-        if arguments[index] == "--" {
-            arguments.formIndex(after: &index)
-        }
+        return Self(mode: mode)
     }
 }

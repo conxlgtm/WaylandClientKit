@@ -186,14 +186,13 @@ struct ToolingConvergenceTests {
         #expect(ExampleBuilder.targets.contains("CompositorSessionSmoke"))
         #expect(ExampleBuilder.targets.contains("GraphicsPreviewColorMetadataSmoke"))
         #expect(ExampleBuilder.targets.contains("GraphicsPreviewExternalBufferMaintainerSmoke"))
-        #expect(ExampleBuilder.targets.contains("GraphicsPreviewExternalBufferSmoke"))
         #expect(ExampleBuilder.targets.contains("OutputTopologySmoke"))
         #expect(ExampleBuilder.targets.contains("PointerWarpSmoke"))
         #expect(ExampleBuilder.targets.contains("SessionStateSmoke"))
         #expect(ExampleBuilder.targets.contains("SubsurfaceSmoke"))
         #expect(ExampleBuilder.targets.contains("TabletInputSmoke"))
         #expect(ExampleBuilder.targets.contains("WaylandClientKitDemo"))
-        #expect(ExampleBuilder.targets.count == 31)
+        #expect(ExampleBuilder.targets.count == 30)
     }
 
     @Test

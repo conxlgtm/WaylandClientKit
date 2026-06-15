@@ -46,7 +46,7 @@ swift run OutputTopologySmoke -- --auto-close --print-summary
 swift run GPUPreviewSmokeClient
 swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
 swift run GraphicsPreviewManagedGPUClear -- --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
-swift run GraphicsPreviewExternalBufferSmoke -- --probe
+swift run GraphicsPreviewExternalBufferMaintainerSmoke -- --probe
 swift run GraphicsPreviewColorMetadataSmoke -- --content-type game --presentation-hint async
 swift run ColorManagementSmoke
 ```
@@ -85,7 +85,7 @@ example or manual probe has been run:
 | presentation feedback | `PresentationFeedbackAnimation` feedback summary |
 | output topology | `OutputTopologySmoke` output snapshot and window output membership report |
 | graphics preview fallback/GPU path | `GPUPreviewSmokeClient` runtime-path report |
-| external graphics buffer | `GraphicsPreviewExternalBufferSmoke -- --probe`, `GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer` renderer dmabuf import/submit/release run, or `GraphicsPreviewExternalBufferMaintainerSmoke -- --negative-test-buffer` import-cleanup probe |
+| external graphics buffer | `GraphicsPreviewExternalBufferMaintainerSmoke -- --probe`, `GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer` renderer dmabuf import/submit/release run, or `GraphicsPreviewExternalBufferMaintainerSmoke -- --negative-test-buffer` import-cleanup probe |
 | graphics frame scheduling | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` requested/actual sync and pacing lines |
 | color metadata | `ColorManagementSmoke` and `GraphicsPreviewColorMetadataSmoke` capability/runtime report |
 
