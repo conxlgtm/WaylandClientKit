@@ -65,8 +65,8 @@ enum DialogSmoke {
         _ display: WaylandDisplay,
         title: String,
         appID: String,
-        width: UInt32,
-        height: UInt32
+        width: Int32,
+        height: Int32
     ) async throws -> Window {
         try await display.createTopLevelWindow(
             configuration: try WindowConfiguration(

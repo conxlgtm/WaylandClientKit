@@ -25,7 +25,7 @@ enum ForeignToplevelListSmoke {
                 return
             }
 
-            let snapshot = try display.foreignToplevelListSnapshot()
+            let snapshot = try await display.foreignToplevelListSnapshot()
             log("toplevels: \(snapshot.toplevels.count)")
             for fact in snapshot.toplevels {
                 log("toplevel id=\(fact.id?.description ?? "unknown") title=\(fact.title ?? "private") appID=\(fact.appID ?? "private")")

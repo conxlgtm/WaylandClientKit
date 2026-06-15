@@ -158,6 +158,87 @@
         }
 
         @Test
+        func xdgDialogRequestsPreserveManagerDialogAndToplevelPointers() async throws {
+            try await recordDesktopRequests {
+                swl_test_desktop_request_recording_begin()
+                defer { swl_test_desktop_request_recording_end() }
+
+                let manager = try unsafe testPointer(0xFA01)
+                let topLevel = try unsafe testPointer(0xFA02)
+
+                let dialog = unsafe swl_xdg_wm_dialog_v1_get_xdg_dialog(manager, topLevel)
+                let createRecord = unsafe swl_test_desktop_request_record()
+                #expect(unsafe dialog != nil)
+                #expect(unsafe createRecord.call_count == 1)
+                #expect(unsafe createRecord.kind == SWL_TEST_DESKTOP_DIALOG_GET)
+                #expect(unsafe createRecord.object == UnsafeMutableRawPointer(manager))
+                #expect(unsafe createRecord.toplevel == topLevel)
+                #expect(unsafe createRecord.dialog == dialog)
+
+                unsafe swl_xdg_dialog_v1_set_modal(dialog)
+                let setRecord = unsafe swl_test_desktop_request_record()
+                #expect(unsafe setRecord.call_count == 2)
+                #expect(unsafe setRecord.kind == SWL_TEST_DESKTOP_DIALOG_SET_MODAL)
+                #expect(unsafe setRecord.object == UnsafeMutableRawPointer(dialog))
+
+                unsafe swl_xdg_dialog_v1_unset_modal(dialog)
+                let unsetRecord = unsafe swl_test_desktop_request_record()
+                #expect(unsafe unsetRecord.call_count == 3)
+                #expect(unsafe unsetRecord.kind == SWL_TEST_DESKTOP_DIALOG_UNSET_MODAL)
+                #expect(unsafe unsetRecord.object == UnsafeMutableRawPointer(dialog))
+            }
+        }
+
+        @Test
+        func toplevelDragRequestsPreserveSourceToplevelAndOffsets() async throws {
+            try await recordDesktopRequests {
+                swl_test_desktop_request_recording_begin()
+                defer { swl_test_desktop_request_recording_end() }
+
+                let manager = try unsafe testPointer(0xFA11)
+                let source = try unsafe testPointer(0xFA12)
+                let topLevel = try unsafe testPointer(0xFA13)
+
+                let drag = unsafe swl_xdg_toplevel_drag_manager_v1_get_xdg_toplevel_drag(
+                    manager,
+                    source
+                )
+                let createRecord = unsafe swl_test_desktop_request_record()
+                #expect(unsafe drag != nil)
+                #expect(unsafe createRecord.call_count == 1)
+                #expect(unsafe createRecord.kind == SWL_TEST_DESKTOP_TOPLEVEL_DRAG_GET)
+                #expect(unsafe createRecord.object == UnsafeMutableRawPointer(manager))
+                #expect(unsafe createRecord.data_source == source)
+                #expect(unsafe createRecord.drag == drag)
+
+                unsafe swl_xdg_toplevel_drag_v1_attach(drag, topLevel, -7, 9)
+                let attachRecord = unsafe swl_test_desktop_request_record()
+                #expect(unsafe attachRecord.call_count == 2)
+                #expect(unsafe attachRecord.kind == SWL_TEST_DESKTOP_TOPLEVEL_DRAG_ATTACH)
+                #expect(unsafe attachRecord.object == UnsafeMutableRawPointer(drag))
+                #expect(unsafe attachRecord.toplevel == topLevel)
+                #expect(unsafe attachRecord.x == -7)
+                #expect(unsafe attachRecord.y == 9)
+            }
+        }
+
+        @Test
+        func foreignToplevelListStopRecordsTarget() async throws {
+            try await recordDesktopRequests {
+                swl_test_desktop_request_recording_begin()
+                defer { swl_test_desktop_request_recording_end() }
+
+                let list = try unsafe testPointer(0xFA21)
+                unsafe swl_ext_foreign_toplevel_list_v1_stop(list)
+
+                let record = unsafe swl_test_desktop_request_record()
+                #expect(unsafe record.call_count == 1)
+                #expect(unsafe record.kind == SWL_TEST_DESKTOP_FOREIGN_TOPLEVEL_LIST_STOP)
+                #expect(unsafe record.object == UnsafeMutableRawPointer(list))
+            }
+        }
+
+        @Test
         func destroyRequestsAreIdempotent() async throws {
             try await recordDesktopRequests {
                 swl_test_desktop_request_recording_begin()
@@ -172,6 +253,51 @@
                 #expect(unsafe record.call_count == 1)
                 #expect(unsafe record.kind == SWL_TEST_DESKTOP_DESTROY_IDLE_INHIBITOR)
                 #expect(unsafe record.object == UnsafeMutableRawPointer(inhibitor.pointer))
+            }
+        }
+
+        @Test
+        func desktopRelationshipDestroyWrappersUseMatchingTargets() async throws {
+            try await recordDesktopRequests {
+                swl_test_desktop_request_recording_begin()
+                defer { swl_test_desktop_request_recording_end() }
+
+                let dialogManager = try unsafe testPointer(0xFA31)
+                let dialog = try unsafe testPointer(0xFA32)
+                let dragManager = try unsafe testPointer(0xFA33)
+                let drag = try unsafe testPointer(0xFA34)
+                let list = try unsafe testPointer(0xFA35)
+                let handle = try unsafe testPointer(0xFA36)
+
+                unsafe swl_xdg_wm_dialog_v1_destroy(dialogManager)
+                assertDestroy(
+                    expectedKind: SWL_TEST_DESKTOP_DESTROY_DIALOG_MANAGER,
+                    object: dialogManager
+                )
+
+                unsafe swl_xdg_dialog_v1_destroy(dialog)
+                assertDestroy(expectedKind: SWL_TEST_DESKTOP_DESTROY_DIALOG, object: dialog)
+
+                unsafe swl_xdg_toplevel_drag_manager_v1_destroy(dragManager)
+                assertDestroy(
+                    expectedKind: SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_DRAG_MANAGER,
+                    object: dragManager
+                )
+
+                unsafe swl_xdg_toplevel_drag_v1_destroy(drag)
+                assertDestroy(expectedKind: SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_DRAG, object: drag)
+
+                unsafe swl_ext_foreign_toplevel_list_v1_destroy(list)
+                assertDestroy(
+                    expectedKind: SWL_TEST_DESKTOP_DESTROY_FOREIGN_TOPLEVEL_LIST,
+                    object: list
+                )
+
+                unsafe swl_ext_foreign_toplevel_handle_v1_destroy(handle)
+                assertDestroy(
+                    expectedKind: SWL_TEST_DESKTOP_DESTROY_FOREIGN_TOPLEVEL_HANDLE,
+                    object: handle
+                )
             }
         }
 
@@ -257,6 +383,20 @@
                 pointer: testPointer(rawPointer),
                 version: 1,
                 proxyAdoption: try testAdoptionContext()
+            )
+        }
+
+        @safe
+        private func assertDestroy(
+            expectedKind: swl_test_desktop_destroy_kind,
+            object rawObject: OpaquePointer,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) {
+            let record = unsafe swl_test_desktop_destroy_record()
+            #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
+            #expect(
+                unsafe record.object == UnsafeMutableRawPointer(rawObject),
+                sourceLocation: sourceLocation
             )
         }
 
