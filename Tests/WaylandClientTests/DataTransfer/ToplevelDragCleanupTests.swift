@@ -76,6 +76,53 @@
             }
         }
 
+        @Test
+        func installedCancelHookDestroysToplevelDrag() async throws {
+            try await recordDesktopRequests {
+                let core = DisplayCore(eventHub: DisplayEventHub())
+                let manager = DataTransferManager(backend: RecordingDataTransferBackend())
+                let sourceID = DataSourceID(rawValue: 61)
+                let dragID = ToplevelDragID(rawValue: 62)
+                try installToplevelDrag(
+                    in: core,
+                    sourceID: sourceID,
+                    dragID: dragID,
+                    windowID: WindowID(rawValue: 63),
+                    pointer: 0xC803
+                )
+
+                core.installToplevelDragCancellationHook(on: manager)
+                manager.sourceWillCancel(sourceID)
+
+                let record = unsafe swl_test_desktop_destroy_record()
+                #expect(unsafe record.call_count == 1)
+                #expect(unsafe record.kind == SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_DRAG)
+                #expect(core.toplevelDragsByID[dragID] == nil)
+            }
+        }
+
+        @Test
+        func manualCancelRejectsActiveToplevelDrag() async throws {
+            try await recordDesktopRequests {
+                let core = DisplayCore(eventHub: DisplayEventHub())
+                let sourceID = DataSourceID(rawValue: 71)
+                let dragID = ToplevelDragID(rawValue: 72)
+                try installToplevelDrag(
+                    in: core,
+                    sourceID: sourceID,
+                    dragID: dragID,
+                    windowID: WindowID(rawValue: 73),
+                    pointer: 0xC804
+                )
+
+                #expect(throws: ClientError.display(.toplevelDragStillActive(dragID))) {
+                    try core.cancelDragSource(id: sourceID)
+                }
+                let record = unsafe swl_test_desktop_destroy_record()
+                #expect(unsafe record.call_count == 0)
+            }
+        }
+
         private func recordDesktopRequests(_ request: () async throws -> Void)
             async throws
         {

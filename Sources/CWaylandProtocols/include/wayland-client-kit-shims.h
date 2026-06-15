@@ -2315,6 +2315,8 @@ enum swl_test_output_destroy_kind {
     SWL_TEST_OUTPUT_DESTROY_NONE = 0,
     SWL_TEST_OUTPUT_HEAD_RELEASE = 1,
     SWL_TEST_OUTPUT_MODE_RELEASE = 2,
+    SWL_TEST_OUTPUT_MANAGER_STOP = 3,
+    SWL_TEST_OUTPUT_MANAGER_DESTROY = 4,
 };
 
 struct swl_test_output_destroy_record {

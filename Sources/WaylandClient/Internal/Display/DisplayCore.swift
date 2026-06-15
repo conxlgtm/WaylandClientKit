@@ -41,11 +41,18 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     init(session activeSession: DisplaySession, eventHub displayEventHub: DisplayEventHub) {
         lifecycle = .active(activeSession)
         eventHub = displayEventHub
+        installToplevelDragCancellationHook(on: activeSession.dataTransferManager)
     }
 
     init(eventHub displayEventHub: DisplayEventHub) {
         lifecycle = .testHarness
         eventHub = displayEventHub
+    }
+
+    func installToplevelDragCancellationHook(on manager: DataTransferManager) {
+        manager.sourceWillCancel = { [weak self] sourceID in
+            self?.closeToplevelDrags(for: sourceID.dragIdentity)
+        }
     }
 
     func createTopLevelWindowID(

@@ -47,11 +47,23 @@ swl_zwlr_output_manager_v1_create_configuration(
 
 void swl_zwlr_output_manager_v1_stop(struct zwlr_output_manager_v1 *manager)
 {
+#ifdef SWL_ENABLE_TESTING
+    if (swl_test_output_request_recording_enabled) {
+        swl_test_record_output_destroy(SWL_TEST_OUTPUT_MANAGER_STOP, manager);
+        return;
+    }
+#endif
     zwlr_output_manager_v1_stop(manager);
 }
 
 void swl_zwlr_output_manager_v1_destroy(struct zwlr_output_manager_v1 *manager)
 {
+#ifdef SWL_ENABLE_TESTING
+    if (swl_test_output_request_recording_enabled) {
+        swl_test_record_output_destroy(SWL_TEST_OUTPUT_MANAGER_DESTROY, manager);
+        return;
+    }
+#endif
     zwlr_output_manager_v1_destroy(manager);
 }
 
