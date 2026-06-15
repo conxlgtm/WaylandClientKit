@@ -59,3 +59,140 @@ extension PointerAxisRelativeDirection {
         self.init(rawValue: raw.rawValue)
     }
 }
+
+extension RawPointerGestureEvent {
+    package var beginSurfaceID: RawObjectID? {
+        switch self {
+        case .swipe(let swipe):
+            swipe.beginSurfaceID
+        case .pinch(let pinch):
+            pinch.beginSurfaceID
+        case .hold(let hold):
+            hold.beginSurfaceID
+        }
+    }
+}
+
+extension RawPointerSwipeGestureEvent {
+    package var beginSurfaceID: RawObjectID? {
+        guard case .begin(_, _, let surfaceID, _) = self else {
+            return nil
+        }
+
+        return surfaceID
+    }
+}
+
+extension RawPointerPinchGestureEvent {
+    package var beginSurfaceID: RawObjectID? {
+        guard case .begin(_, _, let surfaceID, _) = self else {
+            return nil
+        }
+
+        return surfaceID
+    }
+}
+
+extension RawPointerHoldGestureEvent {
+    package var beginSurfaceID: RawObjectID? {
+        guard case .begin(_, _, let surfaceID, _) = self else {
+            return nil
+        }
+
+        return surfaceID
+    }
+}
+
+extension PointerGestureEvent {
+    package init(_ raw: RawPointerGestureEvent) {
+        switch raw {
+        case .swipe(let swipe):
+            self = .swipe(PointerSwipeGestureEvent(swipe))
+        case .pinch(let pinch):
+            self = .pinch(PointerPinchGestureEvent(pinch))
+        case .hold(let hold):
+            self = .hold(PointerHoldGestureEvent(hold))
+        }
+    }
+}
+
+extension PointerSwipeGestureEvent {
+    package init(_ raw: RawPointerSwipeGestureEvent) {
+        switch raw {
+        case .begin(let serial, let time, _, let fingers):
+            self = .begin(
+                serial: InputSerial(rawValue: serial),
+                time: WaylandTimestampMilliseconds(rawValue: time),
+                fingers: fingers
+            )
+        case .update(let time, let dx, let dy):
+            self = .update(
+                time: WaylandTimestampMilliseconds(rawValue: time),
+                delta: PointerDelta(dx: dx.doubleValue, dy: dy.doubleValue)
+            )
+        case .end(let serial, let time, false):
+            self = .end(
+                serial: InputSerial(rawValue: serial),
+                time: WaylandTimestampMilliseconds(rawValue: time)
+            )
+        case .end(let serial, let time, true):
+            self = .cancel(
+                serial: InputSerial(rawValue: serial),
+                time: WaylandTimestampMilliseconds(rawValue: time)
+            )
+        }
+    }
+}
+
+extension PointerPinchGestureEvent {
+    package init(_ raw: RawPointerPinchGestureEvent) {
+        switch raw {
+        case .begin(let serial, let time, _, let fingers):
+            self = .begin(
+                serial: InputSerial(rawValue: serial),
+                time: WaylandTimestampMilliseconds(rawValue: time),
+                fingers: fingers
+            )
+        case .update(let time, let dx, let dy, let scale, let rotation):
+            self = .update(
+                time: WaylandTimestampMilliseconds(rawValue: time),
+                delta: PointerDelta(dx: dx.doubleValue, dy: dy.doubleValue),
+                scale: scale.doubleValue,
+                rotation: rotation.doubleValue
+            )
+        case .end(let serial, let time, false):
+            self = .end(
+                serial: InputSerial(rawValue: serial),
+                time: WaylandTimestampMilliseconds(rawValue: time)
+            )
+        case .end(let serial, let time, true):
+            self = .cancel(
+                serial: InputSerial(rawValue: serial),
+                time: WaylandTimestampMilliseconds(rawValue: time)
+            )
+        }
+    }
+}
+
+extension PointerHoldGestureEvent {
+    package init(_ raw: RawPointerHoldGestureEvent) {
+        switch raw {
+        case .begin(let serial, let time, _, let fingers):
+            self = .begin(
+                serial: InputSerial(rawValue: serial),
+                time: WaylandTimestampMilliseconds(rawValue: time),
+                fingers: fingers
+            )
+        case .end(let serial, let time, false):
+            self = .end(
+                serial: InputSerial(rawValue: serial),
+                time: WaylandTimestampMilliseconds(rawValue: time)
+            )
+        case .end(let serial, let time, true):
+            self = .cancel(
+                serial: InputSerial(rawValue: serial),
+                time: WaylandTimestampMilliseconds(rawValue: time)
+            )
+        }
+    }
+}

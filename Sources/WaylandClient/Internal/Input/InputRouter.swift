@@ -230,7 +230,31 @@ final class InputRouter {
                 constraint,
                 lifecycleEvent: pointerConstraintLifecycleEvent
             )
+        case .gesture(let gesture):
+            return routePointerGesture(rawEvent, gesture)
         }
+    }
+
+    private func routePointerGesture(
+        _ rawEvent: RawInputEvent,
+        _ gesture: RawPointerGestureEvent
+    ) -> InputEvent {
+        routedEvent(
+            rawEvent,
+            target: gestureTarget(rawEvent, gesture),
+            kind: .pointer(.gesture(PointerGestureEvent(gesture)))
+        )
+    }
+
+    private func gestureTarget(
+        _ rawEvent: RawInputEvent,
+        _ gesture: RawPointerGestureEvent
+    ) -> InputEventTarget {
+        if let surfaceID = gesture.beginSurfaceID {
+            return target(for: surfaceID)
+        }
+
+        return target(forFocusedSurface: focusedPointerSurface(for: rawEvent.seatID))
     }
 
     private func routePointerConstraint(

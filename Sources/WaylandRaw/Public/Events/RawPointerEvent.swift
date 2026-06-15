@@ -6,6 +6,7 @@ package enum RawPointerEvent: Equatable, Sendable {
     case axis(RawPointerAxisEvent)
     case relativeMotion(RawRelativePointerMotion)
     case constraint(RawPointerConstraintEvent)
+    case gesture(RawPointerGestureEvent)
 }
 
 package struct RawPointerEnter: Equatable, Sendable {
@@ -166,4 +167,33 @@ package struct RawPointerAxisRelativeDirection: Equatable, Sendable {
 
     package static let identical = Self(rawValue: 0)
     package static let inverted = Self(rawValue: 1)
+}
+
+package enum RawPointerGestureEvent: Equatable, Sendable {
+    case swipe(RawPointerSwipeGestureEvent)
+    case pinch(RawPointerPinchGestureEvent)
+    case hold(RawPointerHoldGestureEvent)
+}
+
+package enum RawPointerSwipeGestureEvent: Equatable, Sendable {
+    case begin(serial: UInt32, time: UInt32, surfaceID: RawObjectID?, fingers: UInt32)
+    case update(time: UInt32, dx: WaylandFixed, dy: WaylandFixed)
+    case end(serial: UInt32, time: UInt32, cancelled: Bool)
+}
+
+package enum RawPointerPinchGestureEvent: Equatable, Sendable {
+    case begin(serial: UInt32, time: UInt32, surfaceID: RawObjectID?, fingers: UInt32)
+    case update(
+        time: UInt32,
+        dx: WaylandFixed,
+        dy: WaylandFixed,
+        scale: WaylandFixed,
+        rotation: WaylandFixed
+    )
+    case end(serial: UInt32, time: UInt32, cancelled: Bool)
+}
+
+package enum RawPointerHoldGestureEvent: Equatable, Sendable {
+    case begin(serial: UInt32, time: UInt32, surfaceID: RawObjectID?, fingers: UInt32)
+    case end(serial: UInt32, time: UInt32, cancelled: Bool)
 }

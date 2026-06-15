@@ -1,6 +1,7 @@
 public enum PointerCaptureFeature: Equatable, Sendable, CustomStringConvertible {
     case relativePointer
     case pointerConstraints
+    case pointerGestures
 
     public var description: String {
         switch self {
@@ -8,6 +9,8 @@ public enum PointerCaptureFeature: Equatable, Sendable, CustomStringConvertible 
             "relative pointer"
         case .pointerConstraints:
             "pointer constraints"
+        case .pointerGestures:
+            "pointer gestures"
         }
     }
 }
@@ -44,10 +47,13 @@ public enum PointerCaptureError: Error, Equatable, Sendable, CustomStringConvert
     case emptyRegion
     case relativePointerAlreadySubscribed(seatID: SeatID)
     case alreadyConstrained(seatID: SeatID)
+    case pointerGesturesAlreadySubscribed(seatID: SeatID)
     case invalidCursorHint(PointerLocation)
     case unknownRelativePointerSubscription(RelativePointerSubscriptionID)
+    case unknownPointerGestureSubscription(PointerGestureSubscriptionID)
     case unknownPointerConstraint(PointerConstraintID)
     case foreignRelativePointerSubscription(RelativePointerSubscriptionID)
+    case foreignPointerGestureSubscription(PointerGestureSubscriptionID)
     case foreignPointerConstraint(PointerConstraintID)
 
     public var description: String {
@@ -72,15 +78,21 @@ public enum PointerCaptureError: Error, Equatable, Sendable, CustomStringConvert
             "seat \(seatID) already has a relative pointer subscription"
         case .alreadyConstrained(let seatID):
             "seat \(seatID) already has a pointer constraint for this surface"
+        case .pointerGesturesAlreadySubscribed(let seatID):
+            "seat \(seatID) already has a pointer gesture subscription"
         case .invalidCursorHint(let location):
             "pointer constraint cursor hint \(location) cannot be represented "
                 + "as Wayland fixed point"
         case .unknownRelativePointerSubscription(let subscriptionID):
             "relative pointer subscription \(subscriptionID) is not registered"
+        case .unknownPointerGestureSubscription(let subscriptionID):
+            "pointer gesture subscription \(subscriptionID) is not registered"
         case .unknownPointerConstraint(let constraintID):
             "pointer constraint \(constraintID) is not registered"
         case .foreignRelativePointerSubscription(let subscriptionID):
             "relative pointer subscription \(subscriptionID) belongs to a different display"
+        case .foreignPointerGestureSubscription(let subscriptionID):
+            "pointer gesture subscription \(subscriptionID) belongs to a different display"
         case .foreignPointerConstraint(let constraintID):
             "pointer constraint \(constraintID) belongs to a different display"
         }
@@ -98,6 +110,21 @@ public struct RelativePointerSubscriptionID: Equatable, Hashable, Sendable,
 
     public var description: String {
         "relative-pointer-\(rawValue)"
+    }
+}
+
+public struct PointerGestureSubscriptionID: Equatable, Hashable, Sendable,
+    CustomStringConvertible,
+    UInt64WaylandEntityID
+{
+    public let rawValue: UInt64
+
+    public init(rawValue subscriptionRawValue: UInt64) {
+        rawValue = subscriptionRawValue
+    }
+
+    public var description: String {
+        "pointer-gestures-\(rawValue)"
     }
 }
 
@@ -129,6 +156,43 @@ public struct RelativePointerSubscription: Hashable, Sendable {
 
     public func destroy() async throws {
         try await display.destroyRelativePointerSubscription(self)
+    }
+}
+
+public struct PointerGestureSubscription: Hashable, Sendable, Identifiable {
+    public let id: PointerGestureSubscriptionID
+    public let seatID: SeatID
+    public let version: UInt32
+    private let display: WaylandDisplay
+    private let ownership: DisplayOwnedIdentity<PointerGestureSubscriptionID>
+
+    package init(
+        id subscriptionID: PointerGestureSubscriptionID,
+        seatID subscriptionSeatID: SeatID,
+        version protocolVersion: UInt32,
+        display owningDisplay: WaylandDisplay
+    ) {
+        id = subscriptionID
+        seatID = subscriptionSeatID
+        version = protocolVersion
+        display = owningDisplay
+        ownership = DisplayOwnedIdentity(id: subscriptionID, display: owningDisplay)
+    }
+
+    package func isOwned(by owningDisplay: WaylandDisplay) -> Bool {
+        ownership.isOwned(by: owningDisplay)
+    }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.ownership == rhs.ownership
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(ownership)
+    }
+
+    public func destroy() async throws {
+        try await display.destroyPointerGestureSubscription(self)
     }
 }
 

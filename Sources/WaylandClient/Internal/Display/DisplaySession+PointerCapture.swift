@@ -8,6 +8,13 @@ extension DisplaySession {
         return try pointerCaptureManager.createRelativePointer(seatID: seatID)
     }
 
+    package func createPointerGesturesOnOwnerThread(
+        seatID: SeatID
+    ) throws -> (id: PointerGestureSubscriptionID, version: UInt32) {
+        connection.preconditionIsOwnerThread()
+        return try pointerCaptureManager.createPointerGestures(seatID: seatID)
+    }
+
     package func lockPointerOnOwnerThread(
         surface: RawSurface,
         seatID: SeatID,
@@ -62,6 +69,13 @@ extension DisplaySession {
     ) throws {
         connection.preconditionIsOwnerThread()
         try pointerCaptureManager.destroyRelativePointerSubscription(id)
+    }
+
+    package func destroyPointerGestureSubscriptionOnOwnerThread(
+        _ id: PointerGestureSubscriptionID
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        try pointerCaptureManager.destroyPointerGestureSubscription(id)
     }
 
     package func destroyPointerConstraintOnOwnerThread(_ id: PointerConstraintID) throws {

@@ -1,4 +1,5 @@
 import CWaylandProtocols
+import Glibc
 
 @safe
 package final class RawPointerGestures {
@@ -25,7 +26,11 @@ package final class RawPointerGestures {
         )
     }
 
-    package func swipeGesture(for seat: RawSeat) throws -> RawPointerSwipeGesture {
+    package func swipeGesture(
+        for seat: RawSeat,
+        eventSink: RawInputEventSink,
+        invariantFailureSink: RawInvariantFailureSink?
+    ) throws -> RawPointerSwipeGesture {
         guard let pointerDevice = unsafe seat.pointerDevicePointer else {
             throw RuntimeError.bindFailed("wl_pointer")
         }
@@ -41,10 +46,27 @@ package final class RawPointerGestures {
             interface: "zwp_pointer_gesture_swipe_v1",
             destroy: unsafe swl_zwp_pointer_gesture_swipe_v1_destroy
         )
-        return RawPointerSwipeGesture(pointer: adoptedGesture)
+        let owner = RawPointerSwipeGestureOwner(
+            seatID: seat.id,
+            deviceID: seat.pointerDeviceID,
+            eventSink: eventSink,
+            invariantFailureSink: invariantFailureSink
+        )
+        do {
+            try unsafe owner.install(on: adoptedGesture)
+        } catch {
+            owner.cancel()
+            unsafe swl_zwp_pointer_gesture_swipe_v1_destroy(adoptedGesture)
+            throw error
+        }
+        return RawPointerSwipeGesture(pointer: adoptedGesture, listenerOwner: owner)
     }
 
-    package func pinchGesture(for seat: RawSeat) throws -> RawPointerPinchGesture {
+    package func pinchGesture(
+        for seat: RawSeat,
+        eventSink: RawInputEventSink,
+        invariantFailureSink: RawInvariantFailureSink?
+    ) throws -> RawPointerPinchGesture {
         guard let pointerDevice = unsafe seat.pointerDevicePointer else {
             throw RuntimeError.bindFailed("wl_pointer")
         }
@@ -60,10 +82,27 @@ package final class RawPointerGestures {
             interface: "zwp_pointer_gesture_pinch_v1",
             destroy: unsafe swl_zwp_pointer_gesture_pinch_v1_destroy
         )
-        return RawPointerPinchGesture(pointer: adoptedGesture)
+        let owner = RawPointerPinchGestureOwner(
+            seatID: seat.id,
+            deviceID: seat.pointerDeviceID,
+            eventSink: eventSink,
+            invariantFailureSink: invariantFailureSink
+        )
+        do {
+            try unsafe owner.install(on: adoptedGesture)
+        } catch {
+            owner.cancel()
+            unsafe swl_zwp_pointer_gesture_pinch_v1_destroy(adoptedGesture)
+            throw error
+        }
+        return RawPointerPinchGesture(pointer: adoptedGesture, listenerOwner: owner)
     }
 
-    package func holdGesture(for seat: RawSeat) throws -> RawPointerHoldGesture {
+    package func holdGesture(
+        for seat: RawSeat,
+        eventSink: RawInputEventSink,
+        invariantFailureSink: RawInvariantFailureSink?
+    ) throws -> RawPointerHoldGesture {
         guard version >= RawVersion(3) else {
             throw RuntimeError.unsupportedProtocolVersion(
                 interface: "zwp_pointer_gestures_v1",
@@ -86,7 +125,20 @@ package final class RawPointerGestures {
             interface: "zwp_pointer_gesture_hold_v1",
             destroy: unsafe swl_zwp_pointer_gesture_hold_v1_destroy
         )
-        return RawPointerHoldGesture(pointer: adoptedGesture)
+        let owner = RawPointerHoldGestureOwner(
+            seatID: seat.id,
+            deviceID: seat.pointerDeviceID,
+            eventSink: eventSink,
+            invariantFailureSink: invariantFailureSink
+        )
+        do {
+            try unsafe owner.install(on: adoptedGesture)
+        } catch {
+            owner.cancel()
+            unsafe swl_zwp_pointer_gesture_hold_v1_destroy(adoptedGesture)
+            throw error
+        }
+        return RawPointerHoldGesture(pointer: adoptedGesture, listenerOwner: owner)
     }
 
     package func destroy() {
@@ -101,9 +153,14 @@ package final class RawPointerGestures {
 @safe
 package final class RawPointerSwipeGesture {
     private var proxy: RawOwnedProxy
+    private let listenerOwner: RawPointerSwipeGestureOwner?
 
     @safe
-    init(pointer gesturePointer: OpaquePointer) {
+    fileprivate init(
+        pointer gesturePointer: OpaquePointer,
+        listenerOwner owner: RawPointerSwipeGestureOwner?
+    ) {
+        listenerOwner = owner
         proxy = RawOwnedProxy(
             pointer: gesturePointer,
             destroy: unsafe swl_zwp_pointer_gesture_swipe_v1_destroy
@@ -111,6 +168,7 @@ package final class RawPointerSwipeGesture {
     }
 
     package func destroy() {
+        listenerOwner?.cancel()
         proxy.destroy()
     }
 
@@ -122,9 +180,14 @@ package final class RawPointerSwipeGesture {
 @safe
 package final class RawPointerPinchGesture {
     private var proxy: RawOwnedProxy
+    private let listenerOwner: RawPointerPinchGestureOwner?
 
     @safe
-    init(pointer gesturePointer: OpaquePointer) {
+    fileprivate init(
+        pointer gesturePointer: OpaquePointer,
+        listenerOwner owner: RawPointerPinchGestureOwner?
+    ) {
+        listenerOwner = owner
         proxy = RawOwnedProxy(
             pointer: gesturePointer,
             destroy: unsafe swl_zwp_pointer_gesture_pinch_v1_destroy
@@ -132,6 +195,7 @@ package final class RawPointerPinchGesture {
     }
 
     package func destroy() {
+        listenerOwner?.cancel()
         proxy.destroy()
     }
 
@@ -143,9 +207,14 @@ package final class RawPointerPinchGesture {
 @safe
 package final class RawPointerHoldGesture {
     private var proxy: RawOwnedProxy
+    private let listenerOwner: RawPointerHoldGestureOwner?
 
     @safe
-    init(pointer gesturePointer: OpaquePointer) {
+    fileprivate init(
+        pointer gesturePointer: OpaquePointer,
+        listenerOwner owner: RawPointerHoldGestureOwner?
+    ) {
+        listenerOwner = owner
         proxy = RawOwnedProxy(
             pointer: gesturePointer,
             destroy: unsafe swl_zwp_pointer_gesture_hold_v1_destroy
@@ -153,11 +222,401 @@ package final class RawPointerHoldGesture {
     }
 
     package func destroy() {
+        listenerOwner?.cancel()
         proxy.destroy()
     }
 
     deinit {
         destroy()
+    }
+}
+
+@safe
+private final class RawPointerSwipeGestureOwner {
+    private let seatID: RawSeatID
+    private let deviceID: RawInputDeviceID?
+    private let eventSink: RawInputEventSink
+    private let invariantFailureSink: RawInvariantFailureSink?
+    private var isCanceled = false
+    @safe private lazy var listenerStorage = CListenerStorage(
+        owner: self,
+        initialValue: unsafe swl_zwp_pointer_gesture_swipe_v1_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
+    )
+
+    @safe private var callbacks:
+        UnsafeMutablePointer<swl_zwp_pointer_gesture_swipe_v1_listener_callbacks>
+    {
+        listenerStorage.callbacks
+    }
+
+    init(
+        seatID gestureSeatID: RawSeatID,
+        deviceID gestureDeviceID: RawInputDeviceID?,
+        eventSink gestureEventSink: RawInputEventSink,
+        invariantFailureSink failureSink: RawInvariantFailureSink?
+    ) {
+        seatID = gestureSeatID
+        deviceID = gestureDeviceID
+        eventSink = gestureEventSink
+        invariantFailureSink = failureSink
+
+        unsafe callbacks.pointee.begin = { data, _, serial, time, surface, fingers in
+            RawPointerSwipeGestureOwner.withOwner(
+                data,
+                message: "zwp_pointer_gesture_swipe_v1 begin fired without Swift state"
+            ) { owner in
+                owner.append(
+                    .gesture(
+                        .swipe(
+                            .begin(
+                                serial: serial,
+                                time: time,
+                                surfaceID: unsafe RawSeatProxyOperations.live.proxyObjectID(
+                                    surface
+                                ),
+                                fingers: fingers
+                            )
+                        )
+                    )
+                )
+            }
+        }
+        unsafe callbacks.pointee.update = { data, _, time, dx, dy in
+            RawPointerSwipeGestureOwner.withOwner(
+                data,
+                message: "zwp_pointer_gesture_swipe_v1 update fired without Swift state"
+            ) { owner in
+                owner.append(
+                    .gesture(
+                        .swipe(
+                            .update(
+                                time: time,
+                                dx: WaylandFixed(rawValue: dx),
+                                dy: WaylandFixed(rawValue: dy)
+                            )
+                        )
+                    )
+                )
+            }
+        }
+        unsafe callbacks.pointee.end = { data, _, serial, time, cancelled in
+            RawPointerSwipeGestureOwner.withOwner(
+                data,
+                message: "zwp_pointer_gesture_swipe_v1 end fired without Swift state"
+            ) { owner in
+                owner.append(
+                    .gesture(
+                        .swipe(
+                            .end(
+                                serial: serial,
+                                time: time,
+                                cancelled: cancelled != 0
+                            )
+                        )
+                    )
+                )
+            }
+        }
+    }
+
+    func install(on gesture: OpaquePointer) throws {
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        let result = unsafe swl_zwp_pointer_gesture_swipe_v1_add_listener(
+            gesture,
+            callbacks
+        )
+        guard result == 0 else {
+            throw RuntimeError.systemError(
+                errno: EINVAL,
+                operation: .installListener("zwp_pointer_gesture_swipe_v1")
+            )
+        }
+    }
+
+    func cancel() {
+        isCanceled = true
+        listenerStorage.invalidate()
+    }
+
+    private func append(_ event: RawPointerEvent) {
+        guard !isCanceled else { return }
+
+        eventSink.append(rawDraft(kind: .pointer(event)))
+    }
+
+    private func rawDraft(kind: RawInputEventKind) -> RawInputEventDraft {
+        if let deviceID {
+            RawInputEventDraft(deviceID: deviceID, kind: kind)
+        } else {
+            RawInputEventDraft(seatID: seatID, kind: kind)
+        }
+    }
+
+    @safe
+    private static func withOwner(
+        _ data: UnsafeMutableRawPointer?,
+        message: @autoclosure () -> String,
+        _ body: (RawPointerSwipeGestureOwner) -> Void
+    ) {
+        CListenerStorage<
+            RawPointerSwipeGestureOwner,
+            swl_zwp_pointer_gesture_swipe_v1_listener_callbacks
+        >.withOwner(from: data, message: message(), body)
+    }
+}
+
+@safe
+private final class RawPointerPinchGestureOwner {
+    private let seatID: RawSeatID
+    private let deviceID: RawInputDeviceID?
+    private let eventSink: RawInputEventSink
+    private let invariantFailureSink: RawInvariantFailureSink?
+    private var isCanceled = false
+    @safe private lazy var listenerStorage = CListenerStorage(
+        owner: self,
+        initialValue: unsafe swl_zwp_pointer_gesture_pinch_v1_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
+    )
+
+    @safe private var callbacks:
+        UnsafeMutablePointer<swl_zwp_pointer_gesture_pinch_v1_listener_callbacks>
+    {
+        listenerStorage.callbacks
+    }
+
+    init(
+        seatID gestureSeatID: RawSeatID,
+        deviceID gestureDeviceID: RawInputDeviceID?,
+        eventSink gestureEventSink: RawInputEventSink,
+        invariantFailureSink failureSink: RawInvariantFailureSink?
+    ) {
+        seatID = gestureSeatID
+        deviceID = gestureDeviceID
+        eventSink = gestureEventSink
+        invariantFailureSink = failureSink
+
+        unsafe callbacks.pointee.begin = { data, _, serial, time, surface, fingers in
+            RawPointerPinchGestureOwner.withOwner(
+                data,
+                message: "zwp_pointer_gesture_pinch_v1 begin fired without Swift state"
+            ) { owner in
+                owner.append(
+                    .gesture(
+                        .pinch(
+                            .begin(
+                                serial: serial,
+                                time: time,
+                                surfaceID: unsafe RawSeatProxyOperations.live.proxyObjectID(
+                                    surface
+                                ),
+                                fingers: fingers
+                            )
+                        )
+                    )
+                )
+            }
+        }
+        unsafe callbacks.pointee.update = { data, _, time, dx, dy, scale, rotation in
+            RawPointerPinchGestureOwner.withOwner(
+                data,
+                message: "zwp_pointer_gesture_pinch_v1 update fired without Swift state"
+            ) { owner in
+                owner.append(
+                    .gesture(
+                        .pinch(
+                            .update(
+                                time: time,
+                                dx: WaylandFixed(rawValue: dx),
+                                dy: WaylandFixed(rawValue: dy),
+                                scale: WaylandFixed(rawValue: scale),
+                                rotation: WaylandFixed(rawValue: rotation)
+                            )
+                        )
+                    )
+                )
+            }
+        }
+        unsafe callbacks.pointee.end = { data, _, serial, time, cancelled in
+            RawPointerPinchGestureOwner.withOwner(
+                data,
+                message: "zwp_pointer_gesture_pinch_v1 end fired without Swift state"
+            ) { owner in
+                owner.append(
+                    .gesture(
+                        .pinch(
+                            .end(
+                                serial: serial,
+                                time: time,
+                                cancelled: cancelled != 0
+                            )
+                        )
+                    )
+                )
+            }
+        }
+    }
+
+    func install(on gesture: OpaquePointer) throws {
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        let result = unsafe swl_zwp_pointer_gesture_pinch_v1_add_listener(
+            gesture,
+            callbacks
+        )
+        guard result == 0 else {
+            throw RuntimeError.systemError(
+                errno: EINVAL,
+                operation: .installListener("zwp_pointer_gesture_pinch_v1")
+            )
+        }
+    }
+
+    func cancel() {
+        isCanceled = true
+        listenerStorage.invalidate()
+    }
+
+    private func append(_ event: RawPointerEvent) {
+        guard !isCanceled else { return }
+
+        eventSink.append(rawDraft(kind: .pointer(event)))
+    }
+
+    private func rawDraft(kind: RawInputEventKind) -> RawInputEventDraft {
+        if let deviceID {
+            RawInputEventDraft(deviceID: deviceID, kind: kind)
+        } else {
+            RawInputEventDraft(seatID: seatID, kind: kind)
+        }
+    }
+
+    @safe
+    private static func withOwner(
+        _ data: UnsafeMutableRawPointer?,
+        message: @autoclosure () -> String,
+        _ body: (RawPointerPinchGestureOwner) -> Void
+    ) {
+        CListenerStorage<
+            RawPointerPinchGestureOwner,
+            swl_zwp_pointer_gesture_pinch_v1_listener_callbacks
+        >.withOwner(from: data, message: message(), body)
+    }
+}
+
+@safe
+private final class RawPointerHoldGestureOwner {
+    private let seatID: RawSeatID
+    private let deviceID: RawInputDeviceID?
+    private let eventSink: RawInputEventSink
+    private let invariantFailureSink: RawInvariantFailureSink?
+    private var isCanceled = false
+    @safe private lazy var listenerStorage = CListenerStorage(
+        owner: self,
+        initialValue: unsafe swl_zwp_pointer_gesture_hold_v1_listener_callbacks(),
+        invariantFailureSink: invariantFailureSink
+    )
+
+    @safe private var callbacks:
+        UnsafeMutablePointer<swl_zwp_pointer_gesture_hold_v1_listener_callbacks>
+    {
+        listenerStorage.callbacks
+    }
+
+    init(
+        seatID gestureSeatID: RawSeatID,
+        deviceID gestureDeviceID: RawInputDeviceID?,
+        eventSink gestureEventSink: RawInputEventSink,
+        invariantFailureSink failureSink: RawInvariantFailureSink?
+    ) {
+        seatID = gestureSeatID
+        deviceID = gestureDeviceID
+        eventSink = gestureEventSink
+        invariantFailureSink = failureSink
+
+        unsafe callbacks.pointee.begin = { data, _, serial, time, surface, fingers in
+            RawPointerHoldGestureOwner.withOwner(
+                data,
+                message: "zwp_pointer_gesture_hold_v1 begin fired without Swift state"
+            ) { owner in
+                owner.append(
+                    .gesture(
+                        .hold(
+                            .begin(
+                                serial: serial,
+                                time: time,
+                                surfaceID: unsafe RawSeatProxyOperations.live.proxyObjectID(
+                                    surface
+                                ),
+                                fingers: fingers
+                            )
+                        )
+                    )
+                )
+            }
+        }
+        unsafe callbacks.pointee.end = { data, _, serial, time, cancelled in
+            RawPointerHoldGestureOwner.withOwner(
+                data,
+                message: "zwp_pointer_gesture_hold_v1 end fired without Swift state"
+            ) { owner in
+                owner.append(
+                    .gesture(
+                        .hold(
+                            .end(
+                                serial: serial,
+                                time: time,
+                                cancelled: cancelled != 0
+                            )
+                        )
+                    )
+                )
+            }
+        }
+    }
+
+    func install(on gesture: OpaquePointer) throws {
+        unsafe callbacks.pointee.data = listenerStorage.opaqueOwnerPointer
+        let result = unsafe swl_zwp_pointer_gesture_hold_v1_add_listener(
+            gesture,
+            callbacks
+        )
+        guard result == 0 else {
+            throw RuntimeError.systemError(
+                errno: EINVAL,
+                operation: .installListener("zwp_pointer_gesture_hold_v1")
+            )
+        }
+    }
+
+    func cancel() {
+        isCanceled = true
+        listenerStorage.invalidate()
+    }
+
+    private func append(_ event: RawPointerEvent) {
+        guard !isCanceled else { return }
+
+        eventSink.append(rawDraft(kind: .pointer(event)))
+    }
+
+    private func rawDraft(kind: RawInputEventKind) -> RawInputEventDraft {
+        if let deviceID {
+            RawInputEventDraft(deviceID: deviceID, kind: kind)
+        } else {
+            RawInputEventDraft(seatID: seatID, kind: kind)
+        }
+    }
+
+    @safe
+    private static func withOwner(
+        _ data: UnsafeMutableRawPointer?,
+        message: @autoclosure () -> String,
+        _ body: (RawPointerHoldGestureOwner) -> Void
+    ) {
+        CListenerStorage<
+            RawPointerHoldGestureOwner,
+            swl_zwp_pointer_gesture_hold_v1_listener_callbacks
+        >.withOwner(from: data, message: message(), body)
     }
 }
 
