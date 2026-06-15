@@ -1420,6 +1420,12 @@ typedef void (*swl_zwp_pointer_gesture_hold_v1_end_fn)(
     uint32_t serial,
     uint32_t time,
     int32_t cancelled);
+typedef void (*swl_zwp_keyboard_shortcuts_inhibitor_v1_active_fn)(
+    void *data,
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor);
+typedef void (*swl_zwp_keyboard_shortcuts_inhibitor_v1_inactive_fn)(
+    void *data,
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor);
 
 /* Tablet */
 typedef void (*swl_zwp_tablet_seat_v2_tablet_added_fn)(
@@ -1909,6 +1915,12 @@ struct swl_zwp_pointer_gesture_hold_v1_listener_callbacks {
     void                                    *data;
 };
 
+struct swl_zwp_keyboard_shortcuts_inhibitor_v1_listener_callbacks {
+    swl_zwp_keyboard_shortcuts_inhibitor_v1_active_fn   active;
+    swl_zwp_keyboard_shortcuts_inhibitor_v1_inactive_fn inactive;
+    void                                               *data;
+};
+
 struct swl_zwp_tablet_seat_v2_listener_callbacks {
     swl_zwp_tablet_seat_v2_tablet_added_fn tablet_added;
     swl_zwp_tablet_seat_v2_tool_added_fn   tool_added;
@@ -2170,6 +2182,11 @@ int swl_zwp_pointer_gesture_pinch_v1_add_listener(
 int swl_zwp_pointer_gesture_hold_v1_add_listener(
     struct zwp_pointer_gesture_hold_v1 *gesture,
     const struct swl_zwp_pointer_gesture_hold_v1_listener_callbacks *callbacks);
+
+int swl_zwp_keyboard_shortcuts_inhibitor_v1_add_listener(
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor,
+    const struct
+        swl_zwp_keyboard_shortcuts_inhibitor_v1_listener_callbacks *callbacks);
 
 int swl_zwp_tablet_seat_v2_add_listener(
     struct zwp_tablet_seat_v2 *tablet_seat,
@@ -2789,6 +2806,8 @@ enum swl_test_pointer_capture_listener_kind {
     SWL_TEST_POINTER_CAPTURE_LISTENER_UNLOCKED = 3,
     SWL_TEST_POINTER_CAPTURE_LISTENER_CONFINED = 4,
     SWL_TEST_POINTER_CAPTURE_LISTENER_UNCONFINED = 5,
+    SWL_TEST_POINTER_CAPTURE_LISTENER_SHORTCUTS_ACTIVE = 6,
+    SWL_TEST_POINTER_CAPTURE_LISTENER_SHORTCUTS_INACTIVE = 7,
 };
 
 struct swl_test_pointer_capture_listener_record {
@@ -3296,6 +3315,14 @@ void swl_test_confined_pointer_listener_emit_confined(
 void swl_test_confined_pointer_listener_emit_unconfined(
     void *data,
     struct zwp_confined_pointer_v1 *confined_pointer,
+    struct swl_test_pointer_capture_listener_record *record);
+void swl_test_keyboard_shortcuts_inhibitor_listener_emit_active(
+    void *data,
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor,
+    struct swl_test_pointer_capture_listener_record *record);
+void swl_test_keyboard_shortcuts_inhibitor_listener_emit_inactive(
+    void *data,
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor,
     struct swl_test_pointer_capture_listener_record *record);
 
 void swl_test_syncobj_request_recording_begin(void);

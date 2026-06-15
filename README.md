@@ -92,10 +92,9 @@ Current experimental baseline:
   redraw
 - static and animated custom cursor images
 - desktop integration hooks for toplevel icons, idle inhibition, system bell,
-  xdg-dialog hints, keyboard-shortcut inhibition, toplevel drag start, and
-  read-only foreign toplevel facts
-- wlroots output-management preview snapshots with mutation/test requests
-  rejected until the manager serial lifecycle is modeled
+  xdg-dialog hints, keyboard-shortcut inhibition, and toplevel drag start
+- capability reporting and raw preview plumbing for foreign toplevel lists and
+  wlroots output management; event-backed public facts/control remain deferred
 - compose and dead-key text results for interpreted keyboard events
 - display, input, data-transfer, text-input, and diagnostic event streams
 - window restoration snapshots for framework-owned local session state

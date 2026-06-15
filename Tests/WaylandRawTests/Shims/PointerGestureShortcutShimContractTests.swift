@@ -56,6 +56,40 @@
         }
 
         @Test
+        func keyboardShortcutsInhibitorListenerForwardsActiveAndInactive() throws {
+            let data = unsafe UnsafeMutableRawPointer(bitPattern: 0xB131)
+            let inhibitor = try unsafe #require(OpaquePointer(bitPattern: 0xB132))
+            var activeRecord = unsafe swl_test_pointer_capture_listener_record()
+            var inactiveRecord = unsafe swl_test_pointer_capture_listener_record()
+
+            unsafe swl_test_keyboard_shortcuts_inhibitor_listener_emit_active(
+                data,
+                inhibitor,
+                &activeRecord
+            )
+            unsafe swl_test_keyboard_shortcuts_inhibitor_listener_emit_inactive(
+                data,
+                inhibitor,
+                &inactiveRecord
+            )
+
+            #expect(unsafe activeRecord.call_count == 1)
+            #expect(
+                unsafe activeRecord.kind
+                    == SWL_TEST_POINTER_CAPTURE_LISTENER_SHORTCUTS_ACTIVE
+            )
+            #expect(unsafe activeRecord.data == data)
+            #expect(unsafe activeRecord.object == UnsafeMutableRawPointer(inhibitor))
+            #expect(unsafe inactiveRecord.call_count == 1)
+            #expect(
+                unsafe inactiveRecord.kind
+                    == SWL_TEST_POINTER_CAPTURE_LISTENER_SHORTCUTS_INACTIVE
+            )
+            #expect(unsafe inactiveRecord.data == data)
+            #expect(unsafe inactiveRecord.object == UnsafeMutableRawPointer(inhibitor))
+        }
+
+        @Test
         func gestureAndShortcutDestroyWrappersUseMatchingTargets() throws {
             let gestures = try unsafe #require(OpaquePointer(bitPattern: 0xB607))
             let swipe = try unsafe #require(OpaquePointer(bitPattern: 0xB608))

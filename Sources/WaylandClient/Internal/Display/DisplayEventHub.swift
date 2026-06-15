@@ -96,7 +96,7 @@ final class DisplayEventHub: Sendable {
             publishDiagnostic(diagnostic)
         case .windowCloseRequested, .windowClosed, .popupDismissed, .popupClosed,
             .redrawRequested, .popupRedrawRequested, .outputChanged, .outputRemoved,
-            .windowOutputsChanged:
+            .windowOutputsChanged, .keyboardShortcutsInhibitorChanged:
             displayBroker.publish(event)
         }
     }

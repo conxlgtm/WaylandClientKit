@@ -11,11 +11,13 @@ Use a window icon when the compositor or shell can display app identity. Use
 idle inhibition while visible activity such as media playback should keep the
 screen awake. Use `createDialog(parent:modal:)` to expose the protocol fact that
 one toplevel is a dialog relative to another toplevel. Use keyboard shortcut
-inhibition only for seat/window-scoped full-screen or capture-heavy modes. Use
-`startToplevelDrag` when a drag source should move detachable toplevel
-content. Foreign toplevel list event-backed facts are deferred until the raw
-protocol state is modeled. Use system bell for compositor-mediated attention
-feedback rather than playing sound directly from WaylandClientKit.
+inhibition only for seat/window-scoped full-screen or capture-heavy modes, and
+watch display events for `keyboardShortcutsInhibitorChanged` because the
+compositor can activate or deactivate the request. Use `startToplevelDrag` when
+a drag source should move detachable toplevel content. Foreign toplevel list
+event-backed facts are deferred until the raw protocol state is modeled. Use
+system bell for compositor-mediated attention feedback rather than playing sound
+directly from WaylandClientKit.
 
 ## Capability Gates
 
