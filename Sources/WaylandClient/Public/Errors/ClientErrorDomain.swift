@@ -14,6 +14,7 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
     case xdgToplevelIconUnavailable
     case xdgDialogUnavailable
     case xdgToplevelDragUnavailable
+    case foreignToplevelListUnavailable
     case foreignDragSource(DragSourceIdentity)
     case dragSourceSeatMismatch(DragSourceIdentity, expected: SeatID, actual: SeatID)
     case unknownToplevelDrag(ToplevelDragID)
@@ -68,6 +69,8 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "xdg-dialog protocol is unavailable"
         case .xdgToplevelDragUnavailable:
             "xdg-toplevel-drag protocol is unavailable"
+        case .foreignToplevelListUnavailable:
+            "ext-foreign-toplevel-list protocol is unavailable"
         case .foreignDragSource(let sourceID):
             "drag source belongs to another display: \(sourceID)"
         case .dragSourceSeatMismatch(let sourceID, let expected, let actual):
