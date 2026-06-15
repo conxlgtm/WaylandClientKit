@@ -66,7 +66,7 @@ package final class RawWlrOutputHead {
     package init(pointer headPointer: OpaquePointer) {
         proxy = RawOwnedProxy(
             pointer: headPointer,
-            destroy: unsafe swl_zwlr_output_head_v1_destroy
+            destroy: unsafe swl_zwlr_output_head_v1_release
         )
     }
 
@@ -89,7 +89,7 @@ package final class RawWlrOutputMode {
     package init(pointer modePointer: OpaquePointer) {
         proxy = RawOwnedProxy(
             pointer: modePointer,
-            destroy: unsafe swl_zwlr_output_mode_v1_destroy
+            destroy: unsafe swl_zwlr_output_mode_v1_release
         )
     }
 

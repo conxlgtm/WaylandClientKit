@@ -105,13 +105,16 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
                 eventSink: connection.inputEventSink,
                 invariantFailureSink: connection.invariantFailureSink
             )
-            let hold = try? manager.holdGesture(
-                for: seat,
-                eventSink: connection.inputEventSink,
-                invariantFailureSink: connection.invariantFailureSink
-            )
-            let subscriptionID = pointerGestureSubscriptionIDs.next()
+            var hold: RawPointerHoldGesture?
             do {
+                if manager.version >= RawVersion(3) {
+                    hold = try manager.holdGesture(
+                        for: seat,
+                        eventSink: connection.inputEventSink,
+                        invariantFailureSink: connection.invariantFailureSink
+                    )
+                }
+                let subscriptionID = pointerGestureSubscriptionIDs.next()
                 try pointerGestures.insert(
                     ManagedPointerGestureSubscription(
                         seatID: seatID,
@@ -122,14 +125,13 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
                     ),
                     id: subscriptionID
                 )
+                pointerGestureIDsBySeatID[seatID] = subscriptionID
+                return (subscriptionID, manager.version.value)
             } catch {
-                swipe.destroy()
                 pinch.destroy()
                 hold?.destroy()
                 throw error
             }
-            pointerGestureIDsBySeatID[seatID] = subscriptionID
-            return (subscriptionID, manager.version.value)
         } catch {
             swipe.destroy()
             throw error

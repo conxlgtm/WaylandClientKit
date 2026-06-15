@@ -283,7 +283,11 @@ extension DisplayCore {
         if let childWindow = surfaces.window(record.childWindowID),
             !childWindow.isClosedOnOwnerThread
         {
-            try? childWindow.clearDialogParentOnOwnerThread()
+            do {
+                try childWindow.clearDialogParentOnOwnerThread()
+            } catch {
+                markSurfaceStoreInvariantFailed(error)
+            }
         }
         record.destroy()
         windowDialogIDByChildWindowID.removeValue(forKey: record.childWindowID)

@@ -853,7 +853,9 @@ swl_zwlr_output_manager_v1_create_configuration(
 void swl_zwlr_output_manager_v1_stop(struct zwlr_output_manager_v1 *manager);
 void swl_zwlr_output_manager_v1_destroy(struct zwlr_output_manager_v1 *manager);
 void swl_zwlr_output_head_v1_destroy(struct zwlr_output_head_v1 *head);
+void swl_zwlr_output_head_v1_release(struct zwlr_output_head_v1 *head);
 void swl_zwlr_output_mode_v1_destroy(struct zwlr_output_mode_v1 *mode);
+void swl_zwlr_output_mode_v1_release(struct zwlr_output_mode_v1 *mode);
 struct zwlr_output_configuration_head_v1 *
 swl_zwlr_output_configuration_v1_enable_head(
     struct zwlr_output_configuration_v1 *configuration,
@@ -2307,6 +2309,18 @@ enum swl_test_metadata_destroy_kind {
     SWL_TEST_METADATA_DESTROY_COLOR_MANAGEMENT_SURFACE_FEEDBACK = 12,
 };
 
+enum swl_test_output_destroy_kind {
+    SWL_TEST_OUTPUT_DESTROY_NONE = 0,
+    SWL_TEST_OUTPUT_HEAD_RELEASE = 1,
+    SWL_TEST_OUTPUT_MODE_RELEASE = 2,
+};
+
+struct swl_test_output_destroy_record {
+    int32_t                           call_count;
+    enum swl_test_output_destroy_kind kind;
+    void                             *object;
+};
+
 struct swl_test_core_request_record {
     int32_t                         call_count;
     enum swl_test_core_request_kind kind;
@@ -3097,6 +3111,9 @@ void swl_test_metadata_request_recording_begin(void);
 void swl_test_metadata_request_recording_end(void);
 struct swl_test_metadata_request_record swl_test_metadata_request_record(void);
 struct swl_test_metadata_destroy_record swl_test_metadata_destroy_record(void);
+void swl_test_output_request_recording_begin(void);
+void swl_test_output_request_recording_end(void);
+struct swl_test_output_destroy_record swl_test_output_destroy_record(void);
 void swl_test_metadata_listener_recording_begin(void);
 void swl_test_metadata_listener_recording_end(void);
 struct swl_test_metadata_listener_record swl_test_metadata_listener_record(void);
