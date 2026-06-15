@@ -6,6 +6,7 @@ package final class RawWlrOutputManager {
 
     private let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
+    private var hasStopped = false
 
     @safe private var pointer: OpaquePointer { proxy.pointer }
 
@@ -25,7 +26,25 @@ package final class RawWlrOutputManager {
         )
     }
 
+    @safe
+    private init(
+        testingPointer managerPointer: OpaquePointer,
+        version managerVersion: RawVersion,
+        proxyAdoption adoptionContext: RawProxyAdoptionContext
+    ) {
+        version = managerVersion
+        proxyAdoption = adoptionContext
+        proxy = RawOwnedProxy(
+            pointer: managerPointer,
+            destroy: unsafe swl_zwlr_output_manager_v1_destroy
+        )
+    }
+
     package func createConfiguration(serial: UInt32) throws -> RawWlrOutputConfiguration {
+        guard !hasStopped else {
+            throw RuntimeError.invalidArgument("zwlr_output_manager_v1 stopped")
+        }
+
         guard
             let configuration = unsafe swl_zwlr_output_manager_v1_create_configuration(
                 pointer,
@@ -44,15 +63,34 @@ package final class RawWlrOutputManager {
     }
 
     package func stop() {
+        guard !hasStopped else { return }
+
+        hasStopped = true
         unsafe swl_zwlr_output_manager_v1_stop(pointer)
+        proxy.abandon()
     }
 
     package func destroy() {
-        proxy.destroy()
+        stop()
     }
 
     deinit {
         destroy()
+    }
+}
+
+extension RawWlrOutputManager {
+    @safe
+    package static func testingOutputManager(
+        pointer managerPointer: OpaquePointer,
+        version managerVersion: RawVersion,
+        proxyAdoption adoptionContext: RawProxyAdoptionContext
+    ) -> RawWlrOutputManager {
+        RawWlrOutputManager(
+            testingPointer: managerPointer,
+            version: managerVersion,
+            proxyAdoption: adoptionContext
+        )
     }
 }
 

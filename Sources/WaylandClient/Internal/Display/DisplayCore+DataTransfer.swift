@@ -317,6 +317,12 @@ extension DisplayCore {
 
     func cancelDragSource(id sourceID: DataSourceID) throws {
         try withFatalFailureFinalization {
+            if let activeDrag = toplevelDragsByID.values.first(where: { drag in
+                drag.source == sourceID.dragIdentity
+            }) {
+                throw ClientError.display(.toplevelDragStillActive(activeDrag.id))
+            }
+
             let activeSession = try requireSession()
             try activeSession.cancelDragSourceOnOwnerThread(id: sourceID)
             publishDrainedDataTransfer(from: activeSession)
