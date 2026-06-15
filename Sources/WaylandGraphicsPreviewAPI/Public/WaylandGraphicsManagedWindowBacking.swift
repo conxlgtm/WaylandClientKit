@@ -34,6 +34,17 @@ package protocol WaylandGraphicsManagedWindow: Sendable {
         identity: SurfaceSyncTimelineIdentity
     ) async throws
 
+    func importGraphicsPreviewExternalBuffer(
+        _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor
+    ) async throws -> RawLinuxDmabufBuffer
+
+    func presentGraphicsPreviewBuffer(
+        _ buffer: RawSurfaceBuffer,
+        submitConstraints: SurfaceSubmitConstraints,
+        metadata: SurfaceCommitMetadata,
+        requestPresentationFeedback: Bool
+    ) async throws -> PreviewBufferPresentationResult
+
     func close() async
 }
 
@@ -51,9 +62,44 @@ extension WaylandGraphicsManagedWindow {
         fileDescriptor.close()
         throw SurfaceSubmitConstraintError.explicitSyncUnavailable
     }
+
+    package func importGraphicsPreviewExternalBuffer(
+        _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor
+    ) async throws -> RawLinuxDmabufBuffer {
+        var descriptor = descriptor
+        do {
+            try descriptor.closeFileDescriptors()
+        } catch {
+            _ = error
+        }
+        throw WaylandGraphicsError.unavailable(.dmabufUnavailable)
+    }
+
+    package func presentGraphicsPreviewBuffer(
+        _: RawSurfaceBuffer,
+        submitConstraints _: SurfaceSubmitConstraints,
+        metadata _: SurfaceCommitMetadata,
+        requestPresentationFeedback _: Bool
+    ) async throws -> PreviewBufferPresentationResult {
+        throw WaylandGraphicsError.unavailable(.managedGPUSubmissionUnavailable)
+    }
 }
 
-extension Window: WaylandGraphicsManagedWindow {}
+extension Window: WaylandGraphicsManagedWindow {
+    package func importGraphicsPreviewExternalBuffer(
+        _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor
+    ) async throws -> RawLinuxDmabufBuffer {
+        var descriptor = descriptor
+        let importPlan = try descriptor.makeImportPlan()
+        return try await withGraphicsPreviewLinuxDmabuf { linuxDmabuf, syncDisplay in
+            try importPlan.importBuffer(
+                using: linuxDmabuf,
+                timeoutMilliseconds: WaylandDisplay.defaultDiscoveryTimeoutMilliseconds,
+                syncDisplay: syncDisplay
+            )
+        }
+    }
+}
 
 package struct WaylandGraphicsManagedGPUClearFrameSubmission: Sendable {
     let color: GPUClearColor

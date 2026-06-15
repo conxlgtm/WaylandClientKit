@@ -88,7 +88,16 @@ struct WaylandGraphicsPreviewClientTests {
         let metadata = WaylandGraphicsFrameMetadata(
             contentType: .video,
             presentationHint: .async,
+            alpha: .opaque,
+            colorRepresentation: WaylandGraphicsColorRepresentation(
+                alphaMode: .premultipliedElectrical
+            ),
             damage: .fullFrame
+        )
+        let schedule = WaylandGraphicsFrameSchedule(
+            synchronization: .preferExplicit,
+            pacing: .fifo,
+            presentationFeedback: .requestWhenAvailable
         )
         let frame = WaylandGraphicsSubmittedFrame.clearColor(
             WaylandGraphicsXRGBColor(red: 1, green: 2, blue: 3)
@@ -108,6 +117,7 @@ struct WaylandGraphicsPreviewClientTests {
             operation: .show,
             size: try PositivePixelSize(width: 1, height: 1),
             metadata: metadata,
+            schedule: schedule,
             presentationFeedbackRequested: true,
             synchronizationPolicy: .preferExplicit,
             pacingPolicy: .preferFIFO
@@ -119,11 +129,13 @@ struct WaylandGraphicsPreviewClientTests {
         #expect(WaylandGraphicsFallbackReason.surfaceFeedbackUnavailable != .dmabufUnavailable)
         #expect(WaylandGraphicsUnavailableReason.gbmAllocationFailed != .gbmUnavailable)
         #expect(metadata.contentType == .video)
+        #expect(metadata.alpha == .opaque)
         #expect(metadata.damage == .fullFrame)
         #expect(frame == expectedFrame)
         #expect(result.operation == .show)
         #expect(result.backing == .fallback(.forcedSoftware))
         #expect(result.metadata == metadata)
+        #expect(result.schedule == schedule)
         #expect(result.presentationFeedbackRequested)
         #expect(result.synchronizationPolicy == .preferExplicit)
         #expect(result.pacingPolicy == .preferFIFO)

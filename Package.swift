@@ -1,4 +1,5 @@
 // swift-tools-version: 6.3.2
+// swiftlint:disable file_length
 import PackageDescription
 
 let librarySwiftSettings: [SwiftSetting] = [
@@ -154,7 +155,12 @@ let package = Package(
         ),
         .target(
             name: "WaylandGraphicsPreview",
-            dependencies: ["WaylandClient", "WaylandGPUPreview", "WaylandRaw"],
+            dependencies: [
+                "WaylandClient",
+                "WaylandGraphicsCore",
+                "WaylandGPUPreview",
+                "WaylandRaw",
+            ],
             path: "Sources/WaylandGraphicsPreviewAPI",
             swiftSettings: strictMemorySafetySwiftSettings
         ),
@@ -200,6 +206,36 @@ let package = Package(
             name: "GraphicsPreviewManagedGPUClear",
             dependencies: ["WaylandClient", "WaylandExampleSupport", "WaylandGraphicsPreview"],
             path: "Examples/GraphicsPreviewManagedGPUClear",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "GraphicsPreviewExternalBufferMaintainerSmoke",
+            dependencies: [
+                "WaylandClient",
+                "WaylandExampleSupport",
+                "WaylandGraphicsCore",
+                "WaylandGraphicsPreview",
+                "WaylandRaw",
+            ],
+            path: "Examples/GraphicsPreviewExternalBufferMaintainerSmoke",
+            swiftSettings: strictMemorySafetySwiftSettings
+        ),
+        .executableTarget(
+            name: "GraphicsPreviewColorMetadataSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport", "WaylandGraphicsPreview"],
+            path: "Examples/GraphicsPreviewColorMetadataSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "ColorManagementSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport", "WaylandGraphicsPreview"],
+            path: "Examples/ColorManagementSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "OutputTopologySmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/OutputTopologySmoke",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(

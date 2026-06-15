@@ -27,6 +27,7 @@ Sources/WaylandGraphicsPreview/Internal/GBM/**	OpaquePointer	GBM preview device 
 Sources/WaylandGraphicsPreview/Internal/GBM/GBMBuffer.swift	@unchecked Sendable	Dmabuf export owns plane fds for transfer into Wayland buffer params during package-internal managed GPU setup.
 Sources/WaylandGraphicsPreview/Internal/GBM/DRMRenderNodeSelection.swift	UnsafeBufferPointer	Borrow dmabuf device bytes and C string storage for libdrm render-node lookup.
 Sources/WaylandGraphicsPreview/Internal/GBM/DRMRenderNodeSelection.swift	UnsafeMutableBufferPointer	Borrow render-node path storage for libdrm render-node lookup.
+Sources/WaylandGraphicsPreviewAPI/Public/WaylandGraphicsSubmission.swift	@unchecked Sendable	External-buffer import plan owns plane fds during package-internal dmabuf import handoff without exposing raw handles publicly.
 Sources/WaylandGraphicsPreview/Internal/EGL/**	UnsafeMutableRawPointer	EGL preview display, context, and surface lifetime wrappers.
 Sources/WaylandGraphicsPreview/Internal/EGL/EGLRenderTarget.swift	UnsafeMutableBufferPointer	Scoped GPU smoke pixel readback buffer.
 Sources/WaylandRuntime/**	eventfd	Executor wake fd primitive.

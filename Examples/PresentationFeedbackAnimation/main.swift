@@ -36,7 +36,6 @@ enum PresentationFeedbackAnimation {
             let usePresentationFeedback = capabilities.presentationTime.isAvailable
             log("feature: presentation-feedback")
             log("capability: \(availabilityDescription(capabilities.presentationTime))")
-            log("pacing requested: \(options.pacing ?? "none")")
             log(
                 "presentation feedback "
                     + (usePresentationFeedback ? "available" : "unavailable")
@@ -83,6 +82,8 @@ enum PresentationFeedbackAnimation {
             if options.printSummary {
                 log(await animation.summary())
             }
+            log("fallback: none")
+            log("failure: none")
             log("result: pass")
             log("cleanup: pass")
         }
@@ -102,8 +103,12 @@ enum PresentationFeedbackAnimation {
             case .redrawRequested(let windowID) where windowID == window.id:
                 let phase = await animation.nextPhase()
                 if usePresentationFeedback {
-                    try? await window.requestPresentationFeedback()
-                    log("operation: request-presentation-feedback pass")
+                    do {
+                        try await window.requestPresentationFeedback()
+                        log("operation: request-presentation-feedback pass")
+                    } catch {
+                        log("operation: request-presentation-feedback failed(\(error))")
+                    }
                 } else {
                     log("operation: request-presentation-feedback skip")
                 }
