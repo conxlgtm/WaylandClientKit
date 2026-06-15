@@ -6,6 +6,20 @@ extension WaylandDisplay {
         return RelativePointerSubscription(id: id, display: self)
     }
 
+    public func pointerGestures(
+        seatID: SeatID
+    ) throws -> PointerGestureSubscription {
+        let subscription = try pointerCaptureCore().createPointerGestureSubscription(
+            seatID: seatID
+        )
+        return PointerGestureSubscription(
+            id: subscription.id,
+            seatID: seatID,
+            version: subscription.version,
+            display: self
+        )
+    }
+
     public func lockPointer(
         window: Window,
         seatID: SeatID,
@@ -73,6 +87,16 @@ extension WaylandDisplay {
         }
 
         try pointerCaptureCore().destroyRelativePointerSubscription(subscription.id)
+    }
+
+    public func destroyPointerGestureSubscription(
+        _ subscription: PointerGestureSubscription
+    ) throws {
+        guard subscription.isOwned(by: self) else {
+            throw PointerCaptureError.foreignPointerGestureSubscription(subscription.id)
+        }
+
+        try pointerCaptureCore().destroyPointerGestureSubscription(subscription.id)
     }
 
     public func destroyPointerConstraint(_ constraint: PointerConstraint) throws {

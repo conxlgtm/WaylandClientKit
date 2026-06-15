@@ -1366,6 +1366,61 @@ typedef void (*swl_zwp_confined_pointer_v1_unconfined_fn)(
     void *data,
     struct zwp_confined_pointer_v1 *confined_pointer);
 
+/* Pointer gestures */
+typedef void (*swl_zwp_pointer_gesture_swipe_v1_begin_fn)(
+    void *data,
+    struct zwp_pointer_gesture_swipe_v1 *gesture,
+    uint32_t serial,
+    uint32_t time,
+    struct wl_surface *surface,
+    uint32_t fingers);
+typedef void (*swl_zwp_pointer_gesture_swipe_v1_update_fn)(
+    void *data,
+    struct zwp_pointer_gesture_swipe_v1 *gesture,
+    uint32_t time,
+    wl_fixed_t dx,
+    wl_fixed_t dy);
+typedef void (*swl_zwp_pointer_gesture_swipe_v1_end_fn)(
+    void *data,
+    struct zwp_pointer_gesture_swipe_v1 *gesture,
+    uint32_t serial,
+    uint32_t time,
+    int32_t cancelled);
+typedef void (*swl_zwp_pointer_gesture_pinch_v1_begin_fn)(
+    void *data,
+    struct zwp_pointer_gesture_pinch_v1 *gesture,
+    uint32_t serial,
+    uint32_t time,
+    struct wl_surface *surface,
+    uint32_t fingers);
+typedef void (*swl_zwp_pointer_gesture_pinch_v1_update_fn)(
+    void *data,
+    struct zwp_pointer_gesture_pinch_v1 *gesture,
+    uint32_t time,
+    wl_fixed_t dx,
+    wl_fixed_t dy,
+    wl_fixed_t scale,
+    wl_fixed_t rotation);
+typedef void (*swl_zwp_pointer_gesture_pinch_v1_end_fn)(
+    void *data,
+    struct zwp_pointer_gesture_pinch_v1 *gesture,
+    uint32_t serial,
+    uint32_t time,
+    int32_t cancelled);
+typedef void (*swl_zwp_pointer_gesture_hold_v1_begin_fn)(
+    void *data,
+    struct zwp_pointer_gesture_hold_v1 *gesture,
+    uint32_t serial,
+    uint32_t time,
+    struct wl_surface *surface,
+    uint32_t fingers);
+typedef void (*swl_zwp_pointer_gesture_hold_v1_end_fn)(
+    void *data,
+    struct zwp_pointer_gesture_hold_v1 *gesture,
+    uint32_t serial,
+    uint32_t time,
+    int32_t cancelled);
+
 /* Tablet */
 typedef void (*swl_zwp_tablet_seat_v2_tablet_added_fn)(
     void *data,
@@ -1834,6 +1889,26 @@ struct swl_zwp_confined_pointer_v1_listener_callbacks {
     void                                     *data;
 };
 
+struct swl_zwp_pointer_gesture_swipe_v1_listener_callbacks {
+    swl_zwp_pointer_gesture_swipe_v1_begin_fn  begin;
+    swl_zwp_pointer_gesture_swipe_v1_update_fn update;
+    swl_zwp_pointer_gesture_swipe_v1_end_fn    end;
+    void                                      *data;
+};
+
+struct swl_zwp_pointer_gesture_pinch_v1_listener_callbacks {
+    swl_zwp_pointer_gesture_pinch_v1_begin_fn  begin;
+    swl_zwp_pointer_gesture_pinch_v1_update_fn update;
+    swl_zwp_pointer_gesture_pinch_v1_end_fn    end;
+    void                                      *data;
+};
+
+struct swl_zwp_pointer_gesture_hold_v1_listener_callbacks {
+    swl_zwp_pointer_gesture_hold_v1_begin_fn begin;
+    swl_zwp_pointer_gesture_hold_v1_end_fn   end;
+    void                                    *data;
+};
+
 struct swl_zwp_tablet_seat_v2_listener_callbacks {
     swl_zwp_tablet_seat_v2_tablet_added_fn tablet_added;
     swl_zwp_tablet_seat_v2_tool_added_fn   tool_added;
@@ -2083,6 +2158,18 @@ int swl_zwp_locked_pointer_v1_add_listener(
 int swl_zwp_confined_pointer_v1_add_listener(
     struct zwp_confined_pointer_v1 *confined_pointer,
     const struct swl_zwp_confined_pointer_v1_listener_callbacks *callbacks);
+
+int swl_zwp_pointer_gesture_swipe_v1_add_listener(
+    struct zwp_pointer_gesture_swipe_v1 *gesture,
+    const struct swl_zwp_pointer_gesture_swipe_v1_listener_callbacks *callbacks);
+
+int swl_zwp_pointer_gesture_pinch_v1_add_listener(
+    struct zwp_pointer_gesture_pinch_v1 *gesture,
+    const struct swl_zwp_pointer_gesture_pinch_v1_listener_callbacks *callbacks);
+
+int swl_zwp_pointer_gesture_hold_v1_add_listener(
+    struct zwp_pointer_gesture_hold_v1 *gesture,
+    const struct swl_zwp_pointer_gesture_hold_v1_listener_callbacks *callbacks);
 
 int swl_zwp_tablet_seat_v2_add_listener(
     struct zwp_tablet_seat_v2 *tablet_seat,
