@@ -1,0 +1,164 @@
+import Foundation
+import WaylandClient
+import WaylandExampleSupport
+
+@main
+enum ToplevelDragSmoke {
+    nonisolated private static let leftButton = PointerButtonCode(rawValue: 0x110)
+
+    static func main() async throws {
+        let options = try ExampleRunOptions.parse(CommandLine.arguments.dropFirst())
+
+        try await WaylandDisplay.withConnection(
+            eventStreamConfiguration: try EventStreamConfiguration(
+                displayEventCapacity: 64,
+                inputEventCapacity: 128,
+                textInputEventCapacity: 16,
+                dataTransferEventCapacity: 64,
+                presentationEventCapacity: 16
+            )
+        ) { display in
+            let capabilities = try await display.capabilities()
+            log("feature: xdg-toplevel-drag")
+            log("capability: \(availability(capabilities.xdgToplevelDrag))")
+            guard capabilities.xdgToplevelDrag.isAvailable else {
+                log("operation: attach skip")
+                log("cleanup: pass")
+                return
+            }
+
+            let window = try await display.createTopLevelWindow(
+                configuration: try WindowConfiguration(
+                    title: "WaylandClientKit Toplevel Drag Smoke",
+                    appID: "wayland-client-kit-toplevel-drag-smoke",
+                    initialWidth: 360,
+                    initialHeight: 220,
+                    closeRequestPolicy: .requestOnly
+                )
+            )
+            try await window.show(draw)
+            log("operation: waiting-for-live-button-serial")
+
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                group.addTask { try await consumeDisplayEvents(display.events, window: window) }
+                group.addTask { try await consumeInputEvents(display.inputEvents, window: window) }
+                group.addTask { try await consumeDataTransferEvents(display.dataTransferEvents) }
+                if let seconds = options.autoCloseSeconds {
+                    group.addTask {
+                        try await Task.sleep(for: .seconds(seconds))
+                        await window.close()
+                    }
+                }
+
+                _ = try await group.next()
+                group.cancelAll()
+            }
+            log("cleanup: pass")
+        }
+    }
+
+    nonisolated private static func consumeDisplayEvents(
+        _ events: DisplayEvents,
+        window: Window
+    ) async throws {
+        var iterator = events.makeAsyncIterator()
+        while !Task.isCancelled, let event = try await iterator.next() {
+            switch event {
+            case .redrawRequested(let windowID) where windowID == window.id:
+                try await window.redraw(draw)
+            case .windowCloseRequested(let windowID) where windowID == window.id:
+                await window.close()
+            case .windowClosed(let windowID) where windowID == window.id:
+                return
+            case .diagnostic(let diagnostic):
+                log("diagnostic \(diagnostic)")
+            default:
+                break
+            }
+        }
+    }
+
+    nonisolated private static func consumeInputEvents(
+        _ events: InputEvents,
+        window: Window
+    ) async throws {
+        var attempted = false
+        var iterator = events.makeAsyncIterator()
+        while !Task.isCancelled, let event = try await iterator.next() {
+            guard event.windowID == window.id else { continue }
+
+            switch event.kind {
+            case .pointer(.button(let button))
+                where !attempted && button.state == .pressed && button.button == leftButton:
+                attempted = true
+                await startToplevelDrag(window: window, seatID: event.seatID, serial: button.serial)
+                await window.close()
+                return
+            default:
+                break
+            }
+        }
+    }
+
+    nonisolated private static func consumeDataTransferEvents(
+        _ events: DataTransferEvents
+    ) async throws {
+        var iterator = events.makeAsyncIterator()
+        while !Task.isCancelled, let event = try await iterator.next() {
+            log("data-transfer event \(event)")
+        }
+    }
+
+    nonisolated private static func startToplevelDrag(
+        window: Window,
+        seatID: SeatID,
+        serial: InputSerial
+    ) async {
+        do {
+            let source = try await window.startDrag(
+                source: try DragSourceConfiguration.data(
+                    mimeType: .plainText,
+                    Data("WaylandClientKit toplevel drag smoke".utf8),
+                    actions: [.move]
+                ),
+                seatID: seatID,
+                serial: serial,
+                icon: .none
+            )
+            log("operation: start-drag-source pass source=\(source.identity)")
+            let drag = try await window.attachToToplevelDrag(
+                source: source,
+                seatID: seatID,
+                serial: serial
+            )
+            log("operation: attach pass id=\(drag.id) seat=\(seatID) serial=\(serial)")
+            try await drag.destroy()
+            log("operation: destroy-drag pass")
+        } catch {
+            log("operation: attach failed error=\(error)")
+        }
+    }
+
+    nonisolated private static func draw(_ frame: borrowing SoftwareFrame) {
+        frame.withXRGB8888Rows { row, pixels in
+            for x in 0..<Int(frame.width) {
+                let red = UInt32((x * 255) / max(Int(frame.width), 1))
+                let green = UInt32((row * 255) / max(Int(frame.height), 1))
+                unsafe pixels[unchecked: x] = (red << 16) | (green << 8) | 0x22
+            }
+        }
+    }
+
+    nonisolated private static func availability(_ availability: ProtocolAvailability) -> String {
+        switch availability {
+        case .available(let version):
+            "available version=\(version)"
+        case .unavailable:
+            "unavailable"
+        }
+    }
+
+    nonisolated private static func log(_ message: String) {
+        print("[ToplevelDragSmoke] \(message)")
+    }
+}

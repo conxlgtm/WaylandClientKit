@@ -239,6 +239,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "OutputManagementSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/OutputManagementSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "FrameworkHostSmoke",
             dependencies: ["WaylandClient"],
             path: "Examples/FrameworkHostSmoke",
@@ -287,6 +293,12 @@ let package = Package(
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
+            name: "ToplevelDragSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/ToplevelDragSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
             name: "TwoWindowOrderStress",
             dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/TwoWindowOrderStress",
@@ -314,6 +326,12 @@ let package = Package(
             name: "PointerCaptureSmoke",
             dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/PointerCaptureSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "PointerGesturesSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/PointerGesturesSmoke",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
@@ -350,6 +368,24 @@ let package = Package(
             name: "IdleInhibitSmoke",
             dependencies: ["WaylandClient", "WaylandExampleSupport"],
             path: "Examples/IdleInhibitSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "DialogSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/DialogSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "KeyboardShortcutsInhibitSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/KeyboardShortcutsInhibitSmoke",
+            swiftSettings: executableSwiftSettings
+        ),
+        .executableTarget(
+            name: "ForeignToplevelListSmoke",
+            dependencies: ["WaylandClient", "WaylandExampleSupport"],
+            path: "Examples/ForeignToplevelListSmoke",
             swiftSettings: executableSwiftSettings
         ),
         .executableTarget(
