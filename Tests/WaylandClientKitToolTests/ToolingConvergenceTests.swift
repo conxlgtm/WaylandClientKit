@@ -182,13 +182,17 @@ struct ToolingConvergenceTests {
     func exampleBuilderTracksEveryExampleExecutable() {
         #expect(ExampleBuilder.targets.contains("CursorAnimationSmoke"))
         #expect(ExampleBuilder.targets.contains("CustomCursorSmoke"))
+        #expect(ExampleBuilder.targets.contains("ColorManagementSmoke"))
         #expect(ExampleBuilder.targets.contains("CompositorSessionSmoke"))
+        #expect(ExampleBuilder.targets.contains("GraphicsPreviewColorMetadataSmoke"))
+        #expect(ExampleBuilder.targets.contains("GraphicsPreviewExternalBufferMaintainerSmoke"))
+        #expect(ExampleBuilder.targets.contains("OutputTopologySmoke"))
         #expect(ExampleBuilder.targets.contains("PointerWarpSmoke"))
         #expect(ExampleBuilder.targets.contains("SessionStateSmoke"))
         #expect(ExampleBuilder.targets.contains("SubsurfaceSmoke"))
         #expect(ExampleBuilder.targets.contains("TabletInputSmoke"))
         #expect(ExampleBuilder.targets.contains("WaylandClientKitDemo"))
-        #expect(ExampleBuilder.targets.count == 26)
+        #expect(ExampleBuilder.targets.count == 30)
     }
 
     @Test

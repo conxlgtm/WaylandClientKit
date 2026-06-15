@@ -64,6 +64,7 @@ Canonical examples by feature:
 | Framework host loop | [FrameworkHostSmoke](../Examples/FrameworkHostSmoke/main.swift) |
 | Session state and restoration facts | [SessionStateSmoke](../Examples/SessionStateSmoke/main.swift), [CompositorSessionSmoke](../Examples/CompositorSessionSmoke/main.swift) |
 | Presentation timing | [PresentationFeedbackAnimation](../Examples/PresentationFeedbackAnimation/main.swift) |
+| Output topology | [OutputTopologySmoke](../Examples/OutputTopologySmoke/main.swift) |
 | Text input | [TextInputSmoke](../Examples/TextInputSmoke/main.swift) |
 | Data transfer and drag icons | [DataTransferSmoke](../Examples/DataTransferSmoke/main.swift) |
 | Tablet input | [TabletInputSmoke](../Examples/TabletInputSmoke/main.swift) |
@@ -72,7 +73,7 @@ Canonical examples by feature:
 | Desktop integration | [WindowIconSmoke](../Examples/WindowIconSmoke/main.swift), [IdleInhibitSmoke](../Examples/IdleInhibitSmoke/main.swift), [SystemBellSmoke](../Examples/SystemBellSmoke/main.swift) |
 | Surface regions and damage | [SurfaceRegionSmoke](../Examples/SurfaceRegionSmoke/main.swift), [DamageRegionSmoke](../Examples/DamageRegionSmoke/main.swift) |
 | Subsurfaces | [SubsurfaceSmoke](../Examples/SubsurfaceSmoke/main.swift) |
-| Graphics preview | [GPUPreviewSmokeClient](../Examples/GPUPreviewSmokeClient/main.swift), [GraphicsPreviewManagedGPUClear](../Examples/GraphicsPreviewManagedGPUClear/main.swift) |
+| Graphics preview | [GPUPreviewSmokeClient](../Examples/GPUPreviewSmokeClient/main.swift), [GraphicsPreviewManagedGPUClear](../Examples/GraphicsPreviewManagedGPUClear/main.swift), [GraphicsPreviewExternalBufferMaintainerSmoke](../Examples/GraphicsPreviewExternalBufferMaintainerSmoke/main.swift), [GraphicsPreviewColorMetadataSmoke](../Examples/GraphicsPreviewColorMetadataSmoke/main.swift), [ColorManagementSmoke](../Examples/ColorManagementSmoke/main.swift) |
 
 ## Canonical Concept Documents
 
@@ -81,6 +82,7 @@ Every public feature family should have one conceptual home:
 | Public feature family | Canonical conceptual doc |
 | --- | --- |
 | Display lifecycle and connection ownership | [Display Lifecycle](../Sources/WaylandClient/WaylandClient.docc/DisplayLifecycle.md) |
+| Output topology and membership | [Output Topology](../Sources/WaylandClient/WaylandClient.docc/OutputTopology.md) |
 | Software frame drawing and redraw sequencing | [Window Drawing](../Sources/WaylandClient/WaylandClient.docc/WindowDrawing.md) |
 | Surface regions and partial damage | [Surface Regions And Damage](../Sources/WaylandClient/WaylandClient.docc/SurfaceRegionsAndDamage.md) |
 | Subsurfaces | [Subsurfaces](../Sources/WaylandClient/WaylandClient.docc/Subsurfaces.md) |
@@ -93,7 +95,7 @@ Every public feature family should have one conceptual home:
 | Text input lifecycle | [Text Input Lifecycle](../Sources/WaylandClient/WaylandClient.docc/TextInputLifecycle.md) |
 | Presentation feedback and animation | [Presentation Feedback And Frame Callbacks](../Sources/WaylandClient/WaylandClient.docc/PresentationFeedbackAndFrameCallbacks.md) |
 | Diagnostics and event overflow | [Diagnostics And Display Failures](../Sources/WaylandClient/WaylandClient.docc/DiagnosticsAndDisplayFailures.md), [Event Streams And Overflow](../Sources/WaylandClient/WaylandClient.docc/EventStreamsAndOverflow.md) |
-| Graphics preview | [Graphics Preview Overview](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/GraphicsPreviewOverview.md) |
+| Graphics preview | [Graphics Preview Overview](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/GraphicsPreviewOverview.md), [External Buffer Submission](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/ExternalBufferSubmission.md), [Scheduling And Color Metadata](../Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/SchedulingAndColorMetadata.md) |
 | App/window restoration facts | [Session Readiness](../Sources/WaylandClient/WaylandClient.docc/SessionReadiness.md) |
 
 If a new public API family is added, add or update its canonical conceptual doc

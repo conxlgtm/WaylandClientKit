@@ -101,10 +101,6 @@ public actor WaylandDisplay {
         try requireCore().capabilities()
     }
 
-    public func outputs() throws -> [OutputSnapshot] {
-        try requireCore().outputs()
-    }
-
     @discardableResult
     public func setPointerCursor(_ cursor: PointerCursor) throws -> [CursorRequestResult] {
         let results = try requireCore().setPointerCursor(cursor)
@@ -296,6 +292,18 @@ public actor WaylandDisplay {
         }
 
         return core
+    }
+}
+
+extension WaylandDisplay {
+    public func outputs() throws -> [OutputSnapshot] {
+        try requireCore().outputs()
+    }
+
+    public func outputTopology() throws -> [OutputSnapshot] {
+        try outputs().sorted { lhs, rhs in
+            lhs.id.rawValue < rhs.id.rawValue
+        }
     }
 }
 

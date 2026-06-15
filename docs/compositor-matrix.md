@@ -42,9 +42,13 @@ swift run PointerWarpSmoke -- --auto-close --print-summary
 swift run TabletInputSmoke -- --auto-close --print-summary
 swift run CompositorSessionSmoke -- --auto-close --print-summary
 swift run TextInputSmoke -- --auto-close --print-summary
+swift run OutputTopologySmoke -- --auto-close --print-summary
 swift run GPUPreviewSmokeClient
 swift run GPUPreviewSmokeClient -- --sync prefer-explicit --pacing fifo
 swift run GraphicsPreviewManagedGPUClear -- --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary
+swift run GraphicsPreviewExternalBufferMaintainerSmoke -- --probe
+swift run GraphicsPreviewColorMetadataSmoke -- --content-type game --presentation-hint async
+swift run ColorManagementSmoke
 ```
 
 Smoke examples should print matrix-friendly lines such as `feature`,
@@ -79,10 +83,15 @@ example or manual probe has been run:
 | compositor session management | `CompositorSessionSmoke` capability and event summary |
 | data transfer | `DataTransferSmoke` clipboard/primary/drag summary |
 | presentation feedback | `PresentationFeedbackAnimation` feedback summary |
+| output topology | `OutputTopologySmoke` output snapshot and window output membership report |
 | graphics preview fallback/GPU path | `GPUPreviewSmokeClient` runtime-path report |
+| external graphics buffer | `GraphicsPreviewExternalBufferMaintainerSmoke -- --probe`, `GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer` renderer dmabuf import/submit/release run, or `GraphicsPreviewExternalBufferMaintainerSmoke -- --negative-test-buffer` import-cleanup probe |
+| graphics frame scheduling | `GPUPreviewSmokeClient` and `GraphicsPreviewManagedGPUClear` requested/actual sync and pacing lines |
+| color metadata | `ColorManagementSmoke` and `GraphicsPreviewColorMetadataSmoke` capability/runtime report |
 
-Cursor animation, pointer warp, tablet input, and compositor session management
-are new capability-gated surfaces. Matrix rows should record the exact command,
+Cursor animation, pointer warp, tablet input, compositor session management,
+external graphics buffers, output topology, scheduling, and color metadata are
+capability-gated surfaces. Matrix rows should record the exact command,
 protocol availability, and result before claiming live compositor support. A
 clean typed skip is evidence for absence, not evidence that the feature is
 active.
@@ -217,6 +226,17 @@ KDE/KWin graphics preview addendum on 2026-06-13:
 - `swift run GraphicsPreviewManagedGPUClear -- --sync prefer-explicit --pacing fifo --metadata prefer --content-type game --presentation-hint async --auto-close --print-summary`
   produced five submitted frames with explicit sync, FIFO, content type, and
   tearing control active, with no fallback or failure.
+
+KDE/KWin external-buffer addendum on 2026-06-14:
+
+- `swift run GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer`
+  produced `mode: renderer-dmabuf`, `renderer: active`,
+  `import: active`, `submit: active`, `release: active`,
+  `release/reuse: tracked-by-wayland-client-kit`, `fallback reason: none`,
+  `failure: none`, and `cleanup: pass` on `wayland-0`.
+- `swift run GraphicsPreviewExternalBufferMaintainerSmoke -- --negative-test-buffer`
+  produced the expected pipe-descriptor import failure
+  `externalBufferImportFailed` with `cleanup: pass`.
 
 Record graphics facts in this form:
 

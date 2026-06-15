@@ -9,10 +9,11 @@ authors should expect source changes while managed GPU behavior is proven across
 compositors.
 
 The preview product does not expose raw Wayland, GBM, EGL, DRM, dmabuf,
-syncobj, file descriptor, renderer, swapchain, scene graph, widget, or layout
-handles. In short, raw GPU handles stay internal. It reports active, fallback,
-failed, unavailable, advertised, and configured states through public value
-types.
+syncobj, renderer, swapchain, scene graph, widget, or layout handles; raw GPU
+handles stay internal. External-buffer descriptor import is package-internal
+maintainer preview plumbing until a renderer-neutral public buffer boundary is
+designed. Runtime results report active, fallback, failed, unavailable,
+advertised, and configured states through public value types.
 
 ## Topics
 
@@ -21,6 +22,8 @@ types.
 - <doc:GraphicsPreviewOverview>
 - <doc:ManagedGraphicsBacking>
 - <doc:FrameLeases>
+- <doc:ExternalBufferSubmission>
+- <doc:SchedulingAndColorMetadata>
 
 ### Runtime Truth
 
@@ -37,6 +40,8 @@ types.
 - ``WaylandGraphicsPacingPolicy``
 - ``WaylandGraphicsMetadataPolicy``
 - ``WaylandGraphicsPresentationFeedbackPolicy``
+- ``WaylandGraphicsFrameSchedule``
+- ``WaylandGraphicsFramePacingRequest``
 
 ### Backing And Frames
 
@@ -48,6 +53,9 @@ types.
 - ``WaylandGraphicsXRGBColor``
 - ``WaylandGraphicsFrameMetadata``
 - ``WaylandGraphicsDamageRegion``
+- ``WaylandGraphicsAlphaModifier``
+- ``WaylandGraphicsColorRepresentation``
+- ``WaylandGraphicsColorAlphaMode``
 
 ### Runtime Path Values
 

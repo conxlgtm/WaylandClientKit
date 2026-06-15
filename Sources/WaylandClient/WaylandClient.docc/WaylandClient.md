@@ -8,7 +8,8 @@ window and popup surfaces, software rendering through shared memory, input
 events, keyboard interpretation, relative pointer and pointer constraints,
 pointer warp requests, tablet input, cursor requests, data transfer,
 text-input sessions, XDG activation,
-presentation feedback, diagnostics, and capability reporting.
+presentation feedback, output topology facts, diagnostics, and capability
+reporting.
 
 GPU allocation and presentation experiments live in package-internal preview
 targets. They are not public `WaylandClient` API.
@@ -18,6 +19,7 @@ targets. They are not public `WaylandClient` API.
 ### Display Connection
 
 - <doc:DisplayLifecycle>
+- <doc:OutputTopology>
 - ``WaylandDisplay``
 - ``WaylandDisplayError``
 - ``WaylandCapabilities``
@@ -42,6 +44,8 @@ targets. They are not public `WaylandClient` API.
 - ``SoftwareFrame``
 - ``SurfaceGeometry``
 - ``SurfaceScale``
+- ``OutputSnapshot``
+- ``OutputID``
 - ``SurfaceRegion``
 - ``SurfaceDamageRegion``
 - ``PositivePixelSize``
