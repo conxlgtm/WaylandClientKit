@@ -223,12 +223,18 @@ package final class DisplaySession {  // swiftlint:disable:this type_body_length
         "xdg_toplevel_icon_manager_v1",
         "zwp_idle_inhibit_manager_v1",
         "xdg_system_bell_v1",
+        "xdg_wm_dialog_v1",
+        "xdg_toplevel_drag_manager_v1",
+        "ext_foreign_toplevel_list_v1",
         "wp_pointer_warp_v1",
         "zwp_tablet_manager_v2",
         "zwp_relative_pointer_manager_v1",
         "zwp_pointer_constraints_v1",
+        "zwp_pointer_gestures_v1",
+        "zwp_keyboard_shortcuts_inhibit_manager_v1",
         "zwp_text_input_manager_v3",
         "zwp_linux_dmabuf_v1",
+        "zwlr_output_manager_v1",
     ]
 
     package func isProtocolAdvertisedOnOwnerThread(

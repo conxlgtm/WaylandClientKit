@@ -7,9 +7,15 @@
 #include "generated/staging/xdg-session-management/xdg-session-management-v1-client-protocol.h"
 #include "generated/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1-client-protocol.h"
 #include "generated/staging/xdg-system-bell/xdg-system-bell-v1-client-protocol.h"
+#include "generated/staging/xdg-dialog/xdg-dialog-v1-client-protocol.h"
+#include "generated/staging/xdg-toplevel-drag/xdg-toplevel-drag-v1-client-protocol.h"
+#include "generated/staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1-client-protocol.h"
 #include "generated/legacy-unstable/relative-pointer/relative-pointer-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1-client-protocol.h"
+#include "generated/legacy-unstable/pointer-gestures/pointer-gestures-unstable-v1-client-protocol.h"
+#include "generated/legacy-unstable/keyboard-shortcuts-inhibit/keyboard-shortcuts-inhibit-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/idle-inhibit/idle-inhibit-unstable-v1-client-protocol.h"
+#include "generated/wlr-unstable/output-management/wlr-output-management-unstable-v1-client-protocol.h"
 #include "generated/staging/linux-drm-syncobj/linux-drm-syncobj-v1-client-protocol.h"
 #include "generated/staging/fifo/fifo-v1-client-protocol.h"
 #include "generated/staging/commit-timing/commit-timing-v1-client-protocol.h"
@@ -134,6 +140,29 @@ struct xdg_system_bell_v1 *swl_registry_bind_xdg_system_bell_v1(
         registry, name, &xdg_system_bell_v1_interface, version);
 }
 
+struct xdg_wm_dialog_v1 *swl_registry_bind_xdg_wm_dialog_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct xdg_wm_dialog_v1 *)wl_registry_bind(
+        registry, name, &xdg_wm_dialog_v1_interface, version);
+}
+
+struct xdg_toplevel_drag_manager_v1 *
+swl_registry_bind_xdg_toplevel_drag_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct xdg_toplevel_drag_manager_v1 *)wl_registry_bind(
+        registry, name, &xdg_toplevel_drag_manager_v1_interface, version);
+}
+
+struct ext_foreign_toplevel_list_v1 *
+swl_registry_bind_ext_foreign_toplevel_list_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct ext_foreign_toplevel_list_v1 *)wl_registry_bind(
+        registry, name, &ext_foreign_toplevel_list_v1_interface, version);
+}
+
 struct wp_pointer_warp_v1 *swl_registry_bind_wp_pointer_warp_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version)
 {
@@ -162,6 +191,22 @@ swl_registry_bind_zwp_pointer_constraints_v1(
 {
     return (struct zwp_pointer_constraints_v1 *)wl_registry_bind(
         registry, name, &zwp_pointer_constraints_v1_interface, version);
+}
+
+struct zwp_pointer_gestures_v1 *
+swl_registry_bind_zwp_pointer_gestures_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct zwp_pointer_gestures_v1 *)wl_registry_bind(
+        registry, name, &zwp_pointer_gestures_v1_interface, version);
+}
+
+struct zwp_keyboard_shortcuts_inhibit_manager_v1 *
+swl_registry_bind_zwp_keyboard_shortcuts_inhibit_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct zwp_keyboard_shortcuts_inhibit_manager_v1 *)wl_registry_bind(
+        registry, name, &zwp_keyboard_shortcuts_inhibit_manager_v1_interface, version);
 }
 
 struct zwp_idle_inhibit_manager_v1 *
@@ -268,4 +313,11 @@ struct zwp_linux_dmabuf_v1 *swl_registry_bind_zwp_linux_dmabuf_v1(
 {
     return (struct zwp_linux_dmabuf_v1 *)wl_registry_bind(
         registry, name, &zwp_linux_dmabuf_v1_interface, version);
+}
+
+struct zwlr_output_manager_v1 *swl_registry_bind_zwlr_output_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version)
+{
+    return (struct zwlr_output_manager_v1 *)wl_registry_bind(
+        registry, name, &zwlr_output_manager_v1_interface, version);
 }

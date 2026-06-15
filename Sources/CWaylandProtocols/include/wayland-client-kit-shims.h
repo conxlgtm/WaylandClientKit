@@ -34,6 +34,12 @@ struct xdg_toplevel_session_v1;
 struct xdg_toplevel_icon_manager_v1;
 struct xdg_toplevel_icon_v1;
 struct xdg_system_bell_v1;
+struct xdg_wm_dialog_v1;
+struct xdg_dialog_v1;
+struct xdg_toplevel_drag_manager_v1;
+struct xdg_toplevel_drag_v1;
+struct ext_foreign_toplevel_list_v1;
+struct ext_foreign_toplevel_handle_v1;
 struct wp_pointer_warp_v1;
 struct zwp_tablet_manager_v2;
 struct zwp_tablet_seat_v2;
@@ -49,6 +55,12 @@ struct zwp_relative_pointer_v1;
 struct zwp_pointer_constraints_v1;
 struct zwp_locked_pointer_v1;
 struct zwp_confined_pointer_v1;
+struct zwp_pointer_gestures_v1;
+struct zwp_pointer_gesture_swipe_v1;
+struct zwp_pointer_gesture_pinch_v1;
+struct zwp_pointer_gesture_hold_v1;
+struct zwp_keyboard_shortcuts_inhibit_manager_v1;
+struct zwp_keyboard_shortcuts_inhibitor_v1;
 struct zwp_idle_inhibit_manager_v1;
 struct zwp_idle_inhibitor_v1;
 struct wp_linux_drm_syncobj_manager_v1;
@@ -87,6 +99,11 @@ struct zwp_primary_selection_offer_v1;
 struct zwp_primary_selection_source_v1;
 struct zwp_text_input_manager_v3;
 struct zwp_text_input_v3;
+struct zwlr_output_manager_v1;
+struct zwlr_output_head_v1;
+struct zwlr_output_mode_v1;
+struct zwlr_output_configuration_v1;
+struct zwlr_output_configuration_head_v1;
 
 #ifdef __cplusplus
 extern "C" {
@@ -141,6 +158,17 @@ swl_registry_bind_xdg_toplevel_icon_manager_v1(
 struct xdg_system_bell_v1 *swl_registry_bind_xdg_system_bell_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
+struct xdg_wm_dialog_v1 *swl_registry_bind_xdg_wm_dialog_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct xdg_toplevel_drag_manager_v1 *
+swl_registry_bind_xdg_toplevel_drag_manager_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct ext_foreign_toplevel_list_v1 *
+swl_registry_bind_ext_foreign_toplevel_list_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
 struct wp_pointer_warp_v1 *swl_registry_bind_wp_pointer_warp_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
@@ -153,6 +181,14 @@ swl_registry_bind_zwp_relative_pointer_manager_v1(
 
 struct zwp_pointer_constraints_v1 *
 swl_registry_bind_zwp_pointer_constraints_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct zwp_pointer_gestures_v1 *
+swl_registry_bind_zwp_pointer_gestures_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct zwp_keyboard_shortcuts_inhibit_manager_v1 *
+swl_registry_bind_zwp_keyboard_shortcuts_inhibit_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct zwp_idle_inhibit_manager_v1 *
@@ -200,6 +236,9 @@ struct zwp_text_input_manager_v3 *swl_registry_bind_zwp_text_input_manager_v3(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 struct zwp_linux_dmabuf_v1 *swl_registry_bind_zwp_linux_dmabuf_v1(
+    struct wl_registry *registry, uint32_t name, uint32_t version);
+
+struct zwlr_output_manager_v1 *swl_registry_bind_zwlr_output_manager_v1(
     struct wl_registry *registry, uint32_t name, uint32_t version);
 
 /* ------------------------------------------------------------------ */
@@ -424,6 +463,30 @@ swl_zwp_idle_inhibit_manager_v1_create_inhibitor(
 void swl_xdg_system_bell_v1_ring(
     struct xdg_system_bell_v1 *bell,
     struct wl_surface *surface);
+void swl_xdg_wm_dialog_v1_destroy(struct xdg_wm_dialog_v1 *manager);
+struct xdg_dialog_v1 *swl_xdg_wm_dialog_v1_get_xdg_dialog(
+    struct xdg_wm_dialog_v1 *manager,
+    struct xdg_toplevel *toplevel);
+void swl_xdg_dialog_v1_destroy(struct xdg_dialog_v1 *dialog);
+void swl_xdg_dialog_v1_set_modal(struct xdg_dialog_v1 *dialog);
+void swl_xdg_dialog_v1_unset_modal(struct xdg_dialog_v1 *dialog);
+void swl_xdg_toplevel_drag_manager_v1_destroy(
+    struct xdg_toplevel_drag_manager_v1 *manager);
+struct xdg_toplevel_drag_v1 *swl_xdg_toplevel_drag_manager_v1_get_xdg_toplevel_drag(
+    struct xdg_toplevel_drag_manager_v1 *manager,
+    struct wl_data_source *source);
+void swl_xdg_toplevel_drag_v1_destroy(struct xdg_toplevel_drag_v1 *drag);
+void swl_xdg_toplevel_drag_v1_attach(
+    struct xdg_toplevel_drag_v1 *drag,
+    struct xdg_toplevel *toplevel,
+    int32_t x_offset,
+    int32_t y_offset);
+void swl_ext_foreign_toplevel_list_v1_stop(
+    struct ext_foreign_toplevel_list_v1 *list);
+void swl_ext_foreign_toplevel_list_v1_destroy(
+    struct ext_foreign_toplevel_list_v1 *list);
+void swl_ext_foreign_toplevel_handle_v1_destroy(
+    struct ext_foreign_toplevel_handle_v1 *handle);
 
 /* ------------------------------------------------------------------ */
 /*  Pointer capture request wrappers                                  */
@@ -500,6 +563,36 @@ void swl_zwp_confined_pointer_v1_set_region(
     struct wl_region *region);
 void swl_zwp_confined_pointer_v1_destroy(
     struct zwp_confined_pointer_v1 *confined_pointer);
+
+struct zwp_pointer_gesture_swipe_v1 *
+swl_zwp_pointer_gestures_v1_get_swipe_gesture(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer);
+struct zwp_pointer_gesture_pinch_v1 *
+swl_zwp_pointer_gestures_v1_get_pinch_gesture(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer);
+struct zwp_pointer_gesture_hold_v1 *
+swl_zwp_pointer_gestures_v1_get_hold_gesture(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer);
+void swl_zwp_pointer_gestures_v1_destroy(
+    struct zwp_pointer_gestures_v1 *gestures);
+void swl_zwp_pointer_gesture_swipe_v1_destroy(
+    struct zwp_pointer_gesture_swipe_v1 *gesture);
+void swl_zwp_pointer_gesture_pinch_v1_destroy(
+    struct zwp_pointer_gesture_pinch_v1 *gesture);
+void swl_zwp_pointer_gesture_hold_v1_destroy(
+    struct zwp_pointer_gesture_hold_v1 *gesture);
+void swl_zwp_keyboard_shortcuts_inhibit_manager_v1_destroy(
+    struct zwp_keyboard_shortcuts_inhibit_manager_v1 *manager);
+struct zwp_keyboard_shortcuts_inhibitor_v1 *
+swl_zwp_keyboard_shortcuts_inhibit_manager_v1_inhibit_shortcuts(
+    struct zwp_keyboard_shortcuts_inhibit_manager_v1 *manager,
+    struct wl_surface *surface,
+    struct wl_seat *seat);
+void swl_zwp_keyboard_shortcuts_inhibitor_v1_destroy(
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor);
 
 struct wl_region *swl_compositor_create_region(struct wl_compositor *compositor);
 void swl_region_add(
@@ -749,6 +842,48 @@ swl_wp_color_management_surface_feedback_v1_get_preferred(
 struct wp_presentation_feedback *swl_wp_presentation_feedback(
     struct wp_presentation *presentation,
     struct wl_surface *surface);
+
+struct zwlr_output_configuration_v1 *
+swl_zwlr_output_manager_v1_create_configuration(
+    struct zwlr_output_manager_v1 *manager,
+    uint32_t serial);
+void swl_zwlr_output_manager_v1_stop(struct zwlr_output_manager_v1 *manager);
+void swl_zwlr_output_manager_v1_destroy(struct zwlr_output_manager_v1 *manager);
+void swl_zwlr_output_head_v1_destroy(struct zwlr_output_head_v1 *head);
+void swl_zwlr_output_mode_v1_destroy(struct zwlr_output_mode_v1 *mode);
+struct zwlr_output_configuration_head_v1 *
+swl_zwlr_output_configuration_v1_enable_head(
+    struct zwlr_output_configuration_v1 *configuration,
+    struct zwlr_output_head_v1 *head);
+void swl_zwlr_output_configuration_v1_disable_head(
+    struct zwlr_output_configuration_v1 *configuration,
+    struct zwlr_output_head_v1 *head);
+void swl_zwlr_output_configuration_v1_apply(
+    struct zwlr_output_configuration_v1 *configuration);
+void swl_zwlr_output_configuration_v1_test(
+    struct zwlr_output_configuration_v1 *configuration);
+void swl_zwlr_output_configuration_v1_destroy(
+    struct zwlr_output_configuration_v1 *configuration);
+void swl_zwlr_output_configuration_head_v1_set_mode(
+    struct zwlr_output_configuration_head_v1 *head,
+    struct zwlr_output_mode_v1 *mode);
+void swl_zwlr_output_configuration_head_v1_set_custom_mode(
+    struct zwlr_output_configuration_head_v1 *head,
+    int32_t width,
+    int32_t height,
+    int32_t refresh);
+void swl_zwlr_output_configuration_head_v1_set_position(
+    struct zwlr_output_configuration_head_v1 *head,
+    int32_t x,
+    int32_t y);
+void swl_zwlr_output_configuration_head_v1_set_transform(
+    struct zwlr_output_configuration_head_v1 *head,
+    int32_t transform);
+void swl_zwlr_output_configuration_head_v1_set_scale(
+    struct zwlr_output_configuration_head_v1 *head,
+    int32_t scale);
+void swl_zwlr_output_configuration_head_v1_destroy(
+    struct zwlr_output_configuration_head_v1 *head);
 
 /* ------------------------------------------------------------------ */
 /*  Linux dmabuf request wrappers                                     */
