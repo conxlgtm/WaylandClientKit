@@ -2867,7 +2867,6 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L317: `    public let offset: UInt32`
 - L318: `    public let stride: UInt32`
 - L319: `    public let planeIndex: Int`
-- L321: `    public init(`
 - L347: `public enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {`
 - L348: `    case one(WaylandGraphicsExternalBufferPlane)`
 - L349: `    case two(WaylandGraphicsExternalBufferPlane, WaylandGraphicsExternalBufferPlane)`

@@ -57,10 +57,11 @@ Implemented:
   and unavailable states. Active GPU is reported only after a GPU-rendered buffer
   is imported and committed.
 - External-buffer submission keeps Wayland import/commit/release lifetime inside
-  WaylandClientKit. Plane construction consumes owned descriptors without
-  exposing raw Wayland, GBM, EGL, DRM, or syncobj handles. KDE/KWin has live
-  renderer-dmabuf import/commit/release evidence; broader compositor coverage
-  is still needed before foundation-candidate claims.
+  WaylandClientKit. Public descriptor submission avoids raw Wayland, GBM, EGL,
+  DRM, syncobj, and file-descriptor handles; fd-backed descriptor manufacturing
+  remains package-internal until a raw-handle-free renderer adapter is reviewed.
+  KDE/KWin has live renderer-dmabuf import/commit/release evidence; broader
+  compositor coverage is still needed before foundation-candidate claims.
 - Public frame schedules let callers request explicit sync, FIFO, commit timing,
   and presentation feedback per frame. Runtime path and frame result facts
   report requested versus actual compositor behavior.

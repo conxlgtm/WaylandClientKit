@@ -318,7 +318,7 @@ public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
     public let stride: UInt32
     public let planeIndex: Int
 
-    public init(
+    package init(
         fd planeFileDescriptor: consuming OwnedFileDescriptor,
         offset planeOffset: UInt32,
         stride planeStride: UInt32,

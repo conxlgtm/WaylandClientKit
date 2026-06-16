@@ -170,7 +170,7 @@ protocol is advertised; `require` fails when it is unavailable.
 `WaylandGraphicsWindowBacking` owns a managed `Window` and exposes the current
 runtime path. `nextFrame()` returns a single-use `WaylandGraphicsFrameLease`.
 Callers submit a `WaylandGraphicsSubmittedFrame.clearColor`, submit arbitrary
-software drawing with `submitSoftware`, submit a renderer-produced dmabuf
+software drawing with `submitSoftware`, submit an opaque external-buffer
 descriptor with `submitExternalBuffer`, or cancel the lease. `clearColor` uses
 the active managed GPU path when setup and submission succeed; it falls back to
 the software path only when the fallback policy and surface synchronization
@@ -182,12 +182,12 @@ buffer size, metadata, schedule, synchronization policy, pacing policy, backing
 status, and whether presentation feedback was requested. The result does not
 imply presentation feedback was observed; feedback still arrives through
 `WindowPresentationEvents`. The lease does not expose Wayland proxies, SHM
-pools, GBM buffers, EGL surfaces, DRM nodes, raw dmabuf protocol objects, or
-syncobj handles. Public external-buffer submission uses a renderer-neutral
-descriptor whose plane construction consumes `OwnedFileDescriptor` ownership
-for handoff into WaylandClientKit. Completed descriptors do not expose public
-file-descriptor access; WaylandClientKit owns dmabuf import, Wayland buffer
-creation, surface commit, and release tracking.
+pools, GBM buffers, EGL surfaces, DRM nodes, raw dmabuf protocol objects,
+syncobj handles, or file descriptors. Public external-buffer submission uses
+an opaque renderer-neutral descriptor boundary. The fd-consuming descriptor
+manufacturing path remains package-internal until a raw-handle-free public
+renderer adapter is reviewed. WaylandClientKit owns dmabuf import, Wayland
+buffer creation, surface commit, and release tracking.
 
 `WaylandGraphicsFrameMetadata` exposes content type, presentation hint, alpha
 modifier, color representation, and `WaylandGraphicsDamageRegion`. Public
