@@ -136,6 +136,41 @@ struct OutputManagementPreviewTests {
     }
 
     @Test
+    func displayCorePreservesModeIDsAcrossSnapshots() throws {
+        let core = DisplayCore(eventHub: DisplayEventHub())
+
+        let first = try outputManagementSnapshot(
+            core: core,
+            headPointer: 0xA21,
+            modePointer: 0xA22,
+            refresh: 60_000,
+            isPreferred: false
+        )
+        let second = try outputManagementSnapshot(
+            core: core,
+            headPointer: 0xA23,
+            modePointer: 0xA24,
+            refresh: 60_000,
+            isPreferred: true
+        )
+        let changed = try outputManagementSnapshot(
+            core: core,
+            headPointer: 0xA25,
+            modePointer: 0xA26,
+            refresh: 75_000,
+            isPreferred: false
+        )
+
+        let firstMode = try #require(first.heads.first?.modes.first)
+        let secondMode = try #require(second.heads.first?.modes.first)
+        let changedMode = try #require(changed.heads.first?.modes.first)
+
+        #expect(first.heads.first?.id == second.heads.first?.id)
+        #expect(firstMode.id == secondMode.id)
+        #expect(changedMode.id != firstMode.id)
+    }
+
+    @Test
     func staleConfigurationProposalIsRejectedBeforeRequests() throws {
         let firstSnapshot = OutputManagementSnapshot(heads: [], serial: 11)
         let secondSnapshot = OutputManagementSnapshot(heads: [], serial: 12)
@@ -281,6 +316,39 @@ struct OutputManagementPreviewTests {
 
 private enum FakePointerError: Error {
     case invalid(UInt)
+}
+
+private func outputManagementSnapshot(
+    core: DisplayCore,
+    headPointer: UInt,
+    modePointer: UInt,
+    refresh: Int32,
+    isPreferred: Bool
+) throws -> OutputManagementSnapshot {
+    let collector = OutputManagementCollector(core: core)
+    let head = RawWlrOutputHead(
+        pointer: try unsafe fakePointer(headPointer),
+        version: RawVersion(4)
+    )
+    let mode = RawWlrOutputMode(
+        pointer: try unsafe fakePointer(modePointer),
+        version: RawVersion(4)
+    )
+    defer {
+        head.abandonAfterManagerFinished()
+        mode.abandonAfterManagerFinished()
+    }
+
+    collector.handle(.head(head))
+    collector.handle(.headEvent(head, .name("DP-1")))
+    collector.handle(.headEvent(head, .mode(mode)))
+    collector.handle(.modeEvent(head, mode, .size(width: 1_920, height: 1_080)))
+    collector.handle(.modeEvent(head, mode, .refresh(refresh)))
+    if isPreferred {
+        collector.handle(.modeEvent(head, mode, .preferred))
+    }
+    collector.handle(.done(UInt32(refresh)))
+    return try collector.snapshot()
 }
 
 private func fakePointer(_ bitPattern: UInt) throws -> OpaquePointer {
