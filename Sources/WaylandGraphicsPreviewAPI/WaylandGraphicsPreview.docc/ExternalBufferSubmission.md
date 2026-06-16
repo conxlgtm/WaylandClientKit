@@ -12,13 +12,13 @@ cleanup for the submitted buffer.
 ## Descriptor Boundary
 
 The descriptor boundary carries a positive pixel size, DRM format and modifier
-facts, and one to four plane values. Plane construction consumes an owned file
-descriptor for transfer into WaylandClientKit's import path; the completed
-descriptor does not expose the file descriptor back to callers.
+facts, and one to four opaque plane values. The fd-consuming descriptor
+manufacturing path remains package-internal until a raw-handle-free public
+renderer adapter is reviewed.
 
 Public APIs must not expose `wl_buffer`, `zwp_linux_buffer_params_v1`, GBM, EGL,
-DRM nodes, syncobj handles, or raw pointers. Explicit public fence or syncobj
-passing is deferred until a narrow ownership type is designed.
+DRM nodes, syncobj handles, file descriptors, or raw pointers. Explicit public
+fence or syncobj passing is deferred until a narrow ownership type is designed.
 
 ## Runtime Truth
 
