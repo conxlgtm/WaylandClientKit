@@ -294,11 +294,6 @@ Intentionally public:
 - `WaylandGraphicsColorAlphaMode`
 - `WaylandGraphicsColorRepresentation`
 - `WaylandGraphicsXRGBColor`
-- `WaylandGraphicsDRMFormat`
-- `WaylandGraphicsDRMFormatModifier`
-- `WaylandGraphicsExternalBufferPlane`
-- `WaylandGraphicsExternalBufferPlanes`
-- `WaylandGraphicsExternalBufferDescriptor`
 - `WaylandGraphicsClearFrame`
 - `WaylandGraphicsSubmittedFrame`
 - `WaylandGraphicsFrameResult`
@@ -321,13 +316,10 @@ Current preview contract:
   frame, attempt a package-internal GPU clear-frame path, fall back to software
   when policy allows, submit arbitrary software drawing, return a typed frame
   result, and cancel or close resources without exposing raw graphics handles.
-- The external-buffer import path is public preview plumbing. It can import an
-  opaque renderer-produced dmabuf descriptor, commit it, track compositor
-  release, and clean up late releases. The fd-consuming descriptor
-  manufacturing path remains package-internal until a raw-handle-free public
-  renderer adapter is reviewed. The boundary carries DRM format/modifier facts
-  without exposing `wl_buffer`, `zwp_linux_buffer_params_v1`, GBM, EGL, DRM
-  nodes, syncobj handles, file descriptors, or raw pointers.
+- The external-buffer import path is package-internal preview plumbing. It can
+  import a renderer-produced dmabuf descriptor, commit it, track compositor
+  release, and clean up late releases without exposing public DRM, dmabuf, or
+  file descriptor handles.
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
   submission, or release failure; display-level dmabuf advertisement alone is
@@ -350,8 +342,7 @@ Current preview contract:
   descriptors, syncobj handles, SHM pools, scene rendering, swapchains,
   drawables, file descriptors, or raw color-management/image-description
   protocol objects. `OwnedFileDescriptor` remains part of the stable
-  data-transfer APIs, but is not part of the public graphics preview
-  external-buffer API.
+  data-transfer APIs, but is not part of public graphics preview API.
 - Public frame metadata is intentionally narrow. Content type and presentation
   hint map to safe surface commit metadata when their protocols are available
   and `metadataPolicy` permits metadata. Preferred-but-unavailable metadata is

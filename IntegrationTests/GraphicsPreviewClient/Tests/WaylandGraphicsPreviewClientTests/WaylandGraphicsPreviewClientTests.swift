@@ -165,23 +165,6 @@ struct WaylandGraphicsPreviewClientTests {
 
         _ = submitSoftwareFrame
     }
-
-    @Test
-    func externalBufferSubmissionTypesCompileForExternalClients() throws {
-        func submitExternalBuffer(
-            backing: WaylandGraphicsWindowBacking,
-            descriptor: consuming WaylandGraphicsExternalBufferDescriptor
-        ) async throws {
-            let lease = try await backing.nextFrame()
-            _ = try await lease.submitExternalBuffer(
-                descriptor,
-                metadata: WaylandGraphicsFrameMetadata(damage: .fullFrame),
-                schedule: .default
-            )
-        }
-
-        _ = submitExternalBuffer
-    }
 }
 
 private func externalClientSoftwareRuntimePath() -> WaylandGraphicsRuntimePath {

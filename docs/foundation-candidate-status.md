@@ -29,7 +29,7 @@ enough; active GPU claims must be backed by public runtime-path output.
 | Session readiness | done | [session-readiness.md](session-readiness.md), [session-management-plan.md](session-management-plan.md), `SessionStateSmoke`, `CompositorSessionSmoke`, `WindowRestorationSnapshot` | Keep compositor session-management preview events protocol-shaped and separate from framework scene/document restoration. |
 | Managed GPU setup code path | done | Managed GPU attempts surface feedback, render-node, GBM/EGL, dmabuf import, owner-thread commit, and typed fallback. | Keep runtime-path truth tests current. |
 | Managed GPU active proof | partial | [compositor-matrix.md](compositor-matrix.md) records active managed GPU clear-frame submission and resize/reconfigure on KDE/KWin, active managed GPU clear-frame submission on nested Sway/wlroots, `surfaceFeedbackUnavailable` fallback on GNOME/Mutter, and `dmabufUnavailable` fallback under headless Weston. | Broaden active/fallback/failure evidence before foundation-candidate claims, especially another desktop compositor when active managed GPU is available. |
-| External GPU buffer preview | partial | Public preview descriptor submission exists in `WaylandGraphicsPreview`, and KDE/KWin 2026-06-14 renderer-dmabuf smoke imported, submitted, released, and cleaned up through the external-buffer path. | Keep live renderer evidence current before promoting beyond preview. |
+| External GPU buffer preview | partial | Package-internal descriptor submission exists in `WaylandGraphicsPreview`, and KDE/KWin 2026-06-14 renderer-dmabuf smoke imported, submitted, released, and cleaned up through the external-buffer path. | Keep live renderer evidence current before promoting beyond preview. |
 | Public graphics scheduling | partial | `WaylandGraphicsFrameSchedule` exposes sync, FIFO, commit-timing, and presentation-feedback requests with runtime-path result facts. | Keep commit-timing active evidence pending until a compositor run reports it active. |
 | Output and color facts | partial | `OutputTopologySmoke`, `OutputManagementSmoke`, `ColorManagementSmoke`, and color metadata preview API exist. | Collect compositor rows for output topology, output-management, and color metadata advertised/active/fallback behavior. |
 | Compositor matrix minimum | partial | [compositor-matrix.md](compositor-matrix.md) records fresh headless Weston, KDE/KWin, nested Sway/wlroots, and GNOME/Mutter VM rows and separates protocol advertisement from active runtime facts. KDE/KWin now has manual proof for pointer lock/confine with relative motion, data-transfer drag-source/drop/read/finish, serial move/window-menu/resize/drag-source, managed GPU resize/reconfigure, explicit sync active, FIFO active, and metadata active. | Complete remaining GNOME/Mutter manual rows, popup-specific manual probes, broader explicit-sync compositor evidence beyond KDE/KWin, and commit-timing active evidence where practical. |
@@ -162,8 +162,7 @@ swift run wck smoke live
 swift run wck smoke integration
 swift run GPUPreviewSmokeClient
 swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
-# Maintainer-only external-buffer probe; public compile proof is the graphics
-# preview integration client.
+# Maintainer-only external-buffer probe.
 swift run GraphicsPreviewExternalBufferSmoke -- --probe
 swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer
 swift run GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer
