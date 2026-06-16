@@ -4,6 +4,8 @@
 #include "generated/stable/tablet/tablet-v2-client-protocol.h"
 #include "generated/legacy-unstable/relative-pointer/relative-pointer-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1-client-protocol.h"
+#include "generated/legacy-unstable/pointer-gestures/pointer-gestures-unstable-v1-client-protocol.h"
+#include "generated/legacy-unstable/keyboard-shortcuts-inhibit/keyboard-shortcuts-inhibit-unstable-v1-client-protocol.h"
 
 #ifdef SWL_ENABLE_TESTING
 static struct swl_test_pointer_capture_request_record
@@ -140,6 +142,79 @@ static void swl_region_destroy_default(struct wl_region *region)
     wl_region_destroy(region);
 }
 
+static struct zwp_pointer_gesture_swipe_v1 *swl_pointer_gestures_get_swipe_default(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer)
+{
+    return zwp_pointer_gestures_v1_get_swipe_gesture(gestures, pointer);
+}
+
+static struct zwp_pointer_gesture_pinch_v1 *swl_pointer_gestures_get_pinch_default(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer)
+{
+    return zwp_pointer_gestures_v1_get_pinch_gesture(gestures, pointer);
+}
+
+static struct zwp_pointer_gesture_hold_v1 *swl_pointer_gestures_get_hold_default(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer)
+{
+    return zwp_pointer_gestures_v1_get_hold_gesture(gestures, pointer);
+}
+
+static void swl_pointer_gestures_destroy_default(
+    struct zwp_pointer_gestures_v1 *gestures)
+{
+    zwp_pointer_gestures_v1_destroy(gestures);
+}
+
+static void swl_pointer_gestures_release_default(
+    struct zwp_pointer_gestures_v1 *gestures)
+{
+    zwp_pointer_gestures_v1_release(gestures);
+}
+
+static void swl_swipe_gesture_destroy_default(
+    struct zwp_pointer_gesture_swipe_v1 *gesture)
+{
+    zwp_pointer_gesture_swipe_v1_destroy(gesture);
+}
+
+static void swl_pinch_gesture_destroy_default(
+    struct zwp_pointer_gesture_pinch_v1 *gesture)
+{
+    zwp_pointer_gesture_pinch_v1_destroy(gesture);
+}
+
+static void swl_hold_gesture_destroy_default(
+    struct zwp_pointer_gesture_hold_v1 *gesture)
+{
+    zwp_pointer_gesture_hold_v1_destroy(gesture);
+}
+
+static void swl_keyboard_shortcuts_manager_destroy_default(
+    struct zwp_keyboard_shortcuts_inhibit_manager_v1 *manager)
+{
+    zwp_keyboard_shortcuts_inhibit_manager_v1_destroy(manager);
+}
+
+static struct zwp_keyboard_shortcuts_inhibitor_v1 *
+swl_keyboard_shortcuts_inhibit_default(
+    struct zwp_keyboard_shortcuts_inhibit_manager_v1 *manager,
+    struct wl_surface *surface,
+    struct wl_seat *seat)
+{
+    return zwp_keyboard_shortcuts_inhibit_manager_v1_inhibit_shortcuts(
+        manager, surface, seat);
+}
+
+static void swl_keyboard_shortcuts_inhibitor_destroy_default(
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor)
+{
+    zwp_keyboard_shortcuts_inhibitor_v1_destroy(inhibitor);
+}
+
 static struct zwp_relative_pointer_v1 *(*swl_relative_pointer_get_impl)(
     struct zwp_relative_pointer_manager_v1 *manager,
     struct wl_pointer *pointer) =
@@ -215,6 +290,45 @@ static void (*swl_region_subtract_impl)(
         swl_region_subtract_default;
 static void (*swl_region_destroy_impl)(struct wl_region *region) =
     swl_region_destroy_default;
+static struct zwp_pointer_gesture_swipe_v1 *(*swl_pointer_gestures_get_swipe_impl)(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer) =
+        swl_pointer_gestures_get_swipe_default;
+static struct zwp_pointer_gesture_pinch_v1 *(*swl_pointer_gestures_get_pinch_impl)(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer) =
+        swl_pointer_gestures_get_pinch_default;
+static struct zwp_pointer_gesture_hold_v1 *(*swl_pointer_gestures_get_hold_impl)(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer) =
+        swl_pointer_gestures_get_hold_default;
+static void (*swl_pointer_gestures_destroy_impl)(
+    struct zwp_pointer_gestures_v1 *gestures) =
+        swl_pointer_gestures_destroy_default;
+static void (*swl_pointer_gestures_release_impl)(
+    struct zwp_pointer_gestures_v1 *gestures) =
+        swl_pointer_gestures_release_default;
+static void (*swl_swipe_gesture_destroy_impl)(
+    struct zwp_pointer_gesture_swipe_v1 *gesture) =
+        swl_swipe_gesture_destroy_default;
+static void (*swl_pinch_gesture_destroy_impl)(
+    struct zwp_pointer_gesture_pinch_v1 *gesture) =
+        swl_pinch_gesture_destroy_default;
+static void (*swl_hold_gesture_destroy_impl)(
+    struct zwp_pointer_gesture_hold_v1 *gesture) =
+        swl_hold_gesture_destroy_default;
+static void (*swl_keyboard_shortcuts_manager_destroy_impl)(
+    struct zwp_keyboard_shortcuts_inhibit_manager_v1 *manager) =
+        swl_keyboard_shortcuts_manager_destroy_default;
+static struct zwp_keyboard_shortcuts_inhibitor_v1 *(
+    *swl_keyboard_shortcuts_inhibit_impl)(
+    struct zwp_keyboard_shortcuts_inhibit_manager_v1 *manager,
+    struct wl_surface *surface,
+    struct wl_seat *seat) =
+        swl_keyboard_shortcuts_inhibit_default;
+static void (*swl_keyboard_shortcuts_inhibitor_destroy_impl)(
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor) =
+        swl_keyboard_shortcuts_inhibitor_destroy_default;
 
 static void swl_test_record_pointer_capture_request(
     enum swl_test_pointer_capture_request_kind kind,
@@ -405,6 +519,98 @@ static void swl_test_region_destroy_record(struct wl_region *region)
     swl_test_record_pointer_capture_destroy(
         SWL_TEST_POINTER_CAPTURE_DESTROY_REGION, region);
 }
+
+static struct zwp_pointer_gesture_swipe_v1 *swl_test_gestures_get_swipe_record(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer)
+{
+    swl_test_record_pointer_capture_request(
+        SWL_TEST_POINTER_CAPTURE_GET_SWIPE_GESTURE, gestures);
+    swl_test_pointer_capture_request_latest.pointer = pointer;
+    return (struct zwp_pointer_gesture_swipe_v1 *)0xB701;
+}
+
+static struct zwp_pointer_gesture_pinch_v1 *swl_test_gestures_get_pinch_record(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer)
+{
+    swl_test_record_pointer_capture_request(
+        SWL_TEST_POINTER_CAPTURE_GET_PINCH_GESTURE, gestures);
+    swl_test_pointer_capture_request_latest.pointer = pointer;
+    return (struct zwp_pointer_gesture_pinch_v1 *)0xB702;
+}
+
+static struct zwp_pointer_gesture_hold_v1 *swl_test_gestures_get_hold_record(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer)
+{
+    swl_test_record_pointer_capture_request(
+        SWL_TEST_POINTER_CAPTURE_GET_HOLD_GESTURE, gestures);
+    swl_test_pointer_capture_request_latest.pointer = pointer;
+    return (struct zwp_pointer_gesture_hold_v1 *)0xB703;
+}
+
+static struct zwp_keyboard_shortcuts_inhibitor_v1 *
+swl_test_keyboard_shortcuts_inhibit_record(
+    struct zwp_keyboard_shortcuts_inhibit_manager_v1 *manager,
+    struct wl_surface *surface,
+    struct wl_seat *seat)
+{
+    swl_test_record_pointer_capture_request(
+        SWL_TEST_POINTER_CAPTURE_INHIBIT_SHORTCUTS, manager);
+    swl_test_pointer_capture_request_latest.surface = surface;
+    swl_test_pointer_capture_request_latest.seat = seat;
+    return (struct zwp_keyboard_shortcuts_inhibitor_v1 *)0xB801;
+}
+
+static void swl_test_pointer_gestures_destroy_record(
+    struct zwp_pointer_gestures_v1 *gestures)
+{
+    swl_test_record_pointer_capture_destroy(
+        SWL_TEST_POINTER_CAPTURE_DESTROY_GESTURES, gestures);
+}
+
+static void swl_test_pointer_gestures_release_record(
+    struct zwp_pointer_gestures_v1 *gestures)
+{
+    swl_test_record_pointer_capture_destroy(
+        SWL_TEST_POINTER_CAPTURE_RELEASE_GESTURES, gestures);
+}
+
+static void swl_test_swipe_gesture_destroy_record(
+    struct zwp_pointer_gesture_swipe_v1 *gesture)
+{
+    swl_test_record_pointer_capture_destroy(
+        SWL_TEST_POINTER_CAPTURE_DESTROY_SWIPE_GESTURE, gesture);
+}
+
+static void swl_test_pinch_gesture_destroy_record(
+    struct zwp_pointer_gesture_pinch_v1 *gesture)
+{
+    swl_test_record_pointer_capture_destroy(
+        SWL_TEST_POINTER_CAPTURE_DESTROY_PINCH_GESTURE, gesture);
+}
+
+static void swl_test_hold_gesture_destroy_record(
+    struct zwp_pointer_gesture_hold_v1 *gesture)
+{
+    swl_test_record_pointer_capture_destroy(
+        SWL_TEST_POINTER_CAPTURE_DESTROY_HOLD_GESTURE, gesture);
+}
+
+static void swl_test_keyboard_shortcuts_manager_destroy_record(
+    struct zwp_keyboard_shortcuts_inhibit_manager_v1 *manager)
+{
+    swl_test_record_pointer_capture_destroy(
+        SWL_TEST_POINTER_CAPTURE_DESTROY_SHORTCUTS_MANAGER, manager);
+}
+
+static void swl_test_keyboard_shortcuts_inhibitor_destroy_record(
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor)
+{
+    swl_test_record_pointer_capture_destroy(
+        SWL_TEST_POINTER_CAPTURE_DESTROY_SHORTCUTS_INHIBITOR, inhibitor);
+}
 #else
 #define swl_relative_pointer_get_impl \
     zwp_relative_pointer_manager_v1_get_relative_pointer
@@ -428,6 +634,23 @@ static void swl_test_region_destroy_record(struct wl_region *region)
 #define swl_region_add_impl wl_region_add
 #define swl_region_subtract_impl wl_region_subtract
 #define swl_region_destroy_impl wl_region_destroy
+#define swl_pointer_gestures_get_swipe_impl \
+    zwp_pointer_gestures_v1_get_swipe_gesture
+#define swl_pointer_gestures_get_pinch_impl \
+    zwp_pointer_gestures_v1_get_pinch_gesture
+#define swl_pointer_gestures_get_hold_impl \
+    zwp_pointer_gestures_v1_get_hold_gesture
+#define swl_pointer_gestures_destroy_impl zwp_pointer_gestures_v1_destroy
+#define swl_pointer_gestures_release_impl zwp_pointer_gestures_v1_release
+#define swl_swipe_gesture_destroy_impl zwp_pointer_gesture_swipe_v1_destroy
+#define swl_pinch_gesture_destroy_impl zwp_pointer_gesture_pinch_v1_destroy
+#define swl_hold_gesture_destroy_impl zwp_pointer_gesture_hold_v1_destroy
+#define swl_keyboard_shortcuts_manager_destroy_impl \
+    zwp_keyboard_shortcuts_inhibit_manager_v1_destroy
+#define swl_keyboard_shortcuts_inhibit_impl \
+    zwp_keyboard_shortcuts_inhibit_manager_v1_inhibit_shortcuts
+#define swl_keyboard_shortcuts_inhibitor_destroy_impl \
+    zwp_keyboard_shortcuts_inhibitor_v1_destroy
 #endif
 
 void swl_wp_pointer_warp_v1_warp_pointer(
@@ -583,6 +806,81 @@ void swl_zwp_confined_pointer_v1_destroy(
     swl_confined_pointer_destroy_impl(confined_pointer);
 }
 
+struct zwp_pointer_gesture_swipe_v1 *
+swl_zwp_pointer_gestures_v1_get_swipe_gesture(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer)
+{
+    return swl_pointer_gestures_get_swipe_impl(gestures, pointer);
+}
+
+struct zwp_pointer_gesture_pinch_v1 *
+swl_zwp_pointer_gestures_v1_get_pinch_gesture(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer)
+{
+    return swl_pointer_gestures_get_pinch_impl(gestures, pointer);
+}
+
+struct zwp_pointer_gesture_hold_v1 *
+swl_zwp_pointer_gestures_v1_get_hold_gesture(
+    struct zwp_pointer_gestures_v1 *gestures,
+    struct wl_pointer *pointer)
+{
+    return swl_pointer_gestures_get_hold_impl(gestures, pointer);
+}
+
+void swl_zwp_pointer_gestures_v1_destroy(
+    struct zwp_pointer_gestures_v1 *gestures)
+{
+    swl_pointer_gestures_destroy_impl(gestures);
+}
+
+void swl_zwp_pointer_gestures_v1_release(
+    struct zwp_pointer_gestures_v1 *gestures)
+{
+    swl_pointer_gestures_release_impl(gestures);
+}
+
+void swl_zwp_pointer_gesture_swipe_v1_destroy(
+    struct zwp_pointer_gesture_swipe_v1 *gesture)
+{
+    swl_swipe_gesture_destroy_impl(gesture);
+}
+
+void swl_zwp_pointer_gesture_pinch_v1_destroy(
+    struct zwp_pointer_gesture_pinch_v1 *gesture)
+{
+    swl_pinch_gesture_destroy_impl(gesture);
+}
+
+void swl_zwp_pointer_gesture_hold_v1_destroy(
+    struct zwp_pointer_gesture_hold_v1 *gesture)
+{
+    swl_hold_gesture_destroy_impl(gesture);
+}
+
+void swl_zwp_keyboard_shortcuts_inhibit_manager_v1_destroy(
+    struct zwp_keyboard_shortcuts_inhibit_manager_v1 *manager)
+{
+    swl_keyboard_shortcuts_manager_destroy_impl(manager);
+}
+
+struct zwp_keyboard_shortcuts_inhibitor_v1 *
+swl_zwp_keyboard_shortcuts_inhibit_manager_v1_inhibit_shortcuts(
+    struct zwp_keyboard_shortcuts_inhibit_manager_v1 *manager,
+    struct wl_surface *surface,
+    struct wl_seat *seat)
+{
+    return swl_keyboard_shortcuts_inhibit_impl(manager, surface, seat);
+}
+
+void swl_zwp_keyboard_shortcuts_inhibitor_v1_destroy(
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor)
+{
+    swl_keyboard_shortcuts_inhibitor_destroy_impl(inhibitor);
+}
+
 struct wl_region *swl_compositor_create_region(struct wl_compositor *compositor)
 {
     return swl_compositor_create_region_impl(compositor);
@@ -643,6 +941,22 @@ void swl_test_pointer_capture_request_recording_begin(void)
     swl_region_add_impl = swl_test_region_add_record;
     swl_region_subtract_impl = swl_test_region_subtract_record;
     swl_region_destroy_impl = swl_test_region_destroy_record;
+    swl_pointer_gestures_get_swipe_impl = swl_test_gestures_get_swipe_record;
+    swl_pointer_gestures_get_pinch_impl = swl_test_gestures_get_pinch_record;
+    swl_pointer_gestures_get_hold_impl = swl_test_gestures_get_hold_record;
+    swl_pointer_gestures_destroy_impl =
+        swl_test_pointer_gestures_destroy_record;
+    swl_pointer_gestures_release_impl =
+        swl_test_pointer_gestures_release_record;
+    swl_swipe_gesture_destroy_impl = swl_test_swipe_gesture_destroy_record;
+    swl_pinch_gesture_destroy_impl = swl_test_pinch_gesture_destroy_record;
+    swl_hold_gesture_destroy_impl = swl_test_hold_gesture_destroy_record;
+    swl_keyboard_shortcuts_manager_destroy_impl =
+        swl_test_keyboard_shortcuts_manager_destroy_record;
+    swl_keyboard_shortcuts_inhibit_impl =
+        swl_test_keyboard_shortcuts_inhibit_record;
+    swl_keyboard_shortcuts_inhibitor_destroy_impl =
+        swl_test_keyboard_shortcuts_inhibitor_destroy_record;
 }
 
 void swl_test_pointer_capture_request_recording_end(void)
@@ -668,6 +982,20 @@ void swl_test_pointer_capture_request_recording_end(void)
     swl_region_add_impl = swl_region_add_default;
     swl_region_subtract_impl = swl_region_subtract_default;
     swl_region_destroy_impl = swl_region_destroy_default;
+    swl_pointer_gestures_get_swipe_impl = swl_pointer_gestures_get_swipe_default;
+    swl_pointer_gestures_get_pinch_impl = swl_pointer_gestures_get_pinch_default;
+    swl_pointer_gestures_get_hold_impl = swl_pointer_gestures_get_hold_default;
+    swl_pointer_gestures_destroy_impl = swl_pointer_gestures_destroy_default;
+    swl_pointer_gestures_release_impl = swl_pointer_gestures_release_default;
+    swl_swipe_gesture_destroy_impl = swl_swipe_gesture_destroy_default;
+    swl_pinch_gesture_destroy_impl = swl_pinch_gesture_destroy_default;
+    swl_hold_gesture_destroy_impl = swl_hold_gesture_destroy_default;
+    swl_keyboard_shortcuts_manager_destroy_impl =
+        swl_keyboard_shortcuts_manager_destroy_default;
+    swl_keyboard_shortcuts_inhibit_impl =
+        swl_keyboard_shortcuts_inhibit_default;
+    swl_keyboard_shortcuts_inhibitor_destroy_impl =
+        swl_keyboard_shortcuts_inhibitor_destroy_default;
 }
 
 struct swl_test_pointer_capture_request_record

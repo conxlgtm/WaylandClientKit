@@ -57,6 +57,7 @@ public enum PointerEvent: Equatable, Sendable {
     case axis(PointerAxisEvent)
     case relativeMotion(RelativePointerMotionEvent)
     case constraintLifecycle(PointerConstraintLifecycleEvent)
+    case gesture(PointerGestureEvent)
 }
 
 public struct PointerLocation: Equatable, Sendable {
@@ -93,6 +94,37 @@ public struct RelativePointerMotionEvent: Equatable, Sendable {
         delta = eventDelta
         unacceleratedDelta = eventUnacceleratedDelta
     }
+}
+
+public enum PointerGestureEvent: Equatable, Sendable {
+    case swipe(PointerSwipeGestureEvent)
+    case pinch(PointerPinchGestureEvent)
+    case hold(PointerHoldGestureEvent)
+}
+
+public enum PointerSwipeGestureEvent: Equatable, Sendable {
+    case begin(serial: InputSerial, time: WaylandTimestampMilliseconds, fingers: UInt32)
+    case update(time: WaylandTimestampMilliseconds, delta: PointerDelta)
+    case end(serial: InputSerial, time: WaylandTimestampMilliseconds)
+    case cancel(serial: InputSerial, time: WaylandTimestampMilliseconds)
+}
+
+public enum PointerPinchGestureEvent: Equatable, Sendable {
+    case begin(serial: InputSerial, time: WaylandTimestampMilliseconds, fingers: UInt32)
+    case update(
+        time: WaylandTimestampMilliseconds,
+        delta: PointerDelta,
+        scale: Double,
+        rotation: Double
+    )
+    case end(serial: InputSerial, time: WaylandTimestampMilliseconds)
+    case cancel(serial: InputSerial, time: WaylandTimestampMilliseconds)
+}
+
+public enum PointerHoldGestureEvent: Equatable, Sendable {
+    case begin(serial: InputSerial, time: WaylandTimestampMilliseconds, fingers: UInt32)
+    case end(serial: InputSerial, time: WaylandTimestampMilliseconds)
+    case cancel(serial: InputSerial, time: WaylandTimestampMilliseconds)
 }
 
 public enum PointerConstraintKind: Equatable, Hashable, Sendable {

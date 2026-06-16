@@ -1,4 +1,5 @@
 #include "wayland-client-kit-shims.h"
+#include "generated/legacy-unstable/keyboard-shortcuts-inhibit/keyboard-shortcuts-inhibit-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/relative-pointer/relative-pointer-unstable-v1-client-protocol.h"
 #include "generated/legacy-unstable/pointer-constraints/pointer-constraints-unstable-v1-client-protocol.h"
 
@@ -101,6 +102,7 @@ static const struct zwp_confined_pointer_v1_listener
 #ifdef SWL_ENABLE_TESTING
 static struct swl_test_pointer_capture_listener_record
     swl_test_pointer_capture_listener_latest;
+static int swl_test_keyboard_shortcuts_inhibitor_listener_add_result;
 
 static void swl_test_record_relative_motion(
     void *data,
@@ -292,5 +294,118 @@ void swl_test_confined_pointer_listener_emit_unconfined(
     swl_zwp_confined_pointer_v1_handle_unconfined(&callbacks, confined_pointer);
     if (record)
         *record = swl_test_pointer_capture_listener_latest;
+}
+#endif
+
+static void swl_zwp_keyboard_shortcuts_inhibitor_v1_handle_active(
+    void *data,
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor)
+{
+    const struct
+        swl_zwp_keyboard_shortcuts_inhibitor_v1_listener_callbacks *cb = data;
+    if (cb && cb->active)
+        cb->active(cb->data, inhibitor);
+}
+
+static void swl_zwp_keyboard_shortcuts_inhibitor_v1_handle_inactive(
+    void *data,
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor)
+{
+    const struct
+        swl_zwp_keyboard_shortcuts_inhibitor_v1_listener_callbacks *cb = data;
+    if (cb && cb->inactive)
+        cb->inactive(cb->data, inhibitor);
+}
+
+static const struct zwp_keyboard_shortcuts_inhibitor_v1_listener
+    swl_zwp_keyboard_shortcuts_inhibitor_v1_listener_impl = {
+        .active = swl_zwp_keyboard_shortcuts_inhibitor_v1_handle_active,
+        .inactive = swl_zwp_keyboard_shortcuts_inhibitor_v1_handle_inactive,
+    };
+
+int swl_zwp_keyboard_shortcuts_inhibitor_v1_add_listener(
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor,
+    const struct
+        swl_zwp_keyboard_shortcuts_inhibitor_v1_listener_callbacks *callbacks)
+{
+#ifdef SWL_ENABLE_TESTING
+    if (swl_test_keyboard_shortcuts_inhibitor_listener_add_result)
+        return swl_test_keyboard_shortcuts_inhibitor_listener_add_result;
+#endif
+    return zwp_keyboard_shortcuts_inhibitor_v1_add_listener(
+        inhibitor,
+        &swl_zwp_keyboard_shortcuts_inhibitor_v1_listener_impl,
+        (void *)callbacks);
+}
+
+#ifdef SWL_ENABLE_TESTING
+static void swl_test_record_keyboard_shortcuts_active(
+    void *data,
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor)
+{
+    swl_test_pointer_capture_listener_latest.call_count += 1;
+    swl_test_pointer_capture_listener_latest.kind =
+        SWL_TEST_POINTER_CAPTURE_LISTENER_SHORTCUTS_ACTIVE;
+    swl_test_pointer_capture_listener_latest.data = data;
+    swl_test_pointer_capture_listener_latest.object = inhibitor;
+}
+
+static void swl_test_record_keyboard_shortcuts_inactive(
+    void *data,
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor)
+{
+    swl_test_pointer_capture_listener_latest.call_count += 1;
+    swl_test_pointer_capture_listener_latest.kind =
+        SWL_TEST_POINTER_CAPTURE_LISTENER_SHORTCUTS_INACTIVE;
+    swl_test_pointer_capture_listener_latest.data = data;
+    swl_test_pointer_capture_listener_latest.object = inhibitor;
+}
+
+static struct swl_zwp_keyboard_shortcuts_inhibitor_v1_listener_callbacks
+swl_test_keyboard_shortcuts_inhibitor_callbacks(void *data)
+{
+    return (struct
+            swl_zwp_keyboard_shortcuts_inhibitor_v1_listener_callbacks){
+        .active = swl_test_record_keyboard_shortcuts_active,
+        .inactive = swl_test_record_keyboard_shortcuts_inactive,
+        .data = data,
+    };
+}
+
+void swl_test_keyboard_shortcuts_inhibitor_listener_emit_active(
+    void *data,
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor,
+    struct swl_test_pointer_capture_listener_record *record)
+{
+    swl_test_pointer_capture_listener_latest =
+        (struct swl_test_pointer_capture_listener_record){0};
+    struct swl_zwp_keyboard_shortcuts_inhibitor_v1_listener_callbacks
+        callbacks = swl_test_keyboard_shortcuts_inhibitor_callbacks(data);
+    swl_zwp_keyboard_shortcuts_inhibitor_v1_handle_active(
+        &callbacks,
+        inhibitor);
+    if (record)
+        *record = swl_test_pointer_capture_listener_latest;
+}
+
+void swl_test_keyboard_shortcuts_inhibitor_listener_emit_inactive(
+    void *data,
+    struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor,
+    struct swl_test_pointer_capture_listener_record *record)
+{
+    swl_test_pointer_capture_listener_latest =
+        (struct swl_test_pointer_capture_listener_record){0};
+    struct swl_zwp_keyboard_shortcuts_inhibitor_v1_listener_callbacks
+        callbacks = swl_test_keyboard_shortcuts_inhibitor_callbacks(data);
+    swl_zwp_keyboard_shortcuts_inhibitor_v1_handle_inactive(
+        &callbacks,
+        inhibitor);
+    if (record)
+        *record = swl_test_pointer_capture_listener_latest;
+}
+
+void swl_test_keyboard_shortcuts_inhibitor_listener_set_add_result(int result)
+{
+    swl_test_keyboard_shortcuts_inhibitor_listener_add_result = result;
 }
 #endif

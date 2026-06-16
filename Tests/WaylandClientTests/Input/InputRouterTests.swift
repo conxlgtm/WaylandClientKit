@@ -91,6 +91,29 @@ struct PointerInputRouterTests {
     }
 
     @Test
+    func pointerGestureUpdatesReuseBeginTargetUntilEnd() {
+        let router = InputRouter()
+        let seatID = RawSeatID(rawValue: 35)
+        let beginWindow = WindowID(rawValue: 350)
+        let focusedWindow = WindowID(rawValue: 351)
+        router.register(windowID: beginWindow, surfaceID: 3_500)
+        router.register(windowID: focusedWindow, surfaceID: 3_501)
+
+        let begin = router.route(
+            rawPointerSwipeGestureBegin(sequence: 1, seatID: seatID, surfaceID: 3_500)
+        )
+        _ = router.route(rawPointerEnter(sequence: 2, seatID: seatID, surfaceID: 3_501))
+        let update = router.route(rawPointerSwipeGestureUpdate(sequence: 3, seatID: seatID))
+        let end = router.route(rawPointerSwipeGestureEnd(sequence: 4, seatID: seatID))
+        let laterUpdate = router.route(rawPointerSwipeGestureUpdate(sequence: 5, seatID: seatID))
+
+        #expect(begin.first?.windowID == beginWindow)
+        #expect(update.first?.windowID == beginWindow)
+        #expect(end.first?.windowID == beginWindow)
+        #expect(laterUpdate.first?.windowID == focusedWindow)
+    }
+
+    @Test
     func pointerConstraintEventsRouteToConstraintSurface() {
         let router = InputRouter()
         let seatID = RawSeatID(rawValue: 33)

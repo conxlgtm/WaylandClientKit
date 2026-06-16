@@ -198,45 +198,53 @@
             let confinedPointer = try unsafe #require(OpaquePointer(bitPattern: 0xB605))
             let region = try unsafe #require(OpaquePointer(bitPattern: 0xB606))
 
-            // swiftlint:disable:next closure_body_length
+            assertDestroyRequest(
+                object: relativeManager,
+                expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_RELATIVE_MANAGER,
+                destroy: unsafe swl_zwp_relative_pointer_manager_v1_destroy
+            )
+            assertDestroyRequest(
+                object: relativePointer,
+                expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_RELATIVE_POINTER,
+                destroy: unsafe swl_zwp_relative_pointer_v1_destroy
+            )
+            assertDestroyRequest(
+                object: constraints,
+                expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_CONSTRAINTS,
+                destroy: unsafe swl_zwp_pointer_constraints_v1_destroy
+            )
+            assertDestroyRequest(
+                object: lockedPointer,
+                expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_LOCKED_POINTER,
+                destroy: unsafe swl_zwp_locked_pointer_v1_destroy
+            )
+            assertDestroyRequest(
+                object: confinedPointer,
+                expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_CONFINED_POINTER,
+                destroy: unsafe swl_zwp_confined_pointer_v1_destroy
+            )
+            assertDestroyRequest(
+                object: region,
+                expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_REGION,
+                destroy: unsafe swl_region_destroy
+            )
+        }
+
+        @safe
+        private func assertDestroyRequest(
+            object rawObject: OpaquePointer,
+            expectedKind: swl_test_pointer_capture_destroy_kind,
+            destroy: (OpaquePointer?) -> Void,
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) {
             ShimRequestRecordingLock.pointerCapture.withLock { _ in
                 swl_test_pointer_capture_request_recording_begin()
                 defer { swl_test_pointer_capture_request_recording_end() }
-
-                unsafe swl_zwp_relative_pointer_manager_v1_destroy(relativeManager)
+                unsafe destroy(rawObject)
                 assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_RELATIVE_MANAGER,
-                    object: relativeManager
-                )
-
-                unsafe swl_zwp_relative_pointer_v1_destroy(relativePointer)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_RELATIVE_POINTER,
-                    object: relativePointer
-                )
-
-                unsafe swl_zwp_pointer_constraints_v1_destroy(constraints)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_CONSTRAINTS,
-                    object: constraints
-                )
-
-                unsafe swl_zwp_locked_pointer_v1_destroy(lockedPointer)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_LOCKED_POINTER,
-                    object: lockedPointer
-                )
-
-                unsafe swl_zwp_confined_pointer_v1_destroy(confinedPointer)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_CONFINED_POINTER,
-                    object: confinedPointer
-                )
-
-                unsafe swl_region_destroy(region)
-                assertDestroy(
-                    expectedKind: SWL_TEST_POINTER_CAPTURE_DESTROY_REGION,
-                    object: region
+                    expectedKind: expectedKind,
+                    object: rawObject,
+                    sourceLocation: sourceLocation
                 )
             }
         }
@@ -252,31 +260,31 @@
             #expect(unsafe record.kind == expectedKind, sourceLocation: sourceLocation)
             #expect(unsafe record.object == object)
         }
+    }
 
-        @safe
-        private func getRelativePointer(
-            _ manager: OpaquePointer?,
-            _ pointer: OpaquePointer?
-        ) -> OpaquePointer? {
-            unsafe swl_zwp_relative_pointer_manager_v1_get_relative_pointer(manager, pointer)
-        }
+    @safe
+    private func getRelativePointer(
+        _ manager: OpaquePointer?,
+        _ pointer: OpaquePointer?
+    ) -> OpaquePointer? {
+        unsafe swl_zwp_relative_pointer_manager_v1_get_relative_pointer(manager, pointer)
+    }
 
-        @safe
-        private func confinePointer(
-            _ constraints: OpaquePointer?,
-            _ surface: OpaquePointer?,
-            _ pointer: OpaquePointer?,
-            _ region: OpaquePointer?,
-            _ lifetime: UInt32
-        ) -> OpaquePointer? {
-            unsafe swl_zwp_pointer_constraints_v1_confine_pointer(
-                constraints,
-                surface,
-                pointer,
-                region,
-                lifetime
-            )
-        }
+    @safe
+    private func confinePointer(
+        _ constraints: OpaquePointer?,
+        _ surface: OpaquePointer?,
+        _ pointer: OpaquePointer?,
+        _ region: OpaquePointer?,
+        _ lifetime: UInt32
+    ) -> OpaquePointer? {
+        unsafe swl_zwp_pointer_constraints_v1_confine_pointer(
+            constraints,
+            surface,
+            pointer,
+            region,
+            lifetime
+        )
     }
 
 #endif

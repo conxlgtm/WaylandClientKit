@@ -13,6 +13,18 @@ extension DisplayCore {
         }
     }
 
+    func createPointerGestureSubscription(
+        seatID: SeatID
+    ) throws -> (id: PointerGestureSubscriptionID, version: UInt32) {
+        try withFatalFailureFinalization {
+            guard !isClosed else {
+                throw PointerCaptureError.displayClosed
+            }
+
+            return try requireSession().createPointerGesturesOnOwnerThread(seatID: seatID)
+        }
+    }
+
     func lockPointer(
         windowID: WindowID,
         seatID: SeatID,
@@ -108,6 +120,16 @@ extension DisplayCore {
             }
 
             try requireSession().destroyRelativePointerSubscriptionOnOwnerThread(id)
+        }
+    }
+
+    func destroyPointerGestureSubscription(_ id: PointerGestureSubscriptionID) throws {
+        try withFatalFailureFinalization {
+            guard !isClosed else {
+                throw PointerCaptureError.displayClosed
+            }
+
+            try requireSession().destroyPointerGestureSubscriptionOnOwnerThread(id)
         }
     }
 

@@ -488,34 +488,48 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L25: `    public static func solid(`
 - L83: `public struct DragSourceIdentity: Hashable, Sendable, CustomStringConvertible {`
 - L90: `    public var description: String {`
-- L95: `public struct DragSourceConfiguration: Equatable, Sendable {`
-- L96: `    public let payloads: [DataTransferSourcePayload]`
-- L97: `    public let actions: DragActionSet`
-- L100: `    public init(`
-- L114: `    public static func data(`
-- L130: `public struct DragSource: Sendable, Hashable, Identifiable {`
-- L132: `    public let id: DragSourceIdentity`
-- L133: `    public let seatID: SeatID`
-- L134: `    public let mimeTypes: [MIMEType]`
-- L135: `    public let actions: DragActionSet`
-- L155: `    public var identity: DragSourceIdentity {`
-- L160: `    public func cancel() async throws {`
-- L164: `    public static func == (lhs: DragSource, rhs: DragSource) -> Bool {`
-- L168: `    public func hash(into hasher: inout Hasher) {`
-- L173: `public struct DragSourceTargetEvent: Equatable, Sendable {`
-- L174: `    public let source: DragSourceIdentity`
-- L175: `    public let mimeType: MIMEType?`
-- L183: `public struct DragSourceActionEvent: Equatable, Sendable {`
-- L184: `    public let source: DragSourceIdentity`
-- L185: `    public let action: DragAction`
-- L193: `public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {`
-- L194: `    case copy`
-- L195: `    case move`
-- L196: `    case unknown(rawValue: UInt32)`
-- L211: `    public var description: String {`
-- L223: `public struct DragSourceFinishedEvent: Equatable, Sendable {`
-- L224: `    public let source: DragSourceIdentity`
-- L225: `    public let finalAction: DragSourceFinalAction`
+- L95: `public struct ToplevelDragID:`
+- L107: `    public var description: String {`
+- L112: `public struct DragSourceConfiguration: Equatable, Sendable {`
+- L113: `    public let payloads: [DataTransferSourcePayload]`
+- L114: `    public let actions: DragActionSet`
+- L117: `    public init(`
+- L131: `    public static func data(`
+- L147: `public struct DragSource: Sendable, Hashable, Identifiable {`
+- L149: `    public let id: DragSourceIdentity`
+- L150: `    public let seatID: SeatID`
+- L151: `    public let mimeTypes: [MIMEType]`
+- L152: `    public let actions: DragActionSet`
+- L172: `    public var identity: DragSourceIdentity {`
+- L181: `    public func cancel() async throws {`
+- L185: `    public static func == (lhs: DragSource, rhs: DragSource) -> Bool {`
+- L189: `    public func hash(into hasher: inout Hasher) {`
+- L194: `public struct ToplevelDrag: Sendable, Hashable, Identifiable {`
+- L195: `    public let id: ToplevelDragID`
+- L196: `    public let windowID: WindowID`
+- L197: `    public let source: DragSourceIdentity`
+- L198: `    public let seatID: SeatID`
+- L199: `    public let serial: InputSerial`
+- L225: `    public func destroy() async throws {`
+- L233: `    public static func == (lhs: ToplevelDrag, rhs: ToplevelDrag) -> Bool {`
+- L237: `    public func hash(into hasher: inout Hasher) {`
+- L242: `public struct StartedToplevelDrag: Sendable, Hashable {`
+- L243: `    public let source: DragSource`
+- L244: `    public let drag: ToplevelDrag`
+- L252: `public struct DragSourceTargetEvent: Equatable, Sendable {`
+- L253: `    public let source: DragSourceIdentity`
+- L254: `    public let mimeType: MIMEType?`
+- L262: `public struct DragSourceActionEvent: Equatable, Sendable {`
+- L263: `    public let source: DragSourceIdentity`
+- L264: `    public let action: DragAction`
+- L272: `public enum DragSourceFinalAction: Equatable, Sendable, CustomStringConvertible {`
+- L273: `    case copy`
+- L274: `    case move`
+- L275: `    case unknown(rawValue: UInt32)`
+- L290: `    public var description: String {`
+- L302: `public struct DragSourceFinishedEvent: Equatable, Sendable {`
+- L303: `    public let source: DragSourceIdentity`
+- L304: `    public let finalAction: DragSourceFinalAction`
 
 ### `Sources/WaylandClient/Public/DataTransfer/OwnedFileDescriptor.swift`
 
@@ -546,13 +560,42 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L114: `    case none`
 - L115: `    case named(WindowIconName)`
 - L116: `    case xrgb8888(WindowIconImage)`
-- L119: `public struct IdleInhibitorID:`
+- L119: `public struct WindowDialogID:`
 - L131: `    public var description: String {`
-- L136: `public struct IdleInhibitor: Sendable, Hashable, Identifiable {`
-- L137: `    public let id: IdleInhibitorID`
-- L152: `    public func destroy() async throws {`
-- L160: `    public static func == (lhs: IdleInhibitor, rhs: IdleInhibitor) -> Bool {`
-- L164: `    public func hash(into hasher: inout Hasher) {`
+- L136: `public struct WindowDialog: Sendable, Hashable, Identifiable {`
+- L137: `    public let id: WindowDialogID`
+- L138: `    public let childWindowID: WindowID`
+- L139: `    public let parentWindowID: WindowID`
+- L161: `    public func setModal() async throws {`
+- L169: `    public func unsetModal() async throws {`
+- L177: `    public func destroy() async throws {`
+- L185: `    public static func == (lhs: WindowDialog, rhs: WindowDialog) -> Bool {`
+- L189: `    public func hash(into hasher: inout Hasher) {`
+- L194: `public struct IdleInhibitorID:`
+- L206: `    public var description: String {`
+- L211: `public struct IdleInhibitor: Sendable, Hashable, Identifiable {`
+- L212: `    public let id: IdleInhibitorID`
+- L227: `    public func destroy() async throws {`
+- L235: `    public static func == (lhs: IdleInhibitor, rhs: IdleInhibitor) -> Bool {`
+- L239: `    public func hash(into hasher: inout Hasher) {`
+- L244: `public struct KeyboardShortcutsInhibitorID:`
+- L256: `    public var description: String {`
+- L261: `public struct KeyboardShortcutsInhibitor: Sendable, Hashable, Identifiable {`
+- L262: `    public let id: KeyboardShortcutsInhibitorID`
+- L263: `    public let windowID: WindowID`
+- L264: `    public let seatID: SeatID`
+- L286: `    public func destroy() async throws {`
+- L294: `    public static func == (`
+- L301: `    public func hash(into hasher: inout Hasher) {`
+- L306: `public enum KeyboardShortcutsInhibitorActivity: Equatable, Sendable {`
+- L307: `    case active`
+- L308: `    case inactive`
+- L311: `public struct KeyboardShortcutsInhibitorEvent: Equatable, Sendable {`
+- L312: `    public let inhibitorID: KeyboardShortcutsInhibitorID`
+- L313: `    public let windowID: WindowID`
+- L314: `    public let seatID: SeatID`
+- L315: `    public let activity: KeyboardShortcutsInhibitorActivity`
+- L317: `    public init(`
 
 ### `Sources/WaylandClient/Public/Diagnostics/InputDiagnostic.swift`
 
@@ -759,84 +802,85 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L10: `    case outputChanged(OutputSnapshot)`
 - L11: `    case outputRemoved(OutputID)`
 - L12: `    case windowOutputsChanged(WindowOutputMembershipEvent)`
-- L15: `public struct PopupLifecycleEvent: Equatable, Sendable {`
-- L16: `    public let popup: PopupSurfaceIdentity`
-- L17: `    public let parentWindowID: WindowID`
-- L25: `public struct WindowOutputMembershipEvent: Equatable, Sendable {`
-- L26: `    public let windowID: WindowID`
-- L27: `    public let outputs: [OutputID]`
-- L29: `    public init(windowID eventWindowID: WindowID, outputs eventOutputs: [OutputID]) {`
-- L35: `public enum DiagnosticSeverity: Equatable, Sendable {`
-- L36: `    case warning`
-- L37: `    case degraded`
-- L38: `    case error`
-- L41: `public struct DiagnosticID: Equatable, Hashable, Sendable {`
-- L42: `    public let rawValue: UInt64`
-- L44: `    public init(rawValue diagnosticRawValue: UInt64) {`
-- L49: `public struct DisplayDiagnostic: Equatable, Sendable {`
-- L50: `    public let id: DiagnosticID`
-- L51: `    public let severity: DiagnosticSeverity`
-- L52: `    public let payload: DisplayDiagnosticPayload`
-- L54: `    public init(`
-- L65: `public enum DisplayDiagnosticPayload: Equatable, Sendable {`
-- L66: `    case input(InputDiagnostic)`
-- L67: `    case window(WindowDiagnostic)`
-- L68: `    case dataTransfer(DataTransferDiagnostic)`
-- L69: `    case textInput(TextInputDiagnostic)`
-- L70: `    case diagnosticsDropped(count: Int)`
-- L73: `public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {`
-- L74: `    case displayEvents`
-- L75: `    case inputEvents`
-- L76: `    case dataTransferEvents`
-- L77: `    case textInputEvents`
-- L78: `    case presentationEvents`
-- L79: `    case diagnostics`
-- L81: `    public var description: String {`
-- L143: `public struct DisplayEvents: AsyncSequence, Sendable {`
-- L144: `    public typealias Element = DisplayEvent`
-- L145: `    public typealias Failure = WaylandDisplayError`
-- L153: `    public func makeAsyncIterator() -> DisplayEventsIterator {`
-- L159: `public struct DisplayEventsIterator: AsyncIteratorProtocol {`
-- L160: `    public typealias Element = DisplayEvent`
-- L161: `    public typealias Failure = WaylandDisplayError`
-- L169: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayEvent? {`
-- L173: `    public mutating func next(`
-- L181: `public struct InputEvents: AsyncSequence, Sendable {`
-- L182: `    public typealias Element = InputEvent`
-- L183: `    public typealias Failure = WaylandDisplayError`
-- L191: `    public func makeAsyncIterator() -> InputEventsIterator {`
-- L197: `public struct InputEventsIterator: AsyncIteratorProtocol {`
-- L198: `    public typealias Element = InputEvent`
-- L199: `    public typealias Failure = WaylandDisplayError`
-- L207: `    public mutating func next() async throws(WaylandDisplayError) -> InputEvent? {`
-- L211: `    public mutating func next(`
-- L219: `public struct DataTransferEvents: AsyncSequence, Sendable {`
-- L220: `    public typealias Element = DataTransferEvent`
-- L221: `    public typealias Failure = WaylandDisplayError`
-- L229: `    public func makeAsyncIterator() -> DataTransferEventsIterator {`
-- L235: `public struct DataTransferEventsIterator: AsyncIteratorProtocol {`
-- L236: `    public typealias Element = DataTransferEvent`
-- L237: `    public typealias Failure = WaylandDisplayError`
-- L245: `    public mutating func next() async throws(WaylandDisplayError) -> DataTransferEvent? {`
-- L249: `    public mutating func next(`
-- L257: `public struct TextInputEvents: AsyncSequence, Sendable {`
-- L258: `    public typealias Element = TextInputEvent`
-- L259: `    public typealias Failure = WaylandDisplayError`
-- L267: `    public func makeAsyncIterator() -> TextInputEventsIterator {`
-- L273: `public struct TextInputEventsIterator: AsyncIteratorProtocol {`
-- L274: `    public typealias Element = TextInputEvent`
-- L275: `    public typealias Failure = WaylandDisplayError`
-- L283: `    public mutating func next() async throws(WaylandDisplayError) -> TextInputEvent? {`
-- L287: `    public mutating func next(`
-- L295: `public struct DisplayDiagnostics: AsyncSequence, Sendable {`
-- L296: `    public typealias Element = DisplayDiagnostic`
-- L297: `    public typealias Failure = WaylandDisplayError`
-- L305: `    public func makeAsyncIterator() -> DisplayDiagnosticsIterator {`
-- L311: `public struct DisplayDiagnosticsIterator: AsyncIteratorProtocol {`
-- L312: `    public typealias Element = DisplayDiagnostic`
-- L313: `    public typealias Failure = WaylandDisplayError`
-- L321: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayDiagnostic? {`
-- L325: `    public mutating func next(`
+- L13: `    case keyboardShortcutsInhibitorChanged(KeyboardShortcutsInhibitorEvent)`
+- L16: `public struct PopupLifecycleEvent: Equatable, Sendable {`
+- L17: `    public let popup: PopupSurfaceIdentity`
+- L18: `    public let parentWindowID: WindowID`
+- L26: `public struct WindowOutputMembershipEvent: Equatable, Sendable {`
+- L27: `    public let windowID: WindowID`
+- L28: `    public let outputs: [OutputID]`
+- L30: `    public init(windowID eventWindowID: WindowID, outputs eventOutputs: [OutputID]) {`
+- L36: `public enum DiagnosticSeverity: Equatable, Sendable {`
+- L37: `    case warning`
+- L38: `    case degraded`
+- L39: `    case error`
+- L42: `public struct DiagnosticID: Equatable, Hashable, Sendable {`
+- L43: `    public let rawValue: UInt64`
+- L45: `    public init(rawValue diagnosticRawValue: UInt64) {`
+- L50: `public struct DisplayDiagnostic: Equatable, Sendable {`
+- L51: `    public let id: DiagnosticID`
+- L52: `    public let severity: DiagnosticSeverity`
+- L53: `    public let payload: DisplayDiagnosticPayload`
+- L55: `    public init(`
+- L66: `public enum DisplayDiagnosticPayload: Equatable, Sendable {`
+- L67: `    case input(InputDiagnostic)`
+- L68: `    case window(WindowDiagnostic)`
+- L69: `    case dataTransfer(DataTransferDiagnostic)`
+- L70: `    case textInput(TextInputDiagnostic)`
+- L71: `    case diagnosticsDropped(count: Int)`
+- L74: `public enum EventStreamIdentity: Equatable, Sendable, CustomStringConvertible {`
+- L75: `    case displayEvents`
+- L76: `    case inputEvents`
+- L77: `    case dataTransferEvents`
+- L78: `    case textInputEvents`
+- L79: `    case presentationEvents`
+- L80: `    case diagnostics`
+- L82: `    public var description: String {`
+- L144: `public struct DisplayEvents: AsyncSequence, Sendable {`
+- L145: `    public typealias Element = DisplayEvent`
+- L146: `    public typealias Failure = WaylandDisplayError`
+- L154: `    public func makeAsyncIterator() -> DisplayEventsIterator {`
+- L160: `public struct DisplayEventsIterator: AsyncIteratorProtocol {`
+- L161: `    public typealias Element = DisplayEvent`
+- L162: `    public typealias Failure = WaylandDisplayError`
+- L170: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayEvent? {`
+- L174: `    public mutating func next(`
+- L182: `public struct InputEvents: AsyncSequence, Sendable {`
+- L183: `    public typealias Element = InputEvent`
+- L184: `    public typealias Failure = WaylandDisplayError`
+- L192: `    public func makeAsyncIterator() -> InputEventsIterator {`
+- L198: `public struct InputEventsIterator: AsyncIteratorProtocol {`
+- L199: `    public typealias Element = InputEvent`
+- L200: `    public typealias Failure = WaylandDisplayError`
+- L208: `    public mutating func next() async throws(WaylandDisplayError) -> InputEvent? {`
+- L212: `    public mutating func next(`
+- L220: `public struct DataTransferEvents: AsyncSequence, Sendable {`
+- L221: `    public typealias Element = DataTransferEvent`
+- L222: `    public typealias Failure = WaylandDisplayError`
+- L230: `    public func makeAsyncIterator() -> DataTransferEventsIterator {`
+- L236: `public struct DataTransferEventsIterator: AsyncIteratorProtocol {`
+- L237: `    public typealias Element = DataTransferEvent`
+- L238: `    public typealias Failure = WaylandDisplayError`
+- L246: `    public mutating func next() async throws(WaylandDisplayError) -> DataTransferEvent? {`
+- L250: `    public mutating func next(`
+- L258: `public struct TextInputEvents: AsyncSequence, Sendable {`
+- L259: `    public typealias Element = TextInputEvent`
+- L260: `    public typealias Failure = WaylandDisplayError`
+- L268: `    public func makeAsyncIterator() -> TextInputEventsIterator {`
+- L274: `public struct TextInputEventsIterator: AsyncIteratorProtocol {`
+- L275: `    public typealias Element = TextInputEvent`
+- L276: `    public typealias Failure = WaylandDisplayError`
+- L284: `    public mutating func next() async throws(WaylandDisplayError) -> TextInputEvent? {`
+- L288: `    public mutating func next(`
+- L296: `public struct DisplayDiagnostics: AsyncSequence, Sendable {`
+- L297: `    public typealias Element = DisplayDiagnostic`
+- L298: `    public typealias Failure = WaylandDisplayError`
+- L306: `    public func makeAsyncIterator() -> DisplayDiagnosticsIterator {`
+- L312: `public struct DisplayDiagnosticsIterator: AsyncIteratorProtocol {`
+- L313: `    public typealias Element = DisplayDiagnostic`
+- L314: `    public typealias Failure = WaylandDisplayError`
+- L322: `    public mutating func next() async throws(WaylandDisplayError) -> DisplayDiagnostic? {`
+- L326: `    public mutating func next(`
 
 ### `Sources/WaylandClient/Public/Display/Output.swift`
 
@@ -927,18 +971,24 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L59: `    public let cursorShape: ProtocolAvailability`
 - L62: `    public let xdgActivation: ProtocolAvailability`
 - L65: `    public let compositorSessionManagement: ProtocolAvailability`
-- L68: `    public let xdgToplevelIcon: ProtocolAvailability`
-- L71: `    public let idleInhibit: ProtocolAvailability`
-- L74: `    public let systemBell: ProtocolAvailability`
-- L77: `    public let pointerWarp: ProtocolAvailability`
-- L80: `    public let tablet: ProtocolAvailability`
-- L83: `    public let relativePointer: ProtocolAvailability`
-- L86: `    public let pointerConstraints: ProtocolAvailability`
-- L89: `    public let textInput: ProtocolAvailability`
-- L92: `    public let linuxDmabuf: ProtocolAvailability`
-- L94: `    public init(`
-- L140: `    public init(`
-- L179: `    public init(`
+- L68: `    public let xdgDialog: ProtocolAvailability`
+- L71: `    public let xdgToplevelDrag: ProtocolAvailability`
+- L74: `    public let foreignToplevelList: ProtocolAvailability`
+- L77: `    public let xdgToplevelIcon: ProtocolAvailability`
+- L80: `    public let idleInhibit: ProtocolAvailability`
+- L83: `    public let systemBell: ProtocolAvailability`
+- L86: `    public let pointerWarp: ProtocolAvailability`
+- L89: `    public let tablet: ProtocolAvailability`
+- L92: `    public let relativePointer: ProtocolAvailability`
+- L95: `    public let pointerConstraints: ProtocolAvailability`
+- L98: `    public let pointerGestures: ProtocolAvailability`
+- L101: `    public let keyboardShortcutsInhibit: ProtocolAvailability`
+- L104: `    public let textInput: ProtocolAvailability`
+- L107: `    public let linuxDmabuf: ProtocolAvailability`
+- L110: `    public let outputManagement: ProtocolAvailability`
+- L112: `    public init(`
+- L170: `    public init(`
+- L215: `    public init(`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+Activation.swift`
 
@@ -948,26 +998,28 @@ Run `swift run wck api verify --update` only after reviewing and updating
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+DataTransfer.swift`
 
-- L2: `    public func clipboardOffer(for seatID: SeatID) throws -> ClipboardOffer? {`
-- L8: `    public func dragOffer(for seatID: SeatID) throws -> DragOffer? {`
-- L18: `    public func requestClipboardSelection(`
-- L34: `    public func requestClearClipboard(seatID: SeatID, serial: InputSerial) throws {`
-- L111: `    public func primarySelectionOffer(for seatID: SeatID) throws -> PrimarySelectionOffer? {`
-- L121: `    public func requestPrimarySelection(`
-- L137: `    public func requestClearPrimarySelection(seatID: SeatID, serial: InputSerial) throws {`
+- L27: `    public func clipboardOffer(for seatID: SeatID) throws -> ClipboardOffer? {`
+- L33: `    public func dragOffer(for seatID: SeatID) throws -> DragOffer? {`
+- L43: `    public func requestClipboardSelection(`
+- L59: `    public func requestClearClipboard(seatID: SeatID, serial: InputSerial) throws {`
+- L169: `    public func primarySelectionOffer(for seatID: SeatID) throws -> PrimarySelectionOffer? {`
+- L179: `    public func requestPrimarySelection(`
+- L195: `    public func requestClearPrimarySelection(seatID: SeatID, serial: InputSerial) throws {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+DesktopIntegration.swift`
 
-- L19: `    public func ringSystemBell() throws {`
+- L78: `    public func ringSystemBell() throws {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+PointerCapture.swift`
 
 - L2: `    public func relativePointer(`
-- L9: `    public func lockPointer(`
-- L30: `    public func confinePointer(`
-- L49: `    public func requestPointerWarp(`
-- L68: `    public func destroyRelativePointerSubscription(`
-- L78: `    public func destroyPointerConstraint(_ constraint: PointerConstraint) throws {`
+- L9: `    public func pointerGestures(`
+- L23: `    public func lockPointer(`
+- L44: `    public func confinePointer(`
+- L63: `    public func requestPointerWarp(`
+- L82: `    public func destroyRelativePointerSubscription(`
+- L92: `    public func destroyPointerGestureSubscription(`
+- L102: `    public func destroyPointerConstraint(_ constraint: PointerConstraint) throws {`
 
 ### `Sources/WaylandClient/Public/Display/WaylandDisplay+TextInput.swift`
 
@@ -1037,33 +1089,50 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L7: `    case closedSubsurface`
 - L8: `    case foreignWindow(WindowID)`
 - L9: `    case foreignSubsurface(SubsurfaceIdentity)`
-- L10: `    case invalidSubsurfaceStacking(SubsurfaceStackingError)`
-- L11: `    case subsurfacePresentationFailed(SubsurfacePresentationFailure)`
-- L12: `    case presentationTimeUnavailable`
-- L13: `    case xdgToplevelIconUnavailable`
-- L14: `    case idleInhibitUnavailable`
-- L15: `    case systemBellUnavailable`
-- L16: `    case unknownIdleInhibitor(IdleInhibitorID)`
-- L17: `    case foreignIdleInhibitor(IdleInhibitorID)`
-- L18: `    case emptyWindowIconName`
-- L19: `    case windowIconNameContainsNUL`
-- L20: `    case nonSquareWindowIconImage(width: Int32, height: Int32)`
-- L21: `    case invalidWindowIconImagePixelCount(expected: Int, actual: Int)`
-- L23: `    public var description: String {`
-- L69: `public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {`
-- L70: `    case skippedUnknownSeat`
-- L71: `    case skippedNoPointer`
-- L73: `    public var description: String {`
-- L83: `public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConvertible {`
-- L84: `    public let seatID: SeatID`
-- L85: `    public let requestedCursor: PointerCursor`
-- L86: `    public let backendResult: PointerCursorBackendResult`
-- L88: `    public init(`
-- L98: `    public var description: String {`
-- L116: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L117: `    case invalidConfiguration(CursorConfigurationError)`
-- L118: `    case requestFailed(PointerCursorRequestFailure)`
-- L120: `    public var description: String {`
+- L10: `    case unknownSeat(SeatID)`
+- L11: `    case invalidSubsurfaceStacking(SubsurfaceStackingError)`
+- L12: `    case subsurfacePresentationFailed(SubsurfacePresentationFailure)`
+- L13: `    case presentationTimeUnavailable`
+- L14: `    case xdgToplevelIconUnavailable`
+- L15: `    case xdgDialogUnavailable`
+- L16: `    case xdgToplevelDragUnavailable`
+- L17: `    case foreignToplevelListUnavailable`
+- L18: `    case foreignDragSource(DragSourceIdentity)`
+- L19: `    case dragSourceSeatMismatch(DragSourceIdentity, expected: SeatID, actual: SeatID)`
+- L20: `    case unknownToplevelDrag(ToplevelDragID)`
+- L21: `    case foreignToplevelDrag(ToplevelDragID)`
+- L22: `    case toplevelDragStillActive(ToplevelDragID)`
+- L23: `    case idleInhibitUnavailable`
+- L24: `    case keyboardShortcutsInhibitUnavailable`
+- L25: `    case systemBellUnavailable`
+- L26: `    case unknownIdleInhibitor(IdleInhibitorID)`
+- L27: `    case foreignIdleInhibitor(IdleInhibitorID)`
+- L28: `    case invalidDialogParent(child: WindowID, parent: WindowID)`
+- L29: `    case dialogAlreadyExists(WindowID)`
+- L30: `    case unknownWindowDialog(WindowDialogID)`
+- L31: `    case foreignWindowDialog(WindowDialogID)`
+- L32: `    case keyboardShortcutsAlreadyInhibited(window: WindowID, seat: SeatID)`
+- L33: `    case unknownKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)`
+- L34: `    case foreignKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)`
+- L35: `    case emptyWindowIconName`
+- L36: `    case windowIconNameContainsNUL`
+- L37: `    case nonSquareWindowIconImage(width: Int32, height: Int32)`
+- L38: `    case invalidWindowIconImagePixelCount(expected: Int, actual: Int)`
+- L40: `    public var description: String {`
+- L120: `public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {`
+- L121: `    case skippedUnknownSeat`
+- L122: `    case skippedNoPointer`
+- L124: `    public var description: String {`
+- L134: `public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConvertible {`
+- L135: `    public let seatID: SeatID`
+- L136: `    public let requestedCursor: PointerCursor`
+- L137: `    public let backendResult: PointerCursorBackendResult`
+- L139: `    public init(`
+- L149: `    public var description: String {`
+- L167: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L168: `    case invalidConfiguration(CursorConfigurationError)`
+- L169: `    case requestFailed(PointerCursorRequestFailure)`
+- L171: `    public var description: String {`
 
 ### `Sources/WaylandClient/Public/Errors/DisplayError.swift`
 
@@ -1377,181 +1446,200 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L57: `    case axis(PointerAxisEvent)`
 - L58: `    case relativeMotion(RelativePointerMotionEvent)`
 - L59: `    case constraintLifecycle(PointerConstraintLifecycleEvent)`
-- L62: `public struct PointerLocation: Equatable, Sendable {`
-- L63: `    public let x: Double`
-- L64: `    public let y: Double`
-- L66: `    public init(x locationX: Double, y locationY: Double) {`
-- L72: `public struct PointerDelta: Equatable, Sendable {`
-- L73: `    public let dx: Double`
-- L74: `    public let dy: Double`
-- L76: `    public init(dx pointerDX: Double, dy pointerDY: Double) {`
-- L82: `public struct RelativePointerMotionEvent: Equatable, Sendable {`
-- L83: `    public let time: WaylandTimestampMicroseconds`
-- L84: `    public let delta: PointerDelta`
-- L85: `    public let unacceleratedDelta: PointerDelta`
-- L87: `    public init(`
-- L98: `public enum PointerConstraintKind: Equatable, Hashable, Sendable {`
-- L99: `    case locked`
-- L100: `    case confined`
-- L103: `public struct PointerConstraintID: Equatable, Hashable, Sendable, CustomStringConvertible {`
-- L104: `    public let rawValue: UInt64`
-- L105: `    public let kind: PointerConstraintKind`
-- L107: `    public init(rawValue constraintRawValue: UInt64, kind constraintKind: PointerConstraintKind) {`
-- L112: `    public var description: String {`
-- L122: `public enum PointerConstraintLifecycleEvent: Equatable, Sendable {`
-- L123: `    case activated(PointerConstraintID)`
-- L124: `    case inactivePersistent(PointerConstraintID)`
-- L125: `    case defunctOneShot(PointerConstraintID)`
-- L128: `public struct PointerButtonEvent: Equatable, Sendable {`
-- L129: `    public let serial: InputSerial`
-- L130: `    public let time: WaylandTimestampMilliseconds`
-- L131: `    public let button: PointerButtonCode`
-- L132: `    public let state: ButtonState`
-- L134: `    public init(`
-- L147: `public enum PointerAxisEvent: Equatable, Sendable {`
-- L148: `    case axis(time: WaylandTimestampMilliseconds, axis: PointerAxis, value: Double)`
-- L149: `    case source(PointerAxisSource)`
-- L150: `    case stop(time: WaylandTimestampMilliseconds, axis: PointerAxis)`
-- L151: `    case discrete(axis: PointerAxis, value: PointerAxisDiscreteStep)`
-- L152: `    case value120(axis: PointerAxis, value120: PointerAxisValue120)`
-- L153: `    case relativeDirection(axis: PointerAxis, direction: PointerAxisRelativeDirection)`
-- L154: `    case frame`
-- L157: `public enum KeyboardEvent: Equatable, Sendable {`
-- L158: `    case raw(RawKeyboardEvent)`
-- L159: `    case interpreted(InterpretedKeyboardEvent)`
-- L162: `public enum RawKeyboardEvent: Equatable, Sendable {`
-- L163: `    case keymapChanged(KeyboardKeymapInfo)`
-- L164: `    case entered(serial: InputSerial, pressedKeys: [EvdevKeycode])`
-- L165: `    case left(serial: InputSerial)`
-- L166: `    case key(KeyboardKeyEvent)`
-- L167: `    case modifiers(KeyboardModifiers)`
-- L168: `    case repeatInfo(KeyboardRepeatPolicy)`
-- L171: `public enum InterpretedKeyboardEvent: Equatable, Sendable {`
-- L172: `    case keymap(InterpretedKeyboardKeymapInfo)`
-- L173: `    case key(InterpretedKeyboardKeyEvent)`
-- L174: `    case modifiers(InterpretedKeyboardModifiers)`
-- L175: `    case repeatInfo(KeyboardRepeatPolicy)`
-- L176: `    case unavailable(KeyboardInterpretationUnavailable)`
-- L179: `public struct InterpretedKeyboardKeymapInfo: Equatable, Sendable {`
-- L180: `    public let format: KeyboardKeymapFormat`
-- L181: `    public let size: UInt32`
-- L183: `    public init(format keymapFormat: KeyboardKeymapFormat, size keymapSize: UInt32) {`
-- L189: `public struct KeyboardKeymapInfo: Equatable, Sendable {`
-- L190: `    public let format: KeyboardKeymapFormat`
-- L191: `    public let size: UInt32`
-- L193: `    public init(format keymapFormat: KeyboardKeymapFormat, size keymapSize: UInt32) {`
-- L199: `public struct KeyboardKeyEvent: Equatable, Sendable {`
-- L200: `    public let serial: InputSerial`
-- L201: `    public let time: WaylandTimestampMilliseconds`
-- L202: `    public let rawKeycode: EvdevKeycode`
-- L203: `    public let state: KeyState`
-- L205: `    public init(`
-- L218: `public struct KeyboardKeysym: Equatable, Sendable {`
-- L219: `    public let rawValue: UInt32`
-- L221: `    public init(rawValue keysymRawValue: UInt32) {`
-- L225: `    public static let noSymbol = Self(rawValue: 0)`
-- L228: `public struct KeyboardModifiers: Equatable, Sendable {`
-- L229: `    public let serial: InputSerial`
-- L230: `    public let depressed: KeyboardModifierMask`
-- L231: `    public let latched: KeyboardModifierMask`
-- L232: `    public let locked: KeyboardModifierMask`
-- L233: `    public let group: KeyboardLayoutGroup`
-- L235: `    public init(`
-- L249: `    public init(`
-- L264: `public struct InterpretedKeyboardModifiers: Equatable, Sendable {`
-- L265: `    public let serial: InputSerial`
-- L266: `    public let depressed: KeyboardModifierMask`
-- L267: `    public let latched: KeyboardModifierMask`
-- L268: `    public let locked: KeyboardModifierMask`
-- L269: `    public let group: KeyboardLayoutGroup`
-- L270: `    public let changedComponents: KeyboardModifierStateComponents`
-- L272: `    public init(`
-- L288: `    public init(`
-- L305: `public struct KeyboardModifierStateComponents: OptionSet, Equatable, Sendable {`
-- L306: `    public let rawValue: UInt32`
-- L308: `    public init(rawValue componentsRawValue: UInt32) {`
-- L312: `    public static let modsDepressed = Self(rawValue: 1 << 0)`
-- L313: `    public static let modsLatched = Self(rawValue: 1 << 1)`
-- L314: `    public static let modsLocked = Self(rawValue: 1 << 2)`
-- L315: `    public static let modsEffective = Self(rawValue: 1 << 3)`
-- L316: `    public static let layoutDepressed = Self(rawValue: 1 << 4)`
-- L317: `    public static let layoutLatched = Self(rawValue: 1 << 5)`
-- L318: `    public static let layoutLocked = Self(rawValue: 1 << 6)`
-- L319: `    public static let layoutEffective = Self(rawValue: 1 << 7)`
-- L320: `    public static let leds = Self(rawValue: 1 << 8)`
-- L323: `public enum KeyboardRepeatPolicy: Equatable, Sendable {`
-- L324: `    case disabled`
-- L325: `    case enabled(rate: KeyboardRepeatRate, delay: KeyboardRepeatDelay)`
-- L327: `    public init(rate repeatRate: Int32, delay repeatDelay: Int32) throws {`
-- L345: `    public var rate: Int32 {`
-- L354: `    public var delayMilliseconds: Int32? {`
-- L364: `public struct KeyboardRepeatRate: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L365: `    public let rawValue: Int32`
-- L367: `    public init(_ value: Int32) throws {`
-- L380: `    public var description: String {`
-- L384: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L389: `public struct KeyboardRepeatDelay: Equatable, Comparable, Sendable, CustomStringConvertible {`
-- L390: `    public let rawValue: Int32`
-- L392: `    public init(_ value: Int32) throws {`
-- L405: `    public var description: String {`
-- L409: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
-- L414: `public enum KeyboardRepeatPolicyError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L415: `    case nonPositiveRate(Int32)`
-- L416: `    case negativeRate(rate: Int32, delay: Int32)`
-- L417: `    case negativeDelay(rate: Int32, delay: Int32)`
-- L419: `    public var description: String {`
-- L431: `public struct KeyboardInterpretationUnavailable: Equatable, Sendable {`
-- L432: `    public let reason: KeyboardInterpretationUnavailableReason`
-- L434: `    public init(reason unavailableReason: KeyboardInterpretationUnavailableReason) {`
-- L439: `public enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {`
-- L440: `    case missingDeviceID`
-- L441: `    case noKeymap`
-- L442: `    case unsupportedKeymapFormat(UInt32)`
-- L443: `    case emptyKeymap`
-- L444: `    case invalidKeymap`
-- L445: `    case keymapReadFailed(KeymapReadFailure)`
-- L446: `    case composeTableUnavailable(locale: String)`
-- L447: `    case invalidComposeConfiguration`
-- L448: `    case composeStateCreationFailed`
-- L449: `    case missingKeymap`
-- L450: `    case missingKeyboardState`
-- L451: `    case invalidKeycode(UInt32)`
-- L452: `    case nonKeyboardInputDevice`
-- L453: `    case mismatchedKeyboardSeat(expected: SeatID, actual: SeatID)`
-- L454: `    case mismatchedKeyboardDevice`
-- L457: `public enum TouchEvent: Equatable, Sendable {`
-- L458: `    case down(TouchDownEvent)`
-- L459: `    case up(TouchUpEvent)`
-- L460: `    case motion(TouchMotionEvent)`
-- L461: `    case frame`
-- L462: `    case cancel`
-- L463: `    case shape(TouchShapeEvent)`
-- L464: `    case orientation(TouchOrientationEvent)`
-- L467: `public struct TouchDownEvent: Equatable, Sendable {`
-- L468: `    public let serial: InputSerial`
-- L469: `    public let time: WaylandTimestampMilliseconds`
-- L470: `    public let id: TouchID`
-- L471: `    public let location: PointerLocation`
-- L473: `    public init(`
-- L486: `public struct TouchUpEvent: Equatable, Sendable {`
-- L487: `    public let serial: InputSerial`
-- L488: `    public let time: WaylandTimestampMilliseconds`
-- L489: `    public let id: TouchID`
-- L491: `    public init(`
-- L502: `public struct TouchMotionEvent: Equatable, Sendable {`
-- L503: `    public let time: WaylandTimestampMilliseconds`
-- L504: `    public let id: TouchID`
-- L505: `    public let location: PointerLocation`
-- L507: `    public init(`
-- L518: `public struct TouchShapeEvent: Equatable, Sendable {`
-- L519: `    public let id: TouchID`
-- L520: `    public let major: Double`
-- L521: `    public let minor: Double`
-- L523: `    public init(id touchID: TouchID, major touchMajor: Double, minor touchMinor: Double) {`
-- L530: `public struct TouchOrientationEvent: Equatable, Sendable {`
-- L531: `    public let id: TouchID`
-- L532: `    public let orientation: Double`
-- L534: `    public init(id touchID: TouchID, orientation touchOrientation: Double) {`
+- L60: `    case gesture(PointerGestureEvent)`
+- L63: `public struct PointerLocation: Equatable, Sendable {`
+- L64: `    public let x: Double`
+- L65: `    public let y: Double`
+- L67: `    public init(x locationX: Double, y locationY: Double) {`
+- L73: `public struct PointerDelta: Equatable, Sendable {`
+- L74: `    public let dx: Double`
+- L75: `    public let dy: Double`
+- L77: `    public init(dx pointerDX: Double, dy pointerDY: Double) {`
+- L83: `public struct RelativePointerMotionEvent: Equatable, Sendable {`
+- L84: `    public let time: WaylandTimestampMicroseconds`
+- L85: `    public let delta: PointerDelta`
+- L86: `    public let unacceleratedDelta: PointerDelta`
+- L88: `    public init(`
+- L99: `public enum PointerGestureEvent: Equatable, Sendable {`
+- L100: `    case swipe(PointerSwipeGestureEvent)`
+- L101: `    case pinch(PointerPinchGestureEvent)`
+- L102: `    case hold(PointerHoldGestureEvent)`
+- L105: `public enum PointerSwipeGestureEvent: Equatable, Sendable {`
+- L106: `    case begin(serial: InputSerial, time: WaylandTimestampMilliseconds, fingers: UInt32)`
+- L107: `    case update(time: WaylandTimestampMilliseconds, delta: PointerDelta)`
+- L108: `    case end(serial: InputSerial, time: WaylandTimestampMilliseconds)`
+- L109: `    case cancel(serial: InputSerial, time: WaylandTimestampMilliseconds)`
+- L112: `public enum PointerPinchGestureEvent: Equatable, Sendable {`
+- L113: `    case begin(serial: InputSerial, time: WaylandTimestampMilliseconds, fingers: UInt32)`
+- L114: `    case update(`
+- L120: `    case end(serial: InputSerial, time: WaylandTimestampMilliseconds)`
+- L121: `    case cancel(serial: InputSerial, time: WaylandTimestampMilliseconds)`
+- L124: `public enum PointerHoldGestureEvent: Equatable, Sendable {`
+- L125: `    case begin(serial: InputSerial, time: WaylandTimestampMilliseconds, fingers: UInt32)`
+- L126: `    case end(serial: InputSerial, time: WaylandTimestampMilliseconds)`
+- L127: `    case cancel(serial: InputSerial, time: WaylandTimestampMilliseconds)`
+- L130: `public enum PointerConstraintKind: Equatable, Hashable, Sendable {`
+- L131: `    case locked`
+- L132: `    case confined`
+- L135: `public struct PointerConstraintID: Equatable, Hashable, Sendable, CustomStringConvertible {`
+- L136: `    public let rawValue: UInt64`
+- L137: `    public let kind: PointerConstraintKind`
+- L139: `    public init(rawValue constraintRawValue: UInt64, kind constraintKind: PointerConstraintKind) {`
+- L144: `    public var description: String {`
+- L154: `public enum PointerConstraintLifecycleEvent: Equatable, Sendable {`
+- L155: `    case activated(PointerConstraintID)`
+- L156: `    case inactivePersistent(PointerConstraintID)`
+- L157: `    case defunctOneShot(PointerConstraintID)`
+- L160: `public struct PointerButtonEvent: Equatable, Sendable {`
+- L161: `    public let serial: InputSerial`
+- L162: `    public let time: WaylandTimestampMilliseconds`
+- L163: `    public let button: PointerButtonCode`
+- L164: `    public let state: ButtonState`
+- L166: `    public init(`
+- L179: `public enum PointerAxisEvent: Equatable, Sendable {`
+- L180: `    case axis(time: WaylandTimestampMilliseconds, axis: PointerAxis, value: Double)`
+- L181: `    case source(PointerAxisSource)`
+- L182: `    case stop(time: WaylandTimestampMilliseconds, axis: PointerAxis)`
+- L183: `    case discrete(axis: PointerAxis, value: PointerAxisDiscreteStep)`
+- L184: `    case value120(axis: PointerAxis, value120: PointerAxisValue120)`
+- L185: `    case relativeDirection(axis: PointerAxis, direction: PointerAxisRelativeDirection)`
+- L186: `    case frame`
+- L189: `public enum KeyboardEvent: Equatable, Sendable {`
+- L190: `    case raw(RawKeyboardEvent)`
+- L191: `    case interpreted(InterpretedKeyboardEvent)`
+- L194: `public enum RawKeyboardEvent: Equatable, Sendable {`
+- L195: `    case keymapChanged(KeyboardKeymapInfo)`
+- L196: `    case entered(serial: InputSerial, pressedKeys: [EvdevKeycode])`
+- L197: `    case left(serial: InputSerial)`
+- L198: `    case key(KeyboardKeyEvent)`
+- L199: `    case modifiers(KeyboardModifiers)`
+- L200: `    case repeatInfo(KeyboardRepeatPolicy)`
+- L203: `public enum InterpretedKeyboardEvent: Equatable, Sendable {`
+- L204: `    case keymap(InterpretedKeyboardKeymapInfo)`
+- L205: `    case key(InterpretedKeyboardKeyEvent)`
+- L206: `    case modifiers(InterpretedKeyboardModifiers)`
+- L207: `    case repeatInfo(KeyboardRepeatPolicy)`
+- L208: `    case unavailable(KeyboardInterpretationUnavailable)`
+- L211: `public struct InterpretedKeyboardKeymapInfo: Equatable, Sendable {`
+- L212: `    public let format: KeyboardKeymapFormat`
+- L213: `    public let size: UInt32`
+- L215: `    public init(format keymapFormat: KeyboardKeymapFormat, size keymapSize: UInt32) {`
+- L221: `public struct KeyboardKeymapInfo: Equatable, Sendable {`
+- L222: `    public let format: KeyboardKeymapFormat`
+- L223: `    public let size: UInt32`
+- L225: `    public init(format keymapFormat: KeyboardKeymapFormat, size keymapSize: UInt32) {`
+- L231: `public struct KeyboardKeyEvent: Equatable, Sendable {`
+- L232: `    public let serial: InputSerial`
+- L233: `    public let time: WaylandTimestampMilliseconds`
+- L234: `    public let rawKeycode: EvdevKeycode`
+- L235: `    public let state: KeyState`
+- L237: `    public init(`
+- L250: `public struct KeyboardKeysym: Equatable, Sendable {`
+- L251: `    public let rawValue: UInt32`
+- L253: `    public init(rawValue keysymRawValue: UInt32) {`
+- L257: `    public static let noSymbol = Self(rawValue: 0)`
+- L260: `public struct KeyboardModifiers: Equatable, Sendable {`
+- L261: `    public let serial: InputSerial`
+- L262: `    public let depressed: KeyboardModifierMask`
+- L263: `    public let latched: KeyboardModifierMask`
+- L264: `    public let locked: KeyboardModifierMask`
+- L265: `    public let group: KeyboardLayoutGroup`
+- L267: `    public init(`
+- L281: `    public init(`
+- L296: `public struct InterpretedKeyboardModifiers: Equatable, Sendable {`
+- L297: `    public let serial: InputSerial`
+- L298: `    public let depressed: KeyboardModifierMask`
+- L299: `    public let latched: KeyboardModifierMask`
+- L300: `    public let locked: KeyboardModifierMask`
+- L301: `    public let group: KeyboardLayoutGroup`
+- L302: `    public let changedComponents: KeyboardModifierStateComponents`
+- L304: `    public init(`
+- L320: `    public init(`
+- L337: `public struct KeyboardModifierStateComponents: OptionSet, Equatable, Sendable {`
+- L338: `    public let rawValue: UInt32`
+- L340: `    public init(rawValue componentsRawValue: UInt32) {`
+- L344: `    public static let modsDepressed = Self(rawValue: 1 << 0)`
+- L345: `    public static let modsLatched = Self(rawValue: 1 << 1)`
+- L346: `    public static let modsLocked = Self(rawValue: 1 << 2)`
+- L347: `    public static let modsEffective = Self(rawValue: 1 << 3)`
+- L348: `    public static let layoutDepressed = Self(rawValue: 1 << 4)`
+- L349: `    public static let layoutLatched = Self(rawValue: 1 << 5)`
+- L350: `    public static let layoutLocked = Self(rawValue: 1 << 6)`
+- L351: `    public static let layoutEffective = Self(rawValue: 1 << 7)`
+- L352: `    public static let leds = Self(rawValue: 1 << 8)`
+- L355: `public enum KeyboardRepeatPolicy: Equatable, Sendable {`
+- L356: `    case disabled`
+- L357: `    case enabled(rate: KeyboardRepeatRate, delay: KeyboardRepeatDelay)`
+- L359: `    public init(rate repeatRate: Int32, delay repeatDelay: Int32) throws {`
+- L377: `    public var rate: Int32 {`
+- L386: `    public var delayMilliseconds: Int32? {`
+- L396: `public struct KeyboardRepeatRate: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L397: `    public let rawValue: Int32`
+- L399: `    public init(_ value: Int32) throws {`
+- L412: `    public var description: String {`
+- L416: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L421: `public struct KeyboardRepeatDelay: Equatable, Comparable, Sendable, CustomStringConvertible {`
+- L422: `    public let rawValue: Int32`
+- L424: `    public init(_ value: Int32) throws {`
+- L437: `    public var description: String {`
+- L441: `    public static func < (lhs: Self, rhs: Self) -> Bool {`
+- L446: `public enum KeyboardRepeatPolicyError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L447: `    case nonPositiveRate(Int32)`
+- L448: `    case negativeRate(rate: Int32, delay: Int32)`
+- L449: `    case negativeDelay(rate: Int32, delay: Int32)`
+- L451: `    public var description: String {`
+- L463: `public struct KeyboardInterpretationUnavailable: Equatable, Sendable {`
+- L464: `    public let reason: KeyboardInterpretationUnavailableReason`
+- L466: `    public init(reason unavailableReason: KeyboardInterpretationUnavailableReason) {`
+- L471: `public enum KeyboardInterpretationUnavailableReason: Equatable, Sendable {`
+- L472: `    case missingDeviceID`
+- L473: `    case noKeymap`
+- L474: `    case unsupportedKeymapFormat(UInt32)`
+- L475: `    case emptyKeymap`
+- L476: `    case invalidKeymap`
+- L477: `    case keymapReadFailed(KeymapReadFailure)`
+- L478: `    case composeTableUnavailable(locale: String)`
+- L479: `    case invalidComposeConfiguration`
+- L480: `    case composeStateCreationFailed`
+- L481: `    case missingKeymap`
+- L482: `    case missingKeyboardState`
+- L483: `    case invalidKeycode(UInt32)`
+- L484: `    case nonKeyboardInputDevice`
+- L485: `    case mismatchedKeyboardSeat(expected: SeatID, actual: SeatID)`
+- L486: `    case mismatchedKeyboardDevice`
+- L489: `public enum TouchEvent: Equatable, Sendable {`
+- L490: `    case down(TouchDownEvent)`
+- L491: `    case up(TouchUpEvent)`
+- L492: `    case motion(TouchMotionEvent)`
+- L493: `    case frame`
+- L494: `    case cancel`
+- L495: `    case shape(TouchShapeEvent)`
+- L496: `    case orientation(TouchOrientationEvent)`
+- L499: `public struct TouchDownEvent: Equatable, Sendable {`
+- L500: `    public let serial: InputSerial`
+- L501: `    public let time: WaylandTimestampMilliseconds`
+- L502: `    public let id: TouchID`
+- L503: `    public let location: PointerLocation`
+- L505: `    public init(`
+- L518: `public struct TouchUpEvent: Equatable, Sendable {`
+- L519: `    public let serial: InputSerial`
+- L520: `    public let time: WaylandTimestampMilliseconds`
+- L521: `    public let id: TouchID`
+- L523: `    public init(`
+- L534: `public struct TouchMotionEvent: Equatable, Sendable {`
+- L535: `    public let time: WaylandTimestampMilliseconds`
+- L536: `    public let id: TouchID`
+- L537: `    public let location: PointerLocation`
+- L539: `    public init(`
+- L550: `public struct TouchShapeEvent: Equatable, Sendable {`
+- L551: `    public let id: TouchID`
+- L552: `    public let major: Double`
+- L553: `    public let minor: Double`
+- L555: `    public init(id touchID: TouchID, major touchMajor: Double, minor touchMinor: Double) {`
+- L562: `public struct TouchOrientationEvent: Equatable, Sendable {`
+- L563: `    public let id: TouchID`
+- L564: `    public let orientation: Double`
+- L566: `    public init(id touchID: TouchID, orientation touchOrientation: Double) {`
 
 ### `Sources/WaylandClient/Public/Input/InputEventState.swift`
 
@@ -1634,45 +1722,60 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L1: `public enum PointerCaptureFeature: Equatable, Sendable, CustomStringConvertible {`
 - L2: `    case relativePointer`
 - L3: `    case pointerConstraints`
-- L5: `    public var description: String {`
-- L15: `public enum PointerConstraintLifetime: Equatable, Sendable {`
-- L16: `    case oneShot`
-- L17: `    case persistent`
-- L20: `public struct PointerConstraintRegion: Equatable, Sendable {`
-- L21: `    public let rectangles: [LogicalRect]`
-- L23: `    public init(_ constraintRectangles: [LogicalRect]) throws {`
-- L31: `    public init(_ rectangle: LogicalRect) {`
-- L36: `public enum PointerCaptureError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L37: `    case unavailable(PointerCaptureFeature)`
-- L38: `    case foreignWindow(WindowID)`
-- L39: `    case unknownWindow(WindowID)`
-- L40: `    case closedWindow(WindowID)`
-- L41: `    case unknownSeat(SeatID)`
-- L42: `    case pointerUnavailable(SeatID)`
-- L43: `    case displayClosed`
-- L44: `    case emptyRegion`
-- L45: `    case relativePointerAlreadySubscribed(seatID: SeatID)`
-- L46: `    case alreadyConstrained(seatID: SeatID)`
-- L47: `    case invalidCursorHint(PointerLocation)`
-- L48: `    case unknownRelativePointerSubscription(RelativePointerSubscriptionID)`
-- L49: `    case unknownPointerConstraint(PointerConstraintID)`
-- L50: `    case foreignRelativePointerSubscription(RelativePointerSubscriptionID)`
-- L51: `    case foreignPointerConstraint(PointerConstraintID)`
-- L53: `    public var description: String {`
-- L90: `public struct RelativePointerSubscriptionID: Equatable, Hashable, Sendable,`
-- L93: `    public let rawValue: UInt64`
-- L95: `    public init(rawValue subscriptionRawValue: UInt64) {`
-- L99: `    public var description: String {`
-- L104: `public struct RelativePointerSubscription: Hashable, Sendable {`
-- L105: `    public let id: RelativePointerSubscriptionID`
-- L122: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
-- L126: `    public func hash(into hasher: inout Hasher) {`
-- L130: `    public func destroy() async throws {`
-- L135: `public struct PointerConstraint: Hashable, Sendable {`
-- L136: `    public let id: PointerConstraintID`
-- L150: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
-- L154: `    public func hash(into hasher: inout Hasher) {`
-- L158: `    public func destroy() async throws {`
+- L4: `    case pointerGestures`
+- L6: `    public var description: String {`
+- L18: `public enum PointerConstraintLifetime: Equatable, Sendable {`
+- L19: `    case oneShot`
+- L20: `    case persistent`
+- L23: `public struct PointerConstraintRegion: Equatable, Sendable {`
+- L24: `    public let rectangles: [LogicalRect]`
+- L26: `    public init(_ constraintRectangles: [LogicalRect]) throws {`
+- L34: `    public init(_ rectangle: LogicalRect) {`
+- L39: `public enum PointerCaptureError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L40: `    case unavailable(PointerCaptureFeature)`
+- L41: `    case foreignWindow(WindowID)`
+- L42: `    case unknownWindow(WindowID)`
+- L43: `    case closedWindow(WindowID)`
+- L44: `    case unknownSeat(SeatID)`
+- L45: `    case pointerUnavailable(SeatID)`
+- L46: `    case displayClosed`
+- L47: `    case emptyRegion`
+- L48: `    case relativePointerAlreadySubscribed(seatID: SeatID)`
+- L49: `    case alreadyConstrained(seatID: SeatID)`
+- L50: `    case pointerGesturesAlreadySubscribed(seatID: SeatID)`
+- L51: `    case invalidCursorHint(PointerLocation)`
+- L52: `    case unknownRelativePointerSubscription(RelativePointerSubscriptionID)`
+- L53: `    case unknownPointerGestureSubscription(PointerGestureSubscriptionID)`
+- L54: `    case unknownPointerConstraint(PointerConstraintID)`
+- L55: `    case foreignRelativePointerSubscription(RelativePointerSubscriptionID)`
+- L56: `    case foreignPointerGestureSubscription(PointerGestureSubscriptionID)`
+- L57: `    case foreignPointerConstraint(PointerConstraintID)`
+- L59: `    public var description: String {`
+- L102: `public struct RelativePointerSubscriptionID: Equatable, Hashable, Sendable,`
+- L105: `    public let rawValue: UInt64`
+- L107: `    public init(rawValue subscriptionRawValue: UInt64) {`
+- L111: `    public var description: String {`
+- L116: `public struct PointerGestureSubscriptionID: Equatable, Hashable, Sendable,`
+- L120: `    public let rawValue: UInt64`
+- L122: `    public init(rawValue subscriptionRawValue: UInt64) {`
+- L126: `    public var description: String {`
+- L131: `public struct RelativePointerSubscription: Hashable, Sendable {`
+- L132: `    public let id: RelativePointerSubscriptionID`
+- L149: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
+- L153: `    public func hash(into hasher: inout Hasher) {`
+- L157: `    public func destroy() async throws {`
+- L162: `public struct PointerGestureSubscription: Hashable, Sendable, Identifiable {`
+- L163: `    public let id: PointerGestureSubscriptionID`
+- L164: `    public let seatID: SeatID`
+- L165: `    public let version: UInt32`
+- L186: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
+- L190: `    public func hash(into hasher: inout Hasher) {`
+- L194: `    public func destroy() async throws {`
+- L199: `public struct PointerConstraint: Hashable, Sendable {`
+- L200: `    public let id: PointerConstraintID`
+- L214: `    public static func == (lhs: Self, rhs: Self) -> Bool {`
+- L218: `    public func hash(into hasher: inout Hasher) {`
+- L222: `    public func destroy() async throws {`
 
 ### `Sources/WaylandClient/Public/Input/PointerWarpDomainTypes.swift`
 
@@ -2263,36 +2366,39 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L182: `    public func setOpaqueRegion(_ region: SurfaceRegion?) async throws {`
 - L186: `    public func setIcon(_ icon: WindowIcon) async throws {`
 - L190: `    public func inhibitIdle() async throws -> IdleInhibitor {`
-- L194: `    public func ringSystemBell() async throws {`
-- L198: `    public func requestActivationToken(`
-- L213: `    public func activate(using token: ActivationToken) async throws {`
-- L217: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
-- L221: `    public func lockPointer(`
-- L236: `    public func confinePointer(`
-- L249: `    public func requestPointerWarp(`
-- L262: `    public func setTitle(_ title: WaylandString) async throws {`
-- L266: `    public func setTitle(_ title: String) async throws {`
-- L270: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
-- L274: `    public func setAppID(_ appID: String) async throws {`
-- L278: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
-- L282: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
-- L286: `    public func requestMaximize() async throws {`
-- L290: `    public func requestUnmaximize() async throws {`
-- L294: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
-- L298: `    public func requestExitFullscreen() async throws {`
-- L302: `    public func requestMinimize() async throws {`
-- L306: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
-- L310: `    public func requestInteractiveResize(`
-- L323: `    public func requestWindowMenu(`
-- L336: `    public func startDrag(`
-- L351: `    public var isClosed: Bool {`
-- L357: `    public var needsRedraw: Bool {`
-- L363: `    public var decorationMode: WindowDecorationMode {`
-- L369: `    public var geometry: SurfaceGeometry {`
-- L375: `    public var stateSnapshot: WindowStateSnapshot {`
-- L381: `    public var restorationSnapshot: WindowRestorationSnapshot {`
-- L387: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
-- L391: `    public func hash(into hasher: inout Hasher) {`
+- L194: `    public func createDialog(`
+- L201: `    public func inhibitKeyboardShortcuts(`
+- L207: `    public func ringSystemBell() async throws {`
+- L211: `    public func requestActivationToken(`
+- L226: `    public func activate(using token: ActivationToken) async throws {`
+- L230: `    public func relativePointer(seatID: SeatID) async throws -> RelativePointerSubscription {`
+- L234: `    public func lockPointer(`
+- L249: `    public func confinePointer(`
+- L262: `    public func requestPointerWarp(`
+- L275: `    public func setTitle(_ title: WaylandString) async throws {`
+- L279: `    public func setTitle(_ title: String) async throws {`
+- L283: `    public func setAppID(_ appID: NonEmptyWaylandString) async throws {`
+- L287: `    public func setAppID(_ appID: String) async throws {`
+- L291: `    public func setMinimumSize(_ size: PositiveLogicalSize?) async throws {`
+- L295: `    public func setMaximumSize(_ size: PositiveLogicalSize?) async throws {`
+- L299: `    public func requestMaximize() async throws {`
+- L303: `    public func requestUnmaximize() async throws {`
+- L307: `    public func requestFullscreen(output: OutputID? = nil) async throws {`
+- L311: `    public func requestExitFullscreen() async throws {`
+- L315: `    public func requestMinimize() async throws {`
+- L319: `    public func requestInteractiveMove(seatID: SeatID, serial: InputSerial) async throws {`
+- L323: `    public func requestInteractiveResize(`
+- L336: `    public func requestWindowMenu(`
+- L349: `    public func startDrag(`
+- L364: `    public func startToplevelDrag(`
+- L383: `    public var isClosed: Bool {`
+- L389: `    public var needsRedraw: Bool {`
+- L395: `    public var decorationMode: WindowDecorationMode {`
+- L401: `    public var geometry: SurfaceGeometry {`
+- L407: `    public var stateSnapshot: WindowStateSnapshot {`
+- L413: `    public var restorationSnapshot: WindowRestorationSnapshot {`
+- L419: `    public static func == (lhs: Window, rhs: Window) -> Bool {`
+- L423: `    public func hash(into hasher: inout Hasher) {`
 
 ### `Sources/WaylandClient/Public/Window/WindowConfiguration.swift`
 

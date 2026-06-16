@@ -191,6 +191,19 @@ public struct Window: Sendable, Hashable {
         try await display.inhibitIdle(window: self)
     }
 
+    public func createDialog(
+        parent: Window,
+        modal: Bool = false
+    ) async throws -> WindowDialog {
+        try await display.createDialog(child: self, parent: parent, modal: modal)
+    }
+
+    public func inhibitKeyboardShortcuts(
+        seatID: SeatID
+    ) async throws -> KeyboardShortcutsInhibitor {
+        try await display.inhibitKeyboardShortcuts(window: self, seatID: seatID)
+    }
+
     public func ringSystemBell() async throws {
         try await display.ringSystemBell(window: self)
     }
@@ -345,6 +358,25 @@ public struct Window: Sendable, Hashable {
             seatID: seatID,
             serial: serial,
             icon: icon
+        )
+    }
+
+    public func startToplevelDrag(
+        source configuration: DragSourceConfiguration,
+        seatID: SeatID,
+        serial: InputSerial,
+        icon: DragIcon = .none,
+        offset: LogicalOffset = .zero
+    ) async throws -> StartedToplevelDrag {
+        try await display.startToplevelDrag(
+            WindowToplevelDragStartRequest(
+                window: self,
+                configuration: configuration,
+                seatID: seatID,
+                serial: serial,
+                icon: icon,
+                offset: offset
+            )
         )
     }
 

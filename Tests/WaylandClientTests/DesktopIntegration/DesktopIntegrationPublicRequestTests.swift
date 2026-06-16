@@ -238,6 +238,28 @@
         }
 
         @Test
+        func createDialogRejectsSelfParentBeforeProtocolRequest() async throws {
+            try await withDesktopConnection { display, window in
+                try requireAvailable(
+                    try await display.capabilities().xdgDialog,
+                    "xdg-dialog"
+                )
+
+                do {
+                    _ = try await window.createDialog(parent: window, modal: false)
+                    Issue.record("Expected self-parent dialog to throw.")
+                } catch ClientError.display(
+                    .invalidDialogParent(let childID, let parentID)
+                ) {
+                    #expect(childID == window.id)
+                    #expect(parentID == window.id)
+                } catch {
+                    Issue.record("Expected invalid dialog parent, got \(error).")
+                }
+            }
+        }
+
+        @Test
         func ringDisplaySystemBellUsesNilSurface() async throws {
             try await withDesktopConnection { display, _ in
                 try requireAvailable(

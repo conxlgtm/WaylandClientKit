@@ -38,6 +38,10 @@ extension RawXDGTopLevel {
         unsafe swl_xdg_toplevel_set_min_size(pointer, width, height)
     }
 
+    package func setParent(_ parent: RawXDGTopLevel?) {
+        unsafe swl_xdg_toplevel_set_parent(pointer, parent?.pointer)
+    }
+
     package func setMaximized() {
         unsafe swl_xdg_toplevel_set_maximized(pointer)
     }

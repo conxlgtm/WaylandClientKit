@@ -435,6 +435,99 @@
       "vendoredFromPath" : "/usr/share/wayland-protocols/staging/xdg-system-bell/xdg-system-bell-v1.xml"
     },
     {
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/xdg-dialog/xdg-dialog-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/xdg-dialog/xdg-dialog-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/xdg-dialog/xdg-dialog-v1.xml",
+      "name" : "xdg-dialog-v1",
+      "notes" : "Optional desktop-shell protocol for policy-free dialog hints on xdg_toplevel objects.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "2822956bdf13d51848ff4b5e29c509028c1204c6e06262ee926b001f43a42dbb",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/xdg-dialog/xdg-dialog-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/xdg-dialog/xdg-dialog-v1.xml"
+        ],
+        "environmentOverride" : "XDG_DIALOG_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/xdg-dialog/xdg-dialog-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "waylandClientKitTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-1.48",
+      "vendoredFromPath" : "/nix/store/fgq3g4mnlwdll7gmhd5gcgyx10103zxx-wayland-protocols-1.48/share/wayland-protocols/staging/xdg-dialog/xdg-dialog-v1.xml"
+    },
+    {
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/xdg-toplevel-drag/xdg-toplevel-drag-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/xdg-toplevel-drag/xdg-toplevel-drag-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/xdg-toplevel-drag/xdg-toplevel-drag-v1.xml",
+      "name" : "xdg-toplevel-drag-v1",
+      "notes" : "Optional desktop-shell protocol for attaching an xdg_toplevel to an existing data-source drag.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "687d7a1db0ced0e2794dc2d5be1a80b1dc71c46a055aedd882838586345ee1dc",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/xdg-toplevel-drag/xdg-toplevel-drag-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/xdg-toplevel-drag/xdg-toplevel-drag-v1.xml"
+        ],
+        "environmentOverride" : "XDG_TOPLEVEL_DRAG_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/xdg-toplevel-drag/xdg-toplevel-drag-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "waylandClientKitTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-1.48",
+      "vendoredFromPath" : "/nix/store/fgq3g4mnlwdll7gmhd5gcgyx10103zxx-wayland-protocols-1.48/share/wayland-protocols/staging/xdg-toplevel-drag/xdg-toplevel-drag-v1.xml"
+    },
+    {
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1.xml",
+      "name" : "ext-foreign-toplevel-list-v1",
+      "notes" : "Optional read-only foreign toplevel list facts; no management or control API.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "6b2ffb3a07d679d1c4170263adfefb9a7c37dd34ed3db5180bf58cb8ff8fbd0b",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1.xml",
+          "/usr/local/share/wayland-protocols/staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1.xml"
+        ],
+        "environmentOverride" : "EXT_FOREIGN_TOPLEVEL_LIST_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "staging",
+      "waylandClientKitTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-1.48",
+      "vendoredFromPath" : "/nix/store/fgq3g4mnlwdll7gmhd5gcgyx10103zxx-wayland-protocols-1.48/share/wayland-protocols/staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1.xml"
+    },
+    {
       "apiExposure" : "internal",
       "generatedCodePath" : "Sources/CWaylandProtocols/generated/staging/linux-drm-syncobj/linux-drm-syncobj-v1-protocol.c",
       "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/staging/linux-drm-syncobj/linux-drm-syncobj-v1-client-protocol.h",
@@ -746,6 +839,68 @@
     },
     {
       "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/legacy-unstable/pointer-gestures/pointer-gestures-unstable-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/legacy-unstable/pointer-gestures/pointer-gestures-unstable-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/legacy-unstable/pointer-gestures/pointer-gestures-unstable-v1.xml",
+      "name" : "pointer-gestures-unstable-v1",
+      "notes" : "Optional input protocol for raw pointer swipe, pinch, and hold gesture facts.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "9f7b6ad542f444001312113395b8de6f24e59d6f0c57c9b44f6c3c498ef004d7",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/unstable/pointer-gestures/pointer-gestures-unstable-v1.xml",
+          "/usr/local/share/wayland-protocols/unstable/pointer-gestures/pointer-gestures-unstable-v1.xml"
+        ],
+        "environmentOverride" : "POINTER_GESTURES_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "unstable/pointer-gestures/pointer-gestures-unstable-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "unstable",
+      "waylandClientKitTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-1.48",
+      "vendoredFromPath" : "/nix/store/fgq3g4mnlwdll7gmhd5gcgyx10103zxx-wayland-protocols-1.48/share/wayland-protocols/unstable/pointer-gestures/pointer-gestures-unstable-v1.xml"
+    },
+    {
+      "apiExposure" : "public",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/legacy-unstable/keyboard-shortcuts-inhibit/keyboard-shortcuts-inhibit-unstable-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/legacy-unstable/keyboard-shortcuts-inhibit/keyboard-shortcuts-inhibit-unstable-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/legacy-unstable/keyboard-shortcuts-inhibit/keyboard-shortcuts-inhibit-unstable-v1.xml",
+      "name" : "keyboard-shortcuts-inhibit-unstable-v1",
+      "notes" : "Optional input protocol for surface-and-seat scoped compositor shortcut inhibition.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "9117d9e8ec02e9a3c3c55803b41e1227e76986f555f7c12eeb29f796fa63e69b",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [
+          "/usr/share/wayland-protocols/unstable/keyboard-shortcuts-inhibit/keyboard-shortcuts-inhibit-unstable-v1.xml",
+          "/usr/local/share/wayland-protocols/unstable/keyboard-shortcuts-inhibit/keyboard-shortcuts-inhibit-unstable-v1.xml"
+        ],
+        "environmentOverride" : "KEYBOARD_SHORTCUTS_INHIBIT_XML_SOURCE",
+        "pkgConfigPackage" : "wayland-protocols",
+        "pkgConfigVariable" : "pkgdatadir",
+        "relativeSourceCandidates" : [
+          "unstable/keyboard-shortcuts-inhibit/keyboard-shortcuts-inhibit-unstable-v1.xml"
+        ],
+        "strategy" : "pkg-config-with-fallbacks"
+      },
+      "stability" : "unstable",
+      "waylandClientKitTier" : "optionalFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wayland-protocols",
+      "upstreamVersion" : "1.48",
+      "vendoredFromPackage" : "wayland-protocols-1.48",
+      "vendoredFromPath" : "/nix/store/fgq3g4mnlwdll7gmhd5gcgyx10103zxx-wayland-protocols-1.48/share/wayland-protocols/unstable/keyboard-shortcuts-inhibit/keyboard-shortcuts-inhibit-unstable-v1.xml"
+    },
+    {
+      "apiExposure" : "public",
       "generatedCodePath" : "Sources/CWaylandProtocols/generated/legacy-unstable/text-input/text-input-unstable-v3-protocol.c",
       "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/legacy-unstable/text-input/text-input-unstable-v3-client-protocol.h",
       "localPath" : "protocols/upstream/legacy-unstable/text-input/text-input-unstable-v3.xml",
@@ -867,6 +1022,30 @@
       "upstreamVersion" : "1.48",
       "vendoredFromPackage" : "wayland-protocols-devel-1.48-1.fc44.noarch",
       "vendoredFromPath" : "/usr/share/wayland-protocols/unstable/pointer-constraints/pointer-constraints-unstable-v1.xml"
+    },
+    {
+      "apiExposure" : "preview",
+      "generatedCodePath" : "Sources/CWaylandProtocols/generated/wlr-unstable/output-management/wlr-output-management-unstable-v1-protocol.c",
+      "generatedHeaderPath" : "Sources/CWaylandProtocols/include/generated/wlr-unstable/output-management/wlr-output-management-unstable-v1-client-protocol.h",
+      "localPath" : "protocols/upstream/wlr-unstable/output-management/wlr-output-management-unstable-v1.xml",
+      "name" : "wlr-output-management-unstable-v1",
+      "notes" : "Preview wlroots output-management protocol used for read-first output facts and explicit test/apply transactions.",
+      "scannerCodeMode" : "private-code",
+      "scannerHeaderMode" : "client-header",
+      "sha256" : "65b0f82a6cf129bf1a1c31a2428795abd33886c15ddd5f3ad97e5922d7bdc3a7",
+      "sourceResolution" : {
+        "absoluteFallbackCandidates" : [],
+        "environmentOverride" : "WLR_OUTPUT_MANAGEMENT_XML_SOURCE",
+        "relativeSourceCandidates" : [],
+        "strategy" : "vendored-only"
+      },
+      "stability" : "unstable",
+      "waylandClientKitTier" : "previewFoundation",
+      "testStrategy" : "unit-and-live-when-advertised",
+      "upstreamProject" : "wlroots",
+      "upstreamVersion" : "f141edcd0233d86d9e9aab605b2b6f0803be5e98",
+      "vendoredFromPackage" : "wlroots-git",
+      "vendoredFromPath" : "https://gitlab.freedesktop.org/wlroots/wlroots/-/raw/f141edcd0233d86d9e9aab605b2b6f0803be5e98/protocol/wlr-output-management-unstable-v1.xml"
     }
   ]
 }

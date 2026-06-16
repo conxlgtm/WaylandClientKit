@@ -36,6 +36,7 @@ package protocol DataTransferSourceBinding: AnyObject {
 
     func offer(mimeType: MIMEType)
     func setDragActions(_ actions: DragActionSet)
+    func createToplevelDrag(manager: RawXDGToplevelDragManager) throws -> RawXDGToplevelDrag
     func attachDragIcon(_ icon: (any DataTransferDragIconBinding)?)
     func destroy()
 }
@@ -73,6 +74,7 @@ package final class DataTransferManager {
     package let backend: any DataTransferManagerBackend
     let eventQueue: DataTransferEventQueue
     let surfaceTargetResolver: (RawObjectID?) -> InputEventTarget
+    package var sourceWillCancel: (DataSourceID) -> Void
     var store = DataTransferStore()
     private var offerIDs = IDGenerator<DataOfferID>()
     package var sourceIDs = IDGenerator<DataSourceID>()
@@ -82,23 +84,27 @@ package final class DataTransferManager {
         connection rawConnection: RawDisplayConnection,
         eventQueue dataTransferEventQueue: DataTransferEventQueue = DataTransferEventQueue(),
         surfaceTargetResolver targetResolver: @escaping (RawObjectID?) -> InputEventTarget =
-            DataTransferManager.defaultTarget
+            DataTransferManager.defaultTarget,
+        sourceWillCancel cancellationHandler: @escaping (DataSourceID) -> Void = { _ in () }
     ) {
         backend = LiveDataTransferManagerBackend(connection: rawConnection)
         eventQueue = dataTransferEventQueue
         surfaceTargetResolver = targetResolver
+        sourceWillCancel = cancellationHandler
     }
 
     package init(
         backend dataTransferBackend: any DataTransferManagerBackend,
         eventQueue dataTransferEventQueue: DataTransferEventQueue = DataTransferEventQueue(),
         surfaceTargetResolver targetResolver: @escaping (RawObjectID?) -> InputEventTarget =
-            DataTransferManager.defaultTarget
+            DataTransferManager.defaultTarget,
+        sourceWillCancel cancellationHandler: @escaping (DataSourceID) -> Void = { _ in () }
     ) {
         dataTransferBackend.preconditionIsOwnerThread()
         backend = dataTransferBackend
         eventQueue = dataTransferEventQueue
         surfaceTargetResolver = targetResolver
+        sourceWillCancel = cancellationHandler
     }
 
     package func synchronizeSeats(_ seatIDs: [SeatID]) throws {
@@ -298,6 +304,7 @@ package final class DataTransferManager {
     }
 
     private func cancelSourceBinding(_ sourceID: DataSourceID) {
+        sourceWillCancel(sourceID)
         destroySourceBinding(sourceID)
         discardPendingSourceSendRequests(for: sourceID)
     }
