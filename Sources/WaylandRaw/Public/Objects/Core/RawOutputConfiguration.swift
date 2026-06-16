@@ -239,6 +239,7 @@ package final class RawWlrOutputMode {
 package final class RawWlrOutputConfiguration {
     private var proxy: RawOwnedProxy
     private let listenerOwner: RawWlrOutputConfigurationListenerOwner?
+    private var configurationHeads: [RawWlrOutputConfigurationHead] = []
 
     @safe private var pointer: OpaquePointer { proxy.pointer }
 
@@ -277,7 +278,9 @@ package final class RawWlrOutputConfiguration {
             throw RuntimeError.bindFailed("zwlr_output_configuration_head_v1")
         }
 
-        return RawWlrOutputConfigurationHead(pointer: configurationHead)
+        let head = RawWlrOutputConfigurationHead(pointer: configurationHead)
+        configurationHeads.append(head)
+        return head
     }
 
     package func disable(head: RawWlrOutputHead) {
@@ -294,6 +297,10 @@ package final class RawWlrOutputConfiguration {
 
     package func destroy() {
         listenerOwner?.cancel()
+        for head in configurationHeads {
+            head.abandonAfterConfigurationDestroyed()
+        }
+        configurationHeads.removeAll(keepingCapacity: false)
         proxy.destroy()
     }
 
@@ -343,6 +350,10 @@ package final class RawWlrOutputConfigurationHead {
 
     package func destroy() {
         proxy.destroy()
+    }
+
+    package func abandonAfterConfigurationDestroyed() {
+        proxy.abandon()
     }
 
     deinit {
