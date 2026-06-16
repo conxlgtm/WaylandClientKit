@@ -35,7 +35,8 @@ input events, and closes cleanly.
 - [Which API Should I Use?](docs/which-api-should-i-use.md): task-to-API guide
   for common app and framework needs.
 - [Session Readiness](docs/session-readiness.md): local app/window restoration
-  facts for future framework authors without compositor session-management API.
+  facts and preview compositor session protocol facts for future framework
+  authors.
 - [WaylandClient DocC](Sources/WaylandClient/WaylandClient.docc/WaylandClient.md):
   public app-substrate concepts and API reference.
 - [WaylandGraphicsPreview DocC](Sources/WaylandGraphicsPreviewAPI/WaylandGraphicsPreview.docc/WaylandGraphicsPreview.md):
@@ -86,15 +87,15 @@ Current experimental baseline:
 - explicit compositor presentation feedback through `wp_presentation`
 - linux-dmabuf capability discovery, graphics runtime-path reporting, and
   package-internal GBM/EGL preview pieces
-- preview graphics frame scheduling and package-internal external dmabuf
-  maintainer evidence
+- preview graphics frame scheduling and public external dmabuf descriptor
+  submission through `WaylandGraphicsPreview`
 - managed subsurfaces, surface input/opaque regions, and damage-aware software
   redraw
 - static and animated custom cursor images
 - desktop integration hooks for toplevel icons, idle inhibition, system bell,
   xdg-dialog hints, keyboard-shortcut inhibition, and toplevel drag start
-- capability reporting and raw preview plumbing for foreign toplevel lists and
-  wlroots output management; event-backed public facts/control remain deferred
+- read-only foreign toplevel list facts and wlroots output-management preview
+  snapshots/current-configuration tests
 - compose and dead-key text results for interpreted keyboard events
 - display, input, data-transfer, text-input, and diagnostic event streams
 - window restoration snapshots for framework-owned local session state
@@ -106,7 +107,8 @@ Current experimental baseline:
 Not implemented yet:
 
 - protocol coverage beyond the listed current support matrix
-- output-management mutation APIs
+- general-purpose output-management mutation APIs beyond explicit current/no-op
+  preview proposals
 - public GPU rendering APIs in `WaylandClient`
 - raw public GBM, EGL, DRM, dmabuf, or syncobj handles
 - high-level gesture recognizers or widgets
@@ -212,11 +214,11 @@ Supported in the current experimental baseline:
 - `wp_color_management_output_v1` (package-internal preview)
 - `wp_image_description_v1` (package-internal preview)
 - `wp_image_description_reference_v1` (package-internal preview)
-- `zwlr_output_manager_v1` (capability/raw preview plumbing)
-- `zwlr_output_head_v1` (capability/raw preview plumbing)
-- `zwlr_output_mode_v1` (capability/raw preview plumbing)
-- `zwlr_output_configuration_v1` (raw wrapper only)
-- `zwlr_output_configuration_head_v1` (raw wrapper only)
+- `zwlr_output_manager_v1` (public preview facts/current config)
+- `zwlr_output_head_v1` (public preview facts/current config)
+- `zwlr_output_mode_v1` (public preview facts)
+- `zwlr_output_configuration_v1` (public preview current test/apply)
+- `zwlr_output_configuration_head_v1` (public preview current config)
 
 Window geometry:
 
@@ -579,9 +581,11 @@ requests. `CustomCursorSmoke`, `WindowIconSmoke`, `IdleInhibitSmoke`, and
 `SystemBellSmoke` exercise optional desktop-integration paths. `DialogSmoke`,
 `KeyboardShortcutsInhibitSmoke`, `ToplevelDragSmoke`, and
 `PointerGesturesSmoke` cover dialog hints, shortcut inhibition, detachable
-toplevel drag, and gesture facts. `ForeignToplevelListSmoke` and
-`OutputManagementSmoke` remain capability/raw preview plumbing and do not claim
-event-backed public facts or monitor mutation.
+toplevel drag, and gesture facts. `ForeignToplevelListSmoke` logs read-only
+foreign toplevel facts when the protocol is advertised. `OutputManagementSmoke`
+lists wlroots output-management facts and can test or apply the current/no-op
+configuration only when explicitly requested; it does not change monitor
+configuration by default.
 `SurfaceRegionSmoke`, `DamageRegionSmoke`, and `SubsurfaceSmoke` cover region,
 damage, and child-surface behavior for compositor evidence.
 

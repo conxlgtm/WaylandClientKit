@@ -150,6 +150,20 @@ Intentionally public:
 - `TextInputDiagnostic`
 - `TextInputDiagnosticOperation`
 - `TextInputEvent`
+- `ForeignToplevelID`
+- `ForeignToplevelSnapshot`
+- `ForeignToplevelEvent`
+- `ForeignToplevelListSnapshot`
+- `OutputManagementHeadID`
+- `OutputManagementModeID`
+- `OutputManagementMode`
+- `OutputManagementHead`
+- `OutputManagementSnapshot`
+- `OutputConfigurationProposal`
+- `CompositorSessionID`
+- `CompositorSessionReason`
+- `CompositorSessionEvent`
+- `CompositorSessionEventSnapshot`
 - `ClientError`
 
 Current user-facing contract:
@@ -162,8 +176,10 @@ Current user-facing contract:
   clipboard selection, primary selection, receive-side and source-side
   drag-and-drop data transfer, drag icon surfaces, xdg activation, relative
   pointer, pointer lock/confine, pointer warp, tablet input facts, cursor
-  requests, text-input sessions and events, diagnostics, and terminal display
-  errors are the current product surface.
+  requests, text-input sessions and events, foreign toplevel facts,
+  output-management preview facts/current proposals, compositor session preview
+  facts, diagnostics, and terminal display errors are the current product
+  surface.
 - Public event and diagnostic enums are machine-matchable. String descriptions
   are derived display text, not control-flow payloads.
 - Raw keycodes, raw pointer button values, raw axis values, and unknown future
@@ -200,9 +216,10 @@ Current user-facing contract:
   hints that compositors may ignore. Preedit, delete, commit, action, language,
   preedit-hint, and done events are typed public facts.
 - Compositor session management means `xdg_session_manager_v1` advertisement
-  reporting through `WaylandCapabilities.compositorSessionManagement`.
-  Compositor session objects and event streams remain package-internal preview
-  plumbing until lifecycle evidence and framework policy boundaries are clearer.
+  reporting through `WaylandCapabilities.compositorSessionManagement` plus
+  narrow preview created/restored/replaced event facts. Compositor session IDs
+  are protocol identities, not framework scene or document identities. Local
+  restore policy remains framework-owned.
 - Relative pointer and pointer constraints mean
   `zwp_relative_pointer_manager_v1` and `zwp_pointer_constraints_v1`.
   WaylandClientKit exposes capability facts, relative motion events, typed
@@ -484,9 +501,14 @@ Notes:
   drag/drop policy.
 - `KeyboardShortcutsInhibitorEvent` reports compositor active/inactive facts.
   Requesting inhibition is not treated as proof that shortcuts are inhibited.
-- Foreign toplevel list and output-management capabilities are reported, but
-  public fact/control APIs are deferred until event-backed protocol state is
-  modeled.
+- Foreign toplevel list exposes read-only event-backed snapshots and
+  add/update/remove facts. Titles, app IDs, and identifiers are optional
+  privacy-sensitive compositor facts. There is no public close, minimize, focus,
+  or management API.
+- Output management exposes preview event-backed head/mode snapshots and an
+  explicit current/no-op configuration proposal path. Test/apply calls are
+  compositor-specific preview requests and never run from the default smoke
+  path. There is no general display-settings framework API.
 - `WaylandDisplay.withConnection` does not eagerly require a cursor theme to load.
   Cursor theme loading is deferred until a visible cursor image is first needed.
 - `WaylandDisplay.withConnection`, `Window.show`, and `PopupSurface.show` use finite
