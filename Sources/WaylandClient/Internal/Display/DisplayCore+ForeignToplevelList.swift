@@ -14,7 +14,6 @@ extension DisplayCore {
             else {
                 throw ClientError.display(.foreignToplevelListUnavailable)
             }
-            defer { list.destroy() }
 
             try session.connection.completeInitialDiscovery(
                 timeoutMilliseconds: timeoutMilliseconds
@@ -26,6 +25,7 @@ extension DisplayCore {
             guard collector.isFinished else {
                 throw ClientError.display(.foreignToplevelListIncomplete)
             }
+            list.destroy()
             return collector.snapshot()
         }
     }

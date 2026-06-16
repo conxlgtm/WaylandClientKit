@@ -37,10 +37,10 @@ The completion target is:
 
 This target is not met until a GPU buffer path exists. A software-only SHM
 client is useful, but it is not a complete foundation for a modern GUI stack.
-The preview external-buffer path exposes a renderer-neutral descriptor boundary
-so external renderers can hand WaylandClientKit a dmabuf while WaylandClientKit
-owns import, commit, release tracking, and late-release cleanup. It remains
-preview API until live renderer integration evidence is broader.
+The preview external-buffer path keeps descriptor submission package-internal
+while WaylandClientKit owns import, commit, release tracking, and late-release
+cleanup. A raw-handle-free public renderer adapter remains deferred until live
+renderer integration evidence is broader.
 
 ## Foundation Checkpoint 1
 
@@ -132,10 +132,9 @@ The current baseline already has meaningful substrate pieces:
 - package-internal GPU window presentation bridge through `WaylandGPUPreview`
 - preview graphics product `WaylandGraphicsPreview` for renderer-neutral
   capability, runtime-path, and fallback facts
-- managed software backing, managed-GPU clear-frame submission, and public
-  external-buffer descriptor submission in `WaylandGraphicsPreview` for
-  framework-facing preview experiments without raw platform handles; `.managedGPU`
-  now attempts surface feedback, GBM/EGL
+- managed software backing and managed-GPU clear-frame submission in
+  `WaylandGraphicsPreview` for framework-facing preview experiments without raw
+  platform handles; `.managedGPU` now attempts surface feedback, GBM/EGL
   rendering, dmabuf import, and owner-thread presentation before falling back or
   failing with a typed reason
 - public graphics frame scheduling requests for explicit sync, FIFO,

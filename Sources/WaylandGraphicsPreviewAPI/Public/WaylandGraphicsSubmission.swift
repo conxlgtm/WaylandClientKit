@@ -292,10 +292,10 @@ public struct WaylandGraphicsXRGBColor: Equatable, Sendable {
     }
 }
 
-public struct WaylandGraphicsDRMFormat: Equatable, Hashable, Sendable {
-    public let rawValue: UInt32
+package struct WaylandGraphicsDRMFormat: Equatable, Hashable, Sendable {
+    package let rawValue: UInt32
 
-    public init(rawValue formatRawValue: UInt32) throws {
+    package init(rawValue formatRawValue: UInt32) throws {
         guard formatRawValue != 0 else {
             throw WaylandGraphicsError.unavailable(.invalidExternalBufferDescriptor)
         }
@@ -304,19 +304,19 @@ public struct WaylandGraphicsDRMFormat: Equatable, Hashable, Sendable {
     }
 }
 
-public struct WaylandGraphicsDRMFormatModifier: Equatable, Hashable, Sendable {
-    public let rawValue: UInt64
+package struct WaylandGraphicsDRMFormatModifier: Equatable, Hashable, Sendable {
+    package let rawValue: UInt64
 
-    public init(rawValue modifierRawValue: UInt64) {
+    package init(rawValue modifierRawValue: UInt64) {
         rawValue = modifierRawValue
     }
 }
 
-public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
+package struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
     package var fileDescriptor: OwnedFileDescriptor
-    public let offset: UInt32
-    public let stride: UInt32
-    public let planeIndex: Int
+    package let offset: UInt32
+    package let stride: UInt32
+    package let planeIndex: Int
 
     package init(
         fd planeFileDescriptor: consuming OwnedFileDescriptor,
@@ -344,7 +344,7 @@ public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
     }
 }
 
-public enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
+package enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
     case one(WaylandGraphicsExternalBufferPlane)
     case two(WaylandGraphicsExternalBufferPlane, WaylandGraphicsExternalBufferPlane)
     case three(
@@ -413,13 +413,13 @@ public enum WaylandGraphicsExternalBufferPlanes: ~Copyable, Sendable {
     }
 }
 
-public struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
-    public let size: PositivePixelSize
-    public let format: WaylandGraphicsDRMFormat
-    public let modifier: WaylandGraphicsDRMFormatModifier
+package struct WaylandGraphicsExternalBufferDescriptor: ~Copyable, Sendable {
+    package let size: PositivePixelSize
+    package let format: WaylandGraphicsDRMFormat
+    package let modifier: WaylandGraphicsDRMFormatModifier
     private var planes: WaylandGraphicsExternalBufferPlanes
 
-    public init(
+    package init(
         size bufferSize: PositivePixelSize,
         format bufferFormat: WaylandGraphicsDRMFormat,
         modifier bufferModifier: WaylandGraphicsDRMFormatModifier,
@@ -863,7 +863,7 @@ public struct WaylandGraphicsFrameLease: Sendable {
     }
 
     @discardableResult
-    public func submitExternalBuffer(
+    package func submitExternalBuffer(
         _ descriptor: consuming WaylandGraphicsExternalBufferDescriptor,
         metadata frameMetadata: WaylandGraphicsFrameMetadata = .default,
         schedule frameSchedule: WaylandGraphicsFrameSchedule? = nil

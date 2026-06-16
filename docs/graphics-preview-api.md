@@ -53,9 +53,8 @@ accepts `--metadata none|prefer`, `--content-type none|photo|video|game`, and
 metadata, color capability facts, and output topology.
 `GraphicsPreviewExternalBufferSmoke` is a maintainer evidence probe: its public
 `--probe` mode reports capability facts, while the target itself imports
-package-internal GBM/EGL helpers to manufacture test buffers. Public client
-compile coverage for external-buffer submission lives in the graphics preview
-integration client. `GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer`
+package-internal GBM/EGL helpers to manufacture test buffers.
+`GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer`
 creates a small GBM/EGL-rendered dmabuf for live matrix evidence, and
 `GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer`
 intentionally uses a pipe descriptor rather than a real dmabuf as a negative
@@ -170,24 +169,21 @@ protocol is advertised; `require` fails when it is unavailable.
 `WaylandGraphicsWindowBacking` owns a managed `Window` and exposes the current
 runtime path. `nextFrame()` returns a single-use `WaylandGraphicsFrameLease`.
 Callers submit a `WaylandGraphicsSubmittedFrame.clearColor`, submit arbitrary
-software drawing with `submitSoftware`, submit an opaque external-buffer
-descriptor with `submitExternalBuffer`, or cancel the lease. `clearColor` uses
+software drawing with `submitSoftware`, or cancel the lease. `clearColor` uses
 the active managed GPU path when setup and submission succeed; it falls back to
 the software path only when the fallback policy and surface synchronization
-state allow an implicit software commit. External-buffer submission never
-claims software fallback as an external-buffer success. `requireGPU` fails if
-the managed GPU path cannot be used. Submission returns
+state allow an implicit software commit. `requireGPU` fails if the managed GPU
+path cannot be used. Submission returns
 `WaylandGraphicsFrameResult`, which reports runtime path, submitted operation,
 buffer size, metadata, schedule, synchronization policy, pacing policy, backing
 status, and whether presentation feedback was requested. The result does not
 imply presentation feedback was observed; feedback still arrives through
 `WindowPresentationEvents`. The lease does not expose Wayland proxies, SHM
 pools, GBM buffers, EGL surfaces, DRM nodes, raw dmabuf protocol objects,
-syncobj handles, or file descriptors. Public external-buffer submission uses
-an opaque renderer-neutral descriptor boundary. The fd-consuming descriptor
-manufacturing path remains package-internal until a raw-handle-free public
-renderer adapter is reviewed. WaylandClientKit owns dmabuf import, Wayland
-buffer creation, surface commit, and release tracking.
+syncobj handles, or file descriptors. External-buffer descriptor manufacturing
+and submission remain package-internal until a raw-handle-free public renderer
+adapter is reviewed. WaylandClientKit owns dmabuf import, Wayland buffer
+creation, surface commit, and release tracking.
 
 `WaylandGraphicsFrameMetadata` exposes content type, presentation hint, alpha
 modifier, color representation, and `WaylandGraphicsDamageRegion`. Public
