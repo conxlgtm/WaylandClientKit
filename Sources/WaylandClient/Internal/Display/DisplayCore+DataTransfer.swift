@@ -11,6 +11,10 @@ struct DisplayToplevelDragRecord {
     func destroy() {
         rawDrag.destroy()
     }
+
+    func abandon() {
+        rawDrag.abandon()
+    }
 }
 
 struct DisplayToplevelDragStartRequest {
@@ -455,7 +459,7 @@ extension DisplayCore {
         toplevelDragIDsByWindowID.removeAll(keepingCapacity: false)
         closedToplevelDragIDs.formUnion(records.map(\.id))
         for record in records {
-            record.destroy()
+            record.abandon()
         }
     }
 }

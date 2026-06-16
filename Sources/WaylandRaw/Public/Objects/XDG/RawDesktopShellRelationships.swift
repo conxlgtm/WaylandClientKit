@@ -162,6 +162,10 @@ package final class RawXDGToplevelDrag {
         proxy.destroy()
     }
 
+    package func abandon() {
+        proxy.abandon()
+    }
+
     deinit {
         destroy()
     }
