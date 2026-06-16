@@ -70,6 +70,15 @@
         }
 
         @Test
+        func outputConfigurationRetainsEnabledHeadUntilDestroy()
+            async throws
+        {
+            try await withOutputRequestRecording {
+                try assertConfigurationRetainsEnabledHeadUntilDestroy()
+            }
+        }
+
+        @Test
         func outputConfigurationHeadRequestsPreserveModeAndLayout()
             async throws
         {
@@ -185,6 +194,45 @@
         assertOutputRequest(
             expectedKind: SWL_TEST_OUTPUT_CONFIGURATION_DESTROY,
             callCount: 6,
+            object: testConfigurationPointer,
+            configuration: testConfigurationPointer
+        )
+    }
+
+    private func assertConfigurationRetainsEnabledHeadUntilDestroy() throws {
+        let configuration = try unsafe RawWlrOutputConfiguration(
+            pointer: outputTestPointer(testConfigurationPointer)
+        )
+        let head = try unsafe RawWlrOutputHead(
+            pointer: outputTestPointer(0xC735),
+            version: RawVersion(4)
+        )
+        defer { head.abandonAfterManagerFinished() }
+
+        do {
+            _ = try configuration.enable(head: head)
+        }
+        assertOutputRequest(
+            expectedKind: SWL_TEST_OUTPUT_CONFIGURATION_ENABLE_HEAD,
+            callCount: 1,
+            object: testConfigurationPointer,
+            configuration: testConfigurationPointer,
+            configurationHead: testConfigurationHeadPointer,
+            head: 0xC735
+        )
+
+        configuration.test()
+        assertOutputRequest(
+            expectedKind: SWL_TEST_OUTPUT_CONFIGURATION_TEST,
+            callCount: 2,
+            object: testConfigurationPointer,
+            configuration: testConfigurationPointer
+        )
+
+        configuration.destroy()
+        assertOutputRequest(
+            expectedKind: SWL_TEST_OUTPUT_CONFIGURATION_DESTROY,
+            callCount: 3,
             object: testConfigurationPointer,
             configuration: testConfigurationPointer
         )

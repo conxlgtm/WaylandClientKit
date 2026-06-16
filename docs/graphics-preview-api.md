@@ -110,15 +110,15 @@ deterministic clear frame, and submit arbitrary software drawing through a
 borrowed `SoftwareFrame`.
 
 For `.managedGPU`, clear-frame submission attempts the package-internal GPU
-path. External-buffer submission imports a public renderer-produced dmabuf
-descriptor and commits it through the same owner-thread surface path without
-exposing Wayland, GBM, EGL, DRM, or syncobj handles. Missing dmabuf, missing
-per-surface feedback, missing compatible format/modifier, render-node lookup
-failure, GBM allocation failure, EGL failure, dmabuf import rejection, external
-buffer import failure, metadata failure, and presentation failure are reported
-through typed public fallback or unavailable reasons. Public results report
-`.active` GPU backing only after a managed GPU frame has been committed;
-display-level dmabuf advertisement alone remains `.advertised`.
+path. Package-internal external-buffer submission imports renderer-produced
+dmabuf descriptors and commits them through the same owner-thread surface path.
+Missing dmabuf, missing per-surface feedback, missing compatible
+format/modifier, render-node lookup failure, GBM allocation failure, EGL
+failure, dmabuf import rejection, external buffer import failure, metadata
+failure, and presentation failure are reported through typed public fallback or
+unavailable reasons. Public results report `.active` GPU backing only after a
+managed GPU frame has been committed; display-level dmabuf advertisement alone
+remains `.advertised`.
 `WaylandGraphicsRuntimePath` separates dmabuf advertisement, per-surface
 feedback, render-node selection, GBM, EGL, dmabuf import, buffer lifecycle,
 synchronization, pacing, metadata, and presentation-feedback status so callers
