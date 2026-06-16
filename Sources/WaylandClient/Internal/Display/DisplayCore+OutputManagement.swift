@@ -12,7 +12,12 @@ extension DisplayCore {
             )
             defer { collection.destroy() }
 
-            return collection.snapshot
+            let snapshot = collection.snapshot
+            try collection.stopAndDrain(
+                connection: session.connection,
+                timeoutMilliseconds: timeoutMilliseconds
+            )
+            return snapshot
         }
     }
 
@@ -90,15 +95,28 @@ extension DisplayCore {
             timeoutMilliseconds: timeoutMilliseconds
         )
 
+        let resultError = Self.outputManagementConfigurationError(for: result)
+        try collection.stopAndDrain(
+            connection: session.connection,
+            timeoutMilliseconds: timeoutMilliseconds
+        )
+        if let resultError {
+            throw resultError
+        }
+    }
+
+    static func outputManagementConfigurationError(
+        for result: RawWlrOutputConfigurationEvent?
+    ) -> ClientError? {
         switch result {
         case .succeeded:
-            return
+            nil
         case .failed:
-            throw ClientError.display(.outputConfigurationFailed)
+            ClientError.display(.outputConfigurationFailed)
         case .cancelled:
-            throw ClientError.display(.outputConfigurationCancelled)
+            ClientError.display(.outputConfigurationCancelled)
         case nil:
-            throw ClientError.display(.outputConfigurationFailed)
+            ClientError.display(.outputConfigurationFailed)
         }
     }
 
@@ -119,27 +137,38 @@ extension DisplayCore {
             try session.connection.completeInitialDiscovery(
                 timeoutMilliseconds: timeoutMilliseconds
             )
-            return collector.collection(manager: manager)
+            return try collector.collection(manager: manager)
         } catch {
+            manager.stop()
+            do {
+                try session.connection.completeInitialDiscovery(
+                    timeoutMilliseconds: timeoutMilliseconds
+                )
+            } catch {
+                _ = error
+            }
             manager.destroy()
             throw error
         }
     }
 }
 
-private final class OutputManagementCollection {
+final class OutputManagementCollection {
     let manager: RawWlrOutputManager
     let snapshot: OutputManagementSnapshot
     private let states: [OutputManagementCollector.HeadState]
+    private let collector: OutputManagementCollector
 
     init(
         manager outputManager: RawWlrOutputManager,
         snapshot outputSnapshot: OutputManagementSnapshot,
-        states outputStates: [OutputManagementCollector.HeadState]
+        states outputStates: [OutputManagementCollector.HeadState],
+        collector outputCollector: OutputManagementCollector
     ) {
         manager = outputManager
         snapshot = outputSnapshot
         states = outputStates
+        collector = outputCollector
     }
 
     func configureCurrentState(on configuration: RawWlrOutputConfiguration) throws {
@@ -167,9 +196,19 @@ private final class OutputManagementCollection {
     func destroy() {
         manager.destroy()
     }
+
+    func stopAndDrain(connection: RawDisplayConnection, timeoutMilliseconds: Int32) throws {
+        manager.stop()
+        guard !collector.isFinished else { return }
+
+        try connection.completeInitialDiscovery(timeoutMilliseconds: timeoutMilliseconds)
+        guard collector.isFinished else {
+            throw ClientError.display(.outputManagementIncomplete)
+        }
+    }
 }
 
-private final class OutputManagementCollector {
+final class OutputManagementCollector {
     final class ModeState {
         let id: OutputManagementModeID
         let rawMode: RawWlrOutputMode
@@ -219,13 +258,28 @@ private final class OutputManagementCollector {
         }
     }
 
-    private unowned let core: DisplayCore
+    private let headIDProvider: (String?) -> OutputManagementHeadID
+    private let modeIDProvider: () -> OutputManagementModeID
     private var serial: UInt32?
     private var states: [ObjectIdentifier: HeadState] = [:]
     private var order: [ObjectIdentifier] = []
+    private(set) var isFinished = false
 
     init(core displayCore: DisplayCore) {
-        core = displayCore
+        headIDProvider = { name in
+            displayCore.outputManagementHeadID(for: name)
+        }
+        modeIDProvider = {
+            displayCore.nextOutputManagementModeID()
+        }
+    }
+
+    init(
+        headIDProvider outputHeadIDProvider: @escaping (String?) -> OutputManagementHeadID,
+        modeIDProvider outputModeIDProvider: @escaping () -> OutputManagementModeID
+    ) {
+        headIDProvider = outputHeadIDProvider
+        modeIDProvider = outputModeIDProvider
     }
 
     func handle(_ event: RawWlrOutputManagerEvent) {
@@ -241,7 +295,7 @@ private final class OutputManagementCollector {
         case .done(let doneSerial):
             serial = doneSerial
         case .finished:
-            break
+            isFinished = true
         }
     }
 
@@ -273,7 +327,7 @@ private final class OutputManagementCollector {
     private func addMode(_ mode: RawWlrOutputMode, to state: HeadState) {
         let modeKey = ObjectIdentifier(mode)
         state.modes[modeKey] = ModeState(
-            id: core.nextOutputManagementModeID(),
+            id: modeIDProvider(),
             rawMode: mode
         )
         state.modeOrder.append(modeKey)
@@ -338,40 +392,56 @@ private final class OutputManagementCollector {
         }
     }
 
-    func collection(manager: RawWlrOutputManager) -> OutputManagementCollection {
-        let activeStates = order.compactMap { states[$0] }.filter { !$0.isFinished }
-        let heads = activeStates.map { state in
-            let currentID = state.currentMode?.id
-            let modes = state.modeOrder.compactMap { state.modes[$0] }
-                .filter { !$0.isFinished }
-                .map { mode in
-                    OutputManagementMode(
-                        id: mode.id,
-                        size: mode.size,
-                        refresh: mode.refresh,
-                        isPreferred: mode.isPreferred,
-                        isCurrent: mode.id == currentID
-                    )
-                }
-            return OutputManagementHead(
-                id: core.outputManagementHeadID(for: state.name),
-                name: state.name,
-                description: state.description,
-                modes: modes,
-                enabled: state.enabled,
-                position: state.position,
-                scale: state.scale,
-                transform: state.transform,
-                make: state.make,
-                model: state.model,
-                serialNumber: state.serialNumber
-            )
-        }
-        let snapshot = OutputManagementSnapshot(heads: heads, serial: serial ?? 0)
+    func collection(manager: RawWlrOutputManager) throws -> OutputManagementCollection {
+        let outputSnapshot = try snapshot()
+        let activeStates = activeHeadStates()
         return OutputManagementCollection(
             manager: manager,
-            snapshot: snapshot,
-            states: activeStates
+            snapshot: outputSnapshot,
+            states: activeStates,
+            collector: self
+        )
+    }
+
+    func snapshot() throws -> OutputManagementSnapshot {
+        guard let serial else {
+            throw ClientError.display(.outputManagementIncomplete)
+        }
+
+        let activeStates = activeHeadStates()
+        let heads = activeStates.map(snapshot(for:))
+        return OutputManagementSnapshot(heads: heads, serial: serial)
+    }
+
+    private func activeHeadStates() -> [HeadState] {
+        order.compactMap { states[$0] }.filter { !$0.isFinished }
+    }
+
+    private func snapshot(for state: HeadState) -> OutputManagementHead {
+        let currentID = state.currentMode?.id
+        let modes = state.modeOrder.compactMap { state.modes[$0] }
+            .filter { !$0.isFinished }
+            .map { mode in
+                OutputManagementMode(
+                    id: mode.id,
+                    size: mode.size,
+                    refresh: mode.refresh,
+                    isPreferred: mode.isPreferred,
+                    isCurrent: mode.id == currentID
+                )
+            }
+        return OutputManagementHead(
+            id: headIDProvider(state.name),
+            name: state.name,
+            description: state.description,
+            modes: modes,
+            enabled: state.enabled,
+            position: state.position,
+            scale: state.scale,
+            transform: state.transform,
+            make: state.make,
+            model: state.model,
+            serialNumber: state.serialNumber
         )
     }
 }

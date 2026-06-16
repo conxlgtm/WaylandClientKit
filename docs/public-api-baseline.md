@@ -1158,48 +1158,50 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L15: `    case xdgDialogUnavailable`
 - L16: `    case xdgToplevelDragUnavailable`
 - L17: `    case foreignToplevelListUnavailable`
-- L18: `    case compositorSessionManagementUnavailable`
-- L19: `    case invalidCompositorSessionID`
-- L20: `    case outputManagementUnavailable`
-- L21: `    case staleOutputConfiguration`
-- L22: `    case outputConfigurationFailed`
-- L23: `    case outputConfigurationCancelled`
-- L24: `    case foreignDragSource(DragSourceIdentity)`
-- L25: `    case dragSourceSeatMismatch(DragSourceIdentity, expected: SeatID, actual: SeatID)`
-- L26: `    case unknownToplevelDrag(ToplevelDragID)`
-- L27: `    case foreignToplevelDrag(ToplevelDragID)`
-- L28: `    case toplevelDragStillActive(ToplevelDragID)`
-- L29: `    case idleInhibitUnavailable`
-- L30: `    case keyboardShortcutsInhibitUnavailable`
-- L31: `    case systemBellUnavailable`
-- L32: `    case unknownIdleInhibitor(IdleInhibitorID)`
-- L33: `    case foreignIdleInhibitor(IdleInhibitorID)`
-- L34: `    case invalidDialogParent(child: WindowID, parent: WindowID)`
-- L35: `    case dialogAlreadyExists(WindowID)`
-- L36: `    case unknownWindowDialog(WindowDialogID)`
-- L37: `    case foreignWindowDialog(WindowDialogID)`
-- L38: `    case keyboardShortcutsAlreadyInhibited(window: WindowID, seat: SeatID)`
-- L39: `    case unknownKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)`
-- L40: `    case foreignKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)`
-- L41: `    case emptyWindowIconName`
-- L42: `    case windowIconNameContainsNUL`
-- L43: `    case nonSquareWindowIconImage(width: Int32, height: Int32)`
-- L44: `    case invalidWindowIconImagePixelCount(expected: Int, actual: Int)`
-- L46: `    public var description: String {`
-- L138: `public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {`
-- L139: `    case skippedUnknownSeat`
-- L140: `    case skippedNoPointer`
-- L142: `    public var description: String {`
-- L152: `public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConvertible {`
-- L153: `    public let seatID: SeatID`
-- L154: `    public let requestedCursor: PointerCursor`
-- L155: `    public let backendResult: PointerCursorBackendResult`
-- L157: `    public init(`
-- L167: `    public var description: String {`
-- L185: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
-- L186: `    case invalidConfiguration(CursorConfigurationError)`
-- L187: `    case requestFailed(PointerCursorRequestFailure)`
-- L189: `    public var description: String {`
+- L18: `    case foreignToplevelListIncomplete`
+- L19: `    case compositorSessionManagementUnavailable`
+- L20: `    case invalidCompositorSessionID`
+- L21: `    case outputManagementUnavailable`
+- L22: `    case outputManagementIncomplete`
+- L23: `    case staleOutputConfiguration`
+- L24: `    case outputConfigurationFailed`
+- L25: `    case outputConfigurationCancelled`
+- L26: `    case foreignDragSource(DragSourceIdentity)`
+- L27: `    case dragSourceSeatMismatch(DragSourceIdentity, expected: SeatID, actual: SeatID)`
+- L28: `    case unknownToplevelDrag(ToplevelDragID)`
+- L29: `    case foreignToplevelDrag(ToplevelDragID)`
+- L30: `    case toplevelDragStillActive(ToplevelDragID)`
+- L31: `    case idleInhibitUnavailable`
+- L32: `    case keyboardShortcutsInhibitUnavailable`
+- L33: `    case systemBellUnavailable`
+- L34: `    case unknownIdleInhibitor(IdleInhibitorID)`
+- L35: `    case foreignIdleInhibitor(IdleInhibitorID)`
+- L36: `    case invalidDialogParent(child: WindowID, parent: WindowID)`
+- L37: `    case dialogAlreadyExists(WindowID)`
+- L38: `    case unknownWindowDialog(WindowDialogID)`
+- L39: `    case foreignWindowDialog(WindowDialogID)`
+- L40: `    case keyboardShortcutsAlreadyInhibited(window: WindowID, seat: SeatID)`
+- L41: `    case unknownKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)`
+- L42: `    case foreignKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)`
+- L43: `    case emptyWindowIconName`
+- L44: `    case windowIconNameContainsNUL`
+- L45: `    case nonSquareWindowIconImage(width: Int32, height: Int32)`
+- L46: `    case invalidWindowIconImagePixelCount(expected: Int, actual: Int)`
+- L48: `    public var description: String {`
+- L144: `public enum PointerCursorBackendResult: Equatable, Sendable, CustomStringConvertible {`
+- L145: `    case skippedUnknownSeat`
+- L146: `    case skippedNoPointer`
+- L148: `    public var description: String {`
+- L158: `public struct PointerCursorRequestFailure: Equatable, Sendable, CustomStringConvertible {`
+- L159: `    public let seatID: SeatID`
+- L160: `    public let requestedCursor: PointerCursor`
+- L161: `    public let backendResult: PointerCursorBackendResult`
+- L163: `    public init(`
+- L173: `    public var description: String {`
+- L191: `public enum PointerCursorError: Error, Equatable, Sendable, CustomStringConvertible {`
+- L192: `    case invalidConfiguration(CursorConfigurationError)`
+- L193: `    case requestFailed(PointerCursorRequestFailure)`
+- L195: `    public var description: String {`
 
 ### `Sources/WaylandClient/Public/Errors/DisplayError.swift`
 
@@ -2862,7 +2864,6 @@ Run `swift run wck api verify --update` only after reviewing and updating
 - L308: `    public let rawValue: UInt64`
 - L310: `    public init(rawValue modifierRawValue: UInt64) {`
 - L315: `public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {`
-- L316: `    public var fileDescriptor: OwnedFileDescriptor`
 - L317: `    public let offset: UInt32`
 - L318: `    public let stride: UInt32`
 - L319: `    public let planeIndex: Int`

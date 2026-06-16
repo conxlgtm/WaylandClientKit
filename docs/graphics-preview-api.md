@@ -180,9 +180,10 @@ imply presentation feedback was observed; feedback still arrives through
 `WindowPresentationEvents`. The lease does not expose Wayland proxies, SHM
 pools, GBM buffers, EGL surfaces, DRM nodes, raw dmabuf protocol objects, or
 syncobj handles. Public external-buffer submission uses a renderer-neutral
-descriptor with explicit `OwnedFileDescriptor` plane ownership; WaylandClientKit
-owns dmabuf import, Wayland buffer creation, surface commit, and release
-tracking.
+descriptor whose plane construction consumes `OwnedFileDescriptor` ownership
+for handoff into WaylandClientKit. Completed descriptors do not expose public
+file-descriptor access; WaylandClientKit owns dmabuf import, Wayland buffer
+creation, surface commit, and release tracking.
 
 `WaylandGraphicsFrameMetadata` exposes content type, presentation hint, alpha
 modifier, color representation, and `WaylandGraphicsDamageRegion`. Public

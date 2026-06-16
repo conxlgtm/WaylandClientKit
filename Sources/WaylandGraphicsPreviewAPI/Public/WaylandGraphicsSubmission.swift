@@ -313,7 +313,7 @@ public struct WaylandGraphicsDRMFormatModifier: Equatable, Hashable, Sendable {
 }
 
 public struct WaylandGraphicsExternalBufferPlane: ~Copyable, Sendable {
-    public var fileDescriptor: OwnedFileDescriptor
+    package var fileDescriptor: OwnedFileDescriptor
     public let offset: UInt32
     public let stride: UInt32
     public let planeIndex: Int

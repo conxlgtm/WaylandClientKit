@@ -15,9 +15,11 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
     case xdgDialogUnavailable
     case xdgToplevelDragUnavailable
     case foreignToplevelListUnavailable
+    case foreignToplevelListIncomplete
     case compositorSessionManagementUnavailable
     case invalidCompositorSessionID
     case outputManagementUnavailable
+    case outputManagementIncomplete
     case staleOutputConfiguration
     case outputConfigurationFailed
     case outputConfigurationCancelled
@@ -77,12 +79,16 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "xdg-toplevel-drag protocol is unavailable"
         case .foreignToplevelListUnavailable:
             "ext-foreign-toplevel-list protocol is unavailable"
+        case .foreignToplevelListIncomplete:
+            "ext-foreign-toplevel-list finished event was not observed"
         case .compositorSessionManagementUnavailable:
             "xdg-session-management protocol is unavailable"
         case .invalidCompositorSessionID:
             "compositor session ID must not be empty or contain NUL bytes"
         case .outputManagementUnavailable:
             "wlr-output-management protocol is unavailable"
+        case .outputManagementIncomplete:
+            "wlr-output-management done or finished lifecycle was incomplete"
         case .staleOutputConfiguration:
             "output configuration proposal is stale"
         case .outputConfigurationFailed:

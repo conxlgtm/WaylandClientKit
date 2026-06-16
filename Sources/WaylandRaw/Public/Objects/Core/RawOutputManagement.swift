@@ -46,8 +46,10 @@ package final class RawWlrOutputManager {
     private let proxyAdoption: RawProxyAdoptionContext
     private var proxy: RawOwnedProxy
     private var hasStopped = false
+    private var hasFinished = false
     private var heads: [RawWlrOutputHead] = []
     private var listenerOwner: RawWlrOutputManagerListenerOwner?
+    private var stoppedLifetimeRetainer: RawWlrOutputManager?
 
     @safe private var pointer: OpaquePointer { proxy.pointer }
 
@@ -127,6 +129,7 @@ package final class RawWlrOutputManager {
             eventHandler(.done(serial))
         case .finished:
             eventHandler(.finished)
+            finish()
         }
     }
 
@@ -174,20 +177,29 @@ package final class RawWlrOutputManager {
     }
 
     package func stop() {
-        guard !hasStopped else { return }
+        guard !hasStopped, !hasFinished else { return }
 
         hasStopped = true
-        listenerOwner?.cancel()
-        for head in heads {
-            head.destroy()
-        }
-        heads.removeAll(keepingCapacity: false)
         unsafe swl_zwlr_output_manager_v1_stop(pointer)
         proxy.abandon()
+        stoppedLifetimeRetainer = self
     }
 
     package func destroy() {
         stop()
+    }
+
+    private func finish() {
+        guard !hasFinished else { return }
+
+        hasFinished = true
+        listenerOwner?.cancel()
+        for head in heads {
+            head.abandonAfterManagerFinished()
+        }
+        heads.removeAll(keepingCapacity: false)
+        proxy.abandon()
+        stoppedLifetimeRetainer = nil
     }
 
     deinit {

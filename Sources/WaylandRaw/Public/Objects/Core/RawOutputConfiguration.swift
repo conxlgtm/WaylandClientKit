@@ -162,6 +162,15 @@ package final class RawWlrOutputHead {
         proxy.destroy()
     }
 
+    func abandonAfterManagerFinished() {
+        listenerOwner?.cancel()
+        for mode in modes {
+            mode.abandonAfterManagerFinished()
+        }
+        modes.removeAll(keepingCapacity: false)
+        proxy.abandon()
+    }
+
     deinit {
         destroy()
     }
@@ -214,6 +223,11 @@ package final class RawWlrOutputMode {
     package func destroy() {
         listenerOwner?.cancel()
         proxy.destroy()
+    }
+
+    func abandonAfterManagerFinished() {
+        listenerOwner?.cancel()
+        proxy.abandon()
     }
 
     deinit {

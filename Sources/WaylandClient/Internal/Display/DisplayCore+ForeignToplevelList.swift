@@ -20,6 +20,12 @@ extension DisplayCore {
                 timeoutMilliseconds: timeoutMilliseconds
             )
             list.stop()
+            try session.connection.completeInitialDiscovery(
+                timeoutMilliseconds: timeoutMilliseconds
+            )
+            guard collector.isFinished else {
+                throw ClientError.display(.foreignToplevelListIncomplete)
+            }
             return collector.snapshot()
         }
     }
@@ -39,7 +45,7 @@ extension DisplayCore {
     }
 }
 
-private final class ForeignToplevelListCollector {
+final class ForeignToplevelListCollector {
     private struct Draft {
         var id: ForeignToplevelID?
         var identifier: String?
@@ -48,13 +54,20 @@ private final class ForeignToplevelListCollector {
         var hasEmitted = false
     }
 
-    private unowned let core: DisplayCore
+    private let idProvider: (String?) -> ForeignToplevelID
     private var drafts: [ObjectIdentifier: Draft] = [:]
     private var snapshots: [ForeignToplevelID: ForeignToplevelSnapshot] = [:]
     private var events: [ForeignToplevelEvent] = []
+    private(set) var isFinished = false
 
     init(core displayCore: DisplayCore) {
-        core = displayCore
+        idProvider = { identifier in
+            displayCore.foreignToplevelID(for: identifier)
+        }
+    }
+
+    init(idProvider toplevelIDProvider: @escaping (String?) -> ForeignToplevelID) {
+        idProvider = toplevelIDProvider
     }
 
     func handle(_ event: RawForeignToplevelListEvent) {
@@ -64,7 +77,7 @@ private final class ForeignToplevelListCollector {
         case .handle(let handle, let handleEvent):
             self.handle(handleEvent, for: ObjectIdentifier(handle))
         case .finished:
-            break
+            isFinished = true
         }
     }
 
@@ -93,7 +106,7 @@ private final class ForeignToplevelListCollector {
 
     private func publish(_ draft: Draft, for key: ObjectIdentifier) {
         var nextDraft = draft
-        let id = draft.id ?? core.foreignToplevelID(for: draft.identifier)
+        let id = draft.id ?? idProvider(draft.identifier)
         nextDraft.id = id
         nextDraft.hasEmitted = true
         drafts[key] = nextDraft
