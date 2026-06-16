@@ -73,9 +73,10 @@ extension DisplayCore {
         )
         defer { collection.destroy() }
 
-        guard collection.snapshot.serial == proposal.snapshot.serial else {
-            throw ClientError.display(.staleOutputConfiguration)
-        }
+        try Self.validateOutputConfigurationProposal(
+            proposal,
+            against: collection.snapshot
+        )
 
         var result: RawWlrOutputConfigurationEvent?
         let configuration = try collection.manager.createConfiguration(
@@ -117,6 +118,15 @@ extension DisplayCore {
             ClientError.display(.outputConfigurationCancelled)
         case nil:
             ClientError.display(.outputConfigurationFailed)
+        }
+    }
+
+    static func validateOutputConfigurationProposal(
+        _ proposal: OutputConfigurationProposal,
+        against snapshot: OutputManagementSnapshot
+    ) throws {
+        guard snapshot.serial == proposal.snapshot.serial else {
+            throw ClientError.display(.staleOutputConfiguration)
         }
     }
 
@@ -283,6 +293,8 @@ final class OutputManagementCollector {
     }
 
     func handle(_ event: RawWlrOutputManagerEvent) {
+        guard !isFinished else { return }
+
         switch event {
         case .head(let head):
             let key = ObjectIdentifier(head)

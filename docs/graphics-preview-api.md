@@ -51,7 +51,11 @@ accepts `--metadata none|prefer`, `--content-type none|photo|video|game`, and
 `GraphicsPreviewColorMetadataSmoke`, `ColorManagementSmoke`, and
 `OutputTopologySmoke` provide bounded probes for external buffers, color
 metadata, color capability facts, and output topology.
-`GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer`
+`GraphicsPreviewExternalBufferSmoke` is a maintainer evidence probe: its public
+`--probe` mode reports capability facts, while the target itself imports
+package-internal GBM/EGL helpers to manufacture test buffers. Public client
+compile coverage for external-buffer submission lives in the graphics preview
+integration client. `GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer`
 creates a small GBM/EGL-rendered dmabuf for live matrix evidence, and
 `GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer`
 intentionally uses a pipe descriptor rather than a real dmabuf as a negative

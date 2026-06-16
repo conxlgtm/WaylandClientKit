@@ -26,10 +26,11 @@ Import failure, unsupported descriptors, missing dmabuf support, and unavailable
 external synchronization produce typed errors or runtime fallback/failure facts.
 Software fallback never reports that an external buffer was submitted.
 
-Use `GraphicsPreviewExternalBufferSmoke -- --probe` for a bounded
-capability report. The `--internal-test-buffer` mode is maintainer evidence for
-a renderer-dmabuf import run; external clients compile against the descriptor
-and lease API through the graphics preview integration client.
+Use `GraphicsPreviewExternalBufferSmoke -- --probe` for a bounded maintainer
+capability report. That smoke target imports package-internal renderer helpers
+only to manufacture live test buffers; it is not the public-user example for
+renderer integration. External clients compile against the descriptor and lease
+API through the graphics preview integration client.
 
 ## Topics
 
