@@ -311,3 +311,117 @@ extension PositiveInt32 {
         self.init(unchecked: value)
     }
 }
+
+public struct OutputManagementHeadID:
+    Hashable,
+    Sendable,
+    CustomStringConvertible,
+    UInt64WaylandEntityID
+{
+    package let rawValue: UInt64
+
+    public init(rawValue headRawValue: UInt64) {
+        rawValue = headRawValue
+    }
+
+    public var description: String {
+        "output-head-\(rawValue)"
+    }
+}
+
+public struct OutputManagementModeID:
+    Hashable,
+    Sendable,
+    CustomStringConvertible,
+    UInt64WaylandEntityID
+{
+    package let rawValue: UInt64
+
+    public init(rawValue modeRawValue: UInt64) {
+        rawValue = modeRawValue
+    }
+
+    public var description: String {
+        "output-mode-\(rawValue)"
+    }
+}
+
+public struct OutputManagementMode: Equatable, Sendable, Identifiable {
+    public let id: OutputManagementModeID
+    public let size: PositivePixelSize?
+    public let refresh: OutputRefreshRate
+    public let isPreferred: Bool
+    public let isCurrent: Bool
+
+    public init(
+        id modeID: OutputManagementModeID,
+        size modeSize: PositivePixelSize?,
+        refresh modeRefresh: OutputRefreshRate,
+        isPreferred modeIsPreferred: Bool,
+        isCurrent modeIsCurrent: Bool
+    ) {
+        id = modeID
+        size = modeSize
+        refresh = modeRefresh
+        isPreferred = modeIsPreferred
+        isCurrent = modeIsCurrent
+    }
+}
+
+public struct OutputManagementHead: Equatable, Sendable, Identifiable {
+    public let id: OutputManagementHeadID
+    public let name: String?
+    public let description: String?
+    public let modes: [OutputManagementMode]
+    public let enabled: Bool
+    public let position: LogicalOffset?
+    public let scale: SurfaceScale?
+    public let transform: OutputTransform?
+    public let make: String?
+    public let model: String?
+    public let serialNumber: String?
+
+    public init(
+        id headID: OutputManagementHeadID,
+        name headName: String?,
+        description headDescription: String?,
+        modes headModes: [OutputManagementMode],
+        enabled headEnabled: Bool,
+        position headPosition: LogicalOffset?,
+        scale headScale: SurfaceScale?,
+        transform headTransform: OutputTransform?,
+        make headMake: String?,
+        model headModel: String?,
+        serialNumber headSerialNumber: String?
+    ) {
+        id = headID
+        name = headName
+        description = headDescription
+        modes = headModes
+        enabled = headEnabled
+        position = headPosition
+        scale = headScale
+        transform = headTransform
+        make = headMake
+        model = headModel
+        serialNumber = headSerialNumber
+    }
+}
+
+public struct OutputManagementSnapshot: Equatable, Sendable {
+    public let heads: [OutputManagementHead]
+    public let serial: UInt32
+
+    public init(heads snapshotHeads: [OutputManagementHead], serial snapshotSerial: UInt32) {
+        heads = snapshotHeads
+        serial = snapshotSerial
+    }
+}
+
+public struct OutputConfigurationProposal: Equatable, Sendable {
+    public let snapshot: OutputManagementSnapshot
+
+    public init(current snapshot: OutputManagementSnapshot) {
+        self.snapshot = snapshot
+    }
+}

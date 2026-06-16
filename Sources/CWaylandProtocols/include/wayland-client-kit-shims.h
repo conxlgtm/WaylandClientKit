@@ -1865,6 +1865,48 @@ struct swl_xdg_toplevel_icon_manager_v1_listener_callbacks {
     void                                         *data;
 };
 
+typedef void (*swl_ext_foreign_toplevel_list_v1_toplevel_fn)(
+    void *data,
+    struct ext_foreign_toplevel_list_v1 *list,
+    struct ext_foreign_toplevel_handle_v1 *toplevel);
+typedef void (*swl_ext_foreign_toplevel_list_v1_finished_fn)(
+    void *data,
+    struct ext_foreign_toplevel_list_v1 *list);
+
+struct swl_ext_foreign_toplevel_list_v1_listener_callbacks {
+    swl_ext_foreign_toplevel_list_v1_toplevel_fn toplevel;
+    swl_ext_foreign_toplevel_list_v1_finished_fn finished;
+    void                                        *data;
+};
+
+typedef void (*swl_ext_foreign_toplevel_handle_v1_closed_fn)(
+    void *data,
+    struct ext_foreign_toplevel_handle_v1 *handle);
+typedef void (*swl_ext_foreign_toplevel_handle_v1_done_fn)(
+    void *data,
+    struct ext_foreign_toplevel_handle_v1 *handle);
+typedef void (*swl_ext_foreign_toplevel_handle_v1_title_fn)(
+    void *data,
+    struct ext_foreign_toplevel_handle_v1 *handle,
+    const char *title);
+typedef void (*swl_ext_foreign_toplevel_handle_v1_app_id_fn)(
+    void *data,
+    struct ext_foreign_toplevel_handle_v1 *handle,
+    const char *app_id);
+typedef void (*swl_ext_foreign_toplevel_handle_v1_identifier_fn)(
+    void *data,
+    struct ext_foreign_toplevel_handle_v1 *handle,
+    const char *identifier);
+
+struct swl_ext_foreign_toplevel_handle_v1_listener_callbacks {
+    swl_ext_foreign_toplevel_handle_v1_closed_fn     closed;
+    swl_ext_foreign_toplevel_handle_v1_done_fn       done;
+    swl_ext_foreign_toplevel_handle_v1_title_fn      title;
+    swl_ext_foreign_toplevel_handle_v1_app_id_fn     app_id;
+    swl_ext_foreign_toplevel_handle_v1_identifier_fn identifier;
+    void                                            *data;
+};
+
 struct swl_xdg_activation_token_v1_listener_callbacks {
     swl_xdg_activation_token_v1_done_fn done;
     void                              *data;
@@ -2043,6 +2085,142 @@ struct swl_touch_listener_callbacks {
     void                    *data;
 };
 
+typedef void (*swl_zwlr_output_manager_v1_head_fn)(
+    void *data,
+    struct zwlr_output_manager_v1 *manager,
+    struct zwlr_output_head_v1 *head);
+typedef void (*swl_zwlr_output_manager_v1_done_fn)(
+    void *data,
+    struct zwlr_output_manager_v1 *manager,
+    uint32_t serial);
+typedef void (*swl_zwlr_output_manager_v1_finished_fn)(
+    void *data,
+    struct zwlr_output_manager_v1 *manager);
+
+struct swl_zwlr_output_manager_v1_listener_callbacks {
+    swl_zwlr_output_manager_v1_head_fn     head;
+    swl_zwlr_output_manager_v1_done_fn     done;
+    swl_zwlr_output_manager_v1_finished_fn finished;
+    void                                  *data;
+};
+
+typedef void (*swl_zwlr_output_head_v1_name_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head,
+    const char *name);
+typedef void (*swl_zwlr_output_head_v1_description_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head,
+    const char *description);
+typedef void (*swl_zwlr_output_head_v1_physical_size_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head,
+    int32_t width,
+    int32_t height);
+typedef void (*swl_zwlr_output_head_v1_mode_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head,
+    struct zwlr_output_mode_v1 *mode);
+typedef void (*swl_zwlr_output_head_v1_enabled_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head,
+    int32_t enabled);
+typedef void (*swl_zwlr_output_head_v1_current_mode_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head,
+    struct zwlr_output_mode_v1 *mode);
+typedef void (*swl_zwlr_output_head_v1_position_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head,
+    int32_t x,
+    int32_t y);
+typedef void (*swl_zwlr_output_head_v1_transform_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head,
+    int32_t transform);
+typedef void (*swl_zwlr_output_head_v1_scale_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head,
+    wl_fixed_t scale);
+typedef void (*swl_zwlr_output_head_v1_finished_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head);
+typedef void (*swl_zwlr_output_head_v1_make_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head,
+    const char *make);
+typedef void (*swl_zwlr_output_head_v1_model_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head,
+    const char *model);
+typedef void (*swl_zwlr_output_head_v1_serial_number_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head,
+    const char *serial_number);
+typedef void (*swl_zwlr_output_head_v1_adaptive_sync_fn)(
+    void *data,
+    struct zwlr_output_head_v1 *head,
+    uint32_t state);
+
+struct swl_zwlr_output_head_v1_listener_callbacks {
+    swl_zwlr_output_head_v1_name_fn          name;
+    swl_zwlr_output_head_v1_description_fn   description;
+    swl_zwlr_output_head_v1_physical_size_fn physical_size;
+    swl_zwlr_output_head_v1_mode_fn          mode;
+    swl_zwlr_output_head_v1_enabled_fn       enabled;
+    swl_zwlr_output_head_v1_current_mode_fn  current_mode;
+    swl_zwlr_output_head_v1_position_fn      position;
+    swl_zwlr_output_head_v1_transform_fn     transform;
+    swl_zwlr_output_head_v1_scale_fn         scale;
+    swl_zwlr_output_head_v1_finished_fn      finished;
+    swl_zwlr_output_head_v1_make_fn          make;
+    swl_zwlr_output_head_v1_model_fn         model;
+    swl_zwlr_output_head_v1_serial_number_fn serial_number;
+    swl_zwlr_output_head_v1_adaptive_sync_fn adaptive_sync;
+    void                                    *data;
+};
+
+typedef void (*swl_zwlr_output_mode_v1_size_fn)(
+    void *data,
+    struct zwlr_output_mode_v1 *mode,
+    int32_t width,
+    int32_t height);
+typedef void (*swl_zwlr_output_mode_v1_refresh_fn)(
+    void *data,
+    struct zwlr_output_mode_v1 *mode,
+    int32_t refresh);
+typedef void (*swl_zwlr_output_mode_v1_preferred_fn)(
+    void *data,
+    struct zwlr_output_mode_v1 *mode);
+typedef void (*swl_zwlr_output_mode_v1_finished_fn)(
+    void *data,
+    struct zwlr_output_mode_v1 *mode);
+
+struct swl_zwlr_output_mode_v1_listener_callbacks {
+    swl_zwlr_output_mode_v1_size_fn      size;
+    swl_zwlr_output_mode_v1_refresh_fn   refresh;
+    swl_zwlr_output_mode_v1_preferred_fn preferred;
+    swl_zwlr_output_mode_v1_finished_fn  finished;
+    void                                *data;
+};
+
+typedef void (*swl_zwlr_output_configuration_v1_succeeded_fn)(
+    void *data,
+    struct zwlr_output_configuration_v1 *configuration);
+typedef void (*swl_zwlr_output_configuration_v1_failed_fn)(
+    void *data,
+    struct zwlr_output_configuration_v1 *configuration);
+typedef void (*swl_zwlr_output_configuration_v1_cancelled_fn)(
+    void *data,
+    struct zwlr_output_configuration_v1 *configuration);
+
+struct swl_zwlr_output_configuration_v1_listener_callbacks {
+    swl_zwlr_output_configuration_v1_succeeded_fn succeeded;
+    swl_zwlr_output_configuration_v1_failed_fn    failed;
+    swl_zwlr_output_configuration_v1_cancelled_fn cancelled;
+    void                                         *data;
+};
+
 /* ------------------------------------------------------------------ */
 /*  Typed listener installers                                         */
 /* ------------------------------------------------------------------ */
@@ -2070,6 +2248,14 @@ int swl_output_add_listener(
 int swl_xdg_toplevel_icon_manager_v1_add_listener(
     struct xdg_toplevel_icon_manager_v1 *manager,
     const struct swl_xdg_toplevel_icon_manager_v1_listener_callbacks *callbacks);
+
+int swl_ext_foreign_toplevel_list_v1_add_listener(
+    struct ext_foreign_toplevel_list_v1 *list,
+    const struct swl_ext_foreign_toplevel_list_v1_listener_callbacks *callbacks);
+
+int swl_ext_foreign_toplevel_handle_v1_add_listener(
+    struct ext_foreign_toplevel_handle_v1 *handle,
+    const struct swl_ext_foreign_toplevel_handle_v1_listener_callbacks *callbacks);
 
 int swl_data_offer_add_listener(
     struct wl_data_offer *offer,
@@ -2231,6 +2417,22 @@ int swl_keyboard_add_listener(
 int swl_touch_add_listener(
     struct wl_touch *touch,
     const struct swl_touch_listener_callbacks *callbacks);
+
+int swl_zwlr_output_manager_v1_add_listener(
+    struct zwlr_output_manager_v1 *manager,
+    const struct swl_zwlr_output_manager_v1_listener_callbacks *callbacks);
+
+int swl_zwlr_output_head_v1_add_listener(
+    struct zwlr_output_head_v1 *head,
+    const struct swl_zwlr_output_head_v1_listener_callbacks *callbacks);
+
+int swl_zwlr_output_mode_v1_add_listener(
+    struct zwlr_output_mode_v1 *mode,
+    const struct swl_zwlr_output_mode_v1_listener_callbacks *callbacks);
+
+int swl_zwlr_output_configuration_v1_add_listener(
+    struct zwlr_output_configuration_v1 *configuration,
+    const struct swl_zwlr_output_configuration_v1_listener_callbacks *callbacks);
 
 #ifdef SWL_ENABLE_TESTING
 /* ------------------------------------------------------------------ */

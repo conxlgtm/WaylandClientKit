@@ -137,7 +137,9 @@ extension RawDisplayConnection {
     }
 
     @safe
-    package func bindForeignToplevelListOneShot() throws -> RawForeignToplevelList? {
+    package func bindForeignToplevelListOneShot(
+        onEvent: ((RawForeignToplevelListEvent) -> Void)? = nil
+    ) throws -> RawForeignToplevelList? {
         preconditionIsOwnerThread()
         guard let global = optionalGlobal(named: "ext_foreign_toplevel_list_v1") else {
             return nil
@@ -159,7 +161,8 @@ extension RawDisplayConnection {
         return try RawForeignToplevelList(
             pointer: list,
             version: version,
-            proxyAdoption: proxyAdoption
+            proxyAdoption: proxyAdoption,
+            onEvent: onEvent
         )
     }
 }

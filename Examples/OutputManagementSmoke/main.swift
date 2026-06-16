@@ -7,7 +7,7 @@ enum OutputManagementSmoke {
     static func main() async throws {
         let flags = Set(CommandLine.arguments.dropFirst().filter { $0.hasPrefix("--") })
         let commonArguments = CommandLine.arguments.dropFirst().filter {
-            $0 != "--test-only" && $0 != "--apply"
+            !["--test-only", "--test-current", "--apply", "--apply-current"].contains($0)
         }
         _ = try ExampleRunOptions.parse(commonArguments[...])
 
@@ -29,16 +29,26 @@ enum OutputManagementSmoke {
                 return
             }
 
-            log("heads: deferred")
-            log("operation: list deferred")
-            if flags.contains("--test-only") || flags.contains("--apply") {
-                log("operation: test-current deferred")
+            let snapshot = try await display.outputManagementSnapshot()
+            log("heads: \(snapshot.heads.count)")
+            for head in snapshot.heads {
+                log(
+                    "head: id=\(head.id) name=\(head.name ?? "<unknown>") enabled=\(head.enabled) modes=\(head.modes.count)"
+                )
+            }
+            log("operation: list pass")
+
+            let proposal = OutputConfigurationProposal(current: snapshot)
+            if flags.contains("--test-only") || flags.contains("--test-current") {
+                try await display.testOutputConfiguration(proposal)
+                log("operation: test-current pass")
             } else {
                 log("operation: test-current skip")
             }
 
-            if flags.contains("--apply") {
-                log("operation: apply-current deferred")
+            if flags.contains("--apply") || flags.contains("--apply-current") {
+                try await display.applyOutputConfiguration(proposal)
+                log("operation: apply-current pass")
             } else {
                 log("operation: apply-current skipped-by-default")
             }

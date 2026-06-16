@@ -326,3 +326,58 @@ public struct KeyboardShortcutsInhibitorEvent: Equatable, Sendable {
         activity = eventActivity
     }
 }
+
+public struct ForeignToplevelID:
+    Hashable,
+    Sendable,
+    CustomStringConvertible,
+    UInt64WaylandEntityID
+{
+    package let rawValue: UInt64
+
+    public init(rawValue toplevelRawValue: UInt64) {
+        rawValue = toplevelRawValue
+    }
+
+    public var description: String {
+        "foreign-toplevel-\(rawValue)"
+    }
+}
+
+public struct ForeignToplevelSnapshot: Equatable, Sendable, Identifiable {
+    public let id: ForeignToplevelID
+    public let protocolIdentifier: String?
+    public let title: String?
+    public let appID: String?
+
+    public init(
+        id toplevelID: ForeignToplevelID,
+        protocolIdentifier toplevelProtocolIdentifier: String?,
+        title toplevelTitle: String?,
+        appID toplevelAppID: String?
+    ) {
+        id = toplevelID
+        protocolIdentifier = toplevelProtocolIdentifier
+        title = toplevelTitle
+        appID = toplevelAppID
+    }
+}
+
+public enum ForeignToplevelEvent: Equatable, Sendable {
+    case added(ForeignToplevelSnapshot)
+    case updated(ForeignToplevelSnapshot)
+    case removed(ForeignToplevelID)
+}
+
+public struct ForeignToplevelListSnapshot: Equatable, Sendable {
+    public let toplevels: [ForeignToplevelSnapshot]
+    public let events: [ForeignToplevelEvent]
+
+    public init(
+        toplevels snapshotToplevels: [ForeignToplevelSnapshot],
+        events snapshotEvents: [ForeignToplevelEvent]
+    ) {
+        toplevels = snapshotToplevels
+        events = snapshotEvents
+    }
+}
