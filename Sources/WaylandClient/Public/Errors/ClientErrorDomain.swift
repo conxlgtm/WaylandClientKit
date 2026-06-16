@@ -7,14 +7,31 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
     case closedSubsurface
     case foreignWindow(WindowID)
     case foreignSubsurface(SubsurfaceIdentity)
+    case unknownSeat(SeatID)
     case invalidSubsurfaceStacking(SubsurfaceStackingError)
     case subsurfacePresentationFailed(SubsurfacePresentationFailure)
     case presentationTimeUnavailable
     case xdgToplevelIconUnavailable
+    case xdgDialogUnavailable
+    case xdgToplevelDragUnavailable
+    case foreignToplevelListUnavailable
+    case foreignDragSource(DragSourceIdentity)
+    case dragSourceSeatMismatch(DragSourceIdentity, expected: SeatID, actual: SeatID)
+    case unknownToplevelDrag(ToplevelDragID)
+    case foreignToplevelDrag(ToplevelDragID)
+    case toplevelDragStillActive(ToplevelDragID)
     case idleInhibitUnavailable
+    case keyboardShortcutsInhibitUnavailable
     case systemBellUnavailable
     case unknownIdleInhibitor(IdleInhibitorID)
     case foreignIdleInhibitor(IdleInhibitorID)
+    case invalidDialogParent(child: WindowID, parent: WindowID)
+    case dialogAlreadyExists(WindowID)
+    case unknownWindowDialog(WindowDialogID)
+    case foreignWindowDialog(WindowDialogID)
+    case keyboardShortcutsAlreadyInhibited(window: WindowID, seat: SeatID)
+    case unknownKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)
+    case foreignKeyboardShortcutsInhibitor(KeyboardShortcutsInhibitorID)
     case emptyWindowIconName
     case windowIconNameContainsNUL
     case nonSquareWindowIconImage(width: Int32, height: Int32)
@@ -38,6 +55,8 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "window belongs to another display: \(windowID)"
         case .foreignSubsurface(let subsurfaceID):
             "subsurface belongs to another display: \(subsurfaceID)"
+        case .unknownSeat(let seatID):
+            "unknown seat: \(seatID)"
         case .invalidSubsurfaceStacking(let error):
             error.description
         case .subsurfacePresentationFailed(let failure):
@@ -46,14 +65,46 @@ public enum DisplayOperationError: Error, Equatable, Sendable, CustomStringConve
             "presentation-time protocol is unavailable"
         case .xdgToplevelIconUnavailable:
             "xdg-toplevel-icon protocol is unavailable"
+        case .xdgDialogUnavailable:
+            "xdg-dialog protocol is unavailable"
+        case .xdgToplevelDragUnavailable:
+            "xdg-toplevel-drag protocol is unavailable"
+        case .foreignToplevelListUnavailable:
+            "ext-foreign-toplevel-list protocol is unavailable"
+        case .foreignDragSource(let sourceID):
+            "drag source belongs to another display: \(sourceID)"
+        case .dragSourceSeatMismatch(let sourceID, let expected, let actual):
+            "drag source \(sourceID) is on seat \(actual), expected \(expected)"
+        case .unknownToplevelDrag(let dragID):
+            "unknown toplevel drag: \(dragID)"
+        case .foreignToplevelDrag(let dragID):
+            "toplevel drag belongs to another display: \(dragID)"
+        case .toplevelDragStillActive(let dragID):
+            "toplevel drag is still active: \(dragID)"
         case .idleInhibitUnavailable:
             "idle-inhibit protocol is unavailable"
+        case .keyboardShortcutsInhibitUnavailable:
+            "keyboard-shortcuts-inhibit protocol is unavailable"
         case .systemBellUnavailable:
             "xdg-system-bell protocol is unavailable"
         case .unknownIdleInhibitor(let inhibitorID):
             "unknown idle inhibitor: \(inhibitorID)"
         case .foreignIdleInhibitor(let inhibitorID):
             "idle inhibitor belongs to another display: \(inhibitorID)"
+        case .invalidDialogParent(let child, let parent):
+            "window \(child) cannot use \(parent) as its dialog parent"
+        case .dialogAlreadyExists(let windowID):
+            "window already has an xdg-dialog object: \(windowID)"
+        case .unknownWindowDialog(let dialogID):
+            "unknown window dialog: \(dialogID)"
+        case .foreignWindowDialog(let dialogID):
+            "window dialog belongs to another display: \(dialogID)"
+        case .keyboardShortcutsAlreadyInhibited(let windowID, let seatID):
+            "keyboard shortcuts are already inhibited for window \(windowID) on seat \(seatID)"
+        case .unknownKeyboardShortcutsInhibitor(let inhibitorID):
+            "unknown keyboard shortcuts inhibitor: \(inhibitorID)"
+        case .foreignKeyboardShortcutsInhibitor(let inhibitorID):
+            "keyboard shortcuts inhibitor belongs to another display: \(inhibitorID)"
         case .emptyWindowIconName:
             "window icon name must not be empty"
         case .windowIconNameContainsNUL:

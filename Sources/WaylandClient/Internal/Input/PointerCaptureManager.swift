@@ -5,13 +5,32 @@ private struct ManagedRelativePointerSubscription {
     let pointer: RawRelativePointer
 }
 
+private struct ManagedPointerGestureSubscription {
+    let seatID: SeatID
+    let version: RawVersion
+    let swipe: RawPointerSwipeGesture
+    let pinch: RawPointerPinchGesture
+    let hold: RawPointerHoldGesture?
+
+    func destroy() {
+        swipe.destroy()
+        pinch.destroy()
+        hold?.destroy()
+    }
+}
+
 package final class PointerCaptureManager {  // swiftlint:disable:this type_body_length
     private let connection: RawDisplayConnection
     private var relativePointerSubscriptionIDs =
         IDGenerator<RelativePointerSubscriptionID>()
+    private var pointerGestureSubscriptionIDs =
+        IDGenerator<PointerGestureSubscriptionID>()
     private var pointerConstraintIDs = IDGenerator<PointerConstraintID>()
     private var relativePointers =
         DisplayResourceTable<RelativePointerSubscriptionID, ManagedRelativePointerSubscription>()
+    private var pointerGestures =
+        DisplayResourceTable<PointerGestureSubscriptionID, ManagedPointerGestureSubscription>()
+    private var pointerGestureIDsBySeatID: [SeatID: PointerGestureSubscriptionID] = [:]
     private var relativePointerRegistry = RelativePointerSubscriptionRegistry()
     private var constraintRuntime = PointerConstraintRuntime()
     private var isShutDown = false
@@ -54,6 +73,69 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
         }
         relativePointerRegistry.insert(id: subscriptionID, seatID: seatID)
         return subscriptionID
+    }
+
+    package func createPointerGestures(
+        seatID: SeatID
+    ) throws -> (id: PointerGestureSubscriptionID, version: UInt32) {
+        connection.preconditionIsOwnerThread()
+        guard !isShutDown else {
+            throw PointerCaptureError.displayClosed
+        }
+        guard pointerGestureIDsBySeatID[seatID] == nil else {
+            throw PointerCaptureError.pointerGesturesAlreadySubscribed(seatID: seatID)
+        }
+
+        let globals = try connection.bindRequiredGlobals()
+        let seat = try requireSeat(seatID, globals: globals)
+        try Self.requirePointerDevice(on: seat, seatID: seatID)
+        guard let manager = try connection.bindPointerGesturesOneShot() else {
+            throw PointerCaptureError.unavailable(.pointerGestures)
+        }
+        defer { manager.destroy() }
+
+        let swipe = try manager.swipeGesture(
+            for: seat,
+            eventSink: connection.inputEventSink,
+            invariantFailureSink: connection.invariantFailureSink
+        )
+        do {
+            let pinch = try manager.pinchGesture(
+                for: seat,
+                eventSink: connection.inputEventSink,
+                invariantFailureSink: connection.invariantFailureSink
+            )
+            var hold: RawPointerHoldGesture?
+            do {
+                if manager.version >= RawVersion(3) {
+                    hold = try manager.holdGesture(
+                        for: seat,
+                        eventSink: connection.inputEventSink,
+                        invariantFailureSink: connection.invariantFailureSink
+                    )
+                }
+                let subscriptionID = pointerGestureSubscriptionIDs.next()
+                try pointerGestures.insert(
+                    ManagedPointerGestureSubscription(
+                        seatID: seatID,
+                        version: manager.version,
+                        swipe: swipe,
+                        pinch: pinch,
+                        hold: hold
+                    ),
+                    id: subscriptionID
+                )
+                pointerGestureIDsBySeatID[seatID] = subscriptionID
+                return (subscriptionID, manager.version.value)
+            } catch {
+                pinch.destroy()
+                hold?.destroy()
+                throw error
+            }
+        } catch {
+            swipe.destroy()
+            throw error
+        }
     }
 
     package func lockPointer(
@@ -198,6 +280,18 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
         pointer.destroy()
     }
 
+    package func destroyPointerGestureSubscription(
+        _ id: PointerGestureSubscriptionID
+    ) throws {
+        connection.preconditionIsOwnerThread()
+        guard let subscription = pointerGestures.remove(id) else {
+            throw PointerCaptureError.unknownPointerGestureSubscription(id)
+        }
+
+        pointerGestureIDsBySeatID.removeValue(forKey: subscription.seatID)
+        subscription.destroy()
+    }
+
     package func destroyPointerConstraint(_ id: PointerConstraintID) throws {
         connection.preconditionIsOwnerThread()
         try constraintRuntime.destroyPointerConstraint(id)
@@ -227,6 +321,14 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
             relativePointers.remove(id)?.pointer.destroy()
         }
 
+        let gestureIDs = pointerGestures.ids.filter { id in
+            pointerGestures.get(id)?.seatID == seatID
+        }
+        for id in gestureIDs {
+            pointerGestures.remove(id)?.destroy()
+        }
+        pointerGestureIDsBySeatID.removeValue(forKey: seatID)
+
         constraintRuntime.removeSeat(seatID)
     }
 
@@ -243,7 +345,11 @@ package final class PointerCaptureManager {  // swiftlint:disable:this type_body
         for relativePointer in relativePointers.removeAll() {
             relativePointer.pointer.destroy()
         }
+        for gestures in pointerGestures.removeAll() {
+            gestures.destroy()
+        }
         relativePointerRegistry.removeAll()
+        pointerGestureIDsBySeatID.removeAll()
         constraintRuntime.removeAll()
     }
 

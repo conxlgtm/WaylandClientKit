@@ -19,10 +19,15 @@ package enum SupportedVersions {
     package static let xdgSessionManagerV1: RawVersion = 1
     package static let xdgToplevelIconManagerV1: RawVersion = 1
     package static let xdgSystemBellV1: RawVersion = 1
+    package static let xdgWmDialogV1: RawVersion = 1
+    package static let xdgToplevelDragManagerV1: RawVersion = 1
+    package static let extForeignToplevelListV1: RawVersion = 1
     package static let wpPointerWarpV1: RawVersion = 1
     package static let zwpTabletManagerV2: RawVersion = 2
     package static let zwpRelativePointerManagerV1: RawVersion = 1
     package static let zwpPointerConstraintsV1: RawVersion = 1
+    package static let zwpPointerGesturesV1: RawVersion = 3
+    package static let zwpKeyboardShortcutsInhibitManagerV1: RawVersion = 1
     package static let zwpIdleInhibitManagerV1: RawVersion = 1
     package static let wpLinuxDrmSyncobjManagerV1: RawVersion = 1
     package static let wpFifoManagerV1: RawVersion = 1
@@ -37,6 +42,7 @@ package enum SupportedVersions {
     package static let wlDataDeviceManager: RawVersion = 3
     package static let zwpPrimarySelectionDeviceManagerV1: RawVersion = 1
     package static let zwpTextInputManagerV3: RawVersion = 2
+    package static let zwlrOutputManagerV1: RawVersion = 4
 }
 
 package enum XDGDecorationManagerBindingDecision: Equatable, Sendable {

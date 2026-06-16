@@ -92,6 +92,23 @@ public struct DragSourceIdentity: Hashable, Sendable, CustomStringConvertible {
     }
 }
 
+public struct ToplevelDragID:
+    Hashable,
+    Sendable,
+    CustomStringConvertible,
+    UInt64WaylandEntityID
+{
+    package let rawValue: UInt64
+
+    package init(rawValue dragRawValue: UInt64) {
+        rawValue = dragRawValue
+    }
+
+    public var description: String {
+        "toplevel-drag-\(rawValue)"
+    }
+}
+
 public struct DragSourceConfiguration: Equatable, Sendable {
     public let payloads: [DataTransferSourcePayload]
     public let actions: DragActionSet
@@ -156,6 +173,10 @@ public struct DragSource: Sendable, Hashable, Identifiable {
         id
     }
 
+    package func isOwned(by owningDisplay: WaylandDisplay) -> Bool {
+        ownership.isOwned(by: owningDisplay)
+    }
+
     /// Cancels this source-side drag operation by destroying the underlying data source.
     public func cancel() async throws {
         try await display.cancelDragSource(id: sourceID)
@@ -167,6 +188,64 @@ public struct DragSource: Sendable, Hashable, Identifiable {
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(ownership)
+    }
+}
+
+public struct ToplevelDrag: Sendable, Hashable, Identifiable {
+    public let id: ToplevelDragID
+    public let windowID: WindowID
+    public let source: DragSourceIdentity
+    public let seatID: SeatID
+    public let serial: InputSerial
+
+    private let display: WaylandDisplay
+    private let ownership: DisplayOwnedIdentity<ToplevelDragID>
+
+    package init(
+        id dragID: ToplevelDragID,
+        windowID dragWindowID: WindowID,
+        source dragSource: DragSourceIdentity,
+        seatID dragSeatID: SeatID,
+        serial dragSerial: InputSerial,
+        display owningDisplay: WaylandDisplay
+    ) {
+        id = dragID
+        windowID = dragWindowID
+        source = dragSource
+        seatID = dragSeatID
+        serial = dragSerial
+        display = owningDisplay
+        ownership = DisplayOwnedIdentity(id: dragID, display: owningDisplay)
+    }
+
+    package func isOwned(by owningDisplay: WaylandDisplay) -> Bool {
+        ownership.isOwned(by: owningDisplay)
+    }
+
+    public func destroy() async throws {
+        guard isOwned(by: display) else {
+            throw ClientError.display(.foreignToplevelDrag(id))
+        }
+
+        try await display.destroyToplevelDrag(id)
+    }
+
+    public static func == (lhs: ToplevelDrag, rhs: ToplevelDrag) -> Bool {
+        lhs.ownership == rhs.ownership
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(ownership)
+    }
+}
+
+public struct StartedToplevelDrag: Sendable, Hashable {
+    public let source: DragSource
+    public let drag: ToplevelDrag
+
+    package init(source dragSource: DragSource, drag toplevelDrag: ToplevelDrag) {
+        source = dragSource
+        drag = toplevelDrag
     }
 }
 

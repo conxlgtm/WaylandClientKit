@@ -71,6 +71,12 @@ Intentionally public:
 - public relative pointer and pointer constraint payloads
 - `RelativePointerSubscription`
 - `RelativePointerSubscriptionID`
+- `PointerGestureSubscription`
+- `PointerGestureSubscriptionID`
+- `PointerGestureEvent`
+- `PointerSwipeGestureEvent`
+- `PointerPinchGestureEvent`
+- `PointerHoldGestureEvent`
 - `PointerConstraint`
 - `PointerConstraintID`
 - `PointerConstraintRegion`
@@ -98,6 +104,9 @@ Intentionally public:
 - `PrimarySelectionEvent`
 - `DragOffer`
 - `DragSource`
+- `ToplevelDrag`
+- `ToplevelDragID`
+- `StartedToplevelDrag`
 - `DragIcon`
 - `DragIconImage`
 - `DragOfferIdentity`
@@ -464,6 +473,15 @@ Notes:
 - `WindowDecorationPreference.preferServerSide` is the default because WaylandClientKit
   does not draw client-side titlebars. `preferClientSide` requests no server-side
   decorations. Applications remain responsible for any custom chrome they want.
+- `WindowDialog`, `KeyboardShortcutsInhibitor`, and `ToplevelDrag` expose
+  protocol-shaped desktop relationship requests only. WaylandClientKit does not
+  implement modal event filtering, sheet/alert behavior, shortcut policy, or
+  drag/drop policy.
+- `KeyboardShortcutsInhibitorEvent` reports compositor active/inactive facts.
+  Requesting inhibition is not treated as proof that shortcuts are inhibited.
+- Foreign toplevel list and output-management capabilities are reported, but
+  public fact/control APIs are deferred until event-backed protocol state is
+  modeled.
 - `WaylandDisplay.withConnection` does not eagerly require a cursor theme to load.
   Cursor theme loading is deferred until a visible cursor image is first needed.
 - `WaylandDisplay.withConnection`, `Window.show`, and `PopupSurface.show` use finite

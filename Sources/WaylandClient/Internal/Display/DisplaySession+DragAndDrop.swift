@@ -1,3 +1,5 @@
+import WaylandRaw
+
 extension DisplaySession {
     package func dragOfferOnOwnerThread(for seatID: SeatID) throws -> DataOfferSnapshot? {
         connection.preconditionIsOwnerThread()
@@ -54,7 +56,8 @@ extension DisplaySession {
         seatID: SeatID,
         serial: InputSerial,
         origin: any DataTransferDragOriginBinding,
-        icon: DragIcon
+        icon: DragIcon,
+        beforeStartDrag: ((any DataTransferSourceBinding) throws -> Void)? = nil
     ) throws -> DataSourceSnapshot {
         connection.preconditionIsOwnerThread()
         try processClipboardDataTransferState()
@@ -65,7 +68,8 @@ extension DisplaySession {
                 actions: configuration.actions,
                 serial: serial,
                 origin: origin,
-                icon: icon
+                icon: icon,
+                beforeStartDrag: beforeStartDrag
             )
         )
     }

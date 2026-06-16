@@ -15,6 +15,8 @@ still owns the user-interface model.
 - display, input, text-input, data-transfer, presentation, and diagnostic streams
 - pointer, keyboard, touch, tablet, text-input, clipboard, drag-and-drop, and
   cursor facts
+- pointer gesture, dialog, toplevel-drag, and keyboard-shortcut inhibition
+  facts
 - `WaylandGraphicsPreview` capability, runtime-path, fallback, and managed
   software-submission APIs
 - external integration tests that compile as separate packages
@@ -81,9 +83,17 @@ Use these examples as references before adding framework policy:
 - `CompositorSessionSmoke`: staging compositor session-management capability
   reporting. It skips public session binding while the protocol remains
   capability-only preview plumbing.
+- `DialogSmoke`: dialog parent/modal hints without framework modal policy.
+- `KeyboardShortcutsInhibitSmoke`: window/seat-scoped shortcut inhibition and
+  active/inactive facts.
 - `DataTransferSmoke`: clipboard, primary-selection, drag/drop source and offer
   behavior, private MIME filtering, stale-offer handling, bounded reads, and
   source cancellation.
+- `ToplevelDragSmoke`: detachable toplevel drag start from a live button serial.
+- `PointerGesturesSmoke`: raw swipe, pinch, and hold gesture facts when the
+  compositor and hardware provide them.
+- `ForeignToplevelListSmoke` and `OutputManagementSmoke`: capability/raw preview
+  plumbing that defers public facts/control.
 - `PresentationFeedbackAnimation`: redraw-driven animation and optional
   presentation feedback.
 - `SurfaceRegionSmoke`: input and opaque region behavior with compositor

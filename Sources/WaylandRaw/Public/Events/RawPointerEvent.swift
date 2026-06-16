@@ -6,6 +6,7 @@ package enum RawPointerEvent: Equatable, Sendable {
     case axis(RawPointerAxisEvent)
     case relativeMotion(RawRelativePointerMotion)
     case constraint(RawPointerConstraintEvent)
+    case gesture(RawPointerGestureEvent)
 }
 
 package struct RawPointerEnter: Equatable, Sendable {
@@ -166,4 +167,49 @@ package struct RawPointerAxisRelativeDirection: Equatable, Sendable {
 
     package static let identical = Self(rawValue: 0)
     package static let inverted = Self(rawValue: 1)
+}
+
+package enum RawPointerGestureEvent: Equatable, Sendable {
+    case swipe(RawPointerSwipeGestureEvent)
+    case pinch(RawPointerPinchGestureEvent)
+    case hold(RawPointerHoldGestureEvent)
+}
+
+package enum RawPointerSwipeGestureEvent: Equatable, Sendable {
+    case begin(serial: UInt32, time: UInt32, surfaceID: RawObjectID?, fingers: UInt32)
+    case update(time: UInt32, dx: WaylandFixed, dy: WaylandFixed)
+    case end(serial: UInt32, time: UInt32, cancelled: Bool)
+}
+
+package enum RawPointerPinchGestureEvent: Equatable, Sendable {
+    case begin(serial: UInt32, time: UInt32, surfaceID: RawObjectID?, fingers: UInt32)
+    case update(RawPointerPinchGestureUpdate)
+    case end(serial: UInt32, time: UInt32, cancelled: Bool)
+}
+
+package struct RawPointerPinchGestureUpdate: Equatable, Sendable {
+    package let time: UInt32
+    package let dx: WaylandFixed
+    package let dy: WaylandFixed
+    package let scale: WaylandFixed
+    package let rotation: WaylandFixed
+
+    package init(
+        time updateTime: UInt32,
+        dx updateDX: WaylandFixed,
+        dy updateDY: WaylandFixed,
+        scale updateScale: WaylandFixed,
+        rotation updateRotation: WaylandFixed
+    ) {
+        time = updateTime
+        dx = updateDX
+        dy = updateDY
+        scale = updateScale
+        rotation = updateRotation
+    }
+}
+
+package enum RawPointerHoldGestureEvent: Equatable, Sendable {
+    case begin(serial: UInt32, time: UInt32, surfaceID: RawObjectID?, fingers: UInt32)
+    case end(serial: UInt32, time: UInt32, cancelled: Bool)
 }

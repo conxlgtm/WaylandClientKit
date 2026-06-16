@@ -61,7 +61,7 @@ enum WaylandClientKitDemo {
         case .windowClosed(let windowID):
             return windowID == window.id
         case .popupDismissed, .popupClosed, .outputChanged, .outputRemoved,
-            .windowOutputsChanged:
+            .windowOutputsChanged, .keyboardShortcutsInhibitorChanged:
             break
         }
 
@@ -201,7 +201,7 @@ private struct DemoState {
             )
         case .axis(let axis):
             DemoLog.write("pointer axis \(axis)")
-        case .relativeMotion, .constraintLifecycle:
+        case .relativeMotion, .constraintLifecycle, .gesture:
             break
         }
     }

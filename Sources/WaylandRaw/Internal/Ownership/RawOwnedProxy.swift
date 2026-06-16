@@ -21,6 +21,10 @@ package struct RawOwnedProxy: ~Copyable {
         unsafe destroyProxy(pointer)
     }
 
+    package mutating func abandon() {
+        isDestroyed = true
+    }
+
     deinit {
         if !isDestroyed {
             unsafe destroyProxy(pointer)

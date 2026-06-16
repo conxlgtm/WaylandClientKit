@@ -1,3 +1,28 @@
+package struct WindowToplevelDragStartRequest {
+    package let window: Window
+    package let configuration: DragSourceConfiguration
+    package let seatID: SeatID
+    package let serial: InputSerial
+    package let icon: DragIcon
+    package let offset: LogicalOffset
+
+    package init(
+        window dragWindow: Window,
+        configuration dragConfiguration: DragSourceConfiguration,
+        seatID dragSeatID: SeatID,
+        serial dragSerial: InputSerial,
+        icon dragIcon: DragIcon,
+        offset dragOffset: LogicalOffset
+    ) {
+        window = dragWindow
+        configuration = dragConfiguration
+        seatID = dragSeatID
+        serial = dragSerial
+        icon = dragIcon
+        offset = dragOffset
+    }
+}
+
 extension WaylandDisplay {
     public func clipboardOffer(for seatID: SeatID) throws -> ClipboardOffer? {
         try requireCore().clipboardOffer(for: seatID).map { offer in
@@ -54,6 +79,39 @@ extension WaylandDisplay {
 
     package func cancelDragSource(id sourceID: DataSourceID) throws {
         try requireCore().cancelDragSource(id: sourceID)
+    }
+
+    package func startToplevelDrag(
+        _ request: WindowToplevelDragStartRequest
+    ) throws -> StartedToplevelDrag {
+        let window = request.window
+        guard window.isOwned(by: self) else {
+            throw ClientError.display(.foreignWindow(window.id))
+        }
+        let started = try requireCore().startToplevelDrag(
+            DisplayToplevelDragStartRequest(
+                windowID: window.id,
+                configuration: request.configuration,
+                seatID: request.seatID,
+                serial: request.serial,
+                icon: request.icon,
+                offset: request.offset
+            )
+        )
+        let source = DragSource(snapshot: started.source, display: self)
+        let drag = ToplevelDrag(
+            id: started.dragID,
+            windowID: window.id,
+            source: source.id,
+            seatID: request.seatID,
+            serial: request.serial,
+            display: self
+        )
+        return StartedToplevelDrag(source: source, drag: drag)
+    }
+
+    package func destroyToplevelDrag(_ dragID: ToplevelDragID) throws {
+        try requireCore().destroyToplevelDrag(dragID)
     }
 
     package func requestClearClipboard(

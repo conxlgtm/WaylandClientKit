@@ -85,7 +85,7 @@ enum FrameworkHostSmoke {
                 log("display diagnostic \(diagnostic)")
             case .popupDismissed, .popupClosed, .popupRedrawRequested, .outputChanged,
                 .outputRemoved, .windowCloseRequested, .windowClosed, .redrawRequested,
-                .windowOutputsChanged:
+                .windowOutputsChanged, .keyboardShortcutsInhibitorChanged:
                 break
             }
         }

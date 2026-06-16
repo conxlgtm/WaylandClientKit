@@ -17,6 +17,21 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     var idleInhibitorsByID: [IdleInhibitorID: DisplayIdleInhibitorRecord] = [:]
     var idleInhibitorIDsByWindowID: [WindowID: [IdleInhibitorID]] = [:]
     var closedIdleInhibitorIDs: Set<IdleInhibitorID> = []
+    var windowDialogIDs = IDGenerator<WindowDialogID>()
+    var windowDialogsByID: [WindowDialogID: DisplayWindowDialogRecord] = [:]
+    var windowDialogIDByChildWindowID: [WindowID: WindowDialogID] = [:]
+    var windowDialogIDsByParentWindowID: [WindowID: [WindowDialogID]] = [:]
+    var closedWindowDialogIDs: Set<WindowDialogID> = []
+    var toplevelDragIDs = IDGenerator<ToplevelDragID>()
+    var toplevelDragsByID: [ToplevelDragID: DisplayToplevelDragRecord] = [:]
+    var toplevelDragIDsByWindowID: [WindowID: [ToplevelDragID]] = [:]
+    var closedToplevelDragIDs: Set<ToplevelDragID> = []
+    var keyboardShortcutsInhibitorIDs = IDGenerator<KeyboardShortcutsInhibitorID>()
+    var keyboardShortcutsInhibitorsByID:
+        [KeyboardShortcutsInhibitorID: DisplayKeyboardShortcutsInhibitorRecord] = [:]
+    var keyboardShortcutsInhibitorIDsByWindowID: [WindowID: [KeyboardShortcutsInhibitorID]] = [:]
+    var keyboardShortcutsInhibitorIDsBySeatID: [SeatID: [KeyboardShortcutsInhibitorID]] = [:]
+    var closedKeyboardShortcutsInhibitorIDs: Set<KeyboardShortcutsInhibitorID> = []
     private var inputSerialActionIDs = IDGenerator<InputSerialActionID>()
     private var inputSerialActionHandlers: [InputSerialActionID: InputSerialActionHandler] = [:]
     var isClosed: Bool { lifecycle.isClosed }
@@ -26,11 +41,21 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
     init(session activeSession: DisplaySession, eventHub displayEventHub: DisplayEventHub) {
         lifecycle = .active(activeSession)
         eventHub = displayEventHub
+        installToplevelDragCancellationHook(on: activeSession.dataTransferManager)
+        activeSession.onSeatRemoved = { [weak self] seatID in
+            self?.closeKeyboardShortcutsInhibitors(forSeat: seatID)
+        }
     }
 
     init(eventHub displayEventHub: DisplayEventHub) {
         lifecycle = .testHarness
         eventHub = displayEventHub
+    }
+
+    func installToplevelDragCancellationHook(on manager: DataTransferManager) {
+        manager.sourceWillCancel = { [weak self] sourceID in
+            self?.closeToplevelDrags(for: sourceID.dragIdentity)
+        }
     }
 
     func createTopLevelWindowID(
@@ -208,6 +233,11 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
             for inhibitorID in idleInhibitorIDsByWindowID[windowID] ?? [] {
                 closeIdleInhibitor(inhibitorID)
             }
+            closeWindowDialogs(forClosingWindow: windowID)
+            detachToplevelDrags(forClosingWindow: windowID)
+            for inhibitorID in keyboardShortcutsInhibitorIDsByWindowID[windowID] ?? [] {
+                closeKeyboardShortcutsInhibitor(inhibitorID)
+            }
             for subsurfaceID in subsurfaceIDsTopDown(parentedBy: windowID) {
                 closeSubsurface(subsurfaceID)
             }
@@ -225,6 +255,7 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
         for windowID in surfaces.allWindowIDs {
             closeWindow(windowID)
         }
+        removeAllToplevelDrags()
         session?.releaseWaylandResourcesOnOwnerThread()
         lifecycle = .closed
         eventHub.finish()
@@ -267,6 +298,9 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
         var discardedSurfaces = DisplaySurfaceStore<TopLevelWindow, PopupRoleSurface>()
         swap(&surfaces, &discardedSurfaces)
+        removeAllWindowDialogs()
+        removeAllToplevelDrags()
+        removeAllKeyboardShortcutsInhibitors()
         removeAllIdleInhibitors()
         removeAllSubsurfaces()
         discardedSurfaces.removeAll()
@@ -367,6 +401,11 @@ final class DisplayCore: RawInvariantFailureReporter, WindowFailureSink {
 
     private func handleWindowClosed(_ windowID: WindowID) {
         guard surfaceGraphAcceptsLifecycleCallback() else { return }
+        closeWindowDialogs(forClosingWindow: windowID)
+        detachToplevelDrags(forClosingWindow: windowID)
+        for inhibitorID in keyboardShortcutsInhibitorIDsByWindowID[windowID] ?? [] {
+            closeKeyboardShortcutsInhibitor(inhibitorID)
+        }
         for subsurfaceID in subsurfaceIDsTopDown(parentedBy: windowID) {
             closeSubsurface(subsurfaceID)
         }
