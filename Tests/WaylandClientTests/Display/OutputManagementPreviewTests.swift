@@ -131,8 +131,40 @@ struct OutputManagementPreviewTests {
         #expect(snapshot.heads.first?.modes.isEmpty == true)
 
         collector.handle(.headEvent(head, .finished))
+        collector.handle(.done(6))
         snapshot = try collector.snapshot()
         #expect(snapshot.heads.isEmpty)
+    }
+
+    @Test
+    func collectorPublishesPendingChangesOnlyOnDone() throws {
+        let collector = OutputManagementCollector(
+            headIDProvider: { _ in OutputManagementHeadID(rawValue: 1) },
+            modeIDProvider: { OutputManagementModeID(rawValue: 1) }
+        )
+        let head = RawWlrOutputHead(pointer: try unsafe fakePointer(0xA17), version: RawVersion(4))
+        defer { head.abandonAfterManagerFinished() }
+
+        collector.handle(.head(head))
+        collector.handle(.headEvent(head, .name("DP-1")))
+        collector.handle(.headEvent(head, .enabled(true)))
+        collector.handle(.done(10))
+
+        collector.handle(.headEvent(head, .enabled(false)))
+        collector.handle(.headEvent(head, .position(x: 44, y: 55)))
+
+        var snapshot = try collector.snapshot()
+        var outputHead = try #require(snapshot.heads.first)
+        #expect(snapshot.serial == 10)
+        #expect(outputHead.enabled)
+        #expect(outputHead.position == nil)
+
+        collector.handle(.done(11))
+        snapshot = try collector.snapshot()
+        outputHead = try #require(snapshot.heads.first)
+        #expect(snapshot.serial == 11)
+        #expect(outputHead.enabled == false)
+        #expect(outputHead.position == LogicalOffset(x: 44, y: 55))
     }
 
     @Test
