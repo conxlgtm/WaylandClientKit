@@ -34,16 +34,33 @@
         func outputHeadAndModeDestroySendReleaseRequests() throws {
             try assertHeadReleaseRequest(
                 pointer: 0xC701,
+                version: RawVersion(3),
                 expectedKind: SWL_TEST_OUTPUT_HEAD_RELEASE
             )
             try assertModeReleaseRequest(
                 pointer: 0xC702,
+                version: RawVersion(3),
                 expectedKind: SWL_TEST_OUTPUT_MODE_RELEASE
+            )
+        }
+
+        @Test
+        func outputHeadAndModeBeforeVersion3UseLocalDestroy() throws {
+            try assertHeadReleaseRequest(
+                pointer: 0xC703,
+                version: RawVersion(2),
+                expectedKind: SWL_TEST_OUTPUT_HEAD_DESTROY
+            )
+            try assertModeReleaseRequest(
+                pointer: 0xC704,
+                version: RawVersion(2),
+                expectedKind: SWL_TEST_OUTPUT_MODE_DESTROY
             )
         }
 
         private func assertHeadReleaseRequest(
             pointer rawPointer: UInt,
+            version: RawVersion,
             expectedKind: swl_test_output_destroy_kind,
             sourceLocation: SourceLocation = #_sourceLocation
         ) throws {
@@ -51,7 +68,7 @@
 
             swl_test_output_request_recording_begin()
             defer { swl_test_output_request_recording_end() }
-            RawWlrOutputHead(pointer: pointer).destroy()
+            RawWlrOutputHead(pointer: pointer, version: version).destroy()
 
             assertReleaseRecord(
                 expectedKind: expectedKind,
@@ -62,6 +79,7 @@
 
         private func assertModeReleaseRequest(
             pointer rawPointer: UInt,
+            version: RawVersion,
             expectedKind: swl_test_output_destroy_kind,
             sourceLocation: SourceLocation = #_sourceLocation
         ) throws {
@@ -69,7 +87,7 @@
 
             swl_test_output_request_recording_begin()
             defer { swl_test_output_request_recording_end() }
-            RawWlrOutputMode(pointer: pointer).destroy()
+            RawWlrOutputMode(pointer: pointer, version: version).destroy()
 
             assertReleaseRecord(
                 expectedKind: expectedKind,

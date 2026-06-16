@@ -69,6 +69,12 @@ void swl_zwlr_output_manager_v1_destroy(struct zwlr_output_manager_v1 *manager)
 
 void swl_zwlr_output_head_v1_destroy(struct zwlr_output_head_v1 *head)
 {
+#ifdef SWL_ENABLE_TESTING
+    if (swl_test_output_request_recording_enabled) {
+        swl_test_record_output_destroy(SWL_TEST_OUTPUT_HEAD_DESTROY, head);
+        return;
+    }
+#endif
     zwlr_output_head_v1_destroy(head);
 }
 
@@ -85,6 +91,12 @@ void swl_zwlr_output_head_v1_release(struct zwlr_output_head_v1 *head)
 
 void swl_zwlr_output_mode_v1_destroy(struct zwlr_output_mode_v1 *mode)
 {
+#ifdef SWL_ENABLE_TESTING
+    if (swl_test_output_request_recording_enabled) {
+        swl_test_record_output_destroy(SWL_TEST_OUTPUT_MODE_DESTROY, mode);
+        return;
+    }
+#endif
     zwlr_output_mode_v1_destroy(mode);
 }
 

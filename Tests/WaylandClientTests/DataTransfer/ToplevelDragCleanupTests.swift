@@ -124,32 +124,28 @@
         }
 
         @Test
-        func displayCloseDestroysRemainingToplevelDrags() async throws {
+        func displayCloseAbandonsRemainingActiveToplevelDrags() async throws {
             try await recordDesktopRequests {
                 let core = DisplayCore(eventHub: DisplayEventHub())
                 let sourceID = DataSourceID(rawValue: 81)
                 let dragID = ToplevelDragID(rawValue: 82)
                 let windowID = WindowID(rawValue: 83)
-                let dragPointer = UInt(0xC805)
                 try installToplevelDrag(
                     in: core,
                     sourceID: sourceID,
                     dragID: dragID,
                     windowID: windowID,
-                    pointer: dragPointer
+                    pointer: 0xC805
                 )
 
                 core.detachToplevelDrags(forClosingWindow: windowID)
                 core.close()
 
                 let record = unsafe swl_test_desktop_destroy_record()
-                #expect(unsafe record.call_count == 1)
-                #expect(unsafe record.kind == SWL_TEST_DESKTOP_DESTROY_TOPLEVEL_DRAG)
-                #expect(
-                    unsafe record.object == UnsafeMutableRawPointer(bitPattern: dragPointer)
-                )
+                #expect(unsafe record.call_count == 0)
                 #expect(core.toplevelDragsByID[dragID] == nil)
                 #expect(core.toplevelDragIDsByWindowID[windowID] == nil)
+                #expect(core.closedToplevelDragIDs.contains(dragID))
             }
         }
 
