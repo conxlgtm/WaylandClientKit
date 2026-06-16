@@ -165,6 +165,41 @@ struct WaylandGraphicsPreviewClientTests {
 
         _ = submitSoftwareFrame
     }
+
+    @Test
+    func externalBufferSubmissionTypesCompileForExternalClients() throws {
+        func descriptor(
+            fd: consuming OwnedFileDescriptor
+        ) throws -> WaylandGraphicsExternalBufferDescriptor {
+            let plane = try WaylandGraphicsExternalBufferPlane(
+                fd: fd,
+                offset: 0,
+                stride: 64,
+                planeIndex: 0
+            )
+            return try WaylandGraphicsExternalBufferDescriptor(
+                size: PositivePixelSize(width: 16, height: 16),
+                format: WaylandGraphicsDRMFormat(rawValue: 875_713_112),
+                modifier: WaylandGraphicsDRMFormatModifier(rawValue: 0),
+                planes: .one(plane)
+            )
+        }
+
+        func submitExternalBuffer(
+            backing: WaylandGraphicsWindowBacking,
+            descriptor: consuming WaylandGraphicsExternalBufferDescriptor
+        ) async throws {
+            let lease = try await backing.nextFrame()
+            _ = try await lease.submitExternalBuffer(
+                descriptor,
+                metadata: WaylandGraphicsFrameMetadata(damage: .fullFrame),
+                schedule: .default
+            )
+        }
+
+        _ = descriptor
+        _ = submitExternalBuffer
+    }
 }
 
 private func externalClientSoftwareRuntimePath() -> WaylandGraphicsRuntimePath {

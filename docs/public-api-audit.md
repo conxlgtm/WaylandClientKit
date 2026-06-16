@@ -277,6 +277,11 @@ Intentionally public:
 - `WaylandGraphicsColorAlphaMode`
 - `WaylandGraphicsColorRepresentation`
 - `WaylandGraphicsXRGBColor`
+- `WaylandGraphicsDRMFormat`
+- `WaylandGraphicsDRMFormatModifier`
+- `WaylandGraphicsExternalBufferPlane`
+- `WaylandGraphicsExternalBufferPlanes`
+- `WaylandGraphicsExternalBufferDescriptor`
 - `WaylandGraphicsClearFrame`
 - `WaylandGraphicsSubmittedFrame`
 - `WaylandGraphicsFrameResult`
@@ -299,12 +304,12 @@ Current preview contract:
   frame, attempt a package-internal GPU clear-frame path, fall back to software
   when policy allows, submit arbitrary software drawing, return a typed frame
   result, and cancel or close resources without exposing raw graphics handles.
-- The external-buffer import path is package-internal maintainer preview
-  plumbing. It can import a renderer-produced dmabuf descriptor, commit it,
-  track compositor release, and clean up late releases, but it is not public API
-  because the descriptor boundary carries DRM, dmabuf, and file-descriptor
-  facts. Public renderer-produced buffer submission is deferred until an opaque
-  preview-buffer or renderer-neutral descriptor boundary exists.
+- The external-buffer import path is public preview plumbing. It can import a
+  renderer-produced dmabuf descriptor, commit it, track compositor release, and
+  clean up late releases. The descriptor boundary carries DRM format/modifier
+  facts and `OwnedFileDescriptor` plane ownership, but it does not expose
+  `wl_buffer`, `zwp_linux_buffer_params_v1`, GBM, EGL, DRM nodes, syncobj
+  handles, or raw pointers.
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
   submission, or release failure; display-level dmabuf advertisement alone is

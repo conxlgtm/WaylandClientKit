@@ -47,13 +47,13 @@ decorations. Use `--auto-close --print-summary` for bounded evidence runs.
 Both GPU smoke tools accept `--sync implicit-only|prefer-explicit|require-explicit`
 and `--pacing none|fifo|commit-timing`. `GraphicsPreviewManagedGPUClear` also
 accepts `--metadata none|prefer`, `--content-type none|photo|video|game`, and
-`--presentation-hint vsync|async`. `GraphicsPreviewExternalBufferMaintainerSmoke`,
+`--presentation-hint vsync|async`. `GraphicsPreviewExternalBufferSmoke`,
 `GraphicsPreviewColorMetadataSmoke`, `ColorManagementSmoke`, and
 `OutputTopologySmoke` provide bounded probes for external buffers, color
 metadata, color capability facts, and output topology.
-`GraphicsPreviewExternalBufferMaintainerSmoke -- --internal-test-buffer`
+`GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer`
 creates a small GBM/EGL-rendered dmabuf for live matrix evidence, and
-`GraphicsPreviewExternalBufferMaintainerSmoke -- --negative-test-buffer`
+`GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer`
 intentionally uses a pipe descriptor rather than a real dmabuf as a negative
 import-failure cleanup probe.
 
@@ -107,16 +107,15 @@ deterministic clear frame, and submit arbitrary software drawing through a
 borrowed `SoftwareFrame`.
 
 For `.managedGPU`, clear-frame submission attempts the package-internal GPU
-path. Package-internal maintainer external-buffer submission can import a
-renderer-produced dmabuf descriptor and commit it through the same owner-thread
-surface path, but that descriptor boundary is not public because it carries DRM,
-dmabuf, and file-descriptor facts. Missing dmabuf, missing per-surface feedback,
-missing compatible format/modifier, render-node lookup failure, GBM allocation
-failure, EGL failure, dmabuf import rejection, external buffer import failure,
-metadata failure, and presentation failure are reported through typed public
-fallback or unavailable reasons. Public results report `.active` GPU backing
-only after a managed GPU frame has been committed; display-level dmabuf
-advertisement alone remains `.advertised`.
+path. External-buffer submission imports a public renderer-produced dmabuf
+descriptor and commits it through the same owner-thread surface path without
+exposing Wayland, GBM, EGL, DRM, or syncobj handles. Missing dmabuf, missing
+per-surface feedback, missing compatible format/modifier, render-node lookup
+failure, GBM allocation failure, EGL failure, dmabuf import rejection, external
+buffer import failure, metadata failure, and presentation failure are reported
+through typed public fallback or unavailable reasons. Public results report
+`.active` GPU backing only after a managed GPU frame has been committed;
+display-level dmabuf advertisement alone remains `.advertised`.
 `WaylandGraphicsRuntimePath` separates dmabuf advertisement, per-surface
 feedback, render-node selection, GBM, EGL, dmabuf import, buffer lifecycle,
 synchronization, pacing, metadata, and presentation-feedback status so callers
@@ -167,13 +166,13 @@ protocol is advertised; `require` fails when it is unavailable.
 `WaylandGraphicsWindowBacking` owns a managed `Window` and exposes the current
 runtime path. `nextFrame()` returns a single-use `WaylandGraphicsFrameLease`.
 Callers submit a `WaylandGraphicsSubmittedFrame.clearColor`, submit arbitrary
-software drawing with `submitSoftware`, or cancel the lease. `clearColor` uses
+software drawing with `submitSoftware`, submit a renderer-produced dmabuf
+descriptor with `submitExternalBuffer`, or cancel the lease. `clearColor` uses
 the active managed GPU path when setup and submission succeed; it falls back to
 the software path only when the fallback policy and surface synchronization
-state allow an implicit software commit. Package-internal maintainer
-external-buffer submission never claims software fallback as an external-buffer
-success. `requireGPU` fails if the managed GPU path cannot be used. Submission
-returns
+state allow an implicit software commit. External-buffer submission never
+claims software fallback as an external-buffer success. `requireGPU` fails if
+the managed GPU path cannot be used. Submission returns
 `WaylandGraphicsFrameResult`, which reports runtime path, submitted operation,
 buffer size, metadata, schedule, synchronization policy, pacing policy, backing
 status, and whether presentation feedback was requested. The result does not
