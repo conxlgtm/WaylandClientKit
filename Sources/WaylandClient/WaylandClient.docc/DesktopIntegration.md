@@ -3,7 +3,7 @@
 Desktop integration covers optional compositor-mediated affordances that are
 outside the core drawing path: window icons, idle inhibition, xdg-dialog hints,
 keyboard shortcut inhibition, toplevel-drag start, read-only foreign toplevel
-capability reporting, and system bell.
+facts, and system bell.
 
 ## When To Use This
 
@@ -14,9 +14,11 @@ one toplevel is a dialog relative to another toplevel. Use keyboard shortcut
 inhibition only for seat/window-scoped full-screen or capture-heavy modes, and
 watch display events for `keyboardShortcutsInhibitorChanged` because the
 compositor can activate or deactivate the request. Use `startToplevelDrag` when
-a drag source should move detachable toplevel content. Foreign toplevel list
-event-backed facts are deferred until the raw protocol state is modeled. Use
-system bell for compositor-mediated attention feedback rather than playing sound
+a drag source should move detachable toplevel content. Use
+``WaylandDisplay/foreignToplevelListSnapshot(timeoutMilliseconds:)`` for
+read-only, connection-local facts about compositor-known toplevels. Foreign
+titles and app IDs are optional, privacy-sensitive compositor facts. Use system
+bell for compositor-mediated attention feedback rather than playing sound
 directly from WaylandClientKit.
 
 ## Capability Gates
@@ -29,6 +31,8 @@ directly from WaylandClientKit.
   object before the compositor `start_drag` request.
 - ``Window/inhibitKeyboardShortcuts(seatID:)`` requires
   `zwp_keyboard_shortcuts_inhibit_manager_v1`.
+- ``WaylandDisplay/foreignToplevelListSnapshot(timeoutMilliseconds:)`` requires
+  `ext_foreign_toplevel_list_v1`.
 - ``WaylandDisplay/ringSystemBell()`` and ``Window/ringSystemBell()`` require
   `xdg_system_bell_v1`.
 
@@ -51,6 +55,7 @@ or ignore a request.
 - ``Window/createDialog(parent:modal:)``
 - ``Window/inhibitKeyboardShortcuts(seatID:)``
 - ``Window/startToplevelDrag(source:seatID:serial:icon:offset:)``
+- ``WaylandDisplay/foreignToplevelListSnapshot(timeoutMilliseconds:)``
 - ``WaylandDisplay/ringSystemBell()``
 - ``Window/ringSystemBell()``
 
@@ -59,10 +64,10 @@ or ignore a request.
 WaylandClientKit owns protocol request validation and typed unavailable errors.
 Frameworks own app identity, icon asset selection, idle policy, modal event
 filtering, sheet/alert/document-modal behavior, shortcut policy, drag/drop
-policy, and user-visible attention policy.
+policy, foreign-window privacy policy, and user-visible attention policy.
 
 ## Examples
 
 See `WindowIconSmoke`, `IdleInhibitSmoke`, `DialogSmoke`,
-`KeyboardShortcutsInhibitSmoke`, `ToplevelDragSmoke`, and `SystemBellSmoke` in
-`Examples/`.
+`KeyboardShortcutsInhibitSmoke`, `ToplevelDragSmoke`,
+`ForeignToplevelListSmoke`, and `SystemBellSmoke` in `Examples/`.

@@ -81,8 +81,8 @@ Use these examples as references before adding framework policy:
   event facts. It skips cleanly when no compositor tablet protocol or hardware
   events are available.
 - `CompositorSessionSmoke`: staging compositor session-management capability
-  reporting. It skips public session binding while the protocol remains
-  capability-only preview plumbing.
+  and preview event facts. Local scene/document restoration remains
+  framework-owned.
 - `DialogSmoke`: dialog parent/modal hints without framework modal policy.
 - `KeyboardShortcutsInhibitSmoke`: window/seat-scoped shortcut inhibition and
   active/inactive facts.
@@ -92,8 +92,10 @@ Use these examples as references before adding framework policy:
 - `ToplevelDragSmoke`: detachable toplevel drag start from a live button serial.
 - `PointerGesturesSmoke`: raw swipe, pinch, and hold gesture facts when the
   compositor and hardware provide them.
-- `ForeignToplevelListSmoke` and `OutputManagementSmoke`: capability/raw preview
-  plumbing that defers public facts/control.
+- `ForeignToplevelListSmoke`: read-only foreign toplevel facts when the
+  compositor advertises the protocol.
+- `OutputManagementSmoke`: wlroots output-management facts and explicit
+  current/no-op test/apply preview. It lists only by default.
 - `PresentationFeedbackAnimation`: redraw-driven animation and optional
   presentation feedback.
 - `SurfaceRegionSmoke`: input and opaque region behavior with compositor
@@ -182,10 +184,10 @@ observed. Presentation feedback remains a separate event stream.
 - `WaylandGraphicsFrameSchedule`
 
 Managed public GPU submission is preview API. Current leases support
-clear-frame submission, arbitrary software drawing, per-frame scheduling
-requests, and runtime-path reporting. Package-internal maintainer tooling can
-exercise external dmabuf import for evidence, but public renderer-produced GPU
-buffer submission is deferred until a raw-handle-free preview boundary exists.
+clear-frame submission, arbitrary software drawing, public external dmabuf
+descriptor submission, per-frame scheduling requests, and runtime-path
+reporting. External-buffer submission keeps Wayland import, buffer creation,
+commit, and release tracking inside WaylandClientKit.
 This is still not a renderer, swapchain, drawable, or scene graph API, and it
 does not expose raw Wayland, GBM, EGL, DRM, dmabuf, file-descriptor, or syncobj
 handles.

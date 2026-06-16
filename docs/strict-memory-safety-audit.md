@@ -44,9 +44,10 @@ Remaining unsafe constructs:
   to itself in each listener `data` field.
 - `CallbackBoxStorage` keeps the Swift owner reachable while the listener is
   valid.
-- Seat, pointer, keyboard, touch, data-device, XDG, session-management,
-  buffer-release, frame callback, scale-extension, cursor-shape, and text-input
-  listeners recover Swift owners from C callback payloads.
+- Seat, pointer, keyboard, touch, data-device, XDG, foreign-toplevel,
+  output-management, session-management, buffer-release, frame callback,
+  scale-extension, cursor-shape, and text-input listeners recover Swift owners
+  from C callback payloads.
 - `RawInputChildProxy` keeps pointer, keyboard, and touch listener owners alive
   until the child proxy is destroyed.
 
@@ -108,29 +109,39 @@ Tests:
   target resolution, binding destruction, and late callback behavior.
 - `DisplayEventHubTextInputTests` covers delivery on the text-input stream.
 
-## Compositor Session-Management Boundary
+## Foreign Toplevel, Output Management, And Session Boundaries
 
 Remaining unsafe constructs:
 
+- `RawForeignToplevelList` and `RawForeignToplevelHandle` wrap
+  `ext_foreign_toplevel_list_v1` and handle proxies and listener owners.
+- `RawWlrOutputManager`, `RawWlrOutputHead`, `RawWlrOutputMode`, and
+  `RawWlrOutputConfiguration` wrap wlroots output-management proxies and
+  listener owners.
 - `RawCompositorSessionManager`, `RawCompositorSession`, and
   `RawCompositorToplevelSession` wrap staging `xdg_session_manager_v1`,
   `xdg_session_v1`, and `xdg_toplevel_session_v1` proxies returned by C shims.
-- Session listener owners bridge compositor-created, restored, and replaced
-  callbacks into package-internal raw events.
+- Listener owners bridge foreign toplevel updates, output head/mode/configuration
+  updates, and compositor-created/restored/replaced callbacks into typed raw
+  events.
 
 Audit invariant:
 
-- Session-management wrappers remain package-internal preview plumbing.
-- Listener storage is cancelled before the corresponding raw session proxy is
-  destroyed.
-- Public API exposes only registry capability facts until session lifecycle
-  evidence and framework policy boundaries are stronger.
+- The public APIs expose value snapshots and protocol facts, not raw proxies or
+  listener owners.
+- Listener storage is cancelled before the corresponding raw proxy is destroyed.
+- Output-management head and mode destroy paths are version-gated: v3+ uses the
+  protocol `release` request and older bindings fall back to local proxy destroy.
+- Session-management preview events remain protocol facts. Scene/document
+  identity and local restore policy stay framework-owned.
 
 Tests:
 
 - `RawCompositorSessionLifecycleTests` covers manager, session, and toplevel
   session destroy idempotency, listener event mapping, listener cancellation,
   late events after destroy, and child toplevel cleanup.
+- Raw foreign-toplevel and output-management tests cover listener mapping,
+  destroy/release behavior, and configuration request paths.
 - `WaylandCapabilitiesTests` covers `xdg_session_manager_v1` advertisement and
   negotiated-version reporting.
 - C shim verification covers the request/listener declarations compiled into

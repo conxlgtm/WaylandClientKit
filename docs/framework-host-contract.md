@@ -36,6 +36,13 @@ Start with these public APIs:
   `Window.relativePointer(seatID:)`, `Window.lockPointer(...)`, and
   `Window.confinePointer(...)`
 - `WaylandDisplay.pointerGestures(seatID:)` for raw touchpad gesture facts
+- `WaylandDisplay.foreignToplevelListSnapshot()` for read-only foreign
+  toplevel facts when the compositor advertises the protocol
+- `WaylandDisplay.outputManagementSnapshot()` and explicit current/no-op
+  output-configuration proposals for compositor-specific preview output
+  management tooling
+- `WaylandDisplay.compositorSessionEvents(reason:existingID:)` for staging
+  compositor session protocol facts
 - `TextInputSession` and `WaylandDisplay.textInputSession(for:)`
 - clipboard, primary-selection, and drag-and-drop source and offer APIs
 - cursor APIs through `PointerCursor`, `CursorConfiguration`,
@@ -168,10 +175,11 @@ can request a token with app ID, window, seat ID, and serial hints, then send
 `Window.activate(using:)`. It should not treat a sent activate request as a
 guaranteed focus change.
 
-Compositor session-management advertisement is reported as a capability fact.
-Frameworks should still own scene/document identity, restore schemas, and local
-state migration. WaylandClientKit does not expose public compositor session
-objects or events until the staging protocol has stronger lifecycle evidence.
+Compositor session-management is a staging protocol. WaylandClientKit exposes
+preview event facts through `WaylandDisplay.compositorSessionEvents`, but
+frameworks still own scene/document identity, restore schemas, and local state
+migration. Do not treat compositor session IDs as framework scene or document
+IDs, and keep activation tokens separate from restore/session identity.
 
 Pointer capture is optional compositor functionality. Use
 `WaylandCapabilities.relativePointer` and `.pointerConstraints` before exposing

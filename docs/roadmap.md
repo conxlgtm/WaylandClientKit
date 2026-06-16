@@ -159,8 +159,8 @@ The current baseline already has meaningful substrate pieces:
   accept damage, regions, metadata, and submit constraints
 - xdg-activation protocol XML, raw manager/token binding, public capability
   reporting, public token request and activate APIs, and `XDGActivationSmoke`
-- public window restoration snapshots and `SessionStateSmoke` for local
-  framework-owned session state without compositor session-management API
+- public window restoration snapshots, `SessionStateSmoke`, and preview
+  compositor session protocol facts without framework session policy
 - relative pointer and pointer-constraint protocol XML, raw wrappers, public
   capability reporting, typed input events, managed lock/confine requests, and
   `PointerCaptureSmoke`
@@ -189,8 +189,8 @@ Known foundation gaps:
 - broader live compositor coverage for explicit sync, FIFO, commit timing,
   external buffer import, output topology, and metadata protocols beyond local
   unit and smoke reporting
-- compositor session-management protocol evidence where needed by app launch
-  and restoration workflows
+- broader compositor session-management protocol evidence where needed by app
+  launch and restoration workflows
 - compositor matrix coverage beyond headless Weston
 - public DocC reference documentation
 - compatibility and release policy for stable client APIs and preview graphics
@@ -270,9 +270,9 @@ These sources shape the roadmap:
   input hints:
   <https://www.mail-archive.com/wayland-devel%40lists.freedesktop.org/msg44067.html>
 - `xdg-session-management-v1` defines compositor-managed application session
-  identity and toplevel session membership. WaylandClientKit reports the
-  capability and keeps raw preview plumbing internal until lifecycle evidence
-  and framework boundaries are stronger:
+  identity and toplevel session membership. WaylandClientKit exposes narrow
+  preview event facts while keeping framework scene/document restore policy
+  above the package:
   <https://cgit.freedesktop.org/wayland/wayland-protocols/tree/staging/xdg-session-management/xdg-session-management-v1.xml>
 - `cursor-shape-v1` is the compositor-managed cursor shape protocol:
   <https://wayland.app/protocols/cursor-shape-v1>
@@ -1053,9 +1053,8 @@ Required behavior:
 
 - expose xdg activation as a typed app-client API
 - expose local restoration facts without owning document lifecycle
-- report compositor session-management advertisement while deferring public
-  session objects/events until lifecycle evidence and framework usage shape are
-  clear
+- report compositor session-management advertisement and narrow preview protocol
+  events without owning framework scene/document policy
 - expose toplevel icon and dialog metadata only as protocol-shaped desktop
   integration facts
 - distinguish output observation from output control

@@ -178,9 +178,11 @@ buffer size, metadata, schedule, synchronization policy, pacing policy, backing
 status, and whether presentation feedback was requested. The result does not
 imply presentation feedback was observed; feedback still arrives through
 `WindowPresentationEvents`. The lease does not expose Wayland proxies, SHM
-pools, GBM buffers, EGL surfaces, DRM nodes, dmabuf descriptors, file
-descriptors, or syncobj handles. Public external-buffer submission is deferred
-until there is an opaque preview-buffer or renderer-neutral descriptor boundary.
+pools, GBM buffers, EGL surfaces, DRM nodes, raw dmabuf protocol objects, or
+syncobj handles. Public external-buffer submission uses a renderer-neutral
+descriptor with explicit `OwnedFileDescriptor` plane ownership; WaylandClientKit
+owns dmabuf import, Wayland buffer creation, surface commit, and release
+tracking.
 
 `WaylandGraphicsFrameMetadata` exposes content type, presentation hint, alpha
 modifier, color representation, and `WaylandGraphicsDamageRegion`. Public
