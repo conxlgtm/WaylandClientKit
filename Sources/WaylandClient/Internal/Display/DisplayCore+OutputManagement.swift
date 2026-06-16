@@ -25,22 +25,26 @@ extension DisplayCore {
         _ proposal: OutputConfigurationProposal,
         timeoutMilliseconds: Int32
     ) throws {
-        try runCurrentOutputConfiguration(
-            proposal,
-            timeoutMilliseconds: timeoutMilliseconds,
-            apply: false
-        )
+        try withFatalFailureFinalization {
+            try runCurrentOutputConfiguration(
+                proposal,
+                timeoutMilliseconds: timeoutMilliseconds,
+                apply: false
+            )
+        }
     }
 
     func applyOutputConfiguration(
         _ proposal: OutputConfigurationProposal,
         timeoutMilliseconds: Int32
     ) throws {
-        try runCurrentOutputConfiguration(
-            proposal,
-            timeoutMilliseconds: timeoutMilliseconds,
-            apply: true
-        )
+        try withFatalFailureFinalization {
+            try runCurrentOutputConfiguration(
+                proposal,
+                timeoutMilliseconds: timeoutMilliseconds,
+                apply: true
+            )
+        }
     }
 
     func outputManagementHeadID(for name: String?) -> OutputManagementHeadID {
@@ -57,8 +61,20 @@ extension DisplayCore {
         return id
     }
 
-    func nextOutputManagementModeID() -> OutputManagementModeID {
-        outputManagementModeIDs.next()
+    func outputManagementModeID(
+        for key: OutputManagementModeStableKey?
+    ) -> OutputManagementModeID {
+        guard let key else {
+            return outputManagementModeIDs.next()
+        }
+
+        if let existing = outputManagementModeIDsByStableKey[key] {
+            return existing
+        }
+
+        let id = outputManagementModeIDs.next()
+        outputManagementModeIDsByStableKey[key] = id
+        return id
     }
 
     private func runCurrentOutputConfiguration(
@@ -220,26 +236,14 @@ final class OutputManagementCollection {
 
 final class OutputManagementCollector {
     final class ModeState {
-        let id: OutputManagementModeID
         let rawMode: RawWlrOutputMode
         var size: PositivePixelSize?
         var refresh: OutputRefreshRate = .unspecified
         var isPreferred = false
         var isFinished = false
 
-        init(id modeID: OutputManagementModeID, rawMode outputMode: RawWlrOutputMode) {
-            id = modeID
+        init(rawMode outputMode: RawWlrOutputMode) {
             rawMode = outputMode
-        }
-
-        var snapshot: OutputManagementMode {
-            OutputManagementMode(
-                id: id,
-                size: size,
-                refresh: refresh,
-                isPreferred: isPreferred,
-                isCurrent: false
-            )
         }
     }
 
@@ -269,7 +273,7 @@ final class OutputManagementCollector {
     }
 
     private let headIDProvider: (String?) -> OutputManagementHeadID
-    private let modeIDProvider: () -> OutputManagementModeID
+    private let modeIDProvider: (OutputManagementModeStableKey?) -> OutputManagementModeID
     private var serial: UInt32?
     private var states: [ObjectIdentifier: HeadState] = [:]
     private var order: [ObjectIdentifier] = []
@@ -279,8 +283,8 @@ final class OutputManagementCollector {
         headIDProvider = { name in
             displayCore.outputManagementHeadID(for: name)
         }
-        modeIDProvider = {
-            displayCore.nextOutputManagementModeID()
+        modeIDProvider = { key in
+            displayCore.outputManagementModeID(for: key)
         }
     }
 
@@ -289,7 +293,7 @@ final class OutputManagementCollector {
         modeIDProvider outputModeIDProvider: @escaping () -> OutputManagementModeID
     ) {
         headIDProvider = outputHeadIDProvider
-        modeIDProvider = outputModeIDProvider
+        modeIDProvider = { _ in outputModeIDProvider() }
     }
 
     func handle(_ event: RawWlrOutputManagerEvent) {
@@ -339,7 +343,6 @@ final class OutputManagementCollector {
     private func addMode(_ mode: RawWlrOutputMode, to state: HeadState) {
         let modeKey = ObjectIdentifier(mode)
         state.modes[modeKey] = ModeState(
-            id: modeIDProvider(),
             rawMode: mode
         )
         state.modeOrder.append(modeKey)
@@ -430,20 +433,22 @@ final class OutputManagementCollector {
     }
 
     private func snapshot(for state: HeadState) -> OutputManagementHead {
-        let currentID = state.currentMode?.id
+        let headID = headIDProvider(state.name)
+        let currentKey = state.currentModeKey
         let modes = state.modeOrder.compactMap { state.modes[$0] }
             .filter { !$0.isFinished }
             .map { mode in
-                OutputManagementMode(
-                    id: mode.id,
+                let key = OutputManagementModeStableKey(headID: headID, mode: mode)
+                return OutputManagementMode(
+                    id: modeIDProvider(key),
                     size: mode.size,
                     refresh: mode.refresh,
                     isPreferred: mode.isPreferred,
-                    isCurrent: mode.id == currentID
+                    isCurrent: currentKey == ObjectIdentifier(mode.rawMode)
                 )
             }
         return OutputManagementHead(
-            id: headIDProvider(state.name),
+            id: headID,
             name: state.name,
             description: state.description,
             modes: modes,
