@@ -7,7 +7,14 @@ enum OutputManagementSmoke {
     static func main() async throws {
         let flags = Set(CommandLine.arguments.dropFirst().filter { $0.hasPrefix("--") })
         let commonArguments = CommandLine.arguments.dropFirst().filter {
-            !["--test-only", "--test-current", "--apply", "--apply-current"].contains($0)
+            ![
+                "--list",
+                "--test-only",
+                "--test-current",
+                "--apply",
+                "--apply-current",
+            ]
+            .contains($0)
         }
         _ = try ExampleRunOptions.parse(commonArguments[...])
 

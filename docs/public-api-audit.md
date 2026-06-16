@@ -323,10 +323,12 @@ Current preview contract:
   result, and cancel or close resources without exposing raw graphics handles.
 - The external-buffer import path is public preview plumbing. It can import a
   renderer-produced dmabuf descriptor, commit it, track compositor release, and
-  clean up late releases. The descriptor boundary carries DRM format/modifier
-  facts and `OwnedFileDescriptor` plane ownership, but it does not expose
-  `wl_buffer`, `zwp_linux_buffer_params_v1`, GBM, EGL, DRM nodes, syncobj
-  handles, or raw pointers.
+  clean up late releases. Plane construction consumes an
+  `OwnedFileDescriptor` for the dmabuf ownership handoff, but the resulting
+  descriptor does not expose a public file-descriptor field or accessor. The
+  boundary carries DRM format/modifier facts without exposing `wl_buffer`,
+  `zwp_linux_buffer_params_v1`, GBM, EGL, DRM nodes, syncobj handles, or raw
+  pointers.
 - Managed GPU failures preserve public typed reasons including missing
   per-surface dmabuf feedback, GBM allocation failure, and explicit-sync setup,
   submission, or release failure; display-level dmabuf advertisement alone is
@@ -348,7 +350,9 @@ Current preview contract:
 - It does not expose raw Wayland proxies, EGL/GBM/DRM objects, dmabuf
   descriptors, syncobj handles, SHM pools, scene rendering, swapchains,
   drawables, or raw color-management/image-description protocol objects.
-  `OwnedFileDescriptor` remains part of the stable data-transfer APIs.
+  `OwnedFileDescriptor` remains part of the stable data-transfer APIs and the
+  preview external-buffer construction handoff; submitted descriptors keep fd
+  storage package-internal.
 - Public frame metadata is intentionally narrow. Content type and presentation
   hint map to safe surface commit metadata when their protocols are available
   and `metadataPolicy` permits metadata. Preferred-but-unavailable metadata is

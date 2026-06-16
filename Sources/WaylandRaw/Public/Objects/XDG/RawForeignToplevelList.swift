@@ -21,6 +21,9 @@ package final class RawForeignToplevelList {
     private var proxy: RawOwnedProxy
     private var handles: [RawForeignToplevelHandle] = []
     private var listenerOwner: RawForeignToplevelListListenerOwner?
+    private var hasStopped = false
+    private var hasDestroyed = false
+    private var stoppedLifetimeRetainer: RawForeignToplevelList?
 
     @safe private var pointer: OpaquePointer { proxy.pointer }
 
@@ -73,20 +76,39 @@ package final class RawForeignToplevelList {
             eventHandler(.toplevel(handle))
         case .finished:
             eventHandler(.finished)
+            destroyAfterFinished()
         }
     }
 
     package func stop() {
+        guard !hasStopped, !hasDestroyed else { return }
+
+        hasStopped = true
         unsafe swl_ext_foreign_toplevel_list_v1_stop(pointer)
+        proxy.abandon()
+        stoppedLifetimeRetainer = self
     }
 
     package func destroy() {
+        guard !hasDestroyed else { return }
+        guard hasStopped else {
+            stop()
+            return
+        }
+    }
+
+    private func destroyAfterFinished() {
+        guard !hasDestroyed else { return }
+
+        hasDestroyed = true
         listenerOwner?.cancel()
         for handle in handles {
             handle.destroy()
         }
         handles.removeAll(keepingCapacity: false)
-        proxy.destroy()
+        unsafe swl_ext_foreign_toplevel_list_v1_destroy(pointer)
+        proxy.abandon()
+        stoppedLifetimeRetainer = nil
     }
 
     deinit {
@@ -121,6 +143,32 @@ package final class RawForeignToplevelHandle {
             listenerOwner?.cancel()
             proxy.destroy()
         }
+    }
+
+    @safe
+    package static func testingHandle(pointer handlePointer: OpaquePointer)
+        -> RawForeignToplevelHandle
+    {
+        RawForeignToplevelHandle(
+            pointer: handlePointer,
+            destroy: unsafe ignoreTestingDestroy
+        )
+    }
+
+    private static func ignoreTestingDestroy(_ handlePointer: OpaquePointer?) {
+        _ = unsafe handlePointer
+    }
+
+    @safe
+    private init(
+        pointer handlePointer: OpaquePointer,
+        destroy destroyHandle: @escaping @Sendable (OpaquePointer?) -> Void
+    ) {
+        listenerOwner = nil
+        proxy = RawOwnedProxy(
+            pointer: handlePointer,
+            destroy: destroyHandle
+        )
     }
 
     package func destroy() {

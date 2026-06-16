@@ -12,9 +12,9 @@ cleanup for the submitted buffer.
 ## Descriptor Boundary
 
 The descriptor boundary carries a positive pixel size, DRM format and modifier
-facts, and one to four plane values with owned file descriptors. Submitting a
-descriptor transfers those file descriptors into WaylandClientKit's import
-path.
+facts, and one to four plane values. Plane construction consumes an owned file
+descriptor for transfer into WaylandClientKit's import path; the completed
+descriptor does not expose the file descriptor back to callers.
 
 Public APIs must not expose `wl_buffer`, `zwp_linux_buffer_params_v1`, GBM, EGL,
 DRM nodes, syncobj handles, or raw pointers. Explicit public fence or syncobj

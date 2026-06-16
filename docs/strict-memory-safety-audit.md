@@ -350,9 +350,10 @@ Remaining unsafe constructs:
 - `WaylandGraphicsExternalBufferDescriptor` and
   `WaylandGraphicsExternalBufferPlane` are public preview move-only values.
   Plane construction consumes an `OwnedFileDescriptor`, offset, stride, and
-  plane index, then transfers the descriptor into the package-internal dmabuf
-  import path. Public `WaylandGraphicsPreview` exposes descriptor facts, not
-  raw Wayland proxies, GBM/EGL/DRM objects, syncobj handles, or pointers.
+  plane index, then stores the descriptor package-internally for transfer into
+  the dmabuf import path. Public `WaylandGraphicsPreview` exposes descriptor
+  facts, not reusable file-descriptor access, raw Wayland proxies, GBM/EGL/DRM
+  objects, syncobj handles, or pointers.
 - `RawSurfaceBuffer` is `@unchecked Sendable` because the managed GPU preview
   presenter passes an imported `wl_buffer` wrapper through the async
   owner-thread commit bridge without exposing the proxy to public API.
