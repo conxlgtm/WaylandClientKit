@@ -3,6 +3,11 @@ import Testing
 @testable import WaylandClient
 @testable import WaylandRaw
 
+#if SWL_ENABLE_TESTING
+    import CWaylandProtocols
+    import WaylandTestSupport
+#endif
+
 @Suite
 struct OutputManagementPreviewTests {
     @Test
@@ -82,6 +87,28 @@ struct OutputManagementPreviewTests {
     }
 
     @Test
+    func collectorIgnoresLateEventsAfterManagerFinished() throws {
+        let collector = OutputManagementCollector(
+            headIDProvider: { _ in OutputManagementHeadID(rawValue: 1) },
+            modeIDProvider: { OutputManagementModeID(rawValue: 1) }
+        )
+        let lateHead = RawWlrOutputHead(
+            pointer: try unsafe fakePointer(0xA09),
+            version: RawVersion(4)
+        )
+        defer { lateHead.abandonAfterManagerFinished() }
+
+        collector.handle(.done(9))
+        collector.handle(.finished)
+        collector.handle(.head(lateHead))
+        collector.handle(.headEvent(lateHead, .name("late")))
+
+        let snapshot = try collector.snapshot()
+        #expect(snapshot.serial == 9)
+        #expect(snapshot.heads.isEmpty)
+    }
+
+    @Test
     func collectorRemovesFinishedHeadsAndModes() throws {
         let collector = OutputManagementCollector(
             headIDProvider: { _ in OutputManagementHeadID(rawValue: 1) },
@@ -109,6 +136,67 @@ struct OutputManagementPreviewTests {
     }
 
     @Test
+    func staleConfigurationProposalIsRejectedBeforeRequests() throws {
+        let firstSnapshot = OutputManagementSnapshot(heads: [], serial: 11)
+        let secondSnapshot = OutputManagementSnapshot(heads: [], serial: 12)
+        let proposal = OutputConfigurationProposal(current: firstSnapshot)
+
+        #expect(throws: ClientError.display(.staleOutputConfiguration)) {
+            try DisplayCore.validateOutputConfigurationProposal(
+                proposal,
+                against: secondSnapshot
+            )
+        }
+    }
+
+    #if SWL_ENABLE_TESTING
+        @Test
+        func currentStateConfigurationMapsEnabledHeadRequests() async throws {
+            try await withOutputRequestRecording {
+                try assertCurrentStateConfigurationMapsEnabledHeadRequests()
+            }
+        }
+
+        @Test
+        func currentStateConfigurationMapsDisabledHeadRequest() async throws {
+            try await withOutputRequestRecording {
+                let collector = OutputManagementCollector(
+                    headIDProvider: { _ in OutputManagementHeadID(rawValue: 1) },
+                    modeIDProvider: { OutputManagementModeID(rawValue: 1) }
+                )
+                let head = RawWlrOutputHead(
+                    pointer: try unsafe fakePointer(0xA41),
+                    version: RawVersion(4)
+                )
+                let manager = RawWlrOutputManager.testingOutputManager(
+                    pointer: try unsafe fakePointer(0xA42),
+                    version: RawVersion(4),
+                    proxyAdoption: try testAdoptionContext()
+                )
+                defer {
+                    head.abandonAfterManagerFinished()
+                    manager.destroy()
+                }
+
+                collector.handle(.head(head))
+                collector.handle(.headEvent(head, .enabled(false)))
+                collector.handle(.done(14))
+
+                let collection = try collector.collection(manager: manager)
+                let configuration = try RawWlrOutputConfiguration(
+                    pointer: try unsafe fakePointer(0xA43)
+                )
+                try collection.configureCurrentState(on: configuration)
+
+                let record = unsafe swl_test_output_request_record()
+                #expect(unsafe record.call_count == 1)
+                #expect(unsafe record.kind == SWL_TEST_OUTPUT_CONFIGURATION_DISABLE_HEAD)
+                #expect(unsafe record.head == UnsafeMutableRawPointer(head.pointer))
+            }
+        }
+    #endif
+
+    @Test
     func configurationResultMappingIsTyped() {
         #expect(DisplayCore.outputManagementConfigurationError(for: .succeeded) == nil)
         #expect(
@@ -125,6 +213,71 @@ struct OutputManagementPreviewTests {
         )
     }
 }
+
+#if SWL_ENABLE_TESTING
+    private func assertCurrentStateConfigurationMapsEnabledHeadRequests() throws {
+        let collector = OutputManagementCollector(
+            headIDProvider: { _ in OutputManagementHeadID(rawValue: 1) },
+            modeIDProvider: { OutputManagementModeID(rawValue: 1) }
+        )
+        let head = RawWlrOutputHead(
+            pointer: try unsafe fakePointer(0xA31),
+            version: RawVersion(4)
+        )
+        let mode = RawWlrOutputMode(
+            pointer: try unsafe fakePointer(0xA32),
+            version: RawVersion(4)
+        )
+        let manager = RawWlrOutputManager.testingOutputManager(
+            pointer: try unsafe fakePointer(0xA33),
+            version: RawVersion(4),
+            proxyAdoption: try testAdoptionContext()
+        )
+        defer {
+            head.abandonAfterManagerFinished()
+            mode.abandonAfterManagerFinished()
+            manager.destroy()
+        }
+
+        collector.handle(.head(head))
+        collector.handle(.headEvent(head, .enabled(true)))
+        collector.handle(.headEvent(head, .mode(mode)))
+        collector.handle(.headEvent(head, .currentMode(mode)))
+        collector.handle(.headEvent(head, .position(x: 50, y: -25)))
+        collector.handle(.headEvent(head, .transform(2)))
+        collector.handle(.headEvent(head, .scale(WaylandFixed(rawValue: 512))))
+        collector.handle(.done(13))
+
+        let collection = try collector.collection(manager: manager)
+        let configuration = try RawWlrOutputConfiguration(
+            pointer: try unsafe fakePointer(0xA34)
+        )
+        try collection.configureCurrentState(on: configuration)
+
+        let record = unsafe swl_test_output_request_record()
+        #expect(unsafe record.call_count == 6)
+        #expect(unsafe record.kind == SWL_TEST_OUTPUT_CONFIGURATION_HEAD_DESTROY)
+        #expect(unsafe record.configuration_head != nil)
+    }
+
+    private func withOutputRequestRecording(_ operation: () throws -> Void) async throws {
+        try await CoreRequestRecordingGate.withExclusiveRecording {
+            swl_test_core_request_recording_begin()
+            swl_test_output_request_recording_begin()
+            defer { swl_test_output_request_recording_end() }
+            defer { swl_test_core_request_recording_end() }
+            try operation()
+        }
+    }
+
+    private func testAdoptionContext() throws -> RawProxyAdoptionContext {
+        RawProxyAdoptionContext(
+            eventQueue: RawEventQueue.testingQueueWithoutDestroy(
+                opaquePointer: try unsafe fakePointer(0xA99)
+            )
+        )
+    }
+#endif
 
 private enum FakePointerError: Error {
     case invalid(UInt)

@@ -161,6 +161,8 @@ swift run wck smoke live
 swift run wck smoke integration
 swift run GPUPreviewSmokeClient
 swift run GraphicsPreviewManagedGPUClear -- --auto-close --print-summary
+# Maintainer-only external-buffer probe; public compile proof is the graphics
+# preview integration client.
 swift run GraphicsPreviewExternalBufferSmoke -- --probe
 swift run GraphicsPreviewExternalBufferSmoke -- --internal-test-buffer
 swift run GraphicsPreviewExternalBufferSmoke -- --negative-test-buffer

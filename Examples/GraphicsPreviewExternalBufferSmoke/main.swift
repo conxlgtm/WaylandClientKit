@@ -46,6 +46,7 @@ enum GraphicsPreviewExternalBufferSmoke {
             )
             let runtimePath = try await backing.runtimePath
             log("feature: external-gpu-buffer")
+            log("scope: maintainer-internal")
             log("requested backing: external-dmabuf")
             log("dmabuf: \(status(runtimePath.dmabufImport))")
             log("format: XRGB8888")

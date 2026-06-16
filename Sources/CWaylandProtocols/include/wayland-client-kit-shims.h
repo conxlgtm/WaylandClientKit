@@ -2523,10 +2523,44 @@ enum swl_test_output_destroy_kind {
     SWL_TEST_OUTPUT_MODE_DESTROY = 6,
 };
 
+enum swl_test_output_request_kind {
+    SWL_TEST_OUTPUT_REQUEST_NONE = 0,
+    SWL_TEST_OUTPUT_MANAGER_CREATE_CONFIGURATION = 1,
+    SWL_TEST_OUTPUT_CONFIGURATION_ENABLE_HEAD = 2,
+    SWL_TEST_OUTPUT_CONFIGURATION_DISABLE_HEAD = 3,
+    SWL_TEST_OUTPUT_CONFIGURATION_APPLY = 4,
+    SWL_TEST_OUTPUT_CONFIGURATION_TEST = 5,
+    SWL_TEST_OUTPUT_CONFIGURATION_DESTROY = 6,
+    SWL_TEST_OUTPUT_CONFIGURATION_HEAD_SET_MODE = 7,
+    SWL_TEST_OUTPUT_CONFIGURATION_HEAD_SET_CUSTOM_MODE = 8,
+    SWL_TEST_OUTPUT_CONFIGURATION_HEAD_SET_POSITION = 9,
+    SWL_TEST_OUTPUT_CONFIGURATION_HEAD_SET_TRANSFORM = 10,
+    SWL_TEST_OUTPUT_CONFIGURATION_HEAD_SET_SCALE = 11,
+    SWL_TEST_OUTPUT_CONFIGURATION_HEAD_DESTROY = 12,
+};
+
 struct swl_test_output_destroy_record {
     int32_t                           call_count;
     enum swl_test_output_destroy_kind kind;
     void                             *object;
+};
+
+struct swl_test_output_request_record {
+    int32_t                           call_count;
+    enum swl_test_output_request_kind kind;
+    void                             *object;
+    void                             *configuration;
+    void                             *configuration_head;
+    void                             *head;
+    void                             *mode;
+    uint32_t                          serial;
+    int32_t                           x;
+    int32_t                           y;
+    int32_t                           width;
+    int32_t                           height;
+    int32_t                           refresh;
+    int32_t                           transform;
+    int32_t                           scale;
 };
 
 struct swl_test_core_request_record {
@@ -3322,6 +3356,7 @@ struct swl_test_metadata_request_record swl_test_metadata_request_record(void);
 struct swl_test_metadata_destroy_record swl_test_metadata_destroy_record(void);
 void swl_test_output_request_recording_begin(void);
 void swl_test_output_request_recording_end(void);
+struct swl_test_output_request_record swl_test_output_request_record(void);
 struct swl_test_output_destroy_record swl_test_output_destroy_record(void);
 void swl_test_metadata_listener_recording_begin(void);
 void swl_test_metadata_listener_recording_end(void);
